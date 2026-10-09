@@ -19533,8 +19533,8 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   min-width: 0;
 }
 .wrapper_widget.publication_hosts .host_field > .field_error {
-  border-color: var(--danger, #c0392b);
-  outline: 1px solid var(--danger, #c0392b);
+  border-color: var(--color_danger);
+  outline: 1px solid var(--color_danger);
 }
 .wrapper_widget.publication_hosts .host_field[hidden] {
   display: none;

@@ -621,7 +621,7 @@ function lockstepRow(
 	runtime: HostRuntime | null,
 ): ApiLockstepRow {
 	const lastPush = runtime === null ? null : runtime.apis[api];
-	if (host.reachable && host.served !== null && !host.served.includes(api)) {
+	if (servesNot(host, api)) {
 		return {
 			host: host.name,
 			api,
@@ -640,6 +640,11 @@ function lockstepRow(
 		last_push: lastPush,
 		state: lockstepState(release, current, lastPush?.state === 'failed'),
 	};
+}
+
+/** A reached host whose declaration does not serve `api` (unknown `served` = serves all). */
+function servesNot(host: LockstepHostInput, api: ApiName): boolean {
+	return host.reachable && host.served !== null && !host.served.includes(api);
 }
 
 /** `current` undefined = the agent was not reached (its release is unknown, not absent). */

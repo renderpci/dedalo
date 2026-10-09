@@ -183,7 +183,7 @@ export interface Scene {
 	 * The scene's host-wide base (the agent's HOST_BASE, provision layout `paths.host_base`):
 	 * `locks/web.lock`, the host web lock every rules.apply configtest+reload takes. Planted
 	 * here, as the drill's own uid (on a host root creates it; under NODE_ENV=test with a
-	 * scratch HOST_BASE the agent accepts its own uid as the lock's owner — src/rules/apply.ts).
+	 * scratch HOST_BASE the agent accepts its own uid as the lock's owner — publication/host_agent/src/rules/apply.ts).
 	 */
 	readonly hostBase: string;
 	/** The agent's SERVICE_TOKEN — mutable: restartAgent re-provisions it. */

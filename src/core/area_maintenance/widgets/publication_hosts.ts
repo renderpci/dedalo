@@ -518,6 +518,17 @@ function rowProbe(panelRuntime: PanelRuntime, name: string): GateProbe {
 	return panelRuntime.runtime[name]?.probe ?? { ...NEVER_PROBED };
 }
 
+/** The root-only `drafts_state` + `drafts` keys of the payload ({} for anyone else). */
+async function draftsPartOf(
+	isRoot: boolean,
+	loadSetup: SetupDepsLoader | undefined,
+	registry: RegistryFile | null,
+): Promise<{ drafts_state?: string; drafts?: unknown }> {
+	if (!isRoot || loadSetup === undefined) return {};
+	const setup = await draftRows(await loadSetup(), registry);
+	return { drafts_state: setup.state, drafts: setup.drafts };
+}
+
 export async function publicationHostsValue(
 	deps: PublicationHostsDeps,
 	principal: Principal,
@@ -527,11 +538,7 @@ export async function publicationHostsValue(
 	const read = readRegistry(deps);
 	// ROOT ONLY: the drafts of "New publication host" (publication_host_setup.ts). Another admin's
 	// payload carries no `drafts` key at all (a draft names a future host's address and accounts).
-	const setup =
-		isRoot && loadSetup !== undefined
-			? await draftRows(await loadSetup(), read.ok ? read.file : null)
-			: null;
-	const draftsPart = setup === null ? {} : { drafts_state: setup.state, drafts: setup.drafts };
+	const draftsPart = await draftsPartOf(isRoot, loadSetup, read.ok ? read.file : null);
 	// ONE runtime read for the whole panel (panel_runtime.ts): a corrupt file is a red
 	// `runtime_invalid`, never a 500. Fixed decorator order for phases 5/6:
 	// rows → withMediaCopyCheck → attachProbe, each taking panelRuntime.runtime; then
@@ -778,8 +785,22 @@ async function applyMapStep(
 	}
 	const expected = deps.expectedNginxMap(status);
 	if (expected === null) return { state: 'not_applicable' };
-	const reported = status.rules.map?.managed === true ? status.rules.map.hash : null;
-	if (reported === expected.hash) return { state: 'current', hash: expected.hash };
+	if (reportedMapHash(status) === expected.hash) return { state: 'current', hash: expected.hash };
+	return pushMap(deps, name, expected, actor);
+}
+
+/** The map hash the agent reports loaded, or null when it manages none. */
+function reportedMapHash(status: AgentStatus): string | null {
+	return status.rules.map?.managed === true ? status.rules.map.hash : null;
+}
+
+/** Push the expected map; a host that reports another hash than the one sent fails the action. */
+async function pushMap(
+	deps: PublicationHostsDeps,
+	name: string,
+	expected: ExpectedNginxMap,
+	actor: string,
+): Promise<MapStep> {
 	const applied = await deps.hostApplyRulesMap(
 		name,
 		{ text: expected.text, hash: expected.hash },

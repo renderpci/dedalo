@@ -526,7 +526,11 @@ describe('the directory doors pin the parent under an untrusted grandparent', ()
     expect(() => io().mkdir(site, 0o755, { ...pin, mode: 0o755 })).toThrow('not the expected');
     expect(() => io().mkdir(site, 0o755, { ...pin, gid: pin.gid + 1 })).toThrow('not the expected');
     // Same owner, group and mode, but not the inode observed: a look-alike made after the plan.
-    rmSync(parent, { recursive: true });
+    // The original is RENAMED away, never removed: a removed directory's inode number is free,
+    // and ext4/overlayfs hand it straight back to the next mkdir (measured in the CI image), so
+    // a removed-then-recreated parent can be the observed (dev, ino) again — a look-alike made
+    // while the original still exists cannot.
+    renameSync(parent, `${parent}.original`);
     mkdirSync(parent);
     chmodSync(parent, 0o750);
     expect(() => io().mkdir(site, 0o755, pin)).toThrow('replaced after it was observed');

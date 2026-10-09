@@ -664,12 +664,18 @@ function isMapApplied(value: unknown): value is RulesMapApplied {
 	return (
 		isRecord(value) &&
 		typeof value.hash === 'string' &&
-		typeof value.host_hash === 'string' &&
-		SHA256_HEX.test(value.host_hash) &&
-		Number.isSafeInteger(value.contributions) &&
-		(value.contributions as number) >= 1 &&
+		isSha256Hex(value.host_hash) &&
+		isPositiveCount(value.contributions) &&
 		value.reloaded === true
 	);
+}
+
+function isSha256Hex(value: unknown): value is string {
+	return typeof value === 'string' && SHA256_HEX.test(value);
+}
+
+function isPositiveCount(value: unknown): value is number {
+	return Number.isSafeInteger(value) && (value as number) >= 1;
 }
 
 function isSwap(value: unknown): value is { from: string; to: string } {

@@ -29,13 +29,13 @@
  */
 
 import { publication_hosts } from '../../../core/area_maintenance/widgets/publication_hosts/js/publication_hosts.js';
-import { ApiError } from '../../../core/common/js/api_error.js';
-import { debug_redacted } from '../../../core/common/js/data_manager.js';
 import {
 	base64_to_bytes,
 	bytes_to_base64,
 	read_draft_form,
 } from '../../../core/area_maintenance/widgets/publication_hosts/js/render_new_host.js';
+import { ApiError } from '../../../core/common/js/api_error.js';
+import { debug_redacted } from '../../../core/common/js/data_manager.js';
 
 const container = document.getElementById('content');
 const mounted = [];
@@ -103,7 +103,9 @@ const build_widget = (widget_value) => {
 	};
 	self.widget_request = async (action, options) => {
 		self.calls.push({ action: action, options: options });
-		return typeof self.next_response === 'function' ? self.next_response(action, options) : self.next_response;
+		return typeof self.next_response === 'function'
+			? self.next_response(action, options)
+			: self.next_response;
 	};
 	return self;
 };
@@ -137,9 +139,9 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.ok(root.querySelector('.new_publication_host'), 'root sees the section');
 		const admin = await mount(build_widget(value([], { is_root: false })));
 		assert.isNull(admin.querySelector('.new_publication_host'), 'a non-root admin sees none');
-		const older = build_widget(value([]));
-		delete older.value.drafts_state;
-		const none = await mount(older);
+		// an older server: the value carries no drafts_state key at all
+		const { drafts_state: _absent, ...older_value } = value([]);
+		const none = await mount(build_widget(older_value));
 		assert.isNull(none.querySelector('.new_publication_host'), 'no drafts_state, no section');
 	});
 
@@ -159,21 +161,48 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.isTrue(card.querySelector('.button_download_kit').disabled, 'no kit, no download');
 		assert.isFalse(card.querySelector('.button_build_kit').disabled);
 		assert.ok(card.querySelector('.pair_package input[type="file"]'), 'the package input');
-		assert.strictEqual(card.querySelector('.pair_package input[name="pairing_passphrase"]').type, 'password');
-		assert.isNull(card.querySelector('.pair_package input[name*="address"], .pair_package input[name*="host"]'), 'no address input');
+		assert.strictEqual(
+			card.querySelector('.pair_package input[name="pairing_passphrase"]').type,
+			'password',
+		);
+		assert.isNull(
+			card.querySelector('.pair_package input[name*="address"], .pair_package input[name*="host"]'),
+			'no address input',
+		);
 
 		const sha = 'c'.repeat(64);
 		const built = await mount(
-			build_widget(value([draft_row({ kit: { sha256: sha, release: '7.0.1_abcdef0', file_name: 'k.tar.gz', size: 3 } })])),
+			build_widget(
+				value([
+					draft_row({
+						kit: { sha256: sha, release: '7.0.1_abcdef0', file_name: 'k.tar.gz', size: 3 },
+					}),
+				]),
+			),
 		);
-		assert.include(built.querySelector('.publication_host_draft').textContent, sha, 'the kit sha256 is shown');
+		assert.include(
+			built.querySelector('.publication_host_draft').textContent,
+			sha,
+			'the kit sha256 is shown',
+		);
 		assert.isFalse(built.querySelector('.button_download_kit').disabled);
 
 		const one = await mount(
-			build_widget(value([draft_row({ draft: Object.assign({}, DRAFT, { listen: { kind: 'unix' }, engine_group: 'dedalo' }) })])),
+			build_widget(
+				value([
+					draft_row({
+						draft: Object.assign({}, DRAFT, { listen: { kind: 'unix' }, engine_group: 'dedalo' }),
+					}),
+				]),
+			),
 		);
-		assert.isNull(one.querySelector('.pair_package'), 'a one-machine draft pairs itself during init');
-		const paired = await mount(build_widget(value([draft_row({ state: 'paired', paired_as: 'museum_org' })])));
+		assert.isNull(
+			one.querySelector('.pair_package'),
+			'a one-machine draft pairs itself during init',
+		);
+		const paired = await mount(
+			build_widget(value([draft_row({ state: 'paired', paired_as: 'museum_org' })])),
+		);
 		assert.isNull(paired.querySelector('.pair_package'), 'a paired draft has no upload');
 		assert.isTrue(paired.querySelector('.button_build_kit').disabled);
 	});
@@ -202,7 +231,11 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		await settle();
 		const save = self.calls[1];
 		assert.strictEqual(save.action, 'save_draft');
-		assert.deepEqual(save.options, { name: 'museum_org', draft: DRAFT }, 'the draft round-trips: two machines carry no engine group, v2-only no v1');
+		assert.deepEqual(
+			save.options,
+			{ name: 'museum_org', draft: DRAFT },
+			'the draft round-trips: two machines carry no engine group, v2-only no v1',
+		);
 		assert.strictEqual(self.reloads, 1);
 	});
 
@@ -293,7 +326,11 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.strictEqual(self.calls.length, 1);
 		assert.deepEqual(self.calls[0], {
 			action: 'pair_package',
-			options: { name: 'museum_org', package_base64: bytes_to_base64(bytes), passphrase: 'ABCD-EFGH-JKMN-PQRS-TVWX-YZ01' },
+			options: {
+				name: 'museum_org',
+				package_base64: bytes_to_base64(bytes),
+				passphrase: 'ABCD-EFGH-JKMN-PQRS-TVWX-YZ01',
+			},
 		});
 		assert.strictEqual(pass.value, '', 'the passphrase input is cleared');
 		assert.strictEqual(self.confirms.length, 1, 'confirm-gated');
@@ -307,8 +344,13 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.strictEqual(pass.value, '');
 	});
 
-	it("the debug request line never carries the passphrase or the package (data_manager debug_redacted)", function () {
-		const merged = { body: { action: 'widget_request', options: { name: 'a', passphrase: 'P', package_base64: 'QUJD' } } };
+	it('the debug request line never carries the passphrase or the package (data_manager debug_redacted)', function () {
+		const merged = {
+			body: {
+				action: 'widget_request',
+				options: { name: 'a', passphrase: 'P', package_base64: 'QUJD' },
+			},
+		};
 		const shown = debug_redacted(merged);
 		assert.strictEqual(shown.body.options.passphrase, '[redacted]');
 		assert.strictEqual(shown.body.options.package_base64, '[redacted]');
@@ -318,12 +360,18 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 
 	it('Download hands the decoded kit to save_file under its name and shows the sha256', async function () {
 		const sha = 'd'.repeat(64);
-		const self = build_widget(value([draft_row({ kit: { sha256: sha, release: 'r', file_name: 'kit.tar.gz', size: 3 } })]));
+		const self = build_widget(
+			value([draft_row({ kit: { sha256: sha, release: 'r', file_name: 'kit.tar.gz', size: 3 } })]),
+		);
 		const content = await mount(self);
 		const payload = new Uint8Array([1, 2, 250]);
 		self.next_response = {
 			ok: true,
-			data: { sha256: sha, file_name: 'dedalo_publication_host_kit_museum_org.tar.gz', kit_base64: bytes_to_base64(payload) },
+			data: {
+				sha256: sha,
+				file_name: 'dedalo_publication_host_kit_museum_org.tar.gz',
+				kit_base64: bytes_to_base64(payload),
+			},
 		};
 		content.querySelector('.button_download_kit').click();
 		await settle();

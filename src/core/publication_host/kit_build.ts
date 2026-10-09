@@ -161,11 +161,24 @@ function resolveContext(seams: KitBuildSeams): Context {
 			'kit refused (unsafe_seams): a scratch treeRoot must name its own backupRoot',
 		);
 	}
+	return { ...releaseSeams(seams), ...actionSeams(seams) };
+}
+
+/** Where the release is and what it is: the seams, or this installation's own. */
+function releaseSeams(
+	seams: KitBuildSeams,
+): Pick<Context, 'treeRoot' | 'backupRoot' | 'digest' | 'version'> {
 	return {
 		treeRoot: seams.treeRoot ?? projectRoot,
 		backupRoot: seams.backupRoot ?? resolveCodeBackupRoot(),
 		digest: seams.digest === undefined ? INSTALLED_DIGEST : seams.digest,
 		version: seams.version ?? DEDALO_VERSION,
+	};
+}
+
+/** The two outside effects a build runs: the seams, or the real installer and judge. */
+function actionSeams(seams: KitBuildSeams): Pick<Context, 'installDeps' | 'judge'> {
+	return {
 		installDeps: seams.installDeps ?? installV2DepsReal,
 		judge: seams.judge ?? judgeInChild,
 	};
@@ -294,8 +307,28 @@ async function collect(
 ): Promise<{ files: KitFile[]; constants: KitConstants }> {
 	const installSh = await verifiedFile(ctx, manifest, INSTALL_SH_REL);
 	const constants = kitConstants(new TextDecoder().decode(installSh.data));
+	const sourceFiles = await agentSourceFiles(ctx, manifest, agentDir, constants);
+	const moduleFiles = await productionModules(ctx, manifest, agentDir, constants);
+	const draftText = await judgedDraft(ctx, draft, agentDir);
+	const others = await otherSourceFiles(ctx, manifest, constants, draftServesV1(draft));
+	const files: KitFile[] = [
+		{ path: constants.draftName, bytes: new TextEncoder().encode(draftText), executable: false },
+		{ path: constants.installName, bytes: installSh.data, executable: true },
+		...others,
+		...sourceFiles,
+		...moduleFiles,
+	];
+	return { files, constants };
+}
+
+/** 1. the verified agent files (minus test material), written into the kit copy too. */
+async function agentSourceFiles(
+	ctx: Context,
+	manifest: PublicationManifest,
+	agentDir: string,
+	constants: KitConstants,
+): Promise<KitFile[]> {
 	const sourceFiles: KitFile[] = [];
-	// 1. the verified agent files (minus test material) into the kit copy
 	for (const key of manifestKitFiles(manifest)) {
 		if (!key.startsWith(`${PUBLICATION_AGENT_ROOT}/`)) continue;
 		const inAgent = key.slice(AGENT_REL.length + 1);
@@ -309,9 +342,20 @@ async function collect(
 			executable: file.executable,
 		});
 	}
-	// 2. production node_modules, installed in the copy (the API bundles' installer). The
-	//    lockfile is REQUIRED: bun accepts --frozen-lockfile with no lockfile and floats every
-	//    version (api_bundles.ts lockfile_missing, the same rule).
+	return sourceFiles;
+}
+
+/**
+ * 2. production node_modules, installed in the copy (the API bundles' installer). The
+ *    lockfile is REQUIRED: bun accepts --frozen-lockfile with no lockfile and floats every
+ *    version (api_bundles.ts lockfile_missing, the same rule).
+ */
+async function productionModules(
+	ctx: Context,
+	manifest: PublicationManifest,
+	agentDir: string,
+	constants: KitConstants,
+): Promise<KitFile[]> {
 	for (const input of ['package.json', 'bun.lock']) {
 		if (manifest.files[`${AGENT_REL}/${input}`] === undefined) {
 			throw new KitBuildError(
@@ -334,23 +378,31 @@ async function collect(
 			[dev],
 		);
 	}
-	const moduleFiles: KitFile[] = [];
 	try {
-		const top = await stat(join(agentDir, 'node_modules')).catch(() => null);
-		if (top !== null) {
-			for (const entry of await dependencyFiles(agentDir)) {
-				const { data, mode } = await entry.load();
-				moduleFiles.push({
-					path: `${constants.sourceDir}/${AGENT_REL}/${entry.path}`,
-					bytes: data,
-					executable: mode === 0o755,
-				});
-			}
-		}
+		return await moduleKitFiles(agentDir, constants);
 	} catch (error) {
 		throw mapBundleError(error);
 	}
-	// 3. the draft, judged by the code that goes into the kit
+}
+
+/** The installed node_modules as kit files (none when nothing was installed). */
+async function moduleKitFiles(agentDir: string, constants: KitConstants): Promise<KitFile[]> {
+	const moduleFiles: KitFile[] = [];
+	const top = await stat(join(agentDir, 'node_modules')).catch(() => null);
+	if (top === null) return moduleFiles;
+	for (const entry of await dependencyFiles(agentDir)) {
+		const { data, mode } = await entry.load();
+		moduleFiles.push({
+			path: `${constants.sourceDir}/${AGENT_REL}/${entry.path}`,
+			bytes: data,
+			executable: mode === 0o755,
+		});
+	}
+	return moduleFiles;
+}
+
+/** 3. the draft, judged by the code that goes into the kit; its file text. */
+async function judgedDraft(ctx: Context, draft: PanelDraft, agentDir: string): Promise<string> {
 	const draftText = draftJson(draft);
 	const draftPath = join(agentDir, '.kit_draft.json');
 	await writeFile(draftPath, draftText);
@@ -362,14 +414,22 @@ async function collect(
 			throw new KitBuildError('draft_refused', `kit refused (draft_refused): ${error.message}`);
 		throw error;
 	}
-	const servesV1 = draftServesV1(draft);
-	if (verdict.instance !== draft.instance || verdict.servesV1 !== servesV1) {
+	if (verdict.instance !== draft.instance || verdict.servesV1 !== draftServesV1(draft)) {
 		throw new KitBuildError(
 			'draft_refused',
 			"kit refused (draft_refused): the agent's parseDraft read another instance or API set",
 		);
 	}
-	// 4. the other SOURCE_MANIFEST files (the v1 sample only for a draft that serves v1)
+	return draftText;
+}
+
+/** 4. the other SOURCE_MANIFEST files (the v1 sample only for a draft that serves v1). */
+async function otherSourceFiles(
+	ctx: Context,
+	manifest: PublicationManifest,
+	constants: KitConstants,
+	servesV1: boolean,
+): Promise<KitFile[]> {
 	const others: KitFile[] = [];
 	for (const entry of constants.sourceManifest) {
 		if (entry.kind !== 'file') continue;
@@ -381,14 +441,7 @@ async function collect(
 			executable: file.executable,
 		});
 	}
-	const files: KitFile[] = [
-		{ path: constants.draftName, bytes: new TextEncoder().encode(draftText), executable: false },
-		{ path: constants.installName, bytes: installSh.data, executable: true },
-		...others,
-		...sourceFiles,
-		...moduleFiles,
-	];
-	return { files, constants };
+	return others;
 }
 
 async function readSidecar(path: string): Promise<Sidecar | null> {
@@ -433,24 +486,39 @@ export async function cachedPanelKit(
 	seams: KitBuildSeams = {},
 ): Promise<PanelKit | null> {
 	const ctx = resolveContext(seams);
-	let release: string;
-	try {
-		release = releaseOf(ctx);
-	} catch {
-		return null;
-	}
+	const release = releaseOrNull(ctx);
+	if (release === null) return null;
 	const paths = kitPaths(ctx.backupRoot, release, name);
 	const sidecar = await readSidecar(paths.sidecar);
 	if (
 		sidecar === null ||
-		sidecar.name !== name ||
-		sidecar.release !== release ||
-		sidecar.digest !== ctx.digest ||
-		sidecar.draft_sha256 !== sha256Hex(draftJson(draft))
+		!sidecarIsCurrent(sidecar, { name, release, digest: ctx.digest, draft })
 	) {
 		return null;
 	}
 	return (await fileSha256(paths.kit)) === sidecar.sha256 ? kitOf(sidecar, paths.kit) : null;
+}
+
+/** This tree's verified release, or null (a tree without one has no cached kit). */
+function releaseOrNull(ctx: Context): string | null {
+	try {
+		return releaseOf(ctx);
+	} catch {
+		return null;
+	}
+}
+
+/** Was this sidecar written for THIS name, release, install digest and draft bytes? */
+function sidecarIsCurrent(
+	sidecar: Sidecar,
+	want: { name: string; release: string; digest: Context['digest']; draft: PanelDraft },
+): boolean {
+	return (
+		sidecar.name === want.name &&
+		sidecar.release === want.release &&
+		sidecar.digest === want.digest &&
+		sidecar.draft_sha256 === sha256Hex(draftJson(want.draft))
+	);
 }
 
 async function buildFresh(

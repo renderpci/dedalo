@@ -154,20 +154,10 @@ export function kitProblems(files: readonly KitFile[], constants: KitConstants):
 	const problems: string[] = [];
 	const seen = new Set<string>();
 	for (const file of files) {
-		if (!constants.pathPattern.test(file.path) || constants.dotSegmentPattern.test(file.path)) {
-			problems.push(
-				`'${file.path}' is outside the kit path grammar (${constants.pathPattern.source})`,
-			);
-		}
-		if (file.path === constants.manifestName)
-			problems.push(`'${file.path}' is the MANIFEST's own name`);
+		problems.push(...pathProblems(file.path, constants));
 		if (seen.has(file.path)) problems.push(`'${file.path}' is listed twice`);
 		seen.add(file.path);
-		if (SECRET_NAME.test(file.path))
-			problems.push(`'${file.path}' is named like a credential: a kit never carries a secret`);
-		else if (PRIVATE_KEY_BLOCK.test(Buffer.from(file.bytes).toString('latin1'))) {
-			problems.push(`'${file.path}' holds a PEM private key: a kit never carries a secret`);
-		}
+		problems.push(...secretProblems(file));
 	}
 	for (const need of [constants.draftName, constants.installName]) {
 		if (!seen.has(need)) problems.push(`the kit has no ${need}`);
@@ -178,6 +168,25 @@ export function kitProblems(files: readonly KitFile[], constants: KitConstants):
 			`the kit holds ${files.length + 1} files (install.sh refuses more than ${constants.maxEntries} entries)`,
 		);
 	return problems;
+}
+
+/** A path outside the kit grammar, or the MANIFEST's own name. */
+function pathProblems(path: string, constants: KitConstants): string[] {
+	const problems: string[] = [];
+	if (!constants.pathPattern.test(path) || constants.dotSegmentPattern.test(path)) {
+		problems.push(`'${path}' is outside the kit path grammar (${constants.pathPattern.source})`);
+	}
+	if (path === constants.manifestName) problems.push(`'${path}' is the MANIFEST's own name`);
+	return problems;
+}
+
+/** A file named like a credential, or else holding a PEM private key. */
+function secretProblems(file: KitFile): string[] {
+	if (SECRET_NAME.test(file.path))
+		return [`'${file.path}' is named like a credential: a kit never carries a secret`];
+	if (PRIVATE_KEY_BLOCK.test(Buffer.from(file.bytes).toString('latin1')))
+		return [`'${file.path}' holds a PEM private key: a kit never carries a secret`];
+	return [];
 }
 
 /** The MANIFEST: the format line, then `<sha256>  <path>` per file in byte order of the path. */
@@ -252,8 +261,8 @@ export interface DraftVerdict {
 export function draftJudgeProgram(scratchAgent: string, draftPath: string): string {
 	const at = (rel: string): string => JSON.stringify(`${scratchAgent}/${rel}`);
 	return [
-		`const { parseDraft } = await import(${at('src/provision/init/draft_schema.ts')});`,
-		`const { draftServesV1 } = await import(${at('src/provision/init/draft.ts')});`,
+		`import { parseDraft } from ${at('src/provision/init/draft_schema.ts')};`,
+		`import { draftServesV1 } from ${at('src/provision/init/draft.ts')};`,
 		'let raw;',
 		`try { raw = JSON.parse(await Bun.file(${JSON.stringify(draftPath)}).text()); } catch { console.log(JSON.stringify({ ok: false, message: 'the draft is not JSON' })); process.exit(0); }`,
 		"try { const d = parseDraft(raw, 'the draft'); console.log(JSON.stringify({ ok: true, instance: d.instance, servesV1: draftServesV1(d) })); }",
@@ -261,17 +270,25 @@ export function draftJudgeProgram(scratchAgent: string, draftPath: string): stri
 	].join('\n');
 }
 
-/** The child's last stdout line → the verdict; a refusal is PackRefused, a broken child an Error. */
-export function draftVerdictFrom(stdout: string, exitCode: number, stderr: string): DraftVerdict {
+/** The child's last stdout line, parsed; a line that is no JSON is a broken child (an Error). */
+function childVerdict(
+	stdout: string,
+	exitCode: number,
+	stderr: string,
+): { ok: boolean; instance?: string; servesV1?: boolean; message?: string } {
 	const line = stdout.trim().split('\n').at(-1) ?? '';
-	let verdict: { ok: boolean; instance?: string; servesV1?: boolean; message?: string };
 	try {
-		verdict = JSON.parse(line);
+		return JSON.parse(line);
 	} catch {
 		throw new KitFormatError(
 			`judging the draft with the agent's parseDraft failed (exit ${exitCode}): ${stderr.trim().split('\n').slice(-3).join(' ')}`,
 		);
 	}
+}
+
+/** The child's last stdout line → the verdict; a refusal is PackRefused, a broken child an Error. */
+export function draftVerdictFrom(stdout: string, exitCode: number, stderr: string): DraftVerdict {
+	const verdict = childVerdict(stdout, exitCode, stderr);
 	if (!verdict.ok)
 		throw new PackRefused(
 			`the draft is refused by the agent's own validation:\n${verdict.message ?? ''}`,

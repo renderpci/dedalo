@@ -369,11 +369,26 @@ const render_host = function (self, host, is_root, body_response, parent) {
 const render_nginx_map = function (facts, map) {
 	if (!map || typeof map !== 'object') return;
 	if (map.managed !== true) return;
-	fact_row(facts, get_label.publication_hosts_map_expected || 'Expected media map hash', map.expected, true);
-	fact_row(facts, get_label.publication_hosts_map_applied || 'Applied media map hash', map.applied, true);
+	fact_row(
+		facts,
+		get_label.publication_hosts_map_expected || 'Expected media map hash',
+		map.expected,
+		true,
+	);
+	fact_row(
+		facts,
+		get_label.publication_hosts_map_applied || 'Applied media map hash',
+		map.applied,
+		true,
+	);
 	// host-wide facts: absent (not null) on a non-root row, which shows this instance only
 	if (!Object.hasOwn(map, 'host_hash')) return;
-	fact_row(facts, get_label.publication_hosts_map_host_hash || 'Shared host map hash', map.host_hash, true);
+	fact_row(
+		facts,
+		get_label.publication_hosts_map_host_hash || 'Shared host map hash',
+		map.host_hash,
+		true,
+	);
 	fact_row(
 		facts,
 		get_label.publication_hosts_map_contributions || 'Instances in the host map',

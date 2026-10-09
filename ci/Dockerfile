@@ -61,6 +61,10 @@
 #             tests/init_web_syntax.test.ts: `php-fpm<v> -t -y <rendered pool>`) and the
 #             Debian init drill's base (scripts/publication_host_init_drill.ts builds its
 #             privileged systemd container FROM this image). Never started here.
+#   shellcheck — the publication-host installer's lint gate (publication/host_agent
+#             tests/init_install_sh.test.ts: `shellcheck -s sh deploy/install.sh`). That
+#             script runs as root on a fresh host before any Bun exists, so a POSIX-sh
+#             defect is caught here or on a museum's server: RED on Linux when absent.
 #
 # BASE: debian:trixie-slim, DIGEST-pinned — the distro of the product image
 # (oven/bun:<v>-debian is trixie), so CI and production share a package set.
@@ -112,7 +116,7 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
       ca-certificates curl gnupg bash coreutils procps tzdata locales \
-      git rsync unzip zip xz-utils gzip file jq openssl gpgv; \
+      git rsync unzip zip xz-utils gzip file jq openssl gpgv shellcheck; \
     for l in es_ES de_DE fr_FR; do \
       sed -i "s/^# *\($l\.UTF-8 UTF-8\)/\1/" /etc/locale.gen; \
       grep -q "^$l\.UTF-8 UTF-8" /etc/locale.gen; \
@@ -280,6 +284,7 @@ RUN set -eu; \
       echo "$(php -v | head -n1)"; \
       echo "$("$(ls /usr/sbin/php-fpm* | head -n1)" -v | head -n1)"; \
       echo "$(gpgv --version | head -n1)"; \
+      echo "shellcheck $(shellcheck --version | sed -n 's/^version: //p')"; \
       echo "$(git --version)"; \
       echo "$(openssl version)"; \
       echo "$(cvtsudoers -V | head -n1)"; \

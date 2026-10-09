@@ -176,6 +176,9 @@ describe('apply_rules against the mock agent', () => {
 		mock.reply('GET', '/v1/status', { status: 200, body: mockNginxStatus(fp, 'absent') });
 		const error = await applyRules().catch((e: unknown) => e);
 		expect((error as DedaloError).code).toBe('maintenance.action_refused');
+		// Floor: the agent WAS asked (its status answered the refusal) — an empty POST list
+		// from a run that never reached the mock would prove nothing.
+		expect(mock.requests.filter((r) => r.method === 'GET').length).toBeGreaterThan(0);
 		expect(posts()).toEqual([]);
 	});
 

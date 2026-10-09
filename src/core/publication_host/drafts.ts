@@ -337,14 +337,8 @@ export function standInDeclaration(draft: PanelDraft): HostDeclaration {
 		agent_user: draft.agent_user,
 		...(draft.engine_group === undefined ? {} : { engine_group: draft.engine_group }),
 		agent_dir: paths.agent_dir,
-		web: {
-			server: draft.web.server,
-			unit: draft.web.server === 'apache' ? DEFAULTS.webUnit.apache.debian : DEFAULTS.webUnit.nginx,
-		},
-		site: servesV1
-			? { domain: draft.site.domain, fpm: { flavor: 'debian', version: V1_PHP_FLOOR } }
-			: { domain: draft.site.domain, os_family: 'debian' },
-		...(servesV1 ? { v1: { user: draft.v1?.user ?? '' }, php_bin: DEFAULTS.phpBin } : {}),
+		web: standInWeb(draft),
+		...standInApis(draft, servesV1),
 		state_root: paths.state_root,
 		media: draft.media,
 		bun_bin: paths.bun_bin,
@@ -358,18 +352,46 @@ export function standInDeclaration(draft: PanelDraft): HostDeclaration {
 	};
 }
 
+/** The stand-in's web server: the draft's choice with init's default unit for it. */
+function standInWeb(draft: PanelDraft): HostDeclaration['web'] {
+	return {
+		server: draft.web.server,
+		unit: draft.web.server === 'apache' ? DEFAULTS.webUnit.apache.debian : DEFAULTS.webUnit.nginx,
+	};
+}
+
+/** The stand-in's `site` (+ `v1` and `php_bin` when the draft serves v1). */
+function standInApis(
+	draft: PanelDraft,
+	servesV1: boolean,
+): Pick<HostDeclaration, 'site' | 'v1' | 'php_bin'> {
+	if (!servesV1) return { site: { domain: draft.site.domain, os_family: 'debian' } };
+	return {
+		site: { domain: draft.site.domain, fpm: { flavor: 'debian', version: V1_PHP_FLOOR } },
+		v1: { user: draft.v1?.user ?? '' },
+		php_bin: DEFAULTS.phpBin,
+	};
+}
+
+/**
+ * derive()/siblings field prefixes → the form field they are about, FIRST MATCH WINS (the
+ * order is load-bearing: `site.fpm` is `apis` before `site.` is `site.domain`).
+ */
+const FORM_FIELD_RULES: readonly (readonly [RegExp, DraftField])[] = [
+	[/^(state_root|agent_dir|bun_bin|site\.home)/, 'layout'],
+	[/^v2\.group/, 'v2.user'],
+	[/^v2\.health_url/, 'v2.port'],
+	[/^web\./, 'web.server'],
+	[/^media\./, 'media.root'],
+	[/^listen/, 'listen.port'],
+	[/^(site\.fpm|php_bin|site\.os_family|site\.api_paths)/, 'apis'],
+	[/^site\./, 'site.domain'],
+];
+
 /** A derive() / siblings field → the form field it is about (layout paths → `layout`). */
 export function formFieldOf(field: string): DraftField {
 	if ((DRAFT_FIELDS as readonly string[]).includes(field)) return field as DraftField;
-	if (/^(state_root|agent_dir|bun_bin|site\.home)/.test(field)) return 'layout';
-	if (field.startsWith('v2.group')) return 'v2.user';
-	if (field.startsWith('v2.health_url')) return 'v2.port';
-	if (field.startsWith('web.')) return 'web.server';
-	if (field.startsWith('media.')) return 'media.root';
-	if (field.startsWith('listen')) return 'listen.port';
-	if (/^(site\.fpm|php_bin|site\.os_family|site\.api_paths)/.test(field)) return 'apis';
-	if (field.startsWith('site.')) return 'site.domain';
-	return 'instance';
+	return FORM_FIELD_RULES.find(([pattern]) => pattern.test(field))?.[1] ?? 'instance';
 }
 
 /** The leading field of a siblings.ts refusal sentence (they all start with it). */
@@ -437,65 +459,114 @@ export function validateDraft(
 	draft: PanelDraft,
 	context: DraftContext,
 ): StoredDraft['draft'] {
-	const issues: DraftIssue[] = [];
-	if (typeof name !== 'string' || !HOST_NAME.test(name) || name.startsWith(RESERVED_HOST_PREFIX)) {
-		issues.push({
-			field: 'name',
-			message: `must match ${HOST_NAME.source} and not start with '${RESERVED_HOST_PREFIX}'`,
-		});
-	} else if (context.registry.hosts.some((host) => host.name === name)) {
-		issues.push({ field: 'name', message: `a publication host named '${name}' is already paired` });
-	} else if (context.drafts.some((stored) => stored.name === name)) {
-		issues.push({
-			field: 'name',
-			message: `a draft named '${name}' already exists: remove it first`,
-		});
-	}
+	const issues: DraftIssue[] = nameIssues(name, context);
 	const own = deriveDraft(draft);
 	if ('issue' in own) throw new DraftInvalid([...issues, own.issue]);
-	const siblings: Sibling[] = [];
-	for (const stored of context.drafts) {
-		if (stored.name === name || !sameMachine(draft.listen, stored.draft.listen)) continue;
-		const derived = deriveDraft(stored.draft);
-		if ('layout' in derived)
-			siblings.push({ source: `draft '${stored.name}'`, layout: derived.layout });
+	for (const refusal of siblingRefusals(own.layout, draftSiblings(name, draft, context))) {
+		addOnce(issues, siblingField(refusal), refusal);
 	}
-	for (const refusal of siblingRefusals(own.layout, siblings)) {
-		const field = siblingField(refusal);
-		if (!issues.some((issue) => issue.field === field)) issues.push({ field, message: refusal });
-	}
-	// A paired host whose OWN draft is a sibling above was judged in full there; every other
-	// host on the machine is judged on what the registry knows of it.
-	const drafted = new Set(
-		context.drafts
-			.filter((stored) => stored.name !== name && sameMachine(draft.listen, stored.draft.listen))
-			.flatMap((stored) => {
-				const paired = pairedRecord(stored, context.registry);
-				return paired === null ? [] : [paired.name];
-			}),
-	);
-	for (const host of context.registry.hosts) {
-		if (!sameMachine(draft.listen, host.address) || drafted.has(host.name)) continue;
-		if (host.instance === draft.instance && !issues.some((i) => i.field === 'instance')) {
-			issues.push({
-				field: 'instance',
-				message: `instance '${draft.instance}' is already paired on that machine as '${host.name}'`,
-			});
-		}
-		if (
-			draft.listen.kind === 'tls' &&
-			host.address.kind === 'tls' &&
-			host.address.port === draft.listen.port &&
-			!issues.some((i) => i.field === 'listen.port')
-		) {
-			issues.push({
-				field: 'listen.port',
-				message: `listen ${draft.listen.host}:${draft.listen.port} is the paired host '${host.name}'s`,
-			});
-		}
+	for (const host of undraftedHostsOnMachine(name, draft, context)) {
+		registryHostIssues(issues, draft, host);
 	}
 	if (issues.length > 0) throw new DraftInvalid(issues);
 	return draft;
+}
+
+/** Add an issue unless its field already has one. */
+function addOnce(issues: DraftIssue[], field: DraftField, message: string): void {
+	if (!issues.some((issue) => issue.field === field)) issues.push({ field, message });
+}
+
+/** The registry name: its shape, then neither a paired host's nor another draft's. */
+function nameIssues(name: unknown, context: DraftContext): DraftIssue[] {
+	if (typeof name !== 'string' || !HOST_NAME.test(name) || name.startsWith(RESERVED_HOST_PREFIX)) {
+		return [
+			{
+				field: 'name',
+				message: `must match ${HOST_NAME.source} and not start with '${RESERVED_HOST_PREFIX}'`,
+			},
+		];
+	}
+	if (context.registry.hosts.some((host) => host.name === name)) {
+		return [{ field: 'name', message: `a publication host named '${name}' is already paired` }];
+	}
+	if (context.drafts.some((stored) => stored.name === name)) {
+		return [{ field: 'name', message: `a draft named '${name}' already exists: remove it first` }];
+	}
+	return [];
+}
+
+/** The OTHER stored drafts on the draft's machine. */
+function otherDraftsOnMachine(
+	name: unknown,
+	draft: PanelDraft,
+	context: DraftContext,
+): StoredDraft[] {
+	return context.drafts.filter(
+		(stored) => stored.name !== name && sameMachine(draft.listen, stored.draft.listen),
+	);
+}
+
+/** The other drafts on the machine that derive, as siblings.ts reads them. */
+function draftSiblings(name: unknown, draft: PanelDraft, context: DraftContext): Sibling[] {
+	return otherDraftsOnMachine(name, draft, context).flatMap((stored) => {
+		const derived = deriveDraft(stored.draft);
+		return 'layout' in derived
+			? [{ source: `draft '${stored.name}'`, layout: derived.layout }]
+			: [];
+	});
+}
+
+/**
+ * The paired hosts on the machine that no sibling draft stands for: a paired host whose OWN
+ * draft is a sibling was judged in full there; every other host on the machine is judged on
+ * what the registry knows of it.
+ */
+function undraftedHostsOnMachine(
+	name: unknown,
+	draft: PanelDraft,
+	context: DraftContext,
+): PublicationHostRecord[] {
+	const drafted = new Set(
+		otherDraftsOnMachine(name, draft, context).flatMap((stored) => {
+			const paired = pairedRecord(stored, context.registry);
+			return paired === null ? [] : [paired.name];
+		}),
+	);
+	return context.registry.hosts.filter(
+		(host) => sameMachine(draft.listen, host.address) && !drafted.has(host.name),
+	);
+}
+
+/** A paired host on the machine: its instance, and its TLS port, are taken. */
+function registryHostIssues(
+	issues: DraftIssue[],
+	draft: PanelDraft,
+	host: PublicationHostRecord,
+): void {
+	if (host.instance === draft.instance) {
+		addOnce(
+			issues,
+			'instance',
+			`instance '${draft.instance}' is already paired on that machine as '${host.name}'`,
+		);
+	}
+	if (sharesTlsPort(draft.listen, host.address)) {
+		const listen = draft.listen as { host: string; port: number };
+		addOnce(
+			issues,
+			'listen.port',
+			`listen ${listen.host}:${listen.port} is the paired host '${host.name}'s`,
+		);
+	}
+}
+
+/** Both TLS, on the same port. */
+function sharesTlsPort(
+	listen: PanelDraft['listen'],
+	address: PublicationHostRecord['address'],
+): boolean {
+	return listen.kind === 'tls' && address.kind === 'tls' && address.port === listen.port;
 }
 
 // ------------------------------------------------------------------------------ proposals
@@ -543,40 +614,57 @@ export function proposeDraft(
 		DEFAULTS.v2Port,
 		new Set(onMachine.map((stored) => stored.draft.v2.port)),
 	);
-	if (listen.kind === 'tls') {
-		const taken = new Set<number>([
-			...onMachine.flatMap((stored) =>
-				stored.draft.listen.kind === 'tls' ? [stored.draft.listen.port] : [],
-			),
-			...context.registry.hosts.flatMap((host) =>
-				host.address.kind === 'tls' && host.address.host === listen.host ? [host.address.port] : [],
-			),
-			v2Port,
-		]);
-		listen.port = nextFree(DEFAULT_TLS_PORT, taken);
-	}
+	if (listen.kind === 'tls') listen.port = proposedTlsPort(listen.host, onMachine, context, v2Port);
 	const draft: PanelDraft = {
 		instance,
 		layout: 'home',
 		apis: input.apis,
 		listen,
-		agent_user: instance === '' ? '' : DEFAULTS.agentUser(instance),
+		agent_user: named(instance, DEFAULTS.agentUser),
 		web: { server: 'apache' },
 		site: { domain: input.domain },
-		media:
-			input.machines === 'one' && input.mediaRoot !== null
-				? { mode: 'shared', root: input.mediaRoot }
-				: { mode: input.machines === 'one' ? 'shared' : 'copy', root: '' },
+		media: proposedMedia(input),
 		v2: {
-			unit: instance === '' ? '' : DEFAULTS.v2Unit(instance),
-			user: instance === '' ? '' : DEFAULTS.v2User(instance),
+			unit: named(instance, DEFAULTS.v2Unit),
+			user: named(instance, DEFAULTS.v2User),
 			port: v2Port,
 		},
 	};
 	if (listen.kind === 'unix') draft.engine_group = input.engineGroup ?? '';
-	if (input.apis === 'v1_and_v2')
-		draft.v1 = { user: instance === '' ? '' : DEFAULTS.v1User(instance) };
+	if (input.apis === 'v1_and_v2') draft.v1 = { user: named(instance, DEFAULTS.v1User) };
 	return { name: instance, draft };
+}
+
+/** init's default name for an instance, or '' when the domain gave no instance name. */
+function named(instance: string, of: (instance: string) => string): string {
+	return instance === '' ? '' : of(instance);
+}
+
+/** The next free TLS port on `host`: past the drafts on that machine, its paired hosts, and v2. */
+function proposedTlsPort(
+	host: string,
+	onMachine: readonly StoredDraft[],
+	context: DraftContext,
+	v2Port: number,
+): number {
+	const taken = new Set<number>([
+		...onMachine.flatMap((stored) =>
+			stored.draft.listen.kind === 'tls' ? [stored.draft.listen.port] : [],
+		),
+		...context.registry.hosts.flatMap((paired) =>
+			paired.address.kind === 'tls' && paired.address.host === host ? [paired.address.port] : [],
+		),
+		v2Port,
+	]);
+	return nextFree(DEFAULT_TLS_PORT, taken);
+}
+
+/** One machine shares the work system's media tree (its root when known); two copy. */
+function proposedMedia(input: ProposalInput): PanelDraft['media'] {
+	if (input.machines === 'one' && input.mediaRoot !== null) {
+		return { mode: 'shared', root: input.mediaRoot };
+	}
+	return { mode: input.machines === 'one' ? 'shared' : 'copy', root: '' };
 }
 
 /** The draft file the kit carries (`draft.json`): the panel draft, nothing added. */
@@ -596,23 +684,39 @@ function validateStored(value: unknown, index: number): StoredDraft {
 	const keys = Object.keys(value).sort().join(',');
 	if (keys !== 'created_at,created_by,draft,name')
 		throw new DraftsStoreError('invalid', `${where} has keys [${keys}]`);
-	if (typeof value.name !== 'string' || !HOST_NAME.test(value.name))
-		throw new DraftsStoreError('invalid', `${where}.name`);
-	if (typeof value.created_at !== 'string' || Number.isNaN(Date.parse(value.created_at))) {
-		throw new DraftsStoreError('invalid', `${where}.created_at`);
-	}
-	if (typeof value.created_by !== 'number' || !Number.isInteger(value.created_by)) {
-		throw new DraftsStoreError('invalid', `${where}.created_by`);
-	}
-	let draft: PanelDraft;
+	const name = storedField(value.name, isHostName, `${where}.name`);
+	const createdAt = storedField(value.created_at, isTimestamp, `${where}.created_at`);
+	const createdBy = storedField(value.created_by, isInteger, `${where}.created_by`);
+	return { name, created_at: createdAt, created_by: createdBy, draft: storedDraft(value, where) };
+}
+
+/** One stored field that must pass `valid`, or the store is invalid at `where`. */
+function storedField<T>(value: unknown, valid: (value: unknown) => value is T, where: string): T {
+	if (!valid(value)) throw new DraftsStoreError('invalid', where);
+	return value;
+}
+
+function isInteger(value: unknown): value is number {
+	return Number.isInteger(value);
+}
+
+function isHostName(value: unknown): value is string {
+	return typeof value === 'string' && HOST_NAME.test(value);
+}
+
+function isTimestamp(value: unknown): value is string {
+	return typeof value === 'string' && !Number.isNaN(Date.parse(value));
+}
+
+/** The stored entry's draft, re-read as the panel reads one (a refusal = an invalid store). */
+function storedDraft(value: Record<string, unknown>, where: string): PanelDraft {
 	try {
-		draft = readPanelDraft(value.draft);
+		return readPanelDraft(value.draft);
 	} catch (error) {
 		if (error instanceof DraftInvalid)
 			throw new DraftsStoreError('invalid', `${where}.draft: ${error.message}`);
 		throw error;
 	}
-	return { name: value.name, created_at: value.created_at, created_by: value.created_by, draft };
 }
 
 export function validateDraftsFile(value: unknown): DraftsFile {

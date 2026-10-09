@@ -461,15 +461,23 @@ export const NGINX_MAP_CHECK_ID = 'nginx_map';
  *  - ours loaded → ok, the hash's first 12 characters.
  */
 export function nginxMapCheck(map: NginxMapPanel): HostCheck {
-	if (map.agent_outdated)
-		return { id: NGINX_MAP_CHECK_ID, state: 'blocked', detail: 'agent_outdated' };
-	if (map.refused !== null)
-		return { id: NGINX_MAP_CHECK_ID, state: 'blocked', detail: map.refused };
-	if (!map.managed) return { id: NGINX_MAP_CHECK_ID, state: 'ok', detail: 'unmanaged' };
-	if (map.applied === null) return { id: NGINX_MAP_CHECK_ID, state: 'blocked', detail: 'none' };
-	if (map.drift || map.expected === null)
-		return { id: NGINX_MAP_CHECK_ID, state: 'blocked', detail: 'drift' };
-	return { id: NGINX_MAP_CHECK_ID, state: 'ok', detail: map.expected.slice(0, 12) };
+	const [state, detail] = nginxMapVerdict(map);
+	return { id: NGINX_MAP_CHECK_ID, state, detail };
+}
+
+/** nginxMapCheck's state + detail, in the order the list above gives them. */
+function nginxMapVerdict(map: NginxMapPanel): [HostCheck['state'], string] {
+	if (map.agent_outdated) return ['blocked', 'agent_outdated'];
+	if (map.refused !== null) return ['blocked', map.refused];
+	if (!map.managed) return ['ok', 'unmanaged'];
+	return managedMapVerdict(map);
+}
+
+/** A map of ours: none loaded, another one loaded, or ours (its hash's first 12 characters). */
+function managedMapVerdict(map: NginxMapPanel): [HostCheck['state'], string] {
+	if (map.applied === null) return ['blocked', 'none'];
+	if (map.drift || map.expected === null) return ['blocked', 'drift'];
+	return ['ok', map.expected.slice(0, 12)];
 }
 
 /**

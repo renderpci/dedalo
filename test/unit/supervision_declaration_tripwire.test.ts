@@ -41,15 +41,21 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
-	readdirSync,
 	readFileSync,
 	rmSync,
+	symlinkSync,
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { envSnapshot, parseEnvFile, projectRoot } from '../../src/config/env.ts';
 import { RESTART_EXIT_CODE } from '../../src/core/install/restart.ts';
+import {
+	DEPLOY_DIR,
+	systemdUnitNames,
+	trackedComposeFiles,
+} from '../helpers/deploy_artifact_corpus.ts';
+import { proseMarkdownFiles } from '../helpers/prose_markdown_corpus.ts';
 
 const SUPERVISION_KEY = 'DEDALO_SUPERVISED';
 /** Every variable that could make a child read as supervised by inheritance. */
@@ -138,6 +144,14 @@ exec "$SUPERVISION_REAL_BUN" "$@"
 `;
 	writeFileSync(join(dir, 'bun'), stub);
 	chmodSync(join(dir, 'bun'), 0o755);
+	// A `node` beside the stub, or the stub is BYPASSED on a host without Node (the CI
+	// image, measured 2026-10-09): `bun run` then prepends its own /tmp/bun-node-<rev>/
+	// shim dir — holding a `bun` AND a `node` — to the child's PATH, so dev.ts's
+	// spawn of a bare `bun` reached the REAL bun and booted a real server (the 'dev' leg
+	// hung to its timeout). With a `node` already on PATH, bun adds no shim dir. It is
+	// the real binary, which behaves as Node when invoked under that name — as the
+	// shim's own `node` link does.
+	symlinkSync(process.execPath, join(dir, 'node'));
 }
 
 /** Run one package.json script through `sh -c` under the stub; the recorded launches. */
@@ -221,16 +235,6 @@ describe('package.json launchers declare supervision', () => {
 // 2. systemd units — deploy/*.service + every fenced block in the manuals.
 // ---------------------------------------------------------------------------
 
-function markdownFiles(dir: string): string[] {
-	const out: string[] = [];
-	for (const entry of readdirSync(dir, { withFileTypes: true })) {
-		const path = join(dir, entry.name);
-		if (entry.isDirectory()) out.push(...markdownFiles(path));
-		else if (entry.name.endsWith('.md')) out.push(path);
-	}
-	return out;
-}
-
 /**
  * The lines systemd parses, read the way systemd reads them: a comment is a
  * WHOLE line starting with `#` or `;`, and there is no inline comment. A
@@ -251,17 +255,14 @@ function unitLines(text: string): string[] {
 /** Every unit text that starts the server: [label, text]. */
 function serverUnits(): [string, string][] {
 	const units: [string, string][] = [];
-	const deployDir = join(projectRoot, 'deploy');
-	for (const name of readdirSync(deployDir).filter((n) => n.endsWith('.service'))) {
-		units.push([`deploy/${name}`, readFileSync(join(deployDir, name), 'utf8')]);
+	for (const name of systemdUnitNames()) {
+		units.push([`deploy/${name}`, readFileSync(join(DEPLOY_DIR, name), 'utf8')]);
 	}
-	for (const root of ['docs', 'engineering']) {
-		for (const file of markdownFiles(join(projectRoot, root))) {
-			const text = readFileSync(file, 'utf8');
-			let index = 0;
-			for (const match of text.matchAll(/```[\w-]*\n([\s\S]*?)```/g)) {
-				units.push([`${relative(projectRoot, file)} block ${++index}`, match[1] as string]);
-			}
+	for (const file of proseMarkdownFiles()) {
+		const text = readFileSync(file, 'utf8');
+		let index = 0;
+		for (const match of text.matchAll(/```[\w-]*\n([\s\S]*?)```/g)) {
+			units.push([`${relative(projectRoot, file)} block ${++index}`, match[1] as string]);
 		}
 	}
 	return units.filter(([, text]) =>
@@ -336,17 +337,7 @@ function declaredValue(service: ComposeService): unknown {
 
 describe('compose stacks declare supervision', () => {
 	test('every engine service in a tracked compose file sets DEDALO_SUPERVISED "true"', async () => {
-		const listed = Bun.spawnSync(
-			['git', 'ls-files', 'docker-compose*.yml', 'deploy/docker-compose*.yml'],
-			{
-				cwd: projectRoot,
-				stdout: 'pipe',
-			},
-		);
-		const files = listed.stdout
-			.toString()
-			.split('\n')
-			.filter((f) => f !== '');
+		const files = trackedComposeFiles();
 		const engines: string[] = [];
 		const undeclared: string[] = [];
 		for (const file of files) {

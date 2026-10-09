@@ -453,7 +453,7 @@ describe('the actions: root only, the store, the panel rows', () => {
 		expect(existsSync(registryPath())).toBe(false); // a draft is not a paired host
 		expect(h.audits).toEqual([
 			expect.objectContaining({
-				what: 'NEW',
+				what: 'SAVE',
 				action: 'publication_hosts.save_draft',
 				draft: 'museum_org',
 				listen: '127.0.0.1:8471',
@@ -889,7 +889,7 @@ describe('pair_package: the sealed package completes a saved draft, through the 
 		).toBe(true);
 		expect(h.audits).toEqual([
 			expect.objectContaining({
-				what: 'NEW',
+				what: 'SAVE',
 				action: 'publication_hosts.pair_package',
 				host: 'museum_org',
 				instance: 'museum_org',

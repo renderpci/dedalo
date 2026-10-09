@@ -405,6 +405,10 @@ describe('persist_config (P2)', () => {
 			{ ...BASE_CFG, update_servers: false },
 			prior,
 		);
+		// Floor: the written .env parsed into real keys (the prior's salt survived) — an
+		// empty parse would make the two empty lists below vacuous.
+		expect(Object.keys(parsed).length).toBeGreaterThan(2);
+		expect(parsed.DEDALO_SALT_STRING).toBe('deadbeef');
 		expect(JSON.parse(parsed.ONTOLOGY_SERVERS as string)).toEqual([]);
 		expect(JSON.parse(parsed.CODE_SERVERS as string)).toEqual([]);
 	});

@@ -2,6 +2,7 @@
 	"_": "The top-level entries a release archive ships (git-tracked roots minus export-ignore). Gate: test/unit/release_root_entries_tripwire.test.ts — the set must equal this list EXACTLY. ADDING a root entry is a deliberate act: it lands on every install and is read by the code updater's root whitelist (src/core/update/code_update.ts refuseUnaccountedLiveEntries), so add it here in the same commit. REMOVING one is safe for installs whose install stamp records their release root (src/core/update/install_stamp.ts root_entries, 2026-10-07): the updater moves the retired entry into the backup instead of refusing. Editor and OS config never belongs here (.vscode shipped by accident until 0ebc82b616 and blocked updates).",
 	"root_entries": [
 		".agents",
+		".bun-sha256",
 		".bun-version",
 		".dockerignore",
 		".gitattributes",

@@ -71,6 +71,11 @@ const NOT_A_BASELINE: Readonly<Record<string, { reason: string; runtime: boolean
 			'PRESCRIBED by scripts/lib/client_compat_census.ts for a future shrink-only ratchet and NOT PRESENT: the day it is created it must be registered (this row then goes stale and reddens)',
 		runtime: true,
 	},
+	'engineering/el_drill_record.json': {
+		reason:
+			'PRESCRIBED by scripts/publication_host_init_drill.ts (`bun run test:pubhost:init:el --record`, only after a green init drill on a disposable SELinux-enforcing EL 9/10 VM marked /etc/dedalo_init_drill_host) and NOT PRESENT: no such run is recorded yet. The day it is committed it must be registered (this row then fails the not-committed leg and reddens)',
+		runtime: true,
+	},
 };
 
 /** The ratchet-shaped basenames, however a path to them is assembled. */

@@ -1,9 +1,10 @@
 /**
  * THE BUN HASH TABLE, FROM A SIGNATURE (spec provision init §1.3, owner decision Q3).
  *
- * `.bun-sha256` (repo root) is what the publication host's trampoline (deploy/install.sh) and
- * `provision init` (src/provision/init/bun_asset.ts) verify a downloaded Bun against before it
- * ever runs as root. This script is the ONLY writer of that table, and it writes it only from
+ * `.bun-sha256` (repo root) is what the publication host's trampoline
+ * (publication/host_agent/deploy/install.sh) and `provision init`
+ * (publication/host_agent/src/provision/init/bun_asset.ts) verify a downloaded Bun against
+ * before it ever runs as root. This script is the ONLY writer of that table, and it writes it only from
  * the SIGNED PAYLOAD of Bun's clearsigned `SHASUMS256.txt.asc`, after that signature verified
  * against the pinned release-key fingerprint below.
  *

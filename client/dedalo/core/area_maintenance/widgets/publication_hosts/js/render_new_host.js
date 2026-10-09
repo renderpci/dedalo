@@ -2,7 +2,11 @@
 /*global get_label */
 /*eslint no-undef: "error"*/
 
-import { request_failed, response_data, response_extension } from '../../../../common/js/api_error.js';
+import {
+	request_failed,
+	response_data,
+	response_extension,
+} from '../../../../common/js/api_error.js';
 import { handle_api_error } from '../../../../common/js/error_dispatch.js';
 import { error_text } from '../../../../common/js/render_api_error.js';
 import { ui } from '../../../../common/js/ui.js';
@@ -70,11 +74,16 @@ export const read_draft_form = function (inputs) {
 		instance: text('instance'),
 		layout: text('layout'),
 		apis: text('apis'),
-		listen: two ? { kind: 'tls', host: text('listen.host'), port: number('listen.port') } : { kind: 'unix' },
+		listen: two
+			? { kind: 'tls', host: text('listen.host'), port: number('listen.port') }
+			: { kind: 'unix' },
 		agent_user: text('agent_user'),
 		web: { server: text('web.server') },
 		site: { domain: text('site.domain') },
-		media: text('media.mode') === 'none' ? { mode: 'none' } : { mode: text('media.mode'), root: text('media.root') },
+		media:
+			text('media.mode') === 'none'
+				? { mode: 'none' }
+				: { mode: text('media.mode'), root: text('media.root') },
 		v2: { unit: text('v2.unit'), user: text('v2.user'), port: number('v2.port') },
 	};
 	if (!two) draft.engine_group = text('engine_group');
@@ -91,7 +100,8 @@ export const read_draft_form = function (inputs) {
 export const fill_draft_form = function (inputs, proposal) {
 	const draft = proposal.draft || {};
 	const set = (path, value) => {
-		if (inputs[path]) inputs[path].value = value === undefined || value === null ? '' : String(value);
+		if (inputs[path])
+			inputs[path].value = value === undefined || value === null ? '' : String(value);
 	};
 	set('name', proposal.name);
 	set('instance', draft.instance);
@@ -164,7 +174,7 @@ export const render_new_host = function (self, value, body_response) {
 	ui.create_dom_element({
 		element_type: 'h3',
 		class_name: 'new_host_title',
-		text_content: (get_label.publication_hosts_new_title || 'New publication host'),
+		text_content: get_label.publication_hosts_new_title || 'New publication host',
 		parent: wrap,
 	});
 
@@ -172,7 +182,9 @@ export const render_new_host = function (self, value, body_response) {
 		ui.create_dom_element({
 			element_type: 'div',
 			class_name: 'dd_note state_danger drafts_invalid',
-			text_content: (get_label.publication_hosts_drafts_invalid || 'The publication host drafts file is unreadable or invalid. Drafts are not shown until it is repaired or deleted.'),
+			text_content:
+				get_label.publication_hosts_drafts_invalid ||
+				'The publication host drafts file is unreadable or invalid. Drafts are not shown until it is repaired or deleted.',
 			parent: wrap,
 		});
 	} else {
@@ -204,21 +216,44 @@ const render_draft = function (self, row, parent, body_response) {
 	const facts = section(card, row.name);
 	const listen = draft.listen || {};
 	const two = listen.kind === 'tls';
-	fact_row(facts, (get_label.publication_hosts_draft_state || 'State'),
+	fact_row(
+		facts,
+		get_label.publication_hosts_draft_state || 'State',
 		row.state === 'paired'
-			? `${(get_label.publication_hosts_draft_paired || 'Paired as')} ${row.paired_as}`
-			: (get_label.publication_hosts_draft_awaiting || 'Awaiting installation'),
-		false);
-	fact_row(facts, (get_label.publication_hosts_draft_instance || 'Instance'), draft.instance, true);
-	fact_row(facts, (get_label.publication_hosts_draft_domain || 'Site domain'), draft.site?.domain, true);
-	fact_row(facts, (get_label.publication_hosts_draft_listen || 'Agent listens on'),
-		two ? `${listen.host}:${listen.port}` : (get_label.publication_hosts_draft_one_machine || 'a socket (this machine)'), true);
-	fact_row(facts, (get_label.publication_hosts_draft_apis || 'Publication APIs'),
-		draft.apis === 'v1_and_v2' ? 'v1 + v2' : 'v2', true);
+			? `${get_label.publication_hosts_draft_paired || 'Paired as'} ${row.paired_as}`
+			: get_label.publication_hosts_draft_awaiting || 'Awaiting installation',
+		false,
+	);
+	fact_row(facts, get_label.publication_hosts_draft_instance || 'Instance', draft.instance, true);
+	fact_row(
+		facts,
+		get_label.publication_hosts_draft_domain || 'Site domain',
+		draft.site?.domain,
+		true,
+	);
+	fact_row(
+		facts,
+		get_label.publication_hosts_draft_listen || 'Agent listens on',
+		two
+			? `${listen.host}:${listen.port}`
+			: get_label.publication_hosts_draft_one_machine || 'a socket (this machine)',
+		true,
+	);
+	fact_row(
+		facts,
+		get_label.publication_hosts_draft_apis || 'Publication APIs',
+		draft.apis === 'v1_and_v2' ? 'v1 + v2' : 'v2',
+		true,
+	);
 	const kit = row.kit;
-	fact_row(facts, (get_label.publication_hosts_kit_sha256 || 'Kit sha256'), kit ? kit.sha256 : null, true);
+	fact_row(
+		facts,
+		get_label.publication_hosts_kit_sha256 || 'Kit sha256',
+		kit ? kit.sha256 : null,
+		true,
+	);
 	if (kit) {
-		fact_row(facts, (get_label.publication_hosts_kit_release || 'Kit release'), kit.release, true);
+		fact_row(facts, get_label.publication_hosts_kit_release || 'Kit release', kit.release, true);
 	}
 
 	const actions = ui.create_dom_element({
@@ -228,7 +263,7 @@ const render_draft = function (self, row, parent, body_response) {
 	});
 	const awaiting = row.state !== 'paired';
 
-	const build_label = (get_label.publication_hosts_build_kit || 'Build kit');
+	const build_label = get_label.publication_hosts_build_kit || 'Build kit';
 	const button_build = button(actions, 'button_build_kit', build_label, !awaiting);
 	button_build.addEventListener('click', async (e) => {
 		e.stopPropagation();
@@ -242,7 +277,12 @@ const render_draft = function (self, row, parent, body_response) {
 		});
 	});
 
-	const button_download = button(actions, 'button_download_kit', (get_label.publication_hosts_download_kit || 'Download kit'), !kit);
+	const button_download = button(
+		actions,
+		'button_download_kit',
+		get_label.publication_hosts_download_kit || 'Download kit',
+		!kit,
+	);
 	button_download.addEventListener('click', async (e) => {
 		e.stopPropagation();
 		await run(self, {
@@ -259,7 +299,7 @@ const render_draft = function (self, row, parent, body_response) {
 		render_pair_form(self, row, card, body_response);
 	}
 
-	const remove_label = (get_label.publication_hosts_remove_draft || 'Remove draft');
+	const remove_label = get_label.publication_hosts_remove_draft || 'Remove draft';
 	const button_remove = button(actions, 'danger button_remove_draft', remove_label, false);
 	button_remove.addEventListener('click', async (e) => {
 		e.stopPropagation();
@@ -268,7 +308,7 @@ const render_draft = function (self, row, parent, body_response) {
 			body_response: body_response,
 			action: 'remove_draft',
 			options: { name: row.name },
-			confirm_text: `${(get_label.sure || 'Are you sure?')}\n${remove_label}: ${row.name}`,
+			confirm_text: `${get_label.sure || 'Are you sure?'}\n${remove_label}: ${row.name}`,
 			reload: true,
 		});
 	});
@@ -288,7 +328,7 @@ const save_kit = function (self, data) {
 	if (typeof self.save_file === 'function') {
 		self.save_file(blob, data.file_name);
 	}
-	return `${data.file_name}\nsha256 ${data.sha256}\n\n${(get_label.publication_hosts_kit_next || 'On the publication host, as root: sha256sum the kit (it must print the sha256 above), extract install.sh, then run sh install.sh <instance> --kit <file> --kit-sha256 <sha256>.')}`;
+	return `${data.file_name}\nsha256 ${data.sha256}\n\n${get_label.publication_hosts_kit_next || 'On the publication host, as root: sha256sum the kit (it must print the sha256 above), extract install.sh, then run sh install.sh <instance> --kit <file> --kit-sha256 <sha256>.'}`;
 }; //end save_kit
 
 /**
@@ -305,7 +345,7 @@ const render_pair_form = function (self, row, card, body_response) {
 	});
 	ui.create_dom_element({
 		element_type: 'summary',
-		text_content: (get_label.publication_hosts_pair_package || 'Pair from the sealed package'),
+		text_content: get_label.publication_hosts_pair_package || 'Pair from the sealed package',
 		parent: details,
 	});
 	const fields = ui.create_dom_element({
@@ -321,7 +361,7 @@ const render_pair_form = function (self, row, card, body_response) {
 	ui.create_dom_element({
 		element_type: 'span',
 		class_name: 'host_field_label',
-		text_content: (get_label.publication_hosts_pair_package_file || 'Pairing package (.pairing)'),
+		text_content: get_label.publication_hosts_pair_package_file || 'Pairing package (.pairing)',
 		parent: file_label,
 	});
 	const file_input = ui.create_dom_element({
@@ -339,7 +379,7 @@ const render_pair_form = function (self, row, card, body_response) {
 	ui.create_dom_element({
 		element_type: 'span',
 		class_name: 'host_field_label',
-		text_content: (get_label.publication_hosts_pair_passphrase || 'One-time passphrase'),
+		text_content: get_label.publication_hosts_pair_passphrase || 'One-time passphrase',
 		parent: pass_label,
 	});
 	const pass_input = ui.create_dom_element({
@@ -350,7 +390,7 @@ const render_pair_form = function (self, row, card, body_response) {
 	});
 	pass_input.autocomplete = 'off';
 
-	const pair_label = (get_label.publication_hosts_pair || 'Pair');
+	const pair_label = get_label.publication_hosts_pair || 'Pair';
 	const button_pair = button(fields, 'button_apply button_pair_package', pair_label, false);
 	button_pair.addEventListener('click', async (e) => {
 		e.stopPropagation();
@@ -360,7 +400,9 @@ const render_pair_form = function (self, row, card, body_response) {
 		// request line redacts it: data_manager.js DEBUG_REDACTED_OPTION_KEYS)
 		pass_input.value = '';
 		if (!file || passphrase.trim() === '') {
-			body_response.textContent = (get_label.publication_hosts_pair_missing || 'Choose the package file and type its passphrase.');
+			body_response.textContent =
+				get_label.publication_hosts_pair_missing ||
+				'Choose the package file and type its passphrase.';
 			return;
 		}
 		const bytes = new Uint8Array(await file.arrayBuffer());
@@ -371,7 +413,7 @@ const render_pair_form = function (self, row, card, body_response) {
 			options: { name: row.name, package_base64: bytes_to_base64(bytes), passphrase: passphrase },
 			heading: `${row.name} · pair_package\n`,
 			result_text: (api_response) => String(response_extension(api_response, 'msg') || ''),
-			confirm_text: `${(get_label.sure || 'Are you sure?')}\n${pair_label}: ${row.name}`,
+			confirm_text: `${get_label.sure || 'Are you sure?'}\n${pair_label}: ${row.name}`,
 			reload: true,
 		});
 	});
@@ -392,7 +434,7 @@ const render_draft_form = function (self, parent, body_response) {
 	});
 	ui.create_dom_element({
 		element_type: 'summary',
-		text_content: (get_label.publication_hosts_new_draft || 'Create a draft'),
+		text_content: get_label.publication_hosts_new_draft || 'Create a draft',
 		parent: details,
 	});
 	const fields = ui.create_dom_element({
@@ -421,15 +463,27 @@ const render_draft_form = function (self, parent, body_response) {
 	text_field('site.domain', get_label.publication_hosts_draft_domain || 'Site domain');
 	select_field('listen.kind', get_label.publication_hosts_draft_machines || 'Machines', [
 		['unix', get_label.publication_hosts_draft_machines_one || 'One machine (this server)'],
-		['tls', get_label.publication_hosts_draft_machines_two || 'Two machines (mTLS over a private network)'],
+		[
+			'tls',
+			get_label.publication_hosts_draft_machines_two ||
+				'Two machines (mTLS over a private network)',
+		],
 	]);
-	text_field('listen.host', get_label.publication_hosts_draft_listen_host || 'Private IPv4 address of the publication host');
+	text_field(
+		'listen.host',
+		get_label.publication_hosts_draft_listen_host || 'Private IPv4 address of the publication host',
+	);
 	select_field('apis', get_label.publication_hosts_draft_apis || 'Publication APIs', [
 		['v2_only', get_label.publication_hosts_draft_apis_v2 || 'v2 only (recommended, no PHP)'],
 		['v1_and_v2', get_label.publication_hosts_draft_apis_v1 || 'v1 and v2 (a v6-era website)'],
 	]);
 
-	const button_propose = button(fields, 'button_propose_draft', (get_label.publication_hosts_propose || 'Propose'), false);
+	const button_propose = button(
+		fields,
+		'button_propose_draft',
+		get_label.publication_hosts_propose || 'Propose',
+		false,
+	);
 
 	text_field('name', get_label.publication_hosts_draft_name || 'Host name (in this panel)');
 	text_field('instance', get_label.publication_hosts_draft_instance || 'Instance');
@@ -443,13 +497,27 @@ const render_draft_form = function (self, parent, body_response) {
 		['nginx', get_label.publication_hosts_draft_web_nginx || 'nginx'],
 	]);
 	select_field('media.mode', get_label.publication_hosts_draft_media_mode || 'Media', [
-		['shared', get_label.publication_hosts_draft_media_shared || 'shared (a read-only mount of this server\'s media)'],
-		['copy', get_label.publication_hosts_draft_media_copy || 'copy (the published media, copied to the host)'],
+		[
+			'shared',
+			get_label.publication_hosts_draft_media_shared ||
+				"shared (a read-only mount of this server's media)",
+		],
+		[
+			'copy',
+			get_label.publication_hosts_draft_media_copy ||
+				'copy (the published media, copied to the host)',
+		],
 		['none', get_label.publication_hosts_draft_media_none || 'none'],
 	]);
-	text_field('media.root', get_label.publication_hosts_draft_media_root || 'Media directory on the publication host');
+	text_field(
+		'media.root',
+		get_label.publication_hosts_draft_media_root || 'Media directory on the publication host',
+	);
 	text_field('agent_user', get_label.publication_hosts_draft_agent_user || 'Agent account');
-	text_field('engine_group', get_label.publication_hosts_draft_engine_group || 'Group of the account that runs Dédalo');
+	text_field(
+		'engine_group',
+		get_label.publication_hosts_draft_engine_group || 'Group of the account that runs Dédalo',
+	);
 	text_field('v1.user', get_label.publication_hosts_draft_v1_user || 'v1 pool account');
 	text_field('v2.user', get_label.publication_hosts_draft_v2_user || 'v2 account');
 	text_field('v2.unit', get_label.publication_hosts_draft_v2_unit || 'v2 service');
@@ -486,13 +554,21 @@ const render_draft_form = function (self, parent, body_response) {
 				const proposal = response_data(api_response) || {};
 				fill_draft_form(inputs, proposal);
 				sync_visibility();
-				return (get_label.publication_hosts_proposed || 'Proposed. Review every field, then save the draft.');
+				return (
+					get_label.publication_hosts_proposed ||
+					'Proposed. Review every field, then save the draft.'
+				);
 			},
 			reload: false,
 		});
 	});
 
-	const button_save = button(fields, 'button_apply button_save_draft', (get_label.publication_hosts_save_draft || 'Save draft'), false);
+	const button_save = button(
+		fields,
+		'button_apply button_save_draft',
+		get_label.publication_hosts_save_draft || 'Save draft',
+		false,
+	);
 	button_save.addEventListener('click', async (e) => {
 		e.stopPropagation();
 		const { name, draft } = read_draft_form(inputs);

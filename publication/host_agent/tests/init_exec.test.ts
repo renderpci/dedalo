@@ -6,6 +6,7 @@
  * Real read-only runs: Linux only (RED there when the tool is missing), skipped on Darwin.
  */
 import { describe, expect, test } from 'bun:test';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import type { ExecProbe, ExecResult, SyncSpawnOptions, SyncSpawner } from '../src/exec';
 import { COMMAND_TIMEOUT_MS, PAIR_SCRIPT, PROVISION_PATH, initExec, provisionExec, provisionSpawner } from '../src/exec';
 import type { PairInvocation } from '../src/provision/exec_contract';
@@ -296,6 +297,28 @@ test('every other validator refuses its bad inputs before anything spawns', () =
   expect(calls).toEqual([]);
 });
 
+/**
+ * The CI image (ci/Dockerfile, "exec seam") replaces /usr/bin/systemctl with a DISPATCHER that
+ * runs <seam dir>/systemctl when armed and otherwise fails, and diverts the real binary to
+ * /usr/bin/systemctl.distrib. There, the real read-only run arms the seam with an exec of the
+ * real binary for the one call (the argv still travels the agent's own PATH lookup to
+ * /usr/bin/systemctl), and disarms it after. A seam someone else armed is refused, not reused.
+ * On any other Linux, `systemctl` is the real program and nothing is armed.
+ */
+const SEAM_MARKER = 'DEDALO CI EXEC SEAM DISPATCHER';
+const SEAM_SYSTEMCTL = '/opt/dedalo-ci/exec-seam/systemctl';
+function withRealSystemctl<T>(run: () => T): T {
+  const dispatcher = existsSync('/usr/bin/systemctl') ? readFileSync('/usr/bin/systemctl', 'utf8') : '';
+  if (!dispatcher.includes(SEAM_MARKER)) return run();
+  if (existsSync(SEAM_SYSTEMCTL)) throw new Error(`${SEAM_SYSTEMCTL} is already armed by someone else`);
+  writeFileSync(SEAM_SYSTEMCTL, '#!/bin/sh\nexec /usr/bin/systemctl.distrib "$@"\n', { mode: 0o755 });
+  try {
+    return run();
+  } finally {
+    rmSync(SEAM_SYSTEMCTL, { force: true });
+  }
+}
+
 describe('real read-only runs (Linux; RED there when a tool is missing)', () => {
   const linux = process.platform === 'linux';
   test.skipIf(!linux)('uname, getent and systemctl --version answer', () => {
@@ -303,7 +326,7 @@ describe('real read-only runs (Linux; RED there when a tool is missing)', () => 
     expect(x.unameMachine().stdout.trim()).toMatch(/^(x86_64|aarch64)$/);
     expect(x.passwdLookup('root').stdout).toStartWith('root:');
     expect(x.passwdLookup('dedalo-no-such-user').code).toBe(2);
-    expect(provisionExec().systemdVersion().stdout).toMatch(/^systemd \d+/);
+    expect(withRealSystemctl(() => provisionExec().systemdVersion()).stdout).toMatch(/^systemd \d+/);
   });
 
   test.skipIf(!linux)('a setsid --wait child has no controlling terminal (tty_nr 0)', () => {

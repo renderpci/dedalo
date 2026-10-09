@@ -168,6 +168,24 @@ function unlessPlaceholder(value: string | undefined, placeholder: string): stri
 
 export function parseFragment(text: string): FragmentFields {
 	const declared = parseEnvFile(text);
+	assertFragmentVocabulary(declared);
+	const instance = fragmentInstance(declared);
+	const fingerprint = fragmentFingerprint(declared);
+	const { url, socket } = fragmentAddress(declared);
+	return {
+		instance,
+		fingerprint,
+		url,
+		socket,
+		tlsBundle: unlessPlaceholder(declared[FRAGMENT_KEYS.tlsBundle], BUNDLE_PLACEHOLDER),
+		token: unlessPlaceholder(declared[FRAGMENT_KEYS.token], TOKEN_PLACEHOLDER),
+	};
+}
+
+type Declared = ReturnType<typeof parseEnvFile>;
+
+/** Some KEY=value lines, every key pairing vocabulary. */
+function assertFragmentVocabulary(declared: Declared): void {
 	const keys = Object.keys(declared);
 	if (keys.length === 0) {
 		refuse(
@@ -183,6 +201,9 @@ export function parseFragment(text: string): FragmentFields {
 				'A fragment from an agent newer than this engine? Update the engine first.',
 		);
 	}
+}
+
+function fragmentInstance(declared: Declared): string {
 	const instance = declared[FRAGMENT_KEYS.instance] ?? '';
 	if (!AGENT_INSTANCE.test(instance)) {
 		refuse(
@@ -190,6 +211,10 @@ export function parseFragment(text: string): FragmentFields {
 			`${FRAGMENT_KEYS.instance} is missing or does not match ${AGENT_INSTANCE}.`,
 		);
 	}
+	return instance;
+}
+
+function fragmentFingerprint(declared: Declared): string {
 	const fingerprint = declared[FRAGMENT_KEYS.fingerprint] ?? '';
 	if (fingerprint === FINGERPRINT_PENDING) {
 		refuse(
@@ -201,6 +226,11 @@ export function parseFragment(text: string): FragmentFields {
 	if (!FINGERPRINT_SHAPE.test(fingerprint)) {
 		refuse('fragment_invalid', `${FRAGMENT_KEYS.fingerprint} is missing or not 64 lowercase hex.`);
 	}
+	return fingerprint;
+}
+
+/** Exactly one of the mTLS URL and the socket path. */
+function fragmentAddress(declared: Declared): { url: string | null; socket: string | null } {
 	const url = declared[FRAGMENT_KEYS.url] ?? null;
 	const socket = declared[FRAGMENT_KEYS.socket] ?? null;
 	if ((url === null) === (socket === null)) {
@@ -209,36 +239,42 @@ export function parseFragment(text: string): FragmentFields {
 			`the fragment must set exactly one of ${FRAGMENT_KEYS.url} (mTLS) and ${FRAGMENT_KEYS.socket} (same machine).`,
 		);
 	}
-	return {
-		instance,
-		fingerprint,
-		url,
-		socket,
-		tlsBundle: unlessPlaceholder(declared[FRAGMENT_KEYS.tlsBundle], BUNDLE_PLACEHOLDER),
-		token: unlessPlaceholder(declared[FRAGMENT_KEYS.token], TOKEN_PLACEHOLDER),
-	};
+	return { url, socket };
 }
 
 export function parseAgentAddress(fields: Pick<FragmentFields, 'url' | 'socket'>): Address {
-	if (fields.socket !== null) {
-		if (!fields.socket.startsWith('/')) {
-			refuse('address_invalid', `${FRAGMENT_KEYS.socket} must be an absolute socket path.`);
-		}
-		return { kind: 'unix', socket: fields.socket };
+	if (fields.socket !== null) return socketAddress(fields.socket);
+	return tlsAddress(agentUrl(fields.url));
+}
+
+function socketAddress(socket: string): Address {
+	if (!socket.startsWith('/')) {
+		refuse('address_invalid', `${FRAGMENT_KEYS.socket} must be an absolute socket path.`);
 	}
-	let url: URL;
+	return { kind: 'unix', socket };
+}
+
+function agentUrl(value: string | null): URL {
 	try {
-		url = new URL(fields.url ?? '');
+		return new URL(value ?? '');
 	} catch {
 		refuse('address_invalid', `${FRAGMENT_KEYS.url} is not a URL.`);
 	}
-	const plain =
+}
+
+/** https, and nothing besides the origin and the path: no credentials, query or fragment. */
+function isPlainHttps(url: URL): boolean {
+	return (
 		url.protocol === 'https:' &&
 		url.username === '' &&
 		url.password === '' &&
 		url.search === '' &&
-		url.hash === '';
-	if (!plain) {
+		url.hash === ''
+	);
+}
+
+function tlsAddress(url: URL): Address {
+	if (!isPlainHttps(url)) {
 		refuse(
 			'address_invalid',
 			`${FRAGMENT_KEYS.url} must be a plain https:// URL (no credentials, query or fragment): the agent listens on mTLS only.`,
@@ -258,6 +294,12 @@ export function parseAgentAddress(fields: Pick<FragmentFields, 'url' | 'socket'>
 }
 
 export function resolveToken(fragmentToken: string | null, supplied: string | null): string {
+	assertOneToken(fragmentToken, supplied);
+	return assertTokenShape(supplied ?? fragmentToken ?? '');
+}
+
+/** A token from somewhere, and never two different ones. */
+function assertOneToken(fragmentToken: string | null, supplied: string | null): void {
 	if (fragmentToken === null && supplied === null) {
 		refuse(
 			'token_invalid',
@@ -271,7 +313,9 @@ export function resolveToken(fragmentToken: string | null, supplied: string | nu
 			'the fragment carries a token and a different one was supplied. One pairing, one token.',
 		);
 	}
-	const token = supplied ?? fragmentToken ?? '';
+}
+
+function assertTokenShape(token: string): string {
 	if (token.length < MIN_TOKEN_LENGTH) {
 		refuse(
 			'token_invalid',
@@ -301,6 +345,11 @@ export function resolveBundlePath(
 		}
 		return null;
 	}
+	return tlsBundlePath(fragmentBundle, flagBundle);
+}
+
+/** An mTLS pairing's bundle: the flag's or the fragment's (never two different ones). */
+function tlsBundlePath(fragmentBundle: string | null, flagBundle: string | null): string {
 	if (fragmentBundle !== null && flagBundle !== null && fragmentBundle !== flagBundle) {
 		refuse(
 			'bundle_invalid',
@@ -386,15 +435,7 @@ export function assertSlot(
 	fingerprint: string,
 ): PublicationHostRecord | null {
 	const existing = registry.hosts.find((host) => host.name === name) ?? null;
-	if (command === 'add' && existing !== null) {
-		refuse(
-			'name_taken',
-			`a publication host named '${name}' is already registered. Use \`replace\` to re-pair it.`,
-		);
-	}
-	if (command === 'replace' && existing === null) {
-		refuse('name_unknown', `no publication host named '${name}' is registered. Use \`add\`.`);
-	}
+	assertCommandFits(command, name, existing);
 	const twin = registry.hosts.find(
 		(host) =>
 			host.name !== name &&
@@ -407,6 +448,23 @@ export function assertSlot(
 		);
 	}
 	return existing;
+}
+
+/** `add` needs a free name, `replace` a registered one. */
+function assertCommandFits(
+	command: 'add' | 'replace',
+	name: string,
+	existing: PublicationHostRecord | null,
+): void {
+	if (command === 'add' && existing !== null) {
+		refuse(
+			'name_taken',
+			`a publication host named '${name}' is already registered. Use \`replace\` to re-pair it.`,
+		);
+	}
+	if (command === 'replace' && existing === null) {
+		refuse('name_unknown', `no publication host named '${name}' is registered. Use \`add\`.`);
+	}
 }
 
 function buildRecord(
@@ -447,20 +505,29 @@ export async function sweepStaleStaging(now: number, notes: string[], tag: strin
 	};
 	const stale: string[] = [];
 	for (const entry of await readdir(root)) {
-		if (!entry.startsWith(STAGING_PREFIX)) continue;
-		if (!HOST_NAME.test(entry)) {
-			skip(entry);
-			continue;
-		}
-		// lstat, never stat: a (dangling) symlink is not a staging dir and is never followed
-		const st = await lstat(join(root, entry)).catch(() => null);
-		if (st === null || !st.isDirectory()) {
-			skip(entry);
-			continue;
-		}
-		if (now - st.mtimeMs > STAGING_STALE_MS) stale.push(entry);
+		const verdict = await stagingVerdict(root, entry, now);
+		if (verdict === 'foreign') skip(entry);
+		else if (verdict === 'stale') stale.push(entry);
 	}
 	for (const entry of stale) removeHostSecrets(entry);
+}
+
+/**
+ * One secrets-root entry: not staging at all (`other`), something only shaped like staging
+ * (`foreign`: fails HOST_NAME, or is not a real directory), or a staging dir — `stale` past
+ * STAGING_STALE_MS, `fresh` before.
+ */
+async function stagingVerdict(
+	root: string,
+	entry: string,
+	now: number,
+): Promise<'other' | 'foreign' | 'stale' | 'fresh'> {
+	if (!entry.startsWith(STAGING_PREFIX)) return 'other';
+	if (!HOST_NAME.test(entry)) return 'foreign';
+	// lstat, never stat: a (dangling) symlink is not a staging dir and is never followed
+	const st = await lstat(join(root, entry)).catch(() => null);
+	if (st === null || !st.isDirectory()) return 'foreign';
+	return now - st.mtimeMs > STAGING_STALE_MS ? 'stale' : 'fresh';
 }
 
 /** Exists WITHOUT following a symlink (a dangling link to the root is not "absent"). */

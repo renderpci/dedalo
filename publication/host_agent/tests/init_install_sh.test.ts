@@ -382,8 +382,9 @@ describe('install.sh library', () => {
     const withFlock = (exit: number): { code: number; err: string } => {
       const bin = join(SCRATCH, `flock_${exit}`);
       mkdirSync(bin, { recursive: true });
-      // a stand-in for util-linux flock (absent on Darwin): records its argv, answers `exit`
-      writeFileSync(join(bin, 'flock'), `#!/bin/sh\necho "$@" >"${bin}/argv"\nexit ${exit}\n`);
+      // a stand-in for util-linux flock (absent on Darwin): records its argv, answers `exit`.
+      // printf, never echo: dash (Debian's /bin/sh) takes the recorded `-n` as echo's own flag.
+      writeFileSync(join(bin, 'flock'), `#!/bin/sh\nprintf '%s\\n' "$*" >"${bin}/argv"\nexit ${exit}\n`);
       chmodSync(join(bin, 'flock'), 0o755);
       const run = spawnSync(
         'sh',

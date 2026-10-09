@@ -391,7 +391,14 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			};
 			const with_check = (check) => [...build_host().checks, check];
 			const content = await mount(
-				build_widget(ok_value([build_host({ nginx_map: managed, checks: with_check({ id: 'nginx_map', state: 'ok', detail: H.slice(0, 12) }) })])),
+				build_widget(
+					ok_value([
+						build_host({
+							nginx_map: managed,
+							checks: with_check({ id: 'nginx_map', state: 'ok', detail: H.slice(0, 12) }),
+						}),
+					]),
+				),
 			);
 			const card = content.querySelector('.publication_host[data-name="www"]');
 			const facts = [...card.querySelectorAll('.dd_row')].map((row) => row.textContent);
@@ -400,69 +407,123 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			assert.include(facts, (L.publication_hosts_map_expected || 'Expected media map hash') + H);
 			assert.include(facts, (L.publication_hosts_map_applied || 'Applied media map hash') + H);
 			assert.include(facts, (L.publication_hosts_map_host_hash || 'Shared host map hash') + S);
-			assert.include(facts, (L.publication_hosts_map_contributions || 'Instances in the host map') + '2');
-			const ok_row = [...card.querySelectorAll('.check_row')].find((row) => row.querySelector('.dd_k')?.textContent === map_label);
+			assert.include(
+				facts,
+				(L.publication_hosts_map_contributions || 'Instances in the host map') + '2',
+			);
+			const ok_row = [...card.querySelectorAll('.check_row')].find(
+				(row) => row.querySelector('.dd_k')?.textContent === map_label,
+			);
 			assert.ok(ok_row, 'the map state is a check row, labelled by its id');
 			assert.ok(ok_row.classList.contains('state_ok'), 'shared, not drift');
 
 			const drift = { ...managed, applied: null, drift: true };
 			const drifted = await mount(
-				build_widget(ok_value([build_host({ name: 'drift', nginx_map: drift, checks: with_check({ id: 'nginx_map', state: 'blocked', detail: 'none' }) })])),
+				build_widget(
+					ok_value([
+						build_host({
+							name: 'drift',
+							nginx_map: drift,
+							checks: with_check({ id: 'nginx_map', state: 'blocked', detail: 'none' }),
+						}),
+					]),
+				),
 			);
-			const row = [...drifted.querySelectorAll('.publication_host[data-name="drift"] .check_row')].find(
-				(r) => r.querySelector('.dd_k')?.textContent === map_label,
-			);
+			const row = [
+				...drifted.querySelectorAll('.publication_host[data-name="drift"] .check_row'),
+			].find((r) => r.querySelector('.dd_k')?.textContent === map_label);
 			assert.ok(row.classList.contains('state_blocked'), 'not loaded is red');
 			assert.ok(row.querySelector('.dd_badge.pill_danger'), 'red: the kit danger pill');
 			assert.include(row.textContent, 'none');
 
 			// a non-root row: the server omits the host-wide facts, so no host-wide rows render
 			const { host_hash: _h, contributions: _c, invalid: _i, ...own } = managed;
-			const reduced = await mount(build_widget(ok_value([build_host({ name: 'own', nginx_map: own })])));
-			const ownFacts = [...reduced.querySelectorAll('.publication_host[data-name="own"] .dd_row')].map((r) => r.textContent);
+			const reduced = await mount(
+				build_widget(ok_value([build_host({ name: 'own', nginx_map: own })])),
+			);
+			const ownFacts = [
+				...reduced.querySelectorAll('.publication_host[data-name="own"] .dd_row'),
+			].map((r) => r.textContent);
 			assert.include(ownFacts, (L.publication_hosts_map_applied || 'Applied media map hash') + H);
 			assert.notOk(
-				ownFacts.some((text) => text.startsWith(L.publication_hosts_map_host_hash || 'Shared host map hash')),
+				ownFacts.some((text) =>
+					text.startsWith(L.publication_hosts_map_host_hash || 'Shared host map hash'),
+				),
 				'no shared host hash below root',
 			);
 			assert.notOk(
-				ownFacts.some((text) => text.startsWith(L.publication_hosts_map_contributions || 'Instances in the host map')),
+				ownFacts.some((text) =>
+					text.startsWith(L.publication_hosts_map_contributions || 'Instances in the host map'),
+				),
 				'no instance count below root',
 			);
 		});
 
 		it('nginx map: unmanaged shows only its check; apache (null) shows nothing', async function () {
-			const unmanaged = { managed: false, expected: null, applied: null, host_hash: null, contributions: 0, invalid: 0, refused: null, drift: false, agent_outdated: false };
+			const unmanaged = {
+				managed: false,
+				expected: null,
+				applied: null,
+				host_hash: null,
+				contributions: 0,
+				invalid: 0,
+				refused: null,
+				drift: false,
+				agent_outdated: false,
+			};
 			const content = await mount(
 				build_widget(
 					ok_value([
-						build_host({ name: 'hand', nginx_map: unmanaged, checks: [...build_host().checks, { id: 'nginx_map', state: 'ok', detail: 'unmanaged' }] }),
+						build_host({
+							name: 'hand',
+							nginx_map: unmanaged,
+							checks: [
+								...build_host().checks,
+								{ id: 'nginx_map', state: 'ok', detail: 'unmanaged' },
+							],
+						}),
 						build_host({ name: 'apache', nginx_map: null }),
 					]),
 				),
 			);
 			const map_label = labels().publication_hosts_check_nginx_map || 'nginx_map';
 			const hand = content.querySelector('.publication_host[data-name="hand"]');
-			const check = [...hand.querySelectorAll('.check_row')].find((row) => row.querySelector('.dd_k')?.textContent === map_label);
+			const check = [...hand.querySelectorAll('.check_row')].find(
+				(row) => row.querySelector('.dd_k')?.textContent === map_label,
+			);
 			assert.include(check.textContent, 'unmanaged');
 			assert.ok(check.classList.contains('state_ok'), 'a hand-placed map is not drift');
 			const handFacts = [...hand.querySelectorAll('.dd_row')].map((row) => row.textContent);
 			assert.notOk(
-				handFacts.some((text) => text.startsWith(labels().publication_hosts_map_expected || 'Expected media map hash')),
+				handFacts.some((text) =>
+					text.startsWith(labels().publication_hosts_map_expected || 'Expected media map hash'),
+				),
 				'no hash rows for a hand-placed map',
 			);
 			const apache = content.querySelector('.publication_host[data-name="apache"]');
 			const apacheLabels = [...apache.querySelectorAll('.dd_k')].map((k) => k.textContent);
 			assert.notInclude(apacheLabels, map_label, 'no map check on an apache host');
 			assert.notOk(
-				apacheLabels.some((text) => text === (labels().publication_hosts_map_expected || 'Expected media map hash')),
+				apacheLabels.some(
+					(text) => text === (labels().publication_hosts_map_expected || 'Expected media map hash'),
+				),
 				'no map rows on an apache host',
 			);
 		});
 
 		it('nginx map: server strings render as TEXT', async function () {
 			const hostile = '<img src=x onerror=alert(1)>';
-			const map = { managed: true, expected: hostile, applied: null, host_hash: null, contributions: 1, invalid: 0, refused: hostile, drift: true, agent_outdated: false };
+			const map = {
+				managed: true,
+				expected: hostile,
+				applied: null,
+				host_hash: null,
+				contributions: 1,
+				invalid: 0,
+				refused: hostile,
+				drift: true,
+				agent_outdated: false,
+			};
 			const content = await mount(build_widget(ok_value([build_host({ nginx_map: map })])));
 			const card = content.querySelector('.publication_host[data-name="www"]');
 			assert.isNull(card.querySelector('img'), 'no element was injected');

@@ -165,6 +165,7 @@ const AMBIENT_GLOBALS = new Set([
 	'Blob',
 	'File',
 	'FileReader',
+	'DataTransfer',
 	'XMLHttpRequest',
 	'WebSocket',
 	'EventSource',

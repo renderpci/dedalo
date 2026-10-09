@@ -622,9 +622,14 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 			'the numbered boot migrations — what an EXISTING installation actually applies, for gates proving a schema or SQL-function change reaches one',
 	},
 	'test/helpers/deploy_artifact_corpus.ts': {
-		roots: [['.'], ['deploy']],
+		roots: [['.'], ['.', 'deploy'], ['deploy'], ['deploy']],
 		scope:
-			'what the engine SHIPS to an operator — the reverse-proxy configurations under deploy/ and the compose stacks git tracks at the repo root',
+			'what the engine SHIPS to an operator — the reverse-proxy configurations and systemd units under deploy/, the compose stacks git tracks at the repo root, and (trackedComposeFiles) those plus the deploy/ compose variants',
+	},
+	'test/helpers/prose_markdown_corpus.ts': {
+		roots: [['docs', 'engineering']],
+		scope:
+			'the prose a reader is told to act on — every *.md under docs/ (the manual, exclude_docs included: a page can still be read) and engineering/ (the definitions), for gates that census the fenced blocks those pages hand an operator (supervision_declaration_tripwire: every documented systemd unit that runs the server)',
 	},
 	'test/helpers/client_suite_census.ts': {
 		roots: [['client/dedalo/test/client/js']],

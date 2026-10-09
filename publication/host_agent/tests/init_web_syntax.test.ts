@@ -149,8 +149,15 @@ describe('nginx accepts the include, the zero-match reference and the host map i
 describe('PHP-FPM accepts the pool', () => {
   gate(FPM !== null, 'php-fpm')('php-fpm -t -y with the rendered Debian-flavour pool', () => {
     const layout = scratchLayout(unixDeclaration(), 'debian', 'apache');
-    const user = sh(['id', '-un']).out.trim();
-    const group = sh(['id', '-gn']).out.trim();
+    // The account by NAME where it has one, else by NUMBER: CI runs as a bare uid 1001 with no
+    // passwd entry (ci/compose.yml), where `id -un` answers nothing and an empty `user =` is a
+    // NULL ini value. php-fpm resolves a numeric user/owner/group directly.
+    const account = (nameFlag: string, idFlag: string): string => {
+      const named = sh(['id', nameFlag]);
+      return named.code === 0 && named.out.trim() !== '' ? named.out.trim() : sh(['id', idFlag]).out.trim();
+    };
+    const user = account('-un', '-u');
+    const group = account('-gn', '-g');
     const pool = fpmPoolBody(layout)
       // sun_path caps at 104 bytes on macOS and the checkout path is long: a short name `-t` checks, never binds.
       .replace(/^listen = .*$/m, `listen = /tmp/ddv1-${process.pid}.sock`)

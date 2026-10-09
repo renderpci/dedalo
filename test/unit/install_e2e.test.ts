@@ -110,6 +110,10 @@ function cliArgs(): string[] {
 		config.db.host,
 		'--db-port',
 		String(config.db.port),
+		// The admin connection's own password, when it has one: a runner's Postgres
+		// (md5/scram) asks for it, where a desk's trust/.pgpass setup does not — without
+		// it the CLI's connection check is refused on CI and passes here (2026-10-09).
+		...(config.db.password ? ['--db-password', config.db.password] : []),
 		'--entity',
 		'e2etest',
 		'--root-password',

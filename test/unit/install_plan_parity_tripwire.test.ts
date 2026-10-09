@@ -466,8 +466,8 @@ describe('install plan — refusals and notes (f)', () => {
 		expect(withLg.hierarchies).toEqual(['fr']);
 		expect(withLg.notes.some((note) => note.startsWith('lg is a core hierarchy'))).toBe(true);
 		expect(withLg.errors).toEqual([]);
-		const unknown = buildInstallPlan({ ...BASE_WIZARD, hierarchies: ['zzbk'] });
-		expect(unknown.errors).toContain("unknown hierarchy 'zzbk' (not vendored)");
+		const unknown = buildInstallPlan({ ...BASE_WIZARD, hierarchies: ['zzipv'] });
+		expect(unknown.errors).toContain("unknown hierarchy 'zzipv' (not vendored)");
 	});
 
 	test('every documented flag maps (the table is complete for the plan answers it names)', () => {

@@ -77,6 +77,8 @@ describe('APACHE_MODULES is exactly what the publication host Apache texts need'
 			'proxy_fcgi',
 			'proxy_http',
 		]);
+		// Floor: the include was rendered (an empty text has no IfModule either).
+		expect(INCLUDE.split('\n').length).toBeGreaterThan(5);
 		expect(ifModules(INCLUDE)).toEqual([]);
 		expect(INCLUDE).toContain('<IfModule php_module>');
 	});

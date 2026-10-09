@@ -293,6 +293,11 @@ function realPorts(stateDir: string): BunInstallPorts {
     table: TABLE,
     stateDir,
     lstat: (path: string) => {
+      // The scenario is SCRATCH and below. Its ancestors are the test host's own tmpdir chain,
+      // which installBun rightly refuses on Linux (/tmp is root 1777: writable by others) and
+      // which no install would place bun_bin under; they read as the root-owned 0755 chain a
+      // real host has above /opt. The ancestor refusals are the fake-ports tests' job above.
+      if (SCRATCH.startsWith(`${path}/`)) return { type: 'dir', uid: 0, mode: 0o755 };
       try {
         const s = lstatSync(path);
         return { type: s.isSymbolicLink() ? 'symlink' : s.isDirectory() ? 'dir' : s.isFile() ? 'file' : 'other', uid: asRoot(s.uid), mode: s.mode & 0o7777 };

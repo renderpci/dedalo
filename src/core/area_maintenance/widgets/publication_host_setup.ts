@@ -169,13 +169,21 @@ export interface SetupDeps {
 	sweepStaleStaging(now: number, notes: string[], tag: string): Promise<void>;
 	forgetPairing(name: string): void;
 	addressLabel(address: Address): string;
-	/** One activity-log row (never a secret). */
-	audit(principal: Principal, what: 'NEW' | 'DELETE', data: Record<string, unknown>): Promise<void>;
+	/**
+	 * One activity-log row (never a secret). SAVE for what the panel stores (a draft, a pairing),
+	 * DELETE for what it drops — never NEW: dd42's NEW is the birth of a SECTION RECORD, written
+	 * only by the record-birth engines (write_obligations_tripwire), and neither a draft nor a
+	 * pairing is one.
+	 */
+	audit(principal: Principal, what: AuditVerb, data: Record<string, unknown>): Promise<void>;
 	/** push_apis's bounded wait (the server idle timeout's half, capped). */
 	answerWithinMs(): number;
 }
 
 export type SetupDepsLoader = () => Promise<SetupDeps>;
+
+/** The activity verbs the panel writes (see SetupDeps.audit). */
+export type AuditVerb = 'SAVE' | 'DELETE';
 
 /** The production dependencies, imported on first use. */
 export async function loadDefaultSetupDeps(): Promise<SetupDeps> {
@@ -186,6 +194,7 @@ export async function loadDefaultSetupDeps(): Promise<SetupDeps> {
 	const pkg = await import('../../../../publication/host_agent/src/provision/pairing_package.ts');
 	const { forgetPairing } = await import('../../publication_host/agent_client.ts');
 	const { config } = await import('../../../config/config.ts');
+	const { assertTestMediaRoot } = await import('../../media/test_media_root.ts');
 	const { pushAnswerWithinMs } = await import('./publication_hosts.ts');
 	return {
 		loadRegistry: registry.loadRegistry,
@@ -196,7 +205,16 @@ export async function loadDefaultSetupDeps(): Promise<SetupDeps> {
 		proposeDraft: drafts.proposeDraft,
 		pairedRecord: drafts.pairedRecord,
 		engineGroup: ownGroupName,
-		engineMediaRoot: () => config.media.rootPath,
+		// The shared media tree a one-machine draft proposes: it goes into a draft, then a kit,
+		// and the publication host built from it serves files out of it — so under the suite's
+		// test-media seam it must be the MARKED suite root, never an installation's tree (the
+		// guard is inert outside the seam).
+		engineMediaRoot: () => {
+			const root = config.media.rootPath;
+			return root === null
+				? null
+				: assertTestMediaRoot(root, 'publication_host_setup.engineMediaRoot');
+		},
 		buildKit: (name, draft) => kits.buildPanelKit(name, draft),
 		cachedKit: (name, draft) => kits.cachedPanelKit(name, draft),
 		readKit: kits.readPanelKit,
@@ -219,12 +237,18 @@ async function ownGroupName(): Promise<string | null> {
 	if (gid === undefined) return null;
 	try {
 		const { readFile } = await import('node:fs/promises');
-		for (const line of (await readFile('/etc/group', 'utf8')).split('\n')) {
-			const [name, , id] = line.split(':');
-			if (name !== undefined && id !== undefined && Number(id) === gid) return name;
-		}
+		return groupNameIn(await readFile('/etc/group', 'utf8'), gid);
 	} catch {
 		// no /etc/group (not a Unix host): the operator names the group
+		return null;
+	}
+}
+
+/** The name of group `gid` in an /etc/group text, or null. */
+function groupNameIn(text: string, gid: number): string | null {
+	for (const line of text.split('\n')) {
+		const [name, , id] = line.split(':');
+		if (name !== undefined && id !== undefined && Number(id) === gid) return name;
 	}
 	return null;
 }
@@ -232,7 +256,7 @@ async function ownGroupName(): Promise<string | null> {
 /** The activity row: WHAT on the maintenance area (dd88), the payload names no secret. */
 async function auditActivity(
 	principal: Principal,
-	what: 'NEW' | 'DELETE',
+	what: AuditVerb,
 	data: Record<string, unknown>,
 ): Promise<void> {
 	const { logActivity, hostFromClientIp } = await import('../../api/handlers/activity_log.ts');
@@ -415,12 +439,24 @@ type Action = (
 	loadDeps: SetupDepsLoader,
 ) => Promise<WidgetResponse>;
 
+/** propose_draft's request options, each closed to its known values (never an error). */
+function proposalOptions(options: Record<string, unknown>): {
+	domain: string;
+	machines: 'one' | 'two';
+	apis: 'v1_and_v2' | 'v2_only';
+	listenHost: string;
+} {
+	return {
+		domain: typeof options.domain === 'string' ? options.domain.trim().toLowerCase() : '',
+		machines: options.machines === 'two' ? 'two' : 'one',
+		apis: options.apis === 'v1_and_v2' ? 'v1_and_v2' : 'v2_only',
+		listenHost: typeof options.listen_host === 'string' ? options.listen_host.trim() : '',
+	};
+}
+
 const proposeDraftAction: Action = async (options, principal, loadDeps) => {
 	requireRoot(principal, 'propose_draft');
-	const domain = typeof options.domain === 'string' ? options.domain.trim().toLowerCase() : '';
-	const machines = options.machines === 'two' ? 'two' : 'one';
-	const apis = options.apis === 'v1_and_v2' ? 'v1_and_v2' : 'v2_only';
-	const listenHost = typeof options.listen_host === 'string' ? options.listen_host.trim() : '';
+	const { domain, machines, apis, listenHost } = proposalOptions(options);
 	const deps = await loadDeps();
 	const context = loadContext(deps);
 	const proposal = deps.proposeDraft(
@@ -478,7 +514,7 @@ const saveDraftAction: Action = async (options, principal, loadDeps) => {
 		principal,
 		`instance=${draft.instance} listen=${draft.listen.kind}`,
 	);
-	await deps.audit(principal, 'NEW', {
+	await deps.audit(principal, 'SAVE', {
 		msg: `Publication host draft '${stored.name}' saved`,
 		action: 'publication_hosts.save_draft',
 		draft: stored.name,
@@ -594,18 +630,23 @@ const downloadKitAction: Action = async (options, principal, loadDeps) => {
 function uploadInput(options: Record<string, unknown>): { bytes: Uint8Array; passphrase: string } {
 	const encoded = options.package_base64;
 	const passphrase = options.passphrase;
-	if (
-		typeof encoded !== 'string' ||
-		encoded.length === 0 ||
-		encoded.length > PACKAGE_BASE64_MAX ||
-		!/^[A-Za-z0-9+/]*={0,2}$/.test(encoded) ||
-		typeof passphrase !== 'string' ||
-		passphrase.length === 0 ||
-		passphrase.length > PASSPHRASE_MAX
-	) {
-		throw pairRefused('input');
-	}
+	if (!isPackageBase64(encoded) || !isPassphraseInput(passphrase)) throw pairRefused('input');
 	return { bytes: new Uint8Array(Buffer.from(encoded, 'base64')), passphrase };
+}
+
+/** A non-empty base64 string no longer than a package can be. */
+function isPackageBase64(value: unknown): value is string {
+	return (
+		typeof value === 'string' &&
+		value.length > 0 &&
+		value.length <= PACKAGE_BASE64_MAX &&
+		/^[A-Za-z0-9+/]*={0,2}$/.test(value)
+	);
+}
+
+/** A non-empty string no longer than a passphrase can be (its shape is the package's check). */
+function isPassphraseInput(value: unknown): value is string {
+	return typeof value === 'string' && value.length > 0 && value.length <= PASSPHRASE_MAX;
 }
 
 function packageReason(error: unknown): PanelPairReason | null {
@@ -640,25 +681,51 @@ function pairFailure(error: unknown): unknown {
 	if (error instanceof DedaloError) return error;
 	const name = (error as Error | null)?.name;
 	if (name === 'PairRefusal') {
-		const reason = (error as { reason: PairRefusalReason }).reason;
-		return pairRefused(
-			(PANEL_PAIR_REASONS as readonly string[]).includes(reason)
-				? (reason as PanelPairReason)
-				: 'input',
-			error,
-		);
+		return pairRefused(panelReason((error as { reason: PairRefusalReason }).reason), error);
 	}
 	if (name === 'SecretError') {
-		const reason = (error as { reason?: string }).reason;
-		const mapped =
-			reason === 'bad_bundle'
-				? 'bundle_invalid'
-				: reason === 'bad_token'
-					? 'token_invalid'
-					: 'secret_refused';
-		return pairRefused(mapped, error);
+		const reason = (error as { reason?: string }).reason ?? '';
+		return pairRefused(SECRET_REASONS[reason] ?? 'secret_refused', error);
 	}
 	return registryFailure(error);
+}
+
+/** A shared-path refusal reason as the panel's own (an unknown one reads as `input`). */
+function panelReason(reason: PairRefusalReason): PanelPairReason {
+	return (PANEL_PAIR_REASONS as readonly string[]).includes(reason)
+		? (reason as PanelPairReason)
+		: 'input';
+}
+
+/** The secrets store's refusals that name the package's part; any other is secret_refused. */
+const SECRET_REASONS: Readonly<Record<string, PanelPairReason>> = Object.freeze({
+	bad_bundle: 'bundle_invalid',
+	bad_token: 'token_invalid',
+});
+
+/** The saved, not yet paired, TLS-listener draft `name` — or the refusal that says which it is not. */
+function pairableDraft(deps: SetupDeps, name: string): StoredDraft {
+	const context = loadContext(deps);
+	const stored = context.drafts.find((draft) => draft.name === name);
+	if (stored === undefined) throw pairRefused('draft_unknown');
+	if (deps.pairedRecord(stored, context.registry) !== null) throw pairRefused('draft_paired');
+	if (stored.draft.listen.kind !== 'tls') throw pairRefused('socket_package');
+	return stored;
+}
+
+/** The package opened in memory; its own refusals (wrong passphrase, altered) mapped. */
+async function openUploadedPackage(
+	deps: SetupDeps,
+	bytes: Uint8Array,
+	passphrase: string,
+): Promise<PairingParts> {
+	try {
+		return await deps.openPackage(bytes, passphrase);
+	} catch (error) {
+		const reason = packageReason(error);
+		if (reason !== null) throw pairRefused(reason);
+		throw error;
+	}
 }
 
 /**
@@ -676,19 +743,8 @@ const pairPackageAction: Action = async (options, principal, loadDeps) => {
 	const { bytes, passphrase } = uploadInput(options);
 	try {
 		const deps = await loadDeps();
-		const context = loadContext(deps);
-		const stored = context.drafts.find((draft) => draft.name === name);
-		if (stored === undefined) throw pairRefused('draft_unknown');
-		if (deps.pairedRecord(stored, context.registry) !== null) throw pairRefused('draft_paired');
-		if (stored.draft.listen.kind !== 'tls') throw pairRefused('socket_package');
-		let parts: PairingParts;
-		try {
-			parts = await deps.openPackage(bytes, passphrase);
-		} catch (error) {
-			const reason = packageReason(error);
-			if (reason !== null) throw pairRefused(reason);
-			throw error;
-		}
+		const stored = pairableDraft(deps, name);
+		const parts = await openUploadedPackage(deps, bytes, passphrase);
 		const fields = deps.parseFragment(parts.fragment);
 		const notes: string[] = [];
 		await deps.sweepStaleStaging(Date.now(), notes, TAG);
@@ -715,7 +771,7 @@ const pairPackageAction: Action = async (options, principal, loadDeps) => {
 			principal,
 			`paired instance=${outcome.record.instance} address=${label}`,
 		);
-		await deps.audit(principal, 'NEW', {
+		await deps.audit(principal, 'SAVE', {
 			msg: `Publication host '${name}' paired from the panel (sealed package, live fingerprint proof)`,
 			action: 'publication_hosts.pair_package',
 			host: name,

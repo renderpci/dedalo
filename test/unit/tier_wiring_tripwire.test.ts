@@ -407,10 +407,6 @@ function vacuousFloors(input: VacuityInput): VacuityVerdict {
  */
 const VACUOUS_DELIVERY_EXEMPT: ReadonlyMap<string, string> = new Map([
 	[
-		'test/unit/install_e2e.test.ts',
-		'Needs an ADMIN Postgres connection (CREATE DATABASE for a throwaway install); the hosted tier composes none, so both cases skip. Owner decision pending (closure plan integrator request 10): export DB_ADMIN_* from the job Postgres in hosted_env.sh, then delete this row.',
-	],
-	[
 		'test/integration/diffusion_publish_e2e.test.ts',
 		"Unreachable under suite arming BY CONSTRUCTION: it publishes an INSTALLATION's real diffusion element into that element's own database, which the suite MariaDB does not and must not hold. Its portable halves live in diffusion_publish_native. Owner: retire (closure plan integrator request 10).",
 	],

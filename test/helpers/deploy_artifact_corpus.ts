@@ -42,3 +42,30 @@ export function shippedComposeStacks(): string[] {
 		.filter((line) => line.length > 0)
 		.sort();
 }
+
+/** Every shipped systemd unit under deploy/ (`*.service`, templates included), by NAME, sorted. */
+export function systemdUnitNames(): string[] {
+	return readdirSync(DEPLOY_DIR)
+		.filter((name) => name.endsWith('.service'))
+		.sort();
+}
+
+/**
+ * Every compose file git TRACKS — the root stacks AND the ones under deploy/
+ * (a developer/NAS variant is still a definition someone runs), repo-relative,
+ * sorted.
+ */
+export function trackedComposeFiles(): string[] {
+	const listed = Bun.spawnSync(
+		['git', 'ls-files', 'docker-compose*.yml', 'deploy/docker-compose*.yml'],
+		{
+			cwd: REPO_ROOT,
+		},
+	);
+	return new TextDecoder()
+		.decode(listed.stdout)
+		.split('\n')
+		.map((line) => line.trim())
+		.filter((line) => line.length > 0)
+		.sort();
+}

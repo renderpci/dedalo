@@ -797,7 +797,10 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 			source: { typo: 'source', model: 'add_hierarchy', action: 'install_hierarchies' },
 		});
 		expect(body.data).toBe(true);
-		expect(String(body.msg)).toContain('Imported 0');
+		// an empty selection imports nothing: lg is core, activated by the install (98424957ee)
+		expect(String(body.msg)).toBe(
+			'No optional hierarchies selected — Languages (lg) is always active',
+		);
 		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 	});
 
@@ -808,7 +811,10 @@ describe('add_hierarchy (panel value + import/reset routing)', () => {
 			source: { typo: 'source', model: 'add_hierarchy', action: 'reset_hierarchies' },
 		});
 		expect(body.data).toBe(true);
-		expect(String(body.msg)).toContain('Reset 0');
+		// an empty selection imports nothing: lg is core, activated by the install (98424957ee)
+		expect(String(body.msg)).toBe(
+			'No optional hierarchies selected — Languages (lg) is always active',
+		);
 		expect(body.errors).toBeUndefined(); // envelope v2: no errors key on success
 	});
 });

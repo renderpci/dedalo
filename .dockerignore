@@ -46,6 +46,7 @@
 #     reason (the installer refuses symlink entries). The real path .agents/ IS copied.
 #   CLAUDE.md — Committed SYMLINK alias of AGENTS.md — same reason as .claude/.
 !.agents
+!.bun-sha256
 !.bun-version
 !.dockerignore
 !.gitattributes

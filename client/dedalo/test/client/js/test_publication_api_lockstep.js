@@ -155,10 +155,17 @@ describe('PUBLICATION HOSTS — API LOCKSTEP', function () {
 		assert.ok(rows[2].querySelector('.dd_badge.state_warning'));
 	});
 
-	it('a v2-only site\'s v1 row reads Not served on a plain badge — never amber or red', function () {
+	it("a v2-only site's v1 row reads Not served on a plain badge — never amber or red", function () {
 		const panel = make_panel({
 			rows: [
-				{ host: 'site', api: 'v1', engine: ENGINE, host_current: null, last_push: null, state: 'not_served' },
+				{
+					host: 'site',
+					api: 'v1',
+					engine: ENGINE,
+					host_current: null,
+					last_push: null,
+					state: 'not_served',
+				},
 			],
 		});
 		const badge = render_api_lockstep(panel).querySelector('.lockstep_row .dd_badge');

@@ -16,7 +16,7 @@
  *     asked (phase 4: the engine drill's lockstep rows push real v1 releases). On nginx with
  *     the host-wide map, `systemctl start dedalo-pubhost-map.service` runs
  *   - renderHostMapDriver: the drill's stand-in for that root oneshot — the agent's OWN renderer
- *     (src/rules/host_map_main.ts runHostMap) over the scene's paths and user-mode nginx.
+ *     (publication/host_agent/src/rules/host_map_main.ts runHostMap) over the scene's paths and user-mode nginx.
  *   - EXEC_SEAM_DIR / EXEC_SEAM_MARKER / execSeamProblem: the CI image's seam (ci/Dockerfile,
  *     "exec seam"): a dispatcher at each of exec.ts's absolute binaries that runs the stand-in
  *     the drill writes into EXEC_SEAM_DIR.
@@ -349,7 +349,7 @@ export function renderStandIns(input: StandInInput): StandIns {
 // ── the host-wide nginx map's root renderer, as the drill runs it ────────────
 
 export interface HostMapDriverInput {
-	/** publication/host_agent: the driver imports the REAL renderer (src/rules/host_map_main.ts) from here. */
+	/** publication/host_agent: the driver imports the REAL renderer (publication/host_agent/src/rules/host_map_main.ts) from here. */
 	readonly agentDir: string;
 	/** `<HOST_BASE>/nginx_map`, `<HOST_BASE>/locks`, `<HOST_BASE>/map_renderer/identities.json`. */
 	readonly mapDir: string;
@@ -367,7 +367,7 @@ export interface HostMapDriverInput {
 
 /**
  * The drill's stand-in for the root oneshot `dedalo-pubhost-map.service`: a Bun entry that runs
- * the agent's OWN renderer (`runHostMap` + `hostMapIo` + `exitCodeOf` of src/rules/host_map_main.ts,
+ * the agent's OWN renderer (`runHostMap` + `hostMapIo` + `exitCodeOf` of publication/host_agent/src/rules/host_map_main.ts,
  * unmodified — contributions lstat-judged against identities.json, rendered, re-parsed, installed
  * through the shared transaction, result.json written) with the scene's paths. Two drill seams,
  * both named: the host web lock is the scene's (its owner is the drill's uid, not root's — the

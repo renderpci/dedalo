@@ -969,10 +969,16 @@ const DIR_MODE_REGISTER: Readonly<Record<string, DirModeRow>> = Object.freeze({
 			"publication-host drill kit: the stand-ins' dir and the drill CA's dir (private keys) in the drill's scratch dir, NOT under the media root",
 	},
 	'scripts/lib/publication_host_agent_scene.ts': {
-		modes: ['0o700', '0o750'],
+		modes: ['0o700', '0o750', '0o750', '0o755'],
 		kind: 'not_media',
 		reason:
-			"publication-host drill scene: the agent's credentials dir (0700) and its state root (0750, the provisioner's layout) in the drill's scratch dir, NOT under the media root",
+			"publication-host drill scene: the agent's credentials dir (0700), its state root and the host locks dir (0750, the provisioner's layout: layout.ts MODES hostLocks) and the host-map renderer's identities dir (0755) in the drill's scratch HOST_BASE, NOT under the media root",
+	},
+	'scripts/ci/bun_pin_hashes.ts': {
+		modes: ['0o700'],
+		kind: 'not_media',
+		reason:
+			"the Bun hash-table signature check's scratch keyring home under /tmp (gpgv's dearmored release key), owner-only by design, NOT under the media root",
 	},
 	'scripts/lib/publication_host_engine_drill_kit.ts': {
 		modes: ['0o700'],
