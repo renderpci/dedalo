@@ -18,6 +18,7 @@
  */
 
 import { isDiffusionLangCode } from '../../../config/lang_code.ts';
+import { describePgTransport, resolvePgTransport } from '../../../config/pg_transport.ts';
 import { sql } from '../../db/postgres.ts';
 import { probeSchemaHealth } from '../../db/schema_probe.ts';
 import {
@@ -412,7 +413,8 @@ async function computeCheckConfig(): Promise<{
 		pool: { in_use: number; max: number; waiters: number };
 	} | null = null;
 	{
-		const identity = `${config.db.database}@${config.db.host}:${config.db.port}`;
+		// The route the pool actually takes (DB_SOCKET wins), not DB_HOST verbatim.
+		const identity = `${config.db.database}@${describePgTransport(resolvePgTransport(config.db))}`;
 		let server: string | null = null;
 		let schemaOk: boolean | null = null;
 		let ontologyRows: number | null = null;

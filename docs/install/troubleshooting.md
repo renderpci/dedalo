@@ -153,6 +153,20 @@ refuses to boot instead.
 ACTIVE_ONTOLOGY_TLDS=dd,rsc,ontology,ontologytype,hierarchy,lg,oh,ich
 ```
 
+### `Config key 'DB_SOCKET': the PostgreSQL socket '…' is not an absolute path`
+
+**Cause.** `DB_SOCKET` (or its old spelling `DEDALO_SOCKET_CONN`) names the
+PostgreSQL unix-socket **directory**, and only an absolute path is one. A relative
+value would be read as a network host name by PostgreSQL's own tools, so the
+server refuses to boot rather than connect somewhere you did not mean.
+
+**Fix.** Write the directory in full, or delete the line to connect over TCP to
+`DB_HOST`:
+
+```dotenv
+DB_SOCKET=/var/run/postgresql
+```
+
 ### Crash loop right after the wizard's *Save config*
 
 **Cause.** The language configuration is mandatory and the written `.env` is
@@ -553,7 +567,12 @@ find out.
 check is deliberately *not* liveness-only — monitoring must go red when the
 database is down, not only when the process dies.
 
-**Fix.** Check PostgreSQL, then the pool: `DB_POOL_MAX` is **per process**, and
+**Fix.** Check PostgreSQL, and that it answers where the configuration says. When
+`DB_SOCKET` is set the engine connects **only** through that socket directory and
+ignores `DB_HOST`: a socket that does not exist is a failed connection, never a
+quiet fall back to `localhost`. Check the file is there, e.g.
+`ls /var/run/postgresql/.s.PGSQL.5432` for `DB_SOCKET=/var/run/postgresql` and
+`DB_PORT=5432`. Then the pool: `DB_POOL_MAX` is **per process**, and
 the engine plus every diffusion runner plus the RAG drain all draw against
 PostgreSQL's `max_connections`. Watch `db_pool_waits` on
 `GET /api/v1/counters`.

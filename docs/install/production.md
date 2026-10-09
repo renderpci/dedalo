@@ -256,6 +256,9 @@ SQL
 !!! note "No `~/.pgpass` needed"
     Dédalo threads `PGPASSWORD` into every `psql` / `pg_dump` subprocess and passes `-h/-p` explicitly, so local and remote databases work the same way. A `~/.pgpass` file is still honoured by libpq if you prefer it (leave the password empty in the configuration and rely on peer/trust auth).
 
+!!! tip "Connecting through the local unix socket"
+    To reach a PostgreSQL on the same machine without the network stack, pass `--db-socket /var/run/postgresql` (RHEL: `/var/run/postgresql` too; Homebrew: `/tmp`) instead of relying on `--db-host`. It is written as `DB_SOCKET`, and when set it **wins** over `DB_HOST`: the installer's connection test, the server, the nightly backup and every maintenance `psql`/`pg_dump` connect through that one socket, so they can never reach different servers. A socket that does not exist fails loudly — nothing falls back to `localhost`. Over the socket, PostgreSQL's `peer` authentication lets the `dedalo` system user connect as a role of the same name with no password.
+
 ### 8. Run the installer
 
 The installer has two front ends driving one engine: a headless CLI and a browser wizard. **On a server, use the CLI** — it needs no restart, no exposed pre-auth surface, and it ends by verifying a real login. The wizard route is written out in 8.4, along with the three things a server has to do differently for it.

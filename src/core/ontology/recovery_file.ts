@@ -21,7 +21,7 @@ import { createGzip } from 'node:zlib';
 import { envSnapshot } from '../../config/env.ts';
 import { createRecoverySlice, dropRecoverySlice } from '../db/dd_ontology.ts';
 import { resolvePgBinary } from '../install/pg_bin.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
+import { connArgs, connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
 import { recoveryFileWritePath, resolveRecoveryFilePath } from '../install/runtime_paths.ts';
 import { gunzipWithCaps } from './data_io_import.ts';
 
@@ -110,10 +110,10 @@ export async function buildRecoveryVersionFile(
 		// The private-dir slot ('<private>/db/') may not exist on a box whose
 		// dump always landed in-tree before; the build creates its parent.
 		mkdirSync(dirname(outFile), { recursive: true });
-		const args: string[] = [];
-		if (conn.host && !conn.socket) args.push('-h', conn.host);
-		if (conn.port) args.push('-p', String(conn.port));
-		if (conn.user) args.push('-U', conn.user);
+		// The shared transport rule (DB_SOCKET wins) — this used to DROP `-h`
+		// when a socket was set, so pg_dump reached libpq's compiled-in default
+		// socket instead of the configured one.
+		const args = connArgs(conn);
 		args.push('-t', 'dd_ontology_recovery', conn.database);
 		const child = Bun.spawn([resolvePgBinary('pg_dump'), ...args], {
 			stdout: 'pipe',

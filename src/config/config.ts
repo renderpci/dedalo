@@ -61,9 +61,16 @@ export interface DatabaseConfig {
 	/**
 	 * Host: either a TCP hostname ('localhost') or a unix-socket DIRECTORY
 	 * (starts with '/', e.g. '/tmp' — Postgres appends .s.PGSQL.<port> itself).
+	 * Ignored for transport when `socket` is set.
 	 */
 	readonly host: string;
 	readonly port: number;
+	/**
+	 * DB_SOCKET: the unix-socket directory; '' = none. When set it WINS over
+	 * `host`. Never read the pair by hand — resolvePgTransport(config.db)
+	 * (src/config/pg_transport.ts) is the one decision every connection takes.
+	 */
+	readonly socket: string;
 	readonly user: string;
 	/** Empty string means trust/peer auth (typical local dev over the socket). */
 	readonly password: string;
@@ -1182,6 +1189,7 @@ export const config: DedaloConfig = Object.freeze({
 		database: requireString('DB_NAME'),
 		host: requireString('DB_HOST'),
 		port: Number(readString('DB_PORT')),
+		socket: readString('DB_SOCKET').trim(),
 		user: requireString('DB_USER'),
 		password: readString('DB_PASSWORD'),
 		sslMode: readString('DB_SSLMODE'),

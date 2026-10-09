@@ -722,7 +722,8 @@ export function failFastSkip(
  * one thing this script exists to withhold from the tiers.
  */
 function connectionFromPrivateEnv(): Record<string, string> {
-	const CONNECTION_KEYS = ['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD'] as const;
+	// DB_SOCKET too: it wins over DB_HOST for every connection (src/config/pg_transport.ts).
+	const CONNECTION_KEYS = ['DB_HOST', 'DB_PORT', 'DB_SOCKET', 'DB_USER', 'DB_PASSWORD'] as const;
 	const path = join(REPO_ROOT, '..', 'private', '.env');
 	if (!existsSync(path)) return {};
 	const found: Record<string, string> = {};
@@ -778,7 +779,7 @@ async function runOnHost(args: Args, tiers: readonly Tier[]): Promise<TierResult
 		...connection,
 		// The caller's explicit values still win over the file's.
 		...Object.fromEntries(
-			['DB_HOST', 'DB_PORT', 'DB_USER', 'DB_PASSWORD']
+			['DB_HOST', 'DB_PORT', 'DB_SOCKET', 'DB_USER', 'DB_PASSWORD']
 				.filter((key) => process.env[key] !== undefined)
 				.map((key) => [key, process.env[key]]),
 		),

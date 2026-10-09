@@ -17,6 +17,7 @@
  * else about the action's wire response, ordering or skip rules changed.
  */
 
+import { type PgEndpointInput, resolvePgTransport } from '../../../config/pg_transport.ts';
 import { sectionIdAddressSqlPredicate } from '../../concepts/section_id.ts';
 import { runWithoutStatementTimeout, sql, withTransaction } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
@@ -168,6 +169,17 @@ export function degradedTableNames(rows: TableStatsRow[]): string[] {
  * its libpq client/protocol versions — TS reports the server version string
  * and its own configured host).
  */
+/**
+ * The panel's `host`: where the pool actually connects — the socket DIRECTORY
+ * when DB_SOCKET (or a `/` DB_HOST) decides it, else the TCP hostname. Same
+ * value DB_HOST alone always produced; DB_SOCKET now shows instead of a host
+ * the engine does not use.
+ */
+function transportHost(db: PgEndpointInput): string {
+	const transport = resolvePgTransport(db);
+	return transport.kind === 'socket' ? transport.directory : transport.hostname;
+}
+
 export async function databaseInfoGetValue(): Promise<WidgetResponse> {
 	const tableRows = (await sql.unsafe(
 		`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`,
@@ -201,7 +213,7 @@ export async function databaseInfoGetValue(): Promise<WidgetResponse> {
 	const { config } = await import('../../../config/config.ts');
 	const info = {
 		server: versionRows[0]?.v ?? '',
-		host: String((config.db as { host?: unknown } | undefined)?.host ?? 'localhost'),
+		host: transportHost(config.db),
 	};
 
 	// WC-073: engine-native, additive. Fail-soft — a statistics readout must

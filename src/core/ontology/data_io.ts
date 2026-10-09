@@ -35,6 +35,7 @@ import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
 import { envSnapshot } from '../../config/env.ts';
+import { libpqTransportArgs, resolvePgTransport } from '../../config/pg_transport.ts';
 import { readString } from '../../config/readers.ts';
 import { compareLocators, type Locator } from '../concepts/locator.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
@@ -573,9 +574,8 @@ export function resolvePsql(): string {
 
 /** host/port/user flags (PHP DBi::get_connection_string; password via PGPASSWORD). */
 function psqlConnectionArgs(): string[] {
-	const args: string[] = [];
-	if (config.db.host) args.push('-h', String(config.db.host));
-	if (config.db.port) args.push('-p', String(config.db.port));
+	// The shared transport rule (DB_SOCKET wins) — the route the pool takes.
+	const args = libpqTransportArgs(resolvePgTransport(config.db));
 	if (config.db.user) args.push('-U', String(config.db.user));
 	return args;
 }

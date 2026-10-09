@@ -106,6 +106,7 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { privateDir, projectRoot } from '../src/config/env.ts';
+import { libpqTransportArgs, resolvePgTransport } from '../src/config/pg_transport.ts';
 import { DEDALO_ENGINE_VERSION } from '../src/core/update/build_stamp.ts';
 import { UPDATE_CATALOG, type UpdateDescriptor } from '../src/core/update/catalog.ts';
 import { compareVersionArrays } from '../src/core/update/version.ts';
@@ -609,10 +610,8 @@ async function buildDrillArchive(scratch: string, suiteDb: string): Promise<stri
 	const dump = Bun.spawnSync(
 		[
 			resolvePgDump(),
-			'-h',
-			config.db.host,
-			'-p',
-			String(config.db.port),
+			// The engine's ONE transport rule (DB_SOCKET wins) — the pool's route.
+			...libpqTransportArgs(resolvePgTransport(config.db)),
 			'-U',
 			config.db.user,
 			'-F',

@@ -82,6 +82,7 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { readEnv } from '../../src/config/env.ts';
+import { libpqTransportArgs, resolvePgTransport } from '../../src/config/pg_transport.ts';
 // DB-free ON PURPOSE (see that module's header): the marker is named through
 // the constant, never the literal (test_db_marker_tripwire rule 5), and never
 // through the marker module itself (its postgres.ts import connects the pool
@@ -146,16 +147,22 @@ export function assertShardableTemplate(template: string): string {
 
 // ── psql plumbing (mirrors scripts/test_db_setup.ts) ─────────────────────────
 
-const host = readEnv('DB_HOST') ?? readEnv('DEDALO_HOSTNAME_CONN') ?? 'localhost';
-const portRaw = readEnv('DB_PORT') ?? readEnv('DEDALO_DB_PORT_CONN') ?? '';
 const user = readEnv('DB_USER') ?? readEnv('DEDALO_USERNAME_CONN') ?? '';
 const password = readEnv('DB_PASSWORD') ?? readEnv('DEDALO_PASSWORD_CONN') ?? '';
 
-/** A unix-socket install has no port; `psql -p 0` is a hard error, so send it only if set. */
+/**
+ * `-h/-p` decided by the engine's ONE transport rule (DB_SOCKET wins, a `/`
+ * DB_HOST is a socket directory, else TCP; an unset port is 5432) — the route
+ * the suite's own pool takes. readEnv already honours the PHP alias spellings.
+ */
 const conn = [
-	'-h',
-	host,
-	...(portRaw !== '' && Number(portRaw) > 0 ? ['-p', portRaw] : []),
+	...libpqTransportArgs(
+		resolvePgTransport({
+			host: readEnv('DB_HOST') ?? 'localhost',
+			port: readEnv('DB_PORT') ?? '',
+			socket: readEnv('DB_SOCKET'),
+		}),
+	),
 	'-U',
 	user,
 ];

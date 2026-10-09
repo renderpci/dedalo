@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - The PostgreSQL socket you give the installer is now the one the server connects through (`DB_SOCKET`).
     - Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`.
     - Installations now choose their domain ontologies (Oral history by default) and install what each one declares it depends on; the install database carries only the core ontologies and no test data.
     - New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.
@@ -1354,6 +1355,10 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-10-03-publication-hosts-widget`.
 
 #### Fixed
+
+- **The PostgreSQL socket you give the installer is now the one the server connects through (`DB_SOCKET`).** *(action needed)*
+
+    The installer's socket answer (`--db-socket`, or the wizard's *Unix socket* field) was used by the installer's own connection test and then written as `DEDALO_SOCKET_CONN`, a key the server never read: an installation reachable only through the socket passed the install and then connected to `DB_HOST` instead. The answer is now written as the new key [`DB_SOCKET`](./config/config_db.md), and one rule decides the route for everything that connects to the database: the server, the installer's test, the nightly backup and the maintenance tools. When `DB_SOCKET` is set it wins over `DB_HOST`, and a socket that does not exist fails loudly instead of quietly falling back to `localhost`. An existing `.env` that holds `DEDALO_SOCKET_CONN` keeps working: it is now read as the old spelling of `DB_SOCKET`, so check that the directory it names is where your PostgreSQL socket really is before updating. A re-run of the installer writes the value once, under the new name. If you use the nightly backup unit, update `deploy/dedalo-backup.service` from the release so its database backup connects the same way.
 
 - **On Docker, the browser client now always matches the engine that is running.**
 

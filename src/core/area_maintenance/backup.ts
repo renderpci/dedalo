@@ -48,6 +48,7 @@ import {
 import { dirname, join, resolve as resolvePath } from 'node:path';
 import { config } from '../../config/config.ts';
 import { privateDir } from '../../config/env.ts';
+import { libpqTransportArgs, resolvePgTransport } from '../../config/pg_transport.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
 import { type JobRecord, jobAbortInfo, mediaJobs } from '../media/jobs.ts';
@@ -609,7 +610,7 @@ export async function initBackupSequence(
 		}
 	}
 
-	const db = config.db as { database?: string; host?: string; port?: number; user?: string };
+	const db = config.db as { database?: string; user?: string };
 	const databaseName = String(db.database ?? 'dedalo');
 	const fileName = backupFileName({
 		now: overrides.now ?? new Date(),
@@ -653,9 +654,15 @@ export async function initBackupSequence(
 
 	// custom format with blobs (PHP: pg_dump … -F c -b) into the PART; stderr
 	// streams to a sibling .log (PHP writes it to the process file)
-	const args = ['-F', 'c', '-b', '-f', partPath];
-	if (db.host) args.push('-h', String(db.host));
-	if (db.port) args.push('-p', String(db.port));
+	// The shared transport rule (DB_SOCKET wins) — the route the pool takes.
+	const args = [
+		'-F',
+		'c',
+		'-b',
+		'-f',
+		partPath,
+		...libpqTransportArgs(resolvePgTransport(config.db)),
+	];
 	if (db.user) args.push('-U', String(db.user));
 	args.push(databaseName);
 	const dump: DumpJob = {

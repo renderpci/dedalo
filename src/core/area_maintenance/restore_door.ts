@@ -92,7 +92,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { envSnapshot } from '../../config/env.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
+import { connArgs, connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
 import { type PostRestoreReport, runPostRestore } from '../reconcile/post_restore.ts';
 import { setServerState } from '../resolve/server_state.ts';
 import {
@@ -285,16 +285,6 @@ async function admin(
 	return { ok: run.exitCode === 0, stderr: run.stderr };
 }
 
-/** The `-h/-p/-U` triple pg_restore connects with (a unix socket path is a host to libpq). */
-function connectionArgs(conn: DbConnDescriptor): string[] {
-	const host = conn.socket && conn.socket !== '' ? conn.socket : conn.host;
-	return [
-		...(host ? ['-h', String(host)] : []),
-		...(conn.port ? ['-p', String(conn.port)] : []),
-		...(conn.user ? ['-U', String(conn.user)] : []),
-	];
-}
-
 /**
  * Run pg_restore INTO a database. Unlike backup.ts's verification runs this one
  * opens a connection, so it carries the credential the way pg_exec does:
@@ -309,7 +299,7 @@ async function pgRestoreInto(
 	const args = [
 		'--dbname',
 		database,
-		...connectionArgs(conn),
+		...connArgs(conn),
 		'--no-owner',
 		'--no-privileges',
 		'--single-transaction',

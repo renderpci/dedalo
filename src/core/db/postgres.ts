@@ -26,15 +26,21 @@
  * come from fixed allowlists validated at the §7.6 chokepoint BEFORE reaching
  * this layer.
  *
- * Connection: DB_HOST starting with '/' is a unix-socket DIRECTORY (Postgres
- * convention, e.g. '/tmp'); we derive the full socket path Bun expects.
- * Otherwise it is a TCP hostname. Verified against Bun 1.4.0 (2026-08-25).
+ * Connection: DB_SOCKET (a unix-socket DIRECTORY) wins; else a DB_HOST starting
+ * with '/' is one too (Postgres convention, e.g. '/tmp'); otherwise DB_HOST is a
+ * TCP hostname. Decided by src/config/pg_transport.ts, shared with the install
+ * probe and every spawned libpq client. Verified against Bun 1.4.2 (2026-10-09).
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { SQL } from 'bun';
 import { config } from '../../config/config.ts';
+import {
+	bunSqlTransportOptions,
+	pgSocketProblem,
+	resolvePgTransport,
+} from '../../config/pg_transport.ts';
 import { suiteDatabaseRefusal } from '../../config/suite_database.ts';
 import { recordPoolWait } from '../api/counters.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
@@ -166,7 +172,7 @@ function buildSqlOptions(
 	applicationName?: string,
 	lockTimeout?: string,
 ): ConstructorParameters<typeof SQL>[0] {
-	const { database, host, port, user, password, sslMode } = config.db;
+	const { database, user, password, sslMode } = config.db;
 	// A TEST process opens only the database the suite preload armed: a `bun test`
 	// run outside the repo root never reads bunfig.toml, so DB_NAME would still
 	// name the APPLICATION database (src/config/suite_database.ts).
@@ -175,6 +181,15 @@ function buildSqlOptions(
 		throw new DedaloError('internal.invariant', {
 			message: suiteRefusal,
 			coordinates: { database },
+		});
+	}
+	// A relative DB_SOCKET is no socket to libpq (it would read it as a TCP host
+	// name): refuse the pool — at import, so the boot itself refuses.
+	const socketProblem = pgSocketProblem(config.db.socket);
+	if (socketProblem !== null) {
+		throw new DedaloError('internal.invariant', {
+			message: `Config key 'DB_SOCKET': ${socketProblem} (../private/.env).`,
+			coordinates: { key: 'DB_SOCKET' },
 		});
 	}
 	// Startup parameters (sent in the startup packet — they outrank ALTER ROLE /
@@ -200,11 +215,11 @@ function buildSqlOptions(
 		max,
 		...(Object.keys(startupParameters).length === 0 ? {} : { connection: startupParameters }),
 	};
-	if (host.startsWith('/')) {
-		// Unix socket: Postgres sockets are named .s.PGSQL.<port> inside the dir.
-		return { ...commonOptions, path: `${host}/.s.PGSQL.${port}` };
-	}
-	return { ...commonOptions, hostname: host, port };
+	// DB_SOCKET > a `/` DB_HOST > TCP — the one decision the install probe and
+	// every psql/pg_dump share (src/config/pg_transport.ts). A socket transport
+	// also sets `hostname` to the socket path so a missing socket fails loudly
+	// instead of Bun.sql's silent fallback to TCP localhost.
+	return { ...commonOptions, ...bunSqlTransportOptions(resolvePgTransport(config.db)) };
 }
 
 /**

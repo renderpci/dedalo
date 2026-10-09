@@ -13,6 +13,11 @@
 
 import { config } from '../../config/config.ts';
 import { envSnapshot } from '../../config/env.ts';
+import {
+	libpqTransportArgs,
+	pgSocketProblem,
+	resolvePgTransport,
+} from '../../config/pg_transport.ts';
 import { DedaloError } from '../errors/index.ts';
 import { resolvePgBinary } from './pg_bin.ts';
 
@@ -23,7 +28,10 @@ export interface DbConnDescriptor {
 	port: string | number;
 	user: string;
 	password: string;
-	/** Optional unix socket DIRECTORY; when set it is used as the host. */
+	/**
+	 * Optional unix socket DIRECTORY; when set it WINS over `host` — the same
+	 * rule the engine's pool applies (resolvePgTransport, src/config/pg_transport.ts).
+	 */
 	socket?: string;
 }
 
@@ -35,6 +43,7 @@ export function connFromConfig(): DbConnDescriptor {
 		port: config.db.port,
 		user: config.db.user,
 		password: config.db.password,
+		socket: config.db.socket,
 	};
 }
 
@@ -65,15 +74,32 @@ export function assertSafeConnField(name: string, value: string): void {
 	}
 }
 
-/** host/port/user flags (password rides PGPASSWORD, never argv). */
-function connArgs(conn: DbConnDescriptor): string[] {
-	const args: string[] = [];
-	const host = conn.socket && conn.socket !== '' ? conn.socket : conn.host;
-	if (host) {
-		assertSafeConnField('host', String(host));
-		args.push('-h', String(host));
+/**
+ * The `-h <host|socket dir> -p <port>` pair for a descriptor, decided by the ONE
+ * transport rule the engine's pool also takes (resolvePgTransport): DB_SOCKET
+ * wins, a `/` host is a socket directory, anything else is TCP. So the install
+ * probe connects over exactly the route the configured engine will use.
+ * Exported for every psql/pg_dump/pg_restore door (restore, recovery, backup).
+ */
+export function pgTransportArgs(conn: DbConnDescriptor): string[] {
+	const socketProblem = pgSocketProblem(conn.socket);
+	if (socketProblem !== null) {
+		throw new DedaloError('install.invalid_input', {
+			message: `install: ${socketProblem}`,
+			publicMessage: 'The database socket must be an absolute path',
+			coordinates: { field: 'socket' },
+		});
 	}
-	if (conn.port) args.push('-p', String(conn.port));
+	const args = libpqTransportArgs(
+		resolvePgTransport({ host: String(conn.host ?? ''), port: conn.port, socket: conn.socket }),
+	);
+	assertSafeConnField('host', args[1] as string);
+	return args;
+}
+
+/** host/port/user flags (password rides PGPASSWORD, never argv). */
+export function connArgs(conn: DbConnDescriptor): string[] {
+	const args = pgTransportArgs(conn);
 	if (conn.user) {
 		assertSafeConnField('user', String(conn.user));
 		args.push('-U', String(conn.user));

@@ -83,7 +83,7 @@ meaning.)
 | `--db-password` | no | *(empty)* | empty means peer/trust auth over a local socket |
 | `--db-host` | no | `localhost` | a hostname, **or a unix-socket directory** when it starts with `/` (the default used to be `/tmp`; Debian/Ubuntu and RHEL do not put the PostgreSQL socket there) |
 | `--db-port` | no | `5432` | |
-| `--db-socket` | no | — | an explicit socket directory, e.g. `/var/run/postgresql` |
+| `--db-socket` | no | — | a PostgreSQL unix-socket directory, e.g. `/var/run/postgresql`; written as `DB_SOCKET`. When given it **wins** over `--db-host`: the connection test, the server and the backups all connect through it. Must be an absolute path |
 | `--entity-label` | no | the entity name | shown on the login form |
 | `--locale` | no | `es-ES` | |
 | `--timezone` | no | `Europe/Madrid` | every database timestamp is stamped in it |
@@ -375,7 +375,7 @@ owns are these:
 
 | Section | Keys |
 | --- | --- |
-| Database | `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DEDALO_SOCKET_CONN` |
+| Database | `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_SOCKET` |
 | Entity / locale | `ENTITY`, `DEDALO_ENTITY_LABEL`, `DEDALO_TIMEZONE`, `DEDALO_LOCALE` |
 | Languages | `DEDALO_APPLICATION_LANGS`, `PROJECTS_DEFAULT_LANGS`, `DEDALO_APPLICATION_LANGS_DEFAULT`, `DEDALO_DATA_LANG_DEFAULT`, `APPLICATION_LANG`, `DATA_LANG`, `DEDALO_STRUCTURE_LANG` |
 | Secret | one generated secret, printed once |
@@ -428,8 +428,8 @@ air-gapped option always writes `[]`.
     …). The older fallback spellings the engine still accepts from a `.env` carried
     over from v6 or from an earlier installer (`DEDALO_DATABASE_CONN`,
     `DEDALO_ENTITY`, …) count as the same key: a re-run drops them and writes the
-    value once, under the current name. `DEDALO_SOCKET_CONN` is still written, but
-    the engine does not read it — it connects through `DB_HOST`/`DB_PORT`.
+    value once, under the current name — `DEDALO_SOCKET_CONN` included, which is now
+    the old spelling of `DB_SOCKET`.
 
 The file is written through a two-phase commit (staged, then renamed into place)
 at mode `0600`, inside a `0700` private directory.

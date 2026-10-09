@@ -140,6 +140,32 @@ DB_MAINTENANCE_POOL_MAX=2
 DB_PORT=5432
 \`\`\``,
 	},
+	DB_SOCKET: {
+		type: 'string',
+		scope: 'operator',
+		default: '',
+		heading: 'Dédalo database unix socket',
+		typeLabel: 'string',
+		doc: `The unix-socket DIRECTORY of the PostgreSQL server, for a local connection that does not go
+through the network stack (e.g. \`/var/run/postgresql\` on Debian/Ubuntu, \`/tmp\` on macOS
+Homebrew). When set it **wins**: \`DB_HOST\` is then ignored for the connection, and
+\`DB_PORT\` only selects the socket file inside the directory (\`.s.PGSQL.<port>\`). A path
+to the socket file itself (\`/var/run/postgresql/.s.PGSQL.5432\`) is accepted too; its port
+is the one in the file name.
+
+Leave it empty (the default) to connect over TCP to \`DB_HOST\`:\`DB_PORT\`. A \`DB_HOST\`
+that starts with \`/\` is also read as a socket directory, as PostgreSQL's own tools do.
+
+The value must be an absolute path — a relative one refuses the boot. One rule decides the
+route for everything that connects to this database: the server, the installer's connection
+test, the backups and every \`psql\`/\`pg_dump\` the maintenance tools run, so they can never
+reach different servers. A socket that does not exist fails loudly; it never falls back to
+TCP. The old spelling \`DEDALO_SOCKET_CONN\` is still read when this key is not set.
+
+\`\`\`bash
+DB_SOCKET="/var/run/postgresql"
+\`\`\``,
+	},
 	DB_SSLMODE: {
 		type: 'string',
 		scope: 'operator',

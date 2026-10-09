@@ -71,6 +71,7 @@ fi
 bun -e '
 import { existsSync } from "node:fs";
 import { readEnv } from "./src/config/env.ts";
+import { resolvePgTransport } from "./src/config/pg_transport.ts";
 
 const oracle = readEnv("PHP_API_BASE_URL");
 if (!oracle) {
@@ -84,13 +85,14 @@ if (!oracle) {
 	}
 }
 
-const host = readEnv("DB_HOST") ?? "";
-const port = Number(readEnv("DB_PORT") ?? "5432");
-if (host.startsWith("/")) {
-	const sock = `${host}/.s.PGSQL.${port}`;
+// The engine's ONE transport rule (DB_SOCKET wins) — src/config/pg_transport.ts.
+const transport = resolvePgTransport({ host: readEnv("DB_HOST") ?? "", port: readEnv("DB_PORT") ?? "", socket: readEnv("DB_SOCKET") });
+if (transport.kind === "socket") {
+	const sock = transport.socketPath;
 	// existsSync, not Bun.file().exists() — the latter is false for socket files
 	console.log(`report  Postgres: unix socket ${sock} ${existsSync(sock) ? "present" : "MISSING"}`);
 } else {
+	const { hostname: host, port } = transport;
 	try {
 		const s = await Bun.connect({ hostname: host, port, socket: { data() {} } });
 		s.end();

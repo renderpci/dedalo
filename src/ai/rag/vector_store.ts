@@ -41,6 +41,11 @@
 import { SQL } from 'bun';
 import { config } from '../../config/config.ts';
 import { readEnv } from '../../config/env.ts';
+import {
+	bunSqlTransportOptions,
+	type PgEndpointInput,
+	resolvePgTransport,
+} from '../../config/pg_transport.ts';
 import { readString } from '../../config/readers.ts';
 import { suitePoolRefusal } from '../../config/suite_database.ts';
 import { DedaloError } from '../../core/errors/index.ts';
@@ -70,20 +75,27 @@ function buildRagSqlOptions(): ConstructorParameters<typeof SQL>[0] {
 			coordinates: { database },
 		});
 	}
-	const socket = readString('DEDALO_RAG_DB_SOCKET_CONN');
-	const host = (readEnv('DEDALO_RAG_DB_HOSTNAME_CONN') ?? config.db.host) as string;
-	const portRaw = Number(readString('DEDALO_RAG_DB_PORT_CONN'));
-	const port = Number.isFinite(portRaw) && portRaw > 0 ? Math.trunc(portRaw) : config.db.port;
 	const user = (readEnv('DEDALO_RAG_DB_USERNAME_CONN') ?? config.db.user) as string;
 	const password = (readEnv('DEDALO_RAG_DB_PASSWORD_CONN') ?? config.db.password) as string;
 	const commonOptions = { database, username: user, password: password || undefined, max: 4 };
-	if (socket !== '') {
-		return { ...commonOptions, path: socket };
-	}
-	if (host.startsWith('/')) {
-		return { ...commonOptions, path: `${host}/.s.PGSQL.${port}` };
-	}
-	return { ...commonOptions, hostname: host, port };
+	return { ...commonOptions, ...bunSqlTransportOptions(resolvePgTransport(ragEndpoint())) };
+}
+
+/**
+ * The vector database's endpoint: its own socket wins, then its own host; with
+ * neither it inherits the MAIN database's whole route (DB_SOCKET included — a
+ * main install reached only over a socket would otherwise send the index to
+ * DB_HOST). The port falls back to the main port. Decided by the same rule as
+ * the matrix pool (src/config/pg_transport.ts).
+ */
+export function ragEndpoint(): PgEndpointInput {
+	const portRaw = Number(readString('DEDALO_RAG_DB_PORT_CONN'));
+	const port = Number.isFinite(portRaw) && portRaw > 0 ? Math.trunc(portRaw) : config.db.port;
+	const socket = readString('DEDALO_RAG_DB_SOCKET_CONN').trim();
+	if (socket !== '') return { host: '', port, socket };
+	const host = readEnv('DEDALO_RAG_DB_HOSTNAME_CONN');
+	if (host !== undefined) return { host, port };
+	return { host: config.db.host, port, socket: config.db.socket };
 }
 
 /** The RAG pool (module-level like the matrix pool — holds no request state). */

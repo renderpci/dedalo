@@ -4531,7 +4531,7 @@ DEDALO_RAG_DB_HOSTNAME_CONN `string`
 
 The host of the vector database. Set it only when the semantic index lives on a
 **different** database server than the catalogue: when unset (the default), Dédalo reuses the
-main database's host, and the same goes for `DEDALO_RAG_DB_PORT_CONN`,
+main database's route (its socket `DB_SOCKET` when set, else `DB_HOST`), and the same goes for `DEDALO_RAG_DB_PORT_CONN`,
 `DEDALO_RAG_DB_USERNAME_CONN` and `DEDALO_RAG_DB_PASSWORD_CONN`. The typical installation sets
 none of them.
 

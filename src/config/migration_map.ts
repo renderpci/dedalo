@@ -489,7 +489,6 @@ const DROPPED: Readonly<Record<string, MigrationRule>> = {
 	// Read by nothing in the TS engine today.
 	...dropped(
 		[
-			'DEDALO_SOCKET_CONN',
 			'DEDALO_SECTION_ID_TEMP',
 			'NUMERICAL_MATRIX_VALUE_YES',
 			'NUMERICAL_MATRIX_VALUE_NO',

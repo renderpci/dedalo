@@ -111,6 +111,7 @@ alias_of() {
 	DB_PORT) echo DEDALO_DB_PORT_CONN ;;
 	DB_USER) echo DEDALO_USERNAME_CONN ;;
 	DB_PASSWORD) echo DEDALO_PASSWORD_CONN ;;
+	DB_SOCKET) echo DEDALO_SOCKET_CONN ;;
 	# Store 2's database name has a PHP spelling too, and readEnv honours it — so
 	# this table covers every key the unit passes, not only the ones the wizard
 	# writes. A .env carried over from the PHP engine resolves here exactly as it
@@ -165,14 +166,23 @@ HOST=$(resolve_key "$HOST_KEY")
 PORT=$(resolve_key "$PORT_KEY")
 USER=$(resolve_key "$USER_KEY")
 SOCKET=$(resolve_key "$SOCKET_KEY")
-# A socket directory outranks host/port, which is the precedence the engine applies
-# WHERE IT HONOURS ONE — src/ai/rag/vector_store.ts, for DEDALO_RAG_DB_SOCKET_CONN
-# (store 2). The MATRIX connection has no such key in the TS engine: the installer
-# writes DEDALO_SOCKET_CONN but nothing reads it, so store 1 passes no --socket-key
-# and connects exactly the way the engine does. pg_dump takes a directory in -h
-# exactly as libpq does.
-[ -n "$SOCKET" ] && HOST=$SOCKET
 [ -n "$PORT" ] || PORT=5432
+# A socket outranks host/port — the ONE transport rule the engine applies to every
+# connection (src/config/pg_transport.ts): DB_SOCKET for the matrix (store 1,
+# --socket-key DB_SOCKET, alias DEDALO_SOCKET_CONN), DEDALO_RAG_DB_SOCKET_CONN for
+# the vector store (store 2). pg_dump takes a directory in -h exactly as libpq
+# does; a value naming the socket FILE (`<dir>/.s.PGSQL.<port>`) is split into its
+# directory and the port its name carries, as the engine does.
+if [ -n "$SOCKET" ]; then
+	case "${SOCKET##*/}" in
+	.s.PGSQL.[0-9]*)
+		PORT=${SOCKET##*/.s.PGSQL.}
+		SOCKET=${SOCKET%/*}
+		[ -n "$SOCKET" ] || SOCKET=/
+		;;
+	esac
+	HOST=$SOCKET
+fi
 
 # The client must not be OLDER than the server (an older pg_dump refuses a newer
 # server outright). DEDALO_PG_BIN_PATH is the key the engine's own resolvePgDump

@@ -48,6 +48,7 @@ import { tmpdir } from 'node:os';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { readEnv } from '../src/config/env.ts';
+import { libpqTransportArgs, resolvePgTransport } from '../src/config/pg_transport.ts';
 import { CORE_ONTOLOGY_TLDS } from '../src/core/ontology/core_tlds.ts';
 import {
 	formatSidecarJson,
@@ -130,12 +131,15 @@ function recordedPath(path: string): string {
 async function connection(): Promise<Connection> {
 	// Dynamic: pg_bin reads config, which only this runner (never the pure lib) may load.
 	const { resolvePgBinary } = await import('../src/core/install/pg_bin.ts');
-	const host = readEnv('DB_HOST') ?? 'localhost';
-	const port = readEnv('DB_PORT') ?? '';
+	const transport = resolvePgTransport({
+		host: readEnv('DB_HOST') ?? 'localhost',
+		port: readEnv('DB_PORT') ?? '',
+		socket: readEnv('DB_SOCKET'),
+	});
 	const user = readEnv('DB_USER') ?? '';
 	return {
-		// A unix-socket install has no port; `-p 0` is a hard error, so send it only if set.
-		args: ['-h', host, ...(port !== '' && Number(port) > 0 ? ['-p', port] : []), '-U', user],
+		// The engine's ONE transport rule (DB_SOCKET wins) — src/config/pg_transport.ts.
+		args: [...libpqTransportArgs(transport), '-U', user],
 		env: { ...process.env, PGPASSWORD: readEnv('DB_PASSWORD') ?? '' },
 		psql: resolvePgBinary('psql'),
 		pgDump: resolvePgBinary('pg_dump'),

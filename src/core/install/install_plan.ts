@@ -39,9 +39,9 @@
  * method reads alike (src/core/update/supervision.ts). The plan's key set is a
  * closed list; no answer can add a key to it.
  *
- * PURE AND CONFIG-FREE: imports only lang_catalog.ts, hierarchy_meta.ts and
- * ontology_choice.ts (each config-free; the vendored files they read are the only
- * I/O). The
+ * PURE AND CONFIG-FREE: imports only lang_catalog.ts, hierarchy_meta.ts,
+ * ontology_choice.ts and src/config/pg_transport.ts (each config-free; the
+ * vendored files they read are the only I/O). The
  * CLI builds the plan BEFORE it seeds the process environment that
  * src/config/config.ts freezes at import, so importing config (or the error
  * registry, or the db) from here would freeze the wrong configuration.
@@ -49,6 +49,7 @@
  */
 
 import { resolve } from 'node:path';
+import { pgSocketProblem } from '../../config/pg_transport.ts';
 import {
 	defaultOptionalHierarchies,
 	isCoreHierarchyTld,
@@ -293,6 +294,9 @@ function requireAnswers(answers: InstallAnswers, errors: string[]): void {
 	}
 	// An empty host would persist a DISABLED mailer — refuse the contradiction.
 	if (answers.mailer && answers.smtp_host === '') errors.push('mailer requires smtp_host');
+	// A relative socket would refuse the boot (config.ts) — refuse it here first.
+	const socketProblem = pgSocketProblem(answers.db_socket);
+	if (socketProblem !== null) errors.push(`db_socket: ${socketProblem}`);
 }
 
 /** Database + entity + locale answers (the plan's defaults live here). */
@@ -382,8 +386,10 @@ type LangConfig = ReturnType<typeof deriveLangConfig>;
  * plan writes, so a re-run never leaves one value under both names. Gate:
  * test/unit/install_persist_config.test.ts ('writes canonical key names').
  *
- * DEDALO_SOCKET_CONN has no canonical twin: the catalog has no main-database
- * socket key and the engine reads it nowhere (migration_map: DROPPED).
+ * The socket answer is DB_SOCKET (2026-10-09). Before that the plan wrote
+ * DEDALO_SOCKET_CONN, which the engine read NOWHERE — a socket-only install
+ * passed the probe over the socket and then connected to DB_HOST. It is now
+ * DB_SOCKET's PHP_KEY_ALIASES fallback spelling, read, never written.
  */
 function databaseSection(a: InstallAnswers): EnvSection {
 	return {
@@ -394,7 +400,7 @@ function databaseSection(a: InstallAnswers): EnvSection {
 			entry('DB_PASSWORD', a.db_password),
 			entry('DB_HOST', a.db_hostname),
 			entry('DB_PORT', a.db_port),
-			entry('DEDALO_SOCKET_CONN', a.db_socket),
+			entry('DB_SOCKET', a.db_socket),
 		],
 	};
 }
@@ -750,6 +756,9 @@ export function cliBootEnv(plan: InstallPlan): Record<string, string> {
 		DB_NAME: a.db_database,
 		DB_HOST: a.db_hostname,
 		DB_PORT: a.db_port,
+		// The socket answer too: without it the CLI's pool would reach DB_HOST
+		// while the probe and every psql step went through the socket.
+		DB_SOCKET: a.db_socket,
 		DB_USER: a.db_username,
 		DB_PASSWORD: a.db_password,
 		// The directory step's write-probe reads config.media.rootPath.

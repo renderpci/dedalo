@@ -99,6 +99,7 @@ fallback, so a migrated `.env` needs no edit; the v7 name wins when both are set
 | `DEDALO_DB_PORT_CONN` | `DB_PORT` |
 | `DEDALO_USERNAME_CONN` | `DB_USER` |
 | `DEDALO_PASSWORD_CONN` | `DB_PASSWORD` |
+| `DEDALO_SOCKET_CONN` | `DB_SOCKET` |
 | `DEDALO_MEDIA_PATH` | `MEDIA_PATH` |
 | `DEDALO_APPLICATION_LANG` | `APPLICATION_LANG` |
 | `DEDALO_DATA_LANG` | `DATA_LANG` |

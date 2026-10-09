@@ -282,7 +282,7 @@ take_backup() {
 	said="$(dc exec -T backup /opt/dedalo/master_dedalo/deploy/dedalo-db-backup.sh \
 		--label pre-image-update --dir /backups/db \
 		--db-key DB_NAME --host-key DB_HOST --port-key DB_PORT \
-		--user-key DB_USER --password-key DB_PASSWORD \
+		--user-key DB_USER --password-key DB_PASSWORD --socket-key DB_SOCKET \
 		--pg-dump pg_dump --pg-restore pg_restore)" || finish failed backup_failed 'the database backup failed — nothing was changed'
 	BACKUP_PATH="$(printf '%s\n' "$said" | sed -n 's/^dedalo-db-backup: verified \([^ ]*\).*$/\1/p' | tail -n 1)"
 	backup_path_grammar "$BACKUP_PATH" || finish failed backup_failed 'the backup reported no verified dump — nothing was changed'

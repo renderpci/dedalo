@@ -97,12 +97,13 @@ UMask=0077
 # 1. Matrix DB — custom format with blobs, read back with pg_restore before it is
 #    allowed to be named `*.backup`. --dir-key follows DEDALO_BACKUP_DIR when the
 #    operator moved the dumps, because that is the directory the panel lists and the
-#    updater's freshness gate scans. NO --socket-key here on purpose: the installer
-#    writes DEDALO_SOCKET_CONN but the TS engine reads it NOWHERE (config.ts builds
-#    the pool from DB_HOST/DB_PORT; src/config/migration_map.ts classifies the key
-#    as read by nothing), and a backup that connects by a route the engine does not
-#    use is a second, disagreeing answer to "which server holds the catalogue".
-ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run matrix_db /opt/dedalo/master_dedalo/deploy/dedalo-db-backup.sh --label timer --dir-key DEDALO_BACKUP_DIR --dir /opt/dedalo/private/backups/db --db-key DB_NAME --host-key DB_HOST --port-key DB_PORT --user-key DB_USER --password-key DB_PASSWORD --pg-dump pg_dump --pg-restore pg_restore
+#    updater's freshness gate scans. --socket-key DB_SOCKET because the engine's
+#    pool takes the same route (DB_SOCKET wins over DB_HOST, one rule for every
+#    connection: src/config/pg_transport.ts) — a backup that connected by another
+#    route would be a second, disagreeing answer to "which server holds the
+#    catalogue". Before 2026-10-09 the installer wrote DEDALO_SOCKET_CONN and
+#    nothing read it; it is now DB_SOCKET's fallback spelling.
+ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run matrix_db /opt/dedalo/master_dedalo/deploy/dedalo-db-backup.sh --label timer --dir-key DEDALO_BACKUP_DIR --dir /opt/dedalo/private/backups/db --db-key DB_NAME --host-key DB_HOST --port-key DB_PORT --user-key DB_USER --password-key DB_PASSWORD --socket-key DB_SOCKET --pg-dump pg_dump --pg-restore pg_restore
 # 2. RAG pgvector DB — UNCOMMENT when the semantic index is enabled. Its keys fall
 #    back to the main database's in the ENGINE, but not here on purpose: a backup
 #    that silently dumps the catalogue a second time because DEDALO_RAG_DB_NAME is

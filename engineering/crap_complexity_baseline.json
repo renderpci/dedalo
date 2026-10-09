@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 635,
-		"functions": 8460,
-		"functionsOverCap": 679,
-		"filesOverCap": 261
+		"files": 642,
+		"functions": 8618,
+		"functionsOverCap": 677,
+		"filesOverCap": 260
 	},
 	"ledger": [
 		{
@@ -109,6 +109,11 @@
 			"generated": "2026-10-08",
 			"functionsOverCap": 679,
 			"filesOverCap": 261
+		},
+		{
+			"generated": "2026-10-09",
+			"functionsOverCap": 677,
+			"filesOverCap": 260
 		}
 	],
 	"files": {
@@ -137,7 +142,7 @@
 		"src/core/area/dashboard.ts": 20,
 		"src/core/area/read.ts": 21,
 		"src/core/area/tree.ts": 27,
-		"src/core/area_maintenance/backup.ts": 22,
+		"src/core/area_maintenance/backup.ts": 20,
 		"src/core/area_maintenance/user_stats.ts": 33,
 		"src/core/area_maintenance/widgets/check_config.ts": 16,
 		"src/core/area_maintenance/widgets/counters_status.ts": 7,
@@ -258,7 +263,6 @@
 		"src/core/ontology/ontology_update_target.ts": 12,
 		"src/core/ontology/ontology_write.ts": 17,
 		"src/core/ontology/parser.ts": 17,
-		"src/core/ontology/recovery_file.ts": 9,
 		"src/core/ontology/resolver.ts": 13,
 		"src/core/ontology/section_map.ts": 9,
 		"src/core/reconcile/registry.ts": 13,
