@@ -1046,6 +1046,18 @@ Merged since the last release; these ship with the next one.
     lines is no longer needed. See
     [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).
 
+- **"On RHEL, Rocky and Alma, the v2 API of a site installed in its home now uses the publication host's own SELinux type, as in the system layout."**
+
+    With SELinux, the v2 API tree of a site installed in its home (`/home/<domain>`) was labelled
+    `data_home_t`, a home type the web server can read when `httpd_read_user_content` is on. It is
+    now labelled `dedalo_publication_v2_t`, the one type of the publication host's own policy module
+    `dedalo_publication_host`, in both layouts: systemd may only read it and the web server may not
+    read it under any boolean. `provision apply` (or init) installs the module on every SELinux host.
+    On a site already installed in its home, the next run re-types its own rule in place and
+    relabels the tree, before v2 starts again; nothing is to be done by hand. A rule of yours on the
+    same path is refused, never changed. Run `provision apply` (or init) again on such a site. See
+    [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).
+
 - **The guided publication-host install now proposes the v1 database connection it finds on the host.**
 
     `provision init` asks how the v1 Publication API reaches MariaDB: through its unix socket or over TCP. Until now the proposed answer was always the socket, even on a host without a local MariaDB. Init now looks for a local MariaDB socket (`/run/mysqld/mysqld.sock` on Debian and Ubuntu, `/var/lib/mysql/mysql.sock` on RHEL, Rocky and Alma). It proposes that socket when one exists, and otherwise TCP to `127.0.0.1:3306`, saying whether anything listens there. The question is still yours to answer. For TCP the proposed host is `127.0.0.1`, never `localhost`, because v1's database driver reads `localhost` as "use the socket" whatever the port. See [Publication host agent](./install/publication_host.md#the-three-lists).
@@ -1418,8 +1430,8 @@ Merged since the last release; these ship with the next one.
     v2 directory kept the home's own SELinux type, which systemd may not read, so neither the v2
     settings file (`v2.env`) nor the links to the current release and to the release being tested
     could be followed: every install was refused (`scratch_start_failed`). `provision apply` now
-    labels `<home>/dedalo/publication_api/v2` `data_home_t`, a type systemd reads and the web server
-    still may not. The v2 services also start their entry with `bun src/index.ts` instead of
+    labels `<home>/dedalo/publication_api/v2` `dedalo_publication_v2_t`, the publication host's own
+    SELinux type, which systemd may only read and the web server may not read. The v2 services also start their entry with `bun src/index.ts` instead of
     `bun run src/index.ts`, which left links in the service's private `/tmp` that systemd could not
     remove at every stop (an SELinux denial each time). Run `provision apply` (or init) again on such
     a site. See [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).
@@ -1493,7 +1505,7 @@ Merged since the last release; these ship with the next one.
     web server may not, and labels the v2 tree with it before any service starts. The guided
     install lists it as `selinux.v2_policy`. A module of that name that the provisioner did not
     install is refused, never replaced, and the module is removed when no instance on the host
-    needs it any more. A first system-layout install also creates the shared directory `/srv/dedalo_publication_host` (it was refused when that directory did not exist). The home layout is unchanged. See
+    needs it any more. A first system-layout install also creates the shared directory `/srv/dedalo_publication_host` (it was refused when that directory did not exist). See
     [Publication host agent](./install/publication_host.md#rhel-rocky-and-alma).
 
 - **"Rotating a publication host's token now restarts its agent."**
