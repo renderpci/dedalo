@@ -685,6 +685,23 @@ you are. Set it in the `dedalo` service's `environment:` **before** the stack
 ever comes up (the shipped compose file already passes the variable through, so
 exporting it is enough):
 
+In the same shell you will run `docker compose up -d` from (B2), replacing
+`203.0.113.10` with the address **you** will browse from:
+
+```shell
+export DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10
+```
+
+Check that compose picked it up before going on:
+
+```shell
+docker compose config | grep DEDALO_INSTALL_ALLOWED_IPS
+```
+
+The export lives only in that shell: a new terminal needs it again. To set it
+permanently instead, edit the `dedalo` service's `environment:` in the compose
+file:
+
 ```yaml
 environment:
   DEDALO_INSTALL_ALLOWED_IPS: "203.0.113.10"     # the address YOU will browse from
