@@ -11,7 +11,7 @@
  */
 
 import { expect } from 'bun:test';
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -27,6 +27,7 @@ import {
 	SEED_BOOTSTRAP_TLDS,
 	SEED_BUILD_MARKER_TABLE,
 	SEED_LANGS_PATH,
+	SEED_MIGRATIONS_DIR,
 	SEED_ONTOLOGY_TLDS,
 	SEED_RECORDS,
 	SEED_REGISTRY_PATH,
@@ -159,14 +160,26 @@ export async function assertSeedContract(conn: DbConnDescriptor): Promise<void> 
 		),
 	).toEqual([]);
 
-	// No constraint ships NOT VALID: the seed is born satisfying every check.
+	// The NOT VALID constraints are EXACTLY the ones the migrations add NOT VALID:
+	// the seed's schema is schema.sql + the migrations (the boot self-heals reproduce
+	// that shape), never a stricter or a looser one.
+	const migrationNotValid = readdirSync(SEED_MIGRATIONS_DIR)
+		.filter((name) => name.endsWith('.sql'))
+		.flatMap((name) => [
+			...readFileSync(join(SEED_MIGRATIONS_DIR, name), 'utf8').matchAll(
+				/ADD\s+CONSTRAINT\s+([a-z_][a-z0-9_]*)[^;]*?\bNOT\s+VALID\s*;/gi,
+			),
+		])
+		.map((match) => match[1] as string)
+		.sort();
+	expect(migrationNotValid.length).toBeGreaterThan(0);
 	expect(
 		await column(
 			conn,
-			`SELECT conrelid::regclass::text || '.' || conname FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace
-			 WHERE n.nspname = 'public' AND NOT convalidated`,
+			`SELECT conname FROM pg_constraint c JOIN pg_namespace n ON n.oid = c.connamespace
+			 WHERE n.nspname = 'public' AND NOT convalidated ORDER BY 1`,
 		),
-	).toEqual([]);
+	).toEqual(migrationNotValid);
 
 	// None of the compiler's, the suite's or the engine's own machinery; declared extensions only.
 	expect(tables.filter((table) => table.startsWith('dedalo_'))).toEqual([]);

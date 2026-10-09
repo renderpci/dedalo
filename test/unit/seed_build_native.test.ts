@@ -229,23 +229,20 @@ describe('seed compiler — pure halves', () => {
 		);
 	});
 
-	test('the finish script clusters keyed tables, refuses an unkeyed one, restarts idle sequences, validates constraints', () => {
+	test('the finish script clusters keyed tables, refuses an unkeyed one, restarts idle sequences, validates nothing', () => {
 		const sql = seedFinishSql({
 			tables: ['matrix_langs', 'matrix_string_search'],
 			primaryKeys: { matrix_langs: 'matrix_langs_pkey' },
 			idleSequences: ['matrix_activity_id_seq'],
-			notValid: [{ table: 'dd_ontology', constraint: 'dd_ontology_tipo_grammar' }],
 		});
 		expect(sql).toContain('CLUSTER "matrix_langs" USING "matrix_langs_pkey";');
 		expect(sql).toContain('ALTER TABLE "matrix_langs" SET WITHOUT CLUSTER;');
 		expect(sql).not.toContain('CLUSTER "matrix_string_search"'); // declared key-less: ships empty
 		expect(sql.startsWith('TRUNCATE "matrix_string_search";')).toBe(true); // emptied after every load
 		expect(sql).toContain('ALTER SEQUENCE "matrix_activity_id_seq" RESTART WITH 1;');
-		expect(sql).toContain(
-			'ALTER TABLE "dd_ontology" VALIDATE CONSTRAINT "dd_ontology_tipo_grammar";',
-		);
+		expect(sql).not.toContain('VALIDATE CONSTRAINT'); // the schema stays schema.sql + migrations
 		expect(() =>
-			seedFinishSql({ tables: ['matrix_new'], primaryKeys: {}, idleSequences: [], notValid: [] }),
+			seedFinishSql({ tables: ['matrix_new'], primaryKeys: {}, idleSequences: [] }),
 		).toThrow(
 			expect.objectContaining({ publicMessage: expect.stringContaining('no primary key') }),
 		);

@@ -21,8 +21,8 @@
  *   4. psql empties every table that does not ship (the search stores
  *      included — they fill at the install's first boot, in ITS locale), loads
  *      langs + registry, writes the canonical records + the data version; then
- *      CLUSTERs every table on its primary key, restarts idle sequences and
- *      VALIDATEs the migrations' NOT VALID constraints (a deterministic dump);
+ *      CLUSTERs every table on its primary key and restarts idle sequences
+ *      (a deterministic dump);
  *      the registry must be activatable (provisionBlocker) and inactive;
  *   5. pg_dump → `<out>.part`;
  *   6. VERIFIED BY A REAL INSTALL: the VERIFY child restores `.part` into a
@@ -687,7 +687,7 @@ export function seedDataSql(input: {
 }
 
 /**
- * The finishing script (step 4b). Pure. Three things a fresh install must not
+ * The finishing script (step 4b). Pure. Two things a fresh install must not
  * inherit from HOW the seed was compiled:
  *  - ROW ORDER: pg_dump writes heap order, and the compile's DELETE + COPY passes
  *    leave it to chance (measured: two compiles dumped the same rows in another
@@ -697,15 +697,14 @@ export function seedDataSql(input: {
  *  - SEQUENCES: a sequence serving only EMPTY tables restarts at 1 — TRUNCATE …
  *    RESTART IDENTITY reaches only OWNED sequences (measured: the activity
  *    sequences shipped at 8 after the child's own writes).
- *  - NOT VALID constraints: the migrations add their checks NOT VALID (an old
- *    install may violate them); a seed is born clean, so every one is VALIDATED
- *    — a free proof the shipped rows obey the identifier grammar.
+ * The migrations' NOT VALID constraints stay NOT VALID: the seed's schema is
+ * exactly schema.sql + the migrations, which is what the boot self-heals
+ * reproduce (tm_role_self_heal_native compares them).
  */
 export function seedFinishSql(input: {
 	tables: readonly string[];
 	primaryKeys: Readonly<Record<string, string>>;
 	idleSequences: readonly string[];
-	notValid: readonly { table: string; constraint: string }[];
 }): string {
 	// The stores LAST-emptied: their sync triggers re-fill them on every row the
 	// data script loads (measured: 130 889 relation-index rows after an early TRUNCATE).
@@ -715,7 +714,6 @@ export function seedFinishSql(input: {
 		),
 		...clusterStatements(input.tables, input.primaryKeys),
 		...sequenceRestarts(input.idleSequences),
-		...constraintValidations(input.notValid),
 	];
 	return `${lines.join('\n')}\n`;
 }
@@ -746,17 +744,6 @@ function sequenceRestarts(sequences: readonly string[]): string[] {
 	});
 }
 
-function constraintValidations(
-	notValid: readonly { table: string; constraint: string }[],
-): string[] {
-	return notValid.map(({ table, constraint }) => {
-		if (!IDENTIFIER.test(table) || !IDENTIFIER.test(constraint)) {
-			fail(`refusing constraint '${table}.${constraint}'`);
-		}
-		return `ALTER TABLE "${table}" VALIDATE CONSTRAINT "${constraint}";`;
-	});
-}
-
 /**
  * Sequences no NON-EMPTY table uses (owner or column default) — the ones a
  * fresh install must find at 1. Run after ANALYZE (reltuples).
@@ -770,10 +757,6 @@ const IDLE_SEQUENCES_SQL = `SELECT s.relname FROM pg_class s JOIN pg_namespace n
 		    OR (d.classid = 'pg_class'::regclass AND d.objid = s.oid AND d.deptype IN ('a','i')))
 		  AND t.relkind = 'r' AND t.reltuples > 0
 	) ORDER BY 1`;
-
-/** The NOT VALID constraints of the public schema, `table:constraint`. */
-const NOT_VALID_SQL = `SELECT c.conrelid::regclass::text || ':' || c.conname FROM pg_constraint c
-	JOIN pg_namespace n ON n.oid = c.connamespace WHERE n.nspname = 'public' AND NOT c.convalidated ORDER BY 1`;
 
 /** table → its primary-key constraint (public schema). */
 async function primaryKeys(
@@ -974,7 +957,7 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 		build.conn,
 		scratch.name,
 		['-1', '-f', '-'],
-		'order the tables, reset idle sequences, validate constraints',
+		'order the tables, reset idle sequences',
 		seedFinishSql({
 			tables: await scratchTables(build.conn, scratch.name),
 			primaryKeys: await primaryKeys(build.conn, scratch.name),
@@ -984,12 +967,6 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 				IDLE_SEQUENCES_SQL,
 				'list idle sequences',
 			),
-			notValid: (
-				await psqlColumn(build.conn, scratch.name, NOT_VALID_SQL, 'list NOT VALID constraints')
-			).map((row) => {
-				const [table = '', constraint = ''] = row.split(':');
-				return { table, constraint };
-			}),
 		}),
 	);
 	const registry = await assertShippable(build.conn, scratch.name);
