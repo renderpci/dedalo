@@ -1,6 +1,6 @@
 # PR gate — HERMETIC TIER ONLY (engineering/CI.md).
 #
-# PUBLIC-REPO POSTURE (2026-07-11): renderpci/dedalo is PUBLIC, so NO job in this
+# PUBLIC-REPO POSTURE (2026-07-11): dedalia-org/dedalo is PUBLIC, so NO job in this
 # directory may target the self-hosted runner. A fork PR runs attacker-controlled
 # code, and the self-hosted Mac holds the real ../private/.env and the live matrix
 # Postgres — a self-hosted PR job there is remote code execution on the data host.

@@ -102,7 +102,7 @@ updates:
 
   # THE CI IMAGE'S BASE (ci/Dockerfile `FROM debian:trixie-slim@sha256:…`). The digest pin
   # is exactness; this is its updater — the same rule as the SHA-pinned actions above. A
-  # merged bump changes the image fingerprint, which republishes ghcr.io/renderpci/dedalo-ci
+  # merged bump changes the image fingerprint, which republishes ghcr.io/dedalia-org/dedalo-ci
   # (.github/workflows/ci-image.yml). Distro PACKAGES inside the image are refreshed by that
   # workflow's weekly no-cache rebuild, not here.
   - package-ecosystem: docker

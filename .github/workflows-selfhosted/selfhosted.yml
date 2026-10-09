@@ -1,7 +1,8 @@
 # SELF-HOSTED TIER — PRIVATE MIRROR ONLY. Never place this file (or any job with
 # `runs-on: [self-hosted, …]`) under .github/workflows/ on the PUBLIC repo.
 #
-# Why this directory exists (2026-07-11): renderpci/dedalo went PUBLIC. GitHub only
+# Why this directory exists (2026-07-11): the repository (renderpci/dedalo then,
+# dedalia-org/dedalo since 2026-10-09) went PUBLIC. GitHub only
 # executes workflows under .github/workflows/, so everything here is INERT on the
 # public repo — preserved, reviewed, and ready to be activated on a PRIVATE mirror
 # that has the self-hosted runner attached.

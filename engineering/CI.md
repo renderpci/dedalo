@@ -1,6 +1,7 @@
 # CI/CD — pipeline map, local gate, invariants, runbooks
 
-CI runs on `renderpci/dedalo` (GitHub), a **PUBLIC** repo whose default branch is
+CI runs on `dedalia-org/dedalo` (GitHub; transferred from `renderpci/dedalo` on
+2026-10-09 — old URLs redirect), a **PUBLIC** repo whose default branch is
 **`master`**; development lands directly on **`v7`**. Both facts shape everything
 below (see Security posture). Active since 2026-07-11. Invariants in the workflow
 files are enforced by `test/unit/ci_workflow_tripwire.test.ts` (rules numbered in its
@@ -41,7 +42,7 @@ by a hosted one (`tier_wiring_tripwire` leg B).
 | `.github/workflows/ci.yml` | pull_request + push master/v7 | hosted ubuntu, `hermetic` in the CI image (uid 1001) | `dedupe` → `hermetic` (`scripts/ci/hermetic.sh`) |
 | `.github/workflows/db.yml` | pull_request + push master/v7 + dispatch | hosted ubuntu, each tier job in the CI image (uid 1001) + a `pgvector` service (digest-pinned) reached as `postgres` | `dedupe` → `db` (`scripts/ci/db_tier.sh`: builds the suite database from repo-vendored bytes, starts the suite MariaDB target, then, in this order, the DB-backed tripwires → the unit tier (blocking since 2026-10-02) → the parity tier → the MariaDB tier (blocking — PUB-05, LAST on purpose: see *CI tiers → DB* below; tier_wiring leg K)) and `instance` (`scripts/ci/instance_tier.sh`: its OWN fresh suite database, then the browser client suite via `scripts/ci/client_gate.sh`, the tool phone contract, both update drills, the publication-host media drill on live Apache + nginx, the publication-host agent drill (the suite MariaDB started for it) and the publication-host engine drill (engine ↔ real agent: pair CLI, panel actions, httpd gating)). Both source `scripts/ci/hosted_env.sh` |
 | `.github/workflows/nightly.yml` | cron 04:17 UTC daily + dispatch | hosted ubuntu | the TIME-BASED checks the push gate defers: `scripts/ci/audit.ts --force --require-network` with the vendor calendar ON; `image_pin` (`bun run ci:image:pin --check`: the lock is the latest published build); `cosign_pin` (`bun run ci:cosign:pin --check`: `ci/cosign.json` is set and is the latest stable cosign); `report` keeps one `ci-nightly` issue open/updated/closed |
-| `.github/workflows/ci-image.yml` | push master/v7 touching the image definition + weekly cron (cache OFF) + dispatch | hosted ubuntu-24.04 amd64 + arm64 (native, no QEMU) | builds `ci/Dockerfile`, smoke-tests the exact bytes, pushes `ghcr.io/renderpci/dedalo-ci` (`fp-<fingerprint>`, `<YYYYMMDD>`, `latest`) as a multi-arch manifest list |
+| `.github/workflows/ci-image.yml` | push master/v7 touching the image definition + weekly cron (cache OFF) + dispatch | hosted ubuntu-24.04 amd64 + arm64 (native, no QEMU) | builds `ci/Dockerfile`, smoke-tests the exact bytes, pushes `ghcr.io/dedalia-org/dedalo-ci` (`fp-<fingerprint>`, `<YYYYMMDD>`, `latest`) as a multi-arch manifest list |
 | `.github/workflows/image-release.yml` | push of a stable tag `vX.Y.Z` + dispatch (`dev` from `master`, or `release` of an existing tag) — never PR or schedule | hosted ubuntu-24.04 amd64 + arm64 (native); `publish` bound to the `image-release` environment | the PRODUCT image (`Dockerfile`): `plan` → per-arch `build` from a `git archive` of the release commit + smoke test → `publish` (one index in staging, immutability, cosign keyless sign ONCE, `cosign copy` to every provisioned registry of `engineering/image_registries.json`, same-digest + `cosign verify` check, record) — see *The product image* |
 | `.github/workflows/security.yml` | PR + push master + weekly cron + dispatch | hosted ubuntu | secret scan (gitleaks, digest-pinned image): working tree every run, FULL HISTORY weekly |
 | `.github/workflows/codeql.yml` | PR + push master + weekly cron | hosted ubuntu | CodeQL dataflow SAST (javascript-typescript, `build-mode: none`) → Security tab |
@@ -707,6 +708,42 @@ nightly `image_pin` is red: the weekly no-cache rebuild published distro securit
 the lock does not take yet. (Rule 1b asserted `lock == checkout` until review on
 2026-09-26 found it deadlocked the push that publishes a new definition.)
 
+**Moving the CI image repository** (2026-10-09: the repo was transferred
+`renderpci/dedalo` → `dedalia-org/dedalo`; a user-owned GHCR package does NOT move with
+a repository). `ci-image.yml` publishes to `ghcr.io/dedalia-org/dedalo-ci`
+(`CI_IMAGE_NAME`, `scripts/lib/ci_image.ts`), and `ci:image:pin` resolves
+`fp-<fingerprint>` THERE and always writes that name. Until the first publish under the
+new owner is pinned, the lock and the literals still name the old package
+`ghcr.io/renderpci/dedalo-ci`, accepted ONLY as the named `CI_IMAGE_LEGACY` (with its
+reason). Rule 1b holds both ends: while `CI_IMAGE_LEGACY` is set the lock MUST still
+name it, every literal must equal the lock's `<name>@<digest>`, and a `dedalo-ci@sha256`
+literal under any third name is red. So the transition cannot outlive its reason —
+the pin that drops the old name turns rule 1b red until the legacy constant is deleted.
+
+Stage 2 (in order; each step is the previous one's precondition):
+
+1. Push the stage-1 commit to `v7`/`master`. It touches `ci-image.yml` and `ci/Dockerfile`
+   (the `org.opencontainers.image.source` label), so `ci-image.yml` runs and publishes
+   `ghcr.io/dedalia-org/dedalo-ci:fp-<fingerprint>`. The label change moved the
+   fingerprint: the hosts, still on the locked renderpci build, are RED on rule 1b (a)
+   until step 4 lands — the documented pin-me signal ("The pin"), not a fault. The
+   pre-push gate is green (`ci:local --docker` builds the new definition locally).
+2. Make the new package PUBLIC (org → Packages → `dedalo-ci` → Package settings →
+   Change visibility) and confirm it is linked to `dedalia-org/dedalo` (the source label;
+   Actions access: the repo with *Write*). `ci:image:pin` pulls anonymously — a private
+   package answers like a missing one.
+3. `bun run ci:image:pin` — rewrites `ci/image.json` and every literal in `ci.yml`,
+   `db.yml`, `.gitlab-ci.yml` to `ghcr.io/dedalia-org/dedalo-ci@<digest>`.
+4. In the SAME commit, set `CI_IMAGE_LEGACY = null` in `scripts/lib/ci_image.ts` (rule 1b
+   is red without it) and drop the legacy mentions in `.gitlab-ci.yml`, `ci-image.yml`'s
+   header and `ci/README.md` (`git grep renderpci/dedalo-ci` must then hit only this section).
+   `bunx tsc --noEmit`, `bun test test/unit/ci_workflow_tripwire.test.ts`,
+   `bun run ci:image:pin --check` → green; commit; push.
+5. CI green on both hosts (GitHub `ci`/`db`, GitLab hermetic) in the new image.
+6. Delete the old user package `ghcr.io/renderpci/dedalo-ci` (renderpci → Packages →
+   `dedalo-ci` → Delete) — only after step 5, and after any branch still pinning it is
+   re-pinned or gone: until then it serves those pins.
+
 ### The product image (`image-release.yml`)
 
 Dédalo publishes ONE signed image — one digest — to every **provisioned** registry of
@@ -936,7 +973,7 @@ naming them: the gate is what keeps every reference inside the environment-bound
    seeing another branch's run of the same sha CONCLUDE success; a failed, timed-out
    or cancelled dedupe runs the tiers (`!cancelled()`, leg F), so no dedupe fault can
    post a skip (see the dedupe). **Periodic check** (calendar it; no gate fires):
-   `gh api repos/renderpci/dedalo/branches/<b>/protection` for both branches must list
+   `gh api repos/dedalia-org/dedalo/branches/<b>/protection` for both branches must list
    exactly those three contexts.
 5. **Timeouts**: the `instance` job's 60 min is a first pin from the db build plus the
    drills' documented runtimes — re-pin from the first green run's wall clock.

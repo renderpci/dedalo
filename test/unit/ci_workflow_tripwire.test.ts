@@ -27,7 +27,7 @@
  *      engineering/TRIPWIRES.md rows exactly (the 12-vs-14 drift found
  *      2026-07-09 stays fixed), and every listed test file exists.
  *   5. PUBLIC-REPO POSTURE (2026-07-11) — NO self-hosted job may live in
- *      .github/workflows/. renderpci/dedalo is PUBLIC: anyone can fork it and
+ *      .github/workflows/. dedalia-org/dedalo is PUBLIC: anyone can fork it and
  *      open a PR, and a `runs-on: self-hosted` job would execute that fork's
  *      code on the Mac holding the real ../private/.env and the live matrix
  *      Postgres — RCE on the data host. The self-hosted tier is preserved,
@@ -139,10 +139,13 @@ import { join } from 'node:path';
 import { Glob } from 'bun';
 import { PACKAGES } from '../../scripts/ci/audit.ts';
 import {
+	CI_IMAGE_LEGACY,
 	CI_IMAGE_NAME,
+	CI_IMAGE_NAME_PATTERN,
 	CI_IMAGE_REF,
 	CI_IMAGE_REFERENCES,
 	ciImageFingerprint,
+	lockedImageRef,
 	readCiImageLock,
 } from '../../scripts/lib/ci_image.ts';
 import { findStatusProse } from '../../scripts/lib/status_prose.ts';
@@ -1093,7 +1096,7 @@ describe('CI workflow tripwire', () => {
 		);
 		expect(
 			offenders,
-			'renderpci/dedalo is PUBLIC. A `runs-on: self-hosted` job here executes fork-PR code on the Mac that holds ../private/.env and the live matrix Postgres. Move it to .github/workflows-selfhosted/ (inert; GitHub executes only .github/workflows/). If the repo ever goes private again, retire this rule deliberately — do not just delete it:',
+			'dedalia-org/dedalo is PUBLIC. A `runs-on: self-hosted` job here executes fork-PR code on the Mac that holds ../private/.env and the live matrix Postgres. Move it to .github/workflows-selfhosted/ (inert; GitHub executes only .github/workflows/). If the repo ever goes private again, retire this rule deliberately — do not just delete it:',
 		).toEqual([]);
 	});
 
@@ -1537,7 +1540,7 @@ describe('CI workflow tripwire', () => {
 	 * move together.
 	 */
 	// Rule 11 (2026-08-25) — FORK SAFETY: the executed tier references NO secret.
-	// renderpci/dedalo is PUBLIC. GitHub withholds secrets from fork-PR
+	// dedalia-org/dedalo is PUBLIC. GitHub withholds secrets from fork-PR
 	// `pull_request` runs, but that protection is one trigger edit away
 	// (`pull_request_target` hands them back alongside the fork's code), and a
 	// hosted test tier NEEDS no secret: its Postgres service password is a
@@ -1619,7 +1622,7 @@ describe('CI workflow tripwire', () => {
 	//
 	// The INLINE `container: <ref>` spelling (2026-09-26) is the same image under the
 	// other key GitHub accepts, and the tiers are moving into the CI image: a
-	// `container: ghcr.io/renderpci/dedalo-ci:latest` would have passed a scan that
+	// `container: ghcr.io/dedalia-org/dedalo-ci:latest` would have passed a scan that
 	// only read `image:` lines. The mapping form (`container:` + `image:` below it) is
 	// already covered by the image: scan.
 	test('every workflow image: (and inline container:) is pinned by digest, never a tag', () => {
@@ -1798,7 +1801,21 @@ describe('CI workflow tripwire', () => {
 
 	test('every tier on every host runs the ONE locked CI image, as uid 1001, built from THIS definition', () => {
 		const lock = readCiImageLock(repoRoot);
-		expect(lock.image, 'ci/image.json names another repository').toBe(CI_IMAGE_NAME);
+		// The lock names the publishing repository — or, during the repository move ONLY,
+		// the named legacy one (scripts/lib/ci_image.ts CI_IMAGE_LEGACY). The legacy name
+		// lives exactly as long as a pin uses it: once `bun run ci:image:pin` has moved
+		// the lock to CI_IMAGE_NAME this goes RED until CI_IMAGE_LEGACY is set to null,
+		// so the transition cannot outlive its reason (engineering/CI.md "Moving the CI
+		// image repository").
+		if (CI_IMAGE_LEGACY === null) {
+			expect(lock.image, 'ci/image.json names another repository').toBe(CI_IMAGE_NAME);
+		} else {
+			expect(CI_IMAGE_LEGACY.reason.length, 'CI_IMAGE_LEGACY carries a reason').toBeGreaterThan(40);
+			expect(
+				lock.image,
+				`ci/image.json no longer pins the legacy ${CI_IMAGE_LEGACY.name}: the repository move is done — set CI_IMAGE_LEGACY = null in scripts/lib/ci_image.ts (then retire the old package)`,
+			).toBe(CI_IMAGE_LEGACY.name);
+		}
 
 		// (a) IN the image: the image IS this checkout's definition.
 		if (process.env.DEDALO_CI_IMAGE === '1') {
@@ -1813,11 +1830,20 @@ describe('CI workflow tripwire', () => {
 		const hosts = [...allWorkflows, { rel: '.gitlab-ci.yml', src: read('.gitlab-ci.yml') }];
 		const holders: string[] = [];
 		for (const { rel, src } of hosts) {
-			const digests = [...src.matchAll(CI_IMAGE_REF)].map((m) => m[1]);
-			if (digests.length === 0) continue;
+			const refs = [...src.matchAll(CI_IMAGE_REF)];
+			// A dedalo-ci digest under a name the regex does not accept would be invisible
+			// to the updater and to every leg below — count them independently.
+			const anyName = [...src.matchAll(/dedalo-ci@sha256:/g)].length;
+			expect(
+				refs.length,
+				`${rel}: a dedalo-ci@sha256 literal under a repository other than ${CI_IMAGE_NAME}${CI_IMAGE_LEGACY ? ` / ${CI_IMAGE_LEGACY.name}` : ''}`,
+			).toBe(anyName);
+			if (refs.length === 0) continue;
 			holders.push(rel);
-			for (const digest of digests) {
-				expect(digest, `${rel}: a dedalo-ci digest that is not ci/image.json's`).toBe(lock.digest);
+			for (const m of refs) {
+				expect(`${m[1]}@${m[2]}`, `${rel}: a dedalo-ci pin that is not ci/image.json's`).toBe(
+					lockedImageRef(lock),
+				);
 			}
 		}
 		expect(
@@ -1859,7 +1885,7 @@ describe('CI workflow tripwire', () => {
 				orphanMentions,
 			};
 		};
-		const IMAGE = String.raw`ghcr\.io\/renderpci\/dedalo-ci@sha256:[0-9a-f]{64}`;
+		const IMAGE = `${CI_IMAGE_NAME_PATTERN}@sha256:[0-9a-f]{64}`;
 		const githubInImage = (body: string) =>
 			new RegExp(
 				String.raw`^ {4}container:\s*(?:#.*)?\n(?: {6}.*\n)*? {6}image:\s*${IMAGE}\s*$`,
@@ -1875,7 +1901,7 @@ describe('CI workflow tripwire', () => {
 		// an in-image job is told from a bare one; a mention outside any job is counted.
 		const d = '0'.repeat(64);
 		const control = jobsOf(
-			`jobs:\n  a: # note\n    container:\n      image: ghcr.io/renderpci/dedalo-ci@sha256:${d}\n      options: --user 1001\n    steps:\n      - run: |\n          bash ./scripts/ci/db_tier.sh\n  b:\n    steps:\n      - run: bash scripts/ci/hermetic.sh\n`,
+			`jobs:\n  a: # note\n    container:\n      image: ${CI_IMAGE_NAME}@sha256:${d}\n      options: --user 1001\n    steps:\n      - run: |\n          bash ./scripts/ci/db_tier.sh\n  b:\n    steps:\n      - run: bash scripts/ci/hermetic.sh\n`,
 			2,
 		);
 		expect(control.tierJobs.map((j) => [j.name, githubInImage(`${j.body}\n`)])).toEqual([
@@ -1883,7 +1909,7 @@ describe('CI workflow tripwire', () => {
 			['b', false],
 		]);
 		const glControl = jobsOf(
-			`hermetic:\n  image:\n    name: ghcr.io/renderpci/dedalo-ci@sha256:${d}\n    docker:\n      user: "1001"\n  script:\n    - bash scripts/ci/hermetic.sh\n`,
+			`hermetic:\n  image:\n    name: ${CI_IMAGE_NAME}@sha256:${d}\n    docker:\n      user: "1001"\n  script:\n    - bash scripts/ci/hermetic.sh\n`,
 			0,
 		);
 		expect(glControl.tierJobs.map((j) => gitlabInImage(`${j.body}\n`))).toEqual([true]);

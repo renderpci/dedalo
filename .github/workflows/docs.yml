@@ -16,7 +16,7 @@
 # purge deleted and renamed ~10 pages across a 240-page manual; without this gate the
 # broken inbound links would have been found by readers, months later.
 #
-# PUBLIC-REPO POSTURE: renderpci/dedalo is PUBLIC, so no job in this directory may target
+# PUBLIC-REPO POSTURE: dedalia-org/dedalo is PUBLIC, so no job in this directory may target
 # the self-hosted runner (a fork PR would be RCE on the data host). This job is
 # ubuntu-latest and needs no secrets, no database, and no runtime — it is pure Python.
 # Rule 5 of test/unit/ci_workflow_tripwire.test.ts enforces that.

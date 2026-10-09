@@ -5,7 +5,7 @@
 # 2026-08-24: 19 tripwires ran on NO executing tier while every gate the repo
 # owns reported green. This workflow runs them on every PR.
 #
-# FORK SAFETY IS THE WHOLE DESIGN. renderpci/dedalo is PUBLIC and anyone may open
+# FORK SAFETY IS THE WHOLE DESIGN. dedalia-org/dedalo is PUBLIC and anyone may open
 # a PR, which is exactly why the DB tier could never be self-hosted (rule 5 of
 # test/unit/ci_workflow_tripwire.test.ts: that would be RCE on the machine
 # holding ../private/.env and the live matrix Postgres). Here a fork PR gets its

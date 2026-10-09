@@ -6,7 +6,9 @@
 # client gate) run ONLY via GitHub Actions — one runner machine-owner, no
 # cross-system collision on the shared scratch DB surfaces.
 #
-# THE IMAGE IS THE CI IMAGE (2026-09-26) — ghcr.io/renderpci/dedalo-ci, the one
+# THE IMAGE IS THE CI IMAGE (2026-09-26) — ghcr.io/dedalia-org/dedalo-ci (the pin below
+# may still name the transition's legacy ghcr.io/renderpci/dedalo-ci until it is re-pinned —
+# engineering/CI.md "Moving the CI image repository"), the one
 # ci:local and the GitHub tiers use (ci/README.md), pinned by DIGEST, run as uid 1001
 # (the GitHub runner's, and ci:local's `runner`). It was bare oven/bun as root: no git
 # (site_builder publishes through git) and root defeats the uid/permission gates, so

@@ -10,7 +10,7 @@ each package, the base choice and the layer order live in the header of
 |---|---|
 | Pin | `ci/image.json` (digest + fingerprint) — every host runs it; `bun run ci:image:pin` moves it |
 | Local tag | `dedalo-ci:local` (only while the definition is unpublished, or `ci:local --build`) |
-| Registry | `ghcr.io/renderpci/dedalo-ci` (published by `.github/workflows/ci-image.yml`) |
+| Registry | `ghcr.io/dedalia-org/dedalo-ci` (published by `.github/workflows/ci-image.yml`; pins may name the legacy `ghcr.io/renderpci/dedalo-ci` until re-pinned — `engineering/CI.md` "Moving the CI image repository") |
 | Arches | `linux/amd64`, `linux/arm64` (native builds; Apple Silicon runs it without emulation) |
 | Base | `debian:trixie-slim` by digest — the product image's distro |
 | Contents | bun = `.bun-version`, `postgresql-client-18`, ffmpeg (+ffprobe, qt-faststart), ImageMagick 7, poppler-utils, ghostscript, librsvg2-bin, MariaDB server+client, Apache (apache2 + apxs) + nginx (publication-host drills), php-cli (the engine drill lints real v1 releases), Chromium, git, rsync, unzip/zip, openssl + `cvtsudoers` from `sudo` (publication-host agent gates); the EXEC SEAM: `/usr/bin/sudo` and `/usr/bin/systemctl` are dispatchers into `/opt/dedalo-ci/exec-seam/` (real binaries diverted to `*.distrib`) — the agent drill's stand-ins |

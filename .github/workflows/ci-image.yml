@@ -1,4 +1,7 @@
-# CI IMAGE — build and publish ghcr.io/renderpci/dedalo-ci from ci/Dockerfile.
+# CI IMAGE — build and publish ghcr.io/dedalia-org/dedalo-ci from ci/Dockerfile.
+# (Since the 2026-10-09 repo transfer renderpci/dedalo → dedalia-org/dedalo; the old
+# user-owned package ghcr.io/renderpci/dedalo-ci keeps serving the pins until they are
+# re-pinned — engineering/CI.md "Moving the CI image repository".)
 #
 # WHAT IT IS FOR. The executing tiers (ci.yml, db.yml) and `bun run ci:local -- --docker`
 # run INSIDE this image, so a verdict is a property of the commit and not of whichever
@@ -69,7 +72,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  IMAGE: ghcr.io/renderpci/dedalo-ci
+  IMAGE: ghcr.io/dedalia-org/dedalo-ci
 
 jobs:
   build:
