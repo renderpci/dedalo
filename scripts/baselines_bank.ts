@@ -325,6 +325,20 @@ export const REGISTRY: readonly RatchetEntry[] = [
 		reason:
 			'a DECISION list, not a measure: which top-level entries a release ships to every install (test/unit/release_root_entries_tripwire.test.ts). Regenerating it from the tree would bank exactly the accident it exists to stop (an editor config committed at the root), so every add or removal is a hand edit in review',
 	},
+	{
+		id: 'image_registries',
+		artifacts: ['engineering/image_registries.json'],
+		tier: 'manual',
+		reason:
+			'a SOURCE, not a measure: the official image registry list (addresses, signing identity) is a hand decision; the generated copies (deploy/image_registries.sh, the docs/install/docker.md table) derive FROM it via `bun run registries:gen` and are gated by `registries:check` (test/unit/image_registries_tripwire.test.ts) — nothing derives the list itself',
+	},
+	{
+		id: 'install_seed_contract',
+		artifacts: ['engineering/install_seed_contract.json'],
+		tier: 'manual',
+		reason:
+			'an EXACT, shrink-only exception list whose every entry carries a hand-written reason: the core seed’s dangling DEPENDENCY references (src/core/ontology/ontology_references.ts measures them; test/unit/install_seed_drift_tripwire.test.ts demands equality). A writer would bank a new dangling reference without the reason the gate exists to demand, so an entry leaves only by hand after the seed is rebuilt',
+	},
 ];
 
 // ── execution ────────────────────────────────────────────────────────────────
