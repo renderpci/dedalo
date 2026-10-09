@@ -53,6 +53,16 @@ export const ONTOLOGY_CHILDREN = 'ontology14';
 export const ONTOLOGY_TYPE_GROUP = 'ontology40';
 /** The grouper TLD namespace for ontology typologies. */
 export const ONTOLOGY_TYPE_TLD = 'ontologytype';
+/**
+ * ddengine11 — "Required ontologies": the DECLARED dependencies of an ontology
+ * (component_portal → ontology35 registry records), filled on the ontology
+ * master in the Ontologies-main edit form. ENGINE-OWNED (engine_ontology.json):
+ * the master ontology cannot carry a component the engine reads for a wire
+ * contract (an update replaces its TLD wholesale). The export emits it as
+ * `active_ontologies[i].dependencies` (data_io.ts getActiveOntologies →
+ * ontology.json → the update manifest); an empty component = NOT declared.
+ */
+export const ONTOLOGY_DEPENDENCIES = 'ddengine11';
 
 // --- Hierarchy registry components (read off a hierarchy1 / matrix_hierarchy_main record) ---
 /** hierarchy1 — the hierarchy main (thesaurus definitions) section. */
@@ -111,6 +121,14 @@ export const THESAURUS_BUTTON_DELETE = 'hierarchy39';
 // --- Structural constants ---
 /** dd6 — the section model tipo (SECTION_MODEL). */
 export const SECTION_MODEL_TIPO = 'dd6';
+/**
+ * dd1226 — the `diffusion` model grouper: every model under it (the diffusion
+ * domain/element/table/field models, table_alias…) defines PUBLICATION
+ * structure. A relation FROM a node of such a model names what is published,
+ * not what the node needs to work — the reference classifier
+ * (ontology_references.ts) treats it as soft (`diffusion`), never a dependency.
+ */
+export const DIFFUSION_MODEL_ROOT = 'dd1226';
 /** dd64 — the si/no (yes/no) section (DEDALO_SECTION_SI_NO_TIPO). */
 export const SI_NO_SECTION = 'dd64';
 /** The si/no record ids: 1 = yes, 2 = no. */

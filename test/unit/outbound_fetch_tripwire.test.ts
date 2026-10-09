@@ -207,6 +207,8 @@ const ADDRESS_POLICY: Record<string, string> = {
 		'defines fetchBoundedText (no policy, no pin); fetchGuardedText vets, pins and caps through fetchPinnedHop and never calls it',
 	'src/core/tools/transcription_local_asr.ts':
 		'isSafeLocalAsrUrl: http(s) only, private hosts ONLY behind DEDALO_TRANSCRIBER_ALLOW_PRIVATE_HOSTS',
+	'src/core/ontology/ontology_manifest.ts':
+		'assertConfiguredMasterUrl: the URL must be EXACTLY (normalized) a configured ontology-master API URL (ONTOLOGY_SERVERS / the install plan official constant) — operator configuration, never client text; a LAN master is legitimate, so the public-address policy does not apply',
 	// Not a fetchBoundedText caller: a private-destination DOOR with its own call, held to
 	// the same rule — its one URL is its policy's output (asserted below).
 	'src/core/publication_host/transport.ts':
@@ -768,7 +770,7 @@ describe('no outbound fetch is unbounded', () => {
 		const notApplied: string[] = [];
 		for (const file of callers) {
 			const source = code(file);
-			const policy = /isSafeLocalAsrUrl\(|assertPublicUrl\(/g;
+			const policy = /isSafeLocalAsrUrl\(|assertPublicUrl\(|assertConfiguredMasterUrl\(/g;
 			const guards = [...source.matchAll(policy)].length;
 			const uses = [...source.matchAll(/fetchBoundedText\s*\(/g)].length;
 			if (guards < uses) {
@@ -802,6 +804,30 @@ describe('no outbound fetch is unbounded', () => {
 			importedCalls(door, 'src/core/security/ssrf_guard.ts'),
 			'the agent channel reads its body with a loop of its own',
 		).toContain('readBytesCapped');
+	});
+
+	test('the ontology manifest client judges the URL it dials, then uses the primitive', () => {
+		// Behaviour (a non-configured URL refused before any socket, the stand-in
+		// counting zero requests) is test/unit/ontology_manifest_native.test.ts; this
+		// leg pins that the ONE transport call dials the URL the policy just judged.
+		const manifest = code('src/core/ontology/ontology_manifest.ts');
+		expect(manifest, 'the manifest client re-grew its own transport').not.toMatch(
+			/(?<![\w$.])fetch\s*\(/,
+		);
+		const calls = [...manifest.matchAll(/fetchBoundedText\s*\(\s*([\w.]+)/g)];
+		expect(calls.length, 'the manifest client makes exactly one transport call').toBe(1);
+		const dialled = calls[0]?.[1] as string;
+		const judged = new RegExp(
+			`assertConfiguredMasterUrl\\(\\s*${dialled.replace('.', '\\.')}\\s*,`,
+		);
+		const policyAt = manifest.search(judged);
+		expect(
+			policyAt,
+			`the URL dialled (${dialled}) is not the one the policy judged`,
+		).toBeGreaterThan(-1);
+		expect(policyAt, 'the policy must run BEFORE the transport call').toBeLessThan(
+			calls[0]?.index as number,
+		);
 	});
 
 	test('the on-premise transcriber uses the primitive, not a third copy', () => {

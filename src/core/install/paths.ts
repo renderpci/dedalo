@@ -6,6 +6,7 @@
 
 import { join } from 'node:path';
 import { privateDir, projectRoot, readEnv } from '../../config/env.ts';
+import { DEDALO_VERSION_MAJOR_MINOR } from '../update/version.ts';
 
 /**
  * The private config directory the installer WRITES to (.env, state, sessions,
@@ -32,6 +33,27 @@ export const SEED_DUMP_PATH: string = join(projectRoot, 'install/db/dedalo_insta
 export const SEED_PREDATED_MIGRATION_PATHS: readonly string[] = [
 	join(projectRoot, 'install/db/migrations/0010_tm_role.sql'),
 ];
+
+/**
+ * The vendored ontology dir of this engine's major.minor. The INSTALLER reads
+ * exactly one domain file from it (`oh.copy.gz`, + the `oh` entry of its
+ * `ontology.json` — ontology_choice.ts); everything else there serves the
+ * ontology-server role (IS_AN_ONTOLOGY_SERVER).
+ */
+export const VENDORED_ONTOLOGY_DIR: string = join(
+	projectRoot,
+	'install/import/ontology',
+	DEDALO_VERSION_MAJOR_MINOR,
+);
+
+/**
+ * Where the install's ontology files are staged (fetched + verified) before
+ * the database is touched — under the private dir, removed after a successful
+ * import (ontology_install.ts).
+ */
+export function installOntologyStagingDir(): string {
+	return join(installPrivateDir(), 'install', 'ontology_staging');
+}
 
 /** Directory holding the vendored hierarchy import files + metadata JSONs. */
 export const HIERARCHY_IMPORT_DIR: string = join(projectRoot, 'install/import/hierarchy');

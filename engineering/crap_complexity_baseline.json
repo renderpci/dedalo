@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 620,
-		"functions": 7984,
+		"files": 635,
+		"functions": 8460,
 		"functionsOverCap": 679,
 		"filesOverCap": 261
 	},
@@ -254,7 +254,7 @@
 		"src/core/ontology/labels.ts": 11,
 		"src/core/ontology/ontology_delete.ts": 9,
 		"src/core/ontology/ontology_state.ts": 15,
-		"src/core/ontology/ontology_update.ts": 27,
+		"src/core/ontology/ontology_update.ts": 15,
 		"src/core/ontology/ontology_update_target.ts": 12,
 		"src/core/ontology/ontology_write.ts": 17,
 		"src/core/ontology/parser.ts": 17,

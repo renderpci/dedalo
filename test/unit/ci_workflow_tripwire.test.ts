@@ -625,7 +625,7 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	],
 	[
 		'test/unit/test_db_marker_tripwire.test.ts',
-		'The gate’s core proof is behavioural against the live suite database (delete-marker-in-transaction, real refusals, real installer bypass), so it is DB-bound by design',
+		'The gate’s core proof is behavioural against the live suite database (delete-marker-in-transaction, real refusals, the retired installer bypass refused), so it is DB-bound by design',
 	],
 	[
 		'test/unit/test_rag_db_tripwire.test.ts',
@@ -778,6 +778,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
 		'test/unit/import_create_door_native.test.ts',
 		"It installs the authz door fixture's scratch projects, profiles and users on the suite database, runs the mapped and CSV importers as those users so they create (or are refused) real test3 records, and measures every refusal on the stored rows and the section's row count, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/install_ontology_door_native.test.ts',
+		"It drives the installer's ontology door (stage + import through the update panel's shared lower layer) against the suite Postgres, serving its zz packages from a loopback ontology-master stand-in, and measures dd_ontology / matrix_ontology / registry / matrix_dd rows and their census around every case, so it cannot run without a live suite Postgres.",
 	],
 ]);
 

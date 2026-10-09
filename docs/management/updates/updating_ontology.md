@@ -24,7 +24,7 @@ The update process replaces the whole ontology definition with the latest versio
 
 Private tlds must be updated manually.
 
-Common and shared tlds are defined by `ACTIVE_ONTOLOGY_TLDS` (set in `../private/.env`). See the [Configuration Administrator Guide](../../config/administration.md).
+Common and shared tlds are defined by `ACTIVE_ONTOLOGY_TLDS` (set in `../private/.env`). The installer writes it: the core ontologies, the domain ontologies chosen at install time and the ontologies they declare as dependencies (see [Domain ontologies](../../install/installer_reference.md#domain-ontologies)). See the [Configuration Administrator Guide](../../config/administration.md).
 
 ## What the panel tells you
 
@@ -61,6 +61,45 @@ Which value of `DEDALO_CORS_ALLOWED_ORIGINS` depends on who you serve:
 
 * **A known set of installations** — list every client origin, as exact `scheme://host[:port]` strings (no partial wildcards, no trailing slash): `DEDALO_CORS_ALLOWED_ORIGINS=["https://archive.example.org","https://museum.example.org"]`.
 * **A public master**, serving installations you do not know in advance — their origins cannot be enumerated, so set the single entry `*`: `DEDALO_CORS_ALLOWED_ORIGINS=["*"]`. This opens only the **anonymous** API, the same surface any `curl` on the internet already reaches; clients still present the `ONTOLOGY_SERVER_CODE` access code, and no cross-origin caller ever carries a session.
+
+### Declaring what an ontology requires
+
+A master also tells installers **which ontologies each ontology needs** — the
+ones whose nodes it uses as models, or links to. An installer installs those too,
+before the ontology itself. The installer reads this declaration and nothing
+else; it never works out dependencies on its own.
+
+The declaration is ordinary Dédalo data on the master:
+
+1. Open **Ontology › Ontologies main** (`ontology35`) and edit the record of the
+   ontology, for example the `tch` record.
+2. In the *Relations* group (`hierarchy60`), fill **Required ontologies**
+   (`ddengine11`) with every ontology it needs. Include the core ones it uses
+   (every domain ontology takes its models from `dd`). An installer skips core
+   ontologies, because every installation already has them.
+3. Export the ontology files again (the **Export** action of the
+   [ontology parser](../../tools/using_ontology_parser.md)). The export writes the
+   list as `dependencies` on that ontology's entry in `ontology.json`, and the
+   update manifest serves it unchanged.
+
+An **empty** field means *not declared*, not *needs nothing*. The ontology is
+exported with no `dependencies`, and an installer that is asked for it warns
+that the server declares no dependencies, then installs it alone. A field that
+names only core ontologies is a complete declaration: *needs nothing beyond the
+core*.
+
+*Required ontologies* is an engine-owned field, part of every installation. It
+also appears on thesaurus records (*Thesaurus › Hierarchy*, which share the
+same form), but only the Ontologies main records are exported.
+
+**Importing keeps the declaration.** When an installation imports an ontology
+whose master declares its requirements (with this panel or at install time), the
+import fills *Required ontologies* on that ontology's record here, replacing what
+the field held. A master that gets its ontologies from another master (a local
+master for an institution's network, for example) therefore publishes the same
+declarations with its next export. An ontology the source does not declare
+leaves the field as it is. A required ontology that this installation has no
+record for is left out of the field, and the import's message names it.
 
 ### On the client side
 
@@ -103,13 +142,16 @@ The control panel will show the ontology configuration and the tlds to be update
 
 ### Which tlds are updated
 
-The prefilled list is `ACTIVE_ONTOLOGY_TLDS` unioned with the core pair `ontology` / `ontologytype` (always imported, whatever the configuration says). When the key is not set in `../private/.env`, it falls back to the mandatory core set every installation needs:
+The prefilled list is `ACTIVE_ONTOLOGY_TLDS` unioned with the core pair `ontology` / `ontologytype` (always imported, whatever the configuration says). When the key is not set in `../private/.env`, it falls back to the core ontologies every installation carries — exactly what the install database ships:
 
 ```
-dd, rsc, ontology, ontologytype, hierarchy, lg, utoponymy, nexus
+dd, rsc, ontology, ontologytype, hierarchy, lg
 ```
 
-Domain tlds (`oh`, `ich`, `tch`, `numisdata`, …) are per-installation: add them to `ACTIVE_ONTOLOGY_TLDS` so they are offered here on every update — that is the only place to change the default for everybody. They are never part of the fallback above.
+Domain tlds (`oh`, `ich`, `tch`, `numisdata`, `utoponymy`, `nexus`, …) are per-installation: the installer writes the ones it installed into `ACTIVE_ONTOLOGY_TLDS`; add any you import later so they are offered here on every update — that is the only place to change the default for everybody. They are never part of the fallback above.
+
+!!! note "Adding a domain ontology later does not add its dependencies"
+    The installer installs the dependencies an ontology server declares; this panel imports exactly the tlds in the line. When you add a domain ontology here, check the master's catalog (*Fetch list*) for what it requires and add those tlds too.
 
 The panel tells you which of the two you are looking at: when the key is set the reference list is headed **Configured in this installation**, and when it is not it reads **Engine fallback (not configured)** and the note says so. An empty value counts as unset.
 

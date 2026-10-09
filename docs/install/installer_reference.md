@@ -3,8 +3,9 @@
 > See also: [Production install](production.md) · [Dev quickstart](dev_quickstart.md) · [Troubleshooting](troubleshooting.md) · [Install internals](../development/ts_install_internals.md)
 
 The reference for the installer itself: every flag, every step, what the seed
-contains, and — the part that surprises people — exactly which keys the installer
-writes into `../private/.env` and which it does not.
+contains, how the domain ontologies are chosen and installed, and — the part that
+surprises people — exactly which keys the installer writes into `../private/.env`
+and which it does not.
 
 Two front ends drive one engine (`src/core/install/`), and the guided container
 script `install.sh` drives the headless CLI:
@@ -61,10 +62,11 @@ bun run scripts/install.ts \
   [--entity-label 'My Institution'] [--locale es-ES] [--timezone Europe/Madrid] \
   [--langs lg-spa,lg-eng] [--app-lang lg-spa] [--data-lang lg-spa] \
   [--hierarchies default|none|es,fr] \
+  [--ontologies default|oh,tch] [--ontology-source <dir|archive>] \
   [--media-path /srv/dedalo/media] [--socket /run/dedalo/dedalo_ts.sock] [--media-access-mode publication] \
   [--diffusion --mysql-name web_dedalo --mysql-user d --mysql-password '…'] \
   [--mailer --smtp-host smtp.example.org --smtp-user dedalo@example.org --smtp-password '…'] \
-  [--no-update-servers] [--skip-tools] [--plan]
+  [--no-update-servers] [--skip-tools] [--plan | --list-ontologies]
 ```
 
 An **unknown flag is refused** (`unknown flag --x`) and so is a value flag with no
@@ -89,6 +91,8 @@ meaning.)
 | `--app-lang` | no | first of `--langs` | the default interface language |
 | `--data-lang` | no | first of `--langs` | the default data language |
 | `--hierarchies` | no | `default` | the **optional** thesauri: `default` (the shared default set — today `es`), `none`, or a comma list of vendored codes, e.g. `es,fr`. Languages (`lg`) is a **core** thesaurus, activated with the database on every install: naming it here is dropped with a note. An unknown (not vendored) code is refused |
+| `--ontologies` | no | `default` (= `oh`) | the **domain** ontologies, a comma list of TLDs — at least one. `default` is Oral history (`oh`), built into the release. Any other TLD comes from the ontology source, together with the ontologies it **declares** as dependencies. A core TLD is dropped with a note; `none` and an unknown TLD are refused. See [Domain ontologies](#domain-ontologies) |
+| `--ontology-source` | no | *(unset)* | a local directory, or a `.tar` / `.tar.gz` / `.tgz` archive of one, in the ontology server's export layout. The non-built-in ontologies come from it instead of the update server — a fully [offline install](#offline-installs-ontology-source) |
 | `--media-path` | no | *(unset)* | the media root; write-probed during install **and persisted** to `.env` as `MEDIA_PATH` (replaces the old `MEDIA_PATH=…` env prefix) |
 | `--socket` | no | `/tmp/dedalo_ts.sock` | persisted as `SERVER_UNIX_SOCKET`; set `/run/dedalo/dedalo_ts.sock` for a systemd + reverse-proxy deploy (the default does not match that layout) |
 | `--media-access-mode` | no | *(unset = `publication`, fail-closed)* | persisted as `DEDALO_MEDIA_ACCESS_MODE` — `private`, `publication`, or `false` to deliberately serve an open media tree |
@@ -96,7 +100,8 @@ meaning.)
 | `--mailer` | no | off | writes the outbound-email (SMTP) keys, enabling [password recovery](../management/password_recovery.md); requires `--smtp-host`, pair with `--smtp-port` (587), `--smtp-secure` (`tls`\|`ssl`\|`none`), `--smtp-user`, `--smtp-password`, `--smtp-from`, `--smtp-from-name`. The relay is probed (connection + auth, no email sent); a failure warns but does not stop the install |
 | `--no-update-servers` | no | off | air-gapped install: writes `ONTOLOGY_SERVERS=[]` and `CODE_SERVERS=[]`, so no ontology or code update is ever offered. Without it, both name the official Dédalo master (see below) |
 | `--skip-tools` | no | off | skips tool registration (register them later from the Development Area) |
-| `--plan` | no | off | dry run: prints ONE JSON line — `env_keys`, `steps`, `hierarchies`, `notes`, `errors` — and exits `0` (valid) or `1`, touching nothing: no database, no files, no root password needed |
+| `--plan` | no | off | dry run: prints ONE JSON line — `env_keys`, `steps`, `hierarchies`, `ontologies`, `ontology_source`, `ontology_install`, `active_ontology_tlds`, `notes`, `warnings`, `errors` — and exits `0` (valid) or `1`. It touches no database and no file and needs no root password. A choice beyond `oh` reads the source's catalog (one request to the update server, or the `--ontology-source` files) |
+| `--list-ontologies` | no | off | prints ONE JSON line — the ontology catalog of the selected source, exactly what the wizard's *Ontologies* step shows — and exits. It needs no other answer. See [Listing the catalog](#listing-the-catalog) |
 | `--information`, `--info-key` | no | `ts-install`, `ts` | free-text install provenance, recorded in the state file |
 
 !!! danger "The root password never belongs on the command line"
@@ -136,12 +141,24 @@ affordances (the wizard has its *Verify* screen and in-wizard login instead).
    session store, the backups directory, and the media root (only if `MEDIA_PATH`
    is set). Writability is proven by writing and deleting a probe file, not by
    reading permission bits — a network mount can lie about the bits.
-6. **`install_db_from_default_file`** — restores the database from the seed
-   (refused unless the database is empty), **then activates the core Languages
-   thesaurus (`lg`)**. Its terms already ship in the seed, so activation is all it
-   needs — there is no separate step for it, and nothing about it to choose.
-7. **`set_root_pw`** — the root password, hashed with Argon2id.
-8. **`install_hierarchies`** — imports and activates the **optional** thesauri (the
+6. **`stage_ontologies`** — fetches (update server) or copies (built-in `oh`,
+   `--ontology-source`) every chosen domain ontology file, dependencies first,
+   into the staging directory, and verifies each one (decompression and row
+   format) **before the database is touched**. This is the install's only
+   network phase: an unreachable server or a damaged file stops the install
+   here, with the database still empty.
+7. **`install_db_from_default_file`** — restores the database from the core-only
+   seed (refused unless the database is empty), **then** builds the derived search
+   indexes, writes the engine's own ontology nodes and **activates the core
+   Languages thesaurus (`lg`)**. Its terms already ship in the seed, so activation
+   is all it needs — there is no separate step for it, and nothing about it to
+   choose.
+8. **`install_ontologies`** — imports the staged domain ontologies through the
+   same import routine the ontology update panel uses, then checks their
+   references (see [Domain ontologies](#domain-ontologies)). An import failure
+   **fails the install**.
+9. **`set_root_pw`** — the root password, hashed with Argon2id.
+10. **`install_hierarchies`** — imports and activates the **optional** thesauri (the
    shared default set unless `--hierarchies` says otherwise; `none` makes it a
    no-op). Each selected TLD has its vendored term data copied in, **and is then
    activated**: the hierarchy is flagged active, its virtual ontology sections
@@ -151,11 +168,11 @@ affordances (the wizard has its *Verify* screen and in-wizard login instead).
    does not exist for the engine until its ontology does), so a TLD whose activation
    fails is a **failed** hierarchy — and a failed hierarchy **fails the install**:
    nothing is sealed (the wizard cannot get past a failed step either).
-9. **`register_tools`** (unless `--skip-tools`).
-10. **`install_finish`** — seals the install, refused unless a root user with a
+11. **`register_tools`** (unless `--skip-tools`).
+12. **`install_finish`** — seals the install, refused unless a root user with a
     password actually exists. A forged *finish* can never seal a half-built
     instance.
-11. **Verify the root login** — an actual login against the freshly installed
+13. **Verify the root login** — an actual login against the freshly installed
     database. This is the end-to-end proof, and it is why the CLI prints
     `✔ install complete — root login verified`.
 
@@ -169,26 +186,183 @@ affordances (the wizard has its *Verify* screen and in-wizard login instead).
 ## What the seed installs
 
 Restoring the vendored seed (`install/db/dedalo_install.pgsql.gz`, about 2 MB
-compressed) turns an empty database into a working Dédalo:
+compressed, 50 MB of SQL) turns an empty database into a working Dédalo core:
 
-- the full **matrix / `dd_ontology` schema** — 31 tables, plus the functions and
-  indexes;
+- the full **matrix / `dd_ontology` schema** — 33 tables, plus the functions,
+  triggers and indexes;
 - the **extensions** `btree_gin`, `pg_trgm` and `unaccent` (which is why the role
   needs the right to create them);
-- the populated **core ontology** — about **3,700 `dd_ontology` rows**;
-- the **`root` user** (with no password until step 6), the default project, and
-  the *Admin* and *User* profiles.
+- the **core ontologies, and nothing else** — `dd`, `rsc`, `ontology`,
+  `ontologytype`, `hierarchy` and `lg`, about **3,470 `dd_ontology` rows**;
+- the terms of the **Languages** thesaurus (`lg`), which the restore activates;
+- the **`root` user** (with no password until `set_root_pw`), the default project,
+  and the *Admin* and *User* profiles.
 
-!!! warning "A fresh install ships demo data"
-    On the default path the installer also seeds the canonical **`test3`
-    playground** — the sample section the test suite and the component reference
-    pages use. It is harmless, but it is not your data. Remove its records from
-    the section list when you no longer want it, or hide the section from the
-    menu with `DEDALO_ENTITY_MENU_SKIP_TIPOS`.
+The derived search indexes (`matrix_string_search`, `matrix_relation_index`)
+ship **empty**: the restore step rebuilds them from the restored rows, the same
+way a booting server repairs them.
+
+!!! info "An installation carries no test data"
+    The seed holds no domain ontology (each installation chooses its own — see
+    below), no developers' `test` ontology and no *test3* playground records.
+    Those belong to the developers' test database, which `bun run test:db:setup`
+    builds through these same install steps and then adds its fixtures to (see
+    [Testing](../development/testing.md)).
 
 The restore is all-or-nothing: the seed is fed to `psql` with
 `ON_ERROR_STOP=1`, and a non-zero exit is a hard failure. There is no partial
 success to clean up after.
+
+??? note "How the seed is built"
+    The seed is a generated file. `bun run seed:build`
+    (`scripts/build_install_seed.ts`) restores the current seed into a scratch
+    database it creates and drops, deletes every non-core row in one transaction,
+    and dumps it again in plain SQL with the derived indexes' data excluded. Next
+    to the seed it writes `install/db/dedalo_install.build.json`: the source and
+    output checksums, the `pg_dump` version and options, the rows removed and
+    the row count of every table. A gate (`install_seed_drift_tripwire`) holds
+    the committed seed to that file and to the core-only rule, so a hand-edited
+    seed fails the build. [Install internals](../development/ts_install_internals.md#the-install-seed)
+    has the details.
+
+## Domain ontologies
+
+The core ontologies describe Dédalo itself: users, projects, resources such as
+people, images and publications, the thesaurus machinery, languages. What an
+institution catalogues — interviews, objects, coins, intangible heritage — is
+described by **domain ontologies**, and every installation chooses at least one.
+
+| Answer | CLI | Wizard | `install.sh` |
+| --- | --- | --- | --- |
+| which domain ontologies | `--ontologies oh,tch` (default `oh`) | the *Ontologies* step, `oh` pre-ticked | *Domain ontologies to install* (`default` = `oh`) |
+| where the others come from | the update server, or `--ontology-source` | the update server | the update server |
+
+- **`oh` (Oral history) is the default, and it is built in.** The installer reads
+  one file of the vendored ontology directory,
+  `install/import/ontology/<major.minor>/oh.copy.gz` (and that ontology's entry
+  in the directory's `ontology.json`), so an installation always
+  has a usable domain ontology, even with no network. (The other files in that
+  directory are there for an installation that serves the ontology to others;
+  the installer does not read them.)
+- **Every other ontology comes from the selected source**: the first server in
+  `ONTOLOGY_SERVERS` — the official Dédalo master by default, or the first server
+  of a list you set yourself on an earlier run — or the `--ontology-source`
+  directory or archive. For example, `tch` (Tangible cultural heritage) is the
+  general inventory model for objects and collections; it is described in the
+  wizard but not pre-ticked. When one TLD is offered by several places, a
+  `--ontology-source` file wins over the built-in `oh`, which wins over the
+  server.
+- **An air-gapped install (`--no-update-servers`) is offered only `oh`**, unless
+  `--ontology-source` provides more. Asking for another TLD is refused before
+  anything is written: `unknown ontology 'tch' — not offered by the built-in set
+  (air-gapped: only oh is available offline)`.
+- **The installer writes `ACTIVE_ONTOLOGY_TLDS`**: the core, then the installed
+  domain ontologies in install order. It is rewritten on every run. The
+  [ontology update panel](../management/updates/updating_ontology.md) refreshes
+  exactly these.
+
+### Dependencies are declared, never guessed
+
+A domain ontology usually builds on others: its sections use components defined
+in another ontology, or its fields point into another one's thesaurus. The
+ontology server **declares** these dependencies for each ontology in its
+catalog (an editor fills them in on the master — see
+[Declaring what an ontology requires](../management/updates/updating_ontology.md#declaring-what-an-ontology-requires)).
+
+- The installer installs the chosen ontologies **plus everything they declare**,
+  transitively, each dependency before the ontology that needs it. It says so
+  before it starts: `tch also installs: …`. Core ontologies in a declaration
+  are already installed and are skipped.
+- A dependency the source does not offer is refused before anything is written:
+  `'x', declared as a dependency of 'y', is not offered by the ontology server '…'`.
+- **An older ontology server publishes no dependencies.** The installer then
+  warns, names the ontology, and installs exactly what you chose — it never works
+  out dependencies on its own:
+  `the ontology source declares no dependencies for 'tch' (an older ontology server) — 'tch' is installed alone; anything it references in other ontologies stays unresolved`.
+  Name the missing ontologies yourself (`--ontologies tch,crm,…`), or install
+  them later from the update panel.
+
+**After the import, the installer checks the references.** For every node of
+the installed ontologies it follows the parent, the model and the related nodes.
+A reference to an ontology the installation does not have is reported as a
+warning — the install still completes — that names the ontology to add. For
+example, `tch` installed alone from a server that declares nothing (its 15 model
+references into `crm`, measured on the vendored `tch` package):
+
+```text
+⚠ 'tch' references 15 node(s) of 'crm' that is not installed (model: e.g. tch457→crm222) — install 'crm' too (--ontologies tch,crm) or ask the ontology server to declare it
+```
+
+Two kinds of reference are never reported, because a missing target is harmless
+by design: a node placed *under* a node of another ontology (it simply does not
+show there), and the field mappings of a publication (diffusion) definition into
+another ontology. A reference into a **core** ontology that this release's seed
+does not have yet means the master's core is newer than the seed; the warning
+then says to run *Maintenance › Update ontology* after the install.
+
+### Listing the catalog
+
+`--list-ontologies` prints what the selected source offers, as the wizard
+shows it — air-gapped here, so only the built-in `oh`:
+
+```shell
+bun run scripts/install.ts --list-ontologies --no-update-servers
+```
+
+```json
+{"source":{"kind":"none"},"default":["oh"],"core":["dd","rsc","ontology","ontologytype","hierarchy","lg"],"entries":[{"tld":"oh","name":"Oral History | oh","typology_id":"8","typology_name":"Catalog","origin":"vendored","is_default":true,"note_key":"installation_ontology_note_oh","dependencies":["dd","rsc","ontology","ontologytype","hierarchy","lg"],"also_installs":[]}],"warnings":[],"errors":[]}
+```
+
+Each entry carries its `origin` (`vendored`, `local` or `server`), its declared
+`dependencies` (`null` when the source declares none) and `also_installs` — the
+non-core ontologies a choice of it would add. Core ontologies are never listed:
+they are not a choice. The source follows the other flags: `--ontology-source`,
+`--no-update-servers`, or the configured server. `--plan` shows the outcome for a
+given answer: `ontology_install` is the install order and
+`active_ontology_tlds` what will be written.
+
+### Offline installs (`--ontology-source`)
+
+To install more than `oh` without a network, copy an ontology server's export
+to the machine and point the installer at it:
+
+```shell
+bun run scripts/install.ts … --ontologies oh,tch --ontology-source /srv/media/ontology_7.0.tgz
+```
+
+The source is one **version directory** of an ontology server's export (its
+`ONTOLOGY_DATA_IO_DIR/<major.minor>/` — see
+[the ontology directory](../config/config.md#ontology-inputoutput-exportimport-or-download-directory)),
+or an archive of it:
+
+- `ontology.json` — the catalog, with each ontology's metadata and declared
+  dependencies. Its version must be this release's `major.minor`;
+- one `<tld>.copy.gz` per ontology;
+- optionally `matrix_dd.copy.gz`, the master's private value lists. It is
+  installed when at least one chosen ontology comes from this source, and it
+  **replaces** the installation's private lists.
+
+An archive (`.tar`, `.tar.gz` or `.tgz`) may hold those files at its root or in
+one top-level directory. Only regular files with those names are extracted;
+anything else (directories, extended headers, a `recovery/` subfolder, other
+names) is ignored and does not count against any limit. An archive with absolute
+paths, `..` segments or links, more than 4096 ontology files, more than 50 000
+entries in all, or more than 512 MB is refused.
+
+### When something fails
+
+The ontology files are fetched and verified by `stage_ontologies`, **before the
+seed is restored**: a source that is unreachable, refuses the access code or
+serves a damaged file stops the install with the database untouched. The
+staged files wait in `../private/install/ontology_staging/` (with a
+`staged.json` recording each file's checksum) and are deleted after a successful
+import; after a failure they stay there for diagnosis, and the next run starts
+from a clean staging directory.
+
+An import failure in `install_ontologies` stops the install: the import routine
+restores each ontology's tables from its snapshot, but **nothing is sealed**, and
+the remedy is the one for every step after the restore — drop and recreate the
+database, then run the installer again.
 
 ## What `../private/.env` does — and does not — get
 
@@ -201,6 +375,7 @@ success to clean up after.
 | Languages | `DEDALO_APPLICATION_LANGS`, `DEDALO_PROJECTS_DEFAULT_LANGS`, `DEDALO_APPLICATION_LANGS_DEFAULT`, `DEDALO_DATA_LANG_DEFAULT`, `DEDALO_APPLICATION_LANG`, `DEDALO_DATA_LANG`, `DEDALO_STRUCTURE_LANG` |
 | Secret | one generated secret, printed once |
 | Update servers | `ONTOLOGY_SERVERS`, `CODE_SERVERS` — the official master by default, `[]` with `--no-update-servers` |
+| Ontologies | `ACTIVE_ONTOLOGY_TLDS` — the core, the chosen domain ontologies and their declared dependencies, in install order; rewritten on every run |
 | Serving / media *(only with `--media-path` / `--socket` / `--media-access-mode`)* | `MEDIA_PATH`, `SERVER_UNIX_SOCKET`, `DEDALO_MEDIA_ACCESS_MODE` |
 | Diffusion *(only with `--diffusion`)* | `DEDALO_DIFFUSION_NATIVE`, `DEDALO_DIFFUSION_DB_*` |
 | Outbound email *(only with `--mailer`, or the wizard's optional step)* | `DEDALO_SMTP_HOST`, `DEDALO_SMTP_PORT`, `DEDALO_SMTP_SECURE`, `DEDALO_SMTP_USER`, `DEDALO_SMTP_PASS`, `DEDALO_SMTP_FROM`, `DEDALO_SMTP_FROM_NAME` |
@@ -233,8 +408,8 @@ air-gapped option always writes `[]`.
     [Updating the code](../management/updates/updating_code.md).
 
 !!! danger "The operational tuning is yours to append — afterwards"
-    The **pool settings, the timeouts, the access log, and `ACTIVE_ONTOLOGY_TLDS`**
-    are not written by the installer. Append them once the install has finished,
+    The **pool settings, the timeouts and the access log** are not written by the
+    installer. Append them once the install has finished,
     then restart the server. (`MEDIA_PATH`, `SERVER_UNIX_SOCKET` and
     `DEDALO_MEDIA_ACCESS_MODE` **are** written — pass `--media-path`, `--socket` and
     `--media-access-mode`.)
@@ -262,7 +437,7 @@ Start the server on a machine with **no `../private/.env`**. It logs
 `INSTALL MODE`, skips every database-dependent boot step, and serves only the
 wizard at `/dedalo/core/page/`.
 
-Steps: **Diagnostics → Database → Entity → *(optional)* Diffusion →
+Steps: **Diagnostics → Database → Entity → Ontologies → *(optional)* Diffusion →
 *(optional)* Outbound email → Save config** … *(restart)* … **Verify →
 Directories → Install database → Root password → log in → Hierarchies → Tools →
 Finish**.
@@ -272,6 +447,19 @@ English and Spanish pre-checked; the others are optional) plus the default
 interface and data language. Before *Save config*
 the wizard also asks whether to use the official update server (yes by default;
 no is the air-gapped install described above).
+
+The **Ontologies** step lists the core ontologies as fixed rows and the domain
+ontologies on offer, with `oh` pre-ticked. The built-in list shows at once. When
+the update server is in use, the step also reads the server's catalog and adds
+its ontologies, grouped by typology; without it (or when the server cannot be
+reached) only the built-in `oh` is offered. A short note describes `oh` and
+`tch`. Under each ticked ontology the step lists what it also installs, or warns
+that the server declares no dependencies for it. At least one must be ticked.
+The choice is saved with the configuration (`ACTIVE_ONTOLOGY_TLDS`), and after
+the restart the **Install database** step runs three actions in a row:
+`stage_ontologies`, `install_db_from_default_file` and `install_ontologies`, each
+with its own status line. It stops at the first failure; reference warnings
+are shown but do not block.
 
 The **Hierarchies** step lists the optional thesauri with the shared default
 pre-ticked. Languages is not among them — it was activated with the database —

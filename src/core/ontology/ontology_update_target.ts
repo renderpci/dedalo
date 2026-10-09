@@ -26,6 +26,7 @@ import {
 	downloadRemoteOntologyFile,
 	gunzipWithCaps,
 } from './data_io_import.ts';
+import { normalizeDeclaredDependencies } from './ontology_manifest.ts';
 
 /** One manifest entry as the client sends it (updateOntologyOptionsSchema shape). */
 export interface OntologyUpdateFile {
@@ -35,6 +36,12 @@ export interface OntologyUpdateFile {
 	url: string;
 	typology_id?: number | string | null | undefined;
 	name_data?: unknown;
+	/**
+	 * The manifest's declared dependencies (`info.active_ontologies[i].dependencies`),
+	 * forwarded as the source declared them; absent = NOT declared. Normalized by
+	 * the stager (ontology_manifest.ts normalizeDeclaredDependencies).
+	 */
+	dependencies?: unknown;
 }
 
 export interface StagedFile {
@@ -45,6 +52,8 @@ export interface StagedFile {
 	stagedPath: string;
 	typologyId?: number | string | null;
 	nameData?: unknown;
+	/** Declared dependency TLDs (normalized); null = not declared — the import writes nothing. */
+	dependencies?: string[] | null;
 }
 
 /** The config catalog slice resolveUpdateTarget adjudicates against. */
@@ -168,9 +177,16 @@ export async function stageOntologyFiles(
 			stagedPath,
 			typologyId: file.typology_id ?? null,
 			nameData: file.name_data ?? null,
+			dependencies: stagedDependencies(file, messages),
 		});
 	}
 	return { staged, messages };
+}
+
+/** A file's declared dependencies, normalized (notes into `messages`); matrix_dd declares none. */
+function stagedDependencies(file: OntologyUpdateFile, messages: string[]): string[] | null {
+	if (file.tld === 'matrix_dd') return null;
+	return normalizeDeclaredDependencies(file.tld, file.dependencies, messages);
 }
 
 function statSafe(path: string): boolean {

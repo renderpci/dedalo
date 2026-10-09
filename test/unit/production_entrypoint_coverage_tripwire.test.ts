@@ -291,6 +291,12 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	// baselines and remotes, never on an installation.
 	'baselines',
 	'push',
+	// `seed:build` (2026-10-09, installer unification A2) regenerates THIS
+	// REPOSITORY's install seed (install/db/dedalo_install.pgsql.gz + its sidecar)
+	// on a scratch database it creates and drops — a repository artifact, like
+	// `changelog`; it never touches an installation. Its outcome is gated by
+	// install_seed_drift_tripwire (the committed bytes vs the sidecar).
+	'seed',
 ]);
 // `media:*` (2026-10-03, `media:publication-host-rules`) is OPERATOR-run: it renders the
 // web-server gate of a publication host serving an installation's media. Covered by

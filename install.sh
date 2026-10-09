@@ -448,8 +448,8 @@ choose_tls
 WIZARD_ALLOWED_IPS=''
 if [ "$WIZARD_MODE" = 'true' ]; then
 	echo
-	echo 'Wizard mode: the remaining questions (languages, thesauri, the update server)'
-	echo 'are asked in the browser instead.'
+	echo 'Wizard mode: the remaining questions (languages, thesauri, the update server,'
+	echo 'the ontologies) are asked in the browser instead.'
 	echo
 	bold 'Who may open the install wizard?'
 	echo 'Until you press Finish the wizard needs no login, so only the addresses you'
@@ -498,6 +498,27 @@ if ! confirm_yes 'Use the official Dédalo update server (v7.master.dedalo.dev) 
 	warn 'Air-gapped: no ontology or code updates will be offered. To enable them later,'
 	warn 'add ONTOLOGY_SERVERS and CODE_SERVERS to /private/.env and restart Dédalo.'
 fi
+echo
+
+# DOMAIN ONTOLOGIES. The core ontologies come with the database; this answer
+# picks the domain models on top (at least one). "default" passes NO flag: the
+# installer's own default applies (oh — built in, installable offline; one
+# default, in one place — src/core/install/ontology_choice.ts). Any other TLD is
+# downloaded from the update server, together with the ontologies it declares
+# as dependencies, so an air-gapped install can only take the built-in one: the
+# question is asked again rather than letting the installer refuse later.
+bold 'Ontologies'
+echo 'oh  — Oral history: built in, installs without a network.'
+echo 'tch — Tangible cultural heritage: the general inventory model for objects and collections (downloaded).'
+echo 'Any other ontology the update server offers can be named by its code; what it depends on comes with it.'
+while true; do
+	ask ONTOLOGIES 'Domain ontologies to install (comma-separated TLDs, or "default" = oh)' 'default'
+	if [ "$USE_UPDATE_SERVERS" = 'true' ] || [ "$ONTOLOGIES" = 'default' ] || [ "$ONTOLOGIES" = 'oh' ]; then
+		break
+	fi
+	warn 'Air-gapped: only the built-in oh can be installed without the update server.'
+	warn 'Answer "default" (or oh), or re-run ./install.sh and accept the update server.'
+done
 echo
 
 bold 'Administrator password'
@@ -626,6 +647,7 @@ if [ "$LANGS" != 'default' ]; then
 	install_args+=(--langs "$LANGS" --app-lang "$APP_LANG" --data-lang "$APP_LANG")
 fi
 if [ "$HIERARCHIES" != 'default' ]; then install_args+=(--hierarchies "$HIERARCHIES"); fi
+if [ "$ONTOLOGIES" != 'default' ]; then install_args+=(--ontologies "$ONTOLOGIES"); fi
 if [ "$USE_UPDATE_SERVERS" = 'false' ]; then install_args+=(--no-update-servers); fi
 
 # Exported explicitly rather than as a `VAR=x compose …` prefix: `compose` is a

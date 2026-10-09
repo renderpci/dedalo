@@ -35,16 +35,30 @@
  *      the spawned CLI exits 1; `lg` is dropped with a note; an unvendored tld
  *      is an error;
  *  (g) no plan, whatever the answers, owns DEDALO_SUPERVISED — supervision is
- *      declared by the process manager, never by ../private/.env.
+ *      declared by the process manager, never by ../private/.env;
+ *  (h) DOMAIN ONTOLOGIES (A4/A5/A6, 2026-10-09): the default (no flag ≡ the
+ *      wizard posting its context default), an explicit `--ontologies oh`, a
+ *      core TLD dropped with a note, `none` and an air-gapped non-vendored
+ *      choice refused the same on both sides; a LOCAL fixture source (a
+ *      package this gate builds into a mkdtemp dir — zz TLDs, a declared
+ *      dependency chain): the spawned `--plan` equals the in-process plan over
+ *      the resolved catalog (closure, ACTIVE_ONTOLOGY_TLDS), `--list-ontologies`
+ *      prints exactly describeOntologyCatalog of it, persistConfig writes the
+ *      same ACTIVE_ONTOLOGY_TLDS, and that written list maps back
+ *      (ontologyRequestFromActive — the wizard's restarted process) to the very
+ *      request the CLI plan stages.
  *
  * persistConfig runs in CHILD processes (scratch DEDALO_INSTALL_PRIVATE_DIR +
  * DEDALO_TS_STATE_PATH in the child's env), so this gate never mutates its own
- * process environment and never touches the live ../private/.env or state.
- * No database is touched anywhere in this file.
+ * process environment and never touches the live ../private/.env or state. The
+ * spawned CLI reads its prior .env from an EMPTY scratch private dir (it honours
+ * a preserved custom server list, which the in-process plan here has none of).
+ * No database is touched anywhere in this file, and no network: the only
+ * non-vendored source is a local fixture.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { MAINTENANCE_KEYS } from '../../src/config/catalog/maintenance.ts';
@@ -57,9 +71,18 @@ import {
 	INSTALL_CLI_FLAGS,
 	INSTALL_STEP_IDS,
 	type InstallPlan,
+	type InstallStepId,
 	OFFICIAL_CODE_SERVER,
 	OFFICIAL_ONTOLOGY_SERVER,
 } from '../../src/core/install/install_plan.ts';
+import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
+import {
+	describeOntologyCatalog,
+	ontologyRequestFromActive,
+	vendoredOntologyCatalog,
+} from '../../src/core/install/ontology_choice.ts';
+import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
+import { buildOntologyPackage } from '../../src/core/test_data/ontology_package_fixture.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const CLI = join(ROOT, 'scripts/install.ts');
@@ -67,10 +90,47 @@ const CONFIG_PERSIST = join(ROOT, 'src/core/install/config_persist.ts');
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_plan_parity_'));
 afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
 
+const WIZARD_PROPERTIES = buildInstallContext().properties as {
+	install_checked_default: string[];
+	ontologies: { default: string[] };
+};
 /** The thesauri the WIZARD pre-ticks — read from the context it is served, not re-typed. */
-const WIZARD_DEFAULT_THESAURI = (
-	buildInstallContext().properties as { install_checked_default: string[] }
-).install_checked_default;
+const WIZARD_DEFAULT_THESAURI = WIZARD_PROPERTIES.install_checked_default;
+/** The domain ontologies the WIZARD pre-ticks (its context, not a re-typed list). */
+const WIZARD_DEFAULT_ONTOLOGIES = WIZARD_PROPERTIES.ontologies.default;
+
+/** An empty private dir: the spawned CLI's prior .env (none). */
+const EMPTY_PRIVATE = mkdtempSync(join(scratchRoot, 'empty_private_'));
+
+/**
+ * A LOCAL ontology source in the server export layout, built by this gate:
+ * zzpa declares zzpb (+ core), zzpb declares core only — a dependency chain the
+ * closure must install deps first.
+ */
+const FIXTURE_SOURCE = (() => {
+	const dir = mkdtempSync(join(scratchRoot, 'ontology_source_'));
+	const files = buildOntologyPackage([
+		{
+			tld: 'zzpa',
+			name: 'zz parity A',
+			typologyId: 8,
+			typologyName: 'Catalog',
+			dependencies: ['dd', 'zzpb'],
+			nodes: [{ id: 1, parent: 'zzpa0', model: 'dd6', term: 'A root' }],
+		},
+		{
+			tld: 'zzpb',
+			name: 'zz parity B',
+			typologyId: 8,
+			typologyName: 'Catalog',
+			dependencies: ['dd'],
+			nodes: [{ id: 1, parent: 'zzpb0', model: 'dd6', term: 'B root' }],
+		},
+	]);
+	mkdirSync(dir, { recursive: true });
+	for (const [name, bytes] of files) writeFileSync(join(dir, name), bytes);
+	return dir;
+})();
 
 // ── the answer matrix ─────────────────────────────────────────────────────────
 
@@ -126,6 +186,7 @@ const BASE_WIZARD: Record<string, unknown> = {
 	mailer: false,
 	update_servers: true,
 	hierarchies: WIZARD_DEFAULT_THESAURI,
+	ontologies: WIZARD_DEFAULT_ONTOLOGIES,
 };
 
 const DIFFUSION_ARGV = [
@@ -227,6 +288,21 @@ const CASES: AnswerCase[] = [
 		argv: [...BASE_ARGV, '--hierarchies', 'lg,fr'],
 		wizard: { ...BASE_WIZARD, hierarchies: ['lg', 'fr'] },
 	},
+	{
+		name: 'ontologies: explicit oh',
+		argv: [...BASE_ARGV, '--ontologies', 'oh'],
+		wizard: { ...BASE_WIZARD, ontologies: ['oh'] },
+	},
+	{
+		name: 'ontologies: a core TLD dropped with a note',
+		argv: [...BASE_ARGV, '--ontologies', 'DD,oh'],
+		wizard: { ...BASE_WIZARD, ontologies: ['dd', 'oh'] },
+	},
+	{
+		name: 'ontologies: air-gapped default (the vendored oh)',
+		argv: [...BASE_ARGV, '--no-update-servers', '--ontologies', 'default'],
+		wizard: { ...BASE_WIZARD, update_servers: false },
+	},
 ];
 
 /** What a plan DECIDES (the fields both front ends must agree on). */
@@ -236,7 +312,12 @@ function decided(plan: InstallPlan) {
 		envKeys: plan.envKeys,
 		steps: plan.steps,
 		hierarchies: plan.hierarchies,
+		ontologies: plan.ontologies,
+		ontologySource: plan.ontologySource,
+		ontologyRequest: plan.ontologyRequest,
+		activeOntologyTlds: plan.activeOntologyTlds,
 		notes: plan.notes,
+		warnings: plan.warnings,
 		errors: plan.errors,
 	};
 }
@@ -249,10 +330,14 @@ function cliPlan(argv: readonly string[]): InstallPlan {
 
 // ── child processes ──────────────────────────────────────────────────────────
 
-/** Spawn the real CLI in --plan mode (touches nothing). */
-function spawnPlan(argv: readonly string[]): { exitCode: number; stdout: string; stderr: string } {
-	const proc = Bun.spawnSync([process.execPath, 'run', CLI, '--plan', ...argv], {
+/** Spawn the real CLI in --plan mode (touches nothing; an empty prior .env). */
+function spawnPlan(
+	argv: readonly string[],
+	mode: '--plan' | '--list-ontologies' = '--plan',
+): { exitCode: number; stdout: string; stderr: string } {
+	const proc = Bun.spawnSync([process.execPath, 'run', CLI, mode, ...argv], {
 		cwd: ROOT,
+		env: { ...Bun.env, DEDALO_INSTALL_PRIVATE_DIR: EMPTY_PRIVATE },
 		stdout: 'pipe',
 		stderr: 'pipe',
 	});
@@ -334,6 +419,22 @@ describe('install plan — CLI ≡ wizard (a)', () => {
 
 // ── (b) the spawned CLI uses the module ─────────────────────────────────────
 
+/** The --plan JSON line a plan prints (scripts/install.ts). */
+function printedPlan(plan: InstallPlan, errors: string[]) {
+	return {
+		env_keys: [...plan.envKeys],
+		steps: [...plan.steps],
+		hierarchies: [...plan.hierarchies],
+		ontologies: [...plan.ontologies],
+		ontology_source: plan.ontologySource,
+		ontology_install: (plan.ontologyRequest?.items ?? []).map((item) => item.tld),
+		active_ontology_tlds: [...plan.activeOntologyTlds],
+		notes: [...plan.notes],
+		warnings: [...plan.warnings],
+		errors,
+	};
+}
+
 describe('install plan — the CLI runs the module (b)', () => {
 	test('`scripts/install.ts --plan` prints the in-process plan and exits 0', () => {
 		const argv = [...BASE_ARGV, ...DIFFUSION_ARGV, '--hierarchies', 'lg,ad'];
@@ -341,13 +442,7 @@ describe('install plan — the CLI runs the module (b)', () => {
 		expect(spawned.exitCode, spawned.stderr).toBe(0);
 		const printed = JSON.parse(spawned.stdout.trim()) as Record<string, unknown>;
 		const local = cliPlan(argv);
-		expect(printed).toEqual({
-			env_keys: [...local.envKeys],
-			steps: [...local.steps],
-			hierarchies: [...local.hierarchies],
-			notes: [...local.notes],
-			errors: [],
-		});
+		expect(printed).toEqual(printedPlan(local, []));
 		expect((printed.notes as string[]).length).toBe(1);
 	});
 });
@@ -369,6 +464,13 @@ describe('install plan — the written .env (c, d)', () => {
 		const { DEDALO_SALT_STRING: _cliSalt, ...cliRest } = cliEnv;
 		const { DEDALO_SALT_STRING: _wizardSalt, ...wizardRest } = wizardEnv;
 		expect(cliRest).toEqual(wizardRest);
+		// The default domain ontology, after the core — and the wizard's restarted
+		// process maps that written list back to the very request the CLI stages.
+		const active = JSON.parse(wizardEnv.ACTIVE_ONTOLOGY_TLDS as string) as string[];
+		expect(active).toEqual([...CORE_ONTOLOGY_TLDS, ...WIZARD_DEFAULT_ONTOLOGIES]);
+		const back = ontologyRequestFromActive(active, vendoredOntologyCatalog());
+		expect(back.errors).toEqual([]);
+		expect(back.request).toEqual(cliPlan(answerCase.argv).ontologyRequest);
 	});
 
 	test('the default .env carries the official servers — the SAME entries the catalog documents', () => {
@@ -430,6 +532,104 @@ describe('install plan — the written .env (c, d)', () => {
 	});
 });
 
+// ── (h) domain ontologies ────────────────────────────────────────────────────
+
+describe('install plan — domain ontologies (h)', () => {
+	test('the default is the wizard default, installed from the vendored file', () => {
+		const plan = cliPlan(BASE_ARGV);
+		expect(WIZARD_DEFAULT_ONTOLOGIES).toEqual(['oh']);
+		expect(plan.ontologies).toEqual(WIZARD_DEFAULT_ONTOLOGIES);
+		expect(plan.ontologyRequest?.items.map((item) => [item.tld, item.origin])).toEqual([
+			['oh', 'vendored'],
+		]);
+		expect(plan.activeOntologyTlds).toEqual([...CORE_ONTOLOGY_TLDS, 'oh']);
+		expect(plan.envKeys).toContain('ACTIVE_ONTOLOGY_TLDS');
+		const dropped = cliPlan([...BASE_ARGV, '--ontologies', 'dd,oh']);
+		expect(dropped.notes).toContain(
+			'dd is a core ontology (always installed) — dropped from the list',
+		);
+	});
+
+	test('`none` is refused the same way on both sides', () => {
+		const none = 'at least one domain ontology is required (the default is oh)';
+		expect(cliPlan([...BASE_ARGV, '--ontologies', 'none']).errors).toContain(none);
+		expect(buildInstallPlan({ ...BASE_WIZARD, ontologies: [] }).errors).toContain(none);
+		const spawned = spawnPlan([...BASE_ARGV, '--ontologies', 'none']);
+		expect(spawned.exitCode).toBe(1);
+		expect((JSON.parse(spawned.stdout.trim()) as { errors: string[] }).errors).toContain(none);
+	});
+
+	test('air-gapped + a non-vendored TLD: the same refusal on both sides', () => {
+		const refusal =
+			"unknown ontology 'tch' — not offered by the built-in set (air-gapped: only oh is available offline)";
+		const cli = cliPlan([...BASE_ARGV, '--no-update-servers', '--ontologies', 'oh,tch']);
+		const wizard = buildInstallPlan({
+			...BASE_WIZARD,
+			update_servers: false,
+			ontologies: ['oh', 'tch'],
+		});
+		expect(cli.errors).toContain(refusal);
+		expect(decided(cli)).toEqual(decided(wizard));
+		const spawned = spawnPlan([...BASE_ARGV, '--no-update-servers', '--ontologies', 'oh,tch']);
+		expect(spawned.exitCode).toBe(1);
+		expect((JSON.parse(spawned.stdout.trim()) as { errors: string[] }).errors).toContain(refusal);
+	});
+
+	test('a needed catalog that was not resolved is reported, never fetched by the plan', () => {
+		const plan = cliPlan([
+			...BASE_ARGV,
+			'--ontology-source',
+			FIXTURE_SOURCE,
+			'--ontologies',
+			'zzpa',
+		]);
+		expect(plan.errors).toEqual([
+			`the ontology catalog of --ontology-source ${FIXTURE_SOURCE} was not resolved`,
+		]);
+		expect(plan.ontologyRequest).toBeNull();
+	});
+
+	test('a LOCAL source: spawned --plan ≡ in-process plan over the resolved catalog (closure + ACTIVE)', async () => {
+		const argv = [...BASE_ARGV, '--ontology-source', FIXTURE_SOURCE, '--ontologies', 'zzpa,oh'];
+		const resolved = await resolveOntologyCatalog(
+			{ kind: 'local', path: FIXTURE_SOURCE },
+			{ allowedServers: [] },
+		);
+		const local = buildInstallPlan(answersFromCliArgs(argv).raw, {
+			ontologyCatalog: resolved.catalog,
+		});
+		expect(local.errors).toEqual([]);
+		expect(local.ontologyRequest?.items.map((item) => [item.tld, item.origin])).toEqual([
+			['zzpb', 'local'],
+			['zzpa', 'local'],
+			['oh', 'vendored'],
+		]);
+		expect(local.activeOntologyTlds).toEqual([...CORE_ONTOLOGY_TLDS, 'zzpb', 'zzpa', 'oh']);
+		expect(local.notes).toContain('zzpa also installs: zzpb');
+		const spawned = spawnPlan(argv);
+		expect(spawned.exitCode, spawned.stderr).toBe(0);
+		expect(JSON.parse(spawned.stdout.trim())).toEqual(printedPlan(local, []));
+
+		// --list-ontologies prints THE view of the same catalog.
+		const listed = spawnPlan(['--ontology-source', FIXTURE_SOURCE], '--list-ontologies');
+		expect(listed.exitCode, listed.stderr).toBe(0);
+		expect(JSON.parse(listed.stdout.trim())).toEqual({
+			...describeOntologyCatalog(resolved.catalog),
+			errors: [],
+		});
+
+		// persistConfig (resolving the source itself) writes that ACTIVE list, and it
+		// maps back to the very request the CLI stages.
+		const env = parseEnvFile(persistInChild({ ...local.answers }, scratchDir('local_source')));
+		const active = JSON.parse(env.ACTIVE_ONTOLOGY_TLDS as string) as string[];
+		expect(active).toEqual([...local.activeOntologyTlds]);
+		const back = ontologyRequestFromActive(active, resolved.catalog);
+		expect(back.errors).toEqual([]);
+		expect(back.request).toEqual(local.ontologyRequest);
+		resolved.cleanup();
+	});
+});
+
 // ── (e) routable steps ───────────────────────────────────────────────────────
 
 describe('install plan — every step is routable (e)', () => {
@@ -440,6 +640,13 @@ describe('install plan — every step is routable (e)', () => {
 			const steps = cliPlan(answerCase.argv).steps;
 			expect(steps.filter((step) => !INSTALL_ROUTER_ACTIONS.includes(step))).toEqual([]);
 			expect(steps).toContain('install_hierarchies');
+			// the ontology files are staged before the restore and imported right after it
+			const order: InstallStepId[] = [
+				'stage_ontologies',
+				'install_db_from_default_file',
+				'install_ontologies',
+			];
+			expect(steps.filter((step) => order.includes(step))).toEqual(order);
 		}
 	});
 });

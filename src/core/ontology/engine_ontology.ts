@@ -1,6 +1,7 @@
 /**
- * THE ENGINE-OWNED ONTOLOGY — the sections the engine itself writes, defined in
- * the repository and materialized into every installation.
+ * THE ENGINE-OWNED ONTOLOGY — the sections the engine itself writes AND the
+ * components it reads for a wire contract, defined in the repository and
+ * materialized into every installation.
  *
  * WHY A TLD OF ITS OWN (2026-10-01, closure Step 3 / TOOLS-4). The AI spend
  * ledger (security/ai_spend.ts) is standard-schema state: a section with
@@ -33,6 +34,22 @@
  * database is drift by definition. Records of `ddengine0` the JSON does not
  * declare are REPORTED as strays, never deleted (not this door's to remove).
  *
+ * A COMPONENT THE ENGINE READS (2026-10-09, installer unification A5).
+ * `ddengine11` "Required ontologies" (ontology_tipos.ts ONTOLOGY_DEPENDENCIES)
+ * is a component_portal → ontology35 placed in hierarchy1's "Relations" group
+ * (`hierarchy60`), so it renders in the Ontologies-main (ontology35, virtual of
+ * hierarchy1) edit form — and, the real section being shared, in the thesaurus
+ * registry (hierarchy1) form too, where nothing reads it. The ontology export
+ * reads it into ontology.json `active_ontologies[i].dependencies` (data_io.ts),
+ * which the installer follows (WC-2026-10-09-ontology-manifest-dependencies).
+ * It cannot live in the master ontology for the same reason as the ledger: an
+ * update replaces a TLD wholesale, and a tipo cannot be pre-allocated on the
+ * master for every installation. `ddengine` ships with the code, is
+ * materialized on every install INCLUDING the master, and the master's editors
+ * fill it in the normal edit form. A node of this file may therefore hang under
+ * another TLD's parent (`parent` is not ownership — the TIPO is); the door
+ * still owns and rewrites only `ddengine` records.
+ *
  * WHO CALLS IT: boot (server.ts, after the schema migrations — a code update
  * reaches an installation through a restart, so boot IS the update lane), the
  * installer (install/db_restore.ts), the suite setup (scripts/test_db_setup.ts)
@@ -45,10 +62,12 @@
  * the doors below are idempotent (whole-record overwrite, wholesale rebuild),
  * so a rare concurrent second run converges on the same rows.
  *
- * Gate: test/unit/ai_spend_budget_native.test.ts (the engine-ontology legs:
+ * Gates: test/unit/ai_spend_budget_native.test.ts (the engine-ontology legs:
  * dd_ontology ≡ the JSON node for node, `inspectOntology` drift-free, a second
  * run writes nothing, a damaged node is healed, every node is under the
- * engine TLD).
+ * engine TLD); test/unit/ontology_dependencies_native.test.ts (ddengine11
+ * materialized under hierarchy60, in the ontology35 edit context, read by the
+ * export census).
  */
 
 import type { DdOntologyNode } from '../db/dd_ontology.ts';

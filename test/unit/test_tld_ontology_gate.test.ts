@@ -1,8 +1,9 @@
 /**
  * The generic `test` TLD ontology has ONE source of record:
  * `src/core/test_data/test_tld_ontology.json` (2026-08-19, generic-`test`-TLD
- * migration phase 1). The database is DERIVED from it — the installer and
- * `scripts/test_db_setup.ts` call `materializeTestTldOntology()`, which writes
+ * migration phase 1). The database is DERIVED from it — `scripts/test_db_setup.ts`
+ * (the SUITE database; an installation receives no test TLD since the install
+ * seed is core-only) calls `materializeTestTldOntology()`, which writes
  * `matrix_ontology` `<tld>0` records through `ontologyRecordFromNode` (the
  * inverse of the parser) and then lets `rebuildOntology(tld)` — the ONE
  * dd_ontology writer — produce the runtime rows.
@@ -25,8 +26,10 @@
  *      no test record ever lands in an install's table).
  *
  * The old (a) — "the JSON equals the `test` TLD inside the install seed" — is
- * GONE on purpose: the seed is no longer a source, and
- * `scripts/strip_test_tld_from_seed.ts` removes its copy of these rows.
+ * GONE on purpose: the seed is no longer a source, and the core-only seed
+ * (scripts/build_install_seed.ts) carries no `test` row at all. The old
+ * install/suite SPLIT (an install received the hand-authored half) is gone with
+ * it: the suite materializes the whole file, nothing else materializes any.
  */
 
 import { beforeAll, describe, expect, test } from 'bun:test';
@@ -56,12 +59,10 @@ import {
 } from '../../src/core/ontology/resolver.ts';
 import { getSectionIdFromTipo } from '../../src/core/ontology/tld.ts';
 import {
-	coreClosure,
 	loadTestTldOntologyDoc,
 	materializeTestTldOntology,
 	ontologyRecordFromNode,
 } from '../../src/core/test_data/test_tld_materialize.ts';
-import cloneMapJson from '../../src/core/test_data/test_tld_tipo_map.json';
 
 const DOC = await loadTestTldOntologyDoc();
 const NODES = DOC.nodes;
@@ -477,64 +478,5 @@ describe('test TLD ontology — the database is derived from the JSON', () => {
 			'plan decision 1: every `test` section carries relations:[{tipo:"test24"}] so its records land in matrix_test.',
 		).toEqual([]);
 		expect(checked).toBeGreaterThan(0); // anti-vacuity: 5 sections today
-	});
-});
-
-describe('the install/suite split (materializeTestTldOntology scope)', () => {
-	/**
-	 * A fresh install materializes the CORE half only. These pin the property
-	 * that makes that safe — the core must be CLOSED — and the property that
-	 * makes it worth doing: it must be a small fraction of the file.
-	 */
-	test('the core is CLOSED: it names no test tipo this file defines but omits', async () => {
-		const doc = await loadTestTldOntologyDoc();
-		const core = await coreClosure(doc.nodes);
-		const defined = new Set(doc.nodes.map((node) => node.tipo));
-		const kept = new Set(core.map((node) => node.tipo));
-		const dangling: string[] = [];
-		for (const node of core) {
-			for (const referenced of JSON.stringify(node).match(/test[a-z]*\d+/g) ?? []) {
-				// A reference this file does not define is seed-shipped (dd/rsc/…) and
-				// already present on any install; only an omitted SIBLING dangles.
-				if (defined.has(referenced) && !kept.has(referenced))
-					dangling.push(`${node.tipo} -> ${referenced}`);
-			}
-		}
-		expect(
-			[...new Set(dangling)],
-			'an install would receive a Test area referencing nodes it was never given',
-		).toEqual([]);
-		expect(core.length).toBeGreaterThan(0); // anti-vacuity
-	});
-
-	test('the core carries the hand-authored Test area', async () => {
-		const doc = await loadTestTldOntologyDoc();
-		const kept = new Set((await coreClosure(doc.nodes)).map((node) => node.tipo));
-		// test3 is the playground section every install shows; test45 its group.
-		for (const tipo of ['test1', 'test3', 'test45']) {
-			expect(kept.has(tipo), `${tipo} must reach an installation`).toBe(true);
-		}
-	});
-
-	test('the core EXCLUDES the clone twins — that is the point of the split', async () => {
-		const doc = await loadTestTldOntologyDoc();
-		const core = await coreClosure(doc.nodes);
-		// A large majority of the file is phase-2 clone twins, which exist so the
-		// SUITE can replay a frozen store naming one installation. If this ratio
-		// ever collapses, the split has stopped working and installs are carrying
-		// another install's ontology again.
-		expect(core.length).toBeLessThan(doc.nodes.length / 4);
-		// And every clone that IS kept is kept for a reason: something in the core
-		// names it (the closure above), never a blanket inclusion.
-		const cloneMap = cloneMapJson as { map: Record<string, { target: string }> };
-		const targets = new Set(Object.values(cloneMap.map).map((entry) => entry.target));
-		const keptClones = core.filter((node) => targets.has(node.tipo)).map((node) => node.tipo);
-		const coreOnly = core.filter((node) => !targets.has(node.tipo));
-		const named = new Set(JSON.stringify(coreOnly).match(/test[a-z]*\d+/g) ?? []);
-		const unreferenced = keptClones.filter((tipo) => !named.has(tipo));
-		// Transitive: a clone may be named by another kept clone rather than by a
-		// hand-authored node, so only report ones nothing in the core names at all.
-		const allNamed = new Set(JSON.stringify(core).match(/test[a-z]*\d+/g) ?? []);
-		expect(unreferenced.filter((tipo) => !allNamed.has(tipo))).toEqual([]);
 	});
 });

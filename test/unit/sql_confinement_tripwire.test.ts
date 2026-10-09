@@ -528,10 +528,10 @@ const T2_PSQL_WRITE_CHANNEL: Readonly<Record<string, { writes: number; reason: s
 		reason:
 			'`-f` restore of the vendored install seed (install/db/dedalo_install.pgsql.gz), then `-1 -f` of each shipped migration the seed PREDATES (paths.ts SEED_PREDATED_MIGRATION_PATHS — install mode skips the boot runner).',
 	},
-	'scripts/test_db_setup.ts': {
-		writes: 1,
+	'scripts/build_install_seed.ts': {
+		writes: 7,
 		reason:
-			'suite-database builder: `-f` restore of the vendored seed into a database it just created and will mark (never the app database).',
+			'the install-seed builder (`bun run seed:build`): the `-f` restore of the previous seed and the six scoped strip DELETEs (non-core rows of dd_ontology, dd_ontology_recovery, matrix_ontology, matrix_ontology_main, matrix_dd; all of matrix_test — main_dd is outside the T2 families), all on a uniquely named SCRATCH database it creates and always drops; never the app or suite database, no counter statement (counter law). The strip runs as ONE psql transaction (-1).',
 	},
 };
 

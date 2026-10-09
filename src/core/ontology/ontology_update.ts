@@ -23,6 +23,14 @@
  * are purged via clearOntologyDerivedCaches; the activity row is not
  * ported (ledgered).
  *
+ * THE SHARED LOWER LAYER (2026-10-09, installer unification A4):
+ * `importStagedOntologyFiles` is Phases B + C + the dd_ontology re-derive,
+ * extracted so the installer's ontology door (src/core/install/ontology_install.ts)
+ * imports through the SAME routine the update panel does — never a copy. It never
+ * resolves a target, downloads, or runs the panel's tail; both callers hold the
+ * one single-flight latch (claimOntologyImportLatch / releaseOntologyImportLatch)
+ * around it.
+ *
  * GATE: `test/unit/ontology_update_shell_native.test.ts` drives the real
  * orchestrator through the `UpdateOntologyDeps` seam over the scratch TLD
  * `zzd` — target refusal, the single-flight latch (refused AND released), the
@@ -74,6 +82,7 @@ import {
 	addMainSection,
 	createDdOntologyRootNode,
 	setRecordsInDdOntology,
+	writeDeclaredDependencies,
 } from './ontology_write.ts';
 import { getOrderedSubtree } from './resolver.ts';
 import { LOCAL_ONTOLOGY_SECTION } from './tld.ts';
@@ -119,6 +128,9 @@ export const updateOntologyOptionsSchema = z.object({
 				url: z.string().url(),
 				typology_id: z.union([z.number(), z.string()]).nullish(),
 				name_data: z.unknown().nullish(),
+				// The manifest's declared dependencies, forwarded verbatim (absent = not
+				// declared); normalized by the stager, persisted on the registry record.
+				dependencies: z.unknown().optional(),
 			}),
 		)
 		.min(1)
@@ -127,8 +139,24 @@ export const updateOntologyOptionsSchema = z.object({
 });
 export type UpdateOntologyOptions = z.infer<typeof updateOntologyOptionsSchema>;
 
-/** Single-flight latch — two concurrent runs must never interleave DELETEs. */
+/**
+ * Single-flight latch — two concurrent runs must never interleave DELETEs. ONE
+ * flag for every door that imports ontology files (the update panel and the
+ * installer): claimed and released through the two functions below.
+ */
 let updateInFlight = false;
+
+/** Claim the ontology-import latch: false when an import is already running. */
+export function claimOntologyImportLatch(): boolean {
+	if (updateInFlight) return false;
+	updateInFlight = true;
+	return true;
+}
+
+/** Release the ontology-import latch (always — in the claimer's `finally`). */
+export function releaseOntologyImportLatch(): void {
+	updateInFlight = false;
+}
 
 /**
  * PHP hierarchy::save_simple_schema_file — additions-only diff of the section
@@ -307,16 +335,15 @@ export async function updateOntology(
 		return response;
 	}
 
-	if (updateInFlight) {
+	if (!claimOntologyImportLatch()) {
 		response.errors.push('an ontology update is already running');
 		response.msg = 'Error. An ontology update is already running';
 		return response;
 	}
-	updateInFlight = true;
 
 	const ioPath = setOntologyIoPath(deps.ioBaseDir);
 	if (ioPath === false) {
-		updateInFlight = false;
+		releaseOntologyImportLatch();
 		response.errors.push('unable to resolve the ontology IO directory');
 		return response;
 	}
@@ -344,118 +371,25 @@ export async function updateOntology(
 		const staged = staging.staged;
 		messages.push(...staging.messages);
 
-		// ------------------------------------------------------------------
-		// Phase B — recovery snapshot BEFORE the first destructive statement
-		// ------------------------------------------------------------------
 		// Pre-import schema for the operator-facing changes artifact. Captured
-		// HERE — before the first destructive statement — not after the import
-		// as PHP did (defect D8, fixed 2026-08-09; see the wire-contract entry
+		// HERE — after every refusal gate, before the shared layer's Phase B and
+		// its first destructive statement — not after the import as PHP did
+		// (defect D8, fixed 2026-08-09; see the wire-contract entry
 		// WC-2026-08-09-simple-schema-changes-pre-import). PHP read it after the
 		// import and before optimize_tables, and since the read is uncached the
 		// two sides were always identical: the artifact was permanently `[]`.
 		const oldSchema = await getSimpleSchemaOfSections();
 
-		mkdirSync(recoveryDir, { recursive: true });
-		for (const file of staged) {
-			const outFile = confinedPath(recoveryDir, `${file.tld}.copy`);
-			if (outFile === null) {
-				response.errors.push(`unconfined recovery path for ${file.tld}`);
-				return response;
-			}
-			const ok =
-				file.tld === 'matrix_dd'
-					? await snapshotTableRows('matrix_dd', null, outFile, conn)
-					: await snapshotTableRows('matrix_ontology', file.sectionTipo, outFile, conn);
-			if (!ok) {
-				response.errors.push(`recovery snapshot failed for ${file.tld}`);
-				response.msg = 'Error. Recovery snapshot failed — database untouched';
-				return response;
-			}
-		}
-
-		// ------------------------------------------------------------------
-		// Phase C — import (destructive; per-file txn; auto-restore on failure)
-		// ------------------------------------------------------------------
-		for (const file of staged) {
-			if (file.tld === 'matrix_dd') {
-				const imported = await importFromCopyFile({
-					filePath: file.stagedPath,
-					matrixTable: 'matrix_dd',
-					deleteTable: true,
-					conn,
-				});
-				messages.push(imported.msg);
-				if (imported.ok !== true) {
-					response.errors.push(...imported.errors);
-					await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
-					response.msg = restoreFailureMessage(provisioned, response.errors);
-					return response;
-				}
-				mutated.push(file);
-				continue;
-			}
-			// PHP order: registry record + root node BEFORE the row import.
-			// absent typology (null) → both read the registry / default themselves
-			const fileItem = {
-				tld: file.tld,
-				section_tipo: file.sectionTipo,
-				typology_id: file.typologyId,
-				name_data: file.nameData,
-			} as Parameters<typeof addMainSection>[0];
-			await addMainSection(fileItem, userId);
-			await createDdOntologyRootNode(fileItem, userId);
-			provisioned.push(file.tld);
-			const imported = await importFromCopyFile({
-				sectionTipo: file.sectionTipo,
-				filePath: file.stagedPath,
-				matrixTable: 'matrix_ontology',
-				conn,
-			});
-			messages.push(imported.msg);
-			if (imported.ok !== true) {
-				response.errors.push(...imported.errors);
-				await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
-				response.msg = restoreFailureMessage(provisioned, response.errors);
-				return response;
-			}
-			// ONT-TLD: the staged file carries whatever ontology7 it was EXPORTED
-			// with, while sectionTipo comes from the target tld — a tld renamed
-			// upstream would otherwise land a whole ontology in the OLD namespace.
-			// See data_io_import.normalizeOntologyTld. (The restore path below is
-			// deliberately NOT normalized: a rollback restores, it does not fix.)
-			const rewritten = await normalizeOntologyTld(file.sectionTipo, conn);
-			if (rewritten === null) {
-				// FATAL and ROLLED BACK, exactly like a failed import above. Continuing
-				// would run the dd_ontology re-derive below over rows that still
-				// declare the export's tld — projecting the whole ontology into the OLD
-				// namespace and finishing `ok: true`. A warning here was the worst
-				// of both: the damage done, and the panel reporting success.
-				response.errors.push(`ontology7 normalization failed for ${file.sectionTipo}`);
-				await restoreSnapshots(mutated.concat(file), recoveryDir, conn, response.errors);
-				response.msg = 'Error. ONT-TLD normalization failed — previous state restored';
-				return response;
-			}
-			if (rewritten > 0) {
-				messages.push(`${file.sectionTipo}: rewrote ontology7 on ${rewritten} row(s)`);
-			}
-			if (!(await consolidateSectionCounter(file.sectionTipo, 'matrix_ontology', conn))) {
-				response.errors.push(`counter consolidation failed for ${file.sectionTipo}`);
-			}
-			mutated.push(file);
-		}
-
-		// dd_ontology flat-index rebuild per imported TLD (skip matrix_dd)
-		for (const file of staged) {
-			if (!derivesNodes(file)) continue;
-			// wholeSection: this IS the deliberate full-TLD re-derive after an
-			// ontology-file import — not a request-driven batch (WC-043).
-			const rebuilt = await setRecordsInDdOntology({
-				sectionTipo: file.sectionTipo,
-				wholeSection: true,
-				userId,
-			});
-			messages.push(rebuilt.msg);
-			if (rebuilt.ok !== true) response.errors.push(...rebuilt.errors);
+		// Phases B + C + the dd_ontology re-derive: the SHARED LOWER LAYER (the
+		// installer's ontology door drives the same function).
+		const imported = await importStagedOntologyFiles(staged, { conn, userId, recoveryDir });
+		mutated.push(...imported.mutated);
+		provisioned.push(...imported.provisioned);
+		messages.push(...imported.messages);
+		response.errors.push(...imported.errors);
+		if (!imported.completed) {
+			if (imported.msg !== null) response.msg = imported.msg;
+			return response;
 		}
 
 		// SURF-1: the re-derive above never projects a non-grammar identifier, so
@@ -470,7 +404,9 @@ export async function updateOntology(
 
 		// TS analog of the PHP session wipe + dd_cache purge: the in-process
 		// ontology-derived caches. (UI labels are repo catalogs since WC-033 —
-		// the imported model='label' rows are inert for the TS engine.)
+		// the imported model='label' rows are inert for the TS engine.) The shared
+		// layer already purged once after its re-derive; this purge keeps the
+		// update's post-optimize order unchanged.
 		await clearOntologyDerivedCaches();
 
 		// schema-changes file — the ONE hard-fail tail step (PHP parity)
@@ -498,15 +434,293 @@ export async function updateOntology(
 		response.msg = `${response.errors.length === 0 ? 'OK. Request done successfully' : 'Warning! Request done with errors'} ${messages.join('\n')}`;
 		return response;
 	} catch (error) {
-		response.errors.push((error as Error).message);
-		if (mutated.length > 0) {
-			await restoreSnapshots(mutated, recoveryDir, conn, response.errors);
-			response.msg = restoreFailureMessage(provisioned, response.errors);
-		}
+		const restored = await restoreAfterThrow(
+			error,
+			{ mutated, provisioned, errors: response.errors },
+			{ conn, recoveryDir },
+		);
+		if (restored !== null) response.msg = restored;
 		return response;
 	} finally {
 		rmSync(stagingDir, { recursive: true, force: true });
-		updateInFlight = false;
+		releaseOntologyImportLatch();
+	}
+}
+
+// ---------------------------------------------------------------------------
+// THE SHARED LOWER LAYER — Phases B + C + the dd_ontology re-derive
+// ---------------------------------------------------------------------------
+
+/** The edges the shared layer needs: the psql seam, the auditing user, where snapshots go. */
+export interface StagedImportContext {
+	conn: DbConnDescriptor;
+	userId: number;
+	recoveryDir: string;
+}
+
+/**
+ * The shared layer's outcome. `completed: false` = it refused or restored (`msg`
+ * is the operator line, or null to keep the caller's own). `completed: true` may still carry
+ * `errors` (a counter consolidation or a re-derive that failed — never fatal for
+ * the update panel; the installer treats ANY error as a failed install).
+ */
+export interface StagedImportResult {
+	completed: boolean;
+	msg: string | null;
+	messages: string[];
+	errors: string[];
+	/** TLDs whose registry record + root node were provisioned (D7 — not snapshot-covered). */
+	provisioned: string[];
+	/** Files whose table slice this call replaced (what a later failure must restore). */
+	mutated: StagedFile[];
+}
+
+/**
+ * Import already-staged ontology files: Phase B (a recovery snapshot of every
+ * slice it will replace), Phase C (per file: matrix_dd whole-table; otherwise
+ * registry record + root node, scoped DELETE+COPY, ONT-TLD normalization,
+ * counter consolidation — any failure auto-restores the slices already
+ * replaced), then the dd_ontology re-derive per TLD in staged order and the
+ * ontology cache purge. It never resolves a target, downloads, takes the latch
+ * or runs the update panel's tail (grammar, optimize, schema file) — its
+ * callers do: updateOntology (the maintenance panel) and the installer's
+ * ontology door (src/core/install/ontology_install.ts). The caller holds the
+ * single-flight latch (claimOntologyImportLatch) around the call.
+ */
+export async function importStagedOntologyFiles(
+	staged: readonly StagedFile[],
+	ctx: StagedImportContext,
+): Promise<StagedImportResult> {
+	const result: StagedImportResult = {
+		completed: false,
+		msg: null,
+		messages: [],
+		errors: [],
+		provisioned: [],
+		mutated: [],
+	};
+	try {
+		// ------------------------------------------------------------------
+		// Phase B — recovery snapshot BEFORE the first destructive statement
+		// ------------------------------------------------------------------
+		if (!(await snapshotStagedSlices(staged, ctx, result))) return result;
+		// ------------------------------------------------------------------
+		// Phase C — import (destructive; per-file txn; auto-restore on failure)
+		// ------------------------------------------------------------------
+		for (const file of staged) {
+			if (!(await importStagedFile(file, ctx, result))) return result;
+		}
+		// Every registry record of the batch exists now: the declarations can
+		// name each other (a dependency imported after its dependant).
+		await recordDeclaredDependencies(staged, result);
+		await deriveStagedNodes(staged, ctx.userId, result);
+		await clearOntologyDerivedCaches();
+		result.completed = true;
+		return result;
+	} catch (error) {
+		result.msg = await restoreAfterThrow(error, result, ctx);
+		return result;
+	}
+}
+
+/**
+ * A THROWN failure in the middle of an import (the shared layer's, or the update
+ * panel's tail): its text joins the errors, and every slice already replaced is
+ * restored from its snapshot. Answers the operator line, or null when nothing was
+ * replaced (the caller keeps its own message). ONE home for both catch sites.
+ */
+async function restoreAfterThrow(
+	error: unknown,
+	progress: { mutated: readonly StagedFile[]; provisioned: readonly string[]; errors: string[] },
+	ctx: { conn: DbConnDescriptor; recoveryDir: string },
+): Promise<string | null> {
+	progress.errors.push((error as Error).message);
+	if (progress.mutated.length === 0) return null;
+	await restoreSnapshots(progress.mutated, ctx.recoveryDir, ctx.conn, progress.errors);
+	return restoreFailureMessage(progress.provisioned, progress.errors);
+}
+
+/** Phase B: one snapshot per staged slice; false (with the refusal set) when one cannot be taken. */
+async function snapshotStagedSlices(
+	staged: readonly StagedFile[],
+	ctx: StagedImportContext,
+	result: StagedImportResult,
+): Promise<boolean> {
+	mkdirSync(ctx.recoveryDir, { recursive: true });
+	for (const file of staged) {
+		const outFile = confinedPath(ctx.recoveryDir, `${file.tld}.copy`);
+		if (outFile === null) {
+			result.errors.push(`unconfined recovery path for ${file.tld}`);
+			return false;
+		}
+		if (!(await snapshotStagedSlice(file, outFile, ctx.conn))) {
+			result.errors.push(`recovery snapshot failed for ${file.tld}`);
+			result.msg = 'Error. Recovery snapshot failed — database untouched';
+			return false;
+		}
+	}
+	return true;
+}
+
+function snapshotStagedSlice(
+	file: StagedFile,
+	outFile: string,
+	conn: DbConnDescriptor,
+): Promise<boolean> {
+	return file.tld === 'matrix_dd'
+		? snapshotTableRows('matrix_dd', null, outFile, conn)
+		: snapshotTableRows('matrix_ontology', file.sectionTipo, outFile, conn);
+}
+
+/** Restore everything replaced so far (+ `file`) and set the failure line; always false. */
+async function failImport(
+	file: StagedFile,
+	ctx: StagedImportContext,
+	result: StagedImportResult,
+	msg: string | null,
+): Promise<false> {
+	await restoreSnapshots(result.mutated.concat(file), ctx.recoveryDir, ctx.conn, result.errors);
+	result.msg = msg ?? restoreFailureMessage(result.provisioned, result.errors);
+	return false;
+}
+
+/** Phase C for one file; false when it failed (and the replaced slices were restored). */
+async function importStagedFile(
+	file: StagedFile,
+	ctx: StagedImportContext,
+	result: StagedImportResult,
+): Promise<boolean> {
+	if (file.tld === 'matrix_dd') return importStagedPrivateLists(file, ctx, result);
+	// PHP order: registry record + root node BEFORE the row import.
+	// absent typology (null) → both read the registry / default themselves
+	const fileItem = {
+		tld: file.tld,
+		section_tipo: file.sectionTipo,
+		typology_id: file.typologyId,
+		name_data: file.nameData,
+	} as Parameters<typeof addMainSection>[0];
+	await addMainSection(fileItem, ctx.userId);
+	await createDdOntologyRootNode(fileItem, ctx.userId);
+	result.provisioned.push(file.tld);
+	const imported = await importFromCopyFile({
+		sectionTipo: file.sectionTipo,
+		filePath: file.stagedPath,
+		matrixTable: 'matrix_ontology',
+		conn: ctx.conn,
+	});
+	result.messages.push(imported.msg);
+	if (imported.ok !== true) {
+		result.errors.push(...imported.errors);
+		return failImport(file, ctx, result, null);
+	}
+	return finishStagedOntology(file, ctx, result);
+}
+
+/** matrix_dd: whole-table private lists. */
+async function importStagedPrivateLists(
+	file: StagedFile,
+	ctx: StagedImportContext,
+	result: StagedImportResult,
+): Promise<boolean> {
+	const imported = await importFromCopyFile({
+		filePath: file.stagedPath,
+		matrixTable: 'matrix_dd',
+		deleteTable: true,
+		conn: ctx.conn,
+	});
+	result.messages.push(imported.msg);
+	if (imported.ok !== true) {
+		result.errors.push(...imported.errors);
+		return failImport(file, ctx, result, null);
+	}
+	result.mutated.push(file);
+	return true;
+}
+
+/** ONT-TLD normalization + counter consolidation of an imported ontology slice. */
+async function finishStagedOntology(
+	file: StagedFile,
+	ctx: StagedImportContext,
+	result: StagedImportResult,
+): Promise<boolean> {
+	// ONT-TLD: the staged file carries whatever ontology7 it was EXPORTED
+	// with, while sectionTipo comes from the target tld — a tld renamed
+	// upstream would otherwise land a whole ontology in the OLD namespace.
+	// See data_io_import.normalizeOntologyTld. (The restore path below is
+	// deliberately NOT normalized: a rollback restores, it does not fix.)
+	const rewritten = await normalizeOntologyTld(file.sectionTipo, ctx.conn);
+	if (rewritten === null) {
+		// FATAL and ROLLED BACK, exactly like a failed import above. Continuing
+		// would run the dd_ontology re-derive below over rows that still
+		// declare the export's tld — projecting the whole ontology into the OLD
+		// namespace and finishing `ok: true`. A warning here was the worst
+		// of both: the damage done, and the panel reporting success.
+		result.errors.push(`ontology7 normalization failed for ${file.sectionTipo}`);
+		return failImport(
+			file,
+			ctx,
+			result,
+			'Error. ONT-TLD normalization failed — previous state restored',
+		);
+	}
+	if (rewritten > 0) {
+		result.messages.push(`${file.sectionTipo}: rewrote ontology7 on ${rewritten} row(s)`);
+	}
+	if (!(await consolidateSectionCounter(file.sectionTipo, 'matrix_ontology', ctx.conn))) {
+		result.errors.push(`counter consolidation failed for ${file.sectionTipo}`);
+	}
+	result.mutated.push(file);
+	return true;
+}
+
+/**
+ * Persist each imported ontology's DECLARED dependencies on its registry record
+ * (ddengine11 — ontology_write.ts writeDeclaredDependencies), so the census and
+ * this server's next export re-serve the declaration instead of losing it after
+ * one hop (installer unification A5). `null` (the source declared nothing — an
+ * older server, or a panel that did not forward it) writes NOTHING: the local
+ * declaration, if any, stands. A dependency with no registry record here is a
+ * NOTE (messages, never an error — the installer fails on any error): the
+ * locator it would need does not exist on this server.
+ */
+async function recordDeclaredDependencies(
+	staged: readonly StagedFile[],
+	result: StagedImportResult,
+): Promise<void> {
+	for (const file of staged) {
+		const declared = derivesNodes(file) ? (file.dependencies ?? null) : null;
+		if (declared === null) continue;
+		const note = dependencyNote(file.tld, await writeDeclaredDependencies(file.tld, declared));
+		if (note !== null) result.messages.push(note);
+	}
+}
+
+/** The operator note of one declaration write (null = recorded whole). */
+function dependencyNote(tld: string, missing: string[] | null): string | null {
+	if (missing === null) {
+		return `${tld}: no registry record — its declared dependencies were not recorded`;
+	}
+	if (missing.length === 0) return null;
+	return `${tld}: declared dependencies without a registry record here were not recorded: ${missing.join(', ')}`;
+}
+
+/** dd_ontology flat-index rebuild per imported TLD, in staged order (matrix_dd and overrides skipped). */
+async function deriveStagedNodes(
+	staged: readonly StagedFile[],
+	userId: number,
+	result: StagedImportResult,
+): Promise<void> {
+	for (const file of staged) {
+		if (!derivesNodes(file)) continue;
+		// wholeSection: this IS the deliberate full-TLD re-derive after an
+		// ontology-file import — not a request-driven batch (WC-043).
+		const rebuilt = await setRecordsInDdOntology({
+			sectionTipo: file.sectionTipo,
+			wholeSection: true,
+			userId,
+		});
+		result.messages.push(rebuilt.msg);
+		if (rebuilt.ok !== true) result.errors.push(...rebuilt.errors);
 	}
 }
 

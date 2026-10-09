@@ -274,7 +274,7 @@ const add_spinner = function(parent, label) {
 /**
 * API_CALL_WITH_SPINNER
 * Performs a data_manager API call with spinner and status message management.
-* @param object options { action, dd_action, body_options, status_node, button_node, retries, timeout }
+* @param object options { action, dd_action, body_options, status_node, button_node, retries, timeout, spinner_label }
 * @return object api_response
 */
 const api_call_with_spinner = async function(options) {
@@ -302,7 +302,7 @@ const api_call_with_spinner = async function(options) {
 
 	// add spinner
 	const spinner = status_node
-		? add_spinner(status_node)
+		? add_spinner(status_node, options.spinner_label)
 		: null
 
 	// API call
@@ -629,6 +629,7 @@ const get_content_data = function(self) {
 				get_label.init_text || 'Diagnostics',
 				get_label.db_name || 'Database',
 				get_label.entity_name || 'Entity',
+				get_label.installation_ontologies || 'Ontologies',
 				get_label.enable_diffusion || 'Diffusion',
 				get_label.installation_mailer || 'Email',
 				get_label.save_configuration || 'Save config',
@@ -714,6 +715,19 @@ const get_content_data = function(self) {
 				content_data	: content_data
 			})
 			entity.content_div.appendChild(render_entity_block(self))
+
+		// ONTOLOGIES (the domain ontologies to install — >= 1, oh pre-ticked)
+			const ontologies = create_section_block({
+				label			: get_label.installation_ontologies || 'Ontologies',
+				class_name		: 'ontologies_block',
+				hidden			: true,
+				parent			: content_data,
+				content_data	: content_data
+			})
+			ontologies.content_div.appendChild(render_ontologies_block(self))
+			// the server catalog is read when the step first appears (not before
+			// the operator reaches it), and again when the update-server box changes
+			ontologies.section._on_reveal = self._ontologies_on_reveal
 
 		// DIFFUSION (optional)
 			const diffusion = create_section_block({
@@ -842,7 +856,7 @@ const get_content_data = function(self) {
 			// On a successful import, reveal the Register tools step.
 			callback		: function() {
 				reveal_section(self.node.content_data.register_tools_block)
-				update_step_indicator(self.node.content_data.step_indicator, needs_config ? 12 : 7)
+				update_step_indicator(self.node.content_data.step_indicator, needs_config ? 13 : 7)
 			}
 		}
 		hierarchies.content_div.appendChild(
@@ -1674,6 +1688,10 @@ const render_entity_block = function(self) {
 	updates_checkbox.addEventListener('change', function() {
 		cfg.update_servers = updates_checkbox.checked === true
 		airgapped_warning.classList.toggle('hide', cfg.update_servers)
+		// the Ontologies step offers what the chosen source serves: re-read it
+		if (typeof self._ontologies_refresh === 'function') {
+			self._ontologies_refresh()
+		}
 	})
 
 	// required field → its input, so validation can flag the exact offending field
@@ -1722,12 +1740,408 @@ const render_entity_block = function(self) {
 		}
 		status.classList.remove('error'); status.classList.add('ok')
 		status.textContent = 'OK'
-		reveal_section(self.node.content_data.diffusion_block)
+		reveal_section(self.node.content_data.ontologies_block)
 		update_step_indicator(self.node.content_data.step_indicator, 4)
 	})
 
 	return fragment
 }//end render_entity_block
+
+
+
+/**
+* ONTOLOGY_NOTE_FALLBACKS
+* English fallbacks of the explanatory notes the server names per catalog entry
+* (`note_key` — src/core/install/ontology_choice.ts ONTOLOGY_NOTE_LABELS). The
+* wizard runs pre-login, so a catalog label may be absent: the note must still read.
+*/
+const ONTOLOGY_NOTE_FALLBACKS = {
+	installation_ontology_note_oh	: 'Oral history: interviews, their audiovisual recordings, transcriptions and indexing. Built in — installable without a network.',
+	installation_ontology_note_tch	: 'Tangible cultural heritage: the general inventory model for objects and collections. Downloaded from the update server.'
+}
+
+
+
+/**
+* RENDER_WARNING_LINES
+* Appends one warning box holding each server warning as its own line. The
+* warnings are server text (they name TLDs and remedies): text_content only.
+* Non-blocking by design — the caller decides nothing from them.
+* @param HTMLElement parent
+* @param array|undefined warnings
+* @return HTMLElement|null the box, or null when there is nothing to show
+*/
+const render_warning_lines = function(parent, warnings) {
+
+	const lines = (Array.isArray(warnings) ? warnings : [])
+		.filter(line => typeof line==='string' && line!=='')
+	if (lines.length===0) {
+		return null
+	}
+
+	const box = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'msg warning installer_warning_lines',
+		parent			: parent
+	})
+	for (const line of lines) {
+		ui.create_dom_element({
+			element_type	: 'div',
+			text_content	: line,
+			parent			: box
+		})
+	}
+
+	return box
+}//end render_warning_lines
+
+
+
+/**
+* ONTOLOGY_ENTRY_LABEL
+* The visible name of one catalog entry. The manifest names read "Oral History | oh";
+* the TLD is appended only when the name does not already carry it.
+* @param object entry (OntologyCatalogView entry)
+* @return string
+*/
+const ontology_entry_label = function(entry) {
+
+	const name = (typeof entry.name==='string' && entry.name!=='') ? entry.name : entry.tld
+
+	return name.indexOf(entry.tld)!==-1
+		? name
+		: name + ' [' + entry.tld + ']'
+}//end ontology_entry_label
+
+
+
+/**
+* ONTOLOGY_DEPENDENCY_TEXT
+* What ticking this entry brings with it: the declared dependencies the installer
+* installs too (`also_installs`, deps of deps included, core excluded), the
+* "not declared" warning when the source does not declare them
+* (`dependencies === null` — an older ontology server), or '' (nothing more).
+* @param object entry (OntologyCatalogView entry)
+* @return object { text, warning }
+*/
+const ontology_dependency_text = function(entry) {
+
+	if (entry.dependencies===null) {
+		return {
+			text	: get_label.installation_ontologies_undeclared || 'The ontology server does not declare what this ontology depends on (an older server): it is installed alone, and anything it references in other ontologies stays unresolved.',
+			warning	: true
+		}
+	}
+	const also = Array.isArray(entry.also_installs) ? entry.also_installs : []
+	if (also.length===0) {
+		return { text : '', warning : false }
+	}
+
+	return {
+		text	: (get_label.installation_ontologies_also_installs || 'Also installs:') + ' ' + also.join(', '),
+		warning	: false
+	}
+}//end ontology_dependency_text
+
+
+
+/**
+* RENDER_ONTOLOGY_ENTRY
+* One catalog row: checkbox + name, the explanatory note (when the server names
+* one), and the dependency line, shown only while the row is ticked. Every
+* server-supplied string goes through text_content (SEC-032).
+* @param object entry (OntologyCatalogView entry)
+* @param Set selected the ticked TLDs (mutated on change)
+* @param function on_change called after every tick/untick
+* @return HTMLElement li
+*/
+const render_ontology_entry = function(entry, selected, on_change) {
+
+	const li = ui.create_dom_element({
+		element_type	: 'li',
+		class_name		: 'ontology_entry'
+	})
+
+	const label = ui.create_dom_element({
+		element_type	: 'label',
+		class_name		: 'hierarchy_label ontology_label',
+		parent			: li
+	})
+	const checkbox = ui.create_dom_element({
+		element_type	: 'input',
+		type			: 'checkbox',
+		class_name		: 'hierarchy_checkbox',
+		parent			: label
+	})
+	checkbox.value		= entry.tld
+	checkbox.checked	= selected.has(entry.tld)
+	ui.create_dom_element({
+		element_type	: 'span',
+		text_content	: ontology_entry_label(entry),
+		parent			: label
+	})
+
+	// note (oh, tch): a label key named by the server
+	const note_text = entry.note_key
+		? (get_label[entry.note_key] || ONTOLOGY_NOTE_FALLBACKS[entry.note_key] || '')
+		: ''
+	if (note_text!=='') {
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'installer_field_help ontology_note',
+			text_content	: note_text,
+			parent			: li
+		})
+	}
+
+	// dependencies: visible while ticked
+	const dependency = ontology_dependency_text(entry)
+	const dependency_node = dependency.text!==''
+		? ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'installer_field_help ontology_dependencies' + (dependency.warning ? ' warning' : ''),
+			text_content	: dependency.text,
+			parent			: li
+		  })
+		: null
+	const sync_dependency = function() {
+		if (dependency_node) {
+			dependency_node.classList.toggle('hide', !checkbox.checked)
+		}
+	}
+	sync_dependency()
+
+	checkbox.addEventListener('change', function() {
+		if (checkbox.checked) {
+			selected.add(entry.tld)
+		}else{
+			selected.delete(entry.tld)
+		}
+		sync_dependency()
+		on_change()
+	})
+
+	return li
+}//end render_ontology_entry
+
+
+
+/**
+* GROUP_ONTOLOGY_ENTRIES
+* The catalog entries grouped by typology name, in the server's order (default
+* first, then typology, then TLD — describeOntologyCatalog sorts them).
+* @param array entries
+* @return array [{ name, entries }]
+*/
+const group_ontology_entries = function(entries) {
+
+	const groups = new Map()
+	for (const entry of entries) {
+		const name = (typeof entry.typology_name==='string' && entry.typology_name!=='')
+			? entry.typology_name
+			: (get_label.others || 'Others')
+		if (!groups.has(name)) {
+			groups.set(name, [])
+		}
+		groups.get(name).push(entry)
+	}
+
+	return [...groups].map(([name, group_entries]) => ({ name, entries:group_entries }))
+}//end group_ontology_entries
+
+
+
+/**
+* RENDER_ONTOLOGY_GROUP
+* One typology group as a <details>. A group opens when it holds a default, a
+* noted (oh, tch) or a ticked entry — the domain models; every other group (the
+* thesaurus typologies: toponymy, thematic, semantics…) starts collapsed, so a
+* server catalog of a few hundred TLDs stays readable.
+* @param object group { name, entries }
+* @param Set selected
+* @param function on_change
+* @return HTMLElement details
+*/
+const render_ontology_group = function(group, selected, on_change) {
+
+	const details = ui.create_dom_element({
+		element_type	: 'details',
+		class_name		: 'ontology_group'
+	})
+	details.open = group.entries.some(entry => entry.is_default===true || !!entry.note_key || selected.has(entry.tld))
+
+	ui.create_dom_element({
+		element_type	: 'summary',
+		class_name		: 'typology_label',
+		text_content	: group.name + ' (' + group.entries.length + ')',
+		parent			: details
+	})
+
+	const ul = ui.create_dom_element({
+		element_type	: 'ul',
+		class_name		: 'ontology_ul',
+		parent			: details
+	})
+	for (const entry of group.entries) {
+		ul.appendChild(render_ontology_entry(entry, selected, on_change))
+	}
+
+	return details
+}//end render_ontology_group
+
+
+
+/**
+* RENDER_ONTOLOGIES_BLOCK
+* The "Ontologies" step (WC-2026-10-09-install-domain-ontologies): which DOMAIN
+* ontologies this installation carries beyond the core the database seed ships.
+*
+*  - core (`properties.ontologies.core`) is shown as fixed rows — never a choice;
+*  - the built-in catalog (`properties.ontologies.offline`: the vendored `oh`) is
+*    rendered at once, with no network;
+*  - when the update-server box (Entity step) is ticked, the step asks the server
+*    for the configured ontology server's catalog (`get_ontology_catalog`) the first
+*    time it appears and again whenever the box changes; an unreadable server
+*    (`data:false`) is reported and the built-in catalog stays offered;
+*  - `properties.ontologies.default` (oh) is pre-ticked; tch carries its note but
+*    is not; a ticked entry shows what it also installs (the DECLARED dependencies)
+*    or the not-declared warning;
+*  - at least one domain ontology is required. The choice travels as
+*    `cfg.ontologies` with persist_config — only TLDs the current catalog offers.
+* @param {Object} self
+* @returns {DocumentFragment}
+*/
+const render_ontologies_block = function(self) {
+
+	const fragment		= new DocumentFragment()
+	const cfg			= self._cfg
+	const props			= self.context.properties || {}
+	const context		= props.ontologies || {}
+	const offline_view	= context.offline || { entries:[], warnings:[] }
+	const core			= Array.isArray(context.core) ? context.core : []
+
+	// the ticked TLDs — kept across catalog reloads; only the offered ones are posted
+	const selected = new Set(Array.isArray(context.default) ? context.default : [])
+	let offered = []
+
+	ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'description',
+		text_content	: get_label.installation_ontologies_help || 'Choose the domain ontologies this installation will catalogue with. The core ontologies are always installed; each chosen ontology brings the ontologies it declares as dependencies.',
+		parent			: fragment
+	})
+
+	// core: fixed rows, not checkboxes
+	if (core.length>0) {
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'description info core_hierarchies',
+			text_content	: (get_label.core_hierarchies_always || 'Always installed:') + ' ' + core.join(', '),
+			parent			: fragment
+		})
+	}
+
+	const airgapped_note = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'installer_field_help ontology_airgapped hide',
+		text_content	: get_label.installation_ontologies_airgapped || 'Air-gapped: only the built-in ontology (Oral history, oh) is offered. Tick the update server in the Entity step to choose from its catalog.',
+		parent			: fragment
+	})
+	const source_status	= create_status_msg(fragment)
+	const list			= ui.create_dom_element({ element_type:'div', class_name:'ontology_container', parent:fragment })
+	const status		= create_status_msg(fragment)
+	const next_button	= ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'primary ontologies_next_button',
+		text_content	: get_label.continue_label || 'Continue',
+		parent			: fragment
+	})
+
+	// cfg.ontologies = ticked ∩ offered, in catalog order
+	const sync_cfg = function() {
+		cfg.ontologies = offered.filter(tld => selected.has(tld))
+		status.classList.remove('ok', 'error')
+		status.textContent = ''
+	}
+
+	const render_list = function(view) {
+		const entries = Array.isArray(view.entries) ? view.entries : []
+		offered = entries.map(entry => entry.tld)
+		// a catalog that offers none of the ticked TLDs (e.g. the box was unticked
+		// after tch was chosen) falls back to the default instead of an empty choice
+		if (!offered.some(tld => selected.has(tld))) {
+			for (const tld of (Array.isArray(context.default) ? context.default : [])) {
+				if (offered.includes(tld)) selected.add(tld)
+			}
+		}
+		list.replaceChildren()
+		for (const group of group_ontology_entries(entries)) {
+			list.appendChild(render_ontology_group(group, selected, sync_cfg))
+		}
+		render_warning_lines(list, view.warnings)
+		sync_cfg()
+	}
+
+	// catalog loading: the newest request wins (the box may change mid-flight)
+	let request_seq		= 0
+	let revealed		= false
+	const load_catalog = async function() {
+		const seq				= ++request_seq
+		const update_servers	= cfg.update_servers!==false
+		airgapped_note.classList.toggle('hide', update_servers)
+		source_status.classList.remove('ok', 'error', 'warning')
+		source_status.textContent = ''
+		if (!update_servers) {
+			render_list(offline_view)
+			return
+		}
+		const api_response = await api_call_with_spinner({
+			action			: 'get_ontology_catalog',
+			body_options	: { update_servers : true },
+			status_node		: source_status,
+			timeout			: 60*1000,
+			spinner_label	: get_label.installation_ontologies_loading || 'Reading the update server\'s ontology catalog…'
+		})
+		if (seq!==request_seq) {
+			return // superseded by a newer request
+		}
+		const catalog = response_extension(api_response, 'catalog')
+		const view = (catalog && Array.isArray(catalog.entries)) ? catalog : offline_view
+		if (request_failed(api_response) || response_data(api_response)!==true) {
+			source_status.classList.add('warning')
+			source_status.textContent = (get_label.installation_ontologies_unreachable || 'The update server\'s ontology catalog could not be read — only the built-in ontologies are offered.') + ' ' + server_text(api_response)
+		}
+		render_list(view)
+	}
+
+	// the built-in catalog at once; the server's when the step first appears
+	render_list(offline_view)
+	self._ontologies_on_reveal = function() {
+		if (revealed) return
+		revealed = true
+		load_catalog()
+	}
+	self._ontologies_refresh = function() {
+		if (revealed) {
+			load_catalog()
+		}
+	}
+
+	next_button.addEventListener('mouseup', function() {
+		sync_cfg()
+		if (cfg.ontologies.length===0) {
+			status.classList.add('error')
+			status.textContent = get_label.installation_ontologies_required || 'Select at least one domain ontology (the default is Oral history, oh).'
+			return
+		}
+		status.classList.add('ok')
+		status.textContent = 'OK'
+		reveal_section(self.node.content_data.diffusion_block)
+		update_step_indicator(self.node.content_data.step_indicator, 5)
+	})
+
+	return fragment
+}//end render_ontologies_block
 
 
 
@@ -1811,7 +2225,7 @@ const render_diffusion_block = function(self) {
 			return
 		}
 		reveal_section(self.node.content_data.mailer_block)
-		update_step_indicator(self.node.content_data.step_indicator, 5)
+		update_step_indicator(self.node.content_data.step_indicator, 6)
 	})
 
 	return fragment
@@ -1901,7 +2315,7 @@ const render_mailer_block = function(self) {
 			return
 		}
 		reveal_section(self.node.content_data.persist_block)
-		update_step_indicator(self.node.content_data.step_indicator, 6)
+		update_step_indicator(self.node.content_data.step_indicator, 7)
 	})
 
 	return fragment
@@ -1930,6 +2344,9 @@ const render_persist_block = function(self) {
 	})
 
 	const status		= create_status_msg(fragment)
+	// what the saved plan will install (the chosen ontologies + their declared
+	// dependencies, deps first) and its non-blocking warnings
+	const plan_box		= ui.create_dom_element({ element_type:'div', class_name:'persist_plan', parent:fragment })
 	const secrets_box	= ui.create_dom_element({ element_type:'div', class_name:'generated_secrets hide', parent:fragment })
 	const verify_status	= create_status_msg(fragment)
 
@@ -1939,16 +2356,22 @@ const render_persist_block = function(self) {
 	save_button.addEventListener('mouseup', async function() {
 		const api_response = await api_call_with_spinner({
 			action		: 'persist_config',
-			// update_servers: true = official master, false = air-gapped (absent → official)
+			// update_servers: true = official master, false = air-gapped (absent → official).
+			// ontologies (in cfg): the ticked domain ontologies of the Ontologies step;
+			// a non-vendored one makes the server read the update server's manifest
+			// before writing (its declared dependencies decide ACTIVE_ONTOLOGY_TLDS),
+			// hence the longer timeout.
 			body_options: { ...cfg, diffusion: cfg.diffusion===true, mailer: cfg.mailer===true, update_servers: cfg.update_servers!==false },
 			status_node	: status,
 			button_node	: save_button,
-			timeout		: 20*1000
+			timeout		: 60*1000
 		})
 		set_status_result(status, api_response)
+		plan_box.replaceChildren()
 		if (response_data(api_response)!==true) {
 			return
 		}
+		render_ontology_plan(plan_box, api_response)
 		// show generated secrets ONCE
 		const generated = api_response.generated || {}
 		const keys = Object.keys(generated)
@@ -1977,7 +2400,7 @@ const render_persist_block = function(self) {
 		if (response_data(api_response)===true) {
 			verify_button.remove()
 			reveal_section(self.node.content_data.directories_block)
-			update_step_indicator(self.node.content_data.step_indicator, 7)
+			update_step_indicator(self.node.content_data.step_indicator, 8)
 		}
 		// if not active: status shows the reload guidance; the button stays for a re-check
 	})
@@ -2033,7 +2456,7 @@ const render_directories_block = function(self) {
 		if (response_data(api_response)===true) {
 			create_button.classList.add('hide')
 			reveal_section(self.node.content_data.installer_db_block)
-			update_step_indicator(self.node.content_data.step_indicator, 8)
+			update_step_indicator(self.node.content_data.step_indicator, 9)
 		} else {
 			create_button.classList.remove('hide')
 		}
@@ -2044,6 +2467,97 @@ const render_directories_block = function(self) {
 
 	return fragment
 }//end render_directories_block
+
+
+
+/**
+* RENDER_ONTOLOGY_PLAN
+* After a successful persist_config: the domain ontologies the saved plan will
+* stage and import (`ontology_install` — the chosen ones and their declared
+* dependencies, deps first) and the plan's non-blocking warnings (e.g. an
+* ontology whose dependencies the server does not declare). Server text →
+* text_content only.
+* @param HTMLElement parent
+* @param object api_response (persist_config)
+*/
+const render_ontology_plan = function(parent, api_response) {
+
+	const install = response_extension(api_response, 'ontology_install')
+	if (Array.isArray(install) && install.length>0) {
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'description info',
+			text_content	: (get_label.installation_ontologies || 'Ontologies') + ': ' + install.join(', '),
+			parent			: parent
+		})
+	}
+	render_warning_lines(parent, response_extension(api_response, 'warnings'))
+}//end render_ontology_plan
+
+
+
+/**
+* INSTALLER_DB_STEPS
+* The install-DB block's ordered steps (WC-2026-10-09-install-domain-ontologies):
+* fetch + verify the ontology files BEFORE the database is touched, restore the
+* seed, import the staged ontologies. Labels resolved at click time.
+* @return array [{ action, timeout, label }]
+*/
+const installer_db_steps = function() {
+
+	return [
+		{
+			action	: 'stage_ontologies',
+			timeout	: 600*1000,
+			label	: get_label.installation_ontologies_staging || 'Fetching and verifying the ontology files…'
+		},
+		{
+			action	: 'install_db_from_default_file',
+			timeout	: 120*1000,
+			label	: get_label.installation_db_restoring || 'Installing the database from the seed file…'
+		},
+		{
+			action	: 'install_ontologies',
+			timeout	: 600*1000,
+			label	: get_label.installation_ontologies_installing || 'Installing the domain ontologies…'
+		}
+	]
+}//end installer_db_steps
+
+
+
+/**
+* RUN_INSTALL_DB_SEQUENCE
+* Runs the steps in order, one status line each, and stops at the FIRST failure
+* (that line shows the refusal through set_status_result). Step warnings
+* (`warnings` extension key: undeclared dependencies, unresolved references) are
+* shown under the lines and never block.
+* @param array steps (installer_db_steps)
+* @param HTMLElement container the status lines' parent
+* @param HTMLElement button
+* @return object { ok }
+*/
+const run_install_db_sequence = async function(steps, container, button) {
+
+	for (const step of steps) {
+		const status_node = create_status_msg(container)
+		const api_response = await api_call_with_spinner({
+			action			: step.action,
+			status_node		: status_node,
+			button_node		: button,
+			timeout			: step.timeout,
+			spinner_label	: step.label
+		})
+		set_status_result(status_node, api_response)
+		if (request_failed(api_response) || response_data(api_response)!==true) {
+			console.error(step.action + ' failed:', api_response.error || api_response)
+			return { ok : false }
+		}
+		render_warning_lines(container, response_extension(api_response, 'warnings'))
+	}
+
+	return { ok : true }
+}//end run_install_db_sequence
 
 
 
@@ -2113,7 +2627,8 @@ const render_installer_db_block = function(self) {
 					user_name	: self._cfg.db_username,
 					hostname	: self._cfg.db_hostname,
 					port		: self._cfg.db_port,
-					socket		: self._cfg.db_socket
+					socket		: self._cfg.db_socket,
+					ontologies	: Array.isArray(self._cfg.ontologies) ? self._cfg.ontologies.join(', ') : ''
 				}
 				: (properties.db_config || {})
 			for(const config_item in db_config_display){
@@ -2135,8 +2650,12 @@ const render_installer_db_block = function(self) {
 		// expose so the step can refresh itself when revealed (see get_content_data wiring)
 		self._refresh_installer_db_config = refresh_db_config
 
-	// installer_db_status msg
-		const installer_db_status = create_status_msg(fragment)
+	// installer_db_status: one status line per step (run_install_db_sequence)
+		const installer_db_status = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'installer_db_steps',
+			parent			: fragment
+		})
 
 	// installer_db_button
 		const installer_db_button = ui.create_dom_element({
@@ -2145,28 +2664,30 @@ const render_installer_db_block = function(self) {
 			inner_html		: get_label.installation_from_file || 'INSTALL DATABASE FROM FILE',
 			parent			: fragment
 		})
+		// THREE steps, one button (WC-2026-10-09-install-domain-ontologies): the
+		// ontology files are fetched and verified BEFORE the database is touched
+		// (stage_ontologies), then the seed is restored, then the staged ontologies
+		// are imported. One status line per step; the first failure stops the run.
+		let running = false
 		installer_db_button.addEventListener('mouseup', async function() {
 
-			// API call with spinner
-				const api_response = await api_call_with_spinner({
-					action			: 'install_db_from_default_file',
-					status_node		: installer_db_status,
-					button_node		: installer_db_button
-				})
+			if (running) return
+			running = true
+
+			// a re-run starts from a clean status list
+				installer_db_status.replaceChildren()
+
+			const result = await run_install_db_sequence(installer_db_steps(), installer_db_status, installer_db_button)
+			running = false
 
 			// manage result
-				if (response_data(api_response)===true) {
-					console.log('DBB installed:', api_response);
-					set_status_result(installer_db_status, api_response)
+				if (result.ok===true) {
 					// show set_root_password_block
 					reveal_section(self.node.content_data.set_root_password_block)
-					// step indicator: "Set root password" is step 8 in the needs_config (11-step) flow
-					// and step 4 in the legacy (7-step) flow. Branch like the password/login blocks do.
-					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 9 : 4)
+					// step indicator: "Set root password" is step 10 in the needs_config (14-step) flow
+					// and step 4 in the legacy (8-step) flow. Branch like the password/login blocks do.
+					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 10 : 4)
 					installer_db_button.remove();
-				}else{
-					console.error('install_db_from_default_file failed:', api_response.error || api_response);
-					set_status_result(installer_db_status, api_response)
 				}
 		})//end mouse_up event
 
@@ -2392,7 +2913,7 @@ const render_set_root_password_block = function(self) {
 					change_root_pw_button.remove();
 					// show next block: login (root logs in inside the installer)
 					reveal_section(self.node.content_data.login_block)
-					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 10 : 5)
+					update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 11 : 5)
 				}else{
 					console.error('set_root_pw failed:', api_response.error || api_response);
 					set_status_result(set_pw_status, api_response)
@@ -2474,7 +2995,7 @@ const render_login_block = async function(self) {
 
 						// login done → reveal the MANDATORY hierarchies import (now authenticated)
 							reveal_section(self.node.content_data.hierarchies_import_block)
-							update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 11 : 6)
+							update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 12 : 6)
 
 					}else{
 
@@ -3109,7 +3630,7 @@ const render_register_tools_block = function(self) {
 			}
 
 			reveal_section(self.node.content_data.installer_finish_block)
-			update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 13 : 8)
+			update_step_indicator(self.node.content_data.step_indicator, self._needs_config ? 14 : 8)
 	})
 
 

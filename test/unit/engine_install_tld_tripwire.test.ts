@@ -51,22 +51,19 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { INSTALL_TLDS } from '../../scripts/lib/tld_census.ts';
+import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 
 const SRC_DIR = join(import.meta.dir, '..', '..', 'src');
 
 /**
  * Ships with every installation, so naming one is naming the ONTOLOGY, not an
- * install. `rsc` is the only member that the census also lists (it lists it for
- * the test-side section rule, which is a different question).
+ * install: the CORE ontologies the install seed carries — linked, never
+ * duplicated (src/core/ontology/core_tlds.ts; install_seed_drift_tripwire holds
+ * that list equal to the seed's dd_ontology TLD set). `rsc` is the only member
+ * that the census also lists (it lists it for the test-side section rule,
+ * which is a different question).
  */
-const SEED_SHIPPED: ReadonlySet<string> = new Set([
-	'rsc',
-	'dd',
-	'hierarchy',
-	'ontology',
-	'ontologytype',
-	'lg',
-]);
+const SEED_SHIPPED: ReadonlySet<string> = new Set(CORE_ONTOLOGY_TLDS);
 
 /**
  * `<file>:<tipo>` → why it is still here. SHRINK-ONLY.

@@ -9,11 +9,13 @@
  *
  * TWO KINDS OF STEP, and the difference is the whole design here:
  *  - a PROBE/REPORT step (test_*_connection, check_directories,
- *    verify_active_config, install_hierarchies, register_tools) answers a
+ *    verify_active_config, get_ontology_catalog, install_hierarchies,
+ *    register_tools) answers a
  *    question; "the server is unreachable" / "3 of 5 tlds failed" IS the
  *    answer, so it returns ok:true with the report as extension keys and the
  *    compat mirror puts the boolean back on `result` where the wizard reads it;
- *  - an ACTION step (persist_config, install_db_from_default_file, set_root_pw,
+ *  - an ACTION step (persist_config, stage_ontologies,
+ *    install_db_from_default_file, install_ontologies, set_root_pw,
  *    install_finish) either does the thing or REFUSES — and a refusal THROWS a
  *    registered `install.*` code (./refuse.ts) that the dispatch catch converts.
  * Nothing here builds a failure body.
@@ -21,7 +23,10 @@
  * Per-step auth: the dispatch gate (Gate 1b) already enforced unsealed +
  * IP-allowed for the whole surface; the two record-writing steps
  * (install_hierarchies, register_tools) additionally require a session here —
- * the client only reaches them after the in-wizard login.
+ * the client only reaches them after the in-wizard login. The three ontology
+ * steps need none: they run before the login exists (the ontology import is the
+ * same kind of machine-side install step as the seed restore it follows, and is
+ * audited to -1 like it).
  */
 
 import type { ApiRequestContext } from '../api/handler_context.ts';
@@ -98,7 +103,10 @@ const STEP_HANDLERS: Readonly<Record<string, StepHandler>> = Object.freeze({
 	},
 
 	persist_config: async (options, context) => {
-		const { persistConfig } = await import('./config_persist.ts');
+		const { persistConfig, refuseWizardOnlyCliAnswers } = await import('./config_persist.ts');
+		// The wizard door never takes a server filesystem path (`ontology_source`
+		// is CLI-only — the CLI calls persistConfig itself): refused before any read.
+		refuseWizardOnlyCliAnswers(options);
 		// A failure THROWS out of persistConfig, so reaching the next line means
 		// the .env is written: persisting config makes the current (install-mode)
 		// process obsolete — schedule the restart AFTER the response flushes so
@@ -115,9 +123,27 @@ const STEP_HANDLERS: Readonly<Record<string, StepHandler>> = Object.freeze({
 		return stepResult(context, await verifyActiveConfig(options));
 	},
 
+	get_ontology_catalog: async (options, context) => {
+		const { ontologyCatalogProbe } = await import('./ontology_catalog.ts');
+		return stepResult(context, await ontologyCatalogProbe(options.update_servers !== false));
+	},
+
+	stage_ontologies: async (_options, context) => {
+		const { ontologyRequestFromConfig, stageOntologies } = await import('./ontology_install.ts');
+		// The request comes from the WRITTEN configuration (ACTIVE_ONTOLOGY_TLDS +
+		// the configured ontology servers) — never from the client: this process
+		// was restarted after persist_config.
+		return stepResult(context, await stageOntologies(await ontologyRequestFromConfig()));
+	},
+
 	install_db_from_default_file: async (_options, context) => {
 		const { installDbFromSeed } = await import('./db_restore.ts');
 		return stepResult(context, await installDbFromSeed());
+	},
+
+	install_ontologies: async (_options, context) => {
+		const { installOntologies } = await import('./ontology_install.ts');
+		return stepResult(context, await installOntologies({ userId: -1 }));
 	},
 
 	set_root_pw: async (options, context) => {

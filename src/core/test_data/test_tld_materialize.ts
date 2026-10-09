@@ -2,21 +2,20 @@
  * Materialize the generic `test` TLD ontology INTO A DATABASE — the door that
  * makes `src/core/test_data/test_tld_ontology.json` the SOURCE OF RECORD.
  *
- * DIRECTION REVERSED (2026-08-19, generic-`test`-TLD migration phase 1). Until
- * now the JSON was EXPORTED from the install seed
- * (`scripts/export_test_tld_ontology.ts`, seed → JSON) and the seed's binary
- * `dd_ontology` rows were what an install actually got. From here the JSON is
- * the reviewable source and the database is DERIVED from it, through the
- * engine's own doors and in the engine's own order:
+ * The JSON is the reviewable source and the database is DERIVED from it,
+ * through the engine's own doors and in the engine's own order (the direction
+ * was reversed in the generic-`test`-TLD migration; the seed → JSON exporter is
+ * gone, and since the core-only install seed the seed holds no `test` row at
+ * all):
  *
  *   JSON node  --ontologyRecordFromNode-->  matrix_ontology record (`<tld>0`)
  *   matrix_ontology records  --rebuildOntology(tld)-->  dd_ontology rows
  *
  * dd_ontology is NEVER hand-written here. That is the whole point: the same
  * single writer (`ontology_state.rebuildOntology`) that an operator's "rebuild
- * ontology" button uses produces the runtime table, so a test database and a
- * fresh install carry exactly what the ontology area would produce, drift
- * included — `inspectOntology(tld).drift` is the honest check afterwards.
+ * ontology" button uses produces the runtime table, so the suite database
+ * carries exactly what the ontology area would produce, drift included —
+ * `inspectOntology(tld).drift` is the honest check afterwards.
  *
  * `ontologyRecordFromNode` is the EXACT INVERSE of
  * `src/core/ontology/parser.ts parseSectionRecordToOntologyNode`; its
@@ -50,17 +49,19 @@
  * section, and each TLD is rebuilt separately.
  *
  * TEST-ONLY DOOR. It DELETES and rewrites `<tld>0` records, so it is
- * FAIL-CLOSED, in TWO layers:
+ * FAIL-CLOSED, in TWO layers, ALWAYS:
  *   1. the caller NAMES the database it expects (`expectDatabase`, checked
  *      against `current_database()`) — a declaration by the caller;
  *   2. the database CARRIES the `dedalo_test_marker` row
  *      (`./test_database_marker.ts`) — a declaration by the database, which is
  *      what makes the guarantee mechanical rather than a convention.
  * A call that satisfies neither, or only the first, writes nothing at all.
- * `allowAnyDatabase` skips both and is the installer's carve-out: on a fresh
- * install this door writes the `test` TLD ONTOLOGY (definitions, no records)
- * into a database that IS the application's by definition. It is the ONLY
- * bypass in the tree (test/unit/test_db_marker_tripwire.test.ts asserts that).
+ * There is NO bypass (installer unification A2): an installation receives no
+ * `test` TLD — the install seed is core-only and the installer never calls this
+ * door. The test TLD exists only in the SUITE database, whose builder
+ * (`bun run test:db:setup`) materializes the whole file after stamping the
+ * marker (test/unit/test_db_marker_tripwire.test.ts asserts that no bypass
+ * comes back).
  */
 
 import type { DdOntologyNode } from '../db/dd_ontology.ts';
@@ -122,15 +123,11 @@ function refuse(message: string, coordinates: Record<string, string | number> = 
 /**
  * FAIL-CLOSED database guard. This door DELETES and rewrites every `<tld>0`
  * ontology record of the TLDs it materializes, so a bare call writes NOTHING:
- * the caller must either name the database it expects to be connected to
- * (`expectDatabase`, checked against `current_database()`) or opt out
- * explicitly (`allowAnyDatabase`, which only the installer does — on a database
- * it has just restored from the seed, and which IS the application's by
- * definition).
+ * the caller must name the database it expects to be connected to
+ * (`expectDatabase`, checked against `current_database()`).
  *
- * BOTH layers run. The name check is the caller's own declaration; the marker
- * check (`assertTestDatabase`) is the database's. `allowAnyDatabase` skips both
- * — it is the installer's carve-out and the ONLY one in the tree.
+ * BOTH layers run, on every call. The name check is the caller's own
+ * declaration; the marker check (`assertTestDatabase`) is the database's.
  *
  * The expected NAME is passed in rather than read from the environment here:
  * the rule that derives it (`DEDALO_TEST_DATABASE` else `<app db>_test`) has
@@ -138,16 +135,12 @@ function refuse(message: string, coordinates: Record<string, string | number> = 
  * test preload — and `src/` may not read an env key that the config catalog
  * does not document.
  */
-async function assertAllowedDatabase(options: {
-	allowAnyDatabase?: boolean;
-	expectDatabase?: string;
-}): Promise<void> {
-	if (options.allowAnyDatabase === true) return;
+async function assertAllowedDatabase(options: { expectDatabase?: string }): Promise<void> {
 	const rows = (await sql`SELECT current_database() AS db`) as { db: string }[];
 	const live = rows[0]?.db ?? '';
 	if (options.expectDatabase === undefined || options.expectDatabase === '') {
 		refuse(
-			`REFUSING to write to database '${live}': this door DELETES and rewrites every '<tld>0' ontology record, so it needs the caller to name the database it expects ({ expectDatabase: testDatabaseName() }) or to opt out explicitly ({ allowAnyDatabase: true } — the installer only).`,
+			`REFUSING to write to database '${live}': this door DELETES and rewrites every '<tld>0' ontology record, so it needs the caller to name the database it expects ({ expectDatabase: testDatabaseName() }).`,
 			{ live },
 		);
 	}
@@ -262,68 +255,9 @@ async function straySectionIds(
 }
 
 /**
- * The INSTALL half of the ontology: the hand-authored `test` Test area, plus
- * the transitive closure of whatever it references, and nothing else.
- *
- * WHY THE SPLIT EXISTS. Until 2026-08-21 a fresh install materialized the WHOLE
- * file. That was proportionate when the `test` TLD was the small hand-authored
- * playground; after the phase-2 clone it is 8474 nodes across 33 TLDs — twins
- * of OTHER installations' ontologies (`testmint`, `testimmovable`,
- * `testheritagecatalog`…), which exist so the SUITE can replay a frozen store
- * that names one install. A customer's database has no use for them, and
- * shipping ~8000 test-only nodes into every production ontology is a cost with
- * no return.
- *
- * DERIVED, NOT HAND-LISTED. The partition is computed from the committed,
- * append-only clone map: a node is a CLONE if it is a target in that map. The
- * core is then closed over what it actually needs — a hand-authored node whose
- * parent or whose properties name a clone drags that clone in, because an
- * install must not receive a subtree that dangles. Measured 2026-08-21: 217
- * hand-authored nodes close to 405, against 8474 for the whole file.
- *
- * A second JSON would have been the obvious move and the wrong one: two files
- * carrying the same nodes is a fork waiting to drift, and this repo's law is
- * link, never duplicate. One source, one derivation.
- */
-/** The clone TARGETS: a node is a twin if the committed map mints it. */
-async function cloneTargets(): Promise<Set<string>> {
-	const { readFile } = await import('node:fs/promises');
-	const mapPath = new URL('./test_tld_tipo_map.json', import.meta.url);
-	const cloneMap = JSON.parse(await readFile(mapPath, 'utf8')) as {
-		map: Record<string, { target: string }>;
-	};
-	return new Set(Object.values(cloneMap.map).map((entry) => entry.target));
-}
-
-/** Every `test*` tipo this node NAMES, anywhere in its JSON. */
-function namedTestTipos(node: DdOntologyNode): string[] {
-	return JSON.stringify(node).match(/test[a-z]*\d+/g) ?? [];
-}
-
-export async function coreClosure(all: readonly DdOntologyNode[]): Promise<DdOntologyNode[]> {
-	const targets = await cloneTargets();
-	const byTipo = new Map(all.map((node) => [node.tipo, node]));
-	const keep = new Set<string>();
-	const stack = all
-		.filter((node) => node.tld === 'test' && !targets.has(node.tipo))
-		.map((node) => node.tipo);
-
-	while (stack.length > 0) {
-		const tipo = stack.pop() as string;
-		const node = keep.has(tipo) ? undefined : byTipo.get(tipo);
-		// Absent from this file = seed-shipped (dd/rsc/hierarchy/…), already installed.
-		if (node === undefined) continue;
-		keep.add(tipo);
-		// Anything it NAMES and this file DEFINES comes along, or the install
-		// receives a reference it cannot resolve.
-		for (const referenced of namedTestTipos(node)) stack.push(referenced);
-	}
-	return all.filter((node) => keep.has(node.tipo));
-}
-
-/**
- * Write the JSON ontology into the database and derive dd_ontology from
- * it, one TLD at a time. IDEMPOTENT: each record is deleted and re-inserted
+ * Write the WHOLE JSON ontology (the hand-authored Test area AND the clone
+ * twins the suite replays the frozen store against) into the database and
+ * derive dd_ontology from it, one TLD at a time. IDEMPOTENT: each record is deleted and re-inserted
  * from the JSON, and the rebuild rewrites the TLD's dd_ontology rows wholesale,
  * so a second run leaves no drift.
  */
@@ -331,26 +265,14 @@ export async function materializeTestTldOntology(
 	options: {
 		/** The database the caller expects to be connected to (`current_database()`). */
 		expectDatabase?: string;
-		/** Installer-only opt-out: a fresh install's database is the application's. */
-		allowAnyDatabase?: boolean;
 		/** Override the JSON source (tests). */
 		doc?: TestTldOntologyDoc;
-		/**
-		 * WHICH HALF to materialize (see coreClosure):
-		 *   'all'  — the whole file: the hand-authored Test area PLUS the 8225
-		 *            clone twins the SUITE replays the frozen store against.
-		 *            The default, and what a test database gets.
-		 *   'core' — the hand-authored Test area and nothing else that is not
-		 *            needed to make it resolve. What an INSTALLATION gets.
-		 */
-		scope?: 'all' | 'core';
 	} = {},
 ): Promise<MaterializeResult> {
 	await assertAllowedDatabase(options);
 	const doc = options.doc ?? (await loadTestTldOntologyDoc());
-	const nodes = options.scope === 'core' ? await coreClosure(doc.nodes) : doc.nodes;
 
-	const byTld = groupNodesByTld(nodes);
+	const byTld = groupNodesByTld(doc.nodes);
 	const result: MaterializeResult = { tlds: [...byTld.keys()], nodes: 0, rebuilt: [], strays: [] };
 
 	for (const [tld, nodes] of byTld) {

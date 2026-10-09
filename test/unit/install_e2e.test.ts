@@ -17,6 +17,16 @@
  *    every default tld is registered active and its terms are in;
  *  - the written .env carries the official ONTOLOGY_SERVERS / CODE_SERVERS
  *    and no DEDALO_SUPERVISED.
+ * And, since the core-only seed + domain ontology choice (2026-10-09):
+ *  - the ontologies installed are the core, the DEFAULT domain ontology (no
+ *    --ontologies given) and the engine's own — plus only what the thesaurus
+ *    step provisions (the chosen hierarchies and their two typology groupers);
+ *    NO test TLD row and NO test3 record (installations carry no fixture);
+ *  - the default domain ontology came from its ONE vendored file: its `<tld>0`
+ *    record count equals that file's line count (tipo BUILT, never spelled);
+ *  - the written ACTIVE_ONTOLOGY_TLDS is core + default, in that order;
+ *  - the derived relation index is FILLED (the seed ships it empty, the restore
+ *    door refills it) and the ontology staging dir is gone (success cleans up).
  * The default thesaurus import (tens of thousands of rows) is why the first
  * case's timeout is generous — measured, never narrowed by passing
  * `--hierarchies none`.
@@ -34,9 +44,10 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, relative, resolve } from 'node:path';
+import { gunzipSync } from 'node:zlib';
 import { config } from '../../src/config/config.ts';
 import { parseEnvFile } from '../../src/config/env.ts';
 import { defaultOptionalHierarchies } from '../../src/core/install/hierarchy_meta.ts';
@@ -44,8 +55,20 @@ import {
 	OFFICIAL_CODE_SERVER,
 	OFFICIAL_ONTOLOGY_SERVER,
 } from '../../src/core/install/install_plan.ts';
+import { DEFAULT_DOMAIN_ONTOLOGIES } from '../../src/core/install/ontology_choice.ts';
+import {
+	installOntologyStagingDir,
+	installPrivateDir,
+	VENDORED_ONTOLOGY_DIR,
+} from '../../src/core/install/paths.ts';
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { runPsql } from '../../src/core/install/pg_exec.ts';
+import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
+import { ENGINE_TLD } from '../../src/core/ontology/engine_ontology.ts';
+import {
+	HIERARCHY_MODEL_TYPE_TLD,
+	HIERARCHY_TYPE_TLD,
+} from '../../src/core/ontology/ontology_tipos.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 
 const SCRATCH_PREFIX = 'dedalo_install_e2e_';
@@ -157,6 +180,61 @@ function registryActiveSql(tld: string): string {
 	         WHERE section_tipo = 'hierarchy1' AND lower(string->'hierarchy6'->0->>'value') = '${tld}'`;
 }
 
+/** Lines of a gzipped COPY package (one record per non-empty line). */
+function packageLineCount(path: string): number {
+	return gunzipSync(readFileSync(path))
+		.toString('utf8')
+		.split('\n')
+		.filter((line) => line !== '').length;
+}
+
+/**
+ * What the install left in its ontology (installer unification A2/A4): core +
+ * default domain + engine, nothing of the suite's, the vendored file whole.
+ */
+async function assertOntologyOutcome(
+	hierarchies: readonly string[],
+	env: Record<string, string>,
+): Promise<void> {
+	const installed = (
+		await scratchScalar("SELECT string_agg(DISTINCT tld, ',' ORDER BY tld) FROM dd_ontology")
+	).split(',');
+	const expected = [...CORE_ONTOLOGY_TLDS, ...DEFAULT_DOMAIN_ONTOLOGIES, ENGINE_TLD];
+	expect(
+		expected.filter((tld) => !installed.includes(tld)),
+		'missing ontologies',
+	).toEqual([]);
+	// Anything else is the thesaurus step's own provisioning: the chosen
+	// hierarchies' TLDs and their two typology groupers — never a fixture.
+	const provisioned = new Set([...hierarchies, HIERARCHY_TYPE_TLD, HIERARCHY_MODEL_TYPE_TLD]);
+	const extra = installed.filter((tld) => !expected.includes(tld) && !provisioned.has(tld));
+	expect(extra, 'ontologies the install was not asked for').toEqual([]);
+	expect(installed.filter((tld) => tld.startsWith('test'))).toEqual([]);
+	expect(await scratchScalar('SELECT count(*) FROM matrix_test')).toBe('0');
+
+	// The default domain ontology: its whole vendored file, record for record.
+	const domain = DEFAULT_DOMAIN_ONTOLOGIES[0] as string;
+	const records = Number(
+		await scratchScalar(
+			`SELECT count(*) FROM matrix_ontology WHERE section_tipo = '${domain}${0}'`,
+		),
+	);
+	const vendored = packageLineCount(join(VENDORED_ONTOLOGY_DIR, `${domain}.copy.gz`));
+	expect(vendored).toBeGreaterThan(50);
+	expect(records).toBe(vendored);
+
+	expect(JSON.parse(env.ACTIVE_ONTOLOGY_TLDS as string)).toEqual([
+		...CORE_ONTOLOGY_TLDS,
+		...DEFAULT_DOMAIN_ONTOLOGIES,
+	]);
+	expect(Number(await scratchScalar('SELECT count(*) FROM matrix_relation_index'))).toBeGreaterThan(
+		0,
+	);
+	// The staging dir, resolved the installer's way but under THIS run's private dir.
+	const staging = join(scratchDir, relative(installPrivateDir(), installOntologyStagingDir()));
+	expect(existsSync(staging), `${staging} left behind`).toBe(false);
+}
+
 /**
  * THE REASON GOES IN THE NAME (P2-19 / GATE-25).
  *
@@ -227,6 +305,8 @@ describe('TS-native install e2e (P5)', () => {
 			expect(JSON.parse(env.ONTOLOGY_SERVERS as string)).toEqual([OFFICIAL_ONTOLOGY_SERVER]);
 			expect(JSON.parse(env.CODE_SERVERS as string)).toEqual([OFFICIAL_CODE_SERVER]);
 			expect(env.DEDALO_SUPERVISED).toBeUndefined();
+
+			await assertOntologyOutcome(plan.hierarchies, env);
 		},
 		600000,
 	);

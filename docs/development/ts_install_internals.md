@@ -21,12 +21,18 @@ through its `STEP_HANDLERS` table to a pure engine function and returns the
 ## The install plan (one module, every front end)
 
 `install_plan.ts` is the ONE place that turns raw answers into an install:
-`buildInstallPlan(raw, {salt, priorEnv})` normalizes them
+`buildInstallPlan(raw, {salt, priorEnv, ontologyCatalog})` normalizes them
 (`normalizeInstallAnswers` — every default lives here and nowhere else), and
 returns the `.env` sections in file order, the keys the plan owns, the ordered
-step ids, the optional thesauri, notes and errors. It is PURE: it imports only
-`lang_catalog.ts` and `hierarchy_meta.ts`, never `config.ts`, errors or the
-database, because the CLI imports it before any configuration exists.
+step ids, the optional thesauri, the domain-ontology choice (`ontologies`, its
+`ontologySource`, the deps-first `ontologyRequest` and the
+`activeOntologyTlds` it writes), notes, warnings and errors. It is PURE: it
+imports only `lang_catalog.ts`, `hierarchy_meta.ts` and `ontology_choice.ts`,
+never `config.ts`, the database or the network, because the CLI imports it
+before any configuration exists. A catalog beyond the built-in `oh` is resolved
+by the CALLER (`ontology_catalog.ts`, which may fetch) and handed in; when the
+choice needs one and none was given, the plan reports a programming error rather
+than fetching.
 
 - **The CLI** maps argv to the SAME raw record the wizard posts
   (`answersFromCliArgs`, table `INSTALL_CLI_FLAGS` — the parser carries no
@@ -34,16 +40,20 @@ database, because the CLI imports it before any configuration exists.
   seeds the process environment from `cliBootEnv(plan)` through
   `seedProcessEnv` (`src/config/env.ts` — the installer is the one writer of
   `process.env` outside the loader), then runs `plan.steps` with an exhaustive
-  switch. `--plan` prints the plan as one JSON line and touches nothing.
+  switch. `--plan` prints the plan as one JSON line and touches nothing;
+  `--list-ontologies` prints `describeOntologyCatalog` of the selected source
+  and exits. The prior `.env` is read once through `prior_env.ts readPriorEnv()`
+  (the same reader `config_persist.ts` uses), so a printed plan honours a
+  preserved custom server list.
 - **The wizard** posts the same keys to `persist_config`; `config_persist.ts`
   builds the plan from them (with the prior `.env` values) and renders
   `plan.env`, refusing `install.invalid_input` on `plan.errors` before any write.
 - **The steps** (`INSTALL_STEP_IDS`) are the router's action names:
   `test_db_connection`, `test_diffusion_connection` (diffusion only),
   `test_mailer_connection` (mailer only), `persist_config`, `check_directories`,
-  `install_db_from_default_file`, `set_root_pw`, `install_hierarchies` (always —
-  possibly with an empty list), `register_tools` (unless skipped),
-  `install_finish`. The CLI's pre-flight and closing login check, and the
+  `stage_ontologies`, `install_db_from_default_file`, `install_ontologies`,
+  `set_root_pw`, `install_hierarchies` (always — possibly with an empty list),
+  `register_tools` (unless skipped), `install_finish`. The CLI's pre-flight and closing login check, and the
   wizard's `verify_active_config` and in-wizard login, are front-end affordances,
   not plan steps.
 - **Update servers.** The plan writes `ONTOLOGY_SERVERS` and `CODE_SERVERS`
@@ -53,6 +63,10 @@ database, because the CLI imports it before any configuration exists.
   carries the operator's line (mirrors included) verbatim; a prior `[]` (an
   earlier air-gapped answer) or an unparseable value is replaced by the official
   entry.
+- **Ontologies.** The plan writes `ACTIVE_ONTOLOGY_TLDS` (raw JSON, OWNED —
+  rewritten on every run) = `CORE_ONTOLOGY_TLDS` followed by the install order of
+  the chosen domain ontologies and their declared dependencies. See
+  [Domain ontologies](#domain-ontologies) below.
 - **Never in the plan:** `DEDALO_SUPERVISED`. Supervision is declared by the
   process manager (unit `Environment=`, compose `environment:`, the supervised
   `bun run` scripts); the engine reads it from the process environment only
@@ -61,7 +75,11 @@ database, because the CLI imports it before any configuration exists.
 `install_plan_parity_tripwire` holds the front ends to this: the same answers
 through CLI argv and through the wizard record yield the same plan, a spawned
 `--plan` equals the in-process plan, and two persisted `.env` files differ only in
-the generated secret.
+the generated secret. For the ontologies it also builds a local fixture source and
+checks that the spawned `--list-ontologies` prints exactly
+`describeOntologyCatalog` of it, and that the `ACTIVE_ONTOLOGY_TLDS` the wizard
+path writes maps back (`ontologyRequestFromActive`) to the very request the CLI
+plan stages.
 
 | Step | Module | Notes |
 |---|---|---|
@@ -71,11 +89,117 @@ the generated secret.
 | `persist_config` | `config_persist.ts` | atomic `.env` write (0600, backup-on-overwrite, preserve-or-generate secrets) + state |
 | `verify_active_config` | `config_persist.ts` | confirms the RESTARTED process is on the new config |
 | `check_directories` | `directories.ts` | private/sessions/cache/media/backups, write+unlink probe |
-| `install_db_from_default_file` | `db_restore.ts` | empty-DB gate → gunzip → `psql -f` the seed → engine ontology → `activateCoreHierarchies()` (activates `lg`, see below) |
+| `get_ontology_catalog` | `ontology_catalog.ts` | wizard PROBE (pre-login): the catalog view of the official/configured server, or the offline view (`update_servers: false`, or the server failed — `data: false`) |
+| `stage_ontologies` | `ontology_install.ts` | copy/download + gunzip + COPY-sanity of every chosen file into the staging dir, `staged.json` with sha256s; the DB is never touched. The wizard's request comes from the WRITTEN config (`ontologyRequestFromConfig`), never from the client |
+| `install_db_from_default_file` | `db_restore.ts` | empty-DB gate → gunzip → `psql -f` the core-only seed → predated migrations → `ensureSearchStores()` → engine ontology → `activateCoreHierarchies()` (activates `lg`, see below) |
+| `install_ontologies` | `ontology_install.ts` | sha re-check → `stageOntologyFiles` → `importStagedOntologyFiles` (the update panel's shared lower layer) → one re-derive pass → reference verification (warnings) → staging dir removed |
 | `set_root_pw` | `root_pw.ts` | Argon2id, direct UPDATE `matrix_users` section_id `-1` dd133 |
 | `install_hierarchies` | `hierarchy_import.ts` | optional thesauri only: `\copy` into `matrix_hierarchy` + counter consolidate + activation (login-gated); a core TLD is activation-only, an empty list is a no-op |
 | `register_tools` | `register_tools.ts` | reuses `core/tools/register.ts importTools({dryRun:false})` |
 | `install_finish` | `finish.ts` | seal guard (root + password exist) → `install_status='sealed'` |
+
+## Domain ontologies
+
+The seed carries only the core (`src/core/ontology/core_tlds.ts`
+`CORE_ONTOLOGY_TLDS` — `dd`, `rsc`, `ontology`, `ontologytype`, `hierarchy`, `lg`,
+the ONE home of that list). Every install adds ≥ 1 domain ontology. The modules,
+leaf first:
+
+| Module | Role |
+|---|---|
+| `src/core/install/ontology_choice.ts` | PURE, config-free. The answer (`normalizeOntologyChoice`: default `DEFAULT_DOMAIN_ONTOLOGIES` = `oh`, core dropped with a note, `none` refused), the built-in catalog (`vendoredOntologyCatalog`: `oh` only, its dependencies DECLARED here in `VENDORED_DOMAIN_ONTOLOGIES`), the merge (precedence local > vendored > server), the closure (`closeOntologyChoice`), the request, `activeOntologyTldsOf`, the round trip from a written list (`ontologyRequestFromActive`) and the ONE view (`describeOntologyCatalog`) both front ends show |
+| `src/core/install/ontology_catalog.ts` | `resolveOntologyCatalog(source, {allowedServers})` — the one place a source is read: `none` → built-in only; `local` → a directory or an extracted archive, its `ontology.json` version must equal this engine's `major.minor`; `server` → `fetchOntologyManifest`. Refuses `install.invalid_input` (operator path) or `install.step_failed` (server) |
+| `src/core/install/ontology_archive.ts` | `extractOntologyArchive` — a pure tar walk (no `tar` binary): regular files named `ontology.json` / `<tld>.copy.gz` at the root or under one top directory, through `confinedPath`; links, devices, absolute or `..` paths, > 256 entries or > 512 MiB refused |
+| `src/core/install/ontology_install.ts` | the two steps: `stageOntologies(request, {stagingDir})` and `installOntologies({stagingDir, userId})`, plus `verifyInstalledOntologyReferences` and the wizard's `ontologyRequestFromConfig` |
+| `src/core/install/prior_env.ts` | `readPriorEnv()` — the prior `.env` (`{}` when absent), for the CLI and `config_persist.ts` alike |
+| `src/core/ontology/ontology_manifest.ts` | the manifest CLIENT: `parseOntologyManifest`, `readLocalOntologyManifest`, `fetchOntologyManifest` |
+| `src/core/ontology/ontology_references.ts` | the pure reference classifier (below) |
+| `src/core/db/copy_text.ts` | the src-side COPY text codec (decode/encode a field, split a row, find a dump's COPY blocks) |
+
+**The closure.** `closeOntologyChoice(chosen, catalog)` walks the DECLARED
+dependencies of the chosen TLDs, transitively, in deps-first post-order. Core
+TLDs and the engine-owned `ddengine` are never followed (a declaration names core
+too — every domain ontology takes its models from `dd` — but the seed already
+has it). A cycle is tolerated (first finish wins; the re-derive pass in
+`installOntologies` settles a node whose model arrived later). An entry with
+`dependencies: null` (an older server) is installed alone under a loud warning
+naming it — the installer never computes dependencies. A declared dependency the
+source does not offer, and an unknown TLD, are errors before any write.
+
+**The source.** `ontologySourceFor(answers, priorEnv)` (in the plan): a local
+`ontology_source` wins; else the first entry of `ontologyServersFor` (a prior
+CUSTOM `ONTOLOGY_SERVERS` list — the same preserve rule as the update-servers
+section — or `OFFICIAL_ONTOLOGY_SERVER`); else `none` (air-gapped). The manifest
+fetch is a server-side `fetchBoundedText` call behind the named address policy
+`assertConfiguredMasterUrl(url, allowed)`: the URL must be EXACTLY one of the
+configured masters — operator configuration, never client text. LAN masters are
+legitimate, so the public-address guard does not apply. File downloads reuse the
+update panel's pinned `downloadRemoteOntologyFile`; there is no new fetch site.
+
+**The two steps.** `stage_ontologies` is the install's only network phase and
+runs BEFORE the restore: every file (deps first, plus the source's
+`matrix_dd.copy.gz` when it ships one and ≥ 1 item comes from it) is copied or
+downloaded into `installOntologyStagingDir()`
+(`<private>/install/ontology_staging/<major.minor>/`), gunzipped under the shared
+caps and COPY-sanity checked; `staged.json` records each file's sha256 and the
+source (never the access code). `install_ontologies` runs right after the restore:
+it refuses `install.state_conflict` when `staged.json` is missing or a file's
+sha256 changed, unpacks through the update panel's own Phase-A stager
+(`stageOntologyFiles`, local mode), claims the update's single-flight latch
+(`claimOntologyImportLatch`), and imports through the SHARED LOWER LAYER of
+`src/core/ontology/ontology_update.ts`, `importStagedOntologyFiles` — recovery
+snapshots, the per-file import with auto-restore, the `dd_ontology` derive and
+the cache clears. `updateOntology` keeps its own shell (TLS, ownership, target,
+latch, download, Phase A, schema capture before and after, root info); the
+installer calls the layer directly, without flipping `IS_AN_ONTOLOGY_SERVER`.
+
+**The failure contract** is install-level all-or-nothing: any import error
+refuses `install.step_failed`; the layer's snapshot restore runs (its known
+limits are the update panel's), nothing is sealed, and the operator recreates the
+database. The staging directory is removed on success only.
+
+**Reference measurement.** `ontology_references.ts` reads the structural fields
+only — parent (`ontology15`), model (`ontology6`), related nodes (`ontology10`) —
+from `dd_ontology` rows (`referencesOfRows`) or raw package lines
+(`referencesOfCopyRows`), and classifies each reference: a PARENT in a TLD the
+measured set does not own is a `graft` (a node hung under another ontology's
+node — inert when absent); a relation FROM a node whose model descends from the
+diffusion model grouper (`DIFFUSION_MODEL_ROOT` = `dd1226`) is `diffusion`;
+everything else is a `dependency` and must resolve. Tipos embedded in
+`properties` are not measured — a stated limit. The same classifier drives the
+post-install warnings (`verifyInstalledOntologyReferences`), the vendored-closure
+gate and the seed contract.
+
+**The declaration (server side).** Dependencies are Dédalo state on the ontology
+master: the engine-owned component `ddengine11` *Required ontologies* (a
+`component_portal` into the ontology registry `ontology35`, placed in the
+`hierarchy60` *Relations* group of `hierarchy1`, so it renders in the
+*Ontologies main* edit form). It lives in the ENGINE ontology
+(`src/core/ontology/engine_ontology.json`, TLD `ddengine`) because an ontology
+update replaces a TLD wholesale and a tipo cannot be pre-allocated on the master;
+`ensureEngineOntology` materializes it on every install, the master included.
+`getActiveOntologies` (`src/core/ontology/data_io.ts`) resolves its locators to
+TLDs (declared order, deduplicated, own TLD dropped) and emits `dependencies`
+ONLY when ≥ 1 resolves; `activeOntologiesInfo` copies it into `ontology.json`,
+and the update manifest serves that file verbatim. An empty component means NOT
+DECLARED (`engineering/wire_contract/WC-2026-10-09-ontology-manifest-dependencies.md`).
+
+**The wizard wire** (`engineering/wire_contract/WC-2026-10-09-install-domain-ontologies.md`):
+`get_install_context` gains `properties.ontologies = {default, core, offline}`
+(synchronous, no network); three pre-auth router actions —
+`get_ontology_catalog`, `stage_ontologies`, `install_ontologies`; and
+`persist_config` takes `ontologies`.
+
+## The suite database is built through these doors
+
+`bun run test:db:setup` (`scripts/test_db_setup.ts`) builds the suite database
+as an installation first: `installDbFromSeed()` (the restore door, so the core
+seed, the search stores, the engine ontology and `lg`), then the default domain
+ontology through `stageOntologies(defaultOfflineOntologyRequest())` +
+`installOntologies()`, and only then the suite's own fixtures — the marker, the
+`test` TLD (`materializeTestTldOntology`, which refuses on a database without the
+marker; there is no bypass), the canonical test3 records, hierarchies and tools.
+No installation receives a test fixture.
 
 ## Install-mode boot (the config-freeze problem)
 
@@ -195,14 +319,52 @@ The optional thesauri pre-selected by default are data, not code:
 `install.sh`'s `default` answer and the wizard's `install_checked_default`
 context property all come from it.
 
-## Seed
+## The install seed
 
 `install/db/dedalo_install.pgsql.gz`: full matrix/`dd_ontology` schema, extensions
-(`btree_gin`/`pg_trgm`/`unaccent`), functions/indexes, the populated core
-ontology (~3,500 `dd_ontology` rows), the root user (empty password), the default
-project and Admin/User profiles, and the Languages terms in `matrix_langs`.
-Optional hierarchy import files are vendored under `install/import/hierarchy/`
-(`<tld>1`/`<tld>2` `.copy.gz` files + three metadata JSONs).
+(`btree_gin`/`pg_trgm`/`unaccent`), functions/indexes, the CORE ontologies only
+(`CORE_ONTOLOGY_TLDS`, ~3,470 `dd_ontology` rows), the root user (empty password),
+the default project and Admin/User profiles, and the Languages terms in
+`matrix_langs`. No domain ontology, no `test` TLD, no `matrix_test` row. The
+derived search stores (`matrix_string_search`, `matrix_relation_index`) are
+created but ship EMPTY: the relation-index reader refuses an empty store while
+relation data exists, so `completeFreshInstall` (`db_restore.ts`) runs
+`ensureSearchStores()` FIRST, before any engine read or write. Optional hierarchy
+import files are vendored under `install/import/hierarchy/` (`<tld>1`/`<tld>2`
+`.copy.gz` files + three metadata JSONs).
+
+**Built by one script, never by hand.** `bun run seed:build`
+(`scripts/build_install_seed.ts [--source <path.gz>] [--out <path.gz>] [--keep-scratch]`):
+
+1. connection from the private config (`readEnv`), `psql`/`pg_dump` resolved like
+   the engine does (`pg_bin.ts`);
+2. a scratch database `dedalo_seedbuild_<pid>_<epochSeconds>` created from
+   `template0` (refused if it exists — the script accepts no database name);
+3. the source seed restored with `ON_ERROR_STOP`;
+4. every non-core row deleted in ONE transaction: `dd_ontology`,
+   `dd_ontology_recovery`, `matrix_ontology`, the `ontology35` registry rows,
+   `main_dd` (core + `localontology` kept), `matrix_dd` lists of non-core TLDs, and
+   the whole of `matrix_test`. Counters and sequences are never touched (they only
+   ever rise);
+5. `pg_dump -F p -b -v --no-owner --no-privileges` with
+   `--exclude-table-data` for both derived stores;
+6. the dump measured before it is written (the same readers the gate uses —
+   `scripts/lib/install_seed.ts` `seedCensus` + `seedCoreViolations`); any
+   violation refuses and nothing is written;
+7. `gzip -9`, written atomically, then the provenance sidecar
+   `install/db/dedalo_install.build.json` (script, git rev, source sha256,
+   `pg_dump --version`, exact options, rows removed per table, COPY row count per
+   table, output sha256);
+8. the scratch database dropped (`WITH (FORCE)`, unless `--keep-scratch`) and the
+   temp files removed, on success and on failure.
+
+Run on its own output it removes 0 rows. `install_seed_drift_tripwire` holds the
+committed seed to the sidecar (sha256, row counts, options) and to the core-only
+rule, and the core's own dependency-class references to tipos the seed lacks to
+`engineering/install_seed_contract.json` — an exact, shrink-only list with a
+reason per entry. The catalog default of `ACTIVE_ONTOLOGY_TLDS` must equal
+`CORE_ONTOLOGY_TLDS` (config may not import core; the gate keeps the two
+literals one list).
 
 ## Gates
 
@@ -214,4 +376,14 @@ verified root login** (and asserting `lg` active with zero `matrix_hierarchy`
 rows). `install_plan_parity_tripwire` holds CLI and wizard to one plan;
 `install_core_hierarchy_native` proves the core activation needs no import;
 `install_sh_portability` runs `install.sh`'s answer-to-flag block through the
-plan's own parser.
+plan's own parser. The ontology half: `install_ontology_choice` (the closure,
+hermetic), `ontology_references_native` (the classifier and codec, hermetic),
+`ontology_manifest_native` (the manifest client against a loopback stand-in
+master, hermetic), `ontology_dependencies_native` (`ddengine11` → manifest, on
+the suite database), `vendored_ontology_closure_tripwire` (the built-in `oh` is
+installable alone over the core seed, hermetic) and
+`install_ontology_door_native` (both steps driven for real on the suite database
+against a loopback master: closure order, undeclared warning, local
+directory/archive, preflight refusals with the database untouched, tampered
+staging, `matrix_dd`). Tests never name a real domain ontology's structure: they
+build zz TLD packages (`src/core/test_data/ontology_package_fixture.ts`).

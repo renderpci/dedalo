@@ -21,13 +21,14 @@
  *       [--timezone Europe/Madrid] [--locale es-ES] \
  *       [--langs lg-spa,lg-eng] [--app-lang lg-spa] [--data-lang lg-spa] \
  *       [--hierarchies es,fr | default | none] \
+ *       [--ontologies oh,tch | default] [--ontology-source <dir|archive>] \
  *       [--diffusion --mysql-host ... --mysql-port ... --mysql-socket ... \
  *          --mysql-name ... --mysql-user ... --mysql-password ...] \
  *       [--mailer --smtp-host smtp.example.org --smtp-port 587 --smtp-secure tls \
  *          --smtp-user ... --smtp-password ... --smtp-from ... --smtp-from-name ...] \
  *       [--media-path /srv/dedalo/media] [--socket /run/dedalo/dedalo_ts.sock] \
  *       [--media-access-mode publication] \
- *       [--no-update-servers] [--skip-tools] [--plan]
+ *       [--no-update-servers] [--skip-tools] [--plan] [--list-ontologies]
  *
  * Defaults live in the plan, not here: --hierarchies omitted = the shared
  * default set (hierarchies.json install_checked_default — the wizard pre-ticks
@@ -36,14 +37,32 @@
  * (air-gapped: ONTOLOGY_SERVERS / CODE_SERVERS = []). An unknown flag is an
  * error, never ignored.
  *
- * --plan prints ONE JSON line (env_keys, steps, hierarchies, notes, errors) and
- * exits — 0 when the answers are valid, 1 otherwise — touching nothing: no
- * database, no file, no root password needed.
+ * DOMAIN ONTOLOGIES (A4/A5/A6): --ontologies omitted = `oh`, installed from the
+ * one vendored file; any other TLD comes from the first configured ontology
+ * server (the official master by default) or from --ontology-source (a
+ * directory in the server export layout — ontology.json + <tld>.copy.gz
+ * [+ matrix_dd.copy.gz] — or a .tar/.tar.gz/.tgz of one: a fully offline
+ * install). The DECLARED dependencies of the chosen TLDs are installed with them,
+ * deps first. The catalog is resolved ONCE, before anything is written; the files
+ * are staged and verified before the database is touched (stage_ontologies) and
+ * imported right after the seed restore (install_ontologies).
+ *
+ * --plan prints ONE JSON line (env_keys, steps, hierarchies, ontologies,
+ * ontology_source, ontology_install, active_ontology_tlds, notes, warnings,
+ * errors) and exits — 0 when the answers are valid, 1 otherwise — touching no
+ * database and no file (a non-vendored choice reads the source's manifest), no
+ * root password needed.
+ *
+ * --list-ontologies prints ONE JSON line — the catalog view the wizard's
+ * Ontologies screen shows (source, default, core, entries with their declared
+ * dependencies and what each also installs, warnings) + errors — for the source
+ * the other answers select (--ontology-source, --no-update-servers, or the
+ * configured server), and exits. It needs no other answer.
  *
  * Secrets: --root-password or DEDALO_INSTALL_ROOT_PASSWORD (never echoed).
  */
 
-// Both config-free — safe to import BEFORE the environment is seeded.
+// All config-free — safe to import BEFORE the environment is seeded.
 import { processEnvValue, seedProcessEnv } from '../src/config/env.ts';
 import {
 	answersFromCliArgs,
@@ -51,24 +70,102 @@ import {
 	cliBootEnv,
 	type InstallPlan,
 	type InstallStepId,
+	normalizeInstallAnswers,
+	ontologyServersFor,
+	ontologySourceFor,
 } from '../src/core/install/install_plan.ts';
+import {
+	describeOntologyCatalog,
+	type OntologyCatalog,
+	ontologyCatalogNeeded,
+	vendoredOntologyCatalog,
+} from '../src/core/install/ontology_choice.ts';
+import { readPriorEnv } from '../src/core/install/prior_env.ts';
+
+/** Removes the resolved catalog's scratch files (an extracted --ontology-source archive). */
+let cleanupCatalog: () => void = () => undefined;
 
 function fail(msg: string): never {
+	cleanupCatalog();
 	console.error(`\n✖ install failed: ${msg}\n`);
 	process.exit(1);
 }
 
 const invocation = answersFromCliArgs(Bun.argv.slice(2));
-const plan = buildInstallPlan(invocation.raw);
-const errors = [...invocation.errors, ...plan.errors];
+const priorEnv = readPriorEnv();
+
+/**
+ * Resolve the source catalog of `answers` (it imports the engine, so call it only
+ * after the environment is seeded — or when the process exits right after).
+ */
+async function resolveCatalogOf(
+	raw: Record<string, unknown>,
+): Promise<{ catalog: OntologyCatalog | undefined; errors: string[] }> {
+	const { answers } = normalizeInstallAnswers(raw);
+	const source = ontologySourceFor(answers, priorEnv);
+	if (!ontologyCatalogNeeded(answers.ontologies, source)) return { catalog: undefined, errors: [] };
+	const { resolveOntologyCatalog } = await import('../src/core/install/ontology_catalog.ts');
+	try {
+		const resolved = await resolveOntologyCatalog(source, {
+			allowedServers: ontologyServersFor(answers, priorEnv),
+		});
+		cleanupCatalog = resolved.cleanup;
+		return { catalog: resolved.catalog, errors: [] };
+	} catch (error) {
+		return { catalog: undefined, errors: [error instanceof Error ? error.message : String(error)] };
+	}
+}
+
+/** --list-ontologies: the catalog view of the selected source, then exit. */
+async function listOntologies(): Promise<never> {
+	const { answers } = normalizeInstallAnswers(invocation.raw);
+	const source = ontologySourceFor(answers, priorEnv);
+	const { resolveOntologyCatalog } = await import('../src/core/install/ontology_catalog.ts');
+	const errors = [...invocation.errors];
+	let catalog = vendoredOntologyCatalog();
+	try {
+		const resolved = await resolveOntologyCatalog(source, {
+			allowedServers: ontologyServersFor(answers, priorEnv),
+		});
+		catalog = resolved.catalog;
+		resolved.cleanup();
+	} catch (error) {
+		errors.push(error instanceof Error ? error.message : String(error));
+	}
+	console.log(JSON.stringify({ ...describeOntologyCatalog(catalog), errors }));
+	process.exit(errors.length === 0 ? 0 : 1);
+}
+
+if (invocation.listOntologies) await listOntologies();
+
+// The answers alone (no catalog yet): enough for the boot environment.
+const preliminary = buildInstallPlan(invocation.raw, { priorEnv });
+const answerErrors = [...invocation.errors, ...normalizeInstallAnswers(invocation.raw).errors];
+// Seed the environment BEFORE anything imports config (see the header) — the
+// catalog resolver below is the first thing that does.
+if (answerErrors.length === 0) seedProcessEnv(cliBootEnv(preliminary));
+// The ontology catalog, resolved ONCE (a server manifest is fetched here, before
+// any write): the plan's closure, the .env and the staging all use it.
+const resolvedCatalog = await resolveCatalogOf(invocation.raw);
+const plan = buildInstallPlan(invocation.raw, {
+	priorEnv,
+	ontologyCatalog: resolvedCatalog.catalog,
+});
+const errors = [...invocation.errors, ...resolvedCatalog.errors, ...plan.errors];
 
 if (invocation.planOnly) {
+	cleanupCatalog();
 	console.log(
 		JSON.stringify({
 			env_keys: [...plan.envKeys],
 			steps: [...plan.steps],
 			hierarchies: [...plan.hierarchies],
+			ontologies: [...plan.ontologies],
+			ontology_source: plan.ontologySource,
+			ontology_install: (plan.ontologyRequest?.items ?? []).map((item) => item.tld),
+			active_ontology_tlds: [...plan.activeOntologyTlds],
 			notes: [...plan.notes],
+			warnings: [...plan.warnings],
 			errors,
 		}),
 	);
@@ -78,9 +175,6 @@ if (invocation.planOnly) {
 if (errors.length > 0) fail(errors.join('; '));
 const rootPassword = invocation.rootPassword ?? processEnvValue('DEDALO_INSTALL_ROOT_PASSWORD');
 if (!rootPassword) fail('--root-password (or DEDALO_INSTALL_ROOT_PASSWORD) is required');
-
-// Seed the environment BEFORE importing config (see the header).
-seedProcessEnv(cliBootEnv(plan));
 
 /** The engine's step functions take the wizard's posted record — the plan's answers ARE it. */
 const posted: Record<string, unknown> = { ...plan.answers };
@@ -92,7 +186,9 @@ const STEP_TEXT: Readonly<Record<InstallStepId, string>> = {
 	test_mailer_connection: 'SMTP connection',
 	persist_config: 'write ../private/.env',
 	check_directories: 'directories',
+	stage_ontologies: `ontology files: ${(plan.ontologyRequest?.items ?? []).map((item) => item.tld).join(', ')} (fetched + verified before the database is touched)`,
 	install_db_from_default_file: 'restore database from seed (+ activate core hierarchies)',
+	install_ontologies: `domain ontologies: ${(plan.ontologyRequest?.items ?? []).map((item) => item.tld).join(', ')}`,
 	set_root_pw: 'set root password',
 	install_hierarchies: `optional hierarchies: ${plan.hierarchies.join(', ') || 'none'}`,
 	register_tools: 'register tools',
@@ -129,7 +225,8 @@ async function stepPersistConfig(): Promise<void> {
 	// Every install step REFUSES BY THROWING a registered install.* code
 	// (src/core/install/refuse.ts); main()'s catch prints its message through
 	// fail(), so there is no per-step `result` to test.
-	const persisted = await persistConfig(posted);
+	// The catalog resolved above is handed in, so the manifest is fetched once.
+	const persisted = await persistConfig(posted, { ontologyCatalog: resolvedCatalog.catalog });
 	for (const [key, value] of Object.entries(persisted.generated)) {
 		console.log(`  generated ${key} = ${value}`);
 	}
@@ -155,6 +252,26 @@ async function stepRestoreSeed(): Promise<void> {
 	const { installDbFromSeed } = await import('../src/core/install/db_restore.ts');
 	const restored = await installDbFromSeed();
 	console.log(`  ${restored.msg}`);
+}
+
+/** Print a step's message and its non-blocking warnings. */
+function report(outcome: { msg: string; warnings: readonly string[] }): void {
+	console.log(`  ${outcome.msg}`);
+	for (const warning of outcome.warnings) console.warn(`  ⚠ ${warning}`);
+}
+
+/** Fetch/copy + verify every ontology file BEFORE the database is touched. */
+async function stepStageOntologies(): Promise<void> {
+	const { stageOntologies } = await import('../src/core/install/ontology_install.ts');
+	const request = plan.ontologyRequest;
+	if (request === null) return fail('the ontology choice did not resolve to an install request');
+	report(await stageOntologies(request));
+}
+
+/** Import the staged ontologies (right after the seed restore) and verify their references. */
+async function stepInstallOntologies(): Promise<void> {
+	const { installOntologies } = await import('../src/core/install/ontology_install.ts');
+	report(await installOntologies({ userId: -1 }));
 }
 
 async function stepRootPassword(): Promise<void> {
@@ -198,8 +315,12 @@ function runStep(step: InstallStepId): Promise<void> {
 			return stepPersistConfig();
 		case 'check_directories':
 			return stepCheckDirectories();
+		case 'stage_ontologies':
+			return stepStageOntologies();
 		case 'install_db_from_default_file':
 			return stepRestoreSeed();
+		case 'install_ontologies':
+			return stepInstallOntologies();
 		case 'set_root_pw':
 			return stepRootPassword();
 		case 'install_hierarchies':
@@ -219,6 +340,7 @@ async function main(installPlan: InstallPlan): Promise<void> {
 	const { answers } = installPlan;
 	console.log(`\nDédalo TS install — entity '${answers.entity}', db '${answers.db_database}'\n`);
 	for (const note of installPlan.notes) console.log(`  note: ${note}`);
+	for (const warning of installPlan.warnings) console.warn(`  ⚠ ${warning}`);
 
 	// Front-end affordance, not a plan step (the wizard shows the same report on load).
 	const { runInitTest } = await import('../src/core/install/init_test.ts');
@@ -237,6 +359,7 @@ async function main(installPlan: InstallPlan): Promise<void> {
 	const auth = await login('root', rootPassword as string, 'local');
 	if (!auth.ok) fail('root login verification failed after install');
 
+	cleanupCatalog();
 	console.log(
 		'\n✔ install complete — root login verified. Start the server with `bun run start`.\n',
 	);

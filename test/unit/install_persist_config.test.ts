@@ -19,6 +19,7 @@ import {
 	OFFICIAL_CODE_SERVER,
 	OFFICIAL_ONTOLOGY_SERVER,
 } from '../../src/core/install/install_plan.ts';
+import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
@@ -423,6 +424,58 @@ describe('persist_config (P2)', () => {
 		);
 		expect(body.split('\n').filter((line) => line.startsWith('CODE_SERVERS='))).toEqual([mirror]);
 		expect(JSON.parse(parsed.ONTOLOGY_SERVERS as string)).toEqual([OFFICIAL_ONTOLOGY_SERVER]);
+	});
+
+	/**
+	 * DOMAIN ONTOLOGIES (installer unification A4, 2026-10-09): ACTIVE_ONTOLOGY_TLDS
+	 * is an OWNED key — core + the install order, rewritten on every save (a prior
+	 * hand-written list is replaced, never carried as "Preserved") — and the step's
+	 * answer names what will be staged.
+	 */
+	test('ontologies: the default writes core + oh, owned, and the answer names the install', async () => {
+		const own = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_ontologies_'));
+		seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: own });
+		try {
+			writeFileSync(
+				join(own, '.env'),
+				'DEDALO_SALT_STRING=deadbeef\nACTIVE_ONTOLOGY_TLDS=dd,zzstale\n',
+			);
+			const result = await persistConfig({ ...BASE_CFG });
+			expect(result.ontology_install).toEqual(['oh']);
+			expect(result.active_ontology_tlds).toEqual([...CORE_ONTOLOGY_TLDS, 'oh']);
+			expect(result.warnings).toEqual([]);
+			const body = readFileSync(join(own, '.env'), 'utf8');
+			const lines = body.split('\n').filter((line) => line.startsWith('ACTIVE_ONTOLOGY_TLDS='));
+			expect(lines).toEqual([
+				`ACTIVE_ONTOLOGY_TLDS=${JSON.stringify([...CORE_ONTOLOGY_TLDS, 'oh'])}`,
+			]);
+			expect(JSON.parse(parseEnvFile(body).ACTIVE_ONTOLOGY_TLDS as string)).toEqual(
+				result.active_ontology_tlds,
+			);
+		} finally {
+			seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: scratch });
+			rmSync(own, { recursive: true, force: true });
+		}
+	});
+
+	test('ontologies: none REFUSES — no .env written', async () => {
+		const own = mkdtempSync(join(tmpdir(), 'dedalo_install_p2_ontologies_none_'));
+		seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: own });
+		try {
+			const error = await persistConfig({ ...BASE_CFG, ontologies: [] }).then(
+				() => null,
+				(caught: unknown) => caught,
+			);
+			expect(isDedaloError(error)).toBe(true);
+			expect((error as Error).message).toContain(
+				'at least one domain ontology is required (the default is oh)',
+			);
+			const { existsSync } = await import('node:fs');
+			expect(existsSync(join(own, '.env'))).toBe(false);
+		} finally {
+			seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: scratch });
+			rmSync(own, { recursive: true, force: true });
+		}
 	});
 
 	test('update servers: an unknown choice REFUSES — no .env written', async () => {

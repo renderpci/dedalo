@@ -441,20 +441,20 @@ This parameter defines the ontology TLDs to be used in the Dédalo installation.
 
 Every tipo (typology of indirect programming object) defines a heritage field, a data model, a structuring tools and definitions. Dédalo is a multi heritage application with ontologies for Archeology, Ethnology, Oral History, Numismatics, etc. Every project or institution can add any tipos that it demands. An archaeologic museum will use the model for archeological catalogs, but it will not need the ethnological definitions. In the same way that Oral History project will don't use the archeological or numismatic definitions.
 
-By default Dédalo load some common tipos for all project types.
+Every installation carries the **core** ontologies — they ship in the install database itself:
 
-| **TLD** | **Defintion** |
+| **TLD** | **Definition** |
 | --- | --- |
 | **dd** | Dédalo. Definition of default list and common uses and tools such as translation tools. |
 | **rsc** | Resources. Definition for areas and sections commons to all projects such as people, images, audiovisual files, publications, documents, bibliography, etc. |
 | **ontology** | Ontology. Definition of the sections used as nodes of the ontology |
+| **ontologytype** | Ontology typologies. The typologies the ontology registry groups the ontologies by. |
 | **hierarchy** | Thesaurus. Definition for sections as toponymy, onomastic, chronologies, techniques, material, etc. |
 | **lg** | Languages, Definition for the languages in the thesaurus (used for all application to translate data and interface) |
-| **utoponymy** | Unofficial toponymy. Section definition for unofficial toponymy (unofficial places names), used to add places that are not inside the official toponymy of countries or the installation don't want import the official toponymy (use to point the place without the official term in some sections as Publications, to define any place of publication around the world) |
 
-Besides, every installation can import the ontology tipo that will use in the inventory or research:
+Besides, every installation chooses the **domain** ontologies it uses in its inventory or research — at install time (the installer installs at least one; `oh` is the default) or later, from the ontology update panel:
 
-| **TLD** | **Defintion** |
+| **TLD** | **Definition** |
 | --- | --- |
 | **oh** | Oral History, the definition sections and tools to be used for oral history projects such as interviews, transcription, indexation, etc. |
 | **ich** | Intangible Cultural Heritage, the definition sections and tools to use for intangible heritage, such as elements, processes, communities, symbolic acts, etc. |
@@ -464,23 +464,26 @@ Besides, every installation can import the ontology tipo that will use in the in
 | **numisdata** | Numismatic heritage, the definition sections and tools to use for numismatics project, such as mints, types, legends, hoards, finds, etc. |
 | **isad** | Archives following the [ISAD(g) standard](https://www.ica.org/en/isadg-general-international-standard-archival-description-second-edition) (General International Standard Archival Description - Second edition), the definition of sections and tools to be used for cataloging documents with the standard structure, etc. |
 | **actv** | Activities, the definition of section and fields of activities as exhibitions, workshops, didactics, conferences, etc. |
+| **utoponymy** | Unofficial toponymy. Section definition for unofficial toponymy (unofficial places names), used to add places that are not inside the official toponymy of countries or the installation don't want import the official toponymy (use to point the place without the official term in some sections as Publications, to define any place of publication around the world) |
+| **nexus** | Nexus, a standalone module with its own sections. |
 
-An EXAMPLE for an oral-history + intangible-heritage installation — not the default:
+The installer WRITES this key on every install: the core, then the domain ontologies chosen, then the ontologies they declare as dependencies. An EXAMPLE for an oral-history + intangible-heritage installation — not the default:
 
 ```bash
-ACTIVE_ONTOLOGY_TLDS=[ "dd", "rsc", "ontology", "hierarchy", "lg", "oh", "ich" ]
+ACTIVE_ONTOLOGY_TLDS=[ "dd", "rsc", "ontology", "ontologytype", "hierarchy", "lg", "oh", "ich" ]
 ```
 
 !!! info "When the key is unset"
-    The engine does NOT fall back to an empty list: it uses the mandatory core set
-    `dd, rsc, ontology, ontologytype, hierarchy, lg, utoponymy, nexus`, and the update
+    The engine does NOT fall back to an empty list: it uses the core set
+    `dd, rsc, ontology, ontologytype, hierarchy, lg`, and the update
     panel says so — it labels the reference list *Engine fallback (not configured)*
     instead of *Configured in this installation*. Domain TLDs (`oh`, `ich`, `tch`,
-    `numisdata`, …) are never in that fallback: they are per-installation, so set the
-    key to add them.
+    `numisdata`, `utoponymy`, `nexus`, …) are never in that fallback: they are
+    per-installation, so set the key to add them. An installation that relied on the
+    old fallback for `utoponymy` or `nexus` adds them to the key.
 
-!!! note "Thesaurus dependencies"
-    Some tld has a thesaurus dependency, if you want to use a `tch` Dédalo installation will need to create the `material`, `technique`, or `objects` hierarchies. This hierarchies are not included into the main tld, because the hierarchies need to be activate and created by the users. [See the table of dependencies](thesaurus_dependencies.md#dependencies).
+!!! note "Dependencies"
+    An ontology may need nodes of other ontologies (`tch` uses models and terms of `crm`, `tchi`, …). Those dependencies are DECLARED by the ontology server (its manifest lists them per TLD) and the installer installs them together with the chosen ontology. Thesaurus *hierarchies* are different: a `tch` installation still activates the `material`, `technique` or `objects` hierarchies itself, because hierarchies are created by the users. [See the table of dependencies](thesaurus_dependencies.md#dependencies).
 
 !!! note "Applying changes in ACTIVE_ONTOLOGY_TLDS"
     Any change in `ACTIVE_ONTOLOGY_TLDS` will need a update of the ontology, this changes are not directly applied. Dédalo needs to get the ontology tld and install it, to do that update the ontology in [maintenance](../management/maintenance_status.md) control panel.
@@ -490,7 +493,7 @@ ACTIVE_ONTOLOGY_TLDS=[ "dd", "rsc", "ontology", "hierarchy", "lg", "oh", "ich" ]
     - for exhibitions section the tld could be: `actvexhibition`
     - for conferences section the tld could be: `actvconference`
 
-*Default: ["dd","rsc","ontology","ontologytype","hierarchy","lg","utoponymy","nexus"]*
+*Default: ["dd","rsc","ontology","ontologytype","hierarchy","lg"]*
 
 ---
 

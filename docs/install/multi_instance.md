@@ -34,7 +34,7 @@ instances collide.
 | `MEDIA_PATH` | the media tree, and the generated web-server rule files that gate it | that instance's `.env` |
 | `DEDALO_EXPORT_ARTIFACTS_DIR` (when set) | the users' server-built exports — copies of records. The default lives inside `private/`, so it is unique with it; a directory set outside it must differ per instance (the engine refuses a directory another install's marker names) | that instance's `.env` |
 | Linux user + group | the ownership boundary that keeps one instance out of another's secrets and media | you create it |
-| `ACTIVE_ONTOLOGY_TLDS` | the ontology domains active in this install | that instance's `.env` |
+| `ACTIVE_ONTOLOGY_TLDS` | the ontologies this install carries — written by the installer from its `--ontologies` answer | that instance's `.env` |
 | systemd service + proxy vhost | one service and one `server{}` + `upstream` per domain | see below |
 
 Two components are **shared and trusted**, one each for the whole box:
@@ -253,7 +253,9 @@ CREATE DATABASE dedalo_${SITE} WITH ENCODING='UTF8' OWNER=dedalo_${SITE};
 SQL
 ```
 
-Run the CLI installer as the service user, then append the production block to
+Run the CLI installer as the service user — with this instance's domain
+ontologies, e.g. `--ontologies oh,ich` (the installer writes
+`ACTIVE_ONTOLOGY_TLDS` from that answer) — then append the production block to
 this instance's `.env` (see [Production install](production.md) steps 8–9), with
 the **unique** values:
 
@@ -261,7 +263,6 @@ the **unique** values:
 SERVER_UNIX_SOCKET=/run/dedalo-site1/dedalo_ts.sock
 MEDIA_PATH=/srv/dedalo/site1/media
 DEDALO_MEDIA_ACCESS_MODE=publication
-ACTIVE_ONTOLOGY_TLDS=dd,rsc,oh,ich,lg,hierarchy
 ```
 
 Then enable the three timers/services for this instance:

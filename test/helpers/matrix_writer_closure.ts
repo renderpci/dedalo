@@ -1059,8 +1059,8 @@ export interface WriterClosure {
 /**
  * Excluded from membership: the primitive module itself (its non-DML helpers are
  * classified above; its DML exports are the seeds). NOT `src/core/test_data/`: those
- * builders also run on REAL databases (the installer's `installDbFromSeed`, the
- * unit_test maintenance widget, `allowAnyDatabase`), so cutting them would cut every
+ * builders are reached from engine doors too (the unit_test maintenance widget;
+ * the suite builder's installer path), so cutting them would cut every
  * witness chain through them — a tool delegating to one would have no cell.
  */
 const CLOSURE_EXCLUDED_PREFIXES = [MATRIX_WRITE];

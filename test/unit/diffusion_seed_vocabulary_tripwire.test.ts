@@ -15,7 +15,11 @@
  * The ontology has THREE shipped copies and a gate must read all three, or
  * the one it skips is where the retired key comes back:
  *   1. src/core/test_data/test_tld_ontology.json — the `test` TLD source of
- *      record, materialized at install and into the suite database;
+ *      record, materialized into the SUITE database (since the core-only
+ *      install seed no installation receives it; the elements an installation
+ *      ships — dd, oh — are compiled through the real compiler by
+ *      diffusion_seed_compiles_native, which is where "a shipped element
+ *      without a block cannot compile" is measured as an outcome);
  *   2. install/import/ontology/7.0/<tld>.copy.gz — the operator-importable
  *      matrix_ontology packages a museum pulls through the ontology-update
  *      manifest, corrected once by scripts/seed_diffusion_type_rewrite.ts;
@@ -59,10 +63,7 @@ import {
 	rewriteMisc,
 	rewriteOntologyPackages,
 } from '../../scripts/seed_diffusion_type_rewrite.ts';
-import {
-	coreClosure,
-	loadTestTldOntologyDoc,
-} from '../../src/core/test_data/test_tld_materialize.ts';
+import { loadTestTldOntologyDoc } from '../../src/core/test_data/test_tld_materialize.ts';
 import { KNOWN_FORMATS } from '../../src/diffusion/plan/formats.ts';
 
 const REPO = join(import.meta.dir, '..', '..');
@@ -178,34 +179,20 @@ function classNamesIn(text: string | null): string[] {
 // ---------------------------------------------------------------------------
 
 describe('diffusion seed vocabulary — test_tld_ontology.json', () => {
-	test('every diffusion element with a v7 block declares a KNOWN_FORMAT type, never class_name; every SHIPPED element has one', async () => {
+	test('every diffusion element with a v7 block declares a KNOWN_FORMAT type, never class_name', async () => {
 		const doc = await loadTestTldOntologyDoc();
-		const shipped = new Set((await coreClosure(doc.nodes)).map((node) => node.tipo));
 		const elements = doc.nodes.filter((node) => (node.model ?? '').startsWith('diffusion_element'));
 		expect(elements.length, 'census floor: diffusion elements in the JSON').toBeGreaterThan(10);
 		expect(doc.nodes.length, 'census floor: nodes in the JSON').toBeGreaterThan(8000);
 
 		const faults: string[] = [];
-		let shippedElements = 0;
 		let judged = 0;
 		for (const node of elements) {
 			const block = diffusionBlockOfProperties(node.properties);
 			if (block !== null) judged += 1;
 			faults.push(...judgeDiffusionBlock('json', node.tipo, block));
-			// A SHIPPED element (the install's core closure) with no v7 block at
-			// all cannot compile either — properties NULL is the same silence as
-			// the retired key. Aliases resolve to their real element and carry none.
-			if (shipped.has(node.tipo) && node.model === 'diffusion_element') {
-				shippedElements += 1;
-				if (block === null) {
-					faults.push(
-						`json ${node.tipo}: SHIPPED (core closure) diffusion_element without properties.diffusion — cannot compile`,
-					);
-				}
-			}
 		}
 		expect(judged, 'census floor: elements carrying a v7 diffusion block').toBeGreaterThan(4);
-		expect(shippedElements, 'census floor: shipped diffusion_element nodes').toBeGreaterThan(2);
 		expect(faults).toEqual([]);
 	});
 });

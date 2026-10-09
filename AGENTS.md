@@ -37,9 +37,10 @@ The live-oracle era is over. The baselines of record are FROZEN:
   (`src/core/test_data/**`, `test/helpers/**`) calls `assertTestDatabase()`
   before its first write — a database without the marker is refused, loudly and
   without writing. The name (`<app db>_test`) is a convention; the marker is
-  the guarantee. One bypass exists, the installer's `allowAnyDatabase` on
-  `materializeTestTldOntology` (a fresh install gets the `test` TLD ONTOLOGY,
-  definitions only). Gate: `test/unit/test_db_marker_tripwire.test.ts`. 
+  the guarantee. NO bypass exists: the install seed is core-only and an
+  installation receives no test fixture (no `test` TLD, no test3), so the
+  installer never calls a test-data door. Gate:
+  `test/unit/test_db_marker_tripwire.test.ts`. 
 - **And FILE writes only into a media root that SAYS it is one.** The suite has
   its own media tree, `../private/test_media/<suite db>` — swept and rebuilt by
   `bun run test:db:setup`, created by `bun test`, marked with a
@@ -56,7 +57,7 @@ The live-oracle era is over. The baselines of record are FROZEN:
 
 - `bun run dev` — server (unix socket / port per `../private/.env`). 
 - `bun test test/unit/…` / `bun test test/parity/…` — targeted gates   (full `bun test` takes minutes; parity replays the frozen store, no   oracle, no creds — but see the verification story above: corpus-bound   parity gates are red on the suite DB by construction until replaced). 
-- `bun run test:db:setup` — build the SUITE database (stamps `dedalo_test_marker`) AND sweep/rebuild the SUITE MEDIA ROOT (`../private/test_media/<suite db>`, marked `.dedalo_test_media`). `bun test` creates the media root itself if it is missing, so this command is about a clean, rebuildable fixture — not a prerequisite for the media guard being armed. 
+- `bun run test:db:setup` — build the SUITE database THROUGH THE INSTALLER'S DOORS (`installDbFromSeed` = the core-only seed + search stores + engine ontology + `lg`; then the default `oh` via `stageOntologies`/`installOntologies` from the vendored file), stamp `dedalo_test_marker`, then add the suite's own fixtures (the `test` TLD, the test3 playground, hierarchies, tools) — AND sweep/rebuild the SUITE MEDIA ROOT (`../private/test_media/<suite db>`, marked `.dedalo_test_media`). `bun test` creates the media root itself if it is missing, so this command is about a clean, rebuildable fixture — not a prerequisite for the media guard being armed. 
 - **Suite MariaDB (PUB-05)** — the diffusion gates run against the suite's OWN MariaDB per lane
   (`../private/test_mariadb/<suite db>`, marked `.dedalo_test_mariadb`, `--skip-networking` unix
   socket), armed in every `bun test` by `test/preload/suite_mariadb.ts`; never an installation's.

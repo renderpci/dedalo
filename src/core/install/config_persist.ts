@@ -18,25 +18,16 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
-import { parseEnvFile } from '../../config/env.ts';
 import { DedaloError } from '../errors/index.ts';
 import { setServerState } from '../resolve/server_state.ts';
 import { buildInstallPlan } from './install_plan.ts';
+import { resolvePlanCatalog } from './ontology_catalog.ts';
+import type { OntologyCatalog } from './ontology_choice.ts';
 import { installPrivateDir, SAMPLE_ENV_PATH } from './paths.ts';
 import { connFromConfig, psqlSelect1 } from './pg_exec.ts';
+import { readPriorEnv } from './prior_env.ts';
 import { refuseInstall } from './refuse.ts';
 import { generateSecret } from './secret.ts';
-
-/** Existing .env values (for preserve-or-generate on secrets); {} when absent. */
-function existingEnv(): Record<string, string> {
-	const path = join(installPrivateDir(), '.env');
-	if (!existsSync(path)) return {};
-	try {
-		return parseEnvFile(readFileSync(path, 'utf8'));
-	} catch {
-		return {};
-	}
-}
 
 /**
  * The existing .env's assignment lines, VERBATIM and in file order.
@@ -87,11 +78,58 @@ export function envQuote(value: string): string {
 	return value;
 }
 
+/** The caller's already-resolved catalog, else the one the answers need (undefined = vendored suffices). */
+function planCatalog(
+	answers: Record<string, unknown>,
+	prior: Readonly<Record<string, string>>,
+	given: OntologyCatalog | undefined,
+): Promise<OntologyCatalog | undefined> {
+	return given === undefined ? resolvePlanCatalog(answers, prior) : Promise.resolve(given);
+}
+
+/** The ontology extension keys of the step's answer. */
+function ontologyOutcome(
+	plan: ReturnType<typeof buildInstallPlan>,
+): Pick<PersistConfigResult, 'ontology_install' | 'active_ontology_tlds' | 'warnings'> {
+	return {
+		ontology_install: (plan.ontologyRequest?.items ?? []).map((item) => item.tld),
+		active_ontology_tlds: [...plan.activeOntologyTlds],
+		warnings: [...plan.warnings],
+	};
+}
+
+/**
+ * The WIZARD's answers may not carry `ontology_source`: it names a path on the
+ * SERVER's filesystem (a directory read, or an archive gunzipped and walked), so
+ * it is the operator's command-line answer (`--ontology-source`, scripts/install.ts
+ * calls persistConfig directly) and never a browser post. The pre-auth wizard
+ * surface honouring it was a file-existence/type oracle and a decompression
+ * lever, and its catalog disagreed with the one stage_ontologies re-resolves
+ * after the restart (configured servers only). Refused — one fixed text that
+ * says nothing about the path — before anything reads it. Any value but absent
+ * or '' (the plan's "not given") is refused. Gate:
+ * test/unit/install_step_router_native.test.ts.
+ */
+export function refuseWizardOnlyCliAnswers(posted: Readonly<Record<string, unknown>>): void {
+	const source = posted.ontology_source;
+	if (source === undefined || source === null || source === '') return;
+	refuseInstall(
+		'install.invalid_input',
+		'ontology_source is a command-line answer (--ontology-source) — the wizard installs from the configured ontology server or the built-in ontologies',
+	);
+}
+
 /** The step's answer on the ONLY path that returns: written (every refusal throws). */
 export interface PersistConfigResult {
 	ok: true;
 	msg: string;
 	generated: Record<string, string>;
+	/** The domain ontologies the install will stage + import, deps first. */
+	ontology_install: string[];
+	/** The ACTIVE_ONTOLOGY_TLDS written (core + that order). */
+	active_ontology_tlds: string[];
+	/** Non-blocking plan warnings (e.g. an ontology whose dependencies are not declared). */
+	warnings: string[];
 }
 
 /** Write ../private/.env + state from the posted wizard config. */
@@ -104,8 +142,11 @@ export interface PersistConfigResult {
  * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
  * (test/unit/tier1_install_native.test.ts).
  */
-export async function persistConfig(o: Record<string, unknown>): Promise<PersistConfigResult> {
-	const prior = existingEnv();
+export async function persistConfig(
+	o: Record<string, unknown>,
+	options: { ontologyCatalog?: OntologyCatalog } = {},
+): Promise<PersistConfigResult> {
+	const prior = readPriorEnv();
 	const generated: Record<string, string> = {};
 
 	// Secrets: preserve an existing value, else generate (and surface once).
@@ -125,7 +166,13 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 	// four mandatory lang keys or the post-restart boot crash-loops. The prior
 	// values feed the update-server PRESERVE rule (a re-run keeps a non-empty
 	// custom list — mirrors — but an earlier air-gapped `[]` yields to `official`).
-	const plan = buildInstallPlan(o, { salt, priorEnv: prior });
+	// The ONTOLOGY CATALOG the choice needs (a non-vendored TLD: the configured
+	// server's manifest; ontology_catalog.ts) is the caller's when it already
+	// resolved one (the CLI — fetched once), else resolved here: the closure over
+	// its declared dependencies decides ACTIVE_ONTOLOGY_TLDS. A source that cannot
+	// be read refuses here too, before any write.
+	const ontologyCatalog = await planCatalog(o, prior, options.ontologyCatalog);
+	const plan = buildInstallPlan(o, { salt, priorEnv: prior, ontologyCatalog });
 	if (plan.errors.length > 0) {
 		refuseInstall('install.invalid_input', `Install answers invalid: ${plan.errors.join('; ')}`);
 	}
@@ -234,7 +281,12 @@ export async function persistConfig(o: Record<string, unknown>): Promise<Persist
 		info_key: plan.answers.info_key || undefined,
 	});
 
-	return { ok: true, msg: 'Configuration saved. The server will restart.', generated };
+	return {
+		ok: true,
+		msg: 'Configuration saved. The server will restart.',
+		generated,
+		...ontologyOutcome(plan),
+	};
 }
 
 /**

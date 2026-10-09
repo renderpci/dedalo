@@ -32,3 +32,25 @@
   the reset, the client render gates).
 - **Fixture interaction (DEC-14b):** NO re-harvest; the frozen PHP fixtures
   carry `value: null` for this widget, which the catalog gate does not compare.
+
+## Addendum 2026-10-09 — the reset refuses where the test3 playground does not exist
+
+- **Why:** installer unification A2 made the install seed CORE-ONLY — an
+  installation receives no `test` TLD and no test3 records (the playground is
+  the SUITE database's, built by `bun run test:db:setup`). On a dev server
+  running an installation's database, `create_test_record` would TRUNCATE
+  `matrix_test` and write records no ontology node describes.
+- **Shape after (TS):** `create_test_record` with `DEDALO_DEV_MODE` on and no
+  `dd_ontology` row for the test3 section: `ok:false`,
+  `maintenance.action_refused` (400, public), `publicMessage` naming the cause
+  and the remedy ("The test TLD is not installed on this database: the test3
+  playground exists only in the suite database (bun run test:db:setup, browse
+  it with bun run test:client:server). Nothing was written."), coordinates
+  `{widget_action: 'unit_test.create_test_record'}`. Checked AFTER the dev-mode
+  refusal and BEFORE the reset. With the node present: unchanged (WC-021).
+- **Gate:** `test/unit/unit_test_dev_gate_native.test.ts` — dev mode ON, the
+  test3 node deleted inside a rolled-back transaction: the refusal code, the
+  remedy in the public message, `matrix_test` row count unchanged; source order
+  dev-mode guard → installed guard → reset.
+- **Fixture interaction (DEC-14b):** none (no frozen fixture exercises the
+  action on a database without the node).

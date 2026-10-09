@@ -23,7 +23,15 @@
  *    on an explicit air-gapped answer;
  *  - the optional-thesaurus choice (A7): the shared default is
  *    defaultOptionalHierarchies(); a CORE tld (`lg`) is dropped with a note —
- *    the seed restore always activates it.
+ *    the seed restore always activates it;
+ *  - the domain-ontology choice (A4/A5/A6, 2026-10-09): `ontologies` (>= 1,
+ *    default `oh`), the SOURCE the non-vendored ones come from (the first
+ *    configured ontology server — official by default — or `ontology_source`, a
+ *    local directory/archive), the install ORDER (the closure over the source's
+ *    DECLARED dependencies, deps first — ontology_choice.ts) and the
+ *    ACTIVE_ONTOLOGY_TLDS it writes (core + that order). A catalog beyond the
+ *    vendored `oh` is resolved by the CALLER (ontology_catalog.ts — it may reach
+ *    the network) and handed in; the plan itself never fetches.
  *
  * WHAT IT NEVER CONTAINS: DEDALO_SUPERVISED. Supervision is declared by the
  * process manager that restarts the server (systemd unit, compose service,
@@ -31,19 +39,37 @@
  * method reads alike (src/core/update/supervision.ts). The plan's key set is a
  * closed list; no answer can add a key to it.
  *
- * PURE AND CONFIG-FREE: imports only lang_catalog.ts + hierarchy_meta.ts. The
+ * PURE AND CONFIG-FREE: imports only lang_catalog.ts, hierarchy_meta.ts and
+ * ontology_choice.ts (each config-free; the vendored files they read are the only
+ * I/O). The
  * CLI builds the plan BEFORE it seeds the process environment that
  * src/config/config.ts freezes at import, so importing config (or the error
  * registry, or the db) from here would freeze the wrong configuration.
  * Gate: test/unit/install_plan_parity_tripwire.test.ts (CLI ≡ wizard).
  */
 
+import { resolve } from 'node:path';
 import {
 	defaultOptionalHierarchies,
 	isCoreHierarchyTld,
 	offeredHierarchies,
 } from './hierarchy_meta.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
+import {
+	activeOntologyTldsOf,
+	closeOntologyChoice,
+	mergeOntologyCatalogs,
+	normalizeOntologyChoice,
+	type OntologyCatalog,
+	type OntologyInstallRequest,
+	type OntologySource,
+	type OntologySourceView,
+	ontologyCatalogNeeded,
+	ontologyInstallRequest,
+	ontologySourceLabel,
+	ontologySourceView,
+	vendoredOntologyCatalog,
+} from './ontology_choice.ts';
 
 /** One master server entry, as ONTOLOGY_SERVERS / CODE_SERVERS carry it. */
 export interface MasterServerEntry {
@@ -81,7 +107,9 @@ export const INSTALL_STEP_IDS = [
 	'test_mailer_connection',
 	'persist_config',
 	'check_directories',
+	'stage_ontologies',
 	'install_db_from_default_file',
+	'install_ontologies',
 	'set_root_pw',
 	'install_hierarchies',
 	'register_tools',
@@ -129,6 +157,14 @@ export interface InstallAnswers {
 	/** OPTIONAL thesauri only — core tlds are removed (with a note). */
 	hierarchies: string[];
 	register_tools: boolean;
+	/** The chosen DOMAIN ontologies (core removed, with a note); >= 1. */
+	ontologies: string[];
+	/**
+	 * A local ontology source (dir or archive); '' = none. CLI-ONLY, enforced at
+	 * the wizard door (config_persist.ts refuseWizardOnlyCliAnswers): it is a
+	 * server filesystem path.
+	 */
+	ontology_source: string;
 }
 
 /** One .env assignment. `raw` = written verbatim (JSON), never envQuote'd. */
@@ -151,7 +187,17 @@ export interface InstallPlan {
 	readonly envKeys: readonly string[];
 	readonly steps: readonly InstallStepId[];
 	readonly hierarchies: readonly string[];
+	/** The chosen domain ontologies (before their dependency closure). */
+	readonly ontologies: readonly string[];
+	/** Where the non-vendored ontologies come from (never the access code). */
+	readonly ontologySource: OntologySourceView;
+	/** What stage_ontologies stages, deps first; null when the plan has errors. */
+	readonly ontologyRequest: OntologyInstallRequest | null;
+	/** The ACTIVE_ONTOLOGY_TLDS this plan writes: core + the install order. */
+	readonly activeOntologyTlds: readonly string[];
 	readonly notes: readonly string[];
+	/** Non-blocking (e.g. an ontology whose dependencies the source does not declare). */
+	readonly warnings: readonly string[];
 	/** Empty = valid. */
 	readonly errors: readonly string[];
 }
@@ -303,15 +349,22 @@ export function normalizeInstallAnswers(raw: RawAnswers): {
 } {
 	const notes: string[] = [];
 	const errors: string[] = [];
+	const ontologyChoice = normalizeOntologyChoice(raw.ontologies);
 	const answers: InstallAnswers = {
 		...coreAnswers(raw),
 		...serviceAnswers(raw),
 		update_servers: parseUpdateServers(raw.update_servers, errors),
 		hierarchies: parseHierarchies(raw.hierarchies, notes, errors),
 		register_tools: raw.register_tools !== false,
+		ontologies: ontologyChoice.ontologies,
+		ontology_source: text(raw, 'ontology_source'),
 	};
 	requireAnswers(answers, errors);
-	return { answers, notes, errors };
+	return {
+		answers,
+		notes: [...notes, ...ontologyChoice.notes],
+		errors: [...errors, ...ontologyChoice.errors],
+	};
 }
 
 // ── the .env sections ───────────────────────────────────────────────────────
@@ -417,6 +470,60 @@ function updateServersSection(
 	};
 }
 
+/** A JSON server list → its well-formed {name,url,code} entries ([] when it is not one). */
+function serverEntries(value: string | undefined): MasterServerEntry[] {
+	if (!isCustomServerList(value)) return [];
+	return (JSON.parse(value as string) as unknown[]).filter(
+		(item): item is MasterServerEntry =>
+			typeof (item as MasterServerEntry | null)?.name === 'string' &&
+			typeof (item as MasterServerEntry).url === 'string' &&
+			typeof (item as MasterServerEntry).code === 'string',
+	);
+}
+
+/**
+ * The ontology servers the install will have configured — the allowlist a
+ * manifest fetch is held to: none when air-gapped; else a prior CUSTOM list
+ * (the same preserve rule updateServersSection applies), else the official one.
+ */
+export function ontologyServersFor(
+	answers: Pick<InstallAnswers, 'update_servers'>,
+	priorEnv: Readonly<Record<string, string>>,
+): MasterServerEntry[] {
+	if (answers.update_servers === 'none') return [];
+	const custom = serverEntries(priorEnv.ONTOLOGY_SERVERS);
+	return custom.length > 0 ? custom : [OFFICIAL_ONTOLOGY_SERVER];
+}
+
+/**
+ * Where the non-vendored ontologies come from: a local `ontology_source`
+ * (resolved to an absolute path), else the FIRST configured ontology server,
+ * else none (air-gapped — only the vendored `oh`).
+ */
+export function ontologySourceFor(
+	answers: Pick<InstallAnswers, 'update_servers' | 'ontology_source'>,
+	priorEnv: Readonly<Record<string, string>>,
+): OntologySource {
+	if (answers.ontology_source !== '') {
+		return { kind: 'local', path: resolve(answers.ontology_source) };
+	}
+	const server = ontologyServersFor(answers, priorEnv)[0];
+	return server === undefined ? { kind: 'none' } : { kind: 'server', server: { ...server } };
+}
+
+/**
+ * ONTOLOGIES: the TLDs this installation carries — core, then its domains in
+ * install order (deps first). OWNED: rewritten on every run; the maintenance
+ * update panel refreshes exactly these.
+ */
+function ontologiesSection(activeOntologyTlds: readonly string[]): EnvSection {
+	return {
+		comment:
+			"# --- Ontologies (core + this installation's domains + their declared dependencies; the update panel refreshes exactly these) ---",
+		entries: [entry('ACTIVE_ONTOLOGY_TLDS', JSON.stringify(activeOntologyTlds), true)],
+	};
+}
+
 /**
  * Serving / media: written ONLY when provided, so a re-save that does not carry
  * them preserves a prior value instead of clobbering it. SERVER_UNIX_SOCKET is
@@ -472,6 +579,7 @@ function envSections(
 	l: LangConfig,
 	salt: string,
 	prior: Readonly<Record<string, string>>,
+	activeOntologyTlds: readonly string[],
 ): EnvSection[] {
 	return [
 		databaseSection(a),
@@ -479,6 +587,7 @@ function envSections(
 		langSection(l),
 		secretSection(salt),
 		updateServersSection(a, prior),
+		ontologiesSection(activeOntologyTlds),
 		servingSection(a),
 		diffusionSection(a),
 		mailerSection(a),
@@ -509,18 +618,89 @@ function installSteps(a: InstallAnswers): InstallStepId[] {
 	return INSTALL_STEP_IDS.filter((step) => optional[step] !== false);
 }
 
-/** Answers → the whole plan. `salt` defaults to '' (the CLI's `--plan` has none). */
+// ── the ontologies ───────────────────────────────────────────────────────────
+
+interface PlannedOntologies {
+	source: OntologySource;
+	request: OntologyInstallRequest | null;
+	activeOntologyTlds: string[];
+	notes: string[];
+	warnings: string[];
+	errors: string[];
+}
+
+/** The closure of the chosen ontologies over the (merged) catalog. */
+function closedOntologies(
+	answers: InstallAnswers,
+	source: OntologySource,
+	catalog: OntologyCatalog,
+): PlannedOntologies {
+	const closure = closeOntologyChoice(answers.ontologies, catalog);
+	const usable = closure.errors.length === 0 && closure.order.length > 0;
+	return {
+		source,
+		request: usable ? ontologyInstallRequest(closure.order, catalog) : null,
+		activeOntologyTlds: activeOntologyTldsOf(closure.order),
+		notes: closure.notes,
+		warnings: [...catalog.warnings, ...closure.warnings],
+		errors: closure.errors,
+	};
+}
+
+/** The front end's programming error: a catalog the choice needs was not handed in. */
+function unresolvedCatalog(source: OntologySource): string {
+	return `the ontology catalog of ${ontologySourceLabel(source)} was not resolved`;
+}
+
+/**
+ * The ontology half of the plan. A catalog the choice NEEDS (a local source, or
+ * a non-vendored TLD from a server) must be handed in already resolved — its
+ * absence is a programming error of the front end, reported, never fetched here.
+ */
+function planOntologies(
+	answers: InstallAnswers,
+	prior: Readonly<Record<string, string>>,
+	given: OntologyCatalog | undefined,
+): PlannedOntologies {
+	const source = ontologySourceFor(answers, prior);
+	if (given === undefined && ontologyCatalogNeeded(answers.ontologies, source)) {
+		return {
+			...closedOntologies(answers, source, vendoredOntologyCatalog()),
+			request: null,
+			errors: [unresolvedCatalog(source)],
+		};
+	}
+	return closedOntologies(answers, source, mergeOntologyCatalogs(given, vendoredOntologyCatalog()));
+}
+
+/**
+ * Answers → the whole plan. `salt` defaults to '' (the CLI's `--plan` has none);
+ * `ontologyCatalog` is the resolved source catalog when the choice needs one
+ * (ontology_catalog.ts resolveOntologyCatalog / resolvePlanCatalog).
+ */
 export function buildInstallPlan(
 	raw: RawAnswers,
-	context: { salt?: string; priorEnv?: Readonly<Record<string, string>> } = {},
+	context: {
+		salt?: string;
+		priorEnv?: Readonly<Record<string, string>>;
+		ontologyCatalog?: OntologyCatalog;
+	} = {},
 ): InstallPlan {
 	const { answers, notes, errors } = normalizeInstallAnswers(raw);
+	const prior = context.priorEnv ?? {};
 	const langConfig = deriveLangConfig({
 		langs: answers.langs,
 		appLangDefault: answers.app_lang_default,
 		dataLangDefault: answers.data_lang_default,
 	});
-	const env = envSections(answers, langConfig, context.salt ?? '', context.priorEnv ?? {});
+	const ontologies = planOntologies(answers, prior, context.ontologyCatalog);
+	const env = envSections(
+		answers,
+		langConfig,
+		context.salt ?? '',
+		prior,
+		ontologies.activeOntologyTlds,
+	);
 	return {
 		answers,
 		langConfig,
@@ -528,9 +708,15 @@ export function buildInstallPlan(
 		envKeys: env.flatMap((section) => section.entries.map((item) => item.key)),
 		steps: installSteps(answers),
 		hierarchies: answers.hierarchies,
-		notes,
+		ontologies: answers.ontologies,
+		ontologySource: ontologySourceView(ontologies.source),
+		ontologyRequest: ontologies.request,
+		activeOntologyTlds: ontologies.activeOntologyTlds,
+		notes: [...notes, ...ontologies.notes],
+		warnings: ontologies.warnings,
 		errors: [
 			...errors,
+			...ontologies.errors,
 			...langConfig.errors.map((error) => `languages: ${error}`),
 			...controlCharacterErrors(env),
 		],
@@ -570,7 +756,7 @@ export function cliBootEnv(plan: InstallPlan): Record<string, string> {
 
 /**
  * Every flag the CLI accepts. `key` is the answer it sets (null = a front-end
- * flag: --root-password, --plan). A bool flag sets `true`, except the negating
+ * flag: --root-password, --plan, --list-ontologies). A bool flag sets `true`, except the negating
  * `--no-*` / `--skip-*` ones, which set `false`. NO DEFAULTS here — a flag that
  * is not given leaves its answer absent, and the plan's default applies.
  */
@@ -611,12 +797,15 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--socket', key: 'unix_socket', kind: 'value' },
 	{ flag: '--media-access-mode', key: 'media_access_mode', kind: 'value' },
 	{ flag: '--hierarchies', key: 'hierarchies', kind: 'value' },
+	{ flag: '--ontologies', key: 'ontologies', kind: 'value' },
+	{ flag: '--ontology-source', key: 'ontology_source', kind: 'value' },
 	{ flag: '--root-password', key: null, kind: 'value' },
 	{ flag: '--diffusion', key: 'diffusion', kind: 'bool' },
 	{ flag: '--mailer', key: 'mailer', kind: 'bool' },
 	{ flag: '--no-update-servers', key: 'update_servers', kind: 'bool' },
 	{ flag: '--skip-tools', key: 'register_tools', kind: 'bool' },
 	{ flag: '--plan', key: null, kind: 'bool' },
+	{ flag: '--list-ontologies', key: null, kind: 'bool' },
 ]);
 
 const FLAGS_BY_NAME: ReadonlyMap<string, (typeof INSTALL_CLI_FLAGS)[number]> = new Map(
@@ -627,6 +816,8 @@ export interface CliInstallInvocation {
 	raw: Record<string, unknown>;
 	rootPassword: string | undefined;
 	planOnly: boolean;
+	/** --list-ontologies: print the catalog view and exit (wins over --plan). */
+	listOntologies: boolean;
 	errors: string[];
 }
 
@@ -648,6 +839,7 @@ function applyFlag(
 ): void {
 	if (spec.flag === '--root-password') invocation.rootPassword = value;
 	else if (spec.flag === '--plan') invocation.planOnly = true;
+	else if (spec.flag === '--list-ontologies') invocation.listOntologies = true;
 	else if (spec.kind === 'value') invocation.raw[spec.key as string] = value;
 	else invocation.raw[spec.key as string] = !/^--(no|skip)-/.test(spec.flag);
 }
@@ -689,6 +881,7 @@ export function answersFromCliArgs(argv: readonly string[]): CliInstallInvocatio
 		raw: {},
 		rootPassword: undefined,
 		planOnly: false,
+		listOntologies: false,
 		errors: [],
 	};
 	for (let index = 0; index < argv.length; ) {

@@ -174,7 +174,8 @@ update_ontology.prototype.supported_code_version = (required_version) => {
 *   @param {Object}   options.server - Target server descriptor chosen by the
 *     operator in the servers list; shape: `{ name, url, code, active }`.
 *   @param {Array}    options.files  - Filtered list of file descriptors to
-*     import, each: `{ section_tipo, tld, url, typology_id?, name_data? }`.
+*     import, each: `{ section_tipo, tld, url, typology_id?, name_data?,
+*     dependencies? }` (`dependencies` only when the master declares them).
 *     Always includes `matrix_dd` first (shared private-list table).
 *   @param {Object}   options.info   - Remote ontology metadata returned by
 *     the prior `get_ontology_update_info` call; forwarded so the server can

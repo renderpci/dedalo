@@ -56,11 +56,17 @@ The suite runs on its own database, built from files vendored in the repository:
 bun run test:db:setup          # drops and rebuilds <app db>_test (or DEDALO_TEST_DATABASE)
 ```
 
-That script restores the install seed, materializes the generic `test` TLD ontology,
-imports the hierarchies and registers the tools — and then **stamps the database**
-with a `dedalo_test_marker` row: one row, pinned by database constraints, carrying
-the build stamp, the git revision that built it and the sha256 of both the seed and
-the `test` TLD ontology. It is the only producer of that row anywhere.
+The suite database is **an installation first, then a fixture**. The script builds
+it through the installer's own steps — `installDbFromSeed()` restores the core-only
+install seed (the search indexes, the engine ontology and the Languages thesaurus
+included), and `stageOntologies` + `installOntologies` install the default domain
+ontology `oh` from its vendored file, exactly as an offline installation gets it.
+Right after the restore it **stamps the database** with a `dedalo_test_marker` row:
+one row, pinned by database constraints, carrying the build stamp, the git revision
+that built it and the sha256 of both the seed and the `test` TLD ontology. It is the
+only producer of that row anywhere. Then it adds what no installation receives: the
+generic `test` TLD ontology, the canonical `test3` playground records, the
+hierarchies the tests reference and the registered tools.
 
 Every writer of test data — the corpus loader, the situation builder, the media kit,
 the ontology materializer, the scratch-record helpers — calls `assertTestDatabase()`
@@ -79,9 +85,10 @@ it carries no 'dedalo_test_marker' row … Build the test database with
 'bun run test:db:setup'. Nothing was written.
 ```
 
-The one bypass is the **installer**: a fresh, real installation has no marker and must
-still receive the `test` TLD ontology (definitions, no records), so `db_restore.ts`
-calls the materializer with `allowAnyDatabase`. Nothing else may.
+There is **no bypass**. The installer used to give every fresh installation the
+`test` TLD ontology through an opt-out of this check; since the install seed became
+core-only (2026-10), an installation receives no test fixture at all and the opt-out
+is gone — the materializer refuses on any database without the marker.
 The gate over all of this is `test/unit/test_db_marker_tripwire.test.ts`.
 
 ### The suite media root, and why it cannot be yours either

@@ -120,6 +120,18 @@ narrows your active ontologies is a bug report six months later.
     Add keys; do not rewrite the file. The one thing you *do* edit in place is a
     retired key's name. Every documented key is listed in `../private/sample.env`.
 
+!!! warning "No `ACTIVE_ONTOLOGY_TLDS` in your `.env`? Check `utoponymy` and `nexus`"
+    When the key is unset, the engine falls back to the core ontologies:
+    `dd, rsc, ontology, ontologytype, hierarchy, lg`. Before the installer chose
+    domain ontologies (2026-10), that fallback also carried `utoponymy` and
+    `nexus`. Both are ordinary domain ontologies now. If your installation uses
+    either and your `.env` has no `ACTIVE_ONTOLOGY_TLDS`, add the key with
+    everything you carry, or the ontology update panel stops refreshing them:
+
+    ```dotenv
+    ACTIVE_ONTOLOGY_TLDS=["dd","rsc","ontology","ontologytype","hierarchy","lg","oh","utoponymy","nexus"]
+    ```
+
 ## 5. One-time data update — `section_id` becomes an integer
 
 Installs migrated from v6 **before** the unification step existed store locator

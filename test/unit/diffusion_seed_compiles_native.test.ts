@@ -15,14 +15,22 @@
  * CENSUS: TOTAL. Every dd1190 `diffusion_domain` node the suite database
  * holds, the virtual tree of each, `findElementNodes` of each — and the
  * SHIPPED partition of that census is DERIVED, never hand-listed: an element
- * is shipped when its TLD is not one the `test` source of record owns (dd, oh,
- * … — seed-shipped) OR when it is in `coreClosure(doc.nodes)` — the exact set
- * `materializeTestTldOntology({scope:'core'})` installs, computed from the
- * committed clone map (test_tld_materialize.ts). Clone twins the suite alone
- * holds (test5942, test6336, test6359, test6112, …) are NOT shipped and NOT
- * judged here — several are partial clones with no database/section under
- * them, which is the clone's shape, not the engine's. Floors: > 3 domains
- * carrying a shipped element, > 4 shipped elements.
+ * is shipped when its TLD is not one the `test` source of record owns — i.e.
+ * it came with the installation (the core seed, the engine ontology, the
+ * default domain ontology the installer imports: dd, lg, oh …). Since the
+ * install seed is core-only (installer unification A2) an installation
+ * receives NO test node, so no test-TLD element is shipped: the whole test
+ * file (the hand-authored Test area and the clone twins test5942, test6336,
+ * test6359, test6112, …) is the suite's and NOT judged here — several twins
+ * are partial clones with no database/section under them, which is the
+ * clone's shape, not the engine's. Floors: > 3 domains carrying a shipped
+ * element, > 3 shipped elements. MEASURED on a lane rebuilt through the
+ * installer doors (2026-10-09): 15 domains, 13 elements in all, 4 shipped —
+ * dd60, dd1099, dd1513 (dd) and oh63 (oh) — one per domain. The shipped floor
+ * was > 4 while hand-authored test elements counted as shipped; with no test
+ * node shipped any more the measured count is 4, so the floor is > 3 (the
+ * count itself did not shrink: the partition lost elements that were never
+ * an installation's).
  *
  * WHAT IS ASSERTED, per shipped element:
  *   - `validateElementPlan` answers errors [] and degradations [] — with two
@@ -70,10 +78,7 @@ import { MIGRATIONS_VERSION_TABLE } from '../../install/db/migrate.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { inspectOntology } from '../../src/core/ontology/ontology_state.ts';
 import { RESERVED_TLD } from '../../src/core/test_data/situations/situation.ts';
-import {
-	coreClosure,
-	loadTestTldOntologyDoc,
-} from '../../src/core/test_data/test_tld_materialize.ts';
+import { loadTestTldOntologyDoc } from '../../src/core/test_data/test_tld_materialize.ts';
 import { validateElementPlan } from '../../src/diffusion/plan/compile.ts';
 import { KNOWN_FORMATS } from '../../src/diffusion/plan/formats.ts';
 import {
@@ -144,7 +149,6 @@ async function censusOfShippedElements(): Promise<{
 	const doc = await loadTestTldOntologyDoc();
 	// The TLDs the source of record OWNS = the TLDs its nodes declare.
 	const testTlds = new Set(doc.nodes.map((node) => node.tld ?? ''));
-	const shippedTestTipos = new Set((await coreClosure(doc.nodes)).map((node) => node.tipo));
 
 	const domainRows = await sql<
 		{ tipo: string; tld: string | null; term: Record<string, string> | null }[]
@@ -173,8 +177,8 @@ async function censusOfShippedElements(): Promise<{
 				scratchResidue.push(`element ${node.tipo} (tld '${tld}', domain '${domainName}')`);
 				continue;
 			}
-			const isShipped = !testTlds.has(tld) || shippedTestTipos.has(node.tipo);
-			if (isShipped) shipped.push({ domainTipo: domain.tipo, domainName, tree, node, tld });
+			if (!testTlds.has(tld))
+				shipped.push({ domainTipo: domain.tipo, domainName, tree, node, tld });
 		}
 	}
 	return { domains: domainRows.length, elements, shipped, scratchResidue };
@@ -208,7 +212,8 @@ describe('the shipped diffusion ontology compiles in the shipped engine', () => 
 		expect(shippedDomains.size, 'census floor: domains carrying a shipped element').toBeGreaterThan(
 			3,
 		);
-		expect(census.shipped.length, 'census floor: shipped elements').toBeGreaterThan(4);
+		// Measured 4 (dd60, dd1099, dd1513, oh63) — see the header.
+		expect(census.shipped.length, 'census floor: shipped elements').toBeGreaterThan(3);
 		// Both exemptions must still be SHIPPED elements — a vanished exemption is
 		// a stale list, not a free pass.
 		const shippedTipos = new Set(census.shipped.map((entry) => entry.node.tipo));

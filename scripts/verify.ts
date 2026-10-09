@@ -356,6 +356,18 @@ const TRIPWIRES = [
 	'test/unit/install_plan_parity_tripwire.test.ts',
 	// Installer unification C — every runtime definition that restarts the server declares DEDALO_SUPERVISED (2026-10-08).
 	'test/unit/supervision_declaration_tripwire.test.ts',
+	// Installer unification A6 — the vendored oh.copy.gz is installable alone over the core seed (2026-10-09).
+	'test/unit/vendored_ontology_closure_tripwire.test.ts',
+	// Installer unification A4/A5/A6 — the installer's ontology door, driven on the suite DB (2026-10-09).
+	'test/unit/install_ontology_door_native.test.ts',
+	// Installer unification A5/A6 — one reference classifier + one COPY codec (2026-10-09).
+	'test/unit/ontology_references_native.test.ts',
+	// Installer unification A4/A5 — the manifest client, held to configured masters (2026-10-09).
+	'test/unit/ontology_manifest_native.test.ts',
+	// Installer unification A4/A5 — declared-dependency closure, never computed (2026-10-09).
+	'test/unit/install_ontology_choice.test.ts',
+	// Installer unification A6 — the offline archive of a REAL export resolves; limits count files, not headers (2026-10-09).
+	'test/unit/install_ontology_archive.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

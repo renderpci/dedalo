@@ -62,6 +62,10 @@ test('the false claim is gone from every failure branch of updateOntology (D7)',
 	// where it is guarded by `provisioned.length === 0`. A second literal would
 	// mean a failure branch bypassing the guard.
 	expect(source.split("'Error. Import failed — previous state restored'").length - 1).toBe(1);
-	// and every restore site routes through the helper.
-	expect(source.split('restoreFailureMessage(provisioned, response.errors)').length - 1).toBe(3);
+	// and every restore site routes through the helper. Since the shared lower
+	// layer (importStagedOntologyFiles, 2026-10-09) the sites are TWO homes:
+	// failImport (a per-file failure) and restoreAfterThrow (both catch sites,
+	// the shared layer's and updateOntology's tail).
+	const calls = [...source.matchAll(/(?<!function )restoreFailureMessage\(/g)].length;
+	expect(calls).toBe(2);
 });

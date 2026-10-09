@@ -34,20 +34,34 @@ organisation of data elements.
 **TLD organisation.** All terms in the ontology are organised by Top-Level Domains
 (TLDs) — identifying codes that let the ontology grow to fit specific needs
 without conflicts. This system ensures scalability and customisation. Every TLD
-defines a specific part of the ontology with a meaning:
+defines a specific part of the ontology with a meaning. Two kinds matter for an
+installation:
+
+- the **core** ontologies — `dd`, `rsc`, `ontology`, `ontologytype`, `hierarchy`
+  and `lg` — ship in the install database itself; every installation has them;
+- the **domain** ontologies — `oh`, `ich`, `tch`, `numisdata`, `utoponymy`,
+  `nexus`, … — are chosen per installation. The installer installs at least one
+  (Oral history, `oh`, by default) together with the ontologies each one
+  declares it depends on, and writes the result into `ACTIVE_ONTOLOGY_TLDS`; more
+  can be imported later from the ontology update panel. See
+  [Domain ontologies](../../install/installer_reference.md#domain-ontologies).
+
+Core ontologies first, then a selection of domain ontologies:
 
 | **TLD** | Definition |
 | --- | --- |
 | **dd** | Dédalo core definition; used for general aspects such as `Cultural heritage fields` (`Tangible`, `Oral History`), `Administration`, `Dédalo users`, etc. |
 | **rsc** | Resource; used to define media elements such as `Audiovisual`, `Image`, `SVG`, `PDF`, etc., including `Publications`, `Restoration processes` and other common sections shared across the system |
 | **ontology** | Ontology definition; used to create the ontology definition itself |
+| **ontologytype** | Ontology typologies; the typologies the ontology registry groups the ontologies by |
 | **hierarchy** | Thesaurus definition; used to manage any kind of thesaurus or taxonomy such as `Onomastic`, `Material`, `Techniques`, etc., as well as `Tipology` catalogues |
 | **lg** | Languages; the definition of the languages used throughout the application to translate data and the interface |
-| **utoponymy** | Unofficial toponymy. Section definition for unofficial place names — places that are not in a country's official toponymy, or that an installation does not want to import (used to point at a place without an official term in sections such as Publications, to record any place of publication around the world) |
 | **oh** | Oral History; the sections and tools for oral-history projects, such as `Interviews`, `Transcription`, `Indexation`, etc. |
 | **ich** | Intangible Cultural Heritage; the sections and tools for intangible heritage, such as elements, processes, communities, symbolic acts, etc. |
 | **tch** | Tangible Heritage; the sections and tools for tangible heritage, such as objects, collectors, informants, etc. |
 | **tchi** | Tangible Heritage Immovable; the sections and tools for immovable tangible heritage, such as archaeological sites, finds, alquerías, etc. |
+| **utoponymy** | Unofficial toponymy (optional). Section definition for unofficial place names — places that are not in a country's official toponymy, or that an installation does not want to import (used to point at a place without an official term in sections such as Publications, to record any place of publication around the world) |
+| **nexus** | Nexus (optional); a standalone module with its own sections |
 
 **Unique identification for every node (`tipo`).** Each node in the ontology is
 uniquely identified by a combination of its TLD and a sequential number. For
@@ -164,16 +178,15 @@ sections within your node. If you do not link your root nodes to existing nodes,
 your definition will still work but will not be accessible in the menu or in the
 place where you want it to act.
 
-!!! note "Mandatory TLDs"
-    Dédalo uses four main TLDs as its core definition, and you cannot remove them:
-    `dd`, `ontology`, `lg`, `hierarchy`. Why? Because the main features — login,
-    profiles, tables, tools, the ontology definition and the multi-language
-    features — are defined by these TLDs.
-
-    A note on the `rsc` TLD: it is not core, but it is an important definition
-    because it manages all media (image, audiovisual, PDF, SVG, 3D, …), people,
-    entities, etc. Although it is not mandatory, it is almost essential. (You can
-    build your own media management, but it is hard to do.)
+!!! note "Core TLDs"
+    Every installation carries six core TLDs, shipped in the install database:
+    `dd`, `rsc`, `ontology`, `ontologytype`, `hierarchy` and `lg`. You cannot remove
+    them: the main features — login, profiles, tables, tools, media (image,
+    audiovisual, PDF, SVG, 3D, …), people and entities, the ontology definition and
+    the multi-language features — are defined by these TLDs. A new TLD builds on
+    them, so on an ontology master, declare in its *Required ontologies* field the
+    core and domain ontologies it uses (see
+    [Declaring what an ontology requires](../../management/updates/updating_ontology.md#declaring-what-an-ontology-requires)).
 
 #### Creating the first node
 

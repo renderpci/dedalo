@@ -644,6 +644,83 @@
 
 	}//end .hierarchies_import_block
 
+	// ---- ONTOLOGIES BLOCK ----
+	// The domain-ontology choice. Typology groups are <details> (the thesaurus
+	// typologies start collapsed); one entry per row, so its note and its
+	// "also installs" line read under the name instead of squeezing into a grid cell.
+	.ontologies_block {
+
+		.ontology_group {
+			margin-bottom: 0.25rem;
+
+			>summary.typology_label {
+				cursor: pointer;
+				padding: 0.5rem 0;
+				border-bottom: 1px solid var(--ut_border);
+				color: var(--ut_text_muted);
+				font-size: 0.9rem;
+				font-weight: 600;
+				letter-spacing: 0.04em;
+			}
+		}
+
+		.ontology_ul {
+			display: flex;
+			flex-direction: column;
+			gap: 0.35rem;
+			list-style: none;
+			margin: 0;
+			padding: 0.5rem 0.75rem;
+		}
+
+		.ontology_label {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.45rem;
+			padding: 0.25rem 0.5rem;
+			border-radius: 7px;
+			cursor: pointer;
+			color: var(--ut_text_primary);
+			font-size: 0.9rem;
+			transition: background 0.2s;
+
+			&:hover {
+				background: var(--ut_bg_hover);
+			}
+
+			>.hierarchy_checkbox {
+				accent-color: var(--ut_accent);
+				height: 1.05rem;
+				width: 1.05rem;
+				margin: 0;
+				flex: 0 0 auto;
+			}
+		}
+
+		// note + dependency line, aligned with the name (past the checkbox)
+		.installer_field_help {
+			padding-left: 2.05rem;
+			font-size: 0.78rem;
+			color: var(--ut_text_muted);
+			line-height: 1.35;
+
+			&.warning {
+				color: var(--ut_run);
+			}
+		}
+		.ontology_airgapped {
+			padding-left: 0;
+		}
+	}//end .ontologies_block
+
+	// a warning box holding several server lines (ontology plan / install
+	// warnings): one line per row, not the single-row flex of a status message
+	.msg.installer_warning_lines {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.25rem;
+	}
+
 	// ---- INSTALL FINISH BLOCK ----
 	.installer_finish_block {
 		margin-bottom: 3rem;

@@ -412,6 +412,17 @@ HERMETIC_TRIPWIRES=(
 	#     package.json scripts under a stub `bun`, each in a child over a mkdtemp private dir.
 	test/unit/install_plan_parity_tripwire.test.ts
 	test/unit/supervision_declaration_tripwire.test.ts
+	# --- 2026-10-09 (installer unification A4/A5/A6). DB-free (re-verified with DB_PORT
+	#     closed): the vendored oh.copy.gz + the seed parsed from the repo; the pure
+	#     reference classifier and COPY codec; the manifest client against a LOOPBACK
+	#     stand-in master (never the network); the closure over built zz catalogs.
+	test/unit/vendored_ontology_closure_tripwire.test.ts
+	test/unit/ontology_references_native.test.ts
+	test/unit/ontology_manifest_native.test.ts
+	test/unit/install_ontology_choice.test.ts
+	#     + the offline archive of the vendored export (system tar into a mkdtemp dir;
+	#     DB_HOST=127.0.0.1 DB_PORT=59999: 4 pass / 0 fail).
+	test/unit/install_ontology_archive.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

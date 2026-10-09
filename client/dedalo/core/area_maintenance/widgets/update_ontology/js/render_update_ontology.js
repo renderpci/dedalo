@@ -883,6 +883,12 @@ const get_content_data_edit = async function(self) {
 							if (found) {
 								file_item.typology_id	= found.typology_id
 								file_item.name_data		= found.name_data
+								// declared dependencies: forwarded ONLY when the master declares them
+								// (absent = not declared) — the import records them on the registry
+								// record so this server re-serves them (WC-2026-10-09-ontology-manifest-dependencies)
+								if (found.dependencies !== undefined) {
+									file_item.dependencies = found.dependencies
+								}
 							}
 						})
 						const selected_files = []

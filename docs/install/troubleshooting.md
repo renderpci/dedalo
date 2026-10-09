@@ -149,7 +149,7 @@ refuses to boot instead.
 **Fix.** Rename the line in `../private/.env`:
 
 ```dotenv
-ACTIVE_ONTOLOGY_TLDS=dd,rsc,oh,ich,lg,hierarchy
+ACTIVE_ONTOLOGY_TLDS=dd,rsc,ontology,ontologytype,hierarchy,lg,oh,ich
 ```
 
 ### Crash loop right after the wizard's *Save config*

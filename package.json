@@ -33,6 +33,7 @@
 		"dedalo:migrate-config": "bun run scripts/migrate_v6_config.ts",
 		"dedalo:migrate-passwords": "bun run scripts/migrate_v6_passwords.ts",
 		"dedalo:restore": "bun run scripts/restore.ts",
+		"seed:build": "bun run scripts/build_install_seed.ts",
 		"dedalo:pair-publication-host": "bun run scripts/publication_host_pair.ts",
 		"test": "bun test --timeout=30000",
 		"lint:browser": "bun run scripts/lint_browser_budget.ts",

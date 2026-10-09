@@ -4,16 +4,22 @@
  * could read one.
  *
  * WHAT IS IN. `install/db/dedalo_install.pgsql.gz` (the `COPY public.dd_ontology`
- * block — what a fresh install's ontology IS) and
- * `src/core/test_data/test_tld_ontology.json` (the generic `test` TLD, source
- * of record since the 2026-08-19 migration, and shipped in every install's Test
- * area). Together: 3814 seed rows + the test TLD, 404 distinct top-level keys.
+ * block — the CORE ontologies every install restores), the DEFAULT domain
+ * ontologies the installer imports from their ONE vendored package each
+ * (src/core/install/ontology_choice.ts DEFAULT_DOMAIN_ONTOLOGIES →
+ * install/import/ontology/<major.minor>/<tld>.copy.gz — since the core-only
+ * seed, 2026-10-09, `oh` reaches an install this way and no longer through the
+ * seed) and `src/core/test_data/test_tld_ontology.json` (the generic `test`
+ * TLD, source of record since the 2026-08-19 migration — the SUITE's; kept in
+ * the corpus because the suite database is a booted install too).
  *
- * WHAT IS NOT, and why: `install/import/ontology/7.0/*.copy.gz` are matrix
- * RECORD packages (an ontology authored AS records), not dd_ontology rows —
- * their property bags only become dd_ontology through the parser, so they are a
- * different census with a different reader. An install's own authored nodes are
- * likewise out of a repo gate's reach: that half is `scripts/ontology_property_report.ts`.
+ * A package is matrix RECORDS, not dd_ontology rows: a node's top-level
+ * property keys are read the way the parser folds them (ontology18's keys,
+ * plus `css` from ontology16 and `source` from ontology17 — parser.ts
+ * readPropertySet). The OTHER vendored packages (the ontology-server role's
+ * catalog) are not shipped by an install and stay out; an install's own
+ * authored nodes are likewise out of a repo gate's reach: that half is
+ * `scripts/ontology_property_report.ts`.
  *
  * THE READER SIDE is the registered shared listers, never a private walk:
  * `writePathSourceFiles()` (src + tools + scripts) and `firstPartyClientFiles()`
@@ -27,6 +33,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import { COPY_MISC_COLUMN_INDEX } from '../../scripts/seed_diffusion_type_rewrite.ts';
+import { DEFAULT_DOMAIN_ONTOLOGIES } from '../../src/core/install/ontology_choice.ts';
+import { VENDORED_ONTOLOGY_DIR } from '../../src/core/install/paths.ts';
 import { firstPartyClientFiles } from './browser_corpus.ts';
 import { stripComments } from './strip_comments.ts';
 import { REPO_ROOT, writePathSourceFiles } from './write_path_corpus.ts';
@@ -93,9 +102,48 @@ export function testTldOntologyNodes(): CorpusNode[] {
 	return doc.nodes.map((node) => ({ tipo: node.tipo, properties: node.properties }));
 }
 
-/** The whole shipped corpus: seed rows + the generic test TLD. */
+/** The misc-column components a package record folds into `properties` (parser.ts readPropertySet). */
+const FOLDED_PROPERTY_COMPONENTS: Readonly<Record<string, string>> = Object.freeze({
+	ontology16: 'css',
+	ontology17: 'source',
+});
+
+/** One package record's misc column → the properties bag the parser would derive (keys only matter). */
+function packageRecordProperties(rawMisc: string | null): Record<string, unknown> | null {
+	if (rawMisc === null) return null;
+	const misc = JSON.parse(rawMisc) as Record<string, { value?: unknown }[] | undefined>;
+	const stated = misc.ontology18?.[0]?.value;
+	const properties: Record<string, unknown> =
+		stated !== null && typeof stated === 'object' && !Array.isArray(stated)
+			? { ...(stated as Record<string, unknown>) }
+			: {};
+	for (const [component, key] of Object.entries(FOLDED_PROPERTY_COMPONENTS)) {
+		const value = misc[component]?.[0]?.value;
+		if (value !== undefined && value !== null) properties[key] = value;
+	}
+	return Object.keys(properties).length > 0 ? properties : null;
+}
+
+/** Every record of the default domain ontologies' vendored packages, as {tipo, properties}. */
+export function defaultDomainOntologyNodes(): CorpusNode[] {
+	const nodes: CorpusNode[] = [];
+	for (const tld of DEFAULT_DOMAIN_ONTOLOGIES) {
+		const raw = gunzipSync(readFileSync(join(VENDORED_ONTOLOGY_DIR, `${tld}.copy.gz`))).toString(
+			'utf8',
+		);
+		for (const line of raw.split('\n')) {
+			if (line === '') continue;
+			const fields = line.split('\t');
+			const misc = unescapeCopyField(fields[COPY_MISC_COLUMN_INDEX] ?? '\\N');
+			nodes.push({ tipo: `${tld}${fields[0] ?? ''}`, properties: packageRecordProperties(misc) });
+		}
+	}
+	return nodes;
+}
+
+/** The whole shipped corpus: core seed rows + the default domain packages + the generic test TLD. */
 export function shippedOntologyNodes(): CorpusNode[] {
-	return [...seedOntologyNodes(), ...testTldOntologyNodes()];
+	return [...seedOntologyNodes(), ...defaultDomainOntologyNodes(), ...testTldOntologyNodes()];
 }
 
 /** key → the tipos that carry it, over the shipped corpus. */

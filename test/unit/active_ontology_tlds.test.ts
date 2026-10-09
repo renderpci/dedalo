@@ -18,6 +18,7 @@ import { describe, expect, test } from 'bun:test';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { dispatchGetWidgetValue } from '../../src/core/area_maintenance/widgets/registry.ts';
+import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
@@ -87,7 +88,7 @@ describe('ACTIVE_ONTOLOGY_TLDS config key', () => {
 		expect(JSON.parse(boot.stdout)).toEqual(['dd', 'hierarchy', 'lg']);
 	});
 
-	test('defaults to the mandatory core set when unset', () => {
+	test('defaults to the core set when unset', () => {
 		// NOT [] — an empty default made a fresh install's update panel offer only
 		// the core pair, importing no usable ontology.
 		const boot = bootConfigWith({
@@ -95,16 +96,11 @@ describe('ACTIVE_ONTOLOGY_TLDS config key', () => {
 			DEDALO_PREFIX_TIPOS: undefined,
 		});
 		expect(boot.exitCode).toBe(0);
-		expect(JSON.parse(boot.stdout)).toEqual([
-			'dd',
-			'rsc',
-			'ontology',
-			'ontologytype',
-			'hierarchy',
-			'lg',
-			'utoponymy',
-			'nexus',
-		]);
+		// The CORE set — the one list (src/core/ontology/core_tlds.ts), same order;
+		// the install seed carries exactly these (install_seed_drift_tripwire).
+		// Domain ontologies (oh, utoponymy, nexus…) are never in the fallback.
+		expect(CORE_ONTOLOGY_TLDS.length).toBeGreaterThan(0);
+		expect(JSON.parse(boot.stdout)).toEqual([...CORE_ONTOLOGY_TLDS]);
 	});
 });
 
@@ -159,7 +155,7 @@ describe('update_ontology panel wire key (WC-028)', () => {
 		}
 		// A fresh install (key unset) must still be offered a USABLE manifest, not
 		// the core pair alone: the mandatory TLDs are in the default.
-		for (const tld of ['dd', 'rsc', 'hierarchy', 'lg', 'nexus']) {
+		for (const tld of CORE_ONTOLOGY_TLDS) {
 			expect(tlds).toContain(tld);
 		}
 	});

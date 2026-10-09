@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - Installations now choose their domain ontologies (Oral history by default) and install what each one declares it depends on; the install database carries only the core ontologies and no test data.
     - New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.
     - "A publication host can now be installed with one guided command, `provision init`, on Debian, Ubuntu 24.04 and 26.04, and RHEL, Rocky or Alma 9 and 10 with SELinux; the Publication API v1 runs in a FastCGI pool of its own."
     - The publication host provisioner now refuses an instance declaration that anyone other than root could change.
@@ -1009,6 +1010,20 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Installations now choose their domain ontologies (Oral history by default) and install what each one declares it depends on; the install database carries only the core ontologies and no test data.** *(action needed)*
+
+    Until now every installation got the same ontologies, whatever it was for: the install database carried Oral history (`oh`) and the developers' test ontology, and nothing asked which heritage domains the institution catalogues. The command-line installer, the browser wizard and `install.sh` now ask ([installer reference](./install/installer_reference.md#domain-ontologies)).
+
+    - **The install database is core-only.** It carries the core ontologies (`dd`, `rsc`, `ontology`, `ontologytype`, `hierarchy`, `lg`) and nothing else. The developers' `test` ontology and the *test3* playground records are no longer installed; they exist only in the developers' test database.
+    - **At least one domain ontology is installed.** The default is Oral history (`oh`). It is built into the release, so it installs without a network. Any other ontology the update server offers can be chosen by its code. For example, `tch` (Tangible cultural heritage) is the general inventory model for objects and collections. The wizard has a new *Ontologies* step. The command line takes `--ontologies oh,tch` and lists the server's catalog with `--list-ontologies`. `install.sh` asks one more question.
+    - **Dependencies come with the choice.** An ontology server now publishes, for each ontology, the ontologies it needs. The installer installs them too, before the ontology that needs them, and says so ("tch also installs: …"). An older server that does not publish them gets a clear warning: the chosen ontology is installed alone, and nothing is guessed. After the import, the installer checks that every node of the installed ontologies can find the nodes it refers to. Anything missing is reported as a warning that names the ontology to add. On an ontology master, an editor declares the dependencies in the new *Required ontologies* field of each ontology's record (Ontology › Ontologies main), and they are published with the next export ([updating the ontology](./management/updates/updating_ontology.md#declaring-what-an-ontology-requires)). Importing an ontology (at install time or with the update panel) keeps its declaration in that field, so a master that imports its ontologies from another master publishes them too.
+    - **Fully offline installs.** `--ontology-source <dir|archive>` installs from a directory (or a `.tar`/`.tar.gz`/`.tgz`) laid out like an ontology server's export. It is a command-line option only: the browser wizard installs from the configured ontology server or the built-in ontologies. An air-gapped install (`--no-update-servers`) is offered only the built-in `oh`.
+    - **Nothing is half-installed.** The ontology files are downloaded and checked *before* the database is touched. If an import fails, the install stops and is not sealed. Recreate the database and run the installer again.
+    - **`ACTIVE_ONTOLOGY_TLDS` is written by the installer** (the core, the chosen ontologies and their dependencies), so the ontology update panel refreshes exactly what the installation carries. When the key is unset, the engine's fallback is now the core list alone: `utoponymy` and `nexus` are no longer in it. **Action needed: if your `/private/.env` has no `ACTIVE_ONTOLOGY_TLDS` and your installation uses `utoponymy` or `nexus`, add the key with them** (for example `ACTIVE_ONTOLOGY_TLDS=["dd","rsc","ontology","ontologytype","hierarchy","lg","oh","utoponymy","nexus"]`), or the update panel stops refreshing them.
+    - On a development server, the maintenance *Unit test area*'s *Truncate test table and Create new empty test record* now refuses on a database that has no test ontology (`maintenance.action_refused`). That is any installation's database. The message names the developers' test database as the place where the playground lives.
+
+    Wire contract: `WC-2026-10-09-ontology-manifest-dependencies`, `WC-2026-10-09-install-domain-ontologies`, `WC-2026-10-01-unit-test-widget-dev-gate`.
+
 - **The guided publication-host install now proposes the v1 database connection it finds on the host.**
 
     `provision init` asks how the v1 Publication API reaches MariaDB: through its unix socket or over TCP. Until now the proposed answer was always the socket, even on a host without a local MariaDB. Init now looks for a local MariaDB socket (`/run/mysqld/mysqld.sock` on Debian and Ubuntu, `/var/lib/mysql/mysql.sock` on RHEL, Rocky and Alma). It proposes that socket when one exists, and otherwise TCP to `127.0.0.1:3306`, saying whether anything listens there. The question is still yours to answer. For TCP the proposed host is `127.0.0.1`, never `localhost`, because v1's database driver reads `localhost` as "use the socket" whatever the port. See [Publication host agent](./install/publication_host.md#the-three-lists).
@@ -1790,7 +1805,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 106 entries"
+??? note "Wire contract — 108 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -1896,6 +1911,8 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-08-install-ip-denied-names-address`
     - `WC-2026-10-08-install-plan-update-servers-core-lg`
     - `WC-2026-10-08-make-backup-scheduled-evidence`
+    - `WC-2026-10-09-install-domain-ontologies`
+    - `WC-2026-10-09-ontology-manifest-dependencies`
     - `WC-2026-10-09-publication-host-panel-setup`
     - `WC-2026-10-09-publication-host-v2-only-site`
 

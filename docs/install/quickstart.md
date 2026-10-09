@@ -90,9 +90,10 @@ Then it asks for:
 | Optional thesauri to install now | controlled vocabularies to load: codes, `default` or `none` | `default` — today Spain (`es`); you can add others later |
 | Locale, time zone | the time zone stamps every record | your own |
 | Use the official update server | where ontology updates and release information come from (`v7.master.dedalo.dev`) | `Y` (the default). Answer `n` for an air-gapped install: no updates are offered until you add `ONTOLOGY_SERVERS` and `CODE_SERVERS` to `/private/.env` |
+| Domain ontologies to install | the heritage domains you catalogue: ontology codes, comma-separated, or `default` | `default` — Oral history (`oh`), built in, installs without a network. `tch` (Tangible cultural heritage) is the general inventory model for objects and collections; it and any other code the update server offers are downloaded, with the ontologies they depend on. Air-gapped, only `oh` is possible |
 | Password for root | the administrator account | choose a strong one and store it |
 
-The **Languages** thesaurus is not a question: it is part of every installation and is activated together with the database.
+The **Languages** thesaurus is not a question: it is part of every installation and is activated together with the database. Neither are the **core ontologies** (`dd`, `rsc`, `ontology`, `ontologytype`, `hierarchy`, `lg`): they come with the database. An installation receives no demo or test data. See [Domain ontologies](installer_reference.md#domain-ontologies) for what the ontology answer installs.
 
 Then it builds the image (slow the first time — it is downloading the media toolchain), starts PostgreSQL, installs Dédalo, and starts the server. The database password is generated for you; nobody ever needs to type it.
 
@@ -112,7 +113,7 @@ When it finishes, open the `https://…` address it prints and log in as **root*
 ./install.sh --wizard
 ```
 
-It asks the **certificate** question above and **who may reach the wizard** — it suggests the private address ranges, which cover this machine and your local network and nothing on the public internet — sets HTTPS up, starts everything, and stops. Then you open the `https://…` address it prints and answer the rest in the browser (languages, thesauri and the update server included): because nothing is configured yet, the engine serves the **install wizard** instead of a login form. The screens are described in the [installer reference](installer_reference.md#the-browser-wizard).
+It asks the **certificate** question above and **who may reach the wizard** — it suggests the private address ranges, which cover this machine and your local network and nothing on the public internet — sets HTTPS up, starts everything, and stops. Then you open the `https://…` address it prints and answer the rest in the browser (languages, thesauri, the update server and the domain ontologies included): because nothing is configured yet, the engine serves the **install wizard** instead of a login form. The screens are described in the [installer reference](installer_reference.md#the-browser-wizard).
 
 !!! warning "TLS comes first here, and that is not an accident"
     The wizard sends the root password **you are about to choose** across the network. Over plain HTTP anyone on the same switch reads it. So the certificate is set up before the wizard is served, not as a step inside it.

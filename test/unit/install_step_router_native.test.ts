@@ -15,6 +15,13 @@
  * compat mirror (`result`) was DELETED on 2026-08-16
  * (WC-2026-08-16-error-envelope-compat-removal): `data` is the only channel.
  *
+ * THE ONTOLOGY STEPS (installer unification A4, 2026-10-09): get_ontology_catalog
+ * / stage_ontologies / install_ontologies are routable WITHOUT a session (they
+ * run before the in-wizard login); the probe with the update-server box off
+ * answers the built-in view with no network; the two actions refuse
+ * install.state_conflict on an unconfigured / unstaged install (a CHILD with a
+ * scratch private dir — never the live one).
+ *
  * Scratch namespace: zzi. No DB writes; the one filesystem-touching arm
  * (check_directories) runs in a CHILD process pointed at a scratch private/
  * media/backup root, and is SKIPPED unless every resolved directory is under it
@@ -28,7 +35,12 @@ import { join } from 'node:path';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
-import { runInstallStep } from '../../src/core/install/engine.ts';
+import { INSTALL_ROUTER_ACTIONS, runInstallStep } from '../../src/core/install/engine.ts';
+import { buildInstallPlan, cliBootEnv } from '../../src/core/install/install_plan.ts';
+import {
+	describeOntologyCatalog,
+	vendoredOntologyCatalog,
+} from '../../src/core/install/ontology_choice.ts';
 
 /** The DedaloError a step threw, or null when it returned a body. */
 async function refusalOf(
@@ -126,6 +138,120 @@ describe('runInstallStep — install_hierarchies takes the PLAN normalization', 
 		expect(body.msg).toContain('lg is a core hierarchy (always activated) — dropped from the list');
 	});
 });
+
+describe('runInstallStep — the ontology steps', () => {
+	test('the three ontology steps are routable', () => {
+		for (const step of ['get_ontology_catalog', 'stage_ontologies', 'install_ontologies']) {
+			expect(INSTALL_ROUTER_ACTIONS).toContain(step);
+		}
+	});
+
+	test('get_ontology_catalog with the update-server box off: the built-in view, no network, no session', async () => {
+		const r = await runInstallStep(
+			stepRqo({ action: 'get_ontology_catalog', update_servers: false }),
+			anonContext(),
+		);
+		const body = r.body as unknown as {
+			ok: boolean;
+			data: unknown;
+			msg: string;
+			catalog: { entries: { tld: string }[] };
+			warnings: string[];
+		};
+		expect(body.ok).toBe(true);
+		expect(body.data).toBe(true);
+		expect(body.msg).toBe('Air-gapped: only the built-in ontologies are offered');
+		expect(body.catalog).toEqual(describeOntologyCatalog(vendoredOntologyCatalog()) as never);
+		expect(body.catalog.entries.map((entry) => entry.tld)).toEqual(['oh']);
+		expect(body.warnings).toEqual([]);
+	});
+
+	test('stage_ontologies / install_ontologies refuse an unconfigured, unstaged install — no session asked', () => {
+		const outcome = runOntologyStepsChild();
+		expect(outcome.stage).toEqual({
+			code: 'install.state_conflict',
+			message: 'ACTIVE_ONTOLOGY_TLDS was not written — save the configuration first',
+		});
+		expect(outcome.install).toEqual({
+			code: 'install.state_conflict',
+			message: 'No staged ontology files — run stage_ontologies first',
+		});
+	});
+});
+
+describe('runInstallStep — persist_config never takes a server path from the wizard', () => {
+	// `ontology_source` names a path on the SERVER (a directory read, an archive
+	// gunzipped + walked): CLI-only. The post deliberately omits the database
+	// fields and chooses a non-vendored TLD, so even an unguarded door would
+	// reach the path read (the oracle) and then refuse at the plan — never write.
+	const post = (ontologySource: unknown) => ({
+		action: 'persist_config',
+		ontologies: ['zzi'],
+		update_servers: false,
+		ontology_source: ontologySource,
+	});
+
+	test('refused install.invalid_input with ONE text, whatever the path is', async () => {
+		const missing = await refusalOf(post('/zzi_nonexistent_ontology_source'));
+		const directory = await refusalOf(post(ROOT));
+		const file = await refusalOf(post(join(ROOT, 'package.json')));
+		expect(missing?.code).toBe('install.invalid_input');
+		expect(missing?.message).toContain('ontology_source is a command-line answer');
+		// no file-existence / file-type oracle: the three answers are identical
+		expect(directory).toEqual(missing);
+		expect(file).toEqual(missing);
+		expect(missing?.message).not.toContain('no such file or directory');
+		expect(missing?.message).not.toContain('/zzi_nonexistent_ontology_source');
+	});
+
+	test('a non-string value is refused the same way', async () => {
+		const refusal = await refusalOf(post({ path: '/tmp' }));
+		expect(refusal?.code).toBe('install.invalid_input');
+		expect(refusal?.message).toContain('ontology_source is a command-line answer');
+	});
+});
+
+/**
+ * The two ontology ACTIONS in a child whose configuration is a FRESH machine:
+ * an empty private dir (no .env → no ACTIVE_ONTOLOGY_TLDS) and an empty
+ * installer private dir (nothing staged). Answers each step's refusal.
+ */
+function runOntologyStepsChild(): Record<string, unknown> {
+	const scratch = join(tmpdir(), `dedalo_zzi_ontology_steps_${process.pid}`);
+	const snippet = [
+		"const { runInstallStep } = await import('./src/core/install/engine.ts');",
+		"const ctx = { requestId: 'zzi', clientIp: '127.0.0.1', session: null, csrfCandidate: null };",
+		'const refusal = async (action) => {',
+		"  try { await runInstallStep({ action: 'install', options: { action } }, ctx); return null; }",
+		'  catch (error) { return { code: error.code, message: error.message }; }',
+		'};',
+		"console.log(JSON.stringify({ stage: await refusal('stage_ontologies'), install: await refusal('install_ontologies') }));",
+	].join('\n');
+	const childEnv: Record<string, string | undefined> = { ...process.env };
+	childEnv.ACTIVE_ONTOLOGY_TLDS = undefined;
+	// A configured process's mandatory keys (the scratch private dir has no .env to
+	// carry them): the plan's own boot environment for a database named `zzi` that
+	// does not exist — both refusals must come before any query.
+	const boot = cliBootEnv(
+		buildInstallPlan({ db_database: 'zzi', db_username: 'zzi', entity: 'zzi' }),
+	);
+	const child = Bun.spawnSync(['bun', '-e', snippet], {
+		cwd: ROOT,
+		env: {
+			...childEnv,
+			...boot,
+			DEDALO_PRIVATE_DIR: join(scratch, 'private'),
+			DEDALO_INSTALL_PRIVATE_DIR: join(scratch, 'install_private'),
+		} as Record<string, string>,
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	const lastLine = (child.stdout.toString().trim().split('\n').pop() ?? '').trim();
+	if (child.exitCode !== 0 || lastLine === '') {
+		throw new Error(`ontology steps child failed (${child.exitCode}): ${child.stderr.toString()}`);
+	}
+	return JSON.parse(lastLine) as Record<string, unknown>;
+}
 
 describe('runInstallStep — test_db_connection', () => {
 	test('routes to the db probe and stops at the required-field guard', async () => {

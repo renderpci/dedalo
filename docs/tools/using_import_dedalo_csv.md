@@ -85,7 +85,7 @@ What an append does depends on the component:
 
 **Repeated rows accumulate.** Two rows with the same `section_id` both append, in file order.
 
-Example, on the `test` section `test3` that ships with Dédalo (`test80` is its `component_portal` to `test3` records, `test100` its `component_geolocation`, `test17` its `component_text_area`), all three columns in *Append* mode:
+Example, on the `test` section `test3` — the developers' playground, present in the test suite's database (`bun run test:client:server` serves it), not in an installation — (`test80` is its `component_portal` to `test3` records, `test100` its `component_geolocation`, `test17` its `component_text_area`), all three columns in *Append* mode:
 
 ```text
 section_id;test80;test100;test17

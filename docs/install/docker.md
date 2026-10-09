@@ -464,6 +464,14 @@ What each part is doing:
   from. Add `--no-update-servers` for an air-gapped instance (both written as
   `[]`). On this stack a new **code** release still arrives as a new image, as
   described in [upgrading](#upgrading); that is unchanged.
+- No `--ontologies`: the default domain ontology, Oral history (`oh`), is
+  installed from the copy built into the image, so this works offline. Name the
+  domains you catalogue instead — `--ontologies oh,tch`, for instance — and the
+  installer downloads them (with the ontologies they declare as dependencies)
+  from the update server before it touches the database. An air-gapped instance
+  can install more than `oh` from a copied ontology export with
+  `--ontology-source <dir|archive>` (mount it into the container). See
+  [Domain ontologies](installer_reference.md#domain-ontologies).
 
 Every flag is in the [installer reference](installer_reference.md). The run ends
 by verifying an actual root login — if it prints success, the instance is real.
@@ -472,7 +480,7 @@ The installer prints one `→` line per step. **Where it stopped decides what yo
 do next:**
 
 - **Before `→ restore database from seed`** (pre-flight, database connection,
-  write `.env`, directories): nothing is in the database yet. Fix the cause and
+  write `.env`, directories, ontology files): nothing is in the database yet. Fix the cause and
   run the same command again — the `.env` it already wrote is reused, and the
   secrets it generated are kept.
 - **At or after `→ restore database from seed`:** see the danger box below.

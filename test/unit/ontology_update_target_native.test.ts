@@ -24,6 +24,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 import { MATRIX_COPY_COLUMNS } from '../../src/core/db/matrix_write.ts';
+import { updateOntologyOptionsSchema } from '../../src/core/ontology/ontology_update.ts';
 import {
 	type OntologyUpdateFile,
 	resolveUpdateTarget,
@@ -211,6 +212,28 @@ describe('stageOntologyFiles (local master)', () => {
 		if ('errors' in out) throw new Error(`unexpected staging failure: ${out.errors.join('; ')}`);
 		expect(out.staged[0]).toMatchObject({ typologyId: 7, nameData: { lg_spa: 'Español' } });
 		expect(out.staged[1]).toMatchObject({ typologyId: null, nameData: null });
+	});
+
+	test('declared dependencies are carried normalized; absent stays NOT declared (null)', async () => {
+		const dirs = makeDirs();
+		for (const tld of ['es', 'fr', 'matrix_dd']) writeLocalPackage(dirs.ioPath, tld);
+		// what the update panel posts: the manifest's own field, through the options schema
+		const options = updateOntologyOptionsSchema.parse({
+			server: { name: 'zz', url: 'https://zz.invalid/api/', code: 'zz' },
+			files: [
+				fileEntry({ tld: 'matrix_dd' }),
+				{ ...fileEntry({ tld: 'es' }), dependencies: [' DD ', 'es', 'fr', 'dd', 7] },
+				fileEntry({ tld: 'fr' }),
+			],
+		});
+		const out = await stageOntologyFiles(options.files, local, dirs);
+		if ('errors' in out) throw new Error(`unexpected staging failure: ${out.errors.join('; ')}`);
+		expect(out.staged.map((file) => [file.tld, file.dependencies])).toEqual([
+			['matrix_dd', null],
+			['es', ['dd', 'fr']],
+			['fr', null],
+		]);
+		expect(out.messages).toEqual(["'es' declares a dependency that is not a TLD (7) — ignored"]);
 	});
 
 	test('a missing local package refuses with its own msg and stages nothing', async () => {

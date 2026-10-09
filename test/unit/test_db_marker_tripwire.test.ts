@@ -30,11 +30,13 @@
  *     the database it names, sha256-shaped provenance, and the DB-level
  *     constraints (one row only, purpose pinned) that make it impossible to
  *     create by accident.
- *  4. THE INSTALLER IS THE ONLY BYPASS. `allowAnyDatabase` appears in exactly
- *     two files — the door that defines it and `src/core/install/db_restore.ts`,
- *     which materializes the `test` TLD ONTOLOGY (definitions, no records) on a
- *     fresh real install. Asserted as source AND exercised behaviourally: the
- *     installer's call shape succeeds with no marker present.
+ *  4. NO BYPASS (installer unification A2, 2026-10-09). The installer used to
+ *     materialize the `test` TLD on every fresh install through an
+ *     `allowAnyDatabase` opt-out; the install seed is now core-only and an
+ *     installation receives no test fixture at all, so the opt-out is DELETED.
+ *     Asserted as source (the word occurs in no engine source, comments
+ *     stripped) AND behaviourally: the old installer call shape, smuggled past
+ *     the type checker, REFUSES on a database with no marker.
  *  5. ONE PRODUCER. `writeTestDatabaseMarker` is called from
  *     `scripts/test_db_setup.ts` and nowhere else, and no install seed,
  *     migration or engine module so much as names the table.
@@ -216,7 +218,7 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 	'test/helpers/media_copy_mock_agent.ts':
 		"WRITES NO DATABASE DATA — the phase-5 stateful mock copy agent: it keeps the agent's files and markers IN MEMORY, binds a unix socket in a 0700 mkdtemp dir under /tmp, and writes host records, tokens and runtime rows only through the publication-host stores while they resolve under the scratch base publication_host_fixtures.ts declares (useScratchMediaCopyStores arms it, plus a mkdtemp sha-cache dir). No database connection, no media root, never the live <private>.",
 	'src/core/test_data/seed.ts':
-		'NOT A TEST-ONLY WRITER: `resetTestSection`/`restoreCanonicalTest3` write the test3 PLAYGROUND records that every install seed ships, and they are called by the INSTALLER (src/core/install/db_restore.ts) and by the maintenance area widget (area_maintenance/widgets/unit_test.ts) — both on a real database, by design.',
+		"NOT A TEST-ONLY WRITER: `resetTestSection`/`restoreCanonicalTest3` write the test3 PLAYGROUND records, and the reset is also the dev-mode maintenance widget (area_maintenance/widgets/unit_test.ts) on whatever database a DEV server runs — refused there unless the test TLD is installed (the playground is the suite's: the install seed is core-only). The suite reaches it through scripts/test_db_setup.ts and the test preload, both after the marker exists.",
 };
 
 /** Every `.ts` under the writer roots (tests excluded), repo-relative. */
@@ -568,14 +570,18 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 ];
 
 describe('rule 2 — every door refuses without the marker', () => {
-	test('all doors refuse, naming themselves, and the bypass still works', async () => {
+	test('all doors refuse, naming themselves — the retired installer bypass included', async () => {
 		const outcome = await withoutMarker(async () => {
 			const refusals: Record<string, string | null> = {};
 			for (const door of DOORS) refusals[door.name] = await refusalOf(door.run);
-			// RULE 4, behavioural half: the installer's call shape is the ONE
-			// thing that still works on a database with no marker.
+			// RULE 4, behavioural half: the RETIRED installer call shape (the
+			// `allowAnyDatabase` opt-out, smuggled past the type checker) must
+			// refuse like any other call — there is no bypass left.
 			const installer = await refusalOf(async () =>
-				materializeTestTldOntology({ allowAnyDatabase: true, doc: { tld: 'zzq', nodes: [] } }),
+				materializeTestTldOntology({
+					allowAnyDatabase: true,
+					doc: { tld: 'zzq', nodes: [] },
+				} as never),
 			);
 			return { refusals, installer };
 		});
@@ -598,8 +604,9 @@ describe('rule 2 — every door refuses without the marker', () => {
 
 		expect(
 			outcome.installer,
-			'the installer bypass (allowAnyDatabase) must still work on a database with no marker — a fresh install has none',
-		).toBeNull();
+			'the retired installer bypass (allowAnyDatabase) must REFUSE on a database with no marker — no bypass exists',
+		).not.toBeNull();
+		expect(outcome.installer ?? '').toContain('materializeTestTldOntology');
 	});
 
 	test('nothing the refused doors touch was written (the rollback restored the marker)', async () => {
@@ -710,7 +717,7 @@ describe('rule 3 — the marker on the suite database', () => {
 });
 
 // ---------------------------------------------------------------------------
-// RULES 4 + 5 — the one bypass, the one producer.
+// RULES 4 + 5 — no bypass, the one producer.
 // ---------------------------------------------------------------------------
 
 /** Every tracked `.ts` under `src/`, `tools/` and `scripts/`, repo-relative. */
@@ -725,35 +732,24 @@ function engineSources(): string[] {
 	return files.sort();
 }
 
-describe('rule 4 — the installer is the only bypass', () => {
-	test('`allowAnyDatabase` occurs in exactly the door and the installer', () => {
+describe('rule 4 — no bypass of the marker exists', () => {
+	test('`allowAnyDatabase` occurs in no engine source (comments stripped)', () => {
 		const users = engineSources().filter((file) =>
 			stripComments(read(file)).includes('allowAnyDatabase'),
 		);
 		expect(
 			users,
-			'A SECOND bypass of the test-database marker. The installer is the one legitimate caller (a fresh install has no marker and gets the `test` TLD ONTOLOGY, definitions only); anything else must build a test database.',
-		).toEqual(['src/core/install/db_restore.ts', 'src/core/test_data/test_tld_materialize.ts']);
+			'A bypass of the test-database marker came back. An installation receives no test fixture (the install seed is core-only); a writer that needs the test TLD must run on a database built by `bun run test:db:setup`.',
+		).toEqual([]);
+		// Anti-vacuity: the census reads the door and the installer it used to name.
+		expect(engineSources()).toContain('src/core/test_data/test_tld_materialize.ts');
+		expect(engineSources()).toContain('src/core/install/db_restore.ts');
 	});
 
-	test('the installer uses it for the ontology door only', () => {
-		const source = stripComments(read('src/core/install/db_restore.ts'));
-		// Checked by STRUCTURE, not by formatting. This used to pin the call as one
-		// exact line, so adding an argument to it (the install/suite `scope`, 2026-08-21)
-		// reddened a gate whose subject had not changed at all. What matters is that
-		// the bypass appears ONCE and appears INSIDE the ontology door's argument
-		// list — a second use, or one attached to any other call, is the thing this
-		// rule exists to catch.
-		const occurrences = source.split('allowAnyDatabase').length - 1;
-		expect(occurrences, 'the installer may bypass the marker exactly once').toBe(1);
-		const flagAt = source.indexOf('allowAnyDatabase');
-		const doorAt = source.lastIndexOf('materializeTestTldOntology(', flagAt);
-		expect(
-			doorAt,
-			'`allowAnyDatabase` is not inside a materializeTestTldOntology call',
-		).toBeGreaterThan(-1);
-		// Nothing closes that call between the door and the flag.
-		expect(source.slice(doorAt, flagAt)).not.toContain(')');
+	test('the installer restore never calls the test-TLD door', () => {
+		expect(stripComments(read('src/core/install/db_restore.ts'))).not.toContain(
+			'materializeTestTldOntology',
+		);
 	});
 });
 

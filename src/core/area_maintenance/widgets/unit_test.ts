@@ -14,10 +14,12 @@
 
 import { CLIENT_LIBS, isDevMode } from '../../client_libs/registry.ts';
 import { resolveClientLibPath } from '../../client_libs/serving.ts';
+import { readDdOntologyRow } from '../../db/dd_ontology.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import type { Principal } from '../../security/permissions.ts';
+import { CANONICAL_SECTION_TIPO } from '../../test_data/manifest.ts';
 import { resetTestSection } from '../../test_data/seed.ts';
-import type { WidgetModule, WidgetResponse } from './support.ts';
+import { refuseAction, type WidgetModule, type WidgetResponse } from './support.ts';
 
 /**
  * What this installation can offer the unit-test panel — the catalog `value` the
@@ -69,6 +71,16 @@ async function unitTestCreateTestRecord(): Promise<WidgetResponse> {
 		throw new DedaloError('maintenance.dev_mode_required', {
 			coordinates: { widget_action: 'unit_test.create_test_record' },
 		});
+	}
+	// The test3 playground is the SUITE's: an installation's seed carries no
+	// `test` TLD (installer unification A2), so on a dev server running an
+	// installation's database the section does not exist and a reset would
+	// write records no ontology describes. Refused BEFORE the TRUNCATE.
+	if ((await readDdOntologyRow(CANONICAL_SECTION_TIPO)) === null) {
+		refuseAction(
+			`The test TLD is not installed on this database: the ${CANONICAL_SECTION_TIPO} playground exists only in the suite database (bun run test:db:setup, browse it with bun run test:client:server). Nothing was written.`,
+			{ widget_action: 'unit_test.create_test_record' },
+		);
 	}
 	await resetTestSection();
 	return { data: true, msg: 'OK. Request done unit_test::create_test_record' };

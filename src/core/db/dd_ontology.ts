@@ -694,6 +694,57 @@ export async function getPopulatedTlds(): Promise<string[]> {
 	return populatedTldsCache;
 }
 
+/**
+ * The structural columns of every node of `tlds` — what the reference
+ * classifier (ontology/ontology_references.ts) measures, plus `model` (null
+ * when the node's model could not be resolved at derive time). Read-only,
+ * uncached (the installer's post-import verification needs the current state).
+ */
+export async function readDdOntologyReferenceRows(tlds: readonly string[]): Promise<
+	{
+		tipo: string;
+		tld: string | null;
+		parent: string | null;
+		model: string | null;
+		model_tipo: string | null;
+		relations: { tipo?: unknown }[] | null;
+	}[]
+> {
+	if (tlds.length === 0) return [];
+	return (await sql`
+		SELECT tipo, tld, parent, model, model_tipo, relations
+		  FROM dd_ontology
+		 WHERE tld = ANY(string_to_array(${tlds.join(',')}, ','))
+		 ORDER BY id
+	`) as {
+		tipo: string;
+		tld: string | null;
+		parent: string | null;
+		model: string | null;
+		model_tipo: string | null;
+		relations: { tipo?: unknown }[] | null;
+	}[];
+}
+
+/** Which of `tipos` exist in dd_ontology. Read-only, uncached. */
+export async function existingDdOntologyTipos(tipos: readonly string[]): Promise<Set<string>> {
+	if (tipos.length === 0) return new Set();
+	const rows = (await sql`
+		SELECT tipo FROM dd_ontology
+		 WHERE tipo = ANY(string_to_array(${[...new Set(tipos)].join(',')}, ','))
+	`) as { tipo: string }[];
+	return new Set(rows.map((row) => row.tipo));
+}
+
+/** The model nodes' parent links (the model tree the diffusion-model set is walked over). */
+export async function readDdOntologyModelParents(): Promise<
+	{ tipo: string; parent: string | null }[]
+> {
+	return (await sql`
+		SELECT tipo, parent FROM dd_ontology WHERE is_model = true
+	`) as { tipo: string; parent: string | null }[];
+}
+
 /** Register the TLD caches with the invalidation hub (dropped on any write). */
 registerOntologyCacheClearer(() => {
 	activeTldsCache = null;

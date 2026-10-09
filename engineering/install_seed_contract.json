@@ -1,0 +1,23 @@
+{
+	"_doc": "The CORE install seed's (install/db/dedalo_install.pgsql.gz) structural DEPENDENCY-class references to tipos it does not hold — EXACT set, shrink-only. Measured by src/core/ontology/ontology_references.ts over the seed's dd_ontology rows (diffusion model set derived from the same rows); graft and diffusion references are soft by RULE and never listed. Gate: test/unit/install_seed_drift_tripwire.test.ts (the measured set must equal this list exactly, every reason non-empty). An entry leaves when the core ontology on the master stops naming the domain tipo and the seed is rebuilt (bun run seed:build); a NEW entry means the core gained a hard reference into a domain ontology — fix the core, do not extend this list without a stated reason.",
+	"known_dangling_dependencies": [
+		{
+			"from": "dd38",
+			"field": "relations",
+			"to": "oh1",
+			"reason": "dd38 'Name' (component_input_text in the Layout section dd30, group dd33) relates to oh1, the Oral History SECTION. Without oh the relation names a section the installation does not have: the component still edits its own text; only the related-section hint resolves to nothing. Installed by default (oh is the default domain ontology)."
+		},
+		{
+			"from": "dd1139",
+			"field": "relations",
+			"to": "ww36",
+			"reason": "dd1139 'Code' (component_json in the 'web dedalo' section dd1100, group dd1391) relates to ww36 'Location' (a component_autocomplete_hi of the ww web ontology). Without ww the relation is unresolved; the JSON component itself keeps working."
+		},
+		{
+			"from": "rsc973",
+			"field": "relations",
+			"to": "tch445",
+			"reason": "rsc973 is the section_list (list columns) of the core section rsc949 'Storage conditions'; one column is tch445 'Title', a component tch GRAFTS into rsc949's Identification group (rsc950). Without tch the node does not exist and the list simply lacks that column; the other five columns resolve."
+		}
+	]
+}

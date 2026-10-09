@@ -11,10 +11,12 @@
  * `server_info` (cosmetic grid), `db_config` prefill, `db_data_version` ([] hides
  * the unsupported v5/v6 "To update" button), `target_file_path`(+`_exists`),
  * `hierarchies`/`hierarchy_typologies`/`install_checked_default`/`core_hierarchies`,
- * `update_servers`.
+ * `update_servers`, `ontologies` (the domain-ontology screen: default, core, and
+ * the OFFLINE catalog view — the server's is fetched by get_ontology_catalog).
  */
 
 import { existsSync } from 'node:fs';
+import { CORE_ONTOLOGY_TLDS } from '../ontology/core_tlds.ts';
 import { currentApplicationLang } from '../resolve/request_lang.ts';
 import { DEDALO_VERSION } from '../update/version.ts';
 import {
@@ -26,6 +28,11 @@ import {
 import { runInitTest } from './init_test.ts';
 import { OFFICIAL_CODE_SERVER, OFFICIAL_ONTOLOGY_SERVER } from './install_plan.ts';
 import { INSTALL_DEFAULT_LANG_CODES, INSTALL_LANG_CATALOG } from './lang_catalog.ts';
+import {
+	DEFAULT_DOMAIN_ONTOLOGIES,
+	describeOntologyCatalog,
+	vendoredOntologyCatalog,
+} from './ontology_choice.ts';
 import { SEED_DUMP_PATH } from './paths.ts';
 import { buildInstallServerInfo } from './server_info.ts';
 
@@ -69,6 +76,15 @@ export function buildInstallContext(): Record<string, unknown> {
 					ontology: { name: OFFICIAL_ONTOLOGY_SERVER.name, url: OFFICIAL_ONTOLOGY_SERVER.url },
 					code: { name: OFFICIAL_CODE_SERVER.name, url: OFFICIAL_CODE_SERVER.url },
 				},
+			},
+			// DOMAIN ONTOLOGIES (A4): `default` pre-ticked (the CLI's default reads the
+			// same constant), `core` shown as fixed rows, `offline` = the built-in
+			// catalog view (no network here — the server's view is the
+			// get_ontology_catalog probe, called when the update-server box is ticked).
+			ontologies: {
+				default: [...DEFAULT_DOMAIN_ONTOLOGIES],
+				core: [...CORE_ONTOLOGY_TLDS],
+				offline: describeOntologyCatalog(vendoredOntologyCatalog()),
 			},
 			// LANGUAGES: the curated labelled catalog the wizard offers (code→label),
 			// the default working languages pre-checked (the rest optional), plus the

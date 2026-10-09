@@ -294,7 +294,7 @@ sudo -u dedalo --preserve-env=DB_PASSWORD,DEDALO_INSTALL_ROOT_PASSWORD \
     --data-lang lg-eng
 ```
 
-No `--hierarchies` here: the shared default set of optional thesauri (today Spain, `es`) is installed, and the Languages thesaurus (`lg`) is activated with the database on every install — it is not something to select. Pass `--hierarchies none` to skip the optional ones, or a list such as `--hierarchies es,fr`. The installer also writes `ONTOLOGY_SERVERS` and `CODE_SERVERS` naming the official Dédalo update server; add `--no-update-servers` for an air-gapped server that must never be offered an update. Run the same command with `--plan` first to see the keys and steps it would produce, without touching anything — every flag is in the [installer reference](installer_reference.md#command-line-flags).
+No `--hierarchies` here: the shared default set of optional thesauri (today Spain, `es`) is installed, and the Languages thesaurus (`lg`) is activated with the database on every install — it is not something to select. No `--ontologies` either: the default domain ontology, Oral history (`oh`), is installed from the copy built into the release. Name the domains your institution catalogues instead — for example `--ontologies oh,tch` (`tch`, Tangible cultural heritage, is the general inventory model for objects and collections) — and the installer downloads them from the update server, with the ontologies they declare as dependencies, before it touches the database; `bun run scripts/install.ts --list-ontologies` shows what the server offers. See [Domain ontologies](installer_reference.md#domain-ontologies). Pass `--hierarchies none` to skip the optional ones, or a list such as `--hierarchies es,fr`. The installer also writes `ONTOLOGY_SERVERS` and `CODE_SERVERS` naming the official Dédalo update server; add `--no-update-servers` for an air-gapped server that must never be offered an update. Run the same command with `--plan` first to see the keys and steps it would produce, without touching anything — every flag is in the [installer reference](installer_reference.md#command-line-flags).
 
 8.3 Clean up
 
@@ -395,7 +395,7 @@ Then close the tunnel, **skip step 10** (the unit is already installed and runni
 
 ### 9. Configure the instance (optional)
 
-The installer wrote `../private/.env` — the database, entity, languages, the generated secret, and (from step 8's flags) `MEDIA_PATH`, `SERVER_UNIX_SOCKET` and `DEDALO_MEDIA_ACCESS_MODE`. **The instance is fully configured to boot.** Everything below is *optional*: production tuning, and a hardening checklist that only restates the safe defaults. Change nothing and the install is still correct — skip to step 10.
+The installer wrote `../private/.env` — the database, entity, languages, the generated secret, the update servers, `ACTIVE_ONTOLOGY_TLDS` (the core ontologies plus the domain ontologies it installed), and (from step 8's flags) `MEDIA_PATH`, `SERVER_UNIX_SOCKET` and `DEDALO_MEDIA_ACCESS_MODE`. **The instance is fully configured to boot.** Everything below is *optional*: production tuning, and a hardening checklist that only restates the safe defaults. Change nothing and the install is still correct — skip to step 10.
 
 !!! danger "`.env` is append-only, documented keys only"
     Add keys; never rewrite the file by hand. A re-run of the installer preserves every key it does not manage, but a key you delete is gone. Each key is documented in `../private/sample.env` and the [configuration reference](../config/index.md).
@@ -416,9 +416,6 @@ DB_STATEMENT_TIMEOUT_MS=60000    # 0 (off) by default — cap one runaway query
 # --- Observability ---
 DEDALO_ACCESS_LOG=true
 DEDALO_SLOW_REQUEST_MS=5000
-
-# --- Ontology ---
-ACTIVE_ONTOLOGY_TLDS=dd,rsc,ontology,ontologytype,hierarchy,lg,utoponymy,nexus,oh,ich   # core set + this install's domain TLDs
 ENV
 ```
 
@@ -569,8 +566,8 @@ The whole subsystem is defined in `engineering/MEDIA_PROTECTION.md`; the adminis
 3. Create an **admin user**, log out, log back in as that admin. Keep `root` for emergencies.
 4. Create your **users and projects** — see [users and permissions](../management/users_and_permissions.md).
 
-!!! warning "A fresh install ships demo data"
-    The default install path seeds the canonical **`test3` playground section** — a small set of sample records used by the test suite and by the component documentation. It is harmless, but it is not yours. Delete the `test3` section's records from the section list once you no longer need them, or hide the section from the menu with `DEDALO_ENTITY_MENU_SKIP_TIPOS`.
+!!! note "Your ontologies"
+    The installation carries the core ontologies and the domain ontologies you chose at step 8 (Oral history, `oh`, by default) — no demo or test data. To add a domain later (for example `tch`), add its code to `ACTIVE_ONTOLOGY_TLDS` in `../private/.env` and import it from *Maintenance › Update ontology*; see [Updating ontology](../management/updates/updating_ontology.md).
 
 !!! note "The thesauri you already have"
     The Languages thesaurus (`lg`) is active on every install — its terms ship in the seed and the database step activates it. The optional thesauri the installer ran (`--hierarchies`, by default `es`) are **imported and activated**: browsable thesaurus trees at the first login. Anything else your collection needs is added later from the thesaurus tools — see [installing new hierarchies](../management/install_new_hierarchies.md). `--hierarchies none` is perfectly valid: the seed already carries the core ontology.

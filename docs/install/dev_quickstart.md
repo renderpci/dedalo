@@ -61,13 +61,13 @@ bun run scripts/install.ts \
 
 `--db-host /tmp` uses the local unix socket, so no password is needed — Homebrew's PostgreSQL puts its socket there (the installer's own default is `localhost`). On a Homebrew PostgreSQL your own user is a superuser, which is why `--db-user "$(whoami)"` just works.
 
-With no `--hierarchies`, the shared default set of optional thesauri (today `es`) is installed; `--hierarchies none` makes the install faster. The Languages thesaurus is activated with the database either way. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server; add `--no-update-servers` to leave both empty.
+With no `--hierarchies`, the shared default set of optional thesauri (today `es`) is installed; `--hierarchies none` makes the install faster. The Languages thesaurus is activated with the database either way. With no `--ontologies`, the default domain ontology, Oral history (`oh`), is installed from the copy built into the repo — no network needed; `--ontologies oh,tch` downloads `tch` and what it declares as dependencies from the update server. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server (add `--no-update-servers` to leave both empty) and lists the installed ontologies in `ACTIVE_ONTOLOGY_TLDS`.
 
 It ends with `✔ install complete — root login verified`.
 
 ## 5. Configure the dev listener
 
-The installer writes only the database, entity, language, secret and update-server keys — you add the rest. Two of them are not optional on a laptop:
+The installer writes only the database, entity, language, secret, update-server and active-ontology keys — you add the rest. Two of them are not optional on a laptop:
 
 ```shell
 cat >> ../private/.env <<'ENV'
@@ -122,16 +122,21 @@ bun run test:db:setup   # once (and after a schema/seed change)
 bun test                # picks it up automatically
 ```
 
-`test:db:setup` builds `<your_db>_test` from files vendored in this repo — the install seed, the hierarchies, the registered tools, plus a **numisdata test ontology** (definitions only, no records) that ~46 gates need to resolve against. Nothing is copied from your install.
+`test:db:setup` builds `<your_db>_test` from files vendored in this repo, **through the installer's own steps**: the core-only install seed and the default domain ontology (`oh`, from the vendored file) exactly as a fresh installation gets them, then the suite's own fixtures — the generic `test` ontology, the canonical `test3` playground records, the hierarchies the tests reference and the registered tools. Nothing is copied from your install.
 
 !!! info "Why a separate database"
     Running the suite against the application's database made the tests depend on that install's data — on a fresh install 183 of 2039 unit tests failed — and let them WRITE to it: one gate provisioned a scratch ontology node and **deleted a real one** on its way out. Tests get their own database; the app's is not theirs to touch.
 
-    If the test DB is missing, `bun test` says so and falls back to the configured database (the old behaviour). `DEDALO_TEST_DB_DISABLE=true` forces that fallback; `DEDALO_TEST_DATABASE` overrides the name.
+    If the test DB is missing, `bun test` says so and names the command that builds it; it never falls back to your application's database, so a DB-backed gate fails with `database "…_test" does not exist`. `DEDALO_TEST_DATABASE` overrides the name; `DEDALO_TEST_DB_DISABLE=true` (process environment only) opts out and runs against the configured database.
 
-## What you get
+## Where the test3 playground lives
 
-A fresh install ships the canonical **`test3` playground section** — sample records covering every component model. It is what the component reference pages document against, and it is the fastest way to see the editor do something. On a production install you would delete it; here, keep it.
+The canonical **`test3` playground section** — sample records covering every component model, the section the component reference pages document against — is **not** part of an installation: your dev install has the core ontologies and `oh`, nothing else. The playground lives in the suite database. To click around in it, serve that database with its own login:
+
+```shell
+bun run test:db:setup        # once
+bun run test:client:server   # the suite server, kept alive for browsing (Ctrl-C stops it)
+```
 
 ## Everyday commands
 

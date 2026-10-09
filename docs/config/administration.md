@@ -85,7 +85,7 @@ file, one precedence chain.
 ENTITY=my_museum
 DB_HOST=localhost
 DEDALO_APPLICATION_LANGS={"lg-eng":"English","lg-spa":"Castellano"}
-ACTIVE_ONTOLOGY_TLDS=dd,rsc,oh
+ACTIVE_ONTOLOGY_TLDS=dd,rsc,ontology,ontologytype,hierarchy,lg,oh
 ```
 
 - one `KEY=value` per line; the first `=` splits it
@@ -144,8 +144,9 @@ Config key 'DEDALO_PREFIX_TIPOS' is RETIRED: rename that line to
 ```
 
 That is deliberate. Ignoring the old key would silently fall back to a default,
-which for this key means an empty ontology-TLD list — an install that looks fine
-and quietly does the wrong thing. The fix is always the one line the error names.
+which for this key means the core ontologies alone — every domain ontology of the
+installation quietly dropped from the ontology updates: an install that looks
+fine and quietly does the wrong thing. The fix is always the one line the error names.
 
 ---
 
@@ -154,7 +155,9 @@ and quietly does the wrong thing. The fix is always the one line the error names
 A fresh machine boots into the wizard, which writes `../private/.env` for you (DB
 connection, entity, languages, the update servers — `ONTOLOGY_SERVERS` and
 `CODE_SERVERS`, the official Dédalo master unless you chose the air-gapped
-option — diffusion) and then seals the install. The headless installer writes
+option — the active ontologies — `ACTIVE_ONTOLOGY_TLDS`, the core plus the
+domain ontologies you chose and their declared dependencies — diffusion) and then
+seals the install. The headless installer writes
 the same keys. After that,
 you edit the `.env` by hand as above.
 

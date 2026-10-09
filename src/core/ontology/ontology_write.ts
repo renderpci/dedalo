@@ -51,6 +51,7 @@ import {
 	HIERARCHY_TYPES_NAME,
 	HIERARCHY_TYPES_SECTION,
 	HIERARCHY_TYPOLOGY,
+	ONTOLOGY_DEPENDENCIES,
 	ONTOLOGY_IS_DESCRIPTOR,
 	ONTOLOGY_IS_MODEL,
 	ONTOLOGY_MAIN_SECTION,
@@ -437,6 +438,57 @@ export async function addMainSection(fileItem: FileItem, userId = -1): Promise<n
 	}
 
 	return mainSectionId;
+}
+
+// --- declared dependencies (ddengine11, installer unification A5) ------------
+
+/**
+ * Write an imported ontology's DECLARED dependencies onto its registry record
+ * (component ddengine11 ONTOLOGY_DEPENDENCIES): one link locator per dependency
+ * TLD that has a registry record HERE, in declared order — REPLACING what the
+ * record held (the source's declaration is the ontology's, like the rows the
+ * import just replaced). The census (data_io.ts getActiveOntologies) reads it
+ * back, so an ontology server that obtained its ontologies by import re-serves
+ * the declaration instead of dropping it after one hop.
+ *
+ * Same write shape as addMainSection (per-key matrix write, no TM — the import's
+ * registry writes are not audited records edits). Answers the dependency TLDs
+ * with no local registry record (not written — the caller reports them), or
+ * null when `tld` itself has no registry record (nothing written).
+ */
+export async function writeDeclaredDependencies(
+	tld: string,
+	dependencies: readonly string[],
+): Promise<string[] | null> {
+	const own = await getOntologyMainFromTld(tld);
+	if (own === null) return null;
+	const locators: Record<string, unknown>[] = [];
+	const missing: string[] = [];
+	for (const dependency of dependencies) {
+		const target = await getOntologyMainFromTld(dependency);
+		if (target === null) missing.push(dependency);
+		else locators.push(dependencyLocator(locators.length + 1, target.section_id));
+	}
+	await updateMatrixKeyData(
+		'matrix_ontology_main',
+		ONTOLOGY_MAIN_SECTION,
+		own.section_id,
+		'relation',
+		ONTOLOGY_DEPENDENCIES,
+		locators,
+	);
+	return missing;
+}
+
+/** One ddengine11 locator: a link to an ontology35 registry record. */
+function dependencyLocator(id: number, sectionId: number): Record<string, unknown> {
+	return relationLocator({
+		id,
+		type: RELATION_TYPE_LINK,
+		section_tipo: ONTOLOGY_MAIN_SECTION,
+		section_id: sectionId,
+		from_component_tipo: ONTOLOGY_DEPENDENCIES,
+	});
 }
 
 // --- parent grouper (PHP create_parent_grouper) ------------------------------

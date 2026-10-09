@@ -26,6 +26,7 @@ import { installFinish } from '../../src/core/install/finish.ts';
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { runPsql } from '../../src/core/install/pg_exec.ts';
 import { setRootPassword } from '../../src/core/install/root_pw.ts';
+import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 
 const SCRATCH_PREFIX = 'dedalo_install_p3_';
@@ -85,6 +86,18 @@ describe('db_restore + set_root_pw (P3, load-bearing)', () => {
 		]);
 		expect(ext.stdout).toContain('pg_trgm');
 		expect(ext.stdout).toContain('unaccent');
+		// The restored database is CORE-ONLY (installer unification A2): exactly the
+		// core ontologies, no test3 playground record — and an explicit connection
+		// says it left the pool-bound completion (stores, engine ontology, core
+		// hierarchies) to the caller.
+		const tlds = await runPsql(scratch, [
+			'-tAc',
+			"SELECT string_agg(DISTINCT tld, ',' ORDER BY tld) FROM dd_ontology",
+		]);
+		expect(tlds.stdout.trim().split(',')).toEqual([...CORE_ONTOLOGY_TLDS].sort());
+		const playground = await runPsql(scratch, ['-tAc', 'SELECT count(*) FROM matrix_test']);
+		expect(Number(playground.stdout.trim())).toBe(0);
+		expect(restored.msg).toContain('explicit connection');
 	}, 60000);
 
 	test('a non-empty DB refuses re-restore (never clobbers data)', async () => {

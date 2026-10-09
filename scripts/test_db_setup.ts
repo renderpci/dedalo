@@ -12,8 +12,24 @@
  * Tests now get their own database. The application's is not theirs to touch.
  *
  * WHAT IT BUILDS — a COMPLETE install, from files vendored in this repo, never by copying
- * a live database:
- *   1. the install seed (install/db/dedalo_install.pgsql.gz) — schema + canonical test3;
+ * a live database, THROUGH THE INSTALLER'S OWN DOORS (installer unification A2: the
+ * suite database is an installation first, then a fixture):
+ *   1. the install seed via `installDbFromSeed()` — the installer's restore door: the
+ *      CORE-ONLY seed (install/db/dedalo_install.pgsql.gz — no domain ontology, no test
+ *      TLD, no test3 records), its predated migrations, the derived search stores, the
+ *      engine-owned ontology and the core hierarchies (`lg` activated), exactly what a
+ *      fresh installation gets;
+ *   1b. the DEFAULT domain ontologies (`oh`) through the installer's ontology door
+ *      (`stageOntologies` + `installOntologies` over `defaultOfflineOntologyRequest()`,
+ *      i.e. the ONE vendored file install/import/ontology/<major.minor>/oh.copy.gz) — the
+ *      generic test nodes reference `oh` (grafts and diffusion aliases), so the suite
+ *      database needs it, and it gets it the way an offline install does;
+ *   then the SUITE'S OWN FIXTURES, which no installation receives:
+ *   1c. the generic `test` TLD ontology, materialized WHOLE from
+ *      src/core/test_data/test_tld_ontology.json through the engine's doors
+ *      (records → rebuildOntology), so the suite runs on the REVIEWABLE source;
+ *   1d. the canonical test3 playground records (src/core/test_data/seed.ts
+ *      restoreCanonicalTest3 — the single verified source, WC-021);
  *   2. the REFERENCED hierarchies via the installer's own installHierarchies()
  *      — the tools/tree/virtual-section gates need them. NOT all 150 vendored
  *      `<tld>1.copy.gz` files: that glob made the fixture 7612 MB, 97.6% of it
@@ -33,11 +49,8 @@
  *      vendored `lg1.copy.gz` (which forced unread duplicates into
  *      matrix_hierarchy) is deleted;
  *   3. the registered tools, via the installer's own registerInstallTools();
- *   4. the generic `test` TLD ontology, materialized from
- *      src/core/test_data/test_tld_ontology.json through the engine's doors
- *      (records → rebuildOntology), so the suite runs on the REVIEWABLE source
- *      and not on whatever the binary seed happens to hold;
- * It installs NO installation's ontology. It used to load one
+ * It installs NO installation's PROJECT ontology (only the installer's default domain
+ * ontology, oh, as above). It used to load one
  * (`test/fixtures/ontology/numisdata_ontology.copy.gz`) because ~46 gates
  * needed that install's definitions to resolve against; the generic-`test`-TLD
  * migration replaced every one of them with a `test` clone, and that step was
@@ -49,7 +62,8 @@
  *
  * DEFINITIONS, NOT RECORDS. Every step above installs ONTOLOGY (and the tool
  * registry an install cannot boot without). No fixture RECORDS are seeded here
- * beyond the seed's own — in particular NOT the derived test corpus
+ * beyond the seed's own and the canonical test3 playground — in particular NOT
+ * the derived test corpus
  * (src/core/test_data/test_corpus/): that is a situation, and ambient records
  * change the answer for every census, emptiness and row-count gate in the
  * suite. A gate that needs the corpus ensures and drops it itself; see step 6
@@ -65,8 +79,9 @@
  * Re-runnable: it drops and rebuilds. It refuses to run when the test database name
  * resolves to the application's, so a fat-fingered env cannot drop your install.
  *
- * AND IT STAMPS THE DATABASE. Right after CREATE DATABASE + seed restore it
- * writes the `dedalo_test_marker` row (step 2b, src/core/test_data/test_database_marker.ts).
+ * AND IT STAMPS THE DATABASE. Right after CREATE DATABASE + the installer's seed
+ * restore (which writes only what any installation gets) it writes the
+ * `dedalo_test_marker` row (step 2b, src/core/test_data/test_database_marker.ts).
  * That row — not this script's name check, and not the `_test` suffix — is what
  * every test-data writer in the tree asks before it moves a single row. This is
  * the ONLY producer of that row anywhere.
@@ -104,10 +119,9 @@
  * template, never built directly.
  */
 
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { gunzipSync } from 'node:zlib';
 import { readEnv } from '../src/config/env.ts';
 // DB-free ON PURPOSE (see that module's header): the provenance check below must
 // name the marker table WITHOUT importing the marker module, whose postgres.ts
@@ -470,16 +484,16 @@ await psql('postgres', [
 		`LOCALE_PROVIDER icu ICU_LOCALE '${SUITE_ICU_LOCALE}' LC_COLLATE 'C' LC_CTYPE 'C'`,
 ]);
 
-// 2. The install seed — the schema + data a real install ships with.
-if (!existsSync(SEED)) throw new Error(`install seed not found: ${SEED}`);
-const seedSql = join(tmpdir(), `dedalo_test_seed_${process.pid}.sql`);
-writeFileSync(seedSql, gunzipSync(readFileSync(SEED)));
-try {
-	await psql(testDb, ['-q', '-f', seedSql]);
-	console.log('[test-db] install seed restored (schema + canonical test3 playground)');
-} finally {
-	rmSync(seedSql, { force: true });
-}
+// 2. The install seed THROUGH THE INSTALLER'S RESTORE DOOR — the same
+// `installDbFromSeed()` the CLI, the wizard and install.sh run: restore + the
+// predated migrations + the derived search stores + the engine ontology + the
+// core hierarchies. Its connection is config's, which the repoint above aimed
+// at this database (the config module is first imported HERE, by this dynamic
+// import). It writes only what every installation gets, so it runs before the
+// marker exists — the marker is the suite's, stamped right below.
+const { installDbFromSeed } = await import('../src/core/install/db_restore.ts');
+const restored = await installDbFromSeed();
+console.log(`[test-db] ${restored.msg}`);
 
 // 2b. THE TEST-DATABASE MARKER — the mechanical half of "tests never write
 // production data" (src/core/test_data/test_database_marker.ts).
@@ -514,29 +528,52 @@ console.log(
 	`[test-db] marker written: ${marker.database_name} @ ${marker.build_stamp} (git ${marker.git_rev.slice(0, 12)}) — every test-data writer refuses without it`,
 );
 
-// 3. The generic `test` TLD ontology, from its ONE source
-// (src/core/test_data/test_tld_ontology.json) through the engine's own doors:
-// matrix_ontology `test0` records, then rebuildOntology('test') derives
-// dd_ontology. The seed still carries its own copy of those rows today; this
-// OVERWRITES them from the reviewable JSON, so the suite database matches the
-// file a human reviews. Once scripts/strip_test_tld_from_seed.ts is applied the
-// seed carries only the bootstrap rows and this step is the sole source.
+// 3. The DEFAULT domain ontologies, through the INSTALLER'S ontology door —
+// stage (copy + gunzip + COPY-sanity of the vendored file into a private
+// staging dir) then install (the update panel's shared import layer, the
+// re-derive pass, the reference verification). The request is the offline
+// default (`oh`, from the one vendored oh.copy.gz): what an air-gapped install
+// gets, and what the generic test nodes reference (test21 hangs under an oh
+// node, test39/test108 are diffusion aliases of one).
+const { defaultOfflineOntologyRequest } = await import('../src/core/install/ontology_choice.ts');
+const { installOntologies, stageOntologies } = await import(
+	'../src/core/install/ontology_install.ts'
+);
+const ontologyStaging = mkdtempSync(join(tmpdir(), 'dedalo_test_ontology_staging_'));
+try {
+	const staged = await stageOntologies(defaultOfflineOntologyRequest(), {
+		stagingDir: ontologyStaging,
+	});
+	console.log(`[test-db] ${staged.msg}`);
+	const ontologies = await installOntologies({ stagingDir: ontologyStaging, userId: -1 });
+	console.log(
+		`[test-db] ${ontologies.msg}${ontologies.warnings.length > 0 ? ` — ${ontologies.warnings.join(' | ')}` : ''}`,
+	);
+} finally {
+	rmSync(ontologyStaging, { recursive: true, force: true });
+}
+
+// 3b. The generic `test` TLD ontology — THE SUITE'S, never an installation's —
+// from its ONE source (src/core/test_data/test_tld_ontology.json), WHOLE (the
+// hand-authored Test area and the clone twins the parity tier replays against),
+// through the engine's own doors: matrix_ontology `<tld>0` records, then
+// rebuildOntology(tld) derives dd_ontology. The door refuses without the marker
+// written above.
 const { materializeTestTldOntology } = await import(
 	'../src/core/test_data/test_tld_materialize.ts'
 );
 const testTld = await materializeTestTldOntology({ expectDatabase: testDb });
 console.log(
-	`[test-db] test TLD ontology materialized from JSON: ${testTld.nodes} records in ${testTld.tlds.join(', ')} — ${testTld.rebuilt.join('; ')}${testTld.strays.length > 0 ? ` (STRAY records not in the JSON: ${testTld.strays.join(', ')})` : ''}`,
+	`[test-db] test TLD ontology materialized from JSON: ${testTld.nodes} records in ${testTld.tlds.length} TLDs — ${testTld.rebuilt.length} rebuilt${testTld.strays.length > 0 ? ` (STRAY records not in the JSON: ${testTld.strays.join(', ')})` : ''}`,
 );
 
-// 3b. The ENGINE-OWNED ontology (src/core/ontology/engine_ontology.json — the
-// sections the engine itself writes, e.g. the AI spend ledger), through the same
-// idempotent door production boot and the installer run.
-const { ensureEngineOntology } = await import('../src/core/ontology/engine_ontology.ts');
-const engineOntology = await ensureEngineOntology();
-console.log(
-	`[test-db] engine ontology ${engineOntology.changed ? `materialized (${engineOntology.written} records)` : 'already current'}${engineOntology.strays.length > 0 ? ` (STRAY records: ${engineOntology.strays.join(', ')})` : ''}`,
-);
+// 3c. The canonical test3 PLAYGROUND records (src/core/test_data/seed.ts — the
+// single verified source, WC-021). The seed ships none; the preload restores
+// the same set before every run, so this only makes a freshly built database
+// complete before its first `bun test`.
+const { restoreCanonicalTest3 } = await import('../src/core/test_data/seed.ts');
+const playground = await restoreCanonicalTest3();
+console.log(`[test-db] canonical test3 playground restored: ${playground.restored} records`);
 
 // 4. The numisdata TEST ontology — definitions only, no records.
 //
@@ -567,15 +604,8 @@ console.log(
 // TLD reddens the fixture rather than failing mysteriously on one machine.
 const allowlist = deriveHierarchyAllowlist(HIERARCHY_DIR);
 const tlds = allowlist.imports;
-// CORE hierarchies first (`lg`): ACTIVATED against the terms the seed already
-// ships in matrix_langs, never imported — the same door the installer's seed
-// restore runs (src/core/install/hierarchy_activate.ts activateCoreHierarchies).
-// This script restores the seed through an explicit connection, which skips
-// that default-config half, so it calls the door itself.
-const { activateCoreHierarchies } = await import('../src/core/install/hierarchy_activate.ts');
-// A failure THROWS (install.step_failed, naming each failed tld) — fatal here too.
-const coreHierarchies = await activateCoreHierarchies();
-console.log(`[test-db] ${coreHierarchies.msg} (activation only — no import)`);
+// CORE hierarchies (`lg`) are not here: the installer's restore door (step 2)
+// activated them, as it does for every installation.
 const { installHierarchies } = await import('../src/core/install/hierarchy_import.ts');
 const hierarchies = await installHierarchies(tlds);
 console.log(
