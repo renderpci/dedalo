@@ -34,6 +34,11 @@ import {
 	legsFor,
 	mergeRecord,
 	parseDrillArgs,
+	SELINUX_CONTROL_DIR,
+	SELINUX_CONTROL_FILE,
+	SELINUX_CONTROL_URL,
+	selinuxControlConf,
+	selinuxControlVerdict,
 } from '../../scripts/publication_host_init_drill.ts';
 
 /** Every EL major the guided install supports (owner decision 2026-10-08: the EL family is 9 and 10). */
@@ -230,5 +235,35 @@ describe('the drill around the record: in place on Debian, and what a capture na
 		expect(names(['--family', 'debian', '--in-place'])).toContain('no-apparmor-denial');
 		expect(names(['--family', 'debian'])).not.toContain('no-apparmor-denial');
 		expect(names(['--family', 'el', '--in-place'])).not.toContain('no-apparmor-denial');
+	});
+});
+
+describe('system-layout-v2: the httpd control measures SELinux alone', () => {
+	const type = 'dedalo_publication_v2_t';
+	const avc = `type=AVC msg=audit(1.1:2): avc:  denied  { read } for  pid=1 comm="httpd" name="${SELINUX_CONTROL_FILE}" dev="dm-0" ino=3 scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:${type}:s0 tclass=file permissive=0`;
+	const good = { baseline: { status: 200, body: 'dd-control\n' }, refused: { status: 403 }, avc, errorLog: '', type };
+
+	test('the control grants its own directory (EL denies every directory httpd.conf does not name)', () => {
+		const conf = selinuxControlConf();
+		expect(conf).toContain(`Alias ${SELINUX_CONTROL_URL} ${SELINUX_CONTROL_DIR}`);
+		expect(conf).toContain(`<Directory ${SELINUX_CONTROL_DIR}>\n    Require all granted`);
+	});
+
+	test('passes only when the label alone made the difference', () => {
+		expect(selinuxControlVerdict(good)).toBeNull();
+	});
+
+	test('a baseline that is not 200 with its bytes is a broken control, never a pass (measured: AH01630 403 under a home DocumentRoot)', () => {
+		expect(selinuxControlVerdict({ ...good, baseline: { status: 403, body: '' } })).toMatch(/proves nothing/);
+		expect(selinuxControlVerdict({ ...good, baseline: { status: 200, body: 'other' } })).toMatch(/proves nothing/);
+	});
+
+	test("a 403 that is Apache's authorization, a read that succeeds, or no AVC for the type: red", () => {
+		const authz = `[authz_core:error] AH01630: client denied by server configuration: ${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}`;
+		expect(selinuxControlVerdict({ ...good, errorLog: authz })).toMatch(/Apache's authorization/);
+		expect(selinuxControlVerdict({ ...good, refused: { status: 200 } })).toMatch(/httpd read/);
+		expect(selinuxControlVerdict({ ...good, avc: '' })).toMatch(/no AVC denial/);
+		expect(selinuxControlVerdict({ ...good, avc: avc.replace(':httpd_t:', ':init_t:') })).toMatch(/no AVC denial/);
+		expect(selinuxControlVerdict({ ...good, avc: avc.replace(`:${type}:`, ':var_t:') })).toMatch(/no AVC denial/);
 	});
 });

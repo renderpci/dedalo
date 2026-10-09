@@ -549,7 +549,62 @@ const SELINUX_MODULE = 'dedalo_publication_host';
 const SELINUX_MODULE_SOURCE = `/var/lib/dedalo_publication_host/_host/${SELINUX_MODULE}.cil`;
 const V2_TREE_TYPE = 'dedalo_publication_v2_t';
 /** system-layout-v2's httpd control file: the one AVC denial the drill causes on purpose (no-avc skips it). */
-const SELINUX_CONTROL_FILE = 'dd_selinux_control.txt';
+export const SELINUX_CONTROL_FILE = 'dd_selinux_control.txt';
+/** Its own directory and URL: granted by its own Apache file, so only the file's label differs between the two requests. */
+export const SELINUX_CONTROL_DIR = '/srv/dd_selinux_control';
+export const SELINUX_CONTROL_URL = '/dd_selinux_control';
+export const SELINUX_CONTROL_CONF = '/etc/httpd/conf.d/dd_selinux_control.conf';
+
+/**
+ * The control's Apache file: an Alias and a `<Directory>` that GRANTS it (EL's httpd.conf denies
+ * every directory it does not name — measured: a file under a vhost's DocumentRoot in a home answered
+ * 403 AH01630 "client denied by server configuration", which is Apache, not SELinux).
+ */
+export function selinuxControlConf(): string {
+	return [
+		'# init drill (system-layout-v2): the SELinux control; removed by the leg',
+		`Alias ${SELINUX_CONTROL_URL} ${SELINUX_CONTROL_DIR}`,
+		`<Directory ${SELINUX_CONTROL_DIR}>`,
+		'    Require all granted',
+		'    Options None',
+		'    AllowOverride None',
+		'</Directory>',
+		'',
+	].join('\n');
+}
+
+/**
+ * The control's verdict, or null when it measured SELinux alone: the SAME file, the same grant, answered
+ * 200 with its bytes as httpd_sys_content_t (else the control proves nothing), then 403 once it carries
+ * the module's type, with an AVC denial of httpd_t on that type naming the file, and Apache's error log
+ * naming no authz refusal for it (AH01630/AH01797: the 403 would be Apache's, not SELinux's).
+ */
+export function selinuxControlVerdict(observed: {
+	readonly baseline: { readonly status: number; readonly body: string };
+	readonly refused: { readonly status: number };
+	readonly avc: string;
+	readonly errorLog: string;
+	readonly type: string;
+}): string | null {
+	const { baseline, refused, avc, errorLog, type } = observed;
+	if (baseline.status !== 200 || !baseline.body.includes('dd-control')) {
+		return `the control file as httpd_sys_content_t answered ${baseline.status}: the control proves nothing`;
+	}
+	if (refused.status !== 403) return `httpd read a ${type} file: ${refused.status}`;
+	if (errorLog.split('\n').some((line) => /AH01630|AH01797/.test(line) && line.includes(SELINUX_CONTROL_FILE))) {
+		return `the 403 for the ${type} control is Apache's authorization, not SELinux:\n${errorLog.slice(-1000)}`;
+	}
+	const denied = avc
+		.split('\n')
+		.some(
+			(line) =>
+				/denied/.test(line) &&
+				line.includes(`name="${SELINUX_CONTROL_FILE}"`) &&
+				line.includes(':httpd_t:') &&
+				line.includes(`:${type}:`),
+		);
+	return denied ? null : `no AVC denial of httpd_t on ${type} for the control:\n${avc.slice(-2000)}`;
+}
 
 interface Ctx {
 	readonly args: DrillArgs;
@@ -1879,23 +1934,35 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				// Leave the host as the next legs expect it: no v2 of this instance answering.
 				await ctx.runner.sh(`systemctl stop ${unit.v2Unit}`, { timeoutMs: 60_000 });
 			}
-			// 6. The control: the SAME world-readable file, served by httpd as httpd_sys_content_t, denied as ours.
-			const control = `/home/${DOMAIN}/httpdocs/${SELINUX_CONTROL_FILE}`;
+			// 6. The control: the SAME world-readable file under its own granted Alias, served as
+			//    httpd_sys_content_t, then denied once it carries the module's type — only the label changes.
+			const control = `${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}`;
+			const errorLog = '/var/log/httpd/error_log';
 			try {
-				await must(ctx, `echo dd-control > ${control} && chmod 0644 ${control} && chcon -t httpd_sys_content_t ${control}`, 'the control file');
-				const served = await webCheck(ctx, DOMAIN, `/${SELINUX_CONTROL_FILE}`);
-				check(served.status === 200 && served.body.includes('dd-control'), `the control file as httpd_sys_content_t answered ${served.status}: the control proves nothing`);
-				const from = (await must(ctx, 'sleep 1.1; date +%T', 'the control start')).trim();
-				await must(ctx, `chcon -t ${V2_TREE_TYPE} ${control}`, `label the control ${V2_TREE_TYPE}`);
-				const refused = await webCheck(ctx, DOMAIN, `/${SELINUX_CONTROL_FILE}`);
-				check(refused.status === 403, `httpd read a ${V2_TREE_TYPE} file: ${refused.status}`);
-				const avc = await must(ctx, `sleep 1; ausearch -m AVC -ts ${from} 2>/dev/null || true`, 'the control AVC');
-				check(
-					avc.split('\n').some((line) => /denied/.test(line) && line.includes(`name="${SELINUX_CONTROL_FILE}"`) && line.includes(':httpd_t:') && line.includes(`:${V2_TREE_TYPE}:`)),
-					`no AVC denial of httpd_t on ${V2_TREE_TYPE} for the control:\n${avc.slice(-2000)}`,
+				await putRootFile(ctx, SELINUX_CONTROL_CONF, selinuxControlConf(), '0644');
+				await must(
+					ctx,
+					`install -d -m 0755 ${SELINUX_CONTROL_DIR} && echo dd-control > ${control} && chmod 0644 ${control} && chcon -t httpd_sys_content_t ${SELINUX_CONTROL_DIR} ${control} && restorecon ${SELINUX_CONTROL_CONF} && apachectl -t 2>&1 && systemctl reload httpd`,
+					'the control file and its Alias',
 				);
+				const fetch = async (): Promise<{ status: number; body: string }> => {
+					const done = await ctx.runner.sh(
+						`curl -s -o /tmp/dd_ctl -w '%{http_code}' http://127.0.0.1${SELINUX_CONTROL_URL}/${SELINUX_CONTROL_FILE}; echo; cat /tmp/dd_ctl; rm -f /tmp/dd_ctl`,
+					);
+					const [status = '0', ...rest] = done.out.split('\n');
+					return { status: Number(status), body: rest.join('\n') };
+				};
+				const baseline = await fetch();
+				const from = (await must(ctx, 'sleep 1.1; date +%T', 'the control start')).trim();
+				const logFrom = Number((await must(ctx, `wc -l < ${errorLog} 2>/dev/null || echo 0`, 'error_log size')).trim()) || 0;
+				await must(ctx, `chcon -t ${V2_TREE_TYPE} ${control}`, `label the control ${V2_TREE_TYPE}`);
+				const refused = await fetch();
+				const avc = await must(ctx, `sleep 1; ausearch -m AVC -ts ${from} 2>/dev/null || true`, 'the control AVC');
+				const log = await must(ctx, `tail -n +${logFrom + 1} ${errorLog} 2>/dev/null || true`, 'the httpd error log');
+				const verdict = selinuxControlVerdict({ baseline, refused, avc, errorLog: log, type: V2_TREE_TYPE });
+				check(verdict === null, `${verdict}\n(httpd error log since the control:\n${log.slice(-1500)})`);
 			} finally {
-				await ctx.runner.sh(`rm -f ${control}`);
+				await ctx.runner.sh(`rm -rf ${SELINUX_CONTROL_DIR} ${SELINUX_CONTROL_CONF} && apachectl -t >/dev/null 2>&1 && systemctl reload httpd`);
 			}
 			// 7. A re-run with nothing to change: the policy item is right.
 			const rerun = await ctx.runner.sh(`sh ${q(`${unit.agentDir}/deploy/install.sh`)} ${SYSTEM_INSTANCE} -- --yes --no-pair </dev/null`, { timeoutMs: 600_000 });
