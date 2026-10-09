@@ -1058,6 +1058,10 @@ Merged since the last release; these ship with the next one.
     `/etc/fapolicyd/trust.d/dedalo_init_<instance>`, and prints the line that removes it once init
     converged; the installed Bun is then trusted by the instance's own trust file.
 
+- **The publication host's guided install is now proven on Ubuntu 26.04, including the agent's one root permission under its new sudo.**
+
+    The guided install of a publication host (`install.sh`, `provision init`) now passes its full drill on a real Ubuntu 26.04 machine with AppArmor enforcing: Apache and nginx, PHP 8.5, systemd 259 and polkit 127. Ubuntu 26.04 replaces `sudo` with sudo-rs; the drill now also checks, on every system, that the agent's single root permission (testing the web server configuration before a reload) works through the machine's own `sudo`, from the agent's own service, and allows nothing else. Ubuntu 26.04's sandboxed `apache2` service serves the site with its logs in `/var/log/apache2/<domain>`. No AppArmor profile confines the web servers, PHP-FPM, polkit or the agents, so no AppArmor change is needed. See [the publication host install guide](./install/publication_host.md).
+
 - **New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.** *(action needed)*
 
     The command-line installer, the browser wizard and `install.sh` now work from one install plan, so the same answers give the same configuration whichever one you use ([installer reference](./install/installer_reference.md)).
