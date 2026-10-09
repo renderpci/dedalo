@@ -56,7 +56,7 @@ bun run scripts/install.ts \
   --db-user "$(whoami)" \
   --db-host /tmp \
   --entity dev \
-  --langs lg-spa,lg-eng --app-lang lg-eng --data-lang lg-spa
+  --langs lg-eng,lg-spa --app-lang lg-eng --data-lang lg-eng
 ```
 
 `--db-host /tmp` uses the local unix socket, so no password is needed — Homebrew's PostgreSQL puts its socket there (the installer's own default is `localhost`). On a Homebrew PostgreSQL your own user is a superuser, which is why `--db-user "$(whoami)"` just works.
