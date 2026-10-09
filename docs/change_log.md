@@ -246,6 +246,12 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Thesaurus: adding a child to a term now shows its expand arrow at once.**
+
+    Adding a child to a term that had none opened the new record in its edit window, but
+    the parent term kept looking like a leaf (no expand arrow) until the page was reloaded.
+    The parent now shows the arrow and its open children as soon as the child is created.
+
 - **The error page shows its Raspa background again.**
 
     When a page could not load (*An unexpected error occurred*, with its `request_id` and a *Home* link), the faded Raspa photo meant to fill the background was hidden behind the page's grey background, so the page looked bare. It now covers the whole window again.
