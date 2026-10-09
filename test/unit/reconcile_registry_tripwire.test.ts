@@ -75,6 +75,8 @@ const EXEMPT: Readonly<Record<string, string>> = {
 		'the maintenance DOOR onto the registry — lists and runs definitions, compares nothing',
 	'scripts/reconcile.ts':
 		'the CLI DOOR onto the registry — lists and runs definitions, compares nothing',
+	'scripts/ci/image_release.ts':
+		'inspectDigest: the RELEASE pipeline asking a container registry what digest one image reference resolves to (the tag-immutability refusal) — a CI probe of a remote manifest, no installation data store is compared or converged',
 };
 
 /** A declaration of a function/method named reconcileX / inspectX. */
