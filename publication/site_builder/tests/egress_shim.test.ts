@@ -58,12 +58,19 @@ function scratch(): string {
   return root;
 }
 
-async function freePort(): Promise<number> {
-  const server = createServer();
-  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
-  const port = (server.address() as { port: number }).port;
-  await new Promise<void>(resolve => server.close(() => resolve()));
-  return port;
+/**
+ * Two DISTINCT free loopback ports: both listeners are held open until both are
+ * known, so the kernel cannot hand the second call the port the first just
+ * released (a proxy port reused as the MCP port reads as "MCP is listened on").
+ */
+async function freePorts(): Promise<{ proxy: number; mcp: number }> {
+  const servers = [createServer(), createServer()];
+  for (const server of servers) {
+    await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  }
+  const [proxy, mcp] = servers.map(server => (server.address() as { port: number }).port) as [number, number];
+  for (const server of servers) await new Promise<void>(resolve => server.close(() => resolve()));
+  return { proxy, mcp };
 }
 
 describe('the shim refuses a unit whose network namespace is not in effect', () => {
@@ -237,7 +244,7 @@ describe('the shim forwards the unit loopback to the bound egress sockets, bytes
     const dir = join(scratch(), 'egress');
     mkdirSync(dir);
     await echoAt(join(dir, 'proxy.sock'));
-    const ports = { proxy: await freePort(), mcp: await freePort() };
+    const ports = await freePorts();
     // The child holds the unit open long enough for this test to speak through the forward.
     const running = runShim({ argv: ['/bin/sh', '-c', 'sleep 2'], door: 'build', workdir: dir, seams: { interfaces: () => LO, socketDir: dir, ports, ...ELSEWHERE } });
     expect(await roundTrip(ports.proxy, 'through-the-shim')).toContain('through-the-shim');
@@ -252,7 +259,7 @@ describe('the shim forwards the unit loopback to the bound egress sockets, bytes
     mkdirSync(dir);
     await echoAt(join(dir, 'proxy.sock'));
     await echoAt(join(dir, 'mcp.sock'));
-    const ports = { proxy: await freePort(), mcp: await freePort() };
+    const ports = await freePorts();
     const running = runShim({ argv: ['/bin/sh', '-c', 'sleep 2'], door: 'turn', workdir: dir, seams: { interfaces: () => LO, socketDir: dir, ports, ...ELSEWHERE } });
     expect(await roundTrip(ports.mcp, 'mcp-through-the-shim')).toContain('mcp-through-the-shim');
     expect(await roundTrip(ports.proxy, 'proxy-too')).toContain('proxy-too');
