@@ -23,7 +23,8 @@ import {
 import { MODES } from '../src/provision/layout';
 import { scratchPath } from './fixtures/instance';
 
-const GATE_DIR = scratchPath('config_gate');
+// Short on purpose: SOCKET_PATH './a.sock' resolves under this dir and must fit sun_path (103 bytes) from a deep checkout.
+const GATE_DIR = scratchPath('cfg');
 const ENV_FILE = join(GATE_DIR, 'env');
 const CREDS_DIR = join(GATE_DIR, 'credentials');
 const TOKEN = 'x'.repeat(40);
