@@ -11,8 +11,11 @@
  * the unit's `DEDALO_*` entries plus PATH, HOME, LC_ALL — never NODE_ENV, never the unit's
  * EnvironmentFile (init never reads the engine's env file).
  *
- * Two machines, `--no-pair`, a tls listener, or no work unit: nothing is run;
- * twoMachineInstructions prints the guide's step 6/8 commands with this instance's paths.
+ * Two machines (a tls listener): `pair.package` seals the engine fragment, the token and the
+ * engine bundle into ONE file under a one-time passphrase (pairing_package.ts), shown once on the
+ * terminal; the work host opens it with `dedalo:pair-publication-host add <name> --package`.
+ * `--no-pair` or no work unit on a socket listener: nothing is run; twoMachineInstructions
+ * prints the guide's step 6/8 commands with this instance's paths (the loose-file path, D5).
  *
  * WHAT THIS MODULE DECIDES, and what it leaves to the orchestrator: `pairPlan` (pure) turns the
  * facts into one of five shapes and `pairItem` (pure) into the §4.1 Item the report shows;
@@ -30,9 +33,13 @@
  * as root from the credential file, never leaves this module.
  */
 
+import { join } from 'node:path';
 import { PAIR_NAME_PATTERN } from '../exec_contract';
 import type { InitExec } from '../exec_contract';
 import type { AgentLayout } from '../layout';
+import { INIT_BASE } from '../lock';
+import { FINGERPRINT_PENDING } from '../render/engine_fragment';
+import { newPassphrase, PairingPackageRefused, sealPairingPackage } from '../pairing_package';
 import type { GroupRow, HostFacts, InitArgs, InitIo, Item, ItemOption, PairInvocation, PasswdRow, WorkUnit } from './types';
 
 /** The work engine's units (spec §6 B5 step 1). */
@@ -150,6 +157,8 @@ export function pairPreconditions(unit: WorkUnit, layout: AgentLayout, accounts:
 
 export type PairPlan =
   | { readonly kind: 'instructions'; readonly reason: string; readonly lines: readonly string[] }
+  /** Two machines: write the sealed package at `path`; `lines` say what to do with it on the work host. */
+  | { readonly kind: 'package'; readonly name: string; readonly path: string; readonly lines: readonly string[]; readonly manual: readonly string[] }
   | { readonly kind: 'blocked'; readonly unit: WorkUnit; readonly problems: readonly string[]; readonly lines: readonly string[] }
   | {
       readonly kind: 'environment_files';
@@ -173,6 +182,16 @@ export interface PairPlanOptions {
   readonly chosenUnit?: string;
   /** The operator answered `pair.engine=replace` (the name is already registered): verb `replace`. */
   readonly replace?: boolean;
+  /** `<INIT_BASE>/<instance>` (default: the production INIT_BASE): where the sealed package is written. */
+  readonly initDir?: string;
+}
+
+/** The file name of the sealed package under `<INIT_BASE>/<instance>/`. */
+export const PAIRING_PACKAGE_SUFFIX = '.pairing';
+
+export function pairingPackagePath(initDir: string, name: string): string {
+  if (!PAIR_NAME_PATTERN.test(name)) throw new Error(`pair: '${name}' must match ${PAIR_NAME_PATTERN.source}`);
+  return join(initDir, `${name}${PAIRING_PACKAGE_SUFFIX}`);
 }
 
 /** Spec §6 B5: what pairing will do, from the facts alone. */
@@ -190,7 +209,10 @@ export function pairPlan(
     lines: twoMachineInstructions(layout, args.pairName, engine),
   });
   if (args.noPair) return instructions('--no-pair: pairing is printed, not run');
-  if (layout.listen.kind === 'tls') return instructions('a tls listener is paired from the work host (two machines)', null);
+  if (layout.listen.kind === 'tls') {
+    const path = pairingPackagePath(options.initDir ?? join(INIT_BASE, layout.instance), args.pairName);
+    return { kind: 'package', name: args.pairName, path, lines: packageInstructions(path, args.pairName), manual: twoMachineInstructions(layout, args.pairName, null) };
+  }
   if (detection.kind === 'none') return instructions('no Dédalo work unit (dedalo-ts, dedalo-ts@*) runs on this machine', null);
   let unit: WorkUnit;
   if (detection.kind === 'several') {
@@ -243,6 +265,20 @@ export function pairItem(plan: PairPlan, layout: AgentLayout): Item {
         commands: plan.lines,
         options: [MANUAL],
         defaultOption: 'manual',
+      };
+    case 'package':
+      return {
+        ...base,
+        id: 'pair.package',
+        list: 'change',
+        title: `write the sealed pairing package for the work host (${plan.path})`,
+        facts: [
+          'two machines: the engine fragment, the service token and the engine TLS bundle, sealed in one file (root 0600)',
+          'its one-time passphrase is shown ONCE on this terminal, never stored or logged; without a terminal the package is not written',
+          'the loose-file pairing (--fragment, --bundle, --token-file) stays available: see the guide',
+        ],
+        commands: plan.lines,
+        action: { kind: 'pair_package', name: plan.name, path: plan.path },
       };
     case 'blocked':
       return {
@@ -321,6 +357,59 @@ export function twoMachineInstructions(layout: AgentLayout, pairName: string, en
     `${pair} add ${pairName} --fragment ${dir}/engine.env.fragment --bundle ${dir}/engine_bundle.pem --token-file ${dir}/token`,
     '# then delete every copy you carried (the token file, the bundle copy, any client.pem / ca.pem); the work system keeps its own',
   ];
+}
+
+/** What the operator does with the sealed package (the passphrase itself is shown separately, once). */
+export function packageInstructions(path: string, pairName: string): string[] {
+  return [
+    `# carry ${path} to the work host over a channel you trust (it is encrypted; the passphrase never travels with it)`,
+    '# on the work host, as root: chown <engine user> <the copy> && chmod 600 <the copy>',
+    '# then, as root or an administrator (the command runs as the engine user and asks for the passphrase):',
+    `cd <work checkout> && sudo -u <engine user> <the work system's pinned bun> run ${PAIR_SCRIPT_NAME} add ${pairName} --package <the copy>`,
+    `# then delete both copies: rm ${path} here, the copy on the work host`,
+  ];
+}
+
+export interface PackagePorts {
+  readonly io: Pick<InitIo, 'readRootFile' | 'writeBytesAtomic'>;
+  readonly root: { readonly uid: number; readonly gid: number };
+  /** randomBytes in production (a gate fixes it). */
+  readonly random?: (n: number) => Uint8Array;
+}
+
+export type PackageOutcome =
+  | { readonly kind: 'done'; readonly path: string; readonly passphrase: string }
+  | { readonly kind: 'failed'; readonly reason: string };
+
+/**
+ * Seals the three pairing parts into `path` (root 0600, written atomically) and returns the
+ * passphrase for the caller to show ONCE. The parts are read as root here and never returned;
+ * the passphrase is returned only on success, and never reaches a reason string.
+ */
+export function writePairingPackage(layout: AgentLayout, path: string, ports: PackagePorts): PackageOutcome {
+  const fragment = ports.io.readRootFile(layout.engineFragmentPath);
+  if (fragment === null) return { kind: 'failed', reason: `the engine fragment ${layout.engineFragmentPath} does not exist: run provision apply ${layout.instance}` };
+  if (fragment.includes(FINGERPRINT_PENDING)) {
+    return { kind: 'failed', reason: `the engine fragment ${layout.engineFragmentPath} still holds a pending fingerprint: re-run provision apply ${layout.instance}` };
+  }
+  const token = ports.io.readRootFile(layout.serviceTokenPath)?.trim() ?? '';
+  if (token.length < MIN_TOKEN_LENGTH) {
+    return { kind: 'failed', reason: `the service token at ${layout.serviceTokenPath} is missing or short: run provision apply ${layout.instance}` };
+  }
+  const bundle = ports.io.readRootFile(layout.engineBundlePath);
+  if (bundle === null || bundle.trim() === '') {
+    return { kind: 'failed', reason: `the engine bundle ${layout.engineBundlePath} does not exist: run provision apply ${layout.instance}` };
+  }
+  const passphrase = newPassphrase(ports.random);
+  let sealed: Uint8Array;
+  try {
+    sealed = sealPairingPackage({ fragment, token, bundle }, passphrase, ports.random);
+  } catch (error) {
+    if (error instanceof PairingPackageRefused) return { kind: 'failed', reason: error.message };
+    throw error;
+  }
+  ports.io.writeBytesAtomic(path, sealed, 0o600, ports.root.uid, ports.root.gid);
+  return { kind: 'done', path, passphrase };
 }
 
 /* ── running it (I/O through the injected exec) ────────────────────────────────────── */

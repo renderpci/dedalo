@@ -329,7 +329,8 @@ export interface StagedSource {
   /** treeDigest(agentDir), compared with treeDigest(agent_dir) by code.install. */
   readonly agentDigest: string;
   readonly v2EnvExample: string;
-  readonly v1Sample: string;
+  /** null: the source carries no v1 sample (a kit built from a v2-only draft; SOURCE_MANIFEST `optional`). */
+  readonly v1Sample: string | null;
   /** package.json `dependencies` names missing under node_modules; dev dependencies present. */
   readonly missingDependencies: readonly string[];
   readonly devDependenciesPresent: readonly string[];
@@ -481,7 +482,9 @@ export type InitAction =
   | { readonly kind: 'nginx_map_seed'; readonly path: string; readonly beforeSha: string; readonly standalone: boolean }
   | { readonly kind: 'keep_ref'; readonly files: readonly string[] }
   | { readonly kind: 'verify_agent' }
-  | { readonly kind: 'pair'; readonly invocation: Omit<PairInvocation, 'token'> };
+  | { readonly kind: 'pair'; readonly invocation: Omit<PairInvocation, 'token'> }
+  /** B5 on two machines: seal the fragment, the token and the engine bundle into `path` (root 0600). */
+  | { readonly kind: 'pair_package'; readonly name: string; readonly path: string };
 
 export type InitActionKind = InitAction['kind'];
 
@@ -498,6 +501,12 @@ export interface Prompter {
   visible(label: string, defaultValue: string | null): Promise<string | null>;
   /** Hidden input, asked twice and compared; null = aborted (Ctrl-C/Ctrl-D). Never echoed. */
   secret(label: string): Promise<string | null>;
+  /**
+   * Lines shown ONCE on the terminal and nowhere else (the pairing package's passphrase): never
+   * through the report sinks, the journal or a log. Interactive only; a non-interactive prompter
+   * shows nothing.
+   */
+  showOnce(lines: readonly string[]): void;
 }
 
 /* ── the I/O doors (init/host_io.ts, spec §2.2) ──────────────────────────────────────── */

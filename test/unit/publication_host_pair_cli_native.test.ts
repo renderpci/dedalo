@@ -40,6 +40,10 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { derive, type HostDeclaration } from '../../publication/host_agent/src/provision/layout.ts';
 import {
+	newPassphrase,
+	sealPairingPackage,
+} from '../../publication/host_agent/src/provision/pairing_package.ts';
+import {
 	engineFragmentRenderer,
 	renderFacts,
 } from '../../publication/host_agent/src/provision/render/engine_fragment.ts';
@@ -58,6 +62,7 @@ import {
 	parseAgentAddress,
 	parseFragment,
 	resolveBundlePath,
+	resolvePackageBundle,
 	resolveToken,
 	runPublicationHostPairCli,
 	TOKEN_PLACEHOLDER,
@@ -219,6 +224,19 @@ describe('fragment grammar and pairing inputs (pure)', () => {
 		expect(resolveBundlePath('unix', null, null)).toBeNull();
 		expect(resolveBundlePath('tls', '/a.pem', null)).toBe('/a.pem');
 		expect(resolveBundlePath('tls', null, '/b.pem')).toBe('/b.pem');
+	});
+
+	test('a sealed package: its bundle on mTLS only; a fragment naming a bundle file besides it is refused', () => {
+		expect(pairRefusalOf(() => resolvePackageBundle('unix', null, 'PEM')).message).toContain(
+			'socket pairing',
+		);
+		expect(pairRefusalOf(() => resolvePackageBundle('tls', '/a.pem', 'PEM')).message).toContain(
+			'names a file',
+		);
+		expect(pairRefusalOf(() => resolvePackageBundle('tls', null, ' ')).message).toContain(
+			'holds none',
+		);
+		expect(resolvePackageBundle('tls', null, 'PEM')).toBe('PEM');
 	});
 
 	test('the fragment fingerprint must be what instance + token hash to; wrong token and wrong instance read the same', () => {
@@ -1034,6 +1052,149 @@ describe('live proof before write (child process, scratch private dir, loopback 
 		});
 		expect(existsSync(join(secretDir('pubsock'), 'token'))).toBe(true);
 		expect(existsSync(join(secretDir('pubsock'), 'engine_bundle.pem'))).toBe(false);
+	});
+	// ── the sealed package (two machines): the SAME checks, proof and commit as the loose files
+	const PASS = newPassphrase();
+	function writePackage(
+		fields: Partial<Record<FragmentField, string>> = tlsFields(),
+		over: { token?: string; bundle?: string; passphrase?: string; mode?: number } = {},
+	): string {
+		fragmentSeq += 1;
+		const path = join(work, `package-${fragmentSeq}.pairing`);
+		const bytes = sealPairingPackage(
+			{
+				fragment: fragmentText(fields),
+				token: over.token ?? TOKEN,
+				bundle: over.bundle ?? pki.bundlePem,
+			},
+			over.passphrase ?? PASS,
+		);
+		writeFileSync(path, bytes, { mode: over.mode ?? 0o600 });
+		chmodSync(path, over.mode ?? 0o600);
+		return path;
+	}
+	const expectNoPassphrase = (text: string): void => {
+		expect(text).not.toContain(PASS);
+		expect(text).not.toContain(PASS.replace(/-/g, ''));
+	};
+
+	test('--package over mTLS: opened in memory, proved by /health alone, registry + 0600 secrets equal to the loose-file add', async () => {
+		const pkg = writePackage();
+		const r = await runCli(['add', NAME, '--package', pkg, '--passphrase-stdin'], `${PASS}\n`);
+		expect(r.code, r.out).toBe(EXIT.ok);
+		expect(r.out).toContain('pairing proved');
+		expect(r.out).toContain('delete the package now');
+		expectNoSecret(r.out);
+		expectNoPassphrase(r.out);
+		expect(tlsAgent.requests).toEqual([HEALTH_ONLY]);
+		expect(registryHosts()[0]).toMatchObject({
+			name: NAME,
+			instance: INSTANCE,
+			fingerprint: fp(TOKEN),
+			address: { kind: 'tls', host: '127.0.0.1', port: tlsAgent.port },
+		});
+		expect(readFileSync(join(secretDir(NAME), 'token'), 'utf8').trim()).toBe(TOKEN);
+		expect(readFileSync(join(secretDir(NAME), 'engine_bundle.pem'), 'utf8')).toBe(pki.bundlePem);
+		expect(statSync(join(secretDir(NAME), 'engine_bundle.pem')).mode & 0o777).toBe(0o600);
+		expect(secretEntries()).toEqual([NAME]);
+		// The passphrase as typed off the screen: lower case, spaces for dashes.
+		const again = await runCli(
+			['add', 'pubpkg2', '--package', writePackage(), '--passphrase-stdin', '--dry-run'],
+			`${PASS.toLowerCase().replace(/-/g, ' ')}\n`,
+		);
+		expect(again.code, again.out).toBe(EXIT.refused); // the same agent under a second name: assertSlot
+		expect(again.out).toContain(`already registered as '${NAME}'`);
+	});
+
+	test('--package: a wrong passphrase or a tampered byte is refused before any connection; nothing written, nothing echoed', async () => {
+		const pkg = writePackage();
+		let other = newPassphrase();
+		while (other === PASS) other = newPassphrase();
+		const wrong = await runCli(['add', NAME, '--package', pkg, '--passphrase-stdin'], `${other}\n`);
+		expect(wrong.code, wrong.out).toBe(EXIT.refused);
+		expect(wrong.out).toContain('passphrase is wrong or the package was altered');
+		expect(wrong.out).not.toContain(other);
+		const bytes = readFileSync(pkg);
+		bytes[bytes.length - 20] = (bytes[bytes.length - 20] as number) ^ 1;
+		writeFileSync(pkg, bytes);
+		const tampered = await runCli(
+			['add', NAME, '--package', pkg, '--passphrase-stdin'],
+			`${PASS}\n`,
+		);
+		expect(tampered.code, tampered.out).toBe(EXIT.refused);
+		expect(tampered.out).toContain('altered');
+		expectNoPassphrase(tampered.out);
+		const shape = await runCli(
+			['add', NAME, '--package', writePackage(), '--passphrase-stdin'],
+			'hunter2\n',
+		);
+		expect(shape.code, shape.out).toBe(EXIT.refused);
+		expect(shape.out).not.toContain('hunter2');
+		expect(tlsAgent.requests).toEqual([]);
+		expectNothingWritten();
+	});
+
+	test('--package goes through the loose-file checks: a token that does not hash, a socket fragment with a bundle, a 0644 package', async () => {
+		const mismatched = await runCli(
+			[
+				'add',
+				NAME,
+				'--package',
+				writePackage(tlsFields(), { token: OTHER_TOKEN }),
+				'--passphrase-stdin',
+			],
+			`${PASS}\n`,
+		);
+		expect(mismatched.code, mismatched.out).toBe(EXIT.refused);
+		expect(mismatched.out).toContain('do not hash');
+		const socket = await runCli(
+			['add', NAME, '--package', writePackage(unixFields()), '--passphrase-stdin'],
+			`${PASS}\n`,
+		);
+		expect(socket.code, socket.out).toBe(EXIT.refused);
+		expect(socket.out).toContain('socket pairing');
+		const open = await runCli(
+			['add', NAME, '--package', writePackage(tlsFields(), { mode: 0o644 }), '--passphrase-stdin'],
+			`${PASS}\n`,
+		);
+		expect(open.code, open.out).toBe(EXIT.refused);
+		expect(open.out).toContain('readable by group or others');
+		for (const out of [mismatched.out, socket.out, open.out]) {
+			expectNoSecret(out);
+			expectNoPassphrase(out);
+		}
+		expect(tlsAgent.requests).toEqual([]);
+		expect(unixAgent.requests).toEqual([]);
+		expectNothingWritten();
+	});
+
+	test('--package usage: exclusive with the loose inputs; --passphrase-stdin needs it; no terminal and no --passphrase-stdin is refused', async () => {
+		const pkg = writePackage();
+		for (const extra of [
+			['--fragment', writeFragment(tlsFields())],
+			['--bundle', bundleFile],
+			['--token-file', tokenFile],
+			['--token-stdin'],
+		]) {
+			const r = await runCli(['add', NAME, '--package', pkg, ...extra]);
+			expect(r.code, r.out).toBe(EXIT.usage);
+			expect(r.out).toContain('--package carries');
+		}
+		const alone = await runCli([
+			'add',
+			NAME,
+			'--fragment',
+			writeFragment(tlsFields()),
+			'--passphrase-stdin',
+		]);
+		expect(alone.code).toBe(EXIT.usage);
+		const remove = await runCli(['remove', NAME, '--package', pkg]);
+		expect(remove.code).toBe(EXIT.usage);
+		const noTty = await runCli(['add', NAME, '--package', pkg]);
+		expect(noTty.code, noTty.out).toBe(EXIT.refused);
+		expect(noTty.out).toContain('--passphrase-stdin');
+		expect(tlsAgent.requests).toEqual([]);
+		expectNothingWritten();
 	});
 });
 

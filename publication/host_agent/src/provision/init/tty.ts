@@ -166,6 +166,10 @@ export function ttyPrompter(streams: TtyStreams = { input: process.stdin, output
   const write = (text: string) => streams.output.write(sanitizeLine(text));
   return {
     interactive,
+    showOnce: lines => {
+      if (!interactive) return;
+      for (const line of lines) write(`${line}\n`);
+    },
     confirm: async question => {
       const answer = await ask(async reader => {
         write(`${question} [y/N] `);
@@ -226,12 +230,17 @@ export interface ScriptedAnswers {
 }
 
 /** A prompter that answers from `answers`, recording every question it was asked. */
-export function scriptedPrompter(answers: ScriptedAnswers = {}): Prompter & { readonly asked: string[] } {
+export function scriptedPrompter(answers: ScriptedAnswers = {}): Prompter & { readonly asked: string[]; readonly shown: string[] } {
   const asked: string[] = [];
+  const shown: string[] = [];
   const interactive = answers.interactive ?? true;
   return {
     asked,
+    shown,
     interactive,
+    showOnce: lines => {
+      if (interactive) shown.push(...lines);
+    },
     confirm: async question => {
       asked.push(`confirm ${question}`);
       return interactive && answers.confirm === true;

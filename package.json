@@ -71,6 +71,7 @@
 		"hostagent:start": "cd publication/host_agent && bun run src/index.ts",
 		"hostagent:test": "cd publication/host_agent && bunx tsc --noEmit && bun test",
 		"hostagent:provision": "cd publication/host_agent && bun run src/provision/cli.ts",
+		"hostagent:pack": "bun run scripts/publication_host_pack.ts",
 		"typecheck": "tsc --noEmit",
 		"lint": "biome check .",
 		"format": "biome format --write ."

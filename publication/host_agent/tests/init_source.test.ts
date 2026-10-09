@@ -88,6 +88,14 @@ describe('readStagedSource', () => {
     expect(() => readStagedSource(stage, reader)).toThrow("'publication/server_api' must be a directory");
   });
 
+  test('the v1 sample is OPTIONAL (a kit built from a v2-only draft): absent → null; every other entry stays required', () => {
+    rmSync(join(stage, 'publication/server_api/v1'), { recursive: true });
+    expect(readStagedSource(stage, reader).v1Sample).toBeNull();
+    expect(SOURCE_MANIFEST.filter(entry => entry.optional).map(entry => entry.path)).toEqual(['publication/server_api/v1/config_api/sample.server_config_api.php']);
+    rmSync(join(stage, 'publication/server_api/v2/.env.example'));
+    expect(() => readStagedSource(stage, reader)).toThrow("'publication/server_api/v2/.env.example' is missing");
+  });
+
   test('a symlink where a manifest file belongs is refused (never followed)', () => {
     rmSync(join(stage, '.bun-version'));
     symlinkSync('/etc/hostname', join(stage, '.bun-version'));

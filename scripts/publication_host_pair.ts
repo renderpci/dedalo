@@ -9,6 +9,8 @@
  *        --bundle <engine_bundle.pem> --token-file <0600 copy of the agent SERVICE_TOKEN>
  *   sudo cat <agent credential> | sudo -u <engine user> bun run dedalo:pair-publication-host add <name> --fragment <f> --token-stdin
  *   sudo -u <engine user> bun run dedalo:pair-publication-host replace <name> --fragment <f> [--bundle <p>] [--token-file <p>]
+ *   sudo -u <engine user> bun run dedalo:pair-publication-host add <name> --package <the sealed pairing package>
+ *        (asks for its one-time passphrase on the terminal; or --passphrase-stdin)
  *   sudo -u <engine user> bun run dedalo:pair-publication-host remove <name>
  *   add|replace|remove … --dry-run        prove (add/replace) or describe (remove); keep nothing
  *                                         (no sweep, no registry, no secret; the proof's
@@ -27,6 +29,11 @@
  *
  * THE ORDER IS THE CONTRACT:
  *   1. Run as the OWNER of the private directory (the engine user).
+ *   1b. A SEALED PACKAGE (`--package`, written by `provision init` on a two-machine host) is
+ *      opened in memory with its one-time passphrase (publication/host_agent/src/provision/
+ *      pairing_package.ts, the ONE implementation of the format): it yields the fragment's
+ *      text, the token and the engine bundle, which then take EXACTLY the steps below — the
+ *      loose files and the package feed one function (pairWith), never two pairing paths.
  *   2. Read the agent's fragment with the ENGINE's env parser (src/config/env.ts). Unknown
  *      keys, a pending fingerprint, both or neither of URL/SOCKET, a bundle on a socket
  *      pairing, a group-readable credential — including a fragment that carries the token —
@@ -59,6 +66,11 @@ import { randomBytes } from 'node:crypto';
 import { lstatSync, readdirSync, readFileSync, rmdirSync, statSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { parseArgs } from 'node:util';
+import {
+	MAX_PACKAGE_BYTES,
+	openPairingPackage,
+	PairingPackageRefused,
+} from '../publication/host_agent/src/provision/pairing_package.ts';
 import { parseEnvFile, privateDir } from '../src/config/env.ts';
 import { isDedaloError } from '../src/core/errors/dedalo_error.ts';
 import { proveHostPairing } from '../src/core/publication_host/agent_client.ts';
@@ -132,6 +144,9 @@ const USAGE = [
 	'  --bundle <file>        engine_bundle.pem carried from the publication host (mTLS; 0600)',
 	'  --token-file <file>    a 0600 copy of the agent SERVICE_TOKEN',
 	'  --token-stdin          read the token from stdin instead',
+	'  --package <file>       the sealed pairing package provision init wrote (two machines; 0600); replaces',
+	'                         --fragment/--bundle/--token-*; its passphrase is asked on the terminal',
+	'  --passphrase-stdin     read the package passphrase from stdin instead (one line)',
 	'  --dry-run              prove the pairing (or describe the removal); keep nothing, sweep nothing',
 	'',
 ].join('\n');
@@ -174,6 +189,8 @@ interface CliOptions {
 	bundle: string | null;
 	tokenFile: string | null;
 	tokenStdin: boolean;
+	packageFile: string | null;
+	passphraseStdin: boolean;
 	dryRun: boolean;
 }
 
@@ -320,6 +337,33 @@ export function resolveBundlePath(
 	return path;
 }
 
+/**
+ * The bundle rule for a SEALED PACKAGE: the same two refusals as resolveBundlePath (a socket
+ * pairing carries none; an mTLS one needs it), and a fragment naming a bundle FILE besides the
+ * package's own is refused rather than guessed between.
+ */
+export function resolvePackageBundle(
+	kind: 'tls' | 'unix',
+	fragmentBundle: string | null,
+	packagePem: string,
+): string | null {
+	if (kind === 'unix') {
+		throw new PairRefusal(
+			'a socket pairing carries no TLS bundle (spec §1.1: the socket group is the access decision), and this package does. ' +
+				'Pair a socket agent with --fragment and --token-stdin.',
+		);
+	}
+	if (fragmentBundle !== null) {
+		throw new PairRefusal(
+			`${FRAGMENT_KEYS.tlsBundle} in the package's fragment names a file, and the package carries the bundle itself. Write a new package with provision init.`,
+		);
+	}
+	if (packagePem.trim() === '') {
+		throw new PairRefusal('an mTLS pairing needs the engine bundle, and the package holds none.');
+	}
+	return packagePem;
+}
+
 /** Returns the fingerprint the registry stores. Wrong token and wrong instance: one sentence. */
 export function assertFragmentFingerprint(
 	fields: Pick<FragmentFields, 'instance' | 'fingerprint'>,
@@ -402,6 +446,22 @@ function readPrivateFile(path: string, what: string): string {
 		return readFileSync(path, 'utf8');
 	} catch (error) {
 		throw new PairRefusal(`${what} could not be read (${readFailure(error)}).`);
+	}
+}
+
+/** The sealed package: a credential at rest like the others (0600), size-capped before it is read. */
+function readPackageBytes(path: string): Uint8Array {
+	assertPrivateMode(path, 'the pairing package');
+	try {
+		if (statSync(path).size > MAX_PACKAGE_BYTES) {
+			throw new PairRefusal(
+				`the pairing package is larger than ${MAX_PACKAGE_BYTES} bytes: it is not one provision init wrote.`,
+			);
+		}
+		return new Uint8Array(readFileSync(path));
+	} catch (error) {
+		if (error instanceof PairRefusal) throw error;
+		throw new PairRefusal(`the pairing package could not be read (${readFailure(error)}).`);
 	}
 }
 
@@ -639,17 +699,51 @@ export function commit(
 	}
 }
 
-async function pair(
-	opts: CliOptions,
-	readStdin: () => Promise<string>,
-	out: string[],
-): Promise<void> {
-	const command = opts.command as 'add' | 'replace';
+/** What a pairing is made of, from loose files or from a sealed package: ONE shape, ONE path. */
+interface PairInputs {
+	fields: FragmentFields;
+	/** The token supplied besides the fragment (file, stdin, or the package). */
+	supplied: string | null;
+	/** Resolves the engine bundle once the address kind is known (null: none, a socket pairing). */
+	bundle: (kind: Address['kind']) => string | null;
+}
+
+async function fileInputs(opts: CliOptions, readStdin: () => Promise<string>): Promise<PairInputs> {
 	const fields = readFragmentFields(opts.fragment ?? '');
+	const supplied = await suppliedToken(opts, readStdin);
+	return {
+		fields,
+		supplied,
+		bundle: (kind) => {
+			const path = resolveBundlePath(kind, fields.tlsBundle, opts.bundle);
+			return path === null ? null : readPrivateFile(path, 'the engine bundle');
+		},
+	};
+}
+
+async function packageInputs(
+	opts: CliOptions,
+	readPassphrase: (fromStdin: boolean) => Promise<string>,
+): Promise<PairInputs> {
+	const bytes = readPackageBytes(opts.packageFile ?? '');
+	const passphrase = await readPassphrase(opts.passphraseStdin);
+	// Decrypted in memory only; the parts reach disk solely through the staging/commit below.
+	const parts = openPairingPackage(bytes, passphrase);
+	const fields = parseFragment(parts.fragment);
+	return {
+		fields,
+		supplied: parts.token,
+		bundle: (kind) => resolvePackageBundle(kind, fields.tlsBundle, parts.bundle),
+	};
+}
+
+/** THE pairing: the same checks, proof and commit whichever way the inputs arrived. */
+async function pairWith(opts: CliOptions, inputs: PairInputs, out: string[]): Promise<void> {
+	const command = opts.command as 'add' | 'replace';
+	const { fields } = inputs;
 	const address = parseAgentAddress(fields);
-	const token = resolveToken(fields.token, await suppliedToken(opts, readStdin));
-	const bundlePath = resolveBundlePath(address.kind, fields.tlsBundle, opts.bundle);
-	const bundlePem = bundlePath === null ? null : readPrivateFile(bundlePath, 'the engine bundle');
+	const token = resolveToken(fields.token, inputs.supplied);
+	const bundlePem = inputs.bundle(address.kind);
 	const fingerprint = assertFragmentFingerprint(fields, token);
 	const existing = assertSlot(loadRegistry(), command, opts.name, address, fingerprint);
 	const record = buildRecord(opts.name, fields.instance, address, fingerprint, existing);
@@ -666,6 +760,24 @@ async function pair(
 		`${TAG} ${command === 'add' ? 'added' : 'replaced'} '${opts.name}': registry ${registryPath()}, secrets ${hostSecretDir(opts.name)} ` +
 			`(token${bundlePem === null ? '' : ' + engine bundle'}, 0600). Maintenance → Publication hosts shows its state.`,
 	);
+	if (opts.packageFile !== null) {
+		out.push(
+			`${TAG} delete the package now: this copy (${opts.packageFile}) and the one on the publication host. Its passphrase opens nothing else.`,
+		);
+	}
+}
+
+async function pair(
+	opts: CliOptions,
+	readStdin: () => Promise<string>,
+	readPassphrase: (fromStdin: boolean) => Promise<string>,
+	out: string[],
+): Promise<void> {
+	const inputs =
+		opts.packageFile === null
+			? await fileInputs(opts, readStdin)
+			: await packageInputs(opts, readPassphrase);
+	await pairWith(opts, inputs, out);
 }
 
 function remove(name: string, dryRun: boolean, out: string[]): void {
@@ -712,6 +824,8 @@ function parseArgv(argv: readonly string[]) {
 				bundle: { type: 'string' },
 				'token-file': { type: 'string' },
 				'token-stdin': { type: 'boolean', default: false },
+				package: { type: 'string' },
+				'passphrase-stdin': { type: 'boolean', default: false },
 				'dry-run': { type: 'boolean', default: false },
 			},
 		});
@@ -743,14 +857,23 @@ function parseCliArgs(argv: readonly string[]): CliOptions {
 		bundle: values.bundle ?? null,
 		tokenFile: values['token-file'] ?? null,
 		tokenStdin: values['token-stdin'] === true,
+		packageFile: values.package ?? null,
+		passphraseStdin: values['passphrase-stdin'] === true,
 		dryRun: values['dry-run'] === true,
 	};
-	const pairingInputs =
+	const looseInputs =
 		opts.fragment !== null || opts.bundle !== null || opts.tokenFile !== null || opts.tokenStdin;
+	const pairingInputs = looseInputs || opts.packageFile !== null || opts.passphraseStdin;
 	if (command === 'remove' && pairingInputs)
 		throw new Error('remove takes only <name> [--dry-run].');
-	if (command !== 'remove' && opts.fragment === null)
-		throw new Error(`${command} needs --fragment.`);
+	if (opts.packageFile !== null && looseInputs)
+		throw new Error(
+			'--package carries the fragment, the token and the bundle: it excludes --fragment, --bundle, --token-file and --token-stdin.',
+		);
+	if (opts.passphraseStdin && opts.packageFile === null)
+		throw new Error('--passphrase-stdin is the passphrase of a --package.');
+	if (command !== 'remove' && opts.fragment === null && opts.packageFile === null)
+		throw new Error(`${command} needs --fragment (or --package).`);
 	if (opts.tokenFile !== null && opts.tokenStdin)
 		throw new Error('--token-file and --token-stdin are exclusive.');
 	return opts;
@@ -798,6 +921,12 @@ function classify(error: unknown): readonly [number, string] {
 				'treated as empty: restore it from a backup or repair it, then re-run. Nothing was written.',
 		];
 	}
+	if (error instanceof PairingPackageRefused) {
+		return [
+			EXIT.refused,
+			`${error.message}. Nothing was written. A forgotten passphrase cannot be recovered: run provision init on the publication host again with --decide pair.package=again.`,
+		];
+	}
 	if (error instanceof SecretError) {
 		return [
 			EXIT.refused,
@@ -818,6 +947,49 @@ function classify(error: unknown): readonly [number, string] {
 	];
 }
 
+/**
+ * The passphrase from the controlling terminal: raw mode, nothing echoed, the prompt on stderr
+ * (stdout carries the result lines). No terminal: refused, naming --passphrase-stdin. Ctrl-C /
+ * Ctrl-D abort; raw mode is restored whatever happens.
+ */
+export async function promptHidden(prompt: string): Promise<string> {
+	const input = process.stdin;
+	if (!input.isTTY || typeof input.setRawMode !== 'function') {
+		throw new PairRefusal(
+			'no terminal to ask the package passphrase on: pipe it with --passphrase-stdin (never as an argument).',
+		);
+	}
+	process.stderr.write(prompt);
+	input.setRawMode(true);
+	input.resume();
+	try {
+		return await new Promise<string>((resolve, reject) => {
+			let typed = '';
+			const onData = (chunk: Buffer | string): void => {
+				for (const char of typeof chunk === 'string' ? chunk : chunk.toString('utf8')) {
+					if (char === '\r' || char === '\n') {
+						input.removeListener('data', onData);
+						resolve(typed);
+						return;
+					}
+					if (char === '\x03' || char === '\x04') {
+						input.removeListener('data', onData);
+						reject(new PairRefusal('aborted at the passphrase prompt.'));
+						return;
+					}
+					if (char === '\x7f' || char === '\b') typed = typed.slice(0, -1);
+					else typed += char;
+				}
+			};
+			input.on('data', onData);
+		});
+	} finally {
+		input.setRawMode(false);
+		input.pause();
+		process.stderr.write('\n');
+	}
+}
+
 function text(lines: string[]): string {
 	return lines.length === 0 ? '' : `${lines.join('\n')}\n`;
 }
@@ -825,7 +997,11 @@ function text(lines: string[]): string {
 export async function runPublicationHostPairCli(
 	argv: readonly string[],
 	readStdin: () => Promise<string> = () => Bun.stdin.text(),
+	readTtyPassphrase: () => Promise<string> = () => promptHidden('pairing package passphrase: '),
 ): Promise<CliResult> {
+	// --passphrase-stdin: the first line of stdin; else the terminal (hidden).
+	const readPassphrase = async (fromStdin: boolean): Promise<string> =>
+		fromStdin ? ((await readStdin()).split(/\r?\n/)[0] ?? '') : readTtyPassphrase();
 	let opts: CliOptions;
 	try {
 		opts = parseCliArgs(argv);
@@ -837,7 +1013,7 @@ export async function runPublicationHostPairCli(
 		assertOwner();
 		if (!opts.dryRun) sweepStaleStaging(Date.now(), out); // a dry run deletes nothing
 		if (opts.command === 'remove') remove(opts.name, opts.dryRun, out);
-		else await pair(opts, readStdin, out);
+		else await pair(opts, readStdin, readPassphrase, out);
 		return { code: EXIT.ok, stdout: text(out), stderr: '' };
 	} catch (error) {
 		const [code, message] = classify(error);

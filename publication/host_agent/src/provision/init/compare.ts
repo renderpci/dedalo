@@ -148,6 +148,7 @@ export const ITEM_IDS = Object.freeze([
   'web.logs',
   'verify.agent',
   'pair.engine',
+  'pair.package',
   'pair.instructions',
   'init.keep_ref',
 ] as const);
@@ -1369,7 +1370,8 @@ function apiConfigItems(env: Env): ComparedItem[] {
   if (decl === null || layout === null) return [];
   const out: ComparedItem[] = [];
   const template = (name: '.env.example' | 'sample.server_config_api.php', sourcePath: string): string | null => {
-    if (ctx.source !== null) return join(ctx.source.dir, sourcePath);
+    // A source without the v1 sample (a kit built from a v2-only draft) gives no v1 template.
+    if (ctx.source !== null) return name === 'sample.server_config_api.php' && ctx.source.v1Sample === null ? null : join(ctx.source.dir, sourcePath);
     if (ctx.kept !== null && ctx.kept.files[name] !== undefined) return join(ctx.kept.dir, name);
     return null;
   };
@@ -1429,6 +1431,12 @@ function apiConfigItems(env: Env): ComparedItem[] {
       } else {
         out.push(blocked(row.id, 'api_config', title, [`${row.path} has the wrong owner or mode and ${row.owner} does not resolve yet`], [`chown ${row.owner} ${row.path} && chmod ${modeText(row.mode)} ${row.path}`]));
       }
+    } else if (row.sample === null && ctx.source !== null) {
+      out.push(
+        blocked(row.id, 'api_config', title, [`${row.path} is missing and the source carries no v1 sample (a kit built from a draft that serves v2 only)`], [
+          'on the work host: bun run hostagent:pack -- --draft <a draft that serves v1>, then install that kit',
+        ]),
+      );
     } else if (row.sample === null) {
       out.push(blocked(row.id, 'api_config', title, [`${row.path} is missing and no template was kept`], ['re-run install.sh with --source']));
     } else {
@@ -1670,7 +1678,7 @@ function tailItems(env: Env, earlier: readonly ComparedItem[]): ComparedItem[] {
             join(ctx.source.dir, '.bun-sha256'),
             join(ctx.source.dir, 'publication/server_api/v2/.env.example'),
             // The v1 sample only for an instance that serves v1 (a v2-only one keeps no PHP template).
-            ...(env.v1 ? [join(ctx.source.dir, 'publication/server_api/v1/config_api/sample.server_config_api.php')] : []),
+            ...(env.v1 && ctx.source.v1Sample !== null ? [join(ctx.source.dir, 'publication/server_api/v1/config_api/sample.server_config_api.php')] : []),
           ],
         },
         after: others,

@@ -121,6 +121,11 @@ export interface ActPorts {
   verifyAgent(): PortResult;
   /** pair.ts (P7, B5): the invocation plus the token it reads itself. */
   pair(invocation: Omit<PairInvocation, 'token'>): PortResult;
+  /**
+   * pair.ts writePairingPackage (B5, two machines): seals and writes the package, then shows its
+   * passphrase ONCE on the terminal. The result never carries the passphrase (it is journaled).
+   */
+  pairPackage(action: Extract<InitAction, { kind: 'pair_package' }>): PortResult;
 }
 
 /* ── the context ──────────────────────────────────────────────────────────────────── */
@@ -667,6 +672,8 @@ function beginDetail(ctx: ActContext, action: InitAction): Record<string, unknow
       return {};
     case 'pair':
       return { name: action.invocation.name };
+    case 'pair_package':
+      return { name: action.name, path: action.path };
     default: {
       const unreachable: never = action;
       throw new StepError(`unknown action ${JSON.stringify(unreachable)}`);
@@ -831,6 +838,8 @@ function step(ctx: ActContext, item: Item, action: InitAction, state: RunState):
       return fromPort(ctx.ports.verifyAgent(), 'the agent check (B4)');
     case 'pair':
       return fromPort(ctx.ports.pair(action.invocation), 'pairing (B5)');
+    case 'pair_package':
+      return fromPort(ctx.ports.pairPackage(action), 'the sealed pairing package (B5)');
     default: {
       const unreachable: never = action;
       throw new StepError(`unknown action ${JSON.stringify(unreachable)}`);

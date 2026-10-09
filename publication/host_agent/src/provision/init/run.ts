@@ -68,13 +68,13 @@ import { JOURNAL_NAME, openJournal } from './journal';
 import { JournalFormatError, decodeJournal, unfinished as unfinishedOf } from './journal_format';
 import type { DeclaredPorts, ObserveFs } from './observe';
 import { hostObserveFs, observeDeclared, observeHostWide } from './observe';
-import { pairItem, pairOneMachine, pairPlan, pairPortResult } from './pair';
+import { pairItem, pairOneMachine, pairPlan, pairPortResult, twoMachineInstructions, writePairingPackage } from './pair';
 import { fsTypeOf } from './parse/mounts';
 import { parseSelinuxContext } from './parse/selinux';
 import { countLine, renderLists, sanitizeLine } from './report';
 import { SourceRefused, confirmedDigestProblem, readStagedSource } from './source';
 import { ttyPrompter } from './tty';
-import type { DeclaredFacts, HostFacts, InitArgs, InitPorts, Item, JournalRecord, KeptRef, StagedSource } from './types';
+import type { DeclaredFacts, HostFacts, InitAction, InitArgs, InitPorts, Item, JournalRecord, KeptRef, StagedSource } from './types';
 import type { HealthFetch } from './verify';
 import { verifyAgent, verifyPortResult } from './verify';
 import { editOperatorFile, seedNginxMap } from './web_txn';
@@ -358,6 +358,7 @@ function declaredPorts(world: InitWorld): DeclaredPorts {
  */
 function adjustPairing(items: ComparedItem[], facts: HostFacts, completion: DraftCompletion, inputs: Inputs): ComparedItem[] {
   const layout = completion.layout;
+  adjustPackage(items, facts, completion, inputs);
   const index = items.findIndex(row => row.id === 'pair.engine');
   if (layout === null || index < 0) return items;
   const current = items[index] as ComparedItem;
@@ -391,6 +392,36 @@ function adjustPairing(items: ComparedItem[], facts: HostFacts, completion: Draf
     facts: [...deferred.facts, 'the engine fragment is written by provision apply earlier in this run; the pairing runs after it'],
   }) as ComparedItem;
   return items;
+}
+
+/**
+ * The sealed package (two machines): compare planned it under the production INIT_BASE; the path
+ * is THIS run's `<INIT_BASE>/<instance>`. A package an earlier run wrote (the journal says so) is
+ * right: every run would otherwise mint a new passphrase; `--decide pair.package=again` writes a
+ * new one (the old file is replaced, its passphrase no longer opens anything).
+ */
+export const PACKAGE_AGAIN = 'again';
+
+function adjustPackage(items: ComparedItem[], facts: HostFacts, completion: DraftCompletion, inputs: Inputs): void {
+  const layout = completion.layout;
+  const index = items.findIndex(row => row.id === 'pair.package');
+  if (layout === null || index < 0) return;
+  const plan = pairPlan(layout, facts, inputs.args, { initDir: inputs.initDir });
+  if (plan.kind !== 'package') return;
+  const planned = pairItem(plan, layout);
+  const written = inputs.history.some(record => record.item === 'pair.package' && record.phase === 'done');
+  if (written && inputs.args.decide.get('pair.package') !== PACKAGE_AGAIN) {
+    items[index] = Object.freeze({
+      ...planned,
+      list: 'right',
+      title: `the sealed pairing package was written (${plan.path})`,
+      facts: [`an earlier run wrote it (journal); delete it once the work host is paired; a new one (new passphrase): --decide pair.package=${PACKAGE_AGAIN}`],
+      commands: [],
+      action: undefined,
+    }) as ComparedItem;
+    return;
+  }
+  items[index] = Object.freeze({ ...planned }) as ComparedItem;
 }
 
 function compute(world: InitWorld, inputs: Inputs, facts: HostFacts, answers: ReadonlyMap<string, string>): Computed {
@@ -631,9 +662,33 @@ function pairNow(a: ActWorld): PortResult {
   const planned = pairPlan(layout, fresh, inputs.args, options);
   if (planned.kind === 'blocked') return { outcome: 'refused', reason: planned.problems.join('; ') };
   if (planned.kind === 'instructions') return { outcome: 'refused', reason: planned.reason };
+  if (planned.kind === 'package') return { outcome: 'refused', reason: 'a tls listener is paired through the sealed package (pair.package)' };
   const outcome = pairOneMachine(planned.invocation, layout, { exec: world.exec, io: world.io, sanitize: sanitizeLine });
   for (const line of outcome.lines) sinks.out(`pair: ${line}`);
   return pairPortResult(outcome);
+}
+
+/**
+ * B5 on two machines: the package is sealed and written, THEN its passphrase is shown once through
+ * the prompter (the terminal) — never through the sinks, so never through a captured report, and
+ * never in the result (the journal records the outcome only).
+ */
+function pairPackageNow(a: ActWorld, action: Extract<InitAction, { kind: 'pair_package' }>): PortResult {
+  const { world, layout, sinks } = a;
+  if (!world.prompter.interactive) return { outcome: 'refused', reason: 'the sealed package needs a terminal: its passphrase is shown once' };
+  const outcome = writePairingPackage(layout, action.path, { io: world.io, root: world.root });
+  if (outcome.kind === 'failed') return { outcome: 'failed', reason: outcome.reason };
+  world.prompter.showOnce([
+    '',
+    `  the passphrase of ${outcome.path} — shown ONCE, stored nowhere; write it down now:`,
+    '',
+    `      ${outcome.passphrase}`,
+    '',
+    '  give it to the work host by a different channel than the file (it opens the package once there)',
+    '',
+  ]);
+  sinks.out(`pair: wrote ${outcome.path} (root 0600); its passphrase was shown above, once`);
+  return { outcome: 'done' };
 }
 
 function declarationProblems(a: ActWorld, body: string): string[] {
@@ -681,6 +736,7 @@ function actContext(a: ActWorld): ActContext {
     declarationProblems: body => declarationProblems(a, body),
     verifyAgent: () => a.verified ?? { outcome: 'failed', reason: 'the agent check (B4) did not run' },
     pair: () => pairNow(a),
+    pairPackage: action => pairPackageNow(a, action),
   };
   return {
     instance: layout.instance,
@@ -707,7 +763,7 @@ function actContext(a: ActWorld): ActContext {
   };
 }
 
-const B4_ITEMS = new Set(['verify.agent', 'pair.engine', 'init.keep_ref']);
+const B4_ITEMS = new Set(['verify.agent', 'pair.engine', 'pair.package', 'init.keep_ref']);
 
 /** Act in two phases around B4 (async): everything before verify.agent, then B4/B5/keep_ref. */
 async function act(a: ActWorld, items: readonly Item[]): Promise<ActReport> {
@@ -920,6 +976,15 @@ export async function runInit(argv: readonly string[], deps: InitDeps = initHost
         if (!(error instanceof ApiConfigRefused)) throw error;
         sinks.err(`provision init: ${error.message}`);
         secretOpen.push(Object.freeze({ ...item, list: 'decision', title: `${item.title}: the typed value was refused` }) as Item);
+      }
+    }
+    // The sealed package shows its passphrase once on the terminal: without one it is not written
+    // (the loose-file pairing instructions stay in its commands).
+    if (!interactive) {
+      for (const item of runnable.filter(row => row.action?.kind === 'pair_package')) {
+        secretOpen.push(Object.freeze({ ...item, list: 'decision', title: `${item.title}: needs a terminal (the passphrase is shown once)`,
+          commands: computed.completion.layout === null ? [...item.commands] : twoMachineInstructions(computed.completion.layout, args.pairName, null),
+        }) as Item);
       }
     }
     const stillOpen = [...resolution.open, ...secretOpen];

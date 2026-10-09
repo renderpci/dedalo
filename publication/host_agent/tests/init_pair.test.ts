@@ -22,11 +22,13 @@ import {
   pairPortResult,
   pairPreconditions,
   twoMachineInstructions,
+  writePairingPackage,
   TWIN_REGISTERED,
   unitOptionId,
 } from '../src/provision/init/pair';
 import type { HostFacts, WorkUnit } from '../src/provision/init/types';
 import { derive } from '../src/provision/layout';
+import { openPairingPackage } from '../src/provision/pairing_package';
 import { tlsDeclaration, unixDeclaration } from './fixtures/provision_declaration';
 
 const TOKEN = 'pair-token-not-a-secret-0123456789abcdefghijk';
@@ -160,10 +162,10 @@ describe('pairPlan → pairItem', () => {
     expect(item.commands[0]).toContain('--token-stdin');
   });
 
-  test('--no-pair, a tls listener, or no unit: printed instructions, never an action', () => {
+  test('--no-pair, or no unit on a socket listener: printed instructions, never an action', () => {
     for (const [layout, work, args] of [
       [UNIX, [unit()], { ...ARGS, noPair: true }],
-      [TLS, [unit()], ARGS],
+      [TLS, [unit()], { ...ARGS, noPair: true }],
       [UNIX, [], ARGS],
     ] as const) {
       const plan = pairPlan(layout, facts([...work]), args);
@@ -171,6 +173,23 @@ describe('pairPlan → pairItem', () => {
       const item = pairItem(plan, layout);
       expect([item.id, item.list, item.action, item.blocking, item.optional]).toEqual(['pair.instructions', 'decision', undefined, false, true]);
     }
+  });
+
+  test('a tls listener (two machines): the sealed package, written under <INIT_BASE>/<instance>, optional, after B4', () => {
+    for (const work of [[unit()], []]) {
+      const plan = pairPlan(TLS, facts(work), ARGS);
+      expect(plan.kind).toBe('package');
+      if (plan.kind !== 'package') continue;
+      expect(plan.path).toBe(`/var/lib/dedalo_publication_host_init/${TLS.instance}/museum_org.pairing`);
+      expect(plan.manual.join('\n')).toContain('--token-file'); // the loose-file path stays (D5)
+      const item = pairItem(plan, TLS);
+      expect([item.id, item.list, item.blocking, item.optional, item.after]).toEqual(['pair.package', 'change', false, true, ['verify.agent']]);
+      expect(item.action).toEqual({ kind: 'pair_package', name: 'museum_org', path: plan.path });
+      expect(item.commands.join('\n')).toContain('dedalo:pair-publication-host add museum_org --package <the copy>');
+    }
+    const elsewhere = pairPlan(TLS, facts([]), ARGS, { initDir: '/scratch/init/x' });
+    expect(elsewhere.kind === 'package' ? elsewhere.path : '').toBe('/scratch/init/x/museum_org.pairing');
+    expect(pairPlan(UNIX, facts([unit()]), ARGS).kind).toBe('invoke'); // one machine: never a package
   });
 
   test('several units: blocked until declaration.work_unit (draft.ts) chose one, then the chosen one is planned', () => {
@@ -355,5 +374,54 @@ describe('pairPortResult (the act loop never re-pairs without an answer)', () =>
     expect(twin.outcome).toBe('refused');
     expect(twin.reason).toContain("'old'");
     expect(twin.reason).toContain('x remove old ; then y add new');
+  });
+});
+
+/* ── the sealed package (two machines) ─────────────────────────────────────────────── */
+
+describe('writePairingPackage', () => {
+  const FRAGMENT = `DEDALO_PUBLICATION_HOST_INSTANCE=${TLS.instance}\nDEDALO_PUBLICATION_HOST_FINGERPRINT=${'a'.repeat(64)}\n`;
+  const BUNDLE = '-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n';
+  function io(files: Record<string, string>) {
+    const writes: { path: string; bytes: Uint8Array; mode: number; uid: number; gid: number }[] = [];
+    return {
+      writes,
+      readRootFile: (path: string) => files[path] ?? null,
+      writeBytesAtomic: (path: string, bytes: Uint8Array, mode: number, uid: number, gid: number) => {
+        writes.push({ path, bytes, mode, uid, gid });
+      },
+    };
+  }
+  const complete = () => ({ [TLS.engineFragmentPath]: FRAGMENT, [TLS.serviceTokenPath]: `${TOKEN}\n`, [TLS.engineBundlePath]: BUNDLE });
+
+  test('seals the three parts into root 0600; the passphrase opens it; nothing else is returned', () => {
+    const fake = io(complete());
+    const outcome = writePairingPackage(TLS, '/i/x.pairing', { io: fake, root: { uid: 0, gid: 0 } });
+    expect(outcome.kind).toBe('done');
+    if (outcome.kind !== 'done') return;
+    expect(fake.writes.map(w => [w.path, w.mode, w.uid, w.gid])).toEqual([['/i/x.pairing', 0o600, 0, 0]]);
+    expect(openPairingPackage(fake.writes[0]?.bytes as Uint8Array, outcome.passphrase)).toEqual({ fragment: FRAGMENT, token: TOKEN, bundle: BUNDLE });
+    expect(Object.keys(outcome).sort()).toEqual(['kind', 'passphrase', 'path']);
+  });
+
+  test('a missing part, a pending fingerprint or a short token: failed, nothing written, no secret in the reason', () => {
+    for (const [drop, why] of [
+      [TLS.engineFragmentPath, 'engine fragment'],
+      [TLS.serviceTokenPath, 'service token'],
+      [TLS.engineBundlePath, 'engine bundle'],
+    ] as const) {
+      const files = complete();
+      delete files[drop];
+      const fake = io(files);
+      const outcome = writePairingPackage(TLS, '/i/x.pairing', { io: fake, root: { uid: 0, gid: 0 } });
+      expect(outcome.kind === 'failed' ? outcome.reason : '').toContain(why);
+      expect(fake.writes).toEqual([]);
+    }
+    const pending = io({ ...complete(), [TLS.engineFragmentPath]: 'DEDALO_PUBLICATION_HOST_FINGERPRINT=PENDING_SERVICE_TOKEN_NOT_MINTED_RERUN_PROVISION_APPLY\n' });
+    expect(writePairingPackage(TLS, '/i/x', { io: pending, root: { uid: 0, gid: 0 } }).kind).toBe('failed');
+    const short = io({ ...complete(), [TLS.serviceTokenPath]: 'tiny-value' });
+    const outcome = writePairingPackage(TLS, '/i/x', { io: short, root: { uid: 0, gid: 0 } });
+    expect(outcome.kind === 'failed' ? outcome.reason : '').not.toContain('tiny-value');
+    expect(short.writes).toEqual([]);
   });
 });

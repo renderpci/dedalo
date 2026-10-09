@@ -524,6 +524,9 @@ export const NGINX_DOMAIN = 'nginx.test';
 /** The v2-only site (no v1 block in its draft): the recommended shape for a new site, no PHP anywhere. */
 export const V2_ONLY_INSTANCE = 'drill_v2only';
 export const V2_ONLY_DOMAIN = 'v2only.test';
+/** The site installed FROM A KIT (`bun run hostagent:pack` here, `install.sh --kit` there). */
+export const KIT_INSTANCE = 'drill_kit';
+export const KIT_DOMAIN = 'kit.test';
 
 interface Ctx {
 	readonly args: DrillArgs;
@@ -590,6 +593,47 @@ async function sourceDigest(ctx: Ctx): Promise<string> {
 	const digest = out.trim().split('\n').at(-1) ?? '';
 	check(/^[0-9a-f]{64}$/.test(digest), `tree_digest printed '${digest}'`);
 	return digest;
+}
+
+/** Copies one local file to `remote` on the target (bytes through docker exec's stdin, or cp in place). */
+async function copyIn(ctx: Ctx, local: string, remote: string): Promise<void> {
+	const where = ctx.runner.where.startsWith('container ')
+		? ctx.runner.where.slice('container '.length)
+		: null;
+	const done =
+		where === null
+			? await spawnText(['cp', local, remote])
+			: await spawnText([
+					'sh',
+					'-c',
+					`docker exec -i ${where} sh -c ${q(`cat > ${q(remote)}`)} < ${q(local)}`,
+				]);
+	check(done.code === 0, `copy ${local} → ${remote}: ${done.err}`);
+}
+
+/** The work host's half of the kit: the REAL packer (a real production `bun install`), here. */
+async function packKit(ctx: Ctx, draftBody: string): Promise<{ kit: string; sha256: string }> {
+	const draftPath = join(ctx.scratch, 'kit.draft.json');
+	writeFileSync(draftPath, draftBody);
+	const kit = join(ctx.scratch, 'dedalo_publication_host_kit.tar.gz');
+	const done = await spawnText(
+		[
+			process.execPath,
+			'run',
+			join(REPO_ROOT, 'scripts/publication_host_pack.ts'),
+			'--draft',
+			draftPath,
+			'--out',
+			kit,
+		],
+		{ timeoutMs: 600_000 },
+	);
+	check(done.code === 0, `hostagent:pack exited ${done.code}: ${done.err}${done.out}`);
+	const sha256 = done.out.match(/^sha256 ([0-9a-f]{64})$/m)?.[1];
+	check(sha256 !== undefined, `hostagent:pack printed no sha256:\n${done.out}`);
+	const actual = createHash('sha256').update(readFileSync(kit)).digest('hex');
+	check(actual === sha256, `the kit's sha256 is ${actual}, the packer printed ${sha256}`);
+	return { kit, sha256: sha256 as string };
 }
 
 /** Every record of one instance's journal, in order. */
@@ -1113,6 +1157,110 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			check(
 				refused[0] === '422' && refused.slice(1).join('\n').includes('"reason":"api_not_served"'),
 				`a v1 install answered ${refused.join(' ')}`,
+			);
+		},
+	},
+	{
+		name: 'kit-install',
+		family: 'both',
+		required: true,
+		what: 'the guided path on two machines: `hostagent:pack` builds ONE kit here (real production install, v2-only draft), the target gets only that file; a kit whose sha256 differs from --kit-sha256 is refused before tar runs; `tar -xzf kit install.sh` + `sh install.sh --kit --kit-sha256` verifies the MANIFEST and converges; the installed agent has no tests and no dev dependencies',
+		async run(ctx) {
+			await makeSite(ctx, KIT_DOMAIN, 'apache');
+			const { kit, sha256 } = await packKit(
+				ctx,
+				draftFor(KIT_INSTANCE, KIT_DOMAIN, { apis: undefined }),
+			);
+			const dir = '/root/kit';
+			await must(ctx, `rm -rf ${dir} && install -d -m 0700 ${dir}`, 'the kit directory');
+			await copyIn(ctx, kit, `${dir}/kit.tar.gz`);
+			const seen = await must(ctx, `sha256sum ${dir}/kit.tar.gz`, 'sha256sum the kit');
+			check(seen.startsWith(sha256), `the copied kit's sha256 is ${seen.trim()}, not ${sha256}`);
+			await must(
+				ctx,
+				`cd ${dir} && tar -xzf kit.tar.gz install.sh`,
+				'extract install.sh from the kit',
+			);
+			// A kit that is not the one the work host printed: refused before tar reads it, nothing staged.
+			await must(
+				ctx,
+				`cp ${dir}/kit.tar.gz ${dir}/bad.tar.gz && printf x >> ${dir}/bad.tar.gz`,
+				'make an altered kit',
+			);
+			const bad = await ctx.runner.sh(
+				`sh ${dir}/install.sh ${KIT_INSTANCE} --kit ${dir}/bad.tar.gz --kit-sha256 ${sha256} --mirror ${ctx.mirror} -- --no-pair </dev/null`,
+			);
+			check(
+				bad.code === 3 && bad.err.includes(`not the --kit-sha256 ${sha256}`),
+				`an altered kit was not refused by its sha256: exit ${bad.code}\n${bad.out}${bad.err}`,
+			);
+			check(
+				(
+					await ctx.runner.sh(
+						`test -e /var/lib/dedalo_publication_host_init/${KIT_INSTANCE}/stage/kit`,
+					)
+				).code !== 0,
+				'the altered kit was extracted',
+			);
+			// --kit with --draft is refused: the kit carries its draft.
+			const both = await ctx.runner.sh(
+				`sh ${dir}/install.sh ${KIT_INSTANCE} --kit ${dir}/kit.tar.gz --draft /etc/hostname </dev/null`,
+			);
+			check(
+				both.code === 3 && both.err.includes('--kit carries its draft'),
+				`--kit --draft: exit ${both.code} ${both.err}`,
+			);
+			const run = await drivePty(
+				ctx.runner,
+				`sh ${dir}/install.sh ${KIT_INSTANCE} --kit ${dir}/kit.tar.gz --kit-sha256 ${sha256} --mirror ${ctx.mirror} -- --no-pair`,
+				ctx.secrets,
+			);
+			check(!run.transcript.includes('[SECRET LEAKED]'), 'a typed secret appeared on the terminal');
+			check(
+				run.code === 0,
+				`install from the kit exited ${run.code}; answered ${run.answered.join(', ')}\n${run.transcript.slice(-4000)}`,
+			);
+			check(
+				run.transcript.includes(`sha256 ${sha256}, MANIFEST verified`),
+				'install.sh did not report the verified MANIFEST',
+			);
+			check(
+				!run.answered.includes('source digest'),
+				'a kit install asked the source-digest question (the kit sha256 is the consent)',
+			);
+			const home = `/home/${KIT_DOMAIN}`;
+			await must(
+				ctx,
+				`test -f ${home}/host_agent/node_modules/zod/package.json`,
+				'the production dependency',
+			);
+			for (const absent of [
+				'tests',
+				'node_modules/typescript',
+				'node_modules/@types',
+				'.env.test',
+				'deploy/examples',
+			])
+				check(
+					(await ctx.runner.sh(`test -e ${home}/host_agent/${absent}`)).code !== 0,
+					`the kit-installed agent carries ${absent}`,
+				);
+			check(
+				(
+					await ctx.runner.sh(
+						`test -e /var/lib/dedalo_publication_host_init/${KIT_INSTANCE}/kept/sample.server_config_api.php`,
+					)
+				).code !== 0,
+				'a v2-only kit kept a v1 sample',
+			);
+			await healthOverSocket(ctx, KIT_INSTANCE);
+			// The re-run needs no kit: rerun.env names the installed Bun and agent.
+			const rerun = await ctx.runner.sh(
+				`${rerunSh(KIT_INSTANCE, home, '-- --yes --no-pair')} </dev/null`,
+			);
+			check(
+				rerun.code === 0,
+				`re-run without the kit exited ${rerun.code}\n${rerun.out.slice(-2000)}${rerun.err}`,
 			);
 		},
 	},

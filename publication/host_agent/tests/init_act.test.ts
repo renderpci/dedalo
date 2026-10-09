@@ -129,6 +129,10 @@ function makeWorld(options: { os?: FakeOs; decl?: HostDeclaration; selinux?: 'ab
       calls.push(`pair ${invocation.name}`);
       return { outcome: behave.pair, reason: 'already registered. Use `replace`' };
     },
+    pairPackage: action => {
+      calls.push(`pairPackage ${action.name} ${action.path}`);
+      return { outcome: behave.pair, reason: 'the engine bundle does not exist' };
+    },
   };
   const ctx: ActContext = {
     instance: 'test',
@@ -579,6 +583,15 @@ describe('the declaration (§5.6), apply (§5.7), B4/B5', () => {
     expect(executeItems([item({ kind: 'pair', invocation })], w.ctx).exit).toBe(3);
     w.behave.verify = 'failed';
     expect(executeItems([item({ kind: 'verify_agent' })], w.ctx).outcomes[0]?.detail).toBe('the agent did not answer /health');
+  });
+
+  test('the sealed package goes through its port; the journal records the name and path only', () => {
+    const w = makeWorld();
+    const action = { kind: 'pair_package' as const, name: 'test', path: `${INIT_DIR}/test.pairing` };
+    expect(executeItems([item(action)], w.ctx).exit).toBe(0);
+    expect(w.calls).toEqual([`pairPackage test ${INIT_DIR}/test.pairing`]);
+    w.behave.pair = 'refused';
+    expect(executeItems([item(action)], w.ctx).exit).toBe(3);
   });
 });
 

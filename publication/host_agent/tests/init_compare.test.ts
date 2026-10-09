@@ -390,6 +390,8 @@ const ROWS: readonly (readonly [string, () => Scn, string, Expect])[] = [
   ['v2 env from kept', () => ({ ctx: { source: null, kept: { dir: '/var/lib/dedalo_publication_host_init/demo/kept', files: { '.env.example': 'e'.repeat(64) } } } }), 'api_config.v2_env', { list: 'change' }],
   ['v1 config missing', () => ({}), 'api_config.v1_config', { list: 'change', action: 'v1_config', after: ['provision.apply', 'api_config.v1_db_transport'] }],
   ['v1 config right', () => converged(), 'api_config.v1_config', { list: 'right' }],
+  ['v1 config, source without the v1 sample (a v2-only kit)', () => ({ ctx: { source: stagedSource({ v1Sample: null }) } }), 'api_config.v1_config', { blocking: true, fact: /carries no v1 sample/, command: /hostagent:pack -- --draft/ }],
+  ['v2 env, source without the v1 sample (a v2-only kit)', () => ({ draft: v2Draft(), ctx: { source: stagedSource({ v1Sample: null }) } }), 'api_config.v2_env', { list: 'change', action: 'v2_env' }],
   // web.modules
   ['modules debian missing', () => ({ facts: { ...debianHost(), web: { ...debianHost().web, modules: ['ssl_module', 'proxy_module'] } } }), 'web.modules', { list: 'change', action: 'apache_modules', command: /^a2enmod -q proxy_http proxy_fcgi headers rewrite$/ }],
   ['modules el ssl', () => ({ facts: { ...elHost(), web: { ...elHost().web, modules: ['proxy_module', 'proxy_http_module', 'proxy_fcgi_module', 'headers_module', 'rewrite_module'] } } }), 'web.modules', { blocking: true, command: /^dnf install mod_ssl$/ }],

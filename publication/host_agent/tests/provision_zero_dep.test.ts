@@ -23,6 +23,8 @@ const ZERO_DEP = [
   '../security/pairing.ts',
   // Task 9: the mTLS issuer (node:crypto + ./layout) — a root drill may import it without node_modules.
   'tls.ts',
+  // Step 3: the sealed pairing package (node:crypto only) — the engine's pairing script imports it.
+  'pairing_package.ts',
   // provision init (spec §2.1, §9): the spawn contracts, the lock policy (its I/O is the injected
   // LockIo; flock.ts is NOT zero-dep — it loads libc), and init's pure modules.
   'exec_contract.ts',

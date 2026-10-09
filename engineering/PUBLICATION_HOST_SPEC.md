@@ -695,8 +695,10 @@ two API configuration files, prove the agent (B4) and pair it (B5).
   downloaded on the publication host and verified (§9.10). **Pairing** through the work
   system's own CLI always exists: on one machine (unix listener, exactly one running
   `dedalo-ts`/`dedalo-ts@<site>` unit) B5 runs it as the engine user, token on stdin only; on
-  two machines (tls), with `--no-pair` or without a work unit it prints the operator page's step
-  6/8 commands — two-machine pairing stays manual. **Database passwords** are typed only on the publication host.
+  two machines (tls) B5 writes the sealed pairing package (§9.12) that the work system's CLI
+  opens; with `--no-pair`, without a terminal, or without a work unit on a socket listener it
+  prints the operator page's step 6/8 commands — the loose-file pairing always stays available.
+  **Database passwords** are typed only on the publication host.
 - **v1 runs in its own dedicated, stamped PHP-FPM pool** per instance (`fpm_pool`, §9.4), as
   `v1.user`, with its own socket, `open_basedir` and temporary directory
   (`/var/lib/dedalo_publication_host/<instance>/v1/`); the website's PHP is never edited.
@@ -723,8 +725,8 @@ two API configuration files, prove the agent (B4) and pair it (B5).
 
 ### 9.2 Entry
 
-`publication/host_agent/deploy/install.sh` is the ONLY entry point (first run with `--source`,
-re-runs through `<INIT_BASE>/<instance>/rerun.env`). Root never runs code or config a non-root
+`publication/host_agent/deploy/install.sh` is the ONLY entry point (first run with `--source`
+or `--kit` (§9.13), re-runs through `<INIT_BASE>/<instance>/rerun.env`). Root never runs code or config a non-root
 account can write: before Bun starts it stages the closed source manifest
 (`publication/host_agent/src/provision/init/constants.ts` `SOURCE_MANIFEST`) into root-owned
 0700 directories, refusing special files and escaping symlinks, shows the source digest for
@@ -935,3 +937,100 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   drill record (`el_drill_record.json` under `engineering/`: inputs digest, hosts, measured
   types and floors); a root ratchet then turns any change to an EL-relevant
   input red until the drill runs again.
+
+### 9.12 The sealed pairing package (two machines)
+
+At the end of a two-machine install (a `tls` listener, not `--no-pair`) B5 is the item
+`pair.package`: init reads the engine fragment, the agent's `SERVICE_TOKEN` and the engine TLS
+bundle as root and seals them into ONE file, `<INIT_BASE>/<instance>/<pair name>.pairing`
+(root 0600), under a one-time passphrase. The passphrase is shown ONCE on the terminal through
+the prompter (`Prompter.showOnce`) — never through the report output, the journal (which
+records the item's name, path and outcome only), argv or a log; without an interactive terminal
+the item stays open (optional) and the loose-file instructions are printed instead. A later
+run reports the package as written (the journal); `--decide pair.package=again` writes a new
+one with a new passphrase. One machine (unix listener) pairs directly and writes no package.
+
+On the work host, as the engine user: `dedalo:pair-publication-host add <name> --package
+<file>` (the file 0600, owned by the engine user; the passphrase asked on the terminal with no
+echo, or one line on `--passphrase-stdin`). The package is opened in memory and its three parts
+take EXACTLY the loose-file path — fragment grammar, address policy, token resolution, the
+bundle rule (none on a socket, required on mTLS, never a second one named by the fragment),
+the fingerprint check, the registry slot, the live proof, the locked commit
+(`scripts/publication_host_pair.ts` `pairWith`). `--package` excludes `--fragment`, `--bundle`,
+`--token-file` and `--token-stdin`. The decrypted secrets reach disk only through the existing
+staging and commit.
+
+**Format v1** — ONE implementation, `publication/host_agent/src/provision/pairing_package.ts`
+(node:crypto only; written by init, imported by the pairing CLI):
+
+| offset | bytes | field |
+| --- | --- | --- |
+| 0 | 8 | magic `DDPHPAIR` |
+| 8 | 1 | version `1` |
+| 9 | 1 | KDF `1` = scrypt |
+| 10 | 1 | log2 N = `17` |
+| 11 | 1 | r = `8` |
+| 12 | 1 | p = `1` |
+| 13 | 16 | salt |
+| 29 | 12 | AES-256-GCM nonce |
+| 41 | … | ciphertext |
+| end − 16 | 16 | GCM tag |
+
+The key is scrypt(passphrase, salt, 32 bytes, N = 2^17, r = 8, p = 1). The 41-byte header is
+the GCM additional data, so no header byte can change unnoticed. Before the KDF runs the reader
+refuses another magic, another version, any KDF or parameter other than exactly those (a file
+never chooses its own work factor), a file shorter than header + tag or larger than 1 MiB, and a
+passphrase outside its shape. A wrong passphrase and an altered file are ONE refusal (`auth`):
+GCM cannot tell them apart. The plaintext is JSON with exactly the keys `format`
+(`dedalo-publication-host-pairing`), `version` (`1`), `fragment`, `token`, `bundle` (non-empty
+strings under per-part caps); any other key set is refused (`parts`). The passphrase is 24
+characters of Crockford's base 32 (120 bits from `randomBytes`), shown as six groups of four;
+input drops spaces and dashes, is upper-cased and reads O as 0 and I/L as 1. Gates:
+`publication/host_agent/tests/pairing_package.test.ts` (format), `tests/init_run.test.ts` (the
+passphrase on the terminal only, the file 0600, the re-run), and
+`test/unit/publication_host_pair_cli_native.test.ts` (`--package` end to end against a mock
+agent: a wrong passphrase, an altered byte, a non-matching token, a socket fragment and a 0644
+package refused before any connection).
+
+### 9.13 The kit (two machines)
+
+`bun run hostagent:pack -- --draft <draft.json> [--out <file>]` (`scripts/publication_host_pack.ts`,
+on the WORK host) builds ONE deterministic archive — the release bundle's writer
+(`src/core/publication_host/bundle_writer.ts`: gzip with a fixed header around ustar, mtime 0,
+uid/gid 0, normalized modes, tree order), so the same checkout and draft give the same bytes and
+the same sha256, which it prints. Layout:
+
+| path | content |
+| --- | --- |
+| `MANIFEST` | `# dedalo publication-host kit 1`, then `<sha256>  <path>` for every other file, byte order of the path |
+| `draft.json` | the draft, byte for byte, after the agent's OWN `parseDraft` accepted it (a child Bun in the scratch copy: the kit's code and its own zod judge it) |
+| `install.sh` | `publication/host_agent/deploy/install.sh` |
+| `source/…` | the `SOURCE_MANIFEST` layout: `.bun-version`, `.bun-sha256`, `publication/host_agent/**` (the checkout's files git tracks or would add — never what `.gitignore` names — minus `tests/`, `.env.test`, `deploy/examples/`), the v2 `.env.example`, and the v1 sample ONLY when the draft serves v1 (`SOURCE_MANIFEST` marks it `optional`; a v1 instance whose source lacks it is the blocking `api_config.v1_config`) |
+
+`node_modules` comes from a scratch copy of those files and `bun install --frozen-lockfile
+--production --linker hoisted --ignore-scripts` there (the release bundles' argv) — never the
+developer's tree; the only network access, and on the work host. Refused (exit 3): a draft
+`parseDraft` refuses; a node_modules symlink, special file or development dependency; a path
+outside the kit grammar (`KIT_PATH_PATTERN`, no `.`/`..` segment); a credential-shaped name
+(`.env*` but `.env.example`, `*.pem`, `*.key`, `id_*`, `SERVICE_TOKEN`, `credentials`) or a PEM
+private-key block — a kit carries no secret (D6).
+
+`install.sh <instance> --kit <file> [--kit-sha256 <sha256>]` (exclusive with `--source`, `--draft`
+and `--source-digest`) copies the kit into the root 0700 stage and hashes THAT copy before any
+tar reads it: it must equal `--kit-sha256`, or the operator confirms it on a terminal (no
+terminal and no `--kit-sha256`: refused). The kit sha256 is the trust anchor — it replaces the
+source-digest consent — so the system tar (needed only here; release bundles never use one) reads
+an archive the work host built. Defence in depth before extraction: `kit_names_ok` (every
+`tar -tzf` name in the grammar, at most `KIT_MAX_ENTRIES`) and `kit_types_ok` (every
+`tar -tvzf` member a file or a directory); extraction with `--no-same-owner
+--no-same-permissions`; then `verify_kit`: regular files and directories only, the file set
+EXACTLY the MANIFEST's (an extra, a missing file, a repeated line refused), every sha256 equal,
+the draft, `install.sh` and `source/` present. Only then is `source/` the staged source and
+`draft.json` the staged draft, and the run continues as a source run. The KIT_* constants live
+in `init/constants.ts`; the sh twins are held equal by `publication/host_agent/tests/
+init_install_kit.test.ts`, which also drives the three functions on altered trees; the packer
+READS them from install.sh. Gates: that file; `test/unit/publication_host_kit_pack.test.ts`
+(determinism, the closed content, the refusals, and the real checkout's kit extracted by the
+system tar and accepted by install.sh's own functions, one altered byte refused); the init
+drill's `kit-install` leg (the real packer, a real production install, an altered kit refused
+by its sha256, the install from the kit, no tests or dev dependencies installed).

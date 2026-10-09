@@ -87,7 +87,8 @@ function assertClosedLayout(dir: string, reader: TreeReader, manifest: readonly 
   walk('');
   for (const entry of manifest) {
     // An excluded path inside a tree (the test scratch) is REPORTED (testScratchPresent), not refused: compare prints the fix.
-    if (reader.lstat(join(dir, entry.path)) === null) throw new SourceRefused(`'${entry.path}' is missing`);
+    // An OPTIONAL entry may be absent (the v1 sample of a kit built from a v2-only draft): readStagedSource reports it null.
+    if (!entry.optional && reader.lstat(join(dir, entry.path)) === null) throw new SourceRefused(`'${entry.path}' is missing`);
   }
 }
 
@@ -151,7 +152,7 @@ export function readStagedSource(dir: string, reader: TreeReader = hostTreeReade
     agentDir,
     agentDigest,
     v2EnvExample: text(reader, join(dir, V2_TEMPLATE_PATH), V2_TEMPLATE_PATH),
-    v1Sample: text(reader, join(dir, V1_TEMPLATE_PATH), V1_TEMPLATE_PATH),
+    v1Sample: reader.lstat(join(dir, V1_TEMPLATE_PATH)) === null ? null : text(reader, join(dir, V1_TEMPLATE_PATH), V1_TEMPLATE_PATH),
     missingDependencies: Object.freeze(missingDependencies),
     devDependenciesPresent: Object.freeze(devDependenciesPresent),
     testScratchPresent,

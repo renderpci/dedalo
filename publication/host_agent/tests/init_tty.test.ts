@@ -204,3 +204,23 @@ describe('scriptedPrompter', () => {
     expect(await p.secret('pw')).toBeNull();
   });
 });
+
+describe('showOnce (the pairing package passphrase)', () => {
+  test('a terminal: the lines are written, sanitized, without raw mode; not a terminal: nothing', () => {
+    const t = terminal();
+    t.prompter.showOnce(['  the passphrase:', '      ABCD-EFGH\x1b[2J']);
+    expect(t.output.text).toBe('  the passphrase:\n      ABCD-EFGH\n');
+    expect(t.input.raw).toEqual([]);
+    const pipe = terminal();
+    pipe.output.isTTY = false;
+    const notTty = ttyPrompter({ input: pipe.input, output: pipe.output, signals: pipe.signals });
+    notTty.showOnce(['secret']);
+    expect(pipe.output.text).toBe('');
+    const scripted = scriptedPrompter();
+    scripted.showOnce(['a']);
+    expect(scripted.shown).toEqual(['a']);
+    const quiet = scriptedPrompter({ interactive: false });
+    quiet.showOnce(['a']);
+    expect(quiet.shown).toEqual([]);
+  });
+});

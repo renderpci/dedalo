@@ -31,6 +31,7 @@ import { parseRestoreconDryRun } from '../src/provision/init/parse/selinux';
 import { footgunProblems, initHostDeps, productionWorld, runInit, SECRET_PROMPTS } from '../src/provision/init/run';
 import type { InitWorld } from '../src/provision/init/run';
 import { sourceDigest } from '../src/provision/init/source';
+import { openPairingPackage } from '../src/provision/pairing_package';
 import type { ScriptedAnswers } from '../src/provision/init/tty';
 import { scriptedPrompter } from '../src/provision/init/tty';
 import type { MountRow, Prompter } from '../src/provision/init/types';
@@ -1194,6 +1195,71 @@ describe('B5: a work engine on this machine', () => {
     w.host.pairResult = { code: 3, stdout: '', stderr: "provision: 'test' is already registered. Use `replace`" };
     expect(await init(w, firstRun(w))).toBe(EXIT.REFUSED);
     expect(w.err.join('\n')).toContain('--decide pair.engine=replace');
+  });
+});
+
+describe('B5 on two machines: the sealed pairing package (tls listener)', () => {
+  const TLS_LISTEN = { kind: 'tls' as const, host: '10.8.0.2', port: 7443 };
+  const PACKAGE = `${INIT}/test/test.pairing`;
+  function tlsWorld(): World {
+    const { engine_group: _dropped, ...rest } = expectedDeclaration(PROFILES.debian, { listen: TLS_LISTEN });
+    const w = makeWorld({ declaration: rest as HostDeclaration });
+    useOperator(w);
+    return w;
+  }
+  const tlsDraft: DraftDeclaration = (() => {
+    const { engine_group: _dropped, ...rest } = DRAFT;
+    return { ...rest, listen: TLS_LISTEN } as DraftDeclaration;
+  })();
+  const shownPassphrase = (w: World): string => {
+    const shown = (w.prompter as { shown?: string[] }).shown ?? [];
+    return shown.map(line => line.trim()).find(line => /^[0-9A-Z]{4}(-[0-9A-Z]{4}){5}$/.test(line)) ?? '';
+  };
+
+  test('written root 0600 after B4; the passphrase shown once on the terminal only — never in out, err or the journal; it opens the package', async () => {
+    const w = tlsWorld();
+    expect(await init(w, firstRun(w, tlsDraft))).toBe(EXIT.OK);
+    expect(listOf(w, 'pair.package')).toBe(2);
+    expect(w.host.lstat(PACKAGE)).toMatchObject({ type: 'file', uid: 0, gid: 0, mode: 0o600 });
+    const passphrase = shownPassphrase(w);
+    expect(passphrase).not.toBe('');
+    for (const text of [w.out.join('\n'), w.err.join('\n'), w.host.body(JOURNAL) ?? '']) {
+      expect(text).not.toContain(passphrase);
+      expect(text).not.toContain(passphrase.replace(/-/g, ''));
+    }
+    expect(w.host.calls.join('\n')).not.toContain(passphrase);
+    expect(w.out.join('\n')).toContain(`pair: wrote ${PACKAGE} (root 0600)`);
+    expect(w.host.pairCalls).toEqual([]); // two machines: nothing is paired from here
+    const parts = openPairingPackage(w.host.entries.get(PACKAGE)?.bytes ?? new Uint8Array(), passphrase);
+    expect(parts.token).toBe(FAKE_TOKEN);
+    expect(parts.fragment).toContain('DEDALO_PUBLICATION_HOST_URL=');
+    expect(parts.bundle).toContain('-----BEGIN');
+  });
+
+  test('a later run: right (no new passphrase); --decide pair.package=again without a terminal stays open, writes nothing', async () => {
+    const w = tlsWorld();
+    expect(await init(w, firstRun(w, tlsDraft))).toBe(EXIT.OK);
+    const first = w.host.body(PACKAGE);
+    rerunMode(w);
+    w.out.length = 0;
+    w.prompter = scriptedPrompter({ interactive: false });
+    expect(await init(w, ['test', '--yes'])).toBe(EXIT.OK);
+    expect(listOf(w, 'pair.package')).toBe(1);
+    rerunMode(w);
+    w.out.length = 0;
+    expect(await init(w, ['test', '--yes', '--decide', 'pair.package=again'])).toBe(EXIT.OK);
+    expect(listOf(w, 'pair.package')).toBe(2);
+    expect(w.out.join('\n')).toContain('needs a terminal (the passphrase is shown once)');
+    expect(w.host.body(PACKAGE)).toBe(first);
+    expect((w.prompter as { shown?: string[] }).shown).toEqual([]);
+  });
+
+  test('--no-pair: no package, the printed instructions only', async () => {
+    const w = tlsWorld();
+    expect(await init(w, firstRun(w, tlsDraft, ['--no-pair']))).toBe(EXIT.OK);
+    expect(listOf(w, 'pair.package')).toBeNull();
+    expect(w.host.lstat(PACKAGE)).toBeNull();
+    expect(shownPassphrase(w)).toBe('');
   });
 });
 

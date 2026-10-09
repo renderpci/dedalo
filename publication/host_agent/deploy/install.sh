@@ -4,9 +4,19 @@
 #   sh deploy/install.sh <instance> [--source <dir>] [--draft <file>]
 #                        [--offline <bun zip> [<SHASUMS256.txt>]] [--mirror <https base url>]
 #                        [--source-digest <sha256>] [-- <init flags>]
+#   sh install.sh <instance> --kit <kit.tar.gz> [--kit-sha256 <sha256>] [--offline …] [--mirror …] [-- <init flags>]
 #
-# First run: --source <dir> (the work checkout, or the copied SOURCE_MANIFEST entries).
+# First run: --source <dir> (the work checkout, or the copied SOURCE_MANIFEST entries), or
+# --kit <file>: the ONE archive `bun run hostagent:pack -- --draft <draft.json>` built on the work
+# host (the source layout + the draft + a MANIFEST of every file's sha256).
 # Re-runs: no --source; the Bun and agent init installed are reused through rerun.env.
+#
+# THE KIT. Its sha256 is the trust anchor: the copy staged here is hashed BEFORE any tar reads it
+# and must equal --kit-sha256 (the value the work host printed), or the operator confirms it on the
+# terminal. Only then is it listed (every member name relative, clean, no '.'/'..' segment) and
+# extracted by tar into a root 0700 directory, and the MANIFEST is verified (verify_kit: regular
+# files and directories only, the file set exactly the MANIFEST's, every sha256 equal) before
+# anything in it is used. The kit consent replaces the source-digest prompt.
 #
 # ROOT NEVER RUNS CODE OR CONFIG A NON-ROOT ACCOUNT CAN WRITE. Before Bun starts, this file
 #   1. stages the source into root-owned 0700 directories, refusing any special file and any
@@ -20,7 +30,8 @@
 #
 # Library mode (the tests): `set -- --lib; . deploy/install.sh` defines the functions and does
 # not run main. The library functions (verify_bun, check_tree, tree_digest, family_of,
-# refuse_host, refuse_kernel, hold_install_lock, pick_asset) use POSIX tools plus $SHA256 (and
+# refuse_host, refuse_kernel, hold_install_lock, pick_asset, kit_names_ok, kit_types_ok,
+# verify_kit) use POSIX tools plus $SHA256 (and
 # hold_install_lock util-linux flock) only; GNU-only forms (stat -c) are confined to main and the
 # re-run trust check, which run only on Linux. There is no `set -e`: a function that dies inside
 # `$(…)` exits only that subshell, so every such assignment in main ends `|| exit 3`.
@@ -34,6 +45,17 @@ BUN_RELEASE_BASE=https://github.com/oven-sh/bun/releases/download
 # SOURCE_MANIFEST: <path>:<file|tree>, in init/constants.ts order; excludes are tree children.
 SOURCE_MANIFEST='.bun-version:file .bun-sha256:file publication/host_agent:tree publication/server_api/v2/.env.example:file publication/server_api/v1/config_api/sample.server_config_api.php:file'
 SOURCE_EXCLUDES='publication/host_agent/.test-tmp'
+# May be absent (a kit built from a v2-only draft carries no v1 sample): skipped, never refused.
+SOURCE_OPTIONAL='publication/server_api/v1/config_api/sample.server_config_api.php'
+# The kit (init/constants.ts KIT_*): its MANIFEST's first line, its fixed top-level names.
+KIT_FORMAT_LINE='# dedalo publication-host kit 1'
+KIT_MANIFEST_NAME=MANIFEST
+KIT_DRAFT_NAME=draft.json
+KIT_INSTALL_NAME=install.sh
+KIT_SOURCE_DIR=source
+KIT_PATH_RE='^[A-Za-z0-9._@+-]+(/[A-Za-z0-9._@+-]+)*$'
+KIT_DOT_SEGMENT_RE='(^|/)\.\.?(/|$)'
+KIT_MAX_ENTRIES=20000
 HANDOVER_FLAGS='--draft --source --source-digest-confirmed --bun-archive --bun-sums'
 BUN_HANDOVER_FLAGS='--no-env-file --no-install'
 EMPTY_BUNFIG_NAME=empty.bunfig.toml
@@ -165,6 +187,70 @@ bad_links() {
   done
 }
 
+# kit_names_ok <listing file>: every line (a `tar -tzf` member name; a directory's trailing '/'
+# dropped) is relative, in KIT_PATH_RE, without a '.' or '..' segment, and there are at most
+# KIT_MAX_ENTRIES of them. Exit 3 naming the first offender. Run BEFORE tar extracts anything.
+kit_names_ok() {
+  [ -f "$1" ] || die "kit_names_ok: no listing $1"
+  _count=$(wc -l <"$1" | tr -d ' ')
+  [ "$_count" -le "$KIT_MAX_ENTRIES" ] || die "the kit lists $_count entries (at most $KIT_MAX_ENTRIES)"
+  _bad=$(sed 's#/$##' "$1" | grep -Ev "$KIT_PATH_RE" | head -n 1)
+  [ -z "$_bad" ] || die "the kit holds a member outside the kit path grammar: '$_bad'"
+  _bad=$(sed 's#/$##' "$1" | grep -E "$KIT_DOT_SEGMENT_RE" | head -n 1)
+  [ -z "$_bad" ] || die "the kit holds a member with a '.' or '..' segment: '$_bad'"
+  return 0
+}
+
+# kit_types_ok <verbose listing file>: every line of `tar -tvzf` starts with '-' (a regular file)
+# or 'd' (a directory) — GNU tar and bsdtar both print the member type first. A link, a device or
+# a FIFO member is refused BEFORE extraction (verify_kit refuses one after it, too).
+kit_types_ok() {
+  [ -f "$1" ] || die "kit_types_ok: no listing $1"
+  _bad=$(grep -Ev '^[-d]' "$1" | head -n 1)
+  [ -z "$_bad" ] || die "the kit holds a member that is not a regular file or directory: '$_bad'"
+  return 0
+}
+
+# verify_kit <extracted dir>: the MANIFEST is the kit's whole truth. Its first line is
+# KIT_FORMAT_LINE; every other line is '<sha256>  <path>' (path in the kit grammar, no dot
+# segment); the dir holds regular files and directories ONLY (a symlink, FIFO or device is a
+# refusal); the regular files other than MANIFEST are EXACTLY the listed paths (an extra or a
+# missing file, a duplicated line: refused); every file's sha256 equals its line; the draft,
+# install.sh and the source directory are present. Exit 3 on any failure.
+verify_kit() {
+  _kit=$(cd "$1" 2>/dev/null && pwd -P) || die "verify_kit: cannot enter $1"
+  _manifest=$_kit/$KIT_MANIFEST_NAME
+  if [ -L "$_manifest" ] || [ ! -f "$_manifest" ]; then die "the kit has no $KIT_MANIFEST_NAME"; fi
+  [ "$(sed -n 1p "$_manifest")" = "$KIT_FORMAT_LINE" ] || die "the kit's $KIT_MANIFEST_NAME does not start with '$KIT_FORMAT_LINE'"
+  _odd=$(find "$_kit" ! -type f ! -type d -print | head -n 1)
+  [ -z "$_odd" ] || die "the kit holds something that is not a regular file or directory: ${_odd#"$_kit"/}"
+  _bad=$(sed 1d "$_manifest" | grep -Ev "^[0-9a-f]{64}  " | head -n 1)
+  [ -z "$_bad" ] || die "a $KIT_MANIFEST_NAME line is not '<sha256>  <path>': '$_bad'"
+  _paths=$(sed 1d "$_manifest" | cut -c 67-)
+  _bad=$(printf '%s\n' "$_paths" | grep -Ev "$KIT_PATH_RE" | head -n 1)
+  [ -z "$_bad" ] || die "a $KIT_MANIFEST_NAME path is outside the kit path grammar: '$_bad'"
+  _bad=$(printf '%s\n' "$_paths" | grep -E "$KIT_DOT_SEGMENT_RE" | head -n 1)
+  [ -z "$_bad" ] || die "a $KIT_MANIFEST_NAME path has a '.' or '..' segment: '$_bad'"
+  _listed=$(printf '%s\n' "$_paths" | LC_ALL=C sort)
+  _found=$(cd "$_kit" && find . -type f ! -path "./$KIT_MANIFEST_NAME" -print | sed 's#^\./##' | LC_ALL=C sort)
+  if [ "$_listed" != "$_found" ]; then
+    _extra=$(printf '%s\n' "$_found" | while IFS= read -r _f; do printf '%s\n' "$_listed" | grep -Fqx -- "$_f" || printf '%s\n' "$_f"; done | head -n 1)
+    [ -z "$_extra" ] || die "the kit holds '$_extra', which its $KIT_MANIFEST_NAME does not list"
+    die "the kit's files are not exactly its $KIT_MANIFEST_NAME's (a listed file is missing, or a line is repeated)"
+  fi
+  sed 1d "$_manifest" | while IFS= read -r _line; do
+    _want=${_line%%  *}
+    _rel=${_line#*  }
+    _got=$(sha_of "$_kit/$_rel")
+    [ "$_got" = "$_want" ] || die "the kit's '$_rel' has sha256 $_got, its $KIT_MANIFEST_NAME says $_want: the kit was altered"
+  done || exit 3
+  for _need in "$KIT_DRAFT_NAME" "$KIT_INSTALL_NAME"; do
+    if [ -L "$_kit/$_need" ] || [ ! -f "$_kit/$_need" ]; then die "the kit has no $_need"; fi
+  done
+  [ -d "$_kit/$KIT_SOURCE_DIR" ] || die "the kit has no $KIT_SOURCE_DIR/ directory"
+  return 0
+}
+
 # check_tree <dir>: regular files, directories and RELATIVE symlinks that resolve to an existing
 # path inside <dir> only; no name holding a newline. Exit 3 on any failure.
 check_tree() {
@@ -279,7 +365,7 @@ trusted_chain() {
 }
 
 usage() {
-  die 'usage: sh deploy/install.sh <instance> [--source <dir>] [--draft <file>] [--offline <bun zip> [<SHASUMS256.txt>]] [--mirror <https base url>] [--source-digest <sha256>] [-- <init flags>]'
+  die 'usage: sh deploy/install.sh <instance> [--source <dir> | --kit <kit.tar.gz> [--kit-sha256 <sha256>]] [--draft <file>] [--offline <bun zip> [<SHASUMS256.txt>]] [--mirror <https base url>] [--source-digest <sha256>] [-- <init flags>]'
 }
 
 main() {
@@ -291,10 +377,12 @@ main() {
   INSTANCE=$1
   shift
   printf '%s\n' "$INSTANCE" | grep -Eq "$INSTANCE_RE" || die "instance '$INSTANCE' must match $INSTANCE_RE"
-  SOURCE='' DRAFT='' OFFLINE='' OFFLINE_SUMS='' MIRROR='' DIGEST_GIVEN=''
+  SOURCE='' DRAFT='' OFFLINE='' OFFLINE_SUMS='' MIRROR='' DIGEST_GIVEN='' KIT='' KIT_SHA_GIVEN=''
   while [ $# -gt 0 ]; do
     case "$1" in
       --source) [ $# -ge 2 ] || usage; SOURCE=$2; shift 2 ;;
+      --kit) [ $# -ge 2 ] || usage; KIT=$2; shift 2 ;;
+      --kit-sha256) [ $# -ge 2 ] || usage; KIT_SHA_GIVEN=$2; shift 2 ;;
       --draft) [ $# -ge 2 ] || usage; DRAFT=$2; shift 2 ;;
       --offline)
         [ $# -ge 2 ] || usage
@@ -317,8 +405,17 @@ main() {
   for _arg in "$@"; do
     case " $HANDOVER_FLAGS " in *" $_arg "*) die "$_arg is set by install.sh itself, not after --" ;; esac
   done
-  if [ -z "$SOURCE" ] && { [ -n "$OFFLINE" ] || [ -n "$MIRROR" ] || [ -n "$DIGEST_GIVEN" ]; }; then
-    die '--offline, --mirror and --source-digest need --source (a re-run installs no Bun)'
+  if [ -n "$KIT" ]; then
+    [ -z "$SOURCE" ] || die '--kit and --source are exclusive (the kit IS the source)'
+    [ -z "$DRAFT" ] || die '--kit carries its draft: drop --draft (or build a new kit from the draft you want)'
+    [ -z "$DIGEST_GIVEN" ] || die '--source-digest is for --source; a kit is confirmed by --kit-sha256'
+  fi
+  [ -z "$KIT_SHA_GIVEN" ] || [ -n "$KIT" ] || die '--kit-sha256 needs --kit'
+  if [ -n "$KIT_SHA_GIVEN" ] && ! printf '%s\n' "$KIT_SHA_GIVEN" | grep -Eqx '[0-9a-f]{64}'; then
+    die '--kit-sha256 must be 64 lowercase hex (the sha256 the work host printed)'
+  fi
+  if [ -z "$SOURCE" ] && [ -z "$KIT" ] && { [ -n "$OFFLINE" ] || [ -n "$MIRROR" ] || [ -n "$DIGEST_GIVEN" ]; }; then
+    die '--offline, --mirror and --source-digest need --source or --kit (a re-run installs no Bun)'
   fi
 
   for _musl in /lib/ld-musl-*; do
@@ -328,6 +425,7 @@ main() {
   refuse_kernel "$(uname -r)"
   _tools='unzip sha256sum stat find readlink runuser setsid flock'
   [ -n "$OFFLINE" ] || _tools="curl $_tools"
+  [ -z "$KIT" ] || _tools="$_tools tar gzip"
   for _t in $_tools; do
     command -v "$_t" >/dev/null 2>&1 || die "missing '$_t': $(pkg_hint "$FAMILY")"
   done
@@ -340,7 +438,7 @@ main() {
 
   STATE=$INIT_BASE/$INSTANCE
   STAGE=$STATE/$STAGE_DIR_NAME
-  if [ -z "$SOURCE" ]; then
+  if [ -z "$SOURCE" ] && [ -z "$KIT" ]; then
     _rerun=$STATE/$RERUN_ENV_NAME
     if [ -L "$_rerun" ] || [ ! -f "$_rerun" ]; then die "no --source and no $_rerun: the first run needs --source <dir>"; fi
     [ "$(stat -c '%u %g %a' "$_rerun")" = '0 0 600' ] || die "$_rerun must be root:root 0600"
@@ -351,7 +449,7 @@ main() {
       die "$_rerun must hold exactly BUN=<path> and AGENT=<path>"
     fi
   fi
-  if [ -z "$DRAFT" ] && [ ! -f "/etc/dedalo_publication_host/$INSTANCE.json" ]; then
+  if [ -z "$DRAFT" ] && [ -z "$KIT" ] && [ ! -f "/etc/dedalo_publication_host/$INSTANCE.json" ]; then
     die "first run: give the draft with --draft <file>"
   fi
 
@@ -372,6 +470,36 @@ main() {
     if ! cp "$DRAFT" "$STAGE/draft.json" || ! chmod 0600 "$STAGE/draft.json"; then die 'cannot copy the draft'; fi
   fi
 
+  if [ -n "$KIT" ]; then
+    if [ -L "$KIT" ] || [ ! -f "$KIT" ]; then die "--kit $KIT must be a regular file (not a symlink)"; fi
+    # The hash is taken of root's OWN copy: what is verified is what is read.
+    _kitcopy=$STAGE/kit.tar.gz
+    cp "$KIT" "$_kitcopy" || die "cannot copy $KIT"
+    KIT_SHA=$(sha_of "$_kitcopy")
+    if [ -n "$KIT_SHA_GIVEN" ]; then
+      [ "$KIT_SHA_GIVEN" = "$KIT_SHA" ] ||
+        die "the kit $KIT has sha256 $KIT_SHA, not the --kit-sha256 $KIT_SHA_GIVEN the work host printed: refusing it (nothing was extracted)"
+    elif [ -t 0 ] && [ -t 1 ]; then
+      printf 'Kit %s (sha256 %s): compare it with the sha256 the work host printed. Its code will run as root. Continue? [y/N] ' "$KIT" "$KIT_SHA"
+      read -r _answer || _answer=''
+      case "$_answer" in y | Y | yes | YES) ;; *) die 'declined: nothing was extracted' ;; esac
+    else
+      die "not a terminal: confirm the kit with --kit-sha256 <the sha256 the work host printed> (this file is $KIT_SHA)"
+    fi
+    tar -tzf "$_kitcopy" >"$STAGE/kit.list" || die 'the kit is not a gzip-compressed tar archive'
+    kit_names_ok "$STAGE/kit.list"
+    tar -tvzf "$_kitcopy" >"$STAGE/kit.vlist" || die 'the kit is not a gzip-compressed tar archive'
+    kit_types_ok "$STAGE/kit.vlist"
+    mkdir -m 0700 "$STAGE/kit" || die 'cannot create the kit stage'
+    tar -xzf "$_kitcopy" -C "$STAGE/kit" --no-same-owner --no-same-permissions || die 'tar could not extract the kit'
+    verify_kit "$STAGE/kit"
+    mv "$STAGE/kit/$KIT_SOURCE_DIR" "$STAGE/source" || die 'cannot stage the kit source'
+    if ! cp "$STAGE/kit/$KIT_DRAFT_NAME" "$STAGE/draft.json" || ! chmod 0600 "$STAGE/draft.json"; then die "cannot stage the kit's draft"; fi
+    DRAFT=$KIT
+    rm -rf "$STAGE/kit" "$STAGE/kit.list" "$STAGE/kit.vlist" "$_kitcopy" || die 'cannot clear the kit stage'
+    printf 'kit %s: sha256 %s, MANIFEST verified\n' "$KIT" "$KIT_SHA"
+  fi
+
   if [ -n "$SOURCE" ]; then
     [ -d "$SOURCE" ] || die "--source $SOURCE is not a directory"
     SOURCE=$(cd "$SOURCE" && pwd -P) || die "cannot enter $SOURCE"
@@ -379,7 +507,10 @@ main() {
     for _entry in $SOURCE_MANIFEST; do
       _path=${_entry%:*}
       _kind=${_entry##*:}
-      [ -e "$SOURCE/$_path" ] || die "the source lacks $_path"
+      if [ ! -e "$SOURCE/$_path" ] && [ ! -L "$SOURCE/$_path" ]; then
+        case " $SOURCE_OPTIONAL " in *" $_path "*) continue ;; esac
+        die "the source lacks $_path"
+      fi
       mkdir -p "$STAGE/source/$(dirname "$_path")" || die "cannot stage $_path"
       if [ "$_kind" = tree ]; then
         if [ -L "$SOURCE/$_path" ] || [ ! -d "$SOURCE/$_path" ]; then die "$_path must be a real directory"; fi
@@ -395,11 +526,17 @@ main() {
         cp -P "$SOURCE/$_path" "$STAGE/source/$_path" || die "cannot copy $_path"
       fi
     done
+  fi
+
+  if [ -n "$SOURCE" ] || [ -n "$KIT" ]; then
     check_tree "$STAGE/source"
     chown -R root:root "$STAGE/source" || die 'cannot chown the staged source'
     chmod -R u=rwX,go=rX,-s "$STAGE/source" || die 'cannot chmod the staged source'
 
     DIGEST=$(tree_digest "$STAGE/source") || exit 3
+  fi
+
+  if [ -n "$SOURCE" ]; then
     _owner=$(stat -c '%U' "$SOURCE")
     if [ -d "$SOURCE/.git" ] && command -v git >/dev/null 2>&1; then
       _head=$(runuser -u "$_owner" -- git -C "$SOURCE" rev-parse HEAD 2>/dev/null)
@@ -413,7 +550,9 @@ main() {
     else
       [ "$DIGEST_GIVEN" = "$DIGEST" ] || die "not a terminal: confirm the source with --source-digest $DIGEST"
     fi
+  fi
 
+  if [ -n "$SOURCE" ] || [ -n "$KIT" ]; then
     PIN=$(cat "$STAGE/source/.bun-version")
     if [ "$(wc -l <"$STAGE/source/.bun-version" | tr -d ' ')" -gt 1 ] || ! printf '%s\n' "$PIN" | grep -Eq "$PIN_RE"; then
       die ".bun-version '$PIN' is not <major>.<minor>.<patch>"

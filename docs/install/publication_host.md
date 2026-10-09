@@ -205,24 +205,58 @@ of yours, sets an SELinux boolean or types a password without your answer.
 
 !!! warning "Whoever can write the source can become root"
     init runs, as root, the agent code you give it: the **source**. On one machine that is
-    the work system's checkout; on two machines, the entries you copied from it. Anyone who can
-    write the source before you run init chooses the code root runs. init shows the source's
-    digest (and its git commit and the number of uncommitted files) and asks you to confirm
-    it; give it only a source you trust.
+    the work system's checkout; on two machines, the kit built on the work host (or the entries
+    you copied from it). Anyone who can write the source before you run init chooses the code
+    root runs. init shows the source's digest (and its git commit and the number of uncommitted
+    files), or the kit's sha256, and asks you to confirm it; give it only a source you trust.
 
 ### Run it
 
 The source is a directory with exactly these entries: `.bun-version`, `.bun-sha256`,
 `publication/host_agent/` (with its production `node_modules/` from
 [step 1](#1-prepare-the-code), without `.test-tmp/`), `publication/server_api/v2/.env.example`
-and `publication/server_api/v1/config_api/sample.server_config_api.php` (used only for v1). On two machines,
-copy those five entries, keeping their paths, over a channel you trust.
+and `publication/server_api/v1/config_api/sample.server_config_api.php` (used only for v1, and
+optional for a site that serves v2 only).
 
 ```bash
 # publication host, as root — the first run, from the source (one machine shown)
 sh /opt/dedalo/master_dedalo/publication/host_agent/deploy/install.sh museum_org \
   --source /opt/dedalo/master_dedalo --draft /root/museum_org.draft.json
 ```
+
+#### Two machines: the kit {#the-kit}
+
+On two machines, build ONE file on the work host — the **kit** — and carry only that. It holds
+the source above (the agent's code with its production dependencies, installed for the kit,
+without the tests), your draft and `install.sh`, plus a `MANIFEST` of every file's sha256. It
+carries no secret: the database passwords are typed on the publication host, and the agent's
+token is created there.
+
+```bash
+# work host, in the work checkout
+bun run hostagent:pack -- --draft /root/museum_org.draft.json
+```
+
+The command checks the draft with the agent's own rules (a draft init would refuse is refused
+here), writes `dedalo_publication_host_kit_museum_org.tar.gz` (`--out <file>` names another
+path) and prints its sha256. The same checkout and draft always give the same file, so the same
+sha256. The v1 sample is in the kit only when the draft serves v1.
+
+```bash
+# publication host, as root — copy the kit here over a channel you trust, then:
+sha256sum dedalo_publication_host_kit_museum_org.tar.gz    # must print the sha256 the work host printed
+tar -xzf dedalo_publication_host_kit_museum_org.tar.gz install.sh
+sh install.sh museum_org --kit dedalo_publication_host_kit_museum_org.tar.gz \
+  --kit-sha256 <the sha256 the work host printed>
+```
+
+`install.sh` hashes its own copy of the kit before anything reads it, and refuses a kit whose
+sha256 is not the one you gave (without `--kit-sha256` it shows the sha256 and asks, on a
+terminal). Only then does it list the archive (every name must be a plain relative path, every
+member a file or a directory), extract it into its root-only stage, and check the result
+against the `MANIFEST`: an altered, extra or missing file, or a symbolic link, stops it before
+any of the kit's code runs. The kit's draft is the draft (`--kit` and `--draft` together are
+refused). Re-runs need no kit.
 
 A later run (to repair drift, or after an upgrade of the source) needs neither: it runs the
 Bun and the agent code the first run installed.
@@ -235,7 +269,9 @@ sh /home/museum.org/host_agent/deploy/install.sh museum_org
 | `install.sh` option | What it does |
 | --- | --- |
 | `--source <dir>` | the source (first run, or to install new code) |
-| `--draft <file>` | the draft declaration (below); required on the first run |
+| `--kit <file>` | the kit built on the work host ([above](#the-kit)), instead of `--source` and `--draft` |
+| `--kit-sha256 <sha256>` | the sha256 `hostagent:pack` printed: a kit with another one is refused before it is opened (without it, install.sh asks on a terminal) |
+| `--draft <file>` | the draft declaration (below); required on the first run (unless the kit carries it) |
 | `--offline <bun zip> [<SHASUMS256.txt>]` | use a Bun archive you downloaded, instead of downloading it (a host without internet access) |
 | `--mirror <https base url>` | download Bun from a mirror (https only); the archive is still checked against the source's hash table |
 | `--source-digest <sha256>` | without a terminal: the source digest you accept (otherwise init asks) |
@@ -244,8 +280,8 @@ sh /home/museum.org/host_agent/deploy/install.sh museum_org
 `install.sh` is the only way to start init. Before any of the agent's code runs it:
 
 - refuses to run as anything but root, on anything but Linux, on a musl system, or without
-  `curl`, `unzip`, `sha256sum`, `runuser` and `setsid` (it prints the `apt install` or
-  `dnf install` line). On an SELinux host it also refuses a root shell that is not
+  `curl`, `unzip`, `sha256sum`, `runuser` and `setsid` (and `tar` and `gzip` with `--kit`; it
+  prints the `apt install` or `dnf install` line). On an SELinux host it also refuses a root shell that is not
   `unconfined_t` (`id -Z` shows it);
 - copies the source into a root-only directory,
   `/var/lib/dedalo_publication_host_init/museum_org/stage/`, refusing any special file and any
@@ -456,10 +492,26 @@ one nginx serves.
   user, with the token on its standard input only: nothing to copy. Several work services are a
   decision; a name already registered asks whether to replace it. `--pair-name` chooses the name,
   `--no-pair` prints the commands instead.
-- **Two machines.** Pairing stays manual in this release: init prints the
+- **Two machines.** When the agent listens on TLS, init seals the engine fragment, the agent's
+  token and the engine TLS bundle into ONE encrypted file,
+  `/var/lib/dedalo_publication_host_init/museum_org/museum_org.pairing` (root `0600`), and shows
+  its one-time passphrase **once** on the terminal. Write the passphrase down: it is stored
+  nowhere, and without a terminal init writes no package (it prints the
   [step 6](#6-carry-the-engine-bundle-to-the-work-system-two-machines-only) and
-  [step 8](#pair-it-with-the-work-system) commands with this instance's paths, to run on the
-  work host.
+  [step 8](#pair-it-with-the-work-system) commands instead). Carry the file to the work host
+  over a channel you trust, and the passphrase by a different one. On the work host, as root:
+
+    ```bash
+    # work host, as root or an administrator; the command runs as dedalo
+    chown dedalo /root/museum_org.pairing && chmod 600 /root/museum_org.pairing
+    cd /opt/dedalo/master_dedalo && sudo -u dedalo /opt/dedalo/.bun/bin/bun run dedalo:pair-publication-host add museum_org --package /root/museum_org.pairing
+    ```
+
+    The command asks for the passphrase without echo (or reads one line with
+    `--passphrase-stdin`), then runs the same checks and the same live proof as the manual
+    path. Then delete both copies of the package. A lost passphrase cannot be recovered:
+    `--decide pair.package=again` makes init write a new package. The manual path
+    (`--fragment`, `--bundle`, `--token-file`) stays.
 
 ### What init keeps, and what a hand-run `provision` sees
 

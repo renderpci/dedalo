@@ -594,6 +594,8 @@ describe('the operator is told how pairing and the panel really work', () => {
 			'bundle',
 			'dry-run',
 			'fragment',
+			'package',
+			'passphrase-stdin',
 			'token-file',
 			'token-stdin',
 		]);
