@@ -57,7 +57,8 @@ describe('install lang catalog', () => {
 		expect(r.errors).toEqual([]);
 		expect(r.projectsDefaultLangs).toEqual(['lg-spa', 'lg-cat']);
 		expect(r.applicationLangs).toEqual({ ...INSTALL_LANG_CATALOG });
-		for (const code of r.projectsDefaultLangs) expect(Object.hasOwn(r.applicationLangs, code)).toBe(true);
+		for (const code of r.projectsDefaultLangs)
+			expect(Object.hasOwn(r.applicationLangs, code)).toBe(true);
 		expect(r.applicationLangsDefault).toBe('lg-cat');
 		expect(r.dataLangDefault).toBe('lg-spa');
 	});

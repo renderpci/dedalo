@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 620,
-		"functions": 7984,
+		"files": 625,
+		"functions": 8246,
 		"functionsOverCap": 679,
 		"filesOverCap": 261
 	},
@@ -206,7 +206,7 @@
 		"src/core/install/db_probe_plan.ts": 8,
 		"src/core/install/db_restore.ts": 8,
 		"src/core/install/directories.ts": 12,
-		"src/core/install/lang_catalog.ts": 9,
+		"src/core/install/lang_catalog.ts": 8,
 		"src/core/install/mailer_probe.ts": 12,
 		"src/core/install/media_tree.ts": 20,
 		"src/core/install/root_pw.ts": 8,

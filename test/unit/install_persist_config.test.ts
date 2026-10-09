@@ -14,12 +14,12 @@ import { join } from 'node:path';
 import { parseEnvFile, seedProcessEnv } from '../../src/config/env.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { persistConfig } from '../../src/core/install/config_persist.ts';
-import { INSTALL_LANG_CATALOG } from '../../src/core/install/lang_catalog.ts';
 import { checkDirectories } from '../../src/core/install/directories.ts';
 import {
 	OFFICIAL_CODE_SERVER,
 	OFFICIAL_ONTOLOGY_SERVER,
 } from '../../src/core/install/install_plan.ts';
+import { INSTALL_LANG_CATALOG } from '../../src/core/install/lang_catalog.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
 
@@ -315,7 +315,9 @@ describe('persist_config (P2)', () => {
 
 		// The two JSON-shaped keys must parse back EXACTLY (the raw-write contract:
 		// envQuote'd JSON would break here because parseEnvFile does not unescape).
-		expect(JSON.parse(parsed.DEDALO_APPLICATION_LANGS as string)).toEqual({ ...INSTALL_LANG_CATALOG });
+		expect(JSON.parse(parsed.DEDALO_APPLICATION_LANGS as string)).toEqual({
+			...INSTALL_LANG_CATALOG,
+		});
 		expect(JSON.parse(parsed.DEDALO_PROJECTS_DEFAULT_LANGS as string)).toEqual([
 			'lg-eng',
 			'lg-spa',
@@ -336,7 +338,10 @@ describe('persist_config (P2)', () => {
 		const map = JSON.parse(parsed.DEDALO_APPLICATION_LANGS as string) as Record<string, string>;
 		expect(Object.keys(map)).toEqual(Object.keys(INSTALL_LANG_CATALOG));
 		expect(map['lg-eng']).toBe('English');
-		expect(JSON.parse(parsed.DEDALO_PROJECTS_DEFAULT_LANGS as string)).toEqual(['lg-eng', 'lg-spa']);
+		expect(JSON.parse(parsed.DEDALO_PROJECTS_DEFAULT_LANGS as string)).toEqual([
+			'lg-eng',
+			'lg-spa',
+		]);
 		expect(parsed.DEDALO_DATA_LANG_DEFAULT).toBe('lg-eng');
 	});
 
