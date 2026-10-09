@@ -127,10 +127,14 @@ export const PHONE_CASES: Record<string, ToolPhoneProbe> = {
 	},
 	tool_export: test3Section(),
 	tool_hierarchy: {
+		// hierarchy1/244 = `lg`, the CORE hierarchy every install seed ships (its registry
+		// record is in install/db/seed/matrix_hierarchy_main.copy.gz; install_seed_drift
+		// _tripwire keeps CORE ⊆ hierarchies_to_install). Was /1 (`ts`), which the compiled
+		// seed no longer ships: it has no installable data file (2026-10-09).
 		caller: {
 			tipo: 'hierarchy1',
 			section_tipo: 'hierarchy1',
-			section_id: 1,
+			section_id: 244,
 			mode: 'edit',
 			model: 'section',
 			lang: 'lg-spa',
