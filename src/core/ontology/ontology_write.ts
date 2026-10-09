@@ -333,6 +333,28 @@ export async function createDdOntologyRootNode(fileItem: FileItem, userId = -1):
 // --- add main section (PHP add_main_section) ---------------------------------
 
 /**
+ * THE one per-key writer of the ontology REGISTRY rows (matrix_ontology_main,
+ * ontology35): addMainSection's registry components and writeDeclaredDependencies'
+ * ddengine11 locators. Unstamped, no TM — registry definition rows, as in PHP
+ * add_main_section (a sanctioned derived writer, write_obligations RAW_CALLER_EXEMPT).
+ */
+function writeOntologyMainKey(
+	mainSectionId: number,
+	column: 'relation' | 'string',
+	tipo: string,
+	value: unknown,
+): Promise<void> {
+	return updateMatrixKeyData(
+		'matrix_ontology_main',
+		ONTOLOGY_MAIN_SECTION,
+		mainSectionId,
+		column,
+		tipo,
+		value,
+	);
+}
+
+/**
  * Idempotently create/update the matrix_ontology_main record for a TLD (PHP
  * add_main_section). Reuses the existing row (matched by hierarchy6) or creates a
  * new ontology35 record, then writes the registry components. Returns section_id.
@@ -348,9 +370,8 @@ export async function addMainSection(fileItem: FileItem, userId = -1): Promise<n
 		existing !== null
 			? existing.section_id
 			: await createSectionRecord(ONTOLOGY_MAIN_SECTION, userId);
-	const table = 'matrix_ontology_main';
 	const write = (column: 'relation' | 'string', tipo: string, value: unknown): Promise<void> =>
-		updateMatrixKeyData(table, ONTOLOGY_MAIN_SECTION, mainSectionId, column, tipo, value);
+		writeOntologyMainKey(mainSectionId, column, tipo, value);
 
 	// Project filter (dd153/1)
 	await write('relation', HIERARCHY_FILTER, [
@@ -469,14 +490,7 @@ export async function writeDeclaredDependencies(
 		if (target === null) missing.push(dependency);
 		else locators.push(dependencyLocator(locators.length + 1, target.section_id));
 	}
-	await updateMatrixKeyData(
-		'matrix_ontology_main',
-		ONTOLOGY_MAIN_SECTION,
-		own.section_id,
-		'relation',
-		ONTOLOGY_DEPENDENCIES,
-		locators,
-	);
+	await writeOntologyMainKey(own.section_id, 'relation', ONTOLOGY_DEPENDENCIES, locators);
 	return missing;
 }
 
