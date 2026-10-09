@@ -95,7 +95,7 @@ function tldNames(count: number): string[] {
 		for (let rest = index; name.length < 3; rest = Math.floor(rest / 26)) {
 			name = String.fromCharCode(97 + (rest % 26)) + name;
 		}
-		names.push(`zz${name}`);
+		names.push(`zzoar${name}`);
 	}
 	return names;
 }
@@ -152,7 +152,7 @@ describe('the archive limits count what is written, not what is walked', () => {
 		writeFileSync(join(top, 'ontology.json'), '{}');
 		writeFileSync(join(top, 'zzab.copy.gz'), '');
 		for (let index = 0; index < OLD_HEADER_CAP + 44; index++) {
-			writeFileSync(join(top, 'recovery', 'snapshot', `zz${index}.copy`), '');
+			writeFileSync(join(top, 'recovery', 'snapshot', `zzoarsnap${index}.copy`), '');
 		}
 		const archive = join(root, 'export.tgz');
 		const tar = spawnSync('tar', ['-czf', archive, '-C', root, 'export']);
