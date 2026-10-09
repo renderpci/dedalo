@@ -33,8 +33,11 @@
  * WHEN: publishClientAtBoot runs before the socket bind in EVERY boot mode
  * (the install wizard is client too). It is a no-op when the key is unset
  * (every non-container install) and in a smoke boot (read-only by
- * construction). It never throws: a failure is one loud `[client_publish]`
- * line, and the engine still serves its API.
+ * construction). It never throws (the returned promise never rejects): a
+ * failure is one loud `[client_publish]` line, and the engine still serves its
+ * API. ASYNC end to end (node:fs/promises): the boot awaits it before the bind,
+ * and no step blocks the event loop for the length of a file
+ * (sync_io_on_request_path_tripwire).
  *
  * The key is read from the PROCESS environment only: it names a mount of this
  * container, which `../private/.env` (outliving every container) cannot know.
@@ -42,20 +45,19 @@
  */
 
 import { createHash } from 'node:crypto';
+import { existsSync, type Stats } from 'node:fs';
 import {
-	chmodSync,
-	copyFileSync,
-	existsSync,
-	lstatSync,
-	mkdirSync,
-	readdirSync,
-	readFileSync,
-	renameSync,
-	rmSync,
-	type Stats,
-	symlinkSync,
-	writeFileSync,
-} from 'node:fs';
+	chmod,
+	copyFile,
+	lstat,
+	mkdir,
+	readdir,
+	readFile,
+	rename,
+	rm,
+	symlink,
+	writeFile,
+} from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { processEnvValue, projectRoot } from '../../config/env.ts';
 
@@ -102,20 +104,21 @@ interface PublishedStamp {
 	bytes: number;
 }
 
-function sha256File(path: string): string {
-	return createHash('sha256').update(readFileSync(path)).digest('hex');
+/** One regular file's sha256 and byte count, from ONE async read. */
+async function hashFile(path: string): Promise<{ sha256: string; bytes: number }> {
+	const content = await readFile(path);
+	return { sha256: createHash('sha256').update(content).digest('hex'), bytes: content.byteLength };
 }
 
 /** Walk one directory of the source; recurse into real directories only. */
-function walkInto(root: string, rel: string, tree: SourceTree): void {
-	for (const entry of readdirSync(join(root, rel), { withFileTypes: true })) {
+async function walkInto(root: string, rel: string, tree: SourceTree): Promise<void> {
+	for (const entry of await readdir(join(root, rel), { withFileTypes: true })) {
 		const child = rel === '' ? entry.name : `${rel}/${entry.name}`;
 		if (entry.isDirectory()) {
 			tree.dirs.push(child);
-			walkInto(root, child, tree);
+			await walkInto(root, child, tree);
 		} else if (entry.isFile()) {
-			const path = join(root, child);
-			tree.files.push({ rel: child, sha256: sha256File(path), bytes: lstatSync(path).size });
+			tree.files.push({ rel: child, ...(await hashFile(join(root, child))) });
 		} else {
 			tree.skipped.push(child); // a symlink or a special file: never followed, never copied
 		}
@@ -123,9 +126,9 @@ function walkInto(root: string, rel: string, tree: SourceTree): void {
 }
 
 /** The source tree, sorted (byte order of the relative path). */
-export function readSourceTree(root: string): SourceTree {
+export async function readSourceTree(root: string): Promise<SourceTree> {
 	const tree: SourceTree = { dirs: [], files: [], skipped: [] };
-	walkInto(root, '', tree);
+	await walkInto(root, '', tree);
 	const byPath = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 	tree.dirs.sort(byPath);
 	tree.files.sort((a, b) => byPath(a.rel, b.rel));
@@ -140,9 +143,9 @@ export function clientContentId(files: readonly SourceFile[]): string {
 	return hash.digest('hex').slice(0, 16);
 }
 
-function readStamp(dir: string): PublishedStamp | null {
+async function readStamp(dir: string): Promise<PublishedStamp | null> {
 	try {
-		const parsed = JSON.parse(readFileSync(join(dir, STAMP), 'utf8')) as PublishedStamp;
+		const parsed = JSON.parse(await readFile(join(dir, STAMP), 'utf8')) as PublishedStamp;
 		return typeof parsed.id === 'string' ? parsed : null;
 	} catch {
 		return null;
@@ -150,63 +153,68 @@ function readStamp(dir: string): PublishedStamp | null {
 }
 
 /** Already published: the stamp names this id AND the link resolves to a directory. */
-function alreadyPublished(dir: string, id: string): boolean {
-	return readStamp(dir)?.id === id && existsSync(join(dir, LINK_NAME));
+async function alreadyPublished(dir: string, id: string): Promise<boolean> {
+	return (await readStamp(dir))?.id === id && existsSync(join(dir, LINK_NAME));
 }
 
-function makeDir(path: string): void {
-	mkdirSync(path, { recursive: true });
-	chmodSync(path, DIR_MODE); // explicit: the process umask must not decide it
+async function makeDir(path: string): Promise<void> {
+	await mkdir(path, { recursive: true });
+	await chmod(path, DIR_MODE); // explicit: the process umask must not decide it
 }
 
 /** Copy the tree into a fresh release directory (a leftover partial copy is replaced). */
-function copyRelease(source: string, release: string, tree: SourceTree): void {
-	rmSync(release, { recursive: true, force: true });
-	makeDir(release);
-	for (const rel of tree.dirs) makeDir(join(release, rel));
+async function copyRelease(source: string, release: string, tree: SourceTree): Promise<void> {
+	await rm(release, { recursive: true, force: true });
+	await makeDir(release);
+	for (const rel of tree.dirs) await makeDir(join(release, rel));
 	for (const file of tree.files) {
 		const target = join(release, file.rel);
-		copyFileSync(join(source, file.rel), target);
-		chmodSync(target, FILE_MODE);
+		await copyFile(join(source, file.rel), target);
+		await chmod(target, FILE_MODE);
 	}
 }
 
 /** An lstat that answers null for a missing path. */
-function lstatOrNull(path: string): Stats | null {
-	return lstatSync(path, { throwIfNoEntry: false }) ?? null;
+async function lstatOrNull(path: string): Promise<Stats | null> {
+	try {
+		return await lstat(path);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+		throw error;
+	}
 }
 
 /** Move a legacy REAL directory out of the link's way; returns where it went, or null. */
-function moveLegacyAside(link: string): string | null {
-	const stat = lstatOrNull(link);
+async function moveLegacyAside(link: string): Promise<string | null> {
+	const stat = await lstatOrNull(link);
 	if (stat === null || stat.isSymbolicLink() || !stat.isDirectory()) return null;
 	const aside = `${link}.legacy-${process.pid}`;
-	renameSync(link, aside);
+	await rename(link, aside);
 	return aside;
 }
 
 /** Point `<dir>/dedalo` at the release: a relative link made aside, renamed over the old one. */
-function switchLink(dir: string, id: string): void {
+async function switchLink(dir: string, id: string): Promise<void> {
 	const link = join(dir, LINK_NAME);
 	const tmp = join(dir, `.${LINK_NAME}.tmp-${process.pid}`);
-	rmSync(tmp, { force: true });
-	symlinkSync(join(RELEASES, id, LINK_NAME), tmp);
-	const legacy = moveLegacyAside(link);
-	renameSync(tmp, link);
-	if (legacy !== null) rmSync(legacy, { recursive: true, force: true });
+	await rm(tmp, { force: true });
+	await symlink(join(RELEASES, id, LINK_NAME), tmp);
+	const legacy = await moveLegacyAside(link);
+	await rename(tmp, link);
+	if (legacy !== null) await rm(legacy, { recursive: true, force: true });
 }
 
-function writeStamp(dir: string, stamp: PublishedStamp): void {
+async function writeStamp(dir: string, stamp: PublishedStamp): Promise<void> {
 	const tmp = join(dir, `${STAMP}.tmp-${process.pid}`);
-	writeFileSync(tmp, `${JSON.stringify(stamp)}\n`, { mode: FILE_MODE });
-	chmodSync(tmp, FILE_MODE);
-	renameSync(tmp, join(dir, STAMP));
+	await writeFile(tmp, `${JSON.stringify(stamp)}\n`, { mode: FILE_MODE });
+	await chmod(tmp, FILE_MODE);
+	await rename(tmp, join(dir, STAMP));
 }
 
 /** Remove every release but the live one. */
-function pruneReleases(dir: string, keep: string): void {
-	for (const name of readdirSync(join(dir, RELEASES))) {
-		if (name !== keep) rmSync(join(dir, RELEASES, name), { recursive: true, force: true });
+async function pruneReleases(dir: string, keep: string): Promise<void> {
+	for (const name of await readdir(join(dir, RELEASES))) {
+		if (name !== keep) await rm(join(dir, RELEASES, name), { recursive: true, force: true });
 	}
 }
 
@@ -214,24 +222,24 @@ function pruneReleases(dir: string, keep: string): void {
  * Publish `source` into `dir` (see the header for the layout). Throws on an
  * I/O failure — publishClientAtBoot is the never-throwing boot wrapper.
  */
-export function publishClient(options: {
+export async function publishClient(options: {
 	source: string;
 	dir: string;
 	now?: () => Date;
-}): ClientPublishResult {
-	const tree = readSourceTree(options.source);
+}): Promise<ClientPublishResult> {
+	const tree = await readSourceTree(options.source);
 	const id = clientContentId(tree.files);
 	const bytes = tree.files.reduce((sum, file) => sum + file.bytes, 0);
 	const release = join(options.dir, RELEASES, id, LINK_NAME);
 	const result = { id, files: tree.files.length, bytes, skipped: tree.skipped, release };
-	if (alreadyPublished(options.dir, id)) return { status: 'unchanged', ...result };
-	makeDir(join(options.dir, RELEASES));
-	makeDir(join(options.dir, RELEASES, id));
-	copyRelease(options.source, release, tree);
-	switchLink(options.dir, id);
+	if (await alreadyPublished(options.dir, id)) return { status: 'unchanged', ...result };
+	await makeDir(join(options.dir, RELEASES));
+	await makeDir(join(options.dir, RELEASES, id));
+	await copyRelease(options.source, release, tree);
+	await switchLink(options.dir, id);
 	const publishedAt = (options.now?.() ?? new Date()).toISOString();
-	writeStamp(options.dir, { id, published_at: publishedAt, files: result.files, bytes });
-	pruneReleases(options.dir, id);
+	await writeStamp(options.dir, { id, published_at: publishedAt, files: result.files, bytes });
+	await pruneReleases(options.dir, id);
 	return { status: 'published', ...result };
 }
 
@@ -260,11 +268,11 @@ function bootPublishDir(options: {
  * is unset; otherwise publishes CLIENT_ROOT and logs one line. NEVER throws.
  * `publishDir` / `source` are test seams; production reads the process env.
  */
-export function publishClientAtBoot(options: {
+export async function publishClientAtBoot(options: {
 	smokeBoot: boolean;
 	publishDir?: string | undefined;
 	source?: string;
-}): ClientPublishResult | null {
+}): Promise<ClientPublishResult | null> {
 	const dir = bootPublishDir(options);
 	if (dir === null) return null;
 	if (!isAbsolute(dir)) {
@@ -274,7 +282,7 @@ export function publishClientAtBoot(options: {
 		return null;
 	}
 	try {
-		const result = publishClient({ source: options.source ?? CLIENT_ROOT, dir });
+		const result = await publishClient({ source: options.source ?? CLIENT_ROOT, dir });
 		(result.skipped.length === 0 ? console.log : console.warn)(describe(result, dir));
 		return result;
 	} catch (error) {

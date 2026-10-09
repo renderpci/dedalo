@@ -2334,7 +2334,7 @@ export async function startServer() {
 	// the proxy forwards already meets a client of the same version. EVERY boot mode
 	// (the install wizard is client too); a no-op outside containers (key unset) and
 	// in a smoke boot. Never fatal: it logs and the API still serves.
-	publishClientAtBoot({ smokeBoot });
+	await publishClientAtBoot({ smokeBoot });
 
 	const socketPath = config.server.unixSocketPath;
 	// A previous unclean shutdown leaves the socket file behind; Bun cannot
