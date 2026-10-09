@@ -186,8 +186,91 @@ export interface PairPlanOptions {
   readonly initDir?: string;
 }
 
+/* ── the package after the pairing (stale, removed) ───────────────────────────────── */
+
+/** `--decide pair.package=remove` / `=keep`: the written package's decision (writtenPackageItem). */
+export const PACKAGE_REMOVE = 'remove';
+export const PACKAGE_KEEP = 'keep';
+
+/** An automatic record, not a work-host command: it proves nothing about the pairing. */
+const NOT_ENGINE_ACTIONS: ReadonlySet<string> = new Set(['release.auto_rollback']);
+
+/**
+ * THE HOST ANSWERS AS PAIRED: the agent's own audit trail (root reads it) records a command after
+ * `since` (the journal's `done` of pair.package). The agent audits only what an AUTHENTICATED
+ * request asked for — the engine's bearer over its mTLS client certificate, the very credentials
+ * the package seals — so such a record means the work host holds them: the package is stale. The
+ * pairing's own live proof is read-only and never audited; the first command after it (the panel's
+ * or the CLI's apply_rules) is. ISO-8601 UTC timestamps on both sides compare as text.
+ */
+export function engineContactSince(auditText: string | null, since: string): { readonly action: string; readonly ts: string } | null {
+  if (auditText === null) return null;
+  for (const line of auditText.split('\n')) {
+    let entry: { ts?: unknown; action?: unknown } | null = null;
+    try {
+      entry = JSON.parse(line) as { ts?: unknown; action?: unknown };
+    } catch {
+      continue; // a torn or foreign line proves nothing
+    }
+    if (typeof entry?.ts !== 'string' || typeof entry.action !== 'string' || NOT_ENGINE_ACTIONS.has(entry.action)) continue;
+    if (entry.ts > since) return { action: entry.action, ts: entry.ts };
+  }
+  return null;
+}
+
+/**
+ * The package an earlier run wrote: gone (removed) → right; stale (`contact`) or the operator asked
+ * (`--decide pair.package=remove`) → the decision to remove it, `remove` by default; else right,
+ * naming how to remove it once the work host is paired.
+ */
+export function writtenPackageItem(
+  planned: Item,
+  path: string,
+  state: { readonly present: boolean; readonly contact: { readonly action: string; readonly ts: string } | null; readonly removeAsked: boolean },
+): Item {
+  const again = `a new one (new passphrase), if a work host must pair again: --decide pair.package=again`;
+  if (!state.present) {
+    return Object.freeze({ ...planned, list: 'right', title: `the sealed pairing package was written and is gone (${path})`, facts: [again], commands: [], action: undefined });
+  }
+  if (state.contact === null && !state.removeAsked) {
+    return Object.freeze({
+      ...planned,
+      list: 'right',
+      title: `the sealed pairing package was written (${path})`,
+      facts: [
+        'an earlier run wrote it (journal); the agent has recorded no work-host command since, so the pairing is not proved yet',
+        `remove it once the work host is paired: --decide pair.package=${PACKAGE_REMOVE}`,
+        again,
+      ],
+      commands: [],
+      action: undefined,
+    });
+  }
+  return Object.freeze({
+    ...planned,
+    list: 'decision',
+    title:
+      state.contact === null
+        ? `remove the sealed pairing package (${path})`
+        : `the sealed pairing package is stale: the work host used its credentials (${state.contact.action} at ${state.contact.ts})`,
+    facts: [
+      `${path} seals the agent's service token and the engine TLS key; once the work host is paired nothing needs it, and a copy of it is a copy of those secrets`,
+      again,
+    ],
+    commands: [],
+    options: [
+      { id: PACKAGE_REMOVE, label: `remove ${path}`, resolves: 'act' as const },
+      { id: PACKAGE_KEEP, label: 'keep it', resolves: 'skip' as const },
+    ],
+    defaultOption: PACKAGE_REMOVE,
+    action: { kind: 'pair_package_remove' as const, path },
+  });
+}
+
 /** The file name of the sealed package under `<INIT_BASE>/<instance>/`. */
 export const PAIRING_PACKAGE_SUFFIX = '.pairing';
+/** Root 0600: written so, and removed (pair.package=remove) only while it still is. */
+export const PAIRING_PACKAGE_MODE = 0o600;
 
 export function pairingPackagePath(initDir: string, name: string): string {
   if (!PAIR_NAME_PATTERN.test(name)) throw new Error(`pair: '${name}' must match ${PAIR_NAME_PATTERN.source}`);
@@ -408,7 +491,7 @@ export function writePairingPackage(layout: AgentLayout, path: string, ports: Pa
     if (error instanceof PairingPackageRefused) return { kind: 'failed', reason: error.message };
     throw error;
   }
-  ports.io.writeBytesAtomic(path, sealed, 0o600, ports.root.uid, ports.root.gid);
+  ports.io.writeBytesAtomic(path, sealed, PAIRING_PACKAGE_MODE, ports.root.uid, ports.root.gid);
   return { kind: 'done', path, passphrase };
 }
 

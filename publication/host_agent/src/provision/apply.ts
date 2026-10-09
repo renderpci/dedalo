@@ -83,6 +83,8 @@ import type {
   HostLockRef,
   HostState,
   PathFacts,
+  RemoveAction,
+  RemoveTreeAction,
   RestoreEntry,
   SelinuxObserved,
   SiblingFacts,
@@ -115,6 +117,7 @@ import { RELOAD_ACTIVE_POLL } from '../rules/txn';
 import { SELINUX_BOOLEANS, isHomeLayout, restoreconTargets } from './selinux';
 import { webReferencePresent } from './web_reference';
 import { webIncludePath } from './render/web_include';
+import { parseRecord, recordPath, recordWatch } from './retire';
 
 /** Suffix of the temp file a write goes through. `removeTemp` refuses anything else. */
 export const TEMP_SUFFIX = '.dedalo-provision.tmp';
@@ -316,9 +319,9 @@ function installValidatedPostRename(action: WriteAction, temp: string, io: Provi
   }
 }
 
-/** Puts back what a validated write replaced (the backup) or removes what it created (the marker says so). */
+/** Puts back what a validated write replaced or a retirement removed (the backup), or removes what it created (the marker says so). */
 function restoreValidated(io: ProvisionIo, entry: RestoreEntry): void {
-  if (entry.disposition === 'rewrite') io.rename(`${entry.path}${BACKUP_SUFFIX}`, entry.path);
+  if (entry.disposition === 'rewrite' || entry.disposition === 'retire') io.rename(`${entry.path}${BACKUP_SUFFIX}`, entry.path);
   else {
     removeThroughTemp(io, entry.path);
     removeThroughTemp(io, `${entry.path}${CREATED_SUFFIX}`);
@@ -327,7 +330,42 @@ function restoreValidated(io: ProvisionIo, entry: RestoreEntry): void {
 
 /** The reload succeeded: the rollback of every file it loaded goes. */
 function dropRollback(io: ProvisionIo, entry: RestoreEntry): void {
-  removeThroughTemp(io, `${entry.path}${entry.disposition === 'rewrite' ? BACKUP_SUFFIX : CREATED_SUFFIX}`);
+  removeThroughTemp(io, `${entry.path}${entry.disposition === 'create' ? CREATED_SUFFIX : BACKUP_SUFFIX}`);
+}
+
+/**
+ * A RETIRED FPM POOL (retire.ts), under the host web lock: renamed to its backup, then the FPM
+ * configtest — a master whose only pool was ours refuses to start, so a failing test puts the pool
+ * back (and tests again, reporting both). The backup stays for the reload (`keepRollback`), or goes.
+ */
+function retireValidated(action: RemoveAction, io: ProvisionIo): void {
+  const validator = action.validator;
+  if (validator === undefined || action.lock === undefined) throw new Error(`apply: the retirement of '${action.path}' has no configtest or no lock`);
+  const lock = takeWebLock(io, action.lock);
+  try {
+    const entry: RestoreEntry = { path: action.path, disposition: 'retire' };
+    io.rename(action.path, `${action.path}${BACKUP_SUFFIX}`);
+    const first = configtest(io, validator);
+    if (first.code !== 0) {
+      restoreValidated(io, entry);
+      const again = configtest(io, validator);
+      throw new Error(
+        `${validator.bin} -t exited ${first.code} without the retired pool (${said(first)}); it was put back and ` +
+          `${validator.bin} -t then exited ${again.code}${again.code === 0 ? '' : ` (${said(again)})`} — the FPM install may need another pool first`,
+      );
+    }
+    if (action.keepRollback !== true) dropRollback(io, entry);
+  } finally {
+    lock.release();
+  }
+}
+
+/** A RETIRED TREE (retire.ts): out of every other account's reach (root 0700), then `rm -rf --one-file-system`. */
+function retireTree(action: RemoveTreeAction, io: ProvisionIo): void {
+  if (!action.resume) io.rename(action.path, action.temp);
+  io.chown(action.temp, action.uid, action.gid);
+  io.chmod(action.temp, 0o700);
+  checked(`rm -rf ${action.temp}`, io.exec.removeTree(action.temp));
 }
 
 /** True when `unit` stayed active for the whole poll (spec §5.9: an inactive unit after a reload is a failure). */
@@ -437,7 +475,15 @@ function run(action: Action, io: ProvisionIo, written: string[]): void {
       io.appendOnly(action.path);
       return;
     case 'remove':
-      removeThroughTemp(io, action.path);
+      if (action.validator !== undefined) retireValidated(action, io);
+      else removeThroughTemp(io, action.path);
+      return;
+    case 'remove-tree':
+      retireTree(action, io);
+      return;
+    case 'provision-record':
+      writeAtomic(io, action.path, action.body, MODES.provisionRecord.mode, action.uid, action.gid);
+      written.push(action.path);
       return;
     case 'renderer-install': {
       if (io.installFile === undefined) throw new Error(`apply: this io cannot copy files — the host map renderer was not installed`);
@@ -1100,6 +1146,11 @@ export function observeHost(
     ...agentDevDependencyPaths(layout),
   ];
   if (layout.site?.v1 != null) watched.push(layout.site.v1.fpm.bin);
+  // The provision record (retire.ts) and everything it names: what a retirement judges and removes.
+  const record = recordPath(layout);
+  const recordFacts = facts(record, true);
+  const recorded = recordWatch(parseRecord(recordFacts?.type === 'file' ? readOrNull(record) : undefined) ?? { v: 1, artifacts: [], trees: [] });
+  watched.push(record, ...recorded.paths);
   // Relabel targets the plan does not create (spec S9): a shared media root, R/bun.
   if (layout.media.root !== null) watched.push(layout.media.root);
   const mapManaged = layout.web.server === 'nginx' && layout.web.nginxMap === 'conf_d';
@@ -1115,7 +1166,7 @@ export function observeHost(
   }
   const agentTree = walkAgentTree(layout.agentDir, options.agentTreeCap ?? AGENT_TREE_WALK_CAP, paths);
   // The marker and our artifacts only: never the credential, never the audit log.
-  const readable = [layout.state.marker, ...artifactPaths, ...(mapManaged ? [identitiesPath, versionPath] : [])];
+  const readable = [layout.state.marker, ...artifactPaths, record, ...recorded.files, ...(mapManaged ? [identitiesPath, versionPath] : [])];
   for (const path of readable) {
     if (paths.get(path)?.type === 'file') contents.set(path, readOrNull(path));
   }
@@ -1142,7 +1193,8 @@ export function observeHost(
   const unitNames = [layout.agentUnitName, layout.v2.unit];
   if (layout.site !== null) unitNames.push(layout.web.unit);
   if (layout.site?.v1 != null) unitNames.push(layout.site.v1.fpm.unit);
-  for (const unit of unitNames) units.set(unit, exec.unitState(unit));
+  unitNames.push(...recorded.units);
+  for (const unit of new Set(unitNames)) units.set(unit, exec.unitState(unit));
   // The audit trail's attribute: probed (an O_NOFOLLOW write-open, never a write), never read.
   const appendOnly = new Set<string>();
   const probe = options.appendOnlyProbe ?? probeAppendOnly;

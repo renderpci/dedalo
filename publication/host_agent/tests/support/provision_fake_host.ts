@@ -240,6 +240,16 @@ export class FakeHost implements ProvisionIo {
         for (const [port, type] of [...this.portTypes, ...this.localPorts]) byType.set(type, [...(byType.get(type) ?? []), port]);
         return this.command('semanage port -l', [...byType].map(([type, ports]) => `${type}    tcp    ${ports.join(', ')}\n`).join(''));
       },
+      removeTree: path => {
+        const result = this.command(`removeTree ${path}`);
+        if (result.code !== 0) return result;
+        const entry = this.entries.get(path);
+        if (entry?.type !== 'dir' || entry.uid !== 0 || entry.mode !== 0o700) {
+          return { code: 1, stdout: '', stderr: `rm: '${path}' is not a root 0700 directory (the exec door refuses it)` };
+        }
+        for (const key of [...this.entries.keys()]) if (key === path || key.startsWith(`${path}/`)) this.entries.delete(key);
+        return result;
+      },
       selinuxLabel: paths =>
         this.command(`stat %C ${paths.join(' ')}`, paths.map(path => `${this.labels.has(path) ? `system_u:object_r:${this.labels.get(path)}:s0` : '?'} ${path}\n`).join('')),
     };
@@ -305,7 +315,7 @@ export class FakeHost implements ProvisionIo {
   /** The number of io calls that change bytes or metadata. */
   get mutations(): number {
     return this.calls.filter(call =>
-      /^(mkdir|writeTemp|chown|chmod|rename|appendOnly|writeBytesAtomic|writeTempNamed|removeInitTemp|removeTree|renameDir|appendSync|symlink) /.test(call),
+      /^(mkdir|writeTemp|chown|chmod|rename|appendOnly|writeBytesAtomic|writeTempNamed|removeInitTemp|removeTree|removeOperatorFile|renameDir|appendSync|symlink) /.test(call),
     ).length;
   }
 
@@ -364,6 +374,14 @@ export class FakeHost implements ProvisionIo {
     if (!entry) throw new Error(`ENOENT: ${from}`);
     this.entries.delete(from);
     this.entries.set(to, entry);
+    // A directory's rename moves its whole subtree (one inode, its children unchanged).
+    if (entry.type === 'dir') {
+      for (const [key, child] of [...this.entries]) {
+        if (!key.startsWith(`${from}/`)) continue;
+        this.entries.delete(key);
+        this.entries.set(`${to}${key.slice(from.length)}`, child);
+      }
+    }
     // A rename keeps the inode, and so its label.
     const label = this.labels.get(from);
     this.labels.delete(from);
@@ -863,6 +881,16 @@ export class FakeInitHost extends FakeHost implements InitIo {
   readRootFile(path: string): string | null {
     const entry = this.entries.get(path);
     return entry?.type === 'file' ? entry.body : null;
+  }
+
+  removeOperatorFile(path: string, expected: string): void {
+    this.calls.push(`removeOperatorFile ${path}`);
+    const entry = this.entries.get(path);
+    if (entry?.type === 'symlink') throw new Error(`init io: refusing '${path}': it is a symbolic link — root never follows a link it did not create`);
+    if (entry?.type !== 'file') throw new Error(`init io: refusing '${path}': cannot open it (ENOENT)`);
+    const got = sha256(entry.bytes ?? entry.body);
+    if (got !== expected) throw new Error(`init io: refusing to remove '${path}': its sha256 is ${got}, not the ${expected} confirmed — it is not the file you gave`);
+    this.entries.delete(path);
   }
 
   readProcFile(path: string): string | null {

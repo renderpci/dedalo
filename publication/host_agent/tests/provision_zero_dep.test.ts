@@ -36,6 +36,8 @@ const ZERO_DEP = [
   'selinux.ts',
   'web_reference.ts',
   'host_map_renderer.ts',
+  // Retired artifacts (the provision record and its guards): plan.ts imports it.
+  'retire.ts',
   // The host-wide nginx map grammar and merge (spec §13.3): root's renderer copy loads them bare.
   '../rules/directives.ts',
   '../rules/host_map.ts',

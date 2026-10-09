@@ -118,7 +118,11 @@ import {
 	suiteServerEnvironment,
 } from './client_test_server.ts';
 import { operatorConfig } from './lib/operator_config.ts';
-import { execSeamProblem, issueTlsMaterial } from './lib/publication_host_agent_drill_kit.ts';
+import {
+	execSeamProblem,
+	issueTlsMaterial,
+	type SvgHeaderContract,
+} from './lib/publication_host_agent_drill_kit.ts';
 import {
 	AGENT_DIR,
 	agentStatus,
@@ -149,6 +153,7 @@ import {
 	scratchCalls,
 	setupScene,
 	spawnAgent,
+	svgTreatmentProblems,
 	tail,
 	teardown,
 	UNPUBLISHED,
@@ -233,6 +238,8 @@ interface Ctx {
 	readonly rules: RulesModule;
 	/** The engine's buildNginxMap(): what nginx's host map must be once apply_rules pushed it. */
 	readonly nginxMap: string;
+	/** The MEDIA-03 header contract (svg_safety.ts, imported after the config repoint). */
+	readonly svgContract: SvgHeaderContract;
 	readonly bundlePath: string;
 	readonly secrets: Secret[];
 }
@@ -705,6 +712,17 @@ async function rulesRows(ctx: Ctx, scene: Scene, name: string): Promise<void> {
 					liveHostMap(scene) !== ctx.nginxMap &&
 					"the live host map is not the engine's map (one contribution renders byte-equal)",
 			]);
+		},
+	);
+	await ctx.book.row(
+		`${s} MEDIA-03 through ${scene.server} after apply_rules: the envelope SVG inline (no Content-Disposition, the envelope CSP), the uploaded SVG \`attachment\` + the quarantine CSP`,
+		async () => {
+			const found = await svgTreatmentProblems(
+				scene,
+				ctx.rules.publicationHostMediaUrl(),
+				ctx.svgContract,
+			);
+			return found.length === 0 ? null : found.join('; ');
 		},
 	);
 }
@@ -1627,6 +1645,7 @@ async function run(
 		throw new Error('the minted admin session does not read back from the engine session store');
 	const rules = await import('../src/core/media/publication_host_rules.ts');
 	const { buildNginxMap } = await import('../src/core/media/protection.ts');
+	const svg = await import('../src/core/media/svg_safety.ts');
 	const mdb = await import('../test/helpers/suite_mariadb.ts');
 	const { SUITE_MARIADB_PASSWORD } = await import('../test/helpers/suite_mariadb_env.ts');
 	const { zzdTargetDatabases } = await import('../test/helpers/zzd_diffusion_fixture.ts');
@@ -1665,6 +1684,12 @@ async function run(
 		admin: { cookie: `dedalo_ts_session=${adminToken}`, csrf: adminCsrf },
 		rules,
 		nginxMap: buildNginxMap(),
+		svgContract: {
+			envelopeCsp: svg.SVG_ENVELOPE_CSP,
+			quarantineCsp: svg.SVG_QUARANTINE_CSP,
+			quarantineDisposition: svg.SVG_QUARANTINE_DISPOSITION,
+			nosniff: svg.MEDIA_NOSNIFF,
+		},
 		bundlePath,
 		secrets: bundleKeySecrets(readFileSync(bundlePath, 'utf8')),
 	};

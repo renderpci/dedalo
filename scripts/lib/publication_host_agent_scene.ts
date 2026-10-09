@@ -69,7 +69,11 @@ import {
 	renderEnvFile,
 	renderHostMapDriver,
 	renderStandIns,
+	SVG_DRILL_FILES,
+	SVG_DRILL_QUALITIES,
+	type SvgHeaderContract,
 	sha256Hex,
+	svgTreatmentProblem,
 	type TlsMaterial,
 	writeStandIns,
 } from './publication_host_agent_drill_kit.ts';
@@ -93,12 +97,15 @@ export const ACTOR = 'drill';
 export const WEB_UNIT: Readonly<Record<Server, string>> = { apache: 'apache2', nginx: 'nginx' };
 export const V2_UNIT = 'dedalo-publication-api-v2';
 export const V2_BASE_PATH = '/publication/server_api/v2';
-export const QUALITIES: readonly string[] = ['image/thumb'];
+/** `image/thumb` for the jpg rows; the two SVG qualities so Rule B serves the SVG rows (kit). */
+export const QUALITIES: readonly string[] = ['image/thumb', ...SVG_DRILL_QUALITIES];
 export const PUBLISHED = 'image/thumb/0/test94_test3_1.jpg';
 export const UNPUBLISHED = 'image/thumb/0/test94_test3_2.jpg';
 export const MEDIA_FILES: Readonly<Record<string, string>> = {
 	[PUBLISHED]: 'JPEG-published',
 	[UNPUBLISHED]: 'JPEG-unpublished',
+	[SVG_DRILL_FILES.envelope]: '<svg xmlns="http://www.w3.org/2000/svg"/>',
+	[SVG_DRILL_FILES.uploaded]: '<svg xmlns="http://www.w3.org/2000/svg"/>',
 	'.publication/pub/test3_1': '',
 };
 /** The agent's defaults (AgentConfig): the bundle must fit what a host runs with. */
@@ -566,6 +573,28 @@ function plantHostMap(hostBase: string): { mapDir: string; identities: string } 
 		mode: 0o644,
 	});
 	return { mapDir, identities };
+}
+
+/**
+ * MEDIA-03 THROUGH THE HOST (provision init §13.8): the envelope and the uploaded SVG of the
+ * published record, fetched through the live web server, each against the header contract
+ * the caller passes (svg_safety.ts's constants: this scene never imports engine config).
+ */
+export async function svgTreatmentProblems(
+	scene: Scene,
+	mediaUrl: string,
+	contract: SvgHeaderContract,
+): Promise<string[]> {
+	const found: string[] = [];
+	for (const population of ['envelope', 'uploaded'] as const) {
+		const res = await fetch(
+			`http://127.0.0.1:${scene.webPort}${mediaUrl}/${SVG_DRILL_FILES[population]}`,
+		);
+		await res.arrayBuffer();
+		const problem = svgTreatmentProblem(population, res.status, res.headers, contract);
+		if (problem !== null) found.push(problem);
+	}
+	return found;
 }
 
 /** The live host map the renderer installed, or null. */

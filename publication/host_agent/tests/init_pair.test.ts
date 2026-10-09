@@ -12,6 +12,10 @@ import type { ExecResult, PairInvocation } from '../src/provision/exec_contract'
 import {
   ALREADY_REGISTERED,
   detectWorkSystem,
+  engineContactSince,
+  PACKAGE_KEEP,
+  PACKAGE_REMOVE,
+  writtenPackageItem,
   PAIR_CHILD_PATH,
   type PairPorts,
   pairEnv,
@@ -424,5 +428,37 @@ describe('writePairingPackage', () => {
     const outcome = writePairingPackage(TLS, '/i/x', { io: short, root: { uid: 0, gid: 0 } });
     expect(outcome.kind === 'failed' ? outcome.reason : '').not.toContain('tiny-value');
     expect(short.writes).toEqual([]);
+  });
+});
+
+describe('the package after the pairing: engineContactSince + writtenPackageItem', () => {
+  const since = '2026-10-09T10:00:00.000Z';
+  const line = (ts: string, action: string) => JSON.stringify({ ts, actor: 'engine', action, outcome: 'ok' });
+
+  test('a work-host command after the package was written is the proof; older lines, automatic rollbacks and torn lines are not', () => {
+    expect(engineContactSince(null, since)).toBeNull();
+    expect(engineContactSince('', since)).toBeNull();
+    const before = line('2026-10-09T09:59:59.999Z', 'rules.apply');
+    const auto = line('2026-10-10T00:00:00.000Z', 'release.auto_rollback');
+    expect(engineContactSince([before, auto, '{"torn', 'not json'].join('\n'), since)).toBeNull();
+    expect(engineContactSince([before, auto, line('2026-10-09T10:00:00.001Z', 'rules.map')].join('\n'), since)).toEqual({
+      action: 'rules.map',
+      ts: '2026-10-09T10:00:00.001Z',
+    });
+    expect(engineContactSince(line(since, 'rules.apply'), since)).toBeNull(); // the same instant is not after
+  });
+
+  test('gone → right; stale or asked → the remove decision (remove by default, keep skips); else right naming the decide', () => {
+    const planned = { id: 'pair.package', list: 'change', area: 'pair', title: 't', facts: [], commands: [], after: [], blocking: false, optional: true, operatorFile: false, hostWide: false } as const;
+    const path = '/var/lib/dedalo_publication_host_init/test/test.pairing';
+    expect(writtenPackageItem(planned, path, { present: false, contact: null, removeAsked: true })).toMatchObject({ list: 'right', action: undefined });
+    const waiting = writtenPackageItem(planned, path, { present: true, contact: null, removeAsked: false });
+    expect(waiting).toMatchObject({ list: 'right', action: undefined });
+    expect(waiting.facts.join('\n')).toContain(`--decide pair.package=${PACKAGE_REMOVE}`);
+    for (const state of [{ contact: { action: 'rules.apply', ts: 'x' }, removeAsked: false }, { contact: null, removeAsked: true }]) {
+      const item = writtenPackageItem(planned, path, { present: true, ...state });
+      expect(item).toMatchObject({ list: 'decision', defaultOption: PACKAGE_REMOVE, action: { kind: 'pair_package_remove', path } });
+      expect(item.options?.map(o => [o.id, o.resolves])).toEqual([[PACKAGE_REMOVE, 'act'], [PACKAGE_KEEP, 'skip']]);
+    }
   });
 });

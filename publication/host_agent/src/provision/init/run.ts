@@ -68,7 +68,7 @@ import { JOURNAL_NAME, openJournal } from './journal';
 import { JournalFormatError, decodeJournal, unfinished as unfinishedOf } from './journal_format';
 import type { DeclaredPorts, ObserveFs } from './observe';
 import { hostObserveFs, observeDeclared, observeHostWide } from './observe';
-import { pairItem, pairOneMachine, pairPlan, pairPortResult, twoMachineInstructions, writePairingPackage } from './pair';
+import { PACKAGE_REMOVE, engineContactSince, pairItem, pairOneMachine, pairPlan, pairPortResult, twoMachineInstructions, writePairingPackage, writtenPackageItem } from './pair';
 import { fsTypeOf } from './parse/mounts';
 import { parseSelinuxContext } from './parse/selinux';
 import { countLine, renderLists, sanitizeLine } from './report';
@@ -356,9 +356,9 @@ function declaredPorts(world: InitWorld): DeclaredPorts {
  * after B4). A pairing done in an earlier run (the journal says so) is right: re-pairing needs
  * `--decide pair.engine=replace`.
  */
-function adjustPairing(items: ComparedItem[], facts: HostFacts, completion: DraftCompletion, inputs: Inputs): ComparedItem[] {
+function adjustPairing(items: ComparedItem[], facts: HostFacts, completion: DraftCompletion, inputs: Inputs, world: InitWorld): ComparedItem[] {
   const layout = completion.layout;
-  adjustPackage(items, facts, completion, inputs);
+  adjustPackage(items, facts, completion, inputs, world);
   const index = items.findIndex(row => row.id === 'pair.engine');
   if (layout === null || index < 0) return items;
   const current = items[index] as ComparedItem;
@@ -397,31 +397,64 @@ function adjustPairing(items: ComparedItem[], facts: HostFacts, completion: Draf
 /**
  * The sealed package (two machines): compare planned it under the production INIT_BASE; the path
  * is THIS run's `<INIT_BASE>/<instance>`. A package an earlier run wrote (the journal says so) is
- * right: every run would otherwise mint a new passphrase; `--decide pair.package=again` writes a
- * new one (the old file is replaced, its passphrase no longer opens anything).
+ * not written again (every run would otherwise mint a new passphrase; `--decide pair.package=again`
+ * writes a new one, the old passphrase then opens nothing) — and it is STALE once the agent's own
+ * audit trail records a work-host command after it was written (writtenPackageItem): the decision
+ * to remove it (`--decide pair.package=remove`, the default on a terminal) is offered then, or
+ * whenever the operator asks for it.
  */
 export const PACKAGE_AGAIN = 'again';
 
-function adjustPackage(items: ComparedItem[], facts: HostFacts, completion: DraftCompletion, inputs: Inputs): void {
+function adjustPackage(items: ComparedItem[], facts: HostFacts, completion: DraftCompletion, inputs: Inputs, world: InitWorld): void {
   const layout = completion.layout;
   const index = items.findIndex(row => row.id === 'pair.package');
   if (layout === null || index < 0) return;
   const plan = pairPlan(layout, facts, inputs.args, { initDir: inputs.initDir });
   if (plan.kind !== 'package') return;
   const planned = pairItem(plan, layout);
-  const written = inputs.history.some(record => record.item === 'pair.package' && record.phase === 'done');
-  if (written && inputs.args.decide.get('pair.package') !== PACKAGE_AGAIN) {
-    items[index] = Object.freeze({
-      ...planned,
-      list: 'right',
-      title: `the sealed pairing package was written (${plan.path})`,
-      facts: [`an earlier run wrote it (journal); delete it once the work host is paired; a new one (new passphrase): --decide pair.package=${PACKAGE_AGAIN}`],
-      commands: [],
-      action: undefined,
-    }) as ComparedItem;
+  const written = inputs.history.filter(record => record.item === 'pair.package' && record.phase === 'done').at(-1);
+  const decided = inputs.args.decide.get('pair.package');
+  if (written !== undefined && decided !== PACKAGE_AGAIN) {
+    const present = world.fs.lstat(plan.path)?.type === 'file';
+    const contact = present ? engineContactSince(world.io.readRootFile(layout.state.auditFile), written.at) : null;
+    items[index] = writtenPackageItem(planned, plan.path, { present, contact, removeAsked: decided === PACKAGE_REMOVE }) as ComparedItem;
     return;
   }
   items[index] = Object.freeze({ ...planned }) as ComparedItem;
+}
+
+/** The journal item of the kit's removal (not a compared item: the kit is install.sh's, not the host's). */
+export const KIT_REMOVE_ITEM = 'kit.remove';
+
+/**
+ * THE KIT, ONCE THE INSTALL CONVERGED (`install.sh --kit` hands it over as --kit-file and
+ * --kit-digest-confirmed): it is no longer needed — a re-run uses the installed code — so it is
+ * offered for removal: confirmed on a terminal (default no), removed under --yes without one,
+ * otherwise named. Only the file install.sh was given, and only while it still hashes to the
+ * sha256 install.sh verified (InitIo.removeOperatorFile: a regular file, never a link, the same
+ * inode). Journaled. A refusal never fails the run: the install itself is done.
+ */
+async function offerKitRemoval(world: InitWorld, args: InitArgs, sinks: Sinks, journal: Journal | null): Promise<void> {
+  const path = args.kitFile;
+  const sha = args.kitDigestConfirmed;
+  if (path === null || sha === null || world.fs.lstat(path) === null) return;
+  const remove = world.prompter.interactive
+    ? await world.prompter.confirm(`The install converged. Remove the kit ${path} you gave install.sh (a re-run needs no kit)?`)
+    : args.yes;
+  if (!remove) {
+    sinks.out(`the kit ${path} is no longer needed here: remove it, or keep it to install another host`);
+    return;
+  }
+  journal?.append(KIT_REMOVE_ITEM, 'begin', { path });
+  try {
+    world.io.removeOperatorFile(path, sha);
+  } catch (error) {
+    journal?.append(KIT_REMOVE_ITEM, 'failed', { path });
+    sinks.err(sanitizeLine(`provision init: the kit was left in place: ${error instanceof Error ? error.message : String(error)}`));
+    return;
+  }
+  journal?.append(KIT_REMOVE_ITEM, 'done', { path });
+  sinks.out(`removed the kit ${path}`);
 }
 
 function compute(world: InitWorld, inputs: Inputs, facts: HostFacts, answers: ReadonlyMap<string, string>): Computed {
@@ -451,7 +484,7 @@ function compute(world: InitWorld, inputs: Inputs, facts: HostFacts, answers: Re
     journalOpen: inputs.journalOpen,
     lock: inputs.lockState,
   };
-  const items = adjustPairing(compare(facts, completion, declared, ctx), facts, completion, inputs);
+  const items = adjustPairing(compare(facts, completion, declared, ctx), facts, completion, inputs, world);
   return { facts, completion, declared, items };
 }
 
@@ -1020,6 +1053,7 @@ export async function runInit(argv: readonly string[], deps: InitDeps = initHost
       return EXIT.REFUSED;
     }
     if (journal !== null) cleanupAfterSuccess({ initDir, io: world.io, lstat: path => world.fs.lstat(path) });
+    await offerKitRemoval(world, args, sinks, journal);
     sinks.out(`provision init: instance '${args.instance}' ${runnable.length === 0 ? 'is right; nothing was changed' : 'converged'}`);
     return EXIT.OK;
   } catch (error) {

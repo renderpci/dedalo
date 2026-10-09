@@ -236,6 +236,12 @@ const PROMPT_RULES: PromptRule[] = [
 		answer: () => 'y',
 	},
 	{ name: 'apply changes', pattern: /Apply these \d+ changes\? \[y\/N\]\s*$/, answer: () => 'y' },
+	// Once a kit install converged (init/run.ts offerKitRemoval): the kit install.sh was given.
+	{
+		name: 'remove the kit',
+		pattern: /Remove the kit \S+ you gave install\.sh \(a re-run needs no kit\)\? \[y\/N\]\s*$/,
+		answer: () => 'y',
+	},
 	{
 		name: 'database password',
 		pattern: /(database )?password[^\n]*:\s*$/i,
@@ -1227,6 +1233,21 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			check(
 				!run.answered.includes('source digest'),
 				'a kit install asked the source-digest question (the kit sha256 is the consent)',
+			);
+			// Converged: the kit it was given is offered for removal and removed — only that file
+			// (the altered copy beside it is not the one install.sh verified).
+			check(
+				run.answered.includes('remove the kit'),
+				'a converged kit install did not offer to remove its kit',
+			);
+			check(
+				(await ctx.runner.sh(`test -e ${dir}/kit.tar.gz`)).code !== 0,
+				'the kit is still there after the operator confirmed its removal',
+			);
+			await must(
+				ctx,
+				`test -f ${dir}/bad.tar.gz && test -f ${dir}/install.sh`,
+				'the files the kit removal must not touch',
 			);
 			const home = `/home/${KIT_DOMAIN}`;
 			await must(

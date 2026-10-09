@@ -85,7 +85,10 @@ export interface PairInvocation {
 /** `--pair-name` grammar (spec §1.2): the engine's registry name for this agent. */
 export const PAIR_NAME_PATTERN = /^(?!pairing_)[a-z][a-z0-9_]{1,31}$/;
 
-/** The provisioner's closed set (24 commands, spec §2.4). Synchronous: `provision` is a sync CLI. */
+/** The name a RETIRED tree is renamed to before `removeTree` (retire.ts): the only argument that door admits. */
+export const RETIRED_SUFFIX = '.dedalo-provision.retired';
+
+/** The provisioner's closed set (25 commands, spec §2.4; the 25th is retire.ts's). Synchronous: `provision` is a sync CLI. */
 export interface ProvisionExec {
   userId(name: string): number | null; //               ['id','-u',name]
   groupId(name: string): number | null; //              ['getent','group',name]
@@ -115,6 +118,8 @@ export interface ProvisionExec {
   systemdVersion(): ExecResult; //                       ['systemctl','--version']
   semanagePortList(): ExecResult; //                     ['semanage','port','-l','-n']
   selinuxLabel(paths: readonly string[]): ExecResult; // ['stat','-c','%C %n','--',…] — 1-32 clean absolute paths
+  /** A RETIRED tree (retire.ts): only a root-owned 0700 directory named `*.dedalo-provision.retired`. */
+  removeTree(path: string): ExecResult; //               ['rm','-rf','--one-file-system','--',path]
 }
 
 /** `provision init`'s closed set (22 commands, spec §2.4). Synchronous, timeout COMMAND_TIMEOUT_MS. */

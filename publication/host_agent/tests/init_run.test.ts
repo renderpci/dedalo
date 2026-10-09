@@ -1254,6 +1254,74 @@ describe('B5 on two machines: the sealed pairing package (tls listener)', () => 
     expect((w.prompter as { shown?: string[] }).shown).toEqual([]);
   });
 
+  /** The agent's trail (provision apply created it, agent-owned, append-only): its bytes only. */
+  const trail = (w: World, text: string) => {
+    (w.host.entries.get(w.layout.state.auditFile) as { body: string }).body = text;
+  };
+  /** One audit line as the agent writes it (src/audit.ts). */
+  const auditLine = (ts: string, action: string) => `${JSON.stringify({ ts, actor: 'engine', action, outcome: 'ok' })}\n`;
+
+  test('once the agent records a work-host command after it was written: STALE — the decision to remove it; --decide pair.package=remove removes it, journaled', async () => {
+    const w = tlsWorld();
+    expect(await init(w, firstRun(w, tlsDraft))).toBe(EXIT.OK);
+    // Before any work-host command (the trail empty, or an older one): right, naming the decide.
+    rerunMode(w);
+    w.out.length = 0;
+    w.prompter = scriptedPrompter({ interactive: false });
+    trail(w, auditLine('2000-01-01T00:00:00.000Z', 'rules.apply'));
+    expect(await init(w, ['test', '--dry-run'])).toBe(EXIT.OK);
+    expect(listOf(w, 'pair.package')).toBe(1);
+    expect(reportOf(w, 'pair.package').join('\n')).toContain('--decide pair.package=remove');
+    // An automatic rollback is not the work host: still not stale.
+    trail(w, auditLine('2999-01-01T00:00:00.000Z', 'release.auto_rollback'));
+    w.out.length = 0;
+    expect(await init(w, ['test', '--dry-run'])).toBe(EXIT.OK);
+    expect(listOf(w, 'pair.package')).toBe(1);
+    // The work host applied its rules after the package was written: stale.
+    trail(w, auditLine('2999-01-01T00:00:00.000Z', 'rules.apply'));
+    w.out.length = 0;
+    expect(await init(w, ['test', '--dry-run'])).toBe(EXIT.OK);
+    expect(listOf(w, 'pair.package')).toBe(3);
+    expect(reportOf(w, 'pair.package').join('\n')).toContain('the sealed pairing package is stale: the work host used its credentials (rules.apply at 2999-01-01T00:00:00.000Z)');
+    expect(w.host.lstat(PACKAGE)?.type).toBe('file');
+    // --yes alone never answers the decision; --decide does.
+    w.out.length = 0;
+    expect(await init(w, ['test', '--yes'])).toBe(EXIT.OK);
+    expect(w.host.lstat(PACKAGE)?.type).toBe('file');
+    rerunMode(w);
+    w.out.length = 0;
+    expect(await init(w, ['test', '--yes', '--decide', 'pair.package=remove'])).toBe(EXIT.OK);
+    expect(w.host.lstat(PACKAGE)).toBeNull();
+    expect(w.host.lstat(`${PACKAGE}.dedalo-init.tmp`)).toBeNull();
+    expect(journalText(w)).toMatch(/"item":"pair.package","phase":"done","detail":\{"path":"[^"]+test.pairing"\}/);
+    // Gone: right, and never written again.
+    rerunMode(w);
+    w.out.length = 0;
+    expect(await init(w, ['test', '--yes'])).toBe(EXIT.OK);
+    expect(listOf(w, 'pair.package')).toBe(1);
+    expect(reportOf(w, 'pair.package').join('\n')).toContain('was written and is gone');
+    expect(w.host.lstat(PACKAGE)).toBeNull();
+  });
+
+  test('pair.package=remove leaves in place, by name, a file that is not the package init wrote (another mode, another format)', async () => {
+    for (const replace of [{ mode: 0o644, bytes: null }, { mode: 0o600, bytes: 'NOTAPAIRINGFILE-but-long-enough-to-be-one-0123456789-0123456789' }]) {
+      const w = tlsWorld();
+      expect(await init(w, firstRun(w, tlsDraft))).toBe(EXIT.OK);
+      const entry = w.host.entries.get(PACKAGE) as { mode: number; body: string; bytes?: Uint8Array };
+      entry.mode = replace.mode;
+      if (replace.bytes !== null) {
+        entry.body = replace.bytes;
+        entry.bytes = new TextEncoder().encode(replace.bytes);
+      }
+      rerunMode(w);
+      w.out.length = 0;
+      w.prompter = scriptedPrompter({ interactive: false });
+      expect(await init(w, ['test', '--yes', '--decide', 'pair.package=remove'])).toBe(EXIT.REFUSED);
+      expect(w.err.join('\n')).toContain(`'${PACKAGE}' is not the sealed package init wrote`);
+      expect(w.host.lstat(PACKAGE)?.type).toBe('file');
+    }
+  });
+
   test('--no-pair: no package, the printed instructions only', async () => {
     const w = tlsWorld();
     expect(await init(w, firstRun(w, tlsDraft, ['--no-pair']))).toBe(EXIT.OK);
@@ -1295,5 +1363,66 @@ describe('initHostDeps', () => {
       throw new Error('built');
     } })).toBe(EXIT.USAGE);
     expect(err).toEqual(['provision init: --decide nope.item: no such item']);
+  });
+});
+
+describe('the kit install.sh was given: offered for removal once the install converged', () => {
+  const KIT = '/root/museum_org.kit.tar.gz';
+  const KIT_BYTES = 'a kit archive, as the work host built it';
+  const kitArgs = (digest = sha(KIT_BYTES)) => ['--kit-file', KIT, '--kit-digest-confirmed', digest];
+
+  test('on a terminal: confirmed → removed (only that file, journaled); the run converged first', async () => {
+    const w = makeWorld();
+    w.host.seedFile(KIT, KIT_BYTES, 0o600);
+    w.host.seedFile('/root/other.tar.gz', KIT_BYTES, 0o600);
+    useOperator(w);
+    expect(await init(w, firstRun(w, DRAFT, kitArgs()))).toBe(EXIT.OK);
+    expect(w.prompter.asked?.some(q => q.includes(`Remove the kit ${KIT} you gave install.sh`))).toBe(true);
+    expect(w.host.lstat(KIT)).toBeNull();
+    expect(w.host.lstat('/root/other.tar.gz')?.type).toBe('file');
+    expect(w.out).toContain(`removed the kit ${KIT}`);
+    expect(journalText(w)).toMatch(/"item":"kit.remove","phase":"done","detail":\{"path":"\/root\/museum_org.kit.tar.gz"\}/);
+  });
+
+  test('declined on a terminal → kept and named; without a terminal only --yes removes it', async () => {
+    const w = await converged();
+    w.host.seedFile(KIT, KIT_BYTES, 0o600);
+    w.prompter = scriptedPrompter({ ...operator(w), confirm: false });
+    expect(await init(w, ['test', ...kitArgs()])).toBe(EXIT.OK);
+    expect(w.host.lstat(KIT)?.type).toBe('file');
+    expect(w.out.join('\n')).toContain(`the kit ${KIT} is no longer needed here`);
+    rerunMode(w);
+    w.prompter = scriptedPrompter({ interactive: false });
+    expect(await init(w, ['test', ...kitArgs()])).toBe(EXIT.OK); // no terminal, no --yes: a dry run
+    expect(w.host.lstat(KIT)?.type).toBe('file');
+    rerunMode(w);
+    expect(await init(w, ['test', '--yes', ...kitArgs()])).toBe(EXIT.OK);
+    expect(w.host.lstat(KIT)).toBeNull();
+  });
+
+  test('a file that no longer hashes to the confirmed sha256, or a link, is left in place, by name — the run still succeeds', async () => {
+    const w = await converged();
+    w.host.seedFile(KIT, 'replaced since install.sh verified it', 0o600);
+    w.prompter = scriptedPrompter({ interactive: false });
+    expect(await init(w, ['test', '--yes', ...kitArgs()])).toBe(EXIT.OK);
+    expect(w.host.lstat(KIT)?.type).toBe('file');
+    expect(w.err.join('\n')).toContain(`the kit was left in place: init io: refusing to remove '${KIT}': its sha256 is`);
+    expect(journalText(w)).toContain('"item":"kit.remove","phase":"failed"');
+    w.host.entries.delete(KIT);
+    w.host.entries.set(KIT, { type: 'symlink', uid: 0, gid: 0, mode: 0o777, body: '', target: '/etc/passwd' });
+    rerunMode(w);
+    w.err.length = 0;
+    expect(await init(w, ['test', '--yes', ...kitArgs()])).toBe(EXIT.OK);
+    expect(w.host.lstat(KIT)?.type).toBe('symlink');
+    expect(w.err.join('\n')).toContain('it is a symbolic link');
+  });
+
+  test('a run that does not converge offers nothing', async () => {
+    const w = makeWorld();
+    w.host.seedFile(KIT, KIT_BYTES, 0o600);
+    w.prompter = scriptedPrompter({ interactive: false });
+    // --yes without a terminal: the decisions and secrets stay open → REFUSED, the kit untouched.
+    expect(await init(w, firstRun(w, DRAFT, ['--yes', ...kitArgs()]))).toBe(EXIT.REFUSED);
+    expect(w.host.lstat(KIT)?.type).toBe('file');
   });
 });

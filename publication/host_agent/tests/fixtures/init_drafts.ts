@@ -389,6 +389,8 @@ export function args(overrides: Partial<InitArgs> = {}): InitArgs {
     sourceDigestConfirmed: 'c'.repeat(64),
     bunArchive: '/var/lib/dedalo_publication_host_init/demo/stage/bun/bun-linux-x64.zip',
     bunSums: null,
+    kitFile: null,
+    kitDigestConfirmed: null,
     yes: false,
     decide: new Map(),
     resume: false,

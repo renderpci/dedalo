@@ -747,10 +747,12 @@ instead of wiping a stage a running init reads (a file of its own, never init's 
 ### 9.3 Command sets
 
 Every spawn stays in `publication/host_agent/src/exec.ts`. `provisionExec()` is the closed set
-of **24** commands the provisioner may run (read-only probes, the web/FPM configtests, the
-SELinux label commands of apply); none creates an account. Every command of both sets spawns
-with a finite timeout (SIGKILL, exit 124): `COMMAND_TIMEOUT_MS`, `UNIT_JOB_TIMEOUT_MS` for the
-systemd jobs, `RELABEL_TIMEOUT_MS` for `semanage import` / `restorecon` — init runs several of
+of **25** commands the provisioner may run (read-only probes, the web/FPM configtests, the
+SELinux label commands of apply, and `rm -rf --one-file-system` of a RETIRED tree — only a
+root-owned 0700 directory named `*.dedalo-provision.retired`, §9.15); none creates an account.
+Every command of both sets spawns with a finite timeout (SIGKILL, exit 124): `COMMAND_TIMEOUT_MS`,
+`UNIT_JOB_TIMEOUT_MS` for the systemd jobs, `RELABEL_TIMEOUT_MS` for `semanage import` /
+`restorecon` / the tree removal — init runs several of
 them while it holds the host web lock (`tests/provision_exec.test.ts`). `initExec()` is a separate closed
 set of **22** commands for init alone (discovery, the account creators, `a2enmod`/`a2dismod`
 on Debian, `setsebool`, the Bun unpack, and the pairing child `setsid --wait runuser -u <engine
@@ -999,6 +1001,21 @@ passphrase on the terminal only, the file 0600, the re-run), and
 agent: a wrong passphrase, an altered byte, a non-matching token, a socket fragment and a 0644
 package refused before any connection).
 
+**After the pairing.** The package is a sealed copy of the agent's token and the engine TLS key:
+it is not kept once used. Init reads the agent's audit trail as root: an entry after the
+journal's `done` of `pair.package` (any action but the automatic `release.auto_rollback`) is a
+command the work host sent with those credentials (the agent audits only authenticated
+requests; the pairing's live proof is read-only and unaudited, the first rules apply after it
+is not), so every later run and `--dry-run` turns `pair.package` into the decision **stale →
+remove** (`remove` by default, `keep` skips; `--yes` never answers it, `--decide
+pair.package=remove` does, and asks for it before any proof too). The action
+`pair_package_remove` removes only init's own file — a regular root 0600 file whose header is
+the format's (`packageHeaderProblem`); anything else is refused by name and left — renamed to
+init's temp name, then removed (journaled; `--resume` finishes the temp). A package gone is
+reported right. Gates: `publication/host_agent/tests/init_pair.test.ts`
+(`engineContactSince`, `writtenPackageItem`), `tests/init_run.test.ts` (stale, decided,
+removed, refused for another mode or format).
+
 ### 9.13 The kit (two machines)
 
 `bun run hostagent:pack -- --draft <draft.json> [--out <file>]` (`scripts/publication_host_pack.ts`,
@@ -1040,7 +1057,19 @@ READS them from install.sh. Gates: that file; `test/unit/publication_host_kit_pa
 (determinism, the closed content, the refusals, and the real checkout's kit extracted by the
 system tar and accepted by install.sh's own functions, one altered byte refused); the init
 drill's `kit-install` leg (the real packer, a real production install, an altered kit refused
-by its sha256, the install from the kit, no tests or dev dependencies installed).
+by its sha256, the install from the kit, no tests or dev dependencies installed, the kit
+offered for removal and removed, the files beside it untouched).
+
+**The kit after the install.** `install.sh` hands init the kit it was given, absolute, with the
+sha256 it verified (`--kit-file`, `--kit-digest-confirmed`: hand-over flags, refused after `--`).
+Once the run converged (exit 0, nothing required open) init offers to remove it: confirmed on a
+terminal (default no), removed under `--yes` without one, otherwise named. `InitIo.removeOperatorFile`
+removes only a regular file (never a link) that still hashes to that sha256, unlinked by name
+after the descriptor read proved it the same inode; no parent-trust rule (the kit may sit in
+`/tmp`): an unlink removes a name, never a link's target or another name's data. Journaled
+(`kit.remove`); a refusal never fails the converged run. Gates: `tests/init_run.test.ts`,
+`tests/init_host_io.test.ts` (the real door), `tests/init_args.test.ts`,
+`tests/init_install_sh.test.ts` (the hand-over).
 
 ### 9.14 The panel: "New publication host" (steps 4–5)
 
@@ -1124,3 +1153,45 @@ token and bundle strings are dropped with the request (honest limit). Gates:
 build and its refusals, the upload's refusals and the secret scan),
 `test/unit/publication_host_widget_native.test.ts` (the action set, root only),
 `client/dedalo/test/client/js/test_publication_host_setup.js` (the view).
+
+### 9.15 Retired artifacts (a declaration that drops something)
+
+A plan cannot learn from a NEW declaration where the OLD one put things (a v2-only declaration
+has no `site.fpm`, so it cannot name the old pool file). `provision apply` keeps a record of what
+it provisioned that may later be retired, `<config_base>/<instance>/provisioned.json` (root:root
+0644, `MODES.provisionRecord`), written by the tail's LAST action (`provision-record`) whenever it
+moves — a run that fails earlier keeps the previous record, so the next one retires again; an
+absent record equals an empty one (an instance with nothing retirable never gets the file).
+`publication/host_agent/src/provision/retire.ts` owns the closed tables: the retirable kinds
+(`fpm_pool` with its FPM install's unit and binary, `logrotate`, `logrotate_v1`) and trees
+(`v1_api` = `<state_root>/publication_api/v1`, `v1_var` = `<v1_var_base>/<instance>`). Retired =
+recorded − rendered: files by PATH (a pool that moves to another PHP version's directory is
+retired, or two pools of one name would meet), trees by KIND (a relocated tree is the operator's
+move, not a retirement). A kind joins the table with its removal rule, never by default: a web
+include is `Include`d by the operator's vhost, so removing it would break the server.
+
+**The guard.** A retired file is removed only when it still carries our stamp for THIS instance
+and THAT kind with an unedited body; a retired tree only at the place this instance's layout puts
+its kind, as a real directory with exactly the `MODES` owner, group and mode `apply` gave it,
+under a trusted parent. Anything else refuses the whole plan, naming the path (init shows it as
+the "edited by hand" decision). A record that is not this grammar refuses too, never guessed.
+
+**The removal.** A file: renamed to the provisioner temp name and removed (`remove`, shown by
+`check` as `would: remove … (retired: …)`). An FPM pool: under the host web lock, renamed to
+`<pool>.dedalo-provision.bak`, then the FPM configtest — a master whose only pool was ours
+refuses to start, so a failing test puts the pool back, tests again, and stops apply — then
+`fpm-configtest` + `fpm-reload` of ITS install while it runs (a `retire` restore entry: put back
+when the master dies at the reload, dropped after a good one; an install not running has nothing
+to reload and the backup goes at once). Each retired install gets its own pair; a reload ranks
+with its configtest in the tail sort, so pairs stay pairs. A tree: in the tail AFTER the units
+restarted (the agent no longer serves v1), renamed to `<path>.dedalo-provision.retired` in its
+trusted parent, made root:root 0700 through the entry doors (no other account reaches anything in
+it by path any more), then `rm -rf --one-file-system` — the 25th provisioner command (§9.3),
+admitted only for a root 0700 directory of that name; GNU rm walks descriptor-relative and never
+follows a link. A leftover `.retired` (or a pool backup awaiting its reload) is finished by the
+next run. SELinux rows need nothing new: the v1 specs leave `selinux.state`'s desired set and are
+deleted by the registration lifecycle (§9.8) in the same import. Accounts are never removed.
+Gates: `publication/host_agent/tests/provision_retire.test.ts` (FakeHost: the plan, the
+convergence and the empty second plan, the FPM failure and restore, the resume, a moved pool, the
+guards one by one, SELinux), `tests/provision_host_io.test.ts` (a real tree: the v1 tree removed,
+a planted link not followed), `tests/provision_exec.test.ts` (the door's argv and refusals).
