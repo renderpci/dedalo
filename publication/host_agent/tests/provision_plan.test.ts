@@ -600,6 +600,7 @@ function selinuxOf(host: FakeInitHost, l: AgentLayout, state: string | null = nu
     state,
     booleans: Object.fromEntries(host.booleans),
     mediaLabelable: true,
+    module: host.moduleObserved(),
   };
 }
 

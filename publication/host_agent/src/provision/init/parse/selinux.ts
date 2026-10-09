@@ -283,3 +283,26 @@ export function parseRestoreconDryRun(text: string): PendingRelabel[] {
   }
   return out;
 }
+
+/* ── the policy modules (selinux_module.ts, spec §9.8) ───────────────────────────── */
+
+export interface ListedPolicyModule {
+  readonly priority: number;
+  readonly name: string;
+  readonly lang: string;
+  readonly disabled: boolean;
+}
+
+/**
+ * `semodule --list-modules=full`: `<priority> <name> <lang> [disabled]` per module (measured, RHEL
+ * 9.8: `400 permissive_rhcd_t cil`, `100 abrt pp  disabled`). Every row of the host, every priority.
+ */
+export function parseSemoduleList(text: string): ListedPolicyModule[] {
+  const out: ListedPolicyModule[] = [];
+  for (const line of lines(text)) {
+    const match = /^\s*(\d{1,3})\s+([A-Za-z0-9_.-]+)\s+([A-Za-z0-9_]+)(?:\s+(disabled))?\s*$/.exec(line);
+    if (!match) fail('semodule --list-modules=full line is not <priority> <name> <lang> [disabled]', line);
+    out.push(Object.freeze({ priority: Number(match[1]), name: match[2] as string, lang: match[3] as string, disabled: match[4] !== undefined }));
+  }
+  return out;
+}

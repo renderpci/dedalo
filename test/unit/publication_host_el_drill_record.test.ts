@@ -34,6 +34,12 @@ import {
 	legsFor,
 	mergeRecord,
 	parseDrillArgs,
+	SELINUX_CONTROL_DIR,
+	SELINUX_CONTROL_FILE,
+	SELINUX_CONTROL_URL,
+	controlNamed,
+	selinuxControlConf,
+	selinuxControlVerdict,
 } from '../../scripts/publication_host_init_drill.ts';
 
 /** Every EL major the guided install supports (owner decision 2026-10-08: the EL family is 9 and 10). */
@@ -99,6 +105,7 @@ describe('the EL drill record holds the tree', () => {
 			.map((leg) => leg.name);
 		expect(required).toContain('selinux-labels');
 		expect(required).toContain('fapolicyd');
+		expect(required).toContain('system-layout-v2');
 		for (const host of record().hosts) {
 			expect(host.skipped, `${host.os} skipped legs`).toEqual([]);
 			expect(
@@ -118,6 +125,8 @@ describe('the EL drill record holds the tree', () => {
 				'httpd_enable_homedirs',
 			]);
 			expect(measured.home_traverse_type, `${host.os} home traverse type`).toBe('home_root_t');
+			// The system layout's default type under /srv is not readable to systemd: why the policy module exists.
+			expect(measured.system_default_readable, `${host.os} system default readable`).toBe(false);
 			expect(measured.v1_php_floor, `${host.os} v1 PHP floor`).toMatch(/^\d+\.\d+$/);
 			expect(Object.keys(measured.supported_directives).length).toBeGreaterThan(0);
 		}
@@ -241,5 +250,40 @@ describe('the drill around the record: in place on Debian, and what a capture na
 				all.findIndex((l) => l.name === 'nginx-host-map'),
 			);
 		}
+	});
+});
+
+describe('system-layout-v2: the httpd control measures SELinux alone', () => {
+	const type = 'dedalo_publication_v2_t';
+	const avc = `type=AVC msg=audit(1.1:2): avc:  denied  { read } for  pid=1 comm="httpd" name="${SELINUX_CONTROL_FILE}" dev="dm-0" ino=3 scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:${type}:s0 tclass=file permissive=0`;
+	const good = { baseline: { status: 200, body: 'dd-control\n' }, refused: { status: 403 }, avc, errorLog: '', type };
+
+	test('the control grants its own directory (EL denies every directory httpd.conf does not name)', () => {
+		const conf = selinuxControlConf();
+		expect(conf).toContain(`Alias ${SELINUX_CONTROL_URL} ${SELINUX_CONTROL_DIR}`);
+		expect(conf).toContain(`<Directory ${SELINUX_CONTROL_DIR}>\n    Require all granted`);
+	});
+
+	test('passes only when the label alone made the difference', () => {
+		expect(selinuxControlVerdict(good)).toBeNull();
+		// measured RHEL 9.8: the stat is denied first, and that record names the path, not the name
+		const getattr = `type=AVC msg=audit(1791571731.029:10818): avc:  denied  { getattr } for  pid=225710 comm="httpd" path="${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}" dev="dm-0" ino=100666481 scontext=system_u:system_r:httpd_t:s0 tcontext=unconfined_u:object_r:${type}:s0 tclass=file permissive=0`;
+		expect(selinuxControlVerdict({ ...good, avc: getattr })).toBeNull();
+		expect(controlNamed(getattr) && controlNamed(avc)).toBe(true);
+		expect(controlNamed(avc.replace(SELINUX_CONTROL_FILE, 'other.txt'))).toBe(false);
+	});
+
+	test('a baseline that is not 200 with its bytes is a broken control, never a pass (measured: AH01630 403 under a home DocumentRoot)', () => {
+		expect(selinuxControlVerdict({ ...good, baseline: { status: 403, body: '' } })).toMatch(/proves nothing/);
+		expect(selinuxControlVerdict({ ...good, baseline: { status: 200, body: 'other' } })).toMatch(/proves nothing/);
+	});
+
+	test("a 403 that is Apache's authorization, a read that succeeds, or no AVC for the type: red", () => {
+		const authz = `[authz_core:error] AH01630: client denied by server configuration: ${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}`;
+		expect(selinuxControlVerdict({ ...good, errorLog: authz })).toMatch(/Apache's authorization/);
+		expect(selinuxControlVerdict({ ...good, refused: { status: 200 } })).toMatch(/httpd read/);
+		expect(selinuxControlVerdict({ ...good, avc: '' })).toMatch(/no AVC denial/);
+		expect(selinuxControlVerdict({ ...good, avc: avc.replace(':httpd_t:', ':init_t:') })).toMatch(/no AVC denial/);
+		expect(selinuxControlVerdict({ ...good, avc: avc.replace(`:${type}:`, ':var_t:') })).toMatch(/no AVC denial/);
 	});
 });

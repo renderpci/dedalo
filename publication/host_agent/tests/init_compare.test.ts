@@ -17,6 +17,10 @@ import { completeDraft, vhostSha8 } from '../src/provision/init/draft';
 import type { CompareCtx, DeclaredFacts, HostFacts, InitAction } from '../src/provision/init/types';
 import { insertApacheReference, insertNginxReference } from '../src/provision/init/web_edit';
 import { canonicalDeclaration } from '../src/provision/schema';
+import { stamp } from '../src/provision/hash';
+import type { HostState } from '../src/provision/plan';
+import type { SelinuxModuleObserved } from '../src/provision/selinux_module';
+import { SELINUX_MODULE_KIND, renderSelinuxModule } from '../src/provision/selinux_module';
 import {
   DOMAIN,
   HOME,
@@ -52,6 +56,11 @@ interface Scn {
 }
 
 const ALL: ComparedItem[] = [];
+
+/** declaredFresh() whose observed host holds this policy module (selinux.v2_policy). */
+function withModule(module: SelinuxModuleObserved): DeclaredFacts {
+  return { ...declaredFresh(), hostState: { selinux: { module } } as unknown as HostState };
+}
 
 function run(scn: Scn = {}) {
   const facts = scn.facts ?? debianHost();
@@ -342,6 +351,13 @@ const ROWS: readonly (readonly [string, () => Scn, string, Expect])[] = [
   ['db connect over tcp', () => ({ facts: elHost(), answers: { 'api_config.v1_db_transport': 'tcp' } }), 'selinux.db_connect', { list: 'decision', hostWide: true, action: 'sebool', after: ['api_config.v1_db_transport'] }],
   ['db connect right', () => ({ facts: withSelinux(elHost(), { booleans: booleans({ httpd_can_network_connect_db: true }) }), answers: { 'api_config.v1_db_transport': 'tcp' } }), 'selinux.db_connect', { list: 'right' }],
   ['db connect socket: absent', () => ({ facts: elHost() }), 'selinux.db_connect', { absent: true }],
+  // selinux.v2_policy (spec §9.8): the system layout's v2 tree, typed by the provisioner's module
+  ['v2 policy: system layout, no module yet', () => ({ facts: elHost(), draft: draft({ layout: 'system' }) }), 'selinux.v2_policy', { list: 'change', hostWide: false, command: /^semodule -X 400 -i \/var\/lib\/dedalo_publication_host\/_host\/dedalo_publication_host\.cil$/, fact: /var_t under \/srv/ }],
+  ['v2 policy: an older module of ours', () => ({ facts: elHost(), draft: draft({ layout: 'system' }), declared: withModule({ listed: [{ priority: 400, lang: 'cil', disabled: false }], source: stamp(SELINUX_MODULE_KIND, '_host', '; older\n', ';') }) }), 'selinux.v2_policy', { list: 'change', fact: /older version/ }],
+  ['v2 policy right (ours, current)', () => ({ facts: elHost(), draft: draft({ layout: 'system' }), declared: withModule({ listed: [{ priority: 400, lang: 'cil', disabled: false }], source: renderSelinuxModule() }) }), 'selinux.v2_policy', { list: 'right', fact: /installed and current/ }],
+  ['v2 policy: a foreign module blocks', () => ({ facts: elHost(), draft: draft({ layout: 'system' }), declared: withModule({ listed: [{ priority: 100, lang: 'pp', disabled: false }], source: null }) }), 'selinux.v2_policy', { blocking: true, fact: /priority 100/, command: /semodule --list-modules=full/ }],
+  ['v2 policy: home layout needs none', () => ({ facts: elHost() }), 'selinux.v2_policy', { absent: true }],
+  ['v2 policy: no SELinux, none', () => ({ draft: draft({ layout: 'system' }) }), 'selinux.v2_policy', { absent: true }],
   ['media on nfs4: mount option default', () => ({ facts: { ...elHost(), mounts: [...elHost().mounts, { mountPoint: '/mnt/dedalo_media', fsType: 'nfs4', readOnly: true, noexec: false, seclabel: false, context: null }] } }), 'selinux.media_access', { list: 'decision', hostWide: true, options: ['mount', 'boolean'], defaultOption: 'mount', command: /context="system_u:object_r:httpd_sys_content_t:s0"/ }],
   ['media on cifs with the boolean', () => ({ facts: { ...withSelinux(elHost(), { booleans: booleans({ httpd_use_cifs: true }) }), mounts: [...elHost().mounts, { mountPoint: '/mnt/dedalo_media', fsType: 'cifs', readOnly: true, noexec: false, seclabel: false, context: null }] } }), 'selinux.media_access', { list: 'right' }],
   ['media mount context=', () => ({ facts: { ...elHost(), mounts: [...elHost().mounts, { mountPoint: '/mnt/dedalo_media', fsType: 'nfs4', readOnly: true, noexec: false, seclabel: false, context: '"system_u:object_r:httpd_sys_content_t:s0"' }] } }), 'selinux.media_access', { list: 'right' }],

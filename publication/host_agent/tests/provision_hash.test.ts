@@ -4,6 +4,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { HOST_STAMP_INSTANCE, HOST_WIDE_KINDS, STAMP_TOKEN, bodyHash, hasDrifted, parseStamp, stamp } from '../src/provision/hash';
+import { SELINUX_MODULE_KIND } from '../src/provision/selinux_module';
 import { INSTANCE_PATTERN, derive } from '../src/provision/layout';
 import { ARTIFACT_KINDS, artifact } from '../src/provision/render/types';
 import { unixDeclaration } from './fixtures/provision_declaration';
@@ -72,9 +73,12 @@ describe('host-wide stamps (spec §2.2): `_host` only for HOST_WIDE_KINDS, never
     expect(hasDrifted(`# ${STAMP_TOKEN} _host unit_agent ${bodyHash(BODY)}\n${BODY}`)).toBe(true);
   });
 
-  test('`_host` can never be an instance name, and every host-wide kind is an artifact kind', () => {
+  test('`_host` can never be an instance name, and every host-wide kind is an artifact kind or the SELinux module source', () => {
     expect(INSTANCE_PATTERN.test(HOST_STAMP_INSTANCE)).toBe(false);
-    for (const kind of HOST_WIDE_KINDS) expect(ARTIFACT_KINDS as readonly string[]).toContain(kind);
+    // The policy module's source is written by the plan's SELinux pass (selinux_module.ts), not rendered.
+    for (const kind of HOST_WIDE_KINDS) expect([...ARTIFACT_KINDS, SELINUX_MODULE_KIND] as readonly string[]).toContain(kind);
+    expect(HOST_WIDE_KINDS).toContain(SELINUX_MODULE_KIND);
+    expect(ARTIFACT_KINDS as readonly string[]).not.toContain(SELINUX_MODULE_KIND);
   });
 
   test("artifact(): hostWide stamps `_host` exactly for a host-wide kind, and refuses the mismatch", () => {

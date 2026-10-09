@@ -24,8 +24,12 @@ export const STAMP_TOKEN = 'dedalo-provision:';
 export const STAMP_KIND_PATTERN = /^[a-z][a-z0-9_]*$/;
 /** The stamp's instance field of a host-wide artifact (spec §2.2). Never an INSTANCE_PATTERN name. */
 export const HOST_STAMP_INSTANCE = '_host';
-/** The only kinds stamped `_host` (spec §2.2, §13.6, §13.5). render/types.ts ARTIFACT_KINDS holds them. */
-export const HOST_WIDE_KINDS: readonly string[] = Object.freeze(['nginx_map_include', 'host_map_unit']);
+/**
+ * The only kinds stamped `_host` (spec §2.2, §13.6, §13.5, §9.8). render/types.ts ARTIFACT_KINDS holds
+ * all but `selinux_module`: the SELinux policy module's source, which the plan's SELinux pass writes
+ * only on an SELinux host (selinux_module.ts) — a renderer cannot see the host.
+ */
+export const HOST_WIDE_KINDS: readonly string[] = Object.freeze(['nginx_map_include', 'host_map_unit', 'selinux_module']);
 
 /** null when `instance` may stamp `kind`; else the reason. */
 function stampOwnerProblem(kind: string, instance: string): string | null {

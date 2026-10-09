@@ -48,7 +48,11 @@
  * directories are created, and the tail gains fpm-configtest → fpm-reload. On an SELinux host the
  * instance's file-context rules and port label are imported in one `semanage import` transaction,
  * then relabelled (restorecon), both before every configtest op; an operator rule on one of our specs
- * with another type, or a v2 port the policy types otherwise, is REFUSED (never overridden). Every
+ * with another type, or a v2 port the policy types otherwise, is REFUSED (never overridden). A layout
+ * whose labels need the provisioner's own policy module (the system layout's v2 tree:
+ * selinux_module.ts) gets its stamped source written and `semodule -i`'d BEFORE the import that names
+ * its type; when no declaration on the host needs it any more, it is removed AFTER the import that
+ * unregistered its last rule — a module of that name that is not ours is refused, never replaced. Every
  * declaration ensures the HOST-WIDE directories (HOST_BASE, its locks; on nginx `conf_d` the map and
  * renderer directories) — each created under a temporary name and renamed, an existing one with other
  * metadata refused, never chowned — and the two host lock files; on nginx `conf_d` the plan also
@@ -76,6 +80,7 @@ import {
   markerContent,
   ownerName,
   webLogBase,
+  SYSTEM_LAYOUT,
 } from './layout';
 import type { TrustDerivation } from './fapolicyd_trust';
 import { TRUST_FILE_MODE, pendingEntry, renderTrustFile, trustFileProblem } from './fapolicyd_trust';
@@ -137,9 +142,21 @@ import {
   parseSelinuxState,
   portEntry,
   restoreconTargets,
+  moduleNeeded,
   selinuxPort,
   selinuxRules,
 } from './selinux';
+import type { SelinuxModuleObserved } from './selinux_module';
+import {
+  FOREIGN_MODULE_HINT,
+  SELINUX_MODULE_FILE_MODE,
+  SELINUX_MODULE_NAME,
+  V2_TREE_TYPE,
+  installedModule,
+  moduleSourceProblem,
+  renderSelinuxModule,
+  selinuxModulePath,
+} from './selinux_module';
 
 /* ── the renderer registry ────────────────────────────────────────────────────────── */
 
@@ -296,6 +313,8 @@ export interface SelinuxObserved {
   readonly booleans: Readonly<Record<string, boolean>>;
   /** The media root lies on a local or `seclabel` filesystem (a network mount is labelled by its own `context=`). */
   readonly mediaLabelable: boolean;
+  /** The provisioner's policy module as installed (`semodule --list-modules=full`, `-E`); NO_MODULE = none. */
+  readonly module: SelinuxModuleObserved;
 }
 
 export interface SiblingFacts {
@@ -590,7 +609,7 @@ export function engineGroupRefusal(layout: AgentLayout, host: HostState): string
 
 /* ── actions ──────────────────────────────────────────────────────────────────────── */
 
-export type WriteLabel = ArtifactKind | 'marker' | 'credential' | 'audit_log' | 'host_identities' | 'host_lock' | 'fapolicyd_trust';
+export type WriteLabel = ArtifactKind | 'marker' | 'credential' | 'audit_log' | 'host_identities' | 'host_lock' | 'fapolicyd_trust' | 'selinux_module';
 
 export type WriteContent =
   | { readonly source: 'literal'; readonly body: string }
@@ -806,6 +825,24 @@ export interface FapolicydUpdateAction {
   readonly path: string;
   readonly pending: string | null;
 }
+/**
+ * `semodule -X 400 -i <file>` (selinux_module.ts): BEFORE the import that names its type; then the
+ * installed module is extracted again and must be `body`, byte for byte.
+ */
+export interface SelinuxModuleInstallAction {
+  readonly op: 'selinux-module-install';
+  readonly file: string;
+  readonly body: string;
+  readonly why: 'absent' | 'outdated';
+}
+/**
+ * `semodule -X 400 -r dedalo_publication_host`, AFTER the import that removed the last rule naming its
+ * type (semodule refuses a removal while one does, measured); then its source file (`file`, null = none).
+ */
+export interface SelinuxModuleRemoveAction {
+  readonly op: 'selinux-module-remove';
+  readonly file: string | null;
+}
 /** restorecon over the instance's targets, then the same as a dry run that must find nothing (spec §5.9). */
 export interface SelinuxRestoreconAction {
   readonly op: 'selinux-restorecon';
@@ -821,7 +858,9 @@ export type Action =
   | RemoveAction
   | RendererInstallAction
   | DaemonReloadAction
+  | SelinuxModuleInstallAction
   | SelinuxImportAction
+  | SelinuxModuleRemoveAction
   | SelinuxRestoreconAction
   | FapolicydUpdateAction
   | FpmConfigtestAction
@@ -835,7 +874,9 @@ export type Action =
 const FS_OPS = new Set<Action['op']>(['mkdir', 'write', 'chown', 'chmod', 'append-only', 'remove', 'renderer-install']);
 const TAIL_ORDER: readonly Action['op'][] = [
   'daemon-reload',
+  'selinux-module-install',
   'selinux-import',
+  'selinux-module-remove',
   'selinux-restorecon',
   'fapolicyd-update',
   'fpm-configtest',
@@ -1183,13 +1224,17 @@ export function plan(
 
   // 4. Directories, parents first; a drifted directory is fixed in place, BEFORE any child of it is
   //    created (apply's parent check needs it trusted). Host-wide ones are never fixed (refused).
-  //    Missing ancestors of the host base and of the v1 pool's directory are created root 0755.
+  //    Missing ancestors of the host base, of the system layout's own state base
+  //    (SYSTEM_LAYOUT.stateBase, /srv/dedalo_publication_host, shared by its instances — measured: the EL
+  //    drill's first system-layout install was refused for it; any OTHER state root's missing parent
+  //    stays a refusal, a typo is never created) and of the v1 pool's directory are created root 0755.
   const wanted = new Map<string, ExtraDir>();
   for (const dir of layout.directories) wanted.set(dir.path, { path: dir.path, modeKey: dir.modeKey, hostWide: false });
   for (const dir of extra) {
     if (!wanted.has(dir.path)) wanted.set(dir.path, dir);
   }
-  for (const root of [layout.host.base, ...(layout.site?.v1 == null ? [] : [dirname(layout.site.v1.var.root)])]) {
+  const systemState = dirname(layout.state.root) === SYSTEM_LAYOUT.stateBase ? [layout.state.root] : [];
+  for (const root of [layout.host.base, ...systemState, ...(layout.site?.v1 == null ? [] : [dirname(layout.site.v1.var.root)])]) {
     for (const dir of ancestorsBelow(root, host.trustRoot)) {
       if (!host.paths.has(dir) && !wanted.has(dir)) wanted.set(dir, { path: dir, modeKey: 'hostBase', hostWide: true });
     }
@@ -1539,9 +1584,21 @@ export function plan(
     }
   }
 
-  // 8. SELinux (spec S9): the instance's rules and port label, then the relabel.
+  // 8. SELinux (spec S9): the provisioner's policy module where the labels need its type (written,
+  //    then installed before the import), the instance's rules and port label, then the relabel.
   const selinuxTail: Action[] = [];
   if (host.selinux !== undefined) {
+    const module = selinuxModulePlan(layout, host, host.selinux, refusals);
+    if (module.write !== null) {
+      const path = selinuxModulePath(layout);
+      const own = ownership('root', 'root');
+      if (!parentReady(path)) refusals.push(`'${dirname(path)}' (the host-wide state directory) does not exist for the SELinux policy module source`);
+      else fsActions.push({ op: 'write', path, label: 'selinux_module', content: { source: 'literal', body: module.body }, disposition: module.write, mode: SELINUX_MODULE_FILE_MODE, validate: null, ...own });
+    } else if (module.keep !== null) {
+      metadata(metaActions, selinuxModulePath(layout), module.keep, ownership('root', 'root'), SELINUX_MODULE_FILE_MODE);
+    }
+    if (module.removeSource != null) fsActions.push({ op: 'remove', path: module.removeSource, why: 'the SELinux policy module source no declaration on this host needs' });
+    selinuxTail.push(...module.tail);
     selinuxTail.push(...selinuxActions(layout, host, host.selinux, created, refusals));
   }
 
@@ -1789,6 +1846,69 @@ function missingParent(layout: AgentLayout, art: Artifact): string {
   return `parent directory '${parent}' of '${art.path}' does not exist`;
 }
 
+/** What the plan does with the provisioner's SELinux policy module (selinux_module.ts). */
+interface SelinuxModulePlan {
+  /** Write the stamped source: create, rewrite (our older or other renderer's bytes), or nothing. */
+  readonly write: 'create' | 'rewrite' | null;
+  /** The source is ours and current: only its metadata is held. */
+  readonly keep: PathFacts | null;
+  readonly body: string;
+  /** semodule -i before the import, semodule -r after it. */
+  readonly tail: Action[];
+  /** Our source file, left with no module installed and no declaration needing it: removed. */
+  readonly removeSource?: string | null;
+}
+
+/**
+ * The provisioner's policy module (spec §9.8, selinux_module.ts). NEEDED (this layout's labels name
+ * its type): the stamped source is written when it differs, and installed when the installed module
+ * is absent or an older one of ours; a module of that name that is not ours (another priority or
+ * language, disabled, unstamped, edited), or a source file that is not ours, is REFUSED. NOT NEEDED by
+ * this layout nor by any sibling on the host: ours is removed after the import (with its source file,
+ * under the same guard); unobserved siblings decide nothing (planReport says so).
+ */
+function selinuxModulePlan(layout: AgentLayout, host: HostState, selinux: SelinuxObserved, refusals: string[]): SelinuxModulePlan {
+  const body = renderSelinuxModule();
+  const none: SelinuxModulePlan = { write: null, keep: null, body, tail: [] };
+  if (!labelScope(selinux.mode, selinux.storePresent).register) return none;
+  const path = selinuxModulePath(layout);
+  const facts = host.paths.get(path);
+  const text = host.contents.get(path) ?? null;
+  const what = `'${path}' (the SELinux policy module source)`;
+  const installed = installedModule(selinux.module);
+  if (moduleNeeded(layout)) {
+    if (installed.kind === 'foreign') {
+      refusals.push(`${installed.reason} — the labels of '${layout.instance}' need its type ${V2_TREE_TYPE}, and a module that is not ours is never replaced: ${FOREIGN_MODULE_HINT}`);
+    }
+    let write: SelinuxModulePlan['write'] = null;
+    let keep: PathFacts | null = null;
+    if (facts === undefined) write = 'create';
+    else if (facts.type !== 'file') refusals.push(`${what} is a ${facts.type}, not a file — move it aside and re-run`);
+    else {
+      const problem = moduleSourceProblem(what, text);
+      if (problem !== null) refusals.push(`${problem} — it is never overwritten: move it aside and re-run`);
+      else if (text !== body) write = 'rewrite';
+      else keep = facts;
+    }
+    const tail: Action[] = [];
+    if (installed.kind === 'absent' || (installed.kind === 'ours' && !installed.current)) {
+      tail.push({ op: 'selinux-module-install', file: path, body, why: installed.kind === 'absent' ? 'absent' : 'outdated' });
+    }
+    return { write, keep, body, tail };
+  }
+  // Not needed here: removed only when no declaration on the host needs it (siblings observed).
+  if (host.siblings === undefined || host.siblings.some(sibling => moduleNeeded(sibling.layout))) return none;
+  let file: string | null = null;
+  if (facts !== undefined) {
+    const problem = facts.type === 'file' ? moduleSourceProblem(what, text) : `${what} is a ${facts.type}, not a file`;
+    if (problem !== null) refusals.push(`${problem} — it is not removed: move it aside or remove it by hand`);
+    else file = path;
+  }
+  if (installed.kind === 'ours') return { ...none, tail: [{ op: 'selinux-module-remove', file }] };
+  // Not installed (or not ours, left alone): only our leftover source goes.
+  return { ...none, removeSource: file };
+}
+
 /**
  * The SELinux ops (spec S9, §5.9): desired rules vs the local registry. A local rule on one of our
  * specs with another type, or the v2 port typed otherwise by the policy, is refused; missing ones
@@ -1960,6 +2080,15 @@ export function planReport(layout: AgentLayout, host: HostState): PlanReport {
         const rfacts = ruleFacts(layout, selinux);
         if (rfacts.homeTraverseByBoolean) facts.push('the site home is traversable through httpd_enable_homedirs (no exact rule)');
       }
+      const module = installedModule(selinux.module);
+      if (moduleNeeded(layout)) {
+        facts.push(
+          `SELinux policy module ${SELINUX_MODULE_NAME} (type ${V2_TREE_TYPE}, the v2 tree): ` +
+            (module.kind === 'absent' ? 'not installed yet' : module.kind === 'foreign' ? `NOT OURS — ${module.reason}` : module.current ? 'installed, current' : 'installed, an older version'),
+        );
+      } else if (module.kind !== 'absent' && host.siblings === undefined) {
+        facts.push(`SELinux policy module ${SELINUX_MODULE_NAME} left installed: the sibling declarations were not observed (one may need it)`);
+      }
       if (layout.media.root !== null && layout.media.mode === 'shared' && !ruleFacts(layout, selinux).sharedMediaAccepted) {
         facts.push(`the shared media root ${layout.media.root} is not labelled by the provisioner: the declaration has no media.selinux_label (provision init's selinux.media_access=act writes it)`);
       }
@@ -2063,8 +2192,20 @@ export function assertPlanIsCoherent(actions: readonly Action[], host: HostState
   const relabelAt = actions.findIndex(action => action.op === 'selinux-restorecon');
   const firstConfigtest = actions.findIndex(action => action.op === 'web-configtest' || action.op === 'fpm-configtest');
   if (importAt !== -1 && relabelAt !== -1 && relabelAt < importAt) throw new Error('plan: restorecon precedes the SELinux import');
+  // The policy module (selinux_module.ts): installed before the import and the relabel that name its
+  // type and before any unit starts on those labels; removed only after the import unregistered its rules.
+  const moduleInstallAt = actions.findIndex(action => action.op === 'selinux-module-install');
+  const moduleRemoveAt = actions.findIndex(action => action.op === 'selinux-module-remove');
+  if (moduleInstallAt !== -1 && moduleRemoveAt !== -1) throw new Error('plan: the SELinux policy module is both installed and removed');
+  if (moduleInstallAt !== -1) {
+    const later = actions.findIndex(
+      action => action.op === 'selinux-import' || action.op === 'selinux-restorecon' || action.op === 'enable' || action.op === 'start' || action.op === 'restart',
+    );
+    if (later !== -1 && later < moduleInstallAt) throw new Error('plan: the SELinux policy module is installed after an op that needs its type');
+  }
+  if (moduleRemoveAt !== -1 && importAt !== -1 && moduleRemoveAt < importAt) throw new Error('plan: the SELinux policy module is removed before the import that unregisters its rules');
   if (firstConfigtest !== -1) {
-    for (const at of [importAt, relabelAt]) {
+    for (const at of [importAt, relabelAt, moduleInstallAt, moduleRemoveAt]) {
       if (at !== -1 && at > firstConfigtest) throw new Error('plan: an SELinux op comes after a configtest');
     }
   }
@@ -2105,6 +2246,10 @@ export function describe(action: Action): string {
       return action.lines.length > 0
         ? `semanage import (${action.lines.length} rule line(s)): ${action.lines.join(' ; ')}`
         : `record the registered SELinux rules in ${action.statePath}`;
+    case 'selinux-module-install':
+      return `semodule -X 400 -i ${action.file} (the SELinux policy module ${SELINUX_MODULE_NAME}: ${action.why === 'absent' ? 'not installed' : 'an older version is installed'})`;
+    case 'selinux-module-remove':
+      return `semodule -X 400 -r ${SELINUX_MODULE_NAME} (no declaration on this host needs it)${action.file === null ? '' : `, then remove ${action.file}`}`;
     case 'selinux-restorecon':
       return `restorecon -v ${action.targets.map(t => `${t.recursive ? '-R ' : ''}${t.path}`).join(' ')}`;
     case 'fapolicyd-update':

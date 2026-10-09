@@ -43,7 +43,8 @@ import {
   canonicalDeclaration,
 } from '../layout';
 import { INIT_BASE } from '../lock';
-import { HOME_TRAVERSE_TYPE, HTTPD_READABLE_TYPES, escapeSpec } from '../selinux';
+import { HOME_TRAVERSE_TYPE, HTTPD_READABLE_TYPES, escapeSpec, moduleNeeded } from '../selinux';
+import { FOREIGN_MODULE_HINT, SELINUX_MODULE_NAME, SELINUX_MODULE_PRIORITY, V2_TREE_TYPE, installedModule, selinuxModulePath } from '../selinux_module';
 import { unifiedDiff, lineEditDiff } from './diff';
 import type { DraftCompletion, DraftDecision } from './draft';
 import {
@@ -153,6 +154,7 @@ export const ITEM_IDS = Object.freeze([
   'api_config.v1_db_transport',
   'selinux.db_connect',
   'selinux.media_access',
+  'selinux.v2_policy',
   'bun.install',
   'code.install',
   'declaration.write',
@@ -1217,8 +1219,44 @@ function selinuxItems(env: Env): ComparedItem[] {
       const network = mount !== null && isNetworkFs(mount.fsType) && !mount.seclabel;
       if (media.mode === 'shared' || network) out.push(mediaAccessItem(env, media.root, mount, network));
     }
+
+    // selinux.v2_policy (the system layout: the v2 tree is typed by the provisioner's own module)
+    if (moduleNeeded(layout)) out.push(v2PolicyItem(env, layout));
   }
   return out;
+}
+
+/**
+ * selinux.v2_policy (spec §9.8): the v2 tree outside a home keeps the path's default type (`var_t`
+ * under /srv), which systemd may not read — no v2 unit could start. provision apply writes and
+ * installs the provisioner's policy module (selinux_module.ts) and labels the tree with its type;
+ * this item states it (no action of its own: provision.apply does it), right once the module of
+ * this provisioner is installed and current, blocked by a module of that name that is not ours.
+ */
+function v2PolicyItem(env: Env, layout: AgentLayout): ComparedItem {
+  const title = 'systemd can read the Publication API v2 tree (SELinux policy module)';
+  const v2 = layout.state.apis.v2.root;
+  const observed = env.declared?.hostState?.selinux?.module;
+  const installed = observed === undefined ? ({ kind: 'absent' } as const) : installedModule(observed);
+  if (installed.kind === 'foreign') {
+    return blocked('selinux.v2_policy', 'selinux', title, [installed.reason, `the labels of ${v2} need its type ${V2_TREE_TYPE}; a module that is not ours is never replaced`], [FOREIGN_MODULE_HINT]);
+  }
+  if (installed.kind === 'ours' && installed.current) {
+    return right('selinux.v2_policy', 'selinux', title, [`the policy module ${SELINUX_MODULE_NAME} is installed and current: ${v2} is ${V2_TREE_TYPE}, which systemd reads and httpd may not`]);
+  }
+  const path = selinuxModulePath(layout);
+  return item('selinux.v2_policy', 'selinux', 'change', title, {
+    facts: [
+      `${v2} would keep the path's default type (var_t under /srv), which systemd may not read: no v2 unit could start`,
+      `provision apply writes ${path} (CIL, stamped; one module for every system-layout instance on this host) and installs it: it defines the one file type ${V2_TREE_TYPE}, which systemd (init_t) may read and httpd may not; the v2 service and the agent run unconfined_service_t`,
+      ...(installed.kind === 'ours' ? ['an older version of the module is installed: provision apply replaces it in place'] : []),
+      'it changes nothing for any other site: the type is only ever given to the v2 trees of this host\'s system-layout instances',
+      'provision apply removes the module when no instance on this host needs it any more; a module of that name that is not ours is refused, never replaced',
+    ],
+    commands: [`semodule -X ${SELINUX_MODULE_PRIORITY} -i ${path}`, `semanage fcontext -a -f a -t ${V2_TREE_TYPE} '${escapeSpec(v2)}(/.*)?'`, `restorecon -R -v ${v2}`],
+    // Installed once per host, but it widens nothing for another site: its one type is only ever
+    // given to our v2 trees, and it grants systemd alone — `--yes` may apply it (not hostWide).
+  });
 }
 
 function mediaAccessItem(env: Env, root: string, mount: ReturnType<typeof mountOf>, network: boolean): ComparedItem {

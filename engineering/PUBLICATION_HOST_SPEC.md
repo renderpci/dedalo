@@ -757,12 +757,15 @@ instead of wiping a stage a running init reads (a file of its own, never init's 
 ### 9.3 Command sets
 
 Every spawn stays in `publication/host_agent/src/exec.ts`. `provisionExec()` is the closed set
-of **25** commands the provisioner may run (read-only probes, the web/FPM configtests, the
-SELinux label commands of apply, and `rm -rf --one-file-system` of a RETIRED tree — only a
-root-owned 0700 directory named `*.dedalo-provision.retired`, §9.15); none creates an account.
+of **29** commands the provisioner may run (read-only probes, the web/FPM configtests, the
+SELinux label commands of apply, `rm -rf --one-file-system` of a RETIRED tree — only a
+root-owned 0700 directory named `*.dedalo-provision.retired`, §9.15 — and the four commands of
+the provisioner's own SELinux policy module, §9.8: `semodule --list-modules=full`, `semodule -X
+400 -E dedalo_publication_host` in a fresh root 0700 directory, `semodule -X 400 -i` of its one
+root-owned source file, `semodule -X 400 -r dedalo_publication_host`); none creates an account.
 Every command of both sets spawns with a finite timeout (SIGKILL, exit 124): `COMMAND_TIMEOUT_MS`,
 `UNIT_JOB_TIMEOUT_MS` for the systemd jobs, `RELABEL_TIMEOUT_MS` for `semanage import` /
-`restorecon` / the tree removal — init runs several of
+`restorecon` / `semodule -E|-i|-r` / the tree removal — init runs several of
 them while it holds the host web lock (`tests/provision_exec.test.ts`). `initExec()` is a separate closed
 set of **22** commands for init alone (discovery, the account creators, `a2enmod`/`a2dismod`
 on Debian, `setsebool`, the Bun unpack, and the pairing child `setsid --wait runuser -u <engine
@@ -908,9 +911,9 @@ systemd (`init_t`) may read neither the units' `EnvironmentFile=` `v2.env` nor t
 `current`/`scratch` links under the home's `user_home_t`, so no v2 unit could start (measured,
 RHEL 9.8: AVC `init_t` read on `user_home_t` `lnk_file`/`file`, found by the EL drill's first v2
 push; `httpd_t` reads `data_home_t` only under `httpd_read_user_content`, like `user_home_t`;
-what the agent creates there inherits it). The SYSTEM layout's v2 tree keeps the path's default
-(`var_t` under /srv), which `init_t` may not read either (sesearch, RHEL 9.8): its type is
-undecided and no drill leg pushes v2 on it); the only rules on paths the provisioner did not
+what the agent creates there inherits it), and under the SYSTEM layout `dedalo_publication_v2_t`
+(below) — the path's default there, `var_t` under /srv, is no more readable to `init_t`
+(sesearch, RHEL 9.8)); the only rules on paths the provisioner did not
 create are the exact `-f d` rule on the site home (one inode) and the consented shared media root
 (below). No rule ever gives
 `S/publication_api/v2` or `S/audit` an httpd-readable type. Booleans (`SELINUX_BOOLEANS`) are
@@ -919,8 +922,36 @@ is read, never written. A SHARED media root (a directory the provisioner did not
 labelled `httpd_sys_content_t` only on the declaration's consent field `media.selinux_label: true`
 (shared mode only; init writes it on a `selinux.media_access=act` answer; removing it
 unregisters the rule on the next apply), and only on a local or seclabel filesystem — a network
-mount gets the fstab `context=` option or a `httpd_use_*` boolean instead. Never `setenforce`,
-never a policy module.
+mount gets the fstab `context=` option or a `httpd_use_*` boolean instead. Never `setenforce`.
+
+**The provisioner's policy module** (owner decision 2026-10-09). No policy type fits a v2 tree
+outside a home (systemd must read it, httpd must not), so the provisioner ships ONE module,
+`dedalo_publication_host` (`publication/host_agent/src/provision/selinux_module.ts`), as CIL —
+no compiler: libsemanage builds CIL on EL 9 and 10 (measured `semodule -i` of a `.cil`, RHEL 9.8
+and 10.2). It defines ONE file type, `dedalo_publication_v2_t` (the reference policy's
+`files_type()` attributes: `file_type`, `non_security_file_type`, `non_auth_file_type`), and
+grants `init_t` read-only access to it (`dir` getattr open read search, `file` getattr open
+read, `lnk_file` getattr read: `EnvironmentFile=`, `WorkingDirectory=`, `AssertPathIsDirectory=`).
+Nothing else: no rule for `httpd_t` (it reaches v2 over the port; the policy's own `httpd_t
+file_type:dir { getattr open search }` lets it traverse, never read a file — the EL drill's
+control), no domain (the v2 service and the agent run `unconfined_service_t`: `init_t` executing
+`bin_t` transitions there, and it is a `files_unconfined_type`), no boolean. It is needed exactly
+when the layout's S9 table names its type (`selinux.ts` `moduleNeeded`: every layout but the home
+one) and is host-wide: one source, `<host_base>/dedalo_publication_host.cil` (root `0644`,
+stamped `; dedalo-provision: _host selinux_module <sha>`), shared by every instance that needs it.
+`provision apply` writes the source when it differs and runs `semodule -X 400 -i` when the
+installed module is absent or an older one of ours — BEFORE the `semanage import` that names the
+type (libsemanage refuses an fcontext of an undefined type, measured), the relabel and every unit
+start — then extracts it again (`semodule -X 400 -E`, which gives a CIL module back byte for
+byte, measured) and holds it equal to the rendered source. A module of that name that is not
+ours — at another priority, in another language, disabled, or whose extracted text is not one of
+our stamped, unedited sources — is refused, never replaced; so is a source file that is not ours.
+When neither this layout nor any sibling declaration needs it (siblings observed), ours is
+removed with `semodule -X 400 -r` AFTER the import whose `-d` lines unregistered our last rule
+naming the type (semodule refuses a removal while one does, measured), and its source with it;
+unobserved siblings decide nothing (`provision check` says so). init states it as
+`selinux.v2_policy` (a *will change* item without an action of its own: `provision.apply` does
+it; right once ours is installed and current, blocked by a foreign one).
 
 ### 9.9 systemd profile
 
@@ -1005,7 +1036,12 @@ inside the CI image's container, with no privileged sibling and no SELinux kerne
   `/etc/dedalo_init_drill_host`. It proves the `<If>` handler (a `.php` and a `.phtml` probe
   answer as `v1.user` under `fpm-fcgi`) under the EL 9 and EL 10 `php.conf` and under Remi's
   mod_php, the relabelled home's sshd login, the site's logs outside the home, a network media mount with the
-  `context=` option, fapolicyd, an empty AVC search, and
+  `context=` option, fapolicyd, a SYSTEM-layout v2-only site (`system-layout-v2`: the policy module of
+  §9.8 installed and extracted equal to its source, the v2 tree `dedalo_publication_v2_t`, a pushed
+  release started by systemd and answering, sesearch granting `init_t` and not `httpd_t`, and the
+  control — one world-readable file served as `httpd_sys_content_t`, denied to httpd once it carries
+  `dedalo_publication_v2_t`; it also records `system_default_readable`, whether `init_t` may read
+  the default type under /srv), an empty AVC search (that control's one denial aside), and
   `systemd-analyze verify` with no warning naming a rendered unit. Its `--record` writes the EL
   drill record (`el_drill_record.json` under `engineering/`: ONE inputs digest, one entry per EL
   major, each its own run — commit, time, legs, measured types and floors — so recording one

@@ -34,6 +34,8 @@ const ZERO_DEP = [
   'init/args.ts',
   // The S9 label table, the web-reference proof and the host map renderer's install decision.
   'selinux.ts',
+  // The provisioner's SELinux policy module (spec §9.8): its CIL source and identity guard.
+  'selinux_module.ts',
   'web_reference.ts',
   'host_map_renderer.ts',
   // Retired artifacts (the provision record and its guards): plan.ts imports it.

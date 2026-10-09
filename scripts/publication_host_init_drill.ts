@@ -541,6 +541,78 @@ export const V2_ONLY_DOMAIN = 'v2only.test';
 /** The site installed FROM A KIT (`bun run hostagent:pack` here, `install.sh --kit` there). */
 export const KIT_INSTANCE = 'drill_kit';
 export const KIT_DOMAIN = 'kit.test';
+/** The SYSTEM-layout site (EL): its v2 tree is typed by the provisioner's own SELinux policy module. */
+export const SYSTEM_INSTANCE = 'drill_system';
+export const SYSTEM_DOMAIN = 'sysl.test';
+/** The policy module and its one type (publication/host_agent/src/provision/selinux_module.ts). */
+const SELINUX_MODULE = 'dedalo_publication_host';
+const SELINUX_MODULE_SOURCE = `/var/lib/dedalo_publication_host/_host/${SELINUX_MODULE}.cil`;
+const V2_TREE_TYPE = 'dedalo_publication_v2_t';
+/** system-layout-v2's httpd control file: the one AVC denial the drill causes on purpose (no-avc skips it). */
+export const SELINUX_CONTROL_FILE = 'dd_selinux_control.txt';
+/** Its own directory and URL: granted by its own Apache file, so only the file's label differs between the two requests. */
+export const SELINUX_CONTROL_DIR = '/srv/dd_selinux_control';
+export const SELINUX_CONTROL_URL = '/dd_selinux_control';
+export const SELINUX_CONTROL_CONF = '/etc/httpd/conf.d/dd_selinux_control.conf';
+
+/**
+ * The control's Apache file: an Alias and a `<Directory>` that GRANTS it (EL's httpd.conf denies
+ * every directory it does not name — measured: a file under a vhost's DocumentRoot in a home answered
+ * 403 AH01630 "client denied by server configuration", which is Apache, not SELinux).
+ */
+export function selinuxControlConf(): string {
+	return [
+		'# init drill (system-layout-v2): the SELinux control; removed by the leg',
+		`Alias ${SELINUX_CONTROL_URL} ${SELINUX_CONTROL_DIR}`,
+		`<Directory ${SELINUX_CONTROL_DIR}>`,
+		'    Require all granted',
+		'    Options None',
+		'    AllowOverride None',
+		'</Directory>',
+		'',
+	].join('\n');
+}
+
+/**
+ * An AVC line about the control file: `name="<file>"` (an open/read) or `path="<dir>/<file>"` (a
+ * getattr — measured, RHEL 9.8: httpd's stat is denied first, and that record names the path).
+ */
+export function controlNamed(line: string): boolean {
+	return line.includes(`name="${SELINUX_CONTROL_FILE}"`) || line.includes(`path="${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}"`);
+}
+
+/**
+ * The control's verdict, or null when it measured SELinux alone: the SAME file, the same grant, answered
+ * 200 with its bytes as httpd_sys_content_t (else the control proves nothing), then 403 once it carries
+ * the module's type, with an AVC denial of httpd_t on that type naming the file, and Apache's error log
+ * naming no authz refusal for it (AH01630/AH01797: the 403 would be Apache's, not SELinux's).
+ */
+export function selinuxControlVerdict(observed: {
+	readonly baseline: { readonly status: number; readonly body: string };
+	readonly refused: { readonly status: number };
+	readonly avc: string;
+	readonly errorLog: string;
+	readonly type: string;
+}): string | null {
+	const { baseline, refused, avc, errorLog, type } = observed;
+	if (baseline.status !== 200 || !baseline.body.includes('dd-control')) {
+		return `the control file as httpd_sys_content_t answered ${baseline.status}: the control proves nothing`;
+	}
+	if (refused.status !== 403) return `httpd read a ${type} file: ${refused.status}`;
+	if (errorLog.split('\n').some((line) => /AH01630|AH01797/.test(line) && line.includes(SELINUX_CONTROL_FILE))) {
+		return `the 403 for the ${type} control is Apache's authorization, not SELinux:\n${errorLog.slice(-1000)}`;
+	}
+	const denied = avc
+		.split('\n')
+		.some(
+			(line) =>
+				/denied/.test(line) &&
+				controlNamed(line) &&
+				line.includes(':httpd_t:') &&
+				line.includes(`:${type}:`),
+		);
+	return denied ? null : `no AVC denial of httpd_t on ${type} for the control:\n${avc.slice(-2000)}`;
+}
 
 interface Ctx {
 	readonly args: DrillArgs;
@@ -1859,6 +1931,128 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		},
 	},
 	{
+		name: 'system-layout-v2',
+		family: 'el',
+		required: true,
+		what: `a v2-only site in the SYSTEM layout (/srv + /opt): init lists selinux.v2_policy and apply installs the policy module ${SELINUX_MODULE} (CIL at priority 400, extracted byte for byte equal to its stamped source) BEFORE the rule naming ${V2_TREE_TYPE}; the v2 tree (v2.env included) is ${V2_TREE_TYPE}; sesearch: init_t may read it, httpd_t may not; a minimal v2 release PUSHED through the agent starts and answers /health; no AVC since the leg started; the control: one world-readable file in the web root answers 200 as httpd_sys_content_t and is DENIED to httpd (an AVC naming ${V2_TREE_TYPE}) once it carries ${V2_TREE_TYPE}; a re-run reports selinux.v2_policy right`,
+		async run(ctx) {
+			check(
+				(await ctx.runner.sh('command -v sesearch')).code === 0,
+				'sesearch is not installed on this VM (dnf install setools-console): the leg reads the loaded policy with it',
+			);
+			const since = (await must(ctx, 'sleep 1.1; date +%T', 'the leg start')).trim();
+			await makeSite(ctx, SYSTEM_DOMAIN, 'apache');
+			const draft = draftFor(SYSTEM_INSTANCE, SYSTEM_DOMAIN, { apis: undefined, layout: 'system' });
+			const transcript = await guidedInstall(ctx, SYSTEM_INSTANCE, SYSTEM_DOMAIN, '', draft);
+			check(
+				transcript.includes('selinux.v2_policy'),
+				`init did not list selinux.v2_policy for a system-layout site:\n${transcript.slice(-3000)}`,
+			);
+			const unit = await instanceUnits(SYSTEM_INSTANCE);
+			check(
+				unit.stateRoot.startsWith('/srv/') && unit.agentDir.startsWith('/opt/'),
+				`${SYSTEM_INSTANCE} is not in the system layout: state ${unit.stateRoot}, agent ${unit.agentDir}`,
+			);
+			// 1. The module: ours, CIL at 400, the store holds exactly the stamped source.
+			const listed = await must(ctx, `semodule --list-modules=full | awk '$2 == "${SELINUX_MODULE}"'`, 'semodule --list-modules=full');
+			check(/^400 dedalo_publication_host\s+cil\s*$/.test(listed.trim()), `the module rows: '${listed.trim()}'`);
+			const source = await must(ctx, `stat -c '%U:%G %a' ${SELINUX_MODULE_SOURCE} && head -n1 ${SELINUX_MODULE_SOURCE}`, 'the module source');
+			check(
+				/^root:root 644\n; dedalo-provision: _host selinux_module [0-9a-f]{64}\n$/.test(source),
+				`the module source is not root:root 0644 with our stamp:\n${source}`,
+			);
+			await must(
+				ctx,
+				`d=$(mktemp -d) && cd "$d" && semodule -X 400 -E ${SELINUX_MODULE} 2>/dev/null && cmp ${SELINUX_MODULE}.cil ${SELINUX_MODULE_SOURCE}; r=$?; cd / && rm -rf "$d"; exit $r`,
+				'the installed module is the stamped source, byte for byte',
+			);
+			// 2. The v2 tree carries the module's type (the env file systemd reads included).
+			const v2 = `${unit.stateRoot}/publication_api/v2`;
+			const labels = await must(ctx, `stat -c '%C %n' ${q(v2)} ${q(`${v2}/shared`)} ${q(`${v2}/shared/v2.env`)}`, 'the v2 tree labels');
+			for (const line of labels.trim().split('\n'))
+				check(line.split(':')[2] === V2_TREE_TYPE, `not ${V2_TREE_TYPE}: ${line}`);
+			const pending = await must(ctx, `restorecon -n -v -R ${q(v2)} 2>&1`, 'restorecon -n on the v2 tree');
+			check(pending.trim() === '', `restorecon would still relabel the v2 tree:\n${pending}`);
+			// 3. The policy: systemd may read it, httpd may not (sesearch -A answers no rule for httpd_t).
+			// Why the module exists: the system layout's default type under /srv (var_t) is not readable to systemd.
+			const defaultType = (await must(ctx, `matchpathcon -n ${q(`${v2}.dd_default_probe`)}`, 'the default type under /srv')).trim().split(':')[2] ?? '';
+			check(defaultType !== '' && defaultType !== V2_TREE_TYPE, `the default type beside the v2 tree is '${defaultType}'`);
+			const defaultRead = await must(ctx, `sesearch -A -s init_t -t ${defaultType} -c file -p read`, `sesearch init_t ${defaultType}`);
+			ctx.facts.system_default_readable = defaultRead.trim() !== '';
+			const initRead = await must(ctx, `sesearch -A -s init_t -t ${V2_TREE_TYPE} -c file -p read`, 'sesearch init_t');
+			check(initRead.includes(`allow init_t ${V2_TREE_TYPE}:file`), `init_t may not read ${V2_TREE_TYPE}:\n${initRead}`);
+			for (const cls of ['file', 'lnk_file'])
+				check(
+					(await must(ctx, `sesearch -A -s httpd_t -t ${V2_TREE_TYPE} -c ${cls} -p read`, `sesearch httpd_t ${cls}`)).trim() === '',
+					`a rule lets httpd_t read ${V2_TREE_TYPE} ${cls}`,
+				);
+			// 4. A v2 release pushed through the agent starts (systemd reads v2.env and the links) and answers.
+			const socket = `/run/dedalo_publication_host/${SYSTEM_INSTANCE}/agent.sock`;
+			await healthOverSocket(ctx, SYSTEM_INSTANCE);
+			const healthUrl = (
+				await must(ctx, `sed -n 's/^V2_HEALTH_URL="\\(.*\\)"$/\\1/p' /etc/dedalo_publication_host/${SYSTEM_INSTANCE}/agent.env`, 'V2_HEALTH_URL')
+			).trim();
+			check(/^http:\/\/127\.0\.0\.1:\d+\//.test(healthUrl), `V2_HEALTH_URL is '${healthUrl}'`);
+			const release = await miniV2Release(ctx, 'sys1');
+			try {
+				const posted = await agentPost(ctx, socket, SYSTEM_INSTANCE, '/publication/host_agent/v1/releases/v2', release);
+				check(posted.status === 200, `release.install ${release.id} answered ${posted.status}: ${posted.body}`);
+				await must(
+					ctx,
+					`for i in $(seq 1 60); do curl -fsS --max-time 5 ${q(healthUrl)} 2>/dev/null | grep -q '"release":"sys1"' && exit 0; sleep 0.5; done; curl -sS --max-time 5 ${q(healthUrl)}; journalctl -u ${unit.v2Unit} -n 10 --no-pager 2>/dev/null; exit 1`,
+					'v2 answers its /health in the system layout',
+				);
+				const current = (await must(ctx, `stat -c '%C' ${q(`${v2}/releases/${release.id}/src/index.ts`)}`, 'the release label')).trim();
+				check(current.split(':')[2] === V2_TREE_TYPE, `the pushed release is ${current}, not ${V2_TREE_TYPE} (it must inherit the tree's type)`);
+				// 5. No denial since the leg started (the control below is the one on purpose).
+				const avc = await ctx.runner.sh(`sleep 1; ausearch -m AVC,USER_AVC -ts ${since} 2>&1`);
+				const denied = avc.out.split('\n').filter((line) => /avc:/.test(line));
+				check(denied.length === 0, `AVC denials during the system-layout install and push:\n${denied.slice(0, 20).join('\n')}`);
+			} finally {
+				// Leave the host as the next legs expect it: no v2 of this instance answering.
+				await ctx.runner.sh(`systemctl stop ${unit.v2Unit}`, { timeoutMs: 60_000 });
+			}
+			// 6. The control: the SAME world-readable file under its own granted Alias, served as
+			//    httpd_sys_content_t, then denied once it carries the module's type — only the label changes.
+			const control = `${SELINUX_CONTROL_DIR}/${SELINUX_CONTROL_FILE}`;
+			const errorLog = '/var/log/httpd/error_log';
+			try {
+				await putRootFile(ctx, SELINUX_CONTROL_CONF, selinuxControlConf(), '0644');
+				await must(
+					ctx,
+					`install -d -m 0755 ${SELINUX_CONTROL_DIR} && echo dd-control > ${control} && chmod 0644 ${control} && chcon -t httpd_sys_content_t ${SELINUX_CONTROL_DIR} ${control} && restorecon ${SELINUX_CONTROL_CONF} && apachectl -t 2>&1 && systemctl reload httpd`,
+					'the control file and its Alias',
+				);
+				const fetch = async (): Promise<{ status: number; body: string }> => {
+					const done = await ctx.runner.sh(
+						`curl -s -o /tmp/dd_ctl -w '%{http_code}' http://127.0.0.1${SELINUX_CONTROL_URL}/${SELINUX_CONTROL_FILE}; echo; cat /tmp/dd_ctl; rm -f /tmp/dd_ctl`,
+					);
+					const [status = '0', ...rest] = done.out.split('\n');
+					return { status: Number(status), body: rest.join('\n') };
+				};
+				const baseline = await fetch();
+				const from = (await must(ctx, 'sleep 1.1; date +%T', 'the control start')).trim();
+				const logFrom = Number((await must(ctx, `wc -l < ${errorLog} 2>/dev/null || echo 0`, 'error_log size')).trim()) || 0;
+				await must(ctx, `chcon -t ${V2_TREE_TYPE} ${control}`, `label the control ${V2_TREE_TYPE}`);
+				const refused = await fetch();
+				const avc = await must(ctx, `sleep 1; ausearch -m AVC -ts ${from} 2>/dev/null || true`, 'the control AVC');
+				const log = await must(ctx, `tail -n +${logFrom + 1} ${errorLog} 2>/dev/null || true`, 'the httpd error log');
+				const verdict = selinuxControlVerdict({ baseline, refused, avc, errorLog: log, type: V2_TREE_TYPE });
+				check(verdict === null, `${verdict}\n(httpd error log since the control:\n${log.slice(-1500)})`);
+			} finally {
+				await ctx.runner.sh(`rm -rf ${SELINUX_CONTROL_DIR} ${SELINUX_CONTROL_CONF} && apachectl -t >/dev/null 2>&1 && systemctl reload httpd`);
+			}
+			// 7. A re-run with nothing to change: the policy item is right.
+			const rerun = await ctx.runner.sh(`sh ${q(`${unit.agentDir}/deploy/install.sh`)} ${SYSTEM_INSTANCE} -- --yes --no-pair </dev/null`, { timeoutMs: 600_000 });
+			check(rerun.code === 0, `the system-layout re-run exited ${rerun.code}\n${rerun.out.slice(-3000)}${rerun.err}`);
+			check(
+				rerun.out.includes(`the policy module ${SELINUX_MODULE} is installed and current`),
+				`the re-run does not report selinux.v2_policy right:\n${rerun.out.slice(-3000)}`,
+			);
+			ctx.facts.system_layout_v2 = { module: `${SELINUX_MODULE} 400 cil`, v2_type: V2_TREE_TYPE };
+		},
+	},
+	{
 		name: 'systemd-analyze',
 		family: 'el',
 		required: true,
@@ -1953,12 +2147,15 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'no-avc',
 		family: 'el',
 		required: true,
-		what: 'ausearch -m AVC,USER_AVC since the drill started finds nothing outside the booleans leg',
+		what: "ausearch -m AVC,USER_AVC since the drill started finds nothing outside the booleans leg and system-layout-v2's control file",
 		async run(ctx) {
 			const out = await ctx.runner.sh(`ausearch -m AVC,USER_AVC -ts ${ctx.startedAt} 2>&1`);
 			const lines = out.out
 				.split('\n')
-				.filter((line) => /avc:/.test(line) && !/name_connect/.test(line));
+				.filter(
+					(line) =>
+						/avc:/.test(line) && !/name_connect/.test(line) && !controlNamed(line),
+				);
 			check(lines.length === 0, `AVC denials during the drill:\n${lines.slice(0, 20).join('\n')}`);
 		},
 	},
@@ -2611,7 +2808,7 @@ async function writeRecord(ctx: Ctx, passed: string[], skipped: string[]): Promi
 					supported_directives:
 						(ctx.facts.supported_directives as ElMeasured['supported_directives']) ?? {},
 					home_traverse_type: (ctx.facts.home_traverse_type as string | null) ?? null,
-					system_default_readable: null,
+					system_default_readable: (ctx.facts.system_default_readable as boolean | null) ?? null,
 					v1_php_floor: (ctx.facts.v1_php_floor as string | null) ?? null,
 					nginx_floor: null,
 				},
