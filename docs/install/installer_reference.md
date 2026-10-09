@@ -56,7 +56,7 @@ proxy. Those fail later, and louder.
 
 ```shell
 bun run scripts/install.ts \
-  --db-name dedalo_main --db-user dedalo_user --entity mib \
+  --db-name dedalo_main --db-user dedalo_user --entity myentity \
   [--db-password '…'] [--db-host localhost] [--db-port 5432] [--db-socket /var/run/postgresql] \
   [--entity-label 'My Institution'] [--locale es-ES] [--timezone Europe/Madrid] \
   [--langs lg-spa,lg-eng] [--app-lang lg-spa] [--data-lang lg-spa] \
@@ -76,7 +76,7 @@ meaning.)
 | --- | --- | --- | --- |
 | `--db-name` | **yes** | — | the **empty** database you created |
 | `--db-user` | **yes** | — | the role that owns it |
-| `--entity` | **yes** | — | this instance's identifier, e.g. `mib` |
+| `--entity` | **yes** | — | this instance's identifier, e.g. `myentity` |
 | root password | **yes** | — | `DEDALO_INSTALL_ROOT_PASSWORD` in the environment, or `--root-password` |
 | `--db-password` | no | *(empty)* | empty means peer/trust auth over a local socket |
 | `--db-host` | no | `localhost` | a hostname, **or a unix-socket directory** when it starts with `/` (the default used to be `/tmp`; Debian/Ubuntu and RHEL do not put the PostgreSQL socket there) |

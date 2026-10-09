@@ -29,9 +29,9 @@ import { INSTANCE_PATTERN } from '../src/provision/layout';
 import { STAMP_TOKEN, bodyHash, hasDrifted, parseStamp, stamp } from '../src/provision/hash';
 
 /** A representative artifact body: several lines, a trailing newline, a non-ASCII character. */
-const BODY = ['[Service]', 'User=dedalo-site-mib', '# Museu Maritim — drafts', ''].join('\n');
+const BODY = ['[Service]', 'User=dedalo-site-myentity', '# My Institution — drafts', ''].join('\n');
 
-const INSTANCE = 'mib';
+const INSTANCE = 'myentity';
 const KIND = 'unit';
 
 describe('bodyHash', () => {
@@ -147,15 +147,15 @@ describe('hasDrifted', () => {
   test('catches an appended line, a deleted line and a one-character edit', () => {
     const text = stamp(KIND, INSTANCE, BODY);
     expect(hasDrifted(`${text}Restart=no\n`)).toBe(true);
-    expect(hasDrifted(text.replace('User=dedalo-site-mib\n', ''))).toBe(true);
-    expect(hasDrifted(text.replace('User=dedalo-site-mib', 'User=root'))).toBe(true);
+    expect(hasDrifted(text.replace('User=dedalo-site-myentity\n', ''))).toBe(true);
+    expect(hasDrifted(text.replace('User=dedalo-site-myentity', 'User=root'))).toBe(true);
   });
 
   test('catches a recorded hash that was edited to match nothing', () => {
     // The obvious attempt to make a hand edit look official: change the body, then change
     // the digits. It fails unless the editor recomputes sha256 over the exact bytes.
     const tampered = stamp(KIND, INSTANCE, BODY)
-      .replace('User=dedalo-site-mib', 'User=root')
+      .replace('User=dedalo-site-myentity', 'User=root')
       .replace(bodyHash(BODY), 'f'.repeat(64));
     expect(hasDrifted(tampered)).toBe(true);
   });

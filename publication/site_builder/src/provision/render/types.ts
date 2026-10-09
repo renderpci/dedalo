@@ -104,7 +104,7 @@ export type ModeKey = keyof typeof MODES;
 /**
  * ONE FILE THE HOST MUST HOLD: its bytes, its place, and its access.
  *
- * `owner` and `group` are RESOLVED NAMES ('root', 'dedalo-site-mib', 'www-data'), not the
+ * `owner` and `group` are RESOLVED NAMES ('root', 'dedalo-site-myentity', 'www-data'), not the
  * matrix's symbols, because the consumer of this record runs `chown owner:group` and
  * `chmod mode` — and a consumer that had to resolve 'webGroup' against the layout would be
  * a second place that knows what 'webGroup' means. `modeKey` is carried alongside so the

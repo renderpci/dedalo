@@ -72,7 +72,7 @@ describe('install-mode boot (P0)', () => {
 	});
 
 	test('PARTIAL config (some required keys set, others not) → still throws (operator error)', () => {
-		const result = probeConfig({ ...UNCONFIGURED, ENTITY: 'mib' });
+		const result = probeConfig({ ...UNCONFIGURED, ENTITY: 'myentity' });
 		expect(result.ok).toBe(false);
 		// The precise missing-key error, not a silent install-mode fallback.
 		expect(result.stderr).toContain("Missing required config key 'DB_NAME'");

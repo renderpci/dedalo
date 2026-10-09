@@ -748,7 +748,7 @@ export interface DedaloConfig {
 	 * and the process restarts. See src/core/install/ and engineering/PRODUCTION.md §7.
 	 */
 	readonly installMode: boolean;
-	/** Instance identifier (PHP: DEDALO_ENTITY), e.g. 'mib'. */
+	/** Instance identifier (PHP: DEDALO_ENTITY), e.g. 'myentity'. */
 	readonly entity: string;
 	/** Default section the client lands on after login (PHP MAIN_FALLBACK_SECTION). */
 	readonly mainSection: string;
