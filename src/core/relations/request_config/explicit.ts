@@ -25,6 +25,7 @@
 
 import type { PublishedApiConfig } from '../../../external/api/index.ts';
 import { getActiveTlds } from '../../db/dd_ontology.ts';
+import { assertMatrixTable } from '../../db/matrix.ts';
 import { sql } from '../../db/postgres.ts';
 import { createOntologyCache } from '../../ontology/cache_factory.ts';
 import { registerOntologyCacheClearer } from '../../ontology/cache_invalidation.ts';
@@ -447,6 +448,11 @@ async function resolveFieldValueSections(
 	const { getMatrixTableFromTipo } = await import('../../ontology/resolver.ts');
 	const table = await getMatrixTableFromTipo(callerSectionTipo);
 	if (table === null) return [];
+	// The query below assumes the STANDARD record contract (data/string/relation
+	// columns) and interpolates the table name: refuse anything else loudly. A
+	// log table (matrix_time_machine) reaching here means a host section (dd15)
+	// was passed as the caller — see concepts/emit_row.ts.
+	assertMatrixTable(table);
 	const resolved: string[] = [];
 	for (const componentTipo of componentTipos) {
 		// Interpolated as a jsonb key — enforce the tipo grammar strictly.

@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 648,
-		"functions": 8795,
+		"files": 649,
+		"functions": 8800,
 		"functionsOverCap": 675,
 		"filesOverCap": 259
 	},
@@ -280,7 +280,7 @@
 		"src/core/relations/dataframe.ts": 9,
 		"src/core/relations/datalist.ts": 21,
 		"src/core/relations/filter_projects.ts": 17,
-		"src/core/relations/models/portal.ts": 24,
+		"src/core/relations/models/portal.ts": 22,
 		"src/core/relations/models/relation_index.ts": 19,
 		"src/core/relations/models/relation_related.ts": 10,
 		"src/core/relations/order_locators.ts": 8,

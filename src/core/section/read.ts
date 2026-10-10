@@ -29,6 +29,7 @@ import { config as dedaloConfig } from '../../config/config.ts';
 import { type EmitHookContext, getEmitHook } from '../components/emit_hooks.ts';
 import { getComponentModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
+import type { EmitRow } from '../concepts/emit_row.ts';
 import {
 	callerDataframePairing,
 	isTemporalSource,
@@ -2386,7 +2387,7 @@ export async function emitDdoData(
 	ddo: Ddo,
 	ddoMap: Ddo[],
 	record: MatrixRecord,
-	row: { section_tipo: string; section_id: number },
+	row: EmitRow,
 	defaultMode: string,
 	defaultLang: string,
 	callerTipo: string,

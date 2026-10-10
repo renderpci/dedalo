@@ -35,6 +35,7 @@
 import { config } from '../../config/config.ts';
 import { isLangSlicedModel } from '../components/registry.ts';
 import type { Ddo } from '../concepts/ddo.ts';
+import type { EmitRow } from '../concepts/emit_row.ts';
 import { compareLocators, type StoredSectionId } from '../concepts/locator.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
@@ -57,6 +58,7 @@ import {
 	getModelByTipo,
 	getTranslatableByTipo,
 	savesInRequestLang,
+	tipoBelongsToSection,
 } from '../ontology/resolver.ts';
 import { resolveDataframeSlotTipos, splitComposed } from '../relations/dataframe_slots.ts';
 import { laneLaw, NOLAN } from '../relations/main_lanes.ts';
@@ -913,6 +915,39 @@ function hasJsonbColumn(model: string): boolean {
 }
 
 /**
+ * The section a dd15 COLUMN's request_config resolves against: the subject
+ * section when the column is one of its components, else none (a dd15 meta
+ * column — who/when/where — is dd15's own and resolves there). dd15 lists a
+ * record's components as its columns; their 'self' / `field_value` / datalist
+ * sources describe THAT section, and dd15's table holds no records of it
+ * (`field_value` once read `matrix_time_machine` and died on a missing column).
+ * Context and data sides both ask this, so a column cannot resolve against two
+ * different owners.
+ */
+async function tmColumnConfigSection(
+	tipo: string,
+	subjectSectionTipo: string | null,
+): Promise<string | undefined> {
+	if (subjectSectionTipo === null) return undefined;
+	return (await tipoBelongsToSection(tipo, subjectSectionTipo)) ? subjectSectionTipo : undefined;
+}
+
+/**
+ * The row a dd15 cell is emitted for: it BINDS to the dd15 row, and its
+ * component's config resolves against the snapshot's own record when the
+ * column is one of that record's components (concepts/emit_row.ts).
+ */
+async function tmCellRow(row: TmRow, tipo: string): Promise<EmitRow> {
+	const binding = { section_tipo: TM_SECTION_TIPO, section_id: row.id };
+	const configSection = await tmColumnConfigSection(tipo, row.section_tipo);
+	if (configSection === undefined) return binding;
+	return {
+		...binding,
+		config_owner: { section_tipo: configSection, section_id: Number(row.section_id) },
+	};
+}
+
+/**
  * Emit ONE dd15 row's data items — one generic cell per requested ddo, resolved
  * from the virtual dd15 record that `tm_record.ts` materializes for the row.
  *
@@ -1020,7 +1055,7 @@ async function emitTmRow(
 			cellDdo as never,
 			clientDdoMap as never,
 			tmRecord as never,
-			{ section_tipo: TM_SECTION_TIPO, section_id: row.id },
+			await tmCellRow(row, tipo),
 			'list',
 			cellLang,
 			TM_SECTION_TIPO,
@@ -1208,6 +1243,7 @@ async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<Structur
 				? source.lang
 				: currentDataLang()
 			: 'lg-nolan';
+		const configSectionTipo = await tmColumnConfigSection(ddo.tipo, scope.sectionTipo);
 		const entry = await buildStructureContext({
 			tipo: ddo.tipo,
 			sectionTipo: TM_SECTION_TIPO,
@@ -1216,6 +1252,7 @@ async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<Structur
 			permissions,
 			parent: TM_SECTION_TIPO,
 			view: (ddo as { view?: string }).view ?? null,
+			...(configSectionTipo !== undefined ? { configSectionTipo } : {}),
 		});
 		if (entry !== null) tmContext.push(entry);
 	}

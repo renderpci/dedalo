@@ -16,6 +16,7 @@
  * component_relation_related_json.php (:90-173).
  */
 
+import { configOwnerOf } from '../../concepts/emit_row.ts';
 import type { DataItem } from '../../resolve/component_data.ts';
 import { buildDataItem } from '../../resolve/component_data.ts';
 import type { RelationEmitContext, RelationModelResolver } from '../registry.ts';
@@ -34,7 +35,7 @@ async function attachReferences(
 	const node = await getNode(context.ddo.tipo);
 	const config = await buildRequestConfigForElement(node?.properties ?? null, {
 		ownerTipo: context.ddo.tipo,
-		ownerSectionTipo: context.row.section_tipo,
+		ownerSectionTipo: configOwnerOf(context.row).section_tipo,
 		mode: 'edit',
 		ownerIsSection: false,
 		lang: context.defaultLang,

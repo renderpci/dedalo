@@ -20,6 +20,7 @@
 
 import type { Ddo } from '../concepts/ddo.ts';
 import { SELF_SENTINEL } from '../concepts/ddo.ts';
+import type { EmitRow } from '../concepts/emit_row.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import type { Sqo } from '../concepts/sqo.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
@@ -52,7 +53,7 @@ export type EmitDdo = (
 	ddo: Ddo,
 	ddoMap: Ddo[],
 	record: MatrixRecord,
-	row: { section_tipo: string; section_id: number },
+	row: EmitRow,
 	defaultMode: string,
 	defaultLang: string,
 	callerTipo: string,
