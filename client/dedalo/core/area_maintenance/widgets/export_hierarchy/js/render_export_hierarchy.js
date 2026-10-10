@@ -225,6 +225,29 @@ export const render_export_hierarchy_node = function (options) {
 			parent			: fragment
 		})
 
+	// scope_info: what '*' selects (collapsed). Source: server
+	// export_hierarchy.ts activeHierarchyRows — keep both in step.
+		const scope_info = ui.create_dom_element({
+			element_type	: 'details',
+			class_name		: 'scope_info',
+			parent			: fragment
+		})
+		ui.create_dom_element({
+			element_type	: 'summary',
+			inner_html		: `Which hierarchies does <code>*</code> export?`,
+			parent			: scope_info
+		})
+		ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'scope_body',
+			inner_html		: `
+				<li><code>*</code> exports every hierarchy marked <strong>Active</strong> (<code>hierarchy4</code> = Yes) in the Hierarchies registry (<code>hierarchy1</code>). Each one becomes its own file.</li>
+				<li>Each file is named after the hierarchy's <strong>Target section tipo</strong> (<code>hierarchy53</code>), e.g. <code>es1.copy.gz</code> or <code>lg1.copy.gz</code>. Model sections (<code>es2</code>…) are not included; to export them, list them explicitly.</li>
+				<li><strong>Active in thesaurus</strong> (<code>hierarchy125</code>) is not checked. To have Active follow it, run <strong>Sync Hierarchy status</strong> first. Sync never deactivates People (<code>rsc197</code>).</li>
+				<li>Other inputs: <code>all</code> writes the whole <code>matrix_hierarchy</code> table to one timestamped file, and <code>es1,ts1</code> exports only the tipos listed.</li>`,
+			parent			: scope_info
+		})
+
 	// body_response
 		const body_response = ui.create_dom_element({
 			element_type	: 'div',

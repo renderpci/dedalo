@@ -19416,6 +19416,67 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   color: var(--fg_muted);
   line-height: 1.4;
 }
+.wrapper_widget.export_hierarchy .scope_info {
+  border: 1px solid var(--border_default);
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--bg_surface);
+  margin: 0.5rem 0;
+}
+.wrapper_widget.export_hierarchy .scope_info > summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--fg_default);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+.wrapper_widget.export_hierarchy .scope_info > summary::-webkit-details-marker {
+  display: none;
+}
+.wrapper_widget.export_hierarchy .scope_info > summary:before {
+  content: '\25B8';
+  color: var(--fg_muted);
+  font-size: 0.8rem;
+  transition: transform 0.12s ease;
+}
+.wrapper_widget.export_hierarchy .scope_info[open] > summary:before {
+  transform: rotate(90deg);
+}
+.wrapper_widget.export_hierarchy .scope_info:not([open]) .scope_body {
+  display: none;
+}
+.wrapper_widget.export_hierarchy .scope_info .scope_body {
+  margin: 0;
+  padding: 0.75rem 0.75rem 0.75rem 2rem;
+  border-top: 1px solid var(--border_default);
+  color: var(--fg_muted);
+  line-height: 1.6;
+  font-size: 0.85rem;
+}
+.wrapper_widget.export_hierarchy .scope_info .scope_body > li + li {
+  margin-top: 0.35rem;
+}
+.wrapper_widget.export_hierarchy .scope_info code {
+  display: inline !important;
+  width: auto !important;
+  margin: 0 !important;
+  padding: 0.05em 0.35em !important;
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+  background-color: color-mix(in srgb, var(--color_primary) 8%, var(--bg_surface_alt));
+  color: var(--fg_default);
+  font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
+  font-size: 0.76rem;
+  font-weight: 400;
+  line-height: 1.6;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
 .wrapper_widget.export_hierarchy pre {
   padding: 0.7rem 0.85rem;
   font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
