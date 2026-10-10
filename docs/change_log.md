@@ -1226,10 +1226,6 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
-- **The *Export hierarchies* panel now explains which hierarchies `*` exports.**
-
-    A folded note under Maintenance → *Export hierarchies* states what `*` selects: every hierarchy marked **Active** in the Hierarchies registry, one file per target section tipo (e.g. `es1.copy.gz`). Model sections are not included, and *Active in thesaurus* is not consulted — run *Sync Hierarchy status* first to align the two.
-
 - **Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`.** *(action needed)*
 
     Until now every Docker installation built its own image from the checkout. Dédalo now publishes the engine image, signed, to its own registry and to mirrors — GitHub Container Registry and Docker Hub — and you choose where your installation takes it from ([where the image comes from](./install/docker.md#choose-where-the-image-comes-from)):
