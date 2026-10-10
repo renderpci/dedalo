@@ -251,6 +251,9 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'input_value' + add_class,
 			value			: current_value.value || '' ,
 			placeholder		: (current_value.value) ? '' : self.data.fallback_value?.[i].value,
+			aria			: {
+				lang: self.lang
+			},
 			parent			: content_value
 		})
 		// mousedown event. Capture event propagation
