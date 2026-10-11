@@ -48,16 +48,39 @@ export function parseEnvFile(fileContent: string): Record<string, string> {
 		}
 		const key = line.slice(0, separatorIndex).trim();
 		let value = line.slice(separatorIndex + 1).trim();
-		// Strip one matching pair of surrounding quotes, if present.
-		if (
-			(value.startsWith('"') && value.endsWith('"')) ||
-			(value.startsWith("'") && value.endsWith("'"))
-		) {
+		// Strip one matching pair of surrounding quotes, if present. Inside DOUBLE
+		// quotes `\"` is an escaped quote — the exact inverse of the installer's
+		// envQuote (core/install/config_persist.ts), so a written value containing
+		// `"` (a database or SMTP password) reads back as written. Before
+		// 2026-10-11 the backslash stayed in (`a\"b`), so a resumed install compared
+		// the right password against a corrupted copy. Single quotes are literal.
+		if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) {
+			value = unescapeDoubleQuoted(value.slice(1, -1));
+		} else if (value.length >= 2 && value.startsWith("'") && value.endsWith("'")) {
 			value = value.slice(1, -1);
 		}
 		parsedEntries[key] = value;
 	}
 	return parsedEntries;
+}
+
+/**
+ * `\"` → `"`, scanning left to right (a `\` not followed by `"` is literal), so
+ * every value envQuote writes — which escapes each `"` and nothing else — has
+ * exactly one reading. Gate: test/unit/install_persist_config.test.ts.
+ */
+function unescapeDoubleQuoted(inner: string): string {
+	let out = '';
+	for (let index = 0; index < inner.length; index++) {
+		const char = inner[index] as string;
+		if (char === '\\' && inner[index + 1] === '"') {
+			out += '"';
+			index++;
+		} else {
+			out += char;
+		}
+	}
+	return out;
 }
 
 /** Values read from ../private/.env (empty object when the file does not exist yet). */
@@ -189,6 +212,18 @@ export function processEnvValue(key: string): string | undefined {
 export function seedProcessEnv(values: Readonly<Record<string, string>>): void {
 	for (const [key, value] of Object.entries(values)) {
 		process.env[key] = value;
+	}
+}
+
+/**
+ * Remove entries from the process environment — the mirror of seedProcessEnv,
+ * and the same ONE-writer rule. The installer CLI reads its secrets
+ * (DEDALO_INSTALL_*_PASSWORD) once and then drops them, so no child process it
+ * spawns afterwards inherits them.
+ */
+export function unsetProcessEnv(keys: readonly string[]): void {
+	for (const key of keys) {
+		delete process.env[key];
 	}
 }
 

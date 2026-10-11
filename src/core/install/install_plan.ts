@@ -53,7 +53,7 @@
  * closed list; no answer can add a key to it.
  *
  * PURE AND CONFIG-FREE: imports only lang_catalog.ts, hierarchy_meta.ts,
- * ontology_choice.ts and src/config/pg_transport.ts (each config-free; the
+ * ontology_choice.ts and install_validation.ts (each config-free; the
  * vendored files they read are the only I/O). The
  * CLI builds the plan BEFORE it seeds the process environment that
  * src/config/config.ts freezes at import, so importing config (or the error
@@ -62,7 +62,6 @@
  */
 
 import { resolve } from 'node:path';
-import { pgSocketProblem } from '../../config/pg_transport.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import {
 	type HierarchyMeta,
@@ -70,6 +69,7 @@ import {
 	offeredHierarchies,
 	TOPONYMY_TYPOLOGY_ID,
 } from './hierarchy_meta.ts';
+import { rootPasswordErrors, validateAnswers } from './install_validation.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
 import {
 	activeOntologyTldsOf,
@@ -196,6 +196,72 @@ export interface InstallAnswers {
 	ontology_source: string;
 }
 
+/**
+ * EVERY answer key, classified — exhaustive at compile time (a new answer that
+ * is not classified here fails to compile). A `secret` answer never leaves
+ * memory: the terminal installer's plan file is built from the PLAIN keys only
+ * (run_files.ts buildPlanFile — an allow-list, so a secret added later is
+ * excluded by default), and an answers file may not carry one
+ * (answersFromAnswersFile). The root password is not an answer at all — it is
+ * the plan's own input (buildInstallPlan `rootPassword`).
+ */
+const ANSWER_CLASS: Readonly<Record<keyof InstallAnswers, 'secret' | 'plain'>> = Object.freeze({
+	db_hostname: 'plain',
+	db_port: 'plain',
+	db_socket: 'plain',
+	db_database: 'plain',
+	db_username: 'plain',
+	db_password: 'secret',
+	entity: 'plain',
+	entity_label: 'plain',
+	information: 'plain',
+	info_key: 'plain',
+	timezone: 'plain',
+	locale: 'plain',
+	langs: 'plain',
+	app_lang_default: 'plain',
+	data_lang_default: 'plain',
+	diffusion: 'plain',
+	mysql_hostname: 'plain',
+	mysql_port: 'plain',
+	mysql_socket: 'plain',
+	mysql_database: 'plain',
+	mysql_username: 'plain',
+	mysql_password: 'secret',
+	mailer: 'plain',
+	smtp_host: 'plain',
+	smtp_port: 'plain',
+	smtp_secure: 'plain',
+	smtp_user: 'plain',
+	smtp_pass: 'secret',
+	smtp_from: 'plain',
+	smtp_from_name: 'plain',
+	media_path: 'plain',
+	unix_socket: 'plain',
+	media_access_mode: 'plain',
+	update_servers: 'plain',
+	hierarchies: 'plain',
+	register_tools: 'plain',
+	ontologies: 'plain',
+	declined_dependencies: 'plain',
+	ontology_source: 'plain',
+});
+
+/** Every answer key, in declaration order (the answers file's key set). */
+export const INSTALL_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze(
+	Object.keys(ANSWER_CLASS) as (keyof InstallAnswers)[],
+);
+
+/** The secret answers (derived from ANSWER_CLASS — never listed twice). */
+export const SECRET_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze(
+	INSTALL_ANSWER_KEYS.filter((key) => ANSWER_CLASS[key] === 'secret'),
+);
+
+/** The plain answers — what a plan file may record. */
+export const PLAIN_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze(
+	INSTALL_ANSWER_KEYS.filter((key) => ANSWER_CLASS[key] === 'plain'),
+);
+
 /** One .env assignment. `raw` = written verbatim (JSON), never envQuote'd. */
 export interface EnvEntry {
 	readonly key: string;
@@ -242,6 +308,11 @@ export interface InstallPlan {
 	readonly notes: readonly string[];
 	/** Non-blocking (e.g. an ontology whose dependencies the source does not declare). */
 	readonly warnings: readonly string[];
+	/**
+	 * The root password's refusals (install_validation.ts rootPasswordErrors) —
+	 * already merged into `errors`; [] when none was supplied and none required.
+	 */
+	readonly rootPasswordErrors: readonly string[];
 	/** Empty = valid. */
 	readonly errors: readonly string[];
 }
@@ -370,18 +441,6 @@ export function normalizeHierarchyChoice(value: unknown): {
 	return { hierarchies, notes, errors };
 }
 
-/** The required answers: empty → "<key> is required". */
-function requireAnswers(answers: InstallAnswers, errors: string[]): void {
-	for (const key of ['db_database', 'db_username', 'entity'] as const) {
-		if (answers[key] === '') errors.push(`${key} is required`);
-	}
-	// An empty host would persist a DISABLED mailer — refuse the contradiction.
-	if (answers.mailer && answers.smtp_host === '') errors.push('mailer requires smtp_host');
-	// A relative socket would refuse the boot (config.ts) — refuse it here first.
-	const socketProblem = pgSocketProblem(answers.db_socket);
-	if (socketProblem !== null) errors.push(`db_socket: ${socketProblem}`);
-}
-
 /** Database + entity + locale answers (the plan's defaults live here). */
 function coreAnswers(raw: RawAnswers) {
 	const entity = text(raw, 'entity');
@@ -448,7 +507,10 @@ export function normalizeInstallAnswers(raw: RawAnswers): {
 		declined_dependencies: declinedChoice.declined,
 		ontology_source: text(raw, 'ontology_source'),
 	};
-	requireAnswers(answers, errors);
+	// Every answer-only refusal (install_validation.ts): raised HERE, before any
+	// front end writes anything — the CLI argv, an answers file and the wizard
+	// post all pass through this one call.
+	validateAnswers(answers, notes, errors);
 	return {
 		answers,
 		notes: [...notes, ...ontologyChoice.notes],
@@ -505,9 +567,9 @@ function entitySection(a: InstallAnswers): EnvSection {
 /**
  * LANGUAGES (mandatory once configured — config.ts requires them whenever
  * INSTALL_MODE is false, so a config without them crash-loops at boot). The
- * map/array keys are RAW compact JSON: parseEnvFile strips surrounding quotes
- * but does not unescape inner \", so an envQuote'd JSON value would not
- * round-trip through JSON.parse.
+ * map/array keys are RAW compact JSON, written verbatim: readable as-is by any
+ * .env reader (parseEnvFile unescapes envQuote's \" since 2026-10-11, but a
+ * shell or a container env-file does not).
  */
 function langSection(l: LangConfig): EnvSection {
 	return {
@@ -856,9 +918,17 @@ export function buildInstallPlan(
 		salt?: string;
 		priorEnv?: Readonly<Record<string, string>>;
 		ontologyCatalog?: OntologyCatalog;
+		/** The root password the run will set (never an answer — see ANSWER_CLASS). */
+		rootPassword?: string;
+		/** A fresh terminal install sets it, so it must be supplied. */
+		requireRootPassword?: boolean;
 	} = {},
 ): InstallPlan {
 	const { answers, notes, errors } = normalizeInstallAnswers(raw);
+	const passwordErrors = rootPasswordErrors(
+		context.rootPassword,
+		context.requireRootPassword === true,
+	);
 	const prior = context.priorEnv ?? {};
 	const langConfig = deriveLangConfig({
 		langs: answers.langs,
@@ -902,10 +972,12 @@ export function buildInstallPlan(
 		activeOntologyTlds: ontologies.activeOntologyTlds,
 		notes: [...notes, ...ontologies.notes, ...thesauri.notes],
 		warnings: [...ontologies.warnings, ...thesauri.warnings],
+		rootPasswordErrors: passwordErrors,
 		errors: [
 			...new Set([...errors, ...ontologies.errors, ...thesauri.errors, ...suggestionErrors]),
 			...langConfig.errors.map((error) => `languages: ${error}`),
 			...controlCharacterErrors(env),
+			...passwordErrors,
 		],
 	};
 }
@@ -946,9 +1018,10 @@ export function cliBootEnv(plan: InstallPlan): Record<string, string> {
 
 /**
  * Every flag the CLI accepts. `key` is the answer it sets (null = a front-end
- * flag: --root-password, --plan, --list-ontologies). A bool flag sets `true`, except the negating
- * `--no-*` / `--skip-*` ones, which set `false`. NO DEFAULTS here — a flag that
- * is not given leaves its answer absent, and the plan's default applies.
+ * flag: --root-password, --plan, --list-ontologies, --answers, --resume, …). A
+ * bool flag sets `true`, except the negating `--no-*` / `--skip-*` ones, which
+ * set `false`. NO DEFAULTS here — a flag that is not given leaves its answer
+ * absent, and the plan's default applies.
  */
 export const INSTALL_CLI_FLAGS: readonly {
 	flag: string;
@@ -998,11 +1071,34 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--plan', key: null, kind: 'bool' },
 	{ flag: '--list-ontologies', key: null, kind: 'bool' },
 	{ flag: '--list-hierarchies', key: null, kind: 'bool' },
+	// The terminal installer's run control (2026-10-11 — executor.ts).
+	{ flag: '--answers', key: null, kind: 'value' },
+	{ flag: '--resume', key: null, kind: 'bool' },
+	{ flag: '--abort', key: null, kind: 'bool' },
+	{ flag: '--confirm-database', key: null, kind: 'value' },
+	{ flag: '--secrets-stdin', key: null, kind: 'bool' },
+	{ flag: '--execute', key: null, kind: 'bool' },
 ]);
 
 const FLAGS_BY_NAME: ReadonlyMap<string, (typeof INSTALL_CLI_FLAGS)[number]> = new Map(
 	INSTALL_CLI_FLAGS.map((spec) => [spec.flag, spec]),
 );
+
+/** The flag that sets each answer key (for the answers-file conflict sentence). */
+const FLAG_OF_KEY: ReadonlyMap<string, string> = new Map(
+	INSTALL_CLI_FLAGS.filter((spec) => spec.key !== null).map((spec) => [
+		spec.key as string,
+		spec.flag,
+	]),
+);
+
+/** The argv secret flags — still accepted in phase 1, each with a warning (visible in `ps`). */
+export const ARGV_SECRET_FLAGS: readonly string[] = Object.freeze([
+	'--db-password',
+	'--mysql-password',
+	'--smtp-password',
+	'--root-password',
+]);
 
 export interface CliInstallInvocation {
 	raw: Record<string, unknown>;
@@ -1012,6 +1108,25 @@ export interface CliInstallInvocation {
 	listOntologies: boolean;
 	/** --list-hierarchies: print the thesaurus offer and exit (wins over --plan). */
 	listHierarchies: boolean;
+	/** --answers <file>: an answers file (dedalo.install.answers/1) merged with the flags. */
+	answersFile: string | undefined;
+	/** --resume: continue the install recorded in <private>/install/. */
+	resume: boolean;
+	/** --abort: undo the install recorded in <private>/install/. */
+	abort: boolean;
+	/** --confirm-database <name>: the database --abort may reset (must equal the plan's). */
+	confirmDatabase: string | undefined;
+	/** --secrets-stdin: read the secrets as ONE JSON object from stdin. */
+	secretsStdin: boolean;
+	/**
+	 * --execute: explicitly headless — never prompts; a missing answer or secret
+	 * is refused. Phase 1 has no interactive front end, so every run behaves so;
+	 * the flag is recorded on the run (install.state.json runs[].execute) and
+	 * gains its contrast when the interactive front end lands.
+	 */
+	execute: boolean;
+	/** The argv secret flags given (each earns a stderr warning). */
+	argvSecretFlags: string[];
 	errors: string[];
 }
 
@@ -1025,16 +1140,31 @@ function flagValue(argv: readonly string[], index: number, flag: string, errors:
 	return value;
 }
 
+type FrontEndSetter = (invocation: CliInstallInvocation, value: string | undefined) => void;
+
+/** The front-end flags (key: null) — each sets its own invocation field. */
+const FRONT_END_SETTERS: ReadonlyMap<string, FrontEndSetter> = new Map<string, FrontEndSetter>([
+	['--root-password', (invocation, value) => (invocation.rootPassword = value)],
+	['--plan', (invocation) => (invocation.planOnly = true)],
+	['--list-ontologies', (invocation) => (invocation.listOntologies = true)],
+	['--list-hierarchies', (invocation) => (invocation.listHierarchies = true)],
+	['--answers', (invocation, value) => (invocation.answersFile = value)],
+	['--resume', (invocation) => (invocation.resume = true)],
+	['--abort', (invocation) => (invocation.abort = true)],
+	['--confirm-database', (invocation, value) => (invocation.confirmDatabase = value)],
+	['--secrets-stdin', (invocation) => (invocation.secretsStdin = true)],
+	['--execute', (invocation) => (invocation.execute = true)],
+]);
+
 /** Apply one parsed flag to the invocation. */
 function applyFlag(
 	invocation: CliInstallInvocation,
 	spec: { flag: string; key: string | null; kind: 'value' | 'bool' },
 	value: string | undefined,
 ): void {
-	if (spec.flag === '--root-password') invocation.rootPassword = value;
-	else if (spec.flag === '--plan') invocation.planOnly = true;
-	else if (spec.flag === '--list-ontologies') invocation.listOntologies = true;
-	else if (spec.flag === '--list-hierarchies') invocation.listHierarchies = true;
+	if (ARGV_SECRET_FLAGS.includes(spec.flag)) invocation.argvSecretFlags.push(spec.flag);
+	const setter = FRONT_END_SETTERS.get(spec.flag);
+	if (setter !== undefined) setter(invocation, value);
 	else if (spec.kind === 'value') invocation.raw[spec.key as string] = value;
 	else invocation.raw[spec.key as string] = !/^--(no|skip)-/.test(spec.flag);
 }
@@ -1066,6 +1196,39 @@ function consumeToken(
 	return 2;
 }
 
+/** Does the invocation continue a saved install (--resume or --abort)? */
+const continuing = (invocation: CliInstallInvocation): boolean =>
+	invocation.resume || invocation.abort;
+
+/** The run-control combinations that cannot mean anything — each a parser error. */
+const COMBINATION_RULES: readonly {
+	refuses: (invocation: CliInstallInvocation) => boolean;
+	error: string;
+}[] = Object.freeze([
+	{
+		refuses: (invocation) => invocation.resume && invocation.abort,
+		error: '--resume and --abort exclude each other',
+	},
+	{
+		refuses: (invocation) => invocation.planOnly && continuing(invocation),
+		error: '--plan cannot be combined with --resume or --abort',
+	},
+	{
+		refuses: (invocation) =>
+			(invocation.listOntologies || invocation.listHierarchies) && continuing(invocation),
+		error: '--list-* cannot be combined with --resume or --abort',
+	},
+	{
+		refuses: (invocation) => invocation.confirmDatabase !== undefined && !invocation.abort,
+		error: '--confirm-database is only meaningful with --abort',
+	},
+]);
+
+/** The run-control combinations that cannot mean anything, as parser errors. */
+function combinationErrors(invocation: CliInstallInvocation): string[] {
+	return COMBINATION_RULES.filter((rule) => rule.refuses(invocation)).map((rule) => rule.error);
+}
+
 /**
  * argv → the raw answers the plan normalizes. Maps PROVIDED flags only (no
  * defaults); an unknown flag or a value flag without its value is an ERROR —
@@ -1078,10 +1241,84 @@ export function answersFromCliArgs(argv: readonly string[]): CliInstallInvocatio
 		planOnly: false,
 		listOntologies: false,
 		listHierarchies: false,
+		answersFile: undefined,
+		resume: false,
+		abort: false,
+		confirmDatabase: undefined,
+		secretsStdin: false,
+		execute: false,
+		argvSecretFlags: [],
 		errors: [],
 	};
 	for (let index = 0; index < argv.length; ) {
 		index += consumeToken(argv, index, invocation);
 	}
+	invocation.errors.push(...combinationErrors(invocation));
 	return invocation;
+}
+
+// ── the answers file (--answers) ─────────────────────────────────────────────
+
+/** The answers file's envelope schema. */
+export const ANSWERS_FILE_SCHEMA = 'dedalo.install.answers/1';
+
+/**
+ * An answers file (already JSON-parsed) → raw answers + errors. The envelope is
+ * `{schema: 'dedalo.install.answers/1', answers: {<the wizard post shape>}}`;
+ * the key set is INSTALL_ANSWER_KEYS. A SECRET key is refused (a file is
+ * copied, mailed and committed; secrets come from DEDALO_INSTALL_* or
+ * --secrets-stdin), and so is an unknown one — never silently ignored.
+ */
+export function answersFromAnswersFile(json: unknown): {
+	raw: Record<string, unknown>;
+	errors: string[];
+} {
+	const answers = answersOfEnvelope(json);
+	if (typeof answers === 'string') return { raw: {}, errors: [answers] };
+	const raw: Record<string, unknown> = {};
+	const errors: string[] = [];
+	for (const [key, value] of Object.entries(answers)) {
+		const refusal = answerFileKeyRefusal(key);
+		if (refusal === null) raw[key] = value;
+		else errors.push(refusal);
+	}
+	return { raw, errors };
+}
+
+/** Is `value` a plain JSON object (not null, not an array)? */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** The envelope's `answers` object, or the refusal sentence. */
+function answersOfEnvelope(json: unknown): Record<string, unknown> | string {
+	if (!isPlainObject(json) || json.schema !== ANSWERS_FILE_SCHEMA) {
+		return `answers file: schema must be ${ANSWERS_FILE_SCHEMA}`;
+	}
+	return isPlainObject(json.answers) ? json.answers : 'answers file: answers must be an object';
+}
+
+/** Why an answers-file key is refused (a secret, an unknown key), or null. */
+function answerFileKeyRefusal(key: string): string | null {
+	if ((SECRET_ANSWER_KEYS as readonly string[]).includes(key)) {
+		return `answers file: '${key}' is a secret and is not accepted in a file — use DEDALO_INSTALL_* or --secrets-stdin`;
+	}
+	return (INSTALL_ANSWER_KEYS as readonly string[]).includes(key)
+		? null
+		: `answers file: unknown key '${key}'`;
+}
+
+/**
+ * The flags' raw answers merged with an answers file's. NO PRECEDENCE: a key
+ * both set is an error naming both sources, so a scripted install never runs on
+ * an answer its author did not see win.
+ */
+export function mergeAnswerSources(
+	flags: Readonly<Record<string, unknown>>,
+	file: Readonly<Record<string, unknown>>,
+): { raw: Record<string, unknown>; errors: string[] } {
+	const errors = Object.keys(file)
+		.filter((key) => Object.hasOwn(flags, key))
+		.map((key) => `${key} is set by both --answers and ${FLAG_OF_KEY.get(key) ?? key}`);
+	return { raw: { ...file, ...flags }, errors };
 }

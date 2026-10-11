@@ -440,6 +440,12 @@ HERMETIC_TRIPWIRES=(
 	test/unit/image_update_channel_native.test.ts
 	test/unit/image_updater_host_native.test.ts
 	test/unit/image_registries_docs_tripwire.test.ts
+	# --- 2026-10-11 (terminal installer phase 1). DB-free (re-verified with DB_HOST=127.0.0.1
+	#     DB_PORT=59999: 55 pass / 0 fail): the plan's validation table, the executor over a
+	#     fake machine in a mkdtemp private dir, and the CLI spawned against an ABSENT database
+	#     (refused before any write, or by the preflight with nothing written).
+	test/unit/install_validation_upfront_tripwire.test.ts
+	test/unit/install_run_files_secret_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

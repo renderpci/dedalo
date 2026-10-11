@@ -1098,7 +1098,7 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			// false, but the install is not yet sealed) — without it a mid-install
 			// reload would strand on the login form with no schema/root yet. Once
 			// install_finish seals, both are false and the login branch runs.
-			const { installInProgress } = await import('../../install/gate.ts');
+			const { installInProgress, installSurfaceReachable } = await import('../../install/gate.ts');
 			if (config.installMode || installInProgress()) {
 				const { buildInstallContext } = await import('../../install/context.ts');
 				return {
@@ -1107,6 +1107,16 @@ export const coreApiActions: Record<string, ActionHandler> = {
 						{ context: [buildInstallContext()], data: [] },
 						// install:true — no database is usable yet (none configured, or
 						// configured and still EMPTY): the environment must not read one.
+				// A TERMINAL install mid-flight (terminal_installing) is in progress
+				// but never the wizard's: no installer page (its API is closed —
+				// installSurfaceReachable) and no login over a half-built database.
+				if (!installSurfaceReachable()) {
+					throw new DedaloError('install.not_reachable', {
+						message: 'a terminal install is in progress',
+						publicMessage:
+							'An install is in progress from the terminal — finish it there (scripts/install.ts --resume).',
+					});
+				}
 						{
 							requestId: context.requestId,
 							extend: { environment: await buildEnv(null, null, { install: true }) },

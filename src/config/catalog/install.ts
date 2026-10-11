@@ -57,6 +57,18 @@ By default that is the \`private\` directory next to the installation, which is 
 DEDALO_INSTALL_PRIVATE_DIR="/srv/dedalo_private"
 \`\`\``,
 	},
+	DEDALO_INSTALL_FAULT: {
+		type: 'string',
+		scope: 'test_seam',
+		default: undefined,
+		heading: 'Crashing the terminal installer on purpose',
+		typeLabel: 'string',
+		doc: `Test seam, not a setting. The resume gate kills the command-line installer at a chosen point to prove that \`--resume\` reaches the same installation as an uninterrupted run. The value is \`<step id>:before\` (the process is killed once the step is recorded as running) or \`<step id>:after\` (once it is recorded as done); any other value refuses the run at startup. It is read from the process environment only, never from the configuration file, so a stray line there can never kill a real installation.
+
+\`\`\`bash
+DEDALO_INSTALL_FAULT="install_ontologies:before"
+\`\`\``,
+	},
 	DEDALO_TS_STATE_PATH: {
 		type: 'string',
 		scope: 'test_seam',

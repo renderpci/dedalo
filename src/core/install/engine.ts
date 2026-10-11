@@ -34,6 +34,7 @@ import type { ApiResult } from '../api/response.ts';
 import type { Rqo } from '../concepts/rqo.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { ok } from '../errors/index.ts';
+import { type InstallStepInputs, STEP_RUNS } from './step_runs.ts';
 
 type StepOptions = { action?: string } & Record<string, unknown>;
 
@@ -60,6 +61,15 @@ function stepResult(context: ApiRequestContext, outcome: { ok: unknown }): ApiRe
 
 type StepHandler = (options: StepOptions, context: ApiRequestContext) => Promise<ApiResult>;
 
+/**
+ * The wizard's inputs for a table step: the post IS the answers; directories
+ * are created only when the client asks (`create`), the ontology steps are
+ * machine-side (audited to -1), and persist_config records `configured`.
+ */
+function wizardInputs(options: StepOptions): InstallStepInputs {
+	return { posted: options, createDirectories: options.create === true, actorUserId: -1 };
+}
+
 /** The in-wizard root session, or the refusal (record-writing steps only). */
 function requireSession(context: ApiRequestContext): NonNullable<ApiRequestContext['session']> {
 	if (context.session === null) throw new DedaloError('auth.not_logged');
@@ -82,28 +92,25 @@ const STEP_HANDLERS: Readonly<Record<string, StepHandler>> = Object.freeze({
 		});
 	},
 
-	test_db_connection: async (options, context) => {
-		const { testDbConnection } = await import('./db_probe.ts');
-		return stepResult(context, await testDbConnection(options));
-	},
+	// ── the plan steps: each runs the ONE step call (step_runs.ts — the `run`
+	// of every row of the step table in steps.ts), whose raw outcome is
+	// serialized exactly as before; the wizard-only wrappers (the CLI-only-answer
+	// refusal, the restart, the session) stay here.
 
-	test_diffusion_connection: async (options, context) => {
-		const { testDiffusionConnection } = await import('./db_probe.ts');
-		return stepResult(context, await testDiffusionConnection(options));
-	},
+	test_db_connection: async (options, context) =>
+		stepResult(context, await STEP_RUNS.test_db_connection(wizardInputs(options))),
 
-	test_mailer_connection: async (options, context) => {
-		const { testMailerConnection } = await import('./mailer_probe.ts');
-		return stepResult(context, await testMailerConnection(options));
-	},
+	test_diffusion_connection: async (options, context) =>
+		stepResult(context, await STEP_RUNS.test_diffusion_connection(wizardInputs(options))),
 
-	check_directories: async (options, context) => {
-		const { checkDirectories } = await import('./directories.ts');
-		return stepResult(context, checkDirectories({ create: options.create === true }));
-	},
+	test_mailer_connection: async (options, context) =>
+		stepResult(context, await STEP_RUNS.test_mailer_connection(wizardInputs(options))),
+
+	check_directories: async (options, context) =>
+		stepResult(context, await STEP_RUNS.check_directories(wizardInputs(options))),
 
 	persist_config: async (options, context) => {
-		const { persistConfig, refuseWizardOnlyCliAnswers } = await import('./config_persist.ts');
+		const { refuseWizardOnlyCliAnswers } = await import('./config_persist.ts');
 		// The wizard door never takes a server filesystem path (`ontology_source`
 		// is CLI-only — the CLI calls persistConfig itself): refused before any read.
 		refuseWizardOnlyCliAnswers(options);
@@ -111,8 +118,8 @@ const STEP_HANDLERS: Readonly<Record<string, StepHandler>> = Object.freeze({
 		// the .env is written: persisting config makes the current (install-mode)
 		// process obsolete — schedule the restart AFTER the response flushes so
 		// it boots with real config. No-op under DEDALO_INSTALL_NO_RESTART
-		// (tests/CLI).
-		const persisted = await persistConfig(options);
+		// (tests/CLI). The wizard records `configured` (the table's default).
+		const persisted = await STEP_RUNS.persist_config(wizardInputs(options));
 		const { scheduleServerRestart } = await import('./restart.ts');
 		scheduleServerRestart('config persisted');
 		return stepResult(context, persisted);
@@ -128,32 +135,37 @@ const STEP_HANDLERS: Readonly<Record<string, StepHandler>> = Object.freeze({
 		return stepResult(context, await ontologyCatalogProbe(options.update_servers !== false));
 	},
 
-	stage_ontologies: async (_options, context) => {
-		const { ontologyRequestFromConfig, stageOntologies } = await import('./ontology_install.ts');
+	stage_ontologies: async (options, context) => {
+		const { ontologyRequestFromConfig } = await import('./ontology_install.ts');
 		// The request comes from the WRITTEN configuration (ACTIVE_ONTOLOGY_TLDS +
 		// the configured ontology servers) — never from the client: this process
 		// was restarted after persist_config.
-		return stepResult(context, await stageOntologies(await ontologyRequestFromConfig()));
+		const ontologyRequest = await ontologyRequestFromConfig();
+		return stepResult(
+			context,
+			await STEP_RUNS.stage_ontologies({ ...wizardInputs(options), ontologyRequest }),
+		);
 	},
 
-	install_db_from_default_file: async (_options, context) => {
-		const { installDbFromSeed } = await import('./db_restore.ts');
-		return stepResult(context, await installDbFromSeed());
-	},
+	// The ordinary restore — never the executor's resumable variant: a seeded
+	// database still refuses install.state_conflict here.
+	install_db_from_default_file: async (options, context) =>
+		stepResult(context, await STEP_RUNS.install_db_from_default_file(wizardInputs(options))),
 
-	install_ontologies: async (_options, context) => {
-		const { installOntologies } = await import('./ontology_install.ts');
-		return stepResult(context, await installOntologies({ userId: -1 }));
-	},
+	install_ontologies: async (options, context) =>
+		stepResult(context, await STEP_RUNS.install_ontologies(wizardInputs(options))),
 
-	set_root_pw: async (options, context) => {
-		const { setRootPassword } = await import('./root_pw.ts');
-		return stepResult(context, await setRootPassword(String(options.password ?? '')));
-	},
+	set_root_pw: async (options, context) =>
+		stepResult(
+			context,
+			await STEP_RUNS.set_root_pw({
+				...wizardInputs(options),
+				rootPassword: String(options.password ?? ''),
+			}),
+		),
 
 	install_hierarchies: async (options, context) => {
 		const session = requireSession(context);
-		const { installHierarchies } = await import('./hierarchy_import.ts');
 		const { normalizeHierarchyChoice } = await import('./install_plan.ts');
 		const { refuseInstall } = await import('./refuse.ts');
 		// The posted list goes through THE PLAN's thesaurus normalization — the one
@@ -186,19 +198,24 @@ const STEP_HANDLERS: Readonly<Record<string, StepHandler>> = Object.freeze({
 		// the provisioned ontology records) — audited to a real actor, not to -1.
 		// installHierarchies itself checks the list against the CHOSEN thesauri's
 		// own declared dependencies (hierarchy.json) before anything is written.
-		const result = await installHierarchies(choice.hierarchies, undefined, session.userId);
+		const result = await STEP_RUNS.install_hierarchies({
+			...wizardInputs(options),
+			hierarchies: choice.hierarchies,
+			actorUserId: session.userId,
+		});
 		const notes = [...choice.notes, ...unmet.warnings, ...declared.warnings];
-		if (notes.length > 0) result.msg = `${result.msg} (${notes.join('; ')})`;
+		if (notes.length > 0) result.msg = `${String(result.msg)} (${notes.join('; ')})`;
 		return stepResult(context, result);
 	},
 
-	register_tools: async (_options, context) => {
+	register_tools: async (options, context) => {
 		requireSession(context);
-		const { registerInstallTools } = await import('./register_tools.ts');
-		return stepResult(context, await registerInstallTools());
+		return stepResult(context, await STEP_RUNS.register_tools(wizardInputs(options)));
 	},
 
 	install_finish: async (_options, context) => {
+		// The same call as the step table's install_finish row (steps.ts) — kept
+		// spelled out here because the restart below must follow it.
 		const { installFinish } = await import('./finish.ts');
 		// A refusal THROWS, so the next line means SEALED. This process booted
 		// mid-wizard and therefore skipped every database boot step (migrations,

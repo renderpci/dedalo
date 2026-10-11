@@ -37,8 +37,17 @@ export interface ServerState {
 	 * 'configured' after persist_config writes .env → 'sealed' after
 	 * install_finish. `sealed` makes the install surface 404 and the server
 	 * behave as a normal configured instance. See src/core/install/.
+	 *
+	 * `terminal_installing` (2026-10-11) is what the TERMINAL installer
+	 * (scripts/install.ts → core/install/executor.ts) writes at persist_config in
+	 * place of `configured`: the install is unfinished — a server started now
+	 * must not run its database boot work against the half-built database
+	 * (gate.ts installInProgress) — but the pre-auth WIZARD surface stays CLOSED
+	 * (gate.ts installSurfaceReachable): a crashed terminal install is resumed
+	 * with `scripts/install.ts --resume`, never finished by whoever reaches the
+	 * port.
 	 */
-	install_status?: 'unconfigured' | 'configured' | 'installing' | 'sealed';
+	install_status?: 'unconfigured' | 'configured' | 'installing' | 'terminal_installing' | 'sealed';
 	/** Install fingerprint captured at persist_config (PHP state.information). */
 	information?: string;
 	/** Install fingerprint key captured at persist_config (PHP state.info_key). */

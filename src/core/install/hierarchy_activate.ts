@@ -47,6 +47,7 @@ import { sql, withTransaction } from '../db/postgres.ts';
 import {
 	ensureHierarchy,
 	HIERARCHY_SECTION,
+	inspectHierarchy,
 	provisionBlocker,
 	type RegistryRow,
 } from '../ontology/hierarchy_state.ts';
@@ -297,6 +298,27 @@ export async function activateCoreHierarchy(
 		return outcome;
 	}
 	return converge(outcome, sectionId, userId, core.active_in_thesaurus);
+}
+
+/**
+ * Why the core hierarchies are not all USABLE (hierarchy_state.ts
+ * inspectHierarchy — every check, not one registry field), or null. Read-only:
+ * the terminal installer's seed verify (db_restore.ts seedComplete).
+ */
+export async function coreHierarchiesProblem(): Promise<string | null> {
+	const problems: string[] = [];
+	for (const core of CORE_HIERARCHIES) {
+		const sectionId = await findHierarchyByTld(core.tld);
+		if (sectionId === null) {
+			problems.push(`core hierarchy '${core.tld}' has no registry row`);
+			continue;
+		}
+		const state = await inspectHierarchy(sectionId);
+		const failed = state.checks.filter((check) => !check.ok).map((check) => check.id);
+		if (!state.usable)
+			problems.push(`core hierarchy '${core.tld}' is not usable (${failed.join(', ')})`);
+	}
+	return problems.length === 0 ? null : problems.join('; ');
 }
 
 /** What activating every core hierarchy did (the seed restore and the suite setup read it). */

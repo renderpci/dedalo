@@ -74,6 +74,16 @@ function targetDirs(mediaRoot: string | null): { label: string; path: string }[]
 	return dirs;
 }
 
+/**
+ * The absolute paths check_directories manages (private, sessions, backups,
+ * the media root when configured) — what the terminal installer records as
+ * missing at its preflight, so `--abort` removes only the directories the
+ * install itself created (executor.ts).
+ */
+export function installDirectoryPaths(): string[] {
+	return targetDirs(config.media.rootPath).map((dir) => dir.path);
+}
+
 export interface CheckDirectoriesResult {
 	/** A REPORT flag, not a refusal: the wizard renders `dirs` either way (see db_probe_plan.ts). */
 	ok: boolean;

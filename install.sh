@@ -822,11 +822,11 @@ if [ "$WIZARD_MODE" = 'true' ]; then
 fi
 
 bold 'Installing Dédalo…'
-# The root password travels in the ENVIRONMENT, never in argv: an argv is visible
-# in `ps`. --media-path and --socket are persisted to /private/.env, so the file
-# describes the deployment on its own.
+# The root AND database passwords travel in the ENVIRONMENT, never in argv: an
+# argv is visible in `ps`. --media-path and --socket are persisted to
+# /private/.env, so the file describes the deployment on its own.
 install_args=(
-	--db-name dedalo --db-user dedalo --db-password "$DB_PASSWORD" --db-host postgres
+	--db-name dedalo --db-user dedalo --db-host postgres
 	--entity "$ENTITY" --entity-label "$ENTITY_LABEL"
 	--locale "$LOCALE" --timezone "$TIMEZONE"
 	--media-path /srv/dedalo/media
@@ -847,11 +847,12 @@ if [ "$USE_UPDATE_SERVERS" = 'false' ]; then install_args+=(--no-update-servers)
 # of bash not worth betting the install on. `-e NAME` (no value) passes it
 # through from this environment, so the password never appears in argv.
 export DEDALO_INSTALL_ROOT_PASSWORD="$ROOT_PASSWORD"
-compose run --rm -e DEDALO_INSTALL_ROOT_PASSWORD \
+export DEDALO_INSTALL_DB_PASSWORD="$DB_PASSWORD"
+compose run --rm -e DEDALO_INSTALL_ROOT_PASSWORD -e DEDALO_INSTALL_DB_PASSWORD \
 	dedalo bun run scripts/install.ts "${install_args[@]}" \
 	|| fail 'The installer failed. Nothing was sealed; read the output above, then destroy the half-built instance with:
     docker compose -f '"$COMPOSE_FILE"' --env-file '"$ENV_FILE"' down -v'
-unset DEDALO_INSTALL_ROOT_PASSWORD
+unset DEDALO_INSTALL_ROOT_PASSWORD DEDALO_INSTALL_DB_PASSWORD
 
 # --- 6. Serve ----------------------------------------------------------------
 

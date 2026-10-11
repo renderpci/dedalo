@@ -387,6 +387,8 @@ const TRIPWIRES = [
 	'test/unit/image_update_channel_native.test.ts',
 	'test/unit/image_updater_host_native.test.ts',
 	'test/unit/image_registries_docs_tripwire.test.ts',
+	'test/unit/install_validation_upfront_tripwire.test.ts',
+	'test/unit/install_run_files_secret_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

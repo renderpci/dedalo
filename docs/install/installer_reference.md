@@ -56,18 +56,23 @@ proxy. Those fail later, and louder.
 ## Command-line flags
 
 ```shell
+DEDALO_INSTALL_ROOT_PASSWORD='…' [DEDALO_INSTALL_DB_PASSWORD='…'] \
 bun run scripts/install.ts \
   --db-name dedalo_main --db-user dedalo_user --entity myentity \
-  [--db-password '…'] [--db-host localhost] [--db-port 5432] [--db-socket /var/run/postgresql] \
+  [--answers answers.json] [--secrets-stdin] [--execute] \
+  [--db-host localhost] [--db-port 5432] [--db-socket /var/run/postgresql] \
   [--entity-label 'My Institution'] [--locale es-ES] [--timezone Europe/Madrid] \
   [--langs lg-eng,lg-spa] [--app-lang lg-eng] [--data-lang lg-eng] \
   [--hierarchies default|none|es,fr] \
   [--ontologies default|oh,tch] [--ontology-source <dir|archive>] \
   [--decline-dependencies tchi,ts:hierarchy1] \
   [--media-path /srv/dedalo/media] [--socket /run/dedalo/dedalo_ts.sock] [--media-access-mode publication] \
-  [--diffusion --mysql-name web_dedalo --mysql-user d --mysql-password '…'] \
-  [--mailer --smtp-host smtp.example.org --smtp-user dedalo@example.org --smtp-password '…'] \
+  [--diffusion --mysql-name web_dedalo --mysql-user d] \
+  [--mailer --smtp-host smtp.example.org --smtp-user dedalo@example.org] \
   [--no-update-servers] [--skip-tools] [--plan | --list-ontologies | --list-hierarchies]
+
+bun run scripts/install.ts --resume                              # finish an interrupted install
+bun run scripts/install.ts --abort --confirm-database dedalo_main # undo it
 ```
 
 An **unknown flag is refused** (`unknown flag --x`) and so is a value flag with no
@@ -80,8 +85,8 @@ meaning.)
 | `--db-name` | **yes** | — | the **empty** database you created |
 | `--db-user` | **yes** | — | the role that owns it |
 | `--entity` | **yes** | — | this instance's identifier, e.g. `myentity` |
-| root password | **yes** | — | `DEDALO_INSTALL_ROOT_PASSWORD` in the environment, or `--root-password` |
-| `--db-password` | no | *(empty)* | empty means peer/trust auth over a local socket |
+| root password | **yes** | — | `DEDALO_INSTALL_ROOT_PASSWORD` in the environment, or `--secrets-stdin`; held to the password policy **before anything is written** (see [Secrets](#secrets)) |
+| database password | no | *(empty)* | `DEDALO_INSTALL_DB_PASSWORD`, or `--secrets-stdin`; empty means peer/trust auth over a local socket. `--db-password` still works but warns |
 | `--db-host` | no | `localhost` | a hostname, **or a unix-socket directory** when it starts with `/` (the default used to be `/tmp`; Debian/Ubuntu and RHEL do not put the PostgreSQL socket there) |
 | `--db-port` | no | `5432` | |
 | `--db-socket` | no | — | a PostgreSQL unix-socket directory, e.g. `/var/run/postgresql`; written as `DB_SOCKET`. When given it **wins** over `--db-host`: the connection test, the server and the backups all connect through it. Must be an absolute path |
@@ -106,14 +111,27 @@ meaning.)
 | `--list-ontologies` | no | off | prints ONE JSON line — the ontology catalog of the selected source, exactly what the wizard's *Ontologies* step shows — and exits. It needs no other answer. See [Listing the catalog](#listing-the-catalog) |
 | `--list-hierarchies` | no | off | prints ONE JSON line — the thesaurus offer of the release's manifest (`core`, `entries` of `{tld, name, typology_id, typology_name, has_data}`, the toponymy `suggestion`, `errors`) — and exits. It needs no other answer. See [The thesaurus manifest](#the-thesaurus-manifest-hierarchyjson) |
 | `--information`, `--info-key` | no | `ts-install`, `ts` | free-text install provenance, recorded in the state file |
+| `--answers <file>` | no | — | the answers as a file (the wizard's field names); see [The answers file](#the-answers-file-answers). A key set both there and by a flag is refused |
+| `--secrets-stdin` | no | off | read the secrets as ONE JSON object from standard input; see [Secrets](#secrets) |
+| `--execute` | no | off | explicitly unattended: the installer never asks anything and refuses a missing answer or secret. Every run behaves so today; the flag is recorded on the run |
+| `--resume` | no | off | finish the install recorded in `<private>/install/`; see [Resuming an install](#resuming-an-install-resume) |
+| `--abort` | no | off | undo the install recorded in `<private>/install/`; needs `--confirm-database`. See [Undoing an install](#undoing-an-install-abort) |
+| `--confirm-database <name>` | with `--abort` | — | must equal the install's database name before `--abort` resets it |
 
-!!! danger "The root password never belongs on the command line"
-    `--root-password` works, but an argv is visible in `ps` and lands in your
-    shell history. Use the environment variable.
+The run-control flags exclude each other where they cannot mean anything:
+`--resume` with `--abort`, `--plan` or a `--list-*` flag with either, and
+`--confirm-database` without `--abort` are refused.
+
+!!! danger "No password belongs on the command line"
+    `--root-password`, `--db-password`, `--mysql-password` and `--smtp-password`
+    still work, but each prints a warning: an argv is visible to every user in
+    `ps` and lands in your shell history. Use the `DEDALO_INSTALL_*`
+    environment variables or `--secrets-stdin` (see [Secrets](#secrets)).
 
 !!! tip "Check the plan before you run it"
     `--plan` validates the answers exactly as the install would, without needing
-    the database:
+    the database (a root password is checked against the policy when one is
+    supplied, but not required):
 
     ```shell
     bun run scripts/install.ts --plan --db-name dedalo_main --db-user dedalo_user --entity myentity --hierarchies none
@@ -132,38 +150,52 @@ names the wizard calls, which is how one plan drives both. The pre-flight before
 the first step and the root-login check after the last are the CLI's own
 affordances (the wizard has its *Verify* screen and in-wizard login instead).
 
-1. **Pre-flight checks** — the four gates above.
-2. **`test_db_connection`** — the database must already exist, and be empty. If it
+1. **Validation** — every answer, and the root password, is checked by the plan
+   (see [Validation before anything is written](#validation-before-anything-is-written)).
+   A refusal here writes nothing.
+2. **Pre-flight checks** — the four gates above, then the **target database**:
+   it must exist and be **empty** — zero tables, views, sequences, functions,
+   types or schemas of its own (members of an extension such as `plpgsql` do not
+   count) — and no other install may be running against it (a server-side lock
+   on the database decides this, so two installs from two private directories
+   cannot both pass). A refusal here writes nothing either.
+3. **The plan and state files** are written under `<private>/install/` — only
+   now. From here on every step is recorded (see
+   [The plan and state files](#the-plan-and-state-files)).
+4. **`test_db_connection`** — the database must already exist, and be empty. If it
    does not exist, the installer stops: it never creates a database.
-3. **`test_diffusion_connection`** *(only with `--diffusion`)* and
+5. **`test_diffusion_connection`** *(only with `--diffusion`)* and
    **`test_mailer_connection`** *(only with `--mailer`)* — probes that **warn** on
    failure and let the install continue.
-4. **`persist_config`** — writes `../private/.env`; see the next section. Any
-   previous `.env` is renamed to `.env.bak.<timestamp>`.
-5. **`check_directories`** — creates and write-probes the private directory, the
+6. **`persist_config`** — writes `../private/.env`; see the next section. Any
+   previous `.env` is first copied to `.env.bak.<timestamp>`, then the new file
+   replaces it in one rename (the `.env` is never missing in between).
+7. **`check_directories`** — creates and write-probes the private directory, the
    session store, the backups directory, and the media root: `--media-path` when
    given, otherwise the default `<private dir>/media` (a legacy in-tree
    `<repo>/media` that already holds files is kept instead). It then provisions
    the media tree under that root. Writability is proven by writing and deleting a probe file, not by
    reading permission bits — a network mount can lie about the bits.
-6. **`stage_ontologies`** — fetches (update server) or copies (built-in `oh`,
+8. **`stage_ontologies`** — fetches (update server) or copies (built-in `oh`,
    `--ontology-source`) every chosen domain ontology file, dependencies first,
    into the staging directory, and verifies each one (decompression and row
    format) **before the database is touched**. This is the install's only
    network phase: an unreachable server or a damaged file stops the install
    here, with the database still empty.
-7. **`install_db_from_default_file`** — restores the database from the core-only
-   seed (refused unless the database is empty), **then** builds the derived search
+9. **`install_db_from_default_file`** — restores the database from the core-only
+   seed (refused unless the database is empty) as **one transaction** — a restore
+   that fails or is killed part-way leaves the database empty, never half-built —
+   **then** builds the derived search
    indexes, writes the engine's own ontology nodes and **activates the core
    Languages thesaurus (`lg`)**. Its terms already ship in the seed, so activation
    is all it needs — there is no separate step for it, and nothing about it to
    choose.
-8. **`install_ontologies`** — imports the staged domain ontologies through the
+10. **`install_ontologies`** — imports the staged domain ontologies through the
    same import routine the ontology update panel uses, then checks their
    references (see [Domain ontologies](#domain-ontologies)). An import failure
    **fails the install**.
-9. **`set_root_pw`** — the root password, hashed with Argon2id.
-10. **`install_hierarchies`** — imports and activates the **optional** thesauri you
+11. **`set_root_pw`** — the root password, hashed with Argon2id.
+12. **`install_hierarchies`** — imports and activates the **optional** thesauri you
    chose (`none`, or nothing chosen, adds none), plus the thesauri the installed
    ontologies declare, unless declined. A declined mandatory thesaurus is a
    warning, never a failure. Each selected TLD has its listed term files verified against their
@@ -175,13 +207,14 @@ affordances (the wizard has its *Verify* screen and in-wizard login instead).
    does not exist for the engine until its ontology does), so a TLD whose activation
    fails is a **failed** hierarchy — and a failed hierarchy **fails the install**:
    nothing is sealed (the wizard cannot get past a failed step either).
-11. **`register_tools`** (unless `--skip-tools`).
-12. **`install_finish`** — seals the install, refused unless a root user with a
+13. **`register_tools`** (unless `--skip-tools`).
+14. **`install_finish`** — seals the install, refused unless a root user with a
     password actually exists. A forged *finish* can never seal a half-built
     instance.
-13. **Verify the root login** — an actual login against the freshly installed
+15. **Verify the root login** — an actual login against the freshly installed
     database. This is the end-to-end proof, and it is why the CLI prints
-    `✔ install complete — root login verified`.
+    `✔ install complete — root login verified`. The generated secret
+    (`DEDALO_SALT_STRING`) is printed here, once — never mid-run.
 
 !!! note "Only declared thesauri are pre-selected"
     The CLI's default, `install.sh`'s `default` answer and the wizard's
@@ -441,9 +474,223 @@ import; after a failure they stay there for diagnosis, and the next run starts
 from a clean staging directory.
 
 An import failure in `install_ontologies` stops the install: the import routine
-restores each ontology's tables from its snapshot, but **nothing is sealed**, and
-the remedy is the one for every step after the restore — drop and recreate the
-database, then run the installer again.
+restores each ontology's tables from its snapshot, and **nothing is sealed**. As
+for any failed step, the progress is saved: fix the cause and run
+`bun run scripts/install.ts --resume` ([Resuming an install](#resuming-an-install-resume)),
+or take the install back with `--abort --confirm-database <db>`
+([Undoing an install](#undoing-an-install-abort)). There is no need to drop and
+recreate the database.
+
+## The answers file (`--answers`)
+
+The answers can come from a file instead of (or beside) the flags — the shape a
+provisioning tool writes. It is the wizard's answers inside a versioned
+envelope:
+
+```json
+{
+  "schema": "dedalo.install.answers/1",
+  "answers": {
+    "db_database": "dedalo_main",
+    "db_username": "dedalo_user",
+    "entity": "myentity",
+    "langs": ["lg-spa", "lg-eng"],
+    "app_lang_default": "lg-spa",
+    "hierarchies": ["es"],
+    "diffusion": false
+  }
+}
+```
+
+```shell
+DEDALO_INSTALL_ROOT_PASSWORD='…' bun run scripts/install.ts --answers answers.json
+```
+
+The keys it accepts are exactly the plain answers: `db_hostname`, `db_port`,
+`db_socket`, `db_database`, `db_username`, `entity`, `entity_label`,
+`information`, `info_key`, `timezone`, `locale`, `langs`, `app_lang_default`,
+`data_lang_default`, `diffusion`, `mysql_hostname`, `mysql_port`,
+`mysql_socket`, `mysql_database`, `mysql_username`, `mailer`, `smtp_host`,
+`smtp_port`, `smtp_secure`, `smtp_user`, `smtp_from`, `smtp_from_name`,
+`media_path`, `unix_socket`, `media_access_mode`, `update_servers`,
+`hierarchies`, `register_tools`, `ontologies`, `declined_dependencies`,
+`ontology_source`. Lists may be JSON arrays or comma strings, switches JSON
+booleans — the same values the wizard posts. The file goes through the same
+plan, so the same answers install the same instance whichever way they arrive.
+
+It is refused, before anything is written, when:
+
+- the envelope is wrong — `answers file: schema must be dedalo.install.answers/1`;
+- a key is unknown — `answers file: unknown key 'x'` (a typo is never ignored);
+- a key is a **secret** (`db_password`, `mysql_password`, `smtp_pass`) —
+  `answers file: '<key>' is a secret and is not accepted in a file — use
+  DEDALO_INSTALL_* or --secrets-stdin`. Answer files get copied, mailed and
+  committed;
+- a key is set both in the file and by a flag — `entity is set by both --answers
+  and --entity`. Neither wins silently.
+
+## Secrets
+
+Four secrets can be supplied: the root password (always required), the
+database password, the diffusion (MariaDB) password and the SMTP password.
+Highest precedence first:
+
+1. **`--secrets-stdin`** — one JSON object on standard input, with any of the
+   keys `db_password`, `mysql_password`, `smtp_pass`, `root_password` (an unknown
+   key is refused):
+
+    ```shell
+    printf '%s' '{"root_password":"…","db_password":"…"}' \
+      | bun run scripts/install.ts --secrets-stdin --db-name dedalo_main --db-user dedalo_user --entity myentity
+    ```
+
+2. **The environment** — `DEDALO_INSTALL_ROOT_PASSWORD`,
+   `DEDALO_INSTALL_DB_PASSWORD`, `DEDALO_INSTALL_MYSQL_PASSWORD`,
+   `DEDALO_INSTALL_SMTP_PASSWORD`. The installer removes them from its own
+   environment as soon as it has read them, so no program it starts inherits
+   a `DEDALO_INSTALL_*` variable. The database password does reach the `psql`
+   programs the installer starts (they need it to connect); the root, SMTP and
+   diffusion passwords reach none.
+3. **The command line** — `--root-password`, `--db-password`,
+   `--mysql-password`, `--smtp-password`. Still accepted, each with the warning
+   `⚠ <flag> on the command line is visible to other users (ps); use
+   DEDALO_INSTALL_* or --secrets-stdin`.
+
+No secret is ever written to the plan or state files, and none is printed: every
+line the installer prints and every message it records has the supplied secrets
+replaced by `***`. The one secret the installer **generates**,
+`DEDALO_SALT_STRING`, is written to `.env` and printed **once**, in the summary
+at the end of the run that completes the install
+(`generated DEDALO_SALT_STRING = …`). Keep it with your backups.
+
+## Validation before anything is written
+
+Every refusal an answer can earn is raised by the plan, before the database is
+touched and before any file is written — the same refusal whether the answers
+come from flags, an answers file or the wizard:
+
+| Answer | Rule | Refusal |
+| --- | --- | --- |
+| `db_database`, `db_username`, `entity` | present | `<key> is required` |
+| `entity` | a letter, then letters, digits or `_` | `entity '<v>' must start with a letter and contain only letters, digits and _` |
+| `db_port`; `mysql_port` (with `--diffusion`); `smtp_port` (with `--mailer`) | an integer 1–65535 | `db_port '<v>' must be an integer 1-65535` |
+| database and MariaDB host, name, user | no leading `-`, no control character | `db_database: looks like a command-line option` |
+| `db_socket` | an absolute directory | `db_socket: …` |
+| `media_path`, `unix_socket`, `mysql_socket` (with `--diffusion`) | absolute, when given | `media_path must be an absolute path` |
+| `smtp_host` (with `--mailer`) | present | `mailer requires smtp_host` |
+| `smtp_secure` (with `--mailer`) | `tls`, `ssl` or `none` | `smtp_secure must be tls\|ssl\|none` |
+| `mysql_database`, `mysql_username` (with `--diffusion`) | present | `diffusion requires mysql_database` |
+| `media_access_mode` | `private`, `publication`, `false` (or empty) | `media_access_mode must be private\|publication\|false (or empty)` |
+| `timezone` | a time zone the runtime knows (IANA name) | `timezone '<v>' is not a valid IANA time zone` |
+| `locale` | a well-formed language tag | `locale '<v>' is not a valid BCP 47 tag` |
+| `langs`, `app_lang_default`, `data_lang_default` | the defaults are members of the set | `languages: …` |
+| `information`, `info_key` | no line break or NUL | `information contains an illegal control character` |
+| root password | supplied (for an install), and passes the password policy | `root password is required (…)`, `root password does not meet the password policy (<rule>)` |
+
+The thesaurus, ontology and declined-dependency refusals described above are
+plan refusals too. Then the database is checked: it must exist
+(`database '<db>' must exist first`), be empty
+(`database '<db>' is not empty (<n> objects, e.g. …) — the installer only installs into an empty database`)
+and be owned by the database user the install connects as
+(`the install role does not own database '<db>' — create it with OWNER set to the install user …`):
+the seed restore marks the database as this install's (its comment,
+`dedalo_install_id:<id>`), which only the owner may write.
+
+## The plan and state files
+
+A run that passed validation and the database check records itself under
+`<private>/install/` (a `0700` directory; every file in it `0600`):
+
+| File | Written | What it holds |
+| --- | --- | --- |
+| `install.plan.json` | once, at the start | schema `dedalo.install.plan/1`: the plain answers, **which** secrets were supplied (true/false — never a value), the steps, the thesauri, the ontology request (each file's checksum, never a temporary path or an access code), the non-secret `.env` entries, the notes and warnings, the engine version, and a `plan_hash` over all of it |
+| `install.state.json` | around every step | schema `dedalo.install.state/1`: each step's status (`pending`, `running`, `done`, `failed`), attempts, verification and redacted message; every run (fresh, resume, abort) and how it ended; what the pre-flight saw; and what the install **created** — the only things `--abort` may remove |
+| `install.lock` | while a run is active | which process holds the install (released when it ends; a lock whose process is gone is taken over with a warning) |
+
+Both files are **kept** after success, as the install's record. A fresh run
+that finds them refuses — `an install record exists at … — resume it with
+--resume, undo it with --abort --confirm-database <db>, or remove the install
+directory if this private directory is being reused deliberately` — so an
+install is never started over another one by accident.
+
+## Resuming an install (`--resume`)
+
+Any failure after the plan and state files exist ends with how to continue:
+
+```
+✖ install failed at step [install_ontologies]: <message>
+  Progress saved: <private>/install/install.state.json (plan: install.plan.json)
+  Fix the cause, then resume:  bun run scripts/install.ts --resume
+    secrets needed again: root password (DEDALO_INSTALL_ROOT_PASSWORD or --secrets-stdin)
+  Or undo this install:        bun run scripts/install.ts --abort --confirm-database <db>
+```
+
+`--resume` takes the **saved** plan: it needs no answers. Repeating the original
+command line (or part of it) with `--resume` added works too — only the answers
+given are compared, and those that differ from the saved ones are refused (`answers differ from the saved plan: entity — resume
+takes the saved answers; drop the flags, or --abort and start again`). A resume
+by another engine version, or of a modified plan file, is refused.
+
+For every step, in order:
+
+- a step recorded **done** is verified again — its work must still be there (the
+  `.env` written as planned, the staged files, the seed of this engine version,
+  every ontology imported, the root password set, the install sealed). A done
+  step whose work has gone is refused as drift
+  (`step <id> was recorded done but its outcome is missing … --abort and start again`);
+  a done step with nothing to verify (a probe, the thesaurus import, tool
+  registration) is not run again;
+- a step left **running** or **failed** whose work verifiably landed (the
+  process died after the work, before recording it) is recorded done without
+  running again; otherwise it runs again. The seed restore is the exception: it
+  always runs again, and decides from the database itself. The restore is one
+  transaction that also marks the database as this install's, so a restore
+  that was killed left the database empty and simply runs again, a committed
+  one is completed, and a database that is neither empty nor marked by this
+  install — a backup restored into it meanwhile, another install — is refused
+  (`… is not empty (<n> objects) and was not seeded by this install — refusing to restore into it`).
+
+Only the secrets a remaining step still needs are asked again: the database,
+diffusion and SMTP passwords only while `persist_config` has not completed (after
+that, the install's own `.env` holds them), the root password only while
+`set_root_pw` has not. A resume that no longer has the root password says so
+(`root login not re-verified …`) instead of checking the login. Resuming a
+complete install verifies every step and prints
+`install already complete — every step verified`.
+
+Exit codes are unchanged: `0` done, `1` refused or failed, `130` interrupted
+(Ctrl-C), `143` terminated.
+
+## Undoing an install (`--abort`)
+
+```shell
+bun run scripts/install.ts --abort --confirm-database dedalo_main
+```
+
+`--abort` undoes, in reverse order, what the state file says the install
+**created**: the database objects (the database goes back to empty — every
+table, function, type, schema and extension the install added is dropped; the
+extensions it already had stay), the ontology staging directory, the directories
+it created (only while still empty), the `.env` (the previous one restored from
+its backup, or removed when there was none) together with every backup and
+`sample.env` the install wrote, and the install status. Then the plan and state
+files and `<private>/install/` go.
+
+It never drops the database itself, never touches objects that predate the
+install (the install only ever started on an empty database), only resets a
+database that carries this install's mark (an empty unmarked one has nothing to
+reset), and refuses — before anything is touched:
+
+- without `--confirm-database` naming the install's database, once the seed
+  restore has started;
+- a **sealed** install — a finished install is a live one;
+- a database that is neither marked by this install nor empty
+  (`database '<db>' is not stamped by this install … — refusing to reset it; nothing was undone`);
+- while another install holds the database, or another installer session is
+  still working on it.
+
+Backups of `.env` that existed before the install (`.env.bak.*`) are never
+removed — only the ones that appeared since the install started.
 
 ## What `../private/.env` does — and does not — get
 
@@ -623,10 +870,19 @@ appended to `../private/.env` at any later time.
 
 ## The state file
 
-`<private>/ts_state.json` records the install status: `configured` while the
-wizard is mid-flight, then `sealed`. It is what makes a reload resume the wizard
-instead of showing a login form, and what makes the sealed instance stay sealed
-across restarts. It belongs in your backups (it is part of `../private/`).
+`<private>/ts_state.json` records the **server's** install status: `configured`
+while the wizard is mid-flight, `terminal_installing` while a command-line
+install is (from its `persist_config` on), then `sealed`. It is what makes a
+reload resume the wizard instead of showing a login form, and what makes the
+sealed instance stay sealed across restarts. A command-line install that stops
+part-way leaves `terminal_installing`: the server does no database work over the
+half-built database, and the browser wizard does **not** open — the install is
+finished from the terminal (`--resume`), never by whoever reaches the port. It
+belongs in your backups (it is part of `../private/`).
+
+It is not the installer's own record: `<private>/install/install.state.json`
+(see [The plan and state files](#the-plan-and-state-files)) tracks the steps of
+one command-line install, for `--resume` and `--abort`.
 
 ## Further reading
 

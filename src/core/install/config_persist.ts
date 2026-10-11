@@ -34,9 +34,9 @@ import { generateSecret } from './secret.ts';
  * The existing .env's assignment lines, VERBATIM and in file order.
  *
  * Kept raw (not re-quoted from the parsed value) so a preserved key round-trips
- * byte-for-byte: parseEnvFile strips surrounding quotes without unescaping inner
- * ones, so re-emitting a parsed value through envQuote could corrupt it — the
- * same trap the JSON lang keys below already document.
+ * byte-for-byte: an operator's line may use quoting envQuote never writes (single
+ * quotes, a backslash before something other than `"`), and re-emitting its
+ * parsed value would normalize it.
  */
 function existingEnvAssignments(): { key: string; line: string }[] {
 	const path = join(installPrivateDir(), '.env');
@@ -189,8 +189,18 @@ function ownedEnvKeys(planKeys: readonly string[]): Set<string> {
  */
 export async function persistConfig(
 	o: Record<string, unknown>,
-	options: { ontologyCatalog?: OntologyCatalog } = {},
+	options: {
+		ontologyCatalog?: OntologyCatalog;
+		/**
+		 * The install status this write records: `configured` (the wizard — its
+		 * surface stays open for the steps after the restart) or
+		 * `terminal_installing` (the terminal installer — the wizard surface stays
+		 * CLOSED while the server's database boot still waits; gate.ts).
+		 */
+		installStatus?: 'configured' | 'terminal_installing';
+	} = {},
 ): Promise<PersistConfigResult> {
+	const { installStatus = 'configured' } = options;
 	const prior = await readPriorEnv();
 	const generated: Record<string, string> = {};
 
@@ -223,9 +233,9 @@ export async function persistConfig(
 	}
 
 	// Rendered with the plan's canonical key names. A RAW
-	// entry (the JSON-shaped lang and server-list keys) is written verbatim:
-	// parseEnvFile strips surrounding quotes but does not unescape inner \", so
-	// an envQuote'd JSON value would not round-trip through JSON.parse.
+	// entry (the JSON-shaped lang and server-list keys) is written verbatim —
+	// readable as-is by every .env reader, not only parseEnvFile (which since
+	// 2026-10-11 does unescape envQuote's \").
 	const lines = renderPlanEnvLines(plan);
 
 	// NEVER DELETE BY OMISSION. This writer rebuilds .env from the posted form, so
@@ -263,7 +273,10 @@ export async function persistConfig(
 	const body = `${lines.join('\n')}\n`;
 
 	// Atomic two-phase commit: private dir 0700, stage .tmp (0600), back up an
-	// existing .env, rename into place.
+	// existing .env BY COPY, then rename the staged file OVER it. The target is
+	// never absent (2026-10-11): the old order renamed the live .env away first,
+	// so a crash between the two renames left no .env at all — a resumable
+	// terminal install must find either the old file or the new one.
 	try {
 		const dir = installPrivateDir();
 		mkdirSync(dir, { recursive: true, mode: 0o700 });
@@ -273,7 +286,8 @@ export async function persistConfig(
 		chmodSync(tmp, 0o600);
 		if (existsSync(target)) {
 			const backup = join(dir, `.env.bak.${Date.now()}`);
-			renameSync(target, backup);
+			copyFileSync(target, backup);
+			chmodSync(backup, 0o600);
 		}
 		renameSync(tmp, target);
 		// EXPLICIT ON THE TARGET, not inherited from the staged file (P2-15 /
@@ -319,7 +333,7 @@ export async function persistConfig(
 	}
 
 	setServerState({
-		install_status: 'configured',
+		install_status: installStatus,
 		information: plan.answers.information || undefined,
 		info_key: plan.answers.info_key || undefined,
 	});

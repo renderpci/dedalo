@@ -176,6 +176,18 @@ describe('install window gate (P1)', () => {
 		expect(ctx[0]?.model).toBe('installer');
 	});
 
+	// A TERMINAL install mid-flight is in progress but never the wizard's: the
+	// page is neither the installer (its API is closed) nor a login over the
+	// half-built database — the install surface's own refusal.
+	test('start under terminal_installing: no installer page, no login — install.not_reachable', async () => {
+		setServerState({ install_status: 'terminal_installing' });
+		const res = await dispatchRqo({ action: 'start', dd_api: 'dd_core_api' } as Rqo, anon());
+		expect(res.body.ok).toBe(false);
+		expect((res.body.error as { code?: string } | undefined)?.code).toBe('install.not_reachable');
+		const ctx = (res.body.data as { context?: { model?: string }[] } | undefined)?.context ?? [];
+		expect(ctx.map((entry) => entry.model)).not.toContain('installer');
+	});
+
 	test('start serves LOGIN once sealed (and for an existing unconfigured deployment)', async () => {
 		const { installInProgress, isSealed } = await import('../../src/core/install/gate.ts');
 		setServerState({ install_status: 'sealed' });

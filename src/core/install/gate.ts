@@ -40,7 +40,19 @@ export function isSealed(): boolean {
  */
 export function installInProgress(): boolean {
 	const status = getServerState().install_status;
-	return status === 'configured' || status === 'installing';
+	return status === 'configured' || status === 'installing' || status === 'terminal_installing';
+}
+
+/**
+ * True while a TERMINAL install (scripts/install.ts) is unfinished — written at
+ * its persist_config instead of `configured` (server_state.ts). It counts as an
+ * install in progress for the server's DATABASE boot (server.ts `databaseBoot`:
+ * the database is not the install's yet), but it NEVER opens the pre-auth wizard
+ * surface (installSurfaceReachable): a crashed terminal install is resumed from
+ * the terminal (`--resume`), not finished by whoever can reach the port.
+ */
+export function terminalInstallInProgress(): boolean {
+	return getServerState().install_status === 'terminal_installing';
 }
 
 /**
@@ -64,7 +76,8 @@ export function installInProgress(): boolean {
  */
 export function installSurfaceReachable(): boolean {
 	if (isSealed()) return false;
-	return INSTALL_MODE || installInProgress();
+	// A terminal install mid-flight is in progress but NOT the wizard's (above).
+	return INSTALL_MODE || (installInProgress() && !terminalInstallInProgress());
 }
 
 /**

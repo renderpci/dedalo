@@ -53,6 +53,14 @@
  *      a mandatory ONTOLOGY never declinable; a THESAURUS never blocks (owner
  *      decision 2026-10-10) — a declined mandatory one, or one with no
  *      hierarchy.json entry, is a WARNING on both sides, never a plan error.
+ *  (j) THE ANSWERS FILE (`--answers`, terminal installer 2026-10-11) is a third
+ *      front end: every matrix case, written as a `dedalo.install.answers/1`
+ *      file (its secrets apart — a file may not carry one, they ride
+ *      DEDALO_INSTALL_*), decides exactly what the wizard post decides; a
+ *      spawned `--answers <file> --plan` prints the in-process plan; a key
+ *      set by both the file and a flag is an error, never a silent winner;
+ *      the run-control flags are front-end flags (key null) and their
+ *      meaningless combinations are parser errors.
  *
  * persistConfig runs in CHILD processes (scratch DEDALO_INSTALL_PRIVATE_DIR +
  * DEDALO_TS_STATE_PATH in the child's env), so this gate never mutates its own
@@ -77,14 +85,18 @@ import {
 	TOPONYMY_TYPOLOGY_ID,
 } from '../../src/core/install/hierarchy_meta.ts';
 import {
+	ANSWERS_FILE_SCHEMA,
+	answersFromAnswersFile,
 	answersFromCliArgs,
 	buildInstallPlan,
 	INSTALL_CLI_FLAGS,
 	INSTALL_STEP_IDS,
 	type InstallPlan,
 	type InstallStepId,
+	mergeAnswerSources,
 	OFFICIAL_CODE_SERVER,
 	OFFICIAL_ONTOLOGY_SERVER,
+	SECRET_ANSWER_KEYS,
 	TOPONYMY_SUGGESTION,
 } from '../../src/core/install/install_plan.ts';
 import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
@@ -946,6 +958,126 @@ describe('install plan — refusals and notes (f)', () => {
 			expect(invocation.errors, spec.flag).toEqual([]);
 			expect(Object.keys(invocation.raw), spec.flag).toEqual([spec.key as string]);
 		}
+	});
+});
+
+// ── (j) the answers file is a third front end ────────────────────────────────
+
+/** A wizard post as an answers file's raw answers: the envelope, its secrets apart. */
+function answersFileRaw(wizard: Record<string, unknown>): Record<string, unknown> {
+	const plain = Object.fromEntries(
+		Object.entries(wizard).filter(
+			([key]) => !(SECRET_ANSWER_KEYS as readonly string[]).includes(key),
+		),
+	);
+	const parsed = answersFromAnswersFile(
+		JSON.parse(JSON.stringify({ schema: ANSWERS_FILE_SCHEMA, answers: plain })),
+	);
+	expect(parsed.errors).toEqual([]);
+	return parsed.raw;
+}
+
+/** The secret answers of a wizard post (what DEDALO_INSTALL_* carries beside a file). */
+function secretsOf(wizard: Record<string, unknown>): Record<string, unknown> {
+	return Object.fromEntries(
+		Object.entries(wizard).filter(([key]) =>
+			(SECRET_ANSWER_KEYS as readonly string[]).includes(key),
+		),
+	);
+}
+
+describe('install plan — the answers file decides what the wizard decides (j)', () => {
+	for (const answerCase of CASES) {
+		test(`${answerCase.name}: answers file (+ its secrets) ≡ wizard post`, () => {
+			const fromFile = buildInstallPlan({
+				...answersFileRaw(answerCase.wizard),
+				...secretsOf(answerCase.wizard),
+			});
+			expect(fromFile.errors).toEqual([]);
+			expect(decided(fromFile)).toEqual(decided(buildInstallPlan(answerCase.wizard)));
+		});
+	}
+
+	test('a spawned `--answers <file> --plan` prints the in-process plan (secrets through the environment)', () => {
+		const wizard: Record<string, unknown> = {
+			...BASE_WIZARD,
+			...DIFFUSION_WIZARD,
+			hierarchies: ['ad'],
+		};
+		const dir = scratchDir('answers_file');
+		const file = join(dir, 'answers.json');
+		writeFileSync(
+			file,
+			JSON.stringify({ schema: ANSWERS_FILE_SCHEMA, answers: answersFileRaw(wizard) }),
+		);
+		const proc = Bun.spawnSync([process.execPath, 'run', CLI, '--plan', '--answers', file], {
+			cwd: ROOT,
+			env: {
+				...Bun.env,
+				DEDALO_INSTALL_PRIVATE_DIR: EMPTY_PRIVATE,
+				DEDALO_INSTALL_DB_PASSWORD: String(wizard.db_password),
+				DEDALO_INSTALL_MYSQL_PASSWORD: String(wizard.mysql_password),
+			},
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect(proc.exitCode, proc.stderr.toString()).toBe(0);
+		const printed = JSON.parse(proc.stdout.toString().trim()) as Record<string, unknown>;
+		expect(printed).toEqual(printedPlan(buildInstallPlan(wizard), []));
+		expect(printed.steps).toContain('test_diffusion_connection');
+	});
+
+	test('a key set by the file AND a flag is an error naming both — never a silent winner', () => {
+		const flags = answersFromCliArgs(BASE_ARGV).raw;
+		const merged = mergeAnswerSources(flags, answersFileRaw(BASE_WIZARD));
+		expect(merged.errors).toContain('db_database is set by both --answers and --db-name');
+		expect(merged.errors).toContain('entity is set by both --answers and --entity');
+		const disjoint = mergeAnswerSources({ entity: 'x' }, { db_database: 'y' });
+		expect(disjoint).toEqual({ raw: { db_database: 'y', entity: 'x' }, errors: [] });
+	});
+
+	test('an answers file refuses a wrong schema, an unknown key and every secret key', () => {
+		expect(answersFromAnswersFile({ answers: {} }).errors).toEqual([
+			`answers file: schema must be ${ANSWERS_FILE_SCHEMA}`,
+		]);
+		expect(
+			answersFromAnswersFile({ schema: ANSWERS_FILE_SCHEMA, answers: { yes: true } }).errors,
+		).toEqual(["answers file: unknown key 'yes'"]);
+		for (const key of SECRET_ANSWER_KEYS) {
+			const parsed = answersFromAnswersFile({
+				schema: ANSWERS_FILE_SCHEMA,
+				answers: { [key]: 'v' },
+			});
+			expect(parsed.raw).toEqual({});
+			expect(parsed.errors[0]).toStartWith(`answers file: '${key}' is a secret`);
+		}
+	});
+
+	test('the run-control flags set no answer, and their meaningless combinations are parser errors', () => {
+		for (const flag of [
+			'--answers',
+			'--resume',
+			'--abort',
+			'--confirm-database',
+			'--secrets-stdin',
+			'--execute',
+		]) {
+			const spec = INSTALL_CLI_FLAGS.find((candidate) => candidate.flag === flag);
+			expect(spec, flag).toBeDefined();
+			expect(spec?.key, flag).toBeNull();
+			const invocation = answersFromCliArgs(spec?.kind === 'value' ? [flag, 'v'] : [flag]);
+			expect(invocation.raw, flag).toEqual({});
+		}
+		const refused: [string[], string][] = [
+			[['--resume', '--abort'], '--resume and --abort exclude each other'],
+			[['--plan', '--resume'], '--plan cannot be combined with --resume or --abort'],
+			[['--list-ontologies', '--abort'], '--list-* cannot be combined with --resume or --abort'],
+			[['--confirm-database', 'x'], '--confirm-database is only meaningful with --abort'],
+		];
+		for (const [argv, error] of refused) {
+			expect(answersFromCliArgs(argv).errors, argv.join(' ')).toContain(error);
+		}
+		expect(answersFromCliArgs(['--abort', '--confirm-database', 'x']).errors).toEqual([]);
 	});
 });
 

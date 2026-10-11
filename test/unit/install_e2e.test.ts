@@ -33,6 +33,14 @@
  *  - the written ACTIVE_ONTOLOGY_TLDS is core + default, in that order;
  *  - the derived relation index is FILLED (the seed ships it empty, the restore
  *    door refills it) and the ontology staging dir is gone (success cleans up).
+ * And, since the resumable terminal installer (2026-10-11):
+ *  - the secrets ride DEDALO_INSTALL_* — argv carries none, so no argv-secret
+ *    warning is printed;
+ *  - a second fresh run over the same private dir REFUSES on the install record
+ *    (install/install.state.json) before writing anything — the .env and the
+ *    record keep their bytes and mtime;
+ *  - `--resume` on the complete install re-verifies every step, says so, exits 0.
+ * Kill-anywhere resume and --abort are install_resume_drill's.
  * The thesaurus import is why the first case's timeout is generous — measured,
  * never narrowed by passing `--hierarchies none`.
  *
@@ -49,7 +57,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, relative, resolve } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -165,7 +173,7 @@ const DECLARED_THESAURI = hierarchyDependencyPlan(
 	]).dependencies,
 ).install;
 
-/** The answers every run gives. */
+/** The answers every run gives — NO secret on argv (2026-10-11: secrets ride DEDALO_INSTALL_*). */
 function cliArgs(): string[] {
 	return [
 		'--hierarchies',
@@ -178,25 +186,33 @@ function cliArgs(): string[] {
 		config.db.host,
 		'--db-port',
 		String(config.db.port),
-		// The admin connection's own password, when it has one: a runner's Postgres
-		// (md5/scram) asks for it, where a desk's trust/.pgpass setup does not — without
-		// it the CLI's connection check is refused on CI and passes here (2026-10-09).
-		...(config.db.password ? ['--db-password', config.db.password] : []),
 		'--entity',
 		'e2etest',
-		'--root-password',
-		// Must pass the ONE password policy (src/core/security/password_policy.ts):
-		// set_root_pw enforces it, and the old 'RootPw12345' failed it ('sequence').
-		'Mosaic-Kestrel-Harbor-47',
 		'--skip-tools',
 	];
 }
 
+/**
+ * The secrets, through the environment (never argv — `ps` shows argv to every
+ * user). The admin connection's own password, when it has one: a runner's
+ * Postgres (md5/scram) asks for it, where a desk's trust/.pgpass setup does not
+ * (2026-10-09). The root password must pass the ONE password policy
+ * (src/core/security/password_policy.ts) — the plan refuses it up front.
+ */
+const ROOT_PASSWORD = 'Mosaic-Kestrel-Harbor-47';
+function secretEnv(): Record<string, string> {
+	return {
+		DEDALO_INSTALL_ROOT_PASSWORD: ROOT_PASSWORD,
+		...(config.db.password ? { DEDALO_INSTALL_DB_PASSWORD: config.db.password } : {}),
+	};
+}
+
 /** Run the install CLI against the scratch DB with fully redirected writes. */
-function runCli(extraArgs: string[] = []): { exitCode: number; out: string } {
-	const proc = Bun.spawnSync(['bun', 'run', CLI, ...cliArgs(), ...extraArgs], {
+function runCli(extraArgs: string[] = [], withAnswers = true): { exitCode: number; out: string } {
+	const proc = Bun.spawnSync(['bun', 'run', CLI, ...(withAnswers ? cliArgs() : []), ...extraArgs], {
 		env: {
 			...process.env,
+			...secretEnv(),
 			DEDALO_INSTALL_PRIVATE_DIR: scratchDir,
 			DEDALO_TS_STATE_PATH: join(scratchDir, 'ts_state.json'),
 			DEDALO_SESSION_DB_PATH: join(scratchDir, 'sessions.sqlite'),
@@ -306,6 +322,8 @@ describe('TS-native install e2e (P5)', () => {
 			console.log(`[install_e2e] CLI install took ${Math.round(performance.now() - started)} ms`);
 			expect(out).toContain('root login verified');
 			expect(exitCode).toBe(0);
+			// No secret rode argv, so no argv-secret warning was earned.
+			expect(out).not.toContain('visible to other users');
 
 			// The CLI ran the SHARED plan: its printed step ids are its own --plan.
 			const planned = Bun.spawnSync(['bun', 'run', CLI, ...cliArgs(), '--plan'], {
@@ -381,12 +399,40 @@ describe('TS-native install e2e (P5)', () => {
 	);
 
 	test.if(available)(
-		named('re-running the CLI on the now-populated DB refuses the restore'),
+		named('re-running the CLI over the install record refuses and writes nothing'),
 		() => {
+			const envPath = join(scratchDir, '.env');
+			const statePath = join(scratchDir, 'install', 'install.state.json');
+			const before = {
+				env: readFileSync(envPath, 'utf8'),
+				envMtime: statSync(envPath).mtimeMs,
+				state: readFileSync(statePath, 'utf8'),
+			};
 			const { exitCode, out } = runCli();
 			expect(exitCode).not.toBe(0);
-			expect(out).toContain('not empty');
+			expect(out).toContain('an install record exists');
+			expect(out).toContain('--resume');
+			// Refused BEFORE any write: the .env and the install record are untouched.
+			expect(readFileSync(envPath, 'utf8')).toBe(before.env);
+			expect(statSync(envPath).mtimeMs).toBe(before.envMtime);
+			expect(readFileSync(statePath, 'utf8')).toBe(before.state);
 		},
 		60000,
+	);
+
+	test.if(available)(
+		named('--resume on the complete install re-verifies every step and exits 0'),
+		() => {
+			const { exitCode, out } = runCli(['--resume'], false);
+			expect(out).toContain('install already complete — every step verified');
+			expect(exitCode).toBe(0);
+			const state = JSON.parse(
+				readFileSync(join(scratchDir, 'install', 'install.state.json'), 'utf8'),
+			) as { outcome: string; steps: Record<string, { status: string }>; runs: { mode: string }[] };
+			expect(state.outcome).toBe('complete');
+			expect(Object.values(state.steps).every((step) => step.status === 'done')).toBe(true);
+			expect(state.runs.map((run) => run.mode)).toEqual(['fresh', 'resume']);
+		},
+		120000,
 	);
 });

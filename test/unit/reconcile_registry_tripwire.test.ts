@@ -51,6 +51,10 @@ const ROOT = join(import.meta.dir, '..', '..');
  * here, unless it genuinely has no second store.
  */
 const EXEMPT: Readonly<Record<string, string>> = {
+	'src/core/install/db_restore.ts':
+		"inspectTargetDatabase: the terminal installer's PREFLIGHT over ONE store (the target database's own catalog — objects, extensions, stamp, sessions); it reconciles nothing and has no second store",
+	'src/core/install/executor.ts':
+		"ExecutorHost.inspectDatabase: the injectable seam over db_restore.ts inspectTargetDatabase (one store, the target's catalog) — the executor's preflight, not a two-store comparison",
 	'src/core/media/jobs.ts':
 		'reconcileProcessFiles: a PROCESS-LIFETIME sweep of pfile job markers against the live process table at boot — one store (the pfile dir) against the process itself, not a second store',
 	'src/core/media/protection.ts':

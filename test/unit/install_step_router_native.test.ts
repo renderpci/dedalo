@@ -22,6 +22,15 @@
  * install.state_conflict on an unconfigured / unstaged install (a CHILD with a
  * scratch private dir — never the live one).
  *
+ * THE ONE STEP TABLE (terminal installer, 2026-10-11): the router's plan steps
+ * and the terminal executor run the SAME table (src/core/install/steps.ts) —
+ * its keys are exactly INSTALL_STEP_IDS, each is a router action, and the
+ * router's body for a step is the table's raw outcome serialized (outcome
+ * equality on test_db_connection and check_directories, not a spelling check).
+ * The wizard's seed step still REFUSES a seeded database (the executor's
+ * stamped variant is its own input — installId) — measured against a real seeded scratch
+ * database in install_resume_drill (scenario A).
+ *
  * Scratch namespace: zzi. No DB writes; the one filesystem-touching arm
  * (check_directories) runs in a CHILD process pointed at a scratch private/
  * media/backup root, and is SKIPPED unless every resolved directory is under it
@@ -36,11 +45,17 @@ import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { INSTALL_ROUTER_ACTIONS, runInstallStep } from '../../src/core/install/engine.ts';
-import { buildInstallPlan, cliBootEnv } from '../../src/core/install/install_plan.ts';
+import {
+	buildInstallPlan,
+	cliBootEnv,
+	INSTALL_STEP_IDS,
+} from '../../src/core/install/install_plan.ts';
 import {
 	describeOntologyCatalog,
 	vendoredOntologyCatalog,
 } from '../../src/core/install/ontology_choice.ts';
+import { STEP_RUNS } from '../../src/core/install/step_runs.ts';
+import { INSTALL_STEPS } from '../../src/core/install/steps.ts';
 
 /** The DedaloError a step threw, or null when it returned a body. */
 async function refusalOf(
@@ -271,6 +286,35 @@ describe('runInstallStep — test_db_connection', () => {
 	});
 });
 
+describe('runInstallStep — the ONE step table', () => {
+	test('INSTALL_STEPS is keyed by exactly INSTALL_STEP_IDS, each a router action', () => {
+		expect(Object.keys(INSTALL_STEPS).sort()).toEqual([...INSTALL_STEP_IDS].sort());
+		for (const [key, definition] of Object.entries(INSTALL_STEPS)) {
+			expect(definition.id, key).toBe(key as (typeof INSTALL_STEP_IDS)[number]);
+			expect(INSTALL_ROUTER_ACTIONS, key).toContain(key);
+			// The table's run IS the router's call — one implementation, not two.
+			expect(definition.run, key).toBe(STEP_RUNS[key as keyof typeof STEP_RUNS]);
+		}
+		expect(Object.keys(STEP_RUNS).sort()).toEqual([...INSTALL_STEP_IDS].sort());
+	});
+
+	test('the router body for test_db_connection IS the table outcome serialized (data = ok, the rest as keys)', async () => {
+		const routed = await runInstallStep(stepRqo({ action: 'test_db_connection' }), anonContext());
+		const raw = await INSTALL_STEPS.test_db_connection.run({
+			posted: { action: 'test_db_connection' },
+			createDirectories: false,
+			actorUserId: -1,
+		});
+		const { ok, ...extension } = raw;
+		expect(routed.body).toEqual({
+			...extension,
+			ok: true,
+			request_id: 'zzi-install-router',
+			data: ok,
+		});
+	});
+});
+
 /**
  * check_directories in a child process with the private/media/backup roots
  * pointed at a NON-EXISTENT scratch tree, so the write+unlink writability probe
@@ -294,9 +338,11 @@ const CHECK_DIRS_SNIPPET = [
 	"  const plain = await runInstallStep({ action: 'install', options: { action: 'check_directories' } }, ctx);",
 	// A TRUTHY STRING — exactly what an HTML form posts for an unchecked box.
 	"  const truthy = await runInstallStep({ action: 'install', options: { action: 'check_directories', create: 'false' } }, ctx);",
+	"  const { INSTALL_STEPS } = await import('./src/core/install/steps.ts');",
+	'  const table = await INSTALL_STEPS.check_directories.run({ posted: {}, createDirectories: false, actorUserId: -1 });',
 	"  const { existsSync } = await import('node:fs');",
 	'  const created = truthy.body.dirs.filter((d) => existsSync(d.path)).map((d) => d.path);',
-	'  console.log(JSON.stringify({ plain: plain.body, truthy: truthy.body, created }));',
+	'  console.log(JSON.stringify({ plain: plain.body, truthy: truthy.body, table, created }));',
 	'}',
 ].join('\n');
 
@@ -349,6 +395,13 @@ describe('runInstallStep — check_directories', () => {
 		expect(body.ok).toBe(true);
 		expect(body.data).toBe(false);
 		expect(body.msg).toBe('One or more directories need attention');
+	});
+
+	test.if(scratchConfirmed)("the router body is the ONE table's check_directories outcome", () => {
+		const { ok, ...extension } = childResult.table as Record<string, unknown>;
+		const body = childResult.plain as Record<string, unknown>;
+		expect(extension.dirs).toBeDefined();
+		expect(body).toEqual({ ...extension, ok: true, request_id: 'zzi', data: ok });
 	});
 
 	test.if(scratchConfirmed)(

@@ -17,12 +17,13 @@
 #          --env-file .dedalo.env build dedalo
 #   3. docker compose --env-file .dedalo.env up -d postgres
 #   4. docker compose --env-file .dedalo.env run --rm \
-#        -e DEDALO_INSTALL_ROOT_PASSWORD='…' dedalo \
+#        -e DEDALO_INSTALL_ROOT_PASSWORD='…' \
+#        -e DEDALO_INSTALL_DB_PASSWORD="$POSTGRES_PASSWORD" dedalo \
 #        bun run scripts/install.ts \
-#          --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" \
-#          --db-password "$POSTGRES_PASSWORD" --db-host postgres \
+#          --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" --db-host postgres \
 #          --entity myentity --langs lg-eng,lg-spa
-#      (the three POSTGRES_* values exported in this shell too, for the arguments)
+#      (the three POSTGRES_* values exported in this shell too, for the arguments;
+#      passwords in the environment, never on the command line — `ps` shows argv)
 #   5. docker compose --env-file .dedalo.env up -d
 #
 # Optional subsystems are behind profiles:
