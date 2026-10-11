@@ -1,8 +1,10 @@
 /**
- * addParent (src/core/relations/parent.ts:275) — the upward hierarchy link
+ * addParent (src/core/relations/parent.ts) — the upward hierarchy link
  * writer. Every branch of the function is exercised against real rows: the
- * auto-reference guard, the descendant-cycle guard, the locator defaults, the
- * item-id pre-allocation, the initial sibling order, and the dedup-append.
+ * auto-reference guard and the descendant-cycle guard (both refuse
+ * `tree.cycle` since ONT-5), the locator defaults, the item-id pre-allocation,
+ * the initial sibling order, and the dedup-append. Every call runs in its own
+ * transaction: a parent.ts mutation refuses without one (CORE-3).
  *
  * SCRATCH SURFACE (this file's namespace ONLY — other agents write the same
  * database concurrently):
@@ -21,8 +23,9 @@
  */
 
 import { afterAll, beforeEach, expect, test } from 'bun:test';
-import { sql } from '../../src/core/db/postgres.ts';
-import { addParent } from '../../src/core/relations/parent.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
+import { isDedaloError } from '../../src/core/errors/index.ts';
+import { addParent, type ParentLocator } from '../../src/core/relations/parent.ts';
 
 const SECTION = 'test3';
 const PARENT_TIPO = 'test71';
@@ -149,6 +152,24 @@ afterAll(async () => {
 	}
 });
 
+/** Who the fixture's tree writes are attributed to (root). */
+const ACTOR = -1;
+
+/** addParent in its own transaction (every parent.ts mutation requires one). */
+function add(sectionTipo: string, sectionId: number, locator: ParentLocator): Promise<boolean> {
+	return withTransaction(() => addParent(sectionTipo, sectionId, PARENT_TIPO, locator, ACTOR));
+}
+
+/** The DedaloError code `run` rejected with — a resolved call is a failure. */
+async function refusalCode(run: Promise<unknown>): Promise<string> {
+	try {
+		await run;
+	} catch (error) {
+		return isDedaloError(error) ? error.code : String(error);
+	}
+	throw new Error('expected a refusal, but the call resolved');
+}
+
 // ---------------------------------------------------------------------------
 // the happy path
 // ---------------------------------------------------------------------------
@@ -157,12 +178,12 @@ test('addParent writes ONE locator carrying the dd47/from_component_tipo default
 	await seedNode({ section_id: 916000 });
 	await seedNode({ section_id: 916001 });
 
-	const result = await addParent(SECTION, 916001, PARENT_TIPO, {
+	const result = await add(SECTION, 916001, {
 		section_tipo: SECTION,
 		section_id: 916000,
 	});
 
-	expect(result).toEqual({ ok: true, errors: [] });
+	expect(result).toBe(true);
 	const locators = await parentLocators(916001);
 	expect(locators).toHaveLength(1);
 	const locator = locators[0] as Record<string, unknown>;
@@ -189,7 +210,7 @@ test('addParent PRESERVES a caller-supplied id/type/from_component_tipo and allo
 	await seedNode({ section_id: 916002 });
 	await seedNode({ section_id: 916003 });
 
-	const result = await addParent(SECTION, 916003, PARENT_TIPO, {
+	const result = await add(SECTION, 916003, {
 		section_tipo: SECTION,
 		section_id: 916002,
 		id: 77,
@@ -197,7 +218,7 @@ test('addParent PRESERVES a caller-supplied id/type/from_component_tipo and allo
 		from_component_tipo: PARENT_TIPO,
 	});
 
-	expect(result.ok).toBe(true);
+	expect(result).toBe(true);
 	const locators = await parentLocators(916003);
 	expect(locators).toHaveLength(1);
 	expect(locators[0]?.id).toBe(77);
@@ -211,26 +232,22 @@ test('addParent PRESERVES a caller-supplied id/type/from_component_tipo and allo
 // the auto-reference guard
 // ---------------------------------------------------------------------------
 
-test('addParent refuses an auto-reference — STRING section_id included — and writes nothing', async () => {
-	// The string form is the load-bearing one: the guard is a loose compare
-	// (Number(a) === Number(b)); a strict compare of the raw values would let
-	// '916010' through and make a record its own parent.
+test('addParent refuses an auto-reference — STRING section_id included — as tree.cycle and writes nothing', async () => {
+	// The string form is the load-bearing one: node identity is the ONE locator
+	// equality (compareLocators: loose section_id); a strict compare of the raw
+	// values would let '916010' through and make a record its own parent.
 	await seedNode({ section_id: 916010, order: [{ id: 1, value: 5 }] });
 	const before = await readRow(916010);
 
-	const asString = await addParent(SECTION, 916010, PARENT_TIPO, {
-		section_tipo: SECTION,
-		section_id: '916010',
-	});
-	expect(asString).toEqual({ ok: false, errors: [] });
+	expect(
+		await refusalCode(add(SECTION, 916010, { section_tipo: SECTION, section_id: '916010' })),
+	).toBe('tree.cycle');
 	expect(await readRow(916010)).toEqual(before);
 
 	// Paired numeric twin — same refusal, same untouched bytes.
-	const asNumber = await addParent(SECTION, 916010, PARENT_TIPO, {
-		section_tipo: SECTION,
-		section_id: 916010,
-	});
-	expect(asNumber).toEqual({ ok: false, errors: [] });
+	expect(
+		await refusalCode(add(SECTION, 916010, { section_tipo: SECTION, section_id: 916010 })),
+	).toBe('tree.cycle');
 	expect(await readRow(916010)).toEqual(before);
 });
 
@@ -238,11 +255,11 @@ test('the auto-reference guard is tipo-scoped: the same id in ANOTHER section is
 	// Control for the case above — proves the refusal came from the guard's
 	// section_tipo half and not from an unconditional bail-out.
 	await seedNode({ section_id: 916011 });
-	const result = await addParent(SECTION, 916011, PARENT_TIPO, {
+	const result = await add(SECTION, 916011, {
 		section_tipo: 'test65',
 		section_id: 916011,
 	});
-	expect(result.ok).toBe(true);
+	expect(result).toBe(true);
 	expect(await parentLocators(916011)).toHaveLength(1);
 });
 
@@ -250,36 +267,52 @@ test('the auto-reference guard is tipo-scoped: the same id in ANOTHER section is
 // the descendant-cycle guard
 // ---------------------------------------------------------------------------
 
-test('addParent records a cycle error when the prospective parent is a DESCENDANT of the child', async () => {
+test('addParent refuses tree.cycle when the prospective parent is a DESCENDANT of the child', async () => {
 	// 916020 → 916021 → 916022, built through addParent itself.
 	await seedNode({ section_id: 916020 });
 	await seedNode({ section_id: 916021 });
 	await seedNode({ section_id: 916022 });
-	expect(
-		(await addParent(SECTION, 916021, PARENT_TIPO, { section_tipo: SECTION, section_id: 916020 }))
-			.ok,
-	).toBe(true);
-	expect(
-		(await addParent(SECTION, 916022, PARENT_TIPO, { section_tipo: SECTION, section_id: 916021 }))
-			.ok,
-	).toBe(true);
+	expect(await add(SECTION, 916021, { section_tipo: SECTION, section_id: 916020 })).toBe(true);
+	expect(await add(SECTION, 916022, { section_tipo: SECTION, section_id: 916021 })).toBe(true);
 
 	const before = await readRow(916020);
-	const result = await addParent(SECTION, 916020, PARENT_TIPO, {
-		section_tipo: SECTION,
-		section_id: 916022,
-	});
-
-	expect(result.ok).toBe(false);
-	expect(result.errors).toEqual([
-		{
-			type: 'add_parent',
-			msg: 'cycle',
-			info: { section_tipo: SECTION, section_id: 916020 },
-		},
-	]);
+	expect(
+		await refusalCode(add(SECTION, 916020, { section_tipo: SECTION, section_id: 916022 })),
+	).toBe('tree.cycle');
 	// The refusal is total: no locator, no order entry, no counter bump.
 	expect(await readRow(916020)).toEqual(before);
+});
+
+test('a cycle is refused BEFORE the id allocation and the order write: a caller that swallows tree.cycle and COMMITS stores nothing', async () => {
+	// addParent is an engine API: its refusal must leave nothing behind even
+	// when the caller catches it and commits its transaction (D15's law, for the
+	// cycle). The record-write hook alone would refuse only at the PARENT-KEY
+	// write — after the item id was burnt and the order value (+ its history
+	// row) written in the same transaction, which this commit would keep.
+	await seedNode({ section_id: 916023 });
+	await seedNode({ section_id: 916024 });
+	expect(await add(SECTION, 916024, { section_tipo: SECTION, section_id: 916023 })).toBe(true);
+	const before = await readRow(916023);
+	const rowsBefore = await scratchRowCount();
+
+	const code = await withTransaction(async () => {
+		try {
+			await addParent(
+				SECTION,
+				916023,
+				PARENT_TIPO,
+				{ section_tipo: SECTION, section_id: 916024 },
+				ACTOR,
+			);
+			return 'resolved';
+		} catch (error) {
+			return isDedaloError(error) ? error.code : String(error);
+		}
+	});
+
+	expect(code).toBe('tree.cycle');
+	expect(await readRow(916023)).toEqual(before); // no link, no order value, no counter bump
+	expect(await scratchRowCount()).toBe(rowsBefore); // no history row
 });
 
 test('a NON-descendant parent two levels up the same tree is accepted (the cycle guard is not a blanket refusal)', async () => {
@@ -288,14 +321,14 @@ test('a NON-descendant parent two levels up the same tree is accepted (the cycle
 	await seedNode({ section_id: 916030 });
 	await seedNode({ section_id: 916031 });
 	await seedNode({ section_id: 916032 });
-	await addParent(SECTION, 916031, PARENT_TIPO, { section_tipo: SECTION, section_id: 916030 });
-	await addParent(SECTION, 916032, PARENT_TIPO, { section_tipo: SECTION, section_id: 916031 });
+	await add(SECTION, 916031, { section_tipo: SECTION, section_id: 916030 });
+	await add(SECTION, 916032, { section_tipo: SECTION, section_id: 916031 });
 
-	const result = await addParent(SECTION, 916032, PARENT_TIPO, {
+	const result = await add(SECTION, 916032, {
 		section_tipo: SECTION,
 		section_id: 916030,
 	});
-	expect(result).toEqual({ ok: true, errors: [] });
+	expect(result).toBe(true);
 	expect(await parentLocators(916032)).toHaveLength(2);
 });
 
@@ -307,21 +340,21 @@ test('a duplicate addParent is refused BEFORE it allocates an id or writes an or
 	await seedNode({ section_id: 916040 });
 	await seedNode({ section_id: 916041, descriptor: true });
 
-	const first = await addParent(SECTION, 916041, PARENT_TIPO, {
+	const first = await add(SECTION, 916041, {
 		section_tipo: SECTION,
 		section_id: 916040,
 	});
-	expect(first.ok).toBe(true);
+	expect(first).toBe(true);
 	expect(await orderItems(916041)).toEqual([{ id: 1, value: 1 }]);
 
-	const second = await addParent(SECTION, 916041, PARENT_TIPO, {
+	const second = await add(SECTION, 916041, {
 		section_tipo: SECTION,
 		section_id: 916040,
 	});
 
 	// The equality is section_tipo + section_id + type + from_component_tipo,
 	// so the re-add is refused and the relation column keeps exactly one link.
-	expect(second).toEqual({ ok: false, errors: [] });
+	expect(second).toBe(false);
 	expect(await parentLocators(916041)).toHaveLength(1);
 	expect(Number((await parentLocators(916041))[0]?.id)).toBe(1);
 
@@ -345,27 +378,20 @@ test('the dedup key is FOUR-part: a link differing only in type — or only in f
 	await seedNode({ section_id: 916045 });
 	await seedNode({ section_id: 916046 });
 
+	expect(await add(SECTION, 916046, { section_tipo: SECTION, section_id: 916045 })).toBe(true);
 	expect(
-		(await addParent(SECTION, 916046, PARENT_TIPO, { section_tipo: SECTION, section_id: 916045 }))
-			.ok,
+		await add(SECTION, 916046, {
+			section_tipo: SECTION,
+			section_id: 916045,
+			type: 'dd151', // same coordinates, different relation type
+		}),
 	).toBe(true);
 	expect(
-		(
-			await addParent(SECTION, 916046, PARENT_TIPO, {
-				section_tipo: SECTION,
-				section_id: 916045,
-				type: 'dd151', // same coordinates, different relation type
-			})
-		).ok,
-	).toBe(true);
-	expect(
-		(
-			await addParent(SECTION, 916046, PARENT_TIPO, {
-				section_tipo: SECTION,
-				section_id: 916045,
-				from_component_tipo: 'test54', // same coordinates, different origin component
-			})
-		).ok,
+		await add(SECTION, 916046, {
+			section_tipo: SECTION,
+			section_id: 916045,
+			from_component_tipo: 'test54', // same coordinates, different origin component
+		}),
 	).toBe(true);
 
 	const locators = await parentLocators(916046);
@@ -383,8 +409,8 @@ test('a SECOND, different parent appends rather than replacing', async () => {
 	await seedNode({ section_id: 916043 });
 	await seedNode({ section_id: 916044 });
 
-	await addParent(SECTION, 916044, PARENT_TIPO, { section_tipo: SECTION, section_id: 916042 });
-	await addParent(SECTION, 916044, PARENT_TIPO, { section_tipo: SECTION, section_id: 916043 });
+	await add(SECTION, 916044, { section_tipo: SECTION, section_id: 916042 });
+	await add(SECTION, 916044, { section_tipo: SECTION, section_id: 916043 });
 
 	const locators = await parentLocators(916044);
 	expect(locators).toHaveLength(2);
@@ -420,11 +446,11 @@ test('the initial order is the parent’s DESCRIPTOR-children count + 1, keyed t
 	await seedNode({ section_id: 916054, parents: [parentLink(916050, 1)] });
 	await seedNode({ section_id: 916053 });
 
-	const result = await addParent(SECTION, 916053, PARENT_TIPO, {
+	const result = await add(SECTION, 916053, {
 		section_tipo: SECTION,
 		section_id: 916050,
 	});
-	expect(result.ok).toBe(true);
+	expect(result).toBe(true);
 
 	const locator = (await parentLocators(916053))[0] as Record<string, unknown>;
 	expect(await orderItems(916053)).toEqual([{ id: Number(locator.id), value: 3 }]);
@@ -432,17 +458,17 @@ test('the initial order is the parent’s DESCRIPTOR-children count + 1, keyed t
 
 test('addParent still links when the section declares NO order component (test38): locator yes, order no', async () => {
 	// test38 has no thesaurus section_map at all ⇒ orderContext() is null and
-	// setChildOrder returns false — which addParent ignores by contract.
+	// setChildOrder writes nothing — the link lands without an order.
 	await sql.unsafe(
 		`INSERT INTO matrix_test (section_id, section_tipo) VALUES ($1,'test38'), ($2,'test38')`,
 		[916060, 916061],
 	);
 	try {
-		const result = await addParent('test38', 916061, PARENT_TIPO, {
+		const result = await add('test38', 916061, {
 			section_tipo: 'test38',
 			section_id: 916060,
 		});
-		expect(result.ok).toBe(true);
+		expect(result).toBe(true);
 		const rows = (await sql.unsafe(
 			`SELECT relation::text AS relation, "number"::text AS "number"
 			   FROM matrix_test WHERE section_tipo='test38' AND section_id = $1`,

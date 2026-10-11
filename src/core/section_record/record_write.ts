@@ -377,6 +377,82 @@ async function relationSearchWrites(
 	return writes;
 }
 
+/** The relation bag of a whole-record write as one key write per parent-candidate key. */
+function relationKeyWrites(relation: unknown): SavePathItem[] {
+	return Object.entries(bagOf(relation)).map(([key, value]) => ({
+		column: 'relation' as MatrixJsonbColumn,
+		key,
+		value,
+	}));
+}
+
+/**
+ * The cycle check of a WHOLE-RECORD write's relation bag (absent bag: nothing
+ * to check) — persistRecordColumns (`replace`) and writeBirth (`birth`).
+ */
+async function assertRelationBagAcyclic(
+	target: RecordWriteTarget,
+	relation: unknown,
+	mode: 'replace' | 'birth',
+): Promise<void> {
+	await assertParentLinkKeys(target, relationKeyWrites(relation), mode);
+}
+
+/**
+ * ONT-5 — THE CYCLE CHECK of every component_relation_parent key a chokepoint
+ * write carries (relations/parent.ts assertParentLinkKeysAcyclic), in the
+ * writer's transaction, after its row lock, before its write: `replace` (the
+ * value is the whole key), `append` (added to the stored items), `birth` (the
+ * row was just inserted: every stored link is added). A write with no relation
+ * key costs nothing.
+ */
+async function assertParentLinkKeys(
+	target: RecordWriteTarget,
+	writes: readonly SavePathItem[],
+	mode: 'replace' | 'append' | 'birth',
+): Promise<void> {
+	if (!writes.some((write) => write.column === 'relation')) return;
+	// CONVENTIONS §2 rationale 1 — cycle-breaking at the write chokepoint:
+	// parent.ts writes THROUGH this chokepoint (persistTreeKeys).
+	const { assertParentLinkKeysAcyclic } = await import('../relations/parent.ts');
+	await assertParentLinkKeysAcyclic(target, writes, mode);
+}
+
+/** True when `savePath` writes a parent key (it must not take the fast path). */
+async function writesParentLink(savePath: readonly SavePathItem[]): Promise<boolean> {
+	if (!savePath.some((item) => item.column === 'relation')) return false;
+	// CONVENTIONS §2 rationale 1 (see assertParentLinkKeys).
+	const { hasParentLinkWrite } = await import('../relations/parent.ts');
+	return hasParentLinkWrite(savePath);
+}
+
+/** A key write with nothing to write is a caller defect, never a no-op. */
+function assertSavePathNotEmpty(
+	target: RecordWriteTarget,
+	savePath: readonly SavePathItem[],
+	door: string,
+): void {
+	if (savePath.length > 0) return;
+	throw new DedaloError('internal.invariant', {
+		message: `${door}: empty savePath`,
+		coordinates: {
+			table: target.table,
+			section_tipo: target.sectionTipo,
+			section_id: target.sectionId,
+		},
+	});
+}
+
+/** The SVG envelope step of writeKeys (§4) — only a write carrying a media key. */
+async function persistSvgEnvelopes(
+	target: RecordWriteTarget,
+	savePath: readonly SavePathItem[],
+): Promise<void> {
+	if (!savePath.some((item) => item.column === 'media')) return;
+	const { persistSvgEnvelopesForKeys } = await import('../media/svg_overlay.ts');
+	await persistSvgEnvelopesForKeys(target, savePath);
+}
+
 /**
  * THE KEY WRITE shared by the four key entries: the SVG envelope (§4), then —
  * inside ONE transaction when anything derived is owed — the before-image of
@@ -390,16 +466,7 @@ async function writeKeys(
 	derived: WriteDerivation,
 	mode: KeyWriteMode,
 ): Promise<void> {
-	if (savePath.length === 0) {
-		throw new DedaloError('internal.invariant', {
-			message: `${mode.door}: empty savePath`,
-			coordinates: {
-				table: target.table,
-				section_tipo: target.sectionTipo,
-				section_id: target.sectionId,
-			},
-		});
-	}
+	assertSavePathNotEmpty(target, savePath, mode.door);
 
 	// 4. COMPONENT_IMAGE SVG ENVELOPE (PHP component_image::save :119-133 →
 	//    create_svg_file). The vector editor ships the drawing inside the saved
@@ -412,16 +479,16 @@ async function writeKeys(
 	//    refused payload must fail the save, not follow it).
 	//    Column-gated before the import so the hot path of every non-media write
 	//    pays nothing.
-	if (savePath.some((item) => item.column === 'media')) {
-		const { persistSvgEnvelopesForKeys } = await import('../media/svg_overlay.ts');
-		await persistSvgEnvelopesForKeys(target, savePath);
-	}
+	await persistSvgEnvelopes(target, savePath);
 
 	const auditWrites = buildModifiedAuditWrites(target.sectionTipo, audit);
 	const touchedKeys = [...savePath, ...auditWrites].map((item) => item.key);
 	const plan = await planKeyObligations(savePath, mode);
+	// A parent key is never written transaction-less: its cycle check needs the
+	// row lock held to COMMIT (ONT-5), so it takes the transaction path below.
+	const parentLink = await writesParentLink(savePath);
 
-	if (plan.observed.length === 0 && plan.indexed.length === 0) {
+	if (plan.observed.length === 0 && plan.indexed.length === 0 && !parentLink) {
 		const affected = await updateMatrixKeysData(
 			target.table,
 			target.sectionTipo,
@@ -464,6 +531,7 @@ async function writeKeys(
 				after: asItems(item.value),
 			});
 		}
+		if (parentLink) await assertParentLinkKeys(target, savePath, 'replace');
 		const indexWrites = await relationSearchWrites(plan.indexed, mode.law);
 		const affected = await updateMatrixKeysData(
 			target.table,
@@ -523,6 +591,7 @@ export async function persistAppendedKeyItems(
 	derived: WriteDerivation,
 ): Promise<void> {
 	await withTransaction(async () => {
+		await assertParentLinkKeys(target, [{ column, key, value: inserts }], 'append');
 		const appended = await appendMatrixKeyItems(
 			target.table,
 			target.sectionTipo,
@@ -1030,6 +1099,7 @@ export async function persistRecordColumns(
 			?.columns as Record<string, unknown> | undefined;
 		if (live === undefined) assertRecordStillExists(0, target, 'persistRecordColumns');
 		const liveColumns = live ?? {};
+		await assertRelationBagAcyclic(target, columns.relation, 'replace');
 		const values: MatrixWriteValues = { ...columns };
 		const pinned = await pinCoveredObserverSlots(values, bagOf(liveColumns.relation));
 		await rederiveHiIndex(values, liveColumns);
@@ -1215,6 +1285,7 @@ async function writeBirth(
 	) {
 		return null;
 	}
+	await assertRelationBagAcyclic(target, values.relation, 'birth');
 	await afterRecordWrite(target, {
 		door,
 		touchedKeys: columnKeys(values),

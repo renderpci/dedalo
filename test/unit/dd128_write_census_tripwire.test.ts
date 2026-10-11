@@ -202,6 +202,11 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'the component_relation_children write-through (WC-2026-10-02): its writes are HARD-BOUND to the child section’s component_relation_parent (and that section’s section_map order number) — the users section declares no parent component (relation_children_write_through_native asserts getParentTipo(dd128) is null), so no dd128 component is reachable. Every child is still asked of authorizeRecordAccess (write, level 2, door `save`, the dd128-aware pair + scope) before any write.',
 	},
+	'src/core/relations/parent.ts': {
+		verdict: 'not-dd128',
+		reason:
+			'the thesaurus tree mutators (persistTreeKeys, CLOSURE_PLAN Step 5): every key they write is HARD-BOUND to a section’s component_relation_parent (getParentTipo), its section_map order number, or add_child’s section_map thesaurus defaults — the users section declares no parent component (relation_children_write_through_native asserts getParentTipo(dd128) is null), so no dd128 component is reachable. Their one caller, ts_object/ts_api.ts, gates at the section level (its own row).',
+	},
 	'src/core/relations/children_orphan_sweep.ts': {
 		verdict: 'system',
 		reason:

@@ -318,35 +318,169 @@ export async function readMatrixKeyForUpdate(
 	columnName: MatrixJsonbColumn,
 	key: string,
 ): Promise<unknown[] | null> {
+	return readMatrixKeyLocked(tableName, sectionTipo, sectionId, columnName, key, 'UPDATE');
+}
+
+/**
+ * Read ONE jsonb key of a matrix row under a `FOR SHARE` row lock — the
+ * reader's half of the tree's cycle check (relations/parent.ts).
+ *
+ * `FOR SHARE` (not `FOR KEY SHARE`) is the weakest mode that CONFLICTS with
+ * the implicit `FOR NO KEY UPDATE` every plain UPDATE takes: a session that is
+ * rewriting this row's parent links makes the share read WAIT, and under READ
+ * COMMITTED the waited read returns the row version that session committed. Two
+ * share readers never block each other, so walks over shared ancestors do not
+ * queue. Same guards, same refusal outside a transaction, same answers as
+ * `readMatrixKeyForUpdate`.
+ */
+export async function readMatrixKeyForShare(
+	tableName: string,
+	sectionTipo: string,
+	sectionId: number,
+	columnName: MatrixJsonbColumn,
+	key: string,
+): Promise<unknown[] | null> {
+	return readMatrixKeyLocked(tableName, sectionTipo, sectionId, columnName, key, 'SHARE');
+}
+
+/** The two row-lock strengths a key read may take (closed: the SQL suffix comes from here only). */
+type KeyLockStrength = 'UPDATE' | 'SHARE';
+
+/** Per strength: the door name its refusals carry and its lock clause. */
+const KEY_LOCK: Readonly<Record<KeyLockStrength, { door: string; clause: string }>> = {
+	UPDATE: { door: 'readMatrixKeyForUpdate', clause: 'FOR UPDATE' },
+	SHARE: { door: 'readMatrixKeyForShare', clause: 'FOR SHARE' },
+};
+
+/** The identifier + transaction guards of a locked key read (refuses as internal.invariant). */
+function assertLockedKeyRead(
+	{ door, clause }: { door: string; clause: string },
+	tableName: string,
+	columnName: MatrixJsonbColumn,
+	key: string,
+	coordinates: { section_tipo: string; section_id: number },
+): void {
 	assertMatrixTable(tableName);
 	if (!MATRIX_JSONB_COLUMNS.includes(columnName)) {
 		throw new DedaloError('internal.invariant', {
-			message: `readMatrixKeyForUpdate: column '${columnName}' is not allowlisted (spec §7.6)`,
+			message: `${door}: column '${columnName}' is not allowlisted (spec §7.6)`,
 			coordinates: { table: tableName, column: columnName },
 		});
 	}
 	if (!/^[a-z]+[0-9]+$/.test(key)) {
 		throw new DedaloError('internal.invariant', {
-			message: `readMatrixKeyForUpdate: key '${key}' fails the tipo grammar (spec §7.6)`,
+			message: `${door}: key '${key}' fails the tipo grammar (spec §7.6)`,
 			coordinates: { table: tableName, key },
 		});
 	}
 	if (!isInTransaction()) {
 		throw new DedaloError('internal.invariant', {
 			message:
-				'readMatrixKeyForUpdate: FOR UPDATE outside a transaction holds no lock past the ' +
+				`${door}: ${clause} outside a transaction holds no lock past the ` +
 				'statement — wrap the read-modify-write in withTransaction',
-			coordinates: { table: tableName, section_tipo: sectionTipo, section_id: sectionId },
+			coordinates: { table: tableName, ...coordinates },
 		});
 	}
+}
+
+/** The guarded body of the two locked key reads. */
+async function readMatrixKeyLocked(
+	tableName: string,
+	sectionTipo: string,
+	sectionId: number,
+	columnName: MatrixJsonbColumn,
+	key: string,
+	strength: KeyLockStrength,
+): Promise<unknown[] | null> {
+	const lock = KEY_LOCK[strength];
+	assertLockedKeyRead(lock, tableName, columnName, key, {
+		section_tipo: sectionTipo,
+		section_id: sectionId,
+	});
 	const rows = (await sql.unsafe(
 		`SELECT "${columnName}"->'${key}' AS items FROM "${tableName}"
-		 WHERE section_tipo = $1 AND section_id = $2 FOR UPDATE`,
+		 WHERE section_tipo = $1 AND section_id = $2 ${lock.clause}`,
 		[sectionTipo, sectionId],
 	)) as { items: unknown }[];
 	if (rows.length === 0) return null;
 	const items = rows[0]?.items;
 	return Array.isArray(items) ? items : [];
+}
+
+/** One matrix row to lock (table + section coordinates). */
+export interface MatrixRowRef {
+	table: string;
+	sectionTipo: string;
+	sectionId: number;
+}
+
+/**
+ * Take `FOR UPDATE` row locks on a SET of matrix rows in ONE global order — the
+ * tree's sibling rewrites (relations/parent.ts recalculateSiblingOrders /
+ * sortChildren) lock every row they may rewrite through this, BEFORE the
+ * first read, so two rewrites over overlapping siblings can never lock in
+ * opposite orders (a lock-order inversion is a 40P01 deadlock).
+ *
+ * The order: groups by (table, section_tipo) in CODE-UNIT order (never
+ * localeCompare — a collation is not a lock order), then `section_id`
+ * ascending inside one statement (`ORDER BY … FOR UPDATE`: the lock node sits
+ * above the sort, so rows lock in sorted order). Ids are truncated, checked as
+ * integers and de-duplicated; a missing row is simply not locked (the caller's
+ * own locked read then answers null for it).
+ *
+ * A locked READ only — it changes no value. MUST run inside withTransaction:
+ * outside one the locks die with the statement, so that is a programming error
+ * and throws, even for an empty set.
+ */
+export async function lockMatrixRowsForUpdate(rows: readonly MatrixRowRef[]): Promise<void> {
+	if (!isInTransaction()) {
+		throw new DedaloError('internal.invariant', {
+			message:
+				'lockMatrixRowsForUpdate: FOR UPDATE outside a transaction holds no lock past the ' +
+				'statement — wrap the rewrite in withTransaction',
+			coordinates: { rows: rows.length },
+		});
+	}
+	for (const group of groupRowsForLocking(rows)) {
+		await sql.unsafe(
+			`SELECT section_id FROM "${group.table}"
+			 WHERE section_tipo = $1 AND section_id = ANY($2::int[])
+			 ORDER BY section_id FOR UPDATE`,
+			[group.sectionTipo, `{${group.ids.join(',')}}`],
+		);
+	}
+}
+
+/** Group, validate and order the rows of one lock batch (see lockMatrixRowsForUpdate). */
+function groupRowsForLocking(
+	rows: readonly MatrixRowRef[],
+): { table: string; sectionTipo: string; ids: number[] }[] {
+	const groups = new Map<string, { table: string; sectionTipo: string; ids: Set<number> }>();
+	for (const row of rows) {
+		assertMatrixTable(row.table);
+		const id = Math.trunc(Number(row.sectionId));
+		if (!Number.isSafeInteger(id)) {
+			throw new DedaloError('internal.invariant', {
+				message: `lockMatrixRowsForUpdate: section_id '${String(row.sectionId)}' is not an integer`,
+				coordinates: { table: row.table, section_tipo: row.sectionTipo },
+			});
+		}
+		const groupKey = `${row.table}\u0000${row.sectionTipo}`;
+		const group = groups.get(groupKey) ?? {
+			table: row.table,
+			sectionTipo: row.sectionTipo,
+			ids: new Set<number>(),
+		};
+		group.ids.add(id);
+		groups.set(groupKey, group);
+	}
+	return [...groups.entries()]
+		.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+		.map(([, group]) => ({
+			table: group.table,
+			sectionTipo: group.sectionTipo,
+			ids: [...group.ids].sort((a, b) => a - b),
+		}));
 }
 
 /**

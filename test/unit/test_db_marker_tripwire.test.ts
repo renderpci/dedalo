@@ -451,6 +451,24 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 			}),
 	},
 	{
+		// The tree-integrity situation (test/helpers/tree_lock_situation.ts): a raw
+		// seed of a node's parent links — refused, writing nothing, unmarked.
+		name: 'seedLinks',
+		run: async () =>
+			(await import('../helpers/tree_lock_situation.ts')).seedLinks(
+				{
+					section: 'zzmk1',
+					term: 'zzmk2',
+					parent: 'zzmk3',
+					children: 'zzmk4',
+					order: null,
+					table: 'matrix_test',
+				},
+				999_997,
+				[{ parent: 999_996, itemId: 1 }],
+			),
+	},
+	{
 		name: 'demoteToLegacyRun',
 		run: async () => (await import('../helpers/legacy_bulk_run.ts')).demoteToLegacyRun(999_997),
 	},

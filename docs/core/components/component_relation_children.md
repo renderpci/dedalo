@@ -338,10 +338,12 @@ for flat output. See [exporting data](../exporting_data.md).
 ## Notes
 
 - **Inverse of `component_relation_parent`.** Adds/removes are routed through the
-  related parent component: `addParent()` / `removeParent()` (`src/core/relations/parent.ts`)
-  are the single write path — a child's parent edge (and this component's computed
-  reflection of it) is always mutated from the child's `component_relation_parent`,
-  never from this component's own column (it never writes, on either side).
+  related parent component: a save on this component is a set of ordinary saves of each
+  affected child's `component_relation_parent` (`src/core/relations/children_write.ts`),
+  and the tree doors write it through `addParent()` / `moveParent()`
+  (`src/core/relations/parent.ts`) — a child's parent edge (and this component's computed
+  reflection of it) is always mutated on the child's `component_relation_parent`,
+  never in this component's own column (it never writes, on either side).
 - **Thesaurus integration.** `getChildrenOfType()` (`src/core/relations/parent.ts`, over
   `getChildrenOfTypeLocators` in `src/core/relations/children.ts`) filters by descriptor
   vs non-descriptor using the section map's `thesaurus.is_descriptor` (a locator to the

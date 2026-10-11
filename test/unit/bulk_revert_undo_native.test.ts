@@ -54,7 +54,7 @@ import { basename, dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
-import { decodeTmImage } from '../../src/core/db/time_machine.ts';
+import { decodeTmImage, recordBulkBirth } from '../../src/core/db/time_machine.ts';
 import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
 import { buildMediaLocation } from '../../src/core/media/path.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
@@ -741,6 +741,44 @@ describe('records the run created (D2)', () => {
 		expect(await stored(born, 'string', TEXT)).toBeUndefined();
 		expect(reasons(data)).toEqual(['created_record_kept']);
 		expect(targetsOf(await stored(referrer, 'relation', TPORTAL))).toEqual([born]);
+	});
+
+	test('a born record whose delete FAILS behind its scope gate is `failed`, located, with the error’s CODE', async () => {
+		// WC-2026-10-11-parent-link-cycle-every-door: every LOCATED `failed` entry
+		// carries the converter's wire code of what failed the unit — a code,
+		// never the words. Situation: the run created a record in a section the
+		// ontology no longer declares (a node removed after the run). Its marker
+		// passes the scope gate (an admin; an unresolvable section is not proven
+		// gone), then the delete door refuses it with a TYPED error. The run's
+		// other born record is still deleted: one marker's failure never aborts
+		// the others.
+		const gone = `${TLD}999`; // no ontology node: resolves no matrix table
+		const run = await mint();
+		const born = await rec(run);
+		try {
+			expect(await getMatrixTableFromTipo(gone)).toBeNull();
+			expect(
+				await recordBulkBirth({ sectionTipo: gone, sectionId: born, userId: USER_ID, bulkId: run }),
+			).not.toBeNull();
+			const quiet = console.error;
+			console.error = () => {};
+			const data = await revert(run).finally(() => {
+				console.error = quiet;
+			});
+			expect(data.skipped).toEqual([
+				{
+					reason: 'failed',
+					section_tipo: gone,
+					tipo: gone,
+					section_id: born,
+					code: 'section.no_matrix_table',
+				},
+			]);
+			expect(JSON.stringify(data)).not.toContain('no matrix table');
+			expect(await stored(born, 'string', TEXT)).toBe('NO-RECORD');
+		} finally {
+			await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1', [gone]);
+		}
 	});
 
 	test('born records referencing EACH OTHER are all deleted (repeated passes)', async () => {

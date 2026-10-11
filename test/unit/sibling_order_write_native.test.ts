@@ -34,8 +34,33 @@
  */
 
 import { afterAll, beforeEach, expect, test } from 'bun:test';
-import { sql } from '../../src/core/db/postgres.ts';
-import { recalculateSiblingOrders, sortChildren } from '../../src/core/relations/parent.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
+import {
+	recalculateSiblingOrders as recalculateSiblingOrdersUnwrapped,
+	sortChildren as sortChildrenUnwrapped,
+} from '../../src/core/relations/parent.ts';
+
+/** Who the fixture's tree writes are attributed to (root). */
+const ACTOR = -1;
+
+/** The two rewrites, each in its own transaction (a parent.ts mutation refuses without one), as ACTOR. */
+const recalculateSiblingOrders = (
+	childSectionTipo: string,
+	parentSectionTipo: string,
+	parentSectionId: number,
+): ReturnType<typeof recalculateSiblingOrdersUnwrapped> =>
+	withTransaction(() =>
+		recalculateSiblingOrdersUnwrapped(childSectionTipo, parentSectionTipo, parentSectionId, ACTOR),
+	);
+const sortChildren = (
+	childSectionTipo: string,
+	locators: Parameters<typeof sortChildrenUnwrapped>[1],
+	parentSectionTipo: string,
+	parentSectionId: number,
+): ReturnType<typeof sortChildrenUnwrapped> =>
+	withTransaction(() =>
+		sortChildrenUnwrapped(childSectionTipo, locators, parentSectionTipo, parentSectionId, ACTOR),
+	);
 
 const SECTION = 'test3';
 const PARENT_TIPO = 'test71';

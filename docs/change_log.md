@@ -271,11 +271,27 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **No change can place a thesaurus term below itself any more — not two tree moves made at the same moment, nor an edit, import or restore — and two people changing a term's broader terms at the same time no longer erase each other's change.**
+
+    Before, two drag-and-drop moves in the thesaurus tree made at the same moment, each harmless on its own, could together place a term under one of its own narrower terms. The hierarchy then contained a loop: the term showed up under itself and its list of ancestors could not be resolved. Now the second move sees the first and is refused with *The move would create a cycle in the tree*, and nothing is stored. The same refusal now answers when the tree's add button would create a term that a leftover link already names as a broader term of one of its new ancestors; before, that failed with a generic error. Duplicating a term is refused the same way when such a leftover link would make the copy one of its own broader terms; before, the copy was stored with the loop. The same check now guards every other way a broader term is stored: saving the broader-term field in the edit form (or its narrower-terms field), the API and assistant field writes, CSV import, propagating a value to many records, and restoring a value, a whole record or a deleted record from the history. Each refuses a change that would close a loop with the same message and stores nothing. A bulk revert from the history keeps going when one of its changes would close a loop: that change is left as it is and listed among the skipped ones with the reason `tree.cycle`; every skipped change that failed now names the reason as a code. An existing loop can still be repaired: removing the link that closes it, or adding a broader term that does not touch it, is accepted.
+
+    Changes made at the same moment no longer get lost either. Before, if two people moved the same term (one with several broader terms), or one moved it while another edited its broader-term field or its position among its siblings, the change saved last could silently undo the first. Now the second change waits for the first and builds on it. See [the thesaurus tree](./core/thesaurus/index.md).
+
+    Wire contract: `WC-2026-10-11-parent-link-cycle-every-door`.
+
 - **The PDF extractor shows extracted text exactly as the PDF holds it, and its HTML mode is cleaned on the server.**
 
     In **text** mode the extractor used to read the extracted text as if it were web markup, so anything between angle brackets disappeared from the preview — an epigraphic edition such as `IMP CAES<A>R` became `IMP CAESR`, and that was what "Select text" copied into the record. Now the preview shows the characters exactly as the PDF holds them. In **HTML** mode the page markers are now added on the server, using the page offset set on the PDF field, and the result is cleaned by the same sanitizer that cleans rich text on save before the preview shows it; a PDF with no page markers no longer produces an empty preview. HTML mode also works again with current versions of the PDF tools on the server: an option they do not accept made every HTML extraction fail.
 
     Wire contract: `WC-2026-10-11-pdf-extractor-render-class`.
+
+- **Moving, adding and reordering terms in the thesaurus tree is recorded in each term's history and updates its "modified by" and "modified date".**
+
+    Before, a change made in the thesaurus tree itself — dragging a term under another broader term, creating a narrower term with the tree's add button, or dragging terms into a new order — was stored without a trace: the term's history showed nothing, and its *modified by* and *modified date* still named the previous edit. Such a change could therefore be neither seen nor undone from the history.
+
+    Now each of these changes is recorded like an edit made in the form. The moved term's history shows the move as one change (its broader term before and after), the new position among its siblings is recorded too, and every term whose position changed shows who changed it and when. See [the thesaurus tree](./core/thesaurus/index.md).
+
+    Wire contract: `WC-2026-10-11-parent-link-cycle-every-door`.
 
 - **Thesaurus: adding a child to a term now shows its expand arrow at once.**
 
@@ -2162,7 +2178,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 116 entries"
+??? note "Wire contract — 117 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -2277,6 +2293,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-10-hierarchy-json-manifest`
     - `WC-2026-10-10-ontology-dependencies-hierarchy60`
     - `WC-2026-10-10-update-ontology-confirm-text`
+    - `WC-2026-10-11-parent-link-cycle-every-door`
     - `WC-2026-10-11-pdf-extractor-render-class`
     - `WC-2026-10-11-rich-text-sanitizer-tokenizer`
     - `WC-2026-10-11-session-user-beside-csrf-token`

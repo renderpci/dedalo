@@ -74,8 +74,9 @@
  * assertFrameTargetDuplicable.
  *
  * NOT ATOMIC, AND SAID OUT LOUD (2026-08-28, CLI-01 / P0-10). This writer opens
- * NO transaction. The clone COMMITS at step 4 (insertMatrixRecordWithCounter is
- * a single autocommit statement), and steps 3b, 4b, 5 and 6 — frame-target
+ * NO transaction around the whole. The clone COMMITS at step 4 (the insert and
+ * the clone's parent-link cycle check, ONT-5, in one short transaction of their
+ * own — nothing else is in it), and steps 3b, 4b, 5 and 6 — frame-target
  * re-minting, media file copies (never a throw: a verdict), the two Time Machine
  * rows per component, and afterRecordWrite with the observer cascade it carries —
  * run outside any transaction, before and after that commit. Consequences a
@@ -125,6 +126,7 @@ import { isConvertibleSectionIdString, isSectionId } from '../../concepts/sectio
 import { isDataframeEntry } from '../../concepts/subdatum.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixJsonbColumn, readMatrixRecord } from '../../db/matrix.ts';
 import { insertMatrixRecordWithCounter, type MatrixWriteValues } from '../../db/matrix_write.ts';
+import { withTransaction } from '../../db/postgres.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { logError } from '../../errors/log.ts';
 import { type ComponentMediaCopy, duplicateSectionMediaFiles } from '../../media/file_ops.ts';
@@ -140,6 +142,7 @@ import {
 	slotsFromBag,
 } from '../../relations/dataframe_slots.ts';
 import { NOLAN } from '../../relations/main_lanes.ts';
+import { assertParentLinkKeysAcyclic, type ParentKeyWrite } from '../../relations/parent.ts';
 import { currentDataLang } from '../../resolve/request_lang.ts';
 import {
 	afterRecordWrite,
@@ -166,6 +169,16 @@ const AUDIT_TIPOS: ReadonlySet<string> = new Set([
 	MODIFIED_BY_USER,
 	MODIFIED_DATE,
 ]);
+
+/** The clone's relation bag as one key write per key (the cycle check reads the parent keys). */
+function relationKeyWrites(relation: unknown): ParentKeyWrite[] {
+	if (relation === null || typeof relation !== 'object' || Array.isArray(relation)) return [];
+	return Object.entries(relation as Record<string, unknown>).map(([key, value]) => ({
+		column: 'relation',
+		key,
+		value,
+	}));
+}
 
 /** Columns whose content is NOT copied wholesale (rebuilt or system-managed). */
 const SKIP_COPY_COLUMNS: ReadonlySet<string> = new Set(['data', 'meta', 'relation_search']);
@@ -284,8 +297,25 @@ export async function duplicateSectionRecord(
 	//    through the chokepoint's BIRTH step (record_write.ts prepareBirthColumns
 	//    — the one law every record birth stores by): no covered observer slot,
 	//    the `_hi` index derived from the relation as copied and re-minted.
+	//    The insert and the clone's PARENT-LINK CYCLE CHECK share ONE short
+	//    transaction (ONT-5, WC-2026-10-11-parent-link-cycle-every-door): the
+	//    clone copies the source's component_relation_parent key, and a STALE
+	//    link naming the id the counter mints here closes a loop through the
+	//    clone — knowable only once the id exists. A refusal (`tree.cycle`)
+	//    rolls back the row AND the counter; nothing addressed by that id
+	//    exists yet (media and history follow the commit), so a reused id
+	//    adopts nothing. Step 3b's re-minted frame targets are already
+	//    committed and stay, unreferenced — as after any failure at this step.
 	const pinned = await prepareBirthColumns(values);
-	const newSectionId = await insertMatrixRecordWithCounter(table, sectionTipo, values);
+	const newSectionId = await withTransaction(async () => {
+		const id = await insertMatrixRecordWithCounter(table, sectionTipo, values);
+		await assertParentLinkKeysAcyclic(
+			{ table, sectionTipo, sectionId: id },
+			relationKeyWrites(values.relation),
+			'birth',
+		);
+		return id;
+	});
 
 	// 4b. Media files: copy every quality/ext file to the new id (PHP
 	//     duplicate_component_media_files), then re-index the clone AT ITS OWN

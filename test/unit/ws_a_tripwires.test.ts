@@ -904,8 +904,8 @@ const INLINE_SECTION_ID_MATCH_RATCHET = new Set<string>([
 	'src/core/relations/children.ts',
 	// datalist.ts, filter_projects.ts, tool_import_files/server/index.ts:
 	// migrated onto compareLocators — entries retired 2026-07-07 (the staleness
-	// self-test below now enforces this pruning mechanically).
-	'src/core/relations/parent.ts',
+	// self-test below now enforces this pruning mechanically). relations/parent.ts:
+	// retired 2026-10-11 (CORE-3/ONT-5 — node + link identity via compareLocators).
 	'src/core/relations/select_lang.ts',
 	'src/core/ontology/hierarchy_provision.ts',
 	// info_widgets.ts split into widgets/<tld>/ modules (Phase 1, 2026-07-10):

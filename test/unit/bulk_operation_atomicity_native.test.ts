@@ -765,7 +765,13 @@ describe('a restore whose Time Machine row cannot be written rolls back WHOLE (D
 		mintedBulkIds.push(data.bulk_process_id);
 		expect(data.counter).toBe(0);
 		expect(data.skipped).toEqual([
-			{ reason: 'failed', section_tipo: SECTION, tipo: MAIN, section_id: bulkRecord },
+			{
+				reason: 'failed',
+				section_tipo: SECTION,
+				tipo: MAIN,
+				section_id: bulkRecord,
+				code: 'internal.unexpected',
+			},
 		]);
 		expect(await storedKey(bulkRecord, MAIN)).toEqual(bulkMainBefore);
 		// the two visible rows + the batch's BEFORE; nothing of the revert

@@ -26,8 +26,8 @@ Registered actions (`src/core/api/handlers/dd_ts_api.ts`): `get_node_data`, `get
 | `section_id.not_an_address` | a `section_id` in the body is not a record address. |
 | `perm.denied` | section permission below the action's level. |
 | `tree.parent_unresolved` | the section has no `component_relation_parent` to hang the node from. |
-| `tree.cycle` | `update_parent_data` would make a node its own ancestor (self-target included). |
-| `tree.node_write_failed` | the mutation's transaction rolled back; nothing was written. |
+| `tree.cycle` | `update_parent_data` would make a node its own ancestor (self-target included) — also when a concurrent move committed first and the two together would close a loop. |
+| `tree.node_write_failed` | the mutation's transaction rolled back; nothing was written (including a deadlock victim whose retries ran out). |
 | `request.invalid_options` | `save_order` without `parent_section_tipo` / `parent_section_id`. |
 | `resource.conflict` | `save_order` on a section whose `section_map` declares no `order` key — there is no column to write the sequence into. |
 
@@ -171,7 +171,7 @@ Move a node from one parent to another.
 `data` is `true`.
 
 !!! warning
-    A cycle is refused **before** any mutation: moving a node onto itself, or onto one of its own descendants, answers `tree.cycle` and nothing is written.
+    A cycle is refused and nothing is written: moving a node onto itself, or onto one of its own descendants, answers `tree.cycle`. The check runs twice: once before the transaction (the fast answer) and once inside it, on locked rows, so two concurrent moves that would *together* close a loop cannot both commit — the later one answers `tree.cycle`. See [the thesaurus lock law](../../core/thesaurus/index.md#the-lock-law-no-lost-update-no-stored-cycle).
 
 ### Example request
 

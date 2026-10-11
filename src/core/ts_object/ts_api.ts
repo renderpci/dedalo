@@ -5,9 +5,13 @@
  * add_child, update_parent_data, save_order.
  *
  * Reads gate at permission ≥1, writes at ≥2 (PHP common::get_permissions on the
- * section). Every mutation runs inside ONE withTransaction that first acquires the
- * PHP-identical advisory node lock(s), does all validation BEFORE any write (no
- * orphan window), and invalidates caches only AFTER commit. Cache invalidation and
+ * section). Every mutation runs inside ONE tree transaction (tree_locks.ts
+ * withTreeTransaction — a deadlock victim is re-run from the start) that first
+ * acquires the PHP-identical advisory node lock(s), then the row locks of the
+ * lock law (relations/parent.ts MUTATION HALF), does all validation BEFORE any
+ * write (no orphan window), writes every key through the record-write
+ * chokepoint with its Time Machine rows (parent.ts persistTreeKeys — PHP
+ * component->save()), and invalidates caches only AFTER commit. Cache invalidation and
  * the dd_ontology order sync run post-commit, never inside the tx.
  *
  * The thin wrappers in api/handlers/dd_ts_api.ts resolve the principal, forward
@@ -22,8 +26,7 @@ import type { Rqo } from '../concepts/rqo.ts';
 import { coerceSectionId } from '../concepts/section_id.ts';
 import { clampClientLimit } from '../concepts/sqo.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
-import { updateMatrixKeyData } from '../db/matrix_write.ts';
-import { acquireNodeLock, withTransaction } from '../db/postgres.ts';
+import { acquireNodeLock } from '../db/postgres.ts';
 import { DedaloError, isDedaloError, SectionIdRefused } from '../errors/index.ts';
 import {
 	RELATION_TYPE_LINK,
@@ -37,13 +40,16 @@ import { getParentTipo } from '../relations/children.ts';
 import {
 	addParent,
 	isAncestor,
+	moveParent,
+	persistTreeKeys,
 	recalculateSiblingOrders,
-	removeParent,
 	sortChildren,
+	type TreeKeyWrite,
 } from '../relations/parent.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
 import type { Principal } from '../security/permissions.ts';
 import { getPermissions } from '../security/permissions.ts';
+import { withTreeTransaction } from './tree_locks.ts';
 import {
 	invalidateNode,
 	type ParseLocator,
@@ -322,7 +328,7 @@ export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiOut
 
 	let newSectionId: number;
 	try {
-		newSectionId = await withTransaction(async () => {
+		newSectionId = await withTreeTransaction(async () => {
 			await acquireNodeLock(sectionTipo, sectionId);
 
 			const createdId = await createSectionRecord(sectionTipo, principal.userId);
@@ -330,27 +336,22 @@ export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiOut
 			const table = await getMatrixTableFromTipo(sectionTipo);
 			if (table === null) throw new Error('Failed to resolve matrix table for new section');
 
+			// The new node's defaults, written through the chokepoint in ONE
+			// update (PHP add_child: each default is an edit-mode component that
+			// autosaves — stamped and historied; persistTreeKeys reads each key's
+			// before-image itself).
+			const target = { table, sectionTipo, sectionId: createdId };
+			const defaults: TreeKeyWrite[] = [];
+			const stage = (column: TreeKeyWrite['column'], key: string, after: unknown[] | null) => {
+				defaults.push({ column, key, after });
+			};
 			// is_descriptor default (dd64/1) when the section_map defines it.
 			if (typeof thesaurus.is_descriptor === 'string' && thesaurus.is_descriptor !== '') {
-				await updateMatrixKeyData(
-					table,
-					sectionTipo,
-					createdId,
-					'relation',
-					thesaurus.is_descriptor,
-					[siNoYesLocator(thesaurus.is_descriptor)],
-				);
+				stage('relation', thesaurus.is_descriptor, [siNoYesLocator(thesaurus.is_descriptor)]);
 			}
 			// is_indexable default (dd64/1) when defined.
 			if (typeof thesaurus.is_indexable === 'string' && thesaurus.is_indexable !== '') {
-				await updateMatrixKeyData(
-					table,
-					sectionTipo,
-					createdId,
-					'relation',
-					thesaurus.is_indexable,
-					[siNoYesLocator(thesaurus.is_indexable)],
-				);
+				stage('relation', thesaurus.is_indexable, [siNoYesLocator(thesaurus.is_indexable)]);
 			}
 
 			// ontology7 (ONT-TLD): for a GOVERNED `<tld>0` section nothing happens
@@ -372,24 +373,24 @@ export async function addChild(rqo: Rqo, principal: Principal): Promise<TsApiOut
 					((parentRecord?.columns.string as Record<string, unknown[]> | null)?.ontology7 as
 						| unknown[]
 						| undefined) ?? [];
-				await updateMatrixKeyData(
-					table,
-					sectionTipo,
-					createdId,
-					'string',
-					'ontology7',
-					tldItems.length === 0 ? null : tldItems,
-				);
+				stage('string', 'ontology7', tldItems.length === 0 ? null : tldItems);
 			}
+			await persistTreeKeys(target, defaults, principal.userId);
 
 			// link to the parent node.
-			const added = await addParent(sectionTipo, createdId, parentRelationTipo, {
-				section_tipo: sectionTipo,
-				section_id: sectionId,
-				from_component_tipo: parentRelationTipo,
-				type: RELATION_TYPE_PARENT,
-			});
-			if (!added.ok) throw new Error('Failed add parent locator to new section');
+			const added = await addParent(
+				sectionTipo,
+				createdId,
+				parentRelationTipo,
+				{
+					section_tipo: sectionTipo,
+					section_id: sectionId,
+					from_component_tipo: parentRelationTipo,
+					type: RELATION_TYPE_PARENT,
+				},
+				principal.userId,
+			);
+			if (!added) throw new Error('Failed add parent locator to new section');
 
 			return createdId;
 		});
@@ -436,7 +437,9 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 		});
 	}
 
-	// PRE-mutation cycle guard.
+	// PRE-mutation cycle guard — a FAST refusal only (unlocked, before the
+	// transaction). The authoritative check is moveParent's locked walk inside
+	// the transaction (relations/parent.ts), which also answers tree.cycle.
 	const isSelfTarget = newParentSectionTipo === sectionTipo && newParentSectionId === sectionId;
 	if (
 		isSelfTarget ||
@@ -453,7 +456,7 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 	}
 
 	try {
-		await withTransaction(async () => {
+		await withTreeTransaction(async () => {
 			// lock both parents in deterministic (strcmp) order.
 			const lockKeys: [string, number][] = [
 				[oldParentSectionTipo, oldParentSectionId],
@@ -464,29 +467,39 @@ export async function updateParentData(rqo: Rqo, principal: Principal): Promise<
 				await acquireNodeLock(tipo, id);
 			}
 
-			const removed = await removeParent(sectionTipo, sectionId, parentTipo, {
-				section_tipo: oldParentSectionTipo,
-				section_id: oldParentSectionId,
-				from_component_tipo: parentTipo,
-				type: RELATION_TYPE_PARENT,
-			});
-			if (!removed)
+			const moved = await moveParent(
+				sectionTipo,
+				sectionId,
+				parentTipo,
+				{
+					section_tipo: oldParentSectionTipo,
+					section_id: oldParentSectionId,
+					from_component_tipo: parentTipo,
+					type: RELATION_TYPE_PARENT,
+				},
+				{
+					section_tipo: newParentSectionTipo,
+					section_id: newParentSectionId,
+					from_component_tipo: parentTipo,
+					type: RELATION_TYPE_PARENT,
+				},
+				principal.userId,
+			);
+			if (moved === 'from_not_found')
 				throw new Error(
 					`Remove old parent locator failed: ${oldParentSectionTipo}_${oldParentSectionId}`,
 				);
-
-			const added = await addParent(sectionTipo, sectionId, parentTipo, {
-				section_tipo: newParentSectionTipo,
-				section_id: newParentSectionId,
-				from_component_tipo: parentTipo,
-				type: RELATION_TYPE_PARENT,
-			});
-			if (!added.ok)
+			if (moved === 'to_refused')
 				throw new Error(
 					`Add new parent locator failed: ${newParentSectionTipo}_${newParentSectionId}`,
 				);
 
-			await recalculateSiblingOrders(sectionTipo, oldParentSectionTipo, oldParentSectionId);
+			await recalculateSiblingOrders(
+				sectionTipo,
+				oldParentSectionTipo,
+				oldParentSectionId,
+				principal.userId,
+			);
 		});
 	} catch (error) {
 		refuseRolledBack(error, 'update_parent_data', {
@@ -541,9 +554,15 @@ export async function saveOrder(rqo: Rqo, principal: Principal): Promise<TsApiOu
 
 	let result: Awaited<ReturnType<typeof sortChildren>>;
 	try {
-		result = await withTransaction(async () => {
+		result = await withTreeTransaction(async () => {
 			await acquireNodeLock(parentSectionTipo, parentSectionId);
-			return sortChildren(sectionTipo, arLocators, parentSectionTipo, parentSectionId);
+			return sortChildren(
+				sectionTipo,
+				arLocators,
+				parentSectionTipo,
+				parentSectionId,
+				principal.userId,
+			);
 		});
 	} catch (error) {
 		refuseRolledBack(error, 'save_order', {

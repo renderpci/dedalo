@@ -35,7 +35,7 @@
 import { afterAll, afterEach, beforeEach, describe, expect, mock, test } from 'bun:test';
 import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
-import { sql } from '../../src/core/db/postgres.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
 import type { ParentLocator } from '../../src/core/relations/parent.ts';
 import * as parentModule from '../../src/core/relations/parent.ts';
@@ -100,10 +100,15 @@ async function seedNode(sectionId: number): Promise<void> {
 	);
 }
 
-/** Link `childId` under `parentId` through the real machinery (id allocation + order). */
+/**
+ * Link `childId` under `parentId` through the real machinery (id allocation +
+ * order), in its own transaction (every parent.ts mutation requires one).
+ */
 async function link(childId: number, parentId: number): Promise<void> {
-	const added = await addParent(SECTION, childId, PARENT_TIPO, parentLocator(parentId));
-	if (!added.ok) throw new Error(`fixture link ${childId}→${parentId} failed`);
+	const added = await withTransaction(() =>
+		addParent(SECTION, childId, PARENT_TIPO, parentLocator(parentId), SUPERUSER.userId),
+	);
+	if (!added) throw new Error(`fixture link ${childId}→${parentId} failed`);
 }
 
 async function relationOf(sectionId: number, tipo: string): Promise<Locator[] | null> {
@@ -116,6 +121,28 @@ async function orderItemsOf(sectionId: number): Promise<OrderItem[] | null> {
 	const record = await readMatrixRecord(TABLE, SECTION, sectionId);
 	const numbers = (record?.columns.number ?? null) as Record<string, OrderItem[]> | null;
 	return numbers?.[ORDER_TIPO] ?? null;
+}
+
+/** The Time Machine rows of one record (optionally one key) above `since` — the history a door left. */
+async function historyOf(
+	sectionId: number,
+	since = 0,
+	tipo: string | null = null,
+): Promise<{ data: unknown; user_id: string }[]> {
+	return (await sql.unsafe(
+		`SELECT data, user_id FROM matrix_time_machine
+		  WHERE section_tipo = $1 AND section_id = $2 AND id > $3 AND ($4::text IS NULL OR tipo = $4)
+		  ORDER BY id`,
+		[SECTION, sectionId, since, tipo],
+	)) as { data: unknown; user_id: string }[];
+}
+
+/** The newest Time Machine id (a door's rows are counted above it). */
+async function tmWatermark(): Promise<number> {
+	const rows = (await sql.unsafe(
+		'SELECT COALESCE(MAX(id), 0)::int AS id FROM matrix_time_machine',
+	)) as { id: number }[];
+	return Number(rows[0]?.id ?? 0);
 }
 
 /**
@@ -421,6 +448,7 @@ describe('saveOrder', () => {
 describe('addChild', () => {
 	test('creates the record, stamps the si/no descriptor default and links it to the parent', async () => {
 		await seedNode(P1);
+		const since = await tmWatermark();
 
 		const response = await callAddChild({ section_tipo: SECTION, section_id: P1 }, SUPERUSER);
 		const newId = Number(response.data);
@@ -444,6 +472,12 @@ describe('addChild', () => {
 		expect(await relationOf(newId, DESCRIPTOR_TIPO)).toEqual([siNoYes(DESCRIPTOR_TIPO)]);
 		// the initial sibling order is paired to the parent-link item id.
 		expect(await orderItemsOf(newId)).toEqual([{ value: 1, id: 1 }]);
+		// The DEFAULT is a save like any other (PHP: an autosaving edit-mode
+		// component): ONE history row of exactly the stored value, by the actor.
+		const descriptorRows = await historyOf(newId, since, DESCRIPTOR_TIPO);
+		expect(descriptorRows.length).toBe(1);
+		expect(descriptorRows[0]?.data).toEqual(await relationOf(newId, DESCRIPTOR_TIPO));
+		expect(Number(descriptorRows[0]?.user_id)).toBe(SUPERUSER.userId);
 	});
 
 	test('a section without a component_relation_parent is refused before any record is created', async () => {
@@ -490,7 +524,7 @@ describe('addChild', () => {
 
 		mock.module('../../src/core/relations/parent.ts', () => ({
 			...REAL_PARENT_MODULE,
-			addParent: async () => ({ ok: false, errors: [] }),
+			addParent: async () => false,
 		}));
 
 		const error = await refusal(callAddChild({ section_tipo: SECTION, section_id: P1 }, SUPERUSER));
@@ -605,6 +639,13 @@ describe('updateParentData', () => {
 		expect(links[0]?.section_id).toBe(P2);
 		expect(links[0]?.type).toBe('dd47');
 
+		// A's WHOLE order value: one frame, keyed to the NEW link's item id (first
+		// under the empty P2) — the removed link's frame (id 1) is gone, never an
+		// orphan left in the record and its history.
+		const newLinkId = Number(links[0]?.id);
+		expect(newLinkId).not.toBe(1);
+		expect(await orderItemsOf(A)).toEqual([{ value: 1, id: newLinkId }]);
+
 		// old siblings renumbered densely from 1.
 		expect(await orderItemsOf(B)).toEqual([{ value: 1, id: 1 }]);
 		expect(await orderItemsOf(C)).toEqual([{ value: 2, id: 1 }]);
@@ -618,11 +659,12 @@ describe('updateParentData', () => {
 		await link(A, P2); // A is a child of BOTH
 		const beforeLinks = await relationOf(A, PARENT_TIPO);
 		const beforeOrder = await orderItemsOf(A);
+		const beforeHistory = (await historyOf(A)).length;
 		expect((beforeLinks as Locator[]).length).toBe(2);
 
-		// removeParent(P1) SUCCEEDS and writes; addParent(P2) then hits the dedup
-		// guard and returns ok:false → the throw, and ONLY the transaction restores
-		// the locator + its order entry.
+		// moveParent removes the P1 order entry (a WRITE, historied), then the P2
+		// link hits the dedup guard (`to_refused`) → the throw, and ONLY the
+		// transaction restores the order entry and drops its history row.
 		const error = await refusal(
 			updateParentData(
 				{
@@ -647,6 +689,54 @@ describe('updateParentData', () => {
 
 		expect(await relationOf(A, PARENT_TIPO)).toEqual(beforeLinks as Locator[]);
 		expect(await orderItemsOf(A)).toEqual(beforeOrder as OrderItem[]);
+		// …and the order removal's history row went with it.
+		expect((await historyOf(A)).length).toBe(beforeHistory);
+	});
+
+	test('a STALE move (old parent no longer linked) is refused whole: never turned into an add', async () => {
+		// The CORE-3 race outcome as one request: a concurrent move already took A
+		// out of P2 (here: A was never under P2). The move must not ADD C anyway —
+		// A would end up with an extra broader term and the call would answer ok.
+		await seedNode(P1);
+		await seedNode(P2);
+		await seedNode(A);
+		await seedNode(C);
+		await link(A, P1);
+		const beforeLinks = await relationOf(A, PARENT_TIPO);
+		const beforeOrder = await orderItemsOf(A);
+		const historyRows = async (): Promise<number> => {
+			const rows = (await sql.unsafe(
+				`SELECT count(*)::int AS n FROM matrix_time_machine
+				  WHERE section_tipo = $1 AND section_id = $2`,
+				[SECTION, A],
+			)) as { n: number }[];
+			return Number(rows[0]?.n ?? -1);
+		};
+		const beforeHistory = await historyRows();
+
+		const error = await refusal(
+			updateParentData(
+				{
+					source: {
+						section_tipo: SECTION,
+						section_id: A,
+						old_parent_section_tipo: SECTION,
+						old_parent_section_id: P2,
+						new_parent_section_tipo: SECTION,
+						new_parent_section_id: C,
+					},
+				} as never,
+				SUPERUSER,
+			),
+		);
+
+		expect(error.code).toBe('tree.node_write_failed');
+		expect((error.cause as Error).message).toContain(
+			`Remove old parent locator failed: ${SECTION}_${P2}`,
+		);
+		expect(await relationOf(A, PARENT_TIPO)).toEqual(beforeLinks as Locator[]);
+		expect(await orderItemsOf(A)).toEqual(beforeOrder as OrderItem[]);
+		expect(await historyRows()).toBe(beforeHistory);
 	});
 
 	test('a caller without write permission is refused', async () => {
