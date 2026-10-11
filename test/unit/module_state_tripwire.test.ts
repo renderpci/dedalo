@@ -655,6 +655,10 @@ const ALLOWLISTED_MODULE_CONST = new Set<string>([
 	// Request-latency aggregate (WS-E observability): monotonic count/total/max
 	// ops metrics fed by access_log — never cleared by design, no identity.
 	'core/api/counters.ts:latency',
+	// Export selection-cursor admission (PERF-1): a process-wide slot counter
+	// plus the FIFO of background exports waiting for a slot — pooled-connection
+	// budget (ops state, max(1, floor(DB_POOL_MAX/4))), never request identity.
+	'diffusion/export/selection_cursor.ts:selectionAdmission',
 ]);
 
 /** Mutation shapes for a named binding: assignment, ++/--, mutating methods. */

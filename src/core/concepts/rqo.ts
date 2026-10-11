@@ -28,7 +28,7 @@ import {
 	boundedOptionsBag,
 	boundedShortName,
 } from './scalar_bounds.ts';
-import { sqoSchema } from './sqo.ts';
+import { wireSqoSchema } from './sqo.ts';
 
 /**
  * The request target: what model/record/mode the action operates on.
@@ -251,7 +251,7 @@ export const rqoSchema = z
 		action: boundedIdentifier(),
 		source: rqoSourceSchema.optional(),
 		/** Search query for read/search actions. Sanitized at the boundary (§7.5). */
-		sqo: sqoSchema.optional(),
+		sqo: wireSqoSchema.optional(),
 		show: rqoDdoBlockSchema.optional(),
 		search: rqoDdoBlockSchema.optional(),
 		choose: rqoDdoBlockSchema.optional(),

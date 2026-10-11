@@ -59,6 +59,46 @@ function repoRelative(file: string): string {
 	return relative(REPO_ROOT, file).split('\\').join('/');
 }
 
+/**
+ * A PINNED ENVIRONMENT for an isolated gate's child, keyed by the gate's
+ * repo-relative path. The second reason a gate runs alone: it needs a CONFIG
+ * value the engine reads ONCE at module load (e.g. `CLIENT_MAX_LIMIT` from
+ * DEDALO_SEARCH_CLIENT_MAX_LIMIT), so the only honest way to measure the
+ * engine under that value is a process that boots with it. Declared here — not
+ * passed at the call site — so the guard statement keeps its one shape
+ * (`census_derivation_tripwire` reads it). Keys a test must NOT pin (the lane
+ * database, the media root, the session store) are refused below.
+ */
+export const ISOLATED_GATE_ENV: Readonly<Record<string, Readonly<Record<string, string>>>> = {
+	'test/unit/client_page_doors_native.test.ts': { DEDALO_SEARCH_CLIENT_MAX_LIMIT: '3' },
+	'test/unit/export_selection_cursor_native.test.ts': {
+		DB_POOL_MAX: '4',
+		DEDALO_SEARCH_CLIENT_MAX_LIMIT: '3',
+	},
+};
+
+/** Seams an isolated gate's pinned env may never set: the child derives them. */
+const UNPINNABLE_KEYS = new Set([
+	'DEDALO_TEST_DATABASE',
+	'DEDALO_TEST_MEDIA_ROOT',
+	'DEDALO_TEST_RAG_DB_NAME',
+	'DEDALO_SESSION_DB_PATH',
+	'DB_NAME',
+	ISOLATED_GATE_KEY,
+]);
+
+function pinnedEnv(target: string): Record<string, string> {
+	const pinned = ISOLATED_GATE_ENV[target] ?? {};
+	for (const key of Object.keys(pinned)) {
+		if (UNPINNABLE_KEYS.has(key)) {
+			throw new Error(
+				`isolated_gate: '${target}' pins '${key}', a per-run seam the child must derive itself`,
+			);
+		}
+	}
+	return { ...pinned };
+}
+
 /** True in the gate's own child process — the only place its real body may register. */
 export function isIsolatedGateChild(file: string): boolean {
 	return process.env[ISOLATED_GATE_KEY] === repoRelative(file);
@@ -76,6 +116,7 @@ function runIsolated(file: string): { run: ParityRun | null; exitCode: number; s
 	const env: Record<string, string | undefined> = {
 		...base,
 		...(census === undefined ? {} : { DEDALO_TIER_CENSUS_RUNNING: census }),
+		...pinnedEnv(target),
 		[ISOLATED_GATE_KEY]: target,
 		// NO TRANSPILER CACHE in the child. Bun's runtime transpiler cache (on disk,
 		// shared by every process of the machine, keyed by source — not by the

@@ -193,6 +193,10 @@ DB_TIER_TRIPWIRES=(
 	test/unit/change_plan_write_door_native.test.ts
 	test/unit/import_create_door_native.test.ts
 	test/unit/install_ontology_door_native.test.ts
+	test/unit/client_page_doors_native.test.ts
+	test/unit/search_related_page_window_native.test.ts
+	test/unit/filter_projects_membership_native.test.ts
+	test/unit/filter_projects_scope_native.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

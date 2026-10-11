@@ -422,6 +422,23 @@ src/diffusion/export/grid.ts   openExportGrid() — THE producer
 The server forces the SQO to the full filtered selection (`sqo.limit = null`
 → ALL, `offset = 0`) after the read-permission gate, so the export always
 covers the whole search result rather than the client's clamped page limit.
+That selection is read in pages from ONE snapshot taken when the export opens
+(a server-side cursor), never loaded whole, so a large export costs the server
+the same memory as a small one; `meta.total` is the snapshot's exact count, and
+a record saved while the export runs is not part of it. Each server process runs
+at most a quarter of `DB_POOL_MAX` exports at once (at least one); beyond that
+a `get_export_grid` request is refused with `export.busy` — try again shortly —
+while a background export (`build_export_artifact`) waits for the next free
+slot instead of failing (its Stop ends the wait). A server with
+`DB_POOL_MAX=1` cannot run exports. A streamed export whose reader stops
+pulling lines for 15 minutes is closed with `export.consumer_idle`, which frees
+its database connection; the time the server spends building the export never
+counts, so a slow export that keeps being read is never cut.
+
+`get_export_grid` without `ndjson_stream` returns the whole grid in one answer,
+so it is refused with `export.format_limit` when the selection holds more than
+`DEDALO_SEARCH_CLIENT_MAX_LIMIT` records; the NDJSON stream and the background
+export serve the same selection.
 
 ### API
 

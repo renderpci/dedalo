@@ -41,6 +41,7 @@ import { getComponentModel, getRenderClass } from '../components/registry.ts';
 import type { RenderClass } from '../components/types.ts';
 import { mediaTypeOf } from '../concepts/media.ts';
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
+import { type ClientPage, offsetPastPage } from '../concepts/sqo.ts';
 import { getActiveTlds } from '../db/dd_ontology.ts';
 import { MATRIX_JSONB_COLUMNS, type MatrixRecord } from '../db/matrix.ts';
 import { sql } from '../db/postgres.ts';
@@ -61,7 +62,11 @@ import { buildRequestConfigForElement } from '../relations/request_config/build.
 import { optimizeTcIn, optimizeTcOut, secondsToTc, tcToSeconds } from '../resolve/optimize_tc.ts';
 import { currentApplicationLang, currentDataLang } from '../resolve/request_lang.ts';
 import { truncateHtml } from '../resolve/truncate_html.ts';
-import { findInverseReferenceLocators } from '../search/search_related.ts';
+import {
+	findInverseReferenceLocators,
+	findInverseReferenceLocatorsPast,
+	type RelatedLocatorFilter,
+} from '../search/search_related.ts';
 import { sanitizeRichText } from '../security/html_sanitize.ts';
 import type { Principal } from '../security/permissions.ts';
 import { getIndexationListConfig } from './list_definitions/indexation_list.ts';
@@ -1390,6 +1395,157 @@ export interface IndexationGridSqo {
 	offset?: number;
 }
 
+/**
+ * The grid's sink question — the indexation locators it asks for and the
+ * owning sections it narrows to — or null when the sqo names nothing to show.
+ * ONE derivation, shared by the page read and the past-the-window probe, so
+ * the probe can never ask a different question than the page it judges.
+ */
+function indexationSinkQuery(
+	sqo: IndexationGridSqo,
+): { filterLocators: RelatedLocatorFilter[]; sectionTipos: string[] | 'all' } | null {
+	// target sections (string | string[]; empty → nothing to show)
+	const rawTarget = sqo.section_tipo;
+	const targetSection =
+		rawTarget === undefined || rawTarget === null || rawTarget === ''
+			? null
+			: Array.isArray(rawTarget)
+				? (rawTarget as string[])
+				: [String(rawTarget)];
+	if (targetSection === null || targetSection.length === 0) return null;
+	// inverse locators (PHP get_ar_locators → search_related + parse_data)
+	const filterLocators = (sqo.filter_by_locators ?? [])
+		.filter((locator) => typeof locator?.section_tipo === 'string')
+		.map((locator) => ({
+			type: RELATION_TYPE_INDEX,
+			section_tipo: String(locator.section_tipo),
+			section_id: locator.section_id as string | number,
+		}));
+	if (filterLocators.length === 0) return null;
+	return {
+		filterLocators,
+		sectionTipos: targetSection.includes('all') ? 'all' : targetSection,
+	};
+}
+
+/**
+ * Whether ANY group past the served page — the grid's own question and order,
+ * from the page's end — is one THIS CALLER may see (READ-4: a DEFAULTED page
+ * owes the `search.page_clamped` notice exactly when it cut something the
+ * caller could page to). Not only the next window: a hidden window can sit
+ * between the page and visible groups.
+ *
+ * SCOPED, like the page itself (AUTHZ-05), and BOUNDED whatever the tail: the
+ * breakdown's rows past the page (findInverseReferenceLocatorsPast — the
+ * sink's own question, plan and order) are projected onto their section_top
+ * (SECTION_TOP_SQL, the SQL twin of groupBySectionTop) and asked ONE question
+ * (record_scope anyRowInScope: the section grant, then one EXISTS under the
+ * list's own record predicate — the halves scopeIndexationGroups applies). So
+ * the notice answers only "is there anything for you past this page" — a
+ * question the caller can already ask by paging forward. An unscoped probe
+ * would answer "do more than offset+limit references exist", counting records
+ * the caller cannot reach (a binary search on the offset yields the exact
+ * unscoped total); a probe that READ the tail window by window cost a deep
+ * OFFSET read per window for a non-admin whose tail is hidden.
+ */
+export async function indexationRowsPast(
+	sqo: IndexationGridSqo,
+	page: ClientPage,
+	principal: Principal,
+): Promise<boolean> {
+	const query = indexationSinkQuery(sqo);
+	const past = offsetPastPage(page);
+	if (query === null || past === null) return false;
+	const tail = await findInverseReferenceLocatorsPast(
+		query.filterLocators,
+		{ sectionTipos: query.sectionTipos, order: 'section_id' },
+		past,
+	);
+	if (tail === null) return false;
+	const { anyRowInScope } = await import('../security/record_scope.ts');
+	return anyRowInScope(
+		{
+			sql: `SELECT ${SECTION_TOP_TIPO_SQL} AS section_tipo, ${SECTION_TOP_ID_SQL} AS section_id FROM (${tail.sql}) AS breakdown`,
+			params: tail.params,
+		},
+		principal,
+	);
+}
+
+/**
+ * The SQL twin of groupBySectionTop's key, over a breakdown row `breakdown`:
+ * the group a hit belongs to — and is SCOPED by — is its locator's
+ * section_top, else its owner.
+ *
+ * TIPO: present key → its text (`null` for a JSON null, as String(null) reads
+ * it in indexLocatorOf), absent → the owner's section_tipo.
+ * ID: absent / JSON null → the owner's section_id (`section_top_id ??
+ * section_id`); present → the record it names only when it is a STRICT integer
+ * (the shared canonical-id rule, concepts/section_id.ts) or an integral JSON
+ * number, within the safe-integer range. Anything else names no record here,
+ * where the page's Number() would read e.g. '007' as 7: the probe may then
+ * MISS a visible group (a notice not owed), never claim a hidden one.
+ */
+const SECTION_TOP_TIPO_SQL = `CASE WHEN breakdown.locator_data ? 'section_top_tipo' THEN COALESCE(breakdown.locator_data->>'section_top_tipo', 'null') ELSE breakdown.section_tipo END`;
+const SECTION_TOP_ID_SQL = `CASE
+	WHEN coalesce(jsonb_typeof(breakdown.locator_data->'section_top_id'), 'null') = 'null' THEN breakdown.section_id::bigint
+	WHEN jsonb_typeof(breakdown.locator_data->'section_top_id') = 'number'
+		AND (breakdown.locator_data->>'section_top_id') ~ '^-?[0-9]{1,15}(\\.0+)?$' THEN trunc((breakdown.locator_data->>'section_top_id')::numeric)::bigint
+	WHEN (breakdown.locator_data->>'section_top_id') ~ '^(-?[1-9][0-9]{0,14}|0)$' THEN (breakdown.locator_data->>'section_top_id')::bigint
+END`;
+
+/** One breakdown hit as the grid reads it (the matched locator rides `locator_data`). */
+type IndexationHit = { section_tipo: string; section_id: number; locator_data?: unknown };
+
+/**
+ * The sink's hits as the grid's IndexLocators, grouped by section_top (PHP
+ * get_ar_section_top_tipo) — the unit the grid renders AND scopes. ONE
+ * derivation, shared by the page read and the past-the-window probe.
+ */
+function groupBySectionTop(
+	hits: readonly IndexationHit[],
+): Map<string, Map<string, IndexLocator[]>> {
+	const groups = new Map<string, Map<string, IndexLocator[]>>();
+	for (const hit of hits) {
+		const locator = indexLocatorOf(hit);
+		const topTipo = locator.section_top_tipo ?? locator.section_tipo;
+		// The GROUPING key is a string by construction (a Map key, never
+		// emitted) — the locators inside keep their canonical typed ids.
+		const topId = String(locator.section_top_id ?? locator.section_id);
+		const byId = groups.get(topTipo) ?? new Map<string, IndexLocator[]>();
+		const list = byId.get(topId) ?? [];
+		list.push(locator);
+		byId.set(topId, list);
+		groups.set(topTipo, byId);
+	}
+	return groups;
+}
+
+/** One sink hit → the IndexLocator the grid carries. */
+function indexLocatorOf(hit: IndexationHit): IndexLocator {
+	const entry = (hit.locator_data ?? {}) as Record<string, unknown>;
+	const locator: IndexLocator = {
+		type: typeof entry.type === 'string' ? entry.type : undefined,
+		section_tipo: hit.section_tipo,
+		// The DB column's own int — no re-stringify
+		// (WC-2026-08-10-section-id-int-canonical).
+		section_id: hit.section_id,
+	};
+	if (entry.tag_component_tipo !== undefined)
+		locator.component_tipo = String(entry.tag_component_tipo);
+	if (entry.tag_id !== undefined) locator.tag_id = String(entry.tag_id);
+	// section_top_id is a record address too: canonicalize the stored form
+	// rather than stringify it (external refs pass verbatim).
+	if (entry.section_top_id !== undefined)
+		locator.section_top_id = canonicalizeStoredSectionId(entry.section_top_id) as number | string;
+	if (entry.section_top_tipo !== undefined)
+		locator.section_top_tipo = String(entry.section_top_tipo);
+	if (entry.from_component_tipo !== undefined) {
+		locator.from_component_top_tipo = String(entry.from_component_tipo);
+	}
+	return locator;
+}
+
 export async function buildIndexationGrid(
 	args: {
 		sectionTipo: string;
@@ -1401,73 +1557,20 @@ export async function buildIndexationGrid(
 ): Promise<GridCell[]> {
 	const grid: GridCell[] = [];
 
-	// target sections (string | string[]; empty → nothing to show)
-	const rawTarget = args.sqo.section_tipo;
-	const targetSection =
-		rawTarget === undefined || rawTarget === null || rawTarget === ''
-			? null
-			: Array.isArray(rawTarget)
-				? (rawTarget as string[])
-				: [String(rawTarget)];
-	if (targetSection === null || targetSection.length === 0) return grid;
+	const query = indexationSinkQuery(args.sqo);
+	if (query === null) return grid;
 
 	const limit = args.sqo.limit ?? 500;
 	const offset = args.sqo.offset ?? 0;
 
-	// inverse locators (PHP get_ar_locators → search_related + parse_data)
-	const filterLocators = (args.sqo.filter_by_locators ?? [])
-		.filter((locator) => typeof locator?.section_tipo === 'string')
-		.map((locator) => ({
-			type: RELATION_TYPE_INDEX,
-			section_tipo: String(locator.section_tipo),
-			section_id: locator.section_id as string | number,
-		}));
-	if (filterLocators.length === 0) return grid;
-
-	const hits = await findInverseReferenceLocators(filterLocators, {
-		sectionTipos: targetSection.includes('all') ? 'all' : targetSection,
+	const hits = await findInverseReferenceLocators(query.filterLocators, {
+		sectionTipos: query.sectionTipos,
 		limit,
 		offset,
 		order: 'section_id',
 	});
 
-	const locators: IndexLocator[] = hits.map((hit) => {
-		const entry = (hit as { locator_data?: Record<string, unknown> }).locator_data ?? {};
-		const locator: IndexLocator = {
-			type: typeof entry.type === 'string' ? entry.type : undefined,
-			section_tipo: hit.section_tipo,
-			// The DB column's own int — no re-stringify
-			// (WC-2026-08-10-section-id-int-canonical).
-			section_id: hit.section_id,
-		};
-		if (entry.tag_component_tipo !== undefined)
-			locator.component_tipo = String(entry.tag_component_tipo);
-		if (entry.tag_id !== undefined) locator.tag_id = String(entry.tag_id);
-		// section_top_id is a record address too: canonicalize the stored form
-		// rather than stringify it (external refs pass verbatim).
-		if (entry.section_top_id !== undefined)
-			locator.section_top_id = canonicalizeStoredSectionId(entry.section_top_id) as number | string;
-		if (entry.section_top_tipo !== undefined)
-			locator.section_top_tipo = String(entry.section_top_tipo);
-		if (entry.from_component_tipo !== undefined) {
-			locator.from_component_top_tipo = String(entry.from_component_tipo);
-		}
-		return locator;
-	});
-
-	// group by section_top (PHP get_ar_section_top_tipo)
-	const groups = new Map<string, Map<string, IndexLocator[]>>();
-	for (const locator of locators) {
-		const topTipo = locator.section_top_tipo ?? locator.section_tipo;
-		// The GROUPING key is a string by construction (a Map key, never
-		// emitted) — the locators inside keep their canonical typed ids.
-		const topId = String(locator.section_top_id ?? locator.section_id);
-		const byId = groups.get(topTipo) ?? new Map<string, IndexLocator[]>();
-		const list = byId.get(topId) ?? [];
-		list.push(locator);
-		byId.set(topId, list);
-		groups.set(topTipo, byId);
-	}
+	const groups = groupBySectionTop(hits);
 
 	const scopedGroups = await scopeIndexationGroups(groups, principal);
 

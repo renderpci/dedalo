@@ -90,6 +90,12 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Searching a thesaurus branch with all its descendants costs the same however large the branch.**
+
+    Expanding a term to all its descendants (the "with children" search, fixed filters, the tree) used to ask the database once per term of the branch — about 1,650 requests for a branch of 1,200 terms. The whole branch is now read in one request, in one consistent snapshot, with the same result. Sibling terms that share an internal number across two sections are now always listed in the same order (by section) instead of an order that could change between reads.
+
+    Wire contract: `WC-2026-10-11-children-recursive-one-statement`.
+
 - **The tools of a section list are now grouped in one Tools menu.**
 
     In list mode the header used to show one labelled button per tool (QR, Export, Import, Time machine, Print layout…), and the row wrapped as more tools were registered. **New** and **Delete** stay where they were; every tool now sits in a single **Tools** menu, sorted by name, that can be opened with the mouse or keyboard (arrow keys to move, Enter to open a tool, Esc to close). A tool can keep its own button next to the menu by setting `"pinned_in_list": true` in its `properties`.
@@ -270,6 +276,10 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-27-csv-import-append-mode`.
 
 #### Fixed
+
+- **The projects picker follows a user's project assignments at once.**
+
+    When an administrator changed the projects a user belongs to, that user's *Projects* picker (and the project names shown in lists) kept offering the old set — a revoked project stayed selectable and a newly granted one stayed hidden — until an unrelated change cleared the server's memory. The picker is now keyed by the user's current projects, so the next read shows exactly the new set.
 
 - **No change can place a thesaurus term below itself any more — not two tree moves made at the same moment, nor an edit, import or restore — and two people changing a term's broader terms at the same time no longer erase each other's change.**
 
@@ -1061,6 +1071,12 @@ Merged since the last release; these ship with the next one.
     (`::ffff:10.0.0.0/104` or `::ffff:a00:0/104`) is the IPv4 block it spells (`10.0.0.0/8`).
 
 #### Changed
+
+- **Large exports no longer load the whole selection into the server's memory.**
+
+    An export now reads its records in pages from one consistent snapshot of the selection, instead of loading every record id before writing the first line, so a very large export uses the same memory as a small one. Two limits are now visible: the in-page (non-streamed) export answer is refused with *export.format_limit* above `DEDALO_SEARCH_CLIENT_MAX_LIMIT` records — the streamed and background exports serve the same selection — and each server process runs at most a quarter of `DB_POOL_MAX` exports at once (at least one), answering *export.busy* (retry shortly) to an export asked for directly beyond that, while a background export waits for its turn instead of failing. A server configured with `DB_POOL_MAX=1` cannot run exports; give it at least 2. A streamed export whose reader stops reading for 15 minutes is closed with *export.consumer_idle*, which frees its database connection; an export that keeps being read is never cut, however slow.
+
+    Wire contract: `WC-2026-10-11-export-buffered-cap-and-admission`.
 
 - **Thesauri are offered from one exported manifest, hierarchy.json, and nothing but declared dependencies is pre-selected.** *(action needed)*
 
@@ -2065,6 +2081,12 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Related-record lists answer one bounded page, and say so when they cut it.**
+
+    The *Referencias* list (`read` with `source.action` `get_relation_list`), the tools' related-records listing (`related_search`) and the thesaurus indexations grid (`get_indexation_grid`) used to read an absent limit or `limit: 0` as "every record", and answered a malformed limit or offset (`'all'`, `1e21`) with a server error. Every client window is now bounded by `DEDALO_SEARCH_CLIENT_MAX_LIMIT`: an absent, zero or out-of-range limit becomes the ceiling, an offset past the end returns an empty page, and the answer carries a `search.page_clamped` notice naming the window asked for and the one served — for an absent limit, only when a record the caller may see lies past the page (records outside the caller's sections or projects never decide it). An indexation cell embedded in a record read is bounded the same way. The same bound applies to every API request at the parse door. A non-administrator's page may hold fewer rows than the limit while more pages exist (rows outside the caller's projects are dropped after paging): page by offset until an empty page.
+
+    Wire contract: `WC-2026-10-11-relation-reads-client-page`.
+
 - **The test suite now runs its diffusion gates against its own MariaDB server, never an installation's.**
 
     Before, the gates that publish to MariaDB used whatever server the machine's
@@ -2178,7 +2200,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 117 entries"
+??? note "Wire contract — 120 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -2293,8 +2315,11 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-10-hierarchy-json-manifest`
     - `WC-2026-10-10-ontology-dependencies-hierarchy60`
     - `WC-2026-10-10-update-ontology-confirm-text`
+    - `WC-2026-10-11-children-recursive-one-statement`
+    - `WC-2026-10-11-export-buffered-cap-and-admission`
     - `WC-2026-10-11-parent-link-cycle-every-door`
     - `WC-2026-10-11-pdf-extractor-render-class`
+    - `WC-2026-10-11-relation-reads-client-page`
     - `WC-2026-10-11-rich-text-sanitizer-tokenizer`
     - `WC-2026-10-11-session-user-beside-csrf-token`
 

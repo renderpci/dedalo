@@ -389,6 +389,11 @@ const TRIPWIRES = [
 	'test/unit/image_registries_docs_tripwire.test.ts',
 	'test/unit/install_validation_upfront_tripwire.test.ts',
 	'test/unit/install_run_files_secret_tripwire.test.ts',
+	'test/unit/client_page_doors_native.test.ts',
+	'test/unit/wire_sqo_page_bound_native.test.ts',
+	'test/unit/search_related_page_window_native.test.ts',
+	'test/unit/filter_projects_membership_native.test.ts',
+	'test/unit/filter_projects_scope_native.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

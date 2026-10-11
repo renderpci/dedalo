@@ -31,7 +31,12 @@
 
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { readMatrixRecord } from '../../src/core/db/matrix.ts';
-import { getChildren, getChildrenRecursive } from '../../src/core/relations/children.ts';
+import { runWithQueryTap } from '../../src/core/db/query_tap.ts';
+import {
+	getChildren,
+	getChildrenRecursive,
+	getChildrenRecursiveBatch,
+} from '../../src/core/relations/children.ts';
 import { readSection } from '../../src/core/section/read.ts';
 import {
 	ZZSCALE_LEVEL1_FIRST_ID,
@@ -76,24 +81,24 @@ const LIST_PAGE_CEILING = 14;
 const WIDE_CHILDREN_CEILING = 3;
 
 /**
- * CEILING 3 — getChildrenRecursive over {@link ZZSCALE_ROOT_DESCENDANT_COUNT}
- * descendants at depth 3.
+ * CEILING 3 — getChildrenRecursive over a whole subtree: FLAT, whatever its size.
  *
- * Arithmetic: the walk asks EVERY visited node for its own children (1
- * inverse-index search each, leaves included) and pays ONE batched order read
- * per node that HAS children — the corpus's internal nodes are the root, its
- * 10 depth-1 children and the 440 depth-2 nodes:
+ * Arithmetic (PERF-6): the walk fetches every edge of the subtree in ONE
+ * recursive statement over the relation index (one more round only when the
+ * walk crosses into a section it had not planned — not here, one section), then
+ * ONE batched order read per (child section, order component) group (one
+ * group here), and replays the edges in process. 1 + 1 = 2; the ceiling 4
+ * leaves room for the coverage probe and one extra round, and is INDEPENDENT of
+ * the tree size — the per-node walk this replaced paid one search per node plus
+ * one order read per internal node (1,651 statements for this subtree).
  *
- *   (1,199 descendants + the root) + (1 + 10 + 440 internal) = 1,651
- *
- * Measured 1,642, so the ceiling carries ~3% slack. Deliberately BELOW
- * 2 x 1,200 = 2,400: with a per-child order read restored (1,200 searches +
- * 1,199 record reads = 2,399) this budget must go red, and a ceiling of "2 per
- * node" would not.
+ * SCALE INVARIANCE is the actual law: the root (1,199 descendants), the wide
+ * parent (1,189) and a depth-2 node (a handful) must cost the SAME number of
+ * statements, and so must a batch over every depth-1 root. A ceiling alone
+ * could be met by a walk that is merely cheaper per node; equal counts across
+ * three orders of magnitude cannot.
  */
-const RECURSIVE_INTERNAL_NODES =
-	1 + (ZZSCALE_LEVEL1_LAST_ID - ZZSCALE_LEVEL1_FIRST_ID + 1) + ZZSCALE_WIDE_CHILD_COUNT;
-const RECURSIVE_CEILING = ZZSCALE_ROOT_DESCENDANT_COUNT + 1 + RECURSIVE_INTERNAL_NODES + 50;
+const RECURSIVE_CEILING = 4;
 
 function listRqo(): never {
 	return {
@@ -157,17 +162,57 @@ test('SHAPE 2b — the batched read still ORDERS: children come back inverted', 
 	expect([...ids].sort((a, b) => b - a)).toEqual(ids);
 });
 
-test('SHAPE 3 — a whole subtree costs one search per node plus one order read per INTERNAL node', async () => {
-	await getChildren(ZZSCALE_ROOT_ID, ZZSCALE_SECTION);
+test('SHAPE 3 — a whole subtree costs a FLAT number of statements, independent of its size', async () => {
+	// Warm the ontology caches for every measured door (per-process, not per-item).
+	await getChildrenRecursive(ZZSCALE_ROOT_ID, ZZSCALE_SECTION);
+	const depth1Roots = Array.from(
+		{ length: ZZSCALE_LEVEL1_LAST_ID - ZZSCALE_LEVEL1_FIRST_ID + 1 },
+		(_, i) => ({ section_tipo: ZZSCALE_SECTION, section_id: ZZSCALE_LEVEL1_FIRST_ID + i }),
+	);
+	await getChildrenRecursiveBatch(depth1Roots);
 
-	const { result } = await expectQueryBudget(
-		'recursive subtree',
+	const root = await expectQueryBudget(
+		'recursive subtree (root)',
 		{ ceiling: RECURSIVE_CEILING, corpus: ZZSCALE_ROOT_DESCENDANT_COUNT },
 		async () => getChildrenRecursive(ZZSCALE_ROOT_ID, ZZSCALE_SECTION),
 	);
-
 	expect(ZZSCALE_ROOT_DESCENDANT_COUNT).toBeGreaterThan(DESCENDANT_FLOOR);
-	expect((result as unknown[]).length).toBe(ZZSCALE_ROOT_DESCENDANT_COUNT);
+	expect((root.result as unknown[]).length).toBe(ZZSCALE_ROOT_DESCENDANT_COUNT);
+
+	const wide = await runWithQueryTap('recursive subtree (wide parent)', () =>
+		getChildrenRecursive(ZZSCALE_WIDE_PARENT_ID, ZZSCALE_SECTION),
+	);
+	expect(wide.result.length).toBeGreaterThan(WIDE_CHILD_FLOOR);
+
+	const small = await runWithQueryTap('recursive subtree (depth-2 node)', () =>
+		getChildrenRecursive(ZZSCALE_LEVEL2_FIRST_ID, ZZSCALE_SECTION),
+	);
+	expect(small.result.length).toBeGreaterThan(0);
+	expect(small.result.length).toBeLessThan(10);
+
+	const batch = await runWithQueryTap('recursive batch (every depth-1 root)', () =>
+		getChildrenRecursiveBatch(depth1Roots),
+	);
+	expect(batch.result.length).toBeGreaterThan(WIDE_CHILD_FLOOR);
+
+	// Exactly ONE edge statement per walk (attributed to the edge fetcher).
+	const edgeStatements = (report: { callers: { frames: string; count: number }[] }) =>
+		report.callers
+			.filter((caller) => caller.frames.includes('descendant_walk.ts'))
+			.reduce((sum, caller) => sum + caller.count, 0);
+	expect({
+		root: edgeStatements(root.report),
+		wide: edgeStatements(wide.report),
+		small: edgeStatements(small.report),
+		batch: edgeStatements(batch.report),
+	}).toEqual({ root: 1, wide: 1, small: 1, batch: 1 });
+
+	// Scale invariance: three orders of magnitude, one statement count.
+	expect({
+		wide: wide.report.count,
+		small: small.report.count,
+		batch: batch.report.count,
+	}).toEqual({ wide: root.report.count, small: root.report.count, batch: root.report.count });
 });
 
 test('POSITIVE CONTROL — a planted per-row read BREACHES its budget', async () => {

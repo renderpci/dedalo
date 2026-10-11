@@ -474,6 +474,32 @@ describe('indexation grid av + media branches (TS-native, oracle-captured golden
 		);
 	});
 
+	test('the door default: an absent limit is 500 under a ceiling above it (the clamp notice names the window served)', async () => {
+		// The page primitive (sqo.ts clampClientPage) gives get_indexation_grid its
+		// OWN default of 500 — the thesaurus "show indexations" page — still
+		// clamped by the ceiling. Observable without 500 rows: an offset the clamp
+		// CHANGES (-5 → 0) owes the notice always, and its `applied` is the window
+		// served. The suite runs at the installation ceiling (above 500), so a door
+		// that lost its default would serve — and name — the ceiling instead.
+		const { CLIENT_MAX_LIMIT } = await import('../../src/core/concepts/sqo.ts');
+		expect(CLIENT_MAX_LIMIT).toBeGreaterThan(500);
+		const rqo = gridRqo(['test3']);
+		// The limit genuinely ABSENT (not undefined), the offset one the clamp changes.
+		const { limit: _sent, ...sqo } = rqo.sqo as Record<string, unknown>;
+		rqo.sqo = { ...sqo, offset: -5 };
+		const outcome = await runWithRequestLangs(
+			{ applicationLang: 'lg-spa', dataLang: 'lg-spa' },
+			() => dispatchRqo(structuredClone(rqo) as unknown as Rqo, adminContext()),
+		);
+		expect(outcome.status).toBe(200);
+		const notices = (outcome.body as { notices?: { code: string; details?: unknown }[] }).notices;
+		expect(notices?.find((notice) => notice.code === 'search.page_clamped')?.details).toEqual({
+			door: 'get_indexation_grid',
+			requested: 'limit absent, offset -5',
+			applied: 'limit 500, offset 0',
+		});
+	});
+
 	test('after revert the term grid is empty again for both target sections', async () => {
 		await sweepScratch();
 		expect((await tsGrid(gridRqo(['test3']))).data).toEqual([]);

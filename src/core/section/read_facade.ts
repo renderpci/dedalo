@@ -20,7 +20,15 @@
 import type { ApiResult } from '../api/response.ts';
 import { isTemporalSource, type Rqo } from '../concepts/rqo.ts';
 import { canonicalizeStoredSectionId, classifyWireSectionId } from '../concepts/section_id.ts';
+import {
+	type ClientPage,
+	clampClientPage,
+	offsetPastPage,
+	pageClampedNotice,
+	requestedPage,
+} from '../concepts/sqo.ts';
 import { type ApiNotice, DedaloError, isErrorInDomain, ok, specOf } from '../errors/index.ts';
+import type { RelatedLocatorFilter } from '../search/search_related.ts';
 import { getPermissions, type Principal } from '../security/permissions.ts';
 import { currentRequestId } from '../security/request_context.ts';
 import { readSection } from './read.ts';
@@ -58,6 +66,420 @@ function uncoveredCellNotices(unresolved: readonly string[]): ApiNotice[] | unde
 	];
 }
 
+/** The page posture a read route declares (READ-4). */
+export type SectionReadPagePosture = 'client_sqo' | 'none';
+
+/**
+ * One `source.action` read route. `page: 'client_sqo'` = the route pages the
+ * CLIENT's sqo window into a sink, so it MUST resolve the window through
+ * `clampClientPage` (concepts/sqo.ts) — never mean "all" by an absent limit,
+ * never pass the offset raw. 'none' = the route serves no client window.
+ * test/unit/client_page_doors_native.test.ts derives the set of doors that
+ * reach the relation sink at run time and requires each such route to
+ * declare 'client_sqo'.
+ */
+export interface SectionReadRoute {
+	readonly page: SectionReadPagePosture;
+	readonly handler: (rqo: Rqo, principal: Principal) => Promise<ApiResult>;
+}
+
+/** A source.sqo section_tipo axis → the owning-section narrowing ('all' = none). */
+function owningSectionTipos(rawAxis: unknown): string[] | 'all' {
+	const rawSectionTipos = Array.isArray(rawAxis)
+		? rawAxis.filter((tipo): tipo is string => typeof tipo === 'string')
+		: typeof rawAxis === 'string'
+			? [rawAxis]
+			: [];
+	return rawSectionTipos.length === 0 || rawSectionTipos.includes('all')
+		? ('all' as const)
+		: rawSectionTipos;
+}
+
+/** Concatenate notice lists; `undefined` when there are none (no empty key on the wire). */
+function joinNotices(...lists: (readonly ApiNotice[] | undefined)[]): ApiNotice[] | undefined {
+	const all = lists.flatMap((list) => list ?? []);
+	return all.length === 0 ? undefined : all;
+}
+
+/** A 'client_sqo' route's page: the bounded window, and the window as sent. */
+interface RouteClientPage {
+	door: string;
+	page: ClientPage;
+	asSent: { limit: unknown; offset: unknown };
+}
+
+/**
+ * The client page of a 'client_sqo' route — `clampClientPage` over the window
+ * AS SENT (requestedPage: the wire-recorded original when the body crossed
+ * wireSqoSchema).
+ */
+function routeClientPage(door: string, sqo: unknown, scope: string): RouteClientPage {
+	const asSent = requestedPage(sqo);
+	return { door, page: clampClientPage(asSent.limit, asSent.offset, scope), asSent };
+}
+
+/**
+ * The `search.page_clamped` notice a 'client_sqo' route owes, decided by the
+ * OUTCOME, never by the spelling of the request:
+ *
+ * - `'requested'` — served as sent: none;
+ * - `'clamped'` — a value the client SENT was changed: always;
+ * - `'defaulted'` — the limit was absent. These doors used to read that as
+ *   "all", so the notice is owed exactly when the default CUT something the
+ *   CALLER could page to: ANY row past the served page (the sink's own
+ *   question, locators, owning-section axis and order) is a record this
+ *   principal may see — not only the next window: a hidden window can sit
+ *   between the page and visible rows. An absent limit whose answer is whole
+ *   (the tools that send none, on a host with a few related records) carries
+ *   no notice — the client toasts every notice, and nothing was cut.
+ *
+ * SCOPED (AUTHZ-05), like the page itself, and BOUNDED whatever the tail: the
+ * whole tail past the page is asked ONE question in SQL
+ * (findInverseReferencesPast → record_scope anyRowInScope — the section grant,
+ * then one EXISTS under the list's own record predicate). The doors cut the
+ * window BEFORE scoping, so "is there anything for you past this page" is a
+ * question the caller can already ask by paging forward — the notice
+ * discloses nothing new. An UNSCOPED probe would answer "do more than
+ * offset+limit references exist", counting records in sections and projects
+ * the caller cannot reach (a binary search on the offset reads the exact
+ * unscoped total); a probe that READ the tail window by window cost a deep
+ * OFFSET read per window for a non-admin whose tail is hidden
+ * (client_page_doors_native: the non-admin legs and the long hidden tail).
+ */
+async function owedPageNotices(
+	route: RouteClientPage,
+	locators: RelatedLocatorFilter[],
+	sectionTipos: string[] | 'all',
+	principal: Principal,
+): Promise<ApiNotice[]> {
+	const { door, page, asSent } = route;
+	if (page.bounded === 'requested') return [];
+	if (
+		page.bounded === 'defaulted' &&
+		!(await anyRecordVisiblePast(locators, sectionTipos, page, principal))
+	) {
+		return [];
+	}
+	return [pageClampedNotice(door, asSent.limit, asSent.offset, page)];
+}
+
+/**
+ * Whether any referencing record past `page` (the sink's default order — the
+ * same call buildRelationList / buildRelatedSections issue) is one `principal`
+ * may see — one scoped statement over the whole tail, never a read of it.
+ * Nothing lies past MAX_SAFE_INTEGER (offsetPastPage). Dynamic imports, like
+ * the sink doors themselves (record_scope pulls in the search assembler).
+ */
+async function anyRecordVisiblePast(
+	locators: RelatedLocatorFilter[],
+	sectionTipos: string[] | 'all',
+	page: ClientPage,
+	principal: Principal,
+): Promise<boolean> {
+	const past = offsetPastPage(page);
+	if (past === null) return false;
+	const { findInverseReferencesPast } = await import('../search/search_related.ts');
+	const { anyRowInScope } = await import('../security/record_scope.ts');
+	return anyRowInScope(
+		await findInverseReferencesPast(locators, { sectionTipos }, past),
+		principal,
+	);
+}
+
+// Relation list (source.action 'get_relation_list'): the Referencias
+// panel — every record pointing AT the host. PHP only answers in
+// edit mode (any other mode returns the empty shell) and gates on
+// read access to the HOST section (gate A in the handler covered it when
+// source carried section_tipo+tipo; enforce host read here).
+async function readRelationList(rqo: Rqo, principal: Principal): Promise<ApiResult> {
+	const source = rqo.source ?? {};
+	const requestId = currentRequestId();
+	const { hostSectionTipo, hostSectionId } = await readableRelationListHost(source, principal);
+	if ((source.mode ?? 'list') !== 'edit') {
+		// PHP relation_list_json: non-edit modes return the empty shell.
+		return emptyShell();
+	}
+	const { buildRelationList } = await import('../resolve/relation_list.ts');
+	const sqoOptions = (rqo.sqo ?? {}) as { section_tipo?: unknown };
+	// The CLIENT sqo's section_tipo axis narrows the OWNING sections ('all' =
+	// no narrowing — the panel sends ["all"], the header open sends the one
+	// target section). Its window is a CLIENT page (READ-4): bounded by
+	// clampClientPage — an absent / 0 / 'all' limit is the ceiling plus a
+	// `search.page_clamped` notice, never "all records" (PHP set_limit(0) did
+	// mean all; WC-2026-10-11-relation-reads-client-page).
+	const route = routeClientPage('get_relation_list', rqo.sqo, hostSectionTipo);
+	const { page } = route;
+	const sectionTipos = owningSectionTipos(sqoOptions.section_tipo);
+	const relationList = await buildRelationList(hostSectionTipo, hostSectionId, {
+		limit: page.limit,
+		offset: page.offset,
+		lang: source.lang,
+		sectionTipos,
+		// AUTHZ-05: scope referencing records to the caller (drops references in
+		// sections/projects the caller cannot reach). Host-read alone (gate above)
+		// is not enough — the scan spans 'all' owning sections.
+		principal,
+	});
+	const pageNotices = await owedPageNotices(
+		route,
+		[
+			{
+				section_tipo: hostSectionTipo,
+				section_id: canonicalizeStoredSectionId(hostSectionId) as string | number,
+			},
+		],
+		sectionTipos,
+		principal,
+	);
+	return {
+		status: 200,
+		body: ok(
+			{ context: relationList.context, data: relationList.data },
+			{
+				requestId,
+				notices: joinNotices(pageNotices, uncoveredCellNotices(relationList.unresolved)),
+			},
+		),
+	};
+}
+
+/** get_relation_list's host: present (else request.invalid_source) and readable (else perm.denied). */
+async function readableRelationListHost(
+	source: NonNullable<Rqo['source']>,
+	principal: Principal,
+): Promise<{
+	hostSectionTipo: string;
+	hostSectionId: NonNullable<NonNullable<Rqo['source']>['section_id']>;
+}> {
+	const hostSectionTipo = String(source.section_tipo ?? '');
+	const hostSectionId = source.section_id;
+	if (hostSectionTipo === '' || hostSectionId === undefined || hostSectionId === null) {
+		throw new DedaloError('request.invalid_source', {
+			coordinates: { action: 'get_relation_list' },
+		});
+	}
+	const hostLevel = await getPermissions(principal, hostSectionTipo, hostSectionTipo);
+	if (hostLevel < 1) {
+		throw new DedaloError('perm.denied', { coordinates: { section_tipo: hostSectionTipo } });
+	}
+	return { hostSectionTipo, hostSectionId };
+}
+
+// Related-sections read (source.action 'related_search' + sqo.mode
+// 'related'): the transcription/indexation/tr_print/epigraphy tools'
+// "which records point at me" listing. PHP dispatches on source.action
+// alone (dd_core_api.php:2326 `case 'related_search'` →
+// sections::get_instance 'related_list'); TS serves the same contract
+// through buildRelatedSections (wire shape: WC-065). Keyed on
+// source.action ALONE and placed BEFORE the component-model get_data
+// branch below, which would otherwise swallow the tools' component-source
+// RQO into an empty component shell.
+async function readRelatedSections(rqo: Rqo, principal: Principal): Promise<ApiResult> {
+	const source = rqo.source ?? {};
+	const requestId = currentRequestId();
+	const sqoOptions = (rqo.sqo ?? {}) as {
+		section_tipo?: unknown;
+		filter_by_locators?: { section_tipo?: unknown; section_id?: unknown }[];
+	};
+	const locators = await readableRelatedHosts(sqoOptions.filter_by_locators, principal);
+	const firstHost = (locators[0] as RelatedHost).section_tipo;
+	// The window is a CLIENT page (READ-4), bounded exactly like
+	// get_relation_list's: absent / 0 / 'all' = the ceiling plus the notice.
+	const route = routeClientPage('related_search', rqo.sqo, firstHost);
+	const { page } = route;
+	const sectionTipos = owningSectionTipos(sqoOptions.section_tipo);
+	const { buildRelatedSections } = await import('../resolve/related_sections.ts');
+	const result = await buildRelatedSections(locators, {
+		callerTipo: String(source.tipo ?? firstHost),
+		lang: source.lang,
+		sectionTipos,
+		limit: page.limit,
+		offset: page.offset,
+		// AUTHZ-05: scope referencing records to the caller, like
+		// get_relation_list above — the scan spans 'all' owning sections. The
+		// scope applies AFTER the window, so a short page is not the end.
+		principal,
+	});
+	// The probe addresses the hosts exactly as buildRelatedSections does (the
+	// canonicalizing entrance — a legacy string id or an external remote id).
+	const notices = await owedPageNotices(
+		route,
+		locators.map((locator) => ({
+			section_tipo: locator.section_tipo,
+			section_id: canonicalizeStoredSectionId(locator.section_id) as string | number,
+		})),
+		sectionTipos,
+		principal,
+	);
+	return { status: 200, body: ok(result, { requestId, notices: joinNotices(notices) }) };
+}
+
+/** A related_search host locator as the wire may send it. */
+type RelatedHost = { section_tipo: string; section_id: number | string };
+
+/**
+ * related_search's hosts: at least one well-formed locator (else
+ * request.invalid_source), each in a section the caller may read (else
+ * perm.denied — mirrors the count-mode 'related' gate in the handler).
+ *
+ * KEPT UNION (WC-2026-08-10-section-id-int-canonical): filter_by_locators is a
+ * RAW wire list from the transcription/indexation tools, still sent in the
+ * legacy string form by an old client, and it may name an external-service
+ * host whose remote id is a string by nature. Narrowing the guard would DROP
+ * those hosts and answer a bogus 400; buildRelatedSections canonicalizes each
+ * locator at its own entrance.
+ */
+async function readableRelatedHosts(
+	filterByLocators: unknown,
+	principal: Principal,
+): Promise<RelatedHost[]> {
+	const locators = (
+		(Array.isArray(filterByLocators) ? filterByLocators : []) as {
+			section_tipo?: unknown;
+			section_id?: unknown;
+		}[]
+	).filter(isRelatedHost);
+	if (locators.length === 0) {
+		throw new DedaloError('request.invalid_source', {
+			coordinates: { action: 'related_search' },
+		});
+	}
+	for (const locator of locators) {
+		if ((await getPermissions(principal, locator.section_tipo, locator.section_tipo)) < 1) {
+			throw new DedaloError('perm.denied', {
+				coordinates: { section_tipo: locator.section_tipo },
+			});
+		}
+	}
+	return locators;
+}
+
+function isRelatedHost(locator: {
+	section_tipo?: unknown;
+	section_id?: unknown;
+}): locator is RelatedHost {
+	return (
+		typeof locator?.section_tipo === 'string' &&
+		(typeof locator.section_id === 'number' || typeof locator.section_id === 'string')
+	);
+}
+
+// Time Machine read (sqo.mode 'tm'): the record-history listing is now
+// served through the GENERIC readSection (the dd15 TM read-source —
+// section/read_source.ts). Only the time-machine ACCESS GATE stays here:
+// it is a per-CALLER-section ACL (SECTION_SPEC §7.4, stricter than the
+// read grant) that must gate BEFORE the read. Gate B in the handler already
+// required level >= 1 on every SQO target section.
+async function gateTimeMachineRead(rqo: Rqo, principal: Principal): Promise<void> {
+	if ((rqo.sqo as { mode?: string } | undefined)?.mode !== 'tm') return;
+	const { canAccessTimeMachineList, resolveTimeMachineScopeSection } = await import(
+		'./list_definitions/time_machine_list.ts'
+	);
+	// The SCOPE — the caller section whose history this reads — comes from the
+	// SQO, not from source.section_tipo: the client pins that to 'dd15', so the
+	// gate used to evaluate dd15 against itself and the §7.4 per-section grant
+	// was never consulted (WC-2026-08-14-tm-scope-server-owned).
+	const scope = resolveTimeMachineScopeSection(rqo.sqo as Record<string, unknown> | undefined);
+	if (scope.mixed) {
+		throw new DedaloError('perm.denied', {
+			message:
+				'Time machine reads spanning several sections are not authorized: one section grant cannot cover another',
+		});
+	}
+	// Unscoped (the bare dd15 browse) shows EVERY section's history at once, so
+	// no per-section grant can authorize it — global admin only. Gating dd15
+	// against itself is exactly that: it declares no time_machine_list child,
+	// so canAccessTimeMachineList fails closed for everyone but an admin.
+	const gateTipo = scope.sectionTipo ?? 'dd15';
+	if (!(await canAccessTimeMachineList(principal, gateTipo))) {
+		throw new DedaloError('perm.denied', {
+			message: 'Insufficient permissions for the time machine of this section',
+			coordinates: { section_tipo: gateTipo },
+		});
+	}
+	// The per-ddo permission FLOOR needs the same scope, but it is published by
+	// readSection itself (read.ts) so direct callers and tests get it too —
+	// this gate only decides admission.
+}
+
+// resolve_data: a component in SEARCH mode resolves INJECTED locators
+// (source.value) — the portal filter chips. Gate A in the handler covered
+// the (section_tipo, tipo) read permission.
+async function readResolveData(rqo: Rqo, principal: Principal): Promise<ApiResult> {
+	const source = rqo.source ?? {};
+	const requestId = currentRequestId();
+	const { resolveSearchData, buildGetDataContext } = await import('./read.ts');
+	// Pass the principal so injected target locators outside the caller's
+	// projects filter are dropped (foundation audit AUTHZ-02 — same root cause
+	// as AUTHZ-01, bounded to the relation's declared target sections).
+	const resolved = await resolveSearchData(rqo, principal);
+	await ensureOwnSearchItem(source, resolved);
+	// The client BUILDS the search-mode instance from this response and
+	// aborts if result.context is empty (component_portal.js:632 —
+	// "component without context", leaving status stuck at 'building').
+	// Emit the component's structure context (buildGetDataContext), same as
+	// the get_data path, so the search filter builds + renders.
+	const context = await buildGetDataContext(rqo, resolved, principal);
+	return { status: 200, body: ok({ context, data: resolved }, { requestId }) };
+}
+
+/**
+ * resolve_data: guarantee the component's OWN item is present in `resolved`.
+ */
+async function ensureOwnSearchItem(
+	source: NonNullable<Rqo['source']>,
+	resolved: unknown[],
+): Promise<void> {
+	// Guarantee the component's OWN item is present (entries=[] when the
+	// search carries no injected value). Some models (e.g. component_external,
+	// search-unported) resolve to zero items, and the client search render
+	// then reads data.entries of undefined (render_search_component_external
+	// :178 data.entries[0]). A [] main item keeps the render safe.
+	if (
+		source.tipo !== undefined &&
+		source.section_tipo !== undefined &&
+		!resolved.some((d) => (d as { tipo?: string }).tipo === source.tipo)
+	) {
+		const { buildDataItem } = await import('../resolve/component_data.ts');
+		// Canonical id echo (WC-2026-08-10-section-id-int-canonical — repeals
+		// the pass-AS-GIVEN string law that stood here): a record address emits
+		// as INT; an external remote id ('000147689' — leading zeros are the
+		// id's own bytes) and a synthetic 'search_<n>' token survive VERBATIM,
+		// which is exactly what canonicalizeStoredSectionId does. The client
+		// matches the item by String(el.section_id)===String(self.section_id),
+		// and both typed forms of a record address stringify identically, so
+		// the canonical form keeps the match; a blanket Number() would still
+		// break it (leading zeros dropped) and stays banned.
+		resolved.unshift(
+			buildDataItem(
+				source.tipo,
+				source.section_tipo,
+				(canonicalizeStoredSectionId(source.section_id) as number | string | null) ?? 0,
+				'search',
+				source.lang ?? 'lg-nolan',
+				[],
+			),
+		);
+	}
+}
+
+/**
+ * THE `source.action` route table — every read keyed on `source.action` ALONE
+ * (PHP dispatches on it, dd_core_api.php:2050). Each route declares its page
+ * posture. Placed BEFORE the component-model get_data branch, which would
+ * otherwise swallow a component-source RQO into an empty component shell.
+ * `search` and `get_data` are NOT here: they also depend on the source model
+ * and section_id (see routeSectionRead).
+ */
+export const SECTION_READ_ROUTES: ReadonlyMap<string, SectionReadRoute> = new Map<
+	string,
+	SectionReadRoute
+>([
+	['get_relation_list', { page: 'client_sqo', handler: readRelationList }],
+	['related_search', { page: 'client_sqo', handler: readRelatedSections }],
+	['resolve_data', { page: 'none', handler: readResolveData }],
+]);
+
 /** Route a permission-gated dd_core_api read RQO to its read strategy. */
 export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<ApiResult> {
 	const source = rqo.source ?? {};
@@ -65,218 +487,17 @@ export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<
 	// this facade is called without the API context, ERRORS_SPEC §3.
 	const requestId = currentRequestId();
 
-	// Relation list (source.action 'get_relation_list'): the Referencias
-	// panel — every record pointing AT the host. PHP only answers in
-	// edit mode (any other mode returns the empty shell) and gates on
-	// read access to the HOST section (gate A in the handler covered it when
-	// source carried section_tipo+tipo; enforce host read here).
-	if (source.action === 'get_relation_list') {
-		const hostSectionTipo = String(source.section_tipo ?? '');
-		const hostSectionId = source.section_id;
-		if (hostSectionTipo === '' || hostSectionId === undefined || hostSectionId === null) {
-			throw new DedaloError('request.invalid_source', {
-				coordinates: { action: 'get_relation_list' },
-			});
-		}
-		const hostLevel = await getPermissions(principal, hostSectionTipo, hostSectionTipo);
-		if (hostLevel < 1) {
-			throw new DedaloError('perm.denied', { coordinates: { section_tipo: hostSectionTipo } });
-		}
-		if ((source.mode ?? 'list') !== 'edit') {
-			// PHP relation_list_json: non-edit modes return the empty shell.
-			return emptyShell();
-		}
-		const { buildRelationList } = await import('../resolve/relation_list.ts');
-		const sqoOptions = (rqo.sqo ?? {}) as {
-			limit?: number | false;
-			offset?: number;
-			section_tipo?: unknown;
-		};
-		// PHP runs the CLIENT sqo straight through sections::get_instance
-		// (class.relation_list.php get_inverse_references): the sqo's
-		// section_tipo axis narrows the OWNING sections ('all' = no narrowing —
-		// the panel sends ["all"], the header open sends the one target section)
-		// and set_limit(0) means ALL records (the header open sends limit 0).
-		const rawSectionTipos = Array.isArray(sqoOptions.section_tipo)
-			? sqoOptions.section_tipo.filter((tipo): tipo is string => typeof tipo === 'string')
-			: typeof sqoOptions.section_tipo === 'string'
-				? [sqoOptions.section_tipo]
-				: [];
-		const sectionTipos =
-			rawSectionTipos.length === 0 || rawSectionTipos.includes('all')
-				? ('all' as const)
-				: rawSectionTipos;
-		const relationList = await buildRelationList(hostSectionTipo, hostSectionId, {
-			limit: sqoOptions.limit === 0 ? false : (sqoOptions.limit ?? false),
-			offset: sqoOptions.offset,
-			lang: source.lang,
-			sectionTipos,
-			// AUTHZ-05: scope referencing records to the caller (drops references in
-			// sections/projects the caller cannot reach). Host-read alone (gate above)
-			// is not enough — the scan spans 'all' owning sections.
-			principal,
-		});
-		return {
-			status: 200,
-			body: ok(
-				{ context: relationList.context, data: relationList.data },
-				{ requestId, notices: uncoveredCellNotices(relationList.unresolved) },
-			),
-		};
-	}
+	// Time Machine admission (sqo.mode 'tm') FIRST, by STRUCTURE: it runs before
+	// any route is chosen, so every read — each SECTION_READ_ROUTES handler,
+	// today's and any added later, and the generic readSection a TM read falls
+	// through to (the dd15 TM read-source) — is admitted by it without a
+	// handler having to remember the call. A no-op unless sqo.mode === 'tm'.
+	// Gate: tm_scope_authz_native ("every read route is admitted by the gate").
+	await gateTimeMachineRead(rqo, principal);
 
-	// Related-sections read (source.action 'related_search' + sqo.mode
-	// 'related'): the transcription/indexation/tr_print/epigraphy tools'
-	// "which records point at me" listing. PHP dispatches on source.action
-	// alone (dd_core_api.php:2326 `case 'related_search'` →
-	// sections::get_instance 'related_list'); TS serves the same contract
-	// through buildRelatedSections (wire shape: WC-065). Keyed on
-	// source.action ALONE and placed BEFORE the component-model get_data
-	// branch below, which would otherwise swallow the tools' component-source
-	// RQO into an empty component shell.
-	if (source.action === 'related_search') {
-		const sqoOptions = (rqo.sqo ?? {}) as {
-			limit?: number | false;
-			offset?: number;
-			section_tipo?: unknown;
-			filter_by_locators?: { section_tipo?: unknown; section_id?: unknown }[];
-		};
-		// KEPT UNION (WC-2026-08-10-section-id-int-canonical): filter_by_locators
-		// is a RAW wire list from the transcription/indexation tools, still sent
-		// in the legacy string form by an old client, and it may name an
-		// external-service host whose remote id is a string by nature. Narrowing
-		// the guard would DROP those hosts and answer a bogus 400;
-		// buildRelatedSections canonicalizes each locator at its own entrance.
-		const locators = (
-			Array.isArray(sqoOptions.filter_by_locators) ? sqoOptions.filter_by_locators : []
-		).filter(
-			(locator): locator is { section_tipo: string; section_id: number | string } =>
-				typeof locator?.section_tipo === 'string' &&
-				(typeof locator.section_id === 'number' || typeof locator.section_id === 'string'),
-		);
-		if (locators.length === 0) {
-			throw new DedaloError('request.invalid_source', {
-				coordinates: { action: 'related_search' },
-			});
-		}
-		// Host-read gate: read access to every host record's section (mirrors
-		// the count-mode 'related' gate in the handler).
-		for (const locator of locators) {
-			if ((await getPermissions(principal, locator.section_tipo, locator.section_tipo)) < 1) {
-				throw new DedaloError('perm.denied', {
-					coordinates: { section_tipo: locator.section_tipo },
-				});
-			}
-		}
-		const rawSectionTipos = Array.isArray(sqoOptions.section_tipo)
-			? sqoOptions.section_tipo.filter((tipo): tipo is string => typeof tipo === 'string')
-			: typeof sqoOptions.section_tipo === 'string'
-				? [sqoOptions.section_tipo]
-				: [];
-		const sectionTipos =
-			rawSectionTipos.length === 0 || rawSectionTipos.includes('all')
-				? ('all' as const)
-				: rawSectionTipos;
-		const { buildRelatedSections } = await import('../resolve/related_sections.ts');
-		const result = await buildRelatedSections(locators, {
-			callerTipo: String(source.tipo ?? locators[0]?.section_tipo ?? ''),
-			lang: source.lang,
-			sectionTipos,
-			limit: sqoOptions.limit === 0 ? false : (sqoOptions.limit ?? false),
-			offset: sqoOptions.offset,
-			// AUTHZ-05: scope referencing records to the caller, like
-			// get_relation_list above — the scan spans 'all' owning sections.
-			principal,
-		});
-		return { status: 200, body: ok(result, { requestId }) };
-	}
-
-	// Time Machine read (sqo.mode 'tm'): the record-history listing is now
-	// served through the GENERIC readSection (the dd15 TM read-source —
-	// section/read_source.ts). Only the time-machine ACCESS GATE stays here:
-	// it is a per-CALLER-section ACL (SECTION_SPEC §7.4, stricter than the
-	// read grant) that must gate BEFORE the read. Gate B in the handler already
-	// required level >= 1 on every SQO target section.
-	if ((rqo.sqo as { mode?: string } | undefined)?.mode === 'tm') {
-		const { canAccessTimeMachineList, resolveTimeMachineScopeSection } = await import(
-			'./list_definitions/time_machine_list.ts'
-		);
-		// The SCOPE — the caller section whose history this reads — comes from the
-		// SQO, not from source.section_tipo: the client pins that to 'dd15', so the
-		// gate used to evaluate dd15 against itself and the §7.4 per-section grant
-		// was never consulted (WC-2026-08-14-tm-scope-server-owned).
-		const scope = resolveTimeMachineScopeSection(rqo.sqo as Record<string, unknown> | undefined);
-		if (scope.mixed) {
-			throw new DedaloError('perm.denied', {
-				message:
-					'Time machine reads spanning several sections are not authorized: one section grant cannot cover another',
-			});
-		}
-		// Unscoped (the bare dd15 browse) shows EVERY section's history at once, so
-		// no per-section grant can authorize it — global admin only. Gating dd15
-		// against itself is exactly that: it declares no time_machine_list child,
-		// so canAccessTimeMachineList fails closed for everyone but an admin.
-		const gateTipo = scope.sectionTipo ?? 'dd15';
-		if (!(await canAccessTimeMachineList(principal, gateTipo))) {
-			throw new DedaloError('perm.denied', {
-				message: 'Insufficient permissions for the time machine of this section',
-				coordinates: { section_tipo: gateTipo },
-			});
-		}
-		// The per-ddo permission FLOOR needs the same scope, but it is published by
-		// readSection itself (read.ts) so direct callers and tests get it too —
-		// this gate only decides admission.
-		// fall through to the generic readSection below (routes to the TM source)
-	}
-
-	// resolve_data: a component in SEARCH mode resolves INJECTED locators
-	// (source.value) — the portal filter chips. Gate A in the handler covered
-	// the (section_tipo, tipo) read permission.
-	if (source.action === 'resolve_data') {
-		const { resolveSearchData, buildGetDataContext } = await import('./read.ts');
-		// Pass the principal so injected target locators outside the caller's
-		// projects filter are dropped (foundation audit AUTHZ-02 — same root cause
-		// as AUTHZ-01, bounded to the relation's declared target sections).
-		const resolved = await resolveSearchData(rqo, principal);
-		// Guarantee the component's OWN item is present (entries=[] when the
-		// search carries no injected value). Some models (e.g. component_external,
-		// search-unported) resolve to zero items, and the client search render
-		// then reads data.entries of undefined (render_search_component_external
-		// :178 data.entries[0]). A [] main item keeps the render safe.
-		if (
-			source.tipo !== undefined &&
-			source.section_tipo !== undefined &&
-			!resolved.some((d) => (d as { tipo?: string }).tipo === source.tipo)
-		) {
-			const { buildDataItem } = await import('../resolve/component_data.ts');
-			// Canonical id echo (WC-2026-08-10-section-id-int-canonical — repeals
-			// the pass-AS-GIVEN string law that stood here): a record address emits
-			// as INT; an external remote id ('000147689' — leading zeros are the
-			// id's own bytes) and a synthetic 'search_<n>' token survive VERBATIM,
-			// which is exactly what canonicalizeStoredSectionId does. The client
-			// matches the item by String(el.section_id)===String(self.section_id),
-			// and both typed forms of a record address stringify identically, so
-			// the canonical form keeps the match; a blanket Number() would still
-			// break it (leading zeros dropped) and stays banned.
-			resolved.unshift(
-				buildDataItem(
-					source.tipo,
-					source.section_tipo,
-					(canonicalizeStoredSectionId(source.section_id) as number | string | null) ?? 0,
-					'search',
-					source.lang ?? 'lg-nolan',
-					[],
-				),
-			);
-		}
-		// The client BUILDS the search-mode instance from this response and
-		// aborts if result.context is empty (component_portal.js:632 —
-		// "component without context", leaving status stuck at 'building').
-		// Emit the component's structure context (buildGetDataContext), same as
-		// the get_data path, so the search filter builds + renders.
-		const context = await buildGetDataContext(rqo, resolved, principal);
-		return { status: 200, body: ok({ context, data: resolved }, { requestId }) };
-	}
+	const route =
+		typeof source.action === 'string' ? SECTION_READ_ROUTES.get(source.action) : undefined;
+	if (route !== undefined) return route.handler(rqo, principal);
 
 	// Component-source SEARCH read (PHP routes on source.action alone —
 	// dd_core_api.php:2050 `$action = $ddo_source->action ?? 'search'`, :2256

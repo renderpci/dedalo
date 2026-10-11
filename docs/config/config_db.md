@@ -113,6 +113,12 @@ A publication runner needs at least **2**: each batch holds one connection for i
 write to the publication target, and the runner's heartbeat needs another beside it. A
 runner started with `DB_POOL_MAX=1` refuses to start, naming this key.
 
+Exports need at least **2** as well: an export holds one connection for its whole run while it
+reads its selection, and needs another beside it to read the records. Each process runs at most a
+quarter of this value of such exports at once (at least one); a request beyond it is answered
+"busy, try again", and a background export waits for its turn. With `DB_POOL_MAX=1` every export
+is refused.
+
 ```bash
 DB_POOL_MAX=10
 ```

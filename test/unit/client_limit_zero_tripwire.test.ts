@@ -20,19 +20,25 @@
  *   3. The client resolves the bound through sqo_limit.js and reads the
  *      page_globals key the server publishes (no client constant is THE bound).
  *   4. clampClientLimit, pure: 0 / negative / 'all' / NaN / > ceiling → the
- *      ceiling; a value within the bound passes; sanitizeClientSqo and the
- *      children door route through it.
+ *      ceiling; a value within the bound passes; sanitizeClientSqo applies it.
+ *      That every DOOR bounds its client page is measured as an OUTCOME, not
+ *      read from source spellings: client_page_doors_native (the doors that
+ *      reach the relation sink, derived at run time) and
+ *      wire_sqo_page_bound_native (the wire schema bounds every action's sqo
+ *      window) — they replaced the spelling half of this leg (READ-4).
  *
  * The behavioural half of the children door is ts_api_children_data_native
  * (suite DB); the browser half is test_render_budget in `bun run test:client`.
  */
 import { describe, expect, test } from 'bun:test';
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
 	CLIENT_MAX_LIMIT,
 	clampClientLimit,
+	clampClientOffset,
+	clampClientPage,
+	offsetPastPage,
 	sanitizeClientSqo,
 } from '../../src/core/concepts/sqo.ts';
 import { browserSources } from '../helpers/browser_corpus.ts';
@@ -196,23 +202,71 @@ describe('client_limit_zero_tripwire', () => {
 		expect(clampClientLimit(3.9, 'x')).toBe(3);
 	});
 
-	test('sanitizeClientSqo and the children door route through the ONE clamp', () => {
+	test('sanitizeClientSqo applies the ONE clamp (limit and offset)', () => {
 		expect(sanitizeClientSqo({ section_tipo: 'test3', limit: 0 }).limit).toBe(CLIENT_MAX_LIMIT);
 		expect(sanitizeClientSqo({ section_tipo: 'test3', limit: 'all' }).limit).toBe(CLIENT_MAX_LIMIT);
 		expect(sanitizeClientSqo({ section_tipo: 'test3', limit: 5 }).limit).toBe(5);
-		// the two doors call the same function (a second clamp is a second bound)
-		const sqo = code('src/core/concepts/sqo.ts');
-		const sanitize = sqo.slice(sqo.indexOf('export function sanitizeClientSqo'));
-		expect(sanitize).toMatch(/clampClientLimit\(/);
-		const tsApi = code('src/core/ts_object/ts_api.ts');
-		expect(tsApi).toMatch(/import \{ clampClientLimit \} from '\.\.\/concepts\/sqo\.ts'/);
-		const parse = tsApi.slice(tsApi.indexOf('function parseChildrenDataRequest'));
-		expect(parse).toMatch(/clampChildrenPagination\(/);
-		expect(parse).toMatch(/clamped\.limit = clampClientLimit\(/);
-		// …and the delegate pages whenever the limit is positive: a client total
-		// never switches paging off
-		const tsObject = code('src/core/ts_object/ts_object.ts');
-		expect(tsObject).toMatch(/const usePagination = limit > 0;/);
-		expect(tsObject).not.toMatch(/usePagination = limit > 0 && total > limit/);
+		expect(sanitizeClientSqo({ section_tipo: 'test3', offset: -5 }).offset).toBe(0);
+		expect(sanitizeClientSqo({ section_tipo: 'test3', offset: 1e21 }).offset).toBe(
+			Number.MAX_SAFE_INTEGER,
+		);
+		// A non-numeric offset is page 1 — never NaN, never dropped silently into
+		// an assembler default.
+		expect(sanitizeClientSqo({ section_tipo: 'test3', offset: 'x' }).offset).toBe(0);
+	});
+
+	test('clampClientOffset: absent / NaN / non-numeric → 0; negative → 0; past MAX_SAFE → MAX_SAFE; within → itself', () => {
+		expect(clampClientOffset(undefined, 'x')).toBe(0);
+		expect(clampClientOffset(null, 'x')).toBe(0);
+		expect(clampClientOffset('x', 'x')).toBe(0);
+		expect(clampClientOffset(Number.NaN, 'x')).toBe(0);
+		expect(clampClientOffset(-5, 'x')).toBe(0);
+		expect(clampClientOffset(1e21, 'x')).toBe(Number.MAX_SAFE_INTEGER);
+		expect(clampClientOffset(Number.POSITIVE_INFINITY, 'x')).toBe(Number.MAX_SAFE_INTEGER);
+		expect(clampClientOffset(Number.MAX_SAFE_INTEGER, 'x')).toBe(Number.MAX_SAFE_INTEGER);
+		expect(clampClientOffset('12', 'x')).toBe(12);
+		expect(clampClientOffset(7.9, 'x')).toBe(7);
+	});
+
+	test('clampClientPage: an absent limit takes the DOOR default (clamped), and is "defaulted"', () => {
+		// The suite runs at the installation ceiling (1000 by default) — above the
+		// get_indexation_grid door default of 500, so the default is observable.
+		expect(CLIENT_MAX_LIMIT).toBeGreaterThan(500);
+		expect(clampClientPage(undefined, 0, 's', 500)).toEqual({
+			limit: 500,
+			offset: 0,
+			bounded: 'defaulted',
+		});
+		// Without a door default: the ceiling.
+		expect(clampClientPage(undefined, 0, 's')).toEqual({
+			limit: CLIENT_MAX_LIMIT,
+			offset: 0,
+			bounded: 'defaulted',
+		});
+		// A door default above the ceiling is itself clamped (one clamp).
+		expect(clampClientPage(null, 0, 's', CLIENT_MAX_LIMIT + 1).limit).toBe(CLIENT_MAX_LIMIT);
+		// Sent and served as sent; sent and changed.
+		expect(clampClientPage(5, 2, 's', 500).bounded).toBe('requested');
+		expect(clampClientPage(5, 'x', 's', 500)).toEqual({ limit: 5, offset: 0, bounded: 'clamped' });
+		// The clamp's own boundary is served as sent: still 'defaulted' with no limit.
+		expect(clampClientPage(undefined, 1e21, 's', 500)).toEqual({
+			limit: 500,
+			offset: Number.MAX_SAFE_INTEGER,
+			bounded: 'clamped',
+		});
+		expect(clampClientPage(undefined, Number.MAX_SAFE_INTEGER, 's', 500).bounded).toBe('defaulted');
+	});
+
+	test('offsetPastPage: the first row past the page, or null when it lies past MAX_SAFE_INTEGER', () => {
+		expect(offsetPastPage({ limit: 3, offset: 6, bounded: 'defaulted' })).toBe(9);
+		expect(
+			offsetPastPage({ limit: 3, offset: Number.MAX_SAFE_INTEGER - 3, bounded: 'defaulted' }),
+		).toBe(Number.MAX_SAFE_INTEGER);
+		expect(
+			offsetPastPage({ limit: 3, offset: Number.MAX_SAFE_INTEGER - 2, bounded: 'defaulted' }),
+		).toBeNull();
+		expect(
+			offsetPastPage({ limit: 1000, offset: Number.MAX_SAFE_INTEGER, bounded: 'defaulted' }),
+		).toBeNull();
 	});
 });

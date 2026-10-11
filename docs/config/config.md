@@ -3621,6 +3621,12 @@ result, so two at once mostly share the same database and disk; the others wait 
 their users see them queued. Raise it on a machine with cores and disk to spare. Values below 1
 are raised to 1.
 
+An export also holds one database connection open for its whole run while it reads its selection,
+and each server process allows at most a quarter of `DB_POOL_MAX` such reads at once (at least
+one): the number of exports that actually read at the same time is the smaller of this budget and
+that share. A job beyond it waits, still shown as running, until another export frees its
+connection — it never fails for that reason. Raise `DB_POOL_MAX` together with this value.
+
 ```bash
 DEDALO_JOB_LANE_EXPORT_CONCURRENCY=1
 ```

@@ -25,12 +25,21 @@
  *     frame folded into its OWN main locator's field group; the cell is
  *     emitted WITHOUT `value` when the component holds nothing;
  *  3. PAGING — sqo.limit/offset page the HITS, not the cells (page 2 = the
- *     remaining records, whose own first sight re-emits context); limit 0 =
- *     ALL; sqo.section_tipo narrows the owning sections ('all' = no
- *     narrowing);
+ *     remaining records, whose own first sight re-emits context); limit 0 is
+ *     a CLIENT page clamped to the ceiling (DEDALO_SEARCH_CLIENT_MAX_LIMIT)
+ *     with a `search.page_clamped` notice — never "all" (READ-4,
+ *     WC-2026-10-11-relation-reads-client-page; the hits here sit below the
+ *     ceiling, so the clamped page holds every one of them; the ceiling itself
+ *     is measured by client_page_doors_native); sqo.section_tipo narrows the
+ *     owning sections ('all' = no narrowing);
  *  4. SHELL — source.mode !== 'edit' returns {context:[],data:[]};
  *  5. HOST READ GATE — the facade's OWN gate: a principal that may read the
- *     sqo's section but NOT the host section is refused (403 perm.denied).
+ *     sqo's section but NOT the host section is refused (403 perm.denied). The
+ *     SAME law holds on the sibling door `related_search` (read_facade
+ *     readableRelatedHosts — the transcription / indexation / tr_print /
+ *     epigraphy tools' "who points at me" listing): a `filter_by_locators` host
+ *     the caller cannot read is refused 403 perm.denied, else the door would
+ *     enumerate the records pointing at any record of any section.
  *
  * KEY ORDER IS PART OF THE CONTRACT, so context/data are compared with
  * `JSON.stringify` (never order-blind `toEqual`), exactly as the retired
@@ -69,6 +78,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
+import { CLIENT_MAX_LIMIT } from '../../src/core/concepts/sqo.ts';
 import { getPermissions, resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
 import {
@@ -633,10 +643,23 @@ describe.if(DB_READY)('get_relation_list — the Referencias grid', () => {
 		expect('value' in (emptyCell as GridEntry)).toBe(false);
 	});
 
-	test('limit 0 = ALL the hits (the header-open request)', async () => {
-		const page = await grid(relationListRqo({ limit: 0 }));
+	test('limit 0 is clamped to the ceiling, visibly (the header-open request)', async () => {
+		const { status, body } = await callRelationList(relationListRqo({ limit: 0 }));
+		expect(status).toBe(200);
+		const page = (body as { data: Grid }).data;
+		// Every hit — they sit below the ceiling — and NOT because 0 means "all":
+		// the notice says the window was clamped, naming the applied ceiling.
 		expectSameJson(page.data, [...REF_A_IDS.flatMap((id) => rowA(id)), ...ROW_B, ...ROW_C]);
 		expectSameJson(page.context, [...contextA('lg-spa'), ...CONTEXT_B, ...CONTEXT_C]);
+		const notices = (body.notices ?? []) as { code: string; details?: { applied?: string } }[];
+		const clamped = notices.find((notice) => notice.code === 'search.page_clamped');
+		expect(clamped?.details?.applied).toBe(`limit ${CLIENT_MAX_LIMIT}, offset 0`);
+		// An honoured window owes no notice.
+		const honoured = await callRelationList(relationListRqo({ limit: 5 }));
+		const honouredCodes = ((honoured.body.notices ?? []) as { code: string }[]).map(
+			(notice) => notice.code,
+		);
+		expect(honouredCodes).not.toContain('search.page_clamped');
 	});
 
 	test('a string section_id addresses the same host (canonical int)', async () => {
@@ -717,5 +740,66 @@ describe.if(DB_READY)('get_relation_list — the host read gate', () => {
 		const { status, body } = await callRelationList(relationListRqo(), UNGRANTED_USER_ID);
 		expect(status).toBe(403);
 		expect((body as { error: { code: string } }).error.code).toBe('perm.denied');
+	});
+});
+
+describe.if(DB_READY)('related_search — the host read gate', () => {
+	/**
+	 * The tools' related_search RQO over the host, with every OTHER gate made
+	 * passable by an identity that holds only the public list section: the
+	 * source names the readable zzrl80 and no tipo (the handler's gate A fires
+	 * only with section_tipo AND tipo), the sqo's owning-section axis is zzrl80
+	 * (gate B: read on every SQO section). Only filter_by_locators names the
+	 * host — so only the facade's host-read gate can refuse.
+	 */
+	function relatedSearchRqo(): Record<string, unknown> {
+		return {
+			action: 'read',
+			dd_api: 'dd_core_api',
+			prevent_lock: true,
+			options: {},
+			source: {
+				typo: 'source',
+				model: 'section',
+				section_tipo: 'zzrl80',
+				action: 'related_search',
+				mode: 'list',
+				lang: 'lg-spa',
+			},
+			sqo: {
+				section_tipo: ['zzrl80'],
+				mode: 'related',
+				filter_by_locators: [{ section_tipo: 'zzrl1', section_id: HOST_ID }],
+				limit: 5,
+				offset: 0,
+			},
+		};
+	}
+
+	test('a principal without read on a filter_by_locators HOST is refused (403 perm.denied)', async () => {
+		const principal = await resolvePrincipal(UNGRANTED_USER_ID);
+		expect(principal.isGlobalAdmin).toBe(false);
+		expect(await getPermissions(principal, 'zzrl80', 'zzrl80')).toBe(1);
+		expect(await getPermissions(principal, 'zzrl1', 'zzrl1')).toBe(0);
+		const { status, body } = await callRelationList(relatedSearchRqo(), UNGRANTED_USER_ID);
+		expect({ status, code: (body as { error?: { code?: string } }).error?.code }).toEqual({
+			status: 403,
+			code: 'perm.denied',
+		});
+	});
+
+	test('control: the SAME RQO is served to a principal that reads the host', async () => {
+		// The refusal above is the host gate, not a malformed request: the
+		// superuser gets a 200 through the same door (the owning-section axis
+		// zzrl80 holds no referencing record, so the page itself is empty).
+		const { status, body } = await callRelationList(relatedSearchRqo());
+		expect(status).toBe(200);
+		expect((body as { ok?: boolean }).ok).toBe(true);
+		// …and with the axis opened, the host's referencing records come back.
+		const opened = relatedSearchRqo();
+		(opened.sqo as Record<string, unknown>).section_tipo = ['all'];
+		const served = await callRelationList(opened);
+		expect(served.status).toBe(200);
+		expect(JSON.stringify(served.body)).toContain(String(REF_A_IDS[0]));
 	});
 });

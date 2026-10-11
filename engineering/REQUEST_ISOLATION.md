@@ -104,9 +104,14 @@ reach for.
   firing on **every** profile-data (dd774) or profile-assignment mutation — this
   is invalidation *completeness* (a staleness risk, not identity bleed); audit it
   on any profile write path.
-- Two latent lang-only keys were made **future-safe** (guarded), not yet exercised
-  by a user-dependent branch: `core/relations/filter_projects.ts`
-  `authorizedProjectsCache` now carries a projects-scope prefix, and
-  `core/resolve/structure_context.ts` `coreCache` must gain a user dimension if
-  `tools`/`buttons` ever become user/permission-dependent (they are ontology-derived
-  today; permissions are applied on the per-call stamp, never cached).
+- `core/relations/filter_projects.ts` `authorizedProjectsCache` is keyed by the
+  caller's sorted dd170 project SET (`projectsScopeKey`; `all_` for a global
+  admin) plus the data lang — never by the user (READ-1, 2026-10-11). The value
+  is a pure function of (set, lang), so two callers with the same set share an
+  entry by construction, and a membership change lands on a fresh key the moment
+  the per-user `getUserProjects` cache is evicted (dd128 save) or expires — no
+  picker-cache listener is needed. Gate: `filter_projects_membership_native`.
+- `core/resolve/structure_context.ts` `coreCache` is lang-only and must gain a
+  user dimension if `tools`/`buttons` ever become user/permission-dependent (they
+  are ontology-derived today; permissions are applied on the per-call stamp,
+  never cached).

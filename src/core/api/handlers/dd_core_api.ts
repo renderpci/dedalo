@@ -45,6 +45,13 @@ import { normalizeTermLocators } from './section_terms.ts';
 /** PHP safe_tipo grammar (shared/core_functions.php:2296). */
 const SAFE_TIPO = /^[a-z]{2,}[0-9]+$/;
 
+/**
+ * get_indexation_grid's page when the client sends no limit (the thesaurus
+ * "show indexations" page) — a door default, still bounded by the client
+ * ceiling (clampClientPage).
+ */
+const INDEXATION_GRID_DEFAULT_LIMIT = 500;
+
 /** dd_core_api action handlers, keyed by action (registered in dispatch.ts). */
 export const coreApiActions: Record<string, ActionHandler> = {
 	read: async (rqo, context) => {
@@ -1594,17 +1601,49 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				},
 			});
 		}
-		const { buildIndexationGrid } = await import('../../section/indexation_grid.ts');
+		// The window is a CLIENT page (READ-4): the one page primitive bounds it
+		// at the ceiling, offset included. The door's own default (500, the
+		// thesaurus "show indexations" page) applies to an absent limit and is
+		// itself clamped. The notice follows the ONE rule of every client page
+		// door (read_facade owedPageNotices): a SENT value that was changed owes
+		// it always; a DEFAULTED page only when the default cut something the
+		// CALLER could page to — any group past the page, scoped like the grid
+		// itself (AUTHZ-05), is one the caller may see (indexationRowsPast); a
+		// page served as sent never.
+		const { clampClientPage, pageClampedNotice, requestedPage } = await import(
+			'../../concepts/sqo.ts'
+		);
+		const asSent = requestedPage(rqo.sqo);
+		const page = clampClientPage(
+			asSent.limit,
+			asSent.offset,
+			'get_indexation_grid',
+			INDEXATION_GRID_DEFAULT_LIMIT,
+		);
+		const { buildIndexationGrid, indexationRowsPast } = await import(
+			'../../section/indexation_grid.ts'
+		);
+		const gridSqo = {
+			...(rqo.sqo ?? {}),
+			limit: page.limit,
+			offset: page.offset,
+		} as import('../../section/indexation_grid.ts').IndexationGridSqo;
 		const grid = await buildIndexationGrid(
 			{
 				sectionTipo: sectionTipo as string,
 				sectionId: gridSectionId,
 				tipo: source.tipo,
-				sqo: (rqo.sqo ?? {}) as import('../../section/indexation_grid.ts').IndexationGridSqo,
+				sqo: gridSqo,
 			},
 			principal,
 		);
-		return { status: 200, body: ok(grid, { requestId: context.requestId }) };
+		const owesNotice =
+			page.bounded === 'clamped' ||
+			(page.bounded === 'defaulted' && (await indexationRowsPast(gridSqo, page, principal)));
+		const notices = owesNotice
+			? [pageClampedNotice('get_indexation_grid', asSent.limit, asSent.offset, page)]
+			: undefined;
+		return { status: 200, body: ok(grid, { requestId: context.requestId, notices }) };
 	},
 	get_activity_metric: async (rqo, context) => {
 		// On-demand activity dataset for the area dashboard's timeline range

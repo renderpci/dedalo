@@ -20,6 +20,17 @@ import type { BuilderResult } from './builders/types.ts';
 export class ParamsCollector {
 	private readonly values: unknown[] = [];
 
+	/**
+	 * @param firstPlaceholder — the number of this collector's FIRST placeholder
+	 * (default `$1`). A fragment built for a statement that already binds N
+	 * values of its own starts at N+1 (search/sql_assembler.ts
+	 * buildAnyRowInScopeSql): the statement's params are then the other
+	 * fragment's followed by `toArray()`, and no value is deduplicated ACROSS
+	 * the two — a shared `$N` would have to carry one type in both, and the two
+	 * fragments cast independently.
+	 */
+	constructor(private readonly firstPlaceholder = 1) {}
+
 	/** Register a value (strict-dedup) and return its '$N' placeholder. */
 	getPlaceholder(value: unknown): string {
 		// Strict search: types must match exactly (mirrors PHP array_search strict).
@@ -28,7 +39,7 @@ export class ParamsCollector {
 			this.values.push(value);
 			index = this.values.length - 1;
 		}
-		return `$${index + 1}`;
+		return `$${index + this.firstPlaceholder}`;
 	}
 
 	/**

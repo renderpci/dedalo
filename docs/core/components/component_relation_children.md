@@ -363,16 +363,29 @@ for flat output. See [exporting data](../exporting_data.md).
   children engine reads the order and parent-link arrays for a whole child set
   in ONE statement per `section_tipo` group; it used to issue two full-row reads
   per child. See `WC-2026-09-05-children-order-one-rule`.
-- **The recursive walk is bounded, and emits each node once.**
-  `getChildrenRecursive()` / `getChildrenRecursiveBatch()` share ONE visited set,
-  so a node reachable from several parents (a polyhierarchy) is emitted and
-  expanded exactly once. Past `CHILDREN_RECURSIVE_MAX_DEPTH` (64) or
-  `CHILDREN_RECURSIVE_MAX_NODES` (200,000) the walk REFUSES with
-  `relation.subtree_too_large` — it never truncates.
+- **Sibling order is total.** Siblings are sorted by (`section_id`, `section_tipo`)
+  first, then by their order value (unordered last) — one pure rule, `orderSiblings()`,
+  shared by `getChildren()`, `getChildrenOfType()` and the recursive walk. Two siblings
+  from different sections sharing an id (a virtual section's record and the real
+  section's) therefore always come back in the same order. See
+  `WC-2026-10-11-children-recursive-one-statement`.
+- **The recursive walk is one statement, bounded, and emits each node once.**
+  `getChildrenRecursive()` / `getChildrenRecursiveBatch()` fetch every edge of the
+  subtree in ONE recursive statement over the relation index
+  (`src/core/relations/descendant_walk.ts` — one more only for a section the walk had
+  not planned), read the order values once per (child section, order component) group,
+  and replay the edges in process: the cost is the same for a branch of five terms and
+  one of 1,200, and the whole branch is read in one snapshot. The edge rule is
+  `getChildren()`'s: a child counts only on its parent's table. The replay shares ONE
+  visited set, so a node reachable from several parents (a polyhierarchy) is emitted
+  and expanded exactly once, and a parent cycle terminates. Past
+  `CHILDREN_RECURSIVE_MAX_DEPTH` (64) or `CHILDREN_RECURSIVE_MAX_NODES` (200,000) the
+  walk REFUSES with `relation.subtree_too_large` — it never truncates.
 - **Caching.** `getChildren()` (`src/core/relations/children.ts`) recomputes on
   every call with no instance-level memoization. Its per-call cost is now
   bounded — one inverse-index search plus one batched order read per section
-  group — and asserted by `test/unit/read_query_budget_native.test.ts`.
+  group — and so is the recursive walk's, whatever the subtree size; both are
+  asserted by `test/unit/read_query_budget_native.test.ts`.
 - **Search.** The dedicated inverse-parent SQL builder (`src/core/search/builders/builder_relation_children.ts`)
   is a correlated `(NOT) EXISTS` scan over the child rows' `relation` column, keyed by
   the paired `component_relation_parent` tipo. Two documented gaps: a multi-locator `q`

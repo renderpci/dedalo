@@ -664,6 +664,21 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// The export's CONSUMER held control past the selection cursor's idle window
+	// (EXPORT_CURSOR_IDLE_MS, selection_cursor.ts) without pulling — an NDJSON
+	// client that stopped reading — so the cursor and its pooled connection were
+	// released. Not the user's Stop (export.cancelled) and not the lane deadline:
+	// the producer's own work never counts toward it. `idle_s` = the window.
+	'export.consumer_idle': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_export_consumer_idle',
+		message: 'The export was stopped because nothing read it for too long',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+		details_keys: ['idle_s'],
+	},
 	// The export ran past its lane's deadline (DEDALO_JOB_DEADLINE_EXPORT_S — an
 	// operator limit, not the user's stop) and was aborted; the partial spool is
 	// deleted. `limit`: the same selection will hit it again — export fewer
@@ -769,6 +784,23 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: true,
 		details_keys: ['limit'],
+	},
+	// Process-wide admission on the export selection cursors (PERF-1): every
+	// slot (max(1, floor(DB_POOL_MAX/4))) holds an open materialized selection,
+	// so a new export would take a pooled connection the request path needs.
+	// A REQUEST-path open is refused BEFORE any connection is reserved; a
+	// background export the lane admitted QUEUES for a slot instead (never this
+	// code) — except with DB_POOL_MAX=1, where no slot can exist. Retryable — a
+	// running export frees its slot when it ends.
+	'export.busy': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_export_busy',
+		message: 'The server is already running as many exports as it allows at once',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+		details_keys: ['slots'],
 	},
 	// Unknown / expired / not-yours / disallowed name — ONE answer for all of
 	// them, so the store never tells a caller which of the four it was.
@@ -2420,6 +2452,21 @@ export const ERROR_REGISTRY = {
 		disclosure: 'public',
 		retryable: false,
 		hint: 'The search filter is malformed. Rebuild the SQO from the section schema and retry.',
+	},
+	// A CLIENT page window was not served as sent (READ-4): the limit was absent
+	// on a door whose absent limit used to mean "all", or a sent limit/offset was
+	// clamped to the ceiling / past-the-end. A NOTICE (ok:true + notices[]),
+	// never thrown: the answer is one bounded page. `door` = the door,
+	// `requested` = the window as sent, `applied` = the window served.
+	'search.page_clamped': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_search_page_clamped',
+		message: 'The list was cut to one page; page through it to see the rest',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['door', 'requested', 'applied'],
 	},
 	'search.index_unavailable': {
 		category: 'unavailable',

@@ -69,6 +69,56 @@ export interface RelatedLocatorFilter {
 	type?: string;
 }
 
+/**
+ * THE sink page window (READ-4) — the one place the relation sink turns a
+ * caller's limit/offset into the numbers it interpolates into `LIMIT` /
+ * `OFFSET` (both sinks, and the JS window of the `tables` branch).
+ *
+ * TOLERANT of every window a SERVER caller legitimately passes, rendered
+ * exactly as before: `false` / `undefined` = no LIMIT; any value whose
+ * `Number(v)` is finite with |floor| <= MAX_SAFE_INTEGER — numeric strings, 0
+ * (still "at least one": `max(1, floor)`), over-ceiling ontology limits. No
+ * ceiling here: CLIENT pages are bounded at their doors (clampClientPage) and
+ * at the wire (wireSqoSchema); the sink only refuses what it cannot NAME.
+ *
+ * REFUSES — a typed `search.invalid_sqo` (400) naming the value — NaN,
+ * ±Infinity, non-numeric strings, and anything past MAX_SAFE_INTEGER. Before,
+ * those rendered `LIMIT NaN` / `LIMIT 1e+21` (a raw Postgres 500) or dropped a
+ * non-numeric offset silently (page 1 served for any page asked).
+ *
+ * @returns limit — the LIMIT to render (null = none); offset — the rows to skip (0 = none)
+ */
+export function pageWindow(
+	limit: unknown,
+	offset: unknown,
+	door: string,
+): { limit: number | null; offset: number } {
+	const nameable = (value: unknown): number | null => {
+		const numeric = Math.floor(Number(value));
+		return Number.isFinite(numeric) && Math.abs(numeric) <= Number.MAX_SAFE_INTEGER
+			? numeric
+			: null;
+	};
+	const refuse = (key: 'limit' | 'offset', value: unknown): never => {
+		const shown = typeof value === 'string' ? JSON.stringify(value.slice(0, 32)) : String(value);
+		throw new DedaloError('search.invalid_sqo', {
+			message: `${door}: ${key} ${shown} is not a page window the search can render`,
+			publicMessage: `The search ${key} is not a valid number`,
+		});
+	};
+	let windowLimit: number | null = null;
+	if (limit !== false && limit !== undefined) {
+		const numeric = nameable(limit);
+		windowLimit = numeric === null ? refuse('limit', limit) : Math.max(1, numeric);
+	}
+	let windowOffset = 0;
+	if (offset !== undefined) {
+		const numeric = nameable(offset);
+		windowOffset = numeric === null ? refuse('offset', offset) : Math.max(0, numeric);
+	}
+	return { limit: windowLimit, offset: windowOffset };
+}
+
 /** Cached relation-capable table list (ontology dd627 walk). */
 let relationTablesCache: string[] | null = null;
 
@@ -159,6 +209,78 @@ async function findInverseReferencesViaIndex(
 	locators: RelatedLocatorFilter[],
 	options: NonNullable<Parameters<typeof findInverseReferences>[1]>,
 ): Promise<InverseReferenceHit[]> {
+	const { selectSql, orderSql, params, tableByTipo } = await inverseReferencesQuery(
+		locators,
+		options,
+	);
+
+	// options.tables narrowing (children engine): table = f(section_tipo),
+	// which the SQL cannot see, so it is applied AFTER the fetch. With a
+	// finite limit that combination must window after filtering (a SQL LIMIT
+	// would drop rows) — the query runs unwindowed and slices in JS. No
+	// caller pairs tables+limit today; correctness over an optimization
+	// nobody hits. Both branches use the SAME validated window (pageWindow).
+	const window = pageWindow(options.limit, options.offset, 'findInverseReferences');
+	const windowInJs = options.tables !== undefined && window.limit !== null;
+
+	const rows = (await sql.unsafe(
+		`${selectSql}
+		 ORDER BY ${orderSql}${windowInJs ? '' : windowSql(window)}`,
+		params,
+	)) as { section_tipo: string; section_id: number }[];
+
+	const hits = await hitsWithTables(rows, tableByTipo);
+	if (options.tables === undefined) return hits;
+	const allowed = new Set(options.tables);
+	const filtered = hits.filter((hit) => allowed.has(hit.table));
+	return windowInJs
+		? filtered.slice(window.offset, window.offset + (window.limit as number))
+		: filtered;
+}
+
+/** A validated window (pageWindow) as SQL: ` LIMIT n` / ` OFFSET n`, each only when it narrows. */
+function windowSql(window: { limit: number | null; offset: number }): string {
+	const limitSql = window.limit !== null ? ` LIMIT ${window.limit}` : '';
+	return window.offset > 0 ? `${limitSql} OFFSET ${window.offset}` : limitSql;
+}
+
+/** Index rows → hits, each with its section's matrix table (cached resolver, memoized per call). */
+async function hitsWithTables(
+	rows: readonly { section_tipo: string; section_id: number }[],
+	tableByTipo: Map<string, string>,
+): Promise<InverseReferenceHit[]> {
+	const hits: InverseReferenceHit[] = [];
+	for (const row of rows) {
+		let table = tableByTipo.get(row.section_tipo);
+		if (table === undefined) {
+			table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
+			tableByTipo.set(row.section_tipo, table);
+		}
+		hits.push({ section_tipo: row.section_tipo, section_id: Number(row.section_id), table });
+	}
+	return hits;
+}
+
+/**
+ * The find engine's QUESTION, unwindowed: the grouped SELECT over
+ * matrix_relation_index (rows `section_tipo, section_id`), its ORDER BY, and
+ * the params both are bound to. ONE derivation, shared by the windowed read
+ * (findInverseReferencesViaIndex) and the tail a scoped probe asks about
+ * (findInverseReferencesPast), so the probe can never ask another question
+ * than the page it judges.
+ */
+async function inverseReferencesQuery(
+	locators: RelatedLocatorFilter[],
+	options: Pick<
+		NonNullable<Parameters<typeof findInverseReferences>[1]>,
+		'sectionTipos' | 'order' | 'op'
+	>,
+): Promise<{
+	selectSql: string;
+	orderSql: string;
+	params: string[];
+	tableByTipo: Map<string, string>;
+}> {
 	const params: string[] = [];
 	const push = (value: string): string => {
 		params.push(value);
@@ -166,14 +288,8 @@ async function findInverseReferencesViaIndex(
 	};
 	const clauses = locators.map((locator) => locatorIndexClause(locator, push));
 	const where: string[] = [`(${clauses.join(' OR ')})`];
-	if (options.sectionTipos !== undefined && options.sectionTipos !== 'all') {
-		const validated = options.sectionTipos.map((tipo) =>
-			assertValidTipo(tipo, 'search_related.target_section'),
-		);
-		where.push(
-			`r.section_tipo IN (SELECT jsonb_array_elements_text(${push(JSON.stringify(validated))}::text::jsonb))`,
-		);
-	}
+	const ownerNarrow = ownerSectionsIn('r.section_tipo', options.sectionTipos, push);
+	if (ownerNarrow !== '') where.push(ownerNarrow);
 	const having =
 		options.op === 'AND' && clauses.length > 1
 			? ` HAVING ${clauses.map((clause) => `bool_or(${clause})`).join(' AND ')}`
@@ -183,7 +299,7 @@ async function findInverseReferencesViaIndex(
 	// the owning tipos actually present so the ORDER BY runs in SQL and
 	// LIMIT/OFFSET stay exact.
 	let orderSql = 'r.section_id ASC';
-	const tableByTipo = new Map<string, string>();
+	let tableByTipo = new Map<string, string>();
 	if (options.order === 'section_tipo_section_id') {
 		// PHP related-search DEFAULT order (v6 core/search/class.search_related.php
 		// :189 — `ORDER BY section_tipo, section_id ASC` when the SQO sets none):
@@ -194,66 +310,64 @@ async function findInverseReferencesViaIndex(
 		// must not pay for an ordering the index already expresses.
 		orderSql = 'r.section_tipo ASC, r.section_id ASC';
 	} else if (options.order !== 'section_id') {
-		const tipoRows = (await sql.unsafe(
-			`SELECT DISTINCT r.section_tipo FROM matrix_relation_index r WHERE ${where.join(' AND ')}`,
-			params,
-		)) as { section_tipo: string }[];
-		for (const { section_tipo } of tipoRows) {
-			tableByTipo.set(section_tipo, (await getMatrixTableFromTipo(section_tipo)) ?? 'matrix');
-		}
-		if (tableByTipo.size > 0) {
-			const cases = [...tableByTipo.entries()]
-				.map(([tipo, table]) => `WHEN ${push(tipo)}::text THEN ${push(table)}::text`)
-				.join(' ');
-			orderSql = `CASE r.section_tipo ${cases} END, r.section_tipo, r.section_id`;
-		}
+		const tableOrder = await tableOrderSql(where, params, push);
+		tableByTipo = tableOrder.tableByTipo;
+		orderSql = tableOrder.orderSql;
 	}
 
-	// options.tables narrowing (children engine): table = f(section_tipo),
-	// which the SQL cannot see, so it is applied AFTER the fetch. With a
-	// finite limit that combination must window after filtering (a SQL LIMIT
-	// would drop rows) — the query runs unwindowed and slices in JS. No
-	// caller pairs tables+limit today; correctness over an optimization
-	// nobody hits.
-	const hasFiniteLimit = options.limit !== false && options.limit !== undefined;
-	const windowInJs = options.tables !== undefined && hasFiniteLimit;
-	const limitSql =
-		hasFiniteLimit && !windowInJs
-			? ` LIMIT ${Math.max(1, Math.floor(options.limit as number))}`
-			: '';
-	const offsetSql =
-		!windowInJs && options.offset !== undefined && options.offset > 0
-			? ` OFFSET ${Math.floor(options.offset)}`
-			: '';
-
-	const rows = (await sql.unsafe(
-		`SELECT r.section_tipo, r.section_id FROM matrix_relation_index r
+	return {
+		selectSql: `SELECT r.section_tipo, r.section_id FROM matrix_relation_index r
 		 WHERE ${where.join(' AND ')}
-		 GROUP BY r.section_tipo, r.section_id${having}
-		 ORDER BY ${orderSql}${limitSql}${offsetSql}`,
+		 GROUP BY r.section_tipo, r.section_id${having}`,
+		orderSql,
 		params,
-	)) as { section_tipo: string; section_id: number }[];
+		tableByTipo,
+	};
+}
 
-	const hits: InverseReferenceHit[] = [];
-	for (const row of rows) {
-		let table = tableByTipo.get(row.section_tipo);
-		if (table === undefined) {
-			table = (await getMatrixTableFromTipo(row.section_tipo)) ?? 'matrix';
-			tableByTipo.set(row.section_tipo, table);
-		}
-		hits.push({ section_tipo: row.section_tipo, section_id: Number(row.section_id), table });
+/**
+ * The 'table' ordering: table = f(section_tipo), so the mapping is
+ * materialized for the owning tipos actually present (one DISTINCT over the
+ * index, bound to the WHERE built so far) and the ORDER BY runs in SQL as a
+ * CASE — LIMIT/OFFSET stay exact. No owner matched → the plain id order.
+ */
+async function tableOrderSql(
+	where: readonly string[],
+	params: readonly string[],
+	push: (value: string) => string,
+): Promise<{ orderSql: string; tableByTipo: Map<string, string> }> {
+	const tableByTipo = new Map<string, string>();
+	const tipoRows = (await sql.unsafe(
+		`SELECT DISTINCT r.section_tipo FROM matrix_relation_index r WHERE ${where.join(' AND ')}`,
+		[...params],
+	)) as { section_tipo: string }[];
+	for (const { section_tipo } of tipoRows) {
+		tableByTipo.set(section_tipo, (await getMatrixTableFromTipo(section_tipo)) ?? 'matrix');
 	}
-	if (options.tables !== undefined) {
-		const allowed = new Set(options.tables);
-		const filtered = hits.filter((hit) => allowed.has(hit.table));
-		if (windowInJs) {
-			const start =
-				options.offset !== undefined && options.offset > 0 ? Math.floor(options.offset) : 0;
-			return filtered.slice(start, start + Math.max(1, Math.floor(options.limit as number)));
-		}
-		return filtered;
-	}
-	return hits;
+	if (tableByTipo.size === 0) return { orderSql: 'r.section_id ASC', tableByTipo };
+	const cases = [...tableByTipo.entries()]
+		.map(([tipo, table]) => `WHEN ${push(tipo)}::text THEN ${push(table)}::text`)
+		.join(' ');
+	return {
+		orderSql: `CASE r.section_tipo ${cases} END, r.section_tipo, r.section_id`,
+		tableByTipo,
+	};
+}
+
+/**
+ * The OWNER-section narrowing (`sectionTipos`; 'all' / absent = none) as one
+ * predicate over `column` — the same jsonb-array idiom on every sink path.
+ */
+function ownerSectionsIn(
+	column: string,
+	sectionTipos: string[] | 'all' | undefined,
+	push: (value: string) => string,
+): string {
+	if (sectionTipos === undefined || sectionTipos === 'all') return '';
+	const validated = sectionTipos.map((tipo) =>
+		assertValidTipo(tipo, 'search_related.target_section'),
+	);
+	return `${column} IN (SELECT jsonb_array_elements_text(${push(JSON.stringify(validated))}::text::jsonb))`;
 }
 
 /**
@@ -310,6 +424,44 @@ export async function findInverseReferences(
 	// options.tables only narrows the RESULT) — uncovered fails loudly.
 	await requireRelationIndex(tables);
 	return findInverseReferencesViaIndex(locators, options);
+}
+
+/** A sink question rendered as SQL, bound to its own `$1..$N` (never executed here). */
+export interface InverseScanSql {
+	sql: string;
+	params: string[];
+}
+
+/**
+ * findInverseReferences' rows PAST `offset` — the same question, owning-section
+ * axis and order — as a bound SELECT `(section_tipo, section_id)`, for a door
+ * that asks a SCOPED question of the whole tail in ONE statement
+ * (security/record_scope.ts anyRowInScope; READ-4's "is anything past this
+ * page yours") instead of reading it window by window.
+ *
+ * UNSCOPED, like the scan it renders: a user-facing caller must scope it, and
+ * it is a `findInverseReference*` name so the AUTHZ-05 door registry
+ * (security_audit_2026_07_23_tripwire) classifies every caller.
+ */
+export async function findInverseReferencesPast(
+	locators: RelatedLocatorFilter[],
+	options: Pick<
+		NonNullable<Parameters<typeof findInverseReferences>[1]>,
+		'sectionTipos' | 'order' | 'op'
+	>,
+	offset: number,
+): Promise<InverseScanSql> {
+	if (locators.length === 0) {
+		throw new DedaloError('search.invalid_sqo', {
+			message: 'search_related: filter_by_locators is required',
+			publicMessage: 'A related search needs filter_by_locators',
+		});
+	}
+	await requireRelationIndex(await getRelationTables());
+	const window = pageWindow(false, offset, 'findInverseReferencesPast');
+	const { selectSql, orderSql, params } = await inverseReferencesQuery(locators, options);
+	const offsetSql = window.offset > 0 ? ` OFFSET ${window.offset}` : '';
+	return { sql: `${selectSql}\n\t\t ORDER BY ${orderSql}${offsetSql}`, params };
 }
 
 /** One breakdown hit: the exact locator entry that matched, plus its owner. */
@@ -618,41 +770,67 @@ export async function findInverseReferenceLocators(
 	// exactly the silent scope narrowing the project forbids).
 	await requireRelationIndex(tables);
 
-	// The tail is identical on both paths (lifted verbatim from the original).
-	const limitSql =
-		options.limit === false || options.limit === undefined
-			? ''
-			: ` LIMIT ${Math.max(1, Math.floor(options.limit))}`;
-	const offsetSql =
-		options.offset !== undefined && options.offset > 0
-			? ` OFFSET ${Math.floor(options.offset)}`
-			: '';
-	// TOTAL ORDER (WC-2026-08-07-breakdown-total-order). The PHP orders — `section_id ASC` and
-	// `"table", section_tipo, section_id` — are not total over a BREAKDOWN row
-	// set: one owner contributes one row per matching locator entry, and those
-	// rows tie on every key. Inside a tie group the physical order is whatever
-	// the chosen plan emits, so a LIMIT/OFFSET window that cuts through a tie
-	// group returned a DIFFERENT ROW depending on the plan — measured between
-	// the two paths here (dd128/67, two locators, {order:'section_id', limit:7,
-	// offset:2}: same section_ids, different from_component_tipo in the
-	// section_id=225 group, deterministic 12/12), and measured WITHIN the old
-	// single-statement path across executions (its off=2,limit=7 window
-	// contained a row absent from its own off=0,limit=9 window — pagination that
-	// is not merely unstable but incoherent).
-	//
-	// The PHP keys stay FIRST and unchanged, so the sequence they determine is
-	// untouched; the tiebreak only refines what neither of them ordered.
-	// locator_data closes it: jsonb has a total btree order, and two rows that
-	// still tie after it are byte-identical, hence unobservable. Both breakdown
-	// paths share this tail, so they now agree row-for-row, not just as
-	// multisets. Measured price of the extra sort key on the biggest unwindowed
-	// results: 8,391 rows 137→142 ms, 9,958 rows 103→119 ms, 17,963 rows
-	// 203→226 ms (3-15%); a windowed read pays a bounded top-N instead.
-	const orderSql =
-		options.order === 'section_id'
-			? 'section_id ASC, section_tipo ASC, "table" ASC, locator_data ASC' // PHP build_sql_query_order_default + tiebreak
-			: '"table", section_tipo, section_id, locator_data';
+	// The tail is identical on both paths (one validated window, pageWindow).
+	const window = pageWindow(options.limit, options.offset, 'findInverseReferenceLocators');
+	const limitSql = window.limit !== null ? ` LIMIT ${window.limit}` : '';
+	const offsetSql = window.offset > 0 ? ` OFFSET ${window.offset}` : '';
+	const orderSql = breakdownOrder(options.order);
 
+	const query = await breakdownQuery(locators, options, tables);
+	if (query === null) return [];
+	const rows = (await sql.unsafe(
+		`${query.sql} ORDER BY ${orderSql}${limitSql}${offsetSql}`,
+		query.params,
+	)) as InverseReferenceLocatorHit[];
+	return rows.map((row) => ({ ...row, section_id: Number(row.section_id) }));
+}
+
+/**
+ * The breakdown's ORDER BY — one definition for the windowed read and the
+ * scoped tail (findInverseReferenceLocatorsPast).
+ *
+ * TOTAL ORDER (WC-2026-08-07-breakdown-total-order). The PHP orders — `section_id ASC` and
+ * `"table", section_tipo, section_id` — are not total over a BREAKDOWN row
+ * set: one owner contributes one row per matching locator entry, and those
+ * rows tie on every key. Inside a tie group the physical order is whatever
+ * the chosen plan emits, so a LIMIT/OFFSET window that cuts through a tie
+ * group returned a DIFFERENT ROW depending on the plan — measured between
+ * the two paths here (dd128/67, two locators, {order:'section_id', limit:7,
+ * offset:2}: same section_ids, different from_component_tipo in the
+ * section_id=225 group, deterministic 12/12), and measured WITHIN the old
+ * single-statement path across executions (its off=2,limit=7 window
+ * contained a row absent from its own off=0,limit=9 window — pagination that
+ * is not merely unstable but incoherent).
+ *
+ * The PHP keys stay FIRST and unchanged, so the sequence they determine is
+ * untouched; the tiebreak only refines what neither of them ordered.
+ * locator_data closes it: jsonb has a total btree order, and two rows that
+ * still tie after it are byte-identical, hence unobservable. Both breakdown
+ * paths share this tail, so they now agree row-for-row, not just as
+ * multisets. Measured price of the extra sort key on the biggest unwindowed
+ * results: 8,391 rows 137→142 ms, 9,958 rows 103→119 ms, 17,963 rows
+ * 203→226 ms (3-15%); a windowed read pays a bounded top-N instead.
+ */
+function breakdownOrder(order: 'table' | 'section_id' | undefined): string {
+	return order === 'section_id'
+		? 'section_id ASC, section_tipo ASC, "table" ASC, locator_data ASC' // PHP build_sql_query_order_default + tiebreak
+		: '"table", section_tipo, section_id, locator_data';
+}
+
+/**
+ * The breakdown's QUESTION, unordered and unwindowed: the owner probe, the plan
+ * choice it decides, and the UNION over every relation-capable table (rows
+ * `section_tipo, section_id, "table", locator_data`) — or `null` when nothing
+ * points at the filter (the empty-owner short-circuit). ONE derivation, shared
+ * by the windowed read (findInverseReferenceLocators) and the scoped tail
+ * (findInverseReferenceLocatorsPast), so both ask the same question on the same
+ * plan.
+ */
+async function breakdownQuery(
+	locators: RelatedLocatorFilter[],
+	options: { sectionTipos?: string[] | 'all'; ownerCap?: number },
+	tables: string[],
+): Promise<InverseScanSql | null> {
 	// ---- STEP 1: resolve the owners. ONE statement, one table, RAW rows.
 	// No GROUP BY / DISTINCT: with only a LIMIT above it, NO plan shape can be
 	// forced to produce more than cap+1 rows (an aggregate would have to consume
@@ -689,13 +867,8 @@ export async function findInverseReferenceLocators(
 		// sectionTipos narrows the OWNER section_tipo — the same thing the old
 		// per-arm sectionNarrow did, moved into the probe (same jsonb idiom as the
 		// find engine above).
-		let probeNarrow = '';
-		if (options.sectionTipos !== undefined && options.sectionTipos !== 'all') {
-			const validated = options.sectionTipos.map((tipo) =>
-				assertValidTipo(tipo, 'search_related.target_section'),
-			);
-			probeNarrow = ` AND r.section_tipo IN (SELECT jsonb_array_elements_text(${probePush(JSON.stringify(validated))}::text::jsonb))`;
-		}
+		const probeOwners = ownerSectionsIn('r.section_tipo', options.sectionTipos, probePush);
+		const probeNarrow = probeOwners === '' ? '' : ` AND ${probeOwners}`;
 		const probeRows = (await sql.unsafe(
 			`SELECT r.section_tipo, r.section_id${flagColumns}
 			 FROM matrix_relation_index r
@@ -746,7 +919,7 @@ export async function findInverseReferenceLocators(
 			// the whole UNION disappears. This is the reported record's path: the
 			// 21 real owners are numisdata*, the request asked for tch*, and the
 			// engine used to seq-scan 3 GB to discover that.
-			if (unionOwners.size === 0) return [];
+			if (unionOwners.size === 0) return null;
 
 			const params: string[] = [];
 			const push = (value: string): string => {
@@ -807,11 +980,7 @@ export async function findInverseReferenceLocators(
 				)
 				.join(' UNION ALL ');
 
-			const rows = (await sql.unsafe(
-				`${unionSql} ORDER BY ${orderSql}${limitSql}${offsetSql}`,
-				params,
-			)) as InverseReferenceLocatorHit[];
-			return rows.map((row) => ({ ...row, section_id: Number(row.section_id) }));
+			return { sql: unionSql, params };
 		}
 	}
 
@@ -836,13 +1005,8 @@ export async function findInverseReferenceLocators(
 	});
 	const wherePerTable = perLocator.join(' OR ');
 
-	let sectionNarrow = '';
-	if (options.sectionTipos !== undefined && options.sectionTipos !== 'all') {
-		const validated = options.sectionTipos.map((tipo) =>
-			assertValidTipo(tipo, 'search_related.target_section'),
-		);
-		sectionNarrow = ` AND section_tipo IN (SELECT jsonb_array_elements_text(${push(JSON.stringify(validated))}::text::jsonb))`;
-	}
+	const owners = ownerSectionsIn('section_tipo', options.sectionTipos, push);
+	const sectionNarrow = owners === '' ? '' : ` AND ${owners}`;
 
 	const union = tables
 		.map(
@@ -854,11 +1018,38 @@ export async function findInverseReferenceLocators(
 		)
 		.join(' UNION ALL ');
 
-	const rows = (await sql.unsafe(
-		`${union} ORDER BY ${orderSql}${limitSql}${offsetSql}`,
-		params,
-	)) as InverseReferenceLocatorHit[];
-	return rows.map((row) => ({ ...row, section_id: Number(row.section_id) }));
+	return { sql: union, params };
+}
+
+/**
+ * findInverseReferenceLocators' rows PAST `offset` — the same question, plan
+ * and total order — as a bound SELECT (`section_tipo, section_id, "table",
+ * locator_data`), for a door that asks a SCOPED question of the whole tail in
+ * one statement (READ-4: indexation_grid.ts indexationRowsPast). `null` when
+ * nothing points at the filter. UNSCOPED like the scan: a user-facing caller
+ * must scope it (AUTHZ-05 door registry).
+ */
+export async function findInverseReferenceLocatorsPast(
+	locators: RelatedLocatorFilter[],
+	options: { sectionTipos?: string[] | 'all'; order?: 'table' | 'section_id' },
+	offset: number,
+): Promise<InverseScanSql | null> {
+	if (locators.length === 0) {
+		throw new DedaloError('search.invalid_sqo', {
+			message: 'search_related: filter_by_locators is required',
+			publicMessage: 'A related search needs filter_by_locators',
+		});
+	}
+	const tables = await getRelationTables();
+	await requireRelationIndex(tables);
+	const window = pageWindow(false, offset, 'findInverseReferenceLocatorsPast');
+	const query = await breakdownQuery(locators, { sectionTipos: options.sectionTipos }, tables);
+	if (query === null) return null;
+	const offsetSql = window.offset > 0 ? ` OFFSET ${window.offset}` : '';
+	return {
+		sql: `${query.sql} ORDER BY ${breakdownOrder(options.order)}${offsetSql}`,
+		params: query.params,
+	};
 }
 
 /** PHP group_by identifier guard (simple, optionally table-qualified). */

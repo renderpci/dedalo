@@ -446,6 +446,10 @@ HERMETIC_TRIPWIRES=(
 	#     (refused before any write, or by the preflight with nothing written).
 	test/unit/install_validation_upfront_tripwire.test.ts
 	test/unit/install_run_files_secret_tripwire.test.ts
+	# --- 2026-10-11 (READ-4 leg W, the wire page bound). DB-free (re-verified with
+	#     DB_HOST=127.0.0.1 DB_PORT=59999 DB_NAME=ci_hermetic_no_db: 3 pass / 0 fail): parses
+	#     hostile windows through rqoSchema for every action the dispatch registry lists.
+	test/unit/wire_sqo_page_bound_native.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

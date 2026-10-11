@@ -133,7 +133,7 @@ const as = <T>(principal: Principal, fn: () => Promise<T>): Promise<T> =>
 		fn,
 	);
 
-const projectIds = (projects: { locator: { section_id: number } }[]): number[] =>
+const projectIds = (projects: readonly { locator: { section_id: number } }[]): number[] =>
 	projects.map((project) => project.locator.section_id).sort((a, b) => a - b);
 
 /** One component `get_data` read of the scratch record, as `principal`. */

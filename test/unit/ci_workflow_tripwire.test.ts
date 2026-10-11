@@ -821,6 +821,22 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/install_ontology_door_native.test.ts',
 		"It drives the installer's ontology door (stage + import through the update panel's shared lower layer) against the suite Postgres, serving its zz packages from a loopback ontology-master stand-in, and measures dd_ontology / matrix_ontology / registry / matrix_dd rows and their census around every case, so it cannot run without a live suite Postgres.",
 	],
+	[
+		'test/unit/client_page_doors_native.test.ts',
+		'It builds the zzpg situation on the suite database (host, referencing records, reader grants, the projects fixture) and drives the real read / get_relation_list, related_search and get_indexation_grid doors against those rows, counting the served records, the notices and the statements and rows the query tap saw — every assertion is a statement about stored rows, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/search_related_page_window_native.test.ts',
+		'It builds the zzpw situation (one host and five referencing records) on the suite database and asserts which page of those rows each sink window renders, or that it is refused, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/filter_projects_membership_native.test.ts',
+		"It rewrites the ACL fixture reader's dd170 membership on the suite database (through the real save door and by direct SQL), restores it in finally, and asserts the projects datalist read back from matrix_projects, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/filter_projects_scope_native.test.ts',
+		'It resolves the ACL fixture principals from matrix_users / matrix_profiles, reads matrix_projects, and mints and sweeps one matrix_test record to drive the get_data facade, so it cannot run without a live suite Postgres.',
+	],
 ]);
 
 /**

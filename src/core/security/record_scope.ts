@@ -32,7 +32,7 @@
 import { CLIENT_MAX_LIMIT, CLIENT_MAX_LOCATOR_PINS, sanitizeClientSqo } from '../concepts/sqo.ts';
 import { sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
-import { buildSearchSql } from '../search/sql_assembler.ts';
+import { buildAnyRowInScopeSql, buildSearchSql } from '../search/sql_assembler.ts';
 import { getPermissions, type Principal } from './permissions.ts';
 
 /**
@@ -302,6 +302,62 @@ export async function scopeInverseReferenceHits<
 	return granted.filter(
 		(hit) => visible.get(hit.section_tipo)?.has(Number(hit.section_id)) === true,
 	);
+}
+
+/** A caller's SELECT yielding `(section_tipo, section_id)` rows, bound to its own `$1..$N`. */
+export interface BoundRows {
+	readonly sql: string;
+	readonly params: readonly unknown[];
+}
+
+/**
+ * THE SET-SHAPED TWIN of {@link scopeInverseReferenceHits}: does ANY row of
+ * `rows` survive this principal's scope? The same two legs, asked of the
+ * database instead of a hit list the caller fetched — for a question whose
+ * candidate set has no bound (READ-4: "is anything past this page yours", over
+ * a tail of any length).
+ *
+ * - global admin: unscoped, as in the hit-list door — any row at all;
+ * - LEG 1, the section read grant: the DISTINCT sections the rows land in (one
+ *   row per section, never per record), judged by the same grant check
+ *   ({@link hitsWithSectionGrant});
+ * - LEG 2, the per-record scope: one EXISTS over the rows, joined to each
+ *   granted section's records under the assembler's own predicate
+ *   (search/sql_assembler.ts buildAnyRowInScopeSql) — one row back, stopping
+ *   at the first visible record.
+ *
+ * Bounded whatever the candidate count: at most three statements (the
+ * section list, the exists, plus what the predicate builders read through
+ * their caches), each returning at most one row per SECTION. Discloses a
+ * boolean about records the caller may see, nothing about the others.
+ */
+export async function anyRowInScope(rows: BoundRows, principal: Principal): Promise<boolean> {
+	const bound = rows.params as (string | number | null)[];
+	if (principal.isGlobalAdmin) {
+		const found = (await sql.unsafe(
+			`SELECT EXISTS (SELECT 1 FROM (${rows.sql}) AS scoped_rows) AS found`,
+			bound,
+		)) as { found: boolean }[];
+		return found[0]?.found === true;
+	}
+	const sections = (await sql.unsafe(
+		`SELECT DISTINCT scoped_rows.section_tipo FROM (${rows.sql}) AS scoped_rows WHERE scoped_rows.section_tipo IS NOT NULL`,
+		bound,
+	)) as { section_tipo: string }[];
+	const { granted } = await hitsWithSectionGrant(
+		sections.map((row) => ({ section_tipo: String(row.section_tipo), section_id: 0 })),
+		principal,
+	);
+	if (granted.length === 0) return false;
+	const query = await buildAnyRowInScopeSql(
+		rows,
+		granted.map((hit) => hit.section_tipo),
+		principal,
+	);
+	const found = (await sql.unsafe(query.sql, query.params as (string | number | null)[])) as {
+		found: boolean;
+	}[];
+	return found[0]?.found === true;
 }
 
 /**
