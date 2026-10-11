@@ -1100,13 +1100,6 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			// install_finish seals, both are false and the login branch runs.
 			const { installInProgress, installSurfaceReachable } = await import('../../install/gate.ts');
 			if (config.installMode || installInProgress()) {
-				const { buildInstallContext } = await import('../../install/context.ts');
-				return {
-					status: 200,
-					body: ok(
-						{ context: [buildInstallContext()], data: [] },
-						// install:true — no database is usable yet (none configured, or
-						// configured and still EMPTY): the environment must not read one.
 				// A TERMINAL install mid-flight (terminal_installing) is in progress
 				// but never the wizard's: no installer page (its API is closed —
 				// installSurfaceReachable) and no login over a half-built database.
@@ -1117,6 +1110,13 @@ export const coreApiActions: Record<string, ActionHandler> = {
 							'An install is in progress from the terminal — finish it there (scripts/install.ts --resume).',
 					});
 				}
+				const { buildInstallContext } = await import('../../install/context.ts');
+				return {
+					status: 200,
+					body: ok(
+						{ context: [buildInstallContext()], data: [] },
+						// install:true — no database is usable yet (none configured, or
+						// configured and still EMPTY): the environment must not read one.
 						{
 							requestId: context.requestId,
 							extend: { environment: await buildEnv(null, null, { install: true }) },
