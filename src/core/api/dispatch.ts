@@ -1022,7 +1022,14 @@ async function withIdempotency(
  * one place a throw becomes a wire body. Every refusal below is a throw of a
  * registered code; the catch converts (registry status), logs, and threads
  * Retry-After. `csrf_token` is appended to every response for client
- * transparency (PHP parity), success or failure.
+ * transparency (PHP parity), success or failure — and beside it ALWAYS
+ * `session_user_id`, the user that token belongs to
+ * (WC-2026-10-11-session-user-beside-csrf-token). A token is an identity: the
+ * client adopts it only for its own page user (error_dispatch
+ * settle_session_identity), so a page whose session was replaced by a login
+ * elsewhere never moves onto it — not through the CSRF resend, not through an
+ * exempt action's success. A handler that minted the session itself (login)
+ * owns both keys; they are not overwritten with the request's previous session.
  */
 async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
 	const apiClass = String(rqo.dd_api ?? 'dd_core_api');
@@ -1033,8 +1040,9 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 	} catch (error) {
 		result = failureResult(error, context, `${apiClass}::${action}`);
 	}
-	if (context.session !== null) {
+	if (context.session !== null && result.body.csrf_token === undefined) {
 		result.body.csrf_token = context.session.csrfToken;
+		result.body.session_user_id = context.session.userId;
 	}
 	return result;
 }

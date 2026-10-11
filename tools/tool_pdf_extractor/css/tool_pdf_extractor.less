@@ -114,6 +114,14 @@
 				padding: 1rem;
 				border-radius: 4px;
 				border: 1px solid @color_grey_13;
+
+				// The text method is the PDF's characters verbatim (render_class
+				// 'text', escaped): its line breaks are newlines, which only
+				// pre-wrap shows. The html method carries its own <br>/<p>, so it
+				// keeps normal white-space (pre-wrap would double every line).
+				&.text {
+					white-space: pre-wrap;
+				}
     		}
 		}
 

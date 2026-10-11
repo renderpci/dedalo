@@ -23,8 +23,13 @@ export interface PdfExtractOptions {
 
 /**
  * Text/HTML extraction argv (PHP :808-831):
- * `<engine> -enc UTF-8 [-f <in>] [-l <out>] [html: -i -p -noframes -layout] <src> <out_file>`.
+ * `<engine> -enc UTF-8 [-f <in>] [-l <out>] [html: -i -p -noframes] <src> <out_file>`.
  * Text mode uses pdftotext; html mode uses pdftohtml.
+ *
+ * NO `-layout` for pdftohtml (CLIENT-2, 2026-10-11): it is a pdftotext option
+ * pdftohtml does not have — poppler prints its usage and exits 1, so the PHP
+ * recipe's flag made EVERY html extraction fail. Measured end to end by
+ * test/unit/tool_pdf_extractor.test.ts (the gs-built html case).
  */
 export function buildExtractArgv(
 	source: string,
@@ -37,7 +42,7 @@ export function buildExtractArgv(
 	if (options.pageIn != null) argv.push('-f', String(options.pageIn));
 	if (options.pageOut != null) argv.push('-l', String(options.pageOut));
 	if (options.method === 'html') {
-		argv.push('-i', '-p', '-noframes', '-layout');
+		argv.push('-i', '-p', '-noframes');
 	}
 	argv.push(source, outFile);
 	return argv;

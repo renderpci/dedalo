@@ -569,6 +569,11 @@ event_manager.publish('login_successful', api_response)
 
 - login.js
 
+A notification, published **before** the re-login identity decision
+(`error_dispatch.settle_relogin_attempt`). It never authorises resuming queued
+work: a subscriber that retries a save on it would replay the page user's edit
+under whoever just logged in. Nothing in the client subscribes to it.
+
 ### modal_close
 
 ```js
@@ -768,19 +773,6 @@ event_manager.publish('set_lang_value_' + self.id_base , datalist_item.section_i
 **Emitted by:**
 
 - view_default_edit_select.js
-
-### set_pdf_data_
-
-```js
-event_manager.publish('set_pdf_data_'+ id_base, {
-    key     : 0,
-    value   : pdf_data
-})
-```
-
-**Emitted by:**
-
-- render_tool_pdf_extractor.js
 
 ### show_save_button_
 

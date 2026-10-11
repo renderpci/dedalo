@@ -115,8 +115,12 @@ Two mechanisms, in order:
    re-derive — the idle window restarts on every request.
 2. **The recovery.** Once the session is gone, the auth gate answers **401**
    with `errors: ['not_logged']`. The client raises the re-login modal in place
-   (`render_relogin`), and components retry on `login_successful` — so page
-   state survives. `msg` carries the human text; `errors` carries the token
+   (`render_relogin`), and a queued save or read is retried once, only when
+   `error_dispatch.settle_relogin_attempt` reports `'resume'` — the page's own
+   user logged back in — so page state survives. Any other identity latches the
+   page (`is_page_identity_revoked()`: no transport sends anything but the
+   login actions, so not even a keyboard-triggered delete leaves the page) and
+   reloads it. `login_successful` is a notification, never an authorisation to resume. `msg` carries the human text; `errors` carries the token
    every client branch dispatches on.
 
 !!! note "A *re*-login, never a second login"
@@ -356,8 +360,12 @@ Gates: `test/unit/change_lang.test.ts`.
   `get_environment`, `start`, `get_login_context`, `change_lang` — the login
   panel's own language selector, see below); (3) CSRF is verified
   (`verifyCsrf`) for every authenticated, non-exempt action — read and count are
-  **not** exempt. A CSRF failure returns `errors:['csrf_failed']` plus the
-  session's current token, so the client's single transparent retry can succeed.
+  **not** exempt. A CSRF failure (`auth.csrf_failed`) carries the session's
+  current token and, beside it, its owner `session_user_id` (every token on the
+  wire does). The client's single transparent retry runs only when that owner is
+  the page's own user: a session replaced by another user's login (in another
+  tab or window) is never adopted — the page latches and reloads, as after a
+  refused re-login.
 - **Authorization.** `login()` stamps `isGlobalAdmin` into the session;
   [`permissions.ts`](security.md) then decides per-element access.
   `resolvePrincipal(userId)` reads the admin/developer flags back for the current

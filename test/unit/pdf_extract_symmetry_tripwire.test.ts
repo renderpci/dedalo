@@ -18,17 +18,22 @@
  * angle brackets all lose characters on the way into the archive, and nothing
  * reports it. The pair must be SYMMETRIC or absent, never half.
  *
- * This gate is a SOURCE census, not a DOM run: `tools/**\/js` has no executing
- * behavioural tier (P0-12's gate shares that limitation). It pins the two
- * properties that made the loss possible.
+ * THE SHAPE SINCE 2026-10-11 (CLIENT-2). The client no longer touches the
+ * payload's markup at all: `get_pdf_data` answers `{value, render_class}`
+ * (tools/tool_pdf_extractor/server/pdf_payload.ts — `shapePdfPayload`), the text
+ * method verbatim, the html method shaped and sanitized on the server, and the
+ * client renders through the ONE render-boundary escaper. So the client half of
+ * this gate is a BAN (no DOMParser, no parse-then-textContent decode anywhere in
+ * the tool's client), and the html half — formerly a brace-depth census of the
+ * client loop — is now an OUTCOME over the server door.
  */
 
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { browserSources } from '../helpers/browser_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
-const EXTRACTOR = 'tools/tool_pdf_extractor/js/tool_pdf_extractor.js';
 const SERVER = 'src/core/media/tools/pdf_extract.ts';
 
 function read(file: string): string {
@@ -44,12 +49,26 @@ function stripComments(source: string): string {
 	return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
-/** The body of `process_pdf_data`, where the round trip lived. */
-function processBody(): string {
-	const src = read(EXTRACTOR);
-	const start = src.indexOf('tool_pdf_extractor.prototype.process_pdf_data');
-	expect(start, `${EXTRACTOR}: process_pdf_data not found`).toBeGreaterThan(-1);
-	return stripComments(src.slice(start, src.indexOf('}//end process_pdf_data', start)));
+/** Every client module of the tool (the shared browser corpus, narrowed to it), comments stripped. */
+function clientSources(): { file: string; code: string }[] {
+	return browserSources()
+		.filter((file) => file.startsWith('tools/tool_pdf_extractor/'))
+		.sort()
+		.map((file) => ({ file, code: stripComments(read(file)) }));
+}
+
+type ShapePdfPayload = (
+	raw: string,
+	method: 'text' | 'html',
+	offset: number,
+) => { value: string; render_class: string };
+
+async function shaper(): Promise<ShapePdfPayload> {
+	const mod = (await import('../../tools/tool_pdf_extractor/server/pdf_payload.ts')) as {
+		shapePdfPayload?: ShapePdfPayload;
+	};
+	expect(typeof mod.shapePdfPayload, 'pdf_payload.ts must export shapePdfPayload').toBe('function');
+	return mod.shapePdfPayload as ShapePdfPayload;
 }
 
 describe('pdf extraction symmetry', () => {
@@ -60,41 +79,42 @@ describe('pdf extraction symmetry', () => {
 		expect(server).not.toMatch(/htmlentities|escapeHtml|encodeEntities/i);
 	});
 
-	test('the CLIENT therefore does not decode', () => {
-		// The exact shape that ate the characters: parsing raw text as HTML and
-		// taking textContent.
-		const body = processBody();
+	test('the CLIENT therefore does not decode — and never re-parses the payload', () => {
+		// The exact shape that ate the characters (parsing raw text as HTML and
+		// taking textContent), and the parser itself: a client-side
+		// parse -> serialise -> innerHTML round trip is also the mutation-XSS route.
+		const sources = clientSources();
+		expect(sources.length, 'the tool client is gone — re-read this gate').toBeGreaterThan(0);
+		const offenders = sources
+			.filter(
+				({ code }) =>
+					/\bDOMParser\b/.test(code) ||
+					/parseFromString\([^)]*\)[\s\S]{0,80}\.textContent/.test(code),
+			)
+			.map(({ file }) => file);
 		expect(
-			/parseFromString\([^)]*\)\s*\.?\s*[\s\S]{0,80}documentElement\.textContent/.test(body),
-			`${EXTRACTOR}: process_pdf_data decodes entities out of RAW server text again — ` +
-				'over raw text that deletes every `<…>` run as a tag. The server does not encode ' +
-				'(see the sibling test), so a decode here is not a round trip, it is a loss.',
-		).toBe(false);
-		expect(body).not.toContain('original_text = htmlEntities(original_text)');
+			offenders,
+			'The server shapes and sanitizes the payload (shapePdfPayload); the client renders ' +
+				'it through render_value by its render_class. A DOMParser here re-opens the decode ' +
+				'that deleted every `<…>` run and the parse/serialise round trip.',
+		).toEqual([]);
 	});
 
-	test('the html method reads the body AFTER the page loop, not inside it', () => {
-		// `final_text = body.innerHTML` inside the `for` returned '' for any PDF
-		// whose parse produced no `a[name]` anchor — which, once the decode above
-		// had flattened the markup to plain text, was every PDF.
-		const body = processBody();
-		const loopStart = body.indexOf('for (let i = 0; i < pages_len; i++)');
-		const loopEnd = body.indexOf('final_text = body.innerHTML');
-		expect(loopStart, 'the html page loop is gone — re-read this gate').toBeGreaterThan(-1);
-		expect(loopEnd, 'the html branch no longer reads body.innerHTML').toBeGreaterThan(-1);
-		// NESTING DEPTH, not "is there a closing brace" — the loop body contains
-		// `${…}` template placeholders, whose braces balance, so a naive
-		// `includes('}')` reads as "the loop closed" from INSIDE it. (Measured: it
-		// did, and this test passed against the defect until it counted.)
-		let depth = 0;
-		for (const char of body.slice(loopStart, loopEnd)) {
-			if (char === '{') depth += 1;
-			else if (char === '}') depth -= 1;
-		}
-		expect(
-			depth,
-			`${EXTRACTOR}: \`final_text = body.innerHTML\` is INSIDE the page loop (depth ${depth}), ` +
-				'so a PDF whose parse produced no `a[name]` anchor yields an EMPTY extraction.',
-		).toBe(0);
+	test('the server keeps text verbatim and returns an html body even with no page anchors', async () => {
+		const shape = await shaper();
+		// text: what the PDF holds, character for character
+		expect(shape('IMP(erator) CAES<A>R a <gap/> b x &amp; y', 'text', 1)).toEqual({
+			value: 'IMP(erator) CAES<A>R a <gap/> b x &amp; y',
+			render_class: 'text',
+		});
+		// html with NO a[name] anchor: the body survives (the old in-loop read
+		// returned '' for exactly this document)
+		const html = shape(
+			'<!DOCTYPE html><html><head><title>t</title></head><body><b>WORLD</b><br/></body></html>',
+			'html',
+			1,
+		);
+		expect(html.render_class).toBe('html');
+		expect(html.value).toContain('<b>WORLD</b>');
 	});
 });

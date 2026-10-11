@@ -163,7 +163,10 @@ the keys the client already reads by name (PHP parity). Rules:
   converter regression, refused at parse time by every schema-parsing gate;
 - `csrf_token` is appended by the dispatch chokepoint to EVERY response of a
   session (success and failure) — a handler never sets it (login excepted:
-  no session yet on the context);
+  no session yet on the context, and the chokepoint never overwrites it) — and
+  beside it ALWAYS `session_user_id`, the user that token belongs to: the client
+  adopts a token, and makes its CSRF resend, only for its own page user
+  (WC-2026-10-11-session-user-beside-csrf-token);
 - an extension key on a FAILURE is exceptional and named: `start`'s
   `environment` (the labels the refused client needs to render its no-access
   page — WC-2026-08-12-authorization-denial-token) and the CSRF gate's
@@ -225,7 +228,7 @@ route. Consequences:
   cannot learn the intake exists), `install.not_reachable` (404),
   `install.ip_denied` (403), `auth.not_logged` (401), `auth.maintenance` (401,
   the client relogin policy keys on both), `auth.csrf_failed` (403, extension
-  `action` + the fresh `csrf_token`), `perm.denied` (report intake IP).
+  `action` + the fresh `csrf_token` + its `session_user_id`), `perm.denied` (report intake IP).
 - **The poison latch lives in `toDedaloError`** (raw error or anywhere in the
   `cause` chain), not in the catch — tool/MCP/stream conversions latch too.
 - **`src/server.ts`** has one failure door, `jsonFailureResponse(error,

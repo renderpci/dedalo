@@ -5,10 +5,10 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {request_failed, response_data, ApiError, CLIENT_ERROR} from '../../../core/common/js/api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	import {render_value} from '../../../core/common/js/utils/render_escape.js'
 
 
 
@@ -24,11 +24,13 @@
 *  - Choose an optional page range (page_in / page_out) to restrict extraction.
 *  - Select the extraction method: 'text' (plain) or 'html' (structured).
 *  - Trigger server-side PDF text extraction via `self.get_pdf_data()`.
-*  - Preview the extracted content inline, then confirm or discard it.
+*  - Preview the extracted content inline and select it for copying.
 *
-* After a successful extraction the processed text is published on the
-* `event_manager` channel `set_pdf_data_<id_base>` so that the target
-* `component_text_area` instance can pick it up and store it as its value.
+* The preview renders the server's `{value, render_class}` answer through the
+* ONE render-boundary escaper (render_value): 'text' is escaped (the PDF's
+* characters verbatim), 'html' is the server-shaped, sanitized markup, and an
+* absent or unknown class escapes (fail closed). Nothing is broadcast: no
+* component subscribes to an extraction (CLIENT-2, 2026-10-11).
 *
 * Main exports:
 *  - `render_tool_pdf_extractor` — constructor (prototype only; no state of its own)
@@ -53,9 +55,6 @@ export const render_tool_pdf_extractor = function() {
 * Side effects:
 *  - Writes `self.config.method`, `self.config.page_in`, and
 *    `self.config.page_out` as the user interacts with the form controls.
-*  - Publishes an `event_manager` event (`set_pdf_data_<id_base>`) when the
-*    user confirms the extracted text, causing the target component_text_area
-*    to update its stored value.
 *
 * @param {Object} options - Render options forwarded from tool_common.prototype.render.
 * @param {string} [options.render_level='full'] - `'content'` to return the inner
@@ -104,25 +103,19 @@ render_tool_pdf_extractor.prototype.edit = async function (options) {
 *  2. `button_submit` — triggers PDF extraction on `mouseup`:
 *     a. Calls `self.get_pdf_data()` (async, up to 180 s timeout).
 *     b. On failure, displays the API error message in `response_msg`.
-*     c. On success, passes the raw string to `self.process_pdf_data()` and:
-*        - Publishes the result on `event_manager` so the target
-*          `component_text_area` (`set_pdf_data_<id_base>`) updates its value.
-*        - Renders the result in the inline `preview` div.
-*        - Reveals the `button_select` helper.
+*     c. On success, renders `data.value` in the inline `preview` div through
+*        render_value by `data.render_class` (escaped unless the server named
+*        it 'html'), and reveals the `button_select` helper.
 *  3. `response_container` — holds `response_msg` (API status text or error)
 *     and `preview` (hidden until extraction succeeds).
 *  4. `button_select` — selects all content of the preview div via
 *     `window.getSelection().selectAllChildren(preview)` for easy copy/paste.
 *  5. Commented-out `info` block — left intentionally for future use.
 *
-* The `id_base` used for the event channel is constructed as
-* `<caller.section_tipo>_<caller.section_id>_<caller.tipo>`, matching the
-* convention expected by `component_text_area`'s init listener.
-*
 * @param {Object} self - The `tool_pdf_extractor` instance. Must have:
 *   `self.config` (initialised by tool_pdf_extractor.prototype.init),
 *   `self.caller` (the parent PDF component providing section/tipo context),
-*   `self.get_pdf_data()`, `self.process_pdf_data()`, and `self.get_tool_label()`.
+*   `self.get_pdf_data()` and `self.get_tool_label()`.
 * @returns {Promise<HTMLElement>} The populated `content_data` div ready for
 *   insertion into the tool wrapper.
 */
@@ -298,27 +291,15 @@ const get_content_data = async function(self) {
 				// the server no longer sends.
 				response_msg.textContent = ''
 
-			// process_pdf_data. Apply the extracted text (the payload) to the target
-			// component value
-				const raw_pdf_string	= response_data(extracted_data_response)
-				const pdf_data			= await self.process_pdf_data(raw_pdf_string)
-				// debug
-					if(SHOW_DEBUG===true) {
-						// console.log('raw_pdf_string:', raw_pdf_string);
-						// console.log('process_pdf_data -> pdf_data:', pdf_data);
-						// console.log('self:', self);
-					}
-				// id_base like 'rsc176_3_rsc37'. Note that target component tipo comes from properties->tool_config->target_tipo
-				const id_base = self.caller.section_tipo + '_' + self.caller.section_id + '_' + self.caller.tipo
-				// set_pdf_data_ event is observed by component_text_area (init function) and get pdf_data and set as component value (set_value)
-				// The published value must be an object like as expected by component_text_area->set_value
-				event_manager.publish('set_pdf_data_'+ id_base, {
-					key		: 0,
-					value	: pdf_data
-				})
-
-			// preview
-				preview.innerHTML = pdf_data
+			// preview. The server decided what this payload IS ({value, render_class},
+			// server/pdf_payload.ts): the text method is the PDF's characters and is
+			// escaped; the html method was shaped and sanitized there. render_value
+			// escapes an absent or unknown class, so a payload of any other shape
+			// can never become markup here.
+				const extracted = response_data(extracted_data_response)
+				preview.innerHTML = render_value(extracted?.value, extracted?.render_class)
+				// newlines of an escaped extraction are shown as line breaks (css)
+				preview.classList.toggle('text', extracted?.render_class!=='html')
 
 			// loading css
 				preview.classList.remove('hide')

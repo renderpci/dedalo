@@ -669,9 +669,9 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 			'every git-tracked js/mjs/cjs/css/less file under the trees that ship to a browser or an installation — the committed third-party byte census behind dependency_integrity_tripwire (SCAN_ROOTS)',
 	},
 	'scripts/lib/production_corpus.ts': {
-		roots: [['tools']],
+		roots: [['.'], ['tools']],
 		scope:
-			"the production source corpus behind production_import_tripwire: every package root derived from the tree (a bun.lock beside a package.json, walked from the repo root — no root chosen), then per package the trees sourceRootsOf returns — the engine's src/ plus every tools/<tool>/server/ (the one site this rule reads: the readdirSync over `tools`), and each other package's src/ — handed to walkFiles through a return value the evaluator does not read as a root",
+			"the production source corpus behind production_import_tripwire: every package root derived from the tree (a git-tracked bun.lock beside a package.json, listed by `git ls-files` run at the repo root — the `.` site: the whole repo, no subtree chosen, and no gitignored local tree such as rewrite/), then per package the trees sourceRootsOf returns — the engine's src/ plus every tools/<tool>/server/ (the one site this rule reads: the readdirSync over `tools`), and each other package's src/ — handed to walkFiles through a return value the evaluator does not read as a root",
 	},
 	'scripts/lib/client_compat_census.ts': {
 		roots: [

@@ -21,7 +21,7 @@
 	// 2026-09-04 (P2-25 / DEAD-07 gate): the branch threw ReferenceError instead
 	// of rendering the error panel it promises.
 	import {ApiError, CLIENT_ERROR, request_failed, response_data} from '../../common/js/api_error.js'
-	import {handle_api_error} from '../../common/js/error_dispatch.js'
+	import {handle_api_error, is_page_identity_revoked} from '../../common/js/error_dispatch.js'
 	import {render_error_panel} from '../../common/js/render_api_error.js'
 
 
@@ -2797,8 +2797,11 @@ export const push_browser_history = function(options) {
 * Error handling: the failure envelope carries an ApiError, and
 * `handle_api_error` executes its policy (relogin overlay for `auth.not_logged`,
 * no-access panel for `perm.denied`, toast for the rest). When it reports
-* `recovered:true` — the user logged back in — a full rebuild+render is retried,
-* unless the page holds unsaved data. Status is always reset to `previous_status`
+* `recovered:true` — the page's OWN user logged back in (relogin_identity
+* 'same'; another identity reloads the page) — the request is re-sent once,
+* unless the page holds unsaved data. While the page identity is revoked
+* (error_dispatch is_page_identity_revoked) nothing is sent. On every failure
+* path — the latch included — status is reset to `previous_status`
 * ('initialized') and false is returned so the calling build() knows to abort.
 *
 * Developer mode logging: when SHOW_DEVELOPER or SHOW_DEBUG is true, the raw
@@ -2813,6 +2816,19 @@ export const push_browser_history = function(options) {
 *   when the response is missing/invalid or a known error was handled
 */
 export const build_autoload = async function(self, {recovery_retry=false}={}) {
+
+	// page identity guard (LEAD-2 + CLIENT-5): a re-login on this page
+	// authenticated another (or an unresolvable) identity — the reload is pending
+	// or was cancelled. No read is sent under that session into this page's
+	// state; the build is aborted like any other failed load — status reset to
+	// 'initialized' as the failure tail below does, or a render() waiting on
+	// this 'building' instance would wait for a 'built_' event that never fires.
+		if (!self.tmp_api_response && is_page_identity_revoked()) {
+			console.warn(`${self.model} build refused: the page identity changed on re-login; reload the page.`)
+			self.build_error = null
+			self.status = 'initialized'
+			return false
+		}
 
 	// load context and data
 		const api_response = self.tmp_api_response || await data_manager.request({

@@ -72,6 +72,10 @@
 	import {request_failed, response_data, response_extension} from '../../common/js/api_error.js'
 	import {error_text} from '../../common/js/render_api_error.js'
 	import {format_label} from '../../common/js/common.js'
+	// static on purpose: error_dispatch imports THIS module only dynamically, so
+	// there is no cycle, and the overlay below must hand its envelope to the ONE
+	// identity door
+	import {settle_relogin_attempt} from '../../common/js/error_dispatch.js'
 	import {check_password} from '../../component_password/js/password_policy.js'
 
 
@@ -1419,8 +1423,12 @@ export const render_files_loader = function() {
 *  1. The page's main container receives class 'loading' (dims the UI).
 *  2. A fresh login instance is created via get_instance() with:
 *     - add_select_lang: false (no language switcher in the overlay)
-*     - custom_action_dispatch: destroys the overlay and unlocks the page
-*       after successful re-authentication, then calls on_success if provided.
+*     - custom_action_dispatch: TRANSPORT only — hands the login envelope to
+*       error_dispatch.settle_relogin_attempt, the ONE decision site. 'resume'
+*       (the page's own user) → destroys the overlay, unlocks the page, calls
+*       on_success. 'retry_form' → the form stays up. 'refused' (another or an
+*       unknown identity: the door latched the page, settled the recovery and
+*       is reloading) → nothing resumes; the overlay and the page lock stay.
 *  3. build(true) loads the login context from the server (autoload mode).
 *  4. render() produces the login_node. The '.overlay' class is added to
 *     content_data so CSS positions it over the existing page content.
@@ -1429,8 +1437,9 @@ export const render_files_loader = function() {
 *
 * @param {Object} [options={}] - Configuration options
 * @param {Function|null} [options.on_success=null] - Callback fired after
-*        successful re-authentication. Receives the login instance as its
-*        first argument. Use to retry the operation that triggered the error.
+*        successful re-authentication AS THE PAGE'S OWN USER
+*        (settle_relogin_attempt==='resume'). Receives (login_instance, api_response).
+*        Use to retry the operation that triggered the error.
 * @param {HTMLElement|null} [options.main_container=null] - The container to
 *        lock with class 'loading' while the overlay is active. Defaults to
 *        the first '.wrapper.page' element in the document.
@@ -1463,49 +1472,23 @@ export const render_relogin = async function(options={}) {
 				// account this page belongs to (CLI-09).
 				//
 				// This overlay appears when a session dies MID-USE, on a page that
-				// may be holding a queued save. Resolving `on_success` without
-				// checking who logged in commits A's edit under B's session: A's
-				// text lands on the record with B as the author in the Time Machine
-				// audit and the `modified_by` stamp, while the page keeps A's menu,
-				// A's `is_developer` and A's cached structure contexts until the
-				// next full load. Server-side authorization is intact throughout —
-				// what is lost is PROVENANCE, which in a heritage archive is part of
-				// the record.
+				// may be holding a queued save. Resuming without checking who logged
+				// in commits A's edit under B's session: A's text lands on the record
+				// with B as the author in the Time Machine audit and the
+				// `modified_by` stamp, while the page keeps A's menu, A's
+				// `is_developer` and A's cached structure contexts until the next
+				// full load. Server-side authorization is intact throughout — what is
+				// lost is PROVENANCE, which in a heritage archive is part of the
+				// record.
 				//
-				// A full reload is the only honest answer: this page's cached state
-				// belongs to the previous identity, and the queued action must NOT
-				// be resolved across the change.
-				// THE KEY IS TOP-LEVEL. Envelope v2 carries extension keys beside
-				// `ok`/`data` — the login handler answers
-				// `ok(true, {extend:{user_id, csrf_token}})`
-				// (src/core/api/handlers/dd_utils_api.ts). There is NO
-				// `result_options` object in a TS response; that spelling is the
-				// PHP-era one and survives only in the frozen oracle fixture.
-				// Reading it returned `undefined`, which made an earlier version of
-				// this very guard INERT — it compared nothing and fell through to
-				// the resume it exists to prevent.
-					const authenticated_user_id =
-						api_response?.user_id ?? api_response?.result_options?.user_id
-					const page_user_id = (typeof page_globals!=='undefined') ? page_globals?.user_id : null
-
-				// FAIL CLOSED. A successful login whose identity cannot be resolved
-				// is not a verified match — it is an unknown, and resuming another
-				// user's queued save on an unknown is the defect. Reload.
-					const logged_in = response_data(api_response)===true
-					const identity_unknown = authenticated_user_id===undefined || authenticated_user_id===null
-					const identity_differs =
-						!identity_unknown && page_user_id!==undefined && page_user_id!==null &&
-						String(authenticated_user_id)!==String(page_user_id)
-
-					if (logged_in && (identity_differs || identity_unknown)) {
-						console.warn(
-							'render_relogin: '
-							+ (identity_differs
-								? 'authenticated as a DIFFERENT user (page ' + page_user_id + ' -> ' + authenticated_user_id + ')'
-								: 'could not resolve the authenticated user_id from the login response')
-							+ ' — reloading instead of resuming this page\'s pending action.'
-						)
-						window.location.reload()
+				// This dispatch is TRANSPORT: the decision, the page latch, the
+				// settlement of the waiting recovery and the reload all live in ONE
+				// door, `settle_relogin_attempt` (error_dispatch.js) — a second
+				// check here would be a second decision site that masks the first.
+				// 'retry_form': the overlay stays for another attempt. 'refused':
+				// the overlay and the page lock stay, the reload is under way.
+					const outcome = settle_relogin_attempt(api_response)
+					if (outcome!=='resume') {
 						return
 					}
 
@@ -1519,7 +1502,7 @@ export const render_relogin = async function(options={}) {
 
 				// exec possible on_success callback function if exists
 				if (on_success && typeof on_success==='function') {
-					on_success(this)
+					on_success(this, api_response)
 				}
 			}
 		})

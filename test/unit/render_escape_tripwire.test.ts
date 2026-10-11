@@ -1134,7 +1134,7 @@ const REMAINDER_RATCHET: Readonly<Record<string, number>> = {
 	'tools/tool_numisdata_epigraphy/js/render_tool_numisdata_epigraphy.js': 1,
 	'tools/tool_ontology/js/render_tool_ontology.js': 3,
 	'tools/tool_ontology_parser/js/render_tool_ontology_parser.js': 12,
-	'tools/tool_pdf_extractor/js/render_tool_pdf_extractor.js': 6,
+	'tools/tool_pdf_extractor/js/render_tool_pdf_extractor.js': 5,
 	'tools/tool_posterframe/js/render_tool_posterframe.js': 2,
 	'tools/tool_print/js/canvas_tool_print.js': 1,
 	'tools/tool_print/js/render_box_tool_print.js': 6,

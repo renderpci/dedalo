@@ -178,6 +178,10 @@ walks the `ddo_map` (`get_ar_inverted_paths`) into a `filter_free`. See
   `_record_api_error` for the page renderer.
 
 A single transparent retry handles the bootstrap CSRF race (`csrf_failed`).
+The token is adopted — and the retry made — only for a session of the page's own
+user: every token on the wire carries `session_user_id`, and
+`error_dispatch.settle_session_identity` refuses another user's session
+(the page latches and reloads; the call answers `client.aborted`).
 
 Specialised actions: `get_element_context` (with `prevent_lock:true`),
 `resolve_model` (cached in `page_globals.models`),
@@ -326,16 +330,25 @@ const api_response = await data_manager.request({ use_worker:false, body:rqo })
 It guards against double-saves (`self.saving`), skips when an `update` batch is
 unchanged (`is_equal` against `db_data.entries`), toggles `saving` / `loading`
 / `error` / `save_success` classes on `self.node` for UI feedback, and on the
-`not_logged` error subscribes to `login_successful` and retries the save. The
-save RQO is the same `{action, source, data}` envelope described in
+`not_logged` error waits for the re-login and retries the save **once**, only
+when the re-login authenticated the page's own user. The save RQO is the same `{action, source, data}` envelope described in
 [RQO](../rqo.md).
 
 !!! note "This is what makes an expired session non-destructive"
     A save that lands after the session died is not lost. The server answers
     401 / `not_logged`, `page.js` raises the re-login modal in place — no
-    navigation, no page state lost — and this handler replays the save once
-    `login_successful` fires. `data_manager` deliberately does **not** treat 401
-    as a transport error, so the envelope reaches the event that drives all of
+    navigation, no page state lost — and the queued save (or `build_autoload`
+    read) is retried once, only when `error_dispatch.settle_relogin_attempt`
+    answers `'resume'`: the account that just logged in is the page's own user.
+    Any other identity — or one that cannot be resolved — **latches** the page
+    (`is_page_identity_revoked()`: `save()` and `build_autoload` send nothing,
+    the edit stays unsaved, and every transport — `data_manager.request`, both
+    stream doors, upload parts, the tools' own raw doors — refuses all but the
+    login actions with `client.aborted`) and reloads it, so A's queued work is
+    never written under B's session. `login_successful` is a notification published before
+    that decision; it never authorises a resume, and nothing subscribes to it
+    to retry work. `data_manager` deliberately does **not** treat 401 as a
+    transport error, so the envelope reaches the dispatch that drives all of
     it. Users are also warned ahead of time; see
     [login → expiry as the client sees it](../system/login.md).
 

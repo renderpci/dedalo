@@ -6,7 +6,10 @@
 
 // import
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { refused_by_page_identity } from '../../../core/common/js/error_dispatch.js'
 	import {
+		ApiError,
+		CLIENT_ERROR,
 		normalize_api_error,
 		normalize_stream_error,
 		normalize_transport_error
@@ -58,18 +61,33 @@ export async function builder_stream(opts) {
 	}
 
 	let response
+	const body = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: { model: 'tool_sitebuilder', action: 'session_stream' },
+		options	: options
+	}
+
+	// the page-identity latch (LEAD-2, error_dispatch.refused_by_page_identity):
+	// a raw fetch is a transport of its own, so it asks the same question as
+	// agent_stream.js — after a re-login as another user this page's prompt never
+	// goes out under that session
+	if (refused_by_page_identity(body)) {
+		on_error(new ApiError({
+			code	: CLIENT_ERROR.ABORTED,
+			source	: 'transport',
+			details	: {reason: 'page_identity_revoked', action: body.action}
+		}))
+		return
+	}
+
 	try {
 		response = await fetch(data_manager.url, {
 			method		: 'POST',
 			credentials	: 'same-origin',
 			headers		: headers,
 			signal		: opts.signal || null,
-			body		: JSON.stringify({
-				dd_api	: 'dd_tools_api',
-				action	: 'tool_request',
-				source	: { model: 'tool_sitebuilder', action: 'session_stream' },
-				options	: options
-			})
+			body		: JSON.stringify(body)
 		})
 	} catch(e) {
 		if (e && e.name === 'AbortError') return

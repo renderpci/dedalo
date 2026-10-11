@@ -40,6 +40,20 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Logging back in as another user no longer saves the previous user's pending edit.**
+
+    When a session expires while you are working, Dédalo shows a login box over the page so you can sign in again without losing your work. Before, if a *different* user signed in on that box, the edit that was waiting to be saved was sent anyway — under the new user's name, so the Time Machine and the "modified by" stamp named the wrong person. Now a pending save, or a page section waiting to load, is resumed only when the same user signs back in. If someone else signs in, nothing is sent: the page reloads, and until it does nothing can be saved, deleted, moved or uploaded from it — only signing in again is allowed. Your unsaved edit stays marked as unsaved. The decision of who signed in is made in one place only, and the login box just passes the answer on, so the check cannot be weakened by changing one copy of it.
+
+    The same now holds when the other user signs in somewhere else — in another tab or window of the same browser. Before, the next save from your page was quietly retried with the other user's session and recorded under their name. Now every answer from the server says whose session it is, your page keeps working only with your own session, and an answer from someone else's makes the page reload instead of sending anything. A lock you held on a field is no longer released on the other user's behalf when such a page closes, either.
+
+    Wire contract: `WC-2026-10-11-session-user-beside-csrf-token`.
+
+- **Rich text is cleaned by a real HTML parser when it is saved.**
+
+    Text fields with formatting are cleaned of anything that could run a script when they are saved. That cleaning used to pattern-match the text, which missed some disguised forms (for example an encoded `javascript:` link or an event handler written without a space) and sometimes changed ordinary text that merely mentioned such words. It now reads the text the way a browser does: disguised forms are caught, and text and formatting that are not dangerous come back exactly as written. Embedded SVG, MathML, frames, `noscript`, `title` and `textarea` blocks are now removed together with their content, HTML comments are removed, an attribute written twice on one tag is kept once with its first value (the one a browser uses), and a tag left unfinished at the very end of a value is dropped, as a browser would drop it. The cleaning is repeated on its own result until nothing changes, so removing one dangerous piece can never join the text around it into a new one. Dropping it takes the same short time however long the unfinished part is; in the rare value where the end cannot be found that way, the whole value is kept as plain visible text rather than lost. Values saved before this update are not changed until they are saved again.
+
+    Wire contract: `WC-2026-10-11-rich-text-sanitizer-tokenizer`.
+
 - **Searching or sorting by a field the user may not see no longer reveals its values.**
 
     A search on a field of the section itself (not of a linked record) did not check the user's permission on that field, so repeated searches like "starts with A", "starts with B" could reveal a hidden field's value, and sorting by it revealed its order. A filter or a sort on a field the user's profile hides now matches nothing and sorts nothing, and the request carries the usual "some content was not shown" notice. Fields shown to the user through a portal or an autocomplete they are allowed to use remain searchable there — and only there: the server checks that the portal really belongs to the section the request names and that the user's own profile grants it, so a request cannot borrow that allowance by naming some other portal, and the record information fields every user may search (created and modified date and user) stay searchable for everyone. Which section's permissions apply is decided by the records being searched, never by what the request says about them. A sort over several sections at once is applied only when the field is visible to the user in every one of them.
@@ -256,6 +270,12 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-27-csv-import-append-mode`.
 
 #### Fixed
+
+- **The PDF extractor shows extracted text exactly as the PDF holds it, and its HTML mode is cleaned on the server.**
+
+    In **text** mode the extractor used to read the extracted text as if it were web markup, so anything between angle brackets disappeared from the preview — an epigraphic edition such as `IMP CAES<A>R` became `IMP CAESR`, and that was what "Select text" copied into the record. Now the preview shows the characters exactly as the PDF holds them. In **HTML** mode the page markers are now added on the server, using the page offset set on the PDF field, and the result is cleaned by the same sanitizer that cleans rich text on save before the preview shows it; a PDF with no page markers no longer produces an empty preview. HTML mode also works again with current versions of the PDF tools on the server: an option they do not accept made every HTML extraction fail.
+
+    Wire contract: `WC-2026-10-11-pdf-extractor-render-class`.
 
 - **Thesaurus: adding a child to a term now shows its expand arrow at once.**
 
@@ -2134,7 +2154,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 113 entries"
+??? note "Wire contract — 116 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -2249,6 +2269,9 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-10-hierarchy-json-manifest`
     - `WC-2026-10-10-ontology-dependencies-hierarchy60`
     - `WC-2026-10-10-update-ontology-confirm-text`
+    - `WC-2026-10-11-pdf-extractor-render-class`
+    - `WC-2026-10-11-rich-text-sanitizer-tokenizer`
+    - `WC-2026-10-11-session-user-beside-csrf-token`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

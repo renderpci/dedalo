@@ -82,8 +82,11 @@ export const area = function() {
 *      from a previously injected context.  The rqo drives the single API round-trip
 *      that returns both context and data for this area's section tipo.
 *   2. Calls `build_autoload(self)` — the shared helper in common.js — which dispatches
-*      the rqo via `data_manager.request()`, handles auth errors (not_logged → waits for
-*      login_successful event), and returns the raw API response or `false` on failure.
+*      the rqo via `data_manager.request()`, handles auth errors (not_logged → the
+*      re-login overlay; re-read once only when the page's OWN user logs back in —
+*      error_dispatch.js settle_relogin_attempt), and returns the raw API response or
+*      `false` on failure (also `false`, with nothing sent, while the page identity is
+*      revoked after a re-login as someone else).
 *   3. Tears down any previously rendered child instances (`destroy(false, true, false)`)
 *      before wiring the fresh server response into the instance.
 *   4. Resolves `self.context` (area-level context object from `datum.context`).

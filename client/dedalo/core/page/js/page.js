@@ -55,7 +55,7 @@
 	import {cookie_manager} from '../../common/js/utils/cookie_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {ApiError, CLIENT_ERROR, request_failed, response_data, response_extension} from '../../common/js/api_error.js'
-	import {handle_api_error, handle_api_notices} from '../../common/js/error_dispatch.js'
+	import {handle_api_error, handle_api_notices, refused_by_page_identity} from '../../common/js/error_dispatch.js'
 	import {error_text, render_error_modal} from '../../common/js/render_api_error.js'
 	import {init_session_expiry} from '../../common/js/session_expiry.js'
 	import {prune_orphan_rules,get_inserted_rules} from '../../page/js/css.js'
@@ -1108,6 +1108,57 @@ page.prototype.destroy = async function(delete_self=true, delete_dependencies=fa
 
 
 /**
+* SEND_LOCK_RELEASE_BEACON
+* The beforeunload lock release: ONE navigator.sendBeacon of
+* `update_lock_components_state` / `delete_user_section_locks` for the section of
+* the active component. sendBeacon cannot set headers, so the CSRF token travels
+* in the body (the API accepts rqo->csrf_token); text/plain avoids a CORS
+* preflight on unload.
+*
+* THE PAGE-IDENTITY LATCH (LEAD-2): the beacon is a transport of its own, so it
+* asks error_dispatch.refused_by_page_identity like every other. The server runs
+* `delete_user_section_locks` as the SESSION's user: on a page whose identity was
+* revoked (a re-login as B on A's page, then the reload the latch asked for)
+* the beacon would release B's live locks in A's section — B editing it in
+* another tab. Refused, nothing is sent; A's own lock expires by LOCK_TTL, as
+* it must anyway (the session that owns it is gone).
+* @param {Object} options
+* @param {Object|null} options.component_active - page_globals.component_active
+* @param {string|null} options.csrf_token - page_globals.csrf_token
+* @param {string} options.api_url
+* @param {Function} options.send_beacon - (url, Blob) => boolean
+* @return {boolean} true when a beacon was handed to the browser
+*/
+export const send_lock_release_beacon = function(options) {
+
+	const {component_active, csrf_token, api_url, send_beacon} = options
+	if (!component_active || typeof send_beacon!=='function') {
+		return false
+	}
+
+	const body = {
+		dd_api			: 'dd_utils_api',
+		action			: 'update_lock_components_state',
+		prevent_lock	: true,
+		csrf_token		: (csrf_token || null),
+		options			: {
+			component_tipo	: null,
+			section_tipo	: component_active.section_tipo,
+			section_id		: null,
+			action			: 'delete_user_section_locks'
+		}
+	}
+	if (refused_by_page_identity(body)) {
+		return false
+	}
+
+	send_beacon(api_url, new Blob([JSON.stringify(body)], {type:'text/plain'}))
+	return true
+}//end send_lock_release_beacon
+
+
+
+/**
 * ADD_EVENTS
 * Attaches the global window- and document-level event listeners for the page shell.
 * Handlers are stored as named properties (e.g. `self.popstate_handler`) so that
@@ -1205,23 +1256,14 @@ page.prototype.add_events = function() {
 			// API accepts rqo->csrf_token); text/plain avoids a CORS preflight on unload.
 				// typeof-guarded: a window unloaded before `start` delivered the
 				// environment (a reload while booting) has no such global yet
-				if (typeof DEDALO_LOCK_COMPONENTS!=='undefined' && DEDALO_LOCK_COMPONENTS===true && page_globals.component_active && typeof navigator!=='undefined' && navigator.sendBeacon) {
+				if (typeof DEDALO_LOCK_COMPONENTS!=='undefined' && DEDALO_LOCK_COMPONENTS===true && typeof navigator!=='undefined' && navigator.sendBeacon) {
 					try {
-						const ca		= page_globals.component_active
-						const api_url	= (typeof DEDALO_API_URL!=='undefined') ? DEDALO_API_URL : '../api/v1/json/'
-						const payload	= JSON.stringify({
-							dd_api			: 'dd_utils_api',
-							action			: 'update_lock_components_state',
-							prevent_lock	: true,
-							csrf_token		: (page_globals.csrf_token || null),
-							options			: {
-								component_tipo	: null,
-								section_tipo	: ca.section_tipo,
-								section_id		: null,
-								action			: 'delete_user_section_locks'
-							}
+						send_lock_release_beacon({
+							component_active	: page_globals.component_active,
+							csrf_token			: page_globals.csrf_token,
+							api_url				: (typeof DEDALO_API_URL!=='undefined') ? DEDALO_API_URL : '../api/v1/json/',
+							send_beacon			: (url, data) => navigator.sendBeacon(url, data)
 						})
-						navigator.sendBeacon(api_url, new Blob([payload], {type:'text/plain'}))
 					} catch (e) {
 						// ignore: the lock will expire via LOCK_TTL_SECONDS anyway
 					}

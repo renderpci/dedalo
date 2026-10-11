@@ -45,10 +45,16 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { builtinModules } from 'node:module';
+import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
-import { packageRoots, productionFilesOf, REPO_ROOT } from '../../scripts/lib/production_corpus.ts';
+import {
+	packageRoots,
+	productionFilesOf,
+	REPO_ROOT,
+	walkFiles,
+} from '../../scripts/lib/production_corpus.ts';
 import { thinReasonProblem } from '../../scripts/lib/reason_validator.ts';
 import { CLIENT_LIBS } from '../../src/core/client_libs/registry.ts';
 
@@ -540,6 +546,128 @@ describe('production_import — LEG 3: no package the advisory baseline accepts 
 		};
 		expect([...productionClosure(lock, ['a'])].sort()).toEqual(['a', 'b', 'c', 'p']);
 		expect([...productionClosure(lock, [])]).toEqual([]);
+	});
+});
+
+// ── LEG 4 ────────────────────────────────────────────────────────────────────
+
+/**
+ * The non-production sources of a package root: its `test/` and `scripts/` trees.
+ * They never ship, but they JUDGE what ships — an oracle that borrows a parser
+ * from another package's transitive tree is judged by whatever version hoisting
+ * happens to leave at node_modules/ top level.
+ */
+function nonProductionFilesOf(root: string): string[] {
+	return ['test', 'scripts']
+		.map((dir) => join(REPO_ROOT, root, dir))
+		.filter((dir) => existsSync(dir))
+		.flatMap((dir) => walkFiles(dir))
+		.filter((file) => /\.(ts|tsx|js|mjs|cjs)$/.test(file) && !file.endsWith('.d.ts'))
+		.sort();
+}
+
+/**
+ * The bare specifiers a source imports, read by Bun's own TRANSPILER (a parser,
+ * not a pattern): a string that merely mentions `import 'x'` — a test name, a
+ * fixture — is not an import, and a type-only import is erased before the scan.
+ */
+function scannedBareImportsOf(file: string): string[] {
+	const loader = file.endsWith('.tsx') ? 'tsx' : file.endsWith('.ts') ? 'ts' : 'js';
+	const source = readFileSync(file, 'utf-8').replace(/^#!.*/, '');
+	const out = new Set<string>();
+	for (const { path: specifier } of new Bun.Transpiler({ loader }).scanImports(source)) {
+		if (specifier === '' || specifier.startsWith('.') || specifier.startsWith('/')) continue;
+		if (/^(node|bun):/.test(specifier) || specifier === 'bun' || BUILTINS.has(specifier)) continue;
+		out.add(specifier);
+	}
+	return [...out].sort();
+}
+
+/** LEG 4's predicate: the specifiers whose package is in neither `dependencies` nor `devDependencies`. */
+function notDeclaredProblems(
+	imports: ReadonlyMap<string, readonly string[]>,
+	pkg: PackageJson,
+): string[] {
+	const declared = new Set([
+		...Object.keys(pkg.dependencies ?? {}),
+		...Object.keys(pkg.devDependencies ?? {}),
+	]);
+	const problems: string[] = [];
+	for (const [specifier, files] of imports) {
+		const name = packageOf(specifier);
+		if (declared.has(name)) continue;
+		problems.push(
+			`'${specifier}' → ${name} is NOT DECLARED in package.json; imported by ${files.join(', ')}`,
+		);
+	}
+	return problems.sort();
+}
+
+describe('production_import — LEG 4: every bare import of a test or script is a DECLARED package', () => {
+	const census = ROOTS.map((root) => {
+		const files = nonProductionFilesOf(root);
+		const imports = new Map<string, string[]>();
+		for (const file of files) {
+			for (const specifier of scannedBareImportsOf(file)) {
+				imports.set(specifier, [...(imports.get(specifier) ?? []), relative(REPO_ROOT, file)]);
+			}
+		}
+		return { root, files, imports, pkg: readPackageJson(root) };
+	});
+
+	test("corpus floor — the census saw the engine's tests and scripts, and their packages", () => {
+		const engine = census.find((c) => c.root === '.');
+		expect(engine?.files.length ?? 0, 'engine test/ + scripts/ files').toBeGreaterThan(1000);
+		const packages = new Set([...(engine?.imports.keys() ?? [])].map(packageOf));
+		for (const name of ['cheerio', 'puppeteer', 'parse5', 'htmlparser2']) {
+			expect(packages.has(name), `${name} is imported by a test helper or script`).toBe(true);
+		}
+	});
+
+	for (const c of ROOTS) {
+		test(`${c}: no test or script imports an undeclared package (a transitive borrowed through hoisting)`, () => {
+			const entry = census.find((m) => m.root === c);
+			expect(
+				notDeclaredProblems(entry?.imports ?? new Map(), entry?.pkg ?? {}),
+				`${c}: declare it (devDependencies, latest stable) so its version is explicit and Dependabot-tracked`,
+			).toEqual([]);
+		});
+	}
+
+	test('positive control — the scanner reads imports, not strings, and the predicate reds on an undeclared package', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'leg4-'));
+		try {
+			const file = join(dir, 'synthetic.test.ts');
+			writeFileSync(
+				file,
+				[
+					'#!/usr/bin/env bun',
+					"import type { Only } from 'type-only-pkg';",
+					"import { Tokenizer } from 'parse5';",
+					"import { Parser } from 'htmlparser2/lib/Parser';",
+					"const lazy = await import('left-pad');",
+					'test(\'empty cell clears the component (import "clear" semantics)\', () => {});',
+					'const s = "import x from \'in-a-string\'";',
+					"import { readFileSync } from 'node:fs';",
+					"import { sql } from 'bun';",
+					"import { local } from './local.ts';",
+					'export type T = Only;',
+					'console.log(Tokenizer, Parser, lazy, s, readFileSync, sql, local);',
+				].join('\n'),
+			);
+			const seen = scannedBareImportsOf(file);
+			expect(seen).toEqual(['htmlparser2/lib/Parser', 'left-pad', 'parse5']);
+			const problems = notDeclaredProblems(new Map(seen.map((s) => [s, ['synthetic.test.ts']])), {
+				dependencies: { cheerio: '1' },
+				devDependencies: { parse5: '1' },
+			});
+			expect(problems).toEqual([
+				"'htmlparser2/lib/Parser' → htmlparser2 is NOT DECLARED in package.json; imported by synthetic.test.ts",
+				"'left-pad' → left-pad is NOT DECLARED in package.json; imported by synthetic.test.ts",
+			]);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });
 

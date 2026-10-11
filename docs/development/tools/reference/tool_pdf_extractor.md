@@ -1,49 +1,51 @@
 # tool_pdf_extractor
 
-Extracts the text (or structured HTML) of a record's PDF and delivers it to a linked text component, via an external `pdftotext` / `pdftohtml` engine. Read-only; PDF-only.
+Extracts the text (or structured HTML) of a record's PDF through an external `pdftotext` / `pdftohtml` engine and shows it in an inline preview for the cataloguer to copy. Read-only; PDF-only.
 
 ## What it does / why & when to use it
 
-`tool_pdf_extractor` reads the default-quality file of a `component_pdf` instance, runs an external PDF text engine over it, and returns the extracted string. The client hands that string to a target `component_text_area`, inserting page markers so the text keeps the document's page structure. It seeds a transcription from a PDF that already has a text layer — it does **not** OCR a scanned image.
+`tool_pdf_extractor` reads the default-quality file of a `component_pdf` instance, runs an external PDF text engine over it, and answers the extracted content already shaped for display: `{value, render_class}`. The client renders that answer in an inline preview; the cataloguer selects it (**Select text**) and pastes it where it belongs. It seeds a transcription from a PDF that already has a text layer — it does **not** OCR a scanned image.
 
-Concrete heritage scenario: a documentary archive stores OCR'd journal articles as PDFs on its *Bibliography* records. A cataloguer opens the PDF component, runs the extractor over a page range, and the article text lands in the record's transcription field with a `[page-n-…]` tag at each page break — ready to index and publish. The register.json description states the extracted text is used "for publication searches".
+Concrete heritage scenario: a documentary archive stores OCR'd journal articles as PDFs on its *Bibliography* records. A cataloguer opens the PDF component, runs the extractor over a page range with the **html** method, and copies the article text — with a `[page-n-…]` tag at each page break — into the record's transcription field, ready to index and publish. The register.json description states the extracted text is used "for publication searches".
 
 Use it when a `component_pdf` has extractable text that should become a searchable/editable component value. Do not use it for image-only PDFs (nothing to extract) or for audio/video transcripts (that is the transcription tooling).
 
 ## How it works (server + client)
 
-**Server** (`tools/tool_pdf_extractor/server/index.ts`). One declaratively gated action, `get_pdf_data` (`permission: 'record', minLevel: 1`). The handler:
+**Server** (`tools/tool_pdf_extractor/server/index.ts`). One declaratively gated action, `get_pdf_data` (`permission: 'record_tipo', minLevel: 1`). The handler:
 
-1. reads `options.method` and rejects anything that is not `'text'` or `'html'` with an error envelope;
-2. resolves the media tool context via `resolveMediaToolContext(ctx.options)` (`src/core/media/tool_support.ts`) — the `spec`, `identity` and `pathOpts` for the target component;
-3. refuses with `'pdf extractor is pdf-only'` unless `spec.model === 'component_pdf'`;
-4. delegates to `extractPdfCore(spec, identity, pathOpts, { method, pageIn, pageOut })` (`src/core/media/tools/pdf_extract.ts`), coercing `options.page_in` / `options.page_out` to numbers (or `null`);
-5. returns `{ result: text, msg: 'ok', errors: [] }`, or `{ result: false, msg, errors }` on any thrown error.
+1. validates the request with `pdfPayloadRequest(options)` (`tools/tool_pdf_extractor/server/pdf_payload.ts`) **before** any permission or filesystem work: `method` must be `'text'` or `'html'`, and `offset` must be an integer (a number or a string of digits; absent → `1`). Anything else is refused with `request.invalid_options` — never coerced;
+2. asserts READ on the (section, component) pair (`getPermissions(principal, section_tipo, component_tipo) >= 1`) itself, refusing with `perm.denied` — the same pair the declarative gate checks, held at the door that reads the file;
+3. resolves the media tool context via `resolveMediaToolContext(ctx.options)` (`src/core/media/tool_support.ts`) — the `spec`, `identity` and `pathOpts` for the target component;
+4. refuses with `tool.unsupported_target` unless `spec.model === 'component_pdf'`;
+5. delegates to `extractPdfCore(spec, identity, pathOpts, { method, pageIn, pageOut })` (`src/core/media/tools/pdf_extract.ts`), coercing `options.page_in` / `options.page_out` to numbers (or `null`);
+6. shapes the raw output with `answerPdfPayload(raw, request)` — the SAME validated request, so the offset that was checked is the offset the page keys use — and answers it as the envelope's `data`.
 
-`extractPdfCore` builds the absolute path of the record's **default-quality** PDF (`buildMediaLocation(spec, identity, spec.defaultQuality, 'pdf', pathOpts)`), throws `'pdf extractor: default-quality PDF not found'` when it is absent, and calls `extractText` (`src/core/media/engine/pdf.ts`). `extractText` spawns the engine with argv `<engine> -enc UTF-8 [-f pageIn] [-l pageOut] [-i -p -noframes -layout] <source> <outFile>` — `pdftotext` for `text`, `pdftohtml` for `html` (the `-i -p -noframes -layout` flags apply to HTML only) — then reads the output file and returns a UTF-8-cleaned string (invalid sequences and control characters stripped). The engine binaries come from `config.media.binaries.pdftotext` / `pdftohtml`.
+`extractPdfCore` builds the absolute path of the record's **default-quality** PDF (`buildMediaLocation(spec, identity, spec.defaultQuality, 'pdf', pathOpts)`), throws `media.file_not_found` when it is absent, and calls `extractText` (`src/core/media/engine/pdf.ts`). `extractText` spawns the engine with argv `<engine> -enc UTF-8 [-f pageIn] [-l pageOut] [-i -p -noframes] <source> <outFile>` — `pdftotext` for `text`, `pdftohtml` for `html` (the `-i -p -noframes` flags apply to HTML only; `pdftohtml` has no `-layout` option and exits on it) — then reads the output file and returns a UTF-8-cleaned string (invalid sequences and control characters stripped). The engine binaries come from `config.media.binaries.pdftotext` / `pdftohtml`.
 
-**Client** (`tools/tool_pdf_extractor/js/`). `tool_pdf_extractor.js` is the instance; it extends the standard `tool_common` lifecycle (`init` / `build` / `render` / `edit`). `render_tool_pdf_extractor.js` builds the panel: `page_in` / `page_out` number inputs, a `txt` / `html` radio pair (`txt` checked, `self.config.method` seeded to `'text'`), a **Process** button, an inline preview, and a **Select text** helper. `init()` also reads a page `offset` from the caller's stored value (`caller.data.value[0].offset`, default `0`).
+**The payload is shaped on the server** (`shapePdfPayload`, `pdf_payload.ts`):
 
-`get_pdf_data()` sends the `tool_request` (below) with a **180-second** timeout and a **single** retry (extraction can be slow on large files). `process_pdf_data()` post-processes the response:
+- **text** → `{value: <the extractor's characters verbatim>, render_class: 'text'}`. Nothing is entity-encoded: an epigraphic edition such as `IMP CAES<A>R` arrives as the PDF holds it, and the client escapes it when it renders.
+- **html** → the `pdftohtml` document is reduced to a fragment (doctype removed, `<head>` removed with its content, `<html>`/`<body>` unwrapped), each numeric `<a name="N">` page anchor is replaced by a Dédalo page tag paragraph `<p>[page-n-{N}-{key}-data:[{N}]:data]</p>` with `key = N - 1 + offset` (a non-numeric named anchor is ordinary content and stays), and the result passes the rich-text sanitizer (`src/core/security/html_sanitize.ts`) **last**, so nothing the shaping emits bypasses it. `render_class: 'html'`.
 
-- **text** — the server has already produced the final string; the browser only HTML-decodes it via `DOMParser` and returns it unchanged.
-- **html** — the browser decodes the returned HTML, finds the `<a name="N">` anchors the engine inserts at each page boundary, and replaces each with a Dédalo page tag `[page-n-{N}-{key}-data:[{N}]:data]`, where `key = page_number - 1 + offset`.
+**Client** (`tools/tool_pdf_extractor/js/`). `tool_pdf_extractor.js` is the instance; it extends the standard `tool_common` lifecycle (`init` / `build` / `render` / `edit`). `render_tool_pdf_extractor.js` builds the panel: `page_in` / `page_out` number inputs, a `txt` / `html` radio pair (`txt` checked, `self.config.method` seeded to `'text'`), a **Process** button, an inline preview, and a **Select text** helper. `init()` also reads the page `offset` the PDF component stores (`caller.data.entries[0].lib_data.offset`, set with the offset input under the PDF viewer; absent → `1`).
 
-The processed string is published on the `event_manager` channel `set_pdf_data_<id_base>` (with `id_base = <section_tipo>_<section_id>_<tipo>` of the caller), where the target `component_text_area` picks it up and stores it as its value.
+`get_pdf_data()` sends the `tool_request` (below), including the `offset` (`config.offset`, sent as `1` when unset), with a **180-second** timeout and a **single** try (extraction can be slow on large files). The client re-parses nothing: the preview is `preview.innerHTML = render_value(data.value, data.render_class)` — the one render-boundary escaper (`client/dedalo/core/common/js/utils/render_escape.js`) escapes a `'text'` payload and passes an `'html'` payload the server already shaped and sanitized. A text preview also gets the `.text` class (`white-space: pre-wrap`, so the extractor's line breaks show). Nothing is broadcast to another component: the result is not written anywhere until the cataloguer copies it.
 
 ## Actions & options
 
-`apiActions = { get_pdf_data: { permission: 'record', minLevel: 1, handler: getPdfData } }` — a single, declaratively gated, read-only action. The `'record'` gate asserts both the component permission level **and** the per-record project-scope check before the handler runs. There is no `backgroundRunnable`.
+`apiActions = { get_pdf_data: { permission: 'record_tipo', minLevel: 1, handler: getPdfData } }` — a single, declaratively gated, read-only action. The `'record_tipo'` gate asserts READ on the (section, component) pair **and** the per-record project-scope check before the handler runs; the handler repeats the pair check itself. There is no `backgroundRunnable`.
 
 | Action | Gate | Background | Reads from `options` |
 | --- | --- | --- | --- |
-| `get_pdf_data` | declarative: `permission: 'record', minLevel: 1` | no | see below |
+| `get_pdf_data` | declarative: `permission: 'record_tipo', minLevel: 1` | no | see below |
 
 Options read by `get_pdf_data`:
 
 | Option | Type | Meaning |
 | --- | --- | --- |
-| `method` | string | `'text'` (via `pdftotext`) or `'html'` (via `pdftohtml`). Any other value returns an error envelope (`"method must be 'text' or 'html'"`). |
+| `method` | string | `'text'` (via `pdftotext`) or `'html'` (via `pdftohtml`). Any other value is refused with `request.invalid_options` (`"method must be 'text' or 'html'"`). |
+| `offset` | integer \| digit string | The logical page number of physical page 1: html page tags carry `key = page - 1 + offset`. Absent, `null` or `''` → `1`. A non-integer (`'abc'`, `1.5`, `'2x'`) is refused with `request.invalid_options`. Ignored by the text method. |
 | `component_tipo` / `tipo` | string | The `component_pdf` tipo whose file is read (resolved through `resolveMediaToolContext`). The server rejects a non-`component_pdf` model. |
 | `section_tipo` | string | The parent section tipo. |
 | `section_id` | string \| number | The record id. |
@@ -51,7 +53,7 @@ Options read by `get_pdf_data`:
 | `page_out` | number \| false | Last page to extract, inclusive (`-l`). `null`/absent → to the last page. |
 | `lang` | string | The caller's language code (sent by the client for context). |
 
-Response: `{ result: <string> | false, msg, errors }`. On success `result` is the extracted string; on failure `result` is `false` and `msg` / `errors` carry the reason (bad method, not a PDF, default-quality PDF not found, or an engine error).
+Response: the envelope v2 `data` is `{ value: <string>, render_class: 'text' | 'html' }` (see above for how each is shaped). A failure is an `ok:false` envelope with a typed error (`request.invalid_options`, `perm.denied`, `tool.unsupported_target`, `media.file_not_found`, or an engine failure) — never an empty value. Wire contract: `engineering/wire_contract/WC-2026-10-11-pdf-extractor-render-class.md`.
 
 ## How it is registered & surfaced
 
@@ -62,7 +64,7 @@ Response: `{ result: <string> | false, msg, errors }`. On success `result` is th
 - `dd1633` config defaults name the engines: `text_engine` (`/usr/local/bin/pdftotext`) and `html_engine` (`/usr/local/bin/pdftohtml`). On this engine the effective binaries are resolved through `config.media.binaries.pdftotext` / `pdftohtml`.
 - `dd1372` labels supply the localized UI strings the client reads via `get_tool_label(...)`: `page_in`, `page_out`, `total_pages`, `proces_method`, `do_process`, `select_text`.
 
-**Where it appears.** The tool attaches to **`component_pdf`** components and renders as an inline component tool; the server refuses any other model. It delivers its result to the record's `component_text_area` through the `set_pdf_data_*` event, so the PDF and its target text field live on the same record.
+**Where it appears.** The tool attaches to **`component_pdf`** components and renders as an inline component tool; the server refuses any other model. Its result is shown in the tool's own preview; it does not write to any other component.
 
 ## Examples
 
@@ -81,19 +83,19 @@ const rqo = {
         section_id     : component.section_id,
         method         : 'text',                  // 'text' (pdftotext) | 'html' (pdftohtml)
         page_in        : false,                   // false → from page 1
-        page_out       : false                    // false → to the last page
+        page_out       : false,                   // false → to the last page
+        offset         : 1                        // logical page of physical page 1
     }
 }
 const response = await data_manager.request({ body: rqo, retries: 1, timeout: 180 * 1000 })
-// response → { result: '<extracted text>', msg: 'ok', errors: [] }
+// response_data(response) → { value: '<the PDF text, verbatim>', render_class: 'text' }
 ```
 
-The client then post-processes and broadcasts the value to the target text area:
+The client renders the answer by the class the server named — no decode, no reshaping:
 
 ```js
-const pdf_data = await self.process_pdf_data(response.result)
-const id_base  = self.caller.section_tipo + '_' + self.caller.section_id + '_' + self.caller.tipo
-event_manager.publish('set_pdf_data_' + id_base, { key: 0, value: pdf_data })
+const extracted = response_data(response)
+preview.innerHTML = render_value(extracted?.value, extracted?.render_class)
 ```
 
 ## Related

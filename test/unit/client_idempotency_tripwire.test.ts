@@ -103,6 +103,7 @@ import {
 	idempotencyLedgerKey,
 	idempotencyLedgerStats,
 	listRegisteredActions,
+	NO_LOGIN_ACTIONS,
 	resetIdempotencyLedgerForTests,
 	seedIdempotencyLedgerForTests,
 	sweepIdempotencyLedgerForTests,
@@ -425,12 +426,27 @@ function censusCallSites(): CallSite[] {
  *                            and the gate pins that branch's shape in server.ts
  *                            so this claim cannot go stale silently.
  *   - `harness`            — client test code, no operator surface.
+ *
+ * THE SAME LIST IS THE CENSUS OF THE PAGE-IDENTITY LATCH (LEAD-2): every one of
+ * these files opens a connection to the API on its own, so each one either ASKS
+ * `refused_by_page_identity` (error_dispatch.js) before it sends —
+ * `identity_latch: 'asks'`, checked below against the file's code — or says why
+ * a revoked page identity has nothing to lose there. data_manager.js asks for
+ * every `data_manager.request` / stream call site in the client; this list
+ * holds the rest, so a new raw door cannot ship without answering it.
  */
 const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 	file: string;
 	basis: 'stamper' | 'idempotent-actions' | 'single-shot' | 'not-gated-here' | 'harness';
 	actions: readonly string[];
 	reason: string;
+	/**
+	 * `'asks'` — the file calls refused_by_page_identity before it sends;
+	 * `{exempt}` — a SAFE basis: why a revoked page has nothing to lose there;
+	 * `{open_gap}` — an admitted hole. It exists so a known hole can be WRITTEN
+	 * DOWN, never so it can sit green: any `open_gap` entry fails the gate.
+	 */
+	identity_latch: 'asks' | { exempt: string } | { open_gap: string };
 }> = [
 	{
 		file: 'client/dedalo/core/common/js/data_manager.js',
@@ -438,6 +454,7 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		actions: [],
 		reason:
 			'THE stamper itself — it owns fetch_api and is where the key is minted. Not a bypass, the door.',
+		identity_latch: 'asks',
 	},
 	{
 		file: 'client/dedalo/core/service_worker.js',
@@ -445,6 +462,10 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		actions: ['dd_utils_api:get_dedalo_files'],
 		reason:
 			'The service worker calls fetch_api directly (retries:3) from a context that has no page and no CSRF token. ONE read action, classified idempotent.',
+		identity_latch: {
+			exempt:
+				'A Service Worker realm: it cannot see the page latch (page state), and it sends one READ (get_dedalo_files, the static file list) that carries no record state of the page.',
+		},
 	},
 	{
 		file: 'client/dedalo/core/page/js/worker_cache.js',
@@ -452,6 +473,10 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		actions: ['dd_utils_api:get_dedalo_files'],
 		reason:
 			'The cache Worker, same single read action and the same reasoning as service_worker.js.',
+		identity_latch: {
+			exempt:
+				'A dedicated Worker realm, same single READ (get_dedalo_files) and the same reasoning as service_worker.js: no page state rides it.',
+		},
 	},
 	{
 		file: 'client/dedalo/core/page/js/page.js',
@@ -459,6 +484,10 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		actions: ['dd_utils_api:update_lock_components_state'],
 		reason:
 			'navigator.sendBeacon on beforeunload releases the component lock; a beacon cannot set headers (the CSRF token rides in the body) and the browser never retries it. The action is a verified-idempotent upsert.',
+		// the beforeunload beacon (send_lock_release_beacon): the server runs
+		// delete_user_section_locks as the SESSION's user, so on a revoked page it
+		// would release the NEW user's live locks; refused, A's lock expires by TTL
+		identity_latch: 'asks',
 	},
 	{
 		file: 'tools/tool_assistant/js/agent_stream.js',
@@ -466,6 +495,7 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		actions: ['dd_mcp_api:agent_chat_stream'],
 		reason:
 			'ONE raw fetch(data_manager.url) opening an SSE turn, because the stamping transport cannot hand back a ReadableStream. No retry loop, no deadline of its own: an abort is the user pressing stop, and the caller renders it rather than re-sending. The action is `mutating` (each attempt is a separate model run) and that is exactly why it must never be resent blind.',
+		identity_latch: 'asks',
 	},
 	{
 		file: 'tools/tool_sitebuilder/js/builder_stream.js',
@@ -473,6 +503,7 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		actions: ['dd_tools_api:tool_request'],
 		reason:
 			'ONE raw fetch(data_manager.url) opening the site-builder session SSE stream (source model tool_sitebuilder, action session_stream). Same shape and same reasoning as agent_stream.js: no retry loop, so no resend to de-duplicate.',
+		identity_latch: 'asks',
 	},
 	{
 		file: 'tools/tool_transcription/js/tool_transcription.js',
@@ -480,6 +511,7 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		actions: ['dd_tools_api:tool_request'],
 		reason:
 			'ONE keepalive fetch on window unload, deleting the throwaway server-side WAV (tool_request → delete_transcribable_audio_file). data_manager cannot be trusted during unload, and keepalive is the one shape the browser promises to finish after the page is gone. The browser does not retry it, and every `retries` in this file is 1.',
+		identity_latch: 'asks',
 	},
 	{
 		file: 'client/dedalo/core/services/service_upload/js/upload_transport.js',
@@ -487,6 +519,7 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		actions: ['dd_utils_api:join_chunked_files_uploaded'],
 		reason:
 			'THE ONE CLIENT TRANSPORT THAT ALREADY RETRIES BY ITSELF (max_retry 3 per chunk), and its chunk POSTs are multipart/form-data — answered by the multipart branch in src/server.ts, which returns BEFORE dispatchRqo and therefore never reaches Gate 4. What bounds it there is its own per-transfer identity: transfer_id is minted ONCE per transfer and every retried chunk carries the same one, so a resent chunk lands in the same staging artifact instead of a second one. The step that turns staged chunks into a record, join_chunked_files_uploaded, comes back through the JSON door with retries:5 and IS stamped and gated.',
+		identity_latch: 'asks',
 	},
 	{
 		file: 'client/dedalo/test/client/js/test_api_error.js',
@@ -494,6 +527,9 @@ const TRANSPORT_BYPASS_EXEMPTIONS: ReadonlyArray<{
 		actions: [],
 		reason:
 			'The CLIENT TEST HARNESS drives fetch_api deliberately, to exercise the error contract. It ships under client/dedalo/test/ and no operator surface reaches it.',
+		identity_latch: {
+			exempt: 'The client test harness: no page identity and no operator surface.',
+		},
 	},
 ];
 
@@ -524,6 +560,36 @@ function apiBypassingFiles(): string[] {
 		}
 	}
 	return bypassing.sort();
+}
+
+/**
+ * The page-identity half of the census, as a function of the entries so the
+ * gate can prove on a synthetic entry that an admitted hole (`open_gap`) is red.
+ */
+function identityLatchOffenders(
+	entries: ReadonlyArray<(typeof TRANSPORT_BYPASS_EXEMPTIONS)[number]>,
+): string[] {
+	const offenders: string[] = [];
+	for (const entry of entries) {
+		const source = stripComments(readFileSync(join(REPO_ROOT, entry.file), 'utf8'));
+		const asks = /\brefused_by_page_identity\s*\(/.test(source);
+		const latch = entry.identity_latch;
+		if (latch === 'asks') {
+			if (!asks) {
+				offenders.push(`${entry.file}: declared 'asks' but never calls refused_by_page_identity`);
+			}
+			continue;
+		}
+		if ('open_gap' in latch) {
+			// an admitted hole is written down, and it is RED until it is closed
+			offenders.push(`${entry.file}: OPEN GAP — ${latch.open_gap}`);
+			continue;
+		}
+		expect(latch.exempt.length, entry.file).toBeGreaterThan(40);
+		// a stale exemption: the file asks now, so the entry must say so
+		if (asks) offenders.push(`${entry.file}: asks the latch but is listed as exempt`);
+	}
+	return offenders;
 }
 
 describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
@@ -651,6 +717,94 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 		}
 	});
 
+	test('every API transport outside data_manager.request ASKS the page-identity latch, or says why not', () => {
+		const offenders = identityLatchOffenders(TRANSPORT_BYPASS_EXEMPTIONS);
+		expect(
+			offenders,
+			'A transport that opens its own connection to the API sends whatever the page holds, even after a re-login as ANOTHER user revoked the page identity (LEAD-2). Ask error_dispatch.refused_by_page_identity(body) before sending, or state why the revoked page has nothing to lose there.',
+		).toEqual([]);
+		// anti-vacuity: the transports the latch was put on are seen asking. The
+		// regex above proves only that each one CALLS the door; that the answer
+		// stops the send is measured per transport by the client suite
+		// (test_relogin_identity cases s, s2, s3).
+		expect(TRANSPORT_BYPASS_EXEMPTIONS.filter((e) => e.identity_latch === 'asks').length).toBe(6);
+		// positive control: an admitted hole is RED, whatever its file does
+		const agent = TRANSPORT_BYPASS_EXEMPTIONS.find(
+			(e) => e.file === 'tools/tool_assistant/js/agent_stream.js',
+		);
+		expect(agent).toBeDefined();
+		const hole = identityLatchOffenders([
+			{
+				...(agent as (typeof TRANSPORT_BYPASS_EXEMPTIONS)[number]),
+				identity_latch: { open_gap: 'probe' },
+			},
+		]);
+		expect(hole.length).toBe(1);
+		expect(hole[0]).toContain('OPEN GAP');
+	});
+
+	test("the login door the latch leaves open is exactly the server's session doors", () => {
+		// error_dispatch.LOGIN_DOOR_ACTIONS is what a revoked page may still send.
+		// It must not drift from the server: every PRE-AUTH dd_utils_api action
+		// (NO_LOGIN_ACTIONS) is classified here, and the login doors among them,
+		// plus `quit` (ends the session the page holds), are exactly the client set.
+		// A new pre-auth action on the server is red here until it is classified.
+		const PRE_AUTH_DD_UTILS: Readonly<Record<string, 'login_door' | { not_a_login_door: string }>> =
+			{
+				login: 'login_door',
+				get_login_context: 'login_door',
+				request_password_reset: 'login_door',
+				confirm_password_reset: 'login_door',
+				change_lang: {
+					not_a_login_door:
+						"session language: on a revoked page it would write this page's language choice into ANOTHER identity's session — the page is reloading anyway",
+				},
+				get_server_ready_status: {
+					not_a_login_door: 'ontology-master surface for REMOTE installations — no page sends it',
+				},
+				get_ontology_update_info: {
+					not_a_login_door:
+						'ontology-master manifest for REMOTE installations — a maintenance widget read, not a login',
+				},
+				get_code_update_info: {
+					not_a_login_door:
+						'code-master manifest for REMOTE installations — a maintenance widget read, not a login',
+				},
+			};
+		const serverPreAuth = [...NO_LOGIN_ACTIONS]
+			.filter((key) => key.startsWith('dd_utils_api:'))
+			.map((key) => key.slice('dd_utils_api:'.length))
+			.sort();
+		expect(serverPreAuth.length).toBeGreaterThan(3);
+		expect(
+			Object.keys(PRE_AUTH_DD_UTILS).sort(),
+			'classify every pre-auth dd_utils_api action',
+		).toEqual(serverPreAuth);
+		// `quit` is a registered dd_utils_api action that is NOT pre-auth: it ends
+		// the session the page holds
+		expect(listRegisteredActions().map((p) => `${p.apiClass}:${p.action}`)).toContain(
+			'dd_utils_api:quit',
+		);
+
+		const dispatchSource = stripComments(
+			readFileSync(join(REPO_ROOT, 'client/dedalo/core/common/js/error_dispatch.js'), 'utf8'),
+		);
+		const literal = /export const LOGIN_DOOR_ACTIONS = new Set\(\[([^\]]*)\]\)/.exec(
+			dispatchSource,
+		);
+		expect(literal, 'LOGIN_DOOR_ACTIONS is a literal Set in error_dispatch.js').not.toBeNull();
+		const clientSet = [...(literal?.[1] ?? '').matchAll(/'([a-z_]+)'/g)]
+			.map((m) => m[1] as string)
+			.sort();
+		const expected = [
+			...Object.entries(PRE_AUTH_DD_UTILS)
+				.filter(([, verdict]) => verdict === 'login_door')
+				.map(([action]) => action),
+			'quit',
+		].sort();
+		expect(clientSet).toEqual(expected);
+	});
+
 	test('the ONE door that is not behind Gate 4 still has the shape this gate claims', () => {
 		// STATED, NOT GATED-AWAY: the multipart upload branch answers before
 		// dispatchRqo, so no idempotency key is ever read for a chunk POST. This
@@ -677,8 +831,12 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
  * copied VERBATIM (with the real api_transport.js, api_error.js and the
  * import-free request_activity.js beside it)
  * into a scratch tree that reproduces the directory DEPTH its relative
- * specifiers assume, and the four leaves it does not need are written there as
- * minimal stubs. So the bytes under test are the shipped bytes.
+ * specifiers assume, and the five leaves it does not need are written there as
+ * minimal stubs (error_dispatch.js as a page whose identity is NOT revoked and
+ * whose session is its own —
+ * the latch itself is measured on the real modules by the Mocha suite
+ * test_relogin_identity.js, case s). So the bytes under test are the shipped
+ * bytes.
  */
 let scratchRoot = '';
 let dataManager: {
@@ -711,6 +869,15 @@ beforeAll(async () => {
 	);
 	writeFileSync(join(jsDir, 'events.js'), 'export const dd_request_idle_callback = () => {}\n');
 	writeFileSync(join(jsDir, 'render_api_error.js'), 'export const render_error_toast = () => {}\n');
+	writeFileSync(
+		join(jsDir, 'error_dispatch.js'),
+		[
+			'export const refused_by_page_identity = () => false',
+			'export const is_login_door_body = () => false',
+			"export const settle_session_identity = () => 'adopt'",
+			'',
+		].join('\n'),
+	);
 
 	const globals = globalThis as unknown as Record<string, unknown>;
 	globals.window = { page_globals: { csrf_token: null, recovery_mode: false } };

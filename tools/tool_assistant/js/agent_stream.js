@@ -6,7 +6,10 @@
 
 // import
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { refused_by_page_identity } from '../../../core/common/js/error_dispatch.js'
 	import {
+		ApiError,
+		CLIENT_ERROR,
 		normalize_api_error,
 		normalize_stream_error,
 		normalize_transport_error
@@ -142,6 +145,23 @@ export async function agent_stream(opts) {
 		headers['X-Dedalo-Csrf-Token'] = window.page_globals.csrf_token
 	}
 
+	const body = {
+		action	: 'agent_chat_stream',
+		dd_api	: 'dd_mcp_api',
+		options	: options
+	}
+
+	// the page-identity latch (LEAD-2, error_dispatch.refused_by_page_identity):
+	// a raw fetch is a transport of its own, so it asks the same question
+	if (refused_by_page_identity(body)) {
+		on_error(new ApiError({
+			code	: CLIENT_ERROR.ABORTED,
+			source	: 'transport',
+			details	: {reason: 'page_identity_revoked', action: body.action}
+		}))
+		return
+	}
+
 	let response
 	try {
 		response = await fetch(data_manager.url, {
@@ -149,11 +169,7 @@ export async function agent_stream(opts) {
 			credentials	: 'same-origin',
 			headers		: headers,
 			signal		: opts.signal || null,
-			body		: JSON.stringify({
-				action	: 'agent_chat_stream',
-				dd_api	: 'dd_mcp_api',
-				options	: options
-			})
+			body		: JSON.stringify(body)
 		})
 	} catch(e) {
 		if (e && e.name === 'AbortError') return // user stop — caller renders it

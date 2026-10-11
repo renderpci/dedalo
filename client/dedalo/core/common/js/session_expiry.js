@@ -15,7 +15,9 @@
 *
 * Recovery AFTER expiry is not this module's job — the server answers 401 with
 * `error.code 'auth.not_logged'` and the client already raises the re-login modal on that
-* token (page.js), with components retrying on `login_successful`.
+* token (page.js). A queued request is retried only when the re-login authenticates the
+* page's OWN user (error_dispatch.js settle_relogin_attempt) — never on the
+* `login_successful` event, which is a notification, not an authorisation to resume.
 *
 * @see src/core/resolve/environment.ts buildPageGlobals — the three page_globals keys
 * @see src/core/security/session_store.ts — the two clocks this mirrors

@@ -586,6 +586,12 @@ login.prototype.action_dispatch = async function(api_response) {
 
 	// publish event always
 	// Subscribers (e.g. analytics, session monitors) can react to both outcomes.
+	// (!) A NOTIFICATION, never an authorisation to resume: it fires BEFORE any
+	// identity check — the re-login overlay's custom_action_dispatch below hands
+	// the envelope to the ONE door that decides whether the account that logged
+	// in is the page's own user (error_dispatch.js settle_relogin_attempt).
+	// Resuming queued work on this event resumes it as WHOEVER logged in
+	// (LEAD-2; relogin_identity_tripwire fences any subscriber).
 		const event_name = response_data(api_response)===true
 			? 'login_successful'
 			: 'login_failed'

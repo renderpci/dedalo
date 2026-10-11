@@ -275,11 +275,11 @@ describe('DATA_MANAGER.request — the envelope it resolves', function() {
 	}
 
 	it('success resolves the server envelope untouched (no error attached)', async function() {
-		await with_stubbed_fetch(async () => json_response({ok: true, data: {x: 1}, csrf_token: 'tok-1'}), async () => {
+		await with_stubbed_fetch(async () => json_response({ok: true, data: {x: 1}, csrf_token: 'tok-1', session_user_id: page_globals.user_id}), async () => {
 			const api_response = await data_manager.request({body: {action: 'noop'}, retries: 1})
 			assert.isFalse(request_failed(api_response))
 			assert.deepEqual(response_data(api_response), {x: 1})
-			assert.equal(page_globals.csrf_token, 'tok-1', 'the token is refreshed from every envelope')
+			assert.equal(page_globals.csrf_token, 'tok-1', 'the token is refreshed from every envelope of the page\'s own session')
 		})
 	})
 
@@ -311,7 +311,9 @@ describe('DATA_MANAGER.request — the envelope it resolves', function() {
 
 	it('csrf rejection is resent exactly once with the fresh token (auth.csrf_failed)', async function() {
 		for (const body of [
-			{ok: false, error: {code: 'auth.csrf_failed', retryable: false}, csrf_token: 'fresh'}
+			// the token's owner travels with it: the page's own session (a session of
+			// ANOTHER user is never adopted nor resent — test_relogin_identity s3)
+			{ok: false, error: {code: 'auth.csrf_failed', retryable: false}, csrf_token: 'fresh', session_user_id: page_globals.user_id}
 		]) {
 			let calls = 0
 			const tokens = []
