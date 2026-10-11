@@ -54,7 +54,7 @@ import {
 	type TableCoverage,
 } from '../../src/core/area_maintenance/widgets/dataframe_control.ts';
 import { ALL_WIDGET_MODULES } from '../../src/core/area_maintenance/widgets/registry.ts';
-import { sql } from '../../src/core/db/postgres.ts';
+import { MAINTENANCE_LOCK_TIMEOUT, sql } from '../../src/core/db/postgres.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { childDriver, driverResult, repoModule } from '../helpers/child_driver.ts';
 
@@ -260,25 +260,35 @@ const results = {};
 // the long reader runs. The holder below keeps its lock until released, or until
 // LOCK_HOLD_CAP_MS after it is ARMED (once the action is seen waiting — so a
 // pre-fix run settles instead of hanging, and a slow runner cannot expire the
-// hold before the action even queues).
+// hold before the action even queues). The cap bounds the GIVE-UP phase only:
+// once the give-up is proven (leg 5: a later reader got through while held) the
+// cap is DISARMED and the hold lasts until the action settles, because what the
+// action does AFTER giving up (leg 5: rebuilding the OTHER store) scales with the
+// lane's data, not with the lock bound.
 const LOCK_HOLD_CAP_MS = 15000;
 async function holdUntilReleased(statement) {
 	const holder = await sql.reserve();
 	await holder.unsafe('BEGIN', []);
 	await holder.unsafe(statement, []);
 	let released = false;
+	let disarmed = false;
 	let requestRelease;
 	let armCap;
 	const requested = new Promise((resolve) => { requestRelease = resolve; });
 	const armed = new Promise((resolve) => { armCap = resolve; });
+	const capFired = armed
+		.then(() => Bun.sleep(LOCK_HOLD_CAP_MS))
+		.then(() => (disarmed ? new Promise(() => {}) : undefined));
 	const done = (async () => {
-		await Promise.race([requested, armed.then(() => Bun.sleep(LOCK_HOLD_CAP_MS))]);
+		await Promise.race([requested, capFired]);
 		await holder.unsafe('COMMIT', []);
 		holder.release();
 		released = true;
 	})();
 	return {
 		arm: () => armCap(),
+		/** Keep holding until release(); a no-op once the cap already fired. */
+		disarm: () => { if (!released) disarmed = true; },
 		release: () => { requestRelease(); return done; },
 		isHeld: () => !released,
 	};
@@ -297,29 +307,45 @@ async function sawWaiter(table, mode) {
 
 // 5. backfill_search_stores queued for ACCESS EXCLUSIVE (its TRUNCATE) behind a long
 // reader; a SECOND reader arrives behind it. The second reader must get through
-// while the long reader still holds its lock.
+// while the long reader still holds its lock — and within the lock bound — and
+// the action must never re-request the lock (a retry would queue every later
+// reader again) before it settles, still while the long reader holds.
 {
 	const hold = await holdUntilReleased('LOCK TABLE matrix_string_search IN ACCESS SHARE MODE');
-	const startedAt = performance.now();
+	let settled = false;
 	const action = dispatchWidgetRequest(ROOT, { model: 'database_info', action: 'backfill_search_stores' }, {})
-		.then((response) => ({ ok: true, errors: response.errors ?? [] }), (e) => ({ ok: false, error: describe(e) }));
+		.then((response) => ({ ok: true, errors: response.errors ?? [] }), (e) => ({ ok: false, error: describe(e) }))
+		.finally(() => { settled = true; });
 	const waited = await sawWaiter('matrix_string_search', 'AccessExclusiveLock');
+	const queuedAt = performance.now();
 	hold.arm();
 	// The reader runs on its own connection with NO ceiling, so only the lock
 	// queue decides when it finishes (this child's request ceiling is 300ms).
 	const reader = await sql.reserve();
 	let readerDoneWhileHeld = false;
+	let giveUpMs = Number.POSITIVE_INFINITY;
 	try {
 		await reader.unsafe('BEGIN', []);
 		await reader.unsafe('SET LOCAL statement_timeout = 0', []);
 		await reader.unsafe('SELECT count(*) FROM matrix_string_search', []);
 		readerDoneWhileHeld = hold.isHeld();
+		giveUpMs = performance.now() - queuedAt;
 		await reader.unsafe('COMMIT', []);
 	} finally {
 		reader.release();
 	}
+	// Give-up proven: the rest of the action (the OTHER store's rebuild) runs on
+	// the lane's data volume, so the hold now lasts until the action settles.
+	if (readerDoneWhileHeld) hold.disarm();
+	let requeued = false;
+	while (!settled) {
+		const rows = await sql.unsafe(
+			"SELECT count(*)::int AS n FROM pg_locks WHERE relation = to_regclass('matrix_string_search') AND mode = 'AccessExclusiveLock' AND NOT granted", []);
+		if (rows[0].n > 0) requeued = true;
+		await Bun.sleep(20);
+	}
 	const outcome = await action;
-	const value = { readerDoneWhileHeld, heldAtVerdict: hold.isHeld(), actionMs: performance.now() - startedAt };
+	const value = { readerDoneWhileHeld, giveUpMs, requeued, heldAtVerdict: hold.isHeld() };
 	await hold.release();
 	results.lock_bound_backfill = { ...outcome, waited, value };
 }
@@ -495,14 +521,30 @@ describe('admin actions through the widget door run past the request ceiling', (
 	});
 });
 
-/** The cap the lock holder releases at on its own (the driver's LOCK_HOLD_CAP_MS). */
-const LOCK_HOLD_CAP_MS = 15000;
+/**
+ * The latest a queued ACCESS EXCLUSIVE request may give up, measured from the
+ * moment it is seen queued: MAINTENANCE_LOCK_TIMEOUT (5 s today) + 5 s of slack for a
+ * slow runner (the 10 ms waiter poll, the reader's round-trips). Strictly under
+ * the driver's LOCK_HOLD_CAP_MS (15 s), so a run with no lock bound can never pass
+ * it: its reader only gets through once the cap releases the hold.
+ */
+const LOCK_GIVE_UP_BOUND_MS = (() => {
+	const seconds = /^(\d+)s$/.exec(MAINTENANCE_LOCK_TIMEOUT);
+	if (seconds === null)
+		throw new Error(`unparsed MAINTENANCE_LOCK_TIMEOUT '${MAINTENANCE_LOCK_TIMEOUT}'`);
+	return Number(seconds[1]) * 1000 + 5000;
+})();
 const LOCK_TIMEOUT_TEXT = /lock timeout|lock_timeout|lock wait|55P03/i;
 
 describe('a declared action never lifts the LOCK-WAIT bound (readers do not queue behind it)', () => {
 	test('backfill_search_stores queued behind a long reader gives up its ACCESS EXCLUSIVE request: a later reader gets through while the long reader still holds', () => {
 		const leg = results.lock_bound_backfill as DoorResult & {
-			value?: { readerDoneWhileHeld?: boolean; heldAtVerdict?: boolean; actionMs?: number };
+			value?: {
+				readerDoneWhileHeld?: boolean;
+				giveUpMs?: number;
+				requeued?: boolean;
+				heldAtVerdict?: boolean;
+			};
 		};
 		expect(leg, 'lock-bound backfill leg did not run').toBeDefined();
 		expect(leg.waited, 'the TRUNCATE never queued behind the held lock (vacuous leg)').toBe(true);
@@ -510,10 +552,22 @@ describe('a declared action never lifts the LOCK-WAIT bound (readers do not queu
 			leg.value?.readerDoneWhileHeld,
 			`a reader queued behind the waiting TRUNCATE until the long reader let go: ${JSON.stringify(leg)}`,
 		).toBe(true);
+		// The give-up latency — NOT the whole action's duration. After the TRUNCATE
+		// gives up, the action goes on rebuilding the OTHER store (matrix_relation_index:
+		// ~1.2M rows on the suite DB, measured 8.4 s locally, slower on a shared CI
+		// runner), so 5 s + that rebuild ≈ 13.5 s locally against the old 15 s cap on the
+		// WHOLE action: a margin the runner's speed flipped (GitHub run 38106726480).
+		expect(
+			leg.value?.giveUpMs ?? Number.POSITIVE_INFINITY,
+			`the TRUNCATE held later readers past the lock bound: ${JSON.stringify(leg)}`,
+		).toBeLessThan(LOCK_GIVE_UP_BOUND_MS);
+		expect(
+			leg.value?.requeued,
+			`the action re-requested ACCESS EXCLUSIVE after giving up (a retry queues readers again): ${JSON.stringify(leg)}`,
+		).toBe(false);
 		expect(leg.value?.heldAtVerdict, 'the action only settled once the lock was released').toBe(
 			true,
 		);
-		expect(leg.value?.actionMs ?? Number.POSITIVE_INFINITY).toBeLessThan(LOCK_HOLD_CAP_MS);
 		// The store's own verdict: its rebuild rolled back on the bounded wait (its old
 		// rows stay — never a partial store), reported as that store's error line.
 		expect(leg.ok, JSON.stringify(leg)).toBe(true);
