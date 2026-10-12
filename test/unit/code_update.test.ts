@@ -2012,7 +2012,7 @@ describe('the instance-dir rule: an update, a restore and a rollback never write
 	}
 
 	test('update, then the supervisor-side rollback (the script, executed), with a 0555 parent', async () => {
-		if (!zipAvailable) return;
+		expect(zipAvailable).toBe(true); // no silent early return (gate_vacuity_tripwire): no zip CLI = red here too
 		const layout = instanceLayout('rollback');
 		const zipPath = await buildReleaseZip(join(layout.parent, 'release_src'));
 		rmSync(join(layout.parent, 'release_src', 'stage'), { recursive: true, force: true });
@@ -2062,7 +2062,7 @@ describe('the instance-dir rule: an update, a restore and a rollback never write
 	}, 60000);
 
 	test('update, then the in-app restore of the restore point it made, with a 0555 parent', async () => {
-		if (!zipAvailable) return;
+		expect(zipAvailable).toBe(true); // no silent early return (gate_vacuity_tripwire): no zip CLI = red here too
 		const layout = instanceLayout('restore');
 		const zipPath = await buildReleaseZip(join(layout.parent, 'release_src'));
 		rmSync(join(layout.parent, 'release_src', 'stage'), { recursive: true, force: true });
