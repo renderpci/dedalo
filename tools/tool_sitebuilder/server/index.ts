@@ -27,8 +27,9 @@
  * ontology, which the engine cannot express today; the publisher grant is the correct
  * gate until it can, not a placeholder for none.
  *
- * `session_stream` is the one streaming action: it returns a ReadableStream that forwards
- * the daemon's SSE bytes verbatim through the existing tool-dispatch stream seam, with
+ * `session_stream` is the one streaming action: it returns a ReadableStream that relays the
+ * daemon's SSE records through the existing tool-dispatch stream seam — every one byte-for-byte
+ * except an error record, which is projected onto its registered code (wire.ts) — with
  * `X-Accel-Buffering: no` so nginx does not buffer the event stream.
  *
  * The tool hides itself when the daemon is not configured (isAvailable → false), and
@@ -58,7 +59,7 @@ import {
 	ownedSessionIds,
 	recordSessionOwner,
 } from './session_owner.ts';
-import { siteBuilderFailure, siteBuilderRejected } from './wire.ts';
+import { relaySessionFrames, siteBuilderFailure, siteBuilderRefusal } from './wire.ts';
 
 const SLUG_PATTERN = /^[a-z][a-z0-9-]{1,39}$/;
 
@@ -89,7 +90,7 @@ const SLUG_PATTERN = /^[a-z][a-z0-9-]{1,39}$/;
  * round trip and comes back named by the side that owns the answer.
  *
  * PRESENCE is still checked — that is not a grammar, and "you did not say which domain"
- * deserves an engine-authored sentence rather than a relayed 400. `SLUG_PATTERN` stays for
+ * deserves its own code (`site_builder.domain_required`) rather than a relayed 400. `SLUG_PATTERN` stays for
  * a different reason: the slug becomes a PATH SEGMENT in the request URL, so this side must
  * constrain it whatever the daemon thinks. Gate:
  * test/unit/site_builder_single_source_tripwire.test.ts (fact `layout_constants`).
@@ -136,7 +137,7 @@ async function proxy(fn: () => Promise<ToolResponse>): Promise<ToolResponse> {
 function requireSlug(options: Record<string, unknown>): string {
 	const slug = String(options.slug ?? '');
 	if (!SLUG_PATTERN.test(slug)) {
-		throw siteBuilderRejected('Invalid site name.');
+		throw siteBuilderRefusal('site_builder.invalid_slug');
 	}
 	return slug;
 }
@@ -154,7 +155,7 @@ function requireSlug(options: Record<string, unknown>): string {
 function requireId(options: Record<string, unknown>, key: string): string {
 	const id = String(options[key] ?? '');
 	if (id.length === 0 || id.length > 200 || /[^A-Za-z0-9._-]/.test(id) || id.includes('..')) {
-		throw siteBuilderRejected(`Invalid ${key}.`);
+		throw siteBuilderRefusal('site_builder.invalid_id', { field: key });
 	}
 	return id;
 }
@@ -177,12 +178,9 @@ function requireId(options: Record<string, unknown>, key: string): string {
  * Gated by `test/unit/tool_sitebuilder_authz_native.test.ts` (every action, both
  * directions) and `test/unit/tool_sitebuilder.test.ts` (the production doors' own rules).
  */
-function assertPublisher(
-	principal: Principal,
-	message = 'The site builder requires developer or administrator permission.',
-): void {
+function assertPublisher(principal: Principal): void {
 	if (!principal.isDeveloper && !principal.isGlobalAdmin) {
-		throw siteBuilderRejected(message);
+		throw siteBuilderRefusal('site_builder.not_permitted');
 	}
 }
 
@@ -261,7 +259,7 @@ async function listSites(context: ToolActionContext): Promise<ToolResponse> {
  *
  * The daemon's own refusal is surfaced by REASON, not by relaying its prose — see
  * `wire.ts`: a daemon-supplied `detail` is another service's text and stays log-only, so
- * the sentence a museum reads is written here, keyed on the machine code the daemon sends.
+ * what a museum reads is the label of the code wire.ts maps the daemon's machine `reason` to.
  */
 async function createSite(context: ToolActionContext): Promise<ToolResponse> {
 	// GATED (P2-8(b)): creating a site provisions a workspace on the daemon host from a
@@ -272,19 +270,16 @@ async function createSite(context: ToolActionContext): Promise<ToolResponse> {
 		const slug = requireSlug(o);
 		const name = String(o.name ?? '').trim();
 		if (name.length === 0 || name.length > 200) {
-			throw siteBuilderRejected('A site name is required.');
+			throw siteBuilderRefusal('site_builder.name_required');
 		}
 		// THE DOMAIN, WHICH IS NOT OPTIONAL. Supplied by the operator, never invented here: a
 		// domain needs DNS, a vhost and a certificate, and the provisioner has already made a
-		// webspace for exactly this one. An engine-authored sentence, so it is safe to show.
+		// webspace for exactly this one. Its own code: the label is the sentence.
 		const domain = String(o.domain ?? '')
 			.trim()
 			.toLowerCase();
 		if (domain.length === 0) {
-			throw siteBuilderRejected(
-				'A site needs the domain it will answer on (for example www.museum.org), and it must ' +
-					'be one the site builder has already been provisioned for.',
-			);
+			throw siteBuilderRefusal('site_builder.domain_required');
 		}
 		const body: Record<string, unknown> = { slug, name, domain };
 		if (typeof o.template === 'string') body.template = o.template;
@@ -318,19 +313,13 @@ async function deleteSite(context: ToolActionContext): Promise<ToolResponse> {
 	// including work in progress that has never been published and therefore has no prod
 	// release history to restore it from. Deleting somebody's work is not a lesser act than
 	// publishing it. The purge_prod half keeps its OWN, stricter pair of checks below.
-	assertPublisher(
-		context.principal,
-		'Deleting a site requires developer or administrator permission.',
-	);
+	assertPublisher(context.principal);
 	return proxy(async () => {
 		const purgeProd = context.options.purge_prod === true;
 		if (purgeProd) {
-			assertPublisher(
-				context.principal,
-				'Removing the published site requires developer or administrator permission.',
-			);
+			assertPublisher(context.principal);
 			if (context.options.confirm !== true) {
-				throw siteBuilderRejected('Removing the published site must be confirmed.');
+				throw siteBuilderRefusal('site_builder.confirmation_required', { confirm: 'purge_prod' });
 			}
 		}
 		const slug = requireSlug(context.options);
@@ -358,7 +347,7 @@ async function sessionStart(context: ToolActionContext): Promise<ToolResponse> {
 		const slug = requireSlug(context.options);
 		const prompt = String(context.options.prompt ?? '');
 		if (prompt.trim().length === 0 || prompt.length > MESSAGE_MAX) {
-			throw siteBuilderRejected('A prompt is required (max 32 KiB).');
+			throw siteBuilderRefusal('site_builder.text_required', { field: 'prompt' });
 		}
 		const body: Record<string, unknown> = { prompt };
 		if (context.options.driver) body.driver = context.options.driver;
@@ -400,7 +389,7 @@ async function sessionMessage(context: ToolActionContext): Promise<ToolResponse>
 		await assertSessionOwner(id, context.principal);
 		const message = String(context.options.message ?? '');
 		if (message.trim().length === 0 || message.length > MESSAGE_MAX) {
-			throw siteBuilderRejected('A message is required (max 32 KiB).');
+			throw siteBuilderRefusal('site_builder.text_required', { field: 'message' });
 		}
 		return ok(
 			context,
@@ -507,14 +496,11 @@ async function preview(context: ToolActionContext): Promise<ToolResponse> {
  */
 async function publish(context: ToolActionContext): Promise<ToolResponse> {
 	return proxy(async () => {
-		assertPublisher(
-			context.principal,
-			'Publishing requires developer or administrator permission.',
-		);
+		assertPublisher(context.principal);
 		const slug = requireSlug(context.options);
 		// The client's confirm dialog sets this; a call without it must not go live.
 		if (context.options.confirm !== true) {
-			throw siteBuilderRejected('Publishing must be confirmed.');
+			throw siteBuilderRefusal('site_builder.confirmation_required', { confirm: 'publish' });
 		}
 		const body: Record<string, unknown> = { confirm: true };
 		if (typeof context.options.note === 'string') body.note = context.options.note;
@@ -540,9 +526,11 @@ async function getAudit(context: ToolActionContext): Promise<ToolResponse> {
 }
 
 /**
- * SSE pass-through: forward the daemon's event stream to the browser byte-for-byte. The
- * returned stream's cancel() aborts the upstream fetch (browser closed → daemon leg torn
- * down). streamHeaders carries X-Accel-Buffering so nginx does not buffer it.
+ * SSE relay: forward the daemon's event stream to the browser — every record byte-for-byte
+ * except an ERROR record, which becomes the converter's body for its reason's registered code
+ * (wire.ts `relaySessionFrames`; the daemon's prose never crosses). The returned stream's
+ * cancel() aborts the upstream fetch (browser closed → daemon leg torn down). streamHeaders
+ * carries X-Accel-Buffering so nginx does not buffer it.
  */
 async function sessionStream(context: ToolActionContext): Promise<ToolResponse> {
 	// GATED (P2-8(b)): publisher grant AND ownership, both BEFORE the upstream leg opens.
@@ -569,42 +557,18 @@ async function sessionStream(context: ToolActionContext): Promise<ToolResponse> 
 		upstreamAbort.signal,
 	);
 
-	const reader = (upstream.body as ReadableStream<Uint8Array>).getReader();
-	const passthrough = new ReadableStream<Uint8Array>({
-		async pull(controller) {
-			try {
-				const { done, value } = await reader.read();
-				if (done) {
-					controller.close();
-					return;
-				}
-				controller.enqueue(value);
-			} catch (error) {
-				// Upstream died mid-stream: tell the client, then close.
-				// A STREAM FRAME, not an envelope: the registered code identifies the
-				// fault; the raw cause stays in the server log.
-				console.error('[tool_sitebuilder] session stream lost:', error);
-				const encoder = new TextEncoder();
-				controller.enqueue(
-					encoder.encode(
-						`event: error\ndata: ${JSON.stringify({ code: 'site_builder.stream_lost' })}\n\n`,
-					),
-				);
-				controller.close();
-			}
-		},
-		cancel() {
-			upstreamAbort.abort();
-			reader.cancel().catch(() => {});
-		},
-	});
+	// THE STREAM DOOR (WIRE-MAP): every error record becomes the converter's body for its
+	// reason's code; every other record passes byte-for-byte (wire.ts relaySessionFrames).
+	const relayed = relaySessionFrames(upstream.body as ReadableStream<Uint8Array>, () =>
+		upstreamAbort.abort(),
+	);
 
 	// stream/streamContentType/streamHeaders are EXTENSION KEYS the dd_tools_api
 	// handler reads off the top level to hand the bytes to the stream seam.
 	return okEnvelope(null, {
 		requestId: toolRequestId(context),
 		extend: {
-			stream: passthrough,
+			stream: relayed,
 			streamContentType: 'text/event-stream; charset=utf-8',
 			streamHeaders: { 'X-Accel-Buffering': 'no' },
 		},
@@ -626,31 +590,31 @@ export const tool: ToolServerModule = {
 		get_status: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected before the daemon call (the daemon executes whatever the engine sends). A read that discloses whether a site builder runs here, whether it is up, and its /health body (service identity, installed agent drivers).',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted before the daemon call (the daemon executes whatever the engine sends). A read that discloses whether a site builder runs here, whether it is up, and its /health body (service identity, installed agent drivers).',
 			handler: getStatus,
 		},
 		list_sites: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected before the daemon call (the daemon executes whatever the engine sends). A read that discloses the whole site inventory, unpublished work included.',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted before the daemon call (the daemon executes whatever the engine sends). A read that discloses the whole site inventory, unpublished work included.',
 			handler: listSites,
 		},
 		create_site: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected before the daemon call (the daemon executes whatever the engine sends). Provisions a workspace on the daemon host and claims a slug; requireSlug() and the name bounds are INPUT VALIDATION, not authorization.',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted before the daemon call (the daemon executes whatever the engine sends). Provisions a workspace on the daemon host and claims a slug; requireSlug() and the name bounds are INPUT VALIDATION, not authorization.',
 			handler: createSite,
 		},
 		delete_site: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected before the daemon call (the daemon executes whatever the engine sends). Now UNCONDITIONAL (P2-8(b)) — the plain workspace+preprod delete used to be ungated; the purge_prod half additionally keeps its own publisher check and an explicit confirm flag.',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted before the daemon call (the daemon executes whatever the engine sends). Now UNCONDITIONAL (P2-8(b)) — the plain workspace+preprod delete used to be ungated; the purge_prod half additionally keeps its own publisher check and an explicit confirm flag.',
 			handler: deleteSite,
 		},
 		session_start: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected before the daemon call (the daemon executes whatever the engine sends). Starts an autonomous coding agent on the installation credentials, and records the caller as its owner via recordSessionOwner() (session_owner.ts).',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted before the daemon call (the daemon executes whatever the engine sends). Starts an autonomous coding agent on the installation credentials, and records the caller as its owner via recordSessionOwner() (session_owner.ts).',
 			handler: sessionStart,
 		},
 		session_message: {
@@ -668,7 +632,7 @@ export const tool: ToolServerModule = {
 		session_history: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected before the daemon call (the daemon executes whatever the engine sends). The site-wide daemon list is additionally FILTERED to the sessions the caller owns through ownedSessionIds() (session_owner.ts); a global admin sees it unfiltered.',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted before the daemon call (the daemon executes whatever the engine sends). The site-wide daemon list is additionally FILTERED to the sessions the caller owns through ownedSessionIds() (session_owner.ts); a global admin sees it unfiltered.',
 			handler: sessionHistory,
 		},
 		session_stream: {
@@ -680,25 +644,25 @@ export const tool: ToolServerModule = {
 		build: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected before the daemon call (the daemon executes whatever the engine sends). Runs the site toolchain on the daemon host and overwrites the preprod bytes that publish promotes.',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted before the daemon call (the daemon executes whatever the engine sends). Runs the site toolchain on the daemon host and overwrites the preprod bytes that publish promotes.',
 			handler: build,
 		},
 		get_build: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected before the daemon call (the daemon executes whatever the engine sends). A read that discloses the build LOG — toolchain error text with host paths.',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted before the daemon call (the daemon executes whatever the engine sends). A read that discloses the build LOG — toolchain error text with host paths.',
 			handler: getBuild,
 		},
 		preview: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected before the daemon call (the daemon executes whatever the engine sends). A read that hands out the preprod URL, i.e. unpublished content.',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted before the daemon call (the daemon executes whatever the engine sends). A read that hands out the preprod URL, i.e. unpublished content.',
 			handler: preview,
 		},
 		publish: {
 			permission: null,
 			gatedInHandler:
-				'assertPublisher() — developer OR global admin, refusing with site_builder.rejected — plus an explicit confirm flag, both BEFORE the daemon call (the daemon executes whatever the engine sends).',
+				'assertPublisher() — developer OR global admin, refusing with site_builder.not_permitted — plus an explicit confirm flag, both BEFORE the daemon call (the daemon executes whatever the engine sends).',
 			handler: publish,
 		},
 		get_audit: {

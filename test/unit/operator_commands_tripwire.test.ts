@@ -418,6 +418,33 @@ describe('every daemon environment key an operator page names is one the daemon 
 		HOME: "the POSIX home-directory variable, named in the internals page as one an agent run's environment never carries from the daemon and the egress shim refuses in a spec (the unit fixes it); never a daemon or engine config key",
 		DEDALO_:
 			'the engine key PREFIX with a trailing wildcard (`DEDALO_*`), naming every engine key the egress shim refuses in a spec',
+		// S3-HOME: the five CHILD environment keys the turn unit fixes (agent_identity.ts
+		// turnHomeEnvironment), named in the internals page as keys the shim refuses in a spec.
+		XDG_CONFIG_HOME:
+			"a CHILD environment key the turn unit fixes (root's read-only `.config`, S3-HOME); the shim refuses it in a spec — never a daemon config key",
+		XDG_DATA_HOME: "the same — a child key the turn unit fixes, under the turn HOME's `state/`",
+		XDG_STATE_HOME: "the same — a child key the turn unit fixes, under the turn HOME's `state/`",
+		XDG_CACHE_HOME: "the same — a child key the turn unit fixes, under the turn HOME's `state/`",
+		CLAUDE_CONFIG_DIR:
+			"the same — a child key the turn unit fixes (the CLI's own state, under `state/claude`)",
+		// LEAD-1c: the opencode PLANT restriction, CHILD environment keys every opencode turn
+		// carries (src/drivers/opencode_argv.ts) and OPENCODE_ENV may not name.
+		OPENCODE_CONFIG_CONTENT:
+			"a CHILD environment key of the opencode restriction (the daemon's whole opencode configuration as JSON); OPENCODE_ENV is refused naming it — never a daemon config key",
+		OPENCODE_DISABLE_PROJECT_CONFIG: 'the same — a child key of the opencode restriction',
+		OPENCODE_PURE: 'the same — a child key of the opencode restriction',
+		OPENCODE_DISABLE_CLAUDE_CODE: 'the same — a child key of the opencode restriction',
+		OPENCODE_DISABLE_EXTERNAL_SKILLS: 'the same — a child key of the opencode restriction',
+		OPENCODE_PERMISSION:
+			"the same — a child key of the opencode restriction (the daemon's permission block, in the one key that overrides a configuration's)",
+		OPENCODE_DB:
+			'a CHILD environment key every opencode turn carries (opencode_argv.ts OPENCODE_DB_KEY: the database the daemon states and reads for a console account); OPENCODE_ENV is refused naming it — never a daemon config key',
+		// LEAD-1c: the two stated opencode CREDENTIALS an operator may put in OPENCODE_ENV (its
+		// allowlist, opencode_argv.ts isOpencodeCredentialKey) — child keys, never daemon config.
+		OPENCODE_API_KEY:
+			'a CHILD environment key: an opencode credential OPENCODE_ENV may carry (its allowlist) — never a daemon config key',
+		OPENCODE_AUTH_CONTENT:
+			"the same — opencode's own credential store, inline, an allowlisted OPENCODE_ENV key",
 	});
 
 	/**

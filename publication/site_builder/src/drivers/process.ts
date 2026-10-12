@@ -11,7 +11,8 @@
  * to every driver.
  *
  * The environment handed to the turn is exactly SessionStartOptions.env — the driver's
- * allowlist. No inheritance.
+ * allowlist — with the driver's OWN statement (`TurnPlan.env`) merged over it, so the daemon's
+ * value always wins over a caller's. No inheritance.
  *
  * AND NOTHING HERE SPAWNS ANYTHING. Every turn goes through `confineTurn()`
  * (./confinement.ts), which decides what the turn runs AS and hands back one `ConfinedChild`
@@ -23,13 +24,21 @@
  * fallback: a host that cannot confine refuses the turn.
  */
 
-import { confineTurn, RunAbortedError, type ConfinedChild, type ConfinementPolicy } from './confinement';
+import { confineTurn, EGRESS_CLOSE_FAILED_LINE, RunAbortedError, type ConfinedChild, type ConfinementPolicy } from './confinement';
+import { agentExitedEvent, turnErrorEvent, turnFault } from './turn_errors';
 import type { AgentEvent, AgentProcess, SessionStartOptions } from './types';
 
 export interface TurnPlan {
   argv: string[];
   /** Maps one line of stdout to zero or more events. */
   parseLine: (line: string) => AgentEvent[];
+  /**
+   * The driver's OWN environment statement (opencode: its PLANT restriction and the daemon's
+   * whole configuration). Merged OVER the caller's `opts.env` at the one merge point below, so
+   * nothing a caller (or an operator's OPENCODE_ENV) hands the turn overrides it; the confinement
+   * then adds what IT fixes (the HOME law, the egress keys) on top of both.
+   */
+  env?: Readonly<Record<string, string>>;
   /**
    * What the driver's setup left on disk that must not outlive the turn.
    *
@@ -100,9 +109,11 @@ class EventQueue implements AsyncIterable<AgentEvent> {
  * inside the async body means a setup failure surfaces as a normalized `error` event, not a
  * throw the manager cannot see. The supervisor guarantees the stream always terminates with
  * exactly one result or error: a non-zero exit with no result seen becomes an `error`
- * (retriable when killed by signal/timeout, i.e. exitCode === null), and a clean exit that
- * emitted no terminal frame gets a synthesized `result` — so the manager's `for await` never
- * hangs waiting for a terminal event the driver forgot to print.
+ * (`turn_agent_killed` when killed by a signal, else `turn_agent_exited` with the agent's stderr
+ * tail as labelled `agent_output`), and a clean exit that emitted no terminal frame gets a
+ * synthesized `result` — so the manager's `for await` never hangs waiting for a terminal event
+ * the driver forgot to print. EVERY error event is a REASON (`turn_errors.ts`): a refusal's own,
+ * or the step's fault — the thrown sentence goes to the daemon's log, never into the session's.
  */
 export function spawnAgentProcess(
   opts: SessionStartOptions,
@@ -144,24 +155,21 @@ export function spawnAgentProcess(
       if (outcome.kind !== 'plan') {
         // Given up on: whatever the setup still writes is undone when (if) it settles.
         void pending.then(late => runCleanup(late), () => {});
-        queue.push(
-          outcome.kind === 'timeout'
-            ? { type: 'error', message: `turn timed out during its setup (${opts.timeoutMs} ms)`, retriable: true }
-            : { type: 'error', message: 'interrupted before start', retriable: true },
-        );
+        queue.push(turnFault(outcome.kind === 'timeout' ? 'turn_timeout' : 'turn_interrupted'));
         queue.close();
         return;
       }
       plan = outcome.plan;
     } catch (error) {
-      queue.push({ type: 'error', message: `setup failed: ${errText(error)}`, retriable: false });
+      // The refusal's own reason (a probe's `confinement.agent_cli_unsupported`, …) or the step's.
+      queue.push(turnErrorEvent(error, 'turn_setup_failed', 'setup'));
       queue.close();
       return;
     }
 
     // Interrupted while setup ran: do not spawn at all.
     if (interruptRequested) {
-      queue.push({ type: 'error', message: 'interrupted before start', retriable: true });
+      queue.push(turnFault('turn_interrupted'));
       queue.close();
       return;
     }
@@ -178,7 +186,8 @@ export function spawnAgentProcess(
           slug: opts.slug,
           argv: plan.argv,
           cwd: opts.workspace,
-          env: opts.env,
+          // THE ONE MERGE POINT: the driver's statement wins over the caller's.
+          env: { ...opts.env, ...(plan.env ?? {}) },
           timeoutMs: opts.timeoutMs,
           driver: opts.driver,
           mcpUpstream: opts.mcpUpstream,
@@ -192,12 +201,13 @@ export function spawnAgentProcess(
       );
     } catch (error) {
       if (error instanceof RunAbortedError) {
-        queue.push({ type: 'error', message: 'interrupted before start', retriable: true });
+        queue.push(turnFault('turn_interrupted'));
         await runCleanup(plan);
         queue.close();
         return;
       }
-      queue.push({ type: 'error', message: `confinement refused: ${errText(error)}`, retriable: false });
+      // Every confinement refusal carries its reason (`confinement.*`, `confinement_unavailable`).
+      queue.push(turnErrorEvent(error, 'turn_failed', 'confinement'));
       await runCleanup(plan);
       queue.close();
       return;
@@ -210,7 +220,7 @@ export function spawnAgentProcess(
     // awaits): there is still no child for interrupt() to kill, so a stop landing here would
     // otherwise be lost and the whole turn would run. Undo what confineTurn opened; spawn nothing.
     if (interruptRequested) {
-      queue.push({ type: 'error', message: 'interrupted before start', retriable: true });
+      queue.push(turnFault('turn_interrupted'));
       await teardown(confined, plan, queue);
       return;
     }
@@ -219,8 +229,11 @@ export function spawnAgentProcess(
     started = true;
     const run = confined;
 
+    // ONE terminal error per turn: a deadline that fired is the turn's error, not the exit it caused.
+    let timedOut = false;
     const timeout = setTimeout(() => {
-      queue.push({ type: 'error', message: 'turn timed out', retriable: true });
+      timedOut = true;
+      queue.push(turnFault('turn_timeout'));
       // Awaited inside: the run is ended through the connection AND PID 1 (RuntimeMaxSec is
       // the backstop behind both, for the case this process is gone too).
       void run.stop();
@@ -240,21 +253,29 @@ export function spawnAgentProcess(
       const exit = await run.exited;
       const exitCode = exit.exitCode;
 
-      if (exit.failure && !sawResult) {
-        // No status of record: never a success, whatever was printed.
-        queue.push({ type: 'error', message: `the turn's unit ended without an exit status (${exit.failure})`, retriable: true });
+      if (timedOut && !sawResult) {
+        // The deadline's error is already queued; the exit it caused is not a second one.
+      } else if (interruptRequested && !sawResult) {
+        // A STOP that was asked for is the turn's error, never the exit it caused (a SIGINT
+        // death, a 130, a unit stopped mid-frame): the browser says "stopped", not "failed".
+        queue.push(turnFault('turn_interrupted'));
+      } else if (exit.failure && !sawResult) {
+        // No status of record: never a success, whatever was printed. The cause is the log's.
+        console.error(`[agent] the turn's unit ended without an exit status (${exit.failure})`);
+        queue.push(turnFault('turn_unit_lost'));
+      } else if ((exitCode === null || exit.signal !== null) && !sawResult) {
+        // Killed by a signal: no exit status of its own.
+        console.error(`[agent] the agent was killed (signal ${String(exit.signal)})`);
+        queue.push(turnFault('turn_agent_killed'));
       } else if (exitCode !== 0 && !sawResult) {
-        queue.push({
-          type: 'error',
-          message: stderrChunks.join('').trim().slice(-500) || `agent exited ${exitCode}`,
-          retriable: exitCode === null, // killed by signal/timeout → retriable
-        });
+        // The AGENT's words, labelled as such and bounded — never the error's text.
+        queue.push(agentExitedEvent(stderrChunks.join('')));
       } else if (!sawResult) {
         // Clean exit but the driver never emitted a terminal result — synthesize one.
         queue.push({ type: 'result', ok: true, durationMs: 0 });
       }
     } catch (error) {
-      queue.push({ type: 'error', message: errText(error), retriable: true });
+      queue.push(turnErrorEvent(error, 'turn_failed', 'run'));
     } finally {
       clearTimeout(timeout);
       // The run's gate and its site's run slot go here, on every path — including the
@@ -321,10 +342,10 @@ async function teardown(confined: ConfinedChild | null, plan: TurnPlan, queue: E
   try {
     await confined?.cleanup();
   } catch (error) {
-    queue.push({
-      type: 'text',
-      text: `[egress] this run's egress gate did not close cleanly (${errText(error)}); its per-run directory may remain under the daemon's runtime directory.`,
-    });
+    // A FIXED line in the session's log; the thrown value (an unlink's errno, a runtime path)
+    // is the daemon's own detail and goes to its log only — the stream door relays `text`
+    // events byte for byte, so prose here would reach the browser (WIRE-MAP, stream door).
+    queue.push({ type: 'text', text: EGRESS_CLOSE_FAILED_LINE });
     console.error('[agent] a turn egress gate failed to close:', error);
   }
   await runCleanup(plan);
@@ -341,9 +362,6 @@ async function runCleanup(plan: TurnPlan): Promise<void> {
   }
 }
 
-function errText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 /** Reads a byte stream, splitting into lines, invoking onLine per complete line. */
 async function readLines(stream: AsyncIterable<Uint8Array>, onLine: (line: string) => void): Promise<void> {

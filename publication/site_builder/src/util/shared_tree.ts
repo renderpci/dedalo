@@ -95,7 +95,7 @@
  */
 
 import { constants as FS } from 'node:fs';
-import { lstat, mkdir, open, readdir, rename } from 'node:fs/promises';
+import { lstat, mkdir, open, readdir, rename, unlink } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative as relativePath, resolve, sep } from 'node:path';
 import { confinedPath } from './paths';
@@ -803,6 +803,29 @@ export async function readFileShared(root: string, relative: string): Promise<st
  */
 export async function readFilePrivate(root: string, relative: string, ownerSeam?: OwnerSeam): Promise<string | null> {
   return readThroughHandle(root, relative, true, ownerSeam);
+}
+
+/**
+ * REMOVE one of the DAEMON's OWN files — the module's ONE `unlink(2)`. A path-based `rm` follows
+ * every link on the way to its last component: a turn that renames `.builder` away and plants
+ * `.builder -> <any directory the daemon can write>` aimed the cleanup of a fixed name
+ * (`.builder/mcp.json`, `.builder/opencode-brief.md`) at that directory. So the chain is walked
+ * `O_NOFOLLOW` and, from `PRIVATE_CHAIN_OWNED_FROM`, must be the daemon's inode (the readers'
+ * rule): a planted or re-created `.builder` is REFUSED (`PlantedSymlinkError` /
+ * `ForeignOwnerError`), and nothing is removed. The last component is unlinked, which never
+ * follows it — a link standing there is removed as a link. Absent (any level) = nothing to do.
+ * What remains is the module's one stated race (a name swapped between the walk and the call),
+ * the same as every door here.
+ */
+export async function removeFilePrivate(root: string, relative: string, ownerSeam?: OwnerSeam): Promise<void> {
+  const { target, segments } = segmentsUnder(root, relative);
+  try {
+    await assertRealChain(root, segments.slice(0, -1), PRIVATE_CHAIN_OWNED_FROM, ownerSeam);
+    await unlink(target);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return;
+    throw error;
+  }
 }
 
 /**

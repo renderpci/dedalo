@@ -17,9 +17,9 @@ Use the tool from inside Dédalo to drive that daemon; a user builds a site and 
 
 - `index.ts` — the `ToolServerModule` with fourteen actions, all `permission: null`. The tool grant (dd1324 active + profile-granted, enforced by dispatch **before** these run) is the gate for building; `publish` and `get_audit` additionally require a developer or global admin, checked imperatively via `assertPublisher`. Each handler validates its untrusted inputs before they become a daemon URL segment — `requireSlug` (`^[a-z][a-z0-9-]{1,39}$`), `requireId` (bounded, path-safe), a 32 KiB cap on prompts/messages — then forwards through `proxy()`, which turns a `SiteBuilderError` into a `{ result: false, msg, errors: [code] }` envelope.
 - `daemon_client.ts` — the **only** place the engine talks HTTP to the daemon. `daemonJson` does the control calls (JSON, timeout via `AbortSignal.timeout`); `daemonStream` does the SSE leg (no overall timeout — a turn streams for minutes; cancellation wired to an `AbortSignal`). Both attach `Authorization: Bearer <token>`, `X-Dedalo-User-Id` and `X-Dedalo-Username` headers, and map every transport failure and daemon `problem+json` onto a stable `SiteBuilderError` code, never leaking the token or daemon URL into a browser-facing message.
-- `wire.ts` — the `SiteBuilderError` type and the daemon problem shape.
+- `wire.ts` — the wire vocabulary: the daemon problem shape, the map from every daemon `reason` to its registered `site_builder.*` code (control door and stream door), the engine's own refusal codes, and the stream relay (`relaySessionFrames`).
 
-The one streaming action, `session_stream`, returns a `ReadableStream` (`stream` in the `ToolResponse`, `streamContentType: 'text/event-stream; charset=utf-8'`) that forwards the daemon's SSE bytes verbatim through the tool-dispatch stream seam, with `streamHeaders: { 'X-Accel-Buffering': 'no' }` so nginx does not buffer the event stream. Its `cancel()` aborts the upstream fetch when the browser closes.
+The one streaming action, `session_stream`, returns a `ReadableStream` (`stream` in the `ToolResponse`, `streamContentType: 'text/event-stream; charset=utf-8'`) that relays the daemon's SSE records through the tool-dispatch stream seam — every record byte-for-byte except an error record, which becomes the error body of its registered code (see *Failure codes* below) — with `streamHeaders: { 'X-Accel-Buffering': 'no' }` so nginx does not buffer the event stream. Its `cancel()` aborts the upstream fetch when the browser closes.
 
 **Client** (`tools/tool_sitebuilder/js/`): `tool_sitebuilder.js` (instance), `sitebuilder_controller.js` (workspace logic), `builder_stream.js` (consumes the SSE stream), `render_tool_sitebuilder.js` (the workspace UI: site list, chat, live preview iframe, publish), and `markdown.js`. The tool opens in its own window.
 
@@ -48,7 +48,13 @@ There is no `backgroundRunnable`; long agent turns are handled by the SSE stream
 
 `isAvailable: () => typeof config.siteBuilder.url === 'string' && typeof config.siteBuilder.token === 'string'` — a fast, pure, cacheable check that hides the whole tool when the daemon is not configured.
 
-Failure codes (registered `DedaloError` codes, mapped from the daemon's `reason` by `server/wire.ts`): `site_builder.unconfigured`, `site_builder.unreachable`, `site_builder.auth` (the daemon rejected this server's token), `site_builder.rejected` (a 4xx the user should see — bad slug, quota, conflict; the one code with public disclosure), `site_builder.failed`, `site_builder.stream_lost`, and `site_builder.instance_mismatch` — raised before a single byte is sent when the daemon's `/health` fingerprint is not this engine's pairing.
+Failure codes are registered `DedaloError` codes, one per refusal — the browser renders the code's label, and no `site_builder.*` error carries free text (the daemon's sentence is log-only):
+
+- transport and pairing: `site_builder.unconfigured`, `site_builder.unreachable`, `site_builder.auth` (the daemon rejected this server's token), `site_builder.instance_mismatch` (raised before a single byte is sent when the daemon's `/health` fingerprint is not this engine's pairing), `site_builder.failed`, `site_builder.stream_lost`;
+- the daemon's `reason`s (`server/wire.ts` `DAEMON_REASON_CODES`): `site_builder.busy` (another task holds the site, or the daemon is restarting — retryable), `site_builder.slug_exists`, `site_builder.workspace_exists`, `site_builder.domain_taken`, `site_builder.webspace_unavailable`, `site_builder.no_build`, `site_builder.not_running`, `site_builder.site_limit`, `site_builder.disk_quota`, `site_builder.capacity` (too many turns at once — retryable), `site_builder.confinement_unavailable`;
+- the engine's own refusals, before the daemon is asked: `site_builder.invalid_slug`, `site_builder.invalid_id`, `site_builder.name_required`, `site_builder.domain_required`, `site_builder.text_required`, `site_builder.confirmation_required`, `site_builder.not_permitted`, `site_builder.not_session_owner`;
+- a turn's error on the event stream (`TURN_EVENT_REASON_CODES`): the codes above, plus `site_builder.turn_timeout`, `site_builder.turn_interrupted`, `site_builder.turn_setup_failed`, `site_builder.agent_failed` and `site_builder.replay_failed`;
+- `site_builder.rejected` is only the fallback for a daemon 4xx that carries no reason.
 
 ## How it is registered & surfaced
 
@@ -93,10 +99,10 @@ const response = await self.tool_request({
     action  : 'publish',
     options : { slug: 'reservoir-memories', confirm: true, note: 'v1 approved' }
 })
-// under-privileged or unconfirmed → { result: false, errors: ['site_builder_rejected'] }
+// under-privileged → error.code 'site_builder.not_permitted'; unconfirmed → 'site_builder.confirmation_required'
 ```
 
-The event stream (`session_stream`) is consumed as an SSE response, forwarded byte-for-byte from `GET /v1/sessions/:id/events?after=N`; the client resumes from the last `after` cursor after a reconnect.
+The event stream (`session_stream`) is consumed as an SSE response relayed from `GET /v1/sessions/:id/events?after=N`; the client resumes from the last `after` cursor after a reconnect. Each `data:` record is a stored event `{seq, ts, body}`; an error record's body is `{type: 'error', error: {code, category, message, label_key, retryable}, agent_output?}` (`agent_output` is the agent's own stderr tail when it exited with an error), and an `event: error` frame's data is that same error body.
 
 ## Related
 

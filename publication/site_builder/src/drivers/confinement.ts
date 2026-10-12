@@ -57,7 +57,20 @@
  */
 
 import { execFile, spawnSync } from 'node:child_process';
-import { existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, type Stats, statSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  readlinkSync,
+  realpathSync,
+  renameSync,
+  rmSync,
+  type Stats,
+  statSync,
+} from 'node:fs';
 import { connect as netConnect, type Socket } from 'node:net';
 import { userInfo } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
@@ -78,8 +91,13 @@ import {
   gitconfigDirectives,
   legacyTransientUnitRegex,
   TURN_BARE_REPOSITORY_MARKER,
+  TURN_HOME_CONFIG,
+  TURN_HOME_CARRY,
   TURN_SYSTEM_GITCONFIG_DIRECTIVES,
   turnBareRepositoryMarker,
+  unconfinedTurnChildEnvironment,
+  unconfinedTurnDirs,
+  turnHomeShapeProblems,
   turnGitconfigBind,
   turnMaskedPaths,
   turnSystemGitconfigPath,
@@ -245,6 +263,12 @@ export interface ConfinementPolicy {
    * socket is served. Absent in production.
    */
   readonly egressSeams?: EgressGateOptions['seams'];
+  /**
+   * The turn-HOME check's test seam (S3-HOME, `turnHomeProblem`): lstat(2) of a path of the
+   * HOME, so a stand-in host (which cannot make a path root's or an identity's) can state who
+   * owns it. Absent in production — the real lstat.
+   */
+  readonly turnHomeSeams?: { readonly lstat?: (path: string) => Stats | null };
 }
 
 /** A host answer that may arrive now or later: the real host's NSS questions are asynchronous. */
@@ -929,6 +953,12 @@ export async function confinementProblems(policy: ConfinementPolicy, door: Confi
  * instead of a host that boots green and fails every run.
  */
 export async function bootConfinementProblems(policy: ConfinementPolicy = policyFromConfig()): Promise<string[]> {
+  if (policy.mode === 'none') {
+    // The ONE thing `none` needs of the host: a state root for the turn's own HOME. Without it
+    // every turn is refused (`declaredUnconfined`), and that is a boot line, never a quiet boot.
+    const noStateRoot = unconfinedStateRootProblem(policy);
+    return noStateRoot === null ? [] : [noStateRoot];
+  }
   if (policy.mode !== 'systemd_scope') return [];
   const out: string[] = [];
   for (const door of DOORS) {
@@ -1451,6 +1481,13 @@ export async function daemonClaimProblem(policy: ConfinementPolicy, pid: number)
  * site's runs, it does not refuse to boot.
  */
 export async function reconcileAgentUnits(policy: ConfinementPolicy = policyFromConfig()): Promise<void> {
+  if (policy.mode === 'none') {
+    // Declared unconfined: no unit to prove idle, but the CLI state of the pre-S3 persistent
+    // HOME to carry into `state/` (once), and a killed daemon's per-run turn HOMEs to sweep.
+    carryUnconfinedTurnState(policy);
+    sweepUnconfinedRunHomes(policy);
+    return;
+  }
   if (policy.mode !== 'systemd_scope') return;
   for (const [slug, k] of [...identitiesOf(policy).entries()].sort((a, b) => a[1] - b[1])) {
     try {
@@ -1607,10 +1644,23 @@ function lstatOrNull(path: string): Stats | null {
  * repository the mask closes.
  */
 export function turnGitconfigProblem(policy: ConfinementPolicy): string | null {
-  const path = turnSystemGitconfigPath(policy.agentStateRoot);
+  return rootConfigFileProblem(turnSystemGitconfigPath(policy.agentStateRoot), policy, TURN_SYSTEM_GITCONFIG_DIRECTIVES);
+}
+
+/**
+ * A ROOT-RENDERED CONFIGURATION FILE, as root rendered it — or why not: a regular file (never a
+ * link), the PROVISIONER's, writable by nobody else, whose only directives are `directives`.
+ * The one reader of such a file in this module (the system gitconfig, each turn HOME's).
+ */
+function rootConfigFileProblem(
+  path: string,
+  policy: ConfinementPolicy,
+  directives: readonly string[],
+  lstat: (path: string) => Stats | null = lstatOrNull,
+): string | null {
   let facts: Stats | null;
   try {
-    facts = lstatOrNull(path);
+    facts = lstat(path);
   } catch (error) {
     return `'${path}' cannot be examined (${String(error)})`;
   }
@@ -1618,17 +1668,73 @@ export function turnGitconfigProblem(policy: ConfinementPolicy): string | null {
   if (!facts.isFile()) return `'${path}' is not a regular file`;
   if (facts.uid !== policy.host.provisionerUid) return `'${path}' is owned by uid ${facts.uid}, not the provisioner's`;
   if ((Number(facts.mode) & 0o022) !== 0) return `'${path}' is writable by its group or by others (mode ${(Number(facts.mode) & 0o7777).toString(8)})`;
-  let body: string;
-  try {
-    body = readFileSync(path, 'utf8');
-  } catch (error) {
-    return `'${path}' cannot be read (${String(error)})`;
-  }
-  const directives = gitconfigDirectives(body);
-  if (JSON.stringify(directives) !== JSON.stringify(TURN_SYSTEM_GITCONFIG_DIRECTIVES)) {
-    return `'${path}' says ${JSON.stringify(directives)}, not exactly ${JSON.stringify(TURN_SYSTEM_GITCONFIG_DIRECTIVES)}`;
+  const said = rootConfigDirectives(path);
+  if ('error' in said) return `'${path}' cannot be read (${said.error})`;
+  if (JSON.stringify(said) !== JSON.stringify(directives)) {
+    return `'${path}' says ${JSON.stringify(said)}, not exactly ${JSON.stringify(directives)}`;
   }
   return null;
+}
+
+/** The directives of a root-rendered configuration file — this module's ONE read of such a file. */
+function rootConfigDirectives(path: string): readonly string[] | { readonly error: string } {
+  try {
+    return gitconfigDirectives(readFileSync(path, 'utf8'));
+  } catch (error) {
+    return { error: String(error) };
+  }
+}
+
+/**
+ * SITE k's TURN HOME AS ROOT PROVISIONED IT (S3-HOME, `TURN_HOME_SKELETON`) — or why not, NAMING
+ * the path. PID 1 binds this directory back into every turn of the site as its HOME, and every
+ * program a turn runs reads configuration from HOME; so it is held to the CLOSED WORLD of
+ * `agent_identity.ts` `turnHomeShapeProblems` — the SAME predicate `provision apply` repairs by
+ * (a refused HOME is a rebuilt HOME, never one refused forever).
+ *
+ * Per SITE, inside `conformance` (never host-wide): one site's defect refuses that site alone.
+ * A `.gitconfig` link to a correct root file is refused like any other link — the bytes PID 1
+ * hands the turn are whatever the link names at that instant.
+ */
+export async function turnHomeProblem(policy: ConfinementPolicy, k: number): Promise<string | null> {
+  const home = agentHomeFor(policy.agentStateRoot, k, 'turn');
+  const lstat = policy.turnHomeSeams?.lstat ?? lstatOrNull;
+  const identity = await policy.host.resolveAgent(agentIdentityName(policy.instance, k));
+  const problems = turnHomeShapeProblems(home, {
+    look(path) {
+      let facts: Stats | null;
+      try {
+        facts = lstat(path);
+      } catch (error) {
+        return { error: String(error) };
+      }
+      if (facts === null) return null;
+      return {
+        type: facts.isSymbolicLink() ? 'symlink' : facts.isDirectory() ? 'dir' : facts.isFile() ? 'file' : 'other',
+        whose: facts.uid === policy.host.provisionerUid ? 'root' : identity !== null && facts.uid === identity.uid ? 'identity' : 'other',
+        ownerName: `uid ${facts.uid}`,
+        mode: Number(facts.mode) & 0o7777,
+      };
+    },
+    list(dir) {
+      try {
+        return readdirSync(dir);
+      } catch (error) {
+        const code = (error as NodeJS.ErrnoException).code;
+        // Absent, or not a directory: its own row names it. Anything else is a directory whose
+        // names this process could not read — a problem, never a pass.
+        return code === 'ENOENT' || code === 'ENOTDIR' ? null : { error: String(error) };
+      }
+    },
+    directives: rootConfigDirectives,
+    identity: identity === null ? null : `uid ${identity.uid}`,
+  });
+  if (problems.length === 0) return null;
+  return (
+    `${problems.join('; ')}. The turn HOME is root's (S3-HOME): a turn must not find configuration a ` +
+    `previous turn could plant, so only its 'state/' is the identity's. Run provision apply (it rebuilds the ` +
+    `HOME and archives what stood in it)`
+  );
 }
 
 function bindPairs(value: string | undefined): string[] {
@@ -1826,7 +1932,7 @@ export async function conformance(k: number, door: ConfinementDoor, policy: Conf
   // No identity, capability, namespace or credential the unit file does not grant.
   for (const property of UNIT_UNSET_WIDENING) unset(svc, 'template', property);
   const env = environmentOf(svc.Environment);
-  const fixed = unitFixedEnvironment({ door, workspace, agentStateRoot: policy.agentStateRoot, k });
+  const fixed: Readonly<Record<string, string | undefined>> = unitFixedEnvironment({ door, workspace, agentStateRoot: policy.agentStateRoot, k });
   const envKeys = Object.keys(env).sort();
   const fixedKeys = Object.keys(fixed).sort();
   if (envKeys.join(',') !== fixedKeys.join(',') || fixedKeys.some(key => env[key] !== fixed[key])) {
@@ -1933,6 +2039,13 @@ export async function conformance(k: number, door: ConfinementDoor, policy: Conf
   );
   if (!includesAll(words(tgt.After), after)) refuse('target After', `loaded '${tgt.After ?? ''}'`);
   equal('StopWhenUnneeded', tgt.StopWhenUnneeded, 'yes');
+
+  // THE TURN HOME (S3-HOME): what PID 1 binds back as the turn's HOME must be root's skeleton
+  // and nothing else — here, inside the one check every door asks (admission, the open, boot).
+  if (door === 'turn') {
+    const home = await turnHomeProblem(policy, k);
+    if (home) refuse('the turn HOME', home);
+  }
 
   return { warnings };
 }
@@ -2042,20 +2155,157 @@ export async function confineTurn(opts: ConfineOptions, policy: ConfinementPolic
   return openConfinedRun(opts, policy);
 }
 
+/**
+ * THE ONE LINE a run's log gets when its egress gate fails to close — fixed text, never the
+ * thrown value. Every sink it reaches (a turn's session log, a refused open's `onEgress`, a
+ * build's log) is relayed to the browser byte for byte, while the thrown value is the daemon's
+ * own detail (an unlink's errno, a path under its runtime directory): that goes to
+ * `console.error`, the daemon's log, at each site. Gate: `closeProse` in `tests/agent_confinement.test.ts`
+ * (a real EACCES close on the turn teardown, a refused open, and the build door).
+ */
+export const EGRESS_CLOSE_FAILED_LINE =
+  "[egress] this run's egress gate did not close cleanly; its sockets may remain in the site's egress directory until the next run unlinks them (the daemon's log has the detail).";
+
+/** Where the declared-unconfined turn's HOMEs live — `agent_identity.ts` (the HOME law) spells it. */
+export { unconfinedTurnDirs };
+
+/** Sweep the per-run HOMEs a killed daemon left behind (boot, `reconcileAgentUnits`, `none` only). */
+export function sweepUnconfinedRunHomes(policy: ConfinementPolicy): void {
+  if (policy.mode !== 'none' || !policy.agentStateRoot || !isAbsolute(policy.agentStateRoot)) return;
+  const { base } = unconfinedTurnDirs(policy.agentStateRoot);
+  let names: string[];
+  try {
+    names = readdirSync(base);
+  } catch {
+    return;
+  }
+  for (const name of names) {
+    if (name.startsWith('run.')) removeUnconfinedRunHome(join(base, name), 'the boot sweep');
+  }
+}
+
+/**
+ * CARRY THE PRE-S3 CLI STATE INTO `state/` (boot, `none` only) — the declared-unconfined twin of
+ * `provision apply`'s rebuild carry. Before S3-HOME the persistent HOME WAS
+ * `<root>/unconfined/turn`, so the CLI's login (`.claude/.credentials.json`), its account record
+ * (`.claude.json`) and its transcripts (`.claude/projects`) sit there, where nothing reads them
+ * since the turn's `CLAUDE_CONFIG_DIR` is `state/claude`: without this a `none` host that logged
+ * the CLI in fails every turn after the update. The SAME allowlist (`TURN_HOME_CARRY`, its
+ * HOME-level entries) and the same rules: by rename, only a real entry of its type under real
+ * directories (never through a link), never over a target that exists. Everything else stays where
+ * it is, read by nothing. Never throws (the boot reconciliation does not): a carry that fails is
+ * logged by path and asked again at the next boot.
+ */
+function carryUnconfinedTurnState(policy: ConfinementPolicy): void {
+  if (policy.mode !== 'none' || !policy.agentStateRoot || !isAbsolute(policy.agentStateRoot)) return;
+  const { base } = unconfinedTurnDirs(policy.agentStateRoot);
+  const kindOf = (path: string): 'dir' | 'file' | 'other' | null => {
+    try {
+      const facts = lstatSync(path);
+      return facts.isSymbolicLink() ? 'other' : facts.isDirectory() ? 'dir' : facts.isFile() ? 'file' : 'other';
+    } catch {
+      return null;
+    }
+  };
+  if (kindOf(base) !== 'dir') return;
+  for (const entry of TURN_HOME_CARRY) {
+    if (entry.from.startsWith('state/')) continue; // the refused-S3 shape: a unit's, not `none`'s
+    const from = join(base, entry.from);
+    const to = join(base, entry.to);
+    try {
+      // Every directory above the source, and the source itself: real, never a link.
+      let at = base;
+      let realAbove = true;
+      for (const part of dirname(entry.from).split('/').filter(name => name !== '.')) {
+        at = join(at, part);
+        if (kindOf(at) !== 'dir') realAbove = false;
+      }
+      if (!realAbove || kindOf(from) !== entry.type) continue;
+      if (kindOf(to) !== null) {
+        console.error(`[confinement] boot: '${from}' was not carried: its target '${to}' already exists (never overwritten)`);
+        continue;
+      }
+      mkdirSync(dirname(to), { recursive: true, mode: 0o700 });
+      renameSync(from, to);
+      console.error(`[confinement] boot: carried the declared-unconfined turn's ${entry.from} -> ${entry.to} (${entry.reason})`);
+    } catch (error) {
+      console.error(`[confinement] boot: could not carry '${from}' -> '${to}' (${(error as Error).message}); asked again at the next boot`);
+    }
+  }
+}
+
+/**
+ * THE ONE QUESTION `none` ASKS OF ITS CONFIG: is there an absolute AGENT_STATE_ROOT for a turn's
+ * own HOME? Asked by the turn (which refuses without one — never the daemon's own HOME, whose
+ * configuration a turn would read and could plant) and by the boot (which says so), so the two
+ * cannot disagree. `null` = present.
+ */
+function unconfinedStateRootProblem(policy: ConfinementPolicy): string | null {
+  if (policy.agentStateRoot && isAbsolute(policy.agentStateRoot)) return null;
+  return (
+    `AGENT_STATE_ROOT ('${String(policy.agentStateRoot ?? '')}') is not an absolute path, so a declared-unconfined ` +
+    `turn (AGENT_CONFINEMENT=none) has no HOME of its own and would run with this daemon's: every turn is refused. ` +
+    `Set it in the instance's .env (provision apply renders it).`
+  );
+}
+
+/**
+ * REMOVE ONE DECLARED-UNCONFINED RUN HOME — and NEVER THROW. Its callers are a detached
+ * `exited.then` (a throw there is an unhandled rejection, and an unhandled rejection ends the
+ * daemon: every live session on every site) and the boot reconciliation (which never throws). A
+ * removal that fails — a subdirectory the run made unwritable (EACCES), something still writing
+ * into the tree (ENOTEMPTY: opencode's background npm install under `none`), EBUSY — is logged,
+ * naming the path, and the leftover is the next boot sweep's.
+ */
+function removeUnconfinedRunHome(runHome: string, by: string): void {
+  try {
+    rmSync(runHome, { recursive: true, force: true });
+  } catch (error) {
+    console.error(
+      `[confinement] ${by} could not remove the declared-unconfined run HOME '${runHome}' ` +
+        `(${(error as Error).message}); it is left for the next boot sweep`,
+    );
+  }
+}
+
 /** The declared-unconfined run: the daemon's own child, announced, with the unit's fixed environment. */
 function declaredUnconfined(opts: ConfineOptions, policy: ConfinementPolicy): ConfinedChild {
   if (opts.signal?.aborted) throw new RunAbortedError(opts.door);
   const env: Record<string, string> = { ...opts.env };
+  let runHome: string | null = null;
   if (opts.door === 'git') {
     env.HOME = '/nonexistent';
     env.GIT_CONFIG_GLOBAL = '/dev/null';
     env.GIT_CONFIG_NOSYSTEM = '1';
+  } else if (opts.door === 'turn') {
+    // NEVER the daemon's own HOME: a turn run there would read (and could plant) the daemon's
+    // configuration. No state root, no turn.
+    const noStateRoot = unconfinedStateRootProblem(policy);
+    if (noStateRoot !== null || !policy.agentStateRoot) {
+      throw new ConfinementUnavailableError(`${noStateRoot ?? 'AGENT_STATE_ROOT is not set.'} Nothing was started.`);
+    }
+    const { base, state } = unconfinedTurnDirs(policy.agentStateRoot);
+    mkdirSync(state, { recursive: true, mode: 0o700 });
+    runHome = mkdtempSync(join(base, 'run.'));
+    mkdirSync(join(runHome, TURN_HOME_CONFIG), { mode: 0o700 });
+    // The daemon's keys win over the caller's (applied after `opts.env`) — the one function a
+    // driver's probe asks its binary under too.
+    Object.assign(env, unconfinedTurnChildEnvironment(env, runHome, state));
   } else if (policy.agentStateRoot) {
     const home = join(policy.agentStateRoot, 'unconfined', opts.door);
     mkdirSync(home, { recursive: true, mode: 0o700 });
     env.HOME = home;
   }
-  const child = spawnChild(opts.argv, { cwd: opts.cwd, env, confined: CONFINED_ARGV });
+  const removeRunHome = () => {
+    if (runHome !== null) removeUnconfinedRunHome(runHome, 'the end of the run');
+  };
+  let child: ReturnType<typeof spawnChild>;
+  try {
+    child = spawnChild(opts.argv, { cwd: opts.cwd, env, confined: CONFINED_ARGV });
+  } catch (error) {
+    removeRunHome();
+    throw error;
+  }
   const exited: Promise<ConfinedExit> = child.exited.then(code => ({
     exitCode: code,
     signal: (child.signalCode as string | null) ?? null,
@@ -2063,6 +2313,8 @@ function declaredUnconfined(opts: ConfineOptions, policy: ConfinementPolicy): Co
   let settled = false;
   void exited.then(() => {
     settled = true;
+    // The run's HOME is the run's: gone with it.
+    removeRunHome();
   });
   return {
     announcement:
@@ -2210,7 +2462,8 @@ async function openConfinedRun(opts: ConfineOptions, policy: ConfinementPolicy):
     if (isFixedEnvKey(key)) {
       throw new Error(
         `confinement: the ${opts.door} run of '${slug}' was handed '${key}', which the unit fixes (HOME, DEDALO_*, ` +
-          `the transpiler cache, git's configuration). No caller sets it. Nothing was opened.`,
+          `the transpiler cache, git's configuration, the agent's configuration and state directories). No caller ` +
+          `sets it. Nothing was opened.`,
       );
     }
   }
@@ -2376,8 +2629,10 @@ async function openConfinedRun(opts: ConfineOptions, policy: ConfinementPolicy):
     try {
       await gate?.close();
     } catch (closeError) {
+      // The fixed line only: the thrown value is the daemon's detail, for its log alone.
+      console.error('[confinement] a refused run egress gate failed to close:', closeError);
       try {
-        opts.onEgress?.(`[egress] this run's egress gate did not close cleanly (${String(closeError)}).`);
+        opts.onEgress?.(EGRESS_CLOSE_FAILED_LINE);
       } catch {
         // A broken sink must not replace the refusal.
       }
@@ -2578,9 +2833,7 @@ export async function runConfined(
       await child.cleanup();
     } catch (closeError) {
       try {
-        opts.onStdout?.(
-          `[egress] this run's egress gate did not close cleanly (${String(closeError)}); its sockets may remain in the site's egress directory until the next run unlinks them.\n`,
-        );
+        opts.onStdout?.(`${EGRESS_CLOSE_FAILED_LINE}\n`);
       } catch {
         // A broken sink must not replace the run's result either.
       }

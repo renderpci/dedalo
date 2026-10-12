@@ -742,12 +742,15 @@ describe('the mode matrix says who, not just how much', () => {
     expect(MODES.workspaces).toEqual({ owner: 'user', group: 'group', mode: 0o2770 });
     expect(MODES.workspaces.mode & 0o007).toBe(0);
     expect(MODES.stateDir).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
-    // LEAD-1b: the shared agent HOME row is gone; the agent state is root's, and each
-    // (site, door) HOME is its identity's alone.
+    // LEAD-1b: the shared agent HOME row is gone; the agent state is root's, the build HOME
+    // its identity's alone — and (S3-HOME) the turn HOME root's, with only `state/` the identity's.
     expect('home' in MODES).toBe(false);
     expect(MODES.agentStateRoot).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
     expect(MODES.agentStateSite).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
     expect(MODES.agentHome).toEqual({ owner: 'identity', group: 'group', mode: 0o700 });
+    expect(MODES.agentTurnHome).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
+    expect(MODES.agentTurnState).toEqual({ owner: 'identity', group: 'group', mode: 0o700 });
+    expect(MODES.agentTurnConfig).toEqual({ owner: 'root', group: 'root', mode: 0o755 });
     expect(MODES.retired).toEqual({ owner: 'root', group: 'root', mode: 0o700 });
   });
 

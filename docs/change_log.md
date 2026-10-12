@@ -17,6 +17,8 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - The site builder's OpenCode driver loads only the configuration the site builder states.
+    - A site builder agent turn can no longer leave configuration in its home directory for the next turn to read.
     - Thesauri are offered from one exported manifest, hierarchy.json, and nothing but declared dependencies is pre-selected.
     - The PostgreSQL socket you give the installer is now the one the server connects through (`DB_SOCKET`).
     - Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`.
@@ -95,6 +97,22 @@ Merged since the last release; these ship with the next one.
     Expanding a term to all its descendants (the "with children" search, fixed filters, the tree) used to ask the database once per term of the branch — about 1,650 requests for a branch of 1,200 terms. The whole branch is now read in one request, in one consistent snapshot, with the same result. Sibling terms that share an internal number across two sections are now always listed in the same order (by section) instead of an order that could change between reads.
 
     Wire contract: `WC-2026-10-11-children-recursive-one-statement`.
+
+- **The site builder now says why it refused, and which refusals clear by themselves.**
+
+    Before, most refusals of the site builder tool read the same: "The site builder rejected the request". A site name already taken, a build still running, a site with no webspace, a server full of running agent turns and a missing confirmation all showed that one sentence, and none of them was marked as something to retry. Now each refusal has its own message: the name is taken, a folder for that name is still on the server, the domain belongs to another site, there is nothing to publish yet, the site has used its disk space, the server has reached its site limit, and so on. A refusal that clears by itself (another task is running on the site, too many agent turns at once) is reported as temporary, so you can try again in a moment. Permission refusals say that the site builder needs developer or administrator permission, or that the agent session belongs to another user.
+
+    For API consumers: the tool's errors are new `site_builder.*` codes (listed in the wire contract entry), the busy family moves from `site_builder.rejected` (400) to `site_builder.busy` (503, retryable), and no site-builder error carries a free-text message any more — the code and its label are the message.
+
+    Wire contract: `WC-2026-10-11-site-builder-reason-codes`.
+
+- **A failed agent turn in the site builder now says what went wrong, in your language.**
+
+    Before, when an agent turn of the site builder failed, the chat showed the site builder service's own internal sentence — sometimes a server path, a user id or a raw program error — in English whatever your language, and nothing said whether trying again could help. Now each failure has its own message: the turn ran out of time, it was stopped (by you, or because the service was shutting down), the server could not prepare it, the agent stopped with an error (its own output is shown apart, as the agent's), the session history could not be read, or one of the refusals the site builder already explains (the site is busy, the server cannot run the agent safely, …). The details an administrator needs stay in the site builder's log.
+
+    For API consumers: an error record of the `session_stream` event stream is now `{type:'error', error:{code, category, message, label_key, retryable}, agent_output?}`, and the stream's `event: error` frames carry the same error body — never free text. New codes: `site_builder.turn_timeout`, `site_builder.turn_interrupted`, `site_builder.turn_setup_failed`, `site_builder.agent_failed`, `site_builder.replay_failed`.
+
+    Wire contract: `WC-2026-10-11-site-builder-turn-error-frames`.
 
 - **The tools of a section list are now grouped in one Tools menu.**
 
@@ -755,6 +773,18 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **The site builder's OpenCode driver loads only the configuration the site builder states.** *(action needed)*
+
+    The OpenCode agent used to read configuration from the site's working folder and from its home directory — project settings, plugins (which are code it runs), agent definitions, commands and skills — files a previous turn or a site build could have written. Now every OpenCode turn runs with those sources switched off and with the site builder's own configuration (its connection to the Dédalo publication server, its permission rules, and the site's brief as the one instruction file) passed directly; the site builder no longer writes an `opencode.json` file into the site's folder. Before it runs any turn, the site builder checks that the installed OpenCode honours these switches — and that it can see each of those sources when they are not switched off, so the check proves something; an OpenCode that fails it is reported as unavailable and its turns are refused. OpenCode 1.18.32 passes. When the check could not be completed at that moment (a question timed out), the turn is refused as "busy, try again" rather than as a defect of OpenCode, and the check runs again on the next attempt.
+
+    **Action needed:** `OPENCODE_ENV` may now carry provider credentials only — `OPENCODE_API_KEY`, `OPENCODE_AUTH_CONTENT`, or a key named like `ANTHROPIC_API_KEY`, `…_AUTH_TOKEN`, `…_ACCESS_KEY_ID`, `…_SECRET_ACCESS_KEY` or `…_SESSION_TOKEN`. Any other key (a switch, a proxy setting, `HOME`, `XDG_*`, `PATH`, a configuration path, a permission override) stops the site builder at start, naming the key: remove it. OpenCode remains unavailable on hosts that confine agent turns (`AGENT_CONFINEMENT=systemd_scope`). The site builder also states OpenCode's credentials itself for every turn, so a login saved with `opencode auth login` is no longer read: put the credential in `OPENCODE_ENV` instead. `OPENCODE_AUTH_CONTENT` may hold `api` and `oauth` entries only — a `wellknown` entry makes OpenCode download and apply a remote configuration on every turn, so it stops the site builder at start. For the same reason an OpenCode console login is refused: while OpenCode's database for the site builder's turns holds a console account (`opencode console login`), OpenCode applies that organisation's remote configuration on every turn, and no setting turns this off, so every OpenCode turn is refused, naming the `opencode console logout` command to run. The site builder now also turns off OpenCode's automatic updates, model catalogue downloads, language-server downloads and session sharing on every turn.
+
+- **A site builder agent turn can no longer leave configuration in its home directory for the next turn to read.** *(action needed)*
+
+    Each site's agent turns used to run with a home directory the agent's own account could write, kept from one turn to the next. Programs a turn runs read their settings from there (git, Bun, the agent command-line tools), so one turn could leave a setting that every later turn of that site would read — including one that reopens the site's repository to the agent. The turn's home directory now belongs to root: only its `state/` folder is the agent's, and the agent's settings and caches are pointed there or at a read-only, empty folder.
+
+    **Action needed:** run `provision apply` on each site builder host after updating. It stops the site builder once, rebuilds every site's turn home directory, carries the agent's own session state (its conversation history, account record and login — nothing else) into the new `state/` folder, and moves everything else that stood there, including the agent's own settings, skills and hooks, into the `retired/` folder of the agent state directory (closed to root; nothing is deleted). A later `provision apply` repairs, the same way, any turn home directory the site builder refuses. Until `provision apply` has run, every agent turn is refused (`confinement_unavailable`, naming the home directory that is not in its new shape). On a development host running the site builder unconfined (`AGENT_CONFINEMENT=none`), `AGENT_STATE_ROOT` is now required: set it to an absolute path in the instance's `.env` before updating, or every agent turn is refused (`confinement_unavailable`; the site builder says so when it starts). Each turn there now gets a fresh home directory, and the agent's state lives in `<AGENT_STATE_ROOT>/unconfined/turn/state`: the site builder moves the Claude Code login, account record and conversation history there once, the first time it starts after the update (it never overwrites what is already there).
+
 - **Root's writes under a directory another account controls now land only in the exact directory expected.**
 
     Two places that `provision apply` and `provision init` write to sit under a directory that root does not fully control. The first is a site's web log directory: on Ubuntu, `/var/log` is writable by the `syslog` group. The second is the API configuration files in the state tree's `shared/` directories, whose parent belongs to the agent. These writes were already pinned to the parent directory, so that a rename cannot redirect them. Any root-owned directory closed to others was accepted as that parent, though. Now the parent must be exactly the directory expected. For `shared/` that means its exact owner, group and mode. For the web server's log directory it means the owner, group, mode and identity that `provision check` observed. The parent must also be on the same filesystem as its own parent, so a filesystem mounted over the name is refused. A directory swapped in after the write began receives nothing. Init's sudo check now also reads included policy files the way sudo does. A file that is not owned by root, or that other accounts can write, is not followed, and neither is an include whose name contains `%h`. Each one is listed in the `host.sudo` item. An API configuration file with the wrong owner or mode is now fixed in place, where before the fix was refused.
@@ -1300,6 +1330,29 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **The installer asks its questions in the terminal, checks each answer as you give it, and shows the whole plan before it installs anything.**
+
+    Before, installing from a terminal meant writing every answer as a flag (or an answers file) and finding out at the end which one was wrong; the step-by-step guidance, the connection checks and the plan preview lived only in the browser wizard.
+
+    Now `bun run scripts/install.ts` with no answer flags asks the questions itself, one step at a time: the kind of installation (production with a named instance, Docker, a Docker trial without media protection, or a developer checkout), a system check, the database, the institution, the ontologies and thesauri (what they declare pre-ticked — ticking one ticks what it declares — untick to decline), the languages, publication, mail and the administrator password. Every default and every refusal is the same one a flag-driven run uses. The database must answer before you go on; the MariaDB and SMTP connections are checked (the mail check can send a real test message), and you can keep a failed one by typing `yes`. Passwords are never shown and are typed twice; the root password is checked rule by rule. The Review lists what will be installed and the equivalent command line (without passwords), then you type `install`, go back with `edit <n>`, or save the answers with `write <path>` for a later unattended run. `--plain` (also chosen automatically for `TERM=dumb`, a redirected output or a small terminal) gives the same questions one per line, with no colour or screen drawing, for screen readers and serial consoles.
+
+    Other changes for administrators: the new `--route` and `--instance` answers change a few defaults (on a production route the database and role are `dedalo_<instance>`, the media root `/srv/dedalo/<instance>/media`); the publication database now defaults to `web_dedalo` (`web_<instance>` on production) instead of being required; a run at a terminal without `--execute` asks for a missing root password instead of failing; `--write-answers <file>` saves the answers of any run; `--list-langs` prints the language offer and `--list-hierarchies` now includes what each thesaurus declares. A run whose standard input is not a terminal and that carries no answers is refused and points to `--answers`. A typed `quit` exits 0, Ctrl-C exits 130. A check whose answers change later (a new instance name, another route) runs again before `install` is offered. On the Docker routes the terminal installer writes the answers but does not install from the host yet; the production web server, TLS and systemd steps are still done by hand. Details: [Installer reference](./install/installer_reference.md#interactive-mode).
+
+- **The terminal installer draws full-screen at a capable terminal, and can abort an interrupted install**
+
+    Run at a terminal of at least 80×24, `bun run scripts/install.ts` now shows the
+    installer full-screen: a rail of the route's steps, filtered lists for the
+    ontologies, thesauri and languages, passwords drawn as dots with the root
+    password's rules checked as you type, checks shown in place, the Review with the
+    equivalent command line, the install's steps with their times, and a Done screen
+    that shows the generated salt once. The questions, defaults, rules and the
+    install are exactly the plain mode's; `--plain`, a small or `dumb` terminal, or a
+    machine without the terminal library's native build get the plain mode (one line
+    says why). Whatever way it ends, the terminal is restored. When an interrupted
+    install is found, both modes now offer **abort** next to resume and quit (the
+    database name typed back). See
+    [the full-screen installer](./install/installer_reference.md#the-full-screen-installer).
+
 - **The command-line installer checks every answer before it writes anything, and an interrupted install can be resumed.**
 
     Before, the command-line installer (`scripts/install.ts`, which `install.sh` drives) found a bad answer only at the step that first used it: a root password that broke the password policy was refused after the `.env` had been written, the database restored and the ontologies imported, and an entity such as `1x` or a port such as `70000` was not refused at all. An install that stopped part-way left a half-built database, and the only way on was to drop it and start again.
@@ -1329,29 +1382,6 @@ Merged since the last release; these ship with the next one.
     ```
 
     Then build once under the new name and recreate the stack:
-
-- **The installer asks its questions in the terminal, checks each answer as you give it, and shows the whole plan before it installs anything.**
-
-    Before, installing from a terminal meant writing every answer as a flag (or an answers file) and finding out at the end which one was wrong; the step-by-step guidance, the connection checks and the plan preview lived only in the browser wizard.
-
-    Now `bun run scripts/install.ts` with no answer flags asks the questions itself, one step at a time: the kind of installation (production with a named instance, Docker, a Docker trial without media protection, or a developer checkout), a system check, the database, the institution, the ontologies and thesauri (what they declare pre-ticked — ticking one ticks what it declares — untick to decline), the languages, publication, mail and the administrator password. Every default and every refusal is the same one a flag-driven run uses. The database must answer before you go on; the MariaDB and SMTP connections are checked (the mail check can send a real test message), and you can keep a failed one by typing `yes`. Passwords are never shown and are typed twice; the root password is checked rule by rule. The Review lists what will be installed and the equivalent command line (without passwords), then you type `install`, go back with `edit <n>`, or save the answers with `write <path>` for a later unattended run. `--plain` (also chosen automatically for `TERM=dumb`, a redirected output or a small terminal) gives the same questions one per line, with no colour or screen drawing, for screen readers and serial consoles.
-
-    Other changes for administrators: the new `--route` and `--instance` answers change a few defaults (on a production route the database and role are `dedalo_<instance>`, the media root `/srv/dedalo/<instance>/media`); the publication database now defaults to `web_dedalo` (`web_<instance>` on production) instead of being required; a run at a terminal without `--execute` asks for a missing root password instead of failing; `--write-answers <file>` saves the answers of any run; `--list-langs` prints the language offer and `--list-hierarchies` now includes what each thesaurus declares. A run whose standard input is not a terminal and that carries no answers is refused and points to `--answers`. A typed `quit` exits 0, Ctrl-C exits 130. A check whose answers change later (a new instance name, another route) runs again before `install` is offered. On the Docker routes the terminal installer writes the answers but does not install from the host yet; the production web server, TLS and systemd steps are still done by hand. Details: [Installer reference](./install/installer_reference.md#interactive-mode).
-
-- **The terminal installer draws full-screen at a capable terminal, and can abort an interrupted install**
-
-    Run at a terminal of at least 80×24, `bun run scripts/install.ts` now shows the
-    installer full-screen: a rail of the route's steps, filtered lists for the
-    ontologies, thesauri and languages, passwords drawn as dots with the root
-    password's rules checked as you type, checks shown in place, the Review with the
-    equivalent command line, the install's steps with their times, and a Done screen
-    that shows the generated salt once. The questions, defaults, rules and the
-    install are exactly the plain mode's; `--plain`, a small or `dumb` terminal, or a
-    machine without the terminal library's native build get the plain mode (one line
-    says why). Whatever way it ends, the terminal is restored. When an interrupted
-    install is found, both modes now offer **abort** next to resume and quit (the
-    database name typed back). See
-    [the full-screen installer](./install/installer_reference.md#the-full-screen-installer).
 
     ```shell
     docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml --env-file .dedalo.env build dedalo
@@ -2223,7 +2253,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 120 entries"
+??? note "Wire contract — 122 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -2345,6 +2375,8 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-11-relation-reads-client-page`
     - `WC-2026-10-11-rich-text-sanitizer-tokenizer`
     - `WC-2026-10-11-session-user-beside-csrf-token`
+    - `WC-2026-10-11-site-builder-reason-codes`
+    - `WC-2026-10-11-site-builder-turn-error-frames`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

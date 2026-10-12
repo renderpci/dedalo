@@ -1,0 +1,10 @@
+---
+title: A site builder agent turn can no longer leave configuration in its home directory for the next turn to read.
+type: security
+audience: admin
+date: 2026-10-11
+breaking: true
+---
+Each site's agent turns used to run with a home directory the agent's own account could write, kept from one turn to the next. Programs a turn runs read their settings from there (git, Bun, the agent command-line tools), so one turn could leave a setting that every later turn of that site would read — including one that reopens the site's repository to the agent. The turn's home directory now belongs to root: only its `state/` folder is the agent's, and the agent's settings and caches are pointed there or at a read-only, empty folder.
+
+**Action needed:** run `provision apply` on each site builder host after updating. It stops the site builder once, rebuilds every site's turn home directory, carries the agent's own session state (its conversation history, account record and login — nothing else) into the new `state/` folder, and moves everything else that stood there, including the agent's own settings, skills and hooks, into the `retired/` folder of the agent state directory (closed to root; nothing is deleted). A later `provision apply` repairs, the same way, any turn home directory the site builder refuses. Until `provision apply` has run, every agent turn is refused (`confinement_unavailable`, naming the home directory that is not in its new shape). On a development host running the site builder unconfined (`AGENT_CONFINEMENT=none`), `AGENT_STATE_ROOT` is now required: set it to an absolute path in the instance's `.env` before updating, or every agent turn is refused (`confinement_unavailable`; the site builder says so when it starts). Each turn there now gets a fresh home directory, and the agent's state lives in `<AGENT_STATE_ROOT>/unconfined/turn/state`: the site builder moves the Claude Code login, account record and conversation history there once, the first time it starts after the update (it never overwrites what is already there).

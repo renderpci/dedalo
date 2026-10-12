@@ -357,16 +357,12 @@ export function childEgressEnv(door: ConfinementDoor, driver?: string): Record<s
     env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1';
     env.DISABLE_AUTOUPDATER = '1';
   }
-  if (door === 'turn' && driver === 'opencode') {
-    // Names read off the opencode 1.18 binary's own flag table. What CANNOT be turned off:
-    // opencode installs a provider's SDK package from registry.npmjs.org on first use of that
-    // provider — a museum whose agent HOME has not cached it names the registry in
-    // AGENT_PROVIDER_HOSTS too (SITE_BUILDER_INSTANCES §6).
-    env.OPENCODE_DISABLE_AUTOUPDATE = '1';
-    env.OPENCODE_DISABLE_MODELS_FETCH = '1';
-    env.OPENCODE_DISABLE_LSP_DOWNLOAD = '1';
-    env.OPENCODE_DISABLE_SHARE = '1';
-  }
+  // opencode's off-plan switches are NOT here: they are the DRIVER's statement in every mode
+  // (`OPENCODE_TRAFFIC_SWITCHES`, opencode_argv.ts), because an opencode turn runs only under
+  // `none`, where these egress keys are never applied. What CANNOT be turned off: opencode
+  // installs a provider's SDK package from registry.npmjs.org on first use of that provider — a
+  // museum whose agent HOME has not cached it names the registry in AGENT_PROVIDER_HOSTS too
+  // (SITE_BUILDER_INSTANCES §6).
   return env;
 }
 

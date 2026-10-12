@@ -46,7 +46,12 @@ describe('opencode under systemd_scope — refused, typed, at every door', () =>
       error => error,
     );
     if (config.AGENT_CONFINEMENT === 'systemd_scope') expect(answer).toBeInstanceOf(ConfinementRefusedError);
-    else expect(answer).toBeNull();
+    // Under `none` the PLANT probe decides (tests/opencode_plant.test.ts O5) — and the suite
+    // configures no OPENCODE_BIN, so there is no binary to prove: refused, typed, all the same.
+    else {
+      expect(config.OPENCODE_BIN).toBe('');
+      expect((answer as ConfinementRefusedError | null)?.code).toBe('agent_cli_unsupported');
+    }
   });
 
   test('availability: detect() reports the driver unavailable under systemd_scope — whatever the binary', async () => {
@@ -59,29 +64,34 @@ describe('opencode under systemd_scope — refused, typed, at every door', () =>
     };
     expect(await detectOpencode({ bin: '/opt/opencode', mode: 'systemd_scope', run: probe })).toBeNull();
     expect(probed).toBe(0);
-    expect(await detectOpencode({ bin: '/opt/opencode', mode: 'none', run: probe })).toEqual({ id: 'opencode', binPath: '/opt/opencode', version: '0.9.1' });
+    // Under `none` the PLANT probe decides (tests/opencode_plant.test.ts O5): a binary that answers
+    // only a version proves nothing about what it loads, so it is unavailable too.
+    expect(await detectOpencode({ bin: '/opt/opencode', mode: 'none', run: probe })).toBeNull();
+    expect(probed).toBeGreaterThan(0);
   });
 
-  test('the turn’s setup refuses FIRST under systemd_scope: no opencode.json written, no argv returned', async () => {
-    let wrote = 0;
+  test('the turn’s setup refuses FIRST under systemd_scope: nothing probed, nothing written, no argv returned', async () => {
+    let probed = 0;
+    const run = async () => {
+      probed++;
+      return { exitCode: 0, stdout: 'opencode 1.18.3\n' };
+    };
     const setup = opencodeTurnSetup({ prompt: 'hello', workspace: '/nonexistent/ws', mcp: { name: 'x', url: 'http://127.0.0.1:1/' } } as never, {
       mode: 'systemd_scope',
-      writeConfig: async () => {
-        wrote++;
-        return '/nonexistent/ws/opencode.json';
-      },
+      bin: '/opt/opencode',
+      run,
     });
     await expect(setup()).rejects.toBeInstanceOf(ConfinementRefusedError);
-    expect(wrote).toBe(0);
-    const plan = await opencodeTurnSetup({ prompt: 'hello', workspace: '/nonexistent/ws', mcp: { name: 'x', url: 'http://127.0.0.1:1/' } } as never, {
-      mode: 'none',
-      bin: '/opt/opencode',
-      writeConfig: async () => {
-        wrote++;
-        return '/nonexistent/ws/opencode.json';
-      },
-    })();
-    expect(wrote).toBe(1);
-    expect(plan.argv).toEqual(['/opt/opencode', 'run', 'hello', '--format', 'json']);
+    expect(probed).toBe(0);
+    // Under `none` the setup asks the probe next (the argv and env of an admitted binary are
+    // tests/opencode_plant.test.ts O1/O2's).
+    await expect(
+      opencodeTurnSetup({ prompt: 'hello', workspace: '/nonexistent/ws', mcp: { name: 'x', url: 'http://127.0.0.1:1/' } } as never, {
+        mode: 'none',
+        bin: '/opt/opencode',
+        run,
+      })(),
+    ).rejects.toBeInstanceOf(ConfinementRefusedError);
+    expect(probed).toBeGreaterThan(0);
   });
 });

@@ -58,14 +58,14 @@
  */
 
 import { realpathSync, statSync } from 'node:fs';
-import { rm } from 'node:fs/promises';
 import { isAbsolute, join } from 'node:path';
 import { config } from '../config';
-import { ConfinementRefusedError, ValidationError } from '../errors';
-import { readFileSharedBounded, relativeUnderRoot, restateDaemonStateDir, writeFileAgentReadable } from '../util/shared_tree';
+import { ConfinementRefusedError } from '../errors';
+import { relativeUnderRoot, removeFilePrivate, restateDaemonStateDir, writeFileAgentReadable } from '../util/shared_tree';
 import { runBinary, type SpawnResult } from '../util/spawn';
 import { spawnAgentProcess, type TurnPlan } from './process';
-import { claudeTurnArgv, listedFlags, MAX_BRIEF_BYTES, requiredCliFlags } from './claude_argv';
+import { readBrief } from './brief';
+import { claudeTurnArgv, listedFlags, requiredCliFlags } from './claude_argv';
 import type {
   AgentDriver,
   AgentEvent,
@@ -86,6 +86,7 @@ export {
   requiredCliFlags,
   UNLISTED_FLAGS,
 } from './claude_argv';
+export { readBrief } from './brief';
 
 const VERSION_PROBE_TIMEOUT_MS = 10_000;
 // Major versions whose stream-json shape this parser has been validated against.
@@ -275,37 +276,6 @@ export async function writeMcpConfig(opts: SessionStartOptions): Promise<string>
   );
 }
 
-/**
- * THE SITE'S BRIEF, read by the daemon: `<workspace>/AGENTS.md` through the link- and
- * hard-link-refusing reader (the workspace is agent-writable; a planted link to a daemon file
- * would otherwise be read into the prompt — it is THROWN, never folded into "no brief").
- * Absent = no brief. Over `MAX_BRIEF_BYTES` = cut, and the cut is said.
- *
- * AND THE FILE IS THE AGENT'S, SO ITS SHAPE IS TOO. A build's `postinstall` can replace it
- * with a FIFO (an open that blocks a daemon thread, and this turn's setup, forever), a sparse
- * multi-GB file (read whole into the daemon before any cut), or a body with a NUL (an argv
- * cannot carry one: the unit's spawn throws and every later turn fails with no exit frame, so
- * no turn could ever repair it). So: opened non-blocking and refused unless REGULAR, never
- * more than `MAX_BRIEF_BYTES + 1` bytes read, and a NUL refused here — typed, named, before
- * anything is written or connected.
- */
-export async function readBrief(workspace: string): Promise<string | undefined> {
-  const relative = relativeUnderRoot(config.SITES_ROOT, workspace);
-  const file = join(relative, 'AGENTS.md');
-  const read = await readFileSharedBounded(config.SITES_ROOT, file, MAX_BRIEF_BYTES + 1);
-  if (read === null || read.size === 0) return undefined;
-  if (read.bytes.includes(0)) {
-    throw new ValidationError(
-      `${file} contains a NUL byte, which no argv can carry; the brief is refused and nothing was started. ` +
-        `Remove the NUL from AGENTS.md (a person can edit it; the agent's next turn cannot run until it is fixed).`,
-    );
-  }
-  if (read.size <= MAX_BRIEF_BYTES) return read.bytes.toString('utf8');
-  console.warn(`[claude_code] ${file} is ${read.size} bytes; the brief is cut at ${MAX_BRIEF_BYTES}.`);
-  const cut = read.bytes.subarray(0, MAX_BRIEF_BYTES).toString('utf8').replace(/\uFFFD+$/, '');
-  return `${cut}\n\n[The site brief (AGENTS.md, ${read.size} bytes) was cut at ${MAX_BRIEF_BYTES} bytes.]`;
-}
-
 /** The per-turn seams: the binary and how it is probed. Production states neither. */
 export interface ClaudeTurnSeams {
   readonly bin?: string;
@@ -326,7 +296,9 @@ export function claudeTurnSetup(opts: SessionStartOptions, seams: ClaudeTurnSeam
     return {
       argv: claudeTurnArgv({ bin, prompt: opts.prompt, mcpConfigPath, brief, resumeToken: opts.resumeToken }),
       parseLine: parseStreamJsonLine,
-      cleanup: () => rm(mcpConfigPath, { force: true }),
+      // Through the no-follow door: a turn can rename `.builder` away and plant a link in its
+      // place, and a path-based rm then unlinked `mcp.json` in whatever directory it named.
+      cleanup: () => removeFilePrivate(config.SITES_ROOT, relativeUnderRoot(config.SITES_ROOT, mcpConfigPath)),
     };
   };
 }

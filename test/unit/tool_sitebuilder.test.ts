@@ -5,7 +5,9 @@
  * tool at a real in-test Bun.serve standing in for the Site Builder daemon. That mock
  * server records every request, so we can assert the proxy attaches the bearer token and
  * the acting-user identity, maps daemon errors onto stable codes, enforces the publish
- * gate, and forwards the SSE stream byte-for-byte with the anti-buffering header.
+ * gate, and relays the SSE stream (every non-error record byte-for-byte; the error records
+ * are the stream door's, test/unit/tool_sitebuilder_stream_codes.test.ts) with the
+ * anti-buffering header.
  *
  * config.siteBuilder is a MUTABLE object here on purpose: daemon_client reads it per call,
  * so a test can flip the URL (to a dead port, or undefined) to exercise the unreachable
@@ -13,6 +15,9 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+// NAMESPACE imports for the reason lists: a gate that imported a not-yet-exported name would
+// die at link time and report a setup error instead of the finding (WIRE-MAP gate-first).
+import * as daemonErrors from '../../publication/site_builder/src/errors.ts';
 // The DAEMON's error classes (a dependency-free module): the reasons it really sends.
 import {
 	CONFINEMENT_CODES,
@@ -20,11 +25,17 @@ import {
 	ConfinementRefusedError,
 	ConfinementUnavailableError,
 } from '../../publication/site_builder/src/errors.ts';
+import { WebspaceError } from '../../publication/site_builder/src/sites/site_table.ts';
+// The daemon's OWN serializer: the stand-in answers with the bytes the daemon really sends.
+import { problem as daemonProblem } from '../../publication/site_builder/src/util/response.ts';
 import * as realConfigModule from '../../src/config/config.ts';
+import { toErrorBody } from '../../src/core/errors/convert.ts';
 import { ERROR_REGISTRY } from '../../src/core/errors/registry.ts';
+import masterLabels from '../../src/core/labels/master.json';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { instanceFingerprint } from '../../src/core/site_builder/pairing.ts';
 import type { ToolActionContext, ToolServerModule } from '../../src/core/tools/module.ts';
+import * as wire from '../../tools/tool_sitebuilder/server/wire.ts';
 import { CONFINEMENT_REASON_CODES } from '../../tools/tool_sitebuilder/server/wire.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -80,6 +91,13 @@ let pairingAnswer: () => Record<string, unknown> = () => ({
 	instance_fingerprint: pairedFingerprint(),
 });
 
+/**
+ * THE DAEMON'S NEXT REFUSAL, when a gate sets one: the next non-/health request is answered
+ * with exactly what the daemon's own `problem()` renders from this thrown value (status,
+ * problem+json body, `reason` extension), then the slot clears.
+ */
+let nextProblem: unknown = null;
+
 function ctx(principal: Principal, options: Record<string, unknown>): ToolActionContext {
 	return { principal, userId: principal.userId, options, background: false };
 }
@@ -107,6 +125,11 @@ beforeAll(async () => {
 				body,
 			});
 
+			if (nextProblem !== null && url.pathname !== '/health') {
+				const thrown = nextProblem;
+				nextProblem = null;
+				return daemonProblem(thrown);
+			}
 			// Canned responses keyed by path.
 			if (url.pathname === '/health') {
 				// The pairing fingerprint the engine recomputes and checks BEFORE it sends
@@ -179,8 +202,19 @@ beforeAll(async () => {
 					{ status: error.status },
 				);
 			}
+			// A real busy refusal, as the daemon's session manager throws it (sessions/manager.ts).
 			if (url.pathname === '/v1/sites/rejectme/sessions') {
-				return Response.json({ detail: 'A session is already running' }, { status: 409 });
+				return daemonProblem(
+					new daemonErrors.ConflictError(
+						"A turn is already running for 'rejectme'",
+						'session_running',
+					),
+				);
+			}
+			// A 4xx the daemon sends WITHOUT a machine reason (a malformed request): the status
+			// fallback is all the engine has, and the daemon's prose still stays off the wire.
+			if (url.pathname === '/v1/sites/validationme/sessions') {
+				return daemonProblem(new daemonErrors.ValidationError('daemon prose: prompt too long'));
 			}
 			if (url.pathname.endsWith('/events')) {
 				const sse =
@@ -206,6 +240,15 @@ afterAll(() => {
 	mock.module('../../src/config/config.ts', () => REAL_CONFIG_MODULE);
 	mock.restore();
 });
+
+/**
+ * What the client READS of a refusal: the converter's body WITHOUT the debug block (present
+ * only under DEDALO_DEBUG_API_ERRORS=true, a developer's own machine — never a museum's wire).
+ */
+function wireOf(refusal: Parameters<typeof toErrorBody>[0]): string {
+	const { debug: _debug, ...wireBody } = toErrorBody(refusal);
+	return JSON.stringify(wireBody);
+}
 
 function lastRequest(): RecordedRequest {
 	return requests[requests.length - 1]!;
@@ -244,9 +287,9 @@ describe('tool_sitebuilder proxy', () => {
 				ctx(DEV, { slug: 'Bad Slug', name: 'x', domain: 'demo.example.org' }),
 			),
 		);
-		expect(bad.code).toBe('site_builder.rejected');
-		// Engine-authored prose, so it DOES reach the wire (public disclosure).
-		expect(bad.publicMessage).toBe('Invalid site name.');
+		// Its OWN code (WIRE-MAP): the label is the sentence, so no prose rides the throw.
+		expect(bad.code).toBe('site_builder.invalid_slug');
+		expect(bad.publicMessage).toBeUndefined();
 
 		const good = await tool.apiActions.create_site!.handler(
 			ctx(DEV, { slug: 'demo', name: 'Demo', domain: 'demo.example.org' }),
@@ -272,8 +315,8 @@ describe('tool_sitebuilder proxy', () => {
 			const refusal = await refusalOf(
 				tool.apiActions.create_site!.handler(ctx(DEV, { slug: 'demo', name: 'Demo', domain })),
 			);
-			expect(refusal.code).toBe('site_builder.rejected');
-			expect(refusal.publicMessage).toContain('domain it will answer on');
+			expect(refusal.code).toBe('site_builder.domain_required');
+			expect(refusal.publicMessage).toBeUndefined();
 			expect(requests.length, 'a missing domain still cost a round trip').toBe(before);
 		}
 	});
@@ -306,7 +349,7 @@ describe('tool_sitebuilder proxy', () => {
 		expect(lastRequest().body).toMatchObject({ domain: 'www.example.org' });
 	});
 
-	test('a placement refusal reaches the user as a sentence the ENGINE wrote', async () => {
+	test('a placement refusal reaches the user as its OWN code, whose label is the sentence', async () => {
 		// The daemon's own careful prose stays log-only (the rule this file's other assertions
 		// rest on). What crosses is the engine's sentence for the machine `reason` the daemon
 		// sent — otherwise a museum sees a refusal with no explanation at all, for a condition
@@ -316,21 +359,25 @@ describe('tool_sitebuilder proxy', () => {
 				ctx(DEV, { slug: 'undeclared', name: 'Undeclared', domain: 'undeclared.example.org' }),
 			),
 		);
-		expect(refusal.code).toBe('site_builder.rejected');
-		expect(refusal.publicMessage).toContain('no webspace prepared for this site');
+		expect(refusal.code).toBe('site_builder.webspace_unavailable');
+		expect(refusal.publicMessage).toBeUndefined();
+		const body = toErrorBody(refusal);
+		// What error_text renders is the registry label of THIS code, not the generic one.
+		expect(body.label_key).toBe('error_site_builder_webspace_unavailable');
+		expect(String((masterLabels as Record<string, string>)[body.label_key] ?? '')).not.toBe('');
 		// And the daemon's own words are NOT what the browser is shown.
-		expect(refusal.publicMessage).not.toContain('site table');
+		expect(wireOf(refusal)).not.toContain('site table');
 	});
 
 	test('publish is denied to a plain user, allowed to a developer and a global admin', async () => {
 		const denied = await refusalOf(
 			tool.apiActions.publish!.handler(ctx(PLAIN, { slug: 'demo', confirm: true })),
 		);
-		expect(denied.code).toBe('site_builder.rejected');
+		expect(denied.code).toBe('site_builder.not_permitted');
 
-		// Developer, but no confirm → rejected before proxying.
+		// Developer, but no confirm → refused before proxying.
 		const noConfirm = await refusalOf(tool.apiActions.publish!.handler(ctx(DEV, { slug: 'demo' })));
-		expect(noConfirm.publicMessage).toBe('Publishing must be confirmed.');
+		expect(noConfirm.code).toBe('site_builder.confirmation_required');
 
 		const dev = await tool.apiActions.publish!.handler(ctx(DEV, { slug: 'demo', confirm: true }));
 		expect(dev.data).toMatchObject({ release: 'r1' });
@@ -356,7 +403,7 @@ describe('tool_sitebuilder proxy', () => {
 		const denied = await refusalOf(
 			tool.apiActions.delete_site!.handler(ctx(PLAIN, { slug: 'demo' })),
 		);
-		expect(denied.code).toBe('site_builder.rejected');
+		expect(denied.code).toBe('site_builder.not_permitted');
 		expect(requests.length).toBe(before);
 
 		const res = await tool.apiActions.delete_site!.handler(ctx(DEV, { slug: 'demo' }));
@@ -374,7 +421,7 @@ describe('tool_sitebuilder proxy', () => {
 				ctx(PLAIN, { slug: 'demo', purge_prod: true, confirm: true }),
 			),
 		);
-		expect(denied.code).toBe('site_builder.rejected');
+		expect(denied.code).toBe('site_builder.not_permitted');
 		// Fails closed BEFORE the proxy call: the daemon trusts us entirely, so a refusal
 		// that still sent the DELETE would have purged production anyway.
 		expect(requests.length).toBe(before);
@@ -385,8 +432,8 @@ describe('tool_sitebuilder proxy', () => {
 		const refusal = await refusalOf(
 			tool.apiActions.delete_site!.handler(ctx(DEV, { slug: 'demo', purge_prod: true })),
 		);
-		expect(refusal.code).toBe('site_builder.rejected');
-		expect(refusal.publicMessage).toBe('Removing the published site must be confirmed.');
+		expect(refusal.code).toBe('site_builder.confirmation_required');
+		expect(refusal.publicMessage).toBeUndefined();
 		expect(requests.length).toBe(before);
 	});
 
@@ -406,21 +453,33 @@ describe('tool_sitebuilder proxy', () => {
 
 	test('get_audit is developer/admin-gated', async () => {
 		const denied = await refusalOf(tool.apiActions.get_audit!.handler(ctx(PLAIN, {})));
-		expect(denied.code).toBe('site_builder.rejected');
+		expect(denied.code).toBe('site_builder.not_permitted');
 		const allowed = await tool.apiActions.get_audit!.handler(ctx(ADMIN, {}));
 		expect(allowed.data).toMatchObject({ data: [{ action: 'publish' }] });
 	});
 
-	test('a daemon 4xx maps to site_builder.rejected, and its prose stays OFF the wire', async () => {
+	test('a daemon busy refusal maps to site_builder.busy (retryable), and its prose stays OFF the wire', async () => {
 		const refusal = await refusalOf(
 			tool.apiActions.session_start!.handler(ctx(DEV, { slug: 'rejectme', prompt: 'go' })),
 		);
-		expect(refusal.code).toBe('site_builder.rejected');
+		expect(refusal.code).toBe('site_builder.busy');
+		expect(ERROR_REGISTRY['site_builder.busy'].retryable).toBe(true);
 		// The daemon's own detail is LOG-only: it is on `message`…
 		expect(refusal.message).toContain('already running');
 		// …and NEVER offered as the vetted public sentence, so another service can
 		// never write this install's browser-facing error text.
 		expect(refusal.publicMessage).toBeUndefined();
+		expect(wireOf(refusal)).not.toContain('already running');
+	});
+
+	test('a daemon 4xx WITHOUT a machine reason falls back to site_builder.rejected, prose off the wire', async () => {
+		const refusal = await refusalOf(
+			tool.apiActions.session_start!.handler(ctx(DEV, { slug: 'validationme', prompt: 'go' })),
+		);
+		expect(refusal.code).toBe('site_builder.rejected');
+		expect(refusal.message).toContain('daemon prose');
+		expect(refusal.publicMessage).toBeUndefined();
+		expect(wireOf(refusal)).not.toContain('daemon prose');
 	});
 
 	/**
@@ -437,7 +496,12 @@ describe('tool_sitebuilder proxy', () => {
 			...CONFINEMENT_CODES.map((code) => `confinement.${code}`),
 		].sort();
 		expect(Object.keys(CONFINEMENT_REASON_CODES).sort()).toEqual(reasons);
-		const BUSY = new Set(['site_busy', 'identity_quarantined', 'daemon_stopping']);
+		const BUSY = new Set([
+			'site_busy',
+			'identity_quarantined',
+			'daemon_stopping',
+			'agent_cli_unproved',
+		]);
 		for (const code of ['unavailable', ...CONFINEMENT_CODES]) {
 			const refusal = await refusalOf(
 				tool.apiActions.session_start!.handler(
@@ -482,7 +546,7 @@ describe('tool_sitebuilder proxy', () => {
 		siteBuilder.url = savedUrl;
 
 		const denied = await refusalOf(tool.apiActions.get_status!.handler(ctx(PLAIN, {})));
-		expect(denied.code).toBe('site_builder.rejected');
+		expect(denied.code).toBe('site_builder.not_permitted');
 	});
 
 	/**
@@ -541,18 +605,18 @@ describe('tool_sitebuilder proxy', () => {
 			const stop = await refusalOf(
 				tool.apiActions.session_stop!.handler(ctx(DEV, { session_id: id })),
 			);
-			expect(stop.code, id).toBe('site_builder.rejected');
+			expect(stop.code, id).toBe('site_builder.invalid_id');
 		}
 		const build = await refusalOf(
 			tool.apiActions.get_build!.handler(ctx(DEV, { slug: 'demo', build_id: '..' })),
 		);
-		expect(build.code).toBe('site_builder.rejected');
+		expect(build.code).toBe('site_builder.invalid_id');
 		// The stream never opens: the refusal is a throw, so there is no body
 		// carrying a half-open stream.
 		const stream = await refusalOf(
 			tool.apiActions.session_stream!.handler(ctx(DEV, { session_id: '..' })),
 		);
-		expect(stream.code).toBe('site_builder.rejected');
+		expect(stream.code).toBe('site_builder.invalid_id');
 		// Nothing reached the daemon.
 		expect(requests.length).toBe(before);
 	});
@@ -561,7 +625,10 @@ describe('tool_sitebuilder proxy', () => {
 	// owner row, so a developer would (correctly) be refused before the stream opens. The
 	// global-admin bypass keeps THIS test about the SSE bytes; the ownership rule itself is
 	// gated in tool_sitebuilder_authz_native.test.ts.
-	test('session_stream forwards the SSE bytes and sets the anti-buffering header', async () => {
+	// NON-ERROR RECORDS ARE BYTE-IDENTICAL (WIRE-MAP stream door): only an error record is
+	// projected onto a registered code (test/unit/tool_sitebuilder_stream_codes.test.ts); every
+	// other record reaches the browser exactly as the daemon framed it.
+	test('session_stream relays non-error records byte-identical and sets the anti-buffering header', async () => {
 		const res = await tool.apiActions.session_stream!.handler(
 			ctx(ADMIN, { session_id: 'abc', after: -1 }),
 		);
@@ -571,7 +638,239 @@ describe('tool_sitebuilder proxy', () => {
 
 		const stream = res.stream as ReadableStream<Uint8Array>;
 		const text = await new Response(stream).text();
-		expect(text).toContain('"type":"turn_start"');
-		expect(text).toContain('"type":"turn_end"');
+		expect(text).toBe(
+			'id: 0\ndata: {"seq":0,"body":{"type":"turn_start"}}\n\nid: 1\ndata: {"seq":1,"body":{"type":"turn_end","state":"idle"}}\n\n',
+		);
 	});
+});
+
+/**
+ * WIRE-MAP — EVERY REASON THE DAEMON SENDS LANDS ON ITS OWN REGISTERED CODE.
+ *
+ * Before: only the confinement reasons were mapped. `slug_exists`, `workspace_exists`, the
+ * six busy reasons, `no_build`, `not_running` and the three limits fell through to the
+ * status default — `site_builder.rejected` (400, "rejected", not retryable) — so a museum
+ * was told "the site builder rejected the request" for "that name is taken", "a build is
+ * running, try again" and "the server is full" alike, and a retryable condition read as a
+ * permanent one. The browser never shows a daemon's or an engine's prose
+ * (render_api_error.js reads the LABEL first), so the code IS the message.
+ *
+ * Driven end to end: the stand-in daemon answers with the bytes its own serializer
+ * (`util/response.ts problem()`) renders from the REAL class it throws, the REAL handler
+ * maps it, and the ONE converter (`toErrorBody`) builds what the client reads.
+ */
+describe('WIRE-MAP — every daemon reason → its own code', () => {
+	/**
+	 * THE CONTRACT (engineering/wire_contract WC-2026-10-11-site-builder-reason-codes): each
+	 * reason the daemon sends and the code a museum must read for it. Pinned here, beside the
+	 * gate, because a map that is only compared with itself cannot be wrong.
+	 */
+	const BUSY = [
+		'session_running',
+		'build_running',
+		'site_initializing',
+		'site_recovering',
+		'git_running',
+		'site_deleting',
+	] as const;
+	const EXPECTED: Readonly<Record<string, string>> = {
+		...Object.fromEntries(BUSY.map((reason) => [reason, 'site_builder.busy'])),
+		slug_exists: 'site_builder.slug_exists',
+		workspace_exists: 'site_builder.workspace_exists',
+		domain_taken: 'site_builder.domain_taken',
+		webspace_unavailable: 'site_builder.webspace_unavailable',
+		no_build: 'site_builder.no_build',
+		not_running: 'site_builder.not_running',
+		max_sites: 'site_builder.site_limit',
+		disk_quota: 'site_builder.disk_quota',
+		max_concurrent_sessions: 'site_builder.capacity',
+		confinement_unavailable: 'site_builder.confinement_unavailable',
+		'confinement.site_busy': 'site_builder.busy',
+		'confinement.identity_missing': 'site_builder.confinement_unavailable',
+		'confinement.identity_quarantined': 'site_builder.busy',
+		'confinement.unit_refused': 'site_builder.confinement_unavailable',
+		'confinement.unit_nonconformant': 'site_builder.confinement_unavailable',
+		'confinement.daemon_stopping': 'site_builder.busy',
+		'confinement.agent_cli_unsupported': 'site_builder.confinement_unavailable',
+		'confinement.agent_cli_unproved': 'site_builder.busy',
+	};
+	const RETRYABLE = new Set<string>([
+		...BUSY,
+		'max_concurrent_sessions',
+		'confinement.site_busy',
+		'confinement.identity_quarantined',
+		'confinement.daemon_stopping',
+		'confinement.agent_cli_unproved',
+	]);
+	const GENERIC = new Set(['site_builder.rejected', 'site_builder.failed', 'internal.unexpected']);
+	const PROSE = 'daemon prose: refused for';
+
+	/** The daemon's reason lists, read off the daemon's own module (absent pre-fix: an empty list, named). */
+	const lists = daemonErrors as unknown as Record<string, readonly string[] | undefined>;
+	const DAEMON_REASONS: readonly string[] = lists.DAEMON_REASONS ?? [];
+
+	/** The thrown value the daemon raises for one reason — its REAL class, as its throw sites do. */
+	function daemonThrowFor(reason: string): unknown {
+		const detail = `${PROSE} ${reason}`;
+		if (reason === 'webspace_unavailable') return new WebspaceError(detail);
+		if (reason === 'confinement_unavailable')
+			return new daemonErrors.ConfinementUnavailableError(detail);
+		if (reason.startsWith('confinement.')) {
+			return new daemonErrors.ConfinementRefusedError(
+				reason.slice('confinement.'.length) as ConfinementCode,
+				detail,
+			);
+		}
+		if (
+			(lists.LIMIT_REASONS ?? ['max_sites', 'disk_quota', 'max_concurrent_sessions']).includes(
+				reason,
+			)
+		) {
+			return new daemonErrors.LimitExceededError(detail, reason as never);
+		}
+		return new daemonErrors.ConflictError(detail, reason as never);
+	}
+
+	test('(a) the daemon exports its reason lists, the engine maps exactly them, and the contract names every one', () => {
+		// The daemon's reason vocabulary is a runtime list the engine is gated against — a reason
+		// added daemon-side without a row here (or in wire.ts) is red, never a silent fallback.
+		expect({
+			DAEMON_REASONS: Array.isArray(lists.DAEMON_REASONS),
+			CONFLICT_REASONS: Array.isArray(lists.CONFLICT_REASONS),
+			LIMIT_REASONS: Array.isArray(lists.LIMIT_REASONS),
+			BUSY_REASONS: Array.isArray(lists.BUSY_REASONS),
+		}).toEqual({
+			DAEMON_REASONS: true,
+			CONFLICT_REASONS: true,
+			LIMIT_REASONS: true,
+			BUSY_REASONS: true,
+		});
+		expect([...DAEMON_REASONS].sort()).toEqual(Object.keys(EXPECTED).sort());
+		expect([...(lists.BUSY_REASONS ?? [])].sort()).toEqual([...BUSY].sort());
+		const map = (wire as unknown as { DAEMON_REASON_CODES?: Readonly<Record<string, string>> })
+			.DAEMON_REASON_CODES;
+		expect(
+			map === undefined ? 'wire.ts exports no DAEMON_REASON_CODES' : Object.keys(map).sort(),
+		).toEqual([...DAEMON_REASONS].sort());
+	});
+
+	for (const reason of Object.keys(EXPECTED)) {
+		test(`(b) '${reason}' → ${EXPECTED[reason]}, its own label, prose off the wire`, async () => {
+			nextProblem = daemonThrowFor(reason);
+			const refusal = await refusalOf(
+				reason === 'slug_exists' || reason === 'domain_taken' || reason === 'max_sites'
+					? tool.apiActions.create_site!.handler(
+							ctx(DEV, { slug: 'demo', name: 'Demo', domain: 'demo.example.org' }),
+						)
+					: reason === 'no_build'
+						? tool.apiActions.publish!.handler(ctx(DEV, { slug: 'demo', confirm: true }))
+						: tool.apiActions.session_start!.handler(ctx(DEV, { slug: 'demo', prompt: 'go' })),
+			);
+			nextProblem = null;
+			const code = EXPECTED[reason] as string;
+			expect({ reason, code: refusal.code as string }).toEqual({ reason, code });
+			expect(GENERIC.has(refusal.code)).toBe(false);
+			const row = ERROR_REGISTRY[code as keyof typeof ERROR_REGISTRY];
+			expect({ reason, registered: row !== undefined }).toEqual({ reason, registered: true });
+			if (!row) return;
+			expect({ reason, retryable: row.retryable }).toEqual({
+				reason,
+				retryable: RETRYABLE.has(reason),
+			});
+			const body = toErrorBody(refusal);
+			// What error_text renders: THIS code's label — present, and not the generic one.
+			expect(body.label_key).toBe(`error_${code.replace(/\./g, '_')}`);
+			expect(body.label_key).not.toBe('error_site_builder_rejected');
+			const label = (masterLabels as Record<string, string>)[body.label_key];
+			expect({ reason, label: typeof label === 'string' && label.trim() !== '' }).toEqual({
+				reason,
+				label: true,
+			});
+			// The daemon's sentence is LOG-only.
+			expect(refusal.message).toContain(PROSE);
+			expect(wireOf(refusal)).not.toContain(PROSE);
+		});
+	}
+
+	/**
+	 * THE ENGINE'S OWN REFUSALS — the same law: a code per refusal, its label is the sentence,
+	 * and nothing rides `publicMessage` (the browser never shows it). `perm.*` maps to the
+	 * no-access PAGE in a tool panel, so the permission refusals are `site_builder.*` too.
+	 */
+	const ENGINE_REFUSALS: ReadonlyArray<readonly [string, string, () => Promise<unknown>]> = [
+		[
+			'an invalid slug',
+			'site_builder.invalid_slug',
+			() =>
+				tool.apiActions.create_site!.handler(
+					ctx(DEV, { slug: 'Bad Slug', name: 'x', domain: 'x.example.org' }),
+				),
+		],
+		[
+			'an invalid id',
+			'site_builder.invalid_id',
+			() => tool.apiActions.session_stop!.handler(ctx(DEV, { session_id: 'a/../b' })),
+		],
+		[
+			'no publisher grant',
+			'site_builder.not_permitted',
+			() => tool.apiActions.list_sites!.handler(ctx(PLAIN, {})),
+		],
+		[
+			'no name',
+			'site_builder.name_required',
+			() =>
+				tool.apiActions.create_site!.handler(
+					ctx(DEV, { slug: 'demo', name: '  ', domain: 'demo.example.org' }),
+				),
+		],
+		[
+			'no domain',
+			'site_builder.domain_required',
+			() =>
+				tool.apiActions.create_site!.handler(ctx(DEV, { slug: 'demo', name: 'Demo', domain: '' })),
+		],
+		[
+			'no prompt',
+			'site_builder.text_required',
+			() => tool.apiActions.session_start!.handler(ctx(DEV, { slug: 'demo', prompt: '' })),
+		],
+		[
+			'no message',
+			'site_builder.text_required',
+			() =>
+				tool.apiActions.session_message!.handler(ctx(ADMIN, { session_id: 'abc', message: ' ' })),
+		],
+		[
+			'publish unconfirmed',
+			'site_builder.confirmation_required',
+			() => tool.apiActions.publish!.handler(ctx(DEV, { slug: 'demo' })),
+		],
+		[
+			'purge unconfirmed',
+			'site_builder.confirmation_required',
+			() => tool.apiActions.delete_site!.handler(ctx(DEV, { slug: 'demo', purge_prod: true })),
+		],
+	];
+
+	for (const [what, code, run] of ENGINE_REFUSALS) {
+		test(`(c) ${what} → ${code}, its own label, no prose on the throw`, async () => {
+			const before = requests.length;
+			const refusal = await refusalOf(run());
+			expect({ what, code: refusal.code as string }).toEqual({ what, code });
+			expect(refusal.publicMessage).toBeUndefined();
+			const row = ERROR_REGISTRY[code as keyof typeof ERROR_REGISTRY];
+			expect({ what, registered: row !== undefined }).toEqual({ what, registered: true });
+			if (row) {
+				const label = (masterLabels as Record<string, string>)[row.label_key];
+				expect(row.label_key).not.toBe('error_site_builder_rejected');
+				expect({ what, label: typeof label === 'string' && label.trim() !== '' }).toEqual({
+					what,
+					label: true,
+				});
+			}
+			// Refused before the daemon was asked anything.
+			expect(requests.length).toBe(before);
+		});
+	}
 });

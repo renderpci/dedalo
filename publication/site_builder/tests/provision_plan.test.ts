@@ -34,6 +34,7 @@ import { describe, expect, test } from 'bun:test';
 import { basename, dirname, join, resolve } from 'node:path';
 import type { InstanceLayout, InstanceManifest } from '../src/provision/layout';
 import { type FakeAccount, fakeLedger, useraddAccount, usermodAccount } from './support/fake_accounts';
+import { simulatedTurnHomeListings } from './support/turn_home_listing';
 import { INSTANCE_MARKER, MODES, SURFACES, derive, isStrictlyWithin, markerContent, readWritePaths } from '../src/provision/layout';
 import { parseManifest } from '../src/provision/schema';
 import { artifact, renderAll } from '../src/provision/render';
@@ -257,6 +258,8 @@ function simulate(host: HostState, actions: readonly Action[], layout: InstanceL
     users,
     groups,
     entries,
+    // As `observeHost` lists them (a real turn-HOME dir with no listing is a planned problem).
+    turnHomeEntries: simulatedTurnHomeListings(layout.agentStateRoot, entries, host.turnHomeEntries),
     unitEnabled,
     unitActive,
     htpasswdUsers,
@@ -481,7 +484,10 @@ describe('the tree', () => {
       [decl.layout.agentStateRoot, 'agentStateRoot'],
       [decl.layout.retiredDir, 'retired'],
       [join(decl.layout.agentStateRoot, 's1'), 'agentStateSite'],
-      [join(decl.layout.agentStateRoot, 's1', 'turn'), 'agentHome'],
+      // S3-HOME: the turn HOME is root's, with only `state/` the identity's.
+      [join(decl.layout.agentStateRoot, 's1', 'turn'), 'agentTurnHome'],
+      [join(decl.layout.agentStateRoot, 's1', 'turn', 'state'), 'agentTurnState'],
+      [join(decl.layout.agentStateRoot, 's1', 'turn', '.config'), 'agentTurnConfig'],
       [join(decl.layout.agentStateRoot, 's1', 'build'), 'agentHome'],
       [decl.layout.sites[0]!.webspace, 'webspace'],
       [decl.layout.sites[0]!.releasesDir('preprod'), 'releases'],
@@ -496,8 +502,11 @@ describe('the tree', () => {
       expect(action.mode).toBe(MODES[modeKey].mode);
       expect(action.changes).toContain('create');
     }
-    // A (site, door) HOME is its SITE identity's — never the service user's, never root's.
-    expect(byPath.get(join(decl.layout.agentStateRoot, 's1', 'turn'))?.owner).toBe('dedalo-a-gate_1');
+    // The BUILD HOME, and the turn HOME's `state/`, are the SITE identity's — never the service
+    // user's; the turn HOME itself is root's (S3-HOME), so nothing at HOME level is agent-writable.
+    expect(byPath.get(join(decl.layout.agentStateRoot, 's1', 'build'))?.owner).toBe('dedalo-a-gate_1');
+    expect(byPath.get(join(decl.layout.agentStateRoot, 's1', 'turn', 'state'))?.owner).toBe('dedalo-a-gate_1');
+    expect(byPath.get(join(decl.layout.agentStateRoot, 's1', 'turn'))?.owner).toBe('root');
   });
 
   test('the release STORE itself is planned, not left to an implicit mkdir -p', () => {

@@ -53,11 +53,10 @@ async function fetchSchemaSummary(): Promise<string> {
 
     const dbJson = (await dbRes.json()) as { data?: Array<{ name?: string }> };
     const dbs = (dbJson.data ?? []).map(d => d.name).filter(Boolean) as string[];
-    if (dbs.length === 0) return schemaUnavailableNote();
-
     // Summarize the first database's tables — enough to orient; the agent uses MCP
     // get_schema for column-level detail on demand.
     const primary = dbs[0];
+    if (primary === undefined) return schemaUnavailableNote();
     const tRes = await fetch(`${config.PUBLICATION_API_URL}/${encodeURIComponent(primary)}/tables`, {
       headers,
     });

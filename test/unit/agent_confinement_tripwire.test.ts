@@ -1034,11 +1034,32 @@ describe('the rendered env leaves the daemon no unconfined mode to fall into', (
 		expect((row.mode & 0o2000) !== 0).toBe(true);
 		expect((row.mode & 0o020) !== 0).toBe(true);
 		expect(row.mode & 0o007).toBe(0);
-		// Each door's HOME is its identity's own, closed to every other principal (LEAD-1b): the
+		// The BUILD HOME is its identity's own, closed to every other principal (LEAD-1b): the
 		// cross-site plant channel the one shared HOME was.
 		expect({ owner: MODES.agentHome.owner, mode: MODES.agentHome.mode }).toEqual({
 			owner: 'identity',
 			mode: 0o700,
+		});
+		// The TURN HOME is ROOT's (S3-HOME): nothing at HOME level is agent-writable, so no turn plants
+		// configuration (git's global files, ~/.bunfig.toml, ~/.config/*) a later turn reads; its
+		// `state/` alone is the identity's, closed; its `.config` root's.
+		expect({
+			owner: MODES.agentTurnHome.owner,
+			writable: (MODES.agentTurnHome.mode & 0o022) !== 0,
+		}).toEqual({
+			owner: 'root',
+			writable: false,
+		});
+		expect({ owner: MODES.agentTurnState.owner, mode: MODES.agentTurnState.mode }).toEqual({
+			owner: 'identity',
+			mode: 0o700,
+		});
+		expect({
+			owner: MODES.agentTurnConfig.owner,
+			writable: (MODES.agentTurnConfig.mode & 0o022) !== 0,
+		}).toEqual({
+			owner: 'root',
+			writable: false,
 		});
 		expect(MODES.agentStateRoot.owner).toBe('root');
 		expect(MODES.agentStateSite.owner).toBe('root');
@@ -1089,8 +1110,11 @@ const RUNNER_IMPORTERS: Readonly<Record<string, string>> = Object.freeze({
 		'the driver VERSION AND FLAG PROBE — a pinned binary run with --version and --help (PLANT: ' +
 		'a turn is refused unless --help lists every flag its argv needs), cwd /, outside every workspace.',
 	'drivers/opencode.ts':
-		'the driver VERSION PROBE — the same shape as claude_code above: a pinned binary asked ' +
-		'for its version, with no cwd and nothing agent-authored anywhere near it.',
+		'the driver VERSION AND PLANT PROBE (LEAD-1c) — a pinned binary asked for its version and ' +
+		'its `run --help`, then for what it would LOAD (`debug config|agent|skill`) twice — a control ' +
+		"without the four switches and exactly the turn's environment — offline, with cwd a daemon-written " +
+		'canary tree under AGENT_STATE_ROOT/probe (0700, built through the private helpers) — outside every ' +
+		'workspace, nothing agent-authored near it.',
 	'drivers/pi.ts':
 		'the driver VERSION PROBE — the same shape again, on the driver that refuses to run a ' +
 		'turn at all until it is implemented.',
@@ -1408,9 +1432,16 @@ const FS_MODULES: ReadonlySet<string> = new Set([
 	'fs/promises',
 ]);
 
-/** Path-based MUTATIONS (each with its `Sync` twin). Closed: `open` counts (an O_CREAT open is a write). */
+/**
+ * Path-based MUTATIONS (each with its `Sync` twin). Closed: `open` counts (an O_CREAT open is a
+ * write), and so does a DELETE — `rm`/`rmdir`/`unlink` follow every link on the way to their last
+ * component, so a planted directory link aims a (recursive) delete wherever the daemon can write.
+ */
 const FS_WRITE_NAMES: ReadonlySet<string> = new Set([
 	...[
+		'rm',
+		'rmdir',
+		'unlink',
 		'mkdir',
 		'mkdtemp',
 		'writeFile',
@@ -1527,23 +1558,40 @@ const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 		'the service user, 0700 with a 0600 file, and named by no path an agent turn can write ' +
 		'in. `ProtectSystem=strict` makes it read-only to a turn on top of that.',
 	'drivers/confinement.ts':
-		"The DECLARED-unconfined run's HOME (`AGENT_CONFINEMENT=none` only): " +
-		'`<AGENT_STATE_ROOT>/unconfined/<door>`, outside `SITES_ROOT` and every workspace — the ' +
-		'same per-door HOME a unit would be given, so a dev host exercises the same shape. Under ' +
-		'systemd_scope the confinement writes NO file at all (LEAD-1b: the spec travels over the ' +
-		"site's socket; the per-run environment file PID 1 read as root is gone, G8).",
+		"The DECLARED-unconfined run's HOMEs (`AGENT_CONFINEMENT=none` only), all under " +
+		'`<AGENT_STATE_ROOT>/unconfined/`, outside `SITES_ROOT` and every workspace: the build ' +
+		"door's `<door>` HOME, and the turn's S3-HOME shape — a persistent `turn/state` (the " +
+		"CLI's state, as the unit's `state/`) and a FRESH per-run HOME `turn/run.<random>` with " +
+		'its `.config` (mkdtemp; removed when the run exits, stale ones swept at boot), so what ' +
+		'one run leaves at HOME level is gone for the next — the same split a unit gives a turn, ' +
+		'minus the uid boundary `none` declares away; and, once at boot, the pre-S3 HOME’s CLI ' +
+		'state renamed into `turn/state` (the `TURN_HOME_CARRY` allowlist, never through a link, ' +
+		'never over a target); a finished run HOME is deleted (`rmSync(runHome)`, recursive, at ' +
+		'exit or by the boot sweep) — a mkdtemp name under the daemon-private unconfined root, no ' +
+		'path a run is handed but its own HOME. Under systemd_scope the confinement writes ' +
+		"NO file at all (LEAD-1b: the spec travels over the site's socket; the per-run " +
+		'environment file PID 1 read as root is gone, G8).',
 	'provision/apply.ts':
 		'THE PROVISIONER, which runs as root before an agent uid exists and CREATES the roots ' +
 		'the rest of this census is measured against. Its writes are an interface (`mkdir`, ' +
 		'`writeFile`, `symlink`, `chmod` on the fs driver) over paths it derives from the ' +
-		'declaration, never from a workspace.',
+		'declaration, never from a workspace — its `unlink` included (a link at the path is refused ' +
+		'first, and a failed write unlinks only its own temporary).',
+	'provision/remove.ts':
+		'THE PROVISIONER’S DECOMMISSION (root, the daemon stopped): `unlink` of a generated ' +
+		'artifact it proved it wrote (its body-hash stamp names this instance) at a path derived ' +
+		'from the layout — unit files, vhost links, the htpasswd — outside `SITES_ROOT`. Every ' +
+		'tree with a museum’s bytes is RENAMED aside, never deleted.',
 	'provision/adopt.ts':
 		'The same provisioner, taking an already-installed tree into the layout: a `rename` of ' +
 		'root-owned provisioned paths outside `SITES_ROOT`, before any turn can run.',
 	'context/agents_md.ts':
 		"`symlink('AGENTS.md', CLAUDE.md)` — CREATING a link, which never writes THROUGH one: " +
 		"symlink(2) does not follow its final component and fails EEXIST. The file's content is " +
-		'written by `writeFileShared`, which is the leg below.',
+		'written by `writeFileShared`, which is the leg below. The `rm` before it removes ' +
+		'`<slug>/CLAUDE.md` itself: a non-recursive rm never follows its final component (a link ' +
+		'there is unlinked as a link), and `<slug>` is a direct child of the trusted root, which ' +
+		'no run can rename or plant in (read-only in every unit).',
 	'sites/template.ts':
 		"`cp` copies a whole template tree, carrying the TEMPLATE's modes; the modes are then " +
 		'restated over the result by applySharedModes(), which is the only way to catch what ' +
@@ -1551,26 +1599,45 @@ const RAW_FS_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 	'build/promote.ts':
 		'The release store and the served surface, which are PROVISIONED webspace under ' +
 		'`WEBSPACE_BASE` — outside `SITES_ROOT`, never a directory an agent turn can write, ' +
-		'and moded by the provisioner rather than by this module.',
+		'and moded by the provisioner rather than by this module. Its deletes (a failed ' +
+		'staging copy, a pruned release, the link swap’s own temporary) are names under that ' +
+		'store, confined (`confinedPath`) before anything is unlinked.',
 	'sites/webspace.ts':
-		'The per-build write probe, inside the PROVISIONED webspace under `WEBSPACE_BASE` — ' +
-		'outside `SITES_ROOT` and outside every workspace, created by the provisioner and ' +
-		'read-only to a turn under `ProtectSystem=strict`.',
+		'The per-build write probe (written, then unlinked), inside the PROVISIONED webspace ' +
+		'under `WEBSPACE_BASE` — outside `SITES_ROOT` and outside every workspace, created by ' +
+		'the provisioner and read-only to a turn under `ProtectSystem=strict`.',
 	'index.ts':
 		'`chmodSync` on the LISTEN SOCKET this process just bound, in the daemon runtime ' +
 		'directory outside `SITES_ROOT` (the `open()` handler of a `Bun.connect` socket, which ' +
-		'the spelling census also matched, is no fs binding and no longer counts).',
+		'the spelling census also matched, is no fs binding and no longer counts); and the ' +
+		'`unlinkSync` of that socket path — a stale one nothing answers on, before the bind, ' +
+		'and its own at shutdown.',
 	'instance/roots.ts':
 		'The BOOT PREFLIGHT probes. The audit append is `AUDIT_DIR`, outside `SITES_ROOT`; ' +
 		'the create probe DOES land at the root of `SITES_ROOT`, which is 2770, ' +
 		'so it is opened `O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW` — an existing name of any kind, ' +
-		'symlink included, is EEXIST rather than a redirect. It is the synchronous ' +
+		'symlink included, is EEXIST rather than a redirect, and it is unlinked by the same ' +
+		'name (unlink never follows its final component). It is the synchronous ' +
 		'counterpart of the doors, in the one place that cannot await them.',
 	'egress/gate.ts':
 		"outside SITES_ROOT: the two sockets (0660, chgrp to the SITE's private group) it binds in a " +
 		"site's egress directory `<agent socket dir>/egress/s<k>/` — ROOT-provisioned (tmpfiles.d, " +
 		"root:<site group> 0770, refused otherwise), never created, chgrp'd or removed by the daemon, " +
-		"never a path an agent run can write: the unit sees only its own site's, read-only, on /run/dedalo-egress.",
+		"never a path an agent run can write: the unit sees only its own site's, read-only, on /run/dedalo-egress. " +
+		'Its `rm` of its own two socket names there (a killed run’s, before the bind; its own, at close).',
+	'drivers/opencode.ts':
+		'THE PROBE’S SCRATCH TREE: `<AGENT_STATE_ROOT>/probe/opencode-<random>` (mkdirPrivate, ' +
+		'0700) — outside `SITES_ROOT` and every workspace, in no unit’s view (opencode runs no ' +
+		'confined turn: refused under systemd_scope), deleted whole after the probe and its ' +
+		'plugin marker after each leg. The brief a turn is handed is removed through the ' +
+		'no-follow door (`removeFilePrivate`), not here.',
+	'sites/workspace.ts':
+		'THE WORKSPACE ITSELF, deleted whole: `<SITES_ROOT>/<slug>` (a create rolled back, or a ' +
+		'delete) is a direct child of the trusted root, which no run can rename or plant in, and ' +
+		'rm never follows a link it meets inside (each entry is lstat-ed, a link unlinked as a ' +
+		'link); both run under the site’s own reservation (create / delete), refused while any ' +
+		'run of the site is alive. And the served surface’s link and release store, PROVISIONED ' +
+		'webspace under `WEBSPACE_BASE`, outside `SITES_ROOT`.',
 });
 
 /**
@@ -1639,18 +1706,33 @@ function callKeys(code: string, side: 'writes' | 'reads'): string[] {
 const RAW_FS_CALLS: Readonly<Record<string, readonly string[]>> = Object.freeze({
 	'audit.ts': ['appendFile(auditPath(), serialized + `)', 'mkdir(config.AUDIT_DIR, {…})'],
 	// THE ONE write: the declared-unconfined run's HOME (`AGENT_CONFINEMENT=none` only).
-	'drivers/confinement.ts': ['mkdirSync(home, {…})'],
+	'drivers/confinement.ts': [
+		'rmSync(runHome, {…})',
+		'mkdirSync(dirname(to), {…})',
+		'mkdirSync(home, {…})',
+		'mkdirSync(join(runHome, TURN_HOME_CONFIG), {…})',
+		'mkdirSync(state, {…})',
+		'mkdtempSync(join(base, "run."))',
+		'renameSync(from, to)',
+	],
 	'provision/apply.ts': [
 		'chmodSync(path, mode)',
 		'chmodSync(temporary, mode)',
 		'mkdirSync(path, {…})',
+		// READ-ONLY opens (counted because `openSync` can create): the observer's no-follow reads
+		// in an identity-writable turn HOME — `listRealDirectory` and `readRegularFileNoFollow`.
+		'openSync(path, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW)',
+		'openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)',
 		'renameSync(from, to)',
 		'renameSync(temporary, path)',
 		'symlinkSync(target, path)',
+		'unlinkSync(path)',
+		'unlinkSync(temporary)',
 		'writeFileSync(temporary, body, {…})',
 	],
+	'provision/remove.ts': ['unlinkSync(path)'],
 	'provision/adopt.ts': ['renameSync(from, to)'],
-	'context/agents_md.ts': ['symlink("AGENTS.md", claudePath)'],
+	'context/agents_md.ts': ['rm(claudePath, {…})', 'symlink("AGENTS.md", claudePath)'],
 	'sites/template.ts': ['cp(src, dest, {…})'],
 	'build/promote.ts': [
 		'copyFile(source, destination)',
@@ -1658,11 +1740,19 @@ const RAW_FS_CALLS: Readonly<Record<string, readonly string[]>> = Object.freeze(
 		'mkdir(to, {…})',
 		'rename(staging, target)',
 		'rename(tmp, surface.linkPath)',
+		'rm(path, {…})',
+		'rm(staging, {…})',
+		'rm(tmp, {…})',
 		'symlink(relativeTarget, tmp)',
 	],
-	'sites/webspace.ts': ['writeFileSync(probe, "", {…})'],
-	'index.ts': ['chmodSync(config.LISTEN_SOCKET, 432)'],
+	'sites/webspace.ts': ['unlinkSync(probe)', 'writeFileSync(probe, "", {…})'],
+	'index.ts': [
+		'chmodSync(config.LISTEN_SOCKET, 432)',
+		'unlinkSync(config.LISTEN_SOCKET)',
+		'unlinkSync(path)',
+	],
 	'instance/roots.ts': [
+		'unlinkSync(probe)',
 		'openSync(path, "a")',
 		'openSync(probe, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, 384)',
 	],
@@ -1670,6 +1760,17 @@ const RAW_FS_CALLS: Readonly<Record<string, readonly string[]>> = Object.freeze(
 		'chmod(mcpPath, SOCKET_MODE)',
 		'chmod(proxyPath, SOCKET_MODE)',
 		'chown(path, uid, gid)',
+		'rm(mcpPath, {…})',
+		'rm(mcpPath, {…})',
+		'rm(proxyPath, {…})',
+		'rm(proxyPath, {…})',
+	],
+	'drivers/opencode.ts': ['rm(join(stateRoot, marker), {…})', 'rm(root, {…})'],
+	'sites/workspace.ts': [
+		'rm(dir, {…})',
+		'rm(paths.linkPath, {…})',
+		'rm(paths.storeDir, {…})',
+		'rm(workspaceDir(slug), {…})',
 	],
 });
 
@@ -1767,12 +1868,20 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
 			['sessions/store.ts', 'writeFilePrivateAtomic'],
 			// THE FOUR THE FIRST REPAIR MISSED, each measured writing through a planted link
 			// as the daemon before it was routed here (the behaviour is in the package gate):
-			// the exclusion rewritten on every commit, both drivers' key-carrying MCP config,
-			// and the session transcript.
+			// the exclusion rewritten on every commit, the key-carrying MCP config, and the
+			// session transcript. (opencode's MCP config is GONE since LEAD-1c — the daemon's
+			// configuration rides the child's environment; its PLANT probe writes its canaries
+			// only into a daemon-private scratch tree, through the private helpers; and the one
+			// file it writes for a turn is the BRIEF, `.builder/opencode-brief.md`, through the
+			// fd-based agent-readable writer.) The brief itself is READ through the bounded,
+			// link-refusing door, by the one reader every driver shares (`brief.ts`).
 			['sites/git.ts', 'writeFileSharedAtomic'],
 			['sites/git.ts', 'mkdirShared'],
 			['drivers/claude_code.ts', 'writeFileAgentReadable'],
+			['drivers/opencode.ts', 'mkdirPrivate'],
+			['drivers/opencode.ts', 'writeFilePrivate'],
 			['drivers/opencode.ts', 'writeFileAgentReadable'],
+			['drivers/brief.ts', 'readFileSharedBounded'],
 			['sessions/store.ts', 'appendFilePrivate'],
 			['sessions/store.ts', 'mkdirPrivate'],
 		] as const) {
@@ -1814,6 +1923,9 @@ describe('a site workspace is CREATED shared, not created and hoped over', () =>
 				// creates a level that is then opened and moded through its descriptor, and it
 				// fails EEXIST — it never follows anything.
 				.filter((call) => !/^mkdir\s*\(\s*path\s*\)/.test(call.text))
+				// `unlink(target)` is the ONE delete (`removeFilePrivate`): after the chain is walked
+				// O_NOFOLLOW and proved the daemon's, and unlink(2) never follows its final component.
+				.filter((call) => !/^unlink\s*\(\s*target\s*\)/.test(call.text))
 				.map((call) => call.text.replace(/;\s*$/, '')),
 		];
 	}
@@ -2076,7 +2188,9 @@ const RAW_READ_CALLS: Readonly<Record<string, readonly string[]>> = Object.freez
 	'instance/roots.ts': ['readFileSync(marker, "utf8")'],
 	'provision/apply.ts': [
 		'readFileSync("/etc/login.defs", "utf8")',
-		'readFileSync(path, "utf8")',
+		// The observer's artifact read (S3-HOME): from the HANDLE `readRegularFileNoFollow` opened
+		// O_NOFOLLOW|O_NONBLOCK and fstat-proved a one-name regular file — never the path again.
+		'readFileSync(fd, "utf8")',
 		'readFileSync(path, "utf8")',
 		'readFileSync(path, "utf8")',
 	],
@@ -2131,6 +2245,32 @@ describe('what the daemon reads back out of an agent-writable tree is proved, no
 				unresolvable: [],
 			});
 		}
+	});
+
+	test('a DELETE is a write: rm / rmdir / unlink (and each Sync twin), by any binding shape, are counted', () => {
+		// A recursive rm aimed through a planted directory link deletes wherever the daemon can
+		// write; the census that left deletes out passed one green. Each spelling a module can use:
+		const fixture = [
+			"import { rmSync, unlinkSync as drop } from 'node:fs';",
+			"import { rm, rmdir } from 'node:fs/promises';",
+			"import * as fs from 'node:fs';",
+			"export const a = (ws: string) => rmSync(join(ws, '.builder'), { recursive: true, force: true });",
+			"export const b = (ws: string) => drop(join(ws, '.builder/mcp.json'));",
+			"export const c = (ws: string) => rm(join(ws, 'x'), { recursive: true });",
+			"export const d = (ws: string) => rmdir(join(ws, 'y'));",
+			"export const e = (ws: string) => fs.unlinkSync(join(ws, 'z'));",
+			"export const f = (ws: string) => fs.rmdirSync(join(ws, 'w'));",
+		].join('\n');
+		expect(callKeys(fixture, 'writes')).toEqual(
+			[
+				'rmSync(join(ws, ".builder"), {…})',
+				'unlinkSync(join(ws, ".builder/mcp.json"))',
+				'rm(join(ws, "x"), {…})',
+				'rmdir(join(ws, "y"))',
+				'unlinkSync(join(ws, "z"))',
+				'rmdirSync(join(ws, "w"))',
+			].sort(),
+		);
 	});
 
 	test('a SECOND call in an exempt file is red — the key is the destination, not the file (round 6)', () => {
@@ -2695,16 +2835,29 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 			'1',
 		);
 		// opencode's own off-plan traffic (auto-update, the models.dev catalogue, LSP downloads,
-		// share uploads) is turned OFF, not refused one CONNECT at a time.
-		const opencode = net.childEgressEnv('turn', 'opencode');
+		// share uploads) is turned OFF, not refused one CONNECT at a time — by the DRIVER, in every
+		// mode: an opencode turn runs only under `none`, where these egress keys are never applied,
+		// so a switch held here reached no opencode turn at all.
+		const opencodeLeaf = (await import(join(PACKAGE, 'src/drivers/opencode_argv.ts'))) as {
+			opencodeTurnEnvironment: (input: {
+				operatorEnv: Record<string, string>;
+				configJson: string;
+			}) => Record<string, string>;
+		};
+		const stated = opencodeLeaf.opencodeTurnEnvironment({ operatorEnv: {}, configJson: '{}' });
 		for (const key of [
 			'OPENCODE_DISABLE_AUTOUPDATE',
 			'OPENCODE_DISABLE_MODELS_FETCH',
 			'OPENCODE_DISABLE_LSP_DOWNLOAD',
 			'OPENCODE_DISABLE_SHARE',
 		]) {
-			expect({ key, value: opencode[key] }).toEqual({ key, value: '1' });
+			expect({ key, value: stated[key] }).toEqual({ key, value: '1' });
 		}
+		expect(
+			Object.keys(net.childEgressEnv('turn', 'opencode')).filter((key) =>
+				key.startsWith('OPENCODE_'),
+			),
+		).toEqual([]);
 		expect(net.childEgressEnv('git')).toEqual({});
 	});
 
@@ -2739,6 +2892,24 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 				foreign: [],
 			});
 		}
+		// LEAD-1c: the opencode argv, restriction and configuration leaf — read by the driver, the
+		// config parser (OPENCODE_ENV refusals) and the live probe on a host with no config —
+		// imports NOTHING at all (stricter than builtins-only).
+		expect({
+			file: 'src/drivers/opencode_argv.ts',
+			imports: specifiersOf(readFileSync(join(PACKAGE, 'src/drivers/opencode_argv.ts'), 'utf8')),
+		}).toEqual({ file: 'src/drivers/opencode_argv.ts', imports: [] });
+		// WIRE-MAP's stream door: the turn-error vocabulary is read by the supervisor, the session
+		// manager, the SSE responder and (type-only) the engine's relay — so it holds no policy of
+		// its own: it reads the reason lists of the dependency-free errors module, and nothing else.
+		expect({
+			file: 'src/drivers/turn_errors.ts',
+			imports: specifiersOf(readFileSync(join(PACKAGE, 'src/drivers/turn_errors.ts'), 'utf8')),
+		}).toEqual({ file: 'src/drivers/turn_errors.ts', imports: ['../errors'] });
+		expect({
+			file: 'src/errors.ts',
+			imports: specifiersOf(readFileSync(join(PACKAGE, 'src/errors.ts'), 'utf8')),
+		}).toEqual({ file: 'src/errors.ts', imports: [] });
 		// Positive control: the scanner sees a config import however it is spelled.
 		expect(
 			specifiersOf(

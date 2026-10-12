@@ -34,7 +34,7 @@ import { spawnSync } from 'node:child_process';
 import { tmpdir, userInfo } from 'node:os';
 import { dirname, join } from 'node:path';
 import { legacyTransientUnitGlob } from '../src/drivers/agent_identity';
-import { apply, type ExecResult, type PathFacts, type ProvisionIo } from '../src/provision/apply';
+import { apply, type ExecResult, type PathFacts, type ProvisionIo, turnHomeListings } from '../src/provision/apply';
 import { derive, markerContent, type InstanceLayout, type InstanceManifest } from '../src/provision/layout';
 import { type Action, changesTheHost, type HostState, markedRoots, markerPath, observedPaths, plan } from '../src/provision/plan';
 import { ledgerOrdinals } from '../src/provision/identities';
@@ -317,6 +317,8 @@ function observe(s: Synthetic): HostState {
     entries,
     unitEnabled: s.host.unitEnabled,
     unitActive: s.host.unitActive,
+    // As the real observer lists them (`turnHomeListings`, the same function).
+    turnHomeEntries: turnHomeListings(s.layout, ledgerOrdinals(s.layout, agentLedger).values(), path => onHost(s.prefix, path)),
     agentLedger,
     pid1Version: 255,
     enabledSockets: [...s.host.enabledSockets],

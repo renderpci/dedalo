@@ -32,6 +32,7 @@
  * per-site reach model are LEAD-1b's own gates (`lead1b_*.test.ts`).
  */
 
+import { withDaemonLog } from './support/daemon_log';
 import { describe, test, expect, afterEach, beforeEach } from 'bun:test';
 import {
   chmodSync,
@@ -42,6 +43,7 @@ import {
   readFileSync,
   realpathSync,
   readdirSync,
+  renameSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -70,6 +72,7 @@ import {
   ForeignOwnerError,
   readFilePrivate,
   readFileShared,
+  removeFilePrivate,
   writeFileAgentReadable,
   writeFilePrivate,
   writeFileShared,
@@ -96,7 +99,8 @@ import * as sessionManager from '../src/sessions/manager';
 import { type Destination, describeDestination, reach } from './support/systemd_reach';
 import { spawnAgentProcess } from '../src/drivers/process';
 import { ALLOWED_TOOLS, DENIED_TOOLS, writeMcpConfig } from '../src/drivers/claude_code';
-import { DENIED_PERMISSIONS, writeMcpConfig as writeOpencodeConfig } from '../src/drivers/opencode';
+import { DENIED_PERMISSIONS } from '../src/drivers/opencode';
+import { opencodeDaemonConfig } from '../src/drivers/opencode_argv';
 import { piDriver } from '../src/drivers/pi';
 import { changedFiles, commitAll, excludeDaemonState } from '../src/sites/git';
 import { createSite } from '../src/sites/workspace';
@@ -181,6 +185,16 @@ async function held<T>(slug: string, fn: () => Promise<T>, kind: ReservationKind
   } finally {
     end(slug, kind);
   }
+}
+
+/**
+ * Where a failed egress close's PROSE went. The failure is made real (EACCES on the site's egress
+ * directory), so its thrown text names the errno and the directory: that is the daemon's detail
+ * and must sit in its log, never on an event (relayed to the browser byte for byte).
+ */
+function closeProse(events: readonly AgentEvent[], daemonLog: string, egressDir: string): { onEvents: boolean; inDaemonLog: boolean } {
+  const carries = (text: string) => text.includes('EACCES') || text.includes(egressDir);
+  return { onEvents: events.some(event => carries(JSON.stringify(event))), inDaemonLog: carries(daemonLog) };
 }
 
 /** Read a confined child to its end and clean it up. */
@@ -502,7 +516,9 @@ describe('no secret outlives the turn', () => {
       env: {},
       timeoutMs: 1000,
     };
-    for (const write of [writeMcpConfig, writeOpencodeConfig]) {
+    // Claude Code's is a FILE. (opencode writes none since LEAD-1c: its whole configuration rides
+    // OPENCODE_CONFIG_CONTENT in the child's own environment — tests/opencode_plant.test.ts O2/O4.)
+    for (const write of [writeMcpConfig]) {
       const path = await write(start);
       // eslint-disable-next-line no-bitwise -- the permission word is the assertion
       expect({ path, mode: statSync(path).mode & 0o777 }).toEqual({ path, mode: 0o640 });
@@ -578,6 +594,19 @@ describe('no secret outlives the turn', () => {
     expect(events.some(event => event.type === 'result')).toBe(true);
     expect(existsSync(join(host.runtimeDir, 'turns'))).toBe(false);
     expect(egressEntries(host)).toEqual([]);
+  });
+
+  test('G-W2(b): a confined run that ends with NO exit status of record → exactly ONE error, turn_unit_lost', async () => {
+    // The unit closed its connection without an X frame: no status, so never a success — and
+    // never misreported as a kill or an agent failure either.
+    const host = await standIn();
+    host.standIn.script = () => ({ kind: 'noExit', stdout: 'half a turn\n' });
+    const events = await held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), host.policy)), 'turn');
+    const errors = events.filter(event => event.type === 'error') as unknown as Array<Record<string, unknown>>;
+    expect(errors.map(event => ({ reason: event.reason, message: Object.hasOwn(event, 'message') }))).toEqual([
+      { reason: 'turn_unit_lost', message: false },
+    ]);
+    expect(events.some(event => event.type === 'result')).toBe(false);
   });
 
   test("the claude_code driver deletes its MCP config, whatever the turn did", async () => {
@@ -1132,7 +1161,7 @@ describe('a workspace is created so the OTHER uid can actually work in it', () =
       expect(bits(victim)).toBe(0o600);
     };
 
-    test("the MCP config — the credential plant, in BOTH drivers", async () => {
+    test("the MCP config — the credential plant (claude_code; opencode writes no file since LEAD-1c)", async () => {
       const { ws, victim } = await plantedWorkspace('zzplantmcp');
       const start = {
         workspace: ws,
@@ -1146,11 +1175,10 @@ describe('a workspace is created so the OTHER uid can actually work in it', () =
       symlinkSync(victim, join(ws, '.builder', 'mcp.json'));
       await expect(writeMcpConfig(start)).rejects.toBeInstanceOf(PlantedSymlinkError);
       survived(victim);
-      // opencode writes at the workspace ROOT, under a filename the agent is told to leave
-      // alone — which is a name it knows and can therefore replace with a link.
-      symlinkSync(victim, join(ws, 'opencode.json'));
-      await expect(writeOpencodeConfig(start)).rejects.toBeInstanceOf(PlantedSymlinkError);
-      survived(victim);
+      // opencode used to write `opencode.json` at the workspace ROOT (a name the agent knows and
+      // can replace with a link). Since LEAD-1c it writes NOTHING: its configuration rides the
+      // child's environment (OPENCODE_CONFIG_CONTENT), and a planted `opencode.json` is ignored
+      // (OPENCODE_DISABLE_PROJECT_CONFIG — tests/opencode_plant.test.ts O4/O5).
       expect(readFileSync(victim, 'utf8')).not.toContain('THE-MUSEUM-KEY');
     });
 
@@ -1336,6 +1364,49 @@ describe('a workspace is created so the OTHER uid can actually work in it', () =
         // An absent file is `null` from both doors — an ordinary answer, never a refusal.
         expect(await readFilePrivate(dir, join('ws', '.builder', 'nope.json'))).toBeNull();
         expect(await readFileShared(dir, join('ws', 'nope.json'))).toBeNull();
+      });
+    });
+
+    test('a turn’s cleanup DELETES through the same door: a planted `.builder` aims it nowhere', async () => {
+      // The drivers' cleanups remove a FIXED name (`.builder/mcp.json`, `.builder/opencode-brief.md`).
+      // A path-based rm followed a `.builder` the turn renamed away and re-planted as a link, and
+      // unlinked that name in whatever directory the link named.
+      await underDaemonUmask(async dir => {
+        await mkdirShared(dir, 'ws');
+        await mkdirPrivate(dir, join('ws', '.builder'));
+        await writeFilePrivate(dir, join('ws', '.builder', 'mcp.json'), '{}');
+        // Control: the daemon's own file goes; an absent one (any level) is no error.
+        await removeFilePrivate(dir, join('ws', '.builder', 'mcp.json'));
+        expect(existsSync(join(dir, 'ws', '.builder', 'mcp.json'))).toBe(false);
+        await removeFilePrivate(dir, join('ws', '.builder', 'mcp.json'));
+        await removeFilePrivate(dir, join('ws', 'gone', 'mcp.json'));
+
+        // The plant: `.builder` renamed away, a link in its place to a directory holding the name.
+        const victim = join(dir, 'victim');
+        mkdirSync(victim);
+        writeFileSync(join(victim, 'mcp.json'), 'the daemon’s other file');
+        renameSync(join(dir, 'ws', '.builder'), join(dir, 'ws', '.x'));
+        symlinkSync(victim, join(dir, 'ws', '.builder'));
+        await expect(removeFilePrivate(dir, join('ws', '.builder', 'mcp.json'))).rejects.toBeInstanceOf(PlantedSymlinkError);
+        expect(readFileSync(join(victim, 'mcp.json'), 'utf8')).toBe('the daemon’s other file');
+
+        // A `.builder` re-created as SOMEONE ELSE's directory is refused the same way.
+        rmSync(join(dir, 'ws', '.builder'));
+        renameSync(join(dir, 'ws', '.x'), join(dir, 'ws', '.builder'));
+        await writeFilePrivate(dir, join('ws', '.builder', 'mcp.json'), '{}');
+        await expect(
+          removeFilePrivate(dir, join('ws', '.builder', 'mcp.json'), (path, uid) => (path.endsWith('.builder') ? 999_999 : uid)),
+        ).rejects.toBeInstanceOf(ForeignOwnerError);
+        expect(existsSync(join(dir, 'ws', '.builder', 'mcp.json'))).toBe(true);
+
+        // A LINK at the final name is removed as a link — its target is untouched.
+        rmSync(join(dir, 'ws', '.builder', 'mcp.json'));
+        symlinkSync(join(victim, 'mcp.json'), join(dir, 'ws', '.builder', 'mcp.json'));
+        await removeFilePrivate(dir, join('ws', '.builder', 'mcp.json'));
+        expect({ link: existsSync(join(dir, 'ws', '.builder', 'mcp.json')), target: readFileSync(join(victim, 'mcp.json'), 'utf8') }).toEqual({
+          link: false,
+          target: 'the daemon’s other file',
+        });
       });
     });
 
@@ -1701,16 +1772,16 @@ describe('the MCP credential stays with the daemon under systemd_scope', () => {
       expect({ driver, upstreamKey: opts.mcpUpstream?.apiKey }).toEqual({ driver, upstreamKey: key });
       // No caller hands a run its HOME (G13): the unit fixes it.
       expect({ driver, home: 'HOME' in opts.env }).toEqual({ driver, home: false });
-      const write = driver === 'claude_code' ? writeMcpConfig : writeOpencodeConfig;
-      const path = await write(opts as Parameters<typeof writeMcpConfig>[0]);
-      const body = readFileSync(path, 'utf8');
+      // Claude Code's MCP config is a file; opencode's is the daemon's configuration in its env.
+      const path = driver === 'claude_code' ? await writeMcpConfig(opts as Parameters<typeof writeMcpConfig>[0]) : null;
+      const body = path !== null ? readFileSync(path, 'utf8') : JSON.stringify(opencodeDaemonConfig(opts.mcp));
       expect({ driver, carriesKey: body.includes(key), carriesHeader: /x-api-key/i.test(body) }).toEqual({
         driver,
         carriesKey: false,
         carriesHeader: false,
       });
       expect({ driver, loopback: body.includes(`http://127.0.0.1:${MCP_PORT}/mcp`) }).toEqual({ driver, loopback: true });
-      rmSync(path, { force: true });
+      if (path !== null) rmSync(path, { force: true });
     }
     // The DECLARED-unconfined mode keeps the direct shape: there is no gate to hold the key.
     const none = sessionManager.buildStartOptions(slug, 'claude_code', 'x', undefined, 'none');
@@ -1777,15 +1848,18 @@ describe('the egress gate lives exactly as long as the run, on every exit path',
     const b = await standIn();
     b.standIn.script = () => ({ kind: 'refuse' });
     const refused = await held(SLUG, () => drain(spawnAgentProcess(turnStart({ mcpUpstream: upstream }), plan(), b.policy)), 'turn');
-    expect(refused.some(event => event.type === 'error' && event.message.includes('confinement refused'))).toBe(true);
+    expect(refused.some(event => event.type === 'error' && event.reason === 'confinement.unit_refused')).toBe(true);
     expect(b.gateEvents.some(event => event.startsWith('serve '))).toBe(true);
     expect({ path: 'refusal', left: egressEntries(b) }).toEqual({ path: 'refusal', left: [] });
     // the socket refuses the connection
     const c = await standIn([[SLUG, 1]], {
       hostOverrides: { connect: () => Promise.reject(new Error('ECONNREFUSED')) },
     });
-    const failed = await held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), c.policy)), 'turn');
-    expect(failed.some(event => event.type === 'error' && event.message.includes('refused the connection'))).toBe(true);
+    const { value: failed, log } = await withDaemonLog(() => held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), c.policy)), 'turn'));
+    expect({ refused: failed.some(event => event.type === 'error' && event.reason === 'confinement.unit_refused'), logged: log.includes('refused the connection') }).toEqual({
+      refused: true,
+      logged: true,
+    });
     expect({ path: 'connect', left: egressEntries(c) }).toEqual({ path: 'connect', left: [] });
   });
 
@@ -1823,7 +1897,7 @@ describe('the egress gate lives exactly as long as the run, on every exit path',
       },
       'turn',
     );
-    expect(events.some(event => event.type === 'error' && event.message.includes('interrupted before start'))).toBe(true);
+    expect(events.some(event => event.type === 'error' && event.reason === 'turn_interrupted')).toBe(true);
     expect(events.some(event => event.type === 'result')).toBe(false);
     // Nothing was handed to PID 1, and what confineTurn opened is gone.
     expect({ connects: host.standIn.connects, specs: host.standIn.specs.length }).toEqual({ connects: [], specs: 0 });
@@ -1844,28 +1918,31 @@ describe('the egress gate lives exactly as long as the run, on every exit path',
     let driverCleanups = 0;
     let outcome: { ended: boolean; events: AgentEvent[] };
     let leftBehind: string[];
+    let daemonLog = '';
     try {
-      outcome = await held(
-        SLUG,
-        () =>
-          Promise.race([
-            drain(
-              spawnAgentProcess(
-                turnStart({ mcpUpstream: upstream }),
-                async () => ({
-                  argv: ['/opt/claude'],
-                  parseLine: () => [],
-                  cleanup: async () => {
-                    driverCleanups++;
-                  },
-                }),
-                host.policy,
-              ),
-            ).then(events => ({ ended: true, events })),
-            Bun.sleep(10_000).then(() => ({ ended: false, events: [] as AgentEvent[] })),
-          ]),
-        'turn',
-      );
+      ({ value: outcome, log: daemonLog } = await withDaemonLog(() =>
+        held(
+          SLUG,
+          () =>
+            Promise.race([
+              drain(
+                spawnAgentProcess(
+                  turnStart({ mcpUpstream: upstream }),
+                  async () => ({
+                    argv: ['/opt/claude'],
+                    parseLine: () => [],
+                    cleanup: async () => {
+                      driverCleanups++;
+                    },
+                  }),
+                  host.policy,
+                ),
+              ).then(events => ({ ended: true, events })),
+              Bun.sleep(10_000).then(() => ({ ended: false, events: [] as AgentEvent[] })),
+            ]),
+          'turn',
+        ),
+      ));
       // The control: the close really failed — the run's sockets are still there.
       leftBehind = existsSync(egressParent) ? readdirSync(egressParent) : [];
     } finally {
@@ -1880,6 +1957,9 @@ describe('the egress gate lives exactly as long as the run, on every exit path',
     expect(outcome.events.some(event => event.type === 'result')).toBe(true);
     // The failure is a line in the session's own log, not a silence.
     expect(outcome.events.some(event => event.type === 'text' && event.text.includes('[egress]'))).toBe(true);
+    // ...and that line is FIXED: the thrown value (the unlink's errno, the runtime path) is in the
+    // daemon's log only — the stream door relays text events byte for byte to the browser.
+    expect(closeProse(outcome.events, daemonLog, egressParent)).toEqual({ onEvents: false, inDaemonLog: true });
   });
 
   test('a refusal after the gate opened is reported AS itself, even when the gate then fails to close', async () => {
@@ -1895,18 +1975,23 @@ describe('the egress gate lives exactly as long as the run, on every exit path',
     const policy = host.policy;
     let events: AgentEvent[];
     let leftBehind: string[];
+    let log = '';
     try {
-      events = await held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), policy)), 'turn');
+      ({ value: events, log } = await withDaemonLog(() => held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), policy)), 'turn')));
       leftBehind = existsSync(egressParent) ? readdirSync(egressParent) : [];
     } finally {
       if (existsSync(egressParent)) chmodSync(egressParent, 0o770);
     }
     const refusal = events.find(event => event.type === 'error');
-    const message = refusal?.type === 'error' ? refusal.message : '';
-    expect({ closeFailed: leftBehind.length > 0, itself: /never said hello/.test(message) }).toEqual({
+    // The refusal is ITSELF (its reason on the event, its sentence in the daemon's log), not the close failure.
+    expect({ closeFailed: leftBehind.length > 0, reason: refusal?.type === 'error' ? refusal.reason : null, itself: /never said hello/.test(log) }).toEqual({
       closeFailed: true,
+      reason: 'confinement.unit_refused',
       itself: true,
     });
+    // The close failure reached the session as the FIXED onEgress line, its errno + path the log's.
+    expect(events.some(event => event.type === 'text' && event.text.includes('[egress]'))).toBe(true);
+    expect(closeProse(events, log, egressParent)).toEqual({ onEvents: false, inDaemonLog: true });
   });
 
   test('a build door whose gate FAILS to close still returns its own result, with an [egress] line in its log', async () => {
@@ -1921,24 +2006,27 @@ describe('the egress gate lives exactly as long as the run, on every exit path',
     const log: string[] = [];
     let outcome: { result: Awaited<ReturnType<typeof runConfined>> | null; error: unknown };
     let leftBehind: string[];
+    let daemonLog = '';
     try {
-      outcome = await held(SLUG, () =>
-        runConfined(
-          {
-            door: 'build',
-            slug: SLUG,
-            argv: ['bun', 'run', 'build'],
-            cwd: workspacePath(SLUG),
-            env: {},
-            timeoutMs: 5_000,
-            onStdout: chunk => log.push(chunk),
-          },
-          host.policy,
-        ).then(
-          result => ({ result, error: null }),
-          error => ({ result: null, error }),
+      ({ value: outcome, log: daemonLog } = await withDaemonLog(() =>
+        held(SLUG, () =>
+          runConfined(
+            {
+              door: 'build',
+              slug: SLUG,
+              argv: ['bun', 'run', 'build'],
+              cwd: workspacePath(SLUG),
+              env: {},
+              timeoutMs: 5_000,
+              onStdout: chunk => log.push(chunk),
+            },
+            host.policy,
+          ).then(
+            result => ({ result, error: null }),
+            error => ({ result: null, error }),
+          ),
         ),
-      );
+      ));
       leftBehind = existsSync(egressParent) ? readdirSync(egressParent) : [];
     } finally {
       if (existsSync(egressParent)) chmodSync(egressParent, 0o770);
@@ -1949,6 +2037,8 @@ describe('the egress gate lives exactly as long as the run, on every exit path',
       exitCode: outcome.result?.exitCode,
     }).toEqual({ closeFailed: true, rejected: null, exitCode: 0 });
     expect(log.some(line => line.includes("[egress] this run's egress gate did not close cleanly"))).toBe(true);
+    // A build's log is read by the museum through the engine: the fixed line, never the errno/path.
+    expect(closeProse([{ type: 'text', text: log.join('') }], daemonLog, egressParent)).toEqual({ onEvents: false, inDaemonLog: true });
   });
 });
 
@@ -2206,9 +2296,11 @@ describe('the gate a run is given tunnels to ITS plan’s hosts and nothing else
     // PR1: `driver: opts.driver` dropped from process.ts gave an opencode turn the
     // api.anthropic.com plan and started it; with it, the empty provider list refuses.
     const host = await standIn();
-    const refused = await held(SLUG, () => drain(spawnAgentProcess(turnStart({ driver: 'opencode' }), plan(['/opt/opencode']), host.policy)), 'turn');
+    const { value: refused, log } = await withDaemonLog(() =>
+      held(SLUG, () => drain(spawnAgentProcess(turnStart({ driver: 'opencode' }), plan(['/opt/opencode']), host.policy)), 'turn'),
+    );
     const error = refused.find(event => event.type === 'error');
-    expect(error?.type === 'error' && error.message).toContain('AGENT_PROVIDER_HOSTS');
+    expect({ refused: error?.type === 'error', logged: log.includes('AGENT_PROVIDER_HOSTS') }).toEqual({ refused: true, logged: true });
     expect(host.standIn.connects).toEqual([]);
     // Control: the same host runs a claude_code turn.
     const ran = await held(SLUG, () => drain(spawnAgentProcess(turnStart(), plan(), host.policy)), 'turn');

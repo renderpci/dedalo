@@ -24,23 +24,20 @@
 // mid-run auth.not_logged still raises the relogin overlay.
 //
 // The six `site_builder_*` UNDERSCORE aliases are GONE: the engine proxy refuses
-// by throwing the registered dotted codes (tools/tool_sitebuilder/server/index.ts
-// siteBuilderFailure / siteBuilderRejected), and its own terminal stream frame
+// by throwing the registered dotted codes (tools/tool_sitebuilder/server/wire.ts
+// siteBuilderFailure / siteBuilderRefusal — one code per refusal, its label the
+// sentence error_text renders), and its own terminal stream frame
 // now names `site_builder.stream_lost` (same file, sessionStream's pull catch) —
 // so every one of them matches `site_builder.*` on the dot.
 //
-// ONE non-registry token still reaches this client, and it is NOT a site_builder
-// one: the DAEMON's own SSE writer emits `event: error` with
-// `{code:'replay_failed'}` (publication/site_builder/src/sessions/sse.ts) when it
-// cannot replay a session's backlog, and the engine relays that stream
-// byte-for-byte. The daemon is outside the engine's registry by design (an
-// isolated subsystem), so the token has no dot to match on and needs its own row
-// — without it a lost backlog would toast in a corner instead of appearing in the
-// pane the operator is reading. REMOVAL: when the daemon frame carries a
-// registered code.
+// The daemon's own SSE frame (`replay_failed`, a session backlog it could not
+// read back) used to be the one non-registry token reaching this client: the
+// engine relays the stream through the stream door now (server/wire.ts
+// relaySessionFrames), which turns that frame — and every stored error event —
+// into the converter's body for a registered `site_builder.*` code. Its policy
+// row is gone with it.
 register_error_policy({
-	'site_builder.*'	: {action:'inline'},
-	'replay_failed'		: {action:'inline'}
+	'site_builder.*'	: {action:'inline'}
 })
 
 
@@ -439,7 +436,14 @@ sitebuilder_controller.prototype.render_event = function(body) {
 			self.append_line('sb_files', '✎ ' + body.files.length + ' file(s): ' + body.files.slice(0, 6).join(', '))
 			break
 		case 'error':
-			self.append_line('sb_error', '✖ ' + body.message)
+			// THE STREAM DOOR (WIRE-MAP): an error event carries the converter's body
+			// (`body.error` — code, label_key, retryable) and never the daemon's prose;
+			// the line is the code's LABEL. An agent that exited non-zero adds its own
+			// words (`agent_output`), shown as the AGENT's output, never as the error.
+			self.append_line('sb_error', '✖ ' + error_text(body.error))
+			if (typeof body.agent_output==='string' && body.agent_output.length) {
+				self.append_line('sb_agent_output', body.agent_output)
+			}
 			break
 		case 'turn_end':
 			self.append_line('sb_turn_end', body.state === 'idle' ? '✓ done' : ('■ ' + body.state))

@@ -41,6 +41,8 @@
 0644  root:root                 hostConfig      agent_units          /etc/systemd/system/dedalo-site-example-agent-s2-turn.target
 0644  root:root                 hostConfig      agent_units          /etc/systemd/system/dedalo-site-example-agent-s2-turn@.service
 0644  root:root                 hostConfig      agent_units          /etc/tmpfiles.d/dedalo-site-example-agent.conf
+0644  root:root                 hostConfig      agent_units          /var/lib/dedalo_sites/example/agents/s1/turn/.gitconfig
+0644  root:root                 hostConfig      agent_units          /var/lib/dedalo_sites/example/agents/s2/turn/.gitconfig
 0644  root:root                 hostConfig      agent_units          /var/lib/dedalo_sites/example/agents/turn.gitconfig
 
 [rendered-apache]  the same declaration with web.server = "apache"
@@ -72,4 +74,6 @@
 0644  root:root                 hostConfig      agent_units          /etc/systemd/system/dedalo-site-example-agent-s2-turn.target
 0644  root:root                 hostConfig      agent_units          /etc/systemd/system/dedalo-site-example-agent-s2-turn@.service
 0644  root:root                 hostConfig      agent_units          /etc/tmpfiles.d/dedalo-site-example-agent.conf
+0644  root:root                 hostConfig      agent_units          /var/lib/dedalo_sites/example/agents/s1/turn/.gitconfig
+0644  root:root                 hostConfig      agent_units          /var/lib/dedalo_sites/example/agents/s2/turn/.gitconfig
 0644  root:root                 hostConfig      agent_units          /var/lib/dedalo_sites/example/agents/turn.gitconfig

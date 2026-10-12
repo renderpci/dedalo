@@ -145,18 +145,32 @@ export class FrameDecoder {
  * THE KEYS A UNIT FIXES — `render/agent_units.ts` renders them as `Environment=` and the spec
  * may not set them (the shim refuses a spec that does). `DEDALO_*` stands for the whole
  * namespace: every key the shim reads for itself is one.
+ *
+ * A TYPED TUPLE, because `agent_identity.ts` `unitFixedEnvironment` is typed
+ * `Partial<Record<FixedEnvKey, string>>`: a key a unit fixes that is not listed here is a tsc
+ * error, not a key a caller could quietly set (the S3-HOME turn keys — `XDG_CONFIG_HOME`,
+ * `CLAUDE_CONFIG_DIR`, `XDG_DATA_HOME`, `XDG_STATE_HOME`, `XDG_CACHE_HOME` — point the agent's
+ * configuration at root's read-only `.config` and its state under `state/`).
  */
-export const FIXED_ENV_KEYS: readonly string[] = Object.freeze([
+export const FIXED_ENV_KEYS = Object.freeze([
   'HOME',
   'BUN_RUNTIME_TRANSPILER_CACHE_PATH',
   'GIT_CONFIG_GLOBAL',
   'GIT_CONFIG_NOSYSTEM',
+  'XDG_CONFIG_HOME',
+  'CLAUDE_CONFIG_DIR',
+  'XDG_DATA_HOME',
+  'XDG_STATE_HOME',
+  'XDG_CACHE_HOME',
   'DEDALO_*',
-]);
+] as const);
+
+/** A key a unit fixes: one of the listed names, or any `DEDALO_*`. */
+export type FixedEnvKey = Exclude<(typeof FIXED_ENV_KEYS)[number], 'DEDALO_*'> | `DEDALO_${string}`;
 
 /** Is `key` one the unit fixes? */
-export function isFixedEnvKey(key: string): boolean {
-  return key.startsWith('DEDALO_') || FIXED_ENV_KEYS.includes(key);
+export function isFixedEnvKey(key: string): key is FixedEnvKey {
+  return key.startsWith('DEDALO_') || (FIXED_ENV_KEYS as readonly string[]).includes(key);
 }
 
 export interface RunSpec {

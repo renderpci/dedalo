@@ -134,6 +134,13 @@
 .sb_error {
   color: var(--color_danger);
 }
+.sb_agent_output {
+  color: var(--fg_muted);
+  font-family: monospace;
+  font-size: 0.82rem;
+  border-left: 2px solid var(--color_danger);
+  padding-left: 8px;
+}
 .sb_notice {
   color: var(--color_warning);
   font-size: 0.82rem;

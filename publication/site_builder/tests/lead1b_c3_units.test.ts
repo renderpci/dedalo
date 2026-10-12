@@ -308,6 +308,16 @@ describe('G3 — root renders one socket, target and template per (site, door)',
               BUN_RUNTIME_TRANSPILER_CACHE_PATH: '0',
               HOME: door === 'git' ? '/nonexistent' : `${stateRoot}/s${k}/${door}`,
               ...(door === 'git' ? { GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' } : {}),
+              // S3-HOME: the turn's configuration in root's read-only `.config`, its state under `state/`.
+              ...(door === 'turn'
+                ? {
+                    XDG_CONFIG_HOME: `${stateRoot}/s${k}/turn/.config`,
+                    CLAUDE_CONFIG_DIR: `${stateRoot}/s${k}/turn/state/claude`,
+                    XDG_DATA_HOME: `${stateRoot}/s${k}/turn/state/data`,
+                    XDG_STATE_HOME: `${stateRoot}/s${k}/turn/state/xdg-state`,
+                    XDG_CACHE_HOME: `${stateRoot}/s${k}/turn/state/cache`,
+                  }
+                : {}),
             };
             expect({ template: names.template, env }).toEqual({ template: names.template, env: expectedEnv });
           }

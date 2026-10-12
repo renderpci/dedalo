@@ -32,14 +32,12 @@
  * decides nothing.
  */
 
-import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { config } from '../config';
 import type { DriverId } from '../drivers/types';
 import { ConfinementUnavailableError } from '../errors';
 import { DRIVER_IDS } from '../provision/layout';
-import { confinedPath } from '../util/paths';
-import { readFilePrivate, writeFilePrivateAtomic, mkdirPrivate } from '../util/shared_tree';
+import { mkdirPrivate, readFilePrivate, removeFilePrivate, writeFilePrivateAtomic } from '../util/shared_tree';
 import { isValidSlug } from '../util/slug';
 import { readManifest } from './manifest';
 
@@ -73,9 +71,8 @@ export async function writeSiteDriver(slug: string, driver: DriverId): Promise<v
 
 /** Forget the site's record (its delete, or a create rolled back). Absent is fine. */
 export async function removeSiteDriver(slug: string): Promise<void> {
-  // `rm` unlinks the final name and never follows it; the directory above is the daemon's,
-  // under a root no run can write.
-  await rm(confinedPath(config.SITES_ROOT, recordPath(slug)), { force: true });
+  // The no-follow door: the chain walked O_NOFOLLOW, the final name unlinked, never followed.
+  await removeFilePrivate(config.SITES_ROOT, recordPath(slug));
 }
 
 /** The driver a session of `slug` runs when the request names none. Absent → REFUSED. */

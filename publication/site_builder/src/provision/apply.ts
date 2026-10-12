@@ -52,9 +52,13 @@ import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
 import {
   chmodSync,
+  closeSync,
+  constants as FS,
   existsSync,
+  fstatSync,
   lstatSync,
   mkdirSync,
+  openSync,
   readFileSync,
   readdirSync,
   readlinkSync,
@@ -65,7 +69,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
-import { agentUnitNames } from '../drivers/agent_identity';
+import { agentHomeFor, agentUnitNames, isAgentOrdinal, TURN_HOME_CONFIG, TURN_HOME_SKELETON, TURN_STATE_CLI_DIR } from '../drivers/agent_identity';
 import { DOORS } from '../drivers/network_profile';
 import { SYSTEMD_FLOOR } from '../drivers/unit_properties';
 import { type AgentLedger, ledgerAllOrdinals, ledgerOrdinals, parseAgentLedger } from './identities';
@@ -83,6 +87,7 @@ import {
   type FileAction,
   type HostState,
   type PathObservation,
+  type TurnHomeRebuildAction,
 } from './plan';
 
 /* ────────────────────────────────────────────────────────────────────────────────────
@@ -105,6 +110,12 @@ export interface PathFacts {
   readonly mode: number;
   readonly owner: string;
   readonly group: string;
+  /**
+   * The filesystem it lives on (`st_dev`). Read by the one rename that must prove it stays on one
+   * filesystem before it moves anything (the turn HOME rebuild); absent from a stand-in io that
+   * does not state it, which that rebuild refuses rather than assumes.
+   */
+  readonly dev?: number;
 }
 
 /** The result of running one command. `code` is the exit status; 127 means "not found". */
@@ -541,6 +552,11 @@ function executeOne(action: Action, io: ProvisionIo, state: RunState): ActionOut
       return { action, status: 'done', detail: `removed ${action.path}` };
     }
 
+    // ── A pre-S3 turn HOME rebuilt root's (S3-HOME). Staged, carried by rename, archived,
+    // swapped — never re-owned in place, never copied, never deleted.
+    case 'turn_home_rebuild':
+      return rebuildTurnHome(action, io, state);
+
     default: {
       // Exhaustiveness as a compile error. A new action kind must be given an execution
       // rule HERE, in the same commit that adds it — never defaulted to "ignore", which
@@ -552,6 +568,196 @@ function executeOne(action: Action, io: ProvisionIo, state: RunState): ActionOut
       );
     }
   }
+}
+
+/** Owner and group of a skeleton row, resolved for one rebuild. */
+function skeletonOwner(action: TurnHomeRebuildAction, owner: 'root' | 'identity'): { owner: string; group: string } {
+  return owner === 'root' ? { owner: 'root', group: 'root' } : { owner: action.identity, group: action.group };
+}
+
+/**
+ * A directory of the staging tree, as the skeleton says: created when absent, its owner and
+ * mode re-asserted when present (staging sits in root's 0755 site directory and its only
+ * identity-owned part belongs to an identity the plan proved idle). Anything else standing
+ * there is refused — the staging tree is never written through.
+ */
+function ensureStagedDir(io: ProvisionIo, path: string, owner: string, group: string, mode: number): void {
+  const facts = io.stat(path);
+  if (facts && facts.type !== 'dir') {
+    throw new Error(`'${path}' is a ${facts.type} where the staged turn HOME needs a directory; nothing more was moved`);
+  }
+  if (!facts) {
+    io.mkdir(path);
+    io.chmod(path, mode);
+    io.chown(path, owner, group);
+    return;
+  }
+  reconcileAccess(io, path, owner, group, mode);
+}
+
+/**
+ * Is a staged turn HOME complete enough to swap in? Every directory row of the skeleton is a
+ * directory with the skeleton's owner. (The io has no readdir, by design: staging is root's
+ * and sits in root's directory, and the one identity-owned part belongs to a proved-idle
+ * identity — so the rows are what can be in it. Conformance checks the closed world before
+ * any run.)
+ */
+function stagedProblem(action: TurnHomeRebuildAction, io: ProvisionIo): string | null {
+  for (const row of TURN_HOME_SKELETON) {
+    if (row.type !== 'dir') continue;
+    const path = row.rel === '.' ? action.staging : join(action.staging, row.rel);
+    const facts = io.stat(path);
+    const want = skeletonOwner(action, row.owner);
+    if (!facts || facts.type !== 'dir' || facts.owner !== want.owner) {
+      return `'${path}' is ${facts ? `a ${facts.type} of ${facts.owner}` : 'absent'}, and the staged turn HOME needs a directory of ${want.owner}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * A CARRY SOURCE, PROVED: `from` (relative to the old HOME) is a real entry of `type` owned by the
+ * identity, and EVERY directory between the HOME and it is the identity's real directory — so a
+ * rename by root moves exactly what the identity left in its own HOME, never what a planted link
+ * points at (`state` → `/etc`, `.claude` → another site's tree). The identity is proved idle
+ * (`pgrep -U`, earlier in the plan), so nothing swaps a component between this and the rename.
+ * Null when it may be carried; else why not (or `absent`).
+ */
+function carrySourceProblem(io: ProvisionIo, home: string, entry: TurnHomeRebuildAction['carry'][number], identity: string): string | null {
+  const parts = entry.from.split('/');
+  let path = home;
+  for (const [index, part] of parts.entries()) {
+    path = join(path, part);
+    const facts = io.stat(path);
+    if (!facts) return 'absent';
+    const last = index === parts.length - 1;
+    const want = last ? entry.type : 'dir';
+    if (facts.type !== want || facts.owner !== identity) {
+      return `${last ? '' : `its parent '${parts.slice(0, index + 1).join('/')}' is `}a ${facts.type} of ${facts.owner}, not the identity's ${want}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * S3-HOME — REBUILD ONE TURN HOME ROOT'S (`TurnHomeRebuildAction`). In order:
+ *
+ *   1. RESUME: `staging` present and `home` absent is the one crash state — checked, swapped.
+ *   2. GUARDS: a `home` that is not a directory is refused; so is a rebuild whose HOME, site
+ *      directory and archive are not ONE filesystem (`st_dev`), whose archive directory is
+ *      missing, or whose archive name is taken — each refused with NOTHING moved (a rename across
+ *      filesystems would fail half-way; an archive is never overwritten).
+ *   3. STAGE: the skeleton's directories at `staging` (root 0755, `state` the identity's 0700,
+ *      `.config` root 0755). The `.gitconfig` is the artifact phase's, after this.
+ *   4. CARRY, by rename and only the allowlist (`TURN_HOME_CARRY`): a real entry of the expected
+ *      type owned by the identity, under the identity's real directories (`carrySourceProblem`).
+ *      A link or a foreign entry is NOT carried — it is named in the result and archived with the
+ *      rest. A carry target that already exists (a resumed partial run, or an earlier source of
+ *      the same state) is never overwritten. The CLI's directory (`state/claude`) exists after.
+ *   5. ARCHIVE: the old HOME closed root:root 0700 (the directory itself, never recursively —
+ *      nothing is followed through what a turn planted inside) and renamed to
+ *      `<retired.dir>/<stem>.<utc>` (the name proved free in step 2).
+ *   6. SWAP: `staging` renamed to `home`.
+ */
+function rebuildTurnHome(action: TurnHomeRebuildAction, io: ProvisionIo, state: RunState): ActionOutcome {
+  const { home, staging } = action;
+  const homeFacts = io.stat(home);
+
+  if (!homeFacts) {
+    if (!io.stat(staging)) {
+      return {
+        action,
+        status: 'failed',
+        detail: `neither '${home}' nor its staging '${staging}' exists — the host changed since the plan was made; re-run`,
+      };
+    }
+    const problem = stagedProblem(action, io);
+    if (problem) return { action, status: 'failed', detail: `the staged turn HOME cannot be swapped in: ${problem}` };
+    io.rename(staging, home);
+    state.written.push(home);
+    return { action, status: 'done', detail: `resumed: ${staging} -> ${home} (the staged turn HOME swapped in)` };
+  }
+  if (homeFacts.type !== 'dir') {
+    return { action, status: 'failed', detail: `'${home}' is a ${homeFacts.type}, not a directory; nothing was moved` };
+  }
+
+  // 2. ONE FILESYSTEM, proved before anything moves.
+  const archiveFacts = io.stat(action.retired.dir);
+  const siteFacts = io.stat(dirname(home));
+  if (!archiveFacts || archiveFacts.type !== 'dir') {
+    return { action, status: 'failed', detail: `the archive directory '${action.retired.dir}' is ${archiveFacts ? `a ${archiveFacts.type}` : 'absent'}; nothing was moved` };
+  }
+  const devices = [homeFacts.dev, siteFacts?.dev, archiveFacts.dev];
+  if (devices.some(dev => dev === undefined) || new Set(devices).size !== 1) {
+    return {
+      action,
+      status: 'failed',
+      detail:
+        `'${home}', its site directory and the archive '${action.retired.dir}' are not one filesystem ` +
+        `(st_dev ${devices.map(dev => (dev === undefined ? '?' : String(dev))).join(', ')}): the rebuild moves by rename, ` +
+        `which cannot cross one. Nothing was moved; put the agent state root on one filesystem`,
+    };
+  }
+
+  // …and the archive's name is free: an archive is never overwritten, and a refusal after the
+  // carry would leave the state half-moved — so it is refused HERE, before anything moves.
+  const archive = join(action.retired.dir, `${action.retired.stem}.${archiveStamp(new Date())}`);
+  if (io.stat(archive)) {
+    return { action, status: 'failed', detail: `'${archive}' already exists; an archive is never overwritten. Nothing was moved` };
+  }
+
+  // 3. The skeleton's directories, staged.
+  for (const row of TURN_HOME_SKELETON) {
+    if (row.type !== 'dir') continue;
+    const { owner, group } = skeletonOwner(action, row.owner);
+    ensureStagedDir(io, row.rel === '.' ? staging : join(staging, row.rel), owner, group, row.mode);
+  }
+  const identityMode = TURN_HOME_SKELETON.find(row => row.owner === 'identity' && row.type === 'dir')?.mode ?? 0o700;
+
+  // 4. The CLI's state, carried by rename — the allowlist only.
+  const carried: string[] = [];
+  const notCarried: string[] = [];
+  for (const entry of action.carry) {
+    const to = join(staging, entry.to);
+    const problem = carrySourceProblem(io, home, entry, action.identity);
+    if (problem === 'absent') continue;
+    if (problem !== null) {
+      notCarried.push(`${entry.from} (${problem})`);
+      continue;
+    }
+    if (io.stat(to)) {
+      notCarried.push(`${entry.from} (its target ${entry.to} already exists)`);
+      continue;
+    }
+    // Every directory above a nested target (`state/claude/…`): the identity's, 0700.
+    let parent = staging;
+    for (const part of dirname(entry.to).split('/')) {
+      parent = join(parent, part);
+      if (!io.stat(parent)) ensureStagedDir(io, parent, action.identity, action.group, identityMode);
+    }
+    io.rename(join(home, entry.from), to);
+    carried.push(entry.from);
+  }
+  // The CLI's own directory, fresh when nothing was carried into it.
+  if (!io.stat(join(staging, TURN_STATE_CLI_DIR))) {
+    ensureStagedDir(io, join(staging, TURN_STATE_CLI_DIR), action.identity, action.group, identityMode);
+  }
+
+  // 5. The old HOME, closed and archived (never deleted).
+  io.chown(home, 'root', 'root');
+  io.chmod(home, ARCHIVE_MODE);
+  io.rename(home, archive);
+
+  // 6. The swap.
+  io.rename(staging, home);
+  state.written.push(home, archive);
+  return {
+    action,
+    status: 'done',
+    detail:
+      `rebuilt ${home} root's; carried ${carried.length > 0 ? carried.join(', ') : 'nothing'}` +
+      `${notCarried.length > 0 ? `; NOT carried (archived): ${notCarried.join(', ')}` : ''}; old HOME archived -> ${archive}`,
+  };
 }
 
 /**
@@ -751,6 +957,12 @@ export function check(actions: readonly Action[]): CheckReport {
       case 'unlink':
         writes.push({ path: action.path, disposition: 'unlink' });
         break;
+      case 'turn_home_rebuild':
+        writes.push({
+          path: action.home,
+          disposition: `rebuild root's (staged at ${action.staging}; old HOME archived -> ${action.retired.dir}/${action.retired.stem}.<utc>)`,
+        });
+        break;
     }
   }
 
@@ -798,6 +1010,7 @@ function factsOf(path: string): PathFacts | null {
       mode: entry.mode & 0o7777,
       owner: nameOfUser(entry.uid),
       group: nameOfGroup(entry.gid),
+      dev: Number(entry.dev),
     });
   } catch {
     return null;
@@ -982,17 +1195,120 @@ function htpasswdNames(path: string): readonly string[] | undefined {
  * owner and mtime are facts the plan needs; the value is not, in any mode, ever.
  */
 /** Directory → its entry names, for the directories that could be read. */
-function directoryListings(dirs: readonly string[]): Record<string, readonly string[]> {
+function directoryListings(dirs: readonly string[], opts: { readonly realDirsOnly?: boolean } = {}): Record<string, readonly string[]> {
   const listings: Record<string, readonly string[]> = {};
   for (const dir of new Set(dirs)) {
     try {
-      listings[dir] = Object.freeze(readdirSync(dir).sort());
+      // A directory an identity wrote is listed only when it IS one: a planted link there would
+      // have root list (and the report print) the names of whatever directory it points at.
+      const names = opts.realDirsOnly ? listRealDirectory(dir) : readdirSync(dir);
+      if (names === undefined) continue;
+      listings[dir] = Object.freeze([...names].sort());
     } catch {
       // Absent or unreadable. "I did not look" must not read as "it was empty", so the
       // directory contributes no entry at all and the plan reports no orphan for it.
     }
   }
   return listings;
+}
+
+/**
+ * READS IN A DIRECTORY AN IDENTITY CAN WRITE — on the handle, never on the path twice.
+ *
+ * Since S3-HOME root observes paths inside a pre-S3 turn HOME (its `.gitconfig`, the HOME and
+ * its `.config` listed). The identity owns that HOME until the rebuild, so between an `lstat`
+ * and a path-based read it can swap the name: to a link (root reads, and the plan's report
+ * prints, whatever root can read) or to a FIFO (the read blocks and `provision apply` hangs).
+ * So each read OPENS the name `O_NOFOLLOW` (a link is a refusal, not a redirect) and
+ * `O_NONBLOCK` (a FIFO opens and is refused, never waited on), then asks `fstat` of THE HANDLE
+ * — a regular file with ONE name (a hard link is the same inode under a second name, which
+ * `O_NOFOLLOW` cannot see) — and reads from the handle. Anything else is `undefined`: no
+ * content, i.e. drift, which apply rewrites by a rename over the name (never into the inode).
+ * The same law as `util/shared_tree.ts`'s readers, synchronous because the observer is.
+ */
+export function readRegularFileNoFollow(path: string): string | undefined {
+  let fd: number;
+  try {
+    fd = openSync(path, FS.O_RDONLY | FS.O_NOFOLLOW | FS.O_NONBLOCK);
+  } catch {
+    return undefined;
+  }
+  try {
+    const facts = fstatSync(fd);
+    if (!facts.isFile() || facts.nlink !== 1) return undefined;
+    return readFileSync(fd, 'utf8');
+  } catch {
+    return undefined;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * A DIRECTORY'S NAMES, only when the name IS a real directory at the moment it is read. Opened
+ * `O_DIRECTORY|O_NOFOLLOW` (a link is refused). Linux lists THE HANDLE (`/proc/self/fd/<fd>`,
+ * which names the opened directory itself, not the path again): no window at all. Elsewhere
+ * (a developer's macOS, which has no fd-relative listing) the path is listed and then proved to
+ * still be the opened inode (same dev and ino) — a swap during the listing is caught unless it
+ * is swapped back by then, a residual window of the fallback only. `undefined` = not listed.
+ */
+export function listRealDirectory(path: string): readonly string[] | undefined {
+  let fd: number;
+  try {
+    fd = openSync(path, FS.O_RDONLY | FS.O_DIRECTORY | FS.O_NOFOLLOW);
+  } catch {
+    return undefined;
+  }
+  try {
+    const opened = fstatSync(fd);
+    if (!opened.isDirectory()) return undefined;
+    const viaHandle = `/proc/self/fd/${fd}`;
+    if (existsSync(viaHandle)) return readdirSync(viaHandle);
+    const names = readdirSync(path);
+    const after = lstatSync(path);
+    return after.isDirectory() && after.dev === opened.dev && after.ino === opened.ino ? names : undefined;
+  } catch {
+    return undefined;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * EACH TURN HOME AND ITS `.config`, LISTED (S3-HOME) — the closed world the daemon holds a HOME
+ * to, as the plan's predicate reads it (`HostState.turnHomeEntries`). The HOMEs of every ordinal
+ * the ledger binds AND of every `s<k>` directory standing under the agent state root (a HOME is a
+ * HOME whether or not the ledger still names its identity; the plan judges only the ones it
+ * binds). NAMES only, and only of a REAL directory: a `.config` (or HOME) that is a link is not
+ * listed — root would otherwise list, and the report print, whatever directory it names; its own
+ * row refuses it as a link. `at` maps a host path to where it is read: the identity on a host, a
+ * gate's scratch prefix in a test observer (which must list exactly as this one does).
+ */
+export function turnHomeListings(
+  layout: InstanceLayout,
+  ordinals: Iterable<number>,
+  at: (path: string) => string = path => path,
+): Record<string, readonly string[]> {
+  const ks = new Set<number>(ordinals);
+  try {
+    for (const name of readdirSync(at(layout.agentStateRoot))) {
+      const match = /^s([1-9][0-9]*)$/.exec(name);
+      if (match && isAgentOrdinal(Number(match[1]))) ks.add(Number(match[1]));
+    }
+  } catch {
+    // No state root yet: only the ledger's ordinals (whose HOMEs are then absent too).
+  }
+  const dirs = [...ks].sort((a, b) => a - b).flatMap(k => {
+    const home = agentHomeFor(layout.agentStateRoot, k, 'turn');
+    return [home, join(home, TURN_HOME_CONFIG)];
+  });
+  const listed = directoryListings(dirs.map(at), { realDirsOnly: true });
+  const out: Record<string, readonly string[]> = {};
+  for (const dir of dirs) {
+    const names = listed[at(dir)];
+    if (names !== undefined) out[dir] = names;
+  }
+  return out;
 }
 
 /**
@@ -1072,8 +1388,13 @@ export function observeHost(layout: InstanceLayout, manifest: InstanceManifest):
     if (!facts) continue;
 
     let content: string | undefined;
+    // ONLY A REGULAR FILE'S bytes, never through a link, never off a FIFO: since S3-HOME a
+    // contentful path can sit in a directory an identity wrote (a pre-S3 turn HOME's `.gitconfig`,
+    // before its rebuild). The `lstat` above is NOT trusted for it — the name can be swapped after
+    // it — so the reader asks the handle it reads from (`readRegularFileNoFollow`). Anything but a
+    // one-name regular file reads as no content — drift, rewritten by a rename over it.
     if (contentful.has(path)) {
-      const bytes = readFileTextOrUndefined(path);
+      const bytes = readRegularFileNoFollow(path);
       if (bytes !== undefined) content = bytes;
     }
 
@@ -1127,6 +1448,10 @@ export function observeHost(layout: InstanceLayout, manifest: InstanceManifest):
     // host remembers. A directory that cannot be read contributes no entry rather than an
     // empty one — the same rule as every stat above.
     vhostDirEntries: directoryListings([layout.vhostDir, layout.vhostEnabledDir]),
+    // EACH TURN HOME, LISTED (S3-HOME): the closed world the daemon holds it to — a stray entry
+    // at HOME level or in `.config` is what the plan rebuilds the HOME for. Root reads it; the
+    // names only, never a byte of what a turn wrote.
+    turnHomeEntries: turnHomeListings(layout, identities.values()),
     agentLedger,
     resolvedPaths: resolvedExecPaths(layout),
     pid1Version: readPid1Version(),
@@ -1144,14 +1469,6 @@ function webServerUnitOf(layout: InstanceLayout): string | undefined {
   return candidates.find(unit => spawnSync('systemctl', ['cat', `${unit}.service`]).status === 0);
 }
 
-function readFileTextOrUndefined(path: string): string | undefined {
-  try {
-    return readFileSync(path, 'utf8');
-  } catch {
-    return undefined;
-  }
-}
-
 function readLinkOrUndefined(path: string): string | undefined {
   try {
     // Verbatim, relative targets included: `build/promote.ts` keeps them relative so the
@@ -1163,11 +1480,9 @@ function readLinkOrUndefined(path: string): string | undefined {
 }
 
 function directoryIsEmpty(path: string): boolean | undefined {
-  try {
-    return readdirSync(path).length === 0;
-  } catch {
-    return undefined;
-  }
+  // The same handle-checked listing: a dir swapped for a link after the `lstat` says nothing.
+  const names = listRealDirectory(path);
+  return names === undefined ? undefined : names.length === 0;
 }
 
 function mtimeOrUndefined(path: string): number | undefined {
