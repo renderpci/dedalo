@@ -46,6 +46,17 @@
  *    no hierarchy.json entry, is a WARNING — strongly recommended, installable
  *    later from Maintenance › Install hierarchies.
  *
+ *  - the ROUTE (terminal installer phase 2, 2026-10-12): `production` (a named
+ *    INSTANCE on a shared host — multi_instance.md), `docker`, `trial` (Docker
+ *    without media protection — install.sh's stack) or `developer` (absent = the
+ *    engine steps on this host, the behaviour before routes existed). A route
+ *    changes answer DEFAULTS only (routeDefaults — the instance-derived names of
+ *    a production install, the compose stack's constants); the step list is the
+ *    same on every route until the host steps land;
+ *  - the FIELD TAGS of every refusal (`fieldErrors`): the same sentences as
+ *    `errors`, each with the answer key it is about — what the terminal screen
+ *    model (screen_model.ts) shows on each question.
+ *
  * WHAT IT NEVER CONTAINS: DEDALO_SUPERVISED. Supervision is declared by the
  * process manager that restarts the server (systemd unit, compose service,
  * the supervised package scripts), never by ../private/.env, which every launch
@@ -69,7 +80,12 @@ import {
 	offeredHierarchies,
 	TOPONYMY_TYPOLOGY_ID,
 } from './hierarchy_meta.ts';
-import { rootPasswordErrors, validateAnswers } from './install_validation.ts';
+import {
+	answerProblems,
+	type FieldError,
+	INSTANCE_PATTERN,
+	rootPasswordErrors,
+} from './install_validation.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
 import {
 	activeOntologyTldsOf,
@@ -124,6 +140,15 @@ export const OFFICIAL_CODE_SERVER: MasterServerEntry = Object.freeze({
 /** `official` = the official master (default); `none` = air-gapped, `[]` written. */
 export type UpdateServersChoice = 'official' | 'none';
 
+/**
+ * The install ROUTES (owner decisions 2026-10-11): production (native services,
+ * a named instance), docker (the compose stack), trial (Docker WITHOUT media
+ * protection — its own route, so it says what it is) and developer (a git
+ * checkout; the default when no route is given — the behaviour before routes).
+ */
+export const INSTALL_ROUTES = ['production', 'docker', 'trial', 'developer'] as const;
+export type InstallRoute = (typeof INSTALL_ROUTES)[number];
+
 /** Every install step, in run order. Each id IS a wizard router action name. */
 export const INSTALL_STEP_IDS = [
 	'test_db_connection',
@@ -143,6 +168,10 @@ export type InstallStepId = (typeof INSTALL_STEP_IDS)[number];
 
 /** The normalized answers — the SAME key names the wizard posts. */
 export interface InstallAnswers {
+	/** The route (absent = developer). Terminal-only: the wizard refuses it (config_persist.ts). */
+	route: InstallRoute;
+	/** The production instance name ('' on every other route). Terminal-only, like `route`. */
+	instance: string;
 	db_hostname: string;
 	db_port: string;
 	db_socket: string;
@@ -206,6 +235,8 @@ export interface InstallAnswers {
  * the plan's own input (buildInstallPlan `rootPassword`).
  */
 const ANSWER_CLASS: Readonly<Record<keyof InstallAnswers, 'secret' | 'plain'>> = Object.freeze({
+	route: 'plain',
+	instance: 'plain',
 	db_hostname: 'plain',
 	db_port: 'plain',
 	db_socket: 'plain',
@@ -292,6 +323,14 @@ export interface InstallPlan {
 	 */
 	readonly hierarchyDependencies: readonly HierarchyDependency[];
 	/**
+	 * The thesauri the ONTOLOGY side declares (the vendored core + the install
+	 * order) and the answers do not decline — before the chosen thesauri's own
+	 * declarations are merged in. What a front end needs to tell "pre-ticked
+	 * because an ontology needs it" from "pre-ticked because a ticked thesaurus
+	 * declares it" (screen_model.ts thesaurus mapping).
+	 */
+	readonly ontologyHierarchyDependencies: readonly HierarchyDependency[];
+	/**
 	 * Advice shown to the operator, never a choice made for them — today the
 	 * toponymy suggestion ({@link TOPONYMY_SUGGESTION}) when the plan installs
 	 * no toponymy thesaurus.
@@ -315,6 +354,13 @@ export interface InstallPlan {
 	readonly rootPasswordErrors: readonly string[];
 	/** Empty = valid. */
 	readonly errors: readonly string[];
+	/**
+	 * The answer-level refusals TAGGED with their answer key — every message is
+	 * also in `errors` (byte-identical). Not tagged (review-level only): the .env
+	 * control-character errors, a broken manifest, an unresolved catalog and the
+	 * root password's (its own `rootPasswordErrors`).
+	 */
+	readonly fieldErrors: readonly FieldError[];
 }
 
 type RawAnswers = Readonly<Record<string, unknown>>;
@@ -358,6 +404,70 @@ function parseUpdateServers(value: unknown, errors: string[]): UpdateServersChoi
 	return 'official';
 }
 
+/** route: absent/'' → developer (the behaviour before routes); else one of INSTALL_ROUTES. */
+function parseRoute(value: unknown, problems: FieldError[]): InstallRoute {
+	if (value === undefined || value === null || value === '') return 'developer';
+	const route = String(value);
+	if ((INSTALL_ROUTES as readonly string[]).includes(route)) return route as InstallRoute;
+	problems.push({ key: 'route', message: `route must be ${INSTALL_ROUTES.join('|')}` });
+	return 'developer';
+}
+
+/**
+ * The answer defaults a ROUTE changes (D6). Everything else defaults alike on
+ * every route.
+ *  - production: the instance's own names, as docs/install/multi_instance.md
+ *    creates them — PostgreSQL role AND database `dedalo_<i>`, media
+ *    `/srv/dedalo/<i>/media`, socket `/run/dedalo-<i>/dedalo_ts.sock` (systemd
+ *    RuntimeDirectory), publication database `web_<i>`; '' while the instance is
+ *    missing or malformed (its own error says so);
+ *  - docker / trial: the compose stack's constants (install.sh passes the
+ *    SAME values as explicit flags — an older pulled image does not know
+ *    `--route`; gate: install_screen_model_tripwire);
+ *  - developer: no database name or user (asked), media and socket not written.
+ */
+export interface RouteDefaults {
+	readonly db_hostname: string;
+	readonly db_database: string;
+	readonly db_username: string;
+	readonly media_path: string;
+	readonly unix_socket: string;
+	readonly mysql_database: string;
+}
+
+const STACK_DEFAULTS: RouteDefaults = Object.freeze({
+	db_hostname: 'postgres',
+	db_database: 'dedalo',
+	db_username: 'dedalo',
+	media_path: '/srv/dedalo/media',
+	unix_socket: '/run/dedalo/dedalo_ts.sock',
+	mysql_database: 'web_dedalo',
+});
+
+export function routeDefaults(route: InstallRoute, instance: string): RouteDefaults {
+	if (route === 'docker' || route === 'trial') return STACK_DEFAULTS;
+	if (route === 'production') {
+		const named = INSTANCE_PATTERN.test(instance) ? instance : '';
+		const derive = (shape: (name: string) => string): string => (named === '' ? '' : shape(named));
+		return {
+			db_hostname: 'localhost',
+			db_database: derive((name) => `dedalo_${name}`),
+			db_username: derive((name) => `dedalo_${name}`),
+			media_path: derive((name) => `/srv/dedalo/${name}/media`),
+			unix_socket: derive((name) => `/run/dedalo-${name}/dedalo_ts.sock`),
+			mysql_database: named === '' ? 'web_dedalo' : `web_${named}`,
+		};
+	}
+	return {
+		db_hostname: 'localhost',
+		db_database: '',
+		db_username: '',
+		media_path: '',
+		unix_socket: '',
+		mysql_database: 'web_dedalo',
+	};
+}
+
 /**
  * The vendored thesaurus offer (every non-core hierarchy.json entry), or `[]`
  * plus the reader's refusal sentence in `errors` — the plan REPORTS a missing
@@ -388,7 +498,12 @@ function requestedHierarchies(value: unknown): string[] {
 }
 
 /** Drop core tlds (noted) and refuse ones hierarchy.json does not list; de-duplicated, order kept. */
-function parseHierarchies(value: unknown, notes: string[], errors: string[]): string[] {
+function parseHierarchies(
+	value: unknown,
+	notes: string[],
+	errors: string[],
+	problems: FieldError[] = [],
+): string[] {
 	const requested = requestedHierarchies(value);
 	if (requested.length === 0) return [];
 	const offered = new Set(offeredThesauri(errors).map((meta) => meta.tld));
@@ -397,7 +512,9 @@ function parseHierarchies(value: unknown, notes: string[], errors: string[]): st
 		if (isCoreHierarchyTld(tld)) {
 			notes.push(`${tld} is a core hierarchy (always activated) — dropped from the list`);
 		} else if (!offered.has(tld)) {
-			errors.push(`unknown hierarchy '${tld}' (no entry in hierarchy.json)`);
+			const message = `unknown hierarchy '${tld}' (no entry in hierarchy.json)`;
+			errors.push(message);
+			problems.push({ key: 'hierarchies', message });
 		} else if (!picked.includes(tld)) {
 			picked.push(tld);
 		}
@@ -413,14 +530,28 @@ function parseHierarchies(value: unknown, notes: string[], errors: string[]): st
 export const TOPONYMY_SUGGESTION =
 	"No toponymy thesaurus is selected (none is ever pre-selected): consider importing your own country's toponymy — e.g. --hierarchies np for an install in Nepal. --list-hierarchies lists the codes.";
 
-/** The suggestion when `hierarchies` holds no toponymy thesaurus of the offer; else none. */
-function thesaurusSuggestions(hierarchies: readonly string[], errors: string[]): string[] {
-	const offer = offeredThesauri(errors);
-	const toponymy = new Set(
-		offer.filter((meta) => meta.typology_id === TOPONYMY_TYPOLOGY_ID).map((meta) => meta.tld),
+/**
+ * Does `hierarchies` lack a COUNTRY toponymy? A country toponymy is a
+ * typology-2 entry that SHIPS TERMS (data files). Thesauri ship empty by design
+ * — only country toponymies and `lg` carry data — so a typology-2 entry WITHOUT
+ * data files (`htoponymy`, the toponymy DEFINITION) is not one: counting it
+ * would suppress the own-country suggestion for a plan that installs no place
+ * at all (install test campaign finding L31). False when the offer has no
+ * country toponymy (nothing to suggest).
+ */
+export function toponymyMissing(hierarchies: readonly string[], errors: string[]): boolean {
+	const countries = new Set(
+		offeredThesauri(errors)
+			.filter((meta) => meta.typology_id === TOPONYMY_TYPOLOGY_ID && meta.data_files.length > 0)
+			.map((meta) => meta.tld),
 	);
-	if (toponymy.size === 0) return [];
-	return hierarchies.some((tld) => toponymy.has(tld)) ? [] : [TOPONYMY_SUGGESTION];
+	if (countries.size === 0) return false;
+	return !hierarchies.some((tld) => countries.has(tld));
+}
+
+/** The suggestion when `hierarchies` holds no country toponymy of the offer; else none. */
+function thesaurusSuggestions(hierarchies: readonly string[], errors: string[]): string[] {
+	return toponymyMissing(hierarchies, errors) ? [TOPONYMY_SUGGESTION] : [];
 }
 
 /**
@@ -441,15 +572,15 @@ export function normalizeHierarchyChoice(value: unknown): {
 	return { hierarchies, notes, errors };
 }
 
-/** Database + entity + locale answers (the plan's defaults live here). */
-function coreAnswers(raw: RawAnswers) {
+/** Database + entity + locale answers (the plan's defaults live here; the route's in `d`). */
+function coreAnswers(raw: RawAnswers, d: RouteDefaults) {
 	const entity = text(raw, 'entity');
 	return {
-		db_hostname: textOr(raw, 'db_hostname', 'localhost'),
+		db_hostname: textOr(raw, 'db_hostname', d.db_hostname),
 		db_port: textOr(raw, 'db_port', '5432'),
 		db_socket: text(raw, 'db_socket'),
-		db_database: text(raw, 'db_database'),
-		db_username: text(raw, 'db_username'),
+		db_database: textOr(raw, 'db_database', d.db_database),
+		db_username: textOr(raw, 'db_username', d.db_username),
 		db_password: text(raw, 'db_password'),
 		entity,
 		entity_label: textOr(raw, 'entity_label', entity),
@@ -464,13 +595,13 @@ function coreAnswers(raw: RawAnswers) {
 }
 
 /** The optional services: diffusion (MariaDB), mailer (SMTP), serving/media. */
-function serviceAnswers(raw: RawAnswers) {
+function serviceAnswers(raw: RawAnswers, d: RouteDefaults) {
 	return {
 		diffusion: raw.diffusion === true,
 		mysql_hostname: textOr(raw, 'mysql_hostname', 'localhost'),
 		mysql_port: textOr(raw, 'mysql_port', '3306'),
 		mysql_socket: text(raw, 'mysql_socket'),
-		mysql_database: text(raw, 'mysql_database'),
+		mysql_database: textOr(raw, 'mysql_database', d.mysql_database),
 		mysql_username: text(raw, 'mysql_username'),
 		mysql_password: text(raw, 'mysql_password'),
 		mailer: raw.mailer === true,
@@ -481,27 +612,41 @@ function serviceAnswers(raw: RawAnswers) {
 		smtp_pass: text(raw, 'smtp_pass'),
 		smtp_from: text(raw, 'smtp_from'),
 		smtp_from_name: text(raw, 'smtp_from_name'),
-		media_path: text(raw, 'media_path'),
-		unix_socket: text(raw, 'unix_socket'),
+		media_path: textOr(raw, 'media_path', d.media_path),
+		unix_socket: textOr(raw, 'unix_socket', d.unix_socket),
 		media_access_mode: text(raw, 'media_access_mode'),
 	};
 }
 
-/** Raw answers (wizard post or CLI flags) → normalized answers + notes + errors. */
+/**
+ * Raw answers (wizard post or CLI flags) → normalized answers + notes + errors
+ * (+ the same refusals tagged by answer key, `fieldErrors`).
+ */
 export function normalizeInstallAnswers(raw: RawAnswers): {
 	answers: InstallAnswers;
 	notes: string[];
 	errors: string[];
+	fieldErrors: FieldError[];
 } {
 	const notes: string[] = [];
 	const errors: string[] = [];
+	const problems: FieldError[] = [];
+	const route = parseRoute(raw.route, problems);
+	const instance = text(raw, 'instance');
+	const defaults = routeDefaults(route, instance);
 	const ontologyChoice = normalizeOntologyChoice(raw.ontologies);
 	const declinedChoice = normalizeDeclinedDependencies(raw.declined_dependencies);
+	const serversErrors: string[] = [];
+	const update_servers = parseUpdateServers(raw.update_servers, serversErrors);
+	for (const message of serversErrors) problems.push({ key: 'update_servers', message });
+	errors.push(...problems.map((item) => item.message));
 	const answers: InstallAnswers = {
-		...coreAnswers(raw),
-		...serviceAnswers(raw),
-		update_servers: parseUpdateServers(raw.update_servers, errors),
-		hierarchies: parseHierarchies(raw.hierarchies, notes, errors),
+		route,
+		instance,
+		...coreAnswers(raw, defaults),
+		...serviceAnswers(raw, defaults),
+		update_servers,
+		hierarchies: parseHierarchies(raw.hierarchies, notes, errors, problems),
 		register_tools: raw.register_tools !== false,
 		ontologies: ontologyChoice.ontologies,
 		declined_dependencies: declinedChoice.declined,
@@ -510,11 +655,18 @@ export function normalizeInstallAnswers(raw: RawAnswers): {
 	// Every answer-only refusal (install_validation.ts): raised HERE, before any
 	// front end writes anything — the CLI argv, an answers file and the wizard
 	// post all pass through this one call.
-	validateAnswers(answers, notes, errors);
+	const validation = answerProblems(answers);
+	errors.push(...validation.map((item) => item.message));
 	return {
 		answers,
 		notes: [...notes, ...ontologyChoice.notes],
 		errors: [...errors, ...ontologyChoice.errors, ...declinedChoice.errors],
+		fieldErrors: [
+			...problems,
+			...validation,
+			...ontologyChoice.errors.map((message) => ({ key: 'ontologies', message })),
+			...declinedChoice.errors.map((message) => ({ key: 'declined_dependencies', message })),
+		],
 	};
 }
 
@@ -768,8 +920,17 @@ function envSections(
 function controlCharacterErrors(sections: readonly EnvSection[]): string[] {
 	return sections
 		.flatMap((section) => section.entries)
-		.filter((item) => /[\r\n\0]/.test(item.value))
+		.filter((item) => hasIllegalControlCharacter(item.value))
 		.map((item) => `${item.key} contains an illegal control character`);
+}
+
+/**
+ * THE .env line rule (CR/LF/NUL split a line — OPS-02): exported so a terminal
+ * front end refuses a typed SECRET at the prompt, before the Review — the plan
+ * only sees a secret when the run starts.
+ */
+export function hasIllegalControlCharacter(value: string): boolean {
+	return /[\r\n\0]/.test(value);
 }
 
 // ── the steps ────────────────────────────────────────────────────────────────
@@ -797,6 +958,8 @@ interface PlannedOntologies {
 	notes: string[];
 	warnings: string[];
 	errors: string[];
+	/** The closure's refusals (an unknown chosen ontology, an unoffered mandatory one), tagged `ontologies`. */
+	fieldErrors: FieldError[];
 }
 
 /**
@@ -848,6 +1011,7 @@ function closedOntologies(
 		notes: closure.notes,
 		warnings: [...catalog.warnings, ...closure.warnings, ...coreWarnings, ...thesauri.warnings],
 		errors: [...closure.errors, ...manifestErrors],
+		fieldErrors: closure.errors.map((message) => ({ key: 'ontologies', message })),
 	};
 }
 
@@ -872,6 +1036,7 @@ function planOntologies(
 			...closedOntologies(answers, source, vendoredOntologyCatalog()),
 			request: null,
 			errors: [unresolvedCatalog(source)],
+			fieldErrors: [],
 		};
 	}
 	return closedOntologies(answers, source, mergeOntologyCatalogs(given, vendoredOntologyCatalog()));
@@ -889,9 +1054,16 @@ function closedThesauri(
 	chosen: readonly string[],
 	answers: InstallAnswers,
 	activeOntologyTlds: readonly string[],
-): ThesaurusChoiceClosure {
+): ThesaurusChoiceClosure & { choiceErrors: string[] } {
 	if (chosen.length === 0) {
-		return { hierarchies: [], dependencies: [], notes: [], warnings: [], errors: [] };
+		return {
+			hierarchies: [],
+			dependencies: [],
+			notes: [],
+			warnings: [],
+			errors: [],
+			choiceErrors: [],
+		};
 	}
 	const manifestErrors: string[] = [];
 	const declarers = offeredThesauri(manifestErrors).map((meta) => ({
@@ -904,7 +1076,13 @@ function closedThesauri(
 		new Set(activeOntologyTlds),
 		declinePolicy(answers.declined_dependencies),
 	);
-	return { ...closure, errors: [...manifestErrors, ...closure.errors] };
+	// `choiceErrors`: the choice's own refusals (tagged `hierarchies`); a broken
+	// manifest is review-level.
+	return {
+		...closure,
+		errors: [...manifestErrors, ...closure.errors],
+		choiceErrors: closure.errors,
+	};
 }
 
 /**
@@ -924,7 +1102,7 @@ export function buildInstallPlan(
 		requireRootPassword?: boolean;
 	} = {},
 ): InstallPlan {
-	const { answers, notes, errors } = normalizeInstallAnswers(raw);
+	const { answers, notes, errors, fieldErrors: answerFieldErrors } = normalizeInstallAnswers(raw);
 	const passwordErrors = rootPasswordErrors(
 		context.rootPassword,
 		context.requireRootPassword === true,
@@ -965,6 +1143,7 @@ export function buildInstallPlan(
 			ontologies.hierarchyDependencies,
 			thesauri.dependencies,
 		),
+		ontologyHierarchyDependencies: ontologies.hierarchyDependencies,
 		suggestions,
 		ontologies: answers.ontologies,
 		ontologySource: ontologySourceView(ontologies.source),
@@ -978,6 +1157,16 @@ export function buildInstallPlan(
 			...langConfig.errors.map((error) => `languages: ${error}`),
 			...controlCharacterErrors(env),
 			...passwordErrors,
+		],
+		fieldErrors: [
+			...answerFieldErrors,
+			...ontologies.fieldErrors,
+			// A chosen thesaurus whose declared ontology is not installed (closeThesaurusChoice).
+			...thesauri.choiceErrors.map((message) => ({ key: 'hierarchies', message })),
+			...langConfig.fieldErrors.map((item) => ({
+				key: item.key,
+				message: `languages: ${item.message}`,
+			})),
 		],
 	};
 }
@@ -1028,6 +1217,8 @@ export const INSTALL_CLI_FLAGS: readonly {
 	key: string | null;
 	kind: 'value' | 'bool';
 }[] = Object.freeze([
+	{ flag: '--route', key: 'route', kind: 'value' },
+	{ flag: '--instance', key: 'instance', kind: 'value' },
 	{ flag: '--db-host', key: 'db_hostname', kind: 'value' },
 	{ flag: '--db-port', key: 'db_port', kind: 'value' },
 	{ flag: '--db-socket', key: 'db_socket', kind: 'value' },
@@ -1078,6 +1269,10 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--confirm-database', key: null, kind: 'value' },
 	{ flag: '--secrets-stdin', key: null, kind: 'bool' },
 	{ flag: '--execute', key: null, kind: 'bool' },
+	// The interactive front end (phase 2, 2026-10-12 — ui_plain/run_plain.ts).
+	{ flag: '--plain', key: null, kind: 'bool' },
+	{ flag: '--write-answers', key: null, kind: 'value' },
+	{ flag: '--list-langs', key: null, kind: 'bool' },
 ]);
 
 const FLAGS_BY_NAME: ReadonlyMap<string, (typeof INSTALL_CLI_FLAGS)[number]> = new Map(
@@ -1120,17 +1315,27 @@ export interface CliInstallInvocation {
 	secretsStdin: boolean;
 	/**
 	 * --execute: explicitly headless — never prompts; a missing answer or secret
-	 * is refused. Phase 1 has no interactive front end, so every run behaves so;
-	 * the flag is recorded on the run (install.state.json runs[].execute) and
-	 * gains its contrast when the interactive front end lands.
+	 * is refused. Without it, a headless run on a terminal PROMPTS for a missing
+	 * root password (fresh) or the secrets a resume still needs (scripts/install.ts).
+	 * Recorded on the run (install.state.json runs[].execute).
 	 */
 	execute: boolean;
+	/** --plain: the interactive front end in plain line mode (no full-screen UI, no colour). */
+	plain: boolean;
+	/** --write-answers <file>: write the reviewed answers as a dedalo.install.answers/1 file. */
+	writeAnswersPath: string | undefined;
+	/** --list-langs: print the language offer and exit. */
+	listLangs: boolean;
 	/** The argv secret flags given (each earns a stderr warning). */
 	argvSecretFlags: string[];
 	errors: string[];
 }
 
-/** A value flag's value, or the error that it has none. */
+/**
+ * A value flag's value, or the error that it has none. `--flag value` treats a
+ * following `--…` token as a missing value; `--flag=value` carries ANY value
+ * (one starting with `--`, an empty one) — the form cliArgsOf emits.
+ */
 function flagValue(argv: readonly string[], index: number, flag: string, errors: string[]) {
 	const value = argv[index + 1];
 	if (value === undefined || value.startsWith('--')) {
@@ -1138,6 +1343,14 @@ function flagValue(argv: readonly string[], index: number, flag: string, errors:
 		return undefined;
 	}
 	return value;
+}
+
+/** `--flag=value` → [flag, value]; any other token → [token, undefined]. */
+function splitInlineValue(token: string): [string, string | undefined] {
+	const at = token.indexOf('=');
+	return token.startsWith('--') && at > 2
+		? [token.slice(0, at), token.slice(at + 1)]
+		: [token, undefined];
 }
 
 type FrontEndSetter = (invocation: CliInstallInvocation, value: string | undefined) => void;
@@ -1154,6 +1367,9 @@ const FRONT_END_SETTERS: ReadonlyMap<string, FrontEndSetter> = new Map<string, F
 	['--confirm-database', (invocation, value) => (invocation.confirmDatabase = value)],
 	['--secrets-stdin', (invocation) => (invocation.secretsStdin = true)],
 	['--execute', (invocation) => (invocation.execute = true)],
+	['--plain', (invocation) => (invocation.plain = true)],
+	['--write-answers', (invocation, value) => (invocation.writeAnswersPath = value)],
+	['--list-langs', (invocation) => (invocation.listLangs = true)],
 ]);
 
 /** Apply one parsed flag to the invocation. */
@@ -1169,6 +1385,17 @@ function applyFlag(
 	else invocation.raw[spec.key as string] = !/^--(no|skip)-/.test(spec.flag);
 }
 
+/** A `--flag=value` token: a value flag takes it; a bool flag refuses one. Takes one token. */
+function applyInline(
+	invocation: CliInstallInvocation,
+	spec: (typeof INSTALL_CLI_FLAGS)[number],
+	inline: string,
+): number {
+	if (spec.kind === 'bool') invocation.errors.push(`${spec.flag} takes no value`);
+	else applyFlag(invocation, spec, inline);
+	return 1;
+}
+
 /**
  * Consume the flag at `index` (and its value, for a value flag); answers how
  * many tokens it took. An unparseable token is recorded as an error and skipped.
@@ -1178,7 +1405,7 @@ function consumeToken(
 	index: number,
 	invocation: CliInstallInvocation,
 ): number {
-	const token = argv[index] as string;
+	const [token, inline] = splitInlineValue(argv[index] as string);
 	const spec = FLAGS_BY_NAME.get(token);
 	if (spec === undefined) {
 		invocation.errors.push(
@@ -1186,6 +1413,7 @@ function consumeToken(
 		);
 		return 1;
 	}
+	if (inline !== undefined) return applyInline(invocation, spec, inline);
 	if (spec.kind === 'bool') {
 		applyFlag(invocation, spec, undefined);
 		return 1;
@@ -1199,6 +1427,39 @@ function consumeToken(
 /** Does the invocation continue a saved install (--resume or --abort)? */
 const continuing = (invocation: CliInstallInvocation): boolean =>
 	invocation.resume || invocation.abort;
+
+/** Does the invocation ask for a listing (--list-*)? */
+const listing = (invocation: CliInstallInvocation): boolean =>
+	invocation.listOntologies || invocation.listHierarchies || invocation.listLangs;
+
+/**
+ * Is the invocation HEADLESS — does it already carry what it is to do? Any
+ * answer (a flag that sets one), an answers file, `--plan`, a listing,
+ * `--resume`/`--abort`, `--secrets-stdin`, `--execute` or `--root-password`.
+ * Anything else (no flag, or only `--plain` / `--write-answers`) starts the
+ * interactive front end (front_end.ts selectFrontEnd). Owner decision 4 ("piped
+ * stdin without --answers is refused") is read as "without ANY answer source":
+ * flags + `--secrets-stdin` piped stay headless — install.sh and the gates run so.
+ */
+export function isHeadlessInvocation(invocation: CliInstallInvocation): boolean {
+	return HEADLESS_SOURCES.some((carries) => carries(invocation));
+}
+
+/** What makes an invocation headless (isHeadlessInvocation), one source each. */
+const HEADLESS_SOURCES: readonly ((invocation: CliInstallInvocation) => boolean)[] = [
+	(invocation) => Object.keys(invocation.raw).length > 0,
+	(invocation) => invocation.answersFile !== undefined,
+	(invocation) => invocation.planOnly,
+	listing,
+	continuing,
+	(invocation) => invocation.secretsStdin,
+	(invocation) => invocation.execute,
+	(invocation) => invocation.rootPassword !== undefined,
+];
+
+/** Headless for a reason other than --resume (the one run control --plain may join: it prompts the secrets). */
+const headlessBesidesResume = (invocation: CliInstallInvocation): boolean =>
+	isHeadlessInvocation({ ...invocation, resume: false });
 
 /** The run-control combinations that cannot mean anything — each a parser error. */
 const COMBINATION_RULES: readonly {
@@ -1214,9 +1475,23 @@ const COMBINATION_RULES: readonly {
 		error: '--plan cannot be combined with --resume or --abort',
 	},
 	{
-		refuses: (invocation) =>
-			(invocation.listOntologies || invocation.listHierarchies) && continuing(invocation),
+		refuses: (invocation) => listing(invocation) && continuing(invocation),
 		error: '--list-* cannot be combined with --resume or --abort',
+	},
+	{
+		refuses: (invocation) => invocation.plain && invocation.abort,
+		error: '--plain cannot be combined with --abort',
+	},
+	{
+		refuses: (invocation) =>
+			invocation.plain && !invocation.abort && headlessBesidesResume(invocation),
+		error:
+			'--plain is the interactive front end — it takes no answer flag, --answers, --plan, --list-*, --secrets-stdin, --execute or --root-password',
+	},
+	{
+		refuses: (invocation) =>
+			invocation.writeAnswersPath !== undefined && (continuing(invocation) || listing(invocation)),
+		error: '--write-answers cannot be combined with --resume, --abort or --list-*',
 	},
 	{
 		refuses: (invocation) => invocation.confirmDatabase !== undefined && !invocation.abort,
@@ -1247,6 +1522,9 @@ export function answersFromCliArgs(argv: readonly string[]): CliInstallInvocatio
 		confirmDatabase: undefined,
 		secretsStdin: false,
 		execute: false,
+		plain: false,
+		writeAnswersPath: undefined,
+		listLangs: false,
 		argvSecretFlags: [],
 		errors: [],
 	};
@@ -1306,6 +1584,78 @@ function answerFileKeyRefusal(key: string): string | null {
 	return (INSTALL_ANSWER_KEYS as readonly string[]).includes(key)
 		? null
 		: `answers file: unknown key '${key}'`;
+}
+
+/**
+ * The INVERSE of answersFromAnswersFile: normalized answers → the answers-file
+ * envelope (the plain keys only — a secret never enters a file; an undefined
+ * one is omitted). What `--write-answers` and the interactive Review's `write`
+ * produce; read back, it decides the same plan.
+ */
+export function answersFileOf(answers: InstallAnswers): {
+	schema: typeof ANSWERS_FILE_SCHEMA;
+	answers: Record<string, unknown>;
+} {
+	const plain: Record<string, unknown> = {};
+	for (const key of PLAIN_ANSWER_KEYS) {
+		if (answers[key] !== undefined) plain[key] = answers[key];
+	}
+	return { schema: ANSWERS_FILE_SCHEMA, answers: plain };
+}
+
+/** Two answer values as one comparable text. */
+function sameValue(a: unknown, b: unknown): boolean {
+	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+/**
+ * Does the answer need its bool flag? --diffusion/--mailer set true;
+ * --no-update-servers (none) and --skip-tools (false) set the negation.
+ */
+function boolFlagSet(key: keyof InstallAnswers, flag: string, value: unknown): boolean {
+	if (key === 'update_servers') return value === 'none';
+	return /^--(no|skip)-/.test(flag) ? value === false : value === true;
+}
+
+/** An answer value as a flag value (a list comma-joined; an empty list `none`). */
+function flagText(value: unknown): string {
+	if (!Array.isArray(value)) return String(value);
+	return value.length === 0 ? 'none' : value.join(',');
+}
+
+/** One answer as the argv that sets it (`--flag=value`; a bool flag bare), or [] when no flag can. */
+function argvOfAnswer(key: keyof InstallAnswers, value: unknown): string[] {
+	const spec = INSTALL_CLI_FLAGS.find((item) => item.key === key);
+	if (spec === undefined) return [];
+	if (spec.kind === 'bool') return boolFlagSet(key, spec.flag, value) ? [spec.flag] : [];
+	return [`${spec.flag}=${flagText(value)}`];
+}
+
+/**
+ * The INVERSE of answersFromCliArgs: normalized answers → the argv that decides
+ * the same plan. Only the answers that differ from the route's own defaults are
+ * emitted (a full flag list would bury the operator's choices), always in the
+ * `--flag=value` form (a value may start with `--` or contain spaces); a secret
+ * answer NEVER (it travels through DEDALO_INSTALL_* or --secrets-stdin).
+ */
+export function cliArgsOf(answers: InstallAnswers): string[] {
+	// The answers OTHER defaults derive from (route, instance, entity) against
+	// the no-answer defaults; every other answer against the defaults THEY derive.
+	const deriving: readonly string[] = ['route', 'instance', 'entity'];
+	const unrouted = normalizeInstallAnswers({}).answers;
+	const routed = normalizeInstallAnswers({
+		route: answers.route,
+		instance: answers.instance,
+		entity: answers.entity,
+	}).answers;
+	const argv: string[] = [];
+	for (const key of PLAIN_ANSWER_KEYS) {
+		const value = answers[key];
+		const baseline = deriving.includes(key) ? unrouted : routed;
+		if (value === undefined || sameValue(value, baseline[key])) continue;
+		argv.push(...argvOfAnswer(key, value));
+	}
+	return argv;
 }
 
 /**

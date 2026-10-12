@@ -7,13 +7,14 @@ contains, how the domain ontologies are chosen and installed, and — the part t
 surprises people — exactly which keys the installer writes into `../private/.env`
 and which it does not.
 
-Two front ends drive one engine (`src/core/install/`), and the guided container
+Three front ends drive one engine (`src/core/install/`), and the guided container
 script `install.sh` drives the headless CLI:
 
 | Front end | Command | Use it when |
 | --- | --- | --- |
+| **Interactive terminal** | `bun run scripts/install.ts` (no answer flag) — `--plain` for the line mode | a person at a terminal: it asks, checks each answer as you go, and shows the whole plan before anything runs. See [Interactive mode](#interactive-mode) |
 | **Headless CLI** | `bun run scripts/install.ts <flags>` | servers, containers, CI. No restart, no pre-auth window. |
-| **Browser wizard** | start the server with no `.env`, open `/dedalo/core/page/` | a workstation, or when you want the diagnostics panel |
+| **Browser wizard** | start the server with no `.env`, open `/dedalo/core/page/` | a workstation, or when you want the diagnostics panel (it is being retired in favour of the interactive terminal) |
 
 !!! info "One install plan, whichever front end you use"
     The CLI, the wizard and `install.sh` all build the **same install plan**
@@ -73,6 +74,8 @@ bun run scripts/install.ts \
 
 bun run scripts/install.ts --resume                              # finish an interrupted install
 bun run scripts/install.ts --abort --confirm-database dedalo_main # undo it
+bun run scripts/install.ts                                       # interactive (a terminal), see below
+bun run scripts/install.ts --plain                               # interactive, plain line mode
 ```
 
 An **unknown flag is refused** (`unknown flag --x`) and so is a value flag with no
@@ -82,8 +85,10 @@ meaning.)
 
 | Flag | Required | Default | Notes |
 | --- | --- | --- | --- |
-| `--db-name` | **yes** | — | the **empty** database you created |
-| `--db-user` | **yes** | — | the role that owns it |
+| `--route` | no | `developer` | how this Dédalo runs: `production` (native services, a named instance), `docker` (the compose stack), `trial` (Docker **without** media protection — evaluation only) or `developer` (a git checkout; the behaviour before routes). The route changes the [defaults below](#route-defaults), never what is installed. An unknown route is refused |
+| `--instance` | with `--route production` | — | the instance name on a production host that can carry several: a lowercase letter, then `a-z`, `0-9` or `_`, 28 characters at most (it becomes the unix user `ded_<instance>`, the database and role `dedalo_<instance>`, a path segment and a systemd instance — see [Several instances on one host](multi_instance.md)). Refused on any other route |
+| `--db-name` | **yes** (except `production` / `docker` / `trial`, which derive it) | see [Route defaults](#route-defaults) | the **empty** database you created |
+| `--db-user` | **yes** (except `production` / `docker` / `trial`) | see [Route defaults](#route-defaults) | the role that owns it |
 | `--entity` | **yes** | — | this instance's identifier, e.g. `myentity` |
 | root password | **yes** | — | `DEDALO_INSTALL_ROOT_PASSWORD` in the environment, or `--secrets-stdin`; held to the password policy **before anything is written** (see [Secrets](#secrets)) |
 | database password | no | *(empty)* | `DEDALO_INSTALL_DB_PASSWORD`, or `--secrets-stdin`; empty means peer/trust auth over a local socket. `--db-password` still works but warns |
@@ -103,24 +108,48 @@ meaning.)
 | `--media-path` | no | *(unset)* | the media root; write-probed during install **and persisted** to `.env` as `MEDIA_PATH` (replaces the old `MEDIA_PATH=…` env prefix) |
 | `--socket` | no | `/tmp/dedalo_ts.sock` | persisted as `SERVER_UNIX_SOCKET`; set `/run/dedalo/dedalo_ts.sock` for a systemd + reverse-proxy deploy (the default does not match that layout) |
 | `--media-access-mode` | no | *(unset = `publication`, fail-closed)* | persisted as `DEDALO_MEDIA_ACCESS_MODE` — `private`, `publication`, or `false` to deliberately serve an open media tree |
-| `--diffusion` | no | off | writes the MariaDB keys; pair with `--mysql-host/-port/-socket/-name/-user/-password`. The MariaDB connection is probed; a failure warns but does not stop the install |
+| `--diffusion` | no | off | writes the MariaDB keys; pair with `--mysql-host/-port/-socket/-name/-user/-password`. `--mysql-user` is required; `--mysql-name` defaults to `web_dedalo` (`web_<instance>` on production). The MariaDB connection is probed; a failure warns but does not stop the install |
 | `--mailer` | no | off | writes the outbound-email (SMTP) keys, enabling [password recovery](../management/password_recovery.md); requires `--smtp-host`, pair with `--smtp-port` (587), `--smtp-secure` (`tls`\|`ssl`\|`none`), `--smtp-user`, `--smtp-password`, `--smtp-from`, `--smtp-from-name`. The relay is probed (connection + auth, no email sent); a failure warns but does not stop the install |
 | `--no-update-servers` | no | off | air-gapped install: writes `ONTOLOGY_SERVERS=[]` and `CODE_SERVERS=[]`, so no ontology or code update is ever offered. Without it, both name the official Dédalo master (see below) |
 | `--skip-tools` | no | off | skips tool registration (register them later from the Development Area) |
 | `--plan` | no | off | dry run: prints ONE JSON line — `env_keys`, `steps`, `hierarchies`, `hierarchy_dependencies`, `suggestions`, `ontologies`, `declined_dependencies`, `ontology_source`, `ontology_install`, `active_ontology_tlds`, `notes`, `warnings`, `errors` — and exits `0` (valid) or `1`. It touches no database and no file and needs no root password. A choice beyond `oh` reads the source's catalog (one request to the update server, or the `--ontology-source` files) |
 | `--list-ontologies` | no | off | prints ONE JSON line — the ontology catalog of the selected source, exactly what the wizard's *Ontologies* step shows — and exits. It needs no other answer. See [Listing the catalog](#listing-the-catalog) |
-| `--list-hierarchies` | no | off | prints ONE JSON line — the thesaurus offer of the release's manifest (`core`, `entries` of `{tld, name, typology_id, typology_name, has_data}`, the toponymy `suggestion`, `errors`) — and exits. It needs no other answer. See [The thesaurus manifest](#the-thesaurus-manifest-hierarchyjson) |
-| `--information`, `--info-key` | no | `ts-install`, `ts` | free-text install provenance, recorded in the state file |
+| `--list-hierarchies` | no | off | prints ONE JSON line — the thesaurus offer of the release's manifest (`core`, `entries` of `{tld, name, typology_id, typology_name, has_data, dependencies}` — `dependencies` being the thesauri the entry declares, `{tld, mandatory}` each —, the toponymy `suggestion`, `errors`) — and exits. It needs no other answer. See [The thesaurus manifest](#the-thesaurus-manifest-hierarchyjson) |
+| `--list-langs` | no | off | prints ONE JSON line — the languages the installer offers (`langs` of `{code, label}`, in presentation order) and the `default` set — and exits |
+| `--information`, `--info-key` | no | `ts-install`, `ts` | the install's **fingerprint**, written once to the server state file (`ts_state.json`) and never changed afterwards. A fresh install hashes passwords with Argon2 and does not use them; they matter only to read passwords migrated from a v6 installation |
 | `--answers <file>` | no | — | the answers as a file (the wizard's field names); see [The answers file](#the-answers-file-answers). A key set both there and by a flag is refused |
 | `--secrets-stdin` | no | off | read the secrets as ONE JSON object from standard input; see [Secrets](#secrets) |
-| `--execute` | no | off | explicitly unattended: the installer never asks anything and refuses a missing answer or secret. Every run behaves so today; the flag is recorded on the run |
+| `--execute` | no | off | explicitly unattended: the installer never asks anything and refuses a missing answer or secret; the flag is recorded on the run. Without it, a run whose standard input is a terminal **asks** for what is missing: the root password of a fresh install, or the secrets a `--resume` still needs — hidden, typed twice, the root password checked rule by rule. A run without a terminal (a pipe, a CI job) never asks |
+| `--plain` | no | off | the interactive installer in [plain line mode](#plain-mode) — no full-screen drawing, no colour, one question per line. Takes no answer flag (`--resume` aside) |
+| `--write-answers <file>` | no | — | also write the answers as an [answers file](#the-answers-file-answers) (`0600`, no secret in it): a headless run writes it once the plan is valid, before anything runs (`--plan` included); the interactive Review's `write` does the same. Refused when the path is inside the private directory, or when it exists and is not an answers file |
 | `--resume` | no | off | finish the install recorded in `<private>/install/`; see [Resuming an install](#resuming-an-install-resume) |
 | `--abort` | no | off | undo the install recorded in `<private>/install/`; needs `--confirm-database`. See [Undoing an install](#undoing-an-install-abort) |
 | `--confirm-database <name>` | with `--abort` | — | must equal the install's database name before `--abort` resets it |
 
 The run-control flags exclude each other where they cannot mean anything:
-`--resume` with `--abort`, `--plan` or a `--list-*` flag with either, and
-`--confirm-database` without `--abort` are refused.
+`--resume` with `--abort`, `--plan` or a `--list-*` flag with either,
+`--confirm-database` without `--abort`, `--plain` with `--abort` or with any
+answer source (`--plain --resume` is allowed: it asks the secrets a resume
+needs), and `--write-answers` with `--resume`, `--abort` or a `--list-*` flag
+are refused. A value that starts with `--` (or is empty) can be given as
+`--flag=value`; the installer prints its own command lines in that form.
+
+### Route defaults
+
+A route changes the **defaults** of a few answers — what an answer you do not
+give falls back to. It never changes the steps, and a flag you give always wins.
+
+| Answer | `developer` | `production` (instance `<i>`) | `docker` / `trial` |
+| --- | --- | --- | --- |
+| database host | `localhost` | `localhost` | `postgres` (the compose service) |
+| database name | — (required) | `dedalo_<i>` | `dedalo` |
+| database role | — (required) | `dedalo_<i>` (the same name, as [multi_instance.md](multi_instance.md) creates it) | `dedalo` |
+| media root (`MEDIA_PATH`) | not written | `/srv/dedalo/<i>/media` | `/srv/dedalo/media` |
+| server socket (`SERVER_UNIX_SOCKET`) | not written | `/run/dedalo-<i>/dedalo_ts.sock` | `/run/dedalo/dedalo_ts.sock` |
+| publication database (`--mysql-name`) | `web_dedalo` | `web_<i>` | `web_dedalo` |
+
+`install.sh` passes `--route trial` and relies on these, so the stack's values
+live in one place (`src/core/install/install_plan.ts`).
 
 !!! danger "No password belongs on the command line"
     `--root-password`, `--db-password`, `--mysql-password` and `--smtp-password`
@@ -481,6 +510,124 @@ or take the install back with `--abort --confirm-database <db>`
 ([Undoing an install](#undoing-an-install-abort)). There is no need to drop and
 recreate the database.
 
+## Interactive mode
+
+Run the installer with **no answer flag** at a terminal and it asks:
+
+```shell
+bun run scripts/install.ts            # the interactive installer
+bun run scripts/install.ts --plain    # the same questions, one per line
+```
+
+It walks one screen per step, in this order, and the route you pick first
+decides which steps follow:
+
+| Route | Steps |
+| --- | --- |
+| production | Install type → System check → Database → Identity → Web server & TLS → Services → Ontologies → Thesauri → Languages → Publication → Mail → Administrator → Review plan |
+| developer | Install type → System check → Database → Identity → Ontologies → Thesauri → Languages → Publication → Mail → Administrator → Review plan |
+| docker | Install type → System check → Image → TLS & address → Containers → Identity → Ontologies → Thesauri → Languages → Publication → Mail → Administrator → Review plan |
+| trial | as docker, without TLS & address |
+
+What the screens do for you:
+
+- **Every default is the installer's own** — the same one a flag-less headless
+  run takes (see the tables above). Accepting a default leaves the answer out,
+  so a default that follows another answer keeps following it (the production
+  database name follows the instance name). The time zone and locale offered
+  are your machine's, when they are valid.
+- **Every answer is checked as you give it**, with the same rules and the same
+  refusal sentences as a headless run ([Validation](#validation-before-anything-is-written)):
+  a refused answer is asked again, the refusal shown under it. An entity name
+  that is not a valid code gets a suggested code next to the refusal.
+- **Checks run where they help.** The System check (Bun, the seed, the private
+  directory, `psql`, the machine's PostgreSQL, ImageMagick, FFmpeg — on docker
+  and trial only the host's own rows) must pass. The database must exist, be
+  reachable and be empty: retry, or go back and edit. The media directory
+  (production) must be creatable by you. The MariaDB and SMTP connections must
+  pass, or you type `yes` to keep them untested — the Review says which. The
+  mail check can also send a real test message to an address you give (it is
+  not kept).
+- **Ontologies and thesauri** are offered from the update server's catalog (or
+  your offline package when the install is air-gapped), grouped, with what each
+  one declares pre-ticked; unticking a declared dependency declines it, exactly
+  as `--decline-dependencies` does. A mandatory ontology dependency cannot be
+  unticked; a thesaurus never is forced. When no country toponymy is selected
+  the thesaurus step suggests typing your country's code (e.g. `np`).
+- **Passwords** are never shown and are typed twice; the root password is
+  checked rule by rule after the first entry. A password already given through
+  `DEDALO_INSTALL_*` or `--secrets-stdin` is kept, not asked (the root password
+  is still checked against the policy).
+- **The Review** lists what the install will do — the database, the ontologies
+  in install order, the thesauri, the languages, publication and mail (tested or
+  not), the media root and socket, the steps, the `.env` key names (never a
+  value), the host steps still done by hand on a production route, and the
+  equivalent command line (without secrets). Then:
+  `install` (typed `yes` to start; offered only when the plan has no error),
+  `edit <n>` (go back to step `n`; later steps ask only what changed),
+  `write <path>` (an [answers file](#the-answers-file-answers), no secret in it),
+  `quit`.
+
+The interactive installer hands its answers to **the same install** a headless
+run makes: the plan is built again from your answers, the ontology catalog read
+again, and the install refused — `the ontology catalog changed between review
+and install — run again` — if it would now decide anything other than what you
+reviewed.
+
+On the **docker** and **trial** routes the interactive installer does not
+install from the host yet: it asks the instance's own answers and writes them
+(`write <path>`); `install.sh` brings the stack up and runs the installer inside
+the container. The production host steps — the web server site, TLS, the
+systemd units, backups — are still done by hand
+([Production install](production.md), [Several instances on one host](multi_instance.md));
+the Review lists them.
+
+If an install was interrupted, the interactive installer says so first and
+offers to resume it (`resume`) instead of asking anything.
+
+**Standard input must be a terminal.** An interactive run with a piped or
+redirected standard input is refused before anything is read or written —
+`stdin is not a terminal — give the answers with --answers <file> (and the
+secrets via DEDALO_INSTALL_* or --secrets-stdin)`. A run that carries any
+answer source — an answer flag, `--answers`, `--plan`, a `--list-*` flag,
+`--resume`/`--abort`, `--secrets-stdin`, `--execute` — is headless and never
+needs a terminal: `install.sh` and CI pipe `--secrets-stdin` that way.
+
+## Plain mode
+
+The plain line mode asks the same questions as the interactive installer, one
+per line, with no screen drawing, no colour and no escape sequence of any kind —
+for a screen reader, a serial console or a log. It is used when you pass
+`--plain`, when `TERM` is unset or `dumb`, when standard output is not a
+terminal (the questions then go to standard error, or to the terminal device),
+or when the terminal is smaller than 80×24. `NO_COLOR` only turns colour off.
+
+- Every question accepts `back` (the previous step) and `quit`; Ctrl-C and
+  Ctrl-D quit too. A typed `quit` exits `0` (nothing installed), Ctrl-C /
+  Ctrl-D exit `130`, and an answer refused too often (or a password whose two
+  entries never matched) exits `1`. An **empty** answer takes the default shown in brackets;
+  `-` empties an optional field.
+- Yes/no switches show `[y/N]` or `[Y/n]`. An acknowledgement (the trial
+  route's missing media protection, no thesaurus at all, a connection kept
+  untested, starting the install) needs the word `yes` typed.
+- **Lists** (ontologies, thesauri, languages) are numbered in their groups, 20
+  lines a page. Type `3`, `3-7` or `3 5 9` to toggle by number, a code (`es`)
+  to toggle it, `/word` to filter and `/` to clear, `more` for the next page,
+  `list` for all of them, and Enter (or `next`) to finish. A locked entry says
+  why instead of toggling. Ticking an entry also ticks what it declares, as the
+  flags install it: untick an optional dependency to decline it; a mandatory
+  one stays while the entry that needs it is ticked. The order you tick languages in is the order they
+  are written.
+- **Passwords** are hidden and typed twice (three mismatches stop); after the
+  first entry of the root password each policy rule is printed as `ok` or
+  `missing` — never the password.
+- A check (System check, database, media directory, publication, mail) holds
+  only for the answers it tested: when a later answer changes them — an
+  instance name that re-derives the database, a different route — the check
+  runs again before the Review offers `install`.
+- Every mark is a word (`default`, `ships terms`, `definition, you fill it`,
+  `needed by tch`), never a symbol.
+
 ## The answers file (`--answers`)
 
 The answers can come from a file instead of (or beside) the flags — the shape a
@@ -506,7 +653,7 @@ envelope:
 DEDALO_INSTALL_ROOT_PASSWORD='…' bun run scripts/install.ts --answers answers.json
 ```
 
-The keys it accepts are exactly the plain answers: `db_hostname`, `db_port`,
+The keys it accepts are exactly the plain answers: `route`, `instance`, `db_hostname`, `db_port`,
 `db_socket`, `db_database`, `db_username`, `entity`, `entity_label`,
 `information`, `info_key`, `timezone`, `locale`, `langs`, `app_lang_default`,
 `data_lang_default`, `diffusion`, `mysql_hostname`, `mysql_port`,
@@ -528,6 +675,9 @@ It is refused, before anything is written, when:
   committed;
 - a key is set both in the file and by a flag — `entity is set by both --answers
   and --entity`. Neither wins silently.
+
+The interactive Review's `write <path>` and `--write-answers <path>` produce
+this file from the reviewed answers; read back, it installs the same instance.
 
 ## Secrets
 
@@ -555,13 +705,24 @@ Highest precedence first:
    `--mysql-password`, `--smtp-password`. Still accepted, each with the warning
    `⚠ <flag> on the command line is visible to other users (ps); use
    DEDALO_INSTALL_* or --secrets-stdin`.
+4. **Typed at the prompt** — on a terminal, without `--execute`: the root
+   password of a fresh install, the secrets a `--resume` still needs, and every
+   password the [interactive installer](#interactive-mode) asks. Hidden, typed
+   twice.
+
+The interactive installer's connection checks run in a separate short-lived
+process; the one password a check needs is handed to it on its standard input,
+never on its command line or in its environment.
 
 No secret is ever written to the plan or state files, and none is printed: every
 line the installer prints and every message it records has the supplied secrets
 replaced by `***`. The one secret the installer **generates**,
 `DEDALO_SALT_STRING`, is written to `.env` and printed **once**, in the summary
 at the end of the run that completes the install
-(`generated DEDALO_SALT_STRING = …`). Keep it with your backups.
+(`generated DEDALO_SALT_STRING = …`). Keep it with your backups. The interactive
+installer shows it only on a terminal: when its output is redirected to a file,
+it says where the salt is stored instead (`<private>/.env`, `0600`) and does not
+write it into the log.
 
 ## Validation before anything is written
 
@@ -579,11 +740,13 @@ come from flags, an answers file or the wizard:
 | `media_path`, `unix_socket`, `mysql_socket` (with `--diffusion`) | absolute, when given | `media_path must be an absolute path` |
 | `smtp_host` (with `--mailer`) | present | `mailer requires smtp_host` |
 | `smtp_secure` (with `--mailer`) | `tls`, `ssl` or `none` | `smtp_secure must be tls\|ssl\|none` |
-| `mysql_database`, `mysql_username` (with `--diffusion`) | present | `diffusion requires mysql_database` |
+| `mysql_username` (with `--diffusion`) | present (the publication database has a default: `web_dedalo`, `web_<instance>` on production) | `diffusion requires mysql_username` |
+| `route` | `production`, `docker`, `trial` or `developer` | `route must be production\|docker\|trial\|developer` |
+| `instance` | required on `production`, refused elsewhere; a lowercase letter, then `a-z`, `0-9`, `_` (28 at most) | `the production route requires instance (e.g. --instance prado)`, `instance is only meaningful on the production route (route is <r>)`, `instance '<v>' must start with a lowercase letter …` |
 | `media_access_mode` | `private`, `publication`, `false` (or empty) | `media_access_mode must be private\|publication\|false (or empty)` |
 | `timezone` | a time zone the runtime knows (IANA name) | `timezone '<v>' is not a valid IANA time zone` |
 | `locale` | a well-formed language tag | `locale '<v>' is not a valid BCP 47 tag` |
-| `langs`, `app_lang_default`, `data_lang_default` | the defaults are members of the set | `languages: …` |
+| `langs`, `app_lang_default`, `data_lang_default` | at least one language; the defaults are members of the set | `languages: …` |
 | `information`, `info_key` | no line break or NUL | `information contains an illegal control character` |
 | root password | supplied (for an install), and passes the password policy | `root password is required (…)`, `root password does not meet the password policy (<rule>)` |
 

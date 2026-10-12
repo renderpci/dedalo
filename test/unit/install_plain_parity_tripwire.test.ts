@@ -1,0 +1,633 @@
+/**
+ * INSTALL PLAIN-MODE PARITY TRIPWIRE — the interactive plain line mode
+ * (src/core/install/ui_plain/run_plain.ts over the screen model,
+ * screen_model.ts) is a FOURTH front end of the one install plan: for every
+ * case it can express, the answers it hands back decide EXACTLY the plan the
+ * CLI flags, the answers file and (where it can post the case) the browser
+ * wizard decide (terminal installer phase 2, 2026-10-12).
+ *
+ * WHY. A screen that restated a default, mapped a tick to the wrong answer key,
+ * lost a declined dependency or kept a hidden answer would install something
+ * the operator never saw on the Review — while every other front end agreed.
+ *
+ * WHAT IS MEASURED (outcomes, not spellings):
+ *  (a) THE MATRIX (test/helpers/install_answer_cases.ts: every phase-1 case +
+ *      the route cases — production with an instance, docker, trial, an
+ *      explicit developer, production + diffusion + mail, air-gapped with a
+ *      local ontology source and a declined dependency, a declined declared
+ *      thesaurus, odd values): runPlainInstall under the scripted prompter
+ *      (the script derived from the case's plan through the MODEL's own
+ *      question ids — scriptForPlan), fake probes that pass, the catalog from
+ *      the fixture source → `decided(plan)` ≡ the flags' ≡ the answers file's
+ *      ≡ the wizard's (when it can post the case), and the SECRETS handed back
+ *      are exactly the case's. A phase-1 case the screens cannot express is
+ *      listed in NOT_PLAIN with its reason, and the reason is MEASURED (a
+ *      ROUTE_FIXED key on its route, or a core TLD in a list).
+ *  (b) ANTI-VACUITY: the prompter was asked every screen of the route and every
+ *      question the final screens show.
+ *  (c) ROUNDTRIPS, every case: answersFileOf → answersFromAnswersFile and
+ *      cliArgsOf → answersFromCliArgs decide the same plan (values with
+ *      spaces, quotes, a leading `--`, non-ASCII included).
+ *  (d) docker / trial: the Review never offers `install`; `write <path>`
+ *      produces an answers file that decides the walked plan.
+ *  (e) an EDIT from the Review (a language change, mail turned off) installs
+ *      the plan of the edited answers.
+ *  (f) the catalog-changed refusal: reviewed decisions ≠ the final plan's →
+ *      CATALOG_CHANGED_REFUSAL; equal → none.
+ *
+ * DB-FREE, network-free (the only non-vendored source is a local fixture in a
+ * mkdtemp dir, removed in afterAll); nothing is spawned, nothing installed.
+ */
+
+import { afterAll, describe, expect, test } from 'bun:test';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+	CATALOG_CHANGED_REFUSAL,
+	type FrontEndResult,
+	reviewDecisions,
+	reviewedDecisionsRefusal,
+	writeAnswersFile,
+} from '../../src/core/install/front_end.ts';
+import {
+	answersFileOf,
+	answersFromAnswersFile,
+	answersFromCliArgs,
+	buildInstallPlan,
+	cliArgsOf,
+	type InstallPlan,
+	normalizeInstallAnswers,
+	SECRET_ANSWER_KEYS,
+} from '../../src/core/install/install_plan.ts';
+import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
+import type { OntologyCatalog } from '../../src/core/install/ontology_choice.ts';
+import type { Secrets } from '../../src/core/install/run_files.ts';
+import { buildScreens, ROUTE_FIXED } from '../../src/core/install/screen_model.ts';
+import { scriptedInstallPrompter } from '../../src/core/install/ui_plain/prompter.ts';
+import { runPlainInstall } from '../../src/core/install/ui_plain/run_plain.ts';
+import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
+import {
+	CASES,
+	decided,
+	declaredThesauri,
+	routeCases,
+	WIZARD_DEFAULT_ONTOLOGIES,
+	writeLocalOntologySource,
+} from '../helpers/install_answer_cases.ts';
+import {
+	fakeProbes,
+	GOOD_ROOT_PASSWORD,
+	modelInput,
+	scriptForPlan,
+	thesaurusOffer,
+} from '../helpers/install_plain_script.ts';
+
+const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_plain_parity_'));
+afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
+
+const SOURCE_DIR = writeLocalOntologySource(join(scratchRoot, 'ontology_source'));
+const LOCAL = await resolveOntologyCatalog(
+	{ kind: 'local', path: SOURCE_DIR },
+	{ allowedServers: [] },
+);
+afterAll(() => LOCAL.cleanup());
+const LOCAL_CATALOG: OntologyCatalog = LOCAL.catalog;
+
+/**
+ * The phase-1 cases the SCREENS cannot express, each with why (measured in
+ * (a)): the plain mode is held to every other one.
+ */
+const NOT_PLAIN: Readonly<Record<string, 'route_fixed' | 'core_tld' | 'declared_named'>> = {
+	// media_path / unix_socket / media_access_mode on the developer route: ROUTE_FIXED (flag-settable).
+	'+serving keys': 'route_fixed',
+	// lg is not an option of the thesaurus screen (core: always installed) — the note is the flag's.
+	'thesauri: with the core lg': 'core_tld',
+	// dd is not an option of the ontology screen (core: always installed) — the note is the flag's.
+	'ontologies: a core TLD dropped with a note': 'core_tld',
+	// A thesaurus an ontology DECLARES, also named in --hierarchies: on the screen it is
+	// pre-ticked by its declarer — the SAME thesauri install; naming it moves it in the
+	// install ORDER (and a self-decline of a named one drops its dependency row), which
+	// a tick cannot say. Re-answering the screen over such answers keeps their plan
+	// (install_screen_model_tripwire, "explicit roots").
+	'thesauri: a declared one named explicitly': 'declared_named',
+	'thesauri: a declared one named explicitly AND declined': 'declared_named',
+};
+
+interface Case {
+	name: string;
+	argv: string[];
+	wizard: Record<string, unknown> | null;
+	local: boolean;
+}
+
+const ALL_CASES: Case[] = [
+	...CASES.map((item) => ({ ...item, local: false })),
+	...routeCases(SOURCE_DIR).map((item) => ({ ...item, wizard: null })),
+];
+
+const SECRET_SET: ReadonlySet<string> = new Set(SECRET_ANSWER_KEYS);
+
+/** The case's raw answers (flags) split into the plain answers and the secrets. */
+function splitCase(argv: readonly string[]): {
+	raw: Record<string, unknown>;
+	plain: Record<string, unknown>;
+	secrets: Secrets;
+} {
+	const invocation = answersFromCliArgs(argv);
+	expect(invocation.errors, argv.join(' ')).toEqual([]);
+	const plain: Record<string, unknown> = {};
+	const secrets: Record<string, string> = {};
+	for (const [key, value] of Object.entries(invocation.raw)) {
+		if (SECRET_SET.has(key)) secrets[key] = String(value);
+		else plain[key] = value;
+	}
+	return { raw: invocation.raw, plain, secrets: secrets as Secrets };
+}
+
+const planOf = (raw: Readonly<Record<string, unknown>>, local: boolean): InstallPlan =>
+	buildInstallPlan(raw, local ? { ontologyCatalog: LOCAL_CATALOG } : {});
+
+/** The plan a plain result decides (its raw answers + the secrets it collected). */
+function plainPlan(result: FrontEndResult, local: boolean): InstallPlan {
+	if (result.kind !== 'install') throw new Error(`plain run ended '${result.kind}', not install`);
+	const { root_password: _root, ...answerSecrets } = result.secrets;
+	return planOf({ ...result.raw, ...answerSecrets }, local);
+}
+
+/** Run the plain mode under a script; answers the result and the prompter's record. */
+async function runScripted(
+	script: Parameters<typeof scriptedInstallPrompter>[0],
+	local: boolean,
+	writeAnswers?: (path: string, answers: InstallPlan['answers']) => string | null,
+) {
+	const prompter = scriptedInstallPrompter(script);
+	const probes = fakeProbes({ catalog: local ? LOCAL_CATALOG : null });
+	const result = await runPlainInstall({
+		prompter,
+		probes,
+		priorEnv: {},
+		thesauri: thesaurusOffer(),
+		host: {},
+		givenSecrets: {},
+		unfinished: null,
+		...(writeAnswers === undefined ? {} : { writeAnswers }),
+	});
+	return { result, prompter, probes };
+}
+
+// ── (a) + (b) the matrix ─────────────────────────────────────────────────────
+
+describe('plain mode ≡ flags ≡ answers file ≡ wizard (a, b)', () => {
+	test('the matrix is the shared one, and every NOT_PLAIN reason is real (measured)', () => {
+		expect(ALL_CASES.length).toBeGreaterThanOrEqual(18);
+		for (const [name, reason] of Object.entries(NOT_PLAIN)) {
+			const found = ALL_CASES.find((item) => item.name === name);
+			expect(found, name).toBeDefined();
+			const { plain } = splitCase(found?.argv ?? []);
+			const route = normalizeInstallAnswers(plain).answers.route;
+			if (reason === 'declared_named') {
+				const declared = new Set(declaredThesauri(WIZARD_DEFAULT_ONTOLOGIES).install);
+				const named = String(plain.hierarchies ?? '').split(',');
+				expect(
+					named.some((tld) => declared.has(tld)),
+					name,
+				).toBe(true);
+				// The thesauri INSTALLED are the same through the screen (only the order differs):
+				// there the named one is simply left TICKED (pre-ticked by its declarer — a
+				// tick also lifts its decline).
+				const caseRaw = splitCase(found?.argv ?? []).raw;
+				const flagsPlan = planOf(caseRaw, false);
+				const ticked = planOf(
+					{
+						...caseRaw,
+						hierarchies: named.filter((tld) => !declared.has(tld)),
+						declined_dependencies: String(caseRaw.declined_dependencies ?? '')
+							.split(',')
+							.filter((token) => token !== '' && !named.includes(token.split(':')[0] as string))
+							.join(','),
+					},
+					false,
+				);
+				expect([...ticked.hierarchies].sort(), name).toEqual([...flagsPlan.hierarchies].sort());
+			} else if (reason === 'route_fixed') {
+				expect(
+					Object.keys(plain).filter((key) => ROUTE_FIXED[route][key] !== undefined).length,
+					name,
+				).toBeGreaterThan(0);
+			} else {
+				const lists = [plain.hierarchies, plain.ontologies].map((value) =>
+					String(value ?? '')
+						.toLowerCase()
+						.split(','),
+				);
+				expect(
+					lists
+						.flat()
+						.some((tld) => tld === 'lg' || (CORE_ONTOLOGY_TLDS as readonly string[]).includes(tld)),
+					name,
+				).toBe(true);
+			}
+		}
+		// Every route is in the matrix.
+		const routes = new Set(
+			ALL_CASES.map((item) => normalizeInstallAnswers(splitCase(item.argv).plain).answers.route),
+		);
+		expect([...routes].sort()).toEqual(['developer', 'docker', 'production', 'trial']);
+	});
+
+	for (const answerCase of ALL_CASES.filter((item) => NOT_PLAIN[item.name] === undefined)) {
+		test(`${answerCase.name}`, async () => {
+			const { raw, plain, secrets } = splitCase(answerCase.argv);
+			const flags = planOf(raw, answerCase.local);
+			expect(flags.errors, answerCase.name).toEqual([]);
+			const route = flags.answers.route;
+			const hostRoute = route === 'production' || route === 'developer';
+			// docker/trial: the stack takes the passwords (ROUTE_FIXED) — none asked here.
+			const askedSecrets = hostRoute ? secrets : {};
+			const script = scriptForPlan(
+				flags,
+				Object.keys(plain),
+				{ ...askedSecrets, root_password: GOOD_ROOT_PASSWORD },
+				hostRoute ? ['install'] : ['write <none>'],
+			);
+			const written: InstallPlan['answers'][] = [];
+			const { result, prompter } = await runScripted(script, answerCase.local, (_path, answers) => {
+				written.push(answers);
+				return null;
+			});
+			// The plan the plain mode hands back.
+			const fromPlain = hostRoute
+				? plainPlan(result, answerCase.local)
+				: planOf(
+						{
+							...answersFromAnswersFile(answersFileOf(written[0] as InstallPlan['answers'])).raw,
+							...secrets,
+						},
+						answerCase.local,
+					);
+			expect(decided(fromPlain)).toEqual(decided(flags));
+			if (hostRoute) {
+				expect(result.kind === 'install' ? result.secrets : null).toEqual({
+					...secrets,
+					root_password: GOOD_ROOT_PASSWORD,
+				});
+			}
+			// ≡ the answers file of the case (its secrets apart, through DEDALO_INSTALL_*).
+			const file = answersFromAnswersFile({ schema: 'dedalo.install.answers/1', answers: plain });
+			expect(file.errors).toEqual([]);
+			expect(decided(planOf({ ...file.raw, ...secrets }, answerCase.local))).toEqual(
+				decided(flags),
+			);
+			// ≡ the wizard, where it can post the case.
+			if (answerCase.wizard !== null) {
+				expect(decided(planOf(answerCase.wizard, answerCase.local))).toEqual(decided(flags));
+			}
+			// (b) anti-vacuity: every screen of the route, every question the final screens show.
+			const finalScreens = buildScreens(
+				modelInput(result.kind === 'install' ? result.raw : { route }, {
+					catalogs: {
+						ontology: {
+							catalog: answerCase.local ? LOCAL_CATALOG : null,
+							ok: true,
+							msg: '',
+						},
+						thesauri: thesaurusOffer(),
+					},
+				}),
+			);
+			for (const screen of finalScreens) {
+				expect(prompter.asked, `screen ${screen.id}`).toContain(`screen:${screen.id}`);
+				if (result.kind !== 'install') continue;
+				for (const question of screen.questions) {
+					if (question.id.endsWith('.probe_override')) continue;
+					expect(prompter.asked, question.id).toContain(question.id);
+				}
+			}
+		});
+	}
+});
+
+// ── (c) roundtrips ───────────────────────────────────────────────────────────
+
+/**
+ * A roundtrip decides the same install. Its notes may only SHRINK: the
+ * normalized answers no longer carry an input the plan dropped with a note
+ * (`lg` / `dd` in a list) — every other decided field is identical.
+ */
+function expectSameDecision(back: InstallPlan, plan: InstallPlan): void {
+	const { notes: backNotes, ...backRest } = decided(back);
+	const { notes, ...rest } = decided(plan);
+	expect(backRest).toEqual(rest);
+	expect(backNotes.filter((note) => !notes.includes(note))).toEqual([]);
+}
+
+describe('roundtrips: answers file and argv are faithful inverses (c)', () => {
+	for (const answerCase of ALL_CASES) {
+		test(`${answerCase.name}`, () => {
+			const { raw, secrets } = splitCase(answerCase.argv);
+			const plan = planOf(raw, answerCase.local);
+			const viaFile = answersFromAnswersFile(
+				JSON.parse(JSON.stringify(answersFileOf(plan.answers))) as unknown,
+			);
+			expect(viaFile.errors).toEqual([]);
+			// No secret ever enters the file.
+			for (const key of SECRET_ANSWER_KEYS)
+				expect(Object.hasOwn(viaFile.raw, key), key).toBe(false);
+			expectSameDecision(planOf({ ...viaFile.raw, ...secrets }, answerCase.local), plan);
+			const argv = cliArgsOf(plan.answers);
+			for (const flag of [
+				'--db-password',
+				'--mysql-password',
+				'--smtp-password',
+				'--root-password',
+			]) {
+				expect(
+					argv.some((token) => token.startsWith(flag)),
+					flag,
+				).toBe(false);
+			}
+			const viaArgv = answersFromCliArgs(argv);
+			expect(viaArgv.errors).toEqual([]);
+			expectSameDecision(planOf({ ...viaArgv.raw, ...secrets }, answerCase.local), plan);
+		});
+	}
+
+	test('the odd-values case really carries the odd values (anti-vacuity)', () => {
+		const odd = ALL_CASES.find((item) => item.name.startsWith('odd values'));
+		const plan = planOf(splitCase(odd?.argv ?? []).raw, false);
+		expect(plan.answers.entity_label).toBe('--x \'quoted\' "double" Ñandú · 博物館');
+		expect(plan.answers.information).toBe('a b  c');
+		expect(cliArgsOf(plan.answers)).toContain(
+			'--entity-label=--x \'quoted\' "double" Ñandú · 博物館',
+		);
+	});
+});
+
+// ── (d) docker / trial: no install here, the written file decides the plan ───
+
+describe('docker and trial: the Review writes, never installs (d)', () => {
+	for (const route of ['docker', 'trial'] as const) {
+		test(`${route}: no install offered; write <path> decides the walked plan`, async () => {
+			const answerCase = ALL_CASES.find((item) => item.name === `route ${route}`) as Case;
+			const { raw, plain } = splitCase(answerCase.argv);
+			const flags = planOf(raw, false);
+			const path = join(mkdtempSync(join(scratchRoot, `${route}_`)), 'answers.json');
+			const script = scriptForPlan(flags, Object.keys(plain), {}, ['install', `write ${path}`]);
+			// trial: the no-media-protection acknowledgement must be TYPED.
+			script.answers['route.trial_no_media_protection'] = 'yes';
+			const { result, prompter } = await runScripted(script, false, writeAnswersFile);
+			expect(result).toEqual({ kind: 'written', path });
+			expect(prompter.said).toContain('install is not offered: see the errors above');
+			expect(prompter.said.some((line) => line.startsWith('commands: install'))).toBe(false);
+			const file = answersFromAnswersFile(JSON.parse(readFileSync(path, 'utf8')) as unknown);
+			expect(file.errors).toEqual([]);
+			expect(decided(planOf(file.raw, false))).toEqual(decided(flags));
+			// The stack's own secrets are never asked on this route.
+			expect(
+				prompter.asked.filter((id) => id.endsWith('_password') || id.endsWith('.smtp_pass')),
+			).toEqual([]);
+		});
+	}
+});
+
+// ── (e) an edit from the Review ──────────────────────────────────────────────
+
+describe('an edit from the Review installs the edited plan (e)', () => {
+	test('change the languages and turn mail off: the plan of the edited answers', async () => {
+		const answerCase = ALL_CASES.find((item) => item.name === '+mailer') as Case;
+		const { raw, plain, secrets } = splitCase(answerCase.argv);
+		const original = planOf(raw, false);
+		const screens = buildScreens(modelInput({ route: 'developer' }));
+		const indexOf = (id: string): number =>
+			(screens.find((screen) => screen.id === id)?.index ?? 0) as number;
+		const script = scriptForPlan(
+			original,
+			Object.keys(plain),
+			{ ...secrets, root_password: GOOD_ROOT_PASSWORD },
+			[`edit ${indexOf('languages')}`, `edit ${indexOf('mail')}`, 'install'],
+		);
+		const prompter = scriptedInstallPrompter(script);
+		// The operator's NEW answers, typed when the Review is first shown.
+		const line = prompter.line;
+		let edited = false;
+		prompter.line = async (id, text) => {
+			if (id === 'review' && !edited) {
+				edited = true;
+				script.answers['languages.langs'] = ['lg-eng', 'lg-fra'];
+				script.answers['languages.app_lang_default'] = 'lg-fra';
+				script.answers['languages.data_lang_default'] = 'lg-eng';
+				script.answers['mail.mailer'] = false;
+			}
+			return line(id, text);
+		};
+		const result = await runPlainInstall({
+			prompter,
+			probes: fakeProbes(),
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		const expected = planOf(
+			{
+				...raw,
+				langs: 'lg-eng,lg-fra',
+				app_lang_default: 'lg-fra',
+				data_lang_default: 'lg-eng',
+				mailer: false,
+				smtp_host: undefined,
+				smtp_port: undefined,
+				smtp_secure: undefined,
+				smtp_user: undefined,
+				smtp_pass: undefined,
+				smtp_from: undefined,
+				smtp_from_name: undefined,
+			},
+			false,
+		);
+		expect(expected.errors).toEqual([]);
+		expect(expected.envKeys).not.toContain('DEDALO_SMTP_HOST');
+		const fromPlain = plainPlan(result, false);
+		expect(decided(fromPlain)).toEqual(decided(expected));
+		// …and NOT the original (the edit really changed the plan).
+		expect(decided(fromPlain)).not.toEqual(decided(original));
+		// The mail password held for the disabled service is not handed back.
+		expect(result.kind === 'install' ? result.secrets.smtp_pass : 'x').toBeUndefined();
+	});
+});
+
+// ── (g) a verdict holds only for what it tested ─────────────────────────────
+
+describe('a probe verdict holds only for the answers it tested (g)', () => {
+	test('an instance changed from the Review re-runs the database and media checks over the NEW names', async () => {
+		const answerCase = ALL_CASES.find(
+			(item) => item.name === 'route production + instance (derived names as shown)',
+		) as Case;
+		const { raw, plain } = splitCase([...answerCase.argv, '--instance', 'murillo']);
+		const original = planOf(raw, false);
+		expect(original.answers.db_database).toBe('dedalo_murillo');
+		const script = scriptForPlan(
+			original,
+			Object.keys(plain),
+			{ db_password: 'Zz-Db-1', root_password: GOOD_ROOT_PASSWORD },
+			['edit 1', 'install'],
+		);
+		const prompter = scriptedInstallPrompter(script);
+		const line = prompter.line;
+		let edited = false;
+		prompter.line = async (id, text) => {
+			if (id === 'review' && !edited) {
+				edited = true;
+				script.answers['route.instance'] = 'ribera';
+			}
+			return line(id, text);
+		};
+		const probes = fakeProbes();
+		const result = await runPlainInstall({
+			prompter,
+			probes,
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		const final = plainPlan(result, false);
+		expect(final.answers.db_database).toBe('dedalo_ribera');
+		const tested = (probe: string) =>
+			probes.calls
+				.filter((call) => call.probe === probe)
+				.map((call) => normalizeInstallAnswers(call.answers ?? {}).answers);
+		// The LAST check of each ran over what will be installed.
+		expect(tested('db').at(-1)?.db_database).toBe('dedalo_ribera');
+		expect(tested('db').at(-1)?.db_username).toBe('dedalo_ribera');
+		expect(tested('media').at(-1)?.media_path).toBe(final.answers.media_path);
+		expect(final.answers.media_path).toBe('/srv/dedalo/ribera/media');
+		// Anti-vacuity: the first checks DID run over the old names.
+		expect(tested('db')[0]?.db_database).toBe('dedalo_murillo');
+	});
+
+	test('a route changed from the Review re-runs the System check: a host route never installs over a trial verdict', async () => {
+		const answerCase = ALL_CASES.find((item) => item.name === 'route trial') as Case;
+		const { raw, plain } = splitCase(answerCase.argv);
+		const script = scriptForPlan(planOf(raw, false), Object.keys(plain), {}, ['edit 1', 'install']);
+		const prompter = scriptedInstallPrompter(script);
+		const line = prompter.line;
+		let edited = false;
+		prompter.line = async (id, text) => {
+			if (id === 'review' && !edited) {
+				edited = true;
+				script.answers['route.route'] = 'developer';
+			}
+			return line(id, text);
+		};
+		// The host checks (psql, the seed…) fail on this "host"; a Docker route skips them.
+		const fake = fakeProbes();
+		const probes = {
+			...fake,
+			system: async (route: Parameters<typeof fake.system>[0]) => {
+				const outcome = await fake.system(route);
+				return route === 'trial' || route === 'docker'
+					? outcome
+					: { ...outcome, ok: false, msg: 'psql not found (fake)' };
+			},
+		};
+		const result = await runPlainInstall({
+			prompter,
+			probes,
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		expect(result.kind).not.toBe('install');
+		expect(
+			fake.calls.filter((call) => call.probe === 'system').map((call) => call.answers?.route),
+		).toEqual(['trial', 'developer']);
+	});
+
+	test('a secret the ENVIRONMENT supplied for a service turned off is not handed back', async () => {
+		const answerCase = ALL_CASES.find((item) => item.name === '+mailer') as Case;
+		const { raw, plain, secrets } = splitCase(answerCase.argv);
+		const original = planOf(raw, false);
+		const screens = buildScreens(modelInput({ route: 'developer' }));
+		const mailIndex = screens.find((screen) => screen.id === 'mail')?.index as number;
+		const script = scriptForPlan(
+			original,
+			Object.keys(plain),
+			{ ...secrets, smtp_pass: undefined, root_password: GOOD_ROOT_PASSWORD },
+			[`edit ${mailIndex}`, 'install'],
+		);
+		const prompter = scriptedInstallPrompter(script);
+		const line = prompter.line;
+		let edited = false;
+		prompter.line = async (id, text) => {
+			if (id === 'review' && !edited) {
+				edited = true;
+				script.answers['mail.mailer'] = false;
+			}
+			return line(id, text);
+		};
+		const result = await runPlainInstall({
+			prompter,
+			probes: fakeProbes(),
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: { smtp_pass: 'Zz-Env-Smtp-3' },
+			unfinished: null,
+		});
+		expect(result.kind).toBe('install');
+		expect(result.kind === 'install' ? result.secrets.smtp_pass : 'x').toBeUndefined();
+		expect(JSON.stringify(result)).not.toContain('Zz-Env-Smtp-3');
+	});
+});
+
+// ── (f) the catalog-changed refusal ─────────────────────────────────────────
+
+describe('the reviewed decisions bind the run (f)', () => {
+	test('a final plan that decides otherwise than the reviewed one is refused; the same one is not', () => {
+		const argv = [
+			'--db-name',
+			'd',
+			'--db-user',
+			'u',
+			'--entity',
+			'e',
+			'--ontology-source',
+			SOURCE_DIR,
+			'--ontologies',
+			'zzsma,oh',
+		];
+		const raw = answersFromCliArgs(argv).raw;
+		const reviewedPlan = planOf(raw, true);
+		expect(reviewedPlan.errors).toEqual([]);
+		const reviewed = reviewDecisions(reviewedPlan);
+		expect(reviewedDecisionsRefusal(reviewed, planOf(raw, true))).toBeNull();
+		// The source changed between the Review and the run: zzsma no longer declares zzsmb.
+		const changedDir = writeLocalOntologySource(join(scratchRoot, 'changed_source'), [
+			{
+				tld: 'zzsma',
+				name: 'zz screen A',
+				typologyId: 8,
+				typologyName: 'Catalog',
+				dependencies: [{ tld: 'dd', main: 'ontology35', mandatory: true }],
+				nodes: [{ id: 1, parent: 'zzsma0', model: 'dd6', term: 'A root' }],
+			},
+		]);
+		return resolveOntologyCatalog({ kind: 'local', path: changedDir }, { allowedServers: [] }).then(
+			(changed) => {
+				try {
+					const final = buildInstallPlan(raw, { ontologyCatalog: changed.catalog });
+					expect(final.errors).toEqual([]);
+					expect(reviewedDecisionsRefusal(reviewed, final)).toBe(CATALOG_CHANGED_REFUSAL);
+				} finally {
+					changed.cleanup();
+				}
+			},
+		);
+	});
+});

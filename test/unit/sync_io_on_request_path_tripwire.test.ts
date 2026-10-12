@@ -64,15 +64,16 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { REQUEST_PATH_ROOTS, reachableModules } from '../helpers/request_path_closure.ts';
 import { WRITE_PATH_CORPUS_FLOOR, writePathSourceFiles } from '../helpers/write_path_corpus.ts';
 
 /** Repo root (this file lives in test/unit/). */
 const REPO_ROOT = resolve(import.meta.dir, '..', '..');
 
-/** The two tables every served request enters through. */
-const ROOT_MODULES = ['src/core/api/dispatch.ts', 'src/server.ts'];
+/** The two tables every served request enters through (the shared walker's roots). */
+const ROOT_MODULES = REQUEST_PATH_ROOTS;
 
 /**
  * The engine corpus the closure is MEASURED AGAINST — the shared write-path
@@ -472,32 +473,8 @@ function forbiddenCallsIn(source: string): { name: string; line: number }[] {
 	return hits;
 }
 
-const STATIC_IMPORT_RE = /\bfrom\s*['"](\.[^'"]*)['"]/g;
-const DYNAMIC_IMPORT_RE = /\bimport\s*\(\s*['"](\.[^'"]*)['"]\s*\)/g;
-
-/**
- * The reachable set: close relative static + dynamic imports over the root
- * tables. `includeDynamic` exists so the gate's own mutation control can prove
- * the dynamic edge is load-bearing.
- */
-function reachableModules(includeDynamic = true): string[] {
-	const seen = new Set<string>();
-	const queue = ROOT_MODULES.map((relative) => resolve(REPO_ROOT, relative));
-	while (queue.length > 0) {
-		const file = queue.pop() as string;
-		if (seen.has(file) || !existsSync(file)) continue;
-		seen.add(file);
-		const source = readFileSync(file, 'utf8');
-		const patterns = includeDynamic ? [STATIC_IMPORT_RE, DYNAMIC_IMPORT_RE] : [STATIC_IMPORT_RE];
-		for (const pattern of patterns) {
-			for (const match of source.matchAll(pattern)) {
-				const target = resolve(dirname(file), match[1] as string);
-				if (target.endsWith('.ts') && !seen.has(target)) queue.push(target);
-			}
-		}
-	}
-	return [...seen].sort();
-}
+// The closure walker is shared (test/helpers/request_path_closure.ts — the
+// installer's screen-model confinement gate walks the SAME closure).
 
 const REACHABLE = reachableModules();
 

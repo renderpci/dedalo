@@ -35,7 +35,11 @@
  * NOTHING SECRET IS WRITTEN OR PRINTED: run files are built from plain answers
  * (run_files.ts), every message is redacted, and console output is redacted
  * for the run's duration (engine modules print directly). The one exception is
- * the generated DEDALO_SALT_STRING, shown ONCE in the final summary.
+ * the generated DEDALO_SALT_STRING, shown ONCE in the final summary (through
+ * ExecutorIo.showOnce when the front end has a terminal for it).
+ *
+ * A step's `details` (steps.ts — one row per directory, one per tool) are
+ * printed after its run, through the same redacted `say`.
  *
  * Imported only AFTER the CLI has seeded the environment config.ts freezes
  * (scripts/install.ts). The step table and the machine-facing host are
@@ -100,13 +104,26 @@ import {
 	type InstallStepDefinition,
 	type InstallStepInputs,
 	installCreatedBackups,
+	secretsNeeded,
 	type VerifyContext,
 	type VerifyResult,
 } from './steps.ts';
 
+// secretsNeeded lives in the config-free step table (scripts/install.ts asks for
+// a resume's missing secrets BEFORE it seeds the environment config freezes).
+export { secretsNeeded };
+
 export interface ExecutorIo {
 	log(line: string): void;
 	warn(line: string): void;
+	/**
+	 * The ONE-TIME display of a generated secret (the salt), when the front end
+	 * has a terminal for it (the interactive installer: prompter.showOnce).
+	 * Answers whether the lines reached a TERMINAL — only then is the secret
+	 * recorded as shown; otherwise the run says where it is stored. Absent (the
+	 * headless CLI): the line is logged once, as before.
+	 */
+	showOnce?(lines: readonly string[]): boolean;
 }
 
 /** What the executor needs from the machine — injectable so the loop is testable without one. */
@@ -189,35 +206,20 @@ export function readInstallFault(): InstallFault | null {
 
 // ── secrets and the hint ─────────────────────────────────────────────────────
 
-const ENV_CARRIED: readonly SecretKey[] = ['db_password', 'mysql_password', 'smtp_pass'];
-
 /** Is the step recorded done (in the state, when there is one)? */
 function recordedDone(state: InstallState | null, step: InstallStepId): boolean {
 	return state?.steps[step]?.status === 'done';
 }
 
-/** Is `step` in the plan and not yet recorded done? */
-function stillToDo(plan: PlanFile, state: InstallState | null, step: InstallStepId): boolean {
-	return plan.steps.includes(step) && !recordedDone(state, step);
-}
-
-/**
- * The secrets this run must be GIVEN. db/mysql/smtp: only while persist_config
- * is not done (once it is, the install's own 0600 .env carries them back); the
- * root password: only while set_root_pw is not done. A secret the original run
- * was not given (a passwordless trust connection) is never required.
- */
-export function secretsNeeded(plan: PlanFile, state: InstallState | null): SecretKey[] {
-	const persistPending = stillToDo(plan, state, 'persist_config');
-	const carried = ENV_CARRIED.filter((key) => persistPending && plan.secrets_supplied[key]);
-	return stillToDo(plan, state, 'set_root_pw') ? [...carried, 'root_password'] : carried;
-}
-
 const SECRET_SOURCE: Readonly<Record<SecretKey, string>> = Object.freeze({
-	db_password: 'database password (DEDALO_INSTALL_DB_PASSWORD or --secrets-stdin)',
-	mysql_password: 'diffusion password (DEDALO_INSTALL_MYSQL_PASSWORD or --secrets-stdin)',
-	smtp_pass: 'SMTP password (DEDALO_INSTALL_SMTP_PASSWORD or --secrets-stdin)',
-	root_password: 'root password (DEDALO_INSTALL_ROOT_PASSWORD or --secrets-stdin)',
+	db_password:
+		'database password (DEDALO_INSTALL_DB_PASSWORD, --secrets-stdin, or typed at the prompt)',
+	mysql_password:
+		'diffusion password (DEDALO_INSTALL_MYSQL_PASSWORD, --secrets-stdin, or typed at the prompt)',
+	smtp_pass:
+		'SMTP password (DEDALO_INSTALL_SMTP_PASSWORD, --secrets-stdin, or typed at the prompt)',
+	root_password:
+		'root password (DEDALO_INSTALL_ROOT_PASSWORD, --secrets-stdin, or typed at the prompt)',
 });
 
 /** The command prefix that reaches the same private dir. */
@@ -501,6 +503,8 @@ async function runStep(ctx: RunContext, step: InstallStepId): Promise<void> {
 	maybeFault(ctx, step, 'before');
 	ctx.ranAny = true;
 	const outcome = await trackPsqlChildren(ctx.children, () => definition.run(inputs));
+	// The per-item rows first: a refused directory check names each directory.
+	for (const line of definition.details?.(outcome) ?? []) say(ctx, `    ${line}`);
 	const refusal = definition.accept?.(outcome, inputs) ?? null;
 	refuseIf(refusal !== null, 'install.step_failed', () => refusal as string);
 	CREATED[step]?.(ctx);
@@ -940,18 +944,34 @@ async function verifyLogin(ctx: RunContext): Promise<void> {
 	say(ctx, '  root login verified');
 }
 
-/** The generated salt, shown ONCE (the one secret line — unredacted by design). */
+/**
+ * Print the ONE unredacted line: through the front end's one-time display when
+ * it has one (answers whether it reached a terminal), else logged. The console
+ * redaction is lifted only for this call.
+ */
+function displayUnredacted(ctx: RunContext, line: string): boolean {
+	ctx.unredacted = true;
+	try {
+		if (ctx.io.showOnce !== undefined) return ctx.io.showOnce([line]);
+		ctx.io.log(line);
+		return true;
+	} finally {
+		ctx.unredacted = false;
+	}
+}
+
+/**
+ * The generated salt, shown ONCE (the one secret line — unredacted by design).
+ * Through the front end's terminal when it has one: recorded as shown only
+ * when it reached a terminal; otherwise (output redirected to a file) the run
+ * says where the salt is stored instead of writing it into a log.
+ */
 function showSaltOnce(ctx: RunContext): void {
 	const { created } = ctx.state as InstallState;
 	const salt = readInstallEnv()?.DEDALO_SALT_STRING ?? '';
 	if (!created.salt_generated || created.salt_shown || salt === '') return;
-	ctx.unredacted = true;
-	try {
-		ctx.io.log(`  generated DEDALO_SALT_STRING = ${salt}`);
-	} finally {
-		ctx.unredacted = false;
-	}
-	created.salt_shown = true;
+	if (displayUnredacted(ctx, `  generated DEDALO_SALT_STRING = ${salt}`)) created.salt_shown = true;
+	else say(ctx, `  generated DEDALO_SALT_STRING stored in ${installEnvPath()} (0600)`);
 }
 
 /** The end of a fresh/resume run: the root login, the salt (once), the outcome. */

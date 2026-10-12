@@ -77,10 +77,10 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { MAINTENANCE_KEYS } from '../../src/config/catalog/maintenance.ts';
 import { parseEnvFile } from '../../src/config/env.ts';
-import { buildInstallContext } from '../../src/core/install/context.ts';
 import { INSTALL_ROUTER_ACTIONS } from '../../src/core/install/engine.ts';
 import {
 	CORE_HIERARCHIES,
+	hierarchyChoiceView,
 	offeredHierarchies,
 	TOPONYMY_TYPOLOGY_ID,
 } from '../../src/core/install/hierarchy_meta.ts';
@@ -99,21 +99,32 @@ import {
 	SECRET_ANSWER_KEYS,
 	TOPONYMY_SUGGESTION,
 } from '../../src/core/install/install_plan.ts';
+import {
+	INSTALL_DEFAULT_LANG_CODES,
+	INSTALL_LANG_CATALOG,
+} from '../../src/core/install/lang_catalog.ts';
 import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
 import {
-	collectHierarchyDependencies,
-	declarersOf,
 	describeOntologyCatalog,
-	type HierarchyDependency,
-	hierarchyDependencyPlan,
-	type OntologyCatalog,
 	offeredHierarchyTlds,
 	ontologyRequestFromActive,
-	vendoredCoreDeclarers,
 	vendoredOntologyCatalog,
 } from '../../src/core/install/ontology_choice.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import { buildOntologyPackage } from '../../src/core/test_data/ontology_package_fixture.ts';
+import {
+	BASE_ARGV,
+	BASE_WIZARD,
+	CASES,
+	DIFFUSION_ARGV,
+	DIFFUSION_WIZARD,
+	decided,
+	declaredThesauri,
+	MAILER_ARGV,
+	MAILER_WIZARD,
+	WIZARD_CONTEXT_PROPERTIES,
+	WIZARD_DEFAULT_ONTOLOGIES,
+} from '../helpers/install_answer_cases.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const CLI = join(ROOT, 'scripts/install.ts');
@@ -121,39 +132,8 @@ const CONFIG_PERSIST = join(ROOT, 'src/core/install/config_persist.ts');
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_plan_parity_'));
 afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
 
-const WIZARD_PROPERTIES = buildInstallContext().properties as Record<string, unknown> & {
-	hierarchies: { tld: string }[];
-	toponymy_typology: number;
-	ontologies: { default: string[] };
-};
-/**
- * The thesauri the WIZARD POSTS before any declaration is known: NONE
- * (2026-10-10 — pre-selection comes only from the declared dependencies, which
- * the plan adds itself and the wizard learns from persist_config's plan). Its
- * context carries no default list at all (pinned below), so the empty post IS
- * its default answer.
- */
-const WIZARD_DEFAULT_THESAURI: string[] = [];
-/** The domain ontologies the WIZARD pre-ticks (its context, not a re-typed list). */
-const WIZARD_DEFAULT_ONTOLOGIES = WIZARD_PROPERTIES.ontologies.default;
+const WIZARD_PROPERTIES = WIZARD_CONTEXT_PROPERTIES;
 
-/**
- * The thesauri the RELEASE declares for an install order — the core TLDs'
- * declarations (vendoredCoreDeclarers: part of EVERY plan) followed by the
- * order's — derived through the production functions, never a hand-typed list:
- * `dependencies` as the plan reports them, `install` the vendored ones the plan
- * pre-ticks, in the plan's order.
- */
-function declaredThesauri(
-	order: readonly string[],
-	catalog: OntologyCatalog = vendoredOntologyCatalog(),
-): { dependencies: HierarchyDependency[]; install: string[] } {
-	const { dependencies } = collectHierarchyDependencies([
-		...vendoredCoreDeclarers(),
-		...declarersOf(order, catalog),
-	]);
-	return { dependencies, install: hierarchyDependencyPlan(dependencies).install };
-}
 /** What the core TLDs alone declare (every plan carries it). */
 const CORE_DECLARED = declaredThesauri([]);
 /** What the DEFAULT install (core + the default domain ontologies) declares. */
@@ -246,197 +226,7 @@ const DECLARED_SOURCE = (() => {
 	return dir;
 })();
 
-// ── the answer matrix ─────────────────────────────────────────────────────────
-
-interface AnswerCase {
-	name: string;
-	argv: string[];
-	wizard: Record<string, unknown>;
-}
-
-const BASE_ARGV = [
-	'--db-name',
-	'dedalo_parity',
-	'--db-user',
-	'parity_user',
-	'--db-password',
-	'secret pass',
-	'--db-host',
-	'localhost',
-	'--db-port',
-	'5432',
-	'--entity',
-	'parity',
-	'--entity-label',
-	'Parity Museum',
-	'--timezone',
-	'Europe/Madrid',
-	'--locale',
-	'es-ES',
-	'--langs',
-	'lg-spa,lg-eng',
-	'--app-lang',
-	'lg-spa',
-	'--data-lang',
-	'lg-eng',
-];
-
-/** The same answers as the wizard posts them (its key names, its value shapes). */
-const BASE_WIZARD: Record<string, unknown> = {
-	db_database: 'dedalo_parity',
-	db_username: 'parity_user',
-	db_password: 'secret pass',
-	db_hostname: 'localhost',
-	db_port: '5432',
-	db_socket: '',
-	entity: 'parity',
-	entity_label: 'Parity Museum',
-	timezone: 'Europe/Madrid',
-	locale: 'es-ES',
-	langs: ['lg-spa', 'lg-eng'],
-	app_lang_default: 'lg-spa',
-	data_lang_default: 'lg-eng',
-	diffusion: false,
-	mailer: false,
-	update_servers: true,
-	hierarchies: WIZARD_DEFAULT_THESAURI,
-	ontologies: WIZARD_DEFAULT_ONTOLOGIES,
-};
-
-const DIFFUSION_ARGV = [
-	'--diffusion',
-	'--mysql-host',
-	'mariadb.local',
-	'--mysql-port',
-	'3307',
-	'--mysql-name',
-	'web_parity',
-	'--mysql-user',
-	'web_user',
-	'--mysql-password',
-	'web pw',
-];
-const DIFFUSION_WIZARD = {
-	diffusion: true,
-	mysql_hostname: 'mariadb.local',
-	mysql_port: '3307',
-	mysql_database: 'web_parity',
-	mysql_username: 'web_user',
-	mysql_password: 'web pw',
-};
-const MAILER_ARGV = [
-	'--mailer',
-	'--smtp-host',
-	'smtp.example.org',
-	'--smtp-port',
-	'465',
-	'--smtp-secure',
-	'ssl',
-	'--smtp-user',
-	'mailer@example.org',
-	'--smtp-password',
-	'mail pw',
-	'--smtp-from',
-	'noreply@example.org',
-	'--smtp-from-name',
-	'Dédalo',
-];
-const MAILER_WIZARD = {
-	mailer: true,
-	smtp_host: 'smtp.example.org',
-	smtp_port: '465',
-	smtp_secure: 'ssl',
-	smtp_user: 'mailer@example.org',
-	smtp_pass: 'mail pw',
-	smtp_from: 'noreply@example.org',
-	smtp_from_name: 'Dédalo',
-};
-
-const CASES: AnswerCase[] = [
-	{ name: 'base (every default)', argv: BASE_ARGV, wizard: BASE_WIZARD },
-	{
-		name: '+diffusion',
-		argv: [...BASE_ARGV, ...DIFFUSION_ARGV],
-		wizard: { ...BASE_WIZARD, ...DIFFUSION_WIZARD },
-	},
-	{
-		name: '+mailer',
-		argv: [...BASE_ARGV, ...MAILER_ARGV],
-		wizard: { ...BASE_WIZARD, ...MAILER_WIZARD },
-	},
-	{
-		name: '+serving keys',
-		argv: [
-			...BASE_ARGV,
-			'--media-path',
-			'/srv/dedalo/media',
-			'--socket',
-			'/run/dedalo/dedalo_ts.sock',
-			'--media-access-mode',
-			'publication',
-		],
-		wizard: {
-			...BASE_WIZARD,
-			media_path: '/srv/dedalo/media',
-			unix_socket: '/run/dedalo/dedalo_ts.sock',
-			media_access_mode: 'publication',
-		},
-	},
-	{
-		name: 'air-gapped (no update servers)',
-		argv: [...BASE_ARGV, '--no-update-servers'],
-		wizard: { ...BASE_WIZARD, update_servers: false },
-	},
-	{
-		name: 'thesauri: none',
-		argv: [...BASE_ARGV, '--hierarchies', 'none'],
-		wizard: { ...BASE_WIZARD, hierarchies: [] },
-	},
-	{
-		name: 'thesauri: explicit',
-		argv: [...BASE_ARGV, '--hierarchies', 'ad,fr'],
-		wizard: { ...BASE_WIZARD, hierarchies: ['ad', 'fr'] },
-	},
-	{
-		name: 'thesauri: with the core lg',
-		argv: [...BASE_ARGV, '--hierarchies', 'lg,fr'],
-		wizard: { ...BASE_WIZARD, hierarchies: ['lg', 'fr'] },
-	},
-	{
-		name: 'ontologies: explicit oh',
-		argv: [...BASE_ARGV, '--ontologies', 'oh'],
-		wizard: { ...BASE_WIZARD, ontologies: ['oh'] },
-	},
-	{
-		name: 'ontologies: a core TLD dropped with a note',
-		argv: [...BASE_ARGV, '--ontologies', 'DD,oh'],
-		wizard: { ...BASE_WIZARD, ontologies: ['dd', 'oh'] },
-	},
-	{
-		name: 'ontologies: air-gapped default (the vendored oh)',
-		argv: [...BASE_ARGV, '--no-update-servers', '--ontologies', 'default'],
-		wizard: { ...BASE_WIZARD, update_servers: false },
-	},
-];
-
-/** What a plan DECIDES (the fields both front ends must agree on). */
-function decided(plan: InstallPlan) {
-	return {
-		env: plan.env,
-		envKeys: plan.envKeys,
-		steps: plan.steps,
-		hierarchies: plan.hierarchies,
-		hierarchyDependencies: plan.hierarchyDependencies,
-		suggestions: plan.suggestions,
-		ontologies: plan.ontologies,
-		ontologySource: plan.ontologySource,
-		ontologyRequest: plan.ontologyRequest,
-		activeOntologyTlds: plan.activeOntologyTlds,
-		notes: plan.notes,
-		warnings: plan.warnings,
-		errors: plan.errors,
-	};
-}
+// ── the answer matrix: test/helpers/install_answer_cases.ts (shared with the plain-mode gate) ──
 
 function cliPlan(argv: readonly string[]): InstallPlan {
 	const invocation = answersFromCliArgs(argv);
@@ -449,7 +239,7 @@ function cliPlan(argv: readonly string[]): InstallPlan {
 /** Spawn the real CLI in --plan mode (touches nothing; an empty prior .env). */
 function spawnPlan(
 	argv: readonly string[],
-	mode: '--plan' | '--list-ontologies' | '--list-hierarchies' = '--plan',
+	mode: '--plan' | '--list-ontologies' | '--list-hierarchies' | '--list-langs' = '--plan',
 ): { exitCode: number; stdout: string; stderr: string } {
 	const proc = Bun.spawnSync([process.execPath, 'run', CLI, mode, ...argv], {
 		cwd: ROOT,
@@ -580,7 +370,12 @@ describe('install plan — the CLI runs the module (b)', () => {
 		expect(listed.exitCode, listed.stderr).toBe(0);
 		const printed = JSON.parse(listed.stdout.trim()) as {
 			core: string[];
-			entries: { tld: string; has_data: boolean; typology_id: number }[];
+			entries: {
+				tld: string;
+				has_data: boolean;
+				typology_id: number;
+				dependencies: { tld: string; mandatory: boolean }[];
+			}[];
 			suggestion: string;
 			errors: string[];
 		};
@@ -593,6 +388,30 @@ describe('install plan — the CLI runs the module (b)', () => {
 		);
 		expect(printed.suggestion).toBe(TOPONYMY_SUGGESTION);
 		expect(printed.errors).toHaveLength(0);
+		// Each entry's DECLARED thesauri (hierarchy60), from THE view the screens read.
+		const view = new Map(
+			hierarchyChoiceView('lg-eng').hierarchies.map((item) => [item.tld, item.dependencies]),
+		);
+		expect(printed.entries.map((entry) => entry.dependencies)).toEqual(
+			offer.map((entry) => view.get(entry.tld) ?? []),
+		);
+	});
+
+	test('`scripts/install.ts --list-langs` prints the language offer and the default set', () => {
+		const listed = spawnPlan([], '--list-langs');
+		expect(listed.exitCode, listed.stderr).toBe(0);
+		const printed = JSON.parse(listed.stdout.trim()) as {
+			langs: { code: string; label: string }[];
+			default: string[];
+			errors: string[];
+		};
+		expect(printed.langs).toEqual(
+			Object.entries(INSTALL_LANG_CATALOG).map(([code, label]) => ({ code, label })),
+		);
+		expect(printed.default).toEqual([...INSTALL_DEFAULT_LANG_CODES]);
+		// The default set is what a plan with no language answer installs (one truth).
+		expect(cliPlan(BASE_ARGV.slice(0, 2)).langConfig.projectsDefaultLangs).toEqual(printed.default);
+		expect(printed.errors).toEqual([]);
 	});
 });
 
@@ -1061,6 +880,9 @@ describe('install plan — the answers file decides what the wizard decides (j)'
 			'--confirm-database',
 			'--secrets-stdin',
 			'--execute',
+			'--plain',
+			'--write-answers',
+			'--list-langs',
 		]) {
 			const spec = INSTALL_CLI_FLAGS.find((candidate) => candidate.flag === flag);
 			expect(spec, flag).toBeDefined();
@@ -1073,11 +895,38 @@ describe('install plan — the answers file decides what the wizard decides (j)'
 			[['--plan', '--resume'], '--plan cannot be combined with --resume or --abort'],
 			[['--list-ontologies', '--abort'], '--list-* cannot be combined with --resume or --abort'],
 			[['--confirm-database', 'x'], '--confirm-database is only meaningful with --abort'],
+			[['--list-langs', '--resume'], '--list-* cannot be combined with --resume or --abort'],
+			[['--plain', '--abort'], '--plain cannot be combined with --abort'],
+			[
+				['--plain', '--entity', 'x'],
+				'--plain is the interactive front end — it takes no answer flag, --answers, --plan, --list-*, --secrets-stdin, --execute or --root-password',
+			],
+			[
+				['--plain', '--answers', 'a.json'],
+				'--plain is the interactive front end — it takes no answer flag, --answers, --plan, --list-*, --secrets-stdin, --execute or --root-password',
+			],
+			[
+				['--write-answers', 'a.json', '--resume'],
+				'--write-answers cannot be combined with --resume, --abort or --list-*',
+			],
+			[
+				['--write-answers', 'a.json', '--list-hierarchies'],
+				'--write-answers cannot be combined with --resume, --abort or --list-*',
+			],
 		];
 		for (const [argv, error] of refused) {
 			expect(answersFromCliArgs(argv).errors, argv.join(' ')).toContain(error);
 		}
 		expect(answersFromCliArgs(['--abort', '--confirm-database', 'x']).errors).toEqual([]);
+		// --plain may join --resume (it prompts the secrets a resume needs) and --write-answers.
+		expect(answersFromCliArgs(['--plain', '--resume']).errors).toEqual([]);
+		expect(answersFromCliArgs(['--plain', '--write-answers', 'a.json']).errors).toEqual([]);
+		// `--flag=value` carries ANY value — one starting with `--` included (cliArgsOf emits it).
+		expect(answersFromCliArgs(['--entity-label=--x y']).raw).toEqual({ entity_label: '--x y' });
+		expect(answersFromCliArgs(['--entity-label', '--x']).errors).toContain(
+			'--entity-label needs a value',
+		);
+		expect(answersFromCliArgs(['--diffusion=yes']).errors).toContain('--diffusion takes no value');
 	});
 });
 

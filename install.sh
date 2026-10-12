@@ -823,8 +823,14 @@ fi
 
 bold 'Installing Dédalo…'
 # The root AND database passwords travel in the ENVIRONMENT, never in argv: an
-# argv is visible in `ps`. --media-path and --socket are persisted to
-# /private/.env, so the file describes the deployment on its own.
+# argv is visible in `ps`. The stack's database (dedalo @ postgres, role
+# dedalo), media path and socket are passed EXPLICITLY — exactly what
+# `--route trial` derives (src/core/install/install_plan.ts routeDefaults; gate:
+# install_screen_model_tripwire "install.sh's stack flags") — because the
+# installer runs inside the PULLED image, which may predate `--route` (an
+# unknown flag is refused). Flags make the run headless: no question inside
+# the container. --media-path and --socket are persisted to /private/.env, so
+# the file describes the deployment on its own.
 install_args=(
 	--db-name dedalo --db-user dedalo --db-host postgres
 	--entity "$ENTITY" --entity-label "$ENTITY_LABEL"

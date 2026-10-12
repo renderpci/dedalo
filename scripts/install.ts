@@ -17,11 +17,34 @@
  * target DB, and no restart is needed. A resume does the same from the SAVED
  * plan (its secrets from the install's own .env once persist_config is done).
  *
+ * INTERACTIVE (terminal installer phase 2, 2026-10-12): run with NO answer
+ * (no answer flag, no --answers, --plan, --list-*, --resume, --abort,
+ * --secrets-stdin, --execute or --root-password) on a terminal and the
+ * installer ASKS — screen by screen, in the route's order
+ * (src/core/install/screen_model.ts), each screen's probe run in a child
+ * process, then a Review (install / edit <n> / write <path> / quit). Phase 2
+ * draws it in PLAIN line mode (src/core/install/ui_plain/) — selected anyway
+ * by --plain, TERM=dumb or unset, a redirected stdout (the prompts then go to
+ * stderr or /dev/tty) or a terminal under 80×24. The interactive answers run
+ * through the SAME plan and executor as the flags below; the catalog is
+ * re-resolved here and a decision that changed since the Review is refused.
+ * Piped stdin with no answer source is REFUSED (use --answers). The Docker
+ * and trial routes stop at the Review (write the answers; install.sh runs the
+ * host steps) — headless `--route docker|trial` is the in-container delegate.
+ *
+ * --write-answers <file> writes the reviewed (or, headless, the planned)
+ * answers as a dedalo.install.answers/1 file (0600, atomic, no secret; never
+ * inside the private dir, never over a file that is not an answers file).
+ *
  * Usage (npm script `dedalo:install` — NOT `install`, which is a reserved
  * package-manager lifecycle hook):
+ *   bun run scripts/install.ts                      # interactive (a terminal)
+ *   bun run scripts/install.ts --plain [--write-answers answers.json]
  *   DEDALO_INSTALL_ROOT_PASSWORD='...' [DEDALO_INSTALL_DB_PASSWORD='...'] \
  *   bun run scripts/install.ts --db-name dedalo_x --db-user u --entity myentity \
- *       [--answers answers.json] [--db-host localhost] [--db-port 5432] [--db-socket ...] \
+ *       [--route production|docker|trial|developer] [--instance <name>] \
+ *       [--answers answers.json] [--write-answers out.json] \
+ *       [--db-host localhost] [--db-port 5432] [--db-socket ...] \
  *       [--entity-label ...] [--information ...] [--info-key ...] \
  *       [--timezone Europe/Madrid] [--locale es-ES] \
  *       [--langs lg-eng,lg-spa] [--app-lang lg-eng] [--data-lang lg-eng] \
@@ -35,7 +58,9 @@
  *       [--media-path /srv/dedalo/media] [--socket /run/dedalo/dedalo_ts.sock] \
  *       [--media-access-mode publication] \
  *       [--no-update-servers] [--skip-tools] [--plan] [--list-ontologies] [--list-hierarchies] \
- *       [--secrets-stdin] [--execute]
+ *       [--list-langs] [--secrets-stdin] [--execute]
+ * Any value flag also takes the `--flag=value` form (a value may then start
+ * with `--`).
  *   bun run scripts/install.ts --resume [same answers, or none]
  *   bun run scripts/install.ts --abort --confirm-database dedalo_x
  *
@@ -46,7 +71,10 @@
  * DEDALO_INSTALL_DB_PASSWORD / _MYSQL_PASSWORD / _SMTP_PASSWORD / _ROOT_PASSWORD
  * (removed from this process's environment once read); the legacy argv flags
  * --db-password / --mysql-password / --smtp-password / --root-password, which
- * still work but warn (visible to other users in `ps`).
+ * still work but warn (visible to other users in `ps`). On a TERMINAL, without
+ * --execute, a fresh run with no root password and a --resume missing a secret
+ * it still needs ASK for it (hidden, twice; the root password against the
+ * policy); --execute never prompts.
  *
  * VALIDATION BEFORE ANY WRITE: every answer-only refusal — the root password
  * policy included — is the PLAN's (install_validation.ts), and the target
@@ -96,19 +124,40 @@
  *
  * --list-hierarchies prints ONE JSON line — the thesaurus offer of the vendored
  * manifest (core, typologies, entries {tld, name, typology_id, typology_name,
- * has_data}, the toponymy suggestion) + errors — and exits. It needs no other
- * answer.
+ * has_data, dependencies}, the toponymy suggestion) + errors — and exits. It
+ * needs no other answer.
  *
- * Exit codes: 0 done, 1 refused or failed (a failure after the first write
- * prints how to resume or undo), 130 SIGINT, 143 SIGTERM.
+ * --list-langs prints ONE JSON line — {langs: [{code, label}], default} — and
+ * exits.
+ *
+ * Exit codes: 0 done (an interactive `quit` typed too: nothing installed), 1
+ * refused or failed (a failure after the first write prints how to resume or
+ * undo; an interactive answer refused too often), 130 SIGINT (Ctrl-C / Ctrl-D
+ * at an interactive question included), 143 SIGTERM.
  */
 
-import { readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import {
+	closeSync,
+	openSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // All config-free — safe to import BEFORE the environment is seeded.
 import { processEnvValue, seedProcessEnv, unsetProcessEnv } from '../src/config/env.ts';
-import { CORE_HIERARCHIES } from '../src/core/install/hierarchy_meta.ts';
+import {
+	type FrontEndChoice,
+	type ReviewedDecisions,
+	reviewedDecisionsRefusal,
+	selectFrontEndFor,
+	type TerminalCaps,
+	writeAnswersFile,
+} from '../src/core/install/front_end.ts';
+import { CORE_HIERARCHIES, hierarchyChoiceView } from '../src/core/install/hierarchy_meta.ts';
 import {
 	answersFromAnswersFile,
 	answersFromCliArgs,
@@ -124,6 +173,10 @@ import {
 	SECRET_ANSWER_KEYS,
 	TOPONYMY_SUGGESTION,
 } from '../src/core/install/install_plan.ts';
+import {
+	INSTALL_DEFAULT_LANG_CODES,
+	INSTALL_LANG_CATALOG,
+} from '../src/core/install/lang_catalog.ts';
 import {
 	describeOntologyCatalog,
 	type OntologyCatalog,
@@ -152,6 +205,49 @@ function fail(msg: string): never {
 }
 
 const invocation = answersFromCliArgs(Bun.argv.slice(2));
+
+// ── which front end (before ANY read or write) ───────────────────────────────
+
+/**
+ * The terminal as this process sees it — THE one place outside src/ that reads
+ * it (front_end.ts selectFrontEnd decides from it).
+ */
+function terminalCaps(): TerminalCaps {
+	const stdoutTty = process.stdout.isTTY === true;
+	const stderrTty = process.stderr.isTTY === true;
+	return {
+		stdinTty: process.stdin.isTTY === true,
+		stdoutTty,
+		stderrTty,
+		ttyDevice: !stdoutTty && !stderrTty && ttyDeviceWritable(),
+		rawMode: typeof process.stdin.setRawMode === 'function',
+		term: processEnvValue('TERM'),
+		noColor: (processEnvValue('NO_COLOR') ?? '') !== '',
+		columns: process.stdout.columns ?? process.stderr.columns,
+		rows: process.stdout.rows ?? process.stderr.rows,
+	};
+}
+
+/** Can /dev/tty be opened for writing (the last-resort prompt sink)? */
+function ttyDeviceWritable(): boolean {
+	try {
+		closeSync(openSync('/dev/tty', 'w'));
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+const frontEnd: FrontEndChoice = selectFrontEndFor(terminalCaps(), invocation);
+if (frontEnd.kind === 'refuse') {
+	console.error(`\n✖ install failed: ${frontEnd.error}\n`);
+	process.exit(1);
+}
+if (frontEnd.kind === 'interactive' && invocation.errors.length > 0) {
+	console.error(`\n✖ install failed: ${invocation.errors.join('; ')}\n`);
+	process.exit(1);
+}
+
 const priorEnv = await readPriorEnv();
 
 for (const flag of invocation.argvSecretFlags) {
@@ -211,10 +307,12 @@ for (const key of SECRET_KEYS) {
 	const value = pick(fromStdin[key], processEnvValue(SECRET_ENV[key]), fromArgv);
 	if (value !== undefined) secrets[key] = value;
 }
-// Read once and removed: no child process inherits a DEDALO_INSTALL_* variable.
-// (The database password does reach the psql children the installer starts —
-// as DB_PASSWORD/PGPASSWORD, they need it; the root, SMTP and diffusion
-// passwords reach no child.)
+// Read once and removed from process.env. Bun's default spawn env is the
+// ORIGINAL environ (deletes ignored), so every installer child is spawned with
+// an explicit env built from the live one (liveProcessEnv / envSnapshot /
+// pgClientEnv) — gate: install_probe_child.test.ts. (The database password does
+// reach the psql children the installer starts — as DB_PASSWORD/PGPASSWORD,
+// they need it; the root, SMTP and diffusion passwords reach no child.)
 unsetProcessEnv(Object.values(SECRET_ENV));
 
 // ── the answers (flags + an answers file; secrets apart) ─────────────────────
@@ -253,7 +351,7 @@ function withSecrets(raw: Record<string, unknown>, given: Secrets): Record<strin
 		...(given.smtp_pass === undefined ? {} : { smtp_pass: given.smtp_pass }),
 	};
 }
-const raw = withSecrets(plainRaw, secrets);
+let raw = withSecrets(plainRaw, secrets);
 
 // ── listings ─────────────────────────────────────────────────────────────────
 
@@ -326,6 +424,13 @@ if (invocation.listOntologies) await listOntologies();
 function listHierarchies(): never {
 	const errors = [...parseErrors];
 	const offer = offeredThesauri(errors);
+	// The declared thesaurus dependencies (hierarchy60), from THE client view.
+	const dependenciesOf = new Map<string, { tld: string; mandatory: boolean }[]>();
+	if (errors.length === 0) {
+		for (const item of hierarchyChoiceView('lg-eng').hierarchies) {
+			dependenciesOf.set(item.tld, item.dependencies);
+		}
+	}
 	console.log(
 		JSON.stringify({
 			core: CORE_HIERARCHIES.map((item) => item.tld),
@@ -335,6 +440,7 @@ function listHierarchies(): never {
 				typology_id: entry.typology_id,
 				typology_name: entry.typology_name,
 				has_data: entry.data_files.length > 0,
+				dependencies: dependenciesOf.get(entry.tld) ?? [],
 			})),
 			suggestion: TOPONYMY_SUGGESTION,
 			errors,
@@ -344,6 +450,20 @@ function listHierarchies(): never {
 }
 
 if (invocation.listHierarchies) listHierarchies();
+
+/** --list-langs: the language offer, then exit (constants only). */
+function listLangs(): never {
+	console.log(
+		JSON.stringify({
+			langs: Object.entries(INSTALL_LANG_CATALOG).map(([code, label]) => ({ code, label })),
+			default: [...INSTALL_DEFAULT_LANG_CODES],
+			errors: [...parseErrors],
+		}),
+	);
+	process.exit(parseErrors.length === 0 ? 0 : 1);
+}
+
+if (invocation.listLangs) listLangs();
 
 // ── running the executor ─────────────────────────────────────────────────────
 
@@ -365,6 +485,9 @@ function announce(plan: InstallPlan): void {
 	for (const suggestion of plan.suggestions) console.log(`  suggestion: ${suggestion}`);
 }
 
+/** The interactive front end's one-time display (the generated salt), when there is one. */
+let showOnce: ((lines: readonly string[]) => boolean) | undefined;
+
 /** Run the executor and leave with its exit code (the hint after a failure that wrote state). */
 async function execute(
 	request: import('../src/core/install/executor.ts').ExecutorRequest,
@@ -373,6 +496,7 @@ async function execute(
 	const outcome = await executeInstall(request, {
 		log: (line) => console.log(line),
 		warn: (line) => console.warn(line),
+		...(showOnce === undefined ? {} : { showOnce }),
 	});
 	cleanupCatalog();
 	if (outcome.exitCode !== 0) {
@@ -401,8 +525,102 @@ async function execute(
 	process.exit(0);
 }
 
+// ── prompting for a missing secret (a terminal, no --execute) ────────────────
+
+/** May this run ASK for a missing secret? A terminal, not --execute, not a print-and-exit run. */
+function canPromptSecrets(): boolean {
+	return (
+		!invocation.execute &&
+		!invocation.planOnly &&
+		process.stdin.isTTY === true &&
+		typeof process.stdin.setRawMode === 'function'
+	);
+}
+
+/** The prompt sink of a headless run (the same rule as the interactive one: never a redirected stdout). */
+function promptOutput(): { isTTY?: boolean; write(text: string): unknown } | null {
+	if (process.stdout.isTTY === true) return process.stdout;
+	if (process.stderr.isTTY === true) return process.stderr;
+	try {
+		const fd = openSync('/dev/tty', 'w');
+		return { isTTY: true, write: (text: string) => writeSync(fd, text) };
+	} catch {
+		return null;
+	}
+}
+
+/** The words a prompt for each secret uses. */
+const SECRET_PROMPT: Readonly<Record<SecretKey, string>> = {
+	db_password: 'Database password',
+	mysql_password: 'MariaDB (publication) password',
+	smtp_pass: 'SMTP password',
+	root_password: 'Root password',
+};
+
+/**
+ * Ask the missing `keys` on the terminal (hidden, twice; the root password held
+ * to the policy, rule by rule). Nothing is asked when the run may not prompt.
+ */
+async function promptSecrets(keys: readonly SecretKey[], into: Secrets): Promise<void> {
+	const missing = keys.filter((key) => (into[key] ?? '') === '');
+	if (missing.length === 0 || !canPromptSecrets()) return;
+	const output = promptOutput();
+	if (output === null) return;
+	const { ttyInstallPrompter, isNav } = await import('../src/core/install/ui_plain/prompter.ts');
+	const { passwordFeedback } = await import('../src/core/install/screen_model.ts');
+	const prompter = ttyInstallPrompter(
+		{ input: process.stdin, output, signals: process },
+		{ columns: process.stdout.columns },
+	);
+	for (const key of missing) {
+		const answer = await prompter.secret(
+			{
+				id: `secret.${key}`,
+				key,
+				sets: [],
+				kind: 'secret',
+				label: SECRET_PROMPT[key],
+				description: 'never echoed, never written to the plan file or the log',
+				value: null,
+				default: '',
+				answered: false,
+				required: true,
+				errors: [],
+			},
+			key === 'root_password' ? passwordFeedback : undefined,
+		);
+		if (isNav(answer)) fail('stopped at the password prompt — nothing was written');
+		into[key] = answer;
+	}
+}
+
+/** Write the answers file (--write-answers, or the interactive Review's choice), or fail. */
+function writeAnswersOrFail(path: string | undefined, plan: InstallPlan): void {
+	if (path === undefined) return;
+	const refusal = writeAnswersFile(path, plan.answers);
+	if (refusal !== null) fail(refusal);
+	// stderr: --plan's stdout is exactly ONE JSON line.
+	console.error(`  answers written to ${path} (no secret is in it)`);
+}
+
+/** What an interactive run adds to a fresh install. */
+interface InteractiveRun {
+	/** The decisions the operator reviewed — the run refuses to decide otherwise. */
+	reviewed: ReviewedDecisions;
+	writeAnswers?: string;
+}
+
 /** A FRESH install (or --plan). */
-async function freshInstall(): Promise<never> {
+async function freshInstall(interactive?: InteractiveRun): Promise<never> {
+	if (interactive === undefined && !invocation.planOnly) {
+		await promptSecrets(['root_password'], secrets);
+	}
+	const route = normalizeInstallAnswers(raw).answers.route;
+	if (interactive !== undefined && (route === 'docker' || route === 'trial')) {
+		fail(
+			`the ${route} route's host steps arrive in a later release — today run install.sh (it runs this installer inside the container)`,
+		);
+	}
 	// The answers alone (no catalog yet): enough for the boot environment.
 	const preliminary = buildInstallPlan(raw, { priorEnv });
 	const answerErrors = [...parseErrors, ...normalizeInstallAnswers(raw).errors];
@@ -420,6 +638,17 @@ async function freshInstall(): Promise<never> {
 		requireRootPassword: !invocation.planOnly,
 	});
 	const errors = [...parseErrors, ...resolvedCatalog.errors, ...plan.errors];
+	// The interactive Review was built on the probe child's catalog; this run
+	// re-resolved it — the decisions must be the reviewed ones.
+	const changed =
+		interactive === undefined || errors.length > 0
+			? null
+			: reviewedDecisionsRefusal(interactive.reviewed, plan);
+	if (changed !== null) errors.push(changed);
+	// --write-answers: after a VALID plan, before anything runs (--plan included).
+	if (errors.length === 0) {
+		writeAnswersOrFail(interactive?.writeAnswers ?? invocation.writeAnswersPath, plan);
+	}
 
 	if (invocation.planOnly) {
 		cleanupCatalog();
@@ -504,6 +733,13 @@ async function continueInstall(): Promise<never> {
 		);
 	}
 	const runSecrets = resumeSecrets(planFile, state);
+	// On a terminal (no --execute) a resume ASKS the secrets it still needs.
+	if (!invocation.abort) {
+		// The config-free step table (importing the executor here would freeze
+		// config BEFORE bootEnvironment seeds the install's database).
+		const { secretsNeeded } = await import('../src/core/install/steps.ts');
+		await promptSecrets(secretsNeeded(planFile, state), runSecrets);
+	}
 	if (
 		invocation.abort &&
 		(state.created.seed_started || state.created.seed_restored) &&
@@ -554,5 +790,68 @@ async function continueInstall(): Promise<never> {
 	});
 }
 
-if (invocation.resume || invocation.abort) await continueInstall();
+// ── the interactive front end ────────────────────────────────────────────────
+
+/** The prompt sink the selection chose (stdout, stderr, or /dev/tty). */
+function interactiveOutput(sink: 'stdout' | 'stderr' | 'tty'): {
+	isTTY?: boolean;
+	write(text: string): unknown;
+} {
+	if (sink === 'stdout') return process.stdout;
+	if (sink === 'stderr') return process.stderr;
+	const output = promptOutput();
+	if (output === null) fail('no terminal to show the questions on');
+	return output;
+}
+
+/** The thesaurus offer the screens show (config-free: the vendored manifest). */
+function thesaurusOffer(): { view: ReturnType<typeof hierarchyChoiceView> } | { error: string } {
+	try {
+		return { view: hierarchyChoiceView('lg-eng') };
+	} catch (error) {
+		return { error: (error as Error).message };
+	}
+}
+
+/** Walk the screens (plain line mode — phase 3 draws the full-screen UI), then act on the outcome. */
+async function interactiveInstall(sink: 'stdout' | 'stderr' | 'tty'): Promise<never> {
+	const { runPlainInstall } = await import('../src/core/install/ui_plain/run_plain.ts');
+	const { ttyInstallPrompter } = await import('../src/core/install/ui_plain/prompter.ts');
+	const { childProbes } = await import('../src/core/install/install_probe_client.ts');
+	const prompter = ttyInstallPrompter(
+		{ input: process.stdin, output: interactiveOutput(sink), signals: process },
+		{ columns: process.stdout.columns ?? process.stderr.columns },
+	);
+	const host = Intl.DateTimeFormat().resolvedOptions();
+	const result = await runPlainInstall({
+		prompter,
+		probes: childProbes({ execPath: process.execPath, cwd: process.cwd() }),
+		priorEnv,
+		thesauri: thesaurusOffer(),
+		host: { timezone: host.timeZone, locale: host.locale },
+		givenSecrets: { ...secrets },
+		...(invocation.writeAnswersPath === undefined
+			? {}
+			: { writeAnswersPath: invocation.writeAnswersPath }),
+	});
+	if (result.kind === 'resume') return continueInstall();
+	if (result.kind === 'quit') {
+		process.exit(result.reason === 'interrupted' ? 130 : result.reason === 'refused' ? 1 : 0);
+	}
+	if (result.kind !== 'install') process.exit(0);
+	// REPLACE, never merge: a secret the environment supplied for a service the
+	// operator then turned off (or cleared) is not in result.secrets (givenOnly)
+	// and must not be recorded as supplied nor used.
+	for (const key of SECRET_KEYS) delete secrets[key];
+	Object.assign(secrets, result.secrets);
+	raw = withSecrets(result.raw, secrets);
+	showOnce = (lines) => prompter.showOnce(lines);
+	return freshInstall({
+		reviewed: result.reviewed,
+		...(result.writeAnswers === undefined ? {} : { writeAnswers: result.writeAnswers }),
+	});
+}
+
+if (frontEnd.kind === 'interactive') await interactiveInstall(frontEnd.sink);
+else if (invocation.resume || invocation.abort) await continueInstall();
 else await freshInstall();

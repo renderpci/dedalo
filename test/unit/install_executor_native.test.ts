@@ -864,3 +864,133 @@ describe('run files — the stale-lock reclaim is atomic', () => {
 		expect(reclaimStaleLock(lockPath, fresh)).toBe(false);
 	});
 });
+
+// ── phase 2 (2026-10-12): per-item rows, and the salt shown once ─────────────
+
+describe('executor — the per-item rows and the one-time display (phase 2)', () => {
+	test("a step's details are printed after it, one row per directory / per tool, in WORDS", async () => {
+		await withPrivateDir(scratchPrivateDir(), async () => {
+			const { plan, planFile } = fakePlan();
+			const calls: string[] = [];
+			const { host } = fakeHost();
+			const { io, lines } = recordingIo();
+			const table = fakeTable(calls, {
+				check_directories: {
+					run: async () => ({
+						ok: true,
+						dirs: [
+							{ label: 'Private config', path: '/zz/private', exists: true, writable: true },
+							{ label: 'Media', path: '/zz/media', exists: false, writable: false },
+							{ label: 'Cache', path: '/zz/cache', exists: true, writable: false },
+						],
+					}),
+					details: INSTALL_STEPS.check_directories.details,
+				},
+				register_tools: {
+					run: async () => ({
+						ok: true,
+						report: [
+							{ name: 'tool_zz_a', version: '1.2', errors: [], warnings: [] },
+							{ name: 'tool_zz_b', version: null, errors: [], warnings: ['no icon'] },
+							{ name: 'tool_zz_c', version: '0.1', errors: ['bad register.json'], warnings: [] },
+						],
+					}),
+					details: INSTALL_STEPS.register_tools.details,
+				},
+			});
+			const outcome = await executeInstall(freshRequest(planFile, plan), io, { table, host });
+			expect(outcome.result).toBe('complete');
+			for (const row of [
+				'    ok  Private config  /zz/private',
+				'    missing  Media  /zz/media',
+				'    not writable  Cache  /zz/cache',
+				'    ok  tool_zz_a 1.2',
+				'    warn  tool_zz_b: no icon',
+				'    error  tool_zz_c: bad register.json',
+			]) {
+				expect(lines, row).toContain(row);
+			}
+			// The rows follow THEIR step: the directory rows come before the tool rows.
+			expect(lines.indexOf('    ok  Private config  /zz/private')).toBeLessThan(
+				lines.indexOf('    ok  tool_zz_a 1.2'),
+			);
+			// The production table wires both (the rows are not a fake-only feature).
+			expect(INSTALL_STEPS.check_directories.details).toBeFunction();
+			expect(INSTALL_STEPS.register_tools.details).toBeFunction();
+		});
+	});
+
+	/** A table whose persist_config writes a .env with a GENERATED salt (as the real one does). */
+	const SALT = 'feedfacecafebeef0123456789abcdef';
+	const saltTable = (calls: string[], dir: string): FakeTable =>
+		fakeTable(calls, {
+			persist_config: {
+				run: async () => {
+					calls.push('run:persist_config');
+					writeFileSync(join(dir, '.env'), `DEDALO_SALT_STRING=${SALT}\n`, { mode: 0o600 });
+					return { ok: true, msg: 'persisted' };
+				},
+			},
+		});
+
+	test('the generated salt reaches the front end showOnce EXACTLY once, never the log; a resume never shows it again', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const { plan, planFile } = fakePlan();
+			const { host } = fakeHost();
+			const shown: string[][] = [];
+			const { io, lines } = recordingIo();
+			const terminalIo = {
+				...io,
+				showOnce: (out: readonly string[]) => {
+					shown.push([...out]);
+					return true;
+				},
+			};
+			const outcome = await executeInstall(freshRequest(planFile, plan), terminalIo, {
+				table: saltTable([], dir),
+				host,
+			});
+			expect(outcome.result).toBe('complete');
+			expect(shown).toHaveLength(1);
+			expect(shown[0]?.join('\n')).toContain(SALT);
+			expect(lines.join('\n')).not.toContain(SALT);
+			expect(readState(dir).created.salt_shown).toBe(true);
+			// A resume of the finished install: nothing shown again.
+			const again = await executeInstall(
+				{ mode: 'resume', planFile, plan, secrets: { root_password: ROOT_PW } },
+				terminalIo,
+				{ table: saltTable([], dir), host },
+			);
+			expect(again.exitCode).toBe(0);
+			expect(shown).toHaveLength(1);
+		});
+	});
+
+	test('a showOnce with no terminal (output redirected): the salt is NOT printed, NOT marked shown — the run says where it is stored', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const { plan, planFile } = fakePlan();
+			const { host } = fakeHost();
+			const { io, lines } = recordingIo();
+			const redirected = { ...io, showOnce: () => false };
+			const outcome = await executeInstall(freshRequest(planFile, plan), redirected, {
+				table: saltTable([], dir),
+				host,
+			});
+			expect(outcome.result).toBe('complete');
+			expect(lines.join('\n')).not.toContain(SALT);
+			expect(lines.some((line) => line.includes('DEDALO_SALT_STRING stored in'))).toBe(true);
+			expect(readState(dir).created.salt_shown).toBe(false);
+		});
+	});
+
+	test('without a showOnce (the headless CLI) the salt is logged once, as before (control)', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const { plan, planFile } = fakePlan();
+			const { host } = fakeHost();
+			const { io, lines } = recordingIo();
+			await executeInstall(freshRequest(planFile, plan), io, { table: saltTable([], dir), host });
+			expect(lines.filter((line) => line.includes(SALT))).toHaveLength(1);
+			expect(readState(dir).created.salt_shown).toBe(true);
+		});
+	});
+});

@@ -450,6 +450,14 @@ HERMETIC_TRIPWIRES=(
 	#     DB_HOST=127.0.0.1 DB_PORT=59999 DB_NAME=ci_hermetic_no_db: 3 pass / 0 fail): parses
 	#     hostile windows through rqoSchema for every action the dispatch registry lists.
 	test/unit/wire_sqo_page_bound_native.test.ts
+	# --- 2026-10-12 (terminal installer phase 2). DB-free (re-verified with DB_HOST=127.0.0.1
+	#     DB_PORT=59999 DB_NAME=ci_hermetic_no_db: 112 pass / 0 fail): the screen model over the vendored
+	#     catalogs + a mkdtemp local ontology fixture, the plain mode under a scripted prompter
+	#     and over fake terminal streams, the probe client over a recording spawn seam, and the
+	#     CLI spawned with a piped stdin (refused before any read or write).
+	test/unit/install_screen_model_tripwire.test.ts
+	test/unit/install_plain_parity_tripwire.test.ts
+	test/unit/install_plain_secrets_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

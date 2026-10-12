@@ -118,16 +118,30 @@ function ontologyOutcome(
  * lever, and its catalog disagreed with the one stage_ontologies re-resolves
  * after the restart (configured servers only). Refused — one fixed text that
  * says nothing about the path — before anything reads it. Any value but absent
- * or '' (the plan's "not given") is refused. Gate:
- * test/unit/install_step_router_native.test.ts.
+ * or '' (the plan's "not given") is refused. So are `route` and `instance`
+ * (below). Gate: test/unit/install_step_router_native.test.ts.
  */
 export function refuseWizardOnlyCliAnswers(posted: Readonly<Record<string, unknown>>): void {
-	const source = posted.ontology_source;
-	if (source === undefined || source === null || source === '') return;
-	refuseInstall(
-		'install.invalid_input',
-		'ontology_source is a command-line answer (--ontology-source) — the wizard installs from the configured ontology server or the built-in ontologies',
-	);
+	const given = (key: string): boolean =>
+		posted[key] !== undefined && posted[key] !== null && posted[key] !== '';
+	if (given('ontology_source')) {
+		refuseInstall(
+			'install.invalid_input',
+			'ontology_source is a command-line answer (--ontology-source) — the wizard installs from the configured ontology server or the built-in ontologies',
+		);
+	}
+	// The ROUTE and the INSTANCE (phase 2, 2026-10-12) are the terminal
+	// installer's: they derive database, media and socket defaults the wizard's
+	// form never shows. The wizard surface stays exactly what it was (developer
+	// defaults), and is retired with the wizard (phase 5).
+	for (const key of ['route', 'instance']) {
+		if (given(key)) {
+			refuseInstall(
+				'install.invalid_input',
+				`${key} is a terminal-installer answer (--${key}) — the wizard installs with the developer defaults`,
+			);
+		}
+	}
 }
 
 /** The step's answer on the ONLY path that returns: written (every refusal throws). */

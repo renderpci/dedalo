@@ -208,11 +208,6 @@ const BAD_ROWS: readonly BadRow[] = [
 		error: 'unix_socket must be an absolute path',
 	},
 	{
-		name: 'diffusion without mysql_database',
-		answers: { ...DIFFUSION, mysql_database: '' },
-		error: 'diffusion requires mysql_database',
-	},
-	{
 		name: 'diffusion without mysql_username',
 		answers: { ...DIFFUSION, mysql_username: '' },
 		error: 'diffusion requires mysql_username',
@@ -236,6 +231,38 @@ const BAD_ROWS: readonly BadRow[] = [
 		name: 'info_key with a NUL',
 		answers: { info_key: 'k\0' },
 		error: 'info_key contains an illegal control character',
+	},
+	// The ROUTE and the INSTANCE (terminal installer phase 2, 2026-10-12).
+	{
+		name: 'an unknown route',
+		answers: { route: 'cloud' },
+		error: 'route must be production|docker|trial|developer',
+	},
+	{
+		name: 'production without an instance',
+		answers: { route: 'production' },
+		error: 'the production route requires instance (e.g. --instance prado)',
+	},
+	{
+		name: 'an instance on the developer route (the default)',
+		answers: { instance: 'prado' },
+		error: 'instance is only meaningful on the production route (route is developer)',
+	},
+	{
+		name: 'an instance on the docker route',
+		answers: { route: 'docker', instance: 'prado' },
+		error: 'instance is only meaningful on the production route (route is docker)',
+	},
+	{
+		name: 'a malformed instance',
+		answers: { route: 'production', instance: 'Prado-1' },
+		error:
+			"instance 'Prado-1' must start with a lowercase letter and contain only a-z, 0-9 and _ (28 characters at most)",
+	},
+	{
+		name: 'an instance too long for the unix user ded_<instance>',
+		answers: { route: 'production', instance: `p${'x'.repeat(28)}` },
+		error: `instance 'p${'x'.repeat(28)}' must start with a lowercase letter and contain only a-z, 0-9 and _ (28 characters at most)`,
 	},
 ];
 
@@ -262,6 +289,26 @@ describe('install validation — every bad answer refused by the plan, identical
 			expect(seen.wizard).toEqual(seen.argv);
 		});
 	}
+
+	// D7 (2026-10-12): the publication database has a plan default, so diffusion
+	// without one is NOT refused (the old "diffusion requires mysql_database" rule
+	// is gone) — the default is written instead, the instance's on production.
+	test('diffusion without mysql_database is CLEAN on all three: the plan default is used', () => {
+		const answers = { ...BASE, ...DIFFUSION, mysql_database: '' };
+		expect(errorsThreeWays(answers)).toEqual({ argv: [], file: [], wizard: [] });
+		expect(buildInstallPlan(answers).answers.mysql_database).toBe('web_dedalo');
+		const production = buildInstallPlan({ ...answers, route: 'production', instance: 'prado' });
+		expect(production.errors).toEqual([]);
+		expect(production.answers.mysql_database).toBe('web_prado');
+	});
+
+	test('a valid production instance is CLEAN on all three (the route rows are not vacuous)', () => {
+		expect(errorsThreeWays({ ...BASE, route: 'production', instance: 'prado' })).toEqual({
+			argv: [],
+			file: [],
+			wizard: [],
+		});
+	});
 
 	test(`${LANG_ROW.name}: a 'languages:' refusal on argv ≡ answers file ≡ wizard post`, () => {
 		const seen = errorsThreeWays({ ...BASE, ...LANG_ROW.answers });

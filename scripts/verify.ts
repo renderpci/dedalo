@@ -394,6 +394,9 @@ const TRIPWIRES = [
 	'test/unit/search_related_page_window_native.test.ts',
 	'test/unit/filter_projects_membership_native.test.ts',
 	'test/unit/filter_projects_scope_native.test.ts',
+	'test/unit/install_screen_model_tripwire.test.ts',
+	'test/unit/install_plain_parity_tripwire.test.ts',
+	'test/unit/install_plain_secrets_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

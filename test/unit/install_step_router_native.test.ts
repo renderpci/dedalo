@@ -224,6 +224,30 @@ describe('runInstallStep — persist_config never takes a server path from the w
 		expect(refusal?.code).toBe('install.invalid_input');
 		expect(refusal?.message).toContain('ontology_source is a command-line answer');
 	});
+
+	// The ROUTE and the INSTANCE are terminal-installer answers (phase 2,
+	// 2026-10-12): they derive database/media/socket defaults the wizard's form
+	// never shows, so the wizard surface stays exactly the developer one. The
+	// post omits the database fields: an unguarded door would refuse LATER, with
+	// the plan's "db_database is required" — the sentence is what reddens.
+	test('route and instance are refused (the wizard installs with the developer defaults)', async () => {
+		for (const [key, value] of [
+			['route', 'production'],
+			['route', 'developer'],
+			['instance', 'prado'],
+		] as const) {
+			const refusal = await refusalOf({ action: 'persist_config', [key]: value });
+			expect(refusal?.code, `${key}=${value}`).toBe('install.invalid_input');
+			expect(refusal?.message, `${key}=${value}`).toBe(
+				`${key} is a terminal-installer answer (--${key}) — the wizard installs with the developer defaults`,
+			);
+		}
+		// Control: '' is "not given" — the post reaches the PLAN instead, which
+		// refuses it (no database name) before any write.
+		const control = await refusalOf({ action: 'persist_config', route: '', instance: '' });
+		expect(control?.message ?? '').not.toContain('terminal-installer answer');
+		expect(control?.message ?? '').toContain('db_database is required');
+	});
 });
 
 /**

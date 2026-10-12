@@ -19,7 +19,7 @@
 #   4. docker compose --env-file .dedalo.env run --rm \
 #        -e DEDALO_INSTALL_ROOT_PASSWORD='…' \
 #        -e DEDALO_INSTALL_DB_PASSWORD="$POSTGRES_PASSWORD" dedalo \
-#        bun run scripts/install.ts \
+#        bun run scripts/install.ts --route docker --execute \
 #          --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" --db-host postgres \
 #          --entity myentity --langs lg-eng,lg-spa
 #      (the three POSTGRES_* values exported in this shell too, for the arguments;

@@ -19,7 +19,11 @@
  *                half commits piecemeal (a half-activated hierarchy can pass a
  *                partial verify);
  *  - `undo`    — `--abort` only, and only over what the state file says the
- *                install CREATED.
+ *                install CREATED;
+ *  - `details` — the per-item rows the executor prints after the step (one
+ *                row per directory, one per tool): WORDS, never glyphs, so a
+ *                screen reader reads them (phase 2, 2026-10-12 — the wizard's
+ *                directory and tool reports, now in the terminal).
  *
  * The wizard never calls accept/verify/undo: its "a probe answers ok:true with
  * the report" semantics are unchanged. `to_update`, `verify_active_config` and
@@ -74,11 +78,37 @@ export interface InstallStepDefinition {
 	run(inputs: InstallStepInputs): Promise<StepRawOutcome>;
 	accept?(outcome: StepRawOutcome, inputs: InstallStepInputs): string | null;
 	warnings?(outcome: StepRawOutcome): string[];
+	/** The per-item rows printed after the step (see the header); never the outcome's verdict. */
+	details?(outcome: StepRawOutcome): string[];
 	verify?(ctx: VerifyContext): Promise<VerifyResult>;
 	readonly consumedBy?: InstallStepId;
 	/** A step left running/failed is always re-run, never adopted on its verify (see the header). */
 	readonly neverAdopt?: true;
 	undo?(ctx: VerifyContext): Promise<string>;
+}
+
+// ── the secrets a run must be given ─────────────────────────────────────────
+
+const ENV_CARRIED: readonly SecretKey[] = ['db_password', 'mysql_password', 'smtp_pass'];
+
+/** Is `step` in the plan and not yet recorded done? */
+function stillToDo(plan: PlanFile, state: InstallState | null, step: InstallStepId): boolean {
+	return plan.steps.includes(step) && state?.steps[step]?.status !== 'done';
+}
+
+/**
+ * The secrets this run must be GIVEN. db/mysql/smtp: only while persist_config
+ * is not done (once it is, the install's own 0600 .env carries them back); the
+ * root password: only while set_root_pw is not done. A secret the original run
+ * was not given (a passwordless trust connection) is never required. HERE, in
+ * the config-free step table (not the executor, which reaches config through
+ * pg_exec): scripts/install.ts asks for a resume's missing secrets BEFORE it
+ * seeds the environment config.ts freezes.
+ */
+export function secretsNeeded(plan: PlanFile, state: InstallState | null): SecretKey[] {
+	const persistPending = stillToDo(plan, state, 'persist_config');
+	const carried = ENV_CARRIED.filter((key) => persistPending && plan.secrets_supplied[key]);
+	return stillToDo(plan, state, 'set_root_pw') ? [...carried, 'root_password'] : carried;
 }
 
 /** The install status the preflight found (what --abort puts back). */
@@ -207,12 +237,48 @@ export function installCreatedBackups(state: InstallState): string[] {
 	return [...new Set([...state.created.env_backups, ...appeared])].sort();
 }
 
+/** One check_directories row as the outcome carries it. */
+interface DirectoryRow {
+	label: string;
+	path: string;
+	exists: boolean;
+	writable: boolean;
+}
+
+/** `ok  Private config  /path` / `missing  …` / `not writable  …` — one per directory. */
+export function directoryDetails(outcome: StepRawOutcome): string[] {
+	const dirs = (Array.isArray(outcome.dirs) ? outcome.dirs : []) as DirectoryRow[];
+	return dirs.map((dir) => {
+		const state = !dir.exists ? 'missing' : dir.writable ? 'ok' : 'not writable';
+		return `${state}  ${dir.label}  ${dir.path}`;
+	});
+}
+
+/** One register_tools report row as the outcome carries it. */
+interface ToolRow {
+	name: string;
+	version: string | null;
+	errors: string[];
+	warnings: string[];
+}
+
+/** `ok  tool_x 1.2` / `warn  tool_y: …` / `error  tool_z: …` — one per tool. */
+export function toolDetails(outcome: StepRawOutcome): string[] {
+	const report = (Array.isArray(outcome.report) ? outcome.report : []) as ToolRow[];
+	return report.map((tool) => {
+		if (tool.errors.length > 0) return `error  ${tool.name}: ${tool.errors.join('; ')}`;
+		if (tool.warnings.length > 0) return `warn  ${tool.name}: ${tool.warnings.join('; ')}`;
+		return `ok  ${tool.name}${tool.version === null ? '' : ` ${tool.version}`}`;
+	});
+}
+
 const check_directories: InstallStepDefinition = {
 	id: 'check_directories',
 	kind: 'action',
 	needs: [],
 	label: () => 'directories',
 	run: STEP_RUNS.check_directories,
+	details: directoryDetails,
 	accept: (outcome) => {
 		if (outcome.ok === true) return null;
 		// A bare path list read as a crash (measured 2026-10-08: "install failed:
@@ -363,6 +429,7 @@ const register_tools: InstallStepDefinition = {
 	needs: [],
 	label: () => 'register tools',
 	run: STEP_RUNS.register_tools,
+	details: toolDetails,
 	undo: COVERED_BY_SEED,
 };
 

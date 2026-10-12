@@ -10,6 +10,7 @@
 
 import { statfsSync } from 'node:fs';
 import { arch, cpus, freemem, platform, totalmem } from 'node:os';
+import { liveProcessEnv } from '../../config/env.ts';
 import { resolvePgBinary } from './pg_bin.ts';
 
 export interface InstallServerInfo {
@@ -36,7 +37,12 @@ function humanBytes(bytes: number): string {
 /** Version string of a binary via `<bin> -version`/`--version`, or null. */
 function binVersion(bin: string, flag: string): string | null {
 	try {
-		const proc = Bun.spawnSync([bin, flag], { stdout: 'pipe', stderr: 'pipe' });
+		const proc = Bun.spawnSync([bin, flag], {
+			stdout: 'pipe',
+			stderr: 'pipe',
+			// Explicit: Bun's default env is the ORIGINAL environ (config/env.ts liveProcessEnv).
+			env: liveProcessEnv(),
+		});
 		if (proc.exitCode !== 0) return null;
 		const out = (proc.stdout.toString() || proc.stderr.toString()).split('\n')[0]?.trim();
 		return out && out.length > 0 ? out : null;

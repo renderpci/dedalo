@@ -614,7 +614,7 @@ lets the seed create its extensions.
 ```shell
 docker compose --env-file .dedalo.env run --rm \
   -e DEDALO_INSTALL_ROOT_PASSWORD='the-root-password' dedalo \
-  bun run scripts/install.ts \
+  bun run scripts/install.ts --route docker --execute \
     --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" \
     --db-password "$POSTGRES_PASSWORD" --db-host postgres \
     --entity myentity --entity-label 'My Institution' \
@@ -631,6 +631,12 @@ What each part is doing:
   so it inherits the same volumes (`/private`, the media tree) and the same
   environment. The install therefore lands on the volumes the long-lived service
   will use, and the container is discarded.
+- `--route docker` names the deployment: the installer takes the stack's
+  defaults from it (database host `postgres`, media `/srv/dedalo/media`, socket
+  `/run/dedalo/dedalo_ts.sock`); the flags given here still win.
+  `--execute` makes the run unattended — the installer never stops to ask a
+  question inside the container (a `docker compose run` is attached to your
+  terminal, so without it a missing root password would be asked for).
 - `--db-host postgres` is the compose **service name** — the engine reaches the
   database over the internal network, not over a published port.
 - The root password goes in the **environment**, never in argv: an argv is

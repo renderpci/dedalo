@@ -218,13 +218,31 @@ export function seedProcessEnv(values: Readonly<Record<string, string>>): void {
 /**
  * Remove entries from the process environment — the mirror of seedProcessEnv,
  * and the same ONE-writer rule. The installer CLI reads its secrets
- * (DEDALO_INSTALL_*_PASSWORD) once and then drops them, so no child process it
- * spawns afterwards inherits them.
+ * (DEDALO_INSTALL_*_PASSWORD) once and then drops them. A child spawned
+ * afterwards lacks them ONLY when it is given `env: liveProcessEnv()` (or an
+ * env built from envSnapshot): Bun.spawn/spawnSync without `env` hand the child
+ * the process's ORIGINAL environ, deletes ignored (see liveProcessEnv).
  */
 export function unsetProcessEnv(keys: readonly string[]): void {
 	for (const key of keys) {
 		delete process.env[key];
 	}
+}
+
+/**
+ * The process environment AS IT IS NOW (every seedProcessEnv/unsetProcessEnv
+ * applied), for a child's explicit `env`. Measured on Bun 1.4.2: Bun.spawn and
+ * Bun.spawnSync WITHOUT `env` pass the ORIGINAL environ — a key removed by
+ * `delete process.env[k]` still reaches the child (node's spawnSync does not).
+ * No `../private/.env` value is added (unlike envSnapshot): a child that needs
+ * config reads it itself. Built fresh per call.
+ */
+export function liveProcessEnv(): Record<string, string> {
+	const env: Record<string, string> = {};
+	for (const [key, value] of Object.entries(process.env)) {
+		if (value !== undefined) env[key] = value;
+	}
+	return env;
 }
 
 /**
