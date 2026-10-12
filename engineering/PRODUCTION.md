@@ -185,6 +185,50 @@ stamped `# dedalo-install <i> <answers digest>`):
   instance whose map differs is refused — same-host instances run the same
   release.
 
+### 2.2 The host layout is defined by ROLE, not by a path (2026-10-12)
+
+Real hosts look like `/home/my_domain.org/dedalo`, several instances per server,
+so no fixed path is THE layout. Two roles are, and every unit, script and
+installer render places things by them:
+
+1. **The INSTANCE DIR** — any path (`/home/ded_<i>` from the installer,
+   `/home/my_domain.org/dedalo`, `/opt/dedalo/app`), **owned by the service
+   user**. It holds the code tree (`<instance dir>/master_dedalo`; the
+   installer's is `dedalo/`), `private/` (the engine's `../private`) and
+   `backups/` — including the code-update backup root `backups/code`, where the
+   update stages, parks the outgoing tree and the rollback parks a failed one.
+   **Every rename a code update, an in-app restore or the supervisor-side
+   rollback makes is an entry of the instance dir or of that backup root**
+   (`code_update.ts` `renameSwap`/`carryPreservedEntries`/`restoreAfterFailedSwap`,
+   `code_restore.ts` through the same `sentinelGuardedSwap`,
+   `deploy/dedalo-code-rollback.sh`'s two `mv`s), so the instance dir's
+   PARENT may be root-owned. The engine refuses an update or restore BEFORE the
+   download when it cannot write the instance dir or the backup root
+   (`assertSwapPreconditions` → `unwritableSwapDirs`); a `DEDALO_BACKUP_PATH`
+   outside the instance dir must still be the service user's and on the same
+   filesystem.
+2. **ROOT-RUN THINGS** — the pinned Bun runtime and every script a root-started
+   unit executes (watchdog, rollback, backup steps, store 5, alert, media
+   rules) — live in a **root-owned directory OUTSIDE the instance dir**, per
+   instance or shared (`/opt/dedalo/instances/<i>/bin/` from the installer;
+   `/opt/dedalo/bin/`, `/usr/local/lib/dedalo/<name>/bin/` by hand). Root never
+   writes into the instance dir except through steps that run as the service
+   user (the rollback's file work, the backup stores, the installer's engine
+   steps).
+3. **Units name both by placeholder or derivation, never by a host path.** The
+   installer's templates derive both from `%i` (`/home/ded_%i`,
+   `/opt/dedalo/instances/%i/bin` — `host/layout.ts`); the hand-installed units
+   under `deploy/*.service` carry `INSTANCE_DIR`, `ROOT_BIN_DIR` and
+   `DEDALO_USER`, rendered per host by `docs/install/manual_host.md`.
+
+Gates: `test/unit/code_update.test.ts` (*the instance-dir rule* — the full
+update chain, the restore and the rollback script EXECUTED against a scratch
+instance dir whose parent is `0555`; a layout that needs the parent refuses
+before the download); `test/unit/operator_commands_tripwire.test.ts` (E2 —
+every shipped unit rendered for three layouts: root executes nothing inside the
+instance dir, and no active line spells a host path);
+`test/unit/install_host_render_tripwire.test.ts` (c) for the installer's render.
+
 ## 3. Sockets, reverse proxy, timeouts (S2-33)
 
 Production serving is **unix-socket-only**: `SERVER_UNIX_SOCKET` (default
@@ -750,7 +794,7 @@ table exists to make impossible:
 | 1 | Matrix Postgres DB | `pg_dump` |
 | 2 | RAG pgvector DB | `DEDALO_RAG_DB_NAME` |
 | 3 | Media originals | `MEDIA_PATH` |
-| 4 | `../private/` | `/opt/dedalo/private/` |
+| 4 | `../private/` | `INSTANCE_DIR/private/` |
 | 5 | Site-builder instances | `dedalo-site-builder-backup.sh` |
 
 Store 5 runs as **root** while the other four stay unprivileged. It has to: an instance's
@@ -759,17 +803,17 @@ owned by that museum's own service user, and the backup user is in none of those
 that separation is the isolation itself. So it is **its own unit**,
 `dedalo-backup-site-builder.service`, never a `+` line in the set (2026-10-12): systemd
 applies a unit's `EnvironmentFile=` to `+` lines too, and the set reads
-`/opt/dedalo/private/.env`, which `DEDALO_USER` writes — its `LD_PRELOAD` or `PATH` would
+`INSTANCE_DIR/private/.env`, which `DEDALO_USER` writes — its `LD_PRELOAD` or `PATH` would
 run as root. The root unit has no `EnvironmentFile=`, runs both scripts from the root-owned
-`/opt/dedalo/bin/`, and keeps its verdict (`/var/lib/dedalo/backup-site-builder`) and its
+`ROOT_BIN_DIR` (outside the instance dir — §2.2), and keeps its verdict (`/var/lib/dedalo/backup-site-builder`) and its
 destination (`/var/backups/dedalo-site-builder`, created `0700 root:root` under the unit's
 `UMask=0077`) outside every tree `DEDALO_USER` owns. The destination holds credentials:
 treat the whole backup tree as secret material, which store 4 already made true. The
 failure alarm (`dedalo-backup-alert@.service`) runs as `DEDALO_USER` (journal access through
-`systemd-journal`), also from `/opt/dedalo/bin/`. Leg E2 of
-`test/unit/operator_commands_tripwire.test.ts` holds every shipped unit to this: no root
-line beside an `EnvironmentFile=`, nothing run as root from outside `/opt/dedalo/bin/` (or a
-system binary), no root write into a tree `DEDALO_USER` owns, no root line naming such a tree
+`systemd-journal`), also from `ROOT_BIN_DIR`. Leg E2 of
+`test/unit/operator_commands_tripwire.test.ts` holds every shipped unit, RENDERED for three
+layouts, to this: no root line beside an `EnvironmentFile=`, nothing run as root from outside
+`ROOT_BIN_DIR` (or a system binary), nothing root executes inside the instance dir, no root write into a tree `DEDALO_USER` owns, no root line naming such a tree
 except the read-only watchdog, and no root-run rollback or watchdog without a pinned
 `--backup-root`. The rollback unit (`dedalo-ts-rollback.service`) therefore does its file work
 as `DEDALO_USER` and only its fixed `systemctl` restart as root (`ExecStartPost=+`), like the
@@ -813,8 +857,8 @@ cannot even be attempted before step 1:
    # 2. The door. Exit 0 = restored and nothing held; 2 = restored, reconcile
    #    verdicts HELD for your decision (read them); 1 = refused or failed, and
    #    the database is exactly as it was.
-   cd /opt/dedalo/master_dedalo
-   bun scripts/restore.ts /opt/dedalo/private/backups/db/2026-08-29_033000.dedalo.custom.backup
+   cd /opt/dedalo/app/master_dedalo     # <instance dir>/master_dedalo (§2.2)
+   bun scripts/restore.ts /opt/dedalo/app/private/backups/db/2026-08-29_033000.dedalo.custom.backup
    ```
 
    What the door does, in order — each phase gates the next, and the shell
@@ -885,7 +929,7 @@ cannot even be attempted before step 1:
 4. **Media originals** (store 3), from a DATED GENERATION of the tree backup
    (`deploy/dedalo-tree-backup.sh` writes `<dest>/<YYYY-MM-DD_HHMMSS>/` with a
    `latest` link; pick the generation OLDER than the mistake, not `latest`):
-   `rsync -a "/opt/dedalo/backups/media/<generation>/" "$MEDIA_PATH/"`. Then
+   `rsync -a "<instance dir>/backups/media/<generation>/" "$MEDIA_PATH/"`. Then
    rebuild derivatives with `tool_update_cache` — do not restore derivatives.
    The restore door does NOT copy media; this step is yours.
 5. **RECONCILE THE ID COUNTERS AGAINST THE MEDIA TREE** — the door's
@@ -1396,26 +1440,29 @@ A pending, unconfirmed sentinel is the machine-readable fact "the last update
 never proved itself". Because it is written pre-swap, the `backupDir` it names
 may not exist yet — the rollback script handles that state explicitly (below).
 
-**The supervisor scripts live OUT OF TREE.** The swap renames the whole app
-tree; in the crash window between its two renames there is NO tree at
-`/opt/dedalo/master_dedalo` — an in-tree rollback script would vanish exactly
-when `OnFailure=` needs it. The units therefore execute the INSTALLED copies
-at `/opt/dedalo/bin/` (a sibling of the checkout, next to the pinned bun at
-`/opt/dedalo/.bun/`), never the shipped copies inside `deploy/`. One-time
-install:
+**The supervisor scripts live OUT OF TREE — and out of the instance dir.**
+The swap renames the whole app tree; in the crash window between its two
+renames there is NO tree at `<instance dir>/master_dedalo` — an in-tree
+rollback script would vanish exactly when `OnFailure=` needs it. The units
+therefore execute the INSTALLED copies in the root-owned `ROOT_BIN_DIR`
+(§2.2: outside the instance dir, next to the pinned runtime `ROOT_BIN_DIR/bun`),
+never the shipped copies inside `deploy/`. One-time install (worked example:
+`ROOT_BIN_DIR=/opt/dedalo/bin`):
 
 ```sh
 sudo install -d -o root -g root -m 0755 /opt/dedalo/bin
 sudo install -m 0755 deploy/dedalo-code-rollback.sh /opt/dedalo/bin/
 sudo install -m 0755 deploy/dedalo-ts-watchdog.sh   /opt/dedalo/bin/
-# What the backup units run as root (store 5) or as their alarm (§6):
-sudo install -m 0755 deploy/dedalo-backup-step.sh deploy/dedalo-site-builder-backup.sh \
+# What the backup units run (the set as DEDALO_USER, store 5 as root, the alarm — §6):
+sudo install -m 0755 deploy/dedalo-backup-step.sh deploy/dedalo-db-backup.sh \
+    deploy/dedalo-tree-backup.sh deploy/dedalo-site-builder-backup.sh \
     deploy/dedalo-backup-alert.sh /opt/dedalo/bin/
 ```
 
-`/opt/dedalo` itself must stay **root-owned** (`DEDALO_USER` owns only the
-checkout, `private/` and `backups/` below it): a user who owns the parent can
-rename `bin/` and put their own scripts where root runs them.
+`ROOT_BIN_DIR` and every directory above it stay **root-owned**: a user who
+owns a parent can rename `bin/` and put their own scripts where root runs
+them. The INSTANCE DIR is the opposite — the service user's — because the
+swap renames the tree inside it; its parent may be root's (§2.2).
 
 An out-of-tree copy is a real staleness risk: it does NOT update with the
 tree. Re-run the `install` lines after any code update that touched
@@ -1443,7 +1490,7 @@ silently. An install that relocated backups needs no unit edit; pinning
   (`deploy/dedalo-ts-watchdog.sh`) sees a red `/health` with a pending
   unconfirmed sentinel and starts the rollback unit instead of a restart.
 
-`dedalo-code-rollback.sh` (the `/opt/dedalo/bin/` copy) distinguishes FOUR
+`dedalo-code-rollback.sh` (the `ROOT_BIN_DIR` copy) distinguishes FOUR
 states of the sentinel and logs which one it saw:
 
 1. **pending, backupDir exists, no usable tree at APP_DIR** — the crash landed

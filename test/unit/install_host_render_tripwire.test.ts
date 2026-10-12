@@ -23,6 +23,10 @@
  *      ROOT (no User=, or a `+` line) executes a file outside the instance's
  *      home and tree — the root-owned bin dir the runtime step fills, or a
  *      system binary — and every script it names is one the step copies there.
+ *      THE INSTANCE-DIR RULE (2026-10-12): the code tree's parent is the instance
+ *      user's home, its parent is never the install's, root's dirs sit outside
+ *      it, and the rollback/watchdog name exactly the tree and the backup root
+ *      the engine's swap renames within (engineering/PRODUCTION.md §2.2).
  *  (e) THE ENGINE'S MEDIA RULES REACH ROOT'S NGINX ONLY AS VALIDATED COPIES
  *      (deploy/dedalo-media-rules.sh, EXECUTED): every rule file the engine
  *      generates (protection.ts, every mode) is accepted and copied byte-equal;
@@ -51,11 +55,12 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
 import { OS_ROWS } from '../../src/core/install/host/os_support.ts';
 import { stampOf } from '../../src/core/install/host/production/common.ts';
+import { instanceDirs } from '../../src/core/install/host/production/identity.ts';
 import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
 import {
 	backupStores,
@@ -265,6 +270,46 @@ describe('nothing a unit runs as root is a file the instance user can replace (c
 				}
 			}
 		}
+	});
+
+	test("THE INSTANCE-DIR RULE: the code tree, its backup root and every path the swap renames are inside the instance user's dir; root's dirs are outside it", () => {
+		// (2026-10-12, owner decision; engineering/PRODUCTION.md §2.2.) The in-app code
+		// update renames the tree within its PARENT and into <parent>/backups/code
+		// (code_update.ts unwritableSwapDirs) — so that parent must be the instance
+		// user's, and the rollback units must name exactly those paths.
+		const ctx = productionPlanCtx(NGINX_LE, REPO_ROOT);
+		const dirs = instanceDirs(ctx);
+		const ownerOf = (path: string) => dirs.find((spec) => spec.path === path)?.owner;
+		const instanceDir = dirname(ctx.paths.tree);
+		expect(instanceDir).toBe(ctx.paths.home);
+		expect(ownerOf(instanceDir)).toBe(ctx.paths.user);
+		// the instance dir's parent is never created or owned by the install (root's /home)
+		expect(dirs.some((spec) => spec.path === dirname(instanceDir))).toBe(false);
+		// root's things: root-owned, outside the instance dir
+		for (const rootDir of [ctx.paths.binDir, dirname(ctx.paths.bunDir)]) {
+			expect(ownerOf(rootDir), rootDir).toBe('root');
+			expect(rootDir.startsWith(`${instanceDir}/`), rootDir).toBe(false);
+		}
+		// the engine's default code-backup root (the installer writes no DEDALO_BACKUP_PATH)
+		const engineBackupRoot = join(instanceDir, 'backups', 'code');
+		let named = 0;
+		for (const name of ['dedalo-ts-rollback@.service', 'dedalo-ts-watchdog@.service'] as const) {
+			const unit = effective(ctx, name);
+			for (const key of ['ExecCondition', 'ExecStart']) {
+				for (const raw of unit.get(`Service.${key}`) ?? []) {
+					const words = systemdWords(raw.replace(/%i/g, ctx.paths.instance));
+					const flag = (f: string) => words[words.indexOf(f) + 1];
+					if (!words.includes('--app-dir')) continue;
+					named += 1;
+					expect({ name, appDir: flag('--app-dir'), backupRoot: flag('--backup-root') }).toEqual({
+						name,
+						appDir: ctx.paths.tree,
+						backupRoot: engineBackupRoot,
+					});
+				}
+			}
+		}
+		expect(named).toBe(3);
 	});
 
 	test('positive control: a `+` store line beside the instance .env is caught by that reading', () => {

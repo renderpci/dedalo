@@ -18,15 +18,19 @@
 # per-instance unit (deploy/systemd/dedalo-ts-rollback@.service).
 #
 # ExecStart points at the OUT-OF-TREE, root-owned copy of the script
-# (/opt/dedalo/bin/) — NEVER at the copy inside the app tree. The swap
+# (ROOT_BIN_DIR/) — NEVER at the copy inside the app tree. The swap
 # pipeline renames the whole tree; in the crash window between its two
-# renames there is NO tree at /opt/dedalo/master_dedalo, and an in-tree
+# renames there is NO tree at INSTANCE_DIR/master_dedalo, and an in-tree
 # ExecStart would leave this unit unable to run exactly when it matters.
 # One-time install + refresh after updates (docs/install/manual_host.md):
-#   sudo install -d /opt/dedalo/bin
-#   sudo install -m 0755 deploy/dedalo-code-rollback.sh /opt/dedalo/bin/
-# A host whose code-update backups live elsewhere (DEDALO_BACKUP_PATH) changes
-# --backup-root on all three script lines below, and in the watchdog unit.
+#   sudo install -d -o root -g root -m 0755 ROOT_BIN_DIR
+#   sudo install -m 0755 deploy/dedalo-code-rollback.sh ROOT_BIN_DIR/
+# Every move the script makes stays INSIDE INSTANCE_DIR (the app tree, the
+# backup root below it, the failed tree's parking place under the backup root),
+# so INSTANCE_DIR's parent may be root-owned. A host whose code-update backups
+# live elsewhere (DEDALO_BACKUP_PATH) changes --backup-root on all three script
+# lines below, and in the watchdog unit — keep it inside INSTANCE_DIR, on the
+# same filesystem, or the engine refuses the update.
 
 [Unit]
 Description=Roll back a failed Dedalo code update to the previous tree
@@ -35,12 +39,12 @@ Description=Roll back a failed Dedalo code update to the previous tree
 Type=oneshot
 User=DEDALO_USER
 UMask=0027
-ExecCondition=/opt/dedalo/bin/dedalo-code-rollback.sh --check \
-    --app-dir /opt/dedalo/master_dedalo \
-    --backup-root /opt/dedalo/backups/code
-ExecStart=/opt/dedalo/bin/dedalo-code-rollback.sh --no-restart \
-    --app-dir /opt/dedalo/master_dedalo \
-    --backup-root /opt/dedalo/backups/code \
+ExecCondition=ROOT_BIN_DIR/dedalo-code-rollback.sh --check \
+    --app-dir INSTANCE_DIR/master_dedalo \
+    --backup-root INSTANCE_DIR/backups/code
+ExecStart=ROOT_BIN_DIR/dedalo-code-rollback.sh --no-restart \
+    --app-dir INSTANCE_DIR/master_dedalo \
+    --backup-root INSTANCE_DIR/backups/code \
     --service dedalo-ts \
     --socket /run/dedalo/dedalo_ts.sock
 ExecStartPost=+/usr/bin/systemctl reset-failed dedalo-ts.service

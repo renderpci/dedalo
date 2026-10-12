@@ -9,36 +9,45 @@ This page is for one case only: a host the installer cannot set up, because it a
 
 ## The layout
 
-The reference units under `deploy/` are written for this single-instance layout. Every command below uses it; on an adopted host, substitute the paths that host already has.
+A host's layout is defined by **role**, not by a fixed path. Two directories matter, and you choose where each one lives:
 
-```text
-/opt/dedalo/                   root-owned (0755)
-/opt/dedalo/master_dedalo/     the code — owned by the service user
-/opt/dedalo/private/           the private directory: .env (0600), sessions, state — owned by the service user (0700)
-/opt/dedalo/backups/           the backups — owned by the service user
-/opt/dedalo/bin/               root-owned copies of the scripts root-run units execute
-/opt/dedalo/.bun/bin/bun       the pinned runtime — root-owned
-/srv/dedalo/media/             MEDIA_PATH — owned by the service user
-/run/dedalo/dedalo_ts.sock     the socket (systemd RuntimeDirectory)
-user/group: dedalo
-```
+- **The instance directory** — any path, **owned by the service user**. It holds the code (`<instance directory>/master_dedalo`), the private directory (`private/`) and the backups (`backups/`). An in-app [code update](../management/updates/updating_code.md) renames the code tree *inside* this directory and moves the old one into `backups/code` below it, so the service user must be able to write it. Its **parent** can stay root-owned: nothing is ever created or renamed there.
+- **The root bin directory** — **owned by root**, **outside** the instance directory. It holds the pinned Bun runtime and the scripts the watchdog, rollback and backup units run. Root never runs a file the service user can replace.
+
+Two worked examples:
+
+| | A single instance | Several instances, one per domain |
+| --- | --- | --- |
+| instance directory (service user's) | `/opt/dedalo/app/` | `/home/my_domain.org/dedalo/` |
+| its parent | `/opt/dedalo/` — root's | `/home/my_domain.org/` — root's |
+| the code | `/opt/dedalo/app/master_dedalo/` | `/home/my_domain.org/dedalo/master_dedalo/` |
+| the private directory (`.env` `0600`, sessions, state — `0700`) | `/opt/dedalo/app/private/` | `/home/my_domain.org/dedalo/private/` |
+| the backups, code-update backups in `backups/code` | `/opt/dedalo/app/backups/` | `/home/my_domain.org/dedalo/backups/` |
+| root bin directory: runtime `bun` and root-run scripts | `/opt/dedalo/bin/` | `/usr/local/lib/dedalo/my_domain.org/bin/` |
+| service user and group | `dedalo` | one per instance, for example `my_domain` |
+| `MEDIA_PATH` | `/srv/dedalo/media/` | `/srv/dedalo/my_domain.org/media/` |
+| socket (systemd `RuntimeDirectory`) | `/run/dedalo/dedalo_ts.sock` | one directory per instance (see [several instances](#several-hand-built-instances-on-one-host)) |
+
+The installer follows the same rule: its instance directory is `/home/ded_<i>/` (owned by `ded_<i>`; `/home` is root's), its code is `/home/ded_<i>/dedalo/`, and its root bin directory is `/opt/dedalo/instances/<i>/bin/`.
 
 Three properties are load-bearing:
 
-- **The private directory is a sibling of the code**, one level above it, never inside the served tree. The engine derives its path from the location of the code it runs (or from `DEDALO_PRIVATE_DIR`).
-- **`/opt/dedalo` itself stays root-owned.** The service user owns only the code, `private/` and `backups/` below it. A user who owns the parent can rename `bin/` and put their own scripts where root runs them.
+- **The service user owns the instance directory, and root owns everything above the root bin directory.** Without the first, every in-app code update is refused before it downloads anything (*the service user cannot write the instance directory*). Without the second, the service user could rename the bin directory and put its own scripts where root runs them.
+- **The private directory is a sibling of the code**, inside the instance directory, never inside the served tree. The engine derives its path from the location of the code it runs (or from `DEDALO_PRIVATE_DIR`).
 - **`MEDIA_PATH` is absolute and independent of the code**, often on its own volume.
 
 ## Prepare the host
 
-**The service user** (skip on an adopted host — [the migration](migrating_from_v6.md#prepare-the-v7-host-first) says why):
+The commands below use the single-instance example; substitute your own paths. **The service user** (skip on an adopted host — [the migration](migrating_from_v6.md#prepare-the-v7-host-first) says why):
 
 ```shell
-sudo adduser --system --group --no-create-home --home /opt/dedalo --shell /usr/sbin/nologin dedalo
 sudo install -d -o root -g root -m 0755 /opt/dedalo /opt/dedalo/bin
-sudo install -d -o dedalo -g dedalo -m 0700 /opt/dedalo/private
-sudo install -d -o dedalo -g dedalo -m 0750 /opt/dedalo/backups /srv/dedalo/media
+sudo adduser --system --group --no-create-home --home /opt/dedalo/app --shell /usr/sbin/nologin dedalo
+sudo install -d -o dedalo -g dedalo -m 0750 /opt/dedalo/app /opt/dedalo/app/backups /srv/dedalo/media
+sudo install -d -o dedalo -g dedalo -m 0700 /opt/dedalo/app/private
 ```
+
+On an adopted host whose installation lives in `/home/my_domain.org/dedalo`, that directory is already the instance directory: check that the service user owns it (`stat -c '%U' /home/my_domain.org/dedalo`) and that its code, `private/` and `backups/` are inside it.
 
 `--group` creates the group `dedalo` too, as the user's primary group. The server unit names only the user (`User=`): with no `Group=` line it runs with that primary group, which owns the socket, and that group is what the web server joins to reach it.
 
@@ -56,17 +65,17 @@ PostgreSQL 18 comes from the PostgreSQL project's repository (PGDG) where the re
 
 ```shell
 BUN_VERSION="$(cat /path/to/the/code/.bun-version)"
-curl -fsSL https://bun.sh/install | sudo BUN_INSTALL=/opt/dedalo/.bun bash -s "bun-v${BUN_VERSION}"
-/opt/dedalo/.bun/bin/bun --version
+curl -fsSL https://bun.sh/install | sudo BUN_INSTALL=/opt/dedalo bash -s "bun-v${BUN_VERSION}"
+/opt/dedalo/bin/bun --version
 ```
 
-Never `bun upgrade` it: the engine is coupled to version-specific runtime behaviour, and a drift there is a data-corruption class. The unit's `ExecStart` names this absolute path.
+`BUN_INSTALL` is the parent of the root bin directory: Bun installs itself as `<BUN_INSTALL>/bin/bun`, which is where the server unit's `ExecStart` looks for it. Never `bun upgrade` it: the engine is coupled to version-specific runtime behaviour, and a drift there is a data-corruption class.
 
 **The code**, owned by the service user, with its locked dependencies:
 
 ```shell
-sudo -u dedalo git clone <your-dedalo-remote> /opt/dedalo/master_dedalo
-sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
+sudo -u dedalo git clone <your-dedalo-remote> /opt/dedalo/app/master_dedalo
+sudo -u dedalo bash -c 'cd /opt/dedalo/app/master_dedalo && /opt/dedalo/bin/bun install --frozen-lockfile --production'
 ```
 
 The `cd` is part of the command: `sudo -u` keeps the directory you are standing in, so Bun run from elsewhere reports `could not find a package.json file to install from`. `--frozen-lockfile` refuses to resolve a dependency tree other than the tested one; `--production` skips the test harness and the linters.
@@ -96,31 +105,41 @@ Reference units ship under `deploy/`:
 | `dedalo-backup-site-builder.service` | the site-builder store, run as root in its own unit with no `EnvironmentFile`, pulled in by the set |
 | `dedalo-backup-alert@.service` | reports a failed backup, run as the service user |
 
-**1 — Install the root-run scripts, and copy the units.** The watchdog, the rollback and the root-run backup units do not run scripts from the code tree: a code update moves the whole tree aside, and the rollback has to work exactly when the tree is missing. They run root-owned copies in `/opt/dedalo/bin/`:
+**1 — Install the root-run scripts.** The watchdog, the rollback and the backup units do not run scripts from the code tree: a code update moves the whole tree aside, and the rollback has to work exactly when the tree is missing. They run root-owned copies in the root bin directory:
 
 ```shell
-cd /opt/dedalo/master_dedalo
+cd /opt/dedalo/app/master_dedalo
 sudo install -m 0755 deploy/dedalo-code-rollback.sh deploy/dedalo-ts-watchdog.sh \
-  deploy/dedalo-backup-step.sh deploy/dedalo-site-builder-backup.sh deploy/dedalo-backup-alert.sh \
+  deploy/dedalo-backup-step.sh deploy/dedalo-db-backup.sh deploy/dedalo-tree-backup.sh \
+  deploy/dedalo-site-builder-backup.sh deploy/dedalo-backup-alert.sh \
   /opt/dedalo/bin/
-sudo cp deploy/dedalo-ts*.service deploy/dedalo-ts*.timer deploy/dedalo-backup*.service \
-  deploy/dedalo-backup.timer /etc/systemd/system/
 ```
 
 Without the copies the watchdog fails with `status=203/EXEC` every 30 seconds, and no failed code update is rolled back. A code update does not refresh them: run the `install` line again after an update that changes `deploy/*.sh` (the release notes say when).
 
-**2 — Substitute the placeholders.** The units ship with ALL-CAPS placeholders:
+**2 — Render the units for your layout.** The units under `deploy/` name the layout only through three placeholders, so one set of files serves any instance directory:
 
-| Placeholder | This layout's value |
-| --- | --- |
-| `DEDALO_USER` (`User=`) | `dedalo` |
-| `WorkingDirectory` | `/opt/dedalo/master_dedalo` |
-| `ExecStart` bun path | `/opt/dedalo/.bun/bin/bun` |
-| backup `EnvironmentFile` | `/opt/dedalo/private/.env` |
-| backup paths | `/opt/dedalo/private/backups/…`, `/opt/dedalo/backups/…` |
-| code-update backup root (`--backup-root` in the rollback and watchdog units) | `/opt/dedalo/backups/code` — change both when `DEDALO_BACKUP_PATH` points elsewhere |
+| Placeholder | What | Single instance | `my_domain.org` |
+| --- | --- | --- | --- |
+| `DEDALO_USER` | the service user | `dedalo` | `my_domain` |
+| `INSTANCE_DIR` | the instance directory (the service user's) | `/opt/dedalo/app` | `/home/my_domain.org/dedalo` |
+| `ROOT_BIN_DIR` | the root bin directory (root's, outside the instance directory) | `/opt/dedalo/bin` | `/usr/local/lib/dedalo/my_domain.org/bin` |
 
-Edit each with `systemctl edit --full <unit>`, then check that none is left: `systemctl cat dedalo-ts dedalo-ts-rollback dedalo-backup 'dedalo-backup-alert@x' | grep -n DEDALO_USER` must print nothing. An unsubstituted `User=DEDALO_USER` fails with `status=217/USER` before Bun runs. On the RHEL family the PostgreSQL unit is `postgresql-18.service`, not `postgresql.service`: change `After=` and `Wants=` accordingly.
+Substitute all three while copying the units into place:
+
+```shell
+DEDALO_USER=dedalo INSTANCE_DIR=/opt/dedalo/app ROOT_BIN_DIR=/opt/dedalo/bin
+cd "$INSTANCE_DIR/master_dedalo"
+for unit in deploy/dedalo-ts*.service deploy/dedalo-ts*.timer deploy/dedalo-backup*.service deploy/dedalo-backup.timer; do
+  sed -e "s|\<DEDALO_USER\>|$DEDALO_USER|g" -e "s|\<INSTANCE_DIR\>|$INSTANCE_DIR|g" \
+      -e "s|\<ROOT_BIN_DIR\>|$ROOT_BIN_DIR|g" "$unit" | sudo tee "/etc/systemd/system/${unit#deploy/}" >/dev/null
+done
+grep -nE '\<(DEDALO_USER|INSTANCE_DIR|ROOT_BIN_DIR)\>' /etc/systemd/system/dedalo-ts*.service /etc/systemd/system/dedalo-backup*.service
+```
+
+The last command must print nothing. An unsubstituted `User=DEDALO_USER` fails with `status=217/USER` before Bun runs. On the RHEL family the PostgreSQL unit is `postgresql-18.service`, not `postgresql.service`: change `After=` and `Wants=` with `systemctl edit --full dedalo-ts`.
+
+The rollback and watchdog units pin the code-update backup root to `INSTANCE_DIR/backups/code`, which is where the engine keeps it unless `DEDALO_BACKUP_PATH` says otherwise. If you set that key, change `--backup-root` in both units to the same directory — inside the instance directory, on the same filesystem as the code; the engine refuses an update whose backup root the service user cannot write.
 
 Never add a root (`+`) line to the backup set: systemd applies its `EnvironmentFile=` — a file the service user writes — to root lines too. The site-builder store is root's, in its own unit.
 
@@ -150,7 +169,8 @@ On the RHEL family with SELinux, the installer's contexts and policy module are 
 
 An adopted host that already carries several Dédalo installations keeps one unit per installation. Two points are specific to adopted hosts:
 
-- **The user name, the home and the site slug rarely agree** (a user `dedalo_user` with the home `/home/dedalo.dev`). A template unit whose `%i` fills all three cannot express that. Write one ordinary unit per installation, every value spelled out — or keep `%i` for the paths and give each instance its `User=`/`Group=` in a drop-in (`systemctl edit <unit>`).
+- **Each installation is one instance directory**, for example `/home/my_domain.org/dedalo` and `/home/other_domain.org/dedalo`, each owned by its own service user, each with its own root bin directory (`/usr/local/lib/dedalo/my_domain.org/bin`, …). Render the units once per installation with that installation's three values.
+- **The user name, the home and the site slug rarely agree** (a user `dedalo_user` with the home `/home/dedalo.dev`). A template unit whose `%i` fills all three cannot express that. Give each installation's units their own names — for example `dedalo-ts-my_domain.service` — and rename every reference between them in the rendered copies: the `OnFailure=`, `Wants=`, `Requisite=`, `After=` and `Also=` lines, the `--service`, `--socket` and unit arguments of the watchdog and rollback lines, and `RuntimeDirectory=` with the socket under it (`SERVER_UNIX_SOCKET` in that installation's `.env`).
 - **Each instance needs its own group.** An adopted user often has the web server's group as its primary group, and two such instances then have no boundary between them — [the migration's Phase E](migrating_from_v6.md#82-give-the-adopted-user-its-own-group) gives each its own.
 
 !!! warning "The installer's unit names are reserved"

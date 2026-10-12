@@ -641,15 +641,18 @@ describe('restart supervisor contract', () => {
 	});
 
 	test('rollback + watchdog units execute scripts OUTSIDE the app tree (finding A)', async () => {
-		const APP_DIR = '/opt/dedalo/master_dedalo';
+		// The units name the layout by ROLE (2026-10-12, engineering/PRODUCTION.md
+		// §2.2): INSTANCE_DIR holds the app tree, ROOT_BIN_DIR (root's, outside it)
+		// the scripts root-started units run.
+		const APP_DIR = 'INSTANCE_DIR/';
 		for (const unitName of ['dedalo-ts-rollback.service', 'dedalo-ts-watchdog.service']) {
 			const unit = await Bun.file(new URL(`../../deploy/${unitName}`, import.meta.url)).text();
 			const exec = unit.match(/^ExecStart=(\S+)/m);
 			expect(exec).not.toBeNull();
 			// The load-bearing property: the executable survives the tree swap.
-			expect(exec?.[1]?.startsWith(`${APP_DIR}/`)).toBe(false);
-			// And the concrete out-of-tree home, so docs/units cannot drift apart.
-			expect(exec?.[1]?.startsWith('/opt/dedalo/bin/')).toBe(true);
+			expect(exec?.[1]?.startsWith(APP_DIR)).toBe(false);
+			// And the out-of-tree home, so docs/units cannot drift apart.
+			expect(exec?.[1]?.startsWith('ROOT_BIN_DIR/')).toBe(true);
 		}
 	});
 

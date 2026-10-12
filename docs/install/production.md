@@ -28,6 +28,8 @@ Everything the installer creates is named after the **instance name** you choose
 | `/opt/dedalo/instances/<i>/bin/` | the root-owned copies of the scripts root-run units execute |
 | `/var/lib/dedalo-install/<i>/` | the installer's record of the host steps (`0700`, root) |
 
+The layout follows one rule, by role. **`/home/ded_<i>/` is the instance directory**: owned by `ded_<i>`, it holds the release tree, the private directory and the backups, and an in-app code update renames the release tree only inside it (`/home` stays root's). **What root-started units run** — the runtime and the root-run scripts — lives in root-owned directories under `/opt/dedalo/`, outside every instance directory. A [host set up by hand](manual_host.md#the-layout) follows the same rule with its own paths.
+
 Several instances can share one host; each runs the installer with its own name. See [Several instances on one host](multi_instance.md).
 
 ### Mandatory: a supervisor that declares itself
@@ -421,6 +423,7 @@ These are the installed defaults. Check that nothing has changed them, because e
 | `SESSION_COOKIE_SECURE` | `true` (the default) | requires TLS — a browser drops a `Secure` cookie over plain HTTP |
 | `/home/ded_<i>/private/.env` | `0600`, owned by `ded_<i>` | it holds every secret |
 | `/home/ded_<i>/private/` | `0700` | it holds the session store and the media-auth store |
+| `/home/ded_<i>/` | owned by `ded_<i>` | an in-app code update renames the release tree inside it; its parent `/home` stays root's |
 | `/opt/dedalo` and everything under it | owned by root | a root-run unit must never execute a file the instance can replace |
 
 !!! note "There is no install surface to close"

@@ -11,14 +11,14 @@
 # every night failed in silence, and a silent backup is believed. See
 # deploy/dedalo-backup-alert.sh for what it does and why those channels.
 #
-#   sudo install -m 0755 deploy/dedalo-backup-alert.sh /opt/dedalo/bin/
+#   sudo install -m 0755 deploy/dedalo-backup-alert.sh ROOT_BIN_DIR/
 #   sudo cp deploy/dedalo-backup-alert@.service /etc/systemd/system/
 #
 # It runs as DEDALO_USER, like the backup's own stores (2026-10-12; it ran as root
 # from the app tree before — a script DEDALO_USER could edit, run as root, writing
 # into a directory DEDALO_USER owns). It writes BACKUP_FAILED into the backup state
 # directory, which is DEDALO_USER's, and reads the failed unit's journal through
-# the systemd-journal group. The script is the ROOT-OWNED /opt/dedalo/bin/ copy, so
+# the systemd-journal group. The script is the ROOT-OWNED ROOT_BIN_DIR/ copy, so
 # the user it runs as cannot change what it runs. A failure of the root store
 # (dedalo-backup-site-builder.service) lands here too: its own verdict stays in its
 # root-owned state directory, the alarm in the one the maintenance panel reads.
@@ -33,8 +33,8 @@ Group=DEDALO_USER
 SupplementaryGroups=systemd-journal
 # Keep this in step with dedalo-backup.service's own Environment= line: the alarm
 # clears nothing and writes BACKUP_FAILED, so both must mean the same directory.
-Environment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups
+Environment=DEDALO_BACKUP_STATE_DIR=INSTANCE_DIR/backups
 # Optional local mail; see the script's header. Set it with `systemctl edit`,
 # not in ../private/.env (append-only, documented keys only).
 #Environment=DEDALO_BACKUP_MAILTO=collections@museum.example
-ExecStart=/opt/dedalo/bin/dedalo-backup-alert.sh %i
+ExecStart=ROOT_BIN_DIR/dedalo-backup-alert.sh %i

@@ -49,7 +49,7 @@ journalctl -u dedalo-backup@<i> -n 50
 and `.timer` ([A host set up by hand › The units](../install/manual_host.md#the-units)).
 The set runs as the service user; it pulls in `deploy/dedalo-backup-site-builder.service`,
 which copies the site-builder store as root, in a unit of its own: it reads no
-`EnvironmentFile`, runs its scripts from the root-owned `/opt/dedalo/bin/`, and
+`EnvironmentFile`, runs its scripts from the root-owned root bin directory, and
 writes to `/var/backups/dedalo-site-builder`. A failed run fires
 `dedalo-backup-alert@.service`, which runs as the service user.
 
@@ -131,8 +131,8 @@ ALTER ROLE dedalo_database_user CREATEDB;
 ```
 
 The commands below name an instance `<i>` installed by the installer; on a host
-set up by hand, use its unit `dedalo-ts`, its code `/opt/dedalo/master_dedalo`
-and its runtime `/opt/dedalo/.bun/bin/bun`.
+set up by hand, use its unit `dedalo-ts`, its code `<instance directory>/master_dedalo`
+and its runtime `<root bin directory>/bun` ([The layout](../install/manual_host.md#the-layout)).
 
 1. Stop the engine, and the watchdog timer that would restart it:
 

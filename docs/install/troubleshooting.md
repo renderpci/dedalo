@@ -403,7 +403,7 @@ could not set up the process. The code says which step:
 | `217/USER` | the user does not resolve | `User=` misspelled, or the account was never created |
 | *group credentials* | the group does not resolve | see the entry above |
 | `200/CHDIR` | cannot enter `WorkingDirectory` | wrong path, or the service user cannot traverse into it |
-| `203/EXEC` | cannot execute `ExecStart` | the pinned runtime is not at that path (`/opt/dedalo/bun/<pin>/bun` on an installer instance). On the watchdog or rollback unit: the root-run scripts are missing from `/opt/dedalo/instances/<i>/bin/` (`/opt/dedalo/bin/` on a single-instance host set up by hand) |
+| `203/EXEC` | cannot execute `ExecStart` | the pinned runtime is not at that path (`/opt/dedalo/bun/<pin>/bun` on an installer instance). On the watchdog or rollback unit: the root-run scripts are missing from `/opt/dedalo/instances/<i>/bin/` (the root bin directory on a host set up by hand — `/opt/dedalo/bin/` in its example) |
 
 Reproduce the same conditions by hand before editing the unit again:
 

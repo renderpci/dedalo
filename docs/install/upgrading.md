@@ -44,12 +44,17 @@ If `.bun-version` changed, install that Bun version first. Rebuild the test data
 
 ### A host set up by hand
 
-A [host set up by hand](manual_host.md) — a migrated installation — can use the code update panel too. Updating by hand is a fetch, a dependency install and a restart, as the service user:
+A [host set up by hand](manual_host.md) — a migrated installation — can use the code update panel too, as long as its service user owns the **instance directory**, the directory that holds the code ([The layout](manual_host.md#the-layout)): the update renames the code tree inside it. When it does not, the panel refuses before it downloads anything (*the service user cannot write the instance directory*).
+
+!!! warning "A host set up by hand before 2026-10-12"
+    The manual's earlier layout kept the code directly in a root-owned `/opt/dedalo` (`/opt/dedalo/master_dedalo`), which the service user cannot rename inside. Move it into an instance directory the service user owns, once, with the server stopped: `sudo systemctl stop dedalo-ts dedalo-ts-watchdog.timer`; `sudo install -d -o dedalo -g dedalo -m 0750 /opt/dedalo/app`; `sudo mv /opt/dedalo/master_dedalo /opt/dedalo/private /opt/dedalo/backups /opt/dedalo/app/`; set `DEDALO_BACKUP_DIR`, `DEDALO_BACKUP_PATH` or `DEDALO_PRIVATE_DIR` in `.env` to the new paths if you had set them; then install the root-run scripts and render the units again ([steps 1 and 2](manual_host.md#the-units)) and start the server. The runtime can stay where it is, or move to `/opt/dedalo/bin/bun` with the unit.
+
+Updating by hand is a fetch, a dependency install and a restart, as the service user (the manual's single-instance example paths):
 
 ```shell
-sudo -u dedalo git -C /opt/dedalo/master_dedalo fetch --all --tags
-sudo -u dedalo git -C /opt/dedalo/master_dedalo checkout <tag-or-sha>
-sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
+sudo -u dedalo git -C /opt/dedalo/app/master_dedalo fetch --all --tags
+sudo -u dedalo git -C /opt/dedalo/app/master_dedalo checkout <tag-or-sha>
+sudo -u dedalo bash -c 'cd /opt/dedalo/app/master_dedalo && /opt/dedalo/bin/bun install --frozen-lockfile --production'
 sudo systemctl restart dedalo-ts
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 ```
@@ -59,18 +64,19 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 **1. The runtime pin.** Before the new code, compare `.bun-version` (`git diff HEAD..<target-ref> -- .bun-version`). If it moved, install the new runtime into the path the unit names, as root:
 
 ```shell
-curl -fsSL https://bun.sh/install | sudo BUN_INSTALL=/opt/dedalo/.bun bash -s "bun-v<the new pin>"
-/opt/dedalo/.bun/bin/bun --version
+curl -fsSL https://bun.sh/install | sudo BUN_INSTALL=/opt/dedalo bash -s "bun-v<the new pin>"
+/opt/dedalo/bin/bun --version
 ```
 
 Because `ExecStart` names that absolute path, installing into it *is* the runtime upgrade.
 
-**2. The root-run scripts.** A code update does not refresh the copies in `/opt/dedalo/bin/`. After an update that changed `deploy/*.sh`:
+**2. The root-run scripts.** A code update does not refresh the copies in the root bin directory (`/opt/dedalo/bin/`). After an update that changed `deploy/*.sh`:
 
 ```shell
-cd /opt/dedalo/master_dedalo
+cd /opt/dedalo/app/master_dedalo
 sudo install -m 0755 deploy/dedalo-code-rollback.sh deploy/dedalo-ts-watchdog.sh \
-  deploy/dedalo-backup-step.sh deploy/dedalo-site-builder-backup.sh deploy/dedalo-backup-alert.sh \
+  deploy/dedalo-backup-step.sh deploy/dedalo-db-backup.sh deploy/dedalo-tree-backup.sh \
+  deploy/dedalo-site-builder-backup.sh deploy/dedalo-backup-alert.sh \
   /opt/dedalo/bin/
 ```
 

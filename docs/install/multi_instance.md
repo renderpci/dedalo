@@ -25,6 +25,8 @@ Every name and path of a production instance derives from its instance name `<i>
 | root-run scripts | `/opt/dedalo/instances/<i>/bin/` |
 | installer record | `/var/lib/dedalo-install/<i>/` |
 
+The layout follows one rule, by role rather than by path. **The instance directory** — `/home/ded_<i>/` here — is owned by the instance's user and holds its code, private directory and backups; an in-app code update renames the code tree only inside it, so `/home` stays root's. **Everything a root-started unit runs** — the Bun runtime and the watchdog, rollback, backup and alert scripts — lives in root-owned directories outside every instance directory (`/opt/dedalo/bun/<pin>/`, `/opt/dedalo/instances/<i>/bin/`). A host set up by hand follows the same rule with paths of its own choosing, for example one instance directory per domain such as `/home/my_domain.org/dedalo` — see [A host set up by hand › The layout](manual_host.md#the-layout).
+
 Two components are **shared and trusted**, one each for the whole host:
 
 - **The web server** terminates TLS for every instance and is the media gate for every instance. Its user joins each instance's group, so it can connect to each socket and read each media tree and published client.
@@ -70,7 +72,7 @@ Each instance has its own public address and its own certificate. The installer 
 Each instance is one long-lived process supervised by systemd, running as **its own user**. The security boundary between two instances is therefore ordinary filesystem ownership: instance A's `.env` is `0600` owned by `ded_a`, inside a `0700` directory, and `ded_b`'s process cannot read it. The media trees are `0750`, never world-readable; the web server reads them through each instance's group.
 
 !!! danger "Never point two instances at one private directory"
-    They would share the session store, `ts_state.json` and the socket path — a silent corruption, not a clean error. The installer gives every instance its own; on a host set up by hand, every instance needs a distinct `DEDALO_PRIVATE_DIR` or its own code tree.
+    They would share the session store, `ts_state.json` and the socket path — a silent corruption, not a clean error. The installer gives every instance its own; on a host set up by hand, every instance needs its own instance directory (its `private/` comes with it) or a distinct `DEDALO_PRIVATE_DIR`.
 
 ## Pitfalls specific to several instances
 

@@ -10,17 +10,18 @@
 # `+` (root) line inside dedalo-backup.service, and that was an escalation:
 #
 #   - systemd applies a unit's EnvironmentFile= to EVERY ExecStart, `+` lines
-#     included, and dedalo-backup.service reads /opt/dedalo/private/.env — a file
+#     included, and dedalo-backup.service reads INSTANCE_DIR/private/.env — a file
 #     DEDALO_USER writes. An LD_PRELOAD or PATH there ran as root.
-#   - the scripts ran from /opt/dedalo/master_dedalo/deploy/, which DEDALO_USER
+#   - the scripts ran from INSTANCE_DIR/master_dedalo/deploy/, which DEDALO_USER
 #     owns: editing them was running code as root.
-#   - its verdict and destination sat under /opt/dedalo/backups, DEDALO_USER's
+#   - its verdict and destination sat under INSTANCE_DIR/backups, DEDALO_USER's
 #     too: a symlink planted there redirected a root write.
 #
 # So here: NO EnvironmentFile (the store reads the provisioner's own artifacts,
 # never the engine's .env), fixed Environment= lines, both scripts from the
-# ROOT-OWNED /opt/dedalo/bin/ (install them there — engineering/PRODUCTION.md §6;
-# /opt/dedalo itself must stay root-owned, or DEDALO_USER could rename bin/), and
+# ROOT-OWNED ROOT_BIN_DIR/ (install them there — engineering/PRODUCTION.md §6;
+# ROOT_BIN_DIR and every directory above it must be root's and OUTSIDE
+# INSTANCE_DIR, or DEDALO_USER could rename it and plant its own scripts), and
 # a root-owned verdict and destination outside every tree DEDALO_USER writes.
 #
 # Pulled in by dedalo-backup.service (its Wants=) and ordered after it, so the
@@ -32,7 +33,7 @@
 # The destination holds root-owned 0600 credentials: it is created 0700 root:root
 # (UMask below) and the whole backup tree is secret material.
 #
-#   sudo install -m 0755 deploy/dedalo-backup-step.sh deploy/dedalo-site-builder-backup.sh /opt/dedalo/bin/
+#   sudo install -m 0755 deploy/dedalo-backup-step.sh deploy/dedalo-site-builder-backup.sh ROOT_BIN_DIR/
 #   sudo cp deploy/dedalo-backup-site-builder.service /etc/systemd/system/
 
 [Unit]
@@ -54,4 +55,4 @@ Environment="DEDALO_BACKUP_EXPECTED_STORES=site_builder"
 # 5. Every site-builder instance: its declaration + secrets, its workspaces root,
 #    each site's whole webspace (BOTH release stores and the two served symlinks),
 #    and its audit trail.
-ExecStart=/opt/dedalo/bin/dedalo-backup-step.sh run --last site_builder /opt/dedalo/bin/dedalo-site-builder-backup.sh /var/backups/dedalo-site-builder
+ExecStart=ROOT_BIN_DIR/dedalo-backup-step.sh run --last site_builder ROOT_BIN_DIR/dedalo-site-builder-backup.sh /var/backups/dedalo-site-builder

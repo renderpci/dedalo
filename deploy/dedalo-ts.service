@@ -1,14 +1,17 @@
 # Dédalo TS server — reference systemd unit (audit S2-38, DEC-17 item 3).
 #
-# Adjust the ALL-CAPS/example placeholders below (DEDALO_USER, /opt/dedalo/…)
-# to the real host layout. The canonical layout (see engineering/PRODUCTION.md)
-# is:
-#   /opt/dedalo/master_dedalo/   the repo (WorkingDirectory)
-#   /opt/dedalo/private/         ../private (config, secrets, session store)
-#   /opt/dedalo/.bun/bin/bun     the PINNED runtime binary
-#   user/group: dedalo
+# THREE PLACEHOLDERS, one rule (the layout is defined by ROLE, not by a path —
+# engineering/PRODUCTION.md §2.2, docs/install/manual_host.md renders them):
+#   DEDALO_USER    the service user
+#   INSTANCE_DIR   the instance directory, OWNED BY DEDALO_USER: the code
+#                  (INSTANCE_DIR/master_dedalo, the WorkingDirectory), ../private
+#                  and backups/ — a code update renames the tree INSIDE it, so its
+#                  parent may stay root-owned (/home/my_domain.org/dedalo,
+#                  /opt/dedalo/app)
+#   ROOT_BIN_DIR   ROOT-OWNED, outside INSTANCE_DIR: the PINNED runtime
+#                  (ROOT_BIN_DIR/bun) and every script a root-started unit runs
+#                  (/opt/dedalo/bin, /usr/local/lib/dedalo/<name>/bin)
 #
-#   sudo cp deploy/dedalo-ts.service /etc/systemd/system/
 #   sudo systemctl daemon-reload && sudo systemctl enable --now dedalo-ts
 #
 # The health watchdog (dedalo-ts-watchdog.timer: curls /health over the unix
@@ -63,11 +66,11 @@ Type=simple
 # credentials: No such process" before Bun ever runs. Omitted here = the user's
 # primary group, which is also what UMask=0007 below makes the socket group-owned by.
 User=DEDALO_USER
-WorkingDirectory=/opt/dedalo/master_dedalo
+WorkingDirectory=INSTANCE_DIR/master_dedalo
 # The runtime is PINNED (.bun-version / package.json engines.bun) — point
 # ExecStart at the pinned binary, not a floating `bun` on PATH, so a stray
 # `bun upgrade` cannot change the production runtime (audit S2-36).
-ExecStart=/opt/dedalo/.bun/bin/bun run src/server.ts
+ExecStart=ROOT_BIN_DIR/bun run src/server.ts
 
 # Socket directory (the "socket never appears / 502" trap). The server binds
 # SERVER_UNIX_SOCKET but does NOT create its parent dir. RuntimeDirectory=dedalo

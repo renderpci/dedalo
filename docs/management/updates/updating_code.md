@@ -189,8 +189,9 @@ running Bun and this tree's pin, and the bytes free where the update stages.
       `/opt/dedalo/bun/<pin>/`. The installer has no command that installs a new
       pin on a live instance today: follow the release notes, or ask the system
       administrator.
-    - **A host set up by hand** runs `/opt/dedalo/.bun/bin/bun`: install the new
-      pin into that path as root, restart Dédalo onto it, and only then apply the
+    - **A host set up by hand** runs `bun` from its root bin directory
+      (`/opt/dedalo/bin/bun` in the manual's example): install the new pin into
+      that path as root, restart Dédalo onto it, and only then apply the
       update — [Upgrading › A host set up by hand](../../install/upgrading.md#a-host-set-up-by-hand).
 
     Confirm the boot line reads `starting on Bun <pin> (pinned: <pin>)` with no
@@ -521,11 +522,12 @@ so the storage directory does not have to sit in the web root, and should not.
 ## Updating manually
 
 On a git checkout — a development machine, or a [host set up by hand](../../install/manual_host.md)
-with its single-instance layout — a manual update reads:
+(here its single-instance example: instance directory `/opt/dedalo/app`, root bin
+directory `/opt/dedalo/bin`) — a manual update reads:
 
 ```bash
-sudo -u dedalo git -C /opt/dedalo/master_dedalo pull --ff-only
-sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
+sudo -u dedalo git -C /opt/dedalo/app/master_dedalo pull --ff-only
+sudo -u dedalo bash -c 'cd /opt/dedalo/app/master_dedalo && /opt/dedalo/bin/bun install --frozen-lockfile --production'
 systemctl restart dedalo-ts
 ```
 

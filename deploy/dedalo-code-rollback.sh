@@ -3,13 +3,21 @@
 # CODE-UPDATE ROLLBACK — restore the previous code tree after a failed update.
 #
 # INSTALLED OUT OF TREE. This file SHIPS at <repo>/deploy/, but its installed
-# home is /opt/dedalo/bin/dedalo-code-rollback.sh — a SIBLING of the checkout,
-# alongside the pinned bun (/opt/dedalo/.bun/). The swap pipeline renames the
+# home is the ROOT-OWNED bin dir OUTSIDE the instance dir (ROOT_BIN_DIR in the
+# units: /opt/dedalo/bin/ by hand, /opt/dedalo/instances/<i>/bin/ from the
+# installer), alongside the pinned bun. The swap pipeline renames the
 # whole app tree; a rollback script living inside that tree vanishes in the
 # crash window it exists for (old tree renamed away, new tree not yet in — no
 # tree at APP_DIR, no script for systemd's OnFailure= to run). The units point
 # at the out-of-tree copy; refresh it after updating (PRODUCTION.md §12):
 #   sudo install -m 0755 deploy/dedalo-code-rollback.sh /opt/dedalo/bin/
+#
+# EVERY MOVE STAYS INSIDE THE INSTANCE DIR (engineering/PRODUCTION.md §2.2): the
+# app tree is an entry of the instance dir (the service user's), the backup it
+# restores and the failed tree's parking place (<backupRoot>/failed_<stamp>) are
+# entries of the backup root below it — so the instance dir's parent may be
+# root-owned. Gate: test/unit/code_update.test.ts (the instance-dir rule) runs
+# this script against a scratch instance dir whose parent is 0555.
 #
 # Fired by systemd (dedalo-ts-rollback.service) in exactly two situations:
 #   - dedalo-ts.service exhausts its start limit and enters `failed`

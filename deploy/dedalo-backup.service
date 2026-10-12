@@ -62,9 +62,10 @@
 # proves the bytes are a complete archive, not that it restores into a working
 # catalogue. Nothing but an actual restore proves that (PRODUCTION.md §6: quarterly).
 #
-# Canonical host layout (engineering/PRODUCTION.md): /opt/dedalo/master_dedalo/
-# (the repo), /opt/dedalo/private/ (../private), user/group dedalo. Adjust the
-# example /opt/dedalo/... paths below to the real host layout if different.
+# Placeholders (rendered by docs/install/manual_host.md, defined in
+# deploy/dedalo-ts.service's header): DEDALO_USER, INSTANCE_DIR (the service
+# user's — the repo, ../private and backups/ live in it), ROOT_BIN_DIR (root's —
+# every script here runs from it, never from the tree a code update moves).
 
 [Unit]
 Description=Dedalo nightly backup set (matrix DB + RAG DB + media + private; site-builder instances via its own unit)
@@ -76,7 +77,7 @@ Wants=dedalo-backup-site-builder.service
 [Service]
 Type=oneshot
 User=DEDALO_USER
-EnvironmentFile=/opt/dedalo/private/.env
+EnvironmentFile=INSTANCE_DIR/private/.env
 # Where the per-run store statuses live. systemd creates it before the first step
 # and REMOVES it when the unit stops, so one run can never read another's leftovers.
 RuntimeDirectory=dedalo-backup
@@ -84,7 +85,7 @@ RuntimeDirectoryMode=0750
 # Where the PERSISTENT verdict lives (BACKUP_FAILED / LAST_OK). It must match
 # dedalo-backup-alert@.service's own Environment= line: both write BACKUP_FAILED and
 # only a fully successful run removes it.
-Environment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups
+Environment=DEDALO_BACKUP_STATE_DIR=INSTANCE_DIR/backups
 # WHICH STORES THIS UNIT PROMISES. The aggregate can otherwise only see the
 # stores that recorded a status, so a step whose ExecStart never ran — a typo
 # here, a missing script, a store commented out by mistake — is invisible and
@@ -108,17 +109,17 @@ UMask=0077
 #    route would be a second, disagreeing answer to "which server holds the
 #    catalogue". Before 2026-10-09 the installer wrote DEDALO_SOCKET_CONN and
 #    nothing read it; it is now DB_SOCKET's fallback spelling.
-ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run matrix_db /opt/dedalo/master_dedalo/deploy/dedalo-db-backup.sh --label timer --dir-key DEDALO_BACKUP_DIR --dir /opt/dedalo/private/backups/db --db-key DB_NAME --host-key DB_HOST --port-key DB_PORT --user-key DB_USER --password-key DB_PASSWORD --socket-key DB_SOCKET --pg-dump pg_dump --pg-restore pg_restore
+ExecStart=-ROOT_BIN_DIR/dedalo-backup-step.sh run matrix_db ROOT_BIN_DIR/dedalo-db-backup.sh --label timer --dir-key DEDALO_BACKUP_DIR --dir INSTANCE_DIR/private/backups/db --db-key DB_NAME --host-key DB_HOST --port-key DB_PORT --user-key DB_USER --password-key DB_PASSWORD --socket-key DB_SOCKET --pg-dump pg_dump --pg-restore pg_restore
 # 2. RAG pgvector DB — UNCOMMENT when the semantic index is enabled. Its keys fall
 #    back to the main database's in the ENGINE, but not here on purpose: a backup
 #    that silently dumps the catalogue a second time because DEDALO_RAG_DB_NAME is
 #    unset would look like a RAG backup and be none.
-#ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run rag_db /opt/dedalo/master_dedalo/deploy/dedalo-db-backup.sh --label rag --dir /opt/dedalo/private/backups/rag --db-key DEDALO_RAG_DB_NAME --host-key DEDALO_RAG_DB_HOSTNAME_CONN --port-key DEDALO_RAG_DB_PORT_CONN --user-key DEDALO_RAG_DB_USERNAME_CONN --password-key DEDALO_RAG_DB_PASSWORD_CONN --socket-key DEDALO_RAG_DB_SOCKET_CONN --pg-dump pg_dump --pg-restore pg_restore
+#ExecStart=-ROOT_BIN_DIR/dedalo-backup-step.sh run rag_db ROOT_BIN_DIR/dedalo-db-backup.sh --label rag --dir INSTANCE_DIR/private/backups/rag --db-key DEDALO_RAG_DB_NAME --host-key DEDALO_RAG_DB_HOSTNAME_CONN --port-key DEDALO_RAG_DB_PORT_CONN --user-key DEDALO_RAG_DB_USERNAME_CONN --password-key DEDALO_RAG_DB_PASSWORD_CONN --socket-key DEDALO_RAG_DB_SOCKET_CONN --pg-dump pg_dump --pg-restore pg_restore
 # 3. Media originals — dated generations, hard-linked to the previous one, 14 kept.
 #    The source is read from MEDIA_PATH (or its PHP alias); an unset key is a loud
 #    refusal, never a guess, because the engine's own default is one of two paths
 #    and the wrong guess backs up an empty directory while reporting success.
-ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run media /opt/dedalo/master_dedalo/deploy/dedalo-tree-backup.sh --label media --source-key MEDIA_PATH --dest /opt/dedalo/backups/media --keep 14
+ExecStart=-ROOT_BIN_DIR/dedalo-backup-step.sh run media ROOT_BIN_DIR/dedalo-tree-backup.sh --label media --source-key MEDIA_PATH --dest INSTANCE_DIR/backups/media --keep 14
 # 4. The private dir itself (secrets, sessions, state) — small, always, and
 #    generational too: the .env is the file every other restore step reads first, so
 #    yesterday's copy is worth exactly as much as the media's. Its own backups/
@@ -138,4 +139,4 @@ ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run media /opt
 #    of them failed — the unit's verdict is the truth about all of them while no
 #    single store can cancel another. If you comment it out, move '--last' to the
 #    last ExecStart that remains, or nothing reports the run's verdict.
-ExecStart=/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run --last private /opt/dedalo/master_dedalo/deploy/dedalo-tree-backup.sh --label private --source /opt/dedalo/private/ --dest /opt/dedalo/backups/private --keep 14 --exclude backups --exclude /export_artifacts
+ExecStart=ROOT_BIN_DIR/dedalo-backup-step.sh run --last private ROOT_BIN_DIR/dedalo-tree-backup.sh --label private --source INSTANCE_DIR/private/ --dest INSTANCE_DIR/backups/private --keep 14 --exclude backups --exclude /export_artifacts

@@ -105,6 +105,7 @@ import { config } from '../../config/config.ts';
 import { projectRoot, readEnv } from '../../config/env.ts';
 import { DedaloError, ok } from '../errors/index.ts';
 import type { ApiEnvelope } from '../errors/schema.ts';
+import { dirIsWritable } from '../install/dir_probe.ts';
 import { runtimePathsInsideTree } from '../install/runtime_paths.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
@@ -1001,6 +1002,16 @@ function assertReleaseShape({ url, version, declaredSha, channel }: UpdateReques
  *    resolving inside the code tree would be silently carried into the backup
  *    by the swap.
  *  - The backup root itself must not sit inside the tree the swap renames away.
+ *  - THE INSTANCE-DIR RULE (2026-10-12): every rename the swap (and the
+ *    supervisor-side rollback) makes is an entry of the code tree's PARENT —
+ *    the INSTANCE DIR, which the service user owns — or of the backup root
+ *    inside it. Nothing is created or renamed above the instance dir, so its
+ *    parent may be root-owned (`/home/my_domain.org` holding
+ *    `/home/my_domain.org/dedalo`). A host whose instance dir the service user
+ *    cannot write (the pre-2026-10-12 hand-built layout kept the code directly
+ *    under a root-owned `/opt/dedalo`) used to download, install deps and smoke
+ *    boot a release before the first rename failed with EACCES; it now refuses
+ *    HERE, before the first byte is fetched, naming the directory.
  */
 export function assertSwapPreconditions(targetRoot: string, seams: CodeUpdateSeams): string {
 	const supervised = seams.supervised ?? isSupervised();
@@ -1017,7 +1028,48 @@ export function assertSwapPreconditions(targetRoot: string, seams: CodeUpdateSea
 	}
 
 	refuseRuntimeDataInsideTree(targetRoot);
-	return resolveBackupRootOrRefuse(targetRoot, seams);
+	const backupRoot = resolveBackupRootOrRefuse(targetRoot, seams);
+	refuseUnwritableSwapDirs(targetRoot, backupRoot);
+	return backupRoot;
+}
+
+/**
+ * The directories whose ENTRIES the swap renames or creates, each with the
+ * reason: the instance dir (the code tree's parent — the tree is renamed out
+ * of it and the new one into it) and the backup root (or, when it does not
+ * exist yet, the nearest existing ancestor `mkdirSync` would create it in).
+ * Returns the ones this process cannot write — empty when the swap can run.
+ * Proven by a write probe (dir_probe.ts), never by mode bits.
+ */
+export function unwritableSwapDirs(
+	targetRoot: string,
+	backupRoot: string,
+): { dir: string; role: 'instance_dir' | 'backup_root' }[] {
+	const instanceDir = dirname(resolve(targetRoot));
+	let backupProbe = resolve(backupRoot);
+	while (!existsSync(backupProbe) && dirname(backupProbe) !== backupProbe) {
+		backupProbe = dirname(backupProbe);
+	}
+	const dirs = [
+		{ dir: instanceDir, role: 'instance_dir' as const },
+		{ dir: backupProbe, role: 'backup_root' as const },
+	];
+	return dirs.filter(
+		(entry, index) =>
+			dirs.findIndex((other) => other.dir === entry.dir) === index && !dirIsWritable(entry.dir),
+	);
+}
+
+/** Refuse a swap whose renames would fail for want of write permission (see the instance-dir rule above). */
+function refuseUnwritableSwapDirs(targetRoot: string, backupRoot: string): void {
+	const first = unwritableSwapDirs(targetRoot, backupRoot)[0];
+	if (first === undefined) return;
+	refuseUpdate(
+		'update.refused',
+		first.role === 'instance_dir'
+			? `Error. The service user cannot write the instance directory ${first.dir} (the code tree's parent) — a code update renames the tree inside it. Give that directory to the service user; its parent may stay root-owned.`
+			: `Error. The service user cannot write the code-backup root ${first.dir} — a code update moves the live tree there. Give it to the service user, or point DEDALO_BACKUP_PATH inside the instance directory.`,
+	);
 }
 
 /** The RUNTIME-PATH CENSUS gate (install/runtime_paths.ts): refuse any runtime
