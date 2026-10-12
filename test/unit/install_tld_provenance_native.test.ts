@@ -54,8 +54,8 @@ import {
 	HIERARCHY_MODEL_TYPE_TLD,
 	HIERARCHY_TYPE_TLD,
 } from '../../src/core/ontology/ontology_tipos.ts';
-import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 import { markExportArtifactsRoot, markMediaRoot } from '../helpers/media_scratch_root.ts';
+import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');

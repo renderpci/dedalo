@@ -135,7 +135,7 @@ describe('no raw exception text reaches the caller', () => {
 			.map((args) => args[5]);
 		expect(codeArguments.length).toBeGreaterThanOrEqual(2);
 		for (const argument of codeArguments) {
-			expect(['failureCodeOf(error)', 'outcome.code']).toContain(argument);
+			expect(['failureCodeOf(error)', 'outcome.code']).toContain(argument ?? '');
 		}
 		expect(source).toMatch(
 			/function failureCodeOf\(error: unknown\): string \{\s*return toDedaloError\(error\)\.code;\s*\}/,
