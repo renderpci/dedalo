@@ -748,12 +748,30 @@ sb_rc=0; wait "$sb_pid" || sb_rc=$?
 pa_rc=0; wait "$pa_pid" || pa_rc=$?
 ha_rc=0; wait "$ha_pid" || ha_rc=$?
 
+# Dumping a log is REPORTING, never a verdict. In the CI image the container's stdout
+# can turn non-blocking (a child sets O_NONBLOCK on the shared pipe), and a large dump
+# then fails with EAGAIN ("cat: write error: Resource temporarily unavailable"). A bare
+# `cat` under `set -e` aborted the tier there, before the three verdicts below were
+# read — three green daemons reported as one red tier (2026-10-12). Retry the dump, and
+# if stdout stays unwritable say so; the verdict stays the job's exit code.
+dump_log() {
+	dl_tries=0
+	until cat "$1"; do
+		dl_tries=$((dl_tries + 1))
+		if [ "$dl_tries" -ge 5 ]; then
+			echo "== hermetic: could not print $2's log (stdout not writable) — its verdict below is its exit code" || true
+			break
+		fi
+		sleep 1
+	done
+	rm -f "$1"
+}
 echo "---- publication/site_builder ----"
-cat "$sb_log" ; rm -f "$sb_log"
+dump_log "$sb_log" publication/site_builder
 echo "---- publication/server_api/v2 ----"
-cat "$pa_log" ; rm -f "$pa_log"
+dump_log "$pa_log" publication/server_api/v2
 echo "---- publication/host_agent ----"
-cat "$ha_log" ; rm -f "$ha_log"
+dump_log "$ha_log" publication/host_agent
 
 [ "$sb_rc" -eq 0 ] || { echo "== hermetic: RED in publication/site_builder (exit $sb_rc)"; daemon_status=1; }
 [ "$pa_rc" -eq 0 ] || { echo "== hermetic: RED in publication/server_api/v2 (exit $pa_rc)"; daemon_status=1; }
