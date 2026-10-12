@@ -196,7 +196,7 @@ COPY scripts ./scripts
 COPY src ./src
 COPY tools ./tools
 COPY vendor ./vendor
-COPY .bun-sha256 .bun-version .dockerignore .gitattributes .gitignore .gitleaks.toml AGENTS.md Dockerfile License.md README.md SECURITY.md biome.jsonc bun.lock bunfig.toml cliff.toml docker-compose.simple.yml docker-compose.yml install.sh mkdocs.yml package.json tsconfig.json ./
+COPY .bun-sha256 .bun-sha256-darwin .bun-version .dockerignore .gitattributes .gitignore .gitleaks.toml AGENTS.md Dockerfile License.md README.md SECURITY.md biome.jsonc bun.lock bunfig.toml cliff.toml docker-compose.simple.yml docker-compose.yml install.sh mkdocs.yml package.json tsconfig.json ./
 # <<< BUILD-CONTEXT ALLOWLIST <<<
 
 # --- Release provenance (src/core/update/install_stamp.ts) ------------------

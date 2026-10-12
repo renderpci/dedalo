@@ -1,646 +1,437 @@
-# Production install (Ubuntu 24.04)
+# Production install
 
-> See also: [Installation hub](index.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Installer reference](installer_reference.md) · [Troubleshooting](troubleshooting.md) · [Upgrading](upgrading.md) · [Multiple instances](multi_instance.md)
+> See also: [Installation hub](index.md) · [Installer reference](installer_reference.md) · [The web server site](reverse_proxy.md) · [Several instances on one host](multi_instance.md) · [Troubleshooting](troubleshooting.md) · [Upgrading](upgrading.md)
+
+The Production route is the recommended way to run Dédalo for a museum, an archive or any institution. The installer turns a clean server into a running, TLS-protected, supervised and backed-up **instance**: one named Dédalo with its own user, database, media, socket, units and web site. This page explains how to run it, what each step does, and how to check or repair each step by hand.
+
+The installer is the procedure. The sections on each step are reference for system administrators: what to look at, and what the installer has already done. They are not a second way to install.
 
 ## Overview
 
-!!! tip "The installer does these steps for you"
-    `sudo sh install.sh --route production --instance <name>` (or the interactive
-    installer, choosing *Production*) automates this page — packages, the instance
-    user, PostgreSQL, the site file, TLS, the systemd units, the first boot and a
-    verified first backup — as resumable steps, each command shown on the Review
-    before it runs. See [Production host steps](installer_reference.md#production-host-steps).
-    This page stays as the reference of what those steps do, and for a host the
-    installer does not support.
+The engine is a single long-lived **Bun** process, run by systemd as the instance's own user. It listens on a **unix socket**. The web server (nginx or Apache) owns TCP and TLS, serves the published client files and the media bytes, and enforces media access control. PostgreSQL 18 on the same host is the system of record.
 
-This is the main bare-metal guide: fifteen steps from a clean Ubuntu 24.04 LTS server to a running, TLS-protected, supervised Dédalo instance. Every command is meant to be run as `root` (or under `sudo`) unless it is explicitly prefixed with `sudo -u dedalo`.
+Everything the installer creates is named after the **instance name** you choose (`<i>` below — for example `prado`):
 
-The engine is a single long-lived **Bun** process. It listens on a **unix socket**; a reverse proxy owns TCP, TLS, the client static files and the media bytes. PostgreSQL is the system of record.
+| Path or name | What |
+| --- | --- |
+| `ded_<i>` | the system user and group the instance runs as (no login shell) |
+| `/home/ded_<i>/dedalo/` | the release tree (an extracted release, not a git clone) |
+| `/home/ded_<i>/private/` | the private directory (`0700`): `.env` (`0600`), the session store, the state file, the engine's install record |
+| `/home/ded_<i>/backups/` | the backups (the default `--backup-dir`) and the code-update backups (`backups/code`) |
+| `/srv/dedalo/<i>/` | the web site's root (`0750`) |
+| `/srv/dedalo/<i>/dedalo/media/` | `MEDIA_PATH`: originals, derivatives and the media-gate files (`0750`, never world-readable) |
+| `/srv/dedalo/<i>/client/` | the client the engine publishes at every start; the web server serves it from here |
+| `/run/dedalo-<i>/dedalo_ts.sock` | the engine's socket (systemd `RuntimeDirectory`) |
+| `dedalo_<i>` | the database, owned by the role `ded_<i>` (peer authentication, no password) |
+| `dedalo-ts@<i>` | the engine's systemd unit, with its watchdog, rollback, restart and backup units |
+| `/opt/dedalo/bun/<pin>/bun` | the Bun runtime at the release's pin, **owned by root** and shared by the instances on that pin |
+| `/opt/dedalo/instances/<i>/bin/` | the root-owned copies of the scripts root-run units execute |
+| `/var/lib/dedalo-install/<i>/` | the installer's record of the host steps (`0700`, root) |
+
+Several instances can share one host; each runs the installer with its own name. See [Several instances on one host](multi_instance.md).
 
 ### Mandatory: a supervisor that declares itself
 
-Dédalo must run under a process manager that **restarts it** and **declares `DEDALO_SUPERVISED=true` in the process environment**. A code update replaces the tree and then exits the server (exit code 75) so the supervisor boots the new code; without a declared supervisor the [code update panel](../management/updates/updating_code.md) refuses every update (*No supervisor declared*) rather than leave the server dead.
+Dédalo must run under a process manager that **restarts it** and **declares `DEDALO_SUPERVISED=true` in the process environment**. A code update replaces the tree and then exits the server with code `75`, so that the supervisor boots the new code; without a declared supervisor the [code update panel](../management/updates/updating_code.md) refuses every update (*No supervisor declared*) rather than leave the server dead.
 
-| Launch method | Where the declaration goes |
+| Launch method | Where the declaration is |
 | --- | --- |
-| systemd (this guide) | the unit: `Environment=DEDALO_SUPERVISED=true`, with `Restart=always` and `SuccessExitStatus=75` — the shipped `deploy/dedalo-ts.service` already has all three |
-| Docker compose | the `dedalo` service's `environment:` — `DEDALO_SUPERVISED: "true"` (both shipped compose files have it) |
-| by hand / development | `bun run start:supervised` (or `bun run dev`); plain `bun run start` is unsupervised |
+| this route's `dedalo-ts@<i>` unit | `Environment="DEDALO_SUPERVISED=true"`, with `Restart=always` and `SuccessExitStatus=75` — written by the installer |
+| the compose stacks | the `dedalo` service's `environment:` |
+| a [host set up by hand](manual_host.md) | its unit, `deploy/dedalo-ts.service` |
+| development | `bun run start:supervised` or `bun run dev`; plain `bun run start` is unsupervised |
 
-!!! danger "Not in `../private/.env`"
-    A `DEDALO_SUPERVISED` line in `/opt/dedalo/private/.env` is **ignored**: that file is read by every launch method, the unsupervised `bun run start` included. A unit written before 2026-10-08, or a hand-written one, lacks the line — check it with `systemctl cat dedalo-ts | grep DEDALO_SUPERVISED` and add it as in [Upgrading › Check that the unit declares supervision](upgrading.md#3-check-that-the-unit-declares-supervision).
+A `DEDALO_SUPERVISED` line in `.env` is **ignored**: that file is read by every launch method, the unsupervised `bun run start` included.
 
-!!! info "Other distributions"
-    RHEL, Rocky, AlmaLinux and Fedora follow the same fifteen steps with different package names, a different PostgreSQL repository, SELinux and firewalld. The deltas are in **[RHEL-based systems](install_rhel.md)** — read this page first, then that one.
+## Before you start
 
-### The layout this guide builds
+**A supported system.** Ubuntu 26.04 LTS, Debian 13, or RHEL, Rocky Linux or AlmaLinux 10, with systemd. The installer supports the newest release of each and refuses anything else, before it changes anything. You run it as root.
 
-```text
-/opt/dedalo/master_dedalo/     the repo (git clone) — the artifact
-/opt/dedalo/private/           ../private — .env (0600), sessions, state, backups
-/opt/dedalo/.bun/bin/bun       the pinned runtime
-/srv/dedalo/media/             MEDIA_PATH — originals + derivatives + markers
-user/group: dedalo
-```
+**The bootstrap's tools.** `curl`, `unzip` and `sha256sum`, which `install.sh` needs before the installer can install anything: `apt-get install curl unzip coreutils` or `dnf install curl unzip coreutils`. See [Get Dédalo](index.md#get-dedalo).
 
-Two properties of this layout are load-bearing, and both are checked by the
-installer:
+**An instance name.** A lowercase letter, then lowercase letters, digits or `_`, at most 28 characters. It becomes the user `ded_<i>`, the database `dedalo_<i>` and every path above, and cannot be changed later.
 
-- **`private/` is a sibling of the repo**, one level above it. It is never inside the served tree, and it holds every secret. The installer creates it (`0700`) — so `/opt/dedalo/` must be **writable by the service user**.
-- **`MEDIA_PATH` is absolute and independent of the repo.** It can live on its own volume; media is by far the largest thing you will store.
+**The public address.** A fully qualified name (not `localhost`, not an IP address) whose DNS points at this server. It goes into the site file and the certificate.
 
-The base directory is a choice, not a requirement. `/opt/dedalo` suits a single instance; **if you expect to host several domains, install under `/home/ded_<site>/` from the start** — everything below is identical, only the base path changes — and follow [Multiple instances on one server](multi_instance.md).
+**The certificate.**
 
-!!! tip "Hosting several domains on one server"
-    This guide builds **one** instance. To run several domains on the same box — each with its own database, media and login — repeat this install per domain and follow [Multiple instances on one server](multi_instance.md), which covers what must be unique per instance and how to template systemd.
+| Choice | What you need |
+| --- | --- |
+| **Let's Encrypt** (default) | the name resolves publicly to this server, port 80 is reachable from the internet (the HTTP-01 challenge), and an email address for expiry notices |
+| **Your institution's certificate** | the fullchain and the key as files on this server. They must name the address, be valid now (a warning under 30 days) and pair with each other. The installer uses them where they are and never copies or changes them |
 
-### Before you start: choose your media access mode
+A local certificate authority is never offered on this route.
 
-Media is served **by the web server**, not by Dédalo — but the **access rules are generated by Dédalo**. Two decisions here shape the whole install, so make them **now**: where `MEDIA_PATH` lives (step 1 creates it, step 8 persists it) and which access mode the web server enforces.
+**The web server.** nginx (at least 1.25.1) or Apache. The installer uses the one already installed, installs nginx when there is none, and writes **one site file** for this instance. It never edits another site, the default site or the global configuration.
+
+**The database.** By default (`--db-mode create`) the installer creates the role and the database on this host's PostgreSQL 18. With `--db-mode existing` it uses a database you created, which must be empty.
+
+**The media access mode.** Media is served **by the web server**, but the **access rules are generated by Dédalo**. Decide which readers the web server lets through:
 
 | `DEDALO_MEDIA_ACCESS_MODE` | Who can read a media file |
 | --- | --- |
-| *(unset)* | **the `publication` default** — logged-in users plus anonymous readers of *published* records (fail-closed since 2026-08-24; set `false` to deliberately serve an open tree) |
+| *(unset)* | the `publication` default — fail-closed |
 | `private` | logged-in Dédalo users only |
 | `publication` | logged-in users **plus** anonymous readers of *published* records, in *public quality* folders only |
+| `false` | everybody: the media tree is served openly, with no gate at all |
 
-Three operator facts you cannot guess and must not forget:
+Three facts about the gate you cannot guess:
 
 - **No Dédalo process is ever in the media byte path.** Authorisation is a single `stat()` performed by the web server, which is why `sendfile`, HTTP `Range` and the H.264 `?start=` clipping still work on multi-gigabyte files.
 - **The gate fails closed as `404`, never `403`.** The existence of unpublished media is not disclosed.
-- **Master qualities can never be made public.** The `original` / `modified` folders are filtered out of the public list no matter what you configure.
+- **Master qualities can never be made public.** The `original` and `modified` folders are filtered out of the public list whatever you configure.
 
-How each mode actually works, and how you wire it into nginx or Apache, is **[step 11](#11-reverse-proxy-tls-and-media-access)** — and it is not optional: an unwired gate serves the whole media tree to the world.
+How the two rules work is in [The web server site](reverse_proxy.md#how-the-media-gate-decides).
 
-## Steps
+## Run the installer
 
-### 1. Service user and directory tree
-
-1.1 Create the GNU/Linux user for Dédalo
+From the release of Dédalo ([Get Dédalo](index.md#get-dedalo)), as root:
 
 ```shell
-sudo adduser --system --group --home /opt/dedalo --shell /usr/sbin/nologin dedalo
+sudo sh install.sh
 ```
 
-`--group` also creates a **group** named `dedalo`. Both matter: the unit in step 10
-names the user *and* the group, and the group is what the web server is later added
-to so it can reach the socket.
+Choose **Production** on the first screen and type the instance name there (`--plain` asks the same questions one per line). Give no other flag: any answer flag, `--route` and `--instance` included, makes the run headless — see the headless form below. The screens ask, in order:
 
-!!! note "Upgrading a host that already runs Dédalo? Do not create a second user"
-    Adopt the existing one — the home, the media tree and the backups are already
-    its. Its group, however, must change: [migrating a v6 install to
-    v7](migrating_from_v6.md#8-phase-e-run-it-as-a-service) explains what changed
-    and gives the four commands.
+| Screen | What it asks |
+| --- | --- |
+| **Install type** | the route and the instance name |
+| **System check** | nothing: it shows what this host has. A failed row must be fixed before the install |
+| **Database** | the database mode (create or existing), and for an existing database its host, port, socket, name, user and password. Defaults follow the instance name |
+| **Identity** | the institution's short code (`entity`) and full name, the locale and the time zone. The time zone stamps every database timestamp; the install fingerprint can never change later |
+| **Web server & TLS** | nginx or Apache, the HTTP and HTTPS ports, the public address, the certificate (Let's Encrypt and its email, or the paths of your files) |
+| **Services** | the media root, the socket, the media access mode and the backup directory. The defaults are the layout above |
+| **Ontologies** | the domain ontologies: Oral history (`oh`) is built in and pre-ticked; others come from the update server, with the ontologies they declare. Also whether to use the official update servers |
+| **Thesauri** | the thesauri the chosen ontologies declare, pre-ticked. No country's toponymy is pre-selected. The thesauri are created empty: only `lg` and the country toponymies carry terms |
+| **Languages** | the interface and data languages |
+| **Publication** | optional: a MariaDB publication target (tested, or kept untested by typing `yes`) |
+| **Mail** | optional: an SMTP relay for password recovery (tested the same way) |
+| **Administrator** | the `root` password, typed twice and checked against the password policy |
+| **Review plan** | everything that will happen — see below |
 
-1.2 Assign correct permissions to the Dédalo home. The user must have read and execute permissions on the `/opt/dedalo` directory.
+The same install runs headless, for automation. Give the answers as flags or as an answers file and the root password through the environment, never on the command line:
 
 ```shell
-sudo chmod 0755 /opt/dedalo
+read -rsp 'New root password: ' DEDALO_INSTALL_ROOT_PASSWORD; echo; export DEDALO_INSTALL_ROOT_PASSWORD
+sudo --preserve-env=DEDALO_INSTALL_ROOT_PASSWORD sh install.sh -- \
+  --route production --instance prado --entity prado \
+  --server-name dedalo.example.org --letsencrypt-email it@example.org --execute
+unset DEDALO_INSTALL_ROOT_PASSWORD
 ```
 
-!!! warning "The parent of the repo must be writable by the service user"
-    The installer creates `../private/` itself. If `/opt/dedalo/` is not writable by `dedalo`, the pre-flight check fails with `Private config directory is not creatable/writable`.
+Every flag, the answers file and `--plan` (a dry run that changes nothing) are in the [installer reference](installer_reference.md#command-line-flags).
 
-1.3 Create the media directory. Media directory will be used to storage images, av, pdf and other media files. Must be writable by the service user.
+## The Review
+
+Nothing has changed on the host until you type `yes` at the Review. It shows the answers, the ontologies in install order, the thesauri, the `.env` key names, and **every command each host step will run, exactly as it will run** — the run executes this same list, and a resume refuses a step whose commands have changed since. Read it: it is the whole change to the host.
+
+`write <path>` (or **w** on the full screen) saves your answers as an answers file, with no secret in it, instead of installing.
+
+## The steps
+
+The installer runs the steps below in order. Each one is recorded in `/var/lib/dedalo-install/<i>/` before and after it runs. If a step fails, the installer stops, says why, and prints the two ways on:
 
 ```shell
-sudo mkdir -p /srv/dedalo/media
+sudo sh install.sh --route production --instance <i> --resume                               # fix the cause, then continue
+sudo sh install.sh --route production --instance <i> --abort --confirm-database dedalo_<i>   # undo this install
 ```
 
-1.4 Give access to the Dédalo user to write in the media directory.
+`--resume` verifies every step already recorded as done, and runs the rest. `--abort` undoes, in reverse order, only what this install created. Neither ever touches something that existed before the install. Both are described in full in the [installer reference](installer_reference.md#resuming-an-install-resume).
 
-```shell
-sudo chown dedalo:dedalo /srv/dedalo/media
-```
+On every step below, **Verify** is what you can check by hand, and **Repair** is what to do when that check fails.
 
-### 2. Base OS packages
+### `host_preflight` — the System check
 
-2.1 Update the OS.
+Measures the host and **refuses, before any change**, everything a later step would trip on: an unsupported system, no systemd, not root, nginx older than 1.25.1, anything already using this instance's names (the user, the database or role, the unit, its drop-ins, the site file, the socket, the nginx `upstream` and rate-limit zone names), **any instance directory that already exists** (the installer never takes over a directory), a web-server configuration it cannot read, the address already served by another site on these ports, a non-standard port held by another program, another PostgreSQL major version on the database port, and an institution certificate that does not check out. It reads the firewall state (ufw or firewalld) and **tells** you what it sees; it never changes the firewall.
 
-```shell
-sudo apt update
-sudo apt upgrade
-```
+It changes nothing, so it has no undo. Then it freezes what it measured and the command list of every later step.
 
-2.2 Install base OS packages
+- **Verify:** the refusal sentence lists every problem at once.
+- **Repair:** resolve each, then run the same command again — nothing was written, so it starts fresh. Open ports 80 and 443 yourself if the firewall report shows them closed. See [Troubleshooting › The System check refuses](troubleshooting.md#the-production-system-check-refuses).
 
-```shell
-sudo apt install -y git unzip gzip file ca-certificates curl
-```
+### `host_packages` — packages and repositories
 
-`git` and `unzip` are not only for you: the in-app code-update subsystem shells out to them. `file` is the fallback MIME sniffer for ambiguous uploads.
+Installs only what the host is missing: PostgreSQL 18 (server, client, contrib), the media toolchain, the archive tools (`git`, `unzip`, `gzip`, `file`, `curl`, `rsync`, `ca-certificates`), the web server when there is none, `certbot` for Let's Encrypt, and the SELinux management tools on the RHEL family. It adds the repositories they need:
 
-### 3. Media toolchain
+| System | Repositories |
+| --- | --- |
+| Ubuntu 26.04 | none — PostgreSQL 18 ships with the release |
+| Debian 13 | the PostgreSQL project's repository (PGDG) |
+| RHEL / Rocky / AlmaLinux 10 | EPEL (ImageMagick, certbot), CodeReady Builder, RPM Fusion free (FFmpeg), PGDG. `ocrmypdf` is optional there: a failure to install it only warns |
 
-3.1 Install OS libraries dependecies
-
-```shell
-sudo apt install -y ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin
-```
+The media toolchain, and what each tool is for:
 
 | Tool | Used for |
 | --- | --- |
 | `ffmpeg` / `ffprobe` | audiovisual transcoding, posterframes, probing |
-| `qt-faststart` | moves the MP4 index to the front so video starts before it finishes downloading |
+| `qt-faststart` | moves the MP4 index to the front so a video starts before it has downloaded |
 | ImageMagick | image derivatives, thumbnails, colour-space conversion |
 | `pdftotext`, `pdftohtml`, `pdfinfo` (poppler) | PDF text extraction and page rendering |
 | `ocrmypdf` | optional automatic OCR of uploaded PDFs |
-| `rsvg-convert` (librsvg) | thumbnails of SVG records — the ONLY vector rasterizer Dédalo uses |
+| `rsvg-convert` (librsvg) | thumbnails of SVG records — the only vector rasterizer Dédalo uses |
 
-!!! note "Why SVG thumbnails do not go through ImageMagick"
-    ImageMagick can render SVG, but only through the coder (`MVG`) that Dédalo's hardened ImageMagick policy disables — that coder is a long-standing remote-code-execution vector, and the policy is what keeps a hostile upload from reaching it. Vector rendering is therefore delegated to `rsvg-convert`, which parses SVG and nothing else. Without librsvg installed, SVG records still upload, store, display and download normally; only their thumbnail cannot be built, and the media-versions panel reports why.
+ImageMagick can render SVG only through a coder that Dédalo's hardened ImageMagick policy disables, because that coder is a long-standing remote-code-execution vector. Vector rendering therefore goes through `rsvg-convert`, which parses SVG and nothing else.
 
-!!! note "ImageMagick 6 is supported"
-    Ubuntu 24.04 ships **ImageMagick 6**, which provides `convert` and `identify` but **no `magick` binary**. This is fine: the image engine probes for `magick` first and falls back to `convert`/`identify` when it is absent (`resolveMagick()` in `src/core/media/engine/imagemagick.ts`). Nothing to configure.
+Packages and repositories are **shared host state**: `--abort` tells you what this install added and never removes it (removing a repository would leave its packages without security updates).
 
-Binaries are resolved from a platform base directory (`/usr/bin` on Linux) and each one can be overridden individually. Check `qt-faststart` in particular — it is not always in the same package:
+- **Verify:** `command -v ffmpeg ffprobe qt-faststart pdftotext rsvg-convert`, and `psql --version` (18). If `qt-faststart` lives elsewhere, set `DEDALO_AV_FASTSTART_PATH` in `.env`. For OCR in another language, install its Tesseract pack (`tesseract-ocr-spa`…); without it OCR falls back to English.
+- **Repair:** a failed download or a locked package manager: fix it, then `--resume`.
 
-3.2 Check the installation of libraries
+### `host_identity` — the instance user and directories
 
-```shell
-command -v ffmpeg ffprobe qt-faststart convert identify pdftotext ocrmypdf rsvg-convert
-```
+Creates the system user and group `ded_<i>` (no login shell, no skeleton files) and every directory in the [layout](#overview) at its mode: the home, `private` (`0700`), the backups, `/srv/dedalo/<i>` and the media root (`0750`), and the root-owned `/opt/dedalo/…` directories (`0755`). A shared directory that already exists (`/srv/dedalo` or `/opt/dedalo` on a host with other instances) is used as it is and never re-moded.
 
-If `qt-faststart` is missing or lives elsewhere, set its absolute path in the `.env` you write in step 9:
+- **Verify:** `getent passwd ded_<i>`; `stat -c '%a %U:%G %n' /home/ded_<i>/private /srv/dedalo/<i>/dedalo/media` shows `700` and `750`, owned by `ded_<i>`.
+- **Repair:** `--resume`. `--abort` removes the directories it created while they are empty, and the user with its home — unless the user still runs processes or backups remain in its home, which it keeps and tells you about (a removed user id could be given to a later account, which would then read them).
 
-```dotenv
-DEDALO_AV_FASTSTART_PATH=/usr/local/bin/qt-faststart
-```
+### `host_runtime` — Bun, the release and the root-run scripts
 
-??? tip "Extra OCR languages"
-    `ocrmypdf` needs a Tesseract language pack per language you want to recognise (`apt install tesseract-ocr-spa tesseract-ocr-cat …`). Without the pack, OCR silently falls back to English.
+- **Bun** at the release's pin, **owned by root**, in `/opt/dedalo/bun/<pin>/`. It is taken only from a zip whose sha256 equals the release's committed `.bun-sha256` row — the bootstrap's verified cache. The unit runs it as the instance, but the instance can never replace what it runs.
+- **The release** extracted into `/home/ded_<i>/dedalo`, owned by the instance, and its dependencies installed as the instance (`bun install --frozen-lockfile --production`).
+- **The root-run scripts** — backup, watchdog, rollback, alert and media-rule scripts — copied root-owned (`0755`) to `/opt/dedalo/instances/<i>/bin/`, outside the code tree: a code update moves the whole tree aside, and the rollback has to work exactly when the tree is missing.
 
-### 4. PostgreSQL 18
+!!! danger "Never `bun upgrade` on a production server"
+    The engine is coupled to version-specific runtime behaviour — JSONB parameter inference in `Bun.sql` above all — and a silent drift there is a data-corruption class, not a performance regression. The server echoes its runtime at boot and warns loudly when it does not match the pin. The rationale is in `engineering/PRODUCTION.md` §1.
 
-4.1 Install the server **and the client tools** from the PostgreSQL project's own repository (PGDG), using a modern `signed-by` keyring:
+- **Verify:** `/opt/dedalo/bun/<pin>/bun --version` equals `cat /home/ded_<i>/dedalo/.bun-version`; `stat -c '%U %n' /opt/dedalo/bun/<pin>/bun` is `root`; `ls /opt/dedalo/instances/<i>/bin/`.
+- **Repair:** `--resume`. `--abort` removes the release and the scripts, and Bun only when no other instance uses that pin.
 
-```shell
-sudo apt install -y curl ca-certificates
-install -d /usr/share/postgresql-common/pgdg
-curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
-  https://www.postgresql.org/media/keys/ACCC4CF8.asc
-echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
-  > /etc/apt/sources.list.d/pgdg.list
-sudo apt update
-sudo apt install -y postgresql-18 postgresql-client-18
-```
+### `host_database` — the role and the database
 
-!!! warning "`psql` is a hard requirement, and it must not be older than the server"
-    The installer, the database restore, the hierarchy import and the backup widget all shell out to `psql` / `pg_dump`. A **missing** client fails the pre-flight check outright; an **older** client refuses to connect to a newer server, which surfaces as a confusing mid-install failure.
+With `--db-mode create`, it creates the role `ded_<i>` (LOGIN, **no password** — peer authentication over the local socket `/var/run/postgresql`, so no database password exists at rest) and the database `dedalo_<i>` it owns (UTF8, from `template0`). Then it checks that the instance user reaches its database by peer, and that the three extensions the seed needs (`btree_gin`, `pg_trgm`, `unaccent`) are available. With `--db-mode existing` it does nothing; the engine step probes your database with the password you gave.
 
-    The resolver (`src/core/install/pg_bin.ts`) looks at `DEDALO_PG_BIN_PATH` first, then a small set of version-suffixed locations, then `$PATH`. On a box that carries several major versions, pin the right one explicitly:
+- **Verify:** `sudo -u ded_<i> psql -h /var/run/postgresql -d dedalo_<i> -c 'SELECT current_user'` prints `ded_<i>` with no password asked.
+- **Repair:** a cluster whose `pg_hba.conf` refuses local peer connections is reported, not edited — `pg_hba.conf` is global configuration. Allow `local all all peer` (the distribution default), reload PostgreSQL, then `--resume`. `--abort` drops only a role and database this install created, only when the database is empty, and only with `--confirm-database`.
 
-    ```dotenv
-    DEDALO_PG_BIN_PATH=/usr/lib/postgresql/18/bin
-    ```
+### `host_engine` — the engine steps, as the instance user
 
-4.2 Verify both halves agree:
+The engine steps — the database seed, the ontologies, the thesauri, the root password, the tool registration — run in **one child process, as the instance user**, in the instance's own tree:
 
 ```shell
-psql --version          # must be >= the server
-sudo -u postgres psql -c 'SELECT version();'
+runuser -u ded_<i> -- /opt/dedalo/bun/<pin>/bun run scripts/install.ts --request-stdin --execute --events-jsonl
 ```
 
-### 5. The pinned Bun runtime
+The answers and the secrets travel as one JSON object on its standard input — never on a command line, never in a file. The child keeps its own record in `/home/ded_<i>/private/install/` and writes `/home/ded_<i>/private/.env`. What each engine step does is in the [installer reference](installer_reference.md#what-the-installer-does-in-order).
 
-The runtime version is **pinned** in `.bun-version` and in `package.json` (`engines.bun`). Read the pin from the repo you are about to clone — do not copy a version number out of a document:
+- **Verify:** `cd /home/ded_<i>/dedalo && sudo -u ded_<i> /opt/dedalo/bun/<pin>/bun run scripts/install.ts --status --json` prints `"outcome":"complete"`.
+- **Repair:** `--resume` resumes the child too. `--abort` runs the child's own `--abort` first, which resets the database to empty — and refuses a completed (sealed) install.
 
-```shell
-# at the time of writing: 1.4.2
-BUN_VERSION=1.4.2
-curl -fsSL https://bun.sh/install | BUN_INSTALL=/opt/dedalo/.bun bash -s "bun-v${BUN_VERSION}"
-chown -R dedalo:dedalo /opt/dedalo/.bun
-/opt/dedalo/.bun/bin/bun --version
-```
+### `host_units` — the systemd units
 
-!!! danger "Never run `bun upgrade` on a production box"
-    The engine is coupled to version-specific runtime behaviour — JSONB parameter inference in `Bun.sql` above all. A silent drift there is a **data-corruption class**, not a performance regression. The server echoes its runtime at boot and warns loudly when it does not match the pin.
+Writes the shared template units from `deploy/systemd/` into `/etc/systemd/system/` (one copy per host), and this instance's drop-ins (`/etc/systemd/system/<unit>@<i>.service.d/10-dedalo-install.conf`: the pinned runtime, the client publish directory, the backup store lines). Then `systemctl daemon-reload` and `systemctl enable dedalo-ts@<i>` — **not** started, and with **no** watchdog or backup timer yet. A template that already exists with other contents is refused, never overwritten.
 
-    Consequences you must honour:
+| Unit | What it does |
+| --- | --- |
+| `dedalo-ts@<i>.service` | the server: `RuntimeDirectory=dedalo-<i>`, `UMask=0007`, `Restart=always`, `SuccessExitStatus=75`, `RestartPreventExitStatus=78`, `Environment="DEDALO_SUPERVISED=true"` |
+| `dedalo-ts-watchdog@<i>.timer` + `.service` | every 30 s, `/health` over the socket; on failure it restarts the server, or rolls back a code update that has not been confirmed yet |
+| `dedalo-ts-restart@<i>.service` | the restart helper the watchdog fires |
+| `dedalo-ts-rollback@<i>.service` | rolls a failed code update back to the previous tree; does nothing when no update is pending |
+| `dedalo-backup@<i>.service` + `.timer` | the nightly backup set, run as the instance |
+| `dedalo-backup-site-builder@<i>.service` | the site-builder store, run as root in its own unit (only with `--backup-site-builder`) |
+| `dedalo-backup-alert@<i>.service` | reports a failed backup |
 
-    - the systemd unit's `ExecStart` points at the **absolute pinned path** (`/opt/dedalo/.bun/bin/bun`), never at a floating `bun` on `$PATH`;
-    - upgrading the runtime is a deliberate act: change the pin, run the test suite, deploy. See [Upgrading](upgrading.md).
+Why both `Restart=always` and the watchdog: the server reads its configuration **once**, at boot, so a configuration change needs a restart, and any crash must bring the process back — `Restart=always` does that. The watchdog catches a different class: *process alive, service dead* (database down, pool wedged), which `Restart=always` cannot see. systemd's own `WatchdogSec` needs `sd_notify`, which the runtime does not speak, so the timer stands in.
 
-    The rationale is written up in `engineering/PRODUCTION.md` §1.
+The unit declares `DEDALO_SUPERVISED=true` — [why that is mandatory](#mandatory-a-supervisor-that-declares-itself).
 
-### 6. Get the code
+- **Verify:** `systemctl cat dedalo-ts@<i>` shows the template and the drop-in; `systemctl is-enabled dedalo-ts@<i>` is `enabled`.
+- **Repair:** `--resume`. `--abort` removes the drop-ins, and the templates when no other instance uses them.
 
-You can obtain the code from official repositories:
+### `host_selinux` — SELinux on the RHEL family
 
-- https://gitlab.com/dedalia/dedalo.git
-- https://github.com/dedalia-org/dedalo.git
+Runs only on the RHEL family with SELinux enforcing or permissive; elsewhere it does nothing. It labels what the web server reads or connects to:
 
-Use one of them to clone the repository:
+| Path | Type |
+| --- | --- |
+| `/var/run/dedalo-<i>(/.*)?` (the socket) | `httpd_var_run_t` |
+| `/srv/dedalo/<i>(/.*)?` (media and the published client) | `httpd_sys_content_t` |
+| `/var/lib/dedalo-install/acme/<i>(/.*)?` (the Let's Encrypt challenge root) | `httpd_sys_content_t` |
 
-```shell
-sudo -u dedalo git clone <your-dedalo-remote> /opt/dedalo/master_dedalo
-cd /opt/dedalo/master_dedalo
-sudo -u dedalo /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production
-```
+It then loads one host-wide policy module, `dedalo_engine` (`deploy/selinux/dedalo_engine.cil.tpl`), at priority 400. The module gives the engine **its own domain**: systemd starts the pinned runtime (labelled `dedalo_engine_exec_t`) into `dedalo_engine_t`, and the web server may connect to the unix sockets of that domain **only**. A rule naming the generic service domain would let the web server reach every other unconfined service's socket on the host. After loading the module it relabels the runtime (`restorecon -F`). No SELinux boolean is changed.
 
-`--frozen-lockfile` refuses to silently resolve a different dependency tree than the one that was tested. `--production` skips the dev dependencies (the test harness and the linters).
+- **Verify:** `semodule -l | grep dedalo_engine`; `stat -c %C /opt/dedalo/bun/<pin>/bun` contains `dedalo_engine_exec_t`; `ls -Zd /srv/dedalo/<i>`.
+- **Repair:** `--resume`. A module named `dedalo_engine` that this installer did not write is refused, not replaced. `--abort` removes this instance's contexts, and the module when no other instance uses it.
 
-!!! warning "The `cd` is part of the command"
-    `sudo -u dedalo …` does **not** move to that user's home — it inherits the
-    directory you are standing in. Run the install from anywhere else and Bun
-    reports `could not find a package.json file to install from`, having never
-    looked at the clone. Combine them when in doubt:
+### `host_first_boot` — the first start
+
+Starts `dedalo-ts@<i>` and waits, with progress, for `/health` on the socket to answer `200` **and** for every database migration to be recorded. Under SELinux it also reads the running engine's domain and refuses a first boot whose engine is not in `dedalo_engine_t` (it would answer on its socket, but never through the site).
+
+- **Verify:**
 
     ```shell
-    sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
+    systemctl status dedalo-ts@<i> --no-pager      # active (running), not activating (auto-restart)
+    ls -l /run/dedalo-<i>/dedalo_ts.sock          # srwxrwx--- ded_<i> ded_<i>
+    curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
+    # {"result":"ok","entity":"<entity>","db":"ok",…}
     ```
 
-!!! note "A clone is self-contained — there is no sync step and no fetch step"
-    The browser libraries the client loads (Leaflet, three.js, D3, CKEditor,the PDF viewer…) ship **with the repo**: they come either from `bun install` (`node_modules/`) or from the committed `vendor/` tree, and they are served through an explicit allowlist (`src/core/client_libs/registry.ts`). Nothing is downloaded at install time, nothing is copied into place, nothing can be half-built.
+- **Repair:** read `journalctl -u dedalo-ts@<i> -n 50`, fix the cause, then `--resume`. `--abort` stops the unit.
 
-    Only the *dev-only* libraries (the browser test harness) are dev dependencies, and they are gated behind `DEDALO_DEV_MODE` — so `--production` is safe.
+### `host_watchdog` — arm the watchdog
 
-### 7. Create the database and role — empty
+Enables `dedalo-ts-watchdog@<i>.timer`, and only now: a watchdog armed before the first boot completed would kill it mid-migration.
 
-The installer **restores into** a database; it does **not** create one, and it
-**refuses a non-empty one** (it probes for `matrix_users` and stops if the table
-already exists — an existing install is never clobbered).
+- **Verify:** `systemctl is-active dedalo-ts-watchdog@<i>.timer` is `active`.
+- **Repair:** `--resume`. `--abort` disarms it.
 
-!!! info "Database name"
-    Change the user, password and database name as needed.
+### `host_web_http` — the plain-HTTP site (Let's Encrypt only)
 
-```shell
-sudo -u postgres psql <<'SQL'
-CREATE USER dedalo_user PASSWORD 'a-long-random-password';
-CREATE DATABASE dedalo_main WITH ENCODING='UTF8' OWNER=dedalo_user;
-COMMENT ON DATABASE dedalo_main IS 'Dédalo: cultural heritage and memory management';
-SQL
-```
+Writes the first stage of the site file: a plain-HTTP server with the Let's Encrypt challenge root (`/var/lib/dedalo-install/acme/<i>/`) and the redirect to HTTPS, so the certificate authority can prove the address before any certificate exists. The web server's user joins the group `ded_<i>` (it reaches the socket and reads media and client through that group). On Apache it **checks** the modules the site needs (`ssl headers http2 rewrite proxy proxy_http`) and, when one is missing, stops with the exact command to enable it; it never enables a module itself. The configuration is tested before the reload, and a reload applies every pending change of the web server's configuration, which the Review says next to the command.
 
-!!! warning "The role must be able to `CREATE EXTENSION`"
-    The seed creates `btree_gin`, `pg_trgm` and `unaccent` in the target database. Making the role the **database owner**, as above, is the simplest way to grant that. If your policy forbids it, have a superuser create the three extensions in the empty database beforehand.
+- **Verify:** `curl -I http://<address>/` answers with a redirect to `https://`.
+- **Repair:** for the Apache modules, run the command the message prints (`a2enmod … && systemctl reload apache2` on Debian and Ubuntu), then `--resume`. `--abort` removes the site file.
 
-!!! note "No `~/.pgpass` needed"
-    Dédalo threads `PGPASSWORD` into every `psql` / `pg_dump` subprocess and passes `-h/-p` explicitly, so local and remote databases work the same way. A `~/.pgpass` file is still honoured by libpq if you prefer it (leave the password empty in the configuration and rely on peer/trust auth).
+### `host_tls` — the certificate
 
-!!! tip "Connecting through the local unix socket"
-    To reach a PostgreSQL on the same machine without the network stack, pass `--db-socket /var/run/postgresql` (RHEL: `/var/run/postgresql` too; Homebrew: `/tmp`) instead of relying on `--db-host`. It is written as `DB_SOCKET`, and when set it **wins** over `DB_HOST`: the installer's connection test, the server, the nightly backup and every maintenance `psql`/`pg_dump` connect through that one socket, so they can never reach different servers. A socket that does not exist fails loudly — nothing falls back to `localhost`. Over the socket, PostgreSQL's `peer` authentication lets the `dedalo` system user connect as a role of the same name with no password.
+- **Let's Encrypt:** `certbot certonly --webroot` against the challenge root, as the certificate `dedalo-<i>`, with a deploy hook that reloads the web server, and the distribution's renewal timer enabled (`certbot.timer`; `certbot-renew.timer` on the RHEL family). `--letsencrypt-staging` (headless only) uses the staging authority: the install completes with a certificate browsers do not trust, and the closing *To do on this host* list prints the `certbot` command that replaces it with a real one.
+- **Your institution's files:** checked again (the address, the expiry, the key) and used where they are.
 
-### 8. Run the installer
+On the RHEL family the web server must be able to read your certificate files: keep them under `/etc/pki/tls` or label them `cert_t`.
 
-The installer runs in the terminal — interactively, or headless with flags as below. It needs no restart, serves nothing before the install is finished, and ends by verifying a real login.
+- **Verify:** `certbot certificates --cert-name dedalo-<i>`; `systemctl is-enabled certbot.timer`.
+- **Repair:** a failed Let's Encrypt request is almost always DNS or port 80 — see [Troubleshooting › Let's Encrypt](troubleshooting.md#lets-encrypt-fails). Then `--resume`. `--abort` deletes only a certificate this install issued.
 
-The root password comes from the **environment** (`DEDALO_INSTALL_ROOT_PASSWORD`), never a flag — a `--root-password` argv is visible in `ps` and lands in your shell history. Read it (and the database password) with `read -rs`, so neither is ever typed literally. `--media-path`, `--socket` and `--media-access-mode` are persisted to `.env`, so the serving config is set here — there is nothing to append later.
+### `host_web_site` — the full site
 
-8.1 Prepare passwords.
+Writes the full site file — HTTPS, the API routes to the socket, the published client, the media gate — tests the configuration and reloads. A failed test puts the files back as they were, so the web server is never left with a configuration it would refuse. What the file contains, and why, is in [The web server site](reverse_proxy.md).
 
-```shell
-# Passwords are read silently — they never enter shell history or `ps`:
-read -rsp 'Database password: '  DB_PASSWORD;                  echo
-read -rsp 'New root password:  '  DEDALO_INSTALL_ROOT_PASSWORD; echo
-export DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
-```
+| Web server | Site file |
+| --- | --- |
+| nginx | `/etc/nginx/conf.d/dedalo-<i>.conf` |
+| Apache (Debian, Ubuntu) | `/etc/apache2/sites-available/dedalo-<i>.conf`, enabled with `a2ensite` |
+| Apache (RHEL family) | `/etc/httpd/conf.d/dedalo-<i>.conf` |
 
-8.2 Run the installer. Change the parameters before run it, according to your needs. **Do not start bun** by hand in this step as the installer will suggests.
+On nginx the media rules the engine generates are not included from the media tree: they are copied, validated, into the root-owned `/etc/nginx/dedalo/<i>/`, and one host-wide file, `/etc/nginx/conf.d/dedalo-00-media-map.conf`, includes the media map.
 
-```shell
-cd /opt/dedalo/master_dedalo
-sudo -u dedalo --preserve-env=DB_PASSWORD,DEDALO_INSTALL_ROOT_PASSWORD \
-  /opt/dedalo/.bun/bin/bun run scripts/install.ts \
-    --db-name dedalo_main \
-    --db-user dedalo_user \
-    --db-password "$DB_PASSWORD" \
-    --db-host localhost \
-    --db-port 5432 \
-    --media-path /srv/dedalo/media \
-    --media-access-mode publication \
-    --socket /run/dedalo/dedalo_ts.sock \
-    --entity institution \
-    --entity-label 'My Institution' \
-    --locale es-ES \
-    --timezone Europe/Madrid \
-    --langs lg-eng,lg-spa \
-    --app-lang lg-eng \
-    --data-lang lg-eng
-```
+- **Verify:** `nginx -t` (or `apachectl -t`); `curl --fail https://<address>/health`.
+- **Repair:** `--resume`. `--abort` removes the site file, the rule copies and the web user's group membership.
 
-No `--hierarchies` here: the shared default set of optional thesauri (today Spain, `es`) is installed, and the Languages thesaurus (`lg`) is activated with the database on every install — it is not something to select. No `--ontologies` either: the default domain ontology, Oral history (`oh`), is installed from the copy built into the release. Name the domains your institution catalogues instead — for example `--ontologies oh,tch` (`tch`, Tangible cultural heritage, is the general inventory model for objects and collections) — and the installer downloads them from the update server, with the ontologies they declare as dependencies, before it touches the database; `bun run scripts/install.ts --list-ontologies` shows what the server offers. An air-gapped install (`--no-update-servers`) installs only `oh`, unless `--ontology-source <dir|tar.gz>` provides the other domains from an ontology server's export. See [Domain ontologies](installer_reference.md#domain-ontologies). Pass `--hierarchies none` to skip the optional ones, or a list such as `--hierarchies es,fr`. The installer also writes `ONTOLOGY_SERVERS` and `CODE_SERVERS` naming the official Dédalo update server; add `--no-update-servers` for an air-gapped server that must never be offered an update. Run the same command with `--plan` first to see the keys and steps it would produce, without touching anything — every flag is in the [installer reference](installer_reference.md#command-line-flags).
+### `host_public_probe` — the instance through its public address
 
-8.3 Clean up
+Checks from the host what an outside browser gets: `/health` answers `200` over HTTPS with a verified certificate chain, and, with the media gate on, the marker store `/dedalo/media/.publication/auth/` and an unpublished probe file both answer `404` to an anonymous request. It connects to `127.0.0.1` with the server name, so split-horizon DNS or a router without hairpin NAT cannot fail a correct install. It retries every 2 s for up to 90 s while the reload settles.
+
+- **Verify:** from another machine, `curl --fail https://<address>/health` and `curl -I https://<address>/dedalo/media/.publication/auth/` (`404`).
+- **Repair:** see [Troubleshooting › The public probe fails](troubleshooting.md#the-public-probe-fails). It changes nothing, so it has no undo.
+
+### `host_backup_verify` — the first backup, verified
+
+Runs the backup set once (`systemctl start --wait dedalo-backup@<i>`) and verifies the **outcome**: a `LAST_OK` marker written by this run listing every expected store with exit `0`, no `BACKUP_FAILED` marker, and the unit's effective environment carrying the full expected store list. With `--backup-site-builder`, the root-run site-builder unit is run and verified the same way. Only then does it enable the nightly `dedalo-backup@<i>.timer`.
+
+- **Verify:** `systemctl list-timers 'dedalo-backup@*'`; `cat /home/ded_<i>/backups/state/LAST_OK`.
+- **Repair:** read `journalctl -u dedalo-backup@<i>`, fix the store that failed, then `--resume`. `--abort` disables the timer and keeps the backups.
+
+## Done
+
+The Done screen shows the generated `DEDALO_SALT_STRING` **once** — keep it with your backups — and what comes next. The instance is running under systemd and starts at boot; the watchdog and the nightly backup are armed.
+
+Open `https://<address>/dedalo/core/page/` and log in as **`root`**. Then follow [After the install](index.md#after-the-install): an admin user, users and projects, the thesauri and toponymies you need (from Maintenance), and a restore test of the backups.
 
 ```shell
-unset DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
+systemctl status dedalo-ts@<i>
+journalctl -u dedalo-ts@<i> -f
 ```
 
-!!! note "What happens to the two passwords"
-    The **root password** flows only through the environment — `--preserve-env` hands it to the install process, so it is never in argv or history. The **database password** is a flag (`--db-password`), so for the few seconds the installer runs it is visible in `ps`; that is unavoidable, but sourcing it from  `$DB_PASSWORD` keeps it out of your history.
+## After the install
 
-!!! note "`--media-path`/`--socket` replace the old append step"
-    `--media-path` both write-probes the media root during the install AND persists `MEDIA_PATH` to `.env`. `--socket` persists `SERVER_UNIX_SOCKET` as `/run/dedalo/dedalo_ts.sock` — the path systemd and the proxy use; the built-in default `/tmp/dedalo_ts.sock` would **not** match and is the classic cause of a 502. So the serving keys are configured here, not appended in step 9.
+### Tuning `.env`
 
-Expected output (abridged — each `→ [<step id>]` line is one step of the install plan; the wording after the id may differ slightly):
-
-```text
-Dédalo TS install — entity 'institution', db 'dedalo_main'
-
-→ pre-flight checks
-→ [test_db_connection] database connection
-→ [persist_config] write ../private/.env
-  generated DEDALO_SALT_STRING = ****
-→ [check_directories] directories
-→ [stage_ontologies] ontology files: oh (fetched + verified before the database is touched)
-→ [install_db_from_default_file] restore database from seed (+ activate core hierarchies)
-→ [install_ontologies] domain ontologies: oh
-→ [set_root_pw] set root password
-→ [install_hierarchies] optional hierarchies: es
-→ [register_tools] register tools
-→ [install_finish] seal install
-→ verify root login
-
-✔ install complete — root login verified. Start the server under its supervisor (systemd: `systemctl enable --now dedalo-ts` — docs/install/production.md) or with `bun run start:supervised`; plain `bun run start` is unsupervised and cannot take code updates.
-```
-
-On this server the supervisor is systemd (step 10) — do not start the engine by hand. Step 9 is optional; you can go straight to step 10.
-
-The full flag list, what each step does, and what the seed contains are in the **[installer reference](installer_reference.md)**.
-
-### 9. Configure the instance (optional)
-
-The installer wrote `../private/.env` — the database, entity, languages, the generated secret, the update servers, `ACTIVE_ONTOLOGY_TLDS` (the core ontologies plus the domain ontologies it installed), and (from step 8's flags) `MEDIA_PATH`, `SERVER_UNIX_SOCKET` and `DEDALO_MEDIA_ACCESS_MODE`. **The instance is fully configured to boot.** Everything below is *optional*: production tuning, and a hardening checklist that only restates the safe defaults. Change nothing and the install is still correct — skip to step 10.
+The installer wrote `/home/ded_<i>/private/.env` (the keys are [listed in the reference](installer_reference.md#what-privateenv-does-and-does-not-get)). The instance is fully configured to boot; the operational tuning is yours. Edit the file as the instance user, then `systemctl restart dedalo-ts@<i>` — configuration is read once, at boot.
 
 !!! danger "`.env` is append-only, documented keys only"
-    Add a line for a new key, or change a value on its existing line (for example `ACTIVE_ONTOLOGY_TLDS` when you add a domain ontology later, step 12) — never a second line for a key that is already there, and never delete one. The [configuration reference](../config/index.md) lists the legitimate edits. A re-run of the installer rewrites only the keys it manages and preserves every other key, but a key you delete is gone. Each key is documented in `../private/sample.env` and the [configuration reference](../config/index.md).
+    Add a line for a new key, or change a value on its existing line — never a second line for a key that is already there, and never delete one. Every key is documented in the [configuration reference](../config/index.md).
 
-**Production tuning** — worth setting on a busy instance; each has a working default, so include only the lines you actually want to change:
-
-```shell
-sudo -u dedalo tee -a /opt/dedalo/private/.env >/dev/null <<'ENV'
-
+```dotenv
 # --- Serving ---
-SERVER_IDLE_TIMEOUT_S=255        # runtime max; the proxy read timeout must be >= this
+SERVER_IDLE_TIMEOUT_S=255        # runtime max; the web server's read timeout must be >= this
 TRUSTED_PROXY_HOPS=1             # count of proxies that append X-Forwarded-For
 
 # --- Database pool (per process) ---
-DB_POOL_MAX=10                   # budget the SUM across processes vs max_connections
-DB_STATEMENT_TIMEOUT_MS=60000    # 0 (off) by default — cap one runaway query
+DB_POOL_MAX=10                   # budget the SUM across processes against max_connections
+DB_STATEMENT_TIMEOUT_MS=60000    # 0 (off) by default — caps one runaway query
 
 # --- Observability ---
 DEDALO_ACCESS_LOG=true
 DEDALO_SLOW_REQUEST_MS=5000
-ENV
 ```
 
-**Hardening checklist** — these are *already* the defaults. You do not need to write them; they are listed so the security posture is explicit, and you verify them again at step 15:
+`DB_POOL_MAX` deserves a second look on a busy host: the server, each diffusion runner and the RAG drain all draw from PostgreSQL's `max_connections`, and so does every other instance on the host.
 
-```dotenv
-DEDALO_DEV_MODE=false            # dev mode exposes the browser test harness
-DEDALO_DEBUG_API_ERRORS=false    # otherwise exception text reaches the client
-MEDIA_DEV_ROUTE_ENABLED          # leave UNSET — setting it true bypasses the media ACL
-SESSION_COOKIE_SECURE=true       # requires TLS (the default)
-```
+### Changing the media access mode
 
-`DB_POOL_MAX` deserves a second look on a multi-service box: the server, each diffusion runner and the RAG drain all draw from PostgreSQL's `max_connections`.
-
-### 10. Run the engine under systemd
-
-The engine is a long-lived process; systemd supervises it, **creates its socket directory**, and restarts it on failure. Do this **before** the reverse proxy — nginx has nothing to connect to until the engine is running and its socket exists.
-
-Reference units ship under `deploy/`:
-
-| Unit | What it does |
-| --- | --- |
-| `dedalo-ts.service` | the server; creates `/run/dedalo` (`RuntimeDirectory`), `Restart=always`, declares `DEDALO_SUPERVISED=true`, journald capture, SIGTERM drain |
-| `dedalo-ts-watchdog.service` + `.timer` | every 30 s, `curl --fail` on `/health` over the socket; on failure it restarts the server, or rolls back a code update that has not been confirmed yet |
-| `dedalo-ts-restart.service` | the restart helper the watchdog fires |
-| `dedalo-ts-rollback.service` | rolls a failed code update back to the previous tree; fired by the watchdog, and by `dedalo-ts.service` (`OnFailure=`) when the new tree never boots. Does nothing when no update is pending |
-| `dedalo-backup.service` + `.timer` | the nightly backup set |
-
-**1 — Install the two scripts the units run, and copy the units:**
-
-The watchdog and the rollback unit do not run scripts from the clone. They run copies in `/opt/dedalo/bin/`, outside the code tree, because a code update moves the whole tree aside and the rollback has to work exactly when the tree is missing.
+Set `DEDALO_MEDIA_ACCESS_MODE` in `.env` and restart the engine, which regenerates the rule files in `MEDIA_PATH`. On nginx, refresh the validated copies the site includes (the installer prints this command on Done):
 
 ```shell
-install -d /opt/dedalo/bin
-install -m 0755 /opt/dedalo/master_dedalo/deploy/dedalo-code-rollback.sh \
-                /opt/dedalo/master_dedalo/deploy/dedalo-ts-watchdog.sh /opt/dedalo/bin/
-cp /opt/dedalo/master_dedalo/deploy/dedalo-ts*.service \
-   /opt/dedalo/master_dedalo/deploy/dedalo-ts*.timer \
-   /opt/dedalo/master_dedalo/deploy/dedalo-backup.* /etc/systemd/system/
+sudo /opt/dedalo/instances/<i>/bin/dedalo-media-rules.sh --source /srv/dedalo/<i>/dedalo/media \
+  --dest /etc/nginx/dedalo/<i> --reload /usr/sbin/nginx nginx
 ```
 
-Skip the `install` lines and the watchdog fails with `status=203/EXEC` every 30 seconds, and no failed code update is ever rolled back. A code update does not refresh `/opt/dedalo/bin/`: run the `install -m 0755` line again after each one (see [Upgrading](upgrading.md)).
+A copy that fails the nginx configuration test is put back. Apache reads the generated `.htaccess` on every request and needs nothing.
 
-**2 — Substitute the placeholders.** The units ship with ALL-CAPS placeholders you **must** replace before starting anything:
+### Adding a domain ontology later
 
-| Placeholder | This guide's value |
-| --- | --- |
-| `DEDALO_USER` (`User=`) | `dedalo` |
-| `Group=` — **a separate value**; must name a group that already exists (`getent group dedalo`) | `dedalo` |
-| `WorkingDirectory` | `/opt/dedalo/master_dedalo` |
-| `ExecStart` bun path | `/opt/dedalo/.bun/bin/bun` |
-| backup `EnvironmentFile` | `/opt/dedalo/private/.env` |
-| backup paths | `/opt/dedalo/private/backups/…`, `/opt/dedalo/backups/…` (the media source is read from `MEDIA_PATH` in `.env`) |
+The installation carries the core ontologies and the domain ontologies you chose. To add one later (for example `tch`):
 
-Edit each file in place, or use `systemctl edit --full <unit>` after copying.
+1. In *Maintenance › Update ontology*, put its code **and the codes of the ontologies it requires** in the list and import them. The panel imports exactly the codes in the list. *Fetch list* shows what the master declares.
+2. Add the same codes to `ACTIVE_ONTOLOGY_TLDS` in `.env` — inside the JSON list on its existing line — so every later update refreshes them.
+3. Restart the server.
 
-```shell
-systemctl edit --full dedalo-ts.service
-systemctl edit --full dedalo-ts-restart.service
-systemctl edit --full dedalo-ts-rollback.service
-systemctl edit --full dedalo-ts-watchdog.service
-systemctl edit --full dedalo-ts-watchdog.timer
-systemctl edit --full dedalo-backup.service
-systemctl edit --full dedalo-backup.timer
+See [Updating ontology](../management/updates/updating_ontology.md#which-tlds-are-updated).
+
+### Optional subsystems
+
+All four are **off by default**.
+
+**Diffusion (publication)** publishes records to a MariaDB target database for a public website. The installer writes its keys when you fill in the *Publication* screen (`--diffusion --mysql-*`), but no code creates the target database:
+
+```sql
+CREATE DATABASE web_prado CHARACTER SET utf8mb4;
+GRANT ALL ON web_prado.* TO 'dedalo_pub'@'localhost';
 ```
 
-After editing, verify the placeholders are gone:
+A missing or ungranted target database is a loud configuration error, not something the engine papers over. Details: [the diffusion engine](../diffusion/native_engine.md).
 
-```shell
-systemctl cat dedalo-ts | grep -n DEDALO_USER   # must print NOTHING
-```
+**RAG (semantic search)** needs a pgvector database whose base schema you apply by hand from the [RAG cookbook](../core/ai/rag_cookbook.md); once it exists, the per-model partitions and the index queue are created automatically. Then set `DEDALO_RAG_ENABLED=true` and `DEDALO_RAG_DB_NAME`.
 
-!!! danger "Replace every `DEDALO_USER` — an unsubstituted placeholder fails with `status=217/USER`"
-    `User=DEDALO_USER` names a user that does not exist, so systemd kills the process **before Bun runs** — the socket never appears and the proxy 502s with nothing wrong in the app. After editing.
+**The AI assistant** is disabled unless a model is configured — see [assistant install](../core/ai/assistant/install.md).
 
-!!! warning "The unit declares `DEDALO_SUPERVISED=true` — keep it"
-    The shipped `dedalo-ts.service` carries `Environment=DEDALO_SUPERVISED=true`. That line is how the engine knows systemd will restart it, which the [code update panel](../management/updates/updating_code.md) requires before it swaps in a new release. Keep it when you edit the unit, and add it if your unit predates it. It must be declared **here**, in the unit: a `DEDALO_SUPERVISED` line in `/opt/dedalo/private/.env` is ignored, because that file is also read by an unsupervised `bun run start`. The engine no longer guesses from systemd's own variables either — every shell started inside a systemd-managed desktop session inherits them.
+**H.264 real-time clipping** needs a web-server module — see [H.264 streaming module](install_h264_module.md).
 
-The socket directory and permissions are handled by the shipped `dedalo-ts.service` already: `RuntimeDirectory=dedalo` creates `/run/dedalo` (owned by the service user) on every start, and `UMask=0007` makes the socket group-writable. Nothing to add.
+## Verify, then harden
 
-**3 — Reload and start:**
+Walk the whole path once, in order. Each line is a real failure mode if it does not pass.
 
-```shell
-systemctl daemon-reload
-systemctl enable --now dedalo-ts.service
-systemctl enable --now dedalo-ts-watchdog.timer
-systemctl enable --now dedalo-backup.timer
-```
-
-**4 — Verify the engine is up and the socket exists:**
-
-```shell
-systemctl status dedalo-ts --no-pager      # active (running), NOT activating (auto-restart)
-ls -l /run/dedalo/dedalo_ts.sock           # srwxrwx--- dedalo dedalo
-curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
-# {"result":"ok","entity":"institution","db":"ok","request_id":"…"}
-```
-
-If `status` shows `activating (auto-restart)`, read `journalctl -u dedalo-ts -n 50`
-— the two usual causes are an unsubstituted `DEDALO_USER` (above) or a database the `.env` cannot reach.
-
-!!! note "The socket path and `RuntimeDirectory` must agree"
-    `SERVER_UNIX_SOCKET` (persisted in step 8 as `/run/dedalo/dedalo_ts.sock`) must sit under the directory `RuntimeDirectory=dedalo` creates (`/run/dedalo`). `/run` is a tmpfs wiped on every reboot; `RuntimeDirectory` recreates it on each start, which a hand-made `mkdir` would not survive.
-
-!!! note "Why `Restart=always` and the watchdog are both needed"
-    The server reads its configuration **once**, at boot — so a config change needs a restart, and any crash (OOM, native fault, unhandled error) must bring the process back; `Restart=always` does that. The watchdog catches a different class: systemd's native `WatchdogSec` needs `sd_notify`, which the runtime does not speak, so the 30-second `curl /health` timer stands in — and it sees *process alive, service dead* (database down, pool wedged) that `Restart=always` cannot.
-
-### 11. Reverse proxy, TLS, and media access
-
-The engine is running on its socket; now put a web server in front. Production serving is **unix-socket-only** — the proxy owns TCP and TLS, serves the client static files and the media bytes, and forwards the API and dynamic routes to the socket. It is also what **enforces the media access mode** you chose at the top of this guide.
-
-→ **[Reverse proxy and TLS](reverse_proxy.md)** walks the full nginx and Apache setup: installing the web server, certbot, the generated media rule files, and the timeouts that matter. Come back here when the proxy answers on 443.
-
-#### How the two access modes work
-
-**Rule A — the back-office cookie.** When a user logs in, the engine sets a fixed-name cookie, `dedalo_media_auth`, whose value rotates daily and is also written as a zero-byte marker under `<media>/.publication/auth/`. The web server authorises a request by checking that the file named by the cookie exists. Today's and yesterday's values are both valid, so nobody is logged out of media at midnight.
-
-**Rule B — the publication markers** (`publication` mode only). An anonymous visitor may read a file only when (a) it sits in a **public quality folder** and (b) the record is **published**. The record identity is parsed from the *file name* (`…{component_tipo}_{section_tipo}_{section_id}[_lg-xxx].{ext}`), and the web server checks for a marker at `<media>/.publication/pub/{section_tipo}_{section_id}`, maintained by the diffusion engine.
-
-#### Let the proxy reach the socket
-
-Connecting to a unix socket needs **write** permission on it. `UMask=0007` (shipped in the unit) makes the socket `srwxrwx---`; add the web-server user to the `dedalo` group so it lands in the group bucket, then **restart** (not reload) the proxy — supplementary group membership is only read when a process starts:
-
-```shell
-usermod -aG dedalo www-data     # nginx on RHEL: usermod -aG dedalo nginx
-systemctl restart nginx
-```
-
-Verify:
-```shell
-ls -l /run/dedalo/dedalo_ts.sock
-```
-
-Expected output:
-
-```text
-→ `srwxrwx--- dedalo dedalo`, and a request through the proxy no longer returns `502`.
-```
-
-#### Optional media keys
-
-```dotenv
-# Which quality folders rule B may serve. Unset = derived from this install's
-# quality catalogue (delivery qualities + thumbs + posterframes + subtitles).
-DEDALO_MEDIA_PUBLIC_QUALITIES=["image/thumb","image/1.5MB","av/404","av/posterframe","av/subtitles","pdf/web"]
-
-# Raw extra Apache directives appended to the generated rules (JSON array).
-MEDIA_HTACCESS_ADDONS=[]
-```
-
-The whole subsystem is defined in `engineering/MEDIA_PROTECTION.md`; the administrator view is [media protection](../config/media_protection.md).
-
-### 12. First login and post-install
-
-1. Open `https://your-domain/dedalo/core/page/` and log in as **`root`** with the password you set in step 8.
-2. Go to the **Development Area** and confirm the tools are registered (the installer does this unless you passed `--skip-tools`).
-3. Create an **admin user**, log out, log back in as that admin. Keep `root` for emergencies.
-4. Create your **users and projects** — see [users and permissions](../management/users_and_permissions.md).
-
-!!! note "Your ontologies"
-    The installation carries the core ontologies and the domain ontologies you chose at step 8 (Oral history, `oh`, by default) — no demo or test data. To add a domain later (for example `tch`):
-
-    1. In *Maintenance › Update ontology*, put its code **and the codes of the ontologies it requires** in the list and import them. The panel imports exactly the codes in the list and adds no dependencies itself. *Fetch list* shows what the master declares, and so does `bun run scripts/install.ts --list-ontologies`.
-    2. Add the same codes to `ACTIVE_ONTOLOGY_TLDS` in `../private/.env`, so that every later update refreshes them. Change its existing line rather than adding a second one (see step 9): the installer wrote it as a JSON list, so add the codes inside that list.
-    3. Restart the server (`systemctl restart dedalo-ts`). Configuration is read once, at boot, so until the restart the panel still offers the old list.
-
-    See [Updating ontology](../management/updates/updating_ontology.md#which-tlds-are-updated).
-
-!!! note "The thesauri you already have"
-    The Languages thesaurus (`lg`) is active on every install — its terms ship in the seed and the database step activates it. The optional thesauri the installer ran (`--hierarchies`, by default `es`) are **imported and activated**: browsable thesaurus trees at the first login. Anything else your collection needs is added later from the thesaurus tools — see [installing new hierarchies](../management/install_new_hierarchies.md). `--hierarchies none` is perfectly valid: the seed already carries the core ontology.
-
-### 13. Backups
-
-**The backup set is five stores.** The matrix database alone is *not* a backup:
-
-1. **The matrix PostgreSQL database** — the schema and every record.
-2. **The RAG vector database**, if you enabled RAG — a separate database, a separate dump.
-3. **The media originals** (`MEDIA_PATH`) — the `original` quality is the source of truth every derivative is rebuilt from. Derivatives need no backup.
-4. **`../private/`** — the `.env` secrets, the session store, `ts_state.json`.
-5. **Every site-builder instance** on the host, if you run the [site builder](../tools/using_sitebuilder.md) — its declaration and secrets, its workspaces and each site's webspace. On a host that has none, this store is an empty step.
-
-`deploy/dedalo-backup.service` + `.timer` is the reference nightly job covering all five. The canonical rules — retention, what is *derived* data and therefore not worth dumping, and the restore drill — are in `engineering/PRODUCTION.md` §6 and in [backup](../management/backup.md). Do not duplicate them into your own runbook; link to them.
-
-!!! warning "A backup that has never been restored is a hypothesis"
-    Restore-test into a scratch database at least quarterly.
-
-### 14. Optional subsystems
-
-All four are **off by default**. Turn on only what you need.
-
-#### Diffusion (publication)
-
-Publishes records to a MariaDB target database for a public website.
-
-```dotenv
-DEDALO_DIFFUSION_NATIVE=true
-DEDALO_DIFFUSION_DB_HOST=localhost
-DEDALO_DIFFUSION_DB_PORT=3306
-DEDALO_DIFFUSION_DB_USER=dedalo_pub
-DEDALO_DIFFUSION_DB_PASSWORD=…
-DEDALO_DIFFUSION_DB_NAME=web_dedalo
-```
-
-!!! warning "You create the target database — the engine never does"
-    A missing or ungranted target database is a **loud configuration error** (`MissingTargetDatabaseError`), not something the engine papers over. Create it and grant the role before enabling diffusion:
-
-    ```sql
-    CREATE DATABASE web_dedalo CHARACTER SET utf8mb4;
-    GRANT ALL ON web_dedalo.* TO 'dedalo_pub'@'localhost';
-    ```
-
-    The installer can write these keys for you (`--diffusion --mysql-*`), but it still does not create the database. Details: [the diffusion engine](../diffusion/native_engine.md).
-
-#### RAG (semantic search)
-
-```dotenv
-DEDALO_RAG_ENABLED=true
-DEDALO_RAG_DB_NAME=dedalo_rag
-```
-
-!!! warning "No code creates the RAG schema"
-    The pgvector database, the `vector` extension and the base `rag_embeddings` table are **not** created by the engine. The DDL exists in exactly one place — the **[RAG cookbook](../core/ai/rag_cookbook.md)** — and you apply it by hand. (Once the base schema exists, the per-model partitions and the index queue table *are* created automatically.) Skip this and RAG fails at the first write.
-
-#### AI assistant
-
-The in-app assistant is disabled unless a model is configured. See
-[assistant install](../core/ai/assistant/install.md).
-
-#### H.264 real-time clipping
-
-Serving audiovisual fragments by time range needs a web-server module. See
-[H.264 streaming module](install_h264_module.md).
-
-### 15. Verify, then harden
-
-Walk the whole path once, in order. Each line is a real failure mode if it does
-not pass.
-
-- [ ] `curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health` → `200` with `"db":"ok"`.
-- [ ] `curl --fail https://your-domain/health` → the same `200`, **through the proxy**. A `404`/`403` here with the socket probe green means the vhost is missing its `/health` rule — see [Reverse proxy and TLS](reverse_proxy.md).
-- [ ] `https://your-domain/dedalo/core/page/` serves the login form over TLS.
+- [ ] `curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health` → `200` with `"db":"ok"`.
+- [ ] `curl --fail https://<address>/health` → the same `200`, **through the web server**.
+- [ ] `https://<address>/dedalo/core/page/` serves the login form over TLS.
 - [ ] Log in as the admin user. The menu renders.
 - [ ] Create a record in a section, save it, reload — the value persists.
-- [ ] Upload an image. The **derivative and the thumbnail** appear (this proves ImageMagick resolved and the media root is writable).
+- [ ] Upload an image. The **derivative and the thumbnail** appear (ImageMagick resolved, the media root is writable).
 - [ ] Search for the record you created.
-- [ ] `GET /api/v1/counters` as a global admin returns request, pool, queue and memory counters. (Anyone else gets a `404` — that is correct.)
-- [ ] `systemctl reboot`, then repeat the health check. The service, the socket and the proxy must all come back on their own.
+- [ ] `GET /api/v1/counters` as a global admin returns request, pool, queue and memory counters. Anyone else gets a `404`, which is correct.
+- [ ] `systemctl reboot`, then repeat the health checks. The service, the socket and the site must all come back on their own.
 
-Hardening recap — verify each, because each is a real hole:
+These are the installed defaults. Check that nothing has changed them, because each is a real hole:
 
 | Setting | Production value | Why |
 | --- | --- | --- |
 | `SERVER_TCP_PORT` | **unset** | the TCP listener is a development convenience; production is socket-only |
-| `DEDALO_DEV_MODE` | `false` | dev mode exposes the browser test harness and unminified client libraries (developer surfaces follow the logged user, not this key) |
+| `DEDALO_DEV_MODE` | `false` | dev mode exposes the browser test harness and unminified client libraries |
 | `DEDALO_DEBUG_API_ERRORS` | `false` | otherwise exception text is echoed to the client |
-| `MEDIA_DEV_ROUTE_ENABLED` | **unset** | unset is already safe: the engine media fallback answers only on the TCP dev listener (unset in production) and only while protection is unconfigured. Setting it to `true` FORCES it on for every listener — the socket included — serving media with **no per-record ACL** and bypassing the generated rules entirely |
-| `SESSION_COOKIE_SECURE` | `true` (the default) | requires TLS — the browser drops a `Secure` cookie over plain HTTP |
-| `../private/.env` | `0600`, owned by `dedalo` | it holds every secret |
-| `../private/` | `0700` | it holds the session store and the media-auth store |
+| `MEDIA_DEV_ROUTE_ENABLED` | **unset** | setting it to `true` forces the engine's development media route on for every listener, the socket included — serving media with **no per-record access control** |
+| `SESSION_COOKIE_SECURE` | `true` (the default) | requires TLS — a browser drops a `Secure` cookie over plain HTTP |
+| `/home/ded_<i>/private/.env` | `0600`, owned by `ded_<i>` | it holds every secret |
+| `/home/ded_<i>/private/` | `0700` | it holds the session store and the media-auth store |
+| `/opt/dedalo` and everything under it | owned by root | a root-run unit must never execute a file the instance can replace |
 
 !!! note "There is no install surface to close"
-    `install_finish` **seals** the instance (`install_status: sealed` in `ts_state.json`). No install page or install API exists on any instance: a server whose box is not installed (or whose `.env` is gone, or whose install did not finish) refuses to start with exit 78 and one `[boot] REFUSED — …` line, which the unit does not restart ([installer reference](installer_reference.md#a-server-that-is-not-installed-refuses-to-start)).
+    The install **seals** the instance. No install page or install API exists: a server whose instance is not installed (or whose `.env` is gone, or whose install did not finish) refuses to start with exit code `78` and one `[boot] REFUSED — …` line, and the unit does not restart it. See [the installer reference](installer_reference.md#a-server-that-is-not-installed-refuses-to-start).
+
+## What the installer does not do after the install
+
+The installer installs; it does not maintain. It refuses to run over a sealed instance, and `--abort` never takes a completed install apart (on a live instance it undoes only the host steps after `host_engine`, and `--resume` puts them back). Three things are therefore manual today, with no installer support:
+
+- **The root-run scripts** in `/opt/dedalo/instances/<i>/bin/` are not refreshed by an in-app code update, which runs as the instance. When a release changes a script under `deploy/`, its release notes say so.
+- **A new Bun pin.** The code update panel refuses a release whose `.bun-version` differs from the running runtime, and the runtime is root-owned at `/opt/dedalo/bun/<pin>/`.
+- **Removing an instance.** There is no command that removes a completed instance.
+
+See [Upgrading](upgrading.md) for what the in-app code update does cover.

@@ -41,7 +41,15 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	symlinkSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
@@ -69,6 +77,7 @@ import {
 	productionRaw,
 	REPO_ROOT,
 	ROOT_PASSWORD,
+	systemdTemplateNames,
 	systemdWords,
 	unitAssignments,
 	unitEnvironment,
@@ -114,9 +123,7 @@ describe('the effective units (template + drop-in, as systemd merges them) (a)',
 				const execs = backup.get('Service.ExecStart') ?? [];
 				expect(execs.some((line) => line === '/bin/false')).toBe(false);
 				const stores = backedUpStores(execs);
-				expect(stores).toEqual(
-					backupStores(ctx.paths, ctx.row).map((line) => line.store),
-				);
+				expect(stores).toEqual(backupStores(ctx.paths, ctx.row).map((line) => line.store));
 				expect(env.get('DEDALO_BACKUP_EXPECTED_STORES')?.split(' ')).toEqual(stores);
 				// The ROOT store never rides the instance's set (its .env is the instance's).
 				expect(stores.includes('site_builder')).toBe(false);
@@ -395,6 +402,11 @@ describe('the site files (d)', () => {
 
 // The repository's own templates are what the step writes (the source tree the root process reads).
 test('the templates the step renders are the repository files (deploy/systemd/*@*)', () => {
+	// Every template on disk is one the step renders: a new unit file that no step
+	// installs (or a rendered one deleted from the tree) is red here.
+	const onDisk = systemdTemplateNames();
+	expect(onDisk.length).toBeGreaterThan(8);
+	expect(onDisk).toEqual([...UNIT_TEMPLATES].sort());
 	const row = OS_ROWS[2] as (typeof OS_ROWS)[number];
 	for (const name of UNIT_TEMPLATES) {
 		const source = readFileSync(join(REPO_ROOT, 'deploy/systemd', name), 'utf8');
@@ -466,7 +478,10 @@ describe("the engine's media rules reach root's nginx only as validated copies (
 		['a second statement after a whitelisted one', 'add_header X "a" always; include /x;'],
 		['a server block', 'server { listen 80; server_name other.example.org; }'],
 		['an alias', 'location /x { alias /etc/; }'],
-		['a marker probe outside this instance', 'if (-f /srv/dedalo/other/.publication/auth/$x) { set $dd_pass 1; }'],
+		[
+			'a marker probe outside this instance',
+			'if (-f /srv/dedalo/other/.publication/auth/$x) { set $dd_pass 1; }',
+		],
 		['an unterminated quote', 'add_header X "open'],
 	];
 	for (const [name, line] of SERVER_ATTACKS) {

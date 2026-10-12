@@ -228,7 +228,7 @@ async function runRuntime(ctx: HostCtx) {
 	updateEntry(ctx.fs, ctx.paths, { bun_pin: pinOf(ctx) });
 	return ran(`Bun ${pinOf(ctx)} at ${ctx.paths.bun}; release at ${ctx.paths.tree}`, {
 		told: [
-			`the root-run scripts in ${ctx.paths.binDir} are refreshed by the installer, not by an in-app code update — re-run it after an update that changes deploy/*.sh`,
+			`the root-run scripts in ${ctx.paths.binDir} are copies, root-owned: an in-app code update does not refresh them — a release that changes deploy/*.sh says what to do in its release notes`,
 		],
 	});
 }

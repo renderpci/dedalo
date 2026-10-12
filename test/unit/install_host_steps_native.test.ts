@@ -47,15 +47,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import {
-	mkdirSync,
-	mkdtempSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-	statSync,
-	writeFileSync,
-} from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { NOT_INSTALLED_EXIT_CODE } from '../../src/config/install_state.ts';
@@ -73,8 +65,13 @@ import { REFUSED_BOOT_EXIT } from '../../src/core/install/host/production/first_
 import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
 import { reviewHostCommands } from '../../src/core/install/host/review.ts';
 import type { RecordedResponse } from '../../src/core/install/host/runner.ts';
+import { stackFileOf } from '../../src/core/install/host/stack/layout.ts';
 import { renderTemplate, UNIT_TEMPLATES } from '../../src/core/install/host/systemd/render.ts';
-import { type HostStepId, normalizeInstallAnswers } from '../../src/core/install/install_plan.ts';
+import {
+	type HostStepId,
+	type InstallAnswers,
+	normalizeInstallAnswers,
+} from '../../src/core/install/install_plan.ts';
 import { MEDIA_DIR_MODE } from '../../src/core/install/media_tree.ts';
 import type { RunEnding } from '../../src/core/install/run_events.ts';
 import { readPlanFile, readStateFile } from '../../src/core/install/run_files_core.ts';
@@ -101,6 +98,7 @@ import {
 	SCRATCH_DIR,
 	type ScratchHost,
 	SERVER_NAME,
+	scratchFilePaths,
 	sourceFiles,
 	UNSUPPORTED_OS_RELEASE,
 	variantName,
@@ -261,12 +259,7 @@ function landedProblems(host: ScratchHost, ctx: HostPlanCtx): string[] {
 
 /** Every file under `dir` (recursive), as text. */
 function allFiles(dir: string): { path: string; text: string }[] {
-	return readdirSync(dir, { recursive: true, withFileTypes: true })
-		.filter((entry) => entry.isFile())
-		.map((entry) => {
-			const path = join(entry.parentPath, entry.name);
-			return { path, text: readFileSync(path, 'utf8') };
-		});
+	return scratchFilePaths(dir).map((path) => ({ path, text: readFileSync(path, 'utf8') }));
 }
 
 /** Mutating log lines (anything that is not a read-only probe). */
@@ -1031,6 +1024,35 @@ describe('the public address is polled while the reload settles (review)', () =>
 	});
 });
 
+describe("a Let's Encrypt STAGING install completes (the probe cannot verify a test chain)", () => {
+	const STAGING_HEALTH = `/usr/bin/curl -sS -o /dev/null -w %{http_code} --max-time 20 --resolve ${SERVER_NAME}:443:127.0.0.1 --insecure https://${SERVER_NAME}/health`;
+
+	test('staging: every public probe skips chain verification, the install completes and says so', async () => {
+		const { host, outcome } = await freshOn(
+			UBUNTU_NGINX_LE,
+			{ responses: [{ match: STAGING_HEALTH, stdout: '200' }] },
+			{ letsencrypt_staging: true },
+		);
+		expect(outcome.message).toBeNull();
+		expect(outcome.result).toBe('complete');
+		const probes = loggedCommands(host.root).filter((line) =>
+			line.includes('--max-time 20 --resolve'),
+		);
+		expect(probes.length).toBeGreaterThanOrEqual(3);
+		for (const line of probes) expect(line).toContain(' --insecure ');
+	});
+
+	test('a real certificate: no probe ever skips chain verification', async () => {
+		const { host, outcome } = await freshOn(UBUNTU_NGINX_LE);
+		expect(outcome.result).toBe('complete');
+		const probes = loggedCommands(host.root).filter((line) =>
+			line.includes('--max-time 20 --resolve'),
+		);
+		expect(probes.length).toBeGreaterThanOrEqual(3);
+		for (const line of probes) expect(line).not.toContain('--insecure');
+	});
+});
+
 describe('a unit that REFUSED to boot stops the first-boot wait at once (phase 5)', () => {
 	const SOCKET_HEALTH = '/usr/bin/curl -s -o /dev/null -w %{http_code} --max-time 10 --unix-socket';
 	const show = (property: string) =>
@@ -1172,8 +1194,17 @@ describe('Done says what the route did (review)', () => {
 		for (const route of ['docker', 'trial'] as const) {
 			expect(summary(route, 'complete')).toContain('The stack is up under Docker');
 			expect(summary(route, 'complete')).not.toContain('systemctl enable --now dedalo-ts');
+			// The compose command the operator copies carries the stack's THREE files
+			// (without them compose resolves its built-in defaults, not this install's).
+			const stack = stackFileOf({ route } as InstallAnswers);
+			expect(summary(route, 'complete')).toContain(
+				`docker compose -f ${stack} -f compose.override.yaml --env-file .dedalo.env ps`,
+			);
 		}
-		expect(summary('engine', 'complete')).toContain('systemctl enable --now dedalo-ts');
+		// The developer route: its own launchers, never the manual host's unit as the path.
+		expect(summary('engine', 'complete')).toContain('bun run start:supervised');
+		expect(summary('engine', 'complete')).toContain('docs/install/dev_quickstart.md');
+		expect(summary('engine', 'complete')).not.toContain('systemctl enable --now dedalo-ts');
 	});
 
 	test('a host abort says what it removed (the database too, as confirmed) — or that the live instance was kept', () => {

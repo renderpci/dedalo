@@ -142,10 +142,31 @@ export function productionPlan(
 
 // ── the fake source tree ─────────────────────────────────────────────────────
 
+/**
+ * The installer's systemd unit templates on disk (deploy/systemd/), sorted —
+ * the ONE walk of that tree the host-step gates share (census_derivation_tripwire
+ * SHARED_LISTERS: a gate imports this, never chooses the root itself).
+ */
+export function systemdTemplateNames(): string[] {
+	return readdirSync(join(REPO_ROOT, 'deploy/systemd')).sort();
+}
+
+/**
+ * Every FILE under the CALLER's own scratch root (a mkdtemp host the gate
+ * built — never a repo directory), absolute, sorted. The one recursive listing
+ * of a scratch host the gates share instead of each walking its own.
+ */
+export function scratchFilePaths(root: string): string[] {
+	return readdirSync(root, { recursive: true, withFileTypes: true })
+		.filter((entry) => entry.isFile())
+		.map((entry) => join(entry.parentPath, entry.name))
+		.sort();
+}
+
 /** The fake source tree: the REAL templates and root-run scripts, a table vouching for the fake zip. */
 export function sourceFiles(): Map<string, string> {
 	const files = new Map<string, string>();
-	for (const name of readdirSync(join(REPO_ROOT, 'deploy/systemd'))) {
+	for (const name of systemdTemplateNames()) {
 		files.set(
 			`deploy/systemd/${name}`,
 			readFileSync(join(REPO_ROOT, 'deploy/systemd', name), 'utf8'),
@@ -324,6 +345,9 @@ function webAnswers(variant: HostVariant): RecordedResponse[] {
 	];
 }
 
+/** The pinned runtime's host path (layout.ts). */
+const BUN_PATH = `/opt/dedalo/bun/${BUN_PIN}/bun`;
+
 /** SELinux on EL: the local rules and the module, once added. */
 function selinuxAnswers(variant: HostVariant): RecordedResponse[] {
 	if (variant.os !== 'el10') return [];
@@ -348,6 +372,28 @@ function selinuxAnswers(variant: HostVariant): RecordedResponse[] {
 			stdout: 'dedalo_engine\n',
 		},
 		{ match: '/usr/sbin/semodule -l', stdout: '' },
+		// The runtime's label: the directory's type until the loaded module's filecon is applied.
+		{
+			match: `/usr/bin/stat -c %C ${BUN_PATH}`,
+			after: `/usr/sbin/restorecon -F ${BUN_PATH}`,
+			stdout: 'system_u:object_r:dedalo_engine_exec_t:s0\n',
+		},
+		{ match: `/usr/bin/stat -c %C ${BUN_PATH}`, stdout: 'system_u:object_r:usr_t:s0\n' },
+		// The started engine: in its own domain once systemd ran the relabelled runtime.
+		{
+			match: `/usr/bin/systemctl show -p MainPID --value dedalo-ts@${INSTANCE}.service`,
+			after: `/usr/bin/systemctl start dedalo-ts@${INSTANCE}.service`,
+			stdout: '4242\n',
+		},
+		{
+			match: '/usr/bin/ps -o label= -p 4242',
+			after: `/usr/sbin/restorecon -F ${BUN_PATH}`,
+			stdout: 'system_u:system_r:dedalo_engine_t:s0\n',
+		},
+		{
+			match: '/usr/bin/ps -o label= -p 4242',
+			stdout: 'system_u:system_r:unconfined_service_t:s0\n',
+		},
 	];
 }
 
@@ -881,6 +927,8 @@ export const READ_ONLY_PROBES: readonly RegExp[] = Object.freeze([
 	/^\/usr\/bin\/test -[sez] /,
 	/^\/usr\/sbin\/semanage fcontext -l -C$/,
 	/^\/usr\/sbin\/(semodule -l|getenforce)$/,
+	/^\/usr\/bin\/stat -c %C /,
+	/^\/usr\/bin\/ps -o label= -p \d+$/,
 	/^\/usr\/bin\/pgrep /,
 	/^\/usr\/sbin\/runuser -u \S+ -- \S+\/bun run \S+install\.ts --status --json$/,
 	/^\/usr\/sbin\/runuser -u \S+ -- \S+\/bun run scripts\/ops\/boot_status\.ts --json$/,

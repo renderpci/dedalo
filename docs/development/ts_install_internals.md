@@ -1,10 +1,11 @@
 # The install engine (developer reference)
 
-> See also: [Installing Dédalo (operator guide)](../install/production.md) · [Development](index.md) · [Extending Dédalo](extending/index.md)
+> See also: [Installing Dédalo (operator guide)](../install/index.md) · [Installer reference](../install/installer_reference.md) · [Development](index.md) · [Extending Dédalo](extending/index.md)
 
 This page documents how the install engine works internally (DEC-19). For the
 step-by-step **operator** instructions, see the
-[install guide](../install/production.md); this page is for developers
+[install guide](../install/index.md) and the
+[installer reference](../install/installer_reference.md); this page is for developers
 working on `src/core/install/` and the install boot path.
 
 ## The engine
@@ -16,7 +17,7 @@ file — all build the same plan. The executor (`executor.ts`, its loop in
 `step_loop.ts`) runs the plan's steps through the ONE step table (`steps.ts`
 `INSTALL_STEPS`, each `run` being the `step_runs.ts` `STEP_RUNS` entry) with
 accept / verify / undo and a checkpoint per step, which is what makes `--resume`
-and `--abort` possible. There is no install API: the browser wizard and its
+and `--abort` possible. There is no install API: the browser front end and its
 step router were removed on 2026-10-12
 (`engineering/wire_contract/WC-2026-10-12-install-surface-removed.md`), and a
 server on a box that is not installed refuses to start
@@ -224,7 +225,7 @@ registry-row law's import door, which on an existing row replaces only the
 definition's keys.
 
 **The answers** (`engineering/wire_contract/WC-2026-10-09-install-domain-ontologies.md`,
-whose wizard half is superseded by `WC-2026-10-12-install-surface-removed`):
+whose browser half is superseded by `WC-2026-10-12-install-surface-removed`):
 `ontologies` and, since
 `engineering/wire_contract/WC-2026-10-10-ontology-dependencies-hierarchy60.md`,
 `declined_dependencies` (CLI `--decline-dependencies`); each catalog view entry
@@ -527,6 +528,92 @@ so a minor release may change the API. Dependabot proposes bumps; a bump is
 taken with the TUI gates green. The lock carries the native build of every
 target (darwin arm64/x64, linux arm64/x64, glibc and musl).
 
+## The step loop (one loop, two executors)
+
+`step_loop.ts` is the resumable loop both executors drive: the ENGINE executor
+(`executor.ts` — the engine steps and its database claim) and the HOST executor
+(`host/host_executor.ts` — the production and docker/trial host steps). One
+implementation of the rules, so a host step resumes exactly as an engine step
+does:
+
+- recorded `done`: a step with a `verify` must still verify, or the run is refused
+  as drift (`step <id> was recorded done but its outcome is missing …`); a step
+  without one is skipped;
+- recorded `running` or `failed`: a `verify` that passes means the work landed
+  before the checkpoint — the step is **adopted** (marked done, skipped) unless it
+  is `neverAdopt` (the seed restore); otherwise it runs again;
+- pending: intent → run → created → verify → done, checkpointed around it.
+
+The loop knows nothing of what a step does; the driver's `perform` runs it. Also
+here, shared by both executors: the fault seam (`DEDALO_INSTALL_FAULT`), the
+event emitter, the console redaction and the stopping of children on a signal.
+It is config-free — the root process of the production route loads it.
+
+## The host executor
+
+`host/host_executor.ts` runs a host route's plan through the same loop, with the
+same state schema, in its **own** run directory, so two processes never share a
+state file and root never writes into a directory the instance user owns:
+`/var/lib/dedalo-install/<instance>/` on production (`0700`, root),
+`<checkout>/.dedalo-install/` on docker and trial. Modes: **fresh** (refuses an
+existing record; production refuses without root, naming the `sudo sh install.sh`
+form), **resume** (the saved plan and the frozen facts; a step whose commands no
+longer equal the ones the run showed is refused) and **abort** (reverse order,
+only what `created` lists — and once the engine child completed, only the host
+steps after it: a live install is never taken apart).
+
+| Module | What it owns |
+| --- | --- |
+| `host/contract.ts` | what a host step is: a PURE `commands(ctx)` (plan + frozen facts → the exact commands), `run`, `verify`, `undo`, `intent`, `created`. **Review equals run**: the Review lists `commands()`, the run executes exactly them; an `unless` probe makes a re-run after a kill converge. Nothing secret is in a command — a secret reaches a child only as `stdin: {secrets}` |
+| `host/execute.ts` | the one place a command becomes an effect and the one place it becomes a Review line; `as: instance\|postgres` becomes a `runuser -u <user> --` prefix |
+| `host/runner.ts` | the one spawner: absolute binaries only (from the OS row's closed table, never a `PATH` lookup), a fixed environment (no `DEDALO_INSTALL_*` reaches a child), secrets on stdin, bounded output and time, every child registered so a signal stops apt, dnf and certbot too. Its recording twin answers argv from a response table and logs every request |
+| `host/fs.ts` | every file a host step touches: atomic writes, mode and owner set by descriptor before the rename, no symlink followed, owners by name from the root's own `passwd`/`group` |
+| `host/facts.ts`, `host/os_support.ts` | the read-only measurement of the machine (OS row, privilege, web server, PostgreSQL, what already exists under this instance's names, SELinux, the firewall) and the supported OS rows — exact `ID` and major version, newest releases only |
+| `host/layout.ts` | every path and name of one production instance, from the instance name |
+| `host/review.ts` | the Review's host commands: the facts measured now, then every step's `commands()` for them |
+| `host/host_table.ts` | the exhaustive step-id → definition table (production rows in `host/production/`, stack rows in `host/stack/`) and the digest `host_preflight` freezes |
+| `host/registry.ts` | `/var/lib/dedalo-install/instances/<i>.json`: the refcounts of the shared resources (template units, a Bun pin, the SELinux module, the nginx media map) |
+| `host/systemd/render.ts` | the template units (`deploy/systemd/*@*`, only OS-row values substituted) and the per-instance drop-ins; every `Environment=` value quoted; no root line beside the instance's `.env` |
+| `host/web/{nginx,apache,site,clash}.ts` | the one site file per instance, the validated media-rule copies and the host-wide map include, and the clash scan (only `(file, names, ports)` tuples kept from `nginx -T` / `-S`) |
+| `host/stack/*` | the docker/trial steps, the compose invocation (`-f <stack> -f compose.override.yaml --env-file .dedalo.env`, the same argv `deploy/dedalo-image-lib.sh` emits) and the image verification |
+
+### Engine delegation
+
+The host process never runs an engine step itself. `host_engine` (production)
+starts ONE child as the instance user in the instance's own tree —
+`runuser -u ded_<i> -- <bun> run scripts/install.ts --request-stdin --execute --events-jsonl [--resume]` —
+and `stack_engine` runs the same command in a throw-away container
+(`docker compose … run --rm -T dedalo …`). The request (the engine answers — the
+host answers minus `HOST_ONLY_ANSWER_KEYS`, plus `engine_only` and, on production,
+the OS row's `pg_bin_path` — and the secrets) is ONE JSON object on the child's
+standard input. Its log lines and step events come back as JSON lines and are
+relayed, redacted; the one-time salt arrives as a `show_once` frame the front end
+shows once and never stores. `verify` asks the child (`--status --json`); `undo`
+is the child's own `--abort`, which refuses a sealed install.
+
+### Seams
+
+All read from the **process** environment only, never from `../private/.env`:
+
+- `DEDALO_INSTALL_FAULT=<step>:before|after` — the resume drills' SIGKILL point, in the loop.
+- `DEDALO_INSTALL_HOST_ROOT` — the HostFs root becomes this directory **and** the
+  runner becomes the recording runner, in the same move; a root without the
+  `.dedalo_install_scratch` marker is refused. In-process gates inject the runner
+  and the fs directly.
+- `DEDALO_INSTALL_PROBE_CA_FILE` — the public probe's trust anchor, accepted only
+  inside a directory marked `.dedalo_install_drill`.
+
+### Drills
+
+- `bun run drill:install-host` (`scripts/install_host_drill.ts`, opt-in, never part
+  of `bun test`): a privileged systemd container of the newest supported release
+  (`--os debian|ubuntu|alma`, `--web nginx|apache`), decoys planted, the bootstrap
+  run as root and killed after every host step in turn, resumed each time, then
+  checked from outside (units, timers, `nginx -t`, `/health` over HTTPS through
+  the drill CA, the decoys byte-equal) and aborted on the live instance.
+- `test/unit/install_host_resume_drill.test.ts` and `install_resume_drill.test.ts`:
+  the same kill-and-resume over a marked scratch host and over the engine steps.
+
 ## Gates
 
 `test/unit/install_*.test.ts` and `seed_build_native`: the seed compiler and its
@@ -550,8 +637,11 @@ registry = the core rows), `install_hierarchy_activate_native` and
 id, a checksum mismatch, an empty thesaurus — each refused or applied with
 nothing partial). `install_plan_parity_tripwire` holds flags, the answers record and the answers file to one plan;
 `install_core_hierarchy_native` proves the core activation needs no import;
-`install_sh_portability` runs `install.sh`'s answer-to-flag block through the
-plan's own parser. The ontology half: `install_ontology_choice` (the closure,
+`install_sh_portability` holds the stack disk probe to its POSIX `df -Pk` form and
+`install.sh` to POSIX sh; `install_bootstrap_sh` holds the bootstrap's refusals
+(kernel, musl, CPU, the release sha256, the Bun hash table) and its exec of the
+installer; `install_sh_image_source` holds the image-source decisions of the shared
+host library (`deploy/dedalo-image-lib.sh`). The ontology half: `install_ontology_choice` (the closure,
 hermetic), `install_hierarchy_dependencies_native` (the `install_hierarchies` step never
 forces a declared thesaurus, over a real registry row, on the suite database),
 `ontology_references_native` (the classifier and codec, hermetic),
@@ -575,3 +665,12 @@ the same matrix: the same plan, the same asks), `install_tui_secrets_tripwire`
 code, every terminal mode undone, `stty` sane), `opentui_confinement_tripwire`,
 `install_tui_frames` (the mockup's layout at 104×30, 96×27 and 80×24) and
 `install_executor_events_native` (the step events).
+
+The host routes: `install_host_steps_native` (every production step over a
+scratch host and the recording runner), `install_host_render_tripwire` (the
+rendered units and site, the templates on disk equal to the rendered set, no root
+line beside an `EnvironmentFile`), `install_host_selinux_native` (what the
+`dedalo_engine` module grants, against the old broad rule as a control),
+`install_host_privilege_tripwire` (what the root process may import and write),
+`install_host_resume_drill`, `install_stack_steps_native` (the docker and trial
+steps). `install_step_table_native` holds the engine's one step table.

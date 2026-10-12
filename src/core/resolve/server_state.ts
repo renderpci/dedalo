@@ -41,7 +41,7 @@ export interface ServerState {
 	 * Any value present and not `sealed` REFUSES THE BOOT
 	 * (src/config/install_state.ts notInstalledRefusal, exit 78): the database
 	 * is not the install's yet, and an unfinished install is resumed with
-	 * `bun run dedalo:install --resume`, never by starting the server.
+	 * the installer's `--resume` (per route), never by starting the server.
 	 */
 	install_status?: 'terminal_installing' | 'sealed';
 	/** Install fingerprint captured at persist_config (PHP state.information). */

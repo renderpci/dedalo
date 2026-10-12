@@ -47,6 +47,7 @@
 #   CLAUDE.md — Committed SYMLINK alias of AGENTS.md — same reason as .claude/.
 !.agents
 !.bun-sha256
+!.bun-sha256-darwin
 !.bun-version
 !.dockerignore
 !.gitattributes

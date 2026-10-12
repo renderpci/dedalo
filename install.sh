@@ -154,6 +154,13 @@ resolve_sha256() {
 	fi
 }
 
+# require_tool <command> <why>: the tool is on PATH, or die naming the package to install.
+# The bootstrap runs BEFORE host_packages, so what it needs the host must already have.
+require_tool() {
+	command -v "$1" >/dev/null 2>&1 \
+		|| die "$1 is not installed and is needed $2 — install it first (Debian/Ubuntu: apt-get install $1; RHEL family: dnf install $1)"
+}
+
 sha_of() {
 	# shellcheck disable=SC2086 # $SHA256 is a command with its arguments
 	$SHA256 "$1" | cut -d' ' -f1
@@ -190,6 +197,7 @@ private_dir() {
 # fetch <https url> <file> <max bytes>: https only, redirects included.
 fetch() {
 	case "$1" in https://*) ;; *) die "refusing a non-https download: $1" ;; esac
+	require_tool curl "to download $1"
 	curl -fsSL --proto =https --proto-redir =https --tlsv1.2 --max-filesize "$3" -o "$2" "$1" \
 		|| die "download failed: $1"
 }
@@ -424,6 +432,7 @@ main() {
 	refuse_kernel "$KERNEL"
 	refuse_musl "$KERNEL"
 	resolve_sha256
+	require_tool unzip 'to unpack the Bun runtime'
 	[ -z "$MIRROR" ] || case "$MIRROR" in https://*) ;; *) die '--mirror must start with https://' ;; esac
 	[ -n "$RELEASE" ] || [ -z "$RELEASE_SHA" ] || die '--release-sha256 without --release'
 	_uid=$(id -u)

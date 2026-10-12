@@ -487,7 +487,7 @@ export const REVIEW_TEXT = Object.freeze({
  * ui/screens/done.ts).
  */
 const DONE_TEXT_ENGINE_SUPERVISOR =
-	'Start the server under its supervisor (systemd: `systemctl enable --now dedalo-ts` — docs/install/production.md) or with `bun run start:supervised`; plain `bun run start` is unsupervised and cannot take code updates.';
+	'Start the server with `bun run dev` (development) or `bun run start:supervised` — docs/install/dev_quickstart.md; plain `bun run start` is unsupervised and cannot take code updates. A host set up by hand runs it under systemd instead — docs/install/manual_host.md.';
 const DONE_TEXT_ENGINE_ABORTED =
 	'install aborted — what the install created is removed; the database itself is kept.';
 
@@ -509,7 +509,8 @@ export const DONE_TEXT = Object.freeze({
 			return `${unit} is running under systemd and starts at boot; its health watchdog and nightly backup timer are armed (systemctl status ${unit} · journalctl -u ${unit}). Do not start dedalo-ts.service — that is the single-instance unit of the manual procedure, not this instance.`;
 		}
 		if (ending.route === 'docker' || ending.route === 'trial') {
-			return 'The stack is up under Docker and restarts with it — `docker compose ps` / `docker compose logs dedalo` from this checkout (with its compose.override.yaml and .dedalo.env).';
+			const compose = `docker compose -f ${ending.route === 'trial' ? 'docker-compose.simple.yml' : 'docker-compose.yml'} -f compose.override.yaml --env-file .dedalo.env`;
+			return `The stack is up under Docker and restarts with it — from this checkout: \`${compose} ps\` / \`${compose} logs dedalo\` (all three files, or compose resolves its built-in defaults).`;
 		}
 		return DONE_TEXT_ENGINE_SUPERVISOR;
 	},
@@ -519,7 +520,7 @@ export const DONE_TEXT = Object.freeze({
 			return 'install partly undone — the host steps after the engine are undone; the instance itself (its user, database and code) is kept, and --resume puts the undone steps back.';
 		}
 		if (ending.route === 'production') {
-			return "install aborted — what this install created is removed: its site, units, user, directories and, as confirmed, its database and role; the installed packages and any backups are kept.";
+			return 'install aborted — what this install created is removed: its site, units, user, directories and, as confirmed, its database and role; the installed packages and any backups are kept.';
 		}
 		if (ending.route === 'docker' || ending.route === 'trial') {
 			return 'install aborted — the stack is down; the files, certificates and volumes this install created are removed (the database volume as confirmed); the image is kept.';

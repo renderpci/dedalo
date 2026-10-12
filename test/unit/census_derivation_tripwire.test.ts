@@ -317,8 +317,6 @@ const FLOORLESS_WALK_BASELINE: Readonly<Record<string, string>> = {
 		'DEBT: the recursive `readdirSync` walk is never floored.',
 	'test/unit/ontology_single_writer_tripwire.test.ts':
 		'DEBT: the recursive `readdirSync` walk is never floored.',
-	'test/unit/operator_commands_tripwire.test.ts':
-		'NOT-A-CENSUS: `readdirSync` lists the scratch backup trees the gate builds under test/.tmp-* (retention generations), not a corpus.',
 	'test/unit/proxy_trust_tripwire.test.ts': 'DEBT: the src/ proxy-trust glob is never floored.',
 	'test/unit/remove_sentinel_native.test.ts':
 		'DEBT: `scanFiles()` over src/ is never floored (floors are on call sites and reasons).',
@@ -619,6 +617,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [['install/db/migrations']],
 		scope:
 			'the numbered boot migrations — what an EXISTING installation actually applies, for gates proving a schema or SQL-function change reaches one',
+	},
+	'test/helpers/install_host_scratch.ts': {
+		roots: [['deploy/systemd']],
+		scope:
+			"the installer's systemd unit templates the host-step gates' fake source tree plants (deploy/systemd/, systemdTemplateNames); scratchFilePaths lists the CALLER's own mkdtemp scratch host, never a repo directory",
 	},
 	'test/helpers/deploy_artifact_corpus.ts': {
 		roots: [['.'], ['.', 'deploy'], ['deploy'], ['deploy']],

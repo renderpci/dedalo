@@ -13,8 +13,8 @@ installer with your arguments:
 
 | Front end | Command | Use it when |
 | --- | --- | --- |
-| **Interactive terminal** | `bun run scripts/install.ts` (no answer flag) — `--plain` for the line mode | a person at a terminal: it asks, checks each answer as you go, and shows the whole plan before anything runs. See [Interactive mode](#interactive-mode) |
-| **Headless CLI** | `bun run scripts/install.ts <flags>` | servers, containers, CI. No restart, no pre-auth window. |
+| **Interactive terminal** | `sh install.sh` (`sudo` for production), or `bun run scripts/install.ts` in a checkout — no answer flag; `--plain` for the line mode | a person at a terminal: it asks, checks each answer as you go, and shows the whole plan before anything runs. See [Interactive mode](#interactive-mode) |
+| **Headless CLI** | `sh install.sh -- <flags>`, or `bun run scripts/install.ts <flags>` | provisioning, CI, repeatable installs: flags or an answers file, nothing asked with `--execute` |
 
 There is no browser installer: a server on a box that is not installed refuses to start ([below](#a-server-that-is-not-installed-refuses-to-start)).
 
@@ -35,11 +35,14 @@ There is no browser installer: a server on a box that is not installed refuses t
 ## Prerequisites the installer checks for you
 
 The pre-flight step (`src/core/install/init_test.ts`) is a hard gate — nothing
-runs until it passes. It checks exactly four things:
+runs until it passes. A headless run checks exactly these four things; the
+interactive *System check* screen shows them together with more rows (the
+machine's PostgreSQL, ImageMagick, FFmpeg — and on the host routes the host's
+own facts):
 
 | Check | Failure message |
 | --- | --- |
-| The Bun runtime is at least 1.3 | `Bun x.y.z is older than the required 1.3.0` |
+| The Bun runtime is at least 1.4.0 | `Bun x.y.z is older than the required 1.4.0` |
 | The seed dump is present in the repo | `Install seed dump missing at …` |
 | The private directory is creatable and writable | `Private config directory is not creatable/writable: …` |
 | A `psql` client can be resolved | `PostgreSQL client (psql) not found — install the postgresql client tools` |
@@ -69,13 +72,14 @@ bun run scripts/install.ts \
   [--hierarchies default|none|es,fr] \
   [--ontologies default|oh,tch] [--ontology-source <dir|archive>] \
   [--decline-dependencies tchi,ts:hierarchy1] \
-  [--media-path /srv/dedalo/media] [--socket /run/dedalo/dedalo_ts.sock] [--media-access-mode publication] \
+  [--media-path <dir>] [--socket <path>] [--media-access-mode publication] \
   [--diffusion --mysql-name web_dedalo --mysql-user d] \
   [--mailer --smtp-host smtp.example.org --smtp-user dedalo@example.org] \
   [--no-update-servers] [--skip-tools] [--plan | --list-ontologies | --list-hierarchies]
 
-bun run scripts/install.ts --resume                              # finish an interrupted install
-bun run scripts/install.ts --abort --confirm-database dedalo_main # undo it
+bun run scripts/install.ts --resume                              # finish an interrupted install (developer route)
+bun run scripts/install.ts --abort --confirm-database dedalo_main # undo it (developer route)
+sh install.sh --route <r> [--instance <i>] --resume              # the same on production / docker / trial
 bun run scripts/install.ts                                       # interactive (a terminal), see below
 bun run scripts/install.ts --plain                               # interactive, plain line mode
 ```
@@ -107,8 +111,8 @@ meaning.)
 | `--ontologies` | no | `default` (= `oh`) | the **domain** ontologies, a comma list of TLDs — at least one. `default` is Oral history (`oh`), built into the release. Any other TLD comes from the ontology source, together with the ontologies it **declares** as dependencies. A core TLD is dropped with a note; `none` and an unknown TLD are refused. See [Domain ontologies](#domain-ontologies) |
 | `--decline-dependencies` | no | *(none)* | the declared dependencies you do not want, a comma list. Each item is a TLD (declines it as an ontology and as a thesaurus) or `<tld>:ontology35` / `<tld>:hierarchy1` (declines only one of the two). Any **thesaurus** can be declined; declining a mandatory one prints a warning (strongly recommended, installable later). A mandatory **ontology** cannot be declined: naming one has no effect, and it is installed. A malformed item is refused |
 | `--ontology-source` | no | *(unset)* | a local directory, or a `.tar` / `.tar.gz` / `.tgz` archive of one, in the ontology server's export layout. The non-built-in ontologies come from it instead of the update server — a fully [offline install](#offline-installs-ontology-source) |
-| `--media-path` | no | *(unset)* | the media root; write-probed during install **and persisted** to `.env` as `MEDIA_PATH` (replaces the old `MEDIA_PATH=…` env prefix) |
-| `--socket` | no | `/tmp/dedalo_ts.sock` | persisted as `SERVER_UNIX_SOCKET`; set `/run/dedalo/dedalo_ts.sock` for a systemd + reverse-proxy deploy (the default does not match that layout) |
+| `--media-path` | no | see [Route defaults](#route-defaults) | the media root; write-probed during install **and persisted** to `.env` as `MEDIA_PATH` (replaces the old `MEDIA_PATH=…` env prefix) |
+| `--socket` | no | see [Route defaults](#route-defaults) | persisted as `SERVER_UNIX_SOCKET`. On the developer route nothing is written unless you give it, and the server listens on its built-in default |
 | `--media-access-mode` | no | *(unset = `publication`, fail-closed)* | persisted as `DEDALO_MEDIA_ACCESS_MODE` — `private`, `publication`, or `false` to deliberately serve an open media tree |
 | `--diffusion` | no | off | writes the MariaDB keys; pair with `--mysql-host/-port/-socket/-name/-user/-password`. `--mysql-user` is required; `--mysql-name` defaults to `web_dedalo` (`web_<instance>` on production). The MariaDB connection is probed; a failure warns but does not stop the install |
 | `--mailer` | no | off | writes the outbound-email (SMTP) keys, enabling [password recovery](../management/password_recovery.md); requires `--smtp-host`, pair with `--smtp-port` (587), `--smtp-secure` (`tls`\|`ssl`\|`none`), `--smtp-user`, `--smtp-password`, `--smtp-from`, `--smtp-from-name`. The relay is probed (connection + auth, no email sent); a failure warns but does not stop the install |
@@ -129,19 +133,20 @@ meaning.)
 | `--http-port`, `--https-port` | no | `80`, `443` | the published ports (distinct). Let's Encrypt needs `--http-port 80` (its HTTP-01 challenge) |
 | `--tls` | no | `letsencrypt` (`none` on `trial`) | the certificate: `letsencrypt` (certbot + its renewal timer) or `files` (the institution's own) on `production`; `docker` adds `local_ca`; `trial` has none. A local CA is never offered on `production` |
 | `--letsencrypt-email` | with `--tls letsencrypt` | — | the address for Let's Encrypt's expiry notices |
-| `--letsencrypt-staging` | no | off | flags only: issue from Let's Encrypt's staging CA (a test certificate) |
+| `--letsencrypt-staging` | no | off | flags only: issue from Let's Encrypt's staging CA (a test certificate browsers do not trust). The public probe then does not verify the chain, so the install completes; on production the closing *To do on this host* list prints the `certbot` command that replaces the certificate with a real one |
 | `--tls-cert`, `--tls-key` | with `--tls files` | — | absolute paths of the fullchain and its key. Checked before use — the certificate must name `--server-name`, be valid now (a warning under 30 days) and pair with the key — and never copied or changed on `production` |
 | `--db-mode` | no | `create` | `production`: `create` (the installer creates the role `ded_<i>` — peer authentication, no password at rest — and the database it owns) or `existing` (yours, probed with the password you give) |
 | `--backup-dir` | no | `/home/ded_<i>/backups` | `production`: where the nightly backup units write |
 | `--backup-site-builder` | no | off | `production`: also back up the site-builder store (as root, from the root-owned script copy) |
 | `--image-source` | no | `official` | `docker` / `trial`: `official` (a Dédalo registry, cosign-verified), `custom` (a registry of your own — `--image-repository`) or `build` (built here from this checkout) |
 | `--image-repository`, `--image-version` | with `--image-source custom` | the installer's own version | the image; its version must be the installer's (or its `-dev` tag): the engine steps run inside it with this installer's request format |
-| `--engine-only` | no | off | flags only, used by the host routes themselves: run the ENGINE steps here (the delegated child of `host_engine` / `stack_engine`) |
-| `--request-stdin` | no | off | the delegated child's input: ONE JSON object `{schema, answers, secrets}` on standard input — never argv, never a file |
-| `--events-jsonl` | no | off | the delegated child's output: its log lines and step events as JSON lines (the one-time salt as a `show_once` frame the parent shows once and never stores) |
-| `--status --json` | no | off | prints the install record of this process's private directory (`{exists, outcome, failed_step}`) and exits — how a host step verifies its child |
-| `--resume` | no | off | finish the install recorded in `<private>/install/`; see [Resuming an install](#resuming-an-install-resume) |
-| `--abort` | no | off | undo the install recorded in `<private>/install/`; needs `--confirm-database`. See [Undoing an install](#undoing-an-install-abort) |
+| `--engine-only` | no | off | **internal**, used by the host routes themselves: run the ENGINE steps here (the delegated child of `host_engine` / `stack_engine`) |
+| `--request-stdin` | no | off | **internal**: the delegated child's input — ONE JSON object `{schema, answers, secrets}` on standard input, never argv, never a file |
+| `--events-jsonl` | no | off | **internal**: the delegated child's output — its log lines and step events as JSON lines (the one-time salt as a `show_once` frame the parent shows once and never stores) |
+| `--pg-bin-path` | no | — | **internal**: written as `DEDALO_PG_BIN_PATH`; the production route derives it from the system's PostgreSQL 18 binaries and hands it to its engine child |
+| `--status --json` | no | off | prints the install record of this process's private directory (`{exists, outcome, failed_step}`) and exits — how a host step verifies its child, and how you can check one by hand |
+| `--resume` | no | off | finish the interrupted install: on the developer route the one recorded in `<private>/install/`; on `production` / `docker` / `trial` repeat `--route` (and `--instance`) so the installer finds the host record. See [Resuming an install](#resuming-an-install-resume) |
+| `--abort` | no | off | undo the interrupted install, found as for `--resume` (repeat `--route` and `--instance` on the host routes); needs `--confirm-database`. See [Undoing an install](#undoing-an-install-abort) |
 | `--confirm-database <name>` | with `--abort` | — | must equal the install's database name before `--abort` resets it |
 
 The run-control flags exclude each other where they cannot mean anything:
@@ -535,9 +540,14 @@ recreate the database.
 Run the installer with **no answer flag** at a terminal and it asks:
 
 ```shell
-bun run scripts/install.ts            # the interactive installer
-bun run scripts/install.ts --plain    # the same questions, one per line
+sh install.sh                         # the interactive installer (sudo sh install.sh for production)
+sh install.sh --plain                 # the same questions, one per line
+bun run scripts/install.ts            # the same, in a checkout that already has Bun
 ```
+
+The route is chosen on the first screen. `--route` and `--instance` are answer
+flags like any other: give one and the run is headless, so it asks nothing and
+refuses an answer it is missing (`entity is required`, …).
 
 It walks one screen per step, in this order, and the route you pick first
 decides which steps follow:
@@ -581,7 +591,7 @@ What the screens do for you:
 - **The Review** lists what the install will do — the database, the ontologies
   in install order, the thesauri, the languages, publication and mail (tested or
   not), the media root and socket, the steps, the `.env` key names (never a
-  value), the host steps still done by hand on a production route, and the
+  value), on the production, docker and trial routes every host command, and the
   equivalent command line (without secrets). Then:
   `install` (typed `yes` to start; offered only when the plan has no error),
   `edit <n>` (go back to step `n`; later steps ask only what changed),
@@ -600,8 +610,14 @@ Every route installs from the Review. On **production**, **docker** and
 [Docker and trial host steps](#docker-and-trial-host-steps)); `write <path>`
 still writes the answers file instead.
 
-If an install was interrupted, the interactive installer says so first and
-offers **resume**, **abort** or **quit** instead of asking anything. Abort asks
+If a **developer-route** install was interrupted (its record is in
+`<private>/install/`), the interactive installer says so first and
+offers **resume**, **abort** or **quit** instead of asking anything. The host
+routes keep their record elsewhere and are not offered this: an interrupted
+production, docker or trial install is continued with
+`sh install.sh --route <r> [--instance <i>] --resume` (`sudo` on production), or
+undone with `--abort` the same way, and a fresh interactive run over it is
+refused once its screens are answered. Abort asks
 you to type the database name back (it resets that database to empty), and
 asks the database password only when the reset needs it and neither the
 environment nor the install's `.env` supplies it — the same rules as
@@ -660,17 +676,18 @@ The screens are the steps listed above, plus:
 - **Checks** show their result in place; a failed one offers retry / edit /
   keep untested / quit.
 - **The Review** shows what will happen, any errors, and the equivalent command
-  line (no secret in it). On the docker and trial routes ("Docker without
-  media protection") Enter does not install — write the answers file instead.
+  line (no secret in it).
 - **Install** lists every step with its state (`◐` running, `✓` done, `↷`
   verified from an earlier run, `✗` failed) and its time. Ctrl-C here stops the
   running step at once and records it failed; `--resume` runs it again later.
 - **Done** shows the outcome; on a fresh install, the generated
   `DEDALO_SALT_STRING` **once** — copy it then (the mouse is not captured, so
   your terminal's own selection works; the value is also kept in the private
-  `.env`, mode 0600). Then what comes next: start the supervisor, then open the
-  web interface. Thesauri, toponymies, restores and updates after the install
-  are done in the browser (**Maintenance**), not here. The screen stays until
+  `.env`, mode 0600). Then what comes next, per route: on production the
+  instance is already running under systemd with its watchdog and backup timer
+  armed; on docker and trial the stack is up; on developer, start the server
+  under a supervisor. Thesauri, toponymies, restores and updates after the
+  install are done in the browser (**Maintenance**), not here. The screen stays until
   you press a key.
 
 Whatever way it ends — quit, Ctrl-C, an error, a signal — the installer gives
@@ -758,7 +775,11 @@ The keys it accepts are exactly the plain answers: `route`, `instance`, `db_host
 `smtp_port`, `smtp_secure`, `smtp_user`, `smtp_from`, `smtp_from_name`,
 `media_path`, `unix_socket`, `media_access_mode`, `update_servers`,
 `hierarchies`, `register_tools`, `ontologies`, `declined_dependencies`,
-`ontology_source`. Lists may be JSON arrays or comma strings, switches JSON
+`ontology_source`, and the host answers `web_server`, `server_name`,
+`http_port`, `https_port`, `tls_mode`, `letsencrypt_email`,
+`letsencrypt_staging`, `tls_cert_path`, `tls_key_path`, `db_mode`, `backup_dir`,
+`backup_site_builder`, `image_source`, `image_repository`, `image_version` (and
+the internal `engine_only` and `pg_bin_path`). Lists may be JSON arrays or comma strings, switches JSON
 booleans — the same values the screens produce. The file goes through the same
 plan, so the same answers install the same instance whichever way they arrive.
 
@@ -867,6 +888,22 @@ A run that passed validation and the database check records itself under
 | `install.state.json` | around every step | schema `dedalo.install.state/1`: each step's status (`pending`, `running`, `done`, `failed`), attempts, verification and redacted message; every run (fresh, resume, abort) and how it ended; what the pre-flight saw; and what the install **created** — the only things `--abort` may remove |
 | `install.lock` | while a run is active | which process holds the install (released when it ends; a lock whose process is gone is taken over with a warning) |
 
+The host routes keep a record of their own, with the same two files and the same
+schemas, in a directory the engine child never writes:
+
+| Route | Host record | Engine record |
+| --- | --- | --- |
+| production | `/var/lib/dedalo-install/<instance>/` (`0700`, root) | `/home/ded_<instance>/private/install/` (the instance user's) |
+| docker, trial | `<checkout>/.dedalo-install/` (yours) | `/private/install/` inside the `private` volume |
+| developer | — | `<private>/install/` |
+
+The host record also freezes what `host_preflight` or `stack_preflight`
+measured and the digest of every host step's commands: a resume runs exactly the
+commands the Review showed. A production host also keeps a registry of its
+instances, `/var/lib/dedalo-install/instances/<instance>.json` (`0644`, root),
+which counts who uses each shared resource — see
+[Several instances on one host](multi_instance.md).
+
 Both files are **kept** after success, as the install's record. A fresh run
 that finds them refuses — `an install record exists at … — resume it with
 --resume, undo it with --abort --confirm-database <db>, or remove the install
@@ -885,7 +922,11 @@ Any failure after the plan and state files exist ends with how to continue:
   Or undo this install:        bun run scripts/install.ts --abort --confirm-database <db>
 ```
 
-`--resume` takes the **saved** plan: it needs no answers. Repeating the original
+`--resume` takes the **saved** plan: it needs no other answer. On the
+**host routes** it still needs the route, and on production the instance, to
+find the host record — `sudo sh install.sh --route production --instance <i> --resume`,
+`sh install.sh --route docker --resume`; a bare `--resume` means the developer
+route and reads `<private>/install/`. Repeating the original
 command line (or part of it) with `--resume` added works too — only the answers
 given are compared, and those that differ from the saved ones are refused (`answers differ from the saved plan: entity — resume
 takes the saved answers; drop the flags, or --abort and start again`). A resume
@@ -974,8 +1015,8 @@ whose commands changed since). Read it: it is the whole change to the host.
 | `host_database` | `--db-mode create`: the role `ded_<i>` (LOGIN, **no password** — peer authentication over the local socket) and the database `dedalo_<i>` it owns (UTF8, from `template0`); then checks the instance reaches it by peer and the three extensions are available. `existing`: nothing | only what it created, only with `--confirm-database`, only an empty database |
 | `host_engine` | the engine steps (seed, ontologies, thesauri, tools, root password) in one child as `ded_<i>`: `runuser -u ded_<i> -- <bun> run scripts/install.ts --request-stdin --execute --events-jsonl` — answers and secrets as ONE JSON object on its standard input | the child's own `--abort` (it refuses a sealed install) |
 | `host_units` | the shared template units (`deploy/systemd/*@*`) and this instance's drop-ins; `dedalo-ts@<i>` enabled (not started, the watchdog **not** armed) | the drop-ins; the templates when no other instance uses them |
-| `host_selinux` | RHEL family, SELinux enforcing or permissive: the file contexts (the socket directory, `/srv/dedalo/<i>`, the ACME root) and the one-rule `dedalo_engine` policy module. The rule names the engine's DOMAIN: the web server may connect to the unix sockets of **every** `unconfined_service_t` service on the host, not only Dédalo's — the Review and Done say so | this instance's contexts; the module when no other instance uses it |
-| `host_first_boot` | starts `dedalo-ts@<i>`, waits for `/health` on its socket and for **every** migration to be recorded | stops it |
+| `host_selinux` | RHEL family, SELinux enforcing or permissive: the file contexts (the socket directory, `/srv/dedalo/<i>`, the ACME root), the `dedalo_engine` policy module (`deploy/selinux/dedalo_engine.cil.tpl`, priority 400) and `restorecon -F` on the runtime. The module gives the engine its own domain — systemd starts the pinned runtime, labelled `dedalo_engine_exec_t`, into `dedalo_engine_t` — and lets the web server connect to the unix sockets of that domain **only**, never another service's. No boolean is changed | this instance's contexts; the module when no other instance uses it |
+| `host_first_boot` | starts `dedalo-ts@<i>`, waits for `/health` on its socket and for **every** migration to be recorded; under SELinux, refuses an engine not running in `dedalo_engine_t` | stops it |
 | `host_watchdog` | arms `dedalo-ts-watchdog@<i>.timer` — only now, after the first boot completed (a watchdog armed earlier killed a first boot mid-migration) | disarms it |
 | `host_web_http` | Let's Encrypt only: the plain-HTTP site (the HTTP-01 challenge root and the redirect) | the site file |
 | `host_tls` | Let's Encrypt: `certbot certonly --webroot` and the renewal timer. Files: the institution's certificate checked again (never copied, never changed) | a certificate it issued |
@@ -1022,14 +1063,24 @@ listing and CGI off again after it.
 
 ### What changes after the install
 
-- The root-run scripts in `/opt/dedalo/instances/<i>/bin` are refreshed by the
-  installer, not by an in-app code update: re-run it after an update that
-  changes `deploy/*.sh`.
-- Bun is root-owned at the release's pin; an update that changes the pin needs
-  the installer again.
+The installer installs; it does not maintain. A fresh run refuses a host whose
+instance record exists, the engine refuses a sealed private directory, and
+`--abort` never takes a completed install apart. So:
+
+- The root-run scripts in `/opt/dedalo/instances/<i>/bin` are not refreshed by an
+  in-app code update, which runs as the instance. There is no installer command
+  that refreshes them on a live instance today.
+- Bun is root-owned at the release's pin. The code update panel refuses a release
+  whose pin differs from the running runtime, and there is no installer command
+  that installs a new pin on a live instance today.
 - The watchdog and the rollback units use the code-backup root
   `/home/ded_<i>/backups/code` (pinned in the units, never read from the
   instance's `.env`); the rollback's file work runs as the instance user.
+- On a **live** instance (the engine child completed), `--abort` undoes only the
+  host steps after `host_engine` — the units' start, SELinux, the watchdog, the
+  site, the certificate, the backup timer — and keeps the instance, its user,
+  database and code; `--resume` puts the undone steps back. On an unfinished
+  install it undoes everything this install created.
 - `--abort` asks for `--confirm-database <db>` BEFORE it undoes anything that
   touches the database (the engine's own reset included); without it nothing is
   undone.
@@ -1056,8 +1107,10 @@ installer tells you how when they are not, and never installs them.
 Every compose command carries `-f <stack> -f compose.override.yaml --env-file
 .dedalo.env` — the same files `deploy/dedalo-image-lib.sh` hands compose, so the
 image updater and your own commands drive the stack the installer built. Its
-record is `<checkout>/.dedalo-install/`. `--abort --confirm-database dedalo` stops
-the stack and removes only the volumes and files this install created.
+record is `<checkout>/.dedalo-install/`.
+`sh install.sh --route docker --abort --confirm-database dedalo` (`--route trial`
+for a trial) stops the stack and removes only the volumes and files this install created; on a
+completed install it undoes only `stack_up` and `stack_health` and keeps the data.
 
 ## `install.sh`, the bootstrap
 
@@ -1076,8 +1129,12 @@ instead); Bun at the release's pin, its zip checked against the release's
 committed `.bun-sha256` and Bun's own `SHASUMS256.txt` (both must agree), cached
 and re-hashed on every reuse; the installer's dependencies; then
 `exec bun scripts/install.ts <your arguments>` — your arguments and your
-terminal reach the installer unchanged. `--wizard` is retired. Exit `3` is a
-refusal of the bootstrap itself.
+terminal reach the installer unchanged. Exit `3` is a refusal of the bootstrap
+itself: an unsupported kernel or CPU, a musl libc, a release whose sha256 does
+not match, or a Bun zip that does not match the release's hash table.
+
+The bootstrap's cache is `/var/lib/dedalo-install` when run as root, otherwise
+`${XDG_CACHE_HOME:-~/.cache}/dedalo-install`. Production needs root.
 
 ## What `../private/.env` does — and does not — get
 
@@ -1094,7 +1151,7 @@ owns are these:
 | Secret | one generated secret, printed once |
 | Update servers | `ONTOLOGY_SERVERS`, `CODE_SERVERS` — the official master by default, `[]` with `--no-update-servers` |
 | Ontologies | `ACTIVE_ONTOLOGY_TLDS` — the core, the chosen domain ontologies and the ontologies they declare (minus declined optional ones), in install order; rewritten on every run |
-| Serving / media *(only with `--media-path` / `--socket` / `--media-access-mode`)* | `MEDIA_PATH`, `SERVER_UNIX_SOCKET`, `DEDALO_MEDIA_ACCESS_MODE` |
+| Serving / media *(each only when it has a value: on production, docker and trial the [route defaults](#route-defaults) give `MEDIA_PATH` and `SERVER_UNIX_SOCKET` one; on developer only `--media-path` / `--socket` do)* | `MEDIA_PATH`, `SERVER_UNIX_SOCKET`, `DEDALO_MEDIA_ACCESS_MODE`, `DEDALO_PG_BIN_PATH` |
 | Diffusion *(only with `--diffusion`)* | `DEDALO_DIFFUSION_NATIVE`, `DEDALO_DIFFUSION_DB_*` |
 | Outbound email *(only with `--mailer`, or the installer's optional *Mail* screen)* | `DEDALO_SMTP_HOST`, `DEDALO_SMTP_PORT`, `DEDALO_SMTP_SECURE`, `DEDALO_SMTP_USER`, `DEDALO_SMTP_PASS`, `DEDALO_SMTP_FROM`, `DEDALO_SMTP_FROM_NAME` |
 
@@ -1112,15 +1169,15 @@ the [code update panel](../management/updates/updating_code.md) looks for releas
 `--no-update-servers` (answering *no* to the interactive installer's
 update-server question) writes both as `[]` — an air-gapped install that is never
 offered an update. To change your mind later, replace the `[]` values of
-`ONTOLOGY_SERVERS` and `CODE_SERVERS` in `.env` (or re-run the installer answering
-*yes*), then restart the server: the list, and the browser's `connect-src` that lets
-the update panels reach a master, are built at boot.
+`ONTOLOGY_SERVERS` and `CODE_SERVERS` in `.env` with a server list, then restart
+the server: the list, and the browser's `connect-src` that lets the update panels
+reach a master, are built at boot.
 
-A **re-run** that keeps the official default does not overwrite a key whose
-value in `.env` is a non-empty list — mirrors you added survive. A key holding
-`[]` (an earlier air-gapped answer) is replaced by the official server, so
-answering *yes* on a re-run switches an air-gapped install back on. Choosing the
-air-gapped option always writes `[]`.
+When the installer writes `.env` over an existing one in the same private
+directory (an unfinished install, or a fresh install into a reused private
+directory), keeping the official default does not overwrite a key whose value is
+a non-empty list — mirrors you added survive — and a key holding `[]` is replaced
+by the official server. Choosing the air-gapped option always writes `[]`.
 
 !!! note "The installer never writes `DEDALO_SUPERVISED`"
     Whether the server runs under a supervisor is a property of how it is
@@ -1140,8 +1197,8 @@ air-gapped option always writes `[]`.
     is written in the configuration reference's own spelling (`DB_NAME`, `ENTITY`,
     …). The older fallback spellings the engine still accepts from a `.env` carried
     over from v6 or from an earlier installer (`DEDALO_DATABASE_CONN`,
-    `DEDALO_ENTITY`, …) count as the same key: a re-run drops them and writes the
-    value once, under the current name — `DEDALO_SOCKET_CONN` included, which is now
+    `DEDALO_ENTITY`, …) count as the same key: the installer drops them and writes
+    the value once, under the current name — `DEDALO_SOCKET_CONN` included, which is now
     the old spelling of `DB_SOCKET`.
 
 The file is written through a two-phase commit (staged, then renamed into place)
@@ -1163,21 +1220,33 @@ one line and exits with code **78**:
 
 | What it found | What it prints (after `[boot] REFUSED — `) |
 |---|---|
-| none of `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER`, and no `.env` | `not installed: … Run the installer: ./install.sh, or bun run dedalo:install` |
+| none of `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER`, and no `.env` | `not installed: … Run the installer: sh install.sh (sudo sh install.sh for production), or bun run dedalo:install in a checkout` |
 | none of the four, but a `.env` with other content | `configuration incomplete: … do not reinstall over an existing configuration` |
 | none of the four, on a sealed install | `configuration missing: … Restore .env from backup — do not reinstall over it` |
-| an install that has not finished (see [the state file](#the-state-file)) | `install not finished … bun run dedalo:install --resume` |
+| an install that has not finished (see [the state file](#the-state-file)) | `install not finished … finish it with the installer's --resume (production: sudo sh install.sh --route production --instance <i> --resume; …)` |
 
 The shipped systemd units do not restart a server that exits 78
 (`RestartPreventExitStatus=78`), and neither do `bun run dev` or
 `bun run start:supervised`. A configuration with only some of the four keys is
 a different mistake: the server names the first missing key and exits 1.
 
-!!! warning "An interrupted re-run keeps the instance down"
-    Re-running the installer on a live instance marks it unfinished until the
-    run completes. If the run dies part-way and its undo does not run, the
-    instance will not come back at its next restart — finish it with
-    `--resume` (or undo it with `--abort`).
+!!! warning "An unfinished install keeps the server down"
+    From `persist_config` on, the state file says `terminal_installing` until the
+    install is sealed. If the install dies part-way, the server will not start —
+    finish it with `--resume` (or undo it with `--abort`).
+
+## Exit codes
+
+| Code | Who | Meaning |
+| --- | --- | --- |
+| `0` | installer | installed, resumed to completion, aborted, quit at a question, or a dry run (`--plan`, `--list-*`) that found no error |
+| `1` | installer | refused (an answer, a check, a record) or a step failed — the message says which, and how to resume or undo |
+| `3` | `install.sh` | the bootstrap refused before the installer started |
+| `130` | installer | interrupted: Ctrl-C, Ctrl-D, SIGINT |
+| `143` | installer | terminated: SIGTERM |
+| `78` | the server | not installed, configuration missing or incomplete, or install not finished — [above](#a-server-that-is-not-installed-refuses-to-start). The shipped units do not restart it |
+
+A step interrupted by `130` or `143` is recorded as failed; `--resume` runs it again.
 
 ## The state file
 

@@ -5,12 +5,18 @@
  * recorded (online migrations included: scripts/ops/boot_status.ts, run as the
  * instance). Only then is the watchdog armed (the next step): campaign 2 L7 —
  * a watchdog armed with the service killed the first boot mid-migration.
+ *
+ * Under SELinux the started engine must run in its OWN domain (dedalo_engine_t,
+ * deploy/selinux/dedalo_engine.cil.tpl): the web server may connect to that
+ * domain only, so an engine left in unconfined_service_t answers on its socket
+ * but never through the site. Read back from the running process, not assumed.
  */
 
 import type { ExecCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
 import { executeCommands } from '../execute.ts';
 import { hostRefuse } from '../refuse.ts';
 import { exec, probeText, ran, systemctl, verdictOf } from './common.ts';
+import { ENGINE_DOMAIN, selinuxApplies } from './selinux.ts';
 import { serverUnit } from './units.ts';
 
 /** The bound of each wait (boot migrations and the search-store backfill can take minutes). */
@@ -110,6 +116,26 @@ async function healthyOrRefused(ctx: HostCtx): Promise<boolean> {
 	return false;
 }
 
+/** A process's SELinux label (`ps -o label= -p <pid>`). */
+export function processLabelProbe(ctx: HostPlanCtx, pid: string): ExecCommand {
+	return exec(ctx, 'ps', ['-o', 'label=', '-p', pid], `the engine's SELinux domain (pid ${pid})`, {
+		mutates: false,
+	});
+}
+
+/**
+ * Why the running engine is not in its own SELinux domain, or null (SELinux
+ * does not apply, or it is). Read from the unit's MainPID.
+ */
+export async function engineDomainProblem(ctx: HostCtx): Promise<string | null> {
+	if (!selinuxApplies(ctx)) return null;
+	const pid = (await probeText(ctx, unitPropertyProbe(ctx, 'MainPID'))).trim();
+	if (!/^[1-9]\d*$/.test(pid)) return `${serverUnit(ctx)} has no main process`;
+	const label = (await probeText(ctx, processLabelProbe(ctx, pid))).trim();
+	if (label.split(':')[2] === ENGINE_DOMAIN) return null;
+	return `${serverUnit(ctx)} runs as ${label || 'an unknown label'}, not ${ENGINE_DOMAIN} — the web server cannot reach its socket (ls -Z ${ctx.paths.bun}: dedalo_engine_exec_t expected; restorecon -F it, then systemctl restart ${serverUnit(ctx)})`;
+}
+
 async function migrated(ctx: HostCtx): Promise<boolean> {
 	return (await pendingMigrations(ctx))?.length === 0;
 }
@@ -158,14 +184,17 @@ export const host_first_boot: HostStepDefinition = {
 		healthProbe(ctx),
 		bootStatusProbe(ctx),
 	],
-	verify: async (ctx) =>
-		verdictOf(
+	verify: async (ctx) => {
+		const domain = await engineDomainProblem(ctx);
+		return verdictOf(
 			[
 				[await healthy(ctx), '/health does not answer 200 on the socket'],
 				[await migrated(ctx), 'migrations are pending'],
+				[domain === null, domain ?? ''],
 			],
 			'the engine is up and every migration is recorded',
-		),
+		);
+	},
 	run: async (ctx) => {
 		await executeCommands(
 			[systemctl(ctx, 'start', [serverUnit(ctx)], `start ${serverUnit(ctx)}`)],
@@ -173,6 +202,8 @@ export const host_first_boot: HostStepDefinition = {
 		);
 		await pollUntil(ctx, () => healthyOrRefused(ctx), 'the engine answering /health');
 		await pollUntil(ctx, () => migrated(ctx), 'every migration recorded');
+		const domain = await engineDomainProblem(ctx);
+		if (domain !== null) hostRefuse('install.step_failed', domain);
 		return ran(`${serverUnit(ctx)} is up; migrations complete`);
 	},
 	undo: async (ctx) => {

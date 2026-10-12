@@ -1,116 +1,86 @@
 # Upgrading
 
-> See also: [Production install](production.md) · [Docker](docker.md) · [Troubleshooting](troubleshooting.md) · [Backup](../management/backup.md) · [Migrating a v6 install to v7](migrating_from_v6.md)
+> See also: [Updating code](../management/updates/updating_code.md) · [Production install](production.md) · [Docker](docker.md) · [Troubleshooting](troubleshooting.md) · [Backup](../management/backup.md) · [Migrating a v6 install to v7](migrating_from_v6.md)
 
-Upgrading Dédalo is a `git pull`, a dependency install and a restart. Everything
-that has to happen to the database happens **inside the server at boot**. This
-page is about the things that are not automatic: the runtime pin, the scripts
-and units installed outside the code tree, retired configuration keys, and
-rollback.
+How a Dédalo installation moves to a newer release depends on how it was installed. Everything that has to happen to the database happens **inside the server at boot**, whichever way the code arrives. This page covers the code update per route, what is not automatic, boot migrations, retired configuration keys and rollback.
 
-## The model
+## Before you start
 
-**The repo is the artifact.** There is no build output to ship: the engine runs
-TypeScript directly. A deploy is therefore `fetch` + `checkout <ref>` on the
-host, and the ref is your rollback identity.
+Take the [backups of every store](../management/backup.md). All of them: the matrix database alone is not a backup, and an upgrade is precisely when you find that out. Update the ontology first when the release notes say the code depends on it ([updating ontology](../management/updates/updating_ontology.md)).
+
+## Per route
+
+| Route | How the code is updated |
+| --- | --- |
+| **Production** | the [code update panel](../management/updates/updating_code.md) in Maintenance, run against the instance's own tree |
+| **Docker**, **Trial** | a new image: `./deploy/dedalo-image-update.sh --version <X.Y.Z>` — [Docker › Upgrading](docker.md#upgrading) |
+| **Developer** | `git pull`, `bun install`, restart |
+| **A host set up by hand** | the code update panel, or by hand — [below](#a-host-set-up-by-hand) |
+
+### Production
+
+The code update panel downloads the release, verifies its checksum, installs its dependencies and boot-tests it in quarantine, then swaps it onto `/home/ded_<i>/dedalo` and exits with code `75` so that systemd starts the new code. The previous tree is kept under `/home/ded_<i>/backups/code`, and the instance's watchdog and rollback units restore it automatically if the new tree never comes up. [How a code update works](../management/updates/updating_code_options.md) has the phases and the rollback contract.
+
+Two things the panel does not do, because it runs as the instance and they belong to root:
+
+- **A release that moves the runtime pin** (`.bun-version`). The panel refuses a release whose pin differs from the running Bun, and the instance's runtime is root-owned at `/opt/dedalo/bun/<pin>/`. The installer has no command that installs a new pin on a live instance today; such a release needs manual work by the system administrator, described in its release notes.
+- **A release that changes the root-run scripts** (`deploy/*.sh`). Their copies in `/opt/dedalo/instances/<i>/bin/` are not refreshed by a code update, and the installer has no command that refreshes them on a live instance today. The release notes say when a script changed.
+
+Never `bun upgrade` a production runtime: the engine is coupled to version-specific runtime behaviour — JSONB parameter inference above all — and a silent drift there corrupts data rather than slowing things down. The server echoes its runtime at boot and warns loudly when it does not match the pin:
+
+```text
+Dédalo TS server starting on Bun 1.4.2 (pinned: 1.4.2)
+```
+
+### Developer
+
+```shell
+git pull --ff-only
+bun install
+bun run dev
+```
+
+If `.bun-version` changed, install that Bun version first. Rebuild the test database after a schema or seed change (`bun run test:db:setup`).
+
+### A host set up by hand
+
+A [host set up by hand](manual_host.md) — a migrated installation — can use the code update panel too. Updating by hand is a fetch, a dependency install and a restart, as the service user:
 
 ```shell
 sudo -u dedalo git -C /opt/dedalo/master_dedalo fetch --all --tags
 sudo -u dedalo git -C /opt/dedalo/master_dedalo checkout <tag-or-sha>
 sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
-systemctl restart dedalo-ts
+sudo systemctl restart dedalo-ts
 curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 ```
 
-`bun install` has no `-C`: the `bash -c 'cd … && …'` is what makes it run in
-the clone, because `sudo -u` keeps the directory you are standing in.
+`--frozen-lockfile` refuses to resolve a dependency tree different from the one that was tested: if it errors, the lockfile and `package.json` disagree — fix that upstream, never drop the flag. Three things are yours on such a host, whichever way the code arrives:
 
-`deploy/deploy.sh` in the repo is meant to automate this — fetch, checkout,
-dependencies, restart, health check, and a rollback to the previous ref if health
-comes back red. It is **parked**: it has never run against a real host. As it
-stands it runs `git` and `bun` as the SSH login user rather than `dedalo` (so the
-files it creates have the wrong owner), and it needs `--bun /opt/dedalo/.bun/bin/bun`
-for this layout. Use the commands above until it has been proven on a staging
-server.
-
-## Before you start
-
-Take the [backups of every store](production.md#13-backups). All of them. The matrix
-database alone is not a backup, and an upgrade is precisely when you find that
-out.
-
-## 1. Has the runtime pin moved?
+**1. The runtime pin.** Before the new code, compare `.bun-version` (`git diff HEAD..<target-ref> -- .bun-version`). If it moved, install the new runtime into the path the unit names, as root:
 
 ```shell
-git diff HEAD..<target-ref> -- .bun-version package.json
-```
-
-If `.bun-version` changed, **install the new runtime before you check out the new
-code**:
-
-```shell
-BUN_VERSION=<the new pin>
-curl -fsSL https://bun.sh/install | BUN_INSTALL=/opt/dedalo/.bun bash -s "bun-v${BUN_VERSION}"
-chown -R dedalo:dedalo /opt/dedalo/.bun   # the installer ran as root; the service user owns the runtime
+curl -fsSL https://bun.sh/install | sudo BUN_INSTALL=/opt/dedalo/.bun bash -s "bun-v<the new pin>"
 /opt/dedalo/.bun/bin/bun --version
 ```
 
-!!! danger "Never `bun upgrade` on a production box"
-    Upgrading the runtime is a deliberate act, and the order matters: change the
-    pin, run the full test suite, *then* deploy. The engine is coupled to
-    version-specific runtime behaviour — JSONB parameter inference above all —
-    and a silent drift there corrupts data rather than slowing things down.
+Because `ExecStart` names that absolute path, installing into it *is* the runtime upgrade.
 
-    The server echoes its runtime at boot and warns loudly when it does not match
-    the pin. Read that line after every restart:
-
-    ```text
-    Dédalo TS server starting on Bun 1.4.2 (pinned: 1.4.2)
-    ```
-
-Because `ExecStart` points at `/opt/dedalo/.bun/bin/bun` — an absolute path, not
-a `bun` on `$PATH` — installing the new runtime into that location *is* the
-upgrade. There is no unit file to edit.
-
-## 2. Pull the code and the dependencies
+**2. The root-run scripts.** A code update does not refresh the copies in `/opt/dedalo/bin/`. After an update that changed `deploy/*.sh`:
 
 ```shell
-sudo -u dedalo git -C /opt/dedalo/master_dedalo pull --ff-only
-sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
+cd /opt/dedalo/master_dedalo
+sudo install -m 0755 deploy/dedalo-code-rollback.sh deploy/dedalo-ts-watchdog.sh \
+  deploy/dedalo-backup-step.sh deploy/dedalo-site-builder-backup.sh deploy/dedalo-backup-alert.sh \
+  /opt/dedalo/bin/
 ```
 
-`--frozen-lockfile` refuses to resolve a dependency tree different from the one
-that was tested. If it errors, the lockfile and `package.json` disagree — fix
-that upstream, do not paper over it by dropping the flag.
-
-Then refresh the two scripts the watchdog and rollback units run from outside
-the code tree ([production step 10](production.md#10-run-the-engine-under-systemd)).
-A pull does not update them:
-
-```shell
-install -m 0755 /opt/dedalo/master_dedalo/deploy/dedalo-code-rollback.sh \
-                /opt/dedalo/master_dedalo/deploy/dedalo-ts-watchdog.sh /opt/dedalo/bin/
-```
-
-## 3. Check that the unit declares supervision
-
-The unit in `/etc/systemd/system/` is a copy, and neither a pull nor an in-app
-code update changes it. Units installed before 2026-10-08 lack a line the engine
-now requires: the [code update panel](../management/updates/updating_code.md)
-replaces the code only when the process manager declares that it will restart
-the server, and the engine no longer guesses this from systemd's own variables.
-Without the line every panel update is refused with *No supervisor declared*.
+**3. The unit declares supervision.** The unit in `/etc/systemd/system/` is a copy, and no update changes it. A unit installed before 2026-10-08 lacks a line the engine now requires: the code update panel replaces the code only when the process manager declares that it will restart the server.
 
 ```shell
 systemctl cat dedalo-ts | grep -E 'DEDALO_SUPERVISED|SuccessExitStatus|^Restart='
 ```
 
-You should see `Environment=DEDALO_SUPERVISED=true`, `SuccessExitStatus=75` and
-`Restart=always`. If any is missing, add it with a drop-in:
-
-```shell
-systemctl edit dedalo-ts
-```
+You should see `Environment=DEDALO_SUPERVISED=true`, `SuccessExitStatus=75` and `Restart=always`. If any is missing, add it with a drop-in (`systemctl edit dedalo-ts`):
 
 ```ini
 [Service]
@@ -119,17 +89,11 @@ SuccessExitStatus=75
 Restart=always
 ```
 
-`systemctl edit` reloads systemd when you save; the restart in the next step
-applies it. Never put `DEDALO_SUPERVISED` in `../private/.env`: that file is read
-by every launch method, the unsupervised `bun run start` included, so the engine
-ignores the key there.
+Never put `DEDALO_SUPERVISED` in `../private/.env`: that file is read by every launch method, the unsupervised `bun run start` included, so the engine ignores the key there.
 
-## 4. Restart, and let the migrations run
+## Boot migrations
 
-```shell
-systemctl restart dedalo-ts
-journalctl -u dedalo-ts -n 50 -o cat
-```
+Read the boot log after every update (`journalctl -u dedalo-ts@<i> -n 50 -o cat` on a production instance).
 
 **Schema migrations are applied at boot.** Ordered SQL files under
 `install/db/migrations/` are applied one transaction per file, tracked in a
@@ -146,7 +110,7 @@ reinstall over your data.
     **hard boot failure** by design — a visible crash loop beats a silently
     degraded server.
 
-## 5. Retired configuration keys
+## Retired configuration keys
 
 A **retired** key is not an alias. It configures nothing, and leaving it in place
 would silently fall back to the new key's default — the exact silent narrowing
@@ -171,7 +135,7 @@ narrows your active ontologies is a bug report six months later.
     retired key — and nothing else: never a second line for a key already there,
     never a deleted line (the [configuration reference](../config/index.md) lists
     the legitimate edits). Every documented key is listed in `install/sample.env` of
-    the code you just pulled, and in the [configuration reference](../config/config.md).
+    the code you now run, and in the [configuration reference](../config/config.md).
     `../private/sample.env` is the copy taken at install time, so it lacks every key
     added since.
 
@@ -187,7 +151,7 @@ narrows your active ontologies is a bug report six months later.
     ACTIVE_ONTOLOGY_TLDS=["dd","rsc","ontology","ontologytype","hierarchy","lg","oh","utoponymy","nexus"]
     ```
 
-## 6. One-time data update — `section_id` becomes an integer
+## One-time data update — `section_id` becomes an integer
 
 Installs migrated from v6 **before** the unification step existed store locator
 addresses as strings (`"section_id": "7"`); the engine now writes and serves
@@ -233,56 +197,23 @@ Three deliberate properties of the apply run:
 Installs migrated with the current `close_v6_prepare_v7` package need none of
 this — the same conversion runs inside the migration itself.
 
-## 7. Verify
+## Verify
 
 ```shell
-curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
+curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
 ```
 
-Then, in the browser: log in, open a record, upload an image, run a search. A
-green health check proves the process and the database; it does not prove the
-media toolchain or the proxy.
+Then, in the browser: log in, open a record, upload an image, run a search. A green health check proves the process and the database; it does not prove the media toolchain or the web server.
 
 ## Rollback
 
-```shell
-sudo -u dedalo git -C /opt/dedalo/master_dedalo checkout <previous-ref>
-sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
-systemctl restart dedalo-ts
-curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
-```
+**A failed update** is rolled back automatically on a production instance and on a hand-built host with the shipped units: the rollback unit restores the previous tree from the code backup directory. **A successful update you want to undo** is a restore of a restore point, from the code update panel — [Updating code](../management/updates/updating_code.md#restoring-a-previous-code-version). On a Docker or Trial stack, see [rolling back by hand](docker.md#rolling-back-by-hand). On a host set up by hand you can also check the previous ref out again, reinstall its dependencies and restart.
 
 !!! danger "Migrations are forward-only"
-    There are no down-migrations. Rolling the **code** back across a release that
-    added a migration leaves the new schema in place. That is usually harmless
-    (the old code ignores what it does not know about) — but if the migration
-    *changed* something the old code reads, the only correct rollback is
-    **restore the database backup** you took in step 0.
+    There are no down-migrations. Rolling the **code** back across a release that added a migration leaves the new schema in place. That is usually harmless (the old code ignores what it does not know about) — but if the migration *changed* something the old code reads, the only correct rollback is **restoring the database backup** you took before the update.
 
     This is the whole reason the backup comes first.
 
-## Upgrading a container stack
-
-A container installation updates by replacing its **image**; one script does the
-whole update, from the stack directory (the one holding `.dedalo.env`):
-
-```shell
-git pull                                         # the compose files and deploy/ come from the checkout
-./deploy/dedalo-image-update.sh --version <X.Y.Z>
-```
-
-It pulls or builds the image as `.dedalo.env` says, takes a verified database
-backup first, re-pins `DEDALO_VERSION`, waits for the health check and rolls
-back on its own if the new version does not come up healthy. A bare
-`docker compose build` no longer updates anything: the stacks run the pinned
-`DEDALO_IMAGE:DEDALO_VERSION` and have no build of their own. Same rules as
-above: migrations run at boot, the seed is never re-applied. See
-[Docker › Upgrading](docker.md#upgrading) and, to go back after a successful
-update, [rolling back by hand](docker.md#rolling-back-by-hand).
-
 ## What this page is *not* about
 
-Updating the **ontology** and updating the **code from a master installation**
-are in-app operations run from the Maintenance area (*System administration ›
-Maintenance*), not deploy-time steps. They have their own documentation under
-[Updates](../management/updates/index.md).
+Updating the **ontology** and the **data** are in-app operations run from the Maintenance area, not deploy-time steps. They have their own documentation under [Updates](../management/updates/index.md).

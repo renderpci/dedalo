@@ -46,7 +46,31 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { NOT_INSTALLED_EXIT_CODE } from '../../src/config/install_state.ts';
+import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
 import { RESTART_EXIT_CODE } from '../../src/core/update/restart.ts';
+import { HOST_VARIANTS, productionPlanCtx, REPO_ROOT } from '../helpers/install_host_scratch.ts';
+
+/**
+ * The site file the PRODUCTION INSTALLER writes for an instance `site1` — the
+ * multi-instance vhost an operator once copied from the manual is now RENDERED
+ * (src/core/install/host/web/), so the rendered text is what these route gates
+ * hold, by the same label the manual samples are held by.
+ */
+const INSTALLER_SITE_NGINX = 'installer site (nginx, instance site1)';
+const INSTALLER_SITE_APACHE = 'installer site (apache, instance site1)';
+function installerSite(web: 'nginx' | 'apache'): string {
+	const variant = HOST_VARIANTS.find((v) => v.web === web && v.tls === 'letsencrypt');
+	if (variant === undefined) throw new Error(`no ${web} host variant`);
+	const ctx = productionPlanCtx(variant, REPO_ROOT, {
+		instance: 'site1',
+		server_name: 'site1.example.org',
+	});
+	return siteText(ctx, certificatePaths(ctx));
+}
+const RENDERED_SITES: ReadonlyMap<string, () => string> = new Map([
+	[INSTALLER_SITE_NGINX, () => installerSite('nginx')],
+	[INSTALLER_SITE_APACHE, () => installerSite('apache')],
+]);
 
 const pkg = (await Bun.file(new URL('../../package.json', import.meta.url)).json()) as {
 	scripts: Record<string, string>;
@@ -266,7 +290,8 @@ describe('restart supervisor contract', () => {
 	// so must every proxy sample in the manual: an operator copy-pastes the
 	// documented vhost, so a hole there reaches production exactly like a hole in
 	// deploy/. Three samples were found empty on 2026-08-28 (the docs nginx block
-	// and both multi_instance blocks), which is what this list prevents recurring.
+	// and both multi-instance blocks), which is what this list prevents recurring. The
+	// multi-instance vhost is now the installer's rendered site, held here the same way.
 	test('every shipped proxy config and documented sample routes /health', async () => {
 		// deploy/: the configs an operator installs verbatim.
 		for (const path of ['deploy/nginx.conf', 'deploy/nginx.simple.conf']) {
@@ -276,9 +301,20 @@ describe('restart supervisor contract', () => {
 		const apache = await Bun.file(new URL('../../deploy/apache.conf', import.meta.url)).text();
 		expect(apache).toMatch(/^\s*ProxyPass\s+\/health\s+unix:/m);
 
-		// docs/: each page ships BOTH flavours, so each must carry both rules.
-		for (const path of ['docs/install/reverse_proxy.md', 'docs/install/multi_instance.md']) {
-			const page = await Bun.file(new URL(`../../${path}`, import.meta.url)).text();
+		// docs/: the page ships BOTH flavours, so it must carry both rules — and so must
+		// the site the production installer renders for an instance.
+		const page = await Bun.file(
+			new URL('../../docs/install/reverse_proxy.md', import.meta.url),
+		).text();
+		const nginxSite = installerSite('nginx');
+		const apacheSite = installerSite('apache');
+		expect(nginxSite, `${INSTALLER_SITE_NGINX} must route /health`).toMatch(
+			/location\s*=\s*\/health\s*\{/,
+		);
+		expect(apacheSite, `${INSTALLER_SITE_APACHE} must route /health`).toMatch(
+			/^\s*ProxyPass\s+\/health\s+unix:/m,
+		);
+		for (const path of ['docs/install/reverse_proxy.md']) {
 			expect(page, `${path}: the nginx sample must route /health`).toMatch(
 				/location\s*=\s*\/health\s*\{/,
 			);
@@ -338,6 +374,8 @@ describe('restart supervisor contract', () => {
 
 	/** Read a repo file by path, without percent-encoding surprises. */
 	async function repoText(rel: string): Promise<string> {
+		const rendered = RENDERED_SITES.get(rel);
+		if (rendered !== undefined) return rendered();
 		return await Bun.file(fileURLToPath(new URL(`../../${rel}`, import.meta.url))).text();
 	}
 
@@ -400,12 +438,12 @@ describe('restart supervisor contract', () => {
 			['deploy/nginx.simple.conf', 'dedalo_ts'],
 			['deploy/nginx.simple-tls.conf.tpl', 'dedalo_ts'],
 			['docs/install/reverse_proxy.md', 'dedalo_ts'],
-			['docs/install/multi_instance.md', 'dedalo_site1'],
+			[INSTALLER_SITE_NGINX, 'dedalo_site1'],
 		];
 		const apacheFiles: ReadonlyArray<readonly [string, string]> = [
 			['deploy/apache.conf', '/run/dedalo/dedalo_ts.sock'],
 			['docs/install/reverse_proxy.md', '/run/dedalo/dedalo_ts.sock'],
-			['docs/install/multi_instance.md', '/run/dedalo-site1/dedalo_ts.sock'],
+			[INSTALLER_SITE_APACHE, '/run/dedalo-site1/dedalo_ts.sock'],
 		];
 		const all = [...prefixes, ...LITERAL_ROUTES.keys()]
 			.map((p) => p.replace(/\/$/, ''))

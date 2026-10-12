@@ -22,12 +22,15 @@ Type=oneshot
 #
 # ExecStart points at the OUT-OF-TREE install (/opt/dedalo/bin/), like the
 # rollback unit: the probe must keep running while the app tree is mid-swap
-# or gone. Install + refresh after updates (PRODUCTION.md §12):
+# or gone. Install + refresh after updates (docs/install/manual_host.md):
 #   sudo install -m 0755 deploy/dedalo-ts-watchdog.sh /opt/dedalo/bin/
-# The script resolves the code-backup root (for the sentinel) the same way
-# the engine does: env DEDALO_BACKUP_PATH, then <private>/.env, then default.
+# It runs as root (it starts the restart and rollback units) and only READS the
+# update sentinel, to choose the remedy. The code-backup root is PINNED with
+# --backup-root — never resolved from .env, a file the service user writes; keep
+# it equal to the rollback unit's.
 ExecStart=/opt/dedalo/bin/dedalo-ts-watchdog.sh \
     --socket /run/dedalo/dedalo_ts.sock \
     --app-dir /opt/dedalo/master_dedalo \
+    --backup-root /opt/dedalo/backups/code \
     --service dedalo-ts.service \
     --grace 900

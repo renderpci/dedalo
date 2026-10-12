@@ -1,6 +1,6 @@
 # Serving audiovisual fragments (H.264 clipping)
 
-> See also: [Installation hub](index.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Media protection](../config/media_protection.md)
+> See also: [Installation hub](index.md) · [The web server site](reverse_proxy.md) · [Media protection](../config/media_protection.md)
 
 Dédalo publishes audiovisual **fragments**: an oral-history interview is one long
 recording, and a record points at a segment of it. Playing that segment without
@@ -60,7 +60,7 @@ a2enmod dedalo_h264
 systemctl restart apache2
 ```
 
-On RHEL, Rocky and Fedora:
+On the RHEL family (RHEL, Rocky Linux, AlmaLinux):
 
 ```shell
 cp mod_dedalo_h264_streaming.so /usr/lib64/httpd/modules/
@@ -75,7 +75,7 @@ Install the Apache development headers:
 ```shell
 apt install apache2-dev                        # Debian / Ubuntu
 
-dnf groupinstall "Development Tools"           # RHEL / Rocky / Fedora
+dnf groupinstall "Development Tools"           # the RHEL family
 dnf install httpd-devel
 ```
 
@@ -114,7 +114,7 @@ not to interfere:
 
 The MP4 index must be at the **front** of the file, or the handler has to read to
 the end before it can serve anything. That is what `qt-faststart` does, and it is
-why the [media toolchain](production.md#3-media-toolchain) includes it. Check it:
+why the [media toolchain](production.md#host_packages-packages-and-repositories) includes it. Check it:
 
 ```shell
 command -v qt-faststart

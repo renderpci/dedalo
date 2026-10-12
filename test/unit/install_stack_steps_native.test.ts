@@ -38,7 +38,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { hostFs } from '../../src/core/install/host/fs.ts';
@@ -62,6 +62,7 @@ import {
 	SCRATCH_DIR,
 	type ScratchHost,
 	SECRETS,
+	scratchFilePaths,
 	stackHostFiles,
 	stackPlanCtx,
 	stackResponses,
@@ -130,12 +131,7 @@ const MUTATING = new RegExp(
 
 /** Every file under `dir`, as text. */
 function allFiles(dir: string): { path: string; text: string }[] {
-	return readdirSync(dir, { recursive: true, withFileTypes: true })
-		.filter((entry) => entry.isFile())
-		.map((entry) => {
-			const path = join(entry.parentPath, entry.name);
-			return { path, text: readFileSync(path, 'utf8') };
-		});
+	return scratchFilePaths(dir).map((path) => ({ path, text: readFileSync(path, 'utf8') }));
 }
 
 /** The Review's exec lines of a plan (every stack step's commands). */
@@ -151,6 +147,17 @@ function reviewLines(raw: Record<string, unknown>): Set<string> {
 }
 
 // ── (a)–(c), (e) the routes run ──────────────────────────────────────────────
+
+// The scratch-host listing the leak checks below read: a fresh trial run leaves a
+// populated host (the planted machine, the written stack files, the run record) —
+// an empty listing would make every "no file holds the secret" check vacuous.
+test('the scratch listing the leak checks read is populated after a run', async () => {
+	const host = machine(TRIAL);
+	const { request } = fresh(TRIAL);
+	expect((await runHost(host, request)).outcome.result).toBe('complete');
+	const listed = scratchFilePaths(host.root);
+	expect(listed.length).toBeGreaterThan(6);
+});
 
 describe('trial and docker run end to end (a, b, c, e)', () => {
 	for (const raw of [TRIAL, DOCKER_LE]) {
@@ -281,6 +288,12 @@ describe('the image is verified; the System check refuses before anything change
 			sentence: "image version 6.9.0 is not this installer's",
 		},
 		{
+			name: 'an operator `id` cannot name',
+			raw: TRIAL,
+			options: { responses: [{ match: '/usr/bin/id -un', stdout: '' }] },
+			sentence: 'the operator cannot be identified',
+		},
+		{
 			name: 'an instance already on this machine (its private volume)',
 			raw: TRIAL,
 			options: {
@@ -303,6 +316,17 @@ describe('the image is verified; the System check refuses before anything change
 			).toEqual([]);
 		});
 	}
+});
+
+// An operator absent from /etc/passwd is the NORMAL case on macOS (Directory
+// Services) and for an LDAP/SSSD account: the identity comes from `id`, so the
+// route the docs promise on a Mac is not refused by a file it never needed.
+test('an operator not listed in /etc/passwd (macOS, LDAP): the install completes', async () => {
+	const host = machine(TRIAL);
+	writeFileSync(join(host.root, 'etc/passwd'), 'root:x:0:0:root:/root:/bin/sh\n');
+	const { outcome } = await runHost(host, fresh(TRIAL).request);
+	expect(outcome.message).toBeNull();
+	expect(outcome.result).toBe('complete');
 });
 
 // ── (f) abort ────────────────────────────────────────────────────────────────

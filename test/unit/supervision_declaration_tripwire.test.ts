@@ -285,10 +285,12 @@ describe('systemd units declare supervision', () => {
 	test('every unit whose ExecStart runs the server carries Environment=DEDALO_SUPERVISED=true', () => {
 		const units = serverUnits();
 		const labels = units.map(([label]) => label);
-		// Floor: the reference unit and the multi-instance template.
+		// Floor: the reference unit. The manual no longer carries a hand-written
+		// multi-instance template (2026-10-12): the installer renders the instance
+		// units from deploy/systemd/, held by the next describe as systemd merges
+		// them. A unit block the manual adds again is still walked and held here.
 		expect(labels).toContain('deploy/dedalo-ts.service');
-		expect(labels.some((l) => l.startsWith('docs/install/multi_instance.md'))).toBe(true);
-		expect(units.length).toBeGreaterThanOrEqual(2);
+		expect(units.length).toBeGreaterThanOrEqual(1);
 		const undeclared = units
 			.filter(([, text]) => !unitLines(text).includes(`Environment=${SUPERVISION_KEY}=true`))
 			.map(([label]) => label);

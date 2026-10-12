@@ -3,7 +3,7 @@
  * 2026-10-12) — one file holding this instance's two <VirtualHost>s:
  * Debian `/etc/apache2/sites-available/dedalo-<i>.conf` (enabled with
  * `a2ensite dedalo-<i>` — our site only), EL `/etc/httpd/conf.d/dedalo-<i>.conf`.
- * Mirrors multi_instance.md's vhost: ProxyPass before the aliases, `Alias
+ * Mirrors deploy/apache.conf's vhost: ProxyPass before the aliases, `Alias
  * /dedalo/media` before `Alias /dedalo`, an EMPTY DocumentRoot (L89), a
  * CSP-free client Directory, the security headers.
  *

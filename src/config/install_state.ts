@@ -103,10 +103,10 @@ export function notInstalledRefusal(): string | null {
 		if (envFileHasContent(envPath)) {
 			return `configuration incomplete: ${envPath} exists but names none of ${keys}. Complete it or restore it from backup — do not reinstall over an existing configuration`;
 		}
-		return `not installed: ${keys} are unset (environment and ${envPath}). Run the installer: ./install.sh, or bun run dedalo:install`;
+		return `not installed: ${keys} are unset (environment and ${envPath}). Run the installer: sh install.sh (sudo sh install.sh for production), or bun run dedalo:install in a checkout`;
 	}
 	if (status !== undefined && status !== 'sealed') {
-		return `install not finished (install_status '${status}'): re-run the installer to finish it (bun run dedalo:install --resume, or ./install.sh)`;
+		return `install not finished (install_status '${status}'): finish it with the installer's --resume (production: sudo sh install.sh --route production --instance <i> --resume; docker/trial: sh install.sh --route <r> --resume; developer: bun run dedalo:install --resume)`;
 	}
 	return null;
 }

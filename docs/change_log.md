@@ -18,6 +18,7 @@ Merged since the last release; these ship with the next one.
 !!! warning "Action needed when you update"
 
     - The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start.
+    - SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change.
     - The terminal installer sets up the whole host: production, Docker and trial install in one run.
     - The site builder's OpenCode driver loads only the configuration the site builder states.
     - A site builder agent turn can no longer leave configuration in its home directory for the next turn to read.
@@ -785,6 +786,31 @@ Merged since the last release; these ship with the next one.
 ### For administrators
 
 #### Security
+
+- **SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change.** *(action needed)*
+
+    On RHEL-family hosts the installer's SELinux module now gives the engine a domain of
+    its own (`dedalo_engine_t`, entered when systemd starts the pinned runtime, which is
+    labelled `dedalo_engine_exec_t`). The web server may connect to that domain only.
+    Before, the rule named the generic service domain, so the web server could also
+    connect to the sockets of every other service started from `/opt` or `/usr/local`.
+    The engine keeps the rights it had. The installer relabels the runtime after loading
+    the module, checks the label, and refuses a first boot whose engine runs in any other
+    domain.
+
+    The single-instance reference units in `deploy/` no longer run anything as root that
+    the service user can change. The site-builder store (store 5) has moved out of
+    `dedalo-backup.service` into its own root unit, `dedalo-backup-site-builder.service`.
+    That unit reads no `.env` file, runs its scripts from the root-owned `/opt/dedalo/bin/`,
+    and writes to `/var/backups/dedalo-site-builder`. The backup failure alarm now runs as
+    the service user, also from `/opt/dedalo/bin/`. The code-update rollback unit,
+    `dedalo-ts-rollback.service`, now moves the code trees as the service user and runs only
+    its restart as root, as the installer's per-instance unit already did; it and the
+    watchdog unit name the code-update backup root (`--backup-root /opt/dedalo/backups/code`)
+    instead of reading it from `.env`. If you installed these units by hand, copy the three
+    backup scripts to `/opt/dedalo/bin/`, install the new backup unit, replace the rollback
+    and watchdog units (adjust `--backup-root` if your backups live elsewhere), and make sure
+    `/opt/dedalo` itself is owned by root ([A host set up by hand](./install/manual_host.md)).
 
 - **The site builder's OpenCode driver loads only the configuration the site builder states.** *(action needed)*
 
@@ -1630,7 +1656,7 @@ Merged since the last release; these ship with the next one.
 
     - **Watchdog and rollback scripts.** The shipped watchdog and rollback units run two scripts from `/opt/dedalo/bin/`, outside the code tree. No page said to install them, so a server set up from the manual alone had a watchdog failing with `status=203/EXEC` every 30 seconds and no automatic rollback of a failed code update. [Production step 10](./install/production.md#10-run-the-engine-under-systemd) now installs them, and [Upgrading](./install/upgrading.md) refreshes them after each update.
     - **Existing servers and supervision.** [Upgrading](./install/upgrading.md#3-check-that-the-unit-declares-supervision) has a new step that checks the installed unit for `Environment=DEDALO_SUPERVISED=true`, `SuccessExitStatus=75` and `Restart=always`, and adds what is missing with a drop-in. [Troubleshooting](./install/troubleshooting.md#updating) explains the *No supervisor declared* refusal. The installer's last line now names the supervised ways to start the server instead of `bun run start`, which cannot take code updates.
-    - **RHEL.** [RHEL-based systems](./install/install_rhel.md) gives a complete `dedalo-ts.service` ordered after `postgresql-18.service`. The shipped unit names `postgresql.service`, which does not exist there. The page also runs the installer the same way as the production guide, and keeps `DEDALO_PG_BIN_PATH` in `.env`.
+    - **RHEL.** The RHEL-based systems page (since folded into [Production install](./install/production.md)) gives a complete `dedalo-ts.service` ordered after `postgresql-18.service`. The shipped unit names `postgresql.service`, which does not exist there. The page also runs the installer the same way as the production guide, and keeps `DEDALO_PG_BIN_PATH` in `.env`.
     - **Several instances.** The [multi-instance](./install/multi_instance.md) template unit now carries `KillMode=process`, the wider start limit, the rollback hook and the watchdog. The watchdog script takes `--restart-unit` / `--rollback-unit`, so a templated instance can point it at its own units. Each site is installed with `--socket`, `--media-path` and `--media-access-mode` instead of appending keys by hand.
     - **Corrections.** The backup set is five stores (site-builder instances included). Without `--media-path` the media root defaults to `../private/media`. The installer keeps every `.env` key it does not own, including keys added before the install. An air-gapped installation can update its ontology from local files ([updating the ontology](./management/updates/updating_ontology.md#updating-without-a-network-air-gapped-installs)). `STRUCTURE_FROM_SERVER` and `DEDALO_SOURCE_VERSION_LOCAL_DIR` are documented as having no effect. The four language keys are documented as required, with no default. The configuration pages point at `install/sample.env` in the code tree for the current list of keys: `../private/sample.env` is the installer's copy and a code update does not refresh it. The [developer quickstart](./install/dev_quickstart.md) lists the supervised start scripts and the second-instance script.
     - **Key names in `.env`.** The installer now writes every key under the name the [configuration reference](./config/config.md) uses (`DB_NAME`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`, `ENTITY`, `PROJECTS_DEFAULT_LANGS`, `APPLICATION_LANG`, `DATA_LANG`) instead of the older fallback spellings (`DEDALO_DATABASE_CONN`, `DEDALO_ENTITY`, …). Before, a `DB_HOST` you added by hand silently won over the answer you had just given the installer. A re-run over an existing `.env` replaces the old spelling with the new one, so no value is left under two names. The engine and the backup scripts still accept the old spellings, so an existing `.env` keeps working unchanged.

@@ -91,6 +91,10 @@ export type Binary =
 	| 'semodule'
 	| 'restorecon'
 	| 'getenforce'
+	/** A file's SELinux label (`stat -c %C`) — host_selinux's verify. */
+	| 'stat'
+	/** A process's SELinux label (`ps -o label=`) — host_first_boot's domain check. */
+	| 'ps'
 	| 'firewall-cmd'
 	| 'ufw'
 	| 'pg_lsclusters'
@@ -168,6 +172,8 @@ const SHARED_BINARIES = {
 	semodule: '/usr/sbin/semodule',
 	restorecon: '/usr/sbin/restorecon',
 	getenforce: '/usr/sbin/getenforce',
+	stat: '/usr/bin/stat',
+	ps: '/usr/bin/ps',
 	'firewall-cmd': '/usr/bin/firewall-cmd',
 	ufw: '/usr/sbin/ufw',
 	uname: '/usr/bin/uname',

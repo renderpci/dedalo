@@ -106,6 +106,7 @@ import {
 	trackedTopLevelEntries,
 } from '../../deploy/build_context.ts';
 import { tlsCommands as stackTlsCommands } from '../../src/core/install/host/stack/tls.ts';
+import { engineSourceFiles } from '../helpers/engine_source_corpus.ts';
 import { stackPlanCtx } from '../helpers/install_host_scratch.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -892,13 +893,14 @@ describe('H. a key that already shipped in an image can be ROTATED', () => {
 			.filter((line) => line.includes('dedalo-tls-rotate.sh'));
 		expect(generators.length).toBe(1);
 		expect(generators[0]).toContain('--mode local-ca');
-		// No second generator: no openssl invocation in the bootstrap or the installer's
-		// host steps — two generators would drift in SAN, lifetime or permissions the
-		// first time one is fixed. Reported as booleans (a `not.toContain` failure
-		// prints the whole script).
-		const hostSources = [...new Bun.Glob('src/core/install/host/**/*.ts').scanSync({ cwd: ROOT })]
-			.map((file) => readFileSync(join(ROOT, file), 'utf-8'))
-			.join('\n');
+		// No second generator: no openssl invocation in the bootstrap or anywhere in the
+		// engine (the installer's host steps included) — two generators would drift in
+		// SAN, lifetime or permissions the first time one is fixed. The corpus is the
+		// registered engine lister (all of src/), never a subtree chosen here. Reported
+		// as booleans (a `not.toContain` failure prints the whole script).
+		const engineFiles = engineSourceFiles();
+		expect(engineFiles.length).toBeGreaterThan(500);
+		const hostSources = engineFiles.map((file) => readFileSync(file, 'utf-8')).join('\n');
 		expect({
 			req: INSTALL_SH.includes('openssl req') || /['"]req['"],\s*['"]-x509/.test(hostSources),
 			x509: INSTALL_SH.includes('openssl x509') || hostSources.includes("'x509'"),

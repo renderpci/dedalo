@@ -48,9 +48,21 @@ The installer restores **into** this database and refuses a non-empty one. It ne
 
 ## 4. Run the installer
 
+The Developer route installs into the database you just created and writes `../private/.env`. It runs no host step: no packages, no units, no web site, no certificate. Interactively:
+
+```shell
+bun run scripts/install.ts            # the full-screen installer: choose Developer on the first screen
+bun run scripts/install.ts --plain    # the same questions, one per line
+```
+
+The *System check* screen shows Bun, the seed, the private directory, `psql`, the local PostgreSQL, ImageMagick and FFmpeg; a failed row must be fixed first. The *Database* screen checks that the database exists, is reachable and is empty.
+
+Or headless, for a repeatable setup — `--route developer` is the default when no route is given:
+
 ```shell
 DEDALO_INSTALL_ROOT_PASSWORD='dev-root-password' \
 bun run scripts/install.ts \
+  --route developer \
   --db-name dedalo_dev \
   --db-user "$(whoami)" \
   --db-host /tmp \
@@ -58,13 +70,15 @@ bun run scripts/install.ts \
   --langs lg-eng,lg-spa --app-lang lg-eng --data-lang lg-eng
 ```
 
-No `--media-path`: the media root defaults to `../private/media` (see step 5). To keep it elsewhere, add `--media-path "$HOME/dev/dedalo/media"`; the installer creates that directory and writes it to `.env` as `MEDIA_PATH`. Setting `MEDIA_PATH=…` in front of the command does not work: the installer would probe that directory, but `.env` would not get it, and the server would use the default.
+Add `--write-answers ~/dedalo-dev.answers.json` once and the next fresh install is `bun run scripts/install.ts --answers ~/dedalo-dev.answers.json` (the file holds no secret). `--plan` shows the keys and steps a command would produce without touching anything.
+
+No `--media-path`: the media root defaults to `../private/media` (see step 5). To keep it elsewhere, add `--media-path "$HOME/dev/dedalo/media"`; the installer creates that directory and writes it to `.env` as `MEDIA_PATH`. Setting `MEDIA_PATH=…` in front of the command does not work: the installer would probe that directory, but `.env` would not get it.
 
 `--db-host /tmp` uses the local unix socket, so no password is needed — Homebrew's PostgreSQL puts its socket there (the installer's own default is `localhost`). On a Homebrew PostgreSQL your own user is a superuser, which is why `--db-user "$(whoami)"` just works.
 
-With no `--hierarchies`, the shared default set of optional thesauri (today `es`) is installed; `--hierarchies none` makes the install faster. The Languages thesaurus is activated with the database either way. With no `--ontologies`, the default domain ontology, Oral history (`oh`), is installed from the copy built into the repo — no network needed; `--ontologies oh,tch` downloads `tch` and what it declares as dependencies from the update server. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server (add `--no-update-servers` to leave both empty) and lists the installed ontologies in `ACTIVE_ONTOLOGY_TLDS`.
+With no `--hierarchies`, only the thesauri the chosen ontologies declare are installed — no country's toponymy is ever pre-selected; `--hierarchies none` skips even those. The Languages thesaurus is activated with the database either way. With no `--ontologies`, the default domain ontology, Oral history (`oh`), is installed from the copy built into the repo — no network needed; `--ontologies oh,tch` downloads `tch` and what it declares from the update server. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server (add `--no-update-servers` to leave both empty) and lists the installed ontologies in `ACTIVE_ONTOLOGY_TLDS`.
 
-It ends with `✔ install complete — root login verified`, and names the supervised ways to start the server (step 6).
+It ends with `✔ install complete — root login verified`. If it stops part-way, fix the cause and run `bun run scripts/install.ts --resume`; `--abort --confirm-database dedalo_dev` undoes it ([Resume and abort](installer_reference.md#resuming-an-install-resume)).
 
 ## 5. Configure the dev listener
 

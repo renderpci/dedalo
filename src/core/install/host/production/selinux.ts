@@ -12,21 +12,37 @@
  *      /var/lib/dedalo-install/acme/<i>(/.*)?  httpd_sys_content_t (the HTTP-01
  *                                       challenge root — var_lib_t is denied: B13)
  *    then `restorecon -RF` on each;
- *  - ONE host-wide CIL module, `dedalo_engine` (deploy/selinux/), allowing
- *    httpd_t to connect to the engine's socket (L12). Written to
+ *  - ONE host-wide CIL module, `dedalo_engine` (deploy/selinux/): the engine's
+ *    own domain dedalo_engine_t (systemd starts the pinned runtime, labelled
+ *    dedalo_engine_exec_t, into it) and httpd_t → dedalo_engine_t connectto
+ *    (L12) — the web server reaches the engine's socket and NO other
+ *    service's (connectto is checked against the listener's domain, so a rule
+ *    naming unconfined_service_t would open every service in it). Written to
  *    /var/lib/dedalo-install/selinux/, loaded at priority 400, stamped; a
  *    module of that name the installer did not write is refused. Refcounted.
+ *    Then `restorecon -F` on the runtime: `install` gave it the directory's
+ *    type, the module's filecon applies only once it is loaded.
  *
  * No boolean is changed (no setsebool). The firewall is checked and told by
  * host_preflight, never changed.
  */
 
-import type { HostCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
+import type {
+	ExecCommand,
+	HostCommand,
+	HostCtx,
+	HostPlanCtx,
+	HostStepDefinition,
+} from '../contract.ts';
 import { executeCommands } from '../execute.ts';
 import { hostRefuse } from '../refuse.ts';
 import { otherEntries, updateEntry } from '../registry.ts';
 import { sourceText } from '../source.ts';
 import { exec, probe, probeText, ran, remember, verdictOf } from './common.ts';
+
+/** The engine runtime's file type and the domain systemd starts it into (the module's). */
+export const ENGINE_EXEC_TYPE = 'dedalo_engine_exec_t';
+export const ENGINE_DOMAIN = 'dedalo_engine_t';
 
 /** Does SELinux apply here (RHEL family, enforcing or permissive)? */
 export function selinuxApplies(ctx: HostPlanCtx): boolean {
@@ -103,7 +119,7 @@ export function selinuxCommands(ctx: HostPlanCtx, present = ''): HostCommand[] {
 			group: 'root',
 			content: moduleText(ctx),
 			label:
-				'the dedalo_engine policy module — WIDENS httpd_t: it may connect to the unix sockets of every unconfined_service_t service on this host, not only Dédalo\'s',
+				"the dedalo_engine policy module — the engine's own domain; the web server may connect to it and to no other service",
 		},
 		exec(
 			ctx,
@@ -111,7 +127,13 @@ export function selinuxCommands(ctx: HostPlanCtx, present = ''): HostCommand[] {
 			['-X', '400', '-i', modulePath(ctx)],
 			'load the dedalo_engine module (httpd → the engine socket)',
 		),
+		exec(ctx, 'restorecon', ['-F', ctx.paths.bun], `label the engine runtime ${ENGINE_EXEC_TYPE}`),
 	];
+}
+
+/** The runtime's SELinux label, read back (`stat -c %C`). */
+export function runtimeLabelProbe(ctx: HostPlanCtx): ExecCommand {
+	return probe(ctx, 'stat', ['-c', '%C', ctx.paths.bun], 'the engine runtime label');
 }
 
 /** A dedalo_engine module this installer did not write is someone else's. */
@@ -142,6 +164,7 @@ export const host_selinux: HostStepDefinition = {
 			probe(ctx, 'semanage', ['fcontext', '-l', '-C'], 'local rules'),
 		);
 		const modules = await probeText(ctx, probe(ctx, 'semodule', ['-l'], 'modules'));
+		const runtime = await probeText(ctx, runtimeLabelProbe(ctx));
 		return verdictOf(
 			[
 				...fcontextRules(ctx).map((rule): [boolean, string] => [
@@ -149,6 +172,10 @@ export const host_selinux: HostStepDefinition = {
 					`no file context for ${rule.spec}`,
 				]),
 				[/^dedalo_engine\b/m.test(modules), 'the dedalo_engine module is not loaded'],
+				[
+					runtime.includes(`:${ENGINE_EXEC_TYPE}:`),
+					`${ctx.paths.bun} is not labelled ${ENGINE_EXEC_TYPE} (${runtime.trim() || 'no label'}) — restorecon -F ${ctx.paths.bun}`,
+				],
 			],
 			'file contexts and the socket policy in place',
 		);
@@ -164,7 +191,7 @@ export const host_selinux: HostStepDefinition = {
 		updateEntry(ctx.fs, ctx.paths, { selinux_module: true });
 		return ran(`${fcontextRules(ctx).length} file contexts, the dedalo_engine module`, {
 			told: [
-				"SELinux: the dedalo_engine module lets the web server (httpd_t) connect to the unix sockets of EVERY unconfined_service_t service on this host (the engine runs in that domain), not only Dédalo's — review the other services started from /opt or /usr/local",
+				`SELinux: the engine runs as ${ENGINE_DOMAIN}; the web server (httpd_t) may connect to it and to no other service's socket`,
 			],
 		});
 	},
@@ -192,6 +219,14 @@ export const host_selinux: HostStepDefinition = {
 				),
 			);
 			commands.push({ kind: 'remove', path: modulePath(ctx), label: 'the module file' });
+			// The runtime's label names a type that no longer exists: give it its default back
+			// (host_runtime's undo, which runs next, removes it only when no instance shares it).
+			if (ctx.fs.exists(ctx.paths.bun))
+				commands.push(
+					exec(ctx, 'restorecon', ['-F', ctx.paths.bun], 'relabel the engine runtime', {
+						okExit: [0, 1],
+					}),
+				);
 		}
 		await executeCommands(commands, ctx);
 		return `${ctx.created.selinux_fcontexts.length} file context(s) removed${shared ? '; module kept (another instance uses it)' : ''}`;

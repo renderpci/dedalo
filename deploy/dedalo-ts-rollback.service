@@ -3,33 +3,45 @@
 #     swapped-in tree never boots);
 #   - dedalo-ts-watchdog.sh, when /health is red AND a pending unconfirmed
 #     code update exists (the new tree boots but is dead).
-# The script is a no-op (exit 0) unless the sentinel at
-# <backup root>/last_code_update.json says status=pending and
-# rollback_attempted=false — so firing it spuriously costs nothing, and it can
-# never roll back twice. See deploy/dedalo-code-rollback.sh.
+# The script is a no-op unless the sentinel at <backup root>/last_code_update.json
+# says status=pending and rollback_attempted=false — so firing it spuriously
+# costs nothing, and it can never roll back twice. See deploy/dedalo-code-rollback.sh.
 #
-# Runs as root, same privilege model as dedalo-ts-restart.service: it must
-# move the application tree and drive systemctl.
+# THE FILE WORK RUNS AS THE SERVICE USER (DEDALO_USER), never as root: every
+# tree the script moves (the app tree, the backed-up tree, the failed tree's
+# parking place) and the sentinel it reads are DEDALO_USER's, so a root process
+# would be reading a file the service user writes and moving the paths named in
+# it. The backup root is PINNED below — never resolved from .env, a file the
+# service user writes. Only the restart runs as root (ExecStartPost=+, fixed
+# systemctl lines). ExecCondition= skips the unit — restart included — when no
+# pending, unattempted update is recorded. Same model as the installer's
+# per-instance unit (deploy/systemd/dedalo-ts-rollback@.service).
 #
-# ExecStart points at the OUT-OF-TREE install of the script
-# (/opt/dedalo/bin/, a sibling of the checkout, next to the pinned bun at
-# /opt/dedalo/.bun/) — NEVER at the copy inside the app tree. The swap
+# ExecStart points at the OUT-OF-TREE, root-owned copy of the script
+# (/opt/dedalo/bin/) — NEVER at the copy inside the app tree. The swap
 # pipeline renames the whole tree; in the crash window between its two
 # renames there is NO tree at /opt/dedalo/master_dedalo, and an in-tree
 # ExecStart would leave this unit unable to run exactly when it matters.
-# One-time install + refresh after updates (PRODUCTION.md §12):
+# One-time install + refresh after updates (docs/install/manual_host.md):
 #   sudo install -d /opt/dedalo/bin
 #   sudo install -m 0755 deploy/dedalo-code-rollback.sh /opt/dedalo/bin/
-# The script resolves the backup root itself (--backup-root > env
-# DEDALO_BACKUP_PATH > <private>/.env > default) — pass --backup-root here
-# only to pin it explicitly.
+# A host whose code-update backups live elsewhere (DEDALO_BACKUP_PATH) changes
+# --backup-root on all three script lines below, and in the watchdog unit.
 
 [Unit]
 Description=Roll back a failed Dedalo code update to the previous tree
 
 [Service]
 Type=oneshot
-ExecStart=/opt/dedalo/bin/dedalo-code-rollback.sh \
+User=DEDALO_USER
+UMask=0027
+ExecCondition=/opt/dedalo/bin/dedalo-code-rollback.sh --check \
     --app-dir /opt/dedalo/master_dedalo \
+    --backup-root /opt/dedalo/backups/code
+ExecStart=/opt/dedalo/bin/dedalo-code-rollback.sh --no-restart \
+    --app-dir /opt/dedalo/master_dedalo \
+    --backup-root /opt/dedalo/backups/code \
     --service dedalo-ts \
     --socket /run/dedalo/dedalo_ts.sock
+ExecStartPost=+/usr/bin/systemctl reset-failed dedalo-ts.service
+ExecStartPost=+/usr/bin/systemctl start --no-block dedalo-ts.service

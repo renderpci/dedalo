@@ -44,7 +44,7 @@ flowchart TB
 
 | File | Who writes it | What it is |
 |---|---|---|
-| `../private/.env` | **you** (and the installer: `./install.sh` / `bun run dedalo:install`) | every setting and secret for this install |
+| `../private/.env` | the installer at install time (`sh install.sh`), then **you** | every setting and secret for this install |
 | `../private/sample.env` | the installer (a copy of `install/sample.env`) | the documented catalogue of every key **at install time**; a reference, not read by the engine. A code update does not refresh it: the current catalogue is `install/sample.env` in the code tree |
 | `../private/ts_state.json` | **the app** | runtime state — maintenance mode, install status, area overrides. Not config; do not hand-edit |
 
@@ -154,7 +154,7 @@ fine and quietly does the wrong thing. The fix is always the one line the error 
 
 ## 8. What the installer writes
 
-The installer (`./install.sh`, or `bun run dedalo:install`) writes `../private/.env`
+The installer (`sh install.sh`, or `bun run dedalo:install` in a checkout) writes `../private/.env`
 for you (DB connection, entity, languages, the update servers — `ONTOLOGY_SERVERS`
 and `CODE_SERVERS`, the official Dédalo master unless you chose the air-gapped
 option — the active ontologies — `ACTIVE_ONTOLOGY_TLDS`, the core plus the domain

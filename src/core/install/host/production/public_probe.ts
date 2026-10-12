@@ -45,6 +45,20 @@ function origin(ctx: HostPlanCtx): string {
 	return `https://${ctx.answers.server_name}${port}`;
 }
 
+/**
+ * How curl trusts the chain: the drill's CA seam, else NOTHING for a Let's
+ * Encrypt STAGING certificate (untrusted by design — the operator asked for a
+ * test certificate; without this the probe could never pass and a staging
+ * install could never complete — stack/health.ts trustArgs is the twin), else
+ * the system's store, verified.
+ */
+function trustArgs(ctx: HostPlanCtx, ca: string | null): string[] {
+	if (ca !== null) return ['--cacert', ca];
+	return ctx.answers.tls_mode === 'letsencrypt' && ctx.answers.letsencrypt_staging
+		? ['--insecure']
+		: [];
+}
+
 /** One HTTPS status probe through the local address. */
 function statusProbe(
 	ctx: HostPlanCtx,
@@ -65,7 +79,7 @@ function statusProbe(
 			'20',
 			'--resolve',
 			`${ctx.answers.server_name}:${ctx.answers.https_port}:127.0.0.1`,
-			...(ca === null ? [] : ['--cacert', ca]),
+			...trustArgs(ctx, ca),
 			`${origin(ctx)}${path}`,
 		],
 		label,
@@ -146,6 +160,14 @@ async function failures(ctx: HostCtx, ca: string | null): Promise<string[]> {
 	return failed;
 }
 
+/** A staging certificate is a test one: say so, and how to replace it. */
+function stagingNote(ctx: HostPlanCtx): string[] {
+	if (ctx.answers.tls_mode !== 'letsencrypt' || !ctx.answers.letsencrypt_staging) return [];
+	return [
+		`the certificate is a Let's Encrypt STAGING certificate: browsers do not trust it, and the chain was not verified. Replace it with a real one: certbot certonly --webroot -w ${ctx.paths.acmeDir} -d ${ctx.answers.server_name} --cert-name dedalo-${ctx.paths.instance} --force-renewal --server https://acme-v02.api.letsencrypt.org/directory`,
+	];
+}
+
 export const host_public_probe: HostStepDefinition = {
 	id: 'host_public_probe',
 	privilege: 'root',
@@ -179,6 +201,7 @@ export const host_public_probe: HostStepDefinition = {
 		return ran(`${origin(ctx)} answers; the media gate refuses anonymous access`, {
 			told: [
 				`check from outside too: open ${origin(ctx)}/dedalo/ in a browser (this probe connected from the host itself)`,
+				...stagingNote(ctx),
 			],
 		});
 	},

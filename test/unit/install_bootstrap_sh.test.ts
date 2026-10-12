@@ -26,7 +26,8 @@
  *      extracted); an archive naming a member outside itself; a cached Bun zip
  *      that no longer matches the table (re-hashed on EVERY reuse, then
  *      removed); Bun's SHASUMS disagreeing with the table (both refused);
- *      `--wizard` (retired).
+ *      `--wizard` (retired); a missing `unzip` or `curl` (require_tool — the
+ *      bootstrap runs before host_packages, so it names the package).
  *  (c) THE SAME VERDICTS AS THE PUBLICATION HOST AGENT'S BOOTSTRAP
  *      (publication/host_agent/deploy/install.sh — the model it follows): its
  *      `pick_asset` and `verify_bun` against this one's `pick_asset` and
@@ -387,7 +388,8 @@ describe('the bootstrap refuses, exit 3, nothing exec’d (b)', () => {
 			name: 'neither Linux nor macOS',
 			args: () => ['--', '--plan'],
 			kernel: 'FreeBSD',
-			sentence: 'this installer runs on Linux, or on macOS for the trial and Docker routes (this is FreeBSD)',
+			sentence:
+				'this installer runs on Linux, or on macOS for the trial and Docker routes (this is FreeBSD)',
 		},
 		{
 			name: '--release without its sha256',
@@ -422,6 +424,32 @@ describe('the bootstrap refuses, exit 3, nothing exec’d (b)', () => {
 			expect(result.installer).toBeNull();
 		});
 	}
+
+	// The bootstrap runs BEFORE host_packages: a minimal host without unzip or curl
+	// is refused naming the package, never a bare "unzip: not found" mid-run.
+	test('a missing unzip / curl is refused naming the package to install (require_tool)', () => {
+		const empty = dir('empty_path');
+		for (const tool of ['unzip', 'curl']) {
+			const result = run(
+				[
+					'/bin/sh',
+					'-c',
+					`set -- --lib; . "${INSTALL_SH}"; PATH="${empty}"; require_tool ${tool} 'for the test'; echo reached`,
+				],
+				{ cwd: scratch },
+			);
+			expect(result.code, tool).toBe(3);
+			expect(result.stdout).not.toContain('reached');
+			expect(result.stderr).toContain(`${tool} is not installed and is needed for the test`);
+			expect(result.stderr).toContain(`apt-get install ${tool}`);
+		}
+		const present = run(
+			['/bin/sh', '-c', `set -- --lib; . "${INSTALL_SH}"; require_tool sh 'x'; echo reached`],
+			{ cwd: scratch },
+		);
+		expect(present.code, present.stderr).toBe(0);
+		expect(present.stdout).toContain('reached');
+	});
 
 	test('an archive naming a member outside itself is refused before extraction (the member check)', () => {
 		const stage = dir('evil');

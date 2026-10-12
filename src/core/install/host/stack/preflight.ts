@@ -79,14 +79,19 @@ function dockerProblems(facts: StackFacts): string[] {
 	];
 }
 
-/** Is the operator a local account (the names the installer's files are owned by resolve there)? */
-function localAccount(ctx: HostCtx, facts: StackFacts): boolean {
-	const passwd = ctx.fs.readText('/etc/passwd') ?? '';
-	return facts.user !== '' && passwd.split('\n').some((line) => line.startsWith(`${facts.user}:`));
+/**
+ * Is the operator's identity known — `id -un` and `id -u` answered? Through
+ * `id`, never /etc/passwd: macOS keeps its accounts in Directory Services and
+ * an LDAP/SSSD account is not in /etc/passwd either, and both are operators
+ * the route supports. The files the install writes need no lookup by name for
+ * them (host/fs.ts ownerIds: an unprivileged process writing as ITSELF).
+ */
+function knownOperator(facts: StackFacts): boolean {
+	return facts.user !== '' && facts.uid >= 0;
 }
 
 /** Disk and the operator's identity. */
-function machineProblems(ctx: HostCtx, facts: StackFacts): string[] {
+function machineProblems(facts: StackFacts): string[] {
 	const free = facts.freeGib ?? STACK_MIN_FREE_GIB;
 	return [
 		...when(
@@ -94,8 +99,8 @@ function machineProblems(ctx: HostCtx, facts: StackFacts): string[] {
 			`only ${free} GiB free under ${facts.dockerRoot} — the install needs about ${STACK_MIN_FREE_GIB} GiB (docker system prune -af, or move Docker's root to a bigger disk)`,
 		),
 		...when(
-			!localAccount(ctx, facts),
-			`${who(facts)} is not a local account in /etc/passwd — run the install as a local user`,
+			!knownOperator(facts),
+			'the operator cannot be identified (`id -un` / `id -u` answered nothing) — run the install as a user with a login on this machine',
 		),
 	];
 }
@@ -183,7 +188,7 @@ async function runStackPreflight(
 	const planCtx = withFacts(ctx, facts);
 	const tls = tlsVerdict(ctx);
 	refuseAll([
-		...machineProblems(ctx, facts),
+		...machineProblems(facts),
 		...instanceProblems(ctx, facts),
 		...imageProblems(planCtx, facts),
 		...tls.problems,

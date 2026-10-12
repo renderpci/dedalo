@@ -55,7 +55,8 @@ Reference units in `deploy/`:
   `Wants=` it and `[Install] Also=` it, so `systemctl enable dedalo-ts` enables
   the health consumer with the server instead of leaving it to a second typed
   command (P2-33 / OPS-09).
-- `dedalo-backup.service` + `.timer` — the nightly backup set (§6).
+- `dedalo-backup.service` + `.timer` — the nightly backup set (§6); it pulls in
+  `dedalo-backup-site-builder.service`, store 5 as root in a unit of its own.
 - `dedalo-ts-rollback.service` — restores the previous code tree after a
   failed code update (§12; fired by `OnFailure=` on the main unit and by the
   watchdog when a pending update never confirms). Publishing a release:
@@ -171,12 +172,14 @@ stamped `# dedalo-install <i> <answers digest>`):
   `DEDALO_BACKUP_EXPECTED_STORES` DERIVED from them, every `Environment=` value
   quoted (an unquoted list was truncated to its first word — L8); the nightly
   timer is enabled only after a first backup verified every store.
-- EVERY script a unit runs as root (rollback, watchdog, alert, the site-builder
+- EVERY script a root-started unit runs (rollback — its file work as the
+  instance user, only the restart as root —, watchdog, alert, the site-builder
   store) runs from `/opt/dedalo/instances/<i>/bin/` (root:root 0755), never from
   the instance's tree: a root-run unit must not execute a file the instance user
   can replace. A code update (it runs as the instance) does not refresh those
-  copies — re-run the installer after an update that changes `deploy/*.sh`; a
-  Bun pin change needs the installer too (the runtime is root's).
+  copies, and the installer refuses to run over a sealed instance — a release
+  that changes `deploy/*.sh` says what to do in its release notes; a Bun pin
+  change likewise (the runtime is root's).
 - nginx: the media map's variables are global, so ONE instance's generated map is
   included host-wide (`/etc/nginx/conf.d/dedalo-00-media-map.conf`) and a second
   instance whose map differs is refused — same-host instances run the same
@@ -735,12 +738,14 @@ The **backup set is five stores** — the matrix DB alone is not a backup:
    `engineering/SITE_BUILDER_INSTANCES.md`. A host that declares no instance
    has an empty store 5 and that is not a failure.
 
-`deploy/dedalo-backup.service` + `.timer` is the reference nightly job. Each
-store above names the token that copies it, and `test/unit/operator_commands_tripwire.test.ts`
-asserts the two agree — a store documented here and copied by nothing is the
-failure this table exists to make impossible:
+`deploy/dedalo-backup.service` + `.timer` is the reference nightly job; it
+pulls in `deploy/dedalo-backup-site-builder.service` (store 5) and is ordered
+before it. Each store above names the token that copies it in one of the two
+reference units, and `test/unit/operator_commands_tripwire.test.ts` asserts the
+two agree — a store documented here and copied by nothing is the failure this
+table exists to make impossible:
 
-| # | Store | What copies it in `deploy/dedalo-backup.service` |
+| # | Store | What copies it in the two reference units |
 |---|---|---|
 | 1 | Matrix Postgres DB | `pg_dump` |
 | 2 | RAG pgvector DB | `DEDALO_RAG_DB_NAME` |
@@ -748,17 +753,33 @@ failure this table exists to make impossible:
 | 4 | `../private/` | `/opt/dedalo/private/` |
 | 5 | Site-builder instances | `dedalo-site-builder-backup.sh` |
 
-Store 5's `ExecStart` carries systemd's `+` prefix, so that one step runs as **root** while
-the other four stay unprivileged. It has to: an instance's credentials are `0600 root:root`
-inside a `0700` directory and its state roots are `0750` owned by that museum's own service
-user, and the backup user is in none of those groups — that separation is the isolation
-itself. The destination consequently holds credentials: create it `0700 root:root` and treat
-the whole backup tree as secret material, which store 4 already made true.
+Store 5 runs as **root** while the other four stay unprivileged. It has to: an instance's
+credentials are `0600 root:root` inside a `0700` directory and its state roots are `0750`
+owned by that museum's own service user, and the backup user is in none of those groups —
+that separation is the isolation itself. So it is **its own unit**,
+`dedalo-backup-site-builder.service`, never a `+` line in the set (2026-10-12): systemd
+applies a unit's `EnvironmentFile=` to `+` lines too, and the set reads
+`/opt/dedalo/private/.env`, which `DEDALO_USER` writes — its `LD_PRELOAD` or `PATH` would
+run as root. The root unit has no `EnvironmentFile=`, runs both scripts from the root-owned
+`/opt/dedalo/bin/`, and keeps its verdict (`/var/lib/dedalo/backup-site-builder`) and its
+destination (`/var/backups/dedalo-site-builder`, created `0700 root:root` under the unit's
+`UMask=0077`) outside every tree `DEDALO_USER` owns. The destination holds credentials:
+treat the whole backup tree as secret material, which store 4 already made true. The
+failure alarm (`dedalo-backup-alert@.service`) runs as `DEDALO_USER` (journal access through
+`systemd-journal`), also from `/opt/dedalo/bin/`. Leg E2 of
+`test/unit/operator_commands_tripwire.test.ts` holds every shipped unit to this: no root
+line beside an `EnvironmentFile=`, nothing run as root from outside `/opt/dedalo/bin/` (or a
+system binary), no root write into a tree `DEDALO_USER` owns, no root line naming such a tree
+except the read-only watchdog, and no root-run rollback or watchdog without a pinned
+`--backup-root`. The rollback unit (`dedalo-ts-rollback.service`) therefore does its file work
+as `DEDALO_USER` and only its fixed `systemctl` restart as root (`ExecStartPost=+`), like the
+installer's `dedalo-ts-rollback@.service`.
 
 MariaDB **diffusion targets are derived data** — rebuildable by re-publishing;
 no dump surface exists (DIFFUSION_SPEC §8.6). Restore-test quarterly.
 
-**The unit declares which stores it promises.** `dedalo-backup.service` carries
+**Each unit declares which stores it promises.** `dedalo-backup.service` (and the
+root unit, for its one store) carries
 `Environment=DEDALO_BACKUP_EXPECTED_STORES=` naming every ACTIVE step, and
 `dedalo-backup-step.sh`'s aggregate fails the run when an expected store recorded
 no status. Without it the aggregate can only see the stores that DID record, so a
@@ -1164,10 +1185,10 @@ writes ONE line to stderr (one journal line) and exits **78**
 
 | State | The line says |
 |---|---|
-| `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER` all unset, no `.env`, not sealed | `not installed: … Run the installer: ./install.sh, or bun run dedalo:install` |
+| `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER` all unset, no `.env`, not sealed | `not installed: … Run the installer: sh install.sh (sudo sh install.sh for production), or bun run dedalo:install in a checkout` |
 | none of the four, but `.env` has content | `configuration incomplete: … do not reinstall over an existing configuration` |
 | none of the four, but `install_status` is `sealed` | `configuration missing: … Restore .env from backup — do not reinstall over it` |
-| `install_status` is anything but `sealed` (the installer writes `terminal_installing` while it runs) | `install not finished … bun run dedalo:install --resume` |
+| `install_status` is anything but `sealed` (the installer writes `terminal_installing` while it runs) | `install not finished … finish it with the installer's --resume (production: sudo sh install.sh --route production --instance <i> --resume; …)` |
 
 A PARTIAL configuration (one to three of the four keys) is misconfigured, not
 unconfigured: the config import throws the precise missing-key error and the
@@ -1384,13 +1405,20 @@ at `/opt/dedalo/bin/` (a sibling of the checkout, next to the pinned bun at
 install:
 
 ```sh
-sudo install -d /opt/dedalo/bin
+sudo install -d -o root -g root -m 0755 /opt/dedalo/bin
 sudo install -m 0755 deploy/dedalo-code-rollback.sh /opt/dedalo/bin/
 sudo install -m 0755 deploy/dedalo-ts-watchdog.sh   /opt/dedalo/bin/
+# What the backup units run as root (store 5) or as their alarm (§6):
+sudo install -m 0755 deploy/dedalo-backup-step.sh deploy/dedalo-site-builder-backup.sh \
+    deploy/dedalo-backup-alert.sh /opt/dedalo/bin/
 ```
 
+`/opt/dedalo` itself must stay **root-owned** (`DEDALO_USER` owns only the
+checkout, `private/` and `backups/` below it): a user who owns the parent can
+rename `bin/` and put their own scripts where root runs them.
+
 An out-of-tree copy is a real staleness risk: it does NOT update with the
-tree. Re-run the two `install` lines after any code update that touched
+tree. Re-run the `install` lines after any code update that touched
 `deploy/*.sh` (the release notes say when), and after editing them locally.
 The scripts are deliberately self-contained and change rarely, but a drifted
 copy fails the contract silently — refresh it, don't trust it.

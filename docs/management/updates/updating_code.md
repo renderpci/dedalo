@@ -4,7 +4,7 @@
 
 Dédalo is an active, rapidly developing software project. It is therefore important to keep it updated and in good condition for stability and security reasons.
 
-There are two ways to update the server's code: the maintenance-panel **self-update** (below), driven by a configured code server, and a **manual** `git pull` (see [Updating manually](#updating-manually)). Both operate on this install's own tree — there is no separate install they delegate to.
+The maintenance-panel **self-update** (below), driven by a configured code server, is how an instance installed by the installer is updated; it operates on this install's own tree. A container installation updates by image instead ([below](#installations-that-run-from-a-container-image)), and a git checkout — a development machine, or a [host set up by hand](../../install/manual_host.md) — can also be updated with a **manual** `git pull` (see [Updating manually](#updating-manually)).
 
 The update process is based on the Dédalo cadence numbering. Versions are installed step by step — the updater refuses to skip **any** version, patch releases included: the only target it accepts is the very next rung — and a code version sometimes depends on the ontology version. Update the ontology before updating the Dédalo code, following [this guide](updating_ontology.md).
 
@@ -41,7 +41,7 @@ with nothing to restart it. Every launch method Dédalo ships already declares i
 
 | Launch method | Where `DEDALO_SUPERVISED=true` is declared |
 | --- | --- |
-| systemd (`deploy/dedalo-ts.service`, the multi-instance template) | `Environment=DEDALO_SUPERVISED=true` in the unit |
+| systemd (`dedalo-ts@<i>`, written by the installer; `deploy/dedalo-ts.service` on a host set up by hand) | `Environment=DEDALO_SUPERVISED=true` in the unit |
 | Docker Compose (`docker-compose.yml`, `docker-compose.simple.yml`) | the `dedalo` service's `environment:` |
 | `bun run start:supervised`, `bun run dev`, `bun run dev:server` | the script's own command line |
 | `bun run start` | **nowhere — deliberately**: nothing restarts it, so it is not supervised |
@@ -57,12 +57,12 @@ after the update.
 !!! warning "An installed unit is a copy — one installed before 2026-10-08 lacks the line"
     The table describes the files in the code tree. The unit in
     `/etc/systemd/system/` is a copy taken at install time, and no code update
-    (panel or `git pull`) refreshes it. A unit installed before this release has no
-    `Environment=DEDALO_SUPERVISED=true`, and since the engine stopped guessing from
-    systemd's variables, its next panel update is refused. Add the line with a
-    drop-in (`systemctl edit dedalo-ts`, then `[Service]` and
+    (panel or `git pull`) refreshes it. A unit installed by hand before this release
+    has no `Environment=DEDALO_SUPERVISED=true`, and since the engine stopped
+    guessing from systemd's variables, its next panel update is refused. Add the
+    line with a drop-in (`systemctl edit dedalo-ts`, then `[Service]` and
     `Environment=DEDALO_SUPERVISED=true`), then restart. The steps are in
-    [Upgrading](../../install/upgrading.md#3-check-that-the-unit-declares-supervision).
+    [Upgrading › A host set up by hand](../../install/upgrading.md#a-host-set-up-by-hand).
 
 !!! warning "Declared by the launcher only — never in `../private/.env`"
     The engine reads `DEDALO_SUPERVISED` from the **process environment only**. A
@@ -182,20 +182,19 @@ running Bun and this tree's pin, and the bytes free where the update stages.
 !!! warning "When a release changes the Bun version"
 
     The update **refuses** — without changing anything — if the release pins a
-    different Bun than the one this server is running. Install the pinned Bun on
-    the machine first, restart Dédalo onto it, and only then apply the update:
+    different Bun than the one this server is running. The runtime has to change
+    first, and how depends on the installation:
 
-    ```bash
-    # the version the release pins is shown in the panel's readiness list
-    curl -fsSL https://bun.sh/install | BUN_INSTALL=/opt/dedalo/.bun bash -s bun-v1.4.2
-    chown -R dedalo:dedalo /opt/dedalo/.bun   # run as root above; hand the runtime back to the service user
-    ```
+    - **An instance installed by the installer** runs a root-owned Bun at
+      `/opt/dedalo/bun/<pin>/`. The installer has no command that installs a new
+      pin on a live instance today: follow the release notes, or ask the system
+      administrator.
+    - **A host set up by hand** runs `/opt/dedalo/.bun/bin/bun`: install the new
+      pin into that path as root, restart Dédalo onto it, and only then apply the
+      update — [Upgrading › A host set up by hand](../../install/upgrading.md#a-host-set-up-by-hand).
 
-    The unit's `ExecStart` already points at `/opt/dedalo/.bun/bin/bun`, so
-    installing into that location *is* the runtime upgrade; there is no unit to
-    edit (see [Upgrading](../../install/upgrading.md#1-has-the-runtime-pin-moved)).
-    Restart, and confirm the boot line reads
-    `starting on Bun 1.4.2 (pinned: 1.4.2)` with no mismatch warning.
+    Confirm the boot line reads `starting on Bun <pin> (pinned: <pin>)` with no
+    mismatch warning.
 
 1. Close access to the work system.
 
@@ -506,7 +505,7 @@ so the storage directory does not have to sit in the web root, and should not.
     answered: **the reverse proxy is not routing** the path, **the engine
     answered** (so routing is fine and the fault is this server's own
     configuration), or **the origin did not answer at all**. The rule to add is
-    in [Reverse proxy and TLS](../../install/reverse_proxy.md).
+    in [The web server site](../../install/reverse_proxy.md).
 
     The probe fetches the master's own public origin from inside its own
     network, so it proves *this vhost routes the path* — not that the wider
@@ -521,8 +520,8 @@ so the storage directory does not have to sit in the web root, and should not.
 
 ## Updating manually
 
-For most installs, the simplest and most predictable update is manual. On the
-[production layout](../../install/production.md) it reads:
+On a git checkout — a development machine, or a [host set up by hand](../../install/manual_host.md)
+with its single-instance layout — a manual update reads:
 
 ```bash
 sudo -u dedalo git -C /opt/dedalo/master_dedalo pull --ff-only

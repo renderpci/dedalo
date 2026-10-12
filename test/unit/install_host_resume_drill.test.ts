@@ -28,15 +28,7 @@
 
 import { afterAll, describe, expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import {
-	existsSync,
-	mkdirSync,
-	mkdtempSync,
-	readdirSync,
-	readFileSync,
-	rmSync,
-	writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { PRODUCTION_HOST_STEP_IDS } from '../../src/core/install/install_plan.ts';
@@ -51,6 +43,7 @@ import {
 	REPO_ROOT,
 	ROOT_PASSWORD,
 	SCRATCH_DIR,
+	scratchFilePaths,
 	sourceFiles,
 } from '../helpers/install_host_scratch.ts';
 
@@ -168,13 +161,11 @@ async function child(
  */
 function hostState(root: string): Record<string, string> {
 	const state: Record<string, string> = {};
-	for (const entry of readdirSync(root, { recursive: true, withFileTypes: true })) {
-		if (!entry.isFile()) continue;
-		const path = join(entry.parentPath, entry.name).slice(root.length);
+	for (const full of scratchFilePaths(root)) {
+		const path = full.slice(root.length);
 		if (path.startsWith(`/${SCRATCH_DIR}/`) || path.startsWith(`${RUN_DIR}/`)) continue;
-		state[path] = createHash('sha256')
-			.update(readFileSync(join(root, path)))
-			.digest('hex');
+		// Bytes, not text: the fake Bun zip is binary.
+		state[path] = createHash('sha256').update(readFileSync(full)).digest('hex');
 	}
 	const owners = join(root, SCRATCH_DIR, 'owners.json');
 	state['<owners>'] = existsSync(owners) ? readFileSync(owners, 'utf8') : '';
@@ -214,12 +205,13 @@ describe('the uninterrupted reference', () => {
 		const run = await child(root, 'fresh');
 		expect(run.outcome?.message ?? null).toBeNull();
 		expect(run.outcome?.result).toBe('complete');
-		reference.state = hostState(root);
+		const after = hostState(root);
+		reference.state = after;
 		reference.changes = changes(root);
 		expect(reference.changes.length).toBeGreaterThan(20);
-		expect(Object.keys(reference.state).length).toBeGreaterThan(
-			Object.keys(reference.before).length + 10,
-		);
+		// The walk's floor: the run planted more than ten host files the fresh scratch lacked.
+		const grown = Object.keys(after).length - Object.keys(reference.before).length;
+		expect(grown).toBeGreaterThan(10);
 	}, 60_000);
 });
 

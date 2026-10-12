@@ -1,557 +1,96 @@
-# Multiple instances on one server (multi-domain hosting)
+# Several instances on one host
 
-> See also: [Production install](production.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Installer reference](installer_reference.md) · [Upgrading](upgrading.md)
+> See also: [Production install](production.md) · [Installer reference](installer_reference.md) · [The web server site](reverse_proxy.md) · [Upgrading](upgrading.md)
 
-!!! tip "The installer builds this layout"
-    Every production install the installer makes is a named instance of this
-    model (`--route production --instance <name>`): its own user and home, database,
-    socket, media and `dedalo-ts@<name>` units, ONE site file, and a refusal on any
-    clash with what is already on the host. See
-    [Production host steps](installer_reference.md#production-host-steps).
-
-One engine process serves **exactly one entity and one database**. It reads its
-configuration once, at boot, into a frozen singleton — there is no per-request
-switch of entity or database. So hosting several domains on one server does not
-mean one bigger process: it means **several independent instances**, each a
-complete production install, running side by side behind one shared reverse proxy.
-
-This page is the **delta on top of [Production install](production.md)**, not a
-replacement for it. Do that page once per domain; this page tells you the two
-things it does not: **what must be unique per instance**, and **how to template
-systemd** so each new domain is a single `systemctl enable` away.
+One engine process serves **exactly one entity and one database**. It reads its configuration once, at boot — there is no per-request switch of entity or database. So hosting several collections on one server does not mean one bigger process: it means **several independent instances**, each a complete installation, side by side behind one shared web server. The Production route is built for this: every production install is a **named instance**, and adding one is running the installer again with another name.
 
 !!! info "When you do NOT need this"
-    A single installation is already multi-user and multi-project: many users,
-    many research projects, one ontology and one database, isolated by
-    permissions. That is not multi-instance. Reach for a second instance only when
-    you need a **separate domain with its own database, its own media, and its own
-    login realm** — a distinct customer, a distinct collection that shares nothing.
+    A single installation is already multi-user and multi-project: many users, many research projects, one ontology and one database, separated by permissions. That is not multi-instance. Reach for a second instance only when you need a **separate domain with its own database, its own media and its own login realm** — a distinct institution, a distinct collection that shares nothing.
 
-## What one instance owns
+## The named-instance model
 
-Two engine processes on one box are safe **only if every row below differs**. The
-first five are the real isolation boundary; get any of them wrong and two
-instances collide.
+Every name and path of a production instance derives from its instance name `<i>` (`src/core/install/host/layout.ts`), so two instances cannot collide by construction:
 
-| Per instance — must be unique | Why | Where it lives |
-| --- | --- | --- |
-| `private/` directory | holds `.env` (every secret), the session store `dedalo_ts_sessions.sqlite`, `ts_state.json`, and the backups | `<repo>/../private` by default, or `DEDALO_PRIVATE_DIR` |
-| `SERVER_UNIX_SOCKET` | the engine **refuses to boot** if a live instance already answers on the socket; the default `/tmp/dedalo_ts.sock` collides | that instance's `.env` |
-| PostgreSQL database + role | the system of record; the installer refuses a non-empty database | `DB_NAME` / `DB_USER` |
-| `MEDIA_PATH` | the media tree, and the generated web-server rule files that gate it | that instance's `.env` |
-| `DEDALO_EXPORT_ARTIFACTS_DIR` (when set) | the users' server-built exports — copies of records. The default lives inside `private/`, so it is unique with it; a directory set outside it must differ per instance (the engine refuses a directory another install's marker names) | that instance's `.env` |
-| Linux user + group | the ownership boundary that keeps one instance out of another's secrets and media | you create it |
-| `ACTIVE_ONTOLOGY_TLDS` | the ontologies this install carries — written by the installer from its `--ontologies` answer | that instance's `.env` |
-| systemd service + proxy vhost | one service and one `server{}` + `upstream` per domain | see below |
+| Per instance | Value |
+| --- | --- |
+| system user and group | `ded_<i>` |
+| home, release tree, private directory, backups | `/home/ded_<i>/`, `…/dedalo/`, `…/private/`, `…/backups/` |
+| web root, media, published client | `/srv/dedalo/<i>/`, `…/dedalo/media/`, `…/client/` |
+| socket | `/run/dedalo-<i>/dedalo_ts.sock` |
+| database and role | `dedalo_<i>`, owned by the peer role `ded_<i>` |
+| publication database (default) | `web_<i>` |
+| units | `dedalo-ts@<i>` and its watchdog, restart, rollback and backup instances, with this instance's drop-ins |
+| site file | `dedalo-<i>.conf`, with the nginx names `dedalo_<i>` and `dedalo_<i>_api` |
+| certificate | `dedalo-<i>` (Let's Encrypt) |
+| root-run scripts | `/opt/dedalo/instances/<i>/bin/` |
+| installer record | `/var/lib/dedalo-install/<i>/` |
 
-Two components are **shared and trusted**, one each for the whole box:
+Two components are **shared and trusted**, one each for the whole host:
 
-- **The reverse proxy** — it terminates TLS for every domain and is the media gate
-  for every instance. It must be able to read each instance's socket, client tree
-  and media tree (see [the group step](#shared-to-both)).
-- **The PostgreSQL cluster** — one server, one database + role per instance. That
-  per-database split is the data isolation boundary.
+- **The web server** terminates TLS for every instance and is the media gate for every instance. Its user joins each instance's group, so it can connect to each socket and read each media tree and published client.
+- **The PostgreSQL cluster** — one server, one database and role per instance. That per-database split is the data isolation boundary.
 
-!!! danger "Never point two instances at one `private/` directory"
-    They would share the session store, `ts_state.json` and the socket path — a
-    silent corruption, not a clean error. One repo clone per instance makes each
-    `../private` distinct automatically. If you ever share a single checkout,
-    every instance **must** set a distinct `DEDALO_PRIVATE_DIR`.
+## What the instances share
+
+A few resources are installed once per host and used by every instance. The installer keeps a registry of the instances it set up — one file each, `/var/lib/dedalo-install/instances/<i>.json` (`0644`, root) — and counts who uses each shared resource, so an `--abort` removes one only when no other instance still names it:
+
+| Shared resource | Where |
+| --- | --- |
+| the template units | `/etc/systemd/system/dedalo-ts@.service` and its siblings (`deploy/systemd/*@*`) |
+| Bun at a pin | `/opt/dedalo/bun/<pin>/` — shared by every instance on the same pin |
+| the SELinux module | `dedalo_engine` (RHEL family) |
+| the nginx media map | `/etc/nginx/conf.d/dedalo-00-media-map.conf` |
+| packages and repositories | never removed: shared host state |
+
+!!! warning "Same-host instances run the same release (nginx)"
+    The media map's variables are global to nginx, so exactly one instance's map is included host-wide, and an instance whose map differs — another release — is refused. Keep every instance on one nginx host at the same release.
+
+## Adding an instance
+
+Run the installer again, choose **Production**, and type another instance name (for example `archive`) on the first screen:
+
+```shell
+sudo sh install.sh
+```
+
+Headless, the run carries every required answer, as on the [Production route](production.md#run-the-installer):
+
+```shell
+sudo --preserve-env=DEDALO_INSTALL_ROOT_PASSWORD sh install.sh -- \
+  --route production --instance archive --entity archive \
+  --server-name archive.example.org --letsencrypt-email it@example.org --execute
+```
+
+The System check refuses, before any change, anything that would collide with what is already on the host: the user, database or role of that name, its unit or drop-ins, its site file, its socket, the nginx `upstream` and rate-limit zone names, any of its directories, and **the address already served by another site** on the same ports. Every refusal is listed in [Troubleshooting › The System check refuses](troubleshooting.md#the-production-system-check-refuses).
+
+Each instance has its own public address and its own certificate. The installer writes one site file per instance and never edits another instance's.
 
 ## The isolation model, stated plainly
 
-Each instance is one long-lived process supervised by systemd, running as **its own
-service user**. The security boundary between two domains is therefore ordinary
-filesystem ownership: instance A's `.env` is mode `0600` owned by user `ded_a`, and
-user `ded_b`'s process cannot read it.
+Each instance is one long-lived process supervised by systemd, running as **its own user**. The security boundary between two instances is therefore ordinary filesystem ownership: instance A's `.env` is `0600` owned by `ded_a`, inside a `0700` directory, and `ded_b`'s process cannot read it. The media trees are `0750`, never world-readable; the web server reads them through each instance's group.
 
-**For separate customers, give each domain its own Linux user and group.** It is
-not required for the engine to *run* — one shared service user works when every
-domain belongs to the same operator — but a per-customer user is what confines a
-compromised process, or a tool that shells out, to that one tenant's files.
+!!! danger "Never point two instances at one private directory"
+    They would share the session store, `ts_state.json` and the socket path — a silent corruption, not a clean error. The installer gives every instance its own; on a host set up by hand, every instance needs a distinct `DEDALO_PRIVATE_DIR` or its own code tree.
 
-## Layout per instance
+## Pitfalls specific to several instances
 
-A home-per-instance layout keeps everything a tenant owns under one tree:
+- **`DB_POOL_MAX` is per process.** Budget the **sum** across all instances — plus each diffusion runner and RAG drain — against PostgreSQL's `max_connections`, not each instance in isolation.
+- **Adopted users share the web server's group.** A host upgraded from v6 keeps the web server's group as its service users' primary group, and two such instances then have **no boundary between them**. Give every instance its own group — [Phase E](migrating_from_v6.md#82-give-the-adopted-user-its-own-group).
+- **The site-builder backup covers the whole host.** Ask for it (`--backup-site-builder`) on one instance at most.
 
-```text
-/home/ded_<site>/dedalo/    the repo clone            (WorkingDirectory)
-/home/ded_<site>/private/          ../private                (.env 0600, sessions, state, backups)
-/home/ded_<site>/.bun/bin/bun      the pinned runtime        (per instance → independent upgrades)
-/srv/dedalo/<site>/dedalo/media/   MEDIA_PATH                (own path, often its own volume)
-/run/dedalo-<site>/dedalo_ts.sock  the unix socket           (systemd RuntimeDirectory)
-user/group: ded_<site>
-```
+## Verify each instance
 
-The `/opt/dedalo/…` tree of the [production guide](production.md) is only a default.
-A user home works identically — the structural rules are unchanged: the directory
-**above** the repo must be writable by the service user (the installer creates
-`../private/` there), and the socket, database and media path must be unique.
+- [ ] `curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health` → `200` with `"db":"ok"`.
+- [ ] `curl --fail https://<address>/health` → the same `200`, through the web server.
+- [ ] Log in, create, save and reload a record; upload an image — the derivative and thumbnail appear.
+- [ ] `curl -I -H 'Range: bytes=0-99' https://<address>/dedalo/media/image/thumb/<file>.jpg` → `206` (nothing is in the media byte path).
+- [ ] As `ded_<i>`, confirm another instance's `/home/ded_<other>/private/.env` is **not** readable — the boundary holds.
+- [ ] `systemctl reboot`; every instance, socket and site comes back on its own.
 
-A separate publication server follows the same one-Bun-per-site convention, with one
-difference: there each site's Bun belongs to root, because it runs the publication host
-agent and its grants. See [Publication host agent](publication_host.md#one-bun-per-site).
+## Upgrading one instance at a time
 
-## 1. One-time host preparation
+Each instance updates its own code from its own **Maintenance** panel, so you can update them one at a time and verify each before the next. Two limits apply: on nginx, instances on one host must end up on the same release (the shared media map), and a release that changes the runtime pin or the root-run scripts needs manual work today — see [Upgrading](upgrading.md).
 
-Do these once for the whole server, not per domain:
+## Removing an instance
 
-- Base packages, the media toolchain, PostgreSQL 18 (server **and** client), nginx
-  and certbot — exactly steps 2–4 of [Production install](production.md).
-- Install the **systemd template units** from the next section once. The reference
-  units in `deploy/` are single-instance; the templates below let one unit file
-  drive every domain.
-
-## 2. Systemd template units
-
-A template unit (`name@.service`) is instantiated per domain with `%i` — here, the
-site name. `dedalo-ts@site1.service` is not a file: systemd splits the name at the
-`@` and serves it from the one template, with `%i` = `site1`.
-
-Because each domain has its own clone, each resolves its own `../private`
-automatically: the engine derives that path from the location of **the code
-`ExecStart` runs**, not from the working directory or the environment. Point a
-unit at a clone and it has that clone's configuration; no `DEDALO_PRIVATE_DIR` is
-needed.
-
-`/etc/systemd/system/dedalo-ts@.service`:
-
-```ini
-[Unit]
-Description=Dedalo TS server (Bun) — %i
-After=network.target postgresql.service
-Wants=postgresql.service
-# this instance's health watchdog comes with it
-Wants=dedalo-ts-watchdog@%i.timer
-# 5 starts per 5 min: planned restarts (installer, code update) never exhaust it
-StartLimitIntervalSec=300
-StartLimitBurst=5
-# start limit exhausted = a new code tree that never boots: roll it back
-OnFailure=dedalo-ts-rollback@%i.service
-
-[Service]
-Type=simple
-User=ded_%i
-Group=ded_%i
-WorkingDirectory=/home/ded_%i/dedalo
-ExecStart=/home/ded_%i/.bun/bin/bun run src/server.ts
-# systemd restarts it: lets code updates run
-Environment=DEDALO_SUPERVISED=true
-# creates /run/dedalo-%i, owned by the service user
-RuntimeDirectory=dedalo-%i
-RuntimeDirectoryMode=0750
-# socket srwxrwx--- so the proxy group can connect
-UMask=0007
-Restart=always
-RestartSec=3
-# a planned restart (installer, code update or restore): not a failure
-SuccessExitStatus=75
-TimeoutStopSec=30
-KillSignal=SIGTERM
-# signal the server only: diffusion runners finish their job across a restart
-KillMode=process
-StandardOutput=journal
-StandardError=journal
-SyslogIdentifier=dedalo-%i
-LimitNOFILE=65536
-
-[Install]
-WantedBy=multi-user.target
-Also=dedalo-ts-watchdog@%i.timer
-```
-
-Every line mirrors the single-instance `deploy/dedalo-ts.service`, whose comments
-give the full reason for each. Three are easy to drop and costly to lose:
-`KillMode=process` (without it a restart kills every diffusion runner mid-publication),
-the widened start limit (systemd's default of 5 starts in 10 s can leave the unit
-`failed` after a burst of planned restarts), and `OnFailure=` (the only thing that
-rolls back a code update whose new tree never boots).
-
-`Environment=DEDALO_SUPERVISED=true` is what lets an in-app code update run: the
-update swaps the code tree and exits, and only a process manager that restarts the
-server may declare it. It belongs in the unit, never in `.env` — that file is read by
-every launch method, including an unsupervised `bun run start`, so the engine ignores
-it there.
-
-!!! warning "No `EnvironmentFile=`, on purpose"
-    The engine reads its own `../private/.env`. Pointing systemd's `EnvironmentFile=`
-    at the same file is redundant and actively harmful: systemd's parser mangles the
-    raw-JSON values (for example `DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano"}`).
-    Set `SERVER_UNIX_SOCKET=/run/dedalo-<site>/dedalo_ts.sock` in each instance's
-    `.env` so it matches `RuntimeDirectory=dedalo-%i`.
-
-### When the user name, the home and the site slug differ
-
-The template above uses one `%i` for three things — the user, the home and the
-site — which holds only when you created all three yourself. On a host **upgraded
-from v6** they rarely agree: the user is `dedalo_user`, its home is
-`/home/dedalo.dev`, and neither is a slug. One `%i` cannot express that.
-
-Split the identity out of the template. Keep `%i` for every **path** — pick the
-value the paths agree on, which in a home-per-domain layout is the domain itself
-— and drop `User=`/`Group=`:
-
-```ini
-# /etc/systemd/system/dedalo-ts@.service — identity removed
-WorkingDirectory=/home/%i/dedalo
-ExecStart=/home/%i/.bun/bin/bun run src/server.ts
-Environment=DEDALO_SUPERVISED=true
-RuntimeDirectory=dedalo-%i
-SyslogIdentifier=dedalo-%i
-```
-
-Then give each instance its own identity with a drop-in:
-
-```shell
-sudo systemctl edit dedalo-ts@dedalo.dev
-```
-
-```ini
-[Service]
-User=dedalo_user
-Group=dedalo_user
-```
-
-`systemctl edit` creates the `dedalo-ts@dedalo.dev.service.d/` directory,
-names the file `override.conf`, and runs `daemon-reload` when you save — the
-directory does not exist beforehand, so writing the file by hand needs an
-`mkdir -p` first. The **template must already be installed**: against a missing
-one, `edit` and `cat` answer `No files found for dedalo-ts@….service`.
-
-Check the merge, which is the only view of what systemd will actually run:
-
-```shell
-systemctl cat  dedalo-ts@dedalo.dev            # template + every drop-in, in order
-systemctl show dedalo-ts@dedalo.dev -p User -p Group -p RuntimeDirectory
-```
-
-!!! warning "`Group=` must name a group that exists"
-    An adopted v6 user usually has no group of its own, and the unit then fails
-    with `Failed to determine group credentials: No such process` before the
-    engine runs at all. Give the install its own group first —
-    [the migration's Phase E](migrating_from_v6.md#82-give-the-adopted-user-its-own-group)
-    is the procedure and the reasoning.
-
-The alternative is to skip templating entirely: **one ordinary unit per instance**,
-no `@`, no `%i`, no drop-in — every value spelled out, `User=` included. That is
-two files duplicating some thirty identical lines. At two domains either shape is
-defensible; the template earns its indirection from the third onward.
-
-Template the remaining reference units the same way (`%i` throughout). The
-watchdog and rollback units run the two scripts installed once for the whole host
-in `/opt/dedalo/bin/` ([production step 10](production.md#10-run-the-engine-under-systemd));
-every instance passes its own paths and unit names to them:
-
-| Template unit | Derived from | Key change |
-| --- | --- | --- |
-| `dedalo-ts-watchdog@.service` + `.timer` | `deploy/dedalo-ts-watchdog.*` | `ExecStart=/opt/dedalo/bin/dedalo-ts-watchdog.sh --socket /run/dedalo-%i/dedalo_ts.sock --app-dir /home/ded_%i/dedalo --restart-unit dedalo-ts-restart@%i.service --rollback-unit dedalo-ts-rollback@%i.service`; `Requisite=`/`After=dedalo-ts@%i.service`. No `OnFailure=`: the script starts the remedy itself, and an `OnFailure=` restart would race the rollback |
-| `dedalo-ts-restart@.service` | `deploy/dedalo-ts-restart.service` | `ExecStart=/usr/bin/systemctl restart dedalo-ts@%i.service` |
-| `dedalo-ts-rollback@.service` | `deploy/dedalo-ts-rollback.service` | `ExecStart=/opt/dedalo/bin/dedalo-code-rollback.sh --app-dir /home/ded_%i/dedalo --service dedalo-ts@%i --socket /run/dedalo-%i/dedalo_ts.sock` |
-| `dedalo-backup@.service` + `.timer` | `deploy/dedalo-backup.*` | `User=ded_%i`, `EnvironmentFile=/home/ded_%i/private/.env`, `DEDALO_BACKUP_STATE_DIR`, and **every path in every `ExecStart`**: the scripts' location (`/home/ded_%i/dedalo/deploy/…`), each `--dir`, `--dest` and `--source` (`/home/ded_%i/private/…`, `/home/ded_%i/backups/…`). The database and media keys are read from that `.env` by name, so they need no change. Keep the site-builder store in one instance's unit only, or in none, since it covers the whole host. In every unit that drops it, remove `site_builder` from `Environment=DEDALO_BACKUP_EXPECTED_STORES` (or the run reports it MISSING and fails) and move `--last` to the last `ExecStart` that remains (or nothing reports the run's verdict) |
-
-## 3. Provision a domain
-
-Repeat this block per customer. `SITE` is a short slug (`site1`, `archivo_x`).
-
-```shell
-SITE=site1
-
-# Service user and directories
-adduser --system --group --home /home/ded_$SITE --shell /usr/sbin/nologin ded_$SITE
-mkdir -p /srv/dedalo/$SITE/media
-chown ded_$SITE:ded_$SITE /srv/dedalo/$SITE/media
-
-# The pinned runtime, per instance. Read the pin from the repo — do not hardcode.
-sudo -u ded_$SITE bash -c \
-  'curl -fsSL https://bun.sh/install | BUN_INSTALL=$HOME/.bun bash -s bun-v1.4.2'
-
-# The code
-sudo -u ded_$SITE git clone <your-dedalo-remote> /home/ded_$SITE/dedalo
-cd /home/ded_$SITE/dedalo
-sudo -u ded_$SITE /home/ded_$SITE/.bun/bin/bun install --frozen-lockfile --production
-```
-
-Create this instance's **empty** database and owner role (one per site — see
-[Production install](production.md) step 7):
-
-```shell
-sudo -u postgres psql <<SQL
-CREATE USER dedalo_${SITE} PASSWORD 'a-long-random-password';
-CREATE DATABASE dedalo_${SITE} WITH ENCODING='UTF8' OWNER=dedalo_${SITE};
-SQL
-```
-
-Run the CLI installer as the service user, from this instance's clone, with the
-**unique** values as flags ([Production install](production.md#8-run-the-installer)
-step 8 explains each one). `--socket`, `--media-path` and `--media-access-mode` are
-written to this instance's `.env`, and `--media-path` is also the directory the
-installer write-probes, so nothing is appended afterwards. `--ontologies` names this
-instance's domain ontologies; the installer writes `ACTIVE_ONTOLOGY_TLDS` from it:
-
-```shell
-read -rsp 'Database password: '  DB_PASSWORD;                  echo
-read -rsp 'New root password:  '  DEDALO_INSTALL_ROOT_PASSWORD; echo
-export DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
-
-cd /home/ded_$SITE/dedalo
-sudo -u ded_$SITE --preserve-env=DB_PASSWORD,DEDALO_INSTALL_ROOT_PASSWORD \
-  /home/ded_$SITE/.bun/bin/bun run scripts/install.ts \
-    --db-name dedalo_$SITE \
-    --db-user dedalo_$SITE \
-    --db-password "$DB_PASSWORD" \
-    --db-host localhost \
-    --db-port 5432 \
-    --socket /run/dedalo-$SITE/dedalo_ts.sock \
-    --media-path /srv/dedalo/$SITE/media \
-    --media-access-mode publication \
-    --ontologies oh,ich \
-    --entity $SITE \
-    --langs lg-eng,lg-spa \
-    --app-lang lg-eng \
-    --data-lang lg-eng
-
-unset DB_PASSWORD DEDALO_INSTALL_ROOT_PASSWORD
-```
-
-Then enable the services and timers for this instance:
-
-```shell
-systemctl enable --now dedalo-ts@$SITE \
-                       dedalo-ts-watchdog@$SITE.timer \
-                       dedalo-backup@$SITE.timer
-```
-
-## Reverse proxy: one virtual host per domain
-
-Follow [Reverse proxy and TLS](reverse_proxy.md) for the load-bearing details (the
-root rule, the media rule files, the timeouts). Per domain you add **one virtual
-host**, pointing at **this instance's** socket and `MEDIA_PATH`. Use whichever web
-server you already run — nginx and Apache both work.
-
-### nginx
-
-Add one `upstream`, one `server{}`, and the http-scope media map include:
-
-```nginx
-# http{} scope — this instance's generated map:
-include /srv/dedalo/site1/dedalo/media/dedalo_media_protection_map.nginx.conf;
-upstream dedalo_site1 { server unix:/run/dedalo-site1/dedalo_ts.sock; }
-
-server {
-    listen 443 ssl; http2 on;
-    server_name site1.example.org;
-    ssl_certificate     /etc/letsencrypt/live/site1.example.org/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/site1.example.org/privkey.pem;
-
-    root /srv/dedalo/site1;            # THE ROOT RULE: root + /dedalo/media/… == MEDIA_PATH
-    client_max_body_size 300m;
-
-    include /srv/dedalo/site1/dedalo/media/dedalo_media_protection.nginx.conf;
-    open_file_cache off;
-
-    # Liveness probe at the origin root — one per domain, each to its OWN
-    # instance. See [Reverse proxy](reverse_proxy.md) for why omitting it makes a
-    # healthy engine look down.
-    location = /health { proxy_pass http://dedalo_site1; }
-
-    location ~ ^/(api/v1/|dedalo/core/api/) {
-        proxy_pass http://dedalo_site1;
-        proxy_buffering off;
-        proxy_read_timeout 300s;
-        proxy_set_header Host            $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    }
-    location /dedalo/lib/                            { proxy_pass http://dedalo_site1; }
-    location /dedalo/tools/                          { proxy_pass http://dedalo_site1; }
-    location /dedalo/core/tools_common/              { proxy_pass http://dedalo_site1; }
-    location = /dedalo/core/component_text_area/tag/ { proxy_pass http://dedalo_site1; }
-    location /dedalo/install/import/ontology/        { proxy_pass http://dedalo_site1; }
-    location /dedalo/install/code/                   { proxy_pass http://dedalo_site1; }
-    location /dedalo/install/import/hierarchy/       { proxy_pass http://dedalo_site1; }
-    location /dedalo/ai_models/                      { proxy_pass http://dedalo_site1; }
-    location /dedalo/upload_tmp/                     { proxy_pass http://dedalo_site1; }
-    location /dedalo/export/artifact/                { proxy_buffering off; proxy_pass http://dedalo_site1; }
-
-    location /dedalo/ {
-        alias /home/ded_site1/dedalo/client/dedalo/;
-        etag on;
-        add_header Cache-Control "no-cache";
-    }
-    location = / { return 302 /dedalo/core/page/; }
-    location   / { return 404; }
-}
-```
-
-### Apache
-
-Enable the modules once for the box (`a2enmod ssl headers http2 rewrite proxy
-proxy_http`), then add one `<VirtualHost>` per domain. The `ProxyPass` rules must
-come **before** the aliases, and `Alias /dedalo/media` before `Alias /dedalo` — the
-first match wins. Every path points at **this instance's** socket, media and clone:
-
-```apache
-<VirtualHost *:443>
-    ServerName site1.example.org
-    Protocols h2 http/1.1
-
-    SSLEngine on
-    SSLCertificateFile    /etc/letsencrypt/live/site1.example.org/fullchain.pem
-    SSLCertificateKeyFile /etc/letsencrypt/live/site1.example.org/privkey.pem
-    Include /etc/letsencrypt/options-ssl-apache.conf
-
-    # An EMPTY directory — nothing is ever served from it (see "The DocumentRoot"
-    # below). One shared /var/www/empty serves every vhost on the box.
-    DocumentRoot /var/www/empty
-
-    ProxyPreserveHost On
-    # >= SERVER_IDLE_TIMEOUT_S (255)
-    ProxyTimeout 300
-
-    # --- Liveness probe → THIS instance's socket -------------------------------
-    # At the ORIGIN ROOT, one per domain. See [Reverse proxy](reverse_proxy.md):
-    # without it Apache resolves /health against the DocumentRoot and the
-    # maintenance widget reports a healthy engine as down.
-    ProxyPass        /health unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/health
-    ProxyPassReverse /health unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/health
-
-    # --- API + dynamic routes → THIS instance's socket -------------------------
-    ProxyPass /api/v1/                              unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/api/v1/
-    ProxyPass /dedalo/core/api/                     unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/core/api/
-    ProxyPass /dedalo/lib/                          unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/lib/
-    ProxyPass /dedalo/tools/                        unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/tools/
-    ProxyPass /dedalo/core/tools_common/            unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/core/tools_common/
-    ProxyPass /dedalo/core/component_text_area/tag/ unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/core/component_text_area/tag/
-    ProxyPass /dedalo/install/import/ontology/      unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/import/ontology/
-    ProxyPass /dedalo/install/code/                 unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/code/
-    ProxyPass /dedalo/install/import/hierarchy/     unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/install/import/hierarchy/
-    ProxyPass /dedalo/ai_models/                    unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/ai_models/
-    ProxyPass /dedalo/upload_tmp/                   unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/upload_tmp/
-    ProxyPass /dedalo/export/artifact/              unix:/run/dedalo-site1/dedalo_ts.sock|http://localhost/dedalo/export/artifact/
-
-    # Media and the client tree are served from disk by Apache, never proxied.
-    ProxyPass /dedalo/media !
-    ProxyPass /dedalo       !
-
-    # --- Entry points: the client tree has no index above core/page/ -----------
-    # Must precede the aliases.
-    RedirectMatch 302 "^/dedalo/?$"      /dedalo/core/page/
-    RedirectMatch 302 "^/dedalo/core/?$" /dedalo/core/page/
-    RedirectMatch 302 "^/$"              /dedalo/core/page/
-
-    # --- Media: the generated .htaccess lives inside THIS instance's MEDIA_PATH -
-    Alias /dedalo/media /srv/dedalo/site1/dedalo/media
-    <Directory /srv/dedalo/site1/dedalo/media>
-        # WITHOUT AllowOverride the generated .htaccess is ignored — silently, and
-        # OPEN. This single line is the whole media gate on Apache.
-        AllowOverride All
-        Options -Indexes -ExecCGI
-        Require all granted
-    </Directory>
-
-    # --- Client static files, from THIS instance's clone -----------------------
-    Alias /dedalo /home/ded_site1/dedalo/client/dedalo
-    <Directory /home/ded_site1/dedalo/client/dedalo>
-        Options -Indexes
-        AllowOverride None
-        Require all granted
-    </Directory>
-
-    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
-    Header always set X-Content-Type-Options "nosniff"
-    Header always set X-Frame-Options "SAMEORIGIN"
-</VirtualHost>
-```
-
-#### The DocumentRoot
-
-Apache has no vhost without a DocumentRoot. If you leave the line out, the vhost
-inherits the server-wide one (often `/var/www/html`), and any path the vhost does
-not route is served from there. Point it at an **empty directory** instead, created
-once for the whole box:
-
-```shell
-mkdir -p /var/www/empty            # Apache warns at start if it is missing
-```
-
-- **Nothing is ever served from it.** Every real path is proxied to the instance's
-  socket or mapped by an `Alias`. An unrouted path answers `403` with `AH01630` in
-  the error log; on a path the vhost *should* serve (`/health` is the classic), that
-  means the route is missing. Add the route, never widen the DocumentRoot.
-- **One shared directory is enough.** It holds no files, so it isolates nothing and
-  leaks nothing. The per-instance boundary is the socket and the two `Alias` lines,
-  not the DocumentRoot. A per-tenant `/var/www/empty/<site>` works too, but it adds
-  no isolation.
-- **Never point it at the clone, `private/` or `MEDIA_PATH`.** A DocumentRoot on the
-  clone serves the repo tree to unrouted paths; on `private/` it exposes `.env`;
-  on the media tree it serves media at a second, unplanned URL.
-
-### Shared to both
-
-Give the proxy user membership of **each** instance's group so it can connect to
-that socket and read that client and media tree — the proxy is the shared gate, so
-being in every group is expected:
-
-```shell
-usermod -aG ded_site1 www-data     # nginx on RHEL: usermod -aG ded_site1 nginx
-systemctl reload apache2           # or: systemctl reload nginx
-```
-
-A reload is enough: the root master process spawns fresh workers, and each worker
-takes the proxy user's groups as it starts, the new membership included.
-
-Issue a certificate per domain: `certbot --apache -d site1.example.org` (or
-`--nginx`; or one certificate with `-d` repeated).
-
-## Pitfalls specific to running several instances
-
-- **Socket collision.** Never leave `SERVER_UNIX_SOCKET` at its default — two
-  instances at `/tmp/dedalo_ts.sock` mean the second refuses to boot. Give each a
-  path under its own `RuntimeDirectory`.
-- **Adopted users share the web server's group.** An install upgraded from v6
-  keeps `www-data` as its service user's primary group, and two such instances
-  therefore have **no boundary between them**: each one's socket is writable, and
-  each one's files readable, by anything in that group. It all works, which is why
-  it survives. Give every instance its own group —
-  [Phase E](migrating_from_v6.md#82-give-the-adopted-user-its-own-group).
-- **`DB_POOL_MAX` is per process.** Budget the **sum** across all instances — plus
-  each diffusion runner and RAG drain — against PostgreSQL's `max_connections`,
-  not each instance in isolation.
-- **Both nginx media includes, or none** (nginx). The map file (http scope) defines
-  a variable the server-scope file needs; include one without the other and nginx
-  refuses to start. This is per instance, so it is easy to half-wire the third
-  domain.
-- **`AllowOverride All` on every media `<Directory>`** (Apache). Without it that
-  instance's generated `.htaccess` is ignored **silently** and its whole media tree
-  is world-readable. Easy to forget on the third vhost.
-- **A `DocumentRoot` on every vhost** (Apache). A vhost without one inherits the
-  server-wide DocumentRoot and serves its contents on unrouted paths. Point each at
-  the empty directory — [The DocumentRoot](#the-documentroot).
-- **Wrong media root reads as a 404.** The proxy path to media must resolve to
-  **this instance's** `MEDIA_PATH` (nginx `root + /dedalo/<media dir>/…`; Apache the
-  `Alias`). A mismatch 404s every media file while the access gate itself works —
-  see [Reverse proxy and TLS](reverse_proxy.md).
-
-## Verify each domain
-
-Run this per instance after enabling it:
-
-- [ ] `curl --fail --unix-socket /run/dedalo-site1/dedalo_ts.sock http://localhost/health`
-      → `200` with `"db":"ok"`.
-- [ ] `curl --fail https://site1.example.org/health` → the same `200`, through the
-      proxy. A `404`/`403` here with the socket probe green means this vhost is
-      missing its `/health` rule.
-- [ ] `https://site1.example.org/dedalo/core/page/` serves the login form over TLS.
-- [ ] Log in, create + save + reload a record; upload an image — the derivative and
-      thumbnail appear.
-- [ ] `curl -I -H 'Range: bytes=0-99' https://site1.example.org/dedalo/media/image/thumb/<file>.jpg`
-      → `206` (proof nothing is in the media byte path).
-- [ ] As `ded_site1`, confirm `/home/ded_site2/private/.env` is **not** readable —
-      the tenant boundary holds.
-- [ ] `systemctl reboot`; every instance, socket and vhost come back on their own.
-
-## Upgrading one domain at a time
-
-Because each instance is its own clone with its own pinned runtime, you upgrade
-them **independently**: run the [upgrade procedure](upgrading.md) against one
-instance's tree, verify it, then move to the next. Nothing forces every domain
-onto the same version at the same moment.
+There is no command that removes a completed instance. `--abort` takes apart only an install that did not finish; on a completed one it undoes only the host steps after the engine install and keeps the instance, its user, its database and its code.

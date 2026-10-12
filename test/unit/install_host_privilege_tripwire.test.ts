@@ -33,7 +33,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { ANSWERS_FILE_SCHEMA } from '../../src/core/install/install_plan.ts';
@@ -49,6 +49,7 @@ import {
 	REPO_ROOT,
 	ROOT_PASSWORD,
 	SCRATCH_DIR,
+	scratchFilePaths,
 	sourceFiles,
 } from '../helpers/install_host_scratch.ts';
 import { reachableModules } from '../helpers/request_path_closure.ts';
@@ -159,10 +160,7 @@ async function runDumped(
 
 /** Every text file under `dir` that holds `needle`. */
 function filesHolding(dir: string, needle: string): string[] {
-	return readdirSync(dir, { recursive: true, withFileTypes: true })
-		.filter((entry) => entry.isFile())
-		.map((entry) => join(entry.parentPath, entry.name))
-		.filter((path) => readFileSync(path, 'utf8').includes(needle));
+	return scratchFilePaths(dir).filter((path) => readFileSync(path, 'utf8').includes(needle));
 }
 
 /** Every secret value found in the log, the files under `root` and the output. */
