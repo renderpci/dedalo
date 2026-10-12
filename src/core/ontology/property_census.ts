@@ -123,11 +123,6 @@ export const RETIRED_PROPERTY_KEYS: Readonly<Record<string, RetiredPropertyKey>>
 		reason: 'v6 common-layer portal list hint (8 nodes); no v7 reader.',
 		replacement: null,
 	},
-	section_config: {
-		reason:
-			'v6 section configuration bag (5 nodes). Section behaviour is read from named keys (section_map, tool_config, widgets), never from this envelope.',
-		replacement: null,
-	},
 	stats_look_at: {
 		reason:
 			'v6 component_relation_common statistics target (5 nodes). No statistics path in this engine reads it.',
