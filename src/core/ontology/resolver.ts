@@ -438,7 +438,11 @@ export async function getTermByTipo(tipo: string, lang: string): Promise<string 
 		model: string | null;
 	}[];
 	if (refuseLabelNode(tipo, rows[0]?.model)) return null;
-	const term = rows[0]?.term ?? null;
+	return termInLang(rows[0]?.term ?? null, lang);
+}
+
+/** getTermByTipo's lang fallback: lang → lg-spa → any non-empty term → null. */
+function termInLang(term: Record<string, string> | null, lang: string): string | null {
 	if (term === null) return null;
 	return term[lang] ?? term['lg-spa'] ?? Object.values(term).find((value) => value) ?? null;
 }

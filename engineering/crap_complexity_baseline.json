@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 750,
-		"functions": 11251,
+		"files": 756,
+		"functions": 11474,
 		"functionsOverCap": 673,
 		"filesOverCap": 258
 	},
@@ -174,7 +174,7 @@
 		"src/core/area/read.ts": 21,
 		"src/core/area/tree.ts": 27,
 		"src/core/area_maintenance/backup.ts": 20,
-		"src/core/area_maintenance/user_stats.ts": 33,
+		"src/core/area_maintenance/user_stats.ts": 29,
 		"src/core/area_maintenance/widgets/check_config.ts": 16,
 		"src/core/area_maintenance/widgets/counters_status.ts": 7,
 		"src/core/area_maintenance/widgets/database_info.ts": 13,
