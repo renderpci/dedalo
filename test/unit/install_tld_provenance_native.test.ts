@@ -55,6 +55,7 @@ import {
 	HIERARCHY_TYPE_TLD,
 } from '../../src/core/ontology/ontology_tipos.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
+import { markExportArtifactsRoot, markMediaRoot } from '../helpers/media_scratch_root.ts';
 import { markProcessesDir } from '../helpers/test_media_root.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -64,6 +65,12 @@ const SCRATCH_DB = `${SCRATCH_PREFIX}${process.pid}`;
 const scratchDir = mkdtempSync(join(tmpdir(), 'dedalo_tldprov_'));
 // Short: macOS caps a unix socket path at 104 bytes.
 const SOCKET = join(tmpdir(), `zztldprov_${process.pid}.sock`);
+/** A marked media root (+ its export store sibling) under scratchDir, swept with it. */
+function scratchMediaRoot(): string {
+	const root = markMediaRoot(join(scratchDir, 'media'));
+	markExportArtifactsRoot(`${root}.export_artifacts`);
+	return root;
+}
 
 const admin: DbConnDescriptor = {
 	database: 'postgres',
@@ -275,6 +282,11 @@ describe('install TLD provenance', () => {
 					SERVER_TCP_PORT: '',
 					DEDALO_DIFFUSION_SCHEDULER_ENABLED: 'false',
 					DEDALO_MEDIA_PROCESSES_DIR: markProcessesDir(join(scratchDir, 'processes')),
+					// Its OWN marked media root: an inherited DEDALO_TEST_MEDIA_ROOT is the SUITE's,
+					// and this server (another database) would claim the suite's export store at
+					// its boot sweep (`<root>.export_artifacts` owner marker names THIS install) —
+					// every later export gate is then refused as a foreign install.
+					DEDALO_TEST_MEDIA_ROOT: scratchMediaRoot(),
 				},
 				stdout: 'pipe',
 				stderr: 'pipe',
