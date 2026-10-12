@@ -397,6 +397,10 @@ const TRIPWIRES = [
 	'test/unit/install_screen_model_tripwire.test.ts',
 	'test/unit/install_plain_parity_tripwire.test.ts',
 	'test/unit/install_plain_secrets_tripwire.test.ts',
+	'test/unit/install_tui_parity_tripwire.test.ts',
+	'test/unit/install_tui_secrets_tripwire.test.ts',
+	'test/unit/install_tui_restore_tripwire.test.ts',
+	'test/unit/opentui_confinement_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

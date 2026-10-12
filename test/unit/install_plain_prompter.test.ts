@@ -21,7 +21,12 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import type { Option, Question } from '../../src/core/install/screen_model.ts';
+import {
+	buildScreens,
+	type Option,
+	type Question,
+	type Screen,
+} from '../../src/core/install/screen_model.ts';
 import {
 	BACK,
 	multiCommand,
@@ -34,7 +39,7 @@ import {
 	ttyInstallPrompter,
 } from '../../src/core/install/ui_plain/prompter.ts';
 import { sanitizeLine, wrap, wrapWidth } from '../../src/core/install/ui_plain/terminal.ts';
-import { autoTerminal } from '../helpers/install_plain_script.ts';
+import { autoTerminal, modelInput } from '../helpers/install_plain_script.ts';
 
 /** A question of `kind` (the model's shape; only what the prompter reads matters). */
 function question(kind: Question['kind'], extra: Partial<Question> = {}): Question {
@@ -464,7 +469,19 @@ describe('the scripted prompter (the parity gates stand on it)', () => {
 		expect(await prompter.choice(question('choice'))).toBe('x');
 		expect(await prompter.acknowledge(question('acknowledge'))).toBe(true);
 		expect(await prompter.secret(question('secret'))).toBe(QUIT);
-		expect(await prompter.line('review', 'review')).toBe('install');
-		expect(await prompter.line('review', 'review')).toBe('quit');
+		const reviewScreen = buildScreens(modelInput({ route: 'developer' })).find(
+			(screen) => screen.id === 'review',
+		) as Screen;
+		const view = {
+			screen: reviewScreen,
+			lines: [],
+			canInstall: true,
+			editable: [],
+			command: '',
+			errors: [],
+		};
+		expect(await prompter.review(view)).toBe('install');
+		expect(await prompter.review(view)).toBe('quit');
+		expect(prompter.asked.filter((id) => id === 'review')).toEqual(['review', 'review']);
 	});
 });

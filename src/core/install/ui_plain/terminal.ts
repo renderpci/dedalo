@@ -18,6 +18,8 @@
  * (`Aborted`).
  */
 
+import { Aborted } from '../prompter_contract.ts';
+
 /** The input side of a terminal (process.stdin's shape). */
 export interface TtyInput {
 	readonly isTTY?: boolean;
@@ -53,8 +55,9 @@ const ABORT_KEYS: ReadonlySet<string> = new Set([CTRL_C, CTRL_D]);
 const BACKSPACE: ReadonlySet<string> = new Set(['\x7f', '\b']);
 const ENTER: ReadonlySet<string> = new Set(['\r', '\n']);
 
-/** Thrown inside the reader when the operator aborts (Ctrl-C, Ctrl-D, SIGINT). */
-export class Aborted extends Error {}
+// Thrown inside the reader when the operator aborts (Ctrl-C, Ctrl-D, SIGINT) —
+// declared with the front-end contract (prompter_contract.ts), re-exported here.
+export { Aborted };
 
 /**
  * One raw-mode session: characters arrive through the `data` listener into a
@@ -189,62 +192,6 @@ export async function readLine(
 	}
 }
 
-/* ── sanitize (copied from host_agent init/report.ts) ──────────────────────────── */
+/* ── sanitize + layout: moved to ../display_text.ts (shared with the full-screen UI) ── */
 
-/** ESC sequences: CSI (`ESC [ … final`), OSC/DCS/APC/PM/SOS (`ESC ] … BEL|ST`), and two-byte escapes. */
-const ESCAPE_SEQUENCES =
-	// biome-ignore lint/suspicious/noControlCharactersInRegex: matching escape sequences IS the point — this makes a line inert for a terminal
-	/\x1b\[[0-?]*[ -/]*[@-~]|\x1b[\]PX^_][\s\S]*?(?:\x07|\x1b\\|$)|\x1b[ -/]*[0-~]?/g;
-/** C0 controls except `\n`, DEL, and the C1 range (U+0080–U+009F, the 8-bit CSI/OSC introducers). */
-// biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters IS the point — this strips them
-const CONTROLS = /[\x00-\x09\x0b-\x1f\x7f\x80-\x9f]/g;
-
-/**
- * One line made inert for a terminal: ESC sequences removed first (their
- * parameters with them), a tab becomes one space, then every other control is
- * removed. EVERY string the plain mode prints passes here — a catalog name from
- * an ontology server is untrusted.
- */
-export function sanitizeLine(line: string): string {
-	return line.replace(ESCAPE_SEQUENCES, '').replace(/\t/g, ' ').replace(CONTROLS, '');
-}
-
-/* ── layout ──────────────────────────────────────────────────────────────────── */
-
-/** The wrap width: the terminal's columns clamped to 40-100; 80 when unknown. */
-export function wrapWidth(columns: number | undefined): number {
-	if (columns === undefined || !Number.isFinite(columns) || columns <= 0) return 80;
-	return Math.min(100, Math.max(40, Math.floor(columns)));
-}
-
-/** One long line broken at single spaces (continuations: its leading spaces + `indent`). */
-function breakLine(paragraph: string, width: number, indent: string): string[] {
-	const columns = (value: string): number => Array.from(value).length;
-	const leading = /^ */.exec(paragraph)?.[0] ?? '';
-	const lines: string[] = [];
-	let line = '';
-	for (const word of paragraph.slice(leading.length).split(' ')) {
-		if (line === '') line = `${leading}${word}`;
-		else if (columns(`${line} ${word}`) <= width) line = `${line} ${word}`;
-		else {
-			lines.push(line);
-			line = `${leading}${indent}${word}`;
-		}
-	}
-	return [...lines, line];
-}
-
-/**
- * `text` wrapped at single spaces to `width` columns. A line that fits is kept
- * byte for byte (its alignment spaces included); a longer one is broken, every
- * continuation line prefixed with the line's own leading spaces plus `indent`.
- * A word longer than the width (a path, a URL) stays whole on its own line.
- * Existing newlines are kept.
- */
-export function wrap(text: string, width: number, indent = ''): string[] {
-	return text
-		.split('\n')
-		.flatMap((paragraph) =>
-			Array.from(paragraph).length <= width ? [paragraph] : breakLine(paragraph, width, indent),
-		);
-}
+export { sanitizeLine, wrap, wrapWidth } from '../display_text.ts';

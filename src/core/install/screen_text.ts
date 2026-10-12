@@ -263,7 +263,7 @@ export const ROUTE_TEXT = Object.freeze({
 	},
 	trial: {
 		label: 'Trial',
-		badge: 'Docker · no media protection',
+		badge: 'Docker without media protection',
 		description:
 			'The Docker stack WITHOUT media access control: any file is served to anyone with its URL. Evaluation only.',
 	},
@@ -403,4 +403,22 @@ export const REVIEW_TEXT = Object.freeze({
 	passwordSet: 'root · password set',
 	passwordMissing: 'root · password NOT set',
 	notWritten: 'not written (engine default)',
+});
+
+/**
+ * The end of a run, in ONE place: the plain CLI prints these sentences and the
+ * full-screen Done screen shows them (scripts/install.ts plainReporter,
+ * ui/screens/done.ts).
+ */
+export const DONE_TEXT = Object.freeze({
+	complete: (verified: boolean) => `install complete${verified ? ' — root login verified' : ''}`,
+	supervisor:
+		'Start the server under its supervisor (systemd: `systemctl enable --now dedalo-ts` — docs/install/production.md) or with `bun run start:supervised`; plain `bun run start` is unsupervised and cannot take code updates.',
+	aborted: 'install aborted — what the install created is removed; the database itself is kept.',
+	browser:
+		'Then open the web interface and log in as root: Maintenance installs further thesauri and toponymies, restores a backup and offers updates.',
+	written: (path: string) => `answers written to ${path} (no secret is in it)`,
+	writtenNext:
+		'Run the install from them with: bun run scripts/install.ts --answers <file> (the passwords via DEDALO_INSTALL_* or --secrets-stdin).',
+	saltStored: "A generated secret is also stored in the install's private .env (0600).",
 });

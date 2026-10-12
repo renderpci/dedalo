@@ -45,9 +45,9 @@ import {
 } from '../../src/core/install/front_end.ts';
 import { answersFromCliArgs } from '../../src/core/install/install_plan.ts';
 import { childProbes, type ProbeProcess } from '../../src/core/install/install_probe_client.ts';
+import { runInteractiveInstall } from '../../src/core/install/install_session.ts';
 import { passwordFeedback } from '../../src/core/install/screen_model.ts';
 import { ttyInstallPrompter } from '../../src/core/install/ui_plain/prompter.ts';
-import { runPlainInstall } from '../../src/core/install/ui_plain/run_plain.ts';
 import {
 	autoTerminal,
 	FakeTtyOutput,
@@ -110,7 +110,7 @@ async function drivenRun(review: string[]) {
 		return { ok: true, msg: 'reached \x1b]0;owned\x07\x1b[31mdb\x1b[0m' };
 	};
 	try {
-		const result = await runPlainInstall({
+		const result = await runInteractiveInstall({
 			prompter: ttyInstallPrompter({
 				input: terminal.input,
 				output: terminal.output,

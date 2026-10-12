@@ -583,7 +583,85 @@ systemd units, backups — are still done by hand
 the Review lists them.
 
 If an install was interrupted, the interactive installer says so first and
-offers to resume it (`resume`) instead of asking anything.
+offers **resume**, **abort** or **quit** instead of asking anything. Abort asks
+you to type the database name back (it resets that database to empty), and
+asks the database password only when the reset needs it and neither the
+environment nor the install's `.env` supplies it — the same rules as
+[`--abort`](#undoing-an-install-abort).
+
+### The full-screen installer
+
+At a capable terminal the screens are drawn full-screen: a header with the
+release and the route you picked, a left rail of the route's steps (`✓` done,
+`›` current, `·` still to come), the current step in the middle, and the keys
+it takes at the bottom. The Welcome and Done screens show the Dédalo logo when
+the terminal has at least 30 rows.
+
+It is used when standard input and standard output are both terminals, `TERM`
+is set and not `dumb`, the terminal is at least 80×24, and you did not pass
+`--plain`. Anything else gets the [plain mode](#plain-mode) — the same
+questions, the same answers, the same install. Between 80×24 and roughly
+104×30 the layout tightens (a compact rail of numbers, shorter descriptions);
+if you shrink the window below 80×24 while it runs, the installer asks you to
+enlarge it and keeps your place (no key answers a question you cannot see;
+Ctrl-C still stops). `NO_COLOR` keeps the full screen, in your
+terminal's own colours.
+
+If the full-screen interface cannot start — the terminal library has no native
+build for this machine — the installer prints one line and continues in plain
+mode:
+
+```text
+full-screen UI unavailable (<reason>) — continuing in plain mode
+```
+
+On a musl-based Linux (Alpine) set `OPENTUI_LIBC=musl` before running the
+installer so the musl build of the terminal library is chosen; without it the
+glibc build is tried, fails, and you get the plain mode. Use `--plain` with a
+screen reader.
+
+| Where | Keys |
+| --- | --- |
+| Anywhere | **Ctrl-C** stops the installer (exit `130`); **Ctrl-Q** asks "Quit?" (exit `0`; an unfinished install is kept for `--resume`); **F1** help (or **?** where you are not typing); **Esc** back to the previous step |
+| A text or password field | **Enter** or **Tab** continue; **Shift-Tab** the previous question of this step; ←→, Backspace, Ctrl-U (clear), Ctrl-W (delete a word) edit; **Ctrl-D** stops (exit `130`) |
+| A choice | ↑↓, PgUp/PgDn, Home/End move; **Enter** chooses |
+| A list (ontologies, thesauri, languages) | type to filter; ↑↓ move; **Space** ticks or unticks; **/** starts a new filter; **Esc** clears the filter, then goes back; **Enter** continues |
+| A failed check | **r** retry, **e** edit the answers, **y** keep them untested (where allowed), **q** quit |
+| The Review | **Enter** install (then type `yes`), **e** + a step number edit it, **w** + a path write an answers file, **Esc** edit the last step, **Ctrl-Q** quit |
+| The install | **l** shows the full log; **Ctrl-C** stops — resume later |
+| Done | **Enter** or **q** closes; Ctrl-C closes too, with the install's own exit code |
+
+The screens are the steps listed above, plus:
+
+- **Lists** show what each entry declares (`also installs …`, `needed by
+  rsc`), `declined` for a dependency you unticked, and `Empty — you fill it`
+  for a thesaurus that ships only its definition. A locked entry says why
+  instead of unticking.
+- **Passwords** are drawn as `•`, typed twice; the root password's policy rules
+  turn from ✗ to ✓ as you type it — the password itself is never drawn.
+- **Checks** show their result in place; a failed one offers retry / edit /
+  keep untested / quit.
+- **The Review** shows what will happen, any errors, and the equivalent command
+  line (no secret in it). On the docker and trial routes ("Docker without
+  media protection") Enter does not install — write the answers file instead.
+- **Install** lists every step with its state (`◐` running, `✓` done, `↷`
+  verified from an earlier run, `✗` failed) and its time. Ctrl-C here stops the
+  running step at once and records it failed; `--resume` runs it again later.
+- **Done** shows the outcome; on a fresh install, the generated
+  `DEDALO_SALT_STRING` **once** — copy it then (the mouse is not captured, so
+  your terminal's own selection works; the value is also kept in the private
+  `.env`, mode 0600). Then what comes next: start the supervisor, then open the
+  web interface. Thesauri, toponymies, restores and updates after the install
+  are done in the browser (**Maintenance**), not here. The screen stays until
+  you press a key.
+
+Whatever way it ends — quit, Ctrl-C, an error, a signal — the installer gives
+the terminal back as it found it and prints the closing message on your normal
+screen. Exit codes: `0` installed or quit, `1` refused or failed, `130`
+interrupted (Ctrl-C, Ctrl-D, SIGINT), `143` terminated (SIGTERM). On the Done
+screen the install is already over: Ctrl-C or a signal only closes it, and the
+exit code (and the closing message, with the resume hint of a failed run) is the
+install's.
 
 **Standard input must be a terminal.** An interactive run with a piped or
 redirected standard input is refused before anything is read or written —

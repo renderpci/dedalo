@@ -6,11 +6,14 @@
  *
  * ONE walker for the gates that hold something OFF (or ON) that path —
  * test/unit/sync_io_on_request_path_tripwire.test.ts (no sync unbounded I/O on
- * it) and test/unit/install_screen_model_tripwire.test.ts (the terminal
- * installer's UI, screen model and probe modules are never on it) — so the two
- * cannot disagree on what "reachable" means.
+ * it), test/unit/install_screen_model_tripwire.test.ts (the terminal
+ * installer's UI, screen model and probe modules are never on it) and
+ * test/unit/opentui_confinement_tripwire.test.ts (the full-screen UI and its
+ * loader are never on it) — so they cannot disagree on what "reachable" means.
+ * A side-effect import (`import './x.ts'`, no `from`) IS a static edge — the
+ * server loads modules that way (src/server.ts registers the component models).
  *
- * HONEST LIMITATION: a regex walk of `from '…'` / `import('…')` with a RELATIVE
+ * HONEST LIMITATION: a regex walk of `from '…'` / `import '…'` / `import('…')` with a RELATIVE
  * literal specifier; a computed specifier or a non-relative import is
  * invisible. Reads tracked source only; writes nothing.
  */
@@ -27,13 +30,16 @@ export const REQUEST_PATH_ROOTS: readonly string[] = Object.freeze([
 ]);
 
 const STATIC_IMPORT_RE = /\bfrom\s*['"](\.[^'"]*)['"]/g;
+/** `import './x.ts'` — a static edge with no binding (no `from`). */
+const SIDE_EFFECT_IMPORT_RE = /\bimport\s*['"](\.[^'"]*)['"]/g;
 const DYNAMIC_IMPORT_RE = /\bimport\s*\(\s*['"](\.[^'"]*)['"]\s*\)/g;
 
 /** The relative `.ts` modules `file` (absolute) imports — static and, by default, dynamic. */
 export function directImports(file: string, includeDynamic = true): string[] {
 	if (!existsSync(file)) return [];
 	const source = readFileSync(file, 'utf8');
-	const patterns = includeDynamic ? [STATIC_IMPORT_RE, DYNAMIC_IMPORT_RE] : [STATIC_IMPORT_RE];
+	const statics = [STATIC_IMPORT_RE, SIDE_EFFECT_IMPORT_RE];
+	const patterns = includeDynamic ? [...statics, DYNAMIC_IMPORT_RE] : statics;
 	const targets: string[] = [];
 	for (const pattern of patterns) {
 		for (const match of source.matchAll(pattern)) {

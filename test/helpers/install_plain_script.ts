@@ -1,7 +1,7 @@
 /**
  * DRIVING THE PLAIN INTERACTIVE INSTALLER WITHOUT A TERMINAL (terminal
  * installer phase 2, 2026-10-12) — for the gates over
- * src/core/install/ui_plain/run_plain.ts:
+ * src/core/install/install_session.ts (the ONE walker, plain or full-screen):
  *
  *  - `scriptForPlan`: the PlainScript (scriptedInstallPrompter) that answers
  *    the screens so that the plain mode decides the given plan. The question

@@ -3,7 +3,8 @@
  * model question (screen_model.ts Question) is asked on a line terminal. It
  * asks; it never decides: the options, the default, the errors and the locks
  * all come from the question, and the answer goes back through the model's
- * applyAnswer (run_plain.ts).
+ * applyAnswer (install_session.ts — the ONE walker; ui/prompter.ts is the
+ * full-screen twin of this prompter).
  *
  * THE LINE CONTRACT (installer_reference.md §Plain mode):
  *  - every answer may be `back` (the previous screen) or `quit`; Ctrl-C /
@@ -30,10 +31,41 @@
  * stdout, or stderr / /dev/tty when stdout is redirected.
  */
 
-import { hasIllegalControlCharacter } from '../install_plan.ts';
-import type { Option, OptionMark, Question, Screen } from '../screen_model.ts';
+import {
+	filtered,
+	MULTI_PAGE,
+	type MultiOutcome,
+	type MultiState,
+	markWords,
+	multiCommand,
+	multiResult,
+	multiState,
+} from '../multi_select.ts';
 import {
 	Aborted,
+	BACK,
+	confirmDefault,
+	EntriesNeverMatched,
+	entryRefusal,
+	FIELD_BACK,
+	type InstallPrompter,
+	isNav,
+	type Nav,
+	navOf,
+	newSecretEntry,
+	type PasswordFeedback,
+	QUIT,
+	type ResumeView,
+	type ReviewView,
+	SECRET_ATTEMPTS,
+	SECRET_TEXT,
+	type SecretStep,
+	secretEntryStep,
+	suggested,
+	textAnswerOf,
+} from '../prompter_contract.ts';
+import type { Option, Question, Screen } from '../screen_model.ts';
+import {
 	RawReader,
 	readLine,
 	sanitizeLine,
@@ -43,140 +75,24 @@ import {
 	wrapWidth,
 } from './terminal.ts';
 
-/** A navigation answer: the previous screen, or leave. */
-export type Nav = { readonly nav: 'back' | 'quit' };
-export const BACK: Nav = Object.freeze({ nav: 'back' });
-export const QUIT: Nav = Object.freeze({ nav: 'quit' });
-
-export function isNav(value: unknown): value is Nav {
-	return value === BACK || value === QUIT;
-}
-
-/** The root password's live verdict (screen_model.ts passwordFeedback). */
-export type PasswordFeedback = (password: string) => {
-	rules: { id: string; text: string; ok: boolean }[];
-	errors: string[];
+// The contract and the multi-select moved to UI-neutral modules (phase 3):
+// re-exported so the plain mode's callers keep one import.
+export {
+	BACK,
+	FIELD_BACK,
+	type InstallPrompter,
+	isNav,
+	MULTI_PAGE,
+	type MultiState,
+	markWords,
+	multiCommand,
+	multiResult,
+	multiState,
+	type Nav,
+	type PasswordFeedback,
+	QUIT,
+	SECRET_ATTEMPTS,
 };
-
-/** Secrets: how many mismatching pairs before the question is aborted. */
-export const SECRET_ATTEMPTS = 3;
-
-/** A multi-select page. */
-export const MULTI_PAGE = 20;
-
-export interface InstallPrompter {
-	/** A real terminal (or a script that plays one). */
-	readonly interactive: boolean;
-	/** A screen's header, description, notices, placeholder and help. */
-	screen(screen: Screen): void;
-	say(lines: readonly string[]): void;
-	text(question: Question): Promise<string | Nav>;
-	choice(question: Question): Promise<string | Nav>;
-	multi(question: Question): Promise<string[] | Nav>;
-	secret(question: Question, feedback?: PasswordFeedback): Promise<string | Nav>;
-	confirm(question: Question): Promise<boolean | Nav>;
-	acknowledge(question: Question): Promise<boolean | Nav>;
-	/** A free line (the Review's command, a probe's next step, a test-mail recipient). */
-	line(id: string, prompt: string): Promise<string | Nav>;
-	/** A generated secret, shown once — only on a terminal; answers whether it reached one. */
-	showOnce(lines: readonly string[]): boolean;
-	/**
-	 * Why the prompter itself ended the session, when it did: `interrupted`
-	 * (Ctrl-C, Ctrl-D, SIGINT) or `refused` (secret entries that never matched);
-	 * null when every QUIT it answered was typed.
-	 */
-	stopReason?(): 'interrupted' | 'refused' | null;
-}
-
-/** Three hidden entries that never matched: the session ends as REFUSED, not interrupted. */
-class EntriesNeverMatched extends Aborted {}
-
-/** `back` / `quit` typed as an answer. */
-function navOf(answer: string): Nav | null {
-	const word = answer.trim().toLowerCase();
-	return word === 'back' ? BACK : word === 'quit' ? QUIT : null;
-}
-
-/** A default as shown in brackets. */
-function shownDefault(value: unknown): string {
-	if (value === null || value === undefined) return '';
-	return Array.isArray(value) ? value.join(',') : String(value);
-}
-
-/**
- * What an empty answer takes: the current value (an edit re-asks with it) — or,
- * when the model refuses that value, the plan's default (never offer back an
- * answer that is refused).
- */
-function suggested(question: Question): string {
-	return question.errors.length > 0
-		? shownDefault(question.default)
-		: shownDefault(question.value ?? question.default);
-}
-
-// ── option marks, as words ───────────────────────────────────────────────────
-
-/** Each mark kind's words (screen readers read words, not glyphs). */
-const MARK_WORDS: Readonly<Record<OptionMark['kind'], (mark: OptionMark) => string>> =
-	Object.freeze({
-		core: () => 'always installed',
-		default: () => 'default',
-		ships_terms: () => 'ships terms',
-		empty: () => 'definition, you fill it',
-		needed_by: (mark: OptionMark) => neededByWords(mark),
-		also_installs: (mark: OptionMark) =>
-			mark.kind === 'also_installs' ? `also installs ${mark.tlds.join(', ')}` : '',
-		undeclared: () => 'dependencies not declared',
-		note: () => '',
-	});
-
-function neededByWords(mark: OptionMark): string {
-	if (mark.kind !== 'needed_by') return '';
-	return `${mark.mandatory ? 'needed by' : 'recommended by'} ${mark.by.join(', ')}`;
-}
-
-/** The words of an option's marks. */
-export function markWords(option: Option): string {
-	return option.marks
-		.map((mark) => MARK_WORDS[mark.kind](mark))
-		.filter((word) => word !== '')
-		.join('; ');
-}
-
-/** Why a locked option cannot be unticked. */
-function lockReason(option: Option): string {
-	const needed = option.marks.find((mark) => mark.kind === 'needed_by');
-	return needed?.kind === 'needed_by'
-		? `${option.value} is needed by ${needed.by.join(', ')} and stays installed`
-		: `${option.value} is always installed`;
-}
-
-// ── the multi-select ─────────────────────────────────────────────────────────
-
-/** The multi-select's state between commands. */
-export interface MultiState {
-	readonly options: readonly Option[];
-	selected: Set<string>;
-	/** What the operator unticked in this session (a deliberate decline a later tick respects). */
-	unticked: Set<string>;
-	filter: string;
-	page: number;
-}
-
-/** Does `option` match the filter word? */
-function matches(option: Option, word: string): boolean {
-	return [option.value, option.label, option.group ?? ''].some((text) =>
-		text.toLowerCase().includes(word),
-	);
-}
-
-/** The options the current filter shows, with their 1-based numbers. */
-function filtered(state: MultiState): { number: number; option: Option }[] {
-	const word = state.filter.toLowerCase();
-	return state.options
-		.map((option, index) => ({ number: index + 1, option }))
-		.filter(({ option }) => word === '' || matches(option, word));
-}
 
 /** One option row: `[x]   3  es  Spain  (ships terms)`. */
 function optionRow(number: number, option: Option, selected: boolean): string {
@@ -223,187 +139,6 @@ export function pageLines(state: MultiState, all: boolean): string[] {
 	];
 }
 
-/** The ticked options that declare `value` MANDATORY (it cannot be unticked while they are ticked). */
-function mandatoryDeclarers(state: MultiState, value: string): string[] {
-	return state.options
-		.filter(
-			(other) =>
-				other.value !== value &&
-				state.selected.has(other.value) &&
-				other.declares.some((item) => item.tld === value && item.mandatory),
-		)
-		.map((other) => other.value);
-}
-
-/**
- * Tick `option` AND what it declares, transitively — as the wizard pre-ticks a
- * dependency and the flags install it (`--ontologies zzsma` installs zzsma's
- * optional zzsmb unless declined). An OPTIONAL dependency the operator unticked
- * in this session stays unticked (a deliberate decline); a mandatory one is
- * ticked regardless.
- */
-function tickWithDeclared(state: MultiState, option: Option): void {
-	const byValue = new Map(state.options.map((item) => [item.value, item]));
-	const queue: Option[] = [option];
-	while (queue.length > 0) {
-		const current = queue.shift() as Option;
-		state.selected.add(current.value);
-		queue.push(...declaredToTick(state, byValue, current));
-	}
-}
-
-/** The declared options of `current` still to tick (offered, unticked, not declined unless mandatory). */
-function declaredToTick(
-	state: MultiState,
-	byValue: ReadonlyMap<string, Option>,
-	current: Option,
-): Option[] {
-	return current.declares
-		.filter(
-			(declared) =>
-				!state.selected.has(declared.tld) &&
-				(declared.mandatory || !state.unticked.has(declared.tld)),
-		)
-		.map((declared) => byValue.get(declared.tld))
-		.filter((next): next is Option => next !== undefined);
-}
-
-/**
- * Toggle one option (a locked one — or one a ticked option declares mandatory —
- * answers its reason instead). Ticking ticks its declared closure.
- */
-function toggle(state: MultiState, option: Option, say: (line: string) => void): void {
-	if (option.locked) {
-		say(lockReason(option));
-		return;
-	}
-	if (!state.selected.has(option.value)) {
-		state.unticked.delete(option.value);
-		tickWithDeclared(state, option);
-		return;
-	}
-	const declarers = mandatoryDeclarers(state, option.value);
-	if (declarers.length > 0) {
-		say(`${option.value} is needed by ${declarers.join(', ')} and stays installed`);
-		return;
-	}
-	state.selected.delete(option.value);
-	state.unticked.add(option.value);
-}
-
-/** One token as option numbers (`3`, `3-7`), or null when it is not one. */
-function tokenNumbers(token: string): number[] | null {
-	const range = /^(\d+)-(\d+)$/.exec(token);
-	if (range === null) return /^\d+$/.test(token) ? [Number(token)] : null;
-	const [from, to] = [Number(range[1]), Number(range[2])].sort((a, b) => a - b) as [number, number];
-	return Array.from({ length: to - from + 1 }, (_, offset) => from + offset);
-}
-
-/** The option numbers a command names (`3`, `3-7`, `3 5 9`), or null when it is not numbers. */
-function numbersOf(command: string, count: number): number[] | null {
-	const lists = command
-		.split(/[\s,]+/)
-		.filter((token) => token !== '')
-		.map(tokenNumbers);
-	if (lists.length === 0 || lists.some((list) => list === null)) return null;
-	return (lists as number[][]).flat().filter((n) => n >= 1 && n <= count);
-}
-
-type MultiOutcome = 'done' | 'continue' | 'show' | 'show_all' | Nav;
-
-/** One multi-select command: does it match, and what it does. */
-interface MultiCommandRule {
-	matches(command: string, state: MultiState): boolean;
-	run(state: MultiState, command: string, say: (line: string) => void): MultiOutcome;
-}
-
-/** The option a typed code names (case-insensitive), or undefined. */
-function optionByCode(state: MultiState, command: string): Option | undefined {
-	return state.options.find((option) => option.value.toLowerCase() === command.toLowerCase());
-}
-
-/** The commands, in order (the first that matches runs). */
-const MULTI_COMMANDS: readonly MultiCommandRule[] = [
-	{ matches: (command) => navOf(command) !== null, run: (_s, command) => navOf(command) as Nav },
-	{
-		matches: (command) => command === '' || command.toLowerCase() === 'next',
-		run: () => 'done',
-	},
-	{ matches: (command) => command === 'list', run: () => 'show_all' },
-	{
-		matches: (command) => command === 'more',
-		run: (state) => {
-			state.page = (state.page + 1) * MULTI_PAGE >= filtered(state).length ? 0 : state.page + 1;
-			return 'show';
-		},
-	},
-	{
-		matches: (command) => command.startsWith('/'),
-		run: (state, command) => {
-			state.filter = command.slice(1).trim();
-			state.page = 0;
-			return 'show';
-		},
-	},
-	{
-		matches: (command, state) => (numbersOf(command, state.options.length) ?? []).length > 0,
-		run: (state, command, say) => {
-			for (const n of numbersOf(command, state.options.length) ?? []) {
-				toggle(state, state.options[n - 1] as Option, say);
-			}
-			return 'show';
-		},
-	},
-	{
-		matches: (command, state) => optionByCode(state, command) !== undefined,
-		run: (state, command, say) => {
-			toggle(state, optionByCode(state, command) as Option, say);
-			return 'show';
-		},
-	},
-];
-
-/** One multi-select command applied to the state (what to do next). */
-export function multiCommand(
-	state: MultiState,
-	command: string,
-	say: (line: string) => void,
-): MultiOutcome {
-	const trimmed = command.trim();
-	const rule = MULTI_COMMANDS.find((item) => item.matches(trimmed, state));
-	if (rule !== undefined) return rule.run(state, trimmed, say);
-	say(`'${trimmed}' is not a number, a code or a command (/word, list, more, next, back, quit)`);
-	return 'continue';
-}
-
-/**
- * A new multi-select state from the question. The selection keeps ORDER (a
- * Set's insertion order): the question's current value first, in its order —
- * then any other pre-selected option — and every later tick is appended, an
- * untick removes. The order is part of the answer where the plan keeps it (the
- * working languages are written in that order: DEDALO_PROJECTS_DEFAULT_LANGS).
- */
-export function multiState(question: Question): MultiState {
-	const options = question.options ?? [];
-	const preselected = options.filter((option) => option.selected).map((option) => option.value);
-	const current = (Array.isArray(question.value) ? question.value.map(String) : []).filter(
-		(value) => preselected.includes(value),
-	);
-	return {
-		options,
-		selected: new Set([...current, ...preselected]),
-		unticked: new Set(),
-		filter: '',
-		page: 0,
-	};
-}
-
-/** The selection in the order it was made (see multiState). */
-export function multiResult(state: MultiState): string[] {
-	const known = new Set(state.options.map((option) => option.value));
-	return [...state.selected].filter((value) => known.has(value));
-}
-
 // ── the terminal prompter ────────────────────────────────────────────────────
 
 /** What every question body uses: the sanitized writer and the readers. */
@@ -419,17 +154,14 @@ function intro(io: Io, question: Question): void {
 	io.say([`${question.label}: ${question.description}`]);
 	// An unanswered question's errors are the plan's verdict on its DEFAULT (a
 	// required field with none): shown only once the operator answered —
-	// run_plain prints them on a re-ask.
+	// the walker (install_session.ts) prints them on a re-ask.
 	if (question.answered) io.say(question.errors.map((error) => `  error: ${error}`));
 	if (question.hint !== undefined) io.say([`  ${question.hint}`]);
 }
 
 /** A text answer: empty takes the suggestion, `-` empties an optional field. */
 function textAnswer(answer: string, question: Question, fallback: string): string | Nav {
-	const nav = navOf(answer);
-	if (nav !== null) return nav;
-	if (answer === '-' && question.emptyAllowed === true) return '';
-	return answer === '' ? fallback : answer;
+	return navOf(answer) ?? textAnswerOf(answer, question, fallback);
 }
 
 async function askText(io: Io, reader: RawReader, question: Question): Promise<string | Nav> {
@@ -503,46 +235,26 @@ async function askMulti(io: Io, reader: RawReader, question: Question): Promise<
 	}
 }
 
-/** Why one hidden entry is refused, or null. */
-function entryRefusal(entry: string, question: Question): string | null {
-	if (hasIllegalControlCharacter(entry))
-		return 'a line break or NUL cannot be part of it; type it again';
-	return entry === '' && question.emptyAllowed !== true ? 'it cannot be empty; type it' : null;
-}
-
-/** One hidden entry, re-asked while refused. */
-async function hiddenEntry(io: Io, reader: RawReader, question: Question): Promise<string> {
-	for (;;) {
-		io.write(`${question.label} (hidden): `);
-		const entry = await io.hidden(reader);
-		const refusal = entryRefusal(entry, question);
-		if (refusal === null) return entry;
-		io.write(`${refusal}\n`);
-	}
-}
-
-/** The policy's rule list for an entry (never the value); answers whether it passes. */
-function policyPasses(io: Io, entry: string, feedback: PasswordFeedback | undefined): boolean {
-	if (feedback === undefined) return true;
-	const verdict = feedback(entry);
-	for (const rule of verdict.rules)
+/** The policy's rule list after a first entry (never the value). */
+function policyRules(io: Io, entry: string, feedback: PasswordFeedback | undefined): void {
+	for (const rule of feedback?.(entry).rules ?? [])
 		io.write(`  ${rule.ok ? 'ok     ' : 'missing'}  ${rule.text}\n`);
-	if (verdict.errors.length === 0) return true;
-	io.write('the password does not meet the policy; type another\n');
-	return false;
 }
 
-/** A first entry that passes the policy (re-asked until it does). */
-async function acceptedEntry(
-	io: Io,
-	reader: RawReader,
-	question: Question,
-	feedback: PasswordFeedback | undefined,
-): Promise<string> {
-	for (;;) {
-		const entry = await hiddenEntry(io, reader, question);
-		if (policyPasses(io, entry, feedback)) return entry;
-	}
+/** The hidden prompt: the first entry, or the repeat. */
+function secretPrompt(question: Question, first: boolean): string {
+	return `${question.label}${first ? '' : ' again'} (hidden): `;
+}
+
+/** The policy's rules follow a FIRST entry that was not refused. */
+function rulesShown(first: boolean, step: SecretStep): boolean {
+	return first && step.kind !== 'refused';
+}
+
+/** How the plain mode shows one step of the secret entry flow (prompter_contract.ts secretEntryStep). */
+function showSecretStep(io: Io, step: SecretStep): void {
+	if (step.kind === 'never_matched') io.write(`${SECRET_TEXT.mismatch}\n`);
+	if ('message' in step) io.write(`${step.message}\n`);
 }
 
 async function askSecret(
@@ -552,15 +264,17 @@ async function askSecret(
 	feedback: PasswordFeedback | undefined,
 ): Promise<string> {
 	intro(io, question);
-	for (let attempt = 1; attempt <= SECRET_ATTEMPTS; attempt += 1) {
-		const first = await acceptedEntry(io, reader, question, feedback);
-		if (first === '') return '';
-		io.write(`${question.label} again (hidden): `);
-		if ((await io.hidden(reader)) === first) return first;
-		io.write('the two entries differ; type it again\n');
+	const state = newSecretEntry();
+	for (;;) {
+		const first = state.first === null;
+		io.write(secretPrompt(question, first));
+		const entry = await io.hidden(reader);
+		const step = secretEntryStep(state, entry, question, feedback);
+		if (rulesShown(first, step)) policyRules(io, entry, feedback);
+		showSecretStep(io, step);
+		if (step.kind === 'done') return step.value;
+		if (step.kind === 'never_matched') throw new EntriesNeverMatched();
 	}
-	io.write(`the entries did not match ${SECRET_ATTEMPTS} times\n`);
-	throw new EntriesNeverMatched();
 }
 
 /** The words a confirm takes. */
@@ -570,11 +284,6 @@ const YES_NO: Readonly<Record<string, boolean>> = Object.freeze({
 	n: false,
 	no: false,
 });
-
-/** A confirm's default: the current value (or the default when unanswered). */
-function confirmDefault(question: Question): boolean {
-	return (question.value ?? question.default) === true;
-}
 
 async function askConfirm(io: Io, reader: RawReader, question: Question): Promise<boolean | Nav> {
 	intro(io, question);
@@ -612,6 +321,34 @@ function screenLines(screen: Screen): string[] {
 		),
 		...(screen.placeholder === undefined ? [] : [`manual step: ${screen.placeholder.manual}`]),
 		...screen.help.map((link) => `help: ${link.label} — ${link.url}`),
+	];
+}
+
+/** The plain mode's opening line. */
+const PLAIN_BANNER = 'Dédalo installer (plain mode) — type back or quit at any question.';
+
+/** The interrupted-install line a Resume shows. */
+function resumeLine(view: ResumeView): string {
+	return `An install into database '${view.database}' was interrupted (${view.outcome}).`;
+}
+
+/** What the Resume prompt offers. */
+function resumePrompt(view: ResumeView): string {
+	return view.canAbort ? 'resume it, abort it, or quit' : 'resume it, or quit';
+}
+
+/** A Resume answer: resume, abort (when offered), else quit. */
+function resumeAnswer(word: unknown, view: ResumeView): 'resume' | 'abort' | Nav {
+	if (word === 'resume') return 'resume';
+	return word === 'abort' && view.canAbort ? 'abort' : QUIT;
+}
+
+/** The Review as the plain mode prints it: the padded lines, then the commands. */
+function reviewTextLines(view: ReviewView): string[] {
+	const numbered = view.editable.map((item) => `${item.n} ${item.title}`).join(', ');
+	return [
+		...view.lines.map((line) => `${line.label.padEnd(14)} ${line.value}`),
+		`commands: ${view.canInstall ? 'install, ' : ''}edit <n> (${numbered}), write <path>, quit`,
 	];
 }
 
@@ -668,6 +405,13 @@ export function ttyInstallPrompter(
 			reader.close();
 		}
 	};
+	/** One free line: a word (or back/quit). */
+	const word = (prompt: string): Promise<string | Nav> =>
+		ask(async (reader) => {
+			io.write(`${prompt}: `);
+			const answer = (await io.visible(reader)).trim();
+			return navOf(answer) ?? answer;
+		});
 	return {
 		interactive,
 		screen: (screen) => io.say(screenLines(screen)),
@@ -678,12 +422,23 @@ export function ttyInstallPrompter(
 		secret: (question, feedback) => ask((reader) => askSecret(io, reader, question, feedback)),
 		confirm: (question) => ask((reader) => askConfirm(io, reader, question)),
 		acknowledge: (question) => ask((reader) => askAcknowledge(io, reader, question)),
-		line: (_id, prompt) =>
-			ask(async (reader) => {
-				io.write(`${prompt}: `);
-				const answer = (await io.visible(reader)).trim();
-				return navOf(answer) ?? answer;
-			}),
+		view: () => undefined,
+		welcome: async () => {
+			io.say([PLAIN_BANNER]);
+			return null;
+		},
+		resume: async (view) => {
+			io.say([resumeLine(view)]);
+			return resumeAnswer(await word(resumePrompt(view)), view);
+		},
+		probe: (view) => {
+			io.say(view.lines);
+			return word(view.prompt);
+		},
+		review: (view) => {
+			io.say([...screenLines(view.screen), ...reviewTextLines(view)]);
+			return word('review');
+		},
 		showOnce: (lines) => showOnceOn(streams.output, lines),
 		stopReason: () => stopped,
 	};
@@ -777,13 +532,25 @@ export function scriptedInstallPrompter(script: PlainScript): InstallPrompter & 
 			const value = scripted(question.id);
 			return scriptedNav(value) ?? (value === true || value === 'yes');
 		},
-		line: async (id) => {
-			if (id === 'review') {
-				asked.push(id);
-				return review.shift() ?? 'quit';
-			}
-			const value = scripted(id);
+		view: () => undefined,
+		welcome: async () => {
+			said.push(PLAIN_BANNER);
+			return null;
+		},
+		resume: async (view) => {
+			said.push(resumeLine(view));
+			return resumeAnswer(scripted('resume'), view);
+		},
+		probe: async (view) => {
+			said.push(...view.lines);
+			const value = scripted(`${view.screen.id}.probe_action`);
 			return scriptedNav(value) ?? (typeof value === 'string' ? value : '');
+		},
+		review: async (view) => {
+			asked.push(`screen:${view.screen.id}`);
+			said.push(...screenLines(view.screen), ...reviewTextLines(view));
+			asked.push('review');
+			return review.shift() ?? 'quit';
 		},
 		showOnce: (lines) => {
 			if (interactive) shown.push(...lines);

@@ -816,6 +816,9 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_INSTALL_ALLOWED_IPS',
 	'DEDALO_INSTALL_NO_RESTART',
 	'DEDALO_INSTALL_PRIVATE_DIR',
+	// The terminal installer's crash seam (2026-10-11): v6 had no resumable
+	// installer, so there is nothing for it to be a rename of.
+	'DEDALO_INSTALL_FAULT',
 	// diffusion (the native engine)
 	'DEDALO_DIFFUSION_NATIVE',
 	'DEDALO_DIFFUSION_NATIVE_ELEMENTS',

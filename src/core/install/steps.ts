@@ -111,6 +111,26 @@ export function secretsNeeded(plan: PlanFile, state: InstallState | null): Secre
 	return stillToDo(plan, state, 'set_root_pw') ? [...carried, 'root_password'] : carried;
 }
 
+/**
+ * Does an --abort have to be GIVEN the database password? When the seed
+ * started (the reset drops what it restored) and the install was run with one
+ * — and `available` (the secrets the abort runs with: once persist_config is
+ * done, the install's own .env's) does not hold it. ONE predicate: the CLI's
+ * refusal (scripts/install.ts) and the interactive abort's question
+ * (install_session.ts) both ask it.
+ */
+export function abortNeedsDatabasePassword(
+	plan: PlanFile,
+	state: InstallState,
+	available: Secrets,
+): boolean {
+	return (
+		(state.created.seed_started || state.created.seed_restored) &&
+		plan.secrets_supplied.db_password === true &&
+		(available.db_password ?? '') === ''
+	);
+}
+
 /** The install status the preflight found (what --abort puts back). */
 function statusBefore(state: InstallState): ServerState['install_status'] {
 	return (state.preflight.install_status_before ?? undefined) as ServerState['install_status'];

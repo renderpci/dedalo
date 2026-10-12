@@ -1,0 +1,94 @@
+/**
+ * THE INSTALL RUN'S EVENTS (terminal installer phase 3, 2026-10-12) — what the
+ * executor (executor.ts) tells a front end while it runs, and what a front end
+ * offers the run (RunIo, RunReporter). Types only, so a front end draws the
+ * progress without importing the executor (or, through it, the engine).
+ *
+ * The executor's headless transcript is unchanged by these events: `log` and
+ * `warn` are called exactly as before; `step` is an ADDITIONAL, optional
+ * listener (gate: install_executor_events_native).
+ */
+
+import type { InstallStepId } from './install_plan.ts';
+
+export type StepPhase =
+	| 'start'
+	| 'skipped'
+	| 'adopted'
+	| 'done'
+	| 'failed'
+	| 'interrupted'
+	| 'undo';
+
+/** One step's progress (every text redacted by the executor before it is sent). */
+export interface StepEvent {
+	step: InstallStepId;
+	label: string;
+	phase: StepPhase;
+	/** done: finished_at − started_at of the step's record; null when unknown. */
+	elapsedMs: number | null;
+	message?: string;
+	warnings?: readonly string[];
+}
+
+/** What a run writes to (ExecutorIo is this). */
+export interface RunIo {
+	log(line: string): void;
+	warn(line: string): void;
+	/**
+	 * The ONE-TIME display of a generated secret (the salt), when the front end
+	 * has a terminal for it. Answers whether the lines reached a TERMINAL — only
+	 * then is the secret recorded as shown. Absent (the headless CLI): the line
+	 * is logged once.
+	 */
+	showOnce?(lines: readonly string[]): boolean;
+	/** A step's progress (optional: the headless CLI has no listener). */
+	step?(event: StepEvent): void;
+	/**
+	 * The executor's own SIGINT/SIGTERM handlers are ARMED (true, on entry) or
+	 * gone (false, on return) — a front end that holds the terminal delegates
+	 * the signals only while they are armed.
+	 */
+	signals?(armed: boolean): void;
+	/**
+	 * The run stopped on a signal — called on EVERY interrupt (inside a step or
+	 * not), before the interrupt line and the resume hint are warned: a front
+	 * end that holds the terminal keeps those lines for the restored screen.
+	 */
+	interrupted?(signal: 'SIGINT' | 'SIGTERM'): void;
+}
+
+/** The plan's words before the run (notes, warnings, suggestions). */
+export interface RunAnnouncement {
+	title: string;
+	notes: readonly string[];
+	warnings: readonly string[];
+	suggestions: readonly string[];
+}
+
+/** How a run's result is told: the outcome as the executor answered it. */
+export interface RunOutcomeView {
+	exitCode: number;
+	result: 'complete' | 'already_complete' | 'aborted' | 'failed' | 'refused';
+	message: string | null;
+	failedStep: string | null;
+	hint: readonly string[];
+}
+
+/**
+ * A front end's side of a run (scripts/install.ts drives it): the plain
+ * reporter prints, the full-screen one draws the Install and Done screens.
+ */
+export interface RunReporter {
+	readonly io: RunIo;
+	/** The run is being prepared (the catalog re-resolved, the environment seeded). */
+	prepare?(): void;
+	/** The steps the run will go through, in order (before the first event). */
+	begin?(steps: readonly { id: InstallStepId; label: string }[]): void;
+	announce(announcement: RunAnnouncement): void;
+	/** Tell the outcome (the caller exits with outcome.exitCode afterwards). */
+	finish(
+		outcome: RunOutcomeView,
+		context: { mode: 'fresh' | 'resume' | 'abort'; rootVerified: boolean },
+	): Promise<void>;
+}

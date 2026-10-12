@@ -60,6 +60,11 @@ export interface ChildProbeOptions {
 	timeoutMs?: Partial<Record<ProbeName, number>>;
 	/** Test seam; default Bun.spawn. */
 	spawn?: ProbeSpawn;
+	/**
+	 * Told of every child started (the full-screen UI kills a running probe
+	 * when it closes: in raw mode a Ctrl-C reaches no child by itself).
+	 */
+	onSpawn?: (child: ProbeProcess) => void;
 }
 
 /**
@@ -119,6 +124,7 @@ async function runChild(
 		stderr: 'pipe',
 		env: liveProcessEnv(),
 	});
+	options.onSpawn?.(child);
 	child.stdin.write(JSON.stringify(request));
 	child.stdin.end();
 	const bound = boundOf(options, request.probe);

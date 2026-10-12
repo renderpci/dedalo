@@ -923,7 +923,11 @@ describe('screen model — off the request path (g)', () => {
 			'src/core/install/probes.ts',
 			'src/core/install/install_probe.ts',
 			'src/core/install/install_probe_client.ts',
-			'src/core/install/ui_plain/run_plain.ts',
+			'src/core/install/install_session.ts',
+			'src/core/install/prompter_contract.ts',
+			'src/core/install/multi_select.ts',
+			'src/core/install/tui_loader.ts',
+			'src/core/install/ui/app.ts',
 			'src/core/install/ui_plain/prompter.ts',
 			'src/core/install/ui_plain/terminal.ts',
 		]) {

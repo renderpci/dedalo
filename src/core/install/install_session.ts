@@ -1,26 +1,36 @@
 /**
- * THE PLAIN LINE MODE (terminal installer phase 2, 2026-10-12) — the
- * interactive installer for any terminal: a screen reader, TERM=dumb, a narrow
- * or redirected terminal, `--plain`. It walks the screen model
- * (screen_model.ts) in the route's order, asks every visible question through
- * the prompter (prompter.ts), runs each screen's probe and applies its gate,
- * then shows the Review — and hands back RAW ANSWERS + SECRETS for
+ * THE INTERACTIVE INSTALL SESSION (terminal installer phase 3, 2026-10-12 —
+ * phase 2's plain walker, made UI-neutral) — the ONE walk every interactive
+ * front end runs: the plain line mode (ui_plain/prompter.ts) and the
+ * full-screen UI (ui/prompter.ts) are two InstallPrompter implementations of
+ * the same session, so they cannot differ in order, gating, invalidation,
+ * kept secrets, what is handed back or when install is offered. It walks the
+ * screen model (screen_model.ts) in the route's order, asks every visible
+ * question through the prompter, runs each screen's probe and applies its
+ * gate, then shows the Review — and hands back RAW ANSWERS + SECRETS for
  * scripts/install.ts to run through the SAME plan and executor as a headless
  * install (front_end.ts). It decides nothing the model does not.
  *
  * THE WALK:
- *  - before the questions: an unfinished install record offers `resume`/`quit`;
- *  - per screen: header, description, notices; every visible question not yet
- *    asked this session, re-asked while the model reports errors on it; then the
- *    probe — `must_pass`: retry / edit / quit; `pass_or_acknowledge`: retry /
- *    edit / typed `yes` (shown on the Review);
+ *  - the Welcome; then an unfinished install record offers resume / abort /
+ *    quit — abort asks the database name typed back (abortConfirmRefusal) and,
+ *    when the reset needs it (steps.ts abortNeedsDatabasePassword), the
+ *    database password;
+ *  - per screen: every visible question not yet asked this session, re-asked
+ *    while the model reports errors on it — before each ask the prompter gets
+ *    the screen as the model REBUILT it (ScreenView: current values, the route,
+ *    the screens shown so far); then the probe — `must_pass`: retry / edit /
+ *    quit; `pass_or_acknowledge`: retry / edit / typed `yes` (shown on the
+ *    Review);
  *  - an answer that turns questions on (publication, mail, the air-gapped
  *    package) asks them on the same screen; one that hides questions drops their
  *    answers (the model's applyAnswer);
- *  - `back` re-asks the previous screen; the Review offers `install` (only
- *    with no plan error, on a route that runs here, and with a typed `yes`),
- *    `edit <n>` (re-asks screen n, then every screen with a question not yet
- *    asked), `write <path>` (an answers file) and `quit`.
+ *  - `back` re-asks the previous screen; FIELD_BACK (the full-screen UI's
+ *    Shift-Tab) re-asks the previous question of this screen (on the first one
+ *    it is `back`); the Review offers `install` (only with no plan error, on a
+ *    route that runs here, and with a typed `yes`), `edit <n>` (re-asks screen
+ *    n, then every screen with a question not yet asked), `write <path>` (an
+ *    answers file) and `quit`.
  *
  * SECRETS stay in this module's session (never in the model's answers — it
  * only learns WHETHER each was given). A secret supplied by DEDALO_INSTALL_* /
@@ -30,24 +40,46 @@
  */
 
 import {
+	abortConfirmRefusal,
 	type CatalogProbeResult,
 	type FrontEndResult,
 	type InstallProbes,
 	type QuitReason,
 	reviewDecisions,
 	writeAnswersFile,
-} from '../front_end.ts';
+} from './front_end.ts';
 import {
 	INSTALL_ANSWER_KEYS,
 	type InstallAnswers,
 	type InstallPlan,
 	type InstallRoute,
 	normalizeInstallAnswers,
-} from '../install_plan.ts';
-import { readPlanFile, readStateFile, type SecretKey, type Secrets } from '../run_files.ts';
+} from './install_plan.ts';
+import {
+	BACK,
+	FIELD_BACK,
+	type InstallPrompter,
+	isNav,
+	type Nav,
+	type ProbeCommand,
+	type ProbeView,
+	QUIT,
+	type ReviewView,
+	type ScreenView,
+} from './prompter_contract.ts';
+import {
+	type InstallState,
+	readInstallEnv,
+	readPlanFile,
+	readStateFile,
+	type SecretKey,
+	type Secrets,
+	secretsFromEnv,
+} from './run_files.ts';
 import {
 	applyAnswer,
 	buildScreens,
+	equivalentCommand,
 	type InstallCatalogs,
 	type ProbeId,
 	type ProbeOutcome,
@@ -59,12 +91,13 @@ import {
 	type Screen,
 	type ScreenId,
 	type ScreenModelInput,
+	shellQuote,
 	visibleKeys,
-} from '../screen_model.ts';
-import { NOTICE_TEXT } from '../screen_text.ts';
-import { BACK, type InstallPrompter, isNav, type Nav, QUIT } from './prompter.ts';
+} from './screen_model.ts';
+import { NOTICE_TEXT } from './screen_text.ts';
+import { abortNeedsDatabasePassword } from './steps.ts';
 
-export interface PlainInstallDeps {
+export interface InteractiveDeps {
 	prompter: InstallPrompter;
 	probes: InstallProbes;
 	priorEnv: Readonly<Record<string, string>>;
@@ -76,9 +109,21 @@ export interface PlainInstallDeps {
 	/** --write-answers: where the reviewed answers are also written. */
 	writeAnswersPath?: string;
 	/** The unfinished install on start; undefined = read the run files. */
-	unfinished?: { database: string; outcome: string } | null;
+	unfinished?: Unfinished | null;
 	/** The answers-file writer (front_end.ts writeAnswersFile); a gate injects one. */
 	writeAnswers?: (path: string, answers: InstallAnswers) => string | null;
+	/** The release the Welcome names. */
+	version?: string;
+}
+
+/** An install record left in progress (offered for resume / abort / quit on start). */
+export interface Unfinished {
+	database: string;
+	outcome: string;
+	/** Abort is offered (the saved plan is readable); default true. */
+	canAbort?: boolean;
+	/** Abort must ask the database password (steps.ts abortNeedsDatabasePassword); default false. */
+	needsDbPassword?: boolean;
 }
 
 /** Re-asking an answer the model keeps refusing ends the session (a script cannot loop forever). */
@@ -130,12 +175,30 @@ const SCREEN_SECRETS: Partial<Record<ScreenId, readonly SecretKey[]>> = {
 	administrator: ['root_password'],
 };
 
+/**
+ * The secrets an abort would run with (scripts/install.ts resumeSecrets): once
+ * persist_config is done, the ones the install's own .env holds; before, the
+ * given ones.
+ */
+function abortSecrets(state: InstallState, given: Secrets): Secrets {
+	if (state.steps.persist_config?.status !== 'done') return given;
+	const env = readInstallEnv();
+	return env === null ? given : secretsFromEnv(env);
+}
+
 /** The unfinished install recorded in the run dir, or null. */
-function readUnfinished(): { database: string; outcome: string } | null {
+function readUnfinished(given: Secrets): Unfinished | null {
 	try {
 		const state = readStateFile();
 		if (state === null || state.outcome !== 'in_progress') return null;
-		return { database: String(readPlanFile()?.answers.db_database ?? ''), outcome: state.outcome };
+		const plan = readPlanFile();
+		return {
+			database: String(plan?.answers.db_database ?? ''),
+			outcome: state.outcome,
+			canAbort: plan !== null,
+			needsDbPassword:
+				plan !== null && abortNeedsDatabasePassword(plan, state, abortSecrets(state, given)),
+		};
 	} catch {
 		return null;
 	}
@@ -143,7 +206,7 @@ function readUnfinished(): { database: string; outcome: string } | null {
 
 /** One interactive session's state (never module state). */
 interface Session {
-	readonly deps: PlainInstallDeps;
+	readonly deps: InteractiveDeps;
 	raw: Record<string, unknown>;
 	secrets: Secrets;
 	/** Supplied by the environment and not to be asked (until an edit asks again). */
@@ -190,6 +253,25 @@ function questionOf(
 	questionId: string,
 ): Question | undefined {
 	return screenOf(session, screenId)?.questions.find((item) => item.id === questionId);
+}
+
+/** What the walker is doing now, for the prompter (ScreenView). */
+function viewOf(session: Session, id: ScreenId, focus: string | null, probing = false): ScreenView {
+	const screens = screensOf(session);
+	const screen = screens.find((item) => item.id === id) ?? (screens[0] as Screen);
+	return {
+		screen,
+		screens: screens.map((item) => ({
+			id: item.id,
+			title: item.title,
+			index: item.index,
+			placeholder: item.placeholder !== undefined,
+		})),
+		seen: [...session.seen],
+		focus,
+		probing,
+		route: typeof session.raw.route === 'string' ? routeOf(session) : null,
+	};
 }
 
 /** The route chosen so far (the model's own reading of the answers). */
@@ -358,17 +440,59 @@ function askQuestion(
 
 // ── the probes ───────────────────────────────────────────────────────────────
 
-/** The mail probe's test recipient (asked at probe time; never an answer, never persisted). */
-async function testRecipient(prompter: InstallPrompter): Promise<string | undefined> {
-	const recipient = await prompter.line(
-		'mail.test_recipient',
-		'Send a test mail to (an address; empty = check the connection only)',
+/** A question the walker asks itself (never an answer key, never in the plan). */
+function ownQuestion(
+	id: string,
+	kind: 'text' | 'secret',
+	text: { label: string; description: string },
+	emptyAllowed: boolean,
+): Question {
+	return {
+		id,
+		key: kind === 'secret' ? 'db_password' : null,
+		sets: [],
+		kind,
+		label: text.label,
+		description: text.description,
+		value: null,
+		default: '',
+		answered: false,
+		required: !emptyAllowed,
+		emptyAllowed,
+		errors: [],
+	};
+}
+
+/**
+ * The mail probe's test recipient (asked at probe time; never an answer, never
+ * persisted). A navigation answer (quit, an interrupt, back) is RETURNED — the
+ * probe does not run and the walk honours it — never read as "no recipient".
+ */
+async function testRecipient(prompter: InstallPrompter): Promise<string | undefined | Nav> {
+	const recipient = await prompter.text(
+		ownQuestion(
+			'mail.test_recipient',
+			'text',
+			{
+				label: 'Send a test mail to',
+				description: 'an address; empty = check the connection only',
+			},
+			true,
+		),
 	);
-	return isNav(recipient) || recipient === '' ? undefined : recipient;
+	if (isNav(recipient)) return recipient;
+	return recipient === '' ? undefined : recipient;
+}
+
+/** The mail probe: its recipient first; a navigation answer ends it unrun. */
+async function mailerProbe(session: Session): Promise<ProbeOutcome | Nav> {
+	const recipient = await testRecipient(session.deps.prompter);
+	if (isNav(recipient)) return recipient;
+	return session.deps.probes.mailer(session.raw, session.secrets.smtp_pass ?? '', recipient);
 }
 
 /** Each probe, with the one secret it needs. */
-const PROBE_RUNS: Readonly<Record<ProbeId, (session: Session) => Promise<ProbeOutcome>>> =
+const PROBE_RUNS: Readonly<Record<ProbeId, (session: Session) => Promise<ProbeOutcome | Nav>>> =
 	Object.freeze({
 		system: (session: Session) => session.deps.probes.system(routeOf(session)),
 		db: (session: Session) =>
@@ -376,12 +500,7 @@ const PROBE_RUNS: Readonly<Record<ProbeId, (session: Session) => Promise<ProbeOu
 		media: (session: Session) => session.deps.probes.media(session.raw),
 		diffusion: (session: Session) =>
 			session.deps.probes.diffusion(session.raw, session.secrets.mysql_password ?? ''),
-		mailer: async (session: Session) =>
-			session.deps.probes.mailer(
-				session.raw,
-				session.secrets.smtp_pass ?? '',
-				await testRecipient(session.deps.prompter),
-			),
+		mailer: mailerProbe,
 	});
 
 /** A notice as one plain line. */
@@ -395,17 +514,19 @@ function probeLines(session: Session, screen: Screen, outcome: ProbeOutcome): st
 	return [outcome.ok ? NOTICE_TEXT.probeOk(outcome.msg) : NOTICE_TEXT.probeFailed(outcome.msg)];
 }
 
-/** The probe's outcome: the recorded one, else a fresh run (recorded). */
+/** The probe's outcome: the recorded one, else a fresh run (recorded; a Nav is not a verdict). */
 async function probeOutcome(
 	session: Session,
 	screen: Screen,
 	probe: ProbeId,
-): Promise<ProbeOutcome> {
+): Promise<ProbeOutcome | Nav> {
 	const recorded = session.probes[probe];
 	if (recorded !== undefined) return recorded;
+	session.deps.prompter.view(viewOf(session, screen.id, null, true));
 	session.deps.prompter.say([`checking: ${screen.title}…`]);
 	const key = probeInputKey(session, probe);
 	const outcome = await PROBE_RUNS[probe](session);
+	if (isNav(outcome)) return outcome;
 	session.probes[probe] = outcome;
 	session.probeKeys[probe] = key;
 	return outcome;
@@ -418,6 +539,24 @@ function probePrompt(gate: ProbeGate['gate']): string {
 	return gate === 'pass_or_acknowledge'
 		? 'retry, edit, or yes to keep these settings untested'
 		: 'retry, edit, or quit (this check must pass)';
+}
+
+/** The commands a failed probe offers (quit always works). */
+function probeCommands(gate: ProbeGate['gate']): ProbeCommand[] {
+	return gate === 'pass_or_acknowledge'
+		? ['retry', 'edit', 'yes', 'quit']
+		: ['retry', 'edit', 'quit'];
+}
+
+/** A failed probe, as the prompter shows it. */
+function probeView(session: Session, screen: Screen, probe: ProbeGate, lines: string[]): ProbeView {
+	return {
+		screen: screenOf(session, screen.id) ?? screen,
+		lines,
+		gate: probe.gate,
+		commands: probeCommands(probe.gate),
+		prompt: probePrompt(probe.gate),
+	};
 }
 
 /** `edit` after a failed probe: forget the verdict, ask the screen's kept secrets again. */
@@ -469,18 +608,28 @@ async function probeStep(session: Session, screen: Screen): Promise<'next' | 'ag
 	const probe = screen.probe;
 	if (probe === undefined) return 'next';
 	for (let round = 0; round < MAX_ATTEMPTS; round++) {
-		const outcome = await probeOutcome(session, screen, probe.id);
-		session.deps.prompter.say(probeLines(session, screen, outcome));
-		if (probePassed(session, screen, probe, outcome)) return 'next';
-		const command = await session.deps.prompter.line(
-			`${screen.id}.probe_action`,
-			probePrompt(probe.gate),
-		);
-		if (isNav(command)) return command;
-		const decided = probeCommand(session, screen, probe, command.trim().toLowerCase());
+		const decided = await probeRound(session, screen, probe);
 		if (decided !== null) return decided;
 	}
 	return QUIT;
+}
+
+/** One round of a screen's probe: its verdict, and on a failure the operator's command (null = again). */
+async function probeRound(
+	session: Session,
+	screen: Screen,
+	probe: ProbeGate,
+): Promise<'next' | 'again' | Nav | null> {
+	const outcome = await probeOutcome(session, screen, probe.id);
+	if (isNav(outcome)) return outcome;
+	const lines = probeLines(session, screen, outcome);
+	if (probePassed(session, screen, probe, outcome)) {
+		session.deps.prompter.say(lines);
+		return 'next';
+	}
+	const command = await session.deps.prompter.probe(probeView(session, screen, probe, lines));
+	if (isNav(command)) return command;
+	return probeCommand(session, screen, probe, command.trim().toLowerCase());
 }
 
 // ── a screen ─────────────────────────────────────────────────────────────────
@@ -537,21 +686,58 @@ async function nextQuestion(
 	return questionOf(session, id, question.id) ?? question;
 }
 
+/** Was the question put to the operator (a kept environment secret is announced, not asked)? */
+function prompted(session: Session, question: Question): boolean {
+	return !(question.kind === 'secret' && session.kept.has(question.key as SecretKey));
+}
+
+/** A question answered in this pass: done, asked, and (when it was prompted) in the pass order. */
+function recordAsked(
+	session: Session,
+	done: Set<string>,
+	pass: string[],
+	question: Question,
+): void {
+	done.add(question.id);
+	session.asked.add(question.id);
+	if (prompted(session, question)) pass.push(question.id);
+}
+
+/**
+ * FIELD_BACK: the previous question of this pass is asked again (it leaves
+ * `done` and `asked`, so it is pending again — and, coming first in the screen
+ * order, asked before the current one, which was never recorded). On the
+ * pass's first question it is BACK (the previous screen).
+ */
+function fieldBack(session: Session, done: Set<string>, pass: string[]): Nav | null {
+	const previous = pass.pop();
+	if (previous === undefined) return BACK;
+	done.delete(previous);
+	session.asked.delete(previous);
+	return null;
+}
+
 /** Ask every pending question of the screen; answers 'ok' or what interrupted it. */
 async function askScreen(
 	session: Session,
 	id: ScreenId,
 	done: Set<string>,
 ): Promise<'ok' | 'again' | Nav> {
+	const pass: string[] = [];
 	for (
 		let question = await nextQuestion(session, id, done);
 		question !== undefined;
 		question = await nextQuestion(session, id, done)
 	) {
+		session.deps.prompter.view(viewOf(session, id, question.id));
 		const before = fingerprint(session);
 		const outcome = await askQuestion(session, id, question);
-		done.add(question.id);
-		session.asked.add(question.id);
+		if (outcome === FIELD_BACK) {
+			const back = fieldBack(session, done, pass);
+			if (back === null) continue;
+			return back;
+		}
+		recordAsked(session, done, pass, question);
 		if (fingerprint(session) !== before) invalidateProbe(session, id);
 		dropStaleVerdicts(session);
 		if (outcome !== 'ok') return outcome;
@@ -584,7 +770,7 @@ async function runScreen(
 
 /** Where the walk goes after a screen: [next index, next mode]. */
 function stepAfter(outcome: 'next' | 'again' | Nav, index: number): [number, 'all' | 'new'] {
-	if (outcome === BACK) return [Math.max(0, index - 1), 'all'];
+	if (outcome === BACK || outcome === FIELD_BACK) return [Math.max(0, index - 1), 'all'];
 	return outcome === 'again' ? [index, 'all'] : [index + 1, 'new'];
 }
 
@@ -696,23 +882,28 @@ async function recheckGates(session: Session): Promise<'review' | 'quit'> {
 	return 'quit';
 }
 
-/** Show the Review (lines, notices, commands). */
-function showReview(session: Session): ReviewRound {
-	const { prompter } = session.deps;
+/** The equivalent command line of a plan (display only; never a secret). */
+function commandLine(plan: InstallPlan): string {
+	return ['bun', 'run', 'scripts/install.ts', ...equivalentCommand(plan.answers)]
+		.map(shellQuote)
+		.join(' ');
+}
+
+/** One Review round: what it decides on, and the view the prompter shows. */
+function reviewRound(session: Session): { round: ReviewRound; view: ReviewView } {
 	const screens = screensOf(session);
 	const input = inputOf(session);
 	const plan = previewPlan(input);
 	const canInstall = installOffered(session, plan);
-	prompter.screen(screens.at(-1) as Screen);
-	prompter.say(reviewLines(plan, input).map((line) => `${line.label.padEnd(14)} ${line.value}`));
-	const numbered = screens
-		.slice(0, -1)
-		.map((item) => `${item.index} ${item.title}`)
-		.join(', ');
-	prompter.say([
-		`commands: ${canInstall ? 'install, ' : ''}edit <n> (${numbered}), write <path>, quit`,
-	]);
-	return { screens, plan, canInstall };
+	const view: ReviewView = {
+		screen: screens.at(-1) as Screen,
+		lines: reviewLines(plan, input),
+		canInstall,
+		editable: screens.slice(0, -1).map((item) => ({ n: item.index, title: item.title })),
+		command: commandLine(plan),
+		errors: [...plan.errors],
+	};
+	return { round: { screens, plan, canInstall }, view };
 }
 
 /** The install result (after the typed yes). */
@@ -795,23 +986,110 @@ async function reviewCommand(
 async function review(session: Session): Promise<FrontEndResult> {
 	for (let round = 0; round < 200; round++) {
 		if ((await recheckGates(session)) === 'quit') return { kind: 'quit' };
-		const shown = showReview(session);
-		const command = await session.deps.prompter.line('review', 'review');
+		const { round: shown, view } = reviewRound(session);
+		session.seen.add('review');
+		session.deps.prompter.view(viewOf(session, 'review', null));
+		const command = await session.deps.prompter.review(view);
 		if (command === QUIT) return { kind: 'quit' };
-		const text = command === BACK ? `edit ${shown.screens.length - 1}` : (command as string).trim();
+		const text = isNav(command) ? `edit ${shown.screens.length - 1}` : command.trim();
 		const step = await reviewCommand(session, shown, text);
 		if (step !== null) return step;
 	}
 	return { kind: 'quit' };
 }
 
+// ── the start: welcome, an unfinished install, abort ─────────────────────────
+
+/** The database name typed back before an abort resets it. */
+function confirmDatabaseQuestion(database: string): Question {
+	return ownQuestion(
+		'resume.confirm_database',
+		'text',
+		{
+			label: 'Database to reset',
+			description: `Abort removes what the install created and resets database '${database}' to empty (the database itself is kept). Type its name to confirm.`,
+		},
+		false,
+	);
+}
+
+/** The database password an abort's reset needs. */
+const ABORT_PASSWORD_TEXT = Object.freeze({
+	label: 'Database password',
+	description: 'Abort resets the database and needs its password.',
+});
+
+/** The confirmed database name, or null (quit, or refused too often — `refused` marks it). */
+async function confirmDatabase(
+	deps: InteractiveDeps,
+	database: string,
+	refused: () => void,
+): Promise<string | null> {
+	for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+		const typed = await deps.prompter.text(confirmDatabaseQuestion(database));
+		if (isNav(typed)) return null;
+		const refusal = abortConfirmRefusal(typed, database);
+		if (refusal === null) return typed.trim();
+		deps.prompter.say([refusal]);
+	}
+	refused();
+	return null;
+}
+
+/** The database password for the reset ('' = not needed), or null (quit). */
+async function abortPassword(
+	deps: InteractiveDeps,
+	unfinished: Unfinished,
+): Promise<string | null> {
+	const given = deps.givenSecrets.db_password ?? '';
+	if (unfinished.needsDbPassword !== true || given !== '') return given;
+	const typed = await deps.prompter.secret(
+		ownQuestion('resume.db_password', 'secret', ABORT_PASSWORD_TEXT, false),
+	);
+	return isNav(typed) ? null : typed;
+}
+
+/** ABORT chosen: the name typed back, the password when the reset needs it. */
+async function abortFlow(
+	deps: InteractiveDeps,
+	unfinished: Unfinished,
+	refused: () => void,
+): Promise<FrontEndResult> {
+	const confirmed = await confirmDatabase(deps, unfinished.database, refused);
+	if (confirmed === null) return { kind: 'quit' };
+	const password = await abortPassword(deps, unfinished);
+	if (password === null) return { kind: 'quit' };
+	return {
+		kind: 'abort',
+		confirmDatabase: confirmed,
+		secrets: password === '' ? {} : { db_password: password },
+	};
+}
+
+/** An unfinished install found on start: resume / abort / quit. */
+async function unfinishedFlow(
+	deps: InteractiveDeps,
+	unfinished: Unfinished,
+	refused: () => void,
+): Promise<FrontEndResult> {
+	const choice = await deps.prompter.resume({
+		database: unfinished.database,
+		outcome: unfinished.outcome,
+		canAbort: unfinished.canAbort !== false,
+	});
+	if (choice === 'resume') return { kind: 'resume' };
+	if (choice === 'abort' && unfinished.canAbort !== false)
+		return abortFlow(deps, unfinished, refused);
+	return { kind: 'quit' };
+}
+
 /**
- * THE PLAIN INTERACTIVE INSTALL: the walk, then the Review. Answers what the
- * caller (scripts/install.ts) does next — never runs the install itself.
+ * THE INTERACTIVE INSTALL: the walk, then the Review. Answers what the caller
+ * (scripts/install.ts) does next — never runs the install itself.
  */
-export async function runPlainInstall(deps: PlainInstallDeps): Promise<FrontEndResult> {
+export async function runInteractiveInstall(deps: InteractiveDeps): Promise<FrontEndResult> {
 	let refused = false;
-	const result = await plainSession(deps, () => {
+	const result = await interactiveSession(deps, () => {
 		refused = true;
 	});
 	if (result.kind !== 'quit') return result;
@@ -820,27 +1098,14 @@ export async function runPlainInstall(deps: PlainInstallDeps): Promise<FrontEndR
 	return { kind: 'quit', reason };
 }
 
-/** The session behind runPlainInstall (`onRefused` marks a refusal-ended walk). */
-async function plainSession(
-	deps: PlainInstallDeps,
-	onRefused: () => void,
-): Promise<FrontEndResult> {
-	const { prompter } = deps;
-	prompter.say(['Dédalo installer (plain mode) — type back or quit at any question.']);
-	const unfinished = deps.unfinished === undefined ? readUnfinished() : deps.unfinished;
-	if (unfinished !== null) {
-		prompter.say([
-			`An install into database '${unfinished.database}' was interrupted (${unfinished.outcome}).`,
-		]);
-		const choice = await prompter.line('resume', 'resume it, or quit');
-		return choice === 'resume' ? { kind: 'resume' } : { kind: 'quit' };
-	}
+/** A fresh session's state. */
+function newSession(deps: InteractiveDeps): Session {
 	const kept = new Set(
 		(Object.entries(deps.givenSecrets) as [SecretKey, string | undefined][])
 			.filter(([, value]) => value !== undefined && value !== '')
 			.map(([key]) => key),
 	);
-	const session: Session = {
+	return {
 		deps,
 		raw: {},
 		secrets: { ...deps.givenSecrets },
@@ -854,6 +1119,24 @@ async function plainSession(
 		seen: new Set(),
 		refused: false,
 	};
+}
+
+/** The unfinished install: the injected one, else the run files'. */
+function unfinishedOf(deps: InteractiveDeps): Unfinished | null {
+	return deps.unfinished === undefined ? readUnfinished(deps.givenSecrets) : deps.unfinished;
+}
+
+/** The session behind runInteractiveInstall (`onRefused` marks a refusal-ended walk). */
+async function interactiveSession(
+	deps: InteractiveDeps,
+	onRefused: () => void,
+): Promise<FrontEndResult> {
+	if ((await deps.prompter.welcome({ version: deps.version ?? '' })) === QUIT) {
+		return { kind: 'quit' };
+	}
+	const unfinished = unfinishedOf(deps);
+	if (unfinished !== null) return unfinishedFlow(deps, unfinished, onRefused);
+	const session = newSession(deps);
 	const walked = await walk(session, 0, 'all');
 	const result = walked === 'quit' ? ({ kind: 'quit' } as const) : await review(session);
 	if (session.refused) onRefused();

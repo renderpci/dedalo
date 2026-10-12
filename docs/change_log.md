@@ -1338,6 +1338,21 @@ Merged since the last release; these ship with the next one.
 
     Other changes for administrators: the new `--route` and `--instance` answers change a few defaults (on a production route the database and role are `dedalo_<instance>`, the media root `/srv/dedalo/<instance>/media`); the publication database now defaults to `web_dedalo` (`web_<instance>` on production) instead of being required; a run at a terminal without `--execute` asks for a missing root password instead of failing; `--write-answers <file>` saves the answers of any run; `--list-langs` prints the language offer and `--list-hierarchies` now includes what each thesaurus declares. A run whose standard input is not a terminal and that carries no answers is refused and points to `--answers`. A typed `quit` exits 0, Ctrl-C exits 130. A check whose answers change later (a new instance name, another route) runs again before `install` is offered. On the Docker routes the terminal installer writes the answers but does not install from the host yet; the production web server, TLS and systemd steps are still done by hand. Details: [Installer reference](./install/installer_reference.md#interactive-mode).
 
+- **The terminal installer draws full-screen at a capable terminal, and can abort an interrupted install**
+
+    Run at a terminal of at least 80×24, `bun run scripts/install.ts` now shows the
+    installer full-screen: a rail of the route's steps, filtered lists for the
+    ontologies, thesauri and languages, passwords drawn as dots with the root
+    password's rules checked as you type, checks shown in place, the Review with the
+    equivalent command line, the install's steps with their times, and a Done screen
+    that shows the generated salt once. The questions, defaults, rules and the
+    install are exactly the plain mode's; `--plain`, a small or `dumb` terminal, or a
+    machine without the terminal library's native build get the plain mode (one line
+    says why). Whatever way it ends, the terminal is restored. When an interrupted
+    install is found, both modes now offer **abort** next to resume and quit (the
+    database name typed back). See
+    [the full-screen installer](./install/installer_reference.md#the-full-screen-installer).
+
     ```shell
     docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml --env-file .dedalo.env build dedalo
     docker compose -f docker-compose.simple.yml --env-file .dedalo.env up -d

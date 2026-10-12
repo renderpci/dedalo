@@ -1,6 +1,6 @@
 /**
  * INSTALL PLAIN-MODE PARITY TRIPWIRE — the interactive plain line mode
- * (src/core/install/ui_plain/run_plain.ts over the screen model,
+ * (src/core/install/install_session.ts under the plain prompter, over the screen model,
  * screen_model.ts) is a FOURTH front end of the one install plan: for every
  * case it can express, the answers it hands back decide EXACTLY the plan the
  * CLI flags, the answers file and (where it can post the case) the browser
@@ -15,7 +15,7 @@
  *      the route cases — production with an instance, docker, trial, an
  *      explicit developer, production + diffusion + mail, air-gapped with a
  *      local ontology source and a declined dependency, a declined declared
- *      thesaurus, odd values): runPlainInstall under the scripted prompter
+ *      thesaurus, odd values): runInteractiveInstall under the scripted prompter
  *      (the script derived from the case's plan through the MODEL's own
  *      question ids — scriptForPlan), fake probes that pass, the catalog from
  *      the fixture source → `decided(plan)` ≡ the flags' ≡ the answers file's
@@ -34,6 +34,11 @@
  *      the plan of the edited answers.
  *  (f) the catalog-changed refusal: reviewed decisions ≠ the final plan's →
  *      CATALOG_CHANGED_REFUSAL; equal → none.
+ *  (h) an unfinished install found on start: resume answers `resume`; abort
+ *      asks the database name typed back (a wrong one refused and re-asked,
+ *      never typed right = refused) and the database password only when the
+ *      reset needs it and the environment did not give it; abort not offered
+ *      = quit; the terminal prompt names abort only when it is offered.
  *
  * DB-FREE, network-free (the only non-vendored source is a local fixture in a
  * mkdtemp dir, removed in afterAll); nothing is spawned, nothing installed.
@@ -60,22 +65,29 @@ import {
 	normalizeInstallAnswers,
 	SECRET_ANSWER_KEYS,
 } from '../../src/core/install/install_plan.ts';
+import { runInteractiveInstall } from '../../src/core/install/install_session.ts';
 import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
 import type { OntologyCatalog } from '../../src/core/install/ontology_choice.ts';
-import type { Secrets } from '../../src/core/install/run_files.ts';
 import { buildScreens, ROUTE_FIXED } from '../../src/core/install/screen_model.ts';
-import { scriptedInstallPrompter } from '../../src/core/install/ui_plain/prompter.ts';
-import { runPlainInstall } from '../../src/core/install/ui_plain/run_plain.ts';
+import {
+	scriptedInstallPrompter,
+	ttyInstallPrompter,
+} from '../../src/core/install/ui_plain/prompter.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import {
-	CASES,
 	decided,
 	declaredThesauri,
-	routeCases,
 	WIZARD_DEFAULT_ONTOLOGIES,
 	writeLocalOntologySource,
 } from '../helpers/install_answer_cases.ts';
 import {
+	allCases,
+	NOT_PLAIN,
+	type ParityCase,
+	splitCase,
+} from '../helpers/install_parity_cases.ts';
+import {
+	autoTerminal,
 	fakeProbes,
 	GOOD_ROOT_PASSWORD,
 	modelInput,
@@ -94,56 +106,9 @@ const LOCAL = await resolveOntologyCatalog(
 afterAll(() => LOCAL.cleanup());
 const LOCAL_CATALOG: OntologyCatalog = LOCAL.catalog;
 
-/**
- * The phase-1 cases the SCREENS cannot express, each with why (measured in
- * (a)): the plain mode is held to every other one.
- */
-const NOT_PLAIN: Readonly<Record<string, 'route_fixed' | 'core_tld' | 'declared_named'>> = {
-	// media_path / unix_socket / media_access_mode on the developer route: ROUTE_FIXED (flag-settable).
-	'+serving keys': 'route_fixed',
-	// lg is not an option of the thesaurus screen (core: always installed) — the note is the flag's.
-	'thesauri: with the core lg': 'core_tld',
-	// dd is not an option of the ontology screen (core: always installed) — the note is the flag's.
-	'ontologies: a core TLD dropped with a note': 'core_tld',
-	// A thesaurus an ontology DECLARES, also named in --hierarchies: on the screen it is
-	// pre-ticked by its declarer — the SAME thesauri install; naming it moves it in the
-	// install ORDER (and a self-decline of a named one drops its dependency row), which
-	// a tick cannot say. Re-answering the screen over such answers keeps their plan
-	// (install_screen_model_tripwire, "explicit roots").
-	'thesauri: a declared one named explicitly': 'declared_named',
-	'thesauri: a declared one named explicitly AND declined': 'declared_named',
-};
+type Case = ParityCase;
 
-interface Case {
-	name: string;
-	argv: string[];
-	wizard: Record<string, unknown> | null;
-	local: boolean;
-}
-
-const ALL_CASES: Case[] = [
-	...CASES.map((item) => ({ ...item, local: false })),
-	...routeCases(SOURCE_DIR).map((item) => ({ ...item, wizard: null })),
-];
-
-const SECRET_SET: ReadonlySet<string> = new Set(SECRET_ANSWER_KEYS);
-
-/** The case's raw answers (flags) split into the plain answers and the secrets. */
-function splitCase(argv: readonly string[]): {
-	raw: Record<string, unknown>;
-	plain: Record<string, unknown>;
-	secrets: Secrets;
-} {
-	const invocation = answersFromCliArgs(argv);
-	expect(invocation.errors, argv.join(' ')).toEqual([]);
-	const plain: Record<string, unknown> = {};
-	const secrets: Record<string, string> = {};
-	for (const [key, value] of Object.entries(invocation.raw)) {
-		if (SECRET_SET.has(key)) secrets[key] = String(value);
-		else plain[key] = value;
-	}
-	return { raw: invocation.raw, plain, secrets: secrets as Secrets };
-}
+const ALL_CASES: Case[] = allCases(SOURCE_DIR);
 
 const planOf = (raw: Readonly<Record<string, unknown>>, local: boolean): InstallPlan =>
 	buildInstallPlan(raw, local ? { ontologyCatalog: LOCAL_CATALOG } : {});
@@ -163,7 +128,7 @@ async function runScripted(
 ) {
 	const prompter = scriptedInstallPrompter(script);
 	const probes = fakeProbes({ catalog: local ? LOCAL_CATALOG : null });
-	const result = await runPlainInstall({
+	const result = await runInteractiveInstall({
 		prompter,
 		probes,
 		priorEnv: {},
@@ -409,19 +374,19 @@ describe('an edit from the Review installs the edited plan (e)', () => {
 		);
 		const prompter = scriptedInstallPrompter(script);
 		// The operator's NEW answers, typed when the Review is first shown.
-		const line = prompter.line;
+		const review = prompter.review;
 		let edited = false;
-		prompter.line = async (id, text) => {
-			if (id === 'review' && !edited) {
+		prompter.review = async (view) => {
+			if (!edited) {
 				edited = true;
 				script.answers['languages.langs'] = ['lg-eng', 'lg-fra'];
 				script.answers['languages.app_lang_default'] = 'lg-fra';
 				script.answers['languages.data_lang_default'] = 'lg-eng';
 				script.answers['mail.mailer'] = false;
 			}
-			return line(id, text);
+			return review(view);
 		};
-		const result = await runPlainInstall({
+		const result = await runInteractiveInstall({
 			prompter,
 			probes: fakeProbes(),
 			priorEnv: {},
@@ -475,17 +440,17 @@ describe('a probe verdict holds only for the answers it tested (g)', () => {
 			['edit 1', 'install'],
 		);
 		const prompter = scriptedInstallPrompter(script);
-		const line = prompter.line;
+		const review = prompter.review;
 		let edited = false;
-		prompter.line = async (id, text) => {
-			if (id === 'review' && !edited) {
+		prompter.review = async (view) => {
+			if (!edited) {
 				edited = true;
 				script.answers['route.instance'] = 'ribera';
 			}
-			return line(id, text);
+			return review(view);
 		};
 		const probes = fakeProbes();
-		const result = await runPlainInstall({
+		const result = await runInteractiveInstall({
 			prompter,
 			probes,
 			priorEnv: {},
@@ -514,14 +479,14 @@ describe('a probe verdict holds only for the answers it tested (g)', () => {
 		const { raw, plain } = splitCase(answerCase.argv);
 		const script = scriptForPlan(planOf(raw, false), Object.keys(plain), {}, ['edit 1', 'install']);
 		const prompter = scriptedInstallPrompter(script);
-		const line = prompter.line;
+		const review = prompter.review;
 		let edited = false;
-		prompter.line = async (id, text) => {
-			if (id === 'review' && !edited) {
+		prompter.review = async (view) => {
+			if (!edited) {
 				edited = true;
 				script.answers['route.route'] = 'developer';
 			}
-			return line(id, text);
+			return review(view);
 		};
 		// The host checks (psql, the seed…) fail on this "host"; a Docker route skips them.
 		const fake = fakeProbes();
@@ -534,7 +499,7 @@ describe('a probe verdict holds only for the answers it tested (g)', () => {
 					: { ...outcome, ok: false, msg: 'psql not found (fake)' };
 			},
 		};
-		const result = await runPlainInstall({
+		const result = await runInteractiveInstall({
 			prompter,
 			probes,
 			priorEnv: {},
@@ -562,16 +527,16 @@ describe('a probe verdict holds only for the answers it tested (g)', () => {
 			[`edit ${mailIndex}`, 'install'],
 		);
 		const prompter = scriptedInstallPrompter(script);
-		const line = prompter.line;
+		const review = prompter.review;
 		let edited = false;
-		prompter.line = async (id, text) => {
-			if (id === 'review' && !edited) {
+		prompter.review = async (view) => {
+			if (!edited) {
 				edited = true;
 				script.answers['mail.mailer'] = false;
 			}
-			return line(id, text);
+			return review(view);
 		};
-		const result = await runPlainInstall({
+		const result = await runInteractiveInstall({
 			prompter,
 			probes: fakeProbes(),
 			priorEnv: {},
@@ -629,5 +594,136 @@ describe('the reviewed decisions bind the run (f)', () => {
 				}
 			},
 		);
+	});
+});
+
+// ── (h) an unfinished install: resume / abort / quit ─────────────────────────
+
+describe('an unfinished install on start: resume, abort (the name typed back), quit (h)', () => {
+	const unfinished = { database: 'dedalo_prado', outcome: 'failed', canAbort: true };
+
+	/** The plain mode over `script`, an unfinished install found on start. */
+	async function startWith(
+		script: Parameters<typeof scriptedInstallPrompter>[0],
+		found: typeof unfinished & { needsDbPassword?: boolean },
+		givenSecrets: Record<string, string> = {},
+		typedNames: string[] = [],
+	) {
+		const prompter = scriptedInstallPrompter(script);
+		const text = prompter.text;
+		// The database names typed, in order (the scripted prompter repeats one answer).
+		prompter.text = async (question) => {
+			if (question.id !== 'resume.confirm_database' || typedNames.length === 0)
+				return text(question);
+			prompter.asked.push(question.id);
+			return typedNames.shift() as string;
+		};
+		const result = await runInteractiveInstall({
+			prompter,
+			probes: fakeProbes(),
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets,
+			unfinished: found,
+		});
+		return { result, prompter };
+	}
+
+	test('resume: no question asked, the session resumes', async () => {
+		const { result, prompter } = await startWith({ answers: { resume: 'resume' } }, unfinished);
+		expect(result).toEqual({ kind: 'resume' });
+		expect(prompter.said).toContain(
+			"An install into database 'dedalo_prado' was interrupted (failed).",
+		);
+		expect(prompter.asked).toEqual(['resume']);
+	});
+
+	test('abort: a wrong name is refused and asked again; the right one aborts; the password when needed', async () => {
+		const { result, prompter } = await startWith(
+			{ answers: { resume: 'abort' }, secrets: { 'resume.db_password': 'Zz-Abort-Db-1' } },
+			{ ...unfinished, needsDbPassword: true },
+			{},
+			['dedalo_wrong', 'dedalo_prado'],
+		);
+		expect(result).toEqual({
+			kind: 'abort',
+			confirmDatabase: 'dedalo_prado',
+			secrets: { db_password: 'Zz-Abort-Db-1' },
+		});
+		expect(prompter.asked).toEqual([
+			'resume',
+			'resume.confirm_database',
+			'resume.confirm_database',
+			'resume.db_password',
+		]);
+		expect(prompter.said).toContain(
+			"type the database name 'dedalo_prado' exactly to confirm the abort",
+		);
+	});
+
+	test('abort: the password is NOT asked when the reset does not need it, nor when the environment gave it', async () => {
+		const notNeeded = await startWith({ answers: { resume: 'abort' } }, unfinished, {}, [
+			'dedalo_prado',
+		]);
+		expect(notNeeded.result).toEqual({
+			kind: 'abort',
+			confirmDatabase: 'dedalo_prado',
+			secrets: {},
+		});
+		expect(notNeeded.prompter.asked).not.toContain('resume.db_password');
+		const given = await startWith(
+			{ answers: { resume: 'abort' } },
+			{ ...unfinished, needsDbPassword: true },
+			{ db_password: 'Zz-Env-Db-2' },
+			['dedalo_prado'],
+		);
+		expect(given.result).toEqual({
+			kind: 'abort',
+			confirmDatabase: 'dedalo_prado',
+			secrets: { db_password: 'Zz-Env-Db-2' },
+		});
+		expect(given.prompter.asked).not.toContain('resume.db_password');
+	});
+
+	test('a name never typed right ends the session as refused; abort not offered = quit', async () => {
+		const never = await startWith(
+			{ answers: { resume: 'abort', 'resume.confirm_database': 'nope' } },
+			unfinished,
+		);
+		expect(never.result).toEqual({ kind: 'quit', reason: 'refused' });
+		const offered = await startWith(
+			{ answers: { resume: 'abort' } },
+			{ ...unfinished, canAbort: false },
+		);
+		expect(offered.result).toEqual({ kind: 'quit', reason: 'operator' });
+		expect(offered.prompter.asked).toEqual(['resume']);
+	});
+
+	test('the plain terminal prompt names abort only when it is offered', async () => {
+		for (const canAbort of [true, false]) {
+			const terminal = autoTerminal(() => 'resume');
+			try {
+				const result = await runInteractiveInstall({
+					prompter: ttyInstallPrompter({
+						input: terminal.input,
+						output: terminal.output,
+						signals: terminal.signals,
+					}),
+					probes: fakeProbes(),
+					priorEnv: {},
+					thesauri: thesaurusOffer(),
+					host: {},
+					givenSecrets: {},
+					unfinished: { ...unfinished, canAbort },
+				});
+				expect(result).toEqual({ kind: 'resume' });
+				expect(terminal.prompts.at(-1)).toContain(
+					canAbort ? 'resume it, abort it, or quit' : 'resume it, or quit',
+				);
+			} finally {
+				terminal.stop();
+			}
+		}
 	});
 });

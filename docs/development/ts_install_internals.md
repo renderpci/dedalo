@@ -486,6 +486,54 @@ is born with is a change to a source, then `bun run seed:build`, then commit the
 and the manifest together — a source changed without a recompile is reported STALE.
 To ship a newer ontology, export the release packages from the ontology master first.
 
+## Front ends (the interactive installer)
+
+The terminal installer has ONE walker and two renderings. `install_session.ts`
+(`runInteractiveInstall`) walks the screen model (`screen_model.ts`): the
+order, the gating, what a changed answer re-asks, the probes, the kept
+secrets, the Review's commands, the unfinished-install offer (resume / abort /
+quit). It talks to an `InstallPrompter` (`prompter_contract.ts`), which holds
+the shared answer rules — what Enter takes (`suggested`), when `-` empties a
+field, the secret entry flow (`secretEntryStep`: refused, policy, twice, three
+mismatches = refused), a confirm's default — and the structured views a front
+end draws (`ScreenView` before every ask; Welcome, Resume, Probe, Review). The
+multi-select model (ticks, declared closure, declines, locks) is
+`multi_select.ts`; the text hygiene every front end applies to untrusted
+strings is `display_text.ts` (`sanitizeLine`).
+
+- **Plain** (`ui_plain/prompter.ts`): one question per line.
+- **Full screen** (`ui/`, OpenTUI): the same asks as widgets, answered with the
+  plain mode's values. It holds no install knowledge — no default, no rule, no
+  step table (`scripts/install.ts` hands it the step list through
+  `RunReporter.begin`). `ui/lifecycle.ts` owns every exit path (signals, an
+  uncaught error, `fail`, Done) and restores the terminal; the process is
+  injected (`ProcessPort`) so the gates drive the UI on OpenTUI's test renderer
+  without a handler that exits the runner. `console_capture.ts` routes every
+  console method into the log ring while the UI is up (the executor's
+  redaction wraps it).
+
+The run is told through `run_events.ts`: the executor emits a `StepEvent` per
+step phase (`start`, `skipped`, `adopted`, `done`, `failed`, `interrupted`,
+`undo` — every text redacted) and reports its own signal handlers armed or
+disarmed (`RunIo.signals`), so the full screen delegates SIGINT/SIGTERM to the
+executor only while it holds them. The headless CLI has no listener and its
+transcript is unchanged.
+
+**Confinement.** `@opentui/*` is imported only under `src/core/install/ui/`,
+and only `tui_loader.ts` loads it — by a dynamic import, inside one `try`
+around the import AND the renderer's creation (a missing native build throws
+only there). Any failure answers `{kind: 'plain', reason}` and the CLI goes on
+in plain mode. Neither the server's import closure nor the headless installer
+reaches it. OpenTUI's own environment switches (`OTUI_*`, `SHOW_CONSOLE` — one
+appends every raw stdin byte to a file) are cleared by `scripts/install.ts`
+before the UI loads.
+
+**The pin.** `@opentui/core` is pinned EXACTLY in `package.json`
+`dependencies` (the latest stable at the time, 0.6.1): the package is pre-1.0,
+so a minor release may change the API. Dependabot proposes bumps; a bump is
+taken with the TUI gates green. The lock carries the native build of every
+target (darwin arm64/x64, linux arm64/x64, glibc and musl).
+
 ## Gates
 
 `test/unit/install_*.test.ts` and `seed_build_native`: the seed compiler and its
@@ -524,3 +572,13 @@ against a loopback master: closure order, undeclared warning, local
 directory/archive, preflight refusals with the database untouched, tampered
 staging, `matrix_dd`). Tests never name a real domain ontology's structure: they
 build zz TLD packages (`src/core/test_data/ontology_package_fixture.ts`).
+
+The interactive front ends: `install_screen_model_tripwire` (the model), the
+plain mode's `install_plain_parity_tripwire` / `install_plain_secrets_tripwire`,
+and the full screen's `install_tui_parity_tripwire` (driven by key presses over
+the same matrix: the same plan, the same asks), `install_tui_secrets_tripwire`
+(no secret on any frame or renderable; the salt only on Done),
+`install_tui_restore_tripwire` (every exit path on a real pseudo-terminal: the
+code, every terminal mode undone, `stty` sane), `opentui_confinement_tripwire`,
+`install_tui_frames` (the mockup's layout at 104×30, 96×27 and 80×24) and
+`install_executor_events_native` (the step events).

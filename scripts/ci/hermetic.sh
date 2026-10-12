@@ -458,6 +458,15 @@ HERMETIC_TRIPWIRES=(
 	test/unit/install_screen_model_tripwire.test.ts
 	test/unit/install_plain_parity_tripwire.test.ts
 	test/unit/install_plain_secrets_tripwire.test.ts
+	# --- 2026-10-12 (terminal installer phase 3, the OpenTUI full-screen UI). DB-free (re-verified
+	#     with DB_HOST=127.0.0.1 DB_PORT=59999 DB_NAME=ci_hermetic_no_db: 79 pass / 0 fail with the
+	#     frames + executor-events gates): OpenTUI's test renderer driven by keys, the UI on a real
+	#     PTY (Bun.spawn terminal; sh + stty), the CLI spawned with a scratch private dir, and the
+	#     native package from `bun install --frozen-lockfile` (absent = RED, never skipped).
+	test/unit/install_tui_parity_tripwire.test.ts
+	test/unit/install_tui_secrets_tripwire.test.ts
+	test/unit/install_tui_restore_tripwire.test.ts
+	test/unit/opentui_confinement_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

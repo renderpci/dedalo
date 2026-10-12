@@ -22,10 +22,17 @@
  * --secrets-stdin, --execute or --root-password) on a terminal and the
  * installer ASKS — screen by screen, in the route's order
  * (src/core/install/screen_model.ts), each screen's probe run in a child
- * process, then a Review (install / edit <n> / write <path> / quit). Phase 2
- * draws it in PLAIN line mode (src/core/install/ui_plain/) — selected anyway
- * by --plain, TERM=dumb or unset, a redirected stdout (the prompts then go to
- * stderr or /dev/tty) or a terminal under 80×24. The interactive answers run
+ * process, then a Review (install / edit <n> / write <path> / quit). ONE
+ * session walks it (src/core/install/install_session.ts) through one of two
+ * prompters: the FULL-SCREEN UI (src/core/install/ui/, OpenTUI — phase 3,
+ * loaded only here, through src/core/install/tui_loader.ts; when it cannot
+ * start, one line says why and the plain mode takes over), or the PLAIN line
+ * mode (src/core/install/ui_plain/) — selected by --plain, TERM=dumb or unset,
+ * a redirected stdout (the prompts then go to stderr or /dev/tty) or a
+ * terminal under 80×24. The full-screen UI also draws the run (the
+ * executor's step events) and the Done screen; it restores the terminal on
+ * every exit path. An unfinished install found on start offers resume, abort
+ * (the database name typed back) or quit. The interactive answers run
  * through the SAME plan and executor as the flags below; the catalog is
  * re-resolved here and a decision that changed since the Review is refused.
  * Piped stdin with no answer source is REFUSED (use --answers). The Docker
@@ -148,9 +155,15 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // All config-free — safe to import BEFORE the environment is seeded.
-import { processEnvValue, seedProcessEnv, unsetProcessEnv } from '../src/config/env.ts';
+import {
+	liveProcessEnv,
+	processEnvValue,
+	seedProcessEnv,
+	unsetProcessEnv,
+} from '../src/config/env.ts';
 import {
 	type FrontEndChoice,
+	type FrontEndResult,
 	type ReviewedDecisions,
 	reviewedDecisionsRefusal,
 	selectFrontEndFor,
@@ -183,6 +196,8 @@ import {
 	vendoredOntologyCatalog,
 } from '../src/core/install/ontology_choice.ts';
 import { readPriorEnv } from '../src/core/install/prior_env.ts';
+import type { InstallPrompter } from '../src/core/install/prompter_contract.ts';
+import type { RunAnnouncement, RunReporter } from '../src/core/install/run_events.ts';
 import {
 	buildPlanFile,
 	type PlanFile,
@@ -194,12 +209,19 @@ import {
 	type Secrets,
 	secretsFromEnv,
 } from '../src/core/install/run_files.ts';
+import { DONE_TEXT } from '../src/core/install/screen_text.ts';
+import { DEDALO_VERSION } from '../src/core/update/version.ts';
 
 /** Removes the resolved catalog's scratch files (an extracted --ontology-source archive). */
 let cleanupCatalog: () => void = () => undefined;
 
+/** The full-screen UI while it is up (every exit path goes through it: the terminal is restored). */
+let activeUi: import('../src/core/install/tui_loader.ts').TuiFrontEnd | null = null;
+
 function fail(msg: string): never {
 	cleanupCatalog();
+	// The full-screen UI is restored FIRST; the message is printed on the main screen after it.
+	if (activeUi !== null) return activeUi.exitNow(1, [`✖ install failed: ${msg}`]);
 	console.error(`\n✖ install failed: ${msg}\n`);
 	process.exit(1);
 }
@@ -476,53 +498,78 @@ function bootEnvironment(plan: InstallPlan): void {
 	seedProcessEnv({ ...cliBootEnv(plan), PGAPPNAME: `dedalo_install:${process.pid}` });
 }
 
-/** Print the plan's notes, warnings and suggestions. */
-function announce(plan: InstallPlan): void {
+/** The plan's notes, warnings and suggestions, as a reporter announces them. */
+function announcementOf(plan: InstallPlan): RunAnnouncement {
 	const { answers } = plan;
-	console.log(`\nDédalo TS install — entity '${answers.entity}', db '${answers.db_database}'\n`);
-	for (const note of plan.notes) console.log(`  note: ${note}`);
-	for (const warning of plan.warnings) console.warn(`  ⚠ ${warning}`);
-	for (const suggestion of plan.suggestions) console.log(`  suggestion: ${suggestion}`);
+	return {
+		title: `Dédalo TS install — entity '${answers.entity}', db '${answers.db_database}'`,
+		notes: plan.notes,
+		warnings: plan.warnings,
+		suggestions: plan.suggestions,
+	};
 }
 
-/** The interactive front end's one-time display (the generated salt), when there is one. */
-let showOnce: ((lines: readonly string[]) => boolean) | undefined;
+/**
+ * THE PLAIN REPORTER — the headless CLI's (and the plain mode's) printing,
+ * byte for byte what this script printed before the full-screen UI existed;
+ * the interactive plain mode adds the one-time display of the salt.
+ */
+function plainReporter(prompter?: InstallPrompter): RunReporter {
+	return {
+		io: {
+			log: (line) => console.log(line),
+			warn: (line) => console.warn(line),
+			...(prompter === undefined ? {} : { showOnce: (lines) => prompter.showOnce(lines) }),
+		},
+		announce: (announcement) => {
+			console.log(`\n${announcement.title}\n`);
+			for (const note of announcement.notes) console.log(`  note: ${note}`);
+			for (const warning of announcement.warnings) console.warn(`  ⚠ ${warning}`);
+			for (const suggestion of announcement.suggestions) console.log(`  suggestion: ${suggestion}`);
+		},
+		finish: async (outcome, context) => {
+			if (outcome.exitCode !== 0) return printFailure(outcome);
+			if (outcome.result === 'aborted') console.log(`\n✔ ${DONE_TEXT.aborted}\n`);
+			else
+				console.log(`\n✔ ${DONE_TEXT.complete(context.rootVerified)}. ${DONE_TEXT.supervisor}\n`);
+		},
+	};
+}
 
-/** Run the executor and leave with its exit code (the hint after a failure that wrote state). */
+/** A failed run's lines (the hint after a failure that wrote state). */
+function printFailure(outcome: {
+	message: string | null;
+	failedStep: string | null;
+	hint: readonly string[];
+}): void {
+	if (outcome.hint.length === 0) {
+		console.error(`\n✖ install failed: ${outcome.message ?? ''}\n`);
+		return;
+	}
+	const at = outcome.failedStep === null ? '' : ` at step [${outcome.failedStep}]`;
+	console.error(`\n✖ install failed${at}: ${outcome.message ?? ''}`);
+	for (const line of outcome.hint) console.error(line);
+	console.error('');
+}
+
+/** Run the executor and leave with its exit code, the reporter telling the outcome. */
 async function execute(
 	request: import('../src/core/install/executor.ts').ExecutorRequest,
+	reporter: RunReporter,
 ): Promise<never> {
 	const { executeInstall } = await import('../src/core/install/executor.ts');
-	const outcome = await executeInstall(request, {
-		log: (line) => console.log(line),
-		warn: (line) => console.warn(line),
-		...(showOnce === undefined ? {} : { showOnce }),
-	});
+	const outcome = await executeInstall(request, reporter.io);
 	cleanupCatalog();
-	if (outcome.exitCode !== 0) {
-		if (outcome.hint.length > 0) {
-			const at = outcome.failedStep === null ? '' : ` at step [${outcome.failedStep}]`;
-			console.error(`\n✖ install failed${at}: ${outcome.message ?? ''}`);
-			for (const line of outcome.hint) console.error(line);
-			console.error('');
-		} else {
-			console.error(`\n✖ install failed: ${outcome.message ?? ''}\n`);
-		}
-		process.exit(outcome.exitCode);
-	}
-	if (outcome.result === 'aborted') {
-		console.log(
-			'\n✔ install aborted — what the install created is removed; the database itself is kept.\n',
-		);
-	} else {
-		const verified = (request.secrets.root_password ?? '') !== '';
-		console.log(
-			`\n✔ install complete${verified ? ' — root login verified' : ''}. Start the server under its supervisor ` +
-				'(systemd: `systemctl enable --now dedalo-ts` — docs/install/production.md) or with ' +
-				'`bun run start:supervised`; plain `bun run start` is unsupervised and cannot take code updates.\n',
-		);
-	}
-	process.exit(0);
+	const rootVerified = (request.secrets.root_password ?? '') !== '';
+	await reporter.finish(outcome, { mode: request.mode, rootVerified });
+	process.exit(outcome.exitCode);
+}
+
+/** The steps a run will go through, with their labels (the reporter's Install screen). */
+async function beginSteps(reporter: RunReporter, planFile: PlanFile): Promise<void> {
+	if (reporter.begin === undefined) return;
+	const { INSTALL_STEPS } = await import('../src/core/install/steps.ts');
+	reporter.begin(planFile.steps.map((id) => ({ id, label: INSTALL_STEPS[id].label(planFile) })));
 }
 
 // ── prompting for a missing secret (a terminal, no --execute) ────────────────
@@ -557,21 +604,34 @@ const SECRET_PROMPT: Readonly<Record<SecretKey, string>> = {
 	root_password: 'Root password',
 };
 
-/**
- * Ask the missing `keys` on the terminal (hidden, twice; the root password held
- * to the policy, rule by rule). Nothing is asked when the run may not prompt.
- */
-async function promptSecrets(keys: readonly SecretKey[], into: Secrets): Promise<void> {
-	const missing = keys.filter((key) => (into[key] ?? '') === '');
-	if (missing.length === 0 || !canPromptSecrets()) return;
+/** The plain prompter a headless run asks a missing secret on, or null (no terminal sink). */
+async function headlessPrompter(): Promise<InstallPrompter | null> {
 	const output = promptOutput();
-	if (output === null) return;
-	const { ttyInstallPrompter, isNav } = await import('../src/core/install/ui_plain/prompter.ts');
-	const { passwordFeedback } = await import('../src/core/install/screen_model.ts');
-	const prompter = ttyInstallPrompter(
+	if (output === null) return null;
+	const { ttyInstallPrompter } = await import('../src/core/install/ui_plain/prompter.ts');
+	return ttyInstallPrompter(
 		{ input: process.stdin, output, signals: process },
 		{ columns: process.stdout.columns },
 	);
+}
+
+/**
+ * Ask the missing `keys` on the terminal (hidden, twice; the root password held
+ * to the policy, rule by rule) — on the interactive session's prompter when
+ * there is one (the full-screen UI asks a resume's secrets itself). Nothing is
+ * asked when the run may not prompt.
+ */
+async function promptSecrets(
+	keys: readonly SecretKey[],
+	into: Secrets,
+	given?: InstallPrompter,
+): Promise<void> {
+	const missing = keys.filter((key) => (into[key] ?? '') === '');
+	if (missing.length === 0 || !canPromptSecrets()) return;
+	const prompter = given ?? (await headlessPrompter());
+	if (prompter === null) return;
+	const { isNav } = await import('../src/core/install/prompter_contract.ts');
+	const { passwordFeedback } = await import('../src/core/install/screen_model.ts');
 	for (const key of missing) {
 		const answer = await prompter.secret(
 			{
@@ -608,10 +668,13 @@ interface InteractiveRun {
 	/** The decisions the operator reviewed — the run refuses to decide otherwise. */
 	reviewed: ReviewedDecisions;
 	writeAnswers?: string;
+	/** The front end's side of the run (the full-screen UI, or the plain one). */
+	reporter: RunReporter;
 }
 
 /** A FRESH install (or --plan). */
 async function freshInstall(interactive?: InteractiveRun): Promise<never> {
+	const reporter = interactive?.reporter ?? plainReporter();
 	if (interactive === undefined && !invocation.planOnly) {
 		await promptSecrets(['root_password'], secrets);
 	}
@@ -673,15 +736,20 @@ async function freshInstall(interactive?: InteractiveRun): Promise<never> {
 	}
 
 	if (errors.length > 0) fail(errors.join('; '));
-	announce(plan);
-	return execute({
-		mode: 'fresh',
-		execute: invocation.execute,
-		planFile: buildPlanFile(plan, secrets),
-		plan,
-		secrets,
-		ontologyCatalog: resolvedCatalog.catalog,
-	});
+	reporter.announce(announcementOf(plan));
+	const planFile = buildPlanFile(plan, secrets);
+	await beginSteps(reporter, planFile);
+	return execute(
+		{
+			mode: 'fresh',
+			execute: invocation.execute,
+			planFile,
+			plan,
+			secrets,
+			ontologyCatalog: resolvedCatalog.catalog,
+		},
+		reporter,
+	);
 }
 
 /** Has the saved state recorded `step` done? */
@@ -716,8 +784,19 @@ function resumeSecrets(planFile: PlanFile, state: ReturnType<typeof readStateFil
 	};
 }
 
-/** `--resume` / `--abort`: the SAVED plan is the authority. */
-async function continueInstall(): Promise<never> {
+/** How a resume / abort is continued (the CLI's flags, or the interactive Resume screen). */
+interface ContinueRequest {
+	mode: 'resume' | 'abort';
+	/** abort: the database name typed back (the executor compares it). */
+	confirmDatabase?: string;
+	/** The interactive session's prompter (a resume's missing secrets are asked on it). */
+	prompter?: InstallPrompter;
+	reporter: RunReporter;
+}
+
+/** `--resume` / `--abort` (or the interactive Resume screen): the SAVED plan is the authority. */
+async function continueInstall(request: ContinueRequest): Promise<never> {
+	const abort = request.mode === 'abort';
 	if (parseErrors.length > 0) fail(parseErrors.join('; '));
 	let planFile: PlanFile | null;
 	let state: ReturnType<typeof readStateFile>;
@@ -733,19 +812,17 @@ async function continueInstall(): Promise<never> {
 		);
 	}
 	const runSecrets = resumeSecrets(planFile, state);
+	// The config-free step table (importing the executor here would freeze
+	// config BEFORE bootEnvironment seeds the install's database).
+	const { secretsNeeded, abortNeedsDatabasePassword } = await import(
+		'../src/core/install/steps.ts'
+	);
 	// On a terminal (no --execute) a resume ASKS the secrets it still needs.
-	if (!invocation.abort) {
-		// The config-free step table (importing the executor here would freeze
-		// config BEFORE bootEnvironment seeds the install's database).
-		const { secretsNeeded } = await import('../src/core/install/steps.ts');
-		await promptSecrets(secretsNeeded(planFile, state), runSecrets);
+	if (!abort) {
+		await promptSecrets(secretsNeeded(planFile, state), runSecrets, request.prompter);
+		request.reporter.prepare?.();
 	}
-	if (
-		invocation.abort &&
-		(state.created.seed_started || state.created.seed_restored) &&
-		planFile.secrets_supplied.db_password &&
-		(runSecrets.db_password ?? '') === ''
-	) {
+	if (abort && abortNeedsDatabasePassword(planFile, state, runSecrets)) {
 		fail(
 			'--abort resets the database and needs its password: DEDALO_INSTALL_DB_PASSWORD or --secrets-stdin',
 		);
@@ -758,13 +835,18 @@ async function continueInstall(): Promise<never> {
 	// Only the keys the operator SUPPLIED are compared (an omitted one is not "different").
 	const givenKeys = Object.keys(plainRaw);
 	const givenAnswers = givenKeys.length > 0 ? normalizeInstallAnswers(raw).answers : undefined;
-	if (invocation.abort) {
-		return execute({
-			mode: 'abort',
-			execute: invocation.execute,
-			secrets: runSecrets,
-			confirmDatabase: invocation.confirmDatabase,
-		});
+	if (abort) {
+		request.reporter.prepare?.();
+		await beginSteps(request.reporter, planFile);
+		return execute(
+			{
+				mode: 'abort',
+				execute: invocation.execute,
+				secrets: runSecrets,
+				confirmDatabase: request.confirmDatabase,
+			},
+			request.reporter,
+		);
 	}
 	// The catalog is re-resolved only while a step that needs it is not done;
 	// the executor then holds the rebuilt plan's decisions to the saved ones.
@@ -778,16 +860,25 @@ async function continueInstall(): Promise<never> {
 		plan = buildInstallPlan(savedRaw, { priorEnv: prior, ontologyCatalog: catalog });
 		if (plan.errors.length > 0) fail(plan.errors.join('; '));
 	}
-	console.log(`\nDédalo TS install — resuming '${String(planFile.answers.db_database ?? '')}'\n`);
-	return execute({
-		mode: 'resume',
-		execute: invocation.execute,
-		givenAnswers,
-		givenKeys,
-		plan,
-		secrets: runSecrets,
-		ontologyCatalog: catalog,
+	request.reporter.announce({
+		title: `Dédalo TS install — resuming '${String(planFile.answers.db_database ?? '')}'`,
+		notes: [],
+		warnings: [],
+		suggestions: [],
 	});
+	await beginSteps(request.reporter, planFile);
+	return execute(
+		{
+			mode: 'resume',
+			execute: invocation.execute,
+			givenAnswers,
+			givenKeys,
+			plan,
+			secrets: runSecrets,
+			ontologyCatalog: catalog,
+		},
+		request.reporter,
+	);
 }
 
 // ── the interactive front end ────────────────────────────────────────────────
@@ -813,45 +904,163 @@ function thesaurusOffer(): { view: ReturnType<typeof hierarchyChoiceView> } | { 
 	}
 }
 
-/** Walk the screens (plain line mode — phase 3 draws the full-screen UI), then act on the outcome. */
-async function interactiveInstall(sink: 'stdout' | 'stderr' | 'tty'): Promise<never> {
-	const { runPlainInstall } = await import('../src/core/install/ui_plain/run_plain.ts');
-	const { ttyInstallPrompter } = await import('../src/core/install/ui_plain/prompter.ts');
-	const { childProbes } = await import('../src/core/install/install_probe_client.ts');
-	const prompter = ttyInstallPrompter(
-		{ input: process.stdin, output: interactiveOutput(sink), signals: process },
-		{ columns: process.stdout.columns ?? process.stderr.columns },
-	);
-	const host = Intl.DateTimeFormat().resolvedOptions();
-	const result = await runPlainInstall({
-		prompter,
-		probes: childProbes({ execPath: process.execPath, cwd: process.cwd() }),
-		priorEnv,
-		thesauri: thesaurusOffer(),
-		host: { timezone: host.timeZone, locale: host.locale },
-		givenSecrets: { ...secrets },
-		...(invocation.writeAnswersPath === undefined
-			? {}
-			: { writeAnswersPath: invocation.writeAnswersPath }),
+/**
+ * OpenTUI's own debug switches, read straight from the environment: one of
+ * them appends every raw stdin byte (a typed password) to a file, others keep
+ * key logs or redirect the screen. Cleared before the UI loads — the
+ * installer's terminal is never anyone else's to configure.
+ */
+const OPENTUI_ENV = /^(OTUI_|SHOW_CONSOLE$)/;
+
+function clearOpenTuiEnv(): void {
+	unsetProcessEnv(Object.keys(liveProcessEnv()).filter((key) => OPENTUI_ENV.test(key)));
+}
+
+/** The probe children alive now (the full-screen UI kills them when it closes). */
+const probeChildren = new Set<{
+	kill(signal?: number | NodeJS.Signals): void;
+	exited: Promise<number>;
+}>();
+
+/** The full-screen UI when it can be drawn; null (one line saying why) when it cannot. */
+async function openTuiFront(): Promise<
+	import('../src/core/install/tui_loader.ts').TuiFrontEnd | null
+> {
+	clearOpenTuiEnv();
+	const { openFullScreen } = await import('../src/core/install/tui_loader.ts');
+	const opened = await openFullScreen({
+		stdin: process.stdin,
+		stdout: process.stdout,
+		noColor: terminalCaps().noColor,
+		version: DEDALO_VERSION,
 	});
-	if (result.kind === 'resume') return continueInstall();
-	if (result.kind === 'quit') {
-		process.exit(result.reason === 'interrupted' ? 130 : result.reason === 'refused' ? 1 : 0);
+	if (opened.kind === 'tui') return opened.front;
+	process.stderr.write(
+		`full-screen UI unavailable (${opened.reason}) — continuing in plain mode\n`,
+	);
+	return null;
+}
+
+/** The exit code of a session that ended without installing. */
+function quitCode(reason: string | undefined): number {
+	if (reason === 'interrupted') return 130;
+	return reason === 'refused' ? 1 : 0;
+}
+
+/** Leave: through the full-screen UI when it is up (the terminal restored first). */
+async function leave(code: number, lines: readonly string[] = []): Promise<never> {
+	if (activeUi !== null) return activeUi.close(code, lines);
+	return process.exit(code);
+}
+
+/** The main-screen line after a quit: an unfinished install (its state file) is KEPT, never "nothing". */
+function quitNotice(): string[] {
+	let unfinished: boolean;
+	try {
+		unfinished = readStateFile() !== null;
+	} catch {
+		unfinished = true;
 	}
-	if (result.kind !== 'install') process.exit(0);
+	return [
+		unfinished
+			? 'the unfinished install is kept — run the installer again to resume or abort it'
+			: 'nothing was installed',
+	];
+}
+
+/** The session's outcome, acted on. */
+async function actOn(
+	result: FrontEndResult,
+	prompter: InstallPrompter,
+	reporter: RunReporter,
+): Promise<never> {
+	if (result.kind === 'resume' || result.kind === 'abort') {
+		if (result.kind === 'abort' && result.secrets.db_password !== undefined) {
+			secrets.db_password = result.secrets.db_password;
+		}
+		// No prepare here: a resume first asks the secrets it still needs ON the
+		// walk's screens (continueInstall enters the run once they are in).
+		return continueInstall({
+			mode: result.kind,
+			...(result.kind === 'abort' ? { confirmDatabase: result.confirmDatabase } : {}),
+			prompter,
+			reporter,
+		});
+	}
+	if (result.kind === 'quit') return leave(quitCode(result.reason), quitNotice());
+	if (result.kind === 'written') {
+		return activeUi === null ? process.exit(0) : activeUi.written(result.path);
+	}
 	// REPLACE, never merge: a secret the environment supplied for a service the
 	// operator then turned off (or cleared) is not in result.secrets (givenOnly)
 	// and must not be recorded as supplied nor used.
 	for (const key of SECRET_KEYS) delete secrets[key];
 	Object.assign(secrets, result.secrets);
 	raw = withSecrets(result.raw, secrets);
-	showOnce = (lines) => prompter.showOnce(lines);
+	reporter.prepare?.();
 	return freshInstall({
 		reviewed: result.reviewed,
+		reporter,
 		...(result.writeAnswers === undefined ? {} : { writeAnswers: result.writeAnswers }),
 	});
 }
 
-if (frontEnd.kind === 'interactive') await interactiveInstall(frontEnd.sink);
-else if (invocation.resume || invocation.abort) await continueInstall();
-else await freshInstall();
+/**
+ * Walk the screens — on the full-screen UI when the terminal can draw it, in
+ * plain line mode otherwise — then act on the outcome.
+ */
+async function interactiveInstall(
+	choice: Extract<FrontEndChoice, { kind: 'interactive' }>,
+): Promise<never> {
+	const { runInteractiveInstall } = await import('../src/core/install/install_session.ts');
+	const { childProbes } = await import('../src/core/install/install_probe_client.ts');
+	activeUi = choice.ui === 'tui' ? await openTuiFront() : null;
+	let prompter: InstallPrompter;
+	let reporter: RunReporter;
+	if (activeUi !== null) {
+		prompter = activeUi.prompter;
+		reporter = activeUi.reporter;
+		activeUi.onClose(() => {
+			for (const child of probeChildren) child.kill('SIGKILL');
+		});
+	} else {
+		const { ttyInstallPrompter } = await import('../src/core/install/ui_plain/prompter.ts');
+		prompter = ttyInstallPrompter(
+			{ input: process.stdin, output: interactiveOutput(choice.sink), signals: process },
+			{ columns: process.stdout.columns ?? process.stderr.columns },
+		);
+		reporter = plainReporter(prompter);
+	}
+	const host = Intl.DateTimeFormat().resolvedOptions();
+	const result = await runInteractiveInstall({
+		prompter,
+		probes: childProbes({
+			execPath: process.execPath,
+			cwd: process.cwd(),
+			onSpawn: (child) => {
+				probeChildren.add(child);
+				void child.exited.then(() => probeChildren.delete(child));
+			},
+		}),
+		priorEnv,
+		thesauri: thesaurusOffer(),
+		host: { timezone: host.timeZone, locale: host.locale },
+		givenSecrets: { ...secrets },
+		version: DEDALO_VERSION,
+		...(invocation.writeAnswersPath === undefined
+			? {}
+			: { writeAnswersPath: invocation.writeAnswersPath }),
+	});
+	return actOn(result, prompter, reporter);
+}
+
+if (frontEnd.kind === 'interactive') await interactiveInstall(frontEnd);
+else if (invocation.resume || invocation.abort) {
+	await continueInstall({
+		mode: invocation.abort ? 'abort' : 'resume',
+		...(invocation.confirmDatabase === undefined
+			? {}
+			: { confirmDatabase: invocation.confirmDatabase }),
+		reporter: plainReporter(),
+	});
+} else await freshInstall();

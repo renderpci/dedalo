@@ -1269,7 +1269,7 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--confirm-database', key: null, kind: 'value' },
 	{ flag: '--secrets-stdin', key: null, kind: 'bool' },
 	{ flag: '--execute', key: null, kind: 'bool' },
-	// The interactive front end (phase 2, 2026-10-12 — ui_plain/run_plain.ts).
+	// The interactive front end (phase 2, 2026-10-12 — install_session.ts).
 	{ flag: '--plain', key: null, kind: 'bool' },
 	{ flag: '--write-answers', key: null, kind: 'value' },
 	{ flag: '--list-langs', key: null, kind: 'bool' },

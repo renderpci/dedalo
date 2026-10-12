@@ -66,6 +66,7 @@ import type { OntologyCatalog } from './ontology_choice.ts';
 import { installPrivateDir } from './paths.ts';
 import { trackPsqlChildren } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
+import type { RunIo, StepPhase } from './run_events.ts';
 import {
 	acquireRunLock,
 	answerDifferences,
@@ -113,18 +114,12 @@ import {
 // a resume's missing secrets BEFORE it seeds the environment config freezes).
 export { secretsNeeded };
 
-export interface ExecutorIo {
-	log(line: string): void;
-	warn(line: string): void;
-	/**
-	 * The ONE-TIME display of a generated secret (the salt), when the front end
-	 * has a terminal for it (the interactive installer: prompter.showOnce).
-	 * Answers whether the lines reached a TERMINAL — only then is the secret
-	 * recorded as shown; otherwise the run says where it is stored. Absent (the
-	 * headless CLI): the line is logged once, as before.
-	 */
-	showOnce?(lines: readonly string[]): boolean;
-}
+/**
+ * What the run writes to: log/warn lines, the one-time display of the salt,
+ * and (optional, the full-screen front end) the step events and the signal
+ * arming — run_events.ts RunIo.
+ */
+export type ExecutorIo = RunIo;
 
 /** What the executor needs from the machine — injectable so the loop is testable without one. */
 export interface ExecutorHost {
@@ -328,6 +323,41 @@ function warnLine(ctx: RunContext, line: string): void {
 	ctx.io.warn(redact(ctx, line));
 }
 
+/** The phases whose event carries the step's recorded duration. */
+const TIMED_PHASES: ReadonlySet<StepPhase> = new Set(['done', 'adopted', 'skipped', 'failed']);
+
+/** finished_at − started_at of a step's record (ms), or null. */
+function elapsedOf(record: StepRecord | undefined): number | null {
+	if (!record?.started_at || !record.finished_at) return null;
+	const ms = Date.parse(record.finished_at) - Date.parse(record.started_at);
+	return Number.isFinite(ms) ? Math.max(0, ms) : null;
+}
+
+/**
+ * Tell the front end a step's progress (when it listens — the headless CLI
+ * does not, and its log/warn transcript is the same either way). Every text
+ * is redacted here, like every logged line.
+ */
+function emit(
+	ctx: RunContext,
+	step: InstallStepId,
+	phase: StepPhase,
+	extra: { message?: string | null; warnings?: readonly string[] } = {},
+): void {
+	if (ctx.io.step === undefined) return;
+	const record = ctx.state?.steps[step];
+	ctx.io.step({
+		step,
+		label: ctx.plan === null ? step : ctx.table[step].label(ctx.plan),
+		phase,
+		elapsedMs: TIMED_PHASES.has(phase) ? elapsedOf(record) : null,
+		...(typeof extra.message === 'string' ? { message: redact(ctx, extra.message) } : {}),
+		...(extra.warnings === undefined
+			? {}
+			: { warnings: extra.warnings.map((warning) => redact(ctx, warning)) }),
+	});
+}
+
 function saveState(ctx: RunContext): void {
 	if (ctx.state !== null) writeStateFile(ctx.state);
 }
@@ -510,6 +540,8 @@ async function runStep(ctx: RunContext, step: InstallStepId): Promise<void> {
 	CREATED[step]?.(ctx);
 	await verifyAfterRun(ctx, step);
 	markDone(ctx, step, outcome.msg, definition.warnings?.(outcome) ?? []);
+	const record = recordOf(ctx, step);
+	emit(ctx, step, 'done', { message: record.message, warnings: record.warnings });
 	maybeFault(ctx, step, 'after');
 }
 
@@ -527,6 +559,7 @@ async function confirmDone(ctx: RunContext, step: InstallStepId): Promise<void> 
 		);
 	}
 	say(ctx, '  done in an earlier run — skipped');
+	emit(ctx, step, 'skipped');
 }
 
 /** A step left running/failed whose work LANDED before its checkpoint: adopt it. Answers whether it did. */
@@ -543,6 +576,7 @@ async function adoptLanded(ctx: RunContext, step: InstallStepId): Promise<boolea
 	record.error = null;
 	saveState(ctx);
 	say(ctx, `  verified (completed in an earlier run): ${verdict.detail}`);
+	emit(ctx, step, 'adopted', { message: verdict.detail });
 	return true;
 }
 
@@ -551,6 +585,7 @@ async function advanceStep(ctx: RunContext, step: InstallStepId): Promise<void> 
 	const status = recordOf(ctx, step).status;
 	say(ctx, `→ [${step}] ${ctx.table[step].label(ctx.plan as PlanFile)}`);
 	ctx.currentStep = step;
+	emit(ctx, step, 'start');
 	if (status === 'done') return confirmDone(ctx, step);
 	if (status !== 'pending' && (await adoptLanded(ctx, step))) return;
 	await runStep(ctx, step);
@@ -910,7 +945,9 @@ async function abortRun(ctx: RunContext): Promise<void> {
 	for (const step of undoable) {
 		ctx.currentStep = step;
 		const undo = ctx.table[step].undo as NonNullable<InstallStepDefinition['undo']>;
-		say(ctx, `  [${step}] ${await undo(verifyContext(ctx))}`);
+		const undone = await undo(verifyContext(ctx));
+		say(ctx, `  [${step}] ${undone}`);
+		emit(ctx, step, 'undo', { message: undone });
 	}
 	state.outcome = 'aborted';
 	rmSync(join(installRunDir(), PLAN_FILE), { force: true });
@@ -994,22 +1031,32 @@ function closeRun(ctx: RunContext, result: NonNullable<RunRecord['result']>): vo
 	saveState(ctx);
 }
 
+/** The console methods a run's output can leave through (errors/log.ts uses info). */
+const CONSOLE_METHODS = ['log', 'info', 'debug', 'trace', 'warn', 'error'] as const;
+
+/**
+ * One console argument redacted: a string, or an Error — its stack (message
+ * included) becomes redacted TEXT, since a connection error can quote a
+ * credential. Other values pass as they are.
+ */
+function cleanArg(ctx: RunContext, arg: unknown): unknown {
+	if (ctx.unredacted) return arg;
+	if (typeof arg === 'string') return redact(ctx, arg);
+	if (arg instanceof Error) return redact(ctx, arg.stack ?? `${arg.name}: ${arg.message}`);
+	return arg;
+}
+
 /** Redact every console line for the run's duration (engine modules print directly). */
 function redactConsole(ctx: RunContext): () => void {
-	const original = { log: console.log, warn: console.warn, error: console.error };
-	const clean = (arg: unknown): unknown =>
-		typeof arg === 'string' && !ctx.unredacted ? redact(ctx, arg) : arg;
-	const wrap =
-		(write: (...args: unknown[]) => void) =>
-		(...args: unknown[]) =>
-			write(...args.map(clean));
-	console.log = wrap(original.log);
-	console.warn = wrap(original.warn);
-	console.error = wrap(original.error);
+	const original = Object.fromEntries(
+		CONSOLE_METHODS.map((method) => [method, console[method]]),
+	) as Record<(typeof CONSOLE_METHODS)[number], (...args: unknown[]) => void>;
+	for (const method of CONSOLE_METHODS) {
+		const write = original[method];
+		console[method] = (...args: unknown[]) => write(...args.map((arg) => cleanArg(ctx, arg)));
+	}
 	return () => {
-		console.log = original.log;
-		console.warn = original.warn;
-		console.error = original.error;
+		for (const method of CONSOLE_METHODS) console[method] = original[method];
 	};
 }
 
@@ -1045,6 +1092,7 @@ function failedOutcome(ctx: RunContext, error: unknown): ExecutorOutcome {
 	const code = isDedaloError(error) ? error.code : 'install.step_failed';
 	const message = redact(ctx, error instanceof Error ? error.message : String(error));
 	recordFailure(ctx, code, message);
+	if (ctx.currentStep !== null) emit(ctx, ctx.currentStep, 'failed', { message });
 	closeRun(ctx, 'failed');
 	const wrote = ctx.state !== null;
 	return {
@@ -1068,6 +1116,8 @@ async function interrupted(
 	await releaseAll(ctx);
 	restoreConsole();
 	const at = ctx.currentStep === null ? '' : ` at step [${ctx.currentStep}]`;
+	if (ctx.currentStep !== null) emit(ctx, ctx.currentStep, 'interrupted', { message: signal });
+	ctx.io.interrupted?.(signal);
 	ctx.io.warn(`\n✖ install interrupted (${signal})${at}`);
 	for (const line of hintFor(ctx)) ctx.io.warn(line);
 	return process.exit(signal === 'SIGINT' ? 130 : 143);
@@ -1133,6 +1183,7 @@ export async function executeInstall(
 	const sigterm = () => void interrupted(ctx, 'SIGTERM', restoreConsole);
 	process.on('SIGINT', sigint);
 	process.on('SIGTERM', sigterm);
+	io.signals?.(true);
 	try {
 		return await runMode(ctx);
 	} catch (error) {
@@ -1140,6 +1191,7 @@ export async function executeInstall(
 	} finally {
 		process.off('SIGINT', sigint);
 		process.off('SIGTERM', sigterm);
+		io.signals?.(false);
 		await releaseAll(ctx);
 		restoreConsole();
 	}

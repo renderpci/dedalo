@@ -1,7 +1,8 @@
 /**
  * THE INTERACTIVE FRONT END'S CONTRACT (terminal installer phase 2,
- * 2026-10-12) — shared by the plain line mode (ui_plain/run_plain.ts) and the
- * OpenTUI screens of phase 3:
+ * 2026-10-12) — shared by the ONE interactive session (install_session.ts),
+ * whichever prompter draws it: the plain line mode (ui_plain/) or the
+ * full-screen UI (ui/, loaded through tui_loader.ts):
  *
  *  - WHICH front end runs (selectFrontEnd): headless whenever the invocation
  *    already carries what to do (install_plan.ts isHeadlessInvocation);
@@ -9,7 +10,8 @@
  *    gets a pointer to --answers) or cannot be put in raw mode (hidden input is
  *    impossible), or when no terminal can show the prompts; PLAIN when asked
  *    (--plain), on TERM unset/dumb, when stdout is not a terminal, or below
- *    80×24; the full-screen UI otherwise (phase 2 runs plain for it too).
+ *    80×24; the full-screen UI otherwise (it falls back to plain, with one
+ *    line saying why, when it cannot start — tui_loader.ts).
  *    NO_COLOR changes colour only, never the mode.
  *  - WHAT it hands back (FrontEndResult): the RAW answers + the secrets it
  *    collected, and the decisions the operator REVIEWED — scripts/install.ts
@@ -191,12 +193,28 @@ export type FrontEndResult =
 	/** The operator chose to continue the unfinished install found on start. */
 	| { kind: 'resume' }
 	/**
+	 * The operator chose to UNDO the unfinished install: the database name typed
+	 * back (the executor compares it again — it is the authority) and the
+	 * database password when the reset needs one.
+	 */
+	| { kind: 'abort'; confirmDatabase: string; secrets: Secrets }
+	/**
 	 * Nothing installed. `reason` decides the exit code (scripts/install.ts):
 	 * `operator` = a typed `quit` (0), `interrupted` = Ctrl-C / Ctrl-D / SIGINT
 	 * (130), `refused` = an answer refused too often, secret entries that never
 	 * matched (1).
 	 */
 	| { kind: 'quit'; reason?: QuitReason };
+
+/**
+ * Why the name typed to confirm an abort is refused, or null — it must be the
+ * interrupted install's database, exactly (the executor checks it again).
+ */
+export function abortConfirmRefusal(typed: string, database: string): string | null {
+	return typed.trim() === database
+		? null
+		: `type the database name '${database}' exactly to confirm the abort`;
+}
 
 /** Why an interactive session ended without installing (see FrontEndResult). */
 export type QuitReason = 'operator' | 'interrupted' | 'refused';
