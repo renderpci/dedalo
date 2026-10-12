@@ -1,10 +1,9 @@
 /**
  * INSTALL PLAIN-MODE PARITY TRIPWIRE — the interactive plain line mode
  * (src/core/install/install_session.ts under the plain prompter, over the screen model,
- * screen_model.ts) is a FOURTH front end of the one install plan: for every
- * case it can express, the answers it hands back decide EXACTLY the plan the
- * CLI flags, the answers file and (where it can post the case) the browser
- * wizard decide (terminal installer phase 2, 2026-10-12).
+ * screen_model.ts) is a front end of the one install plan: for every case it
+ * can express, the answers it hands back decide EXACTLY the plan the CLI flags
+ * and the answers file decide (terminal installer phase 2, 2026-10-12).
  *
  * WHY. A screen that restated a default, mapped a tick to the wrong answer key,
  * lost a declined dependency or kept a hidden answer would install something
@@ -18,8 +17,8 @@
  *      thesaurus, odd values): runInteractiveInstall under the scripted prompter
  *      (the script derived from the case's plan through the MODEL's own
  *      question ids — scriptForPlan), fake probes that pass, the catalog from
- *      the fixture source → `decided(plan)` ≡ the flags' ≡ the answers file's
- *      ≡ the wizard's (when it can post the case), and the SECRETS handed back
+ *      the fixture source → `decided(plan)` ≡ the flags' ≡ the answers file's,
+ *      and the SECRETS handed back
  *      are exactly the case's. A phase-1 case the screens cannot express is
  *      listed in NOT_PLAIN with its reason, and the reason is MEASURED (a
  *      ROUTE_FIXED key on its route, or a core TLD in a list).
@@ -75,10 +74,10 @@ import {
 } from '../../src/core/install/ui_plain/prompter.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import {
+	DEFAULT_ONTOLOGIES,
 	decided,
 	declaredThesauri,
 	localOntologySource,
-	WIZARD_DEFAULT_ONTOLOGIES,
 } from '../helpers/install_answer_cases.ts';
 import {
 	allCases,
@@ -151,7 +150,7 @@ async function runScripted(
 
 // ── (a) + (b) the matrix ─────────────────────────────────────────────────────
 
-describe('plain mode ≡ flags ≡ answers file ≡ wizard (a, b)', () => {
+describe('plain mode ≡ flags ≡ answers file (a, b)', () => {
 	test('the matrix is the shared one, and every NOT_PLAIN reason is real (measured)', () => {
 		expect(ALL_CASES.length).toBeGreaterThanOrEqual(18);
 		for (const [name, reason] of Object.entries(NOT_PLAIN)) {
@@ -160,7 +159,7 @@ describe('plain mode ≡ flags ≡ answers file ≡ wizard (a, b)', () => {
 			const { plain } = splitCase(found?.argv ?? []);
 			const route = normalizeInstallAnswers(plain).answers.route;
 			if (reason === 'declared_named') {
-				const declared = new Set(declaredThesauri(WIZARD_DEFAULT_ONTOLOGIES).install);
+				const declared = new Set(declaredThesauri(DEFAULT_ONTOLOGIES).install);
 				const named = String(plain.hierarchies ?? '').split(',');
 				expect(
 					named.some((tld) => declared.has(tld)),
@@ -234,10 +233,6 @@ describe('plain mode ≡ flags ≡ answers file ≡ wizard (a, b)', () => {
 			expect(decided(planOf({ ...file.raw, ...secrets }, answerCase.local))).toEqual(
 				decided(flags),
 			);
-			// ≡ the wizard, where it can post the case.
-			if (answerCase.wizard !== null) {
-				expect(decided(planOf(answerCase.wizard, answerCase.local))).toEqual(decided(flags));
-			}
 			// (b) anti-vacuity: every screen of the route, every question the final screens show.
 			const finalScreens = buildScreens(
 				modelInput(result.kind === 'install' ? result.raw : { route: flags.answers.route }, {

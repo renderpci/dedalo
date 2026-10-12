@@ -141,11 +141,7 @@ function envProblem(plan: PlanFile, env: Readonly<Record<string, string>>): stri
 }
 
 /** The install statuses a written install config can carry. */
-const WRITTEN_STATUSES: ReadonlySet<string> = new Set([
-	'terminal_installing',
-	'configured',
-	'sealed',
-]);
+const WRITTEN_STATUSES: ReadonlySet<string> = new Set(['terminal_installing', 'sealed']);
 
 /** Why the install status does not say "config written by an install", or null. */
 function statusProblem(installStatus: string | undefined): string | null {

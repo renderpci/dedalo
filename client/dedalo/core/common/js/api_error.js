@@ -401,7 +401,7 @@ export const response_data = (api_response) => api_response?.data;
  * RESPONSE_EXTENSION
  * THE accessor for a handler-owned EXTENSION KEY (ERRORS_SPEC §3.0): a
  * top-level field beside the envelope keys that ONE handler owns and the client
- * reads by name — `msg` / `errors` on the maintenance-widget and installer
+ * reads by name — `msg` / `errors` on the maintenance-widget
  * surfaces, `in_use` on the lock surface, `environment` on `start`, …
  *
  * SUCCESS ONLY, and that is the whole point: a failure has ONE channel,

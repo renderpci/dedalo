@@ -1817,7 +1817,6 @@ const NOT_YET_PROBED: Readonly<Record<string, string>> = {
 	'dd_utils_api:stop_process': 'process control — the job owner check, not a record door',
 	'dd_utils_api:change_lang': 'session language — no record',
 	'dd_utils_api:delete_uploaded_file': "the caller's own upload staging — no record",
-	'dd_utils_api:install': 'installer — its own install-state gate',
 	'dd_utils_api:login': 'session lifecycle — pre-authentication',
 	'dd_utils_api:request_password_reset': 'session lifecycle — pre-authentication',
 	'dd_utils_api:confirm_password_reset': 'session lifecycle — pre-authentication',
@@ -1892,8 +1891,10 @@ const NOT_YET_PROBED: Readonly<Record<string, string>> = {
  * req 10 — tool_lang / tool_lang_multi `automatic_translation` on the write door,
  * probed through the real handler (translationProbe). 62 → 61: req 10 —
  * tool_update_cache `update_cache`'s per-row write door (updateCacheRowProbe).
+ * 61 → 60: `dd_utils_api:install` removed with the browser installer
+ * (WC-2026-10-12-install-surface-removed) — not probed, gone.
  */
-const NOT_YET_PROBED_CEILING = 61;
+const NOT_YET_PROBED_CEILING = 60;
 
 interface Census {
 	probes: Map<string, Probe>;

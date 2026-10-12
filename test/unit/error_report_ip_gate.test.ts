@@ -1,12 +1,12 @@
 /**
  * The error-report intake's address allowlist (`reporterIpAllowed`,
- * src/core/error_report/gate.ts) — the SECOND consumer of the shared entry matcher
- * and of `ipInCidr` (security/ip_address.ts).
+ * src/core/error_report/gate.ts) — the consumer of the shared entry matcher
+ * (security/ip_allowlist.ts) and of `ipInCidr` (security/ip_address.ts).
  *
- * install_ip_gate_tripwire proves the arithmetic through the install gate. This gate
- * exists because the intake reads a DIFFERENT key with a DIFFERENT default (unset =
- * open, deliberately — see the gate's header), and a consumer that stopped routing
- * its entries through the shared matcher would pass every install test. So: the
+ * ip_allowlist.test.ts proves the grammar and the arithmetic. This gate pins the
+ * intake's OWN policy: its default (unset = open, deliberately — see the gate's
+ * header), so a consumer that stopped routing its entries through the shared matcher,
+ * or changed its default, goes red here. So: the
  * default, a CIDR entry at its edges, the loopback token, the IPv4-mapped peer
  * spelling, and the parser's strictness, all through THIS predicate.
  *
@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 describe('reporterIpAllowed — the error-report intake allowlist', () => {
-	test('empty ⇒ open (the intake default, unlike the installer)', () => {
+	test('empty ⇒ open (the intake default, deliberately)', () => {
 		process.env[KEY] = '';
 		expect(reporterIpAllowed('203.0.113.7')).toBe(true);
 	});

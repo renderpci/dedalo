@@ -69,6 +69,47 @@ async function healthy(ctx: HostCtx): Promise<boolean> {
 	return (await probeText(ctx, healthProbe(ctx))).trim() === '200';
 }
 
+/**
+ * The exit code a server that refuses to boot leaves (src/config/install_state.ts
+ * NOT_INSTALLED_EXIT_CODE — held equal by install_host_steps_native; not imported,
+ * so the root-run host executor never loads the engine's config layer).
+ */
+export const REFUSED_BOOT_EXIT = 78;
+
+/** `systemctl show -p <property> --value <unit>` — one property per call. */
+export function unitPropertyProbe(ctx: HostPlanCtx, property: string): ExecCommand {
+	return exec(
+		ctx,
+		'systemctl',
+		['show', '-p', property, '--value', serverUnit(ctx)],
+		`${serverUnit(ctx)} ${property}`,
+		{ mutates: false },
+	);
+}
+
+/**
+ * The unit REFUSED to boot (exit 78 → RestartPreventExitStatus → `failed`, never
+ * restarted): stop waiting at once, instead of polling /health for the whole
+ * bound against a unit nothing will start again.
+ */
+async function refuseIfBootRefused(ctx: HostCtx): Promise<void> {
+	const result = (await probeText(ctx, unitPropertyProbe(ctx, 'Result'))).trim();
+	if (result !== 'exit-code') return;
+	const status = (await probeText(ctx, unitPropertyProbe(ctx, 'ExecMainStatus'))).trim();
+	if (status !== String(REFUSED_BOOT_EXIT)) return;
+	hostRefuse(
+		'install.step_failed',
+		`${serverUnit(ctx)} refused to boot (exit ${REFUSED_BOOT_EXIT}: not installed for the unit's environment) — see journalctl -u ${serverUnit(ctx)} for the [boot] REFUSED line`,
+	);
+}
+
+/** Healthy yet? — refusing at once when the unit refused to boot. */
+async function healthyOrRefused(ctx: HostCtx): Promise<boolean> {
+	if (await healthy(ctx)) return true;
+	await refuseIfBootRefused(ctx);
+	return false;
+}
+
 async function migrated(ctx: HostCtx): Promise<boolean> {
 	return (await pendingMigrations(ctx))?.length === 0;
 }
@@ -130,7 +171,7 @@ export const host_first_boot: HostStepDefinition = {
 			[systemctl(ctx, 'start', [serverUnit(ctx)], `start ${serverUnit(ctx)}`)],
 			ctx,
 		);
-		await pollUntil(ctx, () => healthy(ctx), 'the engine answering /health');
+		await pollUntil(ctx, () => healthyOrRefused(ctx), 'the engine answering /health');
 		await pollUntil(ctx, () => migrated(ctx), 'every migration recorded');
 		return ran(`${serverUnit(ctx)} is up; migrations complete`);
 	},

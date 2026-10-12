@@ -1,8 +1,8 @@
 /**
- * Install pre-flight diagnostics (PHP installer init_test). This is the CLIENT
- * PROGRESSION GATE: the wizard advances past the diagnostics panel only when
- * `result === true` (render_installer.js), so every check here must be a real
- * blocker for a TS-native install — no cosmetic noise.
+ * Install pre-flight diagnostics (PHP installer init_test). The terminal
+ * installer's PROGRESSION GATE (probes.ts, executor.ts): the install proceeds
+ * only when `result === true`, so every check here must be a real blocker for
+ * a TS-native install — no cosmetic noise.
  *
  * Shape: `{ result:boolean, errors:string[], msg:string[] }`. `errors` non-empty
  * also fails the panel; `msg` carries the human-readable pass/fail lines.

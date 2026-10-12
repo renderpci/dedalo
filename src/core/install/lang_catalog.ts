@@ -5,8 +5,8 @@
  * a missing/malformed value must refuse boot, never fall back to a hardcoded
  * list") makes four lang keys mandatory once the server is configured. The
  * installer therefore collects a working-language set and writes them; this
- * module is the ONE source of truth both frontends (browser wizard via
- * config_persist, and the CLI env-preset) share.
+ * module is the ONE source of truth the installer's screens and its
+ * env-preset share.
  *
  * PURE — no config.ts import (the CLI calls it BEFORE config is imported, to set
  * the lang env vars so config resolves without throwing at import time).
@@ -48,8 +48,8 @@ export const INSTALL_LANG_CODES: readonly string[] = Object.freeze(
 );
 
 /**
- * THE default languages — interface AND working (data) — pre-ticked in the
- * wizard, taken by the CLI and install.sh when no language is given: English +
+ * THE default languages — interface AND working (data) — pre-ticked on the
+ * screens, taken by the CLI and install.sh when no language is given: English +
  * Spanish. Every other catalog language is OPTIONAL — offered, never on by
  * default.
  */

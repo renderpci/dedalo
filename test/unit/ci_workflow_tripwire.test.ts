@@ -807,7 +807,7 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	],
 	[
 		'test/unit/install_hierarchy_dependencies_native.test.ts',
-		"It writes scratch ontology35 registry rows declaring thesauri on the suite database and reads them back through the wizard's install_hierarchies reader, so it cannot run without a live suite Postgres.",
+		'It writes scratch ontology35 registry rows declaring thesauri on the suite database and runs the install_hierarchies step over it, so it cannot run without a live suite Postgres.',
 	],
 	[
 		'test/unit/change_plan_write_door_native.test.ts',

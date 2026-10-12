@@ -333,8 +333,8 @@ export interface CoreHierarchiesActivation {
  * Activate every CORE hierarchy (see the header): activation only, never an import.
  * Idempotent — a second run converges with nothing applied.
  *
- * A failure is a REFUSAL, not an outcome: `install.step_failed` (public — the wizard
- * and the CLI show the sentence), naming each failed tld with its activation findings.
+ * A failure is a REFUSAL, not an outcome: `install.step_failed` (public — the installer
+ * and the add_hierarchy widget show the sentence), naming each failed tld with its activation findings.
  * Every caller treats it as fatal (an install without its languages thesaurus is not an
  * install that worked), so there is no `{ok:false}` shape to forward by hand — the
  * converter builds the body (engineering/ERRORS_SPEC.md §4).

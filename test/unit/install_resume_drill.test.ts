@@ -347,16 +347,15 @@ describe('install resume drill', () => {
 			expect(other.exitCode).toBe(1);
 			expect(other.out).toMatch(/answers differ from the saved plan: [a-z_, ]*\bentity\b/);
 
-			// The WIZARD's seed step on the same seeded database still REFUSES (the
-			// executor's resumable variant is its own input, never the wizard's).
-			const wizardSeed = Bun.spawnSync(
+			// The seed step WITHOUT this install's id on the same seeded database still
+			// REFUSES (the executor's resumable variant is its own input — installId).
+			const unstampedSeed = Bun.spawnSync(
 				[
 					process.execPath,
 					'-e',
 					[
-						"const { runInstallStep } = await import('./src/core/install/engine.ts');",
-						"const ctx = { requestId: 'install-drill', clientIp: '127.0.0.1', session: null, csrfCandidate: null };",
-						"try { await runInstallStep({ action: 'install', options: { action: 'install_db_from_default_file' } }, ctx); console.log('NOT REFUSED'); }",
+						"const { STEP_RUNS } = await import('./src/core/install/step_runs.ts');",
+						"try { await STEP_RUNS.install_db_from_default_file({ posted: {}, createDirectories: false, actorUserId: -1 }); console.log('NOT REFUSED'); }",
 						'catch (error) { console.log(`${error.code}: ${error.message}`); }',
 					].join('\n'),
 				],
@@ -367,7 +366,7 @@ describe('install resume drill', () => {
 					stderr: 'pipe',
 				},
 			);
-			expect(wizardSeed.stdout.toString(), wizardSeed.stderr.toString()).toContain(
+			expect(unstampedSeed.stdout.toString(), unstampedSeed.stderr.toString()).toContain(
 				'install.state_conflict: Database is not empty (matrix_users already exists)',
 			);
 

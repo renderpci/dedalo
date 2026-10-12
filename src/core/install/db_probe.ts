@@ -1,11 +1,11 @@
 /**
  * Connection probes (PHP installer test_db_connection / test_diffusion_connection).
  * Both take POSTED credentials and answer a PROBE REPORT (`{ok, msg, …}`) that
- * the install router serves as an ok:true envelope — an unreachable server is
+ * the installer reads as a report — an unreachable server is
  * the answer to the question, not a failure of the engine to answer it. The
  * Postgres probe additionally distinguishes "DB missing" from
  * "auth/host wrong" by falling back to the `postgres` maintenance DB, so the
- * wizard can tell the operator whether to create the database.
+ * installer can tell the operator whether to create the database.
  *
  * This module is the EFFECTFUL shell only — the option coercion and the
  * outcome classification live in db_probe_plan.ts (pure, gate-testable).

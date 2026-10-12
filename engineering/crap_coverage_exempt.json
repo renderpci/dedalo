@@ -269,7 +269,7 @@
 			"file": "src/core/install/config_persist.ts",
 			"symbol": "persistConfig",
 			"class": "unrunnable-mutates-machine",
-			"reason": "A one-shot install procedure that writes the machine's configuration files. Blocked by danger, not by fixture: the hermetic logic in the same subsystem (deriveLangConfig, installIpAllowed) is gated in tier1_install_native.test.ts."
+			"reason": "A one-shot install procedure that writes the machine's configuration files. Blocked by danger, not by fixture: the hermetic logic in the same subsystem (deriveLangConfig, pgBinaryCandidates, the hierarchy readers) is gated in tier1_install_native.test.ts."
 		},
 		{
 			"file": "src/core/install/db_restore.ts",
@@ -320,10 +320,10 @@
 			"reason": "Sets the install's ROOT CREDENTIALS. There is no scratch surface for the root user, and a run would change the identity every ACL gate authenticates against."
 		},
 		{
-			"file": "src/core/install/restart.ts",
+			"file": "src/core/update/restart.ts",
 			"symbol": "scheduleServerRestart",
 			"class": "unrunnable-mutates-machine",
-			"reason": "Schedules a restart of the server process — inside a test run that is the test runner's own process."
+			"reason": "Schedules a restart of the server process (a code update or restore asks for it) — inside a test run that is the test runner's own process."
 		},
 		{
 			"file": "src/core/install/pg_bin.ts",

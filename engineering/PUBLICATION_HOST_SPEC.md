@@ -371,7 +371,7 @@ release, state outside the code:
   - **One reconciler, three triggers** (`reconcilePublicationApis`,
     `src/core/publication_host/api_reconcile.ts`):
     (1) detached and best-effort once `confirmBootedCodeUpdate` has flipped the sentinel
-    (wired in `src/server.ts`); a smoke boot or install mode pushes nothing;
+    (wired in `src/server.ts`); a smoke boot pushes nothing (a box that is not installed never boots: PRODUCTION §7.1);
     (2) the root-only panel action `push_apis`;
     (3) a scheduled DRY-RUN reconcile that reports drift; its apply is refused, so a
     timer never pushes code.

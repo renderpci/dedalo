@@ -41,10 +41,12 @@ Wants=dedalo-ts-watchdog.timer
 StartLimitIntervalSec=300
 StartLimitBurst=5
 
-# Code-update rollback hook. The unit enters `failed` EXACTLY when the start
-# limit above is exhausted — which is precisely the "the newly swapped-in code
-# tree never boots" signature (Restart=always keeps retrying individual crashes
-# as before; only the exhausted budget lands here). The rollback unit is a
+# Code-update rollback hook. The unit enters `failed` in exactly two ways: the
+# start limit above is exhausted — precisely the "the newly swapped-in code tree
+# never boots" signature (Restart=always keeps retrying individual crashes as
+# before) — or ONE exit 78 (RestartPreventExitStatus below: the server refused to
+# boot, not installed for this environment). Both land here: with a pending
+# update, a new tree that refuses to boot is rolled back after a single exit. The rollback unit is a
 # no-op unless the code-update sentinel (<backup root>/last_code_update.json)
 # says a pending, unconfirmed update exists — so an ordinary crash loop with no
 # update in flight fires it harmlessly and nothing is touched. See
@@ -98,14 +100,20 @@ UMask=0007
 # in-flight requests, closes the DB pool and unlinks the socket (S2-17).
 Restart=always
 RestartSec=3
-# Exit 75 (RESTART_EXIT_CODE, src/core/install/restart.ts) is a PLANNED restart:
-# the installer persisted a new ../private/.env (the frozen-at-import config can
-# only be reloaded by a fresh process), or a code update / code restore swapped
-# the tree and needs the new code booted. Restart=always is what brings it back
-# (under Restart=on-failure this line would PREVENT that restart);
-# this line just keeps the planned exit out of the failure counters (and out of
-# the watchdog's alerting), instead of logging it as a crash.
+# Exit 75 (RESTART_EXIT_CODE, src/core/update/restart.ts) is a PLANNED restart:
+# a code update / code restore swapped the tree and needs the new code booted.
+# Restart=always is what brings it back (under Restart=on-failure this line
+# would PREVENT that restart); this line just keeps the planned exit out of the
+# failure counters (and out of the watchdog's alerting), instead of logging it
+# as a crash.
 SuccessExitStatus=75
+# Exit 78 (NOT_INSTALLED_EXIT_CODE, src/config/install_state.ts — EX_CONFIG) is
+# a REFUSAL: no configuration, a sealed install whose .env is gone, or an
+# unfinished install. Restarting cannot fix any of them, so the unit goes to
+# `failed` and STAYS there with the one "[boot] REFUSED — …" journal line;
+# dedalo-ts-watchdog.sh honours the same code. Run the installer (or restore
+# .env), then `systemctl start`.
+RestartPreventExitStatus=78
 # Supervision is DECLARED here, by the thing that restarts the process — never in
 # ../private/.env, which every launch method reads (an unsupervised `bun run start`
 # included) and the engine therefore ignores for this key. A code update swaps the

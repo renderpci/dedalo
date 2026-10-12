@@ -5547,26 +5547,6 @@ DEDALO_SITE_BUILDER_TIMEOUT_MS=10000
 
 ## Install {#install}
 
-### Restricting the install wizard by address
-
-DEDALO_INSTALL_ALLOWED_IPS `string` *comma list*
-
-This parameter defines which addresses may reach the install wizard.
-
-A fresh installation has no users yet, so the wizard cannot ask anyone to log in: until the installation is SEALED (the last step of the wizard), its actions are reachable without a password by whoever can open the page — and those actions write the configuration file and restart the server. **Unset, the wizard answers the local machine and nobody else.** To install from another machine — which is the normal case for a container, a virtual machine or a hosted server — you must name the address you will browse from, before you start the wizard.
-
-An entry is one of four things: the word `loopback` (the local machine), a literal address, a range in CIDR notation such as `10.0.0.0/24`, or the word `any`, which opens the wizard to every address. Write `any` only when nothing else can reach the machine — a firewall, or a laptop with no network — and remove it once the installation is sealed. Separate several entries with commas. Write every IPv4 part in plain decimal: a part with a leading zero (`127.0.0.01`, `010.0.0.0/8`) is refused, because some software reads it as octal and some as decimal — such an entry matches no address, and the server log names it as ignored.
-
-The address is taken from the trusted hop reported by the web server in front of Dédalo, so behind a proxy `loopback` will NOT match: name the real address of the machine you install from. If a request arrives with no such information the engine treats it as local, so put the wizard behind the proxy the production guide prescribes, or behind a closed port, whenever the machine is reachable from a network. The effective list is printed in the server log when the engine starts, so an installation you cannot reach tells you why. Once the installation is sealed, the whole install surface answers "not found" for good and this parameter no longer matters.
-
-```bash
-DEDALO_INSTALL_ALLOWED_IPS="loopback,203.0.113.10,10.0.0.0/24"
-```
-
-*Default: loopback*
-
----
-
 ### Defining the private directory the installer writes to
 
 DEDALO_INSTALL_PRIVATE_DIR `string`
@@ -5591,7 +5571,7 @@ CODE_SERVERS `array`
 
 This parameter defines the code servers this install offers releases from. Each entry is a JSON object with `name`, `url` and `code`; add entries to the array to offer mirror servers too.
 
-The installers (the command-line installer, the browser wizard and `install.sh`) WRITE the official Dédalo code server entry below, unless the install is declared air-gapped (`--no-update-servers`, the unticked update-server box in the wizard, or answering `n` in `install.sh`), which writes `[]`. Unset or `[]` means no masters: the panel offers no code updates. A re-run of the installer that is not air-gapped leaves a NON-EMPTY list already in the file untouched (mirrors you added survive); a `[]` from an earlier air-gapped run, or a value that is not a valid JSON list, is replaced by the official entry. The list is read at boot, and so is the browser's `connect-src` that lets the update panel reach a master: restart the server after changing it.
+The installer (`./install.sh`, or `bun run dedalo:install`) WRITES the official Dédalo code server entry below, unless the install is declared air-gapped (`--no-update-servers`, or answering no to its update-server question), which writes `[]`. Unset or `[]` means no masters: the panel offers no code updates. A re-run of the installer that is not air-gapped leaves a NON-EMPTY list already in the file untouched (mirrors you added survive); a `[]` from an earlier air-gapped run, or a value that is not a valid JSON list, is replaced by the official entry. The list is read at boot, and so is the browser's `connect-src` that lets the update panel reach a master: restart the server after changing it.
 
 `url` is the master's JSON API endpoint — it MUST end in `/dedalo/core/api/v1/json/` (or `/api/v1/json`); any other path answers 404 and the panel reports the server as unreachable. `code` is the shared secret: the master only answers a release manifest to a caller presenting a code listed in its OWN `CODE_SERVERS`.
 
@@ -5795,7 +5775,7 @@ This parameter defines the ontology master servers to get the ontology updates. 
 
 Each entry is a JSON object with `name`, `url` and `code`.
 
-The installers (the command-line installer, the browser wizard and `install.sh`) WRITE the official dedalo.dev entry below, unless the install is declared air-gapped (`--no-update-servers`, the unticked update-server box in the wizard, or answering `n` in `install.sh`), which writes `[]`. Unset or `[]` means no masters: the panel offers no ontology updates. A re-run of the installer that is not air-gapped leaves a NON-EMPTY list already in the file untouched (mirrors you added survive); a `[]` from an earlier air-gapped run, or a value that is not a valid JSON list, is replaced by the official entry.
+The installer (`./install.sh`, or `bun run dedalo:install`) WRITES the official dedalo.dev entry below, unless the install is declared air-gapped (`--no-update-servers`, or answering no to its update-server question), which writes `[]`. Unset or `[]` means no masters: the panel offers no ontology updates. A re-run of the installer that is not air-gapped leaves a NON-EMPTY list already in the file untouched (mirrors you added survive); a `[]` from an earlier air-gapped run, or a value that is not a valid JSON list, is replaced by the official entry.
 
 The list also has an install-time role: its FIRST entry (a preserved custom list, otherwise the official server) is where the installer fetches every domain ontology other than the built-in `oh`, and whose catalog decides which ontologies can be chosen, unless `--ontology-source` names a local export. With `[]` and no `--ontology-source`, only `oh` can be installed.
 

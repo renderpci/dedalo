@@ -6,8 +6,8 @@
  * `applyAnswer`; it never decides a default, a rule or a mapping itself.
  *
  * THE LAWS (each one gated — test/unit/install_screen_model_tripwire.test.ts):
- *  - ONE RUN PATH. The model only builds RAW ANSWERS (the same shape the wizard
- *    posts and an answers file carries); scripts/install.ts feeds them to the
+ *  - ONE RUN PATH. The model only builds RAW ANSWERS (the same shape the flags
+ *    and an answers file carry); scripts/install.ts feeds them to the
  *    same plan and executor as a headless run (front_end.ts).
  *  - DEFAULTS LIVE IN THE PLAN. A question's `default` is the plan's own
  *    normalization of the answers without that key, read back — never restated
@@ -17,7 +17,7 @@
  *    HOST reports are offered as the suggestion and become answers once accepted
  *    (the plan stays deterministic).
  *  - ONE RULE SET. A question's `errors` are the plan's `fieldErrors` for its
- *    key (install_validation.ts — the sentences the CLI and the wizard refuse
+ *    key (install_validation.ts — the sentences every front end refuses
  *    with); nothing here validates.
  *  - A HIDDEN QUESTION HOLDS NO ANSWER. `applyAnswer` drops every answer whose
  *    question is not visible after the change (a route change, a service turned

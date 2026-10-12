@@ -25,8 +25,7 @@ solved.
 
 This page is the whole procedure: what the files are, [where the image comes
 from](#choose-where-the-image-comes-from), how to check your Docker, the install
-itself — by [CLI](#path-a-install-with-the-one-shot-cli) or by [browser
-wizard](#path-b-install-with-the-browser-wizard) — how to verify it, and how to
+itself — [by the one-shot CLI](#path-a-install-with-the-one-shot-cli) — how to verify it, and how to
 [update it](#upgrading).
 Read [the four problems](#the-four-container-problems) first if you plan to
 change anything in the compose file: they are where every container deployment of
@@ -340,8 +339,8 @@ variable, so the whole tree moves together — `.env`, the session store,
 
 !!! danger "No volume, no secrets"
     Without a volume at `/private`, the `.env` the installer writes dies with the
-    container, and the next start comes up in install mode against a database
-    that is no longer empty — an install you cannot finish and cannot repeat.
+    container, and the next start REFUSES to start (`not installed`, exit 78)
+    in front of a database that is no longer empty — an install you cannot repeat.
 
 ### 2. The socket is invisible across containers
 
@@ -417,22 +416,15 @@ nginx:
     the bare-metal unit (`UMask=0007` plus the web-server user in the `dedalo`
     group).
 
-### 4. Installing: one shot, or the wizard
+### 4. Installing: once, from the terminal
 
-Two front ends drive the same install engine. Pick one **before** you bring the
-stack up, because they diverge at the very first `docker compose up`.
-
-| | [Path A — the one-shot CLI](#path-a-install-with-the-one-shot-cli) | [Path B — the browser wizard](#path-b-install-with-the-browser-wizard) |
-| --- | --- | --- |
-| Install runs in | a throwaway `docker compose run` container | the long-lived `dedalo` service |
-| Restart mid-install | none | **yes** — the engine exits after *Save config* |
-| Pre-auth window on the network | never opened | open until you press *Finish* |
-| Good for | servers, orchestration, anything repeatable | a first look, or when you want the diagnostics panel |
-
-**Path A is the recommendation for anything reachable from a network.** It never
-serves the install surface at all. Path B is the same engine with a UI in front,
-and it needs one extra precaution — the pre-auth window — plus a supervisor,
-which in compose is `restart: unless-stopped`.
+The install runs in a throwaway `docker compose run` container, before the stack
+is started, so no install surface is ever served (there is none: a server that is
+not installed refuses to start, exit 78 — see the
+[installer reference](installer_reference.md#a-server-that-is-not-installed-refuses-to-start)).
+Docker's `restart: unless-stopped` has no per-exit-code exception, so a `dedalo`
+container started before the install restarts about once a minute, printing that
+one refusal line each time, until the install has run.
 
 ## Path A — install with the one-shot CLI
 
@@ -724,8 +716,8 @@ engine so it drains and `restart: unless-stopped` recycles the container. That i
 the consumer of the 503 the engine emits when its process is poisoned, its pool
 is wedged or the database is gone — Docker Engine itself never restarts an
 unhealthy container. It escalates only after the container has answered green at
-least once, so an instance still sitting on the browser wizard (no database yet,
-so `/health` is red) is left alone. Budget roughly 90 seconds for a recycle here,
+least once, so a container that never came up is left alone (one that is not
+installed never even listens: it exits 78 with `[boot] REFUSED — not installed`). Budget roughly 90 seconds for a recycle here,
 not the 30 seconds of the systemd deployment.
 
 ### Step 9 — Confirm the engine answers
@@ -864,160 +856,6 @@ A **403** is a different problem: nginx's workers are not in the engine's group
 2. Create an **admin user**; keep `root` for emergencies.
 3. Continue with [after the install](index.md#after-the-install): users and
    projects, hierarchies, and **backups**.
-
-## Path B — install with the browser wizard
-
-Same engine, driven from a browser. It replaces Path A's steps 6–7 only:
-**steps 1–5 are identical** (source, credentials, domain, TLS, image), and once
-the wizard says *Finish* you rejoin Path A at [step
-10](#step-10-turn-the-media-gate-on).
-
-The wizard's own screens — Diagnostics, Database, Entity, Diffusion, Outbound
-email, Save config, Verify, Directories, Install database, Root password,
-Hierarchies, Tools, Finish — are documented once, in the [installer
-reference](installer_reference.md#the-browser-wizard). What follows is only what
-containers change.
-
-### B1 — Name the address you will install from
-
-A fresh instance has no users, so **every install action is reachable without a
-login** until you press *Finish*. Path A never opens that window; Path B does,
-and `docker compose up` publishes ports 80 and 443 in the same breath.
-
-The engine closes that window for you: with `DEDALO_INSTALL_ALLOWED_IPS` unset,
-the wizard answers **the local machine and nobody else**. In a container that is
-nobody at all — nginx forwards your browser's real address, which is never the
-loopback of the engine's namespace — so Path B does not work until you say who
-you are. Set it in the `dedalo` service's `environment:` **before** the stack
-ever comes up (the shipped compose file already passes the variable through, so
-exporting it — or adding `DEDALO_INSTALL_ALLOWED_IPS=…` to `.dedalo.env` — is
-enough):
-
-In the same shell you will run `docker compose up -d` from (B2), replacing
-`203.0.113.10` with the address **you** will browse from:
-
-```shell
-export DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10
-```
-
-Check that compose picked it up before going on:
-
-```shell
-docker compose config | grep DEDALO_INSTALL_ALLOWED_IPS
-```
-
-The export lives only in that shell: a new terminal needs it again. To set it
-permanently instead, edit the `dedalo` service's `environment:` in the compose
-file:
-
-```yaml
-environment:
-  DEDALO_INSTALL_ALLOWED_IPS: "203.0.113.10"     # the address YOU will browse from
-```
-
-A value is a comma list of four possible things: `loopback`, a literal address,
-a range such as `10.0.0.0/24`, or `any`. If the wizard refuses you anyway, its
-message names the address the engine saw — add that one. Behind the nginx
-container it is rarely the address you would guess (Docker Desktop: `192.168.65.1`;
-a Linux bridge: a gateway such as `172.18.0.1`).
-
-!!! warning "`loopback` will not match behind the proxy"
-    The address is resolved from the trusted `X-Forwarded-For` hop — and the
-    compose file sets `TRUSTED_PROXY_HOPS: "1"` for exactly this — so behind the
-    nginx container the caller is never the loopback address. Naming `loopback`
-    locks **you** out while leaving nobody else out. Name the real client
-    address, or the range your workstations sit in.
-
-    `any` opens the surface to every address. It is the one spelling that does
-    that, it is never a default, and it is the wrong choice for anything with a
-    public port — use it only when a firewall already stands in front, and drop
-    it the moment the instance is sealed.
-
-### B2 — Bring the stack up on an empty `private` volume
-
-Install mode is not a flag; it is the **absence of `/private/.env`**. So this
-only works on a first run, or after you have destroyed the volume.
-
-```shell
-docker compose --env-file .dedalo.env up -d
-docker compose --env-file .dedalo.env logs dedalo | grep 'INSTALL MODE'
-```
-
-You want to see the engine announce it:
-
-```text
-[boot] INSTALL MODE — no database configured yet (../private/.env absent).
-Serving the install wizard at /dedalo/core/page/.
-```
-
-No such line means `.env` already exists and you are looking at a normal boot —
-the wizard will not appear. Check with
-`docker compose --env-file .dedalo.env exec dedalo cat /private/.env`.
-
-In install mode the engine skips every database-dependent boot step, so
-`postgres` starting healthy is all the database needs to do at this point.
-
-### B3 — Run the wizard, with the container's answers
-
-Open `https://<your-domain>/dedalo/core/page/`. Three fields are
-container-specific:
-
-| Wizard field | What to enter | Why |
-| --- | --- | --- |
-| Database **host** | `postgres` | the compose **service name**. `localhost` is the engine's own container and there is no database in it |
-| Database **name** / **user** / **password** | your `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` | the `postgres` service already created exactly this, empty and owned by the role |
-| Port | `5432` | the internal network port — it is not published, and does not need to be |
-
-!!! warning "The compose environment overrides what you type"
-    Process environment wins over `/private/.env`. The compose file already sets
-    `MEDIA_PATH`, `SERVER_UNIX_SOCKET` and `DEDALO_MEDIA_ACCESS_MODE`, so
-    whatever the wizard writes for those three, **the compose values are what the
-    engine runs with**. Change them in `docker-compose.yml`, not in the wizard —
-    otherwise `.env` and the running configuration disagree, which is a debugging
-    trap rather than a failure.
-
-### B4 — Survive the restart at *Save config*
-
-Configuration is read once, at boot. So *Save config* writes `.env` and then
-**exits the process** — deliberately, so it can come back with the real
-configuration. `restart: unless-stopped` is what brings it back; it is the
-compose equivalent of systemd's `Restart=always`, and it restarts on the planned
-exit code the same way it restarts on a crash.
-
-```shell
-docker compose --env-file .dedalo.env logs -f dedalo      # watch it exit and come straight back
-```
-
-Leave the browser tab open. The wizard survives the restart: the **Verify**
-button retries, and even a full page reload resumes the wizard rather than
-dropping to a login form. The state that makes this work is `install_status` in
-`/private/ts_state.json`.
-
-!!! danger "A container that does not come back was never supervised"
-    If you removed `restart: unless-stopped`, the engine exits at *Save config*
-    and stays down — the install hangs there with `.env` written and nothing
-    serving. Restore the policy and `docker compose --env-file .dedalo.env up -d`; the wizard resumes.
-
-### B5 — Finish, and confirm the surface is sealed
-
-Work through Verify → Directories → Install database → Root password → log in →
-Hierarchies → Tools → **Finish**. *Finish* is refused unless a root user with a
-password actually exists, so a half-built instance cannot be sealed.
-
-Once sealed, the whole install surface answers `404` permanently, and
-`DEDALO_INSTALL_ALLOWED_IPS` has no further job — drop it (and if you wrote
-`any`, drop it now rather than later).
-
-```shell
-docker compose --env-file .dedalo.env exec dedalo cat /private/ts_state.json   # install_status: "sealed"
-```
-
-### B6 — Rejoin Path A
-
-The engine has now booted with a media access mode and written its rule files.
-Continue at [step 10 — turn the media gate on](#step-10-turn-the-media-gate-on),
-then [step 11](#step-11-prove-media-is-actually-served). Media is **not served**
-until you do: the `include` lines are still commented out.
 
 ## Configuration
 
@@ -1381,11 +1219,8 @@ Container-specific symptoms; everything else is in
 | Every request is a **502** | the proxy cannot write to the socket | the socket volume must be shared, and the engine must grant the socket `0666` itself — [problem 2](#2-the-socket-is-invisible-across-containers) |
 | `nginx` restarts forever | missing certificate, or one `include` uncommented without the other | [step 4](#step-4-provide-a-tls-certificate), [step 10](#step-10-turn-the-media-gate-on) |
 | `nginx -t`: `pcre2_compile() failed` | a rule file generated before 2026-07-12 left the rule-B regex unquoted | quote it — [reverse proxy](reverse_proxy.md#nginx) |
-| The wizard appears after a successful install | `/private` is not on a volume, so `.env` was lost | [problem 1](#1-private-has-no-parent-to-live-in) |
-| The wizard never appears — normal login instead | `/private/.env` already exists, so the engine is not in install mode | [B2](#b2-bring-the-stack-up-on-an-empty-private-volume) |
+| The `dedalo` container restarts about once a minute; its log says `[boot] REFUSED — not installed` | `/private` is not on a volume, so `.env` was lost — or the stack was started before the installer ran | [problem 1](#1-private-has-no-parent-to-live-in); otherwise run [step 7](#step-7-run-the-installer-once) |
 | Newly uploaded media is a **403**, older media serves | nginx's workers are not in the engine's group | keep the `addgroup` calls in nginx's `command:` — [problem 3](#3-the-engine-writes-the-media-rules-the-proxy-reads-them) |
-| The install surface 403s from your browser | the key is unset (the default is the local machine only), your address is not in `DEDALO_INSTALL_ALLOWED_IPS`, or you named `loopback` behind the proxy. The refusal names the address the engine saw — add that one | [B1](#b1-name-the-address-you-will-install-from) |
-| The wizard hangs at *Save config*, engine down | no restart policy — the engine exits there by design | [B4](#b4-survive-the-restart-at-save-config) |
 | Every media file 404s, gate loaded | the derivative is not produced yet, the browser has no media cookie, or proxy `root` and `MEDIA_PATH` disagree | [step 11](#step-11-prove-media-is-actually-served) |
 | Uploads fail with **413** | `client_max_body_size` | already 300m in the shipped config — check you did not replace it |
 | Login "succeeds" but bounces back to the form | plain HTTP, and `SESSION_COOKIE_SECURE` is on | [TLS](#tls) |

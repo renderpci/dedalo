@@ -106,8 +106,8 @@ container (≈90 s, not systemd's 30 s). Without it nothing consumed the 503
 there: a Compose healthcheck only feeds start ordering and `docker ps`, Docker
 Engine never restarts an unhealthy container, and the restart policy fires on
 process EXIT — which a poisoned or wedged process never does. It escalates only
-after a first GREEN probe, which leaves a container still on the install wizard
-(no database ⇒ red `/health`) untouched. Behaviour gate:
+after a first GREEN probe, which leaves a container that never came up green
+untouched (a container that is not installed never even listens: it exits 78, §7.1). Behaviour gate:
 `test/unit/container_watchdog_native.test.ts`.
 
 **Graceful shutdown (S2-17).** On SIGTERM/SIGINT the server: stops the
@@ -117,13 +117,12 @@ media transcode jobs `interrupted` in their pfiles → journals dying background
 tool jobs → closes the Postgres pool → unlinks the socket → exits 0.
 
 A **planned restart** takes the same path and exits `RESTART_EXIT_CODE` (75)
-instead of 0. `scheduleServerRestart` (`src/core/install/restart.ts`) hands off
+instead of 0. `scheduleServerRestart` (`src/core/update/restart.ts`) hands off
 to the graceful sequence through a handler `startServer` registers at boot, so
-`persist_config` and a code update drain exactly like a supervisor's SIGTERM;
+a code update or a code restore drains exactly like a supervisor's SIGTERM;
 with no listening server registered (CLI, test runner) it falls back to an
-immediate exit. It returns a `RestartOutcome` — `suppressed` under
-`DEDALO_INSTALL_NO_RESTART`, otherwise `draining` / `immediate` — so a caller
-can never report a restart it did not perform.
+immediate exit. It returns a `RestartOutcome` — `draining` / `immediate` — so a
+caller can never report a restart it did not perform.
 
 Diffusion RUNNERS are separate processes and survive restarts by design; the
 sweeper heals anything that does not. **That survival is the unit file's job**:
@@ -1115,7 +1114,7 @@ is an operator's decision, with the dry report in view.
   EXISTS` + `ANALYZE`). Today `0011_tm_role_hidden_index.sql` and
   `0012_tm_history_visible_index.sql`, both on `matrix_time_machine`. The boot
   runner defers them; `startOnlineMigrations` runs them in the BACKGROUND after
-  the listener binds (never in install mode). What an operator must expect:
+  the listener binds (never in a smoke boot). What an operator must expect:
   - **Load right after an upgrade.** Each is a full-heap index build + ANALYZE
     of the time machine (29M+ rows on a large install): I/O and CPU for
     minutes, while the server already serves.
@@ -1148,33 +1147,63 @@ is an operator's decision, with the dry report in view.
   COMPILED from repo sources only (`bun run seed:build`,
   `src/core/install/seed_build.ts`; never from an installation's database),
   verified by a fresh install before it is written, and committed with its
-  manifest (`install_seed_manifest_tripwire`). Two frontends
-  drive one engine: the browser wizard (auto-served when unconfigured) and the
-  headless CLI `bun run scripts/install.ts` (npm `dedalo:install`). See
-  **`docs/install/ts_native_install.md`** for the operator guide. PHP is no longer required to
+  manifest (`install_seed_manifest_tripwire`). ONE installer drives it, in the
+  terminal: `./install.sh` (the bootstrap) or `bun run scripts/install.ts` (npm
+  `dedalo:install`) — full-screen, plain line mode or flags/answers file over one
+  plan. See **`docs/install/ts_native_install.md`** for the operator guide. PHP is no longer required to
   install a TS instance.
 
-### 7.1 Install mode + restart-after-configure
+### 7.1 A server that is not installed refuses to start
 
-A server booted with none of `ENTITY`/`DB_NAME`/`DB_HOST`/`DB_USER` set enters
-**install mode** (`config.installMode`): it skips all DB-dependent boot steps,
-`/health` reports `db:down`, and it serves ONLY the install wizard. The browser
-`persist_config` step writes `../private/.env` and then **exits the process**
-with `RESTART_EXIT_CODE` (75 — `src/core/install/restart.ts`); the supervisor
-restarts it into configured mode. The wizard's separate manual
-`verify_active_config` click + the client's request retries bridge the gap. The
-pre-auth install surface is gated: reachable only while UNSEALED and only from
-`DEDALO_INSTALL_ALLOWED_IPS` — FAIL-CLOSED since 2026-08-24
-(`engineering/wire_contract/WC-2026-08-24-install-ip-gate-fail-closed.md`): unset
-or empty means LOOPBACK ONLY, entries are `loopback` / a literal address / a CIDR
-block, and `any` is the one explicit opt-out that opens it to every address. The
-effective policy is printed at boot next to the INSTALL MODE banner. Its limit is
-the resolved client address: a request with no `X-Forwarded-For` reads as
-`'local'`, so a bare TCP listener with no proxy in front must still be closed at
-the firewall. Once `install_finish` seals the instance the surface returns 404. The CLI needs no restart (it sets
-the env before importing config).
+There is no install mode and no install surface (2026-10-12,
+`engineering/wire_contract/WC-2026-10-12-install-surface-removed.md`). Before any
+listener, database connection or file write, the server asks
+`src/config/install_state.ts` whether this box is installed. When it is not, it
+writes ONE line to stderr (one journal line) and exits **78**
+(`NOT_INSTALLED_EXIT_CODE`, `EX_CONFIG`):
 
-The supervisor is:
+| State | The line says |
+|---|---|
+| `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER` all unset, no `.env`, not sealed | `not installed: … Run the installer: ./install.sh, or bun run dedalo:install` |
+| none of the four, but `.env` has content | `configuration incomplete: … do not reinstall over an existing configuration` |
+| none of the four, but `install_status` is `sealed` | `configuration missing: … Restore .env from backup — do not reinstall over it` |
+| `install_status` is anything but `sealed` (the installer writes `terminal_installing` while it runs) | `install not finished … bun run dedalo:install --resume` |
+
+A PARTIAL configuration (one to three of the four keys) is misconfigured, not
+unconfigured: the config import throws the precise missing-key error and the
+process exits 1, bounded by the unit's start limit.
+
+Every systemd unit and dev supervisor this repo ships STOPS on 78 — restarting a
+box that is not installed only re-reads the same missing configuration; containers
+cannot (Docker has no per-exit-code policy) and restart with backoff:
+
+| Where | Reaction to exit 78 |
+|---|---|
+| Production | `deploy/dedalo-ts.service` and `deploy/systemd/dedalo-ts@.service` carry `RestartPreventExitStatus=78`: the unit goes to `failed` and stays there. `OnFailure` fires the rollback unit (a single exit 78 reaches `failed`, not only an exhausted start limit): a no-op without a pending code-update sentinel; with one, the new tree that refuses to boot is rolled back after that one exit. `deploy/dedalo-ts-watchdog.sh` reads `Result` and `ExecMainStatus` and does NOT start the restart unit for it (otherwise it would override the unit every 30 s). Run the installer (or restore `.env`), then `systemctl start`. |
+| Containers | Docker has no per-exit-code restart policy: a config-less container restarts under `restart: unless-stopped` with Docker's capped backoff (about once a minute), printing the same one line each time. The installer's docker and trial routes never reach this — the engine install runs (`compose run --rm`) before the stack is started. |
+| Dev | `bun run dev`, `bun run dev:server` and `bun run start:supervised` respawn on exit 75 ONLY, so 78 ends them with that code. |
+
+**Template units are byte-pinned.** The installer renders
+`deploy/systemd/dedalo-ts@.service` byte-exactly (`src/core/install/host/production/units.ts`)
+and refuses a template whose bytes differ; a host installed before this change (the
+phase-4 drills) keeps a template without `RestartPreventExitStatus` — remove it before a
+re-run. The code-update channel never re-renders units, so an updated host keeps its
+template until the operator replaces it.
+
+**An aborted re-run takes the instance down at its next restart.** A re-run of the
+installer on a live instance writes `terminal_installing`; if it dies without its undo,
+the next restart exits 78 and stays down until `--resume` finishes it. That is
+fail-closed and intended: a half-reconfigured instance must not serve.
+
+Gates: `test/unit/no_install_surface_tripwire.test.ts` (the real server spawned
+config-less: exit 78, no listener, no database connection, no write),
+`test/unit/install_state_boot.test.ts` (the predicate),
+`test/unit/install_restart_supervisor_tripwire.test.ts` (the supervisors).
+
+### 7.2 Planned restart (code update)
+
+A code update or a code restore swaps the tree and exits `RESTART_EXIT_CODE` (75);
+the supervisor brings the new code up:
 
 | Where | What restarts it |
 |---|---|
@@ -1182,9 +1211,9 @@ The supervisor is:
 | Containers | `docker-compose.yml` / `docker-compose.simple.yml` — `restart: unless-stopped`; the `dedalo` service declares `DEDALO_SUPERVISED: "true"`. |
 | Dev | `bun run dev`, `bun run dev:server` or `bun run start:supervised` — loop on exit 75 ONLY, each declaring `DEDALO_SUPERVISED=true` on its command line. |
 
-The declaration (§2) is the code-update contract; the install restart itself only
-needs the exit-75 loop. A `DEDALO_SUPERVISED` line in `../private/.env` is
-ignored, and nothing infers supervision from systemd's own variables.
+The declaration (§2) is the code-update contract. A `DEDALO_SUPERVISED` line in
+`../private/.env` is ignored, and nothing infers supervision from systemd's own
+variables.
 
 Exit 75 is a *distinct* code on purpose: a graceful ^C also exits 0, so a
 supervisor keying on 0 could never be stopped, and one keying on "any exit"
@@ -1192,7 +1221,7 @@ would hot-loop a crash. `bun run start` is deliberately NOT supervised — syste
 is its supervisor. The contract is gated by
 `test/unit/install_restart_supervisor_tripwire.test.ts` (it exists because this
 mechanism once named a `start:supervised` script that was never written, which
-hung the browser wizard at "Save configuration" for every dev).
+left every dev on `bun run dev` with a dead server).
 
 ## 8. Diffusion scheduler placement
 
@@ -1530,7 +1559,7 @@ The host updater is `alive` while `now − seen_at ≤ max(3 × interval, 180 s)
 host never reads these files; it talks to the engine's CLI,
 `scripts/ops/image_update_channel.ts <verb> [--dir D]` (verbs `check-target`,
 `heartbeat`, `claim`, `orphan`, `outcome`, `status`; leaf imports only — never
-`config.ts`, so it answers in install mode too), through `docker compose exec`
+`config.ts`, so it answers even when the engine refuses to start), through `docker compose exec`
 (or `run --rm --no-deps` to record an outcome whatever state the engine is in),
 and accepts back only a UUID and a tag grammar. Gate: `image_update_channel_native`.
 

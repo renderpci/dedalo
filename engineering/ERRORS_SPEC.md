@@ -225,8 +225,7 @@ route. Consequences:
   `logError(error, {subsystem: '<class>::<action>', requestId})`; `csrf_token`
   is appended after (session present). Gate codes: `request.unknown_action`
   (Gate 1 AND Gate 1c-disabled — the SAME body minus request_id, so a probe
-  cannot learn the intake exists), `install.not_reachable` (404),
-  `install.ip_denied` (403), `auth.not_logged` (401), `auth.maintenance` (401,
+  cannot learn the intake exists), `auth.not_logged` (401), `auth.maintenance` (401,
   the client relogin policy keys on both), `auth.csrf_failed` (403, extension
   `action` + the fresh `csrf_token` + its `session_user_id`), `perm.denied` (report intake IP).
 - **The poison latch lives in `toDedaloError`** (raw error or anywhere in the
@@ -423,7 +422,7 @@ tripwired or deleted"). Rows in `engineering/TRIPWIRES.md` + `scripts/verify.ts`
 | `test/unit/error_throw_ratchet.test.ts` | untyped `throw new Error(` per file may only shrink (`engineering/error_throw_baseline.json`); ZERO_TIER dirs are at 0 (`ZERO_TIER_ENFORCED = true`, P3 exit) |
 | `test/unit/client_error_contract_tripwire.test.ts` | the client half: one transport (`api_transport.fetch_api`, no status allowlist), no fourth fetch wrapper, the compat-read census at ZERO (no baseline — `scripts/lib/client_compat_census.ts` + `NON_ENVELOPE_READS` exemptions, each live and reasoned), and the server compat block ABSENT (no `ERROR_ENVELOPE_COMPAT`, no `result:` written by convert.ts, `result` in `ENVELOPE_FORBIDDEN_KEYS`) — P4 landed 2026-08-16 |
 | `test/parity/error_envelope_transform.test.ts` | the fixture-side transform: total over the 8 frozen `result:false` bodies, and it REFUSES a TS-shaped body (`ok` present) — fixture-side only |
-| `test/unit/authorization_denial_native.test.ts`, `session_not_logged_contract.test.ts`, `csrf_handshake.test.ts`, `security_fail_closed.test.ts`, `install_gate.test.ts` | the named refusals (`perm.denied` + environment extension on `start`, `auth.not_logged`, `auth.csrf_failed` + fresh token, install window) — and response.ts's export set (`streamResult` only) |
+| `test/unit/authorization_denial_native.test.ts`, `session_not_logged_contract.test.ts`, `csrf_handshake.test.ts`, `security_fail_closed.test.ts`, `no_install_surface_tripwire.test.ts` | the named refusals (`perm.denied` + environment extension on `start`, `auth.not_logged`, `auth.csrf_failed` + fresh token; no session-less action outside the frozen pre-auth list, the removed install actions `request.unknown_action`) — and response.ts's export set (`streamResult` only) |
 | `test/unit/labels_tripwire.test.ts` | every `label_key` ships in `master.json` (the code and its label land in one commit) |
 | `test/unit/tools_dispatch.test.ts`, `dd_mcp_api.test.ts`, `agent_stream_protocol.test.ts`, `diffusion_queue_stream_tripwire.test.ts`, `external_search_action_native.test.ts` | the non-envelope surfaces (§5) — tool responses ARE the envelope, MCP structured errors, SSE frames, external degradation as notices |
 

@@ -1,10 +1,10 @@
 /**
  * THE INSTALLER'S ANSWER MATRIX — one set of cases every front-end parity gate
  * runs (terminal installer phase 2, 2026-10-12): the CLI flags, the answers
- * file, the browser wizard's post and the interactive plain mode must decide
- * the SAME plan for each.
+ * record (the shape the answers file and the screens produce), the answers file
+ * and the interactive plain / full-screen modes must decide the SAME plan for each.
  *
- * Users: test/unit/install_plan_parity_tripwire.test.ts (CLI ≡ wizard ≡ answers
+ * Users: test/unit/install_plan_parity_tripwire.test.ts (flags ≡ record ≡ answers
  * file, the phase-1 matrix), test/unit/install_plain_parity_tripwire.test.ts
  * (+ plain mode, + the route cases), test/unit/install_screen_model_tripwire.test.ts
  * (the local-fixture ontology source).
@@ -21,10 +21,10 @@
  * and no marker-tripwire row: nothing here can reach a database or a media root.
  */
 
-import { buildInstallContext } from '../../src/core/install/context.ts';
 import type { InstallPlan } from '../../src/core/install/install_plan.ts';
 import {
 	collectHierarchyDependencies,
+	DEFAULT_DOMAIN_ONTOLOGIES,
 	declarersOf,
 	type HierarchyDependency,
 	hierarchyDependencyPlan,
@@ -37,26 +37,16 @@ import {
 	type FixtureOntologyTld,
 } from '../../src/core/test_data/ontology_package_fixture.ts';
 
-// ── the wizard's own defaults (read from its context, never re-typed) ─────────
-
-const WIZARD_PROPERTIES = buildInstallContext().properties as Record<string, unknown> & {
-	hierarchies: { tld: string }[];
-	toponymy_typology: number;
-	ontologies: { default: string[] };
-};
-
-/** The wizard's served properties (its context) — what it renders and posts from. */
-export const WIZARD_CONTEXT_PROPERTIES = WIZARD_PROPERTIES;
+// ── the defaults (read from install_plan / ontology_choice, never re-typed) ───
 
 /**
- * The thesauri the WIZARD POSTS before any declaration is known: NONE
+ * The thesauri a record carries before any declaration is known: NONE
  * (2026-10-10 — pre-selection comes only from the declared dependencies, which
- * the plan adds itself). Its context carries no default list at all, so the
- * empty post IS its default answer.
+ * the plan adds itself), so the empty list IS the default answer.
  */
-export const WIZARD_DEFAULT_THESAURI: string[] = [];
-/** The domain ontologies the WIZARD pre-ticks (its context, not a re-typed list). */
-export const WIZARD_DEFAULT_ONTOLOGIES: string[] = WIZARD_PROPERTIES.ontologies.default;
+export const DEFAULT_THESAURI: string[] = [];
+/** The default domain ontologies (ontology_choice DEFAULT_DOMAIN_ONTOLOGIES). */
+export const DEFAULT_ONTOLOGIES: string[] = [...DEFAULT_DOMAIN_ONTOLOGIES];
 
 // ── the declared thesauri, derived through the production functions ──────────
 
@@ -76,13 +66,13 @@ export function declaredThesauri(
 	return { dependencies, install: hierarchyDependencyPlan(dependencies).install };
 }
 
-// ── the phase-1 matrix (CLI ≡ wizard ≡ answers file) ─────────────────────────
+// ── the phase-1 matrix (flags ≡ record ≡ answers file) ───────────────────────
 
 export interface AnswerCase {
 	name: string;
 	argv: string[];
-	/** The same answers as the wizard posts them (its key names, its value shapes). */
-	wizard: Record<string, unknown>;
+	/** The same answers as a RECORD (the plan's key names, its value shapes). */
+	record: Record<string, unknown>;
 }
 
 export const BASE_ARGV = [
@@ -112,8 +102,8 @@ export const BASE_ARGV = [
 	'lg-eng',
 ];
 
-/** The same answers as the wizard posts them (its key names, its value shapes). */
-export const BASE_WIZARD: Record<string, unknown> = {
+/** The same answers as a record (the plan's key names, its value shapes). */
+export const BASE_RECORD: Record<string, unknown> = {
 	db_database: 'dedalo_parity',
 	db_username: 'parity_user',
 	db_password: 'secret pass',
@@ -130,8 +120,8 @@ export const BASE_WIZARD: Record<string, unknown> = {
 	diffusion: false,
 	mailer: false,
 	update_servers: true,
-	hierarchies: WIZARD_DEFAULT_THESAURI,
-	ontologies: WIZARD_DEFAULT_ONTOLOGIES,
+	hierarchies: DEFAULT_THESAURI,
+	ontologies: DEFAULT_ONTOLOGIES,
 };
 
 export const DIFFUSION_ARGV = [
@@ -147,7 +137,7 @@ export const DIFFUSION_ARGV = [
 	'--mysql-password',
 	'web pw',
 ];
-export const DIFFUSION_WIZARD = {
+export const DIFFUSION_RECORD = {
 	diffusion: true,
 	mysql_hostname: 'mariadb.local',
 	mysql_port: '3307',
@@ -172,7 +162,7 @@ export const MAILER_ARGV = [
 	'--smtp-from-name',
 	'Dédalo',
 ];
-export const MAILER_WIZARD = {
+export const MAILER_RECORD = {
 	mailer: true,
 	smtp_host: 'smtp.example.org',
 	smtp_port: '465',
@@ -183,18 +173,18 @@ export const MAILER_WIZARD = {
 	smtp_from_name: 'Dédalo',
 };
 
-/** The phase-1 matrix: every case the CLI and the wizard can both express. */
+/** The phase-1 matrix: every case the flags and a record can both express. */
 export const CASES: readonly AnswerCase[] = [
-	{ name: 'base (every default)', argv: BASE_ARGV, wizard: BASE_WIZARD },
+	{ name: 'base (every default)', argv: BASE_ARGV, record: BASE_RECORD },
 	{
 		name: '+diffusion',
 		argv: [...BASE_ARGV, ...DIFFUSION_ARGV],
-		wizard: { ...BASE_WIZARD, ...DIFFUSION_WIZARD },
+		record: { ...BASE_RECORD, ...DIFFUSION_RECORD },
 	},
 	{
 		name: '+mailer',
 		argv: [...BASE_ARGV, ...MAILER_ARGV],
-		wizard: { ...BASE_WIZARD, ...MAILER_WIZARD },
+		record: { ...BASE_RECORD, ...MAILER_RECORD },
 	},
 	{
 		name: '+serving keys',
@@ -207,8 +197,8 @@ export const CASES: readonly AnswerCase[] = [
 			'--media-access-mode',
 			'publication',
 		],
-		wizard: {
-			...BASE_WIZARD,
+		record: {
+			...BASE_RECORD,
 			media_path: '/srv/dedalo/media',
 			unix_socket: '/run/dedalo/dedalo_ts.sock',
 			media_access_mode: 'publication',
@@ -217,37 +207,37 @@ export const CASES: readonly AnswerCase[] = [
 	{
 		name: 'air-gapped (no update servers)',
 		argv: [...BASE_ARGV, '--no-update-servers'],
-		wizard: { ...BASE_WIZARD, update_servers: false },
+		record: { ...BASE_RECORD, update_servers: false },
 	},
 	{
 		name: 'thesauri: none',
 		argv: [...BASE_ARGV, '--hierarchies', 'none'],
-		wizard: { ...BASE_WIZARD, hierarchies: [] },
+		record: { ...BASE_RECORD, hierarchies: [] },
 	},
 	{
 		name: 'thesauri: explicit',
 		argv: [...BASE_ARGV, '--hierarchies', 'ad,fr'],
-		wizard: { ...BASE_WIZARD, hierarchies: ['ad', 'fr'] },
+		record: { ...BASE_RECORD, hierarchies: ['ad', 'fr'] },
 	},
 	{
 		name: 'thesauri: with the core lg',
 		argv: [...BASE_ARGV, '--hierarchies', 'lg,fr'],
-		wizard: { ...BASE_WIZARD, hierarchies: ['lg', 'fr'] },
+		record: { ...BASE_RECORD, hierarchies: ['lg', 'fr'] },
 	},
 	{
 		name: 'ontologies: explicit oh',
 		argv: [...BASE_ARGV, '--ontologies', 'oh'],
-		wizard: { ...BASE_WIZARD, ontologies: ['oh'] },
+		record: { ...BASE_RECORD, ontologies: ['oh'] },
 	},
 	{
 		name: 'ontologies: a core TLD dropped with a note',
 		argv: [...BASE_ARGV, '--ontologies', 'DD,oh'],
-		wizard: { ...BASE_WIZARD, ontologies: ['dd', 'oh'] },
+		record: { ...BASE_RECORD, ontologies: ['dd', 'oh'] },
 	},
 	{
 		name: 'ontologies: air-gapped default (the vendored oh)',
 		argv: [...BASE_ARGV, '--no-update-servers', '--ontologies', 'default'],
-		wizard: { ...BASE_WIZARD, update_servers: false },
+		record: { ...BASE_RECORD, update_servers: false },
 	},
 ];
 
@@ -313,7 +303,7 @@ export function localOntologySource(
 
 // ── the route cases (the terminal front ends only) ───────────────────────────
 
-/** A route case: argv the plain mode must reproduce (no wizard: it cannot post a route). */
+/** A route case: argv the plain mode must reproduce (flags only: no record leg). */
 export interface RouteCase {
 	name: string;
 	argv: string[];
@@ -359,7 +349,7 @@ const HOST_ARGV = ['--server-name', 'prado.example.org', '--letsencrypt-email', 
  * declined. `sourceDir` = a local fixture source (localOntologySource, written by the gate).
  */
 export function routeCases(sourceDir: string): RouteCase[] {
-	const declared = declaredThesauri(WIZARD_DEFAULT_ONTOLOGIES).install;
+	const declared = declaredThesauri(DEFAULT_ONTOLOGIES).install;
 	const declinedOne = declared[0] as string;
 	const declaredLast = declared.at(-1) as string;
 	return [

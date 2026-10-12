@@ -405,7 +405,7 @@ parse_args() {
 				;;
 			--mirror) need_value "$1" $#; MIRROR=$2; shift 2 ;;
 			--wizard)
-				die '--wizard is retired: the installer asks every question in the terminal (sh install.sh). The browser wizard is still reached by starting the stack by hand — docs/install/quickstart.md, "The no-certificate variant"'
+				die '--wizard is retired: the installer asks every question in the terminal (sh install.sh).'
 				;;
 			--) shift; break ;;
 			*) break ;;

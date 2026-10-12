@@ -630,15 +630,16 @@ describe('boot wiring', () => {
 		expect(heard).toEqual(['test3_13:true']);
 	});
 
-	test('server.ts starts it only in a real boot (not install, not smoke), behind the reconcile scheduler gate, stopped by the drain', () => {
+	test('server.ts starts it only in a real boot (not smoke), behind the reconcile scheduler gate, stopped by the drain', () => {
 		const text = readFileSync(join(import.meta.dir, '..', '..', 'src', 'server.ts'), 'utf8');
 		const at = text.indexOf('startMediaCopy({');
 		expect(at).toBeGreaterThan(0);
-		// databaseBoot = !installMode && !installInProgress() (install_mode_boot.test.ts).
-		const guard = text.lastIndexOf('if (databaseBoot && !smokeBoot) {', at);
+		// A box that is not installed never boots this far (install_state_boot), so the
+		// smoke boot is the only skip.
+		const guard = text.lastIndexOf('if (!smokeBoot) {', at);
 		expect(guard).toBeGreaterThan(text.indexOf('const shutdownStops'));
-		expect(text.lastIndexOf('} // end if (databaseBoot && !smokeBoot)', at)).toBeLessThan(guard);
-		expect(text.indexOf('} // end if (databaseBoot && !smokeBoot)', at)).toBeGreaterThan(at);
+		expect(text.lastIndexOf('} // end if (!smokeBoot)', at)).toBeLessThan(guard);
+		expect(text.indexOf('} // end if (!smokeBoot)', at)).toBeGreaterThan(at);
 		expect(
 			text.lastIndexOf("readString('DEDALO_RECONCILE_SCHEDULER_ENABLED') !== 'false'", at),
 		).toBeGreaterThan(guard);

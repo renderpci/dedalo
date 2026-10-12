@@ -21,7 +21,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { readdirSync, statSync } from 'node:fs';
+import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -34,8 +34,10 @@ const SKIP_DIRS = new Set(['lib', 'node_modules', 'test', 'server']);
 
 /**
  * Every .js under the browser trees in git's view — tracked AND untracked (a
- * module not yet `git add`ed is still served), never ignored. Unfiltered: the
- * ONE git walk both shapes derive from.
+ * module not yet `git add`ed is still served), never ignored, and never a
+ * tracked file DELETED in the working tree (`--cached` still lists it until the
+ * deletion is committed, but nothing serves it). Unfiltered: the ONE git walk
+ * both shapes derive from.
  */
 const gitBrowserView = (): string[] =>
 	execFileSync(
@@ -54,7 +56,7 @@ const gitBrowserView = (): string[] =>
 		},
 	)
 		.split('\n')
-		.filter(Boolean);
+		.filter((file) => file !== '' && existsSync(join(REPO_ROOT, file)));
 
 /**
  * Every .js under the browser trees in git's view, UNFILTERED — for a census

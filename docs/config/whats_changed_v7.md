@@ -23,7 +23,7 @@ is the "why" behind it.
 | **Lists and maps** | PHP array literals | JSON |
 | **Paths** | you declared them (`DEDALO_CORE_PATH`, `DEDALO_MEDIA_URL`, …) | the engine derives them |
 | **Runtime state** | `config_core.php`, written by the app | `../private/ts_state.json` |
-| **Editing config** | edit a `.php` file inside the web root | edit `.env`, or use the install wizard |
+| **Editing config** | edit a `.php` file inside the web root | edit `.env`, or run the installer (`./install.sh`) |
 
 There is **no `config.php` in v7, and no PHP at all**. Nothing you put in a
 `.php` file is read.

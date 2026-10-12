@@ -2,14 +2,14 @@
 #
 # Operator guide: docs/install/quickstart.md
 #
-#   Path 1 — guided install (it asks you the questions):
+#   Install with the terminal installer (it asks you the questions, writes
+#   /private/.env through a one-shot engine container, then starts the stack):
 #       ./install.sh
 #
-#   Path 2 — browser wizard (it asks you nothing here). Without install.sh
-#   nothing records where the image comes from, so build it here from the
-#   checkout with the override (slow the first time):
-#       docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml up -d
-#       …then open http://localhost/dedalo/core/page/ and fill the wizard.
+#   There is no browser install: an engine container started before the
+#   installer ran finds no configuration, prints one "[boot] REFUSED — not
+#   installed" line and exits 78 (Docker restarts it with its capped backoff,
+#   printing the same line each time) until the installer has written it.
 #
 # THE IMAGE. install.sh asks where it comes from — one of Dédalo's registries, a
 # registry of your own, or a local build — and records the answer in .dedalo.env:
@@ -42,7 +42,6 @@ services:
   #
   # The defaults below are intentionally boring: this port is NOT published, so
   # the database is reachable only from the other containers on this network.
-  # Path 2 users type these same values into the wizard's database step.
   postgres:
     image: postgres:18
     restart: unless-stopped
@@ -75,9 +74,8 @@ services:
     # a bare `docker compose up` can never pull a look-alike image from a public
     # registry: without a local build it fails loudly instead.
     image: ${DEDALO_IMAGE:-localhost/dedalo}:${DEDALO_VERSION:-local}
-    # The container equivalent of systemd's Restart=always — and what makes the
-    # wizard's "Save config" step work at all: the process exits after writing
-    # .env so that it can be restarted into the real configuration.
+    # The container equivalent of systemd's Restart=always — and what brings the
+    # engine back after a planned restart (exit 75: a code update).
     restart: unless-stopped
     # THE SUPERVISOR MUST OUTLAST THE DRAIN (P2-33 / OPS-10).
     #
@@ -115,12 +113,11 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      # DELIBERATELY ABSENT: ENTITY, DB_NAME, DB_HOST, DB_USER. Those four keys
-      # are the engine's "is this a fresh box?" test (src/config/install_mode.ts).
-      # Setting any of them here would take the engine OUT of install mode and
-      # the browser wizard would never appear — so the install answers reach the
-      # engine as installer arguments (path 1) or as wizard input (path 2), never
-      # as container environment.
+      # DELIBERATELY ABSENT: ENTITY, DB_NAME, DB_HOST, DB_USER. The installer
+      # writes them into /private/.env (src/config/install_state.ts reads the
+      # same four to decide "installed or not"). Setting them here would shadow
+      # that file — the install answers reach the engine as installer answers,
+      # never as container environment.
       DEDALO_PRIVATE_DIR: /private
       # SUPERVISION IS DECLARED BY THE SUPERVISOR. `restart: unless-stopped` above
       # is what brings the server back after a planned exit, so the stack says so
@@ -162,7 +159,7 @@ services:
       # to be `true` while DEDALO_NGINX_CONF defaulted to the PLAIN-HTTP
       # nginx.simple.conf — so this file's own header, 78 lines above, said "no
       # TLS — plain HTTP, so SESSION_COOKIE_SECURE must be false" and the file
-      # then shipped the opposite. An operator who completed the wizard, chose a
+      # then shipped the opposite. An operator who completed the install, chose a
       # root password and never passed --env-file could not log in, ever, with
       # nothing on screen to say why. The two defaults are one decision and must
       # move together; the gate that holds them together is
@@ -187,16 +184,6 @@ services:
       TRUSTED_PROXY_HOPS: "1"
       DEDALO_DEV_MODE: "false"
       DEDALO_DEBUG_API_ERRORS: "false"
-      # WHO MAY REACH THE INSTALL WIZARD. Until the wizard SEALS the instance its
-      # actions are pre-auth — they write /private/.env and restart the engine —
-      # so since 2026-08-24 an unset value means LOOPBACK ONLY. In a container
-      # that is exactly nobody: nginx forwards your browser's real address
-      # (TRUSTED_PROXY_HOPS above), which is never this namespace's loopback. A
-      # browser install through this stack therefore REQUIRES naming the address
-      # you browse from:
-      #   export DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10   # or 10.0.0.0/24, or `any`
-      # Drop the value once the instance is sealed.
-      DEDALO_INSTALL_ALLOWED_IPS: ${DEDALO_INSTALL_ALLOWED_IPS:-}
       # The engine never serves media here — nginx does, from the shared volume.
       MEDIA_DEV_ROUTE_ENABLED: "false"
     volumes:
@@ -224,9 +211,8 @@ services:
       # itself, which drains and exits, and `restart: unless-stopped` recycles
       # the container. No docker.sock handed to a container, no extra image.
       #
-      # It escalates only AFTER a first green probe, so it is inert while the
-      # browser wizard is open (no database yet ⇒ /health is red for as long as
-      # the operator takes) and during a slow boot.
+      # It escalates only AFTER a first green probe, so it is inert during a slow
+      # boot and on an engine that refused to start (exit 78: not installed).
       #
       # CADENCE: 3 x 30s ≈ 90 s to a recycle here — NOT systemd's 30 s.
       test: ["CMD", "/opt/dedalo/master_dedalo/scripts/ops/container_watchdog.sh", "--socket", "/run/dedalo/dedalo_ts.sock"]
@@ -339,7 +325,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      # The database this stack created. If you told the install wizard a DIFFERENT
+      # The database this stack created. If you told the installer a DIFFERENT
       # database or role than these, correct them here — the backup connects on its
       # own and cannot ask the engine what it chose.
       DB_NAME: ${POSTGRES_DB:-dedalo}

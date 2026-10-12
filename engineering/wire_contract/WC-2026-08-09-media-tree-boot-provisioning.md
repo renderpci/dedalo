@@ -99,3 +99,5 @@ single-line, scratch media root), the boot entry point, and the source-level
 assertion that `src/server.ts` calls it before serving. No parity gate diffs
 `check_directories` — it is part of the TS-native install surface (WC-004), which
 never runs against PHP — so **no re-harvest is needed**.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (its wizard step-contract half (`check_directories` as a router answer): the step runs only in the terminal executor's step table)

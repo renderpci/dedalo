@@ -117,7 +117,9 @@ describe('the server never reaches the UI (b)', () => {
 
 	test('the closure is real (> 500 modules, into src/core/install and tools/)', () => {
 		expect(reachable.length).toBeGreaterThan(500);
-		expect(reachable).toContain('src/core/install/install_plan.ts');
+		// Into src/core/install through Maintenance › Import hierarchies (since the wizard
+		// router left, 2026-10-12, the plan module is no longer on the server's path).
+		expect(reachable).toContain('src/core/install/hierarchy_import.ts');
 		expect(TOOL_SERVER_ROOTS.length).toBeGreaterThan(20);
 		expect(reachable.filter((file) => file.startsWith('tools/')).length).toBeGreaterThan(20);
 	});

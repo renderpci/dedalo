@@ -102,9 +102,11 @@ the regression the 255 s idleTimeout fixed (Bun's silent 10 s default).
 ✅ `install/db/migrate.ts` runs `0001_baseline.sql` and records it in
 `dedalo_ts_schema_migrations`; a second boot is a no-op (idempotent).
 ▢ Point a fresh staging server at an EMPTY database.
-✅ `/health` reports `db:down` and only the install wizard is served; the
-TS-native installer (`src/core/install/`, wizard or headless `bun run
-scripts/install.ts`) provisions matrix/dd_ontology from the vendored seed.
+✅ With the installation's keys set and its `install_status` not `sealed`, the server
+REFUSES to start (exit 78, one `[boot] REFUSED — install not finished` line — PRODUCTION
+§7.1); the terminal installer (`src/core/install/`, `./install.sh` or `bun run
+scripts/install.ts`) provisions matrix/dd_ontology from the vendored seed and seals it,
+after which the server boots and applies the migrations.
 The former **DEC-19/S2-39 cutover blocker is RESOLVED** (2026-07-09 — see
 `engineering/PRODUCTION.md` §7 and `rewrite/COEXISTENCE.md`). Coexistence
 caveats: the root password is written Argon2id (TS-login-only until re-set on

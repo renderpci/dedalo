@@ -64,8 +64,9 @@ export async function smokeBootQuarantine(codeRoot: string, stagingDir: string):
 	// would otherwise outrank the repointed private dir.
 	const smokePrivateDir = join(stagingDir, 'smoke_private');
 	mkdirSync(smokePrivateDir, { recursive: true });
-	// Boot as a normal configured instance, never the install wizard: the real
-	// ts_state.json stays untouched, so seal the throwaway one.
+	// Boot as a finished install: an absent or non-sealed state would be refused
+	// at boot (src/config/install_state.ts) — the real ts_state.json stays
+	// untouched, so seal the throwaway one.
 	writeFileSync(
 		join(smokePrivateDir, 'ts_state.json'),
 		`${JSON.stringify({ install_status: 'sealed' })}\n`,
@@ -78,9 +79,8 @@ export async function smokeBootQuarantine(codeRoot: string, stagingDir: string):
 			...(envSnapshot() as Record<string, string>),
 			DEDALO_SMOKE_BOOT: 'true',
 			SERVER_UNIX_SOCKET: socketPath,
-			// The smoke child must never claim the dev TCP port or restart itself.
+			// The smoke child must never claim the dev TCP port.
 			SERVER_TCP_PORT: '',
-			DEDALO_INSTALL_NO_RESTART: 'true',
 			DEDALO_PRIVATE_DIR: smokePrivateDir,
 			DEDALO_SESSION_DB_PATH: join(smokePrivateDir, 'dedalo_ts_sessions.sqlite'),
 			DEDALO_TS_STATE_PATH: join(smokePrivateDir, 'ts_state.json'),

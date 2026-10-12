@@ -35,15 +35,14 @@ export const NOT_PLAIN: Readonly<Record<string, 'route_fixed' | 'core_tld' | 'de
 export interface ParityCase {
 	name: string;
 	argv: string[];
-	wizard: Record<string, unknown> | null;
 	local: boolean;
 }
 
 /** Every case (the route cases read the local ontology source at `sourceDir`). */
 export function allCases(sourceDir: string): ParityCase[] {
 	return [
-		...CASES.map((item) => ({ ...item, local: false })),
-		...routeCases(sourceDir).map((item) => ({ ...item, wizard: null })),
+		...CASES.map(({ name, argv }) => ({ name, argv, local: false })),
+		...routeCases(sourceDir),
 	];
 }
 

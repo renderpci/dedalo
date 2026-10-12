@@ -101,7 +101,7 @@ The other keys:
 bun run dev          # watch mode; `bun run start:supervised` runs it without the watchers
 ```
 
-`bun run dev` runs two watchers together: the server (reloading on TypeScript changes, and restarting itself if the install wizard asks for a fresh process) and the stylesheet compiler (recompiling the affected CSS whenever you save a `.less`). Ctrl-C stops both. If you are editing styles, read [Building the CSS](../core/ui/css_architecture.md#building-the-css) first — the compiled `.css` is committed, and it must not be hand-edited.
+`bun run dev` runs two watchers together: the server (reloading on TypeScript changes, and restarting itself if a code update asks for a fresh process) and the stylesheet compiler (recompiling the affected CSS whenever you save a `.less`). Ctrl-C stops both. If you are editing styles, read [Building the CSS](../core/ui/css_architecture.md#building-the-css) first — the compiled `.css` is committed, and it must not be hand-edited.
 
 !!! note "Which scripts are supervised"
     `bun run dev`, `bun run dev:server` and `bun run start:supervised` restart the server when it asks for a fresh process, so each **declares** `DEDALO_SUPERVISED=true` in its own command line. Plain `bun run start` restarts nothing and deliberately declares nothing: the [code update panel](../management/updates/updating_code.md) refuses to swap code under it rather than leave the server dead. Do not put `DEDALO_SUPERVISED` in `../private/.env` — every launch method reads that file, so the engine ignores the key there.
@@ -158,5 +158,5 @@ bun run test:client:server   # the suite server, kept alive for browsing (Ctrl-C
 
 - **Cannot log in, no error** → `SESSION_COOKIE_SECURE=false`. See above.
 - **`address already in use` / the server exits 1 at boot** → another instance is already listening on `/tmp/dedalo_ts.sock`. The double-start guard probes the socket and refuses to steal it. Stop the other one, or point `SERVER_UNIX_SOCKET` somewhere else.
-- **The server serves the install wizard instead of the app** → it booted with none of the four required keys set, so it is in install mode. It is not reading your `.env` — check that it is at `../private/.env`, one level above the repo.
+- **The server exits at once with `[boot] REFUSED — not installed`** (exit code 78) → it found none of the four required keys. It is not reading your `.env` — check that it is at `../private/.env`, one level above the repo (or run the installer).
 - Everything else → [troubleshooting](troubleshooting.md).

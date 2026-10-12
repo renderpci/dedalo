@@ -4,10 +4,9 @@
  * in the owner's order, with the PLAN's defaults and the PLAN's refusals, and
  * maps what the operator ticks to exactly the answers the flags would give.
  *
- * WHY. The browser wizard drifted from the CLI because it carried its own
- * defaults, rules and mappings (install_plan_parity_tripwire's history). The
- * screen model is the third UI over the same plan; it must not become the next
- * copy.
+ * WHY. The retired browser wizard drifted from the CLI because it carried its
+ * own defaults, rules and mappings (install_plan_parity_tripwire's history). The
+ * screen model is a UI over the same plan; it must not become the next copy.
  *
  * WHAT IS MEASURED (outcomes, never spellings):
  *  (a) COMPLETENESS, PER ROUTE (A8): with every conditional question on, the
@@ -54,7 +53,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { offeredHierarchies, TOPONYMY_TYPOLOGY_ID } from '../../src/core/install/hierarchy_meta.ts';
@@ -97,10 +96,10 @@ import {
 import { NOTICE_TEXT, ONTOLOGY_NOTE_TEXT } from '../../src/core/install/screen_text.ts';
 import { multiCommand, multiResult, multiState } from '../../src/core/install/ui_plain/prompter.ts';
 import {
+	DEFAULT_ONTOLOGIES,
 	decided,
 	declaredThesauri,
 	localOntologySource,
-	WIZARD_DEFAULT_ONTOLOGIES,
 } from '../helpers/install_answer_cases.ts';
 import { MAXIMAL_RAW, modelInput } from '../helpers/install_plain_script.ts';
 import { directImports, REPO_ROOT, reachableModules } from '../helpers/request_path_closure.ts';
@@ -710,7 +709,7 @@ describe('screen model — ticks decide what the equivalent flags decide (f)', (
 	});
 
 	test('explicit roots: re-answering the thesauri unchanged over flags that NAME a declared one keeps their plan', () => {
-		const declared = declaredThesauri(WIZARD_DEFAULT_ONTOLOGIES).install;
+		const declared = declaredThesauri(DEFAULT_ONTOLOGIES).install;
 		const last = declared.at(-1) as string;
 		for (const argv of [
 			['--hierarchies', `fr,${last}`],
@@ -942,11 +941,14 @@ describe('screen model — off the request path (g)', () => {
 	const corpus = writePathSourceFiles().filter((file) => file.startsWith('src/'));
 	const ui = uiSide(corpus);
 
-	test('the closure is real: large, and it DOES reach into src/core/install (the wizard)', () => {
+	test('the closure is real: large, and it DOES reach into src/core/install (Maintenance › Import hierarchies)', () => {
 		expect(corpus.length).toBeGreaterThan(500);
 		expect(reachable.length).toBeGreaterThan(500);
-		expect(reachable).toContain('src/core/install/install_plan.ts');
-		expect(reachable).toContain('src/core/install/engine.ts');
+		expect(reachable).toContain('src/core/install/hierarchy_import.ts');
+		// The retired wizard router is gone (WC-2026-10-12-install-surface-removed), and
+		// with it the plan's only path onto the request path.
+		expect(existsSync(join(REPO_ROOT, 'src/core/install/engine.ts'))).toBe(false);
+		expect(reachable).not.toContain('src/core/install/install_plan.ts');
 	});
 
 	test('the derived UI side holds the model, its text, the front-end contract, the probes and the plain UI', () => {
@@ -968,7 +970,7 @@ describe('screen model — off the request path (g)', () => {
 		]) {
 			expect(ui.has(file), file).toBe(true);
 		}
-		// …and NOT the plan or its validation (shared with the wizard): the derivation discriminates.
+		// …and NOT the plan or its validation (shared with the CLI and the executor): the derivation discriminates.
 		expect(ui.has('src/core/install/install_plan.ts')).toBe(false);
 		expect(ui.has('src/core/install/install_validation.ts')).toBe(false);
 	});

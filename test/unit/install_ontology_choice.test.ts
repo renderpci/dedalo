@@ -13,7 +13,7 @@
  *  - precedence local > vendored > server (and the merge is idempotent);
  *  - the ONE view (describeOntologyCatalog): fixed TLDs excluded, default
  *    first, note keys, also_installs;
- *  - ACTIVE_ONTOLOGY_TLDS ↔ request round trip (the wizard path) — an optional
+ *  - ACTIVE_ONTOLOGY_TLDS ↔ request round trip — an optional
  *    dependency the list lacks was declined, a mandatory one refuses;
  *  - hierarchy60 OBJECTS (2026-10-10): mandatory always followed, optional
  *    pre-ticked and declinable (declined_dependencies), an unoffered optional
@@ -24,8 +24,7 @@
  *    pre-ticked AND declinable — declining it is a WARNING naming dependant +
  *    dependency + where to install it later; one with no hierarchy.json entry
  *    is a warning, mandatory or not (an entry WITHOUT data files is
- *    installable: an empty thesaurus); the wizard step's check
- *    (unmetHierarchyDependencies) adds nothing and refuses nothing;
+ *    installable: an empty thesaurus);
  *  - the vendored catalog is exactly `oh`, its declared dependencies are the
  *    vendored ontology.json entry's (never hard-coded), and the offline default
  *    request installs it alone.
@@ -60,7 +59,6 @@ import {
 	ontologyRequestFromActive,
 	recommendedThesaurusWarning,
 	THESAURUS_INSTALL_LATER,
-	unmetHierarchyDependencies,
 	VENDORED_DOMAIN_TLDS,
 	vendoredCoreDeclarers,
 	vendoredInfoFrom,
@@ -638,27 +636,6 @@ describe('the thesaurus set → install_hierarchies', () => {
 			`the thesaurus 'zzodx' (declared mandatory by 'zzodc') has no entry in hierarchy.json — skipped; it is strongly recommended and can be installed later from ${THESAURUS_INSTALL_LATER}`,
 		]);
 		expect(plan).not.toHaveProperty('errors');
-	});
-
-	test('the wizard step: the posted list is the answer — nothing added, a mandatory one left out warned', () => {
-		const offered = new Set([vendored, 'zzodw']);
-		const optionalOnly = collectHierarchyDependencies([
-			{ tld: 'zzodb', dependencies: [dep('zzodw', 'hierarchy1', false)] },
-		]).dependencies;
-		// an optional one left out: silent (the posted list answered it)
-		expect(unmetHierarchyDependencies([], optionalOnly, offered)).toEqual({ warnings: [] });
-		// a mandatory one ticked: nothing to say
-		expect(unmetHierarchyDependencies([vendored], declared.slice(0, 1), offered)).toEqual({
-			warnings: [],
-		});
-		// a mandatory one unticked (declined): a warning, never added
-		expect(unmetHierarchyDependencies(['zzodw'], declared.slice(0, 1), offered)).toEqual({
-			warnings: [recommendedThesaurusWarning(vendored, ['zzoda'], 'declined')],
-		});
-		// a mandatory one with no entry: the no-entry warning, never a refusal
-		expect(unmetHierarchyDependencies([vendored], declared, offered)).toEqual({
-			warnings: [recommendedThesaurusWarning('zzodx', ['zzodc'], 'no_entry')],
-		});
 	});
 });
 

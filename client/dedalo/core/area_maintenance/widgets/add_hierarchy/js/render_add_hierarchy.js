@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {render_hierarchies_import_block} from '../../../../installer/js/render_installer.js'
+	import {render_hierarchies_import_block} from './render_hierarchies_import.js'
 
 
 
@@ -14,10 +14,9 @@
 * RENDER_ADD_HIERARCHY
 * Client-side renderer for the `add_hierarchy` maintenance widget.
 *
-* This widget lets administrators import thesaurus hierarchy files into an
-* already-running Dédalo installation — the same operation that the first-run
-* installation wizard performs, but accessible post-install from the
-* Area Maintenance panel.
+* This widget lets administrators import thesaurus hierarchy files into a
+* running Dédalo installation from the Area Maintenance panel (the terminal
+* installer offers the same choice at install time).
 *
 * Architecture notes:
 *   - The constructor is a no-op stub. All logic lives on the prototype.
@@ -34,8 +33,8 @@
 *         hierarchy_typologies     : Array   – grouping categories for the hierarchy list
 *       }
 *   - The actual import UI (checkbox list + "Import hierarchies" button) is
-*     rendered by `render_hierarchies_import_block` from `render_installer.js`,
-*     which is shared between the install wizard and this widget.
+*     rendered by `render_hierarchies_import_block` (./render_hierarchies_import.js),
+*     this widget's own module.
 *
 * Exported symbols:
 *   - render_add_hierarchy  (constructor, prototype assigned to add_hierarchy)
@@ -99,7 +98,7 @@ render_add_hierarchy.prototype.list = async function(options) {
 *      button to `body_response` after a successful import, triggering a
 *      content-only widget refresh.
 *   4. Delegates the hierarchy checkbox list and import button to
-*      `render_hierarchies_import_block` (shared with the install wizard).
+*      `render_hierarchies_import_block` (./render_hierarchies_import.js).
 *   5. Appends a `body_response` div after the import block to receive
 *      post-import feedback and the reload button injected by `fn_callback`.
 *
@@ -183,7 +182,7 @@ const get_content_data_edit = async function(self) {
 			})
 		}
 
-	// hierarchies_import_node. It built from render_installer because is the same rendered.
+	// hierarchies_import_node (./render_hierarchies_import.js).
 		// Passes the flattened installed_hierarchies array and the post-import callback.
 		// default_checked is empty ([]) so no hierarchies are pre-selected on open —
 		// the operator must explicitly choose which ones to import.
@@ -197,8 +196,7 @@ const get_content_data_edit = async function(self) {
 			// live name/TLD filter — admins locate a hierarchy in the long list fast
 			show_filter					: true,
 			// Route the import through the maintenance widget action (widget_request →
-			// add_hierarchy::install_hierarchies), NOT the install-wizard surface
-			// (dd_utils_api:install), which 404s once the instance is sealed.
+			// add_hierarchy::install_hierarchies).
 			import_request				: {
 				dd_api	: 'dd_area_maintenance_api',
 				action	: 'widget_request',

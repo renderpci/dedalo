@@ -11,9 +11,9 @@
  * records, media derivatives, and `ts_state.json`.
  *
  * ts_state.json is not inert. It carries `media_access_mode`, which WINS over
- * .env, and `install_status` — writing `configured` back into it flips
- * `installInProgress()` true and RE-OPENS the pre-auth install surface, whose
- * actions rewrite ../private/.env and restart the process. Named volumes bound
+ * .env, and `install_status` — writing any value but `sealed` into it makes the
+ * next boot REFUSE to start (src/config/install_state.ts): a world-writable state
+ * file is a one-write denial of service. Named volumes bound
  * this in the shipped stacks; an operator bind-mounting /private, which the
  * Dockerfile's own comments contemplate, is where it bites.
  *
@@ -51,8 +51,8 @@ describe('private state is not world-writable, and /tmp is not raced', () => {
 		expect(
 			umask,
 			'`umask 0000` makes EVERY file the engine writes world-writable for the life of the ' +
-				'process — including ts_state.json, whose install_status re-opens the pre-auth ' +
-				'install surface. Grant the socket its mode explicitly instead.',
+				'process — including ts_state.json, whose media_access_mode wins over .env and whose ' +
+				'install_status decides whether the server starts. Grant the socket its mode explicitly instead.',
 		).not.toBe('0000');
 		// It must actually deny world-write: the last digit is the `other` mask.
 		expect(Number((umask as string).slice(-1)) & 0o2).toBe(0o2);

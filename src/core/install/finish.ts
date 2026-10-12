@@ -1,7 +1,8 @@
 /**
  * install_finish (PHP installer::set_install_status('installed')). SEALS the
  * install: sets install_status='sealed' in the TS state file, after which the
- * dispatch gate makes the whole install surface 404 and `start` serves the app.
+ * server boots (any other install_status is refused at boot with exit 78 —
+ * src/config/install_state.ts, src/boot_refusal.ts).
  *
  * Seal guard (PHP parity): refuse unless the DB actually has a root user WITH a
  * password set — a forged install_finish must never seal a half-built instance.

@@ -1097,7 +1097,7 @@ interface RuntimeApi {
 type RuntimeApis = Record<'v1' | 'v2', RuntimeApi> | null;
 interface ConfirmOut {
 	/** What triggerPublicationApiPush answered; null = the hook never ran (no flip). */
-	trigger: 'started' | 'skipped_smoke_boot' | 'skipped_install_mode' | null;
+	trigger: 'started' | 'skipped_smoke_boot' | null;
 	settled: boolean;
 	before: RuntimeApis;
 	apis: RuntimeApis;

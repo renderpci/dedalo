@@ -133,6 +133,24 @@ if in_boot_grace; then
 	exit 0
 fi
 
+# Red — but a server that REFUSED to start (exit 78, EX_CONFIG: not installed,
+# configuration missing, install unfinished — src/config/install_state.ts) is
+# not a crash: restarting re-reads the same missing configuration. The units
+# carry RestartPreventExitStatus=78; without this check the restart unit below
+# would override that every 30 s. Each property is read in its OWN call:
+# `systemctl show -p A -p B --value` prints in systemd's order, not ours.
+refused_not_installed() {
+	[ -n "$SERVICE" ] || return 1
+	local result status
+	result="$(systemctl show -p Result --value "$SERVICE" 2>/dev/null || true)"
+	status="$(systemctl show -p ExecMainStatus --value "$SERVICE" 2>/dev/null || true)"
+	[ "$result" = "exit-code" ] && [ "$status" = "78" ]
+}
+if refused_not_installed; then
+	echo "== watchdog: $SERVICE refused to start (exit 78: not installed / configuration missing) — not restarting; see its journal" >&2
+	exit 0
+fi
+
 # Red. A pending, unconfirmed update means the freshly swapped tree is the
 # suspect — restarting it would only re-run the same broken code.
 if [ -f "$SENTINEL" ] \

@@ -4,7 +4,7 @@
 
 Utility API for system operations: authentication, language, system info, and upload assembly.
 
-Registered actions (`src/core/api/handlers/dd_utils_api.ts`): `login`, `quit`, `get_login_context`, `get_install_context`, `install`, `request_password_reset`, `confirm_password_reset`, `get_system_info`, `get_dedalo_files`, `change_lang`, `convert_search_object_to_sql_query`, `join_chunked_files_uploaded`, `list_uploaded_files`, `delete_uploaded_file`, `get_job_events`, `get_process_status`, `get_record_jobs`, `get_activity`, `stop_process`, `update_lock_components_state`, `get_lock_status`, `get_server_ready_status`, `get_ontology_update_info`, `get_code_update_info`.
+Registered actions (`src/core/api/handlers/dd_utils_api.ts`): `login`, `quit`, `get_login_context`, `request_password_reset`, `confirm_password_reset`, `get_system_info`, `get_dedalo_files`, `change_lang`, `convert_search_object_to_sql_query`, `join_chunked_files_uploaded`, `list_uploaded_files`, `delete_uploaded_file`, `get_job_events`, `get_process_status`, `get_record_jobs`, `get_activity`, `stop_process`, `update_lock_components_state`, `get_lock_status`, `get_server_ready_status`, `get_ontology_update_info`, `get_code_update_info`.
 
 ## How to call
 
@@ -294,44 +294,6 @@ Return the login form's own structure context.
 ### Usage
 
 Pre-auth by design — the form must render before any session exists.
-
-## get_install_context
-
-### Purpose
-
-Return the install wizard's structure context on a fresh, unconfigured machine.
-
-### Accepts
-
-- No arguments.
-
-### Returns
-
-`{ ok: true, request_id, data: [ <installer element context> ] }` — an array of one, for the same reason as `get_login_context`.
-
-### Usage
-
-On a fresh machine there is no ontology to resolve, so this is a synthetic context built by hand carrying exactly the properties the client's installer reads. The dispatch gate (Gate 1b) admits it only while the server is unsealed **and** the caller IP is allowed; once the install is sealed it 404s.
-
-## install
-
-### Purpose
-
-The install wizard's step router — every wizard step rides this one action.
-
-### Accepts
-
-- `options`: object (required)
-  - `action`: string (required) — the concrete wizard step
-  - other per-step fields consumed by `src/core/install/engine.ts`
-
-### Returns
-
-The step's own envelope-v2 body, shaped per step: `data` carries the step's payload and each step adds the top-level extension keys the wizard reads by name.
-
-### Usage
-
-The dispatch gate (Gate 1b) already enforced unsealed + IP-allowed; record-writing steps re-check the session here (login-gated even while unsealed).
 
 ## request_password_reset
 

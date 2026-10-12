@@ -139,7 +139,7 @@ export async function completeFreshInstall(): Promise<string> {
 	// CORE HIERARCHIES (A7): Languages is ACTIVATED against the terms the seed
 	// already ships in matrix_langs — never imported (hierarchy_activate.ts
 	// header carries the measurement). Here, in the restore, so every surface
-	// that restores the seed (CLI, wizard, install.sh, the suite builder) gets
+	// that restores the seed (the installer, install.sh, the suite builder) gets
 	// it with no step of its own; a failure fails the restore — an install
 	// without its languages thesaurus is not an install that worked (the door
 	// itself refuses `install.step_failed`, naming each failed tld).
@@ -210,7 +210,7 @@ export async function restoreSeed(
  * MUTATES THE MACHINE — config files, a database restore, root credentials, a
  * 126 MB hierarchy import, or a process restart. Blocked by DANGER, not by
  * fixture: the hermetic logic in the same subsystem (deriveLangConfig,
- * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
+ * pgBinaryCandidates, the hierarchy_meta readers) IS gated
  * (test/unit/tier1_install_native.test.ts).
  */
 export async function installDbFromSeed(
@@ -516,9 +516,10 @@ async function engineHalfProblem(conn: DbConnDescriptor): Promise<SeedVerdict | 
  *  - stamped by another install: refused;
  *  - unstamped and EMPTY (zero user objects): the restore, stamped;
  *  - unstamped and not empty: refused — whatever is there is not this
- *    install's (a backup restored, a wizard install, another tool).
- * Re-checked on EVERY run of the step, fresh or resumed. Never the wizard (its
- * router keeps installDbFromSeed, which refuses a seeded database).
+ *    install's (a backup restored, an earlier install, another tool).
+ * Re-checked on EVERY run of the step, fresh or resumed. Without an install id
+ * (installDbFromSeed: the suite builder, the seed compiler) a seeded database is
+ * refused.
  */
 /*
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in

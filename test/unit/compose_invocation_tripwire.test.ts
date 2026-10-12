@@ -119,35 +119,19 @@ const ENV_FILE = '.dedalo.env';
 const HOST_LIB = 'deploy/dedalo-image-lib.sh';
 
 /**
- * Invocations that must NOT carry the env file, each with the reason. The
- * no-certificate variant is the one honest bare form: there is no install to
- * lose, and the compose defaults (plain HTTP + non-Secure cookie) are a working
- * pair — which is exactly what the second half of this gate enforces.
+ * Invocations that must NOT carry the env file, each with the reason. EMPTY since
+ * 2026-10-12: its one entry was the quickstart's "no-certificate variant" — a bare
+ * `up -d` with no install.sh run, which served the browser install wizard. The wizard
+ * is gone (WC-2026-10-12-install-surface-removed): a stack started without an install
+ * refuses to boot, so no honest bare invocation remains. The shape is kept so a future
+ * exemption is a visible, reasoned edit.
  */
 const BARE_BY_DESIGN: {
 	file: string;
 	rawLine: string;
 	underHeading: string;
 	reason: string;
-}[] = [
-	{
-		file: 'docs/install/quickstart.md',
-		// THE EXACT RAW LINE, indentation included — not a substring. The four
-		// spaces put it inside the "no-certificate variant" admonition, and that
-		// is the whole distinction: the UNINDENTED everyday command with the same
-		// text is the OPS-02 defect. Measured — a substring match excused it.
-		rawLine: '    docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml up -d',
-		// ...and it must live under THIS heading. Anchoring on text alone let the
-		// excused line be MOVED: a reviewer deleted it from the admonition and
-		// re-added the byte-identical line inside the everyday-commands section,
-		// which is the OPS-02 defect wearing the exemption's clothes.
-		underHeading: '??? tip "The no-certificate variant"',
-		reason:
-			'The "no-certificate variant" — a laptop look with no install.sh run, so there is no ' +
-			'.dedalo.env to pass and the plain-HTTP defaults are correct here. Without install.sh ' +
-			'there is no image pin, so the bare variant must build locally.',
-	},
-];
+}[] = [];
 
 /**
  * Is this line inside the section that starts at `heading`? A section ends at

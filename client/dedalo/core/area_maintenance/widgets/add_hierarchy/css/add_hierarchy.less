@@ -153,6 +153,8 @@
 		margin-top: 0.4rem;
 	}
 
+	// import / reset status line (render_hierarchies_import.js create_status_msg):
+	// calm by default, tinted only by its outcome
 	.msg {
 		position: relative;
 		padding: 1rem 0;
@@ -160,6 +162,76 @@
 		.spinner {
 			top: 0;
 		}
+
+		&:empty {
+			display: none;
+		}
+		&.ok,
+		&.error,
+		&.loading {
+			margin-top: 0.6rem;
+			padding: 0.55rem 0.7rem;
+			color: var(--fg_default);
+			font-weight: 500;
+			line-height: 1.4;
+			border-radius: 0 6px 6px 0;
+		}
+		&.ok {
+			background-color: color-mix(in srgb, var(--color_success) 11%, transparent);
+			border-left: 3px solid var(--color_success);
+		}
+		&.error {
+			background-color: color-mix(in srgb, var(--color_danger) 11%, transparent);
+			border-left: 3px solid var(--color_danger);
+		}
+		// while a request is in flight — neutral surface holding the spinner row
+		&.loading {
+			color: var(--fg_muted);
+			background-color: var(--bg_surface_alt);
+			border-left: 3px solid var(--border_strong);
+		}
+	}
+
+	// inline loading row: ring + label. A dedicated class so it never inherits the
+	// global app `.spinner` (general.less: position:absolute).
+	.spinner_wrap {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.6rem;
+		color: var(--fg_muted);
+		font-size: 0.85rem;
+	}
+	.hierarchy_import_spinner {
+		width: 1.05rem;
+		height: 1.05rem;
+		flex-shrink: 0;
+		border: 2px solid var(--border_strong);
+		border-top-color: var(--color_primary);
+		border-radius: 50%;
+		animation: hierarchy-import-spin 0.7s linear infinite;
+	}
+
+	// an EMPTY-by-design thesaurus chip (installs with no terms)
+	.hierarchy_label > .empty_hierarchy {
+		margin-left: 0.4rem;
+		font-size: 0.66rem;
+		vertical-align: middle;
+		color: var(--fg_muted);
+	}
+
+	// "strongly recommended by: …" (a declared thesaurus — a mark, never a lock)
+	.recommended_hierarchy {
+		color: var(--fg_muted);
+		font-size: 0.75rem;
+	}
+	// unticking a strongly recommended thesaurus: where to install it later
+	.hierarchy_field_help.recommended_declined {
+		padding-left: 1.6rem;
+		font-size: 0.78rem;
+		line-height: 1.35;
+		color: var(--color_warning);
+
+		&[hidden] { display: none; }
 	}
 
 	// post-import feedback, as a console block (kit)
@@ -172,3 +244,7 @@
 		}
 	}
 }//end add_hierarchy
+
+@keyframes hierarchy-import-spin {
+	to { transform: rotate(360deg); }
+}

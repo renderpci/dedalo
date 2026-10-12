@@ -1,0 +1,156 @@
+/**
+ * INSTALL STATE at boot — `src/config/install_state.ts` (UNCONFIGURED,
+ * notInstalledRefusal, NOT_INSTALLED_EXIT_CODE). Successor of install_mode_boot
+ * (2026-10-12, WC-2026-10-12-install-surface-removed): there is no install mode any
+ * more — a box that is not installed refuses to start. This gate holds the PREDICATE
+ * in fresh child processes (both values are decided at import, so each case gets
+ * its own environment); no_install_surface_tripwire spawns the real server and holds
+ * the boot outcome (exit code, no listener, no write).
+ *
+ * The four required keys are blanked to '' in the child env: process env wins over
+ * `../private/.env` in readEnv, and '' reads as unset regardless of the dev
+ * machine's real `.env`. DEDALO_PRIVATE_DIR points at an EMPTY scratch dir (no
+ * `.env` there), DEDALO_TS_STATE_PATH at a scratch state file per case.
+ */
+
+import { afterAll, describe, expect, test } from 'bun:test';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+
+const STATE_MODULE = resolve(import.meta.dir, '../../src/config/install_state.ts');
+const CONFIG_MODULE = resolve(import.meta.dir, '../../src/config/config.ts');
+const SCRATCH = mkdtempSync(join(tmpdir(), 'dedalo_zzisb_install_state_'));
+const PRIVATE_DIR = join(SCRATCH, 'private');
+mkdirSync(PRIVATE_DIR, { recursive: true });
+
+afterAll(() => rmSync(SCRATCH, { recursive: true, force: true }));
+
+const BLANK = { ENTITY: '', DB_NAME: '', DB_HOST: '', DB_USER: '' };
+const CONFIGURED = { ENTITY: 'zzisb', DB_NAME: 'zzisb', DB_HOST: 'localhost', DB_USER: 'zzisb' };
+
+/** A scratch state file carrying `status` (undefined = no file at all). */
+function statePath(name: string, status?: string): string {
+	const path = join(SCRATCH, `${name}.json`);
+	if (status !== undefined) writeFileSync(path, JSON.stringify({ install_status: status }));
+	return path;
+}
+
+/** Import install_state in a child with `env`; its UNCONFIGURED + refusal. */
+function probe(env: Record<string, string>): {
+	unconfigured: boolean;
+	refusal: string | null;
+	exitCode: number;
+} {
+	const program = `const m = await import(${JSON.stringify(STATE_MODULE)});
+		console.log(JSON.stringify({ unconfigured: m.UNCONFIGURED, refusal: m.notInstalledRefusal(), exitCode: m.NOT_INSTALLED_EXIT_CODE }));`;
+	const proc = Bun.spawnSync(['bun', '-e', program], {
+		env: { ...process.env, DEDALO_PRIVATE_DIR: PRIVATE_DIR, ...env },
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	if (proc.exitCode !== 0) throw new Error(proc.stderr.toString());
+	return JSON.parse(proc.stdout.toString().trim().split('\n').at(-1) ?? '');
+}
+
+describe('UNCONFIGURED and the refusal', () => {
+	test('the exit code is EX_CONFIG (78): not the restart code, not a crash, not success', () => {
+		const result = probe({ ...BLANK, DEDALO_TS_STATE_PATH: statePath('none') });
+		expect(result.exitCode).toBe(78);
+		expect([0, 1, 75]).not.toContain(result.exitCode);
+	});
+
+	test('no keys, no state → not installed: run the installer', () => {
+		const result = probe({ ...BLANK, DEDALO_TS_STATE_PATH: statePath('none') });
+		expect(result.unconfigured).toBe(true);
+		expect(result.refusal).toStartWith('not installed:');
+		expect(result.refusal).toContain('ENTITY, DB_NAME, DB_HOST, DB_USER');
+		expect(result.refusal).toContain('bun run dedalo:install');
+	});
+
+	test('no keys, SEALED → configuration missing: restore .env (the seal is NOT an install mode)', () => {
+		const result = probe({ ...BLANK, DEDALO_TS_STATE_PATH: statePath('sealed', 'sealed') });
+		expect(result.unconfigured).toBe(true);
+		expect(result.refusal).toStartWith('configuration missing:');
+		expect(result.refusal).toContain('Restore .env from backup');
+	});
+
+	test('no keys, a .env with content but none of the four → incomplete: do not reinstall', () => {
+		const dir = join(SCRATCH, 'private_with_env');
+		mkdirSync(dir, { recursive: true });
+		writeFileSync(join(dir, '.env'), 'DEDALO_SOME_OTHER_KEY=1\n');
+		const result = probe({
+			...BLANK,
+			DEDALO_PRIVATE_DIR: dir,
+			DEDALO_TS_STATE_PATH: statePath('none'),
+		});
+		expect(result.refusal).toStartWith('configuration incomplete:');
+		expect(result.refusal).toContain('do not reinstall');
+	});
+
+	test('keys set + any install_status other than sealed → install not finished: --resume', () => {
+		for (const status of ['terminal_installing', 'configured', 'installing', 'zzisb-garbage']) {
+			const result = probe({ ...CONFIGURED, DEDALO_TS_STATE_PATH: statePath(status, status) });
+			expect(result.unconfigured, status).toBe(false);
+			expect(result.refusal, status).toStartWith('install not finished');
+			expect(result.refusal, status).toContain('--resume');
+		}
+	});
+
+	test('keys set + sealed, or no state file, or a garbled one → null (boot)', () => {
+		const garbled = join(SCRATCH, 'garbled.json');
+		writeFileSync(garbled, '{ not json');
+		for (const path of [statePath('sealed', 'sealed'), statePath('none'), garbled]) {
+			expect(probe({ ...CONFIGURED, DEDALO_TS_STATE_PATH: path }).refusal, path).toBeNull();
+		}
+	});
+});
+
+describe('the config import on a box that is not installed', () => {
+	/** Import config in a child; ok + the resolved entity. */
+	function importConfig(env: Record<string, string>): {
+		ok: boolean;
+		stdout: string;
+		stderr: string;
+	} {
+		const proc = Bun.spawnSync(
+			[
+				'bun',
+				'-e',
+				`const { config } = await import(${JSON.stringify(CONFIG_MODULE)}); console.log(JSON.stringify({ entity: config.entity, database: config.db.database }));`,
+			],
+			{
+				env: { ...process.env, DEDALO_PRIVATE_DIR: PRIVATE_DIR, ...env },
+				stdout: 'pipe',
+				stderr: 'pipe',
+			},
+		);
+		return {
+			ok: proc.exitCode === 0,
+			stdout: proc.stdout.toString().trim(),
+			stderr: proc.stderr.toString(),
+		};
+	}
+
+	test('UNCONFIGURED (sealed or not) imports on sentinels — so the server can reach its refusal', () => {
+		for (const path of [statePath('none'), statePath('sealed', 'sealed')]) {
+			const result = importConfig({ ...BLANK, DEDALO_TS_STATE_PATH: path });
+			expect(result.ok, result.stderr.slice(-800)).toBe(true);
+			expect(JSON.parse(result.stdout.split('\n').at(-1) ?? '')).toEqual({
+				entity: 'install',
+				database: 'dedalo_install_placeholder',
+			});
+		}
+	});
+
+	test('PARTIAL config still throws the precise missing-key error (misconfigured, not unconfigured)', () => {
+		const result = importConfig({
+			...BLANK,
+			ENTITY: 'zzisb',
+			DEDALO_TS_STATE_PATH: statePath('none'),
+		});
+		expect(result.ok).toBe(false);
+		// Which key is named first depends on the config build order; the shape is the law.
+		expect(result.stderr).toMatch(/Missing required config key '[A-Z_]+'/);
+	});
+});

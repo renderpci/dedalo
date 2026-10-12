@@ -70,8 +70,8 @@ const DISPATCH_DEFINITION =
  * Dispatches with no page identity to protect, each with the reason. SHRINK-ONLY.
  */
 const EXEMPT_DISPATCHES: Readonly<Record<string, string>> = {
-	'client/dedalo/core/installer/js/render_installer.js':
-		'THE INSTALL WIZARD, which authenticates a box that has no session, no page_globals.user_id and no queued save — there is no previous identity for a re-login to differ from. It also never resolves a pending user action: it reveals the next wizard step.',
+	// (empty since 2026-10-12: the install wizard, the one exempt dispatch, was removed —
+	// WC-2026-10-12-install-surface-removed)
 };
 
 function scanFiles(): string[] {
@@ -128,10 +128,9 @@ describe('re-login identity — a queued save must not change author', () => {
 	const dispatches = dispatchFiles();
 
 	test('the scan finds the injected dispatches (anti-vacuity)', () => {
-		expect(dispatches.length).toBeGreaterThanOrEqual(2);
+		expect(dispatches.length).toBeGreaterThanOrEqual(1);
 		const files = dispatches.map((entry) => entry.file);
 		expect(files).toContain('client/dedalo/core/login/js/render_login.js');
-		expect(files).toContain('client/dedalo/core/installer/js/render_installer.js');
 	});
 
 	test('every injected dispatch compares identity, or is exempt with a reason', () => {

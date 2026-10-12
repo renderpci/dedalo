@@ -1073,7 +1073,6 @@ const REMAINDER_RATCHET: Readonly<Record<string, number>> = {
 	'client/dedalo/core/common/js/ui.js': 23,
 	'client/dedalo/core/common/js/utils/util.js': 1,
 	'client/dedalo/core/inspector/js/render_inspector.js': 5,
-	'client/dedalo/core/installer/js/render_installer.js': 10,
 	'client/dedalo/core/menu/js/menu.js': 1,
 	'client/dedalo/core/menu/js/render_menu_mobile.js': 1,
 	'client/dedalo/core/menu/js/render_menu_tree.js': 1,

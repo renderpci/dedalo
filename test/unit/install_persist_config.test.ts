@@ -4,16 +4,16 @@
  * DEDALO_INSTALL_PRIVATE_DIR redirects the installer's writes to a scratch dir
  * so the live ../private/.env is never touched. Asserts: the .env carries the
  * catalog's canonical key names (never a PHP_KEY_ALIASES spelling), is chmod 600, backs up an existing file on overwrite, `generated`
- * carries only NEW secrets, and the state flips to 'configured'.
+ * carries only NEW secrets, and the state flips to 'terminal_installing'.
  *
- * The TERMINAL installer's status (2026-10-11): persistConfig writes
- * `terminal_installing` only when asked (the executor), `configured` by default
- * (the wizard) — and a terminal install mid-flight keeps the pre-auth wizard
- * surface CLOSED (a crashed CLI is resumed from the terminal, never finished by
- * whoever reaches the port) while still counting as an install in progress
- * (no database boot work over a half-built database). And a rewrite keeps the
- * prior file byte for byte in a fresh `.env.bak.*` (copied, then the new file is
- * renamed over it) and leaves no staged tmp behind.
+ * `terminal_installing` is the ONLY status persistConfig writes (2026-10-12, the
+ * browser wizard and its `configured` status removed —
+ * WC-2026-10-12-install-surface-removed): a server started over it REFUSES to boot
+ * (src/config/install_state.ts) until the installer seals the install — a crashed
+ * run is resumed from the terminal, never finished by whoever reaches the port, and
+ * no boot work runs over a half-built database. And a rewrite keeps the prior file
+ * byte for byte in a fresh `.env.bak.*` (copied, then the new file is renamed over
+ * it) and leaves no staged tmp behind.
  */
 
 import { afterAll, afterEach, beforeEach, describe, expect, test } from 'bun:test';
@@ -24,7 +24,6 @@ import { PHP_KEY_ALIASES, parseEnvFile, seedProcessEnv } from '../../src/config/
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { persistConfig } from '../../src/core/install/config_persist.ts';
 import { checkDirectories } from '../../src/core/install/directories.ts';
-import { installInProgress, installSurfaceReachable } from '../../src/core/install/gate.ts';
 import {
 	OFFICIAL_CODE_SERVER,
 	OFFICIAL_ONTOLOGY_SERVER,
@@ -90,23 +89,17 @@ describe('persist_config (P2)', () => {
 		// 0600 perms (owner-only).
 		expect(statSync(envPath).mode & 0o777).toBe(0o600);
 
-		// State moved to 'configured' with the fingerprints.
+		// State moved to 'terminal_installing' with the fingerprints.
 		const state = getServerState();
-		expect(state.install_status).toBe('configured');
+		expect(state.install_status).toBe('terminal_installing');
 		expect(state.information).toBe('fingerprint');
 		expect(state.info_key).toBe('k123');
 	});
 
-	test("the terminal installer's status: written only when asked; the wizard surface stays closed", async () => {
-		await persistConfig({ ...BASE_CFG }, { installStatus: 'terminal_installing' });
-		expect(getServerState().install_status).toBe('terminal_installing');
-		// An install IS in progress (no database boot work), but NOT the wizard's.
-		expect(installInProgress()).toBe(true);
-		expect(installSurfaceReachable()).toBe(false);
-		// The default (the wizard's own persist) still writes `configured` — and opens it.
+	test("persistConfig writes ONLY 'terminal_installing' — over a sealed state too (a re-run reopens it)", async () => {
+		setServerState({ install_status: 'sealed' });
 		await persistConfig({ ...BASE_CFG });
-		expect(getServerState().install_status).toBe('configured');
-		expect(installSurfaceReachable()).toBe(true);
+		expect(getServerState().install_status).toBe('terminal_installing');
 	});
 
 	test('a rewrite backs up the prior .env byte for byte and leaves no staged tmp', async () => {
@@ -262,15 +255,15 @@ describe('persist_config (P2)', () => {
 	});
 
 	/**
-	 * The 2026-07-12 data loss, mechanically. The wizard invites a re-save (a page
-	 * reload walks the config steps again from an EMPTY cfg), and persist_config
-	 * rebuilds .env from the posted form — so on the second save every key the form
+	 * The 2026-07-12 data loss, mechanically. A re-run of the installer (then: a
+	 * browser-wizard page reload walking the config steps again from an EMPTY cfg)
+	 * rebuilds .env from the answers — so on the second save every key the answers
 	 * did not carry was DELETED. It ate all 8 DEDALO_DIFFUSION_* keys twice, taking
 	 * the generated DEDALO_DIFFUSION_INTERNAL_TOKEN (shown once, then unrecoverable)
 	 * with them, plus operator-appended keys, which is what ../private/.env is FOR
 	 * (append-only, documented keys).
 	 *
-	 * Omission is not consent: a key the form does not manage must survive verbatim.
+	 * Omission is not consent: a key the answers do not manage must survive verbatim.
 	 */
 	test('never deletes a key by omission — unmanaged keys survive a re-save verbatim', async () => {
 		const envPath = join(scratch, '.env');
@@ -289,7 +282,7 @@ describe('persist_config (P2)', () => {
 			].join('\n'),
 		);
 
-		// Re-save from a FRESH wizard page: no diffusion fields, no operator keys.
+		// Re-run with FRESH answers: no diffusion fields, no operator keys.
 		const result = await persistConfig({ ...BASE_CFG });
 		expect(result.ok).toBe(true);
 
@@ -542,7 +535,7 @@ describe('persist_config (P2)', () => {
 			expect(result.warnings).toEqual(
 				closeOntologyChoice(['oh'], vendoredOntologyCatalog()).warnings,
 			);
-			// The thesauri the wizard pre-ticks: what the release DECLARES — the core
+			// The thesauri the plan pre-ticks: what the release DECLARES — the core
 			// TLDs' (every plan) then oh's — the vendored (installable) ones, derived
 			// through the production functions, never a hand-typed list.
 			const { dependencies } = collectHierarchyDependencies([

@@ -98,7 +98,7 @@ export DEDALO_VENDOR_DATED_CHECKS=0
 # Stub the required-no-default config keys so the config catalog loads.
 # Externally provided values always win (: "${VAR:=default}" keeps them).
 # This list must cover EVERY require*() key in src/config/config.ts — pinned by
-# ci_workflow_tripwire rule 6. Values are the install-wizard sentinels: they only
+# ci_workflow_tripwire rule 6. Values are config-less sentinels: they only
 # have to parse, since no hermetic gate reads project data.
 : "${ENTITY:=ci_hermetic}"
 : "${DB_NAME:=ci_hermetic_no_db}"
@@ -212,7 +212,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/human_write_scope_tripwire.test.ts
 	test/unit/rag_index_scope_tripwire.test.ts
 	test/unit/local_db_stores_tripwire.test.ts
-	test/unit/install_seal_tripwire.test.ts
+	test/unit/no_install_surface_tripwire.test.ts
 	# --- static-scan tier, same change: DB-less and previously ungated ---
 	test/unit/config_census_tripwire.test.ts
 	test/unit/config_docs_tripwire.test.ts
@@ -285,7 +285,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/docs_locator_shape_tripwire.test.ts
 	test/unit/external_config_narrowing_census.test.ts
 	test/unit/external_registry_totality_tripwire.test.ts
-	test/unit/install_ip_gate_tripwire.test.ts
+	test/unit/ip_allowlist.test.ts
 	test/unit/migration_shared_row_tripwire.test.ts
 	test/unit/release_archive_tripwire.test.ts
 	test/unit/release_root_entries_tripwire.test.ts

@@ -23,6 +23,11 @@
  *   (ENTRY_REDIRECT_PATHS; the PHP index.php shims).
  */
 
+// FIRST, before every other import is evaluated: a box that is not installed
+// refuses to start here (exit 78) — see boot_refusal.ts for why it is a module.
+// A bare side-effect import: the import sorter never moves one, and the order of
+// evaluation IS the order of the module's first request.
+import './boot_refusal.ts';
 import { chmodSync, existsSync, readFileSync, unlinkSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
@@ -33,6 +38,7 @@ import {
 	stopOnlineMigrations,
 } from '../install/db/migrate.ts';
 import { initRagHooks } from './ai/rag/bootstrap.ts';
+import { refuseBootWhenNotInstalled } from './boot_refusal.ts';
 import { config } from './config/config.ts';
 import { projectRoot, readEnv } from './config/env.ts';
 import { AI_MODEL_URL_PREFIX, serveModelRequest } from './core/ai/model_store.ts';
@@ -75,7 +81,6 @@ import { HIERARCHY_EXPORT_URL_PREFIX } from './core/area_maintenance/widgets/exp
 import { rqoSchema } from './core/concepts/rqo.ts';
 import { toErrorEnvelope } from './core/errors/convert.ts';
 import { DedaloError } from './core/errors/dedalo_error.ts';
-import { describeInstallAllowPolicy, installInProgress } from './core/install/gate.ts';
 import { HIERARCHY_IMPORT_DIR } from './core/install/paths.ts';
 import { HIERARCHY_MANIFEST_FILE } from './core/ontology/hierarchy_manifest_format.ts';
 import { corsPreflightResponse, corsResponseHeaders } from './core/security/cors.ts';
@@ -303,7 +308,9 @@ function trustedProxyTransport(): string {
  * front, a client simply sent its own `X-Forwarded-For` and chose what this
  * function returned — unlimited login-throttle buckets (the brute-force protection
  * this value exists for), forged addresses in dd544 activity rows, and, since the
- * install gate matches the literal `127.0.0.1`, a spoofable claim to be loopback.
+ * address allowlists' `loopback` entry admits `127.0.0.1` (core/security/ip_allowlist.ts —
+ * today the error-report intake; until 2026-10-12 also the install gate), a
+ * spoofable claim to be loopback.
  * The old comment's "this is never an authorization input" was not true.
  *
  * A short header is treated as forged, not as a shorter chain: fewer entries than
@@ -1245,7 +1252,7 @@ export async function handleRequest(request: Request, context: RequestContext): 
 	// built-file downloads). AFTER every engine route, so none can be shadowed;
 	// before the client static tree (a tool may not claim a client directory —
 	// the loader refuses reserved segments). The engine never names a tool here.
-	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/') && !config.installMode) {
+	if (request.method === 'GET' && url.pathname.startsWith('/dedalo/')) {
 		const toolRoute = await toolHttpRouteFor(url.pathname);
 		if (toolRoute !== undefined) {
 			return (await toolRoute.handle(request, url.pathname)) ?? notFoundResponse(context.requestId);
@@ -1730,6 +1737,18 @@ export async function startServer() {
 	installUnhandledRejectionGuard();
 	echoRuntimeVersion();
 
+	// FAIL-CLOSED BOOT (WC-2026-10-12-install-surface-removed): a box that is not
+	// installed — no configuration, a sealed install whose .env is gone, or an
+	// unfinished terminal install — REFUSES TO START. Asked before any listener,
+	// DB work or file write; one stderr line (one journal line) naming the
+	// operator's next act, then EX_CONFIG (78), which the systemd units carry in
+	// RestartPreventExitStatus. There is no install surface to serve: installing
+	// is the terminal installer's job (./install.sh / bun run dedalo:install).
+	// Gate: test/unit/no_install_surface_tripwire.test.ts.
+	// (As the process entry, the boot_refusal.ts import already did this before any
+	// module-level writer ran; this repeats it for a programmatic caller.)
+	refuseBootWhenNotInstalled();
+
 	// SMOKE BOOT (core/update/smoke_boot.ts): the code updater boots the
 	// QUARANTINE tree once, pre-swap, with DEDALO_SMOKE_BOOT=true. Under the
 	// flag this process is READ-ONLY BY CONSTRUCTION: boot migrations,
@@ -1758,28 +1777,6 @@ export async function startServer() {
 		process.exit(1);
 	}
 
-	// INSTALL MODE (DEC-19): a fresh, unconfigured machine (no `.env`). The DB is
-	// a sentinel — skip every DB-dependent boot step (migrations, RAG hooks,
-	// diffusion control plane) and serve ONLY the install wizard. persist_config
-	// writes `.env` and restarts the process, which then boots normally.
-	if (config.installMode) {
-		console.warn(
-			'[boot] INSTALL MODE — no database configured yet (../private/.env absent). ' +
-				'Serving the install wizard at /dedalo/core/page/. Complete it (browser wizard ' +
-				'or `bun run dedalo:install`); the server restarts into normal operation once configured.',
-		);
-	}
-
-	// The install surface is PRE-AUTH while unsealed — persist_config rewrites
-	// ../private/.env and forces a restart, test_db_connection spawns psql — and its
-	// address allowlist is fail-closed by default since 2026-08-24
-	// (WC-2026-08-24-install-ip-gate-fail-closed). Print the effective policy so an
-	// operator locked out of their own wizard reads WHY off the log instead of guessing
-	// at a key; the catalog doc for DEDALO_INSTALL_ALLOWED_IPS promises this line.
-	if (config.installMode || installInProgress()) {
-		console.warn(`[boot] ${describeInstallAllowPolicy()}`);
-	}
-
 	// An UPDATE SERVER must know its own public name. Both manifests hand OTHER machines
 	// absolute urls built from `publicOrigin()` (DEDALO_PROTOCOL + DEDALO_HOST), and
 	// the consumer then ORIGIN-PINS every download to the url it was configured with
@@ -1804,30 +1801,14 @@ export async function startServer() {
 		}
 	}
 
-	// THE DATABASE IS NOT THE INSTALL'S YET while the wizard is mid-flight. After
-	// *Save config* the process restarts OUT of install mode (config.installMode is
-	// false) into a database that is still EMPTY — the seed restore is a later
-	// wizard step. Every boot step below that writes the database ran against it
-	// anyway: migrations and the search-store DDL created the seed's own objects,
-	// and the seed restore then failed ("function f_unaccent already exists"),
-	// leaving a half-built database — every browser-wizard install, on every
-	// platform (measured 2026-10-08). So DB boot work waits for the SEAL, exactly
-	// as on the CLI path (scripts/install.ts restores, seals, and only then does a
-	// server boot); install_finish restarts the process so the sealed instance
-	// boots with all of it (core/install/engine.ts). A boot-time constant: the
-	// state can only move forward by a restart.
-	// Gate: test/unit/install_mode_boot.test.ts.
-	const databaseBoot = !config.installMode && !installInProgress();
-
 	// Ordered TS-owned schema migrations (audit S2-39) — run BEFORE serving so a
 	// request never observes a half-migrated schema. A failure logs loudly and
 	// continues: the lazy CREATE IF NOT EXISTS bootstraps remain the fallback,
 	// and refusing to boot on a transient DB blip would contradict the
-	// fault-tolerant boot posture (S1-15). Skipped entirely in install mode and
-	// mid-wizard (databaseBoot above) and in a smoke boot (read-only by
+	// fault-tolerant boot posture (S1-15). Skipped in a smoke boot (read-only by
 	// construction — running migrations pre-swap would mutate the shared DB while
 	// the old code is live).
-	if (databaseBoot && !smokeBoot) {
+	if (!smokeBoot) {
 		// runBootSchema logs a failed run and continues, then heals the
 		// tm_role column outside any transaction (migrate.ts) — never throws.
 		await runBootSchema();
@@ -1898,10 +1879,10 @@ export async function startServer() {
 	const shutdownStops: (() => void)[] = [];
 
 	// Everything below through the diffusion control plane is DB-dependent —
-	// skipped in install mode and mid-wizard (databaseBoot: no seeded database
-	// yet) and in a smoke boot (schedulers, watchers, media provisioning: all
-	// writers). The block restores on the post-SEAL restart.
-	if (databaseBoot && !smokeBoot) {
+	// skipped in a smoke boot (schedulers, watchers, media provisioning: all
+	// writers). A box whose database is not the install's yet never gets here:
+	// the fail-closed check at the top of startServer refused it.
+	if (!smokeBoot) {
 		// Register the RAG save/delete → index-queue hook (no-op when
 		// DEDALO_RAG_ENABLED is off). Must run before serving so writes are captured.
 		initRagHooks();
@@ -2315,7 +2296,7 @@ export async function startServer() {
 				);
 			}
 		})().catch((error) => console.error('[db stats] boot wipe probe failed:', error));
-	} // end if (databaseBoot && !smokeBoot)
+	} // end if (!smokeBoot)
 
 	// Media job pfile reconcile + residue GC (audit S2-15/S3-46): flip stale
 	// 'running' pfiles from previous process lives to 'interrupted' and prune
@@ -2336,9 +2317,8 @@ export async function startServer() {
 	// THE CLIENT THE PROXY SERVES IS THIS ENGINE'S (installer unification D2). In a
 	// container stack nginx serves the client from a volume this step fills with the
 	// client of the code now booting, before the socket binds — so the first request
-	// the proxy forwards already meets a client of the same version. EVERY boot mode
-	// (the install wizard is client too); a no-op outside containers (key unset) and
-	// in a smoke boot. Never fatal: it logs and the API still serves.
+	// the proxy forwards already meets a client of the same version. EVERY boot that
+	// serves; a no-op outside containers (key unset) and in a smoke boot. Never fatal: it logs and the API still serves.
 	await publishClientAtBoot({ smokeBoot });
 
 	const socketPath = config.server.unixSocketPath;
@@ -2398,10 +2378,10 @@ export async function startServer() {
 	// process for its whole life: correct reason, wrong scope. EVERY file created
 	// without an explicit mode then landed 0666 — the session store and its
 	// -wal/-shm, process and job records, media derivatives, and `ts_state.json`,
-	// which is not inert: it carries `media_access_mode` (which WINS over .env)
-	// and `install_status`, so writing `configured` back into it flips
-	// installInProgress() true and RE-OPENS the pre-auth install surface, whose
-	// actions rewrite ../private/.env and restart the process.
+	// which is not inert: it carries `media_access_mode` (which WINS over .env —
+	// a world-writable file lets any local user switch media protection off) and
+	// `install_status` (writing a non-sealed value takes the instance down at its
+	// next restart: src/config/install_state.ts).
 	//
 	// Named volumes bound that in the shipped stacks; an operator bind-mounting
 	// /private — which the Dockerfile's own comments contemplate — is where it
@@ -2421,16 +2401,15 @@ export async function startServer() {
 	// ONLINE MIGRATIONS (migrate.ts runOnlineMigrations): the CONCURRENTLY index
 	// builds that must never hold the listener — a full-heap build pre-listen
 	// outlasted the systemd watchdog (rollback / restart loop). Background, never
-	// awaited; every reader is correct without the index. Same skips as the boot
-	// runner (install mode: no DB; smoke boot: read-only by construction).
-	if (databaseBoot && !smokeBoot) void startOnlineMigrations();
+	// awaited; every reader is correct without the index. Same skip as the boot
+	// runner (smoke boot: read-only by construction).
+	if (!smokeBoot) void startOnlineMigrations();
 
 	// CODE-UPDATE BOOT CONFIRMATION (core/update/boot_confirm.ts): once the
 	// listener is up AND the first DB ping is green, flip a pending update
 	// sentinel to 'confirmed' so the supervisor-side rollback stands down.
-	// Skipped in install mode and mid-wizard (no seeded DB) and in a smoke boot
-	// (the quarantine must never confirm an update it is merely rehearsing).
-	if (databaseBoot && !smokeBoot) {
+	// Skipped in a smoke boot (the quarantine must never confirm an update it is merely rehearsing).
+	if (!smokeBoot) {
 		void (async () => {
 			if (await checkDbHealth()) {
 				const { confirmBootedCodeUpdate } = await import('./core/update/boot_confirm.ts');
@@ -2441,12 +2420,12 @@ export async function startServer() {
 				// The module is loaded INSIDE the hook, AFTER the flip: a publication-host
 				// module that fails to load is logged and can never veto the confirmation
 				// (an unconfirmed sentinel makes the supervisor roll back a healthy update).
-				// The trigger re-checks smoke/install itself: this block's guard is the
+				// The trigger re-checks the smoke flag itself: this block's guard is the
 				// first line of defence, not the only one.
 				await confirmBootedCodeUpdate(undefined, undefined, undefined, () => {
 					void import('./core/publication_host/api_reconcile.ts')
 						.then(({ triggerPublicationApiPush }) => {
-							triggerPublicationApiPush({ smokeBoot, installMode: config.installMode });
+							triggerPublicationApiPush({ smokeBoot });
 						})
 						.catch((error) =>
 							console.error('[publication_apis] post-confirm trigger failed to load:', error),
@@ -2510,11 +2489,11 @@ export async function startServer() {
 		() => void shutdownGracefully('SIGINT', servers, socketPath, 0, shutdownStops),
 	);
 
-	// A PLANNED restart (persist_config, code update) is a shutdown too, and gets
-	// the same drain. Registered rather than imported: core/install must not close
+	// A PLANNED restart (code update, code restore) is a shutdown too, and gets
+	// the same drain. Registered rather than imported: core/update must not close
 	// an import cycle back through the process root (same seam as registerOpsGauge).
 	{
-		const { registerGracefulShutdown } = await import('./core/install/restart.ts');
+		const { registerGracefulShutdown } = await import('./core/update/restart.ts');
 		registerGracefulShutdown((exitCode, reason) => {
 			void shutdownGracefully(reason, servers, socketPath, exitCode, shutdownStops);
 		});

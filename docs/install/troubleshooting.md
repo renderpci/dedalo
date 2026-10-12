@@ -17,9 +17,7 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 | The server refuses to boot | [Booting](#booting) |
 | `Cannot find package …` on start | [Booting](#booting) |
 | The socket is not where the unit says | [Booting](#booting) |
-| The server serves the install wizard instead of the app | [Booting](#booting) |
-| The wizard resumes on an install that is already finished | [Booting](#booting) |
-| The wizard is a `404`, or refuses your address | [Booting](#booting) |
+| The server exits at once with code `78` (`[boot] REFUSED — …`) | [Booting](#booting) |
 | `502` from the proxy | [Serving](#serving) |
 | Apache: `AH01144`, or `AH01630` naming a path under `/etc/apache2` | [Serving](#serving) |
 | A client asset `404`s at a path that is not in the repo | [Serving](#serving) |
@@ -120,57 +118,39 @@ container, this is what `DEDALO_PRIVATE_DIR` is for — see [Docker](docker.md).
 
 **Cause.** A **partial** configuration. The four keys `ENTITY`, `DB_NAME`,
 `DB_HOST`, `DB_USER` are all-or-nothing: with **none** of them set, the server
-boots into install mode; with **some** of them set, it is misconfigured and says
-so. This is deliberate — a half-configured server must not quietly fall back to
-install mode against a real database.
+refuses to start as not installed (next entry); with **some** of them set, it is
+misconfigured and names the first key missing. This is deliberate — a
+half-configured server must not be mistaken for a fresh box.
 
 **Fix.** Set all four (the installer writes them under exactly these names), or
 none.
 
-### The server serves the install wizard instead of the application
+### The server exits at once with code `78` (`[boot] REFUSED — …`)
 
-**Cause.** It booted with none of those four keys set, so it is in **install
-mode**. Almost always: it is not reading the `.env` you think it is.
+**Cause.** The server found this box **not installed**, and refused to start
+before opening a socket or touching the database. There is no install page to
+serve; the one line in the log (`journalctl -u dedalo-ts`, or the container log)
+says which case it is and what to do:
 
-**Fix.** The file must be at `../private/.env`, one level above the repo — or
-wherever `DEDALO_PRIVATE_DIR` points. Confirm:
+| The line says | Cause | Fix |
+| --- | --- | --- |
+| `not installed: … are unset` | none of `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER` reached it — almost always it is not reading the `.env` you think it is | the file must be at `../private/.env`, one level above the repo, or wherever `DEDALO_PRIVATE_DIR` points; on a new box, run the installer (`./install.sh`) |
+| `configuration incomplete: … exists but names none of …` | a `.env` is there, but without the four keys | complete it, or restore it from backup — do not reinstall over it |
+| `configuration missing: … installed (sealed) but …` | the install finished, then `.env` was lost | restore `.env` from backup — reinstalling would refuse the non-empty database anyway |
+| `install not finished (install_status '…')` | an install (or a re-run) stopped part-way | `bun run dedalo:install --resume` to finish it, or `--abort` to undo it |
+
+Confirm what the server reads:
 
 ```shell
 sudo -u dedalo cat /opt/dedalo/private/.env | head -5
-journalctl -u dedalo-ts | grep 'INSTALL MODE'
+grep install_status /opt/dedalo/private/ts_state.json
+journalctl -u dedalo-ts -n 5 --no-pager | grep 'REFUSED'
 ```
 
-If the four keys **are** set and being read, this is not install mode — see the
-next entry.
-
-### The wizard resumes on an install that is already finished
-
-**Cause.** The install was never **sealed**. `install_finish` is what writes
-`install_status: 'sealed'`; until it runs the status stays `configured`, and a
-`configured` instance deliberately re-mounts the wizard on every reload rather
-than dropping to a login form (that is what lets a mid-install reload resume
-instead of stranding you on a login with no schema and no root user). Abandon the
-wizard one step before the end — close the tab, restart the server — and it
-resumes forever, even though the database is fully built.
-
-Recognise it by the state file **plus** a configured `.env`:
-
-```shell
-grep install_status ../private/ts_state.json     # "configured", not "sealed"
-```
-
-**Fix.** Reopen the wizard and let it run to **Finish**, which calls
-`install_finish`. It refuses to seal unless the root user exists with a password
-set, so it will tell you if a step really is outstanding. To seal from the shell
-instead — same guard, same result — run from the repo root:
-
-```shell
-bun -e "import {installFinish} from './src/core/install/finish.ts'; console.log(await installFinish())"
-```
-
-The seal applies immediately (the state file is read fresh on every request; no
-restart), but **reload the browser page**: the wizard is already mounted in the
-open page's JavaScript and only goes away when the client calls `start` again.
+The systemd units do **not** restart a server that exits 78
+(`RestartPreventExitStatus=78`): the unit stays `failed` until you fix the cause
+and `systemctl start` it. A container under `restart: unless-stopped` is
+restarted by Docker (about once a minute) and prints the same line each time.
 
 ### `Config key 'DEDALO_PREFIX_TIPOS' is RETIRED`
 
@@ -198,17 +178,11 @@ server refuses to boot rather than connect somewhere you did not mean.
 DB_SOCKET=/var/run/postgresql
 ```
 
-### Crash loop right after the wizard's *Save config*
+### Crash loop: `Config key 'DEDALO_APPLICATION_LANGS' must be a non-empty JSON object map`
 
-**Cause.** The language configuration is mandatory and the written `.env` is
-missing it, so every boot dies on:
-
-```text
-Config key 'DEDALO_APPLICATION_LANGS' must be a non-empty JSON object map
-```
-
-The wizard collects the languages on the **Entity** step; a hand-written `.env`
-has to carry them itself.
+**Cause.** The language configuration is mandatory and the `.env` is missing it,
+so every boot dies on that line. The installer writes the languages; a
+hand-written `.env` has to carry them itself.
 
 **Fix.** Ensure all four keys are present:
 
@@ -343,39 +317,6 @@ Reproduce the same conditions by hand before editing the unit again:
 sudo -u <service user> <ExecStart bun path> --version
 sudo -u <service user> bash -c 'cd <WorkingDirectory> && ls src/server.ts'
 ```
-
-### The wizard is a `404`
-
-**Cause.** The instance is **sealed**. Sealing is terminal: the entire install
-surface answers `404` from then on, across restarts, from any address.
-
-**Fix.** None, and that is the point. A sealed instance is an installed instance
-— log in. (If you truly need to re-install: empty database, empty private
-directory, start again.)
-
-### The wizard refuses your address (`403`)
-
-**Cause.** Your address is not on the install allowlist. Note that this is the
-default state, not an unusual one: with `DEDALO_INSTALL_ALLOWED_IPS` **unset**
-the wizard answers **the local machine and nobody else**, because until it is
-sealed the installer runs without a password.
-
-**Fix.** Name the machine you install from — a literal address, a CIDR range, or
-`any` (every address; only behind a firewall, and removed once sealed). The
-refusal itself names the address the engine saw ("not allowed from this address
-(192.168.65.1)"), and so does the engine's log line for it — that is the one to
-add. Behind a container proxy it is rarely the address you would guess: Docker
-Desktop shows `192.168.65.1`, a Linux bridge a gateway such as `172.18.0.1`. The
-engine prints the list in force in its start-up log, next to the `INSTALL MODE`
-line, so you can see what it is actually applying:
-
-```dotenv
-DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10,10.0.0.0/24
-```
-
-And note that **`loopback` will not match behind a reverse proxy**: the address
-is resolved from the trusted `X-Forwarded-For` hop, so name the real client
-address.
 
 ### The boot fails with `core module warm-up: N module(s) failed to evaluate`
 
@@ -619,7 +560,8 @@ Under systemd the health timer polls every 30 seconds and restarts the unit.
 On a docker stack the healthcheck is `scripts/ops/container_watchdog.sh`, which
 recycles the container after **three consecutive red probes at 30-second
 intervals — roughly 90 seconds**, and only once the container has answered green
-at least once (so it never recycles a box that is still on the install wizard).
+at least once (so it never recycles a box that never came up — one that is not
+installed exits 78 instead).
 Either way it is a code defect — capture the log and report it.
 
 ### The maintenance widget reports the engine down while the socket probe is green

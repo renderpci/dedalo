@@ -105,3 +105,5 @@ gates for each `refuseInstall` / `refuseUpdate` site · `error_registry_native.t
 `adoptErrorEnvelopeV2` / `FROZEN_ERROR_BODIES` (`test/parity/normalize.ts`)
 classify only the eight oracle-era root `result:false` bodies listed in
 `WC-2026-08-15-error-envelope-v2`.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (the wizard/router half: `install.unknown_step`, `install.not_reachable` and `install.ip_denied` are deleted from the registry; the update and receive_report halves stand)

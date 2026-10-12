@@ -34,7 +34,6 @@ import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
 import { copyFile, readdir, readFile, writeFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { config } from '../../config/config.ts';
 import {
 	existingDdOntologyTipos,
 	readDdOntologyModelParents,
@@ -63,17 +62,11 @@ import { type StagedFile, stageOntologyFiles } from '../ontology/ontology_update
 import { setRecordsInDdOntology } from '../ontology/ontology_write.ts';
 import { getTldFromTipo } from '../ontology/tld.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_MAJOR_MINOR } from '../update/version.ts';
-import { resolveOntologyCatalog } from './ontology_catalog.ts';
 import {
-	listedPolicy,
 	type OntologyInstallRequest,
 	type OntologyOrigin,
-	type OntologySource,
 	type OntologySourceView,
-	ontologyCatalogNeeded,
-	ontologyRequestFromActive,
 	undeclaredWarning,
-	vendoredOntologyCatalog,
 } from './ontology_choice.ts';
 import { installOntologyStagingDir } from './paths.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
@@ -564,39 +557,4 @@ export async function verifyInstalledOntologyReferences(
 	const present = await existingDdOntologyTipos(refs.map((ref) => ref.to));
 	const dangling = danglingDependencies(refs, new Set(tlds), present, diffusionModels);
 	return groupDangling(dangling).map(danglingWarning);
-}
-
-// ── the wizard path ──────────────────────────────────────────────────────────
-
-/** The ontology source the RUNNING configuration names (its first ontology server, or none). */
-function configuredSource(): OntologySource {
-	const server = config.ontologyIo.servers[0];
-	return server === undefined ? { kind: 'none' } : { kind: 'server', server: { ...server } };
-}
-
-/**
- * The install request the written configuration stands for — the wizard's
- * stage_ontologies runs in the process restarted after persist_config, so it
- * reads ACTIVE_ONTOLOGY_TLDS (core + the install order) and the configured
- * ontology servers, and re-resolves the catalog only when the vendored one does
- * not suffice.
- */
-export async function ontologyRequestFromConfig(): Promise<OntologyInstallRequest> {
-	if (!config.ontologyIo.activeOntologyTldsConfigured) {
-		refuseInstall(
-			'install.state_conflict',
-			'ACTIVE_ONTOLOGY_TLDS was not written — save the configuration first',
-		);
-	}
-	const active = config.ontologyIo.activeOntologyTlds;
-	const source = configuredSource();
-	const domain = active.filter((tld) => !isCoreOntologyTld(tld));
-	const catalog = ontologyCatalogNeeded(domain, source, listedPolicy(domain))
-		? (await resolveOntologyCatalog(source, { allowedServers: config.ontologyIo.servers })).catalog
-		: vendoredOntologyCatalog();
-	const { request, errors } = ontologyRequestFromActive(active, catalog);
-	if (request === null) {
-		refuseInstall('install.invalid_input', `Install answers invalid: ${errors.join('; ')}`);
-	}
-	return request;
 }

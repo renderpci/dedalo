@@ -19,8 +19,8 @@ served tree — if you are looking for the four config files of v6, see
 [what changed in v7](whats_changed_v7.md).
 
 A fresh install needs none of this by hand: the installer writes the file for
-you — the command-line installer, the browser wizard or `install.sh`, which all
-write the same keys ([what `.env` gets](../install/installer_reference.md#what-privateenv-does-and-does-not-get)).
+you — the terminal installer (`./install.sh` or `bun run dedalo:install`), whatever
+route or mode you run it in, writes the same keys ([what `.env` gets](../install/installer_reference.md#what-privateenv-does-and-does-not-get)).
 
 ---
 

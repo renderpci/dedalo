@@ -17,9 +17,8 @@
 *
 * Data loading is deferred: `this.value` is populated via the area_maintenance
 * `get_value()` call (which fires a 'get_widget_value' API action), not in build().
-* The render layer (`render_add_hierarchy`) reuses the hierarchy import UI from
-* the install wizard (`render_hierarchies_import_block`), so the operator sees
-* exactly the same form regardless of entry point.
+* The render layer (`render_add_hierarchy`) delegates the hierarchy import UI to
+* `render_hierarchies_import_block` (./render_hierarchies_import.js).
 *
 * Prototype chain:
 *   Lifecycle (init, render, destroy, refresh) ← widget_common

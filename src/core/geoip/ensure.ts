@@ -3,7 +3,7 @@
  * and loaded into the in-memory reader.
  *
  * Called fire-and-forget from server boot (src/server.ts, inside the
- * !installMode block). NON-FATAL by construction — a failed/slow/absent
+ * !smokeBoot block). NON-FATAL by construction — a failed/slow/absent
  * download never blocks boot and never throws; resolution simply degrades to
  * "IP shown, no country flag" (S1-15 posture). No runtime third-party
  * dependency: the browser never calls out, and after the one-time server-side

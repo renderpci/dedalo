@@ -4,12 +4,12 @@
  *
  * WHY. Until this module an invalid answer was found by the step that first
  * used it: a weak root password at set_root_pw — AFTER the .env, the seed
- * restore and the ontology import; an entity `1x` only by the wizard's own
- * client-side check (the CLI accepted it); a port `x` by the server boot. A
+ * restore and the ontology import; an entity `1x` only by the (since retired)
+ * browser wizard's client-side check (the CLI accepted it); a port `x` by the server boot. A
  * failure that late leaves a half-built install for an input the plan could
  * have refused. So every rule that needs nothing but the answers lives HERE and
  * runs inside buildInstallPlan (install_plan.ts) — the CLI argv, an answers file
- * (`--answers`) and the wizard post all reach the SAME checks through
+ * (`--answers`) and the screens all reach the SAME checks through
  * normalizeInstallAnswers, and refuse with the SAME sentence.
  *
  * What stays OUTSIDE: anything that needs the machine (is the database empty,
@@ -38,8 +38,8 @@ import type { InstallAnswers } from './install_plan.ts';
 
 /**
  * The entity name: a letter, then letters/digits/underscore. It becomes a
- * directory and a key prefix; the wizard enforced it client-side only
- * (render_installer.js) and the CLI not at all.
+ * directory and a key prefix; the retired browser wizard enforced it
+ * client-side only and the CLI not at all — now the plan does.
  */
 export const ENTITY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 
@@ -445,7 +445,7 @@ export function validateAnswers(a: InstallAnswers, _notes: string[], errors: str
 
 /**
  * The root password's refusals. It is a PLAN INPUT of its own, never an answer
- * (a wizard post and an answers file never carry it): `required` when the run
+ * (an answers file never carries it): `required` when the run
  * will set it (a fresh terminal install); a supplied one is always held to THE
  * password policy — the same function set_root_pw refuses with (root_pw.ts).
  */

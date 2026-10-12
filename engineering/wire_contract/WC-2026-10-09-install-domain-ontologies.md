@@ -166,3 +166,5 @@ panel's own routine so there is one way ontology files enter a database.
   `oh.copy.gz` stays installable alone over the core.
 - No parity fixture is affected: the install surface is TS-only (no frozen PHP
   harvest covers these actions); no re-harvest is involved.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (its `get_install_context` / router-action half (`get_ontology_catalog` and the routed ontology steps): the wizard is gone; the plan and executor half stands)

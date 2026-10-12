@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start.
     - The terminal installer sets up the whole host: production, Docker and trial install in one run.
     - The site builder's OpenCode driver loads only the configuration the site builder states.
     - A site builder agent turn can no longer leave configuration in its home directory for the next turn to read.
@@ -1090,16 +1091,23 @@ Merged since the last release; these ship with the next one.
     and Google Compute Engine, `fd20:ce::254`), in any spelling — through a local-use NAT64
     address (`64:ff9b:1::/48`) included.
 
-    **Action needed if an address allowlist** (`DEDALO_INSTALL_ALLOWED_IPS`,
-    `DEDALO_ERROR_REPORT_ALLOWED_IPS`) **has an IPv4 part with a leading zero**
-    (`127.0.0.01`, `010.0.0.1`): such an entry is no longer read as a number and matches no
-    client, because some systems read it as octal — so the installer or the error report
-    refuses that client until you rewrite the entry without leading zeros. The install
-    allowlist line the server logs when it starts names such an entry as ignored. An entry now
+    **Action needed if the address allowlist** (`DEDALO_ERROR_REPORT_ALLOWED_IPS`)
+    **has an IPv4 part with a leading zero** (`127.0.0.01`, `010.0.0.1`): such an entry is
+    no longer read as a number and matches no client, because some systems read it as
+    octal — so the error report refuses that client until you rewrite the entry without
+    leading zeros. An entry now
     matches its address in every spelling: `2001:db8:0::1` matches a client reported as
     `2001:db8::1`, `127.0.0.1` (or the `loopback` token) matches `::ffff:7f00:1`, the form a
     dual-stack listener may report, and a block written in the IPv4-mapped form
     (`::ffff:10.0.0.0/104` or `::ffff:a00:0/104`) is the IPv4 block it spells (`10.0.0.0/8`).
+
+#### Removed
+
+- **The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start.** *(action needed)*
+
+    Every installation route — production, Docker, trial, developer — now runs the terminal installer (`./install.sh`, or `bun run dedalo:install`). The browser wizard, its unauthenticated install API and the `DEDALO_INSTALL_ALLOWED_IPS` and `DEDALO_INSTALL_NO_RESTART` settings are removed; delete those lines from your `.env` and compose overrides. A server started without configuration no longer serves a setup page: it writes one line to its log ("not installed: … run the installer", or "restore .env from backup" on an installed instance whose `.env` is gone) and exits with code 78, which the shipped systemd units do not restart. An interrupted install, or an interrupted re-run on a live instance, keeps the server from starting until it is finished with the installer's `--resume`. Hosts installed with an earlier `dedalo-ts@.service` template keep it until it is replaced: update the template from the release so the unit stops on code 78. Adding thesauri after install is unchanged (Maintenance › Import hierarchies). See [Installer reference](./install/installer_reference.md#a-server-that-is-not-installed-refuses-to-start).
+
+    Wire contract: `WC-2026-10-12-install-surface-removed`, `WC-2026-10-08-install-ip-denied-names-address`.
 
 #### Changed
 
@@ -1139,9 +1147,9 @@ Merged since the last release; these ship with the next one.
     needed, and whether it is **mandatory**.
 
     * **Installing.** The installer always installs mandatory **ontologies**. It offers
-      every other dependency already ticked, and you may untick it, in the wizard or with
+      every other dependency already ticked, and you may untick it, on its screen or with
       `--decline-dependencies`. **A thesaurus never blocks an install:** a mandatory
-      thesaurus is a strong recommendation, marked *strongly recommended* in the wizard.
+      thesaurus is a strong recommendation, marked *strongly recommended* on the screen.
       Leaving it out, or a release that does not ship it, gives a warning that names it
       and says it can be installed later from *Maintenance › Install hierarchies*. You
       can also keep a thesaurus of your own under another name.
@@ -1158,12 +1166,12 @@ Merged since the last release; these ship with the next one.
 
 - **Installations now choose their domain ontologies (Oral history by default) and install what each one declares it depends on; the install database carries only the core ontologies and no test data.** *(action needed)*
 
-    Until now every installation got the same ontologies, whatever it was for: the install database carried Oral history (`oh`) and the developers' test ontology, and nothing asked which heritage domains the institution catalogues. The command-line installer, the browser wizard and `install.sh` now ask ([installer reference](./install/installer_reference.md#domain-ontologies)).
+    Until now every installation got the same ontologies, whatever it was for: the install database carried Oral history (`oh`) and the developers' test ontology, and nothing asked which heritage domains the institution catalogues. The installer now asks ([installer reference](./install/installer_reference.md#domain-ontologies)).
 
     - **The install database is core-only.** It carries the core ontologies (`dd`, `rsc`, `ontology`, `ontologytype`, `hierarchy`, `lg`) and nothing else. The developers' `test` ontology and the *test3* playground records are no longer installed; they exist only in the developers' test database.
-    - **At least one domain ontology is installed.** The default is Oral history (`oh`). It is built into the release, so it installs without a network. Any other ontology the update server offers can be chosen by its code. For example, `tch` (Tangible cultural heritage) is the general inventory model for objects and collections. The wizard has a new *Ontologies* step. The command line takes `--ontologies oh,tch` and lists the server's catalog with `--list-ontologies`. `install.sh` asks one more question.
+    - **At least one domain ontology is installed.** The default is Oral history (`oh`). It is built into the release, so it installs without a network. Any other ontology the update server offers can be chosen by its code. For example, `tch` (Tangible cultural heritage) is the general inventory model for objects and collections. The interactive installer has an *Ontologies* screen. The command line takes `--ontologies oh,tch` and lists the server's catalog with `--list-ontologies`. `install.sh` asks one more question.
     - **Dependencies come with the choice.** An ontology server now publishes, for each ontology, the ontologies it needs. The installer installs them too, before the ontology that needs them, and says so ("tch also installs: …"). An older server that does not publish them gets a clear warning: the chosen ontology is installed alone, and nothing is guessed. After the import, the installer checks that every node of the installed ontologies can find the nodes it refers to. Anything missing is reported as a warning that names the ontology to add. On an ontology master, an editor declares the dependencies in the *Dependencies* field of each ontology's record (Ontology › Ontologies main), and they are published with the next export ([updating the ontology](./management/updates/updating_ontology.md#declaring-what-an-ontology-requires)); see the separate note on that field for mandatory and optional dependencies and required thesauri. Importing an ontology (at install time or with the update panel) keeps its declaration in that field, so a master that imports its ontologies from another master publishes them too.
-    - **Fully offline installs.** `--ontology-source <dir|archive>` installs from a directory (or a `.tar`/`.tar.gz`/`.tgz`) laid out like an ontology server's export. It is a command-line option only: the browser wizard installs from the configured ontology server or the built-in ontologies. An air-gapped install (`--no-update-servers`) is offered only the built-in `oh`.
+    - **Fully offline installs.** `--ontology-source <dir|archive>` installs from a directory (or a `.tar`/`.tar.gz`/`.tgz`) laid out like an ontology server's export. An air-gapped install (`--no-update-servers`) is offered only the built-in `oh`.
     - **Nothing is half-installed.** The ontology files are downloaded and checked *before* the database is touched. If an import fails, the install stops and is not sealed. Recreate the database and run the installer again.
     - **`ACTIVE_ONTOLOGY_TLDS` is written by the installer** (the core, the chosen ontologies and their dependencies), so the ontology update panel refreshes exactly what the installation carries. When the key is unset, the engine's fallback is now the core list alone: `utoponymy` and `nexus` are no longer in it. **Action needed: if your `/private/.env` has no `ACTIVE_ONTOLOGY_TLDS` and your installation uses `utoponymy` or `nexus`, add the key with them** (for example `ACTIVE_ONTOLOGY_TLDS=["dd","rsc","ontology","ontologytype","hierarchy","lg","oh","utoponymy","nexus"]`), or the update panel stops refreshing them.
     - On a development server, the maintenance *Unit test area*'s *Truncate test table and Create new empty test record* now refuses on a database that has no test ontology (`maintenance.action_refused`). That is any installation's database. The message names the developers' test database as the place where the playground lives.
@@ -1223,12 +1231,12 @@ Merged since the last release; these ship with the next one.
 
 - **New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.** *(action needed)*
 
-    The command-line installer, the browser wizard and `install.sh` now work from one install plan, so the same answers give the same configuration whichever one you use ([installer reference](./install/installer_reference.md)).
+    Every way of answering the installer — its screens, its flags, an answers file — now works from one install plan, so the same answers give the same configuration whichever one you use ([installer reference](./install/installer_reference.md)).
 
     - **Update servers are written by default.** Installs used to leave `ONTOLOGY_SERVERS` and `CODE_SERVERS` out of `/private/.env`, which meant no ontology or code updates were ever offered. The installers now write the official Dédalo server (`v7.master.dedalo.dev`) into both. For an air-gapped installation, answer *no* to the update-server question, or pass `--no-update-servers` to the command-line installer. Both keys are then written as `[]`, and you can add them later. Re-running the installer does not overwrite update servers you already set. An earlier air-gapped `[]` is not kept, though: answering *yes* on a re-run switches the installation back to the official server.
     - **Languages is always active.** The Languages thesaurus (`lg`) is switched on together with the database on every install. It is no longer a choice and is never imported, because its terms already ship with the installation database.
-    - **Default working languages: English and Spanish.** All three installers default to `lg-eng` and `lg-spa`. The wizard used to pre-tick the whole language list; the other languages are still offered, but they are optional and you tick them yourself.
-    - **One default set of optional thesauri.** All three installers start from the same default: today that is Spain (`es`). The wizard no longer pre-ticks France. The command-line installer used to install no thesaurus by default and now installs this set; use `--hierarchies none` to skip it. A thesaurus that fails to install now stops the install before anything is sealed. Unknown command-line flags (including the old `--yes`) are refused, and the database host defaults to `localhost` instead of `/tmp`.
+    - **Default working languages: English and Spanish.** The installer defaults to `lg-eng` and `lg-spa`; the other languages are still offered, but they are optional and you tick them yourself.
+    - **One default set of optional thesauri.** Every way of answering starts from the same default: today that is Spain (`es`). The command-line installer used to install no thesaurus by default and now installs this set; use `--hierarchies none` to skip it. A thesaurus that fails to install now stops the install before anything is sealed. Unknown command-line flags (including the old `--yes`) are refused, and the database host defaults to `localhost` instead of `/tmp`.
     - **Supervision must be declared (action needed).** The code update panel only replaces the code tree when something will restart the server afterwards. It used to guess this from systemd's own variables. Those variables are also inherited by terminal shells in desktop sessions, so an unsupervised `bun run start` could look supervised: the update would install the new code, stop the server and leave it stopped. The guess is gone. Now the code update runs only when the process manager declares `DEDALO_SUPERVISED=true`, and the shipped systemd units, compose stacks and the `dev` / `dev:server` / `start:supervised` scripts all do. **If your systemd unit or compose file was written before this release, add `Environment=DEDALO_SUPERVISED=true` to the unit's `[Service]` section, or `DEDALO_SUPERVISED: "true"` to the `dedalo` service's `environment:`.** Setting it in `/private/.env` has no effect, because every launch method reads that file, including the unsupervised `bun run start` ([updating the code](./management/updates/updating_code.md)).
 
     Wire contract: `WC-2026-10-08-install-plan-update-servers-core-lg`.
@@ -1390,7 +1398,7 @@ Merged since the last release; these ship with the next one.
 
     Before, the command-line installer (`scripts/install.ts`, which `install.sh` drives) found a bad answer only at the step that first used it: a root password that broke the password policy was refused after the `.env` had been written, the database restored and the ontologies imported, and an entity such as `1x` or a port such as `70000` was not refused at all. An install that stopped part-way left a half-built database, and the only way on was to drop it and start again.
 
-    Now every answer is checked first, and nothing is written until all of them pass and the target database is confirmed to exist, be empty and be owned by the database user the install connects as (no other install can be running against it). That covers the entity name, ports, time zone, locale, paths, SMTP encryption, media access mode, the diffusion database and user, and the root password against the policy. The browser wizard gets the same checks. The answers can also come from a file (`--answers answers.json`, the wizard's field names in a `dedalo.install.answers/1` envelope). Passwords should come from the `DEDALO_INSTALL_*` environment variables or `--secrets-stdin`, never from the command line: the `--*-password` flags still work but now warn, because `ps` shows them to every user. An answers file that contains a password is refused. No password is written to the installer's record or printed, and the generated `DEDALO_SALT_STRING` is printed once, at the end.
+    Now every answer is checked first, and nothing is written until all of them pass and the target database is confirmed to exist, be empty and be owned by the database user the install connects as (no other install can be running against it). That covers the entity name, ports, time zone, locale, paths, SMTP encryption, media access mode, the diffusion database and user, and the root password against the policy. The answers can also come from a file (`--answers answers.json`, the plan's answer names in a `dedalo.install.answers/1` envelope). Passwords should come from the `DEDALO_INSTALL_*` environment variables or `--secrets-stdin`, never from the command line: the `--*-password` flags still work but now warn, because `ps` shows them to every user. An answers file that contains a password is refused. No password is written to the installer's record or printed, and the generated `DEDALO_SALT_STRING` is printed once, at the end.
 
     Every run is now recorded in `<private>/install/` (a plan file and a state file, kept as the install's record). If an install stops, whether from a failure, Ctrl-C or a killed process, run `bun run scripts/install.ts --resume`. It checks each step that already completed, does not repeat finished work, and asks again only for the passwords a remaining step still needs. To take the install back, run `--abort --confirm-database <db>`. That empties the database (the database itself is kept) and restores the previous `.env`, but a sealed install is never undone. The database restore is now a single transaction that also marks the database as this install's, so an interrupted restore leaves the database empty rather than half-filled, and neither `--resume` nor `--abort` ever adopts or empties a database the install did not fill (for example, a backup restored into it in the meantime). Backups of `.env` that existed before the install are never removed. Running the installer again over an existing record is refused and points you to `--resume` or `--abort`. Details: [Installer reference](./install/installer_reference.md).
 
@@ -1599,7 +1607,7 @@ Merged since the last release; these ship with the next one.
 
 - **The PostgreSQL socket you give the installer is now the one the server connects through (`DB_SOCKET`).** *(action needed)*
 
-    The installer's socket answer (`--db-socket`, or the wizard's *Unix socket* field) was used by the installer's own connection test and then written as `DEDALO_SOCKET_CONN`, a key the server never read: an installation reachable only through the socket passed the install and then connected to `DB_HOST` instead. The answer is now written as the new key [`DB_SOCKET`](./config/config_db.md), and one rule decides the route for everything that connects to the database: the server, the installer's test, the nightly backup and the maintenance tools. When `DB_SOCKET` is set it wins over `DB_HOST`, and a socket that does not exist fails loudly instead of quietly falling back to `localhost`. An existing `.env` that holds `DEDALO_SOCKET_CONN` keeps working: it is now read as the old spelling of `DB_SOCKET`, so check that the directory it names is where your PostgreSQL socket really is before updating. A re-run of the installer writes the value once, under the new name. If you use the nightly backup unit, update `deploy/dedalo-backup.service` from the release so its database backup connects the same way.
+    The installer's socket answer (`--db-socket`) was used by the installer's own connection test and then written as `DEDALO_SOCKET_CONN`, a key the server never read: an installation reachable only through the socket passed the install and then connected to `DB_HOST` instead. The answer is now written as the new key [`DB_SOCKET`](./config/config_db.md), and one rule decides the route for everything that connects to the database: the server, the installer's test, the nightly backup and the maintenance tools. When `DB_SOCKET` is set it wins over `DB_HOST`, and a socket that does not exist fails loudly instead of quietly falling back to `localhost`. An existing `.env` that holds `DEDALO_SOCKET_CONN` keeps working: it is now read as the old spelling of `DB_SOCKET`, so check that the directory it names is where your PostgreSQL socket really is before updating. A re-run of the installer writes the value once, under the new name. If you use the nightly backup unit, update `deploy/dedalo-backup.service` from the release so its database backup connects the same way.
 
 - **On Docker, the browser client now always matches the engine that is running.**
 
@@ -1782,20 +1790,6 @@ Merged since the last release; these ship with the next one.
 - **"`./install.sh` runs on macOS again (and wherever Docker's storage lives in a VM)."**
 
     On macOS, and on Docker Desktop under WSL or with a remote Docker host, `./install.sh` stopped silently right after its banner. Its free-disk check used a Linux-only option. The check is now portable. Where the free space cannot be measured from the host, the check is skipped and the install continues. See [Simple install](./install/quickstart.md).
-
-- **When the install wizard refuses your browser, it now names the address it saw — and `./install.sh --wizard` asks who may open it.**
-
-    Until it is finished, the wizard answers only the addresses in `DEDALO_INSTALL_ALLOWED_IPS`. Behind the stack's proxy the engine sees an address few people would guess (Docker Desktop: `192.168.65.1`). `./install.sh --wizard` started the stack without naming anyone, so every wizard install was refused, with no hint of what to allow. The refusal now says *"The installer is not allowed from this address (192.168.65.1)"*, and the engine log names it too. `./install.sh --wizard` asks which addresses may open the wizard; it suggests the private network ranges. See [Simple install](./install/quickstart.md#path-2-browser-wizard).
-
-    Wire contract: `WC-2026-10-08-install-ip-denied-names-address`.
-
-- **The browser install wizard's first screen no longer fails with "An unexpected error occurred" in containers.**
-
-    On a machine with no database yet, such as any container, the wizard's first call tried to read the database for the names of the configured languages and failed. The wizard now names them from the installer's own language list. See [Simple install](./install/quickstart.md#path-2-browser-wizard).
-
-- **The browser install wizard no longer fails at the database step with `function "f_unaccent" already exists`.**
-
-    After *Save config*, the restarted engine ran its schema upgrades on the still-empty database, and the seed restore then collided with them, leaving a half-built database. This affected every browser-wizard install, on every platform. Those upgrades now wait until the install is sealed, as on the command-line installer. *Finish* restarts the engine once more, so the sealed instance starts with all of them applied; the page reloads by itself a few seconds later.
 
 - **"The publication-host pairing command now names a command you can run, and says why it cannot read a copied file."**
 
@@ -2286,7 +2280,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 122 entries"
+??? note "Wire contract — 123 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -2410,6 +2404,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-11-session-user-beside-csrf-token`
     - `WC-2026-10-11-site-builder-reason-codes`
     - `WC-2026-10-11-site-builder-turn-error-frames`
+    - `WC-2026-10-12-install-surface-removed`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

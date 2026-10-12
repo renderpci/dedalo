@@ -3,8 +3,8 @@
  * screen model (screen_model.ts) puts on a screen, in ONE place, English,
  * owned by the installer.
  *
- * NOT the wizard's `installation_*` labels: those die with the wizard (phase 5),
- * and pinning them here would keep ~47 dead labels alive. Translation, if it is
+ * NOT the retired wizard's `installation_*` labels: those were deleted with it
+ * (phase 5, 2026-10-12). Translation, if it is
  * ever wanted, is an installer-owned catalog (owner flag 1). The ONE shared
  * text is the password policy's rule list, which belongs to component_password
  * and lives in src/core/labels/master.json (`password_rule_*`) — read there,

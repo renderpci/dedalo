@@ -1636,7 +1636,7 @@ export async function updateCode(
 }
 
 function scheduleServerRestartReal(reason: string): void {
-	void import('../install/restart.ts').then(({ scheduleServerRestart }) => {
+	void import('./restart.ts').then(({ scheduleServerRestart }) => {
 		scheduleServerRestart(`code update: ${reason}`);
 	});
 }

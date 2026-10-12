@@ -1096,41 +1096,6 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// The section extras section_map is ledgered uncovered.
 		const { buildEnvironment: buildEnv } = await import('../../resolve/environment.ts');
 		if (context.session === null) {
-			// INSTALL MODE (DEC-19): a fresh, unconfigured machine mounts the
-			// install wizard instead of the login form. The client instantiates
-			// core/installer/js/installer.js from the context entry's
-			// model:'installer', then fires get_install_context. `installInProgress`
-			// keeps the wizard mounted on a RELOAD after persist_config has
-			// restarted the server into configured mode (config.installMode is now
-			// false, but the install is not yet sealed) — without it a mid-install
-			// reload would strand on the login form with no schema/root yet. Once
-			// install_finish seals, both are false and the login branch runs.
-			const { installInProgress, installSurfaceReachable } = await import('../../install/gate.ts');
-			if (config.installMode || installInProgress()) {
-				// A TERMINAL install mid-flight (terminal_installing) is in progress
-				// but never the wizard's: no installer page (its API is closed —
-				// installSurfaceReachable) and no login over a half-built database.
-				if (!installSurfaceReachable()) {
-					throw new DedaloError('install.not_reachable', {
-						message: 'a terminal install is in progress',
-						publicMessage:
-							'An install is in progress from the terminal — finish it there (scripts/install.ts --resume).',
-					});
-				}
-				const { buildInstallContext } = await import('../../install/context.ts');
-				return {
-					status: 200,
-					body: ok(
-						{ context: [buildInstallContext()], data: [] },
-						// install:true — no database is usable yet (none configured, or
-						// configured and still EMPTY): the environment must not read one.
-						{
-							requestId: context.requestId,
-							extend: { environment: await buildEnv(null, null, { install: true }) },
-						},
-					),
-				};
-			}
 			const { buildLoginContext } = await import('./login_context.ts');
 			return {
 				status: 200,

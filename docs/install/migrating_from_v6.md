@@ -357,7 +357,7 @@ If the result is wrong, nothing is destroyed: the previous file is at `.env.bak.
 
     There is no flag to skip the seed — you skipped [production](production.md) step 8 on purpose. The migrated path is: migrate the config, migrate the passwords, then **start the server**, in that order. Nothing else.
 
-The install wizard will not appear either, and that is deliberate: the install surface is reachable only on an unconfigured box or mid-install. A migrated instance has its database keys set, so the normal login serves.
+Nothing asks you to install, either: there is no install page. A migrated instance has its database keys set, so the server boots and the normal login serves. (A server that finds none of the four keys refuses to start — exit 78 — and says which file it read.)
 
 ### 6.2 Migrate the passwords
 

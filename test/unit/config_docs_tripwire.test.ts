@@ -27,7 +27,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONFIG_CATALOG, DOMAINS, isOperatorFacing } from '../../src/config/catalog/index.ts';
 import type { CatalogEntry } from '../../src/config/catalog_types.ts';
-import { REQUIRED_CONFIG_KEYS } from '../../src/config/install_mode.ts';
+import { REQUIRED_CONFIG_KEYS } from '../../src/config/install_state.ts';
 import { renderReferencePage, renderSampleEnv, spliceGenerated } from '../../src/config/render.ts';
 import { envKeysReadInSrc } from '../helpers/env_key_scan.ts';
 
@@ -116,8 +116,9 @@ describe('config docs: the catalog is the single source of truth', () => {
 	});
 
 	test('the fresh-box test is exactly four keys', () => {
-		// REQUIRED_CONFIG_KEYS decides when an UNAUTHENTICATED install wizard is served.
-		// Widening it is a security-shaped change, never a drive-by edit.
+		// REQUIRED_CONFIG_KEYS decides which boxes read as NOT INSTALLED (the server refuses
+		// to start, exit 78) and which boot on sentinels for config:gen and the install
+		// probe child. Widening it is a boot-contract change, never a drive-by edit.
 		expect([...REQUIRED_CONFIG_KEYS].sort()).toEqual(['DB_HOST', 'DB_NAME', 'DB_USER', 'ENTITY']);
 	});
 

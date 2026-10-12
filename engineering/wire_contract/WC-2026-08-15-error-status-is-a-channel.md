@@ -101,3 +101,5 @@ the client half in `client/dedalo/test/client/js/test_error_policy.js`.
 bodies, and `adoptErrorEnvelopeV2` (`test/parity/normalize.ts`) diffs bodies
 only — it projects the frozen `(msg, errors)` pair through
 `FROZEN_ERROR_BODIES` and never asserts a status.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (the `install.not_reachable` 404 row: the code is deleted with the install surface)

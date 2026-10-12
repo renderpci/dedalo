@@ -1996,41 +1996,6 @@ export const ERROR_REGISTRY = {
 		hint: 'Retry later; if it persists, the server log names why the AI usage ledger cannot be used.',
 	},
 
-	// ── install wizard ──────────────────────────────────────────────────────
-	'install.unknown_step': {
-		category: 'caller',
-		status: 400,
-		label_key: 'error_install_unknown_step',
-		message: 'Unknown install step',
-		severity: 'warn',
-		disclosure: 'operator',
-		retryable: false,
-	},
-	'install.not_reachable': {
-		category: 'not_found',
-		status: 404,
-		label_key: 'error_install_not_reachable',
-		message: 'The installer is not reachable on an installed system',
-		severity: 'info',
-		disclosure: 'operator',
-		retryable: false,
-	},
-	'install.ip_denied': {
-		category: 'permission',
-		status: 403,
-		label_key: 'error_install_ip_denied',
-		message: 'The installer is not allowed from this address',
-		severity: 'warn',
-		disclosure: 'operator',
-		retryable: false,
-		// The address the engine SAW (the trusted X-Forwarded-For hop). Behind a
-		// container proxy that is never what the operator would guess (Docker
-		// Desktop's 192.168.65.1, a bridge gateway), and without it the refusal
-		// was unactionable (WC-2026-10-08-install-ip-denied-names-address).
-		// Telling a caller its own address discloses nothing.
-		details_keys: ['client_address'],
-	},
-
 	// ── maintenance widgets ─────────────────────────────────────────────────
 	'maintenance.store_missing': {
 		category: 'unavailable',
@@ -2253,12 +2218,12 @@ export const ERROR_REGISTRY = {
 	},
 
 	// --- install-update-tools (P1 sweep) -----------------------------------
-	// The install surface is PRE-AUTH and has NO label catalog (a fresh box has
-	// no ontology and the wizard renders `msg` verbatim), so these three codes
-	// are `public`: the refusing step states the exact reason as `publicMessage`
-	// and the compat mirror puts it back on `msg` where render_installer.js
-	// reads it. Their registry messages are readable ALONE, for the wire a
-	// non-wizard caller (the CLI, curl) sees.
+	// The installer runs with NO label catalog (a fresh box has no ontology),
+	// so these codes are `public`: the refusing step states the exact reason as
+	// `publicMessage` (core/install/refuse.ts), which is what the terminal
+	// installer prints. Their registry messages are readable ALONE. Their wire
+	// door is Maintenance › add_hierarchy (install_hierarchies), the one install
+	// operation a running server still performs.
 	'install.invalid_input': {
 		category: 'caller',
 		status: 400,
@@ -2292,7 +2257,7 @@ export const ERROR_REGISTRY = {
 	// (or the operator's replacement file) behind it is not — same posture as
 	// ontology.invalid_node. Public: the refusing reader names the JSON path and
 	// the rule it broke (never a secret: the file is a vendored release asset),
-	// and the wizard renders that sentence verbatim.
+	// and the installer prints that sentence verbatim.
 	'install.manifest_invalid': {
 		category: 'unavailable',
 		status: 503,
@@ -3134,7 +3099,7 @@ export const EXTERNAL_ERROR_KINDS = [
  * strings that appear in today's `errors: ['…']` arrays, MCP `err()` codes,
  * identify `decline()` codes and tool-dispatch tokens. Where one old token
  * meant two things (`unauthorized` = permission in tools/security, = not
- * logged in install/engine.ts) the map records the DOMINANT meaning; the
+ * logged in the retired install router) the map records the DOMINANT meaning; the
  * sweeper picks the other by hand and says so.
  */
 export const LEGACY_TOKEN_MAP: Readonly<Record<string, ErrorCode>> = {
@@ -3177,7 +3142,6 @@ export const LEGACY_TOKEN_MAP: Readonly<Record<string, ErrorCode>> = {
 	invalid_action: 'diffusion.invalid_action',
 	already_draining: 'diffusion.already_draining',
 	// install / maintenance
-	unknown_step: 'install.unknown_step',
 	store_missing: 'maintenance.store_missing',
 	invalid_fn_action: 'maintenance.invalid_fn_action',
 	// tools dispatch / jobs

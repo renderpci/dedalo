@@ -1,7 +1,6 @@
 {
 	"_doc": "WC-034 label cleanup map (engineering/wire_contract/ WC-034). Consumed by test/parity/environment_differential.test.ts: an oracle get_label key must be present with the oracle value, OR renamed here (new key asserted present), OR listed as removed/migrated.",
 	"renames": {
-		"information": "install_information",
 		"informacion": "information",
 		"anyo": "year",
 		"anyos": "years",
@@ -28,8 +27,7 @@
 		"tool_sitebuilder": "open_site_builder",
 		"submit": "start_upload",
 		"no_hay_etiqueta_seleccionada": "no_tag_selected",
-		"instalar": "install",
-		"type_root_password": "root_password_intro"
+		"instalar": "install"
 	},
 	"tool_migrations": {
 		"activate_all_columns": {
@@ -339,6 +337,7 @@
 		"total_pages",
 		"total_parrafos",
 		"transcripcion_automatica",
+		"type_root_password",
 		"update_cache",
 		"update_data_version",
 		"updating",

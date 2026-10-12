@@ -449,7 +449,7 @@ login.quit = async function() {
 	event_manager.publish('quit', self)
 
 	// is_developer. Determine if the user is a developer
-	// page_globals may be absent when quit is called from a minimal page (install, etc.)
+	// page_globals may be absent when quit is called from a minimal page
 	const is_developer = typeof page_globals !== 'undefined' ? (page_globals.is_developer ?? false) : false;
 
 	// Dédalo root web. Main http dir for Dédalo files (usually '/dedalo')
@@ -552,8 +552,7 @@ login.quit = async function() {
 /**
 * ACTION_DISPATCH
 * After API login call, it's possible to go to some different pages,
-* the normal behavior will reload the page to go to the section in session or page caller
-* when install the login only need to set the section but it's not necessary load any other page.
+* the normal behavior will reload the page to go to the section in session or page caller.
 *
 * Handles three distinct post-login outcomes in priority order:
 * 1. custom_action_dispatch: if the caller injected its own handler, delegate entirely and return.

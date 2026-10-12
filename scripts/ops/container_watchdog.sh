@@ -27,11 +27,10 @@
 #     to a container and no third-party image in the inventory.
 #
 # ARMED ONLY AFTER A FIRST GREEN. A container that has NEVER answered green is a
-# boot or install problem, not a recycle case: during the browser wizard the
-# engine has no database and /health is red for as long as the operator takes to
-# fill the form, and recycling underneath them would be sabotage. Red-after-green
-# makes install mode and slow boots inert as a CONSEQUENCE of the rule rather
-# than as a special case — no wire change, no install-mode knowledge here.
+# boot or install problem, not a recycle case: an engine that refused to start
+# (exit 78: not installed) never answers at all, and a slow boot answers red for
+# a while. Red-after-green makes both inert as a CONSEQUENCE of the rule rather
+# than as a special case — no wire change, no install knowledge here.
 #
 # CADENCE. The threshold is the compose `retries`, so the two cannot disagree
 # (asserted by test/unit/stack_ops_policy_tripwire.test.ts): 3 consecutive reds
@@ -108,7 +107,7 @@ if [ "$armed" -eq 1 ] && [ "$reds" -ge "$WATCHDOG_THRESHOLD" ]; then
 fi
 
 if [ "$armed" -eq 0 ]; then
-	echo "== container watchdog: /health red ($reds), but this container has never answered green — not a recycle case (boot or install wizard)" >&2
+	echo "== container watchdog: /health red ($reds), but this container has never answered green — not a recycle case (boot or install)" >&2
 fi
 write_state "$armed" "$reds"
 exit 1

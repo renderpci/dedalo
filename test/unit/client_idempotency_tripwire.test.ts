@@ -81,8 +81,9 @@
  * `src/server.ts` answers before `dispatchRqo` and is therefore not behind this
  * gate at all — block C pins that branch's shape so the claim cannot rot, and
  * the exemption names what bounds it instead (`transfer_id`, minted once per
- * transfer). (4) The client census reads `retries` as a literal; ONE site passes
- * a variable (`render_installer.js`) and is enumerated below. (5) The census
+ * transfer). (4) The client census reads `retries` as a literal; a site passing a
+ * variable must be enumerated below (none since 2026-10-12, when the installer
+ * helper that did left with the browser wizard). (5) The census
  * scope is client code BY DIRECTORY — browser JS served from outside `client/`
  * and `tools/**\/js` would escape it, the same gap
  * `client_error_contract_tripwire` names in its own header.
@@ -165,7 +166,6 @@ const IDEMPOTENT_CEILING: ReadonlySet<string> = new Set([
 	'dd_utils_api:get_job_events',
 	'dd_utils_api:get_process_status',
 	'dd_utils_api:get_system_info',
-	'dd_utils_api:get_install_context',
 	'dd_utils_api:get_login_context',
 	'dd_utils_api:get_dedalo_files',
 	'dd_utils_api:list_uploaded_files',
@@ -659,11 +659,7 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 		expect(
 			dynamic,
 			'A call site whose retries value the census cannot read. Enumerate it here with a reason, or make it a literal.',
-		).toEqual([
-			// The installer helper forwards its caller's value and DEFAULTS to
-			// retries:1, so the unreadable case is the safe one.
-			'client/dedalo/core/installer/js/render_installer.js:319',
-		]);
+		).toEqual([]);
 	});
 
 	test('the transports that bypass data_manager.request are exactly the enumerated ones', () => {

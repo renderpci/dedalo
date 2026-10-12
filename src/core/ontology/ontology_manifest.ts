@@ -1,7 +1,7 @@
 /**
  * THE ONTOLOGY MANIFEST, CLIENT SIDE — read an ontology source's catalog (which
  * TLDs it offers, their metadata and their DECLARED dependencies) on the
- * SERVER, for the installer (CLI and wizard) and anything else that must choose
+ * SERVER, for the installer and anything else that must choose
  * ontologies before importing them.
  *
  * The manifest is what the master builds (data_io_import.ts

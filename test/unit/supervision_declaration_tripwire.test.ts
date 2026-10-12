@@ -55,7 +55,7 @@ import { join, relative } from 'node:path';
 import { envSnapshot, parseEnvFile, projectRoot } from '../../src/config/env.ts';
 import { stampOf } from '../../src/core/install/host/production/common.ts';
 import { instanceDropins, renderTemplate } from '../../src/core/install/host/systemd/render.ts';
-import { RESTART_EXIT_CODE } from '../../src/core/install/restart.ts';
+import { RESTART_EXIT_CODE } from '../../src/core/update/restart.ts';
 import {
 	type ComposeServiceShape,
 	DEPLOY_DIR,
@@ -114,7 +114,7 @@ function respawnsOnRestart(script: string): boolean {
 	const file = delegatedFile(script);
 	if (file === undefined) return false;
 	const source = readFileSync(join(projectRoot, file), 'utf8');
-	return /import \{[^}]*RESTART_EXIT_CODE[^}]*\} from '[^']*core\/install\/restart\.ts'/.test(
+	return /import \{[^}]*RESTART_EXIT_CODE[^}]*\} from '[^']*core\/update\/restart\.ts'/.test(
 		source,
 	);
 }

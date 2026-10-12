@@ -33,13 +33,7 @@ afterAll(() => {
 
 describe('engineOwnsInstall — collapsed to true at the 2026-07-11 cutover', () => {
 	test('owns the install in EVERY install-lifecycle state (single-writer)', () => {
-		for (const status of [
-			undefined,
-			'unconfigured',
-			'configured',
-			'installing',
-			'sealed',
-		] as const) {
+		for (const status of [undefined, 'terminal_installing', 'sealed'] as const) {
 			setServerState({ install_status: status });
 			expect(engineOwnsInstall(), `install_status=${String(status)}`).toBe(true);
 		}

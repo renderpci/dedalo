@@ -266,9 +266,10 @@ describe('the production root process loads no engine module and leaks no secret
 describe('host/** is off the server import closure (d)', () => {
 	test('no module under src/core/install/host/ is reachable from the server or the dispatcher', () => {
 		const reachable = reachableModules().map((file) => file.slice(REPO_ROOT.length + 1));
-		// The walker is real: large, and it reaches the installer's plan module (the wizard).
+		// The walker is real: large, and it reaches into src/core/install (Maintenance ›
+		// Import hierarchies — the wizard router that once reached the plan is gone).
 		expect(reachable.length).toBeGreaterThan(500);
-		expect(reachable).toContain('src/core/install/install_plan.ts');
+		expect(reachable).toContain('src/core/install/hierarchy_import.ts');
 		expect(reachable.filter((file) => file.startsWith('src/core/install/host/'))).toEqual([]);
 		expect(reachable).not.toContain('scripts/ops/boot_status.ts');
 	});

@@ -67,3 +67,5 @@ ignored; the report item's `active`) ·
 `test/unit/tools_register_validate.test.ts` (`applyActiveOverride` overrides the
 file declaration, keeps the record valid, is idempotent, creates a missing
 relation column).
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (its install-wizard per-tool report half: the wizard is gone; the panel half stands)

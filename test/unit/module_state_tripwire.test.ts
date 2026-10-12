@@ -112,9 +112,9 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// authored, never user data.
 	'core/concepts/section_id.ts:coercionObserver',
 	// The graceful-shutdown entry point injected ONCE by startServer so a planned
-	// restart drains like a SIGTERM (core/install must not import the process
-	// root). Boot-stable process wiring — carries no request identity.
-	'core/install/restart.ts:gracefulShutdown',
+	// restart (code update / restore) drains like a SIGTERM (core/update must not
+	// import the process root). Boot-stable process wiring — no request identity.
+	'core/update/restart.ts:gracefulShutdown',
 	// "Is curl on PATH" memo for the AI-model downloader: a fact about the HOST
 	// (boot-stable, request-independent), probed once per process on first
 	// download. Never cleared — the binary set does not change under a running

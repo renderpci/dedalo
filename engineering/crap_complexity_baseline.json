@@ -4,10 +4,10 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 659,
-		"functions": 9397,
-		"functionsOverCap": 675,
-		"filesOverCap": 259
+		"files": 750,
+		"functions": 11251,
+		"functionsOverCap": 673,
+		"filesOverCap": 258
 	},
 	"ledger": [
 		{
@@ -135,6 +135,16 @@
 			"functionsOverCap": 675,
 			"filesOverCap": 259,
 			"reason": "96c77bdb9e (terminal installer phase 1) split installDbFromSeed and added resetDatabaseToEmpty in src/core/install/db_restore.ts at complexity 8, one function over the cap that its commit did not record (summary 674, measured 675); frozen here so the ratchet measures the tree again, not accepted — the split is owed by the installer's owner"
+		},
+		{
+			"generated": "2026-10-11",
+			"functionsOverCap": 674,
+			"filesOverCap": 258
+		},
+		{
+			"generated": "2026-10-12",
+			"functionsOverCap": 673,
+			"filesOverCap": 258
 		}
 	],
 	"files": {
@@ -232,7 +242,6 @@
 		"src/core/install/db_probe_plan.ts": 8,
 		"src/core/install/db_restore.ts": 8,
 		"src/core/install/directories.ts": 12,
-		"src/core/install/mailer_probe.ts": 12,
 		"src/core/install/media_tree.ts": 20,
 		"src/core/install/root_pw.ts": 8,
 		"src/core/labels/catalog.ts": 8,
@@ -308,7 +317,7 @@
 		"src/core/relations/select_lang.ts": 9,
 		"src/core/resolve/component_data.ts": 11,
 		"src/core/resolve/dd_info.ts": 12,
-		"src/core/resolve/environment.ts": 17,
+		"src/core/resolve/environment.ts": 16,
 		"src/core/resolve/lang_fallback.ts": 7,
 		"src/core/resolve/media_list_value.ts": 9,
 		"src/core/resolve/optimize_tc.ts": 14,

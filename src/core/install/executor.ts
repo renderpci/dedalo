@@ -315,7 +315,6 @@ function stepInputs(ctx: RunContext): InstallStepInputs {
 		hierarchies: plan.hierarchies,
 		actorUserId: -1,
 		rootPassword: secrets.root_password,
-		installStatus: 'terminal_installing',
 		installId: (ctx.state as InstallState).install_id,
 	};
 }

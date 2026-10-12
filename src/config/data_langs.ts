@@ -132,10 +132,10 @@ export interface CurrentDataLangResolution {
  * never consults DEDALO_DATA_LANG), and the caller reports the fact with the
  * action that recovers it: add the language to DEDALO_PROJECTS_DEFAULT_LANGS.
  *
- * NOT A THROW. A fresh box is exactly this shape — install mode boots on
- * sentinels where PROJECTS_DEFAULT_LANGS is ['lg-eng'] and DATA_LANG is its
- * catalog default 'lg-spa' — so refusing the boot would refuse every new
- * installation. The precedent is one screen up in config.ts: DEDALO_DIFFUSION_LANGS
+ * NOT A THROW. An unconfigured box is exactly this shape — its sentinels
+ * hold PROJECTS_DEFAULT_LANGS ['lg-eng'] while DATA_LANG is its catalog
+ * default 'lg-spa' — and `config` must stay importable there (the installer's
+ * probe child, config:gen, the server on its way to its not-installed refusal). The precedent is one screen up in config.ts: DEDALO_DIFFUSION_LANGS
  * reports at boot and refuses at the point of use, because a server whose
  * editors are working must not die for a language-list mistake.
  */

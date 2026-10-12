@@ -7,8 +7,8 @@
  * WHY. Until the validation moved into the plan, an invalid answer was found by
  * the step that first used it: a weak root password at set_root_pw — AFTER the
  * .env, the seed restore and the ontology import (a half-built install for an
- * input the plan could have refused); an entity `1x` only by the wizard's own
- * client-side check, the CLI accepting it; a port `x` only when the server
+ * input the plan could have refused); an entity `1x` only by the old browser
+ * wizard's client-side check, the CLI accepting it; a port `x` only when the server
  * booted.
  *
  * WHAT IS MEASURED (outcomes, never source spellings):
@@ -16,12 +16,12 @@
  *      `errors` IDENTICALLY through the three ways answers arrive — the CLI argv
  *      (the flag of each key DERIVED from INSTALL_CLI_FLAGS, never re-typed), an
  *      answers file (`answersFromAnswersFile`, the `--answers` envelope) and the
- *      wizard post (its record shape) — and the base answers the table perturbs
+ *      answers record (the plan's own input shape) — and the base answers the table perturbs
  *      are themselves clean on all three (anti-vacuity). Since phase 4 the table
  *      holds the HOST-STEP answers too (server name, ports, TLS mode per route,
  *      certificate paths, web server, database mode, backup dir, the media root
  *      rule, the image source): a host step never meets an answer the plan let by.
- *  (b) The root password is a PLAN INPUT (a wizard post and an answers file never
+ *  (b) The root password is a PLAN INPUT (an answers record and an answers file never
  *      carry it): every rule of THE policy (client password_policy.js
  *      PASSWORD_RULES, iterated — a new rule without a row is red) refuses
  *      through the plan; a fresh run REQUIRES one, `--plan` only checks a
@@ -69,7 +69,7 @@ const ABSENT_DB = `dedalo_upfront_absent_${process.pid}`;
 /** A password every policy rule accepts. */
 const GOOD_ROOT_PASSWORD = 'Mosaic-Kestrel-Harbor-47';
 
-/** Clean base answers, as the wizard posts them (no secret: a trust connection). */
+/** Clean base answers, as a record (no secret: a trust connection). */
 const BASE: Readonly<Record<string, unknown>> = Object.freeze({
 	db_database: ABSENT_DB,
 	db_username: 'upfront_user',
@@ -92,7 +92,7 @@ const FLAG_OF: ReadonlyMap<string, { flag: string; kind: 'value' | 'bool' }> = n
 	]),
 );
 
-/** The wizard-shape answers typed the CLI's way — each key's flag read from the flag table. */
+/** The record-shape answers typed the CLI's way — each key's flag read from the flag table. */
 function argvOf(answers: Readonly<Record<string, unknown>>): string[] {
 	const argv: string[] = [];
 	for (const [key, value] of Object.entries(answers)) {
@@ -115,7 +115,7 @@ function argvOf(answers: Readonly<Record<string, unknown>>): string[] {
 function errorsThreeWays(answers: Readonly<Record<string, unknown>>): {
 	argv: readonly string[];
 	file: readonly string[];
-	wizard: readonly string[];
+	record: readonly string[];
 } {
 	const invocation = answersFromCliArgs(argvOf(answers));
 	expect(invocation.errors, 'the argv itself parses').toEqual([]);
@@ -124,7 +124,7 @@ function errorsThreeWays(answers: Readonly<Record<string, unknown>>): {
 	return {
 		argv: buildInstallPlan(invocation.raw).errors,
 		file: buildInstallPlan(file.raw).errors,
-		wizard: buildInstallPlan(answers).errors,
+		record: buildInstallPlan(answers).errors,
 	};
 }
 
@@ -397,15 +397,15 @@ const LANG_ROW = {
 describe('install validation — every bad answer refused by the plan, identically on three front ends (a)', () => {
 	test('the base answers are CLEAN through all three (the table perturbs a valid install)', () => {
 		const clean = errorsThreeWays(BASE);
-		expect(clean).toEqual({ argv: [], file: [], wizard: [] });
+		expect(clean).toEqual({ argv: [], file: [], record: [] });
 	});
 
 	for (const row of BAD_ROWS) {
-		test(`${row.name}: '${row.error}' on argv ≡ answers file ≡ wizard post`, () => {
+		test(`${row.name}: '${row.error}' on argv ≡ answers file ≡ record`, () => {
 			const seen = errorsThreeWays({ ...BASE, ...row.answers });
 			expect(seen.argv).toContain(row.error);
 			expect(seen.file).toEqual(seen.argv);
-			expect(seen.wizard).toEqual(seen.argv);
+			expect(seen.record).toEqual(seen.argv);
 		});
 	}
 
@@ -414,7 +414,7 @@ describe('install validation — every bad answer refused by the plan, identical
 	// is gone) — the default is written instead, the instance's on production.
 	test('diffusion without mysql_database is CLEAN on all three: the plan default is used', () => {
 		const answers = { ...BASE, ...DIFFUSION, mysql_database: '' };
-		expect(errorsThreeWays(answers)).toEqual({ argv: [], file: [], wizard: [] });
+		expect(errorsThreeWays(answers)).toEqual({ argv: [], file: [], record: [] });
 		expect(buildInstallPlan(answers).answers.mysql_database).toBe('web_dedalo');
 		const production = buildInstallPlan({ ...answers, ...PRODUCTION });
 		expect(production.errors).toEqual([]);
@@ -425,15 +425,15 @@ describe('install validation — every bad answer refused by the plan, identical
 		expect(errorsThreeWays({ ...BASE, ...PRODUCTION })).toEqual({
 			argv: [],
 			file: [],
-			wizard: [],
+			record: [],
 		});
 	});
 
-	test(`${LANG_ROW.name}: a 'languages:' refusal on argv ≡ answers file ≡ wizard post`, () => {
+	test(`${LANG_ROW.name}: a 'languages:' refusal on argv ≡ answers file ≡ record`, () => {
 		const seen = errorsThreeWays({ ...BASE, ...LANG_ROW.answers });
 		expect(seen.argv.some((error) => error.startsWith(LANG_ROW.prefix))).toBe(true);
 		expect(seen.file).toEqual(seen.argv);
-		expect(seen.wizard).toEqual(seen.argv);
+		expect(seen.record).toEqual(seen.argv);
 	});
 });
 

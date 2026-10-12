@@ -699,7 +699,7 @@ function materializeConsumer(fromRoot: string, to: string): Promise<void> {
 	})();
 }
 
-/** A sealed state file so neither instance ever boots into the install wizard. */
+/** A sealed state file: a finished install, so neither instance's boot is refused (exit 78). */
 function sealStateFile(path: string): void {
 	mkdirSync(join(path, '..'), { recursive: true });
 	writeFileSync(path, `${JSON.stringify({ install_status: 'sealed' })}\n`);

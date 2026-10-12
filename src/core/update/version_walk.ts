@@ -7,7 +7,7 @@
  * before it pulls or builds.
  *
  * MOVED VERBATIM out of code_update.ts so the CLI can load it without
- * config.ts (it must answer in install mode, inside an image the operator is
+ * config.ts (it must answer on a box that is not configured, inside an image the operator is
  * about to replace). A LEAF: version.ts and a type, nothing else.
  * Gates: test/unit/code_update*.test.ts (the swap) and
  * test/unit/image_update_channel_native.test.ts (the CLI's verdicts equal this).

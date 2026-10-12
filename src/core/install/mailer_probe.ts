@@ -1,6 +1,6 @@
 /**
- * Install-wizard SMTP probe — verifies the POSTED outbound-email settings
- * (connection + STARTTLS/SSL + authentication) before the wizard persists them
+ * Installer SMTP probe — verifies the POSTED outbound-email settings
+ * (connection + STARTTLS/SSL + authentication) before the installer persists them
  * as DEDALO_SMTP_* keys. Model: db_probe.ts. nodemailer's verify() runs the
  * SMTP handshake (EHLO, TLS upgrade, AUTH) and quits; no email is sent — unless
  * the caller names a TEST RECIPIENT (`sendTo`, the terminal installer's mail
@@ -13,7 +13,7 @@
  * The runtime consumer of the persisted keys is core/mailer/mailer.ts; the
  * secure-mode mapping here matches it exactly, and TLS peer verification is
  * ALWAYS on (WC-023 D1 — never disableable; pin a private CA via
- * NODE_EXTRA_CA_CERTS). Never throws: the wizard shows the probe report inline.
+ * NODE_EXTRA_CA_CERTS). Never throws: the installer prints the probe report.
  */
 
 import nodemailer from 'nodemailer';
@@ -25,7 +25,7 @@ export interface MailerProbeResult {
 	msg: string;
 }
 
-/** Handshake timeout: long enough for a slow relay, short enough for a wizard. */
+/** Handshake timeout: long enough for a slow relay, short enough for an interactive install. */
 const PROBE_TIMEOUT_MS = 10_000;
 
 /** The From the engine sends with (mailer.ts: DEDALO_SMTP_FROM, else DEDALO_SMTP_USER). */

@@ -1,10 +1,10 @@
 /**
  * TS-NATIVE INSTALL CLI (DEC-19) — headless, unattended install of a fresh
  * Dédalo instance with no PHP anywhere. A FRONT END of the install plan
- * (src/core/install/install_plan.ts): the flags (and an answers file) become the
- * same answers the browser wizard posts, the plan turns them into the .env and
- * the step list, and the EXECUTOR (src/core/install/executor.ts) runs those
- * steps through the ONE step table the wizard routes too (steps.ts) — resumably:
+ * (src/core/install/install_plan.ts): the screens, the flags and an answers file
+ * become the same answers, the plan turns them into the .env and the step list,
+ * and the EXECUTOR (src/core/install/executor.ts) runs those steps through the
+ * ONE step table (steps.ts) — resumably:
  * a plan file and a state file under `<private>/install/` record every step, so
  * an install that dies anywhere is finished with `--resume` or undone with
  * `--abort --confirm-database <db>`. install.sh drives this script; it carries no
@@ -99,7 +99,7 @@
  *
  * Defaults live in the plan, not here: --hierarchies omitted (or `default`) =
  * NO optional thesaurus beyond the ones the chosen ontologies DECLARE
- * (hierarchy60 — the same boxes the wizard pre-ticks; 2026-10-10). The offer is
+ * (hierarchy60 — the same boxes the screens pre-tick; 2026-10-10). The offer is
  * every entry of the vendored thesaurus manifest (install/import/hierarchy/
  * hierarchy.json), with or without data files (one without installs as an empty
  * thesaurus). No toponymy is ever a default: a plan without one prints a
@@ -132,7 +132,7 @@
  * database and no file (a non-vendored choice reads the source's manifest). No
  * root password is needed; one that IS supplied is checked against the policy.
  *
- * --list-ontologies prints ONE JSON line — the catalog view the wizard's
+ * --list-ontologies prints ONE JSON line — the catalog view the installer's
  * Ontologies screen shows (source, default, core, entries with their declared
  * dependencies and what each also installs, warnings) + errors — for the source
  * the other answers select (--ontology-source, --no-update-servers, or the

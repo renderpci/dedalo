@@ -100,20 +100,18 @@ describe('confirmBootedCodeUpdate afterConfirmed hook', () => {
 });
 
 describe('server.ts wiring', () => {
-	test('the confirm block passes the trigger with the boot facts, inside the smoke/install guard', () => {
+	test('the confirm block passes the trigger with the boot facts, inside the smoke-boot guard', () => {
 		const source = stripComments(
 			readFileSync(join(import.meta.dir, '..', '..', 'src', 'server.ts'), 'utf8'),
 		);
-		const call = source.indexOf(
-			'triggerPublicationApiPush({ smokeBoot, installMode: config.installMode })',
-		);
+		const call = source.indexOf('triggerPublicationApiPush({ smokeBoot })');
 		expect(call).toBeGreaterThan(-1);
 		// whitespace-insensitive: the formatter wraps this long dynamic import
 		expect(source).toMatch(/import\(\s*'\.\/core\/publication_host\/api_reconcile\.ts'\s*\)/);
-		// `databaseBoot` = !installMode && !installInProgress() (2026-10-08: a
-		// mid-wizard boot must not touch the not-yet-seeded database either); its
-		// definition is held by install_mode_boot.test.ts.
-		const guard = source.lastIndexOf('if (databaseBoot && !smokeBoot) {', call);
+		// No install-mode guard any more: a box that is not installed never reaches
+		// this block — it refuses to start (boot_refusal.ts; held by
+		// no_install_surface_tripwire), so smoke boot is the only skip.
+		const guard = source.lastIndexOf('if (!smokeBoot) {', call);
 		const confirmImport = source.indexOf("import('./core/update/boot_confirm.ts')", guard);
 		expect(guard).toBeGreaterThan(-1);
 		expect(confirmImport).toBeGreaterThan(guard);
@@ -130,9 +128,7 @@ describe('server.ts wiring', () => {
 		const lockstepImport = source.search(
 			/import\(\s*'\.\/core\/publication_host\/api_reconcile\.ts'\s*\)/,
 		);
-		const call = source.indexOf(
-			'triggerPublicationApiPush({ smokeBoot, installMode: config.installMode })',
-		);
+		const call = source.indexOf('triggerPublicationApiPush({ smokeBoot })');
 		expect(confirmCall).toBeGreaterThan(-1);
 		// a load failure before the call would skip the flip → supervisor rollback of a healthy update
 		expect(lockstepImport).toBeGreaterThan(confirmCall);

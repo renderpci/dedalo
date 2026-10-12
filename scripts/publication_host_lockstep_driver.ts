@@ -22,8 +22,8 @@
  * THE CONFIRM HOOK IS THE PRODUCTION CALLBACK. confirmBootedCodeUpdate's 4th parameter
  * defaults to null: only server.ts's CODE-UPDATE BOOT CONFIRMATION block passes the push.
  * `confirm` passes the same shape: api_reconcile.ts loaded INSIDE the hook, after the flip,
- * then triggerPublicationApiPush with smokeBoot from readEnv('DEDALO_SMOKE_BOOT') and
- * installMode from config — so the drill drives the trigger's own guards. It returns what
+ * then triggerPublicationApiPush with smokeBoot from readEnv('DEDALO_SMOKE_BOOT') — so the
+ * drill drives the trigger's own guard. It returns what
  * the trigger answered, or null when the hook never ran (the sentinel was not flipped).
  *
  * Prints ONE `DRIVER_RESULT <json>` line (exit 0) or `DRIVER_ERROR <message>` (exit 1).
@@ -31,7 +31,6 @@
  * builds bundles and pushes code — never in a live installation.
  */
 
-import { config } from '../src/config/config.ts';
 import { projectRoot, readEnv } from '../src/config/env.ts';
 import {
 	type PushTriggerOutcome,
@@ -104,7 +103,6 @@ async function confirm(args: { name: string; waitMs: number }) {
 			({ triggerPublicationApiPush }) => {
 				hook.trigger = triggerPublicationApiPush({
 					smokeBoot: readEnv('DEDALO_SMOKE_BOOT') === 'true',
-					installMode: config.installMode,
 				});
 			},
 		);

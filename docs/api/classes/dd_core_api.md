@@ -62,7 +62,7 @@ Typically called on page load. `data.context` describes the element the client i
 }
 ```
 
-> Unauthenticated `start` returns the **login** element context (this is what renders the login form) — or, on a fresh unconfigured machine, the **installer** element context, which keeps the wizard mounted across the restart that follows persisting the configuration. The environment block is built by `src/core/resolve/environment.ts`.
+> Unauthenticated `start` returns the **login** element context (this is what renders the login form). There is no installer context: a machine that is not installed does not serve at all — the server refuses to start ([installer reference](../../install/installer_reference.md#a-server-that-is-not-installed-refuses-to-start)). The environment block is built by `src/core/resolve/environment.ts`.
 
 ## read
 

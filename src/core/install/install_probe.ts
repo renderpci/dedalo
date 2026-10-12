@@ -20,7 +20,7 @@
  * BOOT ENVIRONMENT: before the first config-touching import the child seeds
  * the lang keys (a prior partial .env without them would make config throw at
  * import) and — only when the answers name all four — the keys that take
- * config out of install mode. Never a secret.
+ * config off its unconfigured sentinels (src/config/install_state.ts). Never a secret.
  */
 
 import { seedProcessEnv } from '../../config/env.ts';
@@ -39,7 +39,7 @@ export interface ProbeRequest {
 	prior_env?: Record<string, string>;
 }
 
-/** The env keys whose presence (all four) takes config out of install mode. */
+/** The env keys whose presence (all four) takes config off its unconfigured sentinels. */
 const REQUIRED_BOOT_KEYS = ['ENTITY', 'DB_NAME', 'DB_HOST', 'DB_USER'] as const;
 
 /** The neutral boot environment of `answers` (see the header) — never a secret. */

@@ -1,11 +1,10 @@
 /**
- * Restart-after-persist (DEC-19). The server is one long-lived process that
- * froze `config` at import; after persist_config writes `.env`, only a restart
- * can load the real config. We exit with RESTART_EXIT_CODE and let the
- * supervisor (deploy/dedalo-ts.service `Restart=always`, or the `start:supervised`
- * / `dev` loops in package.json) bring a fresh process up — which boots out of
- * install mode. The wizard's separate manual `verify_active_config` click + the
- * client's request retries bridge the ~seconds gap.
+ * Planned restart. The server is one long-lived process that froze `config` and
+ * its module graph at import; after a code update (or a code restore) swaps the
+ * tree, only a restart runs the new code. We exit with RESTART_EXIT_CODE and let
+ * the supervisor (deploy/dedalo-ts.service `Restart=always`, or the
+ * `start:supervised` / `dev` loops in package.json, scripts/dev.ts) bring a fresh
+ * process up. The requesters are core/update/code_update.ts and code_restore.ts.
  *
  * Exit-then-restart beats self-respawn: server.ts refuses to start over a LIVE
  * socket (S2-17b), which a self-`Bun.spawn` replacement would race; the dying
@@ -13,13 +12,10 @@
  * unanswered, and unlinks (server.ts startServer) so the fresh one binds clean.
  *
  * The supervisor contract is gated: test/unit/install_restart_supervisor_tripwire.test.ts
- * asserts the package.json loops exist and key on exactly RESTART_EXIT_CODE.
- * It exists because this file once pointed at a `start:supervised` script that
- * was NEVER written — so under `bun run dev` the wizard killed the server and
- * nothing brought it back, hanging the install at "Save configuration".
+ * asserts the package.json loops exist and key on exactly RESTART_EXIT_CODE —
+ * and that NOT_INSTALLED_EXIT_CODE (src/config/install_state.ts, 78) is the one
+ * exit no supervisor restarts.
  */
-
-import { readEnv } from '../../config/env.ts';
 
 /**
  * "I am obsolete — start me again", as distinct from a clean operator shutdown
@@ -32,12 +28,10 @@ import { readEnv } from '../../config/env.ts';
 export const RESTART_EXIT_CODE = 75;
 
 /**
- * What a restart request actually did — the caller must be able to tell, because
- * "suppressed" is indistinguishable from "restarting" at the call site otherwise.
- * A lifecycle BUTTON reporting success while `DEDALO_INSTALL_NO_RESTART=true`
- * silently swallowed the request is the failure this type exists to prevent.
+ * What a restart request actually did — `draining` when a listening server runs
+ * its graceful shutdown first, `immediate` when there is none (a bare exit).
  */
-export type RestartOutcome = 'suppressed' | 'draining' | 'immediate';
+export type RestartOutcome = 'draining' | 'immediate';
 
 /**
  * The graceful-shutdown entry point, injected by server.ts at boot.
@@ -56,7 +50,7 @@ export function registerGracefulShutdown(handler: GracefulShutdown): void {
 }
 
 /**
- * Schedule the exit so the supervisor restarts us into the real config.
+ * Schedule the exit so the supervisor restarts us into the new code.
  *
  * Routes through the GRACEFUL path when a server is listening. A bare
  * `process.exit` here skipped everything shutdownGracefully does — draining
@@ -67,31 +61,21 @@ export function registerGracefulShutdown(handler: GracefulShutdown): void {
  */
 /*
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
- * engineering/crap_coverage_exempt.json): a ONE-SHOT install procedure that
- * MUTATES THE MACHINE — config files, a database restore, root credentials, a
- * 126 MB hierarchy import, or a process restart. Blocked by DANGER, not by
- * fixture: the hermetic logic in the same subsystem (deriveLangConfig,
- * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
- * (test/unit/tier1_install_native.test.ts).
+ * engineering/crap_coverage_exempt.json): ends the PROCESS. Blocked by DANGER,
+ * not by fixture — the update gates inject `seams.restart` in its place.
  */
 export function scheduleServerRestart(reason: string): RestartOutcome {
-	// Never kill the test runner or the short-lived CLI (which reloads config by
-	// simply exiting on its own): both set DEDALO_INSTALL_NO_RESTART=true.
-	if (readEnv('DEDALO_INSTALL_NO_RESTART') === 'true') {
-		console.warn(`[install] restart suppressed (DEDALO_INSTALL_NO_RESTART): ${reason}`);
-		return 'suppressed';
-	}
 	const handler = gracefulShutdown;
 	if (handler === null) {
 		console.warn(
-			`[install] ${reason} — exiting ${RESTART_EXIT_CODE} for a supervised restart (no listening server to drain).`,
+			`[restart] ${reason} — exiting ${RESTART_EXIT_CODE} for a supervised restart (no listening server to drain).`,
 		);
 		// Delay so the HTTP response flushes before the socket closes.
 		setTimeout(() => process.exit(RESTART_EXIT_CODE), 250);
 		return 'immediate';
 	}
 	console.warn(
-		`[install] ${reason} — draining, then exiting ${RESTART_EXIT_CODE} for a supervised restart.`,
+		`[restart] ${reason} — draining, then exiting ${RESTART_EXIT_CODE} for a supervised restart.`,
 	);
 	// Deferred so THIS request's handler returns before the drain begins —
 	// otherwise the drain waits on the very response that asked for the restart.

@@ -601,26 +601,6 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			});
 		}
 	},
-	get_install_context: async (_rqo, context) => {
-		// The installer's own context request (DEC-19 TS-native install). The
-		// client build reads result.find(el => el.model===self.model), so result
-		// is an ARRAY carrying the installer element. On a fresh machine there is
-		// NO ontology to resolve, so this is a SYNTHETIC context built by hand
-		// (buildInstallContext) carrying exactly the properties render_installer.js
-		// reads — NOT buildStructureContext. The dispatch gate (Gate 1b) already
-		// blocked this action pre-seal-only + IP-gated; post-seal it 404s.
-		const { buildInstallContext } = await import('../../install/context.ts');
-		return { status: 200, body: ok([buildInstallContext()], { requestId: context.requestId }) };
-	},
-	install: async (rqo, context) => {
-		// The wizard step router (DEC-19). Every wizard step rides this one action
-		// with the concrete step in options.action; the response is the TOP-LEVEL
-		// envelope the client reads ({result, msg, ...extras}). The dispatch gate
-		// (Gate 1b) already enforced unsealed + IP-allowed; record-writing steps
-		// re-check the session here (login-gated even while unsealed).
-		const { runInstallStep } = await import('../../install/engine.ts');
-		return runInstallStep(rqo, context);
-	},
 	login: async (rqo, context) => {
 		const options = (rqo.options ?? {}) as { username?: string; auth?: string };
 		const outcome = await login(

@@ -17,8 +17,8 @@ import { parseEnvFile } from '../../config/env.ts';
 import { installPrivateDir } from './paths.ts';
 
 /**
- * The existing .env's values; {} when it is absent or unreadable. Async: the
- * wizard's routes call it, and Bun serves every request from one event loop.
+ * The existing .env's values; {} when it is absent or unreadable. Async: it was
+ * written for the request path (one event loop), and stays non-blocking.
  */
 export async function readPriorEnv(): Promise<Record<string, string>> {
 	const path = join(installPrivateDir(), '.env');

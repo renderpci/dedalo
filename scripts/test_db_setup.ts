@@ -492,7 +492,7 @@ await psql('postgres', [
 ]);
 
 // 2. The install seed THROUGH THE INSTALLER'S RESTORE DOOR — the same
-// `installDbFromSeed()` the CLI, the wizard and install.sh run: restore + the
+// `installDbFromSeed()` the installer (and install.sh) runs: restore + the
 // predated migrations + the derived search stores + the engine ontology + the
 // core hierarchies. Its connection is config's, which the repoint above aimed
 // at this database (the config module is first imported HERE, by this dynamic

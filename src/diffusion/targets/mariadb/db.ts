@@ -258,7 +258,7 @@ export async function getTargetDatabaseStatus(database: string): Promise<TargetD
 }
 
 /**
- * One-shot reachability probe for the INSTALL wizard (DEC-19
+ * One-shot reachability probe for the INSTALLER (DEC-19
  * test_diffusion_connection): open a throwaway connection from POSTED MariaDB
  * credentials, `SELECT 1`, and close immediately — never cached in poolCache
  * (these creds are unverified and per-request). Lives here because this tree is

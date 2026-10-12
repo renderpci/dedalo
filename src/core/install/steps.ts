@@ -1,12 +1,10 @@
 /**
  * THE ONE STEP TABLE (terminal installer, phase 1, 2026-10-11). Every install
  * step id (install_plan.ts INSTALL_STEP_IDS) → the engine call that performs it
- * — the SAME call for both front ends: the wizard router (engine.ts) serializes
- * `run`'s raw outcome onto the wire exactly as before; the terminal executor
- * (executor.ts) additionally applies the executor-only policy:
+ * (`run`), plus the policy the terminal executor (executor.ts) applies:
  *
- *  - `accept`  — the CLI's refusal of an outcome the wizard renders as a report
- *                (a probe that says "no database"); null = accepted;
+ *  - `accept`  — the executor's refusal of an outcome that is a report, not a
+ *                success (a probe that says "no database"); null = accepted;
  *  - `warnings`— the non-blocking lines an outcome carries;
  *  - `verify`  — did the step's work LAND? (absent = always re-run; a probe or
  *                an idempotent upsert). What makes a resume safe: a step whose
@@ -22,18 +20,13 @@
  *                install CREATED;
  *  - `details` — the per-item rows the executor prints after the step (one
  *                row per directory, one per tool): WORDS, never glyphs, so a
- *                screen reader reads them (phase 2, 2026-10-12 — the wizard's
- *                directory and tool reports, now in the terminal).
+ *                screen reader reads them (phase 2, 2026-10-12).
  *
- * The wizard never calls accept/verify/undo: its "a probe answers ok:true with
- * the report" semantics are unchanged. `to_update`, `verify_active_config` and
- * `get_ontology_catalog` are wizard affordances, not steps — they stay in
- * engine.ts.
- *
- * The `run` halves live in step_runs.ts (STEP_RUNS) — the ONLY part the wizard
- * router imports: the executor-only policy here reads the run files (sync I/O)
- * and must stay off the served request path (sync_io_on_request_path_tripwire).
- * Every row's `run` IS the STEP_RUNS entry (gated in install_step_router_native).
+ * The `run` halves live in step_runs.ts (STEP_RUNS); every row's `run` IS the
+ * STEP_RUNS entry. This policy half reads the run files (sync I/O) and is never
+ * on the served request path (sync_io_on_request_path_tripwire;
+ * no_install_surface_tripwire: the server's import closure holds no install
+ * step module).
  */
 
 import { copyFileSync, existsSync, readdirSync, renameSync, rmdirSync, rmSync } from 'node:fs';

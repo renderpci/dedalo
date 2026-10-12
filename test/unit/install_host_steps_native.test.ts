@@ -58,6 +58,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { NOT_INSTALLED_EXIT_CODE } from '../../src/config/install_state.ts';
 import type {
 	HostCommand,
 	HostPlanCtx,
@@ -68,14 +69,15 @@ import { hostFs } from '../../src/core/install/host/fs.ts';
 import { hostReview, hostTable } from '../../src/core/install/host/host_table.ts';
 import { instancePaths } from '../../src/core/install/host/layout.ts';
 import { osRowById, supportedOsList } from '../../src/core/install/host/os_support.ts';
+import { REFUSED_BOOT_EXIT } from '../../src/core/install/host/production/first_boot.ts';
+import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
 import { reviewHostCommands } from '../../src/core/install/host/review.ts';
 import type { RecordedResponse } from '../../src/core/install/host/runner.ts';
 import { renderTemplate, UNIT_TEMPLATES } from '../../src/core/install/host/systemd/render.ts';
 import { type HostStepId, normalizeInstallAnswers } from '../../src/core/install/install_plan.ts';
 import { MEDIA_DIR_MODE } from '../../src/core/install/media_tree.ts';
-import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
-import { readPlanFile, readStateFile } from '../../src/core/install/run_files_core.ts';
 import type { RunEnding } from '../../src/core/install/run_events.ts';
+import { readPlanFile, readStateFile } from '../../src/core/install/run_files_core.ts';
 import { doneSummary } from '../../src/core/install/ui/screens/done.ts';
 import {
 	BUN_PIN,
@@ -487,7 +489,9 @@ describe('abort undoes only what this install created (e)', () => {
 		// Checked BEFORE anything is undone: no engine --abort (it would reset the database on
 		// the operator's behalf), no user removed, no step undone — the install is whole.
 		const duringRefusal = loggedCommands(host.root).slice(beforeRefusal);
-		expect(duringRefusal.filter((line) => /--abort|userdel|groupdel|rm -rf/.test(line))).toEqual([]);
+		expect(duringRefusal.filter((line) => /--abort|userdel|groupdel|rm -rf/.test(line))).toEqual(
+			[],
+		);
 		expect(refused.transcript.lines.some((line) => line.startsWith('→ undoing:'))).toBe(false);
 		// With it: dropped (DROP DATABASE, DROP ROLE), the user removed, empty dirs gone.
 		const aborted = await runHost(host, laterRequest('abort', plan, DB));
@@ -794,7 +798,7 @@ describe('refusals, each before anything changes (f)', () => {
 			sentence: '`/usr/sbin/httpd -S` failed (exit 1)',
 		},
 		{
-			name: "an instance directory already exists (never taken over: the answers may point at /var/www, /srv…)",
+			name: 'an instance directory already exists (never taken over: the answers may point at /var/www, /srv…)',
 			options: { files: new Map([[`/srv/dedalo/${INSTANCE}/`, '']]) },
 			sentence: `/srv/dedalo/${INSTANCE} already exists`,
 		},
@@ -928,7 +932,8 @@ function engineFails(): RecordedResponse[] {
 			match: `${child} --status --json`,
 			after: `${child} --request-stdin`,
 			until: `${child} --abort`,
-			stdout: '{"exists":true,"outcome":"in_progress","failed_step":"install_db_from_default_file"}\n',
+			stdout:
+				'{"exists":true,"outcome":"in_progress","failed_step":"install_db_from_default_file"}\n',
 		},
 	];
 }
@@ -960,9 +965,7 @@ describe('the web steps never leave the host half-configured (review)', () => {
 			`/etc/nginx/dedalo/${INSTANCE}`,
 		])
 			expect(() => statSync(join(host.root, path)), path).toThrow();
-		expect(loggedCommands(host.root)).toContain(
-			`/usr/bin/gpasswd -d www-data ded_${INSTANCE}`,
-		);
+		expect(loggedCommands(host.root)).toContain(`/usr/bin/gpasswd -d www-data ded_${INSTANCE}`);
 	});
 
 	test("Apache: a failed module listing is refused as what it is — never read as 'modules missing'", async () => {
@@ -976,16 +979,18 @@ describe('the web steps never leave the host half-configured (review)', () => {
 
 	test('the site includes only ROOT-OWNED copies of the media rules, never a file under MEDIA_PATH', () => {
 		const ctx = productionPlanCtx(UBUNTU_NGINX_LE);
-		const includes = [...siteText(ctx, certificatePaths(ctx)).matchAll(/^\s*include\s+(\S+);/gm)].map(
-			(m) => m[1] as string,
-		);
+		const includes = [
+			...siteText(ctx, certificatePaths(ctx)).matchAll(/^\s*include\s+(\S+);/gm),
+		].map((m) => m[1] as string);
 		expect(includes).toEqual([RULE_COPY]);
 		expect(includes.filter((path) => path.startsWith(ctx.paths.media))).toEqual([]);
 		const apache = productionPlanCtx(DEBIAN_APACHE_LE);
 		const vhost = siteText(apache, certificatePaths(apache));
 		expect(vhost).not.toMatch(/AllowOverride\s+All/);
 		// Merged after every .htaccess: the instance's file can never switch CGI on.
-		expect(vhost).toMatch(/<Location "\/dedalo\/media\/">\s*Options -Indexes -ExecCGI\s*<\/Location>/);
+		expect(vhost).toMatch(
+			/<Location "\/dedalo\/media\/">\s*Options -Indexes -ExecCGI\s*<\/Location>/,
+		);
 	});
 });
 
@@ -1026,6 +1031,67 @@ describe('the public address is polled while the reload settles (review)', () =>
 	});
 });
 
+describe('a unit that REFUSED to boot stops the first-boot wait at once (phase 5)', () => {
+	const SOCKET_HEALTH = '/usr/bin/curl -s -o /dev/null -w %{http_code} --max-time 10 --unix-socket';
+	const show = (property: string) =>
+		`/usr/bin/systemctl show -p ${property} --value dedalo-ts@${INSTANCE}.service`;
+
+	test('the refusal exit is the engine one (not imported by the root-run step — held equal here)', () => {
+		expect(REFUSED_BOOT_EXIT).toBe(NOT_INSTALLED_EXIT_CODE);
+	});
+
+	test('exit 78 (`failed`, never restarted): refused on the first poll, naming the unit and the journal', async () => {
+		let clock = Date.now();
+		const { host, outcome } = await freshOn(
+			UBUNTU_NGINX_LE,
+			{
+				responses: [
+					{ match: SOCKET_HEALTH, exit: 7, stdout: '000' },
+					{ match: show('Result'), stdout: 'exit-code\n' },
+					{ match: show('ExecMainStatus'), stdout: '78\n' },
+				],
+			},
+			{},
+			() => {
+				clock += 5_000;
+				return clock;
+			},
+		);
+		expect(outcome.failedStep).toBe('host_first_boot');
+		expect(outcome.message).toContain(`dedalo-ts@${INSTANCE}.service refused to boot (exit 78`);
+		expect(outcome.message).toContain(`journalctl -u dedalo-ts@${INSTANCE}.service`);
+		// One poll, not the whole bound.
+		expect(loggedCommands(host.root).filter((line) => line.startsWith(SOCKET_HEALTH)).length).toBe(
+			1,
+		);
+	});
+
+	test('another failure exit is NOT read as a refusal: the wait runs to its bound (the check is not vacuous)', async () => {
+		let clock = Date.now();
+		const { host, outcome } = await freshOn(
+			UBUNTU_NGINX_LE,
+			{
+				responses: [
+					{ match: SOCKET_HEALTH, exit: 7, stdout: '000' },
+					{ match: show('Result'), stdout: 'exit-code\n' },
+					{ match: show('ExecMainStatus'), stdout: '1\n' },
+				],
+			},
+			{},
+			() => {
+				clock += 60_000;
+				return clock;
+			},
+		);
+		expect(outcome.failedStep).toBe('host_first_boot');
+		expect(outcome.message).not.toContain('refused to boot');
+		expect(outcome.message).toContain('not reached after');
+		expect(
+			loggedCommands(host.root).filter((line) => line.startsWith(SOCKET_HEALTH)).length,
+		).toBeGreaterThan(1);
+	});
+});
+
 describe('an abort undoes only what it measured as created (review)', () => {
 	test('PostgreSQL unknowable at the System check: the existing role is measured before the CREATE and never dropped', async () => {
 		const { host, plan, outcome } = await freshOn(UBUNTU_NGINX_LE, {
@@ -1062,7 +1128,10 @@ describe('an abort undoes only what it measured as created (review)', () => {
 	test("templates an earlier (aborted) instance wrote: the last instance's abort removes them — the registry decides, not the writer", async () => {
 		const row = osRowById(UBUNTU_NGINX_LE.os);
 		const templates = new Map(
-			UNIT_TEMPLATES.map((name) => [`/etc/systemd/system/${name}`, renderTemplate(name, row, REPO_ROOT)]),
+			UNIT_TEMPLATES.map((name) => [
+				`/etc/systemd/system/${name}`,
+				renderTemplate(name, row, REPO_ROOT),
+			]),
 		);
 		const host = scratchHost(UBUNTU_NGINX_LE, { files: templates });
 		const { plan, planFile } = productionPlan(UBUNTU_NGINX_LE);
@@ -1070,7 +1139,8 @@ describe('an abort undoes only what it measured as created (review)', () => {
 		expect(readStateFile(join(host.root, RUN_DIR))?.created.host?.units).toEqual([]);
 		const abort = await runHost(host, laterRequest('abort', plan));
 		expect(abort.outcome.result).toBe('aborted');
-		for (const path of templates.keys()) expect(() => statSync(join(host.root, path)), path).toThrow();
+		for (const path of templates.keys())
+			expect(() => statSync(join(host.root, path)), path).toThrow();
 	});
 });
 
@@ -1110,6 +1180,8 @@ describe('Done says what the route did (review)', () => {
 		expect(summary('production', 'aborted')).toContain('its database and role');
 		expect(summary('production', 'aborted')).not.toContain('the database itself is kept');
 		expect(summary('docker', 'aborted')).toContain('volumes this install created are removed');
-		expect(summary('production', 'aborted', true)).toContain('the instance itself (its user, database and code) is kept');
+		expect(summary('production', 'aborted', true)).toContain(
+			'the instance itself (its user, database and code) is kept',
+		);
 	});
 });

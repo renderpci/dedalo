@@ -117,10 +117,10 @@ logs in normally afterwards.
 
 ## Configuration
 
-The [install wizard](../install/installer_reference.md#the-browser-wizard)
-offers these settings during installation (the optional **Outbound email**
-step, which also verifies the connection against the relay), and the CLI
-installer accepts them as `--mailer --smtp-*` flags (see
+The [installer](../install/installer_reference.md#interactive-mode) asks for
+these settings during installation (the optional *Mail* screen, which
+also verifies the connection against the relay), and accepts them as
+`--mailer --smtp-*` flags (see
 [the installer reference](../install/installer_reference.md#command-line-flags)).
 On an existing installation, set the keys by hand: they live in
 `../private/.env` and are documented in

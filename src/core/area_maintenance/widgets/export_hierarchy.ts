@@ -9,7 +9,7 @@
  * It is not a choice: the only useful destination is the directory the IMPORT
  * half already reads (`install/import/hierarchy` — HIERARCHY_IMPORT_DIR), so a
  * file exported here is immediately offered by the add_hierarchy panel and the
- * install wizard. It is therefore a FIXED, repo-root-derived constant, not a
+ * installer. It is therefore a FIXED, repo-root-derived constant, not a
  * config key — the same treatment every other v6 `*_PATH` constant got
  * (config/migration_map.ts DERIVED_PATH). The widget serves it to the client as
  * `export_hierarchy_path`; without that value the panel renders its

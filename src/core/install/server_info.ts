@@ -1,11 +1,10 @@
 /**
- * Diagnostics grid cards for the install wizard (DEC-19, TS-native installer).
+ * Host facts for the terminal installer's probe screen (probes.ts; DEC-19).
  * COSMETIC ONLY — the real progression gate is init_test.result. Only
  * TS-MEANINGFUL facts are emitted: the PHP/Apache-specific checkers
  * (php_version, apache_version, memory_limit, php_memory, max_execution_time,
- * php_user, gd, mbstring) were REMOVED from both this payload and the installer
- * client's grid (WC-2026-07-09-installer-diagnostics-grid) — the Bun server has no
- * PHP, so they were always '—'.
+ * php_user, gd, mbstring) were removed (WC-2026-07-09-installer-diagnostics-grid)
+ * — the Bun server has no PHP.
  */
 
 import { statfsSync } from 'node:fs';

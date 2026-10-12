@@ -36,7 +36,10 @@ RuntimeDirectoryMode=0750
 UMask=0007
 Restart=always
 RestartSec=3
+# 75: a planned restart (code update). 78: refused — not installed / config
+# missing / install unfinished (src/config/install_state.ts); never restarted.
 SuccessExitStatus=75
+RestartPreventExitStatus=78
 TimeoutStopSec=30
 KillSignal=SIGTERM
 KillMode=process

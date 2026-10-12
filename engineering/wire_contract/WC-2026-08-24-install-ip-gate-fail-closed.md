@@ -105,3 +105,5 @@ re-harvest (the WC-001 pattern does not even apply; nothing on the wire moved).
   open default are INVERTED in the same change, not deleted.
 - `test/unit/install_gate.test.ts` — unchanged and still green: its anonymous
   context is `'local'`, which the new default admits.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (whole: the install window and `DEDALO_INSTALL_ALLOWED_IPS` are removed; the entry grammar lives on in `src/core/security/ip_allowlist.ts` (gate `test/unit/ip_allowlist.test.ts`))

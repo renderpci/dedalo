@@ -2,12 +2,12 @@
  * The vendored THESAURUS MANIFEST, as the installer reads it —
  * `install/import/hierarchy/hierarchy.json` (format + strict reader:
  * ontology/hierarchy_manifest_format.ts; WC-2026-10-10-hierarchy-json-manifest).
- * ONE reader, shared by every consumer that must agree: the wizard's checkbox
- * list (install/context.ts), the add_hierarchy maintenance widget, the plan's
+ * ONE reader, shared by every consumer that must agree: the add_hierarchy
+ * maintenance widget's checkbox list, the plan's
  * thesaurus choice and dependency rule (install_plan.ts, ontology_choice.ts),
  * and the import + activation that run on the tlds they return
  * (hierarchy_import.ts, hierarchy_activate.ts). A second copy of this lookup
- * would let the wizard offer a hierarchy the activator cannot describe.
+ * would let the installer offer a hierarchy the activator cannot describe.
  *
  * It replaced (2026-10-10) the three hand-written vendored metadata files
  * (named in WC-2026-10-10-hierarchy-json-manifest): the manifest is
@@ -121,7 +121,7 @@ export function hierarchyMetaByTld(tld: string, dir?: string): HierarchyMeta | n
 	);
 }
 
-/** One row of the client's thesaurus checkbox list (wizard + add_hierarchy widget). */
+/** One row of the client's thesaurus checkbox list (the add_hierarchy widget). */
 export interface HierarchyChoiceView {
 	tld: string;
 	/** The name in the READER's language (picked from `name_data`), or the tld when it has none. */
@@ -161,8 +161,8 @@ function labelIn(
 
 /**
  * THE client view of the offer — the `{tld, label, typology}` /
- * `{typology, label}` shape render_hierarchies_import_block groups by (shared
- * by the wizard context and the add_hierarchy widget), derived from the
+ * `{typology, label}` shape render_hierarchies_import_block groups by (served
+ * by the add_hierarchy widget), derived from the
  * manifest in this ONE place. Labels are picked in `lang` — the requesting
  * user's application language (the caller passes currentApplicationLang()).
  */

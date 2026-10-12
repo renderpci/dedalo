@@ -1,43 +1,45 @@
 /**
- * INSTALL PLAN PARITY TRIPWIRE — the CLI and the browser wizard are FRONT ENDS
- * of one install plan (src/core/install/install_plan.ts; installer unification
- * A1/A3/A7, 2026-10-08), so the same answers must produce the same install.
+ * INSTALL PLAN PARITY TRIPWIRE — the flags, the answers record (the shape the
+ * answers file and the interactive screens produce) and the answers FILE are
+ * FRONT ENDS of one install plan (src/core/install/install_plan.ts; installer
+ * unification A1/A3/A7, 2026-10-08), so the same answers must produce the same
+ * install. (The browser wizard was a fourth front end until 2026-10-12 —
+ * WC-2026-10-12-install-surface-removed; the plain and full-screen modes are
+ * held to this same matrix by install_plain_parity / install_tui_parity.)
  *
  * WHY. Before the plan module each front end carried its own answers → .env
  * mapping and its own defaults, and they had drifted (measured): the CLI
  * defaulted the database host to `/tmp`, wrote an empty entity label,
- * installed no optional thesaurus while the wizard pre-ticked three, silently
+ * installed no optional thesaurus while the old wizard pre-ticked three, silently
  * accepted `--yes` and any other unknown flag, and NO front end wrote
  * ONTOLOGY_SERVERS / CODE_SERVERS — every fresh install's update panels said
  * "No master servers are configured".
  *
  * WHAT IS MEASURED (outcomes, not spellings):
  *  (a) an answer matrix — base, +diffusion, +mailer, +serving keys, air-gapped,
- *      thesauri default / none / explicit / with the core `lg` — posted the
- *      wizard's way (its record shape; the default thesauri read from the
- *      wizard's own context) and typed the CLI's way (argv through
+ *      thesauri default / none / explicit / with the core `lg` — as an answers
+ *      RECORD (its key names, its value shapes; the defaults read from
+ *      install_plan / ontology_choice) and typed the CLI's way (argv through
  *      answersFromCliArgs): identical .env sections, keys, steps, thesauri.
- *      (The wizard's thesauri are posted again to install_hierarchies, which
- *      runs the plan's normalizeHierarchyChoice — gated where it is wired, in
- *      install_step_router_native.)
  *  (b) ONE spawned `scripts/install.ts --plan` equals the in-process plan —
  *      the CLI really runs the module, not a copy of it;
  *  (c) persistConfig, run in two scratch private dirs from the CLI-derived and
- *      the wizard answers, writes .env files whose parsed keys AND values are
+ *      the raw record answers, writes .env files whose parsed keys AND values are
  *      identical except the generated DEDALO_SALT_STRING;
  *  (d) the default .env carries the official servers, and the plan's official
  *      constants equal the fenced examples the config catalog documents (one
  *      truth); air-gapped writes `[]`; a prior custom server list survives a
  *      non-air-gapped re-run verbatim, but a prior `[]` (an earlier air-gapped
  *      answer) yields to an official re-run;
- *  (e) every plan step is an action the wizard router serves;
+ *  (e) every engine step any plan emits is a key of the ONE step table the
+ *      executor runs (steps.ts INSTALL_STEPS);
  *  (f) unknown flags (`--yes`) and value flags without a value are errors and
  *      the spawned CLI exits 1; `lg` is dropped with a note; a tld hierarchy.json
  *      does not list is an error;
  *  (g) no plan, whatever the answers, owns DEDALO_SUPERVISED — supervision is
  *      declared by the process manager, never by ../private/.env;
  *  (h) DOMAIN ONTOLOGIES (A4/A5/A6, 2026-10-09): the default (no flag ≡ the
- *      wizard posting its context default), an explicit `--ontologies oh`, a
+ *      record's default, DEFAULT_DOMAIN_ONTOLOGIES), an explicit `--ontologies oh`, a
  *      core TLD dropped with a note, `none` and an air-gapped non-vendored
  *      choice refused the same on both sides; a LOCAL fixture source (a
  *      package this gate builds into a mkdtemp dir — zz TLDs, a declared
@@ -45,7 +47,7 @@
  *      the resolved catalog (closure, ACTIVE_ONTOLOGY_TLDS), `--list-ontologies`
  *      prints exactly describeOntologyCatalog of it, persistConfig writes the
  *      same ACTIVE_ONTOLOGY_TLDS, and that written list maps back
- *      (ontologyRequestFromActive — the wizard's restarted process) to the very
+ *      (ontologyRequestFromActive) to the very
  *      request the CLI plan stages.
  *  (i) DECLARED DEPENDENCIES (hierarchy60): every declared one pre-ticked —
  *      the core TLDs' declarations (vendoredCoreDeclarers) in EVERY plan, then
@@ -56,7 +58,7 @@
  *  (j) THE ANSWERS FILE (`--answers`, terminal installer 2026-10-11) is a third
  *      front end: every matrix case, written as a `dedalo.install.answers/1`
  *      file (its secrets apart — a file may not carry one, they ride
- *      DEDALO_INSTALL_*), decides exactly what the wizard post decides; a
+ *      DEDALO_INSTALL_*), decides exactly what the record decides; a
  *      spawned `--answers <file> --plan` prints the in-process plan; a key
  *      set by both the file and a flag is an error, never a silent winner;
  *      the run-control flags are front-end flags (key null) and their
@@ -77,12 +79,10 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { MAINTENANCE_KEYS } from '../../src/config/catalog/maintenance.ts';
 import { parseEnvFile } from '../../src/config/env.ts';
-import { INSTALL_ROUTER_ACTIONS } from '../../src/core/install/engine.ts';
 import {
 	CORE_HIERARCHIES,
 	hierarchyChoiceView,
 	offeredHierarchies,
-	TOPONYMY_TYPOLOGY_ID,
 } from '../../src/core/install/hierarchy_meta.ts';
 import {
 	ANSWERS_FILE_SCHEMA,
@@ -113,20 +113,20 @@ import {
 	ontologyRequestFromActive,
 	vendoredOntologyCatalog,
 } from '../../src/core/install/ontology_choice.ts';
+import { INSTALL_STEPS } from '../../src/core/install/steps.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import { buildOntologyPackage } from '../../src/core/test_data/ontology_package_fixture.ts';
 import {
 	BASE_ARGV,
-	BASE_WIZARD,
+	BASE_RECORD,
 	CASES,
+	DEFAULT_ONTOLOGIES,
 	DIFFUSION_ARGV,
-	DIFFUSION_WIZARD,
+	DIFFUSION_RECORD,
 	decided,
 	declaredThesauri,
 	MAILER_ARGV,
-	MAILER_WIZARD,
-	WIZARD_CONTEXT_PROPERTIES,
-	WIZARD_DEFAULT_ONTOLOGIES,
+	MAILER_RECORD,
 } from '../helpers/install_answer_cases.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -135,12 +135,13 @@ const CONFIG_PERSIST = join(ROOT, 'src/core/install/config_persist.ts');
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_plan_parity_'));
 afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
 
-const WIZARD_PROPERTIES = WIZARD_CONTEXT_PROPERTIES;
+/** The ONE step table's keys — what the executor can run. */
+const EXECUTOR_STEPS: readonly string[] = Object.keys(INSTALL_STEPS);
 
 /** What the core TLDs alone declare (every plan carries it). */
 const CORE_DECLARED = declaredThesauri([]);
 /** What the DEFAULT install (core + the default domain ontologies) declares. */
-const DEFAULT_DECLARED = declaredThesauri(WIZARD_DEFAULT_ONTOLOGIES);
+const DEFAULT_DECLARED = declaredThesauri(DEFAULT_ONTOLOGIES);
 
 /** An empty private dir: the spawned CLI's prior .env (none). */
 const EMPTY_PRIVATE = mkdtempSync(join(scratchRoot, 'empty_private_'));
@@ -271,7 +272,6 @@ await persistConfig(answers);`;
 			...Bun.env,
 			DEDALO_INSTALL_PRIVATE_DIR: privateDir,
 			DEDALO_TS_STATE_PATH: join(privateDir, 'ts_state.json'),
-			DEDALO_INSTALL_NO_RESTART: 'true',
 		},
 		stdin: Buffer.from(JSON.stringify(answers)),
 		stdout: 'pipe',
@@ -293,23 +293,21 @@ function catalogExample(key: 'ONTOLOGY_SERVERS' | 'CODE_SERVERS'): unknown {
 	return JSON.parse((line as string).slice(key.length + 1));
 }
 
-// ── (a) CLI ≡ wizard ─────────────────────────────────────────────────────────
+// ── (a) flags ≡ record ───────────────────────────────────────────────────────
 
-describe('install plan — CLI ≡ wizard (a)', () => {
-	test('the wizard pre-ticks NO thesaurus by default — no default list is served, the offer is real (the matrix is not vacuous)', () => {
-		expect('install_checked_default' in WIZARD_PROPERTIES).toBe(false);
-		expect(WIZARD_PROPERTIES.hierarchies.length).toBeGreaterThan(0);
-		expect(WIZARD_PROPERTIES.toponymy_typology).toBe(TOPONYMY_TYPOLOGY_ID);
+describe('install plan — flags ≡ record (a)', () => {
+	test('the offer is real and the matrix is not vacuous', () => {
+		expect(offeredHierarchies().length).toBeGreaterThan(0);
 		expect(CASES.length).toBeGreaterThanOrEqual(8);
 	});
 
 	for (const answerCase of CASES) {
 		test(`${answerCase.name}: same .env sections, keys, steps, thesauri`, () => {
 			const fromCli = cliPlan(answerCase.argv);
-			const fromWizard = buildInstallPlan(answerCase.wizard);
+			const fromRecord = buildInstallPlan(answerCase.record);
 			expect(fromCli.errors).toEqual([]);
 			expect(fromCli.envKeys.length).toBeGreaterThan(15);
-			expect(decided(fromCli)).toEqual(decided(fromWizard));
+			expect(decided(fromCli)).toEqual(decided(fromRecord));
 		});
 	}
 
@@ -324,12 +322,12 @@ describe('install plan — CLI ≡ wizard (a)', () => {
 		expect(mailer.envKeys).toContain('DEDALO_SMTP_HOST');
 		expect(cliPlan(CASES[3]?.argv ?? []).envKeys).toContain('SERVER_UNIX_SOCKET');
 		// The ONLY pre-selection is the release's declared thesauri (core + oh):
-		// the default (the wizard's empty post) and `none` alike — never anything else.
+		// the default (an empty record) and `none` alike — never anything else.
 		expect(DEFAULT_DECLARED.install.length, 'the release declares thesauri').toBeGreaterThan(0);
 		expect(base.hierarchies).toEqual(DEFAULT_DECLARED.install);
 		expect(base.hierarchyDependencies).toEqual(DEFAULT_DECLARED.dependencies);
 		expect(cliPlan(CASES[5]?.argv ?? []).hierarchies).toEqual(DEFAULT_DECLARED.install);
-		expect(buildInstallPlan(BASE_WIZARD).hierarchies).toEqual(DEFAULT_DECLARED.install);
+		expect(buildInstallPlan(BASE_RECORD).hierarchies).toEqual(DEFAULT_DECLARED.install);
 		// No toponymy chosen → the SUGGESTION (never a pre-selection); one chosen → none.
 		expect([...base.suggestions]).toEqual([TOPONYMY_SUGGESTION]);
 		expect(cliPlan(CASES[6]?.argv ?? []).suggestions).toHaveLength(0);
@@ -421,24 +419,24 @@ describe('install plan — the CLI runs the module (b)', () => {
 // ── (c) + (d) the written .env ───────────────────────────────────────────────
 
 describe('install plan — the written .env (c, d)', () => {
-	test('CLI-derived and wizard answers write the same .env (salt aside)', () => {
+	test('CLI-derived (plan-normalized) and raw record answers write the same .env (salt aside)', () => {
 		const answerCase = {
 			argv: [...BASE_ARGV, ...DIFFUSION_ARGV, ...MAILER_ARGV],
-			wizard: { ...BASE_WIZARD, ...DIFFUSION_WIZARD, ...MAILER_WIZARD },
+			record: { ...BASE_RECORD, ...DIFFUSION_RECORD, ...MAILER_RECORD },
 		};
 		// The CLI hands persistConfig the plan's normalized answers (scripts/install.ts).
 		const cliAnswers = { ...cliPlan(answerCase.argv).answers };
 		const cliEnv = parseEnvFile(persistInChild(cliAnswers, scratchDir('cli')));
-		const wizardEnv = parseEnvFile(persistInChild(answerCase.wizard, scratchDir('wizard')));
+		const recordEnv = parseEnvFile(persistInChild(answerCase.record, scratchDir('record')));
 		expect(Object.keys(cliEnv).length).toBeGreaterThan(30);
 		expect(cliEnv.DEDALO_SALT_STRING).toMatch(/^[0-9a-f]{64}$/);
 		const { DEDALO_SALT_STRING: _cliSalt, ...cliRest } = cliEnv;
-		const { DEDALO_SALT_STRING: _wizardSalt, ...wizardRest } = wizardEnv;
-		expect(cliRest).toEqual(wizardRest);
-		// The default domain ontology, after the core — and the wizard's restarted
-		// process maps that written list back to the very request the CLI stages.
-		const active = JSON.parse(wizardEnv.ACTIVE_ONTOLOGY_TLDS as string) as string[];
-		expect(active).toEqual([...CORE_ONTOLOGY_TLDS, ...WIZARD_DEFAULT_ONTOLOGIES]);
+		const { DEDALO_SALT_STRING: _recordSalt, ...recordRest } = recordEnv;
+		expect(cliRest).toEqual(recordRest);
+		// The default domain ontology, after the core — and that written list maps
+		// back to the very request the CLI stages.
+		const active = JSON.parse(recordEnv.ACTIVE_ONTOLOGY_TLDS as string) as string[];
+		expect(active).toEqual([...CORE_ONTOLOGY_TLDS, ...DEFAULT_ONTOLOGIES]);
 		const back = ontologyRequestFromActive(active, vendoredOntologyCatalog());
 		expect(back.errors).toEqual([]);
 		expect(back.request).toEqual(cliPlan(answerCase.argv).ontologyRequest);
@@ -447,14 +445,14 @@ describe('install plan — the written .env (c, d)', () => {
 	test('the default .env carries the official servers — the SAME entries the catalog documents', () => {
 		expect([OFFICIAL_ONTOLOGY_SERVER]).toEqual(catalogExample('ONTOLOGY_SERVERS') as never);
 		expect([OFFICIAL_CODE_SERVER]).toEqual(catalogExample('CODE_SERVERS') as never);
-		const env = parseEnvFile(persistInChild(BASE_WIZARD, scratchDir('default')));
+		const env = parseEnvFile(persistInChild(BASE_RECORD, scratchDir('default')));
 		expect(JSON.parse(env.ONTOLOGY_SERVERS as string)).toEqual([OFFICIAL_ONTOLOGY_SERVER]);
 		expect(JSON.parse(env.CODE_SERVERS as string)).toEqual([OFFICIAL_CODE_SERVER]);
 	});
 
 	test('air-gapped writes [] for both lists', () => {
 		const env = parseEnvFile(
-			persistInChild({ ...BASE_WIZARD, update_servers: false }, scratchDir('airgapped')),
+			persistInChild({ ...BASE_RECORD, update_servers: false }, scratchDir('airgapped')),
 		);
 		expect(JSON.parse(env.ONTOLOGY_SERVERS as string)).toEqual([]);
 		expect(JSON.parse(env.CODE_SERVERS as string)).toEqual([]);
@@ -465,24 +463,24 @@ describe('install plan — the written .env (c, d)', () => {
 		const mirror =
 			'ONTOLOGY_SERVERS=[{"name":"Mirror","url":"https://mirror.example.org/dedalo/core/api/v1/json/","code":"m1"}]';
 		writeFileSync(join(dir, '.env'), `DEDALO_SALT_STRING=deadbeef\n${mirror}\n`);
-		const body = persistInChild(BASE_WIZARD, dir);
+		const body = persistInChild(BASE_RECORD, dir);
 		const lines = body.split('\n');
 		expect(lines.filter((line) => line.startsWith('ONTOLOGY_SERVERS='))).toEqual([mirror]);
 		// The list the operator did not customise is still written official.
 		expect(JSON.parse(parseEnvFile(body).CODE_SERVERS as string)).toEqual([OFFICIAL_CODE_SERVER]);
 	});
 
-	// The wizard re-save it invites: an air-gapped save, then a reload (the box
-	// arrives ticked) and a save with the official server. The earlier `[]` is an
-	// ANSWER, not a mirror — keeping it would leave the install offline while the
-	// form showed the official server. Same for an unparseable prior value.
+	// A re-run after an air-gapped install, answering the official server. The
+	// earlier `[]` is an ANSWER, not a mirror — keeping it would leave the install
+	// offline while the operator answered the official server. Same for an
+	// unparseable prior value.
 	test('an official re-run after an air-gapped one writes the official lists (a prior [] is not preserved)', () => {
 		const dir = scratchDir('airgapped_then_official');
 		writeFileSync(
 			join(dir, '.env'),
 			'DEDALO_SALT_STRING=deadbeef\nONTOLOGY_SERVERS=[]\nCODE_SERVERS=not-json\n',
 		);
-		const body = persistInChild(BASE_WIZARD, dir);
+		const body = persistInChild(BASE_RECORD, dir);
 		const env = parseEnvFile(body);
 		expect(JSON.parse(env.ONTOLOGY_SERVERS as string)).toEqual([OFFICIAL_ONTOLOGY_SERVER]);
 		expect(JSON.parse(env.CODE_SERVERS as string)).toEqual([OFFICIAL_CODE_SERVER]);
@@ -498,7 +496,7 @@ describe('install plan — the written .env (c, d)', () => {
 			join(dir, '.env'),
 			'DEDALO_SALT_STRING=deadbeef\nONTOLOGY_SERVERS=[{"name":"Mirror","url":"https://m.example.org/","code":"m1"}]\n',
 		);
-		const env = parseEnvFile(persistInChild({ ...BASE_WIZARD, update_servers: false }, dir));
+		const env = parseEnvFile(persistInChild({ ...BASE_RECORD, update_servers: false }, dir));
 		expect(JSON.parse(env.ONTOLOGY_SERVERS as string)).toEqual([]);
 	});
 });
@@ -506,10 +504,10 @@ describe('install plan — the written .env (c, d)', () => {
 // ── (h) domain ontologies ────────────────────────────────────────────────────
 
 describe('install plan — domain ontologies (h)', () => {
-	test('the default is the wizard default, installed from the vendored file', () => {
+	test('the default is DEFAULT_DOMAIN_ONTOLOGIES, installed from the vendored file', () => {
 		const plan = cliPlan(BASE_ARGV);
-		expect(WIZARD_DEFAULT_ONTOLOGIES).toEqual(['oh']);
-		expect(plan.ontologies).toEqual(WIZARD_DEFAULT_ONTOLOGIES);
+		expect(DEFAULT_ONTOLOGIES).toEqual(['oh']);
+		expect(plan.ontologies).toEqual(DEFAULT_ONTOLOGIES);
 		expect(plan.ontologyRequest?.items.map((item) => [item.tld, item.origin])).toEqual([
 			['oh', 'vendored'],
 		]);
@@ -524,7 +522,7 @@ describe('install plan — domain ontologies (h)', () => {
 	test('`none` is refused the same way on both sides', () => {
 		const none = 'at least one domain ontology is required (the default is oh)';
 		expect(cliPlan([...BASE_ARGV, '--ontologies', 'none']).errors).toContain(none);
-		expect(buildInstallPlan({ ...BASE_WIZARD, ontologies: [] }).errors).toContain(none);
+		expect(buildInstallPlan({ ...BASE_RECORD, ontologies: [] }).errors).toContain(none);
 		const spawned = spawnPlan([...BASE_ARGV, '--ontologies', 'none']);
 		expect(spawned.exitCode).toBe(1);
 		expect((JSON.parse(spawned.stdout.trim()) as { errors: string[] }).errors).toContain(none);
@@ -534,13 +532,13 @@ describe('install plan — domain ontologies (h)', () => {
 		const refusal =
 			"unknown ontology 'tch' — not offered by the built-in set (air-gapped: only oh is available offline)";
 		const cli = cliPlan([...BASE_ARGV, '--no-update-servers', '--ontologies', 'oh,tch']);
-		const wizard = buildInstallPlan({
-			...BASE_WIZARD,
+		const record = buildInstallPlan({
+			...BASE_RECORD,
 			update_servers: false,
 			ontologies: ['oh', 'tch'],
 		});
 		expect(cli.errors).toContain(refusal);
-		expect(decided(cli)).toEqual(decided(wizard));
+		expect(decided(cli)).toEqual(decided(record));
 		const spawned = spawnPlan([...BASE_ARGV, '--no-update-servers', '--ontologies', 'oh,tch']);
 		expect(spawned.exitCode).toBe(1);
 		expect((JSON.parse(spawned.stdout.trim()) as { errors: string[] }).errors).toContain(refusal);
@@ -669,15 +667,15 @@ describe('install plan — declared dependencies: all pre-ticked; a thesaurus ne
 			expect(cli.warnings).toContain(
 				`the thesaurus '${THESAURUS_REQUIRED}' (declared mandatory by 'zzqc') is declined — not installed; it is strongly recommended and can be installed later from Maintenance › Install hierarchies`,
 			);
-			// the wizard posts the same answer as a list: the same plan
-			const wizard = buildInstallPlan(
+			// the record carries the same answer as a list: the same plan
+			const record = buildInstallPlan(
 				{
 					...answersFromCliArgs(declineArgv).raw,
 					declined_dependencies: ['zzqd', THESAURUS_REQUIRED, `${THESAURUS_OPTIONAL}:hierarchy1`],
 				},
 				{ ontologyCatalog: resolved.catalog },
 			);
-			expect(decided(wizard)).toEqual(decided(cli));
+			expect(decided(record)).toEqual(decided(cli));
 			// the spawned CLI prints that plan
 			const spawned = spawnPlan(declineArgv);
 			expect(spawned.exitCode, spawned.stderr).toBe(0);
@@ -722,17 +720,16 @@ describe('install plan — declared dependencies: all pre-ticked; a thesaurus ne
 
 // ── (e) routable steps ───────────────────────────────────────────────────────
 
-describe('install plan — every step is routable (e)', () => {
-	test('every INSTALL_STEP_ID — and every step any plan emits — is a wizard router action', () => {
-		expect(INSTALL_ROUTER_ACTIONS.length).toBeGreaterThanOrEqual(INSTALL_STEP_IDS.length);
-		expect(INSTALL_STEP_IDS.filter((step) => !INSTALL_ROUTER_ACTIONS.includes(step))).toEqual([]);
+describe('install plan — every engine step is in the ONE step table (e)', () => {
+	test('every INSTALL_STEP_ID — and every step any plan emits — is a key of INSTALL_STEPS', () => {
+		expect(INSTALL_STEP_IDS.filter((step) => !EXECUTOR_STEPS.includes(step))).toEqual([]);
 		for (const answerCase of CASES) {
 			const steps = cliPlan(answerCase.argv).steps;
 			// Phase 4: these cases are the developer route — ENGINE steps only (the host
-			// routes' host_*/stack_* steps never reach the wizard router: (e2)).
+			// routes' host_*/stack_* steps are the host tables': (e2)).
 			expect(steps.filter((step) => !isInstallStepId(step))).toEqual([]);
 			expect(
-				steps.filter((step) => !isInstallStepId(step) || !INSTALL_ROUTER_ACTIONS.includes(step)),
+				steps.filter((step) => !isInstallStepId(step) || !EXECUTOR_STEPS.includes(step)),
 			).toEqual([]);
 			expect(steps).toContain('install_hierarchies');
 			// the ontology files are staged before the restore and imported right after it
@@ -764,7 +761,7 @@ describe('install plan — the host routes plan host steps; their engine child p
 		{ route: 'trial', argv: ['--route', 'trial'], ids: STACK_HOST_STEP_IDS },
 	];
 	for (const { route, argv, ids } of ROUTES) {
-		test(`${route}: every step is a host step of its table; --engine-only plans the router's engine steps`, () => {
+		test(`${route}: every step is a host step of its table; --engine-only plans the executor's engine steps`, () => {
 			const host = cliPlan([...IDENTITY, ...argv]);
 			expect(host.errors).toEqual([]);
 			expect(host.steps.length).toBeGreaterThan(5);
@@ -772,9 +769,7 @@ describe('install plan — the host routes plan host steps; their engine child p
 			const child = cliPlan([...IDENTITY, ...argv, '--engine-only']);
 			expect(child.errors).toEqual([]);
 			expect(
-				child.steps.filter(
-					(step) => !isInstallStepId(step) || !INSTALL_ROUTER_ACTIONS.includes(step),
-				),
+				child.steps.filter((step) => !isInstallStepId(step) || !EXECUTOR_STEPS.includes(step)),
 			).toEqual([]);
 			expect(child.steps).toContain('install_db_from_default_file');
 		});
@@ -807,7 +802,7 @@ describe('install plan — refusals and notes (f)', () => {
 		]);
 		expect(withLg.notes.some((note) => note.startsWith('lg is a core hierarchy'))).toBe(true);
 		expect(withLg.errors).toEqual([]);
-		const unknown = buildInstallPlan({ ...BASE_WIZARD, hierarchies: ['zzipv'] });
+		const unknown = buildInstallPlan({ ...BASE_RECORD, hierarchies: ['zzipv'] });
 		expect(unknown.errors).toContain("unknown hierarchy 'zzipv' (no entry in hierarchy.json)");
 	});
 
@@ -825,10 +820,10 @@ describe('install plan — refusals and notes (f)', () => {
 
 // ── (j) the answers file is a third front end ────────────────────────────────
 
-/** A wizard post as an answers file's raw answers: the envelope, its secrets apart. */
-function answersFileRaw(wizard: Record<string, unknown>): Record<string, unknown> {
+/** An answers record as an answers file's raw answers: the envelope, its secrets apart. */
+function answersFileRaw(record: Record<string, unknown>): Record<string, unknown> {
 	const plain = Object.fromEntries(
-		Object.entries(wizard).filter(
+		Object.entries(record).filter(
 			([key]) => !(SECRET_ANSWER_KEYS as readonly string[]).includes(key),
 		),
 	);
@@ -839,59 +834,59 @@ function answersFileRaw(wizard: Record<string, unknown>): Record<string, unknown
 	return parsed.raw;
 }
 
-/** The secret answers of a wizard post (what DEDALO_INSTALL_* carries beside a file). */
-function secretsOf(wizard: Record<string, unknown>): Record<string, unknown> {
+/** The secret answers of a record (what DEDALO_INSTALL_* carries beside a file). */
+function secretsOf(record: Record<string, unknown>): Record<string, unknown> {
 	return Object.fromEntries(
-		Object.entries(wizard).filter(([key]) =>
+		Object.entries(record).filter(([key]) =>
 			(SECRET_ANSWER_KEYS as readonly string[]).includes(key),
 		),
 	);
 }
 
-describe('install plan — the answers file decides what the wizard decides (j)', () => {
+describe('install plan — the answers file decides what the record decides (j)', () => {
 	for (const answerCase of CASES) {
-		test(`${answerCase.name}: answers file (+ its secrets) ≡ wizard post`, () => {
+		test(`${answerCase.name}: answers file (+ its secrets) ≡ record`, () => {
 			const fromFile = buildInstallPlan({
-				...answersFileRaw(answerCase.wizard),
-				...secretsOf(answerCase.wizard),
+				...answersFileRaw(answerCase.record),
+				...secretsOf(answerCase.record),
 			});
 			expect(fromFile.errors).toEqual([]);
-			expect(decided(fromFile)).toEqual(decided(buildInstallPlan(answerCase.wizard)));
+			expect(decided(fromFile)).toEqual(decided(buildInstallPlan(answerCase.record)));
 		});
 	}
 
 	test('a spawned `--answers <file> --plan` prints the in-process plan (secrets through the environment)', () => {
-		const wizard: Record<string, unknown> = {
-			...BASE_WIZARD,
-			...DIFFUSION_WIZARD,
+		const record: Record<string, unknown> = {
+			...BASE_RECORD,
+			...DIFFUSION_RECORD,
 			hierarchies: ['ad'],
 		};
 		const dir = scratchDir('answers_file');
 		const file = join(dir, 'answers.json');
 		writeFileSync(
 			file,
-			JSON.stringify({ schema: ANSWERS_FILE_SCHEMA, answers: answersFileRaw(wizard) }),
+			JSON.stringify({ schema: ANSWERS_FILE_SCHEMA, answers: answersFileRaw(record) }),
 		);
 		const proc = Bun.spawnSync([process.execPath, 'run', CLI, '--plan', '--answers', file], {
 			cwd: ROOT,
 			env: {
 				...Bun.env,
 				DEDALO_INSTALL_PRIVATE_DIR: EMPTY_PRIVATE,
-				DEDALO_INSTALL_DB_PASSWORD: String(wizard.db_password),
-				DEDALO_INSTALL_MYSQL_PASSWORD: String(wizard.mysql_password),
+				DEDALO_INSTALL_DB_PASSWORD: String(record.db_password),
+				DEDALO_INSTALL_MYSQL_PASSWORD: String(record.mysql_password),
 			},
 			stdout: 'pipe',
 			stderr: 'pipe',
 		});
 		expect(proc.exitCode, proc.stderr.toString()).toBe(0);
 		const printed = JSON.parse(proc.stdout.toString().trim()) as Record<string, unknown>;
-		expect(printed).toEqual(printedPlan(buildInstallPlan(wizard), []));
+		expect(printed).toEqual(printedPlan(buildInstallPlan(record), []));
 		expect(printed.steps).toContain('test_diffusion_connection');
 	});
 
 	test('a key set by the file AND a flag is an error naming both — never a silent winner', () => {
 		const flags = answersFromCliArgs(BASE_ARGV).raw;
-		const merged = mergeAnswerSources(flags, answersFileRaw(BASE_WIZARD));
+		const merged = mergeAnswerSources(flags, answersFileRaw(BASE_RECORD));
 		expect(merged.errors).toContain('db_database is set by both --answers and --db-name');
 		expect(merged.errors).toContain('entity is set by both --answers and --entity');
 		const disjoint = mergeAnswerSources({ entity: 'x' }, { db_database: 'y' });
@@ -978,14 +973,14 @@ describe('install plan — the answers file decides what the wizard decides (j)'
 describe('install plan — never DEDALO_SUPERVISED (g)', () => {
 	test('no answer can make a plan own DEDALO_SUPERVISED', () => {
 		const smuggled = {
-			...BASE_WIZARD,
-			...DIFFUSION_WIZARD,
-			...MAILER_WIZARD,
+			...BASE_RECORD,
+			...DIFFUSION_RECORD,
+			...MAILER_RECORD,
 			DEDALO_SUPERVISED: 'true',
 			supervised: true,
 			dedalo_supervised: 'true',
 		};
-		for (const raw of [smuggled, ...CASES.map((answerCase) => answerCase.wizard)]) {
+		for (const raw of [smuggled, ...CASES.map((answerCase) => answerCase.record)]) {
 			expect(buildInstallPlan(raw).envKeys).not.toContain('DEDALO_SUPERVISED');
 		}
 		const env = parseEnvFile(persistInChild(smuggled, scratchDir('smuggled')));

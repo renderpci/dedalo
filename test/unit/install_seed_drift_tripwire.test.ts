@@ -6,7 +6,7 @@
  * WHAT THIS GATE USED TO BE, AND WHY IT CHANGED.
  *  - 2026-08-22: it asserted the three metadata JSONs were byte-identical to
  *    copies under client/dedalo/core/installer/. Nothing read the client copies
- *    (the wizard renders what src/core/install/context.ts serves); they were
+ *    (the since-retired browser wizard rendered what the server served); they were
  *    deleted and the anti-fork assertion points the other way (no copy may
  *    come back).
  *  - 2026-10-10 (WC-2026-10-10-hierarchy-json-manifest): the three hand-written
@@ -46,8 +46,8 @@
  *  - every core ontology35 registry row's misc.hierarchy60 equals the release
  *    entry's declaration through the compiler's own releaseDependencies
  *    (absent ⇔ not declared): the seed is compiled through the import door, and
- *    the installer's CLI plan (vendored ontology.json) and wizard step (these
- *    rows) must read ONE truth (WC-2026-10-10-ontology-dependencies-hierarchy60).
+ *    the installer's plan (vendored ontology.json) and these registry rows
+ *    must read ONE truth (WC-2026-10-10-ontology-dependencies-hierarchy60).
  * Anti-vacuity: floors on rows/references, and a planted dangling dependency
  * must be reported.
  */
@@ -56,6 +56,7 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { gunzipSync } from 'node:zlib';
+import { Glob } from 'bun';
 import { DEFAULTS_KEYS } from '../../src/config/catalog/defaults.ts';
 import { copyBlockRecords, copyBlocks, splitCopyRow } from '../../src/core/db/copy_text.ts';
 import { MATRIX_COPY_COLUMNS } from '../../src/core/db/matrix_write.ts';
@@ -83,7 +84,7 @@ import {
 
 const ROOT = resolve(import.meta.dir, '../..');
 const SERVER_DIR = join(ROOT, 'install/import/hierarchy');
-const CLIENT_INSTALLER_DIR = join(ROOT, 'client/dedalo/core/installer');
+const CLIENT_DIR = join(ROOT, 'client');
 
 /** The vendored manifest, through THE reader (a refusal fails the whole gate, loudly). */
 const manifest = parseHierarchyManifestText(
@@ -170,10 +171,13 @@ describe('install seed tripwire — the vendored thesaurus manifest', () => {
 
 	test('NO hierarchy metadata copy exists under client/', () => {
 		// "Link, never duplicate". A re-introduced copy is drift by construction:
-		// nothing reads it, so nothing would notice it going stale.
-		const copies = readdirSync(CLIENT_INSTALLER_DIR).filter((name) =>
-			/^hierarch(y|ies).*\.json$/.test(name),
-		);
+		// nothing reads it, so nothing would notice it going stale. The whole client
+		// tree is scanned (the browser installer that once held one is gone —
+		// WC-2026-10-12-install-surface-removed — and must stay gone).
+		expect(existsSync(join(CLIENT_DIR, 'dedalo/core/installer'))).toBe(false);
+		const scanned = [...new Glob('**/*.json').scanSync({ cwd: CLIENT_DIR })];
+		expect(scanned.length, 'the scan reads the client tree').toBeGreaterThan(5);
+		const copies = scanned.filter((path) => /(^|\/)hierarch(y|ies)[^/]*\.json$/.test(path));
 		expect(copies, 'dead duplicate of the install seed metadata').toEqual([]);
 	});
 });

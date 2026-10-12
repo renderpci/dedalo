@@ -362,8 +362,8 @@ const featureGroups = (condition: string): string[] => {
  * width or height, plus every length literal wherever it sits.
  *
  *   a. any length-unit literal, anywhere in the condition. This is what catches
- *      the eight historical width literals AND `installer.less`'s `48rem` — the
- *      trap the record now documents, since inside an `@media` condition `rem`
+ *      the eight historical width literals AND the (since removed) browser
+ *      installer's `48rem` — the trap the record now documents, since inside an `@media` condition `rem`
  *      resolves against the BROWSER's 16px, not this app's 13px root, so `48rem`
  *      silently meant ~768px rather than the ~624px its author computed.
  *   b. inside a top-level feature group that mentions width or height, every
@@ -694,7 +694,7 @@ describe('breakpoint_record_tripwire', () => {
 			'screen and (max-width: 1024px)', // component_dataframe / tool_print / tool_import_dedalo_csv
 			'screen and (max-width: 960px)', // tool_print.less:1130
 			'screen and (max-width: 520px)', // update_ontology.less:339
-			'screen and (max-width: 48rem)', // installer.less:944 — the rem trap
+			'screen and (max-width: 48rem)', // the removed installer.less's — the rem trap
 			'screen and (min-width: 2000px)', // add_hierarchy.less:92
 			'(max-width: 0)', // unitless zero is still a threshold
 			'(width >= 600)', // range syntax, unitless

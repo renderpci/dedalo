@@ -1,24 +1,26 @@
 /**
  * THE INSTALL PLAN — the ONE place an install's answers become a configuration
- * and a step list (installer unification A1, 2026-10-08). Every front end is a
- * front end of THIS: the browser wizard (persist_config → config_persist.ts),
- * the headless CLI (scripts/install.ts) and install.sh (which drives the CLI).
+ * and a step list (installer unification A1, 2026-10-08). Every front end of the
+ * ONE terminal installer is a front end of THIS: the full-screen UI and plain
+ * mode (scripts/install.ts), flags, an answers file, and install.sh (which
+ * drives it). The browser wizard that was a second front end was removed on
+ * 2026-10-12 (WC-2026-10-12-install-surface-removed).
  *
  * WHY. Before this module each front end carried its own copy of the answers →
  * .env mapping and its own defaults, and they had drifted: the CLI defaulted
  * the database host to `/tmp` (Debian/RHEL sockets do not live there), wrote an
- * empty entity label, installed NO optional thesaurus while the wizard
- * pre-ticked three, silently ignored unknown flags (`--yes`), and no front end
- * wrote ONTOLOGY_SERVERS / CODE_SERVERS — so every fresh install's update panels
+ * empty entity label, installed NO optional thesaurus while the (since retired)
+ * browser wizard pre-ticked three, silently ignored unknown flags (`--yes`), and
+ * no front end wrote ONTOLOGY_SERVERS / CODE_SERVERS — so every fresh install's update panels
  * answered "No master servers are configured".
  *
  * WHAT IT OWNS:
  *  - the DEFAULTS (here and nowhere else — the CLI parser maps provided flags
- *    only, the wizard posts what the operator typed);
+ *    only, the screens post what the operator typed);
  *  - the .env sections, their order and their comments (config_persist renders
  *    them verbatim);
- *  - the step list, whose ids ARE the wizard router's action names
- *    (engine.ts INSTALL_ROUTER_ACTIONS — gated: every plan step is routable);
+ *  - the step list, whose ids ARE the rows of the executor's ONE step table
+ *    (steps.ts — gated: every plan step has a row);
  *  - the update-server choice (A3): the official master by default, `[]` only
  *    on an explicit air-gapped answer;
  *  - the optional-thesaurus choice (A7; 2026-10-10): the offer is every
@@ -69,7 +71,7 @@
  * CLI builds the plan BEFORE it seeds the process environment that
  * src/config/config.ts freezes at import, so importing config (or the error
  * registry, or the db) from here would freeze the wrong configuration.
- * Gate: test/unit/install_plan_parity_tripwire.test.ts (CLI ≡ wizard).
+ * Gate: test/unit/install_plan_parity_tripwire.test.ts (TUI ≡ plain ≡ flags ≡ answers).
  */
 
 import { resolve } from 'node:path';
@@ -149,7 +151,7 @@ export type UpdateServersChoice = 'official' | 'none';
 export const INSTALL_ROUTES = ['production', 'docker', 'trial', 'developer'] as const;
 export type InstallRoute = (typeof INSTALL_ROUTES)[number];
 
-/** Every install step, in run order. Each id IS a wizard router action name. */
+/** Every install step, in run order. Each id IS a row of the step table (steps.ts). */
 export const INSTALL_STEP_IDS = [
 	'test_db_connection',
 	'test_diffusion_connection',
@@ -170,7 +172,7 @@ export type InstallStepId = (typeof INSTALL_STEP_IDS)[number];
  * The PRODUCTION route's HOST steps (terminal installer phase 4, 2026-10-12), in
  * run order — what the root process runs (src/core/install/host/host_table.ts);
  * `host_engine` runs the ENGINE steps above in a child, as the instance user.
- * Listed HERE (not under host/) because this module is on the wizard's import
+ * Listed HERE (not under host/) because this module is on the server's import
  * closure and host/** must stay off it: the ids are data, the steps are not.
  * `host_selinux` is planned on every production install and decides itself
  * (RHEL family only); `host_web_http` is the Let's Encrypt challenge site.
@@ -232,11 +234,11 @@ export const DB_MODES = ['create', 'existing'] as const;
 /** Where a docker/trial image comes from. */
 export const IMAGE_SOURCES = ['official', 'custom', 'build'] as const;
 
-/** The normalized answers — the SAME key names the wizard posts. */
+/** The normalized answers — the SAME key names every front end posts. */
 export interface InstallAnswers {
-	/** The route (absent = developer). Terminal-only: the wizard refuses it (config_persist.ts). */
+	/** The route (absent = developer). */
 	route: InstallRoute;
-	/** The production instance name ('' on every other route). Terminal-only, like `route`. */
+	/** The production instance name ('' on every other route). */
 	instance: string;
 	db_hostname: string;
 	db_port: string;
@@ -284,12 +286,11 @@ export interface InstallAnswers {
 	 */
 	declined_dependencies: string[];
 	/**
-	 * A local ontology source (dir or archive); '' = none. CLI-ONLY, enforced at
-	 * the wizard door (config_persist.ts refuseWizardOnlyCliAnswers): it is a
-	 * server filesystem path.
+	 * A local ontology source (dir or archive); '' = none. A path on the
+	 * installing machine's filesystem.
 	 */
 	ontology_source: string;
-	// ── host steps (phase 4, 2026-10-12): TERMINAL-ONLY, refused at the wizard door ──
+	// ── host steps (phase 4, 2026-10-12) ──
 	/** production: 'nginx' | 'apache' | '' (= the one the host has, else nginx — decided at host_preflight). */
 	web_server: string;
 	/** production/docker: the public address (an FQDN, never localhost or an IP). */
@@ -396,34 +397,6 @@ const ANSWER_CLASS: Readonly<Record<keyof InstallAnswers, 'secret' | 'plain'>> =
 	engine_only: 'plain',
 	pg_bin_path: 'plain',
 });
-
-/**
- * The answers only the TERMINAL installer takes (its routes, the host steps):
- * the wizard door refuses every one of them (config_persist.ts
- * refuseWizardOnlyCliAnswers) — they derive defaults and run host commands the
- * wizard's form never shows. ONE list, read by that door.
- */
-export const TERMINAL_ONLY_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze([
-	'route',
-	'instance',
-	'web_server',
-	'server_name',
-	'http_port',
-	'https_port',
-	'tls_mode',
-	'letsencrypt_email',
-	'letsencrypt_staging',
-	'tls_cert_path',
-	'tls_key_path',
-	'db_mode',
-	'backup_dir',
-	'backup_site_builder',
-	'image_source',
-	'image_repository',
-	'image_version',
-	'engine_only',
-	'pg_bin_path',
-]);
 
 /**
  * The answers that drive the HOST steps only — what the delegated engine child
@@ -729,8 +702,8 @@ function parseHierarchies(
 
 /**
  * THE toponymy suggestion — advice, never a default (owner decision
- * 2026-10-10: no country is ever pre-selected). The wizard shows its label
- * (`install_toponymy_suggestion`); the CLI prints this sentence.
+ * 2026-10-10: no country is ever pre-selected). The installer prints this
+ * sentence.
  */
 export const TOPONYMY_SUGGESTION =
 	"No toponymy thesaurus is selected (none is ever pre-selected): consider importing your own country's toponymy — e.g. --hierarchies np for an install in Nepal. --list-hierarchies lists the codes.";
@@ -757,24 +730,6 @@ export function toponymyMissing(hierarchies: readonly string[], errors: string[]
 /** The suggestion when `hierarchies` holds no country toponymy of the offer; else none. */
 function thesaurusSuggestions(hierarchies: readonly string[], errors: string[]): string[] {
 	return toponymyMissing(hierarchies, errors) ? [TOPONYMY_SUGGESTION] : [];
-}
-
-/**
- * The thesaurus answer ALONE, normalized exactly as buildInstallPlan does —
- * lowercased, de-duplicated, a core tld dropped with a note, one hierarchy.json
- * does not list an error. The wizard's install_hierarchies step posts its own ticked list
- * AFTER persist_config (engine.ts), so it runs this on that post: the same answer
- * reaches the same thesauri through the CLI and the wizard.
- */
-export function normalizeHierarchyChoice(value: unknown): {
-	hierarchies: string[];
-	notes: string[];
-	errors: string[];
-} {
-	const notes: string[] = [];
-	const errors: string[] = [];
-	const hierarchies = parseHierarchies(value, notes, errors);
-	return { hierarchies, notes, errors };
 }
 
 /**
@@ -865,7 +820,7 @@ function hostAnswers(raw: RawAnswers, d: RouteDefaults) {
 }
 
 /**
- * Raw answers (wizard post or CLI flags) → normalized answers + notes + errors
+ * Raw answers (screens, CLI flags or an answers file) → normalized answers + notes + errors
  * (+ the same refusals tagged by answer key, `fieldErrors`).
  */
 export function normalizeInstallAnswers(raw: RawAnswers): {
@@ -900,8 +855,8 @@ export function normalizeInstallAnswers(raw: RawAnswers): {
 		...hostAnswers(raw, defaults),
 	};
 	// Every answer-only refusal (install_validation.ts): raised HERE, before any
-	// front end writes anything — the CLI argv, an answers file and the wizard
-	// post all pass through this one call.
+	// front end writes anything — the CLI argv, an answers file and the screens
+	// all pass through this one call.
 	const validation = answerProblems(answers);
 	errors.push(...validation.map((item) => item.message));
 	return {
@@ -964,8 +919,8 @@ function entitySection(a: InstallAnswers): EnvSection {
 }
 
 /**
- * LANGUAGES (mandatory once configured — config.ts requires them whenever
- * INSTALL_MODE is false, so a config without them crash-loops at boot). The
+ * LANGUAGES (mandatory once configured — config.ts requires them on every
+ * configured box, so a config without them crash-loops at boot). The
  * map/array keys are RAW compact JSON, written verbatim: readable as-is by any
  * .env reader (parseEnvFile unescapes envQuote's \" since 2026-10-11, but a
  * shell or a container env-file does not).
@@ -1015,7 +970,7 @@ function isCustomServerList(value: string | undefined): boolean {
  * carries the operator's line verbatim (mirrors they added survive a re-run). A
  * prior `[]` is NOT preserved: it is an earlier air-gapped answer, and keeping it
  * under an `official` answer would leave the install cut off from updates while
- * the front end showed the official server (the wizard re-save it invites).
+ * the front end showed the official server (the re-run it invites).
  */
 function updateServersSection(
 	a: InstallAnswers,
@@ -1163,7 +1118,7 @@ function envSections(
 /**
  * A .env is LINE-BASED: a CR/LF/NUL inside a value would split it into a second
  * `KEY=value` line (OPS-02 key injection). envQuote refuses it at write time;
- * the plan reports it up front so `--plan` and the wizard refuse BEFORE a write.
+ * the plan reports it up front so `--plan` and every front end refuse BEFORE a write.
  */
 function controlCharacterErrors(sections: readonly EnvSection[]): string[] {
 	return sections
@@ -1446,7 +1401,7 @@ export function buildInstallPlan(
 
 /**
  * The process environment the CLI must hold BEFORE it imports config.ts: the
- * engine then resolves the REAL configuration (not install mode), the pool
+ * engine then resolves the REAL configuration (not the unconfigured sentinels), the pool
  * targets the install database, and the four mandatory lang keys are present
  * (config.ts throws at import without them once ENTITY/DB are set).
  */
@@ -1465,7 +1420,6 @@ export function cliBootEnv(plan: InstallPlan): Record<string, string> {
 		DB_PASSWORD: a.db_password,
 		// The directory step's write-probe reads config.media.rootPath.
 		...(a.media_path === '' ? {} : { MEDIA_PATH: a.media_path }),
-		DEDALO_INSTALL_NO_RESTART: 'true', // the CLI never self-restarts
 		DEDALO_APPLICATION_LANGS: JSON.stringify(l.applicationLangs),
 		PROJECTS_DEFAULT_LANGS: JSON.stringify(l.projectsDefaultLangs),
 		DEDALO_APPLICATION_LANGS_DEFAULT: l.applicationLangsDefault,
@@ -1881,7 +1835,7 @@ export const ANSWERS_FILE_SCHEMA = 'dedalo.install.answers/1';
 
 /**
  * An answers file (already JSON-parsed) → raw answers + errors. The envelope is
- * `{schema: 'dedalo.install.answers/1', answers: {<the wizard post shape>}}`;
+ * `{schema: 'dedalo.install.answers/1', answers: {<the answers shape>}}`;
  * the key set is INSTALL_ANSWER_KEYS. A SECRET key is refused (a file is
  * copied, mailed and committed; secrets come from DEDALO_INSTALL_* or
  * --secrets-stdin), and so is an unknown one — never silently ignored.

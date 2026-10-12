@@ -238,8 +238,9 @@ export function ipInCidr(ip: string, cidr: string): boolean {
  * `::ffff:a00:0/104`, `::ffff:10.0.0.0/104`) is the IPv4 block it spells — prefix
  * minus 96 — or it would match no peer at all. Any other block is `packCidr`'s. Only
  * for allow entries: the SSRF guard packs its range table with `packCidr`, where
- * `::ffff:0:0/96` is an IPv6 block and stays one. Exported so the install banner can
- * name an entry this predicate cannot read (install/gate.ts `allowEntryUsable`).
+ * `::ffff:0:0/96` is an IPv6 block and stays one. Exported for the allow-entry
+ * grammar's gates (test/unit/ip_allowlist.test.ts), which read a block the way
+ * `ipInCidr` does.
  */
 export function peerBlock(cidr: string): PackedCidr | null {
 	return mappedBlockAsIpv4(cidr) ?? packCidr(cidr);

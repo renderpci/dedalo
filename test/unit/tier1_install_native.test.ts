@@ -1,37 +1,29 @@
 /**
  * Tier-1 backlog gate — the install subsystem's PURE helpers (coverage plan
- * §4.1.9): the pre-auth IP allow-list, the pg-client candidate ORDER, and the
- * vendored hierarchy-descriptor readers. The destructive install orchestration
- * around them stays exempt (§5.2) — this file executes none of it.
+ * §4.1.9): the pg-client candidate ORDER and the vendored hierarchy-descriptor
+ * readers. The destructive install orchestration around them stays exempt
+ * (§5.2) — this file executes none of it. (Its address-allowlist family left
+ * with the pre-auth install surface, 2026-10-12 —
+ * WC-2026-10-12-install-surface-removed; the entry grammar it exercised is
+ * test/unit/ip_allowlist.test.ts.)
  *
  * Operator-visible failure each family prevents:
- *  - installIpAllowed: it is the ONLY address check in front of an
- *    UNAUTHENTICATED installer that rewrites ../private/.env and spawns psql.
- *    A regression that widens it exposes that surface; one that narrows the
- *    `loopback` token locks the operator out of their own fresh box. The
- *    DEFAULT half of that contract (unset ⇒ loopback only, fail-closed since
- *    2026-08-24) plus the CIDR grammar are pinned by
- *    test/unit/install_ip_gate_tripwire.test.ts; what stays here is the
- *    per-entry matching behaviour this tier already owned.
  *  - pgBinaryCandidates: a client OLDER than the server refuses to connect, so
  *    "newest first" and "configured dir wins" are the difference between a
  *    working backup/restore and an install that dies at the psql step.
- *  - hierarchy_meta: the wizard's checkbox list and the activator read the SAME
+ *  - hierarchy_meta: the installer's thesaurus list and the activator read the SAME
  *    vendored manifest (hierarchy.json); a reader that fails soft on a missing
  *    manifest ships an install that silently offers no thesaurus, one that
  *    offers a core tld ships an import of terms the seed already carries.
  *
- * Pure: no DB, no server. `DEDALO_INSTALL_ALLOWED_IPS` is set/cleared on
- * process.env (readEnv resolves per call and process env wins) and restored.
+ * Pure: no DB, no server.
  */
 
-import { afterEach, describe, expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { readEnv } from '../../src/config/env.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
-import { installIpAllowed } from '../../src/core/install/gate.ts';
 import {
 	CORE_HIERARCHIES,
 	hierarchyChoiceView,
@@ -42,59 +34,6 @@ import {
 } from '../../src/core/install/hierarchy_meta.ts';
 import { deriveLangConfig } from '../../src/core/install/lang_catalog.ts';
 import { pgBinaryCandidates } from '../../src/core/install/pg_bin.ts';
-
-const KEY = 'DEDALO_INSTALL_ALLOWED_IPS';
-const original = process.env[KEY];
-
-afterEach(() => {
-	if (original === undefined) delete process.env[KEY];
-	else process.env[KEY] = original;
-});
-
-describe('installIpAllowed — the pre-auth install surface address gate (§4.1.9)', () => {
-	// INVERTED 2026-08-24 (audit P2-6,
-	// engineering/wire_contract/WC-2026-08-24-install-ip-gate-fail-closed.md):
-	// these two cases used to assert that an unset/empty key left the surface
-	// OPEN. It is now LOOPBACK ONLY — the operator opts out explicitly with `any`.
-	test('an EMPTY / whitespace value is the DEFAULT, not "open"', () => {
-		process.env[KEY] = '';
-		expect(installIpAllowed('203.0.113.7')).toBe(false);
-		expect(installIpAllowed('127.0.0.1')).toBe(true);
-		process.env[KEY] = '   ';
-		expect(installIpAllowed('203.0.113.7')).toBe(false);
-		// A value of nothing but separators is still "the operator said nothing".
-		process.env[KEY] = ' , , ';
-		expect(installIpAllowed('203.0.113.7')).toBe(false);
-		expect(installIpAllowed('local')).toBe(true);
-	});
-
-	test('UNSET is LOOPBACK ONLY — the unauthenticated installer is not exposed', () => {
-		delete process.env[KEY];
-		// Only meaningful when this checkout's ../private/.env does not set the key.
-		if (readEnv(KEY) === undefined) {
-			expect(installIpAllowed('203.0.113.7')).toBe(false);
-			expect(installIpAllowed('local')).toBe(true);
-		}
-	});
-
-	test("the 'loopback' token matches EVERY local spelling and nothing else", () => {
-		process.env[KEY] = 'loopback';
-		for (const ip of ['local', '127.0.0.1', '::1', '::ffff:127.0.0.1']) {
-			expect(installIpAllowed(ip)).toBe(true);
-		}
-		expect(installIpAllowed('127.0.0.2')).toBe(false);
-		expect(installIpAllowed('203.0.113.7')).toBe(false);
-	});
-
-	test('a set list admits only its exact entries — everything else is refused', () => {
-		process.env[KEY] = ' 10.0.0.5 , , 192.168.1.9 ';
-		expect(installIpAllowed('10.0.0.5')).toBe(true);
-		expect(installIpAllowed('192.168.1.9')).toBe(true);
-		expect(installIpAllowed('10.0.0.50')).toBe(false);
-		expect(installIpAllowed('local')).toBe(false); // no loopback token ⇒ no implicit local
-		expect(installIpAllowed('')).toBe(false); // an empty entry never becomes a wildcard
-	});
-});
 
 describe('pgBinaryCandidates — probe ORDER (§4.1.9)', () => {
 	test('the configured dir is probed FIRST, then Homebrew newest-first', () => {
@@ -269,7 +208,7 @@ describe('hierarchy_meta — the vendored thesaurus manifest reader (§4.1.9)', 
 	test('a CORE hierarchy (lg) is described by the engine, never offered as a choice', () => {
 		// lg is activated by the seed restore against the terms the seed ships in
 		// matrix_langs (A7, 2026-10-08): the activator must describe it, the
-		// wizard/CLI must never offer or import it.
+		// installer must never offer or import it.
 		expect(CORE_HIERARCHIES.length).toBeGreaterThan(0);
 		expect(isCoreHierarchyTld('  LG ')).toBe(true);
 		expect(isCoreHierarchyTld('af')).toBe(false);

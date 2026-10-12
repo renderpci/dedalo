@@ -425,11 +425,10 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 		'ROOTS: `client/dedalo` `client/dedalo/core/widgets` ×2; `src` `test/parity` `test/unit`.',
 	'test/unit/ingest_encoding_tripwire.test.ts':
 		'ROOTS: `client` `src` `src/core/tools` `tools` — src/core/tools is walked on its own beside src/.',
-	'test/unit/install_ip_gate_tripwire.test.ts': 'ROOTS: `docs/install`.',
 	'test/unit/install_restart_supervisor_tripwire.test.ts':
 		'ROOTS: `deploy`; `src`; `tools` — tool HTTP routes are engine routes too.',
 	'test/unit/install_seed_drift_tripwire.test.ts':
-		'ROOTS: `client/dedalo/core/installer`; `install/import/hierarchy`.',
+		'ROOTS: `client`; `install/import/hierarchy` — the whole client tree is scanned for a re-introduced copy.',
 	'test/unit/install_table_write_tripwire.test.ts':
 		'ROOTS: `test` — every `*.test.ts` under test/, join(import.meta.dir, "..") — not test/unit alone.',
 	'test/unit/labels_tripwire.test.ts':

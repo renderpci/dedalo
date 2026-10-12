@@ -7,7 +7,7 @@ contains, how the domain ontologies are chosen and installed, and — the part t
 surprises people — exactly which keys the installer writes into `../private/.env`
 and which it does not.
 
-Three front ends drive one engine (`src/core/install/`). `install.sh` is only the
+One installer, in the terminal, drives one engine (`src/core/install/`). `install.sh` is only the
 [bootstrap](#installsh-the-bootstrap): it gets Bun and the release, then starts the
 installer with your arguments:
 
@@ -15,10 +15,11 @@ installer with your arguments:
 | --- | --- | --- |
 | **Interactive terminal** | `bun run scripts/install.ts` (no answer flag) — `--plain` for the line mode | a person at a terminal: it asks, checks each answer as you go, and shows the whole plan before anything runs. See [Interactive mode](#interactive-mode) |
 | **Headless CLI** | `bun run scripts/install.ts <flags>` | servers, containers, CI. No restart, no pre-auth window. |
-| **Browser wizard** | start the server with no `.env`, open `/dedalo/core/page/` | a workstation, or when you want the diagnostics panel (it is being retired in favour of the interactive terminal) |
+
+There is no browser installer: a server on a box that is not installed refuses to start ([below](#a-server-that-is-not-installed-refuses-to-start)).
 
 !!! info "One install plan, whichever front end you use"
-    The CLI, the interactive installer and the wizard all build the **same install plan**
+    The CLI, the interactive installer and an answers file all build the **same install plan**
     (`src/core/install/install_plan.ts`): the same defaults, the same list of
     `.env` keys, the same ordered steps. A given set of answers produces the same
     `.env` (apart from the generated secret) through every front end — a gate
@@ -33,8 +34,8 @@ installer with your arguments:
 
 ## Prerequisites the installer checks for you
 
-The pre-flight step (`src/core/install/init_test.ts`) is a hard gate — in the
-wizard it is what unlocks the *Next* button. It checks exactly four things:
+The pre-flight step (`src/core/install/init_test.ts`) is a hard gate — nothing
+runs until it passes. It checks exactly four things:
 
 | Check | Failure message |
 | --- | --- |
@@ -114,11 +115,11 @@ meaning.)
 | `--no-update-servers` | no | off | air-gapped install: writes `ONTOLOGY_SERVERS=[]` and `CODE_SERVERS=[]`, so no ontology or code update is ever offered. Without it, both name the official Dédalo master (see below) |
 | `--skip-tools` | no | off | skips tool registration (register them later from the Development Area) |
 | `--plan` | no | off | dry run: prints ONE JSON line — `env_keys`, `steps`, `hierarchies`, `hierarchy_dependencies`, `suggestions`, `ontologies`, `declined_dependencies`, `ontology_source`, `ontology_install`, `active_ontology_tlds`, `notes`, `warnings`, `errors` — and exits `0` (valid) or `1`. It touches no database and no file and needs no root password. A choice beyond `oh` reads the source's catalog (one request to the update server, or the `--ontology-source` files) |
-| `--list-ontologies` | no | off | prints ONE JSON line — the ontology catalog of the selected source, exactly what the wizard's *Ontologies* step shows — and exits. It needs no other answer. See [Listing the catalog](#listing-the-catalog) |
+| `--list-ontologies` | no | off | prints ONE JSON line — the ontology catalog of the selected source, exactly what the interactive installer's *Ontologies* screen shows — and exits. It needs no other answer. See [Listing the catalog](#listing-the-catalog) |
 | `--list-hierarchies` | no | off | prints ONE JSON line — the thesaurus offer of the release's manifest (`core`, `entries` of `{tld, name, typology_id, typology_name, has_data, dependencies}` — `dependencies` being the thesauri the entry declares, `{tld, mandatory}` each —, the toponymy `suggestion`, `errors`) — and exits. It needs no other answer. See [The thesaurus manifest](#the-thesaurus-manifest-hierarchyjson) |
 | `--list-langs` | no | off | prints ONE JSON line — the languages the installer offers (`langs` of `{code, label}`, in presentation order) and the `default` set — and exits |
 | `--information`, `--info-key` | no | `ts-install`, `ts` | the install's **fingerprint**, written once to the server state file (`ts_state.json`) and never changed afterwards. A fresh install hashes passwords with Argon2 and does not use them; they matter only to read passwords migrated from a v6 installation |
-| `--answers <file>` | no | — | the answers as a file (the wizard's field names); see [The answers file](#the-answers-file-answers). A key set both there and by a flag is refused |
+| `--answers <file>` | no | — | the answers as a file (the plan's answer names); see [The answers file](#the-answers-file-answers). A key set both there and by a flag is refused |
 | `--secrets-stdin` | no | off | read the secrets as ONE JSON object from standard input; see [Secrets](#secrets) |
 | `--execute` | no | off | explicitly unattended: the installer never asks anything and refuses a missing answer or secret; the flag is recorded on the run. Without it, a run whose standard input is a terminal **asks** for what is missing: the root password of a fresh install, or the secrets a `--resume` still needs — hidden, typed twice, the root password checked rule by rule. A run without a terminal (a pipe, a CI job) never asks |
 | `--plain` | no | off | the interactive installer in [plain line mode](#plain-mode) — no full-screen drawing, no colour, one question per line. Takes no answer flag (`--resume` aside) |
@@ -194,10 +195,10 @@ container, so the stack's values live in one place (`src/core/install/install_pl
 
 ## What the installer does, in order
 
-The CLI prints each plan step as `→ [<step id>] …`; the ids are the same action
-names the wizard calls, which is how one plan drives both. The pre-flight before
-the first step and the root-login check after the last are the CLI's own
-affordances (the wizard has its *Verify* screen and in-wizard login instead).
+The CLI prints each plan step as `→ [<step id>] …`; the ids are the keys of the
+one step table the executor runs, whichever front end gathered the answers. The
+pre-flight before the first step and the root-login check after the last are the
+installer's own affordances.
 
 1. **Validation** — every answer, and the root password, is checked by the plan
    (see [Validation before anything is written](#validation-before-anything-is-written)).
@@ -255,7 +256,7 @@ affordances (the wizard has its *Verify* screen and in-wizard login instead).
    without activating leaves the terms in the database but unreachable (the section
    does not exist for the engine until its ontology does), so a TLD whose activation
    fails is a **failed** hierarchy — and a failed hierarchy **fails the install**:
-   nothing is sealed (the wizard cannot get past a failed step either).
+   nothing is sealed.
 13. **`register_tools`** (unless `--skip-tools`).
 14. **`install_finish`** — seals the install, refused unless a root user with a
     password actually exists. A forged *finish* can never seal a half-built
@@ -266,13 +267,12 @@ affordances (the wizard has its *Verify* screen and in-wizard login instead).
     (`DEDALO_SALT_STRING`) is printed here, once — never mid-run.
 
 !!! note "Only declared thesauri are pre-selected"
-    The CLI's default, the interactive installer's and the wizard's
-    pre-ticked boxes are the same set: the thesauri the chosen ontologies
+    The CLI's default and the interactive installer's pre-ticked boxes are the
+    same set: the thesauri the chosen ontologies
     **declare**, all ticked (a mandatory one marked strongly recommended, but
     still editable). Nothing else is
     pre-selected — in particular **no country's toponymy**. When the install
-    adds no toponymy thesaurus, the CLI prints a suggestion (and the wizard shows
-    one) to import your own country's, e.g. `--hierarchies np` for an
+    adds no toponymy thesaurus, the installer prints a suggestion to import your own country's, e.g. `--hierarchies np` for an
     installation in Nepal.
 
 ### The thesaurus manifest (`hierarchy.json`)
@@ -354,10 +354,10 @@ people, images and publications, the thesaurus machinery, languages. What an
 institution catalogues — interviews, objects, coins, intangible heritage — is
 described by **domain ontologies**, and every installation chooses at least one.
 
-| Answer | CLI | Wizard | Interactive installer |
-| --- | --- | --- | --- |
-| which domain ontologies | `--ontologies oh,tch` (default `oh`) | the *Ontologies* step, `oh` pre-ticked | the *Ontologies* screen, `oh` pre-ticked |
-| where the others come from | the update server, or `--ontology-source` | the update server | the update server, or a local source |
+| Answer | CLI | Interactive installer |
+| --- | --- | --- |
+| which domain ontologies | `--ontologies oh,tch` (default `oh`) | the *Ontologies* screen, `oh` pre-ticked |
+| where the others come from | the update server, or `--ontology-source` | the update server, or a local source |
 
 - **`oh` (Oral history) is the default, and it is built in.** The installer reads
   one file of the vendored ontology directory,
@@ -370,8 +370,8 @@ described by **domain ontologies**, and every installation chooses at least one.
   `ONTOLOGY_SERVERS` — the official Dédalo master by default, or the first server
   of a list you set yourself on an earlier run — or the `--ontology-source`
   directory or archive. For example, `tch` (Tangible cultural heritage) is the
-  general inventory model for objects and collections; it is described in the
-  wizard but not pre-ticked. When one TLD is offered by several places, a
+  general inventory model for objects and collections; it is described on the
+  *Ontologies* screen but not pre-ticked. When one TLD is offered by several places, a
   `--ontology-source` file wins over the built-in `oh`, which wins over the
   server.
 - **An air-gapped install (`--no-update-servers`) is offered only `oh`**, unless
@@ -403,16 +403,16 @@ both. Each one is **mandatory** or **optional**.
 - The declared **thesauri** are added to the
   [`install_hierarchies`](#what-the-installer-does-in-order) step. The core Languages
   thesaurus (`lg`) is never listed, because every install activates it.
-- A **mandatory ontology** is always installed. It cannot be unticked in the
-  wizard, and `--decline-dependencies` has no effect on it.
-- An **optional** dependency is offered already ticked. Untick it in the wizard,
+- A **mandatory ontology** is always installed. It cannot be unticked on the
+  screen, and `--decline-dependencies` has no effect on it.
+- An **optional** dependency is offered already ticked. Untick it on the screen,
   or name it in `--decline-dependencies`, to leave it out:
   `the ontology 'x' (an optional dependency of 'y') is declined — not installed`.
 - **A thesaurus dependency never blocks an install.** A **mandatory thesaurus**
   is a strong recommendation, not a requirement: you can work without it,
   keep a thesaurus of your own under another name, or install it any time
-  later. It is offered ticked and marked *strongly recommended*; untick it in
-  the wizard, or name it in `--decline-dependencies`, to leave it out. The
+  later. It is offered ticked and marked *strongly recommended*; untick it on
+  the screen, or name it in `--decline-dependencies`, to leave it out. The
   install continues with a warning:
   `the thesaurus 'x' (declared mandatory by 'y') is declined — not installed; it is strongly recommended and can be installed later from Maintenance › Install hierarchies`.
 - A mandatory ontology the source does not offer is refused before anything is
@@ -454,8 +454,8 @@ then says to run *Maintenance › Update ontology* after the install.
 
 ### Listing the catalog
 
-`--list-ontologies` prints what the selected source offers, as the wizard
-shows it — air-gapped here, so only the built-in `oh`:
+`--list-ontologies` prints what the selected source offers, as the
+*Ontologies* screen shows it — air-gapped here, so only the built-in `oh`:
 
 ```shell
 bun run scripts/install.ts --list-ontologies --no-update-servers
@@ -728,7 +728,7 @@ or when the terminal is smaller than 80×24. `NO_COLOR` only turns colour off.
 ## The answers file (`--answers`)
 
 The answers can come from a file instead of (or beside) the flags — the shape a
-provisioning tool writes. It is the wizard's answers inside a versioned
+provisioning tool writes. It is the plan's answers inside a versioned
 envelope:
 
 ```json
@@ -759,7 +759,7 @@ The keys it accepts are exactly the plain answers: `route`, `instance`, `db_host
 `media_path`, `unix_socket`, `media_access_mode`, `update_servers`,
 `hierarchies`, `register_tools`, `ontologies`, `declined_dependencies`,
 `ontology_source`. Lists may be JSON arrays or comma strings, switches JSON
-booleans — the same values the wizard posts. The file goes through the same
+booleans — the same values the screens produce. The file goes through the same
 plan, so the same answers install the same instance whichever way they arrive.
 
 It is refused, before anything is written, when:
@@ -825,7 +825,7 @@ write it into the log.
 
 Every refusal an answer can earn is raised by the plan, before the database is
 touched and before any file is written — the same refusal whether the answers
-come from flags, an answers file or the wizard:
+come from flags, an answers file or the interactive screens:
 
 | Answer | Rule | Refusal |
 | --- | --- | --- |
@@ -1096,7 +1096,7 @@ owns are these:
 | Ontologies | `ACTIVE_ONTOLOGY_TLDS` — the core, the chosen domain ontologies and the ontologies they declare (minus declined optional ones), in install order; rewritten on every run |
 | Serving / media *(only with `--media-path` / `--socket` / `--media-access-mode`)* | `MEDIA_PATH`, `SERVER_UNIX_SOCKET`, `DEDALO_MEDIA_ACCESS_MODE` |
 | Diffusion *(only with `--diffusion`)* | `DEDALO_DIFFUSION_NATIVE`, `DEDALO_DIFFUSION_DB_*` |
-| Outbound email *(only with `--mailer`, or the wizard's optional step)* | `DEDALO_SMTP_HOST`, `DEDALO_SMTP_PORT`, `DEDALO_SMTP_SECURE`, `DEDALO_SMTP_USER`, `DEDALO_SMTP_PASS`, `DEDALO_SMTP_FROM`, `DEDALO_SMTP_FROM_NAME` |
+| Outbound email *(only with `--mailer`, or the installer's optional *Mail* screen)* | `DEDALO_SMTP_HOST`, `DEDALO_SMTP_PORT`, `DEDALO_SMTP_SECURE`, `DEDALO_SMTP_USER`, `DEDALO_SMTP_PASS`, `DEDALO_SMTP_FROM`, `DEDALO_SMTP_FROM_NAME` |
 
 ### The update servers
 
@@ -1109,8 +1109,8 @@ CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://v7.master.de
 
 `ONTOLOGY_SERVERS` is where ontology updates come from; `CODE_SERVERS` is where
 the [code update panel](../management/updates/updating_code.md) looks for releases.
-`--no-update-servers` (answering *no* to the update-server question in the
-wizard or the interactive installer) writes both as `[]` — an air-gapped install that is never
+`--no-update-servers` (answering *no* to the interactive installer's
+update-server question) writes both as `[]` — an air-gapped install that is never
 offered an update. To change your mind later, replace the `[]` values of
 `ONTOLOGY_SERVERS` and `CODE_SERVERS` in `.env` (or re-run the installer answering
 *yes*), then restart the server: the list, and the browser's `connect-src` that lets
@@ -1155,124 +1155,46 @@ at mode `0600`, inside a `0700` private directory.
     image has no writable parent directory above the repo. See
     [Docker](docker.md).
 
-## The browser wizard
+## A server that is not installed refuses to start
 
-Start the server on a machine with **no `../private/.env`**. It logs
-`INSTALL MODE`, skips every database-dependent boot step, and serves only the
-wizard at `/dedalo/core/page/`.
+There is no install page. Before it opens a socket, touches a database or writes a
+file, the server checks whether this box is installed, and if it is not it prints
+one line and exits with code **78**:
 
-Steps: **Diagnostics → Database → Entity → Ontologies → *(optional)* Diffusion →
-*(optional)* Outbound email → Save config** … *(restart)* … **Verify →
-Directories → Install database → Root password → log in → Hierarchies → Tools →
-Finish**.
+| What it found | What it prints (after `[boot] REFUSED — `) |
+|---|---|
+| none of `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER`, and no `.env` | `not installed: … Run the installer: ./install.sh, or bun run dedalo:install` |
+| none of the four, but a `.env` with other content | `configuration incomplete: … do not reinstall over an existing configuration` |
+| none of the four, on a sealed install | `configuration missing: … Restore .env from backup — do not reinstall over it` |
+| an install that has not finished (see [the state file](#the-state-file)) | `install not finished … bun run dedalo:install --resume` |
 
-The **Entity** step also collects the languages (a checkbox list with
-English and Spanish pre-checked; the others are optional) plus the default
-interface and data language. Before *Save config*
-the wizard also asks whether to use the official update server (yes by default;
-no is the air-gapped install described above).
+The shipped systemd units do not restart a server that exits 78
+(`RestartPreventExitStatus=78`), and neither do `bun run dev` or
+`bun run start:supervised`. A configuration with only some of the four keys is
+a different mistake: the server names the first missing key and exits 1.
 
-The **Ontologies** step lists the core ontologies as fixed rows and the domain
-ontologies on offer, with `oh` pre-ticked. The built-in list shows at once. When
-the update server is in use, the step also reads the server's catalog and adds
-its ontologies, grouped by typology; without it (or when the server cannot be
-reached) only the built-in `oh` is offered. A short note describes `oh` and
-`tch`. Under each ticked ontology the step lists its declared dependencies, each
-with a checkbox: a mandatory ontology is ticked and locked; everything else is
-ticked and can be unticked. A mandatory thesaurus is marked *strongly
-recommended*: unticking it shows a warning that it can be installed later from
-Maintenance › Install hierarchies, and the install goes on without it. A dependency on a core ontology or thesaurus is always
-installed, so it is shown ticked and locked as well. When the source declares nothing for it, the step warns
-instead. At least one must be ticked.
-The choice is saved with the configuration (`ACTIVE_ONTOLOGY_TLDS`), and after
-the restart the **Install database** step runs three actions in a row:
-`stage_ontologies`, `install_db_from_default_file` and `install_ontologies`, each
-with its own status line. It stops at the first failure; reference warnings
-are shown but do not block.
-
-The **Hierarchies** step lists every thesaurus of the release's manifest,
-grouped by typology; one without data files is marked *Empty*. Only the
-thesauri the installed ontologies declare are ticked, and every one can be
-unticked: a mandatory one is marked *strongly recommended by* the ontologies
-that declare it, and unticking it shows the warning that it can be installed
-later. Ticking a thesaurus also ticks the thesauri its own entry declares.
-Nothing else is pre-ticked; the toponymy group shows a suggestion to import
-your own country's. The server installs exactly what the page sends; a
-mandatory thesaurus left out is reported as a warning, never refused. Languages is not
-among them — it was activated with the database — and submitting the step with
-nothing ticked is valid.
-
-The **Outbound email** step asks whether this installation will send email —
-which is what enables the login screen's
-[password recovery](../management/password_recovery.md). Enable it, enter the
-SMTP relay settings (host, port, encryption, credentials, From address) and the
-wizard verifies the connection and authentication against the relay (no email
-is sent) before letting you continue. Skipping it is safe: the keys can be
-appended to `../private/.env` at any later time.
-
-!!! warning "The wizard restarts the server after *Save config*"
-    Configuration is read **once**, at boot. So *Save config* writes `.env` and
-    then **exits the process** — a supervisor must bring it back up with the real
-    configuration:
-
-    - in production, that is `Restart=always` in the systemd unit;
-    - in a container, `restart: unless-stopped`;
-    - on a laptop with neither, start it with `bun run start:supervised` (or
-      `bun run dev` while developing), or (better) just use the CLI, which needs
-      no restart at all:
-
-      ```shell
-      bun run start:supervised
-      ```
-
-      Both declare `DEDALO_SUPERVISED=true` and restart the server only when it
-      exits with code `75`, the planned restart; a crash still stops it, so you
-      see it. Plain `bun run start` restarts nothing and is unsupervised, so the
-      [code update panel](../management/updates/updating_code.md) refuses under it.
-
-    The wizard survives the restart: the page stays open, the **Verify** button
-    retries, and even a full reload resumes the wizard rather than dropping to
-    the login form — until **Finish** seals the instance.
-
-!!! danger "The install surface is pre-auth until it is sealed"
-    A fresh instance has no users, so the install actions are reachable **without
-    a login**. Unset, `DEDALO_INSTALL_ALLOWED_IPS` therefore admits **the local
-    machine only** — installing from anywhere else means naming the address
-    first:
-
-    ```dotenv
-    # comma list. Entries: `loopback` (the local host), a literal address,
-    # a CIDR range, or `any` (every address — the only way to open it).
-    DEDALO_INSTALL_ALLOWED_IPS=loopback,203.0.113.10,10.0.0.0/24
-    ```
-
-    The address is resolved from the trusted `X-Forwarded-For` hop, so **behind a
-    proxy, `loopback` will not match** — name the real client address. A request
-    that carries no such hop is treated as local, so an unsealed instance on a
-    bare TCP port with no proxy in front must be closed at the firewall as well:
-    the allowlist alone cannot see who is calling. The engine prints the list in
-    force in its start-up log.
-
-    Once **sealed**, the whole install surface answers `404` for good.
+!!! warning "An interrupted re-run keeps the instance down"
+    Re-running the installer on a live instance marks it unfinished until the
+    run completes. If the run dies part-way and its undo does not run, the
+    instance will not come back at its next restart — finish it with
+    `--resume` (or undo it with `--abort`).
 
 ## The state file
 
-`<private>/ts_state.json` records the **server's** install status: `configured`
-while the wizard is mid-flight, `terminal_installing` while a command-line
-install is (from its `persist_config` on), then `sealed`. It is what makes a
-reload resume the wizard instead of showing a login form, and what makes the
-sealed instance stay sealed across restarts. A command-line install that stops
-part-way leaves `terminal_installing`: the server does no database work over the
-half-built database, and the browser wizard does **not** open — the install is
-finished from the terminal (`--resume`), never by whoever reaches the port. It
-belongs in your backups (it is part of `../private/`).
+`<private>/ts_state.json` records the **server's** install status:
+`terminal_installing` while an install runs (from its `persist_config` on), then
+`sealed`. Any status other than `sealed` keeps the server from starting (see
+[above](#a-server-that-is-not-installed-refuses-to-start)), so no boot work ever
+runs over a half-built database; an install that stops part-way is finished from
+the terminal (`--resume`). The seal is also what tells a lost `.env` apart from a
+fresh box. It belongs in your backups (it is part of `../private/`).
 
 It is not the installer's own record: `<private>/install/install.state.json`
 (see [The plan and state files](#the-plan-and-state-files)) tracks the steps of
-one command-line install, for `--resume` and `--abort`.
+one install, for `--resume` and `--abort`.
 
 ## Further reading
 
 The developer-facing view of the same machinery — the engine modules, the
-install-mode boot, the restart mechanism, the gates — is
+fail-closed boot, the gates — is
 [the TS-native install engine](../development/ts_install_internals.md).

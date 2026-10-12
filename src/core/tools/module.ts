@@ -317,8 +317,7 @@ export interface ToolServerModule {
 	 */
 	httpRoutes?: readonly ToolHttpRoute[];
 	/**
-	 * Boot hook — framework-called ONCE per serving boot (not in install mode or
-	 * a smoke boot), after the registry loads (`loader.ts startToolBootHooks`).
+	 * Boot hook — framework-called ONCE per serving boot (not in a smoke boot), after the registry loads (`loader.ts startToolBootHooks`).
 	 * For timers the tool owns (tool_export's TTL sweeper). MUST NOT block: arm
 	 * and return. The returned handle is stopped on shutdown. A throw is logged,
 	 * never fatal — a tool never stops the archive from serving.

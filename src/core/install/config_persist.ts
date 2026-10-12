@@ -1,10 +1,10 @@
 /**
- * persist_config + verify_active_config (PHP installer_setup_manager /
- * installer_config_persistor). Writes ../private/.env with the catalog's
- * canonical key names (DB_NAME, ENTITY, … — never a PHP_KEY_ALIASES fallback
- * spelling; install_plan.ts) via an atomic two-phase commit, records the install state, and
- * generates the secrets. verify_active_config confirms the RESTARTED process
- * came up with the new config.
+ * persist_config (PHP installer_setup_manager / installer_config_persistor), the
+ * terminal installer's `.env` writer (core/install/step_runs.ts). Writes
+ * ../private/.env with the catalog's canonical key names (DB_NAME, ENTITY, … —
+ * never a PHP_KEY_ALIASES fallback spelling; install_plan.ts) via an atomic
+ * two-phase commit, records the install state (`terminal_installing`), and
+ * generates the secrets.
  */
 
 import {
@@ -17,15 +17,13 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
-import { config } from '../../config/config.ts';
 import { PHP_KEY_ALIASES } from '../../config/env.ts';
 import { DedaloError } from '../errors/index.ts';
 import { setServerState } from '../resolve/server_state.ts';
-import { buildInstallPlan, TERMINAL_ONLY_ANSWER_KEYS } from './install_plan.ts';
+import { buildInstallPlan } from './install_plan.ts';
 import { resolvePlanCatalog } from './ontology_catalog.ts';
 import type { HierarchyDependency, OntologyCatalog } from './ontology_choice.ts';
 import { installPrivateDir, SAMPLE_ENV_PATH } from './paths.ts';
-import { connFromConfig, psqlSelect1 } from './pg_exec.ts';
 import { readPriorEnv } from './prior_env.ts';
 import { refuseInstall } from './refuse.ts';
 import { generateSecret } from './secret.ts';
@@ -62,10 +60,10 @@ function existingEnvAssignments(): { key: string; line: string }[] {
  * A `.env` is LINE-BASED, so a CR/LF inside a value cannot be represented —
  * quoting does not help, the parser still splits on the newline and reads the
  * tail as a SEPARATE `KEY=value` line. That is arbitrary-key injection
- * (OPS-02, 2026-07-28 audit): a posted wizard field carrying
+ * (OPS-02, 2026-07-28 audit): an answer carrying
  * `foo\nDEDALO_BINARY_BASE=/tmp/evil` would inject a spawned-binary redirect.
- * No legitimate wizard value contains a newline or NUL, so REFUSE it (fail
- * loud) rather than emit a corrupt/injected file.
+ * No legitimate answer contains a newline or NUL, so REFUSE it (fail loud)
+ * rather than emit a corrupt/injected file.
  */
 export function envQuote(value: string): string {
 	if (/[\r\n\0]/.test(value)) {
@@ -98,51 +96,15 @@ function ontologyOutcome(
 	return {
 		ontology_install: (plan.ontologyRequest?.items ?? []).map((item) => item.tld),
 		active_ontology_tlds: [...plan.activeOntologyTlds],
-		// Only the installable ones: the wizard's thesaurus step pre-ticks them all
-		// (a mandatory one marked strongly recommended, still declinable — owner
-		// decision 2026-10-10); one without a hierarchy.json entry is already a
-		// plan warning, never a refusal.
+		// Only the installable ones: the installer's thesaurus question pre-ticks them
+		// all (a mandatory one marked strongly recommended, still declinable — owner
+		// decision 2026-10-10); one without a hierarchy.json entry is already a plan
+		// warning, never a refusal.
 		hierarchy_dependencies: plan.hierarchyDependencies.filter((item) =>
 			plan.hierarchies.includes(item.tld),
 		),
 		warnings: [...plan.warnings],
 	};
-}
-
-/**
- * The WIZARD's answers may not carry `ontology_source`: it names a path on the
- * SERVER's filesystem (a directory read, or an archive gunzipped and walked), so
- * it is the operator's command-line answer (`--ontology-source`, scripts/install.ts
- * calls persistConfig directly) and never a browser post. The pre-auth wizard
- * surface honouring it was a file-existence/type oracle and a decompression
- * lever, and its catalog disagreed with the one stage_ontologies re-resolves
- * after the restart (configured servers only). Refused — one fixed text that
- * says nothing about the path — before anything reads it. Any value but absent
- * or '' (the plan's "not given") is refused. So are `route` and `instance`
- * (below). Gate: test/unit/install_step_router_native.test.ts.
- */
-export function refuseWizardOnlyCliAnswers(posted: Readonly<Record<string, unknown>>): void {
-	const given = (key: string): boolean =>
-		posted[key] !== undefined && posted[key] !== null && posted[key] !== '';
-	if (given('ontology_source')) {
-		refuseInstall(
-			'install.invalid_input',
-			'ontology_source is a command-line answer (--ontology-source) — the wizard installs from the configured ontology server or the built-in ontologies',
-		);
-	}
-	// The ROUTE and the INSTANCE (phase 2, 2026-10-12) and every host-step
-	// answer (phase 4) are the terminal installer's: they derive database, media
-	// and socket defaults and run host commands the wizard's form never shows.
-	// The wizard surface stays exactly what it was (developer defaults), and is
-	// retired with the wizard (phase 5). ONE list: install_plan.ts.
-	for (const key of TERMINAL_ONLY_ANSWER_KEYS) {
-		if (given(key)) {
-			refuseInstall(
-				'install.invalid_input',
-				`${key} is a terminal-installer answer (--${key}) — the wizard installs with the developer defaults`,
-			);
-		}
-	}
 }
 
 /** The step's answer on the ONLY path that returns: written (every refusal throws). */
@@ -168,9 +130,7 @@ type InstallPlan = ReturnType<typeof buildInstallPlan>;
 
 /** The plan's .env sections as lines: a header, then each section's comment and entries. */
 function renderPlanEnvLines(plan: InstallPlan): string[] {
-	const lines: string[] = [
-		'# Dédalo TS server configuration — written by the install wizard (DEC-19).',
-	];
+	const lines: string[] = ['# Dédalo TS server configuration — written by the installer (DEC-19).'];
 	for (const section of plan.env) {
 		lines.push('', section.comment, ...section.entries.map(renderEnvEntry));
 	}
@@ -192,30 +152,20 @@ function ownedEnvKeys(planKeys: readonly string[]): Set<string> {
 	return owned;
 }
 
-/** Write ../private/.env + state from the posted wizard config. */
+/** Write ../private/.env + state from the installer's answers. */
 /*
  * COVERAGE-EXEMPT (coverage plan §5.2; reason registered in
  * engineering/crap_coverage_exempt.json): a ONE-SHOT install procedure that
  * MUTATES THE MACHINE — config files, a database restore, root credentials, a
  * 126 MB hierarchy import, or a process restart. Blocked by DANGER, not by
  * fixture: the hermetic logic in the same subsystem (deriveLangConfig,
- * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
+ * resolvePgBinary, the hierarchy_meta readers) IS gated
  * (test/unit/tier1_install_native.test.ts).
  */
 export async function persistConfig(
 	o: Record<string, unknown>,
-	options: {
-		ontologyCatalog?: OntologyCatalog;
-		/**
-		 * The install status this write records: `configured` (the wizard — its
-		 * surface stays open for the steps after the restart) or
-		 * `terminal_installing` (the terminal installer — the wizard surface stays
-		 * CLOSED while the server's database boot still waits; gate.ts).
-		 */
-		installStatus?: 'configured' | 'terminal_installing';
-	} = {},
+	options: { ontologyCatalog?: OntologyCatalog } = {},
 ): Promise<PersistConfigResult> {
-	const { installStatus = 'configured' } = options;
 	const prior = await readPriorEnv();
 	const generated: Record<string, string> = {};
 
@@ -253,10 +203,10 @@ export async function persistConfig(
 	// 2026-10-11 does unescape envQuote's \").
 	const lines = renderPlanEnvLines(plan);
 
-	// NEVER DELETE BY OMISSION. This writer rebuilds .env from the posted form, so
-	// every key the form does not carry used to vanish on save — and the wizard
-	// INVITES a re-save (reload the page and it walks the config steps again from
-	// an empty cfg). Observed twice on 2026-07-12: re-saving with the optional
+	// NEVER DELETE BY OMISSION. This writer rebuilds .env from the answers, so
+	// every key they do not carry used to vanish on save — and a re-run INVITES a
+	// re-save (the retired browser wizard walked the config steps again from an
+	// empty cfg on every reload). Observed twice on 2026-07-12: re-saving with the optional
 	// Diffusion step untouched silently deleted all 8 DEDALO_DIFFUSION_* keys,
 	// including the generated DEDALO_DIFFUSION_INTERNAL_TOKEN — a secret shown
 	// once and then unrecoverable. Operator-appended keys (../private/.env is
@@ -266,7 +216,7 @@ export async function persistConfig(
 	// So: this run OWNS the keys it assigns; every other key already in the file is
 	// carried over verbatim. Turning Diffusion OFF therefore no longer erases its
 	// credentials — disabling it is an explicit .env edit (DEDALO_DIFFUSION_NATIVE),
-	// never a side effect of not re-typing the form. Gate:
+	// never a side effect of not re-typing an answer. Gate:
 	// test/unit/install_persist_config.test.ts ('never deletes a key by omission').
 	//
 	// ONE VALUE, ONE NAME. The plan writes canonical spellings (DB_NAME, ENTITY, …);
@@ -280,7 +230,7 @@ export async function persistConfig(
 	if (preserved.length > 0) {
 		lines.push(
 			'',
-			'# --- Preserved from the previous .env (not managed by the wizard form) ---',
+			'# --- Preserved from the previous .env (not managed by the installer) ---',
 			...preserved.map((entry) => entry.line),
 		);
 	}
@@ -348,56 +298,17 @@ export async function persistConfig(
 	}
 
 	setServerState({
-		install_status: installStatus,
+		// Unfinished until install_finish seals it: a server started before then
+		// refuses to boot (src/config/install_state.ts notInstalledRefusal).
+		install_status: 'terminal_installing',
 		information: plan.answers.information || undefined,
 		info_key: plan.answers.info_key || undefined,
 	});
 
 	return {
 		ok: true,
-		msg: 'Configuration saved. The server will restart.',
+		msg: 'Configuration saved.',
 		generated,
 		...ontologyOutcome(plan),
 	};
-}
-
-/**
- * A POLL ANSWER (see db_probe_plan.ts DbProbeResult): "the restart has not
- * happened yet" is the answer to the question the wizard asked, not a refusal —
- * the Verify button stays for a re-check.
- */
-export interface VerifyActiveConfigResult {
-	ok: boolean;
-	active: boolean;
-	msg: string;
-}
-
-/**
- * Confirm the RESTARTED process is running the new config: not in install mode,
- * entity/database match the posted values, and the DB answers. If it still hits
- * the old (install-mode) process, report active:false so the wizard re-checks.
- */
-export async function verifyActiveConfig(
-	o: Record<string, unknown>,
-): Promise<VerifyActiveConfigResult> {
-	if (config.installMode) {
-		return {
-			ok: false,
-			active: false,
-			msg: 'Server restart pending — click Verify again in a moment',
-		};
-	}
-	const entity = String(o.entity ?? '');
-	const dbName = String(o.db_database ?? '');
-	if (entity !== '' && config.entity !== entity) {
-		return { ok: false, active: false, msg: 'Active entity does not match the saved config' };
-	}
-	if (dbName !== '' && config.db.database !== dbName) {
-		return { ok: false, active: false, msg: 'Active database does not match the saved config' };
-	}
-	const live = await psqlSelect1(connFromConfig());
-	if (live.exitCode !== 0) {
-		return { ok: false, active: false, msg: `Configured but DB unreachable: ${live.stderr}` };
-	}
-	return { ok: true, active: true, msg: 'Active configuration verified' };
 }

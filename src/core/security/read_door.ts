@@ -534,8 +534,6 @@ export const READ_DOOR_POSTURE: ReadonlyMap<string, ReadDoorPosture> = new Map<
 		{ posture: 'structure_only', reason: 'the caller’s own staged uploads.' },
 	],
 	['dd_utils_api:delete_uploaded_file', { posture: 'mutating', reason: 'removes a staged file.' }],
-	['dd_utils_api:get_install_context', { posture: 'structure_only', reason: 'installer state.' }],
-	['dd_utils_api:install', { posture: 'mutating', reason: 'the installer.' }],
 	['dd_utils_api:login', { posture: 'mutating', reason: 'session creation.' }],
 	['dd_utils_api:request_password_reset', { posture: 'mutating', reason: 'reset flow.' }],
 	['dd_utils_api:confirm_password_reset', { posture: 'mutating', reason: 'reset flow.' }],

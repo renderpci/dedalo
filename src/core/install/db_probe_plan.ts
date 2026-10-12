@@ -24,9 +24,9 @@ export function pgConnFromOptions(o: Record<string, unknown>): DbConnDescriptor 
 
 /**
  * A PROBE ANSWER, not a refusal: "the server is unreachable" is the successful
- * outcome of asking, so this never becomes a thrown DedaloError — the router
- * serves it as `ok(<ok>, {extend:{msg, can_connect, db_exists, can_create}})`
- * and the wizard renders the four booleans either way. `ok` (not `result`) so
+ * outcome of asking, so this never becomes a thrown DedaloError — the
+ * installer reads `{ok, msg, can_connect, db_exists, can_create}` and prints the
+ * four booleans either way. `ok` (not `result`) so
  * no envelope-shaped body can leak out of the install engine.
  */
 export interface DbProbeResult {
@@ -42,7 +42,7 @@ export type PsqlOutcome = Pick<PsqlRunResult, 'exitCode' | 'stderr'>;
 
 /**
  * Turn the target-DB run (and the `postgres` maintenance-DB fallback, when it
- * was needed) into the wizard's four booleans + message.
+ * was needed) into the probe's four booleans + message.
  *
  * `maintenance` is null when the target succeeded and no fallback was spawned.
  */

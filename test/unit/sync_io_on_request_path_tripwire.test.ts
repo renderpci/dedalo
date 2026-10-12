@@ -143,12 +143,16 @@ const SCANNED_CALL_FLOOR = 60;
  */
 // 41 → 39 (2026-10-01, DIFF-1/PERF-2): the rdf/xml writers stream their parts
 // through files.ts (readManifestPart) and write through core/files/durable.ts.
-const CEILING_FILES = 39;
+// 39 → 36 (2026-10-12, install surface removed): config_persist / db_restore /
+// server_info left the served closure with the wizard router; install_mode.ts
+// became install_state.ts (WC-2026-10-12-install-surface-removed).
+const CEILING_FILES = 36;
 // 93 → 88 (2026-09-30, OPS-2 review): the backup's hand-written process-record
 // writes left backup.ts when the dump became a registered maintenance job.
 // 88 → 86 (2026-10-01, DIFF-1/PERF-2): files.ts stages through a numeric fd
 // (atomicWriteFile), the rdf merge reads its parts one at a time.
-const CEILING_CALLS = 86;
+// 86 → 80 (2026-10-12): the install writers left the served closure (see above).
+const CEILING_CALLS = 80;
 
 const EXEMPTIONS: { file: string; reason: string }[] = [
 	{
@@ -161,8 +165,9 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 		reason: 'reads ../private/.env ONCE at boot to build the typed config catalog',
 	},
 	{
-		file: 'src/config/install_mode.ts',
-		reason: 'reads the install-state JSON to decide whether the installer route is live; boot-time',
+		file: 'src/config/install_state.ts',
+		reason:
+			'reads the install-state JSON and the .env presence ONCE at boot (boot_refusal.ts / startServer) to decide whether the server may start — the fail-closed refusal, before any listener; never per request',
 	},
 	{
 		file: 'src/core/ai/model_manifest.ts',
@@ -188,14 +193,6 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 			'loads the .mmdb into memory ONCE on first lookup and caches the reader; a per-request read would be the defect',
 	},
 	{
-		file: 'src/core/install/config_persist.ts',
-		reason: 'the installer writes ../private/.env and copies sample.env; runs once, before service',
-	},
-	{
-		file: 'src/core/install/db_restore.ts',
-		reason: 'the installer unpacks the seed dump to a temp .sql; runs once, before service',
-	},
-	{
 		file: 'src/core/install/dir_probe.ts',
 		reason: 'writes a zero-byte probe file to test directory writability during installation',
 	},
@@ -210,10 +207,6 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 	{
 		file: 'src/core/install/pg_bin.ts',
 		reason: 'probes `psql --version` to locate the postgres binaries during installation',
-	},
-	{
-		file: 'src/core/install/server_info.ts',
-		reason: 'probes web-server binaries for their version banner on the installer report page',
 	},
 	{
 		file: 'src/core/media/ingest/staged_name_record.ts',

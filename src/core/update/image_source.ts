@@ -20,7 +20,7 @@
  * family; DEDALO_CONTAINER_IMAGE cannot collide with a media key.
  *
  * A LEAF: env.ts and the registry validator only, never config.ts, so the
- * install mode and the ops CLI can load it. Values are VALIDATED — a wrong
+ * installer and the ops CLI can load it on a box that is not configured. Values are VALIDATED — a wrong
  * repository or mode is reported as absent (null), never passed on.
  * Gate: test/unit/image_source_tripwire.test.ts.
  */

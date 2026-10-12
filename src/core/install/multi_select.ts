@@ -95,7 +95,7 @@ export function mandatoryDeclarers(state: MultiState, value: string): string[] {
 }
 
 /**
- * Tick `option` AND what it declares, transitively — as the wizard pre-ticks a
+ * Tick `option` AND what it declares, transitively — as the screens pre-tick a
  * dependency and the flags install it (`--ontologies zzsma` installs zzsma's
  * optional zzsmb unless declined). An OPTIONAL dependency the operator unticked
  * in this session stays unticked (a deliberate decline); a mandatory one is

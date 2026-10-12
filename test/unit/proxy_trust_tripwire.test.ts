@@ -14,7 +14,8 @@
  *  - the login throttle is keyed on that address, so an attacker minted a fresh
  *    brute-force bucket per request — the exact evasion the hop arithmetic exists for;
  *  - `dd544` activity rows recorded an attacker-chosen address as fact;
- *  - the install gate matches the literal `127.0.0.1`, so a forged header was a claim to
+ *  - the address allowlists' `loopback` entry admits `127.0.0.1` (the error-report intake;
+ *    until 2026-10-12 also the install gate), so a forged header was a claim to
  *    be loopback. The old comment on the function read "this is never an authorization
  *    input"; that was not true.
  *
@@ -60,7 +61,7 @@ describe('proxy trust: an untrusted transport never believes the header', () => 
 	});
 
 	test('a forged loopback claim is not honoured', () => {
-		// The install gate matches the literal 127.0.0.1, so this spelling is a claim
+		// An allowlist's `loopback` entry admits 127.0.0.1, so this spelling is a claim
 		// to be on the machine. It must come from the connection, never from a header.
 		const forged = req({ 'x-forwarded-for': '127.0.0.1' });
 		expect(clientIpFromRequest(forged, untrusted())).not.toBe('127.0.0.1');

@@ -37,7 +37,7 @@ type Answers = Readonly<Record<string, unknown>>;
 
 // ── the System check ─────────────────────────────────────────────────────────
 
-/** The init_test line's subject (its sentences are the wizard's — read, never rewritten). */
+/** The init_test line's subject (its sentences are init_test's — read, never rewritten). */
 const INIT_ROWS: readonly { label: string; match: RegExp; hostOnly: boolean }[] = [
 	{ label: 'Bun', match: /\bBun\b/, hostOnly: false },
 	{ label: 'Install seed', match: /seed/i, hostOnly: true },
@@ -262,7 +262,7 @@ function productionMediaProbe(answers: { media_path: string; instance: string })
 
 /**
  * Can THIS user create (or write) the media directory? The nearest existing
- * ancestor must be writable — the check the wizard's pre-flight runs on the
+ * ancestor must be writable — the check the pre-flight runs on the
  * private dir (init_test.ts). On production the host steps create it as root
  * (phase 4), so only its shape is checked there.
  */

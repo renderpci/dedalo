@@ -1,22 +1,19 @@
 /**
  * THE STEP RUNS — the `run` half of every install step (install_plan.ts
- * INSTALL_STEP_IDS → the engine call that performs it). The ONE implementation
- * both front ends call: the wizard router (engine.ts) serializes the raw
- * outcome onto the wire exactly as before; the terminal executor reaches the
- * same functions through the step table (steps.ts, whose every `run` IS the
+ * INSTALL_STEP_IDS → the engine call that performs it). The terminal executor
+ * reaches them through the ONE step table (steps.ts, whose every `run` IS the
  * entry here) and adds its executor-only policy (accept, verify, undo).
  *
- * Kept apart from steps.ts on purpose: this module is on the served request
- * path (the wizard), and it reads nothing itself — every step module is
- * imported lazily, as the router always did.
+ * Kept apart from steps.ts: the run bodies read nothing themselves — every step
+ * module is imported lazily — while the policy half reads the run files.
  */
 
 import type { InstallStepId } from './install_plan.ts';
 import type { OntologyCatalog, OntologyInstallRequest } from './ontology_choice.ts';
 
-/** What a step's `run` needs — the wizard's post shape plus the per-step extras. */
+/** What a step's `run` needs — the answers plus the per-step extras. */
 export interface InstallStepInputs {
-	/** The wizard post shape (the CLI: the plan's answers + its secrets, in memory only). */
+	/** The plan's answers + its secrets, in memory only. */
 	readonly posted: Readonly<Record<string, unknown>>;
 	/** check_directories: create the missing directories (the installer's create pass). */
 	readonly createDirectories: boolean;
@@ -26,22 +23,20 @@ export interface InstallStepInputs {
 	readonly ontologyRequest?: OntologyInstallRequest;
 	/** install_hierarchies: the thesauri to import (required there). */
 	readonly hierarchies?: readonly string[];
-	/** The audited actor: -1 for the terminal installer; the wizard's session user for its writes. */
+	/** The audited actor: -1 (the terminal installer). */
 	readonly actorUserId: number;
 	/** set_root_pw. */
 	readonly rootPassword?: string;
-	/** persist_config: the status it records (the wizard: `configured`). */
-	readonly installStatus?: 'configured' | 'terminal_installing';
 	/**
 	 * install_db_from_default_file: the terminal install's id — the seed is
 	 * STAMPED with it and a database carrying it is completed instead of refused
-	 * (db_restore.ts installDbFromSeedForInstall). Only the executor sets it; the
-	 * wizard's restore keeps refusing any seeded database.
+	 * (db_restore.ts installDbFromSeedForInstall). Without it the restore refuses
+	 * any seeded database.
 	 */
 	readonly installId?: string;
 }
 
-/** A step's raw engine outcome: the wizard serializes it; `ok`/`msg` are what the executor reads. */
+/** A step's raw engine outcome; `ok`/`msg` are what the executor reads. */
 export interface StepRawOutcome {
 	ok: unknown;
 	msg?: string;
@@ -67,10 +62,7 @@ export const STEP_RUNS: {
 	persist_config: async (inputs) => {
 		const { persistConfig } = await import('./config_persist.ts');
 		return {
-			...(await persistConfig(
-				{ ...inputs.posted },
-				{ ontologyCatalog: inputs.ontologyCatalog, installStatus: inputs.installStatus },
-			)),
+			...(await persistConfig({ ...inputs.posted }, { ontologyCatalog: inputs.ontologyCatalog })),
 		};
 	},
 	check_directories: async (inputs) => {

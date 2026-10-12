@@ -265,7 +265,7 @@ Resolution helpers:
 | `isAvailable` | `(context: ToolAvailabilityContext) => boolean \| Promise<boolean>` | by the section/component tool filter (`getElementTools` in `registry.ts`) after the `affected_models`/`affected_tipos` match, with `{callerModel, tipo, sectionTipo, isComponent, mode}`. Return `false` to hide the tool for that element. Must be fast and side-effect-free — results are cached per user/tipo/section. Tools without a loaded module fall back to a small set of core rules (`tool_diffusion`'s section-only + diffusion-map check is the one still resolved in `registry.ts` today). |
 | `onRegister` | `() => Promise<void>` | after the registry record is reconciled during `importTools()`. Sanctioned place for setup (e.g. seeding a dd996 config record). A throw is logged, never fails the import. |
 | `onRemove` | `() => Promise<void>` | best-effort, before the registry record of a removed tool is deleted. |
-| `onBoot` | `() => ToolBootHandle \| undefined` | once per serving boot (not in install mode or a smoke boot), after the tool registry loads (`loader.ts::startToolBootHooks`). For timers the tool owns — tool_export's TTL sweeper. Must not block: arm and return. The returned `{stop()}` runs on shutdown. A throw is logged (`[tools] <name>.onBoot failed`), never fatal. |
+| `onBoot` | `() => ToolBootHandle \| undefined` | once per serving boot (not in a smoke boot), after the tool registry loads (`loader.ts::startToolBootHooks`). For timers the tool owns — tool_export's TTL sweeper. Must not block: arm and return. The returned `{stop()}` runs on shutdown. A throw is logged (`[tools] <name>.onBoot failed`), never fatal. |
 
 ## HTTP routes (`httpRoutes`)
 

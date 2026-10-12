@@ -28,9 +28,9 @@
  *
  *  3. NO FLAT PUBLISHED LINKS IN SHIPPED CODE. A link to dedalo.dev/docs/<path>
  *     with no version prefix resolves only through a server-side redirect whose
- *     meaning CHANGES on the day v8 ships. The v7 installer shipped exactly
- *     such links (client/dedalo/core/installer/js/render_installer.js), which
- *     is also why legacy flat URLs route to v7 rather than v6.
+ *     meaning CHANGES on the day v8 ships. The v7 browser installer (removed
+ *     2026-10-12) shipped exactly such links, which is also why legacy flat
+ *     URLs route to v7 rather than v6.
  *
  *  4. A PAGE THAT LEAVES DOES NOT 404. This is the one that only starts
  *     mattering on publication day, which is precisely why it has to exist
