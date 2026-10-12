@@ -255,10 +255,14 @@ describe('install TLD provenance', () => {
 		async () => {
 			const before = await ontologyFingerprint();
 			rmSync(SOCKET, { force: true });
+			// The entity must come from the scratch install's own .env (the identity the
+			// stdout check below proves): an inherited ENTITY (CI's hosted_env.sh exports
+			// `ci_hosted`) or its legacy alias would win over the file.
+			const { ENTITY: _entity, DEDALO_ENTITY: _legacyEntity, ...inherited } = process.env;
 			const server = Bun.spawn([process.execPath, 'run', 'src/server.ts'], {
 				cwd: ROOT,
 				env: {
-					...process.env,
+					...inherited,
 					DEDALO_PRIVATE_DIR: scratchDir,
 					DEDALO_TS_STATE_PATH: join(scratchDir, 'ts_state.json'),
 					DEDALO_SESSION_DB_PATH: join(scratchDir, 'sessions.sqlite'),
