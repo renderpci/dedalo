@@ -90,7 +90,10 @@ Environment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups
 # must name every ACTIVE ExecStart store below, and nothing else;
 # test/unit/operator_commands_tripwire.test.ts holds the two equal.
 # UNCOMMENTING store 2 means adding rag_db here in the same edit.
-Environment=DEDALO_BACKUP_EXPECTED_STORES=matrix_db media private site_builder
+# QUOTED as a whole (campaign 2 L8): systemd splits an Environment= value on
+# whitespace, so the unquoted spelling promised `matrix_db` alone and dropped
+# the rest as invalid assignments — a truncated list that reported success.
+Environment="DEDALO_BACKUP_EXPECTED_STORES=matrix_db media private site_builder"
 # A dump and a media mirror are a complete, unprotected copy of the collection.
 UMask=0077
 

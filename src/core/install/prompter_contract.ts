@@ -229,6 +229,11 @@ export interface ReviewView {
 	command: string;
 	/** The plan's refusals (why install is not offered). */
 	errors: readonly string[];
+	/**
+	 * A host route's commands, per host step, exactly as the run will execute
+	 * them (phase 4: review equals run); [] on the developer route.
+	 */
+	hostCommands?: readonly { step: string; label: string; commands: readonly string[] }[];
 }
 
 // ── the prompter ─────────────────────────────────────────────────────────────

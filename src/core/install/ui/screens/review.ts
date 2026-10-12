@@ -55,6 +55,20 @@ function bodyLines(view: ReviewView, width: number): Line[] {
 		...view.errors.flatMap((error) => wrapped(`✗ ${error}`, width, 'err')),
 		BLANK,
 		...view.lines.flatMap((line) => reviewLine(line.label, line.value, width)),
+		...hostCommandBlock(view, width),
+	];
+}
+
+/** A host route's commands, per step, exactly as they will run (review equals run). */
+function hostCommandBlock(view: ReviewView, width: number): Line[] {
+	const blocks = view.hostCommands ?? [];
+	if (blocks.length === 0) return [];
+	return [
+		BLANK,
+		...blocks.flatMap((block) => [
+			...wrapped(`[${block.step}] ${block.label}`, width, 'text'),
+			...block.commands.flatMap((command) => wrapped(`  $ ${command}`, width, 'muted')),
+		]),
 	];
 }
 

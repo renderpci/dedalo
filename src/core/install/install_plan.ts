@@ -166,6 +166,72 @@ export const INSTALL_STEP_IDS = [
 ] as const;
 export type InstallStepId = (typeof INSTALL_STEP_IDS)[number];
 
+/**
+ * The PRODUCTION route's HOST steps (terminal installer phase 4, 2026-10-12), in
+ * run order — what the root process runs (src/core/install/host/host_table.ts);
+ * `host_engine` runs the ENGINE steps above in a child, as the instance user.
+ * Listed HERE (not under host/) because this module is on the wizard's import
+ * closure and host/** must stay off it: the ids are data, the steps are not.
+ * `host_selinux` is planned on every production install and decides itself
+ * (RHEL family only); `host_web_http` is the Let's Encrypt challenge site.
+ */
+export const PRODUCTION_HOST_STEP_IDS = [
+	'host_preflight',
+	'host_packages',
+	'host_identity',
+	'host_runtime',
+	'host_database',
+	'host_engine',
+	'host_units',
+	'host_selinux',
+	'host_first_boot',
+	'host_watchdog',
+	'host_web_http',
+	'host_tls',
+	'host_web_site',
+	'host_public_probe',
+	'host_backup_verify',
+] as const;
+
+/** The DOCKER/TRIAL routes' host steps (their table: host/stack/table.ts). */
+export const STACK_HOST_STEP_IDS = [
+	'stack_preflight',
+	'stack_image',
+	'stack_tls',
+	'stack_files',
+	'stack_database',
+	'stack_engine',
+	'stack_up',
+	'stack_health',
+] as const;
+
+export type ProductionHostStepId = (typeof PRODUCTION_HOST_STEP_IDS)[number];
+export type StackHostStepId = (typeof STACK_HOST_STEP_IDS)[number];
+export type HostStepId = ProductionHostStepId | StackHostStepId;
+/** Any step the one step loop (step_loop.ts) can run: an engine step or a host step. */
+export type StepId = InstallStepId | HostStepId;
+
+/** Every step id, engine and host (the fault seam's vocabulary). */
+export const ALL_STEP_IDS: readonly StepId[] = Object.freeze([
+	...INSTALL_STEP_IDS,
+	...PRODUCTION_HOST_STEP_IDS,
+	...STACK_HOST_STEP_IDS,
+]);
+
+/** Is `step` an ENGINE step (the executor's table)? */
+export function isInstallStepId(step: string): step is InstallStepId {
+	return (INSTALL_STEP_IDS as readonly string[]).includes(step);
+}
+
+/** The production web servers the host steps render a site file for. */
+export const WEB_SERVERS = ['nginx', 'apache'] as const;
+/** TLS modes: production letsencrypt|files; docker adds local_ca; trial is none. */
+export const TLS_MODES = ['letsencrypt', 'files', 'local_ca', 'none'] as const;
+/** The production database: created by the installer (peer role), or an existing one probed. */
+export const DB_MODES = ['create', 'existing'] as const;
+/** Where a docker/trial image comes from. */
+export const IMAGE_SOURCES = ['official', 'custom', 'build'] as const;
+
 /** The normalized answers — the SAME key names the wizard posts. */
 export interface InstallAnswers {
 	/** The route (absent = developer). Terminal-only: the wizard refuses it (config_persist.ts). */
@@ -223,6 +289,42 @@ export interface InstallAnswers {
 	 * server filesystem path.
 	 */
 	ontology_source: string;
+	// ── host steps (phase 4, 2026-10-12): TERMINAL-ONLY, refused at the wizard door ──
+	/** production: 'nginx' | 'apache' | '' (= the one the host has, else nginx — decided at host_preflight). */
+	web_server: string;
+	/** production/docker: the public address (an FQDN, never localhost or an IP). */
+	server_name: string;
+	http_port: string;
+	https_port: string;
+	/** TLS_MODES, per route (production: letsencrypt|files; docker: +local_ca; trial: none). */
+	tls_mode: string;
+	letsencrypt_email: string;
+	/** Let's Encrypt's staging CA (a drill / a rate-limit-safe rehearsal). Flags only. */
+	letsencrypt_staging: boolean;
+	/** The institution's own certificate: absolute paths (fullchain + key), checked before use. */
+	tls_cert_path: string;
+	tls_key_path: string;
+	/** production: 'create' (the installer creates role + database) | 'existing' (probed only). */
+	db_mode: string;
+	/** production: where the backup units write (default /home/ded_<i>/backups). */
+	backup_dir: string;
+	/** production: this instance's backup also covers the host's site-builder store. Flags only. */
+	backup_site_builder: boolean;
+	/** docker/trial: IMAGE_SOURCES. */
+	image_source: string;
+	image_repository: string;
+	/** docker/trial: the image tag ('' = this installer's own version). */
+	image_version: string;
+	/**
+	 * The ENGINE steps only — the delegated child a host route starts (as the
+	 * instance user, or inside the container). Flags only; recorded in the plan.
+	 */
+	engine_only: boolean;
+	/**
+	 * DEDALO_PG_BIN_PATH ('' = not written): the host's PostgreSQL 18 binaries,
+	 * which the production route passes to its engine child from the OS row.
+	 */
+	pg_bin_path: string;
 }
 
 /**
@@ -276,7 +378,75 @@ const ANSWER_CLASS: Readonly<Record<keyof InstallAnswers, 'secret' | 'plain'>> =
 	ontologies: 'plain',
 	declined_dependencies: 'plain',
 	ontology_source: 'plain',
+	web_server: 'plain',
+	server_name: 'plain',
+	http_port: 'plain',
+	https_port: 'plain',
+	tls_mode: 'plain',
+	letsencrypt_email: 'plain',
+	letsencrypt_staging: 'plain',
+	tls_cert_path: 'plain',
+	tls_key_path: 'plain',
+	db_mode: 'plain',
+	backup_dir: 'plain',
+	backup_site_builder: 'plain',
+	image_source: 'plain',
+	image_repository: 'plain',
+	image_version: 'plain',
+	engine_only: 'plain',
+	pg_bin_path: 'plain',
 });
+
+/**
+ * The answers only the TERMINAL installer takes (its routes, the host steps):
+ * the wizard door refuses every one of them (config_persist.ts
+ * refuseWizardOnlyCliAnswers) — they derive defaults and run host commands the
+ * wizard's form never shows. ONE list, read by that door.
+ */
+export const TERMINAL_ONLY_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze([
+	'route',
+	'instance',
+	'web_server',
+	'server_name',
+	'http_port',
+	'https_port',
+	'tls_mode',
+	'letsencrypt_email',
+	'letsencrypt_staging',
+	'tls_cert_path',
+	'tls_key_path',
+	'db_mode',
+	'backup_dir',
+	'backup_site_builder',
+	'image_source',
+	'image_repository',
+	'image_version',
+	'engine_only',
+	'pg_bin_path',
+]);
+
+/**
+ * The answers that drive the HOST steps only — what the delegated engine child
+ * is NOT given (host/production/engine_delegate.ts: engine answers ≡ the host
+ * answers minus these, plus engine_only and the host-derived pg_bin_path).
+ */
+export const HOST_ONLY_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze([
+	'web_server',
+	'server_name',
+	'http_port',
+	'https_port',
+	'tls_mode',
+	'letsencrypt_email',
+	'letsencrypt_staging',
+	'tls_cert_path',
+	'tls_key_path',
+	'db_mode',
+	'backup_dir',
+	'backup_site_builder',
+	'image_source',
+	'image_repository',
+	'image_version',
+]);
 
 /** Every answer key, in declaration order (the answers file's key set). */
 export const INSTALL_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze(
@@ -311,7 +481,7 @@ export interface InstallPlan {
 	readonly env: readonly EnvSection[];
 	/** Every key the plan OWNS, in file order (DEDALO_SALT_STRING included). */
 	readonly envKeys: readonly string[];
-	readonly steps: readonly InstallStepId[];
+	readonly steps: readonly StepId[];
 	/**
 	 * The thesauri install_hierarchies imports: the answer's, then every
 	 * installable declared thesaurus dependency not already in it.
@@ -416,56 +586,91 @@ function parseRoute(value: unknown, problems: FieldError[]): InstallRoute {
 /**
  * The answer defaults a ROUTE changes (D6). Everything else defaults alike on
  * every route.
- *  - production: the instance's own names, as docs/install/multi_instance.md
- *    creates them — PostgreSQL role AND database `dedalo_<i>`, media
- *    `/srv/dedalo/<i>/media`, socket `/run/dedalo-<i>/dedalo_ts.sock` (systemd
- *    RuntimeDirectory), publication database `web_<i>`; '' while the instance is
- *    missing or malformed (its own error says so);
+ *  - production: the instance's own names (docs/install/multi_instance.md) —
+ *    database `dedalo_<i>` owned by the PEER role `ded_<i>` (the instance's own
+ *    unix user, over the local socket `/var/run/postgresql`: no database
+ *    password exists at rest — phase 4, owner question Q2), media
+ *    `/srv/dedalo/<i>/dedalo/media` (THE ROOT RULE: the site file's
+ *    `root /srv/dedalo/<i>` + `/dedalo/media` must equal MEDIA_PATH — the
+ *    pre-phase-4 `/srv/dedalo/<i>/media` could satisfy no root), socket
+ *    `/run/dedalo-<i>/dedalo_ts.sock` (systemd RuntimeDirectory), backups
+ *    `/home/ded_<i>/backups` (the code updater's `<install>/../backups`),
+ *    publication database `web_<i>`, Let's Encrypt, a created database; '' while
+ *    the instance is missing or malformed (its own error says so);
  *  - docker / trial: the compose stack's constants (install.sh passes the
  *    SAME values as explicit flags — an older pulled image does not know
- *    `--route`; gate: install_screen_model_tripwire);
+ *    `--route`; gate: install_screen_model_tripwire); trial has no TLS;
  *  - developer: no database name or user (asked), media and socket not written.
  */
 export interface RouteDefaults {
 	readonly db_hostname: string;
+	readonly db_socket: string;
 	readonly db_database: string;
 	readonly db_username: string;
 	readonly media_path: string;
 	readonly unix_socket: string;
 	readonly mysql_database: string;
+	readonly tls_mode: string;
+	readonly db_mode: string;
+	readonly backup_dir: string;
+	readonly image_source: string;
 }
 
 const STACK_DEFAULTS: RouteDefaults = Object.freeze({
 	db_hostname: 'postgres',
+	db_socket: '',
 	db_database: 'dedalo',
 	db_username: 'dedalo',
 	media_path: '/srv/dedalo/media',
 	unix_socket: '/run/dedalo/dedalo_ts.sock',
 	mysql_database: 'web_dedalo',
+	tls_mode: 'letsencrypt',
+	db_mode: '',
+	backup_dir: '',
+	image_source: 'official',
+});
+
+/** The local PostgreSQL socket directory a created (peer) production database is reached through. */
+export const LOCAL_PG_SOCKET_DIR = '/var/run/postgresql';
+
+/** A production instance's defaults (see RouteDefaults); '' names while the instance is not valid. */
+function productionDefaults(instance: string): RouteDefaults {
+	const named = INSTANCE_PATTERN.test(instance) ? instance : '';
+	const derive = (shape: (name: string) => string): string => (named === '' ? '' : shape(named));
+	return {
+		db_hostname: 'localhost',
+		db_socket: LOCAL_PG_SOCKET_DIR,
+		db_database: derive((name) => `dedalo_${name}`),
+		db_username: derive((name) => `ded_${name}`),
+		media_path: derive((name) => `/srv/dedalo/${name}/dedalo/media`),
+		unix_socket: derive((name) => `/run/dedalo-${name}/dedalo_ts.sock`),
+		mysql_database: named === '' ? 'web_dedalo' : `web_${named}`,
+		tls_mode: 'letsencrypt',
+		db_mode: 'create',
+		backup_dir: derive((name) => `/home/ded_${name}/backups`),
+		image_source: '',
+	};
+}
+
+const DEVELOPER_DEFAULTS: RouteDefaults = Object.freeze({
+	db_hostname: 'localhost',
+	db_socket: '',
+	db_database: '',
+	db_username: '',
+	media_path: '',
+	unix_socket: '',
+	mysql_database: 'web_dedalo',
+	tls_mode: '',
+	db_mode: '',
+	backup_dir: '',
+	image_source: '',
 });
 
 export function routeDefaults(route: InstallRoute, instance: string): RouteDefaults {
-	if (route === 'docker' || route === 'trial') return STACK_DEFAULTS;
-	if (route === 'production') {
-		const named = INSTANCE_PATTERN.test(instance) ? instance : '';
-		const derive = (shape: (name: string) => string): string => (named === '' ? '' : shape(named));
-		return {
-			db_hostname: 'localhost',
-			db_database: derive((name) => `dedalo_${name}`),
-			db_username: derive((name) => `dedalo_${name}`),
-			media_path: derive((name) => `/srv/dedalo/${name}/media`),
-			unix_socket: derive((name) => `/run/dedalo-${name}/dedalo_ts.sock`),
-			mysql_database: named === '' ? 'web_dedalo' : `web_${named}`,
-		};
-	}
-	return {
-		db_hostname: 'localhost',
-		db_database: '',
-		db_username: '',
-		media_path: '',
-		unix_socket: '',
-		mysql_database: 'web_dedalo',
-	};
+	if (route === 'docker') return STACK_DEFAULTS;
+	if (route === 'trial') return { ...STACK_DEFAULTS, tls_mode: 'none' };
+	if (route === 'production') return productionDefaults(instance);
+	return DEVELOPER_DEFAULTS;
 }
 
 /**
@@ -572,13 +777,23 @@ export function normalizeHierarchyChoice(value: unknown): {
 	return { hierarchies, notes, errors };
 }
 
+/**
+ * The socket answer: given, or the route's — production's local socket only
+ * while the installer CREATES the database (an existing one is reached as the
+ * operator says).
+ */
+function dbSocketOf(raw: RawAnswers, d: RouteDefaults): string {
+	if (Object.hasOwn(raw, 'db_socket')) return text(raw, 'db_socket');
+	return textOr(raw, 'db_mode', d.db_mode) === 'create' ? d.db_socket : '';
+}
+
 /** Database + entity + locale answers (the plan's defaults live here; the route's in `d`). */
 function coreAnswers(raw: RawAnswers, d: RouteDefaults) {
 	const entity = text(raw, 'entity');
 	return {
 		db_hostname: textOr(raw, 'db_hostname', d.db_hostname),
 		db_port: textOr(raw, 'db_port', '5432'),
-		db_socket: text(raw, 'db_socket'),
+		db_socket: dbSocketOf(raw, d),
 		db_database: textOr(raw, 'db_database', d.db_database),
 		db_username: textOr(raw, 'db_username', d.db_username),
 		db_password: text(raw, 'db_password'),
@@ -618,6 +833,37 @@ function serviceAnswers(raw: RawAnswers, d: RouteDefaults) {
 	};
 }
 
+/** A posted bool: exactly `true` (a flag, a JSON true) — anything else is false. */
+function flag(raw: RawAnswers, key: string): boolean {
+	return raw[key] === true;
+}
+
+/**
+ * The host-step answers (phase 4): web, TLS, database mode, backups, image.
+ * Defaults by route (RouteDefaults); the ports are the web server's standard ones.
+ */
+function hostAnswers(raw: RawAnswers, d: RouteDefaults) {
+	return {
+		web_server: text(raw, 'web_server'),
+		server_name: text(raw, 'server_name').toLowerCase(),
+		http_port: textOr(raw, 'http_port', '80'),
+		https_port: textOr(raw, 'https_port', '443'),
+		tls_mode: textOr(raw, 'tls_mode', d.tls_mode),
+		letsencrypt_email: text(raw, 'letsencrypt_email'),
+		letsencrypt_staging: flag(raw, 'letsencrypt_staging'),
+		tls_cert_path: text(raw, 'tls_cert_path'),
+		tls_key_path: text(raw, 'tls_key_path'),
+		db_mode: textOr(raw, 'db_mode', d.db_mode),
+		backup_dir: textOr(raw, 'backup_dir', d.backup_dir),
+		backup_site_builder: flag(raw, 'backup_site_builder'),
+		image_source: textOr(raw, 'image_source', d.image_source),
+		image_repository: text(raw, 'image_repository'),
+		image_version: text(raw, 'image_version'),
+		engine_only: flag(raw, 'engine_only'),
+		pg_bin_path: text(raw, 'pg_bin_path'),
+	};
+}
+
 /**
  * Raw answers (wizard post or CLI flags) → normalized answers + notes + errors
  * (+ the same refusals tagged by answer key, `fieldErrors`).
@@ -651,6 +897,7 @@ export function normalizeInstallAnswers(raw: RawAnswers): {
 		ontologies: ontologyChoice.ontologies,
 		declined_dependencies: declinedChoice.declined,
 		ontology_source: text(raw, 'ontology_source'),
+		...hostAnswers(raw, defaults),
 	};
 	// Every answer-only refusal (install_validation.ts): raised HERE, before any
 	// front end writes anything — the CLI argv, an answers file and the wizard
@@ -852,6 +1099,7 @@ function servingSection(a: InstallAnswers): EnvSection {
 		entry('MEDIA_PATH', a.media_path),
 		entry('SERVER_UNIX_SOCKET', a.unix_socket),
 		entry('DEDALO_MEDIA_ACCESS_MODE', a.media_access_mode),
+		entry('DEDALO_PG_BIN_PATH', a.pg_bin_path),
 	];
 	return {
 		comment: '# --- Serving / media ---',
@@ -935,14 +1183,39 @@ export function hasIllegalControlCharacter(value: string): boolean {
 
 // ── the steps ────────────────────────────────────────────────────────────────
 
-/** The step list: the optional probes and tool registration follow the answers. */
-function installSteps(a: InstallAnswers): InstallStepId[] {
+/** The ENGINE step list: the optional probes and tool registration follow the answers. */
+export function engineSteps(a: InstallAnswers): InstallStepId[] {
 	const optional: Partial<Record<InstallStepId, boolean>> = {
 		test_diffusion_connection: a.diffusion,
 		test_mailer_connection: a.mailer,
 		register_tools: a.register_tools,
 	};
 	return INSTALL_STEP_IDS.filter((step) => optional[step] !== false);
+}
+
+/** The production host steps: the challenge site only for Let's Encrypt. */
+function productionSteps(a: InstallAnswers): ProductionHostStepId[] {
+	return PRODUCTION_HOST_STEP_IDS.filter(
+		(step) => step !== 'host_web_http' || a.tls_mode === 'letsencrypt',
+	);
+}
+
+/** The docker/trial host steps: no TLS step without TLS (trial). */
+function stackSteps(a: InstallAnswers): StackHostStepId[] {
+	return STACK_HOST_STEP_IDS.filter((step) => step !== 'stack_tls' || a.tls_mode !== 'none');
+}
+
+/**
+ * THE step list (phase 4): a host route that is not the delegated engine child
+ * runs its HOST steps (the engine steps run inside `host_engine` /
+ * `stack_engine`, in a child); the developer route and every `engine_only`
+ * child run the engine steps here.
+ */
+export function installSteps(a: InstallAnswers): StepId[] {
+	if (a.engine_only) return engineSteps(a);
+	if (a.route === 'production') return productionSteps(a);
+	if (a.route === 'docker' || a.route === 'trial') return stackSteps(a);
+	return engineSteps(a);
 }
 
 // ── the ontologies ───────────────────────────────────────────────────────────
@@ -1254,11 +1527,29 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--ontologies', key: 'ontologies', kind: 'value' },
 	{ flag: '--ontology-source', key: 'ontology_source', kind: 'value' },
 	{ flag: '--decline-dependencies', key: 'declined_dependencies', kind: 'value' },
+	// The host steps (phase 4, 2026-10-12).
+	{ flag: '--web-server', key: 'web_server', kind: 'value' },
+	{ flag: '--server-name', key: 'server_name', kind: 'value' },
+	{ flag: '--http-port', key: 'http_port', kind: 'value' },
+	{ flag: '--https-port', key: 'https_port', kind: 'value' },
+	{ flag: '--tls', key: 'tls_mode', kind: 'value' },
+	{ flag: '--letsencrypt-email', key: 'letsencrypt_email', kind: 'value' },
+	{ flag: '--tls-cert', key: 'tls_cert_path', kind: 'value' },
+	{ flag: '--tls-key', key: 'tls_key_path', kind: 'value' },
+	{ flag: '--db-mode', key: 'db_mode', kind: 'value' },
+	{ flag: '--backup-dir', key: 'backup_dir', kind: 'value' },
+	{ flag: '--image-source', key: 'image_source', kind: 'value' },
+	{ flag: '--image-repository', key: 'image_repository', kind: 'value' },
+	{ flag: '--image-version', key: 'image_version', kind: 'value' },
+	{ flag: '--pg-bin-path', key: 'pg_bin_path', kind: 'value' },
 	{ flag: '--root-password', key: null, kind: 'value' },
 	{ flag: '--diffusion', key: 'diffusion', kind: 'bool' },
 	{ flag: '--mailer', key: 'mailer', kind: 'bool' },
 	{ flag: '--no-update-servers', key: 'update_servers', kind: 'bool' },
 	{ flag: '--skip-tools', key: 'register_tools', kind: 'bool' },
+	{ flag: '--letsencrypt-staging', key: 'letsencrypt_staging', kind: 'bool' },
+	{ flag: '--backup-site-builder', key: 'backup_site_builder', kind: 'bool' },
+	{ flag: '--engine-only', key: 'engine_only', kind: 'bool' },
 	{ flag: '--plan', key: null, kind: 'bool' },
 	{ flag: '--list-ontologies', key: null, kind: 'bool' },
 	{ flag: '--list-hierarchies', key: null, kind: 'bool' },
@@ -1273,6 +1564,11 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--plain', key: null, kind: 'bool' },
 	{ flag: '--write-answers', key: null, kind: 'value' },
 	{ flag: '--list-langs', key: null, kind: 'bool' },
+	// The delegated engine child's channels (phase 4 — a host route's parent reads them).
+	{ flag: '--status', key: null, kind: 'bool' },
+	{ flag: '--json', key: null, kind: 'bool' },
+	{ flag: '--events-jsonl', key: null, kind: 'bool' },
+	{ flag: '--request-stdin', key: null, kind: 'bool' },
 ]);
 
 const FLAGS_BY_NAME: ReadonlyMap<string, (typeof INSTALL_CLI_FLAGS)[number]> = new Map(
@@ -1326,6 +1622,20 @@ export interface CliInstallInvocation {
 	writeAnswersPath: string | undefined;
 	/** --list-langs: print the language offer and exit. */
 	listLangs: boolean;
+	/**
+	 * --status: print the saved install record's state and exit (with --json: ONE
+	 * JSON line — how a host route's parent verifies its engine child, phase 4).
+	 */
+	status: boolean;
+	json: boolean;
+	/** --events-jsonl: the run's step events and its show-once lines as JSON lines on stdout. */
+	eventsJsonl: boolean;
+	/**
+	 * --request-stdin: ONE JSON object on stdin — `{schema: 'dedalo.install.request/1',
+	 * answers, secrets}` — how a host route's parent hands its engine child the
+	 * answers AND the secrets without a file or an argv (phase 4, critique B10).
+	 */
+	requestStdin: boolean;
 	/** The argv secret flags given (each earns a stderr warning). */
 	argvSecretFlags: string[];
 	errors: string[];
@@ -1370,6 +1680,10 @@ const FRONT_END_SETTERS: ReadonlyMap<string, FrontEndSetter> = new Map<string, F
 	['--plain', (invocation) => (invocation.plain = true)],
 	['--write-answers', (invocation, value) => (invocation.writeAnswersPath = value)],
 	['--list-langs', (invocation) => (invocation.listLangs = true)],
+	['--status', (invocation) => (invocation.status = true)],
+	['--json', (invocation) => (invocation.json = true)],
+	['--events-jsonl', (invocation) => (invocation.eventsJsonl = true)],
+	['--request-stdin', (invocation) => (invocation.requestStdin = true)],
 ]);
 
 /** Apply one parsed flag to the invocation. */
@@ -1455,6 +1769,9 @@ const HEADLESS_SOURCES: readonly ((invocation: CliInstallInvocation) => boolean)
 	(invocation) => invocation.secretsStdin,
 	(invocation) => invocation.execute,
 	(invocation) => invocation.rootPassword !== undefined,
+	(invocation) => invocation.status,
+	(invocation) => invocation.eventsJsonl,
+	(invocation) => invocation.requestStdin,
 ];
 
 /** Headless for a reason other than --resume (the one run control --plain may join: it prompts the secrets). */
@@ -1497,6 +1814,24 @@ const COMBINATION_RULES: readonly {
 		refuses: (invocation) => invocation.confirmDatabase !== undefined && !invocation.abort,
 		error: '--confirm-database is only meaningful with --abort',
 	},
+	{
+		refuses: (invocation) =>
+			invocation.status && (continuing(invocation) || invocation.planOnly || listing(invocation)),
+		error: '--status cannot be combined with --resume, --abort, --plan or --list-*',
+	},
+	{
+		refuses: (invocation) => invocation.json && !invocation.status,
+		error: '--json is only meaningful with --status',
+	},
+	{
+		refuses: (invocation) =>
+			invocation.requestStdin &&
+			(invocation.secretsStdin ||
+				invocation.answersFile !== undefined ||
+				Object.keys(invocation.raw).length > 0),
+		error:
+			'--request-stdin carries the answers and the secrets: it takes no answer flag, --answers or --secrets-stdin',
+	},
 ]);
 
 /** The run-control combinations that cannot mean anything, as parser errors. */
@@ -1525,6 +1860,10 @@ export function answersFromCliArgs(argv: readonly string[]): CliInstallInvocatio
 		plain: false,
 		writeAnswersPath: undefined,
 		listLangs: false,
+		status: false,
+		json: false,
+		eventsJsonl: false,
+		requestStdin: false,
 		argvSecretFlags: [],
 		errors: [],
 	};

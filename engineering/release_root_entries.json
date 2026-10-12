@@ -3,6 +3,7 @@
 	"root_entries": [
 		".agents",
 		".bun-sha256",
+		".bun-sha256-darwin",
 		".bun-version",
 		".dockerignore",
 		".gitattributes",

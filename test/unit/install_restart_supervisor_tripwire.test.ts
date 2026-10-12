@@ -32,6 +32,7 @@ import {
 	readdirSync,
 	readFileSync,
 	rmSync,
+	symlinkSync,
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -795,6 +796,126 @@ describe('install restart supervisor contract', () => {
 		const calls = existsSync(f.systemctlLog) ? readFileSync(f.systemctlLog, 'utf8') : '';
 		return { exitCode: proc.exitCode, calls };
 	}
+
+	// --- the BOOT GRACE (finding F3, campaign 2 L7): a red probe of a server still
+	// booting is skipped — driven against a stub `systemctl show` and a stub uptime
+	// clock, every branch of in_boot_grace, and the no-grace default.
+
+	interface GraceCase {
+		name: string;
+		state: string;
+		/** ActiveEnterTimestampMonotonic, µs since boot. */
+		entered: number;
+		/** /proc/uptime seconds (null: an unreadable clock). */
+		uptime: number | null;
+		/** A /run/<dir>/booting marker naming a LIVE pid. */
+		marker: boolean;
+		flags: boolean;
+		restarted: boolean;
+	}
+
+	const GRACE_CASES: GraceCase[] = [
+		{ name: 'activating', state: 'activating', entered: 0, uptime: 5000, marker: false, flags: true, restarted: false },
+		{ name: 'active, entered 100 s ago (< 900)', state: 'active', entered: 4900e6, uptime: 5000, marker: false, flags: true, restarted: false },
+		{ name: 'active, entered 4900 s ago', state: 'active', entered: 100e6, uptime: 5000, marker: false, flags: true, restarted: true },
+		{ name: 'booting marker, live pid, 2000 s (< 4 × 900)', state: 'active', entered: 3000e6, uptime: 5000, marker: true, flags: true, restarted: false },
+		{ name: 'booting marker, live pid, 4900 s (> 4 × 900)', state: 'active', entered: 100e6, uptime: 5000, marker: true, flags: true, restarted: true },
+		{ name: 'an unreadable clock never reads as young', state: 'active', entered: 4900e6, uptime: null, marker: false, flags: true, restarted: true },
+		{ name: 'no --service: no grace (the old behaviour)', state: 'activating', entered: 4900e6, uptime: 5000, marker: true, flags: false, restarted: true },
+	];
+
+	function runGrace(f: Fixture, item: GraceCase): { exitCode: number | null; calls: string } {
+		writeFileSync(join(f.root, 'active_state'), `${item.state}\n`);
+		writeFileSync(join(f.root, 'entered'), `${item.entered}\n`);
+		writeFileSync(
+			join(f.binDir, 'systemctl'),
+			[
+				'#!/usr/bin/env bash',
+				'if [ "$1" = show ]; then',
+				`  case "$3" in ActiveState) cat "${f.root}/active_state" ;; ActiveEnterTimestampMonotonic) cat "${f.root}/entered" ;; esac`,
+				'  exit 0',
+				'fi',
+				`echo "systemctl $*" >> "${f.systemctlLog}"`,
+				'',
+			].join('\n'),
+		);
+		chmodSync(join(f.binDir, 'systemctl'), 0o755);
+		const uptime = join(f.root, 'uptime');
+		rmSync(uptime, { force: true });
+		if (item.uptime !== null) writeFileSync(uptime, `${item.uptime}.42 1234.56\n`);
+		const socketDir = join(f.root, 'run');
+		mkdirSync(socketDir, { recursive: true });
+		rmSync(join(socketDir, 'booting'), { force: true });
+		if (item.marker) writeFileSync(join(socketDir, 'booting'), `${process.pid}\n`);
+		const flags = item.flags
+			? ['--service', 'dedalo-ts@demo.service', '--grace', '900', '--uptime-file', uptime]
+			: [];
+		return runWatchdog(f, false, ['--socket', join(socketDir, 'dedalo_ts.sock'), ...flags]);
+	}
+
+	test('watchdog boot grace: a booting server is skipped, a dead one restarted — every branch', () => {
+		const f = makeFixture();
+		try {
+			plantTree(f.appDir, 'live-tree');
+			const seen = GRACE_CASES.map((item) => {
+				const run = runGrace(f, item);
+				return {
+					name: item.name,
+					restarted: run.calls.includes('systemctl start dedalo-ts-restart.service'),
+					exit: run.exitCode,
+				};
+			});
+			expect(seen).toEqual(
+				GRACE_CASES.map((item) => ({
+					name: item.name,
+					restarted: item.restarted,
+					exit: item.restarted ? 1 : 0,
+				})),
+			);
+		} finally {
+			rmSync(f.root, { recursive: true, force: true });
+		}
+	});
+
+	// --- the per-instance rollback unit's flags: --check decides, --no-restart restarts nothing,
+	// a sentinel naming a path outside the backup root (or a link) is refused.
+
+	test('rollback --check / --no-restart / foreign paths: the instance-run half of dedalo-ts-rollback@', () => {
+		const f = makeFixture();
+		try {
+			plantTree(f.appDir, 'failed-new-tree');
+			plantTree(f.backupDir, 'old-tree');
+			// --check: nothing recorded → 1; pending, unattempted → 0; changes nothing.
+			expect(runRollback(f, {}, ['--backup-root', f.backupRoot, '--check']).exitCode).toBe(1);
+			writePendingSentinel(f);
+			expect(runRollback(f, {}, ['--backup-root', f.backupRoot, '--check']).exitCode).toBe(0);
+			expect(sentinelJson(f).rollback_attempted).toBe(false);
+			// A backupDir outside the backup root: refused, nothing moved.
+			const outside = join(f.root, 'elsewhere');
+			plantTree(outside, 'foreign');
+			writePendingSentinel(f, { backupDir: outside });
+			const refused = runRollback(f, {}, ['--backup-root', f.backupRoot, '--no-restart']);
+			expect(refused.exitCode).toBe(1);
+			expect(refused.out).toContain('outside the backup root');
+			expect(readFileSync(join(f.appDir, 'src', 'server.ts'), 'utf8')).toContain('failed-new-tree');
+			// A sentinel that is a symbolic link: refused.
+			rmSync(f.sentinel);
+			writeFileSync(join(f.root, 'planted.json'), '{"status": "pending", "rollback_attempted": false}\n');
+			symlinkSync(join(f.root, 'planted.json'), f.sentinel);
+			expect(runRollback(f, {}, ['--backup-root', f.backupRoot, '--no-restart']).out).toContain(
+				'is a symbolic link',
+			);
+			rmSync(f.sentinel);
+			// --no-restart: the restore happens, NO systemctl call (the unit restarts as root).
+			writePendingSentinel(f);
+			const restored = runRollback(f, {}, ['--backup-root', f.backupRoot, '--no-restart']);
+			expect(restored.exitCode).toBe(0);
+			expect(readFileSync(join(f.appDir, 'src', 'server.ts'), 'utf8')).toContain('old-tree');
+			expect(existsSync(f.systemctlLog)).toBe(false);
+		} finally {
+			rmSync(f.root, { recursive: true, force: true });
+		}
+	});
 
 	test('watchdog drill: green → nothing; red → restart unit; red + pending update → rollback unit (default and named units)', () => {
 		const f = makeFixture();

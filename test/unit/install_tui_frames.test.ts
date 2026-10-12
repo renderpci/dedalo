@@ -33,9 +33,10 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { hostReview } from '../../src/core/install/host/host_table.ts';
 import type { InstallRoute } from '../../src/core/install/install_plan.ts';
 import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
-import type { ScreenView } from '../../src/core/install/prompter_contract.ts';
+import type { ReviewView, ScreenView } from '../../src/core/install/prompter_contract.ts';
 import {
 	buildScreens,
 	type Question,
@@ -43,9 +44,18 @@ import {
 	type Screen,
 } from '../../src/core/install/screen_model.ts';
 import { ROUTE_TEXT } from '../../src/core/install/screen_text.ts';
+import { hostCommandLines } from '../../src/core/install/ui_plain/prompter.ts';
 import { localOntologySource } from '../helpers/install_answer_cases.ts';
+import {
+	HOST_VARIANTS,
+	productionPlanCtx,
+	productionRaw,
+} from '../helpers/install_host_scratch.ts';
 import { modelInput, thesaurusOffer } from '../helpers/install_plain_script.ts';
 import { openRig, type TuiRig } from '../helpers/install_tui_driver.ts';
+
+/** The engine-only ending (these runs are engine runs). */
+const ENGINE_ENDING = { route: 'engine', instance: '', keptLive: false } as const;
 
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_tui_frames_'));
 
@@ -194,7 +204,7 @@ describe('the logo: Welcome and Done at 30 rows, the header mark below (a)', () 
 				rig.front.reporter.begin?.([{ id: 'test_db_connection', label: 'Database reachable' }]);
 				void rig.front.reporter.finish(
 					{ exitCode: 0, result: 'complete', message: null, failedStep: null, hint: [] },
-					{ mode: 'fresh', rootVerified: true },
+					{ mode: 'fresh', rootVerified: true, ending: ENGINE_ENDING },
 				);
 				const frame = await rig.frame();
 				expect(frame).toContain('Dédalo is installed');
@@ -341,12 +351,49 @@ describe('the Install screen and a failed Done card at 80 columns (d)', () => {
 					failedStep: 'install_db_from_default_file',
 					hint: ['resume: bun run scripts/install.ts --resume'],
 				},
-				{ mode: 'fresh', rootVerified: false },
+				{ mode: 'fresh', rootVerified: false, ending: ENGINE_ENDING },
 			);
 			frame = await rig.frame();
 			expect(frame).toContain('The install stopped');
 			expect(frame).toContain('pg_restore exited 1');
 			expect(frame).toContain('--resume');
+		});
+	});
+});
+
+// ── the Review's host commands (phase 4) ─────────────────────────────────────
+
+describe("the Review shows every host step's exact commands (h)", () => {
+	test('production: each step and its commands, in the full-screen Review and the plain one', async () => {
+		const ctx = productionPlanCtx(HOST_VARIANTS[0] as (typeof HOST_VARIANTS)[number]);
+		const blocks = hostReview(ctx);
+		expect(blocks.length).toBe(ctx.plan.steps.length);
+		const screens = screensOf(
+			'production',
+			productionRaw(HOST_VARIANTS[0] as (typeof HOST_VARIANTS)[number]),
+		);
+		const view: ReviewView = {
+			screen: screens.at(-1) as Screen,
+			lines: [{ label: 'Route', value: 'production' }],
+			canInstall: true,
+			editable: [{ n: 1, title: 'Install type' }],
+			command: 'bun run scripts/install.ts --route production --instance demo',
+			errors: [],
+			hostCommands: blocks,
+		};
+		// Plain: every step's header and every command, verbatim.
+		const plain = hostCommandLines(view);
+		for (const block of blocks) {
+			expect(plain).toContain(`[${block.step}] ${block.label}`);
+			for (const command of block.commands) expect(plain).toContain(`    $ ${command}`);
+		}
+		// Full screen: a tall terminal shows the first steps' commands (the page scrolls for the rest).
+		await withRig([110, 120], async (rig) => {
+			void rig.front.prompter.review(view);
+			const frame = await rig.frame();
+			expect(frame).toContain('[host_preflight]');
+			expect(frame).toContain('[host_packages]');
+			expect(frame).toContain('$ /usr/bin/apt-get');
 		});
 	});
 });
@@ -530,7 +577,7 @@ describe('every message reaches the operator (h)', () => {
 					failedStep: 'install_db_from_default_file',
 					hint: ['resume: bun run scripts/install.ts --resume'],
 				},
-				{ mode: 'fresh', rootVerified: false },
+				{ mode: 'fresh', rootVerified: false, ending: ENGINE_ENDING },
 			);
 			await rig.frame();
 			rig.setup.mockInput.pressKey('c', { ctrl: true });
@@ -547,7 +594,7 @@ describe('every message reaches the operator (h)', () => {
 		await withRig(SIZES[0], async (rig) => {
 			void rig.front.reporter.finish(
 				{ exitCode: 0, result: 'complete', message: null, failedStep: null, hint: [] },
-				{ mode: 'fresh', rootVerified: true },
+				{ mode: 'fresh', rootVerified: true, ending: ENGINE_ENDING },
 			);
 			await rig.frame();
 			rig.port.fire('SIGTERM');
@@ -572,7 +619,7 @@ describe('every message reaches the operator (h)', () => {
 					failedStep: null,
 					hint: [],
 				},
-				{ mode: 'fresh', rootVerified: false },
+				{ mode: 'fresh', rootVerified: false, ending: ENGINE_ENDING },
 			);
 			const frame = await rig.frame();
 			expect(frame).toContain('The install stopped');

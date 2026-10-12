@@ -42,7 +42,7 @@ import {
 } from './install_plan.ts';
 import type { OntologyCatalog } from './ontology_choice.ts';
 import { installPrivateDir } from './paths.ts';
-import { type Secrets, writeFileAtomic } from './run_files.ts';
+import { type Secrets, writeFileAtomic } from './run_files_core.ts';
 import type { ProbeOutcome } from './screen_model.ts';
 
 /** The terminal as scripts/install.ts measures it (the only place that reads process state). */

@@ -1,0 +1,23 @@
+# The site-builder store of one instance's backup set (written by the
+# installer when the instance asked for it). It copies the HOST-WIDE
+# site-builder instances (root-owned configuration and secrets), so it runs as
+# ROOT — and therefore in its OWN unit: no EnvironmentFile (the instance's .env
+# is the instance user's to write, and a root process given its LD_PRELOAD or
+# PATH would run the instance's code as root), fixed Environment= lines, a
+# root-owned destination and verdict outside the instance's home. Pulled in by
+# dedalo-backup@<i>.service (its drop-in's Wants=) and ordered after it; a
+# failure raises the instance's alert like any other store.
+
+[Unit]
+Description=Dedalo site-builder backup requested by %i (host-wide, root)
+After=dedalo-backup@%i.service
+OnFailure=dedalo-backup-alert@%i.service
+
+[Service]
+Type=oneshot
+UMask=0077
+RuntimeDirectory=dedalo-backup-site-builder-%i
+RuntimeDirectoryMode=0700
+Environment="DEDALO_BACKUP_STATE_DIR=/var/lib/dedalo-install/backup/%i"
+Environment="DEDALO_BACKUP_EXPECTED_STORES=site_builder"
+ExecStart=/opt/dedalo/instances/%i/bin/dedalo-backup-step.sh run --last site_builder /opt/dedalo/instances/%i/bin/dedalo-site-builder-backup.sh /var/backups/dedalo-site-builder/%i

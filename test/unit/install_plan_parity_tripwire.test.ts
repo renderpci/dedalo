@@ -93,10 +93,13 @@ import {
 	INSTALL_STEP_IDS,
 	type InstallPlan,
 	type InstallStepId,
+	isInstallStepId,
 	mergeAnswerSources,
 	OFFICIAL_CODE_SERVER,
 	OFFICIAL_ONTOLOGY_SERVER,
+	PRODUCTION_HOST_STEP_IDS,
 	SECRET_ANSWER_KEYS,
+	STACK_HOST_STEP_IDS,
 	TOPONYMY_SUGGESTION,
 } from '../../src/core/install/install_plan.ts';
 import {
@@ -725,7 +728,12 @@ describe('install plan — every step is routable (e)', () => {
 		expect(INSTALL_STEP_IDS.filter((step) => !INSTALL_ROUTER_ACTIONS.includes(step))).toEqual([]);
 		for (const answerCase of CASES) {
 			const steps = cliPlan(answerCase.argv).steps;
-			expect(steps.filter((step) => !INSTALL_ROUTER_ACTIONS.includes(step))).toEqual([]);
+			// Phase 4: these cases are the developer route — ENGINE steps only (the host
+			// routes' host_*/stack_* steps never reach the wizard router: (e2)).
+			expect(steps.filter((step) => !isInstallStepId(step))).toEqual([]);
+			expect(
+				steps.filter((step) => !isInstallStepId(step) || !INSTALL_ROUTER_ACTIONS.includes(step)),
+			).toEqual([]);
 			expect(steps).toContain('install_hierarchies');
 			// the ontology files are staged before the restore and imported right after it
 			const order: InstallStepId[] = [
@@ -733,9 +741,44 @@ describe('install plan — every step is routable (e)', () => {
 				'install_db_from_default_file',
 				'install_ontologies',
 			];
-			expect(steps.filter((step) => order.includes(step))).toEqual(order);
+			expect(steps.filter((step) => (order as readonly string[]).includes(step))).toEqual(order);
 		}
 	});
+});
+
+describe('install plan — the host routes plan host steps; their engine child plans engine steps (e2)', () => {
+	const IDENTITY = ['--entity', 'parity', '--langs', 'lg-spa,lg-eng', '--app-lang', 'lg-spa'];
+	const HOST_ARGV = [
+		'--server-name',
+		'prado.example.org',
+		'--letsencrypt-email',
+		'ops@example.org',
+	];
+	const ROUTES: readonly { route: string; argv: string[]; ids: readonly string[] }[] = [
+		{
+			route: 'production',
+			argv: ['--route', 'production', '--instance', 'prado', ...HOST_ARGV],
+			ids: PRODUCTION_HOST_STEP_IDS,
+		},
+		{ route: 'docker', argv: ['--route', 'docker', ...HOST_ARGV], ids: STACK_HOST_STEP_IDS },
+		{ route: 'trial', argv: ['--route', 'trial'], ids: STACK_HOST_STEP_IDS },
+	];
+	for (const { route, argv, ids } of ROUTES) {
+		test(`${route}: every step is a host step of its table; --engine-only plans the router's engine steps`, () => {
+			const host = cliPlan([...IDENTITY, ...argv]);
+			expect(host.errors).toEqual([]);
+			expect(host.steps.length).toBeGreaterThan(5);
+			expect(host.steps.filter((step) => !ids.includes(step))).toEqual([]);
+			const child = cliPlan([...IDENTITY, ...argv, '--engine-only']);
+			expect(child.errors).toEqual([]);
+			expect(
+				child.steps.filter(
+					(step) => !isInstallStepId(step) || !INSTALL_ROUTER_ACTIONS.includes(step),
+				),
+			).toEqual([]);
+			expect(child.steps).toContain('install_db_from_default_file');
+		});
+	}
 });
 
 // ── (f) refusals and notes ───────────────────────────────────────────────────

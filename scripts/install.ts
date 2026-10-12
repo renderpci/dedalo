@@ -35,9 +35,18 @@
  * (the database name typed back) or quit. The interactive answers run
  * through the SAME plan and executor as the flags below; the catalog is
  * re-resolved here and a decision that changed since the Review is refused.
- * Piped stdin with no answer source is REFUSED (use --answers). The Docker
- * and trial routes stop at the Review (write the answers; install.sh runs the
- * host steps) — headless `--route docker|trial` is the in-container delegate.
+ * Piped stdin with no answer source is REFUSED (use --answers).
+ *
+ * HOST ROUTES (phase 4, 2026-10-12): `--route production` (and docker/trial)
+ * plans HOST steps (src/core/install/host/) and runs them through the HOST
+ * executor (host/host_executor.ts) — in THIS process, which then stays
+ * config-free: it never seeds the engine environment nor imports the engine
+ * executor (the catalog is resolved in the probe child). Production needs
+ * root (`sudo sh install.sh …`); its record is /var/lib/dedalo-install/<i>/,
+ * so a resume or abort names the route and instance again. The engine steps
+ * run in ONE child, as the instance user: `--request-stdin --execute
+ * --events-jsonl` (answers + secrets as one JSON object on stdin; events as
+ * JSON lines on stdout), verified with `--status --json`.
  *
  * --write-answers <file> writes the reviewed (or, headless, the planned)
  * answers as a dedalo.install.answers/1 file (0600, atomic, no secret; never
@@ -172,11 +181,14 @@ import {
 } from '../src/core/install/front_end.ts';
 import { CORE_HIERARCHIES, hierarchyChoiceView } from '../src/core/install/hierarchy_meta.ts';
 import {
+	ANSWERS_FILE_SCHEMA,
 	answersFromAnswersFile,
 	answersFromCliArgs,
 	buildInstallPlan,
 	cliBootEnv,
+	type InstallAnswers,
 	type InstallPlan,
+	isInstallStepId,
 	mergeAnswerSources,
 	normalizeInstallAnswers,
 	offeredThesauri,
@@ -227,6 +239,39 @@ function fail(msg: string): never {
 }
 
 const invocation = answersFromCliArgs(Bun.argv.slice(2));
+
+// ── --status (the engine child's record, as its host parent verifies it) ─────
+
+/**
+ * --status [--json]: the saved record of THIS process's private dir, then exit
+ * — config-free (the run files only). What a host route's host_engine step
+ * reads (as the instance user) instead of reading another user's tree.
+ */
+function printStatus(): never {
+	let answer: { exists: boolean; outcome: string | null; failed_step: string | null };
+	try {
+		const state = readStateFile();
+		const failed = Object.entries(state?.steps ?? {}).find(
+			([, record]) => record.status === 'failed',
+		);
+		answer = {
+			exists: state !== null,
+			outcome: state?.outcome ?? null,
+			failed_step: failed?.[0] ?? null,
+		};
+	} catch (error) {
+		console.error(`✖ ${(error as Error).message}`);
+		process.exit(1);
+	}
+	console.log(
+		invocation.json
+			? JSON.stringify(answer)
+			: `install record: ${answer.exists ? answer.outcome : 'none'}`,
+	);
+	process.exit(0);
+}
+
+if (invocation.status && invocation.errors.length === 0) printStatus();
 
 // ── which front end (before ANY read or write) ───────────────────────────────
 
@@ -288,29 +333,58 @@ const SECRET_ENV: Readonly<Record<SecretKey, string>> = {
 	root_password: 'DEDALO_INSTALL_ROOT_PASSWORD',
 };
 
-/** `--secrets-stdin`: one JSON object, known keys only. */
-async function stdinSecrets(): Promise<Secrets> {
-	if (!invocation.secretsStdin) return {};
+/** One JSON object from stdin (`what` names the flag in the refusal), or fail. */
+async function stdinObject(what: string): Promise<Record<string, unknown>> {
 	let parsed: unknown;
 	try {
 		parsed = JSON.parse(await Bun.stdin.text());
 	} catch {
 		// NEVER the parser's message: it quotes the offending token, which is
 		// typically an unquoted secret value.
-		return fail('--secrets-stdin: not one JSON object');
+		return fail(`${what}: not one JSON object`);
 	}
 	if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-		return fail('--secrets-stdin: not one JSON object');
+		return fail(`${what}: not one JSON object`);
 	}
+	return parsed as Record<string, unknown>;
+}
+
+/** The secrets of a parsed object: known keys, string values only. */
+function secretsOf(what: string, parsed: Record<string, unknown>): Secrets {
 	const secrets: Secrets = {};
-	for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
+	for (const [key, value] of Object.entries(parsed)) {
 		if (!(SECRET_KEYS as readonly string[]).includes(key)) {
-			fail(`--secrets-stdin: unknown key '${key}' (expected ${SECRET_KEYS.join(', ')})`);
+			fail(`${what}: unknown key '${key}' (expected ${SECRET_KEYS.join(', ')})`);
 		}
-		if (typeof value !== 'string') fail(`--secrets-stdin: '${key}' must be a string`);
+		if (typeof value !== 'string') fail(`${what}: '${key}' must be a string`);
 		secrets[key as SecretKey] = value;
 	}
 	return secrets;
+}
+
+/** The request a host parent hands its engine child (--request-stdin): answers + secrets. */
+const REQUEST_SCHEMA = 'dedalo.install.request/1';
+
+/** `--secrets-stdin` (one JSON object of secrets) or `--request-stdin` ({schema, answers, secrets}). */
+async function stdinInput(): Promise<{
+	secrets: Secrets;
+	answers: Record<string, unknown> | null;
+}> {
+	if (invocation.requestStdin) {
+		const request = await stdinObject('--request-stdin');
+		if (request.schema !== REQUEST_SCHEMA)
+			fail(`--request-stdin: schema must be ${REQUEST_SCHEMA}`);
+		const secrets = (request.secrets ?? {}) as Record<string, unknown>;
+		return {
+			secrets: secretsOf('--request-stdin', secrets),
+			answers: (request.answers ?? {}) as Record<string, unknown>,
+		};
+	}
+	if (!invocation.secretsStdin) return { secrets: {}, answers: null };
+	return {
+		secrets: secretsOf('--secrets-stdin', await stdinObject('--secrets-stdin')),
+		answers: null,
+	};
 }
 
 /** One secret by precedence; '' counts as not given. */
@@ -318,7 +392,8 @@ function pick(...candidates: (string | undefined)[]): string | undefined {
 	return candidates.find((value) => value !== undefined && value !== '');
 }
 
-const fromStdin = await stdinSecrets();
+const stdinPart = await stdinInput();
+const fromStdin = stdinPart.secrets;
 const argvSecret = (key: string): string | undefined => {
 	const value = invocation.raw[key];
 	return typeof value === 'string' ? value : undefined;
@@ -358,6 +433,17 @@ function readAnswersFile(path: string): { raw: Record<string, unknown>; errors: 
 
 const parseErrors = [...invocation.errors];
 let plainRaw = plainFlagAnswers();
+if (stdinPart.answers !== null) {
+	// The request's answers are an answers file's (the same key rules: no secret, no unknown key).
+	const request = answersFromAnswersFile({
+		schema: ANSWERS_FILE_SCHEMA,
+		answers: stdinPart.answers,
+	});
+	plainRaw = request.raw;
+	parseErrors.push(
+		...request.errors.map((error) => error.replace(/^answers file/, '--request-stdin')),
+	);
+}
 if (invocation.answersFile !== undefined) {
 	const file = readAnswersFile(invocation.answersFile);
 	const merged = mergeAnswerSources(plainRaw, file.raw);
@@ -529,11 +615,46 @@ function plainReporter(prompter?: InstallPrompter): RunReporter {
 		},
 		finish: async (outcome, context) => {
 			if (outcome.exitCode !== 0) return printFailure(outcome);
-			if (outcome.result === 'aborted') console.log(`\n✔ ${DONE_TEXT.aborted}\n`);
+			if (outcome.result === 'aborted')
+				console.log(`\n✔ ${DONE_TEXT.abortedFor(context.ending)}\n`);
 			else
-				console.log(`\n✔ ${DONE_TEXT.complete(context.rootVerified)}. ${DONE_TEXT.supervisor}\n`);
+				console.log(
+					`\n✔ ${DONE_TEXT.complete(context.rootVerified)}. ${DONE_TEXT.next(context.ending)}\n`,
+				);
 		},
 	};
+}
+
+/**
+ * THE EVENTS REPORTER (--events-jsonl — the engine child of a host route):
+ * every transcript line, step event and one-time line as ONE JSON line on
+ * stdout, which the host parent relays (host/production/engine_delegate.ts).
+ * The salt line is handed over as `show_once` and reported shown: the parent
+ * owns the terminal (and records nothing of it).
+ */
+function eventsReporter(): RunReporter {
+	const emit = (event: Record<string, unknown>) =>
+		process.stdout.write(`${JSON.stringify(event)}\n`);
+	return {
+		io: {
+			log: (line) => emit({ event: 'log', line }),
+			warn: (line) => emit({ event: 'warn', line }),
+			showOnce: (lines) => {
+				emit({ event: 'show_once', lines });
+				return true;
+			},
+			step: (event) => emit({ event: 'step', ...event }),
+		},
+		announce: (announcement) => emit({ event: 'log', line: announcement.title }),
+		finish: async (outcome) => {
+			emit({ event: 'outcome', ...outcome });
+		},
+	};
+}
+
+/** The headless reporter: JSON lines for a host parent, else the plain transcript. */
+function headlessReporter(): RunReporter {
+	return invocation.eventsJsonl ? eventsReporter() : plainReporter();
 }
 
 /** A failed run's lines (the hint after a failure that wrote state). */
@@ -561,7 +682,11 @@ async function execute(
 	const outcome = await executeInstall(request, reporter.io);
 	cleanupCatalog();
 	const rootVerified = (request.secrets.root_password ?? '') !== '';
-	await reporter.finish(outcome, { mode: request.mode, rootVerified });
+	await reporter.finish(outcome, {
+		mode: request.mode,
+		rootVerified,
+		ending: { route: 'engine', instance: '', keptLive: false },
+	});
 	process.exit(outcome.exitCode);
 }
 
@@ -569,7 +694,123 @@ async function execute(
 async function beginSteps(reporter: RunReporter, planFile: PlanFile): Promise<void> {
 	if (reporter.begin === undefined) return;
 	const { INSTALL_STEPS } = await import('../src/core/install/steps.ts');
-	reporter.begin(planFile.steps.map((id) => ({ id, label: INSTALL_STEPS[id].label(planFile) })));
+	const { hostTable } = await import('../src/core/install/host/host_table.ts');
+	// Labels only: the host table's digest context is never asked for.
+	const host = hostTable(() => fail('no plan context for labels'));
+	reporter.begin(
+		planFile.steps.map((id) => ({
+			id,
+			label: isInstallStepId(id) ? INSTALL_STEPS[id].label(planFile) : host[id].label(planFile),
+		})),
+	);
+}
+
+// ── the host routes (phase 4) ────────────────────────────────────────────────
+
+/** Does this plan run HOST steps (a host route that is not the delegated engine child)? */
+function hostPlanned(answers: InstallAnswers): boolean {
+	return !answers.engine_only && answers.route !== 'developer';
+}
+
+/** The told lines of a host run (firewall, modules, the outside check) — printed after the outcome. */
+function printTold(told: readonly string[]): void {
+	if (told.length === 0) return;
+	console.log('\nTo do on this host (checked by the installer, never changed by it):');
+	for (const line of told) console.log(`  • ${line}`);
+}
+
+/** Run the host executor and leave with its exit code. */
+async function executeHost(
+	request: import('../src/core/install/host/host_executor.ts').HostExecutorRequest,
+	reporter: RunReporter,
+): Promise<never> {
+	const { executeHostInstall } = await import('../src/core/install/host/host_executor.ts');
+	const outcome = await executeHostInstall(request, reporter.io);
+	cleanupCatalog();
+	const answers = request.planFile?.answers ?? request.givenAnswers ?? {};
+	const route = answers.route === 'production' || answers.route === 'trial' ? answers.route : 'docker';
+	await reporter.finish(outcome, {
+		mode: request.mode,
+		rootVerified: false,
+		ending: { route, instance: String(answers.instance ?? ''), keptLive: outcome.keptLive },
+	});
+	if (outcome.exitCode === 0) printTold(outcome.told);
+	process.exit(outcome.exitCode);
+}
+
+/**
+ * The catalog of a HOST run, resolved in the PROBE CHILD (this process stays
+ * config-free: the engine's catalog resolver imports the configuration).
+ */
+async function hostCatalog(
+	answersRaw: Record<string, unknown>,
+): Promise<{ catalog: OntologyCatalog | undefined; errors: string[] }> {
+	const { answers } = normalizeInstallAnswers(answersRaw);
+	if (!planCatalogNeeded(answers, ontologySourceFor(answers, {})))
+		return { catalog: undefined, errors: [] };
+	const { childProbes } = await import('../src/core/install/install_probe_client.ts');
+	const probes = childProbes({ execPath: process.execPath, cwd: process.cwd() });
+	const result = await probes.ontologyCatalog(answersRaw, {});
+	return result.ok && result.catalog !== null
+		? { catalog: result.catalog, errors: [] }
+		: { catalog: undefined, errors: [result.detail] };
+}
+
+/** A host route's FRESH run: the plan (config-free), its record, the host executor. */
+async function hostFreshInstall(
+	reporter: RunReporter,
+	interactive?: InteractiveRun,
+): Promise<never> {
+	const resolved = await hostCatalog(raw);
+	const plan = buildInstallPlan(raw, {
+		priorEnv: {},
+		ontologyCatalog: resolved.catalog,
+		rootPassword: secrets.root_password,
+		requireRootPassword: true,
+	});
+	const errors = [...parseErrors, ...resolved.errors, ...plan.errors];
+	const changed =
+		interactive === undefined || errors.length > 0
+			? null
+			: reviewedDecisionsRefusal(interactive.reviewed, plan);
+	if (changed !== null) errors.push(changed);
+	if (errors.length === 0)
+		writeAnswersOrFail(interactive?.writeAnswers ?? invocation.writeAnswersPath, plan);
+	if (errors.length > 0) fail(errors.join('; '));
+	reporter.announce(announcementOf(plan));
+	const planFile = buildPlanFile(plan, secrets);
+	await beginSteps(reporter, planFile);
+	return executeHost({ mode: 'fresh', execute: invocation.execute, planFile, secrets }, reporter);
+}
+
+/** A host route's --resume / --abort: the record under the host run dir the route and instance name. */
+async function hostContinue(request: ContinueRequest, given: InstallAnswers): Promise<never> {
+	const { hostSecretsNeeded, readHostRecord } = await import(
+		'../src/core/install/host/host_executor.ts'
+	);
+	const record = readHostRecord(given);
+	if (record === null)
+		fail(
+			`no install record for the ${given.route} route${given.instance === '' ? '' : ` instance '${given.instance}'`}`,
+		);
+	if (request.mode === 'resume') {
+		await promptSecrets(hostSecretsNeeded(record.plan, record.state), secrets, request.prompter);
+		request.reporter.prepare?.();
+	}
+	await beginSteps(request.reporter, record.plan);
+	return executeHost(
+		{
+			mode: request.mode,
+			execute: invocation.execute,
+			givenAnswers: given,
+			givenKeys: Object.keys(plainRaw),
+			secrets,
+			...(request.confirmDatabase === undefined
+				? {}
+				: { confirmDatabase: request.confirmDatabase }),
+		},
+		request.reporter,
+	);
 }
 
 // ── prompting for a missing secret (a terminal, no --execute) ────────────────
@@ -674,15 +915,13 @@ interface InteractiveRun {
 
 /** A FRESH install (or --plan). */
 async function freshInstall(interactive?: InteractiveRun): Promise<never> {
-	const reporter = interactive?.reporter ?? plainReporter();
+	const reporter = interactive?.reporter ?? headlessReporter();
 	if (interactive === undefined && !invocation.planOnly) {
 		await promptSecrets(['root_password'], secrets);
 	}
-	const route = normalizeInstallAnswers(raw).answers.route;
-	if (interactive !== undefined && (route === 'docker' || route === 'trial')) {
-		fail(
-			`the ${route} route's host steps arrive in a later release — today run install.sh (it runs this installer inside the container)`,
-		);
+	// A HOST route (phase 4): its own config-free path — never the engine environment here.
+	if (hostPlanned(normalizeInstallAnswers(raw).answers) && !invocation.planOnly) {
+		return hostFreshInstall(reporter, interactive);
 	}
 	// The answers alone (no catalog yet): enough for the boot environment.
 	const preliminary = buildInstallPlan(raw, { priorEnv });
@@ -798,6 +1037,8 @@ interface ContinueRequest {
 async function continueInstall(request: ContinueRequest): Promise<never> {
 	const abort = request.mode === 'abort';
 	if (parseErrors.length > 0) fail(parseErrors.join('; '));
+	const given = normalizeInstallAnswers(raw).answers;
+	if (hostPlanned(given)) return hostContinue(request, given);
 	let planFile: PlanFile | null;
 	let state: ReturnType<typeof readStateFile>;
 	try {
@@ -1047,6 +1288,17 @@ async function interactiveInstall(
 		host: { timezone: host.timeZone, locale: host.locale },
 		givenSecrets: { ...secrets },
 		version: DEDALO_VERSION,
+		hostCommands: async (plan) => {
+			if (!hostPlanned(plan.answers)) return [];
+			const { reviewHostCommands } = await import('../src/core/install/host/review.ts');
+			return reviewHostCommands(plan);
+		},
+		routeRefusal: (plan) =>
+			plan.answers.route === 'production' &&
+			process.geteuid?.() !== 0 &&
+			(processEnvValue('DEDALO_INSTALL_HOST_ROOT') ?? '') === ''
+				? 'the production route runs as root: quit, then sudo sh install.sh (the same arguments)'
+				: null,
 		...(invocation.writeAnswersPath === undefined
 			? {}
 			: { writeAnswersPath: invocation.writeAnswersPath }),
@@ -1061,6 +1313,6 @@ else if (invocation.resume || invocation.abort) {
 		...(invocation.confirmDatabase === undefined
 			? {}
 			: { confirmDatabase: invocation.confirmDatabase }),
-		reporter: plainReporter(),
+		reporter: headlessReporter(),
 	});
 } else await freshInstall();

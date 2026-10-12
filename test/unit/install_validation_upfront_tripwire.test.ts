@@ -17,7 +17,10 @@
  *      (the flag of each key DERIVED from INSTALL_CLI_FLAGS, never re-typed), an
  *      answers file (`answersFromAnswersFile`, the `--answers` envelope) and the
  *      wizard post (its record shape) — and the base answers the table perturbs
- *      are themselves clean on all three (anti-vacuity).
+ *      are themselves clean on all three (anti-vacuity). Since phase 4 the table
+ *      holds the HOST-STEP answers too (server name, ports, TLS mode per route,
+ *      certificate paths, web server, database mode, backup dir, the media root
+ *      rule, the image source): a host step never meets an answer the plan let by.
  *  (b) The root password is a PLAN INPUT (a wizard post and an answers file never
  *      carry it): every rule of THE policy (client password_policy.js
  *      PASSWORD_RULES, iterated — a new rule without a row is red) refuses
@@ -147,6 +150,19 @@ const DIFFUSION = {
 	mysql_username: 'web_user',
 };
 
+/** A clean production instance (the host steps' answers included — phase 4). */
+const PRODUCTION = {
+	route: 'production',
+	instance: 'prado',
+	server_name: 'prado.example.org',
+	letsencrypt_email: 'ops@example.org',
+};
+/** The institution's own certificate files (paths only: the plan checks their shape). */
+const CERT_FILES = {
+	tls_cert_path: '/etc/ssl/prado/fullchain.pem',
+	tls_key_path: '/etc/ssl/prado/privkey.pem',
+};
+
 const BAD_ROWS: readonly BadRow[] = [
 	{
 		name: 'entity starting with a digit',
@@ -264,6 +280,109 @@ const BAD_ROWS: readonly BadRow[] = [
 		answers: { route: 'production', instance: `p${'x'.repeat(28)}` },
 		error: `instance 'p${'x'.repeat(28)}' must start with a lowercase letter and contain only a-z, 0-9 and _ (28 characters at most)`,
 	},
+	// THE HOST-STEP ANSWERS (terminal installer phase 4, 2026-10-12): every refusal a
+	// production or docker host step could raise for an answer is the PLAN's.
+	{
+		name: 'production without a server name',
+		answers: { ...PRODUCTION, server_name: '' },
+		error:
+			'the production route requires server_name (the public address, e.g. --server-name dedalo.example.org)',
+	},
+	{
+		name: 'a server name that is an IP address',
+		answers: { ...PRODUCTION, server_name: '192.0.2.10' },
+		error:
+			"server_name '192.0.2.10' must be a fully qualified domain name (not localhost, not an IP address)",
+	},
+	{
+		name: 'a server name that is localhost',
+		answers: { ...PRODUCTION, server_name: 'localhost' },
+		error:
+			"server_name 'localhost' must be a fully qualified domain name (not localhost, not an IP address)",
+	},
+	{
+		name: "Let's Encrypt without an address for expiry notices",
+		answers: { ...PRODUCTION, letsencrypt_email: '' },
+		error: "Let's Encrypt requires letsencrypt_email (an address for expiry notices)",
+	},
+	{
+		name: "Let's Encrypt with the challenge port moved off 80",
+		answers: { ...PRODUCTION, http_port: '8080' },
+		error: "Let's Encrypt validates over port 80: http_port must be 80 (or use tls_mode files)",
+	},
+	{
+		name: 'the same port for HTTP and HTTPS',
+		answers: { ...PRODUCTION, tls_mode: 'files', ...CERT_FILES, http_port: '443' },
+		error: 'http_port and https_port must differ',
+	},
+	{
+		name: 'an https port out of range',
+		answers: { ...PRODUCTION, https_port: '0' },
+		error: "https_port '0' must be an integer 1-65535",
+	},
+	{
+		name: 'a local CA on production (owner: no local CA there)',
+		answers: { ...PRODUCTION, tls_mode: 'local_ca' },
+		error: 'tls_mode must be letsencrypt|files on the production route',
+	},
+	{
+		name: "the institution's files without the key",
+		answers: { ...PRODUCTION, tls_mode: 'files', tls_cert_path: CERT_FILES.tls_cert_path },
+		error: 'tls_mode files requires tls_key_path (an absolute path)',
+	},
+	{
+		name: "the institution's files at a relative path",
+		answers: { ...PRODUCTION, tls_mode: 'files', ...CERT_FILES, tls_cert_path: 'certs/full.pem' },
+		error: 'tls_mode files requires tls_cert_path (an absolute path)',
+	},
+	{
+		name: 'an unknown web server',
+		answers: { ...PRODUCTION, web_server: 'caddy' },
+		error: 'web_server must be nginx|apache (or empty: the one the host has)',
+	},
+	{
+		name: 'an unknown database mode',
+		answers: { ...PRODUCTION, db_mode: 'adopt' },
+		error: 'db_mode must be create|existing',
+	},
+	{
+		name: 'a relative backup directory',
+		answers: { ...PRODUCTION, backup_dir: 'backups' },
+		error: 'backup_dir must be an absolute path',
+	},
+	{
+		name: 'a production MEDIA_PATH whose URL directory is not the engine media dir (the root rule)',
+		answers: { ...PRODUCTION, media_path: '/data/prado/dedalo/files' },
+		error:
+			"media_path '/data/prado/dedalo/files' must end in /dedalo/media (the web root rule: root + /dedalo/<DEDALO_MEDIA_DIR> == MEDIA_PATH, and the installer keeps DEDALO_MEDIA_DIR=media)",
+	},
+	{
+		name: 'a production MEDIA_PATH no web root can serve (the root rule)',
+		answers: { ...PRODUCTION, media_path: '/srv/dedalo/prado/media' },
+		error:
+			"media_path '/srv/dedalo/prado/media' must end in /dedalo/media (the web root rule: root + /dedalo/<DEDALO_MEDIA_DIR> == MEDIA_PATH, and the installer keeps DEDALO_MEDIA_DIR=media)",
+	},
+	{
+		name: 'docker without a server name',
+		answers: { route: 'docker', letsencrypt_email: 'ops@example.org' },
+		error:
+			'the docker route requires server_name (the public address, e.g. --server-name dedalo.example.org)',
+	},
+	{
+		name: 'a certificate on the trial route',
+		answers: { route: 'trial', tls_mode: 'letsencrypt' },
+		error: 'tls_mode must be none on the trial route',
+	},
+	{
+		name: 'an unknown image source',
+		answers: { route: 'trial', image_source: 'mirror' },
+		error: 'image_source must be official|custom|build',
+	},
+	{
+		name: 'a custom image without its repository',
+		answers: { route: 'trial', image_source: 'custom' },
+		error: 'image_source custom requires image_repository',
+	},
 ];
 
 /** A row whose refusal comes from the language derivation (its sentence is that module's). */
@@ -297,13 +416,13 @@ describe('install validation — every bad answer refused by the plan, identical
 		const answers = { ...BASE, ...DIFFUSION, mysql_database: '' };
 		expect(errorsThreeWays(answers)).toEqual({ argv: [], file: [], wizard: [] });
 		expect(buildInstallPlan(answers).answers.mysql_database).toBe('web_dedalo');
-		const production = buildInstallPlan({ ...answers, route: 'production', instance: 'prado' });
+		const production = buildInstallPlan({ ...answers, ...PRODUCTION });
 		expect(production.errors).toEqual([]);
 		expect(production.answers.mysql_database).toBe('web_prado');
 	});
 
 	test('a valid production instance is CLEAN on all three (the route rows are not vacuous)', () => {
-		expect(errorsThreeWays({ ...BASE, route: 'production', instance: 'prado' })).toEqual({
+		expect(errorsThreeWays({ ...BASE, ...PRODUCTION })).toEqual({
 			argv: [],
 			file: [],
 			wizard: [],

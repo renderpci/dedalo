@@ -27,6 +27,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
 	MIGRATION_LOCK_TIMEOUT,
+	MIGRATIONS_DIR,
+	pendingMigrations,
 	runMigrations,
 	runOnlineMigrations,
 	stopOnlineMigrations,
@@ -328,6 +330,42 @@ describe('migrations runner (S2-39)', () => {
 			await sql.unsafe(`DROP FUNCTION IF EXISTS ${slow}(text)`, []);
 		}
 	}, 30_000);
+
+	test('the census (boot_status) lists exactly what the runner would still apply', async () => {
+		// The suite database is migrated by test:db:setup: nothing of the repo's own is pending.
+		const suite = await pendingMigrations();
+		const repoFiles = (await Array.fromAsync(new Bun.Glob('*.sql').scan(MIGRATIONS_DIR))).filter(
+			(name) => /^\d{4}_/.test(name),
+		);
+		expect(repoFiles.length).toBeGreaterThan(0);
+		expect(suite.pending).toEqual([]);
+		expect(suite.applied).toBeGreaterThanOrEqual(repoFiles.length);
+		// Against the scratch table: after a run nothing is pending; a deleted row reappears,
+		// and the runner applies exactly the census's file (same filter, same order).
+		const census = join(dir, '0100_census_probe.sql');
+		writeFileSync(census, 'SELECT 1');
+		try {
+			await runMigrations({ dir, versionTable: VERSION_TABLE });
+			expect((await pendingMigrations({ dir, versionTable: VERSION_TABLE })).pending).toEqual([]);
+			await sql.unsafe(`DELETE FROM "${VERSION_TABLE}" WHERE version = $1`, ['0100_census_probe.sql']);
+			const pending = (await pendingMigrations({ dir, versionTable: VERSION_TABLE })).pending;
+			expect(pending).toEqual(['0100_census_probe.sql']);
+			const rerun = await runMigrations({ dir, versionTable: VERSION_TABLE });
+			expect(rerun.applied).toEqual(pending);
+			// No version table at all: everything is pending, and nothing is created by asking.
+			const absent = `dedalo_ts_test_census_absent_${process.pid}`;
+			const none = await pendingMigrations({ dir, versionTable: absent });
+			expect(none.applied).toBe(0);
+			expect(none.pending).toContain('0100_census_probe.sql');
+			const [created] = (await sql.unsafe('SELECT to_regclass($1) IS NOT NULL AS present', [
+				`public.${absent}`,
+			])) as { present: boolean }[];
+			expect(created?.present).toBe(false);
+		} finally {
+			rmSync(census, { force: true });
+			await sql.unsafe(`DELETE FROM "${VERSION_TABLE}" WHERE version = $1`, ['0100_census_probe.sql']);
+		}
+	});
 
 	test('refuses an invalid version-table name (identifier chokepoint)', async () => {
 		await expect(runMigrations({ dir, versionTable: 'bad"name; DROP TABLE x' })).rejects.toThrow(

@@ -23,10 +23,14 @@
  *     (engineering/image_registries.json), primary first; the signing identity
  *     cannot be inherited from the environment; cosign verification refuses
  *     without an identity;
- *  F. install.sh's own functions, lifted and DRIVEN with typed answers: the
- *     default, a pull, a verified pull, a refused signature, a custom
- *     repository, a failed pull — and the .dedalo.env writer block, lifted and
- *     run, writing the five keys the library reads back as complete.
+ *  F. (terminal installer phase 4: install.sh is a bootstrap; the image is the
+ *     TypeScript step stack_image's) the installer DECIDES LIKE THE LIBRARY:
+ *     its cosign argv is dedalo_cosign_verify's, its verifyImage refuses a bad
+ *     signature and a re-pointed tag (label ≠ tag) and claims no signature for
+ *     a registry of your own or a local build; the .dedalo.env it renders is
+ *     complete for dedalo_env_problems, its five image keys read back as the
+ *     TS answers, and its compose argv EQUALS dedalo_compose_args' (plain and
+ *     build) — one stack for the installer, the updater and the operator.
  *
  * No network, no daemon: every docker/cosign is a stub on PATH in a temp dir.
  */
@@ -44,6 +48,21 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { HostCtx } from '../../src/core/install/host/contract.ts';
+import { hostFs } from '../../src/core/install/host/fs.ts';
+import { type RecordedResponse, recordingRunner } from '../../src/core/install/host/runner.ts';
+import { composeFiles } from '../../src/core/install/host/stack/compose.ts';
+import { renderEnvFile, renderOverride } from '../../src/core/install/host/stack/files.ts';
+import { imageCommands } from '../../src/core/install/host/stack/image.ts';
+import { cosignCommand, verifyImage } from '../../src/core/install/host/stack/image_verify.ts';
+import {
+	imageRepositoryOf,
+	imageVerifyOf,
+	imageVersionOf,
+	stackFileOf,
+} from '../../src/core/install/host/stack/layout.ts';
+import { emptyHostCreated, type StackImage } from '../../src/core/install/host/state_types.ts';
+import { newInstallState } from '../../src/core/install/run_files_core.ts';
 import { parseDeclaredTriple } from '../../src/core/update/code_build_plan.ts';
 import {
 	isRepositoryReference,
@@ -52,12 +71,12 @@ import {
 	provisionedRegistries,
 } from '../../src/core/update/image_registries.ts';
 import { compareVersionArrays } from '../../src/core/update/version.ts';
+import { stackPlanCtx } from '../helpers/install_host_scratch.ts';
 import { scratchRunEntries } from '../helpers/scratch_run_entries.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const LIB = join(REPO_ROOT, 'deploy', 'dedalo-image-lib.sh');
 const REGISTRIES_SH = join(REPO_ROOT, 'deploy', 'image_registries.sh');
-const INSTALL_SH = readFileSync(join(REPO_ROOT, 'install.sh'), 'utf8');
 const SCRATCH = mkdtempSync(join(tmpdir(), 'dedalo-install-image-'));
 let scratchCount = 0;
 
@@ -573,279 +592,235 @@ describe('E. the offered registries are the provisioned entries of the one list'
 });
 
 // ---------------------------------------------------------------------------
-// F. install.sh's own code, lifted and driven.
+// F. The terminal installer's stack_image (phase 4) decides like the library.
 // ---------------------------------------------------------------------------
 
-/** A top-level `name() { … }` function, verbatim from install.sh. */
-function liftFunction(name: string): string {
-	const match = INSTALL_SH.match(new RegExp(`^${name}\\(\\) \\{\\n[\\s\\S]*?\\n\\}$`, 'm'));
-	expect(match, `install.sh: no \`${name}() { … }\` function`).not.toBeNull();
-	return (match as RegExpMatchArray)[0];
+/** A docker/trial step context over a recording runner answering `responses`. */
+function stackCtx(raw: Record<string, unknown>, responses: RecordedResponse[]) {
+	const plan = stackPlanCtx(raw);
+	const runner = recordingRunner({ responses: () => responses });
+	const ctx: HostCtx = {
+		...plan,
+		state: newInstallState(plan.plan, emptyPreflight()),
+		created: emptyHostCreated(),
+		secrets: {},
+		runner,
+		fs: hostFs(SCRATCH),
+		io: { log: () => {}, warn: () => {} },
+		children: new Set(),
+		say: () => {},
+		warn: () => {},
+		save: () => {},
+		sleep: async () => {},
+		now: () => Date.now(),
+	};
+	return { ctx, log: runner.log };
 }
 
-const CHOOSER_FUNCTIONS = [
-	'bold',
-	'warn',
-	'fail',
-	'ask',
-	'availability_word',
-	'verify_official',
-	'pull_source',
-	'custom_source',
-	'build_source',
-	'print_image_menu',
-	'choose_image_source',
-	'pick_image_source',
-];
-
-/** One-line helpers (bold/warn/fail) are single-line definitions in install.sh. */
-function liftAny(name: string): string {
-	const oneLine = INSTALL_SH.match(new RegExp(`^${name}\\(\\)\\s+\\{[^\\n]*\\}$`, 'm'));
-	return oneLine ? oneLine[0] : liftFunction(name);
-}
-
-/**
- * A stub docker for the chooser: probe answers as in D, `pull` succeeds unless
- * $STUB/pull_fail, `image inspect` reports a RepoDigest; every call logged.
- */
-const CHOOSER_DOCKER = `#!/bin/bash
-printf '%s\\n' "$*" >> "$STUB/docker.log"
-case "$1" in
-	pull) [ -e "$STUB/pull_fail" ] && exit 1; exit 0 ;;
-	image)
-		ref="\${!#}"
-		# The version label the release workflow stamps: the tag, unless a test plants
-		# another (a mirror re-pointing a newer tag at an older signed release).
-		case "$*" in *Labels*) cat "$STUB/label" 2>/dev/null || printf '%s\\n' "\${ref##*:}"; exit 0 ;; esac
-		printf '%s@sha256:%s\\n' "\${ref%:*}" "$(printf 'd%.0s' $(seq 1 64))"
-		exit 0
-		;;
-esac
-ref="\${!#}"
-key="$(printf '%s' "$ref" | tr -c 'a-zA-Z0-9.' '_')"
-verb=imagetools
-if [ "$1" = manifest ]; then verb=manifest; fi
-answer="$(cat "$STUB/$verb.$key" 2>/dev/null || echo '1 dial tcp: network is unreachable')"
-printf '%s\\n' "\${answer#* }" >&2
-exit "\${answer%% *}"
-`;
-
-interface Chosen {
-	code: number;
-	vars: Record<string, string>;
-	pulls: string[];
-	/** Everything said to the operator (install.sh's warn() writes to stdout). */
-	said: string;
-	stderr: string;
-}
-
-/** Drive the lifted chooser in a tree declaring `checkout`, with `typed` answers. */
-function choose(options: {
-	typed: string[];
-	published?: string[];
-	cosign?: 'absent' | 'ok' | 'fail';
-	pullFails?: boolean;
-	/** The version label the pulled image declares (default: its tag). */
-	label?: string;
-}): Chosen {
-	const dir = scratchDir();
-	const bin = join(dir, 'bin');
-	mkdirSync(bin);
-	mkdirSync(join(dir, 'src', 'core', 'update'), { recursive: true });
-	writeFileSync(join(dir, 'src', 'core', 'update', 'version.ts'), 'Object.freeze([7, 0, 1])');
-	writeFileSync(join(bin, 'docker'), CHOOSER_DOCKER);
-	chmodSync(join(bin, 'docker'), 0o755);
-	if (options.cosign !== undefined && options.cosign !== 'absent') {
-		writeFileSync(join(bin, 'cosign'), `#!/bin/sh\nexit ${options.cosign === 'ok' ? 0 : 1}\n`);
-		chmodSync(join(bin, 'cosign'), 0o755);
-	}
-	for (const ref of options.published ?? [])
-		writeFileSync(join(dir, `manifest.${sanitize(ref)}`), '0 ');
-	if (options.pullFails) writeFileSync(join(dir, 'pull_fail'), '');
-	if (options.label !== undefined) writeFileSync(join(dir, 'label'), `${options.label}\n`);
-	const body = [
-		...CHOOSER_FUNCTIONS.map(liftAny),
-		'choose_image_source',
-		'printf "%s\\n" "MODE=$IMAGE_MODE" "REPO=$IMAGE_REPOSITORY" "VERSION=$IMAGE_VERSION" "VERIFY=$IMAGE_VERIFY" "LABEL=$IMAGE_SOURCE_LABEL"',
-	].join('\n');
-	const run = bash(body, {
-		cwd: dir,
-		env: { PATH: `${bin}:/usr/bin:/bin`, STUB: dir },
-		stdin: options.typed.map((line) => `${line}\n`).join(''),
-	});
-	const vars: Record<string, string> = {};
-	for (const line of run.stdout.split('\n')) {
-		const match = line.match(/^(MODE|REPO|VERSION|VERIFY|LABEL)=(.*)$/);
-		if (match) vars[match[1] as string] = match[2] as string;
-	}
-	const log = existsSync(join(dir, 'docker.log'))
-		? readFileSync(join(dir, 'docker.log'), 'utf8')
-		: '';
+function emptyPreflight(): Parameters<typeof newInstallState>[1] {
 	return {
-		code: run.code,
-		vars,
-		pulls: log.split('\n').filter((line) => line.startsWith('pull ')),
-		said: run.stdout + run.stderr,
-		stderr: run.stderr,
+		preexisting_extensions: [],
+		env_backups_before: [],
+		env_existed: false,
+		env_sha256: null,
+		env_had_salt: true,
+		sample_env_existed: false,
+		install_status_before: null,
+		directories_missing: [],
 	};
 }
 
 const PROVISIONED = provisionedRegistries(loadImageRegistries());
 const FIRST = PROVISIONED[0]?.repository as string;
-const BUILD_CHOICE = String(PROVISIONED.length + 2);
-const CUSTOM_CHOICE = String(PROVISIONED.length + 1);
+const DIGEST = `sha256:${'d'.repeat(64)}`;
+const DOCKER = '/usr/bin/docker';
+const COSIGN = '/usr/local/bin/cosign';
 
-describe('F. install.sh chooses the image source', () => {
-	test('nothing published: Enter builds here, from the checkout version, unverified', () => {
-		const chosen = choose({ typed: [''] });
-		expect(chosen.code, chosen.stderr).toBe(0);
-		expect(chosen.vars).toMatchObject({
-			MODE: 'build',
-			REPO: 'localhost/dedalo',
-			VERSION: '7.0.1',
-			VERIFY: 'none',
+/** The pulled image's answers: its version label, its registry digest, cosign's verdict. */
+function imageAnswers(options: {
+	label: string;
+	repository?: string;
+	cosignExit?: number;
+}): RecordedResponse[] {
+	return [
+		{
+			match: `${DOCKER} image inspect --format {{index .Config.Labels`,
+			stdout: `${options.label}\n`,
+		},
+		{
+			match: `${DOCKER} image inspect --format {{range .RepoDigests}}`,
+			stdout: `${options.repository ?? FIRST}@${DIGEST}\n`,
+		},
+		{ match: `${COSIGN} verify`, exit: options.cosignExit ?? 0 },
+	];
+}
+
+/** Run verifyImage; answers its record, or the refusal's sentence. */
+async function verified(
+	raw: Record<string, unknown>,
+	responses: RecordedResponse[],
+): Promise<{ record: StackImage | null; refusal: string | null; log: string[] }> {
+	const { ctx, log } = stackCtx(raw, responses);
+	try {
+		return {
+			record: await verifyImage(ctx),
+			refusal: null,
+			log: log.map((entry) => entry.argv.join(' ')),
+		};
+	} catch (error) {
+		return {
+			record: null,
+			refusal: error instanceof Error ? error.message : String(error),
+			log: log.map((entry) => entry.argv.join(' ')),
+		};
+	}
+}
+
+const TRIAL = { route: 'trial', entity: 'trial_museum' };
+
+describe('F. the installer verifies the image as the library does (stack_image)', () => {
+	test("the cosign argv is the library's: the same identity, the same issuer, the same repository@digest", () => {
+		const dir = scratchDir();
+		const bin = join(dir, 'bin');
+		mkdirSync(bin);
+		writeFileSync(join(bin, 'cosign'), '#!/bin/sh\nprintf \'%s\\n\' "$@" > "$OUT"\nexit 0\n');
+		chmodSync(join(bin, 'cosign'), 0o755);
+		const ref = `${FIRST}@${DIGEST}`;
+		const run = bash('dedalo_cosign_verify "$1"', {
+			args: [ref],
+			env: { PATH: `${bin}:/usr/bin:/bin`, OUT: join(dir, 'argv') },
 		});
-		expect(chosen.pulls).toEqual([]);
+		expect(run.code, run.stderr).toBe(0);
+		const library = readFileSync(join(dir, 'argv'), 'utf8').split('\n').slice(0, -1);
+		const ts = cosignCommand(stackCtx(TRIAL, []).ctx, DIGEST).argv;
+		expect(ts[0]).toBe(COSIGN);
+		expect(ts.slice(1)).toEqual(library);
 	});
 
-	test('published on an official registry: Enter pulls it; no cosign → verify none, said aloud', () => {
-		const chosen = choose({ typed: ['', ''], published: [`${FIRST}:7.0.1`] });
-		expect(chosen.code, chosen.stderr).toBe(0);
-		expect(chosen.vars).toMatchObject({
-			MODE: 'pull',
-			REPO: FIRST,
-			VERSION: '7.0.1',
-			VERIFY: 'none',
+	test('an official image: the label must be its tag, the signature verified over its ONE digest, the digest pinned', async () => {
+		const version = imageVersionOf(stackPlanCtx(TRIAL).answers);
+		const ok = await verified(TRIAL, imageAnswers({ label: version }));
+		expect(ok.refusal).toBeNull();
+		expect(ok.record).toEqual({ repository: FIRST, version, digest: DIGEST, verify: 'cosign' });
+		expect(ok.log.filter((line) => line.startsWith(`${COSIGN} verify`))).toEqual([
+			`${COSIGN} verify --certificate-identity-regexp ${loadImageRegistries().signing.identity_regexp} --certificate-oidc-issuer ${loadImageRegistries().signing.issuer} ${FIRST}@${DIGEST}`,
+		]);
+	});
+
+	test('a signature that does not verify is refused', async () => {
+		const version = imageVersionOf(stackPlanCtx(TRIAL).answers);
+		const bad = await verified(TRIAL, imageAnswers({ label: version, cosignExit: 1 }));
+		expect(bad.record).toBeNull();
+		expect(bad.refusal).toContain("does NOT carry Dédalo's signature");
+	});
+
+	test('a SIGNED image declaring another version is refused (a re-pointed tag is not that release)', async () => {
+		const repointed = await verified(TRIAL, imageAnswers({ label: '6.9.0' }));
+		expect(repointed.record).toBeNull();
+		expect(repointed.refusal).toContain("declares version '6.9.0'");
+		// Refused BEFORE cosign is asked: the label is the cheaper, earlier check.
+		expect(repointed.log.some((line) => line.startsWith(COSIGN))).toBe(false);
+	});
+
+	test('a registry of your own: no signature claimed, cosign never asked; the label is checked when present', async () => {
+		const raw = {
+			...TRIAL,
+			image_source: 'custom',
+			image_repository: 'registry.example.org/dedalo',
+		};
+		const version = imageVersionOf(stackPlanCtx(raw).answers);
+		const own = await verified(
+			raw,
+			imageAnswers({ label: version, repository: 'registry.example.org/dedalo' }),
+		);
+		expect(own.record).toEqual({
+			repository: 'registry.example.org/dedalo',
+			version,
+			digest: null,
+			verify: 'none',
 		});
-		expect(chosen.pulls).toEqual([`pull ${FIRST}:7.0.1`]);
-		expect(chosen.said).toContain('NOT verified');
+		expect(own.log.some((line) => line.startsWith(COSIGN))).toBe(false);
+		const unlabelled = await verified(raw, imageAnswers({ label: '' }));
+		expect(unlabelled.record?.verify).toBe('none');
+		const wrong = await verified(raw, imageAnswers({ label: '6.9.0' }));
+		expect(wrong.refusal).toContain("declares version '6.9.0'");
 	});
 
-	test('cosign present and the signature verifies → DEDALO_IMAGE_VERIFY=cosign', () => {
-		const chosen = choose({ typed: ['1', ''], cosign: 'ok' });
-		expect(chosen.code, chosen.stderr).toBe(0);
-		expect(chosen.vars).toMatchObject({ MODE: 'pull', REPO: FIRST, VERIFY: 'cosign' });
-	});
-
-	test('a signature that does not verify is refused: back to the menu, then build', () => {
-		const chosen = choose({ typed: ['1', '', BUILD_CHOICE], cosign: 'fail' });
-		expect(chosen.code, chosen.stderr).toBe(0);
-		expect(chosen.vars.MODE).toBe('build');
-		expect(chosen.said).toContain("does NOT carry Dédalo's signature");
-	});
-
-	test('a SIGNED image declaring another version is refused (a re-pointed tag is not that release)', () => {
-		const chosen = choose({ typed: ['1', '', BUILD_CHOICE], cosign: 'ok', label: '7.0.0' });
-		expect(chosen.code, chosen.stderr).toBe(0);
-		expect(chosen.vars.MODE).toBe('build');
-		expect(chosen.said).toContain("does NOT carry Dédalo's signature for version 7.0.1");
-	});
-
-	test('a failed pull returns to the menu', () => {
-		const chosen = choose({ typed: ['1', '7.0.2-dev', BUILD_CHOICE], pullFails: true });
-		expect(chosen.code, chosen.stderr).toBe(0);
-		expect(chosen.pulls).toEqual([`pull ${FIRST}:7.0.2-dev`]);
-		expect(chosen.vars.MODE).toBe('build');
-	});
-
-	test('a custom repository: the grammar is enforced, the version asked, no signature claimed', () => {
-		const chosen = choose({
-			typed: [
-				CUSTOM_CHOICE,
-				'Registry.Example.org/Dedalo:7',
-				'registry.example.org/dedalo',
-				'7.0',
-				'7.0.2-dev',
-			],
-		});
-		expect(chosen.code, chosen.stderr).toBe(0);
-		expect(chosen.vars).toMatchObject({
-			MODE: 'pull',
-			REPO: 'registry.example.org/dedalo',
-			VERSION: '7.0.2-dev',
-			VERIFY: 'none',
-			LABEL: 'a registry of your own',
-		});
-		expect(chosen.pulls).toEqual(['pull registry.example.org/dedalo:7.0.2-dev']);
-	});
-
-	test('a choice out of range or not a number is asked again', () => {
-		const chosen = choose({ typed: ['0', 'x', '99', BUILD_CHOICE] });
-		expect(chosen.code, chosen.stderr).toBe(0);
-		expect(chosen.vars.MODE).toBe('build');
+	test('a build here: `docker build` of this checkout, no pull, no signature', async () => {
+		const raw = { ...TRIAL, image_source: 'build' };
+		const ctx = stackPlanCtx(raw);
+		const commands = imageCommands(ctx);
+		expect(
+			commands.map((command) => (command.kind === 'exec' ? command.argv.slice(1) : [])),
+		).toEqual([['build', '--tag', `localhost/dedalo:${imageVersionOf(ctx.answers)}`, ctx.source]]);
+		const built = await verified(raw, []);
+		expect(built.record?.verify).toBe('none');
+		expect(built.log).toEqual([]);
 	});
 });
 
-/** The .dedalo.env writer block, verbatim: `umask 077` … `umask 022`. */
-function writerBlock(): string {
-	const match = INSTALL_SH.match(/^umask 077\ncat >"\$ENV_FILE" <<ENV\n[\s\S]*?\n^umask 022$/m);
-	expect(
-		match,
-		'install.sh: the .dedalo.env writer block (umask 077 … umask 022) moved',
-	).not.toBeNull();
-	return (match as RegExpMatchArray)[0];
-}
-
-describe('F. install.sh writes the image answer the library reads', () => {
-	test('the writer block, lifted and run, writes the five keys — complete, owner-only', () => {
-		const dir = scratchDir();
-		writeFileSync(join(dir, 'docker-compose.simple.yml'), 'services: {}\n');
-		const body = [
-			"ENV_FILE='.dedalo.env' COMPOSE_FILE='docker-compose.simple.yml'",
-			'DB_PASSWORD=pw TLS_MODE=none NGINX_CONF_NAME=nginx.simple.conf COOKIE_SECURE=false',
-			"WIZARD_ALLOWED_IPS='' COMPOSE_PROFILES=''",
-			"IMAGE_REPOSITORY='ghcr.io/x/y' IMAGE_VERSION='7.0.1' IMAGE_MODE='pull' IMAGE_VERIFY='cosign'",
-			writerBlock(),
-			'dedalo_env_problems .dedalo.env',
-			'printf "COMPOSE_ARGS:%s\\n" "$(dedalo_compose_args .dedalo.env | tr "\\n" " ")"',
-		].join('\n');
-		const run = bash(body, { cwd: dir });
-		expect(run.code, run.stderr).toBe(0);
-		const file = join(dir, '.dedalo.env');
-		const get = (key: string): string =>
-			bash('dedalo_env_get "$1" "$2"', { args: [file, key] }).stdout;
-		expect({
-			DEDALO_COMPOSE_FILE: get('DEDALO_COMPOSE_FILE'),
-			DEDALO_IMAGE: get('DEDALO_IMAGE'),
-			DEDALO_VERSION: get('DEDALO_VERSION'),
-			DEDALO_IMAGE_MODE: get('DEDALO_IMAGE_MODE'),
-			DEDALO_IMAGE_VERIFY: get('DEDALO_IMAGE_VERIFY'),
-		}).toEqual({
-			DEDALO_COMPOSE_FILE: 'docker-compose.simple.yml',
-			DEDALO_IMAGE: 'ghcr.io/x/y',
-			DEDALO_VERSION: '7.0.1',
-			DEDALO_IMAGE_MODE: 'pull',
-			DEDALO_IMAGE_VERIFY: 'cosign',
+describe("F. the .dedalo.env the installer writes is the library's contract", () => {
+	for (const raw of [
+		TRIAL,
+		{
+			route: 'docker',
+			entity: 'museo',
+			server_name: 'dedalo.example.org',
+			letsencrypt_email: 'ops@example.org',
+		},
+		{ ...TRIAL, image_source: 'build' },
+	]) {
+		test(`${String(raw.route)}${'image_source' in raw ? ` (${String(raw.image_source)})` : ''}: complete for the updater; the compose argv is dedalo_compose_args'`, () => {
+			const ctx = stackPlanCtx(raw);
+			const dir = scratchDir();
+			writeFileSync(join(dir, stackFileOf(ctx.answers)), 'services: {}\n');
+			writeFileSync(join(dir, '.dedalo.env'), renderEnvFile(ctx, 'pw'), { mode: 0o600 });
+			writeFileSync(join(dir, 'compose.override.yaml'), renderOverride(ctx));
+			const run = bash(
+				[
+					'dedalo_env_problems .dedalo.env',
+					'printf "PLAIN:%s\\n" "$(dedalo_compose_args .dedalo.env plain | tr "\\n" " ")"',
+					'printf "BUILD:%s\\n" "$(dedalo_compose_args .dedalo.env build | tr "\\n" " ")"',
+				].join('\n'),
+				{ cwd: dir },
+			);
+			expect(run.code, run.stderr).toBe(0);
+			expect(run.stdout.split('\n').filter((line) => / (missing|invalid)$/.test(line))).toEqual([]);
+			const line = (prefix: string) =>
+				(run.stdout.split('\n').find((item) => item.startsWith(prefix)) ?? '')
+					.slice(prefix.length)
+					.trim();
+			// The installer and every host tool drive ONE stack (compose.ts says so; this proves it).
+			expect(line('PLAIN:')).toBe(composeFiles(ctx, 'plain').join(' '));
+			expect(line('BUILD:')).toBe(composeFiles(ctx, 'build').join(' '));
+			const get = (key: string): string =>
+				bash('dedalo_env_get "$1" "$2"', { args: [join(dir, '.dedalo.env'), key] }).stdout;
+			expect({
+				DEDALO_COMPOSE_FILE: get('DEDALO_COMPOSE_FILE'),
+				DEDALO_IMAGE: get('DEDALO_IMAGE'),
+				DEDALO_VERSION: get('DEDALO_VERSION'),
+				DEDALO_IMAGE_MODE: get('DEDALO_IMAGE_MODE'),
+				DEDALO_IMAGE_VERIFY: get('DEDALO_IMAGE_VERIFY'),
+			}).toEqual({
+				DEDALO_COMPOSE_FILE: stackFileOf(ctx.answers),
+				DEDALO_IMAGE: imageRepositoryOf(ctx.answers),
+				DEDALO_VERSION: imageVersionOf(ctx.answers),
+				DEDALO_IMAGE_MODE: ctx.answers.image_source === 'build' ? 'build' : 'pull',
+				DEDALO_IMAGE_VERIFY: imageVerifyOf(ctx.answers),
+			});
+			const contract = bash('printf "%s" "$DEDALO_ENV_IMAGE_KEYS"').stdout.split(' ');
+			expect(contract.length).toBe(5);
+			for (const key of contract)
+				expect(readFileSync(join(dir, '.dedalo.env'), 'utf8')).toMatch(new RegExp(`^${key}=`, 'm'));
 		});
-		// dedalo_env_problems printed nothing: the file is COMPLETE for the updater.
-		expect(run.stdout.split('\n').filter((line) => / (missing|invalid)$/.test(line))).toEqual([]);
-		expect(run.stdout).toContain(
-			'COMPOSE_ARGS:-f docker-compose.simple.yml --env-file .dedalo.env ',
-		);
-		expect(statSync(file).mode & 0o777).toBe(0o600);
-		// The keys it writes are exactly the library's contract.
-		const contract = bash('printf "%s" "$DEDALO_ENV_IMAGE_KEYS"').stdout.split(' ');
-		expect(contract.length).toBe(5);
-		for (const key of contract)
-			expect(readFileSync(file, 'utf8')).toMatch(new RegExp(`^${key}=`, 'm'));
-	});
+	}
 
-	test('the build answer reaches compose through the override; every compose call keeps the env file', () => {
-		expect(liftFunction('compose_build')).toContain('dedalo_compose "$ENV_FILE" build "$@"');
-		expect(INSTALL_SH).toMatch(/^\tcompose_build build dedalo$/m);
-		// The everyday helper is unchanged.
-		expect(liftFunction('compose')).toContain(
-			'docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"',
-		);
-		// The library and the list are loaded before anything asks a question.
-		const loads = INSTALL_SH.indexOf('. deploy/dedalo-image-lib.sh');
-		expect(loads).toBeGreaterThan(-1);
-		expect(INSTALL_SH.indexOf('dedalo_registries_load deploy/image_registries.sh')).toBeGreaterThan(
-			loads,
-		);
-		expect(INSTALL_SH.indexOf('\nchoose_image_source\n')).toBeGreaterThan(
-			INSTALL_SH.indexOf('\nchoose_tls\n'),
-		);
-		expect(INSTALL_SH).toContain('./deploy/dedalo-image-update.sh --version <version>');
+	test("without the installer's override (a stack made by hand) the library omits it — the override is opt-in by existence", () => {
+		const ctx = stackPlanCtx(TRIAL);
+		const dir = scratchDir();
+		writeFileSync(join(dir, stackFileOf(ctx.answers)), 'services: {}\n');
+		writeFileSync(join(dir, '.dedalo.env'), renderEnvFile(ctx, 'pw'), { mode: 0o600 });
+		const run = bash('dedalo_compose_args .dedalo.env plain | tr "\\n" " "', { cwd: dir });
+		expect(run.stdout.trim()).toBe(`-f ${stackFileOf(ctx.answers)} --env-file .dedalo.env`);
 	});
 });

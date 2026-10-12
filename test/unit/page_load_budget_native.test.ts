@@ -8,7 +8,7 @@
  * serves the client over plain HTTP/1.1 on port 80. `http2 on;` there would be
  * inert — a browser negotiates HTTP/2 through the TLS ALPN handshake and never
  * in cleartext — so the transport of that one file is IMPOSSIBLE to improve
- * without TLS, which `install.sh choose_tls` modes 1-3 already offer. The
+ * without TLS, which the installer's TLS modes (stack_tls, host_tls) already offer. The
  * decision, its measured cost and its escape live in that file's TRANSPORT
  * block.
  *
@@ -35,9 +35,11 @@
  *      one plain-HTTP conf is the single ENUMERATED entry, and it must carry
  *      the TRANSPORT markers, so the exemption is a written decision rather
  *      than a silence.
- *   4. THE ESCAPE IS CODE. `install.sh` still offers the TLS modes the decision
- *      names: three that render the h2 template, and only `tls_none` selecting
- *      the plain conf.
+ *   4. THE ESCAPE IS CODE. The terminal installer (phase 4) offers the TLS modes
+ *      the decision names: the docker route's three render an h2 site, only the
+ *      trial route takes the plain conf, and every production site file (nginx
+ *      and Apache, Let's Encrypt and the institution's files) declares h2 —
+ *      each RENDERED here, not read as text.
  *   5. THE PROSE AGREES. Every transport claim across `deploy/`,
  *      `docs/install/` and `engineering/` states the MEASURED figures (the
  *      unmeasured "~100-module client boot graph" stood in four files while
@@ -55,8 +57,17 @@
 import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
+import { renderStackNginx } from '../../src/core/install/host/stack/files.ts';
+import { nginxConfOf } from '../../src/core/install/host/stack/layout.ts';
 import { handleRequest } from '../../src/server.ts';
 import { deployProxyConfs, deployStackProse, REPO_ROOT } from '../helpers/deploy_stack_corpus.ts';
+import {
+	HOST_VARIANTS,
+	productionPlanCtx,
+	stackPlanCtx,
+	variantName,
+} from '../helpers/install_host_scratch.ts';
 
 // ---------------------------------------------------------------------------
 // The recorded budget. SHRINK-ONLY: lower a number here when the client boots
@@ -314,19 +325,40 @@ describe('page load budget — TOTAL census of the shipped front ends', () => {
 // Leg 4 — the escape is code, not advice.
 // ---------------------------------------------------------------------------
 
-describe('page load budget — the escape install.sh offers', () => {
-	const install = readFileSync(join(REPO_ROOT, 'install.sh'), 'utf8');
+describe('page load budget — the escape the installer offers', () => {
+	// Phase 4 (2026-10-12): the TLS decision is the TypeScript installer's — the
+	// docker route's generated site (stack_files) and the production site file
+	// (host_web_site), RENDERED here and judged like any shipped conf.
+	const docker = (tls: Record<string, unknown>) =>
+		stackPlanCtx({ route: 'docker', entity: 'museo', server_name: 'dedalo.example.org', ...tls });
 
-	test('three TLS modes render the h2 template, and only tls_none takes the plain conf', () => {
-		for (const mode of ['tls_letsencrypt', 'tls_local_ca', 'tls_existing', 'tls_none']) {
-			expect(install).toContain(`${mode}()`);
+	test("the docker route's three TLS modes render an h2 site; only trial takes the plain conf", () => {
+		const modes = [
+			{ letsencrypt_email: 'ops@example.org' },
+			{ tls_mode: 'local_ca' },
+			{
+				tls_mode: 'files',
+				tls_cert_path: '/etc/ssl/m/fullchain.pem',
+				tls_key_path: '/etc/ssl/m/privkey.pem',
+			},
+		];
+		for (const tls of modes) {
+			const site = renderStackNginx(docker(tls));
+			expect(terminatesTls(site), JSON.stringify(tls)).toBe(true);
+			expect(declaresHttp2(site), JSON.stringify(tls)).toBe(true);
 		}
-		expect(install).toContain('deploy/nginx.simple-tls.conf.tpl');
-		const tlsNone = install.slice(install.indexOf('tls_none()'));
-		expect(tlsNone).toContain("NGINX_CONF_NAME='nginx.simple.conf'");
-		// The generated TLS conf is what the other three modes mount.
-		expect(install).toContain('nginx.simple.generated.conf');
-		expect(declaresHttp2(read('deploy/nginx.simple-tls.conf.tpl'))).toBe(true);
+		const trial = stackPlanCtx({ route: 'trial', entity: 'trial_museum' });
+		expect(nginxConfOf(trial.answers)).toBe('nginx.simple.conf');
+		expect(terminatesTls(read(SIMPLE_CONF))).toBe(false);
+	});
+
+	test('the production site file (nginx and Apache, every certificate mode) declares h2', () => {
+		for (const variant of HOST_VARIANTS) {
+			const ctx = productionPlanCtx(variant);
+			const site = siteText(ctx, certificatePaths(ctx));
+			expect(terminatesTls(site), variantName(variant)).toBe(true);
+			expect(declaresHttp2(site), variantName(variant)).toBe(true);
+		}
 	});
 });
 

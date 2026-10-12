@@ -9,7 +9,7 @@
  * stays until Enter or q — the terminal's selection works (no mouse mode).
  */
 
-import type { RunOutcomeView } from '../../run_events.ts';
+import type { RunEnding, RunOutcomeView } from '../../run_events.ts';
 import { DONE_TEXT, ROUTE_TEXT } from '../../screen_text.ts';
 import type { CardModel } from '../frame.ts';
 import { type Line, seg } from '../styled.ts';
@@ -24,14 +24,15 @@ export type DoneModel =
 			mode: 'fresh' | 'resume' | 'abort';
 			rootVerified: boolean;
 			shownOnce: readonly string[];
+			ending: RunEnding;
 	  }
 	| { kind: 'written'; path: string; trial: boolean };
 
-/** What comes next after a complete install. */
-function nextLines(width: number): Line[] {
+/** What comes next after a complete install (a host route already started the server). */
+function nextLines(ending: RunEnding, width: number): Line[] {
 	return [
 		[seg('Next', 'text', { bold: true })],
-		...wrapped(`1 ${DONE_TEXT.supervisor}`, width, 'muted'),
+		...wrapped(`1 ${DONE_TEXT.next(ending)}`, width, 'muted'),
 		...wrapped(`2 ${DONE_TEXT.browser}`, width, 'muted'),
 	];
 }
@@ -54,7 +55,7 @@ function completeCard(model: Extract<DoneModel, { kind: 'run' }>, width: number)
 			...wrapped(DONE_TEXT.complete(model.rootVerified), width, 'muted'),
 			...secretLines(model.shownOnce, width),
 		],
-		below: nextLines(width),
+		below: nextLines(model.ending, width),
 	};
 }
 
@@ -73,13 +74,13 @@ function failedCard(model: Extract<DoneModel, { kind: 'run' }>, width: number): 
 	};
 }
 
-function abortedCard(width: number): CardModel {
+function abortedCard(ending: RunEnding, width: number): CardModel {
 	return {
 		title: 'aborted',
 		tone: 'warn',
 		info: [
 			[seg('Install aborted', 'warn', { bold: true })],
-			...wrapped(DONE_TEXT.aborted, width, 'muted'),
+			...wrapped(DONE_TEXT.abortedFor(ending), width, 'muted'),
 		],
 		below: [],
 	};
@@ -112,7 +113,9 @@ function writtenCard(model: Extract<DoneModel, { kind: 'written' }>, width: numb
 export function doneCard(model: DoneModel, width: number): CardModel {
 	if (model.kind === 'written') return writtenCard(model, width);
 	if (model.outcome.exitCode !== 0) return failedCard(model, width);
-	return model.outcome.result === 'aborted' ? abortedCard(width) : completeCard(model, width);
+	return model.outcome.result === 'aborted'
+		? abortedCard(model.ending, width)
+		: completeCard(model, width);
 }
 
 /** The one sentence left on the main screen after the UI closes (never a secret). */
@@ -120,6 +123,6 @@ export function doneSummary(model: DoneModel): string {
 	if (model.kind === 'written') return `✔ ${DONE_TEXT.written(model.path)}`;
 	if (model.outcome.exitCode !== 0)
 		return `✖ install failed${model.outcome.failedStep === null ? '' : ` at step [${model.outcome.failedStep}]`}: ${model.outcome.message ?? ''}`;
-	if (model.outcome.result === 'aborted') return `✔ ${DONE_TEXT.aborted}`;
-	return `✔ ${DONE_TEXT.complete(model.rootVerified)}. ${DONE_TEXT.supervisor}`;
+	if (model.outcome.result === 'aborted') return `✔ ${DONE_TEXT.abortedFor(model.ending)}`;
+	return `✔ ${DONE_TEXT.complete(model.rootVerified)}. ${DONE_TEXT.next(model.ending)}`;
 }

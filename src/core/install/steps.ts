@@ -51,6 +51,7 @@ import {
 	type Secrets,
 	sha256Of,
 } from './run_files.ts';
+import type { VerifyResult } from './step_loop.ts';
 import { type InstallStepInputs, STEP_RUNS, type StepRawOutcome } from './step_runs.ts';
 
 export type { InstallStepInputs, StepRawOutcome } from './step_runs.ts';
@@ -61,12 +62,8 @@ export interface VerifyContext {
 	readonly secrets: Secrets;
 }
 
-export interface VerifyResult {
-	ok: boolean;
-	detail: string;
-	/** The outcome is present but CONTRADICTS the plan (e.g. another root password): refuse, never re-run. */
-	conflict?: boolean;
-}
+/** A step's verdict — the ONE shape, owned by the shared loop (step_loop.ts). */
+export type { VerifyResult } from './step_loop.ts';
 
 export interface InstallStepDefinition {
 	readonly id: InstallStepId;
@@ -197,7 +194,10 @@ const persist_config: InstallStepDefinition = {
 	label: () => 'write the .env',
 	run: STEP_RUNS.persist_config,
 	warnings: ownWarnings,
-	verify: async (ctx) => persistedConfigMatches(ctx.plan),
+	verify: async (ctx) => {
+		const { getServerState } = await import('../resolve/server_state.ts');
+		return persistedConfigMatches(ctx.plan, getServerState().install_status);
+	},
 	undo: async (ctx) => {
 		const { setServerState } = await import('../resolve/server_state.ts');
 		const restored = restorePreInstallEnv(ctx.state);

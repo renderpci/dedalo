@@ -17,9 +17,10 @@
  * the PLAIN answers so far plus the one secret it needs.
  */
 
-import { accessSync, constants, existsSync } from 'node:fs';
+import { accessSync, constants, existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import type { CatalogProbeResult } from './front_end.ts';
+import { osRowOf, parseOsRelease, supportedOsList } from './host/os_support.ts';
 import type { InitTestResult } from './init_test.ts';
 import {
 	type InstallRoute,
@@ -43,6 +44,48 @@ const INIT_ROWS: readonly { label: string; match: RegExp; hostOnly: boolean }[] 
 	{ label: 'Private directory', match: /Private config/i, hostOnly: false },
 	{ label: 'PostgreSQL client', match: /psql|PostgreSQL client/i, hostOnly: true },
 ];
+
+/**
+ * On PRODUCTION the host steps provide what init_test checks on THIS process's
+ * tree (critique A17): the instance's private dir is created at
+ * /home/ded_<i>/private, psql comes with the packages. Those rows read so.
+ */
+const PRODUCTION_PROVIDED: Readonly<Record<string, string>> = Object.freeze({
+	'Private directory': 'created by the installer at /home/ded_<instance>/private',
+	'PostgreSQL client': 'installed by the installer (PostgreSQL 18 packages)',
+	ImageMagick: 'installed by the installer (packages)',
+	FFmpeg: 'installed by the installer (packages)',
+	'PostgreSQL version': 'PostgreSQL 18, installed by the installer when missing',
+});
+
+/** A production row a host step provides becomes an ok row saying so. */
+function productionRow(row: SystemCheckRow): SystemCheckRow {
+	const provided = PRODUCTION_PROVIDED[row.label];
+	return provided === undefined || row.state === 'ok'
+		? row
+		: { state: 'ok', label: row.label, detail: provided };
+}
+
+/** The production route's own rows: a supported OS, root (the sudo form when not). */
+function productionHostRows(osRelease: string, euid: number): SystemCheckRow[] {
+	const row = osRowOf(parseOsRelease(osRelease));
+	return [
+		row === null
+			? {
+					state: 'fail',
+					label: 'Operating system',
+					detail: `not supported — the production route supports ${supportedOsList()}`,
+				}
+			: { state: 'ok', label: 'Operating system', detail: row.label },
+		euid === 0
+			? { state: 'ok', label: 'Privilege', detail: 'root' }
+			: {
+					state: 'fail',
+					label: 'Privilege',
+					detail: 'the production route runs as root: sudo sh install.sh (same arguments)',
+				},
+	];
+}
 
 /** A Docker/trial host runs the engine in a container: only Bun and the private dir are its rows. */
 function onHost(route: InstallRoute): boolean {
@@ -109,8 +152,26 @@ export function systemCheckRows(
 	init: InitTestResult,
 	info: InstallServerInfo | null,
 	route: InstallRoute,
+	host: { osRelease: string; euid: number } | null = null,
 ): SystemCheckRow[] {
-	return [...initRows(init, route), ...(info !== null && onHost(route) ? infoRows(info) : [])];
+	const rows = [
+		...initRows(init, route),
+		...(info !== null && onHost(route) ? infoRows(info) : []),
+	];
+	if (route !== 'production') return rows;
+	return [
+		...productionHostRows(host?.osRelease ?? '', host?.euid ?? -1),
+		...rows.map(productionRow),
+	];
+}
+
+/** This machine's os-release text ('' when unreadable). */
+function osReleaseText(): string {
+	try {
+		return readFileSync('/etc/os-release', 'utf8');
+	} catch {
+		return '';
+	}
 }
 
 export async function systemCheck(route: InstallRoute): Promise<ProbeOutcome> {
@@ -122,6 +183,7 @@ export async function systemCheck(route: InstallRoute): Promise<ProbeOutcome> {
 		runInitTest(),
 		onHost(route) ? buildInstallServerInfo() : null,
 		route,
+		{ osRelease: osReleaseText(), euid: process.geteuid?.() ?? -1 },
 	);
 	const failed = rows.filter((row) => row.state === 'fail').length;
 	return {
@@ -142,6 +204,13 @@ function posted(answers: Answers, secret: Record<string, string>): Record<string
 
 /** ok = the role reaches the database AND it exists (the executor refuses anything else). */
 export async function databaseProbe(answers: Answers, dbPassword: string): Promise<ProbeOutcome> {
+	const normalized = normalizeInstallAnswers(answers).answers;
+	if (normalized.route === 'production' && normalized.db_mode === 'create') {
+		return {
+			ok: true,
+			detail: `${normalized.db_database} will be created by the installer (host_database)`,
+		};
+	}
 	const { testDbConnection } = await import('./db_probe.ts');
 	const result = await testDbConnection(posted(answers, { db_password: dbPassword }));
 	return { ok: result.can_connect && result.db_exists, detail: result.msg };
@@ -180,16 +249,31 @@ function nearestExisting(path: string): string | null {
 	return probe;
 }
 
+/** Production: the host steps create the media directory (host_identity) — its shape is checked. */
+function productionMediaProbe(answers: { media_path: string; instance: string }): ProbeOutcome {
+	if (!isAbsolute(answers.media_path)) {
+		return { ok: false, detail: `${answers.media_path || '(empty)'} is not an absolute path` };
+	}
+	return {
+		ok: true,
+		detail: `${answers.media_path} will be created by the installer (host_identity), owned by ded_${answers.instance}`,
+	};
+}
+
 /**
  * Can THIS user create (or write) the media directory? The nearest existing
  * ancestor must be writable — the check the wizard's pre-flight runs on the
- * private dir (init_test.ts). A production instance's `/srv/dedalo/<i>/media`
- * normally needs root to create: that is a manual prerequisite in phase 2
- * (multi_instance.md), and failing HERE beats failing at check_directories
- * after the .env is written.
+ * private dir (init_test.ts). On production the host steps create it as root
+ * (phase 4), so only its shape is checked there.
  */
 export async function mediaProbe(answers: Answers): Promise<ProbeOutcome> {
-	const path = normalizeInstallAnswers(answers).answers.media_path;
+	const normalized = normalizeInstallAnswers(answers).answers;
+	if (normalized.route === 'production') return productionMediaProbe(normalized);
+	return writableMediaProbe(normalized.media_path);
+}
+
+/** A media path THIS user must create or write (every route but production). */
+function writableMediaProbe(path: string): ProbeOutcome {
 	if (path === '') return { ok: true, detail: 'not written — the engine default media root' };
 	if (!isAbsolute(path)) return { ok: false, detail: `${path} is not an absolute path` };
 	const existing = nearestExisting(path);

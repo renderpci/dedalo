@@ -31,6 +31,10 @@
  *   5. the installer never writes the key, whatever an answer smuggles in, and the .env
  *      template it copies into ../private/ offers no line that would set it.
  *
+ *   6. the terminal installer's instance unit (phase 4): deploy/systemd/dedalo-ts@.service
+ *      MERGED with its rendered drop-in the way systemd merges them (the drop-in replaces
+ *      ExecStart) runs the server and carries the declaration, on every OS row.
+ *
  * Floors (3 scripts, 2 units, 3 compose services) keep a broken derivation from passing
  * vacuously. A new launcher of the server is classified here or this gate goes red.
  */
@@ -49,6 +53,8 @@ import {
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { envSnapshot, parseEnvFile, projectRoot } from '../../src/config/env.ts';
+import { stampOf } from '../../src/core/install/host/production/common.ts';
+import { instanceDropins, renderTemplate } from '../../src/core/install/host/systemd/render.ts';
 import { RESTART_EXIT_CODE } from '../../src/core/install/restart.ts';
 import {
 	type ComposeServiceShape,
@@ -59,6 +65,7 @@ import {
 	systemdUnitNames,
 	trackedComposeFiles,
 } from '../helpers/deploy_artifact_corpus.ts';
+import { mergedUnit, productionPlanCtx, unitEnvironment } from '../helpers/install_host_scratch.ts';
 import { proseMarkdownFiles } from '../helpers/prose_markdown_corpus.ts';
 
 const SUPERVISION_KEY = 'DEDALO_SUPERVISED';
@@ -286,6 +293,25 @@ describe('systemd units declare supervision', () => {
 			.filter(([, text]) => !unitLines(text).includes(`Environment=${SUPERVISION_KEY}=true`))
 			.map(([label]) => label);
 		expect(undeclared).toEqual([]);
+	});
+});
+
+describe("the terminal installer's instance units declare supervision", () => {
+	test('dedalo-ts@<i> — the template merged with its drop-in, as systemd does — runs the server, supervised', () => {
+		// Phase 4 (2026-10-12): a production install runs deploy/systemd/dedalo-ts@.service
+		// with a per-instance drop-in that REPLACES ExecStart (the pinned Bun). Neither file
+		// alone is the unit systemd runs; the merge is.
+		for (const os of ['ubuntu2604', 'debian13', 'el10'] as const) {
+			const ctx = productionPlanCtx({ os, web: 'nginx', tls: 'letsencrypt' });
+			const dropins = instanceDropins(ctx.paths, ctx.row, ctx.answers, stampOf(ctx))
+				.filter((dropin) => dropin.path.includes(`/dedalo-ts@${ctx.paths.instance}.service.d/`))
+				.map((dropin) => dropin.content);
+			const unit = mergedUnit(renderTemplate('dedalo-ts@.service', ctx.row, ctx.source), dropins);
+			const execs = unit.get('Service.ExecStart') ?? [];
+			expect(execs.length, os).toBe(1);
+			expect(execs[0], os).toContain(SERVER_ENTRY);
+			expect(unitEnvironment(unit).get(SUPERVISION_KEY), os).toBe('true');
+		}
 	});
 });
 

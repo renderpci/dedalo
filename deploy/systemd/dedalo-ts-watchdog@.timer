@@ -1,0 +1,14 @@
+# One instance's watchdog cadence (written by the installer). OnActiveSec delays
+# the first probe after arming; the script's --grace covers a restart's boot.
+
+[Unit]
+Description=Run the Dedalo TS health watchdog of %i every 30s
+
+[Timer]
+OnBootSec=60
+OnActiveSec=60
+OnUnitActiveSec=30
+AccuracySec=5
+
+[Install]
+WantedBy=timers.target

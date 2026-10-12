@@ -28,4 +28,6 @@ Type=oneshot
 # the engine does: env DEDALO_BACKUP_PATH, then <private>/.env, then default.
 ExecStart=/opt/dedalo/bin/dedalo-ts-watchdog.sh \
     --socket /run/dedalo/dedalo_ts.sock \
-    --app-dir /opt/dedalo/master_dedalo
+    --app-dir /opt/dedalo/master_dedalo \
+    --service dedalo-ts.service \
+    --grace 900

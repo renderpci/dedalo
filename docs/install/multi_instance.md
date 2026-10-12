@@ -2,6 +2,13 @@
 
 > See also: [Production install](production.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Installer reference](installer_reference.md) · [Upgrading](upgrading.md)
 
+!!! tip "The installer builds this layout"
+    Every production install the installer makes is a named instance of this
+    model (`--route production --instance <name>`): its own user and home, database,
+    socket, media and `dedalo-ts@<name>` units, ONE site file, and a refusal on any
+    clash with what is already on the host. See
+    [Production host steps](installer_reference.md#production-host-steps).
+
 One engine process serves **exactly one entity and one database**. It reads its
 configuration once, at boot, into a frozen singleton — there is no per-request
 switch of entity or database. So hosting several domains on one server does not
@@ -71,7 +78,7 @@ A home-per-instance layout keeps everything a tenant owns under one tree:
 /home/ded_<site>/dedalo/    the repo clone            (WorkingDirectory)
 /home/ded_<site>/private/          ../private                (.env 0600, sessions, state, backups)
 /home/ded_<site>/.bun/bin/bun      the pinned runtime        (per instance → independent upgrades)
-/srv/dedalo/<site>/media/          MEDIA_PATH                (own path, often its own volume)
+/srv/dedalo/<site>/dedalo/media/   MEDIA_PATH                (own path, often its own volume)
 /run/dedalo-<site>/dedalo_ts.sock  the unix socket           (systemd RuntimeDirectory)
 user/group: ded_<site>
 ```
@@ -327,7 +334,7 @@ Add one `upstream`, one `server{}`, and the http-scope media map include:
 
 ```nginx
 # http{} scope — this instance's generated map:
-include /srv/dedalo/site1/media/dedalo_media_protection_map.nginx.conf;
+include /srv/dedalo/site1/dedalo/media/dedalo_media_protection_map.nginx.conf;
 upstream dedalo_site1 { server unix:/run/dedalo-site1/dedalo_ts.sock; }
 
 server {
@@ -339,7 +346,7 @@ server {
     root /srv/dedalo/site1;            # THE ROOT RULE: root + /dedalo/media/… == MEDIA_PATH
     client_max_body_size 300m;
 
-    include /srv/dedalo/site1/media/dedalo_media_protection.nginx.conf;
+    include /srv/dedalo/site1/dedalo/media/dedalo_media_protection.nginx.conf;
     open_file_cache off;
 
     # Liveness probe at the origin root — one per domain, each to its OWN
@@ -432,8 +439,8 @@ first match wins. Every path points at **this instance's** socket, media and clo
     RedirectMatch 302 "^/$"              /dedalo/core/page/
 
     # --- Media: the generated .htaccess lives inside THIS instance's MEDIA_PATH -
-    Alias /dedalo/media /srv/dedalo/site1/media
-    <Directory /srv/dedalo/site1/media>
+    Alias /dedalo/media /srv/dedalo/site1/dedalo/media
+    <Directory /srv/dedalo/site1/dedalo/media>
         # WITHOUT AllowOverride the generated .htaccess is ignored — silently, and
         # OPEN. This single line is the whole media gate on Apache.
         AllowOverride All

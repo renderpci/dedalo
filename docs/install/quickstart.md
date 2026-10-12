@@ -2,6 +2,17 @@
 
 > See also: [Installation hub](index.md) · [Docker (full stack)](docker.md) · [Production install](production.md) · [Troubleshooting](troubleshooting.md)
 
+!!! warning "`install.sh` is now the bootstrap of the terminal installer"
+    `sh install.sh` starts the terminal installer (it verifies the release and the
+    pinned Bun first): choose *Trial* (this simple stack, **no media protection**)
+    or *Docker* (the full stack), or pass `--route trial` / `--route docker`. The
+    installer asks the questions below on its own screens, shows every command on
+    its Review, and installs — see
+    [Docker and trial host steps](installer_reference.md#docker-and-trial-host-steps).
+    `./install.sh --wizard` is retired: the browser wizard is reached by starting
+    the stack by hand (the no-certificate variant below). This page is rewritten
+    for the new installer in a later release.
+
 A complete, working Dédalo on one machine, in one command. Everything is installed for you — database, media tools, web server — and you finish either by answering a few questions in the terminal or by filling a form in your browser.
 
 This page is for an institution that wants Dédalo **on its own network**: a museum, an archive, a research group. It is not a cut-down Dédalo — it is the same engine, the same data, the same features. What it leaves out is the hardening a public server needs, and that is the whole of the difference.

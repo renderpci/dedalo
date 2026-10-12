@@ -4,6 +4,15 @@
 
 ## Overview
 
+!!! tip "The installer does these steps for you"
+    `sudo sh install.sh --route production --instance <name>` (or the interactive
+    installer, choosing *Production*) automates this page — packages, the instance
+    user, PostgreSQL, the site file, TLS, the systemd units, the first boot and a
+    verified first backup — as resumable steps, each command shown on the Review
+    before it runs. See [Production host steps](installer_reference.md#production-host-steps).
+    This page stays as the reference of what those steps do, and for a host the
+    installer does not support.
+
 This is the main bare-metal guide: fifteen steps from a clean Ubuntu 24.04 LTS server to a running, TLS-protected, supervised Dédalo instance. Every command is meant to be run as `root` (or under `sudo`) unless it is explicitly prefixed with `sudo -u dedalo`.
 
 The engine is a single long-lived **Bun** process. It listens on a **unix socket**; a reverse proxy owns TCP, TLS, the client static files and the media bytes. PostgreSQL is the system of record.

@@ -80,6 +80,7 @@ export function tuiReporter(app: App, showDone: ShowDone): RunReporter {
 					mode: context.mode,
 					rootVerified: context.rootVerified,
 					shownOnce: app.run.shownOnce,
+					ending: context.ending,
 				},
 				outcome.exitCode,
 				outcome.exitCode === 0 ? [] : [...outcome.hint],

@@ -72,15 +72,46 @@ export const MAXIMAL_RAW: Readonly<Record<string, unknown>> = Object.freeze({
 	update_servers: 'none',
 });
 
-/** The question that asks each answer key (and secret key), read from the model's maximal screens. */
-export function questionByKey(): ReadonlyMap<string, Question> {
-	const byKey = new Map<string, Question>();
-	for (const screen of buildScreens(modelInput(MAXIMAL_RAW))) {
+/**
+ * The answers that turn on the questions MAXIMAL_RAW cannot reach together
+ * (phase 4: the certificate paths are asked for `tls_mode files`, the Let's
+ * Encrypt contact for `letsencrypt`; the image repository for a custom docker
+ * image) — every one alternative of a mutually exclusive choice.
+ */
+export const MAXIMAL_ALTERNATIVES: readonly Readonly<Record<string, unknown>>[] = Object.freeze([
+	Object.freeze({ ...MAXIMAL_RAW, tls_mode: 'files' }),
+	Object.freeze({ route: 'docker', image_source: 'custom', tls_mode: 'files' }),
+	Object.freeze({ route: 'docker', image_source: 'custom', diffusion: true, mailer: true }),
+	Object.freeze({ route: 'trial', image_source: 'custom', diffusion: true, mailer: true }),
+	Object.freeze({ route: 'developer', diffusion: true, mailer: true, update_servers: 'none' }),
+]);
+
+/**
+ * EVERY question that asks each answer key (and secret key), over the maximal
+ * screens of every route — a key is asked by a different screen per route
+ * (production's `web_tls.server_name`, docker's `tls_address.server_name`).
+ */
+export function questionsByKey(): ReadonlyMap<string, readonly Question[]> {
+	const byKey = new Map<string, Question[]>();
+	const screens = [MAXIMAL_RAW, ...MAXIMAL_ALTERNATIVES].flatMap((raw) =>
+		buildScreens(modelInput(raw)),
+	);
+	for (const screen of screens) {
 		for (const question of screen.questions) {
-			if (question.key !== null && !byKey.has(question.key)) byKey.set(question.key, question);
+			if (question.key === null) continue;
+			const list = byKey.get(question.key) ?? [];
+			if (!list.some((known) => known.id === question.id)) list.push(question);
+			byKey.set(question.key, list);
 		}
 	}
 	return byKey;
+}
+
+/** The first question that asks each answer key (and secret key). */
+export function questionByKey(): ReadonlyMap<string, Question> {
+	const first = new Map<string, Question>();
+	for (const [key, list] of questionsByKey()) first.set(key, list[0] as Question);
+	return first;
 }
 
 /** The answer keys whose question is a multi-select over a selection (answered with the tick set). */
@@ -109,7 +140,7 @@ export function scriptForPlan(
 	secrets: Secrets,
 	review: readonly string[] = ['install'],
 ): PlainScript & { answers: Record<string, string | readonly string[] | boolean> } {
-	const byKey = questionByKey();
+	const byKey = questionsByKey();
 	const answers: Record<string, string | readonly string[] | boolean> = {
 		'route.route': plan.answers.route,
 		'ontologies.ontologies': plan.activeOntologyTlds.filter(
@@ -122,16 +153,16 @@ export function scriptForPlan(
 	// The trial route's no-media-protection acknowledgement is TYPED, never defaulted.
 	if (plan.answers.route === 'trial') answers['route.trial_no_media_protection'] = 'yes';
 	for (const key of keys) {
-		const question = byKey.get(key);
-		if (question === undefined || SELECTION_KEYS.has(key) || question.kind === 'secret') continue;
-		answers[question.id] = typed(question, plan.answers[key as keyof InstallPlan['answers']]);
+		if (SELECTION_KEYS.has(key)) continue;
+		for (const question of byKey.get(key) ?? []) {
+			if (question.kind === 'secret') continue;
+			answers[question.id] = typed(question, plan.answers[key as keyof InstallPlan['answers']]);
+		}
 	}
 	const scriptedSecrets: Record<string, string> = {};
 	for (const [key, value] of Object.entries(secrets) as [SecretKey, string | undefined][]) {
-		const question = byKey.get(key);
-		if (question !== undefined && value !== undefined && value !== '') {
-			scriptedSecrets[question.id] = value;
-		}
+		if (value === undefined || value === '') continue;
+		for (const question of byKey.get(key) ?? []) scriptedSecrets[question.id] = value;
 	}
 	return { answers, secrets: scriptedSecrets, review };
 }

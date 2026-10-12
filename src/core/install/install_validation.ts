@@ -269,6 +269,152 @@ function instanceShapeErrors(a: InstallAnswers, problems: Problems): void {
 	);
 }
 
+// ── the host-step answers (phase 4, 2026-10-12) ─────────────────────────────
+
+/** The TLS modes each route takes (trial has none: it is the evaluation stack). */
+const ROUTE_TLS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+	production: ['letsencrypt', 'files'],
+	docker: ['letsencrypt', 'local_ca', 'files'],
+	trial: ['none'],
+});
+
+/** A DNS name with at least two labels, letters/digits/hyphens (no IP, no localhost). */
+const FQDN_PATTERN =
+	/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
+
+/** One address the operator's browser reaches — what certbot issues for and the site serves. */
+function serverNameErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.server_name === '') {
+		problems.push(
+			problem(
+				'server_name',
+				`the ${a.route} route requires server_name (the public address, e.g. --server-name dedalo.example.org)`,
+			),
+		);
+		return;
+	}
+	if (!FQDN_PATTERN.test(a.server_name)) {
+		problems.push(
+			problem(
+				'server_name',
+				`server_name '${a.server_name}' must be a fully qualified domain name (not localhost, not an IP address)`,
+			),
+		);
+	}
+}
+
+/** The two public ports: valid, and distinct. */
+function webPortErrors(a: InstallAnswers, problems: Problems): void {
+	for (const [name, value] of [
+		['http_port', a.http_port],
+		['https_port', a.https_port],
+	] as const) {
+		const message = portError(name, value);
+		if (message !== null) problems.push(problem(name, message));
+	}
+	if (a.http_port === a.https_port) {
+		problems.push(problem('https_port', 'http_port and https_port must differ'));
+	}
+}
+
+/** The certificate the route takes, and what that mode needs. */
+function tlsErrors(a: InstallAnswers, problems: Problems): void {
+	const allowed = ROUTE_TLS[a.route] ?? [];
+	if (!allowed.includes(a.tls_mode)) {
+		problems.push(
+			problem('tls_mode', `tls_mode must be ${allowed.join('|')} on the ${a.route} route`),
+		);
+		return;
+	}
+	if (a.tls_mode === 'letsencrypt') letsEncryptErrors(a, problems);
+	if (a.tls_mode === 'files') tlsFileErrors(a, problems);
+}
+
+/** Let's Encrypt: an address for expiry notices, and the HTTP-01 challenge on port 80. */
+function letsEncryptErrors(a: InstallAnswers, problems: Problems): void {
+	if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a.letsencrypt_email)) {
+		problems.push(
+			problem(
+				'letsencrypt_email',
+				"Let's Encrypt requires letsencrypt_email (an address for expiry notices)",
+			),
+		);
+	}
+	if (a.http_port !== '80') {
+		problems.push(
+			problem(
+				'http_port',
+				"Let's Encrypt validates over port 80: http_port must be 80 (or use tls_mode files)",
+			),
+		);
+	}
+}
+
+/** The institution's own certificate: two absolute paths. */
+function tlsFileErrors(a: InstallAnswers, problems: Problems): void {
+	for (const key of ['tls_cert_path', 'tls_key_path'] as const) {
+		if (!isAbsolute(a[key])) {
+			problems.push(problem(key, `tls_mode files requires ${key} (an absolute path)`));
+		}
+	}
+}
+
+/** The production-only answers: the web server, the database mode, the backup directory. */
+function productionHostErrors(a: InstallAnswers, problems: Problems): void {
+	if (!['', 'nginx', 'apache'].includes(a.web_server)) {
+		problems.push(
+			problem('web_server', 'web_server must be nginx|apache (or empty: the one the host has)'),
+		);
+	}
+	if (!['create', 'existing'].includes(a.db_mode)) {
+		problems.push(problem('db_mode', 'db_mode must be create|existing'));
+	}
+	if (!isAbsolute(a.backup_dir)) {
+		problems.push(problem('backup_dir', 'backup_dir must be an absolute path'));
+	}
+	mediaRootErrors(a, problems);
+}
+
+/**
+ * THE ROOT RULE (deploy/nginx.conf; src/config/catalog/media.ts): the site's
+ * `root` + `/dedalo/<DEDALO_MEDIA_DIR>` must BE MEDIA_PATH. The engine builds
+ * every media URL under `/dedalo/<DEDALO_MEDIA_DIR>/`, and the installer keeps
+ * that name at its default (`media`), so MEDIA_PATH must end in
+ * `/dedalo/media` — any other path has no root that serves it (a
+ * `/…/dedalo/files` would resolve every URL to a `…/dedalo/media` that does
+ * not exist: install_host_render_tripwire (d)).
+ */
+function mediaRootErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.media_path !== '' && !/^\/.+\/dedalo\/media$/.test(a.media_path)) {
+		problems.push(
+			problem(
+				'media_path',
+				`media_path '${a.media_path}' must end in /dedalo/media (the web root rule: root + /dedalo/<DEDALO_MEDIA_DIR> == MEDIA_PATH, and the installer keeps DEDALO_MEDIA_DIR=media)`,
+			),
+		);
+	}
+}
+
+/** The docker/trial-only answers: where the image comes from. */
+function stackHostErrors(a: InstallAnswers, problems: Problems): void {
+	if (!['official', 'custom', 'build'].includes(a.image_source)) {
+		problems.push(problem('image_source', 'image_source must be official|custom|build'));
+	}
+	if (a.image_source === 'custom' && a.image_repository === '') {
+		problems.push(problem('image_repository', 'image_source custom requires image_repository'));
+	}
+}
+
+/** The answers that make the host steps (production, docker) — skipped for the engine child (A14). */
+function hostErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.engine_only || a.route === 'developer') return;
+	if (a.route !== 'trial') serverNameErrors(a, problems);
+	webPortErrors(a, problems);
+	tlsErrors(a, problems);
+	if (a.route === 'production') productionHostErrors(a, problems);
+	else stackHostErrors(a, problems);
+}
+
 /**
  * Every answer-only refusal, each TAGGED with the answer it is about — the ONE
  * rule set: the plan's `errors` carry the sentences, its `fieldErrors` the tags
@@ -285,6 +431,7 @@ export function answerProblems(a: InstallAnswers): FieldError[] {
 	vocabularyErrors(a, problems);
 	localeErrors(a, problems);
 	fingerprintErrors(a, problems);
+	hostErrors(a, problems);
 	return problems;
 }
 

@@ -32,6 +32,13 @@
  *    and every other step converges when re-run;
  *  - pending: run, accept, verify, checkpoint.
  *
+ * THE LOOP ITSELF lives in step_loop.ts (phase 4, 2026-10-12): the host
+ * executor (host/host_executor.ts) drives the same one. This module is the
+ * ENGINE wrapper — the engine step table, the database claim, the engine's
+ * intents and creations; it refuses a plan that holds a host step (a host
+ * route's plan runs in the host executor; its engine steps reach this module
+ * through the delegated `--engine-only` child).
+ *
  * NOTHING SECRET IS WRITTEN OR PRINTED: run files are built from plain answers
  * (run_files.ts), every message is redacted, and console output is redacted
  * for the run's duration (engine modules print directly). The one exception is
@@ -50,23 +57,23 @@
 
 import { existsSync, readdirSync, rmdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
-import type { Subprocess } from 'bun';
 import { processEnvValue, readEnv } from '../../config/env.ts';
 import { isDedaloError } from '../errors/index.ts';
 import { getServerState, statePath } from '../resolve/server_state.ts';
 import { DEDALO_VERSION } from '../update/version.ts';
 import type { InstallLockHandle, TargetDatabaseState } from './db_restore.ts';
 import {
-	INSTALL_STEP_IDS,
 	type InstallAnswers,
 	type InstallPlan,
 	type InstallStepId,
+	isInstallStepId,
+	type StepId,
 } from './install_plan.ts';
 import type { OntologyCatalog } from './ontology_choice.ts';
 import { installPrivateDir } from './paths.ts';
 import { trackPsqlChildren } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
-import type { RunIo, StepPhase } from './run_events.ts';
+import type { RunIo } from './run_events.ts';
 import {
 	acquireRunLock,
 	answerDifferences,
@@ -82,24 +89,37 @@ import {
 	ontologyDecisions,
 	PLAN_FILE,
 	type PlanFile,
-	pendingStep,
 	planHash,
 	type RunMode,
 	type RunRecord,
 	readInstallEnv,
 	readPlanFile,
 	readStateFile,
-	redactSecrets,
 	releaseRunLock,
 	runRecord,
 	type SecretKey,
 	type Secrets,
 	STATE_FILE,
-	type StepRecord,
 	sha256Of,
 	writePlanFile,
 	writeStateFile,
 } from './run_files.ts';
+import {
+	advanceStep,
+	emit,
+	type InstallFault,
+	type LoopContext,
+	nowIso,
+	type Performed,
+	readInstallFault,
+	recordFailure,
+	recordOf,
+	redact,
+	redactConsole,
+	say,
+	stopChildren,
+	warnLine,
+} from './step_loop.ts';
 import {
 	INSTALL_STEPS,
 	type InstallStepDefinition,
@@ -107,12 +127,12 @@ import {
 	installCreatedBackups,
 	secretsNeeded,
 	type VerifyContext,
-	type VerifyResult,
 } from './steps.ts';
 
 // secretsNeeded lives in the config-free step table (scripts/install.ts asks for
 // a resume's missing secrets BEFORE it seeds the environment config freezes).
-export { secretsNeeded };
+// The fault seam lives in the shared loop (host steps are fault points too).
+export { type InstallFault, readInstallFault, secretsNeeded };
 
 /**
  * What the run writes to: log/warn lines, the one-time display of the salt,
@@ -158,7 +178,7 @@ export interface ExecutorOutcome {
 	result: 'complete' | 'already_complete' | 'aborted' | 'failed' | 'refused';
 	/** The refusal/failure sentence (redacted). */
 	message: string | null;
-	failedStep: InstallStepId | null;
+	failedStep: StepId | null;
 	/** The resume/abort hint — empty when no state file exists. */
 	hint: string[];
 }
@@ -166,37 +186,6 @@ export interface ExecutorOutcome {
 export interface ExecutorOptions {
 	table?: { readonly [K in InstallStepId]: InstallStepDefinition };
 	host?: ExecutorHost;
-}
-
-// ── the crash seam ───────────────────────────────────────────────────────────
-
-/** DEDALO_INSTALL_FAULT=<step>:<before|after> — the resume drill's SIGKILL point. */
-export interface InstallFault {
-	step: InstallStepId;
-	when: 'before' | 'after';
-}
-
-/** Is `value` a `<step id>:before|after` seam value? */
-function faultShape(step: string | undefined, when: string | undefined): boolean {
-	const knownStep = (INSTALL_STEP_IDS as readonly string[]).includes(step ?? '');
-	return knownStep && (when === 'before' || when === 'after');
-}
-
-/**
- * The fault seam, from the PROCESS environment only (never ../private/.env — a
- * stray line there must never kill a real install). Any malformed value refuses.
- */
-export function readInstallFault(): InstallFault | null {
-	const raw = processEnvValue('DEDALO_INSTALL_FAULT') ?? '';
-	if (raw === '') return null;
-	const [step, when] = raw.split(':');
-	if (!faultShape(step, when)) {
-		refuseInstall(
-			'install.invalid_input',
-			`DEDALO_INSTALL_FAULT must be <step id>:before|after (got '${raw}')`,
-		);
-	}
-	return { step: step as InstallStepId, when: when as 'before' | 'after' };
 }
 
 // ── secrets and the hint ─────────────────────────────────────────────────────
@@ -284,24 +273,14 @@ export function engineHost(appName: string): ExecutorHost {
 // ── the run ──────────────────────────────────────────────────────────────────
 
 /** One executor run's mutable context (never module state — one per call). */
-interface RunContext {
-	readonly io: ExecutorIo;
+interface RunContext extends LoopContext {
 	readonly table: { readonly [K in InstallStepId]: InstallStepDefinition };
 	readonly host: ExecutorHost;
 	readonly request: ExecutorRequest;
-	readonly children: Set<Subprocess>;
-	fault: InstallFault | null;
-	plan: PlanFile | null;
-	state: InstallState | null;
 	run: RunRecord | null;
 	secrets: Secrets;
-	redactions: string[];
-	currentStep: InstallStepId | null;
 	dbLock: InstallLockHandle | null;
 	runLock: boolean;
-	ranAny: boolean;
-	/** True only while the ONE unredacted line (the salt) is printed. */
-	unredacted: boolean;
 }
 
 type RefusalCode = 'install.invalid_input' | 'install.state_conflict' | 'install.step_failed';
@@ -311,98 +290,12 @@ function refuseIf(condition: boolean, code: RefusalCode, detail: () => string): 
 	if (condition) refuseInstall(code, detail());
 }
 
-function redact(ctx: RunContext, text: string): string {
-	return redactSecrets(text, ctx.redactions);
-}
-
-function say(ctx: RunContext, line: string): void {
-	ctx.io.log(redact(ctx, line));
-}
-
-function warnLine(ctx: RunContext, line: string): void {
-	ctx.io.warn(redact(ctx, line));
-}
-
-/** The phases whose event carries the step's recorded duration. */
-const TIMED_PHASES: ReadonlySet<StepPhase> = new Set(['done', 'adopted', 'skipped', 'failed']);
-
-/** finished_at − started_at of a step's record (ms), or null. */
-function elapsedOf(record: StepRecord | undefined): number | null {
-	if (!record?.started_at || !record.finished_at) return null;
-	const ms = Date.parse(record.finished_at) - Date.parse(record.started_at);
-	return Number.isFinite(ms) ? Math.max(0, ms) : null;
-}
-
-/**
- * Tell the front end a step's progress (when it listens — the headless CLI
- * does not, and its log/warn transcript is the same either way). Every text
- * is redacted here, like every logged line.
- */
-function emit(
-	ctx: RunContext,
-	step: InstallStepId,
-	phase: StepPhase,
-	extra: { message?: string | null; warnings?: readonly string[] } = {},
-): void {
-	if (ctx.io.step === undefined) return;
-	const record = ctx.state?.steps[step];
-	ctx.io.step({
-		step,
-		label: ctx.plan === null ? step : ctx.table[step].label(ctx.plan),
-		phase,
-		elapsedMs: TIMED_PHASES.has(phase) ? elapsedOf(record) : null,
-		...(typeof extra.message === 'string' ? { message: redact(ctx, extra.message) } : {}),
-		...(extra.warnings === undefined
-			? {}
-			: { warnings: extra.warnings.map((warning) => redact(ctx, warning)) }),
-	});
-}
-
 function saveState(ctx: RunContext): void {
 	if (ctx.state !== null) writeStateFile(ctx.state);
 }
 
-function nowIso(): string {
-	return new Date().toISOString();
-}
-
-/** The step's record (created pending when the state predates it). */
-function recordOf(ctx: RunContext, step: InstallStepId): StepRecord {
-	const state = ctx.state as InstallState;
-	state.steps[step] ??= pendingStep();
-	return state.steps[step] as StepRecord;
-}
-
 function verifyContext(ctx: RunContext): VerifyContext {
 	return { plan: ctx.plan as PlanFile, state: ctx.state as InstallState, secrets: ctx.secrets };
-}
-
-/** The consumer whose verdict may stand in for `step`'s, when it has run; else null. */
-function activeConsumer(ctx: RunContext, step: InstallStepId): InstallStepId | null {
-	const consumer = ctx.table[step].consumedBy;
-	if (consumer === undefined || !ctx.plan?.steps.includes(consumer)) return null;
-	return recordOf(ctx, consumer).status === 'pending' ? null : consumer;
-}
-
-/**
- * The step's verdict: its own verify; failing that, for a step another one
- * CONSUMES (staged files the import deletes), the consumer's — once the consumer
- * has itself run. Null = the step has no verify.
- */
-async function verifyStep(ctx: RunContext, step: InstallStepId): Promise<VerifyResult | null> {
-	const verify = ctx.table[step].verify;
-	if (verify === undefined) return null;
-	const own = await verify(verifyContext(ctx));
-	const consumer = own.ok || own.conflict ? null : activeConsumer(ctx, step);
-	if (consumer === null) return own;
-	const consumed = await verifyStep(ctx, consumer);
-	return consumed?.ok === true
-		? { ok: true, detail: `consumed by ${consumer}: ${consumed.detail}` }
-		: own;
-}
-
-function recordVerdict(record: StepRecord, verdict: VerifyResult): void {
-	record.verify = { ok: verdict.ok, detail: verdict.detail, at: nowIso() };
 }
 
 /** The inputs every executor step runs with. */
@@ -471,6 +364,27 @@ function rememberSalt(ctx: RunContext): void {
 	if (salt !== '' && !ctx.redactions.includes(salt)) ctx.redactions.push(salt);
 }
 
+/**
+ * The ENGINE step's work (the loop's `perform`): its run with every psql it
+ * starts tracked (ctrl+c stops them), its per-item rows printed, the
+ * executor-only accept.
+ */
+async function performEngineStep(ctx: RunContext, step: InstallStepId): Promise<Performed> {
+	const definition = ctx.table[step];
+	const inputs = stepInputs(ctx);
+	const outcome = await trackPsqlChildren(ctx.children, () => definition.run(inputs));
+	// The per-item rows first: a refused directory check names each directory.
+	for (const line of definition.details?.(outcome) ?? []) say(ctx, `    ${line}`);
+	const refusal = definition.accept?.(outcome, inputs) ?? null;
+	refuseIf(refusal !== null, 'install.step_failed', () => refusal as string);
+	return { message: outcome.msg, warnings: definition.warnings?.(outcome) ?? [] };
+}
+
+/** The engine step definition of `step` (the loop only ever hands this executor engine ids). */
+function engineStep(ctx: RunContext, step: StepId): InstallStepDefinition {
+	return ctx.table[step as InstallStepId];
+}
+
 /** What the step created, recorded with its checkpoint. */
 const CREATED: Partial<Record<InstallStepId, (ctx: RunContext) => void>> = {
 	persist_config: recordPersisted,
@@ -482,124 +396,6 @@ const CREATED: Partial<Record<InstallStepId, (ctx: RunContext) => void>> = {
 		(ctx.state as InstallState).created.seed_restored = true;
 	},
 };
-
-/** SIGKILL this process at the seam point (the resume drill). */
-function maybeFault(ctx: RunContext, step: InstallStepId, when: 'before' | 'after'): void {
-	if (ctx.fault?.step === step && ctx.fault.when === when) process.kill(process.pid, 'SIGKILL');
-}
-
-/** Mark the step running (attempts, intent) and checkpoint. */
-function markRunning(ctx: RunContext, step: InstallStepId): void {
-	const record = recordOf(ctx, step);
-	record.status = 'running';
-	record.attempts += 1;
-	record.started_at = nowIso();
-	record.finished_at = null;
-	record.error = null;
-	INTENT[step]?.((ctx.state as InstallState).created);
-	saveState(ctx);
-}
-
-/** The post-run verify: a step that reported success must also VERIFY. */
-async function verifyAfterRun(ctx: RunContext, step: InstallStepId): Promise<void> {
-	const verify = ctx.table[step].verify;
-	if (verify === undefined) return;
-	const verdict = await verify(verifyContext(ctx));
-	recordVerdict(recordOf(ctx, step), verdict);
-	refuseIf(
-		!verdict.ok,
-		'install.step_failed',
-		() => `step reported success but its outcome does not verify: ${verdict.detail}`,
-	);
-}
-
-/** Mark the step done with its redacted message + warnings, checkpoint, print. */
-function markDone(ctx: RunContext, step: InstallStepId, msg: unknown, warnings: string[]): void {
-	const record = recordOf(ctx, step);
-	record.status = 'done';
-	record.finished_at = nowIso();
-	record.message = typeof msg === 'string' && msg !== '' ? redact(ctx, msg) : null;
-	record.warnings = warnings.map((warning) => redact(ctx, warning));
-	saveState(ctx);
-	if (record.message !== null) say(ctx, `  ${record.message}`);
-	for (const warning of record.warnings) warnLine(ctx, `  ⚠ ${warning}`);
-}
-
-/** Run ONE step (it is not done): running → run → accept → verify → done. */
-async function runStep(ctx: RunContext, step: InstallStepId): Promise<void> {
-	const definition = ctx.table[step];
-	const inputs = stepInputs(ctx);
-	markRunning(ctx, step);
-	maybeFault(ctx, step, 'before');
-	ctx.ranAny = true;
-	const outcome = await trackPsqlChildren(ctx.children, () => definition.run(inputs));
-	// The per-item rows first: a refused directory check names each directory.
-	for (const line of definition.details?.(outcome) ?? []) say(ctx, `    ${line}`);
-	const refusal = definition.accept?.(outcome, inputs) ?? null;
-	refuseIf(refusal !== null, 'install.step_failed', () => refusal as string);
-	CREATED[step]?.(ctx);
-	await verifyAfterRun(ctx, step);
-	markDone(ctx, step, outcome.msg, definition.warnings?.(outcome) ?? []);
-	const record = recordOf(ctx, step);
-	emit(ctx, step, 'done', { message: record.message, warnings: record.warnings });
-	maybeFault(ctx, step, 'after');
-}
-
-/** A step recorded done: it must still verify (when it has a verify), else drift. */
-async function confirmDone(ctx: RunContext, step: InstallStepId): Promise<void> {
-	const verdict = await verifyStep(ctx, step);
-	if (verdict !== null) {
-		recordVerdict(recordOf(ctx, step), verdict);
-		refuseIf(verdict.conflict === true, 'install.state_conflict', () => verdict.detail);
-		refuseIf(
-			!verdict.ok,
-			'install.state_conflict',
-			() =>
-				`step ${step} was recorded done but its outcome is missing (${verdict.detail}) — the install was changed outside the installer; --abort and start again`,
-		);
-	}
-	say(ctx, '  done in an earlier run — skipped');
-	emit(ctx, step, 'skipped');
-}
-
-/** A step left running/failed whose work LANDED before its checkpoint: adopt it. Answers whether it did. */
-async function adoptLanded(ctx: RunContext, step: InstallStepId): Promise<boolean> {
-	if (ctx.table[step].neverAdopt === true) return false;
-	const verdict = await verifyStep(ctx, step);
-	refuseIf(verdict?.conflict === true, 'install.state_conflict', () => verdict?.detail ?? '');
-	if (verdict?.ok !== true) return false;
-	const record = recordOf(ctx, step);
-	recordVerdict(record, verdict);
-	CREATED[step]?.(ctx);
-	record.status = 'done';
-	record.finished_at = nowIso();
-	record.error = null;
-	saveState(ctx);
-	say(ctx, `  verified (completed in an earlier run): ${verdict.detail}`);
-	emit(ctx, step, 'adopted', { message: verdict.detail });
-	return true;
-}
-
-/** One step through the loop's rules (the header): skip, adopt, refuse as drift, or run. */
-async function advanceStep(ctx: RunContext, step: InstallStepId): Promise<void> {
-	const status = recordOf(ctx, step).status;
-	say(ctx, `→ [${step}] ${ctx.table[step].label(ctx.plan as PlanFile)}`);
-	ctx.currentStep = step;
-	emit(ctx, step, 'start');
-	if (status === 'done') return confirmDone(ctx, step);
-	if (status !== 'pending' && (await adoptLanded(ctx, step))) return;
-	await runStep(ctx, step);
-}
-
-/** Mark the current step failed with a redacted error (the checkpoint a resume reads). */
-function recordFailure(ctx: RunContext, code: string, message: string): void {
-	if (ctx.state === null || ctx.currentStep === null) return;
-	const record = recordOf(ctx, ctx.currentStep);
-	if (record.status !== 'running') return;
-	record.status = 'failed';
-	record.finished_at = nowIso();
-	record.error = { code, message: redact(ctx, message) };
-}
 
 // ── the modes ────────────────────────────────────────────────────────────────
 
@@ -742,9 +538,25 @@ function undoFreshRefusal(ctx: RunContext, createdDir: boolean): void {
 	if (createdDir) removeRunDirIfEmpty();
 }
 
+/**
+ * This executor runs ENGINE steps only: a plan holding a host step belongs to
+ * the host executor (host/host_executor.ts) — reaching here with one is a front
+ * end's programming error, refused before anything is written.
+ */
+function assertEnginePlan(plan: PlanFile): void {
+	const host = plan.steps.filter((step) => !isInstallStepId(step));
+	refuseIf(
+		host.length > 0,
+		'install.invalid_input',
+		() =>
+			`the plan holds host steps (${host.join(', ')}) — the ${String(plan.answers.route ?? '')} route runs them through the host executor`,
+	);
+}
+
 /** FRESH: preflight everything, write nothing until it all passes, then run. */
 async function freshRun(ctx: RunContext): Promise<void> {
 	const plan = ctx.request.planFile as PlanFile;
+	assertEnginePlan(plan);
 	const createdDir = ensureRunDir();
 	try {
 		const preflight = await freshPreconditions(ctx, plan);
@@ -782,6 +594,7 @@ function loadRecord(ctx: RunContext): { plan: PlanFile; state: InstallState } {
 		'install.state_conflict',
 		() => `the install record at ${installRunDir()} was modified (plan hash mismatch)`,
 	);
+	assertEnginePlan(plan);
 	ctx.plan = plan;
 	ctx.state = state;
 	return { plan, state };
@@ -929,6 +742,7 @@ function undoableSteps(ctx: RunContext, plan: PlanFile, state: InstallState): In
 		recordOf(ctx, step).status !== 'pending' ||
 		(step === 'install_db_from_default_file' && touchedDatabase(state));
 	return [...plan.steps]
+		.filter(isInstallStepId)
 		.reverse()
 		.filter((step) => started(step) && ctx.table[step].undo !== undefined);
 }
@@ -1031,35 +845,6 @@ function closeRun(ctx: RunContext, result: NonNullable<RunRecord['result']>): vo
 	saveState(ctx);
 }
 
-/** The console methods a run's output can leave through (errors/log.ts uses info). */
-const CONSOLE_METHODS = ['log', 'info', 'debug', 'trace', 'warn', 'error'] as const;
-
-/**
- * One console argument redacted: a string, or an Error — its stack (message
- * included) becomes redacted TEXT, since a connection error can quote a
- * credential. Other values pass as they are.
- */
-function cleanArg(ctx: RunContext, arg: unknown): unknown {
-	if (ctx.unredacted) return arg;
-	if (typeof arg === 'string') return redact(ctx, arg);
-	if (arg instanceof Error) return redact(ctx, arg.stack ?? `${arg.name}: ${arg.message}`);
-	return arg;
-}
-
-/** Redact every console line for the run's duration (engine modules print directly). */
-function redactConsole(ctx: RunContext): () => void {
-	const original = Object.fromEntries(
-		CONSOLE_METHODS.map((method) => [method, console[method]]),
-	) as Record<(typeof CONSOLE_METHODS)[number], (...args: unknown[]) => void>;
-	for (const method of CONSOLE_METHODS) {
-		const write = original[method];
-		console[method] = (...args: unknown[]) => write(...args.map((arg) => cleanArg(ctx, arg)));
-	}
-	return () => {
-		for (const method of CONSOLE_METHODS) console[method] = original[method];
-	};
-}
-
 /** Release everything this run holds. */
 async function releaseAll(ctx: RunContext): Promise<void> {
 	const lock = ctx.dbLock;
@@ -1068,16 +853,6 @@ async function releaseAll(ctx: RunContext): Promise<void> {
 	if (ctx.runLock) releaseRunLock();
 	ctx.runLock = false;
 	if (ctx.request.mode === 'abort' && ctx.state === null) removeRunDirIfEmpty();
-}
-
-/** Kill the step's psql children and wait (bounded) for them to exit. */
-async function stopChildren(ctx: RunContext): Promise<void> {
-	const children = [...ctx.children];
-	for (const child of children) child.kill('SIGTERM');
-	await Promise.race([
-		Promise.all(children.map((child) => child.exited)),
-		new Promise((done) => setTimeout(done, 10_000)),
-	]);
 }
 
 /** The hint, when there is a saved install to resume (never for --abort). */
@@ -1123,15 +898,16 @@ async function interrupted(
 	return process.exit(signal === 'SIGINT' ? 130 : 143);
 }
 
-/** A fresh context for one call. */
+/** A fresh context for one call: the loop's hooks bound to the engine table. */
 function newContext(
 	request: ExecutorRequest,
 	io: ExecutorIo,
 	options: ExecutorOptions,
 ): RunContext {
-	return {
+	const table = options.table ?? INSTALL_STEPS;
+	const ctx: RunContext = {
 		io,
-		table: options.table ?? INSTALL_STEPS,
+		table,
 		host: options.host ?? engineHost(`dedalo_install:${process.pid}`),
 		request,
 		children: new Set(),
@@ -1148,7 +924,21 @@ function newContext(
 		runLock: false,
 		ranAny: false,
 		unredacted: false,
+		stepOf: (step) => engineStep(ctx, step),
+		verifyOwn: async (step) => {
+			const verify = engineStep(ctx, step).verify;
+			return verify === undefined ? null : verify(verifyContext(ctx));
+		},
+		perform: (step) => performEngineStep(ctx, step as InstallStepId),
+		intent: (step) => {
+			INTENT[step as InstallStepId]?.((ctx.state as InstallState).created);
+		},
+		created: (step) => {
+			CREATED[step as InstallStepId]?.(ctx);
+		},
+		save: () => saveState(ctx),
 	};
+	return ctx;
 }
 
 /** The mode's run, then (fresh/resume) the end-of-run tasks. */

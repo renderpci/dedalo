@@ -22,8 +22,9 @@
  *      TUI was asked EXACTLY what the plain mode was asked (same order).
  *  (b) POSITIVE CONTROL: one wrong choice typed on purpose (a cursor moved one
  *      row) decides a DIFFERENT plan — the comparison is not vacuous.
- *  (c) docker / trial: Enter on the Review does NOT install (the ask stays
- *      pending, the reason is drawn); `w <path>` writes an answers file that
+ *  (c) docker / trial: Enter on the Review INSTALLS the walked plan (phase 4:
+ *      their host steps run here; the root password asked, the stack's
+ *      database password never); `w <path>` still writes an answers file that
  *      decides the walked plan.
  *  (d) an EDIT from the Review (languages changed, mail turned off) installs
  *      the edited plan and drops the disabled service's password.
@@ -47,7 +48,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type FrontEndResult, writeAnswersFile } from '../../src/core/install/front_end.ts';
 import {
-	answersFileOf,
 	answersFromAnswersFile,
 	buildInstallPlan,
 	type InstallPlan,
@@ -167,25 +167,14 @@ function caseScript(answerCase: ParityCase, review?: readonly string[]) {
 	const { raw, plain, secrets } = splitCase(answerCase.argv);
 	const flags = planOf(raw, answerCase.local);
 	expect(flags.errors, answerCase.name).toEqual([]);
-	const route = flags.answers.route;
-	const hostRoute = route === 'production' || route === 'developer';
-	const askedSecrets = hostRoute ? secrets : {};
+	// Phase 4: every route installs from the Review (docker/trial run their host steps here).
 	const script = scriptForPlan(
 		flags,
 		Object.keys(plain),
-		{ ...askedSecrets, root_password: GOOD_ROOT_PASSWORD },
-		review ?? (hostRoute ? ['install'] : ['write <none>']),
+		{ ...secrets, root_password: GOOD_ROOT_PASSWORD },
+		review ?? ['install'],
 	);
-	return { raw, plain, secrets, flags, hostRoute, script };
-}
-
-/** The plan a written answers file decides (the case's secrets through the environment). */
-function writtenPlan(
-	written: InstallPlan['answers'],
-	secrets: object,
-	local: boolean,
-): InstallPlan {
-	return planOf({ ...answersFromAnswersFile(answersFileOf(written)).raw, ...secrets }, local);
+	return { raw, plain, secrets, flags, script };
 }
 
 const findCase = (name: string): ParityCase => {
@@ -207,35 +196,17 @@ describe('full-screen ≡ plain ≡ flags ≡ answers file (a)', () => {
 
 	for (const answerCase of PARITY_CASES) {
 		test(answerCase.name, async () => {
-			const { secrets, flags, hostRoute, script } = caseScript(answerCase);
-			const writtenTui: InstallPlan['answers'][] = [];
-			const writtenPlain: InstallPlan['answers'][] = [];
-			const tui = await runTui(script, answerCase.local, {
-				writeAnswers: (_path, answers) => {
-					writtenTui.push(answers);
-					return null;
-				},
-			});
-			const plain = await runPlain(script, answerCase.local, (_path, answers) => {
-				writtenPlain.push(answers);
-				return null;
-			});
-			const planFrom = (result: FrontEndResult, written: InstallPlan['answers'][]) =>
-				hostRoute
-					? resultPlan(result, answerCase.local)
-					: writtenPlan(written[0] as InstallPlan['answers'], secrets, answerCase.local);
-			expect(decided(planFrom(tui.result, writtenTui))).toEqual(decided(flags));
-			expect(decided(planFrom(tui.result, writtenTui))).toEqual(
-				decided(planFrom(plain.result, writtenPlain)),
+			const { secrets, flags, script } = caseScript(answerCase);
+			const tui = await runTui(script, answerCase.local);
+			const plain = await runPlain(script, answerCase.local);
+			expect(decided(resultPlan(tui.result, answerCase.local))).toEqual(decided(flags));
+			expect(decided(resultPlan(tui.result, answerCase.local))).toEqual(
+				decided(resultPlan(plain.result, answerCase.local)),
 			);
-			if (hostRoute) {
-				expect(tui.result.kind === 'install' ? tui.result.secrets : null).toEqual({
-					...secrets,
-					root_password: GOOD_ROOT_PASSWORD,
-				});
-			} else {
-				expect(tui.result.kind).toBe('written');
-			}
+			expect(tui.result.kind === 'install' ? tui.result.secrets : null).toEqual({
+				...secrets,
+				root_password: GOOD_ROOT_PASSWORD,
+			});
 			// The same walk: every screen and question the plain mode was asked, in order.
 			expect(tui.asked).toEqual(plain.asked);
 			expect(tui.asked.length).toBeGreaterThan(10);
@@ -278,41 +249,33 @@ describe('a wrong key decides a different plan (b)', () => {
 
 // ── (c) docker / trial ───────────────────────────────────────────────────────
 
-describe('docker and trial: Enter never installs; w writes (c)', () => {
+describe('docker and trial: Enter installs; w still writes (c)', () => {
 	for (const route of ['docker', 'trial'] as const) {
-		test(`${route}: the Review refuses Enter inline; w <path> decides the walked plan`, async () => {
-			const answerCase = findCase(`route ${route}`);
+		test(`${route}: Enter on the Review installs the walked plan (root password asked, the stack's database password never)`, async () => {
+			const { flags, script } = caseScript(findCase(`route ${route}`));
+			const { result, asked } = await runTui(script, false);
+			expect(result.kind).toBe('install');
+			expect(decided(resultPlan(result, false))).toEqual(decided(flags));
+			expect(asked.some((id) => id.endsWith('.root_password'))).toBe(true);
+			expect(asked.filter((id) => id.endsWith('.db_password'))).toEqual([]);
+			expect(result.kind === 'install' ? result.secrets : null).toEqual({
+				root_password: GOOD_ROOT_PASSWORD,
+			});
+		});
+
+		test(`${route}: w <path> writes an answers file that decides the walked plan`, async () => {
 			const path = join(mkdtempSync(join(scratchRoot, `${route}_`)), 'answers.json');
-			const { flags, script } = caseScript(answerCase, [`write ${path}`]);
-			let refusedInline = false;
-			let rigRef = undefined as unknown as TuiRig;
-			const keys: Keys = {
-				intercept: async (id) => {
-					if (id !== 'review') return 'continue';
-					await enter(rigRef, {});
-					const frame = await rigRef.frame();
-					// Still the Review, the reason drawn — nothing resolved.
-					expect(pending(rigRef).kind).toBe('review');
-					expect(frame).toContain('install is not offered');
-					refusedInline = true;
-					return 'continue';
-				},
-			};
+			const { flags, script } = caseScript(findCase(`route ${route}`), [`write ${path}`]);
 			const rig = await openRig();
-			rigRef = rig;
 			try {
-				const prompter = drivenPrompter(rig, script, keys);
+				const prompter = drivenPrompter(rig, script, {});
 				const result = await runInteractiveInstall(depsOf(prompter, false, writeAnswersFile));
 				expect(rig.errors).toEqual([]);
-				expect(refusedInline).toBe(true);
 				expect(result).toEqual({ kind: 'written', path });
-				expect(prompter.reviews.every((view) => !view.canInstall)).toBe(true);
+				expect(prompter.reviews.every((view) => view.canInstall)).toBe(true);
 				const file = answersFromAnswersFile(JSON.parse(readFileSync(path, 'utf8')) as unknown);
 				expect(file.errors).toEqual([]);
 				expect(decided(planOf(file.raw, false))).toEqual(decided(flags));
-				expect(
-					prompter.asked.filter((id) => id.endsWith('_password') || id.endsWith('.smtp_pass')),
-				).toEqual([]);
 			} finally {
 				await rig.dispose();
 			}

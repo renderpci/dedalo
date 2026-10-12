@@ -114,6 +114,13 @@ export interface InteractiveDeps {
 	writeAnswers?: (path: string, answers: InstallAnswers) => string | null;
 	/** The release the Welcome names. */
 	version?: string;
+	/**
+	 * A host route's Review commands for a plan (the host facts measured by the
+	 * caller — scripts/install.ts; host/host_table.ts hostReview). Absent: none.
+	 */
+	hostCommands?: (plan: InstallPlan) => Promise<NonNullable<ReviewView['hostCommands']>>;
+	/** Why THIS process cannot run the plan's route (production without root), or null. */
+	routeRefusal?: (plan: InstallPlan) => string | null;
 }
 
 /** An install record left in progress (offered for resume / abort / quit on start). */
@@ -799,14 +806,25 @@ async function walk(
 // ── the review ───────────────────────────────────────────────────────────────
 
 /** The typed-yes question that starts the install. */
-function installQuestion(database: string): Question {
+/** What `install` will do, in one sentence per route. */
+function installSentence(answers: InstallAnswers): string {
+	if (answers.route === 'production') {
+		return `This changes this host: the packages, the instance ${answers.instance} (its user, database '${answers.db_database}', units, site and certificate) — every command is listed above.`;
+	}
+	if (answers.route === 'docker' || answers.route === 'trial') {
+		return `This pulls the image, writes the stack's files and installs into the stack's database '${answers.db_database}'.`;
+	}
+	return `This writes the .env and installs into database '${answers.db_database}'.`;
+}
+
+function installQuestion(answers: InstallAnswers): Question {
 	return {
 		id: 'review.install',
 		key: null,
 		sets: [],
 		kind: 'acknowledge',
 		label: 'Install now',
-		description: `This writes the .env and installs into database '${database}'. Type yes to start.`,
+		description: `${installSentence(answers)} Type yes to start.`,
 		value: false,
 		default: false,
 		answered: false,
@@ -856,10 +874,16 @@ function firstUnprovenGate(session: Session): Screen | undefined {
  * root password — and every gate's verdict CURRENT (taken over the answers the
  * install will use, or acknowledged over them).
  */
+/** May THIS process run the plan's route (production needs root)? */
+function routeRunnable(session: Session, plan: InstallPlan): boolean {
+	return (session.deps.routeRefusal?.(plan) ?? null) === null;
+}
+
 function installOffered(session: Session, plan: InstallPlan): boolean {
 	return (
 		plan.errors.length === 0 &&
 		routeExecutesHere(plan.answers.route) &&
+		routeRunnable(session, plan) &&
 		(session.secrets.root_password ?? '') !== '' &&
 		firstUnprovenGate(session) === undefined
 	);
@@ -892,18 +916,20 @@ function commandLine(plan: InstallPlan): string {
 }
 
 /** One Review round: what it decides on, and the view the prompter shows. */
-function reviewRound(session: Session): { round: ReviewRound; view: ReviewView } {
+async function reviewRound(session: Session): Promise<{ round: ReviewRound; view: ReviewView }> {
 	const screens = screensOf(session);
 	const input = inputOf(session);
 	const plan = previewPlan(input);
 	const canInstall = installOffered(session, plan);
+	const refusal = session.deps.routeRefusal?.(plan) ?? null;
 	const view: ReviewView = {
 		screen: screens.at(-1) as Screen,
 		lines: reviewLines(plan, input),
 		canInstall,
 		editable: screens.slice(0, -1).map((item) => ({ n: item.index, title: item.title })),
 		command: commandLine(plan),
-		errors: [...plan.errors],
+		errors: [...plan.errors, ...(refusal === null ? [] : [refusal])],
+		hostCommands: plan.errors.length === 0 ? ((await session.deps.hostCommands?.(plan)) ?? []) : [],
 	};
 	return { round: { screens, plan, canInstall }, view };
 }
@@ -928,9 +954,7 @@ async function reviewInstall(session: Session, round: ReviewRound): Promise<Revi
 		session.deps.prompter.say(['install is not offered: see the errors above']);
 		return null;
 	}
-	const typed = await session.deps.prompter.acknowledge(
-		installQuestion(round.plan.answers.db_database),
-	);
+	const typed = await session.deps.prompter.acknowledge(installQuestion(round.plan.answers));
 	if (typed === QUIT) return { kind: 'quit' };
 	return typed === true ? installResult(session, round.plan) : null;
 }
@@ -988,7 +1012,7 @@ async function reviewCommand(
 async function review(session: Session): Promise<FrontEndResult> {
 	for (let round = 0; round < 200; round++) {
 		if ((await recheckGates(session)) === 'quit') return { kind: 'quit' };
-		const { round: shown, view } = reviewRound(session);
+		const { round: shown, view } = await reviewRound(session);
 		session.seen.add('review');
 		session.deps.prompter.view(viewOf(session, 'review', null));
 		const command = await session.deps.prompter.review(view);

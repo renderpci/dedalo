@@ -73,7 +73,13 @@ import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 // The alias rule ITSELF, not a copy of it: leg H holds the backup scripts' own
 // fallback table equal to the one the engine's readEnv applies.
 import { PHP_KEY_ALIASES } from '../../src/config/env.ts';
+import {
+	backupStores,
+	instanceDropins,
+	siteBuilderBackupUnit,
+} from '../../src/core/install/host/systemd/render.ts';
 import { buildInstallPlan } from '../../src/core/install/install_plan.ts';
+import { mergedUnit, productionPlanCtx, unitEnvironment } from '../helpers/install_host_scratch.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -648,7 +654,15 @@ describe('the backup set PRODUCTION.md §6 names is the one the nightly unit cop
 		// which stores it promised — and that declaration is worthless if it can
 		// drift from the ExecStart lines, so it is held equal here.
 		const unit = read(UNIT);
-		const declared = /^Environment=DEDALO_BACKUP_EXPECTED_STORES=(.*)$/m.exec(unit)?.[1];
+		// Read the way SYSTEMD reads it (its word split of Environment=, quotes removed) —
+		// never the source spelling: an unquoted list is split and truncated (campaign 2 L8).
+		const declared = unitEnvironment(mergedUnit(unit, [])).get('DEDALO_BACKUP_EXPECTED_STORES');
+		// Positive control: the L8 spelling reads as ONE store under this reading.
+		expect(
+			unitEnvironment(
+				mergedUnit('[Service]\nEnvironment=DEDALO_BACKUP_EXPECTED_STORES=matrix_db media\n', []),
+			).get('DEDALO_BACKUP_EXPECTED_STORES'),
+		).toBe('matrix_db');
 		expect(
 			declared,
 			`${UNIT} declares no Environment=DEDALO_BACKUP_EXPECTED_STORES. Without it the ` +
@@ -730,6 +744,38 @@ describe('the backup set PRODUCTION.md §6 names is the one the nightly unit cop
 				offenders.join('\n  '),
 		).toEqual([]);
 		expect(execStarts().length).toBe(documentedStores().length);
+	});
+
+	test("the installer's per-instance backup set (deploy/systemd/dedalo-backup@ + its drop-in) is the documented one", () => {
+		// Terminal installer phase 4: a production install gets its stores from the
+		// rendered drop-in (src/core/install/host/systemd/render.ts), not this unit. Its
+		// stores are the SAME steps, by name — never a store §6 does not document.
+		const named = execStarts()
+			.map((line) => /dedalo-backup-step\.sh\s+run\s+(?:--last\s+)?([a-z0-9_]+)/.exec(line)?.[1])
+			.filter((name): name is string => name !== undefined);
+		expect(named.length).toBe(documentedStores().length);
+		for (const siteBuilder of [false, true]) {
+			const ctx = productionPlanCtx(
+				{ os: 'debian13', web: 'nginx', tls: 'letsencrypt' },
+				REPO_ROOT,
+				{
+					backup_site_builder: siteBuilder,
+				},
+			);
+			const stores = backupStores(ctx.paths, ctx.row).map((line) => line.store);
+			// The root-run site-builder store is its own unit (never beside the instance's .env).
+			const rootStore = instanceDropins(ctx.paths, ctx.row, ctx.answers, 'stamp')
+				.map((dropin) => dropin.content)
+				.join('\n')
+				.includes(`Wants=${siteBuilderBackupUnit(ctx.paths.instance)}`)
+				? ['site_builder']
+				: [];
+			const all = [...stores, ...rootStore];
+			expect(all.filter((store) => !named.includes(store))).toEqual([]);
+			for (const required of ['matrix_db', 'media', 'private']) expect(stores).toContain(required);
+			expect(stores.includes('site_builder')).toBe(false);
+			expect(all.includes('site_builder')).toBe(siteBuilder);
+		}
 	});
 
 	test('§6 states a restore order and a reconciliation rule', () => {

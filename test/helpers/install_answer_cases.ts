@@ -346,6 +346,12 @@ const IDENTITY_ARGV = [
 ];
 
 /**
+ * The host-step answers a production / docker route needs (phase 4): the public
+ * address and the Let's Encrypt contact (the default certificate mode).
+ */
+const HOST_ARGV = ['--server-name', 'prado.example.org', '--letsencrypt-email', 'ops@example.org'];
+
+/**
  * The route matrix (D5/D6): production with an instance (its derived names
  * taken as shown, and overridden), docker, trial, an explicit developer,
  * production with diffusion + mail, air-gapped with a local source and its
@@ -359,7 +365,7 @@ export function routeCases(sourceDir: string): RouteCase[] {
 	return [
 		{
 			name: 'route production + instance (derived names as shown)',
-			argv: ['--route', 'production', '--instance', 'prado', ...IDENTITY_ARGV],
+			argv: ['--route', 'production', '--instance', 'prado', ...HOST_ARGV, ...IDENTITY_ARGV],
 			local: false,
 		},
 		{
@@ -376,14 +382,30 @@ export function routeCases(sourceDir: string): RouteCase[] {
 				'--db-password',
 				'secret pass',
 				'--media-path',
-				'/data/prado/media',
+				'/data/prado/dedalo/media',
 				'--media-access-mode',
 				'private',
+				'--tls',
+				'files',
+				'--tls-cert',
+				'/etc/ssl/prado/fullchain.pem',
+				'--tls-key',
+				'/etc/ssl/prado/privkey.pem',
+				'--server-name',
+				'prado.example.org',
+				'--web-server',
+				'apache',
+				'--https-port',
+				'8443',
 				...IDENTITY_ARGV,
 			],
 			local: false,
 		},
-		{ name: 'route docker', argv: ['--route', 'docker', ...IDENTITY_ARGV], local: false },
+		{
+			name: 'route docker',
+			argv: ['--route', 'docker', ...HOST_ARGV, ...IDENTITY_ARGV],
+			local: false,
+		},
 		{ name: 'route trial', argv: ['--route', 'trial', ...IDENTITY_ARGV], local: false },
 		{
 			name: 'route developer (explicit)',
@@ -397,6 +419,7 @@ export function routeCases(sourceDir: string): RouteCase[] {
 				'production',
 				'--instance',
 				'prado',
+				...HOST_ARGV,
 				...IDENTITY_ARGV,
 				...DIFFUSION_ARGV,
 				...MAILER_ARGV,

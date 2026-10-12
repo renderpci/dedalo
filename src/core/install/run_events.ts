@@ -9,7 +9,7 @@
  * listener (gate: install_executor_events_native).
  */
 
-import type { InstallStepId } from './install_plan.ts';
+import type { StepId } from './install_plan.ts';
 
 export type StepPhase =
 	| 'start'
@@ -22,7 +22,8 @@ export type StepPhase =
 
 /** One step's progress (every text redacted by the executor before it is sent). */
 export interface StepEvent {
-	step: InstallStepId;
+	/** An engine step, or a host step (phase 4 — a host route's run). */
+	step: StepId;
 	label: string;
 	phase: StepPhase;
 	/** done: finished_at − started_at of the step's record; null when unknown. */
@@ -56,6 +57,11 @@ export interface RunIo {
 	 * end that holds the terminal keeps those lines for the restored screen.
 	 */
 	interrupted?(signal: 'SIGINT' | 'SIGTERM'): void;
+	/**
+	 * A line the run asks the front end to tell the operator, never to log (a
+	 * host route's told commands — firewall, modules). Absent: logged.
+	 */
+	tell?(lines: readonly string[]): void;
 }
 
 /** The plan's words before the run (notes, warnings, suggestions). */
@@ -67,6 +73,13 @@ export interface RunAnnouncement {
 }
 
 /** How a run's result is told: the outcome as the executor answered it. */
+/** How a run ended, for the Done sentences (the route and instance, a live instance kept by an abort). */
+export interface RunEnding {
+	route: 'production' | 'docker' | 'trial' | 'engine';
+	instance: string;
+	keptLive: boolean;
+}
+
 export interface RunOutcomeView {
 	exitCode: number;
 	result: 'complete' | 'already_complete' | 'aborted' | 'failed' | 'refused';
@@ -84,11 +97,16 @@ export interface RunReporter {
 	/** The run is being prepared (the catalog re-resolved, the environment seeded). */
 	prepare?(): void;
 	/** The steps the run will go through, in order (before the first event). */
-	begin?(steps: readonly { id: InstallStepId; label: string }[]): void;
+	begin?(steps: readonly { id: StepId; label: string }[]): void;
 	announce(announcement: RunAnnouncement): void;
 	/** Tell the outcome (the caller exits with outcome.exitCode afterwards). */
 	finish(
 		outcome: RunOutcomeView,
-		context: { mode: 'fresh' | 'resume' | 'abort'; rootVerified: boolean },
+		context: {
+			mode: 'fresh' | 'resume' | 'abort';
+			rootVerified: boolean;
+			/** The route's own Done sentences (screen_text.ts DONE_TEXT.next / abortedFor). */
+			ending: RunEnding;
+		},
 	): Promise<void>;
 }

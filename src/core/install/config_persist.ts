@@ -21,7 +21,7 @@ import { config } from '../../config/config.ts';
 import { PHP_KEY_ALIASES } from '../../config/env.ts';
 import { DedaloError } from '../errors/index.ts';
 import { setServerState } from '../resolve/server_state.ts';
-import { buildInstallPlan } from './install_plan.ts';
+import { buildInstallPlan, TERMINAL_ONLY_ANSWER_KEYS } from './install_plan.ts';
 import { resolvePlanCatalog } from './ontology_catalog.ts';
 import type { HierarchyDependency, OntologyCatalog } from './ontology_choice.ts';
 import { installPrivateDir, SAMPLE_ENV_PATH } from './paths.ts';
@@ -130,11 +130,12 @@ export function refuseWizardOnlyCliAnswers(posted: Readonly<Record<string, unkno
 			'ontology_source is a command-line answer (--ontology-source) — the wizard installs from the configured ontology server or the built-in ontologies',
 		);
 	}
-	// The ROUTE and the INSTANCE (phase 2, 2026-10-12) are the terminal
-	// installer's: they derive database, media and socket defaults the wizard's
-	// form never shows. The wizard surface stays exactly what it was (developer
-	// defaults), and is retired with the wizard (phase 5).
-	for (const key of ['route', 'instance']) {
+	// The ROUTE and the INSTANCE (phase 2, 2026-10-12) and every host-step
+	// answer (phase 4) are the terminal installer's: they derive database, media
+	// and socket defaults and run host commands the wizard's form never shows.
+	// The wizard surface stays exactly what it was (developer defaults), and is
+	// retired with the wizard (phase 5). ONE list: install_plan.ts.
+	for (const key of TERMINAL_ONLY_ANSWER_KEYS) {
 		if (given(key)) {
 			refuseInstall(
 				'install.invalid_input',

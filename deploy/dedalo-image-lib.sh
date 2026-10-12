@@ -17,7 +17,8 @@
 #   DEDALO_VERSION        the pinned tag: X.Y.Z, or X.Y.Z-dev for a developer image
 #   DEDALO_IMAGE_MODE     pull | build
 #   DEDALO_IMAGE_VERIFY   cosign | none
-# Writer: install.sh (the full stack: the docs/install/docker.md recipe). Readers:
+# Writer: the terminal installer (src/core/install/host/stack/files.ts — docker and
+# trial routes; the full stack by hand: the docs/install/docker.md recipe). Readers:
 # compose (`image: ${DEDALO_IMAGE}:${DEDALO_VERSION}`) and this library. The image
 # updater is the ONE re-pinner, and it changes DEDALO_VERSION only.
 #
@@ -52,6 +53,10 @@ DEDALO_TRIPLE_RE='Object\.freeze\(\[[[:space:]]*[0-9]+[[:space:]]*,[[:space:]]*[
 DEDALO_COMPOSE_FILE_RE='^[A-Za-z0-9][A-Za-z0-9._-]*\.ya?ml$'
 # The override that adds the build (deploy/compose.build.yml).
 DEDALO_BUILD_OVERRIDE='deploy/compose.build.yml'
+# The terminal installer's own override (the Let's Encrypt renewal service of the
+# full stack): part of the stack WHEN IT EXISTS, so every host tool drives the
+# stack the installer built (src/core/install/host/stack/compose.ts, same order).
+DEDALO_INSTALL_OVERRIDE='compose.override.yaml'
 # The keys of the contract above, in the order install.sh writes them.
 DEDALO_ENV_IMAGE_KEYS='DEDALO_COMPOSE_FILE DEDALO_IMAGE DEDALO_VERSION DEDALO_IMAGE_MODE DEDALO_IMAGE_VERIFY'
 
@@ -233,9 +238,11 @@ dedalo_checkout_version() {
 # --- compose --------------------------------------------------------------------
 
 # dedalo_compose_args ENVFILE [plain|build] — the compose argv, one per line:
-#   -f <DEDALO_COMPOSE_FILE> [-f deploy/compose.build.yml] --env-file <ENVFILE>
+#   -f <DEDALO_COMPOSE_FILE> [-f deploy/compose.build.yml] [-f compose.override.yaml]
+#   --env-file <ENVFILE>
 # The env file is MANDATORY and must exist: it carries the TLS decision and the
 # image pin, and a compose command without it resolves the built-in defaults.
+# The installer's override joins only when it exists (an install made by hand has none).
 dedalo_compose_args() {
 	local env_file="${1-}" variant="${2-plain}" stack=''
 	[ -n "$env_file" ] && [ -f "$env_file" ] || return 1
@@ -248,6 +255,7 @@ dedalo_compose_args() {
 		build) printf '%s\n' -f "$DEDALO_BUILD_OVERRIDE" ;;
 		*) return 2 ;;
 	esac
+	if [ -f "$DEDALO_INSTALL_OVERRIDE" ]; then printf '%s\n' -f "$DEDALO_INSTALL_OVERRIDE"; fi
 	printf '%s\n' --env-file "$env_file"
 }
 

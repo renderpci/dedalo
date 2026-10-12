@@ -141,8 +141,11 @@ probe_*.ts
 **/*/.env
 .dedalo.env
 **/*/.dedalo.env
+.dedalo-install
 deploy/certs
 deploy/nginx.simple.generated.conf
+deploy/nginx.docker.generated.conf
+compose.override.yaml
 media
 .vendor_fetch_tmp
 .agents/settings.local.json

@@ -19,8 +19,10 @@
  *      docker lists are the owner's step lists.
  *  (c) DEFAULTS ARE THE PLAN'S: every unanswered question's default equals the
  *      plan's normalization of the answers (the languages: deriveLangConfig),
- *      on every route — the instance-derived production names included (B5:
- *      the role IS the database name, multi_instance.md) — with an explicit
+ *      on every route — the instance-derived production names included
+ *      (phase 4: the PEER role ded_<i> owns dedalo_<i>, MEDIA_PATH obeys the
+ *      root rule; the trial stack's DELEGATED engine answers derive the stack
+ *      constants) — with an explicit
  *      exemption table (route: chosen; timezone/locale: the host's suggestion,
  *      itself measured).
  *  (d) ONE RULE SET: a planted bad answer per validator rule, applied through
@@ -52,13 +54,16 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { offeredHierarchies, TOPONYMY_TYPOLOGY_ID } from '../../src/core/install/hierarchy_meta.ts';
+import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
+import { stackEngineAnswers } from '../../src/core/install/host/stack/engine_delegate.ts';
 import {
 	answersFromCliArgs,
 	buildInstallPlan,
+	HOST_ONLY_ANSWER_KEYS,
 	INSTALL_ANSWER_KEYS,
 	INSTALL_ROUTES,
 	type InstallPlan,
@@ -74,7 +79,7 @@ import {
 	ONTOLOGY_NOTE_LABELS,
 	type OntologyCatalog,
 } from '../../src/core/install/ontology_choice.ts';
-import { SECRET_KEYS } from '../../src/core/install/run_files.ts';
+import { buildPlanFile, SECRET_KEYS } from '../../src/core/install/run_files.ts';
 import {
 	applyAnswer,
 	buildScreens,
@@ -129,6 +134,29 @@ function maximalRaw(route: InstallRoute): Record<string, unknown> {
 	return route === 'production' ? { ...MAXIMAL_RAW } : { ...rest, route };
 }
 
+/**
+ * The maximal answers of `route` AND their mutually exclusive alternatives
+ * (phase 4: the certificate paths are asked under `tls_mode files`, the Let's
+ * Encrypt contact under `letsencrypt`; the image repository for a custom image)
+ * — one walk cannot turn both on, the union of the walks must.
+ */
+function maximalRaws(route: InstallRoute): Record<string, unknown>[] {
+	const base = maximalRaw(route);
+	if (route === 'production') return [base, { ...base, tls_mode: 'files' }];
+	if (route === 'docker') return [base, { ...base, tls_mode: 'files', image_source: 'custom' }];
+	if (route === 'trial') return [base, { ...base, image_source: 'custom' }];
+	return [base];
+}
+
+/** The keys the maximal walks of `route` ask, together. */
+function routeAskedKeys(route: InstallRoute): Set<string> {
+	const keys = new Set<string>();
+	for (const raw of maximalRaws(route)) {
+		for (const key of askedKeys(buildScreens(modelInput(raw)))) keys.add(key);
+	}
+	return keys;
+}
+
 const questionsOf = (screens: readonly Screen[]): Question[] =>
 	screens.flatMap((screen) => screen.questions);
 
@@ -173,8 +201,8 @@ describe('screen model — every answer is asked, or fixed with a reason (a)', (
 
 	for (const route of INSTALL_ROUTES) {
 		test(`${route}: asked ∪ ROUTE_FIXED ∪ FLAGS_ONLY = every answer + every secret; disjoint`, () => {
-			const screens = buildScreens(modelInput(maximalRaw(route)));
-			const asked = askedKeys(screens);
+			const screens = maximalRaws(route).flatMap((raw) => buildScreens(modelInput(raw)));
+			const asked = routeAskedKeys(route);
 			const fixed = ROUTE_FIXED[route];
 			for (const [key, reason] of Object.entries(fixed)) {
 				expect(ANSWER_SET.has(key) || SECRET_SET.has(key), key).toBe(true);
@@ -203,14 +231,13 @@ describe('screen model — every answer is asked, or fixed with a reason (a)', (
 		});
 	}
 
-	test('the root password is asked on the routes that install here; the union of all routes asks every non-flags-only answer', () => {
+	test('the root password is asked on every route (all install here); the union of all routes asks every non-flags-only answer', () => {
 		const union = new Set<string>();
 		for (const route of INSTALL_ROUTES) {
-			const asked = askedKeys(buildScreens(modelInput(maximalRaw(route))));
+			const asked = routeAskedKeys(route);
 			for (const key of asked) union.add(key);
-			expect(asked.has('root_password'), route).toBe(
-				route === 'production' || route === 'developer',
-			);
+			// Phase 4: every route installs from here — the root password is always asked.
+			expect(asked.has('root_password'), route).toBe(true);
 		}
 		const expected = [...INSTALL_ANSWER_KEYS, ...SECRET_KEYS].filter(
 			(key) => FLAGS_ONLY_ANSWER_KEYS[key] === undefined,
@@ -338,7 +365,7 @@ describe('screen model — every default is the plan’s (c)', () => {
 		);
 	});
 
-	test('production: the names derive from the instance (role = database, multi_instance.md); docker/trial: the stack constants', () => {
+	test('production: the names derive from the instance (the peer role ded_<i>, the root-rule media path); docker/trial: the stack constants', () => {
 		const production = modelInput({ ...MAXIMAL_RAW, instance: 'prado' });
 		const derived = routeDefaults('production', 'prado');
 		for (const key of [
@@ -351,8 +378,11 @@ describe('screen model — every default is the plan’s (c)', () => {
 			expect(questionFor(production, key)?.default, key).toBe(derived[key]);
 		}
 		expect(derived.db_database).toBe('dedalo_prado');
-		expect(derived.db_username).toBe(derived.db_database);
-		expect(derived.media_path).toBe('/srv/dedalo/prado/media');
+		// Phase 4 (owner Q2): a created database is owned by the instance user's PEER role.
+		expect(derived.db_username).toBe('ded_prado');
+		expect(derived.db_socket).toBe('/var/run/postgresql');
+		// THE ROOT RULE: root (/srv/dedalo/prado) + /dedalo/media == MEDIA_PATH (critique B1).
+		expect(derived.media_path).toBe('/srv/dedalo/prado/dedalo/media');
 		// The instance changes → the defaults follow (nothing was stored for them).
 		const renamed = modelInput({ ...MAXIMAL_RAW, instance: 'goya' });
 		expect(questionFor(renamed, 'db_database')?.default).toBe('dedalo_goya');
@@ -363,26 +393,19 @@ describe('screen model — every default is the plan’s (c)', () => {
 		}
 	});
 
-	test("install.sh's stack flags decide exactly what --route trial derives (older images lack --route)", () => {
-		const script = readFileSync(join(REPO_ROOT, 'install.sh'), 'utf8');
-		const block = /^install_args=\(\n([\s\S]*?)^\)/m.exec(script)?.[1] ?? '';
-		// The literal flags only (the "$VAR" ones are the operator's answers).
-		const argv = block.split(/\s+/).filter((token) => token !== '' && !token.includes('$'));
-		const stackFlags: string[] = [];
-		for (let index = 0; index < argv.length; index++) {
-			const token = argv[index] as string;
-			const next = argv[index + 1];
-			if (token.startsWith('--') && next !== undefined && !next.startsWith('--')) {
-				stackFlags.push(token, next);
-				index++;
-			}
-		}
-		expect(stackFlags.length, block).toBeGreaterThan(0);
-		// No flag a pre-route installer would refuse.
-		expect(block).not.toContain('--route');
-		const invocation = answersFromCliArgs(stackFlags);
-		expect(invocation.errors).toEqual([]);
-		const given = normalizeInstallAnswers(invocation.raw).answers;
+	test("the trial stack's DELEGATED engine answers decide exactly what --route trial derives (the container's own plan)", () => {
+		// Phase 4: install.sh is a bootstrap; the docker/trial host steps hand the engine
+		// child (inside the container) its answers on stdin — stackEngineAnswers.
+		const trial = buildInstallPlan({ route: 'trial', entity: 'trial_museum' });
+		expect(trial.errors).toEqual([]);
+		const delegated = stackEngineAnswers({
+			plan: buildPlanFile(trial, {}),
+		} as unknown as HostPlanCtx);
+		expect(delegated.engine_only).toBe(true);
+		expect(delegated.route).toBe('trial');
+		for (const key of HOST_ONLY_ANSWER_KEYS) expect(key in delegated, key).toBe(false);
+		const child = buildInstallPlan(delegated as Record<string, unknown>);
+		expect(child.errors).toEqual([]);
 		const derived = routeDefaults('trial', '');
 		for (const key of [
 			'db_hostname',
@@ -391,8 +414,12 @@ describe('screen model — every default is the plan’s (c)', () => {
 			'media_path',
 			'unix_socket',
 		] as const) {
-			expect(given[key], key).toBe(derived[key]);
+			expect(child.answers[key], key).toBe(derived[key]);
 		}
+		// The child runs the ENGINE steps only (the host steps are this process's).
+		expect(
+			child.steps.every((step) => !step.startsWith('stack_') && !step.startsWith('host_')),
+		).toBe(true);
 	});
 
 	test('accepting a shown default leaves the key ABSENT (a derived default keeps following)', () => {

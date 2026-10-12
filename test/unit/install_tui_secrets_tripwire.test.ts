@@ -61,6 +61,9 @@ import {
 	typeKeys,
 } from '../helpers/install_tui_driver.ts';
 
+/** The engine-only ending (these runs are engine runs). */
+const ENGINE_ENDING = { route: 'engine', instance: '', keptLive: false } as const;
+
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_tui_secrets_'));
 afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
 
@@ -370,7 +373,7 @@ describe('the run under the full-screen reporter (f)', () => {
 				expect(rig.app.log.lines().join('\n')).not.toContain(DB);
 				expect(rig.app.log.lines().join('\n')).toContain('auth failed for');
 				// Done: the salt drawn once there.
-				const finished = reporter.finish(outcome, { mode: 'fresh', rootVerified: true });
+				const finished = reporter.finish(outcome, { mode: 'fresh', rootVerified: true, ending: ENGINE_ENDING });
 				const doneFrame = await rig.frame();
 				expect(doneFrame).toContain(SALT);
 				expect(doneFrame.toLowerCase()).not.toContain(SECRETS.db.core);

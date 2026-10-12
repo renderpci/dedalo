@@ -249,8 +249,10 @@ services:
       # redirects to HTTPS and answers the ACME challenge at renewal time.
       # Bind to one interface (e.g. "127.0.0.1:443:443") if this machine has an
       # address you do not want it answering on.
-      - "80:80"
-      - "443:443"
+      # The installer (`sh install.sh`, trial route) writes the ports it was given
+      # into .dedalo.env; the defaults are the long-standing ones.
+      - "${DEDALO_HTTP_PORT:-80}:80"
+      - "${DEDALO_HTTPS_PORT:-443}:443"
     volumes:
       # install.sh writes deploy/nginx.simple.generated.conf from the TLS
       # template and points this variable at it. The default keeps a bare

@@ -2,6 +2,13 @@
 
 > See also: [Installation hub](index.md) · [Simple install](quickstart.md) · [Production install](production.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Installer reference](installer_reference.md) · [Troubleshooting](troubleshooting.md)
 
+!!! tip "The installer runs this stack for you"
+    `sh install.sh --route docker` (the full stack below) or `--route trial` (the
+    simple stack, without media protection) verifies the image, writes
+    `.dedalo.env` and `compose.override.yaml`, runs the engine steps inside the
+    container and starts the stack — every command shown on the Review first.
+    See [Docker and trial host steps](installer_reference.md#docker-and-trial-host-steps).
+
 !!! tip "Want it in one command instead?"
     [Simple install](quickstart.md) brings up a complete instance with
     `./install.sh`, using `docker-compose.simple.yml` — HTTPS included, via

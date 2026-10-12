@@ -28,8 +28,9 @@
  *  (c) ROUNDTRIPS, every case: answersFileOf → answersFromAnswersFile and
  *      cliArgsOf → answersFromCliArgs decide the same plan (values with
  *      spaces, quotes, a leading `--`, non-ASCII included).
- *  (d) docker / trial: the Review never offers `install`; `write <path>`
- *      produces an answers file that decides the walked plan.
+ *  (d) docker / trial INSTALL from the Review (phase 4: their host steps run
+ *      here): the walked plan is the flags', the root password is asked and
+ *      the stack's database password never (generated into .dedalo.env).
  *  (e) an EDIT from the Review (a language change, mail turned off) installs
  *      the plan of the edited answers.
  *  (f) the catalog-changed refusal: reviewed decisions ≠ the final plan's →
@@ -45,7 +46,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -53,7 +54,6 @@ import {
 	type FrontEndResult,
 	reviewDecisions,
 	reviewedDecisionsRefusal,
-	writeAnswersFile,
 } from '../../src/core/install/front_end.ts';
 import {
 	answersFileOf,
@@ -214,38 +214,20 @@ describe('plain mode ≡ flags ≡ answers file ≡ wizard (a, b)', () => {
 			const { raw, plain, secrets } = splitCase(answerCase.argv);
 			const flags = planOf(raw, answerCase.local);
 			expect(flags.errors, answerCase.name).toEqual([]);
-			const route = flags.answers.route;
-			const hostRoute = route === 'production' || route === 'developer';
-			// docker/trial: the stack takes the passwords (ROUTE_FIXED) — none asked here.
-			const askedSecrets = hostRoute ? secrets : {};
-			const script = scriptForPlan(
-				flags,
-				Object.keys(plain),
-				{ ...askedSecrets, root_password: GOOD_ROOT_PASSWORD },
-				hostRoute ? ['install'] : ['write <none>'],
-			);
-			const written: InstallPlan['answers'][] = [];
-			const { result, prompter } = await runScripted(script, answerCase.local, (_path, answers) => {
-				written.push(answers);
-				return null;
+			// Phase 4: EVERY route installs from the Review (docker/trial run their host
+			// steps here); the docker stack's database password is generated, never asked.
+			const script = scriptForPlan(flags, Object.keys(plain), {
+				...secrets,
+				root_password: GOOD_ROOT_PASSWORD,
 			});
+			const { result, prompter } = await runScripted(script, answerCase.local);
 			// The plan the plain mode hands back.
-			const fromPlain = hostRoute
-				? plainPlan(result, answerCase.local)
-				: planOf(
-						{
-							...answersFromAnswersFile(answersFileOf(written[0] as InstallPlan['answers'])).raw,
-							...secrets,
-						},
-						answerCase.local,
-					);
+			const fromPlain = plainPlan(result, answerCase.local);
 			expect(decided(fromPlain)).toEqual(decided(flags));
-			if (hostRoute) {
-				expect(result.kind === 'install' ? result.secrets : null).toEqual({
-					...secrets,
-					root_password: GOOD_ROOT_PASSWORD,
-				});
-			}
+			expect(result.kind === 'install' ? result.secrets : null).toEqual({
+				...secrets,
+				root_password: GOOD_ROOT_PASSWORD,
+			});
 			// ≡ the answers file of the case (its secrets apart, through DEDALO_INSTALL_*).
 			const file = answersFromAnswersFile({ schema: 'dedalo.install.answers/1', answers: plain });
 			expect(file.errors).toEqual([]);
@@ -258,7 +240,7 @@ describe('plain mode ≡ flags ≡ answers file ≡ wizard (a, b)', () => {
 			}
 			// (b) anti-vacuity: every screen of the route, every question the final screens show.
 			const finalScreens = buildScreens(
-				modelInput(result.kind === 'install' ? result.raw : { route }, {
+				modelInput(result.kind === 'install' ? result.raw : { route: flags.answers.route }, {
 					catalogs: {
 						ontology: {
 							catalog: answerCase.local ? LOCAL_CATALOG : null,
@@ -337,29 +319,31 @@ describe('roundtrips: answers file and argv are faithful inverses (c)', () => {
 	});
 });
 
-// ── (d) docker / trial: no install here, the written file decides the plan ───
+// ── (d) docker / trial: they install here (phase 4) ─────────────────────────
 
-describe('docker and trial: the Review writes, never installs (d)', () => {
+describe('docker and trial: the Review installs, like every route (d)', () => {
 	for (const route of ['docker', 'trial'] as const) {
-		test(`${route}: no install offered; write <path> decides the walked plan`, async () => {
+		test(`${route}: install offered and taken; the root password asked, the stack's database password never`, async () => {
 			const answerCase = ALL_CASES.find((item) => item.name === `route ${route}`) as Case;
 			const { raw, plain } = splitCase(answerCase.argv);
 			const flags = planOf(raw, false);
-			const path = join(mkdtempSync(join(scratchRoot, `${route}_`)), 'answers.json');
-			const script = scriptForPlan(flags, Object.keys(plain), {}, ['install', `write ${path}`]);
+			expect(flags.errors).toEqual([]);
+			const script = scriptForPlan(flags, Object.keys(plain), {
+				root_password: GOOD_ROOT_PASSWORD,
+			});
 			// trial: the no-media-protection acknowledgement must be TYPED.
-			script.answers['route.trial_no_media_protection'] = 'yes';
-			const { result, prompter } = await runScripted(script, false, writeAnswersFile);
-			expect(result).toEqual({ kind: 'written', path });
-			expect(prompter.said).toContain('install is not offered: see the errors above');
-			expect(prompter.said.some((line) => line.startsWith('commands: install'))).toBe(false);
-			const file = answersFromAnswersFile(JSON.parse(readFileSync(path, 'utf8')) as unknown);
-			expect(file.errors).toEqual([]);
-			expect(decided(planOf(file.raw, false))).toEqual(decided(flags));
-			// The stack's own secrets are never asked on this route.
-			expect(
-				prompter.asked.filter((id) => id.endsWith('_password') || id.endsWith('.smtp_pass')),
-			).toEqual([]);
+			if (route === 'trial') script.answers['route.trial_no_media_protection'] = 'yes';
+			const { result, prompter } = await runScripted(script, false);
+			expect(result.kind).toBe('install');
+			expect(decided(plainPlan(result, false))).toEqual(decided(flags));
+			expect(prompter.said).not.toContain('install is not offered: see the errors above');
+			// The root password is asked (the engine child sets it); the stack's database
+			// password is GENERATED on the host into .dedalo.env — never asked, never shown.
+			expect(prompter.asked.some((id) => id.endsWith('.root_password'))).toBe(true);
+			expect(prompter.asked.filter((id) => id.endsWith('.db_password'))).toEqual([]);
+			expect(result.kind === 'install' ? result.secrets : null).toEqual({
+				root_password: GOOD_ROOT_PASSWORD,
+			});
 		});
 	}
 });
@@ -475,9 +459,10 @@ describe('a probe verdict holds only for the answers it tested (g)', () => {
 				.map((call) => normalizeInstallAnswers(call.answers ?? {}).answers);
 		// The LAST check of each ran over what will be installed.
 		expect(tested('db').at(-1)?.db_database).toBe('dedalo_ribera');
-		expect(tested('db').at(-1)?.db_username).toBe('dedalo_ribera');
+		// Phase 4: a created production database is owned by the instance's PEER role.
+		expect(tested('db').at(-1)?.db_username).toBe('ded_ribera');
 		expect(tested('media').at(-1)?.media_path).toBe(final.answers.media_path);
-		expect(final.answers.media_path).toBe('/srv/dedalo/ribera/media');
+		expect(final.answers.media_path).toBe('/srv/dedalo/ribera/dedalo/media');
 		// Anti-vacuity: the first checks DID run over the old names.
 		expect(tested('db')[0]?.db_database).toBe('dedalo_murillo');
 	});
@@ -485,7 +470,13 @@ describe('a probe verdict holds only for the answers it tested (g)', () => {
 	test('a route changed from the Review re-runs the System check: a host route never installs over a trial verdict', async () => {
 		const answerCase = ALL_CASES.find((item) => item.name === 'route trial') as Case;
 		const { raw, plain } = splitCase(answerCase.argv);
-		const script = scriptForPlan(planOf(raw, false), Object.keys(plain), {}, ['edit 1', 'install']);
+		// Phase 4: trial asks the root password too (its engine child sets it).
+		const script = scriptForPlan(
+			planOf(raw, false),
+			Object.keys(plain),
+			{ root_password: GOOD_ROOT_PASSWORD },
+			['edit 1', 'install'],
+		);
 		const prompter = scriptedInstallPrompter(script);
 		const review = prompter.review;
 		let edited = false;

@@ -819,6 +819,10 @@ export const NEW_IN_V7: readonly string[] = [
 	// The terminal installer's crash seam (2026-10-11): v6 had no resumable
 	// installer, so there is nothing for it to be a rename of.
 	'DEDALO_INSTALL_FAULT',
+	// The terminal installer's host-step seams (phase 4, 2026-10-12): a marked
+	// scratch root + recording runner, and the drill's probe CA. New in v7.
+	'DEDALO_INSTALL_HOST_ROOT',
+	'DEDALO_INSTALL_PROBE_CA_FILE',
 	// diffusion (the native engine)
 	'DEDALO_DIFFUSION_NATIVE',
 	'DEDALO_DIFFUSION_NATIVE_ELEMENTS',

@@ -226,6 +226,51 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 			label: 'Root password',
 			description: 'Never written to the plan file, the log or the shell history.',
 		},
+		// The host steps (phase 4).
+		db_mode: {
+			label: 'Database',
+			description:
+				'create = the installer creates the role and the database on this host (peer login, no password stored); existing = a database you created, probed as it is.',
+		},
+		web_server: {
+			label: 'Web server',
+			description:
+				"The one that serves this instance. Empty = the one this host has, else nginx. Only this instance's own site file is written.",
+		},
+		server_name: {
+			label: 'Public address',
+			description: 'The domain name browsers use (e.g. dedalo.museum.org) — not an IP address.',
+		},
+		http_port: { label: 'HTTP port', description: 'Plain HTTP (redirects to HTTPS).' },
+		https_port: { label: 'HTTPS port', description: 'The port browsers use.' },
+		tls_mode: { label: 'Certificate', description: 'Where the TLS certificate comes from.' },
+		letsencrypt_email: {
+			label: "Let's Encrypt e-mail",
+			description: "Expiry notices from Let's Encrypt go here.",
+		},
+		tls_cert_path: {
+			label: 'Certificate file',
+			description:
+				'The fullchain PEM (certificate + intermediates), absolute path; used where it is.',
+		},
+		tls_key_path: {
+			label: 'Key file',
+			description: 'The private key PEM, absolute path; checked against the certificate.',
+		},
+		backup_dir: {
+			label: 'Backup directory',
+			description:
+				'Where the nightly backup of the database, the media and the configuration goes.',
+		},
+		image_source: { label: 'Image', description: 'Which Dédalo image the stack runs.' },
+		image_repository: {
+			label: 'Image repository',
+			description: 'Your own registry repository (custom image only).',
+		},
+		image_version: {
+			label: 'Image version',
+			description: 'The image tag; empty = the version of this installer.',
+		},
 		'route.trial_no_media_protection': {
 			label: 'Trial without media protection',
 			description:
@@ -296,6 +341,45 @@ export const OPTION_TEXT = Object.freeze({
 		},
 		false: { label: 'false', description: 'No media access control.' },
 	} as Record<string, { label: string; description: string }>,
+	db_mode: {
+		create: {
+			label: 'Create it',
+			description: 'The role ded_<instance> and its database, on this host’s PostgreSQL 18.',
+		},
+		existing: { label: 'Use an existing one', description: 'Probed as it is; nothing is created.' },
+	} as Record<string, { label: string; description: string }>,
+	web_server: {
+		'': { label: 'Detect', description: 'The web server this host has, else nginx.' },
+		nginx: {
+			label: 'nginx',
+			description: 'conf.d/dedalo-<instance>.conf (nginx 1.25.1 or newer).',
+		},
+		apache: {
+			label: 'Apache',
+			description: 'One virtual host file; its modules are checked, never enabled.',
+		},
+	} as Record<string, { label: string; description: string }>,
+	tls_mode: {
+		letsencrypt: {
+			label: "Let's Encrypt",
+			description:
+				'Issued and renewed automatically (the address must reach this host on port 80).',
+		},
+		files: {
+			label: 'Our own certificate',
+			description:
+				'Your institution’s fullchain and key, checked against the address and the expiry.',
+		},
+		local_ca: {
+			label: 'Local CA',
+			description: 'A certificate from a local authority (internal networks; Docker only).',
+		},
+	} as Record<string, { label: string; description: string }>,
+	image_source: {
+		official: { label: 'Official', description: 'The signed Dédalo image, verified before use.' },
+		custom: { label: 'Custom', description: 'An image from your own registry.' },
+		build: { label: 'Build', description: 'Built here from this checkout.' },
+	} as Record<string, { label: string; description: string }>,
 	smtp_secure: {
 		tls: { label: 'STARTTLS', description: 'Plain connection upgraded to TLS (port 587).' },
 		ssl: { label: 'Implicit TLS', description: 'TLS from the first byte (port 465).' },
@@ -340,6 +424,12 @@ export const NOTICE_TEXT = Object.freeze({
 		`No country toponymy selected. Type a country code (e.g. ${example}) to add one, or press enter to skip.`,
 	databasePrerequisite:
 		'The database must exist and be EMPTY, owned by the role below (it creates tables, indexes and functions): CREATE DATABASE <name> OWNER <role>.',
+	databaseCreated:
+		'The installer creates the role and the database on this host (PostgreSQL 18, peer login over the local socket: no database password is stored).',
+	stackDbPassword:
+		'The database of the stack gets a generated password, written to .dedalo.env (0600) — never shown.',
+	hostCommands:
+		'Every host command is listed on the Review, exactly as it will run. Packages, repositories and the firewall are never removed or changed behind your back: packages stay installed on --abort, the firewall is only checked.',
 	databaseProbe: (msg: string) => `Database check: ${msg}`,
 	noMail: 'Without mail, a forgotten password needs the server console.',
 	probeOk: (msg: string) => `Check passed: ${msg}`,
@@ -349,33 +439,15 @@ export const NOTICE_TEXT = Object.freeze({
 		failed === 0
 			? `System ready${warned === 0 ? '' : ` (${warned} warning${warned === 1 ? '' : 's'})`}.`
 			: `${failed} check${failed === 1 ? '' : 's'} failed — fix ${failed === 1 ? 'it' : 'them'} and re-check.`,
-	secretsElsewhere:
-		'On this route the passwords are given to install.sh (or DEDALO_INSTALL_* in the container run), not here.',
 	envSecret: 'supplied by the environment — kept',
 	trialProbesSkipped:
 		'The stack is not running yet, so the connection is tested by the install inside the container.',
-	mediaPrerequisite:
-		'Phase-4 host steps are manual today: create the instance user ded_<instance>, its media directory and its PostgreSQL role and database as docs/install/multi_instance.md shows, BEFORE the install.',
 	mediaProbe: (msg: string) => `Media directory: ${msg}`,
 	reviewEnvHelp:
 		'The .env keys below are written to <private>/.env (0600); the values are never shown here.',
-	reviewDockerOnly:
-		'Docker and trial host steps: run install.sh (it brings the stack up and runs this installer inside the container). Here you can write the answers.',
+	reviewRoot:
+		'The production route runs as root (sudo sh install.sh); the engine steps then run as the instance user.',
 	reviewInstallOffered: 'Type install to start, or edit a step.',
-});
-
-/** The placeholder screens' manual steps (the host automation is phase 4). */
-export const PLACEHOLDER_TEXT = Object.freeze({
-	web_tls:
-		'The web server site and the certificate are configured by hand today: docs/install/production.md §11 (reverse proxy, TLS and media access). The installer will add them in a later release.',
-	services:
-		'The systemd units, the watchdog and the backups are configured by hand today: docs/install/production.md §10 and docs/install/multi_instance.md. The installer will add them in a later release.',
-	image: 'install.sh chooses and verifies the image today (docs/install/docker.md).',
-	tls_address:
-		'install.sh asks for the certificate and the address today (docs/install/docker.md).',
-	containers: 'install.sh writes the compose environment today (docs/install/docker.md).',
-	administrator_stack:
-		'On this route install.sh asks for the root password and passes it to the container run.',
 });
 
 /** The review's line labels. */
@@ -403,6 +475,10 @@ export const REVIEW_TEXT = Object.freeze({
 	passwordSet: 'root · password set',
 	passwordMissing: 'root · password NOT set',
 	notWritten: 'not written (engine default)',
+	address: 'address',
+	certificate: 'certificate',
+	backups: 'backups',
+	hostCommands: 'host commands',
 });
 
 /**
@@ -410,15 +486,51 @@ export const REVIEW_TEXT = Object.freeze({
  * full-screen Done screen shows them (scripts/install.ts plainReporter,
  * ui/screens/done.ts).
  */
+const DONE_TEXT_ENGINE_SUPERVISOR =
+	'Start the server under its supervisor (systemd: `systemctl enable --now dedalo-ts` — docs/install/production.md) or with `bun run start:supervised`; plain `bun run start` is unsupervised and cannot take code updates.';
+const DONE_TEXT_ENGINE_ABORTED =
+	'install aborted — what the install created is removed; the database itself is kept.';
+
 export const DONE_TEXT = Object.freeze({
 	complete: (verified: boolean) => `install complete${verified ? ' — root login verified' : ''}`,
-	supervisor:
-		'Start the server under its supervisor (systemd: `systemctl enable --now dedalo-ts` — docs/install/production.md) or with `bun run start:supervised`; plain `bun run start` is unsupervised and cannot take code updates.',
-	aborted: 'install aborted — what the install created is removed; the database itself is kept.',
+	/** The engine-only run's next step (a host route says its own: `next`). */
+	supervisor: DONE_TEXT_ENGINE_SUPERVISOR,
+	aborted: DONE_TEXT_ENGINE_ABORTED,
 	browser:
 		'Then open the web interface and log in as root: Maintenance installs further thesauri and toponymies, restores a backup and offers updates.',
 	written: (path: string) => `answers written to ${path} (no secret is in it)`,
 	writtenNext:
 		'Run the install from them with: bun run scripts/install.ts --answers <file> (the passwords via DEDALO_INSTALL_* or --secrets-stdin).',
 	saltStored: "A generated secret is also stored in the install's private .env (0600).",
+	/** What comes next after a complete install — per route: a host route already started it. */
+	next: (ending: DoneEnding): string => {
+		if (ending.route === 'production') {
+			const unit = `dedalo-ts@${ending.instance}`;
+			return `${unit} is running under systemd and starts at boot; its health watchdog and nightly backup timer are armed (systemctl status ${unit} · journalctl -u ${unit}). Do not start dedalo-ts.service — that is the single-instance unit of the manual procedure, not this instance.`;
+		}
+		if (ending.route === 'docker' || ending.route === 'trial') {
+			return 'The stack is up under Docker and restarts with it — `docker compose ps` / `docker compose logs dedalo` from this checkout (with its compose.override.yaml and .dedalo.env).';
+		}
+		return DONE_TEXT_ENGINE_SUPERVISOR;
+	},
+	/** The aborted sentence — per route, and whether a live instance was kept. */
+	abortedFor: (ending: DoneEnding): string => {
+		if (ending.keptLive) {
+			return 'install partly undone — the host steps after the engine are undone; the instance itself (its user, database and code) is kept, and --resume puts the undone steps back.';
+		}
+		if (ending.route === 'production') {
+			return "install aborted — what this install created is removed: its site, units, user, directories and, as confirmed, its database and role; the installed packages and any backups are kept.";
+		}
+		if (ending.route === 'docker' || ending.route === 'trial') {
+			return 'install aborted — the stack is down; the files, certificates and volumes this install created are removed (the database volume as confirmed); the image is kept.';
+		}
+		return DONE_TEXT_ENGINE_ABORTED;
+	},
 });
+
+/** How a run ended (structurally run_events.ts RunEnding — this file imports nothing). */
+interface DoneEnding {
+	readonly route: string;
+	readonly instance: string;
+	readonly keptLive: boolean;
+}

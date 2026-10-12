@@ -148,6 +148,41 @@ answers `503 {process:'poisoned'}` from then on and the watchdog recycles the
 process — within its 30 s cadence under systemd, within ~90 s on a docker stack
 (§2). Gate: `test/unit/process_health.test.ts`.
 
+### 2.1 The installer's instance units (terminal installer, phase 4)
+
+A production install made by the terminal installer (`--route production
+--instance <i>`, src/core/install/host/) does not copy the single-instance units
+above. It writes the TEMPLATE units of `deploy/systemd/*@*` (shared by every
+instance on the host — written when absent or byte-equal, refused when a
+different file holds the name, removed only when no instance in the host
+registry `/var/lib/dedalo-install/instances/` still uses them) and ONE drop-in
+per unit and instance (`/etc/systemd/system/<unit>@<i>.<kind>.d/10-dedalo-install.conf`,
+stamped `# dedalo-install <i> <answers digest>`):
+
+- `dedalo-ts@<i>.service`: the drop-in replaces `ExecStart` with the root-owned
+  runtime `/opt/dedalo/bun/<pin>/bun run src/server.ts` and sets
+  `DEDALO_CLIENT_PUBLISH_DIR=/srv/dedalo/<i>/client`. The template does NOT
+  `Wants=`/`Also=` the watchdog: the installer ARMS `dedalo-ts-watchdog@<i>.timer`
+  only after the first boot recorded every migration (a watchdog armed with the
+  service killed a first boot mid-migration — campaign 2 L7). The watchdog
+  script also skips while the unit is activating or younger than its grace, and
+  while the engine's boot marker names a live pid; its timer waits
+  `OnActiveSec=60` before the first check.
+- `dedalo-backup@<i>.service`: the drop-in lists the store lines and declares
+  `DEDALO_BACKUP_EXPECTED_STORES` DERIVED from them, every `Environment=` value
+  quoted (an unquoted list was truncated to its first word — L8); the nightly
+  timer is enabled only after a first backup verified every store.
+- EVERY script a unit runs as root (rollback, watchdog, alert, the site-builder
+  store) runs from `/opt/dedalo/instances/<i>/bin/` (root:root 0755), never from
+  the instance's tree: a root-run unit must not execute a file the instance user
+  can replace. A code update (it runs as the instance) does not refresh those
+  copies — re-run the installer after an update that changes `deploy/*.sh`; a
+  Bun pin change needs the installer too (the runtime is root's).
+- nginx: the media map's variables are global, so ONE instance's generated map is
+  included host-wide (`/etc/nginx/conf.d/dedalo-00-media-map.conf`) and a second
+  instance whose map differs is refused — same-host instances run the same
+  release.
+
 ## 3. Sockets, reverse proxy, timeouts (S2-33)
 
 Production serving is **unix-socket-only**: `SERVER_UNIX_SOCKET` (default

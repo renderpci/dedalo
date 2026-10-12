@@ -36,6 +36,37 @@ curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 
 ## Installing
 
+### The production installer refuses at the System check
+
+**Cause.** `host_preflight` measured something the later steps would trip on and
+changed nothing. The sentence names every problem at once: an unsupported
+system (the supported releases are listed), no root (`sudo sh install.sh …`),
+nginx older than 1.25.1, a name of this instance already taken (the user
+`ded_<i>`, the database or role, `dedalo-ts@<i>`, the site file, the socket),
+the address already served by another site, another PostgreSQL major on the
+database port, or the institution's certificate (another address, expired, a
+key that does not pair).
+
+**Fix.** Resolve each (choose another instance name, upgrade nginx, stop the
+other cluster or use `--db-mode existing`, fix the certificate), then run the
+same command again — nothing was written, so it starts fresh.
+
+### `Apache lacks the modules … — enabling modules is the system administrator's`
+
+**Cause.** The installer checks Apache's modules and never enables one.
+
+**Fix.** Run the command the message prints (`a2enmod … && systemctl reload
+apache2` on Debian/Ubuntu), then `sudo sh install.sh --route production
+--instance <i> --resume`.
+
+### `the commands of <step> are not the ones this install showed`
+
+**Cause.** A resume recomputed a host step's commands and they differ from the
+ones the Review showed and the run froze — the installer's own files changed
+since (another release).
+
+**Fix.** `--abort --confirm-database <db>` and start again with one release.
+
 ### `PostgreSQL client (psql) not found`
 
 **Cause.** The pre-flight check could not resolve a `psql` binary. The installer,

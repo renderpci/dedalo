@@ -25,6 +25,18 @@
 # The two unit names default to the single-instance units. A templated
 # multi-instance host (docs/install/multi_instance.md) passes its own,
 # e.g. --restart-unit dedalo-ts-restart@site1.service.
+#
+# BOOT GRACE (--service <unit> --grace <seconds>; finding F3, campaign 2 L7):
+# boot migrations and the search-store backfill run BEFORE the server binds
+# its socket, and can take minutes. A probe in that window sees no socket and
+# restarts a healthy boot — mid-migration, every 30 s, until the start limit
+# fails the unit. So while <unit> is `activating`, or has been active for less
+# than <seconds>, a red probe is SKIPPED (exit 0, said in the journal). A boot
+# marker the engine may write, /run/<runtime dir>/booting holding its pid,
+# extends the skip while that pid lives (bounded by the grace times four).
+# Without --service the probe behaves as before (no grace). --uptime-file
+# (default /proc/uptime) is the clock the age is measured on — systemd's
+# ActiveEnterTimestampMonotonic counts from boot in microseconds, as it does.
 
 set -euo pipefail
 
@@ -33,6 +45,9 @@ APP_DIR="/opt/dedalo/master_dedalo"
 BACKUP_ROOT=""
 RESTART_UNIT="dedalo-ts-restart.service"
 ROLLBACK_UNIT="dedalo-ts-rollback.service"
+SERVICE=""
+GRACE=0
+UPTIME_FILE="/proc/uptime"
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--socket) SOCKET="$2"; shift 2 ;;
@@ -40,6 +55,9 @@ while [ $# -gt 0 ]; do
 		--backup-root) BACKUP_ROOT="$2"; shift 2 ;;
 		--restart-unit) RESTART_UNIT="$2"; shift 2 ;;
 		--rollback-unit) ROLLBACK_UNIT="$2"; shift 2 ;;
+		--service) SERVICE="$2"; shift 2 ;;
+		--grace) GRACE="$2"; shift 2 ;;
+		--uptime-file) UPTIME_FILE="$2"; shift 2 ;;
 		*) echo "ERROR: unknown arg $1" >&2; exit 2 ;;
 	esac
 done
@@ -83,6 +101,35 @@ SENTINEL="$BACKUP_ROOT/last_code_update.json"
 # --fail: non-2xx is red. --max-time bounds a hung server.
 if curl --fail --silent --show-error --max-time 10 \
 	--unix-socket "$SOCKET" http://localhost/health >/dev/null; then
+	exit 0
+fi
+
+# Red — but a server still BOOTING is not dead (see BOOT GRACE above).
+in_boot_grace() {
+	[ -n "$SERVICE" ] || return 1
+	case "$GRACE" in ''|*[!0-9]*) return 1 ;; esac
+	local state entered now_us age marker pid
+	state="$(systemctl show -p ActiveState --value "$SERVICE" 2>/dev/null || true)"
+	[ "$state" = "activating" ] && return 0
+	entered="$(systemctl show -p ActiveEnterTimestampMonotonic --value "$SERVICE" 2>/dev/null || echo 0)"
+	now_us="$(awk '{printf "%d", $1 * 1000000}' "$UPTIME_FILE" 2>/dev/null || echo 0)"
+	case "$entered" in ''|*[!0-9]*) entered=0 ;; esac
+	case "$now_us" in ''|*[!0-9]*) now_us=0 ;; esac
+	# An age is KNOWN only with both clocks read and the entry in the past —
+	# an unreadable clock must never read as "young" (that would skip forever).
+	[ "$now_us" -gt 0 ] && [ "$entered" -gt 0 ] && [ "$entered" -le "$now_us" ] || return 1
+	age=$(( (now_us - entered) / 1000000 ))
+	[ "$age" -lt "$GRACE" ] && return 0
+	marker="$(dirname "$SOCKET")/booting"
+	if [ -f "$marker" ] && [ "$age" -lt $(( GRACE * 4 )) ]; then
+		pid="$(head -n1 "$marker" 2>/dev/null || true)"
+		case "$pid" in ''|*[!0-9]*) return 1 ;; esac
+		kill -0 "$pid" 2>/dev/null && return 0
+	fi
+	return 1
+}
+if in_boot_grace; then
+	echo "== watchdog: /health not answering, but $SERVICE is still booting (within the ${GRACE}s grace) — skipped" >&2
 	exit 0
 fi
 

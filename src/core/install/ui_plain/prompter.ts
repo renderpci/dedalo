@@ -344,10 +344,20 @@ function resumeAnswer(word: unknown, view: ResumeView): 'resume' | 'abort' | Nav
 }
 
 /** The Review as the plain mode prints it: the padded lines, then the commands. */
+/** A host route's commands, per step, exactly as they will run (review equals run). */
+export function hostCommandLines(view: ReviewView): string[] {
+	return (view.hostCommands ?? []).flatMap((block) => [
+		`[${block.step}] ${block.label}`,
+		...(block.commands.length === 0 ? ['    (checks only — no command changes the host)'] : []),
+		...block.commands.map((command) => `    $ ${command}`),
+	]);
+}
+
 function reviewTextLines(view: ReviewView): string[] {
 	const numbered = view.editable.map((item) => `${item.n} ${item.title}`).join(', ');
 	return [
 		...view.lines.map((line) => `${line.label.padEnd(14)} ${line.value}`),
+		...hostCommandLines(view),
 		`commands: ${view.canInstall ? 'install, ' : ''}edit <n> (${numbered}), write <path>, quit`,
 	];
 }

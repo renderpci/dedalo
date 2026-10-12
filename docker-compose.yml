@@ -232,11 +232,17 @@ services:
     # The image's own entrypoint (conf templates) still runs: exec'd after.
     command: >
       sh -c "addgroup -g 1000 dedalo 2>/dev/null; addgroup nginx dedalo 2>/dev/null; exec /docker-entrypoint.sh nginx -g 'daemon off;'"
+    # The published ports, the proxy configuration and the certificate mount are
+    # VARIABLES whose defaults are this file's long-standing values (the manual
+    # recipe in docs/install/docker.md is unchanged). The terminal installer
+    # (`sh install.sh`, docker route) sets them in .dedalo.env: its generated
+    # site (deploy/nginx.docker.generated.conf — both media includes on), its
+    # certificate directory (/etc/dedalo/certs) and the ports it was given.
     ports:
-      - "80:80"
-      - "443:443"
+      - "${DEDALO_HTTP_PORT:-80}:80"
+      - "${DEDALO_HTTPS_PORT:-443}:443"
     volumes:
-      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/${DEDALO_NGINX_CONF:-nginx.conf}:/etc/nginx/conf.d/default.conf:ro
       # The client the ENGINE published (never the checkout's): the alias in the
       # proxy configuration points into this mount.
       - client:/opt/dedalo/master_dedalo/client:ro
@@ -244,7 +250,7 @@ services:
       - socket:/run/dedalo
       # TLS. For a real deployment bind-mount your certbot tree here; for a local
       # trial, drop a self-signed fullchain.pem + privkey.pem in deploy/certs/.
-      - ./deploy/certs:/etc/letsencrypt/live/dedalo.example.org:ro
+      - ./deploy/certs:${DEDALO_CERT_MOUNT:-/etc/letsencrypt/live/dedalo.example.org}:ro
 
   # --- Optional: MariaDB diffusion (publication) target ----------------------
   # The engine NEVER creates the target database — a missing one is a loud

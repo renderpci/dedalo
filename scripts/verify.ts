@@ -401,6 +401,13 @@ const TRIPWIRES = [
 	'test/unit/install_tui_secrets_tripwire.test.ts',
 	'test/unit/install_tui_restore_tripwire.test.ts',
 	'test/unit/opentui_confinement_tripwire.test.ts',
+	'test/unit/install_host_steps_native.test.ts',
+	'test/unit/install_host_resume_drill.test.ts',
+	'test/unit/install_host_render_tripwire.test.ts',
+	'test/unit/install_host_privilege_tripwire.test.ts',
+	'test/unit/install_host_selinux_native.test.ts',
+	'test/unit/install_stack_steps_native.test.ts',
+	'test/unit/install_bootstrap_sh.test.ts',
 ];
 
 // ---------------------------------------------------------------------------
