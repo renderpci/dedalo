@@ -7,6 +7,12 @@
  *
  * PHP reference: RecordObj_dd term resolution + common label fallback
  * (application lang first, then the first non-empty translation).
+ *
+ * LABEL NODES: labelByTipo and termByTipo are guarded term resolvers — a
+ * model='label' node is refused (dev/test throw, production log-once +
+ * unresolved value, never cached). Guard + rationale: ./label_node_guard.ts.
+ * The ONLY list of guarded homes is TERM_READ_LEDGER in
+ * test/unit/term_by_tipo_label_guard.test.ts.
  */
 
 import { config } from '../../config/config.ts';
@@ -15,6 +21,7 @@ import { translationLangOf } from '../resolve/lang_alias.ts';
 import { currentApplicationLang } from '../resolve/request_lang.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
+import { refuseLabelNode } from './label_node_guard.ts';
 
 /**
  * The language the ONTOLOGY STRUCTURE itself is authored in (S2-28: one named
@@ -75,8 +82,10 @@ export async function labelByTipo(
 	const cached = labelCache.get(cacheKey);
 	if (cached !== undefined) return cached;
 	const rows = (await sql`
-		SELECT term FROM dd_ontology WHERE tipo = ${tipo} LIMIT 1
-	`) as { term: unknown }[];
+		SELECT term, model FROM dd_ontology WHERE tipo = ${tipo} LIMIT 1
+	`) as { term: unknown; model: string | null }[];
+	// Not cached when refused: a dev/test throw must recur on every call.
+	if (refuseLabelNode(tipo, rows[0]?.model)) return null;
 	const label = resolveLabel(rows[0]?.term ?? null, lang);
 	labelCache.set(cacheKey, label);
 	return label;
@@ -103,15 +112,19 @@ const termCache = createOntologyCache<string, string>();
  * one for legacy importers). Fallback chain (distinct from labelByTipo's):
  * requested lang → the ontology structure lang → first non-empty translation
  * → the tipo itself (labelByTipo instead resolves lang → first non-empty →
- * null, the PHP RecordObj_dd label rule).
+ * null, the PHP RecordObj_dd label rule). A model='label' node throws in
+ * dev/test and, in production, answers the tipo itself — this resolver's
+ * existing "no term" value, so its `string` contract holds for every caller
+ * (see refuseLabelNode). Never cached when refused.
  */
 export async function termByTipo(tipo: string, lang: string): Promise<string> {
 	const cacheKey = `${lang} ${tipo}`;
 	const cached = termCache.get(cacheKey);
 	if (cached !== undefined) return cached;
 	const rows = (await sql`
-		SELECT term FROM dd_ontology WHERE tipo = ${tipo} LIMIT 1
-	`) as { term: Record<string, string> | null }[];
+		SELECT term, model FROM dd_ontology WHERE tipo = ${tipo} LIMIT 1
+	`) as { term: Record<string, string> | null; model: string | null }[];
+	if (refuseLabelNode(tipo, rows[0]?.model)) return tipo;
 	const term = rows[0]?.term ?? null;
 	// The declared language equivalence slots between the requested lang and the
 	// structure lang, same as resolveLabel (Valencià reads the Català term).

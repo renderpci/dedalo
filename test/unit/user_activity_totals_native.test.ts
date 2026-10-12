@@ -84,7 +84,7 @@ function firstCall(calls: unknown[][]): unknown[] {
 function nonEmptyTotals(): CanonicalTotals {
 	return {
 		who: [],
-		what: [{ key: 'test3', label: 'Audiovisual', value: 3 }],
+		what: [{ key: 'save', label: 'Save', value: 3 }],
 		where: [],
 		when: [],
 		publish: [],

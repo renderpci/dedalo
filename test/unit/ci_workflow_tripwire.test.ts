@@ -837,6 +837,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'test/unit/filter_projects_scope_native.test.ts',
 		'It resolves the ACL fixture principals from matrix_users / matrix_profiles, reads matrix_projects, and mints and sweeps one matrix_test record to drive the get_data facade, so it cannot run without a live suite Postgres.',
 	],
+	[
+		'test/unit/term_by_tipo_label_guard.test.ts',
+		'Its outcome legs build the zzlbl scratch TLD on the suite database (a model=label node, a plain one, a reused tipo flipped between models via upsertDdOntologyNode) and drive every guarded term resolver against those dd_ontology rows, so without a live suite Postgres the describe.if(DB_READY) skips all 25 resolver cases and only the census and seam legs run.',
+	],
 ]);
 
 /**

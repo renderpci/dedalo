@@ -1,6 +1,13 @@
 {
 	"active": "有効",
 	"activity": "アクティビティ",
+	"activity_login": "ログイン",
+	"activity_logout": "ログアウト",
+	"activity_new_file_version": "新しいバージョン",
+	"activity_recover_component": "コンポーネントを復元",
+	"activity_recover_section": "セクションを復元",
+	"activity_statistics": "統計",
+	"activity_upload_complete": "アップロード完了",
 	"add_file": "ファイルを追加",
 	"add_group": "グループを追加",
 	"add_sample_data": "サンプルデータを追加",

@@ -313,6 +313,9 @@ beforeAll(async () => {
 					id: 1,
 					lang: 'lg-nolan',
 					value: [
+						// a PHP-era item: keyed by the retired label TIPO with a baked
+						// label — read through the legacy map (dd700 → 'save'), never
+						// resolved (WC-2026-10-12-user-activity-what-labels)
 						{ type: 'what', tipo: 'dd700', value: 3, label: 'Guardar' },
 						{ type: 'where', tipo: ARCHIVES, value: 2 },
 						{ type: 'when', hour: 10, value: 5 },
@@ -444,9 +447,14 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 		expect(tsBody.ok).toBe(true);
 
 		const { termByTipo } = await import('../../src/core/ontology/labels.ts');
+		const { getLabels } = await import('../../src/core/labels/catalog.ts');
 		// Session data lang on both engines (the root PHP session + tsContext).
-		const editLabel = await termByTipo('dd694', 'lg-spa');
-		const saveLabel = await termByTipo('dd700', 'lg-spa');
+		// where: a real SECTION tipo → the ontology term (both engines). what:
+		// WC-2026-10-12-user-activity-what-labels — TS keys by ACTION and labels
+		// from the catalog; the v7 master reuses the retired label tipos, so the
+		// PHP side's label (the label node's term at harvest time) is no longer
+		// derivable from the ontology and only its fossil KEY is pinned.
+		const spanish = await getLabels('lg-spa');
 		const whereLabel = await termByTipo(ARCHIVES, 'lg-spa');
 		const zeroWhen = Array.from({ length: 24 }, (_, hour) => ({
 			key: hour,
@@ -456,7 +464,10 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 
 		// PHP: tier 1 dead → the zero canonical + ONLY today's activity merged.
 		const phpValue = phpBody.result?.[0]?.value as Record<string, unknown>;
-		expect(phpValue.what).toEqual([{ key: 'dd694', label: editLabel, value: 1 }] as never);
+		// The PHP fossil, transformed per the WC (tipo → action, label not compared).
+		const phpWhat = phpValue.what as { key: string; label: unknown; value: number }[];
+		expect(phpWhat.map(({ key, value }) => ({ key, value }))).toEqual([{ key: 'dd694', value: 1 }]);
+		expect(typeof phpWhat[0]?.label).toBe('string');
 		expect(phpValue.where).toEqual([{ key: ARCHIVES, label: whereLabel, value: 1 }] as never);
 		expect(phpValue.who).toEqual([] as never);
 		expect(phpValue.when).toEqual(
@@ -467,8 +478,8 @@ describe.if(hasLivePhpOracle())('dd_component_info get_widget_data differential'
 		// PHP-mirrored) — the widget actually shows the saved history.
 		const tsValue = tsBody.data?.[0]?.value as Record<string, unknown>;
 		expect(tsValue.what).toEqual([
-			{ key: 'dd700', label: saveLabel, value: 3 },
-			{ key: 'dd694', label: editLabel, value: 1 },
+			{ key: 'save', label: spanish.save, value: 3 },
+			{ key: 'edit', label: spanish.edit, value: 1 },
 		] as never);
 		expect(tsValue.where).toEqual([{ key: ARCHIVES, label: whereLabel, value: 3 }] as never);
 		expect(tsValue.who).toEqual([] as never);

@@ -45,6 +45,7 @@ import type { Sqo } from '../../core/concepts/sqo.ts';
 import type { MatrixRecord } from '../../core/db/matrix.ts';
 import { sql } from '../../core/db/postgres.ts';
 import { DedaloError } from '../../core/errors/index.ts';
+import { refuseLabelNode } from '../../core/ontology/label_node_guard.ts';
 import {
 	findFirstDescendantTipoByModel,
 	getColumnNameByModel,
@@ -1023,10 +1024,14 @@ async function v5ReferencesHtmlAtoms(
 /**
  * map_locator_to_section_label (PHP diffusion_fn :457-513): each linked
  * locator's SECTION ontology term, one atom per available translation.
- * Term translations come from dd_ontology (cached per run).
+ * Term translations come from dd_ontology (cached per run). A model='label'
+ * node is refused (refuseLabelNode — dev/test throw, production logs once and
+ * the link yields no atom, NOT cached): a by-tipo term read is a guarded home
+ * (test/unit/term_by_tipo_label_guard.test.ts census). Exported for that
+ * gate's outcome legs only (it needs nothing of the run but the label cache).
  */
-async function sectionLabelAtoms(
-	ctx: RunContext,
+export async function sectionLabelAtoms(
+	ctx: Pick<RunContext, 'sectionLabelCache'>,
 	links: ResolvedLink[],
 	componentTipo: string,
 	ddoId: string | undefined,
@@ -1036,8 +1041,9 @@ async function sectionLabelAtoms(
 		let term = ctx.sectionLabelCache.get(link.sectionTipo);
 		if (term === undefined) {
 			const rows = (await sql`
-				SELECT term FROM dd_ontology WHERE tipo = ${link.sectionTipo} LIMIT 1
-			`) as { term: Record<string, string> | null }[];
+				SELECT term, model FROM dd_ontology WHERE tipo = ${link.sectionTipo} LIMIT 1
+			`) as { term: Record<string, string> | null; model: string | null }[];
+			if (refuseLabelNode(link.sectionTipo, rows[0]?.model)) continue;
 			term = rows[0]?.term ?? null;
 			ctx.sectionLabelCache.set(link.sectionTipo, term);
 		}

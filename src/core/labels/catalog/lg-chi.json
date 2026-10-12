@@ -1,6 +1,13 @@
 {
 	"active": "启用",
 	"activity": "活动",
+	"activity_login": "登录",
+	"activity_logout": "退出登录",
+	"activity_new_file_version": "新版本",
+	"activity_recover_component": "恢复组件",
+	"activity_recover_section": "恢复部分",
+	"activity_statistics": "统计",
+	"activity_upload_complete": "上传完成",
 	"add_file": "添加文件",
 	"add_group": "添加组",
 	"add_sample_data": "添加示例数据",

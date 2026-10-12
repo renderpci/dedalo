@@ -1,6 +1,13 @@
 {
 	"active": "Actif",
 	"activity": "Activité",
+	"activity_login": "Entrée",
+	"activity_logout": "Déconnexion",
+	"activity_new_file_version": "Nouvelle version",
+	"activity_recover_component": "Récupérer le composant",
+	"activity_recover_section": "Récupérer la section",
+	"activity_statistics": "Statistiques",
+	"activity_upload_complete": "Téléchargement complet",
 	"add_file": "Ajouter des fichiers",
 	"add_group": "Ajouter un groupe",
 	"add_sample_data": "Ajouter des données d'exemple",

@@ -1,6 +1,13 @@
 {
 	"active": "सक्रिय",
 	"activity": "गतिविधि",
+	"activity_login": "लग - इन",
+	"activity_logout": "बाहिर निस्कनु",
+	"activity_new_file_version": "नयाँ संस्करण",
+	"activity_recover_component": "कम्पोनेन्ट रिकभर गर्नुहोस्",
+	"activity_recover_section": "खण्ड पुन: प्राप्ति गर्नुहोस्",
+	"activity_statistics": "तथ्याङ्क",
+	"activity_upload_complete": "अपलोड पूरा भयो",
 	"add_file": "फाइलहरू थप्नुहोस्",
 	"add_group": "समूह थप्नुहोस्",
 	"add_sample_data": "नमुना डाटा थप्नुहोस्",

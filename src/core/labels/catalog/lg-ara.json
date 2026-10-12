@@ -1,6 +1,13 @@
 {
 	"active": "نشط",
 	"activity": "نشاط",
+	"activity_login": "تسجيل الدخول",
+	"activity_logout": "تسجيل الخروج",
+	"activity_new_file_version": "إصدار جديد",
+	"activity_recover_component": "استعادة المكوّن",
+	"activity_recover_section": "استعادة القسم",
+	"activity_statistics": "إحصائيات",
+	"activity_upload_complete": "اكتمل الرفع",
 	"add_file": "إضافة ملفات",
 	"add_group": "إضافة مجموعة",
 	"add_sample_data": "إضافة بيانات نموذجية",

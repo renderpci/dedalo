@@ -1,6 +1,13 @@
 {
 	"active": "활성",
 	"activity": "활동",
+	"activity_login": "로그인",
+	"activity_logout": "로그아웃",
+	"activity_new_file_version": "새 버전",
+	"activity_recover_component": "구성 요소 복구",
+	"activity_recover_section": "섹션 복구",
+	"activity_statistics": "통계",
+	"activity_upload_complete": "업로드 완료",
 	"add_file": "파일 추가",
 	"add_group": "그룹 추가",
 	"add_sample_data": "샘플 데이터 추가",

@@ -1,6 +1,13 @@
 {
 	"active": "Ενεργό",
 	"activity": "Δραστηριότητα",
+	"activity_login": "Σύνδεση",
+	"activity_logout": "Αποσύνδεση",
+	"activity_new_file_version": "Νέα έκδοση",
+	"activity_recover_component": "Ανάκτηση στοιχείου",
+	"activity_recover_section": "Ανάκτηση ενότητας",
+	"activity_statistics": "Στατιστικά",
+	"activity_upload_complete": "Η μεταφόρτωση ολοκληρώθηκε",
 	"add_file": "Προσθήκη αρχείων",
 	"add_group": "Προσθήκη ομάδας",
 	"add_sample_data": "Προσθήκη δειγματικών δεδομένων",

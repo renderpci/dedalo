@@ -1,6 +1,13 @@
 {
 	"active": "فعال",
 	"activity": "سرگرمی",
+	"activity_login": "لاگ ان",
+	"activity_logout": "لاگ آؤٹ",
+	"activity_new_file_version": "نیا ورژن",
+	"activity_recover_component": "جزو بحال کریں",
+	"activity_recover_section": "سیکشن بحال کریں",
+	"activity_statistics": "اعداد و شمار",
+	"activity_upload_complete": "اپ لوڈ مکمل",
 	"add_file": "فائلیں شامل کریں",
 	"add_group": "گروپ شامل کریں",
 	"add_sample_data": "نمونہ ڈیٹا شامل کریں",

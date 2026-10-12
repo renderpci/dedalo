@@ -10,6 +10,7 @@ import { sql } from '../db/postgres.ts';
 import { currentApplicationLang } from '../resolve/request_lang.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
+import { refuseLabelNode } from './label_node_guard.ts';
 
 /**
  * Resolve a node's display label from its `term` lang-map: the application
@@ -42,15 +43,25 @@ export function clearTermLabelCache(): void {
 }
 registerOntologyCacheClearer(clearTermLabelCache);
 
-/** The app-lang display term of one ontology node (PHP get_term_by_tipo). */
+/**
+ * The app-lang display term of one ontology node (PHP get_term_by_tipo). A
+ * model='label' node is refused (refuseLabelNode, ./label_node_guard.ts):
+ * dev/test throw; production logs once and answers '' (this resolver's
+ * empty-term value). A refusal is NOT cached — only resolvable rows enter
+ * termRowCache, so a dev/test throw recurs on every call.
+ */
 export async function getOntologyTermLabel(tipo: string): Promise<string> {
 	// has() (not get()) — a node without a term caches null.
 	if (termRowCache.has(tipo)) {
 		return resolveLabel(termRowCache.get(tipo) ?? null);
 	}
-	const rows = (await sql.unsafe('SELECT term FROM dd_ontology WHERE tipo = $1', [tipo])) as {
+	const rows = (await sql.unsafe('SELECT term, model FROM dd_ontology WHERE tipo = $1', [
+		tipo,
+	])) as {
 		term: Record<string, string> | null;
+		model: string | null;
 	}[];
+	if (refuseLabelNode(tipo, rows[0]?.model)) return '';
 	const term = rows[0]?.term ?? null;
 	termRowCache.set(tipo, term);
 	return resolveLabel(term);

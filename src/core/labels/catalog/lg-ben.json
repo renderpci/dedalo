@@ -1,6 +1,13 @@
 {
 	"active": "সক্রিয়",
 	"activity": "কার্যকলাপ",
+	"activity_login": "লগইন",
+	"activity_logout": "লগআউট",
+	"activity_new_file_version": "নতুন সংস্করণ",
+	"activity_recover_component": "উপাদান পুনরুদ্ধার",
+	"activity_recover_section": "বিভাগ পুনরুদ্ধার",
+	"activity_statistics": "পরিসংখ্যান",
+	"activity_upload_complete": "আপলোড সম্পন্ন",
 	"add_file": "ফাইল যুক্ত করুন",
 	"add_group": "গ্রুপ যোগ করুন",
 	"add_sample_data": "নমুনা ডেটা যুক্ত করুন",

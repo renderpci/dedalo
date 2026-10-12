@@ -94,6 +94,17 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The user activity chart names actions in your language.**
+
+    The *Activity by type* chart of a user's activity (Login, Save, Edit, Upload complete…)
+    now takes its action names from the application's translated labels, in the language
+    you are using, instead of from ontology terms. Saved statistics from earlier versions
+    are read as before and add up with new ones under the same action. The seven
+    activity-only names (login, logout, upload complete, recover section, recover component,
+    stats, new version) are new labels, translated in every shipped language.
+
+    Wire contract: `WC-2026-10-12-user-activity-what-labels`.
+
 - **Searching a thesaurus branch with all its descendants costs the same however large the branch.**
 
     Expanding a term to all its descendants (the "with children" search, fixed filters, the tree) used to ask the database once per term of the branch — about 1,650 requests for a branch of 1,200 terms. The whole branch is now read in one request, in one consistent snapshot, with the same result. Sibling terms that share an internal number across two sections are now always listed in the same order (by section) instead of an order that could change between reads.

@@ -13,7 +13,7 @@
  * tallies for a window must be byte-identical at every page size — including
  * page sizes that split a single day, and page sizes of 1.
  *
- * widget_request_native.test.ts owns the aggregate's CONTENT (the WHAT_MAP /
+ * widget_request_native.test.ts owns the aggregate's CONTENT (the WHAT_ACTIONS /
  * WHERE_SKIP / dd1223→publish routing and the exact totals order). This gate
  * owns only the paging, and provisions the exotic jsonb shapes that the content
  * gate's tidy rows do not carry: an ARRAY-valued dd546, a boolean `top_tipo`,
@@ -281,7 +281,7 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		// top_tipo wins; null falls through to section_tipo; false contributes nothing
 		expect(at(DAY_A, 'publish', 'zzpub1')).toBe(1);
 		expect(at(DAY_A, 'publish', 'zzpub2')).toBe(1);
-		// the unmapped code is emitted RAW (WHAT_MAP drops it TS-side, not here)
+		// the unmapped code is emitted RAW (WHAT_ACTIONS drops it TS-side, not here)
 		expect(at(DAY_B, 'what', '99')).toBe(1);
 		// WHERE_SKIP is likewise a TS-side rule — the tally is present, unfiltered
 		expect(at(DAY_B, 'where', 'dd271')).toBe(1);
@@ -345,6 +345,12 @@ describe('aggregateActivity paging (the page size is a knob, not a semantic)', (
 		// the shape widget_request_native pins, so it is the reference.
 		const reference = await rebuildAt(100000);
 		expect(reference).not.toBe('[]');
+		// what items are saved by ACTION key, never the retired label tipo
+		// (WC-2026-10-12-user-activity-what-labels): code 1 → 'login', and the
+		// unmapped code 99 is dropped rather than saved raw.
+		expect(reference).toContain('"key":"login"');
+		expect(reference).not.toContain('dd696');
+		expect(reference).not.toContain('"key":"99"');
 		// 1 puts every row in its own page; 2 splits the same-timestamp pair AND
 		// splits day A — the seams that could reorder or double-count.
 		expect(await rebuildAt(1)).toBe(reference);

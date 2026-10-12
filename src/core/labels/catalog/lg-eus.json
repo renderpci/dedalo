@@ -1,6 +1,13 @@
 {
 	"active": "Aktibo",
 	"activity": "Jarduera",
+	"activity_login": "Sarrera",
+	"activity_logout": "Irteera",
+	"activity_new_file_version": "Beste bertsio bat",
+	"activity_recover_component": "Osagaia berreskuratu",
+	"activity_recover_section": "Berreskuratu sekzioa",
+	"activity_statistics": "Estatistikak",
+	"activity_upload_complete": "Karga osatu da",
 	"add_file": "Gehitu fitxategiak",
 	"add_group": "Gehitu taldea",
 	"add_sample_data": "Gehitu adibide-datuak",

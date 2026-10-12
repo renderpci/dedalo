@@ -1,6 +1,13 @@
 {
 	"active": "Активно",
 	"activity": "Действие",
+	"activity_login": "Вход",
+	"activity_logout": "Выход",
+	"activity_new_file_version": "Новая версия",
+	"activity_recover_component": "Восстановить компонент",
+	"activity_recover_section": "Восстановить раздел",
+	"activity_statistics": "Статистика",
+	"activity_upload_complete": "Загрузка завершена",
 	"add_file": "Добавить файлы",
 	"add_group": "Добавить группу",
 	"add_sample_data": "Добавить пример данных",

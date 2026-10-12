@@ -1,6 +1,13 @@
 {
 	"active": "Active",
 	"activity": "Activity",
+	"activity_login": "Login",
+	"activity_logout": "Logout",
+	"activity_new_file_version": "New version",
+	"activity_recover_component": "Recover component",
+	"activity_recover_section": "Recover section",
+	"activity_statistics": "Stats",
+	"activity_upload_complete": "Upload complete",
 	"add_file": "Add files",
 	"add_group": "Add group",
 	"add_sample_data": "Add sample data",

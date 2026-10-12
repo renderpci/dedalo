@@ -38,6 +38,7 @@ import { isInTransaction, sql, withTransaction } from '../../db/postgres.ts';
 import { openEpochIfReborn } from '../../db/record_generation.ts';
 import { recordBulkBirth } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
+import { refuseLabelNode } from '../../ontology/label_node_guard.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { currentRequestContext } from '../../security/request_context.ts';
 import { bulkIdOf } from './bulk_capture.ts';
@@ -91,12 +92,18 @@ export { dbTimestamp } from '../../db/db_timestamp.ts';
 /**
  * Resolve a section's display label from its ontology `term` map (PHP
  * build_metadata → get_term_by_tipo, application lang with fallback to any
- * non-empty term). Empty string when the node has no term (PHP casts null→'').
+ * non-empty term). Empty string when the node has no term (PHP casts null→''),
+ * and for a model='label' node (refuseLabelNode — dev/test throw, production
+ * logs once): a by-tipo term read is a guarded home
+ * (test/unit/term_by_tipo_label_guard.test.ts census).
  */
 async function resolveSectionLabel(sectionTipo: string): Promise<string> {
-	const rows = (await sql`SELECT term FROM dd_ontology WHERE tipo = ${sectionTipo} LIMIT 1`) as {
-		term: Record<string, string> | null;
-	}[];
+	const rows =
+		(await sql`SELECT term, model FROM dd_ontology WHERE tipo = ${sectionTipo} LIMIT 1`) as {
+			term: Record<string, string> | null;
+			model: string | null;
+		}[];
+	if (refuseLabelNode(sectionTipo, rows[0]?.model)) return '';
 	const term = rows[0]?.term;
 	if (term == null) return '';
 	const appLang = config.menu.applicationLang;

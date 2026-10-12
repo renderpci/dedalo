@@ -197,6 +197,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/search_related_page_window_native.test.ts
 	test/unit/filter_projects_membership_native.test.ts
 	test/unit/filter_projects_scope_native.test.ts
+	test/unit/term_by_tipo_label_guard.test.ts
 )
 
 # ── THE STAGES ARE INDEPENDENT ───────────────────────────────────────────────

@@ -1,6 +1,13 @@
 {
 	"active": "Actiu",
 	"activity": "Activitat",
+	"activity_login": "Entrada",
+	"activity_logout": "Eixida",
+	"activity_new_file_version": "Nova versió",
+	"activity_recover_component": "Recuperar component",
+	"activity_recover_section": "Recuperar secció",
+	"activity_statistics": "Estadístiques",
+	"activity_upload_complete": "Càrrega completada",
 	"add_file": "Afegir fitxers",
 	"add_group": "Afegeix grup",
 	"add_sample_data": "Afegir dades d'exemple",
