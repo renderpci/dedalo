@@ -181,7 +181,7 @@ describe('a whole full-screen walk never draws a secret (a–d)', () => {
 			const probes = fakeProbes();
 			probes.database = async (answers, secret) => {
 				probes.calls.push({ probe: 'db', answers, secret });
-				return { ok: true, msg: 'reached \x1b]0;PwnedTitle\x07\x1b[31mdb\x1b[0m' };
+				return { ok: true, detail: 'reached \x1b]0;PwnedTitle\x07\x1b[31mdb\x1b[0m' };
 			};
 			const prompter = drivenPrompter(rig, script, keys);
 			const result = await runInteractiveInstall({

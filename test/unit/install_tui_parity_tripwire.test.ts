@@ -42,7 +42,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type FrontEndResult, writeAnswersFile } from '../../src/core/install/front_end.ts';
@@ -65,7 +65,7 @@ import {
 	type PlainScript,
 	scriptedInstallPrompter,
 } from '../../src/core/install/ui_plain/prompter.ts';
-import { decided, writeLocalOntologySource } from '../helpers/install_answer_cases.ts';
+import { decided, localOntologySource } from '../helpers/install_answer_cases.ts';
 import {
 	allCases,
 	NOT_PLAIN,
@@ -92,9 +92,17 @@ import {
 } from '../helpers/install_tui_driver.ts';
 
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_tui_parity_'));
+
+/** The local ontology source, written into THIS gate's mkdtemp (the helper only returns bytes). */
+function writeSource(dir: string, files = localOntologySource()): string {
+	mkdirSync(dir, { recursive: true });
+	for (const [name, bytes] of files) writeFileSync(join(dir, name), bytes);
+	return dir;
+}
+
 afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
 
-const SOURCE_DIR = writeLocalOntologySource(join(scratchRoot, 'ontology_source'));
+const SOURCE_DIR = writeSource(join(scratchRoot, 'ontology_source'));
 const LOCAL = await resolveOntologyCatalog(
 	{ kind: 'local', path: SOURCE_DIR },
 	{ allowedServers: [] },
@@ -331,13 +339,15 @@ describe('an edit from the Review installs the edited plan (d)', () => {
 		]);
 		let edited = false;
 		const { result } = await runTui(script, false, {
+			// The FIRST Review edits the answers; a later Review (after the edit) leaves them.
 			reviewHook: () => {
-				if (edited) return;
-				edited = true;
-				script.answers['languages.langs'] = ['lg-eng', 'lg-fra'];
-				script.answers['languages.app_lang_default'] = 'lg-fra';
-				script.answers['languages.data_lang_default'] = 'lg-eng';
-				script.answers['mail.mailer'] = false;
+				if (!edited) {
+					edited = true;
+					script.answers['languages.langs'] = ['lg-eng', 'lg-fra'];
+					script.answers['languages.app_lang_default'] = 'lg-fra';
+					script.answers['languages.data_lang_default'] = 'lg-eng';
+					script.answers['mail.mailer'] = false;
+				}
 			},
 		});
 		const expected = planOf(

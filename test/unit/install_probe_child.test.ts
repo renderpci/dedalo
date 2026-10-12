@@ -28,17 +28,25 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SEED_DUMP_PATH } from '../../src/core/install/paths.ts';
 import { systemCheckRows } from '../../src/core/install/probes.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
-import { writeLocalOntologySource } from '../helpers/install_answer_cases.ts';
+import { localOntologySource } from '../helpers/install_answer_cases.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const CHILD = join(ROOT, 'src/core/install/install_probe.ts');
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_probe_child_'));
+
+/** The local ontology source, written into THIS gate's mkdtemp (the helper only returns bytes). */
+function writeSource(dir: string, files = localOntologySource()): string {
+	mkdirSync(dir, { recursive: true });
+	for (const [name, bytes] of files) writeFileSync(join(dir, name), bytes);
+	return dir;
+}
+
 afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
 const PRIVATE = mkdtempSync(join(scratchRoot, 'private_'));
 
@@ -121,7 +129,7 @@ describe('probe child — connections answer, never throw', () => {
 		);
 		expect(exitCode).toBe(0);
 		expect(answer.ok).toBe(false);
-		expect(String(answer.msg).length).toBeGreaterThan(0);
+		expect(String(answer.detail).length).toBeGreaterThan(0);
 		expectNoSentinel(stdout);
 	}, 60000);
 
@@ -142,7 +150,7 @@ describe('probe child — connections answer, never throw', () => {
 	}, 60000);
 
 	test('catalog: a LOCAL fixture source is offered (the parent never resolves it itself)', () => {
-		const source = writeLocalOntologySource(join(scratchRoot, 'source'));
+		const source = writeSource(join(scratchRoot, 'source'));
 		const { exitCode, answer } = child(
 			request('catalog', { update_servers: 'none', ontology_source: source }, { prior_env: {} }),
 		);
@@ -204,7 +212,7 @@ describe('probe child — the environment it inherits', () => {
 		// script named `run` in cwd, the "child" is a reporter of its own environment.
 		writeFileSync(
 			join(dir, 'run'),
-			'printf \'{"ok":true,"msg":"%s"}\\n\' "${DEDALO_INSTALL_ROOT_PASSWORD-absent}"\n',
+			'printf \'{"ok":true,"detail":"%s"}\\n\' "${DEDALO_INSTALL_ROOT_PASSWORD-absent}"\n',
 		);
 		const driver = join(dir, 'driver.ts');
 		writeFileSync(
@@ -214,7 +222,7 @@ describe('probe child — the environment it inherits', () => {
 				`import { childProbes } from ${JSON.stringify(join(ROOT, 'src/core/install/install_probe_client.ts'))};`,
 				"unsetProcessEnv(['DEDALO_INSTALL_ROOT_PASSWORD']);",
 				`const probes = childProbes({ execPath: '/bin/sh', cwd: ${JSON.stringify(dir)} });`,
-				'const client = (await probes.media({})).msg;',
+				'const client = (await probes.media({})).detail;',
 				`const control = Bun.spawnSync(['/bin/sh', 'run'], { cwd: ${JSON.stringify(dir)} }).stdout.toString();`,
 				'console.log(JSON.stringify({ client, control }));',
 			].join('\n'),

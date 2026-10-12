@@ -327,7 +327,7 @@ async function refreshCatalog(session: Session): Promise<void> {
 		session.raw,
 		session.deps.priorEnv,
 	);
-	session.catalog = { catalog: result.catalog, ok: result.ok, msg: result.msg };
+	session.catalog = { catalog: result.catalog, ok: result.ok, detail: result.detail };
 	session.catalogKey = key;
 }
 
@@ -511,7 +511,9 @@ function noticeLine(notice: { level: string; text: string }): string {
 /** The probe's verdict lines (the System check: its rows, from the rebuilt screen). */
 function probeLines(session: Session, screen: Screen, outcome: ProbeOutcome): string[] {
 	if (screen.id === 'system') return (screenOf(session, 'system')?.notices ?? []).map(noticeLine);
-	return [outcome.ok ? NOTICE_TEXT.probeOk(outcome.msg) : NOTICE_TEXT.probeFailed(outcome.msg)];
+	return [
+		outcome.ok ? NOTICE_TEXT.probeOk(outcome.detail) : NOTICE_TEXT.probeFailed(outcome.detail),
+	];
 }
 
 /** The probe's outcome: the recorded one, else a fresh run (recorded; a Nav is not a verdict). */
@@ -1113,7 +1115,7 @@ function newSession(deps: InteractiveDeps): Session {
 		acknowledged: new Set(),
 		probes: {},
 		probeKeys: {},
-		catalog: { catalog: null, ok: true, msg: '' },
+		catalog: { catalog: null, ok: true, detail: '' },
 		catalogKey: null,
 		asked: new Set(),
 		seen: new Set(),

@@ -52,7 +52,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { offeredHierarchies, TOPONYMY_TYPOLOGY_ID } from '../../src/core/install/hierarchy_meta.ts';
@@ -94,17 +94,25 @@ import { multiCommand, multiResult, multiState } from '../../src/core/install/ui
 import {
 	decided,
 	declaredThesauri,
+	localOntologySource,
 	WIZARD_DEFAULT_ONTOLOGIES,
-	writeLocalOntologySource,
 } from '../helpers/install_answer_cases.ts';
 import { MAXIMAL_RAW, modelInput } from '../helpers/install_plain_script.ts';
 import { directImports, REPO_ROOT, reachableModules } from '../helpers/request_path_closure.ts';
 import { writePathSourceFiles } from '../helpers/write_path_corpus.ts';
 
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_screen_model_'));
+
+/** The local ontology source, written into THIS gate's mkdtemp (the helper only returns bytes). */
+function writeSource(dir: string, files = localOntologySource()): string {
+	mkdirSync(dir, { recursive: true });
+	for (const [name, bytes] of files) writeFileSync(join(dir, name), bytes);
+	return dir;
+}
+
 afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
 
-const SOURCE_DIR = writeLocalOntologySource(join(scratchRoot, 'ontology_source'));
+const SOURCE_DIR = writeSource(join(scratchRoot, 'ontology_source'));
 const LOCAL = await resolveOntologyCatalog(
 	{ kind: 'local', path: SOURCE_DIR },
 	{ allowedServers: [] },
@@ -137,7 +145,7 @@ function askedKeys(screens: readonly Screen[]): Set<string> {
 const withLocal = (raw: Record<string, unknown>): ScreenModelInput =>
 	modelInput(raw, {
 		catalogs: {
-			ontology: { catalog: LOCAL_CATALOG, ok: true, msg: '' },
+			ontology: { catalog: LOCAL_CATALOG, ok: true, detail: '' },
 			thesauri: modelInput({}).catalogs.thesauri,
 		},
 	});

@@ -115,18 +115,26 @@ async function handshake(
 		: sendTestMail(transporter, o, target);
 }
 
+/** The test target (null = none asked), or why the probe cannot start — no host, a bad target (ONE refusal exit). */
+function preflight(
+	o: Record<string, unknown>,
+	host: string,
+	sendTo: string | undefined,
+): { refusal: string } | { target: { to: string; from: string } | null } {
+	if (host === '') return { refusal: 'SMTP host is required' };
+	const target = testTarget(o, sendTo);
+	return target !== null && 'refusal' in target ? target : { target };
+}
+
 export async function testMailerConnection(
 	o: Record<string, unknown>,
 	sendTo?: string,
 ): Promise<MailerProbeResult> {
 	const host = String(o.smtp_host ?? '').trim();
-	if (host === '') {
-		return { ok: false, msg: 'SMTP host is required' };
-	}
-	const target = testTarget(o, sendTo);
-	if (target !== null && 'refusal' in target) return { ok: false, msg: target.refusal };
+	const checked = preflight(o, host, sendTo);
+	if ('refusal' in checked) return { ok: false, msg: checked.refusal };
 	try {
-		return await handshake(o, host, target);
+		return await handshake(o, host, checked.target);
 	} catch (error) {
 		return transportFailure(error);
 	}

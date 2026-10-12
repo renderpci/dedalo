@@ -146,20 +146,22 @@ describe('the server never reaches the UI (b)', () => {
 function blockingPreload(withUi: boolean): string {
 	const path = join(scratchRoot, withUi ? 'no_ui_preload.ts' : 'no_opentui_preload.ts');
 	const filter = withUi ? '/^@opentui\\/|tui_loader\\.ts$|install\\/ui\\//' : '/^@opentui\\//';
+	// A template literal on purpose: the plugin runs in the SPAWNED installer's
+	// process (its --preload), never in this one — mock_isolation_tripwire rule 4
+	// counts an in-process plugin, and a template-literal driver is how it tells
+	// the two apart.
 	writeFileSync(
 		path,
-		[
-			"import { plugin } from 'bun';",
-			'plugin({',
-			"\tname: 'no-opentui',",
-			'\tsetup(build) {',
-			`\t\tbuild.onResolve({ filter: ${filter} }, (args) => {`,
-			'\t\t\tthrow new Error(`@opentui unavailable: ${args.path}`);',
-			'\t\t});',
-			'\t},',
-			'});',
-			'',
-		].join('\n'),
+		`import { plugin } from 'bun';
+plugin({
+	name: 'no-opentui',
+	setup(build) {
+		build.onResolve({ filter: ${filter} }, (args) => {
+			throw new Error(\`@opentui unavailable: \${args.path}\`);
+		});
+	},
+});
+`,
 	);
 	return path;
 }

@@ -52,7 +52,7 @@ export function modelInput(
 		raw,
 		secretsGiven: {},
 		priorEnv: {},
-		catalogs: { ontology: { catalog: null, ok: true, msg: '' }, thesauri: thesaurusOffer() },
+		catalogs: { ontology: { catalog: null, ok: true, detail: '' }, thesauri: thesaurusOffer() },
 		host: {},
 		probes: {},
 		acknowledged: new Set(),
@@ -155,8 +155,8 @@ export function fakeProbes(
 	const calls: FakeProbeCall[] = [];
 	const outcome = (probe: string): ProbeOutcome =>
 		options.fail?.includes(probe) === true
-			? { ok: false, msg: `${probe} unreachable (fake)` }
-			: { ok: true, msg: `${probe} ok (fake)` };
+			? { ok: false, detail: `${probe} unreachable (fake)` }
+			: { ok: true, detail: `${probe} ok (fake)` };
 	return {
 		calls,
 		system: async (route) => {
@@ -186,7 +186,7 @@ export function fakeProbes(
 		},
 		ontologyCatalog: async (answers) => {
 			calls.push({ probe: 'catalog', answers });
-			return { ok: true, msg: '', catalog: options.catalog ?? null };
+			return { ok: true, detail: '', catalog: options.catalog ?? null };
 		},
 	};
 }

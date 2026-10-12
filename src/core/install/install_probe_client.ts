@@ -90,7 +90,7 @@ function forms(secrets: ProbeRequest['secrets']): string[] {
 		.flatMap((value) => [value, JSON.stringify(value).slice(1, -1)]);
 }
 
-/** Redact `msg` (and `rows[].detail`) of a child's answer. */
+/** Redact `detail` (and `rows[].detail`) of a child's answer. */
 function redactOutcome<T>(value: T, secrets: readonly string[]): T {
 	return JSON.parse(redactSecrets(JSON.stringify(value), secrets)) as T;
 }
@@ -140,7 +140,7 @@ async function runChild(
 			return redactOutcome(answer as Record<string, unknown>, secrets);
 		}
 		const why = timedOut ? `timed out after ${Math.round(bound / 1000)} s` : silentExit(ended);
-		return { ok: false, msg: redactSecrets(`the ${request.probe} probe ${why}`, secrets) };
+		return { ok: false, detail: redactSecrets(`the ${request.probe} probe ${why}`, secrets) };
 	} finally {
 		clearTimeout(timer);
 	}
@@ -168,7 +168,7 @@ function silentExit(ended: { stderr: string; exitCode: number }): string {
 function outcomeOf(answer: Record<string, unknown>): ProbeOutcome {
 	return {
 		ok: answer.ok === true,
-		msg: String(answer.msg ?? ''),
+		detail: String(answer.detail ?? ''),
 		...(Array.isArray(answer.rows) ? { rows: answer.rows as ProbeOutcome['rows'] } : {}),
 		...(typeof answer.version === 'string' ? { version: answer.version } : {}),
 		...(typeof answer.seedPath === 'string' ? { seedPath: answer.seedPath } : {}),
@@ -219,7 +219,7 @@ export function childProbes(options: ChildProbeOptions): InstallProbes {
 			});
 			return {
 				ok: answer.ok === true,
-				msg: String(answer.msg ?? ''),
+				detail: String(answer.detail ?? ''),
 				catalog: (answer.catalog ?? null) as CatalogProbeResult['catalog'],
 			};
 		},

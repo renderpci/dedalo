@@ -239,7 +239,8 @@ export interface SystemCheckRow {
 /** A probe's answer as the model reads it. */
 export interface ProbeOutcome {
 	ok: boolean;
-	msg: string;
+	/** the probe's sentence (an internal shape, never a wire envelope: no `msg`). */
+	detail: string;
 	/** system only: the rows, the engine version, the seed path. */
 	rows?: SystemCheckRow[];
 	version?: string;
@@ -248,7 +249,7 @@ export interface ProbeOutcome {
 
 export interface InstallCatalogs {
 	/** null = not fetched (or unreachable) → the built-in catalog is offered. */
-	ontology: { catalog: OntologyCatalog | null; ok: boolean; msg: string };
+	ontology: { catalog: OntologyCatalog | null; ok: boolean; detail: string };
 	thesauri: { view: ReturnType<typeof hierarchyChoiceView> } | { error: string };
 }
 
@@ -637,8 +638,8 @@ function probeNotices(
 	if (outcome === undefined) return [];
 	return [
 		outcome.ok
-			? { level: 'info', text: render(NOTICE_TEXT.probeOk(outcome.msg)) }
-			: { level: failLevel, text: render(NOTICE_TEXT.probeFailed(outcome.msg)) },
+			? { level: 'info', text: render(NOTICE_TEXT.probeOk(outcome.detail)) }
+			: { level: failLevel, text: render(NOTICE_TEXT.probeFailed(outcome.detail)) },
 	];
 }
 
@@ -695,7 +696,7 @@ function systemNotices(outcome: ProbeOutcome | undefined): Notice[] {
 			level: failed > 0 ? ('error' as const) : ('info' as const),
 			text: NOTICE_TEXT.systemSummary(failed, warned),
 		},
-		...when(!outcome.ok && rows.length === 0, { level: 'error' as const, text: outcome.msg }),
+		...when(!outcome.ok && rows.length === 0, { level: 'error' as const, text: outcome.detail }),
 	];
 }
 
@@ -724,7 +725,7 @@ function databaseScreen(ctx: Ctx, frame: Frame): Screen {
 				: [
 						{
 							level: probe.ok ? 'info' : 'error',
-							text: NOTICE_TEXT.databaseProbe(probe.msg),
+							text: NOTICE_TEXT.databaseProbe(probe.detail),
 						} as Notice,
 					]),
 		],
@@ -911,8 +912,8 @@ function updateServerOptions(ctx: Ctx): Option[] {
 
 /** Where the offered ontologies come from: the catalog read, or why it could not be. */
 function catalogNotices(catalog: InstallCatalogs['ontology']): Notice[] {
-	if (!catalog.ok && catalog.msg !== '') {
-		return [{ level: 'warn', text: NOTICE_TEXT.catalogUnreachable(catalog.msg) }];
+	if (!catalog.ok && catalog.detail !== '') {
+		return [{ level: 'warn', text: NOTICE_TEXT.catalogUnreachable(catalog.detail) }];
 	}
 	return catalog.catalog === null
 		? []

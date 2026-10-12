@@ -30,7 +30,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { InstallRoute } from '../../src/core/install/install_plan.ts';
@@ -43,13 +43,21 @@ import {
 	type Screen,
 } from '../../src/core/install/screen_model.ts';
 import { ROUTE_TEXT } from '../../src/core/install/screen_text.ts';
-import { writeLocalOntologySource } from '../helpers/install_answer_cases.ts';
+import { localOntologySource } from '../helpers/install_answer_cases.ts';
 import { modelInput, thesaurusOffer } from '../helpers/install_plain_script.ts';
 import { openRig, type TuiRig } from '../helpers/install_tui_driver.ts';
 
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_tui_frames_'));
+
+/** The local ontology source, written into THIS gate's mkdtemp (the helper only returns bytes). */
+function writeSource(dir: string, files = localOntologySource()): string {
+	mkdirSync(dir, { recursive: true });
+	for (const [name, bytes] of files) writeFileSync(join(dir, name), bytes);
+	return dir;
+}
+
 afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
-const SOURCE_DIR = writeLocalOntologySource(join(scratchRoot, 'ontology_source'));
+const SOURCE_DIR = writeSource(join(scratchRoot, 'ontology_source'));
 const LOCAL = await resolveOntologyCatalog(
 	{ kind: 'local', path: SOURCE_DIR },
 	{ allowedServers: [] },
@@ -69,7 +77,7 @@ function screensOf(route: InstallRoute, raw: Record<string, unknown> = {}): Scre
 			{ route, ontology_source: SOURCE_DIR, ontologies: 'zzsma', ...raw },
 			{
 				catalogs: {
-					ontology: { catalog: LOCAL.catalog, ok: true, msg: '' },
+					ontology: { catalog: LOCAL.catalog, ok: true, detail: '' },
 					thesauri: thesaurusOffer(),
 				},
 			},
@@ -511,7 +519,9 @@ describe('every message reaches the operator (h)', () => {
 
 	test('Ctrl-C on a FAILED Done card: exit 1 (not 130), the summary and resume hint printed', async () => {
 		await withRig(SIZES[0], async (rig) => {
-			rig.front.reporter.begin?.([{ id: 'install_db_from_default_file', label: 'Restore the core seed' }]);
+			rig.front.reporter.begin?.([
+				{ id: 'install_db_from_default_file', label: 'Restore the core seed' },
+			]);
 			void rig.front.reporter.finish(
 				{
 					exitCode: 1,
@@ -550,7 +560,9 @@ describe('every message reaches the operator (h)', () => {
 
 	test('the salt shown during a run that then FAILED is on the failed card', async () => {
 		await withRig(SIZES[0], async (rig) => {
-			rig.front.reporter.begin?.([{ id: 'install_db_from_default_file', label: 'Restore the core seed' }]);
+			rig.front.reporter.begin?.([
+				{ id: 'install_db_from_default_file', label: 'Restore the core seed' },
+			]);
 			rig.front.reporter.io.showOnce?.(['salt: s3cr3t-salt-value']);
 			void rig.front.reporter.finish(
 				{

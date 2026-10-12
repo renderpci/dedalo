@@ -45,7 +45,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -77,8 +77,8 @@ import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import {
 	decided,
 	declaredThesauri,
+	localOntologySource,
 	WIZARD_DEFAULT_ONTOLOGIES,
-	writeLocalOntologySource,
 } from '../helpers/install_answer_cases.ts';
 import {
 	allCases,
@@ -96,9 +96,17 @@ import {
 } from '../helpers/install_plain_script.ts';
 
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_plain_parity_'));
+
+/** The local ontology source, written into THIS gate's mkdtemp (the helper only returns bytes). */
+function writeSource(dir: string, files = localOntologySource()): string {
+	mkdirSync(dir, { recursive: true });
+	for (const [name, bytes] of files) writeFileSync(join(dir, name), bytes);
+	return dir;
+}
+
 afterAll(() => rmSync(scratchRoot, { recursive: true, force: true }));
 
-const SOURCE_DIR = writeLocalOntologySource(join(scratchRoot, 'ontology_source'));
+const SOURCE_DIR = writeSource(join(scratchRoot, 'ontology_source'));
 const LOCAL = await resolveOntologyCatalog(
 	{ kind: 'local', path: SOURCE_DIR },
 	{ allowedServers: [] },
@@ -255,7 +263,7 @@ describe('plain mode ≡ flags ≡ answers file ≡ wizard (a, b)', () => {
 						ontology: {
 							catalog: answerCase.local ? LOCAL_CATALOG : null,
 							ok: true,
-							msg: '',
+							detail: '',
 						},
 						thesauri: thesaurusOffer(),
 					},
@@ -496,7 +504,7 @@ describe('a probe verdict holds only for the answers it tested (g)', () => {
 				const outcome = await fake.system(route);
 				return route === 'trial' || route === 'docker'
 					? outcome
-					: { ...outcome, ok: false, msg: 'psql not found (fake)' };
+					: { ...outcome, ok: false, detail: 'psql not found (fake)' };
 			},
 		};
 		const result = await runInteractiveInstall({
@@ -573,16 +581,19 @@ describe('the reviewed decisions bind the run (f)', () => {
 		const reviewed = reviewDecisions(reviewedPlan);
 		expect(reviewedDecisionsRefusal(reviewed, planOf(raw, true))).toBeNull();
 		// The source changed between the Review and the run: zzsma no longer declares zzsmb.
-		const changedDir = writeLocalOntologySource(join(scratchRoot, 'changed_source'), [
-			{
-				tld: 'zzsma',
-				name: 'zz screen A',
-				typologyId: 8,
-				typologyName: 'Catalog',
-				dependencies: [{ tld: 'dd', main: 'ontology35', mandatory: true }],
-				nodes: [{ id: 1, parent: 'zzsma0', model: 'dd6', term: 'A root' }],
-			},
-		]);
+		const changedDir = writeSource(
+			join(scratchRoot, 'changed_source'),
+			localOntologySource([
+				{
+					tld: 'zzsma',
+					name: 'zz screen A',
+					typologyId: 8,
+					typologyName: 'Catalog',
+					dependencies: [{ tld: 'dd', main: 'ontology35', mandatory: true }],
+					nodes: [{ id: 1, parent: 'zzsma0', model: 'dd6', term: 'A root' }],
+				},
+			]),
+		);
 		return resolveOntologyCatalog({ kind: 'local', path: changedDir }, { allowedServers: [] }).then(
 			(changed) => {
 				try {

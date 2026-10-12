@@ -107,7 +107,7 @@ async function drivenRun(review: string[]) {
 	// An untrusted message carrying escape sequences (a server's text): must arrive inert.
 	probes.database = async (answers, secret) => {
 		probes.calls.push({ probe: 'db', answers, secret });
-		return { ok: true, msg: 'reached \x1b]0;owned\x07\x1b[31mdb\x1b[0m' };
+		return { ok: true, detail: 'reached \x1b]0;owned\x07\x1b[31mdb\x1b[0m' };
 	};
 	try {
 		const result = await runInteractiveInstall({
@@ -214,7 +214,7 @@ describe('plain mode — a probe child gets its secret on stdin only (c)', () =>
 			seen.push(record);
 			const echo = (): string => {
 				const request = JSON.parse(record.stdin) as { secrets: Record<string, string> };
-				return `${JSON.stringify({ ok: false, msg: `refused for ${Object.values(request.secrets).join(',')}` })}\n`;
+				return `${JSON.stringify({ ok: false, detail: `refused for ${Object.values(request.secrets).join(',')}` })}\n`;
 			};
 			let stdout = '';
 			return {
@@ -256,8 +256,8 @@ describe('plain mode — a probe child gets its secret on stdin only (c)', () =>
 		expect(seen[2]?.stdin).toContain(SECRETS.smtp.value);
 		// What came back echoed the secret: redacted.
 		for (const outcome of [db, mysql, mail]) {
-			expect(outcome.msg).toContain('***');
-			expectNoSecret(outcome.msg);
+			expect(outcome.detail).toContain('***');
+			expectNoSecret(outcome.detail);
 		}
 	});
 });

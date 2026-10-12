@@ -15,12 +15,12 @@
  * time or a generic one the generic_tld_tripwire allows (ad, fr, htoponymy) —
  * never an install's own TLD.
  *
- * Writes nothing itself: `writeLocalOntologySource` writes ONLY into the
- * directory its caller made (a mkdtemp dir the caller removes).
+ * WRITES NOTHING (the ontology_package_fixture.ts law): `localOntologySource`
+ * RETURNS the source's files as bytes; the gate writes them into its own
+ * mkdtemp dir (and removes it) — so this helper needs no `assertTestDatabase`
+ * and no marker-tripwire row: nothing here can reach a database or a media root.
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { buildInstallContext } from '../../src/core/install/context.ts';
 import type { InstallPlan } from '../../src/core/install/install_plan.ts';
 import {
@@ -301,16 +301,14 @@ export const SCREEN_FIXTURE_ONTOLOGIES: readonly FixtureOntologyTld[] = Object.f
 	},
 ]);
 
-/** Write a local ontology source (the server export layout) into `dir` (the caller's mkdtemp). */
-export function writeLocalOntologySource(
-	dir: string,
+/**
+ * A local ontology source (the server export layout) as bytes by file name —
+ * the gate writes them into its own mkdtemp dir (see the header).
+ */
+export function localOntologySource(
 	ontologies: readonly FixtureOntologyTld[] = SCREEN_FIXTURE_ONTOLOGIES,
-): string {
-	mkdirSync(dir, { recursive: true });
-	for (const [name, bytes] of buildOntologyPackage([...ontologies])) {
-		writeFileSync(join(dir, name), bytes);
-	}
-	return dir;
+): Map<string, Uint8Array> {
+	return buildOntologyPackage([...ontologies]);
 }
 
 // ── the route cases (the terminal front ends only) ───────────────────────────
@@ -352,7 +350,7 @@ const IDENTITY_ARGV = [
  * taken as shown, and overridden), docker, trial, an explicit developer,
  * production with diffusion + mail, air-gapped with a local source and its
  * declared dependencies (one declined), thesauri explicit / a declared one
- * declined. `sourceDir` = a local fixture source (writeLocalOntologySource).
+ * declined. `sourceDir` = a local fixture source (localOntologySource, written by the gate).
  */
 export function routeCases(sourceDir: string): RouteCase[] {
 	const declared = declaredThesauri(WIZARD_DEFAULT_ONTOLOGIES).install;

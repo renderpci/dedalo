@@ -11,7 +11,8 @@
  * seeds the install's environment first). So every config-touching import here
  * is DYNAMIC, made after the child seeded a neutral boot environment.
  *
- * Each probe answers a PROBE OUTCOME (`{ok, msg}`) and never throws for an
+ * Each probe answers a PROBE OUTCOME (`{ok, detail}` — an internal shape, never
+ * the wire envelope's failure spelling) and never throws for an
  * unreachable server — that is the answer to the question. Every function takes
  * the PLAIN answers so far plus the one secret it needs.
  */
@@ -26,6 +27,7 @@ import {
 	ontologyServersFor,
 	ontologySourceFor,
 } from './install_plan.ts';
+import { probeFailureSentence } from './install_probe_failure.ts';
 import type { OntologyCatalog } from './ontology_choice.ts';
 import type { ProbeOutcome, SystemCheckRow } from './screen_model.ts';
 import type { InstallServerInfo } from './server_info.ts';
@@ -87,7 +89,7 @@ function infoRows(info: InstallServerInfo): SystemCheckRow[] {
 	return [
 		fact('Platform', info.platform),
 		fact('Memory', info.ram),
-		fact('CPU', info.cpu_mhz),
+		fact('Processor', info.cpu_mhz),
 		fact('Disk', info.disk_free_space),
 		fact('PostgreSQL version', info.pg_version),
 		fact('ImageMagick', info.imagemagick, 'missing — images are not processed without it'),
@@ -124,7 +126,7 @@ export async function systemCheck(route: InstallRoute): Promise<ProbeOutcome> {
 	const failed = rows.filter((row) => row.state === 'fail').length;
 	return {
 		ok: failed === 0,
-		msg: failed === 0 ? 'system ready' : `${failed} check(s) failed`,
+		detail: failed === 0 ? 'system ready' : `${failed} check(s) failed`,
 		rows,
 		version: DEDALO_VERSION,
 		seedPath: SEED_DUMP_PATH,
@@ -142,7 +144,7 @@ function posted(answers: Answers, secret: Record<string, string>): Record<string
 export async function databaseProbe(answers: Answers, dbPassword: string): Promise<ProbeOutcome> {
 	const { testDbConnection } = await import('./db_probe.ts');
 	const result = await testDbConnection(posted(answers, { db_password: dbPassword }));
-	return { ok: result.can_connect && result.db_exists, msg: result.msg };
+	return { ok: result.can_connect && result.db_exists, detail: result.msg };
 }
 
 export async function diffusionProbe(
@@ -151,7 +153,7 @@ export async function diffusionProbe(
 ): Promise<ProbeOutcome> {
 	const { testDiffusionConnection } = await import('./db_probe.ts');
 	const result = await testDiffusionConnection(posted(answers, { mysql_password: mysqlPassword }));
-	return { ok: result.ok, msg: result.msg };
+	return { ok: result.ok, detail: result.msg };
 }
 
 /** The SMTP handshake, then — with `sendTo` — one real test mail (mailer_probe.ts). */
@@ -162,7 +164,7 @@ export async function mailerProbe(
 ): Promise<ProbeOutcome> {
 	const { testMailerConnection } = await import('./mailer_probe.ts');
 	const result = await testMailerConnection(posted(answers, { smtp_pass: smtpPass }), sendTo);
-	return { ok: result.ok, msg: result.msg };
+	return { ok: result.ok, detail: result.msg };
 }
 
 // ── the media directory ──────────────────────────────────────────────────────
@@ -188,21 +190,22 @@ function nearestExisting(path: string): string | null {
  */
 export async function mediaProbe(answers: Answers): Promise<ProbeOutcome> {
 	const path = normalizeInstallAnswers(answers).answers.media_path;
-	if (path === '') return { ok: true, msg: 'not written — the engine default media root' };
-	if (!isAbsolute(path)) return { ok: false, msg: `${path} is not an absolute path` };
+	if (path === '') return { ok: true, detail: 'not written — the engine default media root' };
+	if (!isAbsolute(path)) return { ok: false, detail: `${path} is not an absolute path` };
 	const existing = nearestExisting(path);
-	if (existing === null) return { ok: false, msg: `no existing ancestor of ${path}` };
+	if (existing === null) return { ok: false, detail: `no existing ancestor of ${path}` };
 	try {
 		accessSync(existing, constants.W_OK);
 	} catch {
 		return {
 			ok: false,
-			msg: `${existing} is not writable by this user — create ${path} owned by the instance user first`,
+			detail: `${existing} is not writable by this user — create ${path} owned by the instance user first`,
 		};
 	}
 	return {
 		ok: true,
-		msg: existing === resolve(path) ? `${path} exists and is writable` : `${path} can be created`,
+		detail:
+			existing === resolve(path) ? `${path} exists and is writable` : `${path} can be created`,
 	};
 }
 
@@ -241,13 +244,13 @@ export async function catalogProbe(
 		resolved.cleanup();
 		return {
 			ok: true,
-			msg: `ontologies offered by ${ontologySourceLabel(source)}`,
+			detail: `ontologies offered by ${ontologySourceLabel(source)}`,
 			catalog: displayCatalog(resolved.catalog),
 		};
 	} catch (error) {
 		return {
 			ok: false,
-			msg: error instanceof Error ? error.message : String(error),
+			detail: probeFailureSentence('catalog', error),
 			catalog: null,
 		};
 	}

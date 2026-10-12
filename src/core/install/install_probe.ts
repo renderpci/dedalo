@@ -11,7 +11,8 @@
  * PROTOCOL: ONE JSON request on stdin — `{probe, answers, secrets, send_to?,
  * prior_env?}`; the secrets travel ONLY there (never argv, never env) — and
  * ONE JSON line on stdout (the probe's outcome). An unknown probe or a
- * malformed request exits 2. A thrown error becomes `{ok:false, msg}` with
+ * malformed request exits 2. A thrown error becomes `{ok:false, detail}` (the
+ * deliberate sentence of install_probe_failure.ts — the raw text goes to stderr) with
  * every secret of the request redacted; the request is never echoed. Anything
  * an engine module prints goes to stderr (the parent redacts and drops it), so
  * stdout carries exactly the one line.
@@ -24,6 +25,7 @@
 
 import { seedProcessEnv } from '../../config/env.ts';
 import { buildInstallPlan, cliBootEnv, INSTALL_ROUTES, type InstallRoute } from './install_plan.ts';
+import { probeFailureSentence } from './install_probe_failure.ts';
 import { redactSecrets } from './run_files.ts';
 
 export const PROBE_NAMES = ['system', 'db', 'media', 'diffusion', 'mailer', 'catalog'] as const;
@@ -157,16 +159,16 @@ export async function probeChildMain(
 ): Promise<{ line: string; exitCode: 0 | 2 }> {
 	const request = parseProbeRequest(stdinText);
 	if (typeof request === 'string') {
-		return { line: JSON.stringify({ ok: false, msg: request }), exitCode: 2 };
+		return { line: JSON.stringify({ ok: false, detail: request }), exitCode: 2 };
 	}
 	const secrets = secretForms(request.secrets);
 	try {
 		const outcome = await runProbeRequest(request);
 		return { line: redactSecrets(JSON.stringify(outcome), secrets), exitCode: 0 };
 	} catch (error) {
-		const message = error instanceof Error ? error.message : String(error);
+		const sentence = probeFailureSentence(request.probe, error);
 		return {
-			line: JSON.stringify({ ok: false, msg: redactSecrets(message, secrets) }),
+			line: JSON.stringify({ ok: false, detail: redactSecrets(sentence, secrets) }),
 			exitCode: 0,
 		};
 	}

@@ -224,7 +224,7 @@ export type QuitReason = 'operator' | 'interrupted' | 'refused';
 /** The ontology catalog a source offers (null = unreachable: the built-in one is offered). */
 export interface CatalogProbeResult {
 	ok: boolean;
-	msg: string;
+	detail: string;
 	catalog: OntologyCatalog | null;
 }
 
