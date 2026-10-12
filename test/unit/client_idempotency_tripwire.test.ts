@@ -624,9 +624,17 @@ describe('C — the client census (TOTAL over client/ and tools/**/js)', () => {
 		// dd_utils_api get_process_status for its own background job (the same
 		// read-only follow shape as tool_import_files / tool_update_cache), so the
 		// population genuinely grew.
+		// 2026-10-12: 19 → 20 streaming sites. The ONE that arrived is
+		// client/dedalo/test/client/js/test_relogin_identity.js's
+		// `data_manager.request_fetch_stream({body: write_body()})` (67dc84bb34,
+		// the re-login identity latch suite: its unlatched control proves the
+		// fetch-stream door still sends before the latch). The census scope is
+		// all of client/, browser-suite files included (test_error_stream.js was
+		// already counted), so the population genuinely grew; no production
+		// streaming site was added.
 		expect(sites.length).toBeGreaterThanOrEqual(240);
 		expect(requests.length).toBeGreaterThanOrEqual(220);
-		expect(sites.length - requests.length).toBe(19);
+		expect(sites.length - requests.length).toBe(20);
 		// the finding's own headline sites are in the corpus, at the default
 		expect(
 			requests.some((s) => s.file.endsWith('section/js/section.js') && s.retries === null),

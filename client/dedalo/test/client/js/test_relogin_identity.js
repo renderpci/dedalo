@@ -94,23 +94,23 @@
 * latched and sends nothing; a build that must fetch is refused.
 */
 
-import {data_manager} from '../../../core/common/js/data_manager.js'
-import {get_instance, get_all_instances} from '../../../core/common/js/instances.js'
-import {build_autoload} from '../../../core/common/js/common.js'
-import {reset_unsaved_data} from '../../../core/common/js/events.js'
 import {ApiError} from '../../../core/common/js/api_error.js'
-import {event_manager} from '../../../core/common/js/event_manager.js'
+import {build_autoload} from '../../../core/common/js/common.js'
+import {data_manager} from '../../../core/common/js/data_manager.js'
 // namespace import ON PURPOSE: a missing door must fail the cases that need it,
 // not unlink the whole module before a single case can say what is missing
 import * as error_dispatch from '../../../core/common/js/error_dispatch.js'
-import {render_relogin} from '../../../core/login/js/render_login.js'
-import {create_transfer} from '../../../core/services/service_upload/js/upload_transport.js'
+import {event_manager} from '../../../core/common/js/event_manager.js'
+import {reset_unsaved_data} from '../../../core/common/js/events.js'
+import {get_all_instances, get_instance} from '../../../core/common/js/instances.js'
 import {login} from '../../../core/login/js/login.js'
+import {render_relogin} from '../../../core/login/js/render_login.js'
 import {send_lock_release_beacon} from '../../../core/page/js/page.js'
+import {create_transfer} from '../../../core/services/service_upload/js/upload_transport.js'
 import {agent_stream} from '../../../tools/tool_assistant/js/agent_stream.js'
 import {builder_stream} from '../../../tools/tool_sitebuilder/js/builder_stream.js'
 import {send_unload_cleanup} from '../../../tools/tool_transcription/js/tool_transcription.js'
-import {section_tipo, section_id, lang} from './elements.js'
+import {lang, section_id, section_tipo} from './elements.js'
 
 
 
@@ -272,7 +272,7 @@ describe('RELOGIN_IDENTITY — a queued action never resumes as another user', f
 		for (const login of login_instances()) {
 			try { await login.destroy(true, true, true) } catch (e) { console.error(e) }
 		}
-		document.querySelectorAll('.wrapper.page.loading').forEach(el => el.classList.remove('loading'))
+		document.querySelectorAll('.wrapper.page.loading').forEach(el => { el.classList.remove('loading') })
 		error_dispatch.reset_error_dispatch_state()
 		page_globals.user_id = s.page_user_id
 		for (const instance of s.instances) {
@@ -784,8 +784,8 @@ describe('RELOGIN_IDENTITY — a queued action never resumes as another user', f
 		}
 		// an XHR that never opens a socket: answers its load with a refusal so
 		// the transfer settles on its own (the positive control's outcome)
-		class CountingXhr extends EventTarget {
-			constructor() { super(); this.upload = new EventTarget(); this.status = 0; this.response = ''; this.responseText = '' }
+		class CountingXhr extends window.EventTarget {
+			constructor() { super(); this.upload = new window.EventTarget(); this.status = 0; this.response = ''; this.responseText = '' }
 			open() {}
 			setRequestHeader() {}
 			abort() {}
