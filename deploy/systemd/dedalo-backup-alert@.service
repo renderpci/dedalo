@@ -1,14 +1,13 @@
 # One instance's backup failure alarm (written by the installer). `%i` is the
 # INSTANCE (dedalo-backup@<i> names it in OnFailure=), so the alarm lands in
 # that instance's state directory — the one its maintenance panel reads — and
-# the script runs as the instance user, from the root-owned bin dir (critique
-# B12). The drop-in sets DEDALO_BACKUP_STATE_DIR.
+# the script runs as the service user, from the root-owned bin dir (critique
+# B12). The drop-in sets User=, Group=, DEDALO_BACKUP_STATE_DIR and the
+# ExecStart; without it this template runs nothing (fail-closed).
 
 [Unit]
 Description=Report that the Dedalo backup set of %i failed
 
 [Service]
 Type=oneshot
-User=ded_%i
-Group=ded_%i
-ExecStart=/opt/dedalo/instances/%i/bin/dedalo-backup-alert.sh dedalo-backup@%i.service
+ExecStart=/bin/false

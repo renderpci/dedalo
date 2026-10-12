@@ -307,7 +307,18 @@ export interface InstallAnswers {
 	tls_key_path: string;
 	/** production: 'create' (the installer creates role + database) | 'existing' (probed only). */
 	db_mode: string;
-	/** production: where the backup units write (default /home/ded_<i>/backups). */
+	/**
+	 * production: the INSTANCE DIR (owner decisions 2026-10-12 — any absolute
+	 * path, default /home/ded_<i>): its code (dedalo/), private settings
+	 * (private/) and backups (backups/). Created owned by the service user when
+	 * missing; an existing one is used only when empty or already the user's.
+	 */
+	install_dir: string;
+	/** production: the account the instance runs as (default ded_<i>; an existing one is used as is). */
+	service_user: string;
+	/** production: the group the web server joins ('' = the service user's own/primary group). */
+	service_group: string;
+	/** production: where the backup units write (default <install_dir>/backups). */
 	backup_dir: string;
 	/** production: this instance's backup also covers the host's site-builder store. Flags only. */
 	backup_site_builder: boolean;
@@ -389,6 +400,9 @@ const ANSWER_CLASS: Readonly<Record<keyof InstallAnswers, 'secret' | 'plain'>> =
 	tls_cert_path: 'plain',
 	tls_key_path: 'plain',
 	db_mode: 'plain',
+	install_dir: 'plain',
+	service_user: 'plain',
+	service_group: 'plain',
 	backup_dir: 'plain',
 	backup_site_builder: 'plain',
 	image_source: 'plain',
@@ -414,6 +428,9 @@ export const HOST_ONLY_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.f
 	'tls_cert_path',
 	'tls_key_path',
 	'db_mode',
+	'install_dir',
+	'service_user',
+	'service_group',
 	'backup_dir',
 	'backup_site_builder',
 	'image_source',
@@ -566,10 +583,13 @@ function parseRoute(value: unknown, problems: FieldError[]): InstallRoute {
  *    `/srv/dedalo/<i>/dedalo/media` (THE ROOT RULE: the site file's
  *    `root /srv/dedalo/<i>` + `/dedalo/media` must equal MEDIA_PATH — the
  *    pre-phase-4 `/srv/dedalo/<i>/media` could satisfy no root), socket
- *    `/run/dedalo-<i>/dedalo_ts.sock` (systemd RuntimeDirectory), backups
- *    `/home/ded_<i>/backups` (the code updater's `<install>/../backups`),
- *    publication database `web_<i>`, Let's Encrypt, a created database; '' while
- *    the instance is missing or malformed (its own error says so);
+ *    `/run/dedalo-<i>/dedalo_ts.sock` (systemd RuntimeDirectory), the install
+ *    folder `/home/ded_<i>` and the service user `ded_<i>` (LEVEL 1 — owner
+ *    decisions 2026-10-12), then (LEVEL 2, derived from level 1) backups
+ *    `<install_dir>/backups` (the code updater's `<tree>/../backups`) and the
+ *    PEER role = the service user, publication database `web_<i>`, Let's
+ *    Encrypt, a created database; '' while the instance is missing or
+ *    malformed (its own error says so);
  *  - docker / trial: the compose stack's constants (install.sh passes the
  *    SAME values as explicit flags — an older pulled image does not know
  *    `--route`; gate: install_screen_model_tripwire); trial has no TLS;
@@ -585,8 +605,16 @@ export interface RouteDefaults {
 	readonly mysql_database: string;
 	readonly tls_mode: string;
 	readonly db_mode: string;
+	readonly install_dir: string;
+	readonly service_user: string;
 	readonly backup_dir: string;
 	readonly image_source: string;
+}
+
+/** The level-1 answers the level-2 defaults (backup_dir, db_username) derive from. */
+export interface IdentityLevel {
+	readonly install_dir: string;
+	readonly service_user: string;
 }
 
 const STACK_DEFAULTS: RouteDefaults = Object.freeze({
@@ -599,6 +627,8 @@ const STACK_DEFAULTS: RouteDefaults = Object.freeze({
 	mysql_database: 'web_dedalo',
 	tls_mode: 'letsencrypt',
 	db_mode: '',
+	install_dir: '',
+	service_user: '',
 	backup_dir: '',
 	image_source: 'official',
 });
@@ -606,22 +636,48 @@ const STACK_DEFAULTS: RouteDefaults = Object.freeze({
 /** The local PostgreSQL socket directory a created (peer) production database is reached through. */
 export const LOCAL_PG_SOCKET_DIR = '/var/run/postgresql';
 
-/** A production instance's defaults (see RouteDefaults); '' names while the instance is not valid. */
-function productionDefaults(instance: string): RouteDefaults {
+/** The level-1 defaults of a production instance ('' while the instance is not valid). */
+export function productionIdentityDefaults(instance: string): IdentityLevel {
+	const named = INSTANCE_PATTERN.test(instance) ? instance : '';
+	return named === ''
+		? { install_dir: '', service_user: '' }
+		: { install_dir: `/home/ded_${named}`, service_user: `ded_${named}` };
+}
+
+/**
+ * A production instance's defaults (see RouteDefaults); '' names while the
+ * instance is not valid. `level` = the level-1 answers as given (the backup
+ * dir and the role derive from them, not from the instance).
+ */
+function productionDefaults(instance: string, level: IdentityLevel | null): RouteDefaults {
 	const named = INSTANCE_PATTERN.test(instance) ? instance : '';
 	const derive = (shape: (name: string) => string): string => (named === '' ? '' : shape(named));
+	const identity = productionIdentityDefaults(instance);
 	return {
 		db_hostname: 'localhost',
 		db_socket: LOCAL_PG_SOCKET_DIR,
 		db_database: derive((name) => `dedalo_${name}`),
-		db_username: derive((name) => `ded_${name}`),
 		media_path: derive((name) => `/srv/dedalo/${name}/dedalo/media`),
 		unix_socket: derive((name) => `/run/dedalo-${name}/dedalo_ts.sock`),
 		mysql_database: named === '' ? 'web_dedalo' : `web_${named}`,
 		tls_mode: 'letsencrypt',
 		db_mode: 'create',
-		backup_dir: derive((name) => `/home/ded_${name}/backups`),
+		install_dir: identity.install_dir,
+		service_user: identity.service_user,
+		...levelTwoDefaults(named, level ?? identity),
 		image_source: '',
+	};
+}
+
+/** The level-2 production defaults: the role and the backup dir follow the level-1 answers. */
+function levelTwoDefaults(
+	named: string,
+	level: IdentityLevel,
+): Pick<RouteDefaults, 'db_username' | 'backup_dir'> {
+	if (named === '') return { db_username: '', backup_dir: '' };
+	return {
+		db_username: level.service_user,
+		backup_dir: level.install_dir === '' ? '' : `${level.install_dir}/backups`,
 	};
 }
 
@@ -635,14 +691,26 @@ const DEVELOPER_DEFAULTS: RouteDefaults = Object.freeze({
 	mysql_database: 'web_dedalo',
 	tls_mode: '',
 	db_mode: '',
+	install_dir: '',
+	service_user: '',
 	backup_dir: '',
 	image_source: '',
 });
 
-export function routeDefaults(route: InstallRoute, instance: string): RouteDefaults {
+/**
+ * The route's defaults. LEVELLED (owner decisions 2026-10-12): `level` — the
+ * level-1 answers (install_dir, service_user) as the operator gave them — is
+ * what the level-2 production defaults (backup_dir, db_username) derive from;
+ * absent = the level-1 defaults themselves.
+ */
+export function routeDefaults(
+	route: InstallRoute,
+	instance: string,
+	level: IdentityLevel | null = null,
+): RouteDefaults {
 	if (route === 'docker') return STACK_DEFAULTS;
 	if (route === 'trial') return { ...STACK_DEFAULTS, tls_mode: 'none' };
-	if (route === 'production') return productionDefaults(instance);
+	if (route === 'production') return productionDefaults(instance, level);
 	return DEVELOPER_DEFAULTS;
 }
 
@@ -809,6 +877,9 @@ function hostAnswers(raw: RawAnswers, d: RouteDefaults) {
 		tls_cert_path: text(raw, 'tls_cert_path'),
 		tls_key_path: text(raw, 'tls_key_path'),
 		db_mode: textOr(raw, 'db_mode', d.db_mode),
+		install_dir: textOr(raw, 'install_dir', d.install_dir),
+		service_user: textOr(raw, 'service_user', d.service_user),
+		service_group: text(raw, 'service_group'),
 		backup_dir: textOr(raw, 'backup_dir', d.backup_dir),
 		backup_site_builder: flag(raw, 'backup_site_builder'),
 		image_source: textOr(raw, 'image_source', d.image_source),
@@ -834,7 +905,12 @@ export function normalizeInstallAnswers(raw: RawAnswers): {
 	const problems: FieldError[] = [];
 	const route = parseRoute(raw.route, problems);
 	const instance = text(raw, 'instance');
-	const defaults = routeDefaults(route, instance);
+	// Level 1 first (the instance's own defaults), then every default derived from it.
+	const identity = routeDefaults(route, instance);
+	const defaults = routeDefaults(route, instance, {
+		install_dir: textOr(raw, 'install_dir', identity.install_dir),
+		service_user: textOr(raw, 'service_user', identity.service_user),
+	});
 	const ontologyChoice = normalizeOntologyChoice(raw.ontologies);
 	const declinedChoice = normalizeDeclinedDependencies(raw.declined_dependencies);
 	const serversErrors: string[] = [];
@@ -1491,6 +1567,9 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--tls-cert', key: 'tls_cert_path', kind: 'value' },
 	{ flag: '--tls-key', key: 'tls_key_path', kind: 'value' },
 	{ flag: '--db-mode', key: 'db_mode', kind: 'value' },
+	{ flag: '--install-dir', key: 'install_dir', kind: 'value' },
+	{ flag: '--service-user', key: 'service_user', kind: 'value' },
+	{ flag: '--service-group', key: 'service_group', kind: 'value' },
 	{ flag: '--backup-dir', key: 'backup_dir', kind: 'value' },
 	{ flag: '--image-source', key: 'image_source', kind: 'value' },
 	{ flag: '--image-repository', key: 'image_repository', kind: 'value' },
@@ -1932,23 +2011,36 @@ function argvOfAnswer(key: keyof InstallAnswers, value: unknown): string[] {
  * answer NEVER (it travels through DEDALO_INSTALL_* or --secrets-stdin).
  */
 export function cliArgsOf(answers: InstallAnswers): string[] {
-	// The answers OTHER defaults derive from (route, instance, entity) against
-	// the no-answer defaults; every other answer against the defaults THEY derive.
-	const deriving: readonly string[] = ['route', 'instance', 'entity'];
-	const unrouted = normalizeInstallAnswers({}).answers;
-	const routed = normalizeInstallAnswers({
-		route: answers.route,
-		instance: answers.instance,
-		entity: answers.entity,
-	}).answers;
 	const argv: string[] = [];
 	for (const key of PLAIN_ANSWER_KEYS) {
 		const value = answers[key];
-		const baseline = deriving.includes(key) ? unrouted : routed;
-		if (value === undefined || sameValue(value, baseline[key])) continue;
+		if (value === undefined || sameValue(value, baselineOf(answers, key)[key])) continue;
 		argv.push(...argvOfAnswer(key, value));
 	}
 	return argv;
+}
+
+/** The answers OTHER defaults derive from, by level (see baselineOf). */
+const LEVEL_0: readonly string[] = ['route', 'instance', 'entity'];
+const LEVEL_1: readonly string[] = ['install_dir', 'service_user', 'service_group'];
+
+/**
+ * The defaults `key` is compared with: level 0 (route, instance, entity)
+ * against the no-answer defaults; level 1 (the install folder and the service
+ * account) against the defaults level 0 derives; every other answer against
+ * the defaults levels 0 and 1 derive (the backup dir and the role follow the
+ * install folder and the service user).
+ */
+function baselineOf(answers: InstallAnswers, key: string): InstallAnswers {
+	if (LEVEL_0.includes(key)) return normalizeInstallAnswers({}).answers;
+	const level0 = { route: answers.route, instance: answers.instance, entity: answers.entity };
+	if (LEVEL_1.includes(key)) return normalizeInstallAnswers(level0).answers;
+	return normalizeInstallAnswers({
+		...level0,
+		install_dir: answers.install_dir,
+		service_user: answers.service_user,
+		service_group: answers.service_group,
+	}).answers;
 }
 
 /**

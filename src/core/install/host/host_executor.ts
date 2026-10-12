@@ -75,7 +75,7 @@ import type { HostCtx, HostPlanCtx, HostStepDefinition } from './contract.ts';
 import { type HostFacts, pendingFacts } from './facts.ts';
 import { type HostFs, hostFs } from './fs.ts';
 import { hostTable, stepDigest } from './host_table.ts';
-import { INSTALL_STATE_ROOT, instancePaths } from './layout.ts';
+import { INSTALL_STATE_ROOT, pathsFor } from './layout.ts';
 import { OS_ROWS, osRowById, supportedOsList } from './os_support.ts';
 import { hostRefuse } from './refuse.ts';
 import { type CommandRunner, scratchRunner, systemRunner } from './runner.ts';
@@ -193,7 +193,11 @@ function frozenFacts(state: InstallState | null): HostFacts {
 	return state?.preflight.host?.facts ?? pendingFacts();
 }
 
-/** The pure plan context: plan, answers, frozen facts, row, paths, source. */
+/**
+ * The pure plan context: plan, answers, frozen facts, row, paths, source. The
+ * paths' service group comes from the FROZEN account facts (critique B2):
+ * the frozen digest, the run and every resume compute the same commands.
+ */
 function planContext(ctx: HostRunContext): HostPlanCtx {
 	const plan = ctx.plan as PlanFile;
 	const facts = frozenFacts(ctx.state);
@@ -204,7 +208,7 @@ function planContext(ctx: HostRunContext): HostPlanCtx {
 		facts,
 		// Before the facts exist only host_preflight runs, and it measures its own row.
 		row: facts.os === null ? (OS_ROWS[0] as (typeof OS_ROWS)[number]) : osRowById(facts.os),
-		paths: instancePaths(answers, bunPinOf(ctx.source)),
+		paths: pathsFor(answers, bunPinOf(ctx.source), facts),
 		source: ctx.source,
 	};
 }
@@ -629,8 +633,8 @@ function newContext(
 		now: options.now ?? (() => Date.now()),
 		runDir,
 		table: hostTable(() => {
-			const { facts: _facts, row: _row, ...base } = planContext(ctx);
-			return base;
+			const { facts: _facts, row: _row, paths: _paths, ...base } = planContext(ctx);
+			return { ...base, bunPin: bunPinOf(ctx.source) };
 		}),
 		told: [],
 		run: null,

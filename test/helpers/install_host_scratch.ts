@@ -25,8 +25,15 @@
  */
 
 import { createHash } from 'node:crypto';
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	writeFileSync,
+} from 'node:fs';
+import { dirname, join } from 'node:path';
 import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
 import { type HostFacts, pendingFacts } from '../../src/core/install/host/facts.ts';
 import { hostFs } from '../../src/core/install/host/fs.ts';
@@ -37,6 +44,7 @@ import {
 } from '../../src/core/install/host/host_executor.ts';
 import { instancePaths } from '../../src/core/install/host/layout.ts';
 import { OS_ROWS, type OsRowId, osRowById } from '../../src/core/install/host/os_support.ts';
+import { fcontextEscape } from '../../src/core/install/host/production/selinux.ts';
 import {
 	type RecordedRequest,
 	type RecordedResponse,
@@ -53,11 +61,77 @@ export const REPO_ROOT = join(import.meta.dir, '..', '..');
 /** The marker a scratch root must carry (host/scratch.ts SCRATCH_MARKER). */
 export const SCRATCH_DIR = '.dedalo_install_scratch';
 
+/**
+ * Plant a directory (or file) on a scratch root with an OWNER and a mode: the
+ * owner goes to the root's owners sidecar (`<marker>/owners.json` — how a
+ * scratch HostFs reports owners; host/fs.ts), the mode to the real path.
+ */
+export function plantOwned(
+	root: string,
+	path: string,
+	owner: { owner: string; group: string; mode: number; content?: string },
+): void {
+	const real = join(root, path);
+	if (owner.content === undefined) mkdirSync(real, { recursive: true });
+	else {
+		mkdirSync(dirname(real), { recursive: true });
+		writeFileSync(real, owner.content);
+	}
+	chmodSync(real, owner.mode);
+	mkdirSync(join(root, SCRATCH_DIR), { recursive: true });
+	const file = join(root, SCRATCH_DIR, 'owners.json');
+	const book = existsSync(file)
+		? (JSON.parse(readFileSync(file, 'utf8')) as Record<string, string>)
+		: {};
+	book[path] = `${owner.owner}:${owner.group}`;
+	writeFileSync(file, `${JSON.stringify(book, null, '\t')}\n`, { mode: 0o600 });
+}
+
 /** The instance every scratch production install creates. */
 export const INSTANCE = 'demo';
 export const SERVER_NAME = 'demo.example.org';
 export const ROOT_PASSWORD = 'Mosaic-Kestrel-Harbor-47';
 export const SECRETS: Secrets = Object.freeze({ root_password: ROOT_PASSWORD });
+
+/**
+ * The service account and install folder a scratch host answers for (owner
+ * decisions 2026-10-12). `existing` = the account is on the host BEFORE the
+ * install (a hosting account used as it is: `getent` answers it from the
+ * start, never removed); otherwise it answers only between `useradd` and
+ * `userdel` (the installer creates it). The ONE fake account table the host
+ * gates share (install_host_identity_native, the steps/resume/selinux gates).
+ */
+export interface ScratchIdentity {
+	user: string;
+	group: string;
+	dir: string;
+	uid: number;
+	gid: number;
+	shell: string;
+	existing: boolean;
+	/** The group is on the host before the install (default: `existing`). */
+	groupExisting?: boolean;
+	/** The account's home in passwd (default: the install folder). */
+	home?: string;
+	/** The existing account's supplementary groups (`id -G` beyond its own). */
+	extraGroups?: readonly { name: string; gid: number }[];
+}
+
+/** The default layout: a new system account ded_<i> in /home/ded_<i>. */
+export const DEFAULT_IDENTITY: ScratchIdentity = Object.freeze({
+	user: `ded_${INSTANCE}`,
+	group: `ded_${INSTANCE}`,
+	dir: `/home/ded_${INSTANCE}`,
+	uid: 999,
+	gid: 999,
+	shell: '/usr/sbin/nologin',
+	existing: false,
+});
+
+/** `runuser` as the service account (execute.ts effectiveArgv's prefix). */
+export function asService(identity: ScratchIdentity = DEFAULT_IDENTITY): string {
+	return `/usr/sbin/runuser -u ${identity.user} -g ${identity.group} --`;
+}
 
 /** The bytes of the fake Bun zip (the fake .bun-sha256 vouches for exactly these). */
 export const FAKE_BUN_ZIP = 'fake bun zip bytes — never executed\n';
@@ -311,7 +385,7 @@ export const APACHE_MODULES_LISTING = ['ssl', 'headers', 'http2', 'rewrite', 'pr
  * almalinux:10), so it answers exactly that here; Debian's a2ensite refuses a
  * site whose file is not written yet (measured on debian:13).
  */
-function webAnswers(variant: HostVariant): RecordedResponse[] {
+function webAnswers(variant: HostVariant, identity: ScratchIdentity): RecordedResponse[] {
 	const row = osRowById(variant.os);
 	const user = row.web[variant.web].user;
 	const site = row.web.apache.sitePath.replace('<i>', INSTANCE);
@@ -336,12 +410,48 @@ function webAnswers(variant: HostVariant): RecordedResponse[] {
 				{ path: `${rules}/media_protection_map.conf`, content: '# config-hash: scratch\n' },
 			],
 		},
+		...groupAnswers(identity, user),
+	];
+}
+
+/** `getent group` of the service group: the web user a member once usermod ran. */
+function groupAnswers(identity: ScratchIdentity, webUser: string): RecordedResponse[] {
+	const { group, gid } = identity;
+	const exact = `/usr/bin/getent group ${group}`;
+	const there = identity.groupExisting ?? identity.existing;
+	const creator =
+		group === identity.user && !identity.existing ? '/usr/sbin/useradd' : '/usr/sbin/groupadd';
+	const created = there ? {} : { after: creator };
+	return [
+		{ match: exact, after: '/usr/sbin/usermod -aG', stdout: `${group}:x:${gid}:${webUser}\n` },
+		{ match: exact, ...created, stdout: `${group}:x:${gid}:\n` },
+		{ match: exact, exit: 2 },
+	];
+}
+
+/** The account's passwd line. */
+function passwdLine(identity: ScratchIdentity): string {
+	const { user, uid, gid, shell } = identity;
+	return `${user}:x:${uid}:${gid}::${identity.home ?? identity.dir}:${shell}\n`;
+}
+
+/** `getent passwd` / `id` of the service user (see ScratchIdentity). */
+function accountAnswers(identity: ScratchIdentity): RecordedResponse[] {
+	const line = passwdLine(identity);
+	const { user, group, gid } = identity;
+	const lifetime = identity.existing
+		? {}
+		: { after: '/usr/sbin/useradd', until: '/usr/sbin/userdel' };
+	const extra = identity.extraGroups ?? [];
+	return [
+		{ match: `/usr/bin/getent passwd ${user}`, ...lifetime, stdout: line },
+		{ match: `/usr/bin/getent passwd ${user}`, exit: 2 },
+		{ match: `/usr/bin/getent group ${gid}`, ...lifetime, stdout: `${group}:x:${gid}:\n` },
 		{
-			match: `/usr/bin/getent group ded_${INSTANCE}`,
-			after: '/usr/sbin/usermod -aG',
-			stdout: `ded_${INSTANCE}:x:999:${user}\n`,
+			match: `/usr/bin/id -Gn ${user}`,
+			stdout: `${[group, ...extra.map((g) => g.name)].join(' ')}\n`,
 		},
-		{ match: `/usr/bin/getent group ded_${INSTANCE}`, stdout: `ded_${INSTANCE}:x:999:\n` },
+		{ match: `/usr/bin/id -G ${user}`, stdout: `${[gid, ...extra.map((g) => g.gid)].join(' ')}\n` },
 	];
 }
 
@@ -349,12 +459,16 @@ function webAnswers(variant: HostVariant): RecordedResponse[] {
 const BUN_PATH = `/opt/dedalo/bun/${BUN_PIN}/bun`;
 
 /** SELinux on EL: the local rules and the module, once added. */
-function selinuxAnswers(variant: HostVariant): RecordedResponse[] {
+function selinuxAnswers(variant: HostVariant, identity: ScratchIdentity): RecordedResponse[] {
 	if (variant.os !== 'el10') return [];
 	const specs = [
 		`/var/run/dedalo-${INSTANCE}(/.*)?`,
 		`/srv/dedalo/${INSTANCE}(/.*)?`,
 		...(variant.tls === 'letsencrypt' ? [`/var/lib/dedalo-install/acme/${INSTANCE}(/.*)?`] : []),
+		fcontextEscape(identity.dir),
+		...['dedalo', 'private', 'backups'].map(
+			(name) => `${fcontextEscape(`${identity.dir}/${name}`)}(/.*)?`,
+		),
 	];
 	return [
 		{ match: '/usr/sbin/getenforce', stdout: 'Enforcing\n' },
@@ -398,7 +512,7 @@ function selinuxAnswers(variant: HostVariant): RecordedResponse[] {
 }
 
 /** PostgreSQL: the facts' counts, the "exists" probes, peer reach, the extensions. */
-function databaseAnswers(variant: HostVariant): RecordedResponse[] {
+function databaseAnswers(variant: HostVariant, identity: ScratchIdentity): RecordedResponse[] {
 	const pg = osRowById(variant.os).pgBinDir;
 	const psql = `${pg}/psql -X -q -A -t -v ON_ERROR_STOP=1 -h /var/run/postgresql -p 5432`;
 	return [
@@ -406,12 +520,12 @@ function databaseAnswers(variant: HostVariant): RecordedResponse[] {
 		{
 			// The instance reaches its database by peer once the role and the database were
 			// CREATED (psql's CREATE travels on stdin: the bare `-d postgres` argv, exactly).
-			match: `/usr/sbin/runuser -u ded_${INSTANCE} -- ${psql} -d dedalo_${INSTANCE} -c SELECT 1`,
+			match: `${asService(identity)} ${psql} -d dedalo_${INSTANCE} -c SELECT 1`,
 			afterExact: `/usr/sbin/runuser -u postgres -- ${psql} -d postgres`,
 			stdout: '1\n',
 		},
 		{
-			match: `/usr/sbin/runuser -u ded_${INSTANCE} -- ${psql} -d dedalo_${INSTANCE} -c SELECT 1`,
+			match: `${asService(identity)} ${psql} -d dedalo_${INSTANCE} -c SELECT 1`,
 			exit: 2,
 			stderr: 'FATAL: role does not exist',
 		},
@@ -431,9 +545,9 @@ function databaseAnswers(variant: HostVariant): RecordedResponse[] {
 }
 
 /** The engine child (as the instance user): its record, its run, its migrations. */
-function engineAnswers(): RecordedResponse[] {
+function engineAnswers(identity: ScratchIdentity): RecordedResponse[] {
 	const bun = `/opt/dedalo/bun/${BUN_PIN}/bun`;
-	const child = `/usr/sbin/runuser -u ded_${INSTANCE} -- ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
+	const child = `${asService(identity)} ${bun} run ${identity.dir}/dedalo/scripts/install.ts`;
 	return [
 		{
 			match: `${child} --status --json`,
@@ -454,7 +568,7 @@ function engineAnswers(): RecordedResponse[] {
 			].join('\n'),
 		},
 		{
-			match: `/usr/sbin/runuser -u ded_${INSTANCE} -- ${bun} run scripts/ops/boot_status.ts --json`,
+			match: `${asService(identity)} ${bun} run scripts/ops/boot_status.ts --json`,
 			stdout: '{"applied":13,"pending":[]}\n',
 		},
 		{ match: `${bun} --version`, after: '/usr/bin/install -D -m 0755', stdout: `${BUN_PIN}\n` },
@@ -463,12 +577,15 @@ function engineAnswers(): RecordedResponse[] {
 }
 
 /** The release extracted, its dependencies installed. */
-function runtimeAnswers(): RecordedResponse[] {
-	const tree = `/home/ded_${INSTANCE}/dedalo`;
+function runtimeAnswers(identity: ScratchIdentity): RecordedResponse[] {
+	const tree = `${identity.dir}/dedalo`;
 	return [
-		{ match: '/usr/bin/tar -xf', creates: [`${tree}/package.json`, `${tree}/scripts/`] },
 		{
-			match: `/usr/sbin/runuser -u ded_${INSTANCE} -- /opt/dedalo/bun/${BUN_PIN}/bun install`,
+			match: `${asService(identity)} /usr/bin/tar -xf`,
+			creates: [`${tree}/package.json`, `${tree}/scripts/`],
+		},
+		{
+			match: `${asService(identity)} /opt/dedalo/bun/${BUN_PIN}/bun install`,
 			creates: [`${tree}/node_modules/`],
 		},
 		{ match: `/usr/bin/test -s /var/lib/dedalo-install/bun/${BUN_PIN}/` },
@@ -486,7 +603,7 @@ function certbotAnswers(): RecordedResponse[] {
 }
 
 /** The first boot, the public probes, the first backup. */
-function serviceAnswers(): RecordedResponse[] {
+function serviceAnswers(identity: ScratchIdentity): RecordedResponse[] {
 	const unit = `dedalo-backup@${INSTANCE}.service`;
 	return [
 		{
@@ -515,7 +632,7 @@ function serviceAnswers(): RecordedResponse[] {
 			match: `/usr/bin/systemctl start --wait ${unit}`,
 			creates: [
 				{
-					path: `/home/ded_${INSTANCE}/backups/state/LAST_OK`,
+					path: `${identity.dir}/backups/state/LAST_OK`,
 					content:
 						'scratch every store succeeded\n  matrix_db: exit 0\n  media: exit 0\n  private: exit 0\n',
 				},
@@ -523,7 +640,7 @@ function serviceAnswers(): RecordedResponse[] {
 		},
 		{
 			match: `/usr/bin/systemctl show -p Environment ${unit}`,
-			stdout: `Environment=DEDALO_SUPERVISED=true "DEDALO_BACKUP_STATE_DIR=/home/ded_${INSTANCE}/backups/state" "DEDALO_BACKUP_EXPECTED_STORES=matrix_db media private"\n`,
+			stdout: `Environment=DEDALO_SUPERVISED=true "DEDALO_BACKUP_STATE_DIR=${identity.dir}/backups/state" "DEDALO_BACKUP_EXPECTED_STORES=matrix_db media private"\n`,
 		},
 	];
 }
@@ -533,31 +650,33 @@ function serviceAnswers(): RecordedResponse[] {
  * the specific answers come first; the `/health` probe through the public
  * address answers 200 before the catch-all curl answers 404 (the media gate).
  */
-export function hostResponses(variant: HostVariant): RecordedResponse[] {
+export function hostResponses(
+	variant: HostVariant,
+	identity: ScratchIdentity = DEFAULT_IDENTITY,
+): RecordedResponse[] {
 	return [
 		{ match: '/usr/bin/id -u', stdout: '0\n' },
 		{ match: '/usr/bin/uname -m', stdout: 'x86_64\n' },
 		{ match: '/usr/bin/systemctl is-active firewalld', exit: 3 },
 		{ match: '/usr/bin/pgrep', exit: 1 },
-		{
-			match: `/usr/bin/getent passwd ded_${INSTANCE}`,
-			after: '/usr/sbin/useradd',
-			until: '/usr/sbin/userdel',
-			stdout: `ded_${INSTANCE}:x:999:999::/home/ded_${INSTANCE}:/usr/sbin/nologin\n`,
-		},
-		{ match: `/usr/bin/getent passwd ded_${INSTANCE}`, exit: 2 },
+		...accountAnswers(identity),
 		...installedAfter(variant),
-		...webAnswers(variant),
-		...selinuxAnswers(variant),
-		...databaseAnswers(variant),
-		...engineAnswers(),
-		...runtimeAnswers(),
+		...webAnswers(variant, identity),
+		...selinuxAnswers(variant, identity),
+		...databaseAnswers(variant, identity),
+		...engineAnswers(identity),
+		...runtimeAnswers(identity),
 		...certbotAnswers(),
 		{
 			match: `/usr/bin/curl -sS -o /dev/null -w %{http_code} --max-time 20 --resolve ${SERVER_NAME}:443:127.0.0.1 https://${SERVER_NAME}/health`,
 			stdout: '200',
 		},
-		...serviceAnswers(),
+		...serviceAnswers(identity),
+		// The local account scan (the accounts whose primary group is the service group).
+		{
+			match: '/usr/bin/getent passwd',
+			stdout: `root:x:0:0:root:/root:/bin/bash\n${identity.existing ? passwdLine(identity) : ''}`,
+		},
 	];
 }
 
@@ -918,9 +1037,10 @@ export const READ_ONLY_PROBES: readonly RegExp[] = Object.freeze([
 	/^\/usr\/bin\/dpkg-query -W /,
 	/^\/usr\/bin\/rpm -qa /,
 	/^\/usr\/bin\/systemctl (is-active|is-enabled|show -p|list-unit-files) /,
-	/^\/usr\/bin\/getent (passwd|group) /,
+	/^\/usr\/bin\/getent (passwd|group)( |$)/,
+	/^\/usr\/bin\/id -Gn? /,
 	/^\/usr\/sbin\/runuser -u postgres -- \S+\/psql -XAtq /,
-	/^\/usr\/sbin\/runuser -u \S+ -- \S+\/psql -X -q -A -t -v ON_ERROR_STOP=1 .* -c SELECT /,
+	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- \S+\/psql -X -q -A -t -v ON_ERROR_STOP=1 .* -c SELECT /,
 	/^\/usr\/bin\/ss -ltnpH$/,
 	/^\/usr\/sbin\/(nginx -[vTt]|apachectl configtest|apache2ctl -[vSM]|httpd -[vSM])$/,
 	/^\/usr\/bin\/curl -s(S)? -o \/dev\/null -w %\{http_code\} /,
@@ -930,8 +1050,8 @@ export const READ_ONLY_PROBES: readonly RegExp[] = Object.freeze([
 	/^\/usr\/bin\/stat -c %C /,
 	/^\/usr\/bin\/ps -o label= -p \d+$/,
 	/^\/usr\/bin\/pgrep /,
-	/^\/usr\/sbin\/runuser -u \S+ -- \S+\/bun run \S+install\.ts --status --json$/,
-	/^\/usr\/sbin\/runuser -u \S+ -- \S+\/bun run scripts\/ops\/boot_status\.ts --json$/,
+	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- \S+\/bun run \S+install\.ts --status --json$/,
+	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- \S+\/bun run scripts\/ops\/boot_status\.ts --json$/,
 	/^\/opt\/dedalo\/bun\/[\d.]+\/bun --version$/,
 	/^\/usr\/bin\/firewall-cmd --list-(services|ports)$/,
 	/^\/usr\/sbin\/ufw status$/,

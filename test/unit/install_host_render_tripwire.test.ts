@@ -27,6 +27,13 @@
  *      user's home, its parent is never the install's, root's dirs sit outside
  *      it, and the rollback/watchdog name exactly the tree and the backup root
  *      the engine's swap renames within (engineering/PRODUCTION.md §2.2).
+ *  (f) THE ACCOUNT AND THE FOLDER ARE THE DROP-INS' (owner decisions
+ *      2026-10-12): no template, on any OS row, spells `/home/ded_`, `ded_%i`
+ *      or `/run/dedalo-%i`, nor sets User=/Group=/WorkingDirectory=/
+ *      EnvironmentFile=; an instance template WITHOUT its drop-in runs
+ *      `/bin/false` (fail-closed, never as root); a custom layout's drop-ins
+ *      carry exactly its user, group, folder, .env, HOME and the rollback/
+ *      watchdog paths. (c) runs over the default AND a custom layout.
  *  (e) THE ENGINE'S MEDIA RULES REACH ROOT'S NGINX ONLY AS VALIDATED COPIES
  *      (deploy/dedalo-media-rules.sh, EXECUTED): every rule file the engine
  *      generates (protection.ts, every mode) is accepted and copied byte-equal;
@@ -109,6 +116,23 @@ function backedUpStores(lines: readonly string[]): string[] {
 }
 
 const NGINX_LE = HOST_VARIANTS[0] as HostVariant;
+
+/**
+ * The two layouts (c) and (f) render (owner decisions 2026-10-12): the default
+ * (ded_<i> in /home/ded_<i>) and a hosting account's folder — a dotted EXISTING
+ * account, a typed group of its own, a folder below the account's home.
+ */
+const LAYOUTS: readonly { name: string; extra: Record<string, unknown> }[] = Object.freeze([
+	{ name: 'default layout', extra: {} },
+	{
+		name: 'custom layout',
+		extra: {
+			install_dir: '/home/drill.example.org/dedalo',
+			service_user: 'drill.example.org',
+			service_group: 'drillgrp',
+		},
+	},
+]);
 
 // ── (a) the effective units ──────────────────────────────────────────────────
 
@@ -214,103 +238,117 @@ describe('the watchdog is armed only by its step (b)', () => {
 // ── (c) root runs nothing the instance owns ──────────────────────────────────
 
 describe('nothing a unit runs as root is a file the instance user can replace (c)', () => {
-	test('every root-run ExecStart is outside the instance tree; every script it names is copied root-owned', () => {
-		const ctx = productionPlanCtx(NGINX_LE, REPO_ROOT, { backup_site_builder: true });
-		const rootRun: string[] = [];
-		for (const name of UNIT_TEMPLATES.filter((unit) => unit.endsWith('.service'))) {
-			const unit = effective(ctx, name);
-			const user = unit.get('Service.User')?.[0];
-			for (const line of unit.get('Service.ExecStart') ?? []) {
-				if (user === undefined || line.startsWith('+'))
-					rootRun.push(line.replace(/^[-+]/, '').replace(/%i/g, ctx.paths.instance));
-			}
-		}
-		// The floor: the watchdog, the site-builder store run as root.
-		expect(rootRun.length).toBeGreaterThanOrEqual(2);
-		const binaries = rootRun.map((line) => line.split(/\s+/)[0] as string);
-		expect(
-			binaries.filter((path) => path.startsWith(ctx.paths.home) || path.startsWith('/home/')),
-		).toEqual([]);
-		const scripts = binaries.filter((path) => path.endsWith('.sh'));
-		for (const path of scripts) {
-			expect(path.startsWith(`${ctx.paths.binDir}/`), path).toBe(true);
-			expect(ROOT_RUN_SCRIPTS as readonly string[]).toContain(
-				path.slice(ctx.paths.binDir.length + 1),
-			);
-		}
-		expect(scripts.length).toBeGreaterThanOrEqual(2);
-	});
-
-	test('no root-run line reads anything the instance writes: no EnvironmentFile under the instance, every backup root pinned', () => {
-		for (const siteBuilder of [false, true]) {
-			const ctx = productionPlanCtx(NGINX_LE, REPO_ROOT, { backup_site_builder: siteBuilder });
+	for (const layout of LAYOUTS)
+		test(`${layout.name}: every root-run ExecStart is outside the instance tree; every script it names is copied root-owned`, () => {
+			const ctx = productionPlanCtx(NGINX_LE, REPO_ROOT, {
+				backup_site_builder: true,
+				...layout.extra,
+			});
+			const rootRun: string[] = [];
 			for (const name of UNIT_TEMPLATES.filter((unit) => unit.endsWith('.service'))) {
 				const unit = effective(ctx, name);
 				const user = unit.get('Service.User')?.[0];
-				const files = (unit.get('Service.EnvironmentFile') ?? []).map((file) =>
-					file.replace(/^-/, '').replace(/%i/g, ctx.paths.instance),
+				for (const line of unit.get('Service.ExecStart') ?? []) {
+					if (user === undefined || line.startsWith('+'))
+						rootRun.push(line.replace(/^[-+]/, '').replace(/%i/g, ctx.paths.instance));
+				}
+			}
+			// The floor: the watchdog, the site-builder store run as root.
+			expect(rootRun.length).toBeGreaterThanOrEqual(2);
+			const binaries = rootRun.map((line) => line.split(/\s+/)[0] as string);
+			expect(
+				binaries.filter(
+					(path) => path.startsWith(ctx.paths.instanceDir) || path.startsWith('/home/'),
+				),
+			).toEqual([]);
+			const scripts = binaries.filter((path) => path.endsWith('.sh'));
+			for (const path of scripts) {
+				expect(path.startsWith(`${ctx.paths.binDir}/`), path).toBe(true);
+				expect(ROOT_RUN_SCRIPTS as readonly string[]).toContain(
+					path.slice(ctx.paths.binDir.length + 1),
 				);
-				const instanceFiles = files.filter(
-					(file) => file.startsWith(`${ctx.paths.home}/`) || file.startsWith('/home/'),
-				);
-				for (const key of ['ExecStart', 'ExecStartPre', 'ExecStartPost', 'ExecCondition']) {
-					for (const line of unit.get(`Service.${key}`) ?? []) {
-						const root = user === undefined || /^[-@]*[+!]/.test(line);
-						// systemd applies EnvironmentFile to EVERY Exec line, a `+` one included.
-						expect({ name, line, instanceFiles: root ? instanceFiles : [] }).toEqual({
-							name,
-							line,
-							instanceFiles: [],
-						});
-						// A root-run script that reads a backup root is GIVEN it: never resolved from .env.
-						if (root && /dedalo-(ts-watchdog|code-rollback)\.sh/.test(line)) {
-							expect(line, name).toContain(`--backup-root ${'/home/ded_%i/backups/code'}`);
+			}
+			expect(scripts.length).toBeGreaterThanOrEqual(2);
+		});
+
+	for (const layout of LAYOUTS)
+		test(`${layout.name}: no root-run line reads anything the instance writes: no EnvironmentFile under the instance, every backup root pinned`, () => {
+			for (const siteBuilder of [false, true]) {
+				const ctx = productionPlanCtx(NGINX_LE, REPO_ROOT, {
+					backup_site_builder: siteBuilder,
+					...layout.extra,
+				});
+				for (const name of UNIT_TEMPLATES.filter((unit) => unit.endsWith('.service'))) {
+					const unit = effective(ctx, name);
+					const user = unit.get('Service.User')?.[0];
+					const files = (unit.get('Service.EnvironmentFile') ?? []).map((file) =>
+						file.replace(/^-/, '').replace(/%i/g, ctx.paths.instance),
+					);
+					const instanceFiles = files.filter(
+						(file) => file.startsWith(`${ctx.paths.instanceDir}/`) || file.startsWith('/home/'),
+					);
+					for (const key of ['ExecStart', 'ExecStartPre', 'ExecStartPost', 'ExecCondition']) {
+						for (const line of unit.get(`Service.${key}`) ?? []) {
+							const root = user === undefined || /^[-@]*[+!]/.test(line);
+							// systemd applies EnvironmentFile to EVERY Exec line, a `+` one included.
+							expect({ name, line, instanceFiles: root ? instanceFiles : [] }).toEqual({
+								name,
+								line,
+								instanceFiles: [],
+							});
+							// A root-run script that reads a backup root is GIVEN it: never resolved from .env.
+							if (root && /dedalo-(ts-watchdog|code-rollback)\.sh/.test(line)) {
+								expect(line, name).toContain(`--backup-root ${ctx.paths.codeBackupRoot}`);
+							}
 						}
 					}
 				}
 			}
-		}
-	});
+		});
 
-	test("THE INSTANCE-DIR RULE: the code tree, its backup root and every path the swap renames are inside the instance user's dir; root's dirs are outside it", () => {
-		// (2026-10-12, owner decision; engineering/PRODUCTION.md §2.2.) The in-app code
-		// update renames the tree within its PARENT and into <parent>/backups/code
-		// (code_update.ts unwritableSwapDirs) — so that parent must be the instance
-		// user's, and the rollback units must name exactly those paths.
-		const ctx = productionPlanCtx(NGINX_LE, REPO_ROOT);
-		const dirs = instanceDirs(ctx);
-		const ownerOf = (path: string) => dirs.find((spec) => spec.path === path)?.owner;
-		const instanceDir = dirname(ctx.paths.tree);
-		expect(instanceDir).toBe(ctx.paths.home);
-		expect(ownerOf(instanceDir)).toBe(ctx.paths.user);
-		// the instance dir's parent is never created or owned by the install (root's /home)
-		expect(dirs.some((spec) => spec.path === dirname(instanceDir))).toBe(false);
-		// root's things: root-owned, outside the instance dir
-		for (const rootDir of [ctx.paths.binDir, dirname(ctx.paths.bunDir)]) {
-			expect(ownerOf(rootDir), rootDir).toBe('root');
-			expect(rootDir.startsWith(`${instanceDir}/`), rootDir).toBe(false);
-		}
-		// the engine's default code-backup root (the installer writes no DEDALO_BACKUP_PATH)
-		const engineBackupRoot = join(instanceDir, 'backups', 'code');
-		let named = 0;
-		for (const name of ['dedalo-ts-rollback@.service', 'dedalo-ts-watchdog@.service'] as const) {
-			const unit = effective(ctx, name);
-			for (const key of ['ExecCondition', 'ExecStart']) {
-				for (const raw of unit.get(`Service.${key}`) ?? []) {
-					const words = systemdWords(raw.replace(/%i/g, ctx.paths.instance));
-					const flag = (f: string) => words[words.indexOf(f) + 1];
-					if (!words.includes('--app-dir')) continue;
-					named += 1;
-					expect({ name, appDir: flag('--app-dir'), backupRoot: flag('--backup-root') }).toEqual({
-						name,
-						appDir: ctx.paths.tree,
-						backupRoot: engineBackupRoot,
-					});
+	for (const layout of LAYOUTS)
+		test(`${layout.name}: THE INSTANCE-DIR RULE: the code tree, its backup root and every path the swap renames are inside the instance user's dir; root's dirs are outside it`, () => {
+			// (2026-10-12, owner decision; engineering/PRODUCTION.md §2.2.) The in-app code
+			// update renames the tree within its PARENT and into <parent>/backups/code
+			// (code_update.ts unwritableSwapDirs) — so that parent must be the instance
+			// user's, and the rollback units must name exactly those paths.
+			const ctx = productionPlanCtx(NGINX_LE, REPO_ROOT, layout.extra);
+			const dirs = instanceDirs(ctx);
+			const ownerOf = (path: string) => dirs.find((spec) => spec.path === path)?.owner;
+			const instanceDir = dirname(ctx.paths.tree);
+			expect(instanceDir).toBe(ctx.paths.instanceDir);
+			expect(instanceDir).toBe(
+				String(layout.extra.install_dir ?? `/home/ded_${ctx.paths.instance}`),
+			);
+			expect(ownerOf(instanceDir)).toBe(ctx.paths.user);
+			// the instance dir's parent is never created or owned by the install (root's /home)
+			expect(dirs.some((spec) => spec.path === dirname(instanceDir))).toBe(false);
+			// root's things: root-owned, outside the instance dir
+			for (const rootDir of [ctx.paths.binDir, dirname(ctx.paths.bunDir)]) {
+				expect(ownerOf(rootDir), rootDir).toBe('root');
+				expect(rootDir.startsWith(`${instanceDir}/`), rootDir).toBe(false);
+			}
+			// the engine's default code-backup root (the installer writes no DEDALO_BACKUP_PATH)
+			const engineBackupRoot = join(instanceDir, 'backups', 'code');
+			let named = 0;
+			for (const name of ['dedalo-ts-rollback@.service', 'dedalo-ts-watchdog@.service'] as const) {
+				const unit = effective(ctx, name);
+				for (const key of ['ExecCondition', 'ExecStart']) {
+					for (const raw of unit.get(`Service.${key}`) ?? []) {
+						const words = systemdWords(raw.replace(/%i/g, ctx.paths.instance));
+						const flag = (f: string) => words[words.indexOf(f) + 1];
+						if (!words.includes('--app-dir')) continue;
+						named += 1;
+						expect({ name, appDir: flag('--app-dir'), backupRoot: flag('--backup-root') }).toEqual({
+							name,
+							appDir: ctx.paths.tree,
+							backupRoot: engineBackupRoot,
+						});
+					}
 				}
 			}
-		}
-		expect(named).toBe(3);
-	});
+			expect(named).toBe(3);
+		});
 
 	test('positive control: a `+` store line beside the instance .env is caught by that reading', () => {
 		const merged = mergedUnit(
@@ -320,6 +358,101 @@ describe('nothing a unit runs as root is a file the instance user can replace (c
 		const line = merged.get('Service.ExecStart')?.[0] ?? '';
 		expect(/^[-@]*[+!]/.test(line)).toBe(true);
 		expect(merged.get('Service.EnvironmentFile')?.[0]?.startsWith('/home/')).toBe(true);
+	});
+});
+
+// ── (f) the service account and the install folder ───────────────────────────
+
+/** The instance units the drop-ins must complete (each needs the account or a path). */
+const INSTANCE_UNITS = [
+	'dedalo-ts@.service',
+	'dedalo-backup@.service',
+	'dedalo-backup-alert@.service',
+	'dedalo-ts-rollback@.service',
+	'dedalo-ts-watchdog@.service',
+] as const satisfies readonly UnitTemplate[];
+
+/** The words after `flag` in an Exec line. */
+function flagOf(line: string, flag: string): string | undefined {
+	const words = systemdWords(line);
+	const at = words.indexOf(flag);
+	return at < 0 ? undefined : words[at + 1];
+}
+
+describe("the account and the folder are the drop-ins'; the templates name none and fail closed (f)", () => {
+	test('every template, every OS row: no /home/ded_, ded_%i or /run/dedalo-%i; no User=, Group=, WorkingDirectory= or EnvironmentFile=', () => {
+		let rendered = 0;
+		for (const row of OS_ROWS) {
+			for (const name of UNIT_TEMPLATES) {
+				const text = renderTemplate(name, row, REPO_ROOT);
+				rendered += 1;
+				expect(text, name).not.toMatch(/\/home\/ded_|ded_%i|\/run\/dedalo-%i/);
+				const keys = unitAssignments(text)
+					.filter((item) => item.section === 'Service')
+					.map((item) => item.key);
+				expect(
+					keys.filter((key) =>
+						['User', 'Group', 'WorkingDirectory', 'EnvironmentFile'].includes(key),
+					),
+					name,
+				).toEqual([]);
+			}
+		}
+		expect(rendered).toBe(OS_ROWS.length * UNIT_TEMPLATES.length);
+	});
+
+	test('without its drop-in an instance template runs NOTHING (ExecStart=/bin/false, the rollback ExecCondition too) — never as root', () => {
+		const row = OS_ROWS[0] as (typeof OS_ROWS)[number];
+		for (const name of INSTANCE_UNITS) {
+			const bare = mergedUnit(renderTemplate(name, row, REPO_ROOT), []);
+			expect(bare.get('Service.ExecStart'), name).toEqual(['/bin/false']);
+			expect(bare.get('Service.User') ?? [], name).toEqual([]);
+		}
+		const rollback = mergedUnit(renderTemplate('dedalo-ts-rollback@.service', row, REPO_ROOT), []);
+		expect(rollback.get('Service.ExecCondition')).toEqual(['/bin/false']);
+	});
+
+	test("custom layout: the drop-ins carry exactly the operator's user, group, folder, .env, HOME, --app-dir, --backup-root and --socket", () => {
+		const custom = LAYOUTS[1] as (typeof LAYOUTS)[number];
+		const dir = String(custom.extra.install_dir);
+		const ctx = productionPlanCtx(NGINX_LE, REPO_ROOT, custom.extra);
+		const account = { user: ['drill.example.org'], group: ['drillgrp'] };
+		const server = effective(ctx, 'dedalo-ts@.service');
+		expect({
+			user: server.get('Service.User'),
+			group: server.get('Service.Group'),
+			cwd: server.get('Service.WorkingDirectory'),
+			home: unitEnvironment(server).get('HOME'),
+		}).toEqual({ ...account, cwd: [`${dir}/dedalo`], home: dir });
+		const backup = effective(ctx, 'dedalo-backup@.service');
+		expect({
+			user: backup.get('Service.User'),
+			group: backup.get('Service.Group'),
+			env: backup.get('Service.EnvironmentFile'),
+		}).toEqual({ ...account, env: [`${dir}/private/.env`] });
+		const alert = effective(ctx, 'dedalo-backup-alert@.service');
+		expect({ user: alert.get('Service.User'), group: alert.get('Service.Group') }).toEqual(account);
+		const rollback = effective(ctx, 'dedalo-ts-rollback@.service');
+		expect({ user: rollback.get('Service.User'), group: rollback.get('Service.Group') }).toEqual(
+			account,
+		);
+		const lines = [
+			...(rollback.get('Service.ExecCondition') ?? []),
+			...(rollback.get('Service.ExecStart') ?? []),
+			...(effective(ctx, 'dedalo-ts-watchdog@.service').get('Service.ExecStart') ?? []),
+		];
+		expect(lines.length).toBe(3);
+		for (const line of lines) {
+			expect(flagOf(line, '--app-dir'), line).toBe(`${dir}/dedalo`);
+			expect(flagOf(line, '--backup-root'), line).toBe(`${dir}/backups/code`);
+		}
+		const socketed = lines.filter((line) => line.includes('--socket'));
+		expect(socketed.length).toBe(2);
+		for (const line of socketed)
+			expect(flagOf(line, '--socket'), line).toBe(ctx.answers.unix_socket);
+		// Nothing of the default layout leaks into the custom one.
+		for (const dropin of instanceDropins(ctx.paths, ctx.row, ctx.answers, stampOf(ctx)))
+			expect(dropin.content, dropin.path).not.toMatch(/ded_|\/home\/ded_/);
 	});
 });
 

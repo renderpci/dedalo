@@ -11,7 +11,10 @@
  *      httpd_var_run_t, the instance's /srv tree (media AND the published
  *      client — critique B13: nothing the web server reads lives under /home)
  *      and the ACME webroot (Let's Encrypt only) as httpd_sys_content_t; each
- *      relabelled with restorecon; nothing under /home is labelled.
+ *      relabelled with restorecon; the install folder's own subtrees
+ *      (dedalo/, private/, backups/ — owner decisions 2026-10-12) as var_lib_t,
+ *      relabelled AS THE SERVICE USER, the folder itself (non-recursive) only
+ *      when this install created it; root relabels nothing inside the folder.
  *  (b) THE MODULE, judged by what it GRANTS (its statements parsed, comments
  *      out): the web server reaches the engine and NOTHING ELSE — no
  *      statement names unconfined_service_t; every unix_stream_socket
@@ -46,6 +49,7 @@ import { hostFs } from '../../src/core/install/host/fs.ts';
 import type { RecordedResponse } from '../../src/core/install/host/runner.ts';
 import { serverDropin } from '../../src/core/install/host/systemd/render.ts';
 import {
+	asService,
 	BUN_PIN,
 	freshRequest,
 	HOST_VARIANTS,
@@ -74,7 +78,8 @@ const CERT = mintCertificate(SERVER_NAME);
 const MODULE = '/var/lib/dedalo-install/selinux/dedalo_engine.cil';
 const TEMPLATE = readFileSync(join(REPO_ROOT, 'deploy/selinux/dedalo_engine.cil.tpl'), 'utf8');
 const OURS = TEMPLATE.replace('@@STAMP@@', 'dedalo-install');
-const FAKE_RUNTIME = 'not a runtime — the scratch host\'s stand-in\n';
+const HOME_DIR = `/home/ded_${INSTANCE}`;
+const FAKE_RUNTIME = "not a runtime — the scratch host's stand-in\n";
 
 const EL = (tls: 'letsencrypt' | 'files', web: 'nginx' | 'apache' = 'nginx') =>
 	HOST_VARIANTS.find(
@@ -135,7 +140,7 @@ function otherInstance(selinuxModule: boolean): Map<string, string> {
 
 describe('SELinux contexts and the one policy rule (a, b)', () => {
 	for (const variant of [EL('letsencrypt'), EL('files', 'apache')]) {
-		test(`${variantName(variant)}: the contexts, the relabel, the stamped module — nothing under /home, no boolean`, async () => {
+		test(`${variantName(variant)}: the contexts, the relabel, the stamped module — the install folder's subtrees var_lib_t relabelled AS THE SERVICE USER, no boolean`, async () => {
 			const host = scratchHost(variant);
 			const { planFile } = productionPlan(variant);
 			expect((await runHost(host, freshRequest(planFile))).outcome.result).toBe('complete');
@@ -148,8 +153,17 @@ describe('SELinux contexts and the one policy rule (a, b)', () => {
 							`/usr/sbin/semanage fcontext -a -t httpd_sys_content_t /var/lib/dedalo-install/acme/${INSTANCE}(/.*)?`,
 						]
 					: []),
+				`/usr/sbin/semanage fcontext -a -t var_lib_t ${HOME_DIR}`,
+				`/usr/sbin/semanage fcontext -a -t var_lib_t ${HOME_DIR}/dedalo(/.*)?`,
+				`/usr/sbin/semanage fcontext -a -t var_lib_t ${HOME_DIR}/private(/.*)?`,
+				`/usr/sbin/semanage fcontext -a -t var_lib_t ${HOME_DIR}/backups(/.*)?`,
 				`/usr/sbin/restorecon -RF /srv/dedalo/${INSTANCE}`,
 				...(acme ? [`/usr/sbin/restorecon -RF /var/lib/dedalo-install/acme/${INSTANCE}`] : []),
+				// The folder this install created (root's, under root's /home): itself only.
+				`/usr/sbin/restorecon -F ${HOME_DIR}`,
+				`${asService()} /usr/sbin/restorecon -RF ${HOME_DIR}/dedalo`,
+				`${asService()} /usr/sbin/restorecon -RF ${HOME_DIR}/private`,
+				`${asService()} /usr/sbin/restorecon -RF ${HOME_DIR}/backups`,
 				`/usr/sbin/semodule -X 400 -i ${MODULE}`,
 				`/usr/sbin/restorecon -F /opt/dedalo/bun/${BUN_PIN}/bun`,
 			]);
@@ -159,10 +173,16 @@ describe('SELinux contexts and the one policy rule (a, b)', () => {
 			expect(fs.stat(MODULE)?.owner).toBe('root');
 			expect(OURS).toContain('; stamp: dedalo-install');
 			expect(OURS).not.toContain('@@');
+			// No boolean; ROOT relabels nothing inside the folder (only the folder itself), and
+			// nothing relabels /home or the account's other files.
+			expect(loggedCommands(host.root).filter((line) => /setsebool/.test(line))).toEqual([]);
 			expect(
-				loggedCommands(host.root).filter(
-					(line) => /setsebool|\/home\//.test(line) && /semanage|restorecon|setsebool/.test(line),
+				loggedCommands(host.root).filter((line) =>
+					/^\/usr\/sbin\/restorecon -R?F \/home\/ded_[^/ ]+\//.test(line),
 				),
+			).toEqual([]);
+			expect(
+				loggedCommands(host.root).filter((line) => /restorecon .*\/home\/?$/.test(line)),
 			).toEqual([]);
 		});
 	}
@@ -374,7 +394,7 @@ describe('refcounted undo (d)', () => {
 		const before = loggedCommands(host.root).length;
 		expect((await runHost(host, laterRequest('abort', plan))).outcome.result).toBe('aborted');
 		const undone = selinuxLog(host, before);
-		expect(undone.filter((line) => line.includes('fcontext -d')).length).toBe(3);
+		expect(undone.filter((line) => line.includes('fcontext -d')).length).toBe(7);
 		expect(undone).toContain('/usr/sbin/semodule -X 400 -r dedalo_engine');
 		// The runtime's label named the unloaded type: relabelled to its default.
 		expect(undone).toContain(`/usr/sbin/restorecon -F /opt/dedalo/bun/${BUN_PIN}/bun`);
@@ -390,7 +410,7 @@ describe('refcounted undo (d)', () => {
 		const before = loggedCommands(host.root).length;
 		expect((await runHost(host, laterRequest('abort', plan))).outcome.result).toBe('aborted');
 		const undone = selinuxLog(host, before);
-		expect(undone.filter((line) => line.includes('fcontext -d')).length).toBe(3);
+		expect(undone.filter((line) => line.includes('fcontext -d')).length).toBe(7);
 		expect(undone.filter((line) => line.includes('semodule -X 400 -r'))).toEqual([]);
 		expect(readFileSync(join(host.root, MODULE), 'utf8')).toBe(OURS);
 	});

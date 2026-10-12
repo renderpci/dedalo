@@ -58,11 +58,21 @@ curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
 | Refusal | Fix |
 | --- | --- |
 | `the production route must run as root: sudo sh install.sh …` | run it with `sudo` |
-| `the user ded_<i> already exists — choose another instance name` | another instance, or a leftover, has that name: choose another |
+| `account <u> is a system account (uid <n>) — …` | a leftover of an earlier install (`ded_<i>` created as a system account) or a system account: remove it with `userdel`, or choose another `--service-user` |
+| `service user <u> is already the service user of instance <j> (<file>) — …`, the same for the group | one account and one group per instance: choose another, or remove the stale `<file>` |
+| `install folder <d> overlaps instance <j>'s folder <dj> (…) — …` | choose a folder of its own (`--install-dir`) |
+| `install folder <d> is not empty and is not owned by <u> — …`, `… already holds dedalo — …` | the installer uses an existing folder only when it is empty, or the service user's and holds no install: empty it, `chown` it, or choose another |
+| `install folder <d> is writable by group or others (mode …)`, `<a> (a parent of the install folder) is writable by an account other than root or <u>` | `chmod go-w` it, or fix the parent's owner |
+| `account <u> is a member of <group> (gid <n>) — …` | the service would hold that group's rights (`sudo`, `docker`, a system group — `users` is accepted): choose an account without it |
+| `account <u> is a member of <g>, the service group of instance <j> (<file>) — …` | one group per instance: the service would read that instance's files — choose an account without that membership |
+| `service user <u> is an account of the installer's packages …`, `group <g> is a group of the installer's packages …` | `postgres`, `www-data`, `nginx` and `apache` are never the service account: choose another |
+| `install folder <d> is an existing directory of root outside /home, /srv, /data, /mnt, /media — …`, `install folder <d> is empty but owned by <x>, another account — …` | the installer never takes over a system or another account's directory: `chown` it to the service user first, or choose a folder that does not exist yet |
+| `<file> names instance <j> but runs as User=<x>, whose primary group cannot be resolved — …` | a hand-installed unit with no `Group=` whose user is gone: give it its `Group=`, or remove the stale unit |
+| `group <g> already exists but user <u> does not — …` | a leftover group: remove it with `groupdel`, or use it as is with `--service-group <g>` |
 | `dedalo-ts@<i>.service is already enabled`, `… already has drop-ins` | the same |
 | `/etc/nginx/conf.d/dedalo-<i>.conf already exists` (or the Apache site) | another install's site file: choose another instance name |
 | `the socket /run/dedalo-<i>/dedalo_ts.sock already exists (another server is listening there)` | stop that server, or choose another name |
-| `database dedalo_<i> already exists`, `role ded_<i> already exists` | choose another name, or use that database with `--db-mode existing` (it must be empty) |
+| `database dedalo_<i> already exists`, `role <service user> already exists` | choose another name, or use that database with `--db-mode existing` (it must be empty) |
 | `PostgreSQL <n> already runs on this host` | another major version holds the database port: stop it, or use `--db-mode existing` with your own server |
 | `<address> is already served on port 80/443 by <file>` | another site answers for that name: remove it, or install under another address. The installer never edits another site |
 | `nginx name dedalo_<i> is already defined in <file>` | an `upstream` or rate-limit zone of that name exists elsewhere (nginx names are global): choose another instance name |
@@ -100,13 +110,13 @@ nginx -t                                                                        
 curl --fail --resolve <address>:443:127.0.0.1 https://<address>/health            # the site, locally
 ```
 
-A green socket and a red site means the web server cannot reach the socket (its user must be in the group `ded_<i>`; on the RHEL family the engine must run in `dedalo_engine_t`: `ps -o label= -p $(systemctl show -p MainPID --value dedalo-ts@<i>)`). A media answer other than `404` means the gate is not loaded — see [Media](#media). Then `--resume`.
+A green socket and a red site means the web server cannot reach the socket (its user must be in the service group, `ded_<i>` by default; on the RHEL family the engine must run in `dedalo_engine_t`: `ps -o label= -p $(systemctl show -p MainPID --value dedalo-ts@<i>)`). A media answer other than `404` means the gate is not loaded — see [Media](#media). Then `--resume`.
 
 ### The backup verification fails
 
 **Cause.** `host_backup_verify` ran the backup set once and a store failed, or the unit's environment did not carry the full list of expected stores.
 
-**Fix.** `journalctl -u dedalo-backup@<i>` names the store; `/home/ded_<i>/backups/state/` holds the `LAST_OK` or `BACKUP_FAILED` marker. Fix it (disk space, a database the backup cannot reach), then `--resume`.
+**Fix.** `journalctl -u dedalo-backup@<i>` names the store; `<backup dir>/state/` holds the `LAST_OK` or `BACKUP_FAILED` marker. Fix it (disk space, a database the backup cannot reach), then `--resume`.
 
 ### Docker and trial refusals
 

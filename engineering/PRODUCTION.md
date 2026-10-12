@@ -191,9 +191,11 @@ Real hosts look like `/home/my_domain.org/dedalo`, several instances per server,
 so no fixed path is THE layout. Two roles are, and every unit, script and
 installer render places things by them:
 
-1. **The INSTANCE DIR** — any path (`/home/ded_<i>` from the installer,
-   `/home/my_domain.org/dedalo`, `/opt/dedalo/app`), **owned by the service
-   user**. It holds the code tree (`<instance dir>/master_dedalo`; the
+1. **The INSTANCE DIR** — any path (`/home/ded_<i>` by default from the
+   installer, or the operator's `--install-dir` such as
+   `/home/my_domain.org/dedalo`; `/opt/dedalo/app` by hand), **owned by the
+   service user** (`--service-user`: a new account, or an existing one the
+   installer uses as it is and never creates or deletes). It holds the code tree (`<instance dir>/master_dedalo`; the
    installer's is `dedalo/`), `private/` (the engine's `../private`) and
    `backups/` — including the code-update backup root `backups/code`, where the
    update stages, parks the outgoing tree and the rollback parks a failed one.
@@ -216,8 +218,15 @@ installer render places things by them:
    user (the rollback's file work, the backup stores, the installer's engine
    steps).
 3. **Units name both by placeholder or derivation, never by a host path.** The
-   installer's templates derive both from `%i` (`/home/ded_%i`,
-   `/opt/dedalo/instances/%i/bin` — `host/layout.ts`); the hand-installed units
+   installer's templates derive only `%i` NAMES (`/opt/dedalo/instances/%i/bin`,
+   `dedalo-%i`) and carry no user, group, working directory, `.env` or instance
+   path: the per-instance drop-ins (`host/systemd/render.ts`, from
+   `host/layout.ts` `pathsFor` — the service group resolved from the host's
+   facts) carry `User=`, `Group=`, `WorkingDirectory=`, `HOME`, the
+   `EnvironmentFile=` and the rollback/watchdog `--app-dir`/`--backup-root`/
+   `--socket`. A template WITHOUT its drop-in runs `ExecStart=/bin/false`
+   (the rollback's `ExecCondition` too) — fail-closed, never as root. The
+   hand-installed units
    under `deploy/*.service` carry `INSTANCE_DIR`, `ROOT_BIN_DIR` and
    `DEDALO_USER`, rendered per host by `docs/install/manual_host.md`.
 
@@ -227,7 +236,11 @@ instance dir whose parent is `0555`; a layout that needs the parent refuses
 before the download); `test/unit/operator_commands_tripwire.test.ts` (E2 —
 every shipped unit rendered for three layouts: root executes nothing inside the
 instance dir, and no active line spells a host path);
-`test/unit/install_host_render_tripwire.test.ts` (c) for the installer's render.
+`test/unit/install_host_render_tripwire.test.ts` (c) and (f) for the installer's
+render (the default and a custom layout; templates user- and path-agnostic and
+fail-closed); `test/unit/install_host_identity_native.test.ts` (root names no
+path strictly inside the install folder; one user, group and folder per
+instance; an existing account never created or deleted).
 
 ## 3. Sockets, reverse proxy, timeouts (S2-33)
 

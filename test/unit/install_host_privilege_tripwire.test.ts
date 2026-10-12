@@ -241,7 +241,14 @@ describe('the production root process loads no engine module and leaks no secret
 		expect(leaks(host.root, run.out)).toEqual([]);
 		// (c) the engine child: as the instance, in its tree, its HOME, secrets on stdin.
 		const child = loggedRequests(host.root).find((entry) => entry.argv.includes('--request-stdin'));
-		expect(child?.argv.slice(0, 4)).toEqual(['/usr/sbin/runuser', '-u', `ded_${INSTANCE}`, '--']);
+		expect(child?.argv.slice(0, 6)).toEqual([
+			'/usr/sbin/runuser',
+			'-u',
+			`ded_${INSTANCE}`,
+			'-g',
+			`ded_${INSTANCE}`,
+			'--',
+		]);
 		expect(child?.cwd).toBe(`/home/ded_${INSTANCE}/dedalo`);
 		expect(child?.env.HOME).toBe(`/home/ded_${INSTANCE}`);
 		expect(child?.stdin).toBe(true);

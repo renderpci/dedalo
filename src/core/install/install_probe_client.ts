@@ -73,6 +73,7 @@ export interface ChildProbeOptions {
  */
 export const PROBE_TIMEOUT_MS: Readonly<Record<ProbeName, number>> = Object.freeze({
 	system: 30_000,
+	identity: 60_000,
 	db: 30_000,
 	media: 10_000,
 	diffusion: 30_000,
@@ -172,7 +173,15 @@ function outcomeOf(answer: Record<string, unknown>): ProbeOutcome {
 		...(Array.isArray(answer.rows) ? { rows: answer.rows as ProbeOutcome['rows'] } : {}),
 		...(typeof answer.version === 'string' ? { version: answer.version } : {}),
 		...(typeof answer.seedPath === 'string' ? { seedPath: answer.seedPath } : {}),
+		...identityOf(answer),
 	};
+}
+
+/** The identity probe's verdict, when the answer carries one. */
+function identityOf(answer: Record<string, unknown>): Pick<ProbeOutcome, 'identity'> {
+	return answer.identity !== null && typeof answer.identity === 'object'
+		? { identity: answer.identity as NonNullable<ProbeOutcome['identity']> }
+		: {};
 }
 
 /** The InstallProbes of the real machine, each one a probe child. */
@@ -182,6 +191,8 @@ export function childProbes(options: ChildProbeOptions): InstallProbes {
 	return {
 		system: async (route: InstallRoute) =>
 			outcomeOf(await run({ probe: 'system', answers: { route }, secrets: {} })),
+		identity: async (answers) =>
+			outcomeOf(await run({ probe: 'identity', answers: plain(answers), secrets: {} })),
 		database: async (answers, dbPassword) =>
 			outcomeOf(
 				await run({ probe: 'db', answers: plain(answers), secrets: { db_password: dbPassword } }),

@@ -58,6 +58,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { offeredHierarchies, TOPONYMY_TYPOLOGY_ID } from '../../src/core/install/hierarchy_meta.ts';
 import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
+import type { IdentityVerdict } from '../../src/core/install/host/production/identity_rules.ts';
 import { stackEngineAnswers } from '../../src/core/install/host/stack/engine_delegate.ts';
 import {
 	answersFromCliArgs,
@@ -87,6 +88,7 @@ import {
 	type Option,
 	type Question,
 	ROUTE_FIXED,
+	reviewLines,
 	SCREEN_ORDER,
 	type Screen,
 	type ScreenId,
@@ -141,7 +143,9 @@ function maximalRaw(route: InstallRoute): Record<string, unknown> {
  */
 function maximalRaws(route: InstallRoute): Record<string, unknown>[] {
 	const base = maximalRaw(route);
-	if (route === 'production') return [base, { ...base, tls_mode: 'files' }];
+	// A created database's role IS the service user (never asked); an existing one's is.
+	if (route === 'production')
+		return [base, { ...base, tls_mode: 'files' }, { ...base, db_mode: 'existing' }];
 	if (route === 'docker') return [base, { ...base, tls_mode: 'files', image_source: 'custom' }];
 	if (route === 'trial') return [base, { ...base, image_source: 'custom' }];
 	return [base];
@@ -251,8 +255,9 @@ describe('screen model — every answer is asked, or fixed with a reason (a)', (
 const OWNER_PRODUCTION: ScreenId[] = [
 	'route',
 	'system',
-	'database',
+	// Owner decision 2026-10-12: identity before the database (its role is the service user).
 	'identity',
+	'database',
 	'web_tls',
 	'services',
 	'ontologies',
@@ -280,7 +285,9 @@ describe('screen model — the order (b)', () => {
 		expect(SCREEN_ORDER.docker).toEqual(OWNER_DOCKER);
 		expect(SCREEN_ORDER.trial).toEqual(OWNER_DOCKER.filter((id) => id !== 'tls_address'));
 		expect(SCREEN_ORDER.developer).toEqual(
-			OWNER_PRODUCTION.filter((id) => id !== 'web_tls' && id !== 'services'),
+			(
+				['route', 'system', 'database', 'identity', ...OWNER_PRODUCTION.slice(4)] as ScreenId[]
+			).filter((id) => id !== 'web_tls' && id !== 'services'),
 		);
 	});
 
@@ -366,19 +373,28 @@ describe('screen model — every default is the plan’s (c)', () => {
 
 	test('production: the names derive from the instance (the peer role ded_<i>, the root-rule media path); docker/trial: the stack constants', () => {
 		const production = modelInput({ ...MAXIMAL_RAW, instance: 'prado' });
+		const existing = modelInput({ ...MAXIMAL_RAW, instance: 'prado', db_mode: 'existing' });
 		const derived = routeDefaults('production', 'prado');
 		for (const key of [
 			'db_database',
-			'db_username',
 			'media_path',
 			'unix_socket',
 			'mysql_database',
+			'install_dir',
+			'service_user',
+			'backup_dir',
 		] as const) {
 			expect(questionFor(production, key)?.default, key).toBe(derived[key]);
 		}
+		expect(questionFor(existing, 'db_username')?.default).toBe(derived.db_username);
 		expect(derived.db_database).toBe('dedalo_prado');
-		// Phase 4 (owner Q2): a created database is owned by the instance user's PEER role.
+		// Owner decisions 2026-10-12: the folder and the account default to the instance's own;
+		// the PEER role of a created database is the service user.
+		expect(derived.install_dir).toBe('/home/ded_prado');
+		expect(derived.service_user).toBe('ded_prado');
+		expect(derived.backup_dir).toBe('/home/ded_prado/backups');
 		expect(derived.db_username).toBe('ded_prado');
+		expect(questionFor(production, 'service_group')?.default).toBe('');
 		expect(derived.db_socket).toBe('/var/run/postgresql');
 		// THE ROOT RULE: root (/srv/dedalo/prado) + /dedalo/media == MEDIA_PATH (critique B1).
 		expect(derived.media_path).toBe('/srv/dedalo/prado/dedalo/media');
@@ -429,6 +445,116 @@ describe('screen model — every default is the plan’s (c)', () => {
 		const instance = questionFor(modelInput(raw), 'instance') as Question;
 		raw = applyAnswer(raw, instance, 'goya');
 		expect(normalizeInstallAnswers(raw).answers.db_database).toBe('dedalo_goya');
+	});
+});
+
+// ── (c2) the install folder and the service account (owner decisions 2026-10-12) ──
+
+/** A verdict fixture: an existing hosting account, its primary group, a login shell. */
+function hostingVerdict(): IdentityVerdict {
+	return {
+		problems: [],
+		told: [
+			'account my_domain.org has a login shell (/bin/bash): whoever logs in as it can change the code the service runs',
+			'the web server user www-data joins psacln, the primary group of my_domain.org: it can then read whatever that group can read — a group of its own is recommended (--service-group ded_prado)',
+			"group psacln has other members (other.org): they can read the instance's files",
+		],
+		user: { name: 'my_domain.org', create: false, uid: 10001, shell: '/bin/bash' },
+		group: { name: 'psacln', create: false, withUser: false, primaryOf: 'my_domain.org' },
+		folder: { kind: 'create', by: 'user', ancestors: [] },
+		parent: '/home/my_domain.org',
+	};
+}
+
+describe('screen model — the install folder and the service account (c2)', () => {
+	const HOSTING_RAW = {
+		...MAXIMAL_RAW,
+		instance: 'prado',
+		install_dir: '/home/my_domain.org/dedalo',
+		service_user: 'my_domain.org',
+	};
+
+	test('production: the identity screen asks install_dir, service_user, service_group FIRST, behind the identity probe', () => {
+		const screens = buildScreens(modelInput({ ...MAXIMAL_RAW, instance: 'prado' }));
+		const identity = screens.find((screen) => screen.id === 'identity');
+		expect(identity?.questions.slice(0, 3).map((question) => question.key)).toEqual([
+			'install_dir',
+			'service_user',
+			'service_group',
+		]);
+		expect(identity?.probe).toEqual({ id: 'identity', gate: 'must_pass' });
+		const order = screens.map((screen) => screen.id);
+		expect(order.indexOf('identity')).toBeLessThan(order.indexOf('database'));
+	});
+
+	test('the level-2 defaults follow the level-1 ANSWERS: backups inside the folder, the role = the service user', () => {
+		const existing = modelInput({ ...HOSTING_RAW, db_mode: 'existing' });
+		expect(questionFor(existing, 'backup_dir')?.default).toBe('/home/my_domain.org/dedalo/backups');
+		expect(questionFor(existing, 'db_username')?.default).toBe('my_domain.org');
+		// An explicit backup dir wins.
+		const explicit = modelInput({ ...HOSTING_RAW, backup_dir: '/srv/backups/prado' });
+		expect(questionFor(explicit, 'backup_dir')?.answered).toBe(true);
+		expect(planOf({ ...HOSTING_RAW, backup_dir: '/srv/backups/prado' }).answers.backup_dir).toBe(
+			'/srv/backups/prado',
+		);
+	});
+
+	test('a created database never asks its role (peer: the service user); an existing one does', () => {
+		expect(questionFor(modelInput({ ...MAXIMAL_RAW, instance: 'prado' }), 'db_username')).toBe(
+			undefined,
+		);
+		expect(
+			questionFor(
+				modelInput({ ...MAXIMAL_RAW, instance: 'prado', db_mode: 'existing' }),
+				'db_username',
+			),
+		).toBeDefined();
+	});
+
+	for (const route of ['developer', 'docker', 'trial'] as const) {
+		test(`${route}: the three keys are not asked, each ROUTE_FIXED with its reason`, () => {
+			const asked = routeAskedKeys(route);
+			for (const key of ['install_dir', 'service_user', 'service_group']) {
+				expect(asked.has(key), key).toBe(false);
+				expect(ROUTE_FIXED[route][key], key).toBe(
+					'only a production install has an install folder and service account of its own',
+				);
+			}
+		});
+	}
+
+	test("the service group's hint comes from the probe and is never written as an answer", () => {
+		const verdict = hostingVerdict();
+		const input = modelInput(HOSTING_RAW, {
+			probes: { identity: { ok: true, detail: 'measured', identity: verdict } },
+		});
+		const group = questionFor(input, 'service_group');
+		expect(group?.hint).toBe('primary group of my_domain.org: psacln');
+		expect(group?.default).toBe('');
+		expect(planOf(HOSTING_RAW).answers.service_group).toBe('');
+	});
+
+	test('the Review says what is CREATED and what is USED AS IS, and every notice of the verdict', () => {
+		const input = modelInput(HOSTING_RAW, {
+			probes: { identity: { ok: true, detail: 'measured', identity: hostingVerdict() } },
+		});
+		const lines = reviewLines(planOf(HOSTING_RAW), input).map((line) => line.value);
+		expect(lines).toContain(
+			'/home/my_domain.org/dedalo — CREATED (my_domain.org:psacln 0750, by my_domain.org; parent /home/my_domain.org unchanged)',
+		);
+		expect(lines).toContain(
+			'my_domain.org — USED AS IS (uid 10001; never created or deleted by the installer)',
+		);
+		expect(lines).toContain('psacln — USED AS IS (primary group of my_domain.org)');
+		expect(lines).toContain('my_domain.org (peer: the service user)');
+		for (const told of hostingVerdict().told) expect(lines).toContain(told);
+		// Without a verdict (a headless plan), the run's System check decides — said so.
+		const headless = reviewLines(planOf(HOSTING_RAW), modelInput(HOSTING_RAW)).map(
+			(line) => line.value,
+		);
+		expect(headless).toContain(
+			'/home/my_domain.org/dedalo — created or used as is — decided by the System check of the run',
+		);
 	});
 });
 

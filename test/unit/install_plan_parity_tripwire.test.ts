@@ -63,6 +63,11 @@
  *      set by both the file and a flag is an error, never a silent winner;
  *      the run-control flags are front-end flags (key null) and their
  *      meaningless combinations are parser errors.
+ *  (k) THE INSTALL FOLDER AND THE SERVICE ACCOUNT (owner decisions
+ *      2026-10-12): defaults, a hosting account in its own folder, and that
+ *      plus a group of its own — flags ≡ record ≡ answers file give the SAME
+ *      plan hash; cliArgsOf round-trips each (the defaults emit no identity
+ *      flag); the three flags are refused off production.
  *
  * persistConfig runs in CHILD processes (scratch DEDALO_INSTALL_PRIVATE_DIR +
  * DEDALO_TS_STATE_PATH in the child's env), so this gate never mutates its own
@@ -89,6 +94,7 @@ import {
 	answersFromAnswersFile,
 	answersFromCliArgs,
 	buildInstallPlan,
+	cliArgsOf,
 	INSTALL_CLI_FLAGS,
 	INSTALL_STEP_IDS,
 	type InstallPlan,
@@ -113,6 +119,7 @@ import {
 	ontologyRequestFromActive,
 	vendoredOntologyCatalog,
 } from '../../src/core/install/ontology_choice.ts';
+import { buildPlanFile } from '../../src/core/install/run_files_core.ts';
 import { INSTALL_STEPS } from '../../src/core/install/steps.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import { buildOntologyPackage } from '../../src/core/test_data/ontology_package_fixture.ts';
@@ -986,5 +993,139 @@ describe('install plan — never DEDALO_SUPERVISED (g)', () => {
 		const env = parseEnvFile(persistInChild(smuggled, scratchDir('smuggled')));
 		expect(Object.keys(env).length).toBeGreaterThan(30);
 		expect(env.DEDALO_SUPERVISED).toBeUndefined();
+	});
+});
+
+// ── (k) the install folder and the service account ──────────────────────────
+
+/** The production answers every identity case shares. */
+const PRODUCTION_IDENTITY_BASE: Record<string, unknown> = {
+	route: 'production',
+	instance: 'prado',
+	entity: 'parity',
+	server_name: 'prado.example.org',
+	letsencrypt_email: 'ops@example.org',
+};
+
+/** The identity cases: record, the argv a typist gives, and the plan's resolved values. */
+const IDENTITY_CASES: readonly {
+	name: string;
+	record: Record<string, unknown>;
+	argv: string[];
+	resolved: Record<string, string>;
+}[] = [
+	{
+		name: 'defaults',
+		record: {},
+		argv: [],
+		resolved: {
+			install_dir: '/home/ded_prado',
+			service_user: 'ded_prado',
+			service_group: '',
+			backup_dir: '/home/ded_prado/backups',
+			db_username: 'ded_prado',
+		},
+	},
+	{
+		name: 'a hosting account in a folder of its own',
+		record: { install_dir: '/home/drill.example.org/dedalo', service_user: 'drill.example.org' },
+		argv: [
+			'--install-dir',
+			'/home/drill.example.org/dedalo',
+			'--service-user',
+			'drill.example.org',
+		],
+		resolved: {
+			install_dir: '/home/drill.example.org/dedalo',
+			service_user: 'drill.example.org',
+			service_group: '',
+			backup_dir: '/home/drill.example.org/dedalo/backups',
+			db_username: 'drill.example.org',
+		},
+	},
+	{
+		name: 'a hosting account + a group of its own',
+		record: {
+			install_dir: '/home/drill.example.org/dedalo',
+			service_user: 'drill.example.org',
+			service_group: 'webgrp',
+		},
+		argv: [
+			'--install-dir',
+			'/home/drill.example.org/dedalo',
+			'--service-user',
+			'drill.example.org',
+			'--service-group',
+			'webgrp',
+		],
+		resolved: {
+			install_dir: '/home/drill.example.org/dedalo',
+			service_user: 'drill.example.org',
+			service_group: 'webgrp',
+			backup_dir: '/home/drill.example.org/dedalo/backups',
+			db_username: 'drill.example.org',
+		},
+	},
+];
+
+const IDENTITY_FLAGS = ['--install-dir', '--service-user', '--service-group'];
+const IDENTITY_SECRETS = { root_password: 'Mosaic-Kestrel-Harbor-47' };
+
+/** The plan hash a run would freeze for `raw`. */
+function identityHash(raw: Record<string, unknown>): string {
+	const plan = buildInstallPlan(raw);
+	expect(plan.errors).toEqual([]);
+	return buildPlanFile(plan, IDENTITY_SECRETS).plan_hash;
+}
+
+describe('install plan — the install folder and the service account (k)', () => {
+	for (const item of IDENTITY_CASES) {
+		test(`${item.name}: flags ≡ record ≡ answers file (one plan hash); cliArgsOf round-trips`, () => {
+			const record = { ...PRODUCTION_IDENTITY_BASE, ...item.record };
+			const base = cliArgsOf(buildInstallPlan(PRODUCTION_IDENTITY_BASE).answers);
+			const viaFlags = answersFromCliArgs([...base, ...item.argv]);
+			expect(viaFlags.errors).toEqual([]);
+			const hash = identityHash(record);
+			expect(identityHash(viaFlags.raw)).toBe(hash);
+			expect(identityHash(answersFileRaw(record))).toBe(hash);
+			const plan = buildInstallPlan(record);
+			const picked = Object.fromEntries(
+				Object.keys(item.resolved).map((key) => [
+					key,
+					plan.answers[key as keyof typeof plan.answers],
+				]),
+			);
+			expect(picked).toEqual(item.resolved);
+			const argv = cliArgsOf(plan.answers);
+			const roundTrip = answersFromCliArgs(argv);
+			expect(roundTrip.errors).toEqual([]);
+			expect(identityHash(roundTrip.raw)).toBe(hash);
+			// A default is never spelled out: only what the operator changed is a flag.
+			const emitted = IDENTITY_FLAGS.filter((flag) => argv.some((token) => token.startsWith(flag)));
+			expect(emitted).toEqual(IDENTITY_FLAGS.filter((flag) => item.argv.includes(flag)));
+		});
+	}
+
+	test('the cases differ in their plan hash (the matrix is not vacuous)', () => {
+		const hashes = IDENTITY_CASES.map((item) =>
+			identityHash({ ...PRODUCTION_IDENTITY_BASE, ...item.record }),
+		);
+		expect(new Set(hashes).size).toBe(IDENTITY_CASES.length);
+	});
+
+	test('the three keys are refused off production, by the plan, with their sentence', () => {
+		for (const route of ['developer', 'docker', 'trial'] as const) {
+			const errors = buildInstallPlan({
+				route,
+				entity: 'parity',
+				install_dir: '/home/x/dedalo',
+				service_user: 'x',
+				service_group: 'y',
+			}).errors;
+			for (const key of ['install_dir', 'service_user', 'service_group'])
+				expect(errors, `${route} ${key}`).toContain(
+					`${key} is only meaningful on the production route (route is ${route})`,
+				);
+		}
 	});
 });

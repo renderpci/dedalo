@@ -54,13 +54,30 @@ export interface HostCreated {
 	repos: string[];
 	/** Packages this install added (told on --abort, never removed). */
 	packages: string[];
-	/** The instance user + group `ded_<i>` were created by this install. */
-	user: boolean;
-	/** Directories this install created (host paths), parents before children. */
+	/** The service user THIS install created (null: none — an existing account is never recorded). */
+	user: string | null;
+	/** The service group THIS install created (null: none — an existing group is never recorded). */
+	group: string | null;
+	/**
+	 * The install folder, when this install created or adopted it: `root` (made
+	 * by root under a root-owned parent), `user` (made by the service user under
+	 * its own ancestor), `adopted` (an empty foreign folder handed to the user —
+	 * its owner and mode before, restored by --abort). null: used as it is.
+	 */
+	install_dir: {
+		path: string;
+		how: 'root' | 'user' | 'adopted';
+		owner: string;
+		group: string;
+		mode: number;
+	} | null;
+	/** Directories this install created as ROOT (host paths, created ancestors included), parents first. */
 	dirs: string[];
+	/** Directories this install created AS THE SERVICE USER (inside the install folder, or its own ancestors). */
+	user_dirs: string[];
 	/** /opt/dedalo/bun/<pin> was created by this install (shared — refcounted). */
 	bun_dir: boolean;
-	/** The release tree /home/ded_<i>/dedalo was created by this install. */
+	/** The release tree <install_dir>/dedalo was created by this install. */
 	release_dir: boolean;
 	pg_role: boolean;
 	pg_database: boolean;
@@ -94,8 +111,11 @@ export function emptyHostCreated(): HostCreated {
 	return {
 		repos: [],
 		packages: [],
-		user: false,
+		user: null,
+		group: null,
+		install_dir: null,
 		dirs: [],
+		user_dirs: [],
 		bun_dir: false,
 		release_dir: false,
 		pg_role: false,

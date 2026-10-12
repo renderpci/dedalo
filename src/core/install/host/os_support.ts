@@ -64,6 +64,7 @@ export type Binary =
 	| 'crb'
 	| 'systemctl'
 	| 'useradd'
+	| 'groupadd'
 	| 'userdel'
 	| 'groupdel'
 	| 'usermod'
@@ -153,6 +154,7 @@ export interface RowPackages {
 const SHARED_BINARIES = {
 	systemctl: '/usr/bin/systemctl',
 	useradd: '/usr/sbin/useradd',
+	groupadd: '/usr/sbin/groupadd',
 	userdel: '/usr/sbin/userdel',
 	groupdel: '/usr/sbin/groupdel',
 	usermod: '/usr/sbin/usermod',

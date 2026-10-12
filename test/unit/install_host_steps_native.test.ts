@@ -56,7 +56,7 @@ import type {
 	HostPlanCtx,
 	MkdirCommand,
 } from '../../src/core/install/host/contract.ts';
-import { effectiveArgv } from '../../src/core/install/host/execute.ts';
+import { effectiveArgv, instanceMkdirExec } from '../../src/core/install/host/execute.ts';
 import { hostFs } from '../../src/core/install/host/fs.ts';
 import { hostReview, hostTable } from '../../src/core/install/host/host_table.ts';
 import { instancePaths } from '../../src/core/install/host/layout.ts';
@@ -190,7 +190,7 @@ function frozenContext(host: ScratchHost): HostPlanCtx {
 
 /** Every host command of the plan, per step (the Review's list, as objects). */
 function reviewCommands(ctx: HostPlanCtx): { step: HostStepId; command: HostCommand }[] {
-	const table = hostTable(() => ctx);
+	const table = hostTable(() => ({ ...ctx, bunPin: BUN_PIN }));
 	return (ctx.plan.steps as HostStepId[]).flatMap((step) =>
 		table[step].commands(ctx).map((command) => ({ step, command })),
 	);
@@ -198,7 +198,7 @@ function reviewCommands(ctx: HostPlanCtx): { step: HostStepId; command: HostComm
 
 /** An exec command as the runner logs it. */
 function logged(ctx: HostPlanCtx, command: HostCommand & { kind: 'exec' }): string {
-	return effectiveArgv(command, ctx.row, ctx.paths.user).join(' ');
+	return effectiveArgv(command, ctx.row, ctx.paths).join(' ');
 }
 
 /** The commands a run may log without the Review listing them: READ-ONLY probes only. */
@@ -207,7 +207,11 @@ const READ_ONLY = READ_ONLY_PROBES;
 /** The Review's mutating execs, in order, with what may excuse their absence from a run. */
 function mutatingReview(ctx: HostPlanCtx): { line: string; skippable: boolean }[] {
 	return reviewCommands(ctx)
-		.map(({ command }) => command)
+		.map(({ command }) =>
+			command.kind === 'mkdir' && command.as === 'instance'
+				? instanceMkdirExec(command, ctx.row)
+				: command,
+		)
 		.filter((command): command is HostCommand & { kind: 'exec' } => command.kind === 'exec')
 		.filter((command) => command.mutates)
 		.map((command) => ({
@@ -311,7 +315,14 @@ describe('every production variant runs end to end: Review ≡ run, files landed
 				entry.argv.includes('--request-stdin'),
 			);
 			expect(child?.stdin).toBe(true);
-			expect(child?.argv.slice(0, 4)).toEqual(['/usr/sbin/runuser', '-u', `ded_${INSTANCE}`, '--']);
+			expect(child?.argv.slice(0, 6)).toEqual([
+				'/usr/sbin/runuser',
+				'-u',
+				`ded_${INSTANCE}`,
+				'-g',
+				`ded_${INSTANCE}`,
+				'--',
+			]);
 			// The salt went to the one-time display, never to the transcript.
 			expect(first.transcript.shown.join('\n')).toContain('scratch-salt-value');
 			expect(first.transcript.lines.join('\n')).not.toContain('scratch-salt-value');
@@ -453,7 +464,7 @@ describe('abort undoes only what this install created (e)', () => {
 		const files = decoys(UBUNTU_NGINX_LE);
 		const pg = osRowById('ubuntu2604').pgBinDir;
 		const bun = `/opt/dedalo/bun/${BUN_PIN}/bun`;
-		const child = `/usr/sbin/runuser -u ded_${INSTANCE} -- ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
+		const child = `/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
 		const host = scratchHost(UBUNTU_NGINX_LE, {
 			files,
 			responses: [
@@ -494,9 +505,13 @@ describe('abort undoes only what this install created (e)', () => {
 		expect(aborted.outcome.keptLive).toBe(false);
 		const log = loggedCommands(host.root);
 		expect(log).toContain(`/usr/sbin/userdel ded_${INSTANCE}`);
-		// The home this install created goes with the user (no file left to a reusable uid);
-		// it was never filled by useradd's skeleton, and the package cache never lived in it.
-		expect(log).toContain(`/usr/bin/rm -rf /home/ded_${INSTANCE}`);
+		// The folder this install created goes with the user (no file left to a reusable uid):
+		// emptied BY THE SERVICE USER (root never works by path inside a tree another account
+		// controls — critique B1), then removed; never filled by useradd's skeleton.
+		expect(log).toContain(
+			`/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- /usr/bin/rm -rf -- /home/ded_${INSTANCE}/backups /home/ded_${INSTANCE}/dedalo /home/ded_${INSTANCE}/private`,
+		);
+		expect(log.filter((line) => /^\/usr\/bin\/rm .*\/home\//.test(line))).toEqual([]);
 		expect(log.some((line) => line.includes('useradd') && line.includes('--create-home'))).toBe(
 			false,
 		);
@@ -507,7 +522,7 @@ describe('abort undoes only what this install created (e)', () => {
 			true,
 		);
 		expect(log).toContain(
-			`/usr/sbin/runuser -u ded_${INSTANCE} -- /usr/bin/rm -rf /home/ded_${INSTANCE}/dedalo/.bun-install-cache`,
+			`/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- /usr/bin/rm -rf /home/ded_${INSTANCE}/dedalo/.bun-install-cache`,
 		);
 		expect(
 			log.filter((line) => line.startsWith(`${child} --abort --confirm-database ${DB}`)).length,
@@ -640,16 +655,18 @@ describe('refusals, each before anything changes (f)', () => {
 		sentence: string;
 	}[] = [
 		{
-			name: 'the instance user exists',
+			// An existing REGULAR account is used as it is (install_host_identity_native); a
+			// SYSTEM account of the default name is an earlier install's leftover — never reused.
+			name: 'the default service user exists as a system account (a leftover)',
 			options: {
 				responses: [
 					{
 						match: `/usr/bin/getent passwd ded_${INSTANCE}`,
-						stdout: `ded_${INSTANCE}:x:1001:1001::/home/ded_${INSTANCE}:/bin/bash\n`,
+						stdout: `ded_${INSTANCE}:x:998:998::/home/ded_${INSTANCE}:/usr/sbin/nologin\n`,
 					},
 				],
 			},
-			sentence: `the user ded_${INSTANCE} already exists`,
+			sentence: `account ded_${INSTANCE} is a system account (uid 998)`,
 		},
 		{
 			name: 'the database exists',
@@ -881,7 +898,7 @@ describe('every directory a production install creates has a deliberate mode (b)
 			const mode = (path: string) => dirs.find((dir) => dir.path === path)?.mode;
 			expect(mode(ctx.paths.media)).toBe(MEDIA_DIR_MODE);
 			expect(mode(ctx.paths.privateDir)).toBe(0o700);
-			expect(mode(ctx.paths.home)).toBe(0o750);
+			expect(mode(ctx.paths.instanceDir)).toBe(0o750);
 			expect(mode(ctx.paths.binDir)).toBe(0o755);
 		}
 	});
@@ -918,7 +935,7 @@ const RULE_COPY = `/etc/nginx/dedalo/${INSTANCE}/media_protection.conf`;
 /** The engine child failing its run (an abort is then a FULL one: nothing live). */
 function engineFails(): RecordedResponse[] {
 	const bun = `/opt/dedalo/bun/${BUN_PIN}/bun`;
-	const child = `/usr/sbin/runuser -u ded_${INSTANCE} -- ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
+	const child = `/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
 	return [
 		{ match: `${child} --request-stdin`, exit: 9, stderr: 'the seed restore failed' },
 		{
@@ -1018,9 +1035,11 @@ describe('the public address is polled while the reload settles (review)', () =>
 		// The probe file: written and removed by the instance user, never by root through a path.
 		const probe = `/srv/dedalo/${INSTANCE}/dedalo/media/image/thumb/dd_install_probe_dd0_0.jpg`;
 		expect(log).toContain(
-			`/usr/sbin/runuser -u ded_${INSTANCE} -- /usr/bin/install -D -m 0640 /dev/null ${probe}`,
+			`/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- /usr/bin/install -D -m 0640 /dev/null ${probe}`,
 		);
-		expect(log).toContain(`/usr/sbin/runuser -u ded_${INSTANCE} -- /usr/bin/rm -f ${probe}`);
+		expect(log).toContain(
+			`/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- /usr/bin/rm -f ${probe}`,
+		);
 	});
 });
 

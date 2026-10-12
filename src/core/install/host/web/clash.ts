@@ -20,6 +20,28 @@ export interface SiteTuple {
 	file: string;
 	names: string[];
 	ports: string[];
+	/**
+	 * The directories the site SERVES (nginx `root`/`alias`, Apache
+	 * `DocumentRoot`/`Alias` — read from the vhost file): no install folder or
+	 * backup folder may lie inside one (identity_rules.ts). Absent = not read.
+	 */
+	roots?: string[];
+}
+
+/** nginx `root` / `alias` values of a server block (nested locations included). */
+export function nginxRoots(body: string): string[] {
+	return [...body.matchAll(/^\s*(?:root|alias)\s+([^;\s]+)\s*;/gm)].map(
+		(m) => (m[1] as string).replace(/^["']|["']$/g, '').replace(/\/+$/, '') || '/',
+	);
+}
+
+/** Apache `DocumentRoot` / `Alias <url> <dir>` values of a vhost file's text. */
+export function apacheRoots(text: string): string[] {
+	const clean = text.replace(/#[^\n]*/g, '');
+	return [
+		...[...clean.matchAll(/^\s*DocumentRoot\s+"?([^"\s]+)"?/gim)].map((m) => m[1] as string),
+		...[...clean.matchAll(/^\s*Alias\s+\S+\s+"?([^"\s]+)"?/gim)].map((m) => m[1] as string),
+	].map((root) => root.replace(/\/+$/, '') || '/');
 }
 
 /** One nginx `listen` value → its port ('80' when only an address is given). */
@@ -79,7 +101,7 @@ export function nginxSites(dump: string): SiteTuple[] {
 	return nginxSections(dump).flatMap(({ file, text }) =>
 		serverBlocks(text).map((body) => {
 			const [names = [], ports = []] = serverDirectives(body);
-			return { file, names, ports };
+			return { file, names, ports, roots: nginxRoots(body) };
 		}),
 	);
 }

@@ -3002,29 +3002,42 @@ function describeVerdict(verdict: Verdict): string {
 	return `shape: ${verdict.shape}, bound floor: ${verdict.boundFloor ? 'yes' : 'NO'}, TOTAL row: ${verdict.claims ? 'yes' : 'no'}`;
 }
 
+/**
+ * The two whole-index tests classify EVERY registered gate's source (~5 s on a
+ * loaded developer machine, 2026-10-12, measured at 5.2 s against Bun's 5 s
+ * default — the index grows with every gate): an explicit bound, the one the
+ * hermetic tier passes anyway (`bun test --timeout=30000`), so a bare `bun test`
+ * judges the census, not the machine's load.
+ */
+const CLASSIFY_TIMEOUT_MS = 30_000;
+
 describe('the census is the index — every registered gate is classified from its source', () => {
-	test('the index parses, every named gate exists, and the claim set is populated (anti-vacuity)', () => {
-		const markdown = readFileSync(TRIPWIRE_INDEX, 'utf8');
-		const rows = parseIndexRows(markdown);
-		expect(rows.length).toBeGreaterThan(100);
-		// TOTAL over the index: every line that names a gate is a row — a parser
-		// that requires a closing `|` dropped three rows and nobody could see it.
-		expect(rows.length).toBe(indexRowLines(markdown));
-		expect(new Set(rows.map((row) => row.file)).size).toBe(rows.length);
-		for (const row of rows) {
-			expect(
-				existsSync(join(REPO_ROOT, row.file)),
-				`${row.file} is named by the index but absent`,
-			).toBe(true);
-		}
-		// 25 TOTAL rows on 2026-09-02: the claim grammar still matches the index.
-		expect(rows.filter((row) => claimsTotality(row.invariant)).length).toBeGreaterThan(20);
-		// And the shapes are populated: a classifier that saw no walks would pass every rule vacuously.
-		const verdicts = liveVerdicts();
-		expect(verdicts.filter(({ verdict }) => verdict.shape === 'walk').length).toBeGreaterThan(80);
-		expect(verdicts.filter(({ verdict }) => verdict.ownWalk).length).toBeGreaterThan(70);
-		expect(verdicts.filter(({ verdict }) => verdict.boundFloor).length).toBeGreaterThan(60);
-	});
+	test(
+		'the index parses, every named gate exists, and the claim set is populated (anti-vacuity)',
+		() => {
+			const markdown = readFileSync(TRIPWIRE_INDEX, 'utf8');
+			const rows = parseIndexRows(markdown);
+			expect(rows.length).toBeGreaterThan(100);
+			// TOTAL over the index: every line that names a gate is a row — a parser
+			// that requires a closing `|` dropped three rows and nobody could see it.
+			expect(rows.length).toBe(indexRowLines(markdown));
+			expect(new Set(rows.map((row) => row.file)).size).toBe(rows.length);
+			for (const row of rows) {
+				expect(
+					existsSync(join(REPO_ROOT, row.file)),
+					`${row.file} is named by the index but absent`,
+				).toBe(true);
+			}
+			// 25 TOTAL rows on 2026-09-02: the claim grammar still matches the index.
+			expect(rows.filter((row) => claimsTotality(row.invariant)).length).toBeGreaterThan(20);
+			// And the shapes are populated: a classifier that saw no walks would pass every rule vacuously.
+			const verdicts = liveVerdicts();
+			expect(verdicts.filter(({ verdict }) => verdict.shape === 'walk').length).toBeGreaterThan(80);
+			expect(verdicts.filter(({ verdict }) => verdict.ownWalk).length).toBeGreaterThan(70);
+			expect(verdicts.filter(({ verdict }) => verdict.boundFloor).length).toBeGreaterThan(60);
+		},
+		CLASSIFY_TIMEOUT_MS,
+	);
 
 	test('the bracket tracker closes every registered gate at depth 0 — its verdicts rest on real ancestry', () => {
 		const rows = liveIndexRows();
@@ -3069,15 +3082,19 @@ describe('the census is the index — every registered gate is classified from i
 		expect(claimsTotality('TOTALLY')).toBe(false);
 	});
 
-	test('no gate walks without a floor bound to its walk, holds a hand corpus, or claims TOTAL over either', () => {
-		const offenders = liveVerdicts()
-			.filter(({ verdict }) => !verdict.ok)
-			.map(({ file, verdict }) => `${file} (${describeVerdict(verdict)})`);
-		expect(
-			offenders,
-			`Rows of engineering/TRIPWIRES.md whose gate breaks the census rule. A WALKING gate floors ITS WALK: expect(<a name bound to the walk>.length).toBeGreaterThan(<int>) — a floor on an unrelated value is not one. A gate iterating a hand array of repo paths derives it instead (a registered shared lister, ${DERIVATION_SHAPES} recognised walk shapes). A TOTAL row needs the walk + bound floor, or a closed-set exemption (cap ${CLOSED_SET_EXEMPTION_CAP}, with reason and corpusToken):`,
-		).toEqual([]);
-	});
+	test(
+		'no gate walks without a floor bound to its walk, holds a hand corpus, or claims TOTAL over either',
+		() => {
+			const offenders = liveVerdicts()
+				.filter(({ verdict }) => !verdict.ok)
+				.map(({ file, verdict }) => `${file} (${describeVerdict(verdict)})`);
+			expect(
+				offenders,
+				`Rows of engineering/TRIPWIRES.md whose gate breaks the census rule. A WALKING gate floors ITS WALK: expect(<a name bound to the walk>.length).toBeGreaterThan(<int>) — a floor on an unrelated value is not one. A gate iterating a hand array of repo paths derives it instead (a registered shared lister, ${DERIVATION_SHAPES} recognised walk shapes). A TOTAL row needs the walk + bound floor, or a closed-set exemption (cap ${CLOSED_SET_EXEMPTION_CAP}, with reason and corpusToken):`,
+			).toEqual([]);
+		},
+		CLASSIFY_TIMEOUT_MS,
+	);
 
 	test('the closed-set exemptions are capped, current, and every entry still describes its file', () => {
 		expect(ENUMERATED_CLOSED_SET_CENSUSES.length).toBeLessThanOrEqual(CLOSED_SET_EXEMPTION_CAP);

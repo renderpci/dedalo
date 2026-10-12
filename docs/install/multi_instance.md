@@ -9,15 +9,15 @@ One engine process serves **exactly one entity and one database**. It reads its 
 
 ## The named-instance model
 
-Every name and path of a production instance derives from its instance name `<i>` (`src/core/install/host/layout.ts`), so two instances cannot collide by construction:
+Every name and path of a production instance derives from its instance name `<i>` (`src/core/install/host/layout.ts`), except the install folder and the service account, which the operator may choose ([The install folder and the service account](production.md#the-install-folder-and-the-service-account)). The derived names cannot collide by construction; the chosen ones are checked:
 
 | Per instance | Value |
 | --- | --- |
-| system user and group | `ded_<i>` |
-| home, release tree, private directory, backups | `/home/ded_<i>/`, `…/dedalo/`, `…/private/`, `…/backups/` |
+| service user and group | `ded_<i>` by default (`--service-user`, `--service-group`) |
+| install folder, release tree, private directory, backups | `/home/ded_<i>/` by default (`--install-dir`), `…/dedalo/`, `…/private/`, `…/backups/` |
 | web root, media, published client | `/srv/dedalo/<i>/`, `…/dedalo/media/`, `…/client/` |
 | socket | `/run/dedalo-<i>/dedalo_ts.sock` |
-| database and role | `dedalo_<i>`, owned by the peer role `ded_<i>` |
+| database and role | `dedalo_<i>`, owned by the peer role named like the service user |
 | publication database (default) | `web_<i>` |
 | units | `dedalo-ts@<i>` and its watchdog, restart, rollback and backup instances, with this instance's drop-ins |
 | site file | `dedalo-<i>.conf`, with the nginx names `dedalo_<i>` and `dedalo_<i>_api` |
@@ -25,7 +25,13 @@ Every name and path of a production instance derives from its instance name `<i>
 | root-run scripts | `/opt/dedalo/instances/<i>/bin/` |
 | installer record | `/var/lib/dedalo-install/<i>/` |
 
-The layout follows one rule, by role rather than by path. **The instance directory** — `/home/ded_<i>/` here — is owned by the instance's user and holds its code, private directory and backups; an in-app code update renames the code tree only inside it, so `/home` stays root's. **Everything a root-started unit runs** — the Bun runtime and the watchdog, rollback, backup and alert scripts — lives in root-owned directories outside every instance directory (`/opt/dedalo/bun/<pin>/`, `/opt/dedalo/instances/<i>/bin/`). A host set up by hand follows the same rule with paths of its own choosing, for example one instance directory per domain such as `/home/my_domain.org/dedalo` — see [A host set up by hand › The layout](manual_host.md#the-layout).
+The layout follows one rule, by role rather than by path. **The instance directory** — the install folder, `/home/ded_<i>/` by default — is owned by the service user and holds its code, private directory and backups; an in-app code update renames the code tree only inside it, so its parent stays root's. **Everything a root-started unit runs** — the Bun runtime and the watchdog, rollback, backup and alert scripts — lives in root-owned directories outside every instance directory (`/opt/dedalo/bun/<pin>/`, `/opt/dedalo/instances/<i>/bin/`). A host set up by hand follows the same rule with paths of its own choosing, for example one instance directory per domain such as `/home/my_domain.org/dedalo` — see [A host set up by hand › The layout](manual_host.md#the-layout).
+
+### One account, one group, one folder per instance
+
+A hosting server often has an account per domain. The installer can use one as the service user — `--service-user my_domain.org --install-dir /home/my_domain.org/dedalo` — and never creates, changes or deletes it. Each instance still needs **its own** account, group and folder: the System check refuses a service user or group another instance uses, and a folder that is, contains or lies inside another instance's folder (component-wise: `/home/a` and `/home/ab` do not overlap). It finds the other instances in the host registry, the units' drop-ins, the records of unfinished installs and any hand-installed `dedalo*.service`, and names the file in its refusal — remove a genuinely stale one, or choose another name.
+
+With an existing account and no `--service-group`, the web server joins the account's **primary group**, and can then read whatever that group can read. The Review says so; a group of its own (`--service-group ded_<i>`) is the recommended choice, and the only one that keeps two instances apart when a hosting panel gives all its accounts one shared primary group.
 
 Two components are **shared and trusted**, one each for the whole host:
 
@@ -86,7 +92,7 @@ Each instance is one long-lived process supervised by systemd, running as **its 
 - [ ] `curl --fail https://<address>/health` → the same `200`, through the web server.
 - [ ] Log in, create, save and reload a record; upload an image — the derivative and thumbnail appear.
 - [ ] `curl -I -H 'Range: bytes=0-99' https://<address>/dedalo/media/image/thumb/<file>.jpg` → `206` (nothing is in the media byte path).
-- [ ] As `ded_<i>`, confirm another instance's `/home/ded_<other>/private/.env` is **not** readable — the boundary holds.
+- [ ] As this instance's service user, confirm another instance's `<its install folder>/private/.env` is **not** readable — the boundary holds.
 - [ ] `systemctl reboot`; every instance, socket and site comes back on its own.
 
 ## Upgrading one instance at a time
@@ -96,3 +102,5 @@ Each instance updates its own code from its own **Maintenance** panel, so you ca
 ## Removing an instance
 
 There is no command that removes a completed instance. `--abort` takes apart only an install that did not finish; on a completed one it undoes only the host steps after the engine install and keeps the instance, its user, its database and its code.
+
+`--abort` removes a service user and group only when that install created them. An **existing** account used as the service user is never removed — neither by `--abort` nor by anything else the installer does — and neither are its home and its other files.

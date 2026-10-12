@@ -341,6 +341,14 @@ const IDENTITY_ARGV = [
  */
 const HOST_ARGV = ['--server-name', 'prado.example.org', '--letsencrypt-email', 'ops@example.org'];
 
+/** A hosting account's install folder and the account itself (production only). */
+const HOSTING_ARGV = [
+	'--install-dir',
+	'/home/drill.example.org/dedalo',
+	'--service-user',
+	'drill.example.org',
+];
+
 /**
  * The route matrix (D5/D6): production with an instance (its derived names
  * taken as shown, and overridden), docker, trial, an explicit developer,
@@ -367,7 +375,8 @@ export function routeCases(sourceDir: string): RouteCase[] {
 				'prado',
 				'--db-name',
 				'prado_db',
-				'--db-user',
+				// A created database's role IS the service user (peer): the account is overridden.
+				'--service-user',
 				'prado_role',
 				'--db-password',
 				'secret pass',
@@ -388,6 +397,35 @@ export function routeCases(sourceDir: string): RouteCase[] {
 				'--https-port',
 				'8443',
 				...IDENTITY_ARGV,
+			],
+			local: false,
+		},
+		{
+			// Owner decisions 2026-10-12: an existing hosting account in a folder below its home.
+			name: 'route production: a hosting account in a folder of its own',
+			argv: [
+				'--route',
+				'production',
+				'--instance',
+				'prado',
+				...HOST_ARGV,
+				...IDENTITY_ARGV,
+				...HOSTING_ARGV,
+			],
+			local: false,
+		},
+		{
+			name: 'route production: a hosting account + a service group of its own',
+			argv: [
+				'--route',
+				'production',
+				'--instance',
+				'prado',
+				...HOST_ARGV,
+				...IDENTITY_ARGV,
+				...HOSTING_ARGV,
+				'--service-group',
+				'webgrp',
 			],
 			local: false,
 		},

@@ -77,6 +77,12 @@ export interface MkdirCommand {
 	readonly owner: string;
 	readonly group: string;
 	readonly label: string;
+	/**
+	 * `instance`: made BY the service user (`install -d -m <mode>` under runuser
+	 * — a directory inside the install folder, where root never works by path:
+	 * critique B1); absent: by root through the HostFs.
+	 */
+	readonly as?: 'instance';
 }
 
 export interface RemoveCommand {

@@ -2,16 +2,32 @@
  * host_selinux — SELINUX CONTEXTS ON THE RHEL FAMILY (terminal installer phase
  * 4, 2026-10-12; enforcing or permissive — a no-op elsewhere):
  *
- *  - file contexts for what the web server reads or connects to:
- *      /var/run/dedalo-<i>(/.*)?        httpd_var_run_t   (the socket — the
- *                                       /var/run spelling: L48, the equivalence
- *                                       rule maps it onto /run)
- *      /srv/dedalo/<i>(/.*)?            httpd_sys_content_t (media + the
- *                                       published client — never the code tree,
+ *  - file contexts, every spec DERIVED FROM THE ANSWERS (the socket's dir, the
+ *    web root of MEDIA_PATH, the install folder — any path, regex-escaped):
+ *      <socket dir>(/.*)?               httpd_var_run_t   (the socket — the
+ *                                       /var/run spelling under /run: L48, the
+ *                                       equivalence rule maps it onto /run)
+ *      /srv/dedalo/<i>(/.*)? and the    httpd_sys_content_t (media + the
+ *      web root of MEDIA_PATH           published client — never the code tree,
  *                                       which an update replaces unlabelled: B13)
  *      /var/lib/dedalo-install/acme/<i>(/.*)?  httpd_sys_content_t (the HTTP-01
  *                                       challenge root — var_lib_t is denied: B13)
- *    then `restorecon -RF` on each;
+ *      <install folder>/{dedalo,private,backups}(/.*)?  var_lib_t — and the
+ *                                       backup dir when it lies outside, and the
+ *                                       folder itself (not recursive) when this
+ *                                       install created it: init_t reaches the
+ *                                       WorkingDirectory= and EnvironmentFile=
+ *                                       there, the engine and the backup units
+ *                                       are unconfined, and httpd_t is DENIED
+ *                                       var_lib_t (B13) — so the web server never
+ *                                       reads the tree, whatever path it is at
+ *                                       (a /home path would be user_home_t, a
+ *                                       /data path default_t: EnvironmentFile
+ *                                       breaks, /opt usr_t: httpd reads it).
+ *                                       Never a relabel of an existing folder
+ *                                       itself (a hosting account's .ssh stays);
+ *    then `restorecon -RF` on each (the instance's subtrees AS the service
+ *    user: root never works by path inside the install folder — B1);
  *  - ONE host-wide CIL module, `dedalo_engine` (deploy/selinux/): the engine's
  *    own domain dedalo_engine_t (systemd starts the pinned runtime, labelled
  *    dedalo_engine_exec_t, into it) and httpd_t → dedalo_engine_t connectto
@@ -35,10 +51,12 @@ import type {
 	HostStepDefinition,
 } from '../contract.ts';
 import { executeCommands } from '../execute.ts';
+import { isInside } from '../fs.ts';
 import { hostRefuse } from '../refuse.ts';
 import { otherEntries, updateEntry } from '../registry.ts';
 import { sourceText } from '../source.ts';
 import { exec, probe, probeText, ran, remember, verdictOf } from './common.ts';
+import { identityOf } from './identity.ts';
 
 /** The engine runtime's file type and the domain systemd starts it into (the module's). */
 export const ENGINE_EXEC_TYPE = 'dedalo_engine_exec_t';
@@ -51,21 +69,98 @@ export function selinuxApplies(ctx: HostPlanCtx): boolean {
 	);
 }
 
-/**
- * The file-context rules (spec, type, and the path relabelled now — null for
- * the socket dir, which systemd creates at each start and labels by the rule).
- */
-export function fcontextRules(
-	ctx: HostPlanCtx,
-): { spec: string; type: string; path: string | null }[] {
+/** A path as a literal inside a file-context regex (its metacharacters escaped). */
+export function fcontextEscape(path: string): string {
+	return path.replace(/[.^$*+?()[\]{}|\\]/g, '\\$&');
+}
+
+/** The /var/run spelling of a path under /run (L48: the equivalence rule maps it onto /run). */
+function varRunSpelling(path: string): string {
+	return path === '/run' || path.startsWith('/run/') ? `/var${path}` : path;
+}
+
+/** One file-context rule. */
+export interface FcontextRule {
+	spec: string;
+	type: string;
+	/** The path relabelled now (null: systemd creates it at each start — labelled by the rule). */
+	path: string | null;
+	/** Relabelled as the service user (inside the install folder — B1). */
+	byUser?: true;
+	/** Only the path itself (the install folder this install created), not its tree. */
+	single?: true;
+}
+
+/** A recursive rule over `path`. */
+function treeRule(path: string, type: string, extra: Partial<FcontextRule> = {}): FcontextRule {
+	return { spec: `${fcontextEscape(path)}(/.*)?`, type, path, ...extra };
+}
+
+/** The web content: /srv/dedalo/<i>, and MEDIA_PATH's web root when it lies elsewhere. */
+function webRules(ctx: HostPlanCtx): FcontextRule[] {
 	const { paths } = ctx;
+	const outside = !isInside(paths.srv, paths.webRoot);
 	return [
-		{ spec: `/var/run/dedalo-${paths.instance}(/.*)?`, type: 'httpd_var_run_t', path: null },
-		{ spec: `${paths.srv}(/.*)?`, type: 'httpd_sys_content_t', path: paths.srv },
+		treeRule(paths.srv, 'httpd_sys_content_t'),
+		...(outside ? [treeRule(paths.webRoot, 'httpd_sys_content_t')] : []),
 		...(ctx.answers.tls_mode === 'letsencrypt'
-			? [{ spec: `${paths.acmeDir}(/.*)?`, type: 'httpd_sys_content_t', path: paths.acmeDir }]
+			? [treeRule(paths.acmeDir, 'httpd_sys_content_t')]
 			: []),
 	];
+}
+
+/** The install folder itself — only when this install created it (never an existing folder). */
+function folderRule(ctx: HostPlanCtx): FcontextRule[] {
+	const folder = identityOf(ctx).folder;
+	if (folder.kind !== 'create') return [];
+	const dir = ctx.paths.instanceDir;
+	return [
+		{
+			spec: fcontextEscape(dir),
+			type: 'var_lib_t',
+			path: dir,
+			single: true,
+			...(folder.by === 'user' ? { byUser: true as const } : {}),
+		},
+	];
+}
+
+/** The instance's own subtrees (var_lib_t — see the header). */
+function instanceRules(ctx: HostPlanCtx): FcontextRule[] {
+	const { paths } = ctx;
+	const backupOutside = !isInside(paths.instanceDir, paths.backupDir);
+	return [
+		...folderRule(ctx),
+		...[paths.tree, paths.privateDir, paths.instanceBackups].map((path) =>
+			treeRule(path, 'var_lib_t', { byUser: true }),
+		),
+		...(backupOutside ? [treeRule(paths.backupDir, 'var_lib_t')] : []),
+	];
+}
+
+/** The file-context rules (see the header). */
+export function fcontextRules(ctx: HostPlanCtx): FcontextRule[] {
+	return [
+		{
+			spec: `${fcontextEscape(varRunSpelling(ctx.paths.socketDir))}(/.*)?`,
+			type: 'httpd_var_run_t',
+			path: null,
+		},
+		...webRules(ctx),
+		...instanceRules(ctx),
+	];
+}
+
+/** The relabel of one rule's path (the instance's subtrees as the service user). */
+function relabelCommand(ctx: HostPlanCtx, rule: FcontextRule & { path: string }): ExecCommand {
+	return exec(ctx, 'restorecon', [rule.single ? '-F' : '-RF', rule.path], `relabel ${rule.path}`, {
+		...(rule.byUser ? { as: 'instance' as const } : {}),
+	});
+}
+
+/** Does a `semanage fcontext -l -C` listing define exactly `spec` (its first column)? */
+export function hasSpec(listing: string, spec: string): boolean {
+	return listing.split('\n').some((line) => line.trim().split(/\s+/)[0] === spec);
 }
 
 /** The module file (stamped with the template's own hash). */
@@ -88,7 +183,7 @@ export function selinuxCommands(ctx: HostPlanCtx, present = ''): HostCommand[] {
 	if (!selinuxApplies(ctx)) return [];
 	return [
 		...fcontextRules(ctx)
-			.filter((rule) => !present.includes(rule.spec))
+			.filter((rule) => !hasSpec(present, rule.spec))
 			.map((rule) =>
 				exec(
 					ctx,
@@ -98,9 +193,7 @@ export function selinuxCommands(ctx: HostPlanCtx, present = ''): HostCommand[] {
 				),
 			),
 		...fcontextRules(ctx).flatMap((rule) =>
-			rule.path === null
-				? []
-				: [exec(ctx, 'restorecon', ['-RF', rule.path], `relabel ${rule.path}`)],
+			rule.path === null ? [] : [relabelCommand(ctx, { ...rule, path: rule.path })],
 		),
 
 		{
@@ -136,6 +229,20 @@ export function runtimeLabelProbe(ctx: HostPlanCtx): ExecCommand {
 	return probe(ctx, 'stat', ['-c', '%C', ctx.paths.bun], 'the engine runtime label');
 }
 
+/**
+ * Record — and save, BEFORE `semanage fcontext -a` runs — exactly the rules
+ * this run is about to ADD (`present` = the local rules defined now). A rule
+ * that was already there (an operator's own label of the chosen path) is never
+ * recorded, so --abort never deletes it; a rule an earlier, killed attempt
+ * added was recorded by that attempt.
+ */
+function claimFcontexts(ctx: HostCtx, present: string): void {
+	const adding = fcontextRules(ctx).filter((rule) => !hasSpec(present, rule.spec));
+	if (adding.length === 0) return;
+	for (const rule of adding) remember(ctx.created.selinux_fcontexts, rule.spec);
+	ctx.save();
+}
+
 /** A dedalo_engine module this installer did not write is someone else's. */
 async function assertModuleOurs(ctx: HostCtx): Promise<void> {
 	const loaded = (await probeText(ctx, probe(ctx, 'semodule', ['-l'], 'modules')))
@@ -168,7 +275,7 @@ export const host_selinux: HostStepDefinition = {
 		return verdictOf(
 			[
 				...fcontextRules(ctx).map((rule): [boolean, string] => [
-					rules.includes(rule.spec),
+					hasSpec(rules, rule.spec),
 					`no file context for ${rule.spec}`,
 				]),
 				[/^dedalo_engine\b/m.test(modules), 'the dedalo_engine module is not loaded'],
@@ -187,6 +294,7 @@ export const host_selinux: HostStepDefinition = {
 			ctx,
 			probe(ctx, 'semanage', ['fcontext', '-l', '-C'], 'local rules'),
 		);
+		claimFcontexts(ctx, present);
 		await executeCommands(selinuxCommands(ctx, present), ctx);
 		updateEntry(ctx.fs, ctx.paths, { selinux_module: true });
 		return ran(`${fcontextRules(ctx).length} file contexts, the dedalo_engine module`, {
@@ -195,9 +303,10 @@ export const host_selinux: HostStepDefinition = {
 			],
 		});
 	},
+	// The file contexts are recorded by claimFcontexts (run), never here: only the
+	// ones this install ADDS are its own.
 	intent: (ctx) => {
 		if (!selinuxApplies(ctx)) return;
-		for (const rule of fcontextRules(ctx)) remember(ctx.created.selinux_fcontexts, rule.spec);
 		ctx.created.selinux_module ||= !ctx.fs.exists(modulePath(ctx));
 	},
 	undo: async (ctx) => {

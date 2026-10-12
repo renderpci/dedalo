@@ -2,12 +2,18 @@
  * ONE PRODUCTION INSTANCE'S PLACES (terminal installer phase 4, 2026-10-12) —
  * every path and name a production install creates, derived from the instance
  * name and the answers in ONE function (multi_instance.md's layout, with the
- * owner's phase-4 decisions):
+ * owner's phase-4 decisions and the 2026-10-12 install folder / service
+ * account decisions — engineering/PRODUCTION.md §2.2):
  *
- *   /home/ded_<i>/                    the instance user's home (0750)
- *   /home/ded_<i>/dedalo/             the release tree (WorkingDirectory)
- *   /home/ded_<i>/private/            ../private (.env 0600, sessions, state) — 0700
- *   /home/ded_<i>/backups/            the backup units' target (default) — 0750
+ *   <install_dir>/                    THE INSTANCE DIR (any path; default
+ *                                     /home/ded_<i>), owned by the SERVICE USER
+ *                                     (<service_user>, default ded_<i>); its
+ *                                     parent may be root-owned and is never changed
+ *   <install_dir>/dedalo/             the release tree (WorkingDirectory)
+ *   <install_dir>/private/            ../private (.env 0600, sessions, state) — 0700
+ *   <install_dir>/backups/            the code updater's backup root (backups/code —
+ *                                     `<tree>/../backups`) and the backup units'
+ *                                     default target — 0750
  *   /srv/dedalo/<i>/                  the web root (0750; THE ROOT RULE)
  *   /srv/dedalo/<i>/dedalo/media/     MEDIA_PATH (0750 — L56)
  *   /srv/dedalo/<i>/client/           DEDALO_CLIENT_PUBLISH_DIR: the engine publishes
@@ -30,11 +36,19 @@ import type { InstallAnswers } from '../install_plan.ts';
 
 export interface InstancePaths {
 	readonly instance: string;
+	/** The service user (an answer — created, or an existing account used as it is). */
 	readonly user: string;
+	/** The service group (resolved: the answer, else the user's primary group, else its own). */
 	readonly group: string;
-	readonly home: string;
+	/** The instance dir (the install folder) — also the service's HOME. */
+	readonly instanceDir: string;
 	readonly tree: string;
 	readonly privateDir: string;
+	/** `<instanceDir>/backups` — always created (the code updater's backup root lives in it). */
+	readonly instanceBackups: string;
+	/** `<instanceDir>/backups/code` — the code updater's `<tree>/../backups/code`. */
+	readonly codeBackupRoot: string;
+	/** The backup units' target (an answer; default `<instanceDir>/backups`). */
 	readonly backupDir: string;
 	readonly srv: string;
 	readonly media: string;
@@ -52,6 +66,8 @@ export interface InstancePaths {
 	readonly registry: string;
 	readonly backupStateDir: string;
 	readonly selinuxDir: string;
+	/** The release archive's root-owned hand-over dir (root:<group> 0750, outside the instance dir). */
+	readonly releaseDir: string;
 }
 
 /** The host-wide install state root. */
@@ -67,18 +83,42 @@ export function webRootOf(media: string): { webRoot: string; mediaDir: string } 
 	return { webRoot: dirname(dirname(media)), mediaDir };
 }
 
-/** Every place of the instance (see the header). */
-export function instancePaths(answers: InstallAnswers, bunPin: string): InstancePaths {
+/** What the service group resolution reads of the host (account_facts.ts AccountFacts). */
+export interface GroupSource {
+	readonly user: { readonly primaryGroup: string | null } | null;
+}
+
+/**
+ * THE service group: the answer; else the EXISTING user's primary group; else
+ * the user's own name (a new user is created with its same-named group).
+ * `account` null = not measured yet (only host_preflight runs before).
+ */
+export function serviceGroupOf(
+	answers: Pick<InstallAnswers, 'service_user' | 'service_group'>,
+	account: GroupSource | null | undefined,
+): string {
+	if (answers.service_group !== '') return answers.service_group;
+	return account?.user?.primaryGroup ?? answers.service_user;
+}
+
+/** Every place of the instance (see the header); `group` = serviceGroupOf(answers, facts.account). */
+export function instancePaths(
+	answers: InstallAnswers,
+	bunPin: string,
+	group: string = serviceGroupOf(answers, null),
+): InstancePaths {
 	const i = answers.instance;
-	const home = `/home/ded_${i}`;
+	const dir = answers.install_dir;
 	const { webRoot, mediaDir } = webRootOf(answers.media_path);
 	return {
 		instance: i,
-		user: `ded_${i}`,
-		group: `ded_${i}`,
-		home,
-		tree: `${home}/dedalo`,
-		privateDir: `${home}/private`,
+		user: answers.service_user,
+		group,
+		instanceDir: dir,
+		tree: `${dir}/dedalo`,
+		privateDir: `${dir}/private`,
+		instanceBackups: `${dir}/backups`,
+		codeBackupRoot: `${dir}/backups/code`,
 		backupDir: answers.backup_dir,
 		srv: `/srv/dedalo/${i}`,
 		media: answers.media_path,
@@ -96,5 +136,24 @@ export function instancePaths(answers: InstallAnswers, bunPin: string): Instance
 		registry: `${INSTALL_STATE_ROOT}/instances/${i}.json`,
 		backupStateDir: `${answers.backup_dir}/state`,
 		selinuxDir: `${INSTALL_STATE_ROOT}/selinux`,
+		releaseDir: `${INSTALL_STATE_ROOT}/release-${i}`,
 	};
+}
+
+/** The runtime pin a paths value carries (`/opt/dedalo/bun/<pin>`). */
+export function bunPinOfPaths(paths: Pick<InstancePaths, 'bunDir'>): string {
+	return paths.bunDir.slice(paths.bunDir.lastIndexOf('/') + 1);
+}
+
+/**
+ * THE instance paths of a plan for the facts measured: the service group is
+ * decided by the account facts (serviceGroupOf) — the ONE derivation the
+ * Review, the frozen digest and every resume share (critique B2).
+ */
+export function pathsFor(
+	answers: InstallAnswers,
+	bunPin: string,
+	facts: { readonly account: GroupSource | null },
+): InstancePaths {
+	return instancePaths(answers, bunPin, serviceGroupOf(answers, facts.account));
 }

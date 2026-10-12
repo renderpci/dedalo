@@ -16,15 +16,15 @@ import { buildPlanFile } from '../run_files_core.ts';
 import { gatherHostFacts, type HostFacts, pendingFacts } from './facts.ts';
 import { type HostFs, hostFs } from './fs.ts';
 import { type HostReviewBlock, hostReview } from './host_table.ts';
-import { type InstancePaths, instancePaths } from './layout.ts';
+import { type InstancePaths, instancePaths, pathsFor } from './layout.ts';
 import { OS_ROWS, osRowById } from './os_support.ts';
 import { type CommandRunner, scratchRunner, systemRunner } from './runner.ts';
 import { readHostRootSeam } from './scratch.ts';
 import { bunPinOf, sourceTreeRoot } from './source.ts';
 import { gatherStackFacts } from './stack/facts.ts';
 
-/** The runner and the fs the Review measures through (the scratch seam's when it is armed). */
-function machine(): { runner: CommandRunner; fs: HostFs } {
+/** The runner and the fs the Review (and the identity probe) measure through (the scratch seam's when it is armed). */
+export function reviewMachine(): { runner: CommandRunner; fs: HostFs } {
 	const scratch = readHostRootSeam();
 	if (scratch !== null) {
 		return {
@@ -44,7 +44,7 @@ async function reviewFacts(
 	paths: InstancePaths,
 	source: string,
 ): Promise<HostFacts> {
-	const { runner, fs } = machine();
+	const { runner, fs } = reviewMachine();
 	if (plan.answers.route !== 'production') {
 		return { ...pendingFacts(), stack: await gatherStackFacts(runner, fs) };
 	}
@@ -55,15 +55,17 @@ async function reviewFacts(
 export async function reviewHostCommands(plan: InstallPlan): Promise<HostReviewBlock[]> {
 	if (plan.answers.route === 'developer' || plan.answers.engine_only) return [];
 	const source = sourceTreeRoot();
-	const paths = instancePaths(plan.answers, bunPinOf(source));
-	const facts = await reviewFacts(plan, paths, source);
+	const pin = bunPinOf(source);
+	// The instance-derived names to measure under; the commands take the paths
+	// whose service group the measured account decides (critique B2).
+	const facts = await reviewFacts(plan, instancePaths(plan.answers, pin), source);
 	if (plan.answers.route === 'production' && facts.os === null) return [];
 	return hostReview({
 		plan: buildPlanFile(plan, {}),
 		answers: plan.answers,
 		facts,
 		row: facts.os === null ? (OS_ROWS[0] as (typeof OS_ROWS)[number]) : osRowById(facts.os),
-		paths,
+		paths: pathsFor(plan.answers, pin, facts),
 		source,
 	});
 }

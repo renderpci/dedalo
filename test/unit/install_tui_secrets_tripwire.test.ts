@@ -162,6 +162,10 @@ describe('a whole full-screen walk never draws a secret (a–d)', () => {
 				}
 			},
 			intercept: async (id) => {
+				// Every question's frame too (not only after a key): a screen answered without a
+				// typed key — the database screen's successor, web_tls, since identity moved
+				// before the database (2026-10-12) — still shows the probe's sentence.
+				allFrames.push(await rig.frame());
 				if (id !== 'administrator.root_password') return 'continue';
 				// The weak one first: refused by the policy (asked again), its rules ✗.
 				await typeKeys(rig, keys, WEAK_ROOT);
@@ -373,7 +377,11 @@ describe('the run under the full-screen reporter (f)', () => {
 				expect(rig.app.log.lines().join('\n')).not.toContain(DB);
 				expect(rig.app.log.lines().join('\n')).toContain('auth failed for');
 				// Done: the salt drawn once there.
-				const finished = reporter.finish(outcome, { mode: 'fresh', rootVerified: true, ending: ENGINE_ENDING });
+				const finished = reporter.finish(outcome, {
+					mode: 'fresh',
+					rootVerified: true,
+					ending: ENGINE_ENDING,
+				});
 				const doneFrame = await rig.frame();
 				expect(doneFrame).toContain(SALT);
 				expect(doneFrame.toLowerCase()).not.toContain(SECRETS.db.core);

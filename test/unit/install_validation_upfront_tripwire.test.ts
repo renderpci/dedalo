@@ -150,13 +150,33 @@ const DIFFUSION = {
 	mysql_username: 'web_user',
 };
 
-/** A clean production instance (the host steps' answers included — phase 4). */
+/**
+ * A clean production instance (the host steps' answers included — phase 4).
+ * Its service user is BASE's database role: a created database's role IS the
+ * service user (peer — owner decisions 2026-10-12).
+ */
 const PRODUCTION = {
 	route: 'production',
 	instance: 'prado',
 	server_name: 'prado.example.org',
 	letsencrypt_email: 'ops@example.org',
+	service_user: 'upfront_user',
 };
+
+/** The shape sentence of an install folder that is not a normalized deep absolute path. */
+const backupNotNormalized = (value: string): string =>
+	`backup_dir '${value}' must be a normalized absolute path of at least two levels with plain segments (letters, digits, '.', '_', '-') — no trailing /, no empty, . or .. segments`;
+
+const notNormalized = (value: string): string =>
+	`install_dir '${value}' must be a normalized absolute path of at least two levels (e.g. /home/ded_prado or /home/my_domain.org/dedalo) — no trailing /, no . or .. segments`;
+
+/** The refusal of a folder overlapping a place the installer keeps root-owned or serves. */
+const overlaps = (key: string, value: string, place: string): string =>
+	`${key} '${value}' overlaps ${place}, which the installer keeps root-owned or serves to the web — choose a folder outside it`;
+
+/** The refusal of an account name. */
+const badName = (kind: 'user' | 'group', value: string): string =>
+	`service_${kind} '${value}' is not a valid Linux ${kind} name (a-z or _ first, then a-z, 0-9, _, -, . — 32 characters at most)`;
 /** The institution's own certificate files (paths only: the plan checks their shape). */
 const CERT_FILES = {
 	tls_cert_path: '/etc/ssl/prado/fullchain.pem',
@@ -350,6 +370,27 @@ const BAD_ROWS: readonly BadRow[] = [
 		answers: { ...PRODUCTION, backup_dir: 'backups' },
 		error: 'backup_dir must be an absolute path',
 	},
+	// A non-normalized backup folder would slip past every component-wise overlap check.
+	{
+		name: 'a backup directory with a doubled leading /',
+		answers: { ...PRODUCTION, backup_dir: '//home/ded_other/backups' },
+		error: backupNotNormalized('//home/ded_other/backups'),
+	},
+	{
+		name: 'a backup directory with a .. segment',
+		answers: { ...PRODUCTION, backup_dir: '/home/ded_y/../ded_other/backups' },
+		error: backupNotNormalized('/home/ded_y/../ded_other/backups'),
+	},
+	{
+		name: 'a backup directory with an empty segment',
+		answers: { ...PRODUCTION, backup_dir: '/srv//dedalo/x' },
+		error: backupNotNormalized('/srv//dedalo/x'),
+	},
+	{
+		name: 'a backup directory with a trailing /',
+		answers: { ...PRODUCTION, backup_dir: '/srv/backups/prado/' },
+		error: backupNotNormalized('/srv/backups/prado/'),
+	},
 	{
 		name: 'a production MEDIA_PATH whose URL directory is not the engine media dir (the root rule)',
 		answers: { ...PRODUCTION, media_path: '/data/prado/dedalo/files' },
@@ -361,6 +402,120 @@ const BAD_ROWS: readonly BadRow[] = [
 		answers: { ...PRODUCTION, media_path: '/srv/dedalo/prado/media' },
 		error:
 			"media_path '/srv/dedalo/prado/media' must end in /dedalo/media (the web root rule: root + /dedalo/<DEDALO_MEDIA_DIR> == MEDIA_PATH, and the installer keeps DEDALO_MEDIA_DIR=media)",
+	},
+	// ── the install folder and the service account (owner decisions 2026-10-12) ──
+	{
+		name: 'a relative install folder',
+		answers: { ...PRODUCTION, install_dir: 'dedalo' },
+		error: 'install_dir must be an absolute path',
+	},
+	{
+		name: 'an install folder with a trailing /',
+		answers: { ...PRODUCTION, install_dir: '/home/site/' },
+		error: notNormalized('/home/site/'),
+	},
+	{
+		name: 'an install folder one level deep',
+		answers: { ...PRODUCTION, install_dir: '/dedalo' },
+		error: notNormalized('/dedalo'),
+	},
+	{
+		name: 'an install folder with a .. segment',
+		answers: { ...PRODUCTION, install_dir: '/home/../etc/dedalo' },
+		error: notNormalized('/home/../etc/dedalo'),
+	},
+	{
+		name: 'an install folder with a space',
+		answers: { ...PRODUCTION, install_dir: '/home/my site/dedalo' },
+		error:
+			"install_dir '/home/my site/dedalo' may contain only letters, digits, '.', '_' and '-' in each segment",
+	},
+	{
+		name: 'an install folder in a system tree',
+		answers: { ...PRODUCTION, install_dir: '/etc/dedalo' },
+		error:
+			"install_dir '/etc/dedalo' is a system location (/etc) — choose a folder of its own, e.g. /home/ded_prado",
+	},
+	{
+		name: 'an install folder that IS a shared root',
+		answers: { ...PRODUCTION, install_dir: '/var/www' },
+		error:
+			"install_dir '/var/www' is a system location (/var/www) — choose a folder of its own, e.g. /home/ded_prado",
+	},
+	{
+		name: 'an install folder under /srv/dedalo (every instance’s web roots)',
+		answers: { ...PRODUCTION, install_dir: '/srv/dedalo/x' },
+		error: overlaps('install_dir', '/srv/dedalo/x', '/srv/dedalo'),
+	},
+	{
+		name: 'an install folder under the root-owned runtime tree',
+		answers: { ...PRODUCTION, install_dir: '/opt/dedalo/prado' },
+		error: overlaps('install_dir', '/opt/dedalo/prado', '/opt/dedalo'),
+	},
+	{
+		name: 'a backup folder under the install state root',
+		answers: { ...PRODUCTION, backup_dir: '/var/lib/dedalo-install/prado' },
+		error: overlaps('backup_dir', '/var/lib/dedalo-install/prado', '/var/lib/dedalo-install'),
+	},
+	{
+		name: "an install folder containing MEDIA_PATH's web root",
+		answers: {
+			...PRODUCTION,
+			media_path: '/data/web/prado/dedalo/media',
+			install_dir: '/data/web',
+		},
+		error: overlaps('install_dir', '/data/web', '/data/web/prado'),
+	},
+	{
+		name: 'a service user name Linux refuses',
+		answers: { ...PRODUCTION, service_user: 'Bad.User', db_username: 'Bad.User' },
+		error: badName('user', 'Bad.User'),
+	},
+	{
+		name: 'a service user name of 33 characters',
+		answers: { ...PRODUCTION, service_user: 'a'.repeat(33), db_username: 'a'.repeat(33) },
+		error: badName('user', 'a'.repeat(33)),
+	},
+	{
+		name: 'a service group name Linux refuses',
+		answers: { ...PRODUCTION, service_group: '9grp' },
+		error: badName('group', '9grp'),
+	},
+	{
+		name: 'the service user root',
+		answers: { ...PRODUCTION, service_user: 'root', db_username: 'root' },
+		error: 'service_user root is refused — the service never runs as root',
+	},
+	{
+		name: 'the service group root',
+		answers: { ...PRODUCTION, service_group: 'root' },
+		error: 'service_group root is refused — the service never runs as root',
+	},
+	{
+		name: 'a created database whose role is not the service user (peer)',
+		answers: { ...PRODUCTION, db_username: 'someone_else' },
+		error:
+			"with db_mode create the database role is the service user (PostgreSQL peer authentication maps the OS user to the role of the same name): db_username 'someone_else' must be 'upfront_user' — omit --db-user",
+	},
+	{
+		name: 'an install folder off production',
+		answers: { install_dir: '/home/x/dedalo' },
+		error: 'install_dir is only meaningful on the production route (route is developer)',
+	},
+	{
+		name: 'a service user off production',
+		answers: { route: 'trial', service_user: 'x' },
+		error: 'service_user is only meaningful on the production route (route is trial)',
+	},
+	{
+		name: 'a service group off production',
+		answers: {
+			route: 'docker',
+			server_name: 'd.example.org',
+			letsencrypt_email: 'ops@example.org',
+			service_group: 'x',
+		},
+		error: 'service_group is only meaningful on the production route (route is docker)',
 	},
 	{
 		name: 'docker without a server name',
@@ -427,6 +582,32 @@ describe('install validation — every bad answer refused by the plan, identical
 			file: [],
 			record: [],
 		});
+	});
+
+	test('the level-2 defaults follow the level-1 answers; an explicit backup dir wins; the engine child keeps its role', () => {
+		const hosting: Record<string, unknown> = {
+			...BASE,
+			...PRODUCTION,
+			install_dir: '/home/drill.example.org/dedalo',
+		};
+		const { db_username: _role, ...withoutRole } = hosting;
+		const derived = buildInstallPlan({ ...withoutRole, service_user: 'drill.example.org' });
+		expect(derived.errors).toEqual([]);
+		expect(derived.answers.backup_dir).toBe('/home/drill.example.org/dedalo/backups');
+		expect(derived.answers.db_username).toBe('drill.example.org');
+		const explicit = buildInstallPlan({ ...hosting, backup_dir: '/srv/backups/prado' });
+		expect(explicit.errors).toEqual([]);
+		expect(explicit.answers.backup_dir).toBe('/srv/backups/prado');
+		// The engine child (no service_user — host-only) is handed the normalized role as is.
+		const child = buildInstallPlan({
+			...BASE,
+			route: 'production',
+			instance: 'prado',
+			engine_only: true,
+			db_username: 'drill.example.org',
+		});
+		expect(child.errors).toEqual([]);
+		expect(child.answers.db_username).toBe('drill.example.org');
 	});
 
 	test(`${LANG_ROW.name}: a 'languages:' refusal on argv ≡ answers file ≡ record`, () => {

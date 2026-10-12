@@ -235,6 +235,12 @@ export interface CatalogProbeResult {
  */
 export interface InstallProbes {
 	system(route: InstallRoute): Promise<ProbeOutcome>;
+	/**
+	 * production: the install folder and the service account against this host
+	 * (host/production/identity_rules.ts — the verdict host_preflight repeats);
+	 * ok = nothing refused. Read-only (root on production).
+	 */
+	identity(answers: Readonly<Record<string, unknown>>): Promise<ProbeOutcome>;
 	/** ok = the database exists and the role reaches it. */
 	database(answers: Readonly<Record<string, unknown>>, dbPassword: string): Promise<ProbeOutcome>;
 	/** ok = the media directory exists writable, or its nearest existing ancestor is writable. */

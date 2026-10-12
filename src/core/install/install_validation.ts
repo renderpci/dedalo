@@ -31,7 +31,7 @@
  * test/unit/install_screen_model_tripwire.test.ts.
  */
 
-import { isAbsolute } from 'node:path';
+import { dirname, isAbsolute } from 'node:path';
 import { check_password } from '../../../client/dedalo/core/component_password/js/password_policy.js';
 import { connFieldProblem, pgSocketProblem } from '../../config/pg_transport.ts';
 import type { InstallAnswers } from './install_plan.ts';
@@ -45,9 +45,10 @@ export const ENTITY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 
 /**
  * The INSTANCE name of a production install (multi-instance hosts —
- * docs/install/multi_instance.md): it must be valid as a unix user `ded_<i>`
- * (32 characters at most, so 28 here), a systemd instance (`dedalo-ts@<i>`), a
- * path segment and a PostgreSQL identifier (`dedalo_<i>`) — hence lowercase.
+ * docs/install/multi_instance.md): it must be valid inside the DEFAULT service
+ * user name (`ded_` + the name: 32 characters at most, so 28 here), a systemd
+ * instance (`dedalo-ts@<i>`), a path segment and a PostgreSQL identifier
+ * (`dedalo_<i>`) — hence lowercase.
  */
 export const INSTANCE_PATTERN = /^[a-z][a-z0-9_]{0,27}$/;
 
@@ -88,7 +89,10 @@ const problem = (key: string, message: string): FieldError => ({ key, message })
 
 /** The required answers: empty → "<key> is required". */
 function requiredErrors(a: InstallAnswers, problems: Problems): void {
-	for (const key of ['db_database', 'db_username', 'entity'] as const) {
+	const keys = peerRole(a)
+		? (['db_database', 'entity'] as const)
+		: (['db_database', 'db_username', 'entity'] as const);
+	for (const key of keys) {
 		if (a[key] === '') problems.push(problem(key, `${key} is required`));
 	}
 	// An empty host would persist a DISABLED mailer — refuse the contradiction.
@@ -243,6 +247,7 @@ function fingerprintErrors(a: InstallAnswers, problems: Problems): void {
  */
 function routeErrors(a: InstallAnswers, problems: Problems): void {
 	const production = a.route === 'production';
+	if (!production) offProductionIdentityErrors(a, problems);
 	if (production && a.instance === '') {
 		problems.push(
 			problem('instance', 'the production route requires instance (e.g. --instance prado)'),
@@ -256,6 +261,17 @@ function routeErrors(a: InstallAnswers, problems: Problems): void {
 		);
 	}
 	instanceShapeErrors(a, problems);
+}
+
+/** The production-only identity answers (install folder, service account) given on another route. */
+function offProductionIdentityErrors(a: InstallAnswers, problems: Problems): void {
+	for (const key of IDENTITY_KEYS) {
+		if (a[key] !== '') {
+			problems.push(
+				problem(key, `${key} is only meaningful on the production route (route is ${a.route})`),
+			);
+		}
+	}
 }
 
 /** The instance name's shape (INSTANCE_PATTERN). */
@@ -369,10 +385,198 @@ function productionHostErrors(a: InstallAnswers, problems: Problems): void {
 	if (!['create', 'existing'].includes(a.db_mode)) {
 		problems.push(problem('db_mode', 'db_mode must be create|existing'));
 	}
-	if (!isAbsolute(a.backup_dir)) {
-		problems.push(problem('backup_dir', 'backup_dir must be an absolute path'));
-	}
+	backupDirErrors(a, problems);
 	mediaRootErrors(a, problems);
+	installDirErrors(a, problems);
+	serviceNameErrors(a, problems);
+	peerRoleErrors(a, problems);
+	for (const key of ['install_dir', 'backup_dir'] as const) reservedOverlapErrors(a, key, problems);
+}
+
+// ── the install folder and the service account (owner decisions 2026-10-12) ──
+
+/** The production-only identity answers. */
+const IDENTITY_KEYS = ['install_dir', 'service_user', 'service_group'] as const;
+
+/**
+ * A Linux user/group name the installer accepts: useradd's default NAME_REGEX
+ * (`^[a-z_][a-z0-9_-]*[$]?$`) plus `.` — an EXISTING hosting account is often
+ * named after its domain (my_domain.org). Creating a dotted name is refused on
+ * the host (identity_rules.ts): useradd's own default regex would refuse it.
+ */
+export const SERVICE_NAME_PATTERN = /^[a-z_][a-z0-9_.-]*\$?$/;
+
+/** The longest Linux user/group name (useradd's default). */
+export const SERVICE_NAME_MAX = 32;
+
+/** Locations (and everything under them) no install folder may be. */
+const SYSTEM_TREES: readonly string[] = Object.freeze([
+	'/etc',
+	'/usr',
+	'/bin',
+	'/sbin',
+	'/lib',
+	'/lib64',
+	'/boot',
+	'/dev',
+	'/proc',
+	'/sys',
+	'/run',
+	'/var/run',
+	'/tmp',
+	'/var/tmp',
+	'/root',
+]);
+
+/** Shared roots no install folder may BE (a folder under them is fine). */
+const SHARED_ROOTS: readonly string[] = Object.freeze([
+	'/home',
+	'/srv',
+	'/opt',
+	'/var',
+	'/var/lib',
+	'/var/www',
+]);
+
+/** Is `path` `dir` itself or inside it (component-wise: /home/a is not inside /home/ab)? */
+export function sameOrInside(path: string, dir: string): boolean {
+	return path === dir || path.startsWith(dir === '/' ? '/' : `${dir}/`);
+}
+
+/** Do two paths overlap (the same, one inside the other)? */
+export function pathsOverlap(a: string, b: string): boolean {
+	return sameOrInside(a, b) || sameOrInside(b, a);
+}
+
+/** Every segment plain: letters, digits, '.', '_', '-'. */
+const PLAIN_SEGMENTS = /^(\/[A-Za-z0-9._-]+)+$/;
+
+/** An absolute path, normalized (no trailing /, no empty, . or .. segment), two levels at least. */
+function normalizedDeep(path: string): boolean {
+	const segments = path.split('/').slice(1);
+	return segments.length >= 2 && segments.every((segment) => !['', '.', '..'].includes(segment));
+}
+
+/** The example folder of the sentences (the instance's default one). */
+function exampleDir(a: InstallAnswers): string {
+	return `/home/ded_${INSTANCE_PATTERN.test(a.instance) ? a.instance : '<instance>'}`;
+}
+
+/** The install folder's shape: absolute, normalized, plain segments, not a system location. */
+function installDirErrors(a: InstallAnswers, problems: Problems): void {
+	const value = a.install_dir;
+	const sentence = installDirShape(value, a);
+	if (sentence !== null) problems.push(problem('install_dir', sentence));
+}
+
+/** The first refusal of the install folder's shape, or null. */
+function installDirShape(value: string, a: InstallAnswers): string | null {
+	if (!isAbsolute(value)) return 'install_dir must be an absolute path';
+	if (!normalizedDeep(value)) {
+		return `install_dir '${value}' must be a normalized absolute path of at least two levels (e.g. ${exampleDir(a)} or /home/my_domain.org/dedalo) — no trailing /, no . or .. segments`;
+	}
+	if (!PLAIN_SEGMENTS.test(value)) {
+		return `install_dir '${value}' may contain only letters, digits, '.', '_' and '-' in each segment`;
+	}
+	const system =
+		SYSTEM_TREES.find((tree) => sameOrInside(value, tree)) ??
+		SHARED_ROOTS.find((root) => value === root);
+	return system === undefined
+		? null
+		: `install_dir '${value}' is a system location (${system}) — choose a folder of its own, e.g. ${exampleDir(a)}`;
+}
+
+/**
+ * The backup folder's shape: absolute and NORMALIZED with plain segments, as
+ * the install folder — every overlap check (another instance's folders, the
+ * reserved places) compares paths component-wise, so `//x`, `/a/../b` or a
+ * trailing `/` would slip past them.
+ */
+function backupDirErrors(a: InstallAnswers, problems: Problems): void {
+	const value = a.backup_dir;
+	if (!isAbsolute(value)) {
+		problems.push(problem('backup_dir', 'backup_dir must be an absolute path'));
+		return;
+	}
+	if (normalizedDeep(value) && PLAIN_SEGMENTS.test(value)) return;
+	problems.push(
+		problem(
+			'backup_dir',
+			`backup_dir '${value}' must be a normalized absolute path of at least two levels with plain segments (letters, digits, '.', '_', '-') — no trailing /, no empty, . or .. segments`,
+		),
+	);
+}
+
+/**
+ * The places the installer keeps ROOT-OWNED or serves to the WEB: no install
+ * folder or backup folder may overlap one (the whole shared roots, so a
+ * folder at /srv/dedalo/foo never blocks a future instance named foo).
+ */
+function reservedPlaces(a: InstallAnswers): string[] {
+	const places = [
+		'/opt/dedalo',
+		'/var/lib/dedalo-install',
+		'/var/backups/dedalo-site-builder',
+		'/srv/dedalo',
+	];
+	if (isAbsolute(a.media_path)) places.push(dirname(dirname(a.media_path)));
+	if (isAbsolute(a.unix_socket)) places.push(dirname(a.unix_socket));
+	return places;
+}
+
+/** `key`'s folder overlapping a reserved place. */
+function reservedOverlapErrors(
+	a: InstallAnswers,
+	key: 'install_dir' | 'backup_dir',
+	problems: Problems,
+): void {
+	const value = a[key];
+	if (!isAbsolute(value)) return;
+	const place = reservedPlaces(a).find((item) => pathsOverlap(value, item));
+	if (place === undefined) return;
+	problems.push(
+		problem(
+			key,
+			`${key} '${value}' overlaps ${place}, which the installer keeps root-owned or serves to the web — choose a folder outside it`,
+		),
+	);
+}
+
+/** One account name's refusal (`kind`: user or group), or null. */
+function serviceNameProblem(kind: 'user' | 'group', value: string): string | null {
+	if (value === 'root') return `service_${kind} root is refused — the service never runs as root`;
+	if (SERVICE_NAME_PATTERN.test(value) && value.length <= SERVICE_NAME_MAX) return null;
+	return `service_${kind} '${value}' is not a valid Linux ${kind} name (a-z or _ first, then a-z, 0-9, _, -, . — 32 characters at most)`;
+}
+
+/** The service user (required) and group ('' = the user's own group). */
+function serviceNameErrors(a: InstallAnswers, problems: Problems): void {
+	const user =
+		a.service_user === ''
+			? 'service_user is required (the account the instance runs as)'
+			: serviceNameProblem('user', a.service_user);
+	if (user !== null) problems.push(problem('service_user', user));
+	const group = a.service_group === '' ? null : serviceNameProblem('group', a.service_group);
+	if (group !== null) problems.push(problem('service_group', group));
+}
+
+/**
+ * Is the database role the SERVICE USER's (a created production database —
+ * PEER)? Then it is never asked: its emptiness is service_user's refusal.
+ */
+function peerRole(a: InstallAnswers): boolean {
+	return a.route === 'production' && !a.engine_only && a.db_mode === 'create';
+}
+
+/** A created database's role IS the service user (PEER: OS user ↔ role of the same name). */
+function peerRoleErrors(a: InstallAnswers, problems: Problems): void {
+	if (!peerRole(a) || a.db_username === a.service_user) return;
+	problems.push(
+		problem(
+			'db_username',
+			`with db_mode create the database role is the service user (PostgreSQL peer authentication maps the OS user to the role of the same name): db_username '${a.db_username}' must be '${a.service_user}' — omit --db-user`,
+		),
+	);
 }
 
 /**

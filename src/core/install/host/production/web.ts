@@ -27,6 +27,7 @@ import type {
 	HostStepDefinition,
 } from '../contract.ts';
 import { executeCommands, requestOf, succeeded } from '../execute.ts';
+import { binaryOf } from '../os_support.ts';
 import { hostRefuse } from '../refuse.ts';
 import { otherEntries, ownEntry, setMapOwner, updateEntry } from '../registry.ts';
 import {
@@ -43,7 +44,6 @@ import {
 	nginxRulesDir,
 	renderNginxSite,
 } from '../web/nginx.ts';
-import { binaryOf } from '../os_support.ts';
 import { mediaGated, type SiteInput } from '../web/site.ts';
 import {
 	configTest,
@@ -59,6 +59,7 @@ import {
 	verdictOf,
 	webFlavor,
 } from './common.ts';
+import { identityOf } from './identity.ts';
 
 /** The certificate the full site names. */
 export function certificatePaths(ctx: HostPlanCtx): { fullchain: string; key: string } {
@@ -81,14 +82,26 @@ export function siteText(ctx: HostPlanCtx, cert: SiteInput['cert']): string {
 	return ctx.facts.web.kind === 'nginx' ? renderNginxSite(input) : renderApacheSite(input);
 }
 
-/** The web user joins the instance group (unless it already is a member — run-time). */
+/**
+ * The trade-off of a service group that is an EXISTING account's primary
+ * group (owner decisions 2026-10-12 — accepted, told): the web user then
+ * reads whatever that group can read. null: the instance's own group.
+ */
+export function sharedGroupLine(ctx: HostPlanCtx): string | null {
+	const owner = identityOf(ctx).group.primaryOf;
+	if (owner === null) return null;
+	return `${webFlavor(ctx).user} joins ${ctx.paths.group}, the primary group of ${owner}: it can then read whatever that group can read (a group of its own is recommended: --service-group)`;
+}
+
+/** The web user joins the service group (unless it already is a member — run-time). */
 function groupCommand(ctx: HostPlanCtx): ExecCommand {
 	const user = webFlavor(ctx).user;
+	const shared = sharedGroupLine(ctx);
 	return exec(
 		ctx,
 		'usermod',
 		['-aG', ctx.paths.group, user],
-		`let ${user} reach the socket, media and client (group ${ctx.paths.group})`,
+		`let ${user} reach the socket, media and client (group ${ctx.paths.group})${shared === null ? '' : ` — ${shared}`}`,
 	);
 }
 
@@ -114,7 +127,9 @@ function apacheRootCommands(ctx: HostPlanCtx): HostCommand[] {
  */
 function enableCommands(ctx: HostPlanCtx): HostCommand[] {
 	if (ctx.facts.web.kind !== 'apache' || !webFlavor(ctx).enableWithA2ensite) return [];
-	return [exec(ctx, 'a2ensite', [`dedalo-${ctx.paths.instance}`], 'enable this site (only this one)')];
+	return [
+		exec(ctx, 'a2ensite', [`dedalo-${ctx.paths.instance}`], 'enable this site (only this one)'),
+	];
 }
 
 /** A site write (0644 root). */
@@ -202,15 +217,17 @@ function ruleCopyArgv(ctx: HostPlanCtx): string[] {
 
 /** The operator's refresh after the engine regenerated its rules (told on Done). */
 export function ruleRefreshLine(ctx: HostPlanCtx): string {
-	const argv = [...ruleCopyArgv(ctx), '--reload', binaryOf(ctx.row, 'nginx'), webFlavor(ctx).service];
+	const argv = [
+		...ruleCopyArgv(ctx),
+		'--reload',
+		binaryOf(ctx.row, 'nginx'),
+		webFlavor(ctx).service,
+	];
 	return `the media gate nginx serves is a root-owned COPY of the engine's rules: after changing the media access mode (or an update that changes them), refresh it as root — ${argv.join(' ')}`;
 }
 
 /** Stage 2's commands (`mapOwner`: this instance's map is the host's — decided at run time). */
-export function siteCommands(
-	ctx: HostPlanCtx,
-	mapOwner = nginxGated(ctx),
-): HostCommand[] {
+export function siteCommands(ctx: HostPlanCtx, mapOwner = nginxGated(ctx)): HostCommand[] {
 	return [
 		groupCommand(ctx),
 		...apacheRootCommands(ctx),
@@ -467,7 +484,9 @@ export const host_web_http: HostStepDefinition = {
 		recordWeb(ctx, member, 'http');
 		ctx.save();
 		await applySite(ctx, await withoutDoneGroup(ctx, httpCommands(ctx)));
-		return ran(`${sitePath(ctx)} (stage 1) — ${webFlavor(ctx).service} reloaded`);
+		return ran(`${sitePath(ctx)} (stage 1) — ${webFlavor(ctx).service} reloaded`, {
+			told: [sharedGroupLine(ctx)].filter((line): line is string => line !== null),
+		});
 	},
 	undo: undoSite,
 };
@@ -490,7 +509,10 @@ export const host_web_site: HostStepDefinition = {
 		await applySite(ctx, await withoutDoneGroup(ctx, siteCommands(ctx, owner)));
 		if (owner) updateEntry(ctx.fs, ctx.paths, { nginx_map_owner: true });
 		return ran(`${sitePath(ctx)} — ${webFlavor(ctx).service} reloaded`, {
-			told: nginxGated(ctx) ? [ruleRefreshLine(ctx)] : [],
+			told: [
+				...(nginxGated(ctx) ? [ruleRefreshLine(ctx)] : []),
+				...[sharedGroupLine(ctx)].filter((line): line is string => line !== null),
+			],
 		});
 	},
 	undo: undoSite,

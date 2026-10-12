@@ -35,6 +35,8 @@
 import { check_password } from '../../../client/dedalo/core/component_password/js/password_policy.js';
 import masterLabels from '../labels/master.json';
 import { CORE_HIERARCHIES, type hierarchyChoiceView } from './hierarchy_meta.ts';
+import type { IdentityVerdict } from './host/production/identity_rules.ts';
+import { identityLines } from './identity_verdict.ts';
 import {
 	buildInstallPlan,
 	cliArgsOf,
@@ -103,11 +105,13 @@ export type ScreenId =
  * "Done" and "Resume" are run states of a front end, not model screens.
  */
 export const SCREEN_ORDER: Readonly<Record<InstallRoute, readonly ScreenId[]>> = Object.freeze({
+	// Identity BEFORE the database (2026-10-12): the database role is the
+	// service user the identity screen asks for.
 	production: Object.freeze([
 		'route',
 		'system',
-		'database',
 		'identity',
+		'database',
 		'web_tls',
 		'services',
 		'ontologies',
@@ -189,6 +193,15 @@ const NO_HOST_STEPS = 'a checkout runs no host steps (no web site, certificate, 
 const NOT_PRODUCTION =
 	'only the production route installs a web server, a database or backup units on this host';
 const NOT_STACK = 'only the docker and trial routes run an image';
+const NO_INSTANCE_DIR =
+	'only a production install has an install folder and service account of its own';
+
+/** The production identity answers no other route asks. */
+const IDENTITY_FIXED: Readonly<Record<string, string>> = Object.freeze({
+	install_dir: NO_INSTANCE_DIR,
+	service_user: NO_INSTANCE_DIR,
+	service_group: NO_INSTANCE_DIR,
+});
 const TRIAL_NO_TLS = 'the trial stack serves plain HTTP (evaluation only — its own route)';
 
 /** The host-step answers no checkout asks. */
@@ -232,6 +245,7 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 			unix_socket: 'a checkout serves on its own port or socket (flag-settable: --socket)',
 			media_access_mode: 'the engine default (flag-settable: --media-access-mode)',
 			...DEVELOPER_HOST_KEYS,
+			...IDENTITY_FIXED,
 		}),
 		docker: Object.freeze({
 			instance: NO_INSTANCE,
@@ -245,6 +259,7 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 			media_access_mode: STACK_FIXED,
 			db_password: NOTICE_STACK_DB_PASSWORD,
 			...STACK_PRODUCTION_KEYS,
+			...IDENTITY_FIXED,
 		}),
 		trial: Object.freeze({
 			instance: NO_INSTANCE,
@@ -258,6 +273,7 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 			media_access_mode: 'the trial stack has no media access control (its own route)',
 			db_password: NOTICE_STACK_DB_PASSWORD,
 			...STACK_PRODUCTION_KEYS,
+			...IDENTITY_FIXED,
 			server_name: TRIAL_NO_TLS,
 			tls_mode: TRIAL_NO_TLS,
 			letsencrypt_email: TRIAL_NO_TLS,
@@ -269,7 +285,7 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 // ── the input ────────────────────────────────────────────────────────────────
 
 /** The probes a front end runs (each in the probe child — install_probe_client.ts). */
-export type ProbeId = 'system' | 'db' | 'media' | 'diffusion' | 'mailer';
+export type ProbeId = 'system' | 'identity' | 'db' | 'media' | 'diffusion' | 'mailer';
 
 /** One System-check row (words, never glyphs). */
 export interface SystemCheckRow {
@@ -287,6 +303,8 @@ export interface ProbeOutcome {
 	rows?: SystemCheckRow[];
 	version?: string;
 	seedPath?: string;
+	/** identity only: the verdict (what is created, used as is, refused, told). */
+	identity?: IdentityVerdict;
 }
 
 export interface InstallCatalogs {
@@ -424,6 +442,8 @@ interface VisibilityRule {
 const productionOrUnset = (_raw: unknown, route: InstallRoute | null): boolean =>
 	route === 'production' || route === null;
 const onHostRoute = (_raw: unknown, route: InstallRoute | null): boolean => hostRoute(route);
+const roleAsked = (raw: Readonly<Record<string, unknown>>, route: InstallRoute | null): boolean =>
+	onHostRoute(raw, route) && !(route === 'production' && (raw.db_mode ?? 'create') === 'create');
 const onStack = (_raw: unknown, route: InstallRoute | null): boolean =>
 	route === 'docker' || route === 'trial';
 /** The routes with a public address and a certificate (production, docker). */
@@ -479,13 +499,18 @@ const VISIBILITY: readonly VisibilityRule[] = Object.freeze<VisibilityRule[]>([
 			'db_mode',
 			'web_server',
 			'backup_dir',
+			'install_dir',
+			'service_user',
+			'service_group',
 		],
 		when: productionOrUnset,
 	},
 	{
-		keys: ['db_hostname', 'db_port', 'db_socket', 'db_database', 'db_username', 'db_password'],
+		keys: ['db_hostname', 'db_port', 'db_socket', 'db_database', 'db_password'],
 		when: onHostRoute,
 	},
+	// A created production database's role IS the service user (peer): not asked.
+	{ keys: ['db_username'], when: roleAsked },
 	// Every route sets the root password HERE (phase 4: the host steps hand it to the engine child).
 	{ keys: ['root_password'], when: () => true },
 	{ keys: ['http_port', 'https_port'], when: (_raw, route) => route !== 'developer' },
@@ -846,14 +871,56 @@ export function entitySlug(text: string): string {
 	return /^[a-z]/.test(slug) ? slug : `e_${slug}`;
 }
 
+/**
+ * The service group's hint (never an answer — TUI ≡ flags): what an empty
+ * answer resolves to on this host, from the identity probe's verdict.
+ */
+function groupHint(ctx: Ctx): string | undefined {
+	const verdict = ctx.input.probes.identity?.identity;
+	if (verdict === undefined || ctx.answers.service_group !== '') return undefined;
+	return verdict.group.primaryOf === null
+		? `new group ${verdict.group.name}`
+		: `primary group of ${verdict.group.primaryOf}: ${verdict.group.name}`;
+}
+
+/** The identity probe's verdict as notices (refusals, then what the operator is told). */
+function identityNotices(ctx: Ctx): Notice[] {
+	const outcome = ctx.input.probes.identity;
+	if (outcome === undefined) return [];
+	const verdict = outcome.identity;
+	if (verdict === undefined) return probeNotices(outcome, 'error', NOTICE_TEXT.identityProbe);
+	return [
+		...verdict.problems.map((text) => ({ level: 'error' as const, text })),
+		...verdict.told.map((text) => ({ level: 'warn' as const, text })),
+		...when(verdict.problems.length === 0, {
+			level: 'info' as const,
+			text: NOTICE_TEXT.identityProbe(outcome.detail),
+		}),
+	];
+}
+
+/** The production identity questions (the install folder and the service account), first. */
+function identityQuestions(ctx: Ctx): Question[] {
+	const group = ask(ctx, 'identity', 'service_group', 'text', { emptyAllowed: true });
+	const hint = groupHint(ctx);
+	if (hint !== undefined) group.hint = hint;
+	return [
+		ask(ctx, 'identity', 'install_dir', 'text', { required: true }),
+		ask(ctx, 'identity', 'service_user', 'text', { required: true }),
+		group,
+	];
+}
+
 function identityScreen(ctx: Ctx, frame: Frame): Screen {
 	const entity = ask(ctx, 'identity', 'entity', 'text', { required: true });
 	const slug = entitySlug(ctx.answers.entity);
 	if (entity.errors.length > 0 && ctx.answers.entity !== '' && slug !== ctx.answers.entity) {
 		entity.hint = `suggested entity code: ${slug}`;
 	}
+	const production = ctx.route === 'production';
 	return screen('identity', frame, {
 		questions: shown(ctx, [
+			...(production ? identityQuestions(ctx) : []),
 			entity,
 			ask(ctx, 'identity', 'entity_label', 'text'),
 			ask(ctx, 'identity', 'information', 'text'),
@@ -861,7 +928,17 @@ function identityScreen(ctx: Ctx, frame: Frame): Screen {
 			ask(ctx, 'identity', 'timezone', 'text'),
 			ask(ctx, 'identity', 'locale', 'text'),
 		]),
+		...(production ? productionIdentityParts(ctx) : {}),
 	});
+}
+
+/** The production identity screen's probe, notices and help. */
+function productionIdentityParts(ctx: Ctx): Partial<Screen> {
+	return {
+		notices: identityNotices(ctx),
+		probe: { id: 'identity', gate: 'must_pass' },
+		help: [HELP_LINKS.production, HELP_LINKS.multiInstance],
+	};
 }
 
 /** The certificate questions (production and docker; the mode's own fields). */
@@ -1717,10 +1794,14 @@ function certificateValue(a: InstallAnswers): string {
 	return a.tls_mode === 'local_ca' ? 'local CA' : 'none (plain HTTP)';
 }
 
-/** The host route's lines: the address, the certificate, the backups. */
-function hostLines(a: InstallAnswers): ReviewLine[] {
+/** The host route's lines: the identity (production), the address, the certificate, the backups. */
+function hostLines(a: InstallAnswers, input: ScreenModelInput): ReviewLine[] {
 	if (a.route === 'developer' || a.engine_only) return [];
 	return [
+		...identityLines(a, input.probes.identity?.identity).map((line) => ({
+			label: REVIEW_TEXT.identity[line.label],
+			value: line.value,
+		})),
 		...when(a.route !== 'trial', {
 			label: REVIEW_TEXT.address,
 			value: `https://${a.server_name}${a.https_port === '443' ? '' : `:${a.https_port}`}`,
@@ -1757,7 +1838,7 @@ export function reviewLines(plan: InstallPlan, input: ScreenModelInput): ReviewL
 		...serviceLines(a, input),
 		{ label: REVIEW_TEXT.media, value: pathValue(a.media_path) },
 		{ label: REVIEW_TEXT.socket, value: pathValue(a.unix_socket) },
-		...hostLines(a),
+		...hostLines(a, input),
 		...adminLines(input),
 		{ label: REVIEW_TEXT.steps, value: plan.steps.join(', ') },
 		{ label: REVIEW_TEXT.envKeys, value: plan.envKeys.join(', ') },

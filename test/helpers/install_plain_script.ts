@@ -199,6 +199,10 @@ export function fakeProbes(
 				seedPath: '/fake/seed',
 			};
 		},
+		identity: async (answers) => {
+			calls.push({ probe: 'identity', answers });
+			return outcome('identity');
+		},
 		database: async (answers, secret) => {
 			calls.push({ probe: 'db', answers, secret });
 			return outcome('db');

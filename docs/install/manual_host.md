@@ -28,7 +28,7 @@ Two worked examples:
 | `MEDIA_PATH` | `/srv/dedalo/media/` | `/srv/dedalo/my_domain.org/media/` |
 | socket (systemd `RuntimeDirectory`) | `/run/dedalo/dedalo_ts.sock` | one directory per instance (see [several instances](#several-hand-built-instances-on-one-host)) |
 
-The installer follows the same rule: its instance directory is `/home/ded_<i>/` (owned by `ded_<i>`; `/home` is root's), its code is `/home/ded_<i>/dedalo/`, and its root bin directory is `/opt/dedalo/instances/<i>/bin/`.
+The installer follows the same rule: its instance directory is the install folder — `/home/ded_<i>/` by default, or any path given with `--install-dir`, such as `/home/my_domain.org/dedalo` — owned by the service user (`ded_<i>`, or an existing account given with `--service-user`, used as it is); its code is `<install folder>/dedalo/`, and its root bin directory is `/opt/dedalo/instances/<i>/bin/`. See [The install folder and the service account](production.md#the-install-folder-and-the-service-account).
 
 Three properties are load-bearing:
 

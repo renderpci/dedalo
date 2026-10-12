@@ -28,7 +28,15 @@ import { buildInstallPlan, cliBootEnv, INSTALL_ROUTES, type InstallRoute } from 
 import { probeFailureSentence } from './install_probe_failure.ts';
 import { redactSecrets } from './run_files.ts';
 
-export const PROBE_NAMES = ['system', 'db', 'media', 'diffusion', 'mailer', 'catalog'] as const;
+export const PROBE_NAMES = [
+	'system',
+	'identity',
+	'db',
+	'media',
+	'diffusion',
+	'mailer',
+	'catalog',
+] as const;
 export type ProbeName = (typeof PROBE_NAMES)[number];
 
 export interface ProbeRequest {
@@ -124,6 +132,7 @@ const PROBE_RUNNERS: Readonly<
 	Record<ProbeName, (probes: Probes, request: ProbeRequest) => Promise<unknown>>
 > = Object.freeze({
 	system: (probes, request) => probes.systemCheck(routeOf(request.answers)),
+	identity: (probes, request) => probes.identityProbe(request.answers),
 	db: (probes, request) => probes.databaseProbe(request.answers, request.secrets.db_password ?? ''),
 	media: (probes, request) => probes.mediaProbe(request.answers),
 	diffusion: (probes, request) =>

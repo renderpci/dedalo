@@ -21,6 +21,11 @@ export interface InstanceEntry {
 	nginx_map_owner: boolean;
 	/** This instance's MEDIA_PATH (where its generated map lives). */
 	media: string;
+	/** The service user, group, install folder and backup dir (host_identity — one per instance). */
+	user: string;
+	group: string;
+	install_dir: string;
+	backup_dir: string;
 }
 
 function emptyEntry(paths: InstancePaths): InstanceEntry {
@@ -31,6 +36,10 @@ function emptyEntry(paths: InstancePaths): InstanceEntry {
 		selinux_module: false,
 		nginx_map_owner: false,
 		media: paths.media,
+		user: paths.user,
+		group: paths.group,
+		install_dir: paths.instanceDir,
+		backup_dir: paths.backupDir,
 	};
 }
 

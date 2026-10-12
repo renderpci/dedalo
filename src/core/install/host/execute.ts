@@ -4,8 +4,14 @@
  * runner or the HostFs) and the one place it becomes a Review line. Both read
  * the SAME list (contract.ts: review equals run).
  *
- *  - `as: instance|postgres` becomes a `runuser -u <user> --` prefix: the argv
- *    the runner logs is the argv that ran.
+ *  - `as: instance|postgres` becomes a `runuser -u <user> [-g <group>] --`
+ *    prefix: the argv the runner logs is the argv that ran. The instance runs
+ *    with its SERVICE GROUP named (`-g`): runuser would otherwise take the
+ *    account's primary group, and an existing account's primary group is not
+ *    necessarily the instance's (owner decisions 2026-10-12).
+ *  - a `mkdir` the INSTANCE makes (`as: 'instance'` — a directory inside the
+ *    install folder, which root never creates by path: critique B1) runs as
+ *    `install -d -m <mode> <path>` under that prefix.
  *  - `stdin: {secrets}` is ONE JSON object of the named secrets, built here
  *    from the run's secrets; the Review shows only the keys.
  *  - an `unless` probe that exits 0 skips its command (already done).
@@ -14,25 +20,46 @@
  */
 
 import type { Secrets } from '../run_files_core.ts';
-import type { ExecCommand, HostCommand, HostCtx } from './contract.ts';
+import type { ExecCommand, HostCommand, HostCtx, MkdirCommand } from './contract.ts';
 import { sha256Text } from './fs.ts';
 import { binaryOf, type OsRow } from './os_support.ts';
 import { shellLine } from './quote.ts';
 import { hostRefuse } from './refuse.ts';
 import type { RunRequest, RunResult } from './runner.ts';
 
-/** The user a command runs as (null = this process). */
-function userOf(command: ExecCommand, instanceUser: string): string | null {
-	if (command.as === 'instance') return instanceUser;
-	return command.as === 'postgres' ? 'postgres' : null;
+/** The service account an `instance` command runs as. */
+export interface ServiceIdentity {
+	readonly user: string;
+	readonly group: string;
+}
+
+/** The runuser identity flags of a command ([] = this process). */
+function identityFlags(command: ExecCommand, identity: ServiceIdentity): string[] {
+	if (command.as === 'instance') return ['-u', identity.user, '-g', identity.group];
+	return command.as === 'postgres' ? ['-u', 'postgres'] : [];
 }
 
 /** The argv as it is run: a runuser prefix for another user. */
-export function effectiveArgv(command: ExecCommand, row: OsRow, instanceUser: string): string[] {
-	const user = userOf(command, instanceUser);
-	return user === null
+export function effectiveArgv(
+	command: ExecCommand,
+	row: OsRow,
+	identity: ServiceIdentity,
+): string[] {
+	const flags = identityFlags(command, identity);
+	return flags.length === 0
 		? [...command.argv]
-		: [binaryOf(row, 'runuser'), '-u', user, '--', ...command.argv];
+		: [binaryOf(row, 'runuser'), ...flags, '--', ...command.argv];
+}
+
+/** The exec an instance-made directory runs as (`install -d`, as the service user). */
+export function instanceMkdirExec(command: MkdirCommand, row: OsRow): ExecCommand {
+	return {
+		kind: 'exec',
+		argv: [binaryOf(row, 'install'), '-d', '-m', octal(command.mode), command.path],
+		as: 'instance',
+		label: command.label,
+		mutates: true,
+	};
 }
 
 /** The named secrets as one JSON object (only the given ones). */
@@ -60,7 +87,7 @@ function stdinOf(command: ExecCommand, secrets: Secrets): string | undefined {
 export function requestOf(command: ExecCommand, ctx: HostCtx): RunRequest {
 	const stdin = stdinOf(command, ctx.secrets);
 	return {
-		argv: effectiveArgv(command, ctx.row, ctx.paths.user),
+		argv: effectiveArgv(command, ctx.row, ctx.paths),
 		...(stdin === undefined ? {} : { stdin }),
 		...(command.cwd === undefined ? {} : { cwd: command.cwd }),
 		...(command.env === undefined ? {} : { env: command.env }),
@@ -92,6 +119,21 @@ export async function runExec(command: ExecCommand, ctx: HostCtx): Promise<RunRe
 	return result;
 }
 
+/**
+ * A directory: root's through the HostFs (mode and owner by descriptor); the
+ * instance's as the service user. A SCRATCH root's recording runner executes
+ * nothing, so the directory the user's `install -d` would create is mirrored
+ * into the scratch tree with its owner (the gates read it there).
+ */
+async function applyMkdir(command: MkdirCommand, ctx: HostCtx): Promise<void> {
+	if (command.as !== 'instance') {
+		ctx.fs.mkdir(command.path, command.mode, command.owner, command.group);
+		return;
+	}
+	await runExec(instanceMkdirExec(command, ctx.row), ctx);
+	if (ctx.fs.root !== '') ctx.fs.mkdir(command.path, command.mode, command.owner, command.group);
+}
+
 /** Apply one command. */
 async function applyCommand(command: HostCommand, ctx: HostCtx): Promise<void> {
 	if (command.kind === 'exec') {
@@ -99,7 +141,7 @@ async function applyCommand(command: HostCommand, ctx: HostCtx): Promise<void> {
 	} else if (command.kind === 'write') {
 		ctx.fs.write(command.path, command.content, command.mode, command.owner, command.group);
 	} else if (command.kind === 'mkdir') {
-		ctx.fs.mkdir(command.path, command.mode, command.owner, command.group);
+		await applyMkdir(command, ctx);
 	} else {
 		ctx.fs.remove(command.path);
 	}
@@ -127,14 +169,20 @@ function stdinText(command: ExecCommand): string {
 	return `  < {${what}secrets: ${stdin.secrets.join(', ') || 'none'}} on stdin`;
 }
 
+/** One exec as the Review shows it (the exact argv, the stdin keys, the `unless` probe). */
+function execText(command: ExecCommand, row: OsRow, identity: ServiceIdentity): string {
+	const unless =
+		command.unless === undefined
+			? ''
+			: `  (unless: ${shellLine(effectiveArgv(command.unless, row, identity))})`;
+	return `${shellLine(effectiveArgv(command, row, identity))}${stdinText(command)}${unless}`;
+}
+
 /** One command as the Review shows it (the exact argv; files by path, mode, owner and hash). */
-export function commandText(command: HostCommand, row: OsRow, instanceUser: string): string {
-	if (command.kind === 'exec') {
-		const unless =
-			command.unless === undefined
-				? ''
-				: `  (unless: ${shellLine(effectiveArgv(command.unless, row, instanceUser))})`;
-		return `${shellLine(effectiveArgv(command, row, instanceUser))}${stdinText(command)}${unless}`;
+export function commandText(command: HostCommand, row: OsRow, identity: ServiceIdentity): string {
+	if (command.kind === 'exec') return execText(command, row, identity);
+	if (command.kind === 'mkdir' && command.as === 'instance') {
+		return execText(instanceMkdirExec(command, row), row, identity);
 	}
 	if (command.kind === 'write') {
 		return `write ${command.path} (${octal(command.mode)} ${command.owner}:${command.group}, sha256 ${sha256Text(command.content).slice(0, 12)})`;
@@ -149,7 +197,7 @@ export function commandText(command: HostCommand, row: OsRow, instanceUser: stri
 export function commandsDigest(
 	commands: readonly HostCommand[],
 	row: OsRow,
-	instanceUser: string,
+	identity: ServiceIdentity,
 ): string {
-	return sha256Text(commands.map((command) => commandText(command, row, instanceUser)).join('\n'));
+	return sha256Text(commands.map((command) => commandText(command, row, identity)).join('\n'));
 }

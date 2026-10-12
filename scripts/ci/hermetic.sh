@@ -473,12 +473,15 @@ HERMETIC_TRIPWIRES=(
 	#     RECORDING runner (no apt/dnf, systemctl, useradd, certbot, docker or web-server reload
 	#     executes), the kill/resume drill in child processes under the same seam, pure renders,
 	#     the CLI spawned under the seam with a module-registry dump, and install.sh run under sh
-	#     with stub uname/curl and zip/tar fixtures.
+	#     with stub uname/curl and zip/tar fixtures. + 2026-10-12 (install folder / service
+	#     account): install_host_identity_native, the same scratch seam and fake account table
+	#     (re-verified DB-less with the five host gates above it: 171 pass / 0 fail).
 	test/unit/install_host_steps_native.test.ts
 	test/unit/install_host_resume_drill.test.ts
 	test/unit/install_host_render_tripwire.test.ts
 	test/unit/install_host_privilege_tripwire.test.ts
 	test/unit/install_host_selinux_native.test.ts
+	test/unit/install_host_identity_native.test.ts
 	test/unit/install_stack_steps_native.test.ts
 	test/unit/install_bootstrap_sh.test.ts
 )

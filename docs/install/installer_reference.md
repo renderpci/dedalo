@@ -92,7 +92,7 @@ meaning.)
 | Flag | Required | Default | Notes |
 | --- | --- | --- | --- |
 | `--route` | no | `developer` | how this Dédalo runs: `production` (native services, a named instance), `docker` (the compose stack), `trial` (Docker **without** media protection — evaluation only) or `developer` (a git checkout; the behaviour before routes). The route changes the [defaults below](#route-defaults), never what is installed. An unknown route is refused |
-| `--instance` | with `--route production` | — | the instance name on a production host that can carry several: a lowercase letter, then `a-z`, `0-9` or `_`, 28 characters at most (it becomes the unix user `ded_<instance>`, the database `dedalo_<instance>` owned by the peer role `ded_<instance>`, a path segment and a systemd instance — see [Several instances on one host](multi_instance.md) and [Production host steps](#production-host-steps)). Refused on any other route |
+| `--instance` | with `--route production` | — | the instance name on a production host that can carry several: a lowercase letter, then `a-z`, `0-9` or `_`, 28 characters at most (it becomes the default service user `ded_<instance>`, the database `dedalo_<instance>` owned by the service user's peer role, a path segment and a systemd instance — see [Several instances on one host](multi_instance.md) and [Production host steps](#production-host-steps)). Refused on any other route |
 | `--db-name` | **yes** (except `production` / `docker` / `trial`, which derive it) | see [Route defaults](#route-defaults) | the **empty** database you created |
 | `--db-user` | **yes** (except `production` / `docker` / `trial`) | see [Route defaults](#route-defaults) | the role that owns it |
 | `--entity` | **yes** | — | this instance's identifier, e.g. `myentity` |
@@ -135,8 +135,11 @@ meaning.)
 | `--letsencrypt-email` | with `--tls letsencrypt` | — | the address for Let's Encrypt's expiry notices |
 | `--letsencrypt-staging` | no | off | flags only: issue from Let's Encrypt's staging CA (a test certificate browsers do not trust). The public probe then does not verify the chain, so the install completes; on production the closing *To do on this host* list prints the `certbot` command that replaces the certificate with a real one |
 | `--tls-cert`, `--tls-key` | with `--tls files` | — | absolute paths of the fullchain and its key. Checked before use — the certificate must name `--server-name`, be valid now (a warning under 30 days) and pair with the key — and never copied or changed on `production` |
-| `--db-mode` | no | `create` | `production`: `create` (the installer creates the role `ded_<i>` — peer authentication, no password at rest — and the database it owns) or `existing` (yours, probed with the password you give) |
-| `--backup-dir` | no | `/home/ded_<i>/backups` | `production`: where the nightly backup units write |
+| `--install-dir` | no | `/home/ded_<i>` | `production`: the install folder — the release tree, `private/` and `backups/` live in it. Any normalized absolute path; created owned by the service user when missing (its parent never changed); an existing one used only when it is the service user's and holds no install, or empty under root-owned parents. Refused on any other route. See [The install folder and the service account](production.md#the-install-folder-and-the-service-account) |
+| `--service-user` | no | `ded_<i>` | `production`: the account the instance runs as — a new name is created (a system account, no login shell), an **existing** account is used as it is and never created or deleted. Refused on any other route |
+| `--service-group` | no | the service user's own group | `production`: the group the web server joins; a new name is created. Refused on any other route |
+| `--db-mode` | no | `create` | `production`: `create` (the installer creates the role named like the service user — peer authentication, no password at rest — and the database it owns; `--db-user` must then equal the service user) or `existing` (yours, probed with the password you give) |
+| `--backup-dir` | no | `<install folder>/backups` | `production`: where the nightly backup units write |
 | `--backup-site-builder` | no | off | `production`: also back up the site-builder store (as root, from the root-owned script copy) |
 | `--image-source` | no | `official` | `docker` / `trial`: `official` (a Dédalo registry, cosign-verified), `custom` (a registry of your own — `--image-repository`) or `build` (built here from this checkout) |
 | `--image-repository`, `--image-version` | with `--image-source custom` | the installer's own version | the image; its version must be the installer's (or its `-dev` tag): the engine steps run inside it with this installer's request format |
@@ -166,13 +169,20 @@ give falls back to. It never changes the steps, and a flag you give always wins.
 | --- | --- | --- | --- |
 | database host | `localhost` | `localhost` | `postgres` (the compose service) |
 | database name | — (required) | `dedalo_<i>` | `dedalo` |
-| database role | — (required) | `ded_<i>` — the instance user's PEER role (no password at rest; `--db-mode create`) | `dedalo` |
+| install folder (`--install-dir`) | — | `/home/ded_<i>` | — |
+| service user / group | — | `ded_<i>` / its own group | — |
+| database role | — (required) | the service user — its PEER role (no password at rest; `--db-mode create`) | `dedalo` |
 | database socket | — | `/var/run/postgresql` | — |
 | media root (`MEDIA_PATH`) | not written | `/srv/dedalo/<i>/dedalo/media` (the web root rule: the site's `root` is `/srv/dedalo/<i>`, so `/dedalo/media/…` is `MEDIA_PATH/…`; a production `MEDIA_PATH` must end in `/dedalo/media`) | `/srv/dedalo/media` |
-| backups | — | `/home/ded_<i>/backups` | the `backups` volume |
+| backups | — | `<install folder>/backups` | the `backups` volume |
 | certificate (`--tls`) | — | `letsencrypt` | `letsencrypt` (`trial`: none) |
 | server socket (`SERVER_UNIX_SOCKET`) | not written | `/run/dedalo-<i>/dedalo_ts.sock` | `/run/dedalo/dedalo_ts.sock` |
 | publication database (`--mysql-name`) | `web_dedalo` | `web_<i>` | `web_dedalo` |
+
+The backups and the database role follow the install folder and the service
+user **you gave**, not the instance name: `--install-dir /home/my_domain.org/dedalo
+--service-user my_domain.org` backs up into `/home/my_domain.org/dedalo/backups`
+and owns the database as the role `my_domain.org`. An explicit `--backup-dir` wins.
 
 The docker and trial host steps hand these to the engine child inside the
 container, so the stack's values live in one place (`src/core/install/install_plan.ts`).
@@ -778,7 +788,7 @@ The keys it accepts are exactly the plain answers: `route`, `instance`, `db_host
 `ontology_source`, and the host answers `web_server`, `server_name`,
 `http_port`, `https_port`, `tls_mode`, `letsencrypt_email`,
 `letsencrypt_staging`, `tls_cert_path`, `tls_key_path`, `db_mode`, `backup_dir`,
-`backup_site_builder`, `image_source`, `image_repository`, `image_version` (and
+`install_dir`, `service_user`, `service_group`, `backup_site_builder`, `image_source`, `image_repository`, `image_version` (and
 the internal `engine_only` and `pg_bin_path`). Lists may be JSON arrays or comma strings, switches JSON
 booleans — the same values the screens produce. The file goes through the same
 plan, so the same answers install the same instance whichever way they arrive.
@@ -850,7 +860,12 @@ come from flags, an answers file or the interactive screens:
 
 | Answer | Rule | Refusal |
 | --- | --- | --- |
-| `db_database`, `db_username`, `entity` | present | `<key> is required` |
+| `db_database`, `db_username`, `entity` | present (`db_username` not on a production install that creates its database: it is the service user) | `<key> is required` |
+| `install_dir`, `service_user`, `service_group` | production only | `<key> is only meaningful on the production route (route is <r>)` |
+| `install_dir` | a normalized absolute path of two levels or more, plain segments (letters, digits, `.`, `_`, `-`), not a system location (`/etc`, `/usr`, `/run`, `/tmp`, `/root`… or exactly `/home`, `/srv`, `/opt`, `/var`, `/var/lib`, `/var/www`) | `install_dir must be an absolute path`, `install_dir '<v>' must be a normalized absolute path of at least two levels …`, `install_dir '<v>' may contain only letters, digits, '.', '_' and '-' in each segment`, `install_dir '<v>' is a system location (<p>) — choose a folder of its own, e.g. /home/ded_<i>` |
+| `install_dir`, `backup_dir` | outside `/opt/dedalo`, `/var/lib/dedalo-install`, `/var/backups/dedalo-site-builder`, `/srv/dedalo`, `MEDIA_PATH`'s web root and the socket's directory | `<key> '<v>' overlaps <place>, which the installer keeps root-owned or serves to the web — choose a folder outside it` |
+| `service_user`, `service_group` | a Linux name: `a-z` or `_` first, then `a-z`, `0-9`, `_`, `-`, `.` (32 at most); never `root` | `service_user '<v>' is not a valid Linux user name (…)`, `service_user root is refused — the service never runs as root` |
+| `db_username` (production, `--db-mode create`) | equals the service user (peer authentication) | `with db_mode create the database role is the service user (…): db_username '<v>' must be '<service user>' — omit --db-user` |
 | `entity` | a letter, then letters, digits or `_` | `entity '<v>' must start with a letter and contain only letters, digits and _` |
 | `db_port`; `mysql_port` (with `--diffusion`); `smtp_port` (with `--mailer`) | an integer 1–65535 | `db_port '<v>' must be an integer 1-65535` |
 | database and MariaDB host, name, user | no leading `-`, no control character | `db_database: looks like a command-line option` |
@@ -893,7 +908,7 @@ schemas, in a directory the engine child never writes:
 
 | Route | Host record | Engine record |
 | --- | --- | --- |
-| production | `/var/lib/dedalo-install/<instance>/` (`0700`, root) | `/home/ded_<instance>/private/install/` (the instance user's) |
+| production | `/var/lib/dedalo-install/<instance>/` (`0700`, root) | `<install folder>/private/install/` (the service user's) |
 | docker, trial | `<checkout>/.dedalo-install/` (yours) | `/private/install/` inside the `private` volume |
 | developer | — | `<private>/install/` |
 
@@ -1000,7 +1015,7 @@ production run without root is refused with that command) and does the whole
 host, as named steps with the same plan, state, resume and abort as the engine
 steps. Its record lives in `/var/lib/dedalo-install/<instance>/` (`0700`, root's);
 the engine steps run in ONE child, **as the instance user**, with their own
-record in `/home/ded_<instance>/private/install/`.
+record in `<install folder>/private/install/`.
 
 Before anything runs, the **Review lists every command each host step will run**,
 exactly as it will run — the same list the run executes (a resume refuses a step
@@ -1008,14 +1023,14 @@ whose commands changed since). Read it: it is the whole change to the host.
 
 | Step | What it does | What `--abort` undoes |
 | --- | --- | --- |
-| `host_preflight` | measures the host and **refuses**, before any change: an unsupported system (supported: Ubuntu 26.04 LTS, Debian 13, RHEL / Rocky / AlmaLinux 10 — newest releases only), no systemd, no root, nginx older than 1.25.1 (it rejects `http2 on;`), anything already under this instance's names (the user `ded_<i>`, the database or role, `dedalo-ts@<i>` enabled or with drop-ins, the site file, the socket, the nginx upstream/zone names `dedalo_<i>` and `dedalo_<i>_api` in another file), **any instance directory that already exists** (home, web root, media, backups — the installer never takes over a directory, so a media path under `/var/www` is refused), a web-server configuration it cannot read (`nginx -T`, Apache's `-S`/`-M`), the address served by another site on our ports, a non-standard port held by another program, another PostgreSQL major on the database port, and the institution's certificate when it does not name the address, has expired or does not pair with its key. The firewall is **checked and told**, never changed | — (it changes nothing) |
+| `host_preflight` | measures the host and **refuses**, before any change: an unsupported system (supported: Ubuntu 26.04 LTS, Debian 13, RHEL / Rocky / AlmaLinux 10 — newest releases only), no systemd, no root, nginx older than 1.25.1 (it rejects `http2 on;`), anything already under this instance's names (the database or role, `dedalo-ts@<i>` enabled or with drop-ins, the site file, the socket, the nginx upstream/zone names `dedalo_<i>` and `dedalo_<i>_api` in another file), **any instance directory that already exists** — `/srv/dedalo/<i>`, its web root, media, the backup dir (outside the install folder or inside it), `private/` — the installer never takes over a directory, so a media path under `/var/www` is refused; the install folder itself follows the [install folder rules](production.md#the-install-folder-and-the-service-account) (used as it is when it is the service user's, adopted when it is root's and empty in an operator's place), a web-server configuration it cannot read (`nginx -T`, Apache's `-S`/`-M`), the address served by another site on our ports, a non-standard port held by another program, another PostgreSQL major on the database port, and the institution's certificate when it does not name the address, has expired or does not pair with its key. The firewall is **checked and told**, never changed | — (it changes nothing) |
 | `host_packages` | PostgreSQL 18, the media toolchain (ImageMagick, FFmpeg, Poppler, librsvg, OCRmyPDF), the web server when missing, certbot (Let's Encrypt), the SELinux tools (EL); the repositories they need (PGDG on Debian; EPEL, RPM Fusion, PGDG and CodeReady Builder on EL) | nothing: packages and repositories are **shared host state** — told, never removed (removing a repository would leave its packages without security updates) |
-| `host_identity` | the system user and group `ded_<i>` (no login shell, no skeleton files) and every directory of the instance at its mode: home, `private` (`0700`), backups, `/srv/dedalo/<i>` (media at `0750`, never world-readable), the root-owned `/opt/dedalo/…` (a shared one that exists is used as it is, never re-moded) | the directories it created, while empty; the user — with the home it created — unless it still runs processes or backups remain in its home (a removed uid could be reused and read them) |
-| `host_runtime` | Bun at the release's pin, **root-owned** in `/opt/dedalo/bun/<pin>/` — only from a zip whose sha256 equals the release's committed `.bun-sha256` (the bootstrap's verified cache); the release extracted into `/home/ded_<i>/dedalo`; its dependencies installed as the instance; the root-run scripts copied root-owned to `/opt/dedalo/instances/<i>/bin` | the release and scripts; Bun when no other instance uses that pin |
-| `host_database` | `--db-mode create`: the role `ded_<i>` (LOGIN, **no password** — peer authentication over the local socket) and the database `dedalo_<i>` it owns (UTF8, from `template0`); then checks the instance reaches it by peer and the three extensions are available. `existing`: nothing | only what it created, only with `--confirm-database`, only an empty database |
-| `host_engine` | the engine steps (seed, ontologies, thesauri, tools, root password) in one child as `ded_<i>`: `runuser -u ded_<i> -- <bun> run scripts/install.ts --request-stdin --execute --events-jsonl` — answers and secrets as ONE JSON object on its standard input | the child's own `--abort` (it refuses a sealed install) |
+| `host_identity` | the service user (created: a system account, no login shell, no skeleton files — or an existing account USED AS IS), the service group (its own, a typed one created with `groupadd`, or an existing one used as is), the install folder (`0750`; made by root only under root-owned parents, else by the service user; an empty root-owned folder under root's parents inside `/home`, `/srv`, `/data`, `/mnt` or `/media` adopted) and every directory of the instance at its mode: `private` (`0700`), backups, `/srv/dedalo/<i>` (media at `0750`, never world-readable) — everything inside the folder made by the service user — and the root-owned `/opt/dedalo/…` (a shared one that exists is used as it is, never re-moded). The System check before it refuses another instance's user, group or folder (and an account in another instance's group), a system account, a package's account, a privileged group and a folder it may not use; an account that appeared since (a package made it) is refused here, never recorded as created | as the service user, what the install left in the folder, then the folder it created (an adopted one gets its owner and mode back); the user and group only when it created them — never an existing account — and not while the user runs processes or backups remain (a removed uid could be reused and read them) |
+| `host_runtime` | Bun at the release's pin, **root-owned** in `/opt/dedalo/bun/<pin>/` — only from a zip whose sha256 equals the release's committed `.bun-sha256` (the bootstrap's verified cache); the release extracted into `<install folder>/dedalo` by the service user; its dependencies installed as the instance; the root-run scripts copied root-owned to `/opt/dedalo/instances/<i>/bin` | the release and scripts; Bun when no other instance uses that pin |
+| `host_database` | `--db-mode create`: the role named like the service user (LOGIN, **no password** — peer authentication over the local socket) and the database `dedalo_<i>` it owns (UTF8, from `template0`); then checks the instance reaches it by peer and the three extensions are available. `existing`: nothing | only what it created, only with `--confirm-database`, only an empty database |
+| `host_engine` | the engine steps (seed, ontologies, thesauri, tools, root password) in one child as the service user: `runuser -u <user> -g <group> -- <bun> run scripts/install.ts --request-stdin --execute --events-jsonl` — answers and secrets as ONE JSON object on its standard input | the child's own `--abort` (it refuses a sealed install) |
 | `host_units` | the shared template units (`deploy/systemd/*@*`) and this instance's drop-ins; `dedalo-ts@<i>` enabled (not started, the watchdog **not** armed) | the drop-ins; the templates when no other instance uses them |
-| `host_selinux` | RHEL family, SELinux enforcing or permissive: the file contexts (the socket directory, `/srv/dedalo/<i>`, the ACME root), the `dedalo_engine` policy module (`deploy/selinux/dedalo_engine.cil.tpl`, priority 400) and `restorecon -F` on the runtime. The module gives the engine its own domain — systemd starts the pinned runtime, labelled `dedalo_engine_exec_t`, into `dedalo_engine_t` — and lets the web server connect to the unix sockets of that domain **only**, never another service's. No boolean is changed | this instance's contexts; the module when no other instance uses it |
+| `host_selinux` | RHEL family, SELinux enforcing or permissive: the file contexts (the socket directory, `/srv/dedalo/<i>`, the ACME root), the `dedalo_engine` policy module (`deploy/selinux/dedalo_engine.cil.tpl`, priority 400) and `restorecon -F` on the runtime. The module gives the engine its own domain — systemd starts the pinned runtime, labelled `dedalo_engine_exec_t`, into `dedalo_engine_t` — and lets the web server connect to the unix sockets of that domain **only**, never another service's. No boolean is changed | the contexts this install added (a rule defined before it is kept); the module when no other instance uses it |
 | `host_first_boot` | starts `dedalo-ts@<i>`, waits for `/health` on its socket and for **every** migration to be recorded; under SELinux, refuses an engine not running in `dedalo_engine_t` | stops it |
 | `host_watchdog` | arms `dedalo-ts-watchdog@<i>.timer` — only now, after the first boot completed (a watchdog armed earlier killed a first boot mid-migration) | disarms it |
 | `host_web_http` | Let's Encrypt only: the plain-HTTP site (the HTTP-01 challenge root and the redirect) | the site file |
@@ -1074,7 +1089,7 @@ instance record exists, the engine refuses a sealed private directory, and
   whose pin differs from the running runtime, and there is no installer command
   that installs a new pin on a live instance today.
 - The watchdog and the rollback units use the code-backup root
-  `/home/ded_<i>/backups/code` (pinned in the units, never read from the
+  `<install folder>/backups/code` (pinned in the units' drop-ins, never read from the
   instance's `.env`); the rollback's file work runs as the instance user.
 - On a **live** instance (the engine child completed), `--abort` undoes only the
   host steps after `host_engine` — the units' start, SELinux, the watchdog, the

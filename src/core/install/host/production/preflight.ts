@@ -6,10 +6,15 @@
  *  - an unsupported system (the sentence lists the supported ones — newest
  *    releases only), no systemd, no root;
  *  - nginx older than 1.25.1 (`http2 on;` — no fallback form);
- *  - a CLASH under this instance's names: the user `ded_<i>`, the database or
- *    the role (a created database), a dedalo-ts@<i> unit or drop-in, the site
- *    file, the socket, the server name on our ports in another site file, a
- *    non-standard port held by another program;
+ *  - the SERVICE ACCOUNT and the INSTALL FOLDER (identity_rules.ts — the same
+ *    verdict the identity probe showed): root/system accounts and groups, an
+ *    account holding a privileged group, another instance's user, group or
+ *    folder (one per instance), a folder that is not the user's and not
+ *    empty, a symlinked or foreign-writable path, a folder a web site serves;
+ *  - a CLASH under this instance's names: the database or the role (a created
+ *    database), a dedalo-ts@<i> unit or drop-in, the site file, the socket,
+ *    the server name on our ports in another site file, a non-standard port
+ *    held by another program;
  *  - PostgreSQL: another major's cluster on the database port (critique B5 —
  *    a second cluster would be created beside it on another port, and the
  *    engine and pg_dump would disagree about which one holds the database);
@@ -23,12 +28,13 @@
 
 import type { HostCtx, HostPlanCtx, HostRunResult, HostStepDefinition } from '../contract.ts';
 import { gatherHostFacts, type HostFacts } from '../facts.ts';
+import { bunPinOfPaths, pathsFor } from '../layout.ts';
 import { NGINX_MIN_VERSION, osRowById, supportedOsList, versionAtLeast } from '../os_support.ts';
 import { hostRefuse } from '../refuse.ts';
 import { checkCertificateFiles } from '../tls_files.ts';
 import { httpNameClash, instanceHttpNames, serverNameClash } from '../web/clash.ts';
 import { ran, sitePath } from './common.ts';
-import { instanceDirs, ownedDirs } from './identity.ts';
+import { identityOf, instanceDirs, ownedDirs } from './identity.ts';
 
 /** Refuse with every problem, joined (the operator fixes them all in one pass). */
 function refuseAll(problems: readonly string[]): void {
@@ -55,7 +61,8 @@ function systemProblems(facts: HostFacts): string[] {
 /** The web server's configuration probes and its version floor. */
 function webProblems(facts: HostFacts): string[] {
 	const probes = facts.web.probeFailures.map(
-		(line) => `${line} — the installer cannot see the web server's sites; fix its configuration first`,
+		(line) =>
+			`${line} — the installer cannot see the web server's sites; fix its configuration first`,
 	);
 	const version = facts.web.version;
 	if (facts.web.kind !== 'nginx' || version === null) return probes;
@@ -67,16 +74,11 @@ function webProblems(facts: HostFacts): string[] {
 			];
 }
 
-/** What already exists under this instance's names (the user, units, site, socket). */
+/** What already exists under this instance's names (units, site, socket). */
 function nameProblems(ctx: HostPlanCtx): string[] {
 	const { facts, paths } = ctx;
 	const unit = `dedalo-ts@${paths.instance}.service`;
 	return [
-		...(facts.userExists
-			? [
-					`the user ${paths.user} already exists — choose another instance name (adopting an existing user is a manual procedure)`,
-				]
-			: []),
 		...(facts.units.some((item) => item.name === unit && item.state === 'enabled')
 			? [`${unit} is already enabled`]
 			: []),
@@ -100,7 +102,9 @@ function databaseProblems(ctx: HostPlanCtx): string[] {
 		...(facts.dbExists === true
 			? [`database ${answers.db_database} already exists (--db-mode existing uses it as it is)`]
 			: []),
-		...(facts.roleExists === true ? [`role ${answers.db_username} already exists`] : []),
+		...(facts.roleExists === true
+			? [`role ${answers.db_username} already exists (--db-mode existing uses it as it is)`]
+			: []),
 		...(other === undefined
 			? []
 			: [
@@ -148,11 +152,14 @@ function addressProblems(ctx: HostPlanCtx): string[] {
 function dirProblems(ctx: HostCtx): string[] {
 	const owned = ownedDirs(ctx);
 	const taken = owned.filter((path) => ctx.fs.exists(path));
+	// Only the SHARED root directories: the install folder and its parents are the verdict's.
 	const shared = instanceDirs(ctx)
-		.filter((spec) => !owned.includes(spec.path))
+		.filter((spec) => spec.owner === 'root' && !owned.includes(spec.path))
 		.filter((spec) => {
 			const stat = ctx.fs.stat(spec.path);
-			return stat !== null && !(stat.isDirectory && stat.owner === 'root' && (stat.mode & 0o001) !== 0);
+			return (
+				stat !== null && !(stat.isDirectory && stat.owner === 'root' && (stat.mode & 0o001) !== 0)
+			);
 		});
 	return [
 		...taken.map(
@@ -186,6 +193,7 @@ function tlsProblems(ctx: HostCtx): { problems: string[]; warnings: string[] } {
 function hostProblems(ctx: HostPlanCtx): string[] {
 	return [
 		...webProblems(ctx.facts),
+		...identityOf(ctx).problems,
 		...nameProblems(ctx),
 		...databaseProblems(ctx),
 		...addressProblems(ctx),
@@ -211,6 +219,8 @@ async function runPreflight(
 		...ctx,
 		facts,
 		row: osRowById(facts.os as NonNullable<HostFacts['os']>),
+		// The service group is the measured account's (critique B2).
+		paths: pathsFor(ctx.answers, bunPinOfPaths(ctx.paths), facts),
 	};
 	const tls = tlsProblems({ ...ctx, ...planCtx });
 	refuseAll([...hostProblems(planCtx), ...dirProblems({ ...ctx, ...planCtx }), ...tls.problems]);
@@ -219,7 +229,10 @@ async function runPreflight(
 		`${facts.osName}, ${facts.web.kind}${facts.web.version === null ? ' (to be installed)' : ` ${facts.web.version}`}`,
 		{
 			warnings: tls.warnings,
-			told: facts.firewall.map((line) => `firewall (checked, not changed): ${line}`),
+			told: [
+				...facts.firewall.map((line) => `firewall (checked, not changed): ${line}`),
+				...identityOf(planCtx).told,
+			],
 		},
 	);
 }

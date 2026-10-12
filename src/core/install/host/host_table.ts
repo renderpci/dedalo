@@ -13,6 +13,7 @@ import type { HostStepId, ProductionHostStepId } from '../install_plan.ts';
 import type { HostPlanCtx, HostStepDefinition } from './contract.ts';
 import { commandsDigest, commandText } from './execute.ts';
 import type { HostFacts } from './facts.ts';
+import { bunPinOfPaths, pathsFor } from './layout.ts';
 import { osRowById } from './os_support.ts';
 import { host_backup_verify } from './production/backup_verify.ts';
 import { host_database } from './production/database.ts';
@@ -50,18 +51,23 @@ const PRODUCTION_ROWS: {
 	host_backup_verify,
 });
 
-/** The plan context minus the facts (and the row they decide) — read when the preflight digests. */
-export type HostBaseCtx = Omit<HostPlanCtx, 'facts' | 'row'>;
+/**
+ * The plan context minus the facts (and what they decide: the row, and the
+ * paths — whose service group is the measured account's, critique B2) — read
+ * when the preflight digests. `bunPin` names the runtime the paths carry.
+ */
+export type HostBaseCtx = Omit<HostPlanCtx, 'facts' | 'row' | 'paths'> & { bunPin: string };
 
 /** The digest of every production step's commands for `facts` (host_preflight freezes it). */
 function digestFor(base: HostBaseCtx, facts: HostFacts): Record<string, string> {
 	const row = osRowById(facts.os as NonNullable<HostFacts['os']>);
-	const ctx: HostPlanCtx = { ...base, facts, row };
+	const { bunPin, ...plan } = base;
+	const ctx: HostPlanCtx = { ...plan, facts, row, paths: pathsFor(base.answers, bunPin, facts) };
 	const digest: Record<string, string> = {};
 	for (const step of ctx.plan.steps) {
 		const definition = PRODUCTION_ROWS[step as keyof typeof PRODUCTION_ROWS];
 		if (definition !== undefined)
-			digest[step] = commandsDigest(definition.commands(ctx), row, ctx.paths.user);
+			digest[step] = commandsDigest(definition.commands(ctx), row, ctx.paths);
 	}
 	return digest;
 }
@@ -89,7 +95,7 @@ export interface HostReviewBlock {
 
 /** The Review's host commands of a plan, for the facts measured (review equals run). */
 export function hostReview(ctx: HostPlanCtx): HostReviewBlock[] {
-	const table = hostTable(() => ctx);
+	const table = hostTable(() => ({ ...ctx, bunPin: bunPinOfPaths(ctx.paths) }));
 	return (ctx.plan.steps as HostStepId[])
 		.filter((step) => step in table)
 		.map((step) => ({
@@ -97,11 +103,11 @@ export function hostReview(ctx: HostPlanCtx): HostReviewBlock[] {
 			label: table[step].label(ctx.plan),
 			commands: table[step]
 				.commands(ctx)
-				.map((command) => commandText(command, ctx.row, ctx.paths.user)),
+				.map((command) => commandText(command, ctx.row, ctx.paths)),
 		}));
 }
 
 /** The digest of one step's commands now (a resume compares it with the frozen one). */
 export function stepDigest(definition: HostStepDefinition, ctx: HostPlanCtx): string {
-	return commandsDigest(definition.commands(ctx), ctx.row, ctx.paths.user);
+	return commandsDigest(definition.commands(ctx), ctx.row, ctx.paths);
 }

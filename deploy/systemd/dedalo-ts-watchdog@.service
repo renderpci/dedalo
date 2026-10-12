@@ -3,9 +3,10 @@
 # the server is younger than --grace (boot migrations run before the socket
 # binds: a watchdog without a grace killed them — campaign 2 L7, finding F3).
 # It runs as root (it starts the restart/rollback units), so the backup root is
-# PINNED here: it never resolves it from the instance's .env, and it only
-# reads (greps) the instance-written sentinel — the rollback acts as the
-# instance user (dedalo-ts-rollback@).
+# PINNED in its drop-in (with the socket and the app dir): it never resolves
+# it from the instance's .env, and it only reads (greps) the instance-written
+# sentinel — the rollback acts as the service user (dedalo-ts-rollback@).
+# Without its drop-in this template runs nothing (fail-closed).
 
 [Unit]
 Description=Dedalo TS health watchdog — %i
@@ -14,4 +15,4 @@ After=dedalo-ts@%i.service
 
 [Service]
 Type=oneshot
-ExecStart=/opt/dedalo/instances/%i/bin/dedalo-ts-watchdog.sh --socket /run/dedalo-%i/dedalo_ts.sock --app-dir /home/ded_%i/dedalo --backup-root /home/ded_%i/backups/code --service dedalo-ts@%i.service --grace 900 --restart-unit dedalo-ts-restart@%i.service --rollback-unit dedalo-ts-rollback@%i.service
+ExecStart=/bin/false

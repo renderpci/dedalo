@@ -24,9 +24,9 @@ import { createHash } from 'node:crypto';
 import {
 	closeSync,
 	constants,
+	existsSync,
 	fchmodSync,
 	fchownSync,
-	existsSync,
 	fsyncSync,
 	lstatSync,
 	mkdirSync,
@@ -49,6 +49,8 @@ export interface HostStat {
 	group: string;
 	isDirectory: boolean;
 	isFile: boolean;
+	/** The path itself is a symbolic link (lstat — never followed). */
+	isSymlink: boolean;
 	mtimeMs: number;
 }
 
@@ -150,7 +152,11 @@ type OwnerIds = { uid: number; gid: number } | null;
 function atomicWrite(real: string, content: string, mode: number, ids: OwnerIds): void {
 	const tmp = `${real}.tmp.${process.pid}`;
 	rmSync(tmp, { force: true });
-	const fd = openSync(tmp, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW, mode);
+	const fd = openSync(
+		tmp,
+		constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL | constants.O_NOFOLLOW,
+		mode,
+	);
 	try {
 		writeSync(fd, content);
 		fsyncSync(fd);
@@ -279,6 +285,7 @@ function statOf(fs: HostFs, book: OwnerBook | null, path: string): HostStat | nu
 		group: owners.group,
 		isDirectory: stats.isDirectory(),
 		isFile: stats.isFile(),
+		isSymlink: stats.isSymbolicLink(),
 		mtimeMs: stats.mtimeMs,
 	};
 }

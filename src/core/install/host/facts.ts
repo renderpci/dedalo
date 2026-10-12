@@ -27,9 +27,17 @@ import {
 	osRowOf,
 	parseOsRelease,
 } from './os_support.ts';
+import {
+	type AccountFacts,
+	gatherAccountFacts,
+	pendingAccountFacts,
+	primaryGroupName,
+} from './production/account_facts.ts';
+import { type OtherInstance, otherInstances, withPrimaryGroups } from './production/instances.ts';
 import type { CommandRunner, RunResult } from './runner.ts';
 import type { StackFacts } from './stack/facts.ts';
 import {
+	apacheRoots,
 	apacheSites,
 	type HttpName,
 	listeningPorts,
@@ -68,7 +76,10 @@ export interface HostFacts {
 	/** null = PostgreSQL is not running yet (unknowable; it will be created). */
 	dbExists: boolean | null;
 	roleExists: boolean | null;
-	userExists: boolean;
+	/** The service account and the install folder (production/account_facts.ts). */
+	account: AccountFacts;
+	/** The other Dédalo instances of this host (production/instances.ts). */
+	instances: OtherInstance[];
 	units: { name: string; state: string }[];
 	dropinExists: boolean;
 	siteFile: { exists: boolean; ours: boolean };
@@ -153,8 +164,20 @@ async function nginxFacts(runner: CommandRunner, row: OsRow): Promise<HostFacts[
 	};
 }
 
+/** Apache's site tuples with the directories each vhost file serves (read through the fs). */
+function apacheSitesWithRoots(output: string, fs: HostFs): SiteTuple[] {
+	return apacheSites(output).map((site) => ({
+		...site,
+		roots: apacheRoots(fs.readText(site.file) ?? ''),
+	}));
+}
+
 /** Apache: version, site tuples, loaded modules — through the row's query binary (EL: httpd). */
-async function apacheFacts(runner: CommandRunner, row: OsRow): Promise<HostFacts['web']> {
+async function apacheFacts(
+	runner: CommandRunner,
+	row: OsRow,
+	fs: HostFs,
+): Promise<HostFacts['web']> {
 	const query = binaryOf(row, 'apache-query');
 	const failures: string[] = [];
 	const version = await probe(runner, [query, '-v']);
@@ -164,7 +187,7 @@ async function apacheFacts(runner: CommandRunner, row: OsRow): Promise<HostFacts
 		kind: 'apache',
 		installed: true,
 		version: /Apache\/(\d+\.\d+\.\d+)/.exec(version.stdout)?.[1] ?? null,
-		sites: apacheSites(sites),
+		sites: apacheSitesWithRoots(sites, fs),
 		httpNames: [],
 		apacheModules: [...modules.matchAll(/^\s*(\w+)_module/gm)].map((m) => m[1] as string),
 		probeFailures: failures,
@@ -185,16 +208,15 @@ function emptyWeb(kind: 'nginx' | 'apache'): HostFacts['web'] {
 }
 
 /** The web server's facts (not installed yet: nothing to read). */
-async function webFacts(
+export async function webFacts(
 	runner: CommandRunner,
 	fs: HostFs,
 	row: OsRow,
 	kind: 'nginx' | 'apache',
 ): Promise<HostFacts['web']> {
 	const binary = binaryOf(row, kind === 'nginx' ? 'nginx' : 'apachectl');
-	if (!fs.exists(binary))
-		return emptyWeb(kind);
-	return kind === 'nginx' ? nginxFacts(runner, row) : apacheFacts(runner, row);
+	if (!fs.exists(binary)) return emptyWeb(kind);
+	return kind === 'nginx' ? nginxFacts(runner, row) : apacheFacts(runner, row, fs);
 }
 
 /** apt: `pg_lsclusters`; EL: the postgresqlNN-server packages. */
@@ -305,24 +327,17 @@ async function cpuFacts(
 	return { arch, avx2: /\bavx2\b/.test(fs.readText('/proc/cpuinfo') ?? '') };
 }
 
-/** What exists under this instance's names (user, units, site file, socket, certificate). */
+/** What exists under this instance's names (units, site file, socket, certificate). */
 async function nameFacts(
 	runner: CommandRunner,
 	fs: HostFs,
 	row: OsRow,
 	paths: InstancePaths,
 	kind: 'nginx' | 'apache',
-): Promise<
-	Pick<
-		HostFacts,
-		'userExists' | 'units' | 'dropinExists' | 'siteFile' | 'socketExists' | 'certIssued'
-	>
-> {
-	const user = await probe(runner, [binaryOf(row, 'getent'), 'passwd', paths.user]);
+): Promise<Pick<HostFacts, 'units' | 'dropinExists' | 'siteFile' | 'socketExists' | 'certIssued'>> {
 	const sitePath = row.web[kind].sitePath.replace('<i>', paths.instance);
 	const site = fs.readText(sitePath);
 	return {
-		userExists: user.exitCode === 0,
 		units: await unitFacts(runner, row),
 		dropinExists: fs.exists(`/etc/systemd/system/dedalo-ts@${paths.instance}.service.d`),
 		siteFile: {
@@ -369,7 +384,8 @@ function unsupportedFacts(os: { os: OsRowId | null; osName: string }, euid: numb
 		pgRunning: false,
 		dbExists: null,
 		roleExists: null,
-		userExists: false,
+		account: pendingAccountFacts(),
+		instances: [],
 		units: [],
 		dropinExists: false,
 		siteFile: { exists: false, ours: false },
@@ -393,7 +409,30 @@ async function euidOf(runner: CommandRunner): Promise<number> {
 	return /^\d+$/.test(result.stdout.trim()) ? Number(result.stdout.trim()) : -1;
 }
 
-/** Gather every fact (see the header). */
+/**
+ * The identity facts (the service account, the install folder, the other
+ * instances) — from the ANSWERS alone: the service group the instance paths
+ * carry is decided by these (layout.ts serviceGroupOf).
+ */
+export async function gatherIdentityFacts(
+	runner: CommandRunner,
+	fs: HostFs,
+	row: OsRow,
+	answers: InstallAnswers,
+): Promise<Pick<HostFacts, 'account' | 'instances'>> {
+	return {
+		account: await gatherAccountFacts(runner, fs, row, answers),
+		instances: await withPrimaryGroups(otherInstances(fs, answers.instance), (user) =>
+			primaryGroupName(runner, row, user),
+		),
+	};
+}
+
+/**
+ * Gather every fact (see the header). `paths` names the instance's units,
+ * site file and socket — instance-derived names only (its group is not read:
+ * the account facts decide it).
+ */
 export async function gatherHostFacts(
 	runner: CommandRunner,
 	fs: HostFs,
@@ -417,6 +456,7 @@ export async function gatherHostFacts(
 		web: await webFacts(runner, fs, row, kind),
 		packages,
 		...(await pgFacts(runner, fs, row, answers, packages)),
+		...(await gatherIdentityFacts(runner, fs, row, answers)),
 		...(await nameFacts(runner, fs, row, paths, kind)),
 		ports: listeningPorts(ss.stdout),
 		selinux: await selinuxFacts(runner, fs, row),

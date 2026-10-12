@@ -55,7 +55,7 @@ export function bootStatusProbe(ctx: HostPlanCtx): ExecCommand {
 		label: 'every migration recorded',
 		mutates: false,
 		cwd: ctx.paths.tree,
-		env: { HOME: ctx.paths.home },
+		env: { HOME: ctx.paths.instanceDir },
 		timeoutMs: 120_000,
 	};
 }

@@ -7,8 +7,14 @@
  *    Written when absent or byte-equal, REFUSED when a different file holds the
  *    name (another installer's, an operator's edit) — never overwritten;
  *  - the per-instance DROP-INS (`<unit>@<i>.service.d/10-dedalo-install.conf`),
- *    stamped `# dedalo-install <i> <answers digest>`: the pinned root-owned runtime,
- *    the client publish dir, the backup store lines and their state.
+ *    stamped `# dedalo-install <i> <answers digest>`: the SERVICE USER and
+ *    GROUP, the INSTALL FOLDER (WorkingDirectory=, HOME, the EnvironmentFile,
+ *    the rollback/watchdog app dir and code backup root — owner decisions
+ *    2026-10-12: both are answers, so no template names them), the pinned
+ *    root-owned runtime, the client publish dir, the backup store lines and
+ *    their state. The templates whose command needs one of these are
+ *    FAIL-CLOSED (`ExecStart=/bin/false`, no User=): without its drop-in a
+ *    template runs nothing.
  *
  * EVERY Environment= VALUE IS QUOTED (quote.ts — campaign 2 L8) and the
  * expected store list is DERIVED from the store lines it is written beside, so
@@ -88,11 +94,19 @@ export function dropinPath(unit: string, instance: string): string {
 	return `${SYSTEMD_DIR}/${unit.slice(0, at + 1)}${instance}${unit.slice(at + 1)}.d/10-dedalo-install.conf`;
 }
 
-/** The server's drop-in: the pinned runtime and the client publish dir. */
+/** The service account lines every instance-run unit's drop-in carries. */
+function accountLines(paths: InstancePaths): string[] {
+	return [`User=${paths.user}`, `Group=${paths.group}`];
+}
+
+/** The server's drop-in: the service account, the install folder, the pinned runtime, the client publish dir. */
 export function serverDropin(paths: InstancePaths, stamp: string): string {
 	return [
 		stamp,
 		'[Service]',
+		...accountLines(paths),
+		`WorkingDirectory=${paths.tree}`,
+		systemdEnvironment({ key: 'HOME', value: paths.instanceDir }),
 		'ExecStart=',
 		`ExecStart=${paths.bun} run src/server.ts`,
 		systemdEnvironment({ key: 'DEDALO_CLIENT_PUBLISH_DIR', value: paths.clientPublish }),
@@ -173,6 +187,9 @@ export function backupDropin(
 			? ['[Unit]', `Wants=${siteBuilderBackupUnit(paths.instance)}`]
 			: []),
 		'[Service]',
+		...accountLines(paths),
+		'EnvironmentFile=',
+		`EnvironmentFile=${paths.privateDir}/.env`,
 		systemdEnvironment({ key: 'DEDALO_BACKUP_STATE_DIR', value: paths.backupStateDir }),
 		systemdEnvironment({ key: 'DEDALO_BACKUP_EXPECTED_STORES', value: expectedStores(stores) }),
 		'ExecStart=',
@@ -181,12 +198,54 @@ export function backupDropin(
 	].join('\n');
 }
 
-/** The alert unit's drop-in: the same state dir the backup writes. */
+/** The alert unit's drop-in: the service account, its command, the same state dir the backup writes. */
 export function alertDropin(paths: InstancePaths, stamp: string): string {
 	return [
 		stamp,
 		'[Service]',
+		...accountLines(paths),
 		systemdEnvironment({ key: 'DEDALO_BACKUP_STATE_DIR', value: paths.backupStateDir }),
+		'ExecStart=',
+		`ExecStart=${paths.binDir}/dedalo-backup-alert.sh dedalo-backup@${paths.instance}.service`,
+		'',
+	].join('\n');
+}
+
+/** The pinned tree and code backup root a rollback acts on (never resolved from the .env). */
+function rollbackPaths(paths: InstancePaths): string[] {
+	return ['--app-dir', paths.tree, '--backup-root', paths.codeBackupRoot];
+}
+
+/** The rollback unit's drop-in: the service account and its pinned condition and command. */
+export function rollbackDropin(paths: InstancePaths, stamp: string): string {
+	const script = `${paths.binDir}/dedalo-code-rollback.sh`;
+	return [
+		stamp,
+		'[Service]',
+		...accountLines(paths),
+		'ExecCondition=',
+		`ExecCondition=${[script, '--check', ...rollbackPaths(paths)].join(' ')}`,
+		'ExecStart=',
+		`ExecStart=${[script, '--no-restart', ...rollbackPaths(paths), '--service', `dedalo-ts@${paths.instance}`, '--socket', paths.socket].join(' ')}`,
+		'',
+	].join('\n');
+}
+
+/** The watchdog unit's drop-in (it runs as root): its pinned command. */
+export function watchdogDropin(paths: InstancePaths, stamp: string): string {
+	const i = paths.instance;
+	return [
+		stamp,
+		'[Service]',
+		'ExecStart=',
+		`ExecStart=${[
+			`${paths.binDir}/dedalo-ts-watchdog.sh`,
+			...['--socket', paths.socket],
+			...rollbackPaths(paths),
+			...['--service', `dedalo-ts@${i}.service`, '--grace', '900'],
+			...['--restart-unit', `dedalo-ts-restart@${i}.service`],
+			...['--rollback-unit', `dedalo-ts-rollback@${i}.service`],
+		].join(' ')}`,
 		'',
 	].join('\n');
 }
@@ -207,6 +266,14 @@ export function instanceDropins(
 		{
 			path: dropinPath('dedalo-backup-alert@.service', paths.instance),
 			content: alertDropin(paths, stamp),
+		},
+		{
+			path: dropinPath('dedalo-ts-rollback@.service', paths.instance),
+			content: rollbackDropin(paths, stamp),
+		},
+		{
+			path: dropinPath('dedalo-ts-watchdog@.service', paths.instance),
+			content: watchdogDropin(paths, stamp),
 		},
 	];
 }

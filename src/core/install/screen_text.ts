@@ -58,7 +58,7 @@ export const SCREEN_TEXT: Readonly<Record<string, { title: string; description: 
 		identity: {
 			title: 'Identity',
 			description:
-				'Who this installation belongs to. The install fingerprint can never change later.',
+				'Where this instance lives and who it belongs to (production: the install folder and the service account first). The install fingerprint can never change later.',
 		},
 		web_tls: { title: 'Web server & TLS', description: 'How browsers reach this instance.' },
 		services: {
@@ -108,6 +108,21 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 			label: 'Instance name',
 			description:
 				'A short name for this instance (e.g. prado): lowercase letters, digits and _. Its database, role, media and socket derive from it, so several Dédalo instances can share this host.',
+		},
+		install_dir: {
+			label: 'Install folder',
+			description:
+				'Where this instance lives: its code (dedalo/), private settings (private/) and backups (backups/). Any absolute path, e.g. /home/my_domain.org/dedalo. Created owned by the service user if missing; an existing folder is used only if empty or already the service user’s. Its parent is never changed.',
+		},
+		service_user: {
+			label: 'Service user',
+			description:
+				'The account the instance runs as. Enter = a new account of its own (recommended). A new name is created; an existing account (e.g. a hosting account) is used as it is — the installer never creates or deletes an existing account.',
+		},
+		service_group: {
+			label: 'Service group',
+			description:
+				'The group the web server joins to reach this instance’s socket, media and client. Empty = the service user’s own group (the new same-named one, or an existing account’s primary group). A group of its own is recommended.',
 		},
 		db_hostname: {
 			label: 'Database host',
@@ -344,7 +359,8 @@ export const OPTION_TEXT = Object.freeze({
 	db_mode: {
 		create: {
 			label: 'Create it',
-			description: 'The role ded_<instance> and its database, on this host’s PostgreSQL 18.',
+			description:
+				'The role of the service user (peer login) and its database, on this host’s PostgreSQL 18.',
 		},
 		existing: { label: 'Use an existing one', description: 'Probed as it is; nothing is created.' },
 	} as Record<string, { label: string; description: string }>,
@@ -443,10 +459,11 @@ export const NOTICE_TEXT = Object.freeze({
 	trialProbesSkipped:
 		'The stack is not running yet, so the connection is tested by the install inside the container.',
 	mediaProbe: (msg: string) => `Media directory: ${msg}`,
+	identityProbe: (msg: string) => `Install folder and service account: ${msg}`,
 	reviewEnvHelp:
 		'The .env keys below are written to <private>/.env (0600); the values are never shown here.',
 	reviewRoot:
-		'The production route runs as root (sudo sh install.sh); the engine steps then run as the instance user.',
+		'The production route runs as root (sudo sh install.sh); the engine steps then run as the service user.',
 	reviewInstallOffered: 'Type install to start, or edit a step.',
 });
 
@@ -479,6 +496,14 @@ export const REVIEW_TEXT = Object.freeze({
 	certificate: 'certificate',
 	backups: 'backups',
 	hostCommands: 'host commands',
+	/** The identity lines (identity_verdict.ts labels → words). */
+	identity: Object.freeze({
+		'install folder': 'install folder',
+		'service user': 'service user',
+		'service group': 'service group',
+		'database role': 'database role',
+		note: 'note',
+	}),
 });
 
 /**

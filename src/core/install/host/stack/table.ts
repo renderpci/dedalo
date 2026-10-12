@@ -48,7 +48,7 @@ export function stackDigest(ctx: HostPlanCtx): Record<string, string> {
 	for (const step of ctx.plan.steps) {
 		const definition = STACK_ROWS[step as keyof typeof STACK_ROWS];
 		if (definition !== undefined) {
-			digest[step] = commandsDigest(definition.commands(ctx), ctx.row, ctx.paths.user);
+			digest[step] = commandsDigest(definition.commands(ctx), ctx.row, ctx.paths);
 		}
 	}
 	return digest;

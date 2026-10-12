@@ -139,6 +139,7 @@ const MAX_ATTEMPTS = 12;
 /** The probe each screen runs. */
 const SCREEN_PROBE: Partial<Record<ScreenId, ProbeId>> = {
 	system: 'system',
+	identity: 'identity',
 	database: 'db',
 	services: 'media',
 	publication: 'diffusion',
@@ -161,6 +162,19 @@ const PROBE_SCREEN: Readonly<Partial<Record<ProbeId, ScreenId>>> = Object.freeze
 const PROBE_INPUTS: Readonly<Record<ProbeId, { keys: readonly string[]; secret?: SecretKey }>> =
 	Object.freeze({
 		system: { keys: ['route'] },
+		identity: {
+			keys: [
+				'route',
+				'instance',
+				'install_dir',
+				'service_user',
+				'service_group',
+				'backup_dir',
+				'media_path',
+				'unix_socket',
+				'web_server',
+			],
+		},
 		db: { keys: prefixed('db_'), secret: 'db_password' },
 		media: { keys: ['media_path'] },
 		diffusion: { keys: prefixed('mysql_'), secret: 'mysql_password' },
@@ -502,6 +516,7 @@ async function mailerProbe(session: Session): Promise<ProbeOutcome | Nav> {
 const PROBE_RUNS: Readonly<Record<ProbeId, (session: Session) => Promise<ProbeOutcome | Nav>>> =
 	Object.freeze({
 		system: (session: Session) => session.deps.probes.system(routeOf(session)),
+		identity: (session: Session) => session.deps.probes.identity(session.raw),
 		db: (session: Session) =>
 			session.deps.probes.database(session.raw, session.secrets.db_password ?? ''),
 		media: (session: Session) => session.deps.probes.media(session.raw),

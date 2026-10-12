@@ -2,18 +2,19 @@
  * host_engine — THE ENGINE STEPS, DELEGATED (terminal installer phase 4,
  * 2026-10-12): the root process never runs an engine step itself (it would
  * freeze the engine configuration for the wrong private dir and run psql as
- * root). It starts ONE child, AS THE INSTANCE USER, in the instance's own
- * release tree:
+ * root). It starts ONE child, AS THE SERVICE USER (with the service group),
+ * in the instance's own release tree:
  *
- *     runuser -u ded_<i> -- /opt/dedalo/bun/<pin>/bun run scripts/install.ts \
- *         --request-stdin --execute --events-jsonl [--resume]
+ *     runuser -u <service user> -g <service group> -- /opt/dedalo/bun/<pin>/bun \
+ *         run scripts/install.ts --request-stdin --execute --events-jsonl [--resume]
  *
  * — the SAME headless executor (executor.ts) every route runs, with its own
- * plan and state under /home/ded_<i>/private/install/. Its request is ONE JSON
- * object on stdin: the engine answers (the host answers minus the host-only
- * keys, plus `engine_only` and the OS row's PostgreSQL binaries) AND the
- * secrets — never argv, never a file root writes into a directory the
- * instance owns (critique B10/A5).
+ * plan and state under <install folder>/private/install/. Its request is ONE
+ * JSON object on stdin: the engine answers (the host answers minus the
+ * host-only keys, plus `engine_only`, the OS row's PostgreSQL binaries and the
+ * NORMALIZED database role — the service user: the child has no service_user
+ * to derive it from, critique B3) AND the secrets — never argv, never a file
+ * root writes into a directory the instance owns (critique B10/A5).
  *
  * Its progress comes back as JSON lines (--events-jsonl): each log line and
  * step event is relayed, redacted; the one-time salt line (`show_once`) is
@@ -31,12 +32,17 @@ import { requestOf, succeeded } from '../execute.ts';
 import { hostRefuse } from '../refuse.ts';
 import { confirmFlags, ran } from './common.ts';
 
-/** The engine child's answers: the host's minus the host-only keys (critique A14). */
+/**
+ * The engine child's answers: the host's minus the host-only keys (critique
+ * A14) — with the role the HOST normalized (= the service user on a created
+ * database): the child never re-derives it (critique B3).
+ */
 export function engineAnswers(ctx: HostPlanCtx): Partial<InstallAnswers> {
 	const answers: Record<string, unknown> = { ...ctx.plan.answers };
 	for (const key of HOST_ONLY_ANSWER_KEYS) delete answers[key];
 	return {
 		...answers,
+		db_username: ctx.answers.db_username,
 		engine_only: true,
 		pg_bin_path: ctx.row.pgBinDir,
 	} as Partial<InstallAnswers>;
@@ -55,7 +61,7 @@ function childCommand(
 		label: 'the engine steps, as the instance user',
 		mutates: true,
 		cwd: ctx.paths.tree,
-		env: { HOME: ctx.paths.home },
+		env: { HOME: ctx.paths.instanceDir },
 		timeoutMs: 6 * 3600 * 1000,
 		...options,
 	};

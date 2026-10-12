@@ -48,10 +48,10 @@ const INIT_ROWS: readonly { label: string; match: RegExp; hostOnly: boolean }[] 
 /**
  * On PRODUCTION the host steps provide what init_test checks on THIS process's
  * tree (critique A17): the instance's private dir is created at
- * /home/ded_<i>/private, psql comes with the packages. Those rows read so.
+ * <install folder>/private, psql comes with the packages. Those rows read so.
  */
 const PRODUCTION_PROVIDED: Readonly<Record<string, string>> = Object.freeze({
-	'Private directory': 'created by the installer at /home/ded_<instance>/private',
+	'Private directory': 'created by the installer in the install folder (private/)',
 	'PostgreSQL client': 'installed by the installer (PostgreSQL 18 packages)',
 	ImageMagick: 'installed by the installer (packages)',
 	FFmpeg: 'installed by the installer (packages)',
@@ -195,6 +195,42 @@ export async function systemCheck(route: InstallRoute): Promise<ProbeOutcome> {
 	};
 }
 
+// ── the install folder and the service account (production) ──────────────────
+
+/**
+ * The identity verdict of the answers against THIS host (owner decisions
+ * 2026-10-12): the same rules host_preflight applies and freezes
+ * (host/production/identity_rules.ts), read-only — the account, the folder,
+ * the other instances, the web sites' roots. Only the production route has
+ * one; an unsupported system answers its own sentence (the System check's).
+ */
+export async function identityProbe(answers: Answers): Promise<ProbeOutcome> {
+	const normalized = normalizeInstallAnswers(answers).answers;
+	if (normalized.route !== 'production') {
+		return {
+			ok: true,
+			detail: 'only a production install has an install folder and service account of its own',
+		};
+	}
+	const { hostOsRelease, measureIdentity } = await import('./host/production/identity_probe.ts');
+	const row = osRowOf(parseOsRelease(hostOsRelease()));
+	if (row === null) {
+		return {
+			ok: false,
+			detail: `not supported — the production route supports ${supportedOsList()}`,
+		};
+	}
+	const verdict = await measureIdentity(normalized, row);
+	return {
+		ok: verdict.problems.length === 0,
+		detail:
+			verdict.problems.length === 0
+				? `${normalized.install_dir} · ${normalized.service_user}`
+				: verdict.problems.join('; '),
+		identity: verdict,
+	};
+}
+
 // ── connections ──────────────────────────────────────────────────────────────
 
 /** The answers as the probe doors read them (normalized: the plan's defaults applied). */
@@ -250,13 +286,13 @@ function nearestExisting(path: string): string | null {
 }
 
 /** Production: the host steps create the media directory (host_identity) — its shape is checked. */
-function productionMediaProbe(answers: { media_path: string; instance: string }): ProbeOutcome {
+function productionMediaProbe(answers: { media_path: string; service_user: string }): ProbeOutcome {
 	if (!isAbsolute(answers.media_path)) {
 		return { ok: false, detail: `${answers.media_path || '(empty)'} is not an absolute path` };
 	}
 	return {
 		ok: true,
-		detail: `${answers.media_path} will be created by the installer (host_identity), owned by ded_${answers.instance}`,
+		detail: `${answers.media_path} will be created by the installer (host_identity), owned by ${answers.service_user}`,
 	};
 }
 

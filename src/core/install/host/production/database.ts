@@ -2,8 +2,9 @@
  * host_database — THE INSTANCE'S DATABASE (terminal installer phase 4,
  * 2026-10-12).
  *
- *  - `--db-mode create` (the default on a local PostgreSQL 18): the role
- *    `ded_<i>` with LOGIN and NO password — PEER authentication over the local
+ *  - `--db-mode create` (the default on a local PostgreSQL 18): the role named
+ *    like the SERVICE USER (the plan holds db_username to it — PEER maps the OS
+ *    user to the role of the same name) with LOGIN and NO password — PEER authentication over the local
  *    socket, so no database password exists at rest (owner question Q2; fixes
  *    campaign 2 L59) — and the database `dedalo_<i>` it OWNS, UTF8 from
  *    template0 (critique A9: template1's encoding may differ). The SQL travels
@@ -88,7 +89,7 @@ export function databaseCommands(ctx: HostPlanCtx): ExecCommand[] {
 		{
 			...psql(ctx, 'postgres', 'postgres', {
 				stdin: `CREATE ROLE ${sqlIdentifier(role)} LOGIN;\n`,
-				label: `create the role ${role} (peer: no password)`,
+				label: `create the role ${role} (peer role = the service user: no password)`,
 				mutates: true,
 			}),
 			unless: existsProbe(ctx, 'pg_roles', 'rolname', role),
@@ -195,10 +196,7 @@ async function recordUnknownExistence(ctx: HostCtx): Promise<void> {
 	if (ctx.facts.roleExists === null && !ctx.created.pg_role)
 		ctx.created.pg_role = await absentNow(ctx, existsProbe(ctx, 'pg_roles', 'rolname', role));
 	if (ctx.facts.dbExists === null && !ctx.created.pg_database)
-		ctx.created.pg_database = await absentNow(
-			ctx,
-			existsProbe(ctx, 'pg_database', 'datname', db),
-		);
+		ctx.created.pg_database = await absentNow(ctx, existsProbe(ctx, 'pg_database', 'datname', db));
 	ctx.save();
 }
 
@@ -224,7 +222,7 @@ export const host_database: HostStepDefinition = {
 	needs: [],
 	label: (plan) =>
 		plan.answers.db_mode === 'create'
-			? `database ${String(plan.answers.db_database)} owned by the peer role ${String(plan.answers.db_username)}`
+			? `database ${String(plan.answers.db_database)} owned by the peer role ${String(plan.answers.db_username)} (the service user)`
 			: `existing database ${String(plan.answers.db_database)} (probed by the engine)`,
 	commands: databaseCommands,
 	verify: async (ctx) =>

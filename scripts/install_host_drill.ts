@@ -33,7 +33,21 @@
  *   6. `--abort --confirm-database` on the LIVE instance: only the host steps
  *      after the engine are undone, the instance and the decoys stay.
  *
- * Flags: --os debian|ubuntu|alma · --web nginx|apache (default nginx; Apache: when
+ * --layout custom (owner decisions 2026-10-12): an EXISTING hosting account
+ * (`drill.example.org`, created in the container beforehand, a login shell, its
+ * own files in its home) is the service user, the install folder
+ * /srv/sites/drill/dedalo sits under a ROOT-OWNED 0555 parent. Legs added: a
+ * failed install (killed after host_database) --abort'ed — the account, its
+ * group, its home and its files byte-equal, the parent's stat unchanged, the
+ * folder and every drop-in gone, its database role dropped; then the killed /
+ * resumed install; the folder `drill.example.org:… 750`, the units' User/Group/
+ * WorkingDirectory, the engine process's owner, the PEER role (`select
+ * current_user` as the account), the web user in the group, SELinux labels
+ * when enforcing (said when not); two CLASHES refused before anything changes
+ * (another instance with the same --service-user; a folder inside this one);
+ * the live --abort keeps the account.
+ *
+ * Flags: --os debian|ubuntu|alma · --layout default|custom · --web nginx|apache (default nginx; Apache: when
  * the installer stops at the module check with the `a2enmod …` it TOLD, the drill
  * runs that command as the operator would and resumes) · --keep (leave the container) · --no-kills
  * (one uninterrupted run) · --plan (print the legs, touch nothing).
@@ -54,6 +68,14 @@ const DB = `dedalo_${INSTANCE}`;
 const ROOT_PASSWORD = `Drill-${randomBytes(6).toString('hex')}-Pw9`;
 const SRC = '/opt/dedalo-src';
 const DRILL_DIR = '/root/drill';
+
+/** --layout custom: an existing hosting account, a folder under a root-owned 0555 parent. */
+const CUSTOM = Object.freeze({
+	user: 'drill.example.org',
+	home: '/home/drill.example.org',
+	parent: '/srv/sites/drill',
+	dir: '/srv/sites/drill/dedalo',
+});
 
 /** The production host steps, in order (a files-mode install plans no host_web_http). */
 const STEPS = [
@@ -83,9 +105,12 @@ type OsKey = keyof typeof IMAGES;
 
 type WebKind = 'nginx' | 'apache';
 
+type LayoutKind = 'default' | 'custom';
+
 interface Args {
 	os: OsKey;
 	web: WebKind;
+	layout: LayoutKind;
 	keep: boolean;
 	kills: boolean;
 	plan: boolean;
@@ -100,9 +125,14 @@ function parseArgs(argv: readonly string[]): Args {
 	const webAt = argv.indexOf('--web');
 	const web = (webAt === -1 ? 'nginx' : argv[webAt + 1]) as WebKind;
 	if (web !== 'nginx' && web !== 'apache') throw new CannotRun('--web must be nginx|apache');
+	const layoutAt = argv.indexOf('--layout');
+	const layout = (layoutAt === -1 ? 'default' : argv[layoutAt + 1]) as LayoutKind;
+	if (layout !== 'default' && layout !== 'custom')
+		throw new CannotRun('--layout must be default|custom');
 	return {
 		os,
 		web,
+		layout,
 		keep: argv.includes('--keep'),
 		kills: !argv.includes('--no-kills'),
 		plan: argv.includes('--plan'),
@@ -255,10 +285,11 @@ async function copySource(name: string, scratch: string): Promise<void> {
 }
 
 /** The decoys and the institution's certificate (a drill CA); answers the decoy digest. */
-async function prepareHost(sh: ReturnType<typeof inContainer>): Promise<string> {
+async function prepareHost(sh: ReturnType<typeof inContainer>, args: Args): Promise<string> {
 	const script = [
 		'set -e',
 		'useradd --create-home --shell /bin/sh museum',
+		...(args.layout === 'custom' ? customAccountScript() : []),
 		'mkdir -p /etc/nginx/conf.d',
 		"printf 'server {\\n\\tlisten 8081;\\n\\tserver_name shop.example.org;\\n\\treturn 200;\\n}\\n' > /etc/nginx/conf.d/museum-shop.conf",
 		`mkdir -p ${DRILL_DIR} /etc/ssl/drill`,
@@ -277,16 +308,48 @@ async function prepareHost(sh: ReturnType<typeof inContainer>): Promise<string> 
 	return prepared.out.trim();
 }
 
+/**
+ * --layout custom: the hosting account an operator already has (a login shell,
+ * its own files) and the root-owned 0555 parent of the install folder.
+ */
+function customAccountScript(): string[] {
+	return [
+		`useradd --create-home --shell /bin/bash ${CUSTOM.user} 2>/dev/null || useradd --badname --create-home --shell /bin/bash ${CUSTOM.user}`,
+		`printf 'the account owner notes\\n' > ${CUSTOM.home}/notes.txt`,
+		`chown ${CUSTOM.user}: ${CUSTOM.home}/notes.txt && chmod 600 ${CUSTOM.home}/notes.txt`,
+		`mkdir -p ${CUSTOM.parent} && chmod 555 ${CUSTOM.parent}`,
+	];
+}
+
+/** The hosting account's world: its entries, its home's and the parent's stat, its file's bytes. */
+const ACCOUNT_WORLD = [
+	`getent passwd ${CUSTOM.user}`,
+	`getent group ${CUSTOM.user}`,
+	`stat -c '%n %U:%G %a' ${CUSTOM.home} ${CUSTOM.parent} ${CUSTOM.home}/notes.txt`,
+	`sha256sum ${CUSTOM.home}/notes.txt`,
+].join(' && ');
+
 /** The web server's own facts on the drill host: the site file and the configuration test. */
 function webOf(args: Args): { site: string; test: string } {
-	if (args.web === 'nginx') return { site: `/etc/nginx/conf.d/dedalo-${INSTANCE}.conf`, test: 'nginx -t' };
+	if (args.web === 'nginx')
+		return { site: `/etc/nginx/conf.d/dedalo-${INSTANCE}.conf`, test: 'nginx -t' };
 	return IMAGES[args.os].family === 'apt'
-		? { site: `/etc/apache2/sites-available/dedalo-${INSTANCE}.conf`, test: 'apache2ctl configtest' }
+		? {
+				site: `/etc/apache2/sites-available/dedalo-${INSTANCE}.conf`,
+				test: 'apache2ctl configtest',
+			}
 		: { site: `/etc/httpd/conf.d/dedalo-${INSTANCE}.conf`, test: 'httpd -t' };
 }
 
 /** The answers file (no secret: the root password travels in the environment). */
-async function writeAnswers(sh: ReturnType<typeof inContainer>, args: Args): Promise<void> {
+async function writeAnswers(
+	sh: ReturnType<typeof inContainer>,
+	args: Args,
+	file = 'answers.json',
+	overrides: Record<string, unknown> = {},
+): Promise<void> {
+	const custom =
+		args.layout === 'custom' ? { install_dir: CUSTOM.dir, service_user: CUSTOM.user } : {};
 	const answers = {
 		schema: 'dedalo.install.answers/1',
 		answers: {
@@ -294,6 +357,7 @@ async function writeAnswers(sh: ReturnType<typeof inContainer>, args: Args): Pro
 			instance: INSTANCE,
 			entity: 'drill',
 			entity_label: 'Drill Museum',
+			...custom,
 			server_name: SERVER_NAME,
 			tls_mode: 'files',
 			tls_cert_path: '/etc/ssl/drill/fullchain.pem',
@@ -304,10 +368,11 @@ async function writeAnswers(sh: ReturnType<typeof inContainer>, args: Args): Pro
 			data_lang_default: 'lg-eng',
 			hierarchies: [],
 			update_servers: false,
+			...overrides,
 		},
 	};
 	const json = JSON.stringify(answers).replace(/'/g, "'\\''");
-	const written = await sh(`printf '%s' '${json}' > ${DRILL_DIR}/answers.json`);
+	const written = await sh(`printf '%s' '${json}' > ${DRILL_DIR}/${file}`);
 	if (written.code !== 0) throw new Error(`write the answers: ${written.err}`);
 }
 
@@ -355,7 +420,9 @@ async function enableToldModules(
 	run: Ran,
 	log: string[],
 ): Promise<boolean> {
-	const told = /(a2enmod [a-z0-9_ ]+) && systemctl reload apache2/.exec(`${run.out}${run.err}`)?.[1];
+	const told = /(a2enmod [a-z0-9_ ]+) && systemctl reload apache2/.exec(
+		`${run.out}${run.err}`,
+	)?.[1];
 	if (told === undefined) return false;
 	const enabled = await sh(`${told} && systemctl reload apache2`);
 	log.push(`$ ${told} && systemctl reload apache2`, enabled.out, enabled.err);
@@ -459,7 +526,10 @@ async function abortLegs(
 			detail: `exit ${run.code}`,
 		},
 		await check('the site file is gone', `[ ! -e ${webOf(args).site} ]`),
-		await check('the instance user is KEPT (a live instance)', `getent passwd ded_${INSTANCE}`),
+		await check(
+			'the instance user is KEPT (a live instance)',
+			`getent passwd ${args.layout === 'custom' ? CUSTOM.user : `ded_${INSTANCE}`}`,
+		),
 		await check(
 			'its database is KEPT',
 			`runuser -u postgres -- psql -XAtc "SELECT 1 FROM pg_database WHERE datname='${DB}'" | grep -q 1`,
@@ -472,10 +542,205 @@ async function abortLegs(
 	];
 }
 
+// ── --layout custom ──────────────────────────────────────────────────────────
+
+/** One shell check as a leg (exit 0 = PASS; the last lines as the detail). */
+function checker(sh: ReturnType<typeof inContainer>) {
+	return async (name: string, script: string): Promise<Leg> => {
+		const run = await sh(script, { timeoutMs: 120_000 });
+		return {
+			name,
+			ok: run.code === 0,
+			detail: (run.out + run.err).trim().split('\n').slice(-3).join(' | '),
+		};
+	};
+}
+
+/** The PostgreSQL client of the row (Debian/Ubuntu: the PGDG layout; EL: /usr/pgsql-18). */
+const PSQL = '$(ls /usr/lib/postgresql/18/bin/psql /usr/pgsql-18/bin/psql 2>/dev/null | head -1)';
+
+/**
+ * A FAILED install (killed after host_database: the engine never ran) and its
+ * --abort: the existing account, its group, its home and files byte-equal, the
+ * root-owned parent unchanged; the folder, the drop-ins and the role this
+ * install created gone.
+ */
+async function failedAbortLegs(sh: ReturnType<typeof inContainer>, log: string[]): Promise<Leg[]> {
+	const check = checker(sh);
+	const world = (await sh(ACCOUNT_WORLD)).out;
+	const killed = await installer(sh, FRESH, 'host_database', log);
+	const aborted = await installer(
+		sh,
+		`--route production --instance ${INSTANCE} --abort --confirm-database ${DB}`,
+		null,
+		log,
+	);
+	const after = (await sh(ACCOUNT_WORLD)).out;
+	return [
+		{
+			name: 'custom: a fresh install killed after host_database',
+			ok: killed.code === 137,
+			detail: `exit ${killed.code}`,
+		},
+		{
+			name: 'custom: --abort --confirm-database of the failed install exits 0',
+			ok: aborted.code === 0,
+			detail: `exit ${aborted.code}`,
+		},
+		{
+			name: 'custom: the existing account, its group, its home, its file and the 0555 parent are byte-equal',
+			ok: world !== '' && world === after,
+			detail: after.trim().split('\n').join(' | '),
+		},
+		await check(
+			'custom: the install folder this install created is gone',
+			`[ ! -e ${CUSTOM.dir} ]`,
+		),
+		await check(
+			'custom: no dedalo drop-in remains',
+			"! ls /etc/systemd/system | grep -q '^dedalo-.*\\.d$'",
+		),
+		await check(
+			'custom: the database role this install created is dropped',
+			`[ -z "$(runuser -u postgres -- ${PSQL} -XAtc "SELECT 1 FROM pg_roles WHERE rolname='${CUSTOM.user}'")" ]`,
+		),
+	];
+}
+
+/** The web server's user on this row (it joins the service group). */
+function webUserOf(args: Args): string {
+	if (IMAGES[args.os].family === 'dnf') return args.web === 'nginx' ? 'nginx' : 'apache';
+	return 'www-data';
+}
+
+/** The custom layout, measured from outside the installer. */
+async function customOutcomeLegs(sh: ReturnType<typeof inContainer>, args: Args): Promise<Leg[]> {
+	const check = checker(sh);
+	const unit = `dedalo-ts@${INSTANCE}.service`;
+	return [
+		await check(
+			"custom: the folder is the account's, 0750",
+			`[ "$(stat -c '%U:%G %a' ${CUSTOM.dir})" = "${CUSTOM.user}:${CUSTOM.user} 750" ]`,
+		),
+		await check(
+			'custom: the 0555 root-owned parent is unchanged',
+			`[ "$(stat -c '%U:%G %a' ${CUSTOM.parent})" = "root:root 555" ]`,
+		),
+		await check(
+			'custom: the server unit runs as the account, in the folder',
+			`systemctl show -p User,Group,WorkingDirectory ${unit} && [ "$(systemctl show -p User --value ${unit})" = "${CUSTOM.user}" ] && [ "$(systemctl show -p Group --value ${unit})" = "${CUSTOM.user}" ] && [ "$(systemctl show -p WorkingDirectory --value ${unit})" = "${CUSTOM.dir}/dedalo" ]`,
+		),
+		await check(
+			"custom: the engine PROCESS is the account's",
+			`[ "$(stat -c %U /proc/$(systemctl show -p MainPID --value ${unit}))" = "${CUSTOM.user}" ]`,
+		),
+		await check(
+			'custom: the PEER role is the account (select current_user)',
+			`[ "$(runuser -u ${CUSTOM.user} -- ${PSQL} -XAt -h /var/run/postgresql -d ${DB} -c 'select current_user')" = "${CUSTOM.user}" ]`,
+		),
+		await check(
+			`custom: the web user ${webUserOf(args)} is in the account's group`,
+			`id -nG ${webUserOf(args)} | tr ' ' '\\n' | grep -qx '${CUSTOM.user}'`,
+		),
+		await check(
+			'custom: SELinux — var_lib_t on dedalo/, private/, backups/ (when enforcing; said otherwise)',
+			`if [ "$(getenforce 2>/dev/null)" = Enforcing ]; then ls -Zd ${CUSTOM.dir}/dedalo ${CUSTOM.dir}/private ${CUSTOM.dir}/backups && [ "$(ls -Zd ${CUSTOM.dir}/dedalo ${CUSTOM.dir}/private ${CUSTOM.dir}/backups | grep -c ':var_lib_t:')" = 3 ]; else echo "SELinux: $(getenforce 2>/dev/null || echo 'not installed') — labels not measurable here"; fi`,
+		),
+	];
+}
+
+/** The host as a refused install must leave it (accounts, units, install records). */
+const HOST_SNAPSHOT =
+	'getent passwd; getent group; ls -la /etc/systemd/system; find /var/lib/dedalo-install -maxdepth 1 | sort';
+
+/** One clash: refused by its sentence before anything changes (its own run record aside). */
+async function clashLeg(
+	sh: ReturnType<typeof inContainer>,
+	args: Args,
+	log: string[],
+	clash: { name: string; instance: string; overrides: Record<string, unknown>; sentence: string },
+): Promise<Leg[]> {
+	await writeAnswers(sh, args, `${clash.instance}.json`, {
+		instance: clash.instance,
+		...clash.overrides,
+	});
+	const strip = (text: string) =>
+		text
+			.split('\n')
+			.filter((line) => !line.includes(`/var/lib/dedalo-install/${clash.instance}`))
+			.join('\n');
+	const before = strip((await sh(HOST_SNAPSHOT)).out);
+	const run = await installer(
+		sh,
+		`--answers ${DRILL_DIR}/${clash.instance}.json --execute`,
+		null,
+		log,
+	);
+	const after = strip((await sh(HOST_SNAPSHOT)).out);
+	const said = `${run.out}${run.err}`;
+	await installer(sh, `--route production --instance ${clash.instance} --abort`, null, log);
+	return [
+		{
+			name: `custom clash: ${clash.name} — refused by its sentence`,
+			ok: run.code !== 0 && said.includes(clash.sentence),
+			detail:
+				said
+					.trim()
+					.split('\n')
+					.filter(
+						(line) =>
+							line.includes('refused') || line.includes('overlaps') || line.includes('already'),
+					)
+					.slice(-2)
+					.join(' | ') || `exit ${run.code}`,
+		},
+		{
+			name: `custom clash: ${clash.name} — accounts, units and install records unchanged`,
+			ok: before !== '' && before === after,
+			detail: before === after ? 'identical' : 'the host changed',
+		},
+	];
+}
+
+/** Two clashes with the live custom instance (one user per instance; one folder per instance). */
+async function clashLegs(
+	sh: ReturnType<typeof inContainer>,
+	args: Args,
+	log: string[],
+): Promise<Leg[]> {
+	const second = {
+		server_name: 'drill2.example.org',
+		install_dir: '/srv/sites/drill2/dedalo',
+		service_user: CUSTOM.user,
+	};
+	return [
+		...(await clashLeg(sh, args, log, {
+			name: 'another instance with the same --service-user',
+			instance: 'drill2',
+			overrides: second,
+			sentence: `service user ${CUSTOM.user} is already the service user of instance ${INSTANCE}`,
+		})),
+		...(await clashLeg(sh, args, log, {
+			name: 'another instance with a folder inside this one',
+			instance: 'drill3',
+			overrides: {
+				server_name: 'drill3.example.org',
+				install_dir: `${CUSTOM.dir}/sub`,
+				service_user: 'ded_drill3',
+			},
+			sentence: `install folder ${CUSTOM.dir}/sub overlaps instance ${INSTANCE}'s folder ${CUSTOM.dir} (inside it)`,
+		})),
+	];
+}
+
 function printPlan(args: Args): void {
 	console.log(
-		`${TAG} os ${args.os} (${IMAGES[args.os].base}), ${args.web}, kills ${args.kills ? 'after every host step' : 'none'}`,
+		`${TAG} os ${args.os} (${IMAGES[args.os].base}), ${args.web}, layout ${args.layout}, kills ${args.kills ? 'after every host step' : 'none'}`,
 	);
+	if (args.layout === 'custom')
+		console.log(
+			`${TAG}   custom: existing ${CUSTOM.user}, folder ${CUSTOM.dir} (parent root 0555); a failed install killed after host_database, --abort'ed first`,
+		);
 	for (const step of STEPS) console.log(`${TAG}   kill after ${step}, resume`);
 	console.log(
 		`${TAG}   outcome checks; --abort of the live instance; container removed${args.keep ? ' (kept: --keep)' : ''}`,
@@ -496,11 +761,16 @@ async function main(): Promise<number> {
 		console.log(`${TAG} container ${name} up`);
 		const sh = inContainer(name);
 		await copySource(name, scratch);
-		const decoy = await prepareHost(sh);
+		const decoy = await prepareHost(sh, args);
 		await writeAnswers(sh, args);
-		const legs = await installLegs(sh, args, log);
+		const legs = args.layout === 'custom' ? await failedAbortLegs(sh, log) : [];
+		if (legs.every((leg) => leg.ok)) legs.push(...(await installLegs(sh, args, log)));
 		if (legs.every((leg) => leg.ok)) {
 			legs.push(...(await outcomeLegs(sh, decoy, args)));
+			if (args.layout === 'custom') {
+				legs.push(...(await customOutcomeLegs(sh, args)));
+				legs.push(...(await clashLegs(sh, args, log)));
+			}
 			legs.push(...(await abortLegs(sh, decoy, log, args)));
 		}
 		writeFileSync(join(scratch, 'transcript.log'), log.join('\n'));

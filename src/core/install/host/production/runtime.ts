@@ -11,9 +11,13 @@
  *    operator's own `bun` binary, whose bytes nothing vouches for). Shared by
  *    every instance of the same pin (refcounted, registry.ts).
  *  - THE RELEASE in place: the source tree's HEAD (git archive) — or the tree
- *    itself when it is a verified release, not a checkout — extracted into
- *    /home/ded_<i>/dedalo, owned by the instance; then `bun install
- *    --frozen-lockfile --production` AS the instance (the updater's own command).
+ *    itself when it is a verified release, not a checkout — archived by root
+ *    into a root-owned hand-over dir (root:<service group> 0750, OUTSIDE the
+ *    install folder), then extracted BY THE SERVICE USER into
+ *    <install folder>/dedalo, and `bun install --frozen-lockfile --production`
+ *    run AS the service user (the updater's own command). Root never extracts,
+ *    chowns or removes by path inside the install folder (critique B1: an
+ *    existing account may run processes that could swap a path under it).
  *  - THE ROOT-RUN SCRIPTS (backup, watchdog, rollback, alert) copied to
  *    /opt/dedalo/instances/<i>/bin, root:root 0755 (F2). An update of the
  *    instance's code does not refresh them (it runs as the instance): a later
@@ -114,9 +118,9 @@ function bunInstall(ctx: HostPlanCtx): HostCommand[] {
 	];
 }
 
-/** The release archive's transient path (root-only state dir). */
+/** The release archive's transient path (the root-owned hand-over dir the service group reads). */
 function releaseTar(ctx: HostPlanCtx): string {
-	return `${ctx.paths.stateDir}/release.tar`;
+	return `${ctx.paths.releaseDir}/release.tar`;
 }
 
 /** Archive the source: its git HEAD, or the verified release tree as it is. */
@@ -146,10 +150,18 @@ function installCache(ctx: HostPlanCtx): string {
 	return `${ctx.paths.tree}/.bun-install-cache`;
 }
 
-/** The release in place, owned by the instance, its dependencies installed AS the instance. */
+/** The release in place: archived by root, extracted and installed BY THE SERVICE USER. */
 function releaseCommands(ctx: HostPlanCtx): HostCommand[] {
 	const { paths } = ctx;
 	return [
+		{
+			kind: 'mkdir',
+			path: paths.releaseDir,
+			mode: 0o750,
+			owner: 'root',
+			group: paths.group,
+			label: 'the release hand-over dir (root-owned; the service group reads it)',
+		},
 		releaseArchive(ctx),
 		{
 			kind: 'mkdir',
@@ -158,32 +170,28 @@ function releaseCommands(ctx: HostPlanCtx): HostCommand[] {
 			owner: paths.user,
 			group: paths.group,
 			label: 'the release tree',
+			as: 'instance',
 		},
 		exec(
 			ctx,
 			'tar',
 			['-xf', releaseTar(ctx), '-C', paths.tree, '--no-same-owner'],
-			`extract the release into ${paths.tree}`,
+			`extract the release into ${paths.tree} (as the service user)`,
+			{ as: 'instance' },
 		),
-		exec(
-			ctx,
-			'chown',
-			['-R', `${paths.user}:${paths.group}`, paths.tree],
-			'hand the tree to the instance user',
-		),
-		exec(ctx, 'rm', ['-f', releaseTar(ctx)], 'remove the archive'),
-		exec(
-			ctx,
-			'runuser',
-			['-u', paths.user, '--', paths.bun, 'install', '--frozen-lockfile', '--production'],
-			'install the dependencies (as the instance user; the package cache inside the tree, removed next)',
-			{
-				cwd: paths.tree,
-				env: { HOME: paths.home, BUN_INSTALL_CACHE_DIR: installCache(ctx) },
-				timeoutMs: 20 * 60_000,
-			},
-		),
-		exec(ctx, 'rm', ['-rf', installCache(ctx)], 'remove the package cache (as the instance user)', {
+		exec(ctx, 'rm', ['-rf', paths.releaseDir], 'remove the archive and its hand-over dir'),
+		{
+			kind: 'exec',
+			argv: [paths.bun, 'install', '--frozen-lockfile', '--production'],
+			as: 'instance',
+			label:
+				'install the dependencies (as the service user; the package cache inside the tree, removed next)',
+			mutates: true,
+			cwd: paths.tree,
+			env: { HOME: paths.instanceDir, BUN_INSTALL_CACHE_DIR: installCache(ctx) },
+			timeoutMs: 20 * 60_000,
+		},
+		exec(ctx, 'rm', ['-rf', installCache(ctx)], 'remove the package cache (as the service user)', {
 			as: 'instance',
 		}),
 	];
@@ -244,9 +252,22 @@ function scriptChecks(ctx: HostCtx): [boolean, string][] {
 	});
 }
 
-/** Remove `path` recursively (a tree this install created). */
+/** Remove `path` recursively (a tree this install created) — as root, outside the install folder only. */
 async function removeTree(ctx: HostCtx, path: string, label: string): Promise<void> {
 	await executeCommands([exec(ctx, 'rm', ['-rf', path], label)], ctx);
+}
+
+/** Remove the release tree AS THE SERVICE USER (inside the install folder: never root by path). */
+async function removeRelease(ctx: HostCtx): Promise<void> {
+	await executeCommands(
+		[
+			exec(ctx, 'rm', ['-rf', ctx.paths.tree], 'remove the release tree (as the service user)', {
+				as: 'instance',
+				okExit: [0, 1],
+			}),
+		],
+		ctx,
+	);
 }
 
 /** Undo Bun: only when this install created it and no other instance runs the same pin. */
@@ -262,7 +283,10 @@ async function undoBun(ctx: HostCtx): Promise<string> {
 /** Undo: the scripts, the release, Bun (refcounted), the registry entry. */
 async function undoRuntime(ctx: HostCtx): Promise<string> {
 	for (const path of ctx.created.scripts) ctx.fs.remove(path);
-	if (ctx.created.release_dir) await removeTree(ctx, ctx.paths.tree, 'remove the release tree');
+	if (ctx.created.release_dir) await removeRelease(ctx);
+	if (ctx.fs.exists(ctx.paths.releaseDir)) {
+		await removeTree(ctx, ctx.paths.releaseDir, 'remove the release hand-over dir');
+	}
 	const bun = await undoBun(ctx);
 	dropEntry(ctx.fs, ctx.paths);
 	return `scripts and release removed${bun}`;

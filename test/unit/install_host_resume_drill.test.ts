@@ -23,7 +23,13 @@
  *      and the record is removed; once the engine completed, the instance is
  *      KEPT and only the host steps after it were undone.
  *
- * DB-FREE, network-free (the hermetic tier runs it); ~60 short child processes.
+ *  (c) CUSTOM LAYOUTS (owner decisions 2026-10-12): a new account with a
+ *      typed group, and an existing hosting account whose primary group is
+ *      named apart from it — a kill around host_identity / host_runtime / the
+ *      engine, then --resume, converges to that layout's uninterrupted host
+ *      (the frozen digest holds the RESOLVED group — critique B2).
+ *
+ * DB-FREE, network-free (the hermetic tier runs it); ~70 short child processes.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
@@ -39,10 +45,12 @@ import {
 	hostFiles,
 	hostResponses,
 	loggedCommands,
+	plantOwned,
 	productionRaw,
 	REPO_ROOT,
 	ROOT_PASSWORD,
 	SCRATCH_DIR,
+	type ScratchIdentity,
 	scratchFilePaths,
 	sourceFiles,
 } from '../helpers/install_host_scratch.ts';
@@ -79,39 +87,57 @@ function plant(base: string, files: ReadonlyMap<string, string>): void {
 const SOURCE = join(scratchBase, 'source');
 plant(SOURCE, sourceFiles());
 
-/** The child: one executor run of the variant's plan through the scratch seam. */
-const DRIVER = join(scratchBase, 'drive.ts');
-writeFileSync(
-	DRIVER,
-	[
-		`import { buildInstallPlan } from ${JSON.stringify(join(REPO_ROOT, 'src/core/install/install_plan.ts'))};`,
-		`import { buildPlanFile } from ${JSON.stringify(join(REPO_ROOT, 'src/core/install/run_files_core.ts'))};`,
-		`import { executeHostInstall } from ${JSON.stringify(join(REPO_ROOT, 'src/core/install/host/host_executor.ts'))};`,
-		'const mode = process.argv[2];',
-		`const secrets = { root_password: ${JSON.stringify(ROOT_PASSWORD)} };`,
-		`const plan = buildInstallPlan(${JSON.stringify(productionRaw(VARIANT))}, { rootPassword: secrets.root_password, requireRootPassword: true });`,
-		'const request = mode === "fresh"',
-		'\t? { mode, execute: true, planFile: buildPlanFile(plan, secrets), secrets }',
-		`\t: { mode, execute: true, givenAnswers: plan.answers, givenKeys: [], secrets, confirmDatabase: ${JSON.stringify(DB)} };`,
-		'const lines = [];',
-		'const outcome = await executeHostInstall(request, { log: (l) => lines.push(l), warn: (l) => lines.push(l), showOnce: () => true },',
-		`\t{ source: ${JSON.stringify(SOURCE)}, sleep: async () => {} });`,
-		'console.log(JSON.stringify({ result: outcome.result, failedStep: outcome.failedStep, message: outcome.message, undoing: lines.find((l) => l.startsWith("→ undoing:")) ?? null }));',
-		'',
-	].join('\n'),
-);
+/** A child driver: one executor run of `raw`'s plan through the scratch seam. */
+function writeDriver(name: string, raw: Record<string, unknown>): string {
+	const path = join(scratchBase, name);
+	writeFileSync(
+		path,
+		[
+			`import { buildInstallPlan } from ${JSON.stringify(join(REPO_ROOT, 'src/core/install/install_plan.ts'))};`,
+			`import { buildPlanFile } from ${JSON.stringify(join(REPO_ROOT, 'src/core/install/run_files_core.ts'))};`,
+			`import { executeHostInstall } from ${JSON.stringify(join(REPO_ROOT, 'src/core/install/host/host_executor.ts'))};`,
+			'const mode = process.argv[2];',
+			`const secrets = { root_password: ${JSON.stringify(ROOT_PASSWORD)} };`,
+			`const plan = buildInstallPlan(${JSON.stringify(raw)}, { rootPassword: secrets.root_password, requireRootPassword: true });`,
+			'const request = mode === "fresh"',
+			'\t? { mode, execute: true, planFile: buildPlanFile(plan, secrets), secrets }',
+			`\t: { mode, execute: true, givenAnswers: plan.answers, givenKeys: [], secrets, confirmDatabase: ${JSON.stringify(DB)} };`,
+			'const lines = [];',
+			'const outcome = await executeHostInstall(request, { log: (l) => lines.push(l), warn: (l) => lines.push(l), showOnce: () => true },',
+			`\t{ source: ${JSON.stringify(SOURCE)}, sleep: async () => {} });`,
+			'console.log(JSON.stringify({ result: outcome.result, failedStep: outcome.failedStep, message: outcome.message, undoing: lines.find((l) => l.startsWith("→ undoing:")) ?? null }));',
+			'',
+		].join('\n'),
+	);
+	return path;
+}
+
+/** The child of the default layout. */
+const DRIVER = writeDriver('drive.ts', productionRaw(VARIANT));
 
 let counter = 0;
 
-/** A planted scratch host (the decoy included); answers its root. */
-function scratchRoot(): string {
+/** A planted scratch host (the decoy included; `layout`: a custom account's world); answers its root. */
+function scratchRoot(layout: Layout | null = null): string {
 	counter += 1;
 	const root = join(scratchBase, `r${counter}`);
 	plant(root, hostFiles(VARIANT));
 	plant(root, new Map([DECOY]));
+	for (const [path, owned] of layout?.owned ?? []) plantOwned(root, path, owned);
 	mkdirSync(join(root, SCRATCH_DIR), { recursive: true });
-	writeFileSync(join(root, SCRATCH_DIR, 'responses.json'), JSON.stringify(hostResponses(VARIANT)));
+	writeFileSync(
+		join(root, SCRATCH_DIR, 'responses.json'),
+		JSON.stringify(hostResponses(VARIANT, layout?.identity)),
+	);
 	return root;
+}
+
+/** A custom install folder / service account (owner decisions 2026-10-12). */
+interface Layout {
+	name: string;
+	identity: ScratchIdentity;
+	extra: Record<string, unknown>;
+	owned: readonly [string, { owner: string; group: string; mode: number; content?: string }][];
 }
 
 interface ChildRun {
@@ -129,6 +155,7 @@ async function child(
 	root: string,
 	mode: 'fresh' | 'resume' | 'abort',
 	fault?: string,
+	driver: string = DRIVER,
 ): Promise<ChildRun> {
 	const { DEDALO_INSTALL_FAULT: _inherited, ...inherited } = process.env;
 	const env: Record<string, string | undefined> = {
@@ -136,7 +163,7 @@ async function child(
 		DEDALO_INSTALL_HOST_ROOT: root,
 		...(fault === undefined ? {} : { DEDALO_INSTALL_FAULT: fault }),
 	};
-	const proc = Bun.spawn([process.execPath, DRIVER, mode], {
+	const proc = Bun.spawn([process.execPath, driver, mode], {
 		cwd: REPO_ROOT,
 		env: env as Record<string, string>,
 		stdout: 'pipe',
@@ -340,4 +367,98 @@ describe('a kill after ANY host step, then --abort --confirm-database, leaves on
 		});
 		expect(failures).toEqual([]);
 	}, 240_000);
+});
+
+// ── (c) custom layouts: the resolved group survives a kill ───────────────────
+
+/**
+ * Two custom layouts (owner decisions 2026-10-12) whose service GROUP is
+ * decided by the host facts host_preflight froze: a new account with a typed
+ * group of its own, and an existing hosting account whose primary group is
+ * named apart from it. A kill around host_identity / host_runtime / the engine,
+ * then --resume, converges to the layout's own uninterrupted host — a digest
+ * frozen without the resolved group would refuse every resume (critique B2).
+ */
+const HOSTING_HOME = '/home/drill.example.org';
+const LAYOUTS: readonly Layout[] = [
+	{
+		name: 'a new account, a typed group of its own',
+		identity: {
+			user: 'site_a',
+			group: 'webgrp',
+			dir: '/srv/apps/a/dedalo',
+			uid: 998,
+			gid: 997,
+			shell: '/usr/sbin/nologin',
+			existing: false,
+		},
+		extra: { install_dir: '/srv/apps/a/dedalo', service_user: 'site_a', service_group: 'webgrp' },
+		owned: [],
+	},
+	{
+		name: 'an existing hosting account, its primary group named apart',
+		identity: {
+			user: 'drill.example.org',
+			group: 'psacln',
+			dir: `${HOSTING_HOME}/dedalo`,
+			home: HOSTING_HOME,
+			uid: 1500,
+			gid: 1501,
+			shell: '/bin/bash',
+			existing: true,
+		},
+		extra: { install_dir: `${HOSTING_HOME}/dedalo`, service_user: 'drill.example.org' },
+		owned: [
+			[HOSTING_HOME, { owner: 'drill.example.org', group: 'psacln', mode: 0o750 }],
+			[
+				`${HOSTING_HOME}/notes.txt`,
+				{ owner: 'drill.example.org', group: 'psacln', mode: 0o600, content: 'own notes\n' },
+			],
+		],
+	},
+];
+
+const LAYOUT_FAULTS = [
+	'host_identity:before',
+	'host_identity:after',
+	'host_runtime:after',
+	'host_engine:after',
+];
+
+describe('custom layouts: a kill, then --resume, converges to the layout’s uninterrupted host (c)', () => {
+	for (const [index, layout] of LAYOUTS.entries()) {
+		test(`${layout.name}: ${LAYOUT_FAULTS.length} killed processes`, async () => {
+			const driver = writeDriver(`drive_layout_${index}.ts`, productionRaw(VARIANT, layout.extra));
+			const reference = scratchRoot(layout);
+			const fresh = await child(reference, 'fresh', undefined, driver);
+			expect(fresh.outcome?.message ?? null).toBeNull();
+			expect(fresh.outcome?.result).toBe('complete');
+			const expected = hostState(reference);
+			const expectedChanges = changes(reference);
+			expect(
+				expectedChanges.some((line) => line.includes(` -g ${layout.identity.group} -- `)),
+			).toBe(true);
+			const failures: string[] = [];
+			await pool(LAYOUT_FAULTS, 4, async (fault) => {
+				const root = scratchRoot(layout);
+				const killed = await child(root, 'fresh', fault, driver);
+				const resumed = await child(root, 'resume', undefined, driver);
+				if (!killed.killed) failures.push(`${fault}: not killed`);
+				if (resumed.outcome?.result !== 'complete') {
+					failures.push(`${fault}: resume ended ${JSON.stringify(resumed.outcome)}`);
+					return;
+				}
+				const state = hostState(root);
+				const differing = Object.keys({ ...state, ...expected }).filter(
+					(path) => state[path] !== expected[path],
+				);
+				if (differing.length > 0)
+					failures.push(`${fault}: the host differs at ${differing.join(', ')}`);
+				const commands = countDiff(changes(root), expectedChanges);
+				if (commands.length > 0)
+					failures.push(`${fault}: commands differ: ${commands.join(' | ')}`);
+			});
+			expect(failures).toEqual([]);
+		}, 120_000);
+	}
 });

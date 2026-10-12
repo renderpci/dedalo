@@ -4,6 +4,11 @@
  * spawns it (install_probe_client.ts): one JSON request on stdin, one JSON line
  * on stdout.
  *
+ *  - `identity` (owner decisions 2026-10-12): off production its sentence;
+ *    on production, through the SCRATCH SEAM (DEDALO_INSTALL_HOST_ROOT — its
+ *    os-release, its fake account table: never this machine's), the verdict
+ *    host_preflight would freeze — an existing hosting account used as it is
+ *    (told its login shell), an install's remains refused by its sentence;
  *  - `system`: the rows, the engine version, the seed path; on docker/trial
  *    only the HOST's rows (no psql / PostgreSQL / ImageMagick / FFmpeg — B4: a
  *    Docker host has none, and a must-pass gate must not block on them);
@@ -35,6 +40,15 @@ import { SEED_DUMP_PATH } from '../../src/core/install/paths.ts';
 import { systemCheckRows } from '../../src/core/install/probes.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 import { localOntologySource } from '../helpers/install_answer_cases.ts';
+import {
+	HOST_VARIANTS,
+	type HostVariant,
+	hostFiles,
+	hostResponses,
+	plantOwned,
+	SCRATCH_DIR,
+	type ScratchIdentity,
+} from '../helpers/install_host_scratch.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const CHILD = join(ROOT, 'src/core/install/install_probe.ts');
@@ -57,14 +71,17 @@ const SENTINELS = {
 };
 
 /** Spawn the child with one stdin text; answers its exit code and the parsed line. */
-function child(stdin: string): {
+function child(
+	stdin: string,
+	env: Record<string, string> = {},
+): {
 	exitCode: number;
 	stdout: string;
 	answer: Record<string, unknown>;
 } {
 	const proc = Bun.spawnSync([process.execPath, 'run', CHILD], {
 		cwd: ROOT,
-		env: { ...Bun.env, DEDALO_INSTALL_PRIVATE_DIR: PRIVATE },
+		env: { ...Bun.env, DEDALO_INSTALL_PRIVATE_DIR: PRIVATE, ...env },
 		stdin: Buffer.from(stdin),
 		stdout: 'pipe',
 		stderr: 'pipe',
@@ -84,6 +101,102 @@ const request = (
 function expectNoSentinel(text: string): void {
 	for (const value of Object.values(SENTINELS)) expect(text.includes(value), value).toBe(false);
 }
+
+/** An existing hosting account (login shell), used as it is. */
+const HOSTING: ScratchIdentity = {
+	user: 'drill.example.org',
+	group: 'drill.example.org',
+	dir: '/home/drill.example.org/dedalo',
+	home: '/home/drill.example.org',
+	uid: 1500,
+	gid: 1500,
+	shell: '/bin/bash',
+	existing: true,
+};
+
+/** A marked scratch EL 10 host holding the hosting account's home (`extra`: more owned paths). */
+function scratchIdentityHost(name: string, extra: readonly string[] = []): string {
+	const root = join(scratchRoot, name);
+	const variant = HOST_VARIANTS.find((item) => item.os === 'el10') as HostVariant;
+	for (const [path, content] of hostFiles(variant)) {
+		const real = join(root, path);
+		if (path.endsWith('/')) mkdirSync(real, { recursive: true });
+		else {
+			mkdirSync(join(real, '..'), { recursive: true });
+			writeFileSync(real, content);
+		}
+	}
+	const own = { owner: HOSTING.user, group: HOSTING.group };
+	plantOwned(root, '/home/drill.example.org', { ...own, mode: 0o750 });
+	for (const path of extra) plantOwned(root, path, { ...own, mode: 0o750 });
+	mkdirSync(join(root, SCRATCH_DIR), { recursive: true });
+	writeFileSync(
+		join(root, SCRATCH_DIR, 'responses.json'),
+		JSON.stringify(hostResponses(variant, HOSTING)),
+	);
+	return root;
+}
+
+const PRODUCTION_ANSWERS = {
+	route: 'production',
+	instance: 'prado',
+	entity: 'probe',
+	install_dir: HOSTING.dir,
+	service_user: HOSTING.user,
+};
+
+describe('probe child — identity (the install folder and the service account)', () => {
+	test('off production: its sentence, no verdict', () => {
+		const { exitCode, answer } = child(request('identity', { route: 'developer' }));
+		expect(exitCode).toBe(0);
+		expect(answer.ok).toBe(true);
+		expect(answer.detail).toBe(
+			'only a production install has an install folder and service account of its own',
+		);
+		expect(answer.identity).toBeUndefined();
+	}, 60000);
+
+	test('production, scratch seam: an existing hosting account is USED AS IS and its login shell told', () => {
+		const root = scratchIdentityHost('identity_ok');
+		const { exitCode, stdout, answer } = child(request('identity', PRODUCTION_ANSWERS), {
+			DEDALO_INSTALL_HOST_ROOT: root,
+		});
+		expect(exitCode).toBe(0);
+		expect(answer.ok).toBe(true);
+		const verdict = answer.identity as {
+			problems: string[];
+			told: string[];
+			user: { create: boolean; uid: number };
+			folder: { kind: string; by?: string };
+		};
+		expect(verdict.problems).toEqual([]);
+		expect({ create: verdict.user.create, uid: verdict.user.uid }).toEqual({
+			create: false,
+			uid: 1500,
+		});
+		expect(verdict.folder).toEqual({
+			kind: 'create',
+			by: 'user',
+			ancestors: [],
+		} as typeof verdict.folder);
+		expect(verdict.told).toContain(
+			'account drill.example.org has a login shell (/bin/bash): whoever logs in as it can change the code the service runs',
+		);
+		expectNoSentinel(stdout);
+	}, 60000);
+
+	test("production, scratch seam: an install's remains in the folder → ok:false with the sentence", () => {
+		const root = scratchIdentityHost('identity_remains', [HOSTING.dir, `${HOSTING.dir}/dedalo`]);
+		const { exitCode, answer } = child(request('identity', PRODUCTION_ANSWERS), {
+			DEDALO_INSTALL_HOST_ROOT: root,
+		});
+		expect(exitCode).toBe(0);
+		expect(answer.ok).toBe(false);
+		expect(answer.detail).toContain(
+			`install folder ${HOSTING.dir} already holds dedalo — an install (or its remains) is there; the installer never takes one over (remove it or choose another folder)`,
+		);
+	}, 60000);
+});
 
 describe('probe child — system', () => {
 	test('developer: rows, the engine version, the seed path', () => {

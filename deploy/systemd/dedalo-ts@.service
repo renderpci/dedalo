@@ -4,8 +4,12 @@
 # by hand: host_units renders it to /etc/systemd/system/ once per HOST (every
 # instance shares it — `%i` is the instance name) and writes each instance's
 # own values into a drop-in, dedalo-ts@<i>.service.d/10-dedalo-install.conf:
+# the service user and group, the install folder (WorkingDirectory=, HOME),
 # the pinned runtime's ExecStart (root-owned /opt/dedalo/bun/<pin>/bun) and
 # DEDALO_CLIENT_PUBLISH_DIR. `systemctl cat dedalo-ts@<i>` shows the merge.
+# FAIL-CLOSED: this template names no user and no path of an instance — the
+# install folder and the service account are the operator's answers (any
+# path, any account) — so without its drop-in it runs nothing (/bin/false).
 #
 # Every line mirrors deploy/dedalo-ts.service (its comments give each reason)
 # with ONE deliberate difference: NO Wants=/Also= on the health watchdog. The
@@ -25,10 +29,8 @@ OnFailure=dedalo-ts-rollback@%i.service
 
 [Service]
 Type=simple
-User=ded_%i
-Group=ded_%i
-WorkingDirectory=/home/ded_%i/dedalo
-# The drop-in resets this and names the pinned, root-owned runtime.
+# The drop-in sets User=, Group=, WorkingDirectory= and HOME, resets this and
+# names the pinned, root-owned runtime.
 ExecStart=/bin/false
 Environment="DEDALO_SUPERVISED=true"
 RuntimeDirectory=dedalo-%i
