@@ -4,7 +4,7 @@
 
 The Production route is the recommended way to run Dédalo for a museum, an archive or any institution. The installer turns a clean server into a running, TLS-protected, supervised and backed-up **instance**: one named Dédalo with its own user, database, media, socket, units and web site. This page explains how to run it, what each step does, and how to check or repair each step by hand.
 
-The installer is the procedure. The sections on each step are reference for system administrators: what to look at, and what the installer has already done. They are not a second way to install.
+The installer is the recommended procedure. The sections on each step are reference for system administrators: what to look at, and what the installer has already done. Each one links its hand version: [Install by hand](manual_install.md) is the same procedure, one command at a time, for administrators who install by hand.
 
 ## Overview
 
@@ -29,7 +29,7 @@ Everything the installer creates is named after the **instance name** you choose
 | `/opt/dedalo/instances/<i>/bin/` | the root-owned copies of the scripts root-run units execute |
 | `/var/lib/dedalo-install/<i>/` | the installer's record of the host steps (`0700`, root) |
 
-The layout follows one rule, by role. **The install folder is the instance directory**: owned by the service user, it holds the release tree, the private directory and the backups, and an in-app code update renames the release tree only inside it (its parent is never changed). **What root-started units run** — the runtime and the root-run scripts — lives in root-owned directories under `/opt/dedalo/`, outside every instance directory. A [host set up by hand](manual_host.md#the-layout) follows the same rule with its own paths.
+The layout follows one rule, by role. **The install folder is the instance directory**: owned by the service user, it holds the release tree, the private directory and the backups, and an in-app code update renames the release tree only inside it (its parent is never changed). **What root-started units run** — the runtime and the root-run scripts — lives in root-owned directories under `/opt/dedalo/`, outside every instance directory. A host [installed by hand](manual_install.md#the-layout) follows the same rule and the same paths.
 
 Several instances can share one host; each runs the installer with its own name. See [Several instances on one host](multi_instance.md).
 
@@ -41,7 +41,7 @@ Dédalo must run under a process manager that **restarts it** and **declares `DE
 | --- | --- |
 | this route's `dedalo-ts@<i>` unit | `Environment="DEDALO_SUPERVISED=true"`, with `Restart=always` and `SuccessExitStatus=75` — written by the installer |
 | the compose stacks | the `dedalo` service's `environment:` |
-| a [host set up by hand](manual_host.md) | its unit, `deploy/dedalo-ts.service` |
+| a host [installed by hand](manual_install.md#manual-host_units) | the same `dedalo-ts@<i>` template and drop-in, written by hand (a host set up before 2026-10-12: [the single-unit set](manual_install.md#the-single-unit-set), `deploy/dedalo-ts.service`) |
 | development | `bun run start:supervised` or `bun run dev`; plain `bun run start` is unsupervised |
 
 A `DEDALO_SUPERVISED` line in `.env` is **ignored**: that file is read by every launch method, the unsupervised `bun run start` included.
@@ -165,6 +165,8 @@ On every step below, **Verify** is what you can check by hand, and **Repair** is
 
 ### `host_preflight` — the System check
 
+By hand: [Install by hand › `host_preflight`](manual_install.md#manual-host_preflight).
+
 Measures the host and **refuses, before any change**, everything a later step would trip on: an unsupported system, no systemd, not root, nginx older than 1.25.1, anything already using this instance's names (the database or role, the unit, its drop-ins, the site file, the socket, the nginx `upstream` and rate-limit zone names), every [install folder and service account rule](#the-install-folder-and-the-service-account) (another instance's user, group or folder; a system account; a privileged group; a folder that is not empty and not the service user's), **any instance directory that already exists** — under `/srv/dedalo/<i>`, the backup dir, `private/` (the installer never takes over a directory), a web-server configuration it cannot read, the address already served by another site on these ports, a non-standard port held by another program, another PostgreSQL major version on the database port, and an institution certificate that does not check out. It reads the firewall state (ufw or firewalld) and **tells** you what it sees; it never changes the firewall.
 
 It changes nothing, so it has no undo. Then it freezes what it measured and the command list of every later step.
@@ -173,6 +175,8 @@ It changes nothing, so it has no undo. Then it freezes what it measured and the 
 - **Repair:** resolve each, then run the same command again — nothing was written, so it starts fresh. Open ports 80 and 443 yourself if the firewall report shows them closed. See [Troubleshooting › The System check refuses](troubleshooting.md#the-production-system-check-refuses).
 
 ### `host_packages` — packages and repositories
+
+By hand: [Install by hand › `host_packages`](manual_install.md#manual-host_packages).
 
 Installs only what the host is missing: PostgreSQL 18 (server, client, contrib), the media toolchain, the archive tools (`git`, `unzip`, `gzip`, `file`, `curl`, `rsync`, `ca-certificates`), the web server when there is none, `certbot` for Let's Encrypt, and the SELinux management tools on the RHEL family. It adds the repositories they need:
 
@@ -202,6 +206,8 @@ Packages and repositories are **shared host state**: `--abort` tells you what th
 
 ### `host_identity` — the service account, the install folder and the directories
 
+By hand: [Install by hand › `host_identity`](manual_install.md#manual-host_identity).
+
 Creates the service user when it does not exist (a system account, no login shell, no skeleton files) with its own group, or the typed group first (`groupadd --system`); an existing account and an existing group are used as they are and appear on the Review as **USED AS IS**. Then every directory in the [layout](#overview) at its mode: the install folder (`0750`), `private` (`0700`), `backups`, `/srv/dedalo/<i>` and the media root (`0750`), and the root-owned `/opt/dedalo/…` directories (`0755`).
 
 Root creates the install folder only under root-owned parents (its missing parents `root 0755`). Under a parent the service user owns — `/home/my_domain.org` — the service user creates it. Everything **inside** the folder and inside the instance's web root is created by the service user: root never works by path in a tree another account controls. A shared directory that already exists (`/srv/dedalo` or `/opt/dedalo` on a host with other instances) is used as it is and never re-moded.
@@ -210,6 +216,8 @@ Root creates the install folder only under root-owned parents (its missing paren
 - **Repair:** `--resume`. `--abort` removes, as the service user, what this install left in the folder, then the folder when it created it (an adopted empty folder gets its owner and mode back; a folder used as it is keeps its own content). It removes the user and the group only when it created them — never an existing account — and keeps them, telling you why, while the user still runs processes or backups remain (a removed user id could be given to a later account, which would then read them).
 
 ### `host_runtime` — Bun, the release and the root-run scripts
+
+By hand: [Install by hand › `host_runtime`](manual_install.md#manual-host_runtime).
 
 - **Bun** at the release's pin, **owned by root**, in `/opt/dedalo/bun/<pin>/`. It is taken only from a zip whose sha256 equals the release's committed `.bun-sha256` row — the bootstrap's verified cache. The unit runs it as the instance, but the instance can never replace what it runs.
 - **The release** extracted into `<dir>/dedalo` **by the service user** (from a root-owned hand-over directory under `/var/lib/dedalo-install/`), and its dependencies installed as the service user (`bun install --frozen-lockfile --production`).
@@ -223,6 +231,8 @@ Root creates the install folder only under root-owned parents (its missing paren
 
 ### `host_database` — the role and the database
 
+By hand: [Install by hand › `host_database`](manual_install.md#manual-host_database).
+
 With `--db-mode create`, it creates the role named like the service user (LOGIN, **no password** — peer authentication over the local socket `/var/run/postgresql`, so no database password exists at rest) and the database `dedalo_<i>` it owns (UTF8, from `template0`). Then it checks that the instance user reaches its database by peer, and that the three extensions the seed needs (`btree_gin`, `pg_trgm`, `unaccent`) are available. With `--db-mode existing` it does nothing; the engine step probes your database with the password you gave.
 
 - **Verify:** `sudo -u <service user> psql -h /var/run/postgresql -d dedalo_<i> -c 'SELECT current_user'` prints the service user with no password asked.
@@ -230,10 +240,12 @@ With `--db-mode create`, it creates the role named like the service user (LOGIN,
 
 ### `host_engine` — the engine steps, as the instance user
 
+By hand: [Install by hand › `host_engine`](manual_install.md#manual-host_engine).
+
 The engine steps — the database seed, the ontologies, the thesauri, the root password, the tool registration — run in **one child process, as the instance user**, in the instance's own tree:
 
 ```shell
-runuser -u <service user> -g <service group> -- /opt/dedalo/bun/<pin>/bun run scripts/install.ts --request-stdin --execute --events-jsonl
+runuser -u <service user> -g <service group> -- /usr/bin/env HOME=<install folder> /opt/dedalo/bun/<pin>/bun run scripts/install.ts --request-stdin --execute --events-jsonl
 ```
 
 The answers and the secrets travel as one JSON object on its standard input — never on a command line, never in a file. The child keeps its own record in `<dir>/private/install/` and writes `<dir>/private/.env`. What each engine step does is in the [installer reference](installer_reference.md#what-the-installer-does-in-order).
@@ -242,6 +254,8 @@ The answers and the secrets travel as one JSON object on its standard input — 
 - **Repair:** `--resume` resumes the child too. `--abort` runs the child's own `--abort` first, which resets the database to empty — and refuses a completed (sealed) install.
 
 ### `host_units` — the systemd units
+
+By hand: [Install by hand › `host_units`](manual_install.md#manual-host_units).
 
 Writes the shared template units from `deploy/systemd/` into `/etc/systemd/system/` (one copy per host), and this instance's drop-ins (`/etc/systemd/system/<unit>@<i>.service.d/10-dedalo-install.conf`: the service user and group, the working directory and `HOME` in the install folder, the `.env`, the pinned runtime, the client publish directory, the backup store lines, and the rollback and watchdog paths). The templates name no user and no path of an instance: a template without its drop-in runs `/bin/false`, never anything as root. Then `systemctl daemon-reload` and `systemctl enable dedalo-ts@<i>` — **not** started, and with **no** watchdog or backup timer yet. A template that already exists with other contents is refused, never overwritten.
 
@@ -264,6 +278,8 @@ The unit declares `DEDALO_SUPERVISED=true` — [why that is mandatory](#mandator
 
 ### `host_selinux` — SELinux on the RHEL family
 
+By hand: [Install by hand › `host_selinux`](manual_install.md#manual-host_selinux).
+
 Runs only on the RHEL family with SELinux enforcing or permissive; elsewhere it does nothing. It labels what the web server reads or connects to, and the install folder's own subtrees:
 
 | Path | Type |
@@ -283,13 +299,16 @@ It then loads one host-wide policy module, `dedalo_engine` (`deploy/selinux/deda
 
 ### `host_first_boot` — the first start
 
+By hand: [Install by hand › `host_first_boot`](manual_install.md#manual-host_first_boot).
+
 Starts `dedalo-ts@<i>` and waits, with progress, for `/health` on the socket to answer `200` **and** for every database migration to be recorded. Under SELinux it also reads the running engine's domain and refuses a first boot whose engine is not in `dedalo_engine_t` (it would answer on its socket, but never through the site).
 
 - **Verify:**
 
     ```shell
     systemctl status dedalo-ts@<i> --no-pager      # active (running), not activating (auto-restart)
-    ls -l /run/dedalo-<i>/dedalo_ts.sock          # srwxrwx--- <service user> <service group>
+    ls -l /run/dedalo-<i>/dedalo_ts.sock          # srw-rw-rw- <service user> <service group>
+    ls -ld /run/dedalo-<i>                        # drwxr-x--- <service user> <service group> — what guards the socket
     curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
     # {"result":"ok","entity":"<entity>","db":"ok",…}
     ```
@@ -298,6 +317,8 @@ Starts `dedalo-ts@<i>` and waits, with progress, for `/health` on the socket to 
 
 ### `host_watchdog` — arm the watchdog
 
+By hand: [Install by hand › `host_watchdog`](manual_install.md#manual-host_watchdog).
+
 Enables `dedalo-ts-watchdog@<i>.timer`, and only now: a watchdog armed before the first boot completed would kill it mid-migration.
 
 - **Verify:** `systemctl is-active dedalo-ts-watchdog@<i>.timer` is `active`.
@@ -305,12 +326,16 @@ Enables `dedalo-ts-watchdog@<i>.timer`, and only now: a watchdog armed before th
 
 ### `host_web_http` — the plain-HTTP site (Let's Encrypt only)
 
+By hand: [Install by hand › `host_web_http`](manual_install.md#manual-host_web_http).
+
 Writes the first stage of the site file: a plain-HTTP server with the Let's Encrypt challenge root (`/var/lib/dedalo-install/acme/<i>/`) and the redirect to HTTPS, so the certificate authority can prove the address before any certificate exists. The web server's user joins the service group (`ded_<i>` by default; it reaches the socket and reads media and client through that group). On Apache it **checks** the modules the site needs (`ssl headers http2 rewrite proxy proxy_http`) and, when one is missing, stops with the exact command to enable it; it never enables a module itself. The configuration is tested before the reload, and a reload applies every pending change of the web server's configuration, which the Review says next to the command.
 
 - **Verify:** `curl -I http://<address>/` answers with a redirect to `https://`.
 - **Repair:** for the Apache modules, run the command the message prints (`a2enmod … && systemctl reload apache2` on Debian and Ubuntu), then `--resume`. `--abort` removes the site file.
 
 ### `host_tls` — the certificate
+
+By hand: [Install by hand › `host_tls`](manual_install.md#manual-host_tls).
 
 - **Let's Encrypt:** `certbot certonly --webroot` against the challenge root, as the certificate `dedalo-<i>`, with a deploy hook that reloads the web server, and the distribution's renewal timer enabled (`certbot.timer`; `certbot-renew.timer` on the RHEL family). `--letsencrypt-staging` (headless only) uses the staging authority: the install completes with a certificate browsers do not trust, and the closing *To do on this host* list prints the `certbot` command that replaces it with a real one.
 - **Your institution's files:** checked again (the address, the expiry, the key) and used where they are.
@@ -321,6 +346,8 @@ On the RHEL family the web server must be able to read your certificate files: k
 - **Repair:** a failed Let's Encrypt request is almost always DNS or port 80 — see [Troubleshooting › Let's Encrypt](troubleshooting.md#lets-encrypt-fails). Then `--resume`. `--abort` deletes only a certificate this install issued.
 
 ### `host_web_site` — the full site
+
+By hand: [Install by hand › `host_web_site`](manual_install.md#manual-host_web_site).
 
 Writes the full site file — HTTPS, the API routes to the socket, the published client, the media gate — tests the configuration and reloads. A failed test puts the files back as they were, so the web server is never left with a configuration it would refuse. What the file contains, and why, is in [The web server site](reverse_proxy.md).
 
@@ -337,12 +364,16 @@ On nginx the media rules the engine generates are not included from the media tr
 
 ### `host_public_probe` — the instance through its public address
 
+By hand: [Install by hand › `host_public_probe`](manual_install.md#manual-host_public_probe).
+
 Checks from the host what an outside browser gets: `/health` answers `200` over HTTPS with a verified certificate chain, and, with the media gate on, the marker store `/dedalo/media/.publication/auth/` and an unpublished probe file both answer `404` to an anonymous request. It connects to `127.0.0.1` with the server name, so split-horizon DNS or a router without hairpin NAT cannot fail a correct install. It retries every 2 s for up to 90 s while the reload settles.
 
 - **Verify:** from another machine, `curl --fail https://<address>/health` and `curl -I https://<address>/dedalo/media/.publication/auth/` (`404`).
 - **Repair:** see [Troubleshooting › The public probe fails](troubleshooting.md#the-public-probe-fails). It changes nothing, so it has no undo.
 
 ### `host_backup_verify` — the first backup, verified
+
+By hand: [Install by hand › `host_backup_verify`](manual_install.md#manual-host_backup_verify).
 
 Runs the backup set once (`systemctl start --wait dedalo-backup@<i>`) and verifies the **outcome**: a `LAST_OK` marker written by this run listing every expected store with exit `0`, no `BACKUP_FAILED` marker, and the unit's effective environment carrying the full expected store list. With `--backup-site-builder`, the root-run site-builder unit is run and verified the same way. Only then does it enable the nightly `dedalo-backup@<i>.timer`.
 

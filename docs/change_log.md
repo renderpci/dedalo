@@ -1388,6 +1388,10 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **A Production instance can be installed by hand again, step by step, exactly as the installer does it.**
+
+    [Install by hand](./install/manual_install.md) is the Production route without the installer: one section per host step, in the installer's order, with the commands that step runs and the full text of every file it writes (the systemd drop-ins, the nginx or Apache site, the media map, the host registry entry). The engine part — the database seed, the ontologies, the thesauri, the `root` password — runs through the installer itself, as the service user, with `--engine-only`. A host built this way has the same layout, units, site and backups as one the installer built, and later installer runs on the same host see it. Each section of [Production install](./install/production.md) links its hand version and back. *A host set up by hand* now points to this page; hosts already running the single `deploy/dedalo-ts.service` unit set keep their instructions in its last section.
+
 - **A production install can live in any folder and run as an existing account.**
 
     The Production route's Identity screen now asks, after the instance name, for the
@@ -1667,6 +1671,10 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-10-03-publication-hosts-widget`.
 
 #### Fixed
+
+- **The installer no longer leaves Bun's cache in an existing hosting account's home.**
+
+    On the Production route, the commands the installer runs with Bun as the service user (the dependency install, the engine steps, the migration check) now set `HOME` to the install folder on their command line (`runuser … -- /usr/bin/env HOME=<install folder> …`). `runuser` resets `HOME` to the account's own home, so with an existing hosting account whose home is not the install folder, Bun's caches were written there. The Review screen shows the new form, and [Install by hand](./install/manual_install.md) uses the same commands.
 
 - **The update-ontology warning no longer claims your local ontology will be deleted.**
 

@@ -71,6 +71,8 @@ export type Binary =
 	| 'gpasswd'
 	| 'getent'
 	| 'runuser'
+	/** `env HOME=…` after a runuser prefix: runuser resets HOME to the account's home. */
+	| 'env'
 	| 'id'
 	| 'pgrep'
 	| 'tar'
@@ -161,6 +163,7 @@ const SHARED_BINARIES = {
 	gpasswd: '/usr/bin/gpasswd',
 	getent: '/usr/bin/getent',
 	runuser: '/usr/sbin/runuser',
+	env: '/usr/bin/env',
 	id: '/usr/bin/id',
 	pgrep: '/usr/bin/pgrep',
 	tar: '/usr/bin/tar',

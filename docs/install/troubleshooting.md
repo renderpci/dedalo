@@ -438,16 +438,19 @@ report it.
 ### Every request is a `502`
 
 **Cause.** The web server cannot connect to the unix socket. Connecting to a
-unix socket needs **write** permission on the socket file. The instance unit's
-`UMask=0007` makes it `srwxrwx---`, and the installer adds the web server's user
-(`www-data`, `nginx` or `apache`) to the instance group `ded_<i>`. A web server
+unix socket needs **write** permission on the socket file. The server makes the
+socket `srw-rw-rw-` itself; what guards it is its directory, `/run/dedalo-<i>/`,
+which the unit creates `drwxr-x---` (service user, service group). The installer
+adds the web server's user (`www-data`, `nginx` or `apache`) to the service group
+so that it can enter that directory. A web server
 started before that membership, a unit edited by hand, or the RHEL family with
 the engine outside its SELinux domain all break it.
 
 **Fix.**
 
 ```shell
-ls -l /run/dedalo-<i>/dedalo_ts.sock     # → srwxrwx--- ded_<i> ded_<i>
+ls -l /run/dedalo-<i>/dedalo_ts.sock     # → srw-rw-rw- ded_<i> ded_<i>
+ls -ld /run/dedalo-<i>                   # → drwxr-x--- ded_<i> ded_<i>
 id www-data                              # (nginx / apache) — must list ded_<i>
 systemctl restart nginx                  # group membership is read when a process starts
 ```

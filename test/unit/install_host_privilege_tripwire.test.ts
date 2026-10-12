@@ -251,6 +251,9 @@ describe('the production root process loads no engine module and leaks no secret
 		]);
 		expect(child?.cwd).toBe(`/home/ded_${INSTANCE}/dedalo`);
 		expect(child?.env.HOME).toBe(`/home/ded_${INSTANCE}`);
+		// runuser RESETS HOME to the account's home: the instance's HOME rides argv
+		// too, or an existing hosting account's home collects Bun's caches.
+		expect(child?.argv.slice(6, 8)).toEqual(['/usr/bin/env', `HOME=/home/ded_${INSTANCE}`]);
 		expect(child?.stdin).toBe(true);
 	});
 

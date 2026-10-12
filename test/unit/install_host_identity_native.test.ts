@@ -104,6 +104,7 @@ import {
 import { readPlanFile, readStateFile } from '../../src/core/install/run_files_core.ts';
 import {
 	asService,
+	asServiceHome,
 	BUN_PIN,
 	changesHost,
 	DEFAULT_IDENTITY,
@@ -255,7 +256,7 @@ function bytesOf(host: ScratchHost, path: string): string | null {
 
 /** The engine child failing its run (a failed install: an abort is then a FULL one). */
 function engineFails(identity: ScratchIdentity): RecordedResponse[] {
-	const child = `${asService(identity)} /opt/dedalo/bun/${BUN_PIN}/bun run ${identity.dir}/dedalo/scripts/install.ts`;
+	const child = `${asServiceHome(identity)} /opt/dedalo/bun/${BUN_PIN}/bun run ${identity.dir}/dedalo/scripts/install.ts`;
 	return [
 		{ match: `${child} --request-stdin`, exit: 9, stderr: 'the seed restore failed' },
 		{
@@ -430,6 +431,13 @@ describe('(c) an EXISTING hosting account is used as it is — never created, ch
 		expect(loggedCommands(host.root)).toContain(
 			`${asService(HOSTING)} /usr/bin/install -d -m 0750 ${HOSTING.dir}`,
 		);
+		// Every Bun the account runs gets the FOLDER as HOME on argv (runuser resets
+		// HOME to the account's own home, which would then collect Bun's caches).
+		const bunRuns = loggedCommands(host.root).filter(
+			(line) => line.startsWith(`${asService(HOSTING)} `) && line.includes('/bun '),
+		);
+		expect(bunRuns.length).toBeGreaterThanOrEqual(2);
+		expect(bunRuns.filter((line) => !line.startsWith(`${asServiceHome(HOSTING)} `))).toEqual([]);
 		expect(rootInsideFolder(host)).toEqual([]);
 		// Told, never refused: the login shell; the web user joining the account's primary group.
 		const told = fresh.transcript.told.join('\n');

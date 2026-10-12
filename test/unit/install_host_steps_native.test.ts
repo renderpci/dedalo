@@ -464,7 +464,7 @@ describe('abort undoes only what this install created (e)', () => {
 		const files = decoys(UBUNTU_NGINX_LE);
 		const pg = osRowById('ubuntu2604').pgBinDir;
 		const bun = `/opt/dedalo/bun/${BUN_PIN}/bun`;
-		const child = `/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
+		const child = `/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- /usr/bin/env HOME=/home/ded_${INSTANCE} ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
 		const host = scratchHost(UBUNTU_NGINX_LE, {
 			files,
 			responses: [
@@ -935,7 +935,7 @@ const RULE_COPY = `/etc/nginx/dedalo/${INSTANCE}/media_protection.conf`;
 /** The engine child failing its run (an abort is then a FULL one: nothing live). */
 function engineFails(): RecordedResponse[] {
 	const bun = `/opt/dedalo/bun/${BUN_PIN}/bun`;
-	const child = `/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
+	const child = `/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- /usr/bin/env HOME=/home/ded_${INSTANCE} ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
 	return [
 		{ match: `${child} --request-stdin`, exit: 9, stderr: 'the seed restore failed' },
 		{

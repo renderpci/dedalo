@@ -512,7 +512,7 @@ export const REVIEW_TEXT = Object.freeze({
  * ui/screens/done.ts).
  */
 const DONE_TEXT_ENGINE_SUPERVISOR =
-	'Start the server with `bun run dev` (development) or `bun run start:supervised` — docs/install/dev_quickstart.md; plain `bun run start` is unsupervised and cannot take code updates. A host set up by hand runs it under systemd instead — docs/install/manual_host.md.';
+	'Start the server with `bun run dev` (development) or `bun run start:supervised` — docs/install/dev_quickstart.md; plain `bun run start` is unsupervised and cannot take code updates. A host set up by hand starts it under systemd: docs/install/manual_install.md#manual-host_units.';
 const DONE_TEXT_ENGINE_ABORTED =
 	'install aborted — what the install created is removed; the database itself is kept.';
 

@@ -133,6 +133,11 @@ export function asService(identity: ScratchIdentity = DEFAULT_IDENTITY): string 
 	return `/usr/sbin/runuser -u ${identity.user} -g ${identity.group} --`;
 }
 
+/** `runuser` as the service account, HOME set on argv (a command with `env.HOME`: runuser resets it). */
+export function asServiceHome(identity: ScratchIdentity = DEFAULT_IDENTITY): string {
+	return `${asService(identity)} /usr/bin/env HOME=${identity.dir}`;
+}
+
 /** The bytes of the fake Bun zip (the fake .bun-sha256 vouches for exactly these). */
 export const FAKE_BUN_ZIP = 'fake bun zip bytes — never executed\n';
 
@@ -547,7 +552,7 @@ function databaseAnswers(variant: HostVariant, identity: ScratchIdentity): Recor
 /** The engine child (as the instance user): its record, its run, its migrations. */
 function engineAnswers(identity: ScratchIdentity): RecordedResponse[] {
 	const bun = `/opt/dedalo/bun/${BUN_PIN}/bun`;
-	const child = `${asService(identity)} ${bun} run ${identity.dir}/dedalo/scripts/install.ts`;
+	const child = `${asServiceHome(identity)} ${bun} run ${identity.dir}/dedalo/scripts/install.ts`;
 	return [
 		{
 			match: `${child} --status --json`,
@@ -568,7 +573,7 @@ function engineAnswers(identity: ScratchIdentity): RecordedResponse[] {
 			].join('\n'),
 		},
 		{
-			match: `${asService(identity)} ${bun} run scripts/ops/boot_status.ts --json`,
+			match: `${asServiceHome(identity)} ${bun} run scripts/ops/boot_status.ts --json`,
 			stdout: '{"applied":13,"pending":[]}\n',
 		},
 		{ match: `${bun} --version`, after: '/usr/bin/install -D -m 0755', stdout: `${BUN_PIN}\n` },
@@ -585,7 +590,7 @@ function runtimeAnswers(identity: ScratchIdentity): RecordedResponse[] {
 			creates: [`${tree}/package.json`, `${tree}/scripts/`],
 		},
 		{
-			match: `${asService(identity)} /opt/dedalo/bun/${BUN_PIN}/bun install`,
+			match: `${asServiceHome(identity)} /opt/dedalo/bun/${BUN_PIN}/bun install`,
 			creates: [`${tree}/node_modules/`],
 		},
 		{ match: `/usr/bin/test -s /var/lib/dedalo-install/bun/${BUN_PIN}/` },
@@ -1050,8 +1055,8 @@ export const READ_ONLY_PROBES: readonly RegExp[] = Object.freeze([
 	/^\/usr\/bin\/stat -c %C /,
 	/^\/usr\/bin\/ps -o label= -p \d+$/,
 	/^\/usr\/bin\/pgrep /,
-	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- \S+\/bun run \S+install\.ts --status --json$/,
-	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- \S+\/bun run scripts\/ops\/boot_status\.ts --json$/,
+	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- (\/usr\/bin\/env HOME=\S+ )?\S+\/bun run \S+install\.ts --status --json$/,
+	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- (\/usr\/bin\/env HOME=\S+ )?\S+\/bun run scripts\/ops\/boot_status\.ts --json$/,
 	/^\/opt\/dedalo\/bun\/[\d.]+\/bun --version$/,
 	/^\/usr\/bin\/firewall-cmd --list-(services|ports)$/,
 	/^\/usr\/sbin\/ufw status$/,

@@ -5,8 +5,9 @@
  * the SAME list (contract.ts: review equals run).
  *
  *  - `as: instance|postgres` becomes a `runuser -u <user> [-g <group>] --`
- *    prefix: the argv the runner logs is the argv that ran. The instance runs
- *    with its SERVICE GROUP named (`-g`): runuser would otherwise take the
+ *    prefix: the argv the runner logs is the argv that ran. A command's
+ *    `env.HOME` follows it as `/usr/bin/env HOME=<dir>` (runuser resets
+ *    HOME to the account's home). The instance runs with its SERVICE GROUP named (`-g`): runuser would otherwise take the
  *    account's primary group, and an existing account's primary group is not
  *    necessarily the instance's (owner decisions 2026-10-12).
  *  - a `mkdir` the INSTANCE makes (`as: 'instance'` — a directory inside the
@@ -46,9 +47,14 @@ export function effectiveArgv(
 	identity: ServiceIdentity,
 ): string[] {
 	const flags = identityFlags(command, identity);
-	return flags.length === 0
-		? [...command.argv]
-		: [binaryOf(row, 'runuser'), ...flags, '--', ...command.argv];
+	if (flags.length === 0) return [...command.argv];
+	// runuser (no --login) keeps the environment but RESETS HOME to the
+	// account's home: a command's own HOME rides argv (`env HOME=…`), or an
+	// existing hosting account's home collects Bun's caches (2026-10-12).
+	const home = command.env?.HOME;
+	const withHome =
+		home === undefined ? command.argv : [binaryOf(row, 'env'), `HOME=${home}`, ...command.argv];
+	return [binaryOf(row, 'runuser'), ...flags, '--', ...withHome];
 }
 
 /** The exec an instance-made directory runs as (`install -d`, as the service user). */

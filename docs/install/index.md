@@ -70,7 +70,7 @@ The first screen asks how this Dédalo will run. The route decides the rest of t
 
 | Route | For | What it sets up | Media protection | TLS | Start here |
 | --- | --- | --- | --- | --- | --- |
-| **Production** | a museum, archive or institution: the recommended route | native services on this host — packages, PostgreSQL 18, a named instance user, systemd units, nginx or Apache, the certificate, backups, a watchdog | yes, enforced by the web server | Let's Encrypt, or your institution's certificate | [Production install](production.md) |
+| **Production** | a museum, archive or institution: the recommended route | native services on this host — packages, PostgreSQL 18, a named instance user, systemd units, nginx or Apache, the certificate, backups, a watchdog | yes, enforced by the web server | Let's Encrypt, or your institution's certificate | [Production install](production.md), or the same by hand: [Install by hand](manual_install.md) |
 | **Docker** | a host that runs everything in containers | the full compose stack: engine, PostgreSQL and nginx containers, volumes on this host | yes | Let's Encrypt, a local certificate authority, or your own certificate | [Docker](docker.md) |
 | **Trial** | an evaluation, a demonstration | the simple compose stack | **none** — every media file is served to anyone with its URL | none: plain HTTP | [Trial](quickstart.md) |
 | **Developer** | working on Dédalo itself | the database and `../private/.env` of a git checkout; nothing on the host | the engine's own development route | none: a local TCP listener | [Developer quickstart](dev_quickstart.md) |
@@ -123,6 +123,7 @@ The installer never installs Docker and never changes the firewall: it checks th
 
 - **[Trial](quickstart.md)** — the simple stack for an evaluation: plain HTTP, no media protection.
 - **[Production install](production.md)** — the recommended route: run the installer, then what each host step does and how to check or repair it by hand.
+- **[Install by hand](manual_install.md)** — the Production route without the installer: every host step as the commands and files it consists of, for administrators who install by hand, and for migrated v6 hosts.
 - **[Docker](docker.md)** — the full container stack, with the media gate.
 - **[Developer quickstart](dev_quickstart.md)** — a working Dédalo on your laptop.
 - **[Installer reference](installer_reference.md)** — every flag, the answers file, the plan and state files, resume and abort, plain mode, the host steps per route, the `.env` keys and the exit codes.
@@ -131,7 +132,6 @@ The installer never installs Docker and never changes the firewall: it checks th
 - **[Troubleshooting](troubleshooting.md)** — installer refusals, resume and abort, boot refusals, serving and media problems.
 - **[Upgrading](upgrading.md)** — the in-app code update, the runtime pin, boot migrations, retired keys, rollback.
 - **[Migrating a v6 install to v7](migrating_from_v6.md)** — the whole operator path from a v6 installation.
-- **[A host set up by hand](manual_host.md)** — the single-instance layout and units of a migrated host the installer does not manage.
 - **[Publication host agent](publication_host.md)** — optional: serve the public website and the Publication APIs from a separate server.
 - **[H.264 streaming module](install_h264_module.md)** — serve audiovisual fragments by time range.
 

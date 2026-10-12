@@ -135,6 +135,7 @@ const TRIPWIRES = [
 	'test/unit/local_db_stores_tripwire.test.ts',
 	'test/unit/docs_current_engine_tripwire.test.ts',
 	'test/unit/docs_versioning_tripwire.test.ts',
+	'test/unit/docs_manual_install_tripwire.test.ts',
 	'test/unit/docs_locator_shape_tripwire.test.ts',
 	'test/unit/css_build_tripwire.test.ts',
 	'test/unit/css_token_duplication_tripwire.test.ts',

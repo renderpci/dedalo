@@ -49,7 +49,7 @@ The whole page follows one example site. Replace these names with your own:
 | `museum_org_agent` | the agent's own user |
 | `museum_org_api` | the Publication API v2's user and group |
 | `dedalo-publication-api-v2-museum_org`, port `3100` | the v2 service and its local port |
-| `dedalo`, `/opt/dedalo/master_dedalo`, `/opt/dedalo/.bun/bin/bun`, `/opt/dedalo/private` | the user that runs Dédalo, its checkout, its pinned Bun and its private directory ([the single-instance layout](manual_host.md#the-layout)) |
+| `dedalo`, `/opt/dedalo/master_dedalo`, `/opt/dedalo/.bun/bin/bun`, `/opt/dedalo/private` | the user that runs Dédalo, its checkout, its pinned Bun and its private directory ([the single-instance layout](manual_install.md#the-single-unit-set)) |
 | `/srv/dedalo/media` | the work system's media directory |
 
 **The machines.** The *work host* runs Dédalo. The *publication host* runs the website, the
@@ -875,7 +875,7 @@ the step here.
 | 10. First use | the work system's Maintenance panel | the Dédalo root user | media rules, API releases, the public check |
 
 **A work system installed by the installer.** The commands name the
-[single-instance layout](manual_host.md#the-layout). On a work system installed by the
+[single-instance layout](manual_install.md#the-single-unit-set). On a work system installed by the
 installer ([production layout](production.md#overview)), replace, everywhere on this page,
 `/opt/dedalo/master_dedalo` with that instance's release tree `/home/ded_<i>/dedalo`, the
 user `dedalo` with `ded_<i>`, `/opt/dedalo/private` with `/home/ded_<i>/private`, and
@@ -1058,7 +1058,7 @@ On a work system installed by the installer ([production layout](production.md#o
 instance's user, `/home/ded_<i>/dedalo` and `/opt/dedalo/bun/<pin>/bun`.
 
 This runs `bun install --frozen-lockfile --production` in `publication/host_agent/`, the
-same locked install as the [work system's own](manual_host.md#prepare-the-host):
+same locked install as the [work system's own](manual_install.md#manual-host_runtime):
 
 - it installs exactly the versions in the committed `publication/host_agent/bun.lock` and
   never rewrites it. If `package.json` and the lock disagree, it stops with *lockfile had

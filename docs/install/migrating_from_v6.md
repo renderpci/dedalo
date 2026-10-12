@@ -56,7 +56,7 @@ dropdb dedalo_restore_test
 | Maintenance mode | **on** before anything that writes | [maintenance status](../management/maintenance_status.md) |
 | Dump tool on the **v6** host | `pg_dump --version` not older than the v6 server's `SELECT version();`, and not older than the v7 target's major | the preflight fails hard if the dump cannot run |
 | Server on the **v6** host | the PostgreSQL that already serves v6 — the transform runs there, in place | — |
-| Server on the **v7** host | PostgreSQL 18 plus the client tools | [prepare the host](manual_host.md#prepare-the-host) |
+| Server on the **v7** host | PostgreSQL 18 plus the client tools | [Install by hand › `host_packages`](manual_install.md#manual-host_packages) |
 | Free disk on the **v6** host | at least 2× the database size plus 20% — the deep preflight and the migrate run each take a full backup | `df -h <backup dir>` against `SELECT pg_size_pretty(pg_database_size(current_database()));` |
 
 If you cannot install PostgreSQL 18 client tools on the v6 host, dump remotely from the v7 host instead: `pg_dump --host <v6 host> …`.
@@ -93,13 +93,13 @@ The package is `close_v6_prepare_v7/` in the Dédalo **v6** source tree, under `
 
 ### Prepare the v7 host first
 
-A migrated instance is **not an installer instance**: the installer only installs into an empty database, and a migrated database is not one (see [6.1](#61-do-not-run-the-installer)). Prepare the host by hand instead, as [A host set up by hand › Prepare the host](manual_host.md#prepare-the-host) describes: the service user, the packages, PostgreSQL 18, the pinned Bun runtime, the code, and the empty database and role. The units and the web server come after Phase D verification, as [Phase E](#8-phase-e-run-it-as-a-service).
+A migrated instance is **not an installer instance**: the installer only installs into an empty database, and a migrated database is not one (see [6.1](#61-do-not-run-the-installer)). Prepare the host by hand instead, with [Install by hand](manual_install.md#a-migrated-v6-host): the packages, the service user and its directories, the pinned Bun runtime and the release, and the empty database and role — its steps from [`host_packages`](manual_install.md#manual-host_packages) to [`host_database`](manual_install.md#manual-host_database). Its engine step is not run: the migration fills the database. The units and the web server come after Phase D verification, as [Phase E](#8-phase-e-run-it-as-a-service).
 
 That page creates a service user first. Which of the two cases you are in decides whether you do so:
 
 | Your case | The service user |
 | --- | --- |
-| **A new v7 host** — a fresh machine, nothing of v6 on it | Run it as written: `adduser --system --group …` creates the user *and* a group of the same name. |
+| **A new v7 host** — a fresh machine, nothing of v6 on it | Run it as written: `useradd --system --user-group …` creates the user *and* a group of the same name. |
 | **An in-place upgrade** — v7 goes on the box that runs v6 | **Adopt the existing user.** Do not create a second one: the home, the media tree and the backups already belong to it. What must change is its **group** — see [Phase E](#8-phase-e-run-it-as-a-service). |
 
 From here on, **the service user** means whichever of the two you have.
@@ -447,7 +447,7 @@ Expected: HTTP 200 with `db` reporting `ok`. If you run on a TCP port instead of
 
 ## 8. Phase E — run it as a service
 
-Phase D started the engine by hand, as the service user. Phase E makes that permanent: **one supervised service per install**, reachable by the web server. On a new host this is [A host set up by hand › The units](manual_host.md#the-units) and [The web server](manual_host.md#the-web-server), and nothing else. On an **in-place upgrade** there is one more thing to do first, because the way the engine runs changed — and with it, who must own what.
+Phase D started the engine by hand, as the service user. Phase E makes that permanent: **one supervised service per install**, reachable by the web server. On a new host this is [Install by hand](manual_install.md), from [`host_units`](manual_install.md#manual-host_units) to [`host_backup_verify`](manual_install.md#manual-host_backup_verify), and nothing else. On an **in-place upgrade** there is one more thing to do first, because the way the engine runs changed — and with it, who must own what.
 
 ### 8.1 What changed: the engine is no longer part of the web server
 
@@ -502,12 +502,12 @@ Once the engine is the only writer, the group-write bits the v6 layout needed ca
 
 ### 8.3 The unit
 
-Install the reference units and substitute the placeholders as described in [A host set up by hand › The units](manual_host.md#the-units). Two points that page states for a fresh host and that an upgraded host gets wrong:
+Install the template units and this instance's drop-ins as described in [Install by hand › `host_units`](manual_install.md#manual-host_units). Two points that an upgraded host gets wrong:
 
-- `User=` and `Group=` are **two independent values**. The guide's `DEDALO_USER` placeholder fills both because on a fresh host they are the same string; here they need not be, and `Group=` must name a group that already exists (`getent group <name>`).
-- The socket must live under the unit's `RuntimeDirectory` — `/run/dedalo/` for a single install. `SERVER_UNIX_SOCKET` in `../private/.env` must match it.
+- `User=` and `Group=` are **two independent values**, and the drop-in names both. On an upgraded host they need not be the same string, and `Group=` must name a group that already exists (`getent group <name>`).
+- The socket must live under the unit's `RuntimeDirectory` — `/run/dedalo-<i>/` for the instance `<i>`. `SERVER_UNIX_SOCKET` in `../private/.env` must be `/run/dedalo-<i>/dedalo_ts.sock`.
 
-Hosting several domains on this box? [Several hand-built instances](manual_host.md#several-hand-built-instances-on-one-host) covers the per-instance identity, and [several instances](multi_instance.md) what else must be unique.
+Hosting several domains on this box? [Several instances by hand](manual_install.md#several-instances-by-hand) covers the per-instance identity, and [several instances](multi_instance.md) what else must be unique.
 
 ### 8.4 The web server's modules changed too
 
@@ -547,7 +547,8 @@ and `DocumentRoot` lines point into the old tree and cannot be reused as they ar
 
 ```shell
 systemctl show dedalo-ts -p User -p Group -p WorkingDirectory
-ls -l /run/dedalo/dedalo_ts.sock          # srwxrwx--- <service user> <service group>
+ls -l /run/dedalo/dedalo_ts.sock          # srw-rw-rw- <service user> <service group>
+ls -ld /run/dedalo                        # drwxr-x--- <service user> <service group> — what guards the socket
 sudo -u www-data test -w /run/dedalo/dedalo_ts.sock && echo "proxy can connect"
 ```
 

@@ -2,7 +2,7 @@
 
 > See also: [Production install](production.md) · [Media protection](../config/media_protection.md) · [Troubleshooting](troubleshooting.md) · [H.264 streaming module](install_h264_module.md)
 
-Dédalo's engine listens on a **unix socket and nothing else**. The web server in front of it is not an optional performance layer: it owns TCP and TLS, it serves the client files, and — most importantly — **it is what enforces media access control**. On the Production route the installer writes the site for you; this page explains what it writes and why, as reference for system administrators, and how to write a site by hand on a [host set up by hand](manual_host.md).
+Dédalo's engine listens on a **unix socket and nothing else**. The web server in front of it is not an optional performance layer: it owns TCP and TLS, it serves the client files, and — most importantly — **it is what enforces media access control**. On the Production route the installer writes the site for you; this page explains what it writes and why, as reference for system administrators, and how to write a site by hand on a host [installed by hand](manual_install.md).
 
 ## What the web server is responsible for
 
@@ -151,7 +151,7 @@ A `/health` that is green over the socket but `404`s or `403`s through the domai
 
 ## A site written by hand
 
-On a [host set up by hand](manual_host.md) — a migrated installation the installer does not manage — you write the site yourself. The reference configurations are `deploy/nginx.conf` and `deploy/apache.conf`, written for that page's single-instance layout (`MEDIA_PATH=/srv/dedalo/media`, so `root /srv;`). Obtain the certificate with your distribution's `certbot` (`certbot certonly --webroot`, as the installer does) or use your institution's.
+A host [installed by hand](manual_install.md) writes the installer's own site file, printed in full in [`host_web_site`](manual_install.md#manual-host_web_site). The reference configurations below, `deploy/nginx.conf` and `deploy/apache.conf`, are for a host on [the single-unit set](manual_install.md#the-single-unit-set) of before 2026-10-12, with its single-instance layout (`MEDIA_PATH=/srv/dedalo/media`, so `root /srv;`). Obtain the certificate with your distribution's `certbot` (`certbot certonly --webroot`, as the installer does) or use your institution's.
 
 !!! warning "The hand-written nginx site includes the generated files directly"
     The reference `deploy/nginx.conf` includes the rule files from `MEDIA_PATH`, a directory the service user writes, which nginx's master parses as root. The installer avoids this with validated root-owned copies ([above](#nginx-validated-copies-of-the-media-rules)); on a hand-written site, `deploy/dedalo-media-rules.sh` can maintain the same copies.
@@ -263,7 +263,7 @@ server {
 ```
 
 !!! note "Several domains on one box"
-    This is a single-domain vhost. To serve more domains, add one `upstream` and one `server{}` per domain, each pointing at that instance's socket and `MEDIA_PATH` — see [A host set up by hand](manual_host.md#several-hand-built-instances-on-one-host).
+    This is a single-domain vhost. To serve more domains, add one `upstream` and one `server{}` per domain, each pointing at that instance's socket and `MEDIA_PATH` — see [Several instances by hand](manual_install.md#several-instances-by-hand).
 
 !!! note "The rule-B location regex is double-quoted, and must stay so"
     In `publication` mode the generated `dedalo_media_protection.nginx.conf` writes its rule-B location as a **quoted** regex, because the pattern contains `{2,12}` and nginx's configuration lexer treats `{` and `}` as block delimiters. Unquoted, nginx refuses to start:
