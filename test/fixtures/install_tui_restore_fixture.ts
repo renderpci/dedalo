@@ -73,7 +73,11 @@ async function done(): Promise<void> {
 	front.reporter.begin?.([{ id: 'test_db_connection', label: 'Database reachable' }]);
 	await front.reporter.finish(
 		{ exitCode: 0, result: 'complete', message: null, failedStep: null, hint: [] },
-		{ mode: 'fresh', rootVerified: true, ending: { route: 'engine', instance: '', keptLive: false } },
+		{
+			mode: 'fresh',
+			rootVerified: true,
+			ending: { route: 'engine', instance: '', keptLive: false },
+		},
 	);
 }
 
@@ -98,7 +102,11 @@ async function install(): Promise<void> {
 			host: fakeHost().host,
 		},
 	);
-	await front.reporter.finish(outcome, { mode: 'fresh', rootVerified: false, ending: { route: 'engine', instance: '', keptLive: false } });
+	await front.reporter.finish(outcome, {
+		mode: 'fresh',
+		rootVerified: false,
+		ending: { route: 'engine', instance: '', keptLive: false },
+	});
 }
 
 const MODES: Record<string, () => unknown> = {

@@ -347,7 +347,9 @@ describe('migrations runner (S2-39)', () => {
 		try {
 			await runMigrations({ dir, versionTable: VERSION_TABLE });
 			expect((await pendingMigrations({ dir, versionTable: VERSION_TABLE })).pending).toEqual([]);
-			await sql.unsafe(`DELETE FROM "${VERSION_TABLE}" WHERE version = $1`, ['0100_census_probe.sql']);
+			await sql.unsafe(`DELETE FROM "${VERSION_TABLE}" WHERE version = $1`, [
+				'0100_census_probe.sql',
+			]);
 			const pending = (await pendingMigrations({ dir, versionTable: VERSION_TABLE })).pending;
 			expect(pending).toEqual(['0100_census_probe.sql']);
 			const rerun = await runMigrations({ dir, versionTable: VERSION_TABLE });
@@ -363,7 +365,9 @@ describe('migrations runner (S2-39)', () => {
 			expect(created?.present).toBe(false);
 		} finally {
 			rmSync(census, { force: true });
-			await sql.unsafe(`DELETE FROM "${VERSION_TABLE}" WHERE version = $1`, ['0100_census_probe.sql']);
+			await sql.unsafe(`DELETE FROM "${VERSION_TABLE}" WHERE version = $1`, [
+				'0100_census_probe.sql',
+			]);
 		}
 	});
 

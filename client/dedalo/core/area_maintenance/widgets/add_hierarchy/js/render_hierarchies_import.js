@@ -21,11 +21,11 @@
 
 
 
+	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 // imports
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {ui} from '../../../../common/js/ui.js'
-	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {error_text} from '../../../../common/js/render_api_error.js'
+	import {ui} from '../../../../common/js/ui.js'
 
 
 

@@ -59,7 +59,12 @@ function verdictChecks(
 /** The root-run site-builder store's checks (asked for only). */
 function siteBuilderChecks(ctx: HostCtx, since: number): [boolean, string][] {
 	if (!ctx.answers.backup_site_builder) return [];
-	return verdictChecks(ctx, siteBuilderBackupPaths(ctx.paths.instance).stateDir, ['site_builder'], since);
+	return verdictChecks(
+		ctx,
+		siteBuilderBackupPaths(ctx.paths.instance).stateDir,
+		['site_builder'],
+		since,
+	);
 }
 
 /** The root-run site-builder store's run (asked for only). */

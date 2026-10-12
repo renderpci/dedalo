@@ -728,7 +728,8 @@ async function executeHost(
 	const outcome = await executeHostInstall(request, reporter.io);
 	cleanupCatalog();
 	const answers = request.planFile?.answers ?? request.givenAnswers ?? {};
-	const route = answers.route === 'production' || answers.route === 'trial' ? answers.route : 'docker';
+	const route =
+		answers.route === 'production' || answers.route === 'trial' ? answers.route : 'docker';
 	await reporter.finish(outcome, {
 		mode: request.mode,
 		rootVerified: false,

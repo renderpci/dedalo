@@ -16,8 +16,8 @@
  * The controller is driven on a bare chat log: render_event and append_line need nothing else.
  */
 
-import {sitebuilder_controller} from '../../../tools/tool_sitebuilder/js/sitebuilder_controller.js'
 import {error_text} from '../../../core/common/js/render_api_error.js'
+import {sitebuilder_controller} from '../../../tools/tool_sitebuilder/js/sitebuilder_controller.js'
 
 
 

@@ -30,9 +30,9 @@
  * data_manager singleton (the options it captures are part of the contract).
  */
 
-import {tool_pdf_extractor} from '../../../tools/tool_pdf_extractor/js/tool_pdf_extractor.js'
 import {data_manager} from '../../../core/common/js/data_manager.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
+import {tool_pdf_extractor} from '../../../tools/tool_pdf_extractor/js/tool_pdf_extractor.js'
 
 
 
@@ -128,7 +128,7 @@ describe('TOOL_PDF_EXTRACTOR PREVIEW — rendered by the server\'s render_class'
 		const published		= []
 		const original		= data_manager.request
 		const token			= event_manager.subscribe('set_pdf_data_' + id_base, (value) => published.push(value))
-		delete window.__pdfx
+		window.__pdfx = undefined
 
 		data_manager.request = async function(options) {
 			if (options?.body?.source?.action==='get_pdf_data' || options?.body?.options?.method!==undefined) {
@@ -175,7 +175,7 @@ describe('TOOL_PDF_EXTRACTOR PREVIEW — rendered by the server\'s render_class'
 			data_manager.request = original
 			event_manager.unsubscribe(token)
 			host.remove()
-			delete window.__pdfx
+			window.__pdfx = undefined
 		}
 	}
 

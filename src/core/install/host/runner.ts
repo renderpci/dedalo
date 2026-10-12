@@ -311,9 +311,7 @@ export function recordingRunner(options: {
 			log.push(entry);
 			options.onLog?.(entry);
 			const exists = options.pathExists ?? (() => false);
-			const response = options
-				.responses()
-				.find((item) => applies(item, joined, seen, exists));
+			const response = options.responses().find((item) => applies(item, joined, seen, exists));
 			if (response?.creates !== undefined) options.onCreates?.(response.creates);
 			const result = resultOf(response);
 			replayLines(request, result.stdout);
