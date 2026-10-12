@@ -99742,6 +99742,74 @@
                     "lg-spa": "Foto de perfil"
                 },
                 "type": "media"
+            },
+            {
+                "tipo": "dd692",
+                "label": {
+                    "lg-ara": "تنفيذات النموذج",
+                    "lg-cat": "Execucions de model",
+                    "lg-deu": "Modellausführungen",
+                    "lg-ell": "Εκτελέσεις μοντέλου",
+                    "lg-eng": "Model runs",
+                    "lg-eus": "Eredu-exekuzioak",
+                    "lg-fra": "Exécutions de modèle",
+                    "lg-ita": "Esecuzioni del modello",
+                    "lg-nep": "मोडेल कार्यान्वयनहरू",
+                    "lg-por": "Execuções de modelo",
+                    "lg-spa": "Ejecuciones de modelo"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd693",
+                "label": {
+                    "lg-ara": "رموز النموذج",
+                    "lg-cat": "Tokens de model",
+                    "lg-deu": "Modell-Token",
+                    "lg-ell": "Tokens μοντέλου",
+                    "lg-eng": "Model tokens",
+                    "lg-eus": "Eredu-tokenak",
+                    "lg-fra": "Tokens du modèle",
+                    "lg-ita": "Token del modello",
+                    "lg-nep": "मोडेल टोकनहरू",
+                    "lg-por": "Tokens do modelo",
+                    "lg-spa": "Tokens de modelo"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd694",
+                "label": {
+                    "lg-ara": "تضمينات الاستعلام",
+                    "lg-cat": "Consultes vectoritzades",
+                    "lg-deu": "Query-Embeddings",
+                    "lg-ell": "Ενσωματώσεις ερωτήματος",
+                    "lg-eng": "Query embeddings",
+                    "lg-eus": "Kontsulta-embeddingak",
+                    "lg-fra": "Embeddings de requête",
+                    "lg-ita": "Embedding di query",
+                    "lg-nep": "क्वेरी इम्बेडिङहरू",
+                    "lg-por": "Embeddings de consulta",
+                    "lg-spa": "Consultas vectorizadas"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd695",
+                "label": {
+                    "lg-ara": "استدعاءات الرؤية",
+                    "lg-cat": "Crides de visió",
+                    "lg-deu": "Vision-Aufrufe",
+                    "lg-ell": "Κλήσεις όρασης",
+                    "lg-eng": "Vision calls",
+                    "lg-eus": "Ikusmen-deiak",
+                    "lg-fra": "Appels de vision",
+                    "lg-ita": "Chiamate di visione",
+                    "lg-nep": "दृष्टि कलहरू",
+                    "lg-por": "Chamadas de visão",
+                    "lg-spa": "Llamadas de visión"
+                },
+                "type": "number"
             }
         ]
     },
@@ -102671,6 +102739,74 @@
                     "lg-spa": "Área"
                 },
                 "type": "text"
+            },
+            {
+                "tipo": "dd696",
+                "label": {
+                    "lg-ara": "تنفيذات النموذج",
+                    "lg-cat": "Execucions de model",
+                    "lg-deu": "Modellausführungen",
+                    "lg-ell": "Εκτελέσεις μοντέλου",
+                    "lg-eng": "Model runs",
+                    "lg-eus": "Eredu-exekuzioak",
+                    "lg-fra": "Exécutions de modèle",
+                    "lg-ita": "Esecuzioni del modello",
+                    "lg-nep": "मोडेल कार्यान्वयनहरू",
+                    "lg-por": "Execuções de modelo",
+                    "lg-spa": "Ejecuciones de modelo"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd697",
+                "label": {
+                    "lg-ara": "رموز النموذج",
+                    "lg-cat": "Tokens de model",
+                    "lg-deu": "Modell-Token",
+                    "lg-ell": "Tokens μοντέλου",
+                    "lg-eng": "Model tokens",
+                    "lg-eus": "Eredu-tokenak",
+                    "lg-fra": "Tokens du modèle",
+                    "lg-ita": "Token del modello",
+                    "lg-nep": "मोडेल टोकनहरू",
+                    "lg-por": "Tokens do modelo",
+                    "lg-spa": "Tokens de modelo"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd698",
+                "label": {
+                    "lg-ara": "تضمينات الاستعلام",
+                    "lg-cat": "Consultes vectoritzades",
+                    "lg-deu": "Query-Embeddings",
+                    "lg-ell": "Ενσωματώσεις ερωτήματος",
+                    "lg-eng": "Query embeddings",
+                    "lg-eus": "Kontsulta-embeddingak",
+                    "lg-fra": "Embeddings de requête",
+                    "lg-ita": "Embedding di query",
+                    "lg-nep": "क्वेरी इम्बेडिङहरू",
+                    "lg-por": "Embeddings de consulta",
+                    "lg-spa": "Consultas vectorizadas"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd699",
+                "label": {
+                    "lg-ara": "استدعاءات الرؤية",
+                    "lg-cat": "Crides de visió",
+                    "lg-deu": "Vision-Aufrufe",
+                    "lg-ell": "Κλήσεις όρασης",
+                    "lg-eng": "Vision calls",
+                    "lg-eus": "Ikusmen-deiak",
+                    "lg-fra": "Appels de vision",
+                    "lg-ita": "Chiamate di visione",
+                    "lg-nep": "दृष्टि कलहरू",
+                    "lg-por": "Chamadas de visão",
+                    "lg-spa": "Llamadas de visión"
+                },
+                "type": "number"
             }
         ]
     },
@@ -104652,6 +104788,146 @@
                     "lg-spa": "JSON data"
                 },
                 "type": "misc"
+            }
+        ]
+    },
+    {
+        "tipo": "dd660",
+        "label": {
+            "lg-ara": "استخدام الذكاء الاصطناعي",
+            "lg-cat": "Ús d'IA",
+            "lg-deu": "KI-Nutzung",
+            "lg-ell": "Χρήση ΤΝ",
+            "lg-eng": "AI usage",
+            "lg-eus": "AAren erabilera",
+            "lg-fra": "Utilisation de l'IA",
+            "lg-ita": "Uso dell'IA",
+            "lg-nep": "एआई प्रयोग",
+            "lg-por": "Uso de IA",
+            "lg-spa": "Uso de IA"
+        },
+        "fields": [
+            {
+                "tipo": "dd662",
+                "label": {
+                    "lg-ara": "معرّف",
+                    "lg-cat": "Id",
+                    "lg-deu": "Id",
+                    "lg-ell": "Id",
+                    "lg-eng": "Id",
+                    "lg-eus": "Id",
+                    "lg-fra": "Id",
+                    "lg-ita": "Id",
+                    "lg-nep": "आईडी",
+                    "lg-por": "Id",
+                    "lg-spa": "Id"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd663",
+                "label": {
+                    "lg-ara": "مستخدم",
+                    "lg-cat": "Usuari",
+                    "lg-deu": "Benutzer",
+                    "lg-ell": "Χρήστης",
+                    "lg-eng": "User",
+                    "lg-eus": "Erabiltzailea",
+                    "lg-fra": "Utilisateur",
+                    "lg-ita": "Utente",
+                    "lg-nep": "प्रयोगकर्ता",
+                    "lg-por": "Usuário",
+                    "lg-spa": "Usuario"
+                },
+                "type": "link",
+                "target_sections": [
+                    "dd128"
+                ]
+            },
+            {
+                "tipo": "dd664",
+                "label": {
+                    "lg-ara": "تاريخ (UTC)",
+                    "lg-cat": "Data (UTC)",
+                    "lg-deu": "Datum (UTC)",
+                    "lg-ell": "Ημερομηνία (UTC)",
+                    "lg-eng": "Date (UTC)",
+                    "lg-eus": "Data (UTC)",
+                    "lg-fra": "Date (UTC)",
+                    "lg-ita": "Data (UTC)",
+                    "lg-nep": "मिति (UTC)",
+                    "lg-por": "Data (UTC)",
+                    "lg-spa": "Fecha (UTC)"
+                },
+                "type": "date"
+            },
+            {
+                "tipo": "dd665",
+                "label": {
+                    "lg-ara": "تنفيذات النموذج",
+                    "lg-cat": "Execucions de model",
+                    "lg-deu": "Modellausführungen",
+                    "lg-ell": "Εκτελέσεις μοντέλου",
+                    "lg-eng": "Model runs",
+                    "lg-eus": "Eredu-exekuzioak",
+                    "lg-fra": "Exécutions de modèle",
+                    "lg-ita": "Esecuzioni del modello",
+                    "lg-nep": "मोडेल कार्यान्वयनहरू",
+                    "lg-por": "Execuções de modelo",
+                    "lg-spa": "Ejecuciones de modelo"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd666",
+                "label": {
+                    "lg-ara": "رموز النموذج",
+                    "lg-cat": "Tokens de model",
+                    "lg-deu": "Modell-Token",
+                    "lg-ell": "Tokens μοντέλου",
+                    "lg-eng": "Model tokens",
+                    "lg-eus": "Eredu-tokenak",
+                    "lg-fra": "Tokens du modèle",
+                    "lg-ita": "Token del modello",
+                    "lg-nep": "मोडेल टोकनहरू",
+                    "lg-por": "Tokens do modelo",
+                    "lg-spa": "Tokens de modelo"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd667",
+                "label": {
+                    "lg-ara": "تضمينات الاستعلام",
+                    "lg-cat": "Consultes vectoritzades",
+                    "lg-deu": "Query-Embeddings",
+                    "lg-ell": "Ενσωματώσεις ερωτήματος",
+                    "lg-eng": "Query embeddings",
+                    "lg-eus": "Kontsulta-embeddingak",
+                    "lg-fra": "Embeddings de requête",
+                    "lg-ita": "Embedding di query",
+                    "lg-nep": "क्वेरी इम्बेडिङहरू",
+                    "lg-por": "Embeddings de consulta",
+                    "lg-spa": "Consultas vectorizadas"
+                },
+                "type": "number"
+            },
+            {
+                "tipo": "dd668",
+                "label": {
+                    "lg-ara": "استدعاءات الرؤية",
+                    "lg-cat": "Crides de visió",
+                    "lg-deu": "Vision-Aufrufe",
+                    "lg-ell": "Κλήσεις όρασης",
+                    "lg-eng": "Vision calls",
+                    "lg-eus": "Ikusmen-deiak",
+                    "lg-fra": "Appels de vision",
+                    "lg-ita": "Chiamate di visione",
+                    "lg-nep": "दृष्टि कलहरू",
+                    "lg-por": "Chamadas de visão",
+                    "lg-spa": "Llamadas de visión"
+                },
+                "type": "number"
             }
         ]
     },
