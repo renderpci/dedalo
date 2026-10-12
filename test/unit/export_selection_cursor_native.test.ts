@@ -1232,7 +1232,7 @@ else {
 				console.log('POOL_ONE ' + JSON.stringify(out));
 				process.exit(0);
 			`;
-			const child = Bun.spawn(['bun', '-e', script], {
+			const child = Bun.spawn([process.execPath, '-e', script], {
 				env: { ...process.env, DB_POOL_MAX: '1' },
 				stdout: 'pipe',
 				stderr: 'pipe',
