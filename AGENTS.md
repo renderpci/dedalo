@@ -52,6 +52,18 @@ The live-oracle era is over. The baselines of record are FROZEN:
   root needs the declaration too — `test/helpers/media_scratch_root.ts`. Gate:
   `test/unit/test_media_root_tripwire.test.ts`. 
 - **Tests use the generic `test` TLD and BUILD the situation they test.**   Never a specific install's TLD (`numisdata`, `oh`, `tch`, `rsc`, `ich`,   `mdcat`…): such a gate passes on one machine and nowhere else. Structure   comes from repo-owned node definitions materialized through the engine's   own write path (`src/core/test_data/` situations — `upsertDdOntologyNode`,   `zz*` scratch TLDs, torn down after); records are created at runtime, never   read from whatever the ambient DB happens to hold. Ratcheted by   `generic_tld_tripwire` (shrink-only). 
+- **Ontology definitions belong to the MASTER ontology — never create them
+  yourself.** Creating an ontology TLD, section, component or any other node
+  without specific human authorisation is NOT allowed — no "engine-owned" TLD,
+  no node shipped in code. When a feature seems to need ontology state: STOP
+  and ASK — is a new TLD really necessary, or is a section/component in an
+  existing TLD enough, or does existing structure (Time Machine, Activity, a
+  user record) already carry it? You may PROPOSE (TLD, parent, model, how the
+  engine reads it); a human decides. An approved definition is set up on the
+  master ontology server first and reaches an installation through an ontology
+  update; only then may code use its tipos. Sole exception: the suite's own
+  fixtures in the marked suite DB (the `test` TLD, `zz*` scratch TLDs torn down
+  after) — and a NEW test TLD needs the same authorisation.
 
 ## Commands 
 
