@@ -275,3 +275,5 @@ mutation-checked by re-adding the union → red). No fixture changes, no
 re-harvest.
 
 ## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (the wizard's `install_hierarchies` step contract (the registry re-read and its warnings in `msg`): the plan decides and warns; the executor's step imports exactly the plan's list)
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-ddengine-removed (the retired-node mechanism (ddengine11 pruned by the engine ontology at boot): the engine owns no ontology)

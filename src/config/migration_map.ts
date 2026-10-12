@@ -896,12 +896,8 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_AGENT_WRITE_SECTIONS',
 	'DEDALO_AGENT_SYSTEM_PROMPT_APPEND',
 	'DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT',
-	// The per-user daily AI budgets (closure Step 3, TOOLS-4). No v6 equivalent —
-	// v6 metered no model spend.
-	'DEDALO_AI_USER_DAILY_RUNS',
-	'DEDALO_AI_USER_DAILY_TOKENS',
-	'DEDALO_AI_USER_DAILY_EMBED_QUERIES',
-	'DEDALO_AI_USER_DAILY_VISION',
+	// The per-user daily AI budget keys were removed 2026-10-12: the per-day AI limits are user /
+	// profile data (dd692-699), not config — and v6 had no such keys to migrate.
 	'DEDALO_MCP_USER_ID',
 	'DEDALO_MCP_ALLOW_WRITE',
 	'DEDALO_MCP_WRITE_SECTIONS',

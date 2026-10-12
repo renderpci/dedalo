@@ -7,8 +7,7 @@
  *  - the answer: default / explicit / core dropped with a note / none and
  *    non-TLD refused;
  *  - the closure over DECLARED dependencies: deps-first post-order,
- *    transitivity, cycles tolerated, core and the engine-owned TLD never
- *    followed, an undeclared entry warned (installed alone), a missing
+ *    transitivity, cycles tolerated, core TLDs never followed, an undeclared entry warned (installed alone), a missing
  *    dependency and an unknown TLD refused with their exact texts;
  *  - precedence local > vendored > server (and the merge is idempotent);
  *  - the ONE view (describeOntologyCatalog): fixed TLDs excluded, default
@@ -66,7 +65,6 @@ import {
 } from '../../src/core/install/ontology_choice.ts';
 import { VENDORED_ONTOLOGY_DIR } from '../../src/core/install/paths.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
-import { ENGINE_TLD } from '../../src/core/ontology/engine_ontology.ts';
 import { serializeHierarchyManifest } from '../../src/core/ontology/hierarchy_manifest_format.ts';
 import {
 	normalizeOntologyDependencies,
@@ -132,7 +130,7 @@ const CHAIN = catalog([
 	entry('zzocb', ['zzocc', 'rsc']),
 	entry('zzocc', []),
 	entry('zzocx', ['zzocy']),
-	entry('zzocy', ['zzocx', ENGINE_TLD]),
+	entry('zzocy', ['zzocx', 'ontology']),
 	entry('zzocu', null),
 	entry('zzocm', ['zzocmissing']),
 ]);
@@ -161,7 +159,7 @@ describe('the answer (normalizeOntologyChoice)', () => {
 });
 
 describe('the closure (closeOntologyChoice)', () => {
-	test('deps first, transitive, core + self + engine-owned never followed', () => {
+	test('deps first, transitive, core + self never followed', () => {
 		const closure = closeOntologyChoice(['zzoca'], CHAIN);
 		// floor: the walk really visited the chain (the empty-list verdicts below are not vacuous)
 		expect(closure.order.length).toBeGreaterThan(2);
@@ -171,7 +169,7 @@ describe('the closure (closeOntologyChoice)', () => {
 		expect(closure.warnings).toEqual([]);
 	});
 
-	test('a cycle is tolerated (first finish wins), the engine-owned TLD skipped', () => {
+	test('a cycle is tolerated (first finish wins), a core TLD skipped', () => {
 		const closure = closeOntologyChoice(['zzocx'], CHAIN);
 		expect(closure.order).toEqual(['zzocy', 'zzocx']);
 		expect(closure.errors).toEqual([]);
@@ -239,7 +237,7 @@ describe('the one view (describeOntologyCatalog)', () => {
 		const view = describeOntologyCatalog(
 			catalog([
 				entry('dd', null),
-				entry(ENGINE_TLD, null),
+				entry('ontologytype', null),
 				entry('zzocz', [], 'server', 'Alpha'),
 				entry('tch', ['zzocz'], 'server', 'Catalog'),
 				entry('oh', CORE_ONTOLOGY_TLDS.slice(), 'vendored', 'Catalog'),
@@ -496,14 +494,14 @@ describe('the closure over hierarchy60 objects', () => {
 		]);
 	});
 
-	test('a FIXED (core / engine-owned) optional dependency is never declined nor noted', () => {
+	test('a FIXED (core) optional dependency is never declined nor noted', () => {
 		// The seed always installs core: declining it changes nothing, so no
 		// "declined — not installed" note may claim otherwise (by token, or by an
 		// ACTIVE list that — rightly — never lists core).
 		const fixed = catalog([
 			declaring('zzodf', [
 				dep('rsc', 'ontology35', false),
-				dep(ENGINE_TLD, 'ontology35', false),
+				dep('ontology', 'ontology35', false),
 				dep('lg', 'hierarchy1', false),
 				dep('zzodc', 'ontology35', false),
 			]),
@@ -512,7 +510,7 @@ describe('the closure over hierarchy60 objects', () => {
 		const declined = closeOntologyChoice(
 			['zzodf'],
 			fixed,
-			declinePolicy(['rsc', ENGINE_TLD, 'lg', 'zzodc']),
+			declinePolicy(['rsc', 'ontology', 'lg', 'zzodc']),
 		);
 		expect(declined.order).toEqual(['zzodf']);
 		expect(declined.hierarchies).toEqual([]);
@@ -522,7 +520,7 @@ describe('the closure over hierarchy60 objects', () => {
 		// the written-list policy (ACTIVE never carries core) declines nothing fixed
 		const listed = closeOntologyChoice(['zzodf'], fixed, listedPolicy(['zzodf']));
 		expect(listed.errors).toEqual([]);
-		expect(listed.notes.filter((note) => /'(rsc|lg|ddengine)'/.test(note))).toEqual([]);
+		expect(listed.notes.filter((note) => /'(rsc|lg|ontology)'/.test(note))).toEqual([]);
 		expect(ontologyRequestFromActive([...CORE_ONTOLOGY_TLDS, 'zzodf'], fixed).errors).toEqual([]);
 	});
 

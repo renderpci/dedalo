@@ -251,7 +251,7 @@ installer's own affordances.
    seed (refused unless the database is empty) as **one transaction** — a restore
    that fails or is killed part-way leaves the database empty, never half-built —
    **then** builds the derived search
-   indexes, writes the engine's own ontology nodes and **activates the core
+   indexes and **activates the core
    Languages thesaurus (`lg`)**. Its terms already ship in the seed, so activation
    is all it needs — there is no separate step for it, and nothing about it to
    choose.

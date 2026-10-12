@@ -46,16 +46,24 @@ Every assistant setting lives in `../private/.env` and is read once at boot. All
 |---|---|---|
 | `DEDALO_AGENT_SYSTEM_PROMPT_APPEND` | *(unset)* | Deployment-specific text appended to the built-in system prompt (after the invariants; it can extend, never reorder them). Use it to add institution context — *"This is the archive of the Museum of X; prefer Catalan labels; the main collection is oral history."* Boot-stable, so it stays inside the cached prompt prefix. |
 
-### Daily budget
+### AI spend limits
 
-Every conversation turn is one **run** against the user's daily AI budget, checked before the model is called. A run reserves the most output it can produce (the model's per-turn output limit times the twelve turns a run may take) and is then charged the tokens the model reports; a model that reports no usage keeps the whole reservation charged. A user whose budget is used up gets `ai.budget_exhausted` (429) with the time it resets (midnight UTC) — as a normal error, never an opened stream. Nobody is exempt, administrators and root included. The searches the assistant makes inside a conversation belong to that run.
+Every conversation turn is one **run** against the user's daily AI limits, checked before the model is called. A run reserves the most output it can produce (the model's per-turn output limit times the twelve turns a run may take) and is then charged the tokens the model reports; a model that reports no usage keeps the whole reservation charged. A user whose limit is used up gets `ai.budget_exhausted` (429) with the time it resets (midnight UTC) — as a normal error, never an opened stream. Nobody is exempt, administrators and root included. The searches the assistant makes inside a conversation belong to that run.
 
-| Key | Default | Effect |
-|---|---|---|
-| `DEDALO_AI_USER_DAILY_RUNS` | `50` | Conversation turns (and generated answers) one user may run per UTC day. |
-| `DEDALO_AI_USER_DAILY_TOKENS` | `1000000` | Model tokens one user may spend per UTC day. |
+The limits are **not** `.env` settings: they are data, edited in the *AI usage* group of each profile and of each user (Administration).
 
-The day's usage of every user is listed in the **AI usage** section under Administration. The other two budgets — query embeddings and vision calls — and their rules are in [the RAG API](../rag.md#the-api-dd_rag_api).
+| Limit | Profile (*Profiles* `dd234`, group `dd649`) | User (*Users* `dd128`, group `dd647`) | Counts |
+|---|---|---|---|
+| Model runs | `dd696` | `dd692` | Conversation turns (and generated answers) per UTC day. |
+| Model tokens | `dd697` | `dd693` | Model tokens per UTC day. |
+| Query embeddings | `dd698` | `dd694` | Semantic-search query embeddings per UTC day ([the RAG API](../rag.md#the-api-dd_rag_api)). |
+| Vision calls | `dd699` | `dd695` | Vision calls of the identification tool per UTC day. |
+
+Each limit is resolved **on its own**, at every request: the user's value when it is filled in, otherwise the value of the user's profile, otherwise **0**. A limit of 0 refuses every request of that kind — an explicit 0 on the user too, even when the profile allows more — and there is no "unlimited" value. A fresh installation starts with every limit empty, so every AI request is refused until an administrator sets limits on the profiles (or users) that may spend. A change takes effect at the next request. A filled-in value that is not a number, or is negative, counts as 0 — it never falls back to the profile.
+
+A user cannot raise their own limit. On their **own** user record the four user limits are read-only for anyone who is not a global administrator, whatever their profile grants on the *Users* section; the same grant still lets a user manager set **other** users' limits. A refusal with limit 0 means no limit is set (or 0 was set): waiting for the reset does not help, an administrator has to set one.
+
+The day's usage of every user is the **AI usage** section under Administration (`dd660`): one record per user and UTC day, with the four counters. An administrator reads it and may correct it like any section.
 
 ---
 

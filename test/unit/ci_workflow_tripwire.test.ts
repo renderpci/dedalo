@@ -791,11 +791,11 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	],
 	[
 		'test/unit/ai_spend_budget_native.test.ts',
-		"It materializes the engine ontology into the suite database's dd_ontology, reserves and settles against the shipped ledger section's rows (concurrent reservations racing on its row locks) and drives the metered doors as fixture users resolved from the suite database, so it cannot run without a live suite Postgres.",
+		"It reads the master ontology's ledger and limit nodes from the suite database's dd_ontology, sets per-user and per-profile limits on fixture records, reserves and settles against the ledger section's rows (concurrent reservations racing on its row locks) and drives the metered doors as fixture users resolved from the suite database, so it cannot run without a live suite Postgres.",
 	],
 	[
-		'test/unit/engine_ontology_retired_native.test.ts',
-		"It plants a retired engine node's source record, dd_ontology row and registry value in the suite database and runs the engine-ontology door to prune them (a scratch ontology35 registry row minted by createMainSection), so it cannot run without a live suite Postgres.",
+		'test/unit/install_tld_provenance_native.test.ts',
+		'It runs the installer CLI into a scratch Postgres database it creates (an admin role with CREATEDB), boots the real server on that install and fingerprints dd_ontology / matrix_ontology around the boot, so it cannot run without a live Postgres cluster.',
 	],
 	[
 		'test/unit/ontology_registry_row_native.test.ts',

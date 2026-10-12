@@ -122,7 +122,7 @@ describe('db_restore + set_root_pw (P3, load-bearing)', () => {
 		expect(ext.stdout).toContain('unaccent');
 		// The restored database is CORE-ONLY (installer unification A2): exactly the
 		// core ontologies, no test3 playground record — and an explicit connection
-		// says it left the pool-bound completion (stores, engine ontology, core
+		// says it left the pool-bound completion (stores, core
 		// hierarchies) to the caller.
 		const tlds = await runPsql(scratch, [
 			'-tAc',

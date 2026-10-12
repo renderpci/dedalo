@@ -25,7 +25,7 @@
  *    and no DEDALO_SUPERVISED.
  * And, since the core-only seed + domain ontology choice (2026-10-09):
  *  - the ontologies installed are the core, the DEFAULT domain ontology (no
- *    --ontologies given) and the engine's own — plus only what the thesaurus
+ *    --ontologies given) — plus only what the thesaurus
  *    step provisions (the chosen hierarchies and their two typology groupers);
  *    NO test TLD row and NO test3 record (installations carry no fixture);
  *  - the default domain ontology came from its ONE vendored file: its `<tld>0`
@@ -85,7 +85,6 @@ import {
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { runPsql } from '../../src/core/install/pg_exec.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
-import { ENGINE_TLD } from '../../src/core/ontology/engine_ontology.ts';
 import {
 	HIERARCHY_MODEL_TYPE_TLD,
 	HIERARCHY_TYPE_TLD,
@@ -251,7 +250,7 @@ function packageLineCount(path: string): number {
 
 /**
  * What the install left in its ontology (installer unification A2/A4): core +
- * default domain + engine, nothing of the suite's, the vendored file whole.
+ * default domain, nothing of the suite's, the vendored file whole.
  */
 async function assertOntologyOutcome(
 	hierarchies: readonly string[],
@@ -260,7 +259,7 @@ async function assertOntologyOutcome(
 	const installed = (
 		await scratchScalar("SELECT string_agg(DISTINCT tld, ',' ORDER BY tld) FROM dd_ontology")
 	).split(',');
-	const expected = [...CORE_ONTOLOGY_TLDS, ...DEFAULT_DOMAIN_ONTOLOGIES, ENGINE_TLD];
+	const expected = [...CORE_ONTOLOGY_TLDS, ...DEFAULT_DOMAIN_ONTOLOGIES];
 	expect(
 		expected.filter((tld) => !installed.includes(tld)),
 		'missing ontologies',

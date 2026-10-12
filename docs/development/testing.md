@@ -58,7 +58,7 @@ bun run test:db:setup          # drops and rebuilds <app db>_test (or DEDALO_TES
 
 The suite database is **an installation first, then a fixture**. The script builds
 it through the installer's own steps — `installDbFromSeed()` restores the core-only
-install seed (the search indexes, the engine ontology and the Languages thesaurus
+install seed (the search indexes and the Languages thesaurus
 included), and `stageOntologies` + `installOntologies` install the default domain
 ontology `oh` from its vendored file, exactly as an offline installation gets it.
 Right after the restore it **stamps the database** with a `dedalo_test_marker` row:

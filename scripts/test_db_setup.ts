@@ -16,8 +16,8 @@
  * suite database is an installation first, then a fixture):
  *   1. the install seed via `installDbFromSeed()` — the installer's restore door: the
  *      CORE-ONLY seed (install/db/dedalo_install.pgsql.gz — no domain ontology, no test
- *      TLD, no test3 records), its predated migrations, the derived search stores, the
- *      engine-owned ontology and the core hierarchies (`lg` activated), exactly what a
+ *      TLD, no test3 records), its predated migrations, the derived search stores and
+ *      the core hierarchies (`lg` activated), exactly what a
  *      fresh installation gets;
  *   1b. the DEFAULT domain ontologies (`oh`) through the installer's ontology door
  *      (`stageOntologies` + `installOntologies` over `defaultOfflineOntologyRequest()`,
@@ -493,8 +493,7 @@ await psql('postgres', [
 
 // 2. The install seed THROUGH THE INSTALLER'S RESTORE DOOR — the same
 // `installDbFromSeed()` the installer (and install.sh) runs: restore + the
-// predated migrations + the derived search stores + the engine ontology + the
-// core hierarchies. Its connection is config's, which the repoint above aimed
+// predated migrations + the derived search stores + the core hierarchies. Its connection is config's, which the repoint above aimed
 // at this database (the config module is first imported HERE, by this dynamic
 // import). It writes only what every installation gets, so it runs before the
 // marker exists — the marker is the suite's, stamped right below.

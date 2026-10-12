@@ -28,7 +28,7 @@
  *   5. pg_dump → `<out>.part`;
  *   6. VERIFIED BY A REAL INSTALL: the VERIFY child restores `.part` into a
  *      second marked database through installDbFromSeed (the whole fresh
- *      install: search stores, engine ontology, lg activation — no test fixture,
+ *      install: search stores, lg activation — no test fixture,
  *      no domain ontology: the seed promises the core), runs the boot
  *      migrations, and checks drift, lg and the root password;
  *   7. only then `.part` → seed, and the manifest (seed_manifest.ts) beside it.

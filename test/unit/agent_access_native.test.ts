@@ -31,6 +31,11 @@ import { mcpApiActions } from '../../src/core/api/handlers/dd_mcp_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { createSession, getSession, type Session } from '../../src/core/security/session_store.ts';
 import {
+	AMPLE_AI_SPEND_LIMITS,
+	setAiSpendLimits,
+	sweepAiSpendLedger,
+} from '../helpers/ai_spend_ledger.ts';
+import {
 	AUTHZ_CONTROL_USER_ID,
 	AUTHZ_DD128_ADMIN_USER_ID,
 	AUTHZ_STUB_MODEL_ID,
@@ -93,6 +98,8 @@ async function call(action: string, session: Session) {
 
 const errorCode = (body: unknown) => (body as { error?: { code?: string } }).error?.code;
 
+let grantedUserId: number | null = null;
+
 describe.if(DB_READY)('SEC-3 — the agent door asks the flag AND the tool grant', () => {
 	beforeAll(async () => {
 		for (const key of ENV_KEYS) savedEnv[key] = process.env[key];
@@ -127,6 +134,12 @@ describe.if(DB_READY)('SEC-3 — the agent door asks the flag AND the tool grant
 		process.env.DEDALO_AGENT_MODELS = authzStubAgentModels(provider.port);
 		await installAuthzDoorFixture();
 		const ids = await resolveAuthzIdentities();
+		// The agent door is METERED and an unset limit is 0: the granted identity
+		// (the only one that reaches the spend) gets ample limits on its own user
+		// record, which the fixture's removal deletes. The budget is not this
+		// gate's subject (ai_spend_budget_native).
+		grantedUserId = ids.toolGranted.userId;
+		await setAiSpendLimits({ userId: grantedUserId }, AMPLE_AI_SPEND_LIMITS);
 		for (const [label, principal] of [
 			['ungranted', ids.control],
 			['ungrantedAdmin', ids.dd128Admin],
@@ -143,6 +156,7 @@ describe.if(DB_READY)('SEC-3 — the agent door asks the flag AND the tool grant
 			if (savedEnv[key] === undefined) delete process.env[key];
 			else process.env[key] = savedEnv[key];
 		}
+		if (grantedUserId !== null) await sweepAiSpendLedger([grantedUserId]);
 		await removeAuthzDoorFixture();
 	});
 

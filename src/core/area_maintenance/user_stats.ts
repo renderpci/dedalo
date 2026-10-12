@@ -859,8 +859,12 @@ export interface StatsRow {
  * file: `aggregateActivity`'s `pageRows`). Takes the already-fetched stats rows
  * plus the three label resolvers as injected functions, so the whole fold is
  * reachable without a database; the SQL stays in `crossUsersRangeData` because
- * `user_stats.ts` is the sole declared owner of `matrix_stats` SQL
- * (sql_confinement_tripwire).
+ * `user_stats.ts` is the sole declared owner of LITERAL `matrix_stats` SQL
+ * (sql_confinement_tripwire). The table is shared: the AI spend ledger
+ * (security/ai_spend.ts, section dd660) reaches it through the ontology-resolved
+ * name, every statement there scoped to `section_tipo = dd660`; every statement
+ * here to `section_tipo = dd1521` or to a `relation @>` on the dd1521 user key
+ * (UA_USER), which no dd660 row carries — disjoint rows.
  *
  * `resolveTerm` labels where/publish SECTION tipos; `resolveWhat` labels what
  * ACTION keys (the labels engine — never the ontology, see WHAT_ACTIONS). A

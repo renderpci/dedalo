@@ -96,7 +96,7 @@ maps back (`ontologyRequestFromActive`) to the very request the plan stages.
 | `check_directories` | `directories.ts` | private/sessions/cache/media/backups, write+unlink probe |
 | (catalog, before the plan) | `ontology_catalog.ts` | `resolveOntologyCatalog` — the caller resolves the catalog of the selected source (the official/configured server, a local `--ontology-source`, or the offline view) and hands it to the plan |
 | `stage_ontologies` | `ontology_install.ts` | copy/download + gunzip + COPY-sanity of every chosen file into the staging dir, `staged.json` with sha256s; the DB is never touched. The request is the plan's `ontologyRequest` |
-| `install_db_from_default_file` | `db_restore.ts` | empty-DB gate → gunzip → `psql -f` the core-only seed (already migrated) → `ensureSearchStores()` → engine ontology → `activateCoreHierarchies()` (activates `lg`, see below) |
+| `install_db_from_default_file` | `db_restore.ts` | empty-DB gate → gunzip → `psql -f` the core-only seed (already migrated) → `ensureSearchStores()` → `activateCoreHierarchies()` (activates `lg`, see below) |
 | `install_ontologies` | `ontology_install.ts` | sha re-check → `stageOntologyFiles` → `importStagedOntologyFiles` (the update panel's shared lower layer) → one re-derive pass → reference verification (warnings) → staging dir removed |
 | `set_root_pw` | `root_pw.ts` | Argon2id, direct UPDATE `matrix_users` section_id `-1` dd133 |
 | `install_hierarchies` | `hierarchy_import.ts` | optional thesauri only: `\copy` into `matrix_hierarchy` + counter consolidate + activation; a core TLD is activation-only, an empty list is a no-op |
@@ -126,7 +126,7 @@ leaf first:
 `main: ontology35` dependencies of the chosen TLDs, transitively, in deps-first
 post-order: mandatory ones always, optional ones unless the policy declines them
 (`declinePolicy(answers.declined_dependencies)`, each declined one noted). Core
-TLDs and the engine-owned `ddengine` are never followed (a declaration names core
+TLDs are never followed (a declaration names core
 too — every domain ontology takes its models from `dd` — but the seed already
 has it). A cycle is tolerated (first finish wins; the re-derive pass in
 `installOntologies` settles a node whose model arrived later). An entry with
@@ -134,7 +134,7 @@ has it). A cycle is tolerated (first finish wins; the re-derive pass in
 naming it — the installer never computes dependencies. A declared MANDATORY
 dependency the source does not offer, and an unknown TLD, are errors before any
 write; an unoffered OPTIONAL one is a warning and skipped. A dependency on a core
-or engine-owned TLD is never put to the decline policy: the seed always installs
+TLD is never put to the decline policy: the seed always installs
 it, so it can be neither declined nor reported as declined (the *Ontologies*
 screen shows it ticked and locked).
 
@@ -236,7 +236,7 @@ and `declined_dependencies`.
 
 `bun run test:db:setup` (`scripts/test_db_setup.ts`) builds the suite database
 as an installation first: `installDbFromSeed()` (the restore door, so the core
-seed, the search stores, the engine ontology and `lg`), then the default domain
+seed, the search stores and `lg`), then the default domain
 ontology through `stageOntologies(defaultOfflineOntologyRequest())` +
 `installOntologies()`, and only then the suite's own fixtures — the marker, the
 `test` TLD (`materializeTestTldOntology`, which refuses on a database without the
@@ -468,7 +468,7 @@ The compile runs in scratch databases it creates and marks (`dedalo_seed_build_<
 `dedalo_seed_verify_<pid>`, dropped afterwards), one compile per cluster (an advisory
 lock). Before the file is replaced, the result **installs itself**: it is restored into
 the second scratch database through the installer's own restore — search stores,
-engine ontology, Languages activation — the boot migrations run over it, and the
+Languages activation — the boot migrations run over it, and the
 core ontology, Languages and root password are checked. It checks what the seed
 promises (the core), never a domain ontology. A registry record the activation
 would refuse, an active hierarchy, a registry row of a non-core hierarchy, an ontology row of another TLD or an undeclared

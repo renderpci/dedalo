@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - Every AI request now counts against daily limits set per user and per profile, and generated answers need their own permission.
     - The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start.
     - SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change.
     - The terminal installer sets up the whole host: production, Docker and trial install in one run.
@@ -32,7 +33,6 @@ Merged since the last release; these ship with the next one.
     - The publication host provisioner now refuses an instance declaration that anyone other than root could change.
     - Publication host provisioning works with Apache on Debian and Ubuntu.
     - Several publication hosts on one server are checked for isolation.
-    - Every AI request now counts against a daily budget per user, and generated answers need their own permission.
     - The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.
     - The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.
     - A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run.
@@ -787,6 +787,16 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Every AI request now counts against daily limits set per user and per profile, and generated answers need their own permission.** *(action needed)*
+
+    Until now any logged-in user could run the assistant, ask for generated answers and run semantic searches without any limit, so one session could exhaust an installation's model budget (or its local GPU). Every request that calls a model is now checked against the user's daily limits before the model is called: assistant runs, model tokens, semantic-search queries, and vision calls of the identification tool. When a limit is used up the request is refused with a message saying when it resets (midnight UTC). Nobody is exempt, administrators and root included.
+
+    The limits are set in the **AI usage** group of each profile (Administration → Profiles) and, to override the profile for one person, of each user (Administration → Users). Each of the four limits is resolved on its own: the user's value when it is filled in, otherwise the profile's, otherwise 0. A limit of 0 refuses every request of that kind; there is no "unlimited" value. A user cannot raise their own limit: on their own user record the AI limits are read-only, whatever their profile allows (administrators with full access excepted). The day's usage of every user is listed in the **AI usage** section under Administration. See [AI spend limits](./core/ai/assistant/configuration.md#ai-spend-limits).
+
+    **Action needed:** a fresh database is required for this beta: databases created by an earlier beta hold engine-written ontology rows that this version no longer uses, and they are not migrated. On the new installation, set the AI limits on the profiles (or users) that should use AI features, since all limits start empty and every AI request is refused until then. Generated answers over the collection also require the **Generated answers** tool permission (`tool_rag`): run *Register tools* after the update, then grant it in the profile editor to the profiles that should use generated answers. Semantic search does not need it.
+
+    Wire contract: `WC-2026-10-01-ai-spend-budget`, `WC-2026-10-12-ddengine-removed`.
+
 - **SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change.** *(action needed)*
 
     On RHEL-family hosts the installer's SELinux module now gives the engine a domain of
@@ -882,14 +892,6 @@ Merged since the last release; these ship with the next one.
     The media rule files regenerate on their own after the update; on nginx, reload
     it afterwards (`nginx -t && nginx -s reload`), and re-render a publication
     host's rule files with `scripts/media_publication_host_rules.ts`.
-
-- **Every AI request now counts against a daily budget per user, and generated answers need their own permission.** *(action needed)*
-
-    Until now any logged-in user could run the assistant, ask for generated answers and run semantic searches without any limit, so one session could exhaust an installation's model budget (or its local GPU). Every request that calls a model is now checked against the user's daily budget before the model is called: assistant runs and model tokens, semantic-search queries, and vision calls of the identification tool. When a budget is used up the request is refused with a message saying when it resets (midnight UTC). Nobody is exempt, administrators and root included. The four budgets are `DEDALO_AI_USER_DAILY_RUNS` (50), `DEDALO_AI_USER_DAILY_TOKENS` (1000000), `DEDALO_AI_USER_DAILY_EMBED_QUERIES` (2000) and `DEDALO_AI_USER_DAILY_VISION` (50) — see [the configuration reference](./config/config.md). The day's usage of every user is listed in the new **AI usage** section under Administration.
-
-    **Action needed:** generated answers over the collection now require the **Generated answers** tool permission (`tool_rag`). Run *Register tools* after the update to add it, then grant it in the profile editor to the profiles that should use generated answers. Semantic search does not need it.
-
-    Wire contract: `WC-2026-10-01-ai-spend-budget`.
 
 - **The assistant no longer proposes changes its own apply step would refuse.**
 
@@ -2357,7 +2359,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 123 entries"
+??? note "Wire contract — 125 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -2481,7 +2483,9 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-11-session-user-beside-csrf-token`
     - `WC-2026-10-11-site-builder-reason-codes`
     - `WC-2026-10-11-site-builder-turn-error-frames`
+    - `WC-2026-10-12-ddengine-removed`
     - `WC-2026-10-12-install-surface-removed`
+    - `WC-2026-10-12-user-activity-what-labels`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

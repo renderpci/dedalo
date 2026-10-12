@@ -39,6 +39,11 @@ import { isDedaloError } from '../../src/core/errors/index.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 import { getUserTools } from '../../src/core/tools/registry.ts';
 import {
+	AMPLE_AI_SPEND_LIMITS,
+	setAiSpendLimits,
+	sweepAiSpendLedger,
+} from '../helpers/ai_spend_ledger.ts';
+import {
 	AUTHZ_PROJECT_P,
 	AUTHZ_SECTION,
 	type AuthzIdentities,
@@ -78,8 +83,16 @@ describe.if(DB_READY)('TOOLS-4 grant half — the vision spend needs tool_identi
 		await installAuthzDoorFixture();
 		seedId = await createDoorRecord(AUTHZ_SECTION, AUTHZ_PROJECT_P);
 		ids = await resolveAuthzIdentities();
+		// The vision doors are METERED and an unset limit is 0: the granted twin
+		// (the only identity that reaches the spend) gets ample limits on its own
+		// user record, which the fixture's removal deletes. The budget is
+		// ai_spend_budget_native's subject, not this gate's.
+		await setAiSpendLimits({ userId: ids.toolGranted.userId }, AMPLE_AI_SPEND_LIMITS);
 	});
-	afterAll(removeAuthzDoorFixture);
+	afterAll(async () => {
+		if (ids !== undefined) await sweepAiSpendLedger([ids.toolGranted.userId]);
+		await removeAuthzDoorFixture();
+	});
 
 	test('the contrast is live: the SAME grants, tool_identify is the only difference', async () => {
 		await assertAuthzDoorContrast(ids);

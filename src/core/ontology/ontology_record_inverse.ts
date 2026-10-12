@@ -4,13 +4,13 @@
  * record, plus the `matrix_ontology_main` (`ontology35`) registry row its main
  * node is derived from.
  *
- * Split out of `src/core/test_data/test_tld_materialize.ts` (2026-10-01,
- * closure Step 3 / TOOLS-4) because it now has TWO doors: the test-only door
- * that materializes the generic `test` TLD into a marked suite database, and
- * the PRODUCTION door that materializes the engine-owned ontology
- * (`./engine_ontology.ts`) into every installation at boot. A pure builder
- * belongs to neither: the field → component map below is the one law both
- * doors write by, and `parseSectionRecordToOntologyNode` (`./parser.ts`) is
+ * Split out of `src/core/test_data/test_tld_materialize.ts` (2026-10-01). Its
+ * one door today is the test-only door that materializes the generic `test`
+ * TLD into a marked suite database (the engine-owned ontology door that also
+ * wrote by it was REMOVED 2026-10-12: the engine owns no ontology definition).
+ * It stays an ontology-layer module because it is the inverse of the parser,
+ * not test policy: the field → component map below is the law a JSON node is
+ * written by, and `parseSectionRecordToOntologyNode` (`./parser.ts`) is
  * the law that reads it back. `test/unit/test_tld_ontology_gate.test.ts` (b)/(c)
  * pin the map and the real round trip.
  *
@@ -31,9 +31,8 @@
  *
  * PURE except `provisionOntologyMainRegistry`, which writes through
  * `syncMainSectionFromDefinition` (the registry's IMPORT door — a JSON node is
- * an ontology definition). No guard lives here:
- * each door owns its own (the test door's marker check, the engine door's
- * "only its own TLD" rule).
+ * an ontology definition). No guard lives here: the calling door owns it (the
+ * test door's marker check).
  */
 
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';

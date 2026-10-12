@@ -4954,24 +4954,6 @@
             ],
             "typology_id": 15,
             "typology_name": "Otros"
-        },
-        {
-            "tld": "ddengine",
-            "name": "Motor | ddengine",
-            "name_data": [
-                {
-                    "id": 1,
-                    "lang": "lg-eng",
-                    "value": "Engine | ddengine"
-                },
-                {
-                    "id": 1,
-                    "lang": "lg-spa",
-                    "value": "Motor | ddengine"
-                }
-            ],
-            "typology_id": 5,
-            "typology_name": "Especial"
         }
     ]
 }

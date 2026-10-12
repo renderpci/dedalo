@@ -76,3 +76,5 @@
   a door whose model call moved no ledger is red, and every door measured spending an
   embedding is refused at embed budget 1); the grant-only law in
   `test/unit/tools_register_validate.test.ts`.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-ddengine-removed (the ledger location (ddengine1) and the DEDALO_AI_USER_DAILY_* budgets: the ledger is master section dd660, the limits are user / profile data)

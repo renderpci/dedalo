@@ -168,3 +168,5 @@ panel's own routine so there is one way ontology files enter a database.
   harvest covers these actions); no re-harvest is involved.
 
 ## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (its `get_install_context` / router-action half (`get_ontology_catalog` and the routed ontology steps): the wizard is gone; the plan and executor half stands)
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-ddengine-removed (the catalog's exclusion of the engine-owned ddengine: there is no such TLD)

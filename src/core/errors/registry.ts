@@ -1971,7 +1971,8 @@ export const ERROR_REGISTRY = {
 	// a vision call — is RESERVED against the caller's per-day ledger
 	// (security/ai_spend.ts) before the provider is touched. `limit` (429): the
 	// same request succeeds after `window_resets_at` (the next UTC midnight) or
-	// once an administrator raises the DEDALO_AI_USER_DAILY_* budget.
+	// once an administrator raises the user's or profile's AI limits (users
+	// dd692-695, profiles dd696-699; an empty user value inherits the profile's).
 	'ai.budget_exhausted': {
 		category: 'limit',
 		status: 429,
@@ -1981,19 +1982,21 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 		details_keys: ['budget_kind', 'limit', 'window_resets_at'],
-		hint: 'Stop: the user has no AI budget left today. It resets at window_resets_at (UTC); an administrator can raise the DEDALO_AI_USER_DAILY_* budgets.',
+		hint: "Stop: the user has no AI budget left today. When limit > 0 it resets at window_resets_at (UTC); limit 0 means no limit is set (or an explicit 0), which no reset changes. Either way only an administrator setting or raising the user's or profile's AI limits admits more.",
 	},
-	// The ledger could not be read or written (its engine ontology is missing, or
-	// the database failed): FAIL CLOSED — an unmetered spend is never admitted.
+	// The ledger or the limits could not be read, or the ledger written (their
+	// master ontology nodes are missing or damaged, or the database failed):
+	// FAIL CLOSED — an unmetered spend is never admitted.
 	'ai.budget_unavailable': {
 		category: 'unavailable',
 		status: 503,
 		label_key: 'error_ai_budget_unavailable',
-		message: 'The AI usage ledger is unavailable, so no AI request is admitted (see server logs)',
+		message:
+			'The AI usage ledger or the AI limits are unavailable, so no AI request is admitted (see server logs)',
 		severity: 'error',
 		disclosure: 'operator',
 		retryable: true,
-		hint: 'Retry later; if it persists, the server log names why the AI usage ledger cannot be used.',
+		hint: 'Retry later; if it persists, the server log names why the AI usage ledger or the AI limits cannot be used.',
 	},
 
 	// ── maintenance widgets ─────────────────────────────────────────────────

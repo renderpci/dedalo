@@ -23,7 +23,7 @@
  *    declared — an older server, or a vendored ontology.json that predates the
  *    field: installed alone, with a loud warning):
  *     · `main: 'ontology35'` → the ONTOLOGY closure (deps first, depth-first
- *       post-order; core and the engine-owned TLD are fixed and never followed);
+ *       post-order; core TLDs are fixed and never followed);
  *     · `main: 'hierarchy1'` → the THESAURUS set the install_hierarchies step
  *       imports + activates (a CORE hierarchy, `lg`, is activation-only and
  *       always done — never a dependency to install);
@@ -78,13 +78,6 @@ export const ONTOLOGY_NOTE_LABELS: Readonly<Record<string, string>> = Object.fre
 	oh: 'installation_ontology_note_oh',
 	tch: 'installation_ontology_note_tch',
 });
-
-/**
- * The engine-owned TLD (engine_ontology.ts ENGINE_TLD — gated equal by
- * install_ontology_choice): materialized by the engine itself, never a choice,
- * never a dependency to install. Not imported: engine_ontology.ts reaches the db.
- */
-const ENGINE_OWNED_TLD = 'ddengine';
 
 const TLD_RE = /^[a-z]{2,}$/;
 
@@ -475,11 +468,6 @@ export function ontologySourceView(source: OntologySource): OntologySourceView {
 
 // ── the closure ──────────────────────────────────────────────────────────────
 
-/** A TLD the closure never follows: core (the seed's) or engine-owned. */
-function isFixedTld(tld: string): boolean {
-	return isCoreOntologyTld(tld) || tld === ENGINE_OWNED_TLD;
-}
-
 interface ClosureWalk {
 	byTld: ReadonlyMap<string, OntologyCatalogEntry>;
 	label: string;
@@ -515,7 +503,7 @@ export function undeclaredWarning(entry: { tld: string; origin: OntologyOrigin }
  * optional.
  */
 function visitDependency(walk: ClosureWalk, tld: string, dependency: OntologyDependency): void {
-	if (isFixedTld(dependency.tld)) return;
+	if (isCoreOntologyTld(dependency.tld)) return;
 	if (walk.byTld.has(dependency.tld)) {
 		visitOntology(walk, dependency.tld);
 		return;
@@ -549,8 +537,7 @@ function visitOntology(walk: ClosureWalk, tld: string): void {
 
 /**
  * The `main: 'ontology35'` dependencies of `tld`: mandatory followed, optional
- * when accepted. A FIXED TLD (core / engine-owned — always installed from the
- * seed) is never put to the policy: it can be neither declined nor noted as
+ * when accepted. A CORE TLD (always installed from the seed) is never put to the policy: it can be neither declined nor noted as
  * "declined — not installed" (that note would be false).
  */
 function followOntologyDependencies(
@@ -559,7 +546,7 @@ function followOntologyDependencies(
 	dependencies: readonly OntologyDependency[],
 ): void {
 	const followed = dependencies.filter(
-		(item) => item.main === 'ontology35' && !isFixedTld(item.tld),
+		(item) => item.main === 'ontology35' && !isCoreOntologyTld(item.tld),
 	);
 	for (const dependency of followed) {
 		if (dependency.mandatory || walk.accept(dependency)) visitDependency(walk, tld, dependency);
@@ -763,8 +750,8 @@ export interface ClosureContext {
 
 /**
  * The install order of the chosen TLDs: the closure over their DECLARED
- * ONTOLOGY dependencies, deps first (depth-first post-order), core and
- * engine-owned TLDs skipped, cycles tolerated (first finish wins; the
+ * ONTOLOGY dependencies, deps first (depth-first post-order), core TLDs
+ * skipped, cycles tolerated (first finish wins; the
  * installer's re-derive pass settles them), an optional dependency followed
  * unless the policy declines it. Undeclared → warning; a chosen TLD or a
  * mandatory dependency the catalog does not offer → error (an optional one →
@@ -912,7 +899,7 @@ export function ontologyRequestFromActive(
 	catalog: OntologyCatalog,
 ): { request: OntologyInstallRequest | null; errors: string[] } {
 	const domain = [...new Set(active.map((tld) => tld.trim().toLowerCase()))].filter(
-		(tld) => tld !== '' && !isFixedTld(tld),
+		(tld) => tld !== '' && !isCoreOntologyTld(tld),
 	);
 	if (domain.length === 0) return { request: null, errors: [NONE_ERROR] };
 	// The written list IS the operator's choice: an optional dependency it does
@@ -973,7 +960,7 @@ export function describeOntologyCatalog(catalog: OntologyCatalog): OntologyCatal
 		default: [...DEFAULT_DOMAIN_ONTOLOGIES],
 		core: [...CORE_ONTOLOGY_TLDS],
 		entries: catalog.entries
-			.filter((entry) => !isFixedTld(entry.tld))
+			.filter((entry) => !isCoreOntologyTld(entry.tld))
 			.map((entry) => viewEntry(entry, catalog))
 			.sort(compareViewEntries),
 		warnings: [...catalog.warnings],

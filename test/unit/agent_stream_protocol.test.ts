@@ -28,6 +28,13 @@ import {
 	getSession,
 	type Session,
 } from '../../src/core/security/session_store.ts';
+import {
+	type AiSpendLimitSnapshot,
+	AMPLE_AI_SPEND_LIMITS,
+	restoreAiSpendLimits,
+	setAiSpendLimits,
+	sweepAiSpendLedger,
+} from '../helpers/ai_spend_ledger.ts';
 
 const REAL_CATALOG = { ...realCatalog };
 
@@ -113,14 +120,24 @@ const ENV_KEYS = [
 	'ANTHROPIC_API_KEY',
 ];
 
-beforeAll(() => {
+/**
+ * agent_chat(_stream) is METERED (ai_spend.ts) and an unset limit is 0, so root
+ * gets ample user-level AI limits here, restored after with its ledger swept —
+ * the budget is ai_spend_budget_native's subject, not this gate's.
+ */
+let rootLimits: AiSpendLimitSnapshot | null = null;
+
+beforeAll(async () => {
 	for (const key of ENV_KEYS) savedEnv[key] = process.env[key];
 	process.env.DEDALO_AGENT_HTTP_ENABLED = 'true';
 	adminToken = createSession(-1, 'debug_superuser', true);
 	admin = getSession(adminToken) as Session;
+	rootLimits = await setAiSpendLimits({ userId: -1 }, AMPLE_AI_SPEND_LIMITS);
 });
 
-afterAll(() => {
+afterAll(async () => {
+	if (rootLimits !== null) await restoreAiSpendLimits([rootLimits]);
+	await sweepAiSpendLedger([-1]);
 	destroySession(adminToken);
 	for (const [key, value] of Object.entries(savedEnv)) {
 		if (value === undefined) {

@@ -20,8 +20,7 @@
  * `ontologyRecordFromNode` is the EXACT INVERSE of
  * `src/core/ontology/parser.ts parseSectionRecordToOntologyNode`; its
  * field → component map lives with it, in
- * `src/core/ontology/ontology_record_inverse.ts` (one copy, shared with the
- * production engine-ontology door).
+ * `src/core/ontology/ontology_record_inverse.ts` (one copy).
  *
  * Two node fields are DERIVED by the parser and therefore written by nobody:
  *  - `tipo` = `<tld><section_id>` — it IS the record's address;
@@ -87,9 +86,8 @@ export interface TestTldOntologyDoc {
 }
 
 // The inverse parser and the registry provisioner live in
-// src/core/ontology/ontology_record_inverse.ts (shared with the PRODUCTION
-// engine-ontology door, ontology/engine_ontology.ts); re-exported here so the
-// gates that pinned them keep one import.
+// src/core/ontology/ontology_record_inverse.ts; re-exported here so the gates
+// that pinned them keep one import.
 export {
 	type OntologyRecordColumns,
 	ontologyRecordFromNode,

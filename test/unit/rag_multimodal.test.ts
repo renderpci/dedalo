@@ -41,6 +41,13 @@ import {
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import {
+	type AiSpendLimitSnapshot,
+	AMPLE_AI_SPEND_LIMITS,
+	restoreAiSpendLimits,
+	setAiSpendLimits,
+	sweepAiSpendLedger,
+} from '../helpers/ai_spend_ledger.ts';
 import { magickTestEnv } from '../helpers/magick_test_env.ts';
 import { cleanScratchRecord } from '../helpers/test_data.ts';
 
@@ -89,6 +96,8 @@ const MODEL = 'deterministic-multimodal'; // buildMultimodalProvider default (no
 const MAX_PX = 512; // multimodalConfigFromEnv().imageMaxPx default
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
+/** Root's limit keys as they were: the image doors are METERED and an unset limit is 0. */
+let rootLimits: AiSpendLimitSnapshot | null = null;
 const provider = new DeterministicMultimodalProvider({ model: MODEL, dimension: 64 });
 const NOLAN = 'lg-nolan';
 const DATA_LANG = 'lg-eng';
@@ -240,6 +249,8 @@ function removeMediaFiles(sectionId: number): void {
 const indexer = buildImageIndexer();
 
 beforeAll(async () => {
+	// Ample limits for root (the budget is ai_spend_budget_native's subject).
+	rootLimits = await setAiSpendLimits({ userId: SUPERUSER.userId }, AMPLE_AI_SPEND_LIMITS);
 	if (!REAL_INGEST) return;
 	matrixTable = (await getMatrixTableFromTipo(SECTION_TIPO)) ?? 'matrix_test';
 	// The SAME options the extractor will resolve for itself — by construction,
@@ -276,6 +287,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+	if (rootLimits !== null) await restoreAiSpendLimits([rootLimits]);
+	await sweepAiSpendLedger([SUPERUSER.userId]);
 	for (const id of createdIds) {
 		removeMediaFiles(id);
 		await deleteRecordChunks(SECTION_TIPO, id);

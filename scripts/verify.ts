@@ -336,8 +336,8 @@ const TRIPWIRES = [
 	'test/unit/portal_locator_door_native.test.ts',
 	// TOOLS-4 budget half — the AI spend ledger (closure Step 3, 2026-10-01).
 	'test/unit/ai_spend_budget_native.test.ts',
-	// 2026-10-10 — retired engine nodes are pruned (ddengine11 → hierarchy60).
-	'test/unit/engine_ontology_retired_native.test.ts',
+	// 2026-10-12 — every installed ontology TLD came from the release files; boot writes no ontology.
+	'test/unit/install_tld_provenance_native.test.ts',
 	// 2026-10-10 — the registry-row law, declared dependencies (hierarchy60) end to end, a declared thesaurus never forced.
 	'test/unit/ontology_registry_row_native.test.ts',
 	'test/unit/ontology_dependencies_native.test.ts',

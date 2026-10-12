@@ -5,8 +5,7 @@
  * the seed is core-only, compiled from repo sources by seed_build.ts), the languages
  * thesaurus terms, root user (empty pw), and the default project/profiles. Then,
  * on the default connection, it completes the install's base: the derived search
- * stores (the seed ships them empty), the engine-owned ontology and the core
- * hierarchies.
+ * stores (the seed ships them empty) and the core hierarchies.
  *
  * NO TEST FIXTURES. An installation receives no `test` TLD and no test3
  * playground: those belong to the SUITE database, which `bun run test:db:setup`
@@ -44,7 +43,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 import { CORE_ONTOLOGY_TLDS } from '../ontology/core_tlds.ts';
-import { ENGINE_TLD } from '../ontology/engine_ontology.ts';
 import { DEDALO_VERSION } from '../update/version.ts';
 import { SEED_DUMP_PATH } from './paths.ts';
 import { resolvePgBinary } from './pg_bin.ts';
@@ -130,12 +128,6 @@ export async function completeFreshInstall(): Promise<string> {
 			`Derived search stores could not be built: ${stores.errors.map(errorText).join(' | ')}`,
 		);
 	}
-	// The ENGINE-OWNED ontology (the sections the engine writes — the AI
-	// spend ledger): the same idempotent
-	// door boot runs, so a fresh install is complete before its first boot
-	// (ontology/engine_ontology.ts).
-	const { ensureEngineOntology } = await import('../ontology/engine_ontology.ts');
-	const engine = await ensureEngineOntology();
 	// CORE HIERARCHIES (A7): Languages is ACTIVATED against the terms the seed
 	// already ships in matrix_langs — never imported (hierarchy_activate.ts
 	// header carries the measurement). Here, in the restore, so every surface
@@ -145,7 +137,7 @@ export async function completeFreshInstall(): Promise<string> {
 	// itself refuses `install.step_failed`, naming each failed tld).
 	const { activateCoreHierarchies } = await import('./hierarchy_activate.ts');
 	const core = await activateCoreHierarchies(-1);
-	return `Database installed from seed (core ontologies: ${CORE_ONTOLOGY_TLDS.join(', ')}) + derived search stores + engine ontology (${engine.written} records) + core hierarchies activated (${core.activated.join(', ')}) — OK`;
+	return `Database installed from seed (core ontologies: ${CORE_ONTOLOGY_TLDS.join(', ')}) + derived search stores + core hierarchies activated (${core.activated.join(', ')}) — OK`;
 }
 
 /**
@@ -232,13 +224,13 @@ export async function installDbFromSeed(
 		);
 	}
 	await restoreSeed(connection, seedPath);
-	// Default-config path only: the search stores, the engine ontology and
-	// the core hierarchies go through the pool, which is guaranteed to point
+	// Default-config path only: the search stores and the core
+	// hierarchies go through the pool, which is guaranteed to point
 	// at this DB only when no explicit conn was given.
 	if (conn === undefined) return { ok: true, msg: await completeFreshInstall() };
 	return {
 		ok: true,
-		msg: 'Database installed from seed — OK (explicit connection: derived search stores, engine ontology and core hierarchies are not completed here)',
+		msg: 'Database installed from seed — OK (explicit connection: derived search stores and core hierarchies are not completed here)',
 	};
 }
 
@@ -437,7 +429,7 @@ async function userObjectCount(conn: DbConnDescriptor): Promise<number> {
  * its stamp — another install's stamp is a CONFLICT) of THIS engine whose engine
  * half (completeFreshInstall) also finished — matrix_users present,
  * matrix_updates stamped with DEDALO_VERSION, the derived relation index
- * filled, the engine ontology's source records written, and every core
+ * filled, and every core
  * hierarchy USABLE (hierarchy_state.ts inspectHierarchy: active, active in the
  * thesaurus, ontology, targets, both roots — not a single registry field, which
  * activation writes first and in its own commit).
@@ -490,17 +482,10 @@ async function seedTablesProblem(conn: DbConnDescriptor): Promise<SeedVerdict | 
 			};
 }
 
-/** completeFreshInstall's work: the relation index, the engine ontology, every core hierarchy usable. */
+/** completeFreshInstall's work: the relation index, every core hierarchy usable. */
 async function engineHalfProblem(conn: DbConnDescriptor): Promise<SeedVerdict | null> {
-	const checks: [string, string][] = [
-		['the derived relation index is empty', 'SELECT EXISTS (SELECT 1 FROM matrix_relation_index)'],
-		[
-			`the engine ontology (${ENGINE_TLD}) was not written`,
-			`SELECT EXISTS (SELECT 1 FROM matrix_ontology WHERE section_tipo = '${ENGINE_TLD}0')`,
-		],
-	];
-	for (const [problem, query] of checks) {
-		if ((await scalar(conn, query)) !== 't') return { ok: false, detail: problem };
+	if ((await scalar(conn, 'SELECT EXISTS (SELECT 1 FROM matrix_relation_index)')) !== 't') {
+		return { ok: false, detail: 'the derived relation index is empty' };
 	}
 	const { coreHierarchiesProblem } = await import('./hierarchy_activate.ts');
 	const hierarchies = await coreHierarchiesProblem();

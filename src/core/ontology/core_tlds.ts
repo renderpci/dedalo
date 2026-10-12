@@ -5,9 +5,10 @@
  * The install seed (`install/db/dedalo_install.pgsql.gz`) carries EXACTLY these
  * TLDs in `dd_ontology` / `matrix_ontology` and nothing else: every domain
  * ontology (`oh`, `tch`, `utoponymy`, `nexus`, …) is an install ANSWER, imported
- * by the installer from the vendored file or an ontology server. The engine-owned
- * `ddengine` TLD is not core either: it ships with the code and is materialized
- * by the engine itself (engine_ontology.ts), never served by an ontology master.
+ * by the installer from the vendored file or an ontology server. The engine owns
+ * NO TLD: every definition, the sections the engine itself writes included (the
+ * AI usage ledger, `dd660`), belongs to the master ontology (AGENTS.md
+ * "Ontology definitions belong to the MASTER ontology").
  *
  * The config catalog's `ACTIVE_ONTOLOGY_TLDS` default
  * (src/config/catalog/defaults.ts) is a GATED TWIN of this list, not an import:
