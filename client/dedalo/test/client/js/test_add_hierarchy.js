@@ -23,9 +23,9 @@
 * on their shared objects and restored after each case.
 */
 
-import {data_manager} from '../../../core/common/js/data_manager.js'
 import {add_hierarchy} from '../../../core/area_maintenance/widgets/add_hierarchy/js/add_hierarchy.js'
 import {render_hierarchies_import_block} from '../../../core/area_maintenance/widgets/add_hierarchy/js/render_hierarchies_import.js'
+import {data_manager} from '../../../core/common/js/data_manager.js'
 
 
 
@@ -318,7 +318,14 @@ describe('ADD_HIERARCHY WIDGET', function() {
 		const spinner = host.querySelector('.msg.loading .hierarchy_import_spinner')
 		assert.ok(spinner, 'the spinner row is mounted in the status line')
 		const style = getComputedStyle(spinner)
-		assert.strictEqual(style.animationName, 'hierarchy-import-spin', 'the ring is animated by the widget stylesheet')
+		assert.strictEqual(style.animationName, 'dd_spin', 'the ring names the kit keyframe')
+		// The computed animation-name is the DECLARED name whether or not a matching
+		// @keyframes rule exists: only a running CSSAnimation proves the kit's dd_spin
+		// keyframe (widget_kit.less) resolved — Chrome creates none for an unknown name.
+		assert.ok(
+			spinner.getAnimations().some(animation => animation.animationName === 'dd_spin'),
+			'the dd_spin keyframe resolves and runs'
+		)
 		assert.notStrictEqual(style.borderTopStyle, 'none', 'the ring is drawn')
 		assert.isAbove(spinner.getBoundingClientRect().width, 0, 'the ring has a size')
 

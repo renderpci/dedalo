@@ -371,6 +371,14 @@
 	100%	{ background-color: transparent; }
 }
 
+// ---- loading ring ------------------------------------------------------
+// Moved here from widgets/add_hierarchy/css/add_hierarchy.less (2026-10-12):
+// motion lives in the kit. A full turn, so the 0.001ms reduced-motion collapse
+// would park it where it started; the use site still declares `animation: none`.
+@keyframes dd_spin {
+	to { transform: rotate(360deg); }
+}
+
 // ---- headline stats -----------------------------------------------------
 // A short row of big numbers with uppercase captions — the "how many, right
 // now" band that sits above a detail table. Same surface, radius and divider

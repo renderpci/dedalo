@@ -208,7 +208,7 @@
 		border: 2px solid var(--border_strong);
 		border-top-color: var(--color_primary);
 		border-radius: 50%;
-		animation: hierarchy-import-spin 0.7s linear infinite;
+		animation: dd_spin 0.7s linear infinite;
 	}
 
 	// an EMPTY-by-design thesaurus chip (installs with no terms)
@@ -245,6 +245,11 @@
 	}
 }//end add_hierarchy
 
-@keyframes hierarchy-import-spin {
-	to { transform: rotate(360deg); }
+// Reduced motion: a still ring. The spin keyframe lives in widget_kit.less
+// (dd_spin); the resting state is declared here, at the USE site. The label
+// beside the ring carries the "working" meaning, so a static ring is honest.
+@media (prefers-reduced-motion: reduce) {
+	.wrapper_widget.add_hierarchy .hierarchy_import_spinner {
+		animation: none;
+	}
 }

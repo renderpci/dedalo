@@ -13653,6 +13653,11 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
     background-color: transparent;
   }
 }
+@keyframes dd_spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 .dd_stats {
   display: flex;
   border: 1px solid var(--border_default);
@@ -15268,7 +15273,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   border: 2px solid var(--border_strong);
   border-top-color: var(--color_primary);
   border-radius: 50%;
-  animation: hierarchy-import-spin 0.7s linear infinite;
+  animation: dd_spin 0.7s linear infinite;
 }
 .wrapper_widget.add_hierarchy .hierarchy_label > .empty_hierarchy {
   margin-left: 0.4rem;
@@ -15305,9 +15310,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.add_hierarchy .body_response:empty {
   display: none;
 }
-@keyframes hierarchy-import-spin {
-  to {
-    transform: rotate(360deg);
+@media (prefers-reduced-motion: reduce) {
+  .wrapper_widget.add_hierarchy .hierarchy_import_spinner {
+    animation: none;
   }
 }
 /**
