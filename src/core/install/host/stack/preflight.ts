@@ -54,29 +54,55 @@ function who(facts: StackFacts): string {
 	return facts.user === '' ? 'this user' : facts.user;
 }
 
-/** `[sentence]` when `bad`, else none. */
-function when(bad: boolean, sentence: string): string[] {
-	return bad ? [sentence] : [];
+/**
+ * THE MACHINE CHECKS, one sentence (or null) each — exported because the
+ * interactive System check (probes.ts stackRows) shows them as rows BEFORE the
+ * run, over the same facts (gatherStackFacts): one wording, one rule, never a
+ * second copy. The preflight below refuses with the same sentences.
+ */
+export const STACK_MACHINE_CHECKS = Object.freeze({
+	/** Docker itself is installed. */
+	docker: (facts: StackFacts): string | null =>
+		facts.docker === null
+			? 'Docker is not installed — install Docker Engine and its Compose plugin (https://docs.docker.com/engine/install/), then run this again; the installer never installs it'
+			: null,
+	/** The daemon answers this operator. */
+	daemon: (facts: StackFacts): string | null =>
+		facts.daemon
+			? null
+			: `the Docker daemon does not answer ${who(facts)} — start it (sudo systemctl enable --now docker) or join the docker group (sudo usermod -aG docker ${who(facts)}, then log in again); DOCKER_HOST is not passed through: use a docker context`,
+	/** Compose v2 or newer. */
+	compose: (facts: StackFacts): string | null =>
+		Number((facts.composeVersion ?? '0').split('.')[0]) >= 2
+			? null
+			: 'Docker Compose v2 or newer is required (the `docker compose` plugin, not the old docker-compose)',
+	/** The disk floor (a root that cannot be measured skips it — see the header). */
+	disk: (facts: StackFacts): string | null => {
+		const free = facts.freeGib ?? STACK_MIN_FREE_GIB;
+		return free < STACK_MIN_FREE_GIB
+			? `only ${free} GiB free under ${facts.dockerRoot} — the install needs about ${STACK_MIN_FREE_GIB} GiB (docker system prune -af, or move Docker's root to a bigger disk)`
+			: null;
+	},
+	/** The operator's identity is known. */
+	operator: (facts: StackFacts): string | null =>
+		knownOperator(facts)
+			? null
+			: 'the operator cannot be identified (`id -un` / `id -u` answered nothing) — run the install as a user with a login on this machine',
+});
+
+/** The sentences of `checks` that fail on `facts`. */
+function failing(
+	facts: StackFacts,
+	checks: readonly (keyof typeof STACK_MACHINE_CHECKS)[],
+): string[] {
+	return checks
+		.map((check) => STACK_MACHINE_CHECKS[check](facts))
+		.filter((sentence): sentence is string => sentence !== null);
 }
 
-/** Docker itself: present, reachable, Compose v2. */
+/** Docker itself: present, reachable, Compose v2 (not installed: that one sentence alone). */
 function dockerProblems(facts: StackFacts): string[] {
-	if (facts.docker === null) {
-		return [
-			'Docker is not installed — install Docker Engine and its Compose plugin (https://docs.docker.com/engine/install/), then run this again; the installer never installs it',
-		];
-	}
-	const major = Number((facts.composeVersion ?? '0').split('.')[0]);
-	return [
-		...when(
-			!facts.daemon,
-			`the Docker daemon does not answer ${who(facts)} — start it (sudo systemctl enable --now docker) or join the docker group (sudo usermod -aG docker ${who(facts)}, then log in again); DOCKER_HOST is not passed through: use a docker context`,
-		),
-		...when(
-			!(major >= 2),
-			'Docker Compose v2 or newer is required (the `docker compose` plugin, not the old docker-compose)',
-		),
-	];
+	return facts.docker === null ? failing(facts, ['docker']) : failing(facts, ['daemon', 'compose']);
 }
 
 /**
@@ -92,17 +118,7 @@ function knownOperator(facts: StackFacts): boolean {
 
 /** Disk and the operator's identity. */
 function machineProblems(facts: StackFacts): string[] {
-	const free = facts.freeGib ?? STACK_MIN_FREE_GIB;
-	return [
-		...when(
-			free < STACK_MIN_FREE_GIB,
-			`only ${free} GiB free under ${facts.dockerRoot} — the install needs about ${STACK_MIN_FREE_GIB} GiB (docker system prune -af, or move Docker's root to a bigger disk)`,
-		),
-		...when(
-			!knownOperator(facts),
-			'the operator cannot be identified (`id -un` / `id -u` answered nothing) — run the install as a user with a login on this machine',
-		),
-	];
+	return failing(facts, ['disk', 'operator']);
 }
 
 /** An instance, or an earlier install's stack files, already here. */

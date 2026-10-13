@@ -455,6 +455,7 @@ export const NOTICE_TEXT = Object.freeze({
 		failed === 0
 			? `System ready${warned === 0 ? '' : ` (${warned} warning${warned === 1 ? '' : 's'})`}.`
 			: `${failed} check${failed === 1 ? '' : 's'} failed — fix ${failed === 1 ? 'it' : 'them'} and re-check.`,
+	systemIncomplete: (msg: string) => `The system check did not complete: ${msg}`,
 	envSecret: 'supplied by the environment — kept',
 	trialProbesSkipped:
 		'The stack is not running yet, so the connection is tested by the install inside the container.',

@@ -37,6 +37,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SEED_DUMP_PATH } from '../../src/core/install/paths.ts';
+import type { PsqlProbe } from '../../src/core/install/pg_bin.ts';
 import { systemCheckRows } from '../../src/core/install/probes.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 import { localOntologySource } from '../helpers/install_answer_cases.ts';
@@ -290,7 +291,13 @@ describe('probe child — refusals', () => {
 });
 
 describe('the System check rows (pure)', () => {
-	const init = (msg: string[], errors: string[]) => ({ result: errors.length === 0, msg, errors });
+	const MISSING: PsqlProbe = { state: 'missing', path: 'psql' };
+	const init = (msg: string[], errors: string[], psql: PsqlProbe = MISSING) => ({
+		result: errors.length === 0,
+		msg,
+		errors,
+		psql,
+	});
 
 	test('an init failure is a FAIL row — one no row names included (never dropped past the gate)', () => {
 		const rows = systemCheckRows(
@@ -301,10 +308,12 @@ describe('the System check rows (pure)', () => {
 			null,
 			'developer',
 		);
-		expect(rows.filter((row) => row.state === 'fail').map((row) => row.detail)).toEqual([
-			'PostgreSQL client (psql) not found',
-			'Zz a future check failed',
+		// The psql line is the routed row's (built from the typed probe), never an unnamed "Check".
+		expect(rows.filter((row) => row.state === 'fail').map((row) => row.label)).toEqual([
+			'Check',
+			'PostgreSQL client',
 		]);
+		expect(rows.find((row) => row.label === 'Check')?.detail).toBe('Zz a future check failed');
 	});
 
 	test('docker: a missing psql is not this host’s failure', () => {

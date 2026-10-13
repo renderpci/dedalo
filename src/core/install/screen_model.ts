@@ -778,7 +778,20 @@ function versionNotices(outcome: ProbeOutcome): Notice[] {
 	});
 }
 
-/** The System check's rows and summary as notices. */
+/**
+ * The System check's verdict line. "System ready." ONLY when the probe answered
+ * ok AND no row failed: a probe that errored (no rows, `ok:false` — the child's
+ * failure sentence) or answered `ok:false` without a failed row says it did
+ * not complete, with its sentence — never "ready" beside a failure (campaign
+ * 3, 2026-10-13).
+ */
+function systemVerdict(outcome: ProbeOutcome, failed: number, warned: number): Notice {
+	if (failed > 0) return { level: 'error', text: NOTICE_TEXT.systemSummary(failed, warned) };
+	if (!outcome.ok) return { level: 'error', text: NOTICE_TEXT.systemIncomplete(outcome.detail) };
+	return { level: 'info', text: NOTICE_TEXT.systemSummary(0, warned) };
+}
+
+/** The System check's rows and verdict as notices. */
 function systemNotices(outcome: ProbeOutcome | undefined): Notice[] {
 	if (outcome === undefined) return [];
 	const rows = outcome.rows ?? [];
@@ -790,11 +803,7 @@ function systemNotices(outcome: ProbeOutcome | undefined): Notice[] {
 			level: ROW_LEVEL[row.state],
 			text: `${row.state === 'fail' ? 'failed' : row.state}  ${row.label}  ${row.detail}`,
 		})),
-		{
-			level: failed > 0 ? ('error' as const) : ('info' as const),
-			text: NOTICE_TEXT.systemSummary(failed, warned),
-		},
-		...when(!outcome.ok && rows.length === 0, { level: 'error' as const, text: outcome.detail }),
+		systemVerdict(outcome, failed, warned),
 	];
 }
 

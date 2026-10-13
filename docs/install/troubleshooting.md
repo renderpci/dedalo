@@ -14,6 +14,7 @@ curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
 | `install.sh:` refuses, exit code `3` | [The bootstrap refuses](#the-bootstrap-refuses-exit-code-3) |
 | `… is not supported — the production route supports …` | [Unsupported system](#an-unsupported-system) |
 | The System check refuses, naming things that already exist | [The System check refuses](#the-production-system-check-refuses) |
+| A row of the System check screen failed, or the check did not complete | [The System check screen](#the-system-check-screen) |
 | Docker, Compose, disk or image refusals | [Docker and trial refusals](#docker-and-trial-refusals) |
 | Let's Encrypt fails | [Let's Encrypt fails](#lets-encrypt-fails) |
 | `database '…' is not empty` | [Installing](#installing) |
@@ -137,6 +138,24 @@ A green socket and a red site means the web server cannot reach the socket (its 
 | `the operator cannot be identified` | `id -un` answered nothing: run the install as a user with a login on this machine, not from a stripped-down environment |
 
 `stack_preflight` refuses an existing instance on purpose: the database restore needs an empty database, so a second install is never a repair.
+
+### The System check screen
+
+The **System check** screen measures this machine before any question about the install. Each row is `ok`, `warn` (told, never blocking) or `failed` (fix it, then re-check). **System ready.** appears only when the check completed and no row failed.
+
+Which rows appear depends on the route:
+
+| Route | PostgreSQL client row | Other rows |
+| --- | --- | --- |
+| **Production** | `ok` when `psql` is absent: the installer installs PostgreSQL 18 itself. `warn` when a `psql` of another major is present; the install's own system check (`host_preflight`) refuses another major's cluster on the database port with `--db-mode create` (see [the production System check](#the-production-system-check-refuses)) | operating system, `root`, Bun, the diagnostics |
+| **Docker**, **Trial** | none: the engine runs in a container and never uses a host `psql` | **Docker**, **Compose**, **Disk** — the same checks, and the same sentences, as [Docker and trial refusals](#docker-and-trial-refusals). A Docker root that cannot be measured is a `warn` |
+| **Developer** | `failed` when no `psql` runs: this route installs into an existing PostgreSQL | Bun, the seed, the private directory, the diagnostics |
+
+| The row or line says | Fix |
+| --- | --- |
+| `PostgreSQL client  psql not found — the developer route installs into an existing PostgreSQL …` | install the client (Debian/Ubuntu `apt install postgresql-client`, RHEL `dnf install postgresql`, macOS `brew install postgresql@18`) or set `DEDALO_PG_BIN_PATH` to its `bin` directory — see [`PostgreSQL client (psql) not found`](#postgresql-client-psql-not-found) |
+| `PostgreSQL client  <path> does not run (EACCES)` (or another reason) | a `psql` is there but cannot start: fix its permissions (`chmod +x`), or remove it |
+| `The system check did not complete: the system probe failed unexpectedly (<class>: <first line>) — full text logged to <file>` | an installer defect, not a setting. The file (mode `0600`, under the system temporary directory, e.g. `/tmp/dedalo-install-probe-system-…log`) holds the full text with its stack: report it with that file. No secret is written in it |
 
 ### The full screen is unavailable
 

@@ -12,12 +12,19 @@ import { accessSync, constants, existsSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { privateDir } from '../../config/env.ts';
 import { SEED_DUMP_PATH } from './paths.ts';
-import { psqlResolvable } from './pg_bin.ts';
+import { type PsqlProbe, probePsql } from './pg_bin.ts';
 
 export interface InitTestResult {
 	result: boolean;
 	errors: string[];
 	msg: string[];
+	/**
+	 * The psql probe's typed answer (pg_bin.ts PsqlProbe — never a throw). The
+	 * System check builds its route-aware PostgreSQL client row from THIS, not
+	 * from the line (probes.ts psqlRow): production installs PostgreSQL itself,
+	 * docker/trial never need a host psql, developer does.
+	 */
+	psql: PsqlProbe;
 }
 
 /** The minimum Bun the server is verified against (matches .bun-version pin). */
@@ -50,8 +57,25 @@ function pathCreatable(dir: string): boolean {
 	}
 }
 
-/** Run the pre-flight checks and summarize as the client-contract shape. */
-export function runInitTest(): InitTestResult {
+/** The pre-flight's psql line: a pass, or the failure naming why (missing / unusable). */
+function psqlLine(psql: PsqlProbe): { ok: boolean; line: string } {
+	if (psql.state === 'found') {
+		return { ok: true, line: 'PostgreSQL client (psql) available — OK' };
+	}
+	const why =
+		psql.state === 'missing' ? 'not found' : `not usable at ${psql.path} (${psql.reason})`;
+	return {
+		ok: false,
+		line: `PostgreSQL client (psql) ${why} — install the postgresql client tools`,
+	};
+}
+
+/**
+ * Run the pre-flight checks and summarize as the client-contract shape.
+ * `psql` is the probe's answer (default: THIS machine's — pg_bin.ts
+ * probePsql); a gate passes the answer over a PATH without psql.
+ */
+export function runInitTest(psql: PsqlProbe = probePsql()): InitTestResult {
 	const errors: string[] = [];
 	const msg: string[] = [];
 
@@ -73,11 +97,8 @@ export function runInitTest(): InitTestResult {
 		errors.push(`Private config directory is not creatable/writable: ${privateDir}`);
 	}
 
-	if (psqlResolvable()) {
-		msg.push('PostgreSQL client (psql) available — OK');
-	} else {
-		errors.push('PostgreSQL client (psql) not found — install the postgresql client tools');
-	}
+	const psqlCheck = psqlLine(psql);
+	(psqlCheck.ok ? msg : errors).push(psqlCheck.line);
 
-	return { result: errors.length === 0, errors, msg };
+	return { result: errors.length === 0, errors, msg, psql };
 }
