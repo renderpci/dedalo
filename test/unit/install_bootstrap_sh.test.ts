@@ -59,7 +59,19 @@ const scratch = mkdtempSync(join(tmpdir(), 'dedalo_install_bootstrap_'));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 const PIN = '1.4.2';
-const ASSET = 'bun-linux-x64-baseline';
+/**
+ * The x86_64 Bun asset install.sh picks ON THIS HOST: the stubbed `uname -m` says
+ * x86_64, but pick_asset reads the REAL /proc/cpuinfo (AVX2 → bun-linux-x64, else
+ * -baseline). Pinning one name made the gate pass on an AVX2-less arm64 image and
+ * fail on GitHub's x64 runner (2026-10-13). Same rule as install.sh, so the fixture
+ * is the asset the script really asks for; DECOY_ASSET is the other one.
+ */
+function hostX64Asset(): string {
+	const cpuinfo = existsSync('/proc/cpuinfo') ? readFileSync('/proc/cpuinfo', 'utf8') : '';
+	return /\bavx2\b/.test(cpuinfo) ? 'bun-linux-x64' : 'bun-linux-x64-baseline';
+}
+const ASSET = hostX64Asset();
+const DECOY_ASSET = ASSET === 'bun-linux-x64' ? 'bun-linux-x64-baseline' : 'bun-linux-x64';
 const SIGNED_BY = 'F'.repeat(40);
 const SECRET = 'Zz-Bootstrap-Secret-91q';
 
@@ -239,7 +251,7 @@ function fixtureSet(options: { sumsSha?: string } = {}) {
 	const sha = sha256File(zip);
 	writeFileSync(
 		join(fixtures, 'SHASUMS256.txt'),
-		`${options.sumsSha ?? sha}  ${ASSET}.zip\n${'0'.repeat(64)}  bun-linux-x64.zip\n`,
+		`${options.sumsSha ?? sha}  ${ASSET}.zip\n${'0'.repeat(64)}  ${DECOY_ASSET}.zip\n`,
 	);
 	const archive = release(sha);
 	return { fixtures, zip, sha, archive, archiveSha: sha256File(archive) };
