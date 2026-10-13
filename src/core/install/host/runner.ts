@@ -42,6 +42,8 @@ export interface RunRequest {
 	readonly timeoutMs?: number;
 	/** Called with each stdout line as it arrives (the engine child's event stream). */
 	readonly onStdoutLine?: (line: string) => void;
+	/** Called with each stderr line as it arrives (a BuildKit build's progress). */
+	readonly onStderrLine?: (line: string) => void;
 }
 
 export interface RunResult {
@@ -154,7 +156,7 @@ export function systemRunner(options: {
 			try {
 				const [stdout, stderr, exitCode] = await Promise.all([
 					readCapped(child.stdout, request.onStdoutLine),
-					readCapped(child.stderr),
+					readCapped(child.stderr, request.onStderrLine),
 					child.exited,
 				]);
 				const secrets = options.redactions();
@@ -271,11 +273,10 @@ function logEntry(request: RunRequest): RecordedRequest {
 	};
 }
 
-/** Hand a canned stdout to the request's line listener, line by line. */
-function replayLines(request: RunRequest, stdout: string): void {
-	const listener = request.onStdoutLine;
+/** Hand a canned output to a line listener, line by line. */
+function replayLines(listener: ((line: string) => void) | undefined, text: string): void {
 	if (listener === undefined) return;
-	for (const line of stdout.split('\n')) if (line !== '') listener(line);
+	for (const line of text.split('\n')) if (line !== '') listener(line);
 }
 
 /** The canned answer as a run result (default: exit 0, no output). */
@@ -314,7 +315,8 @@ export function recordingRunner(options: {
 			const response = options.responses().find((item) => applies(item, joined, seen, exists));
 			if (response?.creates !== undefined) options.onCreates?.(response.creates);
 			const result = resultOf(response);
-			replayLines(request, result.stdout);
+			replayLines(request.onStdoutLine, result.stdout);
+			replayLines(request.onStderrLine, result.stderr);
 			return result;
 		},
 	};

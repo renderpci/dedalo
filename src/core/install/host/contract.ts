@@ -34,6 +34,24 @@ import type { HostCreated } from './state_types.ts';
 /** Who a command runs as: this (root) process, the instance user, or postgres (runuser). */
 export type RunAs = 'root' | 'instance' | 'postgres';
 
+/**
+ * The secrets an engine child is handed — the ones the plan USES (campaign 3
+ * C3-48: the Review listed `mysql_password, smtp_pass` with Publication and
+ * Mail off): the root password; the database password unless the production
+ * route creates a peer-login database (no password exists); the MariaDB and
+ * SMTP passwords only with publication / mail on. What reaches the child is
+ * still only the given ones (execute.ts secretsJson).
+ */
+export function engineSecretKeys(answers: Partial<InstallAnswers>): SecretKey[] {
+	const peerDatabase = answers.route === 'production' && (answers.db_mode ?? 'create') === 'create';
+	return [
+		'root_password',
+		...(peerDatabase ? [] : (['db_password'] as const)),
+		...(answers.diffusion === true ? (['mysql_password'] as const) : []),
+		...(answers.mailer === true ? (['smtp_pass'] as const) : []),
+	];
+}
+
 export interface ExecCommand {
 	readonly kind: 'exec';
 	readonly argv: readonly string[];
@@ -57,6 +75,14 @@ export interface ExecCommand {
 	/** Skip the command when this read-only probe exits 0 (already done). */
 	readonly unless?: ExecCommand;
 	readonly timeoutMs?: number;
+	/**
+	 * The command dies with this process (campaign 3 C3-29): wrapped in
+	 * `setpriv --pdeathsig KILL` at BOTH ends of the runuser chain (runuser
+	 * forks, so the outer one kills runuser and the inner one the command it
+	 * started) — a killed installer never leaves the engine child working on
+	 * as an orphan that a later resume would race.
+	 */
+	readonly pdeathsig?: true;
 }
 
 export interface WriteCommand {
@@ -154,4 +180,36 @@ export interface HostStepDefinition {
 	/** --abort only, only over `created`; answers what it did, in words. */
 	undo?(ctx: HostCtx): Promise<string>;
 	readonly neverAdopt?: true;
+	/**
+	 * RESTARTABLE (campaign 3 C3-8/C3-10): the step's run is idempotent and the
+	 * loss of its outcome is not a data change (a service it STARTED stopped
+	 * since — `compose up -d postgres`, the stack, the first start of the unit).
+	 * A resume RE-RUNS such a step recorded done whose verify fails, instead of
+	 * refusing it as drift. Never on a step that writes or removes anything an
+	 * operator could have changed on purpose (a site file, a database).
+	 */
+	readonly restartable?: true;
+	/**
+	 * What the step must stop when the run is interrupted while it runs (the
+	 * engine child's container: a killed `compose run` client leaves its
+	 * container working — C3-29). Best effort; it never throws.
+	 */
+	onInterrupt?(ctx: HostCtx): Promise<void>;
+	/**
+	 * The preflight's refusals, measured and recorded NOWHERE (campaign 3
+	 * C3-23/C3-25): a fresh run asks them before it writes its record — a
+	 * refused host keeps nothing of the attempt — and `--plan` reports them.
+	 */
+	refusals?(ctx: HostCtx): Promise<string[]>;
+	/**
+	 * At the end of EVERY run that completes the install (fresh, resume, a
+	 * resume that adopted an orphaned child): the engine steps show the
+	 * generated salt once, when no earlier run reached a terminal with it (C3-18).
+	 */
+	afterComplete?(ctx: HostCtx): Promise<void>;
+	/**
+	 * Which of `needs` the step's child still needs (campaign 3 C3-51) — asked
+	 * of the child's own record; null when it cannot answer (then all of them).
+	 */
+	secretsStillNeeded?(ctx: HostCtx): Promise<SecretKey[] | null>;
 }

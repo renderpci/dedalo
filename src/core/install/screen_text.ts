@@ -268,6 +268,17 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 			description:
 				'The fullchain PEM (certificate + intermediates), absolute path; used where it is.',
 		},
+		// The stack COPIES the files in (host/stack/tls.ts): its own words (C3-48).
+		'tls_address.tls_cert_path': {
+			label: 'Certificate file',
+			description:
+				"The fullchain PEM (certificate + intermediates), absolute path; copied into the stack's deploy/certs/.",
+		},
+		'tls_address.tls_key_path': {
+			label: 'Key file',
+			description:
+				"The private key PEM, absolute path; checked against the certificate and copied into the stack's deploy/certs/.",
+		},
 		tls_key_path: {
 			label: 'Key file',
 			description: 'The private key PEM, absolute path; checked against the certificate.',
@@ -277,7 +288,11 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 			description:
 				'Where the nightly backup of the database, the media and the configuration goes.',
 		},
-		image_source: { label: 'Image', description: 'Which Dédalo image the stack runs.' },
+		image_source: {
+			label: 'Image source',
+			description:
+				'Official: pulled from the Dédalo registry, its signature verified. Custom: pulled from your own registry. Build: built here from this checkout (10 to 20 minutes).',
+		},
 		image_repository: {
 			label: 'Image repository',
 			description: 'Your own registry repository (custom image only).',
@@ -289,24 +304,50 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 		'route.trial_no_media_protection': {
 			label: 'Trial without media protection',
 			description:
-				'The trial stack has NO media access control: anyone who can reach this server can read every image, document and recording in it, without logging in. Fine for a public collection or an evaluation; never for a restricted fonds, an embargoed deposit or personal data. Type yes to accept.',
+				'The trial stack serves plain HTTP and has NO media access control: anyone who can reach this server can read every image, document and recording in it, without logging in. For an evaluation only: never put real records in it — no records you need to keep, no restricted material, no personal data.',
 		},
 		'thesauri.none_selected': {
 			label: 'No thesaurus selected',
 			description:
-				'The install will carry no thesaurus beyond Languages. Thesauri can be installed later from Maintenance › Install hierarchies. Type yes to continue without one.',
+				'The install will carry no thesaurus beyond Languages. Thesauri can be installed later from Maintenance › Install hierarchies.',
 		},
 		'publication.probe_override': {
 			label: 'Keep the publication settings untested',
 			description:
-				'The MariaDB connection did not pass. Type yes to keep these settings anyway (shown on the review).',
+				'The MariaDB connection did not pass. Accept to keep these settings anyway (shown on the review).',
 		},
 		'mail.probe_override': {
 			label: 'Keep the mail settings untested',
 			description:
-				'The SMTP test did not pass. Type yes to keep these settings anyway (shown on the review).',
+				'The SMTP test did not pass. Accept to keep these settings anyway (shown on the review).',
 		},
 	});
+
+/**
+ * HOW an acknowledgement is given, per front end — ONE source, so the words
+ * always match the control (campaign 3 C3-26: a full-screen checkbox under
+ * "Type yes" ignored a typed yes). Both front ends take a TYPED `yes`; the
+ * full screen also ticks with Space.
+ */
+export const ACKNOWLEDGE_TEXT = Object.freeze({
+	plain: 'Type yes to accept (anything else declines): ',
+	full: 'Space ticks it, or type yes — then Enter. Unticked, Enter declines.',
+	tick: 'I understand',
+});
+
+/**
+ * The command each route's install is run with — what a "same as" line and an
+ * answers file's next step print (campaign 3 C3-53: never `bun run …` on a
+ * route whose host has no Bun on its PATH). The host routes' words are the
+ * bootstrap's, as host_executor.ts hostCommandPrefix types a resume (gated
+ * equal: install_screen_model_tripwire).
+ */
+export const ENTRY_COMMAND: Readonly<Record<string, string>> = Object.freeze({
+	production: 'sudo sh install.sh',
+	docker: 'sh install.sh',
+	trial: 'sh install.sh',
+	developer: 'bun run scripts/install.ts',
+});
 
 /** The route options. */
 export const ROUTE_TEXT = Object.freeze({
@@ -446,6 +487,9 @@ export const NOTICE_TEXT = Object.freeze({
 		'The database of the stack gets a generated password, written to .dedalo.env (0600) — never shown.',
 	hostCommands:
 		'Every host command is listed on the Review, exactly as it will run. Packages, repositories and the firewall are never removed or changed behind your back: packages stay installed on --abort, the firewall is only checked.',
+	/** The docker and trial routes' own words (C3-48 — never the production boilerplate). */
+	stackCommands:
+		"Every host command is listed on the Review, exactly as it will run. Docker itself, your user's groups and the firewall are never installed or changed — they are only checked; the images stay on --abort. Docker-published ports bypass the host firewall (see Docker install).",
 	databaseProbe: (msg: string) => `Database check: ${msg}`,
 	noMail: 'Without mail, a forgotten password needs the server console.',
 	probeOk: (msg: string) => `Check passed: ${msg}`,
@@ -457,6 +501,8 @@ export const NOTICE_TEXT = Object.freeze({
 			: `${failed} check${failed === 1 ? '' : 's'} failed — fix ${failed === 1 ? 'it' : 'them'} and re-check.`,
 	systemIncomplete: (msg: string) => `The system check did not complete: ${msg}`,
 	envSecret: 'supplied by the environment — kept',
+	trialHttpPort:
+		'The port browsers use: the trial serves plain HTTP only (no HTTPS port, no certificate).',
 	trialProbesSkipped:
 		'The stack is not running yet, so the connection is tested by the install inside the container.',
 	mediaProbe: (msg: string) => `Media directory: ${msg}`,
@@ -516,6 +562,37 @@ const DONE_TEXT_ENGINE_SUPERVISOR =
 	'Start the server with `bun run dev` (development) or `bun run start:supervised` — docs/install/dev_quickstart.md; plain `bun run start` is unsupervised and cannot take code updates. A host set up by hand starts it under systemd: docs/install/manual_install.md#manual-host_units.';
 const DONE_TEXT_ENGINE_ABORTED =
 	'install aborted — what the install created is removed; the database itself is kept.';
+/** An --engine-only run is the by-hand host procedure's: its server is systemd's (C3-54). */
+const DONE_TEXT_ENGINE_ONLY =
+	"Next: the instance's systemd units start it — docs/install/manual_install.md#manual-host_units.";
+
+/** `1 step undone` / `3 steps undone`. */
+function stepsUndone(count: number): string {
+	return `${count} step${count === 1 ? '' : 's'} undone (each line above says what it removed)`;
+}
+
+/** What a LIVE instance keeps, and where removing it by hand is described — per route. */
+function liveKept(ending: DoneEnding): string {
+	return ending.route === 'production'
+		? 'its user, database and code are kept — removing a served instance is a manual job: docs/install/multi_instance.md#removing-an-instance'
+		: 'its containers and volumes (the database) are kept — to remove it, see docs/install/quickstart.md#removing-the-trial';
+}
+
+/** The aborted sentence of a LIVE instance (it has served: an abort keeps it). */
+function abortedLive(ending: DoneEnding): string {
+	const count = ending.undone?.length ?? 0;
+	if (count === 0) {
+		return `nothing was undone — the instance has served, so --abort keeps it whole: ${liveKept(ending)}.`;
+	}
+	return `install partly undone — ${stepsUndone(count)}; the instance has served, so ${liveKept(ending)}. --resume puts the undone steps back.`;
+}
+
+/** What a host route's full abort leaves on the machine on purpose. */
+const HOST_ABORT_KEPT: Readonly<Record<string, string>> = Object.freeze({
+	production: 'the installed packages and any backups are kept',
+	docker: 'the images are kept (docker image ls)',
+	trial: 'the images are kept (docker image ls)',
+});
 
 export const DONE_TEXT = Object.freeze({
 	complete: (verified: boolean) => `install complete${verified ? ' — root login verified' : ''}`,
@@ -525,8 +602,11 @@ export const DONE_TEXT = Object.freeze({
 	browser:
 		'Then open the web interface and log in as root: Maintenance installs further thesauri and toponymies, restores a backup and offers updates.',
 	written: (path: string) => `answers written to ${path} (no secret is in it)`,
-	writtenNext:
-		'Run the install from them with: bun run scripts/install.ts --answers <file> (the passwords via DEDALO_INSTALL_* or --secrets-stdin).',
+	/** --write-answers on an interactive run that never reached a valid Review (C3-36). */
+	notWritten: (path: string) =>
+		`answers not written to ${path}: the session ended before the Review showed a valid plan (--write-answers writes at a valid Review)`,
+	writtenNext: (route: string) =>
+		`Run the install from them with: ${ENTRY_COMMAND[route] ?? ENTRY_COMMAND.developer} --answers <file> (the passwords via DEDALO_INSTALL_* or --secrets-stdin).`,
 	saltStored: "A generated secret is also stored in the install's private .env (0600).",
 	/** What comes next after a complete install — per route: a host route already started it. */
 	next: (ending: DoneEnding): string => {
@@ -538,20 +618,22 @@ export const DONE_TEXT = Object.freeze({
 			const compose = `docker compose -f ${ending.route === 'trial' ? 'docker-compose.simple.yml' : 'docker-compose.yml'} -f compose.override.yaml --env-file .dedalo.env`;
 			return `The stack is up under Docker and restarts with it — from this checkout: \`${compose} ps\` / \`${compose} logs dedalo\` (all three files, or compose resolves its built-in defaults).`;
 		}
-		return DONE_TEXT_ENGINE_SUPERVISOR;
+		return ending.route === 'engine_only' ? DONE_TEXT_ENGINE_ONLY : DONE_TEXT_ENGINE_SUPERVISOR;
 	},
-	/** The aborted sentence — per route, and whether a live instance was kept. */
+	/**
+	 * The aborted sentence — per route, whether a live instance was kept, and
+	 * built from what the abort ACTUALLY undid (campaign 3 C3-50: never "removed:
+	 * its site, units, user…" after `undoing: nothing`).
+	 */
 	abortedFor: (ending: DoneEnding): string => {
-		if (ending.keptLive) {
-			return 'install partly undone — the host steps after the engine are undone; the instance itself (its user, database and code) is kept, and --resume puts the undone steps back.';
+		if (ending.keptLive) return abortedLive(ending);
+		const kept = HOST_ABORT_KEPT[ending.route];
+		if (kept === undefined) return DONE_TEXT_ENGINE_ABORTED;
+		const count = ending.undone?.length ?? 0;
+		if (count === 0) {
+			return 'install aborted — nothing had been created yet, so nothing was undone; the install record is removed.';
 		}
-		if (ending.route === 'production') {
-			return 'install aborted — what this install created is removed: its site, units, user, directories and, as confirmed, its database and role; the installed packages and any backups are kept.';
-		}
-		if (ending.route === 'docker' || ending.route === 'trial') {
-			return 'install aborted — the stack is down; the files, certificates and volumes this install created are removed (the database volume as confirmed); the image is kept.';
-		}
-		return DONE_TEXT_ENGINE_ABORTED;
+		return `install aborted — ${stepsUndone(count)}; ${kept}.`;
 	},
 });
 
@@ -560,4 +642,5 @@ interface DoneEnding {
 	readonly route: string;
 	readonly instance: string;
 	readonly keptLive: boolean;
+	readonly undone?: readonly string[];
 }

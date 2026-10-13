@@ -329,8 +329,8 @@ services:
       - media:/srv/dedalo/media:ro
       - backups:/backups
     # One run a day, the first one an hour after start. `sleep & wait` (not a bare
-    # sleep) is the same shape as the nginx/certbot loops above: it lets SIGTERM
-    # stop the container promptly instead of waiting out the sleep.
+    # sleep) is the certbot renewal loop's shape: with the TERM trap below it
+    # lets SIGTERM stop the container promptly instead of waiting out the sleep.
     entrypoint:
       - /bin/sh
       - -c
@@ -339,6 +339,10 @@ services:
         # loop. The run's verdict is /backups/BACKUP_FAILED (written by the last
         # step, removed when every store succeeded) and the healthcheck reads it.
         set -u
+        # PID 1 IGNORES A SIGNAL IT HAS NO HANDLER FOR: without this trap `compose
+        # stop` waits out its timeout and kills the container (exit 137). The trap
+        # ends the loop at once (the `sleep & wait` below returns on the signal).
+        trap 'exit 0' TERM INT
         D=/opt/dedalo/master_dedalo/deploy
         export DEDALO_BACKUP_STATUS_DIR=/tmp/dedalo-backup-status
         # Which stores this loop promises. Without it the aggregate can only see

@@ -484,6 +484,14 @@ HERMETIC_TRIPWIRES=(
 	test/unit/install_host_selinux_native.test.ts
 	test/unit/install_host_identity_native.test.ts
 	test/unit/install_stack_steps_native.test.ts
+	# --- 2026-10-13 (install campaign 3, the docker/trial stack's own files): pure renders,
+	#     the stack files parsed, openssl-minted chains; its Docker checks skip, named, where
+	#     no daemon answers (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
+	test/unit/install_stack_nginx_native.test.ts
+	# --- 2026-10-13 (install campaign 3, the developer route's tooling): pure option/argv
+	#     builders, a fake password-demanding server, the dev listener; its suite-DB leg
+	#     skips, named, without Postgres (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
+	test/unit/test_tooling_socket_native.test.ts
 	test/unit/install_bootstrap_sh.test.ts
 )
 

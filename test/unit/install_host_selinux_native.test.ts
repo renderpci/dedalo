@@ -6,9 +6,12 @@
  * Run through the real executor on a scratch EL 10 host (recording runner,
  * SELinux enforcing — test/helpers/install_host_scratch.ts):
  *
- *  (a) THE FILE CONTEXTS: the socket directory by its `/var/run` spelling
- *      (the form `semanage fcontext` keeps — campaign 2 L48) as
- *      httpd_var_run_t, the instance's /srv tree (media AND the published
+ *  (a) THE FILE CONTEXTS: the socket directory in the spelling the HOST'S
+ *      policy accepts — its file_contexts.subs_dist/.subs equivalences map a
+ *      path onto their TARGET side (`/var/run /run` on EL 10: /run/dedalo-<i>;
+ *      the other side is refused by `semanage fcontext -a` — campaign 3 C3-3;
+ *      an EL 9-style `/run /var/run` gives the /var/run spelling), verify
+ *      accepting either spelling — as httpd_var_run_t, the instance's /srv tree (media AND the published
  *      client — critique B13: nothing the web server reads lives under /home)
  *      and the ACME webroot (Let's Encrypt only) as httpd_sys_content_t; each
  *      relabelled with restorecon; the install folder's own subtrees
@@ -33,7 +36,9 @@
  *      kernel here.
  *  (c) A FOREIGN MODULE of the same name (loaded, but not the bytes this
  *      installer writes) is REFUSED, never replaced.
- *  (d) REFCOUNTED UNDO: --abort removes this instance's contexts; the module
+ *  (d) REFCOUNTED UNDO: --abort removes this instance's contexts — only the
+ *      claimed ones the host DEFINES (a claim is saved BEFORE `semanage -a`
+ *      runs, so a refused add leaves a claim --abort must not delete); the module
  *      only when this install loaded it AND no other instance on the host
  *      still uses it (the host registry).
  *  (e) Off the RHEL family (and with SELinux disabled) the step runs nothing.
@@ -45,12 +50,18 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { parseSubs } from '../../src/core/install/host/facts.ts';
 import { hostFs } from '../../src/core/install/host/fs.ts';
+import {
+	canonicalSpelling,
+	fcontextRules,
+} from '../../src/core/install/host/production/selinux.ts';
 import type { RecordedResponse } from '../../src/core/install/host/runner.ts';
 import { serverDropin } from '../../src/core/install/host/systemd/render.ts';
 import {
 	asService,
 	BUN_PIN,
+	EL10_SUBS_DIST,
 	freshRequest,
 	HOST_VARIANTS,
 	type HostVariant,
@@ -146,7 +157,7 @@ describe('SELinux contexts and the one policy rule (a, b)', () => {
 			expect((await runHost(host, freshRequest(planFile))).outcome.result).toBe('complete');
 			const acme = variant.tls === 'letsencrypt';
 			expect(selinuxLog(host)).toEqual([
-				`/usr/sbin/semanage fcontext -a -t httpd_var_run_t /var/run/dedalo-${INSTANCE}(/.*)?`,
+				`/usr/sbin/semanage fcontext -a -t httpd_var_run_t /run/dedalo-${INSTANCE}(/.*)?`,
 				`/usr/sbin/semanage fcontext -a -t httpd_sys_content_t /srv/dedalo/${INSTANCE}(/.*)?`,
 				...(acme
 					? [
@@ -297,6 +308,89 @@ function moduleProblems(cil: string): string[] {
 	}
 	return problems;
 }
+
+describe("the socket rule in the spelling the host's policy accepts (a — campaign 3 C3-3)", () => {
+	const EL9_STYLE = '/run /var/run\n';
+	test('EL 10 (`/var/run /run`): /run/…; an EL 9-style policy (`/run /var/run`): /var/run/…; no equivalence: as written', () => {
+		expect(canonicalSpelling('/run/dedalo-x', parseSubs(EL10_SUBS_DIST))).toBe('/run/dedalo-x');
+		expect(canonicalSpelling('/var/run/dedalo-x', parseSubs(EL10_SUBS_DIST))).toBe('/run/dedalo-x');
+		expect(canonicalSpelling('/run/dedalo-x', parseSubs(EL9_STYLE))).toBe('/var/run/dedalo-x');
+		expect(canonicalSpelling('/run/dedalo-x', [])).toBe('/run/dedalo-x');
+		// A path that only SHARES a prefix string is not under the alias.
+		expect(canonicalSpelling('/var/runner/x', parseSubs(EL10_SUBS_DIST))).toBe('/var/runner/x');
+	});
+
+	test('the plan: the socket spec follows the FACTS — /run/ on EL 10, the target side elsewhere', () => {
+		const base = productionPlanCtx(EL('files'));
+		const spec = (subs: string, socketDir = base.paths.socketDir) =>
+			fcontextRules({
+				...base,
+				facts: { ...base.facts, selinux: 'enforcing', selinuxSubs: parseSubs(subs) },
+				paths: { ...base.paths, socketDir },
+			})[0]?.spec;
+		expect(spec(EL10_SUBS_DIST)).toBe(`/run/dedalo-${INSTANCE}(/.*)?`);
+		expect(spec(EL10_SUBS_DIST, `/var/run/dedalo-${INSTANCE}`)).toBe(
+			`/run/dedalo-${INSTANCE}(/.*)?`,
+		);
+		expect(spec(EL9_STYLE)).toBe(`/var/run/dedalo-${INSTANCE}(/.*)?`);
+	});
+
+	test('a rule an operator wrote in the other spelling: verify accepts it, the run adds no second one', async () => {
+		const variant = EL('files');
+		const other = `/var/run/dedalo-${INSTANCE}(/.*)?  all files  system_u:object_r:httpd_var_run_t:s0`;
+		const host = scratchHost(variant, {
+			responses: [
+				{
+					match: '/usr/sbin/semanage fcontext -l -C',
+					after: '/usr/sbin/semanage fcontext -a',
+					stdout: [
+						other,
+						...[`/srv/dedalo/${INSTANCE}(/.*)?`, HOME_DIR].map((x) => `${x}  all files  x`),
+						...['dedalo', 'private', 'backups'].map(
+							(name) => `${HOME_DIR}/${name}(/.*)?  all files  x`,
+						),
+					].join('\n'),
+				},
+				{ match: '/usr/sbin/semanage fcontext -l -C', stdout: other },
+			],
+		});
+		const { planFile } = productionPlan(variant);
+		const { outcome } = await runHost(host, freshRequest(planFile));
+		expect(outcome.result).toBe('complete');
+		expect(selinuxLog(host).filter((line) => line.includes('httpd_var_run_t'))).toEqual([]);
+	});
+
+	test('a refused add (the claim saved before it): --abort deletes no rule the host never defined', async () => {
+		const variant = EL('letsencrypt');
+		const host = scratchHost(variant, {
+			responses: [
+				{
+					match: '/usr/sbin/semanage fcontext -a -t httpd_var_run_t',
+					exit: 1,
+					stderr: "ValueError: File spec conflicts with equivalency rule '/var/run /run'",
+				},
+				{ match: '/usr/sbin/semanage fcontext -l -C', stdout: '' },
+			],
+		});
+		const { plan, planFile } = productionPlan(variant);
+		const first = await runHost(host, freshRequest(planFile));
+		expect(first.outcome.failedStep).toBe('host_selinux');
+		// The claim WAS saved (kill-safety) — the abort must still delete nothing.
+		const state = JSON.parse(
+			readFileSync(
+				join(host.root, `/var/lib/dedalo-install/${INSTANCE}/install.state.json`),
+				'utf8',
+			),
+		) as { created: { host: { selinux_fcontexts: string[] } } };
+		expect(state.created.host.selinux_fcontexts.length).toBe(7);
+		const before = loggedCommands(host.root).length;
+		// The instance never started (host_first_boot not reached): the abort is a FULL one
+		// (C3-11), so it asks the database name back.
+		const db = String(plan.answers.db_database);
+		expect((await runHost(host, laterRequest('abort', plan, db))).outcome.result).toBe('aborted');
+		expect(selinuxLog(host, before).filter((line) => line.includes('fcontext -d'))).toEqual([]);
+	});
+});
 
 describe('the module reaches the engine and only the engine (b)', () => {
 	test("the source tree the step reads holds the module (the scratch host's planted files)", () => {

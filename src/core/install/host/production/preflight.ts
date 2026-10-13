@@ -18,35 +18,51 @@
  *  - PostgreSQL: another major's cluster on the database port (critique B5 —
  *    a second cluster would be created beside it on another port, and the
  *    engine and pg_dump would disagree about which one holds the database);
- *  - the institution's certificate files (address, expiry, key).
+ *  - the institution's certificate files (address, expiry, key) — and that
+ *    this host trusts their chain (host_public_probe verifies it with this
+ *    host's curl: campaign 3 C3-13).
  *
  * Then FREEZES the facts and the digest of every step's commands in the state
  * file (state_types.ts): what the rest of the run, and any resume, executes.
- * The firewall is TOLD (never changed). It creates nothing, so it has no undo;
- * done once, a resume skips it (the frozen facts stand).
+ * The firewall is TOLD (never changed): a verdict for the instance's ports,
+ * with the exact command when they are closed (firewall.ts — campaign 3
+ * C3-6); so are the Apache modules to enable (C3-34). It creates nothing, so
+ * it has no undo; done once, a resume skips it (the frozen facts stand).
  */
 
 import type { HostCtx, HostPlanCtx, HostRunResult, HostStepDefinition } from '../contract.ts';
 import { gatherHostFacts, type HostFacts } from '../facts.ts';
+import { type FirewallVerdict, firewallVerdict } from '../firewall.ts';
 import { bunPinOfPaths, pathsFor } from '../layout.ts';
-import { NGINX_MIN_VERSION, osRowById, supportedOsList, versionAtLeast } from '../os_support.ts';
+import {
+	NGINX_MIN_VERSION,
+	osRowById,
+	unsupportedOsSentence,
+	versionAtLeast,
+} from '../os_support.ts';
 import { hostRefuse } from '../refuse.ts';
-import { checkCertificateFiles } from '../tls_files.ts';
+import {
+	apacheModuleCommand,
+	missingApacheModules,
+	REQUIRED_APACHE_MODULES,
+} from '../web/apache.ts';
 import { httpNameClash, instanceHttpNames, serverNameClash } from '../web/clash.ts';
-import { ran, sitePath } from './common.ts';
+import { ran, sitePath, webFlavor } from './common.ts';
 import { identityOf, instanceDirs, ownedDirs } from './identity.ts';
+import { institutionCertVerdict } from './tls.ts';
 
 /** Refuse with every problem, joined (the operator fixes them all in one pass). */
 function refuseAll(problems: readonly string[]): void {
 	if (problems.length > 0) hostRefuse('install.state_conflict', problems.join('; '));
 }
 
+/** The refusal of a production run without root (also what --plan, run as a normal user, leaves out). */
+export const ROOT_REQUIRED_SENTENCE = 'the production route must run as root: sudo sh install.sh …';
+
 /** The system itself: supported, systemd, root. */
 function systemProblems(facts: HostFacts): string[] {
 	if (facts.os === null) {
-		return [
-			`${facts.osName} is not supported — the production route supports ${supportedOsList()} (newest releases only)`,
-		];
+		return [unsupportedOsSentence(facts.osName)];
 	}
 	return [
 		...(facts.systemd
@@ -54,7 +70,7 @@ function systemProblems(facts: HostFacts): string[] {
 			: [
 					'systemd is not running (/run/systemd/system is absent) — the instance runs as systemd units',
 				]),
-		...(facts.euid === 0 ? [] : ['the production route must run as root: sudo sh install.sh …']),
+		...(facts.euid === 0 ? [] : [ROOT_REQUIRED_SENTENCE]),
 	];
 }
 
@@ -177,16 +193,49 @@ function dirProblems(ctx: HostCtx): string[] {
 function tlsProblems(ctx: HostCtx): { problems: string[]; warnings: string[] } {
 	const { answers } = ctx;
 	if (answers.tls_mode !== 'files') return { problems: [], warnings: [] };
-	const verdict = checkCertificateFiles(
-		ctx.fs.readText(answers.tls_cert_path),
-		ctx.fs.readText(answers.tls_key_path),
-		answers.server_name,
-		ctx.now(),
-	);
+	const verdict = institutionCertVerdict(ctx, ctx.fs, ctx.now());
 	return {
 		problems: verdict.problems.map((problem) => `${answers.tls_cert_path}: ${problem}`),
 		warnings: verdict.warnings,
 	};
+}
+
+/** The firewall's verdict for the instance's two ports (campaign 3 C3-6 — told, never changed). */
+export function webFirewall(ctx: HostPlanCtx): FirewallVerdict {
+	return firewallVerdict(ctx.facts.firewall, [ctx.answers.http_port, ctx.answers.https_port]);
+}
+
+/** The modules the site needs that this Apache will lack (installed: measured; to be installed: the layout's). */
+function pendingApacheModules(ctx: HostPlanCtx): string[] {
+	const { web } = ctx.facts;
+	if (web.kind !== 'apache' || web.probeFailures.length > 0) return [];
+	if (web.installed) return missingApacheModules(web.apacheModules);
+	return webFlavor(ctx).enableWithA2ensite ? [...REQUIRED_APACHE_MODULES] : [];
+}
+
+/**
+ * Apache's modules, said BEFORE the install (campaign 3 C3-34 — they were
+ * discovered ten minutes in, at the web step): an installed Apache lacking
+ * some, or the Apache this run INSTALLS on the Debian layout (its package
+ * enables none of them; the RHEL family's httpd, mod_ssl and mod_http2 load
+ * them all). Enabling stays the administrator's (owner): told, never done.
+ */
+export function apacheModulesTodo(ctx: HostPlanCtx): string[] {
+	const { web } = ctx.facts;
+	const missing = pendingApacheModules(ctx);
+	if (missing.length === 0) return [];
+	const command = apacheModuleCommand(missing, webFlavor(ctx).enableWithA2ensite);
+	return [
+		web.installed
+			? `Apache lacks the modules ${missing.join(', ')} — enable them yourself before the install (the installer never does; the run stops at the web step until they are): ${command}`
+			: `this run installs Apache, whose package enables none of ${missing.join(', ')}: the run stops at the web step until you enable them — ${command}, then --resume (or install apache2 and enable them before you start)`,
+	];
+}
+
+/** What the operator must do THEMSELVES (the Review's to-do; told, never done). */
+export function operatorTodo(ctx: HostPlanCtx): string[] {
+	const firewall = webFirewall(ctx);
+	return [...(firewall.state === 'closed' ? [firewall.line] : []), ...apacheModulesTodo(ctx)];
 }
 
 /** Every refusal of a supported system's facts. */
@@ -208,13 +257,20 @@ export async function measure(ctx: HostCtx): Promise<HostFacts> {
 	return gatherHostFacts(ctx.runner, ctx.fs, ctx.answers, ctx.paths, osRowById, ctx.source);
 }
 
-/** The preflight's own run: measure, refuse, freeze. */
-async function runPreflight(
-	ctx: HostCtx,
-	digest: (facts: HostFacts) => Record<string, string>,
-): Promise<HostRunResult> {
+/** What the measured host says: its facts, the plan context over them (null: the system itself is refused), the refusals. */
+interface PreflightVerdict {
+	facts: HostFacts;
+	planCtx: HostPlanCtx | null;
+	/** Every refusal, each sentence once (two checks may name one path — campaign 3 C3-23). */
+	problems: string[];
+	warnings: string[];
+}
+
+/** Measure the host and judge it — read-only: nothing is written, nothing recorded. */
+async function evaluate(ctx: HostCtx): Promise<PreflightVerdict> {
 	const facts = await measure(ctx);
-	refuseAll(systemProblems(facts));
+	const system = systemProblems(facts);
+	if (system.length > 0) return { facts, planCtx: null, problems: system, warnings: [] };
 	const planCtx: HostPlanCtx = {
 		...ctx,
 		facts,
@@ -223,14 +279,41 @@ async function runPreflight(
 		paths: pathsFor(ctx.answers, bunPinOfPaths(ctx.paths), facts),
 	};
 	const tls = tlsProblems({ ...ctx, ...planCtx });
-	refuseAll([...hostProblems(planCtx), ...dirProblems({ ...ctx, ...planCtx }), ...tls.problems]);
+	const problems = [
+		...hostProblems(planCtx),
+		...dirProblems({ ...ctx, ...planCtx }),
+		...tls.problems,
+	];
+	return { facts, planCtx, problems: [...new Set(problems)], warnings: tls.warnings };
+}
+
+/**
+ * The preflight's refusals, measured now and recorded NOWHERE (campaign 3
+ * C3-23/C3-25): what a fresh run checks BEFORE it writes its record — a
+ * refused host is left exactly as it was, with no resume or abort to offer —
+ * and what `--plan` reports.
+ */
+export async function preflightRefusals(ctx: HostCtx): Promise<string[]> {
+	return (await evaluate(ctx)).problems;
+}
+
+/** The preflight's own run: measure, refuse, freeze. */
+async function runPreflight(
+	ctx: HostCtx,
+	digest: (facts: HostFacts) => Record<string, string>,
+): Promise<HostRunResult> {
+	const verdict = await evaluate(ctx);
+	refuseAll(verdict.problems);
+	const { facts } = verdict;
+	const planCtx = verdict.planCtx as HostPlanCtx;
 	ctx.state.preflight.host = { facts, commands_digest: digest(facts) };
 	return ran(
 		`${facts.osName}, ${facts.web.kind}${facts.web.version === null ? ' (to be installed)' : ` ${facts.web.version}`}`,
 		{
-			warnings: tls.warnings,
+			warnings: verdict.warnings,
 			told: [
-				...facts.firewall.map((line) => `firewall (checked, not changed): ${line}`),
+				`firewall (checked, not changed): ${webFirewall(planCtx).line}`,
+				...apacheModulesTodo(planCtx),
 				...identityOf(planCtx).told,
 			],
 		},
@@ -253,5 +336,6 @@ export function preflightStep(
 			'system check: supported OS, root, web server, names free, PostgreSQL, certificate',
 		commands: () => [],
 		run: (ctx) => runPreflight(ctx, digest),
+		refusals: preflightRefusals,
 	};
 }

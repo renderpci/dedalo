@@ -30,7 +30,15 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -992,5 +1000,158 @@ describe('executor — the per-item rows and the one-time display (phase 2)', ()
 			expect(lines.filter((line) => line.includes(SALT))).toHaveLength(1);
 			expect(readState(dir).created.salt_shown).toBe(true);
 		});
+	});
+});
+
+// ── campaign 3 (2026-10-13): the unserved seal, the media tree, the child's hints ──
+
+/** An engine-only plan (what a host route's child runs) and a host whose database fingerprint `fp` answers. */
+function engineOnlyRun(fp: { value: string | null }) {
+	const { plan, planFile } = fakePlan({}, { ...FAKE_BASE_ANSWERS, engine_only: true });
+	const { host } = fakeHost();
+	return { plan, planFile, host: { ...host, databaseFingerprint: async () => fp.value } };
+}
+
+describe('executor — a SEALED install is undone only as an UNSERVED host child (C3-11)', () => {
+	const abortRequest = (unservedAttested: boolean): ExecutorRequest => ({
+		mode: 'abort',
+		secrets: {},
+		confirmDatabase: String(FAKE_BASE_ANSWERS.db_database),
+		unservedAttested,
+	});
+
+	test('the seal records the database fingerprint (after its own root login); attested + unchanged → undone', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const fp = { value: 'a'.repeat(32) };
+			const landed = new Set<InstallStepId>();
+			const { plan, planFile, host } = engineOnlyRun(fp);
+			const fresh = await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+				table: landingTable([], landed),
+				host,
+			});
+			expect(fresh.result).toBe('complete');
+			expect(readState(dir).created.sealed_fingerprint).toBe('a'.repeat(32));
+			const calls: string[] = [];
+			const { io, lines } = recordingIo();
+			const outcome = await executeInstall(abortRequest(true), io, {
+				table: landingTable(calls, landed),
+				host,
+			});
+			expect(outcome.message).toBeNull();
+			expect(outcome.result).toBe('aborted');
+			expect(calls).toContain('undo:install_db_from_default_file');
+			expect(lines.join('\n')).toContain('sealed but never served');
+			expect(existsSync(runDirOf(dir))).toBe(false);
+		});
+	});
+
+	for (const [name, attested, change, engineOnly] of [
+		['no host attestation', false, false, true],
+		['attested, but the database changed since the seal (it served)', true, true, true],
+		['attested, but not a host child (no engine_only)', true, false, false],
+	] as const) {
+		test(`refused, nothing undone: ${name}`, async () => {
+			await withPrivateDir(scratchPrivateDir(), async (dir) => {
+				const fp = { value: 'b'.repeat(32) as string | null };
+				const landed = new Set<InstallStepId>();
+				const run = engineOnlyRun(fp);
+				const { plan, planFile } = engineOnly ? run : fakePlan();
+				await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+					table: landingTable([], landed),
+					host: run.host,
+				});
+				if (change) fp.value = 'c'.repeat(32);
+				const calls: string[] = [];
+				const outcome = await executeInstall(abortRequest(attested), recordingIo().io, {
+					table: landingTable(calls, landed),
+					host: run.host,
+				});
+				expect(outcome.exitCode).toBe(1);
+				expect(outcome.message).toContain('SEALED');
+				expect(calls).toEqual([]);
+				expect(readState(dir).outcome).toBe('complete');
+			});
+		});
+	}
+
+	test('a later run never launders a changed database into a new seal', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const fp = { value: 'd'.repeat(32) as string | null };
+			const landed = new Set<InstallStepId>();
+			const { plan, planFile, host } = engineOnlyRun(fp);
+			await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+				table: landingTable([], landed),
+				host,
+			});
+			fp.value = 'e'.repeat(32);
+			const resumed = await executeInstall(
+				{ mode: 'resume', secrets: { root_password: ROOT_PW } },
+				recordingIo().io,
+				{ table: landingTable([], landed), host },
+			);
+			expect(resumed.result).toBe('already_complete');
+			expect(readState(dir).created.sealed_fingerprint).toBe('d'.repeat(32));
+		});
+	});
+});
+
+describe('executor — check_directories records the media tree it made; --abort prunes it (C3-9)', () => {
+	test('the created media tree is recorded (absolute); the real undo removes its EMPTY directories, never one holding a file', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const media = mkdtempSync(join(privateRoot, 'media_'));
+			const created = ['av', 'av/subtitles', 'image', 'image/original'];
+			const { plan, planFile } = fakePlan();
+			const table = fakeTable([], {
+				check_directories: {
+					run: async () => {
+						for (const path of created) mkdirSync(join(media, path), { recursive: true });
+						return { ok: true, msg: 'dirs ok', mediaTree: { root: media, created } };
+					},
+				},
+			});
+			await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+				table,
+				host: fakeHost().host,
+			});
+			const state = readState(dir);
+			expect(state.created.media_tree).toEqual(created.map((path) => join(media, path)));
+			// A file someone put in one of them: that directory (and its parent) stays.
+			writeFileSync(join(media, 'image/original/kept.jpg'), 'x');
+			const said = await (
+				INSTALL_STEPS.check_directories.undo as NonNullable<
+					(typeof INSTALL_STEPS)['check_directories']['undo']
+				>
+			)({ plan: planFile, state, secrets: {} });
+			expect(said).toContain('media tree: 2 empty director(ies) removed');
+			expect(existsSync(join(media, 'av'))).toBe(false);
+			expect(existsSync(join(media, 'image/original/kept.jpg'))).toBe(true);
+			expect(readdirSync(media)).toEqual(['image']);
+		});
+	});
+});
+
+describe("executor — a host route's engine child prints no hint of its own (C3-54)", () => {
+	test('delegated (--events-jsonl): a failure carries no `bun run scripts/install.ts` hint; a plain run does', async () => {
+		for (const delegated of [true, false]) {
+			await withPrivateDir(scratchPrivateDir(), async () => {
+				const { plan, planFile } = fakePlan();
+				const table = fakeTable([], {
+					install_ontologies: {
+						run: async () => {
+							throw new Error('the ontology import failed');
+						},
+					},
+				});
+				const { io } = recordingIo();
+				const outcome = await executeInstall(
+					freshRequest(planFile, plan),
+					delegated ? { ...io, delegated: true } : io,
+					{ table, host: fakeHost().host },
+				);
+				expect(outcome.result).toBe('failed');
+				if (delegated) expect(outcome.hint).toEqual([]);
+				else expect(outcome.hint.join('\n')).toContain('scripts/install.ts --resume');
+			});
+		}
 	});
 });

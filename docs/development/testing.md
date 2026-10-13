@@ -48,6 +48,20 @@ Discovery and timeouts come from `bunfig.toml`:
 The static gates are separate: `bunx tsc --noEmit` (strict, zero-new-errors) and
 `bun run lint` (Biome, `biome.jsonc`).
 
+### What a fresh machine needs
+
+The suite is green only where its prerequisites are. On a machine set up by the [developer quickstart](../install/dev_quickstart.md), check three more things:
+
+- **pgvector** on the PostgreSQL server. `bun run test:db:setup` builds a vector database beside the suite database, and refuses before creating anything when the server has no `vector` extension. The package is `postgresql-18-pgvector` on Debian and Ubuntu, `pgvector_18` from PGDG on RHEL, Rocky and Alma, and `pgvector` in Homebrew.
+- **MariaDB binaries** (`mariadbd`, `mariadb-install-db`, `mariadb`). The diffusion tests start the suite's own MariaDB server; without the binaries they fail with `SuiteMariadbUnavailable`. A missing prerequisite is a failure, never a skip.
+- **An ImageMagick that writes AVIF** (`magick -list format | grep -i avif` shows `rw`). On Debian and Ubuntu, the encoder is `libheif-plugin-aomenc`.
+
+The connection comes from `../private/.env` by the engine's own rule: `DB_SOCKET`, when set, wins over `DB_HOST`. No pg client the suite starts asks for a password: each runs with `-w` and a connection timeout, so a missing password fails at once with `no password supplied` instead of waiting at a prompt.
+
+The languages do not come from your `.env`. The suite declares its own set, the same one the CI tier uses (`test/helpers/suite_posture.ts`), so an install that declares two languages runs the same language gates as any other machine. A language key you export in the shell still wins.
+
+Some gates are red on every suite database by construction: the corpus-bound parity gates (Tier 2 below). Their expected failures are recorded per test in `engineering/parity_baseline.json`.
+
 ### The suite database, and why it cannot be yours
 
 The suite runs on its own database, built from files vendored in the repository:

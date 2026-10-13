@@ -8,7 +8,8 @@
  *
  *  - recorded `done`: a step with a verify must still verify (else DRIFT — the
  *    install was changed outside the installer — refused); one without a verify
- *    is skipped;
+ *    is skipped. A RESTARTABLE step (a service it started and that stopped
+ *    since: campaign 3 C3-8/C3-10) whose verify fails is run again instead;
  *  - recorded `running`/`failed`: a verify that passes means the work landed
  *    before the checkpoint — ADOPTED (marked done, skipped), unless the step is
  *    `neverAdopt`; otherwise it runs again;
@@ -51,6 +52,21 @@ export interface LoopStep {
 	/** The step whose verified outcome proves this one (staged files consumed by an import). */
 	readonly consumedBy?: string;
 	readonly neverAdopt?: true;
+	/** Recorded done but its outcome gone: run again, never refused as drift (contract.ts). */
+	readonly restartable?: true;
+}
+
+/**
+ * THE ONE "START AGAIN" ADVICE (campaign 3 C3-8/C3-10): --abort is never
+ * offered without its data consequence — on an install that has not served it
+ * deletes the database this install created; on one that has, it keeps it.
+ */
+export const ABORT_AND_START_AGAIN =
+	'or undo the install with --abort and start again — that DELETES the database this install created (an instance that has already served keeps its database: --abort never removes a live one)';
+
+/** The refusal of a done step whose outcome is gone (not restartable). */
+export function driftSentence(step: string, detail: string): string {
+	return `step ${step} was recorded done but its outcome is missing (${detail}) — something changed it outside the installer: put that back, then --resume; ${ABORT_AND_START_AGAIN}`;
 }
 
 /** What a step's work answered. */
@@ -262,18 +278,25 @@ async function runStep(ctx: LoopContext, step: StepId): Promise<void> {
 	maybeFault(ctx, step, 'after');
 }
 
-/** A step recorded done: it must still verify (when it has a verify), else drift. */
+/**
+ * A step recorded done whose outcome is gone: a RESTARTABLE one runs again
+ * (answers true), any other is refused as drift.
+ */
+function restartOrRefuse(ctx: LoopContext, step: StepId, verdict: VerifyResult): true {
+	if (ctx.stepOf(step).restartable !== true) {
+		hostRefuse('install.state_conflict', driftSentence(step, verdict.detail));
+	}
+	say(ctx, `  done in an earlier run, but ${verdict.detail} — started again`);
+	return true;
+}
+
+/** A step recorded done: it must still verify (when it has a verify), else drift — or a restart. */
 async function confirmDone(ctx: LoopContext, step: StepId): Promise<void> {
 	const verdict = await verifyStep(ctx, step);
 	if (verdict !== null) {
 		recordVerdict(recordOf(ctx, step), verdict);
 		if (verdict.conflict === true) hostRefuse('install.state_conflict', verdict.detail);
-		if (!verdict.ok) {
-			hostRefuse(
-				'install.state_conflict',
-				`step ${step} was recorded done but its outcome is missing (${verdict.detail}) — the install was changed outside the installer; --abort and start again`,
-			);
-		}
+		if (!verdict.ok && restartOrRefuse(ctx, step, verdict)) return runStep(ctx, step);
 	}
 	say(ctx, '  done in an earlier run — skipped');
 	emit(ctx, step, 'skipped');

@@ -33,6 +33,22 @@ function humanBytes(bytes: number): string {
 	return `${bytes} bytes`;
 }
 
+/**
+ * The processor in words: count × clock, the model when the clock is not
+ * reported (aarch64 Linux reports speed 0 — campaign 3 C3-49: that read as an
+ * "unknown" WARNING), else the count alone. Never null when a core is listed.
+ */
+export function processorText(cores: readonly { model: string; speed: number }[]): string | null {
+	const first = cores[0];
+	if (first === undefined) return null;
+	const count = `${cores.length} core${cores.length === 1 ? '' : 's'}`;
+	if (first.speed > 0) return `${cores.length} × ${(first.speed / 1000).toFixed(2)} GHz`;
+	const model = first.model.trim();
+	return model === '' || model === 'unknown'
+		? `${count} (the clock is not reported on this architecture)`
+		: `${count}, ${model}`;
+}
+
 /** Version string of a binary via `<bin> -version`/`--version`, or null. */
 function binVersion(bin: string, flag: string): string | null {
 	try {
@@ -65,11 +81,7 @@ export function buildInstallServerInfo(): InstallServerInfo {
 	const magick = binVersion('magick', '--version') ?? binVersion('convert', '--version');
 	const ffmpeg = binVersion('ffmpeg', '-version');
 
-	const cores = cpus();
-	const cpuMhz =
-		cores.length > 0 && cores[0]?.speed
-			? `${cores.length} × ${(cores[0].speed / 1000).toFixed(2)} GHz`
-			: null;
+	const cpuMhz = processorText(cpus());
 
 	return {
 		server_software: `Bun ${Bun.version} (${platform()}/${arch()})`,

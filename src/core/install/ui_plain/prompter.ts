@@ -31,6 +31,7 @@
  * stdout, or stderr / /dev/tty when stdout is redirected.
  */
 
+import { reviewCommandText } from '../display_text.ts';
 import {
 	filtered,
 	MULTI_PAGE,
@@ -64,7 +65,8 @@ import {
 	suggested,
 	textAnswerOf,
 } from '../prompter_contract.ts';
-import type { Option, Question, Screen } from '../screen_model.ts';
+import { type Option, type Question, type Screen, stepTotal } from '../screen_model.ts';
+import { ACKNOWLEDGE_TEXT } from '../screen_text.ts';
 import {
 	RawReader,
 	readLine,
@@ -305,7 +307,7 @@ async function askAcknowledge(
 	question: Question,
 ): Promise<boolean | Nav> {
 	intro(io, question);
-	io.write('Type yes to accept (anything else declines): ');
+	io.write(ACKNOWLEDGE_TEXT.plain);
 	const answer = (await io.visible(reader)).trim();
 	return navOf(answer) ?? answer === 'yes';
 }
@@ -314,7 +316,7 @@ async function askAcknowledge(
 function screenLines(screen: Screen): string[] {
 	return [
 		'',
-		`Step ${screen.index} of ${screen.count}: ${screen.title}`,
+		`Step ${screen.index} of ${stepTotal(screen)}: ${screen.title}`,
 		screen.description,
 		...screen.notices.map(
 			(notice) => `${notice.level === 'info' ? '' : `${notice.level}: `}${notice.text}`,
@@ -349,7 +351,7 @@ export function hostCommandLines(view: ReviewView): string[] {
 	return (view.hostCommands ?? []).flatMap((block) => [
 		`[${block.step}] ${block.label}`,
 		...(block.commands.length === 0 ? ['    (checks only — no command changes the host)'] : []),
-		...block.commands.map((command) => `    $ ${command}`),
+		...block.commands.map((command) => `    ${reviewCommandText(block.step, command)}`),
 	]);
 }
 

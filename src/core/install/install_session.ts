@@ -79,7 +79,6 @@ import {
 import {
 	applyAnswer,
 	buildScreens,
-	equivalentCommand,
 	type InstallCatalogs,
 	type ProbeId,
 	type ProbeOutcome,
@@ -91,10 +90,11 @@ import {
 	type Screen,
 	type ScreenId,
 	type ScreenModelInput,
-	shellQuote,
+	sameAsCommand,
+	unfixableFailure,
 	visibleKeys,
 } from './screen_model.ts';
-import { NOTICE_TEXT } from './screen_text.ts';
+import { DONE_TEXT, NOTICE_TEXT } from './screen_text.ts';
 import { abortNeedsDatabasePassword } from './steps.ts';
 
 export interface InteractiveDeps {
@@ -244,6 +244,8 @@ interface Session {
 	seen: Set<ScreenId>;
 	/** An answer was refused too often (the session ends as `refused`). */
 	refused: boolean;
+	/** The answers --write-answers last wrote (JSON), or null — never yet. */
+	answersWritten: string | null;
 }
 
 function inputOf(session: Session): ScreenModelInput {
@@ -558,28 +560,40 @@ async function probeOutcome(
 
 type ProbeGate = NonNullable<Screen['probe']>;
 
-/** What the operator may do after a failed probe. */
-function probePrompt(gate: ProbeGate['gate']): string {
+/**
+ * What the operator may do after a failed probe. A failure no fix on this
+ * machine can change (an unsupported operating system — C3-61) offers only
+ * quit, or back to another route: "retry" would only fail again.
+ */
+function probePrompt(gate: ProbeGate['gate'], outcome: ProbeOutcome): string {
+	if (unfixableFailure(outcome)) return 'quit, or back to choose another route';
 	return gate === 'pass_or_acknowledge'
 		? 'retry, edit, or yes to keep these settings untested'
 		: 'retry, edit, or quit (this check must pass)';
 }
 
 /** The commands a failed probe offers (quit always works). */
-function probeCommands(gate: ProbeGate['gate']): ProbeCommand[] {
+function probeCommands(gate: ProbeGate['gate'], outcome: ProbeOutcome): ProbeCommand[] {
+	if (unfixableFailure(outcome)) return ['quit'];
 	return gate === 'pass_or_acknowledge'
 		? ['retry', 'edit', 'yes', 'quit']
 		: ['retry', 'edit', 'quit'];
 }
 
 /** A failed probe, as the prompter shows it. */
-function probeView(session: Session, screen: Screen, probe: ProbeGate, lines: string[]): ProbeView {
+function probeView(
+	session: Session,
+	screen: Screen,
+	probe: ProbeGate,
+	outcome: ProbeOutcome,
+	lines: string[],
+): ProbeView {
 	return {
 		screen: screenOf(session, screen.id) ?? screen,
 		lines,
 		gate: probe.gate,
-		commands: probeCommands(probe.gate),
-		prompt: probePrompt(probe.gate),
+		commands: probeCommands(probe.gate, outcome),
+		prompt: probePrompt(probe.gate, outcome),
 	};
 }
 
@@ -592,27 +606,29 @@ function editAfterProbe(session: Session, screen: Screen): 'again' {
 
 /**
  * One command after a failed probe → what happens: null = ask again (retry
- * re-runs the probe, an unknown word is explained).
+ * re-runs the probe; a word the view does not offer is explained — `retry` is
+ * refused where only quit is offered).
  */
 function probeCommand(
 	session: Session,
 	screen: Screen,
-	probe: ProbeGate,
+	view: ProbeView,
 	word: string,
 ): 'next' | 'again' | Nav | null {
+	const probe = SCREEN_PROBE[screen.id] as ProbeId;
+	if (!(view.commands as readonly string[]).includes(word)) {
+		session.deps.prompter.say([`'${word}' is not one of: ${view.prompt}`]);
+		return null;
+	}
 	if (word === 'retry') {
-		delete session.probes[probe.id];
-		delete session.probeKeys[probe.id];
+		delete session.probes[probe];
+		delete session.probeKeys[probe];
 		return null;
 	}
 	if (word === 'edit') return editAfterProbe(session, screen);
 	if (word === 'quit') return QUIT;
-	if (word === 'yes' && probe.gate === 'pass_or_acknowledge') {
-		session.acknowledged.add(`${screen.id}.probe_override`);
-		return 'next';
-	}
-	session.deps.prompter.say([`'${word}' is not one of: ${probePrompt(probe.gate)}`]);
-	return null;
+	session.acknowledged.add(`${screen.id}.probe_override`);
+	return 'next';
 }
 
 /** Does the probe's verdict let the walk go on (passed, report-only, or overridden)? */
@@ -651,9 +667,10 @@ async function probeRound(
 		session.deps.prompter.say(lines);
 		return 'next';
 	}
-	const command = await session.deps.prompter.probe(probeView(session, screen, probe, lines));
+	const view = probeView(session, screen, probe, outcome, lines);
+	const command = await session.deps.prompter.probe(view);
 	if (isNav(command)) return command;
-	return probeCommand(session, screen, probe, command.trim().toLowerCase());
+	return probeCommand(session, screen, view, command.trim().toLowerCase());
 }
 
 // ── a screen ─────────────────────────────────────────────────────────────────
@@ -820,14 +837,21 @@ async function walk(
 
 // ── the review ───────────────────────────────────────────────────────────────
 
-/** The typed-yes question that starts the install. */
-/** What `install` will do, in one sentence per route. */
+/** How a stack gets its image, by source (C3-48 — never "pulls" for a local build). */
+const IMAGE_SENTENCE: Readonly<Record<string, string>> = Object.freeze({
+	official: 'pulls the official image and verifies its signature',
+	custom: 'pulls the image from your registry',
+	build: 'builds the image here from this checkout (10 to 20 minutes)',
+});
+
+/** What `install` will do, in one sentence per route (a stack: per image source). */
 function installSentence(answers: InstallAnswers): string {
 	if (answers.route === 'production') {
 		return `This changes this host: the packages, the instance ${answers.instance} (its user, database '${answers.db_database}', units, site and certificate) — every command is listed above.`;
 	}
 	if (answers.route === 'docker' || answers.route === 'trial') {
-		return `This pulls the image, writes the stack's files and installs into the stack's database '${answers.db_database}'.`;
+		const image = IMAGE_SENTENCE[answers.image_source] ?? IMAGE_SENTENCE.official;
+		return `This ${image}, writes the stack's files and installs into the stack's database '${answers.db_database}'.`;
 	}
 	return `This writes the .env and installs into database '${answers.db_database}'.`;
 }
@@ -923,13 +947,6 @@ async function recheckGates(session: Session): Promise<'review' | 'quit'> {
 	return 'quit';
 }
 
-/** The equivalent command line of a plan (display only; never a secret). */
-function commandLine(plan: InstallPlan): string {
-	return ['bun', 'run', 'scripts/install.ts', ...equivalentCommand(plan.answers)]
-		.map(shellQuote)
-		.join(' ');
-}
-
 /** One Review round: what it decides on, and the view the prompter shows. */
 async function reviewRound(session: Session): Promise<{ round: ReviewRound; view: ReviewView }> {
 	const screens = screensOf(session);
@@ -942,7 +959,7 @@ async function reviewRound(session: Session): Promise<{ round: ReviewRound; view
 		lines: reviewLines(plan, input),
 		canInstall,
 		editable: screens.slice(0, -1).map((item) => ({ n: item.index, title: item.title })),
-		command: commandLine(plan),
+		command: sameAsCommand(plan.answers),
 		errors: [...plan.errors, ...(refusal === null ? [] : [refusal])],
 		hostCommands: plan.errors.length === 0 ? ((await session.deps.hostCommands?.(plan)) ?? []) : [],
 	};
@@ -994,7 +1011,10 @@ function reviewWrite(session: Session, round: ReviewRound, path: string): Review
 		session.deps.prompter.say([refusal]);
 		return null;
 	}
-	session.deps.prompter.say([`answers written to ${path.trim()} (no secret is in it)`]);
+	session.deps.prompter.say([
+		DONE_TEXT.written(path.trim()),
+		DONE_TEXT.writtenNext(round.plan.answers.route),
+	]);
 	return { kind: 'written', path: path.trim() };
 }
 
@@ -1023,11 +1043,32 @@ async function reviewCommand(
 	return null;
 }
 
+/**
+ * --write-answers on an interactive run (campaign 3 C3-36): written at every
+ * VALID Review (no plan error) whose answers differ from the last written —
+ * so a session that reaches a valid Review and quits still leaves the file;
+ * the closing message says so when it never was (quitNotices).
+ */
+function writeReviewedAnswers(session: Session, plan: InstallPlan): void {
+	const path = session.deps.writeAnswersPath;
+	const answers = JSON.stringify(plan.answers);
+	if (path === undefined || !answersToWrite(session, plan, answers)) return;
+	const refusal = (session.deps.writeAnswers ?? writeAnswersFile)(path, plan.answers);
+	session.deps.prompter.say([refusal ?? DONE_TEXT.written(path)]);
+	if (refusal === null) session.answersWritten = answers;
+}
+
+/** A valid plan whose answers differ from the ones last written. */
+function answersToWrite(session: Session, plan: InstallPlan, answers: string): boolean {
+	return plan.errors.length === 0 && session.answersWritten !== answers;
+}
+
 /** The Review loop: install / edit <n> / write <path> / quit (`back` edits the last screen). */
 async function review(session: Session): Promise<FrontEndResult> {
 	for (let round = 0; round < 200; round++) {
 		if ((await recheckGates(session)) === 'quit') return { kind: 'quit' };
 		const { round: shown, view } = await reviewRound(session);
+		writeReviewedAnswers(session, shown.plan);
 		session.seen.add('review');
 		session.deps.prompter.view(viewOf(session, 'review', null));
 		const command = await session.deps.prompter.review(view);
@@ -1129,14 +1170,27 @@ async function unfinishedFlow(
  * (scripts/install.ts) does next — never runs the install itself.
  */
 export async function runInteractiveInstall(deps: InteractiveDeps): Promise<FrontEndResult> {
-	let refused = false;
-	const result = await interactiveSession(deps, () => {
-		refused = true;
-	});
+	const ended: SessionEnd = { refused: false, answersWritten: false };
+	const result = await interactiveSession(deps, ended);
 	if (result.kind !== 'quit') return result;
 	const stopped = deps.prompter.stopReason?.() ?? null;
-	const reason: QuitReason = stopped ?? (refused ? 'refused' : 'operator');
-	return { kind: 'quit', reason };
+	const reason: QuitReason = stopped ?? (ended.refused ? 'refused' : 'operator');
+	const notices = quitNotices(deps, ended);
+	return { kind: 'quit', reason, ...(notices.length === 0 ? {} : { notices }) };
+}
+
+/** How a session ended, as the caller reports it. */
+interface SessionEnd {
+	/** An answer was refused too often. */
+	refused: boolean;
+	/** --write-answers wrote its file at a valid Review. */
+	answersWritten: boolean;
+}
+
+/** The closing lines of a quit: a --write-answers file the session never wrote (C3-36). */
+function quitNotices(deps: InteractiveDeps, ended: SessionEnd): string[] {
+	const path = deps.writeAnswersPath;
+	return path === undefined || ended.answersWritten ? [] : [DONE_TEXT.notWritten(path)];
 }
 
 /** A fresh session's state. */
@@ -1159,6 +1213,7 @@ function newSession(deps: InteractiveDeps): Session {
 		asked: new Set(),
 		seen: new Set(),
 		refused: false,
+		answersWritten: null,
 	};
 }
 
@@ -1167,19 +1222,23 @@ function unfinishedOf(deps: InteractiveDeps): Unfinished | null {
 	return deps.unfinished === undefined ? readUnfinished(deps.givenSecrets) : deps.unfinished;
 }
 
-/** The session behind runInteractiveInstall (`onRefused` marks a refusal-ended walk). */
+/** The session behind runInteractiveInstall (`ended` records how it ended). */
 async function interactiveSession(
 	deps: InteractiveDeps,
-	onRefused: () => void,
+	ended: SessionEnd,
 ): Promise<FrontEndResult> {
 	if ((await deps.prompter.welcome({ version: deps.version ?? '' })) === QUIT) {
 		return { kind: 'quit' };
 	}
 	const unfinished = unfinishedOf(deps);
+	const onRefused = (): void => {
+		ended.refused = true;
+	};
 	if (unfinished !== null) return unfinishedFlow(deps, unfinished, onRefused);
 	const session = newSession(deps);
 	const walked = await walk(session, 0, 'all');
 	const result = walked === 'quit' ? ({ kind: 'quit' } as const) : await review(session);
-	if (session.refused) onRefused();
+	ended.refused = ended.refused || session.refused;
+	ended.answersWritten = session.answersWritten !== null;
 	return result;
 }

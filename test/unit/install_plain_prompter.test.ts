@@ -25,8 +25,11 @@ import {
 	buildScreens,
 	type Option,
 	type Question,
+	RUN_STEPS,
 	type Screen,
+	type SystemCheckRow,
 } from '../../src/core/install/screen_model.ts';
+import { ACKNOWLEDGE_TEXT } from '../../src/core/install/screen_text.ts';
 import {
 	BACK,
 	multiCommand,
@@ -234,6 +237,37 @@ describe('prompter — text, choice, confirm, acknowledge', () => {
 			expect(await prompter.acknowledge(question('acknowledge'))).toBe(false);
 			expect(await prompter.acknowledge(question('acknowledge'))).toBe(false);
 			expect(await prompter.acknowledge(question('acknowledge'))).toBe(true);
+			// C3-26: the plain mode's how-to is the ONE source's (the full screen says its own).
+			expect(terminal.output.text).toContain(ACKNOWLEDGE_TEXT.plain);
+		} finally {
+			terminal.stop();
+		}
+	});
+
+	test('C3-49: a System check row carries ONE state word — `warn: …`, `error: …`, `ok …`', async () => {
+		const rows: SystemCheckRow[] = [
+			{ state: 'ok', label: 'Bun', detail: '1.4.2' },
+			{ state: 'warn', label: 'Processor', detail: 'unknown' },
+			{ state: 'fail', label: 'Operating system', detail: 'Zz OS 1 is not supported' },
+		];
+		const system = buildScreens(
+			modelInput({ route: 'production' }, { probes: { system: { ok: false, detail: 'x', rows } } }),
+		).find((screen) => screen.id === 'system') as Screen;
+		const terminal = autoTerminal(() => null);
+		try {
+			ttyInstallPrompter({
+				input: terminal.input,
+				output: terminal.output,
+				signals: terminal.signals,
+			}).screen(system);
+			const lines = terminal.output.text.split('\n');
+			const line = (label: string): string => lines.find((item) => item.includes(label)) ?? '';
+			expect(line('Processor')).toBe('warn: Processor  unknown');
+			expect(line('Operating system')).toBe('error: Operating system  Zz OS 1 is not supported');
+			expect(line('Bun')).toBe('ok  Bun  1.4.2');
+			for (const label of ['Processor', 'Operating system', 'Bun']) {
+				expect(line(label).match(/\b(ok|warn|error|failed)\b/g)?.length, label).toBe(1);
+			}
 		} finally {
 			terminal.stop();
 		}
@@ -416,7 +450,8 @@ describe('output — sanitized and wrapped', () => {
 				help: [],
 			});
 			expect(terminal.output.text.includes('\x1b')).toBe(false);
-			expect(terminal.output.text).toContain('Step 2 of 9: Ontologies');
+			// N counts the run states too (RUN_STEPS — the full screen's rail, C3-66).
+			expect(terminal.output.text).toContain(`Step 2 of ${9 + RUN_STEPS.length}: Ontologies`);
 		} finally {
 			terminal.stop();
 		}

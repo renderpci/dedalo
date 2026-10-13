@@ -105,9 +105,11 @@ import { readPlanFile, readStateFile } from '../../src/core/install/run_files_co
 import {
 	asService,
 	asServiceHome,
+	asServiceHomeDying,
 	BUN_PIN,
 	changesHost,
 	DEFAULT_IDENTITY,
+	DIES_WITH_PARENT,
 	freshRequest,
 	HOST_VARIANTS,
 	type HostVariant,
@@ -257,12 +259,13 @@ function bytesOf(host: ScratchHost, path: string): string | null {
 /** The engine child failing its run (a failed install: an abort is then a FULL one). */
 function engineFails(identity: ScratchIdentity): RecordedResponse[] {
 	const child = `${asServiceHome(identity)} /opt/dedalo/bun/${BUN_PIN}/bun run ${identity.dir}/dedalo/scripts/install.ts`;
+	const dying = `${asServiceHomeDying(identity)} /opt/dedalo/bun/${BUN_PIN}/bun run ${identity.dir}/dedalo/scripts/install.ts`;
 	return [
-		{ match: `${child} --request-stdin`, exit: 9, stderr: 'the seed restore failed' },
+		{ match: `${dying} --request-stdin`, exit: 9, stderr: 'the seed restore failed' },
 		{
 			match: `${child} --status --json`,
-			after: `${child} --request-stdin`,
-			until: `${child} --abort`,
+			after: `${dying} --request-stdin`,
+			until: `${dying} --abort`,
 			stdout:
 				'{"exists":true,"outcome":"in_progress","failed_step":"install_db_from_default_file"}\n',
 		},
@@ -326,7 +329,7 @@ function rootInsideFolder(host: ScratchHost): string[] {
 		.filter((word) => strictlyInside(word, dir))
 		.map((word) => `Review: ${word}`);
 	const ran = loggedCommands(host.root)
-		.filter((line) => !line.startsWith('/usr/sbin/runuser -u '))
+		.filter((line) => !line.replace(`${DIES_WITH_PARENT} `, '').startsWith('/usr/sbin/runuser -u '))
 		.filter((line) => line.split(' ').some((word) => strictlyInside(word, dir)))
 		.map((line) => `run: ${line}`);
 	return [...reviewed, ...ran];
@@ -643,7 +646,8 @@ describe('(e) one user, one group, one folder per instance — every discovery s
 				const files = source.files(clash.other);
 				const { host, outcome } = await freshOn(UBUNTU, { files }, {});
 				const label = `${source.name} / ${clash.name}`;
-				expect(outcome.failedStep, label).toBe('host_preflight');
+				expect(outcome.result, label).toBe('refused'); // C3-23: refused before any record
+				expect(outcome.failedStep, label).toBeNull();
 				expect(outcome.message ?? '', label).toContain(
 					clash.sentence(source.source, instanceOf(source.name)),
 				);
@@ -683,7 +687,8 @@ describe('(e) one user, one group, one folder per instance — every discovery s
 			},
 			{},
 		);
-		expect(unknown.outcome.failedStep).toBe('host_preflight');
+		expect(unknown.outcome.result).toBe('refused'); // C3-23: refused before any record
+		expect(unknown.outcome.failedStep).toBeNull();
 		expect(unknown.outcome.message).toContain(
 			`${stamped} names instance other but sets no User= — the installer cannot tell which account it runs as (one user per instance): give it its User= or remove it`,
 		);
@@ -711,7 +716,8 @@ describe('(e) one user, one group, one folder per instance — every discovery s
 			},
 			{ service_group: 'shared' },
 		);
-		expect(resolved.outcome.failedStep).toBe('host_preflight');
+		expect(resolved.outcome.result).toBe('refused'); // C3-23: refused before any record
+		expect(resolved.outcome.failedStep).toBeNull();
 		expect(resolved.outcome.message).toContain(
 			`service group shared is already the service group of instance dedalo (${unit}) — one group per instance: choose another --service-group`,
 		);
@@ -725,7 +731,8 @@ describe('(e) one user, one group, one folder per instance — every discovery s
 			},
 			{},
 		);
-		expect(ghost.outcome.failedStep).toBe('host_preflight');
+		expect(ghost.outcome.result).toBe('refused'); // C3-23: refused before any record
+		expect(ghost.outcome.failedStep).toBeNull();
 		expect(ghost.outcome.message).toContain(
 			`${unit} names instance dedalo but runs as User=ghost, whose primary group cannot be resolved — the installer cannot tell which group it runs as (one group per instance): give it its Group= or remove it`,
 		);
@@ -789,7 +796,8 @@ describe('(e) one user, one group, one folder per instance — every discovery s
 /** A System check refusal of `extra` on a planted host: its sentence; nothing changed. */
 async function refusal(spec: PlantSpec, extra: Record<string, unknown>): Promise<string> {
 	const { host, outcome } = await freshOn(UBUNTU, spec, extra);
-	expect(outcome.failedStep).toBe('host_preflight');
+	expect(outcome.result).toBe('refused'); // C3-23: refused before any record
+	expect(outcome.failedStep).toBeNull();
 	expect(changed(host)).toEqual([]);
 	return outcome.message ?? '';
 }
@@ -881,7 +889,8 @@ describe('(f) the install folder: created, adopted, used as it is — or refused
 		});
 		const { planFile } = productionPlan(UBUNTU, { ...HOSTING_ANSWERS, backup_dir: www });
 		const run = await runHost(host, freshRequest(planFile));
-		expect(run.outcome.failedStep).toBe('host_preflight');
+		expect(run.outcome.result).toBe('refused'); // C3-23: refused before any record
+		expect(run.outcome.failedStep).toBeNull();
 		expect(run.outcome.message).toContain(
 			`${www} already exists — the installer creates the instance's directories itself and never takes over an existing one (remove it or choose another path)`,
 		);
@@ -1303,6 +1312,59 @@ describe('(g) the account rules — one verdict, every sentence exact', () => {
 			"account bob is a member of ded_a, the service group of instance a (/var/lib/dedalo-install/instances/a.json) — one group per instance: the service would hold that instance's group; choose an account without it",
 		]);
 		expect(identityVerdict(base).problems).toEqual([]);
+	});
+
+	test("campaign 3 R4: another instance's user AND folder, read from THREE files — exactly 2 clauses, every file named once (C3-35)", () => {
+		const r4 = { install_dir: '/home/my_domain.org/dedalo', service_user: 'my_domain.org' };
+		const base = input(r4, {
+			user: user('my_domain.org', 1001, 1001),
+			group: { name: 'ded_museo2', gid: 1700, members: [] },
+			groupName: 'ded_museo2',
+			folder: {
+				...fact('/home/my_domain.org/dedalo', {
+					owner: 'my_domain.org',
+					group: 'my_domain.org',
+					mode: 0o750,
+				}),
+				entries: ['dedalo', 'private', 'backups'],
+			},
+			ancestors: [
+				fact('/home/my_domain.org', {
+					owner: 'my_domain.org',
+					group: 'my_domain.org',
+					mode: 0o750,
+				}),
+				fact('/home'),
+				fact('/'),
+			],
+		});
+		const sources = [
+			'/var/lib/dedalo-install/instances/museo1.json',
+			'/etc/systemd/system/dedalo-ts@museo1.service.d/10-dedalo-install.conf',
+			'/var/lib/dedalo-install/museo1/install.state.json',
+		];
+		const records = sources.map((source) => ({
+			instance: 'museo1',
+			user: 'my_domain.org',
+			group: 'my_domain.org',
+			installDir: '/home/my_domain.org/dedalo',
+			backupDir: source.endsWith('.conf') ? null : '/home/my_domain.org/dedalo/backups',
+			source,
+			unknown: null,
+		}));
+		const problems = identityVerdict({ ...base, instances: records }).problems;
+		expect(problems).toEqual([
+			`service user my_domain.org is already the service user of instance museo1 (${sources.join(', ')}) — one user per instance: choose another --service-user`,
+			`install folder /home/my_domain.org/dedalo overlaps instance museo1's folder /home/my_domain.org/dedalo (the same folder) — choose a folder of its own`,
+		]);
+		// A TYPED backup folder elsewhere that overlaps theirs is its own mistake: still said.
+		const typed = identityVerdict({
+			...input({ ...r4, backup_dir: '/srv/b' }, base.account),
+			instances: [{ ...(records[0] as (typeof records)[number]), backupDir: '/srv/b' }],
+		}).problems;
+		expect(typed).toContain(
+			"backup folder /srv/b overlaps instance museo1's folder /srv/b (the same folder) — choose a folder of its own",
+		);
 	});
 
 	test('the primary-group notice depends on the RESULTING group, not on how it was entered', () => {

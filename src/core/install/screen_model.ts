@@ -45,6 +45,7 @@ import {
 	type InstallAnswers,
 	type InstallPlan,
 	type InstallRoute,
+	interactiveSuggestion,
 	normalizeInstallAnswers,
 	ontologyServersFor,
 	toponymyMissing,
@@ -67,6 +68,7 @@ import {
 } from './ontology_choice.ts';
 import type { SecretKey } from './run_files.ts';
 import {
+	ENTRY_COMMAND,
 	HELP_LINKS,
 	MARK_TEXT,
 	NOTICE_TEXT,
@@ -166,6 +168,19 @@ export const SCREEN_ORDER: Readonly<Record<InstallRoute, readonly ScreenId[]>> =
 		'review',
 	] as const),
 });
+
+/**
+ * The run states every front end counts after the model's screens: the
+ * install itself and its end. "Step n of N" (plain) and the full screen's rail
+ * count the SAME steps — N = the route's screens + these (campaign 3 C3-66:
+ * plain said "of 13" where the rail drew 15).
+ */
+export const RUN_STEPS = ['Install', 'Done'] as const;
+
+/** How many steps a front end counts for a screen's route (its screens + the run states). */
+export function stepTotal(screen: Pick<Screen, 'count'>): number {
+	return screen.count + RUN_STEPS.length;
+}
 
 /**
  * The answers no screen asks, with WHY — the completeness gate holds every
@@ -279,6 +294,7 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 			letsencrypt_email: TRIAL_NO_TLS,
 			tls_cert_path: TRIAL_NO_TLS,
 			tls_key_path: TRIAL_NO_TLS,
+			https_port: TRIAL_NO_TLS,
 		}),
 	});
 
@@ -292,6 +308,17 @@ export interface SystemCheckRow {
 	state: 'ok' | 'warn' | 'fail';
 	label: string;
 	detail: string;
+	/**
+	 * false = no fix on THIS machine can change it (an unsupported operating
+	 * system): a failed check then offers only quit — or back, to another
+	 * route — never "retry" (campaign 3 C3-61). Absent = fixable.
+	 */
+	fixable?: boolean;
+}
+
+/** Does a probe's outcome carry a failed row no fix on this machine can change? */
+export function unfixableFailure(outcome: ProbeOutcome): boolean {
+	return (outcome.rows ?? []).some((row) => row.state === 'fail' && row.fixable === false);
 }
 
 /** A probe's answer as the model reads it. */
@@ -377,6 +404,12 @@ export interface Question {
 	errors: string[];
 	/** A suggestion shown next to the errors (never applied for the operator — e.g. the entity code). */
 	hint?: string;
+	/**
+	 * choice, nothing chosen yet: the option a cursor starts on — never an
+	 * answer (the route is CHOSEN: the plan's own default route, so the
+	 * full-screen cursor rests where `--route` defaults — campaign 3 C3-58).
+	 */
+	start?: string;
 }
 
 export interface Notice {
@@ -442,7 +475,11 @@ interface VisibilityRule {
 const productionOrUnset = (_raw: unknown, route: InstallRoute | null): boolean =>
 	route === 'production' || route === null;
 const onHostRoute = (_raw: unknown, route: InstallRoute | null): boolean => hostRoute(route);
-const roleAsked = (raw: Readonly<Record<string, unknown>>, route: InstallRoute | null): boolean =>
+/** The connection is asked unless the production route creates the database (peer login). */
+const connectionAsked = (
+	raw: Readonly<Record<string, unknown>>,
+	route: InstallRoute | null,
+): boolean =>
 	onHostRoute(raw, route) && !(route === 'production' && (raw.db_mode ?? 'create') === 'create');
 const onStack = (_raw: unknown, route: InstallRoute | null): boolean =>
 	route === 'docker' || route === 'trial';
@@ -505,15 +542,19 @@ const VISIBILITY: readonly VisibilityRule[] = Object.freeze<VisibilityRule[]>([
 		],
 		when: productionOrUnset,
 	},
+	{ keys: ['db_database'], when: onHostRoute },
+	// A created production database is reached by peer login over the local
+	// socket, as the service user: no host, port, socket, role or password to
+	// ask (campaign 3 C3-66 — they keep the route's defaults).
 	{
-		keys: ['db_hostname', 'db_port', 'db_socket', 'db_database', 'db_password'],
-		when: onHostRoute,
+		keys: ['db_hostname', 'db_port', 'db_socket', 'db_username', 'db_password'],
+		when: connectionAsked,
 	},
-	// A created production database's role IS the service user (peer): not asked.
-	{ keys: ['db_username'], when: roleAsked },
 	// Every route sets the root password HERE (phase 4: the host steps hand it to the engine child).
 	{ keys: ['root_password'], when: () => true },
-	{ keys: ['http_port', 'https_port'], when: (_raw, route) => route !== 'developer' },
+	{ keys: ['http_port'], when: (_raw, route) => route !== 'developer' },
+	// The trial serves plain HTTP only: no HTTPS port to ask (campaign 3 C3-22).
+	{ keys: ['https_port'], when: (_raw, route) => route !== 'developer' && route !== 'trial' },
 	{ keys: ['server_name', 'tls_mode'], when: addressed },
 	{ keys: ['letsencrypt_email'], when: tlsIs('letsencrypt') },
 	{ keys: ['tls_cert_path', 'tls_key_path'], when: tlsIs('files') },
@@ -617,8 +658,13 @@ function errorsFor(ctx: Ctx, keys: readonly string[]): string[] {
 	];
 }
 
-function textOf(id: string): { label: string; description: string } {
-	return QUESTION_TEXT[id] ?? { label: id, description: '' };
+/**
+ * A question's words: its screen's own (`<screen>.<key>` — the same answer
+ * worded for what THAT route does with it), else the key's.
+ */
+function textOf(id: string, screen?: ScreenId): { label: string; description: string } {
+	const own = screen === undefined ? undefined : QUESTION_TEXT[`${screen}.${id}`];
+	return own ?? QUESTION_TEXT[id] ?? { label: id, description: '' };
 }
 
 /** A question over one plain answer key. */
@@ -635,7 +681,7 @@ function ask(
 		key,
 		sets,
 		kind,
-		...textOf(key),
+		...textOf(key, screen),
 		value: ctx.answers[key],
 		default: defaultOf(ctx, key),
 		answered: Object.hasOwn(ctx.input.raw, key),
@@ -748,7 +794,12 @@ function routeScreen(ctx: Ctx, frame: Frame): Screen {
 	});
 	return screen('route', frame, {
 		questions: shown(ctx, [
-			ask(ctx, 'route', 'route', 'choice', { options, required: true, value: ctx.route }),
+			ask(ctx, 'route', 'route', 'choice', {
+				options,
+				required: true,
+				value: ctx.route,
+				start: String(planDefault(ctx, 'route')),
+			}),
 			// The instance names everything the next screens default (database,
 			// role, media, socket), so it is asked WITH the route.
 			ctx.route === 'production' ? ask(ctx, 'route', 'instance', 'text', { required: true }) : null,
@@ -791,6 +842,17 @@ function systemVerdict(outcome: ProbeOutcome, failed: number, warned: number): N
 	return { level: 'info', text: NOTICE_TEXT.systemSummary(0, warned) };
 }
 
+/**
+ * A row's words. A warned or failed row's state is its notice LEVEL — every
+ * front end draws the level once (plain `warn:` / `error:`, the full screen
+ * `!` / `✗`), so the text never repeats it (campaign 3 C3-49: never
+ * `warn: warn`, `error: failed`); an ok row (an info notice, drawn bare) says
+ * `ok` itself.
+ */
+function rowText(row: SystemCheckRow): string {
+	return `${row.state === 'ok' ? 'ok  ' : ''}${row.label}  ${row.detail}`;
+}
+
 /** The System check's rows and verdict as notices. */
 function systemNotices(outcome: ProbeOutcome | undefined): Notice[] {
 	if (outcome === undefined) return [];
@@ -799,10 +861,7 @@ function systemNotices(outcome: ProbeOutcome | undefined): Notice[] {
 	const warned = rows.filter((row) => row.state === 'warn').length;
 	return [
 		...versionNotices(outcome),
-		...rows.map((row) => ({
-			level: ROW_LEVEL[row.state],
-			text: `${row.state === 'fail' ? 'failed' : row.state}  ${row.label}  ${row.detail}`,
-		})),
+		...rows.map((row) => ({ level: ROW_LEVEL[row.state], text: rowText(row) })),
 		systemVerdict(outcome, failed, warned),
 	];
 }
@@ -1016,9 +1075,11 @@ function tlsAddressScreen(ctx: Ctx, frame: Frame): Screen {
 
 /** Docker/trial: the published ports (the stack's database password is generated). */
 function containersScreen(ctx: Ctx, frame: Frame): Screen {
+	// The trial publishes plain HTTP only — its own words, never "redirects to HTTPS".
+	const httpText = ctx.route === 'trial' ? { description: NOTICE_TEXT.trialHttpPort } : {};
 	return screen('containers', frame, {
 		questions: shown(ctx, [
-			ask(ctx, 'containers', 'http_port', 'text'),
+			ask(ctx, 'containers', 'http_port', 'text', httpText),
 			ask(ctx, 'containers', 'https_port', 'text'),
 		]),
 		notices: [{ level: 'info', text: NOTICE_TEXT.stackDbPassword }],
@@ -1072,11 +1133,35 @@ function ontologyMarks(
 	];
 }
 
+/**
+ * The typology labels in the installer's language, by typology id — the
+ * thesaurus manifest's typology list (the ontologies and the thesauri share
+ * the one typology vocabulary). Empty when the thesaurus offer is unreadable.
+ */
+function typologyLabels(ctx: Ctx): ReadonlyMap<string, string> {
+	const thesauri = ctx.input.catalogs.thesauri;
+	const items = 'view' in thesauri ? thesauri.view.hierarchy_typologies : [];
+	return new Map(items.map((item) => [String(item.typology), item.label] as const));
+}
+
+/**
+ * An ontology's GROUP: its typology's label in the installer's language, else
+ * the catalog's own typology name (C3-45: one group per heading, one language).
+ */
+function ontologyGroup(
+	entry: OntologyCatalogViewEntry,
+	labels: ReadonlyMap<string, string>,
+): string | null {
+	const byId = entry.typology_id === null ? undefined : labels.get(String(entry.typology_id));
+	return byId ?? entry.typology_name;
+}
+
 /** One catalog entry as an option of the ontologies question. */
 function ontologyOption(
 	entry: OntologyCatalogViewEntry,
 	entries: readonly OntologyCatalogViewEntry[],
 	selected: ReadonlySet<string>,
+	group: string | null,
 ): Option {
 	const declarers = declarersOf(entry, entries, selected);
 	const mandatory = declarers.some((other) =>
@@ -1086,13 +1171,23 @@ function ontologyOption(
 		value: entry.tld,
 		label: entry.name,
 		description: ONTOLOGY_NOTE_TEXT[entry.tld] ?? '',
-		group: entry.typology_name,
+		group,
 		selected: selected.has(entry.tld),
 		locked: selected.has(entry.tld) && mandatory,
 		marks: ontologyMarks(entry, declarers, mandatory),
 		declares: ontologyDeclares(entry),
 		external: false,
 	};
+}
+
+/**
+ * The options with each group's members together, the groups in the order
+ * their first member comes (the default's group first) — a list draws a
+ * header per run of one group, so a split group would be drawn twice (C3-45).
+ */
+function contiguousGroups(options: readonly Option[]): Option[] {
+	const order = [...new Set(options.map((option) => option.group ?? ''))];
+	return order.flatMap((group) => options.filter((option) => (option.group ?? '') === group));
 }
 
 /** The core group: locked, always installed (never part of the answer). */
@@ -1102,6 +1197,7 @@ function ontologiesQuestion(ctx: Ctx): Question {
 	const catalog = ctx.input.catalogs.ontology.catalog ?? vendoredOntologyCatalog();
 	const view = describeOntologyCatalog(catalog);
 	const selected = new Set(ctx.plan.activeOntologyTlds.filter((tld) => !view.core.includes(tld)));
+	const labels = typologyLabels(ctx);
 	const options: Option[] = [
 		...view.core.map((tld) => ({
 			...plainOption(tld, tld, MARK_TEXT.core),
@@ -1110,7 +1206,11 @@ function ontologiesQuestion(ctx: Ctx): Question {
 			locked: true,
 			marks: [{ kind: 'core' } as OptionMark],
 		})),
-		...view.entries.map((entry) => ontologyOption(entry, view.entries, selected)),
+		...contiguousGroups(
+			view.entries.map((entry) =>
+				ontologyOption(entry, view.entries, selected, ontologyGroup(entry, labels)),
+			),
+		),
 	];
 	const groups = [...new Set(options.map((option) => option.group ?? ''))].map((id) => ({
 		id,
@@ -1403,19 +1503,35 @@ export function routeExecutesHere(route: InstallRoute | null): boolean {
 	return route !== null;
 }
 
+/**
+ * The Review's words about host commands, per route (C3-48 — docker and trial
+ * never carry the production boilerplate; a checkout runs none).
+ */
+const HOST_COMMAND_NOTICES: Readonly<Record<InstallRoute, readonly string[]>> = Object.freeze({
+	production: [NOTICE_TEXT.hostCommands, NOTICE_TEXT.reviewRoot],
+	docker: [NOTICE_TEXT.stackCommands],
+	trial: [NOTICE_TEXT.stackCommands],
+	developer: [],
+});
+
+function hostCommandNotices(route: InstallRoute | null): Notice[] {
+	const texts = route === null ? [] : HOST_COMMAND_NOTICES[route];
+	return texts.map((text) => ({ level: 'info' as const, text }));
+}
+
 function reviewScreen(ctx: Ctx, frame: Frame): Screen {
 	const plan = ctx.plan;
 	const notices: Notice[] = [
 		...plan.errors.map((text) => ({ level: 'error' as const, text })),
 		...plan.warnings.map((text) => ({ level: 'warn' as const, text })),
 		...plan.notes.map((text) => ({ level: 'info' as const, text })),
-		...plan.suggestions.map((text) => ({ level: 'info' as const, text })),
+		...plan.suggestions.map((text) => ({
+			level: 'info' as const,
+			text: interactiveSuggestion(text),
+		})),
 		{ level: 'info', text: NOTICE_TEXT.reviewEnvHelp },
+		...hostCommandNotices(ctx.route),
 	];
-	if (ctx.route !== 'developer' && ctx.route !== null) {
-		notices.push({ level: 'info', text: NOTICE_TEXT.hostCommands });
-	}
-	if (ctx.route === 'production') notices.push({ level: 'info', text: NOTICE_TEXT.reviewRoot });
 	return screen('review', frame, {
 		notices,
 		help: [HELP_LINKS.reference, ...(ctx.route === 'production' ? [HELP_LINKS.production] : [])],
@@ -1741,6 +1857,17 @@ export function equivalentCommand(answers: InstallAnswers): string[] {
 	return cliArgsOf(answers);
 }
 
+/**
+ * The whole "same as" command line of a plan, as the operator types it: the
+ * route's own entry command (ENTRY_COMMAND — `sh install.sh` on docker and
+ * trial, `sudo sh install.sh` on production, bun on developer), then the
+ * flags. Display only; never a secret.
+ */
+export function sameAsCommand(answers: InstallAnswers): string {
+	const entry = (ENTRY_COMMAND[answers.route] ?? ENTRY_COMMAND.developer ?? '').split(' ');
+	return [...entry, ...equivalentCommand(answers).map(shellQuote)].join(' ');
+}
+
 /** One argv token quoted for a POSIX shell (display only). */
 export function shellQuote(token: string): string {
 	return /^[A-Za-z0-9_./:=,@%+-]+$/.test(token) ? token : `'${token.replace(/'/g, `'\\''`)}'`;
@@ -1851,11 +1978,6 @@ export function reviewLines(plan: InstallPlan, input: ScreenModelInput): ReviewL
 		...adminLines(input),
 		{ label: REVIEW_TEXT.steps, value: plan.steps.join(', ') },
 		{ label: REVIEW_TEXT.envKeys, value: plan.envKeys.join(', ') },
-		{
-			label: REVIEW_TEXT.sameAs,
-			value: ['bun', 'run', 'scripts/install.ts', ...equivalentCommand(a)]
-				.map(shellQuote)
-				.join(' '),
-		},
+		{ label: REVIEW_TEXT.sameAs, value: sameAsCommand(a) },
 	];
 }

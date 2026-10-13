@@ -138,6 +138,14 @@ export function asServiceHome(identity: ScratchIdentity = DEFAULT_IDENTITY): str
 	return `${asService(identity)} /usr/bin/env HOME=${identity.dir}`;
 }
 
+/** `setpriv --pdeathsig KILL --` (execute.ts deathPrefix — campaign 3 C3-29). */
+export const DIES_WITH_PARENT = '/usr/bin/setpriv --pdeathsig KILL --';
+
+/** asServiceHome for a command that dies with the installer: the death prefix at both ends of runuser. */
+export function asServiceHomeDying(identity: ScratchIdentity = DEFAULT_IDENTITY): string {
+	return `${DIES_WITH_PARENT} ${asService(identity)} ${DIES_WITH_PARENT} /usr/bin/env HOME=${identity.dir}`;
+}
+
 /** The bytes of the fake Bun zip (the fake .bun-sha256 vouches for exactly these). */
 export const FAKE_BUN_ZIP = 'fake bun zip bytes — never executed\n';
 
@@ -314,6 +322,17 @@ export function mintCertificate(commonName: string, days = 60): { cert: string; 
 	return { cert, key };
 }
 
+/** The targeted policy's path equivalences on EL 10 (measured, almalinux:10 — `/var/run /run`: campaign 3 C3-3). */
+export const EL10_SUBS_DIST_PATH = '/etc/selinux/targeted/contexts/files/file_contexts.subs_dist';
+export const EL10_SUBS_DIST = '/var/run /run\n/var/lock /run/lock\n';
+
+/** The system CA bundle curl reads on a row (tls_trust.ts SYSTEM_CA_BUNDLES). */
+export function systemCaBundle(os: OsRowId): string {
+	return os === 'el10'
+		? '/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem'
+		: '/etc/ssl/certs/ca-certificates.crt';
+}
+
 /** The asset the scratch CPU (x86_64 with AVX2) selects. */
 export const SCRATCH_ASSET = 'bun-linux-x64.zip';
 
@@ -337,10 +356,15 @@ export function hostFiles(
 		['/run/systemd/system/', ''],
 		[`/var/lib/dedalo-install/bun/${BUN_PIN}/${SCRATCH_ASSET}`, FAKE_BUN_ZIP],
 	]);
-	if (variant.os === 'el10') files.set('/usr/sbin/getenforce', '');
+	if (variant.os === 'el10') {
+		files.set('/usr/sbin/getenforce', '');
+		files.set(EL10_SUBS_DIST_PATH, EL10_SUBS_DIST);
+	}
 	if (variant.tls === 'files' && certificate !== null) {
 		files.set(CERT_PATHS.cert, certificate.cert);
 		files.set(CERT_PATHS.key, certificate.key);
+		// The host TRUSTS the institution's chain (its CA in the system bundle — campaign 3 C3-13).
+		files.set(systemCaBundle(variant.os), certificate.cert);
 	}
 	return files;
 }
@@ -467,7 +491,7 @@ const BUN_PATH = `/opt/dedalo/bun/${BUN_PIN}/bun`;
 function selinuxAnswers(variant: HostVariant, identity: ScratchIdentity): RecordedResponse[] {
 	if (variant.os !== 'el10') return [];
 	const specs = [
-		`/var/run/dedalo-${INSTANCE}(/.*)?`,
+		`/run/dedalo-${INSTANCE}(/.*)?`,
 		`/srv/dedalo/${INSTANCE}(/.*)?`,
 		...(variant.tls === 'letsencrypt' ? [`/var/lib/dedalo-install/acme/${INSTANCE}(/.*)?`] : []),
 		fcontextEscape(identity.dir),
@@ -538,6 +562,16 @@ function databaseAnswers(variant: HostVariant, identity: ScratchIdentity): Recor
 			match: `/usr/sbin/runuser -u postgres -- ${psql} -d postgres -c SELECT count(*) FROM pg_available_extensions`,
 			stdout: '3\n',
 		},
+		// PUBLIC's reach: revoked once the database was made (the REVOKE travels on stdin too).
+		{
+			match: `/usr/sbin/runuser -u postgres -- ${psql} -d postgres -c SELECT has_database_privilege('public'`,
+			afterExact: `/usr/sbin/runuser -u postgres -- ${psql} -d postgres`,
+			stdout: 'f\n',
+		},
+		{
+			match: `/usr/sbin/runuser -u postgres -- ${psql} -d postgres -c SELECT has_database_privilege('public'`,
+			stdout: 't\n',
+		},
 		{
 			match: `/usr/sbin/runuser -u postgres -- ${psql} -d postgres -c SELECT 1 / count(*)`,
 			exit: 1,
@@ -553,19 +587,26 @@ function databaseAnswers(variant: HostVariant, identity: ScratchIdentity): Recor
 function engineAnswers(identity: ScratchIdentity): RecordedResponse[] {
 	const bun = `/opt/dedalo/bun/${BUN_PIN}/bun`;
 	const child = `${asServiceHome(identity)} ${bun} run ${identity.dir}/dedalo/scripts/install.ts`;
+	const dying = `${asServiceHomeDying(identity)} ${bun} run ${identity.dir}/dedalo/scripts/install.ts`;
 	return [
 		{
 			match: `${child} --status --json`,
-			after: `${child} --request-stdin`,
-			until: `${child} --abort`,
-			stdout: '{"exists":true,"outcome":"complete","failed_step":null}\n',
+			after: `${dying} --request-stdin`,
+			until: `${dying} --abort`,
+			stdout:
+				'{"exists":true,"outcome":"complete","failed_step":null,"needs":[],"salt_generated":true,"running":null}\n',
 		},
 		{
 			match: `${child} --status --json`,
 			stdout: '{"exists":false,"outcome":null,"failed_step":null}\n',
 		},
+		// The salt read back as the instance (C3-18): what the end of the run shows once.
 		{
-			match: `${child} --request-stdin`,
+			match: `${asService(identity)} /usr/bin/grep -m 1 ^DEDALO_SALT_STRING= ${identity.dir}/private/.env`,
+			stdout: 'DEDALO_SALT_STRING=scratch-salt-value\n',
+		},
+		{
+			match: `${dying} --request-stdin`,
 			stdout: [
 				'{"event":"log","line":"engine steps: seed, ontologies, root"}',
 				'{"event":"show_once","lines":["  generated DEDALO_SALT_STRING = scratch-salt-value"]}',
@@ -594,6 +635,9 @@ function runtimeAnswers(identity: ScratchIdentity): RecordedResponse[] {
 			creates: [`${tree}/node_modules/`],
 		},
 		{ match: `/usr/bin/test -s /var/lib/dedalo-install/bun/${BUN_PIN}/` },
+		// No runtime at the pin yet (cmp: 2 = a file is missing) — a host where another
+		// instance runs the same pin answers 0 (identical: not reinstalled).
+		{ match: '/usr/bin/cmp -s', exit: 2 },
 	];
 }
 
@@ -739,13 +783,14 @@ export interface RunTranscript {
 }
 
 /** An io that keeps every line (and the one-time display apart). */
-export function transcriptIo(transcript: RunTranscript): RunIo {
+export function transcriptIo(transcript: RunTranscript, terminal = true): RunIo {
 	return {
 		log: (line) => transcript.lines.push(line),
 		warn: (line) => transcript.lines.push(line),
+		// `terminal: false`: the output is redirected — a one-time line reaches no terminal.
 		showOnce: (lines) => {
-			transcript.shown.push(...lines);
-			return true;
+			if (terminal) transcript.shown.push(...lines);
+			return terminal;
 		},
 		tell: (lines) => transcript.told.push(...lines),
 	};
@@ -758,11 +803,12 @@ export function transcriptIo(transcript: RunTranscript): RunIo {
 export async function runHost(
 	host: ScratchHost,
 	request: HostExecutorRequest,
-	options: { now?: () => number } = {},
+	options: { now?: () => number; terminal?: boolean } = {},
 ): Promise<{ outcome: HostExecutorOutcome; transcript: RunTranscript }> {
 	const marker = join(host.root, SCRATCH_DIR);
 	const transcript: RunTranscript = { lines: [], told: [], shown: [] };
-	const outcome = await executeHostInstall(request, transcriptIo(transcript), {
+	const io = transcriptIo(transcript, options.terminal ?? true);
+	const outcome = await executeHostInstall(request, io, {
 		runner: scratchRunner(marker),
 		fs: hostFs(host.root, join(marker, 'owners.json')),
 		source: host.source,
@@ -959,7 +1005,7 @@ export function stackResponses(
 	serverName = 'dedalo.example.org',
 ): RecordedResponse[] {
 	const compose = composePrefix(route);
-	const child = `${compose} run --rm -T dedalo bun run scripts/install.ts`;
+	const child = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts`;
 	const status = `${compose} run --rm -T --no-deps dedalo bun run scripts/install.ts --status --json`;
 	const health =
 		route === 'trial'
@@ -1008,7 +1054,13 @@ export function stackResponses(
 			match: status,
 			after: `${child} --request-stdin`,
 			until: `${child} --abort`,
-			stdout: '{"exists":true,"outcome":"complete","failed_step":null}\n',
+			stdout:
+				'{"exists":true,"outcome":"complete","failed_step":null,"needs":[],"salt_generated":true,"running":null}\n',
+		},
+		// The salt read back in the engine container (C3-18).
+		{
+			match: `${compose} exec -T dedalo grep -m 1 ^DEDALO_SALT_STRING= /private/.env`,
+			stdout: 'DEDALO_SALT_STRING=scratch-stack-salt\n',
 		},
 		{ match: status, stdout: '{"exists":false,"outcome":null,"failed_step":null}\n' },
 		{
@@ -1022,6 +1074,12 @@ export function stackResponses(
 		{ match: `${compose} exec -T dedalo curl`, after: `${compose} up -d dedalo`, stdout: '200' },
 		{ match: `${compose} exec -T dedalo curl`, stdout: '000' },
 		{ match: `${compose} ps --services --status running`, stdout: 'postgres\ndedalo\nnginx\n' },
+		// stack_up: nginx settled — its container, running and not restarting (C3-8).
+		{ match: `${compose} ps -q nginx`, stdout: 'scratch-nginx-id\n' },
+		{
+			match: `${DOCKER} inspect --format {{.State.Status}} {{.RestartCount}}`,
+			stdout: 'running 0\n',
+		},
 		{
 			match: `/usr/bin/curl -sS -o /dev/null -w %{http_code} --max-time 20 ${health}`,
 			stdout: '200',
@@ -1058,8 +1116,11 @@ export const READ_ONLY_PROBES: readonly RegExp[] = Object.freeze([
 	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- (\/usr\/bin\/env HOME=\S+ )?\S+\/bun run \S+install\.ts --status --json$/,
 	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- (\/usr\/bin\/env HOME=\S+ )?\S+\/bun run scripts\/ops\/boot_status\.ts --json$/,
 	/^\/opt\/dedalo\/bun\/[\d.]+\/bun --version$/,
-	/^\/usr\/bin\/firewall-cmd --list-(services|ports)$/,
+	/^\/usr\/bin\/firewall-cmd (--get-default-zone|--zone=\S+ --list-(services|ports))$/,
+	/^\/usr\/bin\/cmp -s /,
 	/^\/usr\/sbin\/ufw status$/,
+	/^\/usr\/bin\/find .* -user \S+ -print -quit$/,
+	/^\/usr\/sbin\/runuser -u \S+ (-g \S+ )?-- \/usr\/bin\/grep -m 1 \^DEDALO_SALT_STRING= /,
 	/^\/usr\/bin\/pg_lsclusters --no-header$/,
 ]);
 

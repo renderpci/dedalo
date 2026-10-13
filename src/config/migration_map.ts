@@ -594,6 +594,7 @@ export const NEW_IN_V7: readonly string[] = [
 	// server / runtime
 	'SERVER_UNIX_SOCKET',
 	'SERVER_TCP_PORT',
+	'SERVER_TCP_HOST',
 	'SERVER_MAX_BODY_BYTES',
 	'SERVER_IDLE_TIMEOUT_S',
 	'SERVER_SHUTDOWN_GRACE_MS',

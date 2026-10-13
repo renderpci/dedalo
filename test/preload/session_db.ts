@@ -8,15 +8,23 @@
  * visible to the store's readEnv at open time. An externally provided
  * DEDALO_SESSION_DB_PATH (CI, package scripts) wins.
  */
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 /** One per-run scratch dir shared by the file-path seams below (lazy — only
- * created when at least one override is not externally provided). */
+ * created when at least one override is not externally provided). REMOVED when
+ * the process exits (C3-65: every run left one `dedalo_ts_test_sessions-*` in
+ * the temp dir — 23 after one campaign day). The session store and the state
+ * file are this run's own, so nothing outlives the run that made them. Gate:
+ * test/unit/test_tooling_socket_native.test.ts. */
 let scratchDirValue: string | undefined;
 function scratchDir(): string {
-	scratchDirValue ??= mkdtempSync(join(tmpdir(), 'dedalo_ts_test_sessions-'));
+	if (scratchDirValue === undefined) {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_ts_test_sessions-'));
+		scratchDirValue = dir;
+		process.once('exit', () => rmSync(dir, { recursive: true, force: true }));
+	}
 	return scratchDirValue;
 }
 

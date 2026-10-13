@@ -1432,6 +1432,7 @@ describe('rule 8 — concurrent lane builds serialize the cluster-shared role st
 		port: config.db.port,
 		user: config.db.user,
 		password: config.db.password,
+		socket: config.db.socket,
 	};
 	const CONCURRENCY = 8;
 

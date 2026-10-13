@@ -4,9 +4,14 @@
  *
  *  - file contexts, every spec DERIVED FROM THE ANSWERS (the socket's dir, the
  *    web root of MEDIA_PATH, the install folder — any path, regex-escaped):
- *      <socket dir>(/.*)?               httpd_var_run_t   (the socket — the
- *                                       /var/run spelling under /run: L48, the
- *                                       equivalence rule maps it onto /run)
+ *      <socket dir>(/.*)?               httpd_var_run_t   (the socket — in the
+ *                                       spelling THIS host's policy accepts:
+ *                                       its file_contexts.subs_dist/.subs
+ *                                       equivalences, measured into the facts,
+ *                                       map a path onto their TARGET side —
+ *                                       `/var/run /run` on EL 10, so
+ *                                       /run/dedalo-<i>; `semanage fcontext -a`
+ *                                       refuses the other side: campaign 3 C3-3)
  *      /srv/dedalo/<i>(/.*)? and the    httpd_sys_content_t (media + the
  *      web root of MEDIA_PATH           published client — never the code tree,
  *                                       which an update replaces unlabelled: B13)
@@ -74,9 +79,42 @@ export function fcontextEscape(path: string): string {
 	return path.replace(/[.^$*+?()[\]{}|\\]/g, '\\$&');
 }
 
-/** The /var/run spelling of a path under /run (L48: the equivalence rule maps it onto /run). */
-function varRunSpelling(path: string): string {
-	return path === '/run' || path.startsWith('/run/') ? `/var${path}` : path;
+/**
+ * A path in the spelling the host's policy accepts: the FIRST equivalence
+ * (file_contexts.subs_dist / .subs: `<alias> <target>`) whose alias is the
+ * path or a parent of it maps it onto the target side — `semanage fcontext -a`
+ * refuses a spec on the alias side ("conflicts with equivalency rule"). No
+ * equivalence names it: the path as it is.
+ */
+export function canonicalSpelling(
+	path: string,
+	equivalences: readonly (readonly [string, string])[],
+): string {
+	for (const [alias, target] of equivalences) {
+		if (path === alias) return target;
+		if (path.startsWith(`${alias}/`)) return `${target}${path.slice(alias.length)}`;
+	}
+	return path;
+}
+
+/** The socket directory's spec: its canonical spelling on this host (see the header). */
+function socketSpec(ctx: HostPlanCtx): string {
+	return `${fcontextEscape(canonicalSpelling(ctx.paths.socketDir, ctx.facts.selinuxSubs))}(/.*)?`;
+}
+
+/**
+ * Every spelling verify accepts for the socket's rule: the canonical one and
+ * each alias that the policy maps onto it (a rule an operator added in the
+ * other spelling, on a policy that took it, is the same rule).
+ */
+function socketSpecs(ctx: HostPlanCtx): string[] {
+	const canonical = canonicalSpelling(ctx.paths.socketDir, ctx.facts.selinuxSubs);
+	const aliases = ctx.facts.selinuxSubs.flatMap(([alias, target]) =>
+		canonical === target || canonical.startsWith(`${target}/`)
+			? [`${alias}${canonical.slice(target.length)}`]
+			: [],
+	);
+	return [canonical, ...aliases].map((path) => `${fcontextEscape(path)}(/.*)?`);
 }
 
 /** One file-context rule. */
@@ -141,11 +179,7 @@ function instanceRules(ctx: HostPlanCtx): FcontextRule[] {
 /** The file-context rules (see the header). */
 export function fcontextRules(ctx: HostPlanCtx): FcontextRule[] {
 	return [
-		{
-			spec: `${fcontextEscape(varRunSpelling(ctx.paths.socketDir))}(/.*)?`,
-			type: 'httpd_var_run_t',
-			path: null,
-		},
+		{ spec: socketSpec(ctx), type: 'httpd_var_run_t', path: null },
 		...webRules(ctx),
 		...instanceRules(ctx),
 	];
@@ -161,6 +195,12 @@ function relabelCommand(ctx: HostPlanCtx, rule: FcontextRule & { path: string })
 /** Does a `semanage fcontext -l -C` listing define exactly `spec` (its first column)? */
 export function hasSpec(listing: string, spec: string): boolean {
 	return listing.split('\n').some((line) => line.trim().split(/\s+/)[0] === spec);
+}
+
+/** Is `rule` defined in `listing` (the socket's rule in either spelling)? */
+function specPresent(ctx: HostPlanCtx, listing: string, rule: FcontextRule): boolean {
+	const specs = rule.spec === socketSpec(ctx) ? socketSpecs(ctx) : [rule.spec];
+	return specs.some((spec) => hasSpec(listing, spec));
 }
 
 /** The module file (stamped with the template's own hash). */
@@ -183,7 +223,7 @@ export function selinuxCommands(ctx: HostPlanCtx, present = ''): HostCommand[] {
 	if (!selinuxApplies(ctx)) return [];
 	return [
 		...fcontextRules(ctx)
-			.filter((rule) => !hasSpec(present, rule.spec))
+			.filter((rule) => !specPresent(ctx, present, rule))
 			.map((rule) =>
 				exec(
 					ctx,
@@ -237,7 +277,7 @@ export function runtimeLabelProbe(ctx: HostPlanCtx): ExecCommand {
  * added was recorded by that attempt.
  */
 function claimFcontexts(ctx: HostCtx, present: string): void {
-	const adding = fcontextRules(ctx).filter((rule) => !hasSpec(present, rule.spec));
+	const adding = fcontextRules(ctx).filter((rule) => !specPresent(ctx, present, rule));
 	if (adding.length === 0) return;
 	for (const rule of adding) remember(ctx.created.selinux_fcontexts, rule.spec);
 	ctx.save();
@@ -275,7 +315,7 @@ export const host_selinux: HostStepDefinition = {
 		return verdictOf(
 			[
 				...fcontextRules(ctx).map((rule): [boolean, string] => [
-					hasSpec(rules, rule.spec),
+					specPresent(ctx, rules, rule),
 					`no file context for ${rule.spec}`,
 				]),
 				[/^dedalo_engine\b/m.test(modules), 'the dedalo_engine module is not loaded'],
@@ -310,7 +350,14 @@ export const host_selinux: HostStepDefinition = {
 		ctx.created.selinux_module ||= !ctx.fs.exists(modulePath(ctx));
 	},
 	undo: async (ctx) => {
-		const commands: HostCommand[] = ctx.created.selinux_fcontexts.map((spec) =>
+		// Claimed BEFORE `semanage -a` ran (kill-safety), so a claim may name a rule
+		// that was never added (the add failed, or the run died first): only the
+		// claimed specs the host DEFINES now are deleted (campaign 3 C3-3).
+		const defined = selinuxApplies(ctx)
+			? await probeText(ctx, probe(ctx, 'semanage', ['fcontext', '-l', '-C'], 'local rules'))
+			: '';
+		const added = ctx.created.selinux_fcontexts.filter((spec) => hasSpec(defined, spec));
+		const commands: HostCommand[] = added.map((spec) =>
 			exec(ctx, 'semanage', ['fcontext', '-d', spec], `remove the file context ${spec}`, {
 				okExit: [0, 1],
 			}),
@@ -338,6 +385,6 @@ export const host_selinux: HostStepDefinition = {
 				);
 		}
 		await executeCommands(commands, ctx);
-		return `${ctx.created.selinux_fcontexts.length} file context(s) removed${shared ? '; module kept (another instance uses it)' : ''}`;
+		return `${added.length} file context(s) removed${shared ? '; module kept (another instance uses it)' : ''}`;
 	},
 };

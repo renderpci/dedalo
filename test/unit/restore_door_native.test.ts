@@ -101,7 +101,12 @@ import {
 	runRestoreDoor,
 } from '../../src/core/area_maintenance/restore_door.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
-import { type DbConnDescriptor, runPsql } from '../../src/core/install/pg_exec.ts';
+import {
+	connArgs,
+	type DbConnDescriptor,
+	pgClientEnv,
+	runPsql,
+} from '../../src/core/install/pg_exec.ts';
 import { publicationHostsBase } from '../../src/core/publication_host/registry.ts';
 import {
 	POST_RESTORE_PLAN,
@@ -131,6 +136,7 @@ const admin: DbConnDescriptor = {
 	port: config.db.port,
 	user: config.db.user,
 	password: config.db.password,
+	socket: config.db.socket,
 };
 const target: DbConnDescriptor = { ...admin, database: TARGET };
 
@@ -142,28 +148,11 @@ const JOURNAL_DIR = join(scratch, 'restores');
 /** A real custom-format archive of the WHOLE suite database (a read). */
 function buildArchive(): string {
 	const run = Bun.spawnSync(
-		[
-			resolvePgDump(),
-			'-h',
-			config.db.host,
-			'-p',
-			String(config.db.port),
-			'-U',
-			config.db.user,
-			'-F',
-			'c',
-			'-b',
-			'-f',
-			CLEAN,
-			config.db.database,
-		],
+		[resolvePgDump(), ...connArgs(admin), '-F', 'c', '-b', '-f', CLEAN, config.db.database],
 		{
 			stdout: 'ignore',
 			stderr: 'pipe',
-			env: {
-				...(process.env as Record<string, string>),
-				...(config.db.password !== '' ? { PGPASSWORD: config.db.password } : {}),
-			},
+			env: pgClientEnv(admin),
 		},
 	);
 	if (run.exitCode !== 0) return `pg_dump failed: ${new TextDecoder().decode(run.stderr)}`;
@@ -341,22 +330,14 @@ describe.if(READY)('restore door — the artifact, the writers, the failure, the
 			[
 				(await import('../../src/core/install/pg_bin.ts')).resolvePgBinary('psql'),
 				`--dbname=${TARGET}`,
-				'-h',
-				String(config.db.host),
-				'-p',
-				String(config.db.port),
-				'-U',
-				config.db.user,
+				...connArgs(target),
 				'-tAc',
 				'SELECT pg_backend_pid(); SELECT pg_sleep(30)',
 			],
 			{
 				stdout: 'pipe',
 				stderr: 'ignore',
-				env: {
-					...(process.env as Record<string, string>),
-					...(config.db.password !== '' ? { PGPASSWORD: config.db.password } : {}),
-				},
+				env: pgClientEnv(target),
 			},
 		);
 		try {

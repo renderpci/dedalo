@@ -102,6 +102,7 @@ const admin: DbConnDescriptor = {
 	port: config.db.port,
 	user: config.db.user,
 	password: config.db.password,
+	socket: config.db.socket,
 };
 
 /**
@@ -185,6 +186,7 @@ function cliArgs(): string[] {
 		config.db.host,
 		'--db-port',
 		String(config.db.port),
+		...(config.db.socket === '' ? [] : ['--db-socket', config.db.socket]),
 		'--entity',
 		'e2etest',
 		'--skip-tools',

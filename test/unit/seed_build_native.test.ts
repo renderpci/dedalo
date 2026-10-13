@@ -67,6 +67,7 @@ const admin: DbConnDescriptor = {
 	port: config.db.port,
 	user: config.db.user,
 	password: config.db.password,
+	socket: config.db.socket,
 };
 const check: DbConnDescriptor = { ...admin, database: CHECK_DB };
 
@@ -91,10 +92,12 @@ beforeAll(async () => {
 }, 600_000);
 
 afterAll(async () => {
+	// The scratch dir FIRST, whatever the database teardown does (C3-65: a
+	// throwing DROP left dedalo_seed_compile_* behind in the temp dir).
+	rmSync(workDir, { recursive: true, force: true });
 	for (const name of [CHECK_DB, MARKED_ORPHAN, UNMARKED_LOOKALIKE]) {
 		await column(admin, `DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
 	}
-	rmSync(workDir, { recursive: true, force: true });
 });
 
 describe('seed compiler — repo sources → a seed that installs', () => {

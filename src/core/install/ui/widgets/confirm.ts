@@ -5,13 +5,16 @@
  *    default is the shared rule (confirmDefault — the current value, else the
  *    plan's default).
  *  - acknowledge (trial without media protection, no thesaurus, a probe kept
- *    untested): Space ticks "I understand", Enter answers — unticked declines,
- *    as anything but a typed `yes` declines in plain mode. (The install itself
- *    keeps the typed `yes`: text_field.ts typedYes.)
+ *    untested): Space ticks "I understand" — and so does TYPING `yes`, the
+ *    plain mode's word (campaign 3 C3-26: the docs say "type yes" for both);
+ *    Enter answers, unticked declines. The how-to line is
+ *    screen_text.ts ACKNOWLEDGE_TEXT.full. (The install itself keeps the typed
+ *    `yes`: text_field.ts typedYes.)
  */
 
 import { BACK, confirmDefault, FIELD_BACK, type Nav } from '../../prompter_contract.ts';
 import type { Question } from '../../screen_model.ts';
+import { ACKNOWLEDGE_TEXT } from '../../screen_text.ts';
 import { type Line, seg } from '../styled.ts';
 import type { DrawContext, KeyHint, Widget } from '../widget.ts';
 import { labelSeg, wrapped } from './field_parts.ts';
@@ -27,6 +30,7 @@ const CONFIRM_KEYS: readonly KeyHint[] = [
 
 const ACK_KEYS: readonly KeyHint[] = [
 	['space', 'tick'],
+	['yes', 'type to tick'],
 	['enter', 'continue'],
 	['shift+tab', 'previous'],
 	['esc', 'back'],
@@ -96,6 +100,8 @@ export function acknowledgeField(
 	done: (answer: boolean | Nav) => void,
 ): Widget {
 	let ticked = false;
+	/** The last letters typed: `yes` ticks the box. */
+	let typed = '';
 	const KEYS: Readonly<Record<string, () => void>> = {
 		...navKeys(done),
 		enter: () => done(ticked),
@@ -103,6 +109,10 @@ export function acknowledgeField(
 		space: () => {
 			ticked = !ticked;
 		},
+	};
+	const typeLetter = (name: string): void => {
+		typed = `${typed}${name.slice(5).toLowerCase()}`.slice(-3);
+		if (typed === 'yes') ticked = true;
 	};
 	return {
 		id: question.id,
@@ -117,12 +127,13 @@ export function acknowledgeField(
 			const row: Line = [
 				seg('❯ ', 'accent'),
 				seg(ticked ? '◼ ' : '◻ ', ticked ? 'accent' : 'faint'),
-				seg(`${question.label} — I understand`, 'text', { bold: true }),
+				seg(`${question.label} — ${ACKNOWLEDGE_TEXT.tick}`, 'text', { bold: true }),
 			];
-			return { lines: [...description, row], focus: description.length };
+			const how: Line = [seg(`  ${ACKNOWLEDGE_TEXT.full}`, 'faint')];
+			return { lines: [...description, row, how], focus: description.length };
 		},
 		keys: () => ACK_KEYS,
-		onKey: (name: string) => KEYS[name]?.(),
+		onKey: (name: string) => (name.startsWith('char:') ? typeLetter(name) : KEYS[name]?.()),
 		pending: () => ({
 			id: question.id,
 			kind: 'acknowledge',

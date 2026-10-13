@@ -33,7 +33,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { SEED_DUMP_PATH } from '../../src/core/install/paths.ts';
@@ -360,5 +360,59 @@ describe('probe child — the environment it inherits', () => {
 		// Anti-vacuity: the launch environ DID carry it, and Bun's default spawn still passes it.
 		expect(out.control).toContain(sentinel);
 		expect(out.client).toBe('absent');
+	}, 60000);
+});
+
+describe('a probe writes no server state (campaign 3 C3-20)', () => {
+	/**
+	 * An operator's environment: no suite seam, no configured database (the
+	 * suite's preload sets both) — only what a shell has, and the private dir.
+	 */
+	function operatorEnv(privateDir: string): Record<string, string> {
+		const kept = ['PATH', 'HOME', 'TMPDIR', 'LANG', 'USER'];
+		const env: Record<string, string> = {};
+		for (const key of kept) if (Bun.env[key] !== undefined) env[key] = Bun.env[key] as string;
+		return { ...env, DEDALO_PRIVATE_DIR: privateDir, DEDALO_INSTALL_PRIVATE_DIR: privateDir };
+	}
+
+	test('a System check through the real client leaves an empty parent EMPTY (no ../private, no ts_state.json, no session store)', () => {
+		const parent = mkdtempSync(join(scratchRoot, 'c320_'));
+		const privateDir = join(parent, 'private');
+		const driver = join(scratchRoot, 'c320_driver.ts');
+		writeFileSync(
+			driver,
+			[
+				`import { childProbes } from ${JSON.stringify(join(ROOT, 'src/core/install/install_probe_client.ts'))};`,
+				`const probes = childProbes({ execPath: process.execPath, cwd: ${JSON.stringify(ROOT)} });`,
+				"const outcome = await probes.system('docker');",
+				'console.log(JSON.stringify({ ok: outcome.ok, rows: (outcome.rows ?? []).length }));',
+			].join('\n'),
+		);
+		const proc = Bun.spawnSync([process.execPath, 'run', driver], {
+			cwd: ROOT,
+			env: operatorEnv(privateDir),
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect(proc.exitCode, proc.stderr.toString()).toBe(0);
+		const out = JSON.parse(proc.stdout.toString().trim().split('\n').at(-1) as string);
+		expect(out.rows).toBeGreaterThan(2); // anti-vacuity: the check ran
+		expect(readdirSync(parent)).toEqual([]);
+	}, 60000);
+
+	test('control: the bare probe child, without the client, DOES write the state file there (the trap is real)', () => {
+		const parent = mkdtempSync(join(scratchRoot, 'c320_control_'));
+		const privateDir = join(parent, 'private');
+		const proc = Bun.spawnSync([process.execPath, 'run', CHILD], {
+			cwd: ROOT,
+			env: operatorEnv(privateDir),
+			stdin: Buffer.from(
+				JSON.stringify({ probe: 'system', answers: { route: 'docker' }, secrets: {} }),
+			),
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect(proc.exitCode).toBe(0);
+		expect(readdirSync(privateDir)).toContain('ts_state.json');
 	}, 60000);
 });

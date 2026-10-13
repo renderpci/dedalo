@@ -6,7 +6,8 @@
  * --abort: the stack's containers go down; the VOLUMES this install created
  * (the database's, the engine's, never one that existed before it) are
  * removed only with `--confirm-database <db>` — the same confirmation a
- * production abort asks before it drops a database. The image is kept.
+ * production abort asks before it drops a database. The images are kept, and
+ * named (keptImages).
  */
 
 import type { HostCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
@@ -16,7 +17,14 @@ import { hostRefuse } from '../refuse.ts';
 import { pollUntil, rememberNewVolumes, stackCreated } from './common.ts';
 import { composeCommand, composeProbe, dockerCommand } from './compose.ts';
 import { stackFactsOf } from './facts.ts';
-import { DATABASE_VOLUME, ENV_FILE, stackFileOf } from './layout.ts';
+import {
+	CERTBOT_IMAGE,
+	DATABASE_VOLUME,
+	ENV_FILE,
+	imageRefOf,
+	STACK_SERVICE_IMAGES,
+	stackFileOf,
+} from './layout.ts';
 
 /** `pg_isready` inside the postgres container. */
 export function readyProbe(ctx: HostPlanCtx): HostCommand & { kind: 'exec' } {
@@ -58,7 +66,7 @@ async function runDatabase(ctx: HostCtx) {
 }
 
 /** The stack's containers down (volumes kept). */
-export async function stackDown(ctx: HostCtx): Promise<void> {
+async function stackDown(ctx: HostCtx): Promise<void> {
 	await executeCommands(
 		[
 			composeCommand(ctx, ['down', '--remove-orphans'], 'stop and remove the stack containers', {
@@ -92,11 +100,23 @@ async function removeCreatedVolumes(ctx: HostCtx): Promise<string> {
 	return `; volumes removed: ${names.join(', ')}`;
 }
 
+/**
+ * The images an abort leaves on the machine, named (campaign 3 C3-52) — a
+ * cache, not the install; the operator decides whether to reclaim the space.
+ */
+export function keptImages(ctx: HostPlanCtx): string {
+	const le = ctx.answers.route === 'docker' && ctx.answers.tls_mode === 'letsencrypt';
+	const images = [imageRefOf(ctx.answers), ...STACK_SERVICE_IMAGES, ...(le ? [CERTBOT_IMAGE] : [])];
+	return `the images are kept (${images.join(', ')}) — remove them with: docker image rm ${images.join(' ')}`;
+}
+
 export const stack_database: HostStepDefinition = {
 	id: 'stack_database',
 	privilege: 'operator',
 	kind: 'action',
 	needs: [],
+	// `up -d postgres` again is the whole repair of a stopped PostgreSQL (C3-10).
+	restartable: true,
 	label: (plan) => `start PostgreSQL (database ${String(plan.answers.db_database)})`,
 	commands: databaseCommands,
 	verify: async (ctx) =>
@@ -108,6 +128,6 @@ export const stack_database: HostStepDefinition = {
 	intent: (ctx) => rememberNewVolumes(ctx, [DATABASE_VOLUME], stackFactsOf(ctx).volumes),
 	undo: async (ctx) => {
 		await stackDown(ctx);
-		return `the stack is down${await removeCreatedVolumes(ctx)}`;
+		return `the stack is down${await removeCreatedVolumes(ctx)}; ${keptImages(ctx)}`;
 	},
 };

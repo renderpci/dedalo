@@ -74,3 +74,21 @@ export function wrap(text: string, width: number, indent = ''): string[] {
 export function firstLine(text: string): string {
 	return sanitizeLine(text.split('\n')[0] ?? '');
 }
+
+/* ── the Review's host blocks ───────────────────────────────────────────────── */
+
+/**
+ * The Review's to-do block's step id (host/review.ts REVIEW_TODO_STEP — gated
+ * equal by install_tui_frames): its lines are SENTENCES the operator acts on,
+ * not commands the installer runs.
+ */
+export const REVIEW_TODO_BLOCK = 'todo';
+
+/**
+ * One line of a Review host block, as both front ends print it: a command the
+ * installer runs is `$ <command>`; a to-do sentence is printed as it is (never
+ * dressed as a command the installer would run).
+ */
+export function reviewCommandText(step: string, line: string): string {
+	return step === REVIEW_TODO_BLOCK ? line : `$ ${line}`;
+}

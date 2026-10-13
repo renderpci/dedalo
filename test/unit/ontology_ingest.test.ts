@@ -363,6 +363,7 @@ const admin: DbConnDescriptor = {
 	port: config.db.port,
 	user: config.db.user,
 	password: config.db.password,
+	socket: config.db.socket,
 };
 const scratch: DbConnDescriptor = { ...admin, database: SCRATCH_DB };
 let scratchAvailable = false;

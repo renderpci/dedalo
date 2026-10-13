@@ -436,6 +436,12 @@ const ALLOWLISTED_MODULE_MAPSET = new Set<string>([
 	// module loads, never cleared by design, and its members are code-authored
 	// callbacks that carry no request identity.
 	'core/ontology/model_section.ts:pairingChangeListeners',
+	// Retired ontology property keys already announced, with a node count (C3-72):
+	// a log dedupe for the PROCESS LIFETIME — deliberately not an ontology cache,
+	// whose clear on every dd_ontology write would announce the key again after
+	// each write of an install. Key names and counts only, no request identity;
+	// cleared only by resetRetiredPropertyAnnouncements (the gate's fresh view).
+	'core/ontology/retired_property_notice.ts:nodesPerRetiredKey',
 	// dd1758 activity-table seam: the scratch-table bootstrap latch (the
 	// diffusion/jobs/schema.ts:ensured twin), keyed by RESOLVED table name —
 	// the table is resolved per call now, so one latch per name. A

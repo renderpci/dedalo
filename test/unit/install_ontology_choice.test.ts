@@ -44,9 +44,11 @@ import {
 	defaultOfflineOntologyRequest,
 	describeOntologyCatalog,
 	hierarchyDependencyPlan,
+	INSTALLER_LANG,
 	listedPolicy,
 	mergeHierarchyDependencyLists,
 	mergeOntologyCatalogs,
+	NOT_OFFERED_ONTOLOGY_TLDS,
 	normalizeDeclinedDependencies,
 	normalizeOntologyChoice,
 	type OntologyCatalog,
@@ -64,12 +66,17 @@ import {
 	vendoredOntologyCatalog,
 } from '../../src/core/install/ontology_choice.ts';
 import { VENDORED_ONTOLOGY_DIR } from '../../src/core/install/paths.ts';
+import { buildScreens } from '../../src/core/install/screen_model.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import { serializeHierarchyManifest } from '../../src/core/ontology/hierarchy_manifest_format.ts';
 import {
 	normalizeOntologyDependencies,
 	type OntologyDependency,
 } from '../../src/core/ontology/ontology_dependencies.ts';
+import {
+	HIERARCHY_MODEL_TYPE_TLD,
+	HIERARCHY_TYPE_TLD,
+} from '../../src/core/ontology/ontology_tipos.ts';
 import { scratchHierarchyEntry } from '../../src/core/test_data/hierarchy_entry_fixture.ts';
 
 const SERVER = {
@@ -730,6 +737,95 @@ describe('the thesauri a THESAURUS declares (closeThesaurusChoice)', () => {
 		).toEqual([
 			{ tld: 'zzicb', mandatory: true, dependants: ['oh', 'zzica'] },
 			{ tld: 'zzicc', mandatory: false, dependants: ['zzica'] },
+		]);
+	});
+});
+
+// ── campaign 3 C3-45: one group per heading, one language, no grouper TLDs ──
+
+describe('the Ontologies screen: English labels, one group per heading (C3-45)', () => {
+	/** A catalog entry named in two languages, under a typology named in Spanish (as the master exports it). */
+	function bilingual(tld: string, typologyId: number, typologyName: string): OntologyCatalogEntry {
+		return {
+			...entry(tld, [], 'server', typologyName),
+			name: `Nombre ${tld}`,
+			name_data: [
+				{ id: 1, lang: 'lg-spa', value: `Nombre ${tld}` },
+				{ id: 1, lang: 'lg-eng', value: `Name ${tld}` },
+			],
+			typology_id: typologyId,
+		};
+	}
+	const SPLIT = catalog([
+		{ ...bilingual('oh', 8, 'Catálogo'), origin: 'vendored' },
+		bilingual('zzoca', 12, 'Actividades'),
+		bilingual('zzocb', 8, 'Catálogo'),
+		bilingual(HIERARCHY_TYPE_TLD, 12, 'Actividades'),
+		bilingual(HIERARCHY_MODEL_TYPE_TLD, 12, 'Actividades'),
+	]);
+	const screensOf = () =>
+		buildScreens({
+			raw: { route: 'developer' },
+			secretsGiven: {},
+			priorEnv: {},
+			catalogs: {
+				ontology: { catalog: SPLIT, ok: true, detail: '' },
+				thesauri: {
+					view: {
+						hierarchies: [],
+						hierarchy_typologies: [
+							{ typology: 8, label: 'Catalog' },
+							{ typology: 12, label: 'Activities' },
+						],
+					},
+				},
+			},
+			host: {},
+			probes: {},
+			acknowledged: new Set(),
+		});
+	const question = () =>
+		screensOf()
+			.flatMap((screen) => screen.questions)
+			.find((item) => item.id === 'ontologies.ontologies');
+
+	test('the grouper TLDs are the ontology_tipos ones, and the view never offers them', () => {
+		expect([...NOT_OFFERED_ONTOLOGY_TLDS].sort()).toEqual(
+			[HIERARCHY_TYPE_TLD, HIERARCHY_MODEL_TYPE_TLD].sort(),
+		);
+		const tlds = describeOntologyCatalog(SPLIT).entries.map((item) => item.tld);
+		expect(tlds).toEqual(['oh', 'zzoca', 'zzocb']);
+		expect((question()?.options ?? []).map((option) => option.value)).not.toContain(
+			HIERARCHY_TYPE_TLD,
+		);
+	});
+
+	test('names in the installer language, never the exporting installation’s', () => {
+		expect(INSTALLER_LANG).toBe('lg-eng');
+		const names = describeOntologyCatalog(SPLIT).entries.map((item) => item.name);
+		expect(names).toEqual(['Name oh', 'Name zzoca', 'Name zzocb']);
+		const labels = (question()?.options ?? [])
+			.filter((option) => option.group !== 'core')
+			.map((option) => option.label);
+		expect(labels).toEqual(['Name oh', 'Name zzocb', 'Name zzoca']);
+	});
+
+	test('a typology is ONE group, labelled in English, its members together', () => {
+		const options = (question()?.options ?? []).filter((option) => option.group !== 'core');
+		expect(options.map((option) => [option.value, option.group])).toEqual([
+			['oh', 'Catalog'],
+			['zzocb', 'Catalog'],
+			['zzoca', 'Activities'],
+		]);
+		// every group is one contiguous run (a list draws one header per run)
+		const runs = options
+			.map((option) => option.group)
+			.filter((group, index, all) => index === 0 || group !== all[index - 1]);
+		expect(runs).toEqual(['Catalog', 'Activities']);
+		expect((question()?.groups ?? []).map((group) => group.id)).toEqual([
+			'core',
+			'Catalog',
+			'Activities',
 		]);
 	});
 });

@@ -78,6 +78,7 @@ const admin: DbConnDescriptor = {
 	port: config.db.port,
 	user: config.db.user,
 	password: config.db.password,
+	socket: config.db.socket,
 };
 const scratchConn = (): DbConnDescriptor => ({ ...admin, database: SCRATCH_DB });
 
@@ -122,6 +123,7 @@ function cliArgs(): string[] {
 		config.db.host,
 		'--db-port',
 		String(config.db.port),
+		...(config.db.socket === '' ? [] : ['--db-socket', config.db.socket]),
 		'--entity',
 		'zztldprov',
 		'--skip-tools',

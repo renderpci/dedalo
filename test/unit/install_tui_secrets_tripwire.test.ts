@@ -130,7 +130,8 @@ describe('a whole full-screen walk never draws a secret (a–d)', () => {
 		const answerCase = routeCases(scratchRoot).find(
 			(item) => item.name === 'production + diffusion + mailer',
 		) as ReturnType<typeof routeCases>[number];
-		const { raw, plain } = splitCase(answerCase.argv);
+		// An EXISTING database: a created one is peer-only and asks no password (C3-66).
+		const { raw, plain } = splitCase([...answerCase.argv, '--db-mode', 'existing']);
 		const plan = buildInstallPlan(raw);
 		const script = scriptForPlan(
 			plan,

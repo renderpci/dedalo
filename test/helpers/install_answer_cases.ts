@@ -375,9 +375,12 @@ export function routeCases(sourceDir: string): RouteCase[] {
 				'prado',
 				'--db-name',
 				'prado_db',
-				// A created database's role IS the service user (peer): the account is overridden.
 				'--service-user',
 				'prado_role',
+				// An EXISTING database: its connection and password are asked (a created one is
+				// peer-only — no password, no connection fields: campaign 3 C3-66).
+				'--db-mode',
+				'existing',
 				'--db-password',
 				'secret pass',
 				'--media-path',

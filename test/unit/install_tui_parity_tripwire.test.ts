@@ -61,6 +61,7 @@ import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.
 import type { OntologyCatalog } from '../../src/core/install/ontology_choice.ts';
 import type { InstallPrompter, ReviewView } from '../../src/core/install/prompter_contract.ts';
 import { buildScreens } from '../../src/core/install/screen_model.ts';
+import { railLines } from '../../src/core/install/ui/screens/question.ts';
 import {
 	type PlainScript,
 	scriptedInstallPrompter,
@@ -577,6 +578,39 @@ describe('the Resume screen: resume, and abort with the name typed back (g)', ()
 			]);
 		} finally {
 			await rig.dispose();
+		}
+	});
+});
+
+// ── campaign 3 C3-66: one step count ─────────────────────────────────────────
+
+describe('plain and full screen count the SAME steps (C3-66)', () => {
+	test('per route: plain "Step i of N" ≡ the rail’s rows (the screens + Install and Done)', () => {
+		for (const route of ['production', 'docker', 'trial', 'developer'] as const) {
+			const screens = buildScreens(modelInput({ route }));
+			const plain = scriptedInstallPrompter({ answers: {} });
+			for (const screen of screens) plain.screen(screen);
+			const totals = new Set(
+				plain.said
+					.map((line) => /^Step \d+ of (\d+):/.exec(line)?.[1])
+					.filter((total): total is string => total !== undefined),
+			);
+			expect([...totals], route).toHaveLength(1);
+			const view = {
+				screen: screens[0] as (typeof screens)[number],
+				screens: screens.map((screen) => ({
+					id: screen.id,
+					title: screen.title,
+					index: screen.index,
+					placeholder: false,
+				})),
+				seen: [],
+				focus: null,
+				probing: false,
+				route,
+			};
+			const rail = railLines(view, 'route', {}, true);
+			expect(Number([...totals][0]), route).toBe(rail.length);
 		}
 	});
 });

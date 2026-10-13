@@ -46,6 +46,16 @@
  * entry, a mandatory and an optional one without — prove the verdict moves.
  * The manifest's own integrity (reader, digests, no lg data file, the retired
  * files absent, seed registry = CORE) is install_seed_drift_tripwire's.
+ * THE NO-FALSE-ADVICE HALF (campaign 3, C3-28, 2026-10-13). The release's
+ * `tch` package with what its ontology.json entry declares — the ontologies
+ * (`tchi`) imported with it, the thesauri the SAME run's install_hierarchies
+ * provisions next — is measured through the installer's own warning builder
+ * (`referenceWarnings`, ontology_install.ts). No warning may name `crm` (its
+ * nodes are reached only from tch's external-ontology mapping, a soft class)
+ * nor a thesaurus the run installs (`dc`). Anti-vacuity: the rows do reference
+ * crm and dc — crm also from a node OUTSIDE the mapping (a mapping node moved
+ * under a recycle bin grafted into an absent TLD: unreachable, soft) — and the
+ * same measurement without the pending thesauri warns about `dc`.
  * Works on the current seed and on a core-only rebuild (only core-TLD rows of
  * the seed are counted as present). Hermetic: no database, no network.
  */
@@ -64,6 +74,7 @@ import {
 	vendoredInfoFrom,
 	vendoredOntologyCatalog,
 } from '../../src/core/install/ontology_choice.ts';
+import { referenceWarnings } from '../../src/core/install/ontology_install.ts';
 import {
 	HIERARCHY_IMPORT_DIR,
 	SEED_DUMP_PATH,
@@ -79,9 +90,12 @@ import {
 	classifyReference,
 	danglingDependencies,
 	diffusionModelSet,
+	externalMappingNodes,
 	foreignDependencyTlds,
 	type OntologyReference,
 	referencesOfCopyRows,
+	referencesOfRows,
+	rowsOfCopyLines,
 } from '../../src/core/ontology/ontology_references.ts';
 import { ontologyCopyRow } from '../../src/core/test_data/ontology_package_fixture.ts';
 
@@ -276,5 +290,76 @@ describe('vendored thesaurus closure', () => {
 			malformed,
 		);
 		expect(malformed.length).toBe(1);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// No false advice: a domain package + its declared closure (C3-28).
+// ---------------------------------------------------------------------------
+
+/** One release package's COPY lines. */
+function releasePackageLines(tld: string): string[] {
+	return gunzipSync(readFileSync(join(VENDORED_ONTOLOGY_DIR, `${tld}.copy.gz`)))
+		.toString('utf8')
+		.split('\n')
+		.filter((line) => line !== '');
+}
+
+describe('a release domain package with its declared closure gives no false advice', () => {
+	const DOMAIN = 'tch';
+	const declared = normalizeOntologyDependencies(
+		DOMAIN,
+		vendoredOntologyInfo.get(DOMAIN)?.dependencies,
+		[],
+	);
+	/** The ontologies the install imports: the domain + its declared non-core ontology35 deps. */
+	const ontologies = [
+		...(declared ?? [])
+			.filter((item) => item.main === 'ontology35' && !CORE.has(item.tld))
+			.map((item) => item.tld),
+		DOMAIN,
+	];
+	const declarers: DependencyDeclarer[] = ontologies.map((tld) => ({
+		tld,
+		dependencies: normalizeOntologyDependencies(
+			tld,
+			vendoredOntologyInfo.get(tld)?.dependencies,
+			[],
+		),
+	}));
+	/** The thesauri the same run's install_hierarchies provisions (the installer's own plan). */
+	const pending = thesaurusVerdict(declarers).install;
+	const rows = ontologies.flatMap((tld) => rowsOfCopyLines(releasePackageLines(tld)));
+	const ownTipos = new Set(rows.map((row) => row.tipo));
+	const measure = (pendingThesauri: readonly string[]) =>
+		referenceWarnings({
+			tlds: ontologies,
+			rows,
+			isPresent: (tipo) => ownTipos.has(tipo) || coreTipos.has(tipo),
+			diffusionModels,
+			pendingThesauri,
+		});
+	const targetTlds = new Set(referencesOfRows(rows).map((ref) => ref.to.replace(/\d+$/, '')));
+
+	test('the measurement is not vacuous', () => {
+		expect(ontologies).toEqual(['tchi', DOMAIN]);
+		expect(rows.length).toBeGreaterThan(400);
+		expect(pending).toContain('dc');
+		expect(targetTlds.has('crm')).toBe(true);
+		expect(targetTlds.has('dc')).toBe(true);
+		// the unreachable rule is exercised too: crm is also named outside the mapping
+		const mapping = externalMappingNodes(rows);
+		expect(
+			referencesOfRows(rows).some((ref) => ref.to.startsWith('crm') && !mapping.has(ref.from)),
+		).toBe(true);
+		// without the pending thesauri the same rows DO warn about one of them
+		expect(measure([]).some((line) => line.includes("of 'dc'"))).toBe(true);
+	});
+
+	test('no warning names crm (a mapping vocabulary) or a thesaurus the run installs', () => {
+		const warnings = measure(pending);
+		const named = warnings.map((line) => /of '([a-z]+)'/.exec(line)?.[1] ?? line);
+		expect(named).not.toContain('crm');
+		expect(named.filter((tld) => pending.includes(tld))).toEqual([]);
 	});
 });

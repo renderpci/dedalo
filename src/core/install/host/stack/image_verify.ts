@@ -21,6 +21,7 @@
  */
 
 import { loadImageRegistries, normalizeRepository } from '../../../update/image_registries.ts';
+import { ABORT_AND_START_AGAIN } from '../../step_loop.ts';
 import type { ExecCommand, HostCtx, HostPlanCtx } from '../contract.ts';
 import { probeText } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
@@ -161,6 +162,6 @@ export async function assertPinnedImage(ctx: HostCtx): Promise<void> {
 	if (await pinHolds(ctx)) return;
 	hostRefuse(
 		'install.state_conflict',
-		`${imageRefOf(ctx.answers)} no longer resolves to the image this install verified — it was re-pulled or removed; --abort and start again`,
+		`${imageRefOf(ctx.answers)} no longer resolves to the image this install verified — it was re-pulled or removed: pull the verified digest (${stackCreated(ctx).image?.digest ?? 'see the install record'}) back, then --resume; ${ABORT_AND_START_AGAIN}`,
 	);
 }

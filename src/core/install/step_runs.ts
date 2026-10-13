@@ -91,7 +91,12 @@ export const STEP_RUNS: {
 	},
 	install_ontologies: async (inputs) => {
 		const { installOntologies } = await import('./ontology_install.ts');
-		return { ...(await installOntologies({ userId: inputs.actorUserId })) };
+		return {
+			...(await installOntologies({
+				userId: inputs.actorUserId,
+				pendingThesauri: inputs.hierarchies ?? [],
+			})),
+		};
 	},
 	set_root_pw: async (inputs) => {
 		const { setRootPassword } = await import('./root_pw.ts');

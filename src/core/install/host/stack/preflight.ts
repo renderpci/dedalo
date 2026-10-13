@@ -18,7 +18,10 @@
  *    from a repository the official list does not name, an official image
  *    without cosign to verify it (critique A16 — use a local build instead, or
  *    install cosign);
- *  - the institution's certificate files (address, expiry, key).
+ *  - the institution's certificate files (address, expiry, key) — and that
+ *    THIS machine trusts their chain (tls_trust.ts: stack_health probes the
+ *    site with this machine's curl; campaign 3 C3-13);
+ *  - Compose older than 2.24.4 (the override's `!override` tag).
  *
  * Then FREEZES the facts and the digest of every stack step's commands in the
  * state file, as host_preflight does: what the rest of the run, and any
@@ -32,6 +35,7 @@ import { pendingFacts } from '../facts.ts';
 import { ran } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
 import { checkCertificateFiles } from '../tls_files.ts';
+import { chainTrustVerdict, SYSTEM_CA_BUNDLES } from '../tls_trust.ts';
 import { inCheckout } from './common.ts';
 import { gatherStackFacts, type StackFacts } from './facts.ts';
 import {
@@ -48,6 +52,23 @@ import {
 
 /** The disk floor (see the header). */
 export const STACK_MIN_FREE_GIB = 8;
+
+/**
+ * The oldest Compose the stack runs on: the installer's compose.override.yaml
+ * replaces the trial nginx's ports and volumes with the `!override` tag, which
+ * Compose understands from 2.24.4 (an older one refuses the file).
+ */
+export const MIN_COMPOSE: readonly number[] = Object.freeze([2, 24, 4]);
+
+/** Is `version` (`2.39.1`, `5.0.0-desktop.1`) at least `minimum`? null: no Compose. */
+export function composeAtLeast(version: string | null, minimum: readonly number[]): boolean {
+	const parts = (version ?? '').split(/[.-]/).map((part) => Number.parseInt(part, 10));
+	for (const [index, wanted] of minimum.entries()) {
+		const have = Number.isNaN(parts[index] ?? Number.NaN) ? -1 : (parts[index] as number);
+		if (have !== wanted) return have > wanted;
+	}
+	return true;
+}
 
 /** The operator as a sentence names them. */
 function who(facts: StackFacts): string {
@@ -71,11 +92,11 @@ export const STACK_MACHINE_CHECKS = Object.freeze({
 		facts.daemon
 			? null
 			: `the Docker daemon does not answer ${who(facts)} — start it (sudo systemctl enable --now docker) or join the docker group (sudo usermod -aG docker ${who(facts)}, then log in again); DOCKER_HOST is not passed through: use a docker context`,
-	/** Compose v2 or newer. */
+	/** Compose 2.24.4 or newer (the installer's override uses `!override`). */
 	compose: (facts: StackFacts): string | null =>
-		Number((facts.composeVersion ?? '0').split('.')[0]) >= 2
+		composeAtLeast(facts.composeVersion, MIN_COMPOSE)
 			? null
-			: 'Docker Compose v2 or newer is required (the `docker compose` plugin, not the old docker-compose)',
+			: `Docker Compose ${MIN_COMPOSE.join('.')} or newer is required (the \`docker compose\` plugin, not the old docker-compose)${facts.composeVersion === null ? '' : ` — this machine has ${facts.composeVersion}`}`,
 	/** The disk floor (a root that cannot be measured skips it — see the header). */
 	disk: (facts: StackFacts): string | null => {
 		const free = facts.freeGib ?? STACK_MIN_FREE_GIB;
@@ -172,15 +193,23 @@ function tlsVerdict(ctx: HostCtx): { problems: string[]; warnings: string[] } {
 	if (answers.route !== 'docker' || answers.tls_mode !== 'files') {
 		return { problems: [], warnings: [] };
 	}
+	const fullchain = ctx.fs.readText(answers.tls_cert_path);
 	const verdict = checkCertificateFiles(
-		ctx.fs.readText(answers.tls_cert_path),
+		fullchain,
 		ctx.fs.readText(answers.tls_key_path),
 		answers.server_name,
 		ctx.now(),
 	);
+	// The install's last step probes the site with THIS machine's curl (C3-13).
+	const trust = chainTrustVerdict(
+		fullchain,
+		SYSTEM_CA_BUNDLES.map((path) => ctx.fs.readText(path)),
+	);
 	return {
-		problems: verdict.problems.map((problem) => `${answers.tls_cert_path}: ${problem}`),
-		warnings: verdict.warnings,
+		problems: [...verdict.problems, ...(trust.problem === null ? [] : [trust.problem])].map(
+			(problem) => `${answers.tls_cert_path}: ${problem}`,
+		),
+		warnings: [...verdict.warnings, ...(trust.warning === null ? [] : [trust.warning])],
 	};
 }
 
@@ -194,25 +223,43 @@ function withFacts(ctx: HostCtx, facts: StackFacts): HostPlanCtx {
 	return { ...ctx, facts: { ...pendingFacts(), stack: facts } };
 }
 
+/** The measured machine's refusals (each sentence once) and warnings — read-only. */
+async function evaluateStack(
+	ctx: HostCtx,
+): Promise<{ facts: StackFacts; problems: string[]; warnings: string[] }> {
+	const facts = await gatherStackFacts(ctx.runner, ctx.fs);
+	const docker = dockerProblems(facts);
+	if (docker.length > 0) return { facts, problems: docker, warnings: [] };
+	const tls = tlsVerdict(ctx);
+	const problems = [
+		...machineProblems(facts),
+		...instanceProblems(ctx, facts),
+		...imageProblems(withFacts(ctx, facts), facts),
+		...tls.problems,
+	];
+	return { facts, problems: [...new Set(problems)], warnings: tls.warnings };
+}
+
+/**
+ * The stack preflight's refusals, measured now and recorded nowhere (campaign
+ * 3 C3-23): a fresh run checks them BEFORE it writes .dedalo-install/.
+ */
+export async function stackPreflightRefusals(ctx: HostCtx): Promise<string[]> {
+	return (await evaluateStack(ctx)).problems;
+}
+
 /** The preflight's own run: measure, refuse, freeze. */
 async function runStackPreflight(
 	ctx: HostCtx,
 	digest: (ctx: HostPlanCtx) => Record<string, string>,
 ): Promise<HostRunResult> {
-	const facts = await gatherStackFacts(ctx.runner, ctx.fs);
-	refuseAll(dockerProblems(facts));
+	const { facts, problems, warnings } = await evaluateStack(ctx);
+	refuseAll(problems);
 	const planCtx = withFacts(ctx, facts);
-	const tls = tlsVerdict(ctx);
-	refuseAll([
-		...machineProblems(facts),
-		...instanceProblems(ctx, facts),
-		...imageProblems(planCtx, facts),
-		...tls.problems,
-	]);
 	ctx.state.preflight.host = { facts: planCtx.facts, commands_digest: digest(planCtx) };
 	return ran(
 		`Docker Compose ${facts.composeVersion}, ${facts.freeGib === null ? 'disk not measurable' : `${facts.freeGib} GiB free`}, as ${facts.user}`,
-		{ warnings: tls.warnings },
+		{ warnings },
 	);
 }
 
@@ -231,5 +278,6 @@ export function stackPreflightStep(
 		label: () => 'system check: Docker, Compose v2, disk, no instance yet, the image source',
 		commands: () => [],
 		run: (ctx) => runStackPreflight(ctx, digest),
+		refusals: stackPreflightRefusals,
 	};
 }

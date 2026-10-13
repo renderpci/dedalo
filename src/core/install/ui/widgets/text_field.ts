@@ -5,6 +5,11 @@
  * plain mode (`-` empties an optional field, an emptied field takes the
  * suggestion). Shift-Tab is the previous question, Esc the previous screen.
  *
+ * The pre-filled value is a DEFAULT, drawn faint until edited: the first typed
+ * character (or a paste) REPLACES it, as plain mode's `[default]` is replaced
+ * by what is typed (campaign 3 C3-47 — never `museoMuseo de prueba`); an
+ * editing key (←→, Home/End, Backspace) edits it instead.
+ *
  * `typedYes` (the Review's "Install now"): the word `yes` must be typed, as in
  * plain mode — anything else declines.
  */
@@ -12,7 +17,7 @@
 import { BACK, FIELD_BACK, type Nav, suggested, textAnswerOf } from '../../prompter_contract.ts';
 import type { Question } from '../../screen_model.ts';
 import { seg } from '../styled.ts';
-import { editKey, editOf, editText, type FieldEdit, pasteInto } from '../view_state.ts';
+import { editKey, editOf, editText, type FieldEdit, pasteInto, typedText } from '../view_state.ts';
 import type { DrawContext, Widget } from '../widget.ts';
 import {
 	boxWidth,
@@ -34,6 +39,11 @@ function submitted(question: Question, text: string, typedYes: boolean): string 
 	return textAnswerOf(text.trim(), question, suggested(question));
 }
 
+/** The edit a key applies to: a shown default is dropped when the key TYPES text over it. */
+function typedOver(edit: FieldEdit, pristine: boolean, name: string): FieldEdit {
+	return pristine && typedText(name) !== '' ? editOf('') : edit;
+}
+
 export function textField(
 	question: Question,
 	done: (answer: string | boolean | Nav) => void,
@@ -41,6 +51,8 @@ export function textField(
 ): Widget {
 	const typedYes = options.typedYes === true;
 	let edit: FieldEdit = editOf(typedYes ? '' : suggested(question));
+	/** The default is shown, not yet typed over or edited. */
+	let pristine = editText(edit) !== '';
 	const submit = (): void => done(submitted(question, editText(edit), typedYes));
 	const NAV: Readonly<Record<string, () => void>> = {
 		enter: submit,
@@ -60,7 +72,7 @@ export function textField(
 			const description = descriptionLines(question, ctx.width, ctx.layout.descLines);
 			const row = [
 				labelSeg(question.label, 'accent'),
-				...valueBox(editText(edit), edit.caret, boxWidth(ctx.width)),
+				...valueBox(editText(edit), edit.caret, boxWidth(ctx.width), pristine ? 'faint' : 'text'),
 			];
 			const hint = typedYes ? [[seg('type yes and press enter to start the install', 'warn')]] : [];
 			return {
@@ -72,10 +84,14 @@ export function textField(
 		onKey: (name: string) => {
 			const nav = NAV[name];
 			if (nav !== undefined) return nav();
-			edit = editKey(edit, name) ?? edit;
+			const next = editKey(typedOver(edit, pristine, name), name);
+			if (next === null) return;
+			edit = next;
+			pristine = false;
 		},
 		onPaste: (text: string) => {
-			edit = pasteInto(edit, text);
+			edit = pasteInto(pristine ? editOf('') : edit, text);
+			pristine = false;
 		},
 		pending: () => ({ id: question.id, kind: 'text', value: editText(edit) }),
 	};

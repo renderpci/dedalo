@@ -12,15 +12,15 @@
 
 import { sanitizeLine } from '../../display_text.ts';
 import type { RouteScreen, ScreenView } from '../../prompter_contract.ts';
-import type { Option, Question } from '../../screen_model.ts';
+import { type Option, type Question, RUN_STEPS } from '../../screen_model.ts';
 import type { PaneModel } from '../frame.ts';
 import { type Line, seg } from '../styled.ts';
 import type { DrawContext, Widget } from '../widget.ts';
 import { labelSeg, wrapped } from '../widgets/field_parts.ts';
 import { BLANK, noticeLines, saidLines, screenExtras } from '../widgets/notices.ts';
 
-/** The run states the rail adds after the model's screens. */
-export const RUN_STATES = ['Install', 'Done'] as const;
+/** The run states the rail adds after the model's screens (the model's own — plain counts them too). */
+export const RUN_STATES = RUN_STEPS;
 
 export type RailState = 'done' | 'current' | 'pending' | 'skipped';
 

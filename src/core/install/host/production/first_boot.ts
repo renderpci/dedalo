@@ -178,6 +178,8 @@ export const host_first_boot: HostStepDefinition = {
 	privilege: 'root',
 	kind: 'action',
 	needs: [],
+	// A start: re-run on a resume when the unit stopped since (C3-8/C3-10).
+	restartable: true,
 	label: () => 'first boot: start, /health on the socket, every migration recorded',
 	commands: (ctx) => [
 		systemctl(ctx, 'start', [serverUnit(ctx)], `start ${serverUnit(ctx)}`),
@@ -205,6 +207,10 @@ export const host_first_boot: HostStepDefinition = {
 		const domain = await engineDomainProblem(ctx);
 		if (domain !== null) hostRefuse('install.step_failed', domain);
 		return ran(`${serverUnit(ctx)} is up; migrations complete`);
+	},
+	// From the first start on the instance may have served: an abort keeps it (C3-11).
+	intent: (ctx) => {
+		ctx.created.served = true;
 	},
 	undo: async (ctx) => {
 		await executeCommands(

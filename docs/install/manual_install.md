@@ -89,6 +89,10 @@ PGBIN=/usr/pgsql-18/bin PGSVC=postgresql-18.service CERTBOT_TIMER=certbot-renew.
 WEB=nginx  WEBSVC=nginx   WEBUSER=nginx    WEBLOG=/var/log/nginx   SITE=/etc/nginx/conf.d/dedalo-$I.conf
 #   Apache
 WEB=apache WEBSVC=httpd   WEBUSER=apache   WEBLOG=/var/log/httpd   SITE=/etc/httpd/conf.d/dedalo-$I.conf
+
+# Every system: does SELinux apply here (the RHEL family, Enforcing or Permissive)?
+SELINUX_MODULE=false
+getenforce 2>/dev/null | grep -qiE '^(enforcing|permissive)$' && SELINUX_MODULE=true
 ```
 
 `PIN`, the Bun version, is set in [`host_runtime`](#manual-host_runtime) from the release itself.
@@ -97,12 +101,17 @@ WEB=apache WEBSVC=httpd   WEBUSER=apache   WEBLOG=/var/log/httpd   SITE=/etc/htt
 
 ```shell
 render() {
+  name_re=$(printf '%s' "$NAME" | sed 's/[.]/\\\\&/g')
   sed -e "s|@@INSTANCE@@|$I|g" -e "s|@@USER@@|$U|g" -e "s|@@GROUP@@|$G|g" \
       -e "s|@@DIR@@|$DIR|g" -e "s|@@BACKUP_DIR@@|$BACKUP_DIR|g" -e "s|@@PIN@@|$PIN|g" \
       -e "s|@@PG_BIN@@|$PGBIN|g" -e "s|@@PG_SERVICE@@|$PGSVC|g" \
-      -e "s|@@SERVER_NAME@@|$NAME|g" -e "s|@@LOG_DIR@@|$WEBLOG|g" "$@"
+      -e "s|@@SERVER_NAME_RE@@|$name_re|g" \
+      -e "s|@@SERVER_NAME@@|$NAME|g" -e "s|@@LOG_DIR@@|$WEBLOG|g" \
+      -e "s|@@SELINUX_MODULE@@|$SELINUX_MODULE|g" "$@"
 }
 ```
+
+`@@SERVER_NAME_RE@@` is the address as a regular expression, its dots escaped (`dedalo\.example\.org`), for the Apache sites' name guard, which matches the `Host` header against it. The installer escapes it the same way.
 
 `render <file>` renders a file, and `render <<'EOF' … EOF` renders the text between the markers. Keep the quotes around the first `EOF`, so the shell leaves the `$` in the files alone. The installer indents its files with tabs; this page shows them as spaces. The difference means nothing to systemd, nginx, Apache or JSON.
 
@@ -129,15 +138,25 @@ ls /var/lib/dedalo-install/instances/ 2>&1     # the other instances on this hos
                                                # PostgreSQL already installed only: prints nothing
 ```
 
+On a fresh host, `nginx: command not found` and `runuser: user postgres does not exist` only mean that nginx and PostgreSQL are not installed yet. That is fine: [`host_packages`](#manual-host_packages) installs them.
+
 Also check:
 
 - **The role and the database are free.** No PostgreSQL role named like the service user and no database `dedalo_<i>` exist yet. The installer refuses either one before it changes anything: an existing role may carry a password, `SUPERUSER` or `CREATEDB`, and the engine would then run as it. A hosting account often has a role of its own name already. Stop and choose another service user, or remove what is left of an earlier install.
-- **The address is free.** No other site on this host serves `$NAME` on ports 80 and 443 (`nginx -T` or `apachectl -S`).
+- **The address is free.** No other site on this host serves `$NAME` on ports 80 and 443 (`nginx -T`; Apache: `apache2ctl -S` on Debian and Ubuntu, `httpd -S` on the RHEL family, whose `apachectl` does not accept `-S`).
 - **One PostgreSQL major.** No cluster other than PostgreSQL 18 listens on port 5432. On Ubuntu and Debian, check with `pg_lsclusters`.
 - **The folder.** The install folder is absent, or empty, or an existing folder of the service user's. It is not reached through a symbolic link, not writable by group or others, and no web site on this host serves it.
 - **One of everything per instance.** No other instance uses the service user, the group or the folder. Read each `/var/lib/dedalo-install/instances/*.json` file and each `User=` line under `/etc/systemd/system/dedalo-ts@*.service.d/`.
-- **The firewall** (`ufw status`, or `firewall-cmd --list-services`) lets ports 80 and 443 in. Open them yourself if needed; the installer never changes the firewall.
-- **Your institution's certificate**, if you use one, names the address, is valid now, and pairs with its key (`openssl x509 -in <fullchain> -noout -subject -enddate`).
+- **The firewall** lets ports 80 and 443 in. The installer never changes the firewall; open them yourself:
+
+    ```shell
+    firewall-cmd --get-default-zone; firewall-cmd --list-services        # firewalld (RHEL family): http and https listed?
+    firewall-cmd --permanent --add-service=http --add-service=https && firewall-cmd --reload
+    ufw status                                                           # ufw (Ubuntu): 80 and 443 allowed?
+    ufw allow 80,443/tcp
+    ```
+
+- **Your institution's certificate**, if you use one, names the address, is valid now, and pairs with its key (`openssl x509 -in <fullchain> -noout -subject -enddate`), and **this host trusts its chain**. The installer's last check runs this host's `curl`, which verifies the chain as a browser does. Check with `openssl verify -untrusted <fullchain> <fullchain>`. When it says *unable to get local issuer certificate*, install your authority's certificate: Debian and Ubuntu, copy it to `/usr/local/share/ca-certificates/<name>.crt`, then `update-ca-certificates`; RHEL family, copy it to `/etc/pki/ca-trust/source/anchors/`, then `update-ca-trust`.
 
 ## `host_packages` — packages and repositories {#manual-host_packages}
 
@@ -150,7 +169,7 @@ The installer installs only the packages that are missing, and adds a repository
 ```shell
 DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update
 DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y --no-install-recommends \
-  git unzip gzip file ca-certificates curl rsync postgresql-18 postgresql-client-18 ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin \
+  git unzip gzip file ca-certificates curl rsync diffutils postgresql-18 postgresql-client-18 ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin \
   nginx certbot                       # or: apache2 certbot   (certbot: Let's Encrypt only)
 /usr/bin/systemctl enable --now postgresql.service nginx      # or: apache2
 ```
@@ -163,7 +182,7 @@ DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y --no-install-recommen
 /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
 DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get update
 DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y --no-install-recommends \
-  git unzip gzip file ca-certificates curl rsync postgresql-18 postgresql-client-18 ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin \
+  git unzip gzip file ca-certificates curl rsync diffutils postgresql-18 postgresql-client-18 ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin \
   nginx certbot                       # or: apache2 certbot   (certbot: Let's Encrypt only)
 /usr/bin/systemctl enable --now postgresql.service nginx      # or: apache2
 ```
@@ -176,7 +195,7 @@ DEBIAN_FRONTEND=noninteractive /usr/bin/apt-get install -y --no-install-recommen
 /usr/bin/dnf install -y https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-10.noarch.rpm
 /usr/bin/dnf install -y "https://download.postgresql.org/pub/repos/yum/reporpms/EL-10-$(uname -m)/pgdg-redhat-repo-latest.noarch.rpm"
 /usr/bin/dnf install -y \
-  git unzip gzip file ca-certificates curl tar rsync postgresql18-server postgresql18 postgresql18-contrib ffmpeg ImageMagick poppler-utils librsvg2-tools \
+  git unzip gzip file ca-certificates curl tar rsync diffutils postgresql18-server postgresql18 postgresql18-contrib ffmpeg ImageMagick poppler-utils librsvg2-tools \
   policycoreutils-python-utils \
   nginx certbot                       # or: httpd mod_ssl mod_http2 certbot   (certbot: Let's Encrypt only)
 test -e /var/lib/pgsql/18/data/PG_VERSION || \
@@ -184,6 +203,10 @@ test -e /var/lib/pgsql/18/data/PG_VERSION || \
 /usr/bin/systemctl enable --now postgresql-18.service nginx   # or: httpd
 /usr/bin/dnf install -y ocrmypdf                   # optional: a failure only leaves PDF OCR off
 ```
+
+`ocrmypdf` is optional on the RHEL family. EPEL 10 has no build for `aarch64` (`No match for argument: ocrmypdf`), and without it automatic OCR of PDFs stays off.
+
+With Apache on Debian and Ubuntu, enable its modules now (the package enables none of them): `a2enmod ssl headers http2 rewrite proxy proxy_http && systemctl restart apache2`. On the RHEL family, the `httpd`, `mod_ssl` and `mod_http2` packages load them all.
 
 What the media tools are for, and why SVG goes through `rsvg-convert` and never ImageMagick, is in [Production › `host_packages`](production.md#host_packages-packages-and-repositories).
 
@@ -268,7 +291,14 @@ SRC=$(dirname "$(dirname "$(ls "$REL"/tree/scripts/install.ts "$REL"/tree/*/scri
 PIN=$(cat "$SRC/.bun-version")
 ```
 
-The archive holds the tree either at its top level or in one top-level directory; `SRC` is wherever `scripts/install.ts` is. Keep `$REL` until [`host_selinux`](#manual-host_selinux): the units and the policy module are copied from it, never from the instance's own tree.
+**From a checkout** instead of the archive (a version not published as an archive, for example), clone it into the same place and check out the release's tag. Run this in place of the `curl` and `unzip` lines, before setting `SRC`:
+
+```shell
+/usr/bin/git clone https://github.com/dedalia-org/dedalo.git "$REL/tree"
+/usr/bin/git -C "$REL/tree" checkout "v$V"
+```
+
+The archive step below leaves `.git` out of the release. The archive holds the tree either at its top level or in one top-level directory; `SRC` is wherever `scripts/install.ts` is. Keep `$REL` until [`host_selinux`](#manual-host_selinux): the units and the policy module are copied from it, never from the instance's own tree.
 
 **Bun**, at the release's pin, root-owned. It comes only from a zip whose sha256 is the release's committed row in `.bun-sha256`, checked before it is unpacked:
 
@@ -287,7 +317,7 @@ grep " $ASSET\$" "$SRC/.bun-sha256" | sha256sum -c -          # bun-linux-….zi
 /usr/bin/rm -rf extract
 ```
 
-On a host where another instance already runs this pin, `/opt/dedalo/bun/$PIN/bun` is already there: leave it.
+On a host where another instance already runs this pin, `/opt/dedalo/bun/$PIN/bun` is already there: leave it. The installer compares it byte for byte with the verified one (`cmp -s`) and does not install it again, so a running instance's binary is never replaced.
 
 !!! danger "Never `bun upgrade` on a production server"
     The engine is coupled to version-specific runtime behaviour, and a silent drift there is a data-corruption class. A new pin is installed next to the old one, as above, and the units are pointed at it.
@@ -297,14 +327,14 @@ On a host where another instance already runs this pin, `/opt/dedalo/bun/$PIN/bu
 ```shell
 /usr/bin/tar -C "$SRC" --exclude=./node_modules --exclude=./.git -cf "$REL/release.tar" .
 $RU /usr/bin/install -d -m 0750 "$DIR/dedalo"
-$RU /usr/bin/tar -xf "$REL/release.tar" -C "$DIR/dedalo" --no-same-owner
+$RU /usr/bin/tar -xf "$REL/release.tar" -C "$DIR/dedalo" --no-same-owner --no-overwrite-dir
 cd "$DIR/dedalo"
 BUN_INSTALL_CACHE_DIR="$DIR/dedalo/.bun-install-cache" \
   $RU /usr/bin/env HOME="$DIR" "/opt/dedalo/bun/$PIN/bun" install --frozen-lockfile --production
 $RU /usr/bin/rm -rf "$DIR/dedalo/.bun-install-cache"
 ```
 
-The `cd` matters: `runuser` keeps the directory you are standing in. `--frozen-lockfile` refuses any dependency tree other than the tested one, and `--production` leaves out the test harness and the linters. The package cache lives inside the tree and is removed straight after. `runuser` resets `HOME` to the account's own home, so every Bun command on this page sets `HOME` to the install folder, as the installer does: nothing is left in the account's home.
+The `cd` matters: `runuser` keeps the directory you are standing in. `--no-overwrite-dir` keeps `$DIR/dedalo` at `0750`: the archive's own `./` entry would otherwise give it the source's `0755`. `--frozen-lockfile` refuses any dependency tree other than the tested one, and `--production` leaves out the test harness and the linters. The package cache lives inside the tree and is removed straight after. `runuser` resets `HOME` to the account's own home, so every Bun command on this page sets `HOME` to the install folder, as the installer does: nothing is left in the account's home.
 
 **The root-run scripts**, copied root-owned, byte for byte, outside the code tree. A code update moves the whole tree aside, and the rollback has to work exactly when the tree is missing:
 
@@ -314,7 +344,7 @@ for script in dedalo-backup-step.sh dedalo-db-backup.sh dedalo-tree-backup.sh de
 done
 ```
 
-**Verify:** `/opt/dedalo/bun/$PIN/bun --version` prints `$PIN`; `stat -c '%U' /opt/dedalo/bun/$PIN/bun` prints `root`; `ls "$DIR/dedalo/node_modules" "$BIN"`.
+**Verify:** `/opt/dedalo/bun/$PIN/bun --version` prints `$PIN`; `stat -c '%U' /opt/dedalo/bun/$PIN/bun` prints `root`; `stat -c %a "$DIR/dedalo"` prints `750`; `ls "$DIR/dedalo/node_modules" "$BIN"`.
 
 ## `host_database` — the role and the database {#manual-host_database}
 
@@ -328,13 +358,17 @@ $PSQL -d postgres -c "SELECT 1 / count(*) FROM pg_roles WHERE rolname = '$U'" >/
   printf 'CREATE ROLE "%s" LOGIN;\n' "$U" | $PSQL -d postgres
 $PSQL -d postgres -c "SELECT 1 / count(*) FROM pg_database WHERE datname = 'dedalo_$I'" >/dev/null 2>&1 || \
   printf "CREATE DATABASE \"dedalo_%s\" OWNER \"%s\" ENCODING 'UTF8' TEMPLATE template0;\n" "$I" "$U" | $PSQL -d postgres
+printf 'REVOKE CONNECT, TEMPORARY ON DATABASE "dedalo_%s" FROM PUBLIC;\nGRANT CONNECT, TEMPORARY ON DATABASE "dedalo_%s" TO "%s";\n' "$I" "$I" "$U" | $PSQL -d postgres
 ```
+
+PostgreSQL lets every role connect to a new database and create temporary tables in it (the `PUBLIC` grant). The last line takes that away and gives it to the instance's role alone, so another instance's role cannot reach this database.
 
 **Verify**, as the installer does — the service user reaches its database by peer, and the three extensions the seed needs are available:
 
 ```shell
 $RU $PGBIN/psql -X -q -A -t -h /var/run/postgresql -p 5432 -d "dedalo_$I" -c 'SELECT 1'     # 1
 $PSQL -d postgres -c "SELECT count(*) FROM pg_available_extensions WHERE name IN ('btree_gin', 'pg_trgm', 'unaccent')"   # 3
+$PSQL -d postgres -c "SELECT has_database_privilege('public', 'dedalo_$I', 'CONNECT')"                               # f
 ```
 
 The `||` guards only make a re-run of this page harmless after it stopped halfway. They never adopt a role or a database that existed before: [`host_preflight`](#manual-host_preflight) checked that neither did.
@@ -351,13 +385,16 @@ The engine steps fill the database and write the configuration: the seed, the on
 cd "$DIR/dedalo"
 $RU /usr/bin/env HOME="$DIR" "/opt/dedalo/bun/$PIN/bun" run "$DIR/dedalo/scripts/install.ts" \
   --route production --instance "$I" --engine-only \
-  --db-user "$U" --pg-bin-path "$PGBIN" \
+  --db-user "$U" --pg-bin-path "$PGBIN" --media-access-mode publication \
+  --backup-dir "$BACKUP_DIR" \
   --entity prado --entity-label 'Museo del Prado' --locale es-ES --timezone Europe/Madrid
 ```
 
 - `--route production --instance "$I"` gives the Production defaults that follow the instance name: the database `dedalo_<i>` over the socket `/var/run/postgresql`, `MEDIA_PATH=/srv/dedalo/<i>/dedalo/media`, and the socket `/run/dedalo-<i>/dedalo_ts.sock`.
 - `--db-user "$U"` is required whenever the service user is not `ded_<i>`: the database role is the service user, and the default would be `ded_<i>`.
 - `--pg-bin-path "$PGBIN"` is written as `DEDALO_PG_BIN_PATH`, so the backups dump with the PostgreSQL 18 client.
+- `--backup-dir "$BACKUP_DIR"` is written as `DEDALO_BACKUP_DIR=$BACKUP_DIR/db`, the directory the backup units write. The server's own backups and its directory check then use that directory too, and the instance has one backup location.
+- `--media-access-mode publication` is the Production default, spelled out so the choice is visible. The installer writes it as `DEDALO_MEDIA_ACCESS_MODE`, with or without the flag, as the installer's own route does, so the first boot does not report an unconfigured mode. Choose `private` or `false` here if that is your choice: [Production › The media access mode](production.md#before-you-start).
 - Add any other answer as a flag or with `--answers <file>`, as on the installer's headless form: `--langs`, `--app-lang`, `--data-lang`, `--ontologies`, `--hierarchies`, `--media-access-mode`, `--diffusion --mysql-*`, `--mailer --smtp-*`. Every flag is in the [installer reference](installer_reference.md#command-line-flags). `--plan` prints the plan and changes nothing.
 
 Run this way, at a terminal and without `--execute`, the installer **asks** for the `root` password (hidden, typed twice, checked against the policy). The password never appears on a command line or in the environment. For an unattended run, add `--execute --secrets-stdin` and pipe the secrets in as one JSON object, `{"root_password":"…"}`, plus `mysql_password` or `smtp_pass` when diffusion or the mailer is on. See [Installer reference › Secrets](installer_reference.md#secrets). Avoid `DEDALO_INSTALL_ROOT_PASSWORD` here: exported in the root shell, the password stays in that shell's environment for every later command on this page, and typed inline it lands in the shell history.
@@ -484,7 +521,7 @@ Only on the RHEL family, and only when `getenforce` prints `Enforcing` or `Permi
 
 ```shell
 E=$(printf '%s\n' "$DIR" | sed 's/[][\.^$*+?(){}|]/\\&/g')     # /home/my_domain\.org/dedalo
-/usr/sbin/semanage fcontext -a -t httpd_var_run_t "/var/run/dedalo-$I(/.*)?"
+/usr/sbin/semanage fcontext -a -t httpd_var_run_t "/run/dedalo-$I(/.*)?"
 /usr/sbin/semanage fcontext -a -t httpd_sys_content_t "/srv/dedalo/$I(/.*)?"
 /usr/sbin/semanage fcontext -a -t httpd_sys_content_t "/var/lib/dedalo-install/acme/$I(/.*)?"   # Let's Encrypt only
 /usr/sbin/semanage fcontext -a -t var_lib_t "$E"                  # only if you CREATED the folder in host_identity
@@ -493,7 +530,7 @@ E=$(printf '%s\n' "$DIR" | sed 's/[][\.^$*+?(){}|]/\\&/g')     # /home/my_domain
 /usr/sbin/semanage fcontext -a -t var_lib_t "$E/backups(/.*)?"
 ```
 
-A backup directory outside the install folder gets its own `var_lib_t` rule, escaped the same way. The socket's rule uses the `/var/run` spelling. systemd creates the socket's directory at every start, and the rule labels it then.
+A backup directory outside the install folder gets its own `var_lib_t` rule, escaped the same way. The socket's rule uses the `/run` spelling. RHEL 10's policy maps `/var/run` onto `/run` (`/etc/selinux/targeted/contexts/files/file_contexts.subs_dist`), and `semanage` refuses a rule written on the `/var/run` side (`conflicts with equivalency rule '/var/run /run'`). systemd creates the socket's directory at every start, and the rule labels it then.
 
 **Relabel.** Root relabels the web root; the service user relabels inside its own folder:
 
@@ -578,7 +615,7 @@ id -nG "$WEBUSER" | grep -qw "$G" || /usr/sbin/usermod -aG "$G" "$WEBUSER"
 install -d -o root -g root -m 0755 /var/www/empty        # Apache only: the empty DocumentRoot
 ```
 
-Apache needs the modules `ssl headers http2 rewrite proxy proxy_http`. Check with `apache2ctl -M` on Debian and Ubuntu, or `httpd -M` on the RHEL family. Enable a missing one with `a2enmod <module> && systemctl reload apache2` on Debian and Ubuntu, or with its package and `LoadModule` line under `/etc/httpd/conf.modules.d/` on the RHEL family. The installer only checks them and stops; enabling modules is the system administrator's job.
+Apache needs the modules `ssl headers http2 rewrite proxy proxy_http`. Check with `apache2ctl -M` on Debian and Ubuntu, or `httpd -M` on the RHEL family. Enable a missing one with `a2enmod <module> && systemctl restart apache2` on Debian and Ubuntu (a restart, as `a2enmod` advises), or with its package and `LoadModule` line under `/etc/httpd/conf.modules.d/` on the RHEL family. The installer checks them, lists the command on the Review's *To do* list, and stops at this step while one is missing; enabling modules is the system administrator's job. The installer never sets `ServerTokens`, a server-wide directive: set `ServerTokens Prod` in the global configuration yourself if you want the `Server:` header not to name the system and version.
 
 Write the first stage of the site: the plain-HTTP server with the challenge root, and the redirect to HTTPS.
 
@@ -625,6 +662,9 @@ render > "$SITE" <<'EOF'
 		Require all granted
 	</Directory>
 	RewriteEngine On
+	# Only this site's own name: any other Host is refused (421), never served.
+	RewriteCond %{HTTP_HOST} !^@@SERVER_NAME_RE@@(:80)?$ [NC]
+	RewriteRule ^ - [R=421,L]
 	RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
 	RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 </VirtualHost>
@@ -663,9 +703,11 @@ openssl x509 -in <fullchain> -noout -subject -ext subjectAltName -enddate
 [ "$(openssl x509 -in <fullchain> -noout -pubkey | sha256sum)" = "$(openssl pkey -in <key> -pubout | sha256sum)" ] && echo pair
 ```
 
+This host must trust the chain (the public probe verifies it with this host's `curl`): `openssl verify -untrusted <fullchain> <fullchain>` prints `OK` once your authority is in the system trust store, as in [`host_preflight`](#manual-host_preflight).
+
 On the RHEL family, the web server must be able to read them: keep them under `/etc/pki/tls`, or label their directory `cert_t` (`semanage fcontext -a -t cert_t '<dir>(/.*)?' && restorecon -RF <dir>`).
 
-**Verify:** `certbot certificates --cert-name "dedalo-$I"`; `systemctl is-enabled "$CERTBOT_TIMER"`.
+**Verify:** with Let's Encrypt, `certbot certificates --cert-name "dedalo-$I"` and `systemctl is-enabled "$CERTBOT_TIMER"`. With your own files, `openssl x509 -noout -subject -enddate -in <fullchain>` names the address and a date ahead; once the site is up, `openssl s_client -connect "$NAME:443" -servername "$NAME" </dev/null | grep 'Verify return code'` prints `0 (ok)`.
 
 ## `host_web_site` — the full site {#manual-host_web_site}
 
@@ -852,6 +894,9 @@ render > "$SITE" <<'EOF'
 		Require all granted
 	</Directory>
 	RewriteEngine On
+	# Only this site's own name: any other Host is refused (421), never served.
+	RewriteCond %{HTTP_HOST} !^@@SERVER_NAME_RE@@(:80)?$ [NC]
+	RewriteRule ^ - [R=421,L]
 	RewriteCond %{REQUEST_URI} !^/\.well-known/acme-challenge/
 	RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
 </VirtualHost>
@@ -867,6 +912,10 @@ render > "$SITE" <<'EOF'
 	ErrorLog @@LOG_DIR@@/dedalo-@@INSTANCE@@.error.log
 	CustomLog @@LOG_DIR@@/dedalo-@@INSTANCE@@.access.log combined
 	LimitRequestBody 314572800
+	RewriteEngine On
+	# Only this site's own name: any other Host is refused (421), never served.
+	RewriteCond %{HTTP_HOST} !^@@SERVER_NAME_RE@@(:443)?$ [NC]
+	RewriteRule ^ - [R=421,L]
 	ProxyPreserveHost On
 	ProxyTimeout 300
 	ProxyPass /health unix:/run/dedalo-@@INSTANCE@@/dedalo_ts.sock|http://localhost/health
@@ -936,9 +985,36 @@ On Apache, replace the two `# The generated .htaccess IS the gate: …` comment 
 		AllowOverride None
 ```
 
+**The catch-all site (nginx).** A web server answers a name no site declares with its default site, which on a host with only Dédalo sites would be an instance. On nginx, one host-wide site, written once, takes that place for ports 80 and 443 and serves nothing ([The catch-all site](reverse_proxy.md#the-catch-all-site)). Skip it when this instance uses other ports, or when the file already exists (another instance wrote it). Apache needs no such file: each of its virtual hosts above refuses any `Host` but its own with `421`.
+
+```shell
+CATCHALL=$(dirname "$SITE")/dedalo-00-default.conf
+test -e "$CATCHALL" || render > "$CATCHALL" <<'EOF'
+# dedalo-install catch-all
+# Answers every name no site of this host declares, so an unknown name never reaches an
+# instance. The default BY ORDER (this file sorts first), never `default_server`: a
+# default_server another site declares stays the default. Shared by every Dédalo
+# instance; removed with the last one. Written by the installer: never edit it.
+server {
+	listen 80;
+	listen [::]:80;
+	server_name dedalo-catch-all.invalid;
+	return 444;
+}
+server {
+	listen 443 ssl;
+	listen [::]:443 ssl;
+	server_name dedalo-catch-all.invalid;
+	ssl_reject_handshake on;
+}
+EOF
+```
+
+The file is the default site **by order**, never with `default_server`: `conf.d` is read before `sites-enabled`, and the file sorts before every `dedalo-<i>.conf`. A site of yours that declares `listen … default_server` (Debian's own `default` site does, on port 80) therefore stays the default for its port, and nginx never sees two defaults.
+
 Test and reload, as in [`host_web_http`](#manual-host_web_http). If the test fails, put the previous file back before you reload: never leave the web server with a configuration it would refuse.
 
-**Verify:** `nginx -t` (or `apachectl configtest`); `curl --fail "https://$NAME/health"`.
+**Verify:** `nginx -t` (or `apachectl configtest`); `curl --fail "https://$NAME/health"`; `curl -sk -o /dev/null -w '%{http_code}\n' --resolve other.invalid:443:127.0.0.1 https://other.invalid/` does not print `200` (nginx refuses the handshake and prints `000`; Apache answers `421`).
 
 ## `host_public_probe` — the instance through its public address {#manual-host_public_probe}
 
@@ -980,7 +1056,7 @@ The set covers the database, the media and the private directory. The **semantic
 
 ## Register the instance on the host {#register-the-instance}
 
-The installer keeps one record per instance in `/var/lib/dedalo-install/instances/<i>.json`. It reads these records for two things. It refuses a new instance that would share a user, a group or a folder with another. And when it undoes another instance (`--abort`), it keeps the shared pieces that a recorded instance still uses: the unit templates, `/opt/dedalo/bun/<pin>`, the `dedalo_engine` module and the nginx media map include. Without a record, an installer `--abort` of a neighbouring instance could remove the templates and the runtime this instance runs on. Write it:
+The installer keeps one record per instance in `/var/lib/dedalo-install/instances/<i>.json`. It reads these records for two things. It refuses a new instance that would share a user, a group or a folder with another. And when it undoes another instance (`--abort`), it keeps the shared pieces that a recorded instance still uses: the unit templates, `/opt/dedalo/bun/<pin>`, the `dedalo_engine` module, the nginx media map include and the catch-all site. Without a record, an installer `--abort` of a neighbouring instance could remove the templates and the runtime this instance runs on. Write it:
 
 ```shell
 render > "/var/lib/dedalo-install/instances/$I.json" <<'EOF'
@@ -988,8 +1064,9 @@ render > "/var/lib/dedalo-install/instances/$I.json" <<'EOF'
 	"instance": "@@INSTANCE@@",
 	"bun_pin": "@@PIN@@",
 	"templates": true,
-	"selinux_module": false,
+	"selinux_module": @@SELINUX_MODULE@@,
 	"nginx_map_owner": false,
+	"catch_all": true,
 	"media": "/srv/dedalo/@@INSTANCE@@/dedalo/media",
 	"user": "@@USER@@",
 	"group": "@@GROUP@@",
@@ -999,7 +1076,7 @@ render > "/var/lib/dedalo-install/instances/$I.json" <<'EOF'
 EOF
 ```
 
-Set `"selinux_module": true` whenever [`host_selinux`](#manual-host_selinux) applied on this host (the RHEL family, SELinux `Enforcing` or `Permissive`), whether you loaded the policy module or found it already loaded: the flag means *this instance uses the module*, and an installer `--abort` of another instance keeps the module only while a record says so. Leave it `false` only where SELinux does not apply. Set `"nginx_map_owner": true` if this instance wrote `/etc/nginx/conf.d/dedalo-00-media-map.conf`. `"media"` stays as printed: on this page `MEDIA_PATH` is always `/srv/dedalo/<i>/dedalo/media`.
+`"selinux_module"` is rendered from `$SELINUX_MODULE` (set with the variables): `true` whenever [`host_selinux`](#manual-host_selinux) applied on this host (the RHEL family, SELinux `Enforcing` or `Permissive`), whether you loaded the policy module or found it already loaded. The flag means *this instance uses the module*, and an installer `--abort` of another instance keeps the module only while a record says so. Set `"nginx_map_owner": true` if this instance wrote `/etc/nginx/conf.d/dedalo-00-media-map.conf`. Set `"catch_all": false` on Apache, if this instance uses other ports than 80 and 443, or if you skipped the catch-all because the file is not the installer's: the flag counts the instances that use the catch-all, and an `--abort` of another instance removes it only when no record says `true`. `"media"` stays as printed: on this page `MEDIA_PATH` is always `/srv/dedalo/<i>/dedalo/media`.
 
 ## After the install
 

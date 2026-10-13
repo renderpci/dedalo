@@ -7,34 +7,108 @@
  *    the cosign signature of the pulled digest, which is RECORDED: before the
  *    engine runs in it and before the stack starts, the tag must still
  *    resolve to that digest (critique A16);
- *  - build: `docker build -t localhost/dedalo:<version> <checkout>` — the
- *    image deploy/compose.build.yml would build (context `.`, the Dockerfile,
- *    the deny-all build context of deploy/build_context.ts), built BEFORE
- *    .dedalo.env exists (compose cannot interpolate the stack without it).
+ *  - build: `docker build -t localhost/dedalo:<version> <context>` — the
+ *    image deploy/compose.build.yml would build (the Dockerfile, the deny-all
+ *    build context of deploy/build_context.ts), built BEFORE .dedalo.env
+ *    exists (compose cannot interpolate the stack without it). The context is
+ *    a `git archive` of the checkout's HEAD, extracted into the run dir
+ *    (campaign 3, C3-46): the SAME mechanism the release image and the
+ *    production route use, so build_info.txt arrives expanded and the engine
+ *    reports the version the image is tagged with (7.0.0 + the commit date),
+ *    never `7.0.0.dev` under a `:7.0.0` tag. Committed files only — an edit
+ *    not committed is not in the image (said on the Review). A verified
+ *    release tree (no .git) is its own context, already expanded.
  *
  * Nothing is undone on --abort: an image is a cache, not an install (told).
  */
 
-import type { HostCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
+import { join } from 'node:path';
+import type { InstallAnswers } from '../../install_plan.ts';
+import type {
+	ExecCommand,
+	HostCommand,
+	HostCtx,
+	HostPlanCtx,
+	HostStepDefinition,
+} from '../contract.ts';
 import { executeCommands } from '../execute.ts';
+import { STACK_RUN_DIR } from '../layout.ts';
 import { probeOk, ran, verdictOf } from '../production/common.ts';
-import { stackCreated } from './common.ts';
-import { dockerCommand } from './compose.ts';
+import { hostRefuse } from '../refuse.ts';
+import type { RunResult } from '../runner.ts';
+import { execute, stackCreated } from './common.ts';
+import { dockerCommand, stackExec } from './compose.ts';
 import { imagePresentProbe, pinHolds, verifyImage } from './image_verify.ts';
-import { imageModeOf, imageRefOf, LOCAL_REPOSITORY } from './layout.ts';
+import { imageModeOf, imageRefOf, imageVerifyOf, LOCAL_REPOSITORY } from './layout.ts';
+
+/** The build context of a checkout: its HEAD, extracted in the run dir (never the checkout itself). */
+export function buildContextDir(ctx: HostPlanCtx): string {
+	return join(ctx.source, STACK_RUN_DIR, 'image-context');
+}
+
+/** The context the build reads: the extracted HEAD of a checkout, or a release tree as it is. */
+function buildContextOf(ctx: HostPlanCtx): string {
+	return ctx.facts.sourceIsGit ? buildContextDir(ctx) : ctx.source;
+}
+
+/** The `docker build` itself (the one command whose progress is shown). */
+function buildCommand(ctx: HostPlanCtx): ExecCommand {
+	const ref = imageRefOf(ctx.answers);
+	return dockerCommand(
+		ctx,
+		['build', '--tag', ref, buildContextOf(ctx)],
+		`build ${ref} here from ${ctx.facts.sourceIsGit ? "this checkout's last commit" : 'this release tree'} (slow: the first build downloads the base image, the media toolchain and the dependencies — about 5 minutes on a fast machine, 15 or more on 2 CPUs; its steps are shown as they run)`,
+		{ timeoutMs: 3 * 3600 * 1000, env: { BUILDKIT_PROGRESS: 'plain' } },
+	);
+}
+
+/**
+ * A checkout's HEAD as the build context: `git archive` (safe.directory for
+ * this one command and fsmonitor off, as host_runtime — C3-7), extracted, the
+ * tarball removed before the build reads the dir. Empty for a release tree.
+ */
+function contextCommands(ctx: HostPlanCtx): ExecCommand[] {
+	if (!ctx.facts.sourceIsGit) return [];
+	const dir = buildContextDir(ctx);
+	const tarball = `${dir}.tar`;
+	return [
+		stackExec(ctx, ['rm', '-rf', dir, tarball], 'clear an earlier build context'),
+		stackExec(ctx, ['mkdir', '-p', dir], `the build context ${dir}`),
+		stackExec(
+			ctx,
+			[
+				'git',
+				'-c',
+				`safe.directory=${ctx.source}`,
+				'-c',
+				'core.fsmonitor=false',
+				'-C',
+				ctx.source,
+				'archive',
+				'--format=tar',
+				'-o',
+				tarball,
+				'HEAD',
+			],
+			"archive this checkout's last commit (committed files only, stamped with that commit)",
+		),
+		stackExec(ctx, ['tar', '-xf', tarball, '-C', dir], 'extract it as the build context'),
+		stackExec(ctx, ['rm', '-f', tarball], 'remove the archive'),
+	];
+}
+
+/** Remove the extracted context once the image is built (a failed build leaves it; the next run clears it). */
+function contextCleanup(ctx: HostPlanCtx): ExecCommand[] {
+	return ctx.facts.sourceIsGit
+		? [stackExec(ctx, ['rm', '-rf', buildContextDir(ctx)], 'remove the build context')]
+		: [];
+}
 
 /** The image's commands (pull, or build here). */
 export function imageCommands(ctx: HostPlanCtx): HostCommand[] {
 	const ref = imageRefOf(ctx.answers);
 	if (imageModeOf(ctx.answers) === 'build') {
-		return [
-			dockerCommand(
-				ctx,
-				['build', '--tag', ref, ctx.source],
-				`build ${ref} here from this checkout (slow: the first build downloads the media toolchain)`,
-				{ timeoutMs: 3 * 3600 * 1000 },
-			),
-		];
+		return [...contextCommands(ctx), buildCommand(ctx), ...contextCleanup(ctx)];
 	}
 	return [
 		dockerCommand(
@@ -46,17 +120,80 @@ export function imageCommands(ctx: HostPlanCtx): HostCommand[] {
 	];
 }
 
+/** A build step's header line — BuildKit plain (`#7 [3/9] RUN …`) or the legacy builder (`Step 3/9 : RUN …`). */
+const BUILD_STEP = /^(#\d+ \[[^\]]+\] |Step \d+\/\d+ : )/;
+
+/** The interval of the "still building" line during a long step. */
+export const BUILD_HEARTBEAT_MS = 30_000;
+
+/**
+ * A build's output, condensed to what the operator needs to see it move
+ * (campaign 3 C3-27 — a silent build looked hung for minutes): every step
+ * header, and during a long step a "still building" line with the time,
+ * at most every BUILD_HEARTBEAT_MS. Lines are cut to 120 characters.
+ */
+export function buildProgress(ctx: HostCtx): (line: string) => void {
+	const start = ctx.now();
+	let last = start;
+	return (line) => {
+		const now = ctx.now();
+		if (BUILD_STEP.test(line)) {
+			ctx.say(`    ${line.slice(0, 120)}`);
+			last = now;
+		} else if (now - last >= BUILD_HEARTBEAT_MS) {
+			ctx.say(`    still building (${Math.round((now - start) / 1000)} s)`);
+			last = now;
+		}
+	};
+}
+
+/** The refusal of a failed build: its exit and the last line it printed. */
+function buildFailed(result: RunResult): never {
+	const why = result.timedOut ? 'timed out' : `exit ${result.exitCode}`;
+	const last = result.stderr.trim().split('\n').at(-1) ?? '';
+	return hostRefuse(
+		'install.step_failed',
+		`the image build failed (${why})${last === '' ? '' : `: ${last}`}`,
+	);
+}
+
+/** Pull, or build with its progress shown (BuildKit writes it to stderr, the legacy builder to stdout). */
+async function getImage(ctx: HostCtx): Promise<void> {
+	if (imageModeOf(ctx.answers) !== 'build') {
+		await executeCommands(imageCommands(ctx), ctx);
+		return;
+	}
+	await executeCommands(contextCommands(ctx), ctx);
+	const progress = buildProgress(ctx);
+	await execute(ctx, buildCommand(ctx), buildFailed, {
+		onStdoutLine: progress,
+		onStderrLine: progress,
+	});
+	await executeCommands(contextCleanup(ctx), ctx);
+}
+
 async function runImage(ctx: HostCtx) {
-	await executeCommands(imageCommands(ctx), ctx);
+	await getImage(ctx);
 	const image = await verifyImage(ctx);
 	stackCreated(ctx).image = image;
 	const how =
 		image.verify === 'cosign'
 			? `signature verified: ${image.repository}@${image.digest}`
 			: image.repository === LOCAL_REPOSITORY
-				? 'built here from this checkout'
+				? `built here from ${ctx.facts.sourceIsGit ? "this checkout's last commit" : 'this release tree'}`
 				: 'a registry of your own: there is no Dédalo signature to check — trusted as pulled';
 	return ran(`${imageRefOf(ctx.answers)} — ${how}`);
+}
+
+/** The step's label, by source: pull and verify, pull from the operator's registry, or build here (C3-48). */
+export function imageLabel(answers: InstallAnswers): string {
+	const ref = imageRefOf(answers);
+	if (imageModeOf(answers) === 'build') {
+		return `build the image ${ref} here, from this checkout's last commit`;
+	}
+	return imageVerifyOf(answers) === 'cosign'
+		? `pull the image ${ref} and verify Dédalo's signature`
+		: `pull the image ${ref} from your registry (no Dédalo signature to check)`;
 }
 
 export const stack_image: HostStepDefinition = {
@@ -64,8 +201,7 @@ export const stack_image: HostStepDefinition = {
 	privilege: 'operator',
 	kind: 'action',
 	needs: [],
-	label: (plan) =>
-		`the image (${String(plan.answers.image_source)}${plan.answers.image_version === '' ? '' : ` ${String(plan.answers.image_version)}`})`,
+	label: (plan) => imageLabel(plan.answers as InstallAnswers),
 	commands: imageCommands,
 	verify: async (ctx) =>
 		verdictOf(

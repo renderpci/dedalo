@@ -85,6 +85,7 @@ const admin: DbConnDescriptor = {
 	port: config.db.port,
 	user: config.db.user,
 	password: config.db.password,
+	socket: config.db.socket,
 };
 
 /** Decided at collection time (test.if reads it then — see install_e2e's header). */
@@ -144,6 +145,7 @@ function answersArgv(db: string): string[] {
 		config.db.host,
 		'--db-port',
 		String(config.db.port),
+		...(config.db.socket === '' ? [] : ['--db-socket', config.db.socket]),
 		'--entity',
 		'drill',
 		'--hierarchies',
@@ -195,8 +197,13 @@ function runCli(dir: string, argv: readonly string[], extra: Record<string, stri
 }
 
 /** A run killed by the fault seam at `<step>:<when>`: it must have died of SIGKILL. */
-function faultedRun(dir: string, argv: readonly string[], fault: string): Run {
-	const run = runCli(dir, argv, { DEDALO_INSTALL_FAULT: fault });
+function faultedRun(
+	dir: string,
+	argv: readonly string[],
+	fault: string,
+	extra: Record<string, string> = {},
+): Run {
+	const run = runCli(dir, argv, { ...extra, DEDALO_INSTALL_FAULT: fault });
 	expect(run.signal, `${fault}: expected a SIGKILL, got exit ${run.exitCode}\n${run.out}`).toBe(
 		'SIGKILL',
 	);
@@ -483,9 +490,15 @@ describe('install resume drill', () => {
 			const preexisting = (await inspectTargetDatabase(conn)).extensions;
 			const dirE = privateDir('e');
 			const argv = answersArgv(db);
-			faultedRun(dirE, argv, 'install_ontologies:after');
+			// The backups a host route's units write (C3-55): the engine checks THAT directory.
+			const unitBackups = join(privateDir('e_backups'), 'db');
+			faultedRun(dirE, argv, 'install_ontologies:after', { DEDALO_BACKUP_DIR: unitBackups });
 			expect((await inspectTargetDatabase(conn)).userObjectCount).toBeGreaterThan(100);
 			expect(existsSync(join(dirE, '.env'))).toBe(true);
+			expect(existsSync(unitBackups)).toBe(true);
+			expect(existsSync(join(dirE, 'backups'))).toBe(false);
+			// The server's runtime files exist now (the abort below must take them back — C3-9).
+			expect(existsSync(join(dirE, 'ts_state.json'))).toBe(true);
 
 			// Unconfirmed / wrongly confirmed: refused, nothing touched.
 			const stateBefore = readFileSync(join(runDir(dirE), 'install.state.json'), 'utf8');
@@ -514,13 +527,11 @@ describe('install resume drill', () => {
 					name,
 				).toBe(false);
 			}
-			const serverState = join(dirE, 'ts_state.json');
-			if (existsSync(serverState)) {
-				expect(
-					(JSON.parse(readFileSync(serverState, 'utf8')) as { install_status?: unknown })
-						.install_status,
-				).toBeUndefined();
-			}
+			// The runtime files the install created are gone (C3-9: a developer abort left them),
+			// and so is the backup directory it made.
+			expect(existsSync(join(dirE, 'ts_state.json'))).toBe(false);
+			expect(existsSync(join(dirE, 'sessions.sqlite'))).toBe(false);
+			expect(existsSync(unitBackups)).toBe(false);
 			expect(leaked(aborted.out)).toEqual([]);
 
 			// ── the preflight refusals, on the now-empty database ──

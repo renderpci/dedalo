@@ -204,7 +204,12 @@ export type FrontEndResult =
 	 * (130), `refused` = an answer refused too often, secret entries that never
 	 * matched (1).
 	 */
-	| { kind: 'quit'; reason?: QuitReason };
+	| {
+			kind: 'quit';
+			reason?: QuitReason;
+			/** Lines the closing message adds (e.g. a --write-answers file NOT written — C3-36). */
+			notices?: string[];
+	  };
 
 /**
  * Why the name typed to confirm an abort is refused, or null — it must be the

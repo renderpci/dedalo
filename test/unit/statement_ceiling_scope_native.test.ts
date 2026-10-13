@@ -403,13 +403,14 @@ import { SQL } from 'bun';
 import * as pg from ${repoModule('src/core/db/postgres.ts')};
 import { config } from ${repoModule('src/config/config.ts')};
 import { assertTestDatabase } from ${repoModule('src/core/test_data/test_database_marker.ts')};
+import { bunSqlTransportOptions, resolvePgTransport } from ${repoModule('src/config/pg_transport.ts')};
 await assertTestDatabase('statement_ceiling_scope_native:shutdown');
 const { sql, withUnboundedStatements, closeDatabasePool } = pg;
 function connect(database, applicationName) {
-	const { host, port, user, password, sslMode } = config.db;
+	const { user, password, sslMode } = config.db;
 	const common = { database, username: user, password: password || undefined, tls: sslMode, max: 1,
 		...(applicationName ? { connection: { application_name: applicationName } } : {}) };
-	return host.startsWith('/') ? new SQL({ ...common, path: host + '/.s.PGSQL.' + port }) : new SQL({ ...common, hostname: host, port });
+	return new SQL({ ...common, ...bunSqlTransportOptions(resolvePgTransport(config.db)) });
 }
 const checker = connect(config.db.database);
 const activeWith = async (marker) => (await checker.unsafe(

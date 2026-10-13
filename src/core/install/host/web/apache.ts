@@ -5,7 +5,9 @@
  * `a2ensite dedalo-<i>` — our site only), EL `/etc/httpd/conf.d/dedalo-<i>.conf`.
  * Mirrors deploy/apache.conf's vhost: ProxyPass before the aliases, `Alias
  * /dedalo/media` before `Alias /dedalo`, an EMPTY DocumentRoot (L89), a
- * CSP-free client Directory, the security headers.
+ * CSP-free client Directory, the security headers — and in both vhosts THE
+ * NAME GUARD (nameGuard: any Host but the site's own is refused with 421;
+ * campaign 3 C3-30).
  *
  * THE MEDIA .htaccess IS THE GATE, and the instance user writes it: so the
  * override is only what the generated file uses — AuthConfig (Require),
@@ -49,7 +51,25 @@ function backend(input: SiteInput, path: string): string {
 	return `unix:${input.paths.socket}|http://localhost${path}`;
 }
 
-/** The plain-HTTP vhost: the challenge root (Let's Encrypt) and the redirect. */
+/**
+ * THE NAME GUARD (campaign 3 C3-30): Apache answers a name no vhost declares
+ * with the FIRST vhost loaded for that port — on a host whose only sites are
+ * instances, an instance (`https://<any other name of this host>/` served
+ * museo). Each vhost therefore refuses any Host but its own with 421
+ * Misdirected Request before anything is served or proxied. (nginx gets the
+ * host-wide catch-all site instead — web/catch_all.ts: it needs no
+ * certificate there, while an Apache catch-all on 443 would.)
+ */
+function nameGuard(serverName: string, port: string): string[] {
+	const name = serverName.replace(/[.^$*+?()[\]{}|\\]/g, '\\$&');
+	return [
+		"\t# Only this site's own name: any other Host is refused (421), never served.",
+		`\tRewriteCond %{HTTP_HOST} !^${name}(:${port})?$ [NC]`,
+		'\tRewriteRule ^ - [R=421,L]',
+	];
+}
+
+/** The plain-HTTP vhost: the name guard, the challenge root (Let's Encrypt) and the redirect. */
 function httpVhost(input: SiteInput): string[] {
 	const { answers, paths } = input;
 	const acme = input.acme
@@ -58,15 +78,19 @@ function httpVhost(input: SiteInput): string[] {
 				`\t<Directory ${paths.acmeDir}>`,
 				'\t\tRequire all granted',
 				'\t</Directory>',
-				'\tRewriteEngine On',
-				'\tRewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/',
 			]
-		: ['\tRewriteEngine On'];
+		: [];
+	const challenge = input.acme
+		? ['\tRewriteCond %{REQUEST_URI} !^/\\.well-known/acme-challenge/']
+		: [];
 	return [
 		`<VirtualHost *:${answers.http_port}>`,
 		`\tServerName ${answers.server_name}`,
 		`\tDocumentRoot ${APACHE_EMPTY_ROOT}`,
 		...acme,
+		'\tRewriteEngine On',
+		...nameGuard(answers.server_name, answers.http_port),
+		...challenge,
 		`\tRewriteRule ^ https://%{HTTP_HOST}${httpsOrigin(answers)}%{REQUEST_URI} [R=301,L]`,
 		'</VirtualHost>',
 		'',
@@ -147,6 +171,8 @@ function httpsVhost(input: SiteInput, cert: { fullchain: string; key: string }):
 		`\tErrorLog ${input.logDir}/dedalo-${paths.instance}.error.log`,
 		`\tCustomLog ${input.logDir}/dedalo-${paths.instance}.access.log combined`,
 		'\tLimitRequestBody 314572800',
+		'\tRewriteEngine On',
+		...nameGuard(answers.server_name, answers.https_port),
 		...proxyLines(input),
 		...mediaLines(input),
 		...clientLines(input),
@@ -175,9 +201,13 @@ export function missingApacheModules(loaded: readonly string[]): string[] {
 	return REQUIRED_APACHE_MODULES.filter((module) => !loaded.includes(module));
 }
 
-/** The exact command that enables `missing` (told — the installer never runs it). */
+/**
+ * The exact command that enables `missing` (told — the installer never runs
+ * it). RESTART, as a2enmod itself advises: loading a module is a process
+ * change, and a reload also applies every other pending configuration change.
+ */
 export function apacheModuleCommand(missing: readonly string[], debianLayout: boolean): string {
 	return debianLayout
-		? `a2enmod ${missing.join(' ')} && systemctl reload apache2`
-		: `install the packages / LoadModule lines for: ${missing.join(', ')} (conf.modules.d), then systemctl reload httpd`;
+		? `a2enmod ${missing.join(' ')} && systemctl restart apache2`
+		: `install the packages / LoadModule lines for: ${missing.join(', ')} (conf.modules.d), then systemctl restart httpd`;
 }

@@ -19,11 +19,21 @@
  *     guessed. That is the difference from webBase, which has a relative default.
  *
  * `config` freezes at first import, so every env case boots a subprocess.
+ *
+ * THE SUITE POSTURE half also holds the suite's LANGUAGES (install campaign 3,
+ * C3-40, 2026-10-13): SUITE_LANGS equals hosted_env.sh's defaults, a config
+ * booted over a developer .env that declares TWO languages still declares the
+ * suite's whole set once the pins are applied (and only the two without them —
+ * the anti-vacuity leg), and this very run carries the set. Mutation: drop the
+ * preload's pin loop (the in-run leg reds on a 2-language .env) or empty
+ * suiteLangPins (the child leg reds).
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { SUITE_MEDIA_EXPORT_BASE } from '../helpers/suite_posture.ts';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { SUITE_LANGS, SUITE_MEDIA_EXPORT_BASE } from '../helpers/suite_posture.ts';
 
 const ROOT = `${import.meta.dir}/../..`;
 const READ_EXPORT_BASE =
@@ -75,5 +85,96 @@ describe('the suite posture (test/helpers/suite_posture.ts)', () => {
 		if (process.env.DEDALO_MEDIA_EXPORT_BASE === SUITE_MEDIA_EXPORT_BASE) {
 			expect(config.media.exportBase).toBe(SUITE_MEDIA_EXPORT_BASE);
 		}
+	});
+});
+
+// ---------------------------------------------------------------------------
+// The suite's languages (C3-40)
+// ---------------------------------------------------------------------------
+
+/** hosted_env.sh's default for one language key (the object map has its own form). */
+function hostedDefault(hosted: string, key: string): string | undefined {
+	const quoted = new RegExp(`^\\t${key}='([^']*)'$`, 'm').exec(hosted)?.[1];
+	if (quoted !== undefined) return quoted;
+	const plain = new RegExp(`^: "\\$\\{${key}:=(.*)\\}"$`, 'm').exec(hosted)?.[1];
+	return plain?.replaceAll('\\"', '"');
+}
+
+/** Every spelling of the suite language keys a shell may carry (key + catalog alias). */
+const LANG_SPELLINGS = [...Object.keys(SUITE_LANGS), 'DEDALO_PROJECTS_DEFAULT_LANGS'];
+
+/**
+ * Boot config in a child over a private dir whose .env declares only
+ * lg-spa + lg-eng (a fresh developer install), with or without the suite pins,
+ * and read the declared data-language set back.
+ */
+function declaredLangsOverTwoLangEnv(pinned: boolean): string[] {
+	const dir = mkdtempSync(join(tmpdir(), 'dd-suite-langs-'));
+	try {
+		writeFileSync(
+			join(dir, '.env'),
+			[
+				'ENTITY=zzlangs',
+				'DB_NAME=zz_langs_none',
+				'DB_HOST=127.0.0.1',
+				'DB_USER=zz',
+				'DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-eng":"English"}',
+				'DEDALO_APPLICATION_LANGS_DEFAULT=lg-spa',
+				'DEDALO_DATA_LANG_DEFAULT=lg-spa',
+				'DEDALO_PROJECTS_DEFAULT_LANGS=["lg-spa","lg-eng"]',
+				'',
+			].join('\n'),
+		);
+		const env: Record<string, string | undefined> = { ...process.env, DEDALO_PRIVATE_DIR: dir };
+		for (const key of LANG_SPELLINGS) delete env[key];
+		const pin = pinned
+			? 'const { processEnvValue } = await import("./src/config/env.ts");' +
+				'const { suiteLangPins } = await import("./test/helpers/suite_posture.ts");' +
+				'for (const [k, v] of suiteLangPins((n) => processEnvValue(n) !== undefined)) process.env[k] = v;'
+			: '';
+		const probe = Bun.spawnSync(
+			[
+				'bun',
+				'-e',
+				`${pin}const c = await import("./src/config/config.ts");` +
+					'console.log(JSON.stringify([...c.INSTALLED_DATA_LANGS].sort()));',
+			],
+			{ cwd: ROOT, env },
+		);
+		return JSON.parse(probe.stdout.toString().trim().split('\n').pop() ?? '[]');
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
+const SUITE_PROJECT_LANGS: string[] = JSON.parse(SUITE_LANGS.PROJECTS_DEFAULT_LANGS ?? '[]');
+
+describe('the suite posture — languages (C3-40)', () => {
+	test('the local suite and the hosted CI tier default to the SAME languages', () => {
+		const hosted = readFileSync(`${ROOT}/scripts/ci/hosted_env.sh`, 'utf8');
+		for (const [key, value] of Object.entries(SUITE_LANGS)) {
+			expect(hostedDefault(hosted, key), `hosted_env.sh default of ${key}`).toBe(value);
+		}
+	});
+
+	test("a developer .env declaring two languages does not narrow the suite's set", () => {
+		expect(SUITE_PROJECT_LANGS.length).toBeGreaterThan(2);
+		// anti-vacuity: without the pins the child declares exactly what its .env says
+		expect(declaredLangsOverTwoLangEnv(false).filter((lang) => lang !== 'lg-nolan')).toEqual([
+			'lg-eng',
+			'lg-spa',
+		]);
+		const pinned = declaredLangsOverTwoLangEnv(true);
+		for (const lang of SUITE_PROJECT_LANGS) expect(pinned).toContain(lang);
+	});
+
+	test('this run actually carries them (the preload pinned them, or the shell chose)', async () => {
+		const { INSTALLED_DATA_LANGS } = await import('../../src/config/config.ts');
+		if (process.env.PROJECTS_DEFAULT_LANGS === SUITE_LANGS.PROJECTS_DEFAULT_LANGS) {
+			for (const lang of SUITE_PROJECT_LANGS) expect(INSTALLED_DATA_LANGS.has(lang)).toBe(true);
+		}
+		expect(
+			process.env.PROJECTS_DEFAULT_LANGS ?? process.env.DEDALO_PROJECTS_DEFAULT_LANGS,
+		).toBeDefined();
 	});
 });

@@ -33,17 +33,20 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { REVIEW_TODO_BLOCK } from '../../src/core/install/display_text.ts';
 import { hostReview } from '../../src/core/install/host/host_table.ts';
-import type { InstallRoute } from '../../src/core/install/install_plan.ts';
+import { REVIEW_TODO_STEP } from '../../src/core/install/host/review.ts';
+import { type InstallRoute, normalizeInstallAnswers } from '../../src/core/install/install_plan.ts';
 import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
 import type { ReviewView, ScreenView } from '../../src/core/install/prompter_contract.ts';
 import {
 	buildScreens,
+	passwordFeedback,
 	type Question,
 	SCREEN_ORDER,
 	type Screen,
 } from '../../src/core/install/screen_model.ts';
-import { ROUTE_TEXT } from '../../src/core/install/screen_text.ts';
+import { ACKNOWLEDGE_TEXT, ROUTE_TEXT } from '../../src/core/install/screen_text.ts';
 import { hostCommandLines } from '../../src/core/install/ui_plain/prompter.ts';
 import { localOntologySource } from '../helpers/install_answer_cases.ts';
 import {
@@ -676,5 +679,184 @@ describe('a UI whose first draw throws gives everything back (i)', () => {
 			setup.renderer.root.add = add;
 			await setup.dispose();
 		}
+	});
+});
+
+// ── campaign 3 (P5): what the full screen draws matches what it takes ────────
+
+describe('campaign 3: the full screen says what its controls do (C3-26, C3-47, C3-48, C3-49, C3-58)', () => {
+	test('C3-26: an acknowledgement draws its how-to and takes a TYPED yes (as plain mode does), or Space', async () => {
+		for (const how of ['typed', 'space', 'none'] as const) {
+			await withRig(SIZES[0], async (rig) => {
+				const view = viewAt('trial', 'route', { route: 'trial' });
+				rig.front.prompter.view(view);
+				const answer = rig.front.prompter.acknowledge(
+					question(view, 'route.trial_no_media_protection'),
+				);
+				const frame = await rig.frame();
+				expect(frame).toContain(ACKNOWLEDGE_TEXT.tick);
+				// the how-to line, whole or wrapped: its first words are drawn
+				expect(frame).toContain(ACKNOWLEDGE_TEXT.full.slice(0, 30));
+				expect(rig.front.prompter.pending()?.kind).toBe('acknowledge');
+				if (how === 'typed') await rig.setup.mockInput.typeText('yes');
+				if (how === 'space') rig.setup.mockInput.pressKey(' ');
+				if (how !== 'none') {
+					expect(rig.front.prompter.pending()?.selected).toEqual(['yes']);
+					expect(await rig.frame()).toContain('◼ ');
+				}
+				rig.setup.mockInput.pressEnter();
+				expect(await answer, how).toBe(how !== 'none');
+			});
+		}
+	});
+
+	test('C3-47: a pre-filled default is REPLACED by the first typed key, kept by Enter, edited by Backspace', async () => {
+		await withRig(SIZES[0], async (rig) => {
+			const view = viewAt('trial', 'identity', { route: 'trial', entity: 'museo' });
+			rig.front.prompter.view(view);
+			const label = question(view, 'identity.entity_label');
+			expect(label.default).toBe('museo');
+			let answer = rig.front.prompter.text(label);
+			await rig.setup.mockInput.typeText('Museo de prueba');
+			rig.setup.mockInput.pressEnter();
+			expect(await answer).toBe('Museo de prueba');
+			// Enter alone keeps the default (plain mode's empty answer).
+			answer = rig.front.prompter.text(label);
+			await rig.frame();
+			rig.setup.mockInput.pressEnter();
+			expect(await answer).toBe('museo');
+			// An editing key edits the default instead of replacing it.
+			answer = rig.front.prompter.text(label);
+			await rig.frame();
+			rig.setup.mockInput.pressBackspace();
+			await rig.setup.mockInput.typeText('X');
+			rig.setup.mockInput.pressEnter();
+			expect(await answer).toBe('museX');
+		});
+	});
+
+	test('C3-58: the route cursor rests on the plan’s default route; the empty password field breaks no rule yet', async () => {
+		await withRig(SIZES[0], async (rig) => {
+			// Nothing chosen yet (no route in the answers).
+			const screens = buildScreens(modelInput({}));
+			const view: ScreenView = {
+				screen: screens[0] as Screen,
+				screens: screens.map((screen) => ({
+					id: screen.id,
+					title: screen.title,
+					index: screen.index,
+					placeholder: false,
+				})),
+				seen: [],
+				focus: null,
+				probing: false,
+				route: null,
+			};
+			rig.front.prompter.view(view);
+			void rig.front.prompter.choice(question(view, 'route.route'));
+			await rig.frame();
+			const pending = rig.front.prompter.pending();
+			expect(pending?.options?.[pending.cursor ?? -1]).toBe(
+				normalizeInstallAnswers({}).answers.route,
+			);
+		});
+		await withRig(SIZES[0], async (rig) => {
+			const view = viewAt('developer', 'administrator');
+			rig.front.prompter.view(view);
+			void rig.front.prompter.secret(
+				question(view, 'administrator.root_password'),
+				passwordFeedback,
+			);
+			let frame = await rig.frame();
+			const ruleRows = (text: string) =>
+				rowsOf(text).filter((row) =>
+					passwordFeedback('').rules.some((rule) => row.includes(rule.text.slice(0, 12))),
+				);
+			expect(ruleRows(frame).length).toBeGreaterThan(0);
+			expect(ruleRows(frame).filter((row) => row.includes('✗'))).toEqual([]);
+			// CONTROL: once typed, a broken rule is drawn ✗.
+			await rig.setup.mockInput.typeText('a');
+			frame = await rig.frame();
+			expect(ruleRows(frame).some((row) => row.includes('✗'))).toBe(true);
+		});
+	});
+
+	test('C3-58: the header of an unfinished install never says "nothing installed yet"', async () => {
+		await withRig(SIZES[0], async (rig) => {
+			void rig.front.prompter.resume({
+				database: 'dedalo_dev',
+				outcome: 'in_progress',
+				canAbort: true,
+			});
+			const header = rowsOf(await rig.frame())[0] ?? '';
+			expect(header).not.toContain('nothing installed yet');
+			expect(header).toContain('an unfinished install is recorded');
+		});
+		// CONTROL: a fresh walk's header.
+		await withRig(SIZES[0], async (rig) => {
+			const view = viewAt('developer', 'database');
+			rig.front.prompter.view(view);
+			void rig.front.prompter.text(question(view, 'database.db_database'));
+			expect(rowsOf(await rig.frame())[0]).toContain('nothing installed yet');
+		});
+	});
+
+	test('C3-49: a passed check’s rows carried onto the next screen are headed by their screen', async () => {
+		await withRig(SIZES[0], async (rig) => {
+			rig.front.prompter.view(viewAt('developer', 'system'));
+			rig.front.prompter.say(['ok  Bun  1.4.2', 'System ready.']);
+			rig.front.prompter.view(viewAt('developer', 'database'));
+			const view = viewAt('developer', 'database');
+			void rig.front.prompter.text(question(view, 'database.db_database'));
+			const frame = await rig.frame();
+			const rows = rowsOf(frame);
+			const head = rows.findIndex((row) => row.includes('System check:'));
+			const bun = rows.findIndex((row) => row.includes('ok  Bun  1.4.2'));
+			expect(head).toBeGreaterThan(-1);
+			expect(bun).toBe(head + 1);
+		});
+	});
+
+	test('the Review’s TO DO block is sentences to act on, never dressed as `$ <command>`', async () => {
+		expect(REVIEW_TODO_BLOCK).toBe(REVIEW_TODO_STEP);
+		const screens = screensOf(
+			'production',
+			productionRaw(HOST_VARIANTS[0] as (typeof HOST_VARIANTS)[number]),
+		);
+		const todo = 'open ports 80 and 443: sudo ufw allow 80,443/tcp';
+		const view: ReviewView = {
+			screen: screens.at(-1) as Screen,
+			lines: [{ label: 'Route', value: 'production' }],
+			canInstall: true,
+			editable: [{ n: 1, title: 'Install type' }],
+			command: 'sudo sh install.sh --route=production --instance=demo',
+			errors: [],
+			hostCommands: [
+				{ step: REVIEW_TODO_STEP, label: 'TO DO YOURSELF', commands: [todo] },
+				{ step: 'host_packages', label: 'packages', commands: ['/usr/bin/apt-get update'] },
+			],
+		};
+		const plain = hostCommandLines(view);
+		expect(plain).toContain(`    ${todo}`);
+		expect(plain).not.toContain(`    $ ${todo}`);
+		expect(plain).toContain('    $ /usr/bin/apt-get update');
+		await withRig([110, 40], async (rig) => {
+			void rig.front.prompter.review(view);
+			const frame = await rig.frame();
+			expect(frame).toContain('open ports 80 and 443');
+			expect(frame).not.toContain('$ open ports');
+			expect(frame).toContain('$ /usr/bin/apt-get update');
+		});
+	});
+
+	test('C3-48: a fresh TLS & address screen draws no refusal before anything is typed', async () => {
+		await withRig(SIZES[0], async (rig) => {
+			const view = viewAt('docker', 'tls_address', { route: 'docker' });
+			rig.front.prompter.view(view);
+			void rig.front.prompter.text(question(view, 'tls_address.server_name'));
+			const frame = await rig.frame();
+			expect(frame).not.toContain('requires server_name');
+			expect(frame).not.toContain('✗');
+		});
 	});
 });

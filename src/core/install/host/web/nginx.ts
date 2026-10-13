@@ -16,7 +16,11 @@
  *    http-scope map through the ONE host-wide include file
  *    (`dedalo-00-media-map.conf`, mapInclude below — critique B6/F1: the map's
  *    variables are global, so exactly one instance's map copy is included; an
- *    instance whose map differs is refused).
+ *    instance whose map differs is refused). The renderer does not decide
+ *    which files: the caller names them (SiteInput.mediaRules) — production
+ *    passes productionMediaRules(instance); the docker stack, inside its own
+ *    nginx container, the engine's files in the read-only media volume
+ *    (stack/files.ts — campaign 3 C3-2).
  *  - The client is served from the engine's PUBLISHED copy
  *    (DEDALO_CLIENT_PUBLISH_DIR — the version of the code that runs).
  *  - `http2 on;` (nginx >= 1.25.1 — the System check refuses an older one),
@@ -30,6 +34,7 @@ import {
 	ENGINE_PREFIXES,
 	httpsOrigin,
 	mediaGated,
+	type NginxMediaRules,
 	SECURITY_HEADERS,
 	type SiteInput,
 	siteHeader,
@@ -134,16 +139,26 @@ export function nginxRuleCopies(instance: string): { server: string; map: string
 	};
 }
 
+/** A production site's media gate: the instance's root-owned, validated copies. */
+export function productionMediaRules(instance: string): NginxMediaRules {
+	return {
+		...nginxRuleCopies(instance),
+		note: [
+			'The media gate: a root-owned, validated copy of the rules the engine generates',
+			'(deploy/dedalo-media-rules.sh — never the instance-writable file itself).',
+		],
+	};
+}
+
 /**
- * The media: the root-owned, validated copy of the engine's GENERATED gate, or
- * — with DEDALO_MEDIA_ACCESS_MODE false — the open location, said so.
+ * The media: the gate's server-scope rule file the caller named, or — with
+ * DEDALO_MEDIA_ACCESS_MODE false — the open location, said so.
  */
 function mediaLines(input: SiteInput): string[] {
 	if (mediaGated(input.answers)) {
 		return [
-			'\t# The media gate: a root-owned, validated copy of the rules the engine generates',
-			'\t# (deploy/dedalo-media-rules.sh — never the instance-writable file itself).',
-			`\tinclude ${nginxRuleCopies(input.paths.instance).server};`,
+			...input.mediaRules.note.map((line) => `\t# ${line}`),
+			`\tinclude ${input.mediaRules.server};`,
 		];
 	}
 	return [

@@ -63,6 +63,7 @@ import {
 } from '../../src/core/install/host/stack/layout.ts';
 import { emptyHostCreated, type StackImage } from '../../src/core/install/host/state_types.ts';
 import { newInstallState } from '../../src/core/install/run_files_core.ts';
+import { parseBuildInfo, prereleaseTagFor } from '../../src/core/update/build_stamp.ts';
 import { parseDeclaredTriple } from '../../src/core/update/code_build_plan.ts';
 import {
 	isRepositoryReference,
@@ -746,16 +747,53 @@ describe('F. the installer verifies the image as the library does (stack_image)'
 		expect(wrong.refusal).toContain("declares version '6.9.0'");
 	});
 
-	test('a build here: `docker build` of this checkout, no pull, no signature', async () => {
+	test("a build here: `docker build` of the checkout's HEAD (archived into the run dir), no pull, no signature", async () => {
 		const raw = { ...TRIAL, image_source: 'build' };
-		const ctx = stackPlanCtx(raw);
-		const commands = imageCommands(ctx);
-		expect(
-			commands.map((command) => (command.kind === 'exec' ? command.argv.slice(1) : [])),
-		).toEqual([['build', '--tag', `localhost/dedalo:${imageVersionOf(ctx.answers)}`, ctx.source]]);
+		const base = stackPlanCtx(raw);
+		const ref = `localhost/dedalo:${imageVersionOf(base.answers)}`;
+		const argvOf = (sourceIsGit: boolean) =>
+			imageCommands({ ...base, facts: { ...base.facts, sourceIsGit } }).map((command) =>
+				command.kind === 'exec' ? command.argv : [],
+			);
+		// a checkout: the context is its HEAD, extracted in the run dir — never the working tree
+		const checkout = argvOf(true);
+		const context = join(base.source, '.dedalo-install', 'image-context');
+		const build = checkout.find((argv) => argv[1] === 'build');
+		expect(build?.slice(1)).toEqual(['build', '--tag', ref, context]);
+		const archive = checkout.find((argv) => argv.includes('archive'));
+		expect(archive?.at(-1)).toBe('HEAD');
+		expect(checkout.indexOf(archive ?? [])).toBeLessThan(checkout.indexOf(build ?? []));
+		// a verified release tree (no .git) is its own context, already stamped
+		expect(argvOf(false).map((argv) => argv.slice(1))).toEqual([
+			['build', '--tag', ref, base.source],
+		]);
 		const built = await verified(raw, []);
 		expect(built.record?.verify).toBe('none');
 		expect(built.log).toEqual([]);
+	});
+
+	test('C3-46: the archived context reports the version the image is tagged with; the working tree would not', () => {
+		const base = stackPlanCtx({ ...TRIAL, image_source: 'build' });
+		const archive = imageCommands({ ...base, facts: { ...base.facts, sourceIsGit: true } })
+			.map((command) => (command.kind === 'exec' ? command.argv : []))
+			.find((argv) => argv.includes('archive'));
+		expect(archive).toBeDefined();
+		// the installer's own archive argv, written to a scratch tarball instead of the run dir
+		const out = join(mkdtempSync(join(tmpdir(), 'dd-image-ctx-')), 'context.tar');
+		const argv = [...(archive ?? [])];
+		argv[argv.indexOf('-o') + 1] = out;
+		const made = Bun.spawnSync(argv, { cwd: REPO_ROOT });
+		expect(made.exitCode, made.stderr.toString()).toBe(0);
+		const stamp = Bun.spawnSync(['tar', '-xOf', out, 'src/core/update/build_info.txt']);
+		rmSync(join(out, '..'), { recursive: true, force: true });
+		const archived = parseBuildInfo(stamp.stdout.toString());
+		expect(archived.build).not.toBeNull();
+		expect(prereleaseTagFor(archived.build, null)).toBe('');
+		// the working tree's own file is the dev placeholder: a build from it reports .dev
+		const tree = parseBuildInfo(
+			readFileSync(join(REPO_ROOT, 'src/core/update/build_info.txt'), 'utf8'),
+		);
+		expect(prereleaseTagFor(tree.build, null)).toBe('.dev');
 	});
 });
 

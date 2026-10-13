@@ -14,11 +14,17 @@
  * keeps its own record; the host step verifies it by asking the child.
  *
  * MODES: fresh (refuse an existing record; production refuses without root —
- * the sentence carries the `sudo sh install.sh …` form); resume (the saved
- * plan; the frozen facts; a step whose commands no longer equal the ones the
- * run showed is REFUSED — critique A2); abort (reverse order, only what
- * `created` lists — and once the engine child completed, ONLY the host steps
- * after host_engine: a live install is never taken apart — critique B3).
+ * the sentence carries the `sudo sh install.sh …` form; the preflight's
+ * refusals are evaluated BEFORE the record is written, so a refused host
+ * keeps nothing of the attempt — campaign 3 C3-23); resume (the saved plan;
+ * the frozen facts; a step whose commands no longer equal the ones the run
+ * showed is REFUSED — critique A2); abort (reverse order, only what
+ * `created` lists — and once the instance COULD HAVE SERVED, i.e. the step
+ * that first starts it as a server started (`created.served`), ONLY the host
+ * steps after the engine: a live install is never taken apart — critique B3.
+ * Before that, the engine child's own --abort takes apart a completed engine
+ * install too, attested unserved — and it refuses unless its database is
+ * unchanged since it sealed: C3-11).
  *
  * CONFIG-FREE (the privilege gate): run_files_core, the loop, host/** and the
  * plan module — never config.ts, pg_exec or server_state.
@@ -59,6 +65,7 @@ import {
 	writeStateFile,
 } from '../run_files_core.ts';
 import {
+	ABORT_AND_START_AGAIN,
 	emit,
 	type LoopContext,
 	nowIso,
@@ -75,8 +82,9 @@ import type { HostCtx, HostPlanCtx, HostStepDefinition } from './contract.ts';
 import { type HostFacts, pendingFacts } from './facts.ts';
 import { type HostFs, hostFs } from './fs.ts';
 import { hostTable, stepDigest } from './host_table.ts';
-import { INSTALL_STATE_ROOT, pathsFor } from './layout.ts';
+import { INSTALL_STATE_ROOT, pathsFor, STACK_RUN_DIR } from './layout.ts';
 import { OS_ROWS, osRowById, supportedOsList } from './os_support.ts';
+import { ROOT_REQUIRED_SENTENCE } from './production/preflight.ts';
 import { hostRefuse } from './refuse.ts';
 import { type CommandRunner, scratchRunner, systemRunner } from './runner.ts';
 import { readHostRootSeam } from './scratch.ts';
@@ -101,6 +109,8 @@ export interface HostExecutorOutcome extends RunOutcomeView {
 	told: string[];
 	/** An abort of a LIVE install: only the host steps after the engine were undone. */
 	keptLive: boolean;
+	/** The steps this abort actually undid, in order (the final sentence is built from it — C3-50). */
+	undone: string[];
 }
 
 /** The machine's seams (a gate injects a recording runner and a scratch fs). */
@@ -130,6 +140,7 @@ interface HostRunContext extends LoopContext {
 	secrets: Secrets;
 	runLock: boolean;
 	keptLive: boolean;
+	undone: string[];
 }
 
 // ── where the record lives ───────────────────────────────────────────────────
@@ -141,7 +152,7 @@ export function hostRunDirOf(
 ): string {
 	if (answers.route === 'production')
 		return `${INSTALL_STATE_ROOT}/${String(answers.instance ?? '')}`;
-	return join(source, '.dedalo-install');
+	return join(source, STACK_RUN_DIR);
 }
 
 /**
@@ -169,6 +180,19 @@ function recordFlags(answers: Partial<InstallAnswers>): string {
 	return `--route ${String(answers.route)}${instance === '' ? '' : ` --instance ${instance}`}`;
 }
 
+/**
+ * The undo line of the hint — true to what --abort will do (C3-11): before the
+ * instance served it removes what the install created, its database included;
+ * after, it only partly undoes and keeps the instance.
+ */
+function undoHint(ctx: HostRunContext, prefix: string): string {
+	if (instanceServed(ctx)) {
+		return `  Or partly undo it:           ${prefix} --abort  (the instance has served: ${keptWhat(ctx)})`;
+	}
+	const db = String((ctx.plan as PlanFile).answers.db_database ?? '<db>');
+	return `  Or undo this install:        ${prefix} --abort --confirm-database ${db}  (deletes the database this install created)`;
+}
+
 /** The hint after a failure. */
 function hostHint(ctx: HostRunContext): string[] {
 	const plan = ctx.plan;
@@ -177,7 +201,7 @@ function hostHint(ctx: HostRunContext): string[] {
 	return [
 		`  Progress saved: ${join(ctx.runDir, STATE_FILE)} (plan: ${PLAN_FILE})`,
 		`  Fix the cause, then resume:  ${prefix} --resume`,
-		`  Or undo this install:        ${prefix} --abort --confirm-database ${String(plan.answers.db_database ?? '<db>')}`,
+		undoHint(ctx, prefix),
 	];
 }
 
@@ -266,7 +290,7 @@ function assertSameCommands(
 	if (stepDigest(definition, planContext(ctx)) !== frozen) {
 		hostRefuse(
 			'install.state_conflict',
-			`the commands of ${step} are not the ones this install showed (the installer's own files changed since) — --abort and start again`,
+			`the commands of ${step} are not the ones this install showed (the installer's own files changed since) — put the installer's files back (the same release), then --resume; ${ABORT_AND_START_AGAIN}`,
 		);
 	}
 }
@@ -354,20 +378,51 @@ function startRun(ctx: HostRunContext, mode: RunMode): void {
 	(ctx.state as InstallState).runs.push(ctx.run);
 }
 
+/** A fresh run never starts over an existing record. */
+function assertNoRecord(ctx: HostRunContext): void {
+	if (readStateFile(ctx.runDir) === null) return;
+	hostRefuse(
+		'install.state_conflict',
+		`an install record exists at ${join(ctx.runDir, STATE_FILE)} — resume it (--resume) or undo it (--abort --confirm-database <db>)`,
+	);
+}
+
+/** A new state for the plan, in memory (nothing created yet). */
+function freshState(plan: PlanFile): InstallState {
+	const state = newInstallState(plan, hostPreflight());
+	state.created.host = emptyHostCreated();
+	return state;
+}
+
+/**
+ * The preflight's refusals, BEFORE anything is written (campaign 3 C3-23): an
+ * unsupported system or an instance folder that already exists is a TERMINAL
+ * refusal — no run dir, no record, no resume or abort to offer (there is
+ * nothing to resume). The state the measurement runs with lives in memory only.
+ */
+async function refuseBeforeRecord(ctx: HostRunContext, plan: PlanFile): Promise<void> {
+	const refusals = hostStep(ctx, plan.steps[0] as StepId).refusals;
+	if (refusals === undefined) return;
+	ctx.state = freshState(plan);
+	let problems: string[];
+	try {
+		problems = await refusals(hostContext(ctx));
+	} finally {
+		ctx.state = null;
+	}
+	if (problems.length > 0) hostRefuse('install.state_conflict', problems.join('; '));
+}
+
 async function freshRun(ctx: HostRunContext, skipPrivilege: boolean): Promise<void> {
 	const plan = ctx.request.planFile as PlanFile;
 	assertPrivilege(plan, skipPrivilege);
 	ctx.plan = plan;
+	assertNoRecord(ctx);
+	await refuseBeforeRecord(ctx, plan);
 	prepareRunDir(ctx);
 	lockRunDir(ctx);
-	if (readStateFile(ctx.runDir) !== null) {
-		hostRefuse(
-			'install.state_conflict',
-			`an install record exists at ${join(ctx.runDir, STATE_FILE)} — resume it (--resume) or undo it (--abort --confirm-database <db>)`,
-		);
-	}
-	ctx.state = newInstallState(plan, hostPreflight());
-	ctx.state.created.host = emptyHostCreated();
+	assertNoRecord(ctx);
+	ctx.state = freshState(plan);
 	startRun(ctx, 'fresh');
 	writePlanFile(plan, ctx.runDir);
 	saveState(ctx);
@@ -418,20 +473,27 @@ async function resumeRun(ctx: HostRunContext): Promise<void> {
 	await runPlanSteps(ctx);
 }
 
-/** Has the engine child completed (a live install — never taken apart by a host abort)? */
-async function engineLive(ctx: HostRunContext): Promise<boolean> {
-	const plan = ctx.plan as PlanFile;
-	const engineStep = plan.steps.find((step) => step === 'host_engine' || step === 'stack_engine');
-	if (engineStep === undefined || recordOf(ctx, engineStep).status === 'pending') return false;
-	if (recordOf(ctx, engineStep).status === 'done') return true;
-	const verify = hostStep(ctx, engineStep).verify;
-	return verify === undefined ? false : (await verify(hostContext(ctx))).ok;
+/** The steps that first start the engine as a server (their start marks the instance served). */
+const SERVING_STEPS: ReadonlySet<StepId> = new Set(['host_first_boot', 'stack_up']);
+
+/**
+ * Could the instance have served (a LIVE install — never taken apart by a host
+ * abort)? Once the step that first starts it as a server started: its intent
+ * sets `served` before its work, and nothing clears it (C3-11). A record
+ * written before the flag existed counts a serving step that ever left
+ * pending.
+ */
+function instanceServed(ctx: HostRunContext): boolean {
+	if (hostCreated(ctx).served) return true;
+	return (ctx.plan as PlanFile).steps.some(
+		(step) => SERVING_STEPS.has(step) && recordOf(ctx, step).status !== 'pending',
+	);
 }
 
 /** The steps an abort undoes: started ones with an undo, reverse order — after the engine only, when it is live. */
-async function undoableSteps(ctx: HostRunContext): Promise<{ steps: StepId[]; live: boolean }> {
+function undoableSteps(ctx: HostRunContext): { steps: StepId[]; live: boolean } {
 	const plan = ctx.plan as PlanFile;
-	const live = await engineLive(ctx);
+	const live = instanceServed(ctx);
 	const engineAt = plan.steps.findIndex(
 		(step) => step === 'host_engine' || step === 'stack_engine',
 	);
@@ -484,31 +546,45 @@ function assertConfirmed(ctx: HostRunContext, steps: readonly StepId[]): void {
 	);
 }
 
+/**
+ * The line an abort of a LIVE instance starts with — route by route (C3-52:
+ * the production account's words never on docker/trial).
+ */
+function keptLiveLine(ctx: HostRunContext): string {
+	return `  ⚠ the instance has served (it was started): an abort never takes a live instance apart — only the host steps after the engine are undone; ${keptWhat(ctx)}`;
+}
+
+/** What an abort of a live instance keeps, in the route's words. */
+function keptWhat(ctx: HostRunContext): string {
+	return (ctx.plan as PlanFile).answers.route === 'production'
+		? 'its user, database and code are kept'
+		: 'its containers, volumes (the database) and files are kept';
+}
+
+/** Undo one step and mark it pending again (a --resume puts it back). */
+async function undoOne(ctx: HostRunContext, step: StepId): Promise<void> {
+	ctx.currentStep = step;
+	const undone = await (hostStep(ctx, step).undo as NonNullable<HostStepDefinition['undo']>)(
+		hostContext(ctx),
+	);
+	recordOf(ctx, step).status = 'pending';
+	ctx.undone.push(step);
+	saveState(ctx);
+	say(ctx, `  [${step}] ${undone}`);
+	emit(ctx, step, 'undo', { message: undone });
+}
+
 async function abortRun(ctx: HostRunContext): Promise<void> {
 	lockRunDir(ctx);
 	loadRecord(ctx);
-	const { steps, live } = await undoableSteps(ctx);
+	const { steps, live } = undoableSteps(ctx);
 	assertConfirmed(ctx, steps);
 	ctx.keptLive = live;
 	startRun(ctx, 'abort');
 	saveState(ctx);
-	if (live) {
-		warnLine(
-			ctx,
-			'  ⚠ the engine install is complete (a live instance): only the host steps after it are undone — the instance, its user, database and code are kept',
-		);
-	}
+	if (live) warnLine(ctx, keptLiveLine(ctx));
 	say(ctx, `→ undoing: ${steps.join(', ') || 'nothing'}`);
-	for (const step of steps) {
-		ctx.currentStep = step;
-		const undone = await (hostStep(ctx, step).undo as NonNullable<HostStepDefinition['undo']>)(
-			hostContext(ctx),
-		);
-		recordOf(ctx, step).status = 'pending';
-		saveState(ctx);
-		say(ctx, `  [${step}] ${undone}`);
-		emit(ctx, step, 'undo', { message: undone });
-	}
+	for (const step of steps) await undoOne(ctx, step);
 	ctx.currentStep = null;
 	if (live) {
 		// The instance stays; what was undone is pending again — a --resume puts it back.
@@ -562,7 +638,18 @@ function failedOutcome(ctx: HostRunContext, error: unknown): HostExecutorOutcome
 		hint: hostHint(ctx),
 		told: ctx.told,
 		keptLive: false,
+		undone: ctx.undone,
 	};
+}
+
+/** The interrupted step's own stop (the engine child's container — C3-29); never throws. */
+async function stopCurrentStep(ctx: HostRunContext): Promise<void> {
+	if (ctx.currentStep === null || ctx.state === null) return;
+	try {
+		await hostStep(ctx, ctx.currentStep).onInterrupt?.(hostContext(ctx));
+	} catch {
+		// best effort: the hint below tells the operator how to resume
+	}
 }
 
 async function interrupted(
@@ -571,6 +658,7 @@ async function interrupted(
 	restore: () => void,
 ): Promise<never> {
 	await stopChildren(ctx);
+	await stopCurrentStep(ctx);
 	recordFailure(ctx, 'install.step_failed', 'interrupted');
 	closeRun(ctx, 'interrupted');
 	releaseLock(ctx);
@@ -641,6 +729,7 @@ function newContext(
 		secrets: { ...request.secrets },
 		runLock: false,
 		keptLive: false,
+		undone: [],
 		stepOf: (step) => hostStep(ctx, step),
 		verifyOwn: async (step) => {
 			const verify = hostStep(ctx, step).verify;
@@ -652,6 +741,14 @@ function newContext(
 		save: () => saveState(ctx),
 	};
 	return ctx;
+}
+
+/** Every plan step's end-of-install task (the engine steps: the salt shown once — C3-18). */
+async function afterComplete(ctx: HostRunContext): Promise<void> {
+	for (const step of (ctx.plan as PlanFile).steps) {
+		await hostStep(ctx, step).afterComplete?.(hostContext(ctx));
+	}
+	saveState(ctx);
 }
 
 /** Does the record at `dir` say complete? */
@@ -674,6 +771,7 @@ async function runMode(
 			hint: [],
 			told: ctx.told,
 			keptLive: ctx.keptLive,
+			undone: ctx.undone,
 		};
 	}
 	const wasComplete = ctx.request.mode === 'resume' && recordComplete(ctx.runDir);
@@ -681,6 +779,7 @@ async function runMode(
 		? freshRun(ctx, options.skipPrivilegeCheck === true)
 		: resumeRun(ctx));
 	ctx.currentStep = null;
+	await afterComplete(ctx);
 	(ctx.state as InstallState).outcome = 'complete';
 	closeRun(ctx, 'complete');
 	const result = wasComplete && !ctx.ranAny ? 'already_complete' : 'complete';
@@ -692,6 +791,7 @@ async function runMode(
 		hint: [],
 		told: ctx.told,
 		keptLive: false,
+		undone: [],
 	};
 }
 
@@ -738,4 +838,73 @@ export function hostSecretsNeeded(plan: PlanFile, state: InstallState | null): S
 	const table = hostTable(() => hostRefuse('install.step_failed', 'no plan context here'));
 	const pending = plan.steps.filter((step) => state?.steps[step]?.status !== 'done');
 	return [...new Set(pending.flatMap((step) => stepNeeds(plan, table[step as HostStepId])))];
+}
+
+/** A run's io that says nothing (a read-only measurement before the run). */
+const QUIET_IO: RunIo = { log: () => {}, warn: () => {} };
+
+/**
+ * The secrets a --resume must ASK for (campaign 3 C3-51): those of the
+ * not-done steps — but for a not-done ENGINE step, only what its child still
+ * needs, asked of the child itself (an orphaned child that went on to set the
+ * root password needs it no more). A child that cannot answer: all of them.
+ */
+export async function hostResumeSecrets(
+	given: InstallAnswers,
+	options: HostExecutorOptions = {},
+): Promise<SecretKey[]> {
+	const ctx = newContext({ mode: 'resume', givenAnswers: given, secrets: {} }, QUIET_IO, options);
+	loadRecord(ctx);
+	const plan = ctx.plan as PlanFile;
+	const pending = plan.steps.filter((step) => recordOf(ctx, step).status !== 'done');
+	const asked: SecretKey[] = [];
+	for (const step of pending) asked.push(...(await stepStillNeeds(ctx, step)));
+	return [...new Set(asked)];
+}
+
+/** One not-done step's secrets: the child's own answer when the step can ask it, else its `needs`. */
+async function stepStillNeeds(ctx: HostRunContext, step: StepId): Promise<SecretKey[]> {
+	const definition = hostStep(ctx, step);
+	const needs = stepNeeds(ctx.plan as PlanFile, definition);
+	const still = await childStillNeeds(ctx, definition);
+	return still === null ? needs : needs.filter((key) => still.includes(key));
+}
+
+/** The step's child's own answer (null: none, or it could not be asked — then all of them). */
+async function childStillNeeds(
+	ctx: HostRunContext,
+	definition: HostStepDefinition,
+): Promise<SecretKey[] | null> {
+	try {
+		return (await definition.secretsStillNeeded?.(hostContext(ctx))) ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * The preflight's refusals for `--plan` (campaign 3 C3-25): the same
+ * read-only measurement a fresh run makes before it writes its record — the
+ * OS, the service account and folder, the names, the certificate. Run as a
+ * normal user, the root refusal is left out and said as a warning instead.
+ */
+export async function hostPlanRefusals(
+	planFile: PlanFile,
+	options: HostExecutorOptions = {},
+): Promise<{ errors: string[]; warnings: string[] }> {
+	const ctx = newContext({ mode: 'fresh', planFile, secrets: {} }, QUIET_IO, options);
+	ctx.plan = planFile;
+	const refusals = hostStep(ctx, planFile.steps[0] as StepId).refusals;
+	if (refusals === undefined) return { errors: [], warnings: [] };
+	ctx.state = freshState(planFile);
+	const problems = await refusals(hostContext(ctx));
+	const asUser = problems.includes(ROOT_REQUIRED_SENTENCE);
+	return {
+		errors: problems.filter((problem) => problem !== ROOT_REQUIRED_SENTENCE),
+		warnings: asUser
+			? [
+					'measured as a normal user: what only root can read was not checked — run --plan with sudo for the whole system check',
+				]
+			: [],
+	};
 }

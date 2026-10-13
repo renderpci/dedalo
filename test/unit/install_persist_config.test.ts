@@ -25,9 +25,17 @@ import { isDedaloError } from '../../src/core/errors/index.ts';
 import { persistConfig } from '../../src/core/install/config_persist.ts';
 import { checkDirectories } from '../../src/core/install/directories.ts';
 import {
+	buildInstallPlan,
+	normalizeInstallAnswers,
 	OFFICIAL_CODE_SERVER,
 	OFFICIAL_ONTOLOGY_SERVER,
 } from '../../src/core/install/install_plan.ts';
+import {
+	FALLBACK_LOCALE,
+	FALLBACK_TIMEZONE,
+	hostLocaleDefaults,
+	localeFromPosix,
+} from '../../src/core/install/install_validation.ts';
 import {
 	closeOntologyChoice,
 	collectHierarchyDependencies,
@@ -597,5 +605,83 @@ describe('persist_config (P2)', () => {
 			seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: scratch });
 			rmSync(own, { recursive: true, force: true });
 		}
+	});
+});
+
+// ── install campaign 3 (developer route, package P4) ─────────────────────────
+
+describe('campaign 3: what a fresh install writes', () => {
+	test('C3-60: the written .env carries no PHP-era wording', async () => {
+		await persistConfig({ ...BASE_CFG });
+		const body = readFileSync(join(scratch, '.env'), 'utf8');
+		expect(body).toContain('DEDALO_SALT_STRING=');
+		expect(body).not.toMatch(/PHP|coexistence/i);
+	});
+
+	test('C3-44: a production --engine-only plan writes DEDALO_MEDIA_ACCESS_MODE=publication, as the host route does', () => {
+		const raw = { route: 'production', instance: 'museo', entity: 'museo', root_password: 'x' };
+		for (const engineOnly of [true, false]) {
+			const plan = buildInstallPlan({ ...raw, engine_only: engineOnly }, { salt: 's' });
+			const entries = plan.env.flatMap((section) => section.entries);
+			expect(entries.find((item) => item.key === 'DEDALO_MEDIA_ACCESS_MODE')?.value).toBe(
+				'publication',
+			);
+		}
+		// An explicit choice still wins; the developer route still writes nothing.
+		const chosen = normalizeInstallAnswers({ ...raw, media_access_mode: 'private' }).answers;
+		expect(chosen.media_access_mode).toBe('private');
+		expect(normalizeInstallAnswers({ route: 'developer' }).answers.media_access_mode).toBe('');
+	});
+
+	describe("C3-21: the identity defaults are the host's", () => {
+		test('TZ=Etc/UTC, LANG=en_US.UTF-8 → Etc/UTC / en-US (never Europe/Madrid / es-ES)', () => {
+			expect(hostLocaleDefaults({ TZ: 'Etc/UTC', LANG: 'en_US.UTF-8' }, 'Europe/Madrid')).toEqual({
+				timezone: 'Etc/UTC',
+				locale: 'en-US',
+			});
+		});
+
+		test('LC_ALL wins over LANG; C/POSIX/unset fall back to en-US; a bad zone to UTC', () => {
+			expect(hostLocaleDefaults({ LC_ALL: 'de_DE@euro', LANG: 'en_US.UTF-8' }, 'UTC').locale).toBe(
+				'de-DE',
+			);
+			expect(hostLocaleDefaults({ LC_ALL: 'C', LANG: 'fr_FR.UTF-8' }, 'UTC').locale).toBe(
+				FALLBACK_LOCALE,
+			);
+			expect(hostLocaleDefaults({}, 'Not/AZone').timezone).toBe(FALLBACK_TIMEZONE);
+			expect(hostLocaleDefaults({ TZ: ':America/Lima' }, 'UTC').timezone).toBe('America/Lima');
+			expect(localeFromPosix('POSIX')).toBeNull();
+			expect(localeFromPosix('pt_BR.utf8')).toBe('pt-BR');
+		});
+
+		test("the plan defaults to THIS process's host values, and a given answer wins", () => {
+			const host = hostLocaleDefaults();
+			const plain = normalizeInstallAnswers({ route: 'developer' }).answers;
+			expect({ timezone: plain.timezone, locale: plain.locale }).toEqual(host);
+			const given = normalizeInstallAnswers({
+				route: 'developer',
+				timezone: 'Asia/Tokyo',
+				locale: 'ja-JP',
+			}).answers;
+			expect({ timezone: given.timezone, locale: given.locale }).toEqual({
+				timezone: 'Asia/Tokyo',
+				locale: 'ja-JP',
+			});
+		});
+
+		test('a run under TZ=Etc/UTC LANG=en_US.UTF-8 normalizes to Etc/UTC / en-US', () => {
+			const run = Bun.spawnSync(
+				[
+					process.execPath,
+					'-e',
+					"const { normalizeInstallAnswers } = await import('./src/core/install/install_plan.ts'); const a = normalizeInstallAnswers({ route: 'developer' }).answers; console.log(a.timezone + ' ' + a.locale);",
+				],
+				{
+					cwd: join(import.meta.dir, '../..'),
+					env: { PATH: process.env.PATH ?? '', TZ: 'Etc/UTC', LANG: 'en_US.UTF-8', LC_ALL: '' },
+				},
+			);
+			expect(new TextDecoder().decode(run.stdout).trim().split('\n').at(-1)).toBe('Etc/UTC en-US');
+		});
 	});
 });

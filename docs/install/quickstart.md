@@ -11,18 +11,28 @@ The Trial route installs a complete Dédalo in containers on one machine, for an
 
 ## What you need
 
-- **Docker Engine and the Compose v2 plugin** (`docker compose`, not the old `docker-compose`), with a daemon your user can reach. On macOS, Docker Desktop. The installer checks all three and tells you how to fix what is missing; it never installs Docker or changes group membership.
+- **Docker Engine and the Compose v2 plugin, 2.24.4 or newer** (`docker compose`, not the old `docker-compose`). The installer checks them and tells you how to fix what is missing; it never installs Docker or changes group membership. To install them:
+    - **Ubuntu:** `sudo apt install docker.io docker-compose-v2 docker-buildx`.
+    - **Debian and the RHEL family** (RHEL, AlmaLinux, Rocky): Docker's own repository, as [docs.docker.com/engine/install](https://docs.docker.com/engine/install/) describes for each distribution. On the RHEL family that procedure first removes the `podman`, `buildah` and `runc` packages the system ships.
+    - **macOS:** Docker Desktop.
+
+    **Podman, and `podman-docker`, are not supported.**
+- **Your user in the `docker` group**, so the daemon answers without `sudo`: `sudo usermod -aG docker "$USER"`, then log out and in again (or run `newgrp docker` in the shell you install from). Membership of `docker` is root-equivalent.
+- **`curl`, `unzip`, `sha256sum` and `git`**: `install.sh` downloads the Bun runtime with `curl`, checks it with `sha256sum` and unpacks it with `unzip`, and `git` gets the checkout. On Ubuntu and Debian, `sudo apt install curl unzip git`; on the RHEL family, `sudo dnf install curl unzip git` (`sha256sum` comes with the system).
 - **About 8 GiB free** under Docker's root directory: the engine image is about 2.5 GB and PostgreSQL about 0.7 GB, and a local image build parks about 3 GB of build cache. Below that the database restore fails part-way with `No space left on device`, so the installer refuses first. A Docker root it cannot measure (a VM, a remote daemon) skips the check.
-- **Port 80 free** on the machine (and the HTTPS port you publish, `443` by default).
+- **Port 80 free** on the machine, or another HTTP port chosen on the *Containers* screen. The trial publishes no HTTPS port.
 - **`cosign`**, if you install an official image: its signature is verified. Without `cosign`, choose a local build instead.
 
 Check by hand first if you like:
 
 ```shell
 docker --version
-docker compose version     # v2 or newer
+docker compose version     # 2.24.4 or newer
 docker info                # an error here = the daemon is not running, or your user cannot reach it
 ```
+
+!!! warning "Published ports bypass the host firewall"
+    Docker writes its own packet-filter rules for every published port, ahead of the host firewall's: the trial's HTTP port is reachable from the network even when `firewalld` or `ufw` does not allow it. To restrict who reaches it, filter in Docker's `DOCKER-USER` chain, which Docker consults before its own rules ([Docker and the firewall](https://docs.docker.com/engine/network/packet-filtering-firewalls/)). Remember that anyone who reaches the port reads every media file.
 
 ## Run the installer
 
@@ -38,11 +48,11 @@ Choose **Trial** on the first screen and answer the screens in the terminal; `sh
 
 | Screen | What it asks |
 | --- | --- |
-| **Install type** | the route, and the acknowledgement that the trial has no media protection (typed `yes`) |
+| **Install type** | the route, and the acknowledgement that the trial has no media protection (type `yes`; the full screen also ticks it with Space) |
 | **System check** | nothing: it shows what this machine has (Docker, Compose, disk). A failed row must be fixed first |
 | **Image** | where the Dédalo image comes from: an **official** registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout. Its version is always the installer's own |
-| **Containers** | the published ports (`80` and `443` by default) |
-| **Identity** | the institution's short code (`entity`) and full name, the locale and the time zone. The time zone stamps every database timestamp |
+| **Containers** | the published HTTP port (`80` by default) |
+| **Identity** | the institution's short code (`entity`) and full name, the install fingerprint (**Information** and **Info key** — keep the defaults), the locale and the time zone. The time zone stamps every database timestamp |
 | **Ontologies** | the domain ontologies: Oral history (`oh`) is built in and pre-ticked; others come from the update server, with what they declare. Also whether to use the official update servers |
 | **Thesauri** | the thesauri the chosen ontologies declare, pre-ticked. Nothing else is pre-selected, and no country's toponymy. The thesauri are created empty: only `lg` and the country toponymies carry terms |
 | **Languages** | the interface and data languages |
@@ -59,20 +69,26 @@ Nothing has changed on the machine until you type `yes` here. The Review lists t
 | Step | What it does |
 | --- | --- |
 | `stack_preflight` | checks Docker, Compose v2, the free disk, that no Dédalo instance is already here (`dedalo_private` volume), that no stack files of an earlier install are left (`.dedalo.env`, `compose.override.yaml`), and the image source |
-| `stack_image` | pulls the image and verifies its signature and version label, or builds it here |
-| `stack_files` | writes `.dedalo.env` (`0600`, with the generated database password) and `compose.override.yaml` into the checkout |
+| `stack_image` | pulls the image and verifies its signature and version label, or builds it here, printing each build step as it starts (a first build takes about 5 minutes on a fast machine, 15 or more on 2 CPUs) |
+| `stack_files` | writes `.dedalo.env` (`0600`, with the generated database password) and `compose.override.yaml` (plain HTTP only: no HTTPS port, no certificate volumes) into the checkout |
 | `stack_database` | starts PostgreSQL and waits for it |
 | `stack_engine` | runs the engine steps inside the container: the database seed, the ontologies, the thesauri, the tools, the `root` password |
-| `stack_up` | starts the engine, waits for it, then starts the rest of the stack |
-| `stack_health` | `/health` through nginx over plain HTTP, and the reminder that there is no media protection |
+| `stack_up` | starts the engine, waits for it, then starts the rest of the stack, and waits for nginx to stay up (its configuration accepted) |
+| `stack_health` | `/health` on the engine's socket and through nginx over plain HTTP, and the reminder that there is no media protection |
 
-At the Review, `write <path>` (or **w** on the full screen) saves your answers as an answers file instead, with no secret in it; `sh install.sh --answers <file>` installs from it later.
+At the Review, `write <path>` (or **w** on the full screen) saves your answers as an answers file instead, with no secret in it; `sh install.sh --answers <file>` installs from it later. That run asks nothing: give it the `root` password in `DEDALO_INSTALL_ROOT_PASSWORD`, or on standard input with `--secrets-stdin` ([Secrets](installer_reference.md#secrets)).
 
 ## Done
 
 When the install completes, the Done screen shows the outcome and the generated `DEDALO_SALT_STRING` **once** — keep it with your backups. Open `http://<this machine's address>/dedalo/` (add `:<port>` if you published another HTTP port) and log in as **`root`** with the password you chose.
 
-The installer's record of this install is in `<checkout>/.dedalo-install/`. If the install stops part-way, fix the cause and run `sh install.sh --route trial --resume`; it continues from the failed step. See [Resume and abort](installer_reference.md#resuming-an-install-resume).
+The installer's record of this install is in `<checkout>/.dedalo-install/`. If the install stops part-way, fix the cause and run `sh install.sh --route trial --resume`; it continues from the failed step. A resume runs in line mode, not on the full screen, and asks again for the secrets the remaining steps need. See [Resume and abort](installer_reference.md#resuming-an-install-resume).
+
+Whichever run completes the install shows the salt, a `--resume` included. If you did not see it (its output went to a file — the end of the run then prints this command), read it from the `private` volume:
+
+```shell
+docker compose -f docker-compose.simple.yml -f compose.override.yaml --env-file .dedalo.env exec dedalo grep DEDALO_SALT_STRING /private/.env
+```
 
 Then continue with [After the install](index.md#after-the-install).
 
@@ -97,9 +113,9 @@ An install that **failed or was interrupted** is undone with:
 sh install.sh --route trial --abort --confirm-database dedalo
 ```
 
-It removes, in reverse order, only what this install created: its containers, the volumes it created, the files it wrote and its record.
+It removes, in reverse order, only what this install created: its containers, the volumes it created, the files it wrote and its record. The images stay, and the abort names them with the `docker image rm` command that reclaims the space.
 
-A **completed** trial is a live instance, and `--abort` never takes it apart: it stops the stack and leaves the data. To remove a finished trial, destroy it yourself — the volumes hold the database, the media and the secrets, so this deletes everything:
+A **completed** trial is a live instance, and `--abort` never takes it apart: it removes the engine, nginx and backup containers and leaves PostgreSQL running with the data, and `--resume` starts them again. To remove a finished trial, destroy it yourself — the volumes hold the database, the media and the secrets, so this deletes everything:
 
 ```shell
 docker compose -f docker-compose.simple.yml -f compose.override.yaml --env-file .dedalo.env down -v
@@ -117,11 +133,12 @@ The installer has no conversion from a trial to another route. When you have dec
 
 | Symptom | Where to look |
 | --- | --- |
-| `Docker is not installed`, `the Docker daemon does not answer`, `Docker Compose v2 or newer is required` | [Troubleshooting › Docker and trial refusals](troubleshooting.md#docker-and-trial-refusals) |
+| `Docker is not installed`, `the Docker daemon does not answer`, `Docker Compose 2.24.4 or newer is required` | [Troubleshooting › Docker and trial refusals](troubleshooting.md#docker-and-trial-refusals) |
 | `only N GiB free under …` | the same section |
 | `this machine already has a Dédalo instance (volume dedalo_private)` | the same section |
 | `cosign is not installed` | install `cosign`, or choose a local build |
 | the install stopped at a step | fix the cause, then `--resume` — [Resuming an install](troubleshooting.md#resuming-and-undoing-an-install) |
-| `port is already allocated` | another program holds port 80 or 443: stop it, or choose other ports on the Containers screen |
+| `port is already allocated` | another program holds the HTTP port: stop it, or choose another port on the Containers screen |
+| `stack_up`: `nginx did not stay up (…)` | nginx refused its configuration; the sentence quotes its `[emerg]` line. Fix what it names, then `--resume` |
 
 Everything else: [troubleshooting](troubleshooting.md).

@@ -26,7 +26,8 @@ export type DoneModel =
 			shownOnce: readonly string[];
 			ending: RunEnding;
 	  }
-	| { kind: 'written'; path: string; trial: boolean };
+	/** `route`: the route the answers are for (its own entry command runs them — C3-53). */
+	| { kind: 'written'; path: string; trial: boolean; route: string };
 
 /** What comes next after a complete install (a host route already started the server). */
 function nextLines(ending: RunEnding, width: number): Line[] {
@@ -105,7 +106,7 @@ function writtenCard(model: Extract<DoneModel, { kind: 'written' }>, width: numb
 			...wrapped(DONE_TEXT.written(model.path), width, 'muted'),
 			...trial,
 		],
-		below: wrapped(DONE_TEXT.writtenNext, width, 'muted'),
+		below: wrapped(DONE_TEXT.writtenNext(model.route), width, 'muted'),
 	};
 }
 

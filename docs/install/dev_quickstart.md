@@ -6,11 +6,24 @@ A working Dédalo on your laptop in about ten minutes. This is a **development**
 
 ## 1. What you need
 
-| | macOS (Homebrew) | Debian/Ubuntu |
-| --- | --- | --- |
-| Bun (**the pinned version**) | `curl -fsSL https://bun.sh/install \| bash -s "bun-v$(cat .bun-version)"` | same |
-| PostgreSQL 18 + `psql` | `brew install postgresql@18` | `apt install postgresql-18 postgresql-client-18` |
-| Media tools | `brew install ffmpeg imagemagick poppler ocrmypdf librsvg` | `apt install ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin` |
+| | macOS (Homebrew) | Ubuntu 26.04 / Debian 13 | RHEL / Rocky / Alma 10 |
+| --- | --- | --- | --- |
+| Base tools | `brew install git` (curl and unzip ship with macOS) | `sudo apt install git curl unzip` | `sudo dnf install git curl unzip` |
+| PostgreSQL 18 + `psql` | `brew install postgresql@18` | `sudo apt install postgresql-18 postgresql-client-18 postgresql-contrib` | `sudo dnf install postgresql18-server postgresql18 postgresql18-contrib` |
+| pgvector (for `test:db:setup`) | `brew install pgvector` | `sudo apt install postgresql-18-pgvector` | `sudo dnf install pgvector_18` |
+| Media tools | `brew install ffmpeg imagemagick poppler ocrmypdf librsvg` | `sudo apt install ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin` | `sudo dnf install ffmpeg ImageMagick poppler-utils librsvg2-tools` |
+| MariaDB (for the test suite) | `brew install mariadb` | `sudo apt install mariadb-server` | `sudo dnf install mariadb-server` |
+
+Bun comes in step 2, inside the checkout, because the version it installs is the one the checkout pins.
+
+Debian 13 and RHEL-family 10 do not ship PostgreSQL 18 themselves, and RHEL-family 10 needs extra repositories for FFmpeg and ImageMagick. Add them first, exactly as the [manual install](manual_install.md) does: the PostgreSQL project's repository (PGDG) on Debian, and EPEL, CodeReady Builder, RPM Fusion free and PGDG on RHEL, Rocky and Alma. On RHEL-family, PGDG's server also needs its data directory created and the service started:
+
+```shell
+sudo /usr/pgsql-18/bin/postgresql-18-setup initdb
+sudo systemctl enable --now postgresql-18
+```
+
+MariaDB is not needed by a development install. The test suite starts its own private MariaDB server from these binaries, and without them the publication tests fail rather than skip (see step 7).
 
 !!! note "macOS binary base"
     Media binaries are looked up under `/opt/homebrew/bin` on macOS and `/usr/bin` on Linux, automatically. Override the base with `DEDALO_BINARY_BASE`, or any single binary with its own key (`DEDALO_AV_FFMPEG_PATH`, `DEDALO_MAGICK_PATH`, …). On an Intel Mac, Homebrew installs to `/usr/local/bin` — set `DEDALO_BINARY_BASE=/usr/local/bin`.
@@ -18,13 +31,17 @@ A working Dédalo on your laptop in about ten minutes. This is a **development**
 !!! note "Several PostgreSQL versions installed?"
     `psql` must not be older than the server. A version-suffixed Homebrew install is detected automatically, newest first. If you have a stranger layout, point at it explicitly with `DEDALO_PG_BIN_PATH=/opt/homebrew/opt/postgresql@18/bin`.
 
-## 2. Clone and install dependencies
+## 2. Clone, install Bun and the dependencies
 
 ```shell
 git clone <your-dedalo-remote> ~/dev/dedalo/master_dedalo
 cd ~/dev/dedalo/master_dedalo
+curl -fsSL https://bun.sh/install | bash -s "bun-v$(cat .bun-version)"   # the version this checkout pins
+exec "$SHELL" -l                                                         # puts ~/.bun/bin on your PATH
 bun install
 ```
+
+Run the Bun line **inside the checkout**: it reads `.bun-version` from the current directory. Run elsewhere, the version is empty and the download fails.
 
 That is the whole setup. The browser libraries the client loads ship **with the repo** — from `node_modules/` or from the committed `vendor/` tree. Nothing is fetched or copied at install time.
 
@@ -33,16 +50,29 @@ That is the whole setup. The browser libraries the client loads ship **with the 
 
 ## 3. Create an empty database
 
+On **macOS**, Homebrew's PostgreSQL already has a superuser named after you:
+
 ```shell
 createdb dedalo_dev
 ```
 
-Or, if you want an explicit role:
+On **Linux**, the server has only the `postgres` role at first, so `createdb` answers `role "<you>" does not exist`. Create a role named after your login once, then the database:
+
+```shell
+sudo -u postgres createuser --superuser "$USER"
+createdb dedalo_dev
+```
+
+Your role connects over the local socket with peer authentication: no password exists, and none is asked. The role is a superuser because the install creates PostgreSQL extensions, and `test:db:setup` builds databases. That is fine on a development machine, never on a server.
+
+If you prefer a role of its own, create it as a superuser and give it the database:
 
 ```sql
-CREATE USER dedalo_user PASSWORD 'dev';
+CREATE ROLE dedalo_user LOGIN SUPERUSER PASSWORD 'dev';
 CREATE DATABASE dedalo_dev WITH ENCODING='UTF8' OWNER=dedalo_user;
 ```
+
+A role with a password connects over TCP (`localhost`), and you give the installer that password.
 
 The installer restores **into** this database and refuses a non-empty one. It never creates the database itself.
 
@@ -55,7 +85,9 @@ bun run scripts/install.ts            # the full-screen installer: choose Develo
 bun run scripts/install.ts --plain    # the same questions, one per line
 ```
 
-The *System check* screen shows Bun, the seed, the private directory, `psql`, the local PostgreSQL, ImageMagick and FFmpeg; a failed row must be fixed first. The *Database* screen checks that the database exists, is reachable and is empty.
+`sh install.sh` from the [installation hub](index.md) starts the same installer: it fetches and verifies the pinned Bun itself, installs the installer's dependencies, then runs `scripts/install.ts` with your arguments. In a checkout where Bun is already installed (step 2), `bun run scripts/install.ts` is the shorter way to the same questions.
+
+The *System check* screen shows Bun, the seed, the private directory and the PostgreSQL client (`psql`, required), then this machine's platform, memory, processor, disk, ImageMagick and FFmpeg; a failed row must be fixed first. A `psql` older than the server is reported by the *Database* screen, once the server's version is known. The *Database* screen checks that the database exists, is reachable and is empty.
 
 Or headless, for a repeatable setup — `--route developer` is the default when no route is given:
 
@@ -65,7 +97,7 @@ bun run scripts/install.ts \
   --route developer \
   --db-name dedalo_dev \
   --db-user "$(whoami)" \
-  --db-host /tmp \
+  --db-socket /var/run/postgresql \
   --entity dev \
   --langs lg-eng,lg-spa --app-lang lg-eng --data-lang lg-eng
 ```
@@ -74,7 +106,14 @@ Add `--write-answers ~/dedalo-dev.answers.json` once and the next fresh install 
 
 No `--media-path`: the media root defaults to `../private/media` (see step 5). To keep it elsewhere, add `--media-path "$HOME/dev/dedalo/media"`; the installer creates that directory and writes it to `.env` as `MEDIA_PATH`. Setting `MEDIA_PATH=…` in front of the command does not work: the installer would probe that directory, but `.env` would not get it.
 
-`--db-host /tmp` uses the local unix socket, so no password is needed — Homebrew's PostgreSQL puts its socket there (the installer's own default is `localhost`). On a Homebrew PostgreSQL your own user is a superuser, which is why `--db-user "$(whoami)"` just works.
+`--db-socket` connects over the local unix socket, as the role from step 3 does, so no password is needed. The socket directory depends on how PostgreSQL was installed:
+
+| PostgreSQL from | `--db-socket` |
+| --- | --- |
+| Ubuntu, Debian, PGDG on RHEL / Rocky / Alma | `/var/run/postgresql` |
+| Homebrew (macOS) | `/tmp` |
+
+The installer writes it to `.env` as `DB_SOCKET`; the engine and the test suite both connect through it. Without `--db-socket`, the installer connects to `localhost` over TCP, which needs a role with a password (step 3).
 
 With no `--hierarchies`, only the thesauri the chosen ontologies declare are installed — no country's toponymy is ever pre-selected; `--hierarchies none` skips even those. The Languages thesaurus is activated with the database either way. With no `--ontologies`, the default domain ontology, Oral history (`oh`), is installed from the copy built into the repo — no network needed; `--ontologies oh,tch` downloads `tch` and what it declares from the update server. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server (add `--no-update-servers` to leave both empty) and lists the installed ontologies in `ACTIVE_ONTOLOGY_TLDS`.
 
@@ -105,9 +144,12 @@ ENV
 
 The other keys:
 
-- **`SERVER_TCP_PORT`** — the engine always listens on a unix socket; a browser cannot. This opens an extra TCP listener for development. Leave it **unset in production**.
+- **`SERVER_TCP_PORT`** — the engine always listens on a unix socket; a browser cannot. This opens an extra TCP listener for development. Leave it **unset in production**. The listener binds `127.0.0.1` only, so no other machine reaches a server that shows full error details. To open it to your network on purpose, set `SERVER_TCP_HOST=0.0.0.0`.
 - **`DEDALO_DEV_MODE=true`** — serves the browser test harness and the dev-only libraries.
 - **`DEDALO_DEBUG_API_ERRORS=true`** — echoes exception text to the client instead of only a request id. Very useful locally; a disclosure hole anywhere else.
+
+!!! note "One download at first boot"
+    On its first start the server downloads the free DB-IP country database (from `https://download.db-ip.com`) into `../private/geoip/`. The Activity section uses it to show a country flag beside an IP address, and the server refreshes it monthly. Offline, the server starts anyway and shows no flags. To make no download at all, set `DEDALO_GEOIP_AUTO_UPDATE=false` (or `DEDALO_GEOIP_ENABLED=false`).
 
 ## 6. Run it
 
@@ -137,12 +179,23 @@ bun run test:db:setup   # once (and after a schema/seed change)
 bun test                # picks it up automatically
 ```
 
-`test:db:setup` builds `<your_db>_test` from files vendored in this repo, **through the installer's own steps**: the core-only install seed and the default domain ontology (`oh`, from the vendored file) exactly as a fresh installation gets them, then the suite's own fixtures — the generic `test` ontology, the canonical `test3` playground records, the hierarchies the tests reference and the registered tools. Nothing is copied from your install.
+`test:db:setup` connects the way your `.env` says (over `DB_SOCKET` when it names one), never prompts for a password, and needs pgvector on the server (step 1). It builds `<your_db>_test` from files vendored in this repo, **through the installer's own steps**: the core-only install seed and the default domain ontology (`oh`, from the vendored file) exactly as a fresh installation gets them, then the suite's own fixtures — the generic `test` ontology, the canonical `test3` playground records, the hierarchies the tests reference and the registered tools. Nothing is copied from your install.
 
 !!! info "Why a separate database"
     Running the suite against the application's database made the tests depend on that install's data — on a fresh install 183 of 2039 unit tests failed — and let them WRITE to it: one gate provisioned a scratch ontology node and **deleted a real one** on its way out. Tests get their own database; the app's is not theirs to touch.
 
     If the test DB is missing, `bun test` says so and names the command that builds it; it never falls back to your application's database, so a DB-backed gate fails with `database "…_test" does not exist`. `DEDALO_TEST_DATABASE` overrides the name; `DEDALO_TEST_DB_DISABLE=true` (process environment only) opts out and runs against the configured database.
+
+### What a fresh machine needs, and what stays red
+
+Beyond step 1, two more things decide whether the suite can pass:
+
+- **MariaDB binaries** (`mariadbd`, `mariadb-install-db`, `mariadb`). The publication tests start their own MariaDB server under `../private/test_mariadb/`, never yours. Without the binaries, those tests fail with `SuiteMariadbUnavailable`: a missing prerequisite is reported as a failure, not skipped.
+- **An ImageMagick that can write AVIF.** `magick -list format | grep AVIF` must show `rw`. On Debian and Ubuntu, `sudo apt install libheif-plugin-aomenc` adds the encoder. Without it, the AVIF media tests fail with `no encode delegate for this image format`.
+
+Some tests are red on every suite database **by construction**: the read-path parity gates under `test/parity/` replay requests recorded against one real installation's records, which the suite database does not hold. Their expected failures are recorded per test in `engineering/parity_baseline.json`, and they are being replaced by tests on the generic `test` ontology. A red parity gate that is in that file is not your machine's fault.
+
+[Testing](../development/testing.md) explains the suite: its tiers, its own database and media root, and how to read a red run.
 
 ## Where the test3 playground lives
 

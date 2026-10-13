@@ -742,7 +742,7 @@ const get_content_data_edit = function(self) {
 * @param {Object} self - Menu instance; reads self.data.info_data for server-provided values
 * @returns {HTMLElement} The `.debug_info_bar` div, ready to append to the menu wrapper
 */
-const render_debug_info_bar = (self) => {
+export const render_debug_info_bar = (self) => {
 
 	// short vars
 		const info_data			= self.data.info_data || {}
@@ -769,7 +769,8 @@ const render_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dedalo_version' + version_style,
-			text_content	: 'Code v. ' + dedalo_version + ' ' + dedalo_build,
+			// dedalo_build is null on a dev checkout (WC-2026-08-23-build-provenance): omitted, never 'null'
+			text_content	: ['Code v.', dedalo_version, dedalo_build].filter(Boolean).join(' '),
 			parent			: debug_info_bar
 		})
 

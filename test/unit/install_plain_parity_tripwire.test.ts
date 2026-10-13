@@ -54,6 +54,7 @@ import {
 	reviewDecisions,
 	reviewedDecisionsRefusal,
 } from '../../src/core/install/front_end.ts';
+import { hostCommandPrefix } from '../../src/core/install/host/host_executor.ts';
 import {
 	answersFileOf,
 	answersFromAnswersFile,
@@ -63,11 +64,14 @@ import {
 	type InstallPlan,
 	normalizeInstallAnswers,
 	SECRET_ANSWER_KEYS,
+	TOPONYMY_SUGGESTION,
+	TOPONYMY_SUGGESTION_INTERACTIVE,
 } from '../../src/core/install/install_plan.ts';
 import { runInteractiveInstall } from '../../src/core/install/install_session.ts';
 import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
 import type { OntologyCatalog } from '../../src/core/install/ontology_choice.ts';
-import { buildScreens, ROUTE_FIXED } from '../../src/core/install/screen_model.ts';
+import { buildScreens, ROUTE_FIXED, sameAsCommand } from '../../src/core/install/screen_model.ts';
+import { DONE_TEXT, ENTRY_COMMAND, REVIEW_TEXT } from '../../src/core/install/screen_text.ts';
 import {
 	scriptedInstallPrompter,
 	ttyInstallPrompter,
@@ -722,5 +726,202 @@ describe('an unfinished install on start: resume, abort (the name typed back), q
 				terminal.stop();
 			}
 		}
+	});
+});
+
+// ── campaign 3 (P5): what the session says and writes, per route ─────────────
+
+describe('campaign 3: the session’s words and files (C3-36, C3-48, C3-53, C3-61, C3-64)', () => {
+	/** A route case's flags plan and the script that walks it (Review commands given). */
+	function walked(name: string, review: readonly string[]) {
+		const answerCase = ALL_CASES.find((item) => item.name === name) as Case;
+		const { raw, plain } = splitCase(answerCase.argv);
+		const flags = planOf(raw, false);
+		expect(flags.errors, name).toEqual([]);
+		const script = scriptForPlan(
+			flags,
+			Object.keys(plain),
+			{ root_password: GOOD_ROOT_PASSWORD },
+			review,
+		);
+		return { flags, script };
+	}
+
+	/** Run a scripted session with --write-answers pointing at `path` (writes recorded, never on disk). */
+	async function withWriteAnswers(
+		script: Parameters<typeof scriptedInstallPrompter>[0],
+		path: string,
+	) {
+		const writes: { path: string; answers: InstallPlan['answers'] }[] = [];
+		const prompter = scriptedInstallPrompter(script);
+		const result = await runInteractiveInstall({
+			prompter,
+			probes: fakeProbes(),
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+			writeAnswersPath: path,
+			writeAnswers: (target, answers) => {
+				writes.push({ path: target, answers });
+				return null;
+			},
+		});
+		return { result, prompter, writes };
+	}
+
+	test('C3-36: --write-answers on an interactive run is written at the first VALID Review — a quit there keeps it', async () => {
+		const { flags, script } = walked('route trial', ['quit']);
+		const { result, writes, prompter } = await withWriteAnswers(script, '/scratch/answers.json');
+		expect(result.kind).toBe('quit');
+		expect(writes.length).toBe(1);
+		expect(writes[0]?.path).toBe('/scratch/answers.json');
+		const written = { ...(writes[0]?.answers ?? {}) } as Record<string, unknown>;
+		expect(decided(planOf(written, false))).toEqual(decided(flags));
+		expect(prompter.said).toContain(DONE_TEXT.written('/scratch/answers.json'));
+		expect(result.kind === 'quit' ? result.notices : 'not a quit').toBeUndefined();
+	});
+
+	test('C3-36: a session that quits before a valid Review says the file was NOT written', async () => {
+		const { script } = walked('route trial', ['quit']);
+		script.answers['route.route'] = '<quit>';
+		const { result, writes } = await withWriteAnswers(script, '/scratch/answers.json');
+		expect(writes).toEqual([]);
+		expect(result.kind === 'quit' ? result.notices : []).toEqual([
+			DONE_TEXT.notWritten('/scratch/answers.json'),
+		]);
+	});
+
+	test("C3-53: the Review's 'same as' line and the answers file's next step use the route's own entry command", async () => {
+		const cases: [string, string][] = [
+			['route trial', 'sh install.sh --route=trial'],
+			['route docker', 'sh install.sh --route=docker'],
+			['route developer (explicit)', 'bun run scripts/install.ts'],
+			[
+				'route production + instance (derived names as shown)',
+				'sudo sh install.sh --route=production',
+			],
+		];
+		for (const [name, start] of cases) {
+			const { flags, script } = walked(name, ['write /scratch/a.json']);
+			const { result, prompter } = await runScripted(script, false, () => null);
+			expect(result.kind, name).toBe('written');
+			const sameAs = prompter.said.find((line) => line.startsWith(REVIEW_TEXT.sameAs)) ?? '';
+			expect(sameAs.slice(REVIEW_TEXT.sameAs.length).trim(), name).toStartWith(`${start} `);
+			expect(sameAsCommand(flags.answers), name).toStartWith(`${start} `);
+			const entry = ENTRY_COMMAND[flags.answers.route] as string;
+			expect(prompter.said, name).toContain(DONE_TEXT.writtenNext(flags.answers.route));
+			expect(DONE_TEXT.writtenNext(flags.answers.route), name).toContain(
+				`${entry} --answers <file>`,
+			);
+		}
+		// The host routes' words ARE the resume line's (host_executor.ts hostCommandPrefix).
+		for (const route of ['production', 'docker', 'trial'] as const) {
+			expect(ENTRY_COMMAND[route]).toBe(hostCommandPrefix({ route }));
+		}
+	});
+
+	test('C3-48: "Install now" says what the image source does — never "pulls" for a local build', async () => {
+		for (const [source, words] of [
+			['build', 'builds the image here from this checkout'],
+			['official', 'pulls the official image and verifies its signature'],
+		] as const) {
+			const { script } = walked('route trial', ['install']);
+			script.answers['image.image_source'] = source;
+			const acknowledged: string[] = [];
+			const base = scriptedInstallPrompter(script);
+			const prompter = {
+				...base,
+				acknowledge: async (question: Parameters<typeof base.acknowledge>[0]) => {
+					acknowledged.push(`${question.id}: ${question.description}`);
+					return base.acknowledge(question);
+				},
+			};
+			const result = await runInteractiveInstall({
+				prompter,
+				probes: fakeProbes(),
+				priorEnv: {},
+				thesauri: thesaurusOffer(),
+				host: {},
+				givenSecrets: {},
+				unfinished: null,
+			});
+			expect(result.kind, source).toBe('install');
+			const install = acknowledged.find((line) => line.startsWith('review.install')) ?? '';
+			expect(install, source).toContain(words);
+			if (source === 'build') expect(install).not.toContain('pulls');
+		}
+	});
+
+	test('C3-61: a failed row no fix on this machine changes offers only quit — retry is refused', async () => {
+		const views: { commands: readonly string[]; prompt: string }[] = [];
+		const { script } = walked('route trial', ['quit']);
+		script.answers['system.probe_action'] = 'retry';
+		const base = scriptedInstallPrompter(script);
+		let asks = 0;
+		const prompter = {
+			...base,
+			probe: async (view: Parameters<typeof base.probe>[0]) => {
+				views.push({ commands: view.commands, prompt: view.prompt });
+				asks += 1;
+				return asks === 1 ? 'retry' : 'quit';
+			},
+		};
+		const probes = fakeProbes();
+		probes.system = async () => ({
+			ok: false,
+			detail: 'one check failed',
+			rows: [
+				{
+					state: 'fail',
+					label: 'Operating system',
+					detail: 'Zz OS 1 is not supported',
+					fixable: false,
+				},
+			],
+		});
+		const result = await runInteractiveInstall({
+			prompter,
+			probes,
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		expect(result.kind).toBe('quit');
+		expect(views[0]?.commands).toEqual(['quit']);
+		expect(views[0]?.prompt).toBe('quit, or back to choose another route');
+		expect(base.said).toContain("'retry' is not one of: quit, or back to choose another route");
+		// CONTROL: a fixable failure still offers retry.
+		probes.system = async () => ({
+			ok: false,
+			detail: 'one check failed',
+			rows: [{ state: 'fail', label: 'Private directory', detail: 'not writable' }],
+		});
+		views.length = 0;
+		asks = 1;
+		await runInteractiveInstall({
+			prompter,
+			probes,
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		expect(views[0]?.commands).toEqual(['retry', 'edit', 'quit']);
+	});
+
+	test('C3-64: the interactive Review advises the Thesauri step and Maintenance, never CLI flags', async () => {
+		const { flags, script } = walked('route trial', ['quit']);
+		expect(flags.suggestions).toContain(TOPONYMY_SUGGESTION);
+		const { prompter } = await runScripted(script, false);
+		expect(prompter.said).toContain(TOPONYMY_SUGGESTION_INTERACTIVE);
+		expect(prompter.said.some((line) => line.includes(TOPONYMY_SUGGESTION))).toBe(false);
+		expect(prompter.said.filter((line) => /--hierarchies|--list-hierarchies/.test(line))).toEqual(
+			[],
+		);
 	});
 });

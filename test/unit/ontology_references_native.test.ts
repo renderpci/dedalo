@@ -8,9 +8,11 @@
  *   - src/core/ontology/ontology_references.ts — the structural reference
  *     classifier: parent/model/relations are extracted from dd_ontology-shaped
  *     rows AND from raw package lines (the same fixture both ways must agree),
- *     the three classes follow their rules (graft = a foreign PARENT,
+ *     the four classes follow their rules (graft = a foreign PARENT,
  *     diffusion = relations FROM a node whose model descends from the diffusion
- *     grouper, everything else a dependency), and a PLANTED offender is found.
+ *     grouper, mapping = any reference FROM a node at or under a node of model
+ *     external_ontology — opt-in, campaign 3 C3-28 — everything else a
+ *     dependency), and a PLANTED offender is found.
  *   - src/core/test_data/ontology_package_fixture.ts — the package bytes the
  *     DB/installer gates build their sources from (scratch TLDs only).
  *
@@ -20,7 +22,9 @@
  * Mutations that turn it red (verified by hand when written): drop a key of
  * the decoder's escape table (escape legs); make classifyReference ignore the
  * parent's TLD (graft leg); stop walking below the diffusion root (diffusion
- * subtree leg); let relationColumn swallow bad JSON (corrupt-line leg).
+ * subtree leg); let relationColumn swallow bad JSON (corrupt-line leg); stop
+ * externalMappingNodes below the mapping root, or drop the mapping check from
+ * classifyReference (mapping leg).
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -38,13 +42,19 @@ import {
 	classifyReference,
 	danglingDependencies,
 	diffusionModelSet,
+	externalMappingNodes,
 	foreignDependencyTlds,
 	type OntologyReference,
 	referencesOfCopyRows,
 	referencesOfRows,
+	rowsOfCopyLines,
 	SOFT_REFERENCE_CLASSES,
+	unreachableNodes,
 } from '../../src/core/ontology/ontology_references.ts';
-import { DIFFUSION_MODEL_ROOT } from '../../src/core/ontology/ontology_tipos.ts';
+import {
+	DIFFUSION_MODEL_ROOT,
+	EXTERNAL_ONTOLOGY_MODEL,
+} from '../../src/core/ontology/ontology_tipos.ts';
 import {
 	buildOntologyPackage,
 	type FixtureOntologyTld,
@@ -254,6 +264,51 @@ describe('ontology_references — the structural classifier', () => {
 		expect(
 			new Set(danglingDependencies(refs, OWN, noModel, diffusionModels).map((ref) => ref.to)),
 		).toEqual(new Set(['zzrm3']));
+	});
+
+	test('mapping: every reference FROM an external-ontology mapping subtree is soft, nothing else (C3-28)', () => {
+		const node = (id: number, parent: string, model: string, relations: string[] = []) =>
+			ontologyCopyRow('zzre', { id, parent, model, relations, term: `n${id}` });
+		const rows = rowsOfCopyLines([
+			node(1, 'zzre0', 'zzrm3'),
+			node(2, 'zzre1', EXTERNAL_ONTOLOGY_MODEL),
+			node(3, 'zzre2', 'zzrv1', ['zzrv9']),
+			node(4, 'zzre3', 'zzrv2'),
+			// OUTSIDE the mapping: a working node of the same TLD stays a dependency
+			node(5, 'zzre1', 'zzrv3'),
+		]);
+		const mapping = externalMappingNodes(rows);
+		expect([...mapping].sort()).toEqual(['zzre2', 'zzre3', 'zzre4']);
+		const mapped = referencesOfRows(rows);
+		const own = new Set(['zzre']);
+		const present = new Set(['zzre0', 'zzre1', 'zzre2', 'zzre3', 'zzrm3']);
+		const none = new Set<string>();
+		const to = (list: OntologyReference[]) => list.map((ref) => ref.to).sort();
+		expect(to(danglingDependencies(mapped, own, present, none, mapping))).toEqual(['zzrv3']);
+		// without the mapping set (the opt-in default) the vocabulary dangles, as before
+		expect(to(danglingDependencies(mapped, own, present, none))).toEqual(
+			[EXTERNAL_ONTOLOGY_MODEL, 'zzrv1', 'zzrv2', 'zzrv3', 'zzrv9'].sort(),
+		);
+		const relation = mapped.find((ref) => ref.from === 'zzre3' && ref.to === 'zzrv9');
+		expect(relation && classifyReference(relation, own, none, mapping)).toBe('mapping');
+		expect(foreignDependencyTlds(mapped, own, none, mapping)).toEqual(['zzrm', 'zzrv']);
+	});
+
+	test('unreachable: a node grafted into an ABSENT TLD and its subtree; a present graft is reachable', () => {
+		const node = (id: number, parent: string) =>
+			ontologyCopyRow('zzrg', { id, parent, model: 'zzrm3', term: `n${id}` });
+		const rows = rowsOfCopyLines([
+			node(1, 'zzrg0'),
+			node(2, 'zzrx4'), // grafted under an absent TLD
+			node(3, 'zzrg2'),
+			node(4, 'zzrg3'),
+			node(5, 'zzry1'), // grafted under a PRESENT foreign node
+			node(6, 'zzrg5'),
+		]);
+		const own = new Set(['zzrg']);
+		const present = new Set(['zzry1']);
+		expect([...unreachableNodes(rows, own, present)].sort()).toEqual(['zzrg2', 'zzrg3', 'zzrg4']);
+		expect([...unreachableNodes(rows, own, new Set([...present, 'zzrx4']))]).toEqual([]);
 	});
 
 	test('foreign dependency TLDs: the model provider and the planted foreign relation, sorted', () => {

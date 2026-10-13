@@ -10,6 +10,7 @@
  */
 
 import { sanitizeLine } from '../display_text.ts';
+import { interactiveSuggestion } from '../install_plan.ts';
 import type { RunReporter } from '../run_events.ts';
 import type { App } from './app.ts';
 import type { DoneModel } from './screens/done.ts';
@@ -67,7 +68,11 @@ export function tuiReporter(app: App, showDone: ShowDone): RunReporter {
 			app.draw();
 		},
 		announce: (announcement) => {
-			app.run.announcement = announcement;
+			// An interactive run: the advice names the screens, never CLI flags (C3-64).
+			app.run.announcement = {
+				...announcement,
+				suggestions: announcement.suggestions.map(interactiveSuggestion),
+			};
 			app.draw();
 		},
 		finish: async (outcome, context) => {

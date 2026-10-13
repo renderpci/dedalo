@@ -26,6 +26,12 @@ export interface SiteTuple {
 	 * backup folder may lie inside one (identity_rules.ts). Absent = not read.
 	 */
 	roots?: string[];
+	/**
+	 * nginx: the ports this server block is the `default_server` of (absent:
+	 * none). The installer's own catch-all (web/catch_all.ts) is told apart by
+	 * its file, never counted as an operator's default.
+	 */
+	defaults?: string[];
 }
 
 /** nginx `root` / `alias` values of a server block (nested locations included). */
@@ -61,15 +67,17 @@ function nginxSections(dump: string): { file: string; text: string }[] {
 	return sections;
 }
 
-/** The directives of one server block's body. */
+/** The directives of one server block's body: names, ports, and the ports it is the default of. */
 function serverDirectives(body: string): string[][] {
 	const names = [...body.matchAll(/^\s*server_name\s+([^;]+);/gm)].flatMap((m) =>
 		(m[1] as string).trim().split(/\s+/),
 	);
-	const ports = [...body.matchAll(/^\s*listen\s+([^;]+);/gm)].map((m) =>
-		listenPort(m[1] as string),
-	);
-	return [names, ports.length === 0 ? ['80'] : ports];
+	const listens = [...body.matchAll(/^\s*listen\s+([^;]+);/gm)].map((m) => m[1] as string);
+	const ports = listens.map(listenPort);
+	const defaults = listens
+		.filter((value) => /\s(default_server|default)(\s|$)/.test(value))
+		.map(listenPort);
+	return [names, ports.length === 0 ? ['80'] : ports, [...new Set(defaults)]];
 }
 
 /** The top-level `server { … }` bodies of a text (brace depth; comments removed). */
@@ -100,8 +108,14 @@ function blockEnd(text: string, from: number): number {
 export function nginxSites(dump: string): SiteTuple[] {
 	return nginxSections(dump).flatMap(({ file, text }) =>
 		serverBlocks(text).map((body) => {
-			const [names = [], ports = []] = serverDirectives(body);
-			return { file, names, ports, roots: nginxRoots(body) };
+			const [names = [], ports = [], defaults = []] = serverDirectives(body);
+			return {
+				file,
+				names,
+				ports,
+				roots: nginxRoots(body),
+				...(defaults.length === 0 ? {} : { defaults }),
+			};
 		}),
 	);
 }

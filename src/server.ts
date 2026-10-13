@@ -70,6 +70,7 @@ import {
 	SVG_QUARANTINE_CSP,
 	SVG_QUARANTINE_DISPOSITION,
 } from './core/media/svg_safety.ts';
+import { unconfiguredMediaProtectionNotice } from './core/media/unconfigured_notice.ts';
 import { publicOrigin, publicOriginIsLocal } from './core/resolve/public_origin.ts';
 // S2-20 boot registration: loading the component registry registers the
 // ontology↔components model lookup (module-load side effect) BEFORE any request
@@ -77,6 +78,7 @@ import { publicOrigin, publicOriginIsLocal } from './core/resolve/public_origin.
 // reach it transitively — the seam must not depend on incidental import paths.
 import './core/components/registry.ts';
 import { readString } from './config/readers.ts';
+import { devTcpListener } from './config/tcp_listener.ts';
 import { HIERARCHY_EXPORT_URL_PREFIX } from './core/area_maintenance/widgets/export_hierarchy.ts';
 import { rqoSchema } from './core/concepts/rqo.ts';
 import { toErrorEnvelope } from './core/errors/convert.ts';
@@ -898,13 +900,8 @@ export function mediaSvgSafetyHeaders(
 function announceUnconfiguredMediaProtection(): void {
 	const { mode, source } = resolveMediaAccessModeDetail();
 	if (source !== 'default' || mode === false) return;
-	console.warn(
-		`[media_protection] no media access mode is configured, so the FAIL-CLOSED DEFAULT '${mode}' applies: ` +
-			'logged-in users see everything; anonymous visitors see only media of PUBLISHED records in the ' +
-			'public quality folders. Apache picks this up immediately; NGINX NEEDS A RELOAD ' +
-			'(include both generated files, then `nginx -t && nginx -s reload`). Set ' +
-			'DEDALO_MEDIA_ACCESS_MODE explicitly — including to `false` — to make the choice yours.',
-	);
+	// Worded for this server: a development server has no web server to reload (C3-60).
+	console.warn(unconfiguredMediaProtectionNotice(String(mode), devTcpListener() !== null));
 }
 
 /**
@@ -2414,11 +2411,14 @@ export async function startServer() {
 	// Read via readEnv so it resolves from ../private/.env like all other config
 	// (NOT process.env only — a plain `bun run` doesn't export the private .env,
 	// which silently dropped the dev listener on restart).
-	const tcpPort = readEnv('SERVER_TCP_PORT');
-	if (tcpPort !== undefined && tcpPort !== '') {
+	// Bound to SERVER_TCP_HOST (default 127.0.0.1 — C3-31): never every address
+	// unless an operator says so (src/config/tcp_listener.ts).
+	const devListener = devTcpListener();
+	if (devListener !== null) {
 		servers.push(
 			Bun.serve({
-				port: Number(tcpPort),
+				hostname: devListener.hostname,
+				port: devListener.port,
 				maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
 				idleTimeout: config.ops.idleTimeoutSeconds,
 				fetch(request, server) {
@@ -2446,7 +2446,12 @@ export async function startServer() {
 				},
 			}),
 		);
-		console.log(`Dédalo TS dev listener on http://localhost:${tcpPort}/dedalo/core/page/`);
+		console.log(`Dédalo TS dev listener on ${devListener.url}`);
+		if (devListener.networkReachable) {
+			console.warn(
+				`[server] the dev listener is bound to ${devListener.hostname} (SERVER_TCP_HOST): other machines can reach it, with full error details and no TLS. Use it only on a network you trust.`,
+			);
+		}
 	}
 
 	// Graceful shutdown (audit S2-17): supervisors send SIGTERM; operators ^C.

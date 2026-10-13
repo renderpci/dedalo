@@ -2301,6 +2301,11 @@
 			"skipped": 0,
 			"assertions": 19
 		},
+		"test/unit/install_stack_nginx_native.test.ts": {
+			"tests": 22,
+			"skipped": 2,
+			"assertions": 65
+		},
 		"test/unit/install_stack_steps_native.test.ts": {
 			"tests": 12,
 			"skipped": 0,
@@ -2315,6 +2320,11 @@
 			"tests": 9,
 			"skipped": 1,
 			"assertions": 39
+		},
+		"test/unit/install_system_check_native.test.ts": {
+			"tests": 26,
+			"skipped": 0,
+			"assertions": 83
 		},
 		"test/unit/install_table_write_tripwire.test.ts": {
 			"tests": 3,
@@ -4725,6 +4735,11 @@
 			"tests": 11,
 			"skipped": 0,
 			"assertions": 179
+		},
+		"test/unit/test_tooling_socket_native.test.ts": {
+			"tests": 13,
+			"skipped": 0,
+			"assertions": 37
 		},
 		"test/unit/text_area_delete_tag.test.ts": {
 			"tests": 13,

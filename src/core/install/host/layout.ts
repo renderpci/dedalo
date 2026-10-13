@@ -73,6 +73,9 @@ export interface InstancePaths {
 /** The host-wide install state root. */
 export const INSTALL_STATE_ROOT = '/var/lib/dedalo-install';
 
+/** A docker/trial run's dir, inside the checkout (the operator's; gitignored and dockerignored). */
+export const STACK_RUN_DIR = '.dedalo-install';
+
 /**
  * The site's `root` and the media dir name (THE ROOT RULE: `root` +
  * `/dedalo/<dir>` == MEDIA_PATH; the plan refuses any other MEDIA_PATH on

@@ -58,6 +58,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { offeredHierarchies, TOPONYMY_TYPOLOGY_ID } from '../../src/core/install/hierarchy_meta.ts';
 import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
+import { engineSecretKeys } from '../../src/core/install/host/contract.ts';
 import type { IdentityVerdict } from '../../src/core/install/host/production/identity_rules.ts';
 import { stackEngineAnswers } from '../../src/core/install/host/stack/engine_delegate.ts';
 import {
@@ -95,7 +96,11 @@ import {
 	type ScreenModelInput,
 	visibleKeys,
 } from '../../src/core/install/screen_model.ts';
-import { NOTICE_TEXT, ONTOLOGY_NOTE_TEXT } from '../../src/core/install/screen_text.ts';
+import {
+	NOTICE_TEXT,
+	ONTOLOGY_NOTE_TEXT,
+	QUESTION_TEXT,
+} from '../../src/core/install/screen_text.ts';
 import { multiCommand, multiResult, multiState } from '../../src/core/install/ui_plain/prompter.ts';
 import {
 	DEFAULT_ONTOLOGIES,
@@ -1103,5 +1108,120 @@ describe('screen model — off the request path (g)', () => {
 
 	test('no UI-side module is reachable from dispatch or server', () => {
 		expect(reachable.filter((file) => ui.has(file))).toEqual([]);
+	});
+});
+
+// ── campaign 3 (P5): what each route's screens ask and say ───────────────────
+
+describe('campaign 3: the screens ask what the route uses, in its own words', () => {
+	const questions = (raw: Record<string, unknown>): Question[] =>
+		buildScreens(modelInput(raw)).flatMap((screen) => screen.questions);
+	const screenOf = (raw: Record<string, unknown>, id: ScreenId): Screen =>
+		buildScreens(modelInput(raw)).find((screen) => screen.id === id) as Screen;
+
+	test('C3-22: the trial asks no HTTPS port, and its HTTP port is plain HTTP — never "redirects"', () => {
+		const trial = questions({ route: 'trial' });
+		expect(trial.filter((item) => item.key === 'https_port')).toEqual([]);
+		expect(ROUTE_FIXED.trial.https_port).toBeDefined();
+		const http = trial.find((item) => item.key === 'http_port') as Question;
+		expect(http.description).toBe(NOTICE_TEXT.trialHttpPort);
+		expect(http.description).not.toContain('redirect');
+		// CONTROL: docker asks both, and says it redirects.
+		const docker = questions({ route: 'docker' });
+		expect(docker.filter((item) => item.key === 'https_port').length).toBe(1);
+		expect(docker.find((item) => item.key === 'http_port')?.description).toContain('redirects');
+	});
+
+	test('C3-66: a CREATED production database asks no connection — an existing one asks it all', () => {
+		const CONNECTION = ['db_hostname', 'db_port', 'db_socket', 'db_username', 'db_password'];
+		const asked = (raw: Record<string, unknown>) =>
+			questions(raw)
+				.map((item) => item.key as string)
+				.filter((key) => CONNECTION.includes(key));
+		expect(asked({ route: 'production', instance: 'prado' })).toEqual([]);
+		expect(asked({ route: 'production', instance: 'prado', db_mode: 'create' })).toEqual([]);
+		expect(asked({ route: 'production', instance: 'prado', db_mode: 'existing' }).sort()).toEqual(
+			[...CONNECTION].sort(),
+		);
+		expect(asked({ route: 'developer' }).sort()).toEqual([...CONNECTION].sort());
+		// The database NAME stays asked either way.
+		expect(
+			questions({ route: 'production', instance: 'prado' }).some(
+				(item) => item.key === 'db_database',
+			),
+		).toBe(true);
+	});
+
+	test('C3-33 / C3-26: the trial acknowledgement is evaluation-only, and no description says how to accept', () => {
+		const ack = questions({ route: 'trial' }).find(
+			(item) => item.id === 'route.trial_no_media_protection',
+		) as Question;
+		expect(ack.description).toContain('For an evaluation only: never put real records in it');
+		expect(ack.description).not.toContain('public collection');
+		// How to accept is the FRONT END's line (ACKNOWLEDGE_TEXT), never the model's.
+		const acks = [
+			'route.trial_no_media_protection',
+			'thesauri.none_selected',
+			'publication.probe_override',
+			'mail.probe_override',
+		];
+		for (const id of acks) {
+			expect(QUESTION_TEXT[id]?.description, id).toBeDefined();
+			expect(QUESTION_TEXT[id]?.description, id).not.toMatch(/type yes/i);
+		}
+	});
+
+	test('C3-48: the docker certificate is COPIED in (its own words); the docker/trial Review never carries the production boilerplate', () => {
+		const docker = questions({ route: 'docker', tls_mode: 'files' });
+		expect(docker.find((item) => item.key === 'tls_cert_path')?.description).toContain(
+			'deploy/certs',
+		);
+		expect(
+			questions({ route: 'production', instance: 'prado', tls_mode: 'files' }).find(
+				(item) => item.key === 'tls_cert_path',
+			)?.description,
+		).toContain('used where it is');
+		// The Image screen's question never repeats the screen's own description.
+		const image = screenOf({ route: 'trial' }, 'image');
+		expect(image.questions.map((item) => item.description)).not.toContain(image.description);
+		for (const route of ['docker', 'trial'] as const) {
+			const texts = screenOf({ route }, 'review').notices.map((notice) => notice.text);
+			expect(texts, route).toContain(NOTICE_TEXT.stackCommands);
+			expect(texts, route).not.toContain(NOTICE_TEXT.hostCommands);
+		}
+		expect(
+			screenOf({ route: 'production', instance: 'prado' }, 'review').notices.map(
+				(notice) => notice.text,
+			),
+		).toContain(NOTICE_TEXT.hostCommands);
+	});
+
+	test('C3-48: the engine child is handed only the secrets the plan uses', () => {
+		const keys = (raw: Record<string, unknown>) => engineSecretKeys(buildInstallPlan(raw).answers);
+		expect(keys({ route: 'trial', entity: 'zz' })).toEqual(['root_password', 'db_password']);
+		expect(
+			keys({
+				route: 'trial',
+				entity: 'zz',
+				diffusion: true,
+				mysql_username: 'u',
+				mailer: true,
+				smtp_host: 'smtp.zz.org',
+			}),
+		).toEqual(['root_password', 'db_password', 'mysql_password', 'smtp_pass']);
+		// A created production database is peer-only: no password exists to hand over.
+		expect(keys({ route: 'production', instance: 'prado', entity: 'zz' })).toEqual([
+			'root_password',
+		]);
+		expect(
+			keys({ route: 'production', instance: 'prado', entity: 'zz', db_mode: 'existing' }),
+		).toEqual(['root_password', 'db_password']);
+	});
+
+	test('C3-58: the route cursor starts on the plan’s own default route — never an answer', () => {
+		const route = questions({}).find((item) => item.id === 'route.route') as Question;
+		expect(route.start).toBe(normalizeInstallAnswers({}).answers.route);
+		expect(route.value).toBeNull();
+		expect(route.default).toBeNull();
 	});
 });

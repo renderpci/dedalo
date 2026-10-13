@@ -105,6 +105,7 @@ import {
 	writeStateFile,
 } from './run_files.ts';
 import {
+	ABORT_AND_START_AGAIN,
 	advanceStep,
 	emit,
 	type InstallFault,
@@ -125,6 +126,7 @@ import {
 	type InstallStepDefinition,
 	type InstallStepInputs,
 	installCreatedBackups,
+	type StepRawOutcome,
 	secretsNeeded,
 	type VerifyContext,
 } from './steps.ts';
@@ -153,6 +155,12 @@ export interface ExecutorHost {
 	verifyRootLogin(password: string): Promise<boolean>;
 	/** Why the server state file is not under the install's private dir, or null. */
 	statePathProblem(): string | null;
+	/** The media root check_directories provisions (null: none configured). */
+	mediaRoot?(): Promise<string | null>;
+	/** The server's runtime files an install may create (the state file, the session store). */
+	runtimeFiles?(): Promise<string[]>;
+	/** The database's row fingerprint (served_guard.ts), or null. */
+	databaseFingerprint?(): Promise<string | null>;
 }
 
 export interface ExecutorRequest {
@@ -171,6 +179,12 @@ export interface ExecutorRequest {
 	ontologyCatalog?: OntologyCatalog;
 	/** abort: must equal the plan's db_database once the seed started. */
 	confirmDatabase?: string;
+	/**
+	 * abort, a host route's engine child only: the host attests the instance
+	 * never served (its request's `unserved` — C3-11). A SEALED install is then
+	 * undone only when its database also proves it (served_guard.ts).
+	 */
+	unservedAttested?: boolean;
 }
 
 export interface ExecutorOutcome {
@@ -267,8 +281,28 @@ export function engineHost(appName: string): ExecutorHost {
 			return (await login('root', password, 'local')).ok === true;
 		},
 		statePathProblem: statePathOutsidePrivateDir,
+		mediaRoot: async () => {
+			const { config } = await import('../../config/config.ts');
+			const { assertTestMediaRoot } = await import('../media/test_media_root.ts');
+			const root = config.media.rootPath;
+			return root === null ? null : assertTestMediaRoot(root, 'install preflight');
+		},
+		runtimeFiles: async () => {
+			const { RUNTIME_PATH_CENSUS } = await import('./runtime_paths.ts');
+			return RUNTIME_PATH_CENSUS.filter((entry) => RUNTIME_FILE_IDS.includes(entry.id))
+				.map((entry) => entry.resolve())
+				.filter((path): path is string => path !== null);
+		},
+		databaseFingerprint: async () => {
+			const { databaseFingerprint } = await import('./served_guard.ts');
+			const { connFromConfig } = await import('./pg_exec.ts');
+			return databaseFingerprint(connFromConfig());
+		},
 	};
 }
+
+/** The runtime files a server creates in the private dir (runtime_paths.ts census ids). */
+const RUNTIME_FILE_IDS: readonly string[] = Object.freeze(['ts_state_path', 'session_db_path']);
 
 // ── the run ──────────────────────────────────────────────────────────────────
 
@@ -281,6 +315,8 @@ interface RunContext extends LoopContext {
 	secrets: Secrets;
 	dbLock: InstallLockHandle | null;
 	runLock: boolean;
+	/** The last engine step's raw outcome (what its `created` hook records from). */
+	lastOutcome: StepRawOutcome | null;
 }
 
 type RefusalCode = 'install.invalid_input' | 'install.state_conflict' | 'install.step_failed';
@@ -372,6 +408,7 @@ async function performEngineStep(ctx: RunContext, step: InstallStepId): Promise<
 	const definition = ctx.table[step];
 	const inputs = stepInputs(ctx);
 	const outcome = await trackPsqlChildren(ctx.children, () => definition.run(inputs));
+	ctx.lastOutcome = outcome;
 	// The per-item rows first: a refused directory check names each directory.
 	for (const line of definition.details?.(outcome) ?? []) say(ctx, `    ${line}`);
 	const refusal = definition.accept?.(outcome, inputs) ?? null;
@@ -384,12 +421,24 @@ function engineStep(ctx: RunContext, step: StepId): InstallStepDefinition {
 	return ctx.table[step as InstallStepId];
 }
 
+/** The media tree directories a check_directories outcome created, absolute (C3-9). */
+function mediaTreeCreated(outcome: StepRawOutcome | null): string[] {
+	const tree = outcome?.mediaTree as
+		| { root?: string; created?: readonly string[] }
+		| null
+		| undefined;
+	if (typeof tree?.root !== 'string' || !Array.isArray(tree.created)) return [];
+	const root = tree.root;
+	return tree.created.map((path) => join(root, path));
+}
+
 /** What the step created, recorded with its checkpoint. */
 const CREATED: Partial<Record<InstallStepId, (ctx: RunContext) => void>> = {
 	persist_config: recordPersisted,
 	check_directories: (ctx) => {
 		const { created, preflight } = ctx.state as InstallState;
 		created.directories = preflight.directories_missing.filter((path) => existsSync(path));
+		created.media_tree = mediaTreeCreated(ctx.lastOutcome);
 	},
 	install_db_from_default_file: (ctx) => {
 		(ctx.state as InstallState).created.seed_restored = true;
@@ -414,7 +463,21 @@ async function freshPreflight(
 		sample_env_existed: existsSync(join(installPrivateDir(), 'sample.env')),
 		install_status_before: ctx.host.installStatus(),
 		directories_missing: missingWithAncestors(await ctx.host.directoryPaths()),
+		media_root_empty: emptyOrMissing((await ctx.host.mediaRoot?.()) ?? null),
+		runtime_files_before: ((await ctx.host.runtimeFiles?.()) ?? []).filter((path) =>
+			existsSync(path),
+		),
 	};
+}
+
+/** Is `dir` absent or empty (null: no media root — nothing to prune)? */
+function emptyOrMissing(dir: string | null): boolean {
+	if (dir === null) return false;
+	try {
+		return readdirSync(dir).length === 0;
+	} catch {
+		return !existsSync(dir);
+	}
 }
 
 /**
@@ -608,7 +671,7 @@ function assertSameAnswers(ctx: RunContext, plan: PlanFile): void {
 		differing.length > 0,
 		'install.state_conflict',
 		() =>
-			`answers differ from the saved plan: ${differing.join(', ')} — resume takes the saved answers; drop the flags, or --abort and start again`,
+			`answers differ from the saved plan: ${differing.join(', ')} — resume takes the saved answers: drop the flags, ${ABORT_AND_START_AGAIN}`,
 	);
 }
 
@@ -620,7 +683,8 @@ function assertSameOntologyDecisions(ctx: RunContext, plan: PlanFile): void {
 	refuseIf(
 		canonicalJson(fresh) !== canonicalJson(ontologyDecisions(plan)),
 		'install.state_conflict',
-		() => 'the ontology source changed since the plan was written — --abort and start again',
+		() =>
+			`the ontology source changed since the plan was written — put the source back, then --resume; ${ABORT_AND_START_AGAIN}`,
 	);
 }
 
@@ -702,18 +766,49 @@ async function lockUntouchedDatabase(ctx: RunContext, db: string): Promise<void>
 	await lockDatabase(ctx, db);
 }
 
-/** The checks before any undo: never sealed; the database reset confirmed and safe. */
+/** The refusal of every sealed install that is not proven unserved (critique B3). */
+const SEALED_REFUSAL = 'this install is SEALED (live) — --abort never undoes a sealed installation';
+
+/**
+ * A SEALED install is undone only as a host route's engine child whose host
+ * attests the instance never served — AND whose database still has exactly
+ * the rows it had when it sealed (served_guard.ts, campaign 3 C3-11). Anything
+ * else is a live install: refused, nothing undone.
+ */
+async function assertUnservedSeal(
+	ctx: RunContext,
+	plan: PlanFile,
+	state: InstallState,
+): Promise<void> {
+	refuseIf(
+		ctx.request.unservedAttested !== true || plan.answers.engine_only !== true,
+		'install.state_conflict',
+		() => SEALED_REFUSAL,
+	);
+	const { unservedRefusal } = await import('./served_guard.ts');
+	const now = (await ctx.host.databaseFingerprint?.()) ?? null;
+	const refusal = unservedRefusal(state.created.sealed_fingerprint, now);
+	refuseIf(
+		refusal !== null,
+		'install.state_conflict',
+		() => `${SEALED_REFUSAL}: its host says it never served, but ${refusal}`,
+	);
+	warnLine(
+		ctx,
+		'  ⚠ the install is sealed but never served (its host attests it; its database is unchanged since the seal) — undoing it',
+	);
+}
+
+/** The checks before any undo: never sealed (unless proven unserved); the database reset confirmed and safe. */
 async function assertAbortable(
 	ctx: RunContext,
 	plan: PlanFile,
 	state: InstallState,
 ): Promise<void> {
 	// B3: a sealed install is a LIVE install — its database holds real records.
-	refuseIf(
-		recordedDone(state, 'install_finish') || ctx.host.installStatus() === 'sealed',
-		'install.state_conflict',
-		() => 'this install is SEALED (live) — --abort never undoes a sealed installation',
-	);
+	if (recordedDone(state, 'install_finish') || ctx.host.installStatus() === 'sealed') {
+		await assertUnservedSeal(ctx, plan, state);
+	}
 	const db = String(plan.answers.db_database ?? '');
 	if (!touchedDatabase(state)) return lockUntouchedDatabase(ctx, db);
 	refuseIf(
@@ -824,13 +919,34 @@ function showSaltOnce(ctx: RunContext): void {
 	else say(ctx, `  generated DEDALO_SALT_STRING stored in ${installEnvPath()} (0600)`);
 }
 
-/** The end of a fresh/resume run: the root login, the salt (once), the outcome. */
+/**
+ * May this run (re)take the seal fingerprint (C3-11)? A host route's engine
+ * child only, and only while the database is still what the last seal saw (or
+ * none was taken yet) — so a later run never launders a served database into
+ * an "unserved" one.
+ */
+async function sealStillClean(ctx: RunContext): Promise<boolean> {
+	if ((ctx.plan as PlanFile).answers.engine_only !== true) return false;
+	const recorded = (ctx.state as InstallState).created.sealed_fingerprint ?? null;
+	if (recorded === null) return true;
+	return (await ctx.host.databaseFingerprint?.()) === recorded;
+}
+
+/** Record the database's fingerprint as the seal's (after the install's own root login). */
+async function recordSeal(ctx: RunContext): Promise<void> {
+	(ctx.state as InstallState).created.sealed_fingerprint =
+		(await ctx.host.databaseFingerprint?.()) ?? null;
+}
+
+/** The end of a fresh/resume run: the root login, the salt (once), the seal's fingerprint, the outcome. */
 async function finishRun(
 	ctx: RunContext,
 	wasComplete: boolean,
 ): Promise<ExecutorOutcome['result']> {
+	const clean = await sealStillClean(ctx);
 	await verifyLogin(ctx);
 	showSaltOnce(ctx);
+	if (clean) await recordSeal(ctx);
 	(ctx.state as InstallState).outcome = 'complete';
 	closeRun(ctx, 'complete');
 	return wasComplete && !ctx.ranAny ? 'already_complete' : 'complete';
@@ -854,10 +970,15 @@ async function releaseAll(ctx: RunContext): Promise<void> {
 	if (ctx.request.mode === 'abort' && ctx.state === null) removeRunDirIfEmpty();
 }
 
-/** The hint, when there is a saved install to resume (never for --abort). */
+/**
+ * The hint, when there is a saved install to resume — never for --abort, and
+ * never in a host route's engine child: its parent tells the route's own
+ * commands (C3-54).
+ */
 function hintFor(ctx: RunContext): string[] {
 	const { plan, state } = ctx;
 	if (plan === null || state === null || ctx.request.mode === 'abort') return [];
+	if (ctx.io.delegated === true) return [];
 	return resumeHint(plan, state, secretsNeeded(plan, state));
 }
 
@@ -921,6 +1042,7 @@ function newContext(
 		currentStep: null,
 		dbLock: null,
 		runLock: false,
+		lastOutcome: null,
 		ranAny: false,
 		unredacted: false,
 		stepOf: (step) => engineStep(ctx, step),

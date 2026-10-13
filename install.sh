@@ -15,7 +15,11 @@
 #   1. a Linux host (glibc) on x86_64 or aarch64 — every route; or macOS (Apple
 #      silicon or Intel) — the docker and trial routes, through Docker Desktop
 #      (the production route is Linux-only: the installer's System check says
-#      so). Anything else is refused;
+#      so). Anything else is refused. `--route production` on a Linux system
+#      the production route does not support is refused HERE, before anything
+#      is downloaded or installed, with the installer's own sentence (campaign
+#      3 C3-24; the TypeScript System check stays the authority — the table
+#      below is its twin, held equal by the gate);
 #   2. THE RELEASE: the checkout this file sits in (proven to be a Dédalo tree),
 #      or --release: an archive (.zip as the code server cuts it, or .tar.gz)
 #      HASHED BEFORE ANYTHING READS IT and refused unless it equals
@@ -34,7 +38,13 @@
 #      install the instance runtime from this same verified zip;
 #   4. the installer's own dependencies (a release carries no node_modules):
 #      `bun install --frozen-lockfile --production --ignore-scripts`, only when
-#      the tree has none;
+#      the tree has none. Under sudo in a checkout that is NOT root's (an
+#      operator's clone), they are installed BY THAT CHECKOUT'S OWNER (runuser,
+#      a root-owned copy of the verified Bun it can run): root never writes in
+#      a user's tree (campaign 3 C3-24 — a root-owned node_modules the user
+#      could not `git clean`, and a 400 MB /root/.bun). Root installing into its
+#      own tree (a staged --release) keeps Bun's package cache under the cache
+#      root below, never in /root/.bun;
 #   5. `exec bun scripts/install.ts <your arguments>` — stdin and the terminal
 #      are the installer's; your arguments reach it unchanged. Bun starts with
 #      --no-env-file (no stray .env), --no-install and the release's own
@@ -64,6 +74,10 @@ SHA256_RE='^[0-9a-f]{64}$'
 ROOT_CACHE=/var/lib/dedalo-install
 # The files that make a directory a Dédalo tree this bootstrap can start.
 TREE_FILES='scripts/install.ts .bun-version .bun-sha256 package.json bun.lock'
+# The production route's systems (<ID>:<VERSION_ID or its major>) and their words — the
+# twins of src/core/install/host/os_support.ts OS_ROWS / supportedOsList (gate-held equal).
+SUPPORTED_PRODUCTION='ubuntu:26.04 debian:13 rhel:10 rocky:10 almalinux:10'
+SUPPORTED_PRODUCTION_WORDS='Ubuntu 26.04 LTS, Debian 13 (trixie), RHEL / Rocky Linux / AlmaLinux 10'
 
 die() {
 	printf 'install.sh: %s\n' "$*" >&2
@@ -371,12 +385,116 @@ provide_bun() {
 	echo "$_dir/run/bun"
 }
 
-# install_deps <bun> <tree>: the installer's dependencies, when the tree has none.
+# tree_owner_uid <dir>: the uid that owns it (GNU stat, else BSD stat).
+tree_owner_uid() {
+	stat -c %u "$1" 2>/dev/null || stat -f %u "$1" 2>/dev/null || die "cannot read the owner of $1"
+}
+
+# deps_user <tree> <uid> <kernel>: the account that installs the tree's dependencies —
+# its OWNER when root runs in a tree that is not root's (Linux); '' = this process.
+deps_user() {
+	[ "$2" = 0 ] && [ "$3" = Linux ] || return 0
+	_owner=$(tree_owner_uid "$1") || exit 3
+	[ "$_owner" != 0 ] || return 0
+	_name=$(getent passwd "$_owner" | cut -d: -f1) || true
+	[ -n "$_name" ] || die "$1 is owned by uid $_owner, which has no account — chown it to its user, or install from a --release archive"
+	echo "$_name"
+}
+
+# shared_bun <bun> <cache> <pin>: a root-owned 0755 copy of the verified Bun another account
+# can RUN (the verified cache is root's alone, 0700) — never one it can replace.
+shared_bun() {
+	mkdir -p "$2/bun-shared/$3" || die "cannot create $2/bun-shared/$3"
+	chmod 0755 "$2/bun-shared" "$2/bun-shared/$3" || die "cannot set the mode of $2/bun-shared"
+	cp "$1" "$2/bun-shared/$3/bun" || die "cannot copy Bun to $2/bun-shared/$3"
+	chmod 0755 "$2/bun-shared/$3/bun" || die "cannot make $2/bun-shared/$3/bun executable"
+	echo "$2/bun-shared/$3/bun"
+}
+
+# install_deps <bun> <tree> <uid> <cache> <kernel> <pin>: the installer's dependencies, when
+# the tree has none — as the tree's owner (deps_user), or as this process with root's
+# package cache under <cache> (never /root/.bun).
 install_deps() {
 	[ -d "$2/node_modules" ] && return 0
 	say 'Installing the installer'"'"'s dependencies (bun install --frozen-lockfile --production)…'
+	_as=$(deps_user "$2" "$3" "$5") || exit 3
+	if [ -n "$_as" ]; then
+		require_tool runuser "to install the dependencies as $_as, the owner of $2"
+		_run=$(shared_bun "$1" "$4" "$6") || exit 3
+		say "  as $_as (the owner of $2: root never writes in it)"
+		(cd "$2" && runuser -u "$_as" -- "$_run" install --frozen-lockfile --production --ignore-scripts) \
+			|| die 'bun install failed — see its output above (this host needs to reach the npm registry once)'
+		return 0
+	fi
+	if [ "$3" = 0 ]; then
+		(cd "$2" && BUN_INSTALL_CACHE_DIR="$4/bun-install-cache" "$1" install --frozen-lockfile --production --ignore-scripts) \
+			|| die 'bun install failed — see its output above (this host needs to reach the npm registry once)'
+		return 0
+	fi
 	(cd "$2" && "$1" install --frozen-lockfile --production --ignore-scripts) \
 		|| die 'bun install failed — see its output above (this host needs to reach the npm registry once)'
+}
+
+# plain_output [installer args…]: will the installer run in its plain line mode (--plain, TERM
+# unset or dumb, stdout not a terminal)?
+plain_output() {
+	case "${TERM-}" in '' | dumb) return 0 ;; esac
+	[ -t 1 ] || return 0
+	for _arg in "$@"; do
+		[ "$_arg" = --plain ] && return 0
+	done
+	return 1
+}
+
+# plain_colours [installer args…]: in the plain mode nothing the bootstrap runs may colour its
+# output either (NO_COLOR, FORCE_COLOR=0 — the dependency install's bun honours them): the
+# plain mode promises no escape sequence of any kind (campaign 3 C3-58).
+plain_colours() {
+	if plain_output "$@"; then export NO_COLOR=1 FORCE_COLOR=0; fi
+}
+
+# os_value <os-release file> <KEY>: one value, its quotes removed ('' when absent).
+os_value() {
+	sed -n "s/^$2=//p" "$1" 2>/dev/null | head -n 1 | sed -e 's/^["'"'"']//' -e 's/["'"'"']$//'
+}
+
+# wants_production [installer args…]: do the installer's arguments ask for the production route?
+wants_production() {
+	_prev=''
+	for _arg in "$@"; do
+		case "$_prev $_arg" in '--route production' | *' --route=production') return 0 ;; esac
+		_prev=$_arg
+	done
+	return 1
+}
+
+# os_release_file: /etc/os-release — or, under the gates' scratch seam (the installer's own,
+# host/scratch.ts), the scratch root's, which must carry its marker.
+os_release_file() {
+	_root=${DEDALO_INSTALL_HOST_ROOT:-}
+	if [ -z "$_root" ]; then
+		echo /etc/os-release
+		return 0
+	fi
+	[ -d "$_root/.dedalo_install_scratch" ] || die "DEDALO_INSTALL_HOST_ROOT=$_root is not a scratch root (no .dedalo_install_scratch)"
+	echo "$_root/etc/os-release"
+}
+
+# production_os_gate <os-release file> <kernel> [installer args…]: `--route production` on a
+# Linux system the route does not support is refused before anything is fetched or installed.
+production_os_gate() {
+	_file=$1 _kernel=$2
+	shift 2
+	wants_production "$@" || return 0
+	[ "$_kernel" = Linux ] || return 0
+	_id=$(os_value "$_file" ID | tr '[:upper:]' '[:lower:]')
+	_ver=$(os_value "$_file" VERSION_ID)
+	case " $SUPPORTED_PRODUCTION " in
+		*" $_id:$_ver "* | *" $_id:${_ver%%.*} "*) return 0 ;;
+	esac
+	_name=$(os_value "$_file" PRETTY_NAME)
+	[ -n "$_name" ] || _name=${_id:-this system}
+	die "$_name is not supported — the production route supports $SUPPORTED_PRODUCTION_WORDS (newest releases only)"
 }
 
 # bun_config <tree> <cache>: the release's own bunfig (an empty one when it has none).
@@ -431,6 +549,8 @@ main() {
 	KERNEL=$(uname -s)
 	refuse_kernel "$KERNEL"
 	refuse_musl "$KERNEL"
+	OS_RELEASE=$(os_release_file) || exit 3
+	production_os_gate "$OS_RELEASE" "$KERNEL" "$@"
 	resolve_sha256
 	require_tool unzip 'to unpack the Bun runtime'
 	[ -z "$MIRROR" ] || case "$MIRROR" in https://*) ;; *) die '--mirror must start with https://' ;; esac
@@ -448,11 +568,12 @@ main() {
 	ASSET=$(host_asset "$KERNEL" "$(uname -m)") || exit 3
 	TABLE=$(hash_table "$SRC" "$KERNEL") || exit 3
 	BUN=$(provide_bun "$SRC" "$PIN" "$ASSET" "$CACHE" "$TABLE") || exit 3
-	install_deps "$BUN" "$SRC"
+	plain_colours "$@"
+	install_deps "$BUN" "$SRC" "$_uid" "$CACHE" "$KERNEL" "$PIN"
 	CONFIG=$(bun_config "$SRC" "$CACHE") || exit 3
 }
 
 parse_args "$@"
 shift $(($# - REST_COUNT))
-main
+main "$@"
 exec "$BUN" --no-env-file --no-install --config="$CONFIG" "$SRC/scripts/install.ts" "$@"

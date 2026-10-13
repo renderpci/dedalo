@@ -14,13 +14,18 @@
 import { afterAll, expect, test } from 'bun:test';
 import { SQL } from 'bun';
 import { config } from '../../src/config/config.ts';
+import { bunSqlTransportOptions, resolvePgTransport } from '../../src/config/pg_transport.ts';
 
+/** A second client over the engine's ONE transport rule (DB_SOCKET wins — C3-12). */
 function makeClient(): SQL {
-	const { database, host, port, user, password } = config.db;
-	const common = { database, username: user, password: password || undefined, max: 1 };
-	return host.startsWith('/')
-		? new SQL({ ...common, path: `${host}/.s.PGSQL.${port}` })
-		: new SQL({ ...common, hostname: host, port });
+	const { database, user, password } = config.db;
+	return new SQL({
+		database,
+		username: user,
+		password: password || undefined,
+		max: 1,
+		...bunSqlTransportOptions(resolvePgTransport(config.db)),
+	});
 }
 
 const clientA = makeClient();

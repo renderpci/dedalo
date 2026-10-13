@@ -17,7 +17,8 @@
  *    from the run's secrets; the Review shows only the keys.
  *  - an `unless` probe that exits 0 skips its command (already done).
  *  - a failed command refuses the step with its label, its exit code and the
- *    LAST line of its stderr (redacted by the runner) — never the whole output.
+ *    stderr line that says why — the last `fatal:`/`error:` line and the last
+ *    line (redacted by the runner) — never the whole output.
  */
 
 import type { Secrets } from '../run_files_core.ts';
@@ -40,6 +41,17 @@ function identityFlags(command: ExecCommand, identity: ServiceIdentity): string[
 	return command.as === 'postgres' ? ['-u', 'postgres'] : [];
 }
 
+/**
+ * `setpriv --pdeathsig KILL --` (campaign 3 C3-29): the process it execs into
+ * is killed when its parent dies. runuser FORKS the command it runs, so a
+ * command that must die with the installer carries it at both ends of the
+ * chain: outside (runuser dies with the installer) and inside (the command
+ * dies with runuser).
+ */
+function deathPrefix(command: ExecCommand, row: OsRow): string[] {
+	return command.pdeathsig === true ? [binaryOf(row, 'setpriv'), '--pdeathsig', 'KILL', '--'] : [];
+}
+
 /** The argv as it is run: a runuser prefix for another user. */
 export function effectiveArgv(
 	command: ExecCommand,
@@ -47,14 +59,15 @@ export function effectiveArgv(
 	identity: ServiceIdentity,
 ): string[] {
 	const flags = identityFlags(command, identity);
-	if (flags.length === 0) return [...command.argv];
+	const death = deathPrefix(command, row);
+	if (flags.length === 0) return [...death, ...command.argv];
 	// runuser (no --login) keeps the environment but RESETS HOME to the
 	// account's home: a command's own HOME rides argv (`env HOME=…`), or an
 	// existing hosting account's home collects Bun's caches (2026-10-12).
 	const home = command.env?.HOME;
 	const withHome =
 		home === undefined ? command.argv : [binaryOf(row, 'env'), `HOME=${home}`, ...command.argv];
-	return [binaryOf(row, 'runuser'), ...flags, '--', ...withHome];
+	return [...death, binaryOf(row, 'runuser'), ...flags, '--', ...death, ...withHome];
 }
 
 /** The exec an instance-made directory runs as (`install -d`, as the service user). */
@@ -106,11 +119,31 @@ export function succeeded(command: ExecCommand, result: RunResult): boolean {
 	return !result.timedOut && (command.okExit ?? [0]).includes(result.exitCode);
 }
 
-/** The refusal of a failed command: its label, exit and stderr's last line. */
+/**
+ * The lines of stderr that say WHY: the last `fatal:`/`error:` line (or a
+ * web server's `[emerg]`/`[alert]`/`[crit]`/`[error]` one), then the last line
+ * when it is another one (git ends its refusal with a hint, `nginx -t` with
+ * "test failed" — the line that said why came before and was lost: campaign
+ * 3 C3-7 and its Debian drill). Never the whole output.
+ */
+export function tellingStderr(stderr: string): string {
+	const lines = stderr
+		.split('\n')
+		.map((line) => line.trim())
+		.filter((line) => line !== '');
+	const last = lines.at(-1) ?? '';
+	const marked = lines
+		.filter((line) => /^(fatal|error)\b/i.test(line) || /\[(emerg|alert|crit|error)\]/.test(line))
+		.at(-1);
+	if (marked === undefined || marked === last) return last;
+	return `${marked} … ${last}`;
+}
+
+/** The refusal of a failed command: its label, exit and stderr's telling line(s). */
 function failedSentence(command: ExecCommand, result: RunResult): string {
-	const last = result.stderr.trim().split('\n').at(-1) ?? '';
+	const said = tellingStderr(result.stderr);
 	const why = result.timedOut ? 'timed out' : `exit ${result.exitCode}`;
-	return `${command.label} failed (${why})${last === '' ? '' : `: ${last}`}`;
+	return `${command.label} failed (${why})${said === '' ? '' : `: ${said}`}`;
 }
 
 /** Run one exec command (its `unless` probe first); answers its result, or null when skipped. */

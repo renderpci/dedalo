@@ -127,6 +127,15 @@ export const SECTION_MODEL_TIPO = 'dd6';
  * (ontology_references.ts) treats it as soft (`diffusion`), never a dependency.
  */
 export const DIFFUSION_MODEL_ROOT = 'dd1226';
+/**
+ * dd260 — the `external_ontology` model: a node of it roots a MAPPING of its
+ * ontology to an outside vocabulary (e.g. CIDOC CRM), whose children take
+ * their models from that vocabulary's TLD. Read only by tool_import_rdf, when an
+ * operator points it at that node; the ontology itself never needs the
+ * subtree — the reference classifier (ontology_references.ts) treats references
+ * from it as soft (`mapping`), never a dependency.
+ */
+export const EXTERNAL_ONTOLOGY_MODEL = 'dd260';
 /** dd64 — the si/no (yes/no) section (DEDALO_SECTION_SI_NO_TIPO). */
 export const YES_NO_SECTION = 'dd64';
 /** The si/no record ids: 1 = yes, 2 = no. */

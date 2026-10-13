@@ -21,12 +21,22 @@
  *     Apache sites (stage 1 and full), the media map include, and the lines the
  *     sites carry with the media gate OFF are produced HERE
  *     by the installer's own renderers (systemd/render.ts, web/nginx.ts,
- *     web/apache.ts) over the page's `@@NAME@@` placeholders and must appear in
+ *     web/apache.ts) — and nginx's host-wide catch-all site (web/catch_all.ts) — over the page's `@@NAME@@` placeholders and must appear in
  *     the page byte for byte; the template and root-run-script lists, the
  *     per-OS package lists and binary directories equal the code's tables; the
  *     host-registry block carries exactly the registry entry's keys.
  *  3. Every `manual_install.md#…` link in production.md resolves to an anchor
  *     the manual defines (explicit `{#id}` or a heading slug).
+ *
+ *  4. THE PAGE'S OWN `render` GIVES THE INSTALLER'S BYTES FOR A REAL NAME
+ *     (campaign 3 review, 2026-10-13). The `@@…@@` comparison above cannot see a
+ *     value transform: the Apache name guard matches `Host` against the name AS
+ *     A REGULAR EXPRESSION, escaped by the installer (`dedalo\.example\.org`),
+ *     while a plain `@@SERVER_NAME@@` substitution would leave the dots
+ *     unescaped (any character). So the page prints the guard with its own
+ *     placeholder `@@SERVER_NAME_RE@@`, and this leg runs the page's `render`
+ *     function (bash) over its Apache sites with a DOTTED name: the result must
+ *     equal the installer's render for that name.
  *
  * Proven red in-file: a fake step id, a removed section, a production section
  * without its link, and a drifted render each make the checker report.
@@ -46,7 +56,12 @@ import {
 	UNIT_TEMPLATES,
 } from '../../src/core/install/host/systemd/render.ts';
 import { renderApacheSite } from '../../src/core/install/host/web/apache.ts';
-import { mapInclude, renderNginxSite } from '../../src/core/install/host/web/nginx.ts';
+import { renderNginxCatchAll } from '../../src/core/install/host/web/catch_all.ts';
+import {
+	mapInclude,
+	productionMediaRules,
+	renderNginxSite,
+} from '../../src/core/install/host/web/nginx.ts';
 import type { SiteInput } from '../../src/core/install/host/web/site.ts';
 import {
 	type InstallAnswers,
@@ -210,12 +225,15 @@ function renderedBlocks(): Map<string, string> {
 		cert: stage,
 		acme: true,
 		logDir: '@@LOG_DIR@@',
+		mediaRules: productionMediaRules('@@INSTANCE@@'),
 	});
 	blocks.set('nginx stage 1', renderNginxSite(site(null)));
 	blocks.set('nginx full site', renderNginxSite(site(cert)));
-	blocks.set('Apache stage 1', renderApacheSite(site(null)));
-	blocks.set('Apache full site', renderApacheSite(site(cert)));
+	blocks.set('Apache stage 1', apachePageForm(renderApacheSite(site(null))));
+	blocks.set('Apache full site', apachePageForm(renderApacheSite(site(cert))));
 	blocks.set('nginx media map include', mapInclude('@@INSTANCE@@'));
+	// nginx's host-wide catch-all (campaign 3 C3-30).
+	blocks.set('nginx catch-all', renderNginxCatchAll());
 	// The media gate OFF: the page prints only the lines that replace the gate's.
 	const off = { ...site(cert), answers: placeholderAnswers({ media_access_mode: 'false' }) };
 	blocks.set(
@@ -227,6 +245,27 @@ function renderedBlocks(): Map<string, string> {
 		replacedLines(renderApacheSite(site(cert)), renderApacheSite(off as SiteInput)),
 	);
 	return new Map([...blocks].map(([name, text]) => [name, text.replace(/\n$/, '')]));
+}
+
+/** The installer's Apache site over the placeholders, for a real `name` (leg 4). */
+function renderApacheSiteFor(stage: 'cert' | null, name: string): string {
+	const answers = placeholderAnswers({ server_name: name });
+	const paths = instancePaths(answers, '@@PIN@@', '@@GROUP@@');
+	return renderApacheSite({
+		paths,
+		answers,
+		stamp: MANUAL_STAMP,
+		cert:
+			stage === null
+				? null
+				: {
+						fullchain: '/etc/letsencrypt/live/dedalo-@@INSTANCE@@/fullchain.pem',
+						key: '/etc/letsencrypt/live/dedalo-@@INSTANCE@@/privkey.pem',
+					},
+		acme: true,
+		logDir: '@@LOG_DIR@@',
+		mediaRules: productionMediaRules('@@INSTANCE@@'),
+	});
 }
 
 /** What `variant` puts in place of `base`'s differing run: the lines between their common head and tail. */
@@ -243,6 +282,45 @@ function replacedLines(base: string, variant: string): string {
 	)
 		tail += 1;
 	return b.slice(head, b.length - tail).join('\n');
+}
+
+/** The page form of an Apache render over the placeholders: the name guard carries `@@SERVER_NAME_RE@@` (leg 4 proves it). */
+function apachePageForm(text: string): string {
+	return text.replaceAll(
+		'RewriteCond %{HTTP_HOST} !^@@SERVER_NAME@@(',
+		'RewriteCond %{HTTP_HOST} !^@@SERVER_NAME_RE@@(',
+	);
+}
+
+/** The page's own `render` shell function, as printed. */
+function pageRenderFunction(manual: string): string | null {
+	return /^render\(\) \{\n[\s\S]*?\n\}$/m.exec(manual)?.[0] ?? null;
+}
+
+/**
+ * Run the page's `render` over `text` with every variable set to its OWN
+ * placeholder (identity) except NAME, the dotted name.
+ */
+function pageRender(manual: string, text: string, name: string): string {
+	const identity: Record<string, string> = {
+		I: '@@INSTANCE@@',
+		U: '@@USER@@',
+		G: '@@GROUP@@',
+		DIR: '@@DIR@@',
+		BACKUP_DIR: '@@BACKUP_DIR@@',
+		PIN: '@@PIN@@',
+		PGBIN: '@@PG_BIN@@',
+		PGSVC: '@@PG_SERVICE@@',
+		WEBLOG: '@@LOG_DIR@@',
+		SELINUX_MODULE: '@@SELINUX_MODULE@@',
+		NAME: name,
+	};
+	const script = `${pageRenderFunction(manual) ?? 'render() { exit 3; }'}\nrender`;
+	const run = Bun.spawnSync(['bash', '-c', script], {
+		stdin: new TextEncoder().encode(text),
+		env: { PATH: process.env.PATH ?? '/usr/bin:/bin', ...identity },
+	});
+	return run.stdout.toString();
 }
 
 /** The blocks of `blocks` the page does not print verbatim. */
@@ -282,6 +360,7 @@ const REGISTRY_SAMPLE: InstanceEntry = {
 	templates: false,
 	selinux_module: false,
 	nginx_map_owner: false,
+	catch_all: false,
 	media: '',
 	user: '',
 	group: '',
@@ -294,7 +373,11 @@ function registryBlock(manual: string): Record<string, unknown> | null {
 	const match = /instances\/\$I\.json" <<'EOF'\n([\s\S]*?)\nEOF/.exec(manual);
 	if (match === null) return null;
 	try {
-		return JSON.parse((match[1] as string).replace(/@@[A-Z_]+@@/g, 'x')) as Record<string, unknown>;
+		// A quoted placeholder is a string; a bare one (`@@SELINUX_MODULE@@`) renders a boolean.
+		const text = (match[1] as string)
+			.replace(/"@@[A-Z_]+@@"/g, '"x"')
+			.replace(/@@[A-Z_]+@@/g, 'false');
+		return JSON.parse(text) as Record<string, unknown>;
 	} catch {
 		return null;
 	}
@@ -354,6 +437,28 @@ describe('manual_install.md: every file it prints is the installer render (2)', 
 		expect(blocks.get('nginx media gate off')?.split('\n').length).toBe(2);
 		expect(blocks.get('Apache media gate off')?.split('\n').length).toBe(2);
 		expect(missingBlocks(MANUAL, blocks)).toEqual([]);
+	});
+
+	test("4. the page's own render of its Apache sites, for a DOTTED name, is the installer's render", () => {
+		const name = 'dedalo.example.org';
+		const blocks = renderedBlocks();
+		expect(pageRenderFunction(MANUAL)).not.toBeNull();
+		for (const stage of ['Apache stage 1', 'Apache full site']) {
+			const page = blocks.get(stage) ?? '';
+			// the page prints this block (leg 2) and it carries the guard placeholder
+			expect(MANUAL.includes(page), stage).toBe(true);
+			expect(page).toContain('@@SERVER_NAME_RE@@');
+			const site = renderApacheSiteFor(stage === 'Apache stage 1' ? null : 'cert', name);
+			expect(site).toContain('dedalo\\.example\\.org');
+			expect(pageRender(MANUAL, `${page}\n`, name), stage).toBe(site);
+		}
+		// red on the drift this leg exists for: a guard substituted with the PLAIN name
+		const plain = MANUAL.replaceAll('@@SERVER_NAME_RE@@', '@@SERVER_NAME@@');
+		const unescaped = (blocks.get('Apache full site') ?? '').replaceAll(
+			'@@SERVER_NAME_RE@@',
+			'@@SERVER_NAME@@',
+		);
+		expect(pageRender(plain, `${unescaped}\n`, name)).not.toBe(renderApacheSiteFor('cert', name));
 	});
 
 	test('the template, script, package and per-OS lines equal the code tables', () => {

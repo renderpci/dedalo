@@ -20,7 +20,8 @@
 import { accessSync, constants, existsSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import type { CatalogProbeResult } from './front_end.ts';
-import { osRowOf, parseOsRelease, supportedOsList } from './host/os_support.ts';
+import { type FirewallFacts, firewallVerdict } from './host/firewall.ts';
+import { osRowOf, parseOsRelease, unsupportedOsSentence } from './host/os_support.ts';
 import type { StackFacts } from './host/stack/facts.ts';
 import { STACK_MACHINE_CHECKS, STACK_MIN_FREE_GIB } from './host/stack/preflight.ts';
 import type { InitTestResult } from './init_test.ts';
@@ -63,7 +64,6 @@ const PRODUCTION_PROVIDED: Readonly<Record<string, string>> = Object.freeze({
 	'Private directory': 'created by the installer in the install folder (private/)',
 	ImageMagick: 'installed by the installer (packages)',
 	FFmpeg: 'installed by the installer (packages)',
-	'PostgreSQL version': 'PostgreSQL 18, installed by the installer when missing',
 });
 
 /** The PostgreSQL major the production route installs (os_support.ts packages, host_preflight). */
@@ -77,24 +77,45 @@ function productionRow(row: SystemCheckRow): SystemCheckRow {
 		: { state: 'ok', label: row.label, detail: provided };
 }
 
-/** The production route's own rows: a supported OS, root (the sudo form when not). */
-function productionHostRows(osRelease: string, euid: number): SystemCheckRow[] {
-	const row = osRowOf(parseOsRelease(osRelease));
+/** The Operating system row (a supported row, else the refusal sentence). */
+function osRow(osRelease: string): SystemCheckRow {
+	const release = parseOsRelease(osRelease);
+	const row = osRowOf(release);
+	if (row !== null) return { state: 'ok', label: 'Operating system', detail: row.label };
+	const name = release.prettyName || release.id || 'this system';
+	// No fix on this machine changes its OS: the check offers quit, never retry (C3-61).
+	return {
+		state: 'fail',
+		label: 'Operating system',
+		detail: unsupportedOsSentence(name),
+		fixable: false,
+	};
+}
+
+/**
+ * The firewall row (campaign 3 C3-6): a WARNING, never a failure — the
+ * installer checks and tells, the firewall is the administrator's. Read for
+ * the default ports (80, 443): the ports are asked later; host_preflight
+ * judges the ones chosen.
+ */
+export function firewallRow(facts: FirewallFacts): SystemCheckRow {
+	const verdict = firewallVerdict(facts, ['80', '443']);
+	const warn = verdict.state === 'closed' || verdict.state === 'unknown';
+	return { state: warn ? 'warn' : 'ok', label: 'Firewall', detail: verdict.line };
+}
+
+/** The production route's own rows: a supported OS, root (the sudo form when not), the firewall. */
+function productionHostRows(host: HostMeasures): SystemCheckRow[] {
 	return [
-		row === null
-			? {
-					state: 'fail',
-					label: 'Operating system',
-					detail: `not supported — the production route supports ${supportedOsList()}`,
-				}
-			: { state: 'ok', label: 'Operating system', detail: row.label },
-		euid === 0
+		osRow(host.osRelease),
+		host.euid === 0
 			? { state: 'ok', label: 'Privilege', detail: 'root' }
 			: {
 					state: 'fail',
 					label: 'Privilege',
 					detail: 'the production route runs as root: sudo sh install.sh (same arguments)',
 				},
+		...(host.firewall === null || host.firewall === undefined ? [] : [firewallRow(host.firewall)]),
 	];
 }
 
@@ -248,9 +269,8 @@ function infoRows(info: InstallServerInfo): SystemCheckRow[] {
 	return [
 		fact('Platform', info.platform),
 		fact('Memory', info.ram),
-		fact('Processor', info.cpu_mhz),
+		fact('Processor', info.cpu_mhz, 'no processor is listed (os.cpus() is empty)'),
 		fact('Disk', info.disk_free_space),
-		fact('PostgreSQL version', info.pg_version),
 		fact('ImageMagick', info.imagemagick, 'missing — images are not processed without it'),
 		fact('FFmpeg', info.ffmpeg, 'missing — audio and video are not processed without it'),
 		fact('cURL', builtIn(info.curl, 'built in (fetch)'), 'missing'),
@@ -258,9 +278,17 @@ function infoRows(info: InstallServerInfo): SystemCheckRow[] {
 	];
 }
 
+/** The production host as the System check measures it. */
+export interface HostMeasures {
+	osRelease: string;
+	euid: number;
+	/** null: not measured (an unsupported system, or another route). */
+	firewall?: FirewallFacts | null;
+}
+
 /** What the System check measured besides init_test: the host (production), the stack (docker/trial). */
 export interface SystemMeasures {
-	host?: { osRelease: string; euid: number } | null;
+	host?: HostMeasures | null;
 	stack?: StackFacts | null;
 }
 
@@ -299,12 +327,9 @@ function measuredRows(
 /** Production: its own rows first (OS, root), then every row a host step provides read as provided. */
 function productionRows(
 	rows: readonly SystemCheckRow[],
-	host: { osRelease: string; euid: number } | null,
+	host: HostMeasures | null,
 ): SystemCheckRow[] {
-	return [
-		...productionHostRows(host?.osRelease ?? '', host?.euid ?? -1),
-		...rows.map(productionRow),
-	];
+	return [...productionHostRows(host ?? { osRelease: '', euid: -1 }), ...rows.map(productionRow)];
 }
 
 /** This machine's os-release text ('' when unreadable). */
@@ -330,6 +355,8 @@ export interface SystemCheckSeams {
 	psql?: () => PsqlProbe;
 	/** The docker/trial stack facts (default: measured — measureStack). */
 	stack?: () => Promise<StackFacts>;
+	/** The production host's firewall (default: measured — measureFirewall). */
+	firewall?: (osRelease: string) => Promise<FirewallFacts | null>;
 }
 
 /**
@@ -349,7 +376,7 @@ export async function systemCheck(
 		runInitTest((seams.psql ?? probePsql)()),
 		await hostInfo(route),
 		route,
-		await systemMeasures(route, seams.stack ?? measureStack),
+		await systemMeasures(route, seams),
 	);
 	const failed = rows.filter((row) => row.state === 'fail').length;
 	return {
@@ -368,14 +395,39 @@ async function hostInfo(route: InstallRoute): Promise<InstallServerInfo | null> 
 	return buildInstallServerInfo();
 }
 
+/** The firewall of a supported production host, measured through the Review's machine. */
+async function measureFirewall(osRelease: string): Promise<FirewallFacts | null> {
+	const row = osRowOf(parseOsRelease(osRelease));
+	if (row === null) return null;
+	const { reviewMachine } = await import('./host/review.ts');
+	const { firewallFacts } = await import('./host/facts.ts');
+	const { runner, fs } = reviewMachine();
+	return firewallFacts(runner, fs, row);
+}
+
+/** The production host's firewall (another route: not measured). */
+async function routeFirewall(
+	route: InstallRoute,
+	osRelease: string,
+	seams: SystemCheckSeams,
+): Promise<FirewallFacts | null> {
+	if (route !== 'production') return null;
+	return (seams.firewall ?? measureFirewall)(osRelease);
+}
+
 /** The host facts (production's rows read them) and, on docker/trial, the measured stack. */
 async function systemMeasures(
 	route: InstallRoute,
-	stack: () => Promise<StackFacts>,
+	seams: SystemCheckSeams,
 ): Promise<SystemMeasures> {
+	const osRelease = osReleaseText();
 	return {
-		host: { osRelease: osReleaseText(), euid: process.geteuid?.() ?? -1 },
-		stack: onHost(route) ? null : await stack(),
+		host: {
+			osRelease,
+			euid: process.geteuid?.() ?? -1,
+			firewall: await routeFirewall(route, osRelease, seams),
+		},
+		stack: onHost(route) ? null : await (seams.stack ?? measureStack)(),
 	};
 }
 
@@ -397,11 +449,12 @@ export async function identityProbe(answers: Answers): Promise<ProbeOutcome> {
 		};
 	}
 	const { hostOsRelease, measureIdentity } = await import('./host/production/identity_probe.ts');
-	const row = osRowOf(parseOsRelease(hostOsRelease()));
+	const release = parseOsRelease(hostOsRelease());
+	const row = osRowOf(release);
 	if (row === null) {
 		return {
 			ok: false,
-			detail: `not supported — the production route supports ${supportedOsList()}`,
+			detail: unsupportedOsSentence(release.prettyName || release.id || 'this system'),
 		};
 	}
 	const verdict = await measureIdentity(normalized, row);
@@ -422,8 +475,77 @@ function posted(answers: Answers, secret: Record<string, string>): Record<string
 	return { ...normalizeInstallAnswers(answers).answers, ...secret };
 }
 
+/**
+ * A psql OLDER than the server it installs into (campaign 3 C3-49: psql 16
+ * against PostgreSQL 18 read "ok") — the backups' pg_dump refuses a newer
+ * server. The words, or null (same or newer, or either side unknown).
+ */
+export function clientServerWarning(
+	psqlVersion: string | null,
+	serverVersionNum: string | null,
+): string | null {
+	const client = psqlVersion === null ? null : psqlMajorOf(psqlVersion);
+	const num = (serverVersionNum ?? '').trim();
+	if (client === null || !/^\d{5,}$/.test(num)) return null;
+	const server = Math.floor(Number(num) / 10000);
+	if (Number(client) >= server) return null;
+	return `warning: psql ${client} is older than the server (PostgreSQL ${server}) — the backups' pg_dump refuses a newer server: install the PostgreSQL ${server} client, or set DEDALO_PG_BIN_PATH to its bin directory`;
+}
+
+/** The database probe's inputs that reach THIS machine — injectable so a gate fixes them. */
+export interface DatabaseProbeSeams {
+	/** The connection report (default: db_probe.ts testDbConnection). */
+	connect?: (posted: Record<string, unknown>) => Promise<{
+		can_connect: boolean;
+		db_exists: boolean;
+		msg: string;
+	}>;
+	/** The server's `server_version_num`, or null (default: one psql query). */
+	serverVersion?: (posted: Record<string, unknown>) => Promise<string | null>;
+	/** This machine's psql `--version` line, or null (default: pg_bin.ts probePsql). */
+	psqlVersion?: () => Promise<string | null>;
+}
+
+/** The server's `server_version_num` over the posted connection, or null. */
+async function serverVersionOf(postedAnswers: Record<string, unknown>): Promise<string | null> {
+	const { runPsql } = await import('./pg_exec.ts');
+	const { pgConnFromOptions } = await import('./db_probe_plan.ts');
+	try {
+		const result = await runPsql(pgConnFromOptions(postedAnswers), [
+			'-tAc',
+			'SHOW server_version_num',
+		]);
+		return result.exitCode === 0 ? result.stdout : null;
+	} catch {
+		return null;
+	}
+}
+
+/** This machine's psql version line, or null. */
+async function localPsqlVersion(): Promise<string | null> {
+	const { probePsql } = await import('./pg_bin.ts');
+	const psql = probePsql();
+	return psql.state === 'found' ? psql.version : null;
+}
+
+/** The developer route's client-vs-server warning, as a suffix of the probe's sentence. */
+async function developerClientSuffix(
+	postedAnswers: Record<string, unknown>,
+	seams: DatabaseProbeSeams,
+): Promise<string> {
+	const warning = clientServerWarning(
+		await (seams.psqlVersion ?? localPsqlVersion)(),
+		await (seams.serverVersion ?? serverVersionOf)(postedAnswers),
+	);
+	return warning === null ? '' : ` — ${warning}`;
+}
+
 /** ok = the role reaches the database AND it exists (the executor refuses anything else). */
-export async function databaseProbe(answers: Answers, dbPassword: string): Promise<ProbeOutcome> {
+export async function databaseProbe(
+	answers: Answers,
+	dbPassword: string,
+	seams: DatabaseProbeSeams = {},
+): Promise<ProbeOutcome> {
 	const normalized = normalizeInstallAnswers(answers).answers;
 	if (normalized.route === 'production' && normalized.db_mode === 'create') {
 		return {
@@ -431,9 +553,21 @@ export async function databaseProbe(answers: Answers, dbPassword: string): Promi
 			detail: `${normalized.db_database} will be created by the installer (host_database)`,
 		};
 	}
-	const { testDbConnection } = await import('./db_probe.ts');
-	const result = await testDbConnection(posted(answers, { db_password: dbPassword }));
-	return { ok: result.can_connect && result.db_exists, detail: result.msg };
+	return connectionProbe(normalized.route, posted(answers, { db_password: dbPassword }), seams);
+}
+
+/** The connection's report — on the developer route with the client-vs-server warning. */
+async function connectionProbe(
+	route: InstallRoute,
+	postedAnswers: Record<string, unknown>,
+	seams: DatabaseProbeSeams,
+): Promise<ProbeOutcome> {
+	const connect = seams.connect ?? (await import('./db_probe.ts')).testDbConnection;
+	const result = await connect(postedAnswers);
+	const ok = result.can_connect && result.db_exists;
+	const suffix =
+		ok && route === 'developer' ? await developerClientSuffix(postedAnswers, seams) : '';
+	return { ok, detail: `${result.msg}${suffix}` };
 }
 
 export async function diffusionProbe(

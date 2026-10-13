@@ -33,6 +33,7 @@
 
 import { dirname, isAbsolute } from 'node:path';
 import { check_password } from '../../../client/dedalo/core/component_password/js/password_policy.js';
+import { liveProcessEnv } from '../../config/env.ts';
 import { connFieldProblem, pgSocketProblem } from '../../config/pg_transport.ts';
 import type { InstallAnswers } from './install_plan.ts';
 
@@ -186,6 +187,57 @@ export function validLocale(locale: string): boolean {
 	} catch {
 		return false;
 	}
+}
+
+// ── the host's own time zone and locale (install campaign 3, C3-21) ──────────
+//
+// The identity defaults were Europe/Madrid / es-ES on every machine — a UTC
+// server with LANG=en_US.UTF-8 was offered a Spanish locale it never asked for,
+// and a headless or unvisited Identity screen took it silently. The defaults are
+// now THIS machine's, read when the answers are normalized; unusable values fall
+// back to UTC / en-US, never to one institution's settings.
+
+/** Used when the host offers no valid time zone. */
+export const FALLBACK_TIMEZONE = 'UTC';
+/** Used when the host offers no usable locale (unset, `C`, `POSIX`). */
+export const FALLBACK_LOCALE = 'en-US';
+
+/** POSIX names that carry no language (`C`, `POSIX`, nothing). */
+const NO_LANGUAGE: ReadonlySet<string> = new Set(['', 'C', 'POSIX']);
+
+/** The language part of a POSIX locale name: `en_US.UTF-8` / `de_DE@euro` → `en_US` / `de_DE`. */
+function posixBase(value: string | undefined): string {
+	return (value ?? '').split(/[.@]/)[0]?.trim() ?? '';
+}
+
+/** A POSIX locale name (`en_US.UTF-8`, `de_DE@euro`) as a BCP 47 tag, or null. */
+export function localeFromPosix(value: string | undefined): string | null {
+	const base = posixBase(value);
+	if (NO_LANGUAGE.has(base)) return null;
+	const tag = base.replaceAll('_', '-');
+	return validLocale(tag) ? (Intl.getCanonicalLocales(tag)[0] ?? null) : null;
+}
+
+/** `TZ` (a leading `:` dropped) when it names a zone, else the runtime's own zone, else UTC. */
+function hostTimeZone(tz: string | undefined, runtimeZone: string | undefined): string {
+	const named = (tz ?? '').replace(/^:/, '').trim();
+	if (named !== '' && validTimeZone(named)) return named;
+	return runtimeZone !== undefined && validTimeZone(runtimeZone) ? runtimeZone : FALLBACK_TIMEZONE;
+}
+
+/**
+ * This machine's time zone and locale: `TZ` or the runtime's zone; `LC_ALL`,
+ * else `LANG` (POSIX precedence: a set LC_ALL decides, `C` included).
+ */
+export function hostLocaleDefaults(
+	env: Readonly<Record<string, string | undefined>> = liveProcessEnv(),
+	runtimeZone: string | undefined = Intl.DateTimeFormat().resolvedOptions().timeZone,
+): { timezone: string; locale: string } {
+	const posix = (env.LC_ALL ?? '') !== '' ? env.LC_ALL : env.LANG;
+	return {
+		timezone: hostTimeZone(env.TZ, runtimeZone),
+		locale: localeFromPosix(posix) ?? FALLBACK_LOCALE,
+	};
 }
 
 /** The entity name's shape. */

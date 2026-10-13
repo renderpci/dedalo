@@ -104,9 +104,16 @@ export function pgTransportArgs(conn: DbConnDescriptor): string[] {
 }
 
 /**
- * host/port/user flags (password rides PGPASSWORD, never argv). Exported for
- * the pg client spawns that cannot go through runPsql (a streamed pg_dump):
- * one argv law for every pg client this engine starts.
+ * host/port/user flags (password rides PGPASSWORD, never argv) and `-w`.
+ * Exported for the pg client spawns that cannot go through runPsql (a streamed
+ * pg_dump): one argv law for every pg client this engine starts.
+ *
+ * `-w` (--no-password, accepted by psql, pg_dump and pg_restore alike): a pg
+ * client this engine starts NEVER prompts. Without it, a server asking for a
+ * password the descriptor does not carry made libpq open /dev/tty and wait —
+ * measured in install campaign 3 (C3-12): a suite run sat ten minutes at
+ * `Password for user dedalo:`. With it the child fails at once with libpq's
+ * own "no password supplied", which the caller reports.
  */
 export function connArgs(conn: DbConnDescriptor): string[] {
 	const args = pgTransportArgs(conn);
@@ -114,13 +121,23 @@ export function connArgs(conn: DbConnDescriptor): string[] {
 		assertSafeConnField('user', String(conn.user));
 		args.push('-U', String(conn.user));
 	}
+	args.push('-w');
 	return args;
 }
 
-/** The child environment of a pg client: the engine's env + PGPASSWORD (never argv). */
+/** Seconds a pg client waits for its connection unless the environment says otherwise. */
+export const PG_CONNECT_TIMEOUT_SECONDS = '10';
+
+/**
+ * The child environment of a pg client: the engine's env + PGPASSWORD (never
+ * argv) + PGCONNECT_TIMEOUT, so an unreachable server ends the child instead of
+ * holding it (an operator's own PGCONNECT_TIMEOUT wins).
+ */
 export function pgClientEnv(conn: DbConnDescriptor): Record<string, string> {
+	const env = envSnapshot() as Record<string, string>;
 	return {
-		...(envSnapshot() as Record<string, string>),
+		...env,
+		PGCONNECT_TIMEOUT: env.PGCONNECT_TIMEOUT ?? PG_CONNECT_TIMEOUT_SECONDS,
 		...(conn.password !== '' ? { PGPASSWORD: conn.password } : {}),
 	};
 }

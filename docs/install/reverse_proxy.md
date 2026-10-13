@@ -38,7 +38,7 @@ flowchart LR
 
 ## What the installer writes
 
-The `host_web_http` and `host_web_site` steps write **one site file** for the instance, and never another site, the default site or the global configuration:
+The `host_web_http` and `host_web_site` steps write **one site file** for the instance, plus, once per host on nginx, the [catch-all site](#the-catch-all-site). They never write another site, your own default site or the global configuration:
 
 | Web server | Site file |
 | --- | --- |
@@ -63,7 +63,26 @@ The media map's variables are global to nginx, so exactly one instance's map cop
 
 ### Apache: the `.htaccess` gate
 
-On Apache the generated `.htaccess` inside `MEDIA_PATH` is the gate. The site allows only the overrides it uses (`AuthConfig FileInfo Options=Indexes,ExecCGI`, never `All`) and turns directory listing and CGI off again after it. The installer **checks** the modules the site needs (`ssl headers http2 rewrite proxy proxy_http`) and never enables one: when one is missing it stops with the exact command, and you run it and resume.
+On Apache the generated `.htaccess` inside `MEDIA_PATH` is the gate. The site allows only the overrides it uses (`AuthConfig FileInfo Options=Indexes,ExecCGI`, never `All`) and turns directory listing and CGI off again after it. The installer **checks** the modules the site needs (`ssl headers http2 rewrite proxy proxy_http`) and never enables one. It lists the command on the Review's *To do* list before the install. When a module is still missing at the web step, the run stops with the same command: run it, then resume.
+
+The installer never sets `ServerTokens`, because it is a server-wide directive and changing it would change every site on the host. `ServerTokens Prod` in the global configuration keeps the `Server:` header from naming the operating system and version.
+
+### The catch-all site
+
+A web server answers a request for a name **no site declares** with its *default* site for that port: the first virtual host loaded (Apache), or the `default_server` and otherwise the first `server` block (nginx). On a host whose only sites are Dédalo instances, that default is an instance, so `https://<any other name of this server>/` would serve that instance's login page under a name it was never given.
+
+**nginx.** The first production install on ports 80 and 443 writes one host-wide catch-all site, `/etc/nginx/conf.d/dedalo-00-default.conf`. It serves nothing: on port 80 `return 444;` closes the connection, and on port 443 `ssl_reject_handshake on;` presents no certificate at all. It is the default **by order**, never with `default_server`: `conf.d` is read before `sites-enabled` (and, on the RHEL family, before `nginx.conf`'s own server), and the file sorts before every `dedalo-<i>.conf`. **Your own default is kept**: a site that declares `default_server` for a port (Debian's own `default` site does, on port 80) stays that port's default, and nginx never sees two defaults. The run tells you which ports that applies to when it can see them. A file at that path that the installer did not write is never overwritten. An instance on other ports than 80 and 443 does not use it. The file is shared: later instances use it as it is, the host registry counts them, and `--abort` removes it only with the last instance that uses it.
+
+**Apache.** A default virtual host on port 443 would need a certificate of its own, and the installer generates none. Instead, both virtual hosts of each instance's site start by refusing every `Host` but their own:
+
+```apache
+	RewriteEngine On
+	# Only this site's own name: any other Host is refused (421), never served.
+	RewriteCond %{HTTP_HOST} !^dedalo\.example\.org(:443)?$ [NC]
+	RewriteRule ^ - [R=421,L]
+```
+
+A request for another name that reaches an instance's virtual host, because it is the default, is answered `421 Misdirected Request` before anything is served or proxied. A TLS client still sees that instance's certificate for the handshake, but nothing else.
 
 ## How the media gate decides
 
@@ -131,8 +150,8 @@ TLS is a hard requirement: `SESSION_COOKIE_SECURE` defaults to **true**, so a br
 ## Verify
 
 ```shell
-# The engine answers over the socket, and PostgreSQL is reachable.
-curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
+# The engine answers over the socket, and PostgreSQL is reachable (the socket's directory is 0750: sudo).
+sudo curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
 
 # The same probe THROUGH the web server — the surface the browser client uses.
 curl --fail https://dedalo.example.org/health
@@ -140,8 +159,13 @@ curl --fail https://dedalo.example.org/health
 # The web server serves the client over TLS.
 curl -I https://dedalo.example.org/dedalo/core/page/
 
-# A media file honours Range (206 — proof that nothing is in the byte path).
-curl -I -H 'Range: bytes=0-99' https://dedalo.example.org/dedalo/media/image/thumb/<a-real-file>.jpg
+# A media file honours Range (206 — proof that nothing is in the byte path). With the gate on,
+# an unpublished file is 404 to an anonymous request: send your session cookie (copy it from
+# the browser after logging in).
+curl -I -H 'Range: bytes=0-99' -H 'Cookie: <your session cookie>' https://dedalo.example.org/dedalo/media/image/thumb/<a-real-file>.jpg
+
+# A name no site declares reaches no instance (nginx's catch-all refuses the handshake; Apache answers 421).
+curl -sk -o /dev/null -w '%{http_code}\n' --resolve unknown.invalid:443:127.0.0.1 https://unknown.invalid/
 
 # The marker store is never served (404).
 curl -I https://dedalo.example.org/dedalo/media/.publication/auth/
