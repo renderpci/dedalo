@@ -1,0 +1,666 @@
+/**
+ * PLAN-TIME VALIDATION — every refusal an install's ANSWERS can earn, raised by
+ * the plan BEFORE anything is written (terminal installer, phase 1, 2026-10-11).
+ *
+ * WHY. Until this module an invalid answer was found by the step that first
+ * used it: a weak root password at set_root_pw — AFTER the .env, the seed
+ * restore and the ontology import; an entity `1x` only by the (since retired)
+ * browser wizard's client-side check (the CLI accepted it); a port `x` by the server boot. A
+ * failure that late leaves a half-built install for an input the plan could
+ * have refused. So every rule that needs nothing but the answers lives HERE and
+ * runs inside buildInstallPlan (install_plan.ts) — the CLI argv, an answers file
+ * (`--answers`) and the screens all reach the SAME checks through
+ * normalizeInstallAnswers, and refuse with the SAME sentence.
+ *
+ * What stays OUTSIDE: anything that needs the machine (is the database empty,
+ * does it exist — db_restore.ts inspectTargetDatabase, run by the executor
+ * before any write) and the step doors' own refusals, which stay as defence in
+ * depth (root_pw.ts still refuses a weak password; pg_exec.ts still refuses an
+ * option-shaped connection field).
+ *
+ * PURE AND CONFIG-FREE: imports only src/config/pg_transport.ts and the client
+ * password policy module (the bytes the browser checklist and the server
+ * refusal both run — core/security/password_policy.ts wraps the same function
+ * but pulls in the error registry, so it is not imported here).
+ *
+ * TAGGED (phase 2, 2026-10-12): every refusal is a {@link FieldError} — the
+ * sentence AND the answer key it is about. The plan's `errors` carry the
+ * sentences unchanged; its `fieldErrors` carry the tags, which the terminal
+ * screen model (screen_model.ts) uses to show each sentence on its question.
+ * Gates: test/unit/install_validation_upfront_tripwire.test.ts,
+ * test/unit/install_screen_model_tripwire.test.ts.
+ */
+
+import { dirname, isAbsolute } from 'node:path';
+import { check_password } from '../../../client/dedalo/core/component_password/js/password_policy.js';
+import { connFieldProblem, pgSocketProblem } from '../../config/pg_transport.ts';
+import type { InstallAnswers } from './install_plan.ts';
+
+/**
+ * The entity name: a letter, then letters/digits/underscore. It becomes a
+ * directory and a key prefix; the retired browser wizard enforced it
+ * client-side only and the CLI not at all — now the plan does.
+ */
+export const ENTITY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
+
+/**
+ * The INSTANCE name of a production install (multi-instance hosts —
+ * docs/install/multi_instance.md): it must be valid inside the DEFAULT service
+ * user name (`ded_` + the name: 32 characters at most, so 28 here), a systemd
+ * instance (`dedalo-ts@<i>`), a path segment and a PostgreSQL identifier
+ * (`dedalo_<i>`) — hence lowercase.
+ */
+export const INSTANCE_PATTERN = /^[a-z][a-z0-9_]{0,27}$/;
+
+/**
+ * The media access modes DEDALO_MEDIA_ACCESS_MODE reads ('' = not written).
+ * `off` and `0` are accepted aliases of `false`; a front end OFFERS only
+ * {@link MEDIA_ACCESS_MODE_OPTIONS}.
+ */
+export const MEDIA_ACCESS_MODES: readonly string[] = Object.freeze([
+	'',
+	'private',
+	'publication',
+	'false',
+	'off',
+	'0',
+]);
+
+/** The canonical media access modes a front end offers ('' = the engine default). */
+export const MEDIA_ACCESS_MODE_OPTIONS: readonly string[] = Object.freeze([
+	'',
+	'private',
+	'publication',
+	'false',
+]);
+
+/** SMTP encryption: STARTTLS, implicit TLS, plain (core/mailer/mailer.ts maps the same three). */
+export const SMTP_SECURE_MODES: readonly string[] = Object.freeze(['tls', 'ssl', 'none']);
+
+/** One answer refusal, TAGGED with the answer key it is about (a front end shows it there). */
+export interface FieldError {
+	readonly key: string;
+	readonly message: string;
+}
+
+type Problems = FieldError[];
+
+const problem = (key: string, message: string): FieldError => ({ key, message });
+
+/** The required answers: empty → "<key> is required". */
+function requiredErrors(a: InstallAnswers, problems: Problems): void {
+	const keys = peerRole(a)
+		? (['db_database', 'entity'] as const)
+		: (['db_database', 'db_username', 'entity'] as const);
+	for (const key of keys) {
+		if (a[key] === '') problems.push(problem(key, `${key} is required`));
+	}
+	// An empty host would persist a DISABLED mailer — refuse the contradiction.
+	if (a.mailer && a.smtp_host === '')
+		problems.push(problem('smtp_host', 'mailer requires smtp_host'));
+	diffusionRequiredErrors(a, problems);
+}
+
+/**
+ * Diffusion writes as a named MariaDB user. (Its database has a plan default —
+ * `web_dedalo`, `web_<instance>` on production — so it is never missing.)
+ */
+function diffusionRequiredErrors(a: InstallAnswers, problems: Problems): void {
+	if (!a.diffusion) return;
+	if (a.mysql_username === '') {
+		problems.push(problem('mysql_username', 'diffusion requires mysql_username'));
+	}
+}
+
+/** A TCP port: digits only, 1-65535. */
+function portError(name: string, value: string): string | null {
+	const port = Number(value);
+	return /^\d+$/.test(value) && port >= 1 && port <= 65535
+		? null
+		: `${name} '${value}' must be an integer 1-65535`;
+}
+
+/** The ports that will be written: the database's, and the services' that are on. */
+function portErrors(a: InstallAnswers, problems: Problems): void {
+	const ports: [string, string][] = [['db_port', a.db_port]];
+	if (a.diffusion) ports.push(['mysql_port', a.mysql_port]);
+	if (a.mailer) ports.push(['smtp_port', a.smtp_port]);
+	for (const [name, value] of ports) {
+		const message = portError(name, value);
+		if (message !== null) problems.push(problem(name, message));
+	}
+}
+
+/**
+ * The connection fields a pg/mysql client spawn will carry: no option shape, no
+ * control character (pg_transport.ts connFieldProblem — the rule pg_exec.ts
+ * enforces again at the spawn).
+ */
+function connectionErrors(a: InstallAnswers, problems: Problems): void {
+	const fields: [string, string][] = [
+		['db_hostname', a.db_hostname],
+		['db_database', a.db_database],
+		['db_username', a.db_username],
+		['mysql_hostname', a.mysql_hostname],
+		['mysql_database', a.mysql_database],
+		['mysql_username', a.mysql_username],
+	];
+	for (const [name, value] of fields) {
+		const message = connFieldProblem(name, value);
+		if (message !== null) problems.push(problem(name, message));
+	}
+	// A relative socket would refuse the boot (config.ts) — refuse it here first.
+	const socketProblem = pgSocketProblem(a.db_socket);
+	if (socketProblem !== null) problems.push(problem('db_socket', `db_socket: ${socketProblem}`));
+}
+
+/** Paths the server resolves from any cwd must be absolute ('' = not given). */
+function pathErrors(a: InstallAnswers, problems: Problems): void {
+	const paths: [string, string][] = [
+		['media_path', a.media_path],
+		['unix_socket', a.unix_socket],
+	];
+	if (a.diffusion) paths.push(['mysql_socket', a.mysql_socket]);
+	for (const [name, value] of paths) {
+		if (value !== '' && !isAbsolute(value)) {
+			problems.push(problem(name, `${name} must be an absolute path`));
+		}
+	}
+}
+
+/** Does `timeZone` name an IANA zone this runtime knows? */
+export function validTimeZone(timeZone: string): boolean {
+	try {
+		new Intl.DateTimeFormat('en', { timeZone });
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/** Is `locale` a well-formed BCP 47 tag? */
+export function validLocale(locale: string): boolean {
+	try {
+		Intl.getCanonicalLocales(locale);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+/** The entity name's shape. */
+function entityErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.entity !== '' && !ENTITY_PATTERN.test(a.entity)) {
+		problems.push(
+			problem(
+				'entity',
+				`entity '${a.entity}' must start with a letter and contain only letters, digits and _`,
+			),
+		);
+	}
+}
+
+/** The closed-vocabulary answers (SMTP encryption, media access mode). */
+function vocabularyErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.mailer && !SMTP_SECURE_MODES.includes(a.smtp_secure.toLowerCase())) {
+		problems.push(problem('smtp_secure', 'smtp_secure must be tls|ssl|none'));
+	}
+	if (!MEDIA_ACCESS_MODES.includes(a.media_access_mode)) {
+		problems.push(
+			problem(
+				'media_access_mode',
+				'media_access_mode must be private|publication|false (or empty)',
+			),
+		);
+	}
+}
+
+/** The time zone and locale the runtime must understand. */
+function localeErrors(a: InstallAnswers, problems: Problems): void {
+	if (!validTimeZone(a.timezone)) {
+		problems.push(problem('timezone', `timezone '${a.timezone}' is not a valid IANA time zone`));
+	}
+	if (!validLocale(a.locale)) {
+		problems.push(problem('locale', `locale '${a.locale}' is not a valid BCP 47 tag`));
+	}
+}
+
+/**
+ * The install fingerprint values. Never .env values (they go to ts_state.json),
+ * so the plan's env-line check (install_plan.ts controlCharacterErrors) does not
+ * see them.
+ */
+function fingerprintErrors(a: InstallAnswers, problems: Problems): void {
+	for (const key of ['information', 'info_key'] as const) {
+		if (/[\r\n\0]/.test(a[key])) {
+			problems.push(problem(key, `${key} contains an illegal control character`));
+		}
+	}
+}
+
+/**
+ * The route and the instance (terminal installer phase 2, 2026-10-12): a
+ * PRODUCTION install is a named instance (multi_instance.md — its own user,
+ * database, media and socket derive from the name), so it requires one; any
+ * other route has no instance, and one given there is refused rather than
+ * silently ignored. (An unknown route is refused by the plan's parser.)
+ */
+function routeErrors(a: InstallAnswers, problems: Problems): void {
+	const production = a.route === 'production';
+	if (!production) offProductionIdentityErrors(a, problems);
+	if (production && a.instance === '') {
+		problems.push(
+			problem('instance', 'the production route requires instance (e.g. --instance prado)'),
+		);
+	} else if (!production && a.instance !== '') {
+		problems.push(
+			problem(
+				'instance',
+				`instance is only meaningful on the production route (route is ${a.route})`,
+			),
+		);
+	}
+	instanceShapeErrors(a, problems);
+}
+
+/** The production-only identity answers (install folder, service account) given on another route. */
+function offProductionIdentityErrors(a: InstallAnswers, problems: Problems): void {
+	for (const key of IDENTITY_KEYS) {
+		if (a[key] !== '') {
+			problems.push(
+				problem(key, `${key} is only meaningful on the production route (route is ${a.route})`),
+			);
+		}
+	}
+}
+
+/** The instance name's shape (INSTANCE_PATTERN). */
+function instanceShapeErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.instance === '' || INSTANCE_PATTERN.test(a.instance)) return;
+	problems.push(
+		problem(
+			'instance',
+			`instance '${a.instance}' must start with a lowercase letter and contain only a-z, 0-9 and _ (28 characters at most)`,
+		),
+	);
+}
+
+// ── the host-step answers (phase 4, 2026-10-12) ─────────────────────────────
+
+/** The TLS modes each route takes (trial has none: it is the evaluation stack). */
+const ROUTE_TLS: Readonly<Record<string, readonly string[]>> = Object.freeze({
+	production: ['letsencrypt', 'files'],
+	docker: ['letsencrypt', 'local_ca', 'files'],
+	trial: ['none'],
+});
+
+/** A DNS name with at least two labels, letters/digits/hyphens (no IP, no localhost). */
+const FQDN_PATTERN =
+	/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{0,61}[a-z0-9]$/;
+
+/** One address the operator's browser reaches — what certbot issues for and the site serves. */
+function serverNameErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.server_name === '') {
+		problems.push(
+			problem(
+				'server_name',
+				`the ${a.route} route requires server_name (the public address, e.g. --server-name dedalo.example.org)`,
+			),
+		);
+		return;
+	}
+	if (!FQDN_PATTERN.test(a.server_name)) {
+		problems.push(
+			problem(
+				'server_name',
+				`server_name '${a.server_name}' must be a fully qualified domain name (not localhost, not an IP address)`,
+			),
+		);
+	}
+}
+
+/** The two public ports: valid, and distinct. */
+function webPortErrors(a: InstallAnswers, problems: Problems): void {
+	for (const [name, value] of [
+		['http_port', a.http_port],
+		['https_port', a.https_port],
+	] as const) {
+		const message = portError(name, value);
+		if (message !== null) problems.push(problem(name, message));
+	}
+	if (a.http_port === a.https_port) {
+		problems.push(problem('https_port', 'http_port and https_port must differ'));
+	}
+}
+
+/** The certificate the route takes, and what that mode needs. */
+function tlsErrors(a: InstallAnswers, problems: Problems): void {
+	const allowed = ROUTE_TLS[a.route] ?? [];
+	if (!allowed.includes(a.tls_mode)) {
+		problems.push(
+			problem('tls_mode', `tls_mode must be ${allowed.join('|')} on the ${a.route} route`),
+		);
+		return;
+	}
+	if (a.tls_mode === 'letsencrypt') letsEncryptErrors(a, problems);
+	if (a.tls_mode === 'files') tlsFileErrors(a, problems);
+}
+
+/** Let's Encrypt: an address for expiry notices, and the HTTP-01 challenge on port 80. */
+function letsEncryptErrors(a: InstallAnswers, problems: Problems): void {
+	if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(a.letsencrypt_email)) {
+		problems.push(
+			problem(
+				'letsencrypt_email',
+				"Let's Encrypt requires letsencrypt_email (an address for expiry notices)",
+			),
+		);
+	}
+	if (a.http_port !== '80') {
+		problems.push(
+			problem(
+				'http_port',
+				"Let's Encrypt validates over port 80: http_port must be 80 (or use tls_mode files)",
+			),
+		);
+	}
+}
+
+/** The institution's own certificate: two absolute paths. */
+function tlsFileErrors(a: InstallAnswers, problems: Problems): void {
+	for (const key of ['tls_cert_path', 'tls_key_path'] as const) {
+		if (!isAbsolute(a[key])) {
+			problems.push(problem(key, `tls_mode files requires ${key} (an absolute path)`));
+		}
+	}
+}
+
+/** The production-only answers: the web server, the database mode, the backup directory. */
+function productionHostErrors(a: InstallAnswers, problems: Problems): void {
+	if (!['', 'nginx', 'apache'].includes(a.web_server)) {
+		problems.push(
+			problem('web_server', 'web_server must be nginx|apache (or empty: the one the host has)'),
+		);
+	}
+	if (!['create', 'existing'].includes(a.db_mode)) {
+		problems.push(problem('db_mode', 'db_mode must be create|existing'));
+	}
+	backupDirErrors(a, problems);
+	mediaRootErrors(a, problems);
+	installDirErrors(a, problems);
+	serviceNameErrors(a, problems);
+	peerRoleErrors(a, problems);
+	for (const key of ['install_dir', 'backup_dir'] as const) reservedOverlapErrors(a, key, problems);
+}
+
+// ── the install folder and the service account (owner decisions 2026-10-12) ──
+
+/** The production-only identity answers. */
+const IDENTITY_KEYS = ['install_dir', 'service_user', 'service_group'] as const;
+
+/**
+ * A Linux user/group name the installer accepts: useradd's default NAME_REGEX
+ * (`^[a-z_][a-z0-9_-]*[$]?$`) plus `.` — an EXISTING hosting account is often
+ * named after its domain (my_domain.org). Creating a dotted name is refused on
+ * the host (identity_rules.ts): useradd's own default regex would refuse it.
+ */
+export const SERVICE_NAME_PATTERN = /^[a-z_][a-z0-9_.-]*\$?$/;
+
+/** The longest Linux user/group name (useradd's default). */
+export const SERVICE_NAME_MAX = 32;
+
+/** Locations (and everything under them) no install folder may be. */
+const SYSTEM_TREES: readonly string[] = Object.freeze([
+	'/etc',
+	'/usr',
+	'/bin',
+	'/sbin',
+	'/lib',
+	'/lib64',
+	'/boot',
+	'/dev',
+	'/proc',
+	'/sys',
+	'/run',
+	'/var/run',
+	'/tmp',
+	'/var/tmp',
+	'/root',
+]);
+
+/** Shared roots no install folder may BE (a folder under them is fine). */
+const SHARED_ROOTS: readonly string[] = Object.freeze([
+	'/home',
+	'/srv',
+	'/opt',
+	'/var',
+	'/var/lib',
+	'/var/www',
+]);
+
+/** Is `path` `dir` itself or inside it (component-wise: /home/a is not inside /home/ab)? */
+export function sameOrInside(path: string, dir: string): boolean {
+	return path === dir || path.startsWith(dir === '/' ? '/' : `${dir}/`);
+}
+
+/** Do two paths overlap (the same, one inside the other)? */
+export function pathsOverlap(a: string, b: string): boolean {
+	return sameOrInside(a, b) || sameOrInside(b, a);
+}
+
+/** Every segment plain: letters, digits, '.', '_', '-'. */
+const PLAIN_SEGMENTS = /^(\/[A-Za-z0-9._-]+)+$/;
+
+/** An absolute path, normalized (no trailing /, no empty, . or .. segment), two levels at least. */
+function normalizedDeep(path: string): boolean {
+	const segments = path.split('/').slice(1);
+	return segments.length >= 2 && segments.every((segment) => !['', '.', '..'].includes(segment));
+}
+
+/** The example folder of the sentences (the instance's default one). */
+function exampleDir(a: InstallAnswers): string {
+	return `/home/ded_${INSTANCE_PATTERN.test(a.instance) ? a.instance : '<instance>'}`;
+}
+
+/** The install folder's shape: absolute, normalized, plain segments, not a system location. */
+function installDirErrors(a: InstallAnswers, problems: Problems): void {
+	const value = a.install_dir;
+	const sentence = installDirShape(value, a);
+	if (sentence !== null) problems.push(problem('install_dir', sentence));
+}
+
+/** The first refusal of the install folder's shape, or null. */
+function installDirShape(value: string, a: InstallAnswers): string | null {
+	if (!isAbsolute(value)) return 'install_dir must be an absolute path';
+	if (!normalizedDeep(value)) {
+		return `install_dir '${value}' must be a normalized absolute path of at least two levels (e.g. ${exampleDir(a)} or /home/my_domain.org/dedalo) — no trailing /, no . or .. segments`;
+	}
+	if (!PLAIN_SEGMENTS.test(value)) {
+		return `install_dir '${value}' may contain only letters, digits, '.', '_' and '-' in each segment`;
+	}
+	const system =
+		SYSTEM_TREES.find((tree) => sameOrInside(value, tree)) ??
+		SHARED_ROOTS.find((root) => value === root);
+	return system === undefined
+		? null
+		: `install_dir '${value}' is a system location (${system}) — choose a folder of its own, e.g. ${exampleDir(a)}`;
+}
+
+/**
+ * The backup folder's shape: absolute and NORMALIZED with plain segments, as
+ * the install folder — every overlap check (another instance's folders, the
+ * reserved places) compares paths component-wise, so `//x`, `/a/../b` or a
+ * trailing `/` would slip past them.
+ */
+function backupDirErrors(a: InstallAnswers, problems: Problems): void {
+	const value = a.backup_dir;
+	if (!isAbsolute(value)) {
+		problems.push(problem('backup_dir', 'backup_dir must be an absolute path'));
+		return;
+	}
+	if (normalizedDeep(value) && PLAIN_SEGMENTS.test(value)) return;
+	problems.push(
+		problem(
+			'backup_dir',
+			`backup_dir '${value}' must be a normalized absolute path of at least two levels with plain segments (letters, digits, '.', '_', '-') — no trailing /, no empty, . or .. segments`,
+		),
+	);
+}
+
+/**
+ * The places the installer keeps ROOT-OWNED or serves to the WEB: no install
+ * folder or backup folder may overlap one (the whole shared roots, so a
+ * folder at /srv/dedalo/foo never blocks a future instance named foo).
+ */
+function reservedPlaces(a: InstallAnswers): string[] {
+	const places = [
+		'/opt/dedalo',
+		'/var/lib/dedalo-install',
+		'/var/backups/dedalo-site-builder',
+		'/srv/dedalo',
+	];
+	if (isAbsolute(a.media_path)) places.push(dirname(dirname(a.media_path)));
+	if (isAbsolute(a.unix_socket)) places.push(dirname(a.unix_socket));
+	return places;
+}
+
+/** `key`'s folder overlapping a reserved place. */
+function reservedOverlapErrors(
+	a: InstallAnswers,
+	key: 'install_dir' | 'backup_dir',
+	problems: Problems,
+): void {
+	const value = a[key];
+	if (!isAbsolute(value)) return;
+	const place = reservedPlaces(a).find((item) => pathsOverlap(value, item));
+	if (place === undefined) return;
+	problems.push(
+		problem(
+			key,
+			`${key} '${value}' overlaps ${place}, which the installer keeps root-owned or serves to the web — choose a folder outside it`,
+		),
+	);
+}
+
+/** One account name's refusal (`kind`: user or group), or null. */
+function serviceNameProblem(kind: 'user' | 'group', value: string): string | null {
+	if (value === 'root') return `service_${kind} root is refused — the service never runs as root`;
+	if (SERVICE_NAME_PATTERN.test(value) && value.length <= SERVICE_NAME_MAX) return null;
+	return `service_${kind} '${value}' is not a valid Linux ${kind} name (a-z or _ first, then a-z, 0-9, _, -, . — 32 characters at most)`;
+}
+
+/** The service user (required) and group ('' = the user's own group). */
+function serviceNameErrors(a: InstallAnswers, problems: Problems): void {
+	const user =
+		a.service_user === ''
+			? 'service_user is required (the account the instance runs as)'
+			: serviceNameProblem('user', a.service_user);
+	if (user !== null) problems.push(problem('service_user', user));
+	const group = a.service_group === '' ? null : serviceNameProblem('group', a.service_group);
+	if (group !== null) problems.push(problem('service_group', group));
+}
+
+/**
+ * Is the database role the SERVICE USER's (a created production database —
+ * PEER)? Then it is never asked: its emptiness is service_user's refusal.
+ */
+function peerRole(a: InstallAnswers): boolean {
+	return a.route === 'production' && !a.engine_only && a.db_mode === 'create';
+}
+
+/** A created database's role IS the service user (PEER: OS user ↔ role of the same name). */
+function peerRoleErrors(a: InstallAnswers, problems: Problems): void {
+	if (!peerRole(a) || a.db_username === a.service_user) return;
+	problems.push(
+		problem(
+			'db_username',
+			`with db_mode create the database role is the service user (PostgreSQL peer authentication maps the OS user to the role of the same name): db_username '${a.db_username}' must be '${a.service_user}' — omit --db-user`,
+		),
+	);
+}
+
+/**
+ * THE ROOT RULE (deploy/nginx.conf; src/config/catalog/media.ts): the site's
+ * `root` + `/dedalo/<DEDALO_MEDIA_DIR>` must BE MEDIA_PATH. The engine builds
+ * every media URL under `/dedalo/<DEDALO_MEDIA_DIR>/`, and the installer keeps
+ * that name at its default (`media`), so MEDIA_PATH must end in
+ * `/dedalo/media` — any other path has no root that serves it (a
+ * `/…/dedalo/files` would resolve every URL to a `…/dedalo/media` that does
+ * not exist: install_host_render_tripwire (d)).
+ */
+function mediaRootErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.media_path !== '' && !/^\/.+\/dedalo\/media$/.test(a.media_path)) {
+		problems.push(
+			problem(
+				'media_path',
+				`media_path '${a.media_path}' must end in /dedalo/media (the web root rule: root + /dedalo/<DEDALO_MEDIA_DIR> == MEDIA_PATH, and the installer keeps DEDALO_MEDIA_DIR=media)`,
+			),
+		);
+	}
+}
+
+/** The docker/trial-only answers: where the image comes from. */
+function stackHostErrors(a: InstallAnswers, problems: Problems): void {
+	if (!['official', 'custom', 'build'].includes(a.image_source)) {
+		problems.push(problem('image_source', 'image_source must be official|custom|build'));
+	}
+	if (a.image_source === 'custom' && a.image_repository === '') {
+		problems.push(problem('image_repository', 'image_source custom requires image_repository'));
+	}
+}
+
+/** The answers that make the host steps (production, docker) — skipped for the engine child (A14). */
+function hostErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.engine_only || a.route === 'developer') return;
+	if (a.route !== 'trial') serverNameErrors(a, problems);
+	webPortErrors(a, problems);
+	tlsErrors(a, problems);
+	if (a.route === 'production') productionHostErrors(a, problems);
+	else stackHostErrors(a, problems);
+}
+
+/**
+ * Every answer-only refusal, each TAGGED with the answer it is about — the ONE
+ * rule set: the plan's `errors` carry the sentences, its `fieldErrors` the tags
+ * the screen model attaches them by (no front end validates anything itself).
+ */
+export function answerProblems(a: InstallAnswers): FieldError[] {
+	const problems: Problems = [];
+	routeErrors(a, problems);
+	requiredErrors(a, problems);
+	connectionErrors(a, problems);
+	portErrors(a, problems);
+	pathErrors(a, problems);
+	entityErrors(a, problems);
+	vocabularyErrors(a, problems);
+	localeErrors(a, problems);
+	fingerprintErrors(a, problems);
+	hostErrors(a, problems);
+	return problems;
+}
+
+/**
+ * Every answer-only refusal, appended to `errors` (the plan's — each one
+ * blocks). `notes` is the plan's notes list, for a rule that only informs.
+ */
+export function validateAnswers(a: InstallAnswers, _notes: string[], errors: string[]): void {
+	errors.push(...answerProblems(a).map((item) => item.message));
+}
+
+/**
+ * The root password's refusals. It is a PLAN INPUT of its own, never an answer
+ * (an answers file never carries it): `required` when the run
+ * will set it (a fresh terminal install); a supplied one is always held to THE
+ * password policy — the same function set_root_pw refuses with (root_pw.ts).
+ */
+export function rootPasswordErrors(password: string | undefined, required: boolean): string[] {
+	if (password === undefined || password === '') {
+		return required
+			? [
+					'root password is required (DEDALO_INSTALL_ROOT_PASSWORD, --secrets-stdin or --root-password)',
+				]
+			: [];
+	}
+	const failed = check_password(password).failed;
+	return failed === null ? [] : [`root password does not meet the password policy (${failed})`];
+}

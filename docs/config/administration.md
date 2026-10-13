@@ -44,7 +44,7 @@ flowchart TB
 
 | File | Who writes it | What it is |
 |---|---|---|
-| `../private/.env` | **you** (and the installer: command line, wizard or `install.sh`) | every setting and secret for this install |
+| `../private/.env` | the installer at install time (`sh install.sh`), then **you** | every setting and secret for this install |
 | `../private/sample.env` | the installer (a copy of `install/sample.env`) | the documented catalogue of every key **at install time**; a reference, not read by the engine. A code update does not refresh it: the current catalogue is `install/sample.env` in the code tree |
 | `../private/ts_state.json` | **the app** | runtime state — maintenance mode, install status, area overrides. Not config; do not hand-edit |
 
@@ -116,8 +116,9 @@ naming the key — it will not limp along half-configured):
 (`DEDALO_APPLICATION_LANGS`, `DEDALO_APPLICATION_LANGS_DEFAULT`,
 `DEDALO_DATA_LANG_DEFAULT`, `PROJECTS_DEFAULT_LANGS`).
 
-A **fresh, unconfigured** machine is different: with none of them set, the server
-boots into install mode so the wizard can run.
+A **fresh, unconfigured** machine is different: with none of the four first keys
+set, the server refuses to start as *not installed* (exit 78) and tells you to run
+the installer — see [the installer reference](../install/installer_reference.md#a-server-that-is-not-installed-refuses-to-start).
 
 ---
 
@@ -129,7 +130,7 @@ What protects them is **where the file is**: `../private/` is outside the web ro
 and the `.env` is written `0600`.
 
 - never move a secret into the served tree, and never commit one
-- the install wizard generates the secrets it needs
+- the installer generates the secrets it needs
 - rotating one = edit the line, restart
 
 ---
@@ -151,16 +152,14 @@ fine and quietly does the wrong thing. The fix is always the one line the error 
 
 ---
 
-## 8. The install wizard
+## 8. What the installer writes
 
-A fresh machine boots into the wizard, which writes `../private/.env` for you (DB
-connection, entity, languages, the update servers — `ONTOLOGY_SERVERS` and
-`CODE_SERVERS`, the official Dédalo master unless you chose the air-gapped
-option — the active ontologies — `ACTIVE_ONTOLOGY_TLDS`, the core plus the
-domain ontologies you chose and the ontologies they declare — diffusion) and then
-seals the install. The headless installer writes
-the same keys. After that,
-you edit the `.env` by hand as above.
+The installer (`sh install.sh`, or `bun run dedalo:install` in a checkout) writes `../private/.env`
+for you (DB connection, entity, languages, the update servers — `ONTOLOGY_SERVERS`
+and `CODE_SERVERS`, the official Dédalo master unless you chose the air-gapped
+option — the active ontologies — `ACTIVE_ONTOLOGY_TLDS`, the core plus the domain
+ontologies you chose and the ontologies they declare — diffusion) and then seals
+the install. After that, you edit the `.env` by hand as above.
 
 See [Installing Dédalo](../install/index.md).
 

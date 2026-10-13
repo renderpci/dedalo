@@ -55,7 +55,7 @@
 	import { ui } from '../../common/js/ui.js'
 	import { set_element_css } from '../../page/js/css.js'
 	import {request_failed, normalize_transport_error, response_data} from '../../common/js/api_error.js'
-	import { handle_api_error } from '../../common/js/error_dispatch.js'
+	import { handle_api_error, is_page_identity_revoked } from '../../common/js/error_dispatch.js'
 
 
 
@@ -654,6 +654,9 @@ export const init_events_subscription = function(self) {
 * keeps the local data model in sync with the server response.
 *
 * Flow:
+*  0. Entry guard: while the page identity is revoked (a re-login authenticated
+*     another user and the reload is pending or was cancelled) nothing is sent —
+*     the edit stays 'modified' / unsaved and save() answers false.
 *  1. Guard: skip if a save is already in progress (self.saving === true).
 *  2. Validate changed_data — must be a non-empty array.
 *  3. Optimisation: for action='update' items, compare each value against the
@@ -665,8 +668,10 @@ export const init_events_subscription = function(self) {
 *     plus the coarse before-unload assertion (window.unsaved_data is DERIVED
 *     from the events.js registry; other dirty components keep it armed).
 *     On error: restore 'modified' (data is still unsaved) and set 'error'.
-*  6. On auth failure ('auth.not_logged'): subscribe to 'login_successful' and
-*     retry the save automatically when the user logs back in.
+*  6. On auth failure ('auth.not_logged'): handle_api_error opens the re-login
+*     overlay; the save is retried ONCE when it reports recovered:true, which it
+*     does only when the page's OWN user logged back in (error_dispatch
+*     relogin_identity==='same'). Another identity reloads the page instead.
 *  7. Always publish 'save' (general) and 'save_' + self.id_base (component-specific)
 *     events with { instance, api_response } payload.
 *
@@ -693,6 +698,25 @@ export const init_events_subscription = function(self) {
 component_common.prototype.save = async function(new_changed_data) {
 
 	const self = this
+
+	// page identity guard (LEAD-2 + CLIENT-5) — THE WRITE DOOR. A re-login on
+	// this page authenticated another (or an unresolvable) identity: the page's
+	// state still belongs to the previous user and a reload is pending (or was
+	// cancelled). Sending now would write this user's edit under that session.
+	// Nothing goes to the wire; the edit keeps its 'modified' / unsaved marks so
+	// the before-unload guard still knows about it.
+	if (is_page_identity_revoked()) {
+		const msg = 'Ignored save. The page identity changed on re-login; reload the page.'
+		console.warn(`[component_common] ${self.model} ${self.tipo}: ${msg}`)
+		// observers must not be left waiting on a save that will never land
+		// (the same notification the other refusals below publish)
+		event_manager.publish('save', {
+			instance		: self,
+			api_response	: null,
+			msg				: msg
+		})
+		return false
+	}
 
 	// set save status to prevent save orders overlapping
 	if (self.saving) {

@@ -49,7 +49,7 @@ The tool attaches **only** to hierarchy-definition records (tipo `hierarchy1`). 
     The panel is the point of the tool: it tells you whether the hierarchy is already usable, and if not, precisely which condition fails. A locator that is *set* is not the same as its target *existing* — a definition can name a root term that was never created, leaving the tree with nothing to hang children on. The tool detects that and creates the missing root.
 
 !!! info "This is one of two ways to activate a hierarchy"
-    The [Installing new hierarchies](../management/install_new_hierarchies.md) wizard imports **and** activates the hierarchies you tick. `tool_hierarchy` is how you activate or repair one afterwards, one record at a time. For the model itself, see the [ontology](../core/ontology/index.md) documentation.
+    The [Installing new hierarchies](../management/install_new_hierarchies.md) panel imports **and** activates the hierarchies you tick. `tool_hierarchy` is how you activate or repair one afterwards, one record at a time. For the model itself, see the [ontology](../core/ontology/index.md) documentation.
 
 ## Related
 

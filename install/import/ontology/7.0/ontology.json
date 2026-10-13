@@ -1,5 +1,5 @@
 {
-    "date": "2026-10-10T22:59:50+02:00",
+    "date": "2026-10-13T00:25:05+02:00",
     "host": "v7.master.dedalo.dev",
     "entity": "master",
     "version": "7.0.0",
@@ -4954,24 +4954,6 @@
             ],
             "typology_id": 15,
             "typology_name": "Otros"
-        },
-        {
-            "tld": "ddengine",
-            "name": "Motor | ddengine",
-            "name_data": [
-                {
-                    "id": 1,
-                    "lang": "lg-eng",
-                    "value": "Engine | ddengine"
-                },
-                {
-                    "id": 1,
-                    "lang": "lg-spa",
-                    "value": "Motor | ddengine"
-                }
-            ],
-            "typology_id": 5,
-            "typology_name": "Especial"
         }
     ]
 }

@@ -23,6 +23,7 @@
 
 import type { Ddo } from '../../concepts/ddo.ts';
 import { configOwnerOf } from '../../concepts/emit_row.ts';
+import { clampClientLimit } from '../../concepts/sqo.ts';
 import { memoizedReadMatrixRecord } from '../../db/record_memo.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { buildDataItem, type DataItem, EmissionContext } from '../../resolve/component_data.ts';
@@ -38,6 +39,25 @@ import { portalResolver } from './portal.ts';
  * finds no section children and emits the entries item alone — a pinned
  * per-request state bleed the differential must reproduce. */
 const SOLVED_SECTIONS = Symbol('relation_index.solvedSections');
+
+/**
+ * The page an EMITTED relation_index cell reads from the inverse sink — the
+ * ONE client clamp (DEC-07, READ-4), whatever the limit's source.
+ *
+ * The inverse set is unbounded by the record's own data (every locator
+ * anywhere that points here), and the ddo whose limit pages it is
+ * CLIENT-REACHABLE: a section read's literal `show.ddo_map` wins
+ * (read.ts resolveSectionColumnDdoMap), and the ddo schema admits any
+ * non-negative integer as `limit`. The server cannot tell that ddo from an
+ * ontology one, so every cell page is bounded here — an over-ceiling value is
+ * clamped (loud, clampClientLimit) and the cell's `pagination` names the
+ * limit applied beside the full total, so a consumer pages through it.
+ * (A PORTAL's limit is not this: it pages the record's OWN stored locators,
+ * and limit 0 = "all" there is a contract tool_print relies on.)
+ */
+function inversePageLimit(rawLimit: number, tipo: string): number {
+	return clampClientLimit(rawLimit, `relation_index ${tipo}`);
+}
 
 /** The component's effective inverse-question filters (see the header). */
 interface RelationIndexConfig {
@@ -143,13 +163,14 @@ async function emitOwnConfigIndexData(
 
 	// The page limit mirrors expandPortal's mode chains EXACTLY, then is pinned
 	// onto the delegated ddo so the pre-fetched page and the portal slice agree.
-	let limit: number;
+	let rawLimit: number;
 	if (ddoMode === 'list') {
 		const { resolveListCellMap } = await import('../../section/list_definitions/section_list.ts');
-		limit = ddo.limit ?? (await resolveListCellMap(ddo.tipo)).cellLimit ?? PORTAL_LIST_LIMIT;
+		rawLimit = ddo.limit ?? (await resolveListCellMap(ddo.tipo)).cellLimit ?? PORTAL_LIST_LIMIT;
 	} else {
-		limit = ddo.limit ?? config.editLimit;
+		rawLimit = ddo.limit ?? config.editLimit;
 	}
+	const limit = inversePageLimit(rawLimit, ddo.tipo);
 
 	const filter = {
 		type: config.relationType,
@@ -215,7 +236,10 @@ async function emitRelationIndexData(
 	};
 	// list/tm keep the pinned 1-locator cell page; the edit read pages at the
 	// component's edit limit (PHP get_data_paginated pagination->limit).
-	const limit = ddoMode === 'list' ? PORTAL_LIST_LIMIT : (ddo.limit ?? config.editLimit);
+	const limit = inversePageLimit(
+		ddoMode === 'list' ? PORTAL_LIST_LIMIT : (ddo.limit ?? config.editLimit),
+		ddo.tipo,
+	);
 	const page = await findInverseReferenceLocators([filter], {
 		limit,
 		offset: 0,

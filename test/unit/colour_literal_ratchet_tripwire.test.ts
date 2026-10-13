@@ -171,7 +171,8 @@ const BANK = {
 		/** `var(--undeclared, literal)` — the literal paints in every axis */
 		undeclared_fallback: 4,
 		/** OUTER budget: every literal in a paint position, drift or not (retune-stable) */
-		paint_literals: 272,
+		// 2026-10-12: 267 — the browser installer's installer.less left with it.
+		paint_literals: 267,
 	},
 	js: {
 		has_token: 27,
@@ -182,7 +183,8 @@ const BANK = {
 		// 2026-09-29: 74 — RAISED by decision: test_component_dataframe_tm_read_only.js
 		// asserts a rating chip paints its datalist colour, so it needs one concrete
 		// colour as FIXTURE DATA ('#ff0000' in, 'rgb(255, 0, 0)' out). Not a paint site.
-		string_literals: 74,
+		// 2026-10-12: 70 — the browser installer's render_installer.js left with it.
+		string_literals: 70,
 	},
 } as const;
 

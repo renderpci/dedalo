@@ -247,9 +247,6 @@ const RESULT_ALLOWLIST: Record<string, Entry> = {
 	// `/health` is a LIVENESS PROBE served before the envelope layer and genuinely emits
 	// `result: 'ok'|'error'` (src/server.ts:741-772). Documenting it any other way would be
 	// documenting a response the engine does not send.
-	'docs/install/docker.md': {
-		reason: '/health is a liveness probe, not an API envelope — src/server.ts emits result',
-	},
 	'docs/install/production.md': {
 		reason: '/health is a liveness probe, not an API envelope — src/server.ts emits result',
 	},
@@ -521,7 +518,6 @@ describe('docs locator/storage/envelope shape tripwire', () => {
 			'docs/development/tools/reference/tool_propagate_component_data.md',
 			'docs/development/tools/reference/tool_update_cache.md',
 			'docs/diffusion/publication_api/publication_api.md',
-			'docs/install/docker.md',
 			'docs/install/production.md',
 		]);
 	});

@@ -35,7 +35,7 @@ const PASSWORD_COMPONENT = 'dd133';
  * MUTATES THE MACHINE — config files, a database restore, root credentials, a
  * 126 MB hierarchy import, or a process restart. Blocked by DANGER, not by
  * fixture: the hermetic logic in the same subsystem (deriveLangConfig,
- * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
+ * pgBinaryCandidates, the hierarchy_meta readers) IS gated
  * (test/unit/tier1_install_native.test.ts).
  */
 export async function setRootPassword(
@@ -92,4 +92,35 @@ export async function setRootPassword(
 		refuseInstall('install.step_failed', `Failed to set password: ${applied.stderr}`);
 	}
 	return { ok: true, msg: 'Root password set — OK' };
+}
+
+/** The root credential as the terminal installer's verify reads it. */
+export type RootPasswordState = 'set' | 'empty' | 'missing';
+
+/** Is the root user's password set? (`missing` = no root user / no seed / unreadable.) */
+export async function rootPasswordState(conn?: DbConnDescriptor): Promise<RootPasswordState> {
+	const probe = await runPsql(conn ?? connFromConfig(), [
+		'-tAc',
+		`SELECT coalesce(jsonb_array_length(string->'${PASSWORD_COMPONENT}'), 0) FROM matrix_users WHERE section_id = ${ROOT_SECTION_ID} AND section_tipo = '${USERS_SECTION_TIPO}'`,
+	]);
+	if (probe.exitCode !== 0 || probe.stdout.trim() === '') return 'missing';
+	return Number(probe.stdout.trim()) > 0 ? 'set' : 'empty';
+}
+
+/**
+ * Does `password` verify against the stored root hash? The terminal installer's
+ * set_root_pw verify uses it when the password is in hand: a root password set
+ * by an earlier run to a DIFFERENT value is drift, never silently accepted.
+ */
+export async function rootPasswordMatches(
+	password: string,
+	conn?: DbConnDescriptor,
+): Promise<boolean> {
+	const probe = await runPsql(conn ?? connFromConfig(), [
+		'-tAc',
+		`SELECT string->'${PASSWORD_COMPONENT}'->0->>'value' FROM matrix_users WHERE section_id = ${ROOT_SECTION_ID} AND section_tipo = '${USERS_SECTION_TIPO}'`,
+	]);
+	const hash = probe.stdout.trim();
+	if (probe.exitCode !== 0 || !hash.startsWith('$argon2')) return false;
+	return Bun.password.verify(password, hash);
 }

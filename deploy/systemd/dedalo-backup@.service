@@ -1,0 +1,21 @@
+# One instance's backup set (written by the installer). The drop-in
+# dedalo-backup@<i>.service.d/10-dedalo-install.conf holds the instance's
+# values: the service user and group, the instance's EnvironmentFile=, its
+# store ExecStart lines (every script from the ROOT-OWNED
+# /opt/dedalo/instances/<i>/bin — F2), DEDALO_BACKUP_STATE_DIR and the FULL
+# DEDALO_BACKUP_EXPECTED_STORES list, every Environment= value quoted
+# (campaign 2 L8: an unquoted list was split and a truncated store list
+# reported success). The installer runs it once and verifies every store
+# before it enables the timer (host_backup_verify).
+
+[Unit]
+Description=Dedalo backup set of %i
+OnFailure=dedalo-backup-alert@%i.service
+
+[Service]
+Type=oneshot
+RuntimeDirectory=dedalo-backup-%i
+RuntimeDirectoryMode=0750
+UMask=0077
+# Fail-closed: without its drop-in this runs nothing.
+ExecStart=/bin/false

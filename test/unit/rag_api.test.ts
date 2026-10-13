@@ -42,6 +42,18 @@ import { deleteRecordChunks } from '../../src/ai/rag/vector_store.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import {
+	type AiSpendLimitSnapshot,
+	AMPLE_AI_SPEND_LIMITS,
+	restoreAiSpendLimits,
+	setAiSpendLimits,
+	sweepAiSpendLedger,
+} from '../helpers/ai_spend_ledger.ts';
+import {
+	DOOR_READER_USER_ID,
+	installReadDoorIdentityFixture,
+	removeReadDoorIdentityFixture,
+} from '../helpers/read_door_identity_fixture.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 /**
@@ -101,6 +113,20 @@ const DOC_LANG = 'lg-eng';
 const EMBED_GROUP = 'probe';
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
+/**
+ * The DENIED SPENDER of the metered doors (semantic_search, retrieve): those doors
+ * reserve the caller's AI limits before they search, and a user with no record
+ * holds no limit (0 refuses), so the access-filter legs need a REAL user that may
+ * spend but holds NO grant on test2 — the read-door fixture's READER (dd774 has
+ * no test2 entry at all), given ample limits on its own user record.
+ */
+const DENIED_SPENDER: Principal = {
+	userId: DOOR_READER_USER_ID,
+	isGlobalAdmin: false,
+	isDeveloper: false,
+};
+/** Root's limit keys as they were (restored after); see DENIED_SPENDER. */
+let limitSnapshots: AiSpendLimitSnapshot[] = [];
 
 // Reserved-high scratch twins (test/helpers/test_data.ts conventions): fixed ids
 // clear of genuine records and of the sibling gates' bands, so the run is
@@ -226,9 +252,18 @@ beforeAll(async () => {
 	const indexer = offlineIndexer();
 	await buildAndIndex(indexer, COIN_ID, COIN_TEXT);
 	await buildAndIndex(indexer, SHIP_ID, SHIP_TEXT);
+	await installReadDoorIdentityFixture();
+	// Ample limits (the budget is ai_spend_budget_native's subject, not this gate's).
+	limitSnapshots = [
+		await setAiSpendLimits({ userId: SUPERUSER.userId }, AMPLE_AI_SPEND_LIMITS),
+		await setAiSpendLimits({ userId: DENIED_SPENDER.userId }, AMPLE_AI_SPEND_LIMITS),
+	];
 });
 
 afterAll(async () => {
+	await restoreAiSpendLimits(limitSnapshots);
+	await sweepAiSpendLedger([SUPERUSER.userId, DENIED_SPENDER.userId]);
+	await removeReadDoorIdentityFixture();
 	for (const id of createdIds) {
 		await deleteRecordChunks(SECTION_TIPO, id);
 		await cleanScratchRecord(SECTION_TIPO, id);
@@ -265,8 +300,9 @@ describe('dd_rag_api semantic_search', () => {
 	test('a denied user gets NOTHING (DoD)', async () => {
 		const res = await ragApiActions.semantic_search(
 			rqo({ query: 'moneda de bronce con jinete ceca', limit: 5 }),
-			{ principal: NO_ACCESS } as Ctx,
+			{ principal: DENIED_SPENDER } as Ctx,
 		);
+		expect(res.body.msg).toBe('ok');
 		expect(res.body.data).toEqual([]);
 	});
 
@@ -299,8 +335,9 @@ describe('dd_rag_api retrieve / get_agent_context', () => {
 
 	test('a denied user gets NOTHING from retrieve (DoD)', async () => {
 		const res = await ragApiActions.retrieve(rqo({ query: 'barco fenicio ánforas', limit: 5 }), {
-			principal: NO_ACCESS,
+			principal: DENIED_SPENDER,
 		} as Ctx);
+		expect(res.body.msg).toBe('ok');
 		expect(res.body.data).toEqual([]);
 	});
 });

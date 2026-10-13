@@ -84,11 +84,14 @@ export interface CatalogEntry {
 	/** Human rendering of a computed default. REQUIRED when `default` is a function. */
 	readonly defaultDoc?: string;
 
-	/** Missing key refuses the boot (outside install mode, where `installSentinel` stands in). */
+	/** Missing key refuses the boot (on an unconfigured box `installSentinel` stands in). */
 	readonly required?: true;
-	/** The value a required key takes while the install wizard is running. */
+	/**
+	 * The value a required key takes on an UNCONFIGURED box (src/config/install_state.ts), so
+	 * `config` stays importable there; the server itself refuses to start on such a box.
+	 */
 	readonly installSentinel?: unknown;
-	/** One of the exactly-4 keys whose absence means "this is a fresh box". */
+	/** One of the exactly-4 keys whose absence means "this box is not installed". */
 	readonly installGate?: true;
 
 	/**

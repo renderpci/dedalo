@@ -9,6 +9,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../config/config.ts';
+import { liveProcessEnv } from '../../config/env.ts';
 
 /** Homebrew postgresql@<n> formulas probed, NEWEST FIRST (an older client refuses a newer server). */
 const HOMEBREW_PG_VERSIONS: readonly number[] = [18, 17, 16, 15];
@@ -55,6 +56,11 @@ export function psqlResolvable(): boolean {
 	const resolved = resolvePgBinary('psql');
 	if (resolved !== 'psql') return existsSync(resolved);
 	// Bare 'psql' → probe PATH with a --version call.
-	const probe = Bun.spawnSync(['psql', '--version'], { stdout: 'pipe', stderr: 'pipe' });
+	const probe = Bun.spawnSync(['psql', '--version'], {
+		stdout: 'pipe',
+		stderr: 'pipe',
+		// Explicit: Bun's default env is the ORIGINAL environ (config/env.ts liveProcessEnv).
+		env: liveProcessEnv(),
+	});
 	return probe.exitCode === 0;
 }

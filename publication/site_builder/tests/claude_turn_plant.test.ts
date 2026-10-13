@@ -24,6 +24,7 @@
  *   P6. through a stand-in PID 1, the spec frame's argv carries the restriction.
  */
 
+import { withDaemonLog } from './support/daemon_log';
 import { afterEach, describe, expect, test } from 'bun:test';
 import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -42,7 +43,7 @@ import {
   requiredCliFlags,
   UNLISTED_FLAGS,
 } from '../src/drivers/claude_code';
-import { policyFromConfig } from '../src/drivers/confinement';
+import { policyFromConfig, unconfinedTurnDirs } from '../src/drivers/confinement';
 import { spawnAgentProcess } from '../src/drivers/process';
 import { __setTestDriver } from '../src/drivers/registry';
 import type { AgentEvent, SessionStartOptions } from '../src/drivers/types';
@@ -115,14 +116,24 @@ function startOptions(slug: string, home: string, prompt = 'build the page'): Se
   };
 }
 
+/** The daemon's log of the last drained turn: an error event carries a reason, its detail is logged here. */
+let lastLog = '';
+
 async function drain(events: AsyncIterable<AgentEvent>): Promise<AgentEvent[]> {
-  const out: AgentEvent[] = [];
-  for await (const event of events) out.push(event);
-  return out;
+  const { value, log } = await withDaemonLog(async () => {
+    const out: AgentEvent[] = [];
+    for await (const event of events) out.push(event);
+    return out;
+  });
+  lastLog = log;
+  return value;
 }
 
 const texts = (events: AgentEvent[]) => events.flatMap(event => (event.type === 'text' ? [event.text] : []));
-const errors = (events: AgentEvent[]) => events.flatMap(event => (event.type === 'error' ? [event.message] : []));
+/** The error events' REASONS (WIRE-MAP stream door: no error event carries prose). */
+const errors = (events: AgentEvent[]) => events.flatMap(event => (event.type === 'error' ? [event.reason] : []));
+/** Which refusal it was: the event's reason, and whether the daemon's log names `detail`. */
+const refusal = (events: AgentEvent[], detail: string) => ({ reasons: errors(events), logged: lastLog.includes(detail) });
 
 /** Run one real claude_code turn (declared `none`: a local child) against `bin`. */
 async function runTurn(slug: string, bin: string, home: string, prompt?: string) {
@@ -199,6 +210,78 @@ describe('P2 — a planted workspace and HOME are NOT loaded', () => {
   });
 });
 
+/**
+ * H7-claude (S3-HOME) — `state/` is WRITABLE CLI STATE: what the CLI loads from it is closed by the
+ * PLANT argv, not by ownership. A previous turn (the same identity) plants into the CLI's own
+ * directory (`CLAUDE_CONFIG_DIR` = `<state>/claude`) every configuration surface it has — a
+ * settings hook, user memory, a skill, an agent, a command, and an MCP server in the account
+ * file — and the next turn, through the real setup and supervisor, loads NONE of them.
+ */
+describe('H7-claude — a plant in the turn’s state/claude is not loaded by the next turn', () => {
+  async function plantState(): Promise<{ cli: string; cleanup: () => void }> {
+    const root = policyFromConfig().agentStateRoot;
+    const cli = join(unconfinedTurnDirs(root).state, 'claude');
+    const planted = ['settings.json', 'CLAUDE.md', 'skills/stateplant', 'agents/stateplant.md', 'commands/stateplant.md', '.claude.json'];
+    mkdirSync(join(cli, 'skills', 'stateplant'), { recursive: true });
+    mkdirSync(join(cli, 'agents'), { recursive: true });
+    mkdirSync(join(cli, 'commands'), { recursive: true });
+    writeFileSync(join(cli, 'settings.json'), JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: 'command', command: 'touch STATE_HOOK' }] }] } }));
+    writeFileSync(join(cli, 'CLAUDE.md'), '# STATE_MEMORY\n');
+    writeFileSync(join(cli, 'skills', 'stateplant', 'SKILL.md'), '---\nname: stateplant\n---\n');
+    writeFileSync(join(cli, 'agents', 'stateplant.md'), '---\nname: stateplant\n---\n');
+    writeFileSync(join(cli, 'commands', 'stateplant.md'), '!`touch STATE_CMD`\n');
+    writeFileSync(join(cli, '.claude.json'), JSON.stringify({ mcpServers: { stateplant: { type: 'stdio', command: '/bin/sh', args: ['-c', 'touch STATE_MCP'] } } }));
+    return { cli, cleanup: () => { for (const rel of planted) rmSync(join(cli, rel), { recursive: true, force: true }); } };
+  }
+
+  test('the next turn through the real setup: no state hook, memory, skill, agent, command or MCP server — only the daemon’s', async () => {
+    const { modern } = bins();
+    const { home } = await plantedWorkspace('zzplant-h7');
+    const { cleanup } = await plantState();
+    try {
+      const events = await runTurn('zzplant-h7', modern, home);
+      expect(errors(events)).toEqual([]);
+      const report = loadReport(texts(events));
+      expect({
+        settingsFrom: report?.settingsFrom,
+        hooks: report?.hooks,
+        mcp: (report?.mcp as Array<{ name: string }> | undefined)?.map(server => server.name),
+        memory: report?.memory,
+        extensions: report?.extensions,
+      }).toEqual({ settingsFrom: ['flag'], hooks: [], mcp: ['dedalo_publication'], memory: [], extensions: [] });
+    } finally {
+      cleanup();
+    }
+  });
+
+  test('POSITIVE CONTROL: the pre-PLANT argv, over the same CLAUDE_CONFIG_DIR, loads every state plant', async () => {
+    const { modern } = bins();
+    const { ws, home } = await plantedWorkspace('zzplant-h7c');
+    const { cli, cleanup } = await plantState();
+    try {
+      writeFileSync(join(ws, '.builder', 'mcp.json'), JSON.stringify({ mcpServers: { dedalo_publication: { type: 'http', url: 'http://x' } } }));
+      const before = [modern, '-p', 'x', '--output-format', 'stream-json', '--verbose', '--mcp-config', join(ws, '.builder', 'mcp.json')];
+      const proc = Bun.spawn(before, { cwd: ws, env: { PATH: '/usr/bin:/bin', HOME: home, CLAUDE_CONFIG_DIR: cli }, stdout: 'pipe' });
+      const out = await new Response(proc.stdout).text();
+      await proc.exited;
+      const report = loadReport(out.split('\n').filter(Boolean).flatMap(line => (JSON.parse(line).message?.content ?? []).map((block: { text: string }) => block.text)));
+      expect({
+        hook: (report?.hooks as string[]).includes('touch STATE_HOOK'),
+        mcp: (report?.mcp as Array<{ name: string }>).some(server => server.name === 'stateplant'),
+        memory: (report?.memory as string[]).includes('user:CLAUDE.md'),
+        extensions: (report?.extensions as string[]).filter(entry => entry.startsWith('user:')).sort(),
+      }).toEqual({
+        hook: true,
+        mcp: true,
+        memory: true,
+        extensions: ['user:agents:stateplant.md', 'user:commands:stateplant.md', 'user:skills:stateplant'],
+      });
+    } finally {
+      cleanup();
+    }
+  });
+});
+
 describe('P3 — the brief still reaches the turn, from the daemon', () => {
   test('AGENTS.md rides --append-system-prompt; a planted link there is refused, never read through', async () => {
     const { modern } = bins();
@@ -212,7 +295,7 @@ describe('P3 — the brief still reaches the turn, from the daemon', () => {
     symlinkSync(victim, join(ws, 'AGENTS.md'));
     const events = await runTurn('zzplant-p3', modern, home);
     expect(loadReport(texts(events))).toBeNull();
-    expect(errors(events).join(' ')).toContain('refusing to write through a symlink');
+    expect(refusal(events, 'refusing to write through a symlink')).toEqual({ reasons: ['turn_setup_failed'], logged: true });
     expect(JSON.stringify(events)).not.toContain('DAEMON_SECRET');
     // Refused BEFORE the MCP config was written.
     expect(existsSync(join(ws, '.builder', 'mcp.json'))).toBe(false);
@@ -249,7 +332,7 @@ describe('P5 — a CLI that cannot carry the restriction is refused, typed', () 
     const { ws, home } = await plantedWorkspace('zzplant-p5');
     const events = await runTurn('zzplant-p5', legacy, home);
     expect(loadReport(texts(events))).toBeNull();
-    expect(errors(events).join(' ')).toContain('--setting-sources');
+    expect(refusal(events, '--setting-sources')).toEqual({ reasons: ['confinement.agent_cli_unsupported'], logged: true });
     expect(existsSync(join(ws, '.builder', 'mcp.json'))).toBe(false);
   });
 
@@ -406,7 +489,7 @@ describe('P8 — the brief is a bounded regular file, read without blocking', ()
     const events = await runTurn('zzplant-p8a', modern, home);
     expect(Date.now() - started).toBeLessThan(5_000);
     expect(loadReport(texts(events))).toBeNull();
-    expect(errors(events).join(' ')).toContain('not a regular file');
+    expect(refusal(events, 'not a regular file')).toEqual({ reasons: ['turn_setup_failed'], logged: true });
     expect(existsSync(join(ws, '.builder', 'mcp.json'))).toBe(false);
   }, 15_000);
 
@@ -416,7 +499,7 @@ describe('P8 — the brief is a bounded regular file, read without blocking', ()
     writeFileSync(join(ws, 'AGENTS.md'), '# rules\u0000and more');
     const events = await runTurn('zzplant-p8b', modern, home);
     expect(loadReport(texts(events))).toBeNull();
-    expect(errors(events).join(' ')).toContain('NUL');
+    expect(refusal(events, 'NUL')).toEqual({ reasons: ['turn_setup_failed'], logged: true });
     expect(existsSync(join(ws, '.builder', 'mcp.json'))).toBe(false);
   });
 
@@ -443,7 +526,7 @@ describe('P9 — a turn’s SETUP is inside the turn’s deadline, and an interr
     const events = await drain(spawnAgentProcess(opts, hanging, policyFromConfig()).events);
     expect(Date.now() - started).toBeLessThan(5_000);
     expect(events.map(event => event.type)).toEqual(['error']);
-    expect(errors(events).join(' ')).toContain('timed out');
+    expect(errors(events)).toEqual(['turn_timeout']);
   }, 15_000);
 
   test('interrupt() during a setup that never returns settles — the stop is not held hostage', async () => {
@@ -453,7 +536,7 @@ describe('P9 — a turn’s SETUP is inside the turn’s deadline, and an interr
     await new Promise(resolve => setTimeout(resolve, 50));
     const stopped = await Promise.race([turn.interrupt().then(() => 'stopped'), new Promise(resolve => setTimeout(() => resolve('hung'), 3_000))]);
     expect(stopped).toBe('stopped');
-    expect(errors(await drained).join(' ')).toContain('interrupted');
+    expect(errors(await drained)).toEqual(['turn_interrupted']);
   }, 15_000);
 
   test('a setup that resolves AFTER the turn gave up has its cleanup run (no per-turn file left resident)', async () => {

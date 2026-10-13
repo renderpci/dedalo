@@ -44,3 +44,5 @@ cannot learn the endpoint exists" property is expressed
   the relay (WC-019) reports to its admin.
 - Gate: `error_report_receiver.test.ts` (unchanged in substance) plus
   `dispatch_error_native.test.ts`, which pins the two bodies EQUAL.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (the sentence naming `install.ip_denied` as the intake's IP refusal: the dispatcher throws `perm.denied` ("Error report not permitted from this address"), and the install code is deleted)

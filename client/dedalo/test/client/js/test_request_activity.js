@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global it, describe, assert */
+/*global it, describe, assert, page_globals */
 /*eslint no-undef: "error"*/
 
 /**
@@ -179,6 +179,9 @@ describe('REQUEST_ACTIVITY — data_manager feeds one page state', function () {
 										? {
 												ok: false,
 												csrf_token: 'tok-resend',
+												// the token's owner travels with it (WC-2026-10-11-session-user-beside-csrf-token):
+												// the page's own session, so the resend is the one under test
+												session_user_id: page_globals.user_id,
 												error: { code: 'auth.csrf_failed', retryable: false },
 											}
 										: { ok: true, data: {} },

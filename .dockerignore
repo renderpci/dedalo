@@ -47,6 +47,7 @@
 #   CLAUDE.md — Committed SYMLINK alias of AGENTS.md — same reason as .claude/.
 !.agents
 !.bun-sha256
+!.bun-sha256-darwin
 !.bun-version
 !.dockerignore
 !.gitattributes
@@ -141,8 +142,11 @@ probe_*.ts
 **/*/.env
 .dedalo.env
 **/*/.dedalo.env
+.dedalo-install
 deploy/certs
 deploy/nginx.simple.generated.conf
+deploy/nginx.docker.generated.conf
+compose.override.yaml
 media
 .vendor_fetch_tmp
 .agents/settings.local.json

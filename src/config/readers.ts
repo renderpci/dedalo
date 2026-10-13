@@ -23,7 +23,7 @@
 import { catalogEntry } from './catalog/index.ts';
 import type { CatalogEntry, ComputedDefault } from './catalog_types.ts';
 import { readEnv, requireEnv } from './env.ts';
-import { INSTALL_MODE } from './install_mode.ts';
+import { UNCONFIGURED } from './install_state.ts';
 
 /**
  * Does an empty value mean "unset"?
@@ -62,18 +62,20 @@ function resolve(key: string): unknown {
 }
 
 /**
- * In install mode the sentinel wins OUTRIGHT — it is not a fallback consulted after the
- * env.
+ * On an unconfigured box the sentinel wins OUTRIGHT — it is not a fallback consulted after
+ * the env. (Such a box never serves: server.ts refuses to start on it. The sentinels exist
+ * so `config` can still be IMPORTED there — by the install probe child, by `config:gen` in
+ * CI, and by the server on its way to that refusal.)
  *
- * This is subtle and it bit once. Install mode is decided by treating an EMPTY required key
- * as unset (`resolveInstallMode`), but a string reader treats empty as a VALUE (`DB_PASSWORD=`
- * means trust auth). So on a box with `ENTITY=`, "consult the env first, then fall back to
- * the sentinel" yields '' — a booted server with no entity — where the pre-catalog
- * `requireOrInstallSentinel` returned 'install'. Check install mode FIRST, exactly as it did.
+ * This is subtle and it bit once. UNCONFIGURED is decided by treating an EMPTY required key
+ * as unset, but a string reader treats empty as a VALUE (`DB_PASSWORD=` means trust auth).
+ * So on a box with `ENTITY=`, "consult the env first, then fall back to the sentinel"
+ * yields '' where the pre-catalog `requireOrInstallSentinel` returned 'install'. Check
+ * UNCONFIGURED FIRST, exactly as it did.
  */
 function requiredValue(key: string): unknown {
 	const entry = catalogEntry(key);
-	if (INSTALL_MODE && entry.installSentinel !== undefined) return entry.installSentinel;
+	if (UNCONFIGURED && entry.installSentinel !== undefined) return entry.installSentinel;
 	return requireEnv(key);
 }
 
@@ -402,12 +404,12 @@ export function requireString(key: string): string {
 /**
  * A required JSON array. Owner rule (2026-07-09): LANGUAGE definitions are install
  * configuration — a missing or malformed value must REFUSE THE BOOT, never fall back to a
- * hardcoded list. Install mode boots on the sentinel so the wizard can run and persist the
- * real value.
+ * hardcoded list. An unconfigured box reads the sentinel so `config` stays importable there
+ * (the server itself refuses to start on it — src/config/install_state.ts).
  */
 export function requireList(key: string): readonly string[] {
 	const entry = catalogEntry(key);
-	if (INSTALL_MODE && entry.installSentinel !== undefined) {
+	if (UNCONFIGURED && entry.installSentinel !== undefined) {
 		return Object.freeze([...(entry.installSentinel as readonly string[])]);
 	}
 	const value = requireEnv(key);
@@ -425,7 +427,7 @@ export function requireList(key: string): readonly string[] {
 /** Required JSON-map twin of requireList (same owner rule). */
 export function requireMap(key: string): Readonly<Record<string, string>> {
 	const entry = catalogEntry(key);
-	if (INSTALL_MODE && entry.installSentinel !== undefined) {
+	if (UNCONFIGURED && entry.installSentinel !== undefined) {
 		return Object.freeze({ ...(entry.installSentinel as Record<string, string>) });
 	}
 	const value = requireEnv(key);

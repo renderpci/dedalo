@@ -95,6 +95,32 @@ export function pgSocketProblem(socket: string | undefined): string | null {
 	return `the PostgreSQL socket '${value}' is not an absolute path — name the socket directory, e.g. /var/run/postgresql`;
 }
 
+/**
+ * What is wrong with one connection FIELD (database, user, host) that a pg
+ * client spawn would carry, or null. ONE rule for every door (CMD-01, 2026-07-28
+ * audit): a leading `-` has an OPTION's shape (psql once parsed a posted
+ * `--command=\! sh` database as one), and a CR/LF/NUL corrupts argv and env
+ * lines. A real Postgres identifier or hostname never starts with `-`. The
+ * install plan reports it up front (install_validation.ts); the spawn door
+ * refuses it again (core/install/pg_exec.ts assertSafeConnField).
+ */
+export type ConnFieldDefect = 'option' | 'control';
+
+export function connFieldDefect(value: string): ConnFieldDefect | null {
+	if (/^-/.test(value)) return 'option';
+	if (/[\r\n\0]/.test(value)) return 'control';
+	return null;
+}
+
+/** The plan's sentence for a defective connection field (`db_database: …`), or null. */
+export function connFieldProblem(name: string, value: string): string | null {
+	const defect = connFieldDefect(value);
+	if (defect === null) return null;
+	return defect === 'option'
+		? `${name}: looks like a command-line option`
+		: `${name}: contains an illegal control character`;
+}
+
 /** The Bun.sql transport options (see the header for why `hostname` mirrors `path`). */
 export function bunSqlTransportOptions(
 	transport: PgTransport,

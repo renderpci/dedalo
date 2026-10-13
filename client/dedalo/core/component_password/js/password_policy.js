@@ -6,11 +6,11 @@
  * The ONE password policy of the engine — client AND server.
  *
  * A pure module (no DOM, no imports, no globals) so the same bytes run in the
- * browser (component_password live checklist, installer root password, login
- * recovery form) and in Bun (src/core/security/password_policy.ts, which refuses
- * a non-conforming plaintext on every write door before it is hashed). One
- * evaluator, so what the user sees ticked green is exactly what the server
- * accepts. Gate: test/unit/password_policy_native.test.ts.
+ * browser (component_password live checklist, login recovery form) and in Bun
+ * (src/core/security/password_policy.ts, which refuses a non-conforming
+ * plaintext on every write door before it is hashed; the terminal installer's
+ * root password). One evaluator, so what the user sees ticked green is exactly
+ * what the server accepts. Gate: test/unit/password_policy_native.test.ts.
  *
  * Length is counted in code points (not UTF-16 units) and the character classes
  * are Unicode-aware: a heritage institution's users type ñ, ç, ü, Ω…

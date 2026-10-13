@@ -202,6 +202,11 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'the component_relation_children write-through (WC-2026-10-02): its writes are HARD-BOUND to the child section’s component_relation_parent (and that section’s section_map order number) — the users section declares no parent component (relation_children_write_through_native asserts getParentTipo(dd128) is null), so no dd128 component is reachable. Every child is still asked of authorizeRecordAccess (write, level 2, door `save`, the dd128-aware pair + scope) before any write.',
 	},
+	'src/core/relations/parent.ts': {
+		verdict: 'not-dd128',
+		reason:
+			'the thesaurus tree mutators (persistTreeKeys, CLOSURE_PLAN Step 5): every key they write is HARD-BOUND to a section’s component_relation_parent (getParentTipo), its section_map order number, or add_child’s section_map thesaurus defaults — the users section declares no parent component (relation_children_write_through_native asserts getParentTipo(dd128) is null), so no dd128 component is reachable. Their one caller, ts_object/ts_api.ts, gates at the section level (its own row).',
+	},
 	'src/core/relations/children_orphan_sweep.ts': {
 		verdict: 'system',
 		reason:
@@ -299,11 +304,6 @@ const CENSUS: Record<string, CensusRow> = {
 		reason:
 			'writes its own hard-bound stats section as userId -1; the maintenance area is already global-admin/developer gated.',
 	},
-	'src/core/ontology/engine_ontology.ts': {
-		verdict: 'system',
-		reason:
-			'the ENGINE-OWNED ontology door: writes only `ddengine0` matrix_ontology source records (persistRecordColumns, actor -1) from the repo-owned engine_ontology.json — refused unless every node is under the engine TLD — at boot, install and suite setup. No request, no principal.',
-	},
 	'src/core/area_maintenance/widgets/export_hierarchy.ts': {
 		verdict: 'system',
 		reason: 'maintenance-area hierarchy export; hard-bound hierarchy/lang sections.',
@@ -313,7 +313,7 @@ const CENSUS: Record<string, CensusRow> = {
 	'src/core/security/ai_spend.ts': {
 		verdict: 'not-dd128',
 		reason:
-			'the AI spend ledger: its only writes are the HARD-BOUND ledger section (AI_SPEND_LEDGER.section, `ddengine1` — createSectionRecord for the day, persistRecordKeys for its user/day/counter components); the caller supplies a principal and amounts, never a section or a component, so no dd128 component is reachable through it.',
+			'the AI spend ledger: its only writes are the HARD-BOUND ledger section (AI_SPEND_LEDGER.section, the master-defined `dd660` — createSectionRecord for the day, persistRecordKeys for its user/day/counter components); the caller supplies a principal and amounts, never a section or a component, so no dd128 component is reachable through it.',
 	},
 	'src/core/security/section_permissions.ts': {
 		verdict: 'not-dd128',
@@ -799,8 +799,6 @@ const REACH_EXEMPT: Record<string, string> = {
 		'its only caller-owned delete is applyDataframeDeletePolicy’s `delete_target` policy, which empties (never removes) the dataframe FRAME TARGET records a dd490 pairing addresses (an ontology-declared frame section, never the users section), after asking the write grant on that section — the slot-policy applier every delete door calls (removeDataframeDataById in relations/save.ts, the direct frame remove in save_component.ts, both record-delete modes in delete_record.ts).',
 	'src/core/section/record/delete_record.ts':
 		'the delete ENGINE — it DEFINES both primitives, holds no principal and no component tipo, and its own docblock puts authorization on the caller. Putting the seam here would revoke on an ontology delete too.',
-	'src/core/ontology/engine_ontology.ts':
-		'its only caller-owned delete is pruneRetired: deleteSectionRecord on the HARD-BOUND engine main section MAIN_SECTION_TIPO (ddengine0, never the users section), removing the source record of a node the shipped engine_ontology.json lists as `retired` — assertRetiredNode checks the tipo is an engine-owned, non-main, no-longer-declared ddengine tipo before any write.',
 	'src/core/test_data/synthetic_hierarchy_fixture.ts':
 		'a repo-owned test fixture builder that deletes its own scratch hierarchy records under the test-database marker guard; it names no users section.',
 	'tools/tool_hierarchy/server/tool_hierarchy.ts':

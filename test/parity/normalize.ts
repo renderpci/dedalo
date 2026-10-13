@@ -13,9 +13,13 @@ import { join } from 'node:path';
  * Top-level fields removed before diffing, with justification:
  *
  * - csrf_token       : per-session random token; differs on every session by design.
+ * - session_user_id  : the user that csrf_token belongs to, appended beside it
+ *                      (WC-2026-10-11-session-user-beside-csrf-token) — part of the
+ *                      token, not of the data contract; stripped with it. Its own
+ *                      contract is gated by test/unit/csrf_handshake.test.ts.
  * - dedalo_last_error: transient server-side error surface, not part of the data contract.
  */
-const VOLATILE_TOP_LEVEL_FIELDS = ['csrf_token', 'dedalo_last_error'] as const;
+const VOLATILE_TOP_LEVEL_FIELDS = ['csrf_token', 'session_user_id', 'dedalo_last_error'] as const;
 
 /**
  * Keys removed RECURSIVELY at any depth, with justification:

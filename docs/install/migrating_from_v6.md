@@ -26,7 +26,7 @@ The transform ships as a **self-contained maintenance package** for v6, `close_v
 
 ### Backups
 
-Four stores, with v6 paths — do not take them from the v7 backup list, whose fourth store (`../private/`) and `MEDIA_PATH` do not exist on a v6 host. [Production §13](production.md#13-backups) describes the equivalent set on v7 only.
+Four stores, with v6 paths — do not take them from the v7 backup list, whose fourth store (`../private/`) and `MEDIA_PATH` do not exist on a v6 host. [Backup](../management/backup.md) describes the equivalent set on v7 only.
 
 1. The **matrix database**: `pg_dump --host localhost --username <v6 user> --format custom --file dedalo_v6.custom.backup <v6 db>`.
 2. The **media root** — the directory holding `image/ av/ pdf/ 3d/ svg/`.
@@ -56,7 +56,7 @@ dropdb dedalo_restore_test
 | Maintenance mode | **on** before anything that writes | [maintenance status](../management/maintenance_status.md) |
 | Dump tool on the **v6** host | `pg_dump --version` not older than the v6 server's `SELECT version();`, and not older than the v7 target's major | the preflight fails hard if the dump cannot run |
 | Server on the **v6** host | the PostgreSQL that already serves v6 — the transform runs there, in place | — |
-| Server on the **v7** host | PostgreSQL 18 plus the client tools | [prerequisites](index.md#prerequisites-at-a-glance) |
+| Server on the **v7** host | PostgreSQL 18 plus the client tools | [Install by hand › `host_packages`](manual_install.md#manual-host_packages) |
 | Free disk on the **v6** host | at least 2× the database size plus 20% — the deep preflight and the migrate run each take a full backup | `df -h <backup dir>` against `SELECT pg_size_pretty(pg_database_size(current_database()));` |
 
 If you cannot install PostgreSQL 18 client tools on the v6 host, dump remotely from the v7 host instead: `pg_dump --host <v6 host> …`.
@@ -93,13 +93,13 @@ The package is `close_v6_prepare_v7/` in the Dédalo **v6** source tree, under `
 
 ### Prepare the v7 host first
 
-Follow [production install](production.md) steps **1 through 7**: service user, OS packages, media toolchain, PostgreSQL 18, the pinned Bun runtime, the code, and the empty database and role. **Stop before step 8 (run the installer)** — a migrated instance never runs the installer, see [6.1](#61-do-not-run-the-installer). Steps 10 onward (systemd, reverse proxy, TLS) come after Phase D verification, as [Phase E](#8-phase-e-run-it-as-a-service).
+A migrated instance is **not an installer instance**: the installer only installs into an empty database, and a migrated database is not one (see [6.1](#61-do-not-run-the-installer)). Prepare the host by hand instead, with [Install by hand](manual_install.md#a-migrated-v6-host): the packages, the service user and its directories, the pinned Bun runtime and the release, and the empty database and role — its steps from [`host_packages`](manual_install.md#manual-host_packages) to [`host_database`](manual_install.md#manual-host_database). Its engine step is not run: the migration fills the database. The units and the web server come after Phase D verification, as [Phase E](#8-phase-e-run-it-as-a-service).
 
-Step 1 of that guide creates a service user. Which of the two cases you are in decides whether you run it as written:
+That page creates a service user first. Which of the two cases you are in decides whether you do so:
 
-| Your case | Step 1 |
+| Your case | The service user |
 | --- | --- |
-| **A new v7 host** — a fresh machine, nothing of v6 on it | Run it as written: `adduser --system --group …` creates the user *and* a group of the same name. |
+| **A new v7 host** — a fresh machine, nothing of v6 on it | Run it as written: `useradd --system --user-group …` creates the user *and* a group of the same name. |
 | **An in-place upgrade** — v7 goes on the box that runs v6 | **Adopt the existing user.** Do not create a second one: the home, the media tree and the backups already belong to it. What must change is its **group** — see [Phase E](#8-phase-e-run-it-as-a-service). |
 
 From here on, **the service user** means whichever of the two you have.
@@ -342,7 +342,7 @@ If the result is wrong, nothing is destroyed: the previous file is at `.env.bak.
     The full v6 → v7 settings map, key by key, is [what changed in v7](../config/whats_changed_v7.md).
 
 !!! warning "Retired keys refuse the boot"
-    A v6 `.env` carried over may still name a key v7 has retired. The server names the key and the file and refuses to start until you rename the line — the full list is in [upgrading](upgrading.md#5-retired-configuration-keys).
+    A v6 `.env` carried over may still name a key v7 has retired. The server names the key and the file and refuses to start until you rename the line — the full list is in [upgrading](upgrading.md#retired-configuration-keys).
 
 ## 6. Phase D — first v7 boot
 
@@ -352,12 +352,12 @@ If the result is wrong, nothing is destroyed: the previous file is at `.env.bak.
     Pointed at a migrated database it stops at the seed step:
 
     ```text
-    Database is not empty (matrix_users already exists) — restore refused
+    database '<db>' is not empty (<n> objects, e.g. …) — the installer only installs into an empty database
     ```
 
-    There is no flag to skip the seed — you skipped [production](production.md) step 8 on purpose. The migrated path is: migrate the config, migrate the passwords, then **start the server**, in that order. Nothing else.
+    There is no flag to skip the seed — a migrated host never runs the installer, on purpose. The migrated path is: migrate the config, migrate the passwords, then **start the server**, in that order. Nothing else.
 
-The install wizard will not appear either, and that is deliberate: the install surface is reachable only on an unconfigured box or mid-install. A migrated instance has its database keys set, so the normal login serves.
+Nothing asks you to install, either: there is no install page. A migrated instance has its database keys set, so the server boots and the normal login serves. (A server that finds none of the four keys refuses to start — exit 78 — and says which file it read.)
 
 ### 6.2 Migrate the passwords
 
@@ -447,7 +447,7 @@ Expected: HTTP 200 with `db` reporting `ok`. If you run on a TCP port instead of
 
 ## 8. Phase E — run it as a service
 
-Phase D started the engine by hand, as the service user. Phase E makes that permanent: **one supervised service per install**, reachable by the web server. On a new host this is [production](production.md) steps 10–11 and nothing else. On an **in-place upgrade** there is one more thing to do first, because the way the engine runs changed — and with it, who must own what.
+Phase D started the engine by hand, as the service user. Phase E makes that permanent: **one supervised service per install**, reachable by the web server. On a new host this is [Install by hand](manual_install.md), from [`host_units`](manual_install.md#manual-host_units) to [`host_backup_verify`](manual_install.md#manual-host_backup_verify), and nothing else. On an **in-place upgrade** there is one more thing to do first, because the way the engine runs changed — and with it, who must own what.
 
 ### 8.1 What changed: the engine is no longer part of the web server
 
@@ -502,12 +502,12 @@ Once the engine is the only writer, the group-write bits the v6 layout needed ca
 
 ### 8.3 The unit
 
-Install the reference units and substitute the placeholders as described in [production step 10](production.md#10-run-the-engine-under-systemd). Two points that page states for a fresh install and that an upgraded host gets wrong:
+Install the template units and this instance's drop-ins as described in [Install by hand › `host_units`](manual_install.md#manual-host_units). Two points that an upgraded host gets wrong:
 
-- `User=` and `Group=` are **two independent values**. The guide's `DEDALO_USER` placeholder fills both because on a fresh host they are the same string; here they need not be, and `Group=` must name a group that already exists (`getent group <name>`).
-- The socket must live under the unit's `RuntimeDirectory` — `/run/dedalo/` for a single install. `SERVER_UNIX_SOCKET` in `../private/.env` must match it.
+- `User=` and `Group=` are **two independent values**, and the drop-in names both. On an upgraded host they need not be the same string, and `Group=` must name a group that already exists (`getent group <name>`).
+- The socket must live under the unit's `RuntimeDirectory` — `/run/dedalo-<i>/` for the instance `<i>`. `SERVER_UNIX_SOCKET` in `../private/.env` must be `/run/dedalo-<i>/dedalo_ts.sock`.
 
-Hosting several domains on this box? Do not copy the unit per domain by hand — [multiple instances](multi_instance.md) covers the template unit, the per-instance identity, and what else must be unique.
+Hosting several domains on this box? [Several instances by hand](manual_install.md#several-instances-by-hand) covers the per-instance identity, and [several instances](multi_instance.md) what else must be unique.
 
 ### 8.4 The web server's modules changed too
 
@@ -538,8 +538,8 @@ sudo systemctl restart apache2       # LoadModule needs a restart, not a reload
     The vhost's `Header always set …` lines are a **configuration error** when
     `mod_headers` is absent — Apache refuses to start, rather than skipping them.
 
-Then write the vhost itself: [reverse proxy and TLS](reverse_proxy.md) for one
-domain, [multiple instances](multi_instance.md) if this host serves several. Point
+Then write the vhost itself: [a site written by hand](reverse_proxy.md#a-site-written-by-hand),
+one per domain if this host serves several. Point
 every path at **this** install's socket, media and clone — a v6 vhost's `Alias`
 and `DocumentRoot` lines point into the old tree and cannot be reused as they are.
 
@@ -547,7 +547,8 @@ and `DocumentRoot` lines point into the old tree and cannot be reused as they ar
 
 ```shell
 systemctl show dedalo-ts -p User -p Group -p WorkingDirectory
-ls -l /run/dedalo/dedalo_ts.sock          # srwxrwx--- <service user> <service group>
+ls -l /run/dedalo/dedalo_ts.sock          # srw-rw-rw- <service user> <service group>
+ls -ld /run/dedalo                        # drwxr-x--- <service user> <service group> — what guards the socket
 sudo -u www-data test -w /run/dedalo/dedalo_ts.sock && echo "proxy can connect"
 ```
 

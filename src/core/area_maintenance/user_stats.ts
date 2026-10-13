@@ -1,9 +1,9 @@
 /**
  * User activity statistics (PHP diffusion/class.diffusion_section_stats.php):
  * per-user, per-day aggregates of the matrix_activity audit log stored as
- * dd1521 records in matrix_stats — what (action-code counts mapped to
- * ontology terms), where (section tipos touched), when (hour histogram) and
- * publish (per-section publish counts from dd1223 events).
+ * dd1521 records in matrix_stats — what (action-code counts keyed by
+ * action, labelled by the labels engine), where (section tipos touched), when
+ * (hour histogram) and publish (per-section publish counts from dd1223 events).
  *
  * The rebuild flow (maintenance widget database_info.rebuild_user_stats,
  * rebuildUserActivityStats) recomputes every day from the surviving
@@ -30,25 +30,109 @@ const ACT_WHERE = 'dd546';
 const ACT_WHEN = 'dd547';
 const ACT_DATA = 'dd551';
 
-/** Activity what-code → ontology term tipo (PHP build_what $what_map). */
-const WHAT_MAP: Record<string, string> = {
-	'1': 'dd696', // login
-	'2': 'dd697', // logout
-	'3': 'dd695', // new
-	'4': 'dd729', // delete
-	'5': 'dd700', // save
-	'6': 'dd694', // edit
-	'7': 'dd693', // list
-	'8': 'dd699', // search
-	'9': 'dd1090', // upload
-	'10': 'dd1080', // download
-	'11': 'dd1094', // upload complete
-	'12': 'dd1095', // delete file
-	'13': 'dd1092', // recover section
-	'14': 'dd1091', // recover component
-	'15': 'dd1098', // statistics
-	'16': 'dd1081', // new file version
-};
+/** Freeze the table AND each entry: an exported table is read-only all the way down. */
+function freezeWhatActions(
+	table: Record<string, WhatAction>,
+): Readonly<Record<string, WhatAction>> {
+	for (const entry of Object.values(table)) Object.freeze(entry);
+	return Object.freeze(table);
+}
+
+/** One activity action: the key stored in dd1523 and sent on the wire, and its UI label key. */
+export interface WhatAction {
+	readonly action: string;
+	readonly labelKey: string;
+}
+
+/**
+ * Activity what-code (dd42 / matrix_activity dd545) → action (PHP build_what
+ * $what_map, which mapped to label TIPOS). CLOSED: an unlisted code is dropped.
+ * The text comes from the labels engine (src/core/labels/, getLabels) — never
+ * from the ontology: the v7 master reuses the tipos of retired model='label'
+ * nodes (dd660-669, dd692-699 are AI-usage nodes now), so a label tipo resolved
+ * through termByTipo would serve whatever node owns that tipo today.
+ * Wire shape: WC-2026-10-12-user-activity-what-labels. Exported READ-ONLY
+ * (table and every entry frozen) for the gate that pins every labelKey to a
+ * src/core/labels/master.json key (user_stats_merge_native T1-T3).
+ */
+export const WHAT_ACTIONS: Readonly<Record<string, WhatAction>> = freezeWhatActions({
+	'1': { action: 'login', labelKey: 'activity_login' },
+	'2': { action: 'logout', labelKey: 'activity_logout' },
+	'3': { action: 'new', labelKey: 'new' },
+	'4': { action: 'delete', labelKey: 'delete' },
+	'5': { action: 'save', labelKey: 'save' },
+	'6': { action: 'edit', labelKey: 'edit' },
+	'7': { action: 'list', labelKey: 'list' },
+	'8': { action: 'search', labelKey: 'search' },
+	'9': { action: 'upload', labelKey: 'upload' },
+	'10': { action: 'download', labelKey: 'download' },
+	'11': { action: 'upload_complete', labelKey: 'activity_upload_complete' },
+	'12': { action: 'delete_file', labelKey: 'delete_file' },
+	'13': { action: 'recover_section', labelKey: 'activity_recover_section' },
+	'14': { action: 'recover_component', labelKey: 'activity_recover_component' },
+	'15': { action: 'statistics', labelKey: 'activity_statistics' },
+	'16': { action: 'new_file_version', labelKey: 'activity_new_file_version' },
+});
+
+/**
+ * READ-ONLY legacy map: the label tipo a PHP-era dd1521 row stored as a what
+ * item's `tipo` → its action. Used ONLY to fold those stored rows; these tipos
+ * are ids in old data, never ontology lookups (see WHAT_ACTIONS). An unlisted
+ * legacy tipo is kept under its raw key — never dropped, never resolved.
+ * Exported READ-ONLY (frozen) for the same gate: its actions equal
+ * WHAT_ACTIONS' action set exactly.
+ */
+export const LEGACY_WHAT_TIPOS: Readonly<Record<string, string>> = Object.freeze({
+	dd696: 'login',
+	dd697: 'logout',
+	dd695: 'new',
+	dd729: 'delete',
+	dd700: 'save',
+	dd694: 'edit',
+	dd693: 'list',
+	dd699: 'search',
+	dd1090: 'upload',
+	dd1080: 'download',
+	dd1094: 'upload_complete',
+	dd1095: 'delete_file',
+	dd1092: 'recover_section',
+	dd1091: 'recover_component',
+	dd1098: 'statistics',
+	dd1081: 'new_file_version',
+});
+
+/** action → label key (derived from WHAT_ACTIONS, the one table). */
+const WHAT_LABEL_KEYS: ReadonlyMap<string, string> = new Map(
+	Object.values(WHAT_ACTIONS).map(({ action, labelKey }) => [action, labelKey]),
+);
+
+/**
+ * The action key of a stored/raw 'what' item: `key` (v7 rows), else a legacy
+ * `tipo` mapped through LEGACY_WHAT_TIPOS (an unknown one stays raw). '' when
+ * the item carries neither.
+ */
+function whatItemKey(item: { key?: unknown; tipo?: unknown }): string {
+	if (typeof item.key === 'string' && item.key !== '') return item.key;
+	const tipo = typeof item.tipo === 'string' ? item.tipo : '';
+	return Object.hasOwn(LEGACY_WHAT_TIPOS, tipo) ? (LEGACY_WHAT_TIPOS[tipo] as string) : tipo;
+}
+
+/**
+ * The display text of an action key in one lang's label dictionary — the
+ * action itself when the key is unknown (a raw legacy tipo) or the lang has
+ * no text for it.
+ */
+function whatLabel(action: string, labels: Record<string, string>): string {
+	const labelKey = WHAT_LABEL_KEYS.get(action);
+	return (labelKey !== undefined ? labels[labelKey] : undefined) ?? action;
+}
+
+/** A what-key → label resolver for one lang, over the labels engine (lazy import: no ontology edge). */
+async function whatLabelResolver(lang: string): Promise<(action: string) => Promise<string>> {
+	const { getLabels } = await import('../labels/catalog.ts');
+	const labels = await getLabels(lang);
+	return async (action) => whatLabel(action, labels);
+}
 
 /** 'where' keys the aggregation ignores (tool/internal areas). */
 const WHERE_SKIP: ReadonlySet<string> = new Set(['dd271', 'dd1224', 'dd1225']);
@@ -139,7 +223,7 @@ const CURSOR_KIND = '__cursor__';
 interface ActivityTally {
 	day: string;
 	kind: 'what' | 'where' | 'when' | 'publish';
-	/** Dimension-raw: the what CODE (not yet WHAT_MAP'd), the where/publish tipo, the hour. */
+	/** Dimension-raw: the what CODE (not yet WHAT_ACTIONS-mapped), the where/publish tipo, the hour. */
 	key: string;
 	n: number;
 	/** Lowest contributing matrix_activity id — the first-encounter order carrier. */
@@ -160,7 +244,7 @@ interface ActivityTally {
  *
  * Only the two extraction rules that DECIDE which dimension a row lands in live
  * in the SQL — the `where` value's array unwrap, and the dd1223 → publish
- * routing with its top_tipo/section_tipo preference. WHAT_MAP and WHERE_SKIP
+ * routing with its top_tipo/section_tipo preference. WHAT_ACTIONS and WHERE_SKIP
  * stay in TS (below), so the mapping tables have exactly one home.
  *
  * `minId` per group is what preserves the totals array ORDER: the payload is
@@ -279,7 +363,7 @@ export async function aggregateActivity(
 
 /**
  * Fold tallies into ONE dimension set, applying the two TS-side mapping tables:
- * WHAT_MAP (an unmapped action code is dropped, as PHP build_what drops it) and
+ * WHAT_ACTIONS (an unmapped action code is dropped, as PHP build_what drops it) and
  * WHERE_SKIP (tool areas leave the `where` histogram but still count in `what`
  * and `when` — the same asymmetry the row loop had).
  *
@@ -298,8 +382,9 @@ function foldTallies(tallies: ActivityTally[]): DayGroup {
 	};
 	for (const tally of [...tallies].sort((a, b) => a.minId - b.minId)) {
 		if (tally.kind === 'what') {
-			const tipo = WHAT_MAP[tally.key];
-			if (tipo !== undefined) add(group.what, tipo, tally.n);
+			if (Object.hasOwn(WHAT_ACTIONS, tally.key)) {
+				add(group.what, (WHAT_ACTIONS[tally.key] as WhatAction).action, tally.n);
+			}
 		} else if (tally.kind === 'where') {
 			if (!WHERE_SKIP.has(tally.key)) add(group.where, tally.key, tally.n);
 		} else if (tally.kind === 'when') {
@@ -420,10 +505,6 @@ export async function updateUserActivityStats(
 		return response;
 	}
 
-	const { termByTipo } = await import('../ontology/labels.ts');
-	const { currentApplicationLang } = await import('../resolve/request_lang.ts');
-	const appLang = currentApplicationLang();
-
 	const updatedDays: { user: number; date: string }[] = [];
 	for (const day of [...dayGroups.keys()].sort()) {
 		if (maxDays > 0 && updatedDays.length >= maxDays) break;
@@ -441,7 +522,7 @@ export async function updateUserActivityStats(
 		)) as unknown[];
 		if (exists.length > 0) continue;
 
-		const totals = await dayTotals(dayGroups.get(day) as DayGroup, termByTipo, appLang);
+		const totals = dayTotals(dayGroups.get(day) as DayGroup);
 		if (totals.length === 0) continue;
 
 		await saveUserActivity(totals, userId, 'day', year, month, dayNum);
@@ -468,15 +549,15 @@ function groupTalliesByDay(tallies: ActivityTally[]): Map<string, DayGroup> {
 	return dayGroups;
 }
 
-/** One day's dd1523 totals payload — what (labelled), where, when, publish, in that order. */
-async function dayTotals(
-	group: DayGroup,
-	termByTipo: (tipo: string, lang: string) => Promise<string | null>,
-	appLang: string,
-): Promise<Record<string, unknown>[]> {
+/**
+ * One day's dd1523 totals payload — what, where, when, publish, in that order.
+ * A what item stores its action `key` only: no tipo, no baked label (the text
+ * is resolved per reader lang from the labels engine at read time).
+ */
+function dayTotals(group: DayGroup): Record<string, unknown>[] {
 	const totals: Record<string, unknown>[] = [];
-	for (const [tipo, value] of group.what) {
-		totals.push({ type: 'what', tipo, value, label: await termByTipo(tipo, appLang) });
+	for (const [key, value] of group.what) {
+		totals.push({ type: 'what', key, value });
 	}
 	for (const [tipo, value] of group.where) {
 		totals.push({ type: 'where', tipo, value });
@@ -500,7 +581,7 @@ async function dayTotals(
  * created was skipped silently.
  *
  * Now the long part — the paged aggregation of the user's WHOLE activity log up
- * to yesterday and the label lookups — runs first, read-only and outside any
+ * to yesterday and the day-totals planning — runs first, read-only and outside any
  * transaction (it may take minutes on a multi-million-row actor; a transaction
  * held open that long would pin the vacuum horizon). Then ONE short transaction
  * DELETEs the user's aggregates and saves every day; a failure rolls the whole
@@ -527,12 +608,9 @@ export async function rebuildUserActivityStats(
 		pageRows,
 	);
 	const dayGroups = groupTalliesByDay(tallies);
-	const { termByTipo } = await import('../ontology/labels.ts');
-	const { currentApplicationLang } = await import('../resolve/request_lang.ts');
-	const appLang = currentApplicationLang();
 	const planned: { day: string; totals: Record<string, unknown>[] }[] = [];
 	for (const day of [...dayGroups.keys()].sort()) {
-		const totals = await dayTotals(dayGroups.get(day) as DayGroup, termByTipo, appLang);
+		const totals = dayTotals(dayGroups.get(day) as DayGroup);
 		if (totals.length > 0) planned.push({ day, totals });
 	}
 
@@ -571,9 +649,12 @@ export interface CanonicalTotals {
 	publish: CanonicalEntry[];
 }
 
-/** One verticalized raw activity item (PHP get_interval_raw_activity_data). */
+/**
+ * One verticalized raw activity item (PHP get_interval_raw_activity_data). A
+ * what item carries the action KEY (WHAT_ACTIONS) — never a label tipo.
+ */
 export type RawActivityItem =
-	| { type: 'what'; tipo: string; value: number; label: string | null }
+	| { type: 'what'; key: string; value: number; label: string | null }
 	| { type: 'where' | 'publish'; tipo: string; value: number }
 	| { type: 'when'; hour: string | number; value: number };
 
@@ -587,7 +668,7 @@ export function virtualDateSeconds(year: number, month: number, day: number): nu
 /**
  * PHP get_interval_raw_activity_data: one flat pass over the user's
  * matrix_activity rows in [dateIn, dateOut) (exclusive upper bound),
- * verticalized to {type, tipo|hour, value} items — the same what-map /
+ * verticalized to {type, key|tipo|hour, value} items — the same what-map /
  * where-skip / dd1223→publish routing as the per-day aggregation above.
  */
 export async function getIntervalRawActivityData(
@@ -602,12 +683,11 @@ export async function getIntervalRawActivityData(
 	const { tallies } = await aggregateActivity(userId, dateIn, dateOut);
 	const { what, where, when, publish } = foldTallies(tallies);
 
-	const { termByTipo } = await import('../ontology/labels.ts');
 	const { currentApplicationLang } = await import('../resolve/request_lang.ts');
-	const appLang = currentApplicationLang();
+	const labelOf = await whatLabelResolver(currentApplicationLang());
 	const items: RawActivityItem[] = [];
-	for (const [tipo, value] of what) {
-		items.push({ type: 'what', tipo, value, label: await termByTipo(tipo, appLang) });
+	for (const [key, value] of what) {
+		items.push({ type: 'what', key, value, label: await labelOf(key) });
 	}
 	for (const [tipo, value] of where) items.push({ type: 'where', tipo, value });
 	for (const [hour, value] of when) items.push({ type: 'when', hour, value });
@@ -704,11 +784,17 @@ export async function crossUsersRangeData(
 	// decision stays with the statement that produced the rows.
 	if (rows.length === 0) return null;
 
+	// termByTipo resolves where/publish SECTION tipos only (real nodes), in the
+	// data lang; what keys go to the labels engine (see WHAT_ACTIONS) in the
+	// APPLICATION lang — the same lang the raw tail uses, so one chart never
+	// mixes two languages.
 	const { termByTipo } = await import('../ontology/labels.ts');
+	const { currentApplicationLang } = await import('../resolve/request_lang.ts');
 	return foldStatsRows(
 		rows,
 		(tipo) => termByTipo(tipo, lang),
 		(userKey) => resolveUserName(userKey, lang),
+		await whatLabelResolver(currentApplicationLang()),
 	);
 }
 
@@ -771,28 +857,42 @@ export interface StatsRow {
 /**
  * The reduction half of `crossUsersRangeData` — TEST SEAM (precedent in this
  * file: `aggregateActivity`'s `pageRows`). Takes the already-fetched stats rows
- * plus the two label resolvers as injected functions, so the whole fold is
+ * plus the three label resolvers as injected functions, so the whole fold is
  * reachable without a database; the SQL stays in `crossUsersRangeData` because
- * `user_stats.ts` is the sole declared owner of `matrix_stats` SQL
- * (sql_confinement_tripwire).
+ * `user_stats.ts` is the sole declared owner of LITERAL `matrix_stats` SQL
+ * (sql_confinement_tripwire). The table is shared: the AI spend ledger
+ * (security/ai_spend.ts, section dd660) reaches it through the ontology-resolved
+ * name, every statement there scoped to `section_tipo = dd660`; every statement
+ * here to `section_tipo = dd1521` or to a `relation @>` on the dd1521 user key
+ * (UA_USER), which no dd660 row carries — disjoint rows.
  *
- * Memoisation of BOTH resolvers lives here, not in the injected functions: a
- * tipo repeated across a year of rows must cost one lookup, not one per row.
+ * `resolveTerm` labels where/publish SECTION tipos; `resolveWhat` labels what
+ * ACTION keys (the labels engine — never the ontology, see WHAT_ACTIONS). A
+ * what item is read by `key` (v7 rows) or by its legacy `tipo` (PHP-era rows,
+ * mapped through LEGACY_WHAT_TIPOS), so both generations fold into one entry.
+ *
+ * Memoisation of ALL resolvers lives here, not in the injected functions: a
+ * key repeated across a year of rows must cost one lookup, not one per row.
  */
 export async function foldStatsRows(
 	rows: StatsRow[],
 	resolveTerm: (tipo: string) => Promise<string | null>,
 	resolveUser: (userKey: string) => Promise<string | null>,
+	resolveWhat: (action: string) => Promise<string | null>,
 ): Promise<CanonicalTotals> {
-	const termCache = new Map<string, string | null>();
-	const cachedTerm = async (tipo: string): Promise<string | null> => {
-		let label = termCache.get(tipo);
-		if (label === undefined) {
-			label = await resolveTerm(tipo);
-			termCache.set(tipo, label);
-		}
-		return label;
+	const memo = (resolve: (key: string) => Promise<string | null>) => {
+		const cache = new Map<string, string | null>();
+		return async (key: string): Promise<string | null> => {
+			let label = cache.get(key);
+			if (label === undefined) {
+				label = await resolve(key);
+				cache.set(key, label);
+			}
+			return label;
+		};
 	};
+	const cachedTerm = memo(resolveTerm);
+	const cachedWhat = memo(resolveWhat);
 
 	const who = new Map<string, CanonicalEntry>();
 	const what = new Map<string, CanonicalEntry>();
@@ -808,6 +908,7 @@ export async function foldStatsRows(
 		const wrapped = Array.isArray(rawTotals) ? rawTotals[0]?.value : rawTotals?.value;
 		const totals = (Array.isArray(wrapped) ? wrapped.flat() : []) as {
 			type?: string;
+			key?: unknown;
 			tipo?: string;
 			hour?: unknown;
 			value?: unknown;
@@ -840,13 +941,14 @@ export async function foldStatsRows(
 			const value = Number(item?.value ?? 0);
 			if (type === 'what' || type === 'where' || type === 'publish') {
 				if (type === 'where') whereActionsTotal += value;
-				const key = String(item.tipo ?? '');
+				const key = type === 'what' ? whatItemKey(item) : String(item.tipo ?? '');
 				const target = type === 'what' ? what : type === 'where' ? where : publish;
 				const existing = target.get(key);
 				if (existing !== undefined) {
 					existing.value += value;
 				} else {
-					target.set(key, { key, label: await cachedTerm(key), value });
+					const label = type === 'what' ? await cachedWhat(key) : await cachedTerm(key);
+					target.set(key, { key, label, value });
 				}
 			} else if (type === 'when') {
 				const hourKey = Number(item.hour);
@@ -887,9 +989,21 @@ export async function foldStatsRows(
 }
 
 /**
+ * The index key of a raw what/where/publish item — a what item's action
+ * (whatItemKey), a where/publish item's tipo; '' (skip) when it has none.
+ */
+function rawItemKey(item: RawActivityItem): string {
+	if (item.type === 'what') return whatItemKey(item as { key?: unknown; tipo?: unknown });
+	const tipo = (item as { tipo?: unknown }).tipo;
+	return typeof tipo === 'string' ? tipo : '';
+}
+
+/**
  * PHP merge_raw_into_canonical: fold raw items into the canonical totals —
  * fresh empty structure when canonical is null; `when` re-densified to the
- * 24-slot hour histogram; new tipo keys resolve labels (raw `label` wins).
+ * 24-slot hour histogram; new keys resolve labels (raw `label` wins) — what
+ * action keys through the labels engine (a legacy `tipo` is mapped via
+ * LEGACY_WHAT_TIPOS, never resolved), where/publish tipos through termByTipo.
  */
 export async function mergeRawIntoCanonical(
 	canonical: CanonicalTotals | null,
@@ -932,8 +1046,35 @@ export async function mergeRawIntoCanonical(
 		}
 	}
 
+	// what labels in the APPLICATION lang (= the raw tail's, getIntervalRawActivityData);
+	// `lang` (data lang) stays for the where/publish section terms.
 	const { termByTipo } = await import('../ontology/labels.ts');
-	const termCache = new Map<string, string | null>();
+	const { currentApplicationLang } = await import('../resolve/request_lang.ts');
+	const resolveWhat = await whatLabelResolver(currentApplicationLang());
+	const labelCache: Record<'what' | 'where' | 'publish', Map<string, string | null>> = {
+		what: new Map(),
+		where: new Map(),
+		publish: new Map(),
+	};
+	/** A new key's label: the raw `label` wins, else the dimension's resolver (memoised per dimension). */
+	const labelOf = async (
+		dim: 'what' | 'where' | 'publish',
+		key: string,
+		item: RawActivityItem,
+	): Promise<string | null> => {
+		const cache = labelCache[dim];
+		let label = cache.get(key);
+		if (label === undefined) {
+			label =
+				'label' in item && typeof item.label === 'string'
+					? item.label
+					: dim === 'what'
+						? await resolveWhat(key)
+						: await termByTipo(key, lang);
+			cache.set(key, label);
+		}
+		return label;
+	};
 
 	for (const item of rawItems) {
 		if (item === null || typeof item !== 'object') continue;
@@ -955,21 +1096,13 @@ export async function mergeRawIntoCanonical(
 			continue;
 		}
 		if (item.type === 'what' || item.type === 'where' || item.type === 'publish') {
-			const key = item.tipo;
-			if (typeof key !== 'string' || key === '') continue;
+			const key = rawItemKey(item);
+			if (key === '') continue;
 			const existing = index[item.type].get(key);
 			if (existing !== undefined) {
 				existing.value += value;
 			} else {
-				let label = termCache.get(key);
-				if (label === undefined) {
-					label =
-						'label' in item && typeof item.label === 'string'
-							? item.label
-							: await termByTipo(key, lang);
-					termCache.set(key, label);
-				}
-				const entry: CanonicalEntry = { key, label, value };
+				const entry: CanonicalEntry = { key, label: await labelOf(item.type, key, item), value };
 				index[item.type].set(key, entry);
 				base[item.type].push(entry);
 			}

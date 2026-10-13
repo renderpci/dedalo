@@ -59,7 +59,16 @@ interface QueryTapFrame {
 	label: string;
 	count: number;
 	byLane: Record<StatementLane, number>;
-	callers: Map<string, number>;
+	callers: Map<string, CallSiteTally>;
+}
+
+/** One call site's tally: statements, and the rows they returned. */
+interface CallSiteTally {
+	count: number;
+	/** Most rows ONE statement of this call site returned (0 for non-row results). */
+	maxRows: number;
+	/** Rows all its statements returned together. */
+	sumRows: number;
 }
 
 const tapStore = new AsyncLocalStorage<QueryTapFrame>();
@@ -70,8 +79,12 @@ export interface QueryTapReport {
 	/** Statements executed inside the scope, all three lanes together. */
 	count: number;
 	byLane: Record<StatementLane, number>;
-	/** Call sites, most statements first: `{ frames, count }`. */
-	callers: { frames: string; count: number }[];
+	/**
+	 * Call sites, most statements first: `{ frames, count, maxRows, sumRows }` —
+	 * rows = the length of a statement's row array (0 for a command without rows),
+	 * so a gate can bound how much ONE statement carried into the process.
+	 */
+	callers: { frames: string; count: number; maxRows: number; sumRows: number }[];
 }
 
 /** True when the current async context is inside a `runWithQueryTap` scope. */
@@ -102,7 +115,12 @@ function captureCallSite(): string {
 	return frames.slice(0, CALLER_FRAMES).join(' <- ');
 }
 
-function recordStatement(frame: QueryTapFrame, lane: StatementLane, callSite: string): void {
+function recordStatement(
+	frame: QueryTapFrame,
+	lane: StatementLane,
+	callSite: string,
+	rows: number,
+): void {
 	frame.count++;
 	frame.byLane[lane]++;
 	const key = frame.callers.has(callSite)
@@ -110,7 +128,11 @@ function recordStatement(frame: QueryTapFrame, lane: StatementLane, callSite: st
 		: frame.callers.size >= MAX_CALL_SITES
 			? OVERFLOW_CALL_SITE
 			: callSite;
-	frame.callers.set(key, (frame.callers.get(key) ?? 0) + 1);
+	const tally = frame.callers.get(key) ?? { count: 0, maxRows: 0, sumRows: 0 };
+	tally.count++;
+	tally.maxRows = Math.max(tally.maxRows, rows);
+	tally.sumRows += rows;
+	frame.callers.set(key, tally);
 }
 
 /**
@@ -131,8 +153,13 @@ export async function observeStatement<T>(
 	// Attribution costs a stack capture, so it happens ONLY with a scope open.
 	const callSite = frame === undefined ? '' : captureCallSite();
 	const startedAt = performance.now();
+	// Rows the statement returned (0 for a command without rows, or a failure),
+	// read in `finally` — a local holder, never module state.
+	const returned = { rows: 0 };
 	try {
-		return await execute();
+		const result = await execute();
+		returned.rows = Array.isArray(result) ? result.length : 0;
+		return result;
 	} finally {
 		const elapsedMs = performance.now() - startedAt;
 		if (SLOW_QUERY_MS > 0 && elapsedMs >= SLOW_QUERY_MS) {
@@ -140,7 +167,7 @@ export async function observeStatement<T>(
 				`[db] slow query ${Math.round(elapsedMs)}ms (threshold ${SLOW_QUERY_MS}ms, lane ${lane}): ${describeQuery()}`,
 			);
 		}
-		if (frame !== undefined) recordStatement(frame, lane, callSite);
+		if (frame !== undefined) recordStatement(frame, lane, callSite, returned.rows);
 	}
 }
 
@@ -172,7 +199,7 @@ export async function runWithQueryTap<T>(
 	};
 	const result = await tapStore.run(frame, work);
 	const callers = [...frame.callers.entries()]
-		.map(([frames, count]) => ({ frames, count }))
+		.map(([frames, tally]) => ({ frames, ...tally }))
 		.sort((a, b) => b.count - a.count);
 	return {
 		result,

@@ -11,9 +11,9 @@
 	},
 	"scripts": {
 		"start": "bun run src/server.ts",
-		"start:supervised": "while true; do DEDALO_SUPERVISED=true bun run src/server.ts; code=$?; [ $code -eq 75 ] || exit $code; echo '[supervisor] restart requested (exit 75) — rebooting into the persisted config'; done",
+		"start:supervised": "while true; do DEDALO_SUPERVISED=true bun run src/server.ts; code=$?; [ $code -eq 75 ] || exit $code; echo '[supervisor] restart requested (exit 75, code update) — rebooting'; done",
 		"dev": "DEDALO_SUPERVISED=true bun run scripts/dev.ts",
-		"dev:server": "while true; do DEDALO_SUPERVISED=true bun run --watch src/server.ts; code=$?; [ $code -eq 75 ] || exit $code; echo '[supervisor] restart requested (exit 75) — rebooting into the persisted config'; done",
+		"dev:server": "while true; do DEDALO_SUPERVISED=true bun run --watch src/server.ts; code=$?; [ $code -eq 75 ] || exit $code; echo '[supervisor] restart requested (exit 75, code update) — rebooting'; done",
 		"css:build": "bun run scripts/build_css.ts",
 		"css:watch": "bun run scripts/build_css.ts --watch",
 		"css:check": "bun run scripts/build_css.ts --check",
@@ -65,6 +65,7 @@
 		"test:pubhost:engine": "bun run scripts/publication_host_engine_drill.ts",
 		"test:pubhost:init": "bun run scripts/publication_host_init_drill.ts",
 		"test:pubhost:init:el": "bun run scripts/publication_host_init_drill.ts --family el --in-place",
+		"drill:install-host": "bun run scripts/install_host_drill.ts",
 		"test:publication": "cd publication/server_api/v2 && bunx tsc --noEmit && bun test",
 		"sitebuilder:install": "cd publication/site_builder && bun install",
 		"start:sitebuilder": "cd publication/site_builder && bun run start",
@@ -86,6 +87,7 @@
 		"@highlightjs/cdn-assets": "11.12.0",
 		"@jaames/iro": "5.5.2",
 		"@modelcontextprotocol/sdk": "^1.32.1",
+		"@opentui/core": "0.6.1",
 		"@svgedit/svgcanvas": "7.4.2",
 		"@turf/turf": "7.4.0",
 		"cheerio": "1.2.0",
@@ -109,8 +111,10 @@
 		"@types/less": "3.0.8",
 		"axe-core": "^4.14.0",
 		"chai": "6.3.0",
+		"htmlparser2": "12.0.0",
 		"less": "4.9.1",
 		"mocha": "12.0.3",
+		"parse5": "8.0.1",
 		"puppeteer": "^25.12.0"
 	},
 	"peerDependencies": {

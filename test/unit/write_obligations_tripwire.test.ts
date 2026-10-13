@@ -45,9 +45,10 @@
  *         the outcome case holding what it declares;
  *      B5 positive controls: a synthetic corpus with each offence is reported
  *         by the same analysers;
- *      PENDING the raw tree-move and archive-restore writers the closure names
- *         are enumerated with the step that closes them; any change to one is
- *         red (a change detector, labelled as one).
+ *      PENDING the raw writers the closure names in the watched tree-move and
+ *         archive-restore files are enumerated with the step that closes them
+ *         (the tree-move ones CLOSED by Step 5 — a new raw writer there is red);
+ *         any change to one is red (a change detector, labelled as one).
  *   S. SPELLING CHECKS (labelled honestly: they read source text) — the NEW
  *      activity emitters, the door activity rows, the birth funnel, the
  *      component_info stored branch.
@@ -181,16 +182,6 @@ const RAW_CALLER_EXEMPT: Record<string, string> = {
 		"the RETENTION prune of matrix_activity (audit 2026-08-26 P2-9): it DELETES aged audit rows through the matrix_write door and writes no record value — there is nothing to stamp, no component history to append and no index to refresh, and the rows it removes are audit events, not records (the record tables are refused by that door's own allowlist).",
 	'src/core/relations/dataframe.ts#fixDataframeOrphanEntries':
 		'maintenance FIX mode: per-key strip of orphaned frame entries with no TM and no stamp (S2-06).',
-	'src/core/relations/parent.ts#setChildOrder':
-		'PENDING, not a design (CLOSURE_PLAN Step 5 tree-move obligation): the thesaurus TREE engine writes the parent/children slots raw. PHP update_parent_data (:747) saved through component->save() — stamped, historied, observed — so this is a known divergence, held by leg B’s PENDING change detector until Step 5 routes it through persistRecordKeys + recordMainHistory.',
-	'src/core/relations/parent.ts#removeChildOrder': 'thesaurus tree engine — see setChildOrder.',
-	'src/core/relations/parent.ts#addParent': 'thesaurus tree engine — see setChildOrder.',
-	'src/core/relations/parent.ts#removeParent': 'thesaurus tree engine — see setChildOrder.',
-	'src/core/relations/parent.ts#recalculateSiblingOrders':
-		'thesaurus tree engine — see setChildOrder.',
-	'src/core/relations/parent.ts#sortChildren': 'thesaurus tree engine — see setChildOrder.',
-	'src/core/ts_object/ts_api.ts#addChild':
-		'PENDING (Step 5 tree-move obligation) — see parent.ts#setChildOrder: PHP dd_ts_api::add_child saved the parent/children slots through component->save(); the raw write here is held by leg B’s PENDING change detector.',
 	'src/core/install/hierarchy_activate.ts#createRegistryRow':
 		'installer hierarchy ACTIVATION — the registry row CREATED from the hierarchy.json manifest entry (system provisioning at install time, no principal, no curated content; one transaction).',
 	'src/core/tools/register.ts#writeRegistryRecord':
@@ -633,7 +624,8 @@ const OUTSIDE_HOOK_CALLERS: Readonly<Record<string, string>> = {
 
 /**
  * PENDING — the raw writers the closure names (a direct matrix_write edge, past
- * every chokepoint) in the tree-move and archive-restore files, each with the
+ * every chokepoint) in the WATCHED tree-move and archive-restore files (the
+ * tree-move set is empty since Step 5 — the files stay watched), each with the
  * step that closes it and a CHANGE DETECTOR: the sha256 (first 16 hex) of its
  * comment-stripped, whitespace-collapsed body. A change to a PENDING unit is red
  * until whoever changes it decides, here, whether it still is one. This is a
@@ -645,19 +637,13 @@ const PENDING_FILES = [
 	'src/core/api/handlers/dd_ts_api.ts',
 	'src/core/archive/restore.ts',
 ] as const;
-const TREE_MOVE = 'Step 5 tree-move obligation';
 const ARCHIVE = 'archive door → persistRecordColumns/persistRecordBirth';
 const PENDING: Record<string, { closes: string; body: string }> = {
-	'src/core/relations/parent.ts#setChildOrder': { closes: TREE_MOVE, body: '2ccc2e1095b79164' },
-	'src/core/relations/parent.ts#removeChildOrder': { closes: TREE_MOVE, body: 'a08d655b6c955c78' },
-	'src/core/relations/parent.ts#addParent': { closes: TREE_MOVE, body: '86a00b18b1390ffa' },
-	'src/core/relations/parent.ts#removeParent': { closes: TREE_MOVE, body: '191692f4fbef150e' },
-	'src/core/relations/parent.ts#recalculateSiblingOrders': {
-		closes: TREE_MOVE,
-		body: '633b49769bf467ee',
-	},
-	'src/core/relations/parent.ts#sortChildren': { closes: TREE_MOVE, body: '51e8d5c70079cf1d' },
-	'src/core/ts_object/ts_api.ts#addChild': { closes: TREE_MOVE, body: '27b4bc49d267b7da' },
+	// CLOSED 2026-10-11 (CLOSURE_PLAN Step 5, the tree-move obligation): the six
+	// relations/parent.ts mutators and ts_api#addChild write through
+	// persistTreeKeys → persistRecordKeys (stamps, index, hook, ledger) +
+	// recordKeyChangeRows (Time Machine), like PHP's component->save(). Behaviour
+	// gate: test/unit/tree_obligations_native.test.ts.
 	// PINNED TO THE DECLARING BODY (2026-10-01, landed in the same commit): `observed`
 	// is REQUIRED on afterRecordWrite and refused at runtime without it, and the body
 	// this row enumerated before (8799bf8d8b9a0788) called the hook WITHOUT it — every

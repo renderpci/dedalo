@@ -6,7 +6,10 @@
 
 // import
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { refused_by_page_identity } from '../../../core/common/js/error_dispatch.js'
 	import {
+		ApiError,
+		CLIENT_ERROR,
 		normalize_api_error,
 		normalize_stream_error,
 		normalize_transport_error
@@ -18,7 +21,8 @@
  * BUILDER_STREAM
  * The wire client for a site-builder agent session's event stream. It POSTs one
  * `session_stream` tool_request RQO to the Dédalo JSON API and consumes the SSE
- * response the engine relays verbatim from the Site Builder daemon.
+ * response the engine relays from the Site Builder daemon (every record verbatim except an
+ * error record, which arrives as the converter's body for its registered code).
  *
  * Forked from tool_assistant/js/agent_stream.js — same spec-compliant SSE record parser
  * (buffers across chunks, splits on the blank line, accumulates multi-`data:` lines,
@@ -57,6 +61,26 @@ export async function builder_stream(opts) {
 		headers['X-Dedalo-Csrf-Token'] = window.page_globals.csrf_token
 	}
 
+	const body = {
+		dd_api	: 'dd_tools_api',
+		action	: 'tool_request',
+		source	: { model: 'tool_sitebuilder', action: 'session_stream' },
+		options	: options
+	}
+
+	// the page-identity latch (LEAD-2, error_dispatch.refused_by_page_identity):
+	// a raw fetch is a transport of its own, so it asks the same question as
+	// agent_stream.js — after a re-login as another user this page's prompt never
+	// goes out under that session
+	if (refused_by_page_identity(body)) {
+		on_error(new ApiError({
+			code	: CLIENT_ERROR.ABORTED,
+			source	: 'transport',
+			details	: {reason: 'page_identity_revoked', action: body.action}
+		}))
+		return
+	}
+
 	let response
 	try {
 		response = await fetch(data_manager.url, {
@@ -64,12 +88,7 @@ export async function builder_stream(opts) {
 			credentials	: 'same-origin',
 			headers		: headers,
 			signal		: opts.signal || null,
-			body		: JSON.stringify({
-				dd_api	: 'dd_tools_api',
-				action	: 'tool_request',
-				source	: { model: 'tool_sitebuilder', action: 'session_stream' },
-				options	: options
-			})
+			body		: JSON.stringify(body)
 		})
 	} catch(e) {
 		if (e && e.name === 'AbortError') return
@@ -124,11 +143,10 @@ export async function builder_stream(opts) {
 		}
 		if (data_lines.length === 0) return
 
-		// TWO writers can emit `event: error` on this one stream: the engine when the
-		// pass-through itself dies (`site_builder.stream_lost`,
-		// tools/tool_sitebuilder/server/index.ts) and the DAEMON when it cannot replay
-		// a session backlog (`replay_failed`, publication/site_builder/src/sessions/
-		// sse.ts — an isolated subsystem, so its token is outside the engine registry).
+		// `event: error` is the converter's body for a registered `site_builder.*`
+		// code: the engine's own `stream_lost` when the relay itself dies, or the
+		// daemon's `replay_failed` frame projected by the engine's stream door
+		// (tools/tool_sitebuilder/server/wire.ts relaySessionFrames).
 		if (event_name === 'error') {
 			terminal = true
 			let payload = null

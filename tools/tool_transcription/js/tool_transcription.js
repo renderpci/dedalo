@@ -70,6 +70,7 @@
 // import
 	import { dd_console, get_json_langs } from '../../../core/common/js/utils/index.js'
 	import { data_manager } from '../../../core/common/js/data_manager.js'
+	import { refused_by_page_identity } from '../../../core/common/js/error_dispatch.js'
 	import { request_failed, response_data } from '../../../core/common/js/api_error.js'
 	import { error_text } from '../../../core/common/js/render_api_error.js'
 	import { common, create_source, rebuild_component_in_lang } from '../../../core/common/js/common.js'
@@ -496,6 +497,46 @@ tool_transcription.prototype.build_subtitles_file = async function() {
 
 
 /**
+* SEND_UNLOAD_CLEANUP
+* The ONE keepalive request automatic_transcription's page_cleanup sends when the
+* tool window closes mid-job (deleting the throwaway server-side WAV).
+* `data_manager` cannot be trusted during unload, so this is a bare `keepalive`
+* fetch — the one request shape browsers promise to finish after the page is
+* gone; the CSRF token rides along (SEC-008).
+*
+* THE PAGE-IDENTITY LATCH (LEAD-2): a raw fetch is a transport of its own, so it
+* asks error_dispatch.refused_by_page_identity first. A page whose identity was
+* revoked is unloading INTO the reload the latch asked for — its cleanup is the
+* previous user's, and must not run under the new session. Module-level (not a
+* closure of the run) so the client suite measures that outcome
+* (test_relogin_identity case s2).
+* @param {Object} body - the tool_request RQO
+* @return {boolean} true when the request was handed to fetch
+*/
+export const send_unload_cleanup = function(body) {
+
+	if (refused_by_page_identity(body)) {
+		return false
+	}
+
+	const csrf = (typeof page_globals!=='undefined' && page_globals.csrf_token)
+		? page_globals.csrf_token
+		: null
+	fetch('/dedalo/core/api/v1/json/', {
+		method		: 'POST',
+		credentials	: 'same-origin',
+		keepalive	: true,
+		headers		: csrf
+			? { 'Content-Type': 'application/json', 'X-Dedalo-Csrf-Token': csrf }
+			: { 'Content-Type': 'application/json' },
+		body		: JSON.stringify(body)
+	})
+	return true
+}//end send_unload_cleanup
+
+
+
+/**
 * AUTOMATIC_TRANSCRIPTION
 * Transcribe the record's audio IN THE BROWSER and return the text ready for the
 * transcription component.
@@ -737,22 +778,11 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 	*/
 		const page_cleanup = function() {
 			try {
-				const csrf = (typeof page_globals!=='undefined' && page_globals.csrf_token)
-					? page_globals.csrf_token
-					: null
-				fetch('/dedalo/core/api/v1/json/', {
-					method		: 'POST',
-					credentials	: 'same-origin',
-					keepalive	: true,
-					headers		: csrf
-						? { 'Content-Type': 'application/json', 'X-Dedalo-Csrf-Token': csrf }
-						: { 'Content-Type': 'application/json' },
-					body		: JSON.stringify({
-						dd_api	: 'dd_tools_api',
-						action	: 'tool_request',
-						source	: create_source(self, 'delete_transcribable_audio_file'),
-						options	: rqo.options
-					})
+				send_unload_cleanup({
+					dd_api	: 'dd_tools_api',
+					action	: 'tool_request',
+					source	: create_source(self, 'delete_transcribable_audio_file'),
+					options	: rqo.options
 				})
 			} catch (error) {
 				// the tab is going away; nothing left to report to

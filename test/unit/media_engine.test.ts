@@ -630,9 +630,12 @@ describe('pdf argv recipes (PHP component_pdf)', () => {
 		expect(s).toContain('-l 5');
 	});
 
-	test('html extraction adds -i -p -noframes -layout', () => {
-		const s = buildExtractArgv('/s.pdf', '/o.html', { method: 'html' }).join(' ');
-		expect(s).toContain('-i -p -noframes -layout');
+	test('html extraction adds -i -p -noframes, and no pdftotext-only -layout', () => {
+		const argv = buildExtractArgv('/s.pdf', '/o.html', { method: 'html' });
+		expect(argv.join(' ')).toContain('-i -p -noframes');
+		// pdftohtml has no -layout: it exits 1 on it (the html end-to-end case in
+		// tool_pdf_extractor.test.ts measures the real binary)
+		expect(argv).not.toContain('-layout');
 	});
 
 	test('ocr: --pdfa-image-compression lossless -l <lang> --force-ocr', () => {

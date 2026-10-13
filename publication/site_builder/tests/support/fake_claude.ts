@@ -26,6 +26,12 @@
  *     (its GIT_* dropped — a `GIT_DIR` given to the CLI does not reach this git) — so a repository
  *     `filter.<x>.clean` runs (the fake runs that git for real: `gitStatus`).
  *
+ *   - the USER configuration lives in `$CLAUDE_CONFIG_DIR` when it is set (else `~/.claude`):
+ *     its `settings.json` (a `user` source), `CLAUDE.md` (user memory), `skills/`, `commands/`,
+ *     `agents/`; and the account file `.claude.json` (there, else `~/.claude.json`) whose
+ *     `mcpServers` are user-scope servers, skipped under `--strict-mcp-config`. MODELLED from the
+ *     CLI's documented `CLAUDE_CONFIG_DIR` — the live probe's P6(v) row measures it per release.
+ *
  * The honest limit: this is a model of one release. A release that changes those semantics
  * is caught by the probe only as far as `--help` changes; the semantics themselves are
  * re-measured by the live probe.
@@ -152,8 +158,10 @@ const gitStatus = require('node:child_process').spawnSync(
 ).status;
 const sources = '--setting-sources' in opts ? String(opts['--setting-sources']).split(',').map(s => s.trim()).filter(Boolean) : ['user', 'project', 'local'];
 const readJson = path => { try { return JSON.parse(readFileSync(path, 'utf8')); } catch { return null; } };
+const userDir = process.env.CLAUDE_CONFIG_DIR || (home ? join(home, '.claude') : null);
+const accountFile = process.env.CLAUDE_CONFIG_DIR ? join(process.env.CLAUDE_CONFIG_DIR, '.claude.json') : home ? join(home, '.claude.json') : null;
 const files = [];
-if (sources.includes('user') && home) files.push(join(home, '.claude', 'settings.json'));
+if (sources.includes('user') && userDir) files.push(join(userDir, 'settings.json'));
 if (sources.includes('project')) files.push(join(cwd, '.claude', 'settings.json'));
 if (sources.includes('local')) files.push(join(cwd, '.claude', 'settings.local.json'));
 const loaded = [];
@@ -173,11 +181,15 @@ for (const c of opts['--mcp-config'] || []) { const j = c.trim().startsWith('{')
 if (!opts['--strict-mcp-config'] && sources.includes('project') && effective('enableAllProjectMcpServers') === true && existsSync(join(cwd, '.mcp.json'))) {
   for (const name of Object.keys((readJson(join(cwd, '.mcp.json')) || {}).mcpServers || {})) mcp.push({ name, from: '.mcp.json' });
 }
+if (!opts['--strict-mcp-config'] && accountFile && existsSync(accountFile)) {
+  for (const name of Object.keys((readJson(accountFile) || {}).mcpServers || {})) mcp.push({ name, from: '.claude.json' });
+}
 const memory = sources.includes('project') && existsSync(join(cwd, 'CLAUDE.md')) ? ['CLAUDE.md'] : [];
+if (sources.includes('user') && userDir && existsSync(join(userDir, 'CLAUDE.md'))) memory.push('user:CLAUDE.md');
 const extensions = [];
 for (const kind of ['skills', 'commands', 'agents']) {
   if (sources.includes('project') && existsSync(join(cwd, '.claude', kind))) for (const e of readdirSync(join(cwd, '.claude', kind))) extensions.push('project:' + kind + ':' + e);
-  if (sources.includes('user') && home && existsSync(join(home, '.claude', kind))) for (const e of readdirSync(join(home, '.claude', kind))) extensions.push('user:' + kind + ':' + e);
+  if (sources.includes('user') && userDir && existsSync(join(userDir, kind))) for (const e of readdirSync(join(userDir, kind))) extensions.push('user:' + kind + ':' + e);
 }
 const report = { gitStatus, sources, settingsFrom: loaded.map(l => l.from), hooks, mcp, memory, extensions, prompt: positional[0] ?? null, positional, appendSystemPrompt: opts['--append-system-prompt'] ?? null, dropped, argv: args };
 console.log(JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'FAKE_LOAD ' + JSON.stringify(report) }] } }));

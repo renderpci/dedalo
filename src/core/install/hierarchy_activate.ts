@@ -47,6 +47,7 @@ import { sql, withTransaction } from '../db/postgres.ts';
 import {
 	ensureHierarchy,
 	HIERARCHY_SECTION,
+	inspectHierarchy,
 	provisionBlocker,
 	type RegistryRow,
 } from '../ontology/hierarchy_state.ts';
@@ -299,6 +300,27 @@ export async function activateCoreHierarchy(
 	return converge(outcome, sectionId, userId, core.active_in_thesaurus);
 }
 
+/**
+ * Why the core hierarchies are not all USABLE (hierarchy_state.ts
+ * inspectHierarchy — every check, not one registry field), or null. Read-only:
+ * the terminal installer's seed verify (db_restore.ts seedComplete).
+ */
+export async function coreHierarchiesProblem(): Promise<string | null> {
+	const problems: string[] = [];
+	for (const core of CORE_HIERARCHIES) {
+		const sectionId = await findHierarchyByTld(core.tld);
+		if (sectionId === null) {
+			problems.push(`core hierarchy '${core.tld}' has no registry row`);
+			continue;
+		}
+		const state = await inspectHierarchy(sectionId);
+		const failed = state.checks.filter((check) => !check.ok).map((check) => check.id);
+		if (!state.usable)
+			problems.push(`core hierarchy '${core.tld}' is not usable (${failed.join(', ')})`);
+	}
+	return problems.length === 0 ? null : problems.join('; ');
+}
+
 /** What activating every core hierarchy did (the seed restore and the suite setup read it). */
 export interface CoreHierarchiesActivation {
 	/** The core tlds that converged — every one of them: a failure THROWS. */
@@ -311,8 +333,8 @@ export interface CoreHierarchiesActivation {
  * Activate every CORE hierarchy (see the header): activation only, never an import.
  * Idempotent — a second run converges with nothing applied.
  *
- * A failure is a REFUSAL, not an outcome: `install.step_failed` (public — the wizard
- * and the CLI show the sentence), naming each failed tld with its activation findings.
+ * A failure is a REFUSAL, not an outcome: `install.step_failed` (public — the installer
+ * and the add_hierarchy widget show the sentence), naming each failed tld with its activation findings.
  * Every caller treats it as fatal (an install without its languages thesaurus is not an
  * install that worked), so there is no `{ok:false}` shape to forward by hand — the
  * converter builds the body (engineering/ERRORS_SPEC.md §4).

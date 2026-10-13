@@ -132,8 +132,8 @@ in the import log.
 
 A client needs one key — the master it may pull from. **The installer already
 writes the official master here**, unless the install was air-gapped
-(`--no-update-servers`, the unticked update-server box in the wizard, or *no* in
-`install.sh`), which writes `[]`. To use another master or a mirror, or to
+(`--no-update-servers`, or *no* to the installer's update-servers question),
+which writes `[]`. To use another master or a mirror, or to
 switch an air-gapped install on, change the value on that existing line — replace
 the `[]`, or add the entry inside the list — then restart. An entry looks like this:
 

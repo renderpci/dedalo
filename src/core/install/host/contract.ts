@@ -1,0 +1,157 @@
+/**
+ * THE HOST STEP CONTRACT (terminal installer phase 4, 2026-10-12) — what a
+ * production (or docker/trial) host step IS, beside the engine step contract
+ * (steps.ts). Both run through the one loop (step_loop.ts): verify-skip,
+ * adopt, drift, intent, created, the fault seam, the events.
+ *
+ * REVIEW EQUALS RUN. Every host step has a PURE `commands(ctx)`: the plan and
+ * the FROZEN host facts (host_preflight's — state_types.ts) → the exact
+ * commands. The Review lists them; `run` executes exactly them (host/execute.ts)
+ * plus the step's own checks; a gate holds the recording runner's argv log to
+ * the list. A command may carry an `unless` probe (read-only): when it exits 0
+ * the command is skipped — what makes a step re-run after a kill converge
+ * instead of failing on its own half-done work (`useradd` of a user it already
+ * created).
+ *
+ * NOTHING SECRET IN A COMMAND: argv, a written file's content and a `text`
+ * stdin are shown on the Review and logged. A secret reaches a child ONLY as
+ * `stdin: {secrets}` — the run supplies the values, the Review shows the keys.
+ */
+
+import type { Subprocess } from 'bun';
+import type { InstallAnswers } from '../install_plan.ts';
+import type { RunIo } from '../run_events.ts';
+import type { InstallState, PlanFile, SecretKey, Secrets } from '../run_files_core.ts';
+import type { VerifyResult } from '../step_loop.ts';
+import type { HostFacts } from './facts.ts';
+import type { HostFs } from './fs.ts';
+import type { HostStepId } from './ids.ts';
+import type { InstancePaths } from './layout.ts';
+import type { OsRow } from './os_support.ts';
+import type { CommandRunner } from './runner.ts';
+import type { HostCreated } from './state_types.ts';
+
+/** Who a command runs as: this (root) process, the instance user, or postgres (runuser). */
+export type RunAs = 'root' | 'instance' | 'postgres';
+
+export interface ExecCommand {
+	readonly kind: 'exec';
+	readonly argv: readonly string[];
+	readonly as: RunAs;
+	/** One line for the Review (what it does, in words). */
+	readonly label: string;
+	/** Changes the host (false: a read-only probe — the only kind `verify` may run). */
+	readonly mutates: boolean;
+	/**
+	 * `secrets`: the named secrets as ONE JSON object — wrapped as `{...with,
+	 * secrets}` when `with` is given (the engine child's request: answers +
+	 * secrets, critique B10); `text`: a non-secret text (SQL…).
+	 */
+	readonly stdin?:
+		| { readonly secrets: readonly SecretKey[]; readonly with?: Readonly<Record<string, unknown>> }
+		| { readonly text: string };
+	readonly cwd?: string;
+	readonly env?: Readonly<Record<string, string>>;
+	/** Exit codes that count as success (default: 0 only). */
+	readonly okExit?: readonly number[];
+	/** Skip the command when this read-only probe exits 0 (already done). */
+	readonly unless?: ExecCommand;
+	readonly timeoutMs?: number;
+}
+
+export interface WriteCommand {
+	readonly kind: 'write';
+	readonly path: string;
+	readonly mode: number;
+	readonly owner: string;
+	readonly group: string;
+	/** The rendered bytes (never a secret: templates hold names and paths only). */
+	readonly content: string;
+	readonly label: string;
+}
+
+export interface MkdirCommand {
+	readonly kind: 'mkdir';
+	readonly path: string;
+	readonly mode: number;
+	readonly owner: string;
+	readonly group: string;
+	readonly label: string;
+	/**
+	 * `instance`: made BY the service user (`install -d -m <mode>` under runuser
+	 * — a directory inside the install folder, where root never works by path:
+	 * critique B1); absent: by root through the HostFs.
+	 */
+	readonly as?: 'instance';
+}
+
+export interface RemoveCommand {
+	readonly kind: 'remove';
+	readonly path: string;
+	readonly label: string;
+}
+
+export type HostCommand = ExecCommand | WriteCommand | MkdirCommand | RemoveCommand;
+
+/** What a host step's commands are computed from (pure inputs). */
+export interface HostPlanCtx {
+	readonly plan: PlanFile;
+	readonly answers: InstallAnswers;
+	readonly facts: HostFacts;
+	readonly row: OsRow;
+	readonly paths: InstancePaths;
+	/** The source tree the installer runs from (templates, scripts, the release). */
+	readonly source: string;
+}
+
+/** What a host step runs with. */
+export interface HostCtx extends HostPlanCtx {
+	readonly state: InstallState;
+	readonly created: HostCreated;
+	readonly secrets: Secrets;
+	readonly runner: CommandRunner;
+	readonly fs: HostFs;
+	readonly io: RunIo;
+	readonly children: Set<Subprocess>;
+	/** A transcript line, redacted (the executor's say/warn). */
+	say(line: string): void;
+	warn(line: string): void;
+	/** Checkpoint the state file now (what a step records before risky work survives a kill). */
+	save(): void;
+	/** The pause between polls (a gate passes one that returns at once). */
+	sleep(ms: number): Promise<void>;
+	now(): number;
+	/** --confirm-database (abort only). */
+	readonly confirmDatabase?: string;
+}
+
+/** A host step's own run result — an internal shape (never the wire's failure spelling). */
+export interface HostRunResult {
+	ok: boolean;
+	detail: string;
+	warnings?: string[];
+	/** Lines the operator must read and act on (told, never done: firewall, modules). */
+	told?: string[];
+}
+
+export interface HostStepDefinition {
+	readonly id: HostStepId;
+	/** `root`: the production root process; `operator`: docker/trial (no root needed). */
+	readonly privilege: 'root' | 'operator';
+	readonly kind: 'probe' | 'action';
+	/** The secrets the step consumes (a resume re-asks them only while it is not done). */
+	readonly needs: readonly SecretKey[];
+	label(plan: PlanFile): string;
+	/** The exact commands (pure) — the Review's list and the run's. */
+	commands(ctx: HostPlanCtx): HostCommand[];
+	/** Did the work land? Read-only commands only. Absent = always run. */
+	verify?(ctx: HostCtx): Promise<VerifyResult>;
+	run(ctx: HostCtx): Promise<HostRunResult>;
+	/** Recorded BEFORE the work: what --abort may clean even without a checkpoint. */
+	intent?(ctx: HostCtx): void;
+	/** Recorded with the checkpoint (after the work). */
+	created?(ctx: HostCtx): void;
+	/** --abort only, only over `created`; answers what it did, in words. */
+	undo?(ctx: HostCtx): Promise<string>;
+	readonly neverAdopt?: true;
+}

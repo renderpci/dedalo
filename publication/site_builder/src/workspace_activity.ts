@@ -19,9 +19,12 @@
  * function, so under Bun's single-threaded JS there is no window. Callers reserve FIRST,
  * before any await, and release in their terminal path (`end`, idempotent).
  *
- * This module holds no other state and imports nothing, so every holder can use it without a
- * dependency cycle.
+ * This module holds no other state and imports nothing at runtime (one TYPE import: the busy
+ * reasons are the daemon's published vocabulary, `BUSY_REASONS` in errors.ts, and are named
+ * once there), so every holder can use it without a dependency cycle.
  */
+
+import type { BUSY_REASONS } from './errors';
 
 /** What a reservation is for. One per slug at a time. */
 export type ReservationKind = 'turn' | 'build' | 'init' | 'recovery' | 'git' | 'delete';
@@ -29,14 +32,7 @@ export type ReservationKind = 'turn' | 'build' | 'init' | 'recovery' | 'git' | '
 const held = new Map<string, ReservationKind>();
 
 /** Why a reservation was refused — callers map this to their 409 reason code. */
-export type BusyReason =
-  | 'session_running'
-  | 'build_running'
-  | 'site_initializing'
-  | 'site_recovering'
-  | 'git_running'
-  | 'site_deleting'
-  | null;
+export type BusyReason = (typeof BUSY_REASONS)[number] | null;
 
 const REASON: Readonly<Record<ReservationKind, Exclude<BusyReason, null>>> = Object.freeze({
   turn: 'session_running',

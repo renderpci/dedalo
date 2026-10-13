@@ -43,6 +43,19 @@ const ROOT = resolve(import.meta.dir, '../..');
 export const KEY_PATH = join(ROOT, 'ci/bun/release_key.asc');
 export const ASC_PATH = join(ROOT, 'ci/bun/SHASUMS256.txt.asc');
 export const TABLE_PATH = join(ROOT, '.bun-sha256');
+/**
+ * The macOS assets' table — a SECOND file of the SAME signed payload, never a second
+ * derivation: the bootstrap (install.sh) verifies a Darwin Bun against it for the
+ * docker and trial routes on a Mac with Docker Desktop. A separate file because
+ * `.bun-sha256` is held to the publication host's three Linux assets
+ * (publication/host_agent/src/provision/init/bun_asset.ts counts its lines).
+ */
+export const DARWIN_TABLE_PATH = join(ROOT, '.bun-sha256-darwin');
+export const DARWIN_ASSETS = Object.freeze([
+	'bun-darwin-aarch64',
+	'bun-darwin-x64-baseline',
+	'bun-darwin-x64',
+] as const);
 export const PIN_PATH = join(ROOT, '.bun-version');
 
 /**
@@ -337,9 +350,12 @@ export function verifiedPayload(
 }
 
 /** The three `<sha>  <asset>.zip` lines of the signed payload, in BUN_ASSETS order (each exactly once). */
-export function payloadAssetLines(payload: string): string[] {
+export function payloadAssetLines(
+	payload: string,
+	assets: readonly string[] = BUN_ASSETS,
+): string[] {
 	const lines = payload.split('\n');
-	return BUN_ASSETS.map((asset) => {
+	return assets.map((asset) => {
 		const named = lines.filter(
 			(l) => l.endsWith(`  ${asset}.zip`) && /^[0-9a-f]{64} {2}\S+$/.test(l),
 		);
@@ -426,8 +442,17 @@ export async function main(argv: readonly string[]): Promise<number> {
 				throw new PinVerifyError(
 					'.bun-sha256 does not equal the signed payload of ci/bun/SHASUMS256.txt.asc',
 				);
+			const darwin = renderShaTable(
+				pin,
+				BUN_RELEASE_KEY_FINGERPRINT,
+				payloadAssetLines(payload, DARWIN_ASSETS),
+			);
+			if (readFileSync(DARWIN_TABLE_PATH, 'utf8') !== darwin)
+				throw new PinVerifyError(
+					'.bun-sha256-darwin does not equal the signed payload of ci/bun/SHASUMS256.txt.asc',
+				);
 			console.log(
-				`ok: .bun-sha256 = the signed payload for bun-v${pin} (key ${BUN_RELEASE_KEY_FINGERPRINT})`,
+				`ok: .bun-sha256 and .bun-sha256-darwin = the signed payload for bun-v${pin} (key ${BUN_RELEASE_KEY_FINGERPRINT})`,
 			);
 			return 0;
 		}
@@ -441,9 +466,17 @@ export async function main(argv: readonly string[]): Promise<number> {
 		const ascText = await download(`${RELEASE_BASE}/bun-v${pin}/SHASUMS256.txt.asc`);
 		const payload = verifiedPayload(ascText, keyText, { gpgv });
 		const table = renderShaTable(pin, BUN_RELEASE_KEY_FINGERPRINT, payloadAssetLines(payload));
+		const darwin = renderShaTable(
+			pin,
+			BUN_RELEASE_KEY_FINGERPRINT,
+			payloadAssetLines(payload, DARWIN_ASSETS),
+		);
 		writeFileSync(ASC_PATH, ascText);
 		writeFileSync(TABLE_PATH, table);
-		console.log(`wrote .bun-sha256 and ci/bun/SHASUMS256.txt.asc for bun-v${pin}; commit both`);
+		writeFileSync(DARWIN_TABLE_PATH, darwin);
+		console.log(
+			`wrote .bun-sha256, .bun-sha256-darwin and ci/bun/SHASUMS256.txt.asc for bun-v${pin}; commit all three`,
+		);
 		return 0;
 	} catch (error) {
 		if (error instanceof PinVerifyError) {

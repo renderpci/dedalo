@@ -1,8 +1,8 @@
 /**
  * TOOLS-4 (closure Step 3) — AI SPEND is GRANTED and METERED, per user, per UTC
- * day, in a DB-backed STANDARD-SCHEMA ledger (owner decision 2026-09-30: a grant
- * row + a DB-backed per-user quota + conservative budgets, stated in
- * WC-2026-10-01-ai-spend-budget for owner review).
+ * day, in a DB-backed STANDARD-SCHEMA ledger on MASTER-defined tipos, against
+ * LIMITS that are user / profile data (owner decisions 2026-09-30 and
+ * 2026-10-12; WC-2026-10-01-ai-spend-budget).
  *
  * WHAT WAS WRONG (measured at 45b8c45162): every authenticated user could spend
  * without bound — the agent loop (`dd_mcp_api` agent_chat / agent_chat_stream: up
@@ -11,20 +11,27 @@
  * generative answer, no per-user budget, no ledger.
  *
  * WHAT THIS GATE PINS, by outcome:
- *   A. THE ENGINE ONTOLOGY (src/core/ontology/engine_ontology.ts) — the ledger's
- *      repo-owned definitions, materialized through the engine's own doors: the
- *      door writes, dd_ontology ≡ the JSON node for node (the engine's equality
- *      law) and `inspectOntology('ddengine')` is drift-free; a second run writes
- *      nothing; a damaged node is HEALED; a document naming a foreign TLD is
- *      refused before anything is written; the ledger section stores in `matrix`.
- *   B. THE LEDGER — a reservation BEFORE the provider (before an SSE stream
+ *   A. THE MASTER NODES — the ledger (dd660 "AI usage" → matrix_stats, user
+ *      dd663 a dd128 locator, day dd664 a component_date, counters dd665-668)
+ *      and the limits (dd692-695 on dd128, dd696-699 on dd234) resolve to the
+ *      shapes the module writes and reads; a charge stores the user locator and
+ *      the day as a dd_date `{start:{year,month,day,time}}`.
+ *   B. THE LIMITS — per kind, on its own: the user's value wins over the
+ *      profile's; an EMPTY user value inherits the profile's; both empty is 0
+ *      (refused); an explicit user 0 refuses although the profile allows; read
+ *      per reservation (an administrator's change takes effect at the next
+ *      spend); root is refused at 0 like anyone; a stored limit parses
+ *      FAIL-CLOSED (only empty inherits — malformed / negative is 0).
+ *   C. THE LEDGER — a reservation BEFORE the provider (before an SSE stream
  *      opens); the reported usage REPLACES the token reservation; a missing usage
- *      keeps the FULL reservation; two concurrent reserves at budget 1 admit
- *      exactly one (node lock + FOR UPDATE); it is DB state (no cache clear
- *      resets it); a missing ledger ontology FAILS CLOSED (503
- *      ai.budget_unavailable); nobody is exempt (a global admin and root are
- *      refused at budget 0).
- *   C. THE DOORS — runs budget 1: the second agent_chat is 429 with ZERO provider
+ *      keeps the FULL reservation; two concurrent reserves at limit 1 admit
+ *      exactly one (node lock + FOR UPDATE); an administrator's correction racing
+ *      a reservation is never lost; it is DB state (no cache clear resets it); a
+ *      ledger or limit set that cannot be used FAILS CLOSED (503
+ *      ai.budget_unavailable — proved through the zz-scratch seam, never by
+ *      touching master nodes); the seam cannot aim a write at a non-scratch
+ *      tipo; nobody is exempt (a global admin and root are refused at 0).
+ *   D. THE DOORS — runs limit 1: the second agent_chat is 429 with ZERO provider
  *      calls; the stream variant refuses as JSON, never an opened stream; the
  *      generative `ask` without `tool_rag` is 403 before any provider call, and
  *      its granted twin is served (a grounding miss refunds the run, the query
@@ -32,24 +39,26 @@
  *      CENSUS (refuter-surviving S2, 2026-10-01): the door table equals
  *      `ragApiActions`; with both embedding sidecars at the counting stand-in,
  *      every action is driven once and a model call that moved no ledger is RED;
- *      every door MEASURED spending an embedding gets embed budget 1 — the
+ *      every door MEASURED spending an embedding gets embed limit 1 — the
  *      second call is 429 with no embedding made.
+ *   E. NOT SELF-WRITABLE — a user-manager granted level 2 on the user limits
+ *      cannot raise its OWN (the dd128 own-record guard, every door), only
+ *      another user's.
  *
- * THE LEDGER IS THE SHIPPED ONE (`ddengine1`) — the gate materializes it through
- * the production door, sweeps the fixture users' rows before and after, and
- * builds the provider as a local `Bun.serve` stand-in that COUNTS calls; the RAG
- * embedding provider is the offline stub.
- *
- * RED AT HEAD (45b8c45162 / d724c8851d): src/core/security/ai_spend.ts and the
- * engine ontology do not exist (the module legs and A fail on import), and no
- * door meters or grants (C).
+ * SCRATCH SURFACES ONLY: the spenders are the authz door fixture's runtime-built
+ * users and profiles (installed and purged here); root's own limit keys are
+ * snapshotted and restored; the ledger rows of every spender are swept before
+ * and after. The provider is a local `Bun.serve` stand-in that COUNTS calls; the
+ * RAG embedding provider is the offline stub.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { setField } from '../../src/ai/mcp/tools/fields_write.ts';
 import { ragApiActions } from '../../src/ai/rag/api.ts';
 import type { MultimodalEmbeddingProvider } from '../../src/ai/rag/multimodal_embedding_provider.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
+import { coreApiActions } from '../../src/core/api/handlers/dd_core_api.ts';
 import {
 	buildGetProposals,
 	buildIdentifyByImage,
@@ -57,33 +66,40 @@ import {
 	defaultIdentifyProposalsDeps,
 } from '../../src/core/api/handlers/dd_identify_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
-import { readDdOntologyRow, upsertDdOntologyNode } from '../../src/core/db/dd_ontology.ts';
+import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
 import { runDetachedFromTransaction, sql } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
-import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
-import {
-	ENGINE_TLD,
-	engineOntologyDrift,
-	ensureEngineOntology,
-	loadEngineOntologyDoc,
-} from '../../src/core/ontology/engine_ontology.ts';
-import { inspectOntology, nodeDiffColumns } from '../../src/core/ontology/ontology_state.ts';
-import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
+import { getMatrixTableFromTipo, getModelByTipo } from '../../src/core/ontology/resolver.ts';
 import { persistRecordKeys } from '../../src/core/section_record/record_write.ts';
 import {
 	AI_SPEND_LEDGER,
+	AI_SPEND_LIMITS,
+	type AiSpendKind,
 	chargeAiSpend,
 	readAiSpend,
 	reserveAiSpend,
+	resolveAiSpendLimits,
+	spendDayDate,
+	storedLimit,
 } from '../../src/core/security/ai_spend.ts';
 import {
 	clearPermissionsCache,
 	clearPrincipalCache,
+	getPermissions,
+	getRecordComponentPermission,
 	type Principal,
 	resolvePrincipal,
+	resolveProfileId,
 } from '../../src/core/security/permissions.ts';
 import { createSession, getSession, type Session } from '../../src/core/security/session_store.ts';
-import { sweepAiSpendLedger } from '../helpers/ai_spend_ledger.ts';
+import {
+	type AiSpendLimitSnapshot,
+	type AiSpendLimitTarget,
+	type AiSpendLimitValues,
+	restoreAiSpendLimits,
+	setAiSpendLimits,
+	sweepAiSpendLedger,
+} from '../helpers/ai_spend_ledger.ts';
 import {
 	AUTHZ_COMPONENT_ONLY_USER_ID,
 	AUTHZ_CONTROL_USER_ID,
@@ -92,7 +108,10 @@ import {
 	AUTHZ_PROJECT_P,
 	AUTHZ_SECTION,
 	AUTHZ_SECTION_ONLY_USER_ID,
+	AUTHZ_TEXT_ONLY_USER_ID,
 	AUTHZ_TOOL_GRANTED_USER_ID,
+	AUTHZ_USER_MANAGER_PROFILE_ID,
+	AUTHZ_USER_MANAGER_USER_ID,
 	type AuthzIdentities,
 	createDoorRecord,
 	installAuthzDoorFixture,
@@ -113,15 +132,12 @@ const SPENDERS = [
 	AUTHZ_TOOL_GRANTED_USER_ID,
 	AUTHZ_LEVEL_1_USER_ID,
 	AUTHZ_DD128_ADMIN_USER_ID,
+	AUTHZ_TEXT_ONLY_USER_ID,
 	ROOT_USER_ID,
 ];
+/** The limits-resolution legs' own user (its fixture profile is its own, N + 10). */
+const RESOLVER_USER_ID = AUTHZ_TEXT_ONLY_USER_ID;
 
-const BUDGET_KEYS = [
-	'DEDALO_AI_USER_DAILY_RUNS',
-	'DEDALO_AI_USER_DAILY_TOKENS',
-	'DEDALO_AI_USER_DAILY_EMBED_QUERIES',
-	'DEDALO_AI_USER_DAILY_VISION',
-] as const;
 const OTHER_KEYS = [
 	'DEDALO_AGENT_HTTP_ENABLED',
 	'DEDALO_AGENT_ALLOW_WRITE',
@@ -132,7 +148,7 @@ const OTHER_KEYS = [
 	'DEDALO_RAG_LLM_MODEL',
 	'DEDALO_RAG_LLM_API_KEY',
 	'DEDALO_RAG_EMBEDDING_PROVIDER',
-	// The C-census legs arm the embedding sidecars at the counting stand-in.
+	// The D-census legs arm the embedding sidecars at the counting stand-in.
 	'DEDALO_RAG_EMBEDDING_ENDPOINT',
 	'DEDALO_RAG_EMBEDDING_MODEL',
 	'DEDALO_RAG_MEDIA_ENABLED',
@@ -146,6 +162,7 @@ const TURN_TOKENS = 5;
 
 let ids: AuthzIdentities;
 let root: Principal;
+let resolverUser: Principal;
 let seedId = 0;
 let provider: ReturnType<typeof Bun.serve> | null = null;
 let providerCalls = 0;
@@ -160,13 +177,55 @@ const EMBED_PATHS: Record<string, string> = {
 const savedEnv: Record<string, string | undefined> = {};
 const sessions = new Map<number, Session>();
 
-/** Set the four budgets for one leg (read per reservation, so it takes effect at once). */
-function budgets(values: { runs?: number; tokens?: number; embeds?: number; vision?: number }) {
-	process.env.DEDALO_AI_USER_DAILY_RUNS = String(values.runs ?? 1000);
-	process.env.DEDALO_AI_USER_DAILY_TOKENS = String(values.tokens ?? 100_000_000);
-	process.env.DEDALO_AI_USER_DAILY_EMBED_QUERIES = String(values.embeds ?? 1000);
-	process.env.DEDALO_AI_USER_DAILY_VISION = String(values.vision ?? 1000);
+/** The FIRST snapshot per record — what afterAll puts back (root's own keys above all). */
+const originals = new Map<string, AiSpendLimitSnapshot>();
+
+async function setLimits(target: AiSpendLimitTarget, values: AiSpendLimitValues): Promise<void> {
+	const snapshot = await setAiSpendLimits(target, values);
+	const key = JSON.stringify(target);
+	const known = originals.get(key);
+	if (known === undefined) originals.set(key, snapshot);
+	else {
+		// Keep the earliest value per kind: that one is the record's own.
+		for (const [kind, value] of Object.entries(snapshot.previous)) {
+			if (!(kind in known.previous)) known.previous[kind as AiSpendKind] = value;
+		}
+	}
 }
+
+/**
+ * Set the four USER-level limits of every spender for one leg (read per
+ * reservation, so it takes effect at once). Profiles stay empty: the user value
+ * is what applies.
+ */
+async function budgets(values: {
+	runs?: number;
+	tokens?: number;
+	embeds?: number;
+	vision?: number;
+}) {
+	const limits = {
+		runs: values.runs ?? 1000,
+		tokens: values.tokens ?? 100_000_000,
+		embeds: values.embeds ?? 1000,
+		vision: values.vision ?? 1000,
+	};
+	for (const userId of SPENDERS) await setLimits({ userId }, limits);
+}
+
+/** Set (null = empty) one user's and its profile's limits — the resolution legs. */
+async function levels(
+	principal: Principal,
+	user: AiSpendLimitValues,
+	profile: AiSpendLimitValues,
+): Promise<void> {
+	const profileId = await resolveProfileId(principal.userId);
+	if (profileId === null) throw new Error(`user ${principal.userId} has no profile`);
+	await setLimits({ userId: principal.userId }, user);
+	await setLimits({ profileId }, profile);
+}
+
+const EMPTY: AiSpendLimitValues = { runs: null, tokens: null, embeds: null, vision: null };
 
 function contextFor(principal: Principal) {
 	let session = sessions.get(principal.userId);
@@ -209,9 +268,22 @@ async function refusalOf(promise: Promise<unknown>): Promise<string> {
 	}
 }
 
+/** The refusal's `limit` detail (or the outcome when it was not a budget refusal). */
+async function refusedAt(promise: Promise<unknown>): Promise<number | string> {
+	try {
+		await promise;
+		return 'admitted';
+	} catch (error) {
+		if (error instanceof DedaloError && error.code === 'ai.budget_exhausted') {
+			return Number((error.details as Record<string, unknown>).limit);
+		}
+		return error instanceof DedaloError ? error.code : `untyped: ${String(error)}`;
+	}
+}
+
 describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 	beforeAll(async () => {
-		for (const key of [...BUDGET_KEYS, ...OTHER_KEYS]) savedEnv[key] = process.env[key];
+		for (const key of OTHER_KEYS) savedEnv[key] = process.env[key];
 		provider = Bun.serve({
 			port: 0,
 			hostname: '127.0.0.1',
@@ -245,7 +317,6 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 				});
 			},
 		});
-		budgets({});
 		process.env.DEDALO_AGENT_HTTP_ENABLED = 'true';
 		delete process.env.DEDALO_AGENT_ALLOW_WRITE;
 		delete process.env.ANTHROPIC_API_KEY;
@@ -266,12 +337,13 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		delete process.env.DEDALO_RAG_LLM_API_KEY;
 		process.env.DEDALO_RAG_EMBEDDING_PROVIDER = 'stub';
 
-		await ensureEngineOntology();
 		await installAuthzDoorFixture();
 		ids = await resolveAuthzIdentities();
 		root = await resolvePrincipal(ROOT_USER_ID);
+		resolverUser = await resolvePrincipal(RESOLVER_USER_ID);
 		seedId = await createDoorRecord(AUTHZ_SECTION, AUTHZ_PROJECT_P);
 		await sweepAiSpendLedger(SPENDERS);
+		await budgets({});
 	});
 
 	afterAll(async () => {
@@ -281,98 +353,311 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 			else process.env[key] = value;
 		}
 		await sweepAiSpendLedger(SPENDERS);
+		await restoreAiSpendLimits([...originals.values()]);
 		await removeAuthzDoorFixture();
 	});
 
-	// ── A. the engine ontology ─────────────────────────────────────────────────
+	// ── A. the master nodes ────────────────────────────────────────────────────
 
-	describe('A. the engine ontology (the ledger definitions)', () => {
-		test('every definition sits under the engine TLD, and dd_ontology ≡ the JSON node for node', async () => {
-			const doc = await loadEngineOntologyDoc();
-			expect(doc.nodes.length).toBeGreaterThanOrEqual(10); // anti-vacuity
-			const diffs: string[] = [];
-			for (const node of doc.nodes) {
-				expect(node.tld).toBe(ENGINE_TLD);
-				const row = await readDdOntologyRow(node.tipo);
-				if (row === null) diffs.push(`${node.tipo}: missing`);
-				else if (nodeDiffColumns(node, row).length > 0) {
-					diffs.push(`${node.tipo}: ${nodeDiffColumns(node, row).join(',')}`);
-				}
-			}
-			expect(diffs).toEqual([]);
-			const state = await inspectOntology(ENGINE_TLD);
-			expect({ drift: state.drift, mainNodeOk: state.mainNodeOk }).toEqual({
-				drift: [],
-				mainNodeOk: true,
+	describe('A. the master nodes (ledger + limits)', () => {
+		test('the ledger and limit tipos resolve to the shapes the module writes and reads', async () => {
+			const models: Record<string, string | null> = {};
+			const tipos = [
+				AI_SPEND_LEDGER.user,
+				AI_SPEND_LEDGER.day,
+				AI_SPEND_LEDGER.runs,
+				AI_SPEND_LEDGER.tokens,
+				AI_SPEND_LEDGER.embeds,
+				AI_SPEND_LEDGER.vision,
+				...(['user', 'profile'] as const).flatMap((level) =>
+					(['runs', 'tokens', 'embeds', 'vision'] as const).map(
+						(kind) => AI_SPEND_LIMITS[level][kind],
+					),
+				),
+			];
+			for (const tipo of tipos) models[tipo] = await getModelByTipo(tipo);
+			expect(models).toEqual({
+				dd663: 'component_portal', // stored component_autocomplete; runtime portal
+				dd664: 'component_date',
+				dd665: 'component_number',
+				dd666: 'component_number',
+				dd667: 'component_number',
+				dd668: 'component_number',
+				dd692: 'component_number',
+				dd693: 'component_number',
+				dd694: 'component_number',
+				dd695: 'component_number',
+				dd696: 'component_number',
+				dd697: 'component_number',
+				dd698: 'component_number',
+				dd699: 'component_number',
 			});
+			expect({
+				ledger: await getMatrixTableFromTipo(AI_SPEND_LEDGER.section),
+				users: await getMatrixTableFromTipo(AI_SPEND_LIMITS.user.section),
+				profiles: await getMatrixTableFromTipo(AI_SPEND_LIMITS.profile.section),
+			}).toEqual({ ledger: 'matrix_stats', users: 'matrix_users', profiles: 'matrix_profiles' });
 		});
 
-		test('a second run writes nothing', async () => {
-			const again = await ensureEngineOntology();
-			expect({ changed: again.changed, written: again.written, strays: again.strays }).toEqual({
-				changed: false,
-				written: 0,
-				strays: [],
+		test('a charge stores the user as a dd128 locator and the UTC day as a dd_date', async () => {
+			await budgets({});
+			await sweepAiSpendLedger([AUTHZ_LEVEL_1_USER_ID]);
+			const now = new Date();
+			await chargeAiSpend(ids.level1, { door: 'zzspend.shape', vision: 1 }, { now });
+			const rows = (await sql.unsafe(
+				`SELECT relation->$2 AS users, date->$3 AS days, number->$4 AS vision
+				 FROM matrix_stats WHERE section_tipo = $1 AND relation @> $5::text::jsonb`,
+				[
+					AI_SPEND_LEDGER.section,
+					AI_SPEND_LEDGER.user,
+					AI_SPEND_LEDGER.day,
+					AI_SPEND_LEDGER.vision,
+					JSON.stringify({
+						[AI_SPEND_LEDGER.user]: [{ section_tipo: 'dd128', section_id: AUTHZ_LEVEL_1_USER_ID }],
+					}),
+				],
+			)) as { users: Record<string, unknown>[]; days: unknown; vision: unknown }[];
+			expect(rows.length).toBe(1);
+			expect(rows[0]?.users[0]).toMatchObject({
+				section_tipo: 'dd128',
+				section_id: AUTHZ_LEVEL_1_USER_ID,
+				from_component_tipo: AI_SPEND_LEDGER.user,
 			});
-		});
-
-		test('a DAMAGED node (an edit made in the database) is healed from the JSON', async () => {
-			const doc = await loadEngineOntologyDoc();
-			const victim = doc.nodes.find((node) => node.tipo === AI_SPEND_LEDGER.vision);
-			if (victim === undefined) throw new Error('the vision counter node is not in the JSON');
-			await upsertDdOntologyNode({ ...victim, term: { 'lg-eng': 'zzspend damaged' } });
-			await clearOntologyDerivedCaches();
-			expect(await engineOntologyDrift()).toEqual([`${AI_SPEND_LEDGER.vision}: term`]);
-			const healed = await ensureEngineOntology();
-			expect(healed.changed).toBe(true);
-			expect(await engineOntologyDrift()).toEqual([]);
-		});
-
-		test('a document naming another TLD is refused before anything is written', async () => {
-			const doc = await loadEngineOntologyDoc();
-			const foreign = { ...doc.nodes[1], tipo: 'test3', tld: 'test' } as (typeof doc.nodes)[number];
-			const before = await readDdOntologyRow('test3');
-			expect(
-				await refusalOf(ensureEngineOntology({ doc: { ...doc, nodes: [...doc.nodes, foreign] } })),
-			).toBe('internal.invariant');
-			expect(await readDdOntologyRow('test3')).toEqual(before);
-			// …and nothing of the engine's own was rewritten from it either.
-			const drift = await engineOntologyDrift();
-			if (drift.length > 0) await ensureEngineOntology(); // heal before reporting
-			expect(drift).toEqual([]);
-		});
-
-		test('the ledger section stores in the standard `matrix` table', async () => {
-			expect(await getMatrixTableFromTipo(AI_SPEND_LEDGER.section)).toBe('matrix');
+			const { year, month, day, time } = spendDayDate(now);
+			expect({ year, month, day }).toEqual({
+				year: now.getUTCFullYear(),
+				month: now.getUTCMonth() + 1,
+				day: now.getUTCDate(),
+			});
+			expect(rows[0]?.days).toEqual([{ id: 1, start: { year, month, day, time } }]);
+			expect(rows[0]?.vision).toEqual([{ id: 1, value: 1 }]);
+			await sweepAiSpendLedger([AUTHZ_LEVEL_1_USER_ID]);
 		});
 	});
 
-	// ── B. the ledger ──────────────────────────────────────────────────────────
+	// ── B. the limits ──────────────────────────────────────────────────────────
 
-	describe('B. the ledger', () => {
-		test('a missing or damaged ledger ontology FAILS CLOSED: ai.budget_unavailable, nothing admitted', async () => {
-			budgets({});
-			// Damage the shipped ledger the way a broken install would: its user
-			// component no longer is the locator component the ledger writes.
-			const doc = await loadEngineOntologyDoc();
-			const user = doc.nodes.find((node) => node.tipo === AI_SPEND_LEDGER.user);
-			if (user === undefined) throw new Error('the ledger user node is not in the JSON');
-			await upsertDdOntologyNode({ ...user, model: 'component_input_text', model_tipo: 'dd9' });
-			await clearOntologyDerivedCaches();
-			try {
-				expect(
-					await refusalOf(reserveAiSpend(ids.level1, { door: 'zzspend.missing', runs: 1 })),
-				).toBe('ai.budget_unavailable');
-			} finally {
-				expect((await ensureEngineOntology()).changed).toBe(true);
-			}
-			expect(
-				await refusalOf(chargeAiSpend(ids.level1, { door: 'zzspend.healed', vision: 1 })),
-			).toBe('admitted');
+	describe('B. the limits (user → profile → 0, per kind)', () => {
+		test('the USER value overrides the profile value', async () => {
+			await sweepAiSpendLedger([RESOLVER_USER_ID]);
+			await levels(resolverUser, { ...EMPTY, runs: 2 }, { ...EMPTY, runs: 5 });
+			expect((await resolveAiSpendLimits(resolverUser)).runs).toEqual({ limit: 2, source: 'user' });
+			const door = { door: 'zzspend.user_wins', runs: 1 };
+			expect(await refusedAt(chargeAiSpend(resolverUser, door))).toBe('admitted');
+			expect(await refusedAt(chargeAiSpend(resolverUser, door))).toBe('admitted');
+			expect(await refusedAt(chargeAiSpend(resolverUser, door))).toBe(2);
 		});
 
-		test('two CONCURRENT reserves at budget 1 admit exactly one (the node lock + FOR UPDATE)', async () => {
-			budgets({ runs: 1 });
+		test('an EMPTY user value inherits the profile value', async () => {
+			await sweepAiSpendLedger([RESOLVER_USER_ID]);
+			await levels(resolverUser, EMPTY, { ...EMPTY, runs: 1 });
+			expect((await resolveAiSpendLimits(resolverUser)).runs).toEqual({
+				limit: 1,
+				source: 'profile',
+			});
+			const door = { door: 'zzspend.profile', runs: 1 };
+			expect(await refusedAt(chargeAiSpend(resolverUser, door))).toBe('admitted');
+			expect(await refusedAt(chargeAiSpend(resolverUser, door))).toBe(1);
+		});
+
+		test('BOTH empty is 0 — refused', async () => {
+			await sweepAiSpendLedger([RESOLVER_USER_ID]);
+			await levels(resolverUser, EMPTY, EMPTY);
+			expect(await resolveAiSpendLimits(resolverUser)).toEqual({
+				runs: { limit: 0, source: 'none' },
+				tokens: { limit: 0, source: 'none' },
+				embeds: { limit: 0, source: 'none' },
+				vision: { limit: 0, source: 'none' },
+			});
+			expect(
+				await refusedAt(chargeAiSpend(resolverUser, { door: 'zzspend.none', embeds: 1 })),
+			).toBe(0);
+			expect(await readAiSpend(resolverUser)).toEqual({ runs: 0, tokens: 0, embeds: 0, vision: 0 });
+		});
+
+		test('an explicit user 0 REFUSES although the profile allows', async () => {
+			await sweepAiSpendLedger([RESOLVER_USER_ID]);
+			await levels(resolverUser, { ...EMPTY, vision: 0 }, { ...EMPTY, vision: 5 });
+			expect((await resolveAiSpendLimits(resolverUser)).vision).toEqual({
+				limit: 0,
+				source: 'user',
+			});
+			expect(
+				await refusedAt(chargeAiSpend(resolverUser, { door: 'zzspend.zero', vision: 1 })),
+			).toBe(0);
+		});
+
+		test('each kind resolves ON ITS OWN, and an exhausted kind blocks only itself', async () => {
+			await sweepAiSpendLedger([RESOLVER_USER_ID]);
+			await levels(
+				resolverUser,
+				{ runs: null, tokens: 7, embeds: 3, vision: null },
+				{ runs: 1, tokens: 9, embeds: null, vision: null },
+			);
+			expect(await resolveAiSpendLimits(resolverUser)).toEqual({
+				runs: { limit: 1, source: 'profile' },
+				tokens: { limit: 7, source: 'user' },
+				embeds: { limit: 3, source: 'user' },
+				vision: { limit: 0, source: 'none' },
+			});
+			expect(await refusedAt(chargeAiSpend(resolverUser, { door: 'zzspend.k', runs: 1 }))).toBe(
+				'admitted',
+			);
+			expect(await refusedAt(chargeAiSpend(resolverUser, { door: 'zzspend.k', runs: 1 }))).toBe(1);
+			// runs is spent; embeds still admits, vision (0) still refuses.
+			expect(await refusedAt(chargeAiSpend(resolverUser, { door: 'zzspend.k', embeds: 1 }))).toBe(
+				'admitted',
+			);
+			expect(await refusedAt(chargeAiSpend(resolverUser, { door: 'zzspend.k', vision: 1 }))).toBe(
+				0,
+			);
+			// A request naming two kinds is refused by the one that would pass its limit.
+			expect(
+				await refusedAt(chargeAiSpend(resolverUser, { door: 'zzspend.k', embeds: 1, tokens: 8 })),
+			).toBe(7);
+			expect(await readAiSpend(resolverUser)).toEqual({ runs: 1, tokens: 0, embeds: 1, vision: 0 });
+		});
+
+		test('limits are read PER RESERVATION: an administrator raising one admits the next spend', async () => {
+			await sweepAiSpendLedger([RESOLVER_USER_ID]);
+			await levels(resolverUser, { ...EMPTY, vision: 0 }, EMPTY);
+			const door = { door: 'zzspend.raise', vision: 1 };
+			expect(await refusedAt(chargeAiSpend(resolverUser, door))).toBe(0);
+			await levels(resolverUser, { vision: 1 }, {});
+			expect(await refusedAt(chargeAiSpend(resolverUser, door))).toBe('admitted');
+			await levels(resolverUser, { vision: null }, { vision: 2 });
+			expect(await refusedAt(chargeAiSpend(resolverUser, door))).toBe('admitted');
+			expect(await refusedAt(chargeAiSpend(resolverUser, door))).toBe(2);
+		});
+
+		test('ROOT is refused at 0 like anyone (its own explicit 0 over an allowing profile)', async () => {
+			const profileId = await resolveProfileId(ROOT_USER_ID);
+			expect(profileId).not.toBeNull();
+			await levels(root, { ...EMPTY, vision: 0 }, { vision: 5 });
+			expect((await resolveAiSpendLimits(root)).vision).toEqual({ limit: 0, source: 'user' });
+			expect(await refusedAt(chargeAiSpend(root, { door: 'zzspend.root0', vision: 1 }))).toBe(0);
+		});
+
+		test('a stored limit parses FAIL-CLOSED: only EMPTY inherits, anything set but unusable is 0', () => {
+			const bag = (value: unknown) => ({ zzlimit: [{ id: 1, value }] });
+			// EMPTY — inherit the next level (null).
+			expect(storedLimit(null, 'zzlimit')).toBeNull();
+			expect(storedLimit({}, 'zzlimit')).toBeNull();
+			expect(storedLimit({ zzlimit: [] }, 'zzlimit')).toBeNull();
+			expect(storedLimit(bag(null), 'zzlimit')).toBeNull();
+			expect(storedLimit(bag(''), 'zzlimit')).toBeNull();
+			expect(storedLimit(bag('   '), 'zzlimit')).toBeNull();
+			// SET but unusable — 0 (refuses), NEVER null (which would inherit a larger one).
+			for (const malformed of ['abc', -5, '-5', Number.NaN, {}, { value: 'x' }, true, [5]]) {
+				expect({ malformed, limit: storedLimit(bag(malformed), 'zzlimit') }).toEqual({
+					malformed,
+					limit: 0,
+				});
+			}
+			// Usable — floored integer.
+			expect(storedLimit(bag(3), 'zzlimit')).toBe(3);
+			expect(storedLimit(bag('3'), 'zzlimit')).toBe(3);
+			expect(storedLimit(bag(12.7), 'zzlimit')).toBe(12);
+			expect(storedLimit(bag(0), 'zzlimit')).toBe(0);
+		});
+
+		test('a MALFORMED or NEGATIVE user limit refuses at 0 — it never inherits the profile; a BLANK one does', async () => {
+			await sweepAiSpendLedger([RESOLVER_USER_ID]);
+			await levels(
+				resolverUser,
+				{ runs: 'abc', tokens: -3, embeds: '   ', vision: null },
+				{ runs: 5, tokens: 5, embeds: 5, vision: null },
+			);
+			expect(await resolveAiSpendLimits(resolverUser)).toEqual({
+				runs: { limit: 0, source: 'user' },
+				tokens: { limit: 0, source: 'user' },
+				embeds: { limit: 5, source: 'profile' },
+				vision: { limit: 0, source: 'none' },
+			});
+			expect(await refusedAt(chargeAiSpend(resolverUser, { door: 'zzspend.bad', runs: 1 }))).toBe(
+				0,
+			);
+			expect(await refusedAt(chargeAiSpend(resolverUser, { door: 'zzspend.bad', embeds: 1 }))).toBe(
+				'admitted',
+			);
+			expect(await readAiSpend(resolverUser)).toEqual({ runs: 0, tokens: 0, embeds: 1, vision: 0 });
+		});
+	});
+
+	// ── C. the ledger ──────────────────────────────────────────────────────────
+
+	describe('C. the ledger', () => {
+		const SCRATCH = { ...AI_SPEND_LEDGER };
+		const failClosed = async (promise: Promise<unknown>) => {
+			try {
+				await promise;
+				return 'admitted';
+			} catch (error) {
+				if (!(error instanceof DedaloError)) return `untyped: ${String(error)}`;
+				const cause = error.cause instanceof DedaloError ? error.cause.code : null;
+				return cause === null ? error.code : `${error.code} <- ${cause}`;
+			}
+		};
+
+		test('a ledger or limit set that cannot be used FAILS CLOSED: ai.budget_unavailable, nothing written', async () => {
+			await budgets({});
+			await sweepAiSpendLedger([AUTHZ_LEVEL_1_USER_ID]);
+			const ask = { door: 'zzspend.missing', runs: 1 };
+			// The zz-scratch seam names a section / component no ontology defines —
+			// what a broken install looks like to this module.
+			expect(
+				await failClosed(
+					reserveAiSpend(ids.level1, ask, { ledger: { ...SCRATCH, section: 'zzspend404' } }),
+				),
+			).toBe('ai.budget_unavailable');
+			expect(
+				await failClosed(
+					reserveAiSpend(ids.level1, ask, { ledger: { ...SCRATCH, user: 'zzspend404' } }),
+				),
+			).toBe('ai.budget_unavailable');
+			expect(
+				await failClosed(
+					reserveAiSpend(ids.level1, ask, {
+						limits: {
+							user: AI_SPEND_LIMITS.user,
+							profile: { ...AI_SPEND_LIMITS.profile, runs: 'zzspend404' },
+						},
+					}),
+				),
+			).toBe('ai.budget_unavailable');
+			expect(
+				await failClosed(
+					reserveAiSpend(ids.level1, ask, {
+						limits: {
+							user: { ...AI_SPEND_LIMITS.user, section: 'zzspend404' },
+							profile: AI_SPEND_LIMITS.profile,
+						},
+					}),
+				),
+			).toBe('ai.budget_unavailable');
+			expect(await readAiSpend(ids.level1)).toEqual({ runs: 0, tokens: 0, embeds: 0, vision: 0 });
+			// …and the shipped ledger, untouched, admits.
+			expect(await failClosed(chargeAiSpend(ids.level1, ask))).toBe('admitted');
+		});
+
+		test('the seam cannot aim a write at a non-scratch tipo (the dd128 census rests on it)', async () => {
+			await budgets({});
+			const ask = { door: 'zzspend.aim', runs: 1 };
+			expect(
+				await failClosed(
+					reserveAiSpend(ids.level1, ask, { ledger: { ...SCRATCH, section: 'dd128' } }),
+				),
+			).toBe('ai.budget_unavailable <- internal.invariant');
+			expect(
+				await failClosed(
+					reserveAiSpend(ids.level1, ask, { ledger: { ...SCRATCH, runs: 'dd692' } }),
+				),
+			).toBe('ai.budget_unavailable <- internal.invariant');
+		});
+
+		test('two CONCURRENT reserves at limit 1 admit exactly one (the node lock + FOR UPDATE)', async () => {
+			await budgets({ runs: 1 });
+			await sweepAiSpendLedger([AUTHZ_LEVEL_1_USER_ID]);
 			let arrived = 0;
 			let open: () => void = () => {};
 			const barrier = new Promise<void>((resolve) => {
@@ -403,11 +688,13 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 			// ROW lock — so the reservation's read must hold the row: the correction
 			// then lands AFTER the reservation commits. Without FOR UPDATE it lands in
 			// the window, and the reservation's stale write erases it.
-			budgets({});
+			await budgets({});
 			await sweepAiSpendLedger([AUTHZ_COMPONENT_ONLY_USER_ID]);
 			await chargeAiSpend(ids.componentOnly, { door: 'zzspend.race.seed', runs: 1 });
+			const table = await getMatrixTableFromTipo(AI_SPEND_LEDGER.section);
+			if (table === null) throw new Error('the ledger section has no table');
 			const rows = (await sql.unsafe(
-				`SELECT section_id FROM matrix WHERE section_tipo = $1 AND relation @> $2::text::jsonb`,
+				`SELECT section_id FROM "${table}" WHERE section_tipo = $1 AND relation @> $2::text::jsonb`,
 				[
 					AI_SPEND_LEDGER.section,
 					JSON.stringify({
@@ -417,7 +704,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 			)) as { section_id: number }[];
 			expect(rows.length).toBe(1);
 			const target = {
-				table: 'matrix',
+				table,
 				sectionTipo: AI_SPEND_LEDGER.section,
 				sectionId: Number(rows[0]?.section_id),
 			};
@@ -444,7 +731,8 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('a MISSING usage report keeps the full reservation charged (never settle-to-zero)', async () => {
-			budgets({});
+			await budgets({});
+			await sweepAiSpendLedger([AUTHZ_SECTION_ONLY_USER_ID]);
 			const reservation = await reserveAiSpend(ids.sectionOnly, {
 				door: 'zzspend.nousage',
 				runs: 1,
@@ -460,7 +748,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('a REPORTED usage replaces the reservation; release refunds only an unspent one', async () => {
-			budgets({});
+			await budgets({});
 			await sweepAiSpendLedger([AUTHZ_SECTION_ONLY_USER_ID]);
 			const used = await reserveAiSpend(ids.sectionOnly, { door: 'zzspend.used', tokens: 4096 });
 			await used.settle({ tokens: 17 });
@@ -478,8 +766,8 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 			});
 		});
 
-		test('NOBODY IS EXEMPT: a global admin and root are refused at budget 0', async () => {
-			budgets({ vision: 0, embeds: 0 });
+		test('NOBODY IS EXEMPT: a global admin and root are refused at limit 0', async () => {
+			await budgets({ vision: 0, embeds: 0 });
 			expect(ids.dd128Admin.isGlobalAdmin).toBe(true);
 			expect(
 				await refusalOf(chargeAiSpend(ids.dd128Admin, { door: 'zzspend.admin', vision: 1 })),
@@ -490,7 +778,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('the refusal names the budget and when it resets (429 details)', async () => {
-			budgets({ vision: 0 });
+			await budgets({ vision: 0 });
 			try {
 				await chargeAiSpend(ids.level1, { door: 'zzspend.details', vision: 1 });
 				throw new Error('admitted');
@@ -504,11 +792,11 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 	});
 
-	// ── C. the doors ───────────────────────────────────────────────────────────
+	// ── D. the doors ───────────────────────────────────────────────────────────
 
-	describe('C. the doors', () => {
+	describe('D. the doors', () => {
 		test('agent_chat charges the REPORTED usage, not the reservation', async () => {
-			budgets({});
+			await budgets({});
 			await sweepAiSpendLedger([AUTHZ_TOOL_GRANTED_USER_ID]);
 			const before = providerCalls;
 			const first = await call(
@@ -528,7 +816,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('runs budget 1: the SECOND agent_chat is ai.budget_exhausted (429), with no provider call', async () => {
-			budgets({ runs: 1 });
+			await budgets({ runs: 1 });
 			const before = providerCalls;
 			const second = await call(
 				'dd_mcp_api',
@@ -544,7 +832,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('the stream variant refuses with a JSON 429 — no SSE byte is ever sent', async () => {
-			budgets({ runs: 1 });
+			await budgets({ runs: 1 });
 			const before = providerCalls;
 			const result = await call(
 				'dd_mcp_api',
@@ -564,7 +852,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('the ledger is DB state: clearing the principal / permission caches resets nothing', async () => {
-			budgets({ runs: 1 });
+			await budgets({ runs: 1 });
 			clearPrincipalCache();
 			clearPermissionsCache();
 			const result = await call(
@@ -577,7 +865,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('generative `ask` without the tool_rag grant is tool.not_authorized — before anything is spent', async () => {
-			budgets({});
+			await budgets({});
 			await sweepAiSpendLedger([AUTHZ_CONTROL_USER_ID]);
 			const before = providerCalls;
 			const result = await call(
@@ -595,7 +883,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('its GRANTED twin is served; a grounding miss refunds the run, the query embedding stays charged', async () => {
-			budgets({});
+			await budgets({});
 			await sweepAiSpendLedger([AUTHZ_TOOL_GRANTED_USER_ID]);
 			const before = providerCalls;
 			const result = await call(
@@ -617,7 +905,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('embed_groups (the capability probe) spends nothing and needs no grant', async () => {
-			budgets({ embeds: 0 });
+			await budgets({ embeds: 0 });
 			await sweepAiSpendLedger([AUTHZ_CONTROL_USER_ID]);
 			const result = await call(
 				'dd_rag_api',
@@ -708,7 +996,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test("CENSUS: every dd_rag_api door that calls a model moves the caller's ledger", async () => {
-			budgets({});
+			await budgets({});
 			armSidecars();
 			try {
 				for (const [action, door] of Object.entries(RAG_DOORS)) {
@@ -762,7 +1050,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 				for (const action of embedDoors) {
 					const door = RAG_DOORS[action as keyof typeof RAG_DOORS];
 					const principal = door.who();
-					budgets({ embeds: 1 });
+					await budgets({ embeds: 1 });
 					await sweepAiSpendLedger([principal.userId]);
 					const first = await call('dd_rag_api', action, door.options(), principal);
 					const before = embedCalls;
@@ -793,7 +1081,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 			({ requestId: 'zzspend-vision', clientIp: '127.0.0.1', principal }) as ApiRequestContext;
 
 		test('vision budget 1: the SECOND get_proposals vision run is 429 and the model is NOT asked', async () => {
-			budgets({ vision: 1 });
+			await budgets({ vision: 1 });
 			await sweepAiSpendLedger([AUTHZ_TOOL_GRANTED_USER_ID]);
 			const calls = { vision: 0 };
 			const handler = buildGetProposals({
@@ -820,7 +1108,7 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 		});
 
 		test('identify_by_image, EXTERNAL encoder at vision budget 0: 429 with ZERO embeds', async () => {
-			budgets({ vision: 0 });
+			await budgets({ vision: 0 });
 			const calls = { embed: 0 };
 			const encoder: MultimodalEmbeddingProvider = {
 				embedImage: async () => {
@@ -848,6 +1136,105 @@ describe.if(DB_READY)('TOOLS-4 — AI spend is granted and metered', () => {
 				code: await refusalOf(handler(rqo, identifyCtx(ids.toolGranted))),
 				embeds: calls.embed,
 			}).toEqual({ code: 'ai.budget_exhausted', embeds: 0 });
+		});
+	});
+
+	// ── E. the per-user limits are not self-writable ──────────────────────────
+
+	describe('E. a user cannot raise their OWN limit (the dd128 own-record downgrade)', () => {
+		/** The user-limit tipos, from the module's own table — a renamed one cannot slip the guard. */
+		const USER_LIMIT_TIPOS = (['runs', 'tokens', 'embeds', 'vision'] as const).map(
+			(kind) => AI_SPEND_LIMITS.user[kind],
+		);
+		let manager: Principal;
+		let control: Principal;
+
+		beforeAll(async () => {
+			// The departmental user-manager (a non-global-admin) ALSO granted level 2 on the
+			// four user-limit components — the role an administrator would hand AI-limit
+			// management to. Its profile is fixture-owned: removed with the fixture.
+			const grants = USER_LIMIT_TIPOS.map((tipo, index) => ({
+				id: 900 + index,
+				tipo,
+				section_tipo: AI_SPEND_LIMITS.user.section,
+				value: 2,
+			}));
+			await sql.unsafe(
+				`UPDATE matrix_profiles SET misc = jsonb_set(misc, '{dd774}', misc->'dd774' || $1::text::jsonb)
+				 WHERE section_tipo = $2 AND section_id = $3`,
+				[encodeForJsonb(grants), AI_SPEND_LIMITS.profile.section, AUTHZ_USER_MANAGER_PROFILE_ID],
+			);
+			clearPermissionsCache();
+			clearPrincipalCache();
+			manager = await resolvePrincipal(AUTHZ_USER_MANAGER_USER_ID);
+			control = await resolvePrincipal(AUTHZ_CONTROL_USER_ID);
+		});
+
+		test('the grant is REAL (level 2), and the resolution downgrades it to READ on the own record only', async () => {
+			expect(manager.isGlobalAdmin).toBe(false);
+			for (const tipo of USER_LIMIT_TIPOS) {
+				expect({ tipo, matrix: await getPermissions(manager, 'dd128', tipo) }).toEqual({
+					tipo,
+					matrix: 2,
+				});
+				expect({
+					tipo,
+					own: await getRecordComponentPermission(manager, 'dd128', tipo, manager.userId),
+					other: await getRecordComponentPermission(manager, 'dd128', tipo, control.userId),
+				}).toEqual({ tipo, own: 1, other: 2 });
+			}
+		});
+
+		const outcome = async (promise: Promise<unknown>): Promise<string> => {
+			try {
+				const response = (await promise) as { status?: number } | undefined;
+				return response?.status === undefined || response.status === 200
+					? 'served'
+					: `status ${response.status}`;
+			} catch (error) {
+				return error instanceof DedaloError ? error.code : `untyped: ${String(error)}`;
+			}
+		};
+		const mcpSet = (principal: Principal, sectionId: number, value: number) =>
+			setField(principal, {
+				section_tipo: 'dd128',
+				section_id: sectionId,
+				field: AI_SPEND_LIMITS.user.tokens,
+				value,
+				mode: 'replace',
+			});
+		const humanSave = (principal: Principal, sectionId: number, value: number) => {
+			const handler = coreApiActions.save;
+			if (!handler) throw new Error("dd_core_api has no 'save' action registered");
+			return handler(
+				{
+					source: {
+						tipo: AI_SPEND_LIMITS.user.tokens,
+						section_tipo: 'dd128',
+						section_id: sectionId,
+						lang: 'lg-nolan',
+					},
+					data: { changed_data: [{ action: 'set_data', value: [{ id: 1, value }] }] },
+				} as unknown as Parameters<typeof handler>[0],
+				{
+					principal,
+					session: { userId: principal.userId },
+					clientIp: '127.0.0.1',
+					requestId: 'zzspend-self-limit',
+				} as unknown as Parameters<typeof handler>[1],
+			);
+		};
+
+		test('MCP set_field and the human save door REFUSE the own limit, and write nothing', async () => {
+			const before = (await resolveAiSpendLimits(manager)).tokens;
+			expect(await outcome(mcpSet(manager, manager.userId, 999_999_999))).toBe('perm.denied');
+			expect(await outcome(humanSave(manager, manager.userId, 999_999_999))).toBe('perm.denied');
+			expect((await resolveAiSpendLimits(manager)).tokens).toEqual(before);
+		});
+
+		test("CONTRAST: the same grant writes ANOTHER user's limit (the refusal is the own-record rule, not the grant)", async () => {
+			expect(await outcome(mcpSet(manager, control.userId, 4242))).toBe('served');
+			expect((await resolveAiSpendLimits(control)).tokens).toEqual({ limit: 4242, source: 'user' });
 		});
 	});
 });

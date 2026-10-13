@@ -31,6 +31,8 @@ import {
 	ascShapeProblem,
 	BUN_PIN_KERNEL_FLOOR,
 	BUN_RELEASE_KEY_FINGERPRINT,
+	DARWIN_ASSETS,
+	DARWIN_TABLE_PATH,
 	dearmorPublicKey,
 	GPGV_MISSING,
 	KEY_PATH,
@@ -254,6 +256,13 @@ describe('the Bun hash table is the signed payload (.bun-sha256, Q3)', () => {
 			expect(gpgv, `${GPGV_MISSING} — and in the CI image (apt install gpgv)`).not.toBeNull();
 			const payload = verifiedPayload(asc, key, { gpgv: gpgv as string });
 			expect(tableAssetLines(table)).toEqual(payloadAssetLines(payload));
+			// The macOS bootstrap's table (docker/trial on a Mac): the same payload, its own assets.
+			const darwin = readFileSync(DARWIN_TABLE_PATH, 'utf-8');
+			expect(darwin.split('\n').slice(0, 2)).toEqual([
+				`# bun-v${pinned}`,
+				`# signed-by: ${BUN_RELEASE_KEY_FINGERPRINT}`,
+			]);
+			expect(tableAssetLines(darwin)).toEqual(payloadAssetLines(payload, DARWIN_ASSETS));
 		},
 	);
 

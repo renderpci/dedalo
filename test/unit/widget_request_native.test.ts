@@ -37,14 +37,17 @@
  *    provisioning (user 424252 here, 2 days of activity incl. a dd1223
  *    publish event and a skipped dd271 'where'). The dd1521 aggregate rows
  *    were byte-compared PHP↔TS there, so their content HERE is pinned from
- *    the PHP algorithm (class.diffusion_section_stats.php: the what-code→term
- *    map, the where-skip set, dd1223→publish routing, the hour histogram,
+ *    the PHP algorithm (class.diffusion_section_stats.php: the what-code→action
+ *    map — action-keyed since WC-2026-10-12-user-activity-what-labels — the where-skip set, dd1223→publish routing, the hour histogram,
  *    save_user_activity's row anatomy incl. the virtual-calendar `time`).
  *
  * SOFTENED / TS-side notes (never oracle-pinned by the differential):
- *  - ontology term labels (counters datalist `label`, stats what-item
- *    `label`) are shared MUTABLE ontology values — asserted AS the term for
- *    that tipo via termByTipo, never as literal strings;
+ *  - ontology term labels (counters datalist `label`) are shared MUTABLE
+ *    ontology values — asserted AS the term for that tipo via termByTipo,
+ *    never as literal strings;
+ *  - a stored stats what-item is `{type, key: <action>, value}` — no tipo, no
+ *    baked label (WC-2026-10-12-user-activity-what-labels: the text is the
+ *    labels engine's, resolved per reader lang at read time);
  *  - datalist ordering (DB collation vs JS string order) is not re-asserted;
  *  - the refreshed datalist modify_counter attaches comes from PHP source
  *    (class.counters_status.php:150-160 — PHP's own modify_counter dies
@@ -75,7 +78,6 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { virtualDateSeconds } from '../../src/core/area_maintenance/user_stats.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { termByTipo } from '../../src/core/ontology/labels.ts';
-import { currentApplicationLang } from '../../src/core/resolve/request_lang.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
@@ -499,7 +501,6 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 	const activityIds: number[] = [];
 	let body: Record<string, unknown> = {};
 	let statsRows: Record<string, unknown>[] = [];
-	const labels: Record<string, string | null> = {};
 
 	// int-canonical actor locator (WC-2026-08-10-section-id-int-canonical): the
 	// writer mints an INT section_id now; the string twin still matches rows
@@ -627,11 +628,6 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 			source: { typo: 'source', model: 'database_info', action: 'rebuild_user_stats' },
 		});
 		statsRows = await readStatsRows();
-
-		// what-labels are mutable shared ontology terms — resolve, never pin
-		for (const tipo of ['dd696', 'dd700', 'dd694', 'dd693', 'dd699']) {
-			labels[tipo] = await termByTipo(tipo, currentApplicationLang());
-		}
 	}, 60000);
 
 	afterAll(async () => {
@@ -711,9 +707,9 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 		// where dd542/test6099×2/test6100 (dd1223 routed to publish);
 		// hours 9×2, 10×2, 11; one testmint1 publish
 		const dayATotals = [
-			{ type: 'what', tipo: 'dd696', value: 1, label: labels.dd696 },
-			{ type: 'what', tipo: 'dd700', value: 3, label: labels.dd700 },
-			{ type: 'what', tipo: 'dd694', value: 1, label: labels.dd694 },
+			{ type: 'what', key: 'login', value: 1 },
+			{ type: 'what', key: 'save', value: 3 },
+			{ type: 'what', key: 'edit', value: 1 },
 			{ type: 'where', tipo: 'dd542', value: 1 },
 			{ type: 'where', tipo: 'test6099', value: 2 },
 			{ type: 'where', tipo: 'test6100', value: 1 },
@@ -724,8 +720,8 @@ describe('database_info.rebuild_user_stats (dd1521 aggregate anatomy)', () => {
 		];
 		// day B: list + search; the dd271 'where' is SKIPPED; hour 14×2
 		const dayBTotals = [
-			{ type: 'what', tipo: 'dd693', value: 1, label: labels.dd693 },
-			{ type: 'what', tipo: 'dd699', value: 1, label: labels.dd699 },
+			{ type: 'what', key: 'list', value: 1 },
+			{ type: 'what', key: 'search', value: 1 },
 			{ type: 'where', tipo: 'test6099', value: 1 },
 			{ type: 'when', hour: 14, value: 2 },
 		];

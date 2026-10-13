@@ -32,13 +32,18 @@ export interface ServerState {
 	 */
 	media_access_mode?: 'private' | 'publication' | false | null;
 	/**
-	 * TS-native install lifecycle (DEC-19; the TS equivalent of PHP's
-	 * state.install_status). Absent/'unconfigured' on a fresh machine →
-	 * 'configured' after persist_config writes .env → 'sealed' after
-	 * install_finish. `sealed` makes the install surface 404 and the server
-	 * behave as a normal configured instance. See src/core/install/.
+	 * Install lifecycle, written ONLY by the terminal installer
+	 * (scripts/install.ts → core/install/executor.ts). Absent on a box the
+	 * installer never touched (a fresh box, a migrated one) →
+	 * `terminal_installing` once persist_config wrote `.env` → `sealed` at
+	 * install_finish (the executor's finish mark).
+	 *
+	 * Any value present and not `sealed` REFUSES THE BOOT
+	 * (src/config/install_state.ts notInstalledRefusal, exit 78): the database
+	 * is not the install's yet, and an unfinished install is resumed with
+	 * the installer's `--resume` (per route), never by starting the server.
 	 */
-	install_status?: 'unconfigured' | 'configured' | 'installing' | 'sealed';
+	install_status?: 'terminal_installing' | 'sealed';
 	/** Install fingerprint captured at persist_config (PHP state.information). */
 	information?: string;
 	/** Install fingerprint key captured at persist_config (PHP state.info_key). */

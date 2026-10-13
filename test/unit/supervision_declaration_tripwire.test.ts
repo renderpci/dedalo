@@ -19,7 +19,10 @@
  *      launch the server unclassified.
  *   2. systemd — every unit (deploy/*.service, and every fenced block under docs/ and
  *      engineering/) whose ExecStart runs src/server.ts carries
- *      `Environment=DEDALO_SUPERVISED=true`.
+ *      `Environment=DEDALO_SUPERVISED=true`. A block that writes a DROP-IN (heredoc into
+ *      `<name>@<i>.service.d/`) is judged with EVERY drop-in its document writes for that
+ *      unit, merged in file-name order over deploy/systemd/<name>@.service, as systemd
+ *      runs it — never alone, and never without its template (fail closed).
  *   3. compose — every tracked compose file, parsed (Bun.YAML): each ENGINE service (its
  *      command reaches src/server.ts or a supervised script, or it builds the image and
  *      inherits a Dockerfile CMD that runs src/server.ts) sets DEDALO_SUPERVISED "true".
@@ -30,6 +33,10 @@
  *      and the refusal names the ignored file; the process value IS.
  *   5. the installer never writes the key, whatever an answer smuggles in, and the .env
  *      template it copies into ../private/ offers no line that would set it.
+ *
+ *   6. the terminal installer's instance unit (phase 4): deploy/systemd/dedalo-ts@.service
+ *      MERGED with its rendered drop-in the way systemd merges them (the drop-in replaces
+ *      ExecStart) runs the server and carries the declaration, on every OS row.
  *
  * Floors (3 scripts, 2 units, 3 compose services) keep a broken derivation from passing
  * vacuously. A new launcher of the server is classified here or this gate goes red.
@@ -49,7 +56,9 @@ import {
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { envSnapshot, parseEnvFile, projectRoot } from '../../src/config/env.ts';
-import { RESTART_EXIT_CODE } from '../../src/core/install/restart.ts';
+import { stampOf } from '../../src/core/install/host/production/common.ts';
+import { instanceDropins, renderTemplate } from '../../src/core/install/host/systemd/render.ts';
+import { RESTART_EXIT_CODE } from '../../src/core/update/restart.ts';
 import {
 	type ComposeServiceShape,
 	DEPLOY_DIR,
@@ -59,6 +68,7 @@ import {
 	systemdUnitNames,
 	trackedComposeFiles,
 } from '../helpers/deploy_artifact_corpus.ts';
+import { mergedUnit, productionPlanCtx, unitEnvironment } from '../helpers/install_host_scratch.ts';
 import { proseMarkdownFiles } from '../helpers/prose_markdown_corpus.ts';
 
 const SUPERVISION_KEY = 'DEDALO_SUPERVISED';
@@ -107,7 +117,7 @@ function respawnsOnRestart(script: string): boolean {
 	const file = delegatedFile(script);
 	if (file === undefined) return false;
 	const source = readFileSync(join(projectRoot, file), 'utf8');
-	return /import \{[^}]*RESTART_EXIT_CODE[^}]*\} from '[^']*core\/install\/restart\.ts'/.test(
+	return /import \{[^}]*RESTART_EXIT_CODE[^}]*\} from '[^']*core\/update\/restart\.ts'/.test(
 		source,
 	);
 }
@@ -256,36 +266,120 @@ function unitLines(text: string): string[] {
 		.filter((line) => line !== '' && !line.startsWith('#') && !line.startsWith(';'));
 }
 
-/** Every unit text that starts the server: [label, text]. */
-function serverUnits(): [string, string][] {
-	const units: [string, string][] = [];
+/** A unit systemd would run, judged: does it carry the declaration? */
+interface ServerUnit {
+	label: string;
+	/** A drop-in judged merged with its deploy/systemd/ template (not on its own). */
+	dropin: boolean;
+	declared: boolean;
+}
+
+/**
+ * A drop-in a manual block writes as a heredoc into `<unit>@<i>.service.d/`:
+ * `render > "/etc/systemd/system/dedalo-ts@$I.service.d/10-x.conf" <<'EOF'` … `EOF`.
+ * Captures the template prefix (`dedalo-ts`), the drop-in file name (`10-x.conf`)
+ * and the heredoc body.
+ */
+const DROPIN_HEREDOC =
+	/\/([\w-]+)@[^/\s"']*\.service\.d\/([^\s"']*)["']?\s*<<-?\s*['"]?(\w+)['"]?\n([\s\S]*?)\n\3(?=\n|$)/g;
+
+function runsServer(lines: readonly string[]): boolean {
+	return lines.some((line) => /^ExecStart=/.test(line) && line.includes(SERVER_ENTRY));
+}
+
+/**
+ * Every unit that starts the server, judged as systemd runs it. A standalone unit
+ * text is judged alone. A DROP-IN (manual_install.md writes the instance unit's
+ * ExecStart that way, 2026-10-12) is never a unit on its own: systemd merges EVERY
+ * drop-in of the unit's `.d/` directory, in file-name order, over the template — so
+ * all the drop-ins one document writes for `<name>@` are collected (a later write
+ * of the same file name replaces the earlier one), sorted by file name and merged
+ * over deploy/systemd/<name>@.service ONCE, with the same merge leg 6 uses. A
+ * sibling drop-in that resets or overrides the declaration without an ExecStart of
+ * its own is therefore red too; a template that is missing merges as empty (fail
+ * closed: the drop-ins are judged alone).
+ */
+function serverUnits(): ServerUnit[] {
+	const declaredAlone = (text: string): boolean =>
+		unitLines(text).includes(`Environment=${SUPERVISION_KEY}=true`);
+	const units: ServerUnit[] = [];
 	for (const name of systemdUnitNames()) {
-		units.push([`deploy/${name}`, readFileSync(join(DEPLOY_DIR, name), 'utf8')]);
+		const text = readFileSync(join(DEPLOY_DIR, name), 'utf8');
+		if (runsServer(unitLines(text)))
+			units.push({ label: `deploy/${name}`, dropin: false, declared: declaredAlone(text) });
 	}
 	for (const file of proseMarkdownFiles()) {
 		const text = readFileSync(file, 'utf8');
+		const doc = relative(projectRoot, file);
+		// template name → drop-in file name → body (one `.d/` directory per document).
+		const dropins = new Map<string, Map<string, string>>();
 		let index = 0;
 		for (const match of text.matchAll(/```[\w-]*\n([\s\S]*?)```/g)) {
-			units.push([`${relative(projectRoot, file)} block ${++index}`, match[1] as string]);
+			const label = `${doc} block ${++index}`;
+			let rest = match[1] as string;
+			for (const heredoc of rest.matchAll(DROPIN_HEREDOC)) {
+				const template = heredoc[1] as string;
+				const files = dropins.get(template) ?? new Map<string, string>();
+				files.set(heredoc[2] as string, heredoc[4] as string);
+				dropins.set(template, files);
+			}
+			rest = rest.replace(DROPIN_HEREDOC, '');
+			if (runsServer(unitLines(rest)))
+				units.push({ label, dropin: false, declared: declaredAlone(rest) });
+		}
+		for (const [name, files] of dropins) {
+			const templatePath = join(projectRoot, 'deploy/systemd', `${name}@.service`);
+			const template = existsSync(templatePath) ? readFileSync(templatePath, 'utf8') : '';
+			const ordered = [...files.keys()].sort();
+			const merged = mergedUnit(
+				template,
+				ordered.map((fileName) => files.get(fileName) as string),
+			);
+			const execs = merged.get('Service.ExecStart') ?? [];
+			if (!execs.some((exec) => exec.includes(SERVER_ENTRY))) continue;
+			units.push({
+				label: `${doc} drop-ins ${ordered.join(', ')} over deploy/systemd/${name}@.service`,
+				dropin: true,
+				declared: unitEnvironment(merged).get(SUPERVISION_KEY) === 'true',
+			});
 		}
 	}
-	return units.filter(([, text]) =>
-		unitLines(text).some((line) => /^ExecStart=/.test(line) && line.includes(SERVER_ENTRY)),
-	);
+	return units;
 }
 
 describe('systemd units declare supervision', () => {
 	test('every unit whose ExecStart runs the server carries Environment=DEDALO_SUPERVISED=true', () => {
 		const units = serverUnits();
-		const labels = units.map(([label]) => label);
-		// Floor: the reference unit and the multi-instance template.
+		const labels = units.map((unit) => unit.label);
+		// Floor: the reference unit. The manual no longer carries a hand-written
+		// multi-instance template (2026-10-12): the installer renders the instance
+		// units from deploy/systemd/, held by the next describe as systemd merges
+		// them. A unit block the manual adds again is still walked and held here.
 		expect(labels).toContain('deploy/dedalo-ts.service');
-		expect(labels.some((l) => l.startsWith('docs/install/multi_instance.md'))).toBe(true);
-		expect(units.length).toBeGreaterThanOrEqual(2);
-		const undeclared = units
-			.filter(([, text]) => !unitLines(text).includes(`Environment=${SUPERVISION_KEY}=true`))
-			.map(([label]) => label);
-		expect(undeclared).toEqual([]);
+		expect(units.length).toBeGreaterThanOrEqual(1);
+		// Floor: manual_install.md's instance drop-in (2026-10-12) is found and judged
+		// merged — a heredoc pattern that stopped matching would judge it vacuously.
+		expect(units.some((unit) => unit.dropin)).toBe(true);
+		expect(units.filter((unit) => !unit.declared).map((unit) => unit.label)).toEqual([]);
+	});
+});
+
+describe("the terminal installer's instance units declare supervision", () => {
+	test('dedalo-ts@<i> — the template merged with its drop-in, as systemd does — runs the server, supervised', () => {
+		// Phase 4 (2026-10-12): a production install runs deploy/systemd/dedalo-ts@.service
+		// with a per-instance drop-in that REPLACES ExecStart (the pinned Bun). Neither file
+		// alone is the unit systemd runs; the merge is.
+		for (const os of ['ubuntu2604', 'debian13', 'el10'] as const) {
+			const ctx = productionPlanCtx({ os, web: 'nginx', tls: 'letsencrypt' });
+			const dropins = instanceDropins(ctx.paths, ctx.row, ctx.answers, stampOf(ctx))
+				.filter((dropin) => dropin.path.includes(`/dedalo-ts@${ctx.paths.instance}.service.d/`))
+				.map((dropin) => dropin.content);
+			const unit = mergedUnit(renderTemplate('dedalo-ts@.service', ctx.row, ctx.source), dropins);
+			const execs = unit.get('Service.ExecStart') ?? [];
+			expect(execs.length, os).toBe(1);
+			expect(execs[0], os).toContain(SERVER_ENTRY);
+			expect(unitEnvironment(unit).get(SUPERVISION_KEY), os).toBe('true');
+		}
 	});
 });
 

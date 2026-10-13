@@ -19,8 +19,8 @@ served tree — if you are looking for the four config files of v6, see
 [what changed in v7](whats_changed_v7.md).
 
 A fresh install needs none of this by hand: the installer writes the file for
-you — the command-line installer, the browser wizard or `install.sh`, which all
-write the same keys ([what `.env` gets](../install/installer_reference.md#what-privateenv-does-and-does-not-get)).
+you — the terminal installer (`sh install.sh`, or `bun run dedalo:install` in a checkout), whatever
+route or mode you run it in, writes the same keys ([what `.env` gets](../install/installer_reference.md#what-privateenv-does-and-does-not-get)).
 
 ---
 
@@ -58,9 +58,9 @@ engine's built-in default.
   file is read top to bottom and the **last** line silently wins.
 - **Rename a retired key** when the boot refuses and names it.
 
-Never delete a line: a key you remove silently falls back to a default. For the
-keys the installer manages, re-running the installer is the alternative to a
-hand edit; it rewrites only those keys and preserves every other line.
+Never delete a line: a key you remove silently falls back to a default. The
+installer writes `.env` once, at install time, and refuses to install over a
+sealed installation, so after the install every change is a hand edit.
 
 **Restart to apply.** Configuration is read once, at boot.
 

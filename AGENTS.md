@@ -52,12 +52,24 @@ The live-oracle era is over. The baselines of record are FROZEN:
   root needs the declaration too — `test/helpers/media_scratch_root.ts`. Gate:
   `test/unit/test_media_root_tripwire.test.ts`. 
 - **Tests use the generic `test` TLD and BUILD the situation they test.**   Never a specific install's TLD (`numisdata`, `oh`, `tch`, `rsc`, `ich`,   `mdcat`…): such a gate passes on one machine and nowhere else. Structure   comes from repo-owned node definitions materialized through the engine's   own write path (`src/core/test_data/` situations — `upsertDdOntologyNode`,   `zz*` scratch TLDs, torn down after); records are created at runtime, never   read from whatever the ambient DB happens to hold. Ratcheted by   `generic_tld_tripwire` (shrink-only). 
+- **Ontology definitions belong to the MASTER ontology — never create them
+  yourself.** Creating an ontology TLD, section, component or any other node
+  without specific human authorisation is NOT allowed — no "engine-owned" TLD,
+  no node shipped in code. When a feature seems to need ontology state: STOP
+  and ASK — is a new TLD really necessary, or is a section/component in an
+  existing TLD enough, or does existing structure (Time Machine, Activity, a
+  user record) already carry it? You may PROPOSE (TLD, parent, model, how the
+  engine reads it); a human decides. An approved definition is set up on the
+  master ontology server first and reaches an installation through an ontology
+  update; only then may code use its tipos. Sole exception: the suite's own
+  fixtures in the marked suite DB (the `test` TLD, `zz*` scratch TLDs torn down
+  after) — and a NEW test TLD needs the same authorisation.
 
 ## Commands 
 
 - `bun run dev` — server (unix socket / port per `../private/.env`). 
 - `bun test test/unit/…` / `bun test test/parity/…` — targeted gates   (full `bun test` takes minutes; parity replays the frozen store, no   oracle, no creds — but see the verification story above: corpus-bound   parity gates are red on the suite DB by construction until replaced). 
-- `bun run test:db:setup` — build the SUITE database THROUGH THE INSTALLER'S DOORS (`installDbFromSeed` = the core-only seed + search stores + engine ontology + `lg`; then the default `oh` via `stageOntologies`/`installOntologies` from the vendored file), stamp `dedalo_test_marker`, then add the suite's own fixtures (the `test` TLD, the test3 playground, hierarchies, tools) — AND sweep/rebuild the SUITE MEDIA ROOT (`../private/test_media/<suite db>`, marked `.dedalo_test_media`). `bun test` creates the media root itself if it is missing, so this command is about a clean, rebuildable fixture — not a prerequisite for the media guard being armed. 
+- `bun run test:db:setup` — build the SUITE database THROUGH THE INSTALLER'S DOORS (`installDbFromSeed` = the core-only seed + search stores + `lg`; then the default `oh` via `stageOntologies`/`installOntologies` from the vendored file), stamp `dedalo_test_marker`, then add the suite's own fixtures (the `test` TLD, the test3 playground, hierarchies, tools) — AND sweep/rebuild the SUITE MEDIA ROOT (`../private/test_media/<suite db>`, marked `.dedalo_test_media`). `bun test` creates the media root itself if it is missing, so this command is about a clean, rebuildable fixture — not a prerequisite for the media guard being armed. 
 - **Suite MariaDB (PUB-05)** — the diffusion gates run against the suite's OWN MariaDB per lane
   (`../private/test_mariadb/<suite db>`, marked `.dedalo_test_mariadb`, `--skip-networking` unix
   socket), armed in every `bun test` by `test/preload/suite_mariadb.ts`; never an installation's.

@@ -17,12 +17,13 @@
 #          --env-file .dedalo.env build dedalo
 #   3. docker compose --env-file .dedalo.env up -d postgres
 #   4. docker compose --env-file .dedalo.env run --rm \
-#        -e DEDALO_INSTALL_ROOT_PASSWORD='…' dedalo \
-#        bun run scripts/install.ts \
-#          --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" \
-#          --db-password "$POSTGRES_PASSWORD" --db-host postgres \
+#        -e DEDALO_INSTALL_ROOT_PASSWORD='…' \
+#        -e DEDALO_INSTALL_DB_PASSWORD="$POSTGRES_PASSWORD" dedalo \
+#        bun run scripts/install.ts --route docker --execute \
+#          --db-name "$POSTGRES_DB" --db-user "$POSTGRES_USER" --db-host postgres \
 #          --entity myentity --langs lg-eng,lg-spa
-#      (the three POSTGRES_* values exported in this shell too, for the arguments)
+#      (the three POSTGRES_* values exported in this shell too, for the arguments;
+#      passwords in the environment, never on the command line — `ps` shows argv)
 #   5. docker compose --env-file .dedalo.env up -d
 #
 # Optional subsystems are behind profiles:
@@ -70,9 +71,10 @@ services:
     # a bare `docker compose up` can never pull a look-alike image from a public
     # registry: without a local build it fails loudly instead.
     image: ${DEDALO_IMAGE:-localhost/dedalo}:${DEDALO_VERSION:-local}
-    # The container equivalent of systemd's Restart=always — and what makes the
-    # browser wizard's "Save config" step work at all: the process exits after
-    # writing .env so that it can be restarted into the real configuration.
+    # The container equivalent of systemd's Restart=always — and what brings the
+    # engine back after a planned restart (exit 75: a code update). An engine
+    # that finds no configuration exits 78 ("[boot] REFUSED — not installed");
+    # Docker restarts it with its capped backoff until the installer has run.
     restart: unless-stopped
     # THE SUPERVISOR MUST OUTLAST THE DRAIN (P2-33 / OPS-10).
     #
@@ -142,16 +144,6 @@ services:
       DB_POOL_ACQUIRE_TIMEOUT_MS: "30000"
       DB_STATEMENT_TIMEOUT_MS: "60000"
       TRUSTED_PROXY_HOPS: "1"
-      # WHO MAY REACH THE INSTALL WIZARD. Until the wizard SEALS the instance its
-      # actions are pre-auth — they write /private/.env and restart the engine — so
-      # since 2026-08-24 an unset value means LOOPBACK ONLY. In a container that is
-      # exactly nobody: nginx forwards your browser's real address (TRUSTED_PROXY_HOPS
-      # above), which is never the loopback of this network namespace. So a browser
-      # install through this stack REQUIRES naming the address you browse from:
-      #   export DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10       # or 10.0.0.0/24, or `any`
-      # Leave it empty (the default here) when you install with the CLI recipe at the
-      # top of this file, which needs no wizard at all. Drop the value once sealed.
-      DEDALO_INSTALL_ALLOWED_IPS: ${DEDALO_INSTALL_ALLOWED_IPS:-}
       # WHERE THE BACKUPS ARE. The `backup` service below writes its dumps into the
       # `backups` volume at /backups/db, but the engine's default is
       # <privateDir>/backups/db — a DIFFERENT directory, and an empty one. Without
@@ -194,9 +186,8 @@ services:
       # itself, which drains and exits, and `restart: unless-stopped` recycles
       # the container. No docker.sock handed to a container, no extra image.
       #
-      # It escalates only AFTER a first green probe, so it is inert while the
-      # browser wizard is open (no database yet ⇒ /health is red for as long as
-      # the operator takes) and during a slow boot.
+      # It escalates only AFTER a first green probe, so it is inert during a slow
+      # boot and on an engine that refused to start (exit 78: not installed).
       #
       # CADENCE: 3 x 30s ≈ 90 s to a recycle here — NOT systemd's 30 s.
       test: ["CMD", "/opt/dedalo/master_dedalo/scripts/ops/container_watchdog.sh", "--socket", "/run/dedalo/dedalo_ts.sock"]
@@ -231,11 +222,17 @@ services:
     # The image's own entrypoint (conf templates) still runs: exec'd after.
     command: >
       sh -c "addgroup -g 1000 dedalo 2>/dev/null; addgroup nginx dedalo 2>/dev/null; exec /docker-entrypoint.sh nginx -g 'daemon off;'"
+    # The published ports, the proxy configuration and the certificate mount are
+    # VARIABLES whose defaults are this file's long-standing values (the manual
+    # recipe in docs/install/docker.md is unchanged). The terminal installer
+    # (`sh install.sh`, docker route) sets them in .dedalo.env: its generated
+    # site (deploy/nginx.docker.generated.conf — both media includes on), its
+    # certificate directory (/etc/dedalo/certs) and the ports it was given.
     ports:
-      - "80:80"
-      - "443:443"
+      - "${DEDALO_HTTP_PORT:-80}:80"
+      - "${DEDALO_HTTPS_PORT:-443}:443"
     volumes:
-      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./deploy/${DEDALO_NGINX_CONF:-nginx.conf}:/etc/nginx/conf.d/default.conf:ro
       # The client the ENGINE published (never the checkout's): the alias in the
       # proxy configuration points into this mount.
       - client:/opt/dedalo/master_dedalo/client:ro
@@ -243,7 +240,7 @@ services:
       - socket:/run/dedalo
       # TLS. For a real deployment bind-mount your certbot tree here; for a local
       # trial, drop a self-signed fullchain.pem + privkey.pem in deploy/certs/.
-      - ./deploy/certs:/etc/letsencrypt/live/dedalo.example.org:ro
+      - ./deploy/certs:${DEDALO_CERT_MOUNT:-/etc/letsencrypt/live/dedalo.example.org}:ro
 
   # --- Optional: MariaDB diffusion (publication) target ----------------------
   # The engine NEVER creates the target database — a missing one is a loud
@@ -312,7 +309,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      # The database this stack created. If you told the install wizard a DIFFERENT
+      # The database this stack created. If you told the installer a DIFFERENT
       # database or role than these, correct them here — the backup connects on its
       # own and cannot ask the engine what it chose.
       DB_NAME: ${POSTGRES_DB:-dedalo_main}

@@ -99,13 +99,54 @@ describe('no raw exception text reaches the caller', () => {
 		// (the words the skip() closure receives are the log's — forwarding them
 		// onto the entry would re-route the raw text through the parameter the
 		// fix introduced).
-		const entry = /inScope\s*\?\s*\{([^}]*)\}/.exec(body);
-		expect(entry).not.toBeNull();
-		const entryKeys = [...(entry?.[1] ?? '').matchAll(/(?:^|,)\s*([a-z_]+)\s*(?=:|,|$)/g)].map(
+		// The located entry, brace-matched (it holds one nested literal, below).
+		const entryOpen = /inScope\s*\?\s*\{/.exec(body);
+		expect(entryOpen).not.toBeNull();
+		const entryStart = (entryOpen?.index ?? 0) + (entryOpen?.[0].length ?? 0);
+		let depth = 1;
+		let entryEnd = entryStart;
+		while (depth > 0 && entryEnd < body.length) {
+			const char = body[entryEnd];
+			if (char === '{') depth++;
+			else if (char === '}') depth--;
+			entryEnd++;
+		}
+		const entryText = body.slice(entryStart, entryEnd - 1);
+		// ONE optional key besides the coordinates: the failed unit's registry `code`
+		// (2026-10-12, owner decision A; WC-2026-10-11-parent-link-cycle-every-door,
+		// 238feca0e4). A closed wire code (`tree.cycle`), never words — pinned below
+		// to the ONE converter. It rides the located entry only, so a denied row
+		// still carries nothing but `{ reason }`.
+		const CODE_SPREAD = /\.\.\.\(code === undefined \? \{\} : \{ code \}\),?/;
+		expect(entryText.match(new RegExp(CODE_SPREAD.source, 'g')) ?? []).toHaveLength(1);
+		const coordinates = entryText.replace(CODE_SPREAD, '');
+		const entryKeys = [...coordinates.matchAll(/(?:^|,)\s*([a-z_]+)\s*(?=:|,|$)/g)].map(
 			(m) => m[1],
 		);
 		expect(entryKeys.sort()).toEqual(['lang', 'reason', 'section_id', 'section_tipo', 'tipo']);
-		expect(entry?.[1]).not.toMatch(/detail|\.\.\./);
+		expect(coordinates).not.toMatch(/detail|\.\.\.|[{}]/);
+		// Where `code` comes from: every skip() call that passes a sixth argument
+		// passes the converter's code — `failureCodeOf(error)` or a record outcome's
+		// `outcome.code` — and both are `toDedaloError(error).code`, nothing else.
+		const skipCalls = [...source.matchAll(/\bskip\(([^;]*?)\);/g)].map((m) => m[1] ?? '');
+		const codeArguments = skipCalls
+			.map((args) => args.split(/,(?![^()]*\))/).map((arg) => arg.trim()))
+			.filter((args) => args.length >= 6 && args[5] !== '')
+			.map((args) => args[5]);
+		expect(codeArguments.length).toBeGreaterThanOrEqual(2);
+		for (const argument of codeArguments) {
+			expect(['failureCodeOf(error)', 'outcome.code']).toContain(argument ?? '');
+		}
+		expect(source).toMatch(
+			/function failureCodeOf\(error: unknown\): string \{\s*return toDedaloError\(error\)\.code;\s*\}/,
+		);
+		const records = read('tools/tool_time_machine/server/bulk_revert_records.ts');
+		const codeValues = [...records.matchAll(/\bcode:\s*([^,}\n]+)/g)].map((m) => m[1]?.trim());
+		expect(codeValues.length).toBeGreaterThanOrEqual(1);
+		for (const value of codeValues) {
+			if (value === 'string') continue; // the outcome TYPE's `code: string` field
+			expect(value).toBe('toDedaloError(error).code');
+		}
 		// The gate sets the flag AFTER both halves pass, and the denial passes `false`.
 		expect(body).toMatch(/skip\(row, 'out_of_scope', false, null\)/);
 		expect(body).toMatch(/inScope = true;/);

@@ -38,17 +38,13 @@ import {
 } from './install_plan.ts';
 import { extractOntologyArchive } from './ontology_archive.ts';
 import {
-	describeOntologyCatalog,
 	mergeOntologyCatalogs,
 	type OntologyCatalog,
 	type OntologyCatalogEntry,
-	type OntologyCatalogView,
 	type OntologyOrigin,
 	type OntologySource,
-	ontologySourceLabel,
 	vendoredOntologyCatalog,
 } from './ontology_choice.ts';
-import { readPriorEnv } from './prior_env.ts';
 import { refuseInstall } from './refuse.ts';
 
 /** A resolved catalog + what removes its scratch files (a no-op unless an archive was extracted). */
@@ -198,49 +194,4 @@ export async function resolvePlanCatalog(
 	});
 	resolved.cleanup();
 	return resolved.catalog;
-}
-
-/** The wizard's get_ontology_catalog answer (a PROBE: `ok` is the verdict, `data` on the wire). */
-export interface OntologyCatalogProbeResult {
-	ok: boolean;
-	msg: string;
-	catalog: OntologyCatalogView;
-	warnings: string[];
-}
-
-function offlineProbe(ok: boolean, msg: string): OntologyCatalogProbeResult {
-	const catalog = describeOntologyCatalog(vendoredOntologyCatalog());
-	return { ok, msg, catalog, warnings: catalog.warnings };
-}
-
-/**
- * What the wizard's Ontologies screen offers. `updateServers` false (the
- * air-gapped box) → the built-in view, no network. True → the catalog of the
- * server the install will configure (ontologySourceFor: a preserved custom list's
- * first entry, else the official master), merged with the built-in one; when
- * it cannot be read the answer is `ok: false` with the reason, and the
- * built-in view so the operator can still install `oh`.
- */
-export async function ontologyCatalogProbe(
-	updateServers: boolean,
-): Promise<OntologyCatalogProbeResult> {
-	if (!updateServers)
-		return offlineProbe(true, 'Air-gapped: only the built-in ontologies are offered');
-	const prior = await readPriorEnv();
-	const answers = { update_servers: 'official', ontology_source: '' } as const;
-	const source = ontologySourceFor(answers, prior);
-	try {
-		const { catalog } = await resolveOntologyCatalog(source, {
-			allowedServers: ontologyServersFor(answers, prior),
-		});
-		const view = describeOntologyCatalog(catalog);
-		return {
-			ok: true,
-			msg: `Ontologies offered by ${ontologySourceLabel(source)}`,
-			catalog: view,
-			warnings: view.warnings,
-		};
-	} catch (error) {
-		return offlineProbe(false, (error as Error).message);
-	}
 }

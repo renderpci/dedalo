@@ -529,7 +529,7 @@ describe('PUBLICATION_APIS_RECONCILE — the interval DRY check (L5)', () => {
 describe('triggerPublicationApiPush — the confirmed-boot hook (L5, Review Focus 5)', () => {
 	test('a smoke boot pushes nothing', () => {
 		let called = 0;
-		const outcome = triggerPublicationApiPush({ smokeBoot: true, installMode: false }, async () => {
+		const outcome = triggerPublicationApiPush({ smokeBoot: true }, async () => {
 			called++;
 			return { release: null, refused: null, hosts: [] };
 		});
@@ -537,20 +537,10 @@ describe('triggerPublicationApiPush — the confirmed-boot hook (L5, Review Focu
 		expect(called).toBe(0);
 	});
 
-	test('install mode pushes nothing', () => {
-		let called = 0;
-		const outcome = triggerPublicationApiPush({ smokeBoot: false, installMode: true }, async () => {
-			called++;
-			return { release: null, refused: null, hosts: [] };
-		});
-		expect(outcome).toBe('skipped_install_mode');
-		expect(called).toBe(0);
-	});
-
 	test('a normal boot starts ONE detached apply as the confirm actor, and returns before it settles', async () => {
 		const seen: unknown[] = [];
 		let settle: () => void = () => {};
-		const outcome = triggerPublicationApiPush({ smokeBoot: false, installMode: false }, (opts) => {
+		const outcome = triggerPublicationApiPush({ smokeBoot: false }, (opts) => {
 			seen.push(opts);
 			return new Promise((resolve) => {
 				settle = () => resolve({ release: REL, refused: null, hosts: [] });
@@ -565,9 +555,7 @@ describe('triggerPublicationApiPush — the confirmed-boot hook (L5, Review Focu
 	test('a failing push never throws out of the hook (logged)', async () => {
 		const logged = silenceConsoleError();
 		expect(() =>
-			triggerPublicationApiPush({ smokeBoot: false, installMode: false }, () =>
-				Promise.reject(new Error('boom')),
-			),
+			triggerPublicationApiPush({ smokeBoot: false }, () => Promise.reject(new Error('boom'))),
 		).not.toThrow();
 		await Bun.sleep(0);
 		expect(logged).toHaveBeenCalled();

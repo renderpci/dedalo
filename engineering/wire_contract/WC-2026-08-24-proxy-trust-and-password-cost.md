@@ -88,3 +88,5 @@ old cost instead would simply invert the sign of the same signal for every
 already-upgraded account. Recorded rather than papered over.
 
 Gate: `test/unit/password_cost_tripwire.test.ts`, mutation-verified.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (the install-gate "forgeable loopback" bullet only: the install gate is gone; the proxy-trust and password-cost halves stand)

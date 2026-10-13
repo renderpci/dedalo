@@ -94,6 +94,7 @@ import {
 import { isInTransaction, withTransaction } from '../../../src/core/db/postgres.ts';
 import { recordEpoch } from '../../../src/core/db/record_generation.ts';
 import { decodeTmImage, recordBulkBirth, TM_ROLE } from '../../../src/core/db/time_machine.ts';
+import { toDedaloError } from '../../../src/core/errors/index.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from '../../../src/core/ontology/resolver.ts';
 import {
 	historyMainsOf,
@@ -175,7 +176,7 @@ export type RecordOutcome =
 export type BornOutcome =
 	| RecordOutcome
 	/** `located`: the record's scope gate had passed before the throw (SEC-16). */
-	| { kind: 'failed'; detail: string; located: boolean };
+	| { kind: 'failed'; detail: string; located: boolean; code: string };
 
 export interface RecordContext {
 	principal: Principal;
@@ -1038,7 +1039,7 @@ async function failedOnThrow(
 		console.error(
 			`[bulk_revert] delete of born record ${marker.sectionTipo}/${marker.sectionId}: ${detail}`,
 		);
-		return { kind: 'failed', detail, located };
+		return { kind: 'failed', detail, located, code: toDedaloError(error).code };
 	}
 }
 

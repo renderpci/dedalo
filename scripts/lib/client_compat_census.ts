@@ -267,12 +267,6 @@ export const NON_ENVELOPE_READS: readonly NonEnvelopeRead[] = [
 			'The eager widget value IS the PHP-parity report block {result,msg,values} (src/core/area_maintenance/widgets/sequences_status.ts checkSequences).',
 	},
 	{
-		file: 'client/dedalo/core/installer/js/render_installer.js',
-		pattern: /\binit_test\.(?:result|msg|errors)\b|\bitem\.errors\b/g,
-		reason:
-			'`init_test` is a CONTEXT PROPERTY block {result,errors,msg[]} (src/core/install/init_test.ts); `item.errors` is one row of the register_tools report.',
-	},
-	{
 		file: 'client/dedalo/core/page/js/job_tray.js',
 		pattern: /\b(?:row|fresh|entry\.row)\.errors\b/g,
 		reason:

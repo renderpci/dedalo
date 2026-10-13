@@ -32,7 +32,7 @@
 
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
 import { encodeForJsonb } from '../../src/core/db/json_codec.ts';
-import { sql } from '../../src/core/db/postgres.ts';
+import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { addParent } from '../../src/core/relations/parent.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
@@ -85,13 +85,21 @@ async function seedNode(sectionId: number, term: string): Promise<void> {
 
 /** Link `childId` under `parentId` through the real machinery (id + order allocation). */
 async function link(childId: number, parentId: number): Promise<void> {
-	const added = await addParent(SECTION, childId, PARENT_TIPO, {
-		section_tipo: SECTION,
-		section_id: parentId,
-		from_component_tipo: PARENT_TIPO,
-		type: 'dd47',
-	});
-	if (!added.ok) throw new Error(`fixture link ${childId}→${parentId} failed`);
+	const added = await withTransaction(() =>
+		addParent(
+			SECTION,
+			childId,
+			PARENT_TIPO,
+			{
+				section_tipo: SECTION,
+				section_id: parentId,
+				from_component_tipo: PARENT_TIPO,
+				type: 'dd47',
+			},
+			SUPERUSER.userId,
+		),
+	);
+	if (!added) throw new Error(`fixture link ${childId}→${parentId} failed`);
 }
 
 /** Overwrite the child's per-parent stored order value (id_key 1 = its first parent link). */

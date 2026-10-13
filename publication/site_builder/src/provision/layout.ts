@@ -49,7 +49,7 @@
  */
 
 import { basename, dirname, isAbsolute, join, resolve, sep } from 'node:path';
-import { AGENT_IDENTITY_STEM, IDENTITY_INSTANCE_SOURCE } from '../drivers/agent_identity';
+import { AGENT_IDENTITY_STEM, agentStateArchiveDir, IDENTITY_INSTANCE_SOURCE } from '../drivers/agent_identity';
 import { isWithin } from '../util/paths';
 import { SLUG_PATTERN } from '../util/slug';
 import { SHARED_DIR_MODE } from '../util/shared_tree';
@@ -1045,6 +1045,12 @@ export interface InstanceLayout {
   /** Archived trees (the retired shared HOME, a removed site's agent state). root 0700. */
   readonly retiredDir: string;
   /**
+   * THE ARCHIVE OF REBUILT TURN HOMEs (S3-HOME) — `<agentStateRoot>/retired`, root 0700: beside the
+   * sites' `s<k>` directories, so the rebuild's rename stays on their filesystem, and masked by
+   * every agent unit's `TemporaryFileSystem=<agentStateRoot>:ro` (no run sees an archive).
+   */
+  readonly agentArchiveDir: string;
+  /**
    * EACH DOOR'S WALL-CLOCK CEILING in ms — the declared limit, else DOOR_TIMEOUT_DEFAULTS_MS.
    * The unit's `RuntimeMaxSec=` is this plus 15 s; the daemon's own timer is the same number.
    */
@@ -1259,11 +1265,25 @@ export const MODES = Object.freeze({
   agentStateRoot: artifactMode('root', 'root', 0o755),
   agentStateSite: artifactMode('root', 'root', 0o755),
   /**
-   * ONE (site, door)'s HOME — the site identity's own, 0700, group the instance group (so a
+   * A site's BUILD HOME — the site identity's own, 0700, group the instance group (so a
    * file it creates is never another group's). Nothing but that identity can read it: not
    * another site, not the same site's other door, not the daemon.
    */
   agentHome: artifactMode('identity', 'group', 0o700),
+  /**
+   * A site's TURN HOME (S3-HOME, `drivers/agent_identity.ts` TURN_HOME_SKELETON) — ROOT's,
+   * 0755. Every program a turn runs reads configuration from HOME (git's global files, Bun's
+   * `~/.bunfig.toml`, the agent CLIs' own); an identity-writable HOME let one turn plant
+   * configuration every later turn of the site read. Nothing can be created at HOME level.
+   */
+  agentTurnHome: artifactMode('root', 'root', 0o755),
+  /**
+   * `<turn HOME>/state` — the ONE identity-writable place under it (the CLI's state, caches).
+   * Writable CLI STATE: what the CLI loads from it is closed by the PLANT argv, not by this mode.
+   */
+  agentTurnState: artifactMode('identity', 'group', 0o700),
+  /** `<turn HOME>/.config` — `XDG_CONFIG_HOME`: root's and empty, so no configuration is planted. */
+  agentTurnConfig: artifactMode('root', 'root', 0o755),
   /** Archived agent state and the retired shared HOME. Root's alone. */
   retired: artifactMode('root', 'root', 0o700),
   auditDir: artifactMode('root', 'group', 0o750),
@@ -1620,6 +1640,7 @@ export function derive(manifest: InstanceManifest): InstanceLayout {
     agentStateRoot,
     agentSocketDir,
     retiredDir,
+    agentArchiveDir: agentStateArchiveDir(agentStateRoot),
     doorCeilingsMs: Object.freeze({
       turn: limitOf(manifest, 'session_turn_timeout_ms'),
       build: Math.max(limitOf(manifest, 'install_timeout_ms'), limitOf(manifest, 'build_timeout_ms')),

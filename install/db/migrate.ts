@@ -130,6 +130,35 @@ function migrationFiles(dir: string): string[] {
 		.sort();
 }
 
+/**
+ * THE MIGRATION CENSUS, read-only (scripts/ops/boot_status.ts — the production
+ * installer's first boot waits on it before arming the watchdog): the files
+ * this runner would still apply (online ones included) and how many are
+ * recorded. The SAME file filter as the runner (migrationFiles), never a copy:
+ * a census that disagreed would wait forever or arm the watchdog mid-migration.
+ * No version table yet = nothing recorded (it is never created here).
+ */
+export async function pendingMigrations(
+	options: { dir?: string; versionTable?: string } = {},
+): Promise<{ applied: number; pending: string[] }> {
+	const versionTable = options.versionTable ?? MIGRATIONS_VERSION_TABLE;
+	if (!TABLE_NAME_PATTERN.test(versionTable)) {
+		throw new Error(`pendingMigrations: invalid version table name '${versionTable}'`);
+	}
+	const [exists] = (await sql.unsafe('SELECT to_regclass($1) IS NOT NULL AS present', [
+		`public.${versionTable}`,
+	])) as { present: boolean }[];
+	const rows =
+		exists?.present === true
+			? ((await sql.unsafe(`SELECT version FROM "${versionTable}"`, [])) as { version: string }[])
+			: [];
+	const done = new Set(rows.map((row) => row.version));
+	return {
+		applied: done.size,
+		pending: migrationFiles(options.dir ?? MIGRATIONS_DIR).filter((name) => !done.has(name)),
+	};
+}
+
 /** Create the version table if needed; return the recorded filenames. */
 async function recordedVersions(versionTable: string): Promise<Set<string>> {
 	if (!TABLE_NAME_PATTERN.test(versionTable)) {

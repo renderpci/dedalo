@@ -6,6 +6,9 @@ Description=Run the Dedalo TS health watchdog every 30s
 
 [Timer]
 OnBootSec=60
+# The first probe after the timer is (re)armed waits too: arming it right after
+# a start must not probe a server that has not bound its socket yet (F3).
+OnActiveSec=60
 OnUnitActiveSec=30
 AccuracySec=5
 

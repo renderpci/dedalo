@@ -470,10 +470,19 @@ export async function runExportArtifact(run: ExportArtifactRun): Promise<ExportA
 
 	// The producer opens FIRST: its eager gates (Gate B, the dataframe columns)
 	// and the selection run here, so a refusal leaves no job directory behind.
+	// selectionAdmission 'queue': this job was ADMITTED by its lane, so with
+	// every selection slot held (selection_cursor.ts — the lane budget may exceed
+	// the slots, and request-path streams hold slots too) it WAITS for the next
+	// one instead of failing with export.busy; the job's signal ends the wait.
 	const grid = await openExportGrid(
 		{ principal, options, applicationLang: run.applicationLang },
 		// captureMedia: the spool's media.ndjson — the media ZIP's input (row_media.ts)
-		{ signal: run.signal, hydrateBatch: run.hydrateBatch, captureMedia: true },
+		{
+			signal: run.signal,
+			hydrateBatch: run.hydrateBatch,
+			captureMedia: true,
+			selectionAdmission: 'queue',
+		},
 	);
 	let created: { job: ArtifactJobRef; manifest: ExportManifest };
 	try {

@@ -118,8 +118,11 @@ describe('toErrorEnvelope — disclosure', () => {
 	});
 
 	test('publicMessage is honoured only when the code discloses public', () => {
+		// A generic public code. (Not a site_builder.* one: since WIRE-MAP every site-builder
+		// refusal has its own code and its label is the text — none carries publicMessage.)
+		expect(ERROR_REGISTRY['request.invalid_options'].disclosure).toBe('public');
 		const pub = toErrorEnvelope(
-			new DedaloError('site_builder.rejected', { publicMessage: 'A site name is required.' }),
+			new DedaloError('request.invalid_options', { publicMessage: 'A site name is required.' }),
 			CTX,
 		).body;
 		expect(pub.error.message).toBe('A site name is required.');

@@ -89,16 +89,8 @@ const UNCATALOGED_CLIENT_KEYS: ReadonlySet<string> = new Set([
 	'tool_print_confirm_n',
 	'tool_print_rendering',
 	'tool_print_too_many',
-	'check_directories',
-	'db_name',
-	'enable_diffusion',
-	'entity_name',
 	'error_report', // no call-site literal at all
-	'init_text',
-	'install_finished',
-	'installation_help',
 	'no_data',
-	'save_configuration',
 	'show_more',
 	'theme_toggle',
 ]);

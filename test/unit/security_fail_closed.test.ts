@@ -225,26 +225,6 @@ describe('fail-closed security suite (Phase 5 gate)', () => {
 		);
 	});
 
-	test('the install surface is GONE (404) once the instance is sealed', async () => {
-		// DEC-19: get_install_context / install are pre-auth WHILE UNSEALED
-		// (that gate is proven in install_gate.test.ts). A normal configured
-		// server is SEALED, so the whole surface must 404 — no residual pre-auth
-		// install actions on a live instance. (bun test isolates the state file.)
-		const { setServerState } = await import('../../src/core/resolve/server_state.ts');
-		setServerState({ install_status: 'sealed' });
-		try {
-			for (const action of ['get_install_context', 'install']) {
-				const res = await dispatchRqo(
-					{ action, dd_api: 'dd_utils_api', options: { action: 'set_root_pw' } } as Rqo,
-					anonymousContext(),
-				);
-				expect(res.status).toBe(404);
-			}
-		} finally {
-			setServerState({ install_status: undefined });
-		}
-	});
-
 	test('wrong password fails ambiguously; nonexistent user fails with the SAME message', async () => {
 		const wrongPassword = await login('root', 'definitely-wrong-password', '127.0.0.1');
 		const noSuchUser = await login('no_such_user_zzz', 'whatever', '127.0.0.1');

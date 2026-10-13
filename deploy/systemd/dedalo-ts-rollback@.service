@@ -1,0 +1,25 @@
+# Roll back one instance's failed code update (written by the installer).
+#
+# THE FILE WORK RUNS AS THE SERVICE USER: every tree the script moves (the
+# app tree, the backed-up tree, the failed tree's parking place) and the
+# sentinel it reads are the instance's, in its install folder — so the
+# instance's own account does it, and a root process never reads the
+# instance-written sentinel or moves a path named in it. The drop-in sets
+# User=, Group= and the ExecCondition=/ExecStart= lines with the PINNED app
+# dir, backup root and socket (never resolved from the instance's .env);
+# without it this template skips itself and runs nothing (fail-closed). Only the restart runs as root
+# (ExecStartPost=+, a fixed systemctl line). ExecCondition= skips the unit —
+# restart included — when no pending, unattempted update is recorded. The
+# script itself runs from the ROOT-OWNED copy in /opt/dedalo/instances/<i>/bin,
+# never from the instance's tree (F2).
+
+[Unit]
+Description=Roll back a failed Dedalo code update of %i to the previous tree
+
+[Service]
+Type=oneshot
+UMask=0027
+ExecCondition=/bin/false
+ExecStart=/bin/false
+ExecStartPost=+/usr/bin/systemctl reset-failed dedalo-ts@%i.service
+ExecStartPost=+/usr/bin/systemctl start --no-block dedalo-ts@%i.service

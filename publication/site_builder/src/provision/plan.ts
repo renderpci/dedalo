@@ -64,8 +64,15 @@ import {
   agentUnitNames,
   egressDirForSite,
   identityGecos,
+  isAgentOrdinal,
   legacyTransientUnitGlob,
   STATEFUL_DOORS,
+  gitconfigDirectives,
+  TURN_HOME_CARRY,
+  TURN_HOME_SKELETON,
+  type TurnHomeCarry,
+  turnHomeShapeProblems,
+  turnHomeStagingPath,
 } from '../drivers/agent_identity';
 import { DOORS } from '../drivers/network_profile';
 import { floorRefusal, SYSTEMD_FLOOR } from '../drivers/unit_properties';
@@ -197,6 +204,14 @@ export interface HostState {
    * business inventing a listing — an absent one yields no orphans and changes no plan.
    */
   readonly vhostDirEntries?: Readonly<Record<string, readonly string[]>>;
+  /**
+   * THE NAMES IN EACH TURN HOME and in its `.config` (S3-HOME), keyed by directory — the closed
+   * world `turnHomeShapeProblems` holds a HOME to. Optional in the TYPE (a hand-built state for
+   * a host with no turn HOME has none to list), but NOT in the plan: a turn HOME (or its
+   * `.config`) observed as a real directory with no listing here is a problem the plan repairs
+   * (`plannedTurnHomeProblems`), never a HOME judged on its rows alone.
+   */
+  readonly turnHomeEntries?: Readonly<Record<string, readonly string[]>>;
   /**
    * THE SITE-IDENTITY LEDGER (LEAD-1b) — `getent passwd`/`shadow`/`group` for this instance's
    * identity namespace, the retired per-museum agent, the service user and the instance group.
@@ -518,6 +533,39 @@ export interface UnlinkAction extends ActionBase {
   readonly path: string;
 }
 
+/**
+ * A TURN HOME REBUILT ROOT'S (S3-HOME, `drivers/agent_identity.ts` TURN_HOME_SKELETON) — phase
+ * `quiesce`, after the daemon is stopped and the identity proved to have no process. Planned for
+ * EXACTLY the HOMEs the daemon's conformance refuses (`turnHomeShapeProblems`, the one predicate):
+ * the pre-S3 identity-owned HOME, and any S3 HOME that has drifted (a stray entry, a planted
+ * `.config/git`, a `state/` that is a link) — so no refused HOME is left refused.
+ *
+ * The old HOME may hold anything a turn planted (`~/.gitconfig`, `~/.config/git`,
+ * `~/.bunfig.toml`, links). So it is NEVER RE-OWNED IN PLACE (a chown or chmod walk over an
+ * agent-planted tree is the walk a swapped component redirects): apply builds the skeleton at
+ * `staging` (`<s<k>>/turn.next`, in root's 0755 site directory), moves the CLI's STATE into it by
+ * RENAME (`carry`, an allowlist — a real entry of the expected type owned by the identity, every
+ * directory above it the identity's real directory; a link or a foreign entry is not carried,
+ * and is named), closes the old HOME root:root 0700 (not recursively) and renames it into
+ * `retired.dir` (`<agentStateRoot>/retired`, the same filesystem — proved before anything moves)
+ * as `<stem>.<utc>`, then renames `staging` to `home`. Nothing is copied and nothing is deleted.
+ * `turn.next` present with `home` absent is the one crash state, and the next apply resumes.
+ */
+export interface TurnHomeRebuildAction extends ActionBase {
+  readonly kind: 'turn_home_rebuild';
+  readonly k: number;
+  /** `<agentStateRoot>/s<k>/turn`. */
+  readonly home: string;
+  /** `<agentStateRoot>/s<k>/turn.next`. */
+  readonly staging: string;
+  /** The site identity: owner of `state/` and the only owner whose entries are carried. */
+  readonly identity: string;
+  readonly group: string;
+  /** Where the old HOME is archived: `<dir>/<stem>.<utc>` (`layout.agentArchiveDir`, `s<k>-turn`). */
+  readonly retired: { readonly dir: string; readonly stem: string };
+  readonly carry: readonly TurnHomeCarry[];
+}
+
 export type Action =
   | GroupAction
   | UserAction
@@ -526,7 +574,8 @@ export type Action =
   | SymlinkAction
   | ExecAction
   | ArchiveAction
-  | UnlinkAction;
+  | UnlinkAction
+  | TurnHomeRebuildAction;
 
 /* ────────────────────────────────────────────────────────────────────────────────────
  * The few constants this module owns, and why each is here rather than in layout.ts
@@ -604,7 +653,10 @@ export function plan(
   actions.push(...linkActions(layout, host));
   actions.push(...secretActions(layout, host));
   actions.push(...quiesceActions(layout, host, agents));
-  actions.push(...artifactActions(layout, manifest, host, agents));
+  // The artifacts are planned against the host AS THE REBUILDS LEAVE IT: a rebuilt turn HOME
+  // holds the skeleton's directories and nothing else, so its `.gitconfig` is written after —
+  // whatever the old HOME held there (identical bytes included) went to the archive with it.
+  actions.push(...artifactActions(layout, manifest, afterTurnHomeRebuilds(layout, host, agents), agents));
   actions.push(...htpasswdActions(layout, host));
   actions.push(...serviceActions(layout, host, actions, agents));
   actions.push(...webActions(layout, host, actions));
@@ -640,6 +692,13 @@ export interface AgentPlan {
    * per-site identities may hold what an agent wrote AS THE SERVICE USER.
    */
   readonly normalise: readonly NormaliseSite[];
+  /**
+   * The ordinals whose TURN HOME is rebuilt root's (S3-HOME) while the daemon is stopped: the
+   * HOME is a directory the daemon's conformance refuses (`turnHomeShapeProblems` — the pre-S3
+   * identity-owned shape, or any drift from the skeleton), or a staged `turn.next` stands where
+   * no HOME does (an apply that died between staging and swap).
+   */
+  readonly homeRebuild: readonly number[];
 }
 
 export interface NormaliseSite {
@@ -772,11 +831,78 @@ export function agentPlan(layout: InstanceLayout, host: HostState): AgentPlan {
       );
     }
   }
+  const homeRebuild: number[] = [];
+  for (const site of layout.sites) {
+    const k = allocation.identities.get(site.slug) as number;
+    const homePath = agentHomeFor(layout.agentStateRoot, k, 'turn');
+    const home = host.entries[homePath];
+    const staging = host.entries[turnHomeStagingPath(layout.agentStateRoot, k)];
+    if (staging !== undefined && staging.type !== 'dir') {
+      throw new Error(
+        `plan(${layout.instance}): a ${staging.type} stands at '${turnHomeStagingPath(layout.agentStateRoot, k)}', where ` +
+          `only a staged turn HOME may be (S3-HOME). Root's site directory holds nothing else; an operator must ` +
+          `inspect it. Nothing was planned.`,
+      );
+    }
+    // ONE PREDICATE REFUSES AND REPAIRS: a HOME the daemon's conformance would refuse
+    // (`turnHomeShapeProblems` — the pre-S3 identity-owned HOME, a stray entry, a planted
+    // `.config/git`, a `state/` that is a link …) is rebuilt; a HOME that is not a directory at
+    // all is dirAction's refusal, never a rename root performs on whatever stands there.
+    const refused = home !== undefined && home.type === 'dir' && plannedTurnHomeProblems(layout, host, k, homePath).length > 0;
+    // The crash state: staged, not swapped.
+    const resume = home === undefined && staging !== undefined;
+    if (refused || resume) homeRebuild.push(k);
+  }
   return Object.freeze({
     allocation,
     facts: Object.freeze({ agentIdentities: allocation.identities, systemdVersion: version, identityEpoch }),
     migrating,
     normalise: Object.freeze(normalise),
+    homeRebuild: Object.freeze(homeRebuild.sort((a, b) => a - b)),
+  });
+}
+
+/** `host` with every rebuilt turn HOME's observed contents removed (the rebuild archives them). */
+function afterTurnHomeRebuilds(layout: InstanceLayout, host: HostState, agents: AgentPlan): HostState {
+  if (agents.homeRebuild.length === 0) return host;
+  const homes = agents.homeRebuild.map(k => agentHomeFor(layout.agentStateRoot, k, 'turn'));
+  const entries: Record<string, PathObservation> = {};
+  for (const [path, observation] of Object.entries(host.entries)) {
+    if (homes.some(home => path === home || path.startsWith(`${home}/`))) continue;
+    entries[path] = observation;
+  }
+  return { ...host, entries };
+}
+
+/**
+ * The turn HOME of s<k> judged by the daemon's own predicate (`turnHomeShapeProblems`), on what
+ * the observer saw: lstat facts by owner NAME, the `.gitconfig`'s bytes (read only from a regular
+ * file), and the HOME's listings when observed.
+ */
+export function plannedTurnHomeProblems(layout: InstanceLayout, host: HostState, k: number, home: string): string[] {
+  const identity = identityNameOf(layout, k);
+  return turnHomeShapeProblems(home, {
+    look(path) {
+      const seen = host.entries[path];
+      if (seen === undefined) return null;
+      const owner = seen.owner ?? '(unobserved)';
+      return {
+        type: seen.type === 'dir' ? 'dir' : seen.type === 'file' ? 'file' : seen.type === 'symlink' ? 'symlink' : 'other',
+        whose: owner === 'root' ? 'root' : owner === identity ? 'identity' : 'other',
+        ownerName: `user '${owner}'`,
+        mode: (seen.mode ?? 0o7777) & 0o7777,
+      };
+    },
+    // A real directory the observer saw but did not LIST is unknown, never empty: the closed
+    // world must not vanish because `observeHost` stopped listing (or a hand-built state lists
+    // nothing). A link or an absent dir is named by its own row.
+    list: dir =>
+      host.turnHomeEntries?.[dir] ?? (host.entries[dir]?.type === 'dir' ? { error: 'its names were not observed' } : null),
+    directives(path) {
+      const content = host.entries[path]?.content;
+      return content === undefined ? { error: 'its bytes were not observed' } : gitconfigDirectives(content);
+    },
+    identity: `user '${identity}'`,
   });
 }
 
@@ -827,6 +953,13 @@ export function observedPaths(
   for (const [, k] of identities ?? new Map<string, number>()) {
     paths.add(agentStateSiteDir(layout.agentStateRoot, k));
     for (const door of STATEFUL_DOORS) paths.add(agentHomeFor(layout.agentStateRoot, k, door));
+    // S3-HOME: every path of the turn HOME's skeleton (lstat facts — whose they are is the
+    // question), and the staging directory whose presence alone means a rebuild to resume.
+    const turnHome = agentHomeFor(layout.agentStateRoot, k, 'turn');
+    for (const row of TURN_HOME_SKELETON) if (row.rel !== '.') paths.add(join(turnHome, row.rel));
+    paths.add(turnHomeStagingPath(layout.agentStateRoot, k));
+    // The rebuild's archive: its presence, and its device (the rename must not cross one).
+    paths.add(layout.agentArchiveDir);
     paths.add(egressDirForSite(layout.agentSocketDir, k));
   }
   for (const root of markedRoots(layout)) paths.add(markerPath(root));
@@ -1112,6 +1245,8 @@ function treeEntries(layout: InstanceLayout): TreeEntry[] {
     // archive the retired shared HOME and a removed site's state are moved into.
     { path: layout.agentStateRoot, modeKey: 'agentStateRoot', what: 'the agent state root' },
     { path: layout.retiredDir, modeKey: 'retired', what: 'the archive of retired agent state' },
+    // S3-HOME: the archive of rebuilt turn HOMEs, under the agent state root (every unit masks it).
+    { path: layout.agentArchiveDir, modeKey: 'retired', what: 'the archive of rebuilt turn HOMEs' },
   ];
 
   for (const site of layout.sites) {
@@ -1191,10 +1326,22 @@ export function markerPath(root: string): string {
   return join(root, INSTANCE_MARKER);
 }
 
+/** The MODES row of each directory of the turn HOME's skeleton (`TURN_HOME_SKELETON`). */
+const TURN_HOME_MODE_KEYS: Readonly<Record<string, ModeKey>> = Object.freeze({
+  '.': 'agentTurnHome',
+  state: 'agentTurnState',
+  '.config': 'agentTurnConfig',
+});
+
 /**
  * THE AGENT STATE, per declared site k (LEAD-1b): `<stateRoot>/s<k>` (root 0755), and in it
- * one HOME per stateful door — the site identity's own, 0700. Created right after the
- * identity exists (identity phase), before any unit that binds them is written.
+ * one HOME per stateful door — the BUILD HOME the site identity's own, 0700; the TURN HOME
+ * root's (S3-HOME): every directory row of `TURN_HOME_SKELETON` (its `.gitconfig` is a
+ * rendered artifact). Created right after the identity exists (identity phase), before any
+ * unit that binds them is written.
+ *
+ * A turn HOME in the PRE-S3 shape (or a staged rebuild to resume) gets NO tree action at all:
+ * it is rebuilt in the quiesce phase (`TurnHomeRebuildAction`), never re-owned in place.
  */
 function agentTreeActions(layout: InstanceLayout, host: HostState, agents: AgentPlan): Action[] {
   const actions: Action[] = [];
@@ -1204,14 +1351,24 @@ function agentTreeActions(layout: InstanceLayout, host: HostState, agents: Agent
     const siteDir = agentStateSiteDir(layout.agentStateRoot, k);
     const dir = dirAction(layout, host, { path: siteDir, modeKey: 'agentStateSite', what: `site '${site.slug}'s agent state (s${k})` });
     if (dir) actions.push(dir);
-    for (const door of STATEFUL_DOORS) {
-      const home = agentHomeFor(layout.agentStateRoot, k, door);
-      const action = dirAction(
-        layout,
-        host,
-        { path: home, modeKey: 'agentHome', what: `site '${site.slug}'s ${door} HOME` },
-        identity,
-      );
+    const build = dirAction(
+      layout,
+      host,
+      { path: agentHomeFor(layout.agentStateRoot, k, 'build'), modeKey: 'agentHome', what: `site '${site.slug}'s build HOME` },
+      identity,
+    );
+    if (build) actions.push(build);
+    if (agents.homeRebuild.includes(k)) continue;
+    const turnHome = agentHomeFor(layout.agentStateRoot, k, 'turn');
+    for (const row of TURN_HOME_SKELETON) {
+      if (row.type !== 'dir') continue;
+      const modeKey = TURN_HOME_MODE_KEYS[row.rel];
+      if (modeKey === undefined) {
+        throw new Error(`plan(${layout.instance}): the turn HOME row '${row.rel}' has no MODES row. Nothing was planned.`);
+      }
+      const path = row.rel === '.' ? turnHome : join(turnHome, row.rel);
+      const what = row.rel === '.' ? `site '${site.slug}'s turn HOME` : `site '${site.slug}'s turn HOME '${row.rel}'`;
+      const action = dirAction(layout, host, { path, modeKey, what }, row.owner === 'identity' ? identity : undefined);
       if (action) actions.push(action);
     }
   }
@@ -1558,7 +1715,7 @@ function secretActions(layout: InstanceLayout, host: HostState): Action[] {
  * Idempotent: a second pass finds nothing to re-own and no process to refuse on.
  */
 function quiesceActions(layout: InstanceLayout, host: HostState, agents: AgentPlan): Action[] {
-  if (agents.normalise.length === 0) return [];
+  if (agents.normalise.length === 0 && agents.homeRebuild.length === 0) return [];
   const actions: Action[] = [];
   if (host.unitActive) {
     actions.push({
@@ -1567,8 +1724,11 @@ function quiesceActions(layout: InstanceLayout, host: HostState, agents: AgentPl
       step: 'daemon_stop',
       argv: ['systemctl', 'stop', layout.unitName],
       reason:
-        `the workspaces are re-owned to their sites' identities, and a live agent run must not race ` +
-        `it; the daemon is started again after the rule, the units and the env are in place`,
+        agents.normalise.length > 0
+          ? `the workspaces are re-owned to their sites' identities, and a live agent run must not race ` +
+            `it; the daemon is started again after the rule, the units and the env are in place`
+          : `the sites' turn HOMEs are rebuilt root's, and a live agent run must not race it; the daemon is ` +
+            `started again once they are in place`,
     });
   }
   if (agents.migrating) {
@@ -1582,7 +1742,8 @@ function quiesceActions(layout: InstanceLayout, host: HostState, agents: AgentPl
         `outlive it; every one of this museum's is stopped before its workspace is re-owned`,
     });
   }
-  const owners = [...new Set(agents.normalise.flatMap(site => site.from))].sort();
+  const rebuilt = agents.homeRebuild.map(k => identityNameOf(layout, k));
+  const owners = [...new Set([...agents.normalise.flatMap(site => site.from), ...rebuilt])].sort();
   for (const owner of owners) {
     actions.push({
       kind: 'exec',
@@ -1591,8 +1752,8 @@ function quiesceActions(layout: InstanceLayout, host: HostState, agents: AgentPl
       argv: ['pgrep', '-U', owner],
       succeedsOn: [1],
       reason:
-        `no process of '${owner}' may still be running while the files it wrote are re-owned; one that is ` +
-        `halts the apply here, before anything is changed`,
+        `no process of '${owner}' may still be running while the files it wrote are re-owned or moved; one ` +
+        `that is halts the apply here, before anything is changed`,
     });
   }
   for (const site of agents.normalise) {
@@ -1622,6 +1783,28 @@ function quiesceActions(layout: InstanceLayout, host: HostState, agents: AgentPl
           `commit and edit it; the daemon keeps owning it, and .builder is not entered`,
       });
     }
+  }
+  for (const k of agents.homeRebuild) {
+    const identity = identityNameOf(layout, k);
+    const home = agentHomeFor(layout.agentStateRoot, k, 'turn');
+    const resume = host.entries[home] === undefined;
+    actions.push({
+      kind: 'turn_home_rebuild',
+      phase: 'quiesce',
+      k,
+      home,
+      staging: turnHomeStagingPath(layout.agentStateRoot, k),
+      identity,
+      group: resolveMode(layout, 'agentTurnState', identity).group,
+      retired: Object.freeze({ dir: layout.agentArchiveDir, stem: `s${k}-turn` }),
+      carry: TURN_HOME_CARRY,
+      reason: resume
+        ? `a rebuild of s${k}'s turn HOME was staged and never swapped in; it is resumed`
+        : `s${k}'s turn HOME is not root's skeleton (${plannedTurnHomeProblems(layout, host, k, home)[0] ?? 'drifted'}), so a ` +
+          `turn could find configuration a previous turn planted (~/.gitconfig, ~/.config, ~/.bunfig.toml) and ` +
+          `the daemon refuses the site; it is rebuilt root's, the CLI state carried into state/, the rest ` +
+          `archived root-only — never re-owned in place`,
+    });
   }
   return actions;
 }
@@ -2365,6 +2548,12 @@ export function describe(action: Action): string {
       return `archive ${action.from} (closed root:root 0700) -> ${'beside' in action.to ? `${action.from}.retired-<utc>` : `${action.to.dir}/${action.to.stem}.<utc>`} — ${action.reason}`;
     case 'unlink':
       return `unlink  ${action.path} — ${action.reason}`;
+    case 'turn_home_rebuild':
+      return (
+        `rebuild ${action.home} (root's; staged at ${action.staging}; ${action.carry.map(entry => entry.from).join(', ')} ` +
+        `carried into state/ as ${action.identity}'s; the rest archived root:root 0700 -> ${action.retired.dir}/${action.retired.stem}.<utc>) ` +
+        `— ${action.reason}`
+      );
     default: {
       // Exhaustiveness as a compile error: a seventh kind must be described in the same
       // commit that adds it, not fall through to something an operator cannot read.
@@ -2515,6 +2704,46 @@ export function assertPlanIsCoherent(actions: readonly Action[], layout: Instanc
       );
     }
   }
+
+  // 2d. A TURN HOME REBUILD (S3-HOME) MOVES ONLY WHAT IT DERIVES, AND ONLY ON A QUIESCED IDENTITY.
+  //     Every path is re-derived from the layout (a rebuild of any other tree is a rename root
+  //     would perform on a path nobody declared), the carry list is the one constant, and a
+  //     `pgrep -U <identity>` proof stands earlier in the plan: a live run of the identity could
+  //     swap a component of the old HOME while it is being moved.
+  actions.forEach((action, index) => {
+    if (action.kind !== 'turn_home_rebuild') return;
+    const k = action.k;
+    const derived =
+      isAgentOrdinal(k) &&
+      action.home === agentHomeFor(layout.agentStateRoot, k, 'turn') &&
+      action.staging === turnHomeStagingPath(layout.agentStateRoot, k) &&
+      action.identity === identityNameOf(layout, k) &&
+      action.retired.dir === layout.agentArchiveDir &&
+      action.retired.stem === `s${k}-turn` &&
+      JSON.stringify(action.carry) === JSON.stringify(TURN_HOME_CARRY);
+    if (!derived) {
+      throw new Error(
+        `${who}: the turn HOME rebuild of '${action.home}' (staging '${action.staging}', archive ` +
+          `${JSON.stringify(action.retired)}) is not the one the layout derives for s${String(k)}. Nothing was planned.`,
+      );
+    }
+    const proved = actions.some(
+      (other, at) =>
+        at < index &&
+        other.kind === 'exec' &&
+        other.step === 'quiesce_proof' &&
+        other.argv.length === 3 &&
+        other.argv[0] === 'pgrep' &&
+        other.argv[1] === '-U' &&
+        other.argv[2] === action.identity,
+    );
+    if (!proved) {
+      throw new Error(
+        `${who}: the turn HOME of s${k} would be rebuilt with no earlier proof that '${action.identity}' has no ` +
+          `process left. Nothing was planned.`,
+      );
+    }
+  });
 
   // 3. NOTHING DELETES. Not a user, not a group, not a path. A uid freed by a deletion is a
   //    uid the next instance can be handed, and it inherits every file the first one left

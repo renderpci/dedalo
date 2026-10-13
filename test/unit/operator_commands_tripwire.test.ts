@@ -73,7 +73,19 @@ import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 // The alias rule ITSELF, not a copy of it: leg H holds the backup scripts' own
 // fallback table equal to the one the engine's readEnv applies.
 import { PHP_KEY_ALIASES } from '../../src/config/env.ts';
+import {
+	backupStores,
+	instanceDropins,
+	siteBuilderBackupUnit,
+} from '../../src/core/install/host/systemd/render.ts';
 import { buildInstallPlan } from '../../src/core/install/install_plan.ts';
+import { systemdUnitNames } from '../helpers/deploy_artifact_corpus.ts';
+import {
+	mergedUnit,
+	productionPlanCtx,
+	systemdWords,
+	unitEnvironment,
+} from '../helpers/install_host_scratch.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -418,6 +430,33 @@ describe('every daemon environment key an operator page names is one the daemon 
 		HOME: "the POSIX home-directory variable, named in the internals page as one an agent run's environment never carries from the daemon and the egress shim refuses in a spec (the unit fixes it); never a daemon or engine config key",
 		DEDALO_:
 			'the engine key PREFIX with a trailing wildcard (`DEDALO_*`), naming every engine key the egress shim refuses in a spec',
+		// S3-HOME: the five CHILD environment keys the turn unit fixes (agent_identity.ts
+		// turnHomeEnvironment), named in the internals page as keys the shim refuses in a spec.
+		XDG_CONFIG_HOME:
+			"a CHILD environment key the turn unit fixes (root's read-only `.config`, S3-HOME); the shim refuses it in a spec — never a daemon config key",
+		XDG_DATA_HOME: "the same — a child key the turn unit fixes, under the turn HOME's `state/`",
+		XDG_STATE_HOME: "the same — a child key the turn unit fixes, under the turn HOME's `state/`",
+		XDG_CACHE_HOME: "the same — a child key the turn unit fixes, under the turn HOME's `state/`",
+		CLAUDE_CONFIG_DIR:
+			"the same — a child key the turn unit fixes (the CLI's own state, under `state/claude`)",
+		// LEAD-1c: the opencode PLANT restriction, CHILD environment keys every opencode turn
+		// carries (src/drivers/opencode_argv.ts) and OPENCODE_ENV may not name.
+		OPENCODE_CONFIG_CONTENT:
+			"a CHILD environment key of the opencode restriction (the daemon's whole opencode configuration as JSON); OPENCODE_ENV is refused naming it — never a daemon config key",
+		OPENCODE_DISABLE_PROJECT_CONFIG: 'the same — a child key of the opencode restriction',
+		OPENCODE_PURE: 'the same — a child key of the opencode restriction',
+		OPENCODE_DISABLE_CLAUDE_CODE: 'the same — a child key of the opencode restriction',
+		OPENCODE_DISABLE_EXTERNAL_SKILLS: 'the same — a child key of the opencode restriction',
+		OPENCODE_PERMISSION:
+			"the same — a child key of the opencode restriction (the daemon's permission block, in the one key that overrides a configuration's)",
+		OPENCODE_DB:
+			'a CHILD environment key every opencode turn carries (opencode_argv.ts OPENCODE_DB_KEY: the database the daemon states and reads for a console account); OPENCODE_ENV is refused naming it — never a daemon config key',
+		// LEAD-1c: the two stated opencode CREDENTIALS an operator may put in OPENCODE_ENV (its
+		// allowlist, opencode_argv.ts isOpencodeCredentialKey) — child keys, never daemon config.
+		OPENCODE_API_KEY:
+			'a CHILD environment key: an opencode credential OPENCODE_ENV may carry (its allowlist) — never a daemon config key',
+		OPENCODE_AUTH_CONTENT:
+			"the same — opencode's own credential store, inline, an allowlisted OPENCODE_ENV key",
 	});
 
 	/**
@@ -544,7 +583,13 @@ describe('every daemon environment key an operator page names is one the daemon 
  * ───────────────────────────────────────────────────────────────────────────── */
 
 describe('the backup set PRODUCTION.md §6 names is the one the nightly unit copies', () => {
-	const UNIT = 'deploy/dedalo-backup.service';
+	// Two reference units since 2026-10-12: the set (DEDALO_USER) and store 5 (root),
+	// its own unit so no root line runs beside the set's EnvironmentFile.
+	const MAIN_UNIT = 'deploy/dedalo-backup.service';
+	const ROOT_STORE_UNIT = 'deploy/dedalo-backup-site-builder.service';
+	const UNITS = [MAIN_UNIT, ROOT_STORE_UNIT];
+	const UNIT = UNITS.join(' + ');
+	const readUnits = (): string => UNITS.map((unit) => read(unit)).join('\n');
 
 	/** §6, from its heading to the next `## `. */
 	function backupSection(): string {
@@ -566,9 +611,9 @@ describe('the backup set PRODUCTION.md §6 names is the one the nightly unit cop
 		);
 	}
 
-	/** Every ExecStart line of the unit, commented-out ones included. */
-	function execStarts(): string[] {
-		return read(UNIT)
+	/** Every ExecStart line of the units, commented-out ones included. */
+	function execStarts(unit?: string): string[] {
+		return (unit === undefined ? readUnits() : read(unit))
 			.split('\n')
 			.filter((line) => /^#?ExecStart=/.test(line.trim()));
 	}
@@ -597,7 +642,7 @@ describe('the backup set PRODUCTION.md §6 names is the one the nightly unit cop
 	});
 
 	test('every documented store is actually copied by the unit', () => {
-		const unit = read(UNIT);
+		const unit = readUnits();
 		const offenders = documentedStores()
 			.filter((store) => !unit.includes(store.token))
 			.map(
@@ -620,30 +665,51 @@ describe('the backup set PRODUCTION.md §6 names is the one the nightly unit cop
 		// NOTHING recorded, never a partial one. The fix needs the unit to say
 		// which stores it promised — and that declaration is worthless if it can
 		// drift from the ExecStart lines, so it is held equal here.
-		const unit = read(UNIT);
-		const declared = /^Environment=DEDALO_BACKUP_EXPECTED_STORES=(.*)$/m.exec(unit)?.[1];
-		expect(
-			declared,
-			`${UNIT} declares no Environment=DEDALO_BACKUP_EXPECTED_STORES. Without it the ` +
-				'aggregate cannot tell a store that SUCCEEDED from one that never ran.',
-		).toBeDefined();
-		const promised = (declared ?? '').trim().split(/\s+/).filter(Boolean).sort();
+		for (const UNIT of UNITS) {
+			const unit = read(UNIT);
+			// Read the way SYSTEMD reads it (its word split of Environment=, quotes removed) —
+			// never the source spelling: an unquoted list is split and truncated (campaign 2 L8).
+			const declared = unitEnvironment(mergedUnit(unit, [])).get('DEDALO_BACKUP_EXPECTED_STORES');
+			// Positive control: the L8 spelling reads as ONE store under this reading.
+			expect(
+				unitEnvironment(
+					mergedUnit('[Service]\nEnvironment=DEDALO_BACKUP_EXPECTED_STORES=matrix_db media\n', []),
+				).get('DEDALO_BACKUP_EXPECTED_STORES'),
+			).toBe('matrix_db');
+			expect(
+				declared,
+				`${UNIT} declares no Environment=DEDALO_BACKUP_EXPECTED_STORES. Without it the ` +
+					'aggregate cannot tell a store that SUCCEEDED from one that never ran.',
+			).toBeDefined();
+			const promised = (declared ?? '').trim().split(/\s+/).filter(Boolean).sort();
 
-		// The store name is the token right after `run` (or `run --last`).
-		const active = execStarts()
-			.filter((line) => !line.trim().startsWith('#'))
-			.map((line) => /dedalo-backup-step\.sh\s+run\s+(?:--last\s+)?([a-z0-9_]+)/.exec(line)?.[1])
-			.filter((name): name is string => name !== undefined)
-			.sort();
-		expect(active.length).toBeGreaterThan(0); // anti-vacuity
+			// The store name is the token right after `run` (or `run --last`).
+			const active = execStarts(UNIT)
+				.filter((line) => !line.trim().startsWith('#'))
+				.map((line) => /dedalo-backup-step\.sh\s+run\s+(?:--last\s+)?([a-z0-9_]+)/.exec(line)?.[1])
+				.filter((name): name is string => name !== undefined)
+				.sort();
+			expect(active.length).toBeGreaterThan(0); // anti-vacuity
 
-		expect(
-			promised,
-			`${UNIT}: DEDALO_BACKUP_EXPECTED_STORES must name every ACTIVE step and nothing ` +
-				'else. A promised store with no step never runs and now fails the unit (correct); ' +
-				'an active step missing from the list is invisible to the aggregate (the defect). ' +
-				`declared=[${promised.join(' ')}] active=[${active.join(' ')}]`,
-		).toEqual(active);
+			expect(
+				promised,
+				`${UNIT}: DEDALO_BACKUP_EXPECTED_STORES must name every ACTIVE step and nothing ` +
+					'else. A promised store with no step never runs and now fails the unit (correct); ' +
+					'an active step missing from the list is invisible to the aggregate (the defect). ' +
+					`declared=[${promised.join(' ')}] active=[${active.join(' ')}]`,
+			).toEqual(active);
+			// Exactly one aggregate per unit: each unit's verdict is reported once.
+			expect(
+				execStarts(UNIT).filter(
+					(line) => !line.trim().startsWith('#') && line.includes(' --last '),
+				),
+				`${UNIT}: exactly one ExecStart carries --last`,
+			).toHaveLength(1);
+		}
+		// The set pulls the root store in, so the one timer still runs all five.
+		expect(mergedUnit(read(MAIN_UNIT), []).get('Unit.Wants') ?? []).toContain(
+			'dedalo-backup-site-builder.service',
+		);
 	});
 
 	test('the compose stack SHOWS the engine the backups it takes', () => {
@@ -703,6 +769,38 @@ describe('the backup set PRODUCTION.md §6 names is the one the nightly unit cop
 				offenders.join('\n  '),
 		).toEqual([]);
 		expect(execStarts().length).toBe(documentedStores().length);
+	});
+
+	test("the installer's per-instance backup set (deploy/systemd/dedalo-backup@ + its drop-in) is the documented one", () => {
+		// Terminal installer phase 4: a production install gets its stores from the
+		// rendered drop-in (src/core/install/host/systemd/render.ts), not this unit. Its
+		// stores are the SAME steps, by name — never a store §6 does not document.
+		const named = execStarts()
+			.map((line) => /dedalo-backup-step\.sh\s+run\s+(?:--last\s+)?([a-z0-9_]+)/.exec(line)?.[1])
+			.filter((name): name is string => name !== undefined);
+		expect(named.length).toBe(documentedStores().length);
+		for (const siteBuilder of [false, true]) {
+			const ctx = productionPlanCtx(
+				{ os: 'debian13', web: 'nginx', tls: 'letsencrypt' },
+				REPO_ROOT,
+				{
+					backup_site_builder: siteBuilder,
+				},
+			);
+			const stores = backupStores(ctx.paths, ctx.row).map((line) => line.store);
+			// The root-run site-builder store is its own unit (never beside the instance's .env).
+			const rootStore = instanceDropins(ctx.paths, ctx.row, ctx.answers, 'stamp')
+				.map((dropin) => dropin.content)
+				.join('\n')
+				.includes(`Wants=${siteBuilderBackupUnit(ctx.paths.instance)}`)
+				? ['site_builder']
+				: [];
+			const all = [...stores, ...rootStore];
+			expect(all.filter((store) => !named.includes(store))).toEqual([]);
+			for (const required of ['matrix_db', 'media', 'private']) expect(stores).toContain(required);
+			expect(stores.includes('site_builder')).toBe(false);
+			expect(all.includes('site_builder')).toBe(siteBuilder);
+		}
 	});
 
 	test('§6 states a restore order and a reconciliation rule', () => {
@@ -1088,6 +1186,296 @@ describe('the site-builder backup script actually copies what it claims to', () 
  * H — the nightly backup unit: the keys it reads, the failure it reports, and
  *     the two copiers, RUN
  * ───────────────────────────────────────────────────────────────────────────── */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+ * E2 — no shipped reference unit runs as root on anything DEDALO_USER can write
+ *
+ * The installer-rendered units were fixed for this (install_host_render_tripwire
+ * (c)); the single-instance units under deploy/ carried the same escalation until
+ * 2026-10-12: store 5 ran as root (`+`) beside an EnvironmentFile DEDALO_USER
+ * writes (systemd applies it to `+` lines too — LD_PRELOAD/PATH ran as root), from
+ * scripts in the app tree DEDALO_USER owns, into a state dir and destination
+ * DEDALO_USER owns; the backup alarm ran as root from the app tree; the rollback
+ * unit ran as root moving the app tree and the backup the instance-written
+ * sentinel names, its backup root read from DEDALO_USER's .env (the installer's
+ * rollback@ unit had been rebuilt; this one had not). A root line may name a
+ * DEDALO_USER tree only through a script in ROOT_READS_ONLY (named, with why), and
+ * a backup-root-resolving script run as root must pin --backup-root. Judged on the
+ * EFFECTIVE unit (systemd's merge, continuation lines joined), every unit shipped.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+/**
+ * A host layout BY ROLE (2026-10-12, owner decision): the trees DEDALO_USER owns —
+ * on a rendered unit, everything under the INSTANCE DIR — and the root-owned dir a
+ * root-run script must come from. The shipped units name both only through the
+ * INSTANCE_DIR / ROOT_BIN_DIR placeholders, so the rules are judged on RENDERS of
+ * real layouts (MANUAL_LAYOUTS), never on one spelling.
+ */
+interface RoleLayout {
+	userWritable: RegExp;
+	rootScriptDir: string;
+}
+/** The pre-2026-10-12 single-instance layout — only the positive controls below use it. */
+const LEGACY_LAYOUT: RoleLayout = {
+	userWritable: /^\/opt\/dedalo\/(master_dedalo|private|backups)(\/|$)/,
+	rootScriptDir: '/opt/dedalo/bin/',
+};
+/** The worked layouts docs/install/manual_host.md renders the units for (+ the installer's shape). */
+const MANUAL_LAYOUTS = [
+	{ user: 'dedalo', instanceDir: '/opt/dedalo/app', rootBinDir: '/opt/dedalo/bin' },
+	{
+		user: 'my_domain',
+		instanceDir: '/home/my_domain.org/dedalo',
+		rootBinDir: '/usr/local/lib/dedalo/my_domain.org/bin',
+	},
+	{
+		user: 'ded_prado',
+		instanceDir: '/home/ded_prado',
+		rootBinDir: '/opt/dedalo/instances/prado/bin',
+	},
+] as const;
+type ManualLayout = (typeof MANUAL_LAYOUTS)[number];
+/** The placeholders the shipped units carry — the render substitutes each WHOLE word. */
+const UNIT_PLACEHOLDERS = ['DEDALO_USER', 'INSTANCE_DIR', 'ROOT_BIN_DIR'] as const;
+
+/** A shipped unit rendered for a layout — the doc's `sed -e 's|\<NAME\>|value|g'`, word for word. */
+function renderManualUnit(text: string, layout: ManualLayout): string {
+	const values: Record<(typeof UNIT_PLACEHOLDERS)[number], string> = {
+		DEDALO_USER: layout.user,
+		INSTANCE_DIR: layout.instanceDir,
+		ROOT_BIN_DIR: layout.rootBinDir,
+	};
+	return UNIT_PLACEHOLDERS.reduce(
+		(out, name) =>
+			out.replace(new RegExp(`(?<![A-Za-z0-9_])${name}(?![A-Za-z0-9_])`, 'g'), values[name]),
+		text,
+	);
+}
+
+/** The role layout a render of `layout` is judged against. */
+function roleLayoutOf(layout: ManualLayout): RoleLayout {
+	const escaped = layout.instanceDir.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+	return { userWritable: new RegExp(`^${escaped}(/|$)`), rootScriptDir: `${layout.rootBinDir}/` };
+}
+
+/** A root-owned system binary a root line may run directly (systemctl). */
+const SYSTEM_BINARY = /^\/usr\/s?bin\/[a-z][a-z0-9_.-]*$/;
+
+/** The command lines of a unit and whether each runs as root (no User=, or a `+` prefix). */
+function rootLines(text: string): { unit: Map<string, string[]>; root: string[] } {
+	const unit = mergedUnit(text.replace(/\\\n\s*/g, ' '), []);
+	const unitIsRoot = unit.get('Service.User') === undefined;
+	const lines = [...unit.entries()]
+		.filter(([key]) => /^Service\.Exec(Start|Stop|Reload|Condition)/.test(key))
+		.flatMap(([, values]) => values);
+	return { unit, root: lines.filter((line) => unitIsRoot || /^[-@:!]*\+/.test(line)) };
+}
+
+/**
+ * Root-run scripts that only READ a tree DEDALO_USER owns — named, with why. Every
+ * other root line naming such a tree is one root ACTS on (moves, writes, resolves
+ * paths from), which is the escalation this gate exists for.
+ */
+const ROOT_READS_ONLY: Readonly<Record<string, string>> = Object.freeze({
+	'dedalo-ts-watchdog.sh':
+		'reads the update sentinel to choose a remedy; its only actions are systemctl on fixed units',
+});
+/** Root-run scripts that resolve their backup root from <private>/.env unless --backup-root pins it. */
+const RESOLVES_BACKUP_ROOT = ['dedalo-code-rollback.sh', 'dedalo-ts-watchdog.sh'];
+
+/** The trees DEDALO_USER owns that a root line's arguments name (`--flag=<path>` included). */
+function userTreesNamed(words: readonly string[], layout: RoleLayout): string[] {
+	return words
+		.slice(1)
+		.map((word) => word.replace(/^--?[a-z][a-z0-9-]*=/, ''))
+		.filter((word) => layout.userWritable.test(word));
+}
+
+/** Why a unit's root lines can run what DEDALO_USER controls, or []. */
+function rootUnitProblems(
+	name: string,
+	text: string,
+	layout: RoleLayout = LEGACY_LAYOUT,
+): string[] {
+	const USER_WRITABLE = layout.userWritable;
+	const ROOT_SCRIPT_DIR = layout.rootScriptDir;
+	const { unit, root } = rootLines(text);
+	if (root.length === 0) return [];
+	const problems: string[] = [];
+	if ((unit.get('Service.EnvironmentFile') ?? []).length > 0)
+		problems.push(`${name}: a root line beside an EnvironmentFile (it applies to root lines too)`);
+	for (const line of root) {
+		const words = systemdWords(line.replace(/^[-@:!+]+/, ''));
+		const executable = words[0] ?? '';
+		if (!executable.startsWith(ROOT_SCRIPT_DIR) && !SYSTEM_BINARY.test(executable))
+			problems.push(`${name}: root runs ${executable}, not a ${ROOT_SCRIPT_DIR} copy`);
+		for (const word of words.filter((token) => token.endsWith('.sh')))
+			if (!word.startsWith(ROOT_SCRIPT_DIR))
+				problems.push(`${name}: root runs the script ${word}, not a ${ROOT_SCRIPT_DIR} copy`);
+		// OUTCOME, whatever the bin dir is called: root never executes a file the instance owns.
+		for (const word of new Set([executable, ...words.filter((token) => token.endsWith('.sh'))]))
+			if (USER_WRITABLE.test(word))
+				problems.push(`${name}: root executes ${word}, inside a tree DEDALO_USER owns`);
+		const script = executable.slice(executable.lastIndexOf('/') + 1);
+		// A backup step's destination is its last word: root writes there.
+		if (script === 'dedalo-backup-step.sh' && USER_WRITABLE.test(words.at(-1) ?? ''))
+			problems.push(
+				`${name}: root writes the backup into ${words.at(-1)}, a tree DEDALO_USER owns`,
+			);
+		else if (ROOT_READS_ONLY[script] === undefined)
+			for (const tree of userTreesNamed(words, layout))
+				problems.push(`${name}: root runs ${script} on ${tree}, a tree DEDALO_USER owns`);
+		if (RESOLVES_BACKUP_ROOT.includes(script) && !words.includes('--backup-root'))
+			problems.push(
+				`${name}: root runs ${script} without --backup-root — it resolves the root from a .env DEDALO_USER writes`,
+			);
+	}
+	const stateDir = unitEnvironment(unit).get('DEDALO_BACKUP_STATE_DIR');
+	if (stateDir !== undefined && USER_WRITABLE.test(stateDir))
+		problems.push(`${name}: root writes its verdict into ${stateDir}, a tree DEDALO_USER owns`);
+	return problems;
+}
+
+describe('no reference unit runs as root on anything DEDALO_USER can write (E2)', () => {
+	for (const layout of MANUAL_LAYOUTS) {
+		test(`every shipped unit under deploy/, rendered for INSTANCE_DIR=${layout.instanceDir} ROOT_BIN_DIR=${layout.rootBinDir}`, () => {
+			const units = systemdUnitNames();
+			expect(units.length).toBeGreaterThan(5);
+			// the layout itself obeys the rule: root's dir is not inside the instance dir
+			expect(roleLayoutOf(layout).userWritable.test(layout.rootBinDir)).toBe(false);
+			const rendered = units.map((name) => ({
+				name,
+				text: renderManualUnit(read(`deploy/${name}`), layout),
+			}));
+			const problems = rendered.flatMap(({ name, text }) =>
+				rootUnitProblems(name, text, roleLayoutOf(layout)),
+			);
+			const rooted = rendered.flatMap(({ text }) => rootLines(text).root);
+			// rollback's restart, watchdog, restart, the site-builder store: root lines exist, so the rule bites.
+			expect(rooted.length).toBeGreaterThanOrEqual(4);
+			expect(problems).toEqual([]);
+		});
+	}
+
+	test('the units name a layout ONLY through the placeholders: no host path is spelled in an active line', () => {
+		// Rule 3 of the role-based layout: one set of units serves any instance dir and
+		// any root bin dir. An active line spelling /opt/dedalo, /home/… or /srv/… would
+		// serve one layout and silently mean the wrong directory on every other.
+		const offenders: string[] = [];
+		let placeholders = 0;
+		for (const name of systemdUnitNames()) {
+			for (const [index, line] of read(`deploy/${name}`).split('\n').entries()) {
+				if (/^\s*(#|;|$)/.test(line)) continue;
+				placeholders += (line.match(/\b(INSTANCE_DIR|ROOT_BIN_DIR)\b/g) ?? []).length;
+				if (/(^|[\s=])\/(opt|home|srv)\//.test(line))
+					offenders.push(`${name}:${index + 1}: ${line.trim()}`);
+			}
+		}
+		expect(placeholders).toBeGreaterThanOrEqual(10);
+		expect(offenders).toEqual([]);
+		// positive control: the pre-2026-10-12 spelling is caught by that reading
+		expect(/(^|[\s=])\/(opt|home|srv)\//.test('WorkingDirectory=/opt/dedalo/master_dedalo')).toBe(
+			true,
+		);
+	});
+
+	test('positive control: a render that puts ROOT_BIN_DIR inside the instance dir is caught', () => {
+		// The bin dir check alone would pass it (the scripts ARE in the bin dir); the
+		// outcome check is what catches root executing a file the instance can replace.
+		const inside = {
+			user: 'x',
+			instanceDir: '/home/x',
+			rootBinDir: '/home/x/bin',
+		} as unknown as ManualLayout;
+		expect(roleLayoutOf(inside).userWritable.test(inside.rootBinDir)).toBe(true);
+		const problems = systemdUnitNames().flatMap((name) =>
+			rootUnitProblems(
+				name,
+				renderManualUnit(read(`deploy/${name}`), inside),
+				roleLayoutOf(inside),
+			),
+		);
+		expect(problems).toContain(
+			'dedalo-ts-watchdog.service: root executes /home/x/bin/dedalo-ts-watchdog.sh, inside a tree DEDALO_USER owns',
+		);
+		expect(problems).toContain(
+			'dedalo-backup-site-builder.service: root executes /home/x/bin/dedalo-backup-step.sh, inside a tree DEDALO_USER owns',
+		);
+	});
+
+	test('positive control: the store-5 line as it shipped before 2026-10-12 is caught', () => {
+		const before = [
+			'[Service]',
+			'Type=oneshot',
+			'User=DEDALO_USER',
+			'EnvironmentFile=/opt/dedalo/private/.env',
+			'Environment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups',
+			'ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run private /opt/dedalo/master_dedalo/deploy/dedalo-tree-backup.sh --dest /opt/dedalo/backups/private',
+			'ExecStart=+/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run --last site_builder /opt/dedalo/master_dedalo/deploy/dedalo-site-builder-backup.sh /opt/dedalo/backups/site_builder',
+			'',
+		].join('\n');
+		expect(rootUnitProblems('before', before)).toEqual([
+			'before: a root line beside an EnvironmentFile (it applies to root lines too)',
+			'before: root runs /opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh, not a /opt/dedalo/bin/ copy',
+			'before: root runs the script /opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh, not a /opt/dedalo/bin/ copy',
+			'before: root runs the script /opt/dedalo/master_dedalo/deploy/dedalo-site-builder-backup.sh, not a /opt/dedalo/bin/ copy',
+			'before: root executes /opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh, inside a tree DEDALO_USER owns',
+			'before: root executes /opt/dedalo/master_dedalo/deploy/dedalo-site-builder-backup.sh, inside a tree DEDALO_USER owns',
+			'before: root writes the backup into /opt/dedalo/backups/site_builder, a tree DEDALO_USER owns',
+			'before: root writes its verdict into /opt/dedalo/backups, a tree DEDALO_USER owns',
+		]);
+		// …and the alarm as it shipped (root, no User=, from the app tree).
+		const alarm =
+			'[Service]\nType=oneshot\nEnvironment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups\nExecStart=/opt/dedalo/master_dedalo/deploy/dedalo-backup-alert.sh %i\n';
+		expect(rootUnitProblems('alarm', alarm)).toEqual([
+			'alarm: root runs /opt/dedalo/master_dedalo/deploy/dedalo-backup-alert.sh, not a /opt/dedalo/bin/ copy',
+			'alarm: root runs the script /opt/dedalo/master_dedalo/deploy/dedalo-backup-alert.sh, not a /opt/dedalo/bin/ copy',
+			'alarm: root executes /opt/dedalo/master_dedalo/deploy/dedalo-backup-alert.sh, inside a tree DEDALO_USER owns',
+			'alarm: root writes its verdict into /opt/dedalo/backups, a tree DEDALO_USER owns',
+		]);
+	});
+
+	test('positive control: the rollback and watchdog units as they shipped before 2026-10-12 are caught', () => {
+		// Root (no User=) moving the app tree and the backup named in the sentinel the
+		// service user writes, its backup root resolved from the service user's .env.
+		const rollback = [
+			'[Service]',
+			'Type=oneshot',
+			'ExecStart=/opt/dedalo/bin/dedalo-code-rollback.sh \\',
+			'    --app-dir /opt/dedalo/master_dedalo \\',
+			'    --service dedalo-ts \\',
+			'    --socket /run/dedalo/dedalo_ts.sock',
+			'',
+		].join('\n');
+		expect(rootUnitProblems('rollback', rollback)).toEqual([
+			'rollback: root runs dedalo-code-rollback.sh on /opt/dedalo/master_dedalo, a tree DEDALO_USER owns',
+			'rollback: root runs dedalo-code-rollback.sh without --backup-root — it resolves the root from a .env DEDALO_USER writes',
+		]);
+		// The same with --app-dir=… spelling: still caught.
+		expect(
+			rootUnitProblems(
+				'eq',
+				'[Service]\nExecStart=/opt/dedalo/bin/dedalo-code-rollback.sh --app-dir=/opt/dedalo/master_dedalo --backup-root=/opt/dedalo/backups/code\n',
+			),
+		).toEqual([
+			'eq: root runs dedalo-code-rollback.sh on /opt/dedalo/master_dedalo, a tree DEDALO_USER owns',
+			'eq: root runs dedalo-code-rollback.sh on /opt/dedalo/backups/code, a tree DEDALO_USER owns',
+			'eq: root runs dedalo-code-rollback.sh without --backup-root — it resolves the root from a .env DEDALO_USER writes',
+		]);
+		// The watchdog only reads (ROOT_READS_ONLY), but an unpinned backup root is still its .env's.
+		const watchdog =
+			'[Service]\nType=oneshot\nExecStart=/opt/dedalo/bin/dedalo-ts-watchdog.sh --socket /run/dedalo/dedalo_ts.sock --app-dir /opt/dedalo/master_dedalo --service dedalo-ts.service --grace 900\n';
+		expect(rootUnitProblems('watchdog', watchdog)).toEqual([
+			'watchdog: root runs dedalo-ts-watchdog.sh without --backup-root — it resolves the root from a .env DEDALO_USER writes',
+		]);
+		// The shipped rollback unit: the file work as DEDALO_USER, only the fixed restart as root.
+		const shipped = rootLines(
+			renderManualUnit(read('deploy/dedalo-ts-rollback.service'), MANUAL_LAYOUTS[0]),
+		).root;
+		expect(shipped.length).toBe(2);
+		for (const line of shipped) expect(line).toMatch(/^\+\/usr\/bin\/systemctl /);
+	});
+});
 
 /**
  * WHY (P0-13, 2026-08-30). Every link of the recovery chain failed SILENTLY, and

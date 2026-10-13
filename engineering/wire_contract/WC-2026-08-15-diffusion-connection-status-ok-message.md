@@ -50,3 +50,5 @@ one — it has no `request_id` and no `error` object.
   `adoptErrorEnvelopeV2` rule, listed with the eight root bodies in
   `WC-2026-08-15-error-envelope-v2` and reasserted in
   `WC-2026-08-15-stream-error-frames`.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (its wizard step-contract half: the install probe adapter answers the terminal executor's `{ok,msg}`, no wizard)

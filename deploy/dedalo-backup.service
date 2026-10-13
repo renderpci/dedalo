@@ -1,12 +1,13 @@
 # Dédalo nightly backup — reference timer unit (audit S2-35; rebuilt for P0-13 on
 # 2026-08-30).
 #
-# It copies the FIVE stores engineering/PRODUCTION.md §6 names — the matrix
-# Postgres DB, the RAG pgvector DB (if enabled), the media originals, ../private/
-# (.env secrets, session store, ts_state.json), and every site-builder INSTANCE on
-# this host. One ExecStart per store, in the same order and with the same tokens as
-# that table; test/unit/operator_commands_tripwire.test.ts holds the two equal, so a
-# store documented there and copied by nothing is impossible.
+# With dedalo-backup-site-builder.service (which it pulls in) it copies the FIVE
+# stores engineering/PRODUCTION.md §6 names — the matrix Postgres DB, the RAG
+# pgvector DB (if enabled), the media originals, ../private/ (.env secrets, session
+# store, ts_state.json) HERE, as DEDALO_USER, and every site-builder INSTANCE on this
+# host THERE, as root. One ExecStart per store, in the same order and with the same
+# tokens as that table; test/unit/operator_commands_tripwire.test.ts holds the two
+# equal, so a store documented there and copied by nothing is impossible.
 #
 # WHAT WAS WRONG WITH THIS FILE BEFORE (P0-13 — every claim measured):
 #
@@ -27,7 +28,7 @@
 #      A database that was down at 03:30 meant the media originals, ../private/ and
 #      every museum's site-builder instance were not copied either. Each store now
 #      runs through deploy/dedalo-backup-step.sh, whose header explains the shape:
-#      stores 1..4 are `-`-prefixed so their exit status cannot cancel the others,
+#      every store but the last is `-`-prefixed so its exit status cannot cancel the others,
 #      the LAST store carries `--last` and aggregates every recorded status, and the
 #      unit FAILS if any store failed. Nothing is papered over: the difference
 #      between "a store failed" and "the unit succeeded" is exactly what this
@@ -51,30 +52,32 @@
 #      truncated or still-running dump can therefore no longer be the freshest
 #      "backup" on disk, which is what made the update panel say "ready".
 #
-# STORE 5 IS A SCRIPT, not a fifth inline command, because it is the one member
-# whose sources are not known until the host is read: a host carries N museums, each
-# declaring its own roots and its own sites. deploy/dedalo-site-builder-backup.sh
-# reads those paths out of the artifacts the provisioner generated for each
-# instance, so the backup cannot derive the host layout a second time and be wrong
-# about it. On a host with no site builder it prints one line and exits 0.
+# STORE 5 IS ITS OWN UNIT (2026-10-12), dedalo-backup-site-builder.service: it must
+# run as root, and a root (`+`) line HERE would run with this unit's
+# EnvironmentFile — a file DEDALO_USER writes (LD_PRELOAD, PATH) — and from scripts
+# in a tree DEDALO_USER owns. That unit's header gives the whole reason; nothing in
+# this one runs as root.
 #
 # Enabled by dedalo-backup.timer. VERIFY RESTORES PERIODICALLY: reading a dump back
 # proves the bytes are a complete archive, not that it restores into a working
 # catalogue. Nothing but an actual restore proves that (PRODUCTION.md §6: quarterly).
 #
-# Canonical host layout (engineering/PRODUCTION.md): /opt/dedalo/master_dedalo/
-# (the repo), /opt/dedalo/private/ (../private), user/group dedalo. Adjust the
-# example /opt/dedalo/... paths below to the real host layout if different.
+# Placeholders (rendered by docs/install/manual_host.md, defined in
+# deploy/dedalo-ts.service's header): DEDALO_USER, INSTANCE_DIR (the service
+# user's — the repo, ../private and backups/ live in it), ROOT_BIN_DIR (root's —
+# every script here runs from it, never from the tree a code update moves).
 
 [Unit]
-Description=Dedalo nightly backup set (matrix DB + RAG DB + media + private + site-builder instances)
+Description=Dedalo nightly backup set (matrix DB + RAG DB + media + private; site-builder instances via its own unit)
 # %n is this unit's own name, so the alarm can quote the right journal.
 OnFailure=dedalo-backup-alert@%n.service
+# Store 5, as root, in its own unit (ordered after this one): the timer runs the set.
+Wants=dedalo-backup-site-builder.service
 
 [Service]
 Type=oneshot
 User=DEDALO_USER
-EnvironmentFile=/opt/dedalo/private/.env
+EnvironmentFile=INSTANCE_DIR/private/.env
 # Where the per-run store statuses live. systemd creates it before the first step
 # and REMOVES it when the unit stops, so one run can never read another's leftovers.
 RuntimeDirectory=dedalo-backup
@@ -82,7 +85,7 @@ RuntimeDirectoryMode=0750
 # Where the PERSISTENT verdict lives (BACKUP_FAILED / LAST_OK). It must match
 # dedalo-backup-alert@.service's own Environment= line: both write BACKUP_FAILED and
 # only a fully successful run removes it.
-Environment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups
+Environment=DEDALO_BACKUP_STATE_DIR=INSTANCE_DIR/backups
 # WHICH STORES THIS UNIT PROMISES. The aggregate can otherwise only see the
 # stores that recorded a status, so a step whose ExecStart never ran — a typo
 # here, a missing script, a store commented out by mistake — is invisible and
@@ -90,7 +93,10 @@ Environment=DEDALO_BACKUP_STATE_DIR=/opt/dedalo/backups
 # must name every ACTIVE ExecStart store below, and nothing else;
 # test/unit/operator_commands_tripwire.test.ts holds the two equal.
 # UNCOMMENTING store 2 means adding rag_db here in the same edit.
-Environment=DEDALO_BACKUP_EXPECTED_STORES=matrix_db media private site_builder
+# QUOTED as a whole (campaign 2 L8): systemd splits an Environment= value on
+# whitespace, so the unquoted spelling promised `matrix_db` alone and dropped
+# the rest as invalid assignments — a truncated list that reported success.
+Environment="DEDALO_BACKUP_EXPECTED_STORES=matrix_db media private"
 # A dump and a media mirror are a complete, unprotected copy of the collection.
 UMask=0077
 
@@ -103,17 +109,17 @@ UMask=0077
 #    route would be a second, disagreeing answer to "which server holds the
 #    catalogue". Before 2026-10-09 the installer wrote DEDALO_SOCKET_CONN and
 #    nothing read it; it is now DB_SOCKET's fallback spelling.
-ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run matrix_db /opt/dedalo/master_dedalo/deploy/dedalo-db-backup.sh --label timer --dir-key DEDALO_BACKUP_DIR --dir /opt/dedalo/private/backups/db --db-key DB_NAME --host-key DB_HOST --port-key DB_PORT --user-key DB_USER --password-key DB_PASSWORD --socket-key DB_SOCKET --pg-dump pg_dump --pg-restore pg_restore
+ExecStart=-ROOT_BIN_DIR/dedalo-backup-step.sh run matrix_db ROOT_BIN_DIR/dedalo-db-backup.sh --label timer --dir-key DEDALO_BACKUP_DIR --dir INSTANCE_DIR/private/backups/db --db-key DB_NAME --host-key DB_HOST --port-key DB_PORT --user-key DB_USER --password-key DB_PASSWORD --socket-key DB_SOCKET --pg-dump pg_dump --pg-restore pg_restore
 # 2. RAG pgvector DB — UNCOMMENT when the semantic index is enabled. Its keys fall
 #    back to the main database's in the ENGINE, but not here on purpose: a backup
 #    that silently dumps the catalogue a second time because DEDALO_RAG_DB_NAME is
 #    unset would look like a RAG backup and be none.
-#ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run rag_db /opt/dedalo/master_dedalo/deploy/dedalo-db-backup.sh --label rag --dir /opt/dedalo/private/backups/rag --db-key DEDALO_RAG_DB_NAME --host-key DEDALO_RAG_DB_HOSTNAME_CONN --port-key DEDALO_RAG_DB_PORT_CONN --user-key DEDALO_RAG_DB_USERNAME_CONN --password-key DEDALO_RAG_DB_PASSWORD_CONN --socket-key DEDALO_RAG_DB_SOCKET_CONN --pg-dump pg_dump --pg-restore pg_restore
+#ExecStart=-ROOT_BIN_DIR/dedalo-backup-step.sh run rag_db ROOT_BIN_DIR/dedalo-db-backup.sh --label rag --dir INSTANCE_DIR/private/backups/rag --db-key DEDALO_RAG_DB_NAME --host-key DEDALO_RAG_DB_HOSTNAME_CONN --port-key DEDALO_RAG_DB_PORT_CONN --user-key DEDALO_RAG_DB_USERNAME_CONN --password-key DEDALO_RAG_DB_PASSWORD_CONN --socket-key DEDALO_RAG_DB_SOCKET_CONN --pg-dump pg_dump --pg-restore pg_restore
 # 3. Media originals — dated generations, hard-linked to the previous one, 14 kept.
 #    The source is read from MEDIA_PATH (or its PHP alias); an unset key is a loud
 #    refusal, never a guess, because the engine's own default is one of two paths
 #    and the wrong guess backs up an empty directory while reporting success.
-ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run media /opt/dedalo/master_dedalo/deploy/dedalo-tree-backup.sh --label media --source-key MEDIA_PATH --dest /opt/dedalo/backups/media --keep 14
+ExecStart=-ROOT_BIN_DIR/dedalo-backup-step.sh run media ROOT_BIN_DIR/dedalo-tree-backup.sh --label media --source-key MEDIA_PATH --dest INSTANCE_DIR/backups/media --keep 14
 # 4. The private dir itself (secrets, sessions, state) — small, always, and
 #    generational too: the .env is the file every other restore step reads first, so
 #    yesterday's copy is worth exactly as much as the media's. Its own backups/
@@ -127,26 +133,10 @@ ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run media /opt
 #    torn — a restore may lose logged-in sessions, which cost a re-login and nothing
 #    else. The files that matter here (.env, ts_state.json) are written atomically by
 #    the engine (tmp + rename), so they copy whole or not at all.
-ExecStart=-/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run private /opt/dedalo/master_dedalo/deploy/dedalo-tree-backup.sh --label private --source /opt/dedalo/private/ --dest /opt/dedalo/backups/private --keep 14 --exclude backups --exclude /export_artifacts
-# 5. Every site-builder instance: its declaration + secrets, its workspaces root,
-#    each site's whole webspace (BOTH release stores and the two served symlinks),
-#    and its audit trail. Exits 0 with one line on a host that declares none.
 #
-#    THE LEADING '+' RUNS THIS ONE STEP AS ROOT, ignoring User= above, and it is not
-#    optional: an instance's secrets are 0600 root:root inside a 0700 root:root directory,
-#    and its state roots are 0750 owned by that museum's own service user. DEDALO_USER is
-#    in none of those groups — deliberately, that separation IS the isolation — so without
-#    the '+' this step reads nothing and reports every museum as unbackuppable. The other
-#    steps stay unprivileged.
-#
-#    IT IS ALSO THE LAST STEP, hence '--last': after copying its own store it
-#    aggregates every store's recorded status and exits non-zero if ANY of them
-#    failed. That is what makes the unit's verdict the truth about all five while
-#    no single store can cancel another, and it is why this line alone is not
-#    '-'-prefixed. If you comment this store out, move '--last' to the last
-#    ExecStart that remains, or nothing will ever report the run's verdict.
-#
-#    The destination therefore holds root-owned 0600 credentials. Create it 0700 root:root
-#    (`install -d -m 0700 -o root -g root /opt/dedalo/backups/site_builder`) and treat the
-#    whole backup tree as secret material — which store 4 already made true.
-ExecStart=+/opt/dedalo/master_dedalo/deploy/dedalo-backup-step.sh run --last site_builder /opt/dedalo/master_dedalo/deploy/dedalo-site-builder-backup.sh /opt/dedalo/backups/site_builder
+#    IT IS THE LAST STEP OF THIS UNIT, hence '--last' and no '-': after copying its
+#    own store it aggregates every store's recorded status and exits non-zero if ANY
+#    of them failed — the unit's verdict is the truth about all of them while no
+#    single store can cancel another. If you comment it out, move '--last' to the
+#    last ExecStart that remains, or nothing reports the run's verdict.
+ExecStart=ROOT_BIN_DIR/dedalo-backup-step.sh run --last private ROOT_BIN_DIR/dedalo-tree-backup.sh --label private --source INSTANCE_DIR/private/ --dest INSTANCE_DIR/backups/private --keep 14 --exclude backups --exclude /export_artifacts

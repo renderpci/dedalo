@@ -179,7 +179,8 @@ describe('database_info.rebuild_user_stats: one user = one atomic unit', () => {
 		expect(after.map((row) => row.day)).toEqual(['2019-4-4', '2019-4-5']);
 		// New records (the old ones were replaced), and day A now counts the edit.
 		expect(after.map((row) => row.section_id)).not.toEqual(before.map((row) => row.section_id));
-		expect(JSON.stringify(after[0]?.totals)).toContain('dd694');
-		expect(JSON.stringify(before[0]?.totals)).not.toContain('dd694');
+		// (what items are action-keyed: WC-2026-10-12-user-activity-what-labels)
+		expect(JSON.stringify(after[0]?.totals)).toContain('"key":"edit"');
+		expect(JSON.stringify(before[0]?.totals)).not.toContain('"key":"edit"');
 	}, 60000);
 });

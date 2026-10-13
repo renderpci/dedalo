@@ -1,0 +1,18 @@
+# One instance's health watchdog (written by the installer; armed by its timer
+# only AFTER the first boot completed — host_watchdog). The script skips while
+# the server is younger than --grace (boot migrations run before the socket
+# binds: a watchdog without a grace killed them — campaign 2 L7, finding F3).
+# It runs as root (it starts the restart/rollback units), so the backup root is
+# PINNED in its drop-in (with the socket and the app dir): it never resolves
+# it from the instance's .env, and it only reads (greps) the instance-written
+# sentinel — the rollback acts as the service user (dedalo-ts-rollback@).
+# Without its drop-in this template runs nothing (fail-closed).
+
+[Unit]
+Description=Dedalo TS health watchdog — %i
+Requisite=dedalo-ts@%i.service
+After=dedalo-ts@%i.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/false

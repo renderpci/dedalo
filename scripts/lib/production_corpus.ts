@@ -4,11 +4,13 @@
  *
  * Two derivations, both from the tree, never a hand list:
  *
- *  - `packageRoots()`: every directory holding a `bun.lock` AND a `package.json`
- *    outside node_modules — the engine ('.'), the v2 publication API, the site
- *    builder and the template it scaffolds. Walked from the repo root, which
- *    narrows nothing (census_derivation_tripwire: a lister fed REPO_ROOT chose
- *    no root).
+ *  - `packageRoots()`: every directory holding a GIT-TRACKED `bun.lock` AND a
+ *    `package.json` — the engine ('.'), the v2 publication API, the site
+ *    builder and the template it scaffolds. Discovered by `git ls-files` over
+ *    the whole repo, which narrows nothing (no root chosen) yet sees only the
+ *    packages that SHIP: a directory walk also entered gitignored local trees
+ *    (`rewrite/` — internal process, never on a clone, and no gate may read it),
+ *    where a scratch package with a lockfile but no `src/` made every case throw.
  *
  *  - `productionFilesOf(root)`: the production SOURCE files of one package.
  *    The engine's are `src/` plus every `tools/<tool>/server/` tree — tool
@@ -23,7 +25,7 @@
  * `tools`; the per-package `src`), so the root set is written down ONCE.
  */
 import { existsSync, readdirSync } from 'node:fs';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 
 export const REPO_ROOT = resolve(import.meta.dir, '../..');
 
@@ -40,11 +42,26 @@ export function walkFiles(dir: string, out: string[] = []): string[] {
 	return out;
 }
 
-/** Every `<root>/bun.lock` outside node_modules, as repo-relative roots ('.' first). */
+/**
+ * Every git-tracked `<root>/bun.lock` with a `package.json` beside it, as
+ * repo-relative roots ('.' first). Tracked, not walked: the question is which
+ * packages this repository SHIPS, and an untracked or ignored lockfile is a
+ * local accident (see the header). Throws when git cannot list.
+ */
 export function packageRoots(): string[] {
-	const roots = walkFiles(REPO_ROOT)
-		.filter((file) => file.endsWith('/bun.lock'))
-		.map((file) => relative(REPO_ROOT, dirname(file)) || '.')
+	const listing = Bun.spawnSync(['git', 'ls-files', '-z', '--', ':(glob)**/bun.lock'], {
+		cwd: REPO_ROOT,
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	if (listing.exitCode !== 0) {
+		throw new Error(`packageRoots: git ls-files failed: ${listing.stderr.toString().trim()}`);
+	}
+	const roots = listing.stdout
+		.toString()
+		.split('\0')
+		.filter((file) => file === 'bun.lock' || file.endsWith('/bun.lock'))
+		.map((file) => dirname(file))
 		.filter((root) => existsSync(join(REPO_ROOT, root, 'package.json')));
 	return roots.sort((a, b) => (a === '.' ? -1 : b === '.' ? 1 : a.localeCompare(b)));
 }

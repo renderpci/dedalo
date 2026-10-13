@@ -77,7 +77,7 @@ Pick the path that matches what you are trying to do. Each is a short, ordered l
 
 ### 4. System administrator — install, configure, operate
 
-1. [Installation](install/index.md) — **start here**: server sizing, prerequisites, and your path — a [production server](install/production.md), [Docker](install/docker.md), or a [laptop in ten minutes](install/dev_quickstart.md). Then the [reverse proxy](install/reverse_proxy.md), the [installer reference](install/installer_reference.md), [upgrading](install/upgrading.md) and [troubleshooting](install/troubleshooting.md)
+1. [Installation](install/index.md) — **start here**: one terminal installer (`sh install.sh`) and four routes — [Production](install/production.md), [Docker](install/docker.md), [Trial](install/quickstart.md) or [Developer](install/dev_quickstart.md). Then the [installer reference](install/installer_reference.md), [the web server site](install/reverse_proxy.md), [upgrading](install/upgrading.md) and [troubleshooting](install/troubleshooting.md)
 2. [Configuration](config/index.md) — the one `.env` file: [how it works](config/administration.md), [every setting](config/config.md), [database](config/config_db.md), [areas](config/config_areas.md)
 3. [Media protection](config/media_protection.md) and [search config](config/search.md) — **before you expose media to the internet**: the two-rule access gate the web server enforces, and search tuning
 4. [Management & maintenance](management/index.md) — environments, root user, [maintenance status](management/maintenance_status.md), [recovery mode](management/recovery_mode.md)
@@ -155,7 +155,7 @@ Every documentation area, with a one-line description and an entry link. The **[
 | Metrics | The performance metrics subsystem and per-request monitor | [development/metrics.md](development/metrics.md) |
 | Media components | Embedding Dédalo media components in third-party code | [development/using_media_components.md](development/using_media_components.md) |
 | CSS architecture | The LESS-based design system and styling structure | [core/ui/css_architecture.md](core/ui/css_architecture.md) |
-| Installation | Server sizing, the production guide, Docker, the dev quickstart, the reverse proxy, upgrading and troubleshooting | [install/index.md](install/index.md) |
+| Installation | The terminal installer and its routes (production, Docker, trial, developer), the installer reference, the web server site, upgrading and troubleshooting | [install/index.md](install/index.md) |
 | Configuration | The one config file (`../private/.env`): settings, database, areas, media/search tuning | [config/index.md](config/index.md) |
 | Management | Environments, root user, maintenance status, recovery, hierarchies, updates | [management/index.md](management/index.md) |
 | Users & permissions | Users, profiles, the 0–3 permission levels and how access is enforced | [management/users_and_permissions.md](management/users_and_permissions.md) |

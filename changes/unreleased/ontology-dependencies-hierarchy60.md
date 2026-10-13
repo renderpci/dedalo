@@ -15,9 +15,9 @@ Each dependency names a TLD and says whether its **ontology** or its **thesaurus
 needed, and whether it is **mandatory**.
 
 * **Installing.** The installer always installs mandatory **ontologies**. It offers
-  every other dependency already ticked, and you may untick it, in the wizard or with
+  every other dependency already ticked, and you may untick it, on its screen or with
   `--decline-dependencies`. **A thesaurus never blocks an install:** a mandatory
-  thesaurus is a strong recommendation, marked *strongly recommended* in the wizard.
+  thesaurus is a strong recommendation, marked *strongly recommended* on the screen.
   Leaving it out, or a release that does not ship it, gives a warning that names it
   and says it can be installed later from *Maintenance › Install hierarchies*. You
   can also keep a thesaurus of your own under another name.

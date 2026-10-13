@@ -5,33 +5,90 @@
  * an RFC 9457 `application/problem+json` document, each class fixes the HTTP `status`,
  * a stable `type` URI and a human `title`, and throwing is the ONLY way to produce an
  * error response — handlers never construct one. The engine's tool_sitebuilder proxy
- * matches on the `type` URI (its wire.ts mirrors these), so treat the URIs as published
- * API, not as strings.
+ * branches on the machine `reason` extension ONLY (its wire.ts maps every entry of
+ * `DAEMON_REASONS` below onto a registered code); the `type` URI and the prose `detail` are
+ * for logs and for direct callers. Treat both the URIs and the reasons as published API.
  */
 
 export const PROBLEM_TYPE_BASE = 'https://dedalo.dev/site-builder/problems/';
 
+/**
+ * THE DAEMON'S REASON VOCABULARY — every machine `reason` a refusal of this daemon can carry.
+ *
+ * The prose `detail` is this daemon's own sentence and is LOG-ONLY on the engine side: the
+ * engine (tools/tool_sitebuilder/server/wire.ts `DAEMON_REASON_CODES`) maps each reason here
+ * onto a registered `site_builder.*` code whose LABEL is what a museum reads. These lists are
+ * the runtime half of that contract: the engine's map is typed `Record<DaemonReason, …>` (an
+ * unmapped reason is a tsc error) and gated equal to `DAEMON_REASONS` (an unmapped reason is
+ * a red test), so a reason added here can never fall through to "the site builder rejected
+ * the request". `ConflictError` / `LimitExceededError` REQUIRE one — a refusal without a
+ * reason is a refusal nobody can branch on.
+ */
+
+/** Something else holds the site right now (workspace_activity.ts reservations). Clears by itself. */
+export const BUSY_REASONS = Object.freeze([
+  'session_running',
+  'build_running',
+  'site_initializing',
+  'site_recovering',
+  'git_running',
+  'site_deleting',
+] as const);
+
+/** A 409: the request names a real resource in a state that cannot accept it. */
+export const CONFLICT_REASONS = Object.freeze([
+  ...BUSY_REASONS,
+  'slug_exists',
+  'workspace_exists',
+  'domain_taken',
+  'webspace_unavailable',
+  'no_build',
+  'not_running',
+] as const);
+
+/** A 429: a configured limit refused the work (MAX_SITES, SITE_DISK_QUOTA_MB, MAX_CONCURRENT_SESSIONS). */
+export const LIMIT_REASONS = Object.freeze(['max_sites', 'disk_quota', 'max_concurrent_sessions'] as const);
+
+export type BusyReasonCode = (typeof BUSY_REASONS)[number];
+export type ConflictReason = (typeof CONFLICT_REASONS)[number];
+export type LimitReason = (typeof LIMIT_REASONS)[number];
+
+/**
+ * THE ONE BASE OF EVERY REFUSAL. Its only machine extension is `reason`, TYPED to the daemon's
+ * vocabulary (`DaemonReason`, below): a free-form extension cannot be written, so nothing but a
+ * listed reason can ever reach either wire (the control door's problem+json, `util/response.ts`;
+ * the stream door's error event, `drivers/turn_errors.ts`). `extensions` is the problem+json
+ * view of it, kept for the readers that branch on the serialized shape.
+ */
 export class ApiError extends Error {
+  readonly reason: DaemonReason | undefined;
+
   constructor(
     public status: number,
     public type: string,
     public title: string,
     detail?: string,
-    public extensions?: Record<string, unknown>,
+    reason?: DaemonReason,
   ) {
     super(detail ?? title);
     this.name = 'ApiError';
+    this.reason = reason;
   }
 
   get detail(): string {
     return this.message;
   }
+
+  /** The problem+json extension members: `{reason}` when the refusal has one. */
+  get extensions(): { readonly reason: DaemonReason } | undefined {
+    return this.reason === undefined ? undefined : { reason: this.reason };
+  }
 }
 
 /** The client's request was malformed: a bad slug, a missing actor, an unknown option. */
 export class ValidationError extends ApiError {
-  constructor(detail: string, extensions?: Record<string, unknown>) {
-    super(400, `${PROBLEM_TYPE_BASE}validation-error`, 'Validation Error', detail, extensions);
+  constructor(detail: string, reason?: DaemonReason) {
+    super(400, `${PROBLEM_TYPE_BASE}validation-error`, 'Validation Error', detail, reason);
     this.name = 'ValidationError';
   }
 }
@@ -71,16 +128,18 @@ export class MethodNotAllowedError extends ApiError {
  * 'no_build') so the engine UI can branch without parsing prose.
  */
 export class ConflictError extends ApiError {
-  constructor(detail: string, reason?: string) {
-    super(409, `${PROBLEM_TYPE_BASE}conflict`, 'Conflict', detail, reason ? { reason } : undefined);
+  declare readonly reason: ConflictReason;
+  constructor(detail: string, reason: ConflictReason) {
+    super(409, `${PROBLEM_TYPE_BASE}conflict`, 'Conflict', detail, reason);
     this.name = 'ConflictError';
   }
 }
 
 // A limit gate refused the work: session concurrency cap, MAX_SITES, disk quota.
 export class LimitExceededError extends ApiError {
-  constructor(detail: string, reason?: string) {
-    super(429, `${PROBLEM_TYPE_BASE}limit-exceeded`, 'Limit Exceeded', detail, reason ? { reason } : undefined);
+  declare readonly reason: LimitReason;
+  constructor(detail: string, reason: LimitReason) {
+    super(429, `${PROBLEM_TYPE_BASE}limit-exceeded`, 'Limit Exceeded', detail, reason);
     this.name = 'LimitExceededError';
   }
 }
@@ -102,7 +161,7 @@ export class ConfinementUnavailableError extends ApiError {
       `${PROBLEM_TYPE_BASE}confinement-unavailable`,
       'Agent Confinement Unavailable',
       detail,
-      { reason: 'confinement_unavailable' },
+      'confinement_unavailable',
     );
     this.name = 'ConfinementUnavailableError';
   }
@@ -130,6 +189,10 @@ export class ConfinementUnavailableError extends ApiError {
  *   - `agent_cli_unsupported` — the installed agent CLI does not list a flag the turn's argv
  *     needs to keep agent-written configuration (hooks, MCP servers, settings) out of the turn
  *     (PLANT). An operator must upgrade the CLI; nothing was started.
+ *   - `agent_cli_unproved` — the CLI's probe could not ASK just now (a question that did not
+ *     answer within its bound, a spawn the host refused for want of resources): nothing it did
+ *     ask proved the binary unfit, the answer is not kept, and the next attempt asks again.
+ *     Retryable; nothing was started.
  *
  * `CONFINEMENT_CODES` is the runtime list the engine's mapping (tools/tool_sitebuilder/server/
  * wire.ts) is gated against: a code added here without a mapping there is red.
@@ -144,18 +207,46 @@ export const CONFINEMENT_CODES = Object.freeze([
   'daemon_stopping',
   /** The installed agent CLI cannot be told to ignore agent-written configuration. */
   'agent_cli_unsupported',
+  /** The agent CLI could not be asked just now (a timeout, a resource-refused spawn): asked again next time. */
+  'agent_cli_unproved',
 ] as const);
 
 export type ConfinementCode = (typeof CONFINEMENT_CODES)[number];
+
+/** Every machine `reason` this daemon sends, in one list — the engine's map is gated equal to it. */
+export const DAEMON_REASONS = Object.freeze([
+  ...CONFLICT_REASONS,
+  ...LIMIT_REASONS,
+  'confinement_unavailable',
+  ...CONFINEMENT_CODES.map((code) => `confinement.${code}` as const),
+] as const);
+
+export type DaemonReason =
+  | ConflictReason
+  | LimitReason
+  | 'confinement_unavailable'
+  | `confinement.${ConfinementCode}`;
+
+/** Is `value` one of `DAEMON_REASONS`? The runtime half of the type: a cast cannot pass it. */
+export function isDaemonReason(value: unknown): value is DaemonReason {
+  return typeof value === 'string' && (DAEMON_REASONS as readonly string[]).includes(value);
+}
+
+/**
+ * THE MACHINE REASON OF ANY THROWN VALUE — a listed `DaemonReason`, or null. The one reader both
+ * doors use (`util/response.ts` for the control door, `drivers/turn_errors.ts` for the stream):
+ * a value that is not an `ApiError`, or whose reason a cast smuggled past the type, has none.
+ */
+export function reasonOf(error: unknown): DaemonReason | null {
+  return error instanceof ApiError && isDaemonReason(error.reason) ? error.reason : null;
+}
 
 export class ConfinementRefusedError extends ApiError {
   constructor(
     public readonly code: ConfinementCode,
     detail: string,
   ) {
-    super(503, `${PROBLEM_TYPE_BASE}confinement-${code.replace(/_/g, '-')}`, 'Agent Run Refused', detail, {
-      reason: `confinement.${code}`,
-    });
+    super(503, `${PROBLEM_TYPE_BASE}confinement-${code.replace(/_/g, '-')}`, 'Agent Run Refused', detail, `confinement.${code}`);
     this.name = 'ConfinementRefusedError';
   }
 }

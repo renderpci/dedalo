@@ -146,7 +146,7 @@ For full installation instructions, see the [installation guide](https://dedalo.
 
 The TS server reads its configuration from `../private/.env` (a sibling directory, *not* the PHP tree's private dir). Every key is declared once in **`src/config/catalog/`**, which GENERATES the copy-paste census `install/sample.env` and the [settings reference](docs/config/config.md); the installer drops a copy of the census at `../private/sample.env`. Regenerate with `bun run config:gen` — `config_docs_tripwire` fails if you forget.
 
-An install wizard is available — open Dédalo in the browser and follow the instructions. Once installed:
+Install with the terminal installer — `./install.sh` (or `bun run dedalo:install` in a checkout); it asks every question in the terminal. A server started before it ran refuses to start (exit 78, "not installed"). Once installed:
 
 1. Log in and head to the Development Area.
 2. Update the Ontology and register all tools.

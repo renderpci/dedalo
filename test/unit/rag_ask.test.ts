@@ -45,6 +45,12 @@ import type { RagPassageHit } from '../../src/ai/rag/retrieval.ts';
 import { deleteRecordChunks } from '../../src/ai/rag/vector_store.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
+import {
+	type AiSpendLimitSnapshot,
+	restoreAiSpendLimits,
+	setAiSpendLimits,
+	sweepAiSpendLedger,
+} from '../helpers/ai_spend_ledger.ts';
 import { cleanScratchRecord, createScratchRecord } from '../helpers/test_data.ts';
 
 /**
@@ -103,6 +109,12 @@ const DOC_LANG = 'lg-eng';
 /** The embed group this gate declares; chunks store under `rag:<id>`. */
 const EMBED_GROUP = 'probe';
 const SUPERUSER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
+/**
+ * The `ask` door is METERED (ai_spend.ts) and an unset limit is 0, so root gets
+ * explicit user-level AI limits for this gate's door legs (ample — the limits
+ * are ai_spend_budget_native's subject), restored after with its ledger swept.
+ */
+let rootLimits: AiSpendLimitSnapshot | null = null;
 const NO_ACCESS: Principal = { userId: 999999, isGlobalAdmin: false, isDeveloper: false };
 
 // Reserved-high scratch twin (test/helpers/test_data.ts conventions): a fixed id
@@ -234,9 +246,15 @@ beforeAll(async () => {
 	// store — which reads as "not grounded", i.e. a FALSE GREEN on the refusal
 	// tests and an unexplained red on the rest. Fail here instead.
 	if (!indexed) throw new Error(`fixture index failed for ${SECTION_TIPO}/${COIN_ID}`);
+	rootLimits = await setAiSpendLimits(
+		{ userId: SUPERUSER.userId },
+		{ runs: 1000, tokens: 100_000_000, embeds: 1000, vision: 1000 },
+	);
 });
 
 afterAll(async () => {
+	if (rootLimits !== null) await restoreAiSpendLimits([rootLimits]);
+	await sweepAiSpendLedger([SUPERUSER.userId]);
 	for (const id of createdIds) {
 		await deleteRecordChunks(SECTION_TIPO, id);
 		await cleanScratchRecord(SECTION_TIPO, id);

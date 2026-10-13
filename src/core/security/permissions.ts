@@ -746,12 +746,21 @@ export function metadataComponentTipos(): readonly string[] {
  * user cannot hand themselves a profile, the developer flag, a new username or
  * a different section_id through the ordinary save API (DEDALO_USER_PROFILE_TIPO,
  * DEDALO_USER_DEVELOPER_TIPO, DEDALO_USER_NAME_TIPO, 'dd330').
+ *
+ * PLUS the per-user AI spend limits dd692-695 (2026-10-12, beyond PHP —
+ * WC-2026-10-12-ddengine-removed): the user's own value WINS over its profile's
+ * (security/ai_spend.ts), so a user-manager writing it on their OWN record would
+ * lift their own spend cap. Same self-elevation class, same downgrade.
  */
 const SELF_ELEVATION_GUARDED: ReadonlySet<string> = new Set([
 	PROFILE_SELECT_COMPONENT,
 	DEVELOPER_COMPONENT,
 	'dd132',
 	'dd330',
+	'dd692',
+	'dd693',
+	'dd694',
+	'dd695',
 ]);
 /**
  * dd128 own-record components PHP forces to WRITE regardless of the matrix —

@@ -106,6 +106,19 @@ export function authorizeUpdateManifest(input: {
 }
 
 /**
+ * The login answer's token keys: the fresh session's `csrf_token` and, beside
+ * it, its owner `session_user_id` (WC-2026-10-11-session-user-beside-csrf-token)
+ * — both absent when the session cannot be read back. Split out of `login` so
+ * the pairing is one decision, not two that could disagree.
+ */
+function tokenWithOwner(
+	session: { csrfToken: string } | null | undefined,
+	userId: number | undefined,
+): { csrf_token?: string; session_user_id?: number } {
+	return session ? { csrf_token: session.csrfToken, session_user_id: userId } : {};
+}
+
+/**
  * The {section_tipo, section_id} a record-scoped read names, or null when the
  * request does not name one.
  *
@@ -588,26 +601,6 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			});
 		}
 	},
-	get_install_context: async (_rqo, context) => {
-		// The installer's own context request (DEC-19 TS-native install). The
-		// client build reads result.find(el => el.model===self.model), so result
-		// is an ARRAY carrying the installer element. On a fresh machine there is
-		// NO ontology to resolve, so this is a SYNTHETIC context built by hand
-		// (buildInstallContext) carrying exactly the properties render_installer.js
-		// reads — NOT buildStructureContext. The dispatch gate (Gate 1b) already
-		// blocked this action pre-seal-only + IP-gated; post-seal it 404s.
-		const { buildInstallContext } = await import('../../install/context.ts');
-		return { status: 200, body: ok([buildInstallContext()], { requestId: context.requestId }) };
-	},
-	install: async (rqo, context) => {
-		// The wizard step router (DEC-19). Every wizard step rides this one action
-		// with the concrete step in options.action; the response is the TOP-LEVEL
-		// envelope the client reads ({result, msg, ...extras}). The dispatch gate
-		// (Gate 1b) already enforced unsealed + IP-allowed; record-writing steps
-		// re-check the session here (login-gated even while unsealed).
-		const { runInstallStep } = await import('../../install/engine.ts');
-		return runInstallStep(rqo, context);
-	},
 	login: async (rqo, context) => {
 		const options = (rqo.options ?? {}) as { username?: string; auth?: string };
 		const outcome = await login(
@@ -648,9 +641,12 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			status: 200,
 			// `user_id` + `csrf_token` are owned top-level keys: the fresh session is
 			// created mid-handler, so the dispatch-level csrf_token append cannot see it.
+			// `session_user_id` travels with the token, as on every other response
+			// (dispatch.ts executeRqo, WC-2026-10-11-session-user-beside-csrf-token): the
+			// client adopts a token only for its own page user.
 			body: ok(true, {
 				requestId: context.requestId,
-				extend: { user_id: outcome.userId, csrf_token: freshSession?.csrfToken },
+				extend: { user_id: outcome.userId, ...tokenWithOwner(freshSession, outcome.userId) },
 			}),
 			setSessionToken: outcome.sessionToken,
 			// Media access control (Rule A). Undefined when the mode is false, so a

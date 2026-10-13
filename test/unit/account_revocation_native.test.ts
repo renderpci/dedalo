@@ -1106,11 +1106,10 @@ describe('orphan markers are collected automatically, backlog included', () => {
 		// The reconcile inside the sweep unlinks every marker not backed by a live
 		// session; a smoke boot holds an EMPTY throwaway session store and the
 		// production MEDIA_PATH, so starting it there would log every editor out of the
-		// media tree. The guard is the same `databaseBoot && !smokeBoot` the
-		// migrations and the schedulers already sit behind (databaseBoot also keeps a
-		// mid-wizard boot off the not-yet-seeded database — install_mode_boot.test.ts).
-		const call =
-			/if \(databaseBoot && !smokeBoot\)[\s\S]{0,3000}?startExpiredSessionSweeper\(\)/.exec(server);
+		// media tree. The guard is the same `!smokeBoot` the migrations and the
+		// schedulers already sit behind (a box that is not installed never gets this
+		// far — it refuses to start: install_state_boot / no_install_surface_tripwire).
+		const call = /if \(!smokeBoot\)[\s\S]{0,3000}?startExpiredSessionSweeper\(\)/.exec(server);
 		expect(call, 'startExpiredSessionSweeper is not behind the smoke-boot guard').not.toBeNull();
 	});
 });

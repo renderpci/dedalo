@@ -1,23 +1,30 @@
 /**
- * TRIPWIRE — the restart-after-persist supervisor contract (DEC-19).
+ * TRIPWIRE — the restart supervisor contract, and the not-installed exit no supervisor
+ * may restart.
  *
- * `persist_config` writes ../private/.env and then KILLS the server on purpose:
- * `config` is frozen at import, so only a fresh process can serve the new
- * configuration. That is only half a mechanism — something must bring the
- * process back, or the install wizard hangs forever at "Save configuration"
- * with nothing listening for its "Verify active configuration" click.
+ * PLANNED RESTART (exit 75). A code update or a code restore (src/core/update/
+ * code_update.ts, code_restore.ts) swaps the tree and then EXITS the server on purpose:
+ * `config` and the module graph are read once at import, so only a fresh process runs
+ * the new code. That is only half a mechanism — something must bring the process back.
+ * (Until 2026-10-12 the browser install wizard's persist_config was the other
+ * requester; it is gone — WC-2026-10-12-install-surface-removed.) This was once
+ * hypothetical-proof: restart.ts justified its exit by naming a `start:supervised` loop
+ * that WAS NEVER WRITTEN, and every dev on `bun run dev` got a dead server.
  *
- * That is not hypothetical: src/core/install/restart.ts used to justify its
- * exit by naming a `start:supervised` loop that WAS NEVER WRITTEN. Production
- * (systemd `Restart=always`) was fine; every dev running the documented
- * `bun run dev` got a dead server and a stuck installer.
+ * REFUSED BOOT (exit 78, NOT_INSTALLED_EXIT_CODE, src/config/install_state.ts). A box
+ * that is not installed refuses to start; restarting it only re-reads the same missing
+ * configuration and fills the journal. Every systemd unit and dev supervisor this repo
+ * ships must STOP on it (a container cannot: Docker has no per-exit-code restart policy,
+ * so the compose engine restarts with backoff — engineering/PRODUCTION.md §7.1).
  *
  * So the contract is mechanical, not prose:
  *   1. the supervised run scripts EXIST in package.json, and
- *   2. they respawn on exactly RESTART_EXIT_CODE — the one the server actually
- *      exits with — and on nothing else (a graceful ^C exits 0 and must QUIT,
- *      a crash exits non-zero and must NOT hot-loop), and
- *   3. the systemd unit does not count that planned exit as a failure, and
+ *   2. they respawn on exactly RESTART_EXIT_CODE — the one the server actually exits
+ *      with — and on nothing else (^C exits 0 and must QUIT, a crash must NOT hot-loop,
+ *      a refusal (78) must stop) — the inline loops are EXECUTED against a stub server;
+ *   3. the systemd units do not count the planned exit as a failure, and carry
+ *      RestartPreventExitStatus=78 (never SuccessExitStatus=78), and the watchdog does
+ *      not restart a unit that failed with 78 (driven below);
  *   4. the systemd unit CREATES the socket directory (RuntimeDirectory), and every
  *      shipped consumer of the socket agrees on one canonical /run/dedalo path — a
  *      fresh-install 502 traced to a missing /run/dedalo and a /tmp-vs-/run drift.
@@ -32,21 +39,47 @@ import {
 	readdirSync,
 	readFileSync,
 	rmSync,
+	symlinkSync,
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { RESTART_EXIT_CODE } from '../../src/core/install/restart.ts';
+import { NOT_INSTALLED_EXIT_CODE } from '../../src/config/install_state.ts';
+import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
+import { RESTART_EXIT_CODE } from '../../src/core/update/restart.ts';
+import { HOST_VARIANTS, productionPlanCtx, REPO_ROOT } from '../helpers/install_host_scratch.ts';
+
+/**
+ * The site file the PRODUCTION INSTALLER writes for an instance `site1` — the
+ * multi-instance vhost an operator once copied from the manual is now RENDERED
+ * (src/core/install/host/web/), so the rendered text is what these route gates
+ * hold, by the same label the manual samples are held by.
+ */
+const INSTALLER_SITE_NGINX = 'installer site (nginx, instance site1)';
+const INSTALLER_SITE_APACHE = 'installer site (apache, instance site1)';
+function installerSite(web: 'nginx' | 'apache'): string {
+	const variant = HOST_VARIANTS.find((v) => v.web === web && v.tls === 'letsencrypt');
+	if (variant === undefined) throw new Error(`no ${web} host variant`);
+	const ctx = productionPlanCtx(variant, REPO_ROOT, {
+		instance: 'site1',
+		server_name: 'site1.example.org',
+	});
+	return siteText(ctx, certificatePaths(ctx));
+}
+const RENDERED_SITES: ReadonlyMap<string, () => string> = new Map([
+	[INSTALLER_SITE_NGINX, () => installerSite('nginx')],
+	[INSTALLER_SITE_APACHE, () => installerSite('apache')],
+]);
 
 const pkg = (await Bun.file(new URL('../../package.json', import.meta.url)).json()) as {
 	scripts: Record<string, string>;
 };
 
-/** The run scripts that must survive a restart-after-persist unattended. */
+/** The run scripts that must survive a planned restart (code update) unattended. */
 const SUPERVISED_SCRIPTS = ['start:supervised', 'dev'];
 
-describe('install restart supervisor contract', () => {
+describe('restart supervisor contract', () => {
 	test('RESTART_EXIT_CODE is a real, non-zero, non-signal exit code', () => {
 		// 0 would collide with a graceful shutdown; >125 collides with the shell's
 		// signal/not-found encodings.
@@ -55,9 +88,7 @@ describe('install restart supervisor contract', () => {
 	});
 
 	test('the server exits with RESTART_EXIT_CODE (not a bare 0) to ask for a restart', async () => {
-		const src = await Bun.file(
-			new URL('../../src/core/install/restart.ts', import.meta.url),
-		).text();
+		const src = await Bun.file(new URL('../../src/core/update/restart.ts', import.meta.url)).text();
 		expect(src).toContain('process.exit(RESTART_EXIT_CODE)');
 		// A literal exit(0) here would silently re-break the supervisor loops:
 		// they cannot distinguish it from an operator ^C.
@@ -96,13 +127,90 @@ describe('install restart supervisor contract', () => {
 				expect(source).toContain('exit $code');
 			} else {
 				expect(source).toContain('RESTART_EXIT_CODE');
-				expect(source).toContain('install/restart.ts');
+				expect(source).toContain('update/restart.ts');
 				// Same rule, TS spelling: anything that is NOT the restart code is propagated.
 				expect(source).toContain('code !== RESTART_EXIT_CODE');
 				expect(source).toContain('process.exit(code)');
 			}
 		});
 	}
+
+	test('NOT_INSTALLED_EXIT_CODE is distinct from success, a crash and the restart code', () => {
+		expect(NOT_INSTALLED_EXIT_CODE).toBe(78); // EX_CONFIG
+		expect([0, 1, RESTART_EXIT_CODE]).not.toContain(NOT_INSTALLED_EXIT_CODE);
+	});
+
+	// The inline loops, EXECUTED: `bun` on PATH is a stub that logs each launch and exits
+	// with the next code of a scripted sequence. A loop that respawned on 78 would launch
+	// again (and, with the sequence exhausted, spin) — the cap below turns that into red.
+	for (const name of ['start:supervised', 'dev:server']) {
+		test(`package.json '${name}' respawns on ${RESTART_EXIT_CODE} and STOPS on ${NOT_INSTALLED_EXIT_CODE} (executed)`, () => {
+			const script = pkg.scripts[name];
+			expect(script).toBeString();
+			const dir = mkdtempSync(join(tmpdir(), 'dedalo_zzi_supervisor_'));
+			try {
+				const log = join(dir, 'launches');
+				const codes = join(dir, 'codes');
+				writeFileSync(
+					join(dir, 'bun'),
+					[
+						'#!/usr/bin/env bash',
+						`echo launch >> "${log}"`,
+						`n=$(wc -l < "${log}" | tr -d ' ')`,
+						'[ "$n" -gt 5 ] && exit 99',
+						`code=$(sed -n "\${n}p" "${codes}")`,
+						'exit "${code:-99}"',
+						'',
+					].join('\n'),
+				);
+				chmodSync(join(dir, 'bun'), 0o755);
+				const run = (sequence: number[]): { exitCode: number | null; launches: number } => {
+					rmSync(log, { force: true });
+					writeFileSync(codes, `${sequence.join('\n')}\n`);
+					const proc = Bun.spawnSync(['bash', '-c', script as string], {
+						env: { PATH: `${dir}:${Bun.env.PATH ?? ''}` },
+						stdout: 'pipe',
+						stderr: 'pipe',
+					});
+					const launches = existsSync(log)
+						? readFileSync(log, 'utf8').trim().split('\n').length
+						: 0;
+					return { exitCode: proc.exitCode, launches };
+				};
+				expect(run([NOT_INSTALLED_EXIT_CODE])).toEqual({
+					exitCode: NOT_INSTALLED_EXIT_CODE,
+					launches: 1,
+				});
+				expect(run([RESTART_EXIT_CODE, NOT_INSTALLED_EXIT_CODE])).toEqual({
+					exitCode: NOT_INSTALLED_EXIT_CODE,
+					launches: 2,
+				});
+				expect(run([RESTART_EXIT_CODE, 0])).toEqual({ exitCode: 0, launches: 2 });
+				expect(run([1])).toEqual({ exitCode: 1, launches: 1 });
+			} finally {
+				rmSync(dir, { recursive: true, force: true });
+			}
+		});
+	}
+
+	test('the TS supervisor (scripts/dev.ts) propagates every non-restart code, 78 included', async () => {
+		const source = await Bun.file(new URL('../../scripts/dev.ts', import.meta.url)).text();
+		// One branch decides: anything !== RESTART_EXIT_CODE exits with that code. A
+		// special case that respawned on 78 would have to name it — refused here.
+		expect(source).toContain('code !== RESTART_EXIT_CODE');
+		expect(source).not.toMatch(/===\s*78|NOT_INSTALLED_EXIT_CODE\s*\)/);
+	});
+
+	test('both systemd units refuse to restart a not-installed exit, and never book it a success', async () => {
+		for (const path of ['deploy/dedalo-ts.service', 'deploy/systemd/dedalo-ts@.service']) {
+			const unit = await Bun.file(new URL(`../../${path}`, import.meta.url)).text();
+			const prevent = unit.match(/^RestartPreventExitStatus=(.+)$/m)?.[1]?.split(/\s+/) ?? [];
+			expect(prevent, path).toContain(String(NOT_INSTALLED_EXIT_CODE));
+			const success = unit.match(/^SuccessExitStatus=(.+)$/m)?.[1]?.split(/\s+/) ?? [];
+			expect(success, path).toContain(String(RESTART_EXIT_CODE));
+			expect(success, path).not.toContain(String(NOT_INSTALLED_EXIT_CODE));
+		}
+	});
 
 	test('systemd does not book the planned restart exit as a failure', async () => {
 		const unit = await Bun.file(new URL('../../deploy/dedalo-ts.service', import.meta.url)).text();
@@ -182,7 +290,8 @@ describe('install restart supervisor contract', () => {
 	// so must every proxy sample in the manual: an operator copy-pastes the
 	// documented vhost, so a hole there reaches production exactly like a hole in
 	// deploy/. Three samples were found empty on 2026-08-28 (the docs nginx block
-	// and both multi_instance blocks), which is what this list prevents recurring.
+	// and both multi-instance blocks), which is what this list prevents recurring. The
+	// multi-instance vhost is now the installer's rendered site, held here the same way.
 	test('every shipped proxy config and documented sample routes /health', async () => {
 		// deploy/: the configs an operator installs verbatim.
 		for (const path of ['deploy/nginx.conf', 'deploy/nginx.simple.conf']) {
@@ -192,9 +301,20 @@ describe('install restart supervisor contract', () => {
 		const apache = await Bun.file(new URL('../../deploy/apache.conf', import.meta.url)).text();
 		expect(apache).toMatch(/^\s*ProxyPass\s+\/health\s+unix:/m);
 
-		// docs/: each page ships BOTH flavours, so each must carry both rules.
-		for (const path of ['docs/install/reverse_proxy.md', 'docs/install/multi_instance.md']) {
-			const page = await Bun.file(new URL(`../../${path}`, import.meta.url)).text();
+		// docs/: the page ships BOTH flavours, so it must carry both rules — and so must
+		// the site the production installer renders for an instance.
+		const page = await Bun.file(
+			new URL('../../docs/install/reverse_proxy.md', import.meta.url),
+		).text();
+		const nginxSite = installerSite('nginx');
+		const apacheSite = installerSite('apache');
+		expect(nginxSite, `${INSTALLER_SITE_NGINX} must route /health`).toMatch(
+			/location\s*=\s*\/health\s*\{/,
+		);
+		expect(apacheSite, `${INSTALLER_SITE_APACHE} must route /health`).toMatch(
+			/^\s*ProxyPass\s+\/health\s+unix:/m,
+		);
+		for (const path of ['docs/install/reverse_proxy.md']) {
 			expect(page, `${path}: the nginx sample must route /health`).toMatch(
 				/location\s*=\s*\/health\s*\{/,
 			);
@@ -254,6 +374,8 @@ describe('install restart supervisor contract', () => {
 
 	/** Read a repo file by path, without percent-encoding surprises. */
 	async function repoText(rel: string): Promise<string> {
+		const rendered = RENDERED_SITES.get(rel);
+		if (rendered !== undefined) return rendered();
 		return await Bun.file(fileURLToPath(new URL(`../../${rel}`, import.meta.url))).text();
 	}
 
@@ -316,12 +438,12 @@ describe('install restart supervisor contract', () => {
 			['deploy/nginx.simple.conf', 'dedalo_ts'],
 			['deploy/nginx.simple-tls.conf.tpl', 'dedalo_ts'],
 			['docs/install/reverse_proxy.md', 'dedalo_ts'],
-			['docs/install/multi_instance.md', 'dedalo_site1'],
+			[INSTALLER_SITE_NGINX, 'dedalo_site1'],
 		];
 		const apacheFiles: ReadonlyArray<readonly [string, string]> = [
 			['deploy/apache.conf', '/run/dedalo/dedalo_ts.sock'],
 			['docs/install/reverse_proxy.md', '/run/dedalo/dedalo_ts.sock'],
-			['docs/install/multi_instance.md', '/run/dedalo-site1/dedalo_ts.sock'],
+			[INSTALLER_SITE_APACHE, '/run/dedalo-site1/dedalo_ts.sock'],
 		];
 		const all = [...prefixes, ...LITERAL_ROUTES.keys()]
 			.map((p) => p.replace(/\/$/, ''))
@@ -519,15 +641,18 @@ describe('install restart supervisor contract', () => {
 	});
 
 	test('rollback + watchdog units execute scripts OUTSIDE the app tree (finding A)', async () => {
-		const APP_DIR = '/opt/dedalo/master_dedalo';
+		// The units name the layout by ROLE (2026-10-12, engineering/PRODUCTION.md
+		// §2.2): INSTANCE_DIR holds the app tree, ROOT_BIN_DIR (root's, outside it)
+		// the scripts root-started units run.
+		const APP_DIR = 'INSTANCE_DIR/';
 		for (const unitName of ['dedalo-ts-rollback.service', 'dedalo-ts-watchdog.service']) {
 			const unit = await Bun.file(new URL(`../../deploy/${unitName}`, import.meta.url)).text();
 			const exec = unit.match(/^ExecStart=(\S+)/m);
 			expect(exec).not.toBeNull();
 			// The load-bearing property: the executable survives the tree swap.
-			expect(exec?.[1]?.startsWith(`${APP_DIR}/`)).toBe(false);
-			// And the concrete out-of-tree home, so docs/units cannot drift apart.
-			expect(exec?.[1]?.startsWith('/opt/dedalo/bin/')).toBe(true);
+			expect(exec?.[1]?.startsWith(APP_DIR)).toBe(false);
+			// And the out-of-tree home, so docs/units cannot drift apart.
+			expect(exec?.[1]?.startsWith('ROOT_BIN_DIR/')).toBe(true);
 		}
 	});
 
@@ -795,6 +920,249 @@ describe('install restart supervisor contract', () => {
 		const calls = existsSync(f.systemctlLog) ? readFileSync(f.systemctlLog, 'utf8') : '';
 		return { exitCode: proc.exitCode, calls };
 	}
+
+	// --- the BOOT GRACE (finding F3, campaign 2 L7): a red probe of a server still
+	// booting is skipped — driven against a stub `systemctl show` and a stub uptime
+	// clock, every branch of in_boot_grace, and the no-grace default.
+
+	interface GraceCase {
+		name: string;
+		state: string;
+		/** ActiveEnterTimestampMonotonic, µs since boot. */
+		entered: number;
+		/** /proc/uptime seconds (null: an unreadable clock). */
+		uptime: number | null;
+		/** A /run/<dir>/booting marker naming a LIVE pid. */
+		marker: boolean;
+		flags: boolean;
+		restarted: boolean;
+	}
+
+	const GRACE_CASES: GraceCase[] = [
+		{
+			name: 'activating',
+			state: 'activating',
+			entered: 0,
+			uptime: 5000,
+			marker: false,
+			flags: true,
+			restarted: false,
+		},
+		{
+			name: 'active, entered 100 s ago (< 900)',
+			state: 'active',
+			entered: 4900e6,
+			uptime: 5000,
+			marker: false,
+			flags: true,
+			restarted: false,
+		},
+		{
+			name: 'active, entered 4900 s ago',
+			state: 'active',
+			entered: 100e6,
+			uptime: 5000,
+			marker: false,
+			flags: true,
+			restarted: true,
+		},
+		{
+			name: 'booting marker, live pid, 2000 s (< 4 × 900)',
+			state: 'active',
+			entered: 3000e6,
+			uptime: 5000,
+			marker: true,
+			flags: true,
+			restarted: false,
+		},
+		{
+			name: 'booting marker, live pid, 4900 s (> 4 × 900)',
+			state: 'active',
+			entered: 100e6,
+			uptime: 5000,
+			marker: true,
+			flags: true,
+			restarted: true,
+		},
+		{
+			name: 'an unreadable clock never reads as young',
+			state: 'active',
+			entered: 4900e6,
+			uptime: null,
+			marker: false,
+			flags: true,
+			restarted: true,
+		},
+		{
+			name: 'no --service: no grace (the old behaviour)',
+			state: 'activating',
+			entered: 4900e6,
+			uptime: 5000,
+			marker: true,
+			flags: false,
+			restarted: true,
+		},
+	];
+
+	function runGrace(f: Fixture, item: GraceCase): { exitCode: number | null; calls: string } {
+		writeFileSync(join(f.root, 'active_state'), `${item.state}\n`);
+		writeFileSync(join(f.root, 'entered'), `${item.entered}\n`);
+		writeFileSync(
+			join(f.binDir, 'systemctl'),
+			[
+				'#!/usr/bin/env bash',
+				'if [ "$1" = show ]; then',
+				`  case "$3" in ActiveState) cat "${f.root}/active_state" ;; ActiveEnterTimestampMonotonic) cat "${f.root}/entered" ;; esac`,
+				'  exit 0',
+				'fi',
+				`echo "systemctl $*" >> "${f.systemctlLog}"`,
+				'',
+			].join('\n'),
+		);
+		chmodSync(join(f.binDir, 'systemctl'), 0o755);
+		const uptime = join(f.root, 'uptime');
+		rmSync(uptime, { force: true });
+		if (item.uptime !== null) writeFileSync(uptime, `${item.uptime}.42 1234.56\n`);
+		const socketDir = join(f.root, 'run');
+		mkdirSync(socketDir, { recursive: true });
+		rmSync(join(socketDir, 'booting'), { force: true });
+		if (item.marker) writeFileSync(join(socketDir, 'booting'), `${process.pid}\n`);
+		const flags = item.flags
+			? ['--service', 'dedalo-ts@demo.service', '--grace', '900', '--uptime-file', uptime]
+			: [];
+		return runWatchdog(f, false, ['--socket', join(socketDir, 'dedalo_ts.sock'), ...flags]);
+	}
+
+	test('watchdog boot grace: a booting server is skipped, a dead one restarted — every branch', () => {
+		const f = makeFixture();
+		try {
+			plantTree(f.appDir, 'live-tree');
+			const seen = GRACE_CASES.map((item) => {
+				const run = runGrace(f, item);
+				return {
+					name: item.name,
+					restarted: run.calls.includes('systemctl start dedalo-ts-restart.service'),
+					exit: run.exitCode,
+				};
+			});
+			expect(seen).toEqual(
+				GRACE_CASES.map((item) => ({
+					name: item.name,
+					restarted: item.restarted,
+					exit: item.restarted ? 1 : 0,
+				})),
+			);
+		} finally {
+			rmSync(f.root, { recursive: true, force: true });
+		}
+	});
+
+	// --- the NOT-INSTALLED refusal (exit 78): the watchdog must not override the units'
+	// RestartPreventExitStatus by starting the restart unit every 30 s. Driven against a
+	// stub `systemctl show` answering each property in its own call; a crashed unit (a
+	// non-78 status) is the control that still gets its restart.
+
+	function runRefusal(
+		f: Fixture,
+		status: string,
+	): { exitCode: number | null; calls: string; err: string } {
+		writeFileSync(
+			join(f.binDir, 'systemctl'),
+			[
+				'#!/usr/bin/env bash',
+				'if [ "$1" = show ]; then',
+				`  case "$3" in ActiveState) echo failed ;; ActiveEnterTimestampMonotonic) echo 0 ;; Result) echo exit-code ;; ExecMainStatus) echo ${status} ;; esac`,
+				'  exit 0',
+				'fi',
+				`echo "systemctl $*" >> "${f.systemctlLog}"`,
+				'',
+			].join('\n'),
+		);
+		chmodSync(join(f.binDir, 'systemctl'), 0o755);
+		writeFileSync(join(f.binDir, 'curl'), '#!/usr/bin/env bash\nexit 22\n');
+		chmodSync(join(f.binDir, 'curl'), 0o755);
+		rmSync(f.systemctlLog, { force: true });
+		const socketDir = join(f.root, 'run');
+		mkdirSync(socketDir, { recursive: true });
+		const proc = Bun.spawnSync(
+			[
+				'bash',
+				WATCHDOG_SH,
+				'--app-dir',
+				f.appDir,
+				'--backup-root',
+				f.backupRoot,
+				'--socket',
+				join(socketDir, 'dedalo_ts.sock'),
+				'--service',
+				'dedalo-ts@demo.service',
+			],
+			{ env: { PATH: `${f.binDir}:${Bun.env.PATH ?? ''}` }, stdout: 'pipe', stderr: 'pipe' },
+		);
+		const calls = existsSync(f.systemctlLog) ? readFileSync(f.systemctlLog, 'utf8') : '';
+		return { exitCode: proc.exitCode, calls, err: proc.stderr.toString() };
+	}
+
+	test(`watchdog: a unit that failed with exit ${NOT_INSTALLED_EXIT_CODE} is NOT restarted (a crash still is)`, () => {
+		const f = makeFixture();
+		try {
+			plantTree(f.appDir, 'live-tree');
+			const refused = runRefusal(f, String(NOT_INSTALLED_EXIT_CODE));
+			expect(refused.exitCode).toBe(0);
+			expect(refused.calls).toBe('');
+			expect(refused.err).toContain(
+				`dedalo-ts@demo.service refused to start (exit ${NOT_INSTALLED_EXIT_CODE}: not installed / configuration missing) — not restarting`,
+			);
+			const crashed = runRefusal(f, '1');
+			expect(crashed.exitCode).toBe(1);
+			expect(crashed.calls).toBe('systemctl start dedalo-ts-restart.service\n');
+		} finally {
+			rmSync(f.root, { recursive: true, force: true });
+		}
+	});
+
+	// --- the per-instance rollback unit's flags: --check decides, --no-restart restarts nothing,
+	// a sentinel naming a path outside the backup root (or a link) is refused.
+
+	test('rollback --check / --no-restart / foreign paths: the instance-run half of dedalo-ts-rollback@', () => {
+		const f = makeFixture();
+		try {
+			plantTree(f.appDir, 'failed-new-tree');
+			plantTree(f.backupDir, 'old-tree');
+			// --check: nothing recorded → 1; pending, unattempted → 0; changes nothing.
+			expect(runRollback(f, {}, ['--backup-root', f.backupRoot, '--check']).exitCode).toBe(1);
+			writePendingSentinel(f);
+			expect(runRollback(f, {}, ['--backup-root', f.backupRoot, '--check']).exitCode).toBe(0);
+			expect(sentinelJson(f).rollback_attempted).toBe(false);
+			// A backupDir outside the backup root: refused, nothing moved.
+			const outside = join(f.root, 'elsewhere');
+			plantTree(outside, 'foreign');
+			writePendingSentinel(f, { backupDir: outside });
+			const refused = runRollback(f, {}, ['--backup-root', f.backupRoot, '--no-restart']);
+			expect(refused.exitCode).toBe(1);
+			expect(refused.out).toContain('outside the backup root');
+			expect(readFileSync(join(f.appDir, 'src', 'server.ts'), 'utf8')).toContain('failed-new-tree');
+			// A sentinel that is a symbolic link: refused.
+			rmSync(f.sentinel);
+			writeFileSync(
+				join(f.root, 'planted.json'),
+				'{"status": "pending", "rollback_attempted": false}\n',
+			);
+			symlinkSync(join(f.root, 'planted.json'), f.sentinel);
+			expect(runRollback(f, {}, ['--backup-root', f.backupRoot, '--no-restart']).out).toContain(
+				'is a symbolic link',
+			);
+			rmSync(f.sentinel);
+			// --no-restart: the restore happens, NO systemctl call (the unit restarts as root).
+			writePendingSentinel(f);
+			const restored = runRollback(f, {}, ['--backup-root', f.backupRoot, '--no-restart']);
+			expect(restored.exitCode).toBe(0);
+			expect(readFileSync(join(f.appDir, 'src', 'server.ts'), 'utf8')).toContain('old-tree');
+			expect(existsSync(f.systemctlLog)).toBe(false);
+		} finally {
+			rmSync(f.root, { recursive: true, force: true });
+		}
+	});
 
 	test('watchdog drill: green → nothing; red → restart unit; red + pending update → rollback unit (default and named units)', () => {
 		const f = makeFixture();

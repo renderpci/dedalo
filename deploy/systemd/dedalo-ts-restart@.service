@@ -1,0 +1,9 @@
+# Restart one Dédalo instance after a failed health probe (written by the
+# installer; started by dedalo-ts-watchdog@<i>.service).
+
+[Unit]
+Description=Restart the Dedalo TS server %i after a failed health probe
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl restart dedalo-ts@%i.service

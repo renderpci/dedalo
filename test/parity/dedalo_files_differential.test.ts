@@ -267,6 +267,9 @@ const POST_HARVEST_CLIENT_ADDITIONS: readonly string[] = [
 	// the maintenance area's cross-widget event leaf (OPEN_WIDGET_EVENT: media_control's
 	// line opening publication_hosts; WC-2026-10-03-publication-hosts-widget)
 	'/dedalo/core/area_maintenance/js/maintenance_events.js',
+	// the add_hierarchy widget's thesaurus import block, extracted from the removed
+	// browser installer (WC-2026-10-12-install-surface-removed)
+	'/dedalo/core/area_maintenance/widgets/add_hierarchy/js/render_hierarchies_import.js',
 ];
 function isPostHarvestClientAdditionEntry(entry: ManifestEntry): boolean {
 	return POST_HARVEST_CLIENT_ADDITIONS.includes(entry.url);
@@ -302,6 +305,14 @@ const THIRD_PARTY_BUNDLE_REMOVALS: readonly string[] = [
 ];
 function isThirdPartyBundleRemovalEntry(entry: ManifestEntry): boolean {
 	return THIRD_PARTY_BUNDLE_REMOVALS.includes(entry.url);
+}
+
+/** The browser installer's client is REMOVED (WC-2026-10-12-install-surface-removed:
+ * one installer, in the terminal). The frozen oracle (2026-07-11) still censuses its two
+ * JS files. A PREFIX: a removal leaves nothing on the TS side for a prefix to stop
+ * comparing — the TS-side-empty mirror below proves it. */
+function isInstallerRemovalEntry(entry: ManifestEntry): boolean {
+	return entry.url.startsWith('/dedalo/core/installer/');
 }
 
 describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', () => {
@@ -386,7 +397,8 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 			!isDropzoneServiceRemovalEntry(entry) &&
 			!isPostHarvestClientAdditionEntry(entry) &&
 			!isTimeMachineServiceRemovalEntry(entry) &&
-			!isThirdPartyBundleRemovalEntry(entry);
+			!isThirdPartyBundleRemovalEntry(entry) &&
+			!isInstallerRemovalEntry(entry);
 		const phpSet = phpBody.result.filter(keep).map(comparableLine).sort();
 		const tsSet = tsBody.data.filter(keep).map(comparableLine).sort();
 		expect(tsSet).toEqual(phpSet);
@@ -435,6 +447,11 @@ describe.if(hasPhpCredentials())('get_dedalo_files differential (S1-19 gate)', (
 		expect(phpBody.result.filter(isThirdPartyBundleRemovalEntry).length).toBe(
 			THIRD_PARTY_BUNDLE_REMOVALS.length,
 		);
+
+		// Mirror for the browser installer's removal: nothing under core/installer/
+		// serves on the TS side, both of its JS files are still in the frozen census.
+		expect(tsBody.data.filter(isInstallerRemovalEntry)).toEqual([]);
+		expect(phpBody.result.filter(isInstallerRemovalEntry).length).toBe(2);
 	});
 
 	test('WC-013: the TS tool_assistant census is the server-driven file set', () => {

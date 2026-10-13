@@ -523,26 +523,25 @@ export const PUBLICATION_APIS_RECONCILE: ReconcileDefinition = {
 	run: (options) => runPublicationApisDefinition(options),
 };
 
-/** What the confirmed boot knows about itself (server.ts passes both). */
+/** What the confirmed boot knows about itself (server.ts passes it). */
 export interface BootFacts {
 	smokeBoot: boolean;
-	installMode: boolean;
 }
 
-export type PushTriggerOutcome = 'started' | 'skipped_smoke_boot' | 'skipped_install_mode';
+export type PushTriggerOutcome = 'started' | 'skipped_smoke_boot';
 
 /**
  * The confirmed-boot trigger (L5 caller 1). Synchronous and DETACHED: the push runs
  * in the background and the result is logged; nothing here can throw into the boot.
- * A smoke boot rehearses an update and an install-mode boot has no registry to trust,
- * so neither pushes — checked HERE as well as by server.ts's enclosing guard.
+ * A smoke boot rehearses an update, so it never pushes — checked HERE as well as by
+ * server.ts's enclosing guard. (A box that is not installed never boots at all:
+ * src/config/install_state.ts.)
  */
 export function triggerPublicationApiPush(
 	facts: BootFacts,
 	reconcile: ReconcileApisFn = reconcilePublicationApis,
 ): PushTriggerOutcome {
 	if (facts.smokeBoot) return 'skipped_smoke_boot';
-	if (facts.installMode) return 'skipped_install_mode';
 	void pushDetached(reconcile);
 	return 'started';
 }

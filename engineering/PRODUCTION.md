@@ -55,7 +55,8 @@ Reference units in `deploy/`:
   `Wants=` it and `[Install] Also=` it, so `systemctl enable dedalo-ts` enables
   the health consumer with the server instead of leaving it to a second typed
   command (P2-33 / OPS-09).
-- `dedalo-backup.service` + `.timer` — the nightly backup set (§6).
+- `dedalo-backup.service` + `.timer` — the nightly backup set (§6); it pulls in
+  `dedalo-backup-site-builder.service`, store 5 as root in a unit of its own.
 - `dedalo-ts-rollback.service` — restores the previous code tree after a
   failed code update (§12; fired by `OnFailure=` on the main unit and by the
   watchdog when a pending update never confirms). Publishing a release:
@@ -106,8 +107,8 @@ container (≈90 s, not systemd's 30 s). Without it nothing consumed the 503
 there: a Compose healthcheck only feeds start ordering and `docker ps`, Docker
 Engine never restarts an unhealthy container, and the restart policy fires on
 process EXIT — which a poisoned or wedged process never does. It escalates only
-after a first GREEN probe, which leaves a container still on the install wizard
-(no database ⇒ red `/health`) untouched. Behaviour gate:
+after a first GREEN probe, which leaves a container that never came up green
+untouched (a container that is not installed never even listens: it exits 78, §7.1). Behaviour gate:
 `test/unit/container_watchdog_native.test.ts`.
 
 **Graceful shutdown (S2-17).** On SIGTERM/SIGINT the server: stops the
@@ -117,13 +118,12 @@ media transcode jobs `interrupted` in their pfiles → journals dying background
 tool jobs → closes the Postgres pool → unlinks the socket → exits 0.
 
 A **planned restart** takes the same path and exits `RESTART_EXIT_CODE` (75)
-instead of 0. `scheduleServerRestart` (`src/core/install/restart.ts`) hands off
+instead of 0. `scheduleServerRestart` (`src/core/update/restart.ts`) hands off
 to the graceful sequence through a handler `startServer` registers at boot, so
-`persist_config` and a code update drain exactly like a supervisor's SIGTERM;
+a code update or a code restore drains exactly like a supervisor's SIGTERM;
 with no listening server registered (CLI, test runner) it falls back to an
-immediate exit. It returns a `RestartOutcome` — `suppressed` under
-`DEDALO_INSTALL_NO_RESTART`, otherwise `draining` / `immediate` — so a caller
-can never report a restart it did not perform.
+immediate exit. It returns a `RestartOutcome` — `draining` / `immediate` — so a
+caller can never report a restart it did not perform.
 
 Diffusion RUNNERS are separate processes and survive restarts by design; the
 sweeper heals anything that does not. **That survival is the unit file's job**:
@@ -147,6 +147,100 @@ process flips a poison latch (`core/api/process_health.ts`) — `/health`
 answers `503 {process:'poisoned'}` from then on and the watchdog recycles the
 process — within its 30 s cadence under systemd, within ~90 s on a docker stack
 (§2). Gate: `test/unit/process_health.test.ts`.
+
+### 2.1 The installer's instance units (terminal installer, phase 4)
+
+A production install made by the terminal installer (`--route production
+--instance <i>`, src/core/install/host/) does not copy the single-instance units
+above. It writes the TEMPLATE units of `deploy/systemd/*@*` (shared by every
+instance on the host — written when absent or byte-equal, refused when a
+different file holds the name, removed only when no instance in the host
+registry `/var/lib/dedalo-install/instances/` still uses them) and ONE drop-in
+per unit and instance (`/etc/systemd/system/<unit>@<i>.<kind>.d/10-dedalo-install.conf`,
+stamped `# dedalo-install <i> <answers digest>`):
+
+- `dedalo-ts@<i>.service`: the drop-in replaces `ExecStart` with the root-owned
+  runtime `/opt/dedalo/bun/<pin>/bun run src/server.ts` and sets
+  `DEDALO_CLIENT_PUBLISH_DIR=/srv/dedalo/<i>/client`. The template does NOT
+  `Wants=`/`Also=` the watchdog: the installer ARMS `dedalo-ts-watchdog@<i>.timer`
+  only after the first boot recorded every migration (a watchdog armed with the
+  service killed a first boot mid-migration — campaign 2 L7). The watchdog
+  script also skips while the unit is activating or younger than its grace, and
+  while the engine's boot marker names a live pid; its timer waits
+  `OnActiveSec=60` before the first check.
+- `dedalo-backup@<i>.service`: the drop-in lists the store lines and declares
+  `DEDALO_BACKUP_EXPECTED_STORES` DERIVED from them, every `Environment=` value
+  quoted (an unquoted list was truncated to its first word — L8); the nightly
+  timer is enabled only after a first backup verified every store.
+- EVERY script a root-started unit runs (rollback — its file work as the
+  instance user, only the restart as root —, watchdog, alert, the site-builder
+  store) runs from `/opt/dedalo/instances/<i>/bin/` (root:root 0755), never from
+  the instance's tree: a root-run unit must not execute a file the instance user
+  can replace. A code update (it runs as the instance) does not refresh those
+  copies, and the installer refuses to run over a sealed instance — a release
+  that changes `deploy/*.sh` says what to do in its release notes; a Bun pin
+  change likewise (the runtime is root's).
+- nginx: the media map's variables are global, so ONE instance's generated map is
+  included host-wide (`/etc/nginx/conf.d/dedalo-00-media-map.conf`) and a second
+  instance whose map differs is refused — same-host instances run the same
+  release.
+
+### 2.2 The host layout is defined by ROLE, not by a path (2026-10-12)
+
+Real hosts look like `/home/my_domain.org/dedalo`, several instances per server,
+so no fixed path is THE layout. Two roles are, and every unit, script and
+installer render places things by them:
+
+1. **The INSTANCE DIR** — any path (`/home/ded_<i>` by default from the
+   installer, or the operator's `--install-dir` such as
+   `/home/my_domain.org/dedalo`; `/opt/dedalo/app` by hand), **owned by the
+   service user** (`--service-user`: a new account, or an existing one the
+   installer uses as it is and never creates or deletes). It holds the code tree (`<instance dir>/master_dedalo`; the
+   installer's is `dedalo/`), `private/` (the engine's `../private`) and
+   `backups/` — including the code-update backup root `backups/code`, where the
+   update stages, parks the outgoing tree and the rollback parks a failed one.
+   **Every rename a code update, an in-app restore or the supervisor-side
+   rollback makes is an entry of the instance dir or of that backup root**
+   (`code_update.ts` `renameSwap`/`carryPreservedEntries`/`restoreAfterFailedSwap`,
+   `code_restore.ts` through the same `sentinelGuardedSwap`,
+   `deploy/dedalo-code-rollback.sh`'s two `mv`s), so the instance dir's
+   PARENT may be root-owned. The engine refuses an update or restore BEFORE the
+   download when it cannot write the instance dir or the backup root
+   (`assertSwapPreconditions` → `unwritableSwapDirs`); a `DEDALO_BACKUP_PATH`
+   outside the instance dir must still be the service user's and on the same
+   filesystem.
+2. **ROOT-RUN THINGS** — the pinned Bun runtime and every script a root-started
+   unit executes (watchdog, rollback, backup steps, store 5, alert, media
+   rules) — live in a **root-owned directory OUTSIDE the instance dir**, per
+   instance or shared (`/opt/dedalo/instances/<i>/bin/` from the installer;
+   `/opt/dedalo/bin/`, `/usr/local/lib/dedalo/<name>/bin/` by hand). Root never
+   writes into the instance dir except through steps that run as the service
+   user (the rollback's file work, the backup stores, the installer's engine
+   steps).
+3. **Units name both by placeholder or derivation, never by a host path.** The
+   installer's templates derive only `%i` NAMES (`/opt/dedalo/instances/%i/bin`,
+   `dedalo-%i`) and carry no user, group, working directory, `.env` or instance
+   path: the per-instance drop-ins (`host/systemd/render.ts`, from
+   `host/layout.ts` `pathsFor` — the service group resolved from the host's
+   facts) carry `User=`, `Group=`, `WorkingDirectory=`, `HOME`, the
+   `EnvironmentFile=` and the rollback/watchdog `--app-dir`/`--backup-root`/
+   `--socket`. A template WITHOUT its drop-in runs `ExecStart=/bin/false`
+   (the rollback's `ExecCondition` too) — fail-closed, never as root. The
+   hand-installed units
+   under `deploy/*.service` carry `INSTANCE_DIR`, `ROOT_BIN_DIR` and
+   `DEDALO_USER`, rendered per host by `docs/install/manual_host.md`.
+
+Gates: `test/unit/code_update.test.ts` (*the instance-dir rule* — the full
+update chain, the restore and the rollback script EXECUTED against a scratch
+instance dir whose parent is `0555`; a layout that needs the parent refuses
+before the download); `test/unit/operator_commands_tripwire.test.ts` (E2 —
+every shipped unit rendered for three layouts: root executes nothing inside the
+instance dir, and no active line spells a host path);
+`test/unit/install_host_render_tripwire.test.ts` (c) and (f) for the installer's
+render (the default and a custom layout; templates user- and path-agnostic and
+fail-closed); `test/unit/install_host_identity_native.test.ts` (root names no
+path strictly inside the install folder; one user, group and folder per
+instance; an existing account never created or deleted).
 
 ## 3. Sockets, reverse proxy, timeouts (S2-33)
 
@@ -701,30 +795,48 @@ The **backup set is five stores** — the matrix DB alone is not a backup:
    `engineering/SITE_BUILDER_INSTANCES.md`. A host that declares no instance
    has an empty store 5 and that is not a failure.
 
-`deploy/dedalo-backup.service` + `.timer` is the reference nightly job. Each
-store above names the token that copies it, and `test/unit/operator_commands_tripwire.test.ts`
-asserts the two agree — a store documented here and copied by nothing is the
-failure this table exists to make impossible:
+`deploy/dedalo-backup.service` + `.timer` is the reference nightly job; it
+pulls in `deploy/dedalo-backup-site-builder.service` (store 5) and is ordered
+before it. Each store above names the token that copies it in one of the two
+reference units, and `test/unit/operator_commands_tripwire.test.ts` asserts the
+two agree — a store documented here and copied by nothing is the failure this
+table exists to make impossible:
 
-| # | Store | What copies it in `deploy/dedalo-backup.service` |
+| # | Store | What copies it in the two reference units |
 |---|---|---|
 | 1 | Matrix Postgres DB | `pg_dump` |
 | 2 | RAG pgvector DB | `DEDALO_RAG_DB_NAME` |
 | 3 | Media originals | `MEDIA_PATH` |
-| 4 | `../private/` | `/opt/dedalo/private/` |
+| 4 | `../private/` | `INSTANCE_DIR/private/` |
 | 5 | Site-builder instances | `dedalo-site-builder-backup.sh` |
 
-Store 5's `ExecStart` carries systemd's `+` prefix, so that one step runs as **root** while
-the other four stay unprivileged. It has to: an instance's credentials are `0600 root:root`
-inside a `0700` directory and its state roots are `0750` owned by that museum's own service
-user, and the backup user is in none of those groups — that separation is the isolation
-itself. The destination consequently holds credentials: create it `0700 root:root` and treat
-the whole backup tree as secret material, which store 4 already made true.
+Store 5 runs as **root** while the other four stay unprivileged. It has to: an instance's
+credentials are `0600 root:root` inside a `0700` directory and its state roots are `0750`
+owned by that museum's own service user, and the backup user is in none of those groups —
+that separation is the isolation itself. So it is **its own unit**,
+`dedalo-backup-site-builder.service`, never a `+` line in the set (2026-10-12): systemd
+applies a unit's `EnvironmentFile=` to `+` lines too, and the set reads
+`INSTANCE_DIR/private/.env`, which `DEDALO_USER` writes — its `LD_PRELOAD` or `PATH` would
+run as root. The root unit has no `EnvironmentFile=`, runs both scripts from the root-owned
+`ROOT_BIN_DIR` (outside the instance dir — §2.2), and keeps its verdict (`/var/lib/dedalo/backup-site-builder`) and its
+destination (`/var/backups/dedalo-site-builder`, created `0700 root:root` under the unit's
+`UMask=0077`) outside every tree `DEDALO_USER` owns. The destination holds credentials:
+treat the whole backup tree as secret material, which store 4 already made true. The
+failure alarm (`dedalo-backup-alert@.service`) runs as `DEDALO_USER` (journal access through
+`systemd-journal`), also from `ROOT_BIN_DIR`. Leg E2 of
+`test/unit/operator_commands_tripwire.test.ts` holds every shipped unit, RENDERED for three
+layouts, to this: no root line beside an `EnvironmentFile=`, nothing run as root from outside
+`ROOT_BIN_DIR` (or a system binary), nothing root executes inside the instance dir, no root write into a tree `DEDALO_USER` owns, no root line naming such a tree
+except the read-only watchdog, and no root-run rollback or watchdog without a pinned
+`--backup-root`. The rollback unit (`dedalo-ts-rollback.service`) therefore does its file work
+as `DEDALO_USER` and only its fixed `systemctl` restart as root (`ExecStartPost=+`), like the
+installer's `dedalo-ts-rollback@.service`.
 
 MariaDB **diffusion targets are derived data** — rebuildable by re-publishing;
 no dump surface exists (DIFFUSION_SPEC §8.6). Restore-test quarterly.
 
-**The unit declares which stores it promises.** `dedalo-backup.service` carries
+**Each unit declares which stores it promises.** `dedalo-backup.service` (and the
+root unit, for its one store) carries
 `Environment=DEDALO_BACKUP_EXPECTED_STORES=` naming every ACTIVE step, and
 `dedalo-backup-step.sh`'s aggregate fails the run when an expected store recorded
 no status. Without it the aggregate can only see the stores that DID record, so a
@@ -758,8 +870,8 @@ cannot even be attempted before step 1:
    # 2. The door. Exit 0 = restored and nothing held; 2 = restored, reconcile
    #    verdicts HELD for your decision (read them); 1 = refused or failed, and
    #    the database is exactly as it was.
-   cd /opt/dedalo/master_dedalo
-   bun scripts/restore.ts /opt/dedalo/private/backups/db/2026-08-29_033000.dedalo.custom.backup
+   cd /opt/dedalo/app/master_dedalo     # <instance dir>/master_dedalo (§2.2)
+   bun scripts/restore.ts /opt/dedalo/app/private/backups/db/2026-08-29_033000.dedalo.custom.backup
    ```
 
    What the door does, in order — each phase gates the next, and the shell
@@ -830,7 +942,7 @@ cannot even be attempted before step 1:
 4. **Media originals** (store 3), from a DATED GENERATION of the tree backup
    (`deploy/dedalo-tree-backup.sh` writes `<dest>/<YYYY-MM-DD_HHMMSS>/` with a
    `latest` link; pick the generation OLDER than the mistake, not `latest`):
-   `rsync -a "/opt/dedalo/backups/media/<generation>/" "$MEDIA_PATH/"`. Then
+   `rsync -a "<instance dir>/backups/media/<generation>/" "$MEDIA_PATH/"`. Then
    rebuild derivatives with `tool_update_cache` — do not restore derivatives.
    The restore door does NOT copy media; this step is yours.
 5. **RECONCILE THE ID COUNTERS AGAINST THE MEDIA TREE** — the door's
@@ -1080,7 +1192,7 @@ is an operator's decision, with the dry report in view.
   EXISTS` + `ANALYZE`). Today `0011_tm_role_hidden_index.sql` and
   `0012_tm_history_visible_index.sql`, both on `matrix_time_machine`. The boot
   runner defers them; `startOnlineMigrations` runs them in the BACKGROUND after
-  the listener binds (never in install mode). What an operator must expect:
+  the listener binds (never in a smoke boot). What an operator must expect:
   - **Load right after an upgrade.** Each is a full-heap index build + ANALYZE
     of the time machine (29M+ rows on a large install): I/O and CPU for
     minutes, while the server already serves.
@@ -1113,33 +1225,63 @@ is an operator's decision, with the dry report in view.
   COMPILED from repo sources only (`bun run seed:build`,
   `src/core/install/seed_build.ts`; never from an installation's database),
   verified by a fresh install before it is written, and committed with its
-  manifest (`install_seed_manifest_tripwire`). Two frontends
-  drive one engine: the browser wizard (auto-served when unconfigured) and the
-  headless CLI `bun run scripts/install.ts` (npm `dedalo:install`). See
-  **`docs/install/ts_native_install.md`** for the operator guide. PHP is no longer required to
+  manifest (`install_seed_manifest_tripwire`). ONE installer drives it, in the
+  terminal: `./install.sh` (the bootstrap) or `bun run scripts/install.ts` (npm
+  `dedalo:install`) — full-screen, plain line mode or flags/answers file over one
+  plan. See **`docs/install/ts_native_install.md`** for the operator guide. PHP is no longer required to
   install a TS instance.
 
-### 7.1 Install mode + restart-after-configure
+### 7.1 A server that is not installed refuses to start
 
-A server booted with none of `ENTITY`/`DB_NAME`/`DB_HOST`/`DB_USER` set enters
-**install mode** (`config.installMode`): it skips all DB-dependent boot steps,
-`/health` reports `db:down`, and it serves ONLY the install wizard. The browser
-`persist_config` step writes `../private/.env` and then **exits the process**
-with `RESTART_EXIT_CODE` (75 — `src/core/install/restart.ts`); the supervisor
-restarts it into configured mode. The wizard's separate manual
-`verify_active_config` click + the client's request retries bridge the gap. The
-pre-auth install surface is gated: reachable only while UNSEALED and only from
-`DEDALO_INSTALL_ALLOWED_IPS` — FAIL-CLOSED since 2026-08-24
-(`engineering/wire_contract/WC-2026-08-24-install-ip-gate-fail-closed.md`): unset
-or empty means LOOPBACK ONLY, entries are `loopback` / a literal address / a CIDR
-block, and `any` is the one explicit opt-out that opens it to every address. The
-effective policy is printed at boot next to the INSTALL MODE banner. Its limit is
-the resolved client address: a request with no `X-Forwarded-For` reads as
-`'local'`, so a bare TCP listener with no proxy in front must still be closed at
-the firewall. Once `install_finish` seals the instance the surface returns 404. The CLI needs no restart (it sets
-the env before importing config).
+There is no install mode and no install surface (2026-10-12,
+`engineering/wire_contract/WC-2026-10-12-install-surface-removed.md`). Before any
+listener, database connection or file write, the server asks
+`src/config/install_state.ts` whether this box is installed. When it is not, it
+writes ONE line to stderr (one journal line) and exits **78**
+(`NOT_INSTALLED_EXIT_CODE`, `EX_CONFIG`):
 
-The supervisor is:
+| State | The line says |
+|---|---|
+| `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER` all unset, no `.env`, not sealed | `not installed: … Run the installer: sh install.sh (sudo sh install.sh for production), or bun run dedalo:install in a checkout` |
+| none of the four, but `.env` has content | `configuration incomplete: … do not reinstall over an existing configuration` |
+| none of the four, but `install_status` is `sealed` | `configuration missing: … Restore .env from backup — do not reinstall over it` |
+| `install_status` is anything but `sealed` (the installer writes `terminal_installing` while it runs) | `install not finished … finish it with the installer's --resume (production: sudo sh install.sh --route production --instance <i> --resume; …)` |
+
+A PARTIAL configuration (one to three of the four keys) is misconfigured, not
+unconfigured: the config import throws the precise missing-key error and the
+process exits 1, bounded by the unit's start limit.
+
+Every systemd unit and dev supervisor this repo ships STOPS on 78 — restarting a
+box that is not installed only re-reads the same missing configuration; containers
+cannot (Docker has no per-exit-code policy) and restart with backoff:
+
+| Where | Reaction to exit 78 |
+|---|---|
+| Production | `deploy/dedalo-ts.service` and `deploy/systemd/dedalo-ts@.service` carry `RestartPreventExitStatus=78`: the unit goes to `failed` and stays there. `OnFailure` fires the rollback unit (a single exit 78 reaches `failed`, not only an exhausted start limit): a no-op without a pending code-update sentinel; with one, the new tree that refuses to boot is rolled back after that one exit. `deploy/dedalo-ts-watchdog.sh` reads `Result` and `ExecMainStatus` and does NOT start the restart unit for it (otherwise it would override the unit every 30 s). Run the installer (or restore `.env`), then `systemctl start`. |
+| Containers | Docker has no per-exit-code restart policy: a config-less container restarts under `restart: unless-stopped` with Docker's capped backoff (about once a minute), printing the same one line each time. The installer's docker and trial routes never reach this — the engine install runs (`compose run --rm`) before the stack is started. |
+| Dev | `bun run dev`, `bun run dev:server` and `bun run start:supervised` respawn on exit 75 ONLY, so 78 ends them with that code. |
+
+**Template units are byte-pinned.** The installer renders
+`deploy/systemd/dedalo-ts@.service` byte-exactly (`src/core/install/host/production/units.ts`)
+and refuses a template whose bytes differ; a host installed before this change (the
+phase-4 drills) keeps a template without `RestartPreventExitStatus` — remove it before a
+re-run. The code-update channel never re-renders units, so an updated host keeps its
+template until the operator replaces it.
+
+**An aborted re-run takes the instance down at its next restart.** A re-run of the
+installer on a live instance writes `terminal_installing`; if it dies without its undo,
+the next restart exits 78 and stays down until `--resume` finishes it. That is
+fail-closed and intended: a half-reconfigured instance must not serve.
+
+Gates: `test/unit/no_install_surface_tripwire.test.ts` (the real server spawned
+config-less: exit 78, no listener, no database connection, no write),
+`test/unit/install_state_boot.test.ts` (the predicate),
+`test/unit/install_restart_supervisor_tripwire.test.ts` (the supervisors).
+
+### 7.2 Planned restart (code update)
+
+A code update or a code restore swaps the tree and exits `RESTART_EXIT_CODE` (75);
+the supervisor brings the new code up:
 
 | Where | What restarts it |
 |---|---|
@@ -1147,9 +1289,9 @@ The supervisor is:
 | Containers | `docker-compose.yml` / `docker-compose.simple.yml` — `restart: unless-stopped`; the `dedalo` service declares `DEDALO_SUPERVISED: "true"`. |
 | Dev | `bun run dev`, `bun run dev:server` or `bun run start:supervised` — loop on exit 75 ONLY, each declaring `DEDALO_SUPERVISED=true` on its command line. |
 
-The declaration (§2) is the code-update contract; the install restart itself only
-needs the exit-75 loop. A `DEDALO_SUPERVISED` line in `../private/.env` is
-ignored, and nothing infers supervision from systemd's own variables.
+The declaration (§2) is the code-update contract. A `DEDALO_SUPERVISED` line in
+`../private/.env` is ignored, and nothing infers supervision from systemd's own
+variables.
 
 Exit 75 is a *distinct* code on purpose: a graceful ^C also exits 0, so a
 supervisor keying on 0 could never be stopped, and one keying on "any exit"
@@ -1157,7 +1299,7 @@ would hot-loop a crash. `bun run start` is deliberately NOT supervised — syste
 is its supervisor. The contract is gated by
 `test/unit/install_restart_supervisor_tripwire.test.ts` (it exists because this
 mechanism once named a `start:supervised` script that was never written, which
-hung the browser wizard at "Save configuration" for every dev).
+left every dev on `bun run dev` with a dead server).
 
 ## 8. Diffusion scheduler placement
 
@@ -1311,22 +1453,32 @@ A pending, unconfirmed sentinel is the machine-readable fact "the last update
 never proved itself". Because it is written pre-swap, the `backupDir` it names
 may not exist yet — the rollback script handles that state explicitly (below).
 
-**The supervisor scripts live OUT OF TREE.** The swap renames the whole app
-tree; in the crash window between its two renames there is NO tree at
-`/opt/dedalo/master_dedalo` — an in-tree rollback script would vanish exactly
-when `OnFailure=` needs it. The units therefore execute the INSTALLED copies
-at `/opt/dedalo/bin/` (a sibling of the checkout, next to the pinned bun at
-`/opt/dedalo/.bun/`), never the shipped copies inside `deploy/`. One-time
-install:
+**The supervisor scripts live OUT OF TREE — and out of the instance dir.**
+The swap renames the whole app tree; in the crash window between its two
+renames there is NO tree at `<instance dir>/master_dedalo` — an in-tree
+rollback script would vanish exactly when `OnFailure=` needs it. The units
+therefore execute the INSTALLED copies in the root-owned `ROOT_BIN_DIR`
+(§2.2: outside the instance dir, next to the pinned runtime `ROOT_BIN_DIR/bun`),
+never the shipped copies inside `deploy/`. One-time install (worked example:
+`ROOT_BIN_DIR=/opt/dedalo/bin`):
 
 ```sh
-sudo install -d /opt/dedalo/bin
+sudo install -d -o root -g root -m 0755 /opt/dedalo/bin
 sudo install -m 0755 deploy/dedalo-code-rollback.sh /opt/dedalo/bin/
 sudo install -m 0755 deploy/dedalo-ts-watchdog.sh   /opt/dedalo/bin/
+# What the backup units run (the set as DEDALO_USER, store 5 as root, the alarm — §6):
+sudo install -m 0755 deploy/dedalo-backup-step.sh deploy/dedalo-db-backup.sh \
+    deploy/dedalo-tree-backup.sh deploy/dedalo-site-builder-backup.sh \
+    deploy/dedalo-backup-alert.sh /opt/dedalo/bin/
 ```
 
+`ROOT_BIN_DIR` and every directory above it stay **root-owned**: a user who
+owns a parent can rename `bin/` and put their own scripts where root runs
+them. The INSTANCE DIR is the opposite — the service user's — because the
+swap renames the tree inside it; its parent may be root's (§2.2).
+
 An out-of-tree copy is a real staleness risk: it does NOT update with the
-tree. Re-run the two `install` lines after any code update that touched
+tree. Re-run the `install` lines after any code update that touched
 `deploy/*.sh` (the release notes say when), and after editing them locally.
 The scripts are deliberately self-contained and change rarely, but a drifted
 copy fails the contract silently — refresh it, don't trust it.
@@ -1351,7 +1503,7 @@ silently. An install that relocated backups needs no unit edit; pinning
   (`deploy/dedalo-ts-watchdog.sh`) sees a red `/health` with a pending
   unconfirmed sentinel and starts the rollback unit instead of a restart.
 
-`dedalo-code-rollback.sh` (the `/opt/dedalo/bin/` copy) distinguishes FOUR
+`dedalo-code-rollback.sh` (the `ROOT_BIN_DIR` copy) distinguishes FOUR
 states of the sentinel and logs which one it saw:
 
 1. **pending, backupDir exists, no usable tree at APP_DIR** — the crash landed
@@ -1495,7 +1647,7 @@ The host updater is `alive` while `now − seen_at ≤ max(3 × interval, 180 s)
 host never reads these files; it talks to the engine's CLI,
 `scripts/ops/image_update_channel.ts <verb> [--dir D]` (verbs `check-target`,
 `heartbeat`, `claim`, `orphan`, `outcome`, `status`; leaf imports only — never
-`config.ts`, so it answers in install mode too), through `docker compose exec`
+`config.ts`, so it answers even when the engine refuses to start), through `docker compose exec`
 (or `run --rm --no-deps` to record an outcome whatever state the engine is in),
 and accepts back only a UUID and a tag grammar. Gate: `image_update_channel_native`.
 

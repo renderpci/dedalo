@@ -128,10 +128,14 @@
 			// such as client/dedalo/dev_tools/). A runner never has them, so linting
 			// them made host-mode `ci:local` (and the browser budget) red on bytes no
 			// CI run can see. Nothing under any is tracked (git ls-files is empty).
+			// rewrite/ joined 2026-10-12 (AGENTS.md: internal process, gitignored, never
+			// on a clone): an untracked TUI mockup under rewrite/plans/ put 11 errors
+			// into host `biome check .` that no runner can see.
 			"!**/audits",
 			"!**/.cache",
 			"!**/dev",
 			"!**/dev_tools",
+			"!**/rewrite",
 
 			// HAND-AUTHORED PROSE — the manual (mkdocs sources, the style guide, the
 			// docs_current_engine_tripwire gate read it), tracked and edited

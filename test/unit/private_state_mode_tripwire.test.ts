@@ -11,9 +11,9 @@
  * records, media derivatives, and `ts_state.json`.
  *
  * ts_state.json is not inert. It carries `media_access_mode`, which WINS over
- * .env, and `install_status` — writing `configured` back into it flips
- * `installInProgress()` true and RE-OPENS the pre-auth install surface, whose
- * actions rewrite ../private/.env and restart the process. Named volumes bound
+ * .env, and `install_status` — writing any value but `sealed` into it makes the
+ * next boot REFUSE to start (src/config/install_state.ts): a world-writable state
+ * file is a one-write denial of service. Named volumes bound
  * this in the shipped stacks; an operator bind-mounting /private, which the
  * Dockerfile's own comments contemplate, is where it bites.
  *
@@ -24,11 +24,14 @@
  * THE /tmp RACE. install.sh downloaded Docker's installer to the fixed path
  * `/tmp/dedalo_get-docker.sh` and executed it AS ROOT — CWE-377 on sticky /tmp,
  * where an unprivileged local user pre-creates the name and owns the window
- * between `curl -o` and the root exec.
+ * between `curl -o` and the root exec. Since the terminal installer (phase 4)
+ * the bootstrap installs no Docker at all (told, owner Q5) and downloads only
+ * into its own 0700 cache — executed here in library mode.
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -48,8 +51,8 @@ describe('private state is not world-writable, and /tmp is not raced', () => {
 		expect(
 			umask,
 			'`umask 0000` makes EVERY file the engine writes world-writable for the life of the ' +
-				'process — including ts_state.json, whose install_status re-opens the pre-auth ' +
-				'install surface. Grant the socket its mode explicitly instead.',
+				'process — including ts_state.json, whose media_access_mode wins over .env and whose ' +
+				'install_status decides whether the server starts. Grant the socket its mode explicitly instead.',
 		).not.toBe('0000');
 		// It must actually deny world-write: the last digit is the `other` mask.
 		expect(Number((umask as string).slice(-1)) & 0o2).toBe(0o2);
@@ -67,19 +70,38 @@ describe('private state is not world-writable, and /tmp is not raced', () => {
 		expect(grant.slice(0, 400)).toMatch(/catch/);
 	});
 
-	test('the installer does not download to a predictable /tmp path', () => {
+	test('the installer does not download to a predictable /tmp path (nor install Docker at all)', () => {
+		// Phase 4 (2026-10-12): install.sh is a bootstrap. It downloads only Bun and the
+		// release, into its OWN cache — created 0700 (root: under the 0755 state root,
+		// its subdirectories 0700) — and never Docker's installer: Docker missing is
+		// TOLD (owner Q5), so no third-party script ever runs as root. EXECUTED: the
+		// bootstrap's own functions, in library mode, against a scratch HOME.
 		const installer = read('install.sh');
-		expect(
-			installer,
-			'a fixed /tmp name for a file executed AS ROOT is CWE-377: an unprivileged local ' +
-				'user pre-creates it and owns the window before the root exec',
-		).not.toContain("script='/tmp/dedalo_get-docker.sh'");
-		expect(installer).toMatch(/mktemp/);
-		// mktemp alone is not the fix: the file run as root must still be OURS.
-		expect(installer, 'the downloaded file is executed without re-checking it').toMatch(
-			/\[ ! -L "\$script" \]/,
-		);
-		expect(installer).toMatch(/\[ -O "\$script" \]/);
+		const code = installer.split('\n').filter((line) => !/^\s*#/.test(line));
+		expect(code.length).toBeGreaterThan(100);
+		expect(code.filter((line) => line.includes('/tmp'))).toEqual([]);
+		expect(code.filter((line) => /get\.docker\.com|get-docker/.test(line))).toEqual([]);
+		const home = mkdtempSync(join(tmpdir(), 'dedalo_bootstrap_cache_'));
+		try {
+			const run = Bun.spawnSync(
+				[
+					'sh',
+					'-c',
+					'set -- --lib; . "$0"; dir=$(cache_root 1000); prepare_cache "$dir" 1000; private_dir "$dir/bun/1.0.0"; echo "$dir"; fetch http://example.org/x "$dir/x" 10',
+					join(REPO_ROOT, 'install.sh'),
+				],
+				{ env: { HOME: home, PATH: '/usr/bin:/bin' }, stdout: 'pipe', stderr: 'pipe' },
+			);
+			const cache = run.stdout.toString().trim();
+			expect(cache).toBe(join(home, '.cache', 'dedalo-install'));
+			expect(statSync(cache).mode & 0o777).toBe(0o700);
+			expect(statSync(join(cache, 'bun', '1.0.0')).mode & 0o777).toBe(0o700);
+			// A non-https download is refused (exit 3), the file never created.
+			expect(run.exitCode).toBe(3);
+			expect(run.stderr.toString()).toContain('refusing a non-https download');
+		} finally {
+			rmSync(home, { recursive: true, force: true });
+		}
 	});
 
 	test('the .env write sets its mode on the TARGET', () => {
@@ -96,7 +118,7 @@ describe('private state is not world-writable, and /tmp is not raced', () => {
 		// Every assertion above is a substring test on a file read by path. A moved
 		// or emptied file would make several of them pass by absence.
 		expect(read('Dockerfile')).toContain('ENTRYPOINT');
-		expect(read('install.sh')).toContain('get.docker.com');
+		expect(read('install.sh')).toContain('prepare_cache "$CACHE"');
 		expect(read('src/server.ts')).toContain('unix: socketPath');
 		expect(read('src/core/install/config_persist.ts')).toContain('renameSync(tmp, target)');
 	});

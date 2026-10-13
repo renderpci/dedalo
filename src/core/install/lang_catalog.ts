@@ -5,8 +5,8 @@
  * a missing/malformed value must refuse boot, never fall back to a hardcoded
  * list") makes four lang keys mandatory once the server is configured. The
  * installer therefore collects a working-language set and writes them; this
- * module is the ONE source of truth both frontends (browser wizard via
- * config_persist, and the CLI env-preset) share.
+ * module is the ONE source of truth the installer's screens and its
+ * env-preset share.
  *
  * PURE — no config.ts import (the CLI calls it BEFORE config is imported, to set
  * the lang env vars so config resolves without throwing at import time).
@@ -48,8 +48,8 @@ export const INSTALL_LANG_CODES: readonly string[] = Object.freeze(
 );
 
 /**
- * THE default languages — interface AND working (data) — pre-ticked in the
- * wizard, taken by the CLI and install.sh when no language is given: English +
+ * THE default languages — interface AND working (data) — pre-ticked on the
+ * screens, taken by the CLI and install.sh when no language is given: English +
  * Spanish. Every other catalog language is OPTIONAL — offered, never on by
  * default.
  */
@@ -77,6 +77,12 @@ export interface DerivedLangConfig {
 	structureLang: string;
 	/** Non-empty when the input is unusable (empty set / default ∉ set / bad code). */
 	errors: string[];
+	/**
+	 * The same sentences as `errors`, each tagged with the answer it is about:
+	 * `langs` (the set), `app_lang_default`, `data_lang_default` (a default
+	 * outside the set) — the terminal screen model shows each on its question.
+	 */
+	fieldErrors: { key: 'langs' | 'app_lang_default' | 'data_lang_default'; message: string }[];
 }
 
 /** Normalize the `langs` input to an ordered, de-duped code array. */
@@ -110,6 +116,22 @@ function validCatalogCodes(codes: readonly string[], errors: string[]): string[]
 }
 
 /**
+ * The picked codes. ABSENT (undefined) → the default working languages, so a
+ * frontend that never collects langs still produces a bootable config. An
+ * EXPLICIT empty set (operator unchecked everything) is an error — never
+ * silently pick for them.
+ */
+function pickedCodes(
+	langs: string[] | string | undefined,
+	refuse: (key: 'langs', message: string) => void,
+): string[] {
+	if (langs === undefined) return [...INSTALL_DEFAULT_LANG_CODES];
+	const codes = toCodeArray(langs);
+	if (codes.length === 0) refuse('langs', 'at least one language must be selected');
+	return codes;
+}
+
+/**
  * Derive the full lang config from the operator's picks, validating as it goes.
  * The picked set drives BOTH the map and the code list, so they can never
  * disagree. An absent set takes INSTALL_DEFAULT_LANG_CODES; the interface/data
@@ -118,33 +140,38 @@ function validCatalogCodes(codes: readonly string[], errors: string[]): string[]
  */
 export function deriveLangConfig(input: LangConfigInput): DerivedLangConfig {
 	const errors: string[] = [];
-	// ABSENT (undefined) → the default working languages, so a frontend that never
-	// collects langs still produces a bootable config. An EXPLICIT empty set
-	// (operator unchecked everything) is an error — never silently pick for them.
-	let codes: string[];
-	if (input.langs === undefined) {
-		codes = [...INSTALL_DEFAULT_LANG_CODES];
-	} else {
-		codes = toCodeArray(input.langs);
-		if (codes.length === 0) errors.push('at least one language must be selected');
-	}
-
-	const valid = validCatalogCodes(codes, errors);
+	const fieldErrors: DerivedLangConfig['fieldErrors'] = [];
+	const refuse = (key: DerivedLangConfig['fieldErrors'][number]['key'], message: string): void => {
+		errors.push(message);
+		fieldErrors.push({ key, message });
+	};
+	const codes = pickedCodes(input.langs, refuse);
+	const codeErrors: string[] = [];
+	const valid = validCatalogCodes(codes, codeErrors);
+	for (const message of codeErrors) refuse('langs', message);
 
 	const applicationLangs: Record<string, string> = {};
 	for (const code of valid) applicationLangs[code] = INSTALL_LANG_CATALOG[code] as string;
 
 	const first = valid[0] ?? INSTALL_LANG_CODES[0] ?? 'lg-eng';
-	const pickDefault = (candidate: string | undefined, label: string): string => {
+	const pickDefault = (
+		candidate: string | undefined,
+		label: string,
+		key: 'app_lang_default' | 'data_lang_default',
+	): string => {
 		if (candidate === undefined || candidate === '') return first;
 		if (!valid.includes(candidate)) {
-			errors.push(`the ${label} language '${candidate}' is not in the selected set`);
+			refuse(key, `the ${label} language '${candidate}' is not in the selected set`);
 			return first;
 		}
 		return candidate;
 	};
-	const applicationLangsDefault = pickDefault(input.appLangDefault, 'default interface');
-	const dataLangDefault = pickDefault(input.dataLangDefault, 'default data');
+	const applicationLangsDefault = pickDefault(
+		input.appLangDefault,
+		'default interface',
+		'app_lang_default',
+	);
+	const dataLangDefault = pickDefault(input.dataLangDefault, 'default data', 'data_lang_default');
 
 	return {
 		applicationLangs,
@@ -154,5 +181,6 @@ export function deriveLangConfig(input: LangConfigInput): DerivedLangConfig {
 		// The ontology structure lang is fixed: upstream ontology exports are lg-spa.
 		structureLang: 'lg-spa',
 		errors,
+		fieldErrors,
 	};
 }

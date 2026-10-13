@@ -79,7 +79,7 @@ import {
   type InstanceManifest,
   type Surface,
 } from '../src/provision/layout';
-import { apply, type PathFacts, type ExecResult } from '../src/provision/apply';
+import { apply, type PathFacts, type ExecResult, turnHomeListings } from '../src/provision/apply';
 import { observedPaths, plan, type EntryType, type HostState, type PathObservation } from '../src/provision/plan';
 import { renderAll } from '../src/provision/render';
 import { ledgerOrdinals } from '../src/provision/identities';
@@ -550,6 +550,8 @@ function observe(adopted: Adopted): HostState {
     unitActive: io.host.unitActive,
     nologinShell: '/usr/sbin/nologin',
     webServerUnit: 'nginx',
+    // As the real observer lists them (`turnHomeListings`, the same function).
+    turnHomeEntries: turnHomeListings(layout, ledgerOrdinals(layout, agentLedger).values(), path => onHost(install, path)),
     agentLedger,
     pid1Version: 255,
     enabledSockets: [...io.host.enabledSockets],

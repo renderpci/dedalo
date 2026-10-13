@@ -19,6 +19,12 @@
  *      probe: if this ever flips open, a non-admin reads history the ontology
  *      never granted.
  *
+ *   3. ADMISSION BY STRUCTURE — the read facade runs the gate BEFORE it picks a
+ *      route, so EVERY `source.action` route of SECTION_READ_ROUTES (resolve_data
+ *      included, and any route added later) and the generic read are refused for
+ *      a TM read the caller has no grant for. The route set is read from the
+ *      table at run time, so a new route is covered without being listed here.
+ *
  * (The companion behaviours are pinned elsewhere: the floor consuming this
  * scope in tm_permission_floor_native, the session isolation in
  * tm_session_sqo_isolation_native, the derived columns in
@@ -36,6 +42,7 @@ import {
 	getTimeMachineListTipo,
 	resolveTimeMachineScopeSection,
 } from '../../src/core/section/list_definitions/time_machine_list.ts';
+import { routeSectionRead, SECTION_READ_ROUTES } from '../../src/core/section/read_facade.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
 
 const admin: Principal = { userId: 42, isGlobalAdmin: true, isDeveloper: false };
@@ -78,5 +85,53 @@ describe('fail-closed grants (§7.4)', () => {
 		// UNSCOPED browse against dd15 is exactly what makes it admin-only.
 		expect(await canAccessTimeMachineList(plainUser, 'dd15')).toBe(false);
 		expect(await canAccessTimeMachineList(admin, 'dd15')).toBe(true);
+	});
+});
+
+describe('admission by structure (read_facade)', () => {
+	/** A TM read scoped to test65 — a section that grants plainUser no TM list. */
+	const tmSqo = {
+		mode: 'tm',
+		section_tipo: ['dd15'],
+		filter_by_locators: [{ section_tipo: 'test65', section_id: 1 }],
+	};
+
+	/** The refusal the TM gate throws (its message names the time machine). */
+	async function refusal(action: string | undefined): Promise<{ code: unknown; tm: boolean }> {
+		try {
+			await routeSectionRead(
+				{
+					action: 'read',
+					source: {
+						...(action === undefined ? {} : { action }),
+						section_tipo: 'test65',
+						tipo: 'test65',
+						section_id: 1,
+						mode: 'edit',
+						model: 'section',
+					},
+					sqo: tmSqo,
+				} as never,
+				plainUser,
+			);
+			return { code: 'answered', tm: false };
+		} catch (error) {
+			const { code, message } = error as { code?: unknown; message?: unknown };
+			return { code, tm: /time machine/i.test(String(message)) };
+		}
+	}
+
+	test('every source.action route, and the generic read, is refused by the TM gate', async () => {
+		const actions = [...SECTION_READ_ROUTES.keys()];
+		// Anti-vacuity: the table holds the routes this leg exists for.
+		expect(actions).toContain('resolve_data');
+		const seen: Record<string, unknown> = {};
+		for (const action of [...actions, undefined]) {
+			seen[action ?? '(generic)'] = await refusal(action);
+		}
+		const expected = Object.fromEntries(
+			Object.keys(seen).map((key) => [key, { code: 'perm.denied', tm: true }]),
+		);
+		expect(seen).toEqual(expected);
 	});
 });

@@ -22,6 +22,7 @@ import { ConflictError, LimitExceededError, NotFoundError, ValidationError } fro
 import { assertConfinementAvailable, policyFromConfig, type ConfinementPolicy } from '../drivers/confinement';
 import { MCP_PORT } from '../drivers/network_profile';
 import { getDriver } from '../drivers/registry';
+import { turnErrorEvent } from '../drivers/turn_errors';
 import type { AgentProcess, DriverId, SessionStartOptions } from '../drivers/types';
 import { readSiteDriver, seedDriverRecords } from '../sites/driver_record';
 import { readManifest } from '../sites/manifest';
@@ -356,11 +357,8 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
   } catch (error) {
     sawError = true;
     finalState = 'error';
-    await persist(slug, sessionId, {
-      type: 'error',
-      message: error instanceof Error ? error.message : String(error),
-      retriable: true,
-    }).catch(() => {
+    // A REASON, never the thrown sentence (which `turnErrorEvent` writes to the daemon's log).
+    await persist(slug, sessionId, turnErrorEvent(error, 'turn_failed', `session ${sessionId} of '${slug}'`)).catch(() => {
       // the persistence layer itself is failing; the finally below still runs
     });
   } finally {

@@ -110,7 +110,7 @@ on HTTP status or message text.
     file read them (`client_error_contract_tripwire` counts those reads and
     holds them at zero). The normaliser understands v2 only and
     `response_data` reads `data`. A handler-owned top-level field (`msg` on the
-    maintenance/install surfaces, `in_use` on the lock surface, …) is an
+    maintenance surfaces, `in_use` on the lock surface, …) is an
     EXTENSION KEY, read on a SUCCESS only through
     `response_extension(api_response, key)` — it is never the error channel.
 

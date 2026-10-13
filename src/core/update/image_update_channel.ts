@@ -33,7 +33,7 @@
  * as a partial object and never as a throw — a panel is a diagnostic surface.
  *
  * A LEAF: env.ts (privateDir), the version walk, the registry grammar and node
- * builtins — never config.ts, so the CLI answers in install mode too.
+ * builtins — never config.ts, so the CLI answers on an unconfigured box too.
  * Gates: test/unit/image_update_channel_native.test.ts (every CLI verb, the
  * modes), update_status_native.test.ts (the panel block),
  * update_code_widget_native.test.ts (the request / cancel actions).

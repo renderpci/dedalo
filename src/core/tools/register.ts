@@ -74,7 +74,7 @@ export interface ImportReportItem {
 	 * The version the register.json declares (`null` when the item bailed before
 	 * parsing). Consumers used to read a `record.version` that this interface
 	 * never carried, so every report showed `version: null` — the widget response
-	 * and the install wizard's per-tool rows alike.
+	 * and the installer's per-tool rows alike.
 	 */
 	version: string | null;
 }

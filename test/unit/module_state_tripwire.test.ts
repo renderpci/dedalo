@@ -112,9 +112,9 @@ const ALLOWLISTED_MODULE_LET = new Set<string>([
 	// authored, never user data.
 	'core/concepts/section_id.ts:coercionObserver',
 	// The graceful-shutdown entry point injected ONCE by startServer so a planned
-	// restart drains like a SIGTERM (core/install must not import the process
-	// root). Boot-stable process wiring — carries no request identity.
-	'core/install/restart.ts:gracefulShutdown',
+	// restart (code update / restore) drains like a SIGTERM (core/update must not
+	// import the process root). Boot-stable process wiring — no request identity.
+	'core/update/restart.ts:gracefulShutdown',
 	// "Is curl on PATH" memo for the AI-model downloader: a fact about the HOST
 	// (boot-stable, request-independent), probed once per process on first
 	// download. Never cleared — the binary set does not change under a running
@@ -655,6 +655,10 @@ const ALLOWLISTED_MODULE_CONST = new Set<string>([
 	// Request-latency aggregate (WS-E observability): monotonic count/total/max
 	// ops metrics fed by access_log — never cleared by design, no identity.
 	'core/api/counters.ts:latency',
+	// Export selection-cursor admission (PERF-1): a process-wide slot counter
+	// plus the FIFO of background exports waiting for a slot — pooled-connection
+	// budget (ops state, max(1, floor(DB_POOL_MAX/4))), never request identity.
+	'diffusion/export/selection_cursor.ts:selectionAdmission',
 ]);
 
 /** Mutation shapes for a named binding: assignment, ++/--, mutating methods. */

@@ -137,10 +137,12 @@ describe('A0 — tool HTTP routes are in the census, each classified by its own 
 
 describe('A — the census is TOTAL and DERIVED', () => {
 	test('anti-vacuity floors: both registries are populous', () => {
-		// Measured 2026-09-03: 90 actions, 10 read tools, 1 extra door.
-		expect(actionKeys.length).toBeGreaterThanOrEqual(90);
+		// Measured 2026-09-03: 90 actions, 10 read tools, 1 extra door; 88 actions since
+		// 2026-10-12 (dd_utils_api get_install_context + install removed —
+		// WC-2026-10-12-install-surface-removed).
+		expect(actionKeys.length).toBeGreaterThanOrEqual(88);
 		expect(TOOL_REGISTRY.filter((spec) => !spec.write).length).toBeGreaterThanOrEqual(10);
-		expect(census.length).toBeGreaterThanOrEqual(110);
+		expect(census.length).toBeGreaterThanOrEqual(108); // 110 until the two install actions left (2026-10-12)
 		expect(new Set(census).size).toBe(census.length);
 	});
 

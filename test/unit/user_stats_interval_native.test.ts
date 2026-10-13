@@ -2,7 +2,7 @@
  * getIntervalRawActivityData — the user-activity widget's TIER-2 producer
  * (src/core/area_maintenance/user_stats.ts:491). Verticalizes one actor's raw
  * matrix_activity rows over [dateIn, dateOut) into the flat
- * {type, tipo|hour, value} item list that mergeRawIntoCanonical folds on top of
+ * {type, key|tipo|hour, value} item list that mergeRawIntoCanonical folds on top of
  * the saved history.
  *
  * WHY THIS GATE EXISTS (2026-08-10, plan §4.2.2). The function was 0%: its only
@@ -37,9 +37,15 @@
  *
  * ALS, NOT AN ARGUMENT. The `what` label is resolved at
  * `currentApplicationLang()` read from the request-lang AsyncLocalStorage, so
- * the language case below runs INSIDE runWithRequestLangs and asserts a term
+ * the language case below runs INSIDE runWithRequestLangs and asserts a label
  * that differs from the ambient installation default — otherwise a mutation
  * that hardcodes the default is invisible.
+ *
+ * LABELS ENGINE, NEVER THE ONTOLOGY (WC-2026-10-12-user-activity-what-labels).
+ * A `what` item carries the ACTION key (WHAT_ACTIONS: 5 → 'save') and its label
+ * is `getLabels(lang)[labelKey]` — the v7 master reuses the retired label
+ * tipos (dd694, dd700…) for other nodes, so a termByTipo here would pin
+ * whatever owns that tipo today.
  *
  * Scratch hygiene: synthetic dd128 user 933001 (band 933000-933999, distinct
  * from 424262/424263 in user_stats_paging.test.ts so the two files stay
@@ -53,7 +59,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { getIntervalRawActivityData } from '../../src/core/area_maintenance/user_stats.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { termByTipo } from '../../src/core/ontology/labels.ts';
+import { getLabels } from '../../src/core/labels/catalog.ts';
 import {
 	currentApplicationLang,
 	runWithRequestLangs,
@@ -66,10 +72,10 @@ const DAY_IN = '2019-05-01';
 /** The EXCLUSIVE upper bound: rows stamped on this day must not appear. */
 const DAY_OUT = '2019-05-02';
 
-/** Ontology tipos the WHAT_MAP routes to (5 = save, 6 = edit, 1 = login). */
-const TIPO_SAVE = 'dd700';
-const TIPO_EDIT = 'dd694';
-const TIPO_LOGIN = 'dd696';
+/** Action keys WHAT_ACTIONS routes the codes to (5 = save, 6 = edit, 1 = login). */
+const ACTION_SAVE = 'save';
+const ACTION_EDIT = 'edit';
+const ACTION_LOGIN = 'login';
 
 const activityIds: number[] = [];
 
@@ -199,10 +205,14 @@ describe('getIntervalRawActivityData', () => {
 
 		// The whole payload, exactly — keys, values, first-encounter order within
 		// each block, and the label VALUE (which is what merge M2 shadows).
-		const lang = currentApplicationLang();
+		const labels = await getLabels(currentApplicationLang());
+		// Precondition: the catalog really carries both texts (a missing one falls
+		// back to the action key, which the toEqual below would then pin).
+		expect(labels.save).toBeString();
+		expect(labels.edit).toBeString();
 		expect(items).toEqual([
-			{ type: 'what', tipo: TIPO_SAVE, value: 3, label: await termByTipo(TIPO_SAVE, lang) },
-			{ type: 'what', tipo: TIPO_EDIT, value: 1, label: await termByTipo(TIPO_EDIT, lang) },
+			{ type: 'what', key: ACTION_SAVE, value: 3, label: labels.save as string },
+			{ type: 'what', key: ACTION_EDIT, value: 1, label: labels.edit as string },
 			{ type: 'where', tipo: 'zzint1', value: 2 },
 			{ type: 'where', tipo: 'zzint2', value: 1 },
 			{ type: 'when', hour: '9', value: 2 },
@@ -213,7 +223,7 @@ describe('getIntervalRawActivityData', () => {
 		// The asymmetry, asserted on PRESENCE OF THE KEY (toEqual above tolerates
 		// an explicit `undefined`), because 4.1.1's M2/M3 hang off exactly this:
 		// `what` carries a label → M2's "raw label wins" arm is live;
-		// `where`/`publish` do not → M3's "fall back to the ontology term" arm is.
+		// `where`/`publish` do not → M3's "fall back to the resolver" arm is.
 		for (const item of of('what')) {
 			expect(Object.keys(item)).toContain('label');
 			expect(typeof (item as { label: unknown }).label).toBe('string');
@@ -231,10 +241,11 @@ describe('getIntervalRawActivityData', () => {
 	}, 60000);
 
 	test('the `what` label is resolved at the ALS application lang, not a hardcoded default', async () => {
-		// Precondition: the two langs must really differ for this tipo, or a
+		// Precondition: the two langs must really differ for this key, or a
 		// mutation that ignores the ALS is invisible.
-		const ambient = await termByTipo(TIPO_SAVE, currentApplicationLang());
-		const italian = await termByTipo(TIPO_SAVE, 'lg-ita');
+		const ambient = (await getLabels(currentApplicationLang())).save;
+		const italian = (await getLabels('lg-ita')).save;
+		expect(italian).toBeString();
 		expect(italian).not.toBe(ambient);
 
 		const items = await runWithRequestLangs({ applicationLang: 'lg-ita', dataLang: 'lg-ita' }, () =>
@@ -249,21 +260,21 @@ describe('getIntervalRawActivityData', () => {
 		const inWindow = (await getIntervalRawActivityData(UID, DAY_IN, DAY_OUT)) ?? [];
 		const keys = (list: typeof inWindow): string[] =>
 			list.map((item) => {
-				const shape = item as { tipo?: string; hour?: string | number };
-				return String(shape.tipo ?? shape.hour);
+				const shape = item as { key?: string; tipo?: string; hour?: string | number };
+				return String(shape.key ?? shape.tipo ?? shape.hour);
 			});
 
 		// positive control INSIDE the window: the day's own rows are there
 		expect(keys(inWindow)).toContain('zzint1');
 		// the row stamped exactly at dateOut is NOT
 		expect(keys(inWindow)).not.toContain('zzintout');
-		expect(keys(inWindow)).not.toContain(TIPO_LOGIN);
+		expect(keys(inWindow)).not.toContain(ACTION_LOGIN);
 
 		// positive control on the EXCLUDED row: widen by one day and it appears —
 		// so "absent above" is exclusivity, not a missing fixture.
 		const widened = (await getIntervalRawActivityData(UID, DAY_IN, '2019-05-03')) ?? [];
 		expect(keys(widened)).toContain('zzintout');
-		expect(keys(widened)).toContain(TIPO_LOGIN);
+		expect(keys(widened)).toContain(ACTION_LOGIN);
 		// exactly the excluded row's three dimensions (what / where / when — it
 		// carries no dd1223 publish), so nothing else moved either.
 		expect(widened.length).toBe(inWindow.length + 3);

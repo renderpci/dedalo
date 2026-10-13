@@ -40,13 +40,7 @@ import {
 	resolveSiteBuilderTransport,
 	type SiteBuilderTransport,
 } from '../../../src/core/site_builder/pairing.ts';
-import {
-	capDetail,
-	codeForProblem,
-	type DaemonProblem,
-	refusalSentence,
-	siteBuilderFailure,
-} from './wire.ts';
+import { capDetail, codeForProblem, type DaemonProblem, siteBuilderFailure } from './wire.ts';
 
 export interface Actor {
 	user_id: number;
@@ -256,9 +250,9 @@ export async function daemonStream(
 }
 
 /**
- * A non-2xx daemon response → the registered refusal. The daemon's problem `type`/`reason`
- * chooses the code; its `detail` is LOG-ONLY prose (wire.ts), so nothing the daemon writes
- * can become the browser's error text.
+ * A non-2xx daemon response → the registered refusal. The daemon's machine `reason` chooses
+ * the code (wire.ts `DAEMON_REASON_CODES`); its `detail` is LOG-ONLY prose, so nothing the
+ * daemon writes can become the browser's error text.
  */
 async function mapError(res: Response): Promise<DedaloError> {
 	// Auth failures are an operator problem (our token is wrong), not the user's — generic
@@ -285,8 +279,8 @@ async function mapError(res: Response): Promise<DedaloError> {
 	// site table, the directory and the command to run, and it is written for whoever
 	// administers the host.
 	console.error(`[tool_sitebuilder] daemon error ${res.status} (${code}):`, problem.detail ?? '');
-	// What the browser gets is the sentence the ENGINE authors for this refusal's machine
-	// code, or nothing at all. A refusal the daemon can spell out and the user cannot see is
+	// What the browser reads is the LABEL of this refusal's own code (one per daemon reason),
+	// which this repo authors. A refusal the daemon can spell out and the user cannot see is
 	// half a failure; a refusal the daemon gets to WORD is a service writing our UI.
-	return siteBuilderFailure(code, detail, { status: res.status }, refusalSentence(problem));
+	return siteBuilderFailure(code, detail, { status: res.status });
 }

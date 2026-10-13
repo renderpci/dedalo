@@ -48,9 +48,21 @@ The installer restores **into** this database and refuses a non-empty one. It ne
 
 ## 4. Run the installer
 
+The Developer route installs into the database you just created and writes `../private/.env`. It runs no host step: no packages, no units, no web site, no certificate. Interactively:
+
+```shell
+bun run scripts/install.ts            # the full-screen installer: choose Developer on the first screen
+bun run scripts/install.ts --plain    # the same questions, one per line
+```
+
+The *System check* screen shows Bun, the seed, the private directory, `psql`, the local PostgreSQL, ImageMagick and FFmpeg; a failed row must be fixed first. The *Database* screen checks that the database exists, is reachable and is empty.
+
+Or headless, for a repeatable setup — `--route developer` is the default when no route is given:
+
 ```shell
 DEDALO_INSTALL_ROOT_PASSWORD='dev-root-password' \
 bun run scripts/install.ts \
+  --route developer \
   --db-name dedalo_dev \
   --db-user "$(whoami)" \
   --db-host /tmp \
@@ -58,13 +70,15 @@ bun run scripts/install.ts \
   --langs lg-eng,lg-spa --app-lang lg-eng --data-lang lg-eng
 ```
 
-No `--media-path`: the media root defaults to `../private/media` (see step 5). To keep it elsewhere, add `--media-path "$HOME/dev/dedalo/media"`; the installer creates that directory and writes it to `.env` as `MEDIA_PATH`. Setting `MEDIA_PATH=…` in front of the command does not work: the installer would probe that directory, but `.env` would not get it, and the server would use the default.
+Add `--write-answers ~/dedalo-dev.answers.json` once and the next fresh install is `bun run scripts/install.ts --answers ~/dedalo-dev.answers.json` (the file holds no secret). `--plan` shows the keys and steps a command would produce without touching anything.
+
+No `--media-path`: the media root defaults to `../private/media` (see step 5). To keep it elsewhere, add `--media-path "$HOME/dev/dedalo/media"`; the installer creates that directory and writes it to `.env` as `MEDIA_PATH`. Setting `MEDIA_PATH=…` in front of the command does not work: the installer would probe that directory, but `.env` would not get it.
 
 `--db-host /tmp` uses the local unix socket, so no password is needed — Homebrew's PostgreSQL puts its socket there (the installer's own default is `localhost`). On a Homebrew PostgreSQL your own user is a superuser, which is why `--db-user "$(whoami)"` just works.
 
-With no `--hierarchies`, the shared default set of optional thesauri (today `es`) is installed; `--hierarchies none` makes the install faster. The Languages thesaurus is activated with the database either way. With no `--ontologies`, the default domain ontology, Oral history (`oh`), is installed from the copy built into the repo — no network needed; `--ontologies oh,tch` downloads `tch` and what it declares as dependencies from the update server. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server (add `--no-update-servers` to leave both empty) and lists the installed ontologies in `ACTIVE_ONTOLOGY_TLDS`.
+With no `--hierarchies`, only the thesauri the chosen ontologies declare are installed — no country's toponymy is ever pre-selected; `--hierarchies none` skips even those. The Languages thesaurus is activated with the database either way. With no `--ontologies`, the default domain ontology, Oral history (`oh`), is installed from the copy built into the repo — no network needed; `--ontologies oh,tch` downloads `tch` and what it declares from the update server. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server (add `--no-update-servers` to leave both empty) and lists the installed ontologies in `ACTIVE_ONTOLOGY_TLDS`.
 
-It ends with `✔ install complete — root login verified`, and names the supervised ways to start the server (step 6).
+It ends with `✔ install complete — root login verified`. If it stops part-way, fix the cause and run `bun run scripts/install.ts --resume`; `--abort --confirm-database dedalo_dev` undoes it ([Resume and abort](installer_reference.md#resuming-an-install-resume)).
 
 ## 5. Configure the dev listener
 
@@ -101,7 +115,7 @@ The other keys:
 bun run dev          # watch mode; `bun run start:supervised` runs it without the watchers
 ```
 
-`bun run dev` runs two watchers together: the server (reloading on TypeScript changes, and restarting itself if the install wizard asks for a fresh process) and the stylesheet compiler (recompiling the affected CSS whenever you save a `.less`). Ctrl-C stops both. If you are editing styles, read [Building the CSS](../core/ui/css_architecture.md#building-the-css) first — the compiled `.css` is committed, and it must not be hand-edited.
+`bun run dev` runs two watchers together: the server (reloading on TypeScript changes, and restarting itself if a code update asks for a fresh process) and the stylesheet compiler (recompiling the affected CSS whenever you save a `.less`). Ctrl-C stops both. If you are editing styles, read [Building the CSS](../core/ui/css_architecture.md#building-the-css) first — the compiled `.css` is committed, and it must not be hand-edited.
 
 !!! note "Which scripts are supervised"
     `bun run dev`, `bun run dev:server` and `bun run start:supervised` restart the server when it asks for a fresh process, so each **declares** `DEDALO_SUPERVISED=true` in its own command line. Plain `bun run start` restarts nothing and deliberately declares nothing: the [code update panel](../management/updates/updating_code.md) refuses to swap code under it rather than leave the server dead. Do not put `DEDALO_SUPERVISED` in `../private/.env` — every launch method reads that file, so the engine ignores the key there.
@@ -158,5 +172,5 @@ bun run test:client:server   # the suite server, kept alive for browsing (Ctrl-C
 
 - **Cannot log in, no error** → `SESSION_COOKIE_SECURE=false`. See above.
 - **`address already in use` / the server exits 1 at boot** → another instance is already listening on `/tmp/dedalo_ts.sock`. The double-start guard probes the socket and refuses to steal it. Stop the other one, or point `SERVER_UNIX_SOCKET` somewhere else.
-- **The server serves the install wizard instead of the app** → it booted with none of the four required keys set, so it is in install mode. It is not reading your `.env` — check that it is at `../private/.env`, one level above the repo.
+- **The server exits at once with `[boot] REFUSED — not installed`** (exit code 78) → it found none of the four required keys. It is not reading your `.env` — check that it is at `../private/.env`, one level above the repo (or run the installer).
 - Everything else → [troubleshooting](troubleshooting.md).

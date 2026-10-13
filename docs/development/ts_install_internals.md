@@ -1,22 +1,27 @@
 # The install engine (developer reference)
 
-> See also: [Installing Dédalo (operator guide)](../install/production.md) · [Development](index.md) · [Extending Dédalo](extending/index.md)
+> See also: [Installing Dédalo (operator guide)](../install/index.md) · [Installer reference](../install/installer_reference.md) · [Development](index.md) · [Extending Dédalo](extending/index.md)
 
 This page documents how the install engine works internally (DEC-19). For the
 step-by-step **operator** instructions, see the
-[install guide](../install/production.md); this page is for developers
+[install guide](../install/index.md) and the
+[installer reference](../install/installer_reference.md); this page is for developers
 working on `src/core/install/` and the install boot path.
 
 ## The engine
 
-One engine under `src/core/install/`, driven by two frontends that share it:
-the browser wizard (the byte-identical client at `client/dedalo/core/installer/`,
-served in install mode) and the headless CLI `scripts/install.ts` (npm
-`dedalo:install`; the container script `install.sh` drives it). The router
-`engine.ts runInstallStep(rqo, context)` maps each wizard step (`options.action`)
-through its `STEP_HANDLERS` table to a pure engine function and returns the
-**top-level** envelope the client reads (`{result, msg, …extras}`).
-`INSTALL_ROUTER_ACTIONS` is that table's key list.
+One engine under `src/core/install/`, driven by ONE installer in the terminal:
+`scripts/install.ts` (npm `dedalo:install`; `install.sh` is only its bootstrap),
+whose front ends — the full-screen UI, the plain line mode, flags and an answers
+file — all build the same plan. The executor (`executor.ts`, its loop in
+`step_loop.ts`) runs the plan's steps through the ONE step table (`steps.ts`
+`INSTALL_STEPS`, each `run` being the `step_runs.ts` `STEP_RUNS` entry) with
+accept / verify / undo and a checkpoint per step, which is what makes `--resume`
+and `--abort` possible. There is no install API: the browser front end and its
+step router were removed on 2026-10-12
+(`engineering/wire_contract/WC-2026-10-12-install-surface-removed.md`), and a
+server on a box that is not installed refuses to start
+([Fail-closed boot](#fail-closed-boot)).
 
 ## The install plan (one module, every front end)
 
@@ -34,8 +39,8 @@ by the CALLER (`ontology_catalog.ts`, which may fetch) and handed in; when the
 choice needs one and none was given, the plan reports a programming error rather
 than fetching.
 
-- **The CLI** maps argv to the SAME raw record the wizard posts
-  (`answersFromCliArgs`, table `INSTALL_CLI_FLAGS` — the parser carries no
+- **The CLI** maps argv to the SAME raw record the screens and an answers file
+  produce (`answersFromCliArgs`, table `INSTALL_CLI_FLAGS` — the parser carries no
   defaults, and an unknown flag or a value flag without a value is an error),
   seeds the process environment from `cliBootEnv(plan)` through
   `seedProcessEnv` (`src/config/env.ts` — the installer is the one writer of
@@ -45,17 +50,18 @@ than fetching.
   and exits. The prior `.env` is read once through `prior_env.ts readPriorEnv()`
   (the same reader `config_persist.ts` uses), so a printed plan honours a
   preserved custom server list.
-- **The wizard** posts the same keys to `persist_config`; `config_persist.ts`
-  builds the plan from them (with the prior `.env` values) and renders
-  `plan.env`, refusing `install.invalid_input` on `plan.errors` before any write.
-- **The steps** (`INSTALL_STEP_IDS`) are the router's action names:
+- **`persist_config`** (`config_persist.ts`) builds the plan from the answers
+  (with the prior `.env` values) and renders `plan.env`, refusing
+  `install.invalid_input` on `plan.errors` before any write; it marks the server
+  state `terminal_installing`, which keeps a server from starting until
+  `install_finish` seals it.
+- **The steps** (`INSTALL_STEP_IDS`) are the keys of the one step table:
   `test_db_connection`, `test_diffusion_connection` (diffusion only),
   `test_mailer_connection` (mailer only), `persist_config`, `check_directories`,
   `stage_ontologies`, `install_db_from_default_file`, `install_ontologies`,
   `set_root_pw`, `install_hierarchies` (always — possibly with an empty list),
-  `register_tools` (unless skipped), `install_finish`. The CLI's pre-flight and closing login check, and the
-  wizard's `verify_active_config` and in-wizard login, are front-end affordances,
-  not plan steps.
+  `register_tools` (unless skipped), `install_finish`. The pre-flight and the
+  closing login check are the installer's own affordances, not plan steps.
 - **Update servers.** The plan writes `ONTOLOGY_SERVERS` and `CODE_SERVERS`
   (raw JSON) — `OFFICIAL_ONTOLOGY_SERVER` / `OFFICIAL_CODE_SERVER` by default,
   `[]` for `update_servers: 'none'`. With the official choice, a key whose prior
@@ -74,28 +80,26 @@ than fetching.
   (`src/core/update/supervision.ts`).
 
 `install_plan_parity_tripwire` holds the front ends to this: the same answers
-through CLI argv and through the wizard record yield the same plan, a spawned
+through CLI argv, as a record and as an answers file yield the same plan, a spawned
 `--plan` equals the in-process plan, and two persisted `.env` files differ only in
 the generated secret. For the ontologies it also builds a local fixture source and
 checks that the spawned `--list-ontologies` prints exactly
-`describeOntologyCatalog` of it, and that the `ACTIVE_ONTOLOGY_TLDS` the wizard
-path writes maps back (`ontologyRequestFromActive`) to the very request the CLI
-plan stages.
+`describeOntologyCatalog` of it, and that the `ACTIVE_ONTOLOGY_TLDS` written
+maps back (`ontologyRequestFromActive`) to the very request the plan stages.
 
 | Step | Module | Notes |
 |---|---|---|
-| diagnostics | `init_test.ts`, `server_info.ts` | `init_test.result` is the client progression gate; `server_info` is cosmetic (TS-meaningful facts only — WC-2026-07-09-installer-diagnostics-grid) |
+| pre-flight | `init_test.ts`, `server_info.ts` | `init_test.result` gates the run; `server_info` feeds the probes' host facts (`probes.ts`) |
 | `test_db_connection` | `db_probe.ts` | psql `SELECT 1` on POSTED creds; falls back to the `postgres` DB to tell "missing DB" from "auth wrong" |
 | `test_diffusion_connection` | `db_probe.ts` → `diffusion/api/` facade | one-shot MariaDB probe (facade-only, boundary rule) |
 | `persist_config` | `config_persist.ts` | atomic `.env` write (0600, backup-on-overwrite, preserve-or-generate secrets) + state |
-| `verify_active_config` | `config_persist.ts` | confirms the RESTARTED process is on the new config |
 | `check_directories` | `directories.ts` | private/sessions/cache/media/backups, write+unlink probe |
-| `get_ontology_catalog` | `ontology_catalog.ts` | wizard PROBE (pre-login): the catalog view of the official/configured server, or the offline view (`update_servers: false`, or the server failed — `data: false`) |
-| `stage_ontologies` | `ontology_install.ts` | copy/download + gunzip + COPY-sanity of every chosen file into the staging dir, `staged.json` with sha256s; the DB is never touched. The wizard's request comes from the WRITTEN config (`ontologyRequestFromConfig`), never from the client |
-| `install_db_from_default_file` | `db_restore.ts` | empty-DB gate → gunzip → `psql -f` the core-only seed (already migrated) → `ensureSearchStores()` → engine ontology → `activateCoreHierarchies()` (activates `lg`, see below) |
+| (catalog, before the plan) | `ontology_catalog.ts` | `resolveOntologyCatalog` — the caller resolves the catalog of the selected source (the official/configured server, a local `--ontology-source`, or the offline view) and hands it to the plan |
+| `stage_ontologies` | `ontology_install.ts` | copy/download + gunzip + COPY-sanity of every chosen file into the staging dir, `staged.json` with sha256s; the DB is never touched. The request is the plan's `ontologyRequest` |
+| `install_db_from_default_file` | `db_restore.ts` | empty-DB gate → gunzip → `psql -f` the core-only seed (already migrated) → `ensureSearchStores()` → `activateCoreHierarchies()` (activates `lg`, see below) |
 | `install_ontologies` | `ontology_install.ts` | sha re-check → `stageOntologyFiles` → `importStagedOntologyFiles` (the update panel's shared lower layer) → one re-derive pass → reference verification (warnings) → staging dir removed |
 | `set_root_pw` | `root_pw.ts` | Argon2id, direct UPDATE `matrix_users` section_id `-1` dd133 |
-| `install_hierarchies` | `hierarchy_import.ts` | optional thesauri only: `\copy` into `matrix_hierarchy` + counter consolidate + activation (login-gated); a core TLD is activation-only, an empty list is a no-op |
+| `install_hierarchies` | `hierarchy_import.ts` | optional thesauri only: `\copy` into `matrix_hierarchy` + counter consolidate + activation; a core TLD is activation-only, an empty list is a no-op |
 | `register_tools` | `register_tools.ts` | reuses `core/tools/register.ts importTools({dryRun:false})` |
 | `install_finish` | `finish.ts` | seal guard (root + password exist) → `install_status='sealed'` |
 
@@ -111,8 +115,8 @@ leaf first:
 | `src/core/install/ontology_choice.ts` | PURE, config-free. The answer (`normalizeOntologyChoice`: default `DEFAULT_DOMAIN_ONTOLOGIES` = `oh`, core dropped with a note, `none` refused), the built-in catalog (`vendoredOntologyCatalog`: `oh` only — `VENDORED_DOMAIN_TLDS` — its dependencies READ from the vendored `ontology.json` entry, absent = not declared), the merge (precedence local > vendored > server), the closure (`closeOntologyChoice`: `main: ontology35` dependencies depth-first, `main: hierarchy1` ones into the thesaurus set; a mandatory ontology always, an optional one and EVERY thesaurus unless `declined_dependencies` — a declined mandatory thesaurus is a warning, `recommendedThesaurusWarning`), the request, `activeOntologyTldsOf`, the round trip from a written list (`ontologyRequestFromActive`) and the ONE view (`describeOntologyCatalog`) both front ends show |
 | `src/core/install/ontology_catalog.ts` | `resolveOntologyCatalog(source, {allowedServers})` — the one place a source is read: `none` → built-in only; `local` → a directory or an extracted archive, its `ontology.json` version must equal this engine's `major.minor`; `server` → `fetchOntologyManifest`. Refuses `install.invalid_input` (operator path) or `install.step_failed` (server) |
 | `src/core/install/ontology_archive.ts` | `extractOntologyArchive` — a pure tar walk (no `tar` binary): regular files named `ontology.json` / `<tld>.copy.gz` at the root or under one top directory, through `confinedPath`; links, devices, absolute or `..` paths, > 256 entries or > 512 MiB refused |
-| `src/core/install/hierarchy_dependencies.ts` | `installedHierarchyDependencies()` — the wizard's `install_hierarchies` step reads the thesauri the registry rows of `ACTIVE_ONTOLOGY_TLDS` declare (`misc.hierarchy60`, read-only), with the plan's own collector |
-| `src/core/install/ontology_install.ts` | the two steps: `stageOntologies(request, {stagingDir})` and `installOntologies({stagingDir, userId})`, plus `verifyInstalledOntologyReferences` and the wizard's `ontologyRequestFromConfig` |
+| `src/core/install/hierarchy_dependencies.ts` | `withThesaurusDependencies()` — closes a thesaurus choice over the thesauri the manifest entries declare (Maintenance › Install hierarchies), with the plan's own collector |
+| `src/core/install/ontology_install.ts` | the two steps: `stageOntologies(request, {stagingDir})` and `installOntologies({stagingDir, userId})`, plus `verifyInstalledOntologyReferences` |
 | `src/core/install/prior_env.ts` | `readPriorEnv()` — the prior `.env` (`{}` when absent), for the CLI and `config_persist.ts` alike |
 | `src/core/ontology/ontology_manifest.ts` | the manifest CLIENT: `parseOntologyManifest`, `readLocalOntologyManifest`, `fetchOntologyManifest` |
 | `src/core/ontology/ontology_references.ts` | the pure reference classifier (below) |
@@ -122,7 +126,7 @@ leaf first:
 `main: ontology35` dependencies of the chosen TLDs, transitively, in deps-first
 post-order: mandatory ones always, optional ones unless the policy declines them
 (`declinePolicy(answers.declined_dependencies)`, each declined one noted). Core
-TLDs and the engine-owned `ddengine` are never followed (a declaration names core
+TLDs are never followed (a declaration names core
 too — every domain ontology takes its models from `dd` — but the seed already
 has it). A cycle is tolerated (first finish wins; the re-derive pass in
 `installOntologies` settles a node whose model arrived later). An entry with
@@ -130,9 +134,9 @@ has it). A cycle is tolerated (first finish wins; the re-derive pass in
 naming it — the installer never computes dependencies. A declared MANDATORY
 dependency the source does not offer, and an unknown TLD, are errors before any
 write; an unoffered OPTIONAL one is a warning and skipped. A dependency on a core
-or engine-owned TLD is never put to the decline policy: the seed always installs
-it, so it can be neither declined nor reported as declined (the wizard shows it
-ticked and locked).
+TLD is never put to the decline policy: the seed always installs
+it, so it can be neither declined nor reported as declined (the *Ontologies*
+screen shows it ticked and locked).
 
 **The thesaurus set.** `main: hierarchy1` dependencies are collected by ONE
 function, `collectHierarchyDependencies` (merged per TLD, mandatory wins, core
@@ -154,14 +158,10 @@ ONE function, `recommendedThesaurusWarning` (dependency, dependants, and
 (`offeredHierarchyTlds()` — every non-core entry of `hierarchy.json`, with or
 without data files) and answers `{install, warnings}`: a thesaurus with no
 entry is a warning and skipped, mandatory or not. An entry without data files
-is installable — it is created empty. The wizard's `install_hierarchies` step
-runs in the restarted process with no plan, so it re-derives the set from the
-installed registry rows (`installedHierarchyDependencies`) and only CHECKS the
-posted list against it (`unmetHierarchyDependencies`): the posted list is the
-operator's answer (the client pre-ticks every declared thesaurus), nothing is
-added, and a mandatory one left out — declined or without an entry — is a
-warning in the step's `msg`. Mandatory ONTOLOGY dependencies keep their rule
-(always installed; unoffered → error).
+is installable — it is created empty. The `install_hierarchies` step imports
+exactly `plan.hierarchies`: the warnings are the plan's, decided before anything
+is written, and the step adds nothing. Mandatory ONTOLOGY dependencies keep their
+rule (always installed; unoffered → error).
 
 **The source.** `ontologySourceFor(answers, priorEnv)` (in the plan): a local
 `ontology_source` wins; else the first entry of `ontologyServersFor` (a prior
@@ -224,84 +224,81 @@ The import writes it back through `syncMainSectionFromDefinition`, the
 registry-row law's import door, which on an existing row replaces only the
 definition's keys.
 
-**The wizard wire** (`engineering/wire_contract/WC-2026-10-09-install-domain-ontologies.md`):
-`get_install_context` gains `properties.ontologies = {default, core, offline}`
-(synchronous, no network); three pre-auth router actions —
-`get_ontology_catalog`, `stage_ontologies`, `install_ontologies`; and
-`persist_config` takes `ontologies`. Since
-`engineering/wire_contract/WC-2026-10-10-ontology-dependencies-hierarchy60.md`
-it also takes `declined_dependencies` (CLI `--decline-dependencies`) and answers
-the extension key `hierarchy_dependencies`; each catalog view entry carries
-`hierarchy_dependencies`, and `--plan` prints `hierarchy_dependencies` and
-`declined_dependencies`.
+**The answers** (`engineering/wire_contract/WC-2026-10-09-install-domain-ontologies.md`,
+whose browser half is superseded by `WC-2026-10-12-install-surface-removed`):
+`ontologies` and, since
+`engineering/wire_contract/WC-2026-10-10-ontology-dependencies-hierarchy60.md`,
+`declined_dependencies` (CLI `--decline-dependencies`); each catalog view entry
+carries `hierarchy_dependencies`, and `--plan` prints `hierarchy_dependencies`
+and `declined_dependencies`.
 
 ## The suite database is built through these doors
 
 `bun run test:db:setup` (`scripts/test_db_setup.ts`) builds the suite database
 as an installation first: `installDbFromSeed()` (the restore door, so the core
-seed, the search stores, the engine ontology and `lg`), then the default domain
+seed, the search stores and `lg`), then the default domain
 ontology through `stageOntologies(defaultOfflineOntologyRequest())` +
 `installOntologies()`, and only then the suite's own fixtures — the marker, the
 `test` TLD (`materializeTestTldOntology`, which refuses on a database without the
 marker; there is no bypass), the canonical test3 records, hierarchies and tools.
 No installation receives a test fixture.
 
-## Install-mode boot (the config-freeze problem)
+## Fail-closed boot
 
-`config.ts` builds and **freezes** `config` at import and `requireEnv`-throws on
-missing `ENTITY`/`DB_NAME`/`DB_HOST`/`DB_USER`, so a machine with no `.env`
-cannot boot. `resolveInstallMode()` sets `config.installMode` true when **all
-four** required keys are unset AND the install is not sealed; the four keys then
-carry sentinels so the server boots to serve the wizard. A **partial** config
-still throws (operator error), and a **sealed** install whose `.env` vanished
-also throws (never silently re-enter the wizard on live data). In install mode
-`server.ts` skips migrations / RAG / diffusion, and `/health` reports `db:down`.
+`config.ts` builds and **freezes** `config` at import and `requireEnv`-throws on a
+missing required key. There is no install mode (removed 2026-10-12 —
+`engineering/wire_contract/WC-2026-10-12-install-surface-removed.md`); a box that
+is not installed REFUSES TO START.
 
-## Restart-after-configure
+`src/config/install_state.ts` (depends on `env.ts` only) answers the question:
 
-The server reads config once at import, so `persist_config` writes `.env` and
-then `process.exit(0)` (`restart.ts scheduleServerRestart`); the supervisor
-(`deploy/dedalo-ts.service` `Restart=always`) restarts it into configured mode.
-Exit-then-restart avoids racing the socket double-start guard that a self-respawn
-would hit. The wizard's separate manual **Verify** click (+ the client's request
-retries) bridges the gap. `scheduleServerRestart` is a no-op under
-`DEDALO_INSTALL_NO_RESTART=true` (tests and the CLI). The **CLI** sets the DB/
-entity env before importing config, so it resolves the real config in one
-process and needs no restart.
+- `REQUIRED_CONFIG_KEYS` — `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER` (frozen at
+  four by `config_docs_tripwire`).
+- `UNCONFIGURED` — true when all four are unset or empty (environment plus
+  `.env`). The catalog readers then hand out the `installSentinel` values, so
+  `config` still imports on a fresh box (for `config:gen`, the install probe
+  child, and the server's own refusal). The seal is NOT consulted: a sealed box
+  whose `.env` was lost must reach the refusal, not throw at import.
+- `notInstalledRefusal()` — reads `install_status` raw from `ts_state.json`
+  (`DEDALO_TS_STATE_PATH` overrides) and answers one sentence, or `null`: not
+  installed (no `.env`) → run the installer; a `.env` naming none of the four →
+  complete it, do not reinstall; sealed → restore `.env`; any status other than
+  `sealed` → `--resume`. A garbled state file reads as no status.
+- `NOT_INSTALLED_EXIT_CODE = 78` (`EX_CONFIG`) — distinct from 75 (the planned
+  restart), 1 (a crash) and 0.
 
-`start` mounts the wizard while `config.installMode || installInProgress()`
-(`gate.ts`): after `persist_config` the server has restarted OUT of install mode
-but is not yet sealed (`install_status='configured'`), so a mid-install **reload**
-must resume the wizard rather than drop to the login form. `installInProgress()`
-deliberately does NOT fire for `undefined`/`unconfigured` status, so a deployment
-provisioned by some other route (one that never ran the installer) always gets the
-login form, never the wizard.
+`src/boot_refusal.ts` is the FIRST import of `server.ts`: ES modules evaluate in
+import order, so when `server.ts` is the process entry (`Bun.main`) the refusal
+prints `[boot] REFUSED — <sentence> (exit 78; supervisors must not restart)` and
+exits before any sibling import runs — before the session store opens its SQLite
+file, before the config build records anything in `ts_state.json`, before any
+listener. `startServer()` repeats the check for a programmatic caller; a gate that
+imports `server.ts` for `handleRequest` is not refused. A PARTIAL configuration
+(one to three keys) is misconfigured, not unconfigured: the config import throws
+the precise missing-key error (exit 1).
 
-## Pre-auth window
+The supervisors stop on 78: the systemd units carry
+`RestartPreventExitStatus=78`, `deploy/dedalo-ts-watchdog.sh` does not start the
+restart unit for a unit that failed with 78, and the dev/supervised loops respawn
+on 75 only. The planned restart itself (`src/core/update/restart.ts`
+`scheduleServerRestart`, exit 75) is requested only by a code update or restore.
 
-`dispatch.ts` Gate 1b: the install surface (`dd_utils_api:install` +
-`get_install_context`) is pre-auth WHILE UNSEALED and IP-gated by
-`installIpAllowed` (`gate.ts`). The gate is **fail-closed since 2026-08-24**
-(`engineering/wire_contract/WC-2026-08-24-install-ip-gate-fail-closed.md`): an
-unset or empty `DEDALO_INSTALL_ALLOWED_IPS` means the local machine only
-(`DEFAULT_INSTALL_ALLOW_ENTRIES = ['loopback']`), and `any` is the single
-spelling that admits every address. An entry is `loopback`, a literal address, or
-a CIDR block matched bitwise by the pure `ipInCidr` (malformed ⇒ no match, never
-a throw). The refusal is `install.ip_denied` (403); its only detail is the caller's own
-resolved address (`client_address`, so the operator knows what to add —
-`engineering/wire_contract/WC-2026-10-08-install-ip-denied-names-address.md`).
-The policy source is never echoed back; the operator reads the effective policy
-off the boot log (`describeInstallAllowPolicy`). Honest limit: `clientIp` is the
-trusted-hop `X-Forwarded-For` value, and a request without that header resolves
-to the sentinel `'local'`, so on a bare TCP listener with no proxy the gate
-cannot see the real peer. Once sealed the surface returns **404**. CSRF is
-unchanged (Gate 3 only runs for sessions), and the record-writing steps re-check
-the session in the handler.
+The installer seals every route before the first server boot (production: the
+engine steps run before `host_first_boot`; docker/trial: the engine runs in
+`compose run --rm` before `stack_up`; developer: the operator starts the server
+after the install). `persist_config` writes `terminal_installing`, so a server
+started by hand over a half-built install refuses with `--resume` instead of
+serving a login in front of an unfinished database.
+
+Gates: `no_install_surface_tripwire` (the action table driven session-less; the
+real server spawned config-less — exit 78, no listener, no database connection,
+no write), `install_state_boot` (the predicate),
+`install_restart_supervisor_tripwire` (the supervisors).
 
 ## Languages (mandatory)
 
 `config.ts` requires four language keys whenever the server is configured
-(`INSTALL_MODE=false`): `DEDALO_APPLICATION_LANGS` (code→label map),
+(not `UNCONFIGURED`): `DEDALO_APPLICATION_LANGS` (code→label map),
 `PROJECTS_DEFAULT_LANGS` (code array), `DEDALO_APPLICATION_LANGS_DEFAULT`,
 `DEDALO_DATA_LANG_DEFAULT` (owner rule: a missing/malformed value must refuse
 boot). The installer therefore MUST write them, or the post-`persist_config`
@@ -324,10 +321,8 @@ restart crash-loops.
   `deriveLangConfig` result (`cliBootEnv`) BEFORE importing config (with ENTITY/DB
   set, config would otherwise throw at import) — `deriveLangConfig` is pure
   precisely so it can run first. Flags: `--langs`, `--app-lang`, `--data-lang`.
-- The wizard collects them on the Entity step (`render_installer.js`), seeded
-  from `context.ts` `available_langs`/`install_checked_langs` (pre-ticked =
-  `INSTALL_DEFAULT_LANG_CODES`); ≥1 enforced both
-  client-side and in `deriveLangConfig`.
+- The interactive installer asks for them on its languages screen, pre-ticking
+  `INSTALL_DEFAULT_LANG_CODES`; ≥1 is enforced by the plan (`deriveLangConfig`).
 
 ## Config / paths
 
@@ -357,8 +352,8 @@ lists it for reference with `data_files: []`, no `lg1.copy.gz` is ever vendored,
 and its registry row is the only one the seed ships. It only needs
 activating — flag active, active in thesaurus, link the root — which
 `activateCoreHierarchies()` (`hierarchy_activate.ts`) does inside
-`install_db_from_default_file`, so every surface that restores the seed (CLI,
-wizard, `install.sh`) gets it with no separate step. `installHierarchies` answers
+`install_db_from_default_file`, so every surface that restores the seed (the
+installer, `test:db:setup`) gets it with no separate step. `installHierarchies` answers
 a core TLD with activation only (`replace` is refused: its terms cannot be
 re-imported), and a front end that lists `lg` gets it dropped with a note.
 
@@ -391,20 +386,19 @@ admits only an active row's own `<tld>1`/`<tld>2`. Contract:
 `engineering/wire_contract/WC-2026-10-10-hierarchy-json-manifest.md`.
 
 - **Offer** — `offeredHierarchies()`: every non-core entry, data or not; the
-  wizard and the add_hierarchy widget get the same view from
+  installer's *Thesauri* screen and the add_hierarchy widget get the same view from
   `hierarchyChoiceView(lang)` (`{tld, label, typology, has_data,
   dependencies}` — `dependencies` = the entry's declared non-core thesauri
   `{tld, mandatory}`, pre-ticked by the client when the entry is ticked; labels
   picked from `name_data` in the requesting user's language through
   `ontology/manifest_lang_pick.ts`).
-- **Pre-selection** — ONLY the declared dependencies: the CLI default,
-  `install.sh`'s `default` answer and the wizard's ticked boxes are the plan's
+- **Pre-selection** — ONLY the declared dependencies: the CLI default and the
+  *Thesauri* screen's ticked boxes are the plan's
   `hierarchyDependencies` (all ticked, a mandatory one marked strongly
   recommended — never locked). No toponymy is
   ever a default; a plan with no toponymy thesaurus (typology
   `TOPONYMY_TYPOLOGY_ID`) carries `suggestions` = `TOPONYMY_SUGGESTION`
-  (`install_plan.ts`), and the wizard shows the label
-  `install_toponymy_suggestion`.
+  (`install_plan.ts`), which the installer prints.
 - **The chosen thesauri's own declarations** (`installHierarchies` →
   `hierarchy_dependencies.ts` `withThesaurusDependencies` →
   `ontology_choice.ts` `closeThesaurusChoice`) — before anything is written,
@@ -474,7 +468,7 @@ The compile runs in scratch databases it creates and marks (`dedalo_seed_build_<
 `dedalo_seed_verify_<pid>`, dropped afterwards), one compile per cluster (an advisory
 lock). Before the file is replaced, the result **installs itself**: it is restored into
 the second scratch database through the installer's own restore — search stores,
-engine ontology, Languages activation — the boot migrations run over it, and the
+Languages activation — the boot migrations run over it, and the
 core ontology, Languages and root password are checked. It checks what the seed
 promises (the core), never a domain ontology. A registry record the activation
 would refuse, an active hierarchy, a registry row of a non-core hierarchy, an ontology row of another TLD or an undeclared
@@ -486,6 +480,140 @@ is born with is a change to a source, then `bun run seed:build`, then commit the
 and the manifest together — a source changed without a recompile is reported STALE.
 To ship a newer ontology, export the release packages from the ontology master first.
 
+## Front ends (the interactive installer)
+
+The terminal installer has ONE walker and two renderings. `install_session.ts`
+(`runInteractiveInstall`) walks the screen model (`screen_model.ts`): the
+order, the gating, what a changed answer re-asks, the probes, the kept
+secrets, the Review's commands, the unfinished-install offer (resume / abort /
+quit). It talks to an `InstallPrompter` (`prompter_contract.ts`), which holds
+the shared answer rules — what Enter takes (`suggested`), when `-` empties a
+field, the secret entry flow (`secretEntryStep`: refused, policy, twice, three
+mismatches = refused), a confirm's default — and the structured views a front
+end draws (`ScreenView` before every ask; Welcome, Resume, Probe, Review). The
+multi-select model (ticks, declared closure, declines, locks) is
+`multi_select.ts`; the text hygiene every front end applies to untrusted
+strings is `display_text.ts` (`sanitizeLine`).
+
+- **Plain** (`ui_plain/prompter.ts`): one question per line.
+- **Full screen** (`ui/`, OpenTUI): the same asks as widgets, answered with the
+  plain mode's values. It holds no install knowledge — no default, no rule, no
+  step table (`scripts/install.ts` hands it the step list through
+  `RunReporter.begin`). `ui/lifecycle.ts` owns every exit path (signals, an
+  uncaught error, `fail`, Done) and restores the terminal; the process is
+  injected (`ProcessPort`) so the gates drive the UI on OpenTUI's test renderer
+  without a handler that exits the runner. `console_capture.ts` routes every
+  console method into the log ring while the UI is up (the executor's
+  redaction wraps it).
+
+The run is told through `run_events.ts`: the executor emits a `StepEvent` per
+step phase (`start`, `skipped`, `adopted`, `done`, `failed`, `interrupted`,
+`undo` — every text redacted) and reports its own signal handlers armed or
+disarmed (`RunIo.signals`), so the full screen delegates SIGINT/SIGTERM to the
+executor only while it holds them. The headless CLI has no listener and its
+transcript is unchanged.
+
+**Confinement.** `@opentui/*` is imported only under `src/core/install/ui/`,
+and only `tui_loader.ts` loads it — by a dynamic import, inside one `try`
+around the import AND the renderer's creation (a missing native build throws
+only there). Any failure answers `{kind: 'plain', reason}` and the CLI goes on
+in plain mode. Neither the server's import closure nor the headless installer
+reaches it. OpenTUI's own environment switches (`OTUI_*`, `SHOW_CONSOLE` — one
+appends every raw stdin byte to a file) are cleared by `scripts/install.ts`
+before the UI loads.
+
+**The pin.** `@opentui/core` is pinned EXACTLY in `package.json`
+`dependencies` (the latest stable at the time, 0.6.1): the package is pre-1.0,
+so a minor release may change the API. Dependabot proposes bumps; a bump is
+taken with the TUI gates green. The lock carries the native build of every
+target (darwin arm64/x64, linux arm64/x64, glibc and musl).
+
+## The step loop (one loop, two executors)
+
+`step_loop.ts` is the resumable loop both executors drive: the ENGINE executor
+(`executor.ts` — the engine steps and its database claim) and the HOST executor
+(`host/host_executor.ts` — the production and docker/trial host steps). One
+implementation of the rules, so a host step resumes exactly as an engine step
+does:
+
+- recorded `done`: a step with a `verify` must still verify, or the run is refused
+  as drift (`step <id> was recorded done but its outcome is missing …`); a step
+  without one is skipped;
+- recorded `running` or `failed`: a `verify` that passes means the work landed
+  before the checkpoint — the step is **adopted** (marked done, skipped) unless it
+  is `neverAdopt` (the seed restore); otherwise it runs again;
+- pending: intent → run → created → verify → done, checkpointed around it.
+
+The loop knows nothing of what a step does; the driver's `perform` runs it. Also
+here, shared by both executors: the fault seam (`DEDALO_INSTALL_FAULT`), the
+event emitter, the console redaction and the stopping of children on a signal.
+It is config-free — the root process of the production route loads it.
+
+## The host executor
+
+`host/host_executor.ts` runs a host route's plan through the same loop, with the
+same state schema, in its **own** run directory, so two processes never share a
+state file and root never writes into a directory the instance user owns:
+`/var/lib/dedalo-install/<instance>/` on production (`0700`, root),
+`<checkout>/.dedalo-install/` on docker and trial. Modes: **fresh** (refuses an
+existing record; production refuses without root, naming the `sudo sh install.sh`
+form), **resume** (the saved plan and the frozen facts; a step whose commands no
+longer equal the ones the run showed is refused) and **abort** (reverse order,
+only what `created` lists — and once the engine child completed, only the host
+steps after it: a live install is never taken apart).
+
+| Module | What it owns |
+| --- | --- |
+| `host/contract.ts` | what a host step is: a PURE `commands(ctx)` (plan + frozen facts → the exact commands), `run`, `verify`, `undo`, `intent`, `created`. **Review equals run**: the Review lists `commands()`, the run executes exactly them; an `unless` probe makes a re-run after a kill converge. Nothing secret is in a command — a secret reaches a child only as `stdin: {secrets}` |
+| `host/execute.ts` | the one place a command becomes an effect and the one place it becomes a Review line; `as: instance\|postgres` becomes a `runuser -u <user> --` prefix |
+| `host/runner.ts` | the one spawner: absolute binaries only (from the OS row's closed table, never a `PATH` lookup), a fixed environment (no `DEDALO_INSTALL_*` reaches a child), secrets on stdin, bounded output and time, every child registered so a signal stops apt, dnf and certbot too. Its recording twin answers argv from a response table and logs every request |
+| `host/fs.ts` | every file a host step touches: atomic writes, mode and owner set by descriptor before the rename, no symlink followed, owners by name from the root's own `passwd`/`group` |
+| `host/facts.ts`, `host/os_support.ts` | the read-only measurement of the machine (OS row, privilege, web server, PostgreSQL, what already exists under this instance's names, SELinux, the firewall) and the supported OS rows — exact `ID` and major version, newest releases only |
+| `host/layout.ts` | every path and name of one production instance, from the instance name |
+| `host/review.ts` | the Review's host commands: the facts measured now, then every step's `commands()` for them |
+| `host/host_table.ts` | the exhaustive step-id → definition table (production rows in `host/production/`, stack rows in `host/stack/`) and the digest `host_preflight` freezes |
+| `host/registry.ts` | `/var/lib/dedalo-install/instances/<i>.json`: the refcounts of the shared resources (template units, a Bun pin, the SELinux module, the nginx media map) |
+| `host/systemd/render.ts` | the template units (`deploy/systemd/*@*`, only OS-row values substituted) and the per-instance drop-ins; every `Environment=` value quoted; no root line beside the instance's `.env` |
+| `host/web/{nginx,apache,site,clash}.ts` | the one site file per instance, the validated media-rule copies and the host-wide map include, and the clash scan (only `(file, names, ports)` tuples kept from `nginx -T` / `-S`) |
+| `host/stack/*` | the docker/trial steps, the compose invocation (`-f <stack> -f compose.override.yaml --env-file .dedalo.env`, the same argv `deploy/dedalo-image-lib.sh` emits) and the image verification |
+
+### Engine delegation
+
+The host process never runs an engine step itself. `host_engine` (production)
+starts ONE child as the instance user in the instance's own tree —
+`runuser -u ded_<i> -- <bun> run scripts/install.ts --request-stdin --execute --events-jsonl [--resume]` —
+and `stack_engine` runs the same command in a throw-away container
+(`docker compose … run --rm -T dedalo …`). The request (the engine answers — the
+host answers minus `HOST_ONLY_ANSWER_KEYS`, plus `engine_only` and, on production,
+the OS row's `pg_bin_path` — and the secrets) is ONE JSON object on the child's
+standard input. Its log lines and step events come back as JSON lines and are
+relayed, redacted; the one-time salt arrives as a `show_once` frame the front end
+shows once and never stores. `verify` asks the child (`--status --json`); `undo`
+is the child's own `--abort`, which refuses a sealed install.
+
+### Seams
+
+All read from the **process** environment only, never from `../private/.env`:
+
+- `DEDALO_INSTALL_FAULT=<step>:before|after` — the resume drills' SIGKILL point, in the loop.
+- `DEDALO_INSTALL_HOST_ROOT` — the HostFs root becomes this directory **and** the
+  runner becomes the recording runner, in the same move; a root without the
+  `.dedalo_install_scratch` marker is refused. In-process gates inject the runner
+  and the fs directly.
+- `DEDALO_INSTALL_PROBE_CA_FILE` — the public probe's trust anchor, accepted only
+  inside a directory marked `.dedalo_install_drill`.
+
+### Drills
+
+- `bun run drill:install-host` (`scripts/install_host_drill.ts`, opt-in, never part
+  of `bun test`): a privileged systemd container of the newest supported release
+  (`--os debian|ubuntu|alma`, `--web nginx|apache`), decoys planted, the bootstrap
+  run as root and killed after every host step in turn, resumed each time, then
+  checked from outside (units, timers, `nginx -t`, `/health` over HTTPS through
+  the drill CA, the decoys byte-equal) and aborted on the live instance.
+- `test/unit/install_host_resume_drill.test.ts` and `install_resume_drill.test.ts`:
+  the same kill-and-resume over a marked scratch host and over the engine steps.
+
 ## Gates
 
 `test/unit/install_*.test.ts` and `seed_build_native`: the seed compiler and its
@@ -493,8 +621,8 @@ content contract (`install_seed_contract_native` holds the committed seed to it,
 `install_seed_manifest_tripwire` to its manifest and sources; `install_seed_drift_tripwire`
 holds the compiler's TLDs = `CORE_ONTOLOGY_TLDS` = the catalog default of
 `ACTIVE_ONTOLOGY_TLDS` and the core's dangling dependency references to
-`engineering/install_seed_contract.json`), install-mode boot (subprocess config import), the
-pre-auth gate + reload-resume + verify-await regressions, the `.env` write
+`engineering/install_seed_contract.json`), the fail-closed boot (`install_state_boot`,
+subprocess imports; `no_install_surface_tripwire`, the real server spawned), the `.env` write
 contract, the seed restore + Argon2id root pw + login (real scratch DB), the
 hierarchy import, the seed drift tripwire, and the full CLI **e2e ending in a
 verified root login** (asserting `lg` active with zero `lg` rows in
@@ -507,12 +635,15 @@ vendored file is listed, no `lg` data file, the retired files absent, the seed
 registry = the core rows), `install_hierarchy_activate_native` and
 `hierarchy_import_atomic_native` (a row written from the entry, a bad language
 id, a checksum mismatch, an empty thesaurus — each refused or applied with
-nothing partial). `install_plan_parity_tripwire` holds CLI and wizard to one plan;
+nothing partial). `install_plan_parity_tripwire` holds flags, the answers record and the answers file to one plan;
 `install_core_hierarchy_native` proves the core activation needs no import;
-`install_sh_portability` runs `install.sh`'s answer-to-flag block through the
-plan's own parser. The ontology half: `install_ontology_choice` (the closure,
-hermetic), `install_hierarchy_dependencies_native` (the step's reader and its
-never-blocking check over real registry rows, on the suite database),
+`install_sh_portability` holds the stack disk probe to its POSIX `df -Pk` form and
+`install.sh` to POSIX sh; `install_bootstrap_sh` holds the bootstrap's refusals
+(kernel, musl, CPU, the release sha256, the Bun hash table) and its exec of the
+installer; `install_sh_image_source` holds the image-source decisions of the shared
+host library (`deploy/dedalo-image-lib.sh`). The ontology half: `install_ontology_choice` (the closure,
+hermetic), `install_hierarchy_dependencies_native` (the `install_hierarchies` step never
+forces a declared thesaurus, over a real registry row, on the suite database),
 `ontology_references_native` (the classifier and codec, hermetic),
 `ontology_manifest_native` (the manifest client against a loopback stand-in
 master, hermetic), `ontology_dependencies_native` (`hierarchy60` → census →
@@ -524,3 +655,22 @@ against a loopback master: closure order, undeclared warning, local
 directory/archive, preflight refusals with the database untouched, tampered
 staging, `matrix_dd`). Tests never name a real domain ontology's structure: they
 build zz TLD packages (`src/core/test_data/ontology_package_fixture.ts`).
+
+The interactive front ends: `install_screen_model_tripwire` (the model), the
+plain mode's `install_plain_parity_tripwire` / `install_plain_secrets_tripwire`,
+and the full screen's `install_tui_parity_tripwire` (driven by key presses over
+the same matrix: the same plan, the same asks), `install_tui_secrets_tripwire`
+(no secret on any frame or renderable; the salt only on Done),
+`install_tui_restore_tripwire` (every exit path on a real pseudo-terminal: the
+code, every terminal mode undone, `stty` sane), `opentui_confinement_tripwire`,
+`install_tui_frames` (the mockup's layout at 104×30, 96×27 and 80×24) and
+`install_executor_events_native` (the step events).
+
+The host routes: `install_host_steps_native` (every production step over a
+scratch host and the recording runner), `install_host_render_tripwire` (the
+rendered units and site, the templates on disk equal to the rendered set, no root
+line beside an `EnvironmentFile`), `install_host_selinux_native` (what the
+`dedalo_engine` module grants, against the old broad rule as a control),
+`install_host_privilege_tripwire` (what the root process may import and write),
+`install_host_resume_drill`, `install_stack_steps_native` (the docker and trial
+steps). `install_step_table_native` holds the engine's one step table.

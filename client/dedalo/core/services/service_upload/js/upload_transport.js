@@ -15,7 +15,12 @@
 * multi-file queue possible: a queue cannot be built on top of a transport that
 * blocks on alert() or that writes into one fixed progress bar.
 *
-* The only non-wire import is data_manager, because the chunked flow is NOT a
+* The page-identity latch is the one other import (error_dispatch
+* `refused_by_page_identity`, LEAD-2): while a re-login as another user has
+* revoked the page identity, no part opens a socket — every transport of the
+* client asks the same question before it sends.
+*
+* The only other non-wire import is data_manager, because the chunked flow is NOT a
 * single request — it is N multipart POSTs followed by ONE JSON RQO
 * (dd_utils_api::join_chunked_files_uploaded) that assembles them server-side.
 * Owning the join here is what lets `start()` resolve exactly once with the
@@ -35,6 +40,7 @@
 
 // imports
 	import { data_manager } from '../../../common/js/data_manager.js'
+	import { refused_by_page_identity } from '../../../common/js/error_dispatch.js'
 	import { JSON_parse_safely } from '../../../common/js/utils/util.js'
 	import { ApiError, CLIENT_ERROR, normalize_api_error, request_failed, response_data } from '../../../common/js/api_error.js'
 
@@ -630,6 +636,20 @@ export const create_transfer = function(options) {
 					}
 					if (cancelled) {
 						resolve({ ok:false, cancelled:true })
+						return
+					}
+				// The page-identity latch (LEAD-2): a part is the page's cached state
+				// (a file bound to A's record) — never sent under another identity.
+				// Terminal, not retryable: the identity does not come back by waiting.
+					if (refused_by_page_identity(null)) {
+						resolve({
+							ok		: false,
+							error	: new ApiError({
+								code	: CLIENT_ERROR.ABORTED,
+								source	: 'transport',
+								details	: { reason:'page_identity_revoked', action:'upload' }
+							})
+						})
 						return
 					}
 

@@ -22,7 +22,7 @@
  * program validated — a uuid and a tag grammar, or an exit code.
  *
  * WHY A LEAF. It runs inside the image the operator is about to replace, in
- * whatever state that engine is in — install mode included — and must answer
+ * whatever state that engine is in — not yet installed included — and must answer
  * fast. So it imports the channel module and the version walk only, never
  * config.ts (which would demand a configured instance and open the pool).
  * The walk is THE rule the tree swap and the panel request use

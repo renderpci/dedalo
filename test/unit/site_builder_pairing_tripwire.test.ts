@@ -562,7 +562,7 @@ describe('tool availability follows the resolver, not a second opinion', () => {
 	 * ownership check, so with an admin the session doors would answer the same whether the
 	 * unconfigured pre-check ran before that check or not. An ordinary publisher owns none
 	 * of these ids, which is what makes the ORDER observable: pre-check first is
-	 * `site_builder.unconfigured`; ownership first is `site_builder.rejected`.
+	 * `site_builder.unconfigured`; ownership first is `site_builder.not_session_owner`.
 	 */
 	const PUBLISHER = { userId: 1, isGlobalAdmin: false, isDeveloper: true };
 

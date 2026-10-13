@@ -540,7 +540,7 @@ export interface ProvisionMediaTreeOptions {
 	/**
 	 * Wall-clock budget in MILLISECONDS for the whole pass, checked before each
 	 * entry. Undefined (the default) means unbounded, which is what the INSTALLER
-	 * wants: the wizard step is an interactive operation where waiting is correct
+	 * wants: the installer step is an interactive operation where waiting is correct
 	 * and half a tree is worse than a slow answer. The BOOT pass always passes one
 	 * — see `provisionMediaTreeAtBoot` and the header's "THE BOOT BUDGET".
 	 */
@@ -737,10 +737,9 @@ export function formatMediaTreeProblems(
 
 /**
  * ONE LINE summarising a pass, for surfaces that cannot render a list — the
- * installer's `msg` is a single-line flex pill (`render_installer.js` assigns it
- * with textContent into a `display:flex` `.msg`), so a multi-line string there
- * collapses into an unreadable run. The full detail always stays on
- * `report.problems`.
+ * terminal installer's step event carries a single-line `msg` (plain and TUI
+ * progress print it as one line), so a multi-line string there breaks the
+ * progress view. The full detail always stays on `report.problems`.
  */
 export function summarizeMediaTreeReport(report: MediaTreeReport): string {
 	const errors = report.problems.filter((problem) => problem.severity === 'error');

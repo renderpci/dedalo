@@ -2006,12 +2006,6 @@ const ADDRESS_JUDGES: Record<string, AddressJudgeRow> = {
 			'the on-premise transcriber’s destination policy (the private-host exemption); with ' +
 			'the exemption OFF it must be the guard, which the drive below measures row by row.',
 	},
-	'src/core/install/gate.ts': {
-		direction: 'inbound',
-		reason:
-			'the installer’s CLIENT-IP allowlist (DEDALO_INSTALL_ALLOWED_IPS, loopback by ' +
-			'default): matches the caller’s address against operator CIDRs; no destination is chosen.',
-	},
 };
 
 function addressJudgeViolations(census: Map<string, Set<string>>): string[] {

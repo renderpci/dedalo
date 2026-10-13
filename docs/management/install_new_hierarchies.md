@@ -146,18 +146,16 @@ the common thematic ones — in `install/import/hierarchy/`: one manifest,
 `hierarchy.json`, that lists every hierarchy the release offers, and the dump
 files of their terms. You do not create these by hand:
 
-- **During the install**, every installer asks: the browser wizard's
-  *Hierarchies* step as a checkbox list, the command-line installer as
-  `--hierarchies <codes>|default|none`
-  ([command-line flags](../install/installer_reference.md#command-line-flags)),
-  and `install.sh` as its *Optional thesauri* question. All three offer every
-  entry of `hierarchy.json` and pre-select **only** the thesauri an installed
+- **During the install**, the installer asks: its *Thesauri* screen as a
+  checkbox list, or `--hierarchies <codes>|default|none` on the command line
+  ([command-line flags](../install/installer_reference.md#command-line-flags)).
+  Both offer every entry of `hierarchy.json` and pre-select **only** the thesauri an installed
   ontology declares as a dependency, mandatory or optional — all pre-ticked, and
   you can untick any of them. A mandatory one is marked **strongly recommended**;
   leaving it out never stops the install, it only gives a warning that you can
   install it later from Maintenance → **Install hierarchies**
   ([dependencies](../install/installer_reference.md#dependencies-are-declared-never-guessed)).
-  Nothing else is pre-selected — no country's toponymy either. Each installer
+  Nothing else is pre-selected — no country's toponymy either. The installer
   suggests importing **your own country's** toponymy (for example Nepal, `np`,
   for an installation in Nepal); that is advice, never a default. `none` is a
   valid answer. The Languages thesaurus (`lg`) is not a choice: it is active on

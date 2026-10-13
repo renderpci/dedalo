@@ -269,13 +269,37 @@
 			"file": "src/core/install/config_persist.ts",
 			"symbol": "persistConfig",
 			"class": "unrunnable-mutates-machine",
-			"reason": "A one-shot install procedure that writes the machine's configuration files. Blocked by danger, not by fixture: the hermetic logic in the same subsystem (deriveLangConfig, installIpAllowed) is gated in tier1_install_native.test.ts."
+			"reason": "A one-shot install procedure that writes the machine's configuration files. Blocked by danger, not by fixture: the hermetic logic in the same subsystem (deriveLangConfig, pgBinaryCandidates, the hierarchy readers) is gated in tier1_install_native.test.ts."
 		},
 		{
 			"file": "src/core/install/db_restore.ts",
 			"symbol": "installDbFromSeed",
 			"class": "unrunnable-mutates-machine",
 			"reason": "Restores an entire database from the install seed — it would replace the suite database mid-run. The resolvable parts (pg binary resolution, connection descriptor) are gated separately."
+		},
+		{
+			"file": "src/core/install/db_restore.ts",
+			"symbol": "restoreSeed",
+			"class": "unrunnable-mutates-machine",
+			"reason": "Restores the whole install seed into a database in ONE transaction. A unit run would need a database to destroy; its outcome (all-or-nothing, the database unchanged on failure) is gated against a scratch database the gate creates and drops (install_db_restore.test.ts, the install e2e)."
+		},
+		{
+			"file": "src/core/install/db_restore.ts",
+			"symbol": "installDbFromSeedForInstall",
+			"class": "unrunnable-mutates-machine",
+			"reason": "The terminal installer's seed step over the ENGINE'S configured database: by the database's install stamp it completes this install's own seed, restores (stamped) into an empty database, or refuses. Run in-process it would act on the suite database; its outcome — including the refusal of a database that is neither empty nor this install's — is gated by spawning the installer against scratch databases (install_resume_drill.test.ts, scenarios B, C and F)."
+		},
+		{
+			"file": "src/core/install/db_restore.ts",
+			"symbol": "resetDatabaseToEmpty",
+			"class": "unrunnable-mutates-machine",
+			"reason": "Drops every object of a database (--abort) — only one carrying THIS install's stamp. Never runnable against a shared surface; its outcome — zero user objects, the preexisting extensions kept, an unstamped non-empty database refused untouched — is gated on scratch databases the drill creates and drops (install_resume_drill.test.ts, scenarios E and F)."
+		},
+		{
+			"file": "src/core/install/db_restore.ts",
+			"symbol": "holdInstallLock",
+			"class": "unrunnable-mutates-machine",
+			"reason": "Holds a session advisory lock on the install's target database through a long-lived psql child for a whole install run; its contract (an install against a database whose lock another session holds is refused, writing nothing) is exercised in install_resume_drill.test.ts scenario F, which takes the lock through this function and spawns the installer against it."
 		},
 		{
 			"file": "src/core/install/hierarchy_import.ts",
@@ -296,10 +320,10 @@
 			"reason": "Sets the install's ROOT CREDENTIALS. There is no scratch surface for the root user, and a run would change the identity every ACL gate authenticates against."
 		},
 		{
-			"file": "src/core/install/restart.ts",
+			"file": "src/core/update/restart.ts",
 			"symbol": "scheduleServerRestart",
 			"class": "unrunnable-mutates-machine",
-			"reason": "Schedules a restart of the server process — inside a test run that is the test runner's own process."
+			"reason": "Schedules a restart of the server process (a code update or restore asks for it) — inside a test run that is the test runner's own process."
 		},
 		{
 			"file": "src/core/install/pg_bin.ts",

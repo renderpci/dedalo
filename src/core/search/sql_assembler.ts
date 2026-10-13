@@ -1155,6 +1155,85 @@ function buildPathScope(
 }
 
 /**
+ * One granted section's arm of {@link buildAnyRowInScopeSql}: a `scoped_rows`
+ * row of this section whose record exists in the section's table under the
+ * main alias's per-record conditions (see there for the arm-by-arm list).
+ */
+async function scopedRowsSectionDisjunct(
+	sectionTipo: string,
+	principal: Principal,
+	params: ParamsCollector,
+): Promise<string> {
+	const alias = 'scope_record';
+	assertValidTipo(sectionTipo, 'scope.section_tipo');
+	const table = await getMatrixTableFromTipo(sectionTipo);
+	if (table === null) {
+		throw new DedaloError('request.invalid_tipo', {
+			message: `scoped existence: no resolvable matrix table for section '${sectionTipo}'`,
+		});
+	}
+	assertMatrixTable(table);
+	const conditions = [
+		`${alias}.section_tipo = scoped_rows.section_tipo`,
+		`${alias}.section_id = scoped_rows.section_id`,
+	];
+	if (sectionTipo === config.usersSectionTipo) conditions.push(`${alias}.section_id > 0`);
+	if (!principal.isGlobalAdmin && (await sectionNeedsRecordAcl(sectionTipo))) {
+		pushFragment(conditions, await buildRecordAclFilter(sectionTipo, alias, principal, params));
+	}
+	pushFragment(
+		conditions,
+		await buildUserRecordsFilter([sectionTipo], alias, principal, params, false),
+	);
+	return `(scoped_rows.section_tipo = ${params.getPlaceholder(sectionTipo)}::text AND EXISTS (SELECT 1 FROM "${table}" ${alias} WHERE ${conditions.map((condition) => `(${condition})`).join(' AND ')}))`;
+}
+
+/**
+ * THE SCOPED EXISTENCE QUESTION, ASKED IN ONE STATEMENT (READ-4): does ANY of
+ * `rows` — a caller's SELECT yielding `(section_tipo, section_id)`, already
+ * bound to its own `$1..$N` — name a record THIS principal may see?
+ *
+ * The per-record half of the scope (record_scope.ts anyRowInScope decides the
+ * section read grant first and passes only the GRANTED sections here) is the
+ * WHERE a single-section, principal-scoped search ANDs onto its main alias
+ * beyond the section_tipo guard, built from the SAME builders, arm for arm, so
+ * it cannot answer one thing here and another in a list:
+ *   - the Users root exclusion (`section_id > 0`, every caller — buildPlainSearchSql
+ *     mainWhere);
+ *   - the per-record ACL (buildRecordAclFilter: the projects filter, the owner
+ *     rule of an owner-bound section) under the main alias's exemptions — a
+ *     global admin and the projects-exempt tables (sectionNeedsRecordAcl);
+ *     `skip_projects_filter` is server-only and this door never sets it;
+ *   - the dd478 allow-list (buildUserRecordsFilter, single-section shape).
+ * A row whose record does not exist in its section's table is not visible —
+ * exactly as the list, whose FROM is that table. Equality with the per-hit
+ * door (scopeInverseReferenceHits) is gated record by record
+ * (client_page_doors_native).
+ *
+ * WHY ONE STATEMENT: the question "is anything past this page yours" reads a
+ * tail of unbounded length. Asked in windows from the application, it costs a
+ * read per window (READ-4 review: a hidden tail of a million references was
+ * twenty sequential deep-OFFSET reads for a zero-row page); asked here, it is
+ * one EXISTS that stops at the first visible row and returns one row.
+ */
+export async function buildAnyRowInScopeSql(
+	rows: { sql: string; params: readonly unknown[] },
+	grantedSectionTipos: readonly string[],
+	principal: Principal,
+): Promise<BuiltQuery> {
+	const params = new ParamsCollector(rows.params.length + 1);
+	const disjuncts: string[] = [];
+	for (const sectionTipo of [...new Set(grantedSectionTipos)]) {
+		disjuncts.push(await scopedRowsSectionDisjunct(sectionTipo, principal, params));
+	}
+	if (disjuncts.length === 0) return { sql: 'SELECT false AS found', params: [] };
+	return {
+		sql: `SELECT EXISTS (SELECT 1 FROM (${rows.sql}) AS scoped_rows WHERE ${disjuncts.join(' OR ')}) AS found`,
+		params: [...rows.params, ...params.toArray()],
+	};
+}
+
+/**
  * `sqo.children_recursive` — the descendant-expanding search (PHP
  * search::search + search_children_recursive + generate_children_recursive_search,
  * core/search/class.search.php:445-711).

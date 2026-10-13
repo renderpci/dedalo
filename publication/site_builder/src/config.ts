@@ -55,6 +55,16 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { z } from 'zod';
 import { isAgentOrdinal, MAX_AGENT_ORDINAL } from './drivers/agent_identity';
 import { hostProblem, parseHostList } from './drivers/network_profile';
+import {
+  isOpencodeCredentialKey,
+  isOpencodeRedirectionKey,
+  OPENCODE_AUTH_CONTENT_KEY,
+  OPENCODE_DB_KEY,
+  OPENCODE_RESTRICTION_KEYS,
+  OPENCODE_TRAFFIC_SWITCHES,
+  opencodeAuthContentProblem,
+} from './drivers/opencode_argv';
+import { isFixedEnvKey } from './drivers/unit_frames';
 import { parseEnvFile } from './env_file';
 import {
   AGENT_RUN_CAPS,
@@ -80,6 +90,33 @@ const PACKAGE_DIR = resolve(import.meta.dir, '..');
  * `resetInstance()` and every publish `rm -rf` operate on.
  */
 let ENV_FILE_DIR = PACKAGE_DIR;
+
+/**
+ * WHY `OPENCODE_ENV` MAY NOT NAME `key`, or null. OPENCODE_ENV carries a provider's credentials to
+ * the opencode child — merged into its environment, so anything else in it is an operator setting
+ * the daemon did not state. It is an ALLOWLIST (`isOpencodeCredentialKey`, `opencode_argv.ts`):
+ * opencode reads ~80 keys of its own and its runtime more (the census:
+ * tests/fixtures/opencode_1.18.32_env_keys.json), and a denylist would be a release behind. The
+ * sentence names the key's owner when the daemon states that key itself (the PLANT restriction,
+ * the traffic switches and database, a unit-fixed key, a configuration/HOME redirection).
+ */
+function opencodeEnvRefusal(key: string): string | null {
+  if (isOpencodeCredentialKey(key)) return null;
+  const owner = (OPENCODE_RESTRICTION_KEYS as readonly string[]).includes(key)
+    ? 'the PLANT restriction every opencode turn carries'
+    : Object.hasOwn(OPENCODE_TRAFFIC_SWITCHES, key) || key === OPENCODE_DB_KEY
+      ? "the turn's traffic switches and database"
+      : isFixedEnvKey(key)
+        ? 'the environment the agent unit fixes'
+        : isOpencodeRedirectionKey(key)
+          ? "a redirection of opencode's configuration, HOME or search path"
+          : null;
+  return (
+    `OPENCODE_ENV names '${key}', which ${owner === null ? 'is not a provider credential' : `is ${owner}: the daemon states it for every opencode turn`}. ` +
+    `OPENCODE_ENV carries provider credentials only (OPENCODE_API_KEY, OPENCODE_AUTH_CONTENT, or a <PROVIDER>_API_KEY / ` +
+    `_AUTH_TOKEN / _ACCESS_KEY_ID / _SECRET_ACCESS_KEY / _SESSION_TOKEN); remove '${key}'.`
+  );
+}
 
 /** A comma-separated list of egress HOSTNAMES, held to the gate's own grammar at boot. */
 function egressHostList(key: string) {
@@ -289,7 +326,21 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().default(''),
   // Extra per-driver provider credentials, forwarded ONLY to that driver's child process:
   // comma-separated KEY=VALUE pairs (e.g. "OPENAI_API_KEY=sk-...").
-  OPENCODE_ENV: z.string().default(''),
+  // An ALLOWLIST of provider credentials (`opencodeEnvRefusal`): anything else is refused at boot.
+  OPENCODE_ENV: z
+    .string()
+    .superRefine((value, ctx) => {
+      const pairs = parseEnvPairs(value);
+      for (const key of Object.keys(pairs)) {
+        const refusal = opencodeEnvRefusal(key);
+        if (refusal) ctx.addIssue({ code: 'custom', message: refusal });
+      }
+      // The inline credential store is a credential only when it holds credentials only.
+      const authContent = pairs[OPENCODE_AUTH_CONTENT_KEY];
+      const authProblem = authContent === undefined ? null : opencodeAuthContentProblem(authContent);
+      if (authProblem) ctx.addIssue({ code: 'custom', message: `OPENCODE_ENV: ${authProblem}; correct or remove it.` });
+    })
+    .default(''),
   PI_ENV: z.string().default(''),
 
   /**

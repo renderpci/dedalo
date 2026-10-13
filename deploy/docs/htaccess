@@ -14,9 +14,9 @@
 ##
 ## WHY LEGACY FLAT URLS GO TO v7, not v6. Measured 2026-09-21: 46 of the v6
 ## manual's 52 pages exist at the IDENTICAL path in v7 — the v7 manual is a
-## path-compatible superset. And the shipping v7 client emits flat /docs/ links
-## itself (client/dedalo/core/installer/js/render_installer.js), so sending them
-## to v6 would point v7's own installer at the retired manual.
+## path-compatible superset. And v7's own browser installer (retired 2026-10-12)
+## emitted flat /docs/ links, so sending them to v6 would have pointed v7's own
+## installer at the retired manual.
 ##
 ## The exceptions below are the ONLY v6 pages with no v7 counterpart. The list
 ## is closed: v6 is frozen and gains no further pages.

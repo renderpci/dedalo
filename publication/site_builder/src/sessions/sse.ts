@@ -19,6 +19,7 @@
 import { replayEvents } from './store';
 import { subscribe, isTurnRunning } from './manager';
 import type { StoredEvent } from './events';
+import type { StreamFrameReason } from '../drivers/turn_errors';
 
 const HEARTBEAT_MS = 15_000;
 
@@ -111,16 +112,13 @@ export function sessionEventStream(slug: string, sessionId: string, afterSeq: nu
           // If no turn is running, there is nothing more to tail — close.
           if (!isTurnRunning(sessionId)) close();
         } catch (error) {
+          // A REASON on the wire (`drivers/turn_errors.ts` STREAM_FRAME_REASONS); the cause — a
+          // path, an fs error — is this daemon's log line, never the browser's text.
+          console.error(`[sse] the replay of session ${sessionId} of '${slug}' failed:`, error);
           if (!closed) {
             try {
-              controller.enqueue(
-                encoder.encode(
-                  `event: error\ndata: ${JSON.stringify({
-                    code: 'replay_failed',
-                    message: error instanceof Error ? error.message : String(error),
-                  })}\n\n`,
-                ),
-              );
+              const reason: StreamFrameReason = 'replay_failed';
+              controller.enqueue(encoder.encode(`event: error\ndata: ${JSON.stringify({ reason })}\n\n`));
             } catch {
               // connection already gone — nothing to tell it
             }

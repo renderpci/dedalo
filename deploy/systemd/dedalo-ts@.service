@@ -1,0 +1,54 @@
+# Dédalo TS server — PER-INSTANCE template unit (terminal installer phase 4).
+#
+# WRITTEN BY THE INSTALLER (scripts/install.ts, production route), never copied
+# by hand: host_units renders it to /etc/systemd/system/ once per HOST (every
+# instance shares it — `%i` is the instance name) and writes each instance's
+# own values into a drop-in, dedalo-ts@<i>.service.d/10-dedalo-install.conf:
+# the service user and group, the install folder (WorkingDirectory=, HOME),
+# the pinned runtime's ExecStart (root-owned /opt/dedalo/bun/<pin>/bun) and
+# DEDALO_CLIENT_PUBLISH_DIR. `systemctl cat dedalo-ts@<i>` shows the merge.
+# FAIL-CLOSED: this template names no user and no path of an instance — the
+# install folder and the service account are the operator's answers (any
+# path, any account) — so without its drop-in it runs nothing (/bin/false).
+#
+# Every line mirrors deploy/dedalo-ts.service (its comments give each reason)
+# with ONE deliberate difference: NO Wants=/Also= on the health watchdog. The
+# installer arms dedalo-ts-watchdog@<i>.timer itself, AFTER the first boot has
+# finished its migrations (host_watchdog) — campaign 2 L7: a watchdog pulled in
+# with the service killed the first boot mid-migration. The single-instance
+# deploy/dedalo-ts.service keeps the coupling (stack_ops_policy: a timer
+# nobody enabled consumes nothing); its watchdog has a boot grace instead.
+
+[Unit]
+Description=Dedalo TS server (Bun) — %i
+After=network.target @@PG_SERVICE@@
+Wants=@@PG_SERVICE@@
+StartLimitIntervalSec=300
+StartLimitBurst=5
+OnFailure=dedalo-ts-rollback@%i.service
+
+[Service]
+Type=simple
+# The drop-in sets User=, Group=, WorkingDirectory= and HOME, resets this and
+# names the pinned, root-owned runtime.
+ExecStart=/bin/false
+Environment="DEDALO_SUPERVISED=true"
+RuntimeDirectory=dedalo-%i
+RuntimeDirectoryMode=0750
+UMask=0007
+Restart=always
+RestartSec=3
+# 75: a planned restart (code update). 78: refused — not installed / config
+# missing / install unfinished (src/config/install_state.ts); never restarted.
+SuccessExitStatus=75
+RestartPreventExitStatus=78
+TimeoutStopSec=30
+KillSignal=SIGTERM
+KillMode=process
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dedalo-%i
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

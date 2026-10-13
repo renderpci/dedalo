@@ -3,18 +3,18 @@
  *
  * The intake action (dd_error_report_api:receive_report) is pre-auth by design:
  * remote installations relay reports machine-to-machine with no session on the
- * master. Mirroring the install-window gate, this module owns the predicates
- * and the dispatcher wires them in front of the auth gate (Gate 1c):
+ * master. This module owns the predicates and the dispatcher wires them in
+ * front of the auth gate (Gate 1c):
  * - receiver disabled → the dispatcher answers with the EXACT unregistered-
  *   action shape, so a probe cannot learn the endpoint exists on this host;
  * - IP allowlist (optional, DEDALO_ERROR_REPORT_ALLOWED_IPS) on the trusted-hop
- *   clientIp, same grammar as the install gate;
+ *   clientIp, in the one allowlist grammar (security/ip_allowlist.ts);
  * - shared token (optional, DEDALO_ERROR_REPORT_TOKEN): a per-master-deployment
  *   spam filter, checked constant-time INSIDE the handler (after the throttle,
  *   so token guessing consumes throttle budget) — never an authentication
  *   factor; payload fields stay untrusted regardless.
  *
- * Like the install gate, the predicates read env AT CALL TIME (readEnv, the
+ * The predicates read env AT CALL TIME (readEnv, the
  * sanctioned reader) rather than the boot-frozen config catalog — the same
  * keys are censused in config.errorReport for the relay side.
  */
@@ -22,7 +22,7 @@
 import crypto from 'node:crypto';
 import { readEnv } from '../../config/env.ts';
 import { readString } from '../../config/readers.ts';
-import { allowEntryMatches } from '../install/gate.ts';
+import { allowEntryMatches } from '../security/ip_allowlist.ts';
 
 /** The (class:action) pairs that make up the pre-auth intake surface. */
 export const ERROR_REPORT_ACTION_KEYS: ReadonlySet<string> = new Set([
@@ -35,24 +35,20 @@ export function receiverEnabled(): boolean {
 }
 
 /**
- * Is the caller's IP allowed to reach the intake? Same ENTRY GRAMMAR as the install
- * gate — it reuses that module's loopback spellings and ENTRY MATCHER
- * (`allowEntryMatches`, install/gate.ts), whose CIDR arithmetic is the shared
- * `ipInCidr` of security/ip_address.ts — so there is ONE definition of "this
- * machine", one of a CIDR block, and one matcher: a literal `127.0.0.1` appears in
- * neither file, and neither predicate can quietly stop understanding a spelling the
- * other still admits.
+ * Is the caller's IP allowed to reach the intake? Read through the ONE entry
+ * grammar (`allowEntryMatches`, security/ip_allowlist.ts), whose CIDR arithmetic is
+ * the shared `ipInCidr` of security/ip_address.ts — one definition of "this
+ * machine", one of a CIDR block, one matcher; a literal `127.0.0.1` appears nowhere
+ * here.
  *
- * The DEFAULT deliberately differs, and the difference is the point: the install
- * gate fronts an unauthenticated installer that rewrites `.env`, so an unset key
- * there means LOOPBACK ONLY (2026-08-24, WC-2026-08-24-install-ip-gate-fail-closed).
- * This intake fronts a receiver that is OFF unless `DEDALO_ERROR_REPORT_RECEIVER`
- * turns it on — and when off the endpoint is invisible (the exact unregistered-action
- * refusal) — whose whole purpose is to accept reports from remote installations
- * whose addresses the master operator cannot enumerate in advance, and which is
- * throttled, size-capped and optionally token-checked behind this gate. So here an
- * unset key means OPEN: locking it to loopback would not harden a smaller surface,
- * it would silently break the only thing the receiver does.
+ * An UNSET key means OPEN, and that is the point: this intake fronts a receiver
+ * that is OFF unless `DEDALO_ERROR_REPORT_RECEIVER` turns it on — and when off the
+ * endpoint is invisible (the exact unregistered-action refusal) — whose whole
+ * purpose is to accept reports from remote installations whose addresses the master
+ * operator cannot enumerate in advance, and which is throttled, size-capped and
+ * optionally token-checked behind this gate. Locking an unset key to loopback would
+ * not harden a smaller surface, it would silently break the only thing the receiver
+ * does.
  */
 export function reporterIpAllowed(clientIp: string): boolean {
 	const raw = readEnv('DEDALO_ERROR_REPORT_ALLOWED_IPS');

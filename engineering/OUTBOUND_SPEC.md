@@ -97,7 +97,7 @@ pinned to the vetted address through a private-policy variant of the pinned hop
 
 **The ontology manifest client is a `fetchBoundedText` caller, not a door**
 (`fetchOntologyManifest`, `src/core/ontology/ontology_manifest.ts`). The installer
-(CLI and wizard) reads an ontology master's catalog SERVER-side — which TLDs it
+(the terminal installer) reads an ontology master's catalog SERVER-side — which TLDs it
 offers and their declared dependencies — before anything is imported. An ontology
 master may legitimately sit on the institution's LAN, so the public-address policy
 cannot apply. Its named policy is `assertConfiguredMasterUrl`: the URL dialled must

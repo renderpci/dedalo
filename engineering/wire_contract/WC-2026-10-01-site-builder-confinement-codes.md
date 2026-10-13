@@ -30,3 +30,13 @@
   stand-in daemon; the mapping's key set must EQUAL `['confinement_unavailable',
   ...CONFINEMENT_CODES.map(c => 'confinement.' + c)]` (the daemon's runtime list,
   `publication/site_builder/src/errors.ts`), so a code added daemon-side without a mapping is red.
+
+## Addendum 2026-10-12 — `agent_cli_unsupported` also covers OpenCode (LEAD-1c)
+
+Wire shape unchanged (`site_builder.confinement_unavailable`, `retryable: false`). The daemon
+now also answers `confinement.agent_cli_unsupported` for the OpenCode driver: a binary whose
+probe does not honour the stated configuration sources, does not open the stated database
+(`OPENCODE_DB`), or whose stated database holds a console account (`opencode console login`,
+whose organisation config no setting turns off). Gates: `publication/site_builder/tests/opencode_plant.test.ts`
+(O10–O13). A probe that could not finish stays `confinement.agent_cli_unproved` → `site_builder.busy`
+(`WC-2026-10-11-site-builder-reason-codes`).

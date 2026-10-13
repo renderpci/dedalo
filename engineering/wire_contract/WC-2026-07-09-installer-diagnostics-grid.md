@@ -17,3 +17,5 @@
 - **Gate reconciliation:** the `client_serving` byte-identity tripwire does not
   cover the installer files (only page/common/main.css), so no gate diffs these.
   No parity gate diffs the installer — no re-harvest needed.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (whole: the browser installer and its diagnostics grid are removed)

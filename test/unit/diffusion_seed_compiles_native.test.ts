@@ -16,7 +16,7 @@
  * holds, the virtual tree of each, `findElementNodes` of each — and the
  * SHIPPED partition of that census is DERIVED, never hand-listed: an element
  * is shipped when its TLD is not one the `test` source of record owns — i.e.
- * it came with the installation (the core seed, the engine ontology, the
+ * it came with the installation (the core seed, the
  * default domain ontology the installer imports: dd, lg, oh …). Since the
  * install seed is core-only (installer unification A2) an installation
  * receives NO test node, so no test-TLD element is shipped: the whole test

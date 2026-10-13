@@ -285,6 +285,7 @@ Example values are for `instance = museum-a`, `sites[n]` = `{ slug: 'coleccion',
 | Retired shared agent HOME (archived beside itself by `provision apply`) | `layout.roots.home` | `…/museum-a/home` |
 | Agent state root (`AGENT_STATE_ROOT`, root's) | `layout.agentStateRoot` | `…/museum-a/agents` |
 | Archive of a removed site's agent state | `layout.retiredDir` | `…/museum-a/retired` |
+| Archive of rebuilt turn HOMEs (S3-HOME; masked by every agent unit) | `layout.agentArchiveDir` | `…/museum-a/agents/retired` |
 | Agent sockets (`AGENT_SOCKET_DIR`, PID 1's) | `layout.agentSocketDir` | `/run/dedalo-sites-agents/museum-a` |
 | Door ceilings (ms; unit `RuntimeMaxSec` = + 15 s) | `layout.doorCeilingsMs` | `{ turn, build, git }` — declared `limits`, else `DOOR_TIMEOUT_DEFAULTS_MS` |
 | Per-run caps (every agent unit) | `layout.agentRunCaps` | `{ memoryMax: '2G', cpuQuota: '200%', tasksMax: 512 }` |
@@ -510,8 +511,11 @@ root:root and is the ONE hand-written file.
 | `…/<i>/workspaces/` | `workspaces` | SU | SG | `2770` | SG | SU and every SK (the daemon and the sites' identities) |
 | `…/<i>/agents/` | `agentStateRoot` | root | root | `0755` | anyone (traverse) | root only |
 | `…/<i>/agents/s<k>/` | `agentStateSite` | root | root | `0755` | anyone (traverse) | root only |
-| `…/<i>/agents/s<k>/{turn,build}/` | `agentHome` | SK | SG | `0700` | SK alone | SK alone |
-| `…/<i>/retired/` | `retired` | root | root | `0700` | root | root |
+| `…/<i>/agents/s<k>/build/` | `agentHome` | SK | SG | `0700` | SK alone | SK alone |
+| `…/<i>/agents/s<k>/turn/` | `agentTurnHome` | root | root | `0755` | anyone (traverse) | root only |
+| `…/<i>/agents/s<k>/turn/state/` | `agentTurnState` | SK | SG | `0700` | SK alone | SK alone |
+| `…/<i>/agents/s<k>/turn/.config/` | `agentTurnConfig` | root | root | `0755` | anyone (traverse) | root only |
+| `…/<i>/retired/`, `…/<i>/agents/retired/` | `retired` | root | root | `0700` | root | root |
 | `…/<i>/audit/` | `auditDir` | root | SG | `0750` | SG | root only |
 | `…/<i>/audit/audit.jsonl` | `auditFile` | SU | SG | `0600` | SU alone | SU (append) |
 | `/run/dedalo-sites/<i>/` | `runtimeDir` | SU | SG | `0750` | SG | SU |
@@ -554,8 +558,15 @@ Read the design out of five of those rows:
 - **The agent state is ROOT's, and each HOME is one (site, door)'s.** `agents/` and every
   `s<k>/` are root-owned 0755, so neither the daemon nor any identity can rename a site's
   state directory — a unit binds `agents/s<k>/<door>` back BY PATH, so whoever could rename
-  `s<k>` could hand one site's run another site's HOME. Each `turn/` and `build/` is the
-  site identity's own, 0700. Every agent unit masks the whole root
+  `s<k>` could hand one site's run another site's HOME. Each `build/` is the site identity's
+  own, 0700; each `turn/` is ROOT's (S3-HOME, `drivers/agent_identity.ts` TURN_HOME_SKELETON):
+  0755 holding exactly `state/` (the identity's, 0700 — writable CLI state, what the CLI loads
+  from it closed by the PLANT argv), `.config/` (root's, 0755, empty: `XDG_CONFIG_HOME`) and
+  `.gitconfig` (root's 0644, the turn's git directives), so nothing a turn writes at HOME level
+  is configuration a later turn reads. The daemon refuses a site whose turn HOME is not that
+  closed world, and `provision apply` rebuilds exactly those HOMEs (one predicate, staged at
+  `s<k>/turn.next`, the CLI's state carried by an allowlist, the old HOME archived root 0700 into
+  `agents/retired/` on the same filesystem). Every agent unit masks the whole root
   (`TemporaryFileSystem=<root>:ro`) and binds back only its own door's directory: a build
   cannot read or plant the turn's `~/.claude`, and no site sees another's. It replaces the
   retired shared `home/` row (2770, one HOME for every site of a museum — the cross-site

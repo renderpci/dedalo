@@ -634,6 +634,13 @@ export interface GatePolicy {
   readonly gateEvents: string[];
   /** Every identity name the host was asked to resolve. */
   readonly resolved: string[];
+  /**
+   * WHO OWNS A TURN-HOME PATH, as the host states it (S3-HOME): this uid cannot make a path
+   * root's or an identity's, so the `turnHomeSeams.lstat` seam reports the provisioner on the
+   * skeleton's root rows and the site identity on `state/`. A gate plants an owner here
+   * (path → uid) to play a HOME re-owned by the identity, a foreign `state/`…
+   */
+  readonly turnHomeOwners: Map<string, number>;
 }
 
 export interface GatePolicyOptions {
@@ -646,6 +653,32 @@ export interface GatePolicyOptions {
   readonly overrides?: Record<string, unknown>;
   /** Overrides applied to `policy.host`. */
   readonly hostOverrides?: Record<string, unknown>;
+}
+
+/**
+ * SITE k's TURN HOME AS ROOT LEAVES IT (S3-HOME) — spelled HERE, from the design's skeleton
+ * table, never imported from the daemon (a skeleton both sides read from one constant cannot
+ * disagree with itself): `<root>/s<k>/turn` 0755 with exactly `state/` 0700, `.config/` 0755
+ * (empty) and `.gitconfig` 0644 saying the turn's git directives; `<root>/s<k>/build` 0700.
+ * Owners are host facts this uid cannot set — the policy's `turnHomeSeams.lstat` states them.
+ */
+export const TURN_HOME_SKELETON_NAMES = Object.freeze(['.config', '.gitconfig', 'state']);
+
+export function buildTurnHome(agentStateRoot: string, k: number): string {
+  const site = join(agentStateRoot, `s${k}`);
+  const home = join(site, 'turn');
+  mkdirSync(site, { recursive: true });
+  chmodSync(site, 0o755);
+  mkdirSync(join(home, 'state'), { recursive: true });
+  mkdirSync(join(home, '.config'), { recursive: true });
+  writeFileSync(join(home, '.gitconfig'), `# rendered\n${TURN_SYSTEM_GITCONFIG_DIRECTIVES.join('\n')}\n`);
+  chmodSync(home, 0o755);
+  chmodSync(join(home, 'state'), 0o700);
+  chmodSync(join(home, '.config'), 0o755);
+  chmodSync(join(home, '.gitconfig'), 0o644);
+  mkdirSync(join(site, 'build'), { recursive: true });
+  chmodSync(join(site, 'build'), 0o700);
+  return home;
 }
 
 /**
@@ -678,6 +711,10 @@ export async function lead1bPolicy(options: GatePolicyOptions): Promise<GatePoli
     { mode: 0o644 },
   );
   chmodSync(turnSystemGitconfigPath(agentStateRoot), 0o644);
+  // EVERY SITE'S TURN HOME, as `provision apply` leaves it (S3-HOME, TURN_HOME_SKELETON): root's
+  // HOME 0755 holding exactly `state/` (the identity's, 0700), `.config/` (root's, 0755, empty)
+  // and `.gitconfig` (root's 0644, the turn's git directives) — and the build HOME, 0700.
+  for (const k of new Set(options.identities.values())) buildTurnHome(agentStateRoot, k);
   const serviceUser = `dedalo-site-${instance}`;
   const identityName = (k: number) => `dedalo-a-${instance}_${k}`;
   const prefix = `dedalo-site-${instance}-agent-`;
@@ -711,6 +748,7 @@ export async function lead1bPolicy(options: GatePolicyOptions): Promise<GatePoli
   const chowns: Array<{ path: string; uid: number; gid: number }> = [];
   const gateEvents: string[] = [];
   const resolved: string[] = [];
+  const turnHomeOwners = new Map<string, number>();
   const ordinalOf = (name: string): number | null => {
     const match = /_(\d+)$/.exec(name);
     const k = match ? Number(match[1]) : NaN;
@@ -813,6 +851,25 @@ export async function lead1bPolicy(options: GatePolicyOptions): Promise<GatePoli
         gateEvents.push(`serve ${socket}`);
       },
     },
+    // lstat(2) of a turn-HOME path as root provisioned it (S3-HOME): the real entry, its owner
+    // stated — the provisioner on the root rows, the site identity on `<home>/state` — unless a
+    // gate planted another (`turnHomeOwners`).
+    turnHomeSeams: {
+      lstat: (path: string) => {
+        let facts: ReturnType<typeof lstatSync>;
+        try {
+          facts = lstatSync(path);
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+          throw error;
+        }
+        const planted = turnHomeOwners.get(path);
+        const state = /\/s(\d+)\/turn\/state$/.exec(path);
+        const uid =
+          planted ?? (state && dirname(dirname(dirname(path))) === agentStateRoot ? GATE_IDS.identityUid(Number(state[1])) : host.provisionerUid);
+        return Object.assign(Object.create(Object.getPrototypeOf(facts)), facts, { uid });
+      },
+    },
     memoryMax: '2G',
     cpuQuota: '100%',
     tasksMax: 512,
@@ -836,6 +893,7 @@ export async function lead1bPolicy(options: GatePolicyOptions): Promise<GatePoli
     chowns,
     gateEvents,
     resolved,
+    turnHomeOwners,
   };
   // By default PID 1 has loaded exactly what this daemon expects (G9 plants its mismatches
   // over these): a conformance check is then a question every run passes, not a skip.
@@ -890,9 +948,15 @@ export function conformingShow(
   const prefix = `dedalo-site-${host.facts.instance}-agent-`;
   const ceilingMs = (host.policy.doorTimeoutsMs as Record<Door, number>)[door];
   const proxy = door !== 'git';
+  const turnHome = `${host.agentStateRoot}/s${k}/turn`;
   const env =
     `DEDALO_DOOR=${door} DEDALO_UNIT_WORKDIR=${workspace} BUN_RUNTIME_TRANSPILER_CACHE_PATH=0 ` +
-    (proxy ? `HOME=${host.agentStateRoot}/s${k}/${door}` : 'HOME=/nonexistent GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1');
+    (proxy ? `HOME=${host.agentStateRoot}/s${k}/${door}` : 'HOME=/nonexistent GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1') +
+    // S3-HOME: the turn's configuration in root's read-only `.config`, its state under `state/`.
+    (door === 'turn'
+      ? ` XDG_CONFIG_HOME=${turnHome}/.config CLAUDE_CONFIG_DIR=${turnHome}/state/claude XDG_DATA_HOME=${turnHome}/state/data ` +
+        `XDG_STATE_HOME=${turnHome}/state/xdg-state XDG_CACHE_HOME=${turnHome}/state/cache`
+      : '');
   const shim = host.policy.unitExec.shim as string;
   const runtime = host.policy.unitExec.runtime as string;
   const binds = proxy

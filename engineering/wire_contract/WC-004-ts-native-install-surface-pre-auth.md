@@ -31,3 +31,5 @@
 - **Gate reconciliation:** `test/unit/install_gate.test.ts` (mount + sealed-404
   + IP + pre-auth + record-step 401) and `test/unit/security_fail_closed.test.ts`
   (sealed → 404). No parity gate diffs these actions — no re-harvest needed.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (whole: the pre-auth install surface is gone; a server that is not installed refuses to start (exit 78))

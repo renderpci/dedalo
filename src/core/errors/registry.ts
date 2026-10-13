@@ -664,6 +664,21 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 	},
+	// The export's CONSUMER held control past the selection cursor's idle window
+	// (EXPORT_CURSOR_IDLE_MS, selection_cursor.ts) without pulling — an NDJSON
+	// client that stopped reading — so the cursor and its pooled connection were
+	// released. Not the user's Stop (export.cancelled) and not the lane deadline:
+	// the producer's own work never counts toward it. `idle_s` = the window.
+	'export.consumer_idle': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_export_consumer_idle',
+		message: 'The export was stopped because nothing read it for too long',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+		details_keys: ['idle_s'],
+	},
 	// The export ran past its lane's deadline (DEDALO_JOB_DEADLINE_EXPORT_S — an
 	// operator limit, not the user's stop) and was aborted; the partial spool is
 	// deleted. `limit`: the same selection will hit it again — export fewer
@@ -769,6 +784,23 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: true,
 		details_keys: ['limit'],
+	},
+	// Process-wide admission on the export selection cursors (PERF-1): every
+	// slot (max(1, floor(DB_POOL_MAX/4))) holds an open materialized selection,
+	// so a new export would take a pooled connection the request path needs.
+	// A REQUEST-path open is refused BEFORE any connection is reserved; a
+	// background export the lane admitted QUEUES for a slot instead (never this
+	// code) — except with DB_POOL_MAX=1, where no slot can exist. Retryable — a
+	// running export frees its slot when it ends.
+	'export.busy': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_export_busy',
+		message: 'The server is already running as many exports as it allows at once',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+		details_keys: ['slots'],
 	},
 	// Unknown / expired / not-yours / disallowed name — ONE answer for all of
 	// them, so the store never tells a caller which of the four it was.
@@ -1297,6 +1329,214 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: true,
 	},
+	/**
+	 * ONE CODE PER SITE-BUILDER REFUSAL (WIRE-MAP, 2026-10-11 —
+	 * engineering/wire_contract/WC-2026-10-11-site-builder-reason-codes.md). The browser
+	 * renders the LABEL, so a refusal that shares a code shares a sentence: the daemon's
+	 * machine reasons (tools/tool_sitebuilder/server/wire.ts DAEMON_REASON_CODES) and the
+	 * engine's own pre-daemon refusals each get theirs, and so does every reason a TURN's
+	 * error event or the SSE responder's frame carries (wire.ts TURN_EVENT_REASON_CODES,
+	 * WC-2026-10-11-site-builder-turn-error-frames). Registry text is engine-authored; no
+	 * throw carries prose (the daemon's `detail` is log-only).
+	 */
+	'site_builder.slug_exists': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_site_builder_slug_exists',
+		message: 'A site with that slug already exists',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.workspace_exists': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_site_builder_workspace_exists',
+		message: 'A non-site directory stands at the workspace path',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.domain_taken': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_site_builder_domain_taken',
+		message: 'Another site already answers on that domain',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.webspace_unavailable': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_site_builder_webspace_unavailable',
+		message: 'The site has no provisioned webspace',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.no_build': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_site_builder_no_build',
+		message: 'There is no successful build to publish',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.not_running': {
+		category: 'conflict',
+		status: 409,
+		label_key: 'error_site_builder_not_running',
+		message: 'No agent turn is running for this site',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.site_limit': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_site_builder_site_limit',
+		message: 'The site builder has reached its site limit',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.disk_quota': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_site_builder_disk_quota',
+		message: 'The site is over its disk quota',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.capacity': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_site_builder_capacity',
+		message: 'Too many agent turns are running on the site builder',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	'site_builder.invalid_slug': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_site_builder_invalid_slug',
+		message: 'Invalid site slug',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.invalid_id': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_site_builder_invalid_id',
+		message: 'Invalid session or build id',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.name_required': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_site_builder_name_required',
+		message: 'A site name is required',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.domain_required': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_site_builder_domain_required',
+		message: 'A site domain is required',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.text_required': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_site_builder_text_required',
+		message: 'A prompt or message is required (at most 32 KiB)',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.confirmation_required': {
+		category: 'caller',
+		status: 400,
+		label_key: 'error_site_builder_confirmation_required',
+		message: 'The action must be confirmed',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.not_permitted': {
+		category: 'permission',
+		status: 403,
+		label_key: 'error_site_builder_not_permitted',
+		message: 'The site builder requires developer or administrator permission',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.not_session_owner': {
+		category: 'permission',
+		status: 403,
+		label_key: 'error_site_builder_not_session_owner',
+		message: 'The agent session belongs to another user',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.turn_timeout': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_turn_timeout',
+		message: 'The agent turn timed out',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	'site_builder.turn_interrupted': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_turn_interrupted',
+		message: 'The agent turn was stopped',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: true,
+	},
+	'site_builder.turn_setup_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_turn_setup_failed',
+		message: 'The agent turn could not be prepared',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.agent_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_agent_failed',
+		message: 'The agent exited with an error',
+		severity: 'warn',
+		disclosure: 'operator',
+		retryable: false,
+	},
+	'site_builder.replay_failed': {
+		category: 'unavailable',
+		status: 503,
+		label_key: 'error_site_builder_replay_failed',
+		message: 'The session history could not be read back',
+		severity: 'error',
+		disclosure: 'operator',
+		retryable: false,
+	},
 
 	// ── publication host (src/core/publication_host/ — PUBLICATION_HOST_SPEC §2) ──
 	// The engine's side of its paired publication-host agents. One code per thing the panel
@@ -1731,7 +1971,8 @@ export const ERROR_REGISTRY = {
 	// a vision call — is RESERVED against the caller's per-day ledger
 	// (security/ai_spend.ts) before the provider is touched. `limit` (429): the
 	// same request succeeds after `window_resets_at` (the next UTC midnight) or
-	// once an administrator raises the DEDALO_AI_USER_DAILY_* budget.
+	// once an administrator raises the user's or profile's AI limits (users
+	// dd692-695, profiles dd696-699; an empty user value inherits the profile's).
 	'ai.budget_exhausted': {
 		category: 'limit',
 		status: 429,
@@ -1741,54 +1982,21 @@ export const ERROR_REGISTRY = {
 		disclosure: 'operator',
 		retryable: false,
 		details_keys: ['budget_kind', 'limit', 'window_resets_at'],
-		hint: 'Stop: the user has no AI budget left today. It resets at window_resets_at (UTC); an administrator can raise the DEDALO_AI_USER_DAILY_* budgets.',
+		hint: "Stop: the user has no AI budget left today. When limit > 0 it resets at window_resets_at (UTC); limit 0 means no limit is set (or an explicit 0), which no reset changes. Either way only an administrator setting or raising the user's or profile's AI limits admits more.",
 	},
-	// The ledger could not be read or written (its engine ontology is missing, or
-	// the database failed): FAIL CLOSED — an unmetered spend is never admitted.
+	// The ledger or the limits could not be read, or the ledger written (their
+	// master ontology nodes are missing or damaged, or the database failed):
+	// FAIL CLOSED — an unmetered spend is never admitted.
 	'ai.budget_unavailable': {
 		category: 'unavailable',
 		status: 503,
 		label_key: 'error_ai_budget_unavailable',
-		message: 'The AI usage ledger is unavailable, so no AI request is admitted (see server logs)',
+		message:
+			'The AI usage ledger or the AI limits are unavailable, so no AI request is admitted (see server logs)',
 		severity: 'error',
 		disclosure: 'operator',
 		retryable: true,
-		hint: 'Retry later; if it persists, the server log names why the AI usage ledger cannot be used.',
-	},
-
-	// ── install wizard ──────────────────────────────────────────────────────
-	'install.unknown_step': {
-		category: 'caller',
-		status: 400,
-		label_key: 'error_install_unknown_step',
-		message: 'Unknown install step',
-		severity: 'warn',
-		disclosure: 'operator',
-		retryable: false,
-	},
-	'install.not_reachable': {
-		category: 'not_found',
-		status: 404,
-		label_key: 'error_install_not_reachable',
-		message: 'The installer is not reachable on an installed system',
-		severity: 'info',
-		disclosure: 'operator',
-		retryable: false,
-	},
-	'install.ip_denied': {
-		category: 'permission',
-		status: 403,
-		label_key: 'error_install_ip_denied',
-		message: 'The installer is not allowed from this address',
-		severity: 'warn',
-		disclosure: 'operator',
-		retryable: false,
-		// The address the engine SAW (the trusted X-Forwarded-For hop). Behind a
-		// container proxy that is never what the operator would guess (Docker
-		// Desktop's 192.168.65.1, a bridge gateway), and without it the refusal
-		// was unactionable (WC-2026-10-08-install-ip-denied-names-address).
-		// Telling a caller its own address discloses nothing.
-		details_keys: ['client_address'],
+		hint: 'Retry later; if it persists, the server log names why the AI usage ledger or the AI limits cannot be used.',
 	},
 
 	// ── maintenance widgets ─────────────────────────────────────────────────
@@ -2013,12 +2221,12 @@ export const ERROR_REGISTRY = {
 	},
 
 	// --- install-update-tools (P1 sweep) -----------------------------------
-	// The install surface is PRE-AUTH and has NO label catalog (a fresh box has
-	// no ontology and the wizard renders `msg` verbatim), so these three codes
-	// are `public`: the refusing step states the exact reason as `publicMessage`
-	// and the compat mirror puts it back on `msg` where render_installer.js
-	// reads it. Their registry messages are readable ALONE, for the wire a
-	// non-wizard caller (the CLI, curl) sees.
+	// The installer runs with NO label catalog (a fresh box has no ontology),
+	// so these codes are `public`: the refusing step states the exact reason as
+	// `publicMessage` (core/install/refuse.ts), which is what the terminal
+	// installer prints. Their registry messages are readable ALONE. Their wire
+	// door is Maintenance › add_hierarchy (install_hierarchies), the one install
+	// operation a running server still performs.
 	'install.invalid_input': {
 		category: 'caller',
 		status: 400,
@@ -2052,7 +2260,7 @@ export const ERROR_REGISTRY = {
 	// (or the operator's replacement file) behind it is not — same posture as
 	// ontology.invalid_node. Public: the refusing reader names the JSON path and
 	// the rule it broke (never a secret: the file is a vendored release asset),
-	// and the wizard renders that sentence verbatim.
+	// and the installer prints that sentence verbatim.
 	'install.manifest_invalid': {
 		category: 'unavailable',
 		status: 503,
@@ -2420,6 +2628,21 @@ export const ERROR_REGISTRY = {
 		disclosure: 'public',
 		retryable: false,
 		hint: 'The search filter is malformed. Rebuild the SQO from the section schema and retry.',
+	},
+	// A CLIENT page window was not served as sent (READ-4): the limit was absent
+	// on a door whose absent limit used to mean "all", or a sent limit/offset was
+	// clamped to the ceiling / past-the-end. A NOTICE (ok:true + notices[]),
+	// never thrown: the answer is one bounded page. `door` = the door,
+	// `requested` = the window as sent, `applied` = the window served.
+	'search.page_clamped': {
+		category: 'limit',
+		status: 429,
+		label_key: 'error_search_page_clamped',
+		message: 'The list was cut to one page; page through it to see the rest',
+		severity: 'info',
+		disclosure: 'operator',
+		retryable: false,
+		details_keys: ['door', 'requested', 'applied'],
 	},
 	'search.index_unavailable': {
 		category: 'unavailable',
@@ -2879,7 +3102,7 @@ export const EXTERNAL_ERROR_KINDS = [
  * strings that appear in today's `errors: ['…']` arrays, MCP `err()` codes,
  * identify `decline()` codes and tool-dispatch tokens. Where one old token
  * meant two things (`unauthorized` = permission in tools/security, = not
- * logged in install/engine.ts) the map records the DOMINANT meaning; the
+ * logged in the retired install router) the map records the DOMINANT meaning; the
  * sweeper picks the other by hand and says so.
  */
 export const LEGACY_TOKEN_MAP: Readonly<Record<string, ErrorCode>> = {
@@ -2922,7 +3145,6 @@ export const LEGACY_TOKEN_MAP: Readonly<Record<string, ErrorCode>> = {
 	invalid_action: 'diffusion.invalid_action',
 	already_draining: 'diffusion.already_draining',
 	// install / maintenance
-	unknown_step: 'install.unknown_step',
 	store_missing: 'maintenance.store_missing',
 	invalid_fn_action: 'maintenance.invalid_fn_action',
 	// tools dispatch / jobs

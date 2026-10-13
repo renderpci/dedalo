@@ -149,3 +149,5 @@ Everything this entry describes is gone:
 `ddengine11` is listed as `retired` in `engine_ontology.json`, so the engine
 ontology door prunes it from installs that materialized it. Its gate legs
 moved to the gates named in the new entry.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-ddengine-removed (the engine-owned ddengine TLD: removed, the engine owns no ontology)

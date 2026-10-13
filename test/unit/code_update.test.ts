@@ -18,6 +18,7 @@
  */
 
 import { afterAll, beforeAll, describe, expect, mock, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
 	chmodSync,
@@ -43,6 +44,7 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import { confirmBootedCodeUpdate } from '../../src/core/update/boot_confirm.ts';
 import { UPDATE_CATALOG } from '../../src/core/update/catalog.ts';
 import { buildCodeUpdateInfo, linearUpgradeTargets } from '../../src/core/update/code_manifest.ts';
+import { restoreCode } from '../../src/core/update/code_restore.ts';
 import {
 	acquireRunLockOrRefuse,
 	assertLinearUpgrade,
@@ -52,6 +54,7 @@ import {
 	preValidateArchive,
 	refuseUnaccountedLiveEntries,
 	type UpdatePhaseFrame,
+	unwritableSwapDirs,
 	updateCode,
 } from '../../src/core/update/code_update.ts';
 import { INSTALL_STAMP_PATH } from '../../src/core/update/install_stamp.ts';
@@ -1945,4 +1948,202 @@ describe('the publication manifest is written at extract (publication host L1)',
 			unmockUpdateEnv();
 		}
 	}, 60000);
+});
+
+/*
+ * THE INSTANCE-DIR RULE (2026-10-12, owner decision): the code tree lives in an
+ * INSTANCE DIR the service user owns (`/home/my_domain.org/dedalo/master_dedalo`,
+ * the installer's `/home/ded_<i>/dedalo`), and every rename the update, the in-app
+ * restore and the supervisor-side rollback make stays INSIDE it — the instance
+ * dir's PARENT may be root-owned. Driven for real: the full update chain, the
+ * restore, and deploy/dedalo-code-rollback.sh EXECUTED, against a scratch
+ * instance dir whose parent is chmod 0555. Anti-vacuity: the parent is PROVEN
+ * unwritable first (a root run would make this whole block meaningless).
+ */
+describe('the instance-dir rule: an update, a restore and a rollback never write the parent', () => {
+	const ROLLBACK_SCRIPT = join(import.meta.dir, '..', '..', 'deploy', 'dedalo-code-rollback.sh');
+
+	/** A scratch `<parent>/instance/master_dedalo` + `<parent>/instance/backups/code`. */
+	function instanceLayout(name: string): {
+		parent: string;
+		instance: string;
+		targetRoot: string;
+		backupRoot: string;
+	} {
+		const parent = mkdtempSync(join(ROOT, `instance_rule_${name}_`));
+		const instance = join(parent, 'instance');
+		const targetRoot = join(instance, 'master_dedalo');
+		buildLiveTree(targetRoot);
+		// bootable as a restore point (restorePointIsBootable): node_modules travels with it
+		mkdirSync(join(targetRoot, 'node_modules', 'dep'), { recursive: true });
+		writeFileSync(join(targetRoot, 'node_modules', 'dep', 'index.js'), '// old dep');
+		// …and declares its version (a restore point must say what it holds)
+		mkdirSync(join(targetRoot, 'src', 'core', 'update'), { recursive: true });
+		writeFileSync(
+			join(targetRoot, 'src', 'core', 'update', 'version.ts'),
+			`export const DEDALO_VERSION_TRIPLE = Object.freeze([${DEDALO_VERSION_TRIPLE.join(', ')}]);\n`,
+		);
+		return { parent, instance, targetRoot, backupRoot: join(instance, 'backups', 'code') };
+	}
+
+	/** Lock the parent (root-owned in production), run, and ALWAYS unlock it. */
+	async function withLockedParent<T>(parent: string, run: () => Promise<T>): Promise<T> {
+		chmodSync(parent, 0o555);
+		try {
+			// anti-vacuity: the lock bites for THIS process (a root run is red here)
+			expect(() => writeFileSync(join(parent, 'probe'), '')).toThrow();
+			return await run();
+		} finally {
+			chmodSync(parent, 0o755);
+		}
+	}
+
+	async function update(
+		origin: string,
+		sha: string,
+		targetRoot: string,
+		backupRoot: string,
+	): Promise<unknown> {
+		return updateCode(
+			{ file: { version: '7.0.1', url: `${origin}/7.0.1.zip`, sha256: sha }, waive_backup: true },
+			SUPERUSER,
+			pipelineSeams({ targetRoot, backupRoot }),
+		);
+	}
+
+	test('update, then the supervisor-side rollback (the script, executed), with a 0555 parent', async () => {
+		expect(zipAvailable).toBe(true); // no silent early return (gate_vacuity_tripwire): no zip CLI = red here too
+		const layout = instanceLayout('rollback');
+		const zipPath = await buildReleaseZip(join(layout.parent, 'release_src'));
+		rmSync(join(layout.parent, 'release_src', 'stage'), { recursive: true, force: true });
+		const sha = createHash('sha256').update(readFileSync(zipPath)).digest('hex');
+		const server = Bun.serve({ port: 0, fetch: () => new Response(readFileSync(zipPath)) });
+		const parentBefore = readdirSync(layout.parent).sort();
+		try {
+			mockUpdateEnv(`http://localhost:${server.port}`);
+			await withLockedParent(layout.parent, async () => {
+				const out = (await update(
+					`http://localhost:${server.port}`,
+					sha,
+					layout.targetRoot,
+					layout.backupRoot,
+				)) as { ok: boolean };
+				expect(out.ok).toBe(true);
+				expect(existsSync(join(layout.targetRoot, 'src', 'new_file.ts'))).toBe(true);
+				// the supervisor-side rollback, as the rollback unit runs it (no restart)
+				const run = spawnSync(
+					'bash',
+					[
+						ROLLBACK_SCRIPT,
+						'--no-restart',
+						'--app-dir',
+						layout.targetRoot,
+						'--backup-root',
+						layout.backupRoot,
+					],
+					{ encoding: 'utf8' },
+				);
+				expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0);
+				expect(readFileSync(join(layout.targetRoot, 'package.json'), 'utf8')).toBe(
+					'{"name":"old"}',
+				);
+				expect(readdirSync(layout.backupRoot).some((n) => n.startsWith('failed_'))).toBe(true);
+				const sentinel = JSON.parse(
+					readFileSync(join(layout.backupRoot, 'last_code_update.json'), 'utf8'),
+				) as Record<string, unknown>;
+				expect(sentinel.status).toBe('rolled_back');
+			});
+			// nothing was created, renamed or removed beside the instance dir
+			expect(readdirSync(layout.parent).sort()).toEqual(parentBefore);
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	}, 60000);
+
+	test('update, then the in-app restore of the restore point it made, with a 0555 parent', async () => {
+		expect(zipAvailable).toBe(true); // no silent early return (gate_vacuity_tripwire): no zip CLI = red here too
+		const layout = instanceLayout('restore');
+		const zipPath = await buildReleaseZip(join(layout.parent, 'release_src'));
+		rmSync(join(layout.parent, 'release_src', 'stage'), { recursive: true, force: true });
+		const sha = createHash('sha256').update(readFileSync(zipPath)).digest('hex');
+		const server = Bun.serve({ port: 0, fetch: () => new Response(readFileSync(zipPath)) });
+		const parentBefore = readdirSync(layout.parent).sort();
+		try {
+			mockUpdateEnv(`http://localhost:${server.port}`);
+			await withLockedParent(layout.parent, async () => {
+				const out = (await update(
+					`http://localhost:${server.port}`,
+					sha,
+					layout.targetRoot,
+					layout.backupRoot,
+				)) as { ok: boolean };
+				expect(out.ok).toBe(true);
+				const point = readdirSync(layout.backupRoot).find((n) => n.startsWith('dedalo_'));
+				expect(point).toBeDefined();
+				// the release's tree is not bootable as a point without node_modules
+				mkdirSync(join(layout.targetRoot, 'node_modules'), { recursive: true });
+				const restored = await restoreCode({ name: point, confirm_downgrade: true }, SUPERUSER, {
+					targetRoot: layout.targetRoot,
+					backupRoot: layout.backupRoot,
+					restart: () => {},
+					supervised: true,
+					smokeBoot: async () => {},
+					channel: 'tree_swap',
+				});
+				expect(restored.ok).toBe(true);
+				expect(readFileSync(join(layout.targetRoot, 'package.json'), 'utf8')).toBe(
+					'{"name":"old"}',
+				);
+			});
+			expect(readdirSync(layout.parent).sort()).toEqual(parentBefore);
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	}, 60000);
+
+	test('a layout that needs the parent refuses BEFORE the download, naming the directory', async () => {
+		// (1) the code tree directly under the root-owned dir (the pre-2026-10-12
+		// hand-built /opt/dedalo/master_dedalo); (2) a backup root beside the
+		// instance dir. Both used to download, install and smoke boot, then die at
+		// the first rename with EACCES.
+		const layout = instanceLayout('refuse');
+		const looseTree = join(layout.parent, 'master_dedalo');
+		buildLiveTree(looseTree);
+		let fetched = 0;
+		const server = Bun.serve({
+			port: 0,
+			fetch: () => {
+				fetched += 1;
+				return new Response('not a zip');
+			},
+		});
+		const sha = 'a'.repeat(64);
+		try {
+			mockUpdateEnv(`http://localhost:${server.port}`);
+			await withLockedParent(layout.parent, async () => {
+				const loose = await refusalOf(
+					update(`http://localhost:${server.port}`, sha, looseTree, layout.backupRoot),
+				);
+				expect(loose.code).toBe('update.refused');
+				expect(loose.message).toContain(`instance directory ${layout.parent}`);
+				const beside = await refusalOf(
+					update(
+						`http://localhost:${server.port}`,
+						sha,
+						layout.targetRoot,
+						join(layout.parent, 'backups', 'code'),
+					),
+				);
+				expect(beside.code).toBe('update.refused');
+				expect(beside.message).toContain(`code-backup root ${layout.parent}`);
+			});
+			expect(fetched).toBe(0);
+			expect(unwritableSwapDirs(layout.targetRoot, layout.backupRoot)).toEqual([]);
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	});
 });

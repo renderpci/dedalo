@@ -148,7 +148,11 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 	 * The three kinds, and what each one CLAIMS:
 	 *   'door'   — reached with a REQUEST principal and emits the hits (their
 	 *              existence, labels, counts or content) back to that caller.
-	 *              ⇒ the source MUST call scopeInverseReferenceHits / scopeRecordHits.
+	 *              ⇒ the source MUST call scopeInverseReferenceHits / scopeRecordHits,
+	 *              or anyRowInScope — the SET-SHAPED twin for a door that asks one
+	 *              question of an unbounded tail in SQL (READ-4's past-the-page
+	 *              probe); its record-by-record equality with the hit-list door is
+	 *              an outcome leg of client_page_doors_native.
 	 *   'system' — no request principal in the path, or the walk must see EVERY
 	 *              reference to be correct (integrity rewrites, propagation).
 	 *              ⇒ the source MUST NOT scope; the reason is recorded.
@@ -158,7 +162,7 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 	 *              Zero is the target; the gate keeps the count visible instead of
 	 *              letting an unreviewed path pass as if it had been cleared.
 	 */
-	const SCOPE_CALL = /scope(InverseReferenceHits|RecordHits)\s*\(/;
+	const SCOPE_CALL = /scope(InverseReferenceHits|RecordHits)\s*\(|anyRowInScope\s*\(/;
 
 	type DoorKind = 'door' | 'system' | 'open';
 	interface DoorEntry {
@@ -196,6 +200,10 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 			kind: 'door',
 			why: 'the thesaurus indexation grid (2026-08 test6813 beta §5.4); the read-grant half of its scoping diverges from PHP — WC-2026-08-09-indexation-grid-read-grant-scope',
 		},
+		'src/core/section/read_facade.ts': {
+			kind: 'door',
+			why: "the 'defaulted' search.page_clamped probe of get_relation_list / related_search (READ-4): whether ANY record past the page is the caller's decides a notice the caller sees, so the tail (findInverseReferencesPast) is asked through anyRowInScope — an unscoped probe is an existence/count oracle",
+		},
 		'tools/tool_posterframe/server/index.ts': {
 			kind: 'door',
 			why: 'get_ar_identifying_image: descriptors of the records referencing the target (TOOLS-08, 2026-07-28 audit)',
@@ -228,6 +236,10 @@ describe('AUTHZ-05: inverse-reference scan is principal-scoped at the user-facin
 		'tools/tool_time_machine/server/bulk_revert_records.ts': {
 			kind: 'system',
 			why: 'the bulk revert’s D2 safety check (isReferenced, inside the delete’s transaction): a born record is deleted only when NOTHING links to it — a link the reverting operator cannot see still makes the delete unsafe, so the check must see every one; the hits never leave the check (only the yes/no decides keep-or-delete)',
+		},
+		'src/core/relations/descendant_walk.ts': {
+			kind: 'system',
+			why: 'the PERF-6 subtree edge fetch: the children engine’s inverse walk in ONE recursive statement over matrix_relation_index (it names the scan it replaces); principal-free for the same reason as children.ts — dropping an intermediate would orphan its subtree rather than hide it',
 		},
 		'src/core/relations/related.ts': {
 			kind: 'system',
@@ -314,16 +326,14 @@ describe('AUTHZ-04: single-session policy is wired into login (opt-in)', () => {
 });
 
 describe('AUTHZ-06: component_filter project datalist is narrowed per user', () => {
-	test('getUserAuthorizedProjects narrows by principal and fails closed unanchored (source invariant)', () => {
-		const src = read('src/core/relations/filter_projects.ts');
-		// Value-level deny for an unanchored call (no principal → no projects).
-		expect(src).toMatch(/if \(principal === undefined\) return \[\]/);
-		// Non-admins are intersected with their own dd170 projects; admins keep all.
-		expect(src).toContain('getUserProjects(principal.userId)');
-		expect(src).toMatch(/principal\.isGlobalAdmin\s*\?\s*null/);
-		// The full-catalog SELECT is filtered by the authorized set.
-		expect(src).toMatch(/allowedIds === null \|\| allowedIds\.has\(id\)/);
-	});
+	// The per-user NARROWING itself is held by two outcome gates on the suite DB,
+	// not here: filter_projects_scope_native (non-admin = exactly its dd170 set,
+	// admin = the catalog, the datalist door, unanchored = []) and
+	// filter_projects_membership_native (a membership change is followed). Both
+	// are held by their registration: rows in engineering/TRIPWIRES.md and
+	// scripts/verify.ts TRIPWIRES (ci_workflow_tripwire keeps the two equal and
+	// every listed file on disk). A pointer that greps their test titles here
+	// would be a spelling pin, red on a rename, green on a gutted leg.
 
 	test('the component get_data facade self-gates at the component level (defense-in-depth)', () => {
 		// Belt-and-braces with the handler's Gate A: the get_data facade must not

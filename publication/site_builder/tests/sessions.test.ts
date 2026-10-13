@@ -450,3 +450,57 @@ describe('what a turn is bounded by', () => {
     expect(getSessionState('bloated').state).not.toBe('running');
   });
 });
+
+describe('G-W2 — the session runner’s own catch stores a REASON, never the thrown sentence', () => {
+  const SENTINEL = 'ZZ_RUNNER_PROSE_4b1d /srv/secret/path EACCES';
+
+  /** A driver whose event stream throws mid-turn (a store or driver fault, as the runner sees it). */
+  function throwingDriver(thrown: Error): AgentDriver {
+    return {
+      id: 'claude_code',
+      capabilities: { resume: true, mcpHttp: true, reportsFileChanges: true },
+      async detect() {
+        return { id: 'claude_code', binPath: 'fake', version: '1.0.0' };
+      },
+      startTurn(): AgentProcess {
+        const events = (async function* (): AsyncIterable<AgentEvent> {
+          yield { type: 'text', text: 'working…' };
+          throw thrown;
+        })();
+        return { pid: 4242, events, async interrupt() {} };
+      },
+    };
+  }
+
+  test('a plain Error mid-turn → {reason:"turn_failed"} in the session log, no message, no prose; the turn ends "error"', async () => {
+    await makeSite('runnercatch', 'Runner catch');
+    __setTestDriver('claude_code', throwingDriver(new Error(SENTINEL)));
+    const { session_id } = await startSession('runnercatch', 'go');
+    const events = await collectStream(sessionEventStream('runnercatch', session_id, -1));
+    const errors = events.map(e => e.body).filter(b => b.type === 'error') as unknown as Array<Record<string, unknown>>;
+    expect(errors.map(b => ({ reason: b.reason, message: Object.hasOwn(b, 'message') }))).toEqual([{ reason: 'turn_failed', message: false }]);
+    expect(JSON.stringify(await replayEvents('runnercatch', session_id, -1)).includes('ZZ_RUNNER_PROSE')).toBe(false);
+    expect(events.at(-1)?.body).toMatchObject({ type: 'turn_end', state: 'error' });
+  });
+
+  test('a daemon refusal mid-turn keeps ITS reason; a cast reason outside the list falls back to turn_failed', async () => {
+    const { ConflictError } = await import('../src/errors');
+    await makeSite('runnerreason', 'Runner reason');
+    __setTestDriver('claude_code', throwingDriver(new ConflictError(SENTINEL, 'site_deleting')));
+    const first = await startSession('runnerreason', 'go');
+    const firstErrors = (await collectStream(sessionEventStream('runnerreason', first.session_id, -1)))
+      .map(e => e.body)
+      .filter(b => b.type === 'error') as unknown as Array<Record<string, unknown>>;
+    __setTestDriver('claude_code', throwingDriver(new ConflictError(SENTINEL, 'zz_unknown' as never)));
+    await makeSite('runnercast', 'Runner cast');
+    const second = await startSession('runnercast', 'go');
+    const secondErrors = (await collectStream(sessionEventStream('runnercast', second.session_id, -1)))
+      .map(e => e.body)
+      .filter(b => b.type === 'error') as unknown as Array<Record<string, unknown>>;
+    expect({ first: firstErrors.map(b => b.reason), second: secondErrors.map(b => b.reason) }).toEqual({
+      first: ['site_deleting'],
+      second: ['turn_failed'],
+    });
+    expect(JSON.stringify([firstErrors, secondErrors]).includes('ZZ_RUNNER_PROSE')).toBe(false);
+  });
+});

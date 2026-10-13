@@ -251,9 +251,11 @@ interface Entrypoint {
 
 /** Closed classification of package.json script KEY prefixes. */
 const TOOLING_SCRIPT_PREFIXES = new Set([
-	// `seed:build` (2026-10-09) compiles THIS REPOSITORY's vendored install seed
-	// from its sources (src/core/install/seed_build.ts) — a build artefact a
-	// developer commits, like `changelog`; it touches no installation's data.
+	// `seed:build` (2026-10-09, installer unification A2) compiles THIS
+	// REPOSITORY's vendored install seed from its sources
+	// (src/core/install/seed_build.ts) — a build artefact a developer commits,
+	// like `changelog`; it touches no installation's data. Its outcome is gated
+	// by install_seed_drift_tripwire + install_seed_manifest_tripwire.
 	'seed',
 	'test',
 	'ci',
@@ -299,12 +301,14 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 	// baselines and remotes, never on an installation.
 	'baselines',
 	'push',
-	// `seed:build` (2026-10-09, installer unification A2) regenerates THIS
-	// REPOSITORY's install seed (install/db/dedalo_install.pgsql.gz + its sidecar)
-	// on a scratch database it creates and drops — a repository artifact, like
-	// `changelog`; it never touches an installation. Its outcome is gated by
-	// install_seed_drift_tripwire (the committed bytes vs the sidecar).
-	'seed',
+	// `drill:install-host` (2026-10-12, terminal installer phase 4) is an OPT-IN
+	// developer drill: it runs the installer's host steps inside a DISPOSABLE
+	// privileged container it creates and removes (scripts/install_host_drill.ts;
+	// no tier runs it, and tier_wiring_tripwire's census walks test:* / ci:* only,
+	// so nothing holds its wiring — run by hand). It never touches an
+	// installation — the operator's entrypoint is install.sh / the installer, not
+	// the drill — so it is tooling, like `test:update`'s drill.
+	'drill',
 ]);
 // `media:*` (2026-10-03, `media:publication-host-rules`) is OPERATOR-run: it renders the
 // web-server gate of a publication host serving an installation's media. Covered by

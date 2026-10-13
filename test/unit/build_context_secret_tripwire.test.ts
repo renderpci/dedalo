@@ -105,6 +105,9 @@ import {
 	trackedSecretShapedFiles,
 	trackedTopLevelEntries,
 } from '../../deploy/build_context.ts';
+import { tlsCommands as stackTlsCommands } from '../../src/core/install/host/stack/tls.ts';
+import { engineSourceFiles } from '../helpers/engine_source_corpus.ts';
+import { stackPlanCtx } from '../helpers/install_host_scratch.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const DOCKERIGNORE = readFileSync(join(ROOT, '.dockerignore'), 'utf-8');
@@ -517,9 +520,11 @@ describe('D. the OPS-01 paths are named in .dockerignore', () => {
 	}
 });
 
-describe('E. the files install.sh writes before `compose build` cannot enter the image', () => {
-	// install.sh: tls_local_ca (CA key + site key + chain), tls_existing (copied
-	// institutional key), generate_tls_conf, step 4 (.dedalo.env / POSTGRES_PASSWORD).
+describe('E. the files the installer writes before `compose build` cannot enter the image', () => {
+	// The docker/trial host steps (src/core/install/host/stack/): stack_tls (CA key +
+	// site key + chain, copied institutional key), stack_files (.dedalo.env with the
+	// generated POSTGRES_PASSWORD, compose.override.yaml, the generated nginx site),
+	// and the host run's record (.dedalo-install/: plan + state).
 	const assets = [
 		'deploy/certs',
 		'deploy/certs/dedalo-local-ca.key',
@@ -528,8 +533,12 @@ describe('E. the files install.sh writes before `compose build` cannot enter the
 		'deploy/certs/fullchain.pem',
 		'deploy/certs/dedalo-local-ca.srl',
 		'deploy/nginx.simple.generated.conf',
+		'deploy/nginx.docker.generated.conf',
 		'deploy/anything.generated.conf',
 		'.dedalo.env',
+		'compose.override.yaml',
+		'.dedalo-install/install.state.json',
+		'.dedalo-install/install.plan.json',
 		'.env',
 		'private/.env',
 		'media/1/5/original/coin.jpg',
@@ -869,16 +878,32 @@ describe('H. a key that already shipped in an image can be ROTATED', () => {
 		expect(Bun.spawnSync(['bash', '-n', ROTATE], { stderr: 'pipe' }).exitCode).toBe(0);
 	});
 
-	test('install.sh has ONE local-CA generator, and it is that script', () => {
-		expect(INSTALL_SH).toContain('deploy/dedalo-tls-rotate.sh');
-		expect(INSTALL_SH).toContain('--mode local-ca');
-		// The openssl invocations moved OUT of install.sh — two generators would
-		// drift in SAN, lifetime or permissions the first time one is fixed.
-		// Reported as booleans: a `not.toContain` failure prints the whole 600-line
-		// script, which buries the one fact the reader needs.
+	test('the installer has ONE local-CA generator, and it is that script', () => {
+		// Phase 4 (2026-10-12): the docker route's local CA is the TypeScript stack_tls
+		// step's — and it RUNS the rotation script (the argv it builds, read back).
+		const ctx = stackPlanCtx({
+			route: 'docker',
+			entity: 'museo',
+			server_name: 'dedalo.example.org',
+			tls_mode: 'local_ca',
+		});
+		const generators = stackTlsCommands(ctx)
+			.filter((command) => command.kind === 'exec')
+			.map((command) => (command.kind === 'exec' ? command.argv.join(' ') : ''))
+			.filter((line) => line.includes('dedalo-tls-rotate.sh'));
+		expect(generators.length).toBe(1);
+		expect(generators[0]).toContain('--mode local-ca');
+		// No second generator: no openssl invocation in the bootstrap or anywhere in the
+		// engine (the installer's host steps included) — two generators would drift in
+		// SAN, lifetime or permissions the first time one is fixed. The corpus is the
+		// registered engine lister (all of src/), never a subtree chosen here. Reported
+		// as booleans (a `not.toContain` failure prints the whole script).
+		const engineFiles = engineSourceFiles();
+		expect(engineFiles.length).toBeGreaterThan(500);
+		const hostSources = engineFiles.map((file) => readFileSync(file, 'utf-8')).join('\n');
 		expect({
-			req: INSTALL_SH.includes('openssl req'),
-			x509: INSTALL_SH.includes('openssl x509'),
+			req: INSTALL_SH.includes('openssl req') || /['"]req['"],\s*['"]-x509/.test(hostSources),
+			x509: INSTALL_SH.includes('openssl x509') || hostSources.includes("'x509'"),
 		}).toEqual({ req: false, x509: false });
 	});
 

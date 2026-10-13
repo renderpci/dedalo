@@ -86,6 +86,7 @@ describe('client CSRF handshake (Phase 7 gate, seam item 2)', () => {
 			error: { code: string; category: string };
 			action?: string;
 			csrf_token?: string;
+			session_user_id?: number;
 		};
 		// The exact shape data_manager keys its transparent retry on.
 		expect(rejectedBody.ok).toBe(false);
@@ -95,6 +96,9 @@ describe('client CSRF handshake (Phase 7 gate, seam item 2)', () => {
 		expect(rejectedBody.action).toBe('read');
 		expect(typeof rejectedBody.csrf_token).toBe('string');
 		expect((rejectedBody.csrf_token as string).length).toBeGreaterThan(0);
+		// ...and the token's OWNER beside it (WC-2026-10-11-session-user-beside-csrf-token):
+		// the client resends only when it is the page's own user
+		expect(rejectedBody.session_user_id).toBe(-1);
 
 		// 2. The single retry with the fresh token from the rejection MUST succeed.
 		const retried = await handleRequest(
@@ -114,6 +118,7 @@ describe('client CSRF handshake (Phase 7 gate, seam item 2)', () => {
 		// 3. Every successful response also carries the token (client refreshes
 		//    its cache from every response).
 		expect(retriedBody.csrf_token).toBe(getSession(token)?.csrfToken as string);
+		expect((retriedBody as { session_user_id?: number }).session_user_id).toBe(-1);
 	});
 
 	test('exempt actions work without any token (start bootstrap)', async () => {

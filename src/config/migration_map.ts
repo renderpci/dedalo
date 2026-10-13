@@ -813,9 +813,14 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_EXTERNAL_MAX_ENTRIES',
 	'DEDALO_EXTERNAL_ZENON_API_KEY',
 	// install
-	'DEDALO_INSTALL_ALLOWED_IPS',
-	'DEDALO_INSTALL_NO_RESTART',
 	'DEDALO_INSTALL_PRIVATE_DIR',
+	// The terminal installer's crash seam (2026-10-11): v6 had no resumable
+	// installer, so there is nothing for it to be a rename of.
+	'DEDALO_INSTALL_FAULT',
+	// The terminal installer's host-step seams (phase 4, 2026-10-12): a marked
+	// scratch root + recording runner, and the drill's probe CA. New in v7.
+	'DEDALO_INSTALL_HOST_ROOT',
+	'DEDALO_INSTALL_PROBE_CA_FILE',
 	// diffusion (the native engine)
 	'DEDALO_DIFFUSION_NATIVE',
 	'DEDALO_DIFFUSION_NATIVE_ELEMENTS',
@@ -891,12 +896,8 @@ export const NEW_IN_V7: readonly string[] = [
 	'DEDALO_AGENT_WRITE_SECTIONS',
 	'DEDALO_AGENT_SYSTEM_PROMPT_APPEND',
 	'DEDALO_AGENT_ALLOW_EXTERNAL_PROVIDER_DEFAULT',
-	// The per-user daily AI budgets (closure Step 3, TOOLS-4). No v6 equivalent —
-	// v6 metered no model spend.
-	'DEDALO_AI_USER_DAILY_RUNS',
-	'DEDALO_AI_USER_DAILY_TOKENS',
-	'DEDALO_AI_USER_DAILY_EMBED_QUERIES',
-	'DEDALO_AI_USER_DAILY_VISION',
+	// The per-user daily AI budget keys were removed 2026-10-12: the per-day AI limits are user /
+	// profile data (dd692-699), not config — and v6 had no such keys to migrate.
 	'DEDALO_MCP_USER_ID',
 	'DEDALO_MCP_ALLOW_WRITE',
 	'DEDALO_MCP_WRITE_SECTIONS',

@@ -23,7 +23,7 @@
  *    declared — an older server, or a vendored ontology.json that predates the
  *    field: installed alone, with a loud warning):
  *     · `main: 'ontology35'` → the ONTOLOGY closure (deps first, depth-first
- *       post-order; core and the engine-owned TLD are fixed and never followed);
+ *       post-order; core TLDs are fixed and never followed);
  *     · `main: 'hierarchy1'` → the THESAURUS set the install_hierarchies step
  *       imports + activates (a CORE hierarchy, `lg`, is activation-only and
  *       always done — never a dependency to install);
@@ -44,8 +44,8 @@
  *       an empty thesaurus).
  *  - PRECEDENCE per TLD: a local source > the vendored file > a server.
  *
- * describeOntologyCatalog is the ONE view of a catalog: the wizard's
- * get_ontology_catalog answers it and the CLI's --list-ontologies prints it.
+ * describeOntologyCatalog is the ONE view of a catalog: the installer's
+ * Ontologies screen shows it and --list-ontologies prints it.
  * Gates: test/unit/install_ontology_choice.test.ts (+ the plan parity tripwire,
  * vendored_ontology_closure_tripwire).
  */
@@ -78,13 +78,6 @@ export const ONTOLOGY_NOTE_LABELS: Readonly<Record<string, string>> = Object.fre
 	oh: 'installation_ontology_note_oh',
 	tch: 'installation_ontology_note_tch',
 });
-
-/**
- * The engine-owned TLD (engine_ontology.ts ENGINE_TLD — gated equal by
- * install_ontology_choice): materialized by the engine itself, never a choice,
- * never a dependency to install. Not imported: engine_ontology.ts reaches the db.
- */
-const ENGINE_OWNED_TLD = 'ddengine';
 
 const TLD_RE = /^[a-z]{2,}$/;
 
@@ -239,7 +232,7 @@ async function readVendoredInfo(): Promise<VendoredInfo> {
 /**
  * Read ONCE, at module load, asynchronously: the file is release content (~120 KB,
  * replaced only WITH the tree, and a code update restarts the process), and the
- * wizard's catalog routes are served from the one event loop — a synchronous
+ * server's routes are served from the one event loop — a synchronous
  * read per entry per call stalled every request (sync_io_on_request_path_tripwire).
  */
 const VENDORED_INFO: VendoredInfo = await readVendoredInfo();
@@ -475,11 +468,6 @@ export function ontologySourceView(source: OntologySource): OntologySourceView {
 
 // ── the closure ──────────────────────────────────────────────────────────────
 
-/** A TLD the closure never follows: core (the seed's) or engine-owned. */
-function isFixedTld(tld: string): boolean {
-	return isCoreOntologyTld(tld) || tld === ENGINE_OWNED_TLD;
-}
-
 interface ClosureWalk {
 	byTld: ReadonlyMap<string, OntologyCatalogEntry>;
 	label: string;
@@ -515,7 +503,7 @@ export function undeclaredWarning(entry: { tld: string; origin: OntologyOrigin }
  * optional.
  */
 function visitDependency(walk: ClosureWalk, tld: string, dependency: OntologyDependency): void {
-	if (isFixedTld(dependency.tld)) return;
+	if (isCoreOntologyTld(dependency.tld)) return;
 	if (walk.byTld.has(dependency.tld)) {
 		visitOntology(walk, dependency.tld);
 		return;
@@ -549,8 +537,7 @@ function visitOntology(walk: ClosureWalk, tld: string): void {
 
 /**
  * The `main: 'ontology35'` dependencies of `tld`: mandatory followed, optional
- * when accepted. A FIXED TLD (core / engine-owned — always installed from the
- * seed) is never put to the policy: it can be neither declined nor noted as
+ * when accepted. A CORE TLD (always installed from the seed) is never put to the policy: it can be neither declined nor noted as
  * "declined — not installed" (that note would be false).
  */
 function followOntologyDependencies(
@@ -559,7 +546,7 @@ function followOntologyDependencies(
 	dependencies: readonly OntologyDependency[],
 ): void {
 	const followed = dependencies.filter(
-		(item) => item.main === 'ontology35' && !isFixedTld(item.tld),
+		(item) => item.main === 'ontology35' && !isCoreOntologyTld(item.tld),
 	);
 	for (const dependency of followed) {
 		if (dependency.mandatory || walk.accept(dependency)) visitDependency(walk, tld, dependency);
@@ -674,8 +661,7 @@ function addHierarchyDependencies(
  * never listed: every install activates it. `declined` lists the ones the
  * policy refused, each with its `mandatory` flag (the caller warns for a
  * mandatory one — declinedFindings). Shared by the plan (catalog entries + the
- * vendored core), the wizard's install_hierarchies step (the installed
- * registry rows) and the catalog view.
+ * vendored core) and the catalog view.
  */
 export function collectHierarchyDependencies(
 	declarers: readonly DependencyDeclarer[],
@@ -764,8 +750,8 @@ export interface ClosureContext {
 
 /**
  * The install order of the chosen TLDs: the closure over their DECLARED
- * ONTOLOGY dependencies, deps first (depth-first post-order), core and
- * engine-owned TLDs skipped, cycles tolerated (first finish wins; the
+ * ONTOLOGY dependencies, deps first (depth-first post-order), core TLDs
+ * skipped, cycles tolerated (first finish wins; the
  * installer's re-derive pass settles them), an optional dependency followed
  * unless the policy declines it. Undeclared → warning; a chosen TLD or a
  * mandatory dependency the catalog does not offer → error (an optional one →
@@ -900,17 +886,20 @@ export function activeOntologyTldsOf(order: readonly string[]): string[] {
 }
 
 /**
- * The install request a written ACTIVE_ONTOLOGY_TLDS stands for (the wizard
- * path: persist_config wrote the key, the restarted process stages from it).
- * The closure of its domain part must be exactly that part — a hand-edited list
- * missing a declared dependency is refused, never silently extended.
+ * The install request a written ACTIVE_ONTOLOGY_TLDS stands for. The closure of
+ * its domain part must be exactly that part — a hand-edited list missing a
+ * declared dependency is refused, never silently extended. It is the INVERSE of
+ * activeOntologyTldsOf: no engine path reads the list back into a request, so its
+ * one purpose is the round-trip proof the gates run (install_plan_parity_tripwire,
+ * install_ontology_choice) — the list an install writes stands for exactly the
+ * request it staged.
  */
 export function ontologyRequestFromActive(
 	active: readonly string[],
 	catalog: OntologyCatalog,
 ): { request: OntologyInstallRequest | null; errors: string[] } {
 	const domain = [...new Set(active.map((tld) => tld.trim().toLowerCase()))].filter(
-		(tld) => tld !== '' && !isFixedTld(tld),
+		(tld) => tld !== '' && !isCoreOntologyTld(tld),
 	);
 	if (domain.length === 0) return { request: null, errors: [NONE_ERROR] };
 	// The written list IS the operator's choice: an optional dependency it does
@@ -964,14 +953,14 @@ function compareViewEntries(a: OntologyCatalogViewEntry, b: OntologyCatalogViewE
 	return byTypology !== 0 ? byTypology : a.tld.localeCompare(b.tld);
 }
 
-/** THE view of a catalog (wizard get_ontology_catalog ≡ CLI --list-ontologies). */
+/** THE view of a catalog (the Ontologies screen ≡ --list-ontologies). */
 export function describeOntologyCatalog(catalog: OntologyCatalog): OntologyCatalogView {
 	return {
 		source: ontologySourceView(catalog.source),
 		default: [...DEFAULT_DOMAIN_ONTOLOGIES],
 		core: [...CORE_ONTOLOGY_TLDS],
 		entries: catalog.entries
-			.filter((entry) => !isFixedTld(entry.tld))
+			.filter((entry) => !isCoreOntologyTld(entry.tld))
 			.map((entry) => viewEntry(entry, catalog))
 			.sort(compareViewEntries),
 		warnings: [...catalog.warnings],
@@ -1150,34 +1139,4 @@ export function mergeHierarchyDependencyLists(
 		}
 	}
 	return [...byTld.values()];
-}
-
-/**
- * What a POSTED thesaurus choice leaves out of the declared set — the wizard's
- * install_hierarchies step runs after the restart, without the plan, so it
- * re-derives the declared set (hierarchy_dependencies.ts) and reports here.
- * NOTHING is added and nothing refuses (owner decision 2026-10-10): the posted
- * list IS the operator's answer on every thesaurus, mandatory ones included
- * (the client pre-ticks them; unticking declines). A MANDATORY one left out →
- * a warning (recommendedThesaurusWarning: declined, or no hierarchy.json
- * entry); an optional one left out → nothing (an optional one without an
- * entry was already a plan warning at persist_config).
- */
-export function unmetHierarchyDependencies(
-	chosen: readonly string[],
-	dependencies: readonly HierarchyDependency[],
-	offered?: ReadonlySet<string>,
-): { warnings: string[] } {
-	const left = dependencies.filter((item) => item.mandatory && !chosen.includes(item.tld));
-	if (left.length === 0) return { warnings: [] };
-	const listed = offered ?? offeredHierarchyTlds();
-	return {
-		warnings: left.map((item) =>
-			recommendedThesaurusWarning(
-				item.tld,
-				item.dependants,
-				listed.has(item.tld) ? 'declined' : 'no_entry',
-			),
-		),
-	};
 }

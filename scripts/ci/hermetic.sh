@@ -98,7 +98,7 @@ export DEDALO_VENDOR_DATED_CHECKS=0
 # Stub the required-no-default config keys so the config catalog loads.
 # Externally provided values always win (: "${VAR:=default}" keeps them).
 # This list must cover EVERY require*() key in src/config/config.ts — pinned by
-# ci_workflow_tripwire rule 6. Values are the install-wizard sentinels: they only
+# ci_workflow_tripwire rule 6. Values are config-less sentinels: they only
 # have to parse, since no hermetic gate reads project data.
 : "${ENTITY:=ci_hermetic}"
 : "${DB_NAME:=ci_hermetic_no_db}"
@@ -189,6 +189,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/tier_assignment_tripwire.test.ts
 	test/unit/docs_current_engine_tripwire.test.ts
 	test/unit/docs_versioning_tripwire.test.ts
+	test/unit/docs_manual_install_tripwire.test.ts
 	test/unit/css_build_tripwire.test.ts
 	test/unit/css_token_duplication_tripwire.test.ts
 	test/unit/wire_contract_tripwire.test.ts
@@ -212,7 +213,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/human_write_scope_tripwire.test.ts
 	test/unit/rag_index_scope_tripwire.test.ts
 	test/unit/local_db_stores_tripwire.test.ts
-	test/unit/install_seal_tripwire.test.ts
+	test/unit/no_install_surface_tripwire.test.ts
 	# --- static-scan tier, same change: DB-less and previously ungated ---
 	test/unit/config_census_tripwire.test.ts
 	test/unit/config_docs_tripwire.test.ts
@@ -285,7 +286,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/docs_locator_shape_tripwire.test.ts
 	test/unit/external_config_narrowing_census.test.ts
 	test/unit/external_registry_totality_tripwire.test.ts
-	test/unit/install_ip_gate_tripwire.test.ts
+	test/unit/ip_allowlist.test.ts
 	test/unit/migration_shared_row_tripwire.test.ts
 	test/unit/release_archive_tripwire.test.ts
 	test/unit/release_root_entries_tripwire.test.ts
@@ -440,6 +441,50 @@ HERMETIC_TRIPWIRES=(
 	test/unit/image_update_channel_native.test.ts
 	test/unit/image_updater_host_native.test.ts
 	test/unit/image_registries_docs_tripwire.test.ts
+	# --- 2026-10-11 (terminal installer phase 1). DB-free (re-verified with DB_HOST=127.0.0.1
+	#     DB_PORT=59999: 55 pass / 0 fail): the plan's validation table, the executor over a
+	#     fake machine in a mkdtemp private dir, and the CLI spawned against an ABSENT database
+	#     (refused before any write, or by the preflight with nothing written).
+	test/unit/install_validation_upfront_tripwire.test.ts
+	test/unit/install_run_files_secret_tripwire.test.ts
+	# --- 2026-10-11 (READ-4 leg W, the wire page bound). DB-free (re-verified with
+	#     DB_HOST=127.0.0.1 DB_PORT=59999 DB_NAME=ci_hermetic_no_db: 3 pass / 0 fail): parses
+	#     hostile windows through rqoSchema for every action the dispatch registry lists.
+	test/unit/wire_sqo_page_bound_native.test.ts
+	# --- 2026-10-12 (terminal installer phase 2). DB-free (re-verified with DB_HOST=127.0.0.1
+	#     DB_PORT=59999 DB_NAME=ci_hermetic_no_db: 112 pass / 0 fail): the screen model over the vendored
+	#     catalogs + a mkdtemp local ontology fixture, the plain mode under a scripted prompter
+	#     and over fake terminal streams, the probe client over a recording spawn seam, and the
+	#     CLI spawned with a piped stdin (refused before any read or write).
+	test/unit/install_screen_model_tripwire.test.ts
+	test/unit/install_plain_parity_tripwire.test.ts
+	test/unit/install_plain_secrets_tripwire.test.ts
+	# --- 2026-10-12 (terminal installer phase 3, the OpenTUI full-screen UI). DB-free (re-verified
+	#     with DB_HOST=127.0.0.1 DB_PORT=59999 DB_NAME=ci_hermetic_no_db: 79 pass / 0 fail with the
+	#     frames + executor-events gates): OpenTUI's test renderer driven by keys, the UI on a real
+	#     PTY (Bun.spawn terminal; sh + stty), the CLI spawned with a scratch private dir, and the
+	#     native package from `bun install --frozen-lockfile` (absent = RED, never skipped).
+	test/unit/install_tui_parity_tripwire.test.ts
+	test/unit/install_tui_secrets_tripwire.test.ts
+	test/unit/install_tui_restore_tripwire.test.ts
+	test/unit/opentui_confinement_tripwire.test.ts
+	# --- 2026-10-12 (terminal installer phase 4, the host steps). DB-free (re-verified with
+	#     DB_HOST=127.0.0.1 DB_PORT=59999 DB_NAME=ci_hermetic_no_db): every production and
+	#     docker/trial host step through the real executor over a MARKED scratch root with the
+	#     RECORDING runner (no apt/dnf, systemctl, useradd, certbot, docker or web-server reload
+	#     executes), the kill/resume drill in child processes under the same seam, pure renders,
+	#     the CLI spawned under the seam with a module-registry dump, and install.sh run under sh
+	#     with stub uname/curl and zip/tar fixtures. + 2026-10-12 (install folder / service
+	#     account): install_host_identity_native, the same scratch seam and fake account table
+	#     (re-verified DB-less with the five host gates above it: 171 pass / 0 fail).
+	test/unit/install_host_steps_native.test.ts
+	test/unit/install_host_resume_drill.test.ts
+	test/unit/install_host_render_tripwire.test.ts
+	test/unit/install_host_privilege_tripwire.test.ts
+	test/unit/install_host_selinux_native.test.ts
+	test/unit/install_host_identity_native.test.ts
+	test/unit/install_stack_steps_native.test.ts
+	test/unit/install_bootstrap_sh.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"
@@ -703,12 +748,30 @@ sb_rc=0; wait "$sb_pid" || sb_rc=$?
 pa_rc=0; wait "$pa_pid" || pa_rc=$?
 ha_rc=0; wait "$ha_pid" || ha_rc=$?
 
+# Dumping a log is REPORTING, never a verdict. In the CI image the container's stdout
+# can turn non-blocking (a child sets O_NONBLOCK on the shared pipe), and a large dump
+# then fails with EAGAIN ("cat: write error: Resource temporarily unavailable"). A bare
+# `cat` under `set -e` aborted the tier there, before the three verdicts below were
+# read — three green daemons reported as one red tier (2026-10-12). Retry the dump, and
+# if stdout stays unwritable say so; the verdict stays the job's exit code.
+dump_log() {
+	dl_tries=0
+	until cat "$1"; do
+		dl_tries=$((dl_tries + 1))
+		if [ "$dl_tries" -ge 5 ]; then
+			echo "== hermetic: could not print $2's log (stdout not writable) — its verdict below is its exit code" || true
+			break
+		fi
+		sleep 1
+	done
+	rm -f "$1"
+}
 echo "---- publication/site_builder ----"
-cat "$sb_log" ; rm -f "$sb_log"
+dump_log "$sb_log" publication/site_builder
 echo "---- publication/server_api/v2 ----"
-cat "$pa_log" ; rm -f "$pa_log"
+dump_log "$pa_log" publication/server_api/v2
 echo "---- publication/host_agent ----"
-cat "$ha_log" ; rm -f "$ha_log"
+dump_log "$ha_log" publication/host_agent
 
 [ "$sb_rc" -eq 0 ] || { echo "== hermetic: RED in publication/site_builder (exit $sb_rc)"; daemon_status=1; }
 [ "$pa_rc" -eq 0 ] || { echo "== hermetic: RED in publication/server_api/v2 (exit $pa_rc)"; daemon_status=1; }

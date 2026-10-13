@@ -7,6 +7,9 @@
  * section-level check does not imply when the component carries its own dd774
  * grant. Both halves are enforced here — the declarative gate for the record,
  * the handler for the component pair.
+ *
+ * The answer is `{value, render_class}` (pdf_payload.ts — CLIENT-2, 2026-10-11;
+ * engineering/wire_contract/WC-2026-10-11-pdf-extractor-render-class.md).
  */
 
 import { DedaloError, ok } from '../../../src/core/errors/index.ts';
@@ -19,14 +22,11 @@ import {
 	type ToolServerModule,
 	toolRequestId,
 } from '../../../src/core/tools/module.ts';
+import { answerPdfPayload, pdfPayloadRequest } from './pdf_payload.ts';
 
 async function getPdfData(ctx: ToolActionContext): Promise<ToolResponse> {
-	const method = ctx.options.method === 'html' ? 'html' : 'text';
-	if (ctx.options.method !== 'text' && ctx.options.method !== 'html') {
-		throw new DedaloError('request.invalid_options', {
-			publicMessage: "method must be 'text' or 'html'",
-		});
-	}
+	// method allowlist + offset, refused before any permission or filesystem work.
+	const request = pdfPayloadRequest(ctx.options);
 	// PHP assert_tipo_permission(section_tipo, component_tipo, 1).
 	const componentTipo = String(ctx.options.tipo ?? ctx.options.component_tipo ?? '');
 	const sectionTipo = String(ctx.options.section_tipo ?? '');
@@ -47,12 +47,14 @@ async function getPdfData(ctx: ToolActionContext): Promise<ToolResponse> {
 		});
 	}
 	const text = await extractPdfCore(spec, identity, pathOpts, {
-		method,
+		method: request.method,
 		pageIn: ctx.options.page_in != null ? Number(ctx.options.page_in) : null,
 		pageOut: ctx.options.page_out != null ? Number(ctx.options.page_out) : null,
 	});
-	// PHP htmlentities-encodes the result; the client decodes for display.
-	return ok(text, { requestId: toolRequestId(ctx) });
+	// {value, render_class}: the text method verbatim, the html method shaped
+	// and sanitized here (pdf_payload.ts). Nothing is entity-encoded and the
+	// client re-parses nothing — it renders by the class this answer names.
+	return ok(answerPdfPayload(text, request), { requestId: toolRequestId(ctx) });
 }
 
 export const tool: ToolServerModule = {

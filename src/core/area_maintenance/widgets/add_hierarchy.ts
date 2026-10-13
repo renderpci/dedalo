@@ -1,21 +1,21 @@
 /**
  * add_hierarchy widget — import additional thesaurus/hierarchy packages into a
- * RUNNING install, the same operation the install wizard's hierarchy step
- * performs (render_hierarchies_import_block, shared with the installer client).
+ * RUNNING install, the same operation the terminal installer's install_hierarchies
+ * step performs (the client block lives in the widget's own
+ * render_hierarchies_import.js).
  *
  * Post-cutover (2026-07-11) the TS engine is the single engine and OWNS the
  * install tree (install/import/hierarchy). So the widget serves the real
  * offered list (get_value) and executes the import natively (apiActions.
- * install_hierarchies) — the same code paths install/context.ts and
- * install/engine.ts drive during the wizard. The wizard's own EXECUTE route
- * (dd_utils_api:install) is install-window-gated and 404s once sealed, so a
- * configured server MUST reach the importer through this widget action.
+ * install_hierarchies) — the same importer the installer's step runs. It is the
+ * ONLY way a running server imports a thesaurus: no install action exists on the
+ * wire (WC-2026-10-12-install-surface-removed).
  *
  * get_value shape: {hierarchies, installed_hierarchies (each {tld}),
  * hierarchy_files_dir_path, hierarchy_typologies}. `hierarchies` /
  * `hierarchy_typologies` are THE client view of the vendored thesaurus manifest
  * (hierarchy.json — install/hierarchy_meta.ts hierarchyChoiceView, the same the
- * wizard renders): `{tld, label, typology, has_data}` / `{typology, label}`.
+ * installer offers): `{tld, label, typology, has_data}` / `{typology, label}`.
  */
 
 import { sql } from '../../db/postgres.ts';
@@ -144,7 +144,7 @@ async function addHierarchyGetValue(): Promise<WidgetResponse> {
  * audited to the acting admin. An already-installed tld is SKIPPED (the import is
  * additive; `replace` stays false) — and the importer closes the selection over
  * the chosen thesauri's own MANDATORY declared dependencies (hierarchy.json)
- * first, exactly as the wizard and the CLI do. ENGINE_NATIVE in
+ * first, exactly as the installer does. ENGINE_NATIVE in
  * update_ownership_tripwire.
  */
 export async function addHierarchyInstall(

@@ -18,12 +18,21 @@
  * model of systemd's load/show derived from the unit-file semantics, not from the comparator —
  * and `conformance()` must answer `{ warnings: [] }` for every (k, door), at 255 and at 257.
  *
+ * THE TURN HOME TOO (S3-HOME): conformance checks the turn HOME PID 1 binds back, so the round
+ * trip materializes it as root leaves it — the skeleton's directories (`TURN_HOME_SKELETON`, the
+ * plan's one source) and the RENDERED `.gitconfig` artifact, byte for byte — under a scratch
+ * `paths.state_base`. Ownership is a host fact this uid cannot set: the policy's
+ * `turnHomeSeams.lstat` states root's rows as the provisioner's and `state/` as the identity's.
+ *
  * HONEST LIMIT: `unit_show.ts` is a model (residual 9 — the P7 capture closes it). It is the
  * model's INDEPENDENCE from `conformance()` that makes a disagreement between the two halves red.
  */
 
-import { describe, expect, test } from 'bun:test';
-import { join } from 'node:path';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { chmodSync, lstatSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { dirname, join } from 'node:path';
+import { TURN_HOME_SKELETON, agentHomeFor, agentIdentityName } from '../src/drivers/agent_identity';
 import { AGENT_RUN_CAPS, DOOR_TIMEOUT_DEFAULTS_MS } from '../src/provision/layout';
 import { renderAll } from '../src/provision/render/index';
 import { SHIM_RELATIVE } from '../src/provision/render/agent_units';
@@ -36,14 +45,42 @@ type Conformance = (k: number, door: Door, policy: unknown) => Promise<{ warning
 
 const SITES = ['alpha', 'beta', 'gamma'] as const;
 
+const scratch: string[] = [];
+afterAll(() => {
+  for (const dir of scratch.splice(0)) rmSync(dir, { recursive: true, force: true });
+});
+
+/** The identity uid the stand-in host resolves for ordinal k (a uid this suite cannot own). */
+const identityUid = (k: number) => 4_100_000_000 + k;
+
 /** One instance as root renders it at PID 1 `version`: the unit files by name, and the daemon's policy. */
 function rendered(version: number, edit?: (name: string, body: string) => string) {
   // The workspaces root DECLARED as this suite's daemon reads it (`roots.sitesRoot`): the
   // rendered env's SITES_ROOT then follows from the declaration, as on a host.
-  const gate = gateInstance('test', SITES, { ...gateManifestDoc('test', SITES), roots: { workspaces: roots.sitesRoot } });
+  const stateBase = mkdtempSync(join(tmpdir(), 'g20-state-'));
+  scratch.push(stateBase);
+  const doc = gateManifestDoc('test', SITES);
+  const gate = gateInstance('test', SITES, { ...doc, paths: { ...(doc.paths ?? {}), state_base: stateBase }, roots: { workspaces: roots.sitesRoot } });
   const layout = gate.layout;
   const artifacts = renderAll(layout, gate.manifest, { agentIdentities: gate.identities, systemdVersion: version, identityEpoch: 1 });
   const byPath = new Map(artifacts.map(artifact => [artifact.path as string, artifact.body as string]));
+  // Every site's turn HOME as root leaves it: the skeleton's directories, the RENDERED files.
+  const provisionerUid = process.getuid?.() ?? 0;
+  for (const [, k] of gate.identities) {
+    const home = agentHomeFor(layout.agentStateRoot, k, 'turn');
+    for (const row of TURN_HOME_SKELETON) {
+      const path = row.rel === '.' ? home : join(home, row.rel);
+      if (row.type === 'dir') {
+        mkdirSync(path, { recursive: true });
+      } else {
+        const body = byPath.get(path);
+        if (body === undefined) throw new Error(`root rendered no '${path}' for the skeleton's file row`);
+        mkdirSync(dirname(path), { recursive: true });
+        writeFileSync(path, body);
+      }
+      chmodSync(path, row.mode);
+    }
+  }
   const env = parseEnvFile(byPath.get(layout.envFile) as string, layout.envFile);
   const daemon = byPath.get(layout.unitPath) as string;
   const one = (key: string) => {
@@ -86,12 +123,31 @@ function rendered(version: number, edit?: (name: string, body: string) => string
     cpuQuota: env.AGENT_TURN_CPU_QUOTA ?? AGENT_RUN_CAPS.cpuQuota,
     tasksMax: number('AGENT_TURN_TASKS_MAX', AGENT_RUN_CAPS.tasksMax),
     host: {
+      provisionerUid,
+      resolveAgent: (name: string) => {
+        const k = [...gate.identities.values()].find(ordinal => agentIdentityName('test', ordinal) === name);
+        return k === undefined ? null : { uid: identityUid(k), gid: 1, gids: [1] };
+      },
       pid1Version: () => version,
       systemctl: async (args: readonly string[]) => {
         const unit = args[args.length - 1] as string;
         const text = shows.get(unit);
         return text === undefined ? { code: 1, stdout: '', stderr: `Unit ${unit} not loaded.` } : { code: 0, stdout: text, stderr: '' };
       },
+    },
+  };
+  (policy as Record<string, unknown>).turnHomeSeams = {
+    // lstat(2) as root provisioned the tree: the identity owns `<root>/s<k>/turn/state`, root the rest.
+    lstat: (path: string) => {
+      let facts: ReturnType<typeof lstatSync>;
+      try {
+        facts = lstatSync(path);
+      } catch {
+        return null;
+      }
+      const state = /\/s(\d+)\/turn\/state$/.exec(path);
+      const uid = state ? identityUid(Number(state[1])) : provisionerUid;
+      return Object.assign(Object.create(Object.getPrototypeOf(facts)), facts, { uid });
     },
   };
   return { gate, layout, env, policy, files, shows };

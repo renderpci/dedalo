@@ -397,39 +397,6 @@ function writeOntologyMainKey(
 	);
 }
 
-/** The registry columns a component's value can live in (relation / literal / json). */
-const REGISTRY_KEY_COLUMNS = ['relation', 'string', 'misc'] as const;
-
-/**
- * Remove a RETIRED component's stored values from every ontology REGISTRY row
- * (matrix_ontology_main, ontology35): the key `tipo` is dropped from each of
- * `relation` / `string` / `misc` that carries it, through the one registry key
- * writer (a null value removes the key). The engine-ontology door calls it for
- * the nodes engine_ontology.json declares `retired` (e.g. ddengine11, the
- * pre-hierarchy60 dependency portal) — a value of a component that no longer
- * exists is never read, but it is not left behind either. Answers one line per
- * key removed (`ontology35/<id>: <column>.<tipo>`); idempotent (none left → []).
- */
-export async function stripRetiredRegistryKey(tipo: string): Promise<string[]> {
-	const rows = (await sql.unsafe(
-		`SELECT section_id, relation ? $2 AS in_relation, string ? $2 AS in_string, misc ? $2 AS in_misc
-		 FROM "matrix_ontology_main"
-		 WHERE section_tipo = $1 AND (relation ? $2 OR string ? $2 OR misc ? $2)
-		 ORDER BY section_id`,
-		[ONTOLOGY_MAIN_SECTION, tipo],
-	)) as { section_id: number; in_relation: boolean; in_string: boolean; in_misc: boolean }[];
-	const removed: string[] = [];
-	for (const row of rows) {
-		const carried = { relation: row.in_relation, string: row.in_string, misc: row.in_misc };
-		for (const column of REGISTRY_KEY_COLUMNS) {
-			if (carried[column] !== true) continue;
-			await writeOntologyMainKey(Number(row.section_id), column, tipo, null);
-			removed.push(`${ONTOLOGY_MAIN_SECTION}/${row.section_id}: ${column}.${tipo}`);
-		}
-	}
-	return removed;
-}
-
 /**
  * The lg1 record id of a language code — by default STRUCTURE_LANG, the
  * language every registry row is filed under (hierarchy8). Resolved from the

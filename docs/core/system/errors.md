@@ -149,7 +149,9 @@ named: the `start` refusal carries `environment` (the labels the refused client 
 its no-access page), and the CSRF gate carries `action` with a fresh token.
 
 `csrf_token` is appended by the dispatcher to every response of a session, success and
-failure alike. A handler never sets it.
+failure alike, and beside it `session_user_id` — the user the token belongs to. A handler
+never sets them (login excepted: it mints the session). The client adopts a token only for
+its own page user, so a session replaced by another user's login never carries a page over.
 
 ## The disclosure ladder
 

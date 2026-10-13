@@ -43,7 +43,6 @@ import {
 import { toErrorEnvelope } from '../errors/convert.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { logError } from '../errors/log.ts';
-import { INSTALL_ACTION_KEYS, installIpAllowed, installSurfaceReachable } from '../install/gate.ts';
 import { resolvePrincipal } from '../security/permissions.ts';
 import { refusedUnderMaintenance } from '../security/session_gate.ts';
 import { verifyCsrf } from '../security/session_store.ts';
@@ -466,7 +465,6 @@ export const ACTION_IDEMPOTENCY: ReadonlyMap<string, ActionIdempotency> = new Ma
 	['dd_ts_api:get_node_data', 'idempotent'],
 	['dd_ts_api:get_children_data', 'idempotent'],
 	// ── dd_utils_api ───────────────────────────────────────────────────────
-	['dd_utils_api:install', 'mutating'],
 	['dd_utils_api:login', 'mutating'],
 	['dd_utils_api:quit', 'mutating'],
 	['dd_utils_api:change_lang', 'mutating'],
@@ -489,7 +487,6 @@ export const ACTION_IDEMPOTENCY: ReadonlyMap<string, ActionIdempotency> = new Ma
 	['dd_utils_api:get_job_events', 'idempotent'],
 	['dd_utils_api:get_process_status', 'idempotent'],
 	['dd_utils_api:get_system_info', 'idempotent'],
-	['dd_utils_api:get_install_context', 'idempotent'],
 	['dd_utils_api:get_login_context', 'idempotent'],
 	['dd_utils_api:get_dedalo_files', 'idempotent'],
 	['dd_utils_api:list_uploaded_files', 'idempotent'],
@@ -1022,7 +1019,14 @@ async function withIdempotency(
  * one place a throw becomes a wire body. Every refusal below is a throw of a
  * registered code; the catch converts (registry status), logs, and threads
  * Retry-After. `csrf_token` is appended to every response for client
- * transparency (PHP parity), success or failure.
+ * transparency (PHP parity), success or failure — and beside it ALWAYS
+ * `session_user_id`, the user that token belongs to
+ * (WC-2026-10-11-session-user-beside-csrf-token). A token is an identity: the
+ * client adopts it only for its own page user (error_dispatch
+ * settle_session_identity), so a page whose session was replaced by a login
+ * elsewhere never moves onto it — not through the CSRF resend, not through an
+ * exempt action's success. A handler that minted the session itself (login)
+ * owns both keys; they are not overwritten with the request's previous session.
  */
 async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResult> {
 	const apiClass = String(rqo.dd_api ?? 'dd_core_api');
@@ -1033,8 +1037,9 @@ async function executeRqo(rqo: Rqo, context: ApiRequestContext): Promise<ApiResu
 	} catch (error) {
 		result = failureResult(error, context, `${apiClass}::${action}`);
 	}
-	if (context.session !== null) {
+	if (context.session !== null && result.body.csrf_token === undefined) {
 		result.body.csrf_token = context.session.csrfToken;
+		result.body.session_user_id = context.session.userId;
 	}
 	return result;
 }
@@ -1093,39 +1098,15 @@ function unknownAction(action: unknown): DedaloError {
 }
 
 /**
- * Gates 1b + 1c — the pre-auth surfaces.
- *
- * 1b — install window (DEC-19, hardened by OPS-01 2026-07-28). The install
- * surface is pre-auth by design (a fresh instance has no session), but ONLY
- * on a genuinely fresh / mid-wizard box (installSurfaceReachable:
- * INSTALL_MODE || installInProgress, never once sealed) and ONLY from an
- * allowed address. A CONFIGURED or PHP-migrated instance is NOT reachable —
- * keying on the bare seal check alone exposed the unauthenticated installer on
- * every coexistence deploy (no install_status ⇒ not "sealed"). Not-reachable
- * answers `install.not_reachable` (404, GONE), the same shape a sealed
- * instance gives.
- *
- * 1c — error-report intake window (WC-017). Disabled ⇒ the EXACT Gate-1
- * unregistered-action refusal (unknownAction), so a probe cannot learn the
- * endpoint exists on this host; the optional IP allowlist mirrors the
- * install gate. Throttle/token/schema live in the handler.
+ * Gate 1c — the pre-auth error-report intake window (WC-017). Disabled ⇒ the
+ * EXACT Gate-1 unregistered-action refusal (unknownAction), so a probe cannot
+ * learn the endpoint exists on this host; the optional IP allowlist reads the
+ * one entry grammar (security/ip_allowlist.ts). Throttle/token/schema live in
+ * the handler. (Gate 1b — the install window — was removed with the browser
+ * installer: WC-2026-10-12-install-surface-removed. No install action exists.)
  */
 function runPreAuthGates(actionKey: string, action: unknown, clientIp: string): void {
-	if (INSTALL_ACTION_KEYS.has(actionKey)) runInstallGate(clientIp);
 	if (ERROR_REPORT_ACTION_KEYS.has(actionKey)) runErrorReportGate(action, clientIp);
-}
-
-function runInstallGate(clientIp: string): void {
-	if (!installSurfaceReachable()) throw new DedaloError('install.not_reachable');
-	if (!installIpAllowed(clientIp)) {
-		// The address goes to the caller (details) AND the operator's log
-		// (coordinates, printed by the catch's logError): the boot banner says what
-		// the allowlist IS; only this says what to add to it.
-		throw new DedaloError('install.ip_denied', {
-			details: { client_address: clientIp },
-			coordinates: { client_address: clientIp },
-		});
-	}
 }
 
 function runErrorReportGate(action: unknown, clientIp: string): void {
@@ -1140,9 +1121,8 @@ function runErrorReportGate(action: unknown, clientIp: string): void {
 /**
  * Gates 2 + 2b + 3 — authentication, maintenance, CSRF.
  *
- * 2 — the exemption is keyed on the (class, action) pair. The install surface
- * is additionally pre-auth WHILE UNSEALED (runPreAuthGates); individual
- * record-writing install steps re-check the session in the handler. WC-051:
+ * 2 — the exemption is keyed on the (class, action) pair (NO_LOGIN_ACTIONS,
+ * and nothing else). WC-051:
  * `auth.not_logged` is the code the client's re-login recovery dispatches on
  * — this is the path an EXPIRED session takes, so it is the one that must
  * reach render_relogin() rather than dying as a thrown fetch error.
@@ -1173,7 +1153,7 @@ async function runAuthGates(
 	context: ApiRequestContext,
 ): Promise<void> {
 	if (context.session === null) {
-		if (!isNoLoginAction(actionKey)) throw new DedaloError('auth.not_logged');
+		if (!NO_LOGIN_ACTIONS.has(actionKey)) throw new DedaloError('auth.not_logged');
 		return;
 	}
 	await refuseUnderMaintenance(context.session.userId);
@@ -1191,14 +1171,6 @@ async function runAuthGates(
 		);
 		throw new DedaloError('auth.csrf_failed', { extend: { action } });
 	}
-}
-
-/** Gate 2's exemption: the pair is in NO_LOGIN_ACTIONS, or it is the install surface while unsealed. */
-function isNoLoginAction(actionKey: string): boolean {
-	return (
-		NO_LOGIN_ACTIONS.has(actionKey) ||
-		(INSTALL_ACTION_KEYS.has(actionKey) && installSurfaceReachable())
-	);
 }
 
 /** Gate 2b (see runAuthGates): every non-superuser session is refused while maintenance is on. */

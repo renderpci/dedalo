@@ -17,6 +17,7 @@
 export type DriverId = 'claude_code' | 'opencode' | 'pi';
 
 import type { ConfinementPolicy } from './confinement';
+import type { TurnErrorEvent } from './turn_errors';
 
 export interface DriverInfo {
   id: DriverId;
@@ -33,13 +34,17 @@ export interface DriverCapabilities {
   reportsFileChanges: boolean;
 }
 
-/** The normalized event stream every driver's output is mapped onto. */
+/**
+ * The normalized event stream every driver's output is mapped onto. An `error` carries a REASON
+ * (`turn_errors.ts`), never the daemon's sentence: the event is stored in the session's durable
+ * log and relayed to the browser, and the engine renders it from the reason's registered code.
+ */
 export type AgentEvent =
   | { type: 'text'; text: string }
   | { type: 'tool'; name: string; summary: string }
   | { type: 'file_change'; files: string[] }
   | { type: 'result'; ok: true; resumeToken?: string; costUsd?: number; durationMs: number }
-  | { type: 'error'; message: string; retriable: boolean };
+  | TurnErrorEvent;
 
 export interface McpAttachment {
   name: string;

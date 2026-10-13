@@ -1,24 +1,26 @@
 /**
  * THE INSTALL PLAN — the ONE place an install's answers become a configuration
- * and a step list (installer unification A1, 2026-10-08). Every front end is a
- * front end of THIS: the browser wizard (persist_config → config_persist.ts),
- * the headless CLI (scripts/install.ts) and install.sh (which drives the CLI).
+ * and a step list (installer unification A1, 2026-10-08). Every front end of the
+ * ONE terminal installer is a front end of THIS: the full-screen UI and plain
+ * mode (scripts/install.ts), flags, an answers file, and install.sh (which
+ * drives it). The browser wizard that was a second front end was removed on
+ * 2026-10-12 (WC-2026-10-12-install-surface-removed).
  *
  * WHY. Before this module each front end carried its own copy of the answers →
  * .env mapping and its own defaults, and they had drifted: the CLI defaulted
  * the database host to `/tmp` (Debian/RHEL sockets do not live there), wrote an
- * empty entity label, installed NO optional thesaurus while the wizard
- * pre-ticked three, silently ignored unknown flags (`--yes`), and no front end
- * wrote ONTOLOGY_SERVERS / CODE_SERVERS — so every fresh install's update panels
+ * empty entity label, installed NO optional thesaurus while the (since retired)
+ * browser wizard pre-ticked three, silently ignored unknown flags (`--yes`), and
+ * no front end wrote ONTOLOGY_SERVERS / CODE_SERVERS — so every fresh install's update panels
  * answered "No master servers are configured".
  *
  * WHAT IT OWNS:
  *  - the DEFAULTS (here and nowhere else — the CLI parser maps provided flags
- *    only, the wizard posts what the operator typed);
+ *    only, the screens post what the operator typed);
  *  - the .env sections, their order and their comments (config_persist renders
  *    them verbatim);
- *  - the step list, whose ids ARE the wizard router's action names
- *    (engine.ts INSTALL_ROUTER_ACTIONS — gated: every plan step is routable);
+ *  - the step list, whose ids ARE the rows of the executor's ONE step table
+ *    (steps.ts — gated: every plan step has a row);
  *  - the update-server choice (A3): the official master by default, `[]` only
  *    on an explicit air-gapped answer;
  *  - the optional-thesaurus choice (A7; 2026-10-10): the offer is every
@@ -46,6 +48,17 @@
  *    no hierarchy.json entry, is a WARNING — strongly recommended, installable
  *    later from Maintenance › Install hierarchies.
  *
+ *  - the ROUTE (terminal installer phase 2, 2026-10-12): `production` (a named
+ *    INSTANCE on a shared host — multi_instance.md), `docker`, `trial` (Docker
+ *    without media protection — install.sh's stack) or `developer` (absent = the
+ *    engine steps on this host, the behaviour before routes existed). A route
+ *    changes answer DEFAULTS only (routeDefaults — the instance-derived names of
+ *    a production install, the compose stack's constants); the step list is the
+ *    same on every route until the host steps land;
+ *  - the FIELD TAGS of every refusal (`fieldErrors`): the same sentences as
+ *    `errors`, each with the answer key it is about — what the terminal screen
+ *    model (screen_model.ts) shows on each question.
+ *
  * WHAT IT NEVER CONTAINS: DEDALO_SUPERVISED. Supervision is declared by the
  * process manager that restarts the server (systemd unit, compose service,
  * the supervised package scripts), never by ../private/.env, which every launch
@@ -53,16 +66,15 @@
  * closed list; no answer can add a key to it.
  *
  * PURE AND CONFIG-FREE: imports only lang_catalog.ts, hierarchy_meta.ts,
- * ontology_choice.ts and src/config/pg_transport.ts (each config-free; the
+ * ontology_choice.ts and install_validation.ts (each config-free; the
  * vendored files they read are the only I/O). The
  * CLI builds the plan BEFORE it seeds the process environment that
  * src/config/config.ts freezes at import, so importing config (or the error
  * registry, or the db) from here would freeze the wrong configuration.
- * Gate: test/unit/install_plan_parity_tripwire.test.ts (CLI ≡ wizard).
+ * Gate: test/unit/install_plan_parity_tripwire.test.ts (TUI ≡ plain ≡ flags ≡ answers).
  */
 
 import { resolve } from 'node:path';
-import { pgSocketProblem } from '../../config/pg_transport.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import {
 	type HierarchyMeta,
@@ -70,6 +82,12 @@ import {
 	offeredHierarchies,
 	TOPONYMY_TYPOLOGY_ID,
 } from './hierarchy_meta.ts';
+import {
+	answerProblems,
+	type FieldError,
+	INSTANCE_PATTERN,
+	rootPasswordErrors,
+} from './install_validation.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
 import {
 	activeOntologyTldsOf,
@@ -124,7 +142,16 @@ export const OFFICIAL_CODE_SERVER: MasterServerEntry = Object.freeze({
 /** `official` = the official master (default); `none` = air-gapped, `[]` written. */
 export type UpdateServersChoice = 'official' | 'none';
 
-/** Every install step, in run order. Each id IS a wizard router action name. */
+/**
+ * The install ROUTES (owner decisions 2026-10-11): production (native services,
+ * a named instance), docker (the compose stack), trial (Docker WITHOUT media
+ * protection — its own route, so it says what it is) and developer (a git
+ * checkout; the default when no route is given — the behaviour before routes).
+ */
+export const INSTALL_ROUTES = ['production', 'docker', 'trial', 'developer'] as const;
+export type InstallRoute = (typeof INSTALL_ROUTES)[number];
+
+/** Every install step, in run order. Each id IS a row of the step table (steps.ts). */
 export const INSTALL_STEP_IDS = [
 	'test_db_connection',
 	'test_diffusion_connection',
@@ -141,8 +168,78 @@ export const INSTALL_STEP_IDS = [
 ] as const;
 export type InstallStepId = (typeof INSTALL_STEP_IDS)[number];
 
-/** The normalized answers — the SAME key names the wizard posts. */
+/**
+ * The PRODUCTION route's HOST steps (terminal installer phase 4, 2026-10-12), in
+ * run order — what the root process runs (src/core/install/host/host_table.ts);
+ * `host_engine` runs the ENGINE steps above in a child, as the instance user.
+ * Listed HERE (not under host/) because this module is on the server's import
+ * closure and host/** must stay off it: the ids are data, the steps are not.
+ * `host_selinux` is planned on every production install and decides itself
+ * (RHEL family only); `host_web_http` is the Let's Encrypt challenge site.
+ */
+export const PRODUCTION_HOST_STEP_IDS = [
+	'host_preflight',
+	'host_packages',
+	'host_identity',
+	'host_runtime',
+	'host_database',
+	'host_engine',
+	'host_units',
+	'host_selinux',
+	'host_first_boot',
+	'host_watchdog',
+	'host_web_http',
+	'host_tls',
+	'host_web_site',
+	'host_public_probe',
+	'host_backup_verify',
+] as const;
+
+/** The DOCKER/TRIAL routes' host steps (their table: host/stack/table.ts). */
+export const STACK_HOST_STEP_IDS = [
+	'stack_preflight',
+	'stack_image',
+	'stack_tls',
+	'stack_files',
+	'stack_database',
+	'stack_engine',
+	'stack_up',
+	'stack_health',
+] as const;
+
+export type ProductionHostStepId = (typeof PRODUCTION_HOST_STEP_IDS)[number];
+export type StackHostStepId = (typeof STACK_HOST_STEP_IDS)[number];
+export type HostStepId = ProductionHostStepId | StackHostStepId;
+/** Any step the one step loop (step_loop.ts) can run: an engine step or a host step. */
+export type StepId = InstallStepId | HostStepId;
+
+/** Every step id, engine and host (the fault seam's vocabulary). */
+export const ALL_STEP_IDS: readonly StepId[] = Object.freeze([
+	...INSTALL_STEP_IDS,
+	...PRODUCTION_HOST_STEP_IDS,
+	...STACK_HOST_STEP_IDS,
+]);
+
+/** Is `step` an ENGINE step (the executor's table)? */
+export function isInstallStepId(step: string): step is InstallStepId {
+	return (INSTALL_STEP_IDS as readonly string[]).includes(step);
+}
+
+/** The production web servers the host steps render a site file for. */
+export const WEB_SERVERS = ['nginx', 'apache'] as const;
+/** TLS modes: production letsencrypt|files; docker adds local_ca; trial is none. */
+export const TLS_MODES = ['letsencrypt', 'files', 'local_ca', 'none'] as const;
+/** The production database: created by the installer (peer role), or an existing one probed. */
+export const DB_MODES = ['create', 'existing'] as const;
+/** Where a docker/trial image comes from. */
+export const IMAGE_SOURCES = ['official', 'custom', 'build'] as const;
+
+/** The normalized answers — the SAME key names every front end posts. */
 export interface InstallAnswers {
+	/** The route (absent = developer). */
+	route: InstallRoute;
+	/** The production instance name ('' on every other route). */
+	instance: string;
 	db_hostname: string;
 	db_port: string;
 	db_socket: string;
@@ -189,12 +286,172 @@ export interface InstallAnswers {
 	 */
 	declined_dependencies: string[];
 	/**
-	 * A local ontology source (dir or archive); '' = none. CLI-ONLY, enforced at
-	 * the wizard door (config_persist.ts refuseWizardOnlyCliAnswers): it is a
-	 * server filesystem path.
+	 * A local ontology source (dir or archive); '' = none. A path on the
+	 * installing machine's filesystem.
 	 */
 	ontology_source: string;
+	// ── host steps (phase 4, 2026-10-12) ──
+	/** production: 'nginx' | 'apache' | '' (= the one the host has, else nginx — decided at host_preflight). */
+	web_server: string;
+	/** production/docker: the public address (an FQDN, never localhost or an IP). */
+	server_name: string;
+	http_port: string;
+	https_port: string;
+	/** TLS_MODES, per route (production: letsencrypt|files; docker: +local_ca; trial: none). */
+	tls_mode: string;
+	letsencrypt_email: string;
+	/** Let's Encrypt's staging CA (a drill / a rate-limit-safe rehearsal). Flags only. */
+	letsencrypt_staging: boolean;
+	/** The institution's own certificate: absolute paths (fullchain + key), checked before use. */
+	tls_cert_path: string;
+	tls_key_path: string;
+	/** production: 'create' (the installer creates role + database) | 'existing' (probed only). */
+	db_mode: string;
+	/**
+	 * production: the INSTANCE DIR (owner decisions 2026-10-12 — any absolute
+	 * path, default /home/ded_<i>): its code (dedalo/), private settings
+	 * (private/) and backups (backups/). Created owned by the service user when
+	 * missing; an existing one is used only when empty or already the user's.
+	 */
+	install_dir: string;
+	/** production: the account the instance runs as (default ded_<i>; an existing one is used as is). */
+	service_user: string;
+	/** production: the group the web server joins ('' = the service user's own/primary group). */
+	service_group: string;
+	/** production: where the backup units write (default <install_dir>/backups). */
+	backup_dir: string;
+	/** production: this instance's backup also covers the host's site-builder store. Flags only. */
+	backup_site_builder: boolean;
+	/** docker/trial: IMAGE_SOURCES. */
+	image_source: string;
+	image_repository: string;
+	/** docker/trial: the image tag ('' = this installer's own version). */
+	image_version: string;
+	/**
+	 * The ENGINE steps only — the delegated child a host route starts (as the
+	 * instance user, or inside the container). Flags only; recorded in the plan.
+	 */
+	engine_only: boolean;
+	/**
+	 * DEDALO_PG_BIN_PATH ('' = not written): the host's PostgreSQL 18 binaries,
+	 * which the production route passes to its engine child from the OS row.
+	 */
+	pg_bin_path: string;
 }
+
+/**
+ * EVERY answer key, classified — exhaustive at compile time (a new answer that
+ * is not classified here fails to compile). A `secret` answer never leaves
+ * memory: the terminal installer's plan file is built from the PLAIN keys only
+ * (run_files.ts buildPlanFile — an allow-list, so a secret added later is
+ * excluded by default), and an answers file may not carry one
+ * (answersFromAnswersFile). The root password is not an answer at all — it is
+ * the plan's own input (buildInstallPlan `rootPassword`).
+ */
+const ANSWER_CLASS: Readonly<Record<keyof InstallAnswers, 'secret' | 'plain'>> = Object.freeze({
+	route: 'plain',
+	instance: 'plain',
+	db_hostname: 'plain',
+	db_port: 'plain',
+	db_socket: 'plain',
+	db_database: 'plain',
+	db_username: 'plain',
+	db_password: 'secret',
+	entity: 'plain',
+	entity_label: 'plain',
+	information: 'plain',
+	info_key: 'plain',
+	timezone: 'plain',
+	locale: 'plain',
+	langs: 'plain',
+	app_lang_default: 'plain',
+	data_lang_default: 'plain',
+	diffusion: 'plain',
+	mysql_hostname: 'plain',
+	mysql_port: 'plain',
+	mysql_socket: 'plain',
+	mysql_database: 'plain',
+	mysql_username: 'plain',
+	mysql_password: 'secret',
+	mailer: 'plain',
+	smtp_host: 'plain',
+	smtp_port: 'plain',
+	smtp_secure: 'plain',
+	smtp_user: 'plain',
+	smtp_pass: 'secret',
+	smtp_from: 'plain',
+	smtp_from_name: 'plain',
+	media_path: 'plain',
+	unix_socket: 'plain',
+	media_access_mode: 'plain',
+	update_servers: 'plain',
+	hierarchies: 'plain',
+	register_tools: 'plain',
+	ontologies: 'plain',
+	declined_dependencies: 'plain',
+	ontology_source: 'plain',
+	web_server: 'plain',
+	server_name: 'plain',
+	http_port: 'plain',
+	https_port: 'plain',
+	tls_mode: 'plain',
+	letsencrypt_email: 'plain',
+	letsencrypt_staging: 'plain',
+	tls_cert_path: 'plain',
+	tls_key_path: 'plain',
+	db_mode: 'plain',
+	install_dir: 'plain',
+	service_user: 'plain',
+	service_group: 'plain',
+	backup_dir: 'plain',
+	backup_site_builder: 'plain',
+	image_source: 'plain',
+	image_repository: 'plain',
+	image_version: 'plain',
+	engine_only: 'plain',
+	pg_bin_path: 'plain',
+});
+
+/**
+ * The answers that drive the HOST steps only — what the delegated engine child
+ * is NOT given (host/production/engine_delegate.ts: engine answers ≡ the host
+ * answers minus these, plus engine_only and the host-derived pg_bin_path).
+ */
+export const HOST_ONLY_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze([
+	'web_server',
+	'server_name',
+	'http_port',
+	'https_port',
+	'tls_mode',
+	'letsencrypt_email',
+	'letsencrypt_staging',
+	'tls_cert_path',
+	'tls_key_path',
+	'db_mode',
+	'install_dir',
+	'service_user',
+	'service_group',
+	'backup_dir',
+	'backup_site_builder',
+	'image_source',
+	'image_repository',
+	'image_version',
+]);
+
+/** Every answer key, in declaration order (the answers file's key set). */
+export const INSTALL_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze(
+	Object.keys(ANSWER_CLASS) as (keyof InstallAnswers)[],
+);
+
+/** The secret answers (derived from ANSWER_CLASS — never listed twice). */
+export const SECRET_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze(
+	INSTALL_ANSWER_KEYS.filter((key) => ANSWER_CLASS[key] === 'secret'),
+);
+
+/** The plain answers — what a plan file may record. */
+export const PLAIN_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze(
+	INSTALL_ANSWER_KEYS.filter((key) => ANSWER_CLASS[key] === 'plain'),
+);
 
 /** One .env assignment. `raw` = written verbatim (JSON), never envQuote'd. */
 export interface EnvEntry {
@@ -214,7 +471,7 @@ export interface InstallPlan {
 	readonly env: readonly EnvSection[];
 	/** Every key the plan OWNS, in file order (DEDALO_SALT_STRING included). */
 	readonly envKeys: readonly string[];
-	readonly steps: readonly InstallStepId[];
+	readonly steps: readonly StepId[];
 	/**
 	 * The thesauri install_hierarchies imports: the answer's, then every
 	 * installable declared thesaurus dependency not already in it.
@@ -225,6 +482,14 @@ export interface InstallPlan {
 	 * the answers do not decline (mandatory = strongly recommended, declinable).
 	 */
 	readonly hierarchyDependencies: readonly HierarchyDependency[];
+	/**
+	 * The thesauri the ONTOLOGY side declares (the vendored core + the install
+	 * order) and the answers do not decline — before the chosen thesauri's own
+	 * declarations are merged in. What a front end needs to tell "pre-ticked
+	 * because an ontology needs it" from "pre-ticked because a ticked thesaurus
+	 * declares it" (screen_model.ts thesaurus mapping).
+	 */
+	readonly ontologyHierarchyDependencies: readonly HierarchyDependency[];
 	/**
 	 * Advice shown to the operator, never a choice made for them — today the
 	 * toponymy suggestion ({@link TOPONYMY_SUGGESTION}) when the plan installs
@@ -242,8 +507,20 @@ export interface InstallPlan {
 	readonly notes: readonly string[];
 	/** Non-blocking (e.g. an ontology whose dependencies the source does not declare). */
 	readonly warnings: readonly string[];
+	/**
+	 * The root password's refusals (install_validation.ts rootPasswordErrors) —
+	 * already merged into `errors`; [] when none was supplied and none required.
+	 */
+	readonly rootPasswordErrors: readonly string[];
 	/** Empty = valid. */
 	readonly errors: readonly string[];
+	/**
+	 * The answer-level refusals TAGGED with their answer key — every message is
+	 * also in `errors` (byte-identical). Not tagged (review-level only): the .env
+	 * control-character errors, a broken manifest, an unresolved catalog and the
+	 * root password's (its own `rootPasswordErrors`).
+	 */
+	readonly fieldErrors: readonly FieldError[];
 }
 
 type RawAnswers = Readonly<Record<string, unknown>>;
@@ -287,6 +564,156 @@ function parseUpdateServers(value: unknown, errors: string[]): UpdateServersChoi
 	return 'official';
 }
 
+/** route: absent/'' → developer (the behaviour before routes); else one of INSTALL_ROUTES. */
+function parseRoute(value: unknown, problems: FieldError[]): InstallRoute {
+	if (value === undefined || value === null || value === '') return 'developer';
+	const route = String(value);
+	if ((INSTALL_ROUTES as readonly string[]).includes(route)) return route as InstallRoute;
+	problems.push({ key: 'route', message: `route must be ${INSTALL_ROUTES.join('|')}` });
+	return 'developer';
+}
+
+/**
+ * The answer defaults a ROUTE changes (D6). Everything else defaults alike on
+ * every route.
+ *  - production: the instance's own names (docs/install/multi_instance.md) —
+ *    database `dedalo_<i>` owned by the PEER role `ded_<i>` (the instance's own
+ *    unix user, over the local socket `/var/run/postgresql`: no database
+ *    password exists at rest — phase 4, owner question Q2), media
+ *    `/srv/dedalo/<i>/dedalo/media` (THE ROOT RULE: the site file's
+ *    `root /srv/dedalo/<i>` + `/dedalo/media` must equal MEDIA_PATH — the
+ *    pre-phase-4 `/srv/dedalo/<i>/media` could satisfy no root), socket
+ *    `/run/dedalo-<i>/dedalo_ts.sock` (systemd RuntimeDirectory), the install
+ *    folder `/home/ded_<i>` and the service user `ded_<i>` (LEVEL 1 — owner
+ *    decisions 2026-10-12), then (LEVEL 2, derived from level 1) backups
+ *    `<install_dir>/backups` (the code updater's `<tree>/../backups`) and the
+ *    PEER role = the service user, publication database `web_<i>`, Let's
+ *    Encrypt, a created database; '' while the instance is missing or
+ *    malformed (its own error says so);
+ *  - docker / trial: the compose stack's constants (install.sh passes the
+ *    SAME values as explicit flags — an older pulled image does not know
+ *    `--route`; gate: install_screen_model_tripwire); trial has no TLS;
+ *  - developer: no database name or user (asked), media and socket not written.
+ */
+export interface RouteDefaults {
+	readonly db_hostname: string;
+	readonly db_socket: string;
+	readonly db_database: string;
+	readonly db_username: string;
+	readonly media_path: string;
+	readonly unix_socket: string;
+	readonly mysql_database: string;
+	readonly tls_mode: string;
+	readonly db_mode: string;
+	readonly install_dir: string;
+	readonly service_user: string;
+	readonly backup_dir: string;
+	readonly image_source: string;
+}
+
+/** The level-1 answers the level-2 defaults (backup_dir, db_username) derive from. */
+export interface IdentityLevel {
+	readonly install_dir: string;
+	readonly service_user: string;
+}
+
+const STACK_DEFAULTS: RouteDefaults = Object.freeze({
+	db_hostname: 'postgres',
+	db_socket: '',
+	db_database: 'dedalo',
+	db_username: 'dedalo',
+	media_path: '/srv/dedalo/media',
+	unix_socket: '/run/dedalo/dedalo_ts.sock',
+	mysql_database: 'web_dedalo',
+	tls_mode: 'letsencrypt',
+	db_mode: '',
+	install_dir: '',
+	service_user: '',
+	backup_dir: '',
+	image_source: 'official',
+});
+
+/** The local PostgreSQL socket directory a created (peer) production database is reached through. */
+export const LOCAL_PG_SOCKET_DIR = '/var/run/postgresql';
+
+/** The level-1 defaults of a production instance ('' while the instance is not valid). */
+export function productionIdentityDefaults(instance: string): IdentityLevel {
+	const named = INSTANCE_PATTERN.test(instance) ? instance : '';
+	return named === ''
+		? { install_dir: '', service_user: '' }
+		: { install_dir: `/home/ded_${named}`, service_user: `ded_${named}` };
+}
+
+/**
+ * A production instance's defaults (see RouteDefaults); '' names while the
+ * instance is not valid. `level` = the level-1 answers as given (the backup
+ * dir and the role derive from them, not from the instance).
+ */
+function productionDefaults(instance: string, level: IdentityLevel | null): RouteDefaults {
+	const named = INSTANCE_PATTERN.test(instance) ? instance : '';
+	const derive = (shape: (name: string) => string): string => (named === '' ? '' : shape(named));
+	const identity = productionIdentityDefaults(instance);
+	return {
+		db_hostname: 'localhost',
+		db_socket: LOCAL_PG_SOCKET_DIR,
+		db_database: derive((name) => `dedalo_${name}`),
+		media_path: derive((name) => `/srv/dedalo/${name}/dedalo/media`),
+		unix_socket: derive((name) => `/run/dedalo-${name}/dedalo_ts.sock`),
+		mysql_database: named === '' ? 'web_dedalo' : `web_${named}`,
+		tls_mode: 'letsencrypt',
+		db_mode: 'create',
+		install_dir: identity.install_dir,
+		service_user: identity.service_user,
+		...levelTwoDefaults(named, level ?? identity),
+		image_source: '',
+	};
+}
+
+/** The level-2 production defaults: the role and the backup dir follow the level-1 answers. */
+function levelTwoDefaults(
+	named: string,
+	level: IdentityLevel,
+): Pick<RouteDefaults, 'db_username' | 'backup_dir'> {
+	if (named === '') return { db_username: '', backup_dir: '' };
+	return {
+		db_username: level.service_user,
+		backup_dir: level.install_dir === '' ? '' : `${level.install_dir}/backups`,
+	};
+}
+
+const DEVELOPER_DEFAULTS: RouteDefaults = Object.freeze({
+	db_hostname: 'localhost',
+	db_socket: '',
+	db_database: '',
+	db_username: '',
+	media_path: '',
+	unix_socket: '',
+	mysql_database: 'web_dedalo',
+	tls_mode: '',
+	db_mode: '',
+	install_dir: '',
+	service_user: '',
+	backup_dir: '',
+	image_source: '',
+});
+
+/**
+ * The route's defaults. LEVELLED (owner decisions 2026-10-12): `level` — the
+ * level-1 answers (install_dir, service_user) as the operator gave them — is
+ * what the level-2 production defaults (backup_dir, db_username) derive from;
+ * absent = the level-1 defaults themselves.
+ */
+export function routeDefaults(
+	route: InstallRoute,
+	instance: string,
+	level: IdentityLevel | null = null,
+): RouteDefaults {
+	if (route === 'docker') return STACK_DEFAULTS;
+	if (route === 'trial') return { ...STACK_DEFAULTS, tls_mode: 'none' };
+	if (route === 'production') return productionDefaults(instance, level);
+	return DEVELOPER_DEFAULTS;
+}
+
 /**
  * The vendored thesaurus offer (every non-core hierarchy.json entry), or `[]`
  * plus the reader's refusal sentence in `errors` — the plan REPORTS a missing
@@ -317,7 +744,12 @@ function requestedHierarchies(value: unknown): string[] {
 }
 
 /** Drop core tlds (noted) and refuse ones hierarchy.json does not list; de-duplicated, order kept. */
-function parseHierarchies(value: unknown, notes: string[], errors: string[]): string[] {
+function parseHierarchies(
+	value: unknown,
+	notes: string[],
+	errors: string[],
+	problems: FieldError[] = [],
+): string[] {
 	const requested = requestedHierarchies(value);
 	if (requested.length === 0) return [];
 	const offered = new Set(offeredThesauri(errors).map((meta) => meta.tld));
@@ -326,7 +758,9 @@ function parseHierarchies(value: unknown, notes: string[], errors: string[]): st
 		if (isCoreHierarchyTld(tld)) {
 			notes.push(`${tld} is a core hierarchy (always activated) — dropped from the list`);
 		} else if (!offered.has(tld)) {
-			errors.push(`unknown hierarchy '${tld}' (no entry in hierarchy.json)`);
+			const message = `unknown hierarchy '${tld}' (no entry in hierarchy.json)`;
+			errors.push(message);
+			problems.push({ key: 'hierarchies', message });
 		} else if (!picked.includes(tld)) {
 			picked.push(tld);
 		}
@@ -336,61 +770,55 @@ function parseHierarchies(value: unknown, notes: string[], errors: string[]): st
 
 /**
  * THE toponymy suggestion — advice, never a default (owner decision
- * 2026-10-10: no country is ever pre-selected). The wizard shows its label
- * (`install_toponymy_suggestion`); the CLI prints this sentence.
+ * 2026-10-10: no country is ever pre-selected). The installer prints this
+ * sentence.
  */
 export const TOPONYMY_SUGGESTION =
 	"No toponymy thesaurus is selected (none is ever pre-selected): consider importing your own country's toponymy — e.g. --hierarchies np for an install in Nepal. --list-hierarchies lists the codes.";
 
-/** The suggestion when `hierarchies` holds no toponymy thesaurus of the offer; else none. */
-function thesaurusSuggestions(hierarchies: readonly string[], errors: string[]): string[] {
-	const offer = offeredThesauri(errors);
-	const toponymy = new Set(
-		offer.filter((meta) => meta.typology_id === TOPONYMY_TYPOLOGY_ID).map((meta) => meta.tld),
+/**
+ * Does `hierarchies` lack a COUNTRY toponymy? A country toponymy is a
+ * typology-2 entry that SHIPS TERMS (data files). Thesauri ship empty by design
+ * — only country toponymies and `lg` carry data — so a typology-2 entry WITHOUT
+ * data files (`htoponymy`, the toponymy DEFINITION) is not one: counting it
+ * would suppress the own-country suggestion for a plan that installs no place
+ * at all (install test campaign finding L31). False when the offer has no
+ * country toponymy (nothing to suggest).
+ */
+export function toponymyMissing(hierarchies: readonly string[], errors: string[]): boolean {
+	const countries = new Set(
+		offeredThesauri(errors)
+			.filter((meta) => meta.typology_id === TOPONYMY_TYPOLOGY_ID && meta.data_files.length > 0)
+			.map((meta) => meta.tld),
 	);
-	if (toponymy.size === 0) return [];
-	return hierarchies.some((tld) => toponymy.has(tld)) ? [] : [TOPONYMY_SUGGESTION];
+	if (countries.size === 0) return false;
+	return !hierarchies.some((tld) => countries.has(tld));
+}
+
+/** The suggestion when `hierarchies` holds no country toponymy of the offer; else none. */
+function thesaurusSuggestions(hierarchies: readonly string[], errors: string[]): string[] {
+	return toponymyMissing(hierarchies, errors) ? [TOPONYMY_SUGGESTION] : [];
 }
 
 /**
- * The thesaurus answer ALONE, normalized exactly as buildInstallPlan does —
- * lowercased, de-duplicated, a core tld dropped with a note, one hierarchy.json
- * does not list an error. The wizard's install_hierarchies step posts its own ticked list
- * AFTER persist_config (engine.ts), so it runs this on that post: the same answer
- * reaches the same thesauri through the CLI and the wizard.
+ * The socket answer: given, or the route's — production's local socket only
+ * while the installer CREATES the database (an existing one is reached as the
+ * operator says).
  */
-export function normalizeHierarchyChoice(value: unknown): {
-	hierarchies: string[];
-	notes: string[];
-	errors: string[];
-} {
-	const notes: string[] = [];
-	const errors: string[] = [];
-	const hierarchies = parseHierarchies(value, notes, errors);
-	return { hierarchies, notes, errors };
+function dbSocketOf(raw: RawAnswers, d: RouteDefaults): string {
+	if (Object.hasOwn(raw, 'db_socket')) return text(raw, 'db_socket');
+	return textOr(raw, 'db_mode', d.db_mode) === 'create' ? d.db_socket : '';
 }
 
-/** The required answers: empty → "<key> is required". */
-function requireAnswers(answers: InstallAnswers, errors: string[]): void {
-	for (const key of ['db_database', 'db_username', 'entity'] as const) {
-		if (answers[key] === '') errors.push(`${key} is required`);
-	}
-	// An empty host would persist a DISABLED mailer — refuse the contradiction.
-	if (answers.mailer && answers.smtp_host === '') errors.push('mailer requires smtp_host');
-	// A relative socket would refuse the boot (config.ts) — refuse it here first.
-	const socketProblem = pgSocketProblem(answers.db_socket);
-	if (socketProblem !== null) errors.push(`db_socket: ${socketProblem}`);
-}
-
-/** Database + entity + locale answers (the plan's defaults live here). */
-function coreAnswers(raw: RawAnswers) {
+/** Database + entity + locale answers (the plan's defaults live here; the route's in `d`). */
+function coreAnswers(raw: RawAnswers, d: RouteDefaults) {
 	const entity = text(raw, 'entity');
 	return {
-		db_hostname: textOr(raw, 'db_hostname', 'localhost'),
+		db_hostname: textOr(raw, 'db_hostname', d.db_hostname),
 		db_port: textOr(raw, 'db_port', '5432'),
-		db_socket: text(raw, 'db_socket'),
-		db_database: text(raw, 'db_database'),
-		db_username: text(raw, 'db_username'),
+		db_socket: dbSocketOf(raw, d),
+		db_database: textOr(raw, 'db_database', d.db_database),
+		db_username: textOr(raw, 'db_username', d.db_username),
 		db_password: text(raw, 'db_password'),
 		entity,
 		entity_label: textOr(raw, 'entity_label', entity),
@@ -405,13 +833,13 @@ function coreAnswers(raw: RawAnswers) {
 }
 
 /** The optional services: diffusion (MariaDB), mailer (SMTP), serving/media. */
-function serviceAnswers(raw: RawAnswers) {
+function serviceAnswers(raw: RawAnswers, d: RouteDefaults) {
 	return {
 		diffusion: raw.diffusion === true,
 		mysql_hostname: textOr(raw, 'mysql_hostname', 'localhost'),
 		mysql_port: textOr(raw, 'mysql_port', '3306'),
 		mysql_socket: text(raw, 'mysql_socket'),
-		mysql_database: text(raw, 'mysql_database'),
+		mysql_database: textOr(raw, 'mysql_database', d.mysql_database),
 		mysql_username: text(raw, 'mysql_username'),
 		mysql_password: text(raw, 'mysql_password'),
 		mailer: raw.mailer === true,
@@ -422,37 +850,101 @@ function serviceAnswers(raw: RawAnswers) {
 		smtp_pass: text(raw, 'smtp_pass'),
 		smtp_from: text(raw, 'smtp_from'),
 		smtp_from_name: text(raw, 'smtp_from_name'),
-		media_path: text(raw, 'media_path'),
-		unix_socket: text(raw, 'unix_socket'),
+		media_path: textOr(raw, 'media_path', d.media_path),
+		unix_socket: textOr(raw, 'unix_socket', d.unix_socket),
 		media_access_mode: text(raw, 'media_access_mode'),
 	};
 }
 
-/** Raw answers (wizard post or CLI flags) → normalized answers + notes + errors. */
+/** A posted bool: exactly `true` (a flag, a JSON true) — anything else is false. */
+function flag(raw: RawAnswers, key: string): boolean {
+	return raw[key] === true;
+}
+
+/**
+ * The host-step answers (phase 4): web, TLS, database mode, backups, image.
+ * Defaults by route (RouteDefaults); the ports are the web server's standard ones.
+ */
+function hostAnswers(raw: RawAnswers, d: RouteDefaults) {
+	return {
+		web_server: text(raw, 'web_server'),
+		server_name: text(raw, 'server_name').toLowerCase(),
+		http_port: textOr(raw, 'http_port', '80'),
+		https_port: textOr(raw, 'https_port', '443'),
+		tls_mode: textOr(raw, 'tls_mode', d.tls_mode),
+		letsencrypt_email: text(raw, 'letsencrypt_email'),
+		letsencrypt_staging: flag(raw, 'letsencrypt_staging'),
+		tls_cert_path: text(raw, 'tls_cert_path'),
+		tls_key_path: text(raw, 'tls_key_path'),
+		db_mode: textOr(raw, 'db_mode', d.db_mode),
+		install_dir: textOr(raw, 'install_dir', d.install_dir),
+		service_user: textOr(raw, 'service_user', d.service_user),
+		service_group: text(raw, 'service_group'),
+		backup_dir: textOr(raw, 'backup_dir', d.backup_dir),
+		backup_site_builder: flag(raw, 'backup_site_builder'),
+		image_source: textOr(raw, 'image_source', d.image_source),
+		image_repository: text(raw, 'image_repository'),
+		image_version: text(raw, 'image_version'),
+		engine_only: flag(raw, 'engine_only'),
+		pg_bin_path: text(raw, 'pg_bin_path'),
+	};
+}
+
+/**
+ * Raw answers (screens, CLI flags or an answers file) → normalized answers + notes + errors
+ * (+ the same refusals tagged by answer key, `fieldErrors`).
+ */
 export function normalizeInstallAnswers(raw: RawAnswers): {
 	answers: InstallAnswers;
 	notes: string[];
 	errors: string[];
+	fieldErrors: FieldError[];
 } {
 	const notes: string[] = [];
 	const errors: string[] = [];
+	const problems: FieldError[] = [];
+	const route = parseRoute(raw.route, problems);
+	const instance = text(raw, 'instance');
+	// Level 1 first (the instance's own defaults), then every default derived from it.
+	const identity = routeDefaults(route, instance);
+	const defaults = routeDefaults(route, instance, {
+		install_dir: textOr(raw, 'install_dir', identity.install_dir),
+		service_user: textOr(raw, 'service_user', identity.service_user),
+	});
 	const ontologyChoice = normalizeOntologyChoice(raw.ontologies);
 	const declinedChoice = normalizeDeclinedDependencies(raw.declined_dependencies);
+	const serversErrors: string[] = [];
+	const update_servers = parseUpdateServers(raw.update_servers, serversErrors);
+	for (const message of serversErrors) problems.push({ key: 'update_servers', message });
+	errors.push(...problems.map((item) => item.message));
 	const answers: InstallAnswers = {
-		...coreAnswers(raw),
-		...serviceAnswers(raw),
-		update_servers: parseUpdateServers(raw.update_servers, errors),
-		hierarchies: parseHierarchies(raw.hierarchies, notes, errors),
+		route,
+		instance,
+		...coreAnswers(raw, defaults),
+		...serviceAnswers(raw, defaults),
+		update_servers,
+		hierarchies: parseHierarchies(raw.hierarchies, notes, errors, problems),
 		register_tools: raw.register_tools !== false,
 		ontologies: ontologyChoice.ontologies,
 		declined_dependencies: declinedChoice.declined,
 		ontology_source: text(raw, 'ontology_source'),
+		...hostAnswers(raw, defaults),
 	};
-	requireAnswers(answers, errors);
+	// Every answer-only refusal (install_validation.ts): raised HERE, before any
+	// front end writes anything — the CLI argv, an answers file and the screens
+	// all pass through this one call.
+	const validation = answerProblems(answers);
+	errors.push(...validation.map((item) => item.message));
 	return {
 		answers,
 		notes: [...notes, ...ontologyChoice.notes],
 		errors: [...errors, ...ontologyChoice.errors, ...declinedChoice.errors],
+		fieldErrors: [
+			...problems,
+			...validation,
+			...ontologyChoice.errors.map((message) => ({ key: 'ontologies', message })),
+			...declinedChoice.errors.map((message) => ({ key: 'declined_dependencies', message })),
+		],
 	};
 }
 
@@ -503,11 +995,11 @@ function entitySection(a: InstallAnswers): EnvSection {
 }
 
 /**
- * LANGUAGES (mandatory once configured — config.ts requires them whenever
- * INSTALL_MODE is false, so a config without them crash-loops at boot). The
- * map/array keys are RAW compact JSON: parseEnvFile strips surrounding quotes
- * but does not unescape inner \", so an envQuote'd JSON value would not
- * round-trip through JSON.parse.
+ * LANGUAGES (mandatory once configured — config.ts requires them on every
+ * configured box, so a config without them crash-loops at boot). The
+ * map/array keys are RAW compact JSON, written verbatim: readable as-is by any
+ * .env reader (parseEnvFile unescapes envQuote's \" since 2026-10-11, but a
+ * shell or a container env-file does not).
  */
 function langSection(l: LangConfig): EnvSection {
 	return {
@@ -554,7 +1046,7 @@ function isCustomServerList(value: string | undefined): boolean {
  * carries the operator's line verbatim (mirrors they added survive a re-run). A
  * prior `[]` is NOT preserved: it is an earlier air-gapped answer, and keeping it
  * under an `official` answer would leave the install cut off from updates while
- * the front end showed the official server (the wizard re-save it invites).
+ * the front end showed the official server (the re-run it invites).
  */
 function updateServersSection(
 	a: InstallAnswers,
@@ -638,6 +1130,7 @@ function servingSection(a: InstallAnswers): EnvSection {
 		entry('MEDIA_PATH', a.media_path),
 		entry('SERVER_UNIX_SOCKET', a.unix_socket),
 		entry('DEDALO_MEDIA_ACCESS_MODE', a.media_access_mode),
+		entry('DEDALO_PG_BIN_PATH', a.pg_bin_path),
 	];
 	return {
 		comment: '# --- Serving / media ---',
@@ -701,25 +1194,59 @@ function envSections(
 /**
  * A .env is LINE-BASED: a CR/LF/NUL inside a value would split it into a second
  * `KEY=value` line (OPS-02 key injection). envQuote refuses it at write time;
- * the plan reports it up front so `--plan` and the wizard refuse BEFORE a write.
+ * the plan reports it up front so `--plan` and every front end refuse BEFORE a write.
  */
 function controlCharacterErrors(sections: readonly EnvSection[]): string[] {
 	return sections
 		.flatMap((section) => section.entries)
-		.filter((item) => /[\r\n\0]/.test(item.value))
+		.filter((item) => hasIllegalControlCharacter(item.value))
 		.map((item) => `${item.key} contains an illegal control character`);
+}
+
+/**
+ * THE .env line rule (CR/LF/NUL split a line — OPS-02): exported so a terminal
+ * front end refuses a typed SECRET at the prompt, before the Review — the plan
+ * only sees a secret when the run starts.
+ */
+export function hasIllegalControlCharacter(value: string): boolean {
+	return /[\r\n\0]/.test(value);
 }
 
 // ── the steps ────────────────────────────────────────────────────────────────
 
-/** The step list: the optional probes and tool registration follow the answers. */
-function installSteps(a: InstallAnswers): InstallStepId[] {
+/** The ENGINE step list: the optional probes and tool registration follow the answers. */
+export function engineSteps(a: InstallAnswers): InstallStepId[] {
 	const optional: Partial<Record<InstallStepId, boolean>> = {
 		test_diffusion_connection: a.diffusion,
 		test_mailer_connection: a.mailer,
 		register_tools: a.register_tools,
 	};
 	return INSTALL_STEP_IDS.filter((step) => optional[step] !== false);
+}
+
+/** The production host steps: the challenge site only for Let's Encrypt. */
+function productionSteps(a: InstallAnswers): ProductionHostStepId[] {
+	return PRODUCTION_HOST_STEP_IDS.filter(
+		(step) => step !== 'host_web_http' || a.tls_mode === 'letsencrypt',
+	);
+}
+
+/** The docker/trial host steps: no TLS step without TLS (trial). */
+function stackSteps(a: InstallAnswers): StackHostStepId[] {
+	return STACK_HOST_STEP_IDS.filter((step) => step !== 'stack_tls' || a.tls_mode !== 'none');
+}
+
+/**
+ * THE step list (phase 4): a host route that is not the delegated engine child
+ * runs its HOST steps (the engine steps run inside `host_engine` /
+ * `stack_engine`, in a child); the developer route and every `engine_only`
+ * child run the engine steps here.
+ */
+export function installSteps(a: InstallAnswers): StepId[] {
+	if (a.engine_only) return engineSteps(a);
+	if (a.route === 'production') return productionSteps(a);
+	if (a.route === 'docker' || a.route === 'trial') return stackSteps(a);
+	return engineSteps(a);
 }
 
 // ── the ontologies ───────────────────────────────────────────────────────────
@@ -735,6 +1262,8 @@ interface PlannedOntologies {
 	notes: string[];
 	warnings: string[];
 	errors: string[];
+	/** The closure's refusals (an unknown chosen ontology, an unoffered mandatory one), tagged `ontologies`. */
+	fieldErrors: FieldError[];
 }
 
 /**
@@ -786,6 +1315,7 @@ function closedOntologies(
 		notes: closure.notes,
 		warnings: [...catalog.warnings, ...closure.warnings, ...coreWarnings, ...thesauri.warnings],
 		errors: [...closure.errors, ...manifestErrors],
+		fieldErrors: closure.errors.map((message) => ({ key: 'ontologies', message })),
 	};
 }
 
@@ -810,6 +1340,7 @@ function planOntologies(
 			...closedOntologies(answers, source, vendoredOntologyCatalog()),
 			request: null,
 			errors: [unresolvedCatalog(source)],
+			fieldErrors: [],
 		};
 	}
 	return closedOntologies(answers, source, mergeOntologyCatalogs(given, vendoredOntologyCatalog()));
@@ -827,9 +1358,16 @@ function closedThesauri(
 	chosen: readonly string[],
 	answers: InstallAnswers,
 	activeOntologyTlds: readonly string[],
-): ThesaurusChoiceClosure {
+): ThesaurusChoiceClosure & { choiceErrors: string[] } {
 	if (chosen.length === 0) {
-		return { hierarchies: [], dependencies: [], notes: [], warnings: [], errors: [] };
+		return {
+			hierarchies: [],
+			dependencies: [],
+			notes: [],
+			warnings: [],
+			errors: [],
+			choiceErrors: [],
+		};
 	}
 	const manifestErrors: string[] = [];
 	const declarers = offeredThesauri(manifestErrors).map((meta) => ({
@@ -842,7 +1380,13 @@ function closedThesauri(
 		new Set(activeOntologyTlds),
 		declinePolicy(answers.declined_dependencies),
 	);
-	return { ...closure, errors: [...manifestErrors, ...closure.errors] };
+	// `choiceErrors`: the choice's own refusals (tagged `hierarchies`); a broken
+	// manifest is review-level.
+	return {
+		...closure,
+		errors: [...manifestErrors, ...closure.errors],
+		choiceErrors: closure.errors,
+	};
 }
 
 /**
@@ -856,9 +1400,17 @@ export function buildInstallPlan(
 		salt?: string;
 		priorEnv?: Readonly<Record<string, string>>;
 		ontologyCatalog?: OntologyCatalog;
+		/** The root password the run will set (never an answer — see ANSWER_CLASS). */
+		rootPassword?: string;
+		/** A fresh terminal install sets it, so it must be supplied. */
+		requireRootPassword?: boolean;
 	} = {},
 ): InstallPlan {
-	const { answers, notes, errors } = normalizeInstallAnswers(raw);
+	const { answers, notes, errors, fieldErrors: answerFieldErrors } = normalizeInstallAnswers(raw);
+	const passwordErrors = rootPasswordErrors(
+		context.rootPassword,
+		context.requireRootPassword === true,
+	);
 	const prior = context.priorEnv ?? {};
 	const langConfig = deriveLangConfig({
 		langs: answers.langs,
@@ -895,6 +1447,7 @@ export function buildInstallPlan(
 			ontologies.hierarchyDependencies,
 			thesauri.dependencies,
 		),
+		ontologyHierarchyDependencies: ontologies.hierarchyDependencies,
 		suggestions,
 		ontologies: answers.ontologies,
 		ontologySource: ontologySourceView(ontologies.source),
@@ -902,17 +1455,29 @@ export function buildInstallPlan(
 		activeOntologyTlds: ontologies.activeOntologyTlds,
 		notes: [...notes, ...ontologies.notes, ...thesauri.notes],
 		warnings: [...ontologies.warnings, ...thesauri.warnings],
+		rootPasswordErrors: passwordErrors,
 		errors: [
 			...new Set([...errors, ...ontologies.errors, ...thesauri.errors, ...suggestionErrors]),
 			...langConfig.errors.map((error) => `languages: ${error}`),
 			...controlCharacterErrors(env),
+			...passwordErrors,
+		],
+		fieldErrors: [
+			...answerFieldErrors,
+			...ontologies.fieldErrors,
+			// A chosen thesaurus whose declared ontology is not installed (closeThesaurusChoice).
+			...thesauri.choiceErrors.map((message) => ({ key: 'hierarchies', message })),
+			...langConfig.fieldErrors.map((item) => ({
+				key: item.key,
+				message: `languages: ${item.message}`,
+			})),
 		],
 	};
 }
 
 /**
  * The process environment the CLI must hold BEFORE it imports config.ts: the
- * engine then resolves the REAL configuration (not install mode), the pool
+ * engine then resolves the REAL configuration (not the unconfigured sentinels), the pool
  * targets the install database, and the four mandatory lang keys are present
  * (config.ts throws at import without them once ENTITY/DB are set).
  */
@@ -931,7 +1496,6 @@ export function cliBootEnv(plan: InstallPlan): Record<string, string> {
 		DB_PASSWORD: a.db_password,
 		// The directory step's write-probe reads config.media.rootPath.
 		...(a.media_path === '' ? {} : { MEDIA_PATH: a.media_path }),
-		DEDALO_INSTALL_NO_RESTART: 'true', // the CLI never self-restarts
 		DEDALO_APPLICATION_LANGS: JSON.stringify(l.applicationLangs),
 		PROJECTS_DEFAULT_LANGS: JSON.stringify(l.projectsDefaultLangs),
 		DEDALO_APPLICATION_LANGS_DEFAULT: l.applicationLangsDefault,
@@ -946,15 +1510,18 @@ export function cliBootEnv(plan: InstallPlan): Record<string, string> {
 
 /**
  * Every flag the CLI accepts. `key` is the answer it sets (null = a front-end
- * flag: --root-password, --plan, --list-ontologies). A bool flag sets `true`, except the negating
- * `--no-*` / `--skip-*` ones, which set `false`. NO DEFAULTS here — a flag that
- * is not given leaves its answer absent, and the plan's default applies.
+ * flag: --root-password, --plan, --list-ontologies, --answers, --resume, …). A
+ * bool flag sets `true`, except the negating `--no-*` / `--skip-*` ones, which
+ * set `false`. NO DEFAULTS here — a flag that is not given leaves its answer
+ * absent, and the plan's default applies.
  */
 export const INSTALL_CLI_FLAGS: readonly {
 	flag: string;
 	key: string | null;
 	kind: 'value' | 'bool';
 }[] = Object.freeze([
+	{ flag: '--route', key: 'route', kind: 'value' },
+	{ flag: '--instance', key: 'instance', kind: 'value' },
 	{ flag: '--db-host', key: 'db_hostname', kind: 'value' },
 	{ flag: '--db-port', key: 'db_port', kind: 'value' },
 	{ flag: '--db-socket', key: 'db_socket', kind: 'value' },
@@ -990,19 +1557,72 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--ontologies', key: 'ontologies', kind: 'value' },
 	{ flag: '--ontology-source', key: 'ontology_source', kind: 'value' },
 	{ flag: '--decline-dependencies', key: 'declined_dependencies', kind: 'value' },
+	// The host steps (phase 4, 2026-10-12).
+	{ flag: '--web-server', key: 'web_server', kind: 'value' },
+	{ flag: '--server-name', key: 'server_name', kind: 'value' },
+	{ flag: '--http-port', key: 'http_port', kind: 'value' },
+	{ flag: '--https-port', key: 'https_port', kind: 'value' },
+	{ flag: '--tls', key: 'tls_mode', kind: 'value' },
+	{ flag: '--letsencrypt-email', key: 'letsencrypt_email', kind: 'value' },
+	{ flag: '--tls-cert', key: 'tls_cert_path', kind: 'value' },
+	{ flag: '--tls-key', key: 'tls_key_path', kind: 'value' },
+	{ flag: '--db-mode', key: 'db_mode', kind: 'value' },
+	{ flag: '--install-dir', key: 'install_dir', kind: 'value' },
+	{ flag: '--service-user', key: 'service_user', kind: 'value' },
+	{ flag: '--service-group', key: 'service_group', kind: 'value' },
+	{ flag: '--backup-dir', key: 'backup_dir', kind: 'value' },
+	{ flag: '--image-source', key: 'image_source', kind: 'value' },
+	{ flag: '--image-repository', key: 'image_repository', kind: 'value' },
+	{ flag: '--image-version', key: 'image_version', kind: 'value' },
+	{ flag: '--pg-bin-path', key: 'pg_bin_path', kind: 'value' },
 	{ flag: '--root-password', key: null, kind: 'value' },
 	{ flag: '--diffusion', key: 'diffusion', kind: 'bool' },
 	{ flag: '--mailer', key: 'mailer', kind: 'bool' },
 	{ flag: '--no-update-servers', key: 'update_servers', kind: 'bool' },
 	{ flag: '--skip-tools', key: 'register_tools', kind: 'bool' },
+	{ flag: '--letsencrypt-staging', key: 'letsencrypt_staging', kind: 'bool' },
+	{ flag: '--backup-site-builder', key: 'backup_site_builder', kind: 'bool' },
+	{ flag: '--engine-only', key: 'engine_only', kind: 'bool' },
 	{ flag: '--plan', key: null, kind: 'bool' },
 	{ flag: '--list-ontologies', key: null, kind: 'bool' },
 	{ flag: '--list-hierarchies', key: null, kind: 'bool' },
+	// The terminal installer's run control (2026-10-11 — executor.ts).
+	{ flag: '--answers', key: null, kind: 'value' },
+	{ flag: '--resume', key: null, kind: 'bool' },
+	{ flag: '--abort', key: null, kind: 'bool' },
+	{ flag: '--confirm-database', key: null, kind: 'value' },
+	{ flag: '--secrets-stdin', key: null, kind: 'bool' },
+	{ flag: '--execute', key: null, kind: 'bool' },
+	// The interactive front end (phase 2, 2026-10-12 — install_session.ts).
+	{ flag: '--plain', key: null, kind: 'bool' },
+	{ flag: '--write-answers', key: null, kind: 'value' },
+	{ flag: '--list-langs', key: null, kind: 'bool' },
+	// The delegated engine child's channels (phase 4 — a host route's parent reads them).
+	{ flag: '--status', key: null, kind: 'bool' },
+	{ flag: '--json', key: null, kind: 'bool' },
+	{ flag: '--events-jsonl', key: null, kind: 'bool' },
+	{ flag: '--request-stdin', key: null, kind: 'bool' },
 ]);
 
 const FLAGS_BY_NAME: ReadonlyMap<string, (typeof INSTALL_CLI_FLAGS)[number]> = new Map(
 	INSTALL_CLI_FLAGS.map((spec) => [spec.flag, spec]),
 );
+
+/** The flag that sets each answer key (for the answers-file conflict sentence). */
+const FLAG_OF_KEY: ReadonlyMap<string, string> = new Map(
+	INSTALL_CLI_FLAGS.filter((spec) => spec.key !== null).map((spec) => [
+		spec.key as string,
+		spec.flag,
+	]),
+);
+
+/** The argv secret flags — still accepted in phase 1, each with a warning (visible in `ps`). */
+export const ARGV_SECRET_FLAGS: readonly string[] = Object.freeze([
+	'--db-password',
+	'--mysql-password',
+	'--smtp-password',
+	'--root-password',
+]);
 
 export interface CliInstallInvocation {
 	raw: Record<string, unknown>;
@@ -1012,10 +1632,53 @@ export interface CliInstallInvocation {
 	listOntologies: boolean;
 	/** --list-hierarchies: print the thesaurus offer and exit (wins over --plan). */
 	listHierarchies: boolean;
+	/** --answers <file>: an answers file (dedalo.install.answers/1) merged with the flags. */
+	answersFile: string | undefined;
+	/** --resume: continue the install recorded in <private>/install/. */
+	resume: boolean;
+	/** --abort: undo the install recorded in <private>/install/. */
+	abort: boolean;
+	/** --confirm-database <name>: the database --abort may reset (must equal the plan's). */
+	confirmDatabase: string | undefined;
+	/** --secrets-stdin: read the secrets as ONE JSON object from stdin. */
+	secretsStdin: boolean;
+	/**
+	 * --execute: explicitly headless — never prompts; a missing answer or secret
+	 * is refused. Without it, a headless run on a terminal PROMPTS for a missing
+	 * root password (fresh) or the secrets a resume still needs (scripts/install.ts).
+	 * Recorded on the run (install.state.json runs[].execute).
+	 */
+	execute: boolean;
+	/** --plain: the interactive front end in plain line mode (no full-screen UI, no colour). */
+	plain: boolean;
+	/** --write-answers <file>: write the reviewed answers as a dedalo.install.answers/1 file. */
+	writeAnswersPath: string | undefined;
+	/** --list-langs: print the language offer and exit. */
+	listLangs: boolean;
+	/**
+	 * --status: print the saved install record's state and exit (with --json: ONE
+	 * JSON line — how a host route's parent verifies its engine child, phase 4).
+	 */
+	status: boolean;
+	json: boolean;
+	/** --events-jsonl: the run's step events and its show-once lines as JSON lines on stdout. */
+	eventsJsonl: boolean;
+	/**
+	 * --request-stdin: ONE JSON object on stdin — `{schema: 'dedalo.install.request/1',
+	 * answers, secrets}` — how a host route's parent hands its engine child the
+	 * answers AND the secrets without a file or an argv (phase 4, critique B10).
+	 */
+	requestStdin: boolean;
+	/** The argv secret flags given (each earns a stderr warning). */
+	argvSecretFlags: string[];
 	errors: string[];
 }
 
-/** A value flag's value, or the error that it has none. */
+/**
+ * A value flag's value, or the error that it has none. `--flag value` treats a
+ * following `--…` token as a missing value; `--flag=value` carries ANY value
+ * (one starting with `--`, an empty one) — the form cliArgsOf emits.
+ */
 function flagValue(argv: readonly string[], index: number, flag: string, errors: string[]) {
 	const value = argv[index + 1];
 	if (value === undefined || value.startsWith('--')) {
@@ -1025,18 +1688,59 @@ function flagValue(argv: readonly string[], index: number, flag: string, errors:
 	return value;
 }
 
+/** `--flag=value` → [flag, value]; any other token → [token, undefined]. */
+function splitInlineValue(token: string): [string, string | undefined] {
+	const at = token.indexOf('=');
+	return token.startsWith('--') && at > 2
+		? [token.slice(0, at), token.slice(at + 1)]
+		: [token, undefined];
+}
+
+type FrontEndSetter = (invocation: CliInstallInvocation, value: string | undefined) => void;
+
+/** The front-end flags (key: null) — each sets its own invocation field. */
+const FRONT_END_SETTERS: ReadonlyMap<string, FrontEndSetter> = new Map<string, FrontEndSetter>([
+	['--root-password', (invocation, value) => (invocation.rootPassword = value)],
+	['--plan', (invocation) => (invocation.planOnly = true)],
+	['--list-ontologies', (invocation) => (invocation.listOntologies = true)],
+	['--list-hierarchies', (invocation) => (invocation.listHierarchies = true)],
+	['--answers', (invocation, value) => (invocation.answersFile = value)],
+	['--resume', (invocation) => (invocation.resume = true)],
+	['--abort', (invocation) => (invocation.abort = true)],
+	['--confirm-database', (invocation, value) => (invocation.confirmDatabase = value)],
+	['--secrets-stdin', (invocation) => (invocation.secretsStdin = true)],
+	['--execute', (invocation) => (invocation.execute = true)],
+	['--plain', (invocation) => (invocation.plain = true)],
+	['--write-answers', (invocation, value) => (invocation.writeAnswersPath = value)],
+	['--list-langs', (invocation) => (invocation.listLangs = true)],
+	['--status', (invocation) => (invocation.status = true)],
+	['--json', (invocation) => (invocation.json = true)],
+	['--events-jsonl', (invocation) => (invocation.eventsJsonl = true)],
+	['--request-stdin', (invocation) => (invocation.requestStdin = true)],
+]);
+
 /** Apply one parsed flag to the invocation. */
 function applyFlag(
 	invocation: CliInstallInvocation,
 	spec: { flag: string; key: string | null; kind: 'value' | 'bool' },
 	value: string | undefined,
 ): void {
-	if (spec.flag === '--root-password') invocation.rootPassword = value;
-	else if (spec.flag === '--plan') invocation.planOnly = true;
-	else if (spec.flag === '--list-ontologies') invocation.listOntologies = true;
-	else if (spec.flag === '--list-hierarchies') invocation.listHierarchies = true;
+	if (ARGV_SECRET_FLAGS.includes(spec.flag)) invocation.argvSecretFlags.push(spec.flag);
+	const setter = FRONT_END_SETTERS.get(spec.flag);
+	if (setter !== undefined) setter(invocation, value);
 	else if (spec.kind === 'value') invocation.raw[spec.key as string] = value;
 	else invocation.raw[spec.key as string] = !/^--(no|skip)-/.test(spec.flag);
+}
+
+/** A `--flag=value` token: a value flag takes it; a bool flag refuses one. Takes one token. */
+function applyInline(
+	invocation: CliInstallInvocation,
+	spec: (typeof INSTALL_CLI_FLAGS)[number],
+	inline: string,
+): number {
+	if (spec.kind === 'bool') invocation.errors.push(`${spec.flag} takes no value`);
+	else applyFlag(invocation, spec, inline);
+	return 1;
 }
 
 /**
@@ -1048,7 +1752,7 @@ function consumeToken(
 	index: number,
 	invocation: CliInstallInvocation,
 ): number {
-	const token = argv[index] as string;
+	const [token, inline] = splitInlineValue(argv[index] as string);
 	const spec = FLAGS_BY_NAME.get(token);
 	if (spec === undefined) {
 		invocation.errors.push(
@@ -1056,6 +1760,7 @@ function consumeToken(
 		);
 		return 1;
 	}
+	if (inline !== undefined) return applyInline(invocation, spec, inline);
 	if (spec.kind === 'bool') {
 		applyFlag(invocation, spec, undefined);
 		return 1;
@@ -1064,6 +1769,107 @@ function consumeToken(
 	if (value === undefined) return 1;
 	applyFlag(invocation, spec, value);
 	return 2;
+}
+
+/** Does the invocation continue a saved install (--resume or --abort)? */
+const continuing = (invocation: CliInstallInvocation): boolean =>
+	invocation.resume || invocation.abort;
+
+/** Does the invocation ask for a listing (--list-*)? */
+const listing = (invocation: CliInstallInvocation): boolean =>
+	invocation.listOntologies || invocation.listHierarchies || invocation.listLangs;
+
+/**
+ * Is the invocation HEADLESS — does it already carry what it is to do? Any
+ * answer (a flag that sets one), an answers file, `--plan`, a listing,
+ * `--resume`/`--abort`, `--secrets-stdin`, `--execute` or `--root-password`.
+ * Anything else (no flag, or only `--plain` / `--write-answers`) starts the
+ * interactive front end (front_end.ts selectFrontEnd). Owner decision 4 ("piped
+ * stdin without --answers is refused") is read as "without ANY answer source":
+ * flags + `--secrets-stdin` piped stay headless — install.sh and the gates run so.
+ */
+export function isHeadlessInvocation(invocation: CliInstallInvocation): boolean {
+	return HEADLESS_SOURCES.some((carries) => carries(invocation));
+}
+
+/** What makes an invocation headless (isHeadlessInvocation), one source each. */
+const HEADLESS_SOURCES: readonly ((invocation: CliInstallInvocation) => boolean)[] = [
+	(invocation) => Object.keys(invocation.raw).length > 0,
+	(invocation) => invocation.answersFile !== undefined,
+	(invocation) => invocation.planOnly,
+	listing,
+	continuing,
+	(invocation) => invocation.secretsStdin,
+	(invocation) => invocation.execute,
+	(invocation) => invocation.rootPassword !== undefined,
+	(invocation) => invocation.status,
+	(invocation) => invocation.eventsJsonl,
+	(invocation) => invocation.requestStdin,
+];
+
+/** Headless for a reason other than --resume (the one run control --plain may join: it prompts the secrets). */
+const headlessBesidesResume = (invocation: CliInstallInvocation): boolean =>
+	isHeadlessInvocation({ ...invocation, resume: false });
+
+/** The run-control combinations that cannot mean anything — each a parser error. */
+const COMBINATION_RULES: readonly {
+	refuses: (invocation: CliInstallInvocation) => boolean;
+	error: string;
+}[] = Object.freeze([
+	{
+		refuses: (invocation) => invocation.resume && invocation.abort,
+		error: '--resume and --abort exclude each other',
+	},
+	{
+		refuses: (invocation) => invocation.planOnly && continuing(invocation),
+		error: '--plan cannot be combined with --resume or --abort',
+	},
+	{
+		refuses: (invocation) => listing(invocation) && continuing(invocation),
+		error: '--list-* cannot be combined with --resume or --abort',
+	},
+	{
+		refuses: (invocation) => invocation.plain && invocation.abort,
+		error: '--plain cannot be combined with --abort',
+	},
+	{
+		refuses: (invocation) =>
+			invocation.plain && !invocation.abort && headlessBesidesResume(invocation),
+		error:
+			'--plain is the interactive front end — it takes no answer flag, --answers, --plan, --list-*, --secrets-stdin, --execute or --root-password',
+	},
+	{
+		refuses: (invocation) =>
+			invocation.writeAnswersPath !== undefined && (continuing(invocation) || listing(invocation)),
+		error: '--write-answers cannot be combined with --resume, --abort or --list-*',
+	},
+	{
+		refuses: (invocation) => invocation.confirmDatabase !== undefined && !invocation.abort,
+		error: '--confirm-database is only meaningful with --abort',
+	},
+	{
+		refuses: (invocation) =>
+			invocation.status && (continuing(invocation) || invocation.planOnly || listing(invocation)),
+		error: '--status cannot be combined with --resume, --abort, --plan or --list-*',
+	},
+	{
+		refuses: (invocation) => invocation.json && !invocation.status,
+		error: '--json is only meaningful with --status',
+	},
+	{
+		refuses: (invocation) =>
+			invocation.requestStdin &&
+			(invocation.secretsStdin ||
+				invocation.answersFile !== undefined ||
+				Object.keys(invocation.raw).length > 0),
+		error:
+			'--request-stdin carries the answers and the secrets: it takes no answer flag, --answers or --secrets-stdin',
+	},
+]);
+
+/** The run-control combinations that cannot mean anything, as parser errors. */
+function combinationErrors(invocation: CliInstallInvocation): string[] {
+	return COMBINATION_RULES.filter((rule) => rule.refuses(invocation)).map((rule) => rule.error);
 }
 
 /**
@@ -1078,10 +1884,176 @@ export function answersFromCliArgs(argv: readonly string[]): CliInstallInvocatio
 		planOnly: false,
 		listOntologies: false,
 		listHierarchies: false,
+		answersFile: undefined,
+		resume: false,
+		abort: false,
+		confirmDatabase: undefined,
+		secretsStdin: false,
+		execute: false,
+		plain: false,
+		writeAnswersPath: undefined,
+		listLangs: false,
+		status: false,
+		json: false,
+		eventsJsonl: false,
+		requestStdin: false,
+		argvSecretFlags: [],
 		errors: [],
 	};
 	for (let index = 0; index < argv.length; ) {
 		index += consumeToken(argv, index, invocation);
 	}
+	invocation.errors.push(...combinationErrors(invocation));
 	return invocation;
+}
+
+// ── the answers file (--answers) ─────────────────────────────────────────────
+
+/** The answers file's envelope schema. */
+export const ANSWERS_FILE_SCHEMA = 'dedalo.install.answers/1';
+
+/**
+ * An answers file (already JSON-parsed) → raw answers + errors. The envelope is
+ * `{schema: 'dedalo.install.answers/1', answers: {<the answers shape>}}`;
+ * the key set is INSTALL_ANSWER_KEYS. A SECRET key is refused (a file is
+ * copied, mailed and committed; secrets come from DEDALO_INSTALL_* or
+ * --secrets-stdin), and so is an unknown one — never silently ignored.
+ */
+export function answersFromAnswersFile(json: unknown): {
+	raw: Record<string, unknown>;
+	errors: string[];
+} {
+	const answers = answersOfEnvelope(json);
+	if (typeof answers === 'string') return { raw: {}, errors: [answers] };
+	const raw: Record<string, unknown> = {};
+	const errors: string[] = [];
+	for (const [key, value] of Object.entries(answers)) {
+		const refusal = answerFileKeyRefusal(key);
+		if (refusal === null) raw[key] = value;
+		else errors.push(refusal);
+	}
+	return { raw, errors };
+}
+
+/** Is `value` a plain JSON object (not null, not an array)? */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+	return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** The envelope's `answers` object, or the refusal sentence. */
+function answersOfEnvelope(json: unknown): Record<string, unknown> | string {
+	if (!isPlainObject(json) || json.schema !== ANSWERS_FILE_SCHEMA) {
+		return `answers file: schema must be ${ANSWERS_FILE_SCHEMA}`;
+	}
+	return isPlainObject(json.answers) ? json.answers : 'answers file: answers must be an object';
+}
+
+/** Why an answers-file key is refused (a secret, an unknown key), or null. */
+function answerFileKeyRefusal(key: string): string | null {
+	if ((SECRET_ANSWER_KEYS as readonly string[]).includes(key)) {
+		return `answers file: '${key}' is a secret and is not accepted in a file — use DEDALO_INSTALL_* or --secrets-stdin`;
+	}
+	return (INSTALL_ANSWER_KEYS as readonly string[]).includes(key)
+		? null
+		: `answers file: unknown key '${key}'`;
+}
+
+/**
+ * The INVERSE of answersFromAnswersFile: normalized answers → the answers-file
+ * envelope (the plain keys only — a secret never enters a file; an undefined
+ * one is omitted). What `--write-answers` and the interactive Review's `write`
+ * produce; read back, it decides the same plan.
+ */
+export function answersFileOf(answers: InstallAnswers): {
+	schema: typeof ANSWERS_FILE_SCHEMA;
+	answers: Record<string, unknown>;
+} {
+	const plain: Record<string, unknown> = {};
+	for (const key of PLAIN_ANSWER_KEYS) {
+		if (answers[key] !== undefined) plain[key] = answers[key];
+	}
+	return { schema: ANSWERS_FILE_SCHEMA, answers: plain };
+}
+
+/** Two answer values as one comparable text. */
+function sameValue(a: unknown, b: unknown): boolean {
+	return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+/**
+ * Does the answer need its bool flag? --diffusion/--mailer set true;
+ * --no-update-servers (none) and --skip-tools (false) set the negation.
+ */
+function boolFlagSet(key: keyof InstallAnswers, flag: string, value: unknown): boolean {
+	if (key === 'update_servers') return value === 'none';
+	return /^--(no|skip)-/.test(flag) ? value === false : value === true;
+}
+
+/** An answer value as a flag value (a list comma-joined; an empty list `none`). */
+function flagText(value: unknown): string {
+	if (!Array.isArray(value)) return String(value);
+	return value.length === 0 ? 'none' : value.join(',');
+}
+
+/** One answer as the argv that sets it (`--flag=value`; a bool flag bare), or [] when no flag can. */
+function argvOfAnswer(key: keyof InstallAnswers, value: unknown): string[] {
+	const spec = INSTALL_CLI_FLAGS.find((item) => item.key === key);
+	if (spec === undefined) return [];
+	if (spec.kind === 'bool') return boolFlagSet(key, spec.flag, value) ? [spec.flag] : [];
+	return [`${spec.flag}=${flagText(value)}`];
+}
+
+/**
+ * The INVERSE of answersFromCliArgs: normalized answers → the argv that decides
+ * the same plan. Only the answers that differ from the route's own defaults are
+ * emitted (a full flag list would bury the operator's choices), always in the
+ * `--flag=value` form (a value may start with `--` or contain spaces); a secret
+ * answer NEVER (it travels through DEDALO_INSTALL_* or --secrets-stdin).
+ */
+export function cliArgsOf(answers: InstallAnswers): string[] {
+	const argv: string[] = [];
+	for (const key of PLAIN_ANSWER_KEYS) {
+		const value = answers[key];
+		if (value === undefined || sameValue(value, baselineOf(answers, key)[key])) continue;
+		argv.push(...argvOfAnswer(key, value));
+	}
+	return argv;
+}
+
+/** The answers OTHER defaults derive from, by level (see baselineOf). */
+const LEVEL_0: readonly string[] = ['route', 'instance', 'entity'];
+const LEVEL_1: readonly string[] = ['install_dir', 'service_user', 'service_group'];
+
+/**
+ * The defaults `key` is compared with: level 0 (route, instance, entity)
+ * against the no-answer defaults; level 1 (the install folder and the service
+ * account) against the defaults level 0 derives; every other answer against
+ * the defaults levels 0 and 1 derive (the backup dir and the role follow the
+ * install folder and the service user).
+ */
+function baselineOf(answers: InstallAnswers, key: string): InstallAnswers {
+	if (LEVEL_0.includes(key)) return normalizeInstallAnswers({}).answers;
+	const level0 = { route: answers.route, instance: answers.instance, entity: answers.entity };
+	if (LEVEL_1.includes(key)) return normalizeInstallAnswers(level0).answers;
+	return normalizeInstallAnswers({
+		...level0,
+		install_dir: answers.install_dir,
+		service_user: answers.service_user,
+		service_group: answers.service_group,
+	}).answers;
+}
+
+/**
+ * The flags' raw answers merged with an answers file's. NO PRECEDENCE: a key
+ * both set is an error naming both sources, so a scripted install never runs on
+ * an answer its author did not see win.
+ */
+export function mergeAnswerSources(
+	flags: Readonly<Record<string, unknown>>,
+	file: Readonly<Record<string, unknown>>,
+): { raw: Record<string, unknown>; errors: string[] } {
+	const errors = Object.keys(file)
+		.filter((key) => Object.hasOwn(flags, key))
+		.map((key) => `${key} is set by both --answers and ${FLAG_OF_KEY.get(key) ?? key}`);
+	return { raw: { ...file, ...flags }, errors };
 }

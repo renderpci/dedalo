@@ -52,10 +52,13 @@ Relative to neighbouring subsystems:
 
 !!! warning "`ts_object.ts` reads; it never mutates the tree"
     The module is **read-only**: it builds node data and counts. All tree
-    mutations (add child, move/`update_parent_data`, reorder, delete) live in
-    `ts_api.ts`, inside `withTransaction()` with per-node advisory locks and a
-    cycle guard (`isAncestor()`). The only state `ts_object.ts` *changes* is its
-    own module-level cache (and only via `invalidateNode()`).
+    mutations (add child, move/`update_parent_data`, reorder) live in
+    `ts_api.ts`, inside `withTreeTransaction()` (`tree_locks.ts`) with per-node
+    advisory locks, and write through `relations/parent.ts`, whose locked reads
+    and locked cycle check are described in
+    [the thesaurus lock law](../thesaurus/index.md#the-lock-law-no-lost-update-no-stored-cycle).
+    The only state `ts_object.ts` *changes* is its own module-level cache (and
+    only via `invalidateNode()`).
 
 ## Responsibilities
 
@@ -418,7 +421,7 @@ flowchart LR
         TSMOD --> REPO[node_repository.ts<br/>batched raw reads · no fallback]
         TSMOD --> TERM[term_resolver.ts<br/>term cache]
         TSMOD --> SEC["relations/children.ts · ontology/section_map.ts"]
-        API --> PARENT[relations/parent.ts<br/>addParent/removeParent/isAncestor]
+        API --> PARENT[relations/parent.ts<br/>addParent/moveParent · locked cycle check · persistTreeKeys]
         API --> CHILD[relations/children.ts<br/>getChildren]
     end
     TSJS -- "dd_ts_api actions" --> API
@@ -501,7 +504,7 @@ invalidateNode(sectionTipo, sectionId);
 - [hierarchy](hierarchy.md) — the per-tree descriptor (TLD, typology, root terms) and the order/section-map helpers `ts_object.ts` calls.
 - [section](../sections/section.md) — every tree row is a section record.
 - [section_map](section_map.md) — the role-to-component map every element resolution starts from.
-- [component_relation_parent](../components/component_relation_parent.md) — the stored upward edge (the cycle guard's home, `isAncestor()` in `relations/parent.ts`).
+- [component_relation_parent](../components/component_relation_parent.md) — the stored upward edge (the cycle guard's home: `assertParentLinksAcyclic()` in `relations/parent.ts`).
 - [component_relation_children](../components/component_relation_children.md) — the computed downward edge; supplies `countChildrenOrNull()`.
 - [component_relation_index](../components/component_relation_index.md) — the indexation backlinks behind the "U" icon.
 - [component_portal](../components/component_portal.md) — the canonical related component whose values `ts_object.ts` resolves to term strings.

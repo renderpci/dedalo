@@ -42,12 +42,14 @@
  *
  * Record SELECTION deliberately stays on sanitizeClientSqo + buildSearchSql
  * (the same §8.4 chokepoint the whole read side uses): the export contract
- * preserves the client SQO's order and the caller-principal projects filter,
- * and the protocol's meta `total` needs the full selection up front.
+ * preserves the client SQO's order and the caller-principal projects filter.
+ * The selection is NEVER loaded whole (PERF-1): it is materialized once, in
+ * one snapshot, as a server-side hold cursor (selection_cursor.ts) and paged
+ * into the walk — the protocol's meta `total` is that snapshot's exact count,
+ * known before the first line without moving a row to the process.
  */
 
-import { getSectionTipos, sanitizeClientSqo } from '../../core/concepts/sqo.ts';
-import { sql } from '../../core/db/postgres.ts';
+import { CLIENT_MAX_LIMIT, getSectionTipos, sanitizeClientSqo } from '../../core/concepts/sqo.ts';
 import { DedaloError, ok } from '../../core/errors/index.ts';
 import { termByTipo } from '../../core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../core/ontology/resolver.ts';
@@ -97,9 +99,18 @@ import {
 } from './external_prefetch.ts';
 import { ndjsonStream } from './ndjson_stream.ts';
 import { EXPORT_ROW_MEDIA, type ExportRowMediaAddress } from './row_media.ts';
+import {
+	openSelectionCursor,
+	SELECTION_PAGE_ROWS_MAX,
+	type SelectionAdmission,
+	type SelectionCursor,
+} from './selection_cursor.ts';
 
 /** Records bulk-hydrated per chunk (matches the diffusion selection default). */
 const HYDRATE_BATCH = 500;
+
+/** Selection rows per cursor FETCH (PERF-1) — the cursor's page bound, at least one hydrate batch. */
+const SELECTION_PAGE = SELECTION_PAGE_ROWS_MAX;
 
 /** One raw declared path step (verbatim client shape). */
 type RawPathStep = {
@@ -685,12 +696,33 @@ export interface ExportGridRunOptions {
 	 */
 	signal?: AbortSignal;
 	/**
+	 * What an open does when every selection slot is held (selection_cursor.ts
+	 * ADMISSION): `'refuse'` (default — the request path answers `export.busy`
+	 * at once) or `'queue'` (the background export lane: an admitted job waits
+	 * for the next slot, ended by `signal`).
+	 */
+	selectionAdmission?: SelectionAdmission;
+	/**
 	 * Records hydrated per chunk (default HYDRATE_BATCH). Only a gate needs to
 	 * move it — to put a batch boundary between two records of a small built
 	 * situation. Output bytes never depend on it; a non-positive-integer value
 	 * falls back to the default.
 	 */
 	hydrateBatch?: number;
+	/**
+	 * Selection rows per cursor FETCH (default SELECTION_PAGE; never below
+	 * `hydrateBatch`). A named TEST SEAM like `hydrateBatch`: only a gate moves
+	 * it, to make a small built selection span several pages. Output bytes
+	 * never depend on it (chunks are cut at `hydrateBatch` across pages).
+	 */
+	selectionPage?: number;
+	/**
+	 * The selection cursor's consumer-idle window in ms (default
+	 * EXPORT_CURSOR_IDLE_MS). A named TEST SEAM like `selectionPage`: only a
+	 * gate moves it, to prove a stalled consumer is closed out while a slow
+	 * export that keeps pulling is not.
+	 */
+	selectionIdleMs?: number;
 	/**
 	 * The REQUEST this export answers, passed EXPLICITLY by a caller that serves
 	 * one (`exportGridUnified`: its envelope's `perm.out_of_scope` notice reads
@@ -725,7 +757,10 @@ export interface OpenedExportGrid {
 	 * THE protocol-line producer: meta, interleaved col/row lines, then 'end'.
 	 * Lazy and single-use; it retains no emitted line, so a consumer that writes
 	 * each line away holds at most one record's lines whatever the selection
-	 * size.
+	 * size. It OWNS the selection cursor (a pooled connection and an admission
+	 * slot): exhausting it, or calling `return()` / `throw()` on it — even
+	 * before the first `next()` — releases them. A consumer that stops early
+	 * must call `return()`.
 	 */
 	lines: AsyncGenerator<Record<string, unknown>>;
 	/**
@@ -1102,16 +1137,12 @@ async function openExportGridInScope(
 	// ONE function, shared with every re-check of a finished export.
 	await assertExportDeclarationReadable(context.principal, options);
 
-	const { sql: builtSql, params } = await buildSearchSql(sqo, {
+	const builtSelection = await buildSearchSql(sqo, {
 		principal: context.principal.isGlobalAdmin ? undefined : context.principal,
 		// The export reads only the selection identity here (per-record data
 		// loads ride the run cache) — skip the ten wide jsonb columns.
 		idsOnly: true,
 	});
-	const records = (await sql.unsafe(builtSql, params as (string | number | null)[])) as {
-		section_id: number;
-		section_tipo: string;
-	}[];
 
 	const unresolved: string[] = [];
 
@@ -1128,6 +1159,23 @@ async function openExportGridInScope(
 			? { demands: [], fieldsOf: new Map() }
 			: await planExternalPrefetch(fields);
 
+	// THE SELECTION (PERF-1): the LAST eager step — every refusal that does not
+	// need it has run — so a cursor is only opened for an export that will run.
+	// From here on the cursor is owned by `lines` (closingLines below).
+	const selectionPage =
+		Number.isInteger(runOptions.selectionPage) && (runOptions.selectionPage as number) > 0
+			? (runOptions.selectionPage as number)
+			: SELECTION_PAGE;
+	const cursor = await openSelectionCursor<SelectedRecord>(
+		{ sql: builtSelection.sql, params: builtSelection.params },
+		{
+			pageRows: Math.max(selectionPage, hydrateBatch),
+			signal,
+			admission: runOptions.selectionAdmission ?? 'refuse',
+			...(runOptions.selectionIdleMs === undefined ? {} : { idleMs: runOptions.selectionIdleMs }),
+		},
+	);
+
 	const meta: Record<string, unknown> = {
 		t: 'meta',
 		v: 1,
@@ -1135,7 +1183,7 @@ async function openExportGridInScope(
 		breakdown,
 		fill_the_gaps: options.fill_the_gaps ?? true,
 		section_tipo: sectionTipo,
-		total: records.length,
+		total: cursor.total,
 	};
 
 	const tabulator = createTabulator({ dataFormat, breakdown, fillTheGaps, lang });
@@ -1322,14 +1370,24 @@ async function openExportGridInScope(
 	 * consumer's choice (exportGridUnified's buffered form), so a streaming or
 	 * spooling consumer holds at most one record's lines however large the
 	 * selection. Every async step runs in the export scope (`scoped`).
+	 *
+	 * RELEASE needs no `finally` here — it is structural, ONE path per way out
+	 * (export_selection_cursor_native legs 5, 5b, 5c, 13):
+	 *   - exhaustion: the empty FETCH closes the cursor (selection_cursor.ts);
+	 *   - a consumer's `return()` / `throw()`: closingLines closes first;
+	 *   - a PRODUCER failure (a hydration statement, external prefetch,
+	 *     tabulation): the `for await` over hydrateChunks — and hydrateChunks'
+	 *     own `for await` over `cursor.pages` — call `return()` on the way out,
+	 *     and `pages.return()` closes; a failing FETCH closes inside `pages`.
+	 * A second, redundant close here masked a regression of either path (both
+	 * mutations stayed green); without it, each is the gated one.
 	 */
 	async function* protocolLines(): AsyncGenerator<Record<string, unknown>> {
 		yield meta;
-		for (let chunkStart = 0; chunkStart < records.length; chunkStart += hydrateBatch) {
+		for await (const chunk of hydrateChunks(cursor, hydrateBatch)) {
 			// Cooperative cancellation at the batch boundary: stop BEFORE hydrating
 			// the next chunk, and emit no 'end' — its absence is the abort signal.
 			if (signal?.aborted === true) return;
-			const chunk = records.slice(chunkStart, chunkStart + hydrateBatch);
 			// Bulk-hydrate the chunk's OWN records (one ANY(int[]) query per
 			// section per chunk) so the per-record walk below hits the run cache
 			// instead of lazy-loading each exported row one SELECT at a time.
@@ -1374,6 +1432,9 @@ async function openExportGridInScope(
 				}
 			}
 		}
+		// An abort also CLOSES the cursor (selection_cursor.ts), which ends the
+		// pages early — a truncated selection must not read as a finished one.
+		if (abortedNow(signal)) return;
 		yield await scoped(async () => {
 			const end = tabulator.endLine();
 			// The marker travels ONLY when something degraded: a clean export's
@@ -1387,11 +1448,77 @@ async function openExportGridInScope(
 
 	return {
 		meta,
-		lines: protocolLines(),
+		lines: closingLines(protocolLines(), cursor),
 		unresolved,
 		frontierGrants: run.atoms.frontierGrants,
 		externalDegradation: () => degradation.snapshot(),
 	};
+}
+
+/** One selected record — the identity the walk hydrates. */
+interface SelectedRecord {
+	section_id: number;
+	section_tipo: string;
+}
+
+/**
+ * The selection's pages re-cut into hydrate chunks of exactly `hydrateBatch`
+ * records (the last one shorter), ACROSS page boundaries — so the chunks are
+ * the ones the whole-array slicing produced, whatever the page size.
+ */
+async function* hydrateChunks(
+	cursor: SelectionCursor<SelectedRecord>,
+	hydrateBatch: number,
+): AsyncGenerator<SelectedRecord[]> {
+	let pending: SelectedRecord[] = [];
+	for await (const page of cursor.pages) {
+		pending = pending.length === 0 ? page : pending.concat(page);
+		while (pending.length >= hydrateBatch) {
+			yield pending.slice(0, hydrateBatch);
+			pending = pending.slice(hydrateBatch);
+		}
+	}
+	if (pending.length > 0) yield pending;
+}
+
+/**
+ * `lines` as handed out: the producer, plus the cursor's release on `return()`
+ * / `throw()`. A generator that never started runs no `finally` when it is
+ * returned, so the producer's own try/finally cannot release a cursor whose
+ * consumer gave up before the first pull (export_job's createJob failure, a
+ * stream cancelled before its first chunk) — this wrapper does, then delegates.
+ *
+ * It also drives the cursor's CONSUMER-IDLE window (selection_cursor.ts): the
+ * window stops when the consumer pulls a line and restarts when the line is
+ * handed back, so only the time control sits with the consumer counts — never
+ * the producer's hydration of a page, however long.
+ */
+function closingLines(
+	inner: AsyncGenerator<Record<string, unknown>>,
+	cursor: SelectionCursor<SelectedRecord>,
+): AsyncGenerator<Record<string, unknown>> {
+	const wrapper = {
+		async next(...args: [] | [unknown]) {
+			cursor.consumerWaiting(false);
+			try {
+				return await inner.next(...args);
+			} finally {
+				cursor.consumerWaiting(true);
+			}
+		},
+		async return(value?: unknown) {
+			await cursor.close();
+			return inner.return(value as never);
+		},
+		async throw(error?: unknown) {
+			await cursor.close();
+			return inner.throw(error);
+		},
+		[Symbol.asyncIterator]() {
+			return wrapper;
+		},
+	};
+	return wrapper as unknown as AsyncGenerator<Record<string, unknown>>;
 }
 
 /** Whether `signal` has fired — read fresh at each call (see protocolLines). */
@@ -1435,9 +1562,21 @@ export async function exportGridUnified(context: ToolActionContext): Promise<Too
 		});
 	}
 
-	// Buffered form: drain the SAME generator, sorting its lines into the
-	// envelope's buckets (meta is `grid.meta`; the producer yields col/row lines
-	// between it and 'end').
+	// Buffered form: ONE CEILING LAW (DEC-07). The envelope holds the whole grid
+	// in memory, so a selection above the client ceiling is refused BEFORE any
+	// hydration — `export.format_limit` (the same selection fits the NDJSON
+	// stream and the background artifact, which never buffer it). The total is
+	// the cursor snapshot's exact count, known at open.
+	if (Number(grid.meta.total) > CLIENT_MAX_LIMIT) {
+		await grid.lines.return(undefined);
+		throw new DedaloError('export.format_limit', {
+			message: `get_export_grid: the buffered envelope holds at most CLIENT_MAX_LIMIT=${CLIENT_MAX_LIMIT} records (selection: ${String(grid.meta.total)}); use the NDJSON stream or a background export`,
+			details: { format: 'json_envelope', limit: CLIENT_MAX_LIMIT },
+		});
+	}
+	// Drain the SAME generator, sorting its lines into the envelope's buckets
+	// (meta is `grid.meta`; the producer yields col/row lines between it and
+	// 'end').
 	const columns: Record<string, unknown>[] = [];
 	const rows: Record<string, unknown>[] = [];
 	let endLineOut: Record<string, unknown> | null = null;

@@ -3,13 +3,21 @@
 # CODE-UPDATE ROLLBACK — restore the previous code tree after a failed update.
 #
 # INSTALLED OUT OF TREE. This file SHIPS at <repo>/deploy/, but its installed
-# home is /opt/dedalo/bin/dedalo-code-rollback.sh — a SIBLING of the checkout,
-# alongside the pinned bun (/opt/dedalo/.bun/). The swap pipeline renames the
+# home is the ROOT-OWNED bin dir OUTSIDE the instance dir (ROOT_BIN_DIR in the
+# units: /opt/dedalo/bin/ by hand, /opt/dedalo/instances/<i>/bin/ from the
+# installer), alongside the pinned bun. The swap pipeline renames the
 # whole app tree; a rollback script living inside that tree vanishes in the
 # crash window it exists for (old tree renamed away, new tree not yet in — no
 # tree at APP_DIR, no script for systemd's OnFailure= to run). The units point
 # at the out-of-tree copy; refresh it after updating (PRODUCTION.md §12):
 #   sudo install -m 0755 deploy/dedalo-code-rollback.sh /opt/dedalo/bin/
+#
+# EVERY MOVE STAYS INSIDE THE INSTANCE DIR (engineering/PRODUCTION.md §2.2): the
+# app tree is an entry of the instance dir (the service user's), the backup it
+# restores and the failed tree's parking place (<backupRoot>/failed_<stamp>) are
+# entries of the backup root below it — so the instance dir's parent may be
+# root-owned. Gate: test/unit/code_update.test.ts (the instance-dir rule) runs
+# this script against a scratch instance dir whose parent is 0555.
 #
 # Fired by systemd (dedalo-ts-rollback.service) in exactly two situations:
 #   - dedalo-ts.service exhausts its start limit and enters `failed`
@@ -60,7 +68,20 @@
 # Usage:
 #   dedalo-code-rollback.sh [--app-dir /opt/dedalo/master_dedalo]
 #     [--backup-root /opt/dedalo/backups/code] [--service dedalo-ts]
-#     [--socket /run/dedalo/dedalo_ts.sock]
+#     [--socket /run/dedalo/dedalo_ts.sock] [--check] [--no-restart]
+#
+# --check       exit 0 when a pending, unattempted sentinel is there (a rollback
+#               would act), 1 otherwise; changes nothing (a unit's ExecCondition=).
+# --no-restart  do the file work only; the caller restarts the service. The
+#               installer's per-instance unit (dedalo-ts-rollback@<i>) runs this
+#               script AS THE INSTANCE USER — every tree it moves and the sentinel
+#               are the instance's — and only the restart as root
+#               (ExecStartPost=+systemctl …). A root process never reads the
+#               instance-written sentinel or moves instance-named paths.
+#
+# REFUSED, whoever runs it: a sentinel that is a symbolic link, a backupDir that
+# is a symbolic link or lies outside the backup root (it is read from a file
+# the instance writes — never trusted to name any other path).
 
 set -euo pipefail
 
@@ -68,12 +89,16 @@ APP_DIR="/opt/dedalo/master_dedalo"
 BACKUP_ROOT=""
 SERVICE="dedalo-ts"
 SOCKET="/run/dedalo/dedalo_ts.sock"
+CHECK_ONLY=false
+RESTART=true
 while [ $# -gt 0 ]; do
 	case "$1" in
 		--app-dir) APP_DIR="$2"; shift 2 ;;
 		--backup-root) BACKUP_ROOT="$2"; shift 2 ;;
 		--service) SERVICE="$2"; shift 2 ;;
 		--socket) SOCKET="$2"; shift 2 ;;
+		--check) CHECK_ONLY=true; shift ;;
+		--no-restart) RESTART=false; shift ;;
 		*) echo "ERROR: unknown arg $1" >&2; exit 2 ;;
 	esac
 done
@@ -159,19 +184,32 @@ health_wait() { # up to 30s for /health over the unix socket (deploy.sh idiom)
 	return 1
 }
 
+# --- the sentinel is a plain file, never a link ------------------------------
+if [ -L "$SENTINEL" ]; then
+	echo "== rollback: RED — $SENTINEL is a symbolic link; refusing; manual intervention required" >&2
+	exit 1
+fi
+
 # --- state 4: nothing to do? ------------------------------------------------
 if [ ! -f "$SENTINEL" ]; then
+	$CHECK_ONLY && exit 1
 	log "state 4 — no sentinel at $SENTINEL — nothing to do"
 	exit 0
 fi
 STATUS="$(json_str status)"
 ATTEMPTED="$(json_raw rollback_attempted)"
 if [ "$STATUS" != "pending" ]; then
+	$CHECK_ONLY && exit 1
 	log "state 4 — sentinel status is '$STATUS' (not pending) — nothing to do"
 	exit 0
 fi
 if [ "$ATTEMPTED" != "false" ]; then
+	$CHECK_ONLY && exit 1
 	log "state 4 — rollback already attempted (rollback_attempted=$ATTEMPTED) — refusing to loop; manual intervention required" >&2
+	exit 0
+fi
+if $CHECK_ONLY; then
+	log "a pending, unattempted code update is recorded — the rollback acts"
 	exit 0
 fi
 
@@ -189,6 +227,15 @@ if [ -z "$BACKUP_DIR" ]; then
 fi
 if [ "$BACKUP_DIR" = "$APP_DIR" ]; then
 	echo "== rollback: RED — backupDir equals APP_DIR ('$APP_DIR'); refusing; manual intervention required" >&2
+	exit 1
+fi
+case "$BACKUP_DIR" in
+	*/../*|*/..|*/./*) echo "== rollback: RED — backupDir '$BACKUP_DIR' is not a plain path; refusing; manual intervention required" >&2; exit 1 ;;
+	"${BACKUP_ROOT%/}"/*) ;;
+	*) echo "== rollback: RED — backupDir '$BACKUP_DIR' lies outside the backup root '$BACKUP_ROOT'; refusing; manual intervention required" >&2; exit 1 ;;
+esac
+if [ -L "$BACKUP_DIR" ]; then
+	echo "== rollback: RED — backupDir '$BACKUP_DIR' is a symbolic link; refusing; manual intervention required" >&2
 	exit 1
 fi
 
@@ -239,6 +286,11 @@ if [ ! -e "$APP_DIR/.git" ] && [ -e "$FAILED_DIR/.git" ]; then
 fi
 
 write_sentinel "rolled_back" "true"
+
+if ! $RESTART; then
+	log "restored — the restart is the unit's (ExecStartPost, as root)"
+	exit 0
+fi
 
 # The start limit is what fired us — clear it or `start` is refused.
 systemctl reset-failed "$SERVICE" || true

@@ -42,6 +42,7 @@
 
 import { existsSync, readFileSync } from 'node:fs';
 import { isAbsolute } from 'node:path';
+import { ConflictError } from '../errors';
 import { hasDrifted, parseStamp } from '../provision/hash';
 import {
   DOMAIN_PATTERN,
@@ -65,17 +66,21 @@ const NOTHING_WRITTEN = 'Nothing was written.';
  * ANSWER. "This site has nowhere to publish" is what a caller can act on, and whether the
  * reason was a missing row or a missing marker is detail the message carries. A second
  * class would only mean a second route mapping to forget — which is precisely how the
- * careful sentences below reached an operator as `500 Internal server error` for a while
- * (the route mapping is in `src/util/response.ts`).
+ * careful sentences below reached an operator as `500 Internal server error` for a while.
+ * Since WIRE-MAP it IS a `ConflictError` (reason 'webspace_unavailable'), so there is no
+ * mapping left to forget.
  *
  * It is declared HERE, in the module with no dependency on the daemon's config, so that the
  * boot preflight (`src/instance/roots.ts`) can raise it without an import cycle;
  * `webspace.ts` re-exports it, because that is where a caller meets it.
  */
-export class WebspaceError extends Error {
-  readonly code = 'webspace_unavailable';
+export class WebspaceError extends ConflictError {
   constructor(message: string) {
-    super(`${message} ${NOTHING_WRITTEN}`);
+    // A 409 with its machine reason (errors.ts CONFLICT_REASONS): the daemon is working as
+    // designed and the request names a real site in a state that cannot accept it. The
+    // sentence was written for the operator who must fix the host; it is log-only on the
+    // engine side (the reason's code's label is what a museum reads).
+    super(`${message} ${NOTHING_WRITTEN}`, 'webspace_unavailable');
     this.name = 'WebspaceError';
   }
 }

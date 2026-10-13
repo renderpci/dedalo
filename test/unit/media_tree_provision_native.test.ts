@@ -682,9 +682,9 @@ describe('installer wiring', () => {
 	});
 
 	test('msg stays a SINGLE line — the client renders it in a one-line flex pill', () => {
-		// render_installer.js assigns api_response.msg with textContent into a
-		// `.msg` element styled display:flex; embedded newlines collapse into one
-		// unreadable run, and a legacy install produces one problem line per folder.
+		// The installer prints msg as ONE step line (the plain and full-screen UIs; the
+		// browser wizard's one-line pill before 2026-10-12); embedded newlines break
+		// it, and a legacy install produces one problem line per folder.
 		// The per-directory detail travels structured, on mediaTree.problems.
 		withScratchRoot((root) => {
 			// A legacy-shaped tree: pre-existing folders at the 0775 the audit found.
@@ -946,6 +946,12 @@ const DIR_MODE_REGISTER: Readonly<Record<string, DirModeRow>> = Object.freeze({
 		kind: 'not_media',
 		reason:
 			'the installer ontology staging + unpack dirs under <private>/install/ontology_staging — verified domain-ontology files awaiting import; engine-only, owner-only by design',
+	},
+	'src/core/install/run_files_core.ts': {
+		modes: ['0o700'],
+		kind: 'not_media',
+		reason:
+			'the terminal installer run dir — <private>/install (engine) or /var/lib/dedalo-install/<i> (host route): plan, state, lock — install metadata; owner-only by design (forced on an existing dir too)',
 	},
 	'src/core/install/ontology_archive.ts': {
 		modes: ['0o700', '0o700'],

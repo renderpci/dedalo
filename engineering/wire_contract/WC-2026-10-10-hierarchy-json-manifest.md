@@ -528,3 +528,5 @@ keys + a scratch manifest proving `dependencies` carries only non-core
 thesauri), `widget_request_native` (the widget's view keys),
 `install_ontology_choice` (`closeThesaurusChoice`: declined mandatory → warning,
 never forced; no entry → warning). No fixture changes, no re-harvest.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (its `get_install_context` / router-action half: the wizard is gone; the manifest and plan half stands)

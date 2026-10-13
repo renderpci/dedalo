@@ -1,46 +1,158 @@
-# Troubleshooting an install
+# Troubleshooting
 
-> See also: [Production install](production.md) · [Reverse proxy and TLS](reverse_proxy.md) · [Installer reference](installer_reference.md) · [Dev quickstart](dev_quickstart.md)
+> See also: [Installer reference](installer_reference.md) · [Production install](production.md) · [Docker](docker.md) · [The web server site](reverse_proxy.md) · [Developer quickstart](dev_quickstart.md)
 
-Symptom first. Each entry names the cause and the fix. If your symptom is not
-here, start with the two things that answer most questions:
+Symptom first. Each entry names the cause and the fix. On a production instance `<i>` is the instance name; on a host you set up by hand, substitute your own unit and paths. If your symptom is not here, start with the two things that answer most questions:
 
 ```shell
-journalctl -u dedalo-ts -n 100 -o cat            # the engine's own words
-curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
+journalctl -u dedalo-ts@<i> -n 100 -o cat            # the engine's own words
+curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
 ```
 
 | Symptom | Jump to |
 | --- | --- |
-| The installer stops on a `psql` complaint | [Installing](#installing) |
-| `Database is not empty … restore refused` | [Installing](#installing) |
-| The server refuses to boot | [Booting](#booting) |
-| `Cannot find package …` on start | [Booting](#booting) |
-| The socket is not where the unit says | [Booting](#booting) |
-| The server serves the install wizard instead of the app | [Booting](#booting) |
-| The wizard resumes on an install that is already finished | [Booting](#booting) |
-| The wizard is a `404`, or refuses your address | [Booting](#booting) |
-| `502` from the proxy | [Serving](#serving) |
-| Apache: `AH01144`, or `AH01630` naming a path under `/etc/apache2` | [Serving](#serving) |
-| A client asset `404`s at a path that is not in the repo | [Serving](#serving) |
+| `install.sh:` refuses, exit code `3` | [The bootstrap refuses](#the-bootstrap-refuses-exit-code-3) |
+| `… is not supported — the production route supports …` | [Unsupported system](#an-unsupported-system) |
+| The System check refuses, naming things that already exist | [The System check refuses](#the-production-system-check-refuses) |
+| Docker, Compose, disk or image refusals | [Docker and trial refusals](#docker-and-trial-refusals) |
+| Let's Encrypt fails | [Let's Encrypt fails](#lets-encrypt-fails) |
+| `database '…' is not empty` | [Installing](#installing) |
+| The install stopped part-way | [Resuming and undoing an install](#resuming-and-undoing-an-install) |
+| The server exits at once with code `78` (`[boot] REFUSED — …`) | [Booting](#booting) |
+| The server refuses to boot for another reason | [Booting](#booting) |
+| `502` from the web server | [Serving](#serving) |
 | nginx will not start | [Serving](#serving) |
-| A big export dies after about a minute | [Serving](#serving) |
-| Uploads fail with `413` | [Serving](#serving) |
-| The maintenance widget says the engine is down, but the socket probe is green | [Serving](#serving) |
 | A code update is refused: `No supervisor declared` | [Updating](#updating) |
 | Nobody can log in, and there is no error | [Using it](#using-it) |
-| Media `404`s | [Media](#media) |
-| Media is served to everyone | [Media](#media) |
-| `MEDIA_HTACCESS_ADDONS` rules do not appear | [Media](#media) |
-| Uploads produce no thumbnail | [Media](#media) |
+| Media `404`s, or media is served to everyone | [Media](#media) |
+
+## Running the installer
+
+### The bootstrap refuses (exit code `3`)
+
+`install.sh` prints `install.sh: <reason>` and exits `3` before the installer starts. Nothing was changed.
+
+| The line says | Cause | Fix |
+| --- | --- | --- |
+| `this installer runs on Linux, or on macOS for the trial and Docker routes` | another operating system | use a supported one ([Supported systems](index.md#supported-systems)) |
+| `no sha256sum (coreutils) on this host`, `unzip is not installed …`, `curl is not installed …` | a minimal system without the bootstrap's tools | install them (`apt-get install curl unzip coreutils`, or `dnf install curl unzip coreutils`) and run again — see [Get Dédalo](index.md#get-dedalo) |
+| `musl libc (…): no supported Bun build` | a musl-based Linux (Alpine) | use a glibc distribution |
+| `no Bun build for CPU '…'` | neither x86_64 nor aarch64 | use a supported CPU |
+| a `--release` whose sha256 does not match `--release-sha256` | the archive is not the one you meant, or it was damaged in transit | fetch it again and compare the sha256 against the one the release publishes; there is no "accept anyway" |
+| the Bun zip does not match the release's hash table, or Bun's `SHASUMS256.txt` disagrees | a damaged or substituted download | remove the cached zip (under `/var/lib/dedalo-install/bun/` as root, `~/.cache/dedalo-install/bun/` otherwise) and run again; behind a proxy, `--offline-bun <zip> [<SHASUMS256.txt>]` or `--mirror <https base url>` |
+
+### An unsupported system
+
+```text
+<system> is not supported — the production route supports Ubuntu 26.04 LTS, Debian 13 (trixie), RHEL / Rocky Linux / AlmaLinux 10 (newest releases only)
+```
+
+**Cause.** The Production route supports the newest release of each distribution, matched on the exact distribution and major version. An older release, or a derivative (Fedora, CentOS Stream, Oracle Linux), is refused before anything changes.
+
+**Fix.** Install on a supported release. There is no flag that accepts another one.
+
+### The production System check refuses
+
+**Cause.** `host_preflight` measured something a later step would trip on, and changed nothing. The sentence names every problem at once:
+
+| Refusal | Fix |
+| --- | --- |
+| `the production route must run as root: sudo sh install.sh …` | run it with `sudo` |
+| `account <u> is a system account (uid <n>) — …` | a leftover of an earlier install (`ded_<i>` created as a system account) or a system account: remove it with `userdel`, or choose another `--service-user` |
+| `service user <u> is already the service user of instance <j> (<file>) — …`, the same for the group | one account and one group per instance: choose another, or remove the stale `<file>` |
+| `install folder <d> overlaps instance <j>'s folder <dj> (…) — …` | choose a folder of its own (`--install-dir`) |
+| `install folder <d> is not empty and is not owned by <u> — …`, `… already holds dedalo — …` | the installer uses an existing folder only when it is empty, or the service user's and holds no install: empty it, `chown` it, or choose another |
+| `install folder <d> is writable by group or others (mode …)`, `<a> (a parent of the install folder) is writable by an account other than root or <u>` | `chmod go-w` it, or fix the parent's owner |
+| `account <u> is a member of <group> (gid <n>) — …` | the service would hold that group's rights (`sudo`, `docker`, a system group — `users` is accepted): choose an account without it |
+| `account <u> is a member of <g>, the service group of instance <j> (<file>) — …` | one group per instance: the service would read that instance's files — choose an account without that membership |
+| `service user <u> is an account of the installer's packages …`, `group <g> is a group of the installer's packages …` | `postgres`, `www-data`, `nginx` and `apache` are never the service account: choose another |
+| `install folder <d> is an existing directory of root outside /home, /srv, /data, /mnt, /media — …`, `install folder <d> is empty but owned by <x>, another account — …` | the installer never takes over a system or another account's directory: `chown` it to the service user first, or choose a folder that does not exist yet |
+| `<file> names instance <j> but runs as User=<x>, whose primary group cannot be resolved — …` | a hand-installed unit with no `Group=` whose user is gone: give it its `Group=`, or remove the stale unit |
+| `group <g> already exists but user <u> does not — …` | a leftover group: remove it with `groupdel`, or use it as is with `--service-group <g>` |
+| `dedalo-ts@<i>.service is already enabled`, `… already has drop-ins` | the same |
+| `/etc/nginx/conf.d/dedalo-<i>.conf already exists` (or the Apache site) | another install's site file: choose another instance name |
+| `the socket /run/dedalo-<i>/dedalo_ts.sock already exists (another server is listening there)` | stop that server, or choose another name |
+| `database dedalo_<i> already exists`, `role <service user> already exists` | choose another name, or use that database with `--db-mode existing` (it must be empty) |
+| `PostgreSQL <n> already runs on this host` | another major version holds the database port: stop it, or use `--db-mode existing` with your own server |
+| `<address> is already served on port 80/443 by <file>` | another site answers for that name: remove it, or install under another address. The installer never edits another site |
+| `nginx name dedalo_<i> is already defined in <file>` | an `upstream` or rate-limit zone of that name exists elsewhere (nginx names are global): choose another instance name |
+| `<path> already exists — the installer creates the instance's directories itself and never takes over an existing one` | remove it, or choose another path (a media path under `/var/www`, for example) |
+| nginx older than 1.25.1 | upgrade nginx: the site uses `http2 on;`, which older versions reject |
+| the institution's certificate names another address, has expired, or does not pair with its key | fix the files, or choose Let's Encrypt |
+
+Then run the same command again — nothing was written, so it starts fresh. The firewall is reported, never changed: if the report shows ports 80 and 443 closed, open them yourself.
+
+### `Apache lacks the modules … — enabling modules is the system administrator's`
+
+**Cause.** The installer checks Apache's modules (`ssl headers http2 rewrite proxy proxy_http`) and never enables one.
+
+**Fix.** Run the command the message prints (`a2enmod … && systemctl reload apache2` on Debian and Ubuntu), then `sudo sh install.sh --route production --instance <i> --resume`.
+
+### Let's Encrypt fails
+
+**Cause.** `host_tls` (production) or `stack_tls` (docker) asked Let's Encrypt to prove the address over HTTP on port 80, and it could not. Almost always one of:
+
+- the name does not resolve publicly to this machine (`dig +short <address>` from outside);
+- port 80 is not reachable from the internet — a firewall, a router without forwarding, a cloud security group;
+- the account hit Let's Encrypt's rate limit after repeated failures.
+
+**Fix.** Fix DNS or the firewall, then `--resume`. To rehearse without spending the rate limit, add `--letsencrypt-staging` to a headless install. The install completes with a test certificate browsers do not trust (its public probe does not verify the chain), and `--abort` cannot take a completed install apart. On Production, the installer's closing *To do on this host* list prints the `certbot certonly … --force-renewal --server https://acme-v02.api.letsencrypt.org/directory` command that replaces it with a real certificate in place. On Docker, the rehearsal stack is destroyed by hand, as in [Removing the trial](quickstart.md#removing-the-trial), and installed again without the flag. If the server cannot be reached from the internet at all, use your institution's certificate (`--tls files`) — or, on the Docker route, a local certificate authority.
+
+### The public probe fails
+
+**Cause.** `host_public_probe` reached the site through its address from the host itself and did not get the expected answers within 90 seconds: `/health` not `200` over HTTPS with a verified chain, or the media marker store or an unpublished file not answering `404`.
+
+**Fix.** Check by hand, in this order:
+
+```shell
+curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health   # the engine
+nginx -t                                                                            # or apachectl -t
+curl --fail --resolve <address>:443:127.0.0.1 https://<address>/health            # the site, locally
+```
+
+A green socket and a red site means the web server cannot reach the socket (its user must be in the service group, `ded_<i>` by default; on the RHEL family the engine must run in `dedalo_engine_t`: `ps -o label= -p $(systemctl show -p MainPID --value dedalo-ts@<i>)`). A media answer other than `404` means the gate is not loaded — see [Media](#media). Then `--resume`.
+
+### The backup verification fails
+
+**Cause.** `host_backup_verify` ran the backup set once and a store failed, or the unit's environment did not carry the full list of expected stores.
+
+**Fix.** `journalctl -u dedalo-backup@<i>` names the store; `<backup dir>/state/` holds the `LAST_OK` or `BACKUP_FAILED` marker. Fix it (disk space, a database the backup cannot reach), then `--resume`.
+
+### Docker and trial refusals
+
+`stack_preflight` refuses before anything is pulled or written:
+
+| Refusal | Fix |
+| --- | --- |
+| `Docker is not installed` | install Docker Engine and its Compose plugin; the installer never installs them |
+| `the Docker daemon does not answer <user>` | start it (`sudo systemctl enable --now docker`) or join the `docker` group (`sudo usermod -aG docker <user>`, then log in again). `DOCKER_HOST` is not passed through: use a docker context |
+| `Docker Compose v2 or newer is required` | install the `docker compose` plugin; the old `docker-compose` v1 does not work |
+| `only <n> GiB free under <docker root>` | free space (`docker system prune -af`) or move Docker's root to a bigger disk |
+| `this machine already has a Dédalo instance (volume dedalo_private)` | keep that instance, or destroy it first (`… down -v` — it deletes its data) |
+| `.dedalo.env` or `compose.override.yaml` already exists | files of an earlier install: remove them if that install is gone |
+| `image version <v> is not this installer's` | use the installer of the matching release |
+| `cosign is not installed` | install `cosign`, or build the image here (`--image-source build`) |
+| `<repository> is not an official Dédalo registry` | the official source accepts only the official registries; for a registry of your own use `--image-source custom` |
+| `docker-compose.yml is not in <directory>` (or `docker-compose.simple.yml`) | run `install.sh` from a Dédalo checkout ([Get Dédalo](index.md#get-dedalo)) |
+| `the operator cannot be identified` | `id -un` answered nothing: run the install as a user with a login on this machine, not from a stripped-down environment |
+
+`stack_preflight` refuses an existing instance on purpose: the database restore needs an empty database, so a second install is never a repair.
+
+### The full screen is unavailable
+
+```text
+full-screen UI unavailable (<reason>) — continuing in plain mode
+```
+
+**Cause.** The terminal library has no native build for this machine, or the terminal is not capable (smaller than 80×24, `TERM` unset or `dumb`, output not a terminal).
+
+**Fix.** Nothing is needed: plain mode asks the same questions and runs the same install. A piped standard input is refused instead (`stdin is not a terminal — give the answers with --answers <file> …`): an unattended install uses flags or an answers file.
 
 ## Installing
 
 ### `PostgreSQL client (psql) not found`
 
-**Cause.** The pre-flight check could not resolve a `psql` binary. The installer,
-the seed restore, the hierarchy import and the backup widget all shell out to it,
-so this is a hard gate.
+**Cause.** The pre-flight check could not resolve a `psql` binary. The installer, the seed restore, the hierarchy import and the backup widget all shell out to it, so this is a hard gate. (The Production route installs it; this is a Developer-route failure.)
 
 **Fix.** Install the client package (`postgresql-client-18`), or point at it:
 
@@ -50,9 +162,7 @@ DEDALO_PG_BIN_PATH=/usr/lib/postgresql/18/bin
 
 ### The install fails part way through, with a connection error
 
-**Cause.** Very often: **`psql` is older than the server.** An older client
-refuses to connect to a newer server, and a machine with several major versions
-installed can easily resolve the wrong one.
+**Cause.** Very often: **`psql` is older than the server.** An older client refuses to connect to a newer server, and a machine with several major versions installed can easily resolve the wrong one.
 
 **Fix.** Check both, then pin the client with `DEDALO_PG_BIN_PATH`:
 
@@ -61,27 +171,48 @@ psql --version
 sudo -u postgres psql -c 'SHOW server_version;'
 ```
 
-### `Database is not empty (matrix_users already exists) — restore refused`
+### `database '<db>' is not empty (<n> objects, e.g. …) — the installer only installs into an empty database`
 
-**Cause.** Exactly what it says. The installer restores **into** a database and
-never clobbers an existing install. It probes for the `matrix_users` table.
+**Cause.** Exactly what it says. The installer restores **into** a database and never into one that holds anything: a table, view, sequence, function, type or schema of its own.
 
-**Fix.** Point at an empty database, or drop and re-create this one — but be
-certain first, because a populated `matrix_users` means *somebody already
-installed here*.
+**Fix.** Point at an empty database. If you are certain the contents are disposable, drop and re-create it (on the Developer route, `dropdb` and `createdb`). Be certain first: a populated database usually means *somebody already installed here*. On the Production route with `--db-mode create`, the installer creates the database itself and the System check refuses a name that exists.
 
-```sql
-DROP DATABASE dedalo_main;
-CREATE DATABASE dedalo_main WITH ENCODING='UTF8' OWNER=dedalo_user;
-```
+### `the install role does not own database '<db>'`
+
+**Cause.** The seed restore marks the database as this install's (its comment), which only the owner may write.
+
+**Fix.** Create the database with `OWNER` set to the role the install connects as, or change its owner (`ALTER DATABASE <db> OWNER TO <role>`).
 
 ### `Private config directory is not creatable/writable`
 
-**Cause.** The installer creates `../private/` — a sibling of the repo. The
-directory **one level above the repo** is not writable by the service user.
+**Cause.** The installer creates the private directory one level **above** the code tree, and that parent is not writable by the user the install runs as. (On the Production route the installer creates it itself; this is a Developer-route failure.)
 
-**Fix.** `chown dedalo:dedalo /opt/dedalo` (the parent, not the repo). In a
-container, this is what `DEDALO_PRIVATE_DIR` is for — see [Docker](docker.md).
+**Fix.** Make the parent of the checkout writable by you, or set `DEDALO_PRIVATE_DIR` to an absolute path you own. In a container, `DEDALO_PRIVATE_DIR` is what the image uses — see [Docker](docker.md).
+
+## Resuming and undoing an install
+
+Any failure after the install recorded its plan prints how to continue:
+
+```text
+  Progress saved: …/install.state.json (plan: install.plan.json)
+  Fix the cause, then resume:  sudo sh install.sh --route production --instance <i> --resume
+  Or undo this install:        sudo sh install.sh --route production --instance <i> --abort --confirm-database dedalo_<i>
+```
+
+(`sh install.sh --route docker …` on the stack routes; `bun run scripts/install.ts --resume` on the Developer route.) The rules are in the [installer reference](installer_reference.md#resuming-an-install-resume); the refusals you can meet:
+
+| Refusal | Cause | Fix |
+| --- | --- | --- |
+| `an install record exists at … — resume it (--resume) or undo it (--abort --confirm-database <db>)` | a fresh run found an earlier install's record | resume or abort it. On the Developer route, if the private directory is being reused deliberately, remove its `install/` directory |
+| `answers differ from the saved plan: <keys>` | a resume was given answers other than the saved ones | drop the flags (a resume takes the saved answers), or abort and start again |
+| `step <id> was recorded done but its outcome is missing … — the install was changed outside the installer` | something the install did was undone by hand since | abort and start again |
+| `the commands of <step> are not the ones this install showed (the installer's own files changed since)` | a resume from another release recomputed different host commands | abort and start again with one release |
+| `this private directory belongs to a SEALED installation — a fresh install never overwrites a live one` | the private directory holds a finished install | install into another private directory; the live one is never overwritten |
+| `this install is SEALED (live) — --abort never undoes a sealed installation` | an engine `--abort` of a finished install | nothing to undo: a finished install is a live one. On a host route, the host `--abort` undoes only the host steps after the engine |
+| `--abort resets and drops the database <db> this install set up: confirm with --confirm-database <db> — nothing was undone` | the abort would touch the database | repeat it with `--confirm-database <db>` once you are sure |
+| `database '<db>' is not stamped by this install … — refusing to reset it` | the database was not seeded by this install | nothing to reset; it is not this install's |
+
+An abort of a production install whose engine completed answers *install partly undone*: the site, the certificate, the units' start and the timers are undone, and the instance, its user, its database and its code are kept. `--resume` puts the undone steps back.
 
 ## Booting
 
@@ -89,57 +220,39 @@ container, this is what `DEDALO_PRIVATE_DIR` is for — see [Docker](docker.md).
 
 **Cause.** A **partial** configuration. The four keys `ENTITY`, `DB_NAME`,
 `DB_HOST`, `DB_USER` are all-or-nothing: with **none** of them set, the server
-boots into install mode; with **some** of them set, it is misconfigured and says
-so. This is deliberate — a half-configured server must not quietly fall back to
-install mode against a real database.
+refuses to start as not installed (next entry); with **some** of them set, it is
+misconfigured and names the first key missing. This is deliberate — a
+half-configured server must not be mistaken for a fresh box.
 
 **Fix.** Set all four (the installer writes them under exactly these names), or
 none.
 
-### The server serves the install wizard instead of the application
+### The server exits at once with code `78` (`[boot] REFUSED — …`)
 
-**Cause.** It booted with none of those four keys set, so it is in **install
-mode**. Almost always: it is not reading the `.env` you think it is.
+**Cause.** The server found this box **not installed**, and refused to start
+before opening a socket or touching the database. There is no install page to
+serve; the one line in the log (`journalctl -u dedalo-ts@<i>`, or the container log)
+says which case it is and what to do:
 
-**Fix.** The file must be at `../private/.env`, one level above the repo — or
-wherever `DEDALO_PRIVATE_DIR` points. Confirm:
+| The line says | Cause | Fix |
+| --- | --- | --- |
+| `not installed: … are unset` | none of `ENTITY`, `DB_NAME`, `DB_HOST`, `DB_USER` reached it — almost always it is not reading the `.env` you think it is | the file must be at `../private/.env`, one level above the repo, or wherever `DEDALO_PRIVATE_DIR` points; on a new box, run the installer (`sh install.sh`) |
+| `configuration incomplete: … exists but names none of …` | a `.env` is there, but without the four keys | complete it, or restore it from backup — do not reinstall over it |
+| `configuration missing: … installed (sealed) but …` | the install finished, then `.env` was lost | restore `.env` from backup — reinstalling would refuse the non-empty database anyway |
+| `install not finished (install_status '…')` | an install stopped part-way | finish it with `--resume` (`sudo sh install.sh --route production --instance <i> --resume` on a production instance), or undo it with `--abort` — [Resuming and undoing an install](#resuming-and-undoing-an-install) |
 
-```shell
-sudo -u dedalo cat /opt/dedalo/private/.env | head -5
-journalctl -u dedalo-ts | grep 'INSTALL MODE'
-```
-
-If the four keys **are** set and being read, this is not install mode — see the
-next entry.
-
-### The wizard resumes on an install that is already finished
-
-**Cause.** The install was never **sealed**. `install_finish` is what writes
-`install_status: 'sealed'`; until it runs the status stays `configured`, and a
-`configured` instance deliberately re-mounts the wizard on every reload rather
-than dropping to a login form (that is what lets a mid-install reload resume
-instead of stranding you on a login with no schema and no root user). Abandon the
-wizard one step before the end — close the tab, restart the server — and it
-resumes forever, even though the database is fully built.
-
-Recognise it by the state file **plus** a configured `.env`:
+Confirm what the server reads:
 
 ```shell
-grep install_status ../private/ts_state.json     # "configured", not "sealed"
+sudo -u ded_<i> head -5 /home/ded_<i>/private/.env
+grep install_status /home/ded_<i>/private/ts_state.json
+journalctl -u dedalo-ts@<i> -n 5 --no-pager | grep 'REFUSED'
 ```
 
-**Fix.** Reopen the wizard and let it run to **Finish**, which calls
-`install_finish`. It refuses to seal unless the root user exists with a password
-set, so it will tell you if a step really is outstanding. To seal from the shell
-instead — same guard, same result — run from the repo root:
-
-```shell
-bun -e "import {installFinish} from './src/core/install/finish.ts'; console.log(await installFinish())"
-```
-
-The seal applies immediately (the state file is read fresh on every request; no
-restart), but **reload the browser page**: the wizard is already mounted in the
-open page's JavaScript and only goes away when the client calls `start` again.
+The systemd units do **not** restart a server that exits 78
+(`RestartPreventExitStatus=78`): the unit stays `failed` until you fix the cause
+and `systemctl start` it. A container under `restart: unless-stopped` is
+restarted by Docker (about once a minute) and prints the same line each time.
 
 ### `Config key 'DEDALO_PREFIX_TIPOS' is RETIRED`
 
@@ -167,17 +280,11 @@ server refuses to boot rather than connect somewhere you did not mean.
 DB_SOCKET=/var/run/postgresql
 ```
 
-### Crash loop right after the wizard's *Save config*
+### Crash loop: `Config key 'DEDALO_APPLICATION_LANGS' must be a non-empty JSON object map`
 
-**Cause.** The language configuration is mandatory and the written `.env` is
-missing it, so every boot dies on:
-
-```text
-Config key 'DEDALO_APPLICATION_LANGS' must be a non-empty JSON object map
-```
-
-The wizard collects the languages on the **Entity** step; a hand-written `.env`
-has to carry them itself.
+**Cause.** The language configuration is mandatory and the `.env` is missing it,
+so every boot dies on that line. The installer writes the languages; a
+hand-written `.env` has to carry them itself.
 
 **Fix.** Ensure all four keys are present:
 
@@ -215,17 +322,17 @@ Almost always one of two things:
 **Fix.** Install as the service user, in the clone, in one command:
 
 ```shell
-sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun install --frozen-lockfile --production'
-ls -d /opt/dedalo/master_dedalo/node_modules/zod      # proof it landed
+sudo -u ded_<i> bash -c 'cd /home/ded_<i>/dedalo && /opt/dedalo/bun/<pin>/bun install --frozen-lockfile --production'
+ls -d /home/ded_<i>/dedalo/node_modules/zod      # proof it landed
 ```
 
 Then clear the crash-loop trip before starting — `Restart=always` does not:
 
 ```shell
-sudo systemctl reset-failed dedalo-ts && sudo systemctl start dedalo-ts
+sudo systemctl reset-failed dedalo-ts@<i> && sudo systemctl start dedalo-ts@<i>
 ```
 
-### The engine listens on `/tmp/dedalo_ts.sock` instead of `/run/dedalo/…`
+### The engine listens on `/tmp/dedalo_ts.sock` instead of the unit's socket
 
 **Cause.** `SERVER_UNIX_SOCKET` is not set in `../private/.env`, so the engine
 falls back to its default path and ignores the unit's `RuntimeDirectory`
@@ -242,8 +349,10 @@ boot**, because something is already answering on the default path.
 **Fix.** Set it per install, matching the unit's `RuntimeDirectory`, and restart:
 
 ```dotenv
-SERVER_UNIX_SOCKET=/run/dedalo/dedalo_ts.sock
+SERVER_UNIX_SOCKET=/run/dedalo-<i>/dedalo_ts.sock
 ```
+
+The installer writes this key on the Production route; a missing one means the `.env` was written by hand.
 
 ### `Failed to determine group credentials: No such process`
 
@@ -261,7 +370,7 @@ group is named after the user.
 ```shell
 id <service user>              # what group does it really have?
 getent group <name>            # empty output = that group does not exist
-systemctl cat dedalo-ts        # what the unit and its drop-ins actually say
+systemctl cat dedalo-ts@<i>    # what the unit and its drop-ins actually say
 ```
 
 **Fix.** Three options, best first:
@@ -278,7 +387,7 @@ systemctl cat dedalo-ts        # what the unit and its drop-ins actually say
     On an upgraded install this is a documented migration step, with the reasoning:
     [Phase E](migrating_from_v6.md#82-give-the-adopted-user-its-own-group).
 
-2. **Point `Group=` at the group that exists** (`systemctl edit dedalo-ts`).
+2. **Point `Group=` at the group that exists** (`systemctl edit <unit>`).
    Unblocks a test box; on a shared host it hands socket access to every member
    of that group.
 
@@ -290,13 +399,13 @@ Then, in this order — `Restart=always` does **not** clear a start-limit trip:
 
 ```shell
 sudo systemctl daemon-reload
-sudo systemctl reset-failed dedalo-ts
-sudo systemctl start dedalo-ts
+sudo systemctl reset-failed <unit>
+sudo systemctl start <unit>
 ```
 
 ### The unit fails before the engine logs anything
 
-`journalctl -u dedalo-ts` shows a `status=` code and no output of ours: systemd
+`journalctl -u <unit>` shows a `status=` code and no output of ours: systemd
 could not set up the process. The code says which step:
 
 | Code | Meaning | Usual cause |
@@ -304,7 +413,7 @@ could not set up the process. The code says which step:
 | `217/USER` | the user does not resolve | `User=` misspelled, or the account was never created |
 | *group credentials* | the group does not resolve | see the entry above |
 | `200/CHDIR` | cannot enter `WorkingDirectory` | wrong path, or the service user cannot traverse into it |
-| `203/EXEC` | cannot execute `ExecStart` | the pinned runtime is not at that path — it is installed per install, so it is easy to point at another install's copy. On `dedalo-ts-watchdog` or `dedalo-ts-rollback`: the scripts were never installed into `/opt/dedalo/bin/` ([production step 10](production.md#10-run-the-engine-under-systemd)) |
+| `203/EXEC` | cannot execute `ExecStart` | the pinned runtime is not at that path (`/opt/dedalo/bun/<pin>/bun` on an installer instance). On the watchdog or rollback unit: the root-run scripts are missing from `/opt/dedalo/instances/<i>/bin/` (the root bin directory on a host set up by hand — `/opt/dedalo/bin/` in its example) |
 
 Reproduce the same conditions by hand before editing the unit again:
 
@@ -312,39 +421,6 @@ Reproduce the same conditions by hand before editing the unit again:
 sudo -u <service user> <ExecStart bun path> --version
 sudo -u <service user> bash -c 'cd <WorkingDirectory> && ls src/server.ts'
 ```
-
-### The wizard is a `404`
-
-**Cause.** The instance is **sealed**. Sealing is terminal: the entire install
-surface answers `404` from then on, across restarts, from any address.
-
-**Fix.** None, and that is the point. A sealed instance is an installed instance
-— log in. (If you truly need to re-install: empty database, empty private
-directory, start again.)
-
-### The wizard refuses your address (`403`)
-
-**Cause.** Your address is not on the install allowlist. Note that this is the
-default state, not an unusual one: with `DEDALO_INSTALL_ALLOWED_IPS` **unset**
-the wizard answers **the local machine and nobody else**, because until it is
-sealed the installer runs without a password.
-
-**Fix.** Name the machine you install from — a literal address, a CIDR range, or
-`any` (every address; only behind a firewall, and removed once sealed). The
-refusal itself names the address the engine saw ("not allowed from this address
-(192.168.65.1)"), and so does the engine's log line for it — that is the one to
-add. Behind a container proxy it is rarely the address you would guess: Docker
-Desktop shows `192.168.65.1`, a Linux bridge a gateway such as `172.18.0.1`. The
-engine prints the list in force in its start-up log, next to the `INSTALL MODE`
-line, so you can see what it is actually applying:
-
-```dotenv
-DEDALO_INSTALL_ALLOWED_IPS=203.0.113.10,10.0.0.0/24
-```
-
-And note that **`loopback` will not match behind a reverse proxy**: the address
-is resolved from the trusted `X-Forwarded-For` hop, so name the real client
-address.
 
 ### The boot fails with `core module warm-up: N module(s) failed to evaluate`
 
@@ -361,29 +437,28 @@ report it.
 
 ### Every request is a `502`
 
-**Cause.** The proxy cannot connect to the unix socket. Connecting to a unix
-socket needs **write** permission on the socket file, and with the default umask
-the engine creates it `srwxr-xr-x` — owner only. The proxy runs as `www-data` or
-`nginx`.
+**Cause.** The web server cannot connect to the unix socket. Connecting to a
+unix socket needs **write** permission on the socket file. The server makes the
+socket `srw-rw-rw-` itself; what guards it is its directory, `/run/dedalo-<i>/`,
+which the unit creates `drwxr-x---` (service user, service group). The installer
+adds the web server's user (`www-data`, `nginx` or `apache`) to the service group
+so that it can enter that directory. A web server
+started before that membership, a unit edited by hand, or the RHEL family with
+the engine outside its SELinux domain all break it.
 
 **Fix.**
 
-```ini
-# dedalo-ts.service
-UMask=0007
-RuntimeDirectory=dedalo
-RuntimeDirectoryMode=0750
-```
-
 ```shell
-usermod -aG dedalo www-data      # nginx: usermod -aG dedalo nginx
-systemctl restart dedalo-ts nginx
-ls -l /run/dedalo/dedalo_ts.sock # → srwxrwx--- dedalo dedalo
+ls -l /run/dedalo-<i>/dedalo_ts.sock     # → srw-rw-rw- ded_<i> ded_<i>
+ls -ld /run/dedalo-<i>                   # → drwxr-x--- ded_<i> ded_<i>
+id www-data                              # (nginx / apache) — must list ded_<i>
+systemctl restart nginx                  # group membership is read when a process starts
 ```
 
-Also confirm the paths agree: `SERVER_UNIX_SOCKET` in `.env`, the `upstream` in
-the proxy configuration, and the `--socket` argument in the `ExecStart` of
-`dedalo-ts-watchdog.service` (and of `dedalo-ts-rollback.service`).
+On the RHEL family, also check the engine's SELinux domain:
+`ps -o label= -p $(systemctl show -p MainPID --value dedalo-ts@<i>)` must contain
+`dedalo_engine_t`. Then confirm the paths agree: `SERVER_UNIX_SOCKET` in `.env`,
+the `upstream` in the site file, and the socket the watchdog unit probes.
 
 ### Apache: `AH01144: No protocol handler was valid for the URL … (scheme 'http')`
 
@@ -484,7 +559,12 @@ configuration one.
 generated **map** file. A `map` cannot live inside `server{}`, so it ships as a
 separate file that must be included at `http{}` scope.
 
-**Fix.** Include both, or neither (below). On a publication host provisioned with `provision init`, the `http{}` map is pushed by **Apply media rules** into the host-wide include and must not be placed by hand; the manual path below still applies to work hosts and hand-provisioned publication hosts. There, run
+**Fix.** Include both, or neither. On a production instance the installer's
+site file includes both — the server-scope copy from `/etc/nginx/dedalo/<i>/`,
+and the map through the host-wide `/etc/nginx/conf.d/dedalo-00-media-map.conf` —
+so this error there means a file was edited or removed by hand: refresh the
+copies with `dedalo-media-rules.sh` ([Production › Changing the media access mode](production.md#changing-the-media-access-mode)).
+On a publication host provisioned with `provision init`, the `http{}` map is pushed by **Apply media rules** into the host-wide include and must not be placed by hand; the manual path below still applies to work hosts and hand-provisioned publication hosts. There, run
 **Apply media rules** in the **Publication hosts** panel, which pushes the map first; on the
 publication host, `provision check <instance>` shows whether the host-wide map include
 (`/etc/nginx/conf.d/dedalo_media_map.conf`) exists. On a work host, or a hand-provisioned
@@ -502,7 +582,7 @@ include /srv/dedalo/media/dedalo_media_protection.nginx.conf;       # server{} s
 configuration lexer reads as a block delimiter.
 
 **Fix.** Quote that one regex. See
-[reverse proxy → nginx](reverse_proxy.md#nginx).
+[The web server site](reverse_proxy.md).
 
 ### nginx: `open() … dedalo_media_protection.nginx.conf failed`
 
@@ -588,12 +668,13 @@ Under systemd the health timer polls every 30 seconds and restarts the unit.
 On a docker stack the healthcheck is `scripts/ops/container_watchdog.sh`, which
 recycles the container after **three consecutive red probes at 30-second
 intervals — roughly 90 seconds**, and only once the container has answered green
-at least once (so it never recycles a box that is still on the install wizard).
+at least once (so it never recycles a box that never came up — one that is not
+installed exits 78 instead).
 Either way it is a code defect — capture the log and report it.
 
 ### The maintenance widget reports the engine down while the socket probe is green
 
-**Symptom.** `curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health`
+**Symptom.** `curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health`
 answers `200`, but **maintenance → system info** shows the engine unhealthy, and
 after a code update the restart poll never confirms the new version.
 
@@ -604,9 +685,9 @@ and logs an `AH01630` denial for `…/health`, while nginx hands the request to 
 vhost's catch-all and returns `404`. Nothing is wrong with the engine; only the
 browser-facing checks can see it.
 
-**Fix.** Add the rule for your server from
-[Reverse proxy and TLS](reverse_proxy.md), reload, and re-run the probe through
-the domain:
+**Fix.** The installer's site file carries the route; a site written by hand
+needs it — see [The web server site](reverse_proxy.md). Reload, and re-run the
+probe through the domain:
 
 ```shell
 curl --fail https://dedalo.example.org/health
@@ -631,7 +712,9 @@ when the process manager declares that it will start the server again:
   that file, including the unsupervised `bun run start`.
 - The server was started with `bun run start`, which is unsupervised by design.
 
-**Fix.** On systemd, add the declaration with a drop-in, then restart:
+**Fix.** The installer's `dedalo-ts@<i>` unit declares it; this concerns a unit
+set up by hand, such as the single-instance `dedalo-ts` of a migrated host. On
+systemd, add the declaration with a drop-in, then restart:
 
 ```shell
 systemctl edit dedalo-ts
@@ -753,7 +836,7 @@ docker compose exec nginx sh -c 'grep Groups /proc/$(pgrep -f "worker process" |
 ```
 
 Do not `chmod -R o+r` the media tree: it makes media world-readable, and the next
-upload is `403` again. See [Running Dédalo in containers](docker.md#3-the-engine-writes-the-media-rules-the-proxy-reads-them).
+upload is `403` again. See [Running Dédalo in containers](docker.md#3-the-engine-writes-the-media-rules-nginx-reads-them).
 
 ### An SVG uploads but gets no thumbnail
 
@@ -832,7 +915,7 @@ markers it never matches, so Rule A is the only door for unpublished media.
 no `alias`; they inherit the server's `root`, which must resolve
 `/dedalo/<media dir>/…` onto `MEDIA_PATH`.
 
-**Fix.** See [reverse proxy → the root rule](reverse_proxy.md#the-root-rule).
+**Fix.** See [The web server site › The root rule](reverse_proxy.md#the-root-rule).
 With the canonical layout it is `root /srv;`.
 
 ### Media is served to *everyone* (Apache)

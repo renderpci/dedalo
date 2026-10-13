@@ -164,6 +164,9 @@
 .sb_turn { color: var(--fg_muted); text-align: center; font-size: 0.78rem; }
 .sb_turn_end { color: var(--color_success); font-size: 0.82rem; }
 .sb_error { color: var(--color_danger); }
+// An agent that exited non-zero: ITS words (the daemon's stream door labels them
+// `agent_output`), set apart from the error line that names the failure.
+.sb_agent_output { color: var(--fg_muted); font-family: monospace; font-size: 0.82rem; border-left: 2px solid var(--color_danger); padding-left: 8px; }
 .sb_notice { color: var(--color_warning); font-size: 0.82rem; }
 .sb_build_status { color: var(--color_info); font-size: 0.82rem; }
 .sb_history_note { color: var(--fg_muted); font-style: italic; font-size: 0.8rem; }

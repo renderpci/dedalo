@@ -197,6 +197,8 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 		"WRITES NO DATA — it plants the `.dedalo_test_media` marker in a gate's scratch directory so the media doors will write there. Filesystem only, no database.",
 	'test/helpers/seed_contract.ts':
 		"WRITES NO SUITE DATA — `restoreSeedRaw` restores an install seed into a scratch database the CALLING gate created moments before (`dedalo_seedcheck_<pid>` / `dedalo_seedcommitted_<pid>`, swept and FORCE-dropped by that gate), via a plain-SQL temp file in tmpdir it removes; it never connects to the suite database. The suite database cannot be its target: a restore refuses a non-empty database (the seed's CREATE TABLEs collide).",
+	'test/helpers/install_host_scratch.ts':
+		"WRITES NO DATA — `plantOwned` plants a directory or file with an OWNER into the CALLER's own installer scratch host (a mkdtemp root marked `.dedalo_install_scratch`, host/scratch.ts): the real path and the scratch HostFs owners sidecar. No database connection; the installer's host gates never touch the suite database.",
 	'test/helpers/child_driver.ts':
 		"WRITES NO DATA — its one write is a throwaway TS driver file in its own mkdtemp scratch dir (removed on cleanup), run in a CHILD bun process that inherits this run's environment: the preload-repointed suite DB and marked media root. It holds no database connection itself; every driver it runs writes only through test-data doors that call assertTestDatabase (PERF-11/OPS-6 gates).",
 	'test/helpers/isolated_gate.ts':
@@ -449,6 +451,24 @@ const DOORS: readonly { name: string; run: () => Promise<unknown> }[] = [
 				bulkId: null,
 				data: [],
 			}),
+	},
+	{
+		// The tree-integrity situation (test/helpers/tree_lock_situation.ts): a raw
+		// seed of a node's parent links — refused, writing nothing, unmarked.
+		name: 'seedLinks',
+		run: async () =>
+			(await import('../helpers/tree_lock_situation.ts')).seedLinks(
+				{
+					section: 'zzmk1',
+					term: 'zzmk2',
+					parent: 'zzmk3',
+					children: 'zzmk4',
+					order: null,
+					table: 'matrix_test',
+				},
+				999_997,
+				[{ parent: 999_996, itemId: 1 }],
+			),
 	},
 	{
 		name: 'demoteToLegacyRun',

@@ -135,8 +135,19 @@ describe('the child environment is CONSTRUCTED, never inherited', () => {
         if (event.type === 'text') seen.push(event.text);
       }
       // HOME is not the caller's: the run's fixed environment supplies it (LEAD-1b — under the
-      // suite's declared `none`, the unconfined runs' own HOME under AGENT_STATE_ROOT).
-      expect(keysOf(seen.join('\n'))).toEqual(['DRIVER_ONLY', 'HOME', 'PATH']);
+      // suite's declared `none`, a fresh per-run HOME under AGENT_STATE_ROOT), and with it the
+      // five keys that point the agent's configuration and state into that HOME (S3-HOME,
+      // agent_identity.ts turnHomeEnvironment). Nothing else crosses.
+      expect(keysOf(seen.join('\n'))).toEqual([
+        'CLAUDE_CONFIG_DIR',
+        'DRIVER_ONLY',
+        'HOME',
+        'PATH',
+        'XDG_CACHE_HOME',
+        'XDG_CONFIG_HOME',
+        'XDG_DATA_HOME',
+        'XDG_STATE_HOME',
+      ]);
     } finally {
       clearCanaries();
     }

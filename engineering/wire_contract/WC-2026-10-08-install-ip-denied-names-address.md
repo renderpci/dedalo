@@ -37,3 +37,5 @@ hold.
 `error_registry_native` + `labels_tripwire` hold the `details_keys` ↔ `${param}`
 agreement. No parity fixture carries this code (the install surface is TS-native,
 WC-004), so no fixture changes and no re-harvest question arises.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (whole: `install.ip_denied` and its label are deleted with the install window)

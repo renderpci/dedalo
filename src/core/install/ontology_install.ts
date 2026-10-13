@@ -30,11 +30,10 @@
  */
 
 import { createHash } from 'node:crypto';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
-import { copyFile, readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import { copyFile, readdir, readFile, writeFile } from 'node:fs/promises';
+import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { config } from '../../config/config.ts';
 import {
 	existingDdOntologyTipos,
 	readDdOntologyModelParents,
@@ -63,20 +62,14 @@ import { type StagedFile, stageOntologyFiles } from '../ontology/ontology_update
 import { setRecordsInDdOntology } from '../ontology/ontology_write.ts';
 import { getTldFromTipo } from '../ontology/tld.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_MAJOR_MINOR } from '../update/version.ts';
-import { resolveOntologyCatalog } from './ontology_catalog.ts';
 import {
-	listedPolicy,
 	type OntologyInstallRequest,
 	type OntologyOrigin,
-	type OntologySource,
 	type OntologySourceView,
-	ontologyCatalogNeeded,
-	ontologyRequestFromActive,
 	undeclaredWarning,
-	vendoredOntologyCatalog,
 } from './ontology_choice.ts';
 import { installOntologyStagingDir } from './paths.ts';
-import { connFromConfig, type DbConnDescriptor } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
 const STAGED_MANIFEST = 'staged.json';
@@ -227,7 +220,7 @@ export async function stageOntologies(
 ): Promise<StageOntologiesResult> {
 	const stagingDir = options.stagingDir ?? installOntologyStagingDir();
 	const versionDir = join(stagingDir, DEDALO_VERSION_MAJOR_MINOR);
-	rmSync(stagingDir, { recursive: true, force: true });
+	await removeStagingDir(stagingDir);
 	mkdirSync(versionDir, { recursive: true, mode: 0o700 });
 	const items: StagedRecord[] = [];
 	for (const item of request.items) {
@@ -279,18 +272,25 @@ async function readStagedManifest(stagingDir: string): Promise<StagedManifest> {
 	return JSON.parse(await readFile(path, 'utf8')) as StagedManifest;
 }
 
-/** Every staged file must still be byte-identical to what stage_ontologies verified. */
-async function assertStagedIntact(stagingDir: string, manifest: StagedManifest): Promise<void> {
+/** The first staged file that is missing or changed since it was verified (its sentence), or null. */
+async function firstChangedStagedFile(
+	stagingDir: string,
+	manifest: StagedManifest,
+): Promise<string | null> {
 	const records = [...(manifest.matrix_dd === null ? [] : [manifest.matrix_dd]), ...manifest.items];
 	for (const record of records) {
 		const path = join(stagingDir, record.file);
 		if (!existsSync(path) || (await digestOf(path)).sha256 !== record.sha256) {
-			refuseInstall(
-				'install.state_conflict',
-				`The staged file ${record.file} changed since it was verified — run stage_ontologies again`,
-			);
+			return `The staged file ${record.file} changed since it was verified — run stage_ontologies again`;
 		}
 	}
+	return null;
+}
+
+/** Every staged file must still be byte-identical to what stage_ontologies verified. */
+async function assertStagedIntact(stagingDir: string, manifest: StagedManifest): Promise<void> {
+	const changed = await firstChangedStagedFile(stagingDir, manifest);
+	if (changed !== null) refuseInstall('install.state_conflict', changed);
 }
 
 /** The staged manifest → the update stager's file list (matrix_dd first, then deps-first items). */
@@ -412,13 +412,113 @@ export async function installOntologies(
 	await rederiveUnresolvedModels(tlds, userId);
 	const warnings = [...manifest.warnings, ...(await verifyInstalledOntologyReferences(tlds))];
 	const installed = await installedCounts(tlds);
-	rmSync(stagingDir, { recursive: true, force: true });
+	await removeStagingDir(stagingDir);
 	return {
 		ok: true,
 		msg: `Installed ontologies: ${tlds.join(', ')} — references verified${warnings.length > 0 ? ` (${warnings.length} warnings)` : ''}`,
 		installed,
 		warnings,
 	};
+}
+
+/**
+ * Remove the staging dir ATOMICALLY: rename it away first (one syscall — the
+ * original path is either the whole staged set or gone), then delete the
+ * renamed copy. A kill during the recursive delete leaves only a
+ * `<dir>.consumed.<pid>` leftover — never a half-deleted staging dir that the
+ * verifies would read as "staged, but changed" — and every call sweeps such
+ * leftovers.
+ */
+export async function removeStagingDir(stagingDir: string): Promise<void> {
+	if (existsSync(stagingDir)) {
+		const consumed = `${stagingDir}.consumed.${process.pid}`;
+		rmSync(consumed, { recursive: true, force: true });
+		renameSync(stagingDir, consumed);
+	}
+	const prefix = `${basename(stagingDir)}.consumed.`;
+	const parent = dirname(stagingDir);
+	const leftovers = existsSync(parent)
+		? (await readdir(parent)).filter((name) => name.startsWith(prefix))
+		: [];
+	for (const name of leftovers) rmSync(join(parent, name), { recursive: true, force: true });
+}
+
+// ── the terminal installer's verifies (executor.ts) ─────────────────────────
+
+/** A step outcome check: did the work land, and if not, why. */
+export interface StepVerdict {
+	ok: boolean;
+	detail: string;
+}
+
+/**
+ * stage_ontologies' VERIFY: staged.json is present, was written by THIS engine,
+ * stages exactly `tlds` (deps first), and every staged file is still
+ * byte-identical to what was verified. Never throws.
+ */
+export async function stagedMatches(
+	tlds: readonly string[],
+	stagingDir: string = installOntologyStagingDir(),
+): Promise<StepVerdict> {
+	const manifest = await stagedManifestIfAny(stagingDir);
+	if (manifest === null) return { ok: false, detail: 'nothing staged (or staged.json unreadable)' };
+	const staged = manifest.items.map((item) => item.tld);
+	const problem =
+		manifest.engine_version !== DEDALO_VERSION
+			? `staged by engine ${manifest.engine_version}`
+			: staged.join(',') !== tlds.join(',')
+				? `staged ${staged.join(', ')}, the plan installs ${tlds.join(', ')}`
+				: await firstChangedStagedFile(stagingDir, manifest);
+	return problem === null
+		? { ok: true, detail: `staged: ${staged.join(', ')}` }
+		: { ok: false, detail: problem };
+}
+
+/** staged.json parsed, or null when absent or unreadable (a verify never throws). */
+async function stagedManifestIfAny(stagingDir: string): Promise<StagedManifest | null> {
+	const path = join(stagingDir, STAGED_MANIFEST);
+	if (!existsSync(path)) return null;
+	try {
+		return JSON.parse(await readFile(path, 'utf8')) as StagedManifest;
+	} catch {
+		return null;
+	}
+}
+
+/** Does `tld` have its `<tld>0` source records AND its derived dd_ontology nodes? */
+async function tldInstalled(conn: DbConnDescriptor, tld: string): Promise<boolean> {
+	if (!/^[a-z][a-z0-9_]*$/.test(tld)) return false;
+	const probe = await runPsql(conn, [
+		'-tAc',
+		`SELECT EXISTS (SELECT 1 FROM matrix_ontology WHERE section_tipo = '${tld}0')`,
+	]);
+	if (probe.exitCode !== 0 || probe.stdout.trim() !== 't') return false;
+	return (await readDdOntologyReferenceRows([tld])).length > 0;
+}
+
+/**
+ * install_ontologies' VERIFY: the import finished — its staging dir is gone
+ * (installOntologies removes it only after the references are verified, so a
+ * partial import never reads as finished) and every TLD has its `<tld>0`
+ * records in matrix_ontology and its nodes in dd_ontology.
+ */
+export async function ontologyImportComplete(
+	tlds: readonly string[],
+	stagingDir: string = installOntologyStagingDir(),
+): Promise<StepVerdict> {
+	if (existsSync(stagingDir)) {
+		return {
+			ok: false,
+			detail: `the staging dir ${stagingDir} is still present (import not finished)`,
+		};
+	}
+	const conn = connFromConfig();
+	for (const tld of tlds) {
+		if (!(await tldInstalled(conn, tld))) {
+			return { ok: false, detail: `ontology '${tld}' is not installed` };
+		}
+	}
+	return { ok: true, detail: `installed: ${tlds.join(', ')}` };
 }
 
 // ── verification ─────────────────────────────────────────────────────────────
@@ -457,39 +557,4 @@ export async function verifyInstalledOntologyReferences(
 	const present = await existingDdOntologyTipos(refs.map((ref) => ref.to));
 	const dangling = danglingDependencies(refs, new Set(tlds), present, diffusionModels);
 	return groupDangling(dangling).map(danglingWarning);
-}
-
-// ── the wizard path ──────────────────────────────────────────────────────────
-
-/** The ontology source the RUNNING configuration names (its first ontology server, or none). */
-function configuredSource(): OntologySource {
-	const server = config.ontologyIo.servers[0];
-	return server === undefined ? { kind: 'none' } : { kind: 'server', server: { ...server } };
-}
-
-/**
- * The install request the written configuration stands for — the wizard's
- * stage_ontologies runs in the process restarted after persist_config, so it
- * reads ACTIVE_ONTOLOGY_TLDS (core + the install order) and the configured
- * ontology servers, and re-resolves the catalog only when the vendored one does
- * not suffice.
- */
-export async function ontologyRequestFromConfig(): Promise<OntologyInstallRequest> {
-	if (!config.ontologyIo.activeOntologyTldsConfigured) {
-		refuseInstall(
-			'install.state_conflict',
-			'ACTIVE_ONTOLOGY_TLDS was not written — save the configuration first',
-		);
-	}
-	const active = config.ontologyIo.activeOntologyTlds;
-	const source = configuredSource();
-	const domain = active.filter((tld) => !isCoreOntologyTld(tld));
-	const catalog = ontologyCatalogNeeded(domain, source, listedPolicy(domain))
-		? (await resolveOntologyCatalog(source, { allowedServers: config.ontologyIo.servers })).catalog
-		: vendoredOntologyCatalog();
-	const { request, errors } = ontologyRequestFromActive(active, catalog);
-	if (request === null) {
-		refuseInstall('install.invalid_input', `Install answers invalid: ${errors.join('; ')}`);
-	}
-	return request;
 }

@@ -21,8 +21,16 @@
  * browser silently discards a `Secure` cookie over http://, so an operator
  * completed the wizard, chose a root password, and could never log in.
  *
- * CENSUS: TOTAL over `install.sh` and `docs/install/**` — install.sh is
- * otherwise unlinted and untested, so this is the first gate that reads it.
+ * CENSUS: TOTAL over `docs/install/**`, the deploy/ host scripts — and, since
+ * the terminal installer (phase 4, 2026-10-12) took the stack over from
+ * install.sh, the TypeScript stack steps' compose commands, EXECUTED: every
+ * command the docker/trial host steps run is BUILT (src/core/install/host/stack/
+ * compose.ts) for real plans of every route and TLS mode and read back — each
+ * carries the stack file, the installer's override and `--env-file .dedalo.env`.
+ * The TLS pairing install.sh used to write is the TS `.dedalo.env` renderer's
+ * now: for every TLS mode it offers, the proxy config it names and the cookie's
+ * Secure flag are ONE decision (decided from the config's own text). install.sh
+ * itself — a POSIX bootstrap now — drives no compose at all.
  *
  * THE HOST LIBRARY (installer unification D2, 2026-10-09). The Docker-host tools
  * (install.sh's build, deploy/dedalo-image-update.sh, the host image updater)
@@ -40,9 +48,68 @@ import { describe, expect, test } from 'bun:test';
 import { chmodSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { ExecCommand, HostPlanCtx } from '../../src/core/install/host/contract.ts';
+import { readyProbe } from '../../src/core/install/host/stack/database.ts';
+import { stackEngineCommand } from '../../src/core/install/host/stack/engine_delegate.ts';
+import { renderEnvFile, renderStackNginx } from '../../src/core/install/host/stack/files.ts';
+import {
+	ENV_FILE as INSTALLER_ENV_FILE,
+	nginxConfOf,
+	OVERRIDE_FILE,
+	stackFileOf,
+} from '../../src/core/install/host/stack/layout.ts';
+import { STACK_HOST_STEPS } from '../../src/core/install/host/stack/table.ts';
+import { socketHealthProbe } from '../../src/core/install/host/stack/up.ts';
+import type { StackHostStepId } from '../../src/core/install/install_plan.ts';
+import { stackPlanCtx } from '../helpers/install_host_scratch.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const INSTALL_SH = 'install.sh';
+
+// ── the TypeScript stack steps' compose commands (phase 4) ───────────────────
+
+/** Real docker/trial plans: every route × TLS mode × image source the installer offers. */
+const STACK_PLANS: readonly Record<string, unknown>[] = [
+	{ route: 'trial', entity: 'trial_museum' },
+	{ route: 'trial', entity: 'trial_museum', image_source: 'build' },
+	{
+		route: 'docker',
+		entity: 'museo',
+		server_name: 'dedalo.example.org',
+		letsencrypt_email: 'ops@example.org',
+	},
+	{ route: 'docker', entity: 'museo', server_name: 'dedalo.example.org', tls_mode: 'local_ca' },
+	{
+		route: 'docker',
+		entity: 'museo',
+		server_name: 'dedalo.example.org',
+		tls_mode: 'files',
+		tls_cert_path: '/etc/ssl/museo/fullchain.pem',
+		tls_key_path: '/etc/ssl/museo/privkey.pem',
+	},
+];
+
+/** Every exec a plan's stack steps list (their `unless` probes too) + the step-run probes. */
+function stackExecs(ctx: HostPlanCtx): ExecCommand[] {
+	const listed = (ctx.plan.steps as StackHostStepId[]).flatMap((step) =>
+		STACK_HOST_STEPS[step].commands(ctx),
+	);
+	const execs = listed.filter((command): command is ExecCommand => command.kind === 'exec');
+	return [
+		...execs,
+		...execs.flatMap((command) => (command.unless === undefined ? [] : [command.unless])),
+		readyProbe(ctx),
+		socketHealthProbe(ctx),
+		stackEngineCommand(ctx, true),
+	];
+}
+
+/** The compose invocations among them (argv[1] === 'compose'). */
+function composeInvocations(ctx: HostPlanCtx): string[][] {
+	return stackExecs(ctx)
+		.map((command) => [...command.argv])
+		.filter((argv) => argv[1] === 'compose');
+}
 const SIMPLE_STACK = 'docker-compose.simple.yml';
 
 /** The env file install.sh writes, and the flag that makes compose read it. */
@@ -52,35 +119,19 @@ const ENV_FILE = '.dedalo.env';
 const HOST_LIB = 'deploy/dedalo-image-lib.sh';
 
 /**
- * Invocations that must NOT carry the env file, each with the reason. The
- * no-certificate variant is the one honest bare form: there is no install to
- * lose, and the compose defaults (plain HTTP + non-Secure cookie) are a working
- * pair — which is exactly what the second half of this gate enforces.
+ * Invocations that must NOT carry the env file, each with the reason. EMPTY since
+ * 2026-10-12: its one entry was the quickstart's "no-certificate variant" — a bare
+ * `up -d` with no install.sh run, which served the browser install wizard. The wizard
+ * is gone (WC-2026-10-12-install-surface-removed): a stack started without an install
+ * refuses to boot, so no honest bare invocation remains. The shape is kept so a future
+ * exemption is a visible, reasoned edit.
  */
 const BARE_BY_DESIGN: {
 	file: string;
 	rawLine: string;
 	underHeading: string;
 	reason: string;
-}[] = [
-	{
-		file: 'docs/install/quickstart.md',
-		// THE EXACT RAW LINE, indentation included — not a substring. The four
-		// spaces put it inside the "no-certificate variant" admonition, and that
-		// is the whole distinction: the UNINDENTED everyday command with the same
-		// text is the OPS-02 defect. Measured — a substring match excused it.
-		rawLine: '    docker compose -f docker-compose.simple.yml -f deploy/compose.build.yml up -d',
-		// ...and it must live under THIS heading. Anchoring on text alone let the
-		// excused line be MOVED: a reviewer deleted it from the admonition and
-		// re-added the byte-identical line inside the everyday-commands section,
-		// which is the OPS-02 defect wearing the exemption's clothes.
-		underHeading: '??? tip "The no-certificate variant"',
-		reason:
-			'The "no-certificate variant" — a laptop look with no install.sh run, so there is no ' +
-			'.dedalo.env to pass and the plain-HTTP defaults are correct here. Without install.sh ' +
-			'there is no image pin, so the bare variant must build locally.',
-	},
-];
+}[] = [];
 
 /**
  * Is this line inside the section that starts at `heading`? A section ends at
@@ -236,13 +287,40 @@ function carriesEnvFile(file: string, text: string): boolean {
 }
 
 describe('a TLS install cannot lose its TLS', () => {
-	const targets = [INSTALL_SH, ...docsInstallFiles(), ...deployAndScriptFiles()];
+	const targets = [...docsInstallFiles(), ...deployAndScriptFiles()];
 
 	test('the census actually finds invocations (anti-vacuity)', () => {
 		// A matcher that found nothing would make the rule below pass forever.
 		const total = targets.flatMap((file) => simpleStackInvocations(file));
 		expect(total.length).toBeGreaterThan(8);
-		expect(simpleStackInvocations(INSTALL_SH).length).toBeGreaterThan(3);
+		// The installer's own: every plan's stack steps run compose many times.
+		for (const raw of STACK_PLANS)
+			expect(composeInvocations(stackPlanCtx(raw)).length, String(raw.route)).toBeGreaterThan(5);
+	});
+
+	test('install.sh (the bootstrap) drives no compose at all — the installer does', () => {
+		const lines = readFileSync(join(REPO_ROOT, INSTALL_SH), 'utf8')
+			.split('\n')
+			.filter((line) => !/^\s*#/.test(line));
+		expect(lines.filter((line) => /docker|compose/.test(line))).toEqual([]);
+	});
+
+	test("every compose command the installer's stack steps run carries the stack, its override and --env-file .dedalo.env", () => {
+		const offenders: string[] = [];
+		for (const raw of STACK_PLANS) {
+			const ctx = stackPlanCtx(raw);
+			for (const argv of composeInvocations(ctx)) {
+				const line = argv.join(' ');
+				const files = argv.slice(2, argv.indexOf('--env-file') + 2).join(' ');
+				const stack = `-f ${stackFileOf(ctx.answers)}`;
+				if (!files.startsWith(stack) || !files.includes(`-f ${OVERRIDE_FILE}`))
+					offenders.push(`${String(raw.route)}: ${line}`);
+				if (argv[argv.indexOf('--env-file') + 1] !== ENV_FILE)
+					offenders.push(`${String(raw.route)}: ${line}`);
+			}
+		}
+		expect(INSTALLER_ENV_FILE).toBe(ENV_FILE);
+		expect(offenders).toEqual([]);
 	});
 
 	test('the deploy census is derived, and holds every host tool that drives compose', () => {
@@ -363,51 +441,63 @@ describe('a TLS install cannot lose its TLS', () => {
 		).toBe(String(servesTls));
 	});
 
-	test('install.sh writes both keys, paired, for every TLS mode it offers', () => {
-		// The default agreeing is not enough: the file install.sh WRITES must pair
-		// them too, or the guided path reintroduces the contradiction.
-		const script = readFileSync(join(REPO_ROOT, INSTALL_SH), 'utf8');
-		expect(script).toContain('DEDALO_NGINX_CONF=$NGINX_CONF_NAME');
-		expect(script).toContain('SESSION_COOKIE_SECURE=$COOKIE_SECURE');
-		// Every branch that sets one must set the other.
-		// PAIRED PER BRANCH, not counted. Counting let one branch lose its cookie
-		// assignment while another gained a duplicate — totals equal, one TLS mode
-		// choosing a proxy without choosing a cookie policy.
-		const lines = script.split('\n');
+	test('the installer writes both keys, paired, for every TLS mode it offers (the proxy config decides)', () => {
+		// The default agreeing is not enough: the file the installer WRITES must pair
+		// them too, or the guided path reintroduces the contradiction. Decided from
+		// the config the env file NAMES (its text, comments stripped), never its name.
 		const unpaired: string[] = [];
-		for (const [index, raw] of lines.entries()) {
-			if (!/^\s*NGINX_CONF_NAME=/.test(raw)) continue;
-			// The two belong together: the pairing is a WINDOW, not a file-wide count.
-			const window = lines.slice(Math.max(0, index - 3), index + 4).join('\n');
-			if (!/^\s*COOKIE_SECURE=/m.test(window))
-				unpaired.push(`install.sh:${index + 1} ${raw.trim()}`);
+		for (const raw of STACK_PLANS) {
+			const ctx = stackPlanCtx(raw);
+			const env = renderEnvFile(ctx, 'pw');
+			const conf = env.match(/^DEDALO_NGINX_CONF=(.+)$/m)?.[1];
+			const cookie = env.match(/^SESSION_COOKIE_SECURE=(.+)$/m)?.[1];
+			expect(conf, String(raw.route)).toBe(nginxConfOf(ctx.answers));
+			const text =
+				conf === nginxConfOf({ ...ctx.answers, route: 'trial' })
+					? readFileSync(join(REPO_ROOT, 'deploy', conf ?? ''), 'utf8')
+					: renderStackNginx(ctx);
+			const servesTls = /listen\s+443/.test(
+				text
+					.split('\n')
+					.filter((line) => !line.trimStart().startsWith('#'))
+					.join('\n'),
+			);
+			if (cookie !== String(servesTls))
+				unpaired.push(
+					`${String(raw.route)} ${String(raw.tls_mode ?? '')}: ${conf} (TLS ${servesTls}) with SESSION_COOKIE_SECURE=${cookie}`,
+				);
 		}
 		expect(
 			unpaired,
-			'A branch sets the nginx configuration without setting the cookie policy beside it. ' +
-				'They are ONE decision: a TLS proxy needs a Secure cookie, a plain-HTTP proxy must ' +
-				`not have one.\n  ${unpaired.join('\n  ')}`,
+			'A TLS mode names a proxy configuration without the cookie policy that goes with it. ' +
+				'They are ONE decision: a TLS proxy needs a Secure cookie, a plain-HTTP proxy must not have one.',
 		).toEqual([]);
+		// Not vacuous: both outcomes occur.
+		const cookies = STACK_PLANS.map(
+			(raw) => renderEnvFile(stackPlanCtx(raw), 'pw').match(/^SESSION_COOKIE_SECURE=(.+)$/m)?.[1],
+		);
+		expect(new Set(cookies)).toEqual(new Set(['true', 'false']));
 	});
 
 	test('the env file every invocation names is really .dedalo.env', () => {
-		// The flag test accepts $ENV_FILE, so the VALUE has to be pinned here or
-		// `ENV_FILE=.env` would satisfy the census while naming the exact file
-		// install.sh's own comment says must not be used — compose would read it,
-		// but so would the engine's loader from the working directory.
-		const script = readFileSync(join(REPO_ROOT, INSTALL_SH), 'utf8');
-		expect(script).toContain(`readonly ENV_FILE='${ENV_FILE}'`);
+		// The flag test accepts $ENV_FILE, so the VALUE has to be pinned: compose would
+		// read `.env` too, but so would the engine's loader from the working directory.
+		expect(INSTALLER_ENV_FILE).toBe('.dedalo.env');
 		expect(
-			script,
-			'install.sh must not name .env as its compose env file — the engine auto-loads that',
-		).not.toMatch(/readonly ENV_FILE='\.env'/);
+			carriesEnvFile(
+				'docs/install/x.md',
+				'docker compose -f docker-compose.yml --env-file .env up -d',
+			),
+		).toBe(false);
+		expect(
+			carriesEnvFile(
+				'docs/install/x.md',
+				'docker compose -f docker-compose.yml --env-file .dedalo.env up -d',
+			),
+		).toBe(true);
 	});
 });
 
-/**
- * THE LIBRARY IS EXECUTED, not read: `dedalo_compose` is run under the scripts'
- * own shell options against a stub `docker` that records its argv.
- */
 describe('the host library always hands compose the env file', () => {
 	function runLibrary(
 		envFile: string | null,

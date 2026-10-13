@@ -132,7 +132,7 @@ export function sweepExpiredSessions(): number {
  * throwaway store and the INHERITED production MEDIA_PATH. Reconciling there unlinks
  * every live editor's marker on the tree it was only supposed to check.
  *
- * This used to be `if (!installMode && !smokeBoot)` at the ONE call site in server.ts —
+ * This used to be a `!smokeBoot` guard at the ONE call site in server.ts —
  * a caller's promise, which is the shape of guard that survives until the second caller.
  * There are already two (the sweeper and the media_control widget), and the invariant is
  * about the process's configuration, not about who is asking.

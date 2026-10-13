@@ -55,7 +55,7 @@ const TRIPWIRES = [
 	'test/unit/config_declaration_tripwire.test.ts',
 	'test/unit/install_seed_manifest_tripwire.test.ts',
 	'test/unit/install_seed_drift_tripwire.test.ts',
-	'test/unit/install_ip_gate_tripwire.test.ts',
+	'test/unit/ip_allowlist.test.ts',
 	'test/unit/proxy_trust_tripwire.test.ts',
 	'test/unit/password_cost_tripwire.test.ts',
 	'test/unit/config_docs_tripwire.test.ts',
@@ -135,6 +135,7 @@ const TRIPWIRES = [
 	'test/unit/local_db_stores_tripwire.test.ts',
 	'test/unit/docs_current_engine_tripwire.test.ts',
 	'test/unit/docs_versioning_tripwire.test.ts',
+	'test/unit/docs_manual_install_tripwire.test.ts',
 	'test/unit/docs_locator_shape_tripwire.test.ts',
 	'test/unit/css_build_tripwire.test.ts',
 	'test/unit/css_token_duplication_tripwire.test.ts',
@@ -168,7 +169,7 @@ const TRIPWIRES = [
 	'test/unit/client_caller_chain_tripwire.test.ts',
 	'test/unit/tools_cache_invalidation.test.ts',
 	'test/unit/no_remote_code_tripwire.test.ts',
-	'test/unit/install_seal_tripwire.test.ts',
+	'test/unit/no_install_surface_tripwire.test.ts',
 	'test/unit/xss_csp_tripwire.test.ts',
 	'test/unit/error_report_xss_tripwire.test.ts',
 	'test/unit/security_audit_2026_07_23_tripwire.test.ts',
@@ -335,9 +336,9 @@ const TRIPWIRES = [
 	'test/unit/portal_locator_door_native.test.ts',
 	// TOOLS-4 budget half — the AI spend ledger (closure Step 3, 2026-10-01).
 	'test/unit/ai_spend_budget_native.test.ts',
-	// 2026-10-10 — retired engine nodes are pruned (ddengine11 → hierarchy60).
-	'test/unit/engine_ontology_retired_native.test.ts',
-	// 2026-10-10 — the registry-row law, declared dependencies (hierarchy60) end to end, the wizard's mandatory thesauri.
+	// 2026-10-12 — every installed ontology TLD came from the release files; boot writes no ontology.
+	'test/unit/install_tld_provenance_native.test.ts',
+	// 2026-10-10 — the registry-row law, declared dependencies (hierarchy60) end to end, a declared thesaurus never forced.
 	'test/unit/ontology_registry_row_native.test.ts',
 	'test/unit/ontology_dependencies_native.test.ts',
 	'test/unit/install_hierarchy_dependencies_native.test.ts',
@@ -359,7 +360,7 @@ const TRIPWIRES = [
 	'test/unit/publication_host_spec_refs_tripwire.test.ts',
 	// #125 — the vendored transformers.js core and the onnxruntime-web pin are one build (2026-10-04).
 	'test/unit/onnxruntime_alignment_tripwire.test.ts',
-	// Installer unification A1/A3 — CLI and wizard produce one plan and one .env (2026-10-08).
+	// Installer unification A1/A3 — flags, answers record and answers file produce one plan and one .env (2026-10-08).
 	'test/unit/install_plan_parity_tripwire.test.ts',
 	// Installer unification C — every runtime definition that restarts the server declares DEDALO_SUPERVISED (2026-10-08).
 	'test/unit/supervision_declaration_tripwire.test.ts',
@@ -387,6 +388,29 @@ const TRIPWIRES = [
 	'test/unit/image_update_channel_native.test.ts',
 	'test/unit/image_updater_host_native.test.ts',
 	'test/unit/image_registries_docs_tripwire.test.ts',
+	'test/unit/install_validation_upfront_tripwire.test.ts',
+	'test/unit/install_run_files_secret_tripwire.test.ts',
+	'test/unit/client_page_doors_native.test.ts',
+	'test/unit/wire_sqo_page_bound_native.test.ts',
+	'test/unit/search_related_page_window_native.test.ts',
+	'test/unit/filter_projects_membership_native.test.ts',
+	'test/unit/filter_projects_scope_native.test.ts',
+	'test/unit/install_screen_model_tripwire.test.ts',
+	'test/unit/install_plain_parity_tripwire.test.ts',
+	'test/unit/install_plain_secrets_tripwire.test.ts',
+	'test/unit/install_tui_parity_tripwire.test.ts',
+	'test/unit/install_tui_secrets_tripwire.test.ts',
+	'test/unit/install_tui_restore_tripwire.test.ts',
+	'test/unit/opentui_confinement_tripwire.test.ts',
+	'test/unit/install_host_steps_native.test.ts',
+	'test/unit/install_host_resume_drill.test.ts',
+	'test/unit/install_host_render_tripwire.test.ts',
+	'test/unit/install_host_privilege_tripwire.test.ts',
+	'test/unit/install_host_selinux_native.test.ts',
+	'test/unit/install_host_identity_native.test.ts',
+	'test/unit/install_stack_steps_native.test.ts',
+	'test/unit/install_bootstrap_sh.test.ts',
+	'test/unit/term_by_tipo_label_guard.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

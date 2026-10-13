@@ -17,6 +17,12 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - Every AI request now counts against daily limits set per user and per profile, and generated answers need their own permission.
+    - The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start.
+    - SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change.
+    - The terminal installer sets up the whole host: production, Docker and trial install in one run.
+    - The site builder's OpenCode driver loads only the configuration the site builder states.
+    - A site builder agent turn can no longer leave configuration in its home directory for the next turn to read.
     - Thesauri are offered from one exported manifest, hierarchy.json, and nothing but declared dependencies is pre-selected.
     - The PostgreSQL socket you give the installer is now the one the server connects through (`DB_SOCKET`).
     - Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`.
@@ -27,7 +33,6 @@ Merged since the last release; these ship with the next one.
     - The publication host provisioner now refuses an instance declaration that anyone other than root could change.
     - Publication host provisioning works with Apache on Debian and Ubuntu.
     - Several publication hosts on one server are checked for isolation.
-    - Every AI request now counts against a daily budget per user, and generated answers need their own permission.
     - The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.
     - The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.
     - A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run.
@@ -39,6 +44,20 @@ Merged since the last release; these ship with the next one.
 ### For users
 
 #### Security
+
+- **Logging back in as another user no longer saves the previous user's pending edit.**
+
+    When a session expires while you are working, Dédalo shows a login box over the page so you can sign in again without losing your work. Before, if a *different* user signed in on that box, the edit that was waiting to be saved was sent anyway — under the new user's name, so the Time Machine and the "modified by" stamp named the wrong person. Now a pending save, or a page section waiting to load, is resumed only when the same user signs back in. If someone else signs in, nothing is sent: the page reloads, and until it does nothing can be saved, deleted, moved or uploaded from it — only signing in again is allowed. Your unsaved edit stays marked as unsaved. The decision of who signed in is made in one place only, and the login box just passes the answer on, so the check cannot be weakened by changing one copy of it.
+
+    The same now holds when the other user signs in somewhere else — in another tab or window of the same browser. Before, the next save from your page was quietly retried with the other user's session and recorded under their name. Now every answer from the server says whose session it is, your page keeps working only with your own session, and an answer from someone else's makes the page reload instead of sending anything. A lock you held on a field is no longer released on the other user's behalf when such a page closes, either.
+
+    Wire contract: `WC-2026-10-11-session-user-beside-csrf-token`.
+
+- **Rich text is cleaned by a real HTML parser when it is saved.**
+
+    Text fields with formatting are cleaned of anything that could run a script when they are saved. That cleaning used to pattern-match the text, which missed some disguised forms (for example an encoded `javascript:` link or an event handler written without a space) and sometimes changed ordinary text that merely mentioned such words. It now reads the text the way a browser does: disguised forms are caught, and text and formatting that are not dangerous come back exactly as written. Embedded SVG, MathML, frames, `noscript`, `title` and `textarea` blocks are now removed together with their content, HTML comments are removed, an attribute written twice on one tag is kept once with its first value (the one a browser uses), and a tag left unfinished at the very end of a value is dropped, as a browser would drop it. The cleaning is repeated on its own result until nothing changes, so removing one dangerous piece can never join the text around it into a new one. Dropping it takes the same short time however long the unfinished part is; in the rare value where the end cannot be found that way, the whole value is kept as plain visible text rather than lost. Values saved before this update are not changed until they are saved again.
+
+    Wire contract: `WC-2026-10-11-rich-text-sanitizer-tokenizer`.
 
 - **Searching or sorting by a field the user may not see no longer reveals its values.**
 
@@ -75,6 +94,39 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-10-06-consultation-only-no-section-tools`.
 
 #### Changed
+
+- **The user activity chart names actions in your language.**
+
+    The *Activity by type* chart of a user's activity (Login, Save, Edit, Upload complete…)
+    now takes its action names from the application's translated labels, in the language
+    you are using, instead of from ontology terms. Saved statistics from earlier versions
+    are read as before and add up with new ones under the same action. The seven
+    activity-only names (login, logout, upload complete, recover section, recover component,
+    stats, new version) are new labels, translated in every shipped language.
+
+    Wire contract: `WC-2026-10-12-user-activity-what-labels`.
+
+- **Searching a thesaurus branch with all its descendants costs the same however large the branch.**
+
+    Expanding a term to all its descendants (the "with children" search, fixed filters, the tree) used to ask the database once per term of the branch — about 1,650 requests for a branch of 1,200 terms. The whole branch is now read in one request, in one consistent snapshot, with the same result. Sibling terms that share an internal number across two sections are now always listed in the same order (by section) instead of an order that could change between reads.
+
+    Wire contract: `WC-2026-10-11-children-recursive-one-statement`.
+
+- **The site builder now says why it refused, and which refusals clear by themselves.**
+
+    Before, most refusals of the site builder tool read the same: "The site builder rejected the request". A site name already taken, a build still running, a site with no webspace, a server full of running agent turns and a missing confirmation all showed that one sentence, and none of them was marked as something to retry. Now each refusal has its own message: the name is taken, a folder for that name is still on the server, the domain belongs to another site, there is nothing to publish yet, the site has used its disk space, the server has reached its site limit, and so on. A refusal that clears by itself (another task is running on the site, too many agent turns at once) is reported as temporary, so you can try again in a moment. Permission refusals say that the site builder needs developer or administrator permission, or that the agent session belongs to another user.
+
+    For API consumers: the tool's errors are new `site_builder.*` codes (listed in the wire contract entry), the busy family moves from `site_builder.rejected` (400) to `site_builder.busy` (503, retryable), and no site-builder error carries a free-text message any more — the code and its label are the message.
+
+    Wire contract: `WC-2026-10-11-site-builder-reason-codes`.
+
+- **A failed agent turn in the site builder now says what went wrong, in your language.**
+
+    Before, when an agent turn of the site builder failed, the chat showed the site builder service's own internal sentence — sometimes a server path, a user id or a raw program error — in English whatever your language, and nothing said whether trying again could help. Now each failure has its own message: the turn ran out of time, it was stopped (by you, or because the service was shutting down), the server could not prepare it, the agent stopped with an error (its own output is shown apart, as the agent's), the session history could not be read, or one of the refusals the site builder already explains (the site is busy, the server cannot run the agent safely, …). The details an administrator needs stay in the site builder's log.
+
+    For API consumers: an error record of the `session_stream` event stream is now `{type:'error', error:{code, category, message, label_key, retryable}, agent_output?}`, and the stream's `event: error` frames carry the same error body — never free text. New codes: `site_builder.turn_timeout`, `site_builder.turn_interrupted`, `site_builder.turn_setup_failed`, `site_builder.agent_failed`, `site_builder.replay_failed`.
+
+    Wire contract: `WC-2026-10-11-site-builder-turn-error-frames`.
 
 - **The tools of a section list are now grouped in one Tools menu.**
 
@@ -256,6 +308,32 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-27-csv-import-append-mode`.
 
 #### Fixed
+
+- **The projects picker follows a user's project assignments at once.**
+
+    When an administrator changed the projects a user belongs to, that user's *Projects* picker (and the project names shown in lists) kept offering the old set — a revoked project stayed selectable and a newly granted one stayed hidden — until an unrelated change cleared the server's memory. The picker is now keyed by the user's current projects, so the next read shows exactly the new set.
+
+- **No change can place a thesaurus term below itself any more — not two tree moves made at the same moment, nor an edit, import or restore — and two people changing a term's broader terms at the same time no longer erase each other's change.**
+
+    Before, two drag-and-drop moves in the thesaurus tree made at the same moment, each harmless on its own, could together place a term under one of its own narrower terms. The hierarchy then contained a loop: the term showed up under itself and its list of ancestors could not be resolved. Now the second move sees the first and is refused with *The move would create a cycle in the tree*, and nothing is stored. The same refusal now answers when the tree's add button would create a term that a leftover link already names as a broader term of one of its new ancestors; before, that failed with a generic error. Duplicating a term is refused the same way when such a leftover link would make the copy one of its own broader terms; before, the copy was stored with the loop. The same check now guards every other way a broader term is stored: saving the broader-term field in the edit form (or its narrower-terms field), the API and assistant field writes, CSV import, propagating a value to many records, and restoring a value, a whole record or a deleted record from the history. Each refuses a change that would close a loop with the same message and stores nothing. A bulk revert from the history keeps going when one of its changes would close a loop: that change is left as it is and listed among the skipped ones with the reason `tree.cycle`; every skipped change that failed now names the reason as a code. An existing loop can still be repaired: removing the link that closes it, or adding a broader term that does not touch it, is accepted.
+
+    Changes made at the same moment no longer get lost either. Before, if two people moved the same term (one with several broader terms), or one moved it while another edited its broader-term field or its position among its siblings, the change saved last could silently undo the first. Now the second change waits for the first and builds on it. See [the thesaurus tree](./core/thesaurus/index.md).
+
+    Wire contract: `WC-2026-10-11-parent-link-cycle-every-door`.
+
+- **The PDF extractor shows extracted text exactly as the PDF holds it, and its HTML mode is cleaned on the server.**
+
+    In **text** mode the extractor used to read the extracted text as if it were web markup, so anything between angle brackets disappeared from the preview — an epigraphic edition such as `IMP CAES<A>R` became `IMP CAESR`, and that was what "Select text" copied into the record. Now the preview shows the characters exactly as the PDF holds them. In **HTML** mode the page markers are now added on the server, using the page offset set on the PDF field, and the result is cleaned by the same sanitizer that cleans rich text on save before the preview shows it; a PDF with no page markers no longer produces an empty preview. HTML mode also works again with current versions of the PDF tools on the server: an option they do not accept made every HTML extraction fail.
+
+    Wire contract: `WC-2026-10-11-pdf-extractor-render-class`.
+
+- **Moving, adding and reordering terms in the thesaurus tree is recorded in each term's history and updates its "modified by" and "modified date".**
+
+    Before, a change made in the thesaurus tree itself — dragging a term under another broader term, creating a narrower term with the tree's add button, or dragging terms into a new order — was stored without a trace: the term's history showed nothing, and its *modified by* and *modified date* still named the previous edit. Such a change could therefore be neither seen nor undone from the history.
+
+    Now each of these changes is recorded like an edit made in the form. The moved term's history shows the move as one change (its broader term before and after), the new position among its siblings is recorded too, and every term whose position changed shows who changed it and when. See [the thesaurus tree](./core/thesaurus/index.md).
+
+    Wire contract: `WC-2026-10-11-parent-link-cycle-every-door`.
 
 - **The Time Machine history of a Hierarchies record opens again instead of failing with an internal error.**
 
@@ -716,6 +794,65 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Every AI request now counts against daily limits set per user and per profile, and generated answers need their own permission.** *(action needed)*
+
+    Until now any logged-in user could run the assistant, ask for generated answers and run semantic searches without any limit, so one session could exhaust an installation's model budget (or its local GPU). Every request that calls a model is now checked against the user's daily limits before the model is called: assistant runs, model tokens, semantic-search queries, and vision calls of the identification tool. When a limit is used up the request is refused with a message saying when it resets (midnight UTC). Nobody is exempt, administrators and root included.
+
+    The limits are set in the **AI usage** group of each profile (Administration → Profiles) and, to override the profile for one person, of each user (Administration → Users). Each of the four limits is resolved on its own: the user's value when it is filled in, otherwise the profile's, otherwise 0. A limit of 0 refuses every request of that kind; there is no "unlimited" value. A user cannot raise their own limit: on their own user record the AI limits are read-only, whatever their profile allows (administrators with full access excepted). The day's usage of every user is listed in the **AI usage** section under Administration. See [AI spend limits](./core/ai/assistant/configuration.md#ai-spend-limits).
+
+    **Action needed:** a fresh database is required for this beta: databases created by an earlier beta hold engine-written ontology rows that this version no longer uses, and they are not migrated. On the new installation, set the AI limits on the profiles (or users) that should use AI features, since all limits start empty and every AI request is refused until then. Generated answers over the collection also require the **Generated answers** tool permission (`tool_rag`): run *Register tools* after the update, then grant it in the profile editor to the profiles that should use generated answers. Semantic search does not need it.
+
+    Wire contract: `WC-2026-10-01-ai-spend-budget`, `WC-2026-10-12-ddengine-removed`.
+
+- **SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change.** *(action needed)*
+
+    On RHEL-family hosts the installer's SELinux module now gives the engine a domain of
+    its own (`dedalo_engine_t`, entered when systemd starts the pinned runtime, which is
+    labelled `dedalo_engine_exec_t`). The web server may connect to that domain only.
+    Before, the rule named the generic service domain, so the web server could also
+    connect to the sockets of every other service started from `/opt` or `/usr/local`.
+    The engine keeps the rights it had. The installer relabels the runtime after loading
+    the module, checks the label, and refuses a first boot whose engine runs in any other
+    domain.
+
+    The reference units in `deploy/` for a host set up by hand no longer run anything as
+    root that the service user can change, and they now describe the host by role rather
+    than by fixed paths. The service user owns an **instance directory** of your choosing,
+    for example `/home/my_domain.org/dedalo` or `/opt/dedalo/app`. It holds the code, the
+    private directory and the backups, and the directory above it can stay root-owned.
+    A **root-owned bin directory** outside it, such as `/opt/dedalo/bin` or
+    `/usr/local/lib/dedalo/my_domain.org/bin`, holds the pinned runtime and every script a
+    root-started unit runs. The units name the two directories and the service user through
+    the placeholders `INSTANCE_DIR`, `ROOT_BIN_DIR` and `DEDALO_USER`, so one set of files
+    serves any layout. The site-builder store (store 5) has moved out of
+    `dedalo-backup.service` into its own root unit, `dedalo-backup-site-builder.service`,
+    which reads no `.env` file and writes to `/var/backups/dedalo-site-builder`. The backup
+    failure alarm now runs as the service user. The code-update rollback unit moves the code
+    trees as the service user and runs only its restart as root, and it and the watchdog
+    name the code-update backup root (`--backup-root INSTANCE_DIR/backups/code`) instead of
+    reading it from `.env`.
+
+    In-app code updates work on such a host: the update renames the code only inside the
+    instance directory. When the service user cannot write that directory, the update is
+    now refused before anything is downloaded, with a message naming the directory. Before,
+    it downloaded and tested the release and then failed when it tried to move the code.
+    A host set up by hand with the earlier layout, whose code sits directly in a root-owned
+    `/opt/dedalo`, must move its code, private directory and backups into an instance
+    directory and render the units again
+    ([Upgrading › A host set up by hand](./install/upgrading.md#a-host-set-up-by-hand)).
+
+- **The site builder's OpenCode driver loads only the configuration the site builder states.** *(action needed)*
+
+    The OpenCode agent used to read configuration from the site's working folder and from its home directory — project settings, plugins (which are code it runs), agent definitions, commands and skills — files a previous turn or a site build could have written. Now every OpenCode turn runs with those sources switched off and with the site builder's own configuration (its connection to the Dédalo publication server, its permission rules, and the site's brief as the one instruction file) passed directly; the site builder no longer writes an `opencode.json` file into the site's folder. Before it runs any turn, the site builder checks that the installed OpenCode honours these switches — and that it can see each of those sources when they are not switched off, so the check proves something; an OpenCode that fails it is reported as unavailable and its turns are refused. OpenCode 1.18.32 passes. When the check could not be completed at that moment (a question timed out), the turn is refused as "busy, try again" rather than as a defect of OpenCode, and the check runs again on the next attempt.
+
+    **Action needed:** `OPENCODE_ENV` may now carry provider credentials only — `OPENCODE_API_KEY`, `OPENCODE_AUTH_CONTENT`, or a key named like `ANTHROPIC_API_KEY`, `…_AUTH_TOKEN`, `…_ACCESS_KEY_ID`, `…_SECRET_ACCESS_KEY` or `…_SESSION_TOKEN`. Any other key (a switch, a proxy setting, `HOME`, `XDG_*`, `PATH`, a configuration path, a permission override) stops the site builder at start, naming the key: remove it. OpenCode remains unavailable on hosts that confine agent turns (`AGENT_CONFINEMENT=systemd_scope`). The site builder also states OpenCode's credentials itself for every turn, so a login saved with `opencode auth login` is no longer read: put the credential in `OPENCODE_ENV` instead. `OPENCODE_AUTH_CONTENT` may hold `api` and `oauth` entries only — a `wellknown` entry makes OpenCode download and apply a remote configuration on every turn, so it stops the site builder at start. For the same reason an OpenCode console login is refused: while OpenCode's database for the site builder's turns holds a console account (`opencode console login`), OpenCode applies that organisation's remote configuration on every turn, and no setting turns this off, so every OpenCode turn is refused, naming the `opencode console logout` command to run. The site builder now also turns off OpenCode's automatic updates, model catalogue downloads, language-server downloads and session sharing on every turn.
+
+- **A site builder agent turn can no longer leave configuration in its home directory for the next turn to read.** *(action needed)*
+
+    Each site's agent turns used to run with a home directory the agent's own account could write, kept from one turn to the next. Programs a turn runs read their settings from there (git, Bun, the agent command-line tools), so one turn could leave a setting that every later turn of that site would read — including one that reopens the site's repository to the agent. The turn's home directory now belongs to root: only its `state/` folder is the agent's, and the agent's settings and caches are pointed there or at a read-only, empty folder.
+
+    **Action needed:** run `provision apply` on each site builder host after updating. It stops the site builder once, rebuilds every site's turn home directory, carries the agent's own session state (its conversation history, account record and login — nothing else) into the new `state/` folder, and moves everything else that stood there, including the agent's own settings, skills and hooks, into the `retired/` folder of the agent state directory (closed to root; nothing is deleted). A later `provision apply` repairs, the same way, any turn home directory the site builder refuses. Until `provision apply` has run, every agent turn is refused (`confinement_unavailable`, naming the home directory that is not in its new shape). On a development host running the site builder unconfined (`AGENT_CONFINEMENT=none`), `AGENT_STATE_ROOT` is now required: set it to an absolute path in the instance's `.env` before updating, or every agent turn is refused (`confinement_unavailable`; the site builder says so when it starts). Each turn there now gets a fresh home directory, and the agent's state lives in `<AGENT_STATE_ROOT>/unconfined/turn/state`: the site builder moves the Claude Code login, account record and conversation history there once, the first time it starts after the update (it never overwrites what is already there).
+
 - **Root's writes under a directory another account controls now land only in the exact directory expected.**
 
     Two places that `provision apply` and `provision init` write to sit under a directory that root does not fully control. The first is a site's web log directory: on Ubuntu, `/var/log` is writable by the `syslog` group. The second is the API configuration files in the state tree's `shared/` directories, whose parent belongs to the agent. These writes were already pinned to the parent directory, so that a rename cannot redirect them. Any root-owned directory closed to others was accepted as that parent, though. Now the parent must be exactly the directory expected. For `shared/` that means its exact owner, group and mode. For the web server's log directory it means the owner, group, mode and identity that `provision check` observed. The parent must also be on the same filesystem as its own parent, so a filesystem mounted over the name is refused. A directory swapped in after the write began receives nothing. Init's sudo check now also reads included policy files the way sudo does. A file that is not owned by root, or that other accounts can write, is not followed, and neither is an include whose name contains `%h`. Each one is listed in the `host.sudo` item. An API configuration file with the wrong owner or mode is now fixed in place, where before the fix was refused.
@@ -762,14 +899,6 @@ Merged since the last release; these ship with the next one.
     The media rule files regenerate on their own after the update; on nginx, reload
     it afterwards (`nginx -t && nginx -s reload`), and re-render a publication
     host's rule files with `scripts/media_publication_host_rules.ts`.
-
-- **Every AI request now counts against a daily budget per user, and generated answers need their own permission.** *(action needed)*
-
-    Until now any logged-in user could run the assistant, ask for generated answers and run semantic searches without any limit, so one session could exhaust an installation's model budget (or its local GPU). Every request that calls a model is now checked against the user's daily budget before the model is called: assistant runs and model tokens, semantic-search queries, and vision calls of the identification tool. When a budget is used up the request is refused with a message saying when it resets (midnight UTC). Nobody is exempt, administrators and root included. The four budgets are `DEDALO_AI_USER_DAILY_RUNS` (50), `DEDALO_AI_USER_DAILY_TOKENS` (1000000), `DEDALO_AI_USER_DAILY_EMBED_QUERIES` (2000) and `DEDALO_AI_USER_DAILY_VISION` (50) — see [the configuration reference](./config/config.md). The day's usage of every user is listed in the new **AI usage** section under Administration.
-
-    **Action needed:** generated answers over the collection now require the **Generated answers** tool permission (`tool_rag`). Run *Register tools* after the update to add it, then grant it in the profile editor to the profiles that should use generated answers. Semantic search does not need it.
-
-    Wire contract: `WC-2026-10-01-ai-spend-budget`.
 
 - **The assistant no longer proposes changes its own apply step would refuse.**
 
@@ -1020,18 +1149,31 @@ Merged since the last release; these ship with the next one.
     and Google Compute Engine, `fd20:ce::254`), in any spelling — through a local-use NAT64
     address (`64:ff9b:1::/48`) included.
 
-    **Action needed if an address allowlist** (`DEDALO_INSTALL_ALLOWED_IPS`,
-    `DEDALO_ERROR_REPORT_ALLOWED_IPS`) **has an IPv4 part with a leading zero**
-    (`127.0.0.01`, `010.0.0.1`): such an entry is no longer read as a number and matches no
-    client, because some systems read it as octal — so the installer or the error report
-    refuses that client until you rewrite the entry without leading zeros. The install
-    allowlist line the server logs when it starts names such an entry as ignored. An entry now
+    **Action needed if the address allowlist** (`DEDALO_ERROR_REPORT_ALLOWED_IPS`)
+    **has an IPv4 part with a leading zero** (`127.0.0.01`, `010.0.0.1`): such an entry is
+    no longer read as a number and matches no client, because some systems read it as
+    octal — so the error report refuses that client until you rewrite the entry without
+    leading zeros. An entry now
     matches its address in every spelling: `2001:db8:0::1` matches a client reported as
     `2001:db8::1`, `127.0.0.1` (or the `loopback` token) matches `::ffff:7f00:1`, the form a
     dual-stack listener may report, and a block written in the IPv4-mapped form
     (`::ffff:10.0.0.0/104` or `::ffff:a00:0/104`) is the IPv4 block it spells (`10.0.0.0/8`).
 
+#### Removed
+
+- **The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start.** *(action needed)*
+
+    Every installation route — production, Docker, trial, developer — now runs the terminal installer (`./install.sh`, or `bun run dedalo:install`). The browser wizard, its unauthenticated install API and the `DEDALO_INSTALL_ALLOWED_IPS` and `DEDALO_INSTALL_NO_RESTART` settings are removed; delete those lines from your `.env` and compose overrides. A server started without configuration no longer serves a setup page: it writes one line to its log ("not installed: … run the installer", or "restore .env from backup" on an installed instance whose `.env` is gone) and exits with code 78, which the shipped systemd units do not restart. An interrupted install, or an interrupted re-run on a live instance, keeps the server from starting until it is finished with the installer's `--resume`. Hosts installed with an earlier `dedalo-ts@.service` template keep it until it is replaced: update the template from the release so the unit stops on code 78. Adding thesauri after install is unchanged (Maintenance › Import hierarchies). See [Installer reference](./install/installer_reference.md#a-server-that-is-not-installed-refuses-to-start).
+
+    Wire contract: `WC-2026-10-12-install-surface-removed`, `WC-2026-10-08-install-ip-denied-names-address`.
+
 #### Changed
+
+- **Large exports no longer load the whole selection into the server's memory.**
+
+    An export now reads its records in pages from one consistent snapshot of the selection, instead of loading every record id before writing the first line, so a very large export uses the same memory as a small one. Two limits are now visible: the in-page (non-streamed) export answer is refused with *export.format_limit* above `DEDALO_SEARCH_CLIENT_MAX_LIMIT` records — the streamed and background exports serve the same selection — and each server process runs at most a quarter of `DB_POOL_MAX` exports at once (at least one), answering *export.busy* (retry shortly) to an export asked for directly beyond that, while a background export waits for its turn instead of failing. A server configured with `DB_POOL_MAX=1` cannot run exports; give it at least 2. A streamed export whose reader stops reading for 15 minutes is closed with *export.consumer_idle*, which frees its database connection; an export that keeps being read is never cut, however slow.
+
+    Wire contract: `WC-2026-10-11-export-buffered-cap-and-admission`.
 
 - **Thesauri are offered from one exported manifest, hierarchy.json, and nothing but declared dependencies is pre-selected.** *(action needed)*
 
@@ -1063,9 +1205,9 @@ Merged since the last release; these ship with the next one.
     needed, and whether it is **mandatory**.
 
     * **Installing.** The installer always installs mandatory **ontologies**. It offers
-      every other dependency already ticked, and you may untick it, in the wizard or with
+      every other dependency already ticked, and you may untick it, on its screen or with
       `--decline-dependencies`. **A thesaurus never blocks an install:** a mandatory
-      thesaurus is a strong recommendation, marked *strongly recommended* in the wizard.
+      thesaurus is a strong recommendation, marked *strongly recommended* on the screen.
       Leaving it out, or a release that does not ship it, gives a warning that names it
       and says it can be installed later from *Maintenance › Install hierarchies*. You
       can also keep a thesaurus of your own under another name.
@@ -1082,12 +1224,12 @@ Merged since the last release; these ship with the next one.
 
 - **Installations now choose their domain ontologies (Oral history by default) and install what each one declares it depends on; the install database carries only the core ontologies and no test data.** *(action needed)*
 
-    Until now every installation got the same ontologies, whatever it was for: the install database carried Oral history (`oh`) and the developers' test ontology, and nothing asked which heritage domains the institution catalogues. The command-line installer, the browser wizard and `install.sh` now ask ([installer reference](./install/installer_reference.md#domain-ontologies)).
+    Until now every installation got the same ontologies, whatever it was for: the install database carried Oral history (`oh`) and the developers' test ontology, and nothing asked which heritage domains the institution catalogues. The installer now asks ([installer reference](./install/installer_reference.md#domain-ontologies)).
 
     - **The install database is core-only.** It carries the core ontologies (`dd`, `rsc`, `ontology`, `ontologytype`, `hierarchy`, `lg`) and nothing else. The developers' `test` ontology and the *test3* playground records are no longer installed; they exist only in the developers' test database.
-    - **At least one domain ontology is installed.** The default is Oral history (`oh`). It is built into the release, so it installs without a network. Any other ontology the update server offers can be chosen by its code. For example, `tch` (Tangible cultural heritage) is the general inventory model for objects and collections. The wizard has a new *Ontologies* step. The command line takes `--ontologies oh,tch` and lists the server's catalog with `--list-ontologies`. `install.sh` asks one more question.
+    - **At least one domain ontology is installed.** The default is Oral history (`oh`). It is built into the release, so it installs without a network. Any other ontology the update server offers can be chosen by its code. For example, `tch` (Tangible cultural heritage) is the general inventory model for objects and collections. The interactive installer has an *Ontologies* screen. The command line takes `--ontologies oh,tch` and lists the server's catalog with `--list-ontologies`. `install.sh` asks one more question.
     - **Dependencies come with the choice.** An ontology server now publishes, for each ontology, the ontologies it needs. The installer installs them too, before the ontology that needs them, and says so ("tch also installs: …"). An older server that does not publish them gets a clear warning: the chosen ontology is installed alone, and nothing is guessed. After the import, the installer checks that every node of the installed ontologies can find the nodes it refers to. Anything missing is reported as a warning that names the ontology to add. On an ontology master, an editor declares the dependencies in the *Dependencies* field of each ontology's record (Ontology › Ontologies main), and they are published with the next export ([updating the ontology](./management/updates/updating_ontology.md#declaring-what-an-ontology-requires)); see the separate note on that field for mandatory and optional dependencies and required thesauri. Importing an ontology (at install time or with the update panel) keeps its declaration in that field, so a master that imports its ontologies from another master publishes them too.
-    - **Fully offline installs.** `--ontology-source <dir|archive>` installs from a directory (or a `.tar`/`.tar.gz`/`.tgz`) laid out like an ontology server's export. It is a command-line option only: the browser wizard installs from the configured ontology server or the built-in ontologies. An air-gapped install (`--no-update-servers`) is offered only the built-in `oh`.
+    - **Fully offline installs.** `--ontology-source <dir|archive>` installs from a directory (or a `.tar`/`.tar.gz`/`.tgz`) laid out like an ontology server's export. An air-gapped install (`--no-update-servers`) is offered only the built-in `oh`.
     - **Nothing is half-installed.** The ontology files are downloaded and checked *before* the database is touched. If an import fails, the install stops and is not sealed. Recreate the database and run the installer again.
     - **`ACTIVE_ONTOLOGY_TLDS` is written by the installer** (the core, the chosen ontologies and their dependencies), so the ontology update panel refreshes exactly what the installation carries. When the key is unset, the engine's fallback is now the core list alone: `utoponymy` and `nexus` are no longer in it. **Action needed: if your `/private/.env` has no `ACTIVE_ONTOLOGY_TLDS` and your installation uses `utoponymy` or `nexus`, add the key with them** (for example `ACTIVE_ONTOLOGY_TLDS=["dd","rsc","ontology","ontologytype","hierarchy","lg","oh","utoponymy","nexus"]`), or the update panel stops refreshing them.
     - On a development server, the maintenance *Unit test area*'s *Truncate test table and Create new empty test record* now refuses on a database that has no test ontology (`maintenance.action_refused`). That is any installation's database. The message names the developers' test database as the place where the playground lives.
@@ -1147,12 +1289,12 @@ Merged since the last release; these ship with the next one.
 
 - **New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.** *(action needed)*
 
-    The command-line installer, the browser wizard and `install.sh` now work from one install plan, so the same answers give the same configuration whichever one you use ([installer reference](./install/installer_reference.md)).
+    Every way of answering the installer — its screens, its flags, an answers file — now works from one install plan, so the same answers give the same configuration whichever one you use ([installer reference](./install/installer_reference.md)).
 
     - **Update servers are written by default.** Installs used to leave `ONTOLOGY_SERVERS` and `CODE_SERVERS` out of `/private/.env`, which meant no ontology or code updates were ever offered. The installers now write the official Dédalo server (`v7.master.dedalo.dev`) into both. For an air-gapped installation, answer *no* to the update-server question, or pass `--no-update-servers` to the command-line installer. Both keys are then written as `[]`, and you can add them later. Re-running the installer does not overwrite update servers you already set. An earlier air-gapped `[]` is not kept, though: answering *yes* on a re-run switches the installation back to the official server.
     - **Languages is always active.** The Languages thesaurus (`lg`) is switched on together with the database on every install. It is no longer a choice and is never imported, because its terms already ship with the installation database.
-    - **Default working languages: English and Spanish.** All three installers default to `lg-eng` and `lg-spa`. The wizard used to pre-tick the whole language list; the other languages are still offered, but they are optional and you tick them yourself.
-    - **One default set of optional thesauri.** All three installers start from the same default: today that is Spain (`es`). The wizard no longer pre-ticks France. The command-line installer used to install no thesaurus by default and now installs this set; use `--hierarchies none` to skip it. A thesaurus that fails to install now stops the install before anything is sealed. Unknown command-line flags (including the old `--yes`) are refused, and the database host defaults to `localhost` instead of `/tmp`.
+    - **Default working languages: English and Spanish.** The installer defaults to `lg-eng` and `lg-spa`; the other languages are still offered, but they are optional and you tick them yourself.
+    - **One default set of optional thesauri.** Every way of answering starts from the same default: today that is Spain (`es`). The command-line installer used to install no thesaurus by default and now installs this set; use `--hierarchies none` to skip it. A thesaurus that fails to install now stops the install before anything is sealed. Unknown command-line flags (including the old `--yes`) are refused, and the database host defaults to `localhost` instead of `/tmp`.
     - **Supervision must be declared (action needed).** The code update panel only replaces the code tree when something will restart the server afterwards. It used to guess this from systemd's own variables. Those variables are also inherited by terminal shells in desktop sessions, so an unsupervised `bun run start` could look supervised: the update would install the new code, stop the server and leave it stopped. The guess is gone. Now the code update runs only when the process manager declares `DEDALO_SUPERVISED=true`, and the shipped systemd units, compose stacks and the `dev` / `dev:server` / `start:supervised` scripts all do. **If your systemd unit or compose file was written before this release, add `Environment=DEDALO_SUPERVISED=true` to the unit's `[Service]` section, or `DEDALO_SUPERVISED: "true"` to the `dedalo` service's `environment:`.** Setting it in `/private/.env` has no effect, because every launch method reads that file, including the unsupervised `bun run start` ([updating the code](./management/updates/updating_code.md)).
 
     Wire contract: `WC-2026-10-08-install-plan-update-servers-core-lg`.
@@ -1254,6 +1396,93 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-28-maintenance-serve-ontology-widget`.
 
 #### Added
+
+- **A Production instance can be installed by hand again, step by step, exactly as the installer does it.**
+
+    [Install by hand](./install/manual_install.md) is the Production route without the installer: one section per host step, in the installer's order, with the commands that step runs and the full text of every file it writes (the systemd drop-ins, the nginx or Apache site, the media map, the host registry entry). The engine part — the database seed, the ontologies, the thesauri, the `root` password — runs through the installer itself, as the service user, with `--engine-only`. A host built this way has the same layout, units, site and backups as one the installer built, and later installer runs on the same host see it. Each section of [Production install](./install/production.md) links its hand version and back. *A host set up by hand* now points to this page; hosts already running the single `deploy/dedalo-ts.service` unit set keep their instructions in its last section.
+
+- **A production install can live in any folder and run as an existing account.**
+
+    The Production route's Identity screen now asks, after the instance name, for the
+    **install folder** (default `/home/ded_<instance>`, any absolute path — for example
+    `/home/my_domain.org/dedalo`), the **service user** (default `ded_<instance>`) and the
+    **service group** (default: the user's own). The same answers are the flags
+    `--install-dir`, `--service-user`, `--service-group` and the answers-file keys
+    `install_dir`, `service_user`, `service_group` (production only). A new account is
+    created; an **existing** account — a hosting account — is used as it is and is never
+    created, changed or deleted by the installer, `--abort` included. The folder's parent
+    is never changed. The database role is the service user (peer authentication), and
+    the backups default to `<install folder>/backups`. The System check refuses another
+    instance's user, group or folder (and an account in another instance's group), root and
+    system accounts, the packages' accounts (`postgres`, the web server's), privileged
+    groups, a folder the installer may not use (an OS directory or another account's is
+    never taken over), and a backup dir that already exists; the Review shows what will be **CREATED** and what is
+    **USED AS IS**. The systemd templates now name no user or path: each instance's
+    drop-ins carry them, and a template without its drop-in runs nothing. See
+    [The install folder and the service account](./install/production.md#the-install-folder-and-the-service-account).
+
+- **The terminal installer sets up the whole host: production, Docker and trial install in one run.** *(action needed)*
+
+    A production install used to be a fifteen-step manual procedure. Now
+    `sudo sh install.sh --route production --instance <name>` (or the interactive
+    installer, choosing *Production*) does it as resumable steps: packages on the
+    newest Ubuntu, Debian and RHEL-family releases (an older one is refused with the
+    supported list), the instance user, PostgreSQL 18 with a password-less peer role,
+    ONE site file for the instance (nginx or Apache — never another site or the global
+    configuration), Let's Encrypt or your own certificate (checked against the address
+    and expiry), the systemd units, SELinux on RHEL, a first boot, the health watchdog
+    (armed only after the first boot) and a first backup verified store by store. Every
+    command is shown on the Review before it runs; `--resume` continues after a failure
+    or an interruption, `--abort` undoes only what the install created. The firewall
+    and the web server's modules are checked and told, never changed.
+
+    The Docker and trial routes now install from the terminal too — on Linux, or on a
+    Mac with Docker Desktop: the image is verified (cosign, and its version label),
+    `.dedalo.env` and `compose.override.yaml` are written, the engine steps run inside
+    the container with their secrets on standard input, and the stack is started and
+    probed.
+
+    nginx serves a root-owned, validated COPY of the media access rules the engine
+    generates (never the instance-writable file itself). After changing the media
+    access mode, refresh it with the command the installer prints at the end of the
+    install. `--abort` asks for `--confirm-database` before it undoes anything that
+    touches the database.
+
+    `install.sh` is now only the bootstrap — it verifies the release and the pinned Bun,
+    then starts the installer with your arguments. It no longer installs Docker, asks
+    questions or runs compose itself, and `--wizard` is retired. See
+    [Production host steps](./install/installer_reference.md#production-host-steps).
+
+- **The installer asks its questions in the terminal, checks each answer as you give it, and shows the whole plan before it installs anything.**
+
+    Before, installing from a terminal meant writing every answer as a flag (or an answers file) and finding out at the end which one was wrong; the step-by-step guidance, the connection checks and the plan preview lived only in the browser wizard.
+
+    Now `bun run scripts/install.ts` with no answer flags asks the questions itself, one step at a time: the kind of installation (production with a named instance, Docker, a Docker trial without media protection, or a developer checkout), a system check, the database, the institution, the ontologies and thesauri (what they declare pre-ticked — ticking one ticks what it declares — untick to decline), the languages, publication, mail and the administrator password. Every default and every refusal is the same one a flag-driven run uses. The database must answer before you go on; the MariaDB and SMTP connections are checked (the mail check can send a real test message), and you can keep a failed one by typing `yes`. Passwords are never shown and are typed twice; the root password is checked rule by rule. The Review lists what will be installed and the equivalent command line (without passwords), then you type `install`, go back with `edit <n>`, or save the answers with `write <path>` for a later unattended run. `--plain` (also chosen automatically for `TERM=dumb`, a redirected output or a small terminal) gives the same questions one per line, with no colour or screen drawing, for screen readers and serial consoles.
+
+    Other changes for administrators: the new `--route` and `--instance` answers change a few defaults (on a production route the database and role are `dedalo_<instance>`, the media root `/srv/dedalo/<instance>/media`); the publication database now defaults to `web_dedalo` (`web_<instance>` on production) instead of being required; a run at a terminal without `--execute` asks for a missing root password instead of failing; `--write-answers <file>` saves the answers of any run; `--list-langs` prints the language offer and `--list-hierarchies` now includes what each thesaurus declares. A run whose standard input is not a terminal and that carries no answers is refused and points to `--answers`. A typed `quit` exits 0, Ctrl-C exits 130. A check whose answers change later (a new instance name, another route) runs again before `install` is offered. On the Docker routes the terminal installer writes the answers but does not install from the host yet; the production web server, TLS and systemd steps are still done by hand. Details: [Installer reference](./install/installer_reference.md#interactive-mode).
+
+- **The terminal installer draws full-screen at a capable terminal, and can abort an interrupted install**
+
+    Run at a terminal of at least 80×24, `bun run scripts/install.ts` now shows the
+    installer full-screen: a rail of the route's steps, filtered lists for the
+    ontologies, thesauri and languages, passwords drawn as dots with the root
+    password's rules checked as you type, checks shown in place, the Review with the
+    equivalent command line, the install's steps with their times, and a Done screen
+    that shows the generated salt once. The questions, defaults, rules and the
+    install are exactly the plain mode's; `--plain`, a small or `dumb` terminal, or a
+    machine without the terminal library's native build get the plain mode (one line
+    says why). Whatever way it ends, the terminal is restored. When an interrupted
+    install is found, both modes now offer **abort** next to resume and quit (the
+    database name typed back). See
+    [the full-screen installer](./install/installer_reference.md#the-full-screen-installer).
+
+- **The command-line installer checks every answer before it writes anything, and an interrupted install can be resumed.**
+
+    Before, the command-line installer (`scripts/install.ts`, which `install.sh` drives) found a bad answer only at the step that first used it: a root password that broke the password policy was refused after the `.env` had been written, the database restored and the ontologies imported, and an entity such as `1x` or a port such as `70000` was not refused at all. An install that stopped part-way left a half-built database, and the only way on was to drop it and start again.
+
+    Now every answer is checked first, and nothing is written until all of them pass and the target database is confirmed to exist, be empty and be owned by the database user the install connects as (no other install can be running against it). That covers the entity name, ports, time zone, locale, paths, SMTP encryption, media access mode, the diffusion database and user, and the root password against the policy. The answers can also come from a file (`--answers answers.json`, the plan's answer names in a `dedalo.install.answers/1` envelope). Passwords should come from the `DEDALO_INSTALL_*` environment variables or `--secrets-stdin`, never from the command line: the `--*-password` flags still work but now warn, because `ps` shows them to every user. An answers file that contains a password is refused. No password is written to the installer's record or printed, and the generated `DEDALO_SALT_STRING` is printed once, at the end.
+
+    Every run is now recorded in `<private>/install/` (a plan file and a state file, kept as the install's record). If an install stops, whether from a failure, Ctrl-C or a killed process, run `bun run scripts/install.ts --resume`. It checks each step that already completed, does not repeat finished work, and asks again only for the passwords a remaining step still needs. To take the install back, run `--abort --confirm-database <db>`. That empties the database (the database itself is kept) and restores the previous `.env`, but a sealed install is never undone. The database restore is now a single transaction that also marks the database as this install's, so an interrupted restore leaves the database empty rather than half-filled, and neither `--resume` nor `--abort` ever adopts or empties a database the install did not fill (for example, a backup restored into it in the meantime). Backups of `.env` that existed before the install are never removed. Running the installer again over an existing record is refused and points you to `--resume` or `--abort`. Details: [Installer reference](./install/installer_reference.md).
 
 - **Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`.** *(action needed)*
 
@@ -1452,6 +1681,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The installer no longer leaves Bun's cache in an existing hosting account's home.**
+
+    On the Production route, the commands the installer runs with Bun as the service user (the dependency install, the engine steps, the migration check) now set `HOME` to the install folder on their command line (`runuser … -- /usr/bin/env HOME=<install folder> …`). `runuser` resets `HOME` to the account's own home, so with an existing hosting account whose home is not the install folder, Bun's caches were written there. The Review screen shows the new form, and [Install by hand](./install/manual_install.md) uses the same commands.
+
 - **The update-ontology warning no longer claims your local ontology will be deleted.**
 
     The **Update ontology** panel and its confirmation dialog warned that the update would "delete the actual ontology" and that "you will lose all changes made to the local Ontology". That is not what the process does: it replaces the ontology of the TLDs you select (the common/shared ontologies) with the master's version and re-processes them. Your local ontology — custom TLDs and `localontology` overrides — is a different namespace and is kept, re-applied automatically when the updated nodes are processed. The panel note, the lead text, the submit label and the confirmation dialog now say so, in every interface language (the confirmation dialog was previously an untranslated English string; it is now a translated label). The only way the local ontology is replaced is if you explicitly add `localontology` to the list of ontologies to update — keep it out.
@@ -1460,7 +1693,7 @@ Merged since the last release; these ship with the next one.
 
 - **The PostgreSQL socket you give the installer is now the one the server connects through (`DB_SOCKET`).** *(action needed)*
 
-    The installer's socket answer (`--db-socket`, or the wizard's *Unix socket* field) was used by the installer's own connection test and then written as `DEDALO_SOCKET_CONN`, a key the server never read: an installation reachable only through the socket passed the install and then connected to `DB_HOST` instead. The answer is now written as the new key [`DB_SOCKET`](./config/config_db.md), and one rule decides the route for everything that connects to the database: the server, the installer's test, the nightly backup and the maintenance tools. When `DB_SOCKET` is set it wins over `DB_HOST`, and a socket that does not exist fails loudly instead of quietly falling back to `localhost`. An existing `.env` that holds `DEDALO_SOCKET_CONN` keeps working: it is now read as the old spelling of `DB_SOCKET`, so check that the directory it names is where your PostgreSQL socket really is before updating. A re-run of the installer writes the value once, under the new name. If you use the nightly backup unit, update `deploy/dedalo-backup.service` from the release so its database backup connects the same way.
+    The installer's socket answer (`--db-socket`) was used by the installer's own connection test and then written as `DEDALO_SOCKET_CONN`, a key the server never read: an installation reachable only through the socket passed the install and then connected to `DB_HOST` instead. The answer is now written as the new key [`DB_SOCKET`](./config/config_db.md), and one rule decides the route for everything that connects to the database: the server, the installer's test, the nightly backup and the maintenance tools. When `DB_SOCKET` is set it wins over `DB_HOST`, and a socket that does not exist fails loudly instead of quietly falling back to `localhost`. An existing `.env` that holds `DEDALO_SOCKET_CONN` keeps working: it is now read as the old spelling of `DB_SOCKET`, so check that the directory it names is where your PostgreSQL socket really is before updating. A re-run of the installer writes the value once, under the new name. If you use the nightly backup unit, update `deploy/dedalo-backup.service` from the release so its database backup connects the same way.
 
 - **On Docker, the browser client now always matches the engine that is running.**
 
@@ -1472,7 +1705,7 @@ Merged since the last release; these ship with the next one.
 
     - **Watchdog and rollback scripts.** The shipped watchdog and rollback units run two scripts from `/opt/dedalo/bin/`, outside the code tree. No page said to install them, so a server set up from the manual alone had a watchdog failing with `status=203/EXEC` every 30 seconds and no automatic rollback of a failed code update. [Production step 10](./install/production.md#10-run-the-engine-under-systemd) now installs them, and [Upgrading](./install/upgrading.md) refreshes them after each update.
     - **Existing servers and supervision.** [Upgrading](./install/upgrading.md#3-check-that-the-unit-declares-supervision) has a new step that checks the installed unit for `Environment=DEDALO_SUPERVISED=true`, `SuccessExitStatus=75` and `Restart=always`, and adds what is missing with a drop-in. [Troubleshooting](./install/troubleshooting.md#updating) explains the *No supervisor declared* refusal. The installer's last line now names the supervised ways to start the server instead of `bun run start`, which cannot take code updates.
-    - **RHEL.** [RHEL-based systems](./install/install_rhel.md) gives a complete `dedalo-ts.service` ordered after `postgresql-18.service`. The shipped unit names `postgresql.service`, which does not exist there. The page also runs the installer the same way as the production guide, and keeps `DEDALO_PG_BIN_PATH` in `.env`.
+    - **RHEL.** The RHEL-based systems page (since folded into [Production install](./install/production.md)) gives a complete `dedalo-ts.service` ordered after `postgresql-18.service`. The shipped unit names `postgresql.service`, which does not exist there. The page also runs the installer the same way as the production guide, and keeps `DEDALO_PG_BIN_PATH` in `.env`.
     - **Several instances.** The [multi-instance](./install/multi_instance.md) template unit now carries `KillMode=process`, the wider start limit, the rollback hook and the watchdog. The watchdog script takes `--restart-unit` / `--rollback-unit`, so a templated instance can point it at its own units. Each site is installed with `--socket`, `--media-path` and `--media-access-mode` instead of appending keys by hand.
     - **Corrections.** The backup set is five stores (site-builder instances included). Without `--media-path` the media root defaults to `../private/media`. The installer keeps every `.env` key it does not own, including keys added before the install. An air-gapped installation can update its ontology from local files ([updating the ontology](./management/updates/updating_ontology.md#updating-without-a-network-air-gapped-installs)). `STRUCTURE_FROM_SERVER` and `DEDALO_SOURCE_VERSION_LOCAL_DIR` are documented as having no effect. The four language keys are documented as required, with no default. The configuration pages point at `install/sample.env` in the code tree for the current list of keys: `../private/sample.env` is the installer's copy and a code update does not refresh it. The [developer quickstart](./install/dev_quickstart.md) lists the supervised start scripts and the second-instance script.
     - **Key names in `.env`.** The installer now writes every key under the name the [configuration reference](./config/config.md) uses (`DB_NAME`, `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`, `ENTITY`, `PROJECTS_DEFAULT_LANGS`, `APPLICATION_LANG`, `DATA_LANG`) instead of the older fallback spellings (`DEDALO_DATABASE_CONN`, `DEDALO_ENTITY`, …). Before, a `DB_HOST` you added by hand silently won over the answer you had just given the installer. A re-run over an existing `.env` replaces the old spelling with the new one, so no value is left under two names. The engine and the backup scripts still accept the old spellings, so an existing `.env` keeps working unchanged.
@@ -1643,20 +1876,6 @@ Merged since the last release; these ship with the next one.
 - **"`./install.sh` runs on macOS again (and wherever Docker's storage lives in a VM)."**
 
     On macOS, and on Docker Desktop under WSL or with a remote Docker host, `./install.sh` stopped silently right after its banner. Its free-disk check used a Linux-only option. The check is now portable. Where the free space cannot be measured from the host, the check is skipped and the install continues. See [Simple install](./install/quickstart.md).
-
-- **When the install wizard refuses your browser, it now names the address it saw — and `./install.sh --wizard` asks who may open it.**
-
-    Until it is finished, the wizard answers only the addresses in `DEDALO_INSTALL_ALLOWED_IPS`. Behind the stack's proxy the engine sees an address few people would guess (Docker Desktop: `192.168.65.1`). `./install.sh --wizard` started the stack without naming anyone, so every wizard install was refused, with no hint of what to allow. The refusal now says *"The installer is not allowed from this address (192.168.65.1)"*, and the engine log names it too. `./install.sh --wizard` asks which addresses may open the wizard; it suggests the private network ranges. See [Simple install](./install/quickstart.md#path-2-browser-wizard).
-
-    Wire contract: `WC-2026-10-08-install-ip-denied-names-address`.
-
-- **The browser install wizard's first screen no longer fails with "An unexpected error occurred" in containers.**
-
-    On a machine with no database yet, such as any container, the wizard's first call tried to read the database for the names of the configured languages and failed. The wizard now names them from the installer's own language list. See [Simple install](./install/quickstart.md#path-2-browser-wizard).
-
-- **The browser install wizard no longer fails at the database step with `function "f_unaccent" already exists`.**
-
-    After *Save config*, the restarted engine ran its schema upgrades on the still-empty database, and the seed restore then collided with them, leaving a half-built database. This affected every browser-wizard install, on every platform. Those upgrades now wait until the install is sealed, as on the command-line installer. *Finish* restarts the engine once more, so the sealed instance starts with all of them applied; the page reloads by itself a few seconds later.
 
 - **"The publication-host pairing command now names a command you can run, and says why it cannot read a copied file."**
 
@@ -2028,6 +2247,12 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Related-record lists answer one bounded page, and say so when they cut it.**
+
+    The *Referencias* list (`read` with `source.action` `get_relation_list`), the tools' related-records listing (`related_search`) and the thesaurus indexations grid (`get_indexation_grid`) used to read an absent limit or `limit: 0` as "every record", and answered a malformed limit or offset (`'all'`, `1e21`) with a server error. Every client window is now bounded by `DEDALO_SEARCH_CLIENT_MAX_LIMIT`: an absent, zero or out-of-range limit becomes the ceiling, an offset past the end returns an empty page, and the answer carries a `search.page_clamped` notice naming the window asked for and the one served — for an absent limit, only when a record the caller may see lies past the page (records outside the caller's sections or projects never decide it). An indexation cell embedded in a record read is bounded the same way. The same bound applies to every API request at the parse door. A non-administrator's page may hold fewer rows than the limit while more pages exist (rows outside the caller's projects are dropped after paging): page by offset until an empty page.
+
+    Wire contract: `WC-2026-10-11-relation-reads-client-page`.
+
 - **The test suite now runs its diffusion gates against its own MariaDB server, never an installation's.**
 
     Before, the gates that publish to MariaDB used whatever server the machine's
@@ -2141,7 +2366,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 113 entries"
+??? note "Wire contract — 125 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -2256,6 +2481,18 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-10-hierarchy-json-manifest`
     - `WC-2026-10-10-ontology-dependencies-hierarchy60`
     - `WC-2026-10-10-update-ontology-confirm-text`
+    - `WC-2026-10-11-children-recursive-one-statement`
+    - `WC-2026-10-11-export-buffered-cap-and-admission`
+    - `WC-2026-10-11-parent-link-cycle-every-door`
+    - `WC-2026-10-11-pdf-extractor-render-class`
+    - `WC-2026-10-11-relation-reads-client-page`
+    - `WC-2026-10-11-rich-text-sanitizer-tokenizer`
+    - `WC-2026-10-11-session-user-beside-csrf-token`
+    - `WC-2026-10-11-site-builder-reason-codes`
+    - `WC-2026-10-11-site-builder-turn-error-frames`
+    - `WC-2026-10-12-ddengine-removed`
+    - `WC-2026-10-12-install-surface-removed`
+    - `WC-2026-10-12-user-activity-what-labels`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

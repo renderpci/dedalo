@@ -1,15 +1,15 @@
 /**
- * Diagnostics grid cards for the install wizard (DEC-19, TS-native installer).
+ * Host facts for the terminal installer's probe screen (probes.ts; DEC-19).
  * COSMETIC ONLY — the real progression gate is init_test.result. Only
  * TS-MEANINGFUL facts are emitted: the PHP/Apache-specific checkers
  * (php_version, apache_version, memory_limit, php_memory, max_execution_time,
- * php_user, gd, mbstring) were REMOVED from both this payload and the installer
- * client's grid (WC-2026-07-09-installer-diagnostics-grid) — the Bun server has no
- * PHP, so they were always '—'.
+ * php_user, gd, mbstring) were removed (WC-2026-07-09-installer-diagnostics-grid)
+ * — the Bun server has no PHP.
  */
 
 import { statfsSync } from 'node:fs';
 import { arch, cpus, freemem, platform, totalmem } from 'node:os';
+import { liveProcessEnv } from '../../config/env.ts';
 import { resolvePgBinary } from './pg_bin.ts';
 
 export interface InstallServerInfo {
@@ -36,7 +36,12 @@ function humanBytes(bytes: number): string {
 /** Version string of a binary via `<bin> -version`/`--version`, or null. */
 function binVersion(bin: string, flag: string): string | null {
 	try {
-		const proc = Bun.spawnSync([bin, flag], { stdout: 'pipe', stderr: 'pipe' });
+		const proc = Bun.spawnSync([bin, flag], {
+			stdout: 'pipe',
+			stderr: 'pipe',
+			// Explicit: Bun's default env is the ORIGINAL environ (config/env.ts liveProcessEnv).
+			env: liveProcessEnv(),
+		});
 		if (proc.exitCode !== 0) return null;
 		const out = (proc.stdout.toString() || proc.stderr.toString()).split('\n')[0]?.trim();
 		return out && out.length > 0 ? out : null;

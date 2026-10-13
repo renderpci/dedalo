@@ -1,908 +1,458 @@
-#!/usr/bin/env bash
+#!/bin/sh
+# Dédalo v7 — THE INSTALLER'S BOOTSTRAP (terminal installer phase 4, 2026-10-12).
 #
-# Dédalo v7 — guided one-command install (containers).
+#   sh install.sh [--release <file|https-url> --release-sha256 <sha256>]
+#                 [--offline-bun <bun zip> [<SHASUMS256.txt>]] [--mirror <https base url>]
+#                 [--] [installer arguments…]
 #
-# Operator guide: docs/install/quickstart.md
+# Operator guides: docs/install/installer_reference.md (every route and flag),
+# docs/install/quickstart.md, docs/install/production.md, docs/install/docker.md.
 #
-# Asks the questions the installer needs, then gets the image, starts
-# PostgreSQL, runs the headless installer and brings the stack up. When it
-# finishes, Dédalo is installed and you log in — there is no browser wizard and
-# therefore no unauthenticated install surface at any point.
+# WHAT IT DOES, AND ONLY THIS. Every install — production, docker, trial,
+# developer — is the ONE TypeScript installer (scripts/install.ts): its
+# questions, its plan, its steps, its resume. This file only gets it running:
 #
-# WHERE THE IMAGE COMES FROM is a question, asked right after the TLS one: one
-# of Dédalo's official registries (deploy/image_registries.sh, generated from
-# engineering/image_registries.json — primary first, then the mirrors, each
-# probed for this checkout's version), a registry of your own, or a build here
-# from this checkout (deploy/compose.build.yml). The default is the first
-# official registry that publishes this version, else the local build. The
-# answer is written to .dedalo.env (DEDALO_IMAGE, DEDALO_VERSION pinned,
-# DEDALO_IMAGE_MODE, DEDALO_IMAGE_VERIFY, DEDALO_COMPOSE_FILE), and every later
-# update — deploy/dedalo-image-update.sh, by hand or through the opt-in host
-# updater — takes its image from the same place. The decisions shared with
-# those tools live in deploy/dedalo-image-lib.sh.
+#   1. a Linux host (glibc) on x86_64 or aarch64 — every route; or macOS (Apple
+#      silicon or Intel) — the docker and trial routes, through Docker Desktop
+#      (the production route is Linux-only: the installer's System check says
+#      so). Anything else is refused;
+#   2. THE RELEASE: the checkout this file sits in (proven to be a Dédalo tree),
+#      or --release: an archive (.zip as the code server cuts it, or .tar.gz)
+#      HASHED BEFORE ANYTHING READS IT and refused unless it equals
+#      --release-sha256 — there is no "confirm on the terminal" instead: a yes
+#      is not integrity. Its member names are checked (relative, no `..`), then
+#      it is extracted into a private stage. Release FIRST: the Bun pin and the
+#      hash table below come from the verified release, never from elsewhere;
+#   3. BUN AT THE RELEASE'S PIN (.bun-version): the zip of this host's asset is
+#      checked against the hash table COMMITTED in the release (.bun-sha256,
+#      derived from Bun's signed SHASUMS256.txt.asc — a mirror cannot substitute
+#      bytes; on macOS its twin .bun-sha256-darwin, the same signed payload's
+#      darwin rows); Bun's own SHASUMS256.txt, when fetched or given, must AGREE or
+#      both are refused. The verified zip is CACHED and re-hashed against the
+#      table on every reuse (a cached binary is never trusted by its --version);
+#      the binary is unpacked from it afresh each run. Production's host steps
+#      install the instance runtime from this same verified zip;
+#   4. the installer's own dependencies (a release carries no node_modules):
+#      `bun install --frozen-lockfile --production --ignore-scripts`, only when
+#      the tree has none;
+#   5. `exec bun scripts/install.ts <your arguments>` — stdin and the terminal
+#      are the installer's; your arguments reach it unchanged. Bun starts with
+#      --no-env-file (no stray .env), --no-install and the release's own
+#      bunfig (never one from the directory you run this in).
 #
-# It drives docker-compose.simple.yml, which trades TLS and media access control
-# away for simplicity. Read that file's header before using this on anything but
-# a machine your own network reaches. For the full production stack, follow
-# docs/install/docker.md instead — nothing here replaces it.
+# THE CACHE: as root /var/lib/dedalo-install (the host's install state root,
+# 0755; bun/<pin>/ and release/<sha256>/ under it 0700); otherwise
+# ${XDG_CACHE_HOME:-~/.cache}/dedalo-install (0700). Production needs root:
+# `sudo sh install.sh …` (the installer itself says so when it is not).
 #
-# Re-running is refused once the instance exists: the seed restore requires an
-# empty database, so a second install is never a repair.
-
-set -euo pipefail
-
-readonly COMPOSE_FILE='docker-compose.simple.yml'
-readonly TLS_TEMPLATE='deploy/nginx.simple-tls.conf.tpl'
-readonly GENERATED_CONF='deploy/nginx.simple.generated.conf'
-readonly CERT_DIR='deploy/certs'
-# The local-CA generator, shared with the rotation path (deploy/dedalo-tls-rotate.sh).
-readonly ROTATE_TLS='deploy/dedalo-tls-rotate.sh'
-# NOT ".env": compose would read that for variable substitution, but so would the
-# engine's own configuration loader from the container's working directory.
-readonly ENV_FILE='.dedalo.env'
-readonly PRIVATE_VOLUME='dedalo_private'
-
-cd "$(dirname "$0")"
-
-# The Docker-host library (the .dedalo.env contract, the version and repository
-# grammars, the registry probe) and the GENERATED official registry list. Loaded
-# before anything else: a checkout missing either cannot choose an image.
-# shellcheck source=deploy/dedalo-image-lib.sh
-. deploy/dedalo-image-lib.sh
-dedalo_registries_load deploy/image_registries.sh || {
-	printf 'deploy/image_registries.sh is missing or inconsistent — this checkout is incomplete.\n' >&2
-	exit 1
-}
-# A DEDALO_IMAGE / DEDALO_VERSION exported in your shell would outvote the file
-# this script writes (compose gives the shell precedence over --env-file).
-dedalo_env_isolate
-
-# --wizard: set TLS up and start the stack, then stop and let the operator answer
-# the install questions in the browser. Same TLS code either way — and TLS has to
-# come FIRST in this mode, because the wizard sends the root password you are
-# about to choose over the network.
-WIZARD_MODE='false'
-case "${1-}" in
-	--wizard) WIZARD_MODE='true' ;;
-	'') : ;;
-	*) printf 'Usage: %s [--wizard]\n' "$0" >&2; exit 2 ;;
-esac
-
-# --- Small helpers -----------------------------------------------------------
-
-bold()  { printf '\033[1m%s\033[0m\n' "$*"; }
-warn()  { printf '\033[33m%s\033[0m\n' "$*"; }
-fail()  { printf '\033[31m✖ %s\033[0m\n' "$*" >&2; exit 1; }
-
-# ask <variable> <prompt> [default]
-ask() {
-	local __var="$1" __prompt="$2" __default="${3-}" __reply=''
-	if [ -n "$__default" ]; then
-		read -rp "$__prompt [$__default]: " __reply || true
-		__reply="${__reply:-$__default}"
-	else
-		while [ -z "$__reply" ]; do
-			read -rp "$__prompt: " __reply || true
-		done
-	fi
-	printf -v "$__var" '%s' "$__reply"
-}
-
-# ask_secret <variable> <prompt> — never echoed, typed twice, must match.
-ask_secret() {
-	local __var="$1" __prompt="$2" __first='' __second=''
-	while true; do
-		read -rsp "$__prompt: " __first;        echo
-		read -rsp "$__prompt (again): " __second; echo
-		if [ -z "$__first" ]; then
-			warn 'Empty password — try again.'
-		elif [ "$__first" != "$__second" ]; then
-			warn 'They do not match — try again.'
-		else
-			break
-		fi
-	done
-	printf -v "$__var" '%s' "$__first"
-}
-
-# Lower-cased comparison the long way round: ${var,,} is bash 4, and macOS still
-# ships bash 3.2.
-confirm() {
-	local reply='' lowered=''
-	read -rp "$1 [y/N]: " reply || true
-	lowered="$(printf '%s' "$reply" | tr '[:upper:]' '[:lower:]')"
-	[ "$lowered" = 'y' ] || [ "$lowered" = 'yes' ]
-}
-
-# confirm_yes — the same question with YES as the default (Enter = yes). Only a
-# typed n/no declines. Same lowercase trick, for the same bash 3.2 reason.
-confirm_yes() {
-	local reply='' lowered=''
-	read -rp "$1 [Y/n]: " reply || true
-	lowered="$(printf '%s' "$reply" | tr '[:upper:]' '[:lower:]')"
-	[ "$lowered" != 'n' ] && [ "$lowered" != 'no' ]
-}
-
-random_password() {
-	LC_ALL=C tr -dc 'A-Za-z0-9' </dev/urandom 2>/dev/null | head -c 28 || true
-}
-
-compose() {
-	docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" "$@"
-}
-
-# compose_build — the same stack plus the build override (deploy/compose.build.yml),
-# through the shared host library: the stack named in $ENV_FILE, and the env file
-# itself, always. Only the "build it here" answer uses it.
-compose_build() {
-	dedalo_compose "$ENV_FILE" build "$@"
-}
-
-# --- Docker bootstrap --------------------------------------------------------
-# Everything else this script does runs as YOU and touches only Docker volumes.
-# The three helpers below are the exception: they need root, they add a package
-# repository, and they change your group membership. That is why each one ASKS
-# first and prints the exact command — on an institution's server, "it installed
-# something as root" must never be a surprise.
-
-run_as_root() {
-	if [ "$(id -u)" = '0' ]; then
-		"$@"
-	elif command -v sudo >/dev/null 2>&1; then
-		sudo "$@"
-	else
-		fail "This step needs root and there is no sudo here. Run as root: $*"
-	fi
-}
-
-# usermod does NOT change the groups of the process that called it, so the new
-# `docker` membership is invisible until a fresh login. Re-entering the script
-# through `sg` gets it now, instead of ending the install with "log out and back
-# in" — which would defeat the whole one-command idea. The guard variable makes
-# a failed re-exec fail loudly rather than loop.
-reexec_in_docker_group() {
-	if [ "${DEDALO_INSTALL_DOCKER_BOOTSTRAPPED:-}" = '1' ]; then
-		fail 'Still cannot reach the Docker daemon. Log out, log back in, and run ./install.sh again.'
-	fi
-	export DEDALO_INSTALL_DOCKER_BOOTSTRAPPED=1
-	if command -v sg >/dev/null 2>&1; then
-		bold 'Re-entering the script with your new docker group…'
-		exec sg docker -c "$(printf '%q ' "$0" "$@")"
-	fi
-	fail 'You were added to the "docker" group. Log out, log back in, then run ./install.sh again.'
-}
-
-install_docker() {
-	case "$(uname -s)" in
-		Linux) : ;;
-		Darwin) fail 'On macOS, install Docker Desktop (https://docs.docker.com/desktop/), start it, then run ./install.sh again.' ;;
-		*) fail 'Automatic Docker installation is only supported on Linux. See https://docs.docker.com/engine/install/' ;;
-	esac
-
-	echo 'Docker is not installed.'
-	echo
-	echo 'This script can install it using Docker'"'"'s own convenience script, which'
-	echo 'adds their package repository and installs the engine — AS ROOT:'
-	echo
-	echo '    curl -fsSL https://get.docker.com -o get-docker.sh'
-	echo '    sudo sh get-docker.sh'
-	echo
-	echo 'If you would rather not run a downloaded script as root, install Docker'
-	echo 'yourself (https://docs.docker.com/engine/install/) and run this again.'
-	echo
-	confirm 'Install Docker now?' \
-		|| fail 'Stopped. Install Docker, then run ./install.sh again.'
-
-	command -v curl >/dev/null 2>&1 || fail 'curl is needed to fetch the Docker installer.'
-	# Downloaded to a file and then run, rather than piped into a shell: a
-	# truncated download cannot half-execute, and you can read it first.
-	#
-	# mktemp, NOT A FIXED /tmp PATH (P2-15 / OPS-06, CWE-377). This was
-	# `/tmp/dedalo_get-docker.sh` — a name any unprivileged local user can predict
-	# and pre-create on sticky /tmp. They cannot make `curl -o` fail, but they own
-	# the window between the download and `run_as_root sh "$script"`, and what
-	# runs there runs AS ROOT. mktemp gives an unpredictable name created 0600 by
-	# the caller, so there is nothing to pre-create and nothing to swap.
-	local script
-	script="$(mktemp "${TMPDIR:-/tmp}/dedalo_get-docker.XXXXXXXX")" \
-		|| fail 'Could not create a temporary file for the Docker installer.'
-	# Remove it even if the installer fails or the operator interrupts.
-	trap 'rm -f "$script"' RETURN
-	curl -fsSL https://get.docker.com -o "$script" || fail 'Could not download the Docker installer.'
-	# The file we are about to run as root must still be the one WE made: a
-	# regular file, owned by us, not a symlink somebody swapped in.
-	[ -f "$script" ] && [ ! -L "$script" ] && [ -O "$script" ] \
-		|| fail 'The downloaded Docker installer is not the file this script created. Aborting.'
-	run_as_root sh "$script" || fail 'The Docker installer failed — see its output above.'
-	rm -f "$script"
-	run_as_root systemctl enable --now docker >/dev/null 2>&1 || true
-}
-
-ensure_docker() {
-	if ! command -v docker >/dev/null 2>&1; then
-		install_docker
-	fi
-
-	if ! docker info >/dev/null 2>&1; then
-		# Two very different causes, and the fix differs: the daemon may be down,
-		# or it may be running and simply unreachable by this user.
-		if run_as_root docker info >/dev/null 2>&1; then
-			warn 'Docker is running, but your user cannot reach it — you are not in the "docker" group.'
-			confirm 'Add your user to the docker group?' \
-				|| fail 'Stopped. Add yourself with: sudo usermod -aG docker "$USER"'
-			run_as_root usermod -aG docker "$(id -un)"
-			reexec_in_docker_group "$@"
-		else
-			warn 'The Docker daemon is not running.'
-			confirm 'Start it now?' || fail 'Stopped. Start Docker, then run ./install.sh again.'
-			run_as_root systemctl enable --now docker || fail 'Could not start the Docker daemon.'
-			if ! docker info >/dev/null 2>&1; then
-				run_as_root usermod -aG docker "$(id -un)"
-				reexec_in_docker_group "$@"
-			fi
-		fi
-	fi
-
-	docker compose version >/dev/null 2>&1 \
-		|| fail 'Docker Compose v2 or newer is required (the "docker compose" subcommand, not the old standalone docker-compose).'
-}
-
-# --- TLS ---------------------------------------------------------------------
-# HTTPS is the DEFAULT here, and the reason is concrete: the login form and (in
-# wizard mode) the root password you are about to set both cross the network. On
-# plain HTTP anyone on the same switch reads them. The four modes below differ
-# only in where the certificate comes from.
+# Library mode (the gates): `set -- --lib; . ./install.sh` defines the
+# functions and runs nothing. POSIX sh: no bash-isms, no `local`. Functions
+# return or die (exit 3); every `$(…)` that can die ends `|| exit 3`.
+# Gates: test/unit/install_bootstrap_sh.test.ts (owner: the gates package).
 #
-# Whichever mode runs, it must end having set: TLS_MODE, NGINX_CONF_NAME,
-# COOKIE_SECURE, PUBLIC_URL — and, unless mode 4, written $GENERATED_CONF.
+# Exit codes: 3 refused here; otherwise the installer's own.
 
-# generate_tls_conf <server_name> <cert_path_in_container> <key_path_in_container>
-generate_tls_conf() {
-	[ -f "$TLS_TEMPLATE" ] || fail "Missing $TLS_TEMPLATE"
-	sed -e "s|@@SERVER_NAME@@|$1|g" \
-	    -e "s|@@SSL_CERT@@|$2|g" \
-	    -e "s|@@SSL_KEY@@|$3|g" \
-	    "$TLS_TEMPLATE" > "$GENERATED_CONF" \
-		|| fail "Could not write $GENERATED_CONF"
-	NGINX_CONF_NAME="$(basename "$GENERATED_CONF")"
-	COOKIE_SECURE='true'
+set -eu
+
+# ── constants (the host agent's twins: publication/host_agent/deploy/install.sh) ──
+BUN_ASSETS='bun-linux-aarch64 bun-linux-x64-baseline bun-linux-x64 bun-darwin-aarch64 bun-darwin-x64-baseline bun-darwin-x64'
+BUN_RELEASE_BASE=https://github.com/oven-sh/bun/releases/download
+PIN_RE='^[0-9]+\.[0-9]+\.[0-9]+$'
+TABLE_PIN_RE='^# bun-v[0-9]+\.[0-9]+\.[0-9]+$'
+TABLE_SIGNED_BY_RE='^# signed-by: [0-9A-F]{40}$'
+SHA256_RE='^[0-9a-f]{64}$'
+ROOT_CACHE=/var/lib/dedalo-install
+# The files that make a directory a Dédalo tree this bootstrap can start.
+TREE_FILES='scripts/install.ts .bun-version .bun-sha256 package.json bun.lock'
+
+die() {
+	printf 'install.sh: %s\n' "$*" >&2
+	exit 3
 }
 
-# Mode 1 — Let's Encrypt. A real, publicly-trusted, auto-renewing certificate.
-# Preconditions are strict and worth stating plainly rather than discovering
-# through a failed challenge: the name must resolve publicly TO THIS MACHINE, and
-# port 80 must be reachable from the internet. A LAN-only box cannot satisfy
-# either, which is what mode 2 is for.
-tls_letsencrypt() {
-	echo
-	echo 'Let'"'"'s Encrypt issues a free certificate that browsers trust, and renews it'
-	echo 'automatically. For it to work, all of this must already be true:'
-	echo
-	echo '  • the domain name resolves, on the public internet, to THIS machine;'
-	echo '  • port 80 on this machine is reachable from the internet;'
-	echo '  • you can receive mail at the address you give (expiry warnings).'
-	echo
-	ask LE_DOMAIN 'Domain name (e.g. dedalo.museum.org)'
-	ask LE_EMAIL  'Email address for expiry notices'
-
-	local staging=''
-	if confirm 'Do a dry run against the Let'"'"'s Encrypt STAGING server first? (recommended)'; then
-		staging='--staging'
-		warn 'Staging certificates are NOT trusted by browsers — this only proves the setup.'
-	fi
-
-	# Standalone, before nginx exists: certbot binds port 80 itself, so there is
-	# no chicken-and-egg (nginx cannot start on 443 without the certificate it is
-	# here to fetch). RENEWAL later goes through the running nginx via webroot,
-	# so the proxy never has to stop — see the certbot service in the compose file.
-	bold 'Requesting the certificate…'
-	docker run --rm -p 80:80 \
-		-v dedalo_letsencrypt:/etc/letsencrypt \
-		-v dedalo_certbot_www:/var/www/certbot \
-		certbot/certbot certonly --standalone $staging \
-		-d "$LE_DOMAIN" --email "$LE_EMAIL" \
-		--agree-tos --no-eff-email --non-interactive \
-		|| fail 'Certificate request failed — read certbot'"'"'s output above.
-Most often: the name does not point here, or port 80 is not reachable from outside.
-You can re-run ./install.sh and pick another mode.'
-
-	generate_tls_conf "$LE_DOMAIN" \
-		"/etc/letsencrypt/live/$LE_DOMAIN/fullchain.pem" \
-		"/etc/letsencrypt/live/$LE_DOMAIN/privkey.pem"
-	COMPOSE_PROFILES='letsencrypt'
-	PUBLIC_URL="https://$LE_DOMAIN/dedalo/core/page/"
+say() {
+	printf '%s\n' "$*" >&2
 }
 
-# Mode 2 — a local certificate authority, for a LAN with no public name. Same
-# idea as mkcert, done with openssl so nothing extra has to be installed. The
-# certificate is real TLS; the CA is yours, so browsers only trust it on machines
-# where you install the CA file. That distribution step cannot be automated from
-# here, and pretending otherwise would be the dishonest part.
-tls_local_ca() {
-	command -v openssl >/dev/null 2>&1 || fail 'openssl is required for the local-CA mode.'
-	echo
-	ask LOCAL_HOST 'Name or IP staff will type in the browser (e.g. dedalo.local or 192.168.1.20)' "$(hostname -f 2>/dev/null || hostname)"
+# ── the host ──────────────────────────────────────────────────────────────────
 
-	# ONE GENERATOR, TWO OCCASIONS. The certificate an install gets and the
-	# certificate a ROTATION gets are produced by the same script — a key that
-	# has to be replaced after it travelled inside a container image (audit
-	# OPS-01) is replaced by the same code that issued it, so the two can never
-	# drift in SAN, lifetime or permissions.
-	bold 'Creating a local certificate authority and a server certificate…'
-	# Invoked THROUGH bash, not by its exec bit: a checkout with core.fileMode
-	# off (or an unzipped copy) would otherwise die here with "permission
-	# denied" at the TLS step of a museum install.
-	bash "$ROTATE_TLS" --mode local-ca --host "$LOCAL_HOST" --dir "$CERT_DIR" --no-reload --quiet \
-		|| fail 'Could not create the local certificate authority.'
-
-	generate_tls_conf '_' '/etc/dedalo/certs/fullchain.pem' '/etc/dedalo/certs/privkey.pem'
-	PUBLIC_URL="https://$LOCAL_HOST/dedalo/core/page/"
-	LOCAL_CA_FILE="$CERT_DIR/dedalo-local-ca.pem"
-}
-
-# Mode 3 — you already have a certificate (institutional CA, a wildcard, a cert
-# your IT department issues). Copied in rather than referenced, so a later
-# `docker compose up` cannot break on a path that moved.
-tls_existing() {
-	echo
-	ask EXIST_CRT 'Path to the full-chain certificate (.pem/.crt)'
-	ask EXIST_KEY 'Path to the private key (.pem/.key)'
-	[ -f "$EXIST_CRT" ] || fail "No such file: $EXIST_CRT"
-	[ -f "$EXIST_KEY" ] || fail "No such file: $EXIST_KEY"
-	ask EXIST_NAME 'Domain name on that certificate (or _ for any)' '_'
-
-	mkdir -p "$CERT_DIR"
-	# Pointing at the destination itself is a natural thing to do on a re-run
-	# (the files are already in deploy/certs). `cp a a` fails, so skip instead of
-	# dying — and never `rm` the source to make room for itself.
-	copy_cert() {
-		if [ "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")" = "$(cd "$(dirname "$2")" && pwd)/$(basename "$2")" ]; then
-			echo "  $2 is already in place — keeping it."
-		else
-			cp "$1" "$2" || fail "Could not copy $1 to $2."
-		fi
-	}
-	copy_cert "$EXIST_CRT" "$CERT_DIR/fullchain.pem"
-	copy_cert "$EXIST_KEY" "$CERT_DIR/privkey.pem"
-	chmod 600 "$CERT_DIR/privkey.pem"
-
-	generate_tls_conf "$EXIST_NAME" '/etc/dedalo/certs/fullchain.pem' '/etc/dedalo/certs/privkey.pem'
-	# `[ … ] && x=…` as the last command of a function returns non-zero when the
-	# test fails, and `set -e` would exit the whole script on it.
-	if [ "$EXIST_NAME" = '_' ]; then
-		# "Any name" is a valid answer, but printing a literal placeholder as the
-		# address to open is useless. Fall back to this machine's own name, the
-		# same default the local-CA mode offers.
-		PUBLIC_URL="https://$(hostname -f 2>/dev/null || hostname)/dedalo/core/page/"
-	else
-		PUBLIC_URL="https://$EXIST_NAME/dedalo/core/page/"
-	fi
-}
-
-# Mode 4 — no HTTPS. Kept because it is genuinely right for a throwaway trial on
-# a laptop, and because forcing a certificate on someone evaluating the software
-# would just make them give up. It is never right for real records.
-tls_none() {
-	echo
-	warn 'Without HTTPS, passwords and session cookies cross the network in clear text.'
-	warn 'Anyone on the same network can read them, and the browser will not warn you.'
-	confirm 'Really continue with no HTTPS?' \
-		|| fail 'Stopped. Re-run ./install.sh and choose a certificate option.'
-	NGINX_CONF_NAME='nginx.simple.conf'
-	COOKIE_SECURE='false'
-	PUBLIC_URL='http://localhost/dedalo/core/page/'
-}
-
-choose_tls() {
-	echo
-	bold 'How will people reach this Dédalo?'
-	echo
-	echo '  1) A public domain name        → Let'"'"'s Encrypt: trusted, auto-renewing   [recommended]'
-	echo '  2) Only our local network      → a local certificate authority'
-	echo '  3) I already have a certificate → point me at the files'
-	echo '  4) No HTTPS, internal test only → not for real records'
-	echo
-	local choice=''
-	while true; do
-		read -rp 'Choose [1]: ' choice || true
-		case "${choice:-1}" in
-			1) TLS_MODE='letsencrypt'; tls_letsencrypt; break ;;
-			2) TLS_MODE='local-ca';    tls_local_ca;    break ;;
-			3) TLS_MODE='existing';    tls_existing;    break ;;
-			4) TLS_MODE='none';        tls_none;        break ;;
-			*) warn 'Enter 1, 2, 3 or 4.' ;;
-		esac
-	done
-}
-
-# --- Image source ------------------------------------------------------------
-# A PUBLISHED image or a LOCAL build. Dédalo publishes the same signed image (one
-# digest) to every official registry; which ones exist is the generated list,
-# never a hostname typed here. A registry of your own is as legitimate a choice,
-# and so is building from this checkout — slower (the build downloads the media
-# toolchain) and the only possibility while no registry publishes this version.
-#
-# Whichever answer, it must end having set: IMAGE_REPOSITORY, IMAGE_VERSION,
-# IMAGE_MODE (pull | build), IMAGE_VERIFY (cosign | none), IMAGE_SOURCE_LABEL —
-# and, for a pull, have pulled it already.
-
-availability_word() {
+# refuse_kernel <uname -s>: Linux (every route) or Darwin (docker and trial through
+# Docker Desktop — the production route's own System check refuses a Mac).
+refuse_kernel() {
 	case "$1" in
-		0) echo 'publishes this version' ;;
-		1) echo 'does not publish this version' ;;
-		*) echo 'could not be checked' ;;
+		Linux | Darwin) ;;
+		*) die "this installer runs on Linux, or on macOS for the trial and Docker routes (this is $1) — see docs/install/quickstart.md" ;;
 	esac
 }
 
-# verify_official <repository> <version> — cosign over the pulled digest, against
-# the official signing identity. Without cosign the pull is kept, unverified, and
-# that is said aloud.
-verify_official() {
-	local digest=''
-	IMAGE_VERIFY='none'
-	if ! command -v cosign >/dev/null 2>&1; then
-		warn 'cosign is not installed, so the image signature was NOT verified.'
-		warn 'Install cosign (https://docs.sigstore.dev) to have every update checked.'
+# refuse_musl <uname -s>: Bun ships no musl build this pin table names (Linux only).
+refuse_musl() {
+	[ "$1" = Linux ] || return 0
+	for _musl in /lib/ld-musl-*; do
+		[ -e "$_musl" ] && die "musl libc ($_musl): no supported Bun build — use a glibc distribution"
+	done
+	return 0
+}
+
+# pick_asset <uname -m> <cpuinfo file>: the Bun asset of this CPU.
+pick_asset() {
+	case "$1" in
+		x86_64)
+			if grep -qw avx2 "$2" 2>/dev/null; then echo bun-linux-x64; else echo bun-linux-x64-baseline; fi
+			;;
+		aarch64 | arm64) echo bun-linux-aarch64 ;;
+		*) die "no Bun build for CPU '$1'" ;;
+	esac
+}
+
+# pick_darwin_asset <uname -m> <avx2: yes|no>: the macOS Bun asset of this CPU.
+pick_darwin_asset() {
+	case "$1" in
+		arm64 | aarch64) echo bun-darwin-aarch64 ;;
+		x86_64)
+			if [ "$2" = yes ]; then echo bun-darwin-x64; else echo bun-darwin-x64-baseline; fi
+			;;
+		*) die "no Bun build for CPU '$1'" ;;
+	esac
+}
+
+# darwin_avx2: yes when this Intel Mac's CPU has AVX2 (sysctl), else no.
+darwin_avx2() {
+	case " $(sysctl -n machdep.cpu.leaf7_features 2>/dev/null || true) " in
+		*" AVX2 "*) echo yes ;;
+		*) echo no ;;
+	esac
+}
+
+# host_asset <uname -s> <uname -m>: the Bun asset of this host.
+host_asset() {
+	if [ "$1" = Darwin ]; then
+		pick_darwin_asset "$2" "$(darwin_avx2)"
+	else
+		pick_asset "$2" /proc/cpuinfo
+	fi
+}
+
+# hash_table <tree> <uname -s>: the committed table that vouches for this host's asset.
+hash_table() {
+	if [ "$2" = Darwin ]; then
+		[ -f "$1/.bun-sha256-darwin" ] || die "$1 is not a Dédalo release for macOS (no .bun-sha256-darwin)"
+		echo "$1/.bun-sha256-darwin"
+	else
+		echo "$1/.bun-sha256"
+	fi
+}
+
+# $SHA256 <file> prints '<hex>  <file>'. Resolved once: sha256sum, else shasum -a 256.
+resolve_sha256() {
+	if command -v sha256sum >/dev/null 2>&1; then
+		SHA256=sha256sum
+	elif command -v shasum >/dev/null 2>&1; then
+		SHA256='shasum -a 256'
+	else
+		die 'no sha256sum (coreutils) on this host'
+	fi
+}
+
+# require_tool <command> <why>: the tool is on PATH, or die naming the package to install.
+# The bootstrap runs BEFORE host_packages, so what it needs the host must already have.
+require_tool() {
+	command -v "$1" >/dev/null 2>&1 \
+		|| die "$1 is not installed and is needed $2 — install it first (Debian/Ubuntu: apt-get install $1; RHEL family: dnf install $1)"
+}
+
+sha_of() {
+	# shellcheck disable=SC2086 # $SHA256 is a command with its arguments
+	$SHA256 "$1" | cut -d' ' -f1
+}
+
+# cache_root <uid>: where verified downloads are kept.
+cache_root() {
+	if [ "$1" = 0 ]; then
+		echo "$ROOT_CACHE"
+	else
+		echo "${XDG_CACHE_HOME:-${HOME:?HOME is not set}/.cache}/dedalo-install"
+	fi
+}
+
+# prepare_cache <dir> <uid>: the cache root. As root it is the host's install state
+# root, 0755 (the installer serves the Let's Encrypt challenge from a directory
+# under it — its own subdirectories are 0700); otherwise the user's own, 0700.
+prepare_cache() {
+	[ ! -L "$1" ] || die "$1 is a symbolic link: refused"
+	if [ "$2" != 0 ]; then
+		private_dir "$1"
 		return 0
 	fi
-	digest="$(dedalo_repo_digest "$1" "$2")" || { warn 'The pulled image carries no registry digest.'; return 1; }
-	if ! dedalo_verify_release "$1" "$digest" "$2"; then
-		warn "$1@$digest does NOT carry Dédalo's signature for version $2 — refusing it."
-		return 1
-	fi
-	IMAGE_VERIFY='cosign'
-	echo "  Signature verified: $1@$digest"
+	mkdir -p "$1" || die "cannot create $1"
+	chmod 0755 "$1" || die "cannot set the mode of $1"
 }
 
-# pull_source <repository> <label> — ask the version, pull it, verify an official
-# one. Status 1 sends the operator back to the menu.
-pull_source() {
-	local repository="$1"
-	while true; do
-		ask PULL_VERSION 'Version to pull' "$CHECKOUT_VERSION"
-		if dedalo_version_grammar "$PULL_VERSION"; then break; fi
-		warn 'A version looks like 7.0.1 (or 7.0.1-dev for a developer image).'
+# private_dir <dir>: create it (and parents) and make it 0700.
+private_dir() {
+	mkdir -p "$1" || die "cannot create $1"
+	chmod 0700 "$1" || die "cannot make $1 private"
+}
+
+# fetch <https url> <file> <max bytes>: https only, redirects included.
+fetch() {
+	case "$1" in https://*) ;; *) die "refusing a non-https download: $1" ;; esac
+	require_tool curl "to download $1"
+	curl -fsSL --proto =https --proto-redir =https --tlsv1.2 --max-filesize "$3" -o "$2" "$1" \
+		|| die "download failed: $1"
+}
+
+# ── the release ───────────────────────────────────────────────────────────────
+
+# check_tree <dir>: a Dédalo tree this bootstrap can start, or die.
+check_tree() {
+	for _file in $TREE_FILES; do
+		[ -f "$1/$_file" ] || die "$1 is not a Dédalo release (no $_file)"
 	done
-	bold "Pulling $repository:$PULL_VERSION…"
-	if ! docker pull "$repository:$PULL_VERSION"; then
-		warn "Could not pull $repository:$PULL_VERSION — choose again."
-		return 1
-	fi
-	if dedalo_official_index "$repository" >/dev/null; then
-		verify_official "$repository" "$PULL_VERSION" || return 1
+}
+
+# member_names_ok <names file>: every archive member relative, no '.'/'..' segment.
+member_names_ok() {
+	! grep -Eq '^/|(^|/)\.\.?(/|$)' "$1"
+}
+
+# archive_kind <name>: zip | tgz, or die.
+archive_kind() {
+	case "$1" in
+		*.zip) echo zip ;;
+		*.tar.gz | *.tgz) echo tgz ;;
+		*) die "--release must be a .zip or a .tar.gz archive: $1" ;;
+	esac
+}
+
+# list_members <kind> <archive> <names file>
+list_members() {
+	if [ "$1" = zip ]; then
+		unzip -Z1 "$2" >"$3" || die 'cannot list the release archive'
 	else
-		IMAGE_VERIFY='none'
-		warn 'A registry of your own: there is no Dédalo signature to check, so the image is trusted as pulled.'
+		tar -tzf "$2" >"$3" || die 'cannot list the release archive'
 	fi
-	if [ "$PULL_VERSION" != "$CHECKOUT_VERSION" ]; then
-		warn "This checkout is $CHECKOUT_VERSION: the compose files and deploy/ come from the checkout,"
-		warn "not from the image — check out v$PULL_VERSION too if that release changed them."
-	fi
-	IMAGE_REPOSITORY="$repository" IMAGE_VERSION="$PULL_VERSION" IMAGE_MODE='pull'
-	IMAGE_SOURCE_LABEL="$2"
 }
 
-custom_source() {
-	while true; do
-		ask CUSTOM_REPOSITORY 'Repository (registry host and path, no tag — e.g. registry.example.org/dedalo)'
-		if dedalo_repository_grammar "$CUSTOM_REPOSITORY"; then break; fi
-		warn 'A repository is lowercase, like registry.example.org/dedalo — no :tag and no @digest.'
+# extract_members <kind> <archive> <dir>
+extract_members() {
+	if [ "$1" = zip ]; then
+		unzip -q -o "$2" -d "$3" || die 'cannot extract the release archive'
+	else
+		tar -xzf "$2" -C "$3" --no-same-owner || die 'cannot extract the release archive'
+	fi
+}
+
+# tree_root <extracted dir>: the tree itself, or its ONE top-level directory (dedalo_code/).
+tree_root() {
+	if [ -f "$1/scripts/install.ts" ]; then
+		echo "$1"
+		return 0
+	fi
+	_found=''
+	for _child in "$1"/*; do
+		if [ -f "$_child/scripts/install.ts" ]; then
+			[ -z "$_found" ] || die 'the release archive holds more than one tree'
+			_found=$_child
+		fi
 	done
-	pull_source "$CUSTOM_REPOSITORY" 'a registry of your own'
+	[ -n "$_found" ] || die 'the release archive holds no Dédalo tree (no scripts/install.ts)'
+	echo "$_found"
 }
 
-build_source() {
-	IMAGE_REPOSITORY='localhost/dedalo' IMAGE_VERSION="$CHECKOUT_VERSION" IMAGE_MODE='build' IMAGE_VERIFY='none'
-	IMAGE_SOURCE_LABEL='built here from this checkout'
+# stage_release <file|https-url> <sha256> <cache>: the verified, extracted tree's path.
+stage_release() {
+	printf '%s\n' "$2" | grep -Eq "$SHA256_RE" \
+		|| die '--release needs --release-sha256 <the sha256 the release was published with> (64 hex digits)'
+	_kind=$(archive_kind "$1") || exit 3
+	_stage=$3/release/$2
+	private_dir "$_stage"
+	_archive=$_stage/release.$_kind
+	case "$1" in
+		https://*) fetch "$1" "$_archive" 2000000000 ;;
+		*) cp "$1" "$_archive" || die "cannot read $1" ;;
+	esac
+	_got=$(sha_of "$_archive") || exit 3
+	[ "$_got" = "$2" ] || {
+		rm -f "$_archive"
+		die "the release archive has sha256 $_got, not $2: refused (nothing was extracted)"
+	}
+	list_members "$_kind" "$_archive" "$_stage/members"
+	member_names_ok "$_stage/members" || die 'the release archive names a member outside itself: refused'
+	rm -rf "$_stage/tree"
+	private_dir "$_stage/tree"
+	extract_members "$_kind" "$_archive" "$_stage/tree"
+	tree_root "$_stage/tree"
 }
 
-# print_image_menu <code>… — the official registries (with what the probe found),
-# then the two other answers.
-print_image_menu() {
-	local index='' id='' label='' role='' repository='' n=1
-	while IFS="$(printf '\t')" read -r index id label role repository; do
-		[ -n "$index" ] || continue
-		printf '  %d) %s — %s:%s  (official %s; %s)\n' "$n" "$label" "$repository" "$CHECKOUT_VERSION" \
-			"$role" "$(availability_word "${1-2}")"
-		shift || true
-		n=$((n + 1))
-	done <<<"$(dedalo_offered_registries)"
-	echo "  $n) Another registry — type its repository"
-	echo "  $((n + 1))) Build it here from this checkout (slower: downloads the toolchain and builds)"
+# read_pin <tree>: the one x.y.z line of .bun-version.
+read_pin() {
+	[ "$(wc -l <"$1/.bun-version" | tr -d ' ')" -le 1 ] || die '.bun-version holds more than one line'
+	_pin=$(tr -d '\r\n' <"$1/.bun-version")
+	printf '%s\n' "$_pin" | grep -Eq "$PIN_RE" || die ".bun-version '$_pin' is not <major>.<minor>.<patch>"
+	echo "$_pin"
 }
 
-choose_image_source() {
-	local count='' codes='' default_choice='' choice='' first=''
-	CHECKOUT_VERSION="$(dedalo_checkout_version .)" \
-		|| fail 'Cannot read the version this checkout declares (src/core/update/version.ts).'
-	count="$(dedalo_registry_count)"
-	echo
-	bold 'Where does the Dédalo image come from?'
-	echo "This checkout is Dédalo $CHECKOUT_VERSION. Asking Dédalo's registries whether they publish it…"
-	echo
-	codes="$(dedalo_probe_registries "$CHECKOUT_VERSION" | tr '\n' ' ')"
-	# shellcheck disable=SC2086 # deliberate split: one code per registry
-	first="$(dedalo_default_source $codes)"
-	if [ "$first" = 'build' ]; then default_choice=$((count + 2)); else default_choice=$((first + 1)); fi
-	# shellcheck disable=SC2086
-	print_image_menu $codes
-	echo
-	while true; do
-		read -rp "Choose [$default_choice]: " choice || true
-		choice="${choice:-$default_choice}"
-		case "$choice" in
-			*[!0-9]* | '') warn "Enter a number from 1 to $((count + 2))." ;;
-			*) if pick_image_source "$choice" "$count"; then break; fi ;;
+# ── Bun ───────────────────────────────────────────────────────────────────────
+
+# verify_bun_zip <zip> <sums|-> <asset> <pin> <table>: the committed table, then the
+# cross-check. Dies on any disagreement (the zip is removed: it is not the release).
+verify_bun_zip() {
+	_zip=$1 _sums=$2 _asset=$3 _pin=$4 _table=$5
+	case " $BUN_ASSETS " in
+		*" $_asset "*) ;;
+		*) die "'$_asset' is not a Bun asset ($BUN_ASSETS)" ;;
+	esac
+	printf '%s\n' "$_pin" | grep -Eq "$PIN_RE" || die "pin '$_pin' is not <major>.<minor>.<patch>"
+	[ -f "$_table" ] || die "no hash table $_table"
+	sed -n 1p "$_table" | grep -Eq "$TABLE_PIN_RE" || die ".bun-sha256 line 1 is not '# bun-v<pin>'"
+	[ "$(sed -n 1p "$_table")" = "# bun-v$_pin" ] \
+		|| die ".bun-sha256 line 1 is not '# bun-v$_pin' (table and .bun-version disagree)"
+	sed -n 2p "$_table" | grep -Eq "$TABLE_SIGNED_BY_RE" || die ".bun-sha256 line 2 is not '# signed-by: <fingerprint>'"
+	_n=$(grep -Ec "^[0-9a-f]{64}  $_asset\\.zip\$" "$_table") || true
+	[ "$_n" = 1 ] || die ".bun-sha256 names $_asset.zip $_n times (exactly once required)"
+	_want=$(grep -E "^[0-9a-f]{64}  $_asset\\.zip\$" "$_table" | cut -d' ' -f1)
+	[ -f "$_zip" ] || die "no archive $_zip"
+	_got=$(sha_of "$_zip") || exit 3
+	[ "$_got" = "$_want" ] || {
+		rm -f "$_zip"
+		die "$_asset.zip has sha256 $_got, .bun-sha256 says $_want: not the pinned release (removed)"
+	}
+	[ "$_sums" = - ] && return 0
+	[ -f "$_sums" ] || die "no SHASUMS file $_sums"
+	_n=$(grep -c "  $_asset\\.zip\$" "$_sums") || true
+	[ "$_n" = 1 ] || die "SHASUMS256.txt names $_asset.zip $_n times (exactly once required)"
+	_line=$(grep "  $_asset\\.zip\$" "$_sums" | tr -d '\r')
+	[ "$_line" = "$_want  $_asset.zip" ] || {
+		rm -f "$_zip"
+		die "SHASUMS256.txt disagrees with .bun-sha256 for $_asset.zip: refusing both"
+	}
+}
+
+# obtain_bun_zip <dir> <asset> <pin>: the zip into <dir> (offline copy, the cache, or a
+# download with Bun's SHASUMS256.txt beside it). Prints the sums file, or '-'.
+obtain_bun_zip() {
+	_zip=$1/$2.zip
+	if [ -n "$OFFLINE_BUN" ]; then
+		cp "$OFFLINE_BUN" "$_zip" || die "cannot copy $OFFLINE_BUN"
+		[ -n "$OFFLINE_SUMS" ] || { echo -; return 0; }
+		cp "$OFFLINE_SUMS" "$1/SHASUMS256.txt" || die "cannot copy $OFFLINE_SUMS"
+		echo "$1/SHASUMS256.txt"
+		return 0
+	fi
+	if [ -s "$_zip" ]; then
+		echo -
+		return 0
+	fi
+	_base=${MIRROR:-$BUN_RELEASE_BASE}
+	fetch "$_base/bun-v$3/$2.zip" "$_zip" 200000000
+	fetch "$_base/bun-v$3/SHASUMS256.txt" "$1/SHASUMS256.txt" 1000000
+	echo "$1/SHASUMS256.txt"
+}
+
+# unpack_bun <zip> <asset> <dir> <pin>: the binary, unpacked afresh, answering the pin.
+unpack_bun() {
+	rm -rf "$3"
+	private_dir "$3"
+	unzip -q -o -j "$1" "$2/bun" -d "$3" || die "unzip of $2.zip failed"
+	chmod 0755 "$3/bun" || die "cannot make $3/bun executable"
+	_said=$("$3/bun" --version 2>/dev/null) || die "bun --version failed (a noexec filesystem under $3, or a glibc older than Bun needs)"
+	[ "$_said" = "$4" ] || die "bun --version says '$_said', the pin is $4"
+}
+
+# provide_bun <tree> <pin> <asset> <cache> [<table>]: the path of a verified Bun at the pin
+# (<table>: the committed hash table of this host — .bun-sha256 unless given).
+provide_bun() {
+	_dir=$4/bun/$2
+	private_dir "$_dir"
+	_sums=$(obtain_bun_zip "$_dir" "$3" "$2") || exit 3
+	verify_bun_zip "$_dir/$3.zip" "$_sums" "$3" "$2" "${5:-$1/.bun-sha256}"
+	unpack_bun "$_dir/$3.zip" "$3" "$_dir/run" "$2"
+	echo "$_dir/run/bun"
+}
+
+# install_deps <bun> <tree>: the installer's dependencies, when the tree has none.
+install_deps() {
+	[ -d "$2/node_modules" ] && return 0
+	say 'Installing the installer'"'"'s dependencies (bun install --frozen-lockfile --production)…'
+	(cd "$2" && "$1" install --frozen-lockfile --production --ignore-scripts) \
+		|| die 'bun install failed — see its output above (this host needs to reach the npm registry once)'
+}
+
+# bun_config <tree> <cache>: the release's own bunfig (an empty one when it has none).
+bun_config() {
+	if [ -f "$1/bunfig.toml" ]; then
+		echo "$1/bunfig.toml"
+		return 0
+	fi
+	: >"$2/empty.bunfig.toml" || die 'cannot write an empty bunfig'
+	echo "$2/empty.bunfig.toml"
+}
+
+# ── the arguments ─────────────────────────────────────────────────────────────
+
+RELEASE='' RELEASE_SHA='' OFFLINE_BUN='' OFFLINE_SUMS='' MIRROR=''
+
+# need_value <flag> <count of remaining args>
+need_value() {
+	[ "$2" -ge 2 ] || die "$1 needs a value"
+}
+
+# The bootstrap's own flags come first; everything from the first other argument
+# (or after `--`) is the installer's, passed through unchanged.
+parse_args() {
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--release) need_value "$1" $#; RELEASE=$2; shift 2 ;;
+			--release-sha256) need_value "$1" $#; RELEASE_SHA=$2; shift 2 ;;
+			--offline-bun)
+				need_value "$1" $#
+				OFFLINE_BUN=$2
+				shift 2
+				case "${1-}" in *SHASUMS256.txt) OFFLINE_SUMS=$1; shift ;; esac
+				;;
+			--mirror) need_value "$1" $#; MIRROR=$2; shift 2 ;;
+			--wizard)
+				die '--wizard is retired: the installer asks every question in the terminal (sh install.sh).'
+				;;
+			--) shift; break ;;
+			*) break ;;
 		esac
 	done
-	echo
-	echo "  Image: $IMAGE_REPOSITORY:$IMAGE_VERSION — $IMAGE_SOURCE_LABEL"
+	REST_COUNT=$#
 }
 
-# pick_image_source <choice> <count> — status 1 = ask again.
-pick_image_source() {
-	local index=$(($1 - 1))
-	if [ "$1" -ge 1 ] && [ "$1" -le "$2" ]; then
-		pull_source "${DEDALO_REGISTRY_REPOSITORIES[index]}" \
-			"${DEDALO_REGISTRY_LABELS[index]}, official ${DEDALO_REGISTRY_ROLES[index]}"
-	elif [ "$1" -eq $(($2 + 1)) ]; then
-		custom_source
-	elif [ "$1" -eq $(($2 + 2)) ]; then
-		build_source
+if [ "${1-}" = --lib ]; then
+	# shellcheck disable=SC2317 # library mode: sourced by the gates
+	return 0 2>/dev/null || exit 0
+fi
+
+main() {
+	KERNEL=$(uname -s)
+	refuse_kernel "$KERNEL"
+	refuse_musl "$KERNEL"
+	resolve_sha256
+	require_tool unzip 'to unpack the Bun runtime'
+	[ -z "$MIRROR" ] || case "$MIRROR" in https://*) ;; *) die '--mirror must start with https://' ;; esac
+	[ -n "$RELEASE" ] || [ -z "$RELEASE_SHA" ] || die '--release-sha256 without --release'
+	_uid=$(id -u)
+	CACHE=$(cache_root "$_uid") || exit 3
+	prepare_cache "$CACHE" "$_uid"
+	if [ -n "$RELEASE" ]; then
+		SRC=$(stage_release "$RELEASE" "$RELEASE_SHA" "$CACHE") || exit 3
 	else
-		warn "Enter a number from 1 to $(($2 + 2))."
-		return 1
+		SRC=$(cd "$(dirname "$0")" && pwd) || exit 3
 	fi
+	check_tree "$SRC"
+	PIN=$(read_pin "$SRC") || exit 3
+	ASSET=$(host_asset "$KERNEL" "$(uname -m)") || exit 3
+	TABLE=$(hash_table "$SRC" "$KERNEL") || exit 3
+	BUN=$(provide_bun "$SRC" "$PIN" "$ASSET" "$CACHE" "$TABLE") || exit 3
+	install_deps "$BUN" "$SRC"
+	CONFIG=$(bun_config "$SRC" "$CACHE") || exit 3
 }
 
-# --- 1. Pre-flight -----------------------------------------------------------
-
-bold 'Dédalo — guided install'
-echo
-
-# Every question below reads from the terminal; piped into a non-interactive
-# shell it would spin forever on a required answer.
-[ -t 0 ] || fail 'This script is interactive — run it from a terminal.'
-
-ensure_docker "$@"
-
-[ -f "$COMPOSE_FILE" ] \
-	|| fail "$COMPOSE_FILE not found — run this script from the master_dedalo directory."
-
-# Disk. Measured on a clean Ubuntu 26.04 box: the engine image is ~2.5 GB (the
-# media toolchain and the PostgreSQL client dominate), postgres:18 ~0.7 GB,
-# nginx:alpine ~0.1 GB, and the build itself parks a ~3 GB cache that is only
-# reclaimable AFTERWARDS (`docker builder prune -af`). Add the seed restore on
-# top and 8 GB free is the honest floor — below it the install dies mid-restore
-# with `No space left on device`, which is a confusing way to learn this.
-#
-# PORTABLE, AND NEVER FATAL. This used GNU-only `df -BG --output=avail` inside a
-# `$(…)` under `set -euo pipefail`: wherever that df fails — BSD df on macOS, or a
-# DockerRootDir that lives in a VM and not on this filesystem (Docker Desktop on
-# macOS and on WSL, a remote DOCKER_HOST) — the assignment's failure exited the
-# whole script, silently, right after the banner (exit 64, 2026-07-27 → 2026-10-08).
-# POSIX `df -Pk` + awk, and a probe that cannot answer simply skips the check.
-# Gate: test/unit/install_sh_portability.test.ts.
-docker_free_gib() {
-	{ df -Pk "$1" 2>/dev/null || true; } | awk 'NR == 2 && $4 ~ /^[0-9]+$/ { print int($4 / 1048576) }'
-}
-docker_root="$(docker info --format '{{.DockerRootDir}}' 2>/dev/null || echo /var/lib/docker)"
-free_gib="$(docker_free_gib "$docker_root")"
-if [ -n "$free_gib" ] && [ "$free_gib" -lt 8 ]; then
-	warn "Only ${free_gib} GiB free on $docker_root — the install needs about 8 GiB."
-	warn 'Free some space (docker system prune -af) or point Docker at a bigger disk.'
-	confirm 'Continue anyway?' || fail 'Stopped — not enough disk.'
-fi
-
-if docker volume inspect "$PRIVATE_VOLUME" >/dev/null 2>&1; then
-	warn "This machine already has a Dédalo instance (docker volume '$PRIVATE_VOLUME')."
-	warn 'Installing again is refused: the seed restore requires an empty database, so a'
-	warn 'second install cannot repair a broken one. To start over, destroy the data first:'
-	warn "    docker compose -f $COMPOSE_FILE --env-file $ENV_FILE down -v"
-	exit 1
-fi
-
-# --- 2. Questions ------------------------------------------------------------
-
-# TLS first: it is the decision with the widest consequences, and mode 1 fails
-# fast (a bad domain is discovered now, not after you have typed everything).
-choose_tls
-
-# The image next: a failed pull is discovered now, and the answer is the first
-# thing the env file records.
-choose_image_source
-
-# WHO MAY OPEN THE WIZARD. Until it is sealed, the wizard is reachable without a
-# login, so the engine admits only the local machine unless told otherwise — and
-# behind this stack's nginx that is NOBODY: the engine sees the browser's address
-# as nginx forwards it (Docker Desktop's 192.168.65.1, a bridge gateway such as
-# 172.18.0.1, or the workstation's LAN address). This mode used to start the stack
-# without naming anyone, so every --wizard install answered 403 at the first
-# screen (measured 2026-10-08). The default offered is the private address ranges
-# (RFC 1918): every one of those cases, and nothing on the public internet. Once
-# the wizard is finished the value is inert — the install surface is gone.
-WIZARD_ALLOWED_IPS=''
-if [ "$WIZARD_MODE" = 'true' ]; then
-	echo
-	echo 'Wizard mode: the remaining questions (languages, thesauri, the update server,'
-	echo 'the ontologies) are asked in the browser instead.'
-	echo
-	bold 'Who may open the install wizard?'
-	echo 'Until you press Finish the wizard needs no login, so only the addresses you'
-	echo 'name here may reach it. The default covers this machine and your local network'
-	echo '(the private address ranges) and nothing on the public internet. If the browser'
-	echo 'later says "not allowed from this address (X)", add X here and re-run.'
-	echo
-	ask WIZARD_ALLOWED_IPS 'Allowed addresses (comma-separated: addresses or ranges)' '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16'
-	if [ "$WIZARD_ALLOWED_IPS" = 'any' ]; then
-		warn '"any" lets EVERY address drive the installer, including the public internet.'
-		confirm 'Really allow any address?' || fail 'Stopped. Re-run ./install.sh --wizard and name your network.'
-	fi
-fi
-
-echo
-if [ "$WIZARD_MODE" != 'true' ]; then
-echo 'A few questions. Press Enter to accept the value in brackets.'
-echo
-
-ask ENTITY        'Short code for your institution (letters/digits, no spaces)' 'dedalo'
-ask ENTITY_LABEL  'Full name, as shown on the login screen'                     "$ENTITY"
-# "default" passes NO language flag: the installer's own default (English +
-# Spanish, the same set the browser wizard pre-ticks; every other language is
-# optional) applies.
-# One default, in one place — src/core/install/install_plan.ts.
-ask LANGS         'Languages, interface and data (comma-separated Dédalo codes, or "default" = lg-eng,lg-spa)' 'default'
-APP_LANG="${LANGS%%,*}"
-# Languages (lg) is a CORE thesaurus: it is activated with the database whatever
-# is answered here, so it is never asked. "default" omits the flag: NO optional
-# thesaurus beyond the ones the chosen ontologies declare (hierarchy60 — the
-# same boxes the wizard pre-ticks); "none" is the same today. No country is ever
-# pre-selected: import your own country's toponymy (e.g. "np" for an install in
-# Nepal) — `bun run scripts/install.ts --list-hierarchies` lists the codes.
-ask HIERARCHIES   'Optional thesauri to install now (comma-separated codes, or "default" / "none" = none beyond the declared dependencies, which are always installed) — tip: your own country, e.g. np for Nepal; Languages is always installed' 'default'
-ask LOCALE        'Locale'                                                      'es-ES'
-ask TIMEZONE      'Time zone (stamps every record timestamp)'                   'Europe/Madrid'
-echo
-
-# UPDATE SERVERS. The installer writes ONTOLOGY_SERVERS and CODE_SERVERS into
-# /private/.env — the official Dédalo master by default. Declining writes both as
-# `[]` (air-gapped: no ontology or code updates are offered). It is a variable,
-# not a test at the end of a branch: `confirm_yes` returning non-zero inside a
-# bare `if` is safe under `set -e`.
-USE_UPDATE_SERVERS='true'
-bold 'Updates'
-if ! confirm_yes 'Use the official Dédalo update server (v7.master.dedalo.dev) for ontology updates and release information?'; then
-	USE_UPDATE_SERVERS='false'
-	warn 'Air-gapped: no ontology or code updates will be offered. To enable them later,'
-	warn 'add ONTOLOGY_SERVERS and CODE_SERVERS to /private/.env and restart Dédalo.'
-fi
-echo
-
-# DOMAIN ONTOLOGIES. The core ontologies come with the database; this answer
-# picks the domain models on top (at least one). "default" passes NO flag: the
-# installer's own default applies (oh — built in, installable offline; one
-# default, in one place — src/core/install/ontology_choice.ts). Any other TLD is
-# downloaded from the update server, together with the ontologies it declares
-# as dependencies, so an air-gapped install can only take the built-in one: the
-# question is asked again rather than letting the installer refuse later.
-bold 'Ontologies'
-echo 'oh  — Oral history: built in, installs without a network.'
-echo 'tch — Tangible cultural heritage: the general inventory model for objects and collections (downloaded).'
-echo 'Any other ontology the update server offers can be named by its code; what it depends on comes with it.'
-while true; do
-	ask ONTOLOGIES 'Domain ontologies to install (comma-separated TLDs, or "default" = oh)' 'default'
-	if [ "$USE_UPDATE_SERVERS" = 'true' ] || [ "$ONTOLOGIES" = 'default' ] || [ "$ONTOLOGIES" = 'oh' ]; then
-		break
-	fi
-	warn 'Air-gapped: only the built-in oh can be installed without the update server.'
-	warn 'Answer "default" (or oh), or re-run ./install.sh and accept the update server.'
-done
-echo
-
-bold 'Administrator password'
-echo 'This is the "root" account — the one that can do everything. Store it safely.'
-ask_secret ROOT_PASSWORD 'Password for root'
-echo
-fi   # end of the terminal-only questions
-
-# The database is on an internal container network and its port is never
-# published, so nobody needs to type or remember this one.
-DB_PASSWORD="$(random_password)"
-[ -n "$DB_PASSWORD" ] || fail 'Could not generate a database password (/dev/urandom unavailable).'
-
-# --- 3. The honesty check ----------------------------------------------------
-
-echo
-warn 'One thing this simple install does NOT do, whatever you chose above:'
-warn '  • no media access control — anyone who can reach this server can read'
-warn '    every image, document and recording in it, without logging in.'
-echo
-echo 'TLS protects those files in transit; it does not decide who may fetch them.'
-echo 'That is fine for a collection that is public anyway, or an internal'
-echo 'instance. For a restricted fonds, an embargoed deposit or personal data,'
-echo 'use docs/install/docker.md instead — it adds the engine-enforced media gate.'
-echo
-confirm 'Understood — continue?' \
-	|| fail 'Stopped. See docs/install/docker.md for the full stack.'
-
-# --- 4. Write the compose environment ---------------------------------------
-
-umask 077
-cat >"$ENV_FILE" <<ENV
-# Written by install.sh — compose variable substitution only.
-# The engine's own configuration lives in the 'private' volume, at /private/.env.
-POSTGRES_DB=dedalo
-POSTGRES_USER=dedalo
-POSTGRES_PASSWORD=$DB_PASSWORD
-# TLS mode chosen at install time: $TLS_MODE
-DEDALO_NGINX_CONF=$NGINX_CONF_NAME
-SESSION_COOKIE_SECURE=$COOKIE_SECURE
-COMPOSE_PROFILES=${COMPOSE_PROFILES:-}
-# Where the Dédalo image comes from — read by compose (the image the dedalo and
-# backup services run: DEDALO_IMAGE:DEDALO_VERSION) and, through
-# deploy/dedalo-image-lib.sh, by deploy/dedalo-image-update.sh and the host image
-# updater. Only the image updater rewrites it, and only DEDALO_VERSION.
-DEDALO_COMPOSE_FILE=$COMPOSE_FILE
-DEDALO_IMAGE=$IMAGE_REPOSITORY
-DEDALO_VERSION=$IMAGE_VERSION
-DEDALO_IMAGE_MODE=$IMAGE_MODE
-DEDALO_IMAGE_VERIFY=$IMAGE_VERIFY
-ENV
-if [ -n "$WIZARD_ALLOWED_IPS" ]; then
-	printf '# Who may open the install wizard (inert once it is finished).\nDEDALO_INSTALL_ALLOWED_IPS=%s\n' "$WIZARD_ALLOWED_IPS" >>"$ENV_FILE"
-fi
-umask 022
-echo "Wrote $ENV_FILE (database credentials, readable only by you)."
-
-# Exported as well as written to the env file: which of the two Compose reads for
-# profile selection has varied between versions, and the renewal service simply
-# not starting would be a silent failure discovered 90 days later.
-if [ -n "${COMPOSE_PROFILES:-}" ]; then export COMPOSE_PROFILES; fi
-
-# --- 5. Get the image -------------------------------------------------------
-
-echo
-if [ "$IMAGE_MODE" = 'build' ]; then
-	bold "Building the image here as $IMAGE_REPOSITORY:$IMAGE_VERSION (first run downloads the media toolchain — this is slow)…"
-	compose_build build dedalo
-	bold "Image: built here as $IMAGE_REPOSITORY:$IMAGE_VERSION"
-else
-	bold "Image: pulled $IMAGE_REPOSITORY:$IMAGE_VERSION — $IMAGE_SOURCE_LABEL"
-fi
-
-bold 'Starting PostgreSQL…'
-compose up -d postgres
-
-bold 'Waiting for the database…'
-for _ in $(seq 1 60); do
-	if compose exec -T postgres pg_isready -U dedalo -d dedalo >/dev/null 2>&1; then
-		break
-	fi
-	sleep 2
-done
-compose exec -T postgres pg_isready -U dedalo -d dedalo >/dev/null 2>&1 \
-	|| fail 'PostgreSQL did not become ready. Inspect it with: docker compose -f '"$COMPOSE_FILE"' --env-file '"$ENV_FILE"' logs postgres'
-
-if [ "$WIZARD_MODE" = 'true' ]; then
-	bold 'Starting Dédalo for the browser wizard…'
-	compose up -d
-	echo
-	bold '✔ Ready for the wizard.'
-	echo
-	echo "  Open   $PUBLIC_URL"
-	echo
-	echo '  Nothing is configured yet, so Dédalo serves the install wizard instead'
-	echo '  of a login form. At its DATABASE step, enter:'
-	echo
-	echo '      Host      postgres'
-	echo '      Port      5432'
-	echo '      Database  dedalo'
-	echo '      User      dedalo'
-	echo "      Password  $DB_PASSWORD"
-	echo
-	echo '  (That password was generated for this install and is also in'
-	echo "   $ENV_FILE. You never need it again after the wizard.)"
-	echo
-	echo '  At "Save config" the engine restarts itself — that is expected. Leave'
-	echo '  the tab open; the wizard resumes on its own.'
-	echo
-	echo "  The wizard answers only: $WIZARD_ALLOWED_IPS"
-	echo '  (DEDALO_INSTALL_ALLOWED_IPS in '"$ENV_FILE"'). A refusal names the address'
-	echo '  it saw — add that one there, then apply it with:'
-	echo "      docker compose -f $COMPOSE_FILE --env-file $ENV_FILE up -d dedalo"
-	echo
-	if [ "$TLS_MODE" = 'local-ca' ]; then
-		warn '  Install the CA file on this computer FIRST, or the browser will refuse'
-		warn "  the connection: $(pwd)/$LOCAL_CA_FILE"
-		echo
-	fi
-	echo "  Logs:  docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs -f dedalo"
-	echo
-	exit 0
-fi
-
-bold 'Installing Dédalo…'
-# The root password travels in the ENVIRONMENT, never in argv: an argv is visible
-# in `ps`. --media-path and --socket are persisted to /private/.env, so the file
-# describes the deployment on its own.
-install_args=(
-	--db-name dedalo --db-user dedalo --db-password "$DB_PASSWORD" --db-host postgres
-	--entity "$ENTITY" --entity-label "$ENTITY_LABEL"
-	--locale "$LOCALE" --timezone "$TIMEZONE"
-	--media-path /srv/dedalo/media
-	--socket /run/dedalo/dedalo_ts.sock
-)
-# "default" means "no flag": the installer's shared default applies. Every
-# append is an `if`, never `[ … ] && x+=…` — a failed test there would be the
-# status `set -e` acts on.
-if [ "$LANGS" != 'default' ]; then
-	install_args+=(--langs "$LANGS" --app-lang "$APP_LANG" --data-lang "$APP_LANG")
-fi
-if [ "$HIERARCHIES" != 'default' ]; then install_args+=(--hierarchies "$HIERARCHIES"); fi
-if [ "$ONTOLOGIES" != 'default' ]; then install_args+=(--ontologies "$ONTOLOGIES"); fi
-if [ "$USE_UPDATE_SERVERS" = 'false' ]; then install_args+=(--no-update-servers); fi
-
-# Exported explicitly rather than as a `VAR=x compose …` prefix: `compose` is a
-# shell function, and whether such a prefix reaches the child process is a corner
-# of bash not worth betting the install on. `-e NAME` (no value) passes it
-# through from this environment, so the password never appears in argv.
-export DEDALO_INSTALL_ROOT_PASSWORD="$ROOT_PASSWORD"
-compose run --rm -e DEDALO_INSTALL_ROOT_PASSWORD \
-	dedalo bun run scripts/install.ts "${install_args[@]}" \
-	|| fail 'The installer failed. Nothing was sealed; read the output above, then destroy the half-built instance with:
-    docker compose -f '"$COMPOSE_FILE"' --env-file '"$ENV_FILE"' down -v'
-unset DEDALO_INSTALL_ROOT_PASSWORD
-
-# --- 6. Serve ----------------------------------------------------------------
-
-bold 'Starting Dédalo…'
-compose up -d
-
-echo
-bold '✔ Done.'
-echo
-echo "  Open   $PUBLIC_URL"
-echo '  Log in as "root" with the password you chose.'
-echo
-
-case "$TLS_MODE" in
-	local-ca)
-		bold '  One more step, on every computer that will use Dédalo:'
-		echo "  install this certificate authority file, or the browser will warn"
-		echo '  about the site every time:'
-		echo
-		echo "      $(pwd)/$LOCAL_CA_FILE"
-		echo
-		echo '  Windows: double-click → Install Certificate → Local Machine →'
-		echo '           Trusted Root Certification Authorities.'
-		echo '  macOS:   double-click → Keychain Access → System → set to "Always Trust".'
-		echo '  Linux:   copy to /usr/local/share/ca-certificates/ (rename to .crt)'
-		echo '           and run: sudo update-ca-certificates'
-		echo
-		echo '  Until you do, the connection is still encrypted — the browser simply'
-		echo '  cannot vouch for who is on the other end.'
-		echo
-		;;
-	letsencrypt)
-		echo '  The certificate renews itself: the certbot service checks twice a day'
-		echo '  and nginx picks up a renewal within six hours. Nothing to schedule.'
-		echo
-		;;
-	none)
-		warn '  No HTTPS: passwords cross the network in clear text. Re-run'
-		warn '  ./install.sh and choose option 1 or 2 when this stops being a test.'
-		echo
-		;;
-esac
-
-echo '  First things to do: create a normal administrator user and keep root for'
-echo '  emergencies, then set up backups — docs/management/backup.md.'
-echo
-echo "  Logs:  docker compose -f $COMPOSE_FILE --env-file $ENV_FILE logs -f dedalo"
-echo "  Stop:  docker compose -f $COMPOSE_FILE --env-file $ENV_FILE stop"
-echo
-echo '  Update: ./deploy/dedalo-image-update.sh --version <version>   (from this directory;'
-echo '          the Update code panel shows the exact command for each release). It takes a'
-echo "          database backup, gets the image the way this install does ($IMAGE_MODE), and"
-echo '          rolls back on its own if the new version does not come up healthy.'
-echo
+parse_args "$@"
+shift $(($# - REST_COUNT))
+main
+exec "$BUN" --no-env-file --no-install --config="$CONFIG" "$SRC/scripts/install.ts" "$@"

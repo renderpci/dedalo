@@ -238,8 +238,8 @@ the media root; you have to make the web server read them.
 | `dedalo_media_protection.nginx.conf` | nginx | `include` it in the media `server` / `location` block. |
 | `dedalo_media_protection_map.nginx.conf` | nginx | `include` it at **`http{}`** scope (a `map` cannot live inside `server{}`). |
 
-The exact wiring, with the surrounding proxy configuration, is in
-[reverse proxy](../install/reverse_proxy.md).
+The exact wiring, with the surrounding site configuration, is in
+[the web server site](../install/reverse_proxy.md).
 
 The files are written at **boot**, at **every login**, and whenever the mode is changed from
 the media_control widget — so a fresh deploy or a wiped media directory heals itself without
@@ -393,8 +393,11 @@ entire media tree to the world.
     ```
 
 2. Restart the server. It writes the rule files into `MEDIA_PATH` at boot.
-3. **nginx only**: add the two `include` lines (see [reverse proxy](../install/reverse_proxy.md)),
-   then `nginx -t && nginx -s reload`. Apache needs nothing.
+3. **nginx only**: on an instance installed by the installer, refresh the validated copies
+   the site includes ([Production › Changing the media access mode](../install/production.md#changing-the-media-access-mode));
+   on a site written by hand, add the two `include` lines
+   ([the web server site](../install/reverse_proxy.md#a-site-written-by-hand)), then
+   `nginx -t && nginx -s reload`. Apache needs nothing.
 4. If the instance already has published records, run **Rebuild media index** once from the
    widget so the `pub/` markers exist.
 5. Ask editors to log out and back in once — the auth cookie is minted at login.

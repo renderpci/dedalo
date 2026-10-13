@@ -42,8 +42,10 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import {
   existsSync,
+  linkSync,
   lstatSync,
   mkdirSync,
   mkdtempSync,
@@ -64,6 +66,9 @@ import {
   type ExecResult,
   type PathFacts,
   type ProvisionIo,
+  listRealDirectory,
+  readRegularFileNoFollow,
+  turnHomeListings,
 } from '../src/provision/apply';
 import {
   INSTANCE_MARKER,
@@ -77,6 +82,7 @@ import {
   changesTheHost,
   observedPaths,
   plan,
+  plannedTurnHomeProblems,
   type Action,
   type EntryType,
   type HostState,
@@ -493,6 +499,8 @@ function observe(instance: Instance, io: RecordingIo): HostState {
       : undefined,
     nologinShell: '/usr/sbin/nologin',
     webServerUnit: 'nginx',
+    // As the real observer lists them (`turnHomeListings`, the same function).
+    turnHomeEntries: turnHomeListings(layout, ledgerOrdinals(layout, agentLedger).values(), path => onHost(instance, path)),
     agentLedger,
     pid1Version: PID1,
     enabledSockets: [...instance.host.enabledSockets],
@@ -882,6 +890,142 @@ describe('observeHost', () => {
     for (const path of credentialPaths(instance.layout)) {
       expect(state.entries[path]?.content).toBeUndefined();
     }
+  });
+
+  test('an artifact path that is a LINK is observed as a link with NO content — never read through (S3-HOME)', () => {
+    // Since S3-HOME an artifact (a pre-S3 turn HOME's `.gitconfig`) can sit in a directory an
+    // identity wrote: a planted link there must not have root read whatever it names into state.
+    const linked = makeInstance();
+    const linkedIo = makeIo(linked);
+    placeCredentials(linked, linkedIo);
+    provision(linked, linkedIo);
+    const secret = join(mkdtempSync(join(tmpdir(), 'observe-secret-')), 'root-only');
+    writeFileSync(secret, 'ROOT_ONLY_BYTES_5e1');
+    const unit = linked.layout.unitPath;
+    rmSync(unit);
+    symlinkSync(secret, unit);
+    const state = observeHost(linked.layout, linked.manifest);
+    expect({ type: state.entries[unit]?.type, content: state.entries[unit]?.content ?? '(none)' }).toEqual({ type: 'symlink', content: '(none)' });
+    expect(JSON.stringify(state).includes('ROOT_ONLY_BYTES_5e1')).toBe(false);
+  });
+
+  test('an artifact path that is a FIFO or a SECOND NAME of a root-only file reads as NO content — never blocks, never reads the other inode (S3-HOME)', () => {
+    // The observer's lstat cannot be trusted for a name an identity can swap after it (a pre-S3
+    // turn HOME's `.gitconfig`): the READ itself must refuse a FIFO (a path-based read blocks,
+    // hanging `provision apply`) and a hard link (the same inode as a file root can read). Each
+    // is planted at a contentful path and the REAL observer is run on it.
+    for (const kind of ['fifo', 'hardlink'] as const) {
+      const planted = makeInstance();
+      const plantedIo = makeIo(planted);
+      placeCredentials(planted, plantedIo);
+      provision(planted, plantedIo);
+      const unit = planted.layout.unitPath;
+      rmSync(unit);
+      const secretDir = mkdtempSync(join(tmpdir(), 'observe-plant-'));
+      temporaryPrefixes.push(secretDir);
+      if (kind === 'fifo') {
+        expect(spawnSync('mkfifo', [unit]).status).toBe(0);
+      } else {
+        writeFileSync(join(secretDir, 'root-only'), 'ROOT_ONLY_BYTES_hl9');
+        linkSync(join(secretDir, 'root-only'), unit);
+      }
+      const began = Date.now();
+      const state = observeHost(planted.layout, planted.manifest);
+      expect({
+        kind,
+        content: state.entries[unit]?.content ?? '(none)',
+        leaked: JSON.stringify(state).includes('ROOT_ONLY_BYTES_hl9'),
+        prompt: Date.now() - began < 5_000,
+      }).toEqual({ kind, content: '(none)', leaked: false, prompt: true });
+    }
+  }, 20_000);
+
+  test('the observer’s two readers, on every kind of name: only a one-name regular file / a real directory is read', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'observe-readers-'));
+    temporaryPrefixes.push(dir);
+    writeFileSync(join(dir, 'file'), 'BYTES');
+    writeFileSync(join(dir, 'other'), 'OTHER');
+    linkSync(join(dir, 'other'), join(dir, 'second-name'));
+    symlinkSync(join(dir, 'file'), join(dir, 'file-link'));
+    expect(spawnSync('mkfifo', [join(dir, 'fifo')]).status).toBe(0);
+    mkdirSync(join(dir, 'sub'));
+    writeFileSync(join(dir, 'sub', 'inside'), '');
+    symlinkSync(join(dir, 'sub'), join(dir, 'sub-link'));
+    const read = (name: string) => readRegularFileNoFollow(join(dir, name)) ?? '(none)';
+    const list = (name: string) => listRealDirectory(join(dir, name)) ?? '(none)';
+    expect({
+      file: read('file'),
+      secondName: read('second-name'),
+      fileLink: read('file-link'),
+      fifo: read('fifo'),
+      dirAsFile: read('sub'),
+      missing: read('missing'),
+      sub: list('sub'),
+      subLink: list('sub-link'),
+      fileAsDir: list('file'),
+      fifoAsDir: list('fifo'),
+    }).toEqual({
+      file: 'BYTES',
+      secondName: '(none)',
+      fileLink: '(none)',
+      fifo: '(none)',
+      dirAsFile: '(none)',
+      missing: '(none)',
+      sub: ['inside'],
+      subLink: '(none)',
+      fileAsDir: '(none)',
+      fifoAsDir: '(none)',
+    });
+  });
+
+  test('THE REAL OBSERVER lists each turn HOME and its .config: a stray entry is seen, a LINKED .config is never listed through (S3-HOME)', () => {
+    // The closed world the daemon holds a turn HOME to reaches the plan only through this
+    // listing: an observer that stopped listing would leave a refused site refused forever.
+    const host = makeInstance();
+    const hostIo = makeIo(host);
+    placeCredentials(host, hostIo);
+    provision(host, hostIo);
+    const home = join(host.layout.agentStateRoot, 's1', 'turn');
+    const homeTwo = join(host.layout.agentStateRoot, 's2', 'turn');
+    mkdirSync(join(home, 'state'), { recursive: true });
+    writeFileSync(join(home, '.gitconfig'), '');
+    writeFileSync(join(home, '.bunfig.toml'), '[install]\n');
+    // `.config` is a link to a directory holding names: none of them may reach the state.
+    const elsewhere = mkdtempSync(join(tmpdir(), 'observe-linked-config-'));
+    temporaryPrefixes.push(elsewhere);
+    mkdirSync(join(elsewhere, 'ZZ_LINKED_NAME_git'));
+    rmSync(join(home, '.config'), { recursive: true, force: true });
+    symlinkSync(elsewhere, join(home, '.config'));
+    // A second HOME, the skeleton's names, with a planted .config/git.
+    mkdirSync(join(homeTwo, '.config', 'git'), { recursive: true });
+    mkdirSync(join(homeTwo, 'state'), { recursive: true });
+    writeFileSync(join(homeTwo, '.gitconfig'), '');
+
+    const state = observeHost(host.layout, host.manifest);
+    expect({
+      home: state.turnHomeEntries?.[home] ?? '(not listed)',
+      linkedConfig: state.turnHomeEntries?.[join(home, '.config')] ?? '(not listed)',
+      homeTwo: state.turnHomeEntries?.[homeTwo] ?? '(not listed)',
+      homeTwoConfig: state.turnHomeEntries?.[join(homeTwo, '.config')] ?? '(not listed)',
+      leaked: JSON.stringify(state).includes('ZZ_LINKED_NAME'),
+    }).toEqual({
+      home: ['.bunfig.toml', '.config', '.gitconfig', 'state'],
+      linkedConfig: '(not listed)',
+      homeTwo: ['.config', '.gitconfig', 'state'],
+      homeTwoConfig: ['git'],
+      leaked: false,
+    });
+    // The same function the test observers list with — so they cannot list differently.
+    expect(turnHomeListings(host.layout, [])).toEqual(state.turnHomeEntries ?? {});
+    // And what the plan's predicate makes of it: the stray and the planted name, each named.
+    const problems = [
+      ...plannedTurnHomeProblems(host.layout, state, 1, home),
+      ...plannedTurnHomeProblems(host.layout, state, 2, homeTwo),
+    ].join('\n');
+    expect({
+      stray: problems.includes(`'${join(home, '.bunfig.toml')}' is not part of the turn HOME`),
+      planted: problems.includes(`'${join(homeTwo, '.config', 'git')}' is not part of the turn HOME`),
+    }).toEqual({ stray: true, planted: true });
   });
 
   test('a path it cannot stat is OMITTED, never reported blank', () => {

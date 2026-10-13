@@ -148,7 +148,7 @@ const EXEMPTIONS: Record<string, Exemption> = {
 	},
 	'test/unit/security_audit_2026_07_23_tripwire.test.ts': {
 		reason:
-			'AUTHZ-05 pins WHERE the inverse-reference scan is scoped (record_scope + the related-count door) and AUTHZ-06 WHERE the projects datalist narrows and the get_data facade self-gates; the file itself drives scopeInverseReferenceHits only as a global admin. The isRecordInScope pin is GONE (PERF-01): that file no longer substring-pins the per-hit call — the projects leg is now pinned as the SHARED PREDICATE (one buildSearchSql site, both doors routed through it), and its behavioural twin stays count_native.test.ts.',
+			"AUTHZ-05 pins WHERE the inverse-reference scan is scoped (record_scope + the related-count door, and the door registry's scope call — scopeInverseReferenceHits / scopeRecordHits / the set-shaped anyRowInScope) and AUTHZ-06 WHERE the get_data facade self-gates; the file itself drives scopeInverseReferenceHits only as a global admin. The isRecordInScope pin is GONE (PERF-01): the projects leg is pinned as the SHARED PREDICATE (one buildSearchSql site, both doors routed through it), its behavioural twin count_native.test.ts. The AUTHZ-06 datalist pins (getUserProjects, the admin ternary) are GONE (READ-1): filter_projects_scope_native / filter_projects_membership_native hold the narrowing as outcomes.",
 		pins: {
 			getPermissions: [
 				{
@@ -165,19 +165,13 @@ const EXEMPTIONS: Record<string, Exemption> = {
 					covers:
 						'AUTHZ-05 — `if (principal.isGlobalAdmin) … countInverseReferences`: the admin takes the index count, the non-admin the enumerate-then-scope arm (totals differ)',
 				},
-				{
-					file: 'test/unit/filter_projects_scope_native.test.ts',
-					case: 'a non-admin gets EXACTLY their dd170 projects — the second project is withheld',
-					covers:
-						'AUTHZ-06 — `principal.isGlobalAdmin ? null : …`: the admin keeps the catalog, the non-admin is intersected',
-				},
 			],
-			getUserProjects: [
+			anyRowInScope: [
 				{
-					file: 'test/unit/filter_projects_scope_native.test.ts',
-					case: 'a non-admin gets EXACTLY their dd170 projects — the second project is withheld',
+					file: 'test/unit/client_page_doors_native.test.ts',
+					case: 'the SET-SHAPED scope (anyRowInScope) answers record by record exactly what the hit-list scope answers',
 					covers:
-						'AUTHZ-06 — getUserProjects(principal.userId) is the allowed set the datalist is filtered by (the `|| true` neutering is red there)',
+						"AUTHZ-05 — the door registry accepts anyRowInScope as a door's scope call: it is driven for a reader and an admin over records each half of the rule (projects, section grant, dd478) decides, and must equal scopeInverseReferenceHits cell for cell",
 				},
 			],
 			ddoIsAuthorized: [

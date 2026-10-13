@@ -234,7 +234,7 @@ describe('P2-8(b) — every tool_sitebuilder action is gated', () => {
 		for (const action of actionNames()) {
 			const before = requestCount;
 			const refusal = await refusalOf(run(action, PLAIN));
-			expect(refusal.code, `${action} must refuse a plain user`).toBe('site_builder.rejected');
+			expect(refusal.code, `${action} must refuse a plain user`).toBe('site_builder.not_permitted');
 			expect(
 				requestCount,
 				`${action} reached the daemon despite refusing the caller — the daemon trusts the engine, so the effect would already have happened`,
@@ -279,8 +279,11 @@ describe('P2-8(b) — session ownership', () => {
 		for (const action of SESSION_ACTIONS) {
 			const before = requestCount;
 			const refusal = await refusalOf(run(action, OTHER_DEV));
-			expect(refusal.code, `${action} must refuse a foreign session`).toBe('site_builder.rejected');
-			expect(refusal.publicMessage).toBe('This agent session belongs to another user.');
+			expect(refusal.code, `${action} must refuse a foreign session`).toBe(
+				'site_builder.not_session_owner',
+			);
+			// The label is the sentence (WIRE-MAP): no prose rides the throw.
+			expect(refusal.publicMessage).toBeUndefined();
 			expect(requestCount, `${action} reached the daemon for a foreign session`).toBe(before);
 		}
 	});
@@ -297,7 +300,7 @@ describe('P2-8(b) — session ownership', () => {
 		const refusal = await refusalOf(
 			tool.apiActions.session_stop!.handler(ctx(DEV, { session_id: 'authz-unknown-session' })),
 		);
-		expect(refusal.code).toBe('site_builder.rejected');
+		expect(refusal.code).toBe('site_builder.not_session_owner');
 	});
 
 	test('a global admin passes ownership (the one named operator bypass)', async () => {
@@ -367,11 +370,11 @@ describe('P2-8(b) — session ownership', () => {
 					tool.apiActions[action]!.handler(ctx(DEV, { session_id: COLLIDING_SESSION })),
 				);
 				expect(refusal.code, `${action} must refuse a foreign-instance row`).toBe(
-					'site_builder.rejected',
+					'site_builder.not_session_owner',
 				);
-				// BYTE-IDENTICAL to "not yours": the refusal may not tell a caller that the id
-				// exists somewhere else.
-				expect(refusal.publicMessage).toBe('This agent session belongs to another user.');
+				// IDENTICAL to "not yours" (same code, same label, no prose): the refusal may not
+				// tell a caller that the id exists somewhere else.
+				expect(refusal.publicMessage).toBeUndefined();
 				expect(requestCount, `${action} reached the daemon`).toBe(before);
 			}
 		});
@@ -396,7 +399,7 @@ describe('P2-8(b) — session ownership', () => {
 			const refusal = await refusalOf(
 				tool.apiActions.session_stop!.handler(ctx(DEV, { session_id: LEGACY_SESSION })),
 			);
-			expect(refusal.code).toBe('site_builder.rejected');
+			expect(refusal.code).toBe('site_builder.not_session_owner');
 		});
 
 		test('and the SAME id under THIS instance still resolves — the check is the instance, not a blanket denial', async () => {

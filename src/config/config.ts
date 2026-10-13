@@ -34,7 +34,7 @@
 import { legacyAwareDefaultDir } from './catalog/media.ts';
 import { declaredDataLangs, resolveCurrentDataLang } from './data_langs.ts';
 import { RETIRED_ENV_KEYS, readEnv } from './env.ts';
-import { INSTALL_MODE } from './install_mode.ts';
+import { UNCONFIGURED } from './install_state.ts';
 import { isDiffusionLangCode } from './lang_code.ts';
 import {
 	readBool,
@@ -744,17 +744,6 @@ export interface DiffusionConfig {
 }
 
 export interface DedaloConfig {
-	/**
-	 * INSTALL MODE (DEC-19 TS-native install): true when the server boots with
-	 * NONE of the four required keys (ENTITY/DB_NAME/DB_HOST/DB_USER) set and the
-	 * install is not yet sealed — a fresh, unconfigured machine. In this mode the
-	 * required keys carry sentinels (no `.env` exists to satisfy `requireEnv`),
-	 * the server serves ONLY the install wizard, and boot skips DB-dependent work.
-	 * A PARTIAL config (some but not all required keys) still throws — that is an
-	 * operator error, not a fresh install. Cleared (false) once `.env` is written
-	 * and the process restarts. See src/core/install/ and engineering/PRODUCTION.md §7.
-	 */
-	readonly installMode: boolean;
 	/** Instance identifier (PHP: DEDALO_ENTITY), e.g. 'myentity'. */
 	readonly entity: string;
 	/** Default section the client lands on after login (PHP MAIN_FALLBACK_SECTION). */
@@ -999,9 +988,10 @@ for (const [retired, replacement] of Object.entries(RETIRED_ENV_KEYS)) {
 
 /**
  * Build the config once at import time and freeze it. A boot failure here is a
- * feature: a misconfigured server must refuse to start, not limp along — UNLESS
- * it is a fresh, unconfigured machine (install mode), where the required keys
- * carry sentinels so the install wizard can boot.
+ * feature: a misconfigured server must refuse to start, not limp along. On an
+ * UNCONFIGURED box (src/config/install_state.ts) the required keys carry
+ * sentinels so `config` stays importable — and the server refuses to start there
+ * anyway, with its own exit code.
  */
 /**
  * Parse DEDALO_LANG_EQUIVALENCES: a JSON array of arrays of lg-* codes, e.g.
@@ -1134,11 +1124,11 @@ const currentDataLang = resolveCurrentDataLang(
 	INSTALLED_DATA_LANGS,
 	dataLangDefault,
 );
-if (currentDataLang.replaced && !INSTALL_MODE) {
-	// INSTALL MODE IS EXEMPT FROM THE REPORT, not from the substitution: a fresh
-	// box boots on sentinels whose PROJECTS_DEFAULT_LANGS is ['lg-eng'] while
-	// DATA_LANG holds its catalog default 'lg-spa', so the mismatch there is the
-	// wizard's starting state and not an operator's mistake.
+if (currentDataLang.replaced && !UNCONFIGURED) {
+	// AN UNCONFIGURED BOX IS EXEMPT FROM THE REPORT, not from the substitution: it
+	// reads sentinels whose PROJECTS_DEFAULT_LANGS is ['lg-eng'] while DATA_LANG
+	// holds its catalog default 'lg-spa', so the mismatch there is the sentinel
+	// state (the server refuses to start on it anyway), not an operator's mistake.
 	console.error(
 		`[config] DEDALO_DATA_LANG = '${configuredDataLang}' is not among the data languages ` +
 			`this installation declares (${[...INSTALLED_DATA_LANGS].join(', ')}); using ` +
@@ -1173,7 +1163,6 @@ if (diffusionLangs.outsideProject.length > 0) {
 }
 
 export const config: DedaloConfig = Object.freeze({
-	installMode: INSTALL_MODE,
 	entity: requireString('ENTITY'),
 	mainSection: readString('MAIN_SECTION'),
 	mediaDir: readString('DEDALO_MEDIA_DIR'),
@@ -1226,8 +1215,8 @@ export const config: DedaloConfig = Object.freeze({
 		structureLang: readString('DEDALO_STRUCTURE_LANG'),
 		// LANGUAGE definitions are INSTALL configuration (owner rule 2026-07-09):
 		// required from ../private/.env (PHP key names), never hardcoded lists.
-		// The single-lang sentinels below exist ONLY for the pre-.env install
-		// wizard boot; the wizard persists the real values.
+		// The single-lang sentinels exist ONLY so `config` is importable on an
+		// unconfigured box (install_state.ts); the installer writes the real values.
 		applicationLangs: requireMap('DEDALO_APPLICATION_LANGS'),
 		applicationLangsDefault: requireString('DEDALO_APPLICATION_LANGS_DEFAULT'),
 		// Both read once, above: they build INSTALLED_DATA_LANGS as well.

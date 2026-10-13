@@ -16,12 +16,12 @@
  * driver — `provisionMediaTreeAtBoot` runs on every server start, which is what
  * reaches a box that was installed years ago.
  *
- * Response shape is the client contract: `{ok, dirs:[{label,path,exists,
- * writable}]}` (render_installer.js renders one row per dir). The media tree is
- * ONE row ("Media tree") — thirty rows would drown the panel — and `msg` carries
- * a ONE-LINE summary, never the list: the client assigns `msg` with textContent
- * into a `display:flex` `.msg` pill (`render_installer.js`, `installer.less`), so
- * embedded newlines collapse into one unreadable run. The full per-directory
+ * Response shape: `{ok, dirs:[{label,path,exists,writable}]}`, read by the
+ * terminal installer's step table (step_runs.ts / steps.ts) and printed by its
+ * plain/TUI front ends as one step-event line. The media tree is ONE row
+ * ("Media tree") — thirty rows would drown the progress view — and `msg` carries
+ * a ONE-LINE summary, never the list: a step event's message is one line, so
+ * embedded newlines would break the progress rendering. The full per-directory
  * detail travels structured, on `mediaTree.problems`.
  */
 
@@ -53,8 +53,8 @@ export interface CheckDirectoriesOptions {
 	 *
 	 * `create:true` provisions the whole media tree, so without this a unit test
 	 * exercising this function would mkdir into the REAL configured media root
-	 * (which is exactly what happened once). Production callers — the installer
-	 * step (`install/engine.ts`) and `scripts/install.ts` — never pass it, and the
+	 * (which is exactly what happened once). Production callers — the terminal
+	 * installer's step table (`install/step_runs.ts`) and `scripts/install.ts` — never pass it, and the
 	 * default stays `config.media.rootPath`.
 	 */
 	readonly mediaRoot?: string;
@@ -74,8 +74,18 @@ function targetDirs(mediaRoot: string | null): { label: string; path: string }[]
 	return dirs;
 }
 
+/**
+ * The absolute paths check_directories manages (private, sessions, backups,
+ * the media root when configured) — what the terminal installer records as
+ * missing at its preflight, so `--abort` removes only the directories the
+ * install itself created (executor.ts).
+ */
+export function installDirectoryPaths(): string[] {
+	return targetDirs(config.media.rootPath).map((dir) => dir.path);
+}
+
 export interface CheckDirectoriesResult {
-	/** A REPORT flag, not a refusal: the wizard renders `dirs` either way (see db_probe_plan.ts). */
+	/** A REPORT flag, not a refusal: the installer prints `dirs` either way (see db_probe_plan.ts). */
 	ok: boolean;
 	dirs: DirReport[];
 	msg: string;
@@ -130,7 +140,7 @@ export function checkDirectories(options: CheckDirectoriesOptions): CheckDirecto
 	//
 	// NO `budgetMs`, DELIBERATELY. The boot pass carries a wall-clock budget
 	// (MEDIA_TREE_BOOT_BUDGET_MS) because it sits between the process starting and
-	// the socket being bound. This one does not: the wizard step is an interactive
+	// the socket being bound. This one does not: the installer step is an interactive
 	// operation an operator is watching, where waiting is the correct behaviour and
 	// half a tree behind an "all directories present" panel is worse than a slow
 	// answer. Gated in media_tree_provision_native.test.ts ("the INSTALLER pass is

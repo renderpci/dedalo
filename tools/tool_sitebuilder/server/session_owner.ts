@@ -54,7 +54,7 @@ import { config } from '../../../src/config/config.ts';
 import { sql } from '../../../src/core/db/postgres.ts';
 import type { Principal } from '../../../src/core/security/permissions.ts';
 import { resolveSiteBuilderTransport } from '../../../src/core/site_builder/pairing.ts';
-import { siteBuilderFailure, siteBuilderRejected } from './wire.ts';
+import { siteBuilderFailure, siteBuilderRefusal } from './wire.ts';
 
 /**
  * The ledger table. Engine-internal machinery (the locks / diffusion-jobs /
@@ -87,13 +87,6 @@ function pairedInstance(): string | null {
 	// though it were.
 	return resolveSiteBuilderTransport(config.siteBuilder)?.instance ?? null;
 }
-
-/**
- * The refusal every ownership denial uses — ONE sentence for "not yours" and for
- * "no owner recorded" alike, so the refusal cannot be used as an oracle telling a
- * caller which session ids exist.
- */
-const NOT_YOURS = 'This agent session belongs to another user.';
 
 /**
  * Idempotent provisioning, run on the WRITE path only (session_start). Keeping
@@ -210,7 +203,10 @@ export async function assertSessionOwner(sessionId: string, principal: Principal
 	if (principal.isGlobalAdmin) return;
 	const owner = await readSessionOwner(sessionId);
 	if (owner === null || owner !== principal.userId) {
-		throw siteBuilderRejected(NOT_YOURS);
+		// ONE refusal — one code, one label, no prose — for "not yours", "no owner recorded"
+		// and "recorded under another instance" alike, so it cannot be used as an oracle
+		// telling a caller which session ids exist.
+		throw siteBuilderRefusal('site_builder.not_session_owner');
 	}
 }
 

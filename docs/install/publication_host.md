@@ -1,6 +1,6 @@
 # Publication host agent
 
-> See also: [Reverse proxy and TLS](reverse_proxy.md) · [Production install](production.md) · [Media protection](../core/system/media_protection.md) · [Installation](index.md)
+> See also: [The web server site](reverse_proxy.md) · [Production install](production.md) · [Media protection](../core/system/media_protection.md) · [Installation](index.md)
 
 Your public website, the Publication APIs and the published media can live on their own
 server, away from the work system. This page installs the **publication host agent**:
@@ -49,7 +49,7 @@ The whole page follows one example site. Replace these names with your own:
 | `museum_org_agent` | the agent's own user |
 | `museum_org_api` | the Publication API v2's user and group |
 | `dedalo-publication-api-v2-museum_org`, port `3100` | the v2 service and its local port |
-| `dedalo`, `/opt/dedalo/master_dedalo`, `/opt/dedalo/.bun/bin/bun`, `/opt/dedalo/private` | the user that runs Dédalo, its checkout, its pinned Bun and its private directory ([production layout](production.md#the-layout-this-guide-builds)) |
+| `dedalo`, `/opt/dedalo/master_dedalo`, `/opt/dedalo/.bun/bin/bun`, `/opt/dedalo/private` | the user that runs Dédalo, its checkout, its pinned Bun and its private directory ([the single-instance layout](manual_install.md#the-single-unit-set)) |
 | `/srv/dedalo/media` | the work system's media directory |
 
 **The machines.** The *work host* runs Dédalo. The *publication host* runs the website, the
@@ -874,12 +874,12 @@ the step here.
 | 9. Map the APIs into the site's virtual host | publication host | `root` | two lines in the site's virtual host |
 | 10. First use | the work system's Maintenance panel | the Dédalo root user | media rules, API releases, the public check |
 
-**A work system with several instances.** The commands name the
-[production layout](production.md#the-layout-this-guide-builds). On a
-[work system with several instances](multi_instance.md#layout-per-instance), replace, everywhere
-on this page, `/opt/dedalo/master_dedalo` with that instance's checkout
-`/home/ded_<site>/dedalo`, the user `dedalo` with `ded_<site>`, and
-`/opt/dedalo/.bun/bin/bun` with `/home/ded_<site>/.bun/bin/bun`.
+**A work system installed by the installer.** The commands name the
+[single-instance layout](manual_install.md#the-single-unit-set). On a work system installed by the
+installer ([production layout](production.md#overview)), replace, everywhere on this page,
+`/opt/dedalo/master_dedalo` with that instance's release tree `/home/ded_<i>/dedalo`, the
+user `dedalo` with `ded_<i>`, `/opt/dedalo/private` with `/home/ded_<i>/private`, and
+`/opt/dedalo/.bun/bin/bun` with `/opt/dedalo/bun/<pin>/bun`.
 
 Steps 0 to 7 follow below; step 8 is [Pair it with the work system](#pair-it-with-the-work-system),
 and steps 9 and 10 are under [Finish the install](#finish-the-install). On one machine, the
@@ -1054,11 +1054,11 @@ does **not** remove the development packages, and `check` refuses them. Then:
 sudo -u dedalo bash -c 'cd /opt/dedalo/master_dedalo && /opt/dedalo/.bun/bin/bun run hostagent:install'
 ```
 
-On a [work system with several instances](multi_instance.md#layout-per-instance), use that
-instance's user, `/home/ded_<site>/dedalo` and `/home/ded_<site>/.bun/bin/bun`.
+On a work system installed by the installer ([production layout](production.md#overview)), use that
+instance's user, `/home/ded_<i>/dedalo` and `/opt/dedalo/bun/<pin>/bun`.
 
 This runs `bun install --frozen-lockfile --production` in `publication/host_agent/`, the
-same locked install as the [work system's own](production.md#6-get-the-code):
+same locked install as the [work system's own](manual_install.md#manual-host_runtime):
 
 - it installs exactly the versions in the committed `publication/host_agent/bun.lock` and
   never rewrites it. If `package.json` and the lock disagree, it stops with *lockfile had
@@ -1114,8 +1114,9 @@ unproven*. `agent_dir` must hold the agent's code only.
 #### The site's Bun {#one-bun-per-site}
 
 Each instance runs its own copy of Bun, at exactly the version the work system pins (the
-`.bun-version` file at the root of its checkout), as each Dédalo instance does on the work
-system (see [Multiple instances on one server](multi_instance.md#layout-per-instance)). This
+`.bun-version` file at the root of its checkout). On the work system the installer keeps one
+root-owned copy per pin, shared by the instances on it (see
+[Several instances on one host](multi_instance.md#what-the-instances-share)). This
 one binary runs three services: the agent (as `museum_org_agent`), and the v2 API and its
 scratch copy (as `museum_org_api`). No `bun install` ever runs on this host.
 

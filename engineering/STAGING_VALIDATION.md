@@ -102,9 +102,11 @@ the regression the 255 s idleTimeout fixed (Bun's silent 10 s default).
 ✅ `install/db/migrate.ts` runs `0001_baseline.sql` and records it in
 `dedalo_ts_schema_migrations`; a second boot is a no-op (idempotent).
 ▢ Point a fresh staging server at an EMPTY database.
-✅ `/health` reports `db:down` and only the install wizard is served; the
-TS-native installer (`src/core/install/`, wizard or headless `bun run
-scripts/install.ts`) provisions matrix/dd_ontology from the vendored seed.
+✅ With the installation's keys set and its `install_status` not `sealed`, the server
+REFUSES to start (exit 78, one `[boot] REFUSED — install not finished` line — PRODUCTION
+§7.1); the terminal installer (`src/core/install/`, `./install.sh` or `bun run
+scripts/install.ts`) provisions matrix/dd_ontology from the vendored seed and seals it,
+after which the server boots and applies the migrations.
 The former **DEC-19/S2-39 cutover blocker is RESOLVED** (2026-07-09 — see
 `engineering/PRODUCTION.md` §7 and `rewrite/COEXISTENCE.md`). Coexistence
 caveats: the root password is written Argon2id (TS-login-only until re-set on
@@ -225,8 +227,10 @@ before the first production code update. Needs a staging code master
 (`IS_A_CODE_SERVER`, `RELEASE.md`) and a consumer install running under the
 `deploy/` units — including `dedalo-ts-rollback.service` and the
 `dedalo-ts-watchdog.sh` probe, with BOTH supervisor scripts installed out of
-tree at `/opt/dedalo/bin/` (PRODUCTION §12 — the units point there; verify
-`systemctl cat` shows no `ExecStart` under the app tree before starting).
+tree in the root-owned `ROOT_BIN_DIR` (PRODUCTION §2.2/§12 — the units point
+there; verify `systemctl cat` shows no `ExecStart` under the instance dir before
+starting), and the instance dir owned by the service user under a ROOT-owned
+parent (the swap renames only inside it).
 
 **I0. The automated twin (`bun run test:update`).** `scripts/update_drill.ts`
 rehearses I1 + I2-class refusals WITHOUT a staging box: a scratch clone gets
@@ -271,11 +275,11 @@ restart) is the same script; observe at least one watchdog-triggered run.
 
 **I4b. Crash window W1 → rollback with NO tree at APP_DIR.**
 ▢ Simulate the worst crash point of the swap: stop the service, move the live
-tree into the backup dir yourself (`mv /opt/dedalo/master_dedalo
+tree into the backup dir yourself (`mv <instance dir>/master_dedalo
 <backup root>/backup_<stamp>`), write (or keep) a `status:"pending"` sentinel
 naming that backupDir, and leave NOTHING at the app path — then start
 `dedalo-ts-rollback.service`.
-✅ The rollback runs at all (its script lives at `/opt/dedalo/bin/`, outside
+✅ The rollback runs at all (its script lives in `ROOT_BIN_DIR`, outside
 the vanished tree — an in-tree `ExecStart` fails here with "No such file");
 the journal logs `state 1`; the backup is moved back to the app path; the
 sentinel reads `status:"rolled_back"`, `rollback_attempted:true`; `/health`

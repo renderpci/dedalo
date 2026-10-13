@@ -265,7 +265,7 @@ export function buildEngineAdvisory(isAdmin: boolean): Record<string, unknown> {
 }
 
 /**
- * Facade re-export for the INSTALL wizard's test_diffusion_connection step
+ * Facade re-export for the installer's test_diffusion_connection step
  * (DEC-19): core/install/db_probe.ts reaches MariaDB ONLY through this facade
  * (boundary_seam rule), never the mariadb internals directly. The probe opens a
  * throwaway connection from posted credentials and closes it immediately.

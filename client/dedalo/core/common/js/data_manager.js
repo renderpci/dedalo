@@ -18,7 +18,15 @@
 *   cache Worker and the Service Worker, so there is ONE request algorithm.
 * - CSRF token management (SEC-008): reads the token from `page_globals.csrf_token`,
 *   injects it as `X-Dedalo-Csrf-Token`, refreshes it from every response, and
-*   performs a single transparent retry on CSRF rejection.
+*   performs a single transparent retry on CSRF rejection — both ONLY for a
+*   session of the page's own user (`session_user_id` beside the token,
+*   error_dispatch.settle_session_identity): another user's session latches the
+*   page identity and reloads it instead.
+* - The PAGE-IDENTITY LATCH (LEAD-2): while error_dispatch has revoked the page
+*   identity (a re-login authenticated another user), `request`,
+*   `request_stream` and `request_fetch_stream` send nothing but the login door
+*   (`refused_by_page_identity`) and answer `client.aborted`
+*   (`details.reason:'page_identity_revoked'`).
 * - Short-circuit caching against the browser's IndexedDB (`cache_handler: {handler:'localdb'}`).
 * - SSE / NDJSON streaming support via `request_stream` / `request_fetch_stream` /
 *   `read_stream`.
@@ -65,6 +73,11 @@
 	} from './api_error.js'
 	import {render_error_toast} from './render_api_error.js'
 	import {create_request_activity} from './request_activity.js'
+	import {
+		refused_by_page_identity,
+		is_login_door_body,
+		settle_session_identity
+	} from './error_dispatch.js'
 
 
 
@@ -193,9 +206,12 @@ const client_failure = (api_error) => ({
 *     what the user sees of a wait is the `request_activity` state (elapsed
 *     time, one page-level cue — see request_activity.js).
 *  7. Refresh `page_globals.csrf_token` from every envelope (success or
-*     failure) and publish `session_activity` (WC-051).
+*     failure) and publish `session_activity` (WC-051) — when the session is
+*     the page user's (settle_session_identity 'adopt'). Otherwise the token is
+*     not taken; a non-login-door call answers `client.aborted`
+*     (`details.reason:'page_identity_revoked'`) and the page reloads.
 *  8. `auth.csrf_failed` → resend exactly once
-*     (`_csrf_retried`).
+*     (`_csrf_retried`) — reached only after step 7 adopted the token.
 *  9. Failure: attach `error` = the ApiError to the envelope (or synthesise
 *     `{ok:false, error}` when no JSON), publish `'api_error'`, toast TRANSPORT
 *     failures (the user must learn the network is down even when no caller
@@ -236,6 +252,15 @@ const client_failure = (api_error) => ({
 *   carries `error` (an ApiError) — test with `request_failed(api_response)`.
 */
 data_manager.request = async function(options) {
+
+	// THE PAGE-IDENTITY LATCH (LEAD-2): after a re-login as another identity the
+	// page's cached state is not this session's — nothing but the login door
+	// leaves it until it reloads (error_dispatch.refused_by_page_identity). Not
+	// published, not toasted: client.aborted is silent by policy, and the reload
+	// already asked for is the user's answer.
+	if (refused_by_page_identity(options?.body)) {
+		return {ok:false, error: page_identity_error(options?.body)}
+	}
 
 	// coalescing key. ONLY a request the caller explicitly declared cacheable
 	// (`cache_handler:{handler:'localdb', id}`) is eligible: that declaration is
@@ -445,6 +470,27 @@ const safe_idempotency_key = function() {
 
 	return null
 }//end safe_idempotency_key
+
+
+
+/**
+* PAGE_IDENTITY_ERROR
+* What every transport answers while the page identity is revoked
+* (error_dispatch.refused_by_page_identity): `client.aborted` — the request was
+* never sent — with the reason in `details`, so a caller that inspects it can
+* tell it from its own abort. `request` resolves it in a failure envelope; the
+* stream doors reject with it.
+* @param {*} body - the refused request body (only its action is reported)
+* @returns {ApiError}
+*/
+const page_identity_error = (body) => new ApiError({
+	code	: CLIENT_ERROR.ABORTED,
+	source	: 'transport',
+	details	: {
+		reason	: 'page_identity_revoked',
+		action	: (body && typeof body==='object' && typeof body.action==='string') ? body.action : null
+	}
+})
 
 
 
@@ -666,17 +712,36 @@ const execute_request = async function(options) {
 	// SEC-008: refresh the cached CSRF token from every response so the
 	// next call carries the latest one (the server may rotate it on auth
 	// state changes such as login or logout). Failure envelopes carry it too.
+	// THE TOKEN IS AN IDENTITY (LEAD-2): it is adopted only when the session
+	// that answered is the page user's (`session_user_id`, beside the token) —
+	// error_dispatch.settle_session_identity. A session replaced by a login
+	// elsewhere is never carried over: not by this refresh, not by the CSRF
+	// resend below. A login-door answer keeps its envelope (the login door
+	// decides); any other answer from such a session is not this page's —
+	// the page is latched and reloads, and the caller gets client.aborted.
+	let token_refused = false
 	if (json && typeof json.csrf_token === 'string' && json.csrf_token.length > 0) {
-		if (typeof window !== 'undefined' && window.page_globals) {
-			window.page_globals.csrf_token = json.csrf_token;
+		if (settle_session_identity(json, body)!=='adopt') {
+			token_refused = true
+			if (!is_login_door_body(body)) {
+				if (end_wait) end_wait()
+				return {ok:false, error: page_identity_error(body)}
+			}
+		}else{
+			if (typeof window !== 'undefined' && window.page_globals) {
+				window.page_globals.csrf_token = json.csrf_token;
+			}
+			// WC-051: the same signal, for the same reason. A response carrying a CSRF
+			// token IS an authenticated response, which is exactly what refreshed the
+			// server's `last_seen` — so it is the honest beat for the client's idle
+			// clock (session_expiry.js). Published rather than called directly to keep
+			// the data layer free of a UI dependency, and to avoid an import cycle.
+			event_manager.publish('session_activity');
 		}
-		// WC-051: the same signal, for the same reason. A response carrying a CSRF
-		// token IS an authenticated response, which is exactly what refreshed the
-		// server's `last_seen` — so it is the honest beat for the client's idle
-		// clock (session_expiry.js). Published rather than called directly to keep
-		// the data layer free of a UI dependency, and to avoid an import cycle.
-		event_manager.publish('session_activity');
 	}
+	// a refused token is never resent (below), so a csrf_failed wait the finally
+	// above left for the resend ends here (end_wait is idempotent)
+	if (token_refused && end_wait) end_wait()
 
 	// SEC-008: transparent retry on CSRF rejection. This handles the bootstrap
 	// race where a non-exempt action fires before the SPA has obtained a
@@ -689,6 +754,7 @@ const execute_request = async function(options) {
 		api_error
 		&& api_error.code === 'auth.csrf_failed'
 		&& !options._csrf_retried
+		&& !token_refused
 	) {
 		console.warn('CSRF token mismatch; retrying once with fresh token.');
 		// SAME key: the CSRF refusal happened at the dispatch gate, so the handler
@@ -826,13 +892,19 @@ export const render_msg_to_inspector = (msg, type, remove_time) => {
 *   cannot: a fetch still awaiting response headers has no reader yet, so a caller
 *   that gives up during connect had no way to release the request without this.
 * @returns {Promise<ReadableStream>} Resolved with the raw `response.body` stream
-* @throws {ApiError} Rejects with an ApiError on network failure (`client.*`,
+* @throws {ApiError} Rejects with `client.aborted` (never sent) while the page
+*   identity is revoked; with an ApiError on network failure (`client.*`,
 *   see normalize_transport_error) or on a non-2xx answer (the server's envelope
 *   error when the body is one — e.g. `auth.not_logged` — else `client.http_status`)
 */
 data_manager.request_stream = async function(options) {
 
 	const self = this
+
+	// the page-identity latch, as in `request`
+	if (refused_by_page_identity(options?.body)) {
+		throw page_identity_error(options?.body)
+	}
 
 	// short vars
 	const url			= options.url || self.url
@@ -942,12 +1014,18 @@ data_manager.request_stream = async function(options) {
 * @param {Object} [options.headers] - HTTP headers; defaults to `application/x-ndjson` Accept
 * @param {Object} options.body - Request payload (will be JSON-stringified)
 * @returns {Promise<ReadableStream>} Raw `response.body` stream for NDJSON consumption
-* @throws {ApiError} On network failure (`client.*`) or a non-2xx answer (the
+* @throws {ApiError} `client.aborted` (never sent) while the page identity is
+*   revoked; on network failure (`client.*`) or a non-2xx answer (the
 *   envelope's error code when the body is an envelope, else `client.http_status`)
 */
 data_manager.request_fetch_stream = async function(options) {
 
 	const self = this
+
+	// the page-identity latch, as in `request`
+	if (refused_by_page_identity(options?.body)) {
+		throw page_identity_error(options?.body)
+	}
 
 	const url			= options.url || self.url
 	const method		= options.method || 'POST'

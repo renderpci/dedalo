@@ -29,13 +29,14 @@ import { virtualDateNow } from '../../section/record/create_record.ts';
  * NOT a single 'LOAD'. Unmapped messages are skipped, never guessed.
  *
  * The map mirrors dd42 in FULL (all 16 codes) because the READ side already
- * does: area_maintenance/user_stats.ts WHAT_MAP resolves 1-16 → dd696…dd1081
- * for the user_activity widget. Four codes have no emitter — here or in PHP:
+ * does: area_maintenance/user_stats.ts WHAT_ACTIONS maps 1-16 → action keys
+ * (login…new_file_version, labelled by the labels engine) for the
+ * user_activity widget. Four codes have no emitter — here or in PHP:
  *
  *   SEARCH 8, UPLOAD 9, STATS 15  — defined in PHP's $what but never passed to
  *       log_message() anywhere in v6 or the frozen v7. Never implemented.
  *   DOWNLOAD 10 — a v5-era event ('download file by tool av / image / pdf')
- *       LOST IN THE v6 MIGRATION. matrix_activity still holds dd1080 rows from
+ *       LOST IN THE v6 MIGRATION. matrix_activity still holds code-10 rows from
  *       2019-2020 and none after, and the v5→v6 upgrade map
  *       (class.activity_v5_to_v6.php) still translates it — so the code must
  *       stay readable even while nothing writes it.
@@ -46,22 +47,22 @@ import { virtualDateNow } from '../../section/record/create_record.ts';
  * question, not a closed one.
  */
 const WHAT_CODES: Record<string, string> = {
-	'LOG IN': '1', // dd696
-	'LOG OUT': '2', // dd697
-	NEW: '3', // dd695
-	DELETE: '4', // dd729
-	SAVE: '5', // dd700
-	'LOAD EDIT': '6', // dd694
-	'LOAD LIST': '7', // dd693
-	SEARCH: '8', // dd699 — no emitter (never implemented)
-	UPLOAD: '9', // dd1090 — no emitter (never implemented; see UPLOAD COMPLETE)
-	DOWNLOAD: '10', // dd1080 — no emitter (v5-era, lost in the v6 migration)
-	'UPLOAD COMPLETE': '11', // dd1094
-	'DELETE FILE': '12', // dd1095
-	'RECOVER SECTION': '13', // dd1092
-	'RECOVER COMPONENT': '14', // dd1091
-	STATS: '15', // dd1098 — no emitter (never implemented)
-	'NEW VERSION': '16', // dd1081
+	'LOG IN': '1', // login
+	'LOG OUT': '2', // logout
+	NEW: '3', // new
+	DELETE: '4', // delete
+	SAVE: '5', // save
+	'LOAD EDIT': '6', // edit
+	'LOAD LIST': '7', // list
+	SEARCH: '8', // search — no emitter (never implemented)
+	UPLOAD: '9', // upload — no emitter (never implemented; see UPLOAD COMPLETE)
+	DOWNLOAD: '10', // download — no emitter (v5-era, lost in the v6 migration)
+	'UPLOAD COMPLETE': '11', // upload_complete
+	'DELETE FILE': '12', // delete_file
+	'RECOVER SECTION': '13', // recover_section
+	'RECOVER COMPONENT': '14', // recover_component
+	STATS: '15', // statistics — no emitter (never implemented)
+	'NEW VERSION': '16', // new_file_version
 };
 
 /**

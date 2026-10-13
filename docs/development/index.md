@@ -21,7 +21,7 @@ bun install
 bun run dev          # the server + the LESS watcher, together
 ```
 
-`bun run dev` is the everyday loop. It supervises the server (restarting it when the install wizard asks for a fresh process) **and** watches the LESS, recompiling the affected stylesheets as you save. Ctrl-C stops both.
+`bun run dev` is the everyday loop. It supervises the server (restarting it when a code update asks for a fresh process) **and** watches the LESS, recompiling the affected stylesheets as you save. Ctrl-C stops both.
 
 The CSS deserves one paragraph of warning, because it catches people out: **the `.less` is the source, the `.css` beside it is generated, and both are committed.** The compiled CSS is what ships — deploying is a checkout, and a production install never runs the LESS compiler — so a `.css` that has drifted from its `.less` means the browser gets bytes that no source in the repo produces. `test/unit/css_build_tripwire.test.ts` recompiles everything on each run and goes red if that happens; the fix is always `bun run css:build`, then commit. Never hand-edit a `.css` or a `.css.map`.
 

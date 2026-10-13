@@ -181,10 +181,12 @@ to this interface, so adding an agent is a file under `drivers/` plus one regist
   argv and its per-line parser, hands them to the confinement, line-buffers the run's
   stdout, pushes parsed events onto an async `EventQueue`, synthesizes a terminal
   result/error, and implements `interrupt()` (an interrupt that lands while the run is being
-  opened starts nothing). It spawns NOTHING itself. The run's environment is exactly
+  opened starts nothing). Every error event it emits is a reason (`src/drivers/turn_errors.ts`),
+  never the thrown sentence, which goes to the daemon's log. It spawns NOTHING itself. The run's environment is
   `SessionStartOptions.env` — a tight allowlist the manager builds, with no `HOME` (the unit
-  fixes it). **Spreading `process.env` would hand a coding agent the daemon's token and
-  provider keys**; the allowlist is the secrets boundary.
+  fixes it) — with the driver's own statement (`TurnPlan.env`, opencode's restriction) merged
+  over it, so the daemon's value always wins. **Spreading `process.env` would hand a coding
+  agent the daemon's token and provider keys**; the allowlist is the secrets boundary.
 - `src/drivers/confinement.ts` decides what a run RUNS AS — a turn, a build step and a git
   command alike (`confineTurn` / `runConfined`) — and under
   `AGENT_CONFINEMENT=systemd_scope` (what a provisioned host renders) **the daemon starts
@@ -242,7 +244,9 @@ to this interface, so adding an agent is a file under `drivers/` plus one regist
   can PROVE the namespace is in effect — its namespace identity differs from the daemon's
   (carried in the spec; a missing identity is a refusal, not a skipped check) and it sees no
   interface but its own `lo` — refuses a spec that sets any key the unit fixes (`HOME`,
-  `DEDALO_*`, the transpiler cache, git's configuration), and then runs the argv in the
+  `DEDALO_*`, the transpiler cache, git's configuration, and on the turn door
+  `XDG_CONFIG_HOME`, `CLAUDE_CONFIG_DIR`, `XDG_DATA_HOME`, `XDG_STATE_HOME`,
+  `XDG_CACHE_HOME`), and then runs the argv in the
   workspace and forwards the unit's loopback to the gate's sockets. The host is refused up
   front (503, naming what is missing) when any of this cannot hold: PID 1 is older than the
   floor, 248 (`PrivateIPC=`), or its release cannot be read; a declared site has no identity,
@@ -291,14 +295,69 @@ to this interface, so adding an agent is a file under `drivers/` plus one regist
   not the daemon's word about a build). The build record and the session meta are written
   tmp+rename through that same door, so a poller never reads a half-written one.
 - `claude_code.ts` runs `claude -p … --output-format stream-json --mcp-config …` and parses
-  the stream-json frames; `opencode.ts` runs `opencode run … --format json`; `pi.ts` is a
-  `detect()`-able stub that refuses a turn rather than inheriting a default. Each writes its
-  own MCP config (Claude reads `.builder/mcp.json`, OpenCode reads a workspace-root
-  `opencode.json`) pointing at the publication `/mcp` — `0640`, and DELETED when the turn
-  ends, because it carries the museum's Publication API key into a directory an agent writes
-  to. Each also STATES its tool set rather than inheriting one: Claude Code gets an explicit
-  `--allowedTools` with `Bash`, `WebFetch` and `WebSearch` in `--disallowedTools`, and
-  OpenCode gets the same statement as a `permission` block in the file the daemon writes.
+  the stream-json frames; `opencode.ts` runs `opencode run --pure --format json [--session
+  <id>] -- <prompt>`; `pi.ts` is a `detect()`-able stub that refuses a turn rather than
+  inheriting a default. Claude Code reads its MCP config from `.builder/mcp.json` — `0640`,
+  and DELETED when the turn ends, because it carries the museum's Publication API key into a
+  directory an agent writes to. OpenCode's whole configuration (the publication `/mcp`
+  server, a `permission` block, and the brief as its one instruction file) rides
+  `OPENCODE_CONFIG_CONTENT` in the child's own environment; the one file the daemon writes for
+  it is that brief — `AGENTS.md` read by the same bounded, link-refusing reader as Claude
+  Code's (`src/drivers/brief.ts`), written to `.builder/opencode-brief.md` (`0640`, fd-based)
+  and deleted when the turn ends. Each STATES its tool set rather than inheriting one: Claude Code
+  gets an explicit `--allowedTools` with `Bash`, `WebFetch` and `WebSearch` in
+  `--disallowedTools`; OpenCode's permission block denies `bash`, `webfetch`, `websearch`,
+  `codesearch`, `skill`, `task` and `external_directory`, and allows `edit`.
+- **PLANT for OpenCode** (LEAD-1c, `src/drivers/opencode_argv.ts` is the one spelling): what a
+  turn loads is the daemon's statement, never the workspace's or HOME's. The restriction
+  (`OPENCODE_DISABLE_PROJECT_CONFIG`, `OPENCODE_PURE` plus `--pure`,
+  `OPENCODE_DISABLE_CLAUDE_CODE`, `OPENCODE_DISABLE_EXTERNAL_SKILLS`,
+  `OPENCODE_CONFIG_CONTENT`, and `OPENCODE_PERMISSION` — the one key opencode lets override a
+  configuration's permissions, measured on 1.18.32) turns off the workspace `opencode.json`,
+  `.opencode/` agents, tools, plugins, commands and skills, and the `.claude` / `.agents` skill
+  trees; HOME comes from the HOME law below. `OPENCODE_ENV` is an ALLOWLIST of provider
+  credentials (`OPENCODE_API_KEY`, `OPENCODE_AUTH_CONTENT`, or a provider's key named
+  `…_API_KEY`, `…_AUTH_TOKEN`, `…_ACCESS_KEY_ID`, `…_SECRET_ACCESS_KEY` or `…_SESSION_TOKEN`): any other key
+  stops the daemon at parse, naming it. The CREDENTIAL STORE is a configuration source too (a
+  `wellknown` entry makes opencode fetch and merge `<url>/.well-known/opencode` on every turn —
+  an extra local MCP server, an agent prompt; measured on 1.18.32), so every turn states
+  `OPENCODE_AUTH_CONTENT` — the operator's, holding `api`/`oauth` entries only (refused at parse
+  otherwise), else `{}` — and opencode never reads the `auth.json` a turn could write into its
+  state. The same statement switches opencode's own off-plan traffic off (auto-update, the
+  models catalogue, LSP downloads, share) in every mode, and NAMES its database (`OPENCODE_DB`).
+  A CONSOLE ACCOUNT is a configuration source no key closes (an active org makes every start
+  fetch `<account url>/api/config` and merge it after the daemon's configuration — a local MCP
+  server reached a fully restricted turn, measured on 1.18.32), so every admission reads the
+  turn's database and refuses while it holds any console account
+  (`confinement.agent_cli_unsupported`, naming the `opencode console logout` to run); a database
+  that cannot be read cannot be proved clean and is refused too. Before any turn of a binary runs, the driver PROBES it
+  (cached per binary inode and operator environment, and only when every question answered):
+  it plants one canary per SOURCE, each with its own random token, in a daemon-private scratch
+  tree under `AGENT_STATE_ROOT/probe/`, and asks `opencode debug config`, `debug agent build`
+  and `debug skill` twice, with npm offline — a CONTROL without the four switches, where every canary
+  must surface (a probe that cannot see a source proves nothing about it), and exactly the
+  turn child's environment (the one function `declaredUnconfined` spawns with: its persistent
+  `unconfined/turn/state` as data/state/cache, where opencode keeps its database, and the
+  turn's own network — no proxy, as under `none` there is none), where none
+  may and the resolved configuration must be EXACTLY the daemon's (its MCP server and no other,
+  every permission, exactly its instruction file, no agent or command definition). It also asks
+  `opencode db path` and refuses a binary that does not open the database the daemon states (the
+  file admission reads for an account). The answer is
+  cached, so state a later turn writes is seen at the next probe, not the next turn — under
+  `none` there is no uid boundary to hold it anyway. Any failure refuses the driver
+  (`confinement.agent_cli_unsupported`, at `detect`, admission and setup), naming the source;
+  so does a `run --help` (read from stdout and stderr: yargs writes it to stderr) lacking a flag
+  the argv passes. A probe that could not ASK — any question past its 10 s bound (`--version`,
+  `run --help` and the `debug` questions alike), a spawn or a scratch tree the host
+  refused for want of resources — and proved nothing against the binary is refused retryable
+  instead (`confinement.agent_cli_unproved` → `site_builder.busy`) and asked again next attempt.
+  One probe per binary and operator environment runs at a time; every door joins it. `detect`
+  (the unauthenticated `/health`) waits for it at most 3 s (then "unavailable" while it runs
+  on) and serves an unproved answer for 60 s before starting another, so a caller of `/health`
+  cannot make the daemon spawn a probe per request (constants in `src/drivers/opencode.ts`). The live leg is `deploy/probes/opencode_plant_probe.ts`. Under
+  `systemd_scope` the driver stays refused, DERIVED from what phase B needs: a root-owned
+  per-run mount for opencode's configuration directory and a decided home for its provider-SDK
+  cache.
 - `src/drivers/registry.ts` maps `DriverId → AgentDriver`, exposes `detectDrivers()` (backs
   `/health` and `/capabilities`), and a test-only `__setTestDriver` seam.
 
@@ -391,10 +450,54 @@ the [site builder management page](../management/site_builder.md).
 `server/daemon_client.ts` is the only place the engine talks to the daemon. It attaches
 `Authorization: Bearer <token>` (from `config.siteBuilder.token`) and the acting user's
 identity, applies a timeout to control calls (not to the stream), and maps every transport
-failure and daemon problem into a stable `SiteBuilderError` code
-(`server/wire.ts`): `site_builder_unconfigured | unreachable | auth | rejected | failed |
-instance_mismatch`. The token and the daemon's address never appear in a response the engine
-relays to the browser.
+failure and daemon problem onto a registered `site_builder.*` code (`server/wire.ts`). The
+token and the daemon's address never appear in a response the engine relays to the browser.
+
+**The code is the message.** The browser renders a refusal from its code's label, so every
+refusal has a code of its own and no `site_builder.*` throw carries prose to the wire:
+
+- Transport and pairing: `unconfigured`, `unreachable`, `auth`, `instance_mismatch`,
+  `stream_lost`, `failed`.
+- Each machine `reason` the daemon sends (the reason lists in the daemon's `src/errors.ts`)
+  maps through the reason map in `server/wire.ts`, which is typed exhaustive over that union
+  and gated equal to the runtime list:
+    - the six busy reasons (`session_running`, `build_running`, `site_initializing`,
+      `site_recovering`, `git_running`, `site_deleting`) → `busy` (503, retryable);
+    - `slug_exists`, `workspace_exists`, `domain_taken`, `webspace_unavailable`, `no_build`,
+      `not_running` → the code of the same name (409);
+    - `max_sites` → `site_limit`, `disk_quota` → `disk_quota` (429), and
+      `max_concurrent_sessions` → `capacity` (429, retryable);
+    - `confinement_unavailable` and `confinement.*` → `confinement_unavailable`, or `busy`
+      for the conditions that clear by themselves (`site_busy`, `identity_quarantined`,
+      `daemon_stopping`, `agent_cli_unproved`).
+- The engine's own refusals, decided before the daemon is asked: `invalid_slug`,
+  `invalid_id`, `name_required`, `domain_required`, `text_required`,
+  `confirmation_required`, and the two permission refusals `not_permitted` and
+  `not_session_owner` (403, not `perm.*`, which would replace the tool panel with the
+  no-access page).
+- `rejected` remains only as the fallback for a daemon 4xx that carries no reason. A reason
+  the engine does not know (a daemon newer than the engine) also falls back by status, with
+  one log line naming the reason.
+
+The daemon's `detail` prose is log-only in every case — on BOTH doors:
+
+- **The control door** (a problem+json answer to a request) carries the machine `reason`
+  above; `src/util/response.ts` emits it only when it is one of the daemon's listed reasons
+  (a reason a cast smuggled past the type is dropped and logged).
+- **The stream door** (`session_stream`, a running turn's events) carries one too. An error
+  event is `{type:'error', reason, retriable}` (`src/drivers/turn_errors.ts`): the refusal's
+  own reason, or the supervisor's fault for the step that failed (`turn_timeout`,
+  `turn_interrupted`, `turn_setup_failed`, `turn_unit_lost`, `turn_agent_killed`,
+  `turn_agent_exited`, `turn_failed`). A terminal fault is ONE error: a deadline or a
+  requested stop is the turn's error (`turn_timeout`, `turn_interrupted` — before the agent
+  started or while it ran), never also the exit it caused. An agent that exited non-zero adds its stderr tail as
+  `agent_output` — the agent's own words, labelled and bounded, never the error's text. The
+  daemon's replay failure is the frame `event: error` `{reason:'replay_failed'}`. The engine's
+  relay (`server/wire.ts` `relaySessionFrames`) turns each error record into the converter's
+  body for the code its reason maps to (`turn_agent_exited` → `agent_failed`,
+  `turn_setup_failed`, `turn_timeout`, `turn_interrupted` and `replay_failed` → codes of the
+  same name, the rest of the faults → `failed`), passes every other record byte-for-byte, and
+  never flushes a record raw. A record with no reason or an unknown one is `failed`.
 
 ### The transport, and the pairing it proves
 
@@ -566,8 +669,31 @@ daemon starts nothing: it connects to the site's socket and PID 1 starts the run
 museum's polkit rule grants the service user only `stop` and `kill` on its declared sites'
 run instances (`src/provision/render/agent_authorization.ts`). The workspaces root is `2770`
 so the service user and the identities can work in it and no other uid on the host can look;
-each door's HOME is its identity's own (`0700`, under a root-owned state root every unit
-masks); the credential store, the audit handle and `$CREDENTIALS_DIRECTORY` stay the
+the build HOME is its identity's own (`0700`, under a root-owned state root every unit
+masks), and the TURN HOME is ROOT's (S3-HOME, the skeleton in
+`src/drivers/agent_identity.ts`): `0755` holding exactly `state/` (the identity's, `0700`),
+`.config/` (root's, `0755`, empty) and `.gitconfig` (root's `0644`, the turn's git directives).
+The turn unit points `XDG_CONFIG_HOME` at that read-only `.config` and `CLAUDE_CONFIG_DIR` and
+the XDG data/state/cache directories under `state/`, so nothing a turn writes at HOME level is
+configuration a later turn reads (git's global files, `~/.bunfig.toml`). `state/` itself is
+WRITABLE CLI STATE, not inert: what the CLI loads from `state/claude` (settings, hooks,
+skills, the MCP servers of its account file) is closed by the PLANT argv
+(`--setting-sources ''`, `--strict-mcp-config`, the daemon's `--settings`), not by ownership.
+The daemon checks the shape, as a closed world, inside conformance — at admission, at the
+run's open and at boot — and refuses a site whose HOME differs (`unit_nonconformant`, naming
+the path). `provision apply` rebuilds exactly the HOMEs that check refuses (one predicate,
+`turnHomeShapeProblems`, shared by the daemon and the plan): the daemon is stopped, the
+identity proved idle, the skeleton staged at `s<k>/turn.next`, the CLI's STATE — an allowlist:
+its session transcripts, account file and login — carried into `state/claude` by rename, the
+old HOME closed root-only and archived into `<agent state root>/retired/` (masked by every
+unit; the rename is proved to stay on one filesystem first), then swapped in — never re-owned
+in place, nothing deleted. Under
+`AGENT_CONFINEMENT=none` a turn gets a FRESH HOME per run (`unconfined/turn/run.*`, removed
+when it exits — a removal that fails is logged and left to the boot sweep, never thrown into the
+daemon) and a persistent `unconfined/turn/state`; the boot carries the pre-S3 HOME's CLI state
+into it once (the same allowlist, never through a link, never over a target). `AGENT_STATE_ROOT`
+is therefore REQUIRED under `none`: without an absolute one every turn is refused
+(`confinement_unavailable`) and the boot reports it — one predicate answers both. The credential store, the audit handle and `$CREDENTIALS_DIRECTORY` stay the
 daemon's alone. Egress IS policed per run, and not by an address list: systemd's IP filter
 is allow-wins, so the `IPAddressAllow=any` this design once relied on granted loopback and
 the LAN whatever the deny list said. Each run lives in a private network namespace with
@@ -603,8 +729,10 @@ without the confinement's token, so a new call site cannot quietly reopen the do
   holds in the kernel; that is the operator's `provision check` on the box.
 - **Engine**: `test/unit/tool_sitebuilder.test.ts` drives the proxy against an in-test
   mock daemon (config injected via `mock.module`), asserting the bearer + actor headers, the
-  error taxonomy, the publish gate, and byte-identical SSE pass-through with the
-  anti-buffering header. `test/unit/dd_tools_api_stream_headers.test.ts` guards the core edit.
+  error taxonomy, the publish gate, and the SSE relay with the anti-buffering header
+  (non-error records byte-identical). `test/unit/tool_sitebuilder_stream_codes.test.ts` drives
+  the stream door end to end (the real supervisor, store and SSE responder on the daemon side,
+  the real relay on the engine's). `test/unit/dd_tools_api_stream_headers.test.ts` guards the core edit.
   The tool is normalized out of the widget and register parity gates as a TS-only addition.
 
 ## File map

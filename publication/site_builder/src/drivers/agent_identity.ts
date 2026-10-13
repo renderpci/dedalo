@@ -32,6 +32,7 @@
 
 import { join } from 'node:path';
 import { type ConfinementDoor, DOORS } from './network_profile';
+import type { FixedEnvKey } from './unit_frames';
 
 /** The identity stem. `layout.ts` asserts it is `${VENDOR}-a-`, spelled from the one prefix. */
 export const AGENT_IDENTITY_STEM = 'dedalo-a-';
@@ -208,7 +209,9 @@ export function agentStateSiteDir(agentStateRoot: string, k: number): string {
 
 /**
  * The HOME a door runs with. turn and build each get their own directory
- * (`<agentStateRoot>/s<k>/<door>`, the identity's, 0700); git gets none at all.
+ * (`<agentStateRoot>/s<k>/<door>`); git gets none at all. The build HOME is the identity's
+ * (0700); the turn HOME is ROOT's (`TURN_HOME_SKELETON`, S3-HOME) with only `state/` the
+ * identity's.
  */
 export const GIT_HOME = '/nonexistent';
 
@@ -269,19 +272,27 @@ export function egressDirForSite(agentSocketDir: string, k: number): string {
  *   3. NOTHING ABOVE THE WORKSPACE IS AGENT-WRITABLE inside a unit (`ProtectSystem=strict`,
  *      `ReadWritePaths=` the workspace alone), so the walk upward finds nothing planted.
  *
+ *   4. GIT'S GLOBAL CONFIGURATION IS ROOT'S TOO (S3-HOME, below). git's global files are protected
+ *      configuration read AFTER the system file (`~/.gitconfig`, `$XDG_CONFIG_HOME/git/config`),
+ *      so a turn that could write either could say `safe.bareRepository = all` and reopen layer 2.
+ *      The turn HOME is therefore ROOT's (`TURN_HOME_SKELETON`): `~/.gitconfig` is a root-rendered
+ *      file saying the same directives, `XDG_CONFIG_HOME` is root's empty `~/.config`, and the
+ *      only identity-writable place under HOME is `state/`. git never reads configuration from
+ *      there (its global files are the two paths above); `state/` is the agent CLI's WRITABLE
+ *      state, and what the CLI loads from `state/claude` (settings, hooks, skills, MCP servers in
+ *      `.claude.json`) is closed by the PLANT argv (`--setting-sources ''`, `--strict-mcp-config`,
+ *      the daemon's `--settings`), not by ownership — measured per turn by `claude_turn_plant`
+ *      (H7-claude). Conformance checks the shape (closed world) before every run.
+ *
  * HONEST LIMIT: a repository planted in a SUBDIRECTORY with a `.git` of its own is reached only
  * by a git run from there (every measured CLI call runs in, or `-C`, the workspace root); a
  * `HEAD` the turn's own Write creates mid-turn is refused by the daemon's check only at the NEXT
- * turn — within the turn, only the configuration of layer 2 stands (git >= 2.38 reading
- * `/etc/gitconfig`). And layer 2 is the SYSTEM file only: git's GLOBAL configuration is protected
- * too and read after it, and for a turn it lives in the turn's own persistent, identity-writable
- * HOME (`~/.gitconfig`, `~/.config/git/config`). A turn whose Write reaches HOME (unmeasured on
- * 2.1.286: acceptEdits answers edits under the workspace) could say `safe.bareRepository = all`
- * there, and in the same turn the planted root would be used by a later git of that turn — open,
- * not closed here (binding root's file over those paths needs PID 1 to create mount points
- * inside an agent-writable directory, which is its own root-resolved path). The live probe (`deploy/probes/claude_plant_probe.ts` C5/P5, P5b for the
- * bare root) re-measures the CLI's git per release, and under `AGENT_CONFINEMENT=none` (declared
- * unconfined, the daemon's own uid) nothing is masked at all.
+ * turn — within the turn, only the configuration of layers 2 and 4 stands (git >= 2.38). The
+ * BUILD HOME is still the identity's own (a build runs agent-authored code by definition; its
+ * git is not the turn's). The live probe (`deploy/probes/claude_plant_probe.ts` C5/P5, P5b for
+ * the bare root, C6/P6 for the HOME) re-measures the CLI's git per release, and under
+ * `AGENT_CONFINEMENT=none` (declared unconfined, the daemon's own uid) nothing is masked — the
+ * turn HOME is only made FRESH per run there (`confinement.ts` `declaredUnconfined`).
  */
 export const TURN_MASKED_REPOSITORY = '.git';
 
@@ -327,10 +338,283 @@ export function gitconfigDirectives(body: string): string[] {
   return body.split('\n').filter(line => line.trim() !== '' && !/^\s*[#;]/.test(line));
 }
 
+/* ────────────────────────────────────────────────────────────────────────────────────
+ * S3-HOME — the turn HOME is ROOT's; only `state/` is the identity's (LEAD-1b §2.6a)
+ * ──────────────────────────────────────────────────────────────────────────────────── */
+
+/** One path of the turn HOME as root leaves it. `rel` is relative to HOME (`.` is HOME). */
+export interface TurnHomeRow {
+  readonly rel: string;
+  readonly type: 'dir' | 'file';
+  /** `root` is the provisioner; `identity` is the site's agent identity (and its private group). */
+  readonly owner: 'root' | 'identity';
+  readonly mode: number;
+}
+
+/**
+ * THE TURN HOME, AND NOTHING ELSE IN IT — the one source the plan (`provision/plan.ts`), the
+ * rebuild (`provision/apply.ts`), the renderer (`render/agent_units.ts`, the `.gitconfig`) and
+ * the conformance check (`confinement.ts` `turnHomeProblem`, closed world) all read.
+ *
+ * Every program a turn runs reads its configuration from HOME: git (`~/.gitconfig`,
+ * `$XDG_CONFIG_HOME/git/config` — protected configuration, read after the system file), Bun
+ * (`~/.bunfig.toml`), opencode (`~/.opencode`, `$XDG_CONFIG_HOME/opencode`), the agent CLI's own
+ * state. While HOME was the identity's own persistent 0700 directory, one turn's Write could
+ * plant configuration EVERY LATER TURN of that site would read. So HOME is root's and fixed:
+ *
+ *   - `.`          root 0755 — nothing can be created at HOME level;
+ *   - `state`      the identity's 0700 — the one writable place: `CLAUDE_CONFIG_DIR` and the
+ *                  `XDG_DATA/STATE/CACHE_HOME` point here. It is WRITABLE CLI STATE, not inert:
+ *                  what the CLI loads from `state/claude` is closed by the PLANT argv
+ *                  (`--setting-sources ''`, `--strict-mcp-config`, the daemon's `--settings`),
+ *                  not by ownership; git and Bun read no configuration from it;
+ *   - `.config`    root 0755 and EMPTY (`TURN_CONFIG_SUBDIRS`) — `XDG_CONFIG_HOME`;
+ *   - `.gitconfig` root 0644, the turn's git directives (`TURN_SYSTEM_GITCONFIG_DIRECTIVES`)
+ *                  and nothing else — so the global layer says what the system layer says.
+ */
+export const TURN_HOME_SKELETON: readonly TurnHomeRow[] = Object.freeze([
+  Object.freeze({ rel: '.', type: 'dir', owner: 'root', mode: 0o755 } as const),
+  Object.freeze({ rel: 'state', type: 'dir', owner: 'identity', mode: 0o700 } as const),
+  Object.freeze({ rel: '.config', type: 'dir', owner: 'root', mode: 0o755 } as const),
+  Object.freeze({ rel: '.gitconfig', type: 'file', owner: 'root', mode: 0o644 } as const),
+]);
+
+/** The relative name of the identity's writable state directory under the turn HOME. */
+export const TURN_HOME_STATE = 'state';
+
+/** The relative name of root's (empty) configuration directory under the turn HOME. */
+export const TURN_HOME_CONFIG = '.config';
+
+/** The relative name of root's global git configuration under the turn HOME. */
+export const TURN_HOME_GITCONFIG = '.gitconfig';
+
+/**
+ * THE ONLY NAMES `.config` MAY HOLD — empty today. The extension point of the opencode phase B
+ * (a root-owned mount point for a per-run tmpfs); a name appears here only with its mount.
+ */
+export const TURN_CONFIG_SUBDIRS: readonly string[] = Object.freeze([]);
+
+/** The top-level names of the turn HOME (the skeleton minus `.`), for the closed-world check. */
+export function turnHomeTopNames(): readonly string[] {
+  return TURN_HOME_SKELETON.filter(row => row.rel !== '.' && !row.rel.includes('/')).map(row => row.rel);
+}
+
+/**
+ * WHERE A TURN HOME IS STAGED while `provision apply` rebuilds an old-shape one:
+ * `<agentStateRoot>/s<k>/turn.next`, beside the HOME in root's 0755 site directory — so neither
+ * the identity nor the daemon can create, rename or replace it, and a crash between the staging
+ * and the swap leaves a state the next apply resumes (`turn.next` present, `turn` absent).
+ */
+export function turnHomeStagingPath(agentStateRoot: string, k: number): string {
+  return join(agentStateSiteDir(agentStateRoot, k), 'turn.next');
+}
+
+/**
+ * WHERE A REBUILT TURN HOME IS ARCHIVED: `<agentStateRoot>/retired/<stem>.<utc>` (root 0700) —
+ * beside the sites' state directories under the agent state root, so the rename stays on one
+ * filesystem (the rebuild still proves it: same device, or nothing moves), and every agent unit's
+ * `TemporaryFileSystem=<agentStateRoot>:ro` masks it: no run sees an archive, its own or another
+ * site's. A SIBLING of the `s<k>` directories, never inside a HOME a unit binds back.
+ */
+export const AGENT_STATE_ARCHIVE = 'retired';
+
+export function agentStateArchiveDir(agentStateRoot: string): string {
+  return join(agentStateRoot, AGENT_STATE_ARCHIVE);
+}
+
+/** One entry the rebuild of a turn HOME moves into the new `state/` (`provision/apply.ts`). */
+export interface TurnHomeCarry {
+  /** Relative to the OLD HOME. Every component above it must be the identity's real directory. */
+  readonly from: string;
+  /** Relative to the staged HOME. Never overwritten when it already exists. */
+  readonly to: string;
+  readonly type: 'dir' | 'file';
+  /** Why this entry survives a rebuild: it is STATE the CLI needs, not configuration. */
+  readonly reason: string;
+}
+
+const RESUME = 'the CLI\'s session transcripts: `--resume` continues a conversation from them';
+const ACCOUNT = 'the CLI\'s own account record (its onboarding and project bookkeeping)';
+const LOGIN = 'the CLI\'s login (an operator who logged the identity in would have to again)';
+
+/**
+ * WHAT A REBUILD CARRIES — AN ALLOWLIST, each entry with its reason. The agent CLI's STATE by
+ * rename, and nothing else: everything not listed — the old HOME's `.gitconfig`, `.config/`,
+ * `.bunfig.toml`, any plant, and the rest of the CLI's directory (`settings.json`, `skills/`,
+ * `agents/`, `commands/`, `CLAUDE.md`: configuration a turn could have written) — is ARCHIVED
+ * root-only as evidence, never carried. Two source shapes: a pre-S3 HOME (`.claude`,
+ * `.claude.json` at HOME level) and a refused S3 HOME being repaired (`state/claude/…`); the first
+ * present wins, and a target that already exists is never overwritten.
+ */
+export const TURN_HOME_CARRY: readonly TurnHomeCarry[] = Object.freeze([
+  Object.freeze({ from: 'state/claude/projects', to: 'state/claude/projects', type: 'dir', reason: RESUME } as const),
+  Object.freeze({ from: 'state/claude/.claude.json', to: 'state/claude/.claude.json', type: 'file', reason: ACCOUNT } as const),
+  Object.freeze({ from: 'state/claude/.credentials.json', to: 'state/claude/.credentials.json', type: 'file', reason: LOGIN } as const),
+  Object.freeze({ from: '.claude/projects', to: 'state/claude/projects', type: 'dir', reason: RESUME } as const),
+  Object.freeze({ from: '.claude.json', to: 'state/claude/.claude.json', type: 'file', reason: ACCOUNT } as const),
+  Object.freeze({ from: '.claude/.credentials.json', to: 'state/claude/.credentials.json', type: 'file', reason: LOGIN } as const),
+]);
+
+/** The directory a rebuild always leaves in the new `state/` (the CLI's, `CLAUDE_CONFIG_DIR`). */
+export const TURN_STATE_CLI_DIR = 'state/claude';
+
+/**
+ * THE DECLARED-UNCONFINED TURN'S HOMEs (S3-HOME under `none`): `<root>/unconfined/turn/state` is the
+ * persistent state (the CLI's sessions survive), and every run gets a FRESH HOME
+ * `<root>/unconfined/turn/run.<random>` — so whatever one run leaves at HOME level (`~/.gitconfig`,
+ * `~/.config/git`, `~/.bunfig.toml`, `~/.opencode`) is gone for the next. The same uid can still write
+ * `state/` directly: that is the declared posture (no uid boundary at all under `none`). Spelled
+ * here, beside the HOME law, because the run (`confinement.ts`) and the opencode probe (which must
+ * ask under the state a turn runs with) both name it.
+ */
+export function unconfinedTurnDirs(agentStateRoot: string): { readonly base: string; readonly state: string } {
+  const base = join(agentStateRoot, 'unconfined', 'turn');
+  return { base, state: join(base, TURN_HOME_STATE) };
+}
+
+/* ── the ONE shape predicate (conformance refuses it, the plan repairs it) ──────────────── */
+
+/** One path of a turn HOME, as an observer saw it (lstat: a link is a link). */
+export interface TurnHomeEntry {
+  readonly type: 'dir' | 'file' | 'symlink' | 'other';
+  /** Whose it is: the provisioner (`root`), the site identity, or anyone else. */
+  readonly whose: 'root' | 'identity' | 'other';
+  /** How its owner is named in a message (`uid 901`, `user 'x'`). */
+  readonly ownerName: string;
+  /** Permission bits (`& 0o7777`). */
+  readonly mode: number;
+}
+
+/** What the predicate may ask of an observer — the daemon (lstat/readdir) or the plan (HostState). */
+export interface TurnHomeView {
+  /** lstat of `path`: null when absent, `{error}` when it cannot be examined. */
+  readonly look: (path: string) => TurnHomeEntry | null | { readonly error: string };
+  /**
+   * The names in `dir`. null ONLY when `dir` is absent or not a directory (its row check names
+   * it); `{error}` when it is a directory whose names were not read — never a silent skip, or the
+   * closed world would vanish exactly when nobody looked.
+   */
+  readonly list: (dir: string) => readonly string[] | null | { readonly error: string };
+  /** The directives of the regular file at `path`, or `{error}` when its bytes are not known. */
+  readonly directives: (path: string) => readonly string[] | { readonly error: string };
+  /** How the site identity is named in a message; null when it does not resolve. */
+  readonly identity: string | null;
+}
+
+/**
+ * EVERY WAY A TURN HOME IS NOT ROOT'S SKELETON, each naming its path — the ONE predicate both
+ * `confinement.ts` `turnHomeProblem` (which REFUSES the site) and `provision/plan.ts` `agentPlan`
+ * (which REBUILDS the HOME) ask, so a HOME the daemon refuses is a HOME `provision apply` repairs
+ * — never one left refused forever. A CLOSED WORLD:
+ *
+ *   - every skeleton row is there, of its type, never a link;
+ *   - root's rows are the provisioner's and writable by nobody else; `state/` is the site
+ *     identity's and closed (`& 077 == 0`);
+ *   - `.gitconfig` says exactly the turn's git directives;
+ *   - HOME holds exactly the skeleton's names, and `.config/` nothing but `TURN_CONFIG_SUBDIRS`.
+ */
+export function turnHomeShapeProblems(home: string, view: TurnHomeView): string[] {
+  const problems: string[] = [];
+  for (const row of TURN_HOME_SKELETON) {
+    const path = row.rel === '.' ? home : join(home, row.rel);
+    const seen = view.look(path);
+    if (seen !== null && 'error' in seen) {
+      problems.push(`'${path}' cannot be examined (${seen.error})`);
+      continue;
+    }
+    if (seen === null) {
+      problems.push(`'${path}' is absent`);
+      continue;
+    }
+    if (row.type === 'file') {
+      if (seen.type !== 'file') problems.push(`'${path}' is not a regular file`);
+      else if (seen.whose !== 'root') problems.push(`'${path}' is owned by ${seen.ownerName}, not the provisioner's`);
+      else if ((seen.mode & 0o022) !== 0) problems.push(`'${path}' is writable by its group or by others (mode ${seen.mode.toString(8)})`);
+      else {
+        const said = view.directives(path);
+        if ('error' in said) problems.push(`'${path}' cannot be read (${said.error})`);
+        else if (JSON.stringify(said) !== JSON.stringify(TURN_SYSTEM_GITCONFIG_DIRECTIVES)) {
+          problems.push(`'${path}' says ${JSON.stringify(said)}, not exactly ${JSON.stringify(TURN_SYSTEM_GITCONFIG_DIRECTIVES)}`);
+        }
+      }
+      continue;
+    }
+    if (seen.type !== 'dir') {
+      problems.push(`'${path}' is ${seen.type === 'symlink' ? 'a link' : 'not a directory'}`);
+      continue;
+    }
+    if (row.owner === 'root') {
+      if (seen.whose !== 'root') problems.push(`'${path}' is owned by ${seen.ownerName}, not the provisioner's`);
+      else if ((seen.mode & 0o022) !== 0) problems.push(`'${path}' is writable by its group or by others (mode ${seen.mode.toString(8)})`);
+    } else if (view.identity === null) {
+      problems.push(`'${path}' cannot be checked: the site identity does not resolve`);
+    } else if (seen.whose !== 'identity') {
+      problems.push(`'${path}' is owned by ${seen.ownerName}, not the site identity's (${view.identity})`);
+    } else if ((seen.mode & 0o077) !== 0) {
+      problems.push(`'${path}' is open to its group or to others (mode ${seen.mode.toString(8)})`);
+    }
+  }
+  // THE CLOSED WORLD: nothing but the skeleton at HOME level, nothing but the declared names in .config.
+  for (const [dir, allowed] of [
+    [home, turnHomeTopNames()],
+    [join(home, TURN_HOME_CONFIG), TURN_CONFIG_SUBDIRS],
+  ] as const) {
+    const names = view.list(dir);
+    if (names === null) continue;
+    if ('error' in names) {
+      problems.push(`'${dir}' cannot be listed (${names.error}), so nothing proves it holds only ${JSON.stringify([...allowed])}`);
+      continue;
+    }
+    for (const name of [...names].sort()) {
+      if (!allowed.includes(name)) {
+        problems.push(`'${join(dir, name)}' is not part of the turn HOME (root provisions exactly ${JSON.stringify([...allowed])} there)`);
+      }
+    }
+  }
+  return problems;
+}
+
+/**
+ * THE TURN'S CONFIGURATION AND STATE LOCATIONS, as a function of its HOME and state directory.
+ * `XDG_CONFIG_HOME` is root's `.config` (never under `state/`: configuration is read-only);
+ * the CLI's own directory (`CLAUDE_CONFIG_DIR`) and the data/state/cache dirs are the state's.
+ * The confined unit fixes them (`unitFixedEnvironment`); the declared-unconfined turn sets them
+ * over a fresh per-run HOME and a persistent state (`confinement.ts`).
+ */
+export function turnHomeEnvironment(
+  home: string,
+  stateDir: string = join(home, TURN_HOME_STATE),
+): Readonly<Partial<Record<FixedEnvKey, string>>> {
+  return Object.freeze({
+    XDG_CONFIG_HOME: join(home, TURN_HOME_CONFIG),
+    CLAUDE_CONFIG_DIR: join(stateDir, 'claude'),
+    XDG_DATA_HOME: join(stateDir, 'data'),
+    XDG_STATE_HOME: join(stateDir, 'xdg-state'),
+    XDG_CACHE_HOME: join(stateDir, 'cache'),
+  });
+}
+
+/**
+ * THE DECLARED-UNCONFINED TURN'S CHILD ENVIRONMENT — the ONE function that says what a `none`
+ * turn's process receives: the caller's environment (the manager's base, the driver's statement
+ * over it), then the HOME law's keys over THAT (`runHome` fresh per run, `stateDir` persistent).
+ * No egress key: under `none` there is no gate to send anything through. `declaredUnconfined`
+ * spawns with it, and a driver's probe asks its binary under it — so the environment a probe
+ * proves and the one a turn runs with cannot drift apart (gate: O13 in opencode_plant.test.ts).
+ */
+export function unconfinedTurnChildEnvironment(
+  env: Readonly<Record<string, string>>,
+  runHome: string,
+  stateDir: string,
+): Record<string, string> {
+  return { ...env, HOME: runHome, ...(turnHomeEnvironment(runHome, stateDir) as Record<string, string>) };
+}
+
 /**
  * THE ENVIRONMENT A UNIT FIXES — rendered as `Environment=` lines by root, and the only
  * environment the run did not receive from the daemon. The shim refuses a spec that tries to
- * set any of these keys (`unit_frames.ts` FIXED_ENV_KEYS), and they win over the spec's.
+ * set any of these keys (`unit_frames.ts` FIXED_ENV_KEYS — the return type holds this to that
+ * list), and they win over the spec's.
  *
  * `DEDALO_*` are for the shim alone and never reach the child.
  */
@@ -339,14 +623,16 @@ export function unitFixedEnvironment(opts: {
   readonly workspace: string;
   readonly agentStateRoot: string;
   readonly k: number;
-}): Readonly<Record<string, string>> {
+}): Readonly<Partial<Record<FixedEnvKey, string>>> {
   assertDoor(opts.door);
-  const env: Record<string, string> = {
+  const home = agentHomeFor(opts.agentStateRoot, opts.k, opts.door);
+  const env: Partial<Record<FixedEnvKey, string>> = {
     DEDALO_DOOR: opts.door,
     DEDALO_UNIT_WORKDIR: opts.workspace,
     BUN_RUNTIME_TRANSPILER_CACHE_PATH: '0',
-    HOME: agentHomeFor(opts.agentStateRoot, opts.k, opts.door),
+    HOME: home,
   };
+  if (opts.door === 'turn') Object.assign(env, turnHomeEnvironment(home));
   if (opts.door === 'git') {
     // git reads no global and no system configuration: its whole configuration is the
     // repository's, which the daemon pins (GIT_DIR/GIT_WORK_TREE) per command.

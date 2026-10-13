@@ -15,11 +15,42 @@
  * should not be. What is lost is PROVENANCE, and in a heritage archive the
  * question "who changed this" is part of the record, not metadata about it.
  *
- * THE RULE. Every injected `custom_action_dispatch` either compares the
- * authenticated identity against the page's before resolving anything, or is
- * listed here with the reason it has no page identity to lose. The dispatch
+ * THE RULE. Every injected `custom_action_dispatch` either goes through the one
+ * identity door (below) before resolving anything, or is listed here with the
+ * reason it has no page identity to lose. The dispatch
  * REPLACES the login component's whole post-login flow (login.js: "stop here!"),
  * so each one is its own decision about what happens next.
+ *
+ * THE ONE DOOR (LEAD-2 + CLIENT-5, 2026-10-11). The overlay guard was right and
+ * still protected nothing: `error_dispatch.relogin()` resolved `recovered:true`
+ * from a `login_successful` SUBSCRIBER, and login.js publishes that event BEFORE
+ * it calls the injected dispatch — so every queued save and `build_autoload`
+ * retried as B while the guard was still deciding to reload.
+ *
+ * The first repair then decided identity TWICE — in the overlay guard and again
+ * in the recovery promise — and each copy masked the other: removing either
+ * check left every outcome gate green, so neither was load-bearing. Now there is
+ * ONE decision site, `error_dispatch.settle_relogin_attempt(api_response)` →
+ * `'resume' | 'retry_form' | 'refused'`: it alone calls `relogin_identity`,
+ * latches or clears the page identity, settles the pending recovery and reloads.
+ * The overlay is TRANSPORT — it hands the envelope to the door and resumes only
+ * on `'resume'`. `login_successful` is a notification and never an authorisation
+ * to resume: zero subscribers, and Mocha case (m) fences the OUTCOME (the event
+ * moves no queued save and no recovery, whatever a subscriber's spelling).
+ *
+ * THE CENSUS below keeps it ONE door: the four identity primitives
+ * (`relogin_identity`, `revoke_page_identity`, `clear_page_identity_revoked`,
+ * `reload_page`) are called — or imported, so an alias cannot hide a call — only
+ * in error_dispatch.js and the client test suite. A second caller is a second
+ * decision site, which is exactly the masking pair this replaced.
+ *
+ * THE OUTCOME GATES are the Mocha suite
+ * client/dedalo/test/client/js/test_relogin_identity.js (`bun run test:client`):
+ * a real component save and a real build_autoload, a real overlay dispatched as
+ * another user, the number of requests that followed, and the transport latch
+ * (case s); and test/unit/relogin_identity_wire_native.test.ts: the key the
+ * client primitive reads, measured on a real login body. This file is the
+ * census that keeps every dispatch, and the door itself, in that shape.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -29,6 +60,7 @@ import { Glob } from 'bun';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const SCAN_ROOTS = ['client', 'tools'] as const;
+const ERROR_DISPATCH = 'client/dedalo/core/common/js/error_dispatch.js';
 
 /** A handler INJECTED as the post-login flow — not the plumbing that carries it. */
 const DISPATCH_DEFINITION =
@@ -38,8 +70,8 @@ const DISPATCH_DEFINITION =
  * Dispatches with no page identity to protect, each with the reason. SHRINK-ONLY.
  */
 const EXEMPT_DISPATCHES: Readonly<Record<string, string>> = {
-	'client/dedalo/core/installer/js/render_installer.js':
-		'THE INSTALL WIZARD, which authenticates a box that has no session, no page_globals.user_id and no queued save — there is no previous identity for a re-login to differ from. It also never resolves a pending user action: it reveals the next wizard step.',
+	// (empty since 2026-10-12: the install wizard, the one exempt dispatch, was removed —
+	// WC-2026-10-12-install-surface-removed)
 };
 
 function scanFiles(): string[] {
@@ -51,6 +83,11 @@ function scanFiles(): string[] {
 		}
 	}
 	return files.sort();
+}
+
+/** Source without block and line comments (a comment naming a call is not a call). */
+function stripComments(src: string): string {
+	return src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:\\'"`])\/\/[^\n]*/g, '$1');
 }
 
 /**
@@ -78,10 +115,10 @@ function dispatchFiles(): { file: string; comparesIdentity: boolean }[] {
 		// only inside the dispatch body, so an unrelated `location.reload()`
 		// elsewhere in the file cannot satisfy it.
 		const body = dispatchBody(src);
-		const comparesIdentity =
-			/api_response\??\.?(?:\?\.)?user_id|result_options\?\.user_id/.test(body) &&
-			body.includes('page_globals') &&
-			/location\.reload\(\)/.test(body);
+		// Through the ONE door (error_dispatch.js `settle_relogin_attempt`), which
+		// alone decides, latches, settles and reloads. An inline comparison is a
+		// second decision site — refused here AND by the census below.
+		const comparesIdentity = body.includes('settle_relogin_attempt(');
 		found.push({ file, comparesIdentity });
 	}
 	return found;
@@ -91,10 +128,9 @@ describe('re-login identity — a queued save must not change author', () => {
 	const dispatches = dispatchFiles();
 
 	test('the scan finds the injected dispatches (anti-vacuity)', () => {
-		expect(dispatches.length).toBeGreaterThanOrEqual(2);
+		expect(dispatches.length).toBeGreaterThanOrEqual(1);
 		const files = dispatches.map((entry) => entry.file);
 		expect(files).toContain('client/dedalo/core/login/js/render_login.js');
-		expect(files).toContain('client/dedalo/core/installer/js/render_installer.js');
 	});
 
 	test('every injected dispatch compares identity, or is exempt with a reason', () => {
@@ -105,26 +141,17 @@ describe('re-login identity — a queued save must not change author', () => {
 			offenders,
 			'A post-login dispatch that resolves a pending action without checking WHO logged in ' +
 				"commits the previous user's queued edit under the new user's name — the audit trail " +
-				'then names the wrong person. Compare `api_response.result_options.user_id` against ' +
-				'`page_globals.user_id` and reload on a mismatch, or add an entry to ' +
+				'then names the wrong person. Hand the envelope to `settle_relogin_attempt(api_response)` ' +
+				"(error_dispatch.js) and resume only on 'resume', or add an entry to " +
 				`EXEMPT_DISPATCHES saying which page identity it has none of.\n  ${offenders.join('\n  ')}`,
 		).toEqual([]);
 	});
 
-	test('the key the guard reads is the key the login handler emits', () => {
-		// A source census cannot catch a guard reading a key the server never
-		// sends — which is exactly how the first version of this fix shipped
-		// INERT. Pin the two halves against each other.
-		const handler = readFileSync(join(REPO_ROOT, 'src/core/api/handlers/dd_utils_api.ts'), 'utf8');
-		expect(
-			/extend:\s*\{\s*user_id:/.test(handler),
-			'src/core/api/handlers/dd_utils_api.ts no longer answers the login with `extend: { user_id }`. ' +
-				'The re-login guard reads `api_response.user_id` on the strength of this — if the shape ' +
-				'moved, the guard is inert again and the audit trail silently names the wrong person.',
-		).toBe(true);
-		// ...and it is NOT the PHP-era nesting, which is what made the guard inert.
-		expect(handler).not.toContain('result_options');
-	});
+	// THE KEY THE GUARD READS IS THE KEY THE LOGIN EMITS — gated as an OUTCOME in
+	// relogin_identity_wire_native.test.ts (a real login over HTTP, the real
+	// client primitive asked about the parsed body), not by spelling here: a
+	// spelling pin on the handler and the primitive stayed green with the key
+	// moved on the wire.
 
 	test('no exemption is stale', () => {
 		const files = new Set(dispatches.map((entry) => entry.file));
@@ -132,26 +159,74 @@ describe('re-login identity — a queued save must not change author', () => {
 		expect(stale).toEqual([]);
 	});
 
-	test('the relogin overlay reloads rather than resuming across an identity change', () => {
-		// The positive pin: it must not merely READ the ids, it must refuse to
-		// resolve `on_success` when they differ.
-		const src = readFileSync(
-			join(REPO_ROOT, 'client/dedalo/core/login/js/render_login.js'),
-			'utf8',
+	test('ONE decision site: the identity primitives are called only by error_dispatch.js', () => {
+		// A second caller of any of them is a second place that decides who logged
+		// in — the masking pair (overlay guard + recovery promise) this replaced.
+		// Imports count too: `import {relogin_identity as decide}` hides every call.
+		const PRIMITIVES = [
+			'relogin_identity',
+			'revoke_page_identity',
+			'clear_page_identity_revoked',
+			'reload_page',
+		] as const;
+		const allowed = (file: string): boolean =>
+			file === ERROR_DISPATCH || file.startsWith('client/dedalo/test/');
+		const offenders: string[] = [];
+		let seenInDoor = 0;
+		for (const file of scanFiles()) {
+			const code = stripComments(readFileSync(join(REPO_ROOT, file), 'utf8'));
+			for (const name of PRIMITIVES) {
+				const called = new RegExp(`(?<![\\w$])${name}\\s*\\(`).test(code);
+				const imported = new RegExp(
+					`import\\s*\\{[^}]*(?<![\\w$])${name}(?![\\w$])[^}]*\\}\\s*from\\s*['"][^'"]*error_dispatch\\.js['"]`,
+				).test(code);
+				if (file === ERROR_DISPATCH && called) seenInDoor++;
+				if (!allowed(file) && (called || imported)) {
+					offenders.push(`${file}: ${called ? 'calls' : 'imports'} ${name}`);
+				}
+			}
+		}
+		// anti-vacuity: the door itself must be where the calls are
+		expect(seenInDoor, `${ERROR_DISPATCH} calls none of the identity primitives`).toBeGreaterThan(
+			0,
 		);
-		const dispatch = src.slice(src.indexOf('custom_action_dispatch\t: function('));
-		const guard = dispatch.slice(0, dispatch.indexOf('login_instance.destroy'));
-		// THE KEY THE SERVER ACTUALLY EMITS. Envelope v2 puts extension keys at
-		// top level, so the login handler's user_id arrives as `api_response.user_id`
-		// — see the sibling test, which reads the handler itself.
-		expect(guard).toContain('api_response?.user_id');
-		expect(guard).toContain('page_globals');
-		expect(guard).toContain('window.location.reload()');
-		// FAIL CLOSED: an unresolvable identity is not a verified match. Pin the
-		// CONDITION, not the variable — declaring `identity_unknown` and then not
-		// branching on it reads as closed and behaves as open.
-		expect(guard.replace(/\s+/g, ' ')).toContain('identity_differs || identity_unknown');
-		// The guard must come BEFORE the resolve, or it protects nothing.
-		expect(guard).not.toContain('on_success(');
+		expect(
+			offenders,
+			'An identity primitive used outside error_dispatch.js is a SECOND decision site: route it ' +
+				'through `settle_relogin_attempt(api_response)` (resume | retry_form | refused) instead.',
+		).toEqual([]);
+	});
+
+	test('the door exists and is the only caller of relogin_identity in error_dispatch.js', () => {
+		// the //end marker is itself a comment: locate on the raw source, judge the
+		// comment-stripped slices
+		const raw = readFileSync(join(REPO_ROOT, ERROR_DISPATCH), 'utf8');
+		expect(raw, `${ERROR_DISPATCH}: export const settle_relogin_attempt not found`).toMatch(
+			/export\s+const\s+settle_relogin_attempt\s*=/,
+		);
+		const start = raw.indexOf('export const settle_relogin_attempt');
+		const end = raw.indexOf('//end settle_relogin_attempt', start);
+		expect(end, `${ERROR_DISPATCH}: //end settle_relogin_attempt marker not found`).toBeGreaterThan(
+			start,
+		);
+		const door = stripComments(raw.slice(start, end));
+		const outside = stripComments(raw.slice(0, start) + raw.slice(end));
+		expect(door).toMatch(/(?<![\w$])relogin_identity\s*\(/);
+		expect(
+			(outside.match(/(?<![\w$])relogin_identity\s*\(/g) ?? []).length,
+			'relogin_identity is called outside settle_relogin_attempt — a second decision site in the module',
+		).toBe(0);
+	});
+
+	test('zero login_successful subscribers in client/ and tools/', () => {
+		// The event is published BEFORE the door decides: a subscriber that resumes
+		// work on it resumes as whoever logged in. (The OUTCOME fence is Mocha case
+		// (m); this is the spelling half, cheap and loud.)
+		const offenders = scanFiles().filter((file) =>
+			/subscribe\(\s*['"`]login_successful['"`]/.test(
+				stripComments(readFileSync(join(REPO_ROOT, file), 'utf8')),
+			),
+		);
+		expect(offenders).toEqual([]);
 	});
 });

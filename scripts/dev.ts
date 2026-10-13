@@ -6,10 +6,11 @@
  *   1. the CSS watcher (scripts/build_css.ts --watch) — recompiles LESS on save;
  *   2. the server under `bun --watch`, wrapped in the SUPERVISOR loop.
  *
- * WHY THE SUPERVISOR EXISTS (do not remove it): the browser install wizard writes
- * ../private/.env and then exits the process with code 75, because config is read once at
- * import and the only way into the new config is a fresh process. In production systemd's
- * `Restart=always` does this; in dev, this loop is that supervisor. Any OTHER exit code is
+ * WHY THE SUPERVISOR EXISTS (do not remove it): a code update (or restore) swaps the tree
+ * and then exits the process with code 75, because config and the module graph are read
+ * once at import and the only way into the new code is a fresh process. In production
+ * systemd's `Restart=always` does this; in dev, this loop is that supervisor. Exit 78 (the
+ * server refused to start: not installed) is NOT restarted either. Any OTHER exit code is
  * a real failure and propagates — we do not restart on a crash, which would hide it.
  *
  * WHY CSS NEEDS ITS OWN WATCHER: `bun --watch` follows the TypeScript module graph, and no
@@ -31,7 +32,7 @@
 // IMPORTED, never re-typed. The supervisor must key on the SAME exit code the server
 // actually uses to ask for a restart; a hand-copied `75` here is precisely the stale-copy
 // drift that `install_restart_supervisor_tripwire.test.ts` exists to catch.
-import { RESTART_EXIT_CODE } from '../src/core/install/restart.ts';
+import { RESTART_EXIT_CODE } from '../src/core/update/restart.ts';
 
 const cssWatcher = Bun.spawn(['bun', 'run', 'scripts/build_css.ts', '--watch'], {
 	stdio: ['ignore', 'inherit', 'inherit'],
@@ -76,7 +77,7 @@ try {
 			process.exit(code);
 		}
 		console.log(
-			`[supervisor] restart requested (exit ${RESTART_EXIT_CODE}) — rebooting into the persisted config`,
+			`[supervisor] restart requested (exit ${RESTART_EXIT_CODE}, code update) — rebooting`,
 		);
 	}
 } finally {

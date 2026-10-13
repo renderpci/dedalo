@@ -633,6 +633,9 @@ describe('openExportGrid runs in its OWN identity scope', () => {
 		);
 		expect(inRequest.frontierRefusals.some(isDenied)).toBe(true);
 		expect((outer.frontierRefusals ?? []).some(isDenied)).toBe(true);
+		// Opened, never read: an opened grid holds its selection cursor until
+		// its lines end or are returned (PERF-1) — give it back.
+		await inRequest.lines.return(undefined);
 
 		// A request context that is merely AMBIENT (the detached job inherits the
 		// submitting request's through the job manager) is never written: that
@@ -648,12 +651,14 @@ describe('openExportGrid runs in its OWN identity scope', () => {
 
 		// The request-serving door (exportGridUnified) names its own request.
 		const served = readerRequest();
-		await runWithRequestContext(served, () =>
+		const servedResponse = (await runWithRequestContext(served, () =>
 			runWithRequestLangs({ applicationLang: appLang, dataLang: DATA_LANG }, () =>
 				exportGridUnified({ ...streamContext(), options }),
 			),
-		);
+		)) as unknown as { stream?: ReadableStream<Uint8Array> };
 		expect((served.frontierRefusals ?? []).some(isDenied)).toBe(true);
+		// The response body is never read here: cancel it (releases the cursor).
+		await servedResponse.stream?.cancel();
 
 		// Control: without the unreadable hop the same selection is not empty.
 		const control = await openExportGrid(
@@ -661,5 +666,6 @@ describe('openExportGrid runs in its OWN identity scope', () => {
 		);
 		expect(control.meta.total).toBe(SOURCE_IDS.length);
 		expect(control.frontierRefusals.length).toBe(0);
+		await control.lines.return(undefined);
 	});
 });

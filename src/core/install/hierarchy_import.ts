@@ -1,5 +1,5 @@
 /**
- * install_hierarchies — the wizard's hierarchy step. For each selected OPTIONAL TLD: look
+ * install_hierarchies — the installer's hierarchy step. For each selected OPTIONAL TLD: look
  * up its entry in the vendored thesaurus manifest (hierarchy.json, hierarchy_meta.ts —
  * WC-2026-10-10-hierarchy-json-manifest), import the data files the entry lists
  * (`<tld>1.copy.gz` terms, `<tld>2.copy.gz` models) into matrix_hierarchy, re-consolidate
@@ -33,8 +33,8 @@
  * with no entry) is a warning in the batch message (strongly recommended,
  * installable later from Maintenance › Install hierarchies). Only a declared
  * MANDATORY ONTOLOGY this installation lacks (the ontology law) refuses the
- * WHOLE batch before anything is written. ONE door: the wizard step, the CLI
- * and the add_hierarchy widget all come through here.
+ * WHOLE batch before anything is written. ONE door: the installer's step and
+ * the add_hierarchy widget all come through here.
  *
  * ALREADY IMPORTED CONVERGES. A tld whose LISTED sections already hold its
  * rows is not re-copied (the raw `\copy` is insert-only) but is still
@@ -58,8 +58,8 @@
  * section_tipo, and uses `\copy … FROM STDIN` through psql (the sanctioned subprocess
  * pattern).
  *
- * Login-gated (the router checks the session): a fresh install reaches this only after the
- * in-wizard root login. Selecting no optional hierarchy is valid (the seed already carries
+ * The installer runs it as the audited actor -1; the add_hierarchy widget behind the
+ * maintenance area's session gate. Selecting no optional hierarchy is valid (the seed already carries
  * the core ontology, and Languages is already active).
  *
  * IMPORT IS HALF THE JOB. The `.copy.gz` only lands term rows; on their own they are
@@ -107,9 +107,8 @@ export interface HierarchyImportResponse {
 
 /**
  * A BATCH REPORT, not a refusal. The import runs per tld and answers what
- * happened to each one; the router serves it as `ok(<ok>, {extend:{msg, errors,
- * responses}})` so the wizard keeps reading `result`/`msg`/`errors` through the
- * compat mirror and still gets the per-tld sentences (a thrown refusal would
+ * happened to each one; the add_hierarchy widget serves it as a widget outcome
+ * and the installer prints it, so both still get the per-tld sentences (a thrown refusal would
  * replace `errors` with the single failure code and lose them).
  */
 export interface InstallHierarchiesResult {
@@ -574,7 +573,7 @@ async function optionalHierarchyOutcome(
 	return importedHierarchyOutcome(meta, connection, options, engineOwnsTarget, userId);
 }
 
-/** The batch sentence the wizard shows. */
+/** The batch sentence the caller shows. */
 function batchMessage(
 	tldCount: number,
 	responses: readonly HierarchyImportResponse[],
@@ -595,7 +594,7 @@ function batchMessage(
  * TWO WRITE CHANNELS, ONE DATABASE. The import is a `\copy` through psql into `conn`;
  * the activation writes through the ENGINE (its connection pool), which is bound to the
  * CONFIGURED database and cannot be pointed elsewhere. They agree only while `conn` names
- * that same database — which the wizard always does (it passes no conn at all). A caller
+ * that same database — which the installer and the widget always do (they pass no conn at all). A caller
  * that hands us a DIFFERENT database (a scratch DB in a test) would import there and
  * activate HERE: half the work in each. That is not a scenario we can serve, so we refuse
  * to activate and say so, rather than silently writing a hierarchy into the wrong database.
@@ -606,7 +605,7 @@ function batchMessage(
  * MUTATES THE MACHINE — config files, a database restore, root credentials, a
  * 126 MB hierarchy import, or a process restart. Blocked by DANGER, not by
  * fixture: the hermetic logic in the same subsystem (deriveLangConfig,
- * installIpAllowed, resolvePgBinary, the hierarchy_meta readers) IS gated
+ * pgBinaryCandidates, the hierarchy_meta readers) IS gated
  * (test/unit/tier1_install_native.test.ts).
  */
 export async function installHierarchies(

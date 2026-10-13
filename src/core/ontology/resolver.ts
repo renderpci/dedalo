@@ -27,6 +27,7 @@ import { isInTransaction, sql } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
+import { refuseLabelNode } from './label_node_guard.ts';
 import { formatRetiredPropertyLine, retiredKeysOf } from './property_census.ts';
 import { getSectionIdFromTipo } from './tld.ts';
 
@@ -427,12 +428,21 @@ export async function getRecursiveChildrenTipos(sectionTipo: string): Promise<st
  * tipo → term (label) in a given lang, or null. Reads the dd_ontology `term`
  * translations map; used for the RAG chunker's contextual document title.
  * Best-effort: falls back to the structure lang, then any non-empty term.
+ * A model='label' node is refused (refuseLabelNode, ./label_node_guard.ts):
+ * dev/test throw; production logs once and answers null (this resolver's
+ * existing "no term" value). Uncached, so nothing to keep a refusal in.
  */
 export async function getTermByTipo(tipo: string, lang: string): Promise<string | null> {
-	const rows = (await sql`SELECT term FROM dd_ontology WHERE tipo = ${tipo} LIMIT 1`) as {
+	const rows = (await sql`SELECT term, model FROM dd_ontology WHERE tipo = ${tipo} LIMIT 1`) as {
 		term: Record<string, string> | null;
+		model: string | null;
 	}[];
-	const term = rows[0]?.term ?? null;
+	if (refuseLabelNode(tipo, rows[0]?.model)) return null;
+	return termInLang(rows[0]?.term ?? null, lang);
+}
+
+/** getTermByTipo's lang fallback: lang → lg-spa → any non-empty term → null. */
+function termInLang(term: Record<string, string> | null, lang: string): string | null {
 	if (term === null) return null;
 	return term[lang] ?? term['lg-spa'] ?? Object.values(term).find((value) => value) ?? null;
 }

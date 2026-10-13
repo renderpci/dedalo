@@ -31,7 +31,7 @@
  * 0750 / 0640 — nginx reads them through the engine's group, like media.
  *
  * WHEN: publishClientAtBoot runs before the socket bind in EVERY boot mode
- * (the install wizard is client too). It is a no-op when the key is unset
+ * that serves. It is a no-op when the key is unset
  * (every non-container install) and in a smoke boot (read-only by
  * construction). It never throws (the returned promise never rejects): a
  * failure is one loud `[client_publish]` line, and the engine still serves its

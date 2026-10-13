@@ -58,7 +58,7 @@
  *   update — SSE phase frames, planned death, container restart onto the new
  *   tree, /health answering 7.0.1, sentinel confirmed ON THE HOST FS. Needs
  *   the museum install's login (--user/--pass; its users were set by ITS
- *   wizard and are unknown here).
+ *   installer and are unknown here).
  *
  * Safety: never touches the master's data or the museum's database beyond the
  * update itself; every mutation is listed above and reversible (remove the

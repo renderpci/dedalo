@@ -71,7 +71,7 @@ import { readMatrixRecord } from '../../../src/core/db/matrix.ts';
 import { sql, withTransaction } from '../../../src/core/db/postgres.ts';
 import { ensureTmHistoryReady, tmEpochPredicate } from '../../../src/core/db/record_generation.ts';
 import { TM_IMAGE_ABSENT_COLUMN, TM_ROLE } from '../../../src/core/db/time_machine.ts';
-import { DedaloError, ok } from '../../../src/core/errors/index.ts';
+import { DedaloError, ok, toDedaloError } from '../../../src/core/errors/index.ts';
 import {
 	getColumnNameByModel,
 	getMatrixTableFromTipo,
@@ -154,7 +154,11 @@ export type BulkRevertSkipReason =
  * One `skipped[]` entry. Coordinates are present ONLY for a unit the caller
  * was entitled to see (it passed the scope gate); an `out_of_scope` entry, or
  * a `failed` one from before the gate, carries the reason alone. `lang` names
- * the language region of a lang-sliced key.
+ * the language region of a lang-sliced key. `code` rides a LOCATED `failed`
+ * entry only: the converter's wire code of the error that failed the unit
+ * (`tree.cycle` for a revert that would close a loop in a hierarchy;
+ * `internal.unexpected` for an untyped throw) — a code, never the words
+ * (WC-2026-10-11-parent-link-cycle-every-door).
  */
 export interface BulkRevertSkipped {
 	reason: BulkRevertSkipReason;
@@ -162,6 +166,12 @@ export interface BulkRevertSkipped {
 	tipo?: string;
 	section_id?: number;
 	lang?: string;
+	code?: string;
+}
+
+/** The wire code of the error that failed a unit (the ONE converter classifies it). */
+export function failureCodeOf(error: unknown): string {
+	return toDedaloError(error).code;
 }
 
 /** Why a written key or record is not an exact inverse of the run. */
@@ -348,8 +358,9 @@ function createReporter(requestId: string, bulkProcessId: number) {
 	const inexact: BulkRevertInexact[] = [];
 	const tally = { counter: 0, unchanged: 0, exactDone: 0 };
 	/**
-	 * Refuse a unit or record: the code goes on the wire, the coordinates only
-	 * when it has passed the scope gate, and the words (if any) to the log.
+	 * Refuse a unit or record: the code goes on the wire, the coordinates (and
+	 * a `failed` unit's error code) only when it has passed the scope gate, and
+	 * the words (if any) to the log.
 	 */
 	const skip = (
 		row: Located,
@@ -357,6 +368,7 @@ function createReporter(requestId: string, bulkProcessId: number) {
 		inScope: boolean,
 		detail: string | null,
 		level: 'warn' | 'error' = 'warn',
+		code?: string,
 	): void => {
 		skipped.push(
 			inScope
@@ -366,6 +378,7 @@ function createReporter(requestId: string, bulkProcessId: number) {
 						tipo: row.tipo,
 						section_id: row.section_id,
 						lang: row.lang,
+						...(code === undefined ? {} : { code }),
 					}
 				: { reason },
 		);
@@ -526,6 +539,7 @@ async function executeRevert(ctx: ToolActionContext, run: RevertRun): Promise<To
 					inScope,
 					error instanceof Error ? error.message : String(error),
 					'error',
+					failureCodeOf(error),
 				);
 			}
 		}
@@ -780,7 +794,7 @@ function reportRecord(
 	if (outcome.kind === 'out_of_scope') report.skip(row, outcome.kind, false, null);
 	// Located only when its scope gate (bornGate) passed before the throw.
 	else if (outcome.kind === 'failed')
-		report.skip(row, 'failed', outcome.located, outcome.detail, 'error');
+		report.skip(row, 'failed', outcome.located, outcome.detail, 'error', outcome.code);
 	else if (outcome.kind === 'refused') report.skip(row, outcome.reason, true, null);
 	else if (outcome.kind === 'kept') report.skip(row, 'cascade_delete_not_reverted', true, null);
 	else if (outcome.kind === 'present') return;

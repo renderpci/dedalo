@@ -35,12 +35,11 @@ still not sit on IPv4 link-local (`169.254.0.0/16`) or on another cloud's metada
 and Google Compute Engine, `fd20:ce::254`), in any spelling — through a local-use NAT64
 address (`64:ff9b:1::/48`) included.
 
-**Action needed if an address allowlist** (`DEDALO_INSTALL_ALLOWED_IPS`,
-`DEDALO_ERROR_REPORT_ALLOWED_IPS`) **has an IPv4 part with a leading zero**
-(`127.0.0.01`, `010.0.0.1`): such an entry is no longer read as a number and matches no
-client, because some systems read it as octal — so the installer or the error report
-refuses that client until you rewrite the entry without leading zeros. The install
-allowlist line the server logs when it starts names such an entry as ignored. An entry now
+**Action needed if the address allowlist** (`DEDALO_ERROR_REPORT_ALLOWED_IPS`)
+**has an IPv4 part with a leading zero** (`127.0.0.01`, `010.0.0.1`): such an entry is
+no longer read as a number and matches no client, because some systems read it as
+octal — so the error report refuses that client until you rewrite the entry without
+leading zeros. An entry now
 matches its address in every spelling: `2001:db8:0::1` matches a client reported as
 `2001:db8::1`, `127.0.0.1` (or the `loopback` token) matches `::ffff:7f00:1`, the form a
 dual-stack listener may report, and a block written in the IPv4-mapped form

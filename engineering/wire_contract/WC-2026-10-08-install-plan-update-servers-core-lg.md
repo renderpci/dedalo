@@ -101,3 +101,5 @@ resolved, `inspectHierarchy` usable).
 
 No parity fixture covers the install surface (TS-native, WC-004), so the frozen
 store is untouched and no re-harvest question arises.
+
+## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (its `get_install_context` / router-action half: the wizard is gone; the plan half stands (the terminal installer runs it))

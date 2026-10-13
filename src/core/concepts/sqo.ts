@@ -23,6 +23,8 @@
 import { z } from 'zod';
 import { config } from '../../config/config.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import { specOf } from '../errors/registry.ts';
+import type { ApiNotice } from '../errors/schema.ts';
 import {
 	boundedFreeText,
 	boundedIdentifier,
@@ -159,6 +161,64 @@ export const sqoSchema = z
 
 export type Sqo = z.infer<typeof sqoSchema>;
 
+/** A page value the client SENT (not undefined, not null). */
+function isPresent(value: unknown): boolean {
+	return value !== undefined && value !== null;
+}
+
+/** The section a log line names for an SQO (its first section_tipo). */
+function sqoScopeLabel(sectionTipo: string | string[]): string {
+	return Array.isArray(sectionTipo) ? (sectionTipo[0] ?? '?') : sectionTipo;
+}
+
+/**
+ * The page window AS THE CLIENT SENT IT, kept on a wire-parsed SQO under a
+ * NON-ENUMERABLE symbol (never serialized, never spread, invisible to
+ * equality): the wire bounds the window (wireSqoSchema) before any door sees
+ * it, and a door that owes a visible truncation (`search.page_clamped`) must
+ * still be able to say what was asked. Read it through `requestedPage`.
+ */
+const WIRE_REQUESTED_PAGE: unique symbol = Symbol('dedalo.sqo.wire_requested_page');
+
+/**
+ * The client's page as sent: the wire-recorded original when the SQO came
+ * through wireSqoSchema, else the SQO's own limit/offset (a server-built or
+ * test-built RQO that never crossed the wire). Feeding it to clampClientPage
+ * is idempotent with the wire clamp — the same raw values, the same clamp —
+ * so the door's `bounded` verdict is true whichever side bounded first.
+ */
+export function requestedPage(sqo: unknown): { limit: unknown; offset: unknown } {
+	if (sqo === null || typeof sqo !== 'object') return { limit: undefined, offset: undefined };
+	const recorded = (sqo as { [WIRE_REQUESTED_PAGE]?: { limit: unknown; offset: unknown } })[
+		WIRE_REQUESTED_PAGE
+	];
+	if (recorded !== undefined) return recorded;
+	const own = sqo as { limit?: unknown; offset?: unknown };
+	return { limit: own.limit, offset: own.offset };
+}
+
+/**
+ * THE WIRE SQO (READ-4 Leg W): `sqoSchema` plus the ONE page bound, applied at
+ * the parse door every HTTP body crosses (rqo.ts → server.ts), so a door that
+ * forgets to clamp still receives a bounded window. A PRESENT limit comes out
+ * an integer in [1, CLIENT_MAX_LIMIT] (clampClientLimit), a present offset an
+ * integer in [0, MAX_SAFE_INTEGER] (clampClientOffset). `null` and absent are
+ * KEPT as they arrived — `mergeSessionSqo` keys on own-property presence and
+ * the read-mode defaults on "absent" — and no key is ever added. The output
+ * type stays `Sqo`. Server-internal SQOs never pass here (they may use 'all').
+ */
+export const wireSqoSchema = sqoSchema.transform((sqo): Sqo => {
+	const scope = sqoScopeLabel(sqo.section_tipo);
+	const bounded: Sqo = { ...sqo };
+	if (isPresent(sqo.limit)) bounded.limit = clampClientLimit(sqo.limit, scope);
+	if (isPresent(sqo.offset)) bounded.offset = clampClientOffset(sqo.offset, scope);
+	Object.defineProperty(bounded, WIRE_REQUESTED_PAGE, {
+		value: { limit: sqo.limit, offset: sqo.offset },
+		enumerable: false,
+	});
+	return bounded;
+});
+
 /**
  * Bounds on an untrusted client SQO's filter tree (L7): a pathologically nested
  * or huge $and/$or tree would otherwise drive unbudgeted recursion (stack /
@@ -252,6 +312,124 @@ export function clampClientLimit(rawLimit: unknown, scope: string): number {
 }
 
 /**
+ * THE client offset clamp (READ-4) — the offset half of the ONE page bound.
+ * Whatever arrives comes out an integer in [0, Number.MAX_SAFE_INTEGER]:
+ *
+ * - absent (undefined/null), NaN, non-numeric → 0 (page 1);
+ * - a finite value → truncated, floored at 0 (INJ-06: a negative offset is
+ *   meaningless and never reaches the assembler raw);
+ * - a value past MAX_SAFE_INTEGER (`1e21`, `Infinity`) → MAX_SAFE_INTEGER, which
+ *   is past the end of any table — an EMPTY page, never `OFFSET 1e+21` (a raw
+ *   Postgres 500). Loud: the caller asked for something no page can name.
+ */
+export function clampClientOffset(rawOffset: unknown, scope: string): number {
+	if (!isPresent(rawOffset)) return 0;
+	const offset = Number(rawOffset);
+	if (Number.isNaN(offset)) {
+		console.warn(
+			`[sqo] client offset ${JSON.stringify(rawOffset)} (section_tipo ${scope}) is not a number — served from 0`,
+		);
+		return 0;
+	}
+	if (offset > Number.MAX_SAFE_INTEGER) {
+		console.warn(
+			`[sqo] client offset ${String(rawOffset)} (section_tipo ${scope}) is past any page — clamped to MAX_SAFE_INTEGER (an empty page)`,
+		);
+		return Number.MAX_SAFE_INTEGER;
+	}
+	return Math.max(0, Math.trunc(offset));
+}
+
+/**
+ * How a client page was bounded: `'requested'` — served as sent;
+ * `'defaulted'` — the limit was absent and the door's default applied;
+ * `'clamped'` — a value the client SENT (limit or offset) was changed.
+ */
+export type ClientPageBound = 'requested' | 'defaulted' | 'clamped';
+
+/** A bounded client page — what a door hands the sink. */
+export interface ClientPage {
+	limit: number;
+	offset: number;
+	bounded: ClientPageBound;
+}
+
+/**
+ * THE client page primitive (READ-4): every door that pages a CLIENT window
+ * resolves it here, so no door can mean "all" by an absent limit or pass an
+ * offset raw. The limit goes through clampClientLimit (still exactly one
+ * clamp — an absent limit takes `doorDefault` first, itself clamped), the
+ * offset through clampClientOffset.
+ *
+ * `bounded` tells the door whether it owes the caller a visible truncation
+ * (`search.page_clamped`, pageClampedNotice): a door whose absent limit used
+ * to mean "all" owes it for `'defaulted'` too.
+ */
+export function clampClientPage(
+	rawLimit: unknown,
+	rawOffset: unknown,
+	scope: string,
+	doorDefault: number = CLIENT_MAX_LIMIT,
+): ClientPage {
+	const limitSent = isPresent(rawLimit);
+	const limit = clampClientLimit(limitSent ? rawLimit : doorDefault, scope);
+	const offset = clampClientOffset(rawOffset, scope);
+	const changed = sentAndChanged(rawLimit, limit) || sentAndChanged(rawOffset, offset);
+	const bounded: ClientPageBound = changed ? 'clamped' : limitSent ? 'requested' : 'defaulted';
+	return { limit, offset, bounded };
+}
+
+/**
+ * The offset of the first row PAST a client page — what a door probes to learn
+ * whether its default cut something — or `null` when that offset lies past
+ * MAX_SAFE_INTEGER: no row can exist there (and the sink refuses an unnameable
+ * window), so "nothing past" is the answer without a probe. clampClientOffset
+ * passes offsets up to MAX_SAFE_INTEGER through, so `offset + limit` CAN
+ * overflow on a page the clamp itself produced.
+ */
+export function offsetPastPage(page: ClientPage): number | null {
+	const past = page.offset + page.limit;
+	return past > Number.MAX_SAFE_INTEGER ? null : past;
+}
+
+/** A value the client sent that the clamp did not serve as sent. */
+function sentAndChanged(raw: unknown, applied: number): boolean {
+	return isPresent(raw) && Number(raw) !== applied;
+}
+
+/** A raw page value as the notice names it (`absent` for undefined/null). */
+function pageValueLabel(value: unknown): string {
+	if (!isPresent(value)) return 'absent';
+	return typeof value === 'string' ? value.slice(0, 32) : String(value);
+}
+
+/**
+ * The `search.page_clamped` notice for a page that was not served as sent —
+ * a NON-FATAL coded fact on an ok envelope (ERRORS_SPEC §3): the answer is one
+ * bounded page, so a consumer that wants the rest pages through it. Details:
+ * `door` (which door bounded it), `requested` (`limit L, offset O` as sent),
+ * `applied` (the window served).
+ */
+export function pageClampedNotice(
+	door: string,
+	rawLimit: unknown,
+	rawOffset: unknown,
+	page: ClientPage,
+): ApiNotice {
+	const spec = specOf('search.page_clamped');
+	return {
+		code: 'search.page_clamped',
+		label_key: spec.label_key,
+		retryable: spec.retryable,
+		details: {
+			door,
+			requested: `limit ${pageValueLabel(rawLimit)}, offset ${pageValueLabel(rawOffset)}`,
+			applied: `limit ${page.limit}, offset ${page.offset}`,
+		},
+	};
+}
+
+/**
  * §7.5 SECURITY GATE — scrub an untrusted client SQO before it may enter the
  * search pipeline. PHP: search_query_object::sanitize_client_sqo (:834).
  *
@@ -276,11 +454,14 @@ export function sanitizeClientSqo(untrustedSqo: Record<string, unknown>): Sqo {
 		typeof stripped.section_tipo === 'string' ? stripped.section_tipo : '?',
 	);
 
-	// offset / total: integer coercion; clamp offset to >= 0 (INJ-06 — a negative
-	// offset is meaningless and must never reach the assembler as a raw value).
-	stripped.offset = Number.isFinite(Number(stripped.offset))
-		? Math.max(0, Math.trunc(Number(stripped.offset)))
-		: 0;
+	// offset: the ONE offset clamp (READ-4) — integer in [0, MAX_SAFE_INTEGER];
+	// a negative offset (INJ-06) is 0, one past any page (1e21) an empty page,
+	// never a raw `OFFSET 1e+21` reaching the assembler.
+	stripped.offset = clampClientOffset(
+		stripped.offset,
+		typeof stripped.section_tipo === 'string' ? stripped.section_tipo : '?',
+	);
+	// total: integer coercion.
 	if (stripped.total !== undefined && stripped.total !== null) {
 		stripped.total = Math.trunc(Number(stripped.total)) || 0;
 	}

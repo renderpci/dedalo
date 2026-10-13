@@ -76,7 +76,8 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, relative, resolve } from 'node:path';
 import { libRootRelative, readManifest } from '../../scripts/vendor_verify.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
@@ -130,23 +131,35 @@ const REMOTE_CODE_PATTERNS: readonly { name: string; pattern: RegExp }[] = [
 	},
 ];
 
-function walk(dir: string, out: string[] = []): string[] {
-	for (const entry of readdirSync(dir)) {
-		if (entry === 'node_modules' || entry === '.git') continue;
-		const full = join(dir, entry);
-		if (statSync(full).isDirectory()) {
-			walk(full, out);
-			continue;
-		}
-		if (SCAN_EXTENSIONS.has(extname(full).toLowerCase())) out.push(full);
-	}
-	return out;
-}
-
+/**
+ * The scanned population: every file of the REPOSITORY TREE under the roots —
+ * tracked plus untracked-not-ignored (`git ls-files --cached --others
+ * --exclude-standard`, the browser_corpus definition), so a file still being
+ * written is seen, and a GITIGNORED scratch tree is not. Until 2026-10-12 this was
+ * a raw disk walk that followed symlinks: the host_agent suite's `.test-tmp/`
+ * (gitignored; `provision_flock.test.ts` plants a dangling `web.lock` symlink on
+ * purpose) made `statSync` throw ENOENT and every leg red on any checkout where
+ * that suite had run — the verdict depended on local leftovers, not on code. A
+ * listed path gone from disk (deleted, not yet staged) or a dangling tracked
+ * symlink is skipped; it loads nothing.
+ */
 function scanFiles(): string[] {
-	const files: string[] = [];
-	for (const root of SCAN_ROOTS) walk(join(REPO_ROOT, root), files);
-	return files.sort();
+	const listed = execFileSync(
+		'git',
+		['ls-files', '--cached', '--others', '--exclude-standard', '-z', '--', ...SCAN_ROOTS],
+		{ cwd: REPO_ROOT, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 },
+	)
+		.split('\0')
+		.filter((rel) => rel !== '');
+	const files = new Set<string>();
+	for (const rel of listed) {
+		if (rel.split('/').includes('node_modules')) continue;
+		if (!SCAN_EXTENSIONS.has(extname(rel).toLowerCase())) continue;
+		const full = join(REPO_ROOT, rel);
+		if (!existsSync(full) || !statSync(full).isFile()) continue;
+		files.add(full);
+	}
+	return [...files].sort();
 }
 
 /** Bundles are big; the walk + scan is ~7 s. Each test that runs it says so. */

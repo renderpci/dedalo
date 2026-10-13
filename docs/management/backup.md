@@ -19,12 +19,43 @@ system.
     matrix database, the vector database (if you enabled semantic search), the
     **media originals**, `../private/` (the secrets and the state), and every
     site-builder instance on the host (if you run the
-    [site builder](../tools/using_sitebuilder.md)). The nightly job the engine
-    ships (`deploy/dedalo-backup.service`) covers all five — see
-    [production step 13](../install/production.md#13-backups).
+    [site builder](../tools/using_sitebuilder.md)). The nightly backup units
+    cover all five — see [The nightly backup](#the-nightly-backup).
 
 !!! note "Recreating a publication database with work data"
     Publishing system is a copy and is possible recreate it doing a publication in work system. But some times will be necessary a copy because the work system is not ready to publish his data.
+
+## The nightly backup
+
+Every installation that runs under systemd has a nightly backup job; the
+compose stacks have their `backup` service ([Docker › Backups](../install/docker.md#backups-from-a-container)).
+
+**An instance installed by the installer** runs, as the instance user,
+`dedalo-backup@<i>.service` with its `dedalo-backup@<i>.timer`, writing to the
+instance's backup directory (`/home/ded_<i>/backups` by default). With
+`--backup-site-builder`, the site-builder store runs as root in its own unit,
+`dedalo-backup-site-builder@<i>.service`, with no access to the instance's
+`.env`. The install's last step (`host_backup_verify`) ran the set once and
+checked that **every** expected store succeeded before it enabled the timer.
+Check it at any time:
+
+```shell
+systemctl list-timers 'dedalo-backup@*'
+cat /home/ded_<i>/backups/state/LAST_OK          # the stores of the last good run
+journalctl -u dedalo-backup@<i> -n 50
+```
+
+**A host set up by hand** uses the reference units `deploy/dedalo-backup.service`
+and `.timer` ([A host set up by hand › The units](../install/manual_host.md#the-units)).
+The set runs as the service user; it pulls in `deploy/dedalo-backup-site-builder.service`,
+which copies the site-builder store as root, in a unit of its own: it reads no
+`EnvironmentFile`, runs its scripts from the root-owned root bin directory, and
+writes to `/var/backups/dedalo-site-builder`. A failed run fires
+`dedalo-backup-alert@.service`, which runs as the service user.
+
+Each unit declares the stores it promises (`DEDALO_BACKUP_EXPECTED_STORES`), and
+a run that leaves one of them without a status fails, so a truncated store list
+cannot report success.
 
 ## Backup the work system
 
@@ -99,10 +130,14 @@ builds the restored database beside the current one and swaps them by name):
 ALTER ROLE dedalo_database_user CREATEDB;
 ```
 
+The commands below name an instance `<i>` installed by the installer; on a host
+set up by hand, use its unit `dedalo-ts`, its code `<instance directory>/master_dedalo`
+and its runtime `<root bin directory>/bun` ([The layout](../install/manual_host.md#the-layout)).
+
 1. Stop the engine, and the watchdog timer that would restart it:
 
     ```shell
-    systemctl stop dedalo-ts.service dedalo-ts-watchdog.timer
+    systemctl stop dedalo-ts@<i>.service dedalo-ts-watchdog@<i>.timer
     ```
 
     The door refuses while anything is still connected to the database — it
@@ -111,8 +146,8 @@ ALTER ROLE dedalo_database_user CREATEDB;
 2. Run the door with the backup file:
 
     ```shell
-    cd /opt/dedalo/master_dedalo
-    bun scripts/restore.ts /opt/dedalo/private/backups/db/2026-08-29_033000.my_dedalo_db.custom.backup
+    cd /home/ded_<i>/dedalo
+    sudo -u ded_<i> /opt/dedalo/bun/<pin>/bun scripts/restore.ts /home/ded_<i>/backups/db/2026-08-29_033000.dedalo_<i>.custom.backup
     ```
 
     What it does, in order: it reads the WHOLE file to prove it is a complete
@@ -159,8 +194,8 @@ is a hypothesis.
 
 Media files are the most large data to be backup, usually it will be a large list of image, audiovisual, pdf, and other documents. If your Dédalo project has large audiovisual files, or thousands or millions image files, you will expect a server with large storage (TBs instead GBs) and your backup storage need to be set to retain almost 3 copies of the media files.
 
-The nightly backup job the engine ships (`deploy/dedalo-backup.service`, or the
-`backup` service of the compose stacks) already copies the media originals as
+The [nightly backup](#the-nightly-backup) (or the `backup` service of the
+compose stacks) already copies the media originals as
 dated generations: each night's copy is a directory named by its timestamp in
 which unchanged files are hard links into the previous night's, so fourteen
 generations cost little more disk than one, and a file deleted by mistake is
@@ -254,12 +289,14 @@ mysql -u publishing_bd_user_name -p -v  mysql_dump_my_publishing_database < mysq
 
 If you run the [site builder](../tools/using_sitebuilder.md), each of its
 instances on the host is part of the backup set: its declaration and secrets,
-its workspaces and each site's webspace. The shipped nightly job copies them as
-its last store (`deploy/dedalo-site-builder-backup.sh`); on a host with no
-instance that step copies nothing. The destination holds root-owned secrets, so
-treat it like the `../private/` copy. A host running several Dédalo instances
-backs the site-builder instances up from **one** instance's job only, since the
-store covers the whole host (see [several instances](../install/multi_instance.md)).
+its workspaces and each site's webspace. The store runs as root in its own unit
+(`dedalo-backup-site-builder@<i>.service` on an installer instance, asked for
+with `--backup-site-builder`; `deploy/dedalo-backup-site-builder.service` on a
+host set up by hand), never beside an instance's `.env`; on a host with no
+site-builder instance it copies nothing. The destination holds root-owned
+secrets, so treat it like the `../private/` copy. A host running several Dédalo
+instances backs the site-builder instances up from **one** instance only, since
+the store covers the whole host (see [several instances](../install/multi_instance.md)).
 
 ## Backup a Dédalo config files
 

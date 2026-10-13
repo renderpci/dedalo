@@ -11,9 +11,12 @@
  * depending on the sentinel pool.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
+import type { Subprocess } from 'bun';
 import { config } from '../../config/config.ts';
 import { envSnapshot } from '../../config/env.ts';
 import {
+	connFieldDefect,
 	libpqTransportArgs,
 	pgSocketProblem,
 	resolvePgTransport,
@@ -57,7 +60,10 @@ export function connFromConfig(): DbConnDescriptor {
  * identifier never starts with `-`, so this rejects only hostile input.
  */
 export function assertSafeConnField(name: string, value: string): void {
-	if (/^-/.test(value)) {
+	// The rule itself is pg_transport.ts connFieldDefect — the install plan
+	// reports the same defect up front (install_validation.ts).
+	const defect = connFieldDefect(value);
+	if (defect === 'option') {
 		// The submitted VALUE stays out of the wire sentence (log-only `message`).
 		throw new DedaloError('install.invalid_input', {
 			message: `install: refusing ${name} that looks like a command-line option ('${value}')`,
@@ -65,7 +71,7 @@ export function assertSafeConnField(name: string, value: string): void {
 			coordinates: { field: name },
 		});
 	}
-	if (/[\r\n\0]/.test(value)) {
+	if (defect === 'control') {
 		throw new DedaloError('install.invalid_input', {
 			message: `install: refusing ${name} with a control character`,
 			publicMessage: `The ${name} value contains a control character and was refused`,
@@ -119,6 +125,25 @@ export function pgClientEnv(conn: DbConnDescriptor): Record<string, string> {
 	};
 }
 
+/**
+ * THE INSTALLER'S CHILD SCOPE. The terminal installer (executor.ts) runs every
+ * step inside `trackPsqlChildren`, so a SIGINT/SIGTERM can kill the psql
+ * children a step started and AWAIT their exit before it records the step
+ * failed and releases its locks — an orphan psql must never COMMIT after the
+ * state says `failed` (a concurrent --resume would race it). Request-independent
+ * and scoped by AsyncLocalStorage, never a module-level registry: outside the
+ * executor the store is absent and nothing is tracked.
+ */
+const psqlChildScope = new AsyncLocalStorage<Set<Subprocess>>();
+
+/** Run `work` with every psql child it spawns recorded in `children` (removed once it exits). */
+export function trackPsqlChildren<T>(
+	children: Set<Subprocess>,
+	work: () => Promise<T>,
+): Promise<T> {
+	return psqlChildScope.run(children, work);
+}
+
 export interface PsqlRunResult {
 	exitCode: number;
 	stdout: string;
@@ -133,7 +158,16 @@ export interface PsqlRunResult {
 export async function runPsql(
 	conn: DbConnDescriptor,
 	args: string[],
-	options: { stdin?: Uint8Array | string; database?: string } = {},
+	options: {
+		stdin?: Uint8Array | string;
+		database?: string;
+		/**
+		 * The session's application_name (PGAPPNAME): the seed restore names itself
+		 * `dedalo_install_seed` so a resume can see a restore still running on the
+		 * server (db_restore.ts inspectTargetDatabase).
+		 */
+		appName?: string;
+	} = {},
 ): Promise<PsqlRunResult> {
 	const database = options.database ?? conn.database;
 	assertSafeConnField('database', String(database));
@@ -146,9 +180,15 @@ export async function runPsql(
 			stdin: options.stdin !== undefined ? 'pipe' : 'ignore',
 			stdout: 'pipe',
 			stderr: 'pipe',
-			env: pgClientEnv(conn),
+			env: {
+				...pgClientEnv(conn),
+				...(options.appName === undefined ? {} : { PGAPPNAME: options.appName }),
+			},
 		},
 	);
+	const tracked = psqlChildScope.getStore();
+	tracked?.add(child);
+	void child.exited.finally(() => tracked?.delete(child));
 	if (options.stdin !== undefined && child.stdin) {
 		child.stdin.write(options.stdin);
 		await child.stdin.end();

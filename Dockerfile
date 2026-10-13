@@ -196,7 +196,7 @@ COPY scripts ./scripts
 COPY src ./src
 COPY tools ./tools
 COPY vendor ./vendor
-COPY .bun-sha256 .bun-version .dockerignore .gitattributes .gitignore .gitleaks.toml AGENTS.md Dockerfile License.md README.md SECURITY.md biome.jsonc bun.lock bunfig.toml cliff.toml docker-compose.simple.yml docker-compose.yml install.sh mkdocs.yml package.json tsconfig.json ./
+COPY .bun-sha256 .bun-sha256-darwin .bun-version .dockerignore .gitattributes .gitignore .gitleaks.toml AGENTS.md Dockerfile License.md README.md SECURITY.md biome.jsonc bun.lock bunfig.toml cliff.toml docker-compose.simple.yml docker-compose.yml install.sh mkdocs.yml package.json tsconfig.json ./
 # <<< BUILD-CONTEXT ALLOWLIST <<<
 
 # --- Release provenance (src/core/update/install_stamp.ts) ------------------
@@ -243,9 +243,9 @@ EXPOSE 3600
 # explicit mode landed 0666 — the session store and its -wal/-shm, process and
 # job records, media derivatives, and ts_state.json, which is not inert: it
 # carries media_access_mode (which WINS over .env) and install_status, so writing
-# `configured` back into it flips installInProgress() true and RE-OPENS the
-# pre-auth install surface, whose actions rewrite ../private/.env and restart the
-# process. Named volumes bound that in the shipped stacks; a bind-mounted
+# anything but `sealed` into it makes the next boot REFUSE to start (exit 78;
+# until 2026-10-12 it re-opened the pre-auth install surface, whose actions
+# rewrote ../private/.env and restarted the process). Named volumes bound that in the shipped stacks; a bind-mounted
 # /private — which the comments in this file contemplate — is where it bites.
 #
 # The socket now gets its 0666 explicitly, from the one place that knows which

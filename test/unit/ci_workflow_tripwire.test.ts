@@ -791,11 +791,11 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	],
 	[
 		'test/unit/ai_spend_budget_native.test.ts',
-		"It materializes the engine ontology into the suite database's dd_ontology, reserves and settles against the shipped ledger section's rows (concurrent reservations racing on its row locks) and drives the metered doors as fixture users resolved from the suite database, so it cannot run without a live suite Postgres.",
+		"It reads the master ontology's ledger and limit nodes from the suite database's dd_ontology, sets per-user and per-profile limits on fixture records, reserves and settles against the ledger section's rows (concurrent reservations racing on its row locks) and drives the metered doors as fixture users resolved from the suite database, so it cannot run without a live suite Postgres.",
 	],
 	[
-		'test/unit/engine_ontology_retired_native.test.ts',
-		"It plants a retired engine node's source record, dd_ontology row and registry value in the suite database and runs the engine-ontology door to prune them (a scratch ontology35 registry row minted by createMainSection), so it cannot run without a live suite Postgres.",
+		'test/unit/install_tld_provenance_native.test.ts',
+		'It runs the installer CLI into a scratch Postgres database it creates (an admin role with CREATEDB), boots the real server on that install and fingerprints dd_ontology / matrix_ontology around the boot, so it cannot run without a live Postgres cluster.',
 	],
 	[
 		'test/unit/ontology_registry_row_native.test.ts',
@@ -807,7 +807,7 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	],
 	[
 		'test/unit/install_hierarchy_dependencies_native.test.ts',
-		"It writes scratch ontology35 registry rows declaring thesauri on the suite database and reads them back through the wizard's install_hierarchies reader, so it cannot run without a live suite Postgres.",
+		'It writes scratch ontology35 registry rows declaring thesauri on the suite database and runs the install_hierarchies step over it, so it cannot run without a live suite Postgres.',
 	],
 	[
 		'test/unit/change_plan_write_door_native.test.ts',
@@ -820,6 +820,26 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 	[
 		'test/unit/install_ontology_door_native.test.ts',
 		"It drives the installer's ontology door (stage + import through the update panel's shared lower layer) against the suite Postgres, serving its zz packages from a loopback ontology-master stand-in, and measures dd_ontology / matrix_ontology / registry / matrix_dd rows and their census around every case, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/client_page_doors_native.test.ts',
+		'It builds the zzpg situation on the suite database (host, referencing records, reader grants, the projects fixture) and drives the real read / get_relation_list, related_search and get_indexation_grid doors against those rows, counting the served records, the notices and the statements and rows the query tap saw — every assertion is a statement about stored rows, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/search_related_page_window_native.test.ts',
+		'It builds the zzpw situation (one host and five referencing records) on the suite database and asserts which page of those rows each sink window renders, or that it is refused, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/filter_projects_membership_native.test.ts',
+		"It rewrites the ACL fixture reader's dd170 membership on the suite database (through the real save door and by direct SQL), restores it in finally, and asserts the projects datalist read back from matrix_projects, so it cannot run without a live suite Postgres.",
+	],
+	[
+		'test/unit/filter_projects_scope_native.test.ts',
+		'It resolves the ACL fixture principals from matrix_users / matrix_profiles, reads matrix_projects, and mints and sweeps one matrix_test record to drive the get_data facade, so it cannot run without a live suite Postgres.',
+	],
+	[
+		'test/unit/term_by_tipo_label_guard.test.ts',
+		'Its outcome legs build the zzlbl scratch TLD on the suite database (a model=label node, a plain one, a reused tipo flipped between models via upsertDdOntologyNode) and drive every guarded term resolver against those dd_ontology rows, so without a live suite Postgres the describe.if(DB_READY) skips all 25 resolver cases and only the census and seam legs run.',
 	],
 ]);
 

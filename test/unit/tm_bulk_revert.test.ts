@@ -287,6 +287,8 @@ describe('bulk_revert_process — DB drive', () => {
 					tipo: COMPONENT_TIPO,
 					section_id: id,
 					lang: LANG,
+					// the converter's code of the planted UNTYPED throw — a code, never its words
+					code: 'internal.unexpected',
 				});
 			}
 			const wire = JSON.stringify(response);
