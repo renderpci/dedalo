@@ -226,6 +226,14 @@ Then install with `--image-source custom --image-repository registry.example.org
 
 Building here needs this checkout and the network to fetch the base image, the system packages and the JavaScript dependencies. The first build is slow and parks several gigabytes of build cache (`docker builder prune -af` reclaims it once the build is done). Updates rebuild from the release's git tag, so the checkout must keep its git remote.
 
+The installer and every later update build the same way, through one builder: `deploy/dedalo-image-build.sh` archives the checkout's last commit (`git archive`) into `.dedalo-install/image-context`, builds that directory, and removes it afterwards. So the image carries **committed files only** — an uncommitted edit, an untracked file, `.dedalo.env` or a certificate never reach it — and it reports the version it is tagged with and the commit date, never `X.Y.Z.dev`. To build by hand, use the same command:
+
+```shell
+./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:7.0.1
+```
+
+`docker compose … -f deploy/compose.build.yml build` still works for development, but it builds the working tree as it is, and that image reports `.dev`.
+
 ### The `.dedalo.env` keys
 
 The image half of `.dedalo.env` is the contract the image updater reads:
@@ -360,7 +368,7 @@ The version is a release the code server lists — the [code update panel](../ma
 2. **Checks the version**: it must move forward from the pinned `DEDALO_VERSION` (the same version only for a `-dev` image), and the running engine must agree it is the next step on the upgrade path.
 3. **Takes a database backup** through the stack's `backup` service and checks it is readable (`/backups/db/<time>.<database>.postgresql_pre-image-update.custom.backup`). There is no update without it; `--no-backup` waives it, and is never the default.
 4. **Keeps the running image** under a `rollback-<time>` tag.
-5. **Gets the new image**: `pull` mode pulls `<DEDALO_IMAGE>:<version>` and, with `DEDALO_IMAGE_VERIFY=cosign`, refuses it unless the signature checks out; `build` mode checks out the release tag `v<version>` in this checkout and builds it.
+5. **Gets the new image**: `pull` mode pulls `<DEDALO_IMAGE>:<version>` and, with `DEDALO_IMAGE_VERIFY=cosign`, refuses it unless the signature checks out; `build` mode checks out the release tag `v<version>` in this checkout and builds it from a clean snapshot of that commit — the same build as the installer's, so the image holds committed files only and reports the release version, never `.dev`. Local changes to tracked files are refused first (the checkout itself moves to the release); untracked files may stay, they never reach the image. A tree without git cannot be rebuilt: the script refuses and says so.
 6. **Re-pins `DEDALO_VERSION`** in `.dedalo.env` — the only line it changes.
 7. **Recreates `dedalo` and `backup`** — never `postgres` or `nginx` — and waits for the engine's healthcheck, up to 15 minutes (`--health-timeout`), since boot migrations on a large database take time.
 8. **Healthy**: done, and only the newest rollback tag is kept. **Not healthy**: it puts the previous image back under its old version, re-pins it, brings it up and says *rolled back* — or, if even that is not healthy, *rollback failed* with the path of the backup it took.
@@ -398,7 +406,7 @@ DEDALO_IMAGE_VERIFY=none
 `DEDALO_VERSION` is the version this checkout declares (the script prints it). Then build once under the new name and recreate the engine:
 
 ```shell
-docker compose -f docker-compose.yml -f deploy/compose.build.yml --env-file .dedalo.env build dedalo
+./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:7.0.1
 docker compose -f docker-compose.yml --env-file .dedalo.env up -d
 ```
 

@@ -52,8 +52,14 @@ import type { HostCtx } from '../../src/core/install/host/contract.ts';
 import { hostFs } from '../../src/core/install/host/fs.ts';
 import { type RecordedResponse, recordingRunner } from '../../src/core/install/host/runner.ts';
 import { composeFiles } from '../../src/core/install/host/stack/compose.ts';
+import { STACK_BINARIES } from '../../src/core/install/host/stack/facts.ts';
 import { renderEnvFile, renderOverride } from '../../src/core/install/host/stack/files.ts';
-import { imageCommands } from '../../src/core/install/host/stack/image.ts';
+import {
+	BUILD_CONTEXT,
+	buildContextDir,
+	IMAGE_BUILDER,
+	imageCommands,
+} from '../../src/core/install/host/stack/image.ts';
 import { cosignCommand, verifyImage } from '../../src/core/install/host/stack/image_verify.ts';
 import {
 	imageRepositoryOf,
@@ -747,7 +753,7 @@ describe('F. the installer verifies the image as the library does (stack_image)'
 		expect(wrong.refusal).toContain("declares version '6.9.0'");
 	});
 
-	test("a build here: `docker build` of the checkout's HEAD (archived into the run dir), no pull, no signature", async () => {
+	test('a build here: the SHARED builder over the checkout (its HEAD, snapshotted in the run dir), no pull, no signature', async () => {
 		const raw = { ...TRIAL, image_source: 'build' };
 		const base = stackPlanCtx(raw);
 		const ref = `localhost/dedalo:${imageVersionOf(base.answers)}`;
@@ -755,47 +761,137 @@ describe('F. the installer verifies the image as the library does (stack_image)'
 			imageCommands({ ...base, facts: { ...base.facts, sourceIsGit } }).map((command) =>
 				command.kind === 'exec' ? command.argv : [],
 			);
-		// a checkout: the context is its HEAD, extracted in the run dir — never the working tree
-		const checkout = argvOf(true);
-		const context = join(base.source, '.dedalo-install', 'image-context');
-		const build = checkout.find((argv) => argv[1] === 'build');
-		expect(build?.slice(1)).toEqual(['build', '--tag', ref, context]);
-		const archive = checkout.find((argv) => argv.includes('archive'));
-		expect(archive?.at(-1)).toBe('HEAD');
-		expect(checkout.indexOf(archive ?? [])).toBeLessThan(checkout.indexOf(build ?? []));
+		// a checkout: ONE command, the builder the image updater's build mode runs too
+		expect(argvOf(true)).toEqual([
+			[
+				STACK_BINARIES.bash,
+				join(base.source, IMAGE_BUILDER),
+				base.source,
+				ref,
+				base.facts.stack?.docker as string,
+			],
+		]);
 		// a verified release tree (no .git) is its own context, already stamped
 		expect(argvOf(false).map((argv) => argv.slice(1))).toEqual([
 			['build', '--tag', ref, base.source],
 		]);
+		// the snapshot's place is the library's
+		expect(bash('printf %s "$DEDALO_IMAGE_CONTEXT"').stdout).toBe(BUILD_CONTEXT);
+		expect(buildContextDir(base)).toBe(join(base.source, '.dedalo-install', 'image-context'));
 		const built = await verified(raw, []);
 		expect(built.record?.verify).toBe('none');
 		expect(built.log).toEqual([]);
 	});
 
-	test('C3-46: the archived context reports the version the image is tagged with; the working tree would not', () => {
-		const base = stackPlanCtx({ ...TRIAL, image_source: 'build' });
-		const archive = imageCommands({ ...base, facts: { ...base.facts, sourceIsGit: true } })
-			.map((command) => (command.kind === 'exec' ? command.argv : []))
-			.find((argv) => argv.includes('archive'));
-		expect(archive).toBeDefined();
-		// the installer's own archive argv, written to a scratch tarball instead of the run dir
-		const out = join(mkdtempSync(join(tmpdir(), 'dd-image-ctx-')), 'context.tar');
-		const argv = [...(archive ?? [])];
-		argv[argv.indexOf('-o') + 1] = out;
-		const made = Bun.spawnSync(argv, { cwd: REPO_ROOT });
-		expect(made.exitCode, made.stderr.toString()).toBe(0);
-		const stamp = Bun.spawnSync(['tar', '-xOf', out, 'src/core/update/build_info.txt']);
-		rmSync(join(out, '..'), { recursive: true, force: true });
-		const archived = parseBuildInfo(stamp.stdout.toString());
+	test("C3-46 OUTCOME: the installer's build command over a checkout with a dirty and an untracked file builds a context without them, stamped (no .dev)", () => {
+		const { repo, seen, docker } = builderFixture();
+		writeFileSync(join(repo, 'tracked.txt'), 'an uncommitted edit\n');
+		writeFileSync(join(repo, 'stray_untracked.txt'), 'never committed\n');
+		writeFileSync(join(repo, 'src', 'core', 'stray_untracked.ts'), 'export const stray = 1;\n');
+		const base = stackPlanCtx({ ...TRIAL, image_source: 'build' }, repo);
+		const ctx = {
+			...base,
+			facts: {
+				...base.facts,
+				sourceIsGit: true,
+				stack: { ...(base.facts.stack as NonNullable<typeof base.facts.stack>), docker },
+			},
+		};
+		const [command] = imageCommands(ctx);
+		const argv = command?.kind === 'exec' ? [...command.argv] : [];
+		const run = Bun.spawnSync(argv, { cwd: repo, env: { PATH: '/usr/bin:/bin', STUB_SEEN: seen } });
+		expect(run.exitCode, run.stderr.toString()).toBe(0);
+		const context = join(repo, BUILD_CONTEXT);
+		expect(readFileSync(`${seen}.argv`, 'utf8').trim()).toBe(
+			`build --tag localhost/dedalo:${imageVersionOf(ctx.answers)} ${context}`,
+		);
+		// committed content only
+		expect(readFileSync(join(seen, 'tracked.txt'), 'utf8')).toBe('committed\n');
+		for (const stray of ['stray_untracked.txt', 'src/core/stray_untracked.ts']) {
+			expect(existsSync(join(seen, stray)), `${stray} reached the build context`).toBe(false);
+		}
+		// export-subst expanded: the engine reports the version the image is tagged with
+		const archived = parseBuildInfo(
+			readFileSync(join(seen, 'src', 'core', 'update', 'build_info.txt'), 'utf8'),
+		);
 		expect(archived.build).not.toBeNull();
 		expect(prereleaseTagFor(archived.build, null)).toBe('');
 		// the working tree's own file is the dev placeholder: a build from it reports .dev
 		const tree = parseBuildInfo(
-			readFileSync(join(REPO_ROOT, 'src/core/update/build_info.txt'), 'utf8'),
+			readFileSync(join(repo, 'src', 'core', 'update', 'build_info.txt'), 'utf8'),
 		);
 		expect(prereleaseTagFor(tree.build, null)).toBe('.dev');
+		// the snapshot is removed after the build
+		expect(existsSync(context)).toBe(false);
+		expect(existsSync(`${context}.tar`)).toBe(false);
+	});
+
+	test('the builder: a failed build removes its snapshot (status 1); a tree without git is refused with the sentence (status 3)', () => {
+		const failing = builderFixture({ fail: true });
+		const red = Bun.spawnSync(
+			[
+				'bash',
+				join(failing.repo, IMAGE_BUILDER),
+				failing.repo,
+				'localhost/dedalo:7.0.0',
+				failing.docker,
+			],
+			{ env: { PATH: '/usr/bin:/bin', STUB_SEEN: failing.seen } },
+		);
+		expect(red.exitCode).toBe(1);
+		expect(existsSync(join(failing.repo, BUILD_CONTEXT))).toBe(false);
+		const release = scratchDir();
+		const refused = Bun.spawnSync(
+			['bash', join(REPO_ROOT, IMAGE_BUILDER), release, 'localhost/dedalo:7.0.0', failing.docker],
+			{ env: { PATH: '/usr/bin:/bin', STUB_SEEN: failing.seen } },
+		);
+		expect(refused.exitCode).toBe(3);
+		expect(refused.stderr.toString()).toContain(`${release} is not a git checkout`);
+		expect(existsSync(join(release, '.dedalo-install'))).toBe(false);
 	});
 });
+
+/**
+ * A real git checkout carrying the shared builder (deploy/dedalo-image-build.sh +
+ * the library), build_info.txt export-subst as in the repo, a tracked file —
+ * all committed — and a stub docker that copies the context its `build` reads
+ * to `seen` (its argv to `seen.argv`), or fails.
+ */
+function builderFixture(options: { fail?: boolean } = {}): {
+	repo: string;
+	seen: string;
+	docker: string;
+} {
+	const root = scratchDir();
+	const repo = join(root, 'checkout');
+	const seen = join(root, 'context_seen');
+	const docker = join(root, 'docker');
+	mkdirSync(join(repo, 'deploy'), { recursive: true });
+	mkdirSync(join(repo, 'src', 'core', 'update'), { recursive: true });
+	for (const file of ['dedalo-image-build.sh', 'dedalo-image-lib.sh']) {
+		writeFileSync(join(repo, 'deploy', file), readFileSync(join(REPO_ROOT, 'deploy', file)));
+	}
+	writeFileSync(join(repo, 'src', 'core', 'update', 'build_info.txt'), '$Format:%H %cI$\n');
+	writeFileSync(join(repo, '.gitattributes'), 'src/core/update/build_info.txt export-subst\n');
+	writeFileSync(join(repo, '.gitignore'), '/.dedalo-install/\n');
+	writeFileSync(join(repo, 'tracked.txt'), 'committed\n');
+	const git = (...args: string[]) => {
+		const run = Bun.spawnSync(
+			['git', '-c', 'user.name=gate', '-c', 'user.email=gate@example.org', ...args],
+			{ cwd: repo, env: { PATH: '/usr/bin:/bin', HOME: root, GIT_CONFIG_NOSYSTEM: '1' } },
+		);
+		if (run.exitCode !== 0) throw new Error(`git ${args.join(' ')}: ${run.stderr.toString()}`);
+	};
+	git('init', '-q', '-b', 'master');
+	git('add', '-A');
+	git('commit', '-q', '-m', 'fixture');
+	writeFileSync(
+		docker,
+		`#!/bin/bash\nfor a in "$@"; do last="$a"; done\nprintf '%s\\n' "$*" > "$STUB_SEEN.argv"\ncp -R "$last" "$STUB_SEEN"\n${options.fail === true ? 'exit 1' : 'exit 0'}\n`,
+	);
+	chmodSync(docker, 0o755);
+	return { repo, seen, docker };
+}
 
 describe("F. the .dedalo.env the installer writes is the library's contract", () => {
 	for (const raw of [

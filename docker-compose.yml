@@ -12,9 +12,9 @@
 #      does not exist.
 #   2. get the image — pull a published one:
 #        docker compose --env-file .dedalo.env pull dedalo
-#      or build it here from this checkout:
-#        docker compose -f docker-compose.yml -f deploy/compose.build.yml \
-#          --env-file .dedalo.env build dedalo
+#      or build it here from a clean snapshot of this checkout's last commit
+#      (the installer's and the updater's builder):
+#        ./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:<DEDALO_VERSION>
 #   3. docker compose --env-file .dedalo.env up -d postgres
 #   4. docker compose --env-file .dedalo.env run --rm \
 #        -e DEDALO_INSTALL_ROOT_PASSWORD='…' \
@@ -65,8 +65,8 @@ services:
     # D2). DEDALO_IMAGE (a repository, no tag) and DEDALO_VERSION (the release tag)
     # come from .dedalo.env, which install.sh writes from the operator's answer:
     # one of Dédalo's registries (engineering/image_registries.json), a registry of
-    # your own, or a local build. Building here is the override
-    # `-f deploy/compose.build.yml`, which tags the build with this same name.
+    # your own, or a local build. Building here is deploy/dedalo-image-build.sh
+    # (a clean snapshot of the last commit), tagged with this same name.
     # The default `localhost/dedalo:local` names the registry host `localhost`, so
     # a bare `docker compose up` can never pull a look-alike image from a public
     # registry: without a local build it fails loudly instead.

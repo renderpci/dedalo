@@ -235,6 +235,62 @@ dedalo_checkout_version() {
 	printf '%s.%s.%s' "$1" "$2" "$3"
 }
 
+# --- the local build ------------------------------------------------------------
+#
+# THE ONE LOCAL BUILD (C3-46, owner 2026-10-14). The installer's stack_image
+# (through deploy/dedalo-image-build.sh) and the image updater's build mode both
+# build HERE, from a CLEAN SNAPSHOT of the checkout's last commit — never from
+# the working tree. `git archive HEAD` is the mechanism the release archive and
+# the production route use: committed files only (an uncommitted edit, an
+# untracked file, .dedalo.env, deploy/certs never travel) and build_info.txt
+# arrives EXPANDED (export-subst), so the engine reports the version the image
+# is tagged with — never `X.Y.Z.dev` under an `:X.Y.Z` tag. A build straight
+# from the checkout (`compose … -f deploy/compose.build.yml build`) reads the
+# working tree and its unexpanded `$Format:` placeholder: it reports `.dev`.
+
+# The snapshot's directory, inside the checkout's run dir (STACK_RUN_DIR,
+# src/core/install/host/layout.ts — git-ignored and docker-ignored).
+DEDALO_IMAGE_CONTEXT='.dedalo-install/image-context'
+
+# dedalo_is_checkout DIR — status 0 when DIR is a git checkout (DIR/.git exists:
+# a directory, or a file for a linked worktree — the installer's sourceIsGit).
+dedalo_is_checkout() {
+	[ -n "${1-}" ] && [ -e "$1/.git" ]
+}
+
+# dedalo_no_checkout_sentence DIR — the refusal of a build with no git to snapshot.
+dedalo_no_checkout_sentence() {
+	printf '%s is not a git checkout: a local image is built from a clean snapshot of a git commit (git archive), and a release tree has no commit to snapshot (it is its own build context only at install) — pull the image instead (DEDALO_IMAGE_MODE=pull), or install from a git checkout' "${1-this directory}"
+}
+
+# dedalo_image_build CHECKOUT TAG [DOCKER] — `DOCKER build --tag TAG` of the
+# checkout's HEAD: archived and extracted into CHECKOUT/DEDALO_IMAGE_CONTEXT
+# (git with safe.directory for this one command — root builds an operator's
+# checkout — and fsmonitor off), the tarball removed before the build reads the
+# dir, the dir removed after the build, green or red. The build's own output is
+# passed through (BUILDKIT_PROGRESS from the caller). Status: 0 built, 1 failed,
+# 2 usage, 3 refused (no git — the sentence on stderr).
+dedalo_image_build() {
+	local checkout="${1-}" tag="${2-}" docker="${3:-docker}" dir='' status=0
+	[ -n "$checkout" ] && [ -n "$tag" ] || return 2
+	if ! dedalo_is_checkout "$checkout"; then
+		dedalo_no_checkout_sentence "$checkout" >&2
+		printf '\n' >&2
+		return 3
+	fi
+	dir="$checkout/$DEDALO_IMAGE_CONTEXT"
+	rm -rf "$dir" "$dir.tar" && mkdir -p "$dir" || return 1
+	if git -c "safe.directory=$checkout" -c core.fsmonitor=false -C "$checkout" \
+		archive --format=tar -o "$dir.tar" HEAD && tar -xf "$dir.tar" -C "$dir" && rm -f "$dir.tar"; then
+		"$docker" build --tag "$tag" "$dir" || status=$?
+	else
+		printf 'could not archive the last commit of %s\n' "$checkout" >&2
+		status=1
+	fi
+	rm -rf "$dir" "$dir.tar"
+	[ "$status" -eq 0 ] || return 1
+}
+
 # --- compose --------------------------------------------------------------------
 
 # dedalo_compose_args ENVFILE [plain|build] — the compose argv, one per line:

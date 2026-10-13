@@ -68,8 +68,8 @@ services:
     # D2). DEDALO_IMAGE (a repository, no tag) and DEDALO_VERSION (the release tag)
     # come from .dedalo.env, which install.sh writes from the operator's answer:
     # one of Dédalo's registries (engineering/image_registries.json), a registry of
-    # your own, or a local build. Building here is the override
-    # `-f deploy/compose.build.yml`, which tags the build with this same name.
+    # your own, or a local build. Building here is deploy/dedalo-image-build.sh
+    # (a clean snapshot of the last commit), tagged with this same name.
     # The default `localhost/dedalo:local` names the registry host `localhost`, so
     # a bare `docker compose up` can never pull a look-alike image from a public
     # registry: without a local build it fails loudly instead.

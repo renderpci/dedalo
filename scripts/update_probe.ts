@@ -224,8 +224,8 @@ function museumImageSourceProblem(museumVersion: string): string | null {
 		`  DEDALO_VERSION=${museumVersion}`,
 		'  DEDALO_IMAGE_MODE=build',
 		'  DEDALO_IMAGE_VERIFY=none',
-		'then build that image once:',
-		`  docker compose -f ${COMPOSE_BASE} -f deploy/compose.build.yml --env-file ${COMPOSE_ENV_FILE} build dedalo`,
+		"then build that image once (a clean snapshot of the checkout's last commit — the updater's builder):",
+		`  ./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:${museumVersion}`,
 	].join('\n');
 }
 

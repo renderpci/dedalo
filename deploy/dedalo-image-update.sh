@@ -40,7 +40,10 @@
 #    6. the running image is tagged <DEDALO_IMAGE>:rollback-<UTC stamp>;
 #    7. the new image: `docker pull` (+ `cosign verify` of its digest when
 #       DEDALO_IMAGE_VERIFY=cosign), or the release checked out and built here
-#       through deploy/compose.build.yml;
+#       from a CLEAN SNAPSHOT of that commit — the installer's own builder,
+#       dedalo_image_build (git archive → docker build → snapshot removed): no
+#       uncommitted or untracked file in the image, no `.dev` in its version;
+#       a tree without git is refused (nothing to check out or snapshot);
 #    8. DEDALO_VERSION is re-pinned (the ONE key this script writes);
 #    9. `up -d dedalo backup` — postgres and nginx are never touched;
 #   10. the compose healthcheck: `healthy` is green; `starting` AND `unhealthy` keep
@@ -335,8 +338,15 @@ restore_checkout() {
 	fi
 }
 
+# build_image — the release checked out here, then built by THE local builder
+# (dedalo_image_build, deploy/dedalo-image-lib.sh — the installer's): a clean
+# snapshot of that commit, never the working tree, so no uncommitted or untracked
+# file reaches the image and it reports the version it is tagged with. The
+# library was sourced before the checkout: the builder that runs is this one.
+# Tracked changes are still refused: the checkout itself moves to the release.
 build_image() {
 	local ref='' declared=''
+	dedalo_is_checkout "$(pwd)" || finish refused build_failed "$(dedalo_no_checkout_sentence "$(pwd)")"
 	[ -z "$(git status --porcelain --untracked-files=no)" ] ||
 		finish refused build_failed 'this checkout has local changes to tracked files — commit or discard them first'
 	PREV_HEAD="$(git rev-parse HEAD)"
@@ -349,7 +359,7 @@ build_image() {
 		restore_checkout
 		finish refused version_refused "$ref declares ${declared:-no version}, not ${TARGET%-dev}"
 	fi
-	if ! (export DEDALO_VERSION="$TARGET" && dedalo_compose "$ENV_FILE" build build dedalo); then
+	if ! dedalo_image_build "$(pwd)" "$IMAGE:$TARGET"; then
 		restore_checkout
 		finish failed build_failed "the build of $ref failed — the running stack is unchanged"
 	fi
