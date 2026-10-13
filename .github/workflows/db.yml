@@ -116,7 +116,13 @@ jobs:
     # sync triggers deriving ~19.5M more), against ~6 s for the 19 gates. A
     # hosted runner is not faster than that Mac, so 20 would have been a coin
     # flip — 40 leaves real headroom while still catching a genuine hang.
-    timeout-minutes: 40
+    # 2026-10-13 → 60: the tier is no longer build + 19 gates. It is the build, 93 DB
+    # tripwires, the WHOLE unit tier, parity and MariaDB — MEASURED 1909–1955 s in the
+    # CI image on the developer Mac (three ci:local --db runs), 38 min for the last
+    # green hosted run (576f9d7087), and over 40 once the unit tier gained 43 floored
+    # files (a430210bc0, cancelled at the cap). 60 is headroom, still well short of
+    # what a hang would burn.
+    timeout-minutes: 60
     # THE CI IMAGE (ci/image.json — scripts/lib/ci_image.ts), the one ci:local and GitLab
     # run: bun = .bun-version, pg18 client, Chromium, media tools, git. As uid 1001, the
     # runner user that owns the mounted workspace — never root, which defeats the
