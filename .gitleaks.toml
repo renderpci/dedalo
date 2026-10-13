@@ -28,6 +28,19 @@ regexes = [
   '''key_live_abc123''',
 ]
 
+[[allowlists]]
+description = "Installer gates' SENTINEL credentials (2026-10-13, terminal installer phases 1-6): fixed made-up literals the tests plant to prove a secret never reaches argv, logs or run files. Scoped to the exact values only (no path: this gitleaks ignores condition=AND in global allowlists, so a test/ path would have allowed every secret under test/ — measured). A real key anywhere, tests included, still fails."
+regexes = [
+  '''Mosaic-Kestrel-Harbor-47''',
+  '''Sentinel-Root-Kestrel-91''',
+  '''Kestrel-Harbor-6789''',
+  '''SENTINEL-db-7Qx2''',
+  '''Db-SentinelWombat-93''',
+  '''Zz-DbSentinel-4417''',
+  '''Zz-MySentinel-5528''',
+  '''Zz-Db-Secret-61x''',
+]
+
 # ---------------------------------------------------------------------------
 # HISTORY ONLY (the weekly full-history scan; none of this exists in the tree).
 #
