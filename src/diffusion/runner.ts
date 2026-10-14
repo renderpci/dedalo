@@ -343,6 +343,9 @@ async function runPublicationJob(job: DiffusionJobRow, lease: JobLease): Promise
 				await finishCancelled();
 				return;
 			}
+			// The dd1758 ledger keys on the section tipo (unchanged); PROGRESS keys on
+			// the selection: only primary batches advance the counter, so it stays
+			// comparable to the estimate, which counted the selection alone.
 			const isPrimary = batch.section.sectionTipo === job.spec.section_tipo;
 			const nextSeq = batchSeq + 1;
 			const batchErrorLines = batch.errors.map(
@@ -397,8 +400,8 @@ async function runPublicationJob(job: DiffusionJobRow, lease: JobLease): Promise
 							userId: job.owner_user_id,
 						});
 					}
-					nextProcessed += batch.records.length;
 				}
+				if (batch.primary) nextProcessed += batch.records.length;
 				await appendRunLedger(lease, nextSeq, [...batch.ledger, ...artifacts]);
 				const lastRecord = batch.records[batch.records.length - 1];
 				await updateJobProgress(lease, {

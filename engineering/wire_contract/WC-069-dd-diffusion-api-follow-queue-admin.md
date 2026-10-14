@@ -150,3 +150,16 @@ shape is FOR, and a future editor reading only the wire half would not see them.
 - Gate: the `diffusion_queue_stream_tripwire` honesty leg (the estimate lives only
   in `time_remaining_model.js`, which must not read `total_ms`/`started_at`) +
   the model legs in `diffusion_queue_stream.test.ts`.
+
+## Addendum 2026-10-14 — `counter` counts the selection only
+
+- **Semantics fix, no shape change.** `counter` used to add every batch whose
+  section tipo equalled the job's section. On a self-linked section (types →
+  related types) the frontier drains batches of the primary's own tipo, holding
+  records OUTSIDE the selection, and `counter` overran `total` mid-run
+  ("estimate exceeded", `Processing records 42206 of 42137...`). The resolver now
+  flags each batch (`ResolvedBatch.primary`) and only primary batches advance
+  `counter`, so it stays comparable to the estimate, which counted the selection
+  alone. The dd1758 ledger still keys on the section tipo (unchanged).
+- Gate: `test/unit/diffusion_resolver.test.ts` (primary batches `primary:true`,
+  frontier batches `primary:false`).

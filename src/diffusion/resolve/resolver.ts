@@ -129,6 +129,14 @@ export interface ResolvedBatch {
 	section: SectionPlan;
 	/** Frontier level: maxLevels for primaries, decreasing for linked batches. */
 	level: number;
+	/**
+	 * A batch of the PRIMARY selection (the job's SQO), not a frontier drain.
+	 * The section tipo cannot tell them apart: a self-linked section (types →
+	 * related types) drains frontier batches of the primary's own tipo, holding
+	 * records OUTSIDE the selection — counting those as progress overran the
+	 * job's estimate before the run finished.
+	 */
+	primary: boolean;
 	records: RecordIR[];
 	rows: ProjectedRow[];
 	/** Records whose gate said 'unpublish' — writers remove their artifacts. */
@@ -2382,6 +2390,7 @@ async function processBatch(
 	return {
 		section: sectionPlan,
 		level,
+		primary: !viaFrontier,
 		records: outRecords,
 		rows: outRows,
 		unpublishIds,
