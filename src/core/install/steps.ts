@@ -30,7 +30,7 @@
  */
 
 import { copyFileSync, existsSync, readdirSync, renameSync, rmdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep as pathSep, resolve as resolvePath } from 'node:path';
 import type { ServerState } from '../resolve/server_state.ts';
 import type { InstallStepId } from './install_plan.ts';
 import { installPrivateDir } from './paths.ts';
@@ -196,9 +196,45 @@ const persist_config: InstallStepDefinition = {
 		const restored = restorePreInstallEnv(ctx.state);
 		const removed = removeInstallEnvCopies(ctx.state);
 		setServerState({ install_status: statusBefore(ctx.state) });
-		return `${restored}; ${removed} backup(s) removed; install status reset`;
+		const runtime = await removeCreatedRuntimeFiles(ctx.state);
+		return `${restored}; ${removed} backup(s) removed; install status reset${runtime}`;
 	},
 };
+
+/** A sqlite store's companion files (removed with it). */
+const SQLITE_SIDE_FILES = ['', '-wal', '-shm', '-journal'] as const;
+
+/**
+ * The server's runtime files this install CREATED — the state file, the
+ * session store (campaign 3 C3-9: a developer abort left both) — removed: the
+ * last undo, after the install status was reset. One that existed at the
+ * preflight is kept; a record without the list (older) removes nothing.
+ */
+async function removeCreatedRuntimeFiles(state: InstallState): Promise<string> {
+	const before = state.preflight.runtime_files_before;
+	if (before === undefined) return '';
+	const { RUNTIME_PATH_CENSUS } = await import('./runtime_paths.ts');
+	// Only a file INSIDE the install's private dir is the install's: a path an
+	// env override points elsewhere (a test run's own session store) is never
+	// this undo's to remove.
+	const privatePrefix = `${resolvePath(installPrivateDir())}${pathSep}`;
+	const created = RUNTIME_PATH_CENSUS.filter((entry) => RUNTIME_FILE_IDS.includes(entry.id))
+		.map((entry) => entry.resolve())
+		.filter(
+			(path): path is string =>
+				path !== null &&
+				resolvePath(path).startsWith(privatePrefix) &&
+				!before.includes(path) &&
+				existsSync(path),
+		);
+	for (const path of created) {
+		for (const side of SQLITE_SIDE_FILES) rmSync(`${path}${side}`, { force: true });
+	}
+	return created.length === 0 ? '' : `; removed ${created.join(', ')}`;
+}
+
+/** The runtime files a server creates in the private dir (runtime_paths.ts census ids). */
+const RUNTIME_FILE_IDS: readonly string[] = Object.freeze(['ts_state_path', 'session_db_path']);
 
 /**
  * Put the pre-install .env back (atomically: copy + rename), or remove the one
@@ -285,6 +321,14 @@ export function toolDetails(outcome: StepRawOutcome): string[] {
 	});
 }
 
+/** `<label> <path> (missing|not writable)` for every directory that is not ok, comma-joined. */
+export function directoriesNeedingAttention(dirs: readonly DirectoryRow[]): string {
+	return dirs
+		.filter((dir) => !(dir.exists && dir.writable))
+		.map((dir) => `${dir.label} ${dir.path} (${dir.exists ? 'not writable' : 'missing'})`)
+		.join(', ');
+}
+
 const check_directories: InstallStepDefinition = {
 	id: 'check_directories',
 	kind: 'action',
@@ -313,31 +357,103 @@ const check_directories: InstallStepDefinition = {
 	verify: async () => {
 		const { checkDirectories } = await import('./directories.ts');
 		const report = checkDirectories({ create: false });
-		return { ok: report.ok, detail: report.msg };
+		// NAME the directory (campaign 3b N4): "One or more directories need
+		// attention" read as "something changed it outside the installer".
+		return {
+			ok: report.ok,
+			detail: report.ok ? report.msg : directoriesNeedingAttention(report.dirs),
+		};
 	},
 	undo: async (ctx) => {
-		// Only what the preflight saw MISSING and now exists — computed at abort
-		// time, so a crash before the step's checkpoint loses nothing. Deepest
-		// first, and only while empty (never a directory holding anything).
-		const created = ctx.state.preflight.directories_missing
-			.filter((path) => existsSync(path))
-			.sort((a, b) => b.length - a.length);
-		const removed: string[] = [];
-		for (const path of created) {
-			try {
-				if (readdirSync(path).length === 0) {
-					rmdirSync(path);
-					removed.push(path);
-				}
-			} catch {
-				// not empty / not ours to force: kept
-			}
-		}
-		return removed.length === 0
-			? 'no created directory was empty'
-			: `removed ${removed.join(', ')}`;
+		// The media tree first (campaign 3 C3-9: it was left whole, under a
+		// deleted service uid), then what the preflight saw MISSING and now
+		// exists — computed at abort time, so a crash before the step's
+		// checkpoint loses nothing. Deepest first, and only while empty (never
+		// a directory holding anything).
+		const tree = await pruneMediaTree(ctx.state);
+		const created = ctx.state.preflight.directories_missing.filter((path) => existsSync(path));
+		const removed = removeEmptyDeepestFirst(created);
+		const dirs =
+			removed.length === 0 ? 'no created directory was empty' : `removed ${removed.join(', ')}`;
+		return tree === 0 ? dirs : `media tree: ${tree} empty director(ies) removed; ${dirs}`;
 	},
 };
+
+/** Remove each of `paths` that is an empty directory, deepest first; answers the removed ones. */
+export function removeEmptyDeepestFirst(paths: readonly string[]): string[] {
+	const removed: string[] = [];
+	for (const path of [...paths].sort((a, b) => b.length - a.length)) {
+		try {
+			if (readdirSync(path).length === 0) {
+				rmdirSync(path);
+				removed.push(path);
+			}
+		} catch {
+			// absent / not empty / not ours to force: kept
+		}
+	}
+	return removed;
+}
+
+/** Every directory under `root` (not `root` itself), any depth; symlinks never followed. */
+function directoriesUnder(root: string): string[] {
+	const found: string[] = [];
+	const walk = (dir: string): void => {
+		for (const entry of readdirSync(dir, { withFileTypes: true })) {
+			if (!entry.isDirectory()) continue;
+			const path = join(dir, entry.name);
+			found.push(path);
+			walk(path);
+		}
+	};
+	try {
+		walk(root);
+	} catch {
+		// unreadable: what was found so far
+	}
+	return found;
+}
+
+/**
+ * The media gate's generated files in a media root that held NOTHING before
+ * the install (campaign 3 C3-9, measured on a real Debian 13 drill): the rule
+ * files (`.htaccess`, the two nginx files) and the session markers of the
+ * install's own root login (`.publication/auth/*`). All regenerated by the
+ * engine at every start — never a record, never a media file — and, in a
+ * root that was empty, all this install's; left behind, they kept the media
+ * tree (and so its service user) alive after an abort.
+ */
+async function removeGateArtifacts(): Promise<void> {
+	const { authMarkerDir, ruleFilePaths } = await import('../media/protection.ts');
+	for (const path of Object.values(ruleFilePaths() ?? {})) rmSync(path, { force: true });
+	for (const path of filesIn(authMarkerDir())) rmSync(path, { force: true });
+}
+
+/** The regular files directly in `dir` (none when it is null or absent). */
+function filesIn(dir: string | null): string[] {
+	if (dir === null || !existsSync(dir)) return [];
+	return readdirSync(dir, { withFileTypes: true })
+		.filter((entry) => entry.isFile())
+		.map((entry) => join(dir, entry.name));
+}
+
+/**
+ * The media tree's EMPTY directories this install made (C3-9): when the media
+ * root held nothing at the preflight, every directory under it is the
+ * install's; otherwise only the ones check_directories recorded. Never a file,
+ * never a directory that holds one. Answers how many were removed.
+ */
+async function pruneMediaTree(state: InstallState): Promise<number> {
+	const recorded = state.created.media_tree ?? [];
+	if (state.preflight.media_root_empty !== true) return removeEmptyDeepestFirst(recorded).length;
+	await removeGateArtifacts();
+	const { config } = await import('../../config/config.ts');
+	const { assertTestMediaRoot } = await import('../media/test_media_root.ts');
+	const configured = config.media.rootPath;
+	const root = configured === null ? null : assertTestMediaRoot(configured, 'pruneMediaTree');
+	const all = root === null ? recorded : [...new Set([...recorded, ...directoriesUnder(root)])];
+	return removeEmptyDeepestFirst(all).length;
+}
 
 const stage_ontologies: InstallStepDefinition = {
 	id: 'stage_ontologies',

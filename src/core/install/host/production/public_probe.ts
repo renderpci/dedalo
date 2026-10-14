@@ -26,11 +26,13 @@
  */
 
 import type { ExecCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
-import { executeCommands } from '../execute.ts';
+import { executeCommands, requestOf } from '../execute.ts';
 import { hostRefuse } from '../refuse.ts';
+import type { RunResult } from '../runner.ts';
 import { readProbeCaSeam } from '../scratch.ts';
+import { TRUST_CA_HOWTO } from '../tls_trust.ts';
 import { mediaGated } from '../web/site.ts';
-import { exec, probeText, ran } from './common.ts';
+import { exec, ran, webFlavor } from './common.ts';
 import { pollUntil } from './first_boot.ts';
 
 const PROBE_NAME = 'dd_install_probe_dd0_0.jpg';
@@ -150,12 +152,53 @@ const PUBLIC_PROBE_BOUND = {
 	look: 'the web server serves another configuration — check `nginx -t` / `apachectl configtest`, its error log, then --resume',
 };
 
+/**
+ * What curl's exit code means, in words (campaign 3 C3-13: an untrusted chain
+ * read "expected 200, got no answer", three times, after 90 seconds). The
+ * docker route's twin is stack/health.ts curlReason.
+ */
+function curlMeaning(exitCode: number, service: string): string {
+	const meanings: Readonly<Record<number, string>> = {
+		6: 'the address does not resolve on this host',
+		7: `nothing answers on that port (is ${service} running? systemctl status ${service})`,
+		28: 'no answer within the timeout',
+		35: 'the TLS handshake failed',
+		51: 'the certificate does not name this address',
+		52: 'the server closed the connection without an answer',
+		56: 'the connection broke while reading the answer',
+		60: `the certificate chain is not trusted by this host — the probe verifies it as a browser does: ${TRUST_CA_HOWTO.replace(', then run this again', ', then --resume')}`,
+	};
+	return meanings[exitCode] ?? `curl exit ${exitCode}`;
+}
+
+/** The reason a probe's curl failed: its exit code in words, and curl's own line. */
+export function curlReason(result: RunResult, service: string): string {
+	if (result.timedOut) return 'the probe timed out';
+	if (result.exitCode === 0) return '';
+	const said = result.stderr.trim().split('\n').at(-1) ?? '';
+	const meaning = curlMeaning(result.exitCode, service);
+	return said === '' ? meaning : `${meaning} (${said})`;
+}
+
+/** One probe's failure sentence, or null when it answered what it must. */
+async function probeFailure(
+	ctx: HostCtx,
+	command: ExecCommand,
+	expect: string,
+): Promise<string | null> {
+	const result = await ctx.runner.run(requestOf(command, ctx));
+	const status = result.stdout.trim() || 'no answer';
+	if (status === expect && !result.timedOut) return null;
+	const reason = curlReason(result, webFlavor(ctx).service);
+	return `${command.label}: expected ${expect}, got ${status}${reason === '' ? '' : ` — ${reason}`}`;
+}
+
 /** Run every probe; answers the failures, in words. */
 async function failures(ctx: HostCtx, ca: string | null): Promise<string[]> {
 	const failed: string[] = [];
 	for (const { command, expect } of publicProbes(ctx, ca)) {
-		const status = (await probeText(ctx, command)).trim() || 'no answer';
-		if (status !== expect) failed.push(`${command.label}: expected ${expect}, got ${status}`);
+		const failure = await probeFailure(ctx, command, expect);
+		if (failure !== null) failed.push(failure);
 	}
 	return failed;
 }

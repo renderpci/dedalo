@@ -1222,8 +1222,15 @@ describe('boot_confirm (the sentinel second half)', () => {
 // and the second swept the first's already-smoke-booted quarantine.
 // ---------------------------------------------------------------------------
 describe('code-update run lock (single-flight)', () => {
+	// Every scratch base is removed after the block (C3-65: one leaked per test).
+	const bases: string[] = [];
+	afterAll(() => {
+		for (const base of bases) rmSync(base, { recursive: true, force: true });
+	});
 	function scratchRoot(name: string): string {
-		const dir = join(mkdtempSync(join(tmpdir(), 'dedalo_run_lock_')), name);
+		const base = mkdtempSync(join(tmpdir(), 'dedalo_run_lock_'));
+		bases.push(base);
+		const dir = join(base, name);
 		mkdirSync(dir, { recursive: true });
 		return dir;
 	}
@@ -1507,9 +1514,15 @@ describe('full swap chain on the DEV CHANNEL (same version)', () => {
 });
 
 describe('the root whitelist', () => {
+	// Every scratch base is removed after the block (C3-65: one leaked per test).
+	const bases: string[] = [];
+	afterAll(() => {
+		for (const base of bases) rmSync(base, { recursive: true, force: true });
+	});
 	/** A live tree + the release about to land, as two dirs of empty files. */
 	function trees(live: string[], shipped: string[]): [string, string] {
 		const base = mkdtempSync(join(tmpdir(), 'dedalo_root_whitelist_'));
+		bases.push(base);
 		const codeRoot = join(base, 'code');
 		const targetRoot = join(base, 'live');
 		for (const [dir, names] of [

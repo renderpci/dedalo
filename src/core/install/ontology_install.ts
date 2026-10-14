@@ -19,7 +19,10 @@
  *     model lives in a TLD imported after them (a dependency cycle). Finally the
  *     installed TLDs' structural references are VERIFIED
  *     (verifyInstalledOntologyReferences): a dependency-class reference to a
- *     tipo this installation does not hold is a WARNING naming the remedy.
+ *     tipo this installation does not hold is a WARNING naming the remedy. A
+ *     reference into a thesaurus the SAME run installs next (install_hierarchies,
+ *     `pendingThesauri`) is not missing, and references from an
+ *     external-ontology mapping (tch → crm) are soft — campaign 3, C3-28.
  *
  * FAILURE CONTRACT — install-level all-or-nothing: ANY import error refuses
  * `install.step_failed`; the shared layer's snapshot restore runs (its known
@@ -50,8 +53,11 @@ import type { OntologyDependency } from '../ontology/ontology_dependencies.ts';
 import {
 	danglingDependencies,
 	diffusionModelSet,
+	externalMappingNodes,
 	type OntologyReference,
+	type ReferenceRow,
 	referencesOfRows,
+	unreachableNodes,
 } from '../ontology/ontology_references.ts';
 import {
 	claimOntologyImportLatch,
@@ -396,7 +402,13 @@ async function installedCounts(
  * `install.step_failed` on any import error (see the header's contract).
  */
 export async function installOntologies(
-	options: { stagingDir?: string; userId?: number; conn?: DbConnDescriptor } = {},
+	options: {
+		stagingDir?: string;
+		userId?: number;
+		conn?: DbConnDescriptor;
+		/** The thesauri this run's install_hierarchies provisions next (their TLDs). */
+		pendingThesauri?: readonly string[];
+	} = {},
 ): Promise<InstallOntologiesResult> {
 	const stagingDir = options.stagingDir ?? installOntologyStagingDir();
 	const userId = options.userId ?? -1;
@@ -410,7 +422,10 @@ export async function installOntologies(
 	});
 	const tlds = manifest.items.map((item) => item.tld);
 	await rederiveUnresolvedModels(tlds, userId);
-	const warnings = [...manifest.warnings, ...(await verifyInstalledOntologyReferences(tlds))];
+	const warnings = [
+		...manifest.warnings,
+		...(await verifyInstalledOntologyReferences(tlds, options.pendingThesauri)),
+	];
 	const installed = await installedCounts(tlds);
 	await removeStagingDir(stagingDir);
 	return {
@@ -530,7 +545,7 @@ function danglingWarning(group: readonly OntologyReference[]): string {
 	if (isCoreOntologyTld(toTld)) {
 		return `'${first.fromTld}' references ${group.length} node(s) of the core ontology '${toTld}' that this installation's seed does not have — run Maintenance › Update ontology after the install to align the core`;
 	}
-	return `'${first.fromTld}' references ${group.length} node(s) of '${toTld}' that is not installed (${first.field}: e.g. ${first.from}→${first.to}) — install '${toTld}' too (--ontologies ${first.fromTld},${toTld}) or ask the ontology server to declare it`;
+	return `'${first.fromTld}' references ${group.length} node(s) of '${toTld}' that is not installed (${first.field}: e.g. ${first.from}→${first.to}) — the nodes that use them do not work until '${toTld}' is installed: add it (--ontologies ${first.fromTld},${toTld}) if you use them, or ask the ontology server to declare it`;
 }
 
 function groupDangling(dangling: readonly OntologyReference[]): OntologyReference[][] {
@@ -542,19 +557,61 @@ function groupDangling(dangling: readonly OntologyReference[]): OntologyReferenc
 	return [...groups.values()];
 }
 
+/** What the reference warnings are measured over (all of it read by the caller). */
+export interface ReferenceWarningInput {
+	/** The installed TLDs (the measured set). */
+	readonly tlds: readonly string[];
+	/** Their dd_ontology-shaped rows. */
+	readonly rows: readonly ReferenceRow[];
+	/** Whether the installation holds a tipo. */
+	readonly isPresent: (tipo: string) => boolean;
+	/** The diffusion model set (diffusionModelSet). */
+	readonly diffusionModels: ReadonlySet<string>;
+	/** Thesaurus TLDs the same run provisions next: a reference into one is not missing. */
+	readonly pendingThesauri?: readonly string[];
+}
+
 /**
- * The installed TLDs' structural references that do not resolve: every
- * DEPENDENCY-class reference (ontology_references.ts — grafts and diffusion
- * relations are soft by rule) to a tipo the dd_ontology table does not hold, one warning per
- * (from, to) TLD pair, naming the remedy.
+ * PURE: the warnings over measured rows — every DEPENDENCY-class reference
+ * (ontology_references.ts: grafts, diffusion relations and external-ontology
+ * mappings are soft by rule) to a tipo neither present nor in a pending
+ * thesaurus, one warning per (from, to) TLD pair, naming the remedy. A
+ * reference FROM a node no tree reaches (under a graft into an absent
+ * ontology — unreachableNodes) is not reported either: it cannot break a node
+ * anyone uses.
+ */
+export function referenceWarnings(input: ReferenceWarningInput): string[] {
+	const pending = new Set(input.pendingThesauri ?? []);
+	const own = new Set(input.tlds);
+	const resolvable = (tipo: string) =>
+		pending.has(getTldFromTipo(tipo) ?? '') || input.isPresent(tipo);
+	const mapping = externalMappingNodes(input.rows);
+	const unreachable = unreachableNodes(input.rows, own, resolvable);
+	const dangling = danglingDependencies(
+		referencesOfRows(input.rows),
+		own,
+		resolvable,
+		input.diffusionModels,
+		(tipo) => mapping.has(tipo),
+	).filter((ref) => !unreachable.has(ref.from));
+	return groupDangling(dangling).map(danglingWarning);
+}
+
+/**
+ * The installed TLDs' structural references that do not resolve in the
+ * dd_ontology table (referenceWarnings over this database's rows).
  */
 export async function verifyInstalledOntologyReferences(
 	tlds: readonly string[],
+	pendingThesauri: readonly string[] = [],
 ): Promise<string[]> {
 	const rows = await readDdOntologyReferenceRows(tlds);
-	const refs = referencesOfRows(rows);
-	const diffusionModels = diffusionModelSet(await readDdOntologyModelParents());
-	const present = await existingDdOntologyTipos(refs.map((ref) => ref.to));
-	const dangling = danglingDependencies(refs, new Set(tlds), present, diffusionModels);
-	return groupDangling(dangling).map(danglingWarning);
+	const present = await existingDdOntologyTipos(referencesOfRows(rows).map((ref) => ref.to));
+	return referenceWarnings({
+		tlds,
+		rows,
+		isPresent: (tipo) => present.has(tipo),
+		diffusionModels: diffusionModelSet(await readDdOntologyModelParents()),
+		pendingThesauri,
+	});
 }

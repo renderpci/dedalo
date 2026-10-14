@@ -423,7 +423,7 @@ Widget by widget, the panels are described in [area_maintenance](../core/areas/a
 ## 7. Verify
 
 ```shell
-curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
+sudo curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 ```
 
 Expected: HTTP 200 with `db` reporting `ok`. If you run on a TCP port instead of a socket, `curl --fail http://localhost:<port>/health`. No socket file at all means the process is not running — `journalctl -u dedalo -n 100`. Put the engine under systemd and the reverse proxy **after** this verification passes — that is [Phase E](#8-phase-e-run-it-as-a-service). Then, in the browser, as a normal user:

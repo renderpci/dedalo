@@ -18,7 +18,10 @@
  *    from a repository the official list does not name, an official image
  *    without cosign to verify it (critique A16 — use a local build instead, or
  *    install cosign);
- *  - the institution's certificate files (address, expiry, key).
+ *  - the institution's certificate files (address, expiry, key) — and that
+ *    THIS machine trusts their chain (tls_trust.ts: stack_health probes the
+ *    site with this machine's curl; campaign 3 C3-13);
+ *  - Compose older than 2.24.4 (the override's `!override` tag).
  *
  * Then FREEZES the facts and the digest of every stack step's commands in the
  * state file, as host_preflight does: what the rest of the run, and any
@@ -28,10 +31,11 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { HostCtx, HostPlanCtx, HostRunResult, HostStepDefinition } from '../contract.ts';
-import { pendingFacts } from '../facts.ts';
+import { type HostFacts, pendingFacts } from '../facts.ts';
 import { ran } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
 import { checkCertificateFiles } from '../tls_files.ts';
+import { chainTrustVerdict, SYSTEM_CA_BUNDLES } from '../tls_trust.ts';
 import { inCheckout } from './common.ts';
 import { gatherStackFacts, type StackFacts } from './facts.ts';
 import {
@@ -49,34 +53,77 @@ import {
 /** The disk floor (see the header). */
 export const STACK_MIN_FREE_GIB = 8;
 
+/**
+ * The oldest Compose the stack runs on: the installer's compose.override.yaml
+ * replaces the trial nginx's ports and volumes with the `!override` tag, which
+ * Compose understands from 2.24.4 (an older one refuses the file).
+ */
+export const MIN_COMPOSE: readonly number[] = Object.freeze([2, 24, 4]);
+
+/** Is `version` (`2.39.1`, `5.0.0-desktop.1`) at least `minimum`? null: no Compose. */
+export function composeAtLeast(version: string | null, minimum: readonly number[]): boolean {
+	const parts = (version ?? '').split(/[.-]/).map((part) => Number.parseInt(part, 10));
+	for (const [index, wanted] of minimum.entries()) {
+		const have = Number.isNaN(parts[index] ?? Number.NaN) ? -1 : (parts[index] as number);
+		if (have !== wanted) return have > wanted;
+	}
+	return true;
+}
+
 /** The operator as a sentence names them. */
 function who(facts: StackFacts): string {
 	return facts.user === '' ? 'this user' : facts.user;
 }
 
-/** `[sentence]` when `bad`, else none. */
-function when(bad: boolean, sentence: string): string[] {
-	return bad ? [sentence] : [];
+/**
+ * THE MACHINE CHECKS, one sentence (or null) each — exported because the
+ * interactive System check (probes.ts stackRows) shows them as rows BEFORE the
+ * run, over the same facts (gatherStackFacts): one wording, one rule, never a
+ * second copy. The preflight below refuses with the same sentences.
+ */
+export const STACK_MACHINE_CHECKS = Object.freeze({
+	/** Docker itself is installed. */
+	docker: (facts: StackFacts): string | null =>
+		facts.docker === null
+			? 'Docker is not installed — install Docker Engine and its Compose plugin (https://docs.docker.com/engine/install/), then run this again; the installer never installs it'
+			: null,
+	/** The daemon answers this operator. */
+	daemon: (facts: StackFacts): string | null =>
+		facts.daemon
+			? null
+			: `the Docker daemon does not answer ${who(facts)} — start it (sudo systemctl enable --now docker) or join the docker group (sudo usermod -aG docker ${who(facts)}, then log in again); DOCKER_HOST is not passed through: use a docker context`,
+	/** Compose 2.24.4 or newer (the installer's override uses `!override`). */
+	compose: (facts: StackFacts): string | null =>
+		composeAtLeast(facts.composeVersion, MIN_COMPOSE)
+			? null
+			: `Docker Compose ${MIN_COMPOSE.join('.')} or newer is required (the \`docker compose\` plugin, not the old docker-compose)${facts.composeVersion === null ? '' : ` — this machine has ${facts.composeVersion}`}`,
+	/** The disk floor (a root that cannot be measured skips it — see the header). */
+	disk: (facts: StackFacts): string | null => {
+		const free = facts.freeGib ?? STACK_MIN_FREE_GIB;
+		return free < STACK_MIN_FREE_GIB
+			? `only ${free} GiB free under ${facts.dockerRoot} — the install needs about ${STACK_MIN_FREE_GIB} GiB (docker system prune -af, or move Docker's root to a bigger disk)`
+			: null;
+	},
+	/** The operator's identity is known. */
+	operator: (facts: StackFacts): string | null =>
+		knownOperator(facts)
+			? null
+			: 'the operator cannot be identified (`id -un` / `id -u` answered nothing) — run the install as a user with a login on this machine',
+});
+
+/** The sentences of `checks` that fail on `facts`. */
+function failing(
+	facts: StackFacts,
+	checks: readonly (keyof typeof STACK_MACHINE_CHECKS)[],
+): string[] {
+	return checks
+		.map((check) => STACK_MACHINE_CHECKS[check](facts))
+		.filter((sentence): sentence is string => sentence !== null);
 }
 
-/** Docker itself: present, reachable, Compose v2. */
+/** Docker itself: present, reachable, Compose v2 (not installed: that one sentence alone). */
 function dockerProblems(facts: StackFacts): string[] {
-	if (facts.docker === null) {
-		return [
-			'Docker is not installed — install Docker Engine and its Compose plugin (https://docs.docker.com/engine/install/), then run this again; the installer never installs it',
-		];
-	}
-	const major = Number((facts.composeVersion ?? '0').split('.')[0]);
-	return [
-		...when(
-			!facts.daemon,
-			`the Docker daemon does not answer ${who(facts)} — start it (sudo systemctl enable --now docker) or join the docker group (sudo usermod -aG docker ${who(facts)}, then log in again); DOCKER_HOST is not passed through: use a docker context`,
-		),
-		...when(
-			!(major >= 2),
-			'Docker Compose v2 or newer is required (the `docker compose` plugin, not the old docker-compose)',
-		),
-	];
+	return facts.docker === null ? failing(facts, ['docker']) : failing(facts, ['daemon', 'compose']);
 }
 
 /**
@@ -92,17 +139,7 @@ function knownOperator(facts: StackFacts): boolean {
 
 /** Disk and the operator's identity. */
 function machineProblems(facts: StackFacts): string[] {
-	const free = facts.freeGib ?? STACK_MIN_FREE_GIB;
-	return [
-		...when(
-			free < STACK_MIN_FREE_GIB,
-			`only ${free} GiB free under ${facts.dockerRoot} — the install needs about ${STACK_MIN_FREE_GIB} GiB (docker system prune -af, or move Docker's root to a bigger disk)`,
-		),
-		...when(
-			!knownOperator(facts),
-			'the operator cannot be identified (`id -un` / `id -u` answered nothing) — run the install as a user with a login on this machine',
-		),
-	];
+	return failing(facts, ['disk', 'operator']);
 }
 
 /** An instance, or an earlier install's stack files, already here. */
@@ -150,22 +187,51 @@ function imageProblems(ctx: HostPlanCtx, facts: StackFacts): string[] {
 	];
 }
 
-/** The institution's own certificate, checked before it is copied. */
-function tlsVerdict(ctx: HostCtx): { problems: string[]; warnings: string[] } {
-	const { answers } = ctx;
+/**
+ * The institution's own certificate, checked before it is copied — by the
+ * preflight (a refusal), and on the Review (campaign 3b N8: an untrusted chain
+ * was accepted by the TLS screen and the Review and refused only after `yes`,
+ * every answer lost; the Review now lists it under TO DO, before `yes`).
+ */
+export function stackTlsVerdict(
+	answers: HostPlanCtx['answers'],
+	fs: Pick<HostCtx['fs'], 'readText'>,
+	now: number,
+): { problems: string[]; warnings: string[] } {
 	if (answers.route !== 'docker' || answers.tls_mode !== 'files') {
 		return { problems: [], warnings: [] };
 	}
+	const fullchain = fs.readText(answers.tls_cert_path);
 	const verdict = checkCertificateFiles(
-		ctx.fs.readText(answers.tls_cert_path),
-		ctx.fs.readText(answers.tls_key_path),
+		fullchain,
+		fs.readText(answers.tls_key_path),
 		answers.server_name,
-		ctx.now(),
+		now,
+	);
+	// The install's last step probes the site with THIS machine's curl (C3-13).
+	const trust = chainTrustVerdict(
+		fullchain,
+		SYSTEM_CA_BUNDLES.map((path) => fs.readText(path)),
 	);
 	return {
-		problems: verdict.problems.map((problem) => `${answers.tls_cert_path}: ${problem}`),
-		warnings: verdict.warnings,
+		problems: [...verdict.problems, ...(trust.problem === null ? [] : [trust.problem])].map(
+			(problem) => `${answers.tls_cert_path}: ${problem}`,
+		),
+		warnings: [...verdict.warnings, ...(trust.warning === null ? [] : [trust.warning])],
 	};
+}
+
+/** The Review's TO DO lines of a stack plan: the institution certificate's problems and warnings. */
+export function stackReviewTodo(
+	ctx: HostPlanCtx,
+	fs: Pick<HostCtx['fs'], 'readText'>,
+	now: number,
+): string[] {
+	const { problems, warnings } = stackTlsVerdict(ctx.answers, fs, now);
+	return [
+		...problems,
+		...warnings.map((line) => `certificate ${ctx.answers.tls_cert_path}: ${line}`),
+	];
 }
 
 /** Refuse with every problem, joined (the operator fixes them all in one pass). */
@@ -173,9 +239,47 @@ function refuseAll(problems: readonly string[]): void {
 	if (problems.length > 0) hostRefuse('install.state_conflict', problems.join('; '));
 }
 
+/**
+ * The facts of a docker/trial plan: no host facts, the stack's — and whether
+ * the source is a git checkout, which picks stack_image's builder (the shared
+ * clean-snapshot builder for a checkout, a plain build of a release tree).
+ * Campaign 3b N1: this was left at the pending `false` on the stack routes, so
+ * every install-time build took the working tree as it was (`X.Y.Z.dev`,
+ * uncommitted files included). ONE function for the run, its frozen digest and
+ * the Review.
+ */
+export function stackPlanFacts(stack: StackFacts, source: string): HostFacts {
+	return { ...pendingFacts(), sourceIsGit: existsSync(join(source, '.git')), stack };
+}
+
 /** The facts a plan context carries once they are frozen. */
 function withFacts(ctx: HostCtx, facts: StackFacts): HostPlanCtx {
-	return { ...ctx, facts: { ...pendingFacts(), stack: facts } };
+	return { ...ctx, facts: stackPlanFacts(facts, ctx.source) };
+}
+
+/** The measured machine's refusals (each sentence once) and warnings — read-only. */
+async function evaluateStack(
+	ctx: HostCtx,
+): Promise<{ facts: StackFacts; problems: string[]; warnings: string[] }> {
+	const facts = await gatherStackFacts(ctx.runner, ctx.fs);
+	const docker = dockerProblems(facts);
+	if (docker.length > 0) return { facts, problems: docker, warnings: [] };
+	const tls = stackTlsVerdict(ctx.answers, ctx.fs, ctx.now());
+	const problems = [
+		...machineProblems(facts),
+		...instanceProblems(ctx, facts),
+		...imageProblems(withFacts(ctx, facts), facts),
+		...tls.problems,
+	];
+	return { facts, problems: [...new Set(problems)], warnings: tls.warnings };
+}
+
+/**
+ * The stack preflight's refusals, measured now and recorded nowhere (campaign
+ * 3 C3-23): a fresh run checks them BEFORE it writes .dedalo-install/.
+ */
+export async function stackPreflightRefusals(ctx: HostCtx): Promise<string[]> {
+	return (await evaluateStack(ctx)).problems;
 }
 
 /** The preflight's own run: measure, refuse, freeze. */
@@ -183,20 +287,13 @@ async function runStackPreflight(
 	ctx: HostCtx,
 	digest: (ctx: HostPlanCtx) => Record<string, string>,
 ): Promise<HostRunResult> {
-	const facts = await gatherStackFacts(ctx.runner, ctx.fs);
-	refuseAll(dockerProblems(facts));
+	const { facts, problems, warnings } = await evaluateStack(ctx);
+	refuseAll(problems);
 	const planCtx = withFacts(ctx, facts);
-	const tls = tlsVerdict(ctx);
-	refuseAll([
-		...machineProblems(facts),
-		...instanceProblems(ctx, facts),
-		...imageProblems(planCtx, facts),
-		...tls.problems,
-	]);
 	ctx.state.preflight.host = { facts: planCtx.facts, commands_digest: digest(planCtx) };
 	return ran(
 		`Docker Compose ${facts.composeVersion}, ${facts.freeGib === null ? 'disk not measurable' : `${facts.freeGib} GiB free`}, as ${facts.user}`,
-		{ warnings: tls.warnings },
+		{ warnings },
 	);
 }
 
@@ -215,5 +312,6 @@ export function stackPreflightStep(
 		label: () => 'system check: Docker, Compose v2, disk, no instance yet, the image source',
 		commands: () => [],
 		run: (ctx) => runStackPreflight(ctx, digest),
+		refusals: stackPreflightRefusals,
 	};
 }

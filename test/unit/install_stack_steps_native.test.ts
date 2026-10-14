@@ -37,25 +37,49 @@
  * DB-FREE, network-free (the hermetic tier runs it).
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, spyOn, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import type { HostCtx, HostStepDefinition } from '../../src/core/install/host/contract.ts';
 import { hostFs } from '../../src/core/install/host/fs.ts';
-import type { RecordedResponse } from '../../src/core/install/host/runner.ts';
-import { imageVersionOf, officialRepositories } from '../../src/core/install/host/stack/layout.ts';
+import { REVIEW_TODO_STEP, reviewHostCommands } from '../../src/core/install/host/review.ts';
+import {
+	type CommandRunner,
+	type RecordedResponse,
+	recordingRunner,
+} from '../../src/core/install/host/runner.ts';
+import { keptImages } from '../../src/core/install/host/stack/database.ts';
+import { curlReason } from '../../src/core/install/host/stack/health.ts';
+import { IMAGE_BUILDER, imageCommands } from '../../src/core/install/host/stack/image.ts';
+import {
+	BUILD_DURATION,
+	imageRefOf,
+	imageVersionOf,
+	officialRepositories,
+} from '../../src/core/install/host/stack/layout.ts';
 import { STACK_HOST_STEPS } from '../../src/core/install/host/stack/table.ts';
+import { emptyHostCreated } from '../../src/core/install/host/state_types.ts';
 import { buildInstallPlan, type StackHostStepId } from '../../src/core/install/install_plan.ts';
-import { buildPlanFile } from '../../src/core/install/run_files_core.ts';
+import { MEDIA_DIR_MODE } from '../../src/core/install/media_tree.ts';
+import {
+	buildPlanFile,
+	type InstallState,
+	readStateFile,
+} from '../../src/core/install/run_files_core.ts';
+import { DONE_TEXT, NOTICE_TEXT } from '../../src/core/install/screen_text.ts';
 import { loadImageRegistries } from '../../src/core/update/image_registries.ts';
 import {
 	COSIGN,
 	composePrefix,
 	DOCKER,
+	type HostFiles,
 	IMAGE_DIGEST,
 	laterRequest,
 	loggedCommands,
 	loggedRequests,
+	mintCertificate,
 	REPO_ROOT,
 	ROOT_PASSWORD,
 	runHost,
@@ -126,7 +150,7 @@ function fresh(raw: Record<string, unknown>) {
 
 /** A docker command that CHANGES something (pull, build, run, up, down, volume rm, exec writes). */
 const MUTATING = new RegExp(
-	`^${DOCKER} (pull|build|run --rm -p|volume rm|compose .* (up|down|run --rm -T dedalo bun run scripts/install.ts --request-stdin|exec -T dedalo (mkdir|tee|rm)))`,
+	`^(/bin/bash \\S+/deploy/dedalo-image-build\\.sh |${DOCKER} (pull|build|run --rm -p|volume rm|compose .* (up|down|run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin|exec -T dedalo (mkdir|tee|rm))))`,
 );
 
 /** Every file under `dir`, as text. */
@@ -204,7 +228,7 @@ describe('trial and docker run end to end (a, b, c, e)', () => {
 			);
 			const argv = child?.argv ?? [];
 			expect(argv.join(' ')).toStartWith(
-				`${composePrefix(raw.route as 'docker' | 'trial')} run --rm -T dedalo bun run scripts/install.ts --request-stdin --execute --events-jsonl`,
+				`${composePrefix(raw.route as 'docker' | 'trial')} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin --execute --events-jsonl`,
 			);
 			expect(
 				argv.filter(
@@ -220,6 +244,10 @@ describe('trial and docker run end to end (a, b, c, e)', () => {
 				expect(log.filter((line) => line.includes(' exec -T dedalo tee '))).toEqual([]);
 				expect(first.outcome.told.join('\n')).toContain(
 					'THE TRIAL STACK HAS NO MEDIA ACCESS CONTROL',
+				);
+				// C3-48: the browser opens THIS machine's address, never only localhost.
+				expect(first.outcome.told.join('\n')).toContain(
+					"open http://<this machine's address>/dedalo/ in a browser",
 				);
 			} else {
 				expect(plan.steps).toContain('stack_tls');
@@ -306,7 +334,9 @@ describe('the image is verified; the System check refuses before anything change
 		test(`refused at the System check: ${refusal.name}`, async () => {
 			const host = machine(refusal.raw, refusal.options);
 			const { outcome } = await runHost(host, fresh(refusal.raw).request);
-			expect(outcome.failedStep).toBe('stack_preflight');
+			expect(outcome.result).toBe('refused'); // C3-23: refused before any record
+			expect(outcome.failedStep).toBeNull();
+			expect(outcome.hint).toEqual([]);
 			expect(outcome.message).toContain(refusal.sentence);
 			expect(loggedCommands(host.root).filter((line) => MUTATING.test(line))).toEqual([]);
 			expect(
@@ -337,13 +367,13 @@ describe('abort removes only what this install created (f)', () => {
 		const host = machine(TRIAL, {
 			responses: [
 				{
-					match: `${compose} run --rm -T dedalo bun run scripts/install.ts --request-stdin`,
+					match: `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`,
 					exit: 9,
 				},
 				{
 					match: `${compose} run --rm -T --no-deps dedalo bun run scripts/install.ts --status --json`,
-					after: `${compose} run --rm -T dedalo bun run scripts/install.ts --request-stdin`,
-					until: `${compose} run --rm -T dedalo bun run scripts/install.ts --abort`,
+					after: `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`,
+					until: `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --abort`,
 					stdout:
 						'{"exists":true,"outcome":"in_progress","failed_step":"install_db_from_default_file"}\n',
 				},
@@ -376,13 +406,691 @@ describe('abort removes only what this install created (f)', () => {
 		// The child's own gate got the OPERATOR's confirmation (never the plan's name on their behalf).
 		expect(
 			loggedCommands(host.root).filter((line) =>
-				line.includes('install.ts --abort --confirm-database dedalo --request-stdin'),
+				line.includes(
+					'install.ts --abort --confirm-database dedalo --request-stdin --events-jsonl',
+				),
 			).length,
 		).toBe(1);
 		expect(removed[0]).toContain('dedalo_pgdata');
 		expect(removed[0]).not.toContain('dedalo_unrelated');
+		// The images stay, and the abort says which (C3-52).
+		const said = aborted.transcript.lines.join('\n');
+		for (const image of ['postgres:18', 'nginx:alpine', 'docker image rm'])
+			expect(said).toContain(image);
 		const fs = hostFs(host.root);
 		expect(fs.exists(join(REPO_ROOT, '.dedalo.env'))).toBe(false);
 		expect(fs.exists(join(REPO_ROOT, 'compose.override.yaml'))).toBe(false);
+	});
+});
+
+// ── (g) campaign 3: what the stack steps must not hide ───────────────────────
+
+/** The state file of the scratch host's run (null once an abort removed it). */
+function stateOf(host: ScratchHost): InstallState | null {
+	return readStateFile(join(host.root, REPO_ROOT, '.dedalo-install'));
+}
+
+describe('stack_up proves nginx stayed up (C3-8)', () => {
+	test('a restarting nginx fails stack_up with its [emerg] line, and stack_up is not recorded done', async () => {
+		const compose = composePrefix('docker');
+		const emerg =
+			'nginx: [emerg] open() "/etc/nginx/dedalo/docker/media_protection.conf" failed (2: No such file or directory)';
+		const host = machine(DOCKER_LE, {
+			responses: [
+				{
+					match: `${DOCKER} inspect --format {{.State.Status}} {{.RestartCount}}`,
+					stdout: 'restarting 4\n',
+				},
+				{ match: `${compose} exec -T nginx nginx -t`, exit: 1, stderr: emerg },
+				{
+					match: `${compose} logs --no-color --tail 5 nginx`,
+					stdout: `nginx-1  | 2026/10/13 [notice] 1#1: using the "epoll" event method\nnginx-1  | ${emerg}\nnginx-1  | done\n`,
+				},
+			],
+		});
+		const { outcome } = await runHost(host, fresh(DOCKER_LE).request);
+		expect(outcome.failedStep).toBe('stack_up');
+		expect(outcome.message).toContain('nginx did not stay up (restarting 4)');
+		expect(outcome.message).toContain(emerg);
+		expect(stateOf(host)?.steps.stack_up?.status).toBe('failed');
+		expect(stateOf(host)?.steps.stack_health?.status).toBe('pending');
+	});
+
+	test('positive control: a running nginx whose config passes completes the install', async () => {
+		const host = machine(DOCKER_LE);
+		const { outcome } = await runHost(host, fresh(DOCKER_LE).request);
+		expect(outcome.result).toBe('complete');
+		const log = loggedCommands(host.root);
+		expect(log.filter((line) => line.endsWith(' exec -T nginx nginx -t')).length).toBeGreaterThan(
+			0,
+		);
+	});
+});
+
+describe('an abort of a live stack keeps PostgreSQL up; --resume puts the rest back (C3-10)', () => {
+	test('abort undoes stack_up with `rm --stop --force` of its own services, never `down`; resume completes', async () => {
+		const compose = composePrefix('trial');
+		const host = machine(TRIAL, {
+			// The effect of a `down`: PostgreSQL no longer answers (a resume's verify sees it).
+			responses: [
+				{ match: `${compose} exec -T postgres pg_isready`, after: `${compose} down`, exit: 1 },
+			],
+		});
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		const before = loggedCommands(host.root).length;
+		const aborted = await runHost(host, laterRequest('abort', plan));
+		expect(aborted.outcome.message).toBeNull();
+		const undone = loggedCommands(host.root).slice(before);
+		expect(undone).toContain(`${compose} rm --stop --force dedalo nginx backup`);
+		expect(undone.filter((line) => line.startsWith(`${compose} down`)).length).toBe(0);
+		expect(stateOf(host)?.steps.stack_database?.status).toBe('done');
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.message).toBeNull();
+		expect(resumed.outcome.result).toBe('complete');
+	});
+
+	test("the Let's Encrypt stack also removes its certbot; the database undo names the images it keeps (C3-52)", async () => {
+		const compose = composePrefix('docker');
+		const host = machine(DOCKER_LE);
+		const { plan, request } = fresh(DOCKER_LE);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		await runHost(host, laterRequest('abort', plan));
+		expect(loggedCommands(host.root)).toContain(
+			`${compose} rm --stop --force dedalo nginx backup certbot`,
+		);
+		const ctx = stackPlanCtx(DOCKER_LE);
+		const kept = keptImages(ctx);
+		for (const image of [
+			'postgres:18',
+			'nginx:alpine',
+			'certbot/certbot',
+			imageRefOf(ctx.answers),
+		]) {
+			expect(kept).toContain(image);
+		}
+	});
+});
+
+/** Prepend responses to a scratch machine's table (first match wins): the world changed since. */
+function prependResponses(host: ScratchHost, extra: readonly RecordedResponse[]): void {
+	const path = join(host.root, SCRATCH_DIR, 'responses.json');
+	const current = JSON.parse(readFileSync(path, 'utf8')) as RecordedResponse[];
+	writeFileSync(path, JSON.stringify([...extra, ...current]));
+}
+
+/** How many times a logged command started with `prefix`. */
+function timesLogged(host: ScratchHost, prefix: string): number {
+	return loggedCommands(host.root).filter((line) => line.startsWith(prefix)).length;
+}
+
+describe('a resume RE-RUNS a restartable step whose outcome is gone (C3-8/C3-10)', () => {
+	test('the whole stack stopped after it completed (a reboot, `compose stop`): --resume starts PostgreSQL and the stack again — never "changed outside the installer"', async () => {
+		const compose = composePrefix('trial');
+		const host = machine(TRIAL);
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		const pg = `${compose} exec -T postgres pg_isready`;
+		const running = `${compose} ps --services --status running`;
+		const [pgSeen, runningSeen] = [timesLogged(host, pg), timesLogged(host, running)];
+		const upsBefore = timesLogged(host, `${compose} up -d`);
+		// Stopped: the NEXT probe of each finds nothing running; once started again, everything is.
+		prependResponses(host, [
+			{ match: pg, afterCount: pgSeen + 1 },
+			{ match: pg, afterCount: pgSeen, exit: 1 },
+			{ match: running, afterCount: runningSeen + 1, stdout: 'postgres\ndedalo\nnginx\n' },
+			{ match: running, afterCount: runningSeen, stdout: '' },
+		]);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.message).toBeNull();
+		expect(resumed.outcome.result).toBe('complete');
+		// It STARTED them again: `up -d postgres` (stack_database) and the stack (stack_up).
+		expect(timesLogged(host, `${compose} up -d`) - upsBefore).toBeGreaterThanOrEqual(3);
+		const said = resumed.transcript.lines.join('\n');
+		expect(said).toContain('PostgreSQL does not accept connections — started again');
+		expect(said).not.toContain('changed it outside the installer');
+	});
+
+	test('a step that is NOT restartable stays drift — refused with the data consequence of --abort spelled out', async () => {
+		const host = machine(TRIAL);
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		// The env file the install wrote, gone (removed by hand).
+		rmSync(join(host.root, REPO_ROOT, '.dedalo.env'), { force: true });
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.result).toBe('failed');
+		expect(resumed.outcome.message).toContain('recorded done but its outcome is missing');
+		expect(resumed.outcome.message).toContain('put that back, then --resume');
+		// Never "start again" without what --abort does to the data (C3-8/C3-10).
+		expect(resumed.outcome.message).toContain('DELETES the database this install created');
+		expect(resumed.outcome.message).toContain(
+			'an instance that has already served keeps its database',
+		);
+	});
+
+	test('a live trial aborted twice: the second abort undoes nothing and says the instance is kept and how it is removed by hand', async () => {
+		const host = machine(TRIAL);
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		const first = await runHost(host, laterRequest('abort', plan));
+		expect(first.outcome.keptLive).toBe(true);
+		expect(first.outcome.undone).toEqual(['stack_up']);
+		const second = await runHost(host, laterRequest('abort', plan));
+		expect(second.outcome.result).toBe('aborted');
+		expect(second.outcome.keptLive).toBe(true);
+		expect(second.outcome.undone).toEqual([]);
+		// The trial's words, never the production account's (C3-52).
+		const warned = second.transcript.lines.join('\n');
+		expect(warned).toContain('its containers, volumes (the database) and files are kept');
+		expect(warned).not.toContain('its user, database and code');
+		// And the record still resumes to complete.
+		expect((await runHost(host, laterRequest('resume', plan))).outcome.result).toBe('complete');
+	});
+});
+
+describe('nginx publishes its ports, or stack_up fails; a resume recreates it (campaign 3b N2)', () => {
+	test('nginx Up with NO published port (a container whose start failed, reused): stack_up fails naming the ports, never "the stack is up"', async () => {
+		const host = machine(DOCKER_LE, {
+			responses: [{ match: `${DOCKER} port scratch-nginx-id`, stdout: '' }],
+		});
+		const { outcome } = await runHost(host, fresh(DOCKER_LE).request);
+		expect(outcome.failedStep).toBe('stack_up');
+		expect(outcome.message).toContain('nginx is running but publishes no port for 443/tcp, 80/tcp');
+		expect(stateOf(host)?.steps.stack_up?.status).toBe('failed');
+	});
+
+	test('a resume after stack_up failed to bind a port removes the never-started nginx BEFORE `up -d` creates it again', async () => {
+		const compose = composePrefix('docker');
+		const up = `${compose} up -d`;
+		const host = machine(DOCKER_LE, {
+			responses: [
+				// `up -d postgres`, `up -d dedalo`, then the whole stack: the third fails, later ones pass.
+				{ match: up, afterCount: 3 },
+				{
+					match: up,
+					afterCount: 2,
+					exit: 1,
+					stderr:
+						'Error response from daemon: failed to bind host port 0.0.0.0:443/tcp: address already in use',
+				},
+				// Docker's behaviour: the container whose start failed is "Up" with NO port bound
+				// (the resume's verify sees that); the recreated one binds them.
+				{
+					match: `${DOCKER} port scratch-nginx-id`,
+					afterCount: 1,
+					stdout: '443/tcp -> 0.0.0.0:443\n80/tcp -> 0.0.0.0:80\n',
+				},
+				{ match: `${DOCKER} port scratch-nginx-id`, stdout: '' },
+			],
+		});
+		const { plan, request } = fresh(DOCKER_LE);
+		const first = await runHost(host, request);
+		expect(first.outcome.failedStep).toBe('stack_up');
+		const before = loggedCommands(host.root).length;
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.message).toBeNull();
+		expect(resumed.outcome.result).toBe('complete');
+		const ran = loggedCommands(host.root).slice(before);
+		// Not adopted as landed (its verify saw no port): run again, nginx removed, then created.
+		expect(resumed.transcript.lines.join('\n')).not.toContain(
+			'verified (completed in an earlier run)',
+		);
+		const removed = ran.indexOf(`${compose} rm --stop --force nginx`);
+		expect(removed).toBeGreaterThanOrEqual(0);
+		expect(removed).toBeLessThan(ran.indexOf(up));
+	});
+});
+
+describe('a resume VERIFIES stack_health; a re-started stack is never reported complete unprobed (campaign 3b N6)', () => {
+	const compose = composePrefix('trial');
+	const publicProbe =
+		'/usr/bin/curl -sS -o /dev/null -w %{http_code} --max-time 20 http://127.0.0.1/health';
+
+	test('abort a live trial, resume with the published address dead: the resume FAILS at stack_health, saying why', async () => {
+		const host = machine(TRIAL);
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		await runHost(host, laterRequest('abort', plan));
+		expect(stateOf(host)?.steps.stack_health?.status).toBe('done');
+		prependResponses(host, [
+			{
+				match: publicProbe,
+				stdout: '000',
+				exit: 7,
+				stderr: 'curl: (7) Failed to connect to 127.0.0.1 port 80',
+			},
+		]);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.result).toBe('failed');
+		expect(resumed.outcome.failedStep).toBe('stack_health');
+		expect(resumed.outcome.message).toContain('nothing answers on that port');
+	});
+
+	test('positive control: the same resume with the stack answering completes, and stack_health was PROBED (never only "skipped")', async () => {
+		const host = machine(TRIAL);
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		await runHost(host, laterRequest('abort', plan));
+		const probes = timesLogged(host, publicProbe);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.result).toBe('complete');
+		expect(timesLogged(host, publicProbe)).toBeGreaterThan(probes);
+		expect(timesLogged(host, `${compose} up -d`)).toBeGreaterThan(0);
+	});
+});
+
+describe('stack_health says why a probe failed (C3-13)', () => {
+	test('curl exit 60 through nginx: the sentence names the untrusted chain and how to trust it', async () => {
+		const host = machine(DOCKER_LE, {
+			responses: [
+				{
+					match:
+						'/usr/bin/curl -sS -o /dev/null -w %{http_code} --max-time 20 --resolve dedalo.example.org:443:127.0.0.1 https://dedalo.example.org/health',
+					stdout: '000',
+					exit: 60,
+					stderr:
+						'curl: (60) SSL certificate problem: self-signed certificate in certificate chain',
+				},
+			],
+		});
+		const { outcome } = await runHost(host, fresh(DOCKER_LE).request);
+		expect(outcome.failedStep).toBe('stack_health');
+		expect(outcome.message).toContain(
+			'expected 200, got 000 — the certificate chain is not trusted by this host',
+		);
+		expect(outcome.message).toContain('update-ca-certificates');
+		expect(outcome.message).toContain('self-signed certificate in certificate chain');
+	});
+
+	test('curlReason: a known exit in words, an unknown one by number, success says nothing', () => {
+		const run = (exitCode: number, stderr = '') => ({
+			exitCode,
+			stderr,
+			stdout: '',
+			timedOut: false,
+		});
+		expect(curlReason(run(7))).toContain('nothing answers on that port');
+		expect(curlReason(run(99, 'curl: (99) odd'))).toBe('exit 99 (curl: (99) odd)');
+		expect(curlReason(run(0))).toBe('');
+	});
+});
+
+describe("the institution's certificate: this machine must trust its chain (C3-13)", () => {
+	const NAME = 'dedalo.example.org';
+	const files = (cert: string, key: string, bundle: string | null): HostFiles => {
+		const planted: HostFiles = new Map([
+			['/etc/ssl/museo/fullchain.pem', cert],
+			['/etc/ssl/museo/privkey.pem', key],
+		]);
+		if (bundle !== null) planted.set('/etc/ssl/certs/ca-certificates.crt', bundle);
+		return planted;
+	};
+	const FILES = {
+		route: 'docker',
+		entity: 'museo',
+		server_name: NAME,
+		tls_mode: 'files',
+		tls_cert_path: '/etc/ssl/museo/fullchain.pem',
+		tls_key_path: '/etc/ssl/museo/privkey.pem',
+	};
+	const { cert, key } = mintCertificate(NAME);
+	const other = mintCertificate('unrelated.example.org').cert;
+
+	test('a self-signed chain this machine does not trust: refused at the System check, naming its issuer', async () => {
+		const host = machine(FILES);
+		plant(host.root, files(cert, key, other));
+		const { outcome } = await runHost(host, fresh(FILES).request);
+		expect(outcome.result).toBe('refused'); // C3-23: refused before any record
+		expect(outcome.failedStep).toBeNull();
+		expect(outcome.hint).toEqual([]);
+		expect(outcome.message).toContain(
+			`its chain ends at CN=${NAME}, which this machine does not trust`,
+		);
+		expect(outcome.message).toContain('update-ca-trust');
+		expect(loggedCommands(host.root).filter((line) => MUTATING.test(line)).length).toBe(0);
+	});
+
+	/** The Review of a stack plan, measured through the scratch seam (as the run would). */
+	async function reviewOf(host: ScratchHost, raw: Record<string, unknown>) {
+		const previous = process.env.DEDALO_INSTALL_HOST_ROOT;
+		process.env.DEDALO_INSTALL_HOST_ROOT = host.root;
+		try {
+			return await reviewHostCommands(fresh(raw).plan);
+		} finally {
+			if (previous === undefined) delete process.env.DEDALO_INSTALL_HOST_ROOT;
+			else process.env.DEDALO_INSTALL_HOST_ROOT = previous;
+		}
+	}
+
+	test('the Review lists an untrusted chain under TO DO, BEFORE `yes` — never first at stack_preflight after every answer (campaign 3b N8)', async () => {
+		const host = machine(FILES);
+		plant(host.root, files(cert, key, other));
+		const blocks = await reviewOf(host, FILES);
+		const todo = blocks.find((block) => block.step === REVIEW_TODO_STEP);
+		expect(todo?.commands.join('\n')).toContain(
+			`its chain ends at CN=${NAME}, which this machine does not trust`,
+		);
+		// positive control: once trusted, nothing to do
+		plant(host.root, files(cert, key, `${other}${cert}`));
+		const trusted = await reviewOf(host, FILES);
+		expect(
+			(trusted.find((block) => block.step === REVIEW_TODO_STEP)?.commands ?? []).filter((line) =>
+				line.includes('does not trust'),
+			),
+		).toEqual([]);
+	});
+
+	test('positive control: the same chain once the machine trusts it passes the System check', async () => {
+		const host = machine(FILES);
+		plant(host.root, files(cert, key, `${other}${cert}`));
+		const { outcome } = await runHost(host, fresh(FILES).request);
+		expect(outcome.failedStep).not.toBe('stack_preflight');
+		expect(stateOf(host)?.steps.stack_preflight?.status).toBe('done');
+	});
+});
+
+/** The shared builder's argv over this checkout (stack_image of a git checkout — campaign 3b N1). */
+function builderArgv(ref: string): string {
+	return `/bin/bash ${join(REPO_ROOT, IMAGE_BUILDER)} ${REPO_ROOT} ${ref} ${DOCKER}`;
+}
+
+test('a local build shows its steps as they run, before it ends (C3-27)', async () => {
+	const BUILD = { ...TRIAL, image_source: 'build' };
+	const host = machine(BUILD, {
+		responses: [
+			{
+				match: builderArgv(imageRefOf(stackPlanCtx(BUILD).answers)),
+				stderr: [
+					'#1 [internal] load build definition from Dockerfile',
+					'#5 [2/9] RUN apt-get update && apt-get install -y ffmpeg imagemagick',
+					'#5 12.31 Get:1 http://deb.debian.org/debian trixie InRelease',
+					'#9 [6/9] RUN bun install --frozen-lockfile',
+				].join('\n'),
+			},
+		],
+	});
+	const { outcome, transcript } = await runHost(host, fresh(BUILD).request);
+	expect(outcome.result).toBe('complete');
+	const lines = transcript.lines;
+	const step = lines.findIndex((line) => line.includes('#5 [2/9] RUN apt-get update'));
+	const done = lines.findIndex((line) => line.includes('— built here from '));
+	expect(step).toBeGreaterThanOrEqual(0);
+	expect(done).toBeGreaterThan(step);
+	expect(lines.some((line) => line.includes('#9 [6/9] RUN bun install'))).toBe(true);
+	// The package manager's own chatter is condensed away.
+	expect(lines.some((line) => line.includes('Get:1 http://deb.debian.org'))).toBe(false);
+	const build = loggedRequests(host.root).find(
+		(entry) => entry.argv.includes('--tag') || entry.argv[1]?.endsWith(IMAGE_BUILDER),
+	);
+	expect(build?.env.BUILDKIT_PROGRESS).toBe('plain');
+});
+
+describe('an install-time build of a checkout goes through the shared clean-snapshot builder (campaign 3b N1, C3-46)', () => {
+	const BUILD = { ...TRIAL, image_source: 'build' };
+	const DOCKER_BUILD = { ...DOCKER_LE, image_source: 'build' };
+	for (const raw of [BUILD, DOCKER_BUILD]) {
+		test(`${raw.route}: the RUN (its facts frozen by the System check) executes deploy/dedalo-image-build.sh over the checkout, never \`docker build\` of the working tree; the Review shows that command`, async () => {
+			const host = machine(raw);
+			const { outcome } = await runHost(host, fresh(raw).request);
+			expect(outcome.message).toBeNull();
+			expect(outcome.result).toBe('complete');
+			const ref = imageRefOf(stackPlanCtx(raw).answers);
+			const log = loggedCommands(host.root);
+			expect(log.filter((line) => line === builderArgv(ref))).toHaveLength(1);
+			expect(log.filter((line) => line.startsWith(`${DOCKER} build`))).toEqual([]);
+			// The frozen facts say so: a resume runs the same builder.
+			expect(stateOf(host)?.preflight.host?.facts.sourceIsGit).toBe(true);
+			// The Review the operator saw lists exactly that command.
+			expect(reviewLines(raw).has(builderArgv(ref))).toBe(true);
+		});
+	}
+
+	test("the builder stamps the image with its OWN OCI labels (the tag, the commit), never the base image's", () => {
+		const lib = join(REPO_ROOT, 'deploy', 'dedalo-image-lib.sh');
+		const run = spawnSync(
+			'bash',
+			[
+				'-c',
+				`. "${lib}" && dedalo_image_labels "$1" "$2"`,
+				'labels',
+				REPO_ROOT,
+				'localhost/dedalo:7.0.0',
+			],
+			{ encoding: 'utf8' },
+		);
+		expect(run.status, run.stderr).toBe(0);
+		const head = spawnSync('git', ['-C', REPO_ROOT, 'rev-parse', 'HEAD'], {
+			encoding: 'utf8',
+		}).stdout.trim();
+		const labels = run.stdout.trim().split('\n');
+		expect(labels).toContain('org.opencontainers.image.version=7.0.0');
+		expect(labels).toContain(`org.opencontainers.image.revision=${head}`);
+		expect(labels).toContain('org.opencontainers.image.source=');
+		// a tag-less reference declares no version (never a registry port)
+		const bare = spawnSync(
+			'bash',
+			[
+				'-c',
+				`. "${lib}" && dedalo_image_labels "$1" "$2"`,
+				'labels',
+				REPO_ROOT,
+				'localhost:5000/dedalo',
+			],
+			{ encoding: 'utf8' },
+		);
+		expect(bare.stdout.split('\n')).toContain('org.opencontainers.image.version=');
+	});
+});
+
+describe('the image makes the media root at the tree mode (C3-19: every install and boot warned mode_differs)', () => {
+	/** The Dockerfile's base image (its first FROM, digest included). */
+	const dockerfile = readFileSync(join(REPO_ROOT, 'Dockerfile'), 'utf8');
+	const base = (dockerfile.match(/^FROM (\S+)/m)?.[1] ?? '').split('@')[0] as string;
+
+	/** The RUN instruction that creates /srv/dedalo/media, continuation lines joined — exactly the build's. */
+	function mediaRootRun(): string {
+		const runs = dockerfile
+			.replace(/\\\n/g, ' ')
+			.split('\n')
+			.filter((line) => line.startsWith('RUN ') && line.includes('/srv/dedalo/media'));
+		expect(runs.length).toBe(1);
+		return (runs[0] as string).slice(4);
+	}
+
+	const dockerReady = (): boolean =>
+		spawnSync('docker', ['image', 'inspect', base], { timeout: 20_000 }).status === 0;
+
+	test.skipIf(!dockerReady())(
+		`the Dockerfile's own RUN, in its base image (${base}), leaves /srv/dedalo/media at MEDIA_DIR_MODE (skipped without Docker or the image)`,
+		() => {
+			const run = spawnSync(
+				'docker',
+				[
+					'run',
+					'--rm',
+					'--user',
+					'root',
+					'--entrypoint',
+					'sh',
+					base,
+					'-c',
+					`${mediaRootRun()} && stat -c %a /srv/dedalo/media`,
+				],
+				{ timeout: 120_000, encoding: 'utf8' },
+			);
+			expect(run.status, run.stderr).toBe(0);
+			expect(run.stdout.trim().split('\n').at(-1)).toBe(MEDIA_DIR_MODE.toString(8));
+		},
+		150_000,
+	);
+});
+
+describe('the engine child’s container never outlives the run, and never races a resume (C3-29)', () => {
+	test('an interrupted stack_engine removes the named engine container', async () => {
+		const runner = recordingRunner({ responses: () => [] });
+		const ctx = {
+			...stackPlanCtx(TRIAL),
+			runner,
+			secrets: {},
+			created: emptyHostCreated(),
+		} as unknown as HostCtx;
+		await (
+			STACK_HOST_STEPS.stack_engine.onInterrupt as NonNullable<HostStepDefinition['onInterrupt']>
+		)(ctx);
+		expect(runner.log.map((entry) => entry.argv.join(' '))).toEqual([
+			`${DOCKER} rm -f dedalo-install-engine`,
+		]);
+	});
+
+	test('a resume while the engine container of an earlier run still runs: refused, no second child started', async () => {
+		const compose = composePrefix('trial');
+		const run = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const host = machine(TRIAL, {
+			responses: [
+				{ match: run, exit: 137 },
+				// The orphaned child is still working: its record says in progress.
+				{
+					match: `${compose} run --rm -T --no-deps dedalo bun run scripts/install.ts --status --json`,
+					stdout: '{"exists":true,"outcome":"in_progress","failed_step":null}\n',
+				},
+				{
+					match: `${DOCKER} ps -q --filter name=^/?dedalo-install-engine$`,
+					after: run,
+					stdout: 'f00dcafe\n',
+				},
+			],
+		});
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.failedStep).toBe('stack_engine');
+		const children = timesLogged(host, run);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.result).toBe('failed');
+		expect(resumed.outcome.message).toContain(
+			'the engine steps of an earlier run are still running (container dedalo-install-engine',
+		);
+		expect(timesLogged(host, run)).toBe(children);
+	});
+});
+
+describe('a served abort says how the stack is removed, per route, and names the images it keeps (campaign 3b N16, N32, C3-52)', () => {
+	for (const raw of [TRIAL, DOCKER_LE]) {
+		test(`${raw.route}: the stack_up undo names the route's removal section and the kept images; never an undo that cannot come`, async () => {
+			const host = machine(raw);
+			const { plan, request } = fresh(raw);
+			expect((await runHost(host, request)).outcome.result).toBe('complete');
+			const aborted = await runHost(host, laterRequest('abort', plan));
+			expect(aborted.outcome.keptLive).toBe(true);
+			const said = aborted.transcript.lines.join('\n');
+			const doc =
+				raw.route === 'docker'
+					? 'docs/install/docker.md#removing-the-stack'
+					: 'docs/install/quickstart.md#removing-the-trial';
+			expect(said).toContain(doc);
+			expect(said).toContain(`docker image rm ${imageRefOf(stackPlanCtx(raw).answers)}`);
+			expect(said).not.toContain("the database step's undo");
+			// the closing sentence points to the same section
+			expect(
+				DONE_TEXT.abortedFor({
+					route: raw.route,
+					instance: 'x',
+					keptLive: true,
+					undone: ['stack_up'],
+				}),
+			).toContain(doc);
+		});
+	}
+
+	test('the sections those sentences name exist, and say how to reclaim the images and caches (N31)', () => {
+		const docker = readFileSync(join(REPO_ROOT, 'docs/install/docker.md'), 'utf8');
+		const trial = readFileSync(join(REPO_ROOT, 'docs/install/quickstart.md'), 'utf8');
+		const section = (text: string, heading: string) => {
+			const start = text.indexOf(`\n## ${heading}\n`);
+			expect(start, heading).toBeGreaterThan(0);
+			const next = text.indexOf('\n## ', start + 4);
+			return text.slice(start, next === -1 ? undefined : next);
+		};
+		for (const removal of [
+			section(docker, 'Removing the stack'),
+			section(trial, 'Removing the trial'),
+		]) {
+			expect(removal).toContain('down -v');
+			expect(removal).toContain('docker image rm');
+			expect(removal).toContain('docker builder prune');
+			expect(removal).toContain('~/.cache/dedalo-install');
+		}
+	});
+});
+
+test('ONE build-duration estimate: the screen, the Review and the docs say BUILD_DURATION (campaign 3b N11)', () => {
+	const ctx = stackPlanCtx({ ...TRIAL, image_source: 'build' });
+	const [build] = imageCommands(ctx);
+	expect(build?.label).toContain(BUILD_DURATION);
+	for (const doc of [
+		'docs/install/quickstart.md',
+		'docs/install/docker.md',
+		'docs/install/installer_reference.md',
+	]) {
+		const text = readFileSync(join(REPO_ROOT, doc), 'utf8');
+		expect(text, doc).toContain(BUILD_DURATION);
+		expect(text, doc).not.toMatch(/15 or more on 2 CPUs|10 to 20 minutes/);
+	}
+});
+
+test('the stack routes never claim the firewall is checked; the docs document the Image version field (campaign 3b N38, N14)', () => {
+	expect(NOTICE_TEXT.stackCommands).toContain('The firewall is neither changed nor checked');
+	expect(NOTICE_TEXT.stackCommands).not.toMatch(/firewall[^.]*only checked/);
+	for (const doc of ['docs/install/quickstart.md', 'docs/install/docker.md']) {
+		const text = readFileSync(join(REPO_ROOT, doc), 'utf8');
+		expect(text, doc).toContain('**Image version** is the image tag');
+		expect(text, doc).not.toContain("Its version is always the installer's own");
+	}
+});
+
+describe('a Ctrl-C that kills the engine child is ONE interruption; an abort run is closed (campaign 3b N12, N30)', () => {
+	test('the child exits 130 of the same SIGINT: one "interrupted" block, exit 130, the run recorded interrupted', async () => {
+		const compose = composePrefix('trial');
+		const child = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const host = machine(TRIAL, { responses: [{ match: child, exit: 130 }] });
+		// Ctrl-C reaches the process group: the child dies (130) AND the installer gets SIGINT.
+		const wrapRunner = (inner: CommandRunner): CommandRunner => ({
+			run: async (request) => {
+				const result = await inner.run(request);
+				if (request.argv.join(' ').startsWith(child)) process.emit('SIGINT');
+				return result;
+			},
+		});
+		class Exited extends Error {}
+		const exits: number[] = [];
+		const exit = spyOn(process, 'exit').mockImplementation(((code?: number) => {
+			exits.push(code ?? 0);
+			throw new Exited(`exit ${code}`);
+		}) as never);
+		const transcript = { lines: [] as string[], told: [] as string[], shown: [] as string[] };
+		let settled: unknown = null;
+		try {
+			settled = await runHost(host, fresh(TRIAL).request, { wrapRunner, transcript });
+		} catch (error) {
+			settled = error;
+		} finally {
+			exit.mockRestore();
+		}
+		expect(settled).toBeInstanceOf(Exited);
+		expect(exits).toEqual([130]);
+		const said = transcript.lines.join('\n');
+		expect(said.match(/install interrupted \(SIGINT\) at step \[stack_engine\]/g)?.length).toBe(1);
+		expect(said).not.toContain('install failed');
+		expect(stateOf(host)?.runs.at(-1)?.result).toBe('interrupted');
+	});
+
+	test('a live abort ends its run record: result aborted, finished_at set', async () => {
+		const host = machine(TRIAL);
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		const aborted = await runHost(host, laterRequest('abort', plan));
+		expect(aborted.outcome.keptLive).toBe(true);
+		const last = stateOf(host)?.runs.at(-1);
+		expect(last?.mode).toBe('abort');
+		expect(last?.result).toBe('aborted');
+		expect(last?.finished_at).not.toBeNull();
 	});
 });

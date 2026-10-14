@@ -85,6 +85,7 @@ import {
 import {
 	answerProblems,
 	type FieldError,
+	hostLocaleDefaults,
 	INSTANCE_PATTERN,
 	rootPasswordErrors,
 } from './install_validation.ts';
@@ -415,7 +416,8 @@ const ANSWER_CLASS: Readonly<Record<keyof InstallAnswers, 'secret' | 'plain'>> =
 /**
  * The answers that drive the HOST steps only — what the delegated engine child
  * is NOT given (host/production/engine_delegate.ts: engine answers ≡ the host
- * answers minus these, plus engine_only and the host-derived pg_bin_path).
+ * answers minus these, plus engine_only, the host-derived pg_bin_path and, on
+ * production, backup_dir — the engine writes DEDALO_BACKUP_DIR from it, C3-55).
  */
 export const HOST_ONLY_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.freeze([
 	'web_server',
@@ -594,6 +596,8 @@ function parseRoute(value: unknown, problems: FieldError[]): InstallRoute {
  *    SAME values as explicit flags — an older pulled image does not know
  *    `--route`; gate: install_screen_model_tripwire); trial has no TLS;
  *  - developer: no database name or user (asked), media and socket not written.
+ *  - DEDALO_MEDIA_ACCESS_MODE: `publication` on production (written, so the
+ *    first boot never reports an unconfigured mode — C3-44); '' elsewhere.
  */
 export interface RouteDefaults {
 	readonly db_hostname: string;
@@ -609,6 +613,8 @@ export interface RouteDefaults {
 	readonly service_user: string;
 	readonly backup_dir: string;
 	readonly image_source: string;
+	/** DEDALO_MEDIA_ACCESS_MODE: production writes `publication` explicitly; elsewhere '' (not written). */
+	readonly media_access_mode: string;
 }
 
 /** The level-1 answers the level-2 defaults (backup_dir, db_username) derive from. */
@@ -631,6 +637,7 @@ const STACK_DEFAULTS: RouteDefaults = Object.freeze({
 	service_user: '',
 	backup_dir: '',
 	image_source: 'official',
+	media_access_mode: '',
 });
 
 /** The local PostgreSQL socket directory a created (peer) production database is reached through. */
@@ -666,6 +673,9 @@ function productionDefaults(instance: string, level: IdentityLevel | null): Rout
 		service_user: identity.service_user,
 		...levelTwoDefaults(named, level ?? identity),
 		image_source: '',
+		// Written, never left to the engine's fail-closed default: the same key
+		// the host route and an `--engine-only` run both write (C3-44).
+		media_access_mode: 'publication',
 	};
 }
 
@@ -695,6 +705,7 @@ const DEVELOPER_DEFAULTS: RouteDefaults = Object.freeze({
 	service_user: '',
 	backup_dir: '',
 	image_source: '',
+	media_access_mode: '',
 });
 
 /**
@@ -777,6 +788,18 @@ export const TOPONYMY_SUGGESTION =
 	"No toponymy thesaurus is selected (none is ever pre-selected): consider importing your own country's toponymy — e.g. --hierarchies np for an install in Nepal. --list-hierarchies lists the codes.";
 
 /**
+ * The same advice for an INTERACTIVE run — its operator answers screens, not
+ * flags (campaign 3 C3-64): the Thesauri step now, Maintenance after.
+ */
+export const TOPONYMY_SUGGESTION_INTERACTIVE =
+	"No country toponymy is selected (none is ever pre-selected): consider your own country's — type its code on the Thesauri step (e.g. np), or install it after the install from Maintenance › Install hierarchies.";
+
+/** A plan suggestion as an interactive run words it (the CLI flags' advice → the screens'). */
+export function interactiveSuggestion(text: string): string {
+	return text === TOPONYMY_SUGGESTION ? TOPONYMY_SUGGESTION_INTERACTIVE : text;
+}
+
+/**
  * Does `hierarchies` lack a COUNTRY toponymy? A country toponymy is a
  * typology-2 entry that SHIPS TERMS (data files). Thesauri ship empty by design
  * — only country toponymies and `lg` carry data — so a typology-2 entry WITHOUT
@@ -810,6 +833,17 @@ function dbSocketOf(raw: RawAnswers, d: RouteDefaults): string {
 	return textOr(raw, 'db_mode', d.db_mode) === 'create' ? d.db_socket : '';
 }
 
+/** timezone/locale: given, else the host's own (read only when one is missing). */
+function hostIdentityAnswers(raw: RawAnswers): { timezone: string; locale: string } {
+	const given = { timezone: text(raw, 'timezone'), locale: text(raw, 'locale') };
+	if (given.timezone !== '' && given.locale !== '') return given;
+	const host = hostLocaleDefaults();
+	return {
+		timezone: given.timezone === '' ? host.timezone : given.timezone,
+		locale: given.locale === '' ? host.locale : given.locale,
+	};
+}
+
 /** Database + entity + locale answers (the plan's defaults live here; the route's in `d`). */
 function coreAnswers(raw: RawAnswers, d: RouteDefaults) {
 	const entity = text(raw, 'entity');
@@ -824,8 +858,8 @@ function coreAnswers(raw: RawAnswers, d: RouteDefaults) {
 		entity_label: textOr(raw, 'entity_label', entity),
 		information: textOr(raw, 'information', 'ts-install'),
 		info_key: textOr(raw, 'info_key', 'ts'),
-		timezone: textOr(raw, 'timezone', 'Europe/Madrid'),
-		locale: textOr(raw, 'locale', 'es-ES'),
+		// THIS machine's, never one institution's (C3-21): install_validation.ts.
+		...hostIdentityAnswers(raw),
 		langs: parseLangs(raw.langs),
 		app_lang_default: optionalText(raw, 'app_lang_default'),
 		data_lang_default: optionalText(raw, 'data_lang_default'),
@@ -852,7 +886,7 @@ function serviceAnswers(raw: RawAnswers, d: RouteDefaults) {
 		smtp_from_name: text(raw, 'smtp_from_name'),
 		media_path: textOr(raw, 'media_path', d.media_path),
 		unix_socket: textOr(raw, 'unix_socket', d.unix_socket),
-		media_access_mode: text(raw, 'media_access_mode'),
+		media_access_mode: textOr(raw, 'media_access_mode', d.media_access_mode),
 	};
 }
 
@@ -1018,7 +1052,9 @@ function langSection(l: LangConfig): EnvSection {
 
 function secretSection(salt: string): EnvSection {
 	return {
-		comment: '# --- Secret (coexistence: written for PHP; TS auth uses Argon2id) ---',
+		// No PHP-era wording in a TS install's .env (C3-60). The value is generated
+		// once and preserved on every re-run, never rotated.
+		comment: '# --- Install secret (generated once, kept on every re-run; never rotate it) ---',
 		entries: [entry('DEDALO_SALT_STRING', salt)],
 	};
 }
@@ -1131,11 +1167,24 @@ function servingSection(a: InstallAnswers): EnvSection {
 		entry('SERVER_UNIX_SOCKET', a.unix_socket),
 		entry('DEDALO_MEDIA_ACCESS_MODE', a.media_access_mode),
 		entry('DEDALO_PG_BIN_PATH', a.pg_bin_path),
+		// The units' database-backup dir (production): the running server's
+		// Maintenance backups and its directory check use the SAME directory the
+		// backup units write, never a second <private>/backups/db (C3-55).
+		entry('DEDALO_BACKUP_DIR', backupDbDir(a)),
 	];
 	return {
 		comment: '# --- Serving / media ---',
 		entries: candidates.filter((candidate) => candidate.value !== ''),
 	};
+}
+
+/**
+ * DEDALO_BACKUP_DIR of `a` ('' = not written): the units' backup dir + `/db`.
+ * ONE spelling for the .env entry AND the CLI's boot environment (cliBootEnv),
+ * so the directory the engine checks is the directory the .env records.
+ */
+export function backupDbDir(a: Pick<InstallAnswers, 'backup_dir'>): string {
+	return a.backup_dir === '' ? '' : `${a.backup_dir}/db`;
 }
 
 function diffusionSection(a: InstallAnswers): EnvSection {
@@ -1496,6 +1545,11 @@ export function cliBootEnv(plan: InstallPlan): Record<string, string> {
 		DB_PASSWORD: a.db_password,
 		// The directory step's write-probe reads config.media.rootPath.
 		...(a.media_path === '' ? {} : { MEDIA_PATH: a.media_path }),
+		// …and config.ops.backupDir: the SAME directory persist_config writes as
+		// DEDALO_BACKUP_DIR, from the first run on (C3-55 / campaign 3b N4: a fresh
+		// `--engine-only` run checked and created <private>/backups/db, then its
+		// --resume, booted from the written .env, found <backup_dir>/db missing).
+		...(backupDbDir(a) === '' ? {} : { DEDALO_BACKUP_DIR: backupDbDir(a) }),
 		DEDALO_APPLICATION_LANGS: JSON.stringify(l.applicationLangs),
 		PROJECTS_DEFAULT_LANGS: JSON.stringify(l.projectsDefaultLangs),
 		DEDALO_APPLICATION_LANGS_DEFAULT: l.applicationLangsDefault,

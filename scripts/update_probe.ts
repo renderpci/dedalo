@@ -224,8 +224,8 @@ function museumImageSourceProblem(museumVersion: string): string | null {
 		`  DEDALO_VERSION=${museumVersion}`,
 		'  DEDALO_IMAGE_MODE=build',
 		'  DEDALO_IMAGE_VERIFY=none',
-		'then build that image once:',
-		`  docker compose -f ${COMPOSE_BASE} -f deploy/compose.build.yml --env-file ${COMPOSE_ENV_FILE} build dedalo`,
+		"then build that image once (a clean snapshot of the checkout's last commit — the updater's builder):",
+		`  ./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:${museumVersion}`,
 	].join('\n');
 }
 
@@ -549,7 +549,13 @@ async function main(): Promise<void> {
 			// The dev session may have gotten its TCP port from the SHELL, not
 			// from .env — a detached relaunch must carry it or the master binds
 			// unix-socket-only and the whole probe loses its origin.
-			env: { ...(process.env as Record<string, string>), SERVER_TCP_PORT: MASTER_PORT },
+			// And its ADDRESS: the museum container reaches the master over the
+			// LAN IP, which the default loopback bind (SERVER_TCP_HOST) refuses.
+			env: {
+				...(process.env as Record<string, string>),
+				SERVER_TCP_PORT: MASTER_PORT,
+				SERVER_TCP_HOST: '0.0.0.0',
+			},
 			stdio: ['ignore', devLog, devLog],
 			detached: true,
 			unref: true,

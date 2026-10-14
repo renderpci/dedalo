@@ -36,6 +36,11 @@ import {
 	listNodesWithProperties,
 } from '../../src/core/ontology/resolver.ts';
 import {
+	RETIRED_PROPERTY_REPORT_COMMAND,
+	resetRetiredPropertyAnnouncements,
+	retiredPropertyCounts,
+} from '../../src/core/ontology/retired_property_notice.ts';
+import {
 	dropSituation,
 	ensureSituation,
 	situation,
@@ -76,6 +81,26 @@ const SITUATION = situation({
 	],
 });
 
+/**
+ * C3-72: several nodes carrying the SAME retired key (the install seed's own
+ * shape — 165 lines in one developer run). Its own TLD, so the census
+ * situation's node and pair counts above stay exactly as they are.
+ */
+const SHARED_KEY_NODES = ['zzprr2', 'zzprr3', 'zzprr4'];
+const SHARED_KEY_SITUATION = situation({
+	tld: 'zzprr',
+	name: 'ontology property census — one retired key on several nodes',
+	nodes: [
+		{ tipo: 'zzprr1', model: 'section', parent: 'dd14' },
+		...SHARED_KEY_NODES.map((tipo) => ({
+			tipo,
+			model: 'component_input_text',
+			parent: 'zzprr1',
+			properties: { multi_value: true },
+		})),
+	],
+});
+
 /** The report lines for THIS situation's nodes only (the install's own rows are not ours to judge). */
 function scratchEntries(entries: readonly PropertyCensusEntry[]): PropertyCensusEntry[] {
 	return entries.filter((entry) => entry.tipo.startsWith('zzprp'));
@@ -83,11 +108,13 @@ function scratchEntries(entries: readonly PropertyCensusEntry[]): PropertyCensus
 
 beforeAll(async () => {
 	await ensureSituation(SITUATION);
+	await ensureSituation(SHARED_KEY_SITUATION);
 	clearOntologyCaches();
 });
 
 afterAll(async () => {
 	await dropSituation(SITUATION);
+	await dropSituation(SHARED_KEY_SITUATION);
 	clearOntologyCaches();
 });
 
@@ -145,6 +172,7 @@ describe('the install report over a real dd_ontology', () => {
 describe('the resolver tripline', () => {
 	test('a node with a retired key gets ONE loud line naming node, key and replacement', async () => {
 		clearOntologyCaches();
+		resetRetiredPropertyAnnouncements(); // a fresh process's view
 		const captured: string[] = [];
 		const errors = spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
 			captured.push(String(args[0]));
@@ -161,6 +189,29 @@ describe('the resolver tripline', () => {
 		expect(lines.join('\n')).toContain('no v7 replacement');
 		expect(lines.join('\n')).toContain('single-value facet');
 		expect(lines.every((line) => line.startsWith('[ontology/resolver]'))).toBe(true);
+	});
+
+	test('C3-72: N nodes carrying the same retired key give ONE line, the rest counted', async () => {
+		clearOntologyCaches();
+		resetRetiredPropertyAnnouncements();
+		const captured: string[] = [];
+		const errors = spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+			captured.push(String(args[0]));
+		});
+		try {
+			for (const tipo of SHARED_KEY_NODES) await getNode(tipo);
+			// An ontology write clears the node cache: the key is NOT announced again.
+			clearOntologyCaches();
+			for (const tipo of SHARED_KEY_NODES) await getNode(tipo);
+		} finally {
+			errors.mockRestore();
+		}
+		const lines = captured.filter((line) => line.includes('properties.multi_value'));
+		expect(lines.length).toBe(1);
+		expect(lines[0]).toContain(`'${SHARED_KEY_NODES[0]}'`);
+		expect(lines[0]).toContain(RETIRED_PROPERTY_REPORT_COMMAND);
+		// Anti-vacuity: every resolution was seen and counted.
+		expect(retiredPropertyCounts().get('multi_value')).toBe(SHARED_KEY_NODES.length * 2);
 	});
 
 	test('an honoured-only node is silent, and a reportedAtUse key is left to its own consumer', async () => {

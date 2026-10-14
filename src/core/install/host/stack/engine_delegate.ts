@@ -20,34 +20,44 @@
  * delegate's relay: the one-time salt line goes to the front end's one-time
  * display, never stored or logged — critique A4). VERIFY asks the child
  * (`--status --json`, in a throw-away container); UNDO is the child's own
- * --abort (it refuses a sealed install) — run first in the reverse order.
+ * --abort (it refuses a sealed install unless the host attests the stack
+ * never started serving — C3-11) — run first in the reverse order, its events
+ * as JSON lines (its own closing sentence never leaks into the host's: C3-52).
  * Before the child runs, the image tag must still be the verified digest (A16).
+ *
+ * The child's container is NAMED (campaign 3 C3-29): an interrupted run
+ * removes it (`docker rm -f` — a killed `compose run` client leaves its
+ * container working), and a resume refuses while one of an earlier run is
+ * still running. The salt is the host's to show once (C3-18): read back from
+ * /private/.env in the running engine container at the end of the install.
  */
 
 import { HOST_ONLY_ANSWER_KEYS, type InstallAnswers } from '../../install_plan.ts';
-import type { SecretKey } from '../../run_files_core.ts';
-import type { ExecCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
+import {
+	type ExecCommand,
+	engineSecretKeys,
+	type HostCtx,
+	type HostPlanCtx,
+	type HostStepDefinition,
+} from '../contract.ts';
 import { requestOf, succeeded } from '../execute.ts';
 import { confirmFlags, probeText, ran } from '../production/common.ts';
-import type { EngineStatus } from '../production/engine_delegate.ts';
-import { relay } from '../production/engine_delegate.ts';
+import {
+	abortRequest,
+	type EngineStatus,
+	relay,
+	showSaltLine,
+	stillNeeded,
+} from '../production/engine_delegate.ts';
 import { hostRefuse } from '../refuse.ts';
 import { databasePassword, rememberNewVolumes, stackCreated } from './common.ts';
-import { composeCommand, composeProbe } from './compose.ts';
+import { composeCommand, composeProbe, dockerCommand, dockerProbe } from './compose.ts';
 import { stackFactsOf } from './facts.ts';
 import { assertPinnedImage } from './image_verify.ts';
-import { ENGINE_VOLUMES, PRIVATE_VOLUME } from './layout.ts';
+import { ENGINE_VOLUMES, ENV_FILE, OVERRIDE_FILE, PRIVATE_VOLUME, stackFileOf } from './layout.ts';
 
 /** The request schema of scripts/install.ts --request-stdin. */
 const REQUEST_SCHEMA = 'dedalo.install.request/1';
-
-/** The secrets the child is handed (the database password is the generated one). */
-const ENGINE_SECRETS: readonly SecretKey[] = Object.freeze([
-	'root_password',
-	'db_password',
-	'mysql_password',
-	'smtp_pass',
-]);
 
 /** The installer inside the image (its WORKDIR is the release tree). */
 const CHILD = ['dedalo', 'bun', 'run', 'scripts/install.ts'] as const;
@@ -59,6 +69,12 @@ export function stackEngineAnswers(ctx: HostPlanCtx): Partial<InstallAnswers> {
 	return { ...answers, engine_only: true } as Partial<InstallAnswers>;
 }
 
+/**
+ * The engine child's container name (C3-29) — one per host, like the stack's
+ * own volume names (layout.ts): one docker/trial stack per Docker host.
+ */
+export const ENGINE_CONTAINER = 'dedalo-install-engine';
+
 /** The delegated run (fresh or resumed) — what the Review lists. */
 export function stackEngineCommand(ctx: HostPlanCtx, resume = false): ExecCommand {
 	return composeCommand(
@@ -66,6 +82,8 @@ export function stackEngineCommand(ctx: HostPlanCtx, resume = false): ExecComman
 		[
 			'run',
 			'--rm',
+			'--name',
+			ENGINE_CONTAINER,
 			'-T',
 			...CHILD,
 			'--request-stdin',
@@ -76,7 +94,8 @@ export function stackEngineCommand(ctx: HostPlanCtx, resume = false): ExecComman
 		'the engine steps (seed, ontologies, thesauri, tools, root), inside the container',
 		{
 			stdin: {
-				secrets: ENGINE_SECRETS,
+				// the plan's own (the database password is the generated one)
+				secrets: engineSecretKeys(ctx.plan.answers),
 				with: { schema: REQUEST_SCHEMA, answers: stackEngineAnswers(ctx) },
 			},
 			timeoutMs: 6 * 3600 * 1000,
@@ -125,8 +144,41 @@ async function runChild(ctx: HostCtx, command: ExecCommand, failed: string): Pro
 		hostRefuse('install.step_failed', `${failed} (exit ${result.exitCode})`);
 }
 
+/** The id of the RUNNING engine container ('' when none). */
+async function liveEngineContainer(ctx: HostCtx): Promise<string> {
+	const filter = `name=^/?${ENGINE_CONTAINER}$`;
+	const text = await probeText(
+		ctx,
+		dockerProbe(ctx, ['ps', '-q', '--filter', filter], 'a running engine container'),
+	);
+	return text.trim();
+}
+
+/** Refuse while the engine container of an earlier run still works (C3-29). */
+async function refuseLiveContainer(ctx: HostCtx): Promise<void> {
+	const id = await liveEngineContainer(ctx);
+	if (id === '') return;
+	hostRefuse(
+		'install.state_conflict',
+		`the engine steps of an earlier run are still running (container ${ENGINE_CONTAINER}, ${id}) — wait for them to end (or docker rm -f ${ENGINE_CONTAINER}), then --resume`,
+	);
+}
+
+/** Stop the engine child's container (an interrupted run — C3-29). */
+async function removeEngineContainer(ctx: HostCtx): Promise<void> {
+	await ctx.runner.run(
+		requestOf(
+			dockerCommand(ctx, ['rm', '-f', ENGINE_CONTAINER], 'stop the engine container', {
+				okExit: [0, 1],
+			}),
+			ctx,
+		),
+	);
+}
+
 async function runStackEngine(ctx: HostCtx) {
 	await assertPinnedImage(ctx);
+	await refuseLiveContainer(ctx);
 	const status = await stackEngineStatus(ctx);
 	if (status?.outcome === 'complete') return ran('engine install already complete');
 	await runChild(
@@ -146,18 +198,21 @@ async function undoStackEngine(ctx: HostCtx): Promise<string> {
 		[
 			'run',
 			'--rm',
+			'--name',
+			ENGINE_CONTAINER,
 			'-T',
 			...CHILD,
 			'--abort',
 			// The OPERATOR's confirmation, never the plan's name: the child's own gate decides.
 			...confirmFlags(ctx),
 			'--request-stdin',
+			'--events-jsonl',
 		],
 		'undo the engine steps (its own --abort)',
 		{
 			stdin: {
 				secrets: ['db_password'],
-				with: { schema: REQUEST_SCHEMA, answers: stackEngineAnswers(ctx) },
+				with: abortRequest(stackEngineAnswers(ctx), ctx.created.served),
 			},
 			timeoutMs: 3600 * 1000,
 		},
@@ -168,6 +223,24 @@ async function undoStackEngine(ctx: HostCtx): Promise<string> {
 		'the engine child refused its --abort (see above) — nothing before it was undone',
 	);
 	return 'engine steps undone';
+}
+
+/** The command that reads the salt back from the engine container. */
+function stackSaltCommand(ctx: HostPlanCtx): string {
+	return `docker compose -f ${stackFileOf(ctx.answers)} -f ${OVERRIDE_FILE} --env-file ${ENV_FILE} exec dedalo grep ^DEDALO_SALT_STRING= /private/.env`;
+}
+
+/** The stack engine's one-time salt (production/engine_delegate.ts showSaltLine — C3-18). */
+async function showStackSalt(ctx: HostCtx): Promise<void> {
+	if (ctx.created.salt_shown) return;
+	const status = await stackEngineStatus(ctx);
+	if (status?.salt_generated !== true) return;
+	const read = composeProbe(
+		ctx,
+		['exec', '-T', 'dedalo', 'grep', '-m', '1', '^DEDALO_SALT_STRING=', '/private/.env'],
+		'the generated salt (shown once, never logged)',
+	);
+	await showSaltLine(ctx, () => probeText(ctx, read), stackSaltCommand(ctx));
 }
 
 export const stack_engine: HostStepDefinition = {
@@ -190,4 +263,7 @@ export const stack_engine: HostStepDefinition = {
 		stackCreated(ctx);
 	},
 	undo: undoStackEngine,
+	onInterrupt: removeEngineContainer,
+	afterComplete: showStackSalt,
+	secretsStillNeeded: async (ctx) => stillNeeded(await stackEngineStatus(ctx)),
 };

@@ -102,6 +102,7 @@ const admin: DbConnDescriptor = {
 	port: config.db.port,
 	user: config.db.user,
 	password: config.db.password,
+	socket: config.db.socket,
 };
 
 /**
@@ -185,6 +186,7 @@ function cliArgs(): string[] {
 		config.db.host,
 		'--db-port',
 		String(config.db.port),
+		...(config.db.socket === '' ? [] : ['--db-socket', config.db.socket]),
 		'--entity',
 		'e2etest',
 		'--skip-tools',
@@ -423,7 +425,9 @@ describe('TS-native install e2e (P5)', () => {
 		named('--resume on the complete install re-verifies every step and exits 0'),
 		() => {
 			const { exitCode, out } = runCli(['--resume'], false);
-			expect(out).toContain('install already complete — every step verified');
+			expect(out).toContain(
+				'install already complete — every done step that has a check was verified again',
+			);
 			expect(exitCode).toBe(0);
 			const state = JSON.parse(
 				readFileSync(join(scratchDir, 'install', 'install.state.json'), 'utf8'),

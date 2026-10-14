@@ -7,8 +7,11 @@
  *    user to the role of the same name) with LOGIN and NO password — PEER authentication over the local
  *    socket, so no database password exists at rest (owner question Q2; fixes
  *    campaign 2 L59) — and the database `dedalo_<i>` it OWNS, UTF8 from
- *    template0 (critique A9: template1's encoding may differ). The SQL travels
- *    on psql's stdin. Then the outcome: the instance user reaches its database
+ *    template0 (critique A9: template1's encoding may differ) — then PUBLIC's
+ *    CONNECT and TEMPORARY on it REVOKED and granted to the role alone
+ *    (PostgreSQL grants them to PUBLIC by default: another instance's role
+ *    connected to it and read its catalogs — campaign 3 C3-62). The SQL
+ *    travels on psql's stdin. Then the outcome: the instance user reaches its database
  *    by peer (a cluster whose pg_hba refuses local peer is TOLD — pg_hba is
  *    global configuration, never edited), and the three trusted extensions the
  *    seed needs are available.
@@ -102,7 +105,22 @@ export function databaseCommands(ctx: HostPlanCtx): ExecCommand[] {
 			}),
 			unless: existsProbe(ctx, 'pg_database', 'datname', db),
 		},
+		psql(ctx, 'postgres', 'postgres', {
+			stdin: `REVOKE CONNECT, TEMPORARY ON DATABASE ${sqlIdentifier(db)} FROM PUBLIC;\nGRANT CONNECT, TEMPORARY ON DATABASE ${sqlIdentifier(db)} TO ${sqlIdentifier(role)};\n`,
+			label: `only ${role} may connect to ${db} (PUBLIC's CONNECT and TEMPORARY revoked — another instance's role cannot reach it)`,
+			mutates: true,
+		}),
 	];
+}
+
+/** The probe of PUBLIC's reach: `t` when any role may still connect (or make temporary tables). */
+function publicReachProbe(ctx: HostPlanCtx): ExecCommand {
+	const db = sqlLiteral(ctx.answers.db_database);
+	return psql(ctx, 'postgres', 'postgres', {
+		sql: `SELECT has_database_privilege('public', ${db}, 'CONNECT') OR has_database_privilege('public', ${db}, 'TEMPORARY')`,
+		label: 'PUBLIC reaches the database',
+		mutates: false,
+	});
 }
 
 /** The outcome checks: peer reach as the instance user, the extensions available. */
@@ -123,7 +141,12 @@ async function databaseChecks(ctx: HostCtx): Promise<[boolean, string][]> {
 			mutates: false,
 		}),
 	);
+	const publicReach = await probeText(ctx, publicReachProbe(ctx));
 	return [
+		[
+			publicReach.trim() === 'f',
+			`PUBLIC may still connect to ${ctx.answers.db_database} (every role of the cluster, another instance's included) — REVOKE CONNECT, TEMPORARY ON DATABASE ${ctx.answers.db_database} FROM PUBLIC`,
+		],
 		[
 			reach.trim() === '1',
 			`${ctx.paths.user} cannot reach ${ctx.answers.db_database} by peer over ${ctx.answers.db_socket} — allow "local all all peer" in pg_hba.conf (global configuration: the installer never edits it)`,

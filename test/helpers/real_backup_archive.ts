@@ -22,6 +22,7 @@ import { readFileSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { resolvePgDump } from '../../src/core/area_maintenance/backup.ts';
+import { connArgs, connFromConfig, pgClientEnv } from '../../src/core/install/pg_exec.ts';
 
 /**
  * The table the archive is cut from. `dd_ontology` is the one table every
@@ -46,12 +47,7 @@ export function buildRealArchive(dir: string): RealArchive {
 	const result = Bun.spawnSync(
 		[
 			resolvePgDump(),
-			'-h',
-			config.db.host,
-			'-p',
-			String(config.db.port),
-			'-U',
-			config.db.user,
+			...connArgs(connFromConfig()),
 			'-F',
 			'c',
 			'-b',
@@ -64,10 +60,7 @@ export function buildRealArchive(dir: string): RealArchive {
 		{
 			stdout: 'ignore',
 			stderr: 'pipe',
-			env: {
-				...(process.env as Record<string, string>),
-				...(config.db.password !== '' ? { PGPASSWORD: config.db.password } : {}),
-			},
+			env: pgClientEnv(connFromConfig()),
 		},
 	);
 	const stderr = new TextDecoder().decode(result.stderr ?? new Uint8Array()).trim();

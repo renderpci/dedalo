@@ -20,7 +20,7 @@ import { type Line, seg, selectedLine } from '../styled.ts';
 import { cursorDelta, moveCursor } from '../view_state.ts';
 import type { DrawContext, KeyHint, Widget } from '../widget.ts';
 import { wrapped } from '../widgets/field_parts.ts';
-import { BLANK, noticeLines } from '../widgets/notices.ts';
+import { BLANK, markedText, noticeLines } from '../widgets/notices.ts';
 
 // ── welcome ──────────────────────────────────────────────────────────────────
 
@@ -243,6 +243,8 @@ function verdictRole(line: string): 'err' | 'ok' | 'warn' | 'muted' {
 
 export function probePage(view: ProbeView, done: (answer: string | Nav) => void): Widget {
 	const buttons: Button[] = view.commands.map((value) => ({ value, ...PROBE_BUTTONS[value] }));
+	/** Only quit is offered: no fix here can change the verdict, Esc goes to another route. */
+	const unfixable = view.commands.length === 1 && view.commands[0] === 'quit';
 	let cursor = 0;
 	const keys = buttonKeys(
 		buttons,
@@ -262,17 +264,22 @@ export function probePage(view: ProbeView, done: (answer: string | Nav) => void)
 		description: view.prompt,
 		lines: (ctx: DrawContext) => {
 			const verdict = view.lines.flatMap((line) =>
-				wrapped(sanitizeLine(line), ctx.width, verdictRole(line)),
+				wrapped(sanitizeLine(markedText(line)), ctx.width, verdictRole(line)),
 			);
 			const head = [...verdict, ...noticeLines([], ctx.width), BLANK];
 			const rows = buttonRows(buttons, cursor, ctx.width, head.length);
 			return { lines: [...head, ...rows.lines], focus: rows.focus };
 		},
+		// Each hotkey names ITS command; back is Esc's (campaign 3b N35: `q` read
+		// "quit, or back to choose another route" — the whole prompt — and only quit).
 		keys: () => [
 			['↑↓', 'move'],
 			['enter', 'choose'],
-			[buttons.map((button) => button.hotkey).join('/'), view.prompt],
-			['esc', 'back'],
+			[
+				buttons.map((button) => button.hotkey).join('/'),
+				buttons.map((button) => button.value).join(' · '),
+			],
+			['esc', unfixable ? 'back to choose another route' : 'back'],
 		],
 		onKey: (name: string) => (name === 'esc' ? done(BACK) : keys(name)),
 		pending: () => ({

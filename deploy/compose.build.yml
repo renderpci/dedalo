@@ -12,9 +12,12 @@
 # (or `-f docker-compose.yml` for the full stack). Everyday `up -d`, `logs` and
 # `stop` do not need this file: once built, the image is local.
 #
-# WHO NEEDS IT: developers, air-gapped hosts, and every installation whose
-# .dedalo.env says DEDALO_IMAGE_MODE=build — which is every installation until
-# Dédalo publishes a release to a registry it can pull from.
+# WHO NEEDS IT: developers only. It builds the WORKING TREE as it is, so the
+# image reports `X.Y.Z.dev` and carries whatever the checkout holds. An
+# installation (DEDALO_IMAGE_MODE=build) never builds through it: the installer
+# and the image updater both build a CLEAN SNAPSHOT of the last commit with
+# deploy/dedalo-image-build.sh (dedalo_image_build, deploy/dedalo-image-lib.sh —
+# C3-46), the image an operator building by hand should make too.
 #
 # WHY IT IS NOT IN THE BASE FILES. With `build:` and `image:` on one service,
 # compose builds whenever the image is missing: a failed or mistyped pull would

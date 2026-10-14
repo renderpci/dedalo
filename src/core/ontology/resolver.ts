@@ -28,7 +28,8 @@ import { DedaloError } from '../errors/dedalo_error.ts';
 import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
 import { refuseLabelNode } from './label_node_guard.ts';
-import { formatRetiredPropertyLine, retiredKeysOf } from './property_census.ts';
+import { retiredKeysOf } from './property_census.ts';
+import { announceRetiredProperties } from './retired_property_notice.ts';
 import { getSectionIdFromTipo } from './tld.ts';
 
 /**
@@ -189,12 +190,12 @@ export async function getNode(tipo: string): Promise<ResolvedNode | null> {
  * a key the engine stopped reading looks exactly like one it honours, so an
  * author's configuration silently does nothing. Every node in the process
  * passes through this cache miss exactly once, which makes it THE chokepoint —
- * one loud, greppable line per (node, retired key), then resolve by the
- * ordinary rule (CONVENTIONS §1: degraded, reported, defined).
+ * one loud, greppable line per retired KEY per process (the first node that
+ * carries it; the rest counted — ./retired_property_notice.ts, C3-72), then
+ * resolve by the ordinary rule (CONVENTIONS §1: degraded, reported, defined).
  *
- * The node cache is the dedupe (no new module-level state); a read inside a
- * transaction is not memoized, so it is not reported either — the same node is
- * reported on its first uncached read outside one. Keys marked `reportedAtUse`
+ * A read inside a transaction is not memoized, so it is not reported either —
+ * the same node is reported on its first uncached read outside one. Keys marked `reportedAtUse`
  * are skipped: their consumer already reports them with context this site
  * cannot have (the concrete replacement sqo, the named v6 fn).
  *
@@ -202,9 +203,9 @@ export async function getNode(tipo: string): Promise<ResolvedNode | null> {
  * ./property_census.ts.
  */
 function reportRetiredProperties(node: ResolvedNode): void {
-	for (const key of retiredKeysOf(node.properties, { skipReportedAtUse: true })) {
-		console.error(`[ontology/resolver] ${formatRetiredPropertyLine(node.tipo, key)}`);
-	}
+	// ONCE PER KEY per process (C3-72): ./retired_property_notice.ts.
+	// Diverted out of the operator's terminal while an install runs (C3-72).
+	announceRetiredProperties(node.tipo, retiredKeysOf(node.properties, { skipReportedAtUse: true }));
 }
 
 /**

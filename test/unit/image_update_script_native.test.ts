@@ -38,6 +38,8 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { BUILD_CONTEXT } from '../../src/core/install/host/stack/image.ts';
+import { parseBuildInfo, prereleaseTagFor } from '../../src/core/update/build_stamp.ts';
 import { loadImageRegistries } from '../../src/core/update/image_registries.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -122,6 +124,11 @@ case "$1" in
 		esac
 		;;
 	pull) [ -e "$S/pull_fail" ] && exit 1 ;;
+	build)
+		# the context the build READ, kept for the assertions (the builder removes its own)
+		ctx="$(last_arg "$@")"
+		rm -rf "$S/context_seen"; cp -R "$ctx" "$S/context_seen"
+		[ -e "$S/build_fail" ] && exit 1 ;;
 	image)
 		case "$2" in
 			inspect)
@@ -137,10 +144,14 @@ esac
 exit 0
 `;
 
-/** git: a checkout of the release ref rewrites version.ts to $STUB_STATE/target_triple. */
+/**
+ * git: a checkout of the release ref rewrites version.ts to $STUB_STATE/target_triple;
+ * `archive` tars $STUB_STATE/commit (the "committed" tree) to its -o file.
+ */
 const GIT_STUB = `#!/bin/bash
 S="$STUB_STATE"
 printf '%s\\n' "git $*" >> "$S/calls.log"
+while [ "$1" = -c ] || [ "$1" = -C ]; do shift 2; done
 write_version() {
 	printf 'export const DEDALO_VERSION_TRIPLE = Object.freeze([\\n\\t%s,\\n]);\\n' "$(printf '%s' "$1" | sed 's/\\./, /g')" > src/core/update/version.ts
 }
@@ -149,6 +160,11 @@ case "$1" in
 	rev-parse) echo prevsha0000 ;;
 	symbolic-ref) echo master ;;
 	fetch) exit 0 ;;
+	archive)
+		out=''
+		while [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done
+		tar -cf "$out" -C "$S/commit" .
+		;;
 	remote) cat "$S/git_remotes" 2>/dev/null || echo origin ;;
 	checkout)
 		for ref in "$@"; do :; done
@@ -181,6 +197,8 @@ interface Situation {
 	/** Replace the whole .dedalo.env. */
 	envText?: string;
 	cosign?: boolean;
+	/** No `.git` in the stack directory (a release tree). */
+	noGit?: boolean;
 }
 
 interface Stack {
@@ -208,6 +226,9 @@ function makeStack(situation: Situation = {}): Stack {
 		copyFileSync(join(REPO_ROOT, 'deploy', file), join(dir, 'deploy', file));
 	}
 	writeFileSync(join(dir, 'docker-compose.simple.yml'), 'services: {}\n');
+	if (situation.noGit !== true) mkdirSync(join(dir, '.git'));
+	mkdirSync(join(state, 'commit'));
+	writeFileSync(join(state, 'commit', 'committed.txt'), 'in the last commit\n');
 	const pinned = situation.pinned ?? '7.0.0';
 	writeFileSync(
 		join(dir, 'src', 'core', 'update', 'version.ts'),
@@ -246,6 +267,51 @@ function makeStack(situation: Situation = {}): Stack {
 	};
 	for (const [name, content] of Object.entries(flags)) writeFileSync(join(state, name), content);
 	return { dir, state, envFile, envBefore: envText };
+}
+
+/** Run git in `cwd` (identity and config isolated from the host's). */
+function git(cwd: string, ...args: string[]): void {
+	const run = Bun.spawnSync(
+		['git', '-c', 'user.name=gate', '-c', 'user.email=gate@example.org', ...args],
+		{ cwd, env: { PATH: '/usr/bin:/bin', HOME: cwd, GIT_CONFIG_NOSYSTEM: '1' } },
+	);
+	if (run.exitCode !== 0) throw new Error(`git ${args.join(' ')}: ${run.stderr.toString()}`);
+}
+
+/**
+ * A build-mode stack that is a REAL git repository (git is NOT stubbed): master
+ * at 7.0.0, the tag v7.0.1 one commit ahead, build_info.txt export-subst as in
+ * the repo; then what a live checkout holds and no commit does — an untracked
+ * file at the root, one nested in the code tree, and .dedalo.env itself.
+ */
+function realGitStack(): Stack {
+	const stack = makeStack({ mode: 'build', image: 'localhost/dedalo' });
+	rmSync(join(stack.state, '..', 'bin', 'git'));
+	rmSync(join(stack.dir, '.git'), { recursive: true });
+	const { dir } = stack;
+	writeFileSync(join(dir, 'src', 'core', 'update', 'build_info.txt'), '$Format:%H %cI$\n');
+	writeFileSync(
+		join(dir, '.gitattributes'),
+		readFileSync(join(REPO_ROOT, '.gitattributes'), 'utf8')
+			.split('\n')
+			.filter((line) => line.includes('build_info.txt export-subst'))
+			.join('\n'),
+	);
+	writeFileSync(join(dir, '.gitignore'), '/.dedalo-install/\n');
+	git(dir, 'init', '-q', '-b', 'master');
+	git(dir, 'add', '-A', '.', ':!.dedalo.env');
+	git(dir, 'commit', '-q', '-m', '7.0.0');
+	git(dir, 'checkout', '-q', '--detach');
+	writeFileSync(
+		join(dir, 'src', 'core', 'update', 'version.ts'),
+		'export const T = Object.freeze([7, 0, 1]);\n',
+	);
+	git(dir, 'commit', '-q', '-am', '7.0.1');
+	git(dir, 'tag', 'v7.0.1');
+	git(dir, 'checkout', '-q', 'master');
+	writeFileSync(join(dir, 'stray_untracked.txt'), 'never committed\n');
+	writeFileSync(join(dir, 'src', 'core', 'stray_untracked.ts'), 'export const stray = 1;\n');
+	return stack;
 }
 
 interface Result {
@@ -484,7 +550,7 @@ describe('pull mode', () => {
 });
 
 describe('build mode', () => {
-	test('green: the release tag is checked out and built THROUGH the override, as that version', () => {
+	test('green: the release tag is checked out, then built from a SNAPSHOT of it by the shared builder, as that version', () => {
 		const stack = makeStack({
 			mode: 'build',
 			image: 'localhost/dedalo',
@@ -492,13 +558,19 @@ describe('build mode', () => {
 		});
 		const result = runUpdate(stack, ['--version', '7.0.1']);
 		expect(result.code, result.stderr).toBe(0);
-		expect(result.calls).toContain('git checkout -q --detach v7.0.1');
-		const build = at(
-			result.calls,
-			/compose\[ docker-compose\.simple\.yml deploy\/compose\.build\.yml \].* build dedalo$/,
-		);
-		expect(build, result.calls.join('\n')).toBeGreaterThan(-1);
-		expect(result.calls[build + 1]).toBe('build-env DEDALO_VERSION=7.0.1');
+		const checkout = at(result.calls, /^git checkout -q --detach v7\.0\.1$/);
+		const archive = at(result.calls, / archive --format=tar -o .* HEAD$/);
+		const context = join(stack.dir, BUILD_CONTEXT);
+		const build = result.calls.findIndex((call) => isBuildOf(call, '7.0.1', context));
+		expect(checkout).toBeGreaterThan(-1);
+		expect(archive).toBeGreaterThan(checkout);
+		expect(build, result.calls.join('\n')).toBeGreaterThan(archive);
+		// never the checkout through the override
+		expect(at(result.calls, / build dedalo$/)).toBe(-1);
+		// the build read the snapshot, which is gone afterwards
+		expect(existsSync(join(stack.state, 'context_seen', 'committed.txt'))).toBe(true);
+		expect(existsSync(context)).toBe(false);
+		expect(existsSync(`${context}.tar`)).toBe(false);
 		expect(at(result.calls, /^docker pull/)).toBe(-1);
 		expect(result.env).toBe(repinned(stack, '7.0.1'));
 		expect(result.outcome).toMatchObject({
@@ -519,7 +591,7 @@ describe('build mode', () => {
 		const result = runUpdate(stack, ['--version', '7.0.1']);
 		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });
 		expect(result.calls).toContain('git checkout -q master');
-		expect(at(result.calls, / build dedalo$/)).toBe(-1);
+		expect(at(result.calls, /^docker build /)).toBe(-1);
 		expect(result.env).toBe(stack.envBefore);
 	});
 
@@ -533,6 +605,64 @@ describe('build mode', () => {
 		expect(result.outcome).toMatchObject({ status: 'failed', detail: 'build_failed' });
 		expect(result.calls.at(-1)).toBe('git checkout -q master');
 		expect(result.env).toBe(stack.envBefore);
+		// a red build removes its snapshot too
+		expect(existsSync(join(stack.dir, BUILD_CONTEXT))).toBe(false);
+	});
+
+	test('not a git checkout (a release tree): refused with the sentence, nothing fetched, checked out or built', () => {
+		const stack = makeStack({
+			mode: 'build',
+			image: 'localhost/dedalo',
+			noGit: true,
+			state: { target_triple: '7.0.1' },
+		});
+		const result = runUpdate(stack, ['--version', '7.0.1']);
+		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'build_failed' });
+		expect(result.stderr).toContain(`${stack.dir} is not a git checkout`);
+		expect(result.stderr).toContain('DEDALO_IMAGE_MODE=pull');
+		expect(result.calls.filter((line) => line.startsWith('git '))).toEqual([]);
+		expect(at(result.calls, /^docker build /)).toBe(-1);
+		expect(result.env).toBe(stack.envBefore);
+	});
+
+	test('OUTCOME over a REAL git checkout: no uncommitted or untracked file in the build context, build_info expanded (no .dev)', () => {
+		const stack = realGitStack();
+		const result = runUpdate(stack, ['--version', '7.0.1']);
+		expect(result.code, result.stderr).toBe(0);
+		expect(result.outcome).toMatchObject({ status: 'green', mode: 'build' });
+		const context = join(stack.dir, BUILD_CONTEXT);
+		expect(result.calls.filter((call) => isBuildOf(call, '7.0.1', context))).toHaveLength(1);
+		const seen = join(stack.state, 'context_seen');
+		// the release commit, as committed
+		expect(readFileSync(join(seen, 'src', 'core', 'update', 'version.ts'), 'utf8')).toContain(
+			'7, 0, 1',
+		);
+		// what the working tree holds and the commit does not never travels
+		for (const stray of ['stray_untracked.txt', 'src/core/stray_untracked.ts', '.dedalo.env']) {
+			expect(existsSync(join(stack.dir, stray)), `${stray} is in the checkout`).toBe(true);
+			expect(existsSync(join(seen, stray)), `${stray} reached the build context`).toBe(false);
+		}
+		// export-subst expanded: the image reports the version it is tagged with
+		const stamp = parseBuildInfo(
+			readFileSync(join(seen, 'src', 'core', 'update', 'build_info.txt'), 'utf8'),
+		);
+		expect(stamp.build).not.toBeNull();
+		expect(prereleaseTagFor(stamp.build, null)).toBe('');
+		// the working tree's own stamp is the placeholder: a build from it would say .dev
+		const tree = parseBuildInfo(
+			readFileSync(join(stack.dir, 'src', 'core', 'update', 'build_info.txt'), 'utf8'),
+		);
+		expect(prereleaseTagFor(tree.build, null)).toBe('.dev');
+		expect(existsSync(context)).toBe(false);
+	});
+
+	test('a REAL checkout with a dirty tracked file: refused before the checkout moves (the build never sees it)', () => {
+		const stack = realGitStack();
+		writeFileSync(join(stack.dir, 'docker-compose.simple.yml'), 'services: {} # local edit\n');
+		const result = runUpdate(stack, ['--version', '7.0.1']);
+		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'build_failed' });
+		expect(result.stderr).toContain('local changes to tracked files');
+		expect(at(result.calls, /^docker build /)).toBe(-1);
 	});
 
 	test('local changes to tracked files: refused before anything is checked out', () => {
@@ -856,3 +986,15 @@ describe('the script itself', () => {
 		expect(source.trimEnd().split('\n').at(-1)).toBe('main "$@"; exit');
 	});
 });
+
+/**
+ * Is `call` the shared builder's `docker build` of `context` as `version` — its
+ * tag, and its OWN version label (campaign 3b N1: never the base image's)?
+ */
+function isBuildOf(call: string, version: string, context: string): boolean {
+	return (
+		call.startsWith(`docker build --tag localhost/dedalo:${version} `) &&
+		call.includes(` --label org.opencontainers.image.version=${version} `) &&
+		call.endsWith(` ${context}`)
+	);
+}

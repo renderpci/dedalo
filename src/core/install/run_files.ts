@@ -87,6 +87,11 @@ export function releaseRunLock(dir: string = installRunDir()): void {
 	core.releaseRunLock(dir);
 }
 
+/** The live holder of this private dir's run lock, or null (core.liveLockHolder). */
+export function liveLockHolder(dir: string = installRunDir()): LockInfo | null {
+	return core.liveLockHolder(dir);
+}
+
 // ── the install's own .env (the engine side) ─────────────────────────────────
 
 /** The install's own .env parsed (config-free), or null when absent/unreadable. */

@@ -12,9 +12,9 @@
 #      does not exist.
 #   2. get the image — pull a published one:
 #        docker compose --env-file .dedalo.env pull dedalo
-#      or build it here from this checkout:
-#        docker compose -f docker-compose.yml -f deploy/compose.build.yml \
-#          --env-file .dedalo.env build dedalo
+#      or build it here from a clean snapshot of this checkout's last commit
+#      (the installer's and the updater's builder):
+#        ./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:<DEDALO_VERSION>
 #   3. docker compose --env-file .dedalo.env up -d postgres
 #   4. docker compose --env-file .dedalo.env run --rm \
 #        -e DEDALO_INSTALL_ROOT_PASSWORD='…' \
@@ -65,8 +65,8 @@ services:
     # D2). DEDALO_IMAGE (a repository, no tag) and DEDALO_VERSION (the release tag)
     # come from .dedalo.env, which install.sh writes from the operator's answer:
     # one of Dédalo's registries (engineering/image_registries.json), a registry of
-    # your own, or a local build. Building here is the override
-    # `-f deploy/compose.build.yml`, which tags the build with this same name.
+    # your own, or a local build. Building here is deploy/dedalo-image-build.sh
+    # (a clean snapshot of the last commit), tagged with this same name.
     # The default `localhost/dedalo:local` names the registry host `localhost`, so
     # a bare `docker compose up` can never pull a look-alike image from a public
     # registry: without a local build it fails loudly instead.
@@ -329,8 +329,8 @@ services:
       - media:/srv/dedalo/media:ro
       - backups:/backups
     # One run a day, the first one an hour after start. `sleep & wait` (not a bare
-    # sleep) is the same shape as the nginx/certbot loops above: it lets SIGTERM
-    # stop the container promptly instead of waiting out the sleep.
+    # sleep) is the certbot renewal loop's shape: with the TERM trap below it
+    # lets SIGTERM stop the container promptly instead of waiting out the sleep.
     entrypoint:
       - /bin/sh
       - -c
@@ -339,6 +339,10 @@ services:
         # loop. The run's verdict is /backups/BACKUP_FAILED (written by the last
         # step, removed when every store succeeded) and the healthcheck reads it.
         set -u
+        # PID 1 IGNORES A SIGNAL IT HAS NO HANDLER FOR: without this trap `compose
+        # stop` waits out its timeout and kills the container (exit 137). The trap
+        # ends the loop at once (the `sleep & wait` below returns on the signal).
+        trap 'exit 0' TERM INT
         D=/opt/dedalo/master_dedalo/deploy
         export DEDALO_BACKUP_STATUS_DIR=/tmp/dedalo-backup-status
         # Which stores this loop promises. Without it the aggregate can only see

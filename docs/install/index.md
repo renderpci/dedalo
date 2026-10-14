@@ -28,12 +28,12 @@ Everything else — publication to a public website, semantic search, the AI ass
 
 ## Get Dédalo
 
-The Production route installs from a **release archive**; the Docker, Trial and Developer routes run from a **git checkout**.
+The Production route installs from a **release archive** — or from a git checkout at a release tag; the Docker, Trial and Developer routes run from a **git checkout**.
 
 | You need | Where it is |
 | --- | --- |
 | a release archive (Production) | the official code server publishes each release at `https://v7.master.dedalo.dev/dedalo/install/code/<version>/<version>.zip`, and its sha256 beside it, at the same address with `.sha256` added. The releases are also listed at `https://github.com/dedalia-org/dedalo/releases` |
-| a checkout (Docker, Trial, Developer) | `git clone https://github.com/dedalia-org/dedalo.git`, then `git checkout v<version>` for a release. Keep the git remote: a Docker update builds from the release's tag |
+| a checkout (Docker, Trial, Developer — or Production at a release tag) | `git clone https://github.com/dedalia-org/dedalo.git`, then `git checkout v<version>` for a release. Keep the git remote: a Docker update builds from the release's tag. Under `sudo`, the bootstrap installs the installer's dependencies as the checkout's owner: root never writes in it |
 
 Unpack the archive and run `install.sh` from it, or let the bootstrap fetch and check it for you:
 
@@ -44,11 +44,11 @@ sudo sh install.sh --release https://v7.master.dedalo.dev/dedalo/install/code/<v
 
 `<sha256>` is the digest published in `<version>.zip.sha256`. The bootstrap hashes the archive before anything reads it and refuses it when the hash differs.
 
-The bootstrap itself needs `curl`, `unzip` and `sha256sum` on the machine before the installer can install anything. A minimal server may lack them:
+The bootstrap itself needs `curl`, `unzip` and `sha256sum` on the machine before the installer can install anything, and a checkout needs `git`. A minimal server may lack them:
 
 ```shell
-sudo apt-get install curl unzip coreutils     # Debian, Ubuntu
-sudo dnf install curl unzip coreutils         # RHEL, Rocky Linux, AlmaLinux
+sudo apt-get install curl unzip coreutils git     # Debian, Ubuntu
+sudo dnf install curl unzip coreutils git         # RHEL, Rocky Linux, AlmaLinux
 ```
 
 ## One command
@@ -59,6 +59,8 @@ Every install starts the same way, from the release (or the checkout) of Dédalo
 sudo sh install.sh        # production: it changes the host, so it runs as root
 sh install.sh             # docker, trial and developer: as yourself
 ```
+
+In a developer checkout that already has Bun, `bun run scripts/install.ts` is the same installer without the bootstrap — the [Developer quickstart](dev_quickstart.md) uses that form; both ask the same questions and run the same install.
 
 `install.sh` is only the bootstrap: it checks the machine, verifies the release and the pinned Bun runtime, and then starts the installer (`scripts/install.ts`). The installer asks its questions on full-screen terminal screens (`--plain` for one question per line), shows the whole plan — every command it will run on the host — on a Review screen, and only then installs. Every flag, the answers file, resume and abort are in the [installer reference](installer_reference.md).
 
@@ -85,7 +87,7 @@ The installer supports the **newest release** of each distribution, and nothing 
 | Route | Supported |
 | --- | --- |
 | Production | Ubuntu 26.04 LTS · Debian 13 (trixie) · RHEL, Rocky Linux or AlmaLinux 10 |
-| Docker, Trial | any Linux with glibc on x86_64 or aarch64 with Docker Engine and Compose v2 · macOS (Apple silicon or Intel) with Docker Desktop |
+| Docker, Trial | any Linux with glibc on x86_64 or aarch64 with Docker Engine and Compose 2.24.4 or newer · macOS (Apple silicon or Intel) with Docker Desktop |
 | Developer | any Linux with glibc on x86_64 or aarch64 · macOS |
 
 The match is on the exact distribution and major version. A derivative (Fedora, CentOS Stream, Oracle Linux) is not treated as one of the supported systems, and neither is an older release of a supported one. A musl-based Linux (Alpine) is refused by the bootstrap.
@@ -113,11 +115,11 @@ Storage is the number you must actually think about. A project of a few thousand
 | Route | Before you start |
 | --- | --- |
 | Production | a supported system with systemd; root; `curl`, `unzip` and `sha256sum` for the bootstrap ([Get Dédalo](#get-dedalo)); an **instance name** (`prado`, `archive`…); the public address and DNS pointing at this machine; ports 80 and 443 reachable (Let's Encrypt proves the address over port 80); for your institution's certificate, its fullchain and key files. The installer installs everything else |
-| Docker | Docker Engine and the Compose v2 plugin, a daemon your user can reach, about 8 GiB free under Docker's root, ports 80 and 443 free; `cosign` to verify an official image (or build the image locally instead); a fully qualified address (not `localhost`, not an IP address) — public for Let's Encrypt, resolvable on staff computers for a local certificate authority |
-| Trial | Docker Engine (or Docker Desktop) and the Compose v2 plugin, about 8 GiB free, port 80 free; `cosign` to verify an official image (or build the image locally instead) |
-| Developer | a git checkout, Bun at the pinned version, a local PostgreSQL 18 with its `psql`, an **empty** database, the media tools |
+| Docker | Docker Engine and the Compose plugin 2.24.4 or newer ([how, per distribution](docker.md); Podman is not supported), a daemon your user can reach (the `docker` group), about 8 GiB free under Docker's root, ports 80 and 443 free; `curl`, `unzip`, `sha256sum` and `git`; `cosign` to verify an official image (or build the image locally instead); a fully qualified address (not `localhost`, not an IP address) — public for Let's Encrypt, resolvable on staff computers for a local certificate authority |
+| Trial | Docker Engine (or Docker Desktop) and the Compose plugin 2.24.4 or newer ([how, per distribution](quickstart.md#what-you-need); Podman is not supported), your user in the `docker` group, about 8 GiB free, port 80 free; `curl`, `unzip`, `sha256sum` and `git`; `cosign` to verify an official image (or build the image locally instead) |
+| Developer | a git checkout (`git`, `curl`, `unzip`), Bun at the pinned version, a local PostgreSQL 18 with its `psql`, an **empty** database, the media tools — the full list, per system, is in the [Developer quickstart](dev_quickstart.md) |
 
-The installer never installs Docker and never changes the firewall: it checks them and tells you.
+The installer never installs Docker and never changes the firewall: it checks Docker and tells you what is missing. On Production the System check shows a **Firewall** row, and the Review and the closing *To do on this host* list give the exact command when ports 80 and 443 are closed (RHEL's firewalld closes them by default) — see [Troubleshooting › The firewall](troubleshooting.md#the-firewall-closes-the-sites-ports). On Docker and Trial the firewall is **not checked**, because the published ports bypass it: Docker writes its own rules ahead of firewalld and ufw, so restrict them in Docker's `DOCKER-USER` chain ([Docker](docker.md)).
 
 ## The pages
 

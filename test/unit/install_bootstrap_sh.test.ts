@@ -28,6 +28,13 @@
  *      removed); Bun's SHASUMS disagreeing with the table (both refused);
  *      `--wizard` (retired); a missing `unzip` or `curl` (require_tool — the
  *      bootstrap runs before host_packages, so it names the package).
+ *  (d) UNDER SUDO (campaign 3 C3-24): `--route production` on a Linux system
+ *      the route does not support is refused BEFORE anything is fetched or
+ *      installed, with the installer's own sentence — the shell table held
+ *      equal to os_support.ts OS_ROWS; root in a checkout that is not root's
+ *      installs the dependencies AS ITS OWNER (runuser, a root-owned 0755 copy
+ *      of the verified Bun) and never itself; root in its own tree keeps Bun's
+ *      package cache under the cache root (never /root/.bun).
  *  (c) THE SAME VERDICTS AS THE PUBLICATION HOST AGENT'S BOOTSTRAP
  *      (publication/host_agent/deploy/install.sh — the model it follows): its
  *      `pick_asset` and `verify_bun` against this one's `pick_asset` and
@@ -51,6 +58,12 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {
+	OS_ROWS,
+	osRowOf,
+	parseOsRelease,
+	unsupportedOsSentence,
+} from '../../src/core/install/host/os_support.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const INSTALL_SH = join(REPO_ROOT, 'install.sh');
@@ -202,10 +215,31 @@ interface BootRun {
 	cache: string;
 }
 
+/**
+ * A scratch host root (the installer's own seam, marked) whose os-release the
+ * production gate reads — never this machine's (default: a supported system).
+ */
+function hostRoot(
+	osRelease = 'ID=ubuntu\nVERSION_ID="26.04"\nPRETTY_NAME="Ubuntu 26.04 LTS"\n',
+): string {
+	const root = dir('hostroot');
+	mkdirSync(join(root, '.dedalo_install_scratch'));
+	mkdirSync(join(root, 'etc'));
+	writeFileSync(join(root, 'etc/os-release'), osRelease);
+	return root;
+}
+
 /** Run the bootstrap end to end. */
 function boot(
 	args: string[],
-	options: { fixtures: string; kernel?: string; machine?: string; stdin?: string; cache?: string },
+	options: {
+		fixtures: string;
+		kernel?: string;
+		machine?: string;
+		stdin?: string;
+		cache?: string;
+		root?: string;
+	},
 ): BootRun {
 	const home = dir('home');
 	const cache = options.cache ?? dir('cache');
@@ -220,6 +254,7 @@ function boot(
 			BUN_RECORD: record,
 			CURL_LOG: curlLog,
 			DEDALO_INSTALL_ROOT_PASSWORD: SECRET,
+			DEDALO_INSTALL_HOST_ROOT: options.root ?? hostRoot(),
 		},
 		...(options.stdin === undefined ? {} : { stdin: options.stdin }),
 	});
@@ -280,12 +315,14 @@ describe('the bootstrap runs end to end under sh (a)', () => {
 		);
 		expect(result.stderr).toContain('Installing the installer');
 		expect(result.code, result.stderr).toBe(0);
-		// The dependencies: the release's lockfile, production, no lifecycle scripts.
+		// The dependencies: the release's lockfile, production, no lifecycle scripts — and, its
+		// stdout a pipe (the installer's plain mode), no progress bar (campaign 3b N25).
 		expect(result.calls[0]).toEqual([
 			'install',
 			'--frozen-lockfile',
 			'--production',
 			'--ignore-scripts',
+			'--no-progress',
 		]);
 		// The installer: the hand-over flags, the release's bunfig, then EXACTLY the operator's argv.
 		const argv = result.installer ?? [];
@@ -589,5 +626,180 @@ describe("the same verdicts as the publication host agent's bootstrap (c)", () =
 		// Not vacuous: the fixtures produce BOTH verdicts.
 		expect(verdicts.filter(Boolean).length).toBe(2);
 		expect(verdicts.filter((ok) => !ok).length).toBe(cases.length - 2);
+	});
+});
+
+// ── (d) under sudo: the OS gate first, root never writes in a user's checkout ─
+
+describe('under sudo: the production OS gate, and the dependencies as the checkout owner (d — campaign 3 C3-24)', () => {
+	/** Run `body` with the bootstrap's library loaded. */
+	function lib(body: string, env: Record<string, string> = {}, cwd = scratch) {
+		return run(['sh', '-c', `set -- --lib; . "${INSTALL_SH}"; ${body}`], {
+			cwd,
+			env: { PATH: '/usr/bin:/bin:/usr/sbin:/sbin', ...env },
+		});
+	}
+
+	/** An os-release file. */
+	function osRelease(id: string, version: string, pretty: string): string {
+		const path = join(dir('osr'), 'os-release');
+		writeFileSync(path, `ID="${id}"\nVERSION_ID="${version}"\nPRETTY_NAME="${pretty}"\n`);
+		return path;
+	}
+
+	test("the shell table IS os_support.ts's: every supported row passes, its words are supportedOsList()", () => {
+		for (const row of OS_ROWS) {
+			for (const id of row.ids) {
+				const version = row.versionMajor.includes('.') ? row.versionMajor : `${row.versionMajor}.1`;
+				const file = osRelease(id, version, `${id} ${version}`);
+				const gate = lib(`production_os_gate "${file}" Linux --route production; echo passed`);
+				expect(gate.stdout, `${id} ${version}`).toBe('passed\n');
+				expect(osRowOf(parseOsRelease(readFileSync(file, 'utf8')))?.id).toBe(row.id);
+			}
+		}
+		for (const [id, version, pretty] of [
+			['ubuntu', '24.04', 'Ubuntu 24.04.3 LTS'],
+			['rhel', '9.6', 'Red Hat Enterprise Linux 9.6 (Plow)'],
+			['debian', '12', 'Debian GNU/Linux 12 (bookworm)'],
+			['fedora', '42', 'Fedora Linux 42'],
+			['ubuntu', '26.10', 'Ubuntu 26.10'],
+		] as const) {
+			const file = osRelease(id, version, pretty);
+			expect(osRowOf(parseOsRelease(readFileSync(file, 'utf8')))).toBeNull();
+			const gate = lib(`production_os_gate "${file}" Linux --route=production; echo passed`);
+			expect(gate.code, pretty).toBe(3);
+			expect(gate.stderr).toBe(`install.sh: ${unsupportedOsSentence(pretty)}\n`);
+		}
+	});
+
+	test('only --route production is gated (docker, trial, an interactive start: the installer decides)', () => {
+		const file = osRelease('ubuntu', '24.04', 'Ubuntu 24.04.3 LTS');
+		for (const args of ['--route docker', '--route trial', '', '--plan --instance x']) {
+			expect(lib(`production_os_gate "${file}" Linux ${args}; echo passed`).stdout, args).toBe(
+				'passed\n',
+			);
+		}
+		expect(lib(`production_os_gate "${file}" Darwin --route production; echo passed`).stdout).toBe(
+			'passed\n',
+		);
+	});
+
+	test('end to end: --route production on an unsupported system — refused before any download or bun install', () => {
+		const set = fixtureSet();
+		const result = boot(
+			['--release', set.archive, '--release-sha256', set.archiveSha, '--', '--route', 'production'],
+			{
+				fixtures: set.fixtures,
+				root: hostRoot('ID=ubuntu\nVERSION_ID="24.04"\nPRETTY_NAME="Ubuntu 24.04.3 LTS"\n'),
+			},
+		);
+		expect(result.code).toBe(3);
+		expect(result.stderr).toContain(unsupportedOsSentence('Ubuntu 24.04.3 LTS'));
+		expect(result.curl).toBe('');
+		expect(result.calls).toEqual([]);
+	});
+
+	test("root in a checkout that is NOT root's: the dependencies are installed BY ITS OWNER (runuser), never by root", () => {
+		const work = dir('sudo');
+		const tree = join(work, 'checkout');
+		mkdirSync(tree);
+		const cache = join(work, 'cache');
+		mkdirSync(cache);
+		const bin = join(work, 'bin');
+		mkdirSync(bin);
+		const log = join(work, 'log');
+		// The verified Bun (root's, in the 0700 cache): records how it was called.
+		const bun = join(cache, 'bun-verified');
+		writeFileSync(
+			bun,
+			`#!/bin/sh\nprintf 'bun %s|%s\\n' "$*" "\${BUN_INSTALL_CACHE_DIR:-}" >> "${log}"\n`,
+		);
+		chmodSync(bun, 0o755);
+		writeFileSync(
+			join(bin, 'getent'),
+			'#!/bin/sh\necho "operator:x:$2:$2::/home/operator:/bin/sh"\n',
+		);
+		writeFileSync(
+			join(bin, 'runuser'),
+			`#!/bin/sh\nprintf 'runuser %s\\n' "$*" >> "${log}"\n[ "$1" = -u ] && shift 2\n[ "$1" = -- ] && shift\nexec "$@"\n`,
+		);
+		chmodSync(join(bin, 'getent'), 0o755);
+		chmodSync(join(bin, 'runuser'), 0o755);
+		const env = { PATH: `${bin}:/usr/bin:/bin:/usr/sbin:/sbin` };
+		const done = lib(`install_deps "${bun}" "${tree}" 0 "${cache}" Linux ${PIN}`, env, work);
+		expect(done.code, done.stderr).toBe(0);
+		const shared = join(cache, 'bun-shared', PIN, 'bun');
+		const lines = readFileSync(log, 'utf8').trim().split('\n');
+		expect(lines).toEqual([
+			`runuser -u operator -- ${shared} install --frozen-lockfile --production --ignore-scripts`,
+			'bun install --frozen-lockfile --production --ignore-scripts|',
+		]);
+		// The copy it runs is root's to replace, not the operator's: 0755 (others read and run it).
+		expect(statMode(shared)).toBe(0o755);
+		expect(statMode(join(cache, 'bun-shared', PIN))).toBe(0o755);
+		expect(done.stderr).toContain(`as operator (the owner of ${tree}`);
+		// Root's own tree (a staged --release): root installs, its package cache under the cache root.
+		writeFileSync(log, '');
+		const own = lib(`install_deps "${bun}" "${tree}" 0 "${cache}" Darwin ${PIN}`, env, work);
+		expect(own.code, own.stderr).toBe(0);
+		expect(readFileSync(log, 'utf8')).toBe(
+			`bun install --frozen-lockfile --production --ignore-scripts|${cache}/bun-install-cache\n`,
+		);
+		// Not root: as before (its own HOME's cache), no runuser.
+		writeFileSync(log, '');
+		expect(
+			lib(`install_deps "${bun}" "${tree}" 1000 "${cache}" Linux ${PIN}`, env, work).code,
+		).toBe(0);
+		expect(readFileSync(log, 'utf8')).toBe(
+			'bun install --frozen-lockfile --production --ignore-scripts|\n',
+		);
+	});
+
+	test('plain mode: the dependency install runs uncoloured (NO_COLOR, FORCE_COLOR=0 — campaign 3 C3-58)', () => {
+		const work = dir('plain');
+		const tree = join(work, 'checkout');
+		mkdirSync(tree);
+		const cache = join(work, 'cache');
+		mkdirSync(cache);
+		const log = join(work, 'log');
+		// The verified Bun records the colour switches it was run with, and its last argument
+		// (`--no-progress` in plain mode: a progress bar moves the cursor — campaign 3b N25).
+		const bun = join(cache, 'bun-verified');
+		writeFileSync(
+			bun,
+			`#!/bin/sh\nfor last; do :; done\nprintf '%s|%s|%s\\n' "\${NO_COLOR:-unset}" "\${FORCE_COLOR:-unset}" "$last" >> "${log}"\n`,
+		);
+		chmodSync(bun, 0o755);
+		const deps = `install_deps "${bun}" "${tree}" 1000 "${cache}" Darwin ${PIN}`;
+		const colours = (args: string, term: string): string => {
+			writeFileSync(log, '');
+			const done = lib(`plain_colours ${args}; ${deps}`, { TERM: term }, work);
+			expect(done.code, done.stderr).toBe(0);
+			return readFileSync(log, 'utf8');
+		};
+		expect(colours('--plain', 'xterm-256color')).toBe('1|0|--no-progress\n');
+		expect(colours('', 'dumb')).toBe('1|0|--no-progress\n');
+		// stdout is a pipe here: the installer's plain mode, so uncoloured too.
+		expect(colours('--route trial', 'xterm-256color')).toBe('1|0|--no-progress\n');
+		// CONTROL: without plain_colours (the full screen), the bar is the bun default.
+		writeFileSync(log, '');
+		expect(lib(deps, { TERM: 'xterm-256color' }, work).code).toBe(0);
+		expect(readFileSync(log, 'utf8')).toBe('unset|unset|--ignore-scripts\n');
+		// A full terminal and no --plain: the full-screen run keeps its colours. Measured under a pty
+		// where `script` provides one (BSD and util-linux spell it differently).
+		const body = `set -- --lib; . "${INSTALL_SH}"; plain_output --route trial && echo plain || echo full`;
+		const pty =
+			process.platform === 'darwin'
+				? ['script', '-q', '/dev/null', 'sh', '-c', body]
+				: ['script', '-qec', `sh -c '${body}'`, '/dev/null'];
+		if (Bun.which('script') !== null) {
+			const full = run(pty, { cwd: work, env: { TERM: 'xterm-256color' } });
+			expect(full.stdout).toContain('full');
+			expect(full.stdout).not.toContain('plain');
+		}
+	});
+
+	test('deps_user: a root-owned tree is installed by root itself (nothing to drop to)', () => {
+		expect(lib('deps_user / 0 Linux; echo "[$(deps_user / 0 Linux)]"').stdout).toContain('[]');
 	});
 });

@@ -34,6 +34,16 @@ import {
 import { DEDALO_VERSION } from '../../../update/version.ts';
 import type { InstallAnswers } from '../../install_plan.ts';
 
+/**
+ * How long a local image build takes — the ONE estimate (campaign 3b N11: the
+ * Image screen, the Review and the docs said three different things). Measured
+ * in campaign 3b on 2 vCPU VMs: 2 to 6 minutes for a first build. The Review
+ * (stack_image's label, the install sentence) says it; the docs repeat it
+ * verbatim (gate: install_stack_steps_native).
+ */
+export const BUILD_DURATION =
+	'a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk';
+
 /** The compose project name both stack files declare (`name: dedalo`). */
 export const STACK_PROJECT = 'dedalo';
 
@@ -70,6 +80,43 @@ export const CONTAINER = Object.freeze({
 	acmeWebroot: '/var/www/certbot',
 	letsencrypt: '/etc/letsencrypt',
 });
+
+/**
+ * The media gate's two nginx rule files AS THE ENGINE WRITES THEM into its
+ * media root (src/core/media/protection.ts ruleFilePaths — the names are
+ * cross-checked against it by install_stack_nginx_native; this module stays
+ * config-free). The full stack's nginx mounts the media volume read-only and
+ * includes them where they are: inside its own container, the instance-writable
+ * file is the stack's documented design (docs/install/docker.md, problem 3),
+ * not the production host's root-owned copies (campaign 3 C3-2).
+ */
+export const CONTAINER_MEDIA_RULES = Object.freeze({
+	server: `${CONTAINER.media}/dedalo_media_protection.nginx.conf`,
+	map: `${CONTAINER.media}/dedalo_media_protection_map.nginx.conf`,
+});
+
+/**
+ * The images the stack files run besides the Dédalo image (both stack files'
+ * `image:` lines — gate: install_stack_nginx_native). An abort names them:
+ * they stay on the machine as a cache.
+ */
+export const STACK_SERVICE_IMAGES: readonly string[] = Object.freeze([
+	'postgres:18',
+	'nginx:alpine',
+]);
+
+/**
+ * The trial nginx's volumes (docker-compose.simple.yml's nginx volumes WITHOUT
+ * the certificate ones — the Let's Encrypt volumes and deploy/certs): the trial
+ * serves plain HTTP, so its override replaces the list (campaign 3 C3-22). The
+ * gate holds it equal to the stack file's list minus those three.
+ */
+export const TRIAL_NGINX_VOLUMES: readonly string[] = Object.freeze([
+	'./deploy/${DEDALO_NGINX_CONF:-nginx.simple.conf}:/etc/nginx/conf.d/default.conf:ro',
+	`client:${CONTAINER.client}:ro`,
+	`media:${CONTAINER.media}:ro`,
+	'socket:/run/dedalo',
+]);
 
 /** The volumes the engine's services use (created by `compose run`/`up`). */
 export const ENGINE_VOLUMES: readonly string[] = Object.freeze(

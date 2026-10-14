@@ -82,7 +82,6 @@
 import { existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { readEnv } from '../../src/config/env.ts';
-import { libpqTransportArgs, resolvePgTransport } from '../../src/config/pg_transport.ts';
 // DB-free ON PURPOSE (see that module's header): the marker is named through
 // the constant, never the literal (test_db_marker_tripwire rule 5), and never
 // through the marker module itself (its postgres.ts import connects the pool
@@ -91,6 +90,7 @@ import {
 	TEST_MARKER_PURPOSE,
 	TEST_MARKER_TABLE,
 } from '../../src/core/test_data/test_database_marker_constants.ts';
+import { suitePsqlConnArgs, suitePsqlEnv } from '../../test/helpers/suite_pg.ts';
 import {
 	TEST_MEDIA_MARKER,
 	testMediaBaseDir,
@@ -154,18 +154,10 @@ const password = readEnv('DB_PASSWORD') ?? readEnv('DEDALO_PASSWORD_CONN') ?? ''
  * `-h/-p` decided by the engine's ONE transport rule (DB_SOCKET wins, a `/`
  * DB_HOST is a socket directory, else TCP; an unset port is 5432) — the route
  * the suite's own pool takes. readEnv already honours the PHP alias spellings.
+ * Plus `-w` and a PGCONNECT_TIMEOUT (test/helpers/suite_pg.ts): never a
+ * password prompt on the terminal (C3-12).
  */
-const conn = [
-	...libpqTransportArgs(
-		resolvePgTransport({
-			host: readEnv('DB_HOST') ?? 'localhost',
-			port: readEnv('DB_PORT') ?? '',
-			socket: readEnv('DB_SOCKET'),
-		}),
-	),
-	'-U',
-	user,
-];
+const conn = suitePsqlConnArgs(readEnv, user);
 
 /**
  * The psql binary, resolved the way the ENGINE resolves it — imported LAZILY
@@ -189,7 +181,7 @@ export async function psql(database: string, args: string[], stdin?: string): Pr
 	const proc = Bun.spawn(
 		[await psqlBinary(), ...conn, '-d', database, '-v', 'ON_ERROR_STOP=1', ...args],
 		{
-			env: { ...process.env, PGPASSWORD: password },
+			env: suitePsqlEnv(process.env, password),
 			stdin: stdin === undefined ? 'ignore' : new TextEncoder().encode(stdin),
 			stdout: 'pipe',
 			stderr: 'pipe',

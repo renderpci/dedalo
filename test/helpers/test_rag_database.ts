@@ -55,6 +55,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { AI_KEYS } from '../../src/config/catalog/ai.ts';
 import { parseEnvFile, privateDir, projectRoot, readEnv } from '../../src/config/env.ts';
+import { type EnvRead, suiteBunSqlTarget, suiteRagPgEndpoint } from './suite_pg.ts';
 
 /**
  * The vendored schema of the vector store — the parent table, its indexes and
@@ -155,35 +156,32 @@ function assertPlainRagDatabaseName(name: string): string {
 }
 
 /**
- * Where the vector database LIVES. Duplicated under protest from
- * `buildRagSqlOptions()` (src/ai/rag/vector_store.ts), which owns this rule —
- * this module may not import it: that module freezes the config at import
- * (`src/config/config.ts`) and BUILDS `ragSql`, the store's own module-scope
- * pool, from whatever the environment says at that instant, i.e. the
- * installation's index while a preload is still composing the environment.
- * `test/preload/test_database.ts` carries the same duplication of
- * `buildSqlOptions` for the same reason and says so; keep the copies in step.
- *
- * The one rule that is easy to get wrong: a host starting with `/` is a socket
- * DIRECTORY, and the socket inside it is `.s.PGSQL.<port>`. Passing the
- * directory as `hostname` does not fail loudly — it fails as
- * `PostgresError: Connection closed`, which reads as "the database is missing".
+ * Where the vector database LIVES: the engine's rule (`ragEndpoint`,
+ * src/ai/rag/vector_store.ts), taken through test/helpers/suite_pg.ts — this
+ * module may not import vector_store.ts, which freezes the config at import and
+ * BUILDS `ragSql` from whatever the environment says at that instant (the
+ * installation's index while a preload is still composing the environment).
+ * The hand copy that stood here read DB_HOST and never DB_SOCKET, so on a socket
+ * install `test:db:setup` went over TCP with a password (C3-12).
  */
 function ragConnection(database: string): Record<string, unknown> {
-	const socket = readEnv('DEDALO_RAG_DB_SOCKET_CONN') ?? '';
-	const host = readEnv('DEDALO_RAG_DB_HOSTNAME_CONN') ?? readEnv('DB_HOST') ?? 'localhost';
-	const portRaw = Number(readEnv('DEDALO_RAG_DB_PORT_CONN') ?? readEnv('DB_PORT') ?? 5432);
-	const port = Number.isFinite(portRaw) && portRaw > 0 ? Math.trunc(portRaw) : 5432;
-	const password = readEnv('DEDALO_RAG_DB_PASSWORD_CONN') ?? readEnv('DB_PASSWORD') ?? '';
-	const common = {
+	return ragConnectionOptions(database, readEnv);
+}
+
+/**
+ * The vector database's Bun.sql options over an environment reader — the
+ * engine's own route (suite_pg.ts suiteRagPgEndpoint: the vector store's socket,
+ * then its host, else the MAIN route with DB_SOCKET). Exported for the gate.
+ */
+export function ragConnectionOptions(database: string, read: EnvRead): Record<string, unknown> {
+	const password = read('DEDALO_RAG_DB_PASSWORD_CONN') ?? read('DB_PASSWORD') ?? '';
+	return {
 		database,
-		username: readEnv('DEDALO_RAG_DB_USERNAME_CONN') ?? readEnv('DB_USER'),
+		username: read('DEDALO_RAG_DB_USERNAME_CONN') ?? read('DB_USER'),
 		password: password === '' ? undefined : password,
 		max: 1,
+		...suiteBunSqlTarget(suiteRagPgEndpoint(read)),
 	};
-	if (socket !== '') return { ...common, path: socket };
-	if (host.startsWith('/')) return { ...common, path: `${host}/.s.PGSQL.${port}` };
-	return { ...common, hostname: host, port };
 }
 
 /** What {@link ensureSuiteRagDatabase} did, so the caller can print the truth. */
@@ -232,15 +230,21 @@ export async function ensureSuiteRagDatabase(options: {
 	database: string;
 	mode: 'ensure' | 'rebuild';
 	force?: boolean;
+	/** The SQL client class (a gate's fake); default Bun's. */
+	SQL?: typeof import('bun').SQL;
 }): Promise<SuiteRagDatabaseOutcome> {
 	const { database, mode, force = false } = options;
 	assertDistinctFromInstallRagDatabase(database);
-	const { SQL } = await import('bun');
+	const SQL = options.SQL ?? (await import('bun')).SQL;
 
 	const admin = new SQL(ragConnection('postgres'));
 	let existing: boolean;
 	let dropped = false;
 	try {
+		// FIRST, before anything is created or dropped (C3-32): a server without
+		// pgvector would take the CREATE DATABASE and then fail the schema,
+		// leaving a database behind that this module could not prove it built.
+		await assertVectorAvailable(admin, database);
 		existing = (await admin`SELECT 1 FROM pg_database WHERE datname = ${database}`).length > 0;
 
 		if (existing) {
@@ -276,35 +280,68 @@ export async function ensureSuiteRagDatabase(options: {
 		await admin.end();
 	}
 
-	// The schema and the marker, on a database THIS CALL just created — which is
-	// the provenance the marker row means (src/ai/rag/test_rag_db.ts, property 1:
-	// this and `writeTestRagDatabaseMarker` are its only producers).
+	// The marker, then the schema, on a database THIS CALL just created — which
+	// is the provenance the marker row means (src/ai/rag/test_rag_db.ts, property
+	// 1: this and `writeTestRagDatabaseMarker` are its only producers). MARKER
+	// FIRST (C3-32): a build that dies in the schema leaves a database that SAYS
+	// it is disposable, so the next `test:db:setup` drops it without --force —
+	// the old order left an unmarked one that refused its own re-run. A schema
+	// failure this process sees drops the database at once.
 	const target = new SQL(ragConnection(database));
 	try {
+		// Through ITS OWN writer — the table name and the purpose sentence are
+		// never re-typed here (a marker spelled twice gets checked in one place
+		// and written in the other). Imported DYNAMICALLY and only at this point:
+		// src/ai/rag/test_rag_db.ts freezes the config and latches the sqlite
+		// session store at import (header), which a preload may not do at module
+		// scope — and on a machine with no Postgres this line is never reached,
+		// so the DB-less tier never imports it either.
+		const { writeTestRagDatabaseMarker } = await import('../../src/ai/rag/test_rag_db.ts');
+		await writeTestRagDatabaseMarker(target, {
+			build_stamp: new Date().toISOString(),
+			git_rev: await gitRev(),
+		});
 		if (!existsSync(RAG_SCHEMA_SQL)) {
 			throw new Error(`vector-store schema not found: ${RAG_SCHEMA_SQL}`);
 		}
 		// ONE simple-protocol statement batch: the file carries dollar-quoted
 		// function bodies, which no naive `;` split survives.
 		await target.unsafe(readFileSync(RAG_SCHEMA_SQL, 'utf-8'));
-
-		// The marker, through ITS OWN writer — the table name and the purpose
-		// sentence are never re-typed here (a marker spelled twice gets checked in
-		// one place and written in the other). Imported DYNAMICALLY and only at
-		// this point: src/ai/rag/test_rag_db.ts freezes the config and latches the
-		// sqlite session store at import (header), which a preload may not do at
-		// module scope — and on a machine with no Postgres this line is never
-		// reached, so the DB-less tier never imports it either.
-		const { writeTestRagDatabaseMarker } = await import('../../src/ai/rag/test_rag_db.ts');
-		await writeTestRagDatabaseMarker(target, {
-			build_stamp: new Date().toISOString(),
-			git_rev: await gitRev(),
-		});
-	} finally {
+	} catch (error) {
 		await target.end();
+		await dropFailedBuild(SQL, database);
+		throw error;
 	}
+	await target.end();
 
 	return { database, created: true, dropped, reused: false };
+}
+
+/**
+ * Refuse, before anything is created, a server that cannot load pgvector — in
+ * the operator's words, with the package to install (C3-32 / C3-15).
+ */
+async function assertVectorAvailable(
+	admin: InstanceType<typeof import('bun').SQL>,
+	database: string,
+) {
+	const rows = await admin`SELECT 1 FROM pg_available_extensions WHERE name = 'vector'`;
+	if (rows.length > 0) return;
+	throw new Error(
+		`REFUSING to build the suite vector database '${database}': this PostgreSQL server has no pgvector extension ('vector' is not in pg_available_extensions). Nothing was created. Install pgvector for the server's major version (Debian/Ubuntu: postgresql-18-pgvector; RHEL/Rocky/Alma: pgvector_18; macOS: brew install pgvector) and run 'bun run test:db:setup' again.`,
+	);
+}
+
+/** Drop the database a failed build of THIS call created (best effort; the marker covers a crash). */
+async function dropFailedBuild(SQL: typeof import('bun').SQL, database: string): Promise<void> {
+	const admin = new SQL(ragConnection('postgres'));
+	try {
+		await admin.unsafe(`DROP DATABASE IF EXISTS "${database}" WITH (FORCE)`);
+	} catch {
+		// The marker row is already in it: the next rebuild drops it without --force.
+	} finally {
+		await admin.end();
+	}
 }
 
 /**

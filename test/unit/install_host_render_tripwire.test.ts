@@ -52,6 +52,7 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import {
 	existsSync,
 	mkdirSync,
@@ -64,11 +65,17 @@ import {
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
-import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
+import type { HostCommand, HostPlanCtx } from '../../src/core/install/host/contract.ts';
 import { OS_ROWS } from '../../src/core/install/host/os_support.ts';
 import { stampOf } from '../../src/core/install/host/production/common.ts';
 import { instanceDirs } from '../../src/core/install/host/production/identity.ts';
-import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
+import {
+	catchAllTold,
+	certificatePaths,
+	keptPorts,
+	siteCommands,
+	siteText,
+} from '../../src/core/install/host/production/web.ts';
 import {
 	backupStores,
 	instanceDropins,
@@ -78,6 +85,8 @@ import {
 	UNIT_TEMPLATES,
 	type UnitTemplate,
 } from '../../src/core/install/host/systemd/render.ts';
+import { CATCH_ALL_STAMP, catchAllPath } from '../../src/core/install/host/web/catch_all.ts';
+import { nginxSites } from '../../src/core/install/host/web/clash.ts';
 import { SECURITY_HEADERS } from '../../src/core/install/host/web/site.ts';
 import { buildInstallPlan } from '../../src/core/install/install_plan.ts';
 import { buildNginxConf, buildNginxMap } from '../../src/core/media/protection.ts';
@@ -701,4 +710,233 @@ describe("the engine's media rules reach root's nginx only as validated copies (
 	});
 
 	afterAll(() => rmSync(base, { recursive: true, force: true }));
+});
+
+// ── (g) an unknown name reaches no instance (campaign 3 C3-30) ──────────────
+
+/** The plan context of `variant` with the web facts `web` (a second instance, an operator's default…). */
+function withWeb(
+	variant: HostVariant,
+	web: Partial<HostPlanCtx['facts']['web']>,
+	extra: Record<string, unknown> = {},
+): HostPlanCtx {
+	const ctx = productionPlanCtx(variant, REPO_ROOT, extra);
+	return { ...ctx, facts: { ...ctx.facts, web: { ...ctx.facts.web, ...web } } };
+}
+
+/** The catch-all writes among the site step's commands. */
+function catchAllWrites(ctx: HostPlanCtx): HostCommand[] {
+	const path = catchAllPath(ctx.row.web.nginx);
+	return siteCommands(ctx).filter((command) => command.kind === 'write' && command.path === path);
+}
+
+/** nginx server blocks of a text. */
+function nginxBlocks(text: string): string[] {
+	return text.split(/^server \{$/m).slice(1);
+}
+
+/** Is a Docker image present here (the real-server checks run only then)? */
+function imageReady(image: string): boolean {
+	return spawnSync('docker', ['image', 'inspect', image], { timeout: 20_000 }).status === 0;
+}
+
+describe('nginx: the host-wide catch-all (g — campaign 3 C3-30)', () => {
+	const NGINX = HOST_VARIANTS.filter((variant) => variant.web === 'nginx');
+
+	for (const variant of NGINX) {
+		test(`${variantName(variant)}: the FIRST instance writes it — 80 and 443, serving nothing, the default by ORDER only`, () => {
+			const ctx = productionPlanCtx(variant);
+			const writes = catchAllWrites(ctx);
+			expect(writes).toHaveLength(1);
+			const text = (writes[0] as { content: string }).content;
+			expect(text.startsWith(`${CATCH_ALL_STAMP}\n`)).toBe(true);
+			const blocks = nginxBlocks(text);
+			expect(blocks).toHaveLength(2);
+			expect(blocks[0]).toMatch(/listen 80;[\s\S]*listen \[::\]:80;[\s\S]*return 444;/);
+			expect(blocks[1]).toMatch(/listen 443 ssl;[\s\S]*ssl_reject_handshake on;/);
+			// Never `default_server`: an operator's (Debian's own, installed WITH nginx, after the
+			// System check) would make nginx -t refuse two defaults on one port (the Debian drill).
+			expect(blocks.join('')).not.toContain('default_server');
+			// The default by ORDER: it sorts before every instance's site in the same directory.
+			expect(
+				(writes[0] as { path: string }).path < ctx.row.web.nginx.sitePath.replace('<i>', 'a'),
+			).toBe(true);
+			for (const block of blocks)
+				expect(block).not.toMatch(/proxy_pass|root |alias |ssl_certificate/);
+		});
+
+		test(`${variantName(variant)}: a SECOND instance (the catch-all is the installer's already) does not duplicate it`, () => {
+			expect(catchAllWrites(withWeb(variant, { catchAll: 'ours' }))).toEqual([]);
+			expect(catchAllWrites(productionPlanCtx(variant))).toHaveLength(1);
+		});
+	}
+
+	test('Apache never gets a catch-all file (its vhosts guard their own name — below)', () => {
+		const apache = HOST_VARIANTS.filter((variant) => variant.web === 'apache');
+		expect(apache.length).toBeGreaterThan(0);
+		for (const variant of apache) {
+			const ctx = productionPlanCtx(variant);
+			const path = catchAllPath(ctx.row.web.apache);
+			expect(siteCommands(ctx).filter((c) => c.kind === 'write' && c.path === path)).toEqual([]);
+		}
+	});
+
+	test("a file the installer did not write at the catch-all's path: never overwritten, said so", () => {
+		const ctx = withWeb(NGINX_LE, { catchAll: 'foreign' });
+		expect(catchAllWrites(ctx)).toEqual([]);
+		expect(catchAllTold(ctx).join('\n')).toContain('is not the installer');
+	});
+
+	test("an operator's default_server on 80 stays the default — said so; the catch-all never clashes with it", () => {
+		const dump =
+			'# configuration file /etc/nginx/sites-enabled/default:\nserver {\n\tlisten 80 default_server;\n\tlisten [::]:80 default_server;\n\troot /var/www/html;\n}\n';
+		const sites = nginxSites(dump);
+		expect(sites[0]?.defaults).toEqual(['80']);
+		const ctx = withWeb(NGINX_LE, {
+			defaults: sites.flatMap((site) =>
+				(site.defaults ?? []).map((port) => ({ port, file: site.file })),
+			),
+		});
+		const text = (catchAllWrites(ctx)[0] as { content: string }).content;
+		expect(nginxBlocks(text)).toHaveLength(2);
+		expect(catchAllTold(ctx).join('\n')).toContain(
+			'port 80: the default site stays yours (/etc/nginx/sites-enabled/default, default_server)',
+		);
+		// The installer's own catch-all is never taken for an operator's default.
+		expect(
+			keptPorts(
+				withWeb(NGINX_LE, {
+					defaults: [{ port: '80', file: '/etc/nginx/conf.d/dedalo-00-default.conf' }],
+				}),
+			),
+		).toEqual([]);
+	});
+
+	test('an instance on other ports: no catch-all (it covers the standard ports only)', () => {
+		const files = HOST_VARIANTS.find((v) => v.web === 'nginx' && v.tls === 'files') as HostVariant;
+		expect(
+			catchAllWrites(
+				productionPlanCtx(files, REPO_ROOT, { http_port: '8080', https_port: '8443' }),
+			),
+		).toEqual([]);
+		expect(catchAllWrites(productionPlanCtx(files))).toHaveLength(1);
+	});
+
+	const NGINX_IMAGE = 'nginx:alpine';
+	/** Run nginx in `image` over `files` (conf.d), then `requests` (one wget each); answers stdout. */
+	function realNginx(files: Record<string, string>, requests: Record<string, string>): string {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_catch_all_'));
+		try {
+			for (const [name, text] of Object.entries(files)) writeFileSync(join(dir, name), text);
+			const script = [
+				'nginx -t 2>&1 || exit 9',
+				'nginx',
+				'sleep 1',
+				...Object.entries(requests).map(
+					([tag, host]) =>
+						`echo "${tag}[$(wget -qO- --header "Host: ${host}" http://127.0.0.1/ 2>&1; echo "exit=$?")]"`,
+				),
+			].join('\n');
+			return spawnSync(
+				'docker',
+				['run', '--rm', '-v', `${dir}:/etc/nginx/conf.d:ro`, NGINX_IMAGE, 'sh', '-c', script],
+				{ encoding: 'utf8', timeout: 120_000 },
+			).stdout;
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	}
+	test.skipIf(!imageReady(NGINX_IMAGE))(
+		`real nginx (${NGINX_IMAGE}): an unknown name is refused, the site's name answers; an operator's default_server stays the default and passes nginx -t (skipped without Docker or the image)`,
+		() => {
+			const ctx = productionPlanCtx(NGINX_LE);
+			const catchAll = (catchAllWrites(ctx)[0] as { content: string }).content;
+			// The image's own default.conf is replaced by the mount: our file and one site.
+			const site = `server {\n\tlisten 80;\n\tlisten [::]:80;\n\tserver_name ${ctx.answers.server_name};\n\treturn 200 "instance\\n";\n}\n`;
+			const alone = realNginx(
+				{ 'dedalo-00-default.conf': catchAll, [`dedalo-${ctx.paths.instance}.conf`]: site },
+				{ KNOWN: ctx.answers.server_name, UNKNOWN: 'museo.unknown.example' },
+			);
+			expect(alone).toContain('test is successful');
+			expect(alone).toContain('KNOWN[instance');
+			expect(alone).not.toMatch(/UNKNOWN\[instance/);
+			expect(alone).toMatch(/UNKNOWN\[[^\]]*exit=[1-9]/);
+			// Debian's own default site (default_server on 80), loaded AFTER ours: no clash, it stays.
+			const operator =
+				'server {\n\tlisten 80 default_server;\n\tlisten [::]:80 default_server;\n\treturn 200 "operator\\n";\n}\n';
+			const beside = realNginx(
+				{
+					'dedalo-00-default.conf': catchAll,
+					[`dedalo-${ctx.paths.instance}.conf`]: site,
+					'zz-operator-default.conf': operator,
+				},
+				{ KNOWN: ctx.answers.server_name, UNKNOWN: 'museo.unknown.example' },
+			);
+			expect(beside).toContain('test is successful');
+			expect(beside).toContain('KNOWN[instance');
+			expect(beside).toContain('UNKNOWN[operator');
+		},
+		200_000,
+	);
+});
+
+describe('Apache: every vhost refuses any Host but its own (g — campaign 3 C3-30)', () => {
+	for (const variant of HOST_VARIANTS.filter((v) => v.web === 'apache')) {
+		test(`${variantName(variant)}: both vhosts guard the name (421) before anything else rewrites or proxies`, () => {
+			const ctx = productionPlanCtx(variant);
+			const text = siteText(ctx, certificatePaths(ctx));
+			const name = ctx.answers.server_name.replace(/\./g, '\\.');
+			for (const port of [ctx.answers.http_port, ctx.answers.https_port]) {
+				const vhost = text.slice(text.indexOf(`<VirtualHost *:${port}>`));
+				const body = vhost.slice(0, vhost.indexOf('</VirtualHost>'));
+				const guard = body.indexOf(`RewriteCond %{HTTP_HOST} !^${name}(:${port})?$ [NC]`);
+				expect(guard, `port ${port}`).toBeGreaterThan(-1);
+				expect(body.slice(guard)).toMatch(/^RewriteCond [^\n]*\n\tRewriteRule \^ - \[R=421,L\]/);
+				expect(body.indexOf('RewriteEngine On')).toBeLessThan(guard);
+				// Nothing is proxied or redirected before the guard.
+				for (const before of ['ProxyPass ', 'RewriteRule ^ https://']) {
+					const at = body.indexOf(before);
+					if (at !== -1) expect(at, `${before} on ${port}`).toBeGreaterThan(guard);
+				}
+			}
+		});
+	}
+
+	const HTTPD_IMAGE = 'httpd:2.4-alpine';
+	test.skipIf(!imageReady(HTTPD_IMAGE))(
+		`real Apache (${HTTPD_IMAGE}): the site's own name is redirected, any other Host gets 421 (skipped without Docker or the image)`,
+		() => {
+			const dir = mkdtempSync(join(tmpdir(), 'dedalo_apache_guard_'));
+			try {
+				const variant = HOST_VARIANTS.find(
+					(v) => v.web === 'apache' && v.tls === 'letsencrypt',
+				) as HostVariant;
+				const ctx = productionPlanCtx(variant);
+				// Stage 1 (the plain-HTTP vhost): no certificate, no proxy module needed.
+				const site = siteText(ctx, null).replace(/\/var\/lib\/dedalo-install\/acme\/\w+/g, '/tmp');
+				writeFileSync(join(dir, 'site.conf'), site);
+				const script = [
+					"sed -i 's|^#LoadModule rewrite_module|LoadModule rewrite_module|' /usr/local/apache2/conf/httpd.conf",
+					'mkdir -p /var/www/empty',
+					'echo "Include /site/site.conf" >> /usr/local/apache2/conf/httpd.conf',
+					'httpd -t 2>&1 || exit 9',
+					'httpd -k start; sleep 1',
+					// One raw request each (busybox: no curl): the status line only.
+					`printf 'GET /x HTTP/1.1\\r\\nHost: ${ctx.answers.server_name}\\r\\nConnection: close\\r\\n\\r\\n' | nc 127.0.0.1 80 | head -1 | sed 's/^/KNOWN[/; s/ [A-Za-z].*$/]/'`,
+					"printf 'GET /x HTTP/1.1\\r\\nHost: museo.unknown.example\\r\\nConnection: close\\r\\n\\r\\n' | nc 127.0.0.1 80 | head -1 | sed 's/^/UNKNOWN[/; s/ [A-Za-z].*$/]/'",
+				].join('\n');
+				const run = spawnSync(
+					'docker',
+					['run', '--rm', '-v', `${dir}:/site:ro`, HTTPD_IMAGE, 'sh', '-c', script],
+					{ encoding: 'utf8', timeout: 120_000 },
+				);
+				expect(run.stdout).toContain('Syntax OK');
+				expect(run.stdout).toContain('KNOWN[HTTP/1.1 301]');
+				expect(run.stdout).toContain('UNKNOWN[HTTP/1.1 421]');
+			} finally {
+				rmSync(dir, { recursive: true, force: true });
+			}
+		},
+		150_000,
+	);
 });

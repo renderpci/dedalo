@@ -8,7 +8,7 @@
  * The command line is shown, not copied (no clipboard escape is written).
  */
 
-import { sanitizeLine } from '../../display_text.ts';
+import { reviewCommandText, sanitizeLine } from '../../display_text.ts';
 import { BACK, type Nav, type ReviewView } from '../../prompter_contract.ts';
 import { type Line, seg } from '../styled.ts';
 import { editKey, editOf, editText, type FieldEdit, pasteInto } from '../view_state.ts';
@@ -22,7 +22,8 @@ const MODE_KEYS: Readonly<Record<Mode, readonly KeyHint[]>> = Object.freeze({
 	command: [
 		['enter', 'install'],
 		['e', 'edit a step'],
-		['w', 'write answers'],
+		// Writing ends the session, nothing installed (campaign 3b N29).
+		['w', 'write answers and quit'],
 		['↑↓', 'scroll'],
 		['esc', 'back'],
 		['ctrl+q', 'quit'],
@@ -67,7 +68,9 @@ function hostCommandBlock(view: ReviewView, width: number): Line[] {
 		BLANK,
 		...blocks.flatMap((block) => [
 			...wrapped(`[${block.step}] ${block.label}`, width, 'text'),
-			...block.commands.flatMap((command) => wrapped(`  $ ${command}`, width, 'muted')),
+			...block.commands.flatMap((command) =>
+				wrapped(`  ${reviewCommandText(block.step, command)}`, width, 'muted'),
+			),
 		]),
 	];
 }

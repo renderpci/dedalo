@@ -334,8 +334,9 @@ describe('a TLS install cannot lose its TLS', () => {
 		]) {
 			expect(derived, `${file} must be in the derived census`).toContain(file);
 		}
-		// The updater reaches compose ONLY through the library.
-		expect(simpleStackInvocations('deploy/dedalo-image-update.sh').length).toBeGreaterThan(1);
+		// The updater reaches compose ONLY through the library (its `dc`; since C3-46 its
+		// build mode builds through dedalo_image_build, not compose — one call site left).
+		expect(simpleStackInvocations('deploy/dedalo-image-update.sh').length).toBeGreaterThan(0);
 		expect(
 			readFileSync(join(REPO_ROOT, 'deploy/dedalo-image-update.sh'), 'utf8')
 				.split('\n')

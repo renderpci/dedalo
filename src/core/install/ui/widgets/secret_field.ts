@@ -30,13 +30,28 @@ function stepMessage(step: SecretStep): string | null {
 	return 'message' in step ? step.message : null;
 }
 
-/** The policy's rules for the text typed so far (first entry only). */
+/**
+ * The policy's rules for the text typed so far (first entry only). Before the
+ * first key they are listed NEUTRAL (`·`): an empty field has broken no rule
+ * yet (campaign 3 C3-58 — never `✗ Does not contain …` on an untouched field).
+ */
 function ruleLines(feedback: PasswordFeedback | undefined, typed: string): Line[] {
 	if (feedback === undefined) return [];
 	return feedback(typed).rules.map((rule) => [
-		seg(rule.ok ? '  ✓ ' : '  ✗ ', rule.ok ? 'ok' : 'err'),
-		seg(rule.text, rule.ok ? 'muted' : 'text'),
+		ruleMark(typed, rule.ok),
+		seg(rule.text, ruleRole(typed, rule.ok)),
 	]);
+}
+
+/** A rule's mark: neutral before anything is typed, then ✓ / ✗. */
+function ruleMark(typed: string, ok: boolean): Line[number] {
+	if (typed === '') return seg('  · ', 'faint');
+	return ok ? seg('  ✓ ', 'ok') : seg('  ✗ ', 'err');
+}
+
+/** A rule's text role: muted when untouched or kept, plain while still broken. */
+function ruleRole(typed: string, ok: boolean): 'muted' | 'text' {
+	return typed === '' || ok ? 'muted' : 'text';
 }
 
 export function secretField(

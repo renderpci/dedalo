@@ -16,12 +16,14 @@
  *      the killed run and its resume EQUALS the uninterrupted run's (nothing
  *      done twice, nothing skipped). The plan/state record's own timestamps
  *      are the only difference allowed.
- *  (b) ABORT AFTER ANY STEP leaves only what was there before: before the
- *      engine completes, every file this install wrote is gone (what remains
- *      is the pre-existing host, byte-equal, and what the scratch runner's
- *      COMMANDS left — their removal is a logged command, not a file effect)
- *      and the record is removed; once the engine completed, the instance is
- *      KEPT and only the host steps after it were undone.
+ *  (b) ABORT AFTER ANY STEP leaves only what was there before: until the
+ *      instance could have served (host_first_boot started — campaign 3
+ *      C3-11; a completed engine install included, its child's own --abort
+ *      attested unserved), every file this install wrote is gone (what
+ *      remains is the pre-existing host, byte-equal, and what the scratch
+ *      runner's COMMANDS left — their removal is a logged command, not a file
+ *      effect) and the record is removed; from then on the instance is KEPT
+ *      and only the host steps after the engine were undone.
  *
  *  (c) CUSTOM LAYOUTS (owner decisions 2026-10-12): a new account with a
  *      typed group, and an existing hosting account whose primary group is
@@ -350,7 +352,10 @@ async function killThenAbort(step: string): Promise<string[]> {
 		hostState(root)[DECOY[0]] === reference.before[DECOY[0]]
 			? []
 			: [`${step}: the decoy site changed`];
-	const live = STEPS.indexOf(step) >= STEPS.indexOf('host_engine');
+	// LIVE once the instance could have served: host_first_boot STARTED (C3-11) — a kill
+	// after the engine but before the first start is a full abort (the child's own --abort,
+	// attested unserved).
+	const live = STEPS.indexOf(step) >= STEPS.indexOf('host_first_boot');
 	const said = (aborted.outcome.undoing ?? '').replace('→ undoing: ', '');
 	return [
 		...decoy,
@@ -367,6 +372,21 @@ describe('a kill after ANY host step, then --abort --confirm-database, leaves on
 		});
 		expect(failures).toEqual([]);
 	}, 240_000);
+});
+
+describe('a kill INSIDE host_first_boot before its start is not a served instance (campaign 3b N9)', () => {
+	test('killed after the step started but before `systemctl start`: --abort removes the instance whole', async () => {
+		const root = scratchRoot();
+		const killed = await child(root, 'fresh', 'host_first_boot:before');
+		expect(killed.killed).toBe(true);
+		const log = loggedCommands(root);
+		expect(log.some((line) => line.includes('systemctl start dedalo-ts@'))).toBe(false);
+		const aborted = await child(root, 'abort');
+		expect(aborted.outcome?.result).toBe('aborted');
+		// never "the instance has served": the full undo, the engine install included
+		expect(aborted.outcome?.undoing ?? '').toContain('host_engine');
+		expect(fullAbortProblems(root, 'host_first_boot:before')).toEqual([]);
+	}, 60_000);
 });
 
 // ── (c) custom layouts: the resolved group survives a kill ───────────────────

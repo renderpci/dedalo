@@ -241,19 +241,23 @@ describe('the production root process loads no engine module and leaks no secret
 		expect(leaks(host.root, run.out)).toEqual([]);
 		// (c) the engine child: as the instance, in its tree, its HOME, secrets on stdin.
 		const child = loggedRequests(host.root).find((entry) => entry.argv.includes('--request-stdin'));
-		expect(child?.argv.slice(0, 6)).toEqual([
+		// It dies with the installer (C3-29): the death prefix outside and inside runuser.
+		const death = ['/usr/bin/setpriv', '--pdeathsig', 'KILL', '--'];
+		expect(child?.argv.slice(0, 14)).toEqual([
+			...death,
 			'/usr/sbin/runuser',
 			'-u',
 			`ded_${INSTANCE}`,
 			'-g',
 			`ded_${INSTANCE}`,
 			'--',
+			...death,
 		]);
 		expect(child?.cwd).toBe(`/home/ded_${INSTANCE}/dedalo`);
 		expect(child?.env.HOME).toBe(`/home/ded_${INSTANCE}`);
 		// runuser RESETS HOME to the account's home: the instance's HOME rides argv
 		// too, or an existing hosting account's home collects Bun's caches.
-		expect(child?.argv.slice(6, 8)).toEqual(['/usr/bin/env', `HOME=/home/ded_${INSTANCE}`]);
+		expect(child?.argv.slice(14, 16)).toEqual(['/usr/bin/env', `HOME=/home/ded_${INSTANCE}`]);
 		expect(child?.stdin).toBe(true);
 	});
 

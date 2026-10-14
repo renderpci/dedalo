@@ -24,16 +24,17 @@ import { BUILD_OVERRIDE, ENV_FILE, OVERRIDE_FILE, stackFileOf } from './layout.t
 
 /** What a stack command may set besides its argv and label. */
 export type StackCommandOptions = Partial<
-	Pick<ExecCommand, 'mutates' | 'stdin' | 'okExit' | 'unless' | 'timeoutMs'>
+	Pick<ExecCommand, 'mutates' | 'stdin' | 'okExit' | 'unless' | 'timeoutMs' | 'env'>
 >;
 
-/** An exec of `binary` as the operator, in the checkout, with the operator's HOME. */
+/** An exec of `binary` as the operator, in the checkout, with the operator's HOME (always). */
 export function stackExec(
 	ctx: HostPlanCtx,
 	argv: readonly string[],
 	label: string,
 	options: StackCommandOptions = {},
 ): ExecCommand {
+	const { env, ...rest } = options;
 	return {
 		kind: 'exec',
 		argv,
@@ -41,8 +42,8 @@ export function stackExec(
 		label,
 		mutates: options.mutates ?? true,
 		cwd: ctx.source,
-		env: { HOME: stackFactsOf(ctx).home },
-		...options,
+		env: { ...env, HOME: stackFactsOf(ctx).home },
+		...rest,
 	};
 }
 

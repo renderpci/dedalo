@@ -178,6 +178,8 @@ export const host_first_boot: HostStepDefinition = {
 	privilege: 'root',
 	kind: 'action',
 	needs: [],
+	// A start: re-run on a resume when the unit stopped since (C3-8/C3-10).
+	restartable: true,
 	label: () => 'first boot: start, /health on the socket, every migration recorded',
 	commands: (ctx) => [
 		systemctl(ctx, 'start', [serverUnit(ctx)], `start ${serverUnit(ctx)}`),
@@ -196,6 +198,14 @@ export const host_first_boot: HostStepDefinition = {
 		);
 	},
 	run: async (ctx) => {
+		// SERVED = the start was ISSUED (campaign 3b N9), checkpointed BEFORE it, so a kill
+		// at any later instant still finds it. Not the step's start: host_units and
+		// host_selinux take milliseconds, so a Ctrl-C "after the engine" nearly always
+		// landed here before `systemctl start` — and an abort then kept a never-started
+		// instance (user, database, code) for removal by hand. From the start on, the
+		// instance may have served: an abort keeps it (C3-11).
+		ctx.created.served = true;
+		ctx.save();
 		await executeCommands(
 			[systemctl(ctx, 'start', [serverUnit(ctx)], `start ${serverUnit(ctx)}`)],
 			ctx,

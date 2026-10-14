@@ -65,6 +65,7 @@ import { SQL } from 'bun';
 import { readEnv } from '../../src/config/env.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { DB_READY } from '../helpers/db_ready.ts';
+import { suiteBunSqlTarget, suitePgEndpoint } from '../helpers/suite_pg.ts';
 
 /** The role and its fixed, deliberately non-secret credential — the exact pair
  * scripts/test_db_setup.ts step 5b ensures (see its header for why a password
@@ -80,17 +81,9 @@ if (!DB_READY) {
 	);
 }
 
-/**
- * Host or unix socket, the same way the engine resolves it. DUPLICATED UNDER
- * PROTEST from src/core/db/postgres.ts buildSqlOptions — the same duplication
- * test/preload/test_database.ts carries, for the same reason it documents: a
- * socket DIRECTORY passed as `hostname` fails as a swallowed 'Connection
- * closed', not loudly. Keep the copies in step.
- */
-function connectionTarget(): { path: string } | { hostname: string; port: number } {
-	const host = readEnv('DB_HOST') ?? 'localhost';
-	const port = Number(readEnv('DB_PORT') ?? 5432);
-	return host.startsWith('/') ? { path: `${host}/.s.PGSQL.${port}` } : { hostname: host, port };
+/** Host or unix socket: the engine's ONE rule, via test/helpers/suite_pg.ts (DB_SOCKET wins — C3-12). */
+function connectionTarget(): ReturnType<typeof suiteBunSqlTarget> {
+	return suiteBunSqlTarget(suitePgEndpoint(readEnv));
 }
 
 /** Does the role exist AND can it log in? Asked once, top-level, so the

@@ -52,7 +52,7 @@ import type {
 import { executeCommands, runExec } from '../execute.ts';
 import { hostRefuse } from '../refuse.ts';
 import { dropEntry, updateEntry } from '../registry.ts';
-import { exec, probe, probeOk, ran, remember, verdictOf, webFlavor } from './common.ts';
+import { exec, probe, probeOk, probeText, ran, remember, verdictOf, webFlavor } from './common.ts';
 import { type FolderPlan, type IdentityVerdict, identityVerdict } from './identity_rules.ts';
 
 interface DirSpec {
@@ -439,20 +439,75 @@ async function removeGroup(ctx: HostCtx): Promise<string> {
 		: `group ${group} removed`;
 }
 
-/** Undo the user (and its group): never an existing one, never while it runs something or backups remain. */
+/** The instance paths a file of the service user may still be in (the existing ones). */
+function instancePaths(ctx: HostCtx): string[] {
+	const { instanceDir, srv, backupDir, instanceBackups } = ctx.paths;
+	return [...new Set([instanceDir, srv, backupDir, instanceBackups])].filter(
+		(path) => isAbsolute(path) && ctx.fs.exists(path),
+	);
+}
+
+/**
+ * The first file or directory of the service user left under the instance's
+ * paths ('' when none) — read-only (campaign 3 C3-9): a user removed while it
+ * still owns something leaves a tree owned by a bare uid, which the next
+ * account created on the host inherits.
+ */
+async function leftOfUser(ctx: HostCtx, user: string): Promise<string> {
+	const paths = instancePaths(ctx);
+	if (paths.length === 0) return '';
+	const text = await probeText(
+		ctx,
+		probe(ctx, 'find', [...paths, '-user', user, '-print', '-quit'], `what ${user} still owns`),
+	);
+	return text.trim();
+}
+
+/** Undo the user (and its group): never an existing one, never while it runs something, owns something or backups remain. */
 async function removeAccount(ctx: HostCtx, keep: string | null): Promise<string> {
 	const user = ctx.created.user;
 	if (user === null) {
 		return `user ${ctx.paths.user} USED AS IS — never removed by the installer`;
 	}
 	if (keep !== null) return keep;
+	const left = await leftOfUser(ctx, user);
+	if (left !== '') {
+		return `user ${user} KEPT: it still owns ${left} (a removed uid would be reused by the next account) — remove what remains, then remove the user (userdel ${user})`;
+	}
 	await runExec(exec(ctx, 'userdel', [user], `remove the user ${user}`, { okExit: [0, 6] }), ctx);
 	return `user ${user} removed; ${await removeGroup(ctx)}`;
+}
+
+/**
+ * The EMPTY directories under the trees this install made outside the folder
+ * (the web root: the engine's media tree — C3-9), removed AS THE USER (root
+ * never works by path in a tree another account controls — B1). Files are
+ * never removed: a tree that still holds one keeps the user (removeAccount).
+ */
+async function pruneUserTrees(ctx: HostCtx): Promise<void> {
+	const dir = ctx.paths.instanceDir;
+	const trees = ctx.created.user_dirs.filter(
+		(path) => !sameOrInside(path, dir) && ctx.fs.exists(path),
+	);
+	const tops = trees.filter((path) => !trees.some((other) => below(path, other)));
+	for (const path of tops) {
+		await runExec(
+			exec(
+				ctx,
+				'find',
+				[path, '-mindepth', '1', '-depth', '-type', 'd', '-empty', '-delete'],
+				`remove the empty directories under ${path}`,
+				{ as: 'instance', okExit: [0, 1] },
+			),
+			ctx,
+		);
+	}
 }
 
 async function undoIdentity(ctx: HostCtx): Promise<string> {
 	const keep = await keepUserReason(ctx);
 	await undoInside(ctx, backupsRemain(ctx));
+	await pruneUserTrees(ctx);
 	await removeUserDirs(ctx, false);
 	const folder = await undoFolder(ctx);
 	await removeUserDirs(ctx, true);

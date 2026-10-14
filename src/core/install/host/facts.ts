@@ -17,6 +17,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { InstallAnswers } from '../install_plan.ts';
+import { type FirewallFacts, parseUfwStatus, words } from './firewall.ts';
 import type { HostFs } from './fs.ts';
 import type { InstancePaths } from './layout.ts';
 import {
@@ -36,6 +37,7 @@ import {
 import { type OtherInstance, otherInstances, withPrimaryGroups } from './production/instances.ts';
 import type { CommandRunner, RunResult } from './runner.ts';
 import type { StackFacts } from './stack/facts.ts';
+import { CATCH_ALL_STAMP, catchAllPath, type PortDefault } from './web/catch_all.ts';
 import {
 	apacheRoots,
 	apacheSites,
@@ -67,6 +69,10 @@ export interface HostFacts {
 		apacheModules: string[];
 		/** A configuration probe that failed (host_preflight refuses: an unread dump is no evidence). */
 		probeFailures: string[];
+		/** nginx: each port's `default_server` and its file (web/catch_all.ts keeps an operator's). */
+		defaults: PortDefault[];
+		/** nginx's host-wide catch-all site (web/catch_all.ts): absent, the installer's, or another file there. */
+		catchAll: 'absent' | 'ours' | 'foreign';
 	};
 	packages: string[];
 	/** apt: `pg_lsclusters`; EL: the installed postgresqlNN-server versions (port unknown). */
@@ -86,7 +92,14 @@ export interface HostFacts {
 	socketExists: boolean;
 	ports: { port: string; process: string }[];
 	selinux: SelinuxMode;
-	firewall: string[];
+	/**
+	 * The policy's path equivalences (`file_contexts.subs_dist` + `.subs`:
+	 * `<alias> <target>` — `/var/run /run` on EL 10): a file-context rule must
+	 * be written on the TARGET side (production/selinux.ts). [] off the RHEL family.
+	 */
+	selinuxSubs: (readonly [string, string])[];
+	/** What the host firewall reports (firewall.ts gives the verdict — told, never changed). */
+	firewall: FirewallFacts;
 	certIssued: boolean;
 	/** The source tree is a git checkout (its HEAD is the release) — else a verified release tree. */
 	sourceIsGit: boolean;
@@ -153,14 +166,19 @@ async function nginxFacts(runner: CommandRunner, row: OsRow): Promise<HostFacts[
 		'`nginx -T` (the configuration dump)',
 		failures,
 	);
+	const sites = nginxSites(dump);
 	return {
 		kind: 'nginx',
 		installed: true,
 		version: nginxVersionOf(`${version.stderr}${version.stdout}`),
-		sites: nginxSites(dump),
+		sites,
 		httpNames: nginxHttpNames(dump),
 		apacheModules: [],
 		probeFailures: failures,
+		defaults: sites.flatMap((site) =>
+			(site.defaults ?? []).map((port) => ({ port, file: site.file })),
+		),
+		catchAll: 'absent',
 	};
 }
 
@@ -191,6 +209,8 @@ async function apacheFacts(
 		httpNames: [],
 		apacheModules: [...modules.matchAll(/^\s*(\w+)_module/gm)].map((m) => m[1] as string),
 		probeFailures: failures,
+		defaults: [],
+		catchAll: 'absent',
 	};
 }
 
@@ -204,6 +224,8 @@ function emptyWeb(kind: 'nginx' | 'apache'): HostFacts['web'] {
 		httpNames: [],
 		apacheModules: [],
 		probeFailures: [],
+		defaults: [],
+		catchAll: 'absent',
 	};
 }
 
@@ -216,7 +238,15 @@ export async function webFacts(
 ): Promise<HostFacts['web']> {
 	const binary = binaryOf(row, kind === 'nginx' ? 'nginx' : 'apachectl');
 	if (!fs.exists(binary)) return emptyWeb(kind);
-	return kind === 'nginx' ? nginxFacts(runner, row) : apacheFacts(runner, row, fs);
+	if (kind === 'apache') return apacheFacts(runner, row, fs);
+	return { ...(await nginxFacts(runner, row)), catchAll: catchAllState(fs, row) };
+}
+
+/** The nginx catch-all site file: absent, the installer's (its stamp), or another file at that path. */
+function catchAllState(fs: HostFs, row: OsRow): HostFacts['web']['catchAll'] {
+	const text = fs.readText(catchAllPath(row.web.nginx));
+	if (text === null) return 'absent';
+	return text.startsWith(`${CATCH_ALL_STAMP}\n`) ? 'ours' : 'foreign';
 }
 
 /** apt: `pg_lsclusters`; EL: the postgresqlNN-server packages. */
@@ -299,23 +329,70 @@ async function selinuxFacts(runner: CommandRunner, fs: HostFs, row: OsRow): Prom
 	return mode === 'enforcing' || mode === 'permissive' ? mode : 'disabled';
 }
 
-/** The firewall's state, as lines to TELL (never changed by the installer). */
-async function firewallFacts(runner: CommandRunner, fs: HostFs, row: OsRow): Promise<string[]> {
-	const active = await probe(runner, [binaryOf(row, 'systemctl'), 'is-active', 'firewalld']);
-	if (active.exitCode === 0) {
-		const services = await probe(runner, [binaryOf(row, 'firewall-cmd'), '--list-services']);
-		const ports = await probe(runner, [binaryOf(row, 'firewall-cmd'), '--list-ports']);
-		return [
-			`firewalld is active — services: ${services.stdout.trim() || 'none'}; ports: ${ports.stdout.trim() || 'none'}`,
-		];
-	}
-	if (fs.exists(binaryOf(row, 'ufw'))) {
-		const status = await probe(runner, [binaryOf(row, 'ufw'), 'status']);
-		return [`ufw: ${status.stdout.trim().split('\n').join(' · ') || 'unknown'}`];
-	}
+/** The loaded policy's name (/etc/selinux/config SELINUXTYPE=, else `targeted`). */
+function selinuxPolicy(fs: HostFs): string {
+	const type = /^\s*SELINUXTYPE=([A-Za-z0-9_-]+)\s*$/m.exec(
+		fs.readText('/etc/selinux/config') ?? '',
+	);
+	return type?.[1] ?? 'targeted';
+}
+
+/** `<alias> <target>` lines of a subs file (comments and malformed lines dropped). */
+export function parseSubs(text: string): [string, string][] {
+	return text
+		.split('\n')
+		.map((line) => line.replace(/#.*/, '').trim().split(/\s+/))
+		.filter((cols) => cols.length === 2 && cols.every((col) => col.startsWith('/')))
+		.map((cols) => [cols[0] as string, cols[1] as string]);
+}
+
+/** The policy's path equivalences, the operator's (.subs) before the distribution's (RHEL family). */
+function selinuxSubsFacts(fs: HostFs, row: OsRow): [string, string][] {
+	if (!row.selinux) return [];
+	const dir = `/etc/selinux/${selinuxPolicy(fs)}/contexts/files`;
 	return [
-		'no firewalld or ufw found — if nftables/iptables rules exist, the installer did not read them',
+		...parseSubs(fs.readText(`${dir}/file_contexts.subs`) ?? ''),
+		...parseSubs(fs.readText(`${dir}/file_contexts.subs_dist`) ?? ''),
 	];
+}
+
+/** One firewall-cmd query's words, or null when it failed. */
+async function firewallCmd(
+	runner: CommandRunner,
+	row: OsRow,
+	args: readonly string[],
+): Promise<string | null> {
+	const result = await probe(runner, [binaryOf(row, 'firewall-cmd'), ...args]);
+	return result.exitCode === 0 ? result.stdout : null;
+}
+
+/** firewalld's DEFAULT zone, its services and ports (firewall.ts reads them). */
+async function firewalldFacts(runner: CommandRunner, row: OsRow): Promise<FirewallFacts> {
+	const zone = (await firewallCmd(runner, row, ['--get-default-zone']))?.trim() ?? '';
+	if (zone === '') return { tool: 'unknown', what: '`firewall-cmd --get-default-zone`' };
+	const services = await firewallCmd(runner, row, [`--zone=${zone}`, '--list-services']);
+	const ports = await firewallCmd(runner, row, [`--zone=${zone}`, '--list-ports']);
+	if (services === null || ports === null) {
+		return {
+			tool: 'unknown',
+			what: `\`firewall-cmd --zone=${zone} --list-services/--list-ports\``,
+		};
+	}
+	return { tool: 'firewalld', zone, services: words(services), ports: words(ports) };
+}
+
+/** What the host firewall reports (told, never changed by the installer). */
+export async function firewallFacts(
+	runner: CommandRunner,
+	fs: HostFs,
+	row: OsRow,
+): Promise<FirewallFacts> {
+	const active = await probe(runner, [binaryOf(row, 'systemctl'), 'is-active', 'firewalld']);
+	if (active.exitCode === 0) return firewalldFacts(runner, row);
+	if (!fs.exists(binaryOf(row, 'ufw'))) return { tool: 'none' };
+	const status = await probe(runner, [binaryOf(row, 'ufw'), 'status']);
+	if (status.exitCode !== 0) return { tool: 'unknown', what: '`ufw status`' };
+	return { tool: 'ufw', ...parseUfwStatus(status.stdout) };
 }
 
 /** The architecture and AVX2 (the Bun asset choice). */
@@ -392,7 +469,8 @@ function unsupportedFacts(os: { os: OsRowId | null; osName: string }, euid: numb
 		socketExists: false,
 		ports: [],
 		selinux: 'absent',
-		firewall: [],
+		selinuxSubs: [],
+		firewall: { tool: 'none' },
 		certIssued: false,
 		sourceIsGit: false,
 	};
@@ -460,6 +538,7 @@ export async function gatherHostFacts(
 		...(await nameFacts(runner, fs, row, paths, kind)),
 		ports: listeningPorts(ss.stdout),
 		selinux: await selinuxFacts(runner, fs, row),
+		selinuxSubs: selinuxSubsFacts(fs, row),
 		firewall: await firewallFacts(runner, fs, row),
 		sourceIsGit: existsSync(join(source, '.git')),
 	};

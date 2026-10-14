@@ -107,6 +107,14 @@ export type Binary =
 	| 'chown'
 	| 'rm'
 	| 'install'
+	/** Byte comparison (diffutils — in every row's base packages): an identical runtime is not reinstalled. */
+	| 'cmp'
+	/** util-linux (runuser's package on every row): the engine child dies with the installer (C3-29). */
+	| 'setpriv'
+	/** What files of the service user remain before it is removed (C3-9). */
+	| 'find'
+	/** The generated salt read back from the instance's .env, as the instance (C3-18). */
+	| 'grep'
 	| 'test';
 
 export interface OsRow {
@@ -186,6 +194,10 @@ const SHARED_BINARIES = {
 	chown: '/usr/bin/chown',
 	rm: '/usr/bin/rm',
 	install: '/usr/bin/install',
+	cmp: '/usr/bin/cmp',
+	setpriv: '/usr/bin/setpriv',
+	find: '/usr/bin/find',
+	grep: '/usr/bin/grep',
 	test: '/usr/bin/test',
 } as const;
 
@@ -208,6 +220,7 @@ const APT_PACKAGES: RowPackages = Object.freeze({
 		'ca-certificates',
 		'curl',
 		'rsync',
+		'diffutils',
 		'postgresql-18',
 		'postgresql-client-18',
 		'ffmpeg',
@@ -324,6 +337,7 @@ export const OS_ROWS: readonly OsRow[] = Object.freeze([
 				'curl',
 				'tar',
 				'rsync',
+				'diffutils',
 				'postgresql18-server',
 				'postgresql18',
 				'postgresql18-contrib',
@@ -352,6 +366,15 @@ export function binaryOf(row: OsRow, name: Binary): string {
 /** The supported list, in words (the System check's refusal names it). */
 export function supportedOsList(): string {
 	return OS_ROWS.map((row) => row.label).join(', ');
+}
+
+/**
+ * THE refusal of an unsupported system — host_preflight's, the System check's
+ * row, the identity probe's and docs/install/troubleshooting.md's, word for
+ * word (campaign 3 C3-61): the system named, the list, "(newest releases only)".
+ */
+export function unsupportedOsSentence(osName: string): string {
+	return `${osName} is not supported — the production route supports ${supportedOsList()} (newest releases only)`;
 }
 
 /** The row of an os-release, or null (refused: not a supported system). */

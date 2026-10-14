@@ -21,12 +21,29 @@
  *     Apache sites (stage 1 and full), the media map include, and the lines the
  *     sites carry with the media gate OFF are produced HERE
  *     by the installer's own renderers (systemd/render.ts, web/nginx.ts,
- *     web/apache.ts) over the page's `@@NAME@@` placeholders and must appear in
+ *     web/apache.ts) — and nginx's host-wide catch-all site (web/catch_all.ts) — over the page's `@@NAME@@` placeholders and must appear in
  *     the page byte for byte; the template and root-run-script lists, the
  *     per-OS package lists and binary directories equal the code's tables; the
  *     host-registry block carries exactly the registry entry's keys.
  *  3. Every `manual_install.md#…` link in production.md resolves to an anchor
  *     the manual defines (explicit `{#id}` or a heading slug).
+ *
+ *  4. THE PAGE'S OWN `render` GIVES THE INSTALLER'S BYTES FOR A REAL NAME
+ *     (campaign 3 review, 2026-10-13). The `@@…@@` comparison above cannot see a
+ *     value transform: the Apache name guard matches `Host` against the name AS
+ *     A REGULAR EXPRESSION, escaped by the installer (`dedalo\.example\.org`),
+ *     while a plain `@@SERVER_NAME@@` substitution would leave the dots
+ *     unescaped (any character). So the page prints the guard with its own
+ *     placeholder `@@SERVER_NAME_RE@@`, and this leg runs the page's `render`
+ *     function (bash) over its Apache sites with a DOTTED name: the result must
+ *     equal the installer's render for that name.
+ *
+ *  5. THE PAGE'S HOST CHECKS LEAVE ITS VARIABLES ALONE (campaign 3b N5). The page
+ *     runs in ONE root shell holding `NAME` (the public address); a host check
+ *     that SOURCES `/etc/os-release` there overwrites it with the distribution's
+ *     name (`Ubuntu`), and every later render serves the wrong name. Each
+ *     os-release line is run in a bash shell holding NAME, over a planted
+ *     os-release: it must print the OS and leave NAME (and no ID) behind.
  *
  * Proven red in-file: a fake step id, a removed section, a production section
  * without its link, and a drifted render each make the checker report.
@@ -34,11 +51,14 @@
  * DB-FREE, pure renders over two fixed files (the hermetic tier runs it).
  */
 
-import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { afterAll, describe, expect, test } from 'bun:test';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
 import { instancePaths } from '../../src/core/install/host/layout.ts';
 import { OS_ROWS } from '../../src/core/install/host/os_support.ts';
+import { webServerClash } from '../../src/core/install/host/production/preflight.ts';
 import type { InstanceEntry } from '../../src/core/install/host/registry.ts';
 import {
 	instanceDropins,
@@ -46,7 +66,12 @@ import {
 	UNIT_TEMPLATES,
 } from '../../src/core/install/host/systemd/render.ts';
 import { renderApacheSite } from '../../src/core/install/host/web/apache.ts';
-import { mapInclude, renderNginxSite } from '../../src/core/install/host/web/nginx.ts';
+import { renderNginxCatchAll } from '../../src/core/install/host/web/catch_all.ts';
+import {
+	mapInclude,
+	productionMediaRules,
+	renderNginxSite,
+} from '../../src/core/install/host/web/nginx.ts';
 import type { SiteInput } from '../../src/core/install/host/web/site.ts';
 import {
 	type InstallAnswers,
@@ -210,12 +235,15 @@ function renderedBlocks(): Map<string, string> {
 		cert: stage,
 		acme: true,
 		logDir: '@@LOG_DIR@@',
+		mediaRules: productionMediaRules('@@INSTANCE@@'),
 	});
 	blocks.set('nginx stage 1', renderNginxSite(site(null)));
 	blocks.set('nginx full site', renderNginxSite(site(cert)));
-	blocks.set('Apache stage 1', renderApacheSite(site(null)));
-	blocks.set('Apache full site', renderApacheSite(site(cert)));
+	blocks.set('Apache stage 1', apachePageForm(renderApacheSite(site(null))));
+	blocks.set('Apache full site', apachePageForm(renderApacheSite(site(cert))));
 	blocks.set('nginx media map include', mapInclude('@@INSTANCE@@'));
+	// nginx's host-wide catch-all (campaign 3 C3-30).
+	blocks.set('nginx catch-all', renderNginxCatchAll());
 	// The media gate OFF: the page prints only the lines that replace the gate's.
 	const off = { ...site(cert), answers: placeholderAnswers({ media_access_mode: 'false' }) };
 	blocks.set(
@@ -227,6 +255,27 @@ function renderedBlocks(): Map<string, string> {
 		replacedLines(renderApacheSite(site(cert)), renderApacheSite(off as SiteInput)),
 	);
 	return new Map([...blocks].map(([name, text]) => [name, text.replace(/\n$/, '')]));
+}
+
+/** The installer's Apache site over the placeholders, for a real `name` (leg 4). */
+function renderApacheSiteFor(stage: 'cert' | null, name: string): string {
+	const answers = placeholderAnswers({ server_name: name });
+	const paths = instancePaths(answers, '@@PIN@@', '@@GROUP@@');
+	return renderApacheSite({
+		paths,
+		answers,
+		stamp: MANUAL_STAMP,
+		cert:
+			stage === null
+				? null
+				: {
+						fullchain: '/etc/letsencrypt/live/dedalo-@@INSTANCE@@/fullchain.pem',
+						key: '/etc/letsencrypt/live/dedalo-@@INSTANCE@@/privkey.pem',
+					},
+		acme: true,
+		logDir: '@@LOG_DIR@@',
+		mediaRules: productionMediaRules('@@INSTANCE@@'),
+	});
 }
 
 /** What `variant` puts in place of `base`'s differing run: the lines between their common head and tail. */
@@ -243,6 +292,45 @@ function replacedLines(base: string, variant: string): string {
 	)
 		tail += 1;
 	return b.slice(head, b.length - tail).join('\n');
+}
+
+/** The page form of an Apache render over the placeholders: the name guard carries `@@SERVER_NAME_RE@@` (leg 4 proves it). */
+function apachePageForm(text: string): string {
+	return text.replaceAll(
+		'RewriteCond %{HTTP_HOST} !^@@SERVER_NAME@@(',
+		'RewriteCond %{HTTP_HOST} !^@@SERVER_NAME_RE@@(',
+	);
+}
+
+/** The page's own `render` shell function, as printed. */
+function pageRenderFunction(manual: string): string | null {
+	return /^render\(\) \{\n[\s\S]*?\n\}$/m.exec(manual)?.[0] ?? null;
+}
+
+/**
+ * Run the page's `render` over `text` with every variable set to its OWN
+ * placeholder (identity) except NAME, the dotted name.
+ */
+function pageRender(manual: string, text: string, name: string): string {
+	const identity: Record<string, string> = {
+		I: '@@INSTANCE@@',
+		U: '@@USER@@',
+		G: '@@GROUP@@',
+		DIR: '@@DIR@@',
+		BACKUP_DIR: '@@BACKUP_DIR@@',
+		PIN: '@@PIN@@',
+		PGBIN: '@@PG_BIN@@',
+		PGSVC: '@@PG_SERVICE@@',
+		WEBLOG: '@@LOG_DIR@@',
+		SELINUX_MODULE: '@@SELINUX_MODULE@@',
+		NAME: name,
+	};
+	const script = `${pageRenderFunction(manual) ?? 'render() { exit 3; }'}\nrender`;
+	const run = Bun.spawnSync(['bash', '-c', script], {
+		stdin: new TextEncoder().encode(text),
+		env: { PATH: process.env.PATH ?? '/usr/bin:/bin', ...identity },
+	});
+	return run.stdout.toString();
 }
 
 /** The blocks of `blocks` the page does not print verbatim. */
@@ -282,6 +370,7 @@ const REGISTRY_SAMPLE: InstanceEntry = {
 	templates: false,
 	selinux_module: false,
 	nginx_map_owner: false,
+	catch_all: false,
 	media: '',
 	user: '',
 	group: '',
@@ -294,7 +383,11 @@ function registryBlock(manual: string): Record<string, unknown> | null {
 	const match = /instances\/\$I\.json" <<'EOF'\n([\s\S]*?)\nEOF/.exec(manual);
 	if (match === null) return null;
 	try {
-		return JSON.parse((match[1] as string).replace(/@@[A-Z_]+@@/g, 'x')) as Record<string, unknown>;
+		// A quoted placeholder is a string; a bare one (`@@SELINUX_MODULE@@`) renders a boolean.
+		const text = (match[1] as string)
+			.replace(/"@@[A-Z_]+@@"/g, '"x"')
+			.replace(/@@[A-Z_]+@@/g, 'false');
+		return JSON.parse(text) as Record<string, unknown>;
 	} catch {
 		return null;
 	}
@@ -356,6 +449,28 @@ describe('manual_install.md: every file it prints is the installer render (2)', 
 		expect(missingBlocks(MANUAL, blocks)).toEqual([]);
 	});
 
+	test("4. the page's own render of its Apache sites, for a DOTTED name, is the installer's render", () => {
+		const name = 'dedalo.example.org';
+		const blocks = renderedBlocks();
+		expect(pageRenderFunction(MANUAL)).not.toBeNull();
+		for (const stage of ['Apache stage 1', 'Apache full site']) {
+			const page = blocks.get(stage) ?? '';
+			// the page prints this block (leg 2) and it carries the guard placeholder
+			expect(MANUAL.includes(page), stage).toBe(true);
+			expect(page).toContain('@@SERVER_NAME_RE@@');
+			const site = renderApacheSiteFor(stage === 'Apache stage 1' ? null : 'cert', name);
+			expect(site).toContain('dedalo\\.example\\.org');
+			expect(pageRender(MANUAL, `${page}\n`, name), stage).toBe(site);
+		}
+		// red on the drift this leg exists for: a guard substituted with the PLAIN name
+		const plain = MANUAL.replaceAll('@@SERVER_NAME_RE@@', '@@SERVER_NAME@@');
+		const unescaped = (blocks.get('Apache full site') ?? '').replaceAll(
+			'@@SERVER_NAME_RE@@',
+			'@@SERVER_NAME@@',
+		);
+		expect(pageRender(plain, `${unescaped}\n`, name)).not.toBe(renderApacheSiteFor('cert', name));
+	});
+
 	test('the template, script, package and per-OS lines equal the code tables', () => {
 		const lines = tableLines();
 		expect(lines.size).toBeGreaterThanOrEqual(10);
@@ -386,5 +501,263 @@ describe('manual_install.md: every file it prints is the installer render (2)', 
 		);
 		expect(drifted).not.toBe(MANUAL);
 		expect(missingBlocks(drifted, blocks)).toEqual(['nginx media gate off']);
+	});
+});
+
+// ── 5. the page's host checks leave the page's variables alone ───────────────
+
+/** Every line inside a fenced block of `page` that reads `/etc/os-release`. */
+function osReleaseLines(page: string): string[] {
+	const lines: string[] = [];
+	let fenced = false;
+	for (const line of page.split('\n')) {
+		if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+		else if (fenced && line.includes('/etc/os-release')) lines.push(line);
+	}
+	return lines;
+}
+
+/**
+ * Run `line` in ONE bash shell holding the page's `NAME` (as the page's "one
+ * root shell" does), with `/etc/os-release` pointed at a planted file that sets
+ * NAME/ID/VERSION_ID as every distribution's does; answers what the line
+ * printed and what `$NAME` / `$ID` hold afterwards.
+ */
+function inPageShell(line: string, osRelease: string): { printed: string; after: string } {
+	const script = `${line.replaceAll('/etc/os-release', osRelease)}\necho "AFTER NAME=$NAME ID=$ID"`;
+	const run = Bun.spawnSync(['bash', '-c', script], {
+		env: { PATH: process.env.PATH ?? '/usr/bin:/bin', NAME: 'dedalo.example.org' },
+	});
+	const out = run.stdout.toString().trim().split('\n');
+	return { printed: out.slice(0, -1).join('\n'), after: out.at(-1) ?? '' };
+}
+
+describe("manual_install.md: the host checks never overwrite the page's variables (5, campaign 3b N5)", () => {
+	const dir = mkdtempSync(join(tmpdir(), 'dedalo_manual_osrelease_'));
+	const osRelease = join(dir, 'os-release');
+	writeFileSync(osRelease, 'NAME="Ubuntu"\nID=ubuntu\nVERSION_ID="26.04"\n');
+	afterAll(() => rmSync(dir, { recursive: true, force: true }));
+
+	test('every os-release line prints the OS and leaves $NAME (the address) as the page set it', () => {
+		const lines = osReleaseLines(MANUAL);
+		expect(lines.length).toBeGreaterThanOrEqual(1);
+		for (const line of lines) {
+			const { printed, after } = inPageShell(line, osRelease);
+			expect(printed, line).toContain('ubuntu 26.04');
+			expect(after, line).toBe('AFTER NAME=dedalo.example.org ID=');
+		}
+	});
+
+	test('red: the line sourced in the page shell itself clobbers $NAME', () => {
+		const { after } = inPageShell('. /etc/os-release; echo "$ID $VERSION_ID"', osRelease);
+		expect(after).toBe('AFTER NAME=Ubuntu ID=ubuntu');
+	});
+});
+
+// ── 6. the host record says what this instance wrote (campaign 3b N21) ───────
+
+/**
+ * Run, in ONE bash shell as the page does: its `MAP_OWNER` default, its
+ * `render`, its host_web_site map block and its host-record render — the two
+ * host paths pointed into `dir`. Answers the record's parsed JSON.
+ */
+function recordAfterMapBlock(manual: string, dir: string): Record<string, unknown> {
+	const map = join(dir, 'dedalo-00-media-map.conf');
+	const record = join(dir, 'record.json');
+	const parts = [
+		/^MAP_OWNER=false$/m.exec(manual)?.[0],
+		pageRenderFunction(manual),
+		/^if ! test -e \/etc\/nginx\/conf\.d\/dedalo-00-media-map\.conf; then\n[\s\S]*?\nfi$/m.exec(
+			manual,
+		)?.[0],
+		/^render > "\/var\/lib\/dedalo-install\/instances\/\$I\.json" <<'EOF'\n[\s\S]*?\nEOF$/m.exec(
+			manual,
+		)?.[0],
+	];
+	expect(parts.every((part) => part !== undefined && part !== null)).toBe(true);
+	const script = parts
+		.join('\n')
+		.replaceAll('/etc/nginx/conf.d/dedalo-00-media-map.conf', map)
+		.replaceAll('"/var/lib/dedalo-install/instances/$I.json"', `"${record}"`);
+	const run = Bun.spawnSync(['bash', '-c', script], {
+		env: {
+			PATH: process.env.PATH ?? '/usr/bin:/bin',
+			I: 'prado',
+			U: 'ded_prado',
+			G: 'ded_prado',
+			DIR: '/home/ded_prado',
+			BACKUP_DIR: '/home/ded_prado/backups',
+			PIN: '1.4.2',
+			NAME: 'dedalo.example.org',
+			SELINUX_MODULE: 'false',
+		},
+	});
+	expect(run.exitCode, run.stderr.toString()).toBe(0);
+	return JSON.parse(readFileSync(record, 'utf8')) as Record<string, unknown>;
+}
+
+describe('manual_install.md: the host record is rendered from what the page did (6, campaign 3b N21)', () => {
+	test('the first instance writes the map and its record says nginx_map_owner true', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_manual_map_'));
+		try {
+			const record = recordAfterMapBlock(MANUAL, dir);
+			expect(readFileSync(join(dir, 'dedalo-00-media-map.conf'), 'utf8')).toContain(
+				'include /etc/nginx/dedalo/prado/media_protection_map.conf;',
+			);
+			expect(record.nginx_map_owner).toBe(true);
+			expect(record.instance).toBe('prado');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test('a map another instance wrote is kept, and this record says false', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_manual_map_'));
+		try {
+			writeFileSync(join(dir, 'dedalo-00-media-map.conf'), 'include other;\n');
+			const record = recordAfterMapBlock(MANUAL, dir);
+			expect(readFileSync(join(dir, 'dedalo-00-media-map.conf'), 'utf8')).toBe('include other;\n');
+			expect(record.nginx_map_owner).toBe(false);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe('manual_install.md: the site header names both writers (campaign 3b N22)', () => {
+	test("every site render's header names manual_install.md, and the page prints it", () => {
+		const sites = [...renderedBlocks()].filter(([name]) => /(stage 1|full site)$/.test(name));
+		expect(sites.length).toBe(4);
+		for (const [name, text] of sites) {
+			expect(text, name).toContain('WRITTEN BY THE INSTALLER');
+			expect(text, name).toContain('or by docs/install/manual_install.md');
+			expect(text, name).not.toContain('rather than editing this file');
+		}
+	});
+});
+
+describe('manual_install.md: both chain-trust failures openssl prints are named (campaign 3b N20)', () => {
+	test('every paragraph naming one openssl verify failure names the other', () => {
+		const paragraphs = MANUAL.split('\n\n').filter((p) => p.includes('local issuer certificate'));
+		expect(paragraphs.length).toBeGreaterThanOrEqual(2);
+		for (const paragraph of paragraphs) {
+			expect(paragraph).toContain('self-signed certificate in certificate chain');
+		}
+	});
+});
+
+describe("production.md: a command never enters the 0750 install folder from the operator's shell (C3-68)", () => {
+	/** `cd <dir…>` run BEFORE sudo: the operator's shell, not the service user, enters the folder. */
+	const entersBeforeSudo = (text: string): string[] =>
+		[...text.matchAll(/cd <(?:dir|install folder)>[^`\n]*?&&\s*sudo\b/g)].map((m) => m[0]);
+
+	test('every Verify that runs in the install folder enters it as the service user', () => {
+		expect(PRODUCTION).toContain("sudo runuser -u <service user> -- sh -c 'cd <dir>/dedalo && ");
+		expect(entersBeforeSudo(PRODUCTION)).toEqual([]);
+	});
+
+	test('red: the C3-68 form is reported', () => {
+		expect(entersBeforeSudo('`cd <dir>/dedalo && sudo runuser -u x -- bun`')).toHaveLength(1);
+	});
+});
+
+// ── 7. multi_instance.md's removal list matches what the installer leaves (campaign 3b N10) ──
+
+describe("multi_instance.md › Removing an instance: the hand list matches the installer's leftovers (N10)", () => {
+	const MULTI = readFileSync(join(REPO_ROOT, 'docs/install/multi_instance.md'), 'utf8');
+	const removal = sectionsOf(MULTI, 2).find(
+		(section) => section.heading === 'Removing an instance',
+	);
+
+	test('the backup comes BEFORE --abort, with a direct dump for after one', () => {
+		const body = removal?.body ?? '';
+		const first = /\n1\. ([^\n]*)/.exec(body)?.[1] ?? '';
+		expect(first).toContain('BEFORE any `--abort`');
+		expect(first).toContain('pg_dump');
+		expect(body).toContain('systemctl reset-failed');
+	});
+
+	test("every file the installer's render names per instance (logs, drop-in units) and the timer stamps are listed", () => {
+		const body = removal?.body ?? '';
+		const blocks = renderedBlocks();
+		const logs = [
+			...(blocks.get('nginx full site') ?? '').matchAll(
+				/(?:access_log|error_log)\s+\S+\/([^/\s;]+);/g,
+			),
+		].map((m) => (m[1] as string).replace('@@INSTANCE@@', '<i>'));
+		expect(logs).toEqual(['dedalo-<i>.access.log', 'dedalo-<i>.error.log']);
+		for (const log of logs) expect(body).toContain(log);
+		const units = [...blocks.keys()]
+			.filter((name) => name.startsWith('drop-in '))
+			.map((name) => name.slice('drop-in '.length));
+		expect(units.length).toBeGreaterThanOrEqual(4);
+		for (const unit of units) expect(body).toContain(`\`${unit}\``);
+		expect(body).toContain('/var/lib/systemd/timers/stamp-dedalo-*@<i>.timer');
+	});
+});
+
+// ── 8. the "One web server" check says what the preflight refuses (campaign 3b review) ──
+
+/**
+ * What `webServerClash` answers for a host: chosen web server installed or not, the
+ * other one's binary present or not, and who holds 80/443. Pure — no host, no run.
+ */
+function clashOn(chosenInstalled: boolean, otherPresent: boolean, holder?: string): string[] {
+	const ctx = {
+		facts: {
+			web: { kind: 'nginx', installed: chosenInstalled },
+			ports: holder === undefined ? [] : [80, 443].map((port) => ({ port, process: holder })),
+		},
+		answers: { http_port: 80, https_port: 443 },
+		row: OS_ROWS[0],
+	} as unknown as HostPlanCtx;
+	return webServerClash(ctx, { exists: () => otherPresent });
+}
+
+/** The manual's "One web server" bullet. */
+const webServerBullet = (page: string): string =>
+	page.split('\n').find((line) => line.startsWith('- **One web server.**')) ?? '';
+
+/**
+ * The bullet against the code's outcomes: where the code lets a host with BOTH
+ * servers installed through, the bullet may not state "the other web server is
+ * not installed" as a bare requirement, and must name the case it accepts; where
+ * the code refuses installing beside the other, the bullet must name that.
+ */
+function bulletDisagreements(bullet: string): string[] {
+	const out: string[] = [];
+	if (bullet === '') return ['no "One web server" bullet'];
+	const bothInstalledAccepted = clashOn(true, true).length === 0;
+	const besideRefused = clashOn(false, true).length > 0;
+	const holderRefused = clashOn(true, false, 'haproxy').length > 0;
+	if (bothInstalledAccepted && /The other web server is not installed[,.]/.test(bullet))
+		out.push('claims the other web server must be absent, the preflight accepts both installed');
+	if (bothInstalledAccepted && !bullet.includes('With both already installed, it goes ahead'))
+		out.push('does not name the both-installed case the preflight accepts');
+	if (besideRefused && !bullet.includes('install one web server beside the other'))
+		out.push('does not name the beside-install refusal');
+	if (holderRefused && !bullet.includes('any program other than your web server holding the ports'))
+		out.push('does not name the port-holder refusal');
+	return out;
+}
+
+describe('manual_install.md › One web server: the bullet says what the preflight refuses (campaign 3b review)', () => {
+	test('the outcomes the bullet is held to (anti-vacuity)', () => {
+		expect(clashOn(true, true)).toEqual([]);
+		expect(clashOn(false, true).join('\n')).toContain('beside it');
+		expect(clashOn(true, false, 'haproxy').join('\n')).toContain('port 80 is held by haproxy');
+		expect(clashOn(true, false, 'nginx')).toEqual([]);
+	});
+
+	test('the page agrees with them', () => {
+		expect(bulletDisagreements(webServerBullet(MANUAL))).toEqual([]);
+	});
+
+	test('red: the pre-review bullet (refuses whenever the other is installed) is reported', () => {
+		const old =
+			"- **One web server.** The other web server is not installed, and nothing but your web server listens on ports 80 and 443 (`ss -ltnp 'sport = :80 or sport = :443'` names the program). The installer refuses both.";
+		expect(bulletDisagreements(old)).toContain(
+			'claims the other web server must be absent, the preflight accepts both installed',
+		);
 	});
 });

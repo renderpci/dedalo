@@ -113,7 +113,10 @@ such an installation and changes what it offers:
 
     The script reads `.dedalo.env` to know where the image comes from: it pulls
     the new image — verifying its signature first when
-    `DEDALO_IMAGE_VERIFY=cosign` — or checks out the release and builds it. It
+    `DEDALO_IMAGE_VERIFY=cosign` — or checks out the release and builds it from
+    a clean snapshot of that commit, exactly as the installer built the first
+    image (committed files only, so it reports the release version, not
+    `.dev`). It
     takes a database backup before switching, re-pins `DEDALO_VERSION`, waits for
     the engine to report healthy, and rolls back to the previous image on its own
     when it does not.

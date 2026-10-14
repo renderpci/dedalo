@@ -16,8 +16,18 @@
  *
  * Async spawn only (Bun.spawn): the front end must stay responsive to Ctrl-C.
  * The spawn is injectable — a gate records the request without a process.
+ *
+ * A PROBE WRITES NO SERVER STATE (campaign 3 C3-20): the child's state file
+ * and session store (DEDALO_TS_STATE_PATH / DEDALO_SESSION_DB_PATH) point into
+ * a throwaway directory made for the one probe and removed after it — the
+ * engine modules a probe imports create both at import, and a System check
+ * under sudo left a root-owned ../private behind on a host that then installed
+ * nothing (the update smoke boot's precedent: src/core/update/smoke_boot.ts).
  */
 
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { liveProcessEnv } from '../../config/env.ts';
 import type { CatalogProbeResult, InstallProbes } from './front_end.ts';
@@ -116,6 +126,29 @@ async function runChild(
 	options: ChildProbeOptions,
 	request: ProbeRequest,
 ): Promise<Record<string, unknown>> {
+	const scratch = mkdtempSync(join(tmpdir(), 'dedalo_install_probe_'));
+	try {
+		return await runChildIn(options, request, scratch);
+	} finally {
+		rmSync(scratch, { recursive: true, force: true });
+	}
+}
+
+/** The child's environment: the live one, its server state and session store in `scratch`. */
+export function probeChildEnv(scratch: string): Record<string, string> {
+	return {
+		...liveProcessEnv(),
+		DEDALO_TS_STATE_PATH: join(scratch, 'ts_state.json'),
+		DEDALO_SESSION_DB_PATH: join(scratch, 'dedalo_ts_sessions.sqlite'),
+	};
+}
+
+/** runChild over a throwaway state directory. */
+async function runChildIn(
+	options: ChildProbeOptions,
+	request: ProbeRequest,
+	scratch: string,
+): Promise<Record<string, unknown>> {
 	const secrets = forms(request.secrets);
 	const spawn = options.spawn ?? defaultSpawn;
 	const child = spawn([options.execPath, 'run', CHILD_PATH], {
@@ -123,7 +156,7 @@ async function runChild(
 		stdin: 'pipe',
 		stdout: 'pipe',
 		stderr: 'pipe',
-		env: liveProcessEnv(),
+		env: probeChildEnv(scratch),
 	});
 	options.onSpawn?.(child);
 	child.stdin.write(JSON.stringify(request));

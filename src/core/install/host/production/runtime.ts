@@ -3,6 +3,9 @@
  * installer phase 4, 2026-10-12):
  *
  *  - BUN at the repo pin (.bun-version), ROOT-OWNED in /opt/dedalo/bun/<pin>/
+ *    (installed only when the binary there is not byte-identical — `cmp`,
+ *    the `unless` probe: a second instance never replaces the inode the first
+ *    one runs; campaign 3 C3-57)
  *    (owner question Q4; F2: the unit runs it as the instance, but the instance
  *    must never be able to replace what it runs). Taken ONLY from a zip whose
  *    sha256 equals the committed .bun-sha256 row of this host's asset — the
@@ -11,7 +14,16 @@
  *    operator's own `bun` binary, whose bytes nothing vouches for). Shared by
  *    every instance of the same pin (refcounted, registry.ts).
  *  - THE RELEASE in place: the source tree's HEAD (git archive) — or the tree
- *    itself when it is a verified release, not a checkout — archived by root
+ *    itself when it is a verified release, not a checkout — archived by root.
+ *    A checkout is usually the operator's own (cloned as the user who ran
+ *    sudo), which git refuses to root as "dubious ownership" (campaign 3
+ *    C3-7): the archive names THAT checkout as safe.directory for this one
+ *    command (`-c`, never the global config) and turns core.fsmonitor off.
+ *    That grants nothing new: root is already running this installer's
+ *    TypeScript FROM the same checkout, so whoever controls its .git/config
+ *    controls root's run anyway; fsmonitor (the one config hook git would
+ *    execute) is off regardless. `--format=tar` runs no tar filter command.
+ *    Archived
  *    into a root-owned hand-over dir (root:<service group> 0750, OUTSIDE the
  *    install folder), then extracted BY THE SERVICE USER into
  *    <install folder>/dedalo, and `bun install --frozen-lockfile --production`
@@ -91,6 +103,7 @@ function bunFetch(ctx: HostPlanCtx): HostCommand[] {
 function bunInstall(ctx: HostPlanCtx): HostCommand[] {
 	const asset = bunAsset(ctx);
 	const staging = `${cacheDir(ctx)}/extract`;
+	const unpacked = `${staging}/${asset.replace(/\.zip$/, '')}/bun`;
 	return [
 		exec(
 			ctx,
@@ -101,18 +114,18 @@ function bunInstall(ctx: HostPlanCtx): HostCommand[] {
 		exec(
 			ctx,
 			'install',
-			[
-				'-D',
-				'-m',
-				'0755',
-				'-o',
-				'root',
-				'-g',
-				'root',
-				`${staging}/${asset.replace(/\.zip$/, '')}/bun`,
-				ctx.paths.bun,
-			],
+			['-D', '-m', '0755', '-o', 'root', '-g', 'root', unpacked, ctx.paths.bun],
 			`install the runtime at ${ctx.paths.bun} (root-owned)`,
+			{
+				// Another instance of the same pin runs it: byte-identical, it is used as
+				// it is — never replaced under a running instance (campaign 3 C3-57).
+				unless: probe(
+					ctx,
+					'cmp',
+					['-s', unpacked, ctx.paths.bun],
+					'the runtime in place is byte-identical',
+				),
+			},
 		),
 		exec(ctx, 'rm', ['-rf', staging], 'remove the unpacked copy'),
 	];
@@ -129,7 +142,19 @@ function releaseArchive(ctx: HostPlanCtx): ExecCommand {
 		return exec(
 			ctx,
 			'git',
-			['-C', ctx.source, 'archive', '--format=tar', '-o', releaseTar(ctx), 'HEAD'],
+			[
+				'-c',
+				`safe.directory=${ctx.source}`,
+				'-c',
+				'core.fsmonitor=false',
+				'-C',
+				ctx.source,
+				'archive',
+				'--format=tar',
+				'-o',
+				releaseTar(ctx),
+				'HEAD',
+			],
 			'archive the source tree (HEAD)',
 		);
 	}
@@ -175,7 +200,9 @@ function releaseCommands(ctx: HostPlanCtx): HostCommand[] {
 		exec(
 			ctx,
 			'tar',
-			['-xf', releaseTar(ctx), '-C', paths.tree, '--no-same-owner'],
+			// --no-overwrite-dir: the archive's own `./` entry would re-mode the 0750 tree
+			// to the source's 0755 (campaign 3, the hand-install runs R6/R7).
+			['-xf', releaseTar(ctx), '-C', paths.tree, '--no-same-owner', '--no-overwrite-dir'],
 			`extract the release into ${paths.tree} (as the service user)`,
 			{ as: 'instance' },
 		),

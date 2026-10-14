@@ -62,6 +62,12 @@ export interface RunIo {
 	 * host route's told commands — firewall, modules). Absent: logged.
 	 */
 	tell?(lines: readonly string[]): void;
+	/**
+	 * The run is a host route's engine CHILD (--events-jsonl): the parent tells
+	 * how to resume or undo, in its own route's words — the child prints none of
+	 * its own (`bun run scripts/install.ts --resume` is wrong there: C3-54).
+	 */
+	readonly delegated?: true;
 }
 
 /** The plan's words before the run (notes, warnings, suggestions). */
@@ -75,9 +81,12 @@ export interface RunAnnouncement {
 /** How a run's result is told: the outcome as the executor answered it. */
 /** How a run ended, for the Done sentences (the route and instance, a live instance kept by an abort). */
 export interface RunEnding {
-	route: 'production' | 'docker' | 'trial' | 'engine';
+	/** `engine_only`: the by-hand host procedure's engine run (its next step is systemd — C3-54). */
+	route: 'production' | 'docker' | 'trial' | 'engine' | 'engine_only';
 	instance: string;
 	keptLive: boolean;
+	/** The steps an abort actually undid (its closing sentence says so — C3-50); absent: none. */
+	undone?: readonly string[];
 }
 
 export interface RunOutcomeView {

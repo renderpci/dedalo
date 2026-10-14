@@ -327,9 +327,9 @@
 		},
 		{
 			"file": "src/core/install/pg_bin.ts",
-			"symbol": "psqlResolvable",
+			"symbol": "probePsql",
 			"class": "vacuous-projection",
-			"reason": "Both arms probe THIS machine (existsSync on a resolved path, or Bun.spawnSync('psql --version')), so any assertion compares a probe against the same probe and answers differently on a clone or in CI. The decidable part, the candidate ORDER, is extracted to pgBinaryCandidates and gated."
+			"reason": "A one-line binding of probePsqlAt to THIS machine's inputs (the configured dir, the Homebrew candidates, the live PATH), so any assertion compares a probe against the same probe and answers differently on a clone or in CI. The decidable parts are gated over their inputs: the candidate ORDER (pgBinaryCandidates) and the never-throws typed answer over a PATH without psql (probePsqlAt)."
 		},
 		{
 			"file": "src/core/media/av_versions.ts",

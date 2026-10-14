@@ -26,9 +26,10 @@ export function labelSeg(label: string, role: Role = 'muted'): Line[number] {
 
 /**
  * A focused value box: the visible tail of `text` (so the caret stays in
- * view), the caret `▏` at `caret`, padded on the selection background.
+ * view), the caret `▏` at `caret`, padded on the selection background — in
+ * `role` (`faint` for a default not yet typed over).
  */
-export function valueBox(text: string, caret: number, width: number): Line {
+export function valueBox(text: string, caret: number, width: number, role: Role = 'text'): Line {
 	const chars = Array.from(text);
 	const room = width - 2;
 	const start = Math.max(0, caret - room + 1);
@@ -36,9 +37,9 @@ export function valueBox(text: string, caret: number, width: number): Line {
 	const after = cutText(chars.slice(caret).join(''), Math.max(0, room - widthOf(before)));
 	const fill = Math.max(0, room - widthOf(before) - widthOf(after));
 	return [
-		seg(` ${before}`, 'text', { sel: true }),
+		seg(` ${before}`, role, { sel: true }),
 		seg('▏', 'accent', { sel: true }),
-		seg(`${after}${' '.repeat(fill)}`, 'text', { sel: true }),
+		seg(`${after}${' '.repeat(fill)}`, role, { sel: true }),
 	];
 }
 

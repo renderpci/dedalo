@@ -51,6 +51,7 @@ const admin: DbConnDescriptor = {
 	port: config.db.port,
 	user: config.db.user,
 	password: config.db.password,
+	socket: config.db.socket,
 };
 const scratch: DbConnDescriptor = { ...admin, database: SCRATCH_DB };
 /** The broken-seed target: its own prefix, so each sweep keeps its `<prefix><pid>` grammar. */

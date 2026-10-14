@@ -9,7 +9,7 @@ import { join } from 'node:path';
 import type { ExecCommand, HostCommand, HostCtx, HostPlanCtx } from '../contract.ts';
 import { requestOf, succeeded } from '../execute.ts';
 import { remember } from '../production/common.ts';
-import type { RunResult } from '../runner.ts';
+import type { RunRequest, RunResult } from '../runner.ts';
 import type { StackCreated } from '../state_types.ts';
 import { stackFactsOf } from './facts.ts';
 import { CERT_DIR, ENV_FILE } from './layout.ts';
@@ -140,13 +140,15 @@ export async function pollUntil(
 /**
  * Run one command; on failure hand its result to `refuse` (which throws the
  * step's own sentence — never the command's raw output). Answers the result.
+ * `listen` sees the output line by line as it arrives (a long build's progress).
  */
 export async function execute(
 	ctx: HostCtx,
 	command: ExecCommand,
 	refuse: (result: RunResult) => never,
+	listen: Pick<RunRequest, 'onStdoutLine' | 'onStderrLine'> = {},
 ): Promise<RunResult> {
-	const result = await ctx.runner.run(requestOf(command, ctx));
+	const result = await ctx.runner.run({ ...requestOf(command, ctx), ...listen });
 	if (!succeeded(command, result)) refuse(result);
 	return result;
 }

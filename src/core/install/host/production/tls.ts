@@ -7,17 +7,23 @@
  *    reloads the web server, and the distribution's renewal timer enabled.
  *    `--letsencrypt-staging` uses the staging CA (a rehearsal; flags only).
  *  - The institution's own files: checked in TypeScript (tls_files.ts) — the
- *    address, the expiry, the key — and used where they are (never copied,
- *    never modified). host_preflight checked them first; this step checks
- *    again (a resume days later sees an expiry that has passed).
+ *    address, the expiry, the key — AND that THIS host trusts their chain
+ *    (tls_trust.ts against the system CA bundle: host_public_probe verifies it
+ *    with this host's curl, as a browser does — an internal CA the host does
+ *    not trust failed there after 90 s; campaign 3 C3-13) — and used where
+ *    they are (never copied, never modified). host_preflight checked them
+ *    first; this step checks again (a resume days later sees an expiry that
+ *    has passed).
  *
  * UNDO: `certbot delete` of the certificate THIS install issued, only.
  */
 
 import type { HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
 import { executeCommands } from '../execute.ts';
+import type { HostFs } from '../fs.ts';
 import { hostRefuse } from '../refuse.ts';
-import { checkCertificateFiles } from '../tls_files.ts';
+import { checkCertificateFiles, type TlsFileVerdict } from '../tls_files.ts';
+import { chainTrustVerdict, SYSTEM_CA_BUNDLES } from '../tls_trust.ts';
 import { exec, probe, probeOk, ran, remember, systemctl, verdictOf, webFlavor } from './common.ts';
 import { selinuxApplies } from './selinux.ts';
 
@@ -76,15 +82,39 @@ function selinuxCertNote(ctx: HostCtx): string[] {
 	];
 }
 
-/** The institution's files, checked now. */
-function filesVerdict(ctx: HostCtx) {
+/**
+ * The institution's files, checked now: the address, the expiry (a warning
+ * under 30 days), the key — and the chain against this host's trust store.
+ * host_preflight, the Review and this step read the same verdict.
+ */
+export function institutionCertVerdict(
+	ctx: Pick<HostPlanCtx, 'answers'>,
+	fs: Pick<HostFs, 'readText'>,
+	now: number,
+): TlsFileVerdict {
 	const { answers } = ctx;
-	return checkCertificateFiles(
-		ctx.fs.readText(answers.tls_cert_path),
-		ctx.fs.readText(answers.tls_key_path),
+	const fullchain = fs.readText(answers.tls_cert_path);
+	const verdict = checkCertificateFiles(
+		fullchain,
+		fs.readText(answers.tls_key_path),
 		answers.server_name,
-		ctx.now(),
+		now,
 	);
+	if (verdict.validTo === null) return verdict;
+	const trust = chainTrustVerdict(
+		fullchain,
+		SYSTEM_CA_BUNDLES.map((path) => fs.readText(path)),
+	);
+	return {
+		...verdict,
+		problems: [...verdict.problems, ...(trust.problem === null ? [] : [trust.problem])],
+		warnings: [...verdict.warnings, ...(trust.warning === null ? [] : [trust.warning])],
+	};
+}
+
+/** The institution's files, checked now. */
+function filesVerdict(ctx: HostCtx): TlsFileVerdict {
+	return institutionCertVerdict(ctx, ctx.fs, ctx.now());
 }
 
 export const host_tls: HostStepDefinition = {

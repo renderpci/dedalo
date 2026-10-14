@@ -150,8 +150,15 @@ ENV DEDALO_PRIVATE_DIR=/private
 # own client tree there at boot (src/core/install/client_publish.ts) and nginx
 # serves it read-only, so the browser always runs the client of the engine it
 # talks to — a pulled image never serves against a host checkout's older client.
+#
+# /srv/dedalo/media is the media tree's ROOT, at the tree's one mode (0750 —
+# src/core/install/media_tree.ts MEDIA_DIR_MODE; nginx reads it through the
+# group): `mkdir -p` under the build's umask made it 0755, and every install
+# and every boot then warned `mode_differs` on it (campaign 3 C3-19). The
+# volume copies this mode up on first use. Gate: install_stack_steps_native.
 RUN mkdir -p /private /srv/dedalo/media /srv/dedalo/client /run/dedalo /backups \
- && chown -R bun:bun /private /srv/dedalo/media /srv/dedalo/client /run/dedalo /backups
+ && chown -R bun:bun /private /srv/dedalo/media /srv/dedalo/client /run/dedalo /backups \
+ && chmod 0750 /srv/dedalo/media
 
 # --- Application -------------------------------------------------------------
 # Everything above is the same for every release built on this base; everything

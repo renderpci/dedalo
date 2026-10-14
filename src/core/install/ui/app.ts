@@ -80,10 +80,18 @@ function routeChip(view: ScreenView | null): string {
 	return route === null ? 'choose' : ROUTE_TEXT[route].label;
 }
 
-/** The header's status: where the install stands. */
+/**
+ * The header's status: where the install stands — read from the state, never
+ * assumed: an unfinished install found on start (the Resume screen) has run
+ * steps already (campaign 3 C3-58: never "nothing installed yet" after the
+ * seed committed).
+ */
 function status(app: App): Line {
 	const ran = app.life.phase() !== 'walk' && app.done?.kind !== 'written';
-	return ran ? runStatus(app.run) : [seg('● ', 'ok'), seg('nothing installed yet', 'muted')];
+	if (ran) return runStatus(app.run);
+	return app.unfinished
+		? [seg('● ', 'warn'), seg('an unfinished install is recorded', 'muted')]
+		: [seg('● ', 'ok'), seg('nothing installed yet', 'muted')];
 }
 
 /** The run states on the rail. */
@@ -481,7 +489,17 @@ export function openTuiOn(
 		exitNow: (code, lines) => app.life.exitNow(code, lines),
 		close: (code, lines) => app.life.close(code, lines),
 		written: (path) =>
-			showDone(app, { kind: 'written', path, trial: app.view?.route === 'trial' }, 0, []),
+			showDone(
+				app,
+				{
+					kind: 'written',
+					path,
+					trial: app.view?.route === 'trial',
+					route: app.view?.route ?? 'developer',
+				},
+				0,
+				[],
+			),
 		onClose: (hook) => app.life.onClose(hook),
 		dispose,
 	};

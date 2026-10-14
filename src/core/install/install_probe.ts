@@ -12,7 +12,8 @@
  * prior_env?}`; the secrets travel ONLY there (never argv, never env) — and
  * ONE JSON line on stdout (the probe's outcome). An unknown probe or a
  * malformed request exits 2. A thrown error becomes `{ok:false, detail}` (the
- * deliberate sentence of install_probe_failure.ts — the raw text goes to stderr) with
+ * deliberate sentence of install_probe_failure.ts: its class, a short sanitized
+ * summary, and the 0600 file the full text was written to) with
  * every secret of the request redacted; the request is never echoed. Anything
  * an engine module prints goes to stderr (the parent redacts and drops it), so
  * stdout carries exactly the one line.
@@ -175,7 +176,7 @@ export async function probeChildMain(
 		const outcome = await runProbeRequest(request);
 		return { line: redactSecrets(JSON.stringify(outcome), secrets), exitCode: 0 };
 	} catch (error) {
-		const sentence = probeFailureSentence(request.probe, error);
+		const sentence = probeFailureSentence(request.probe, error, secrets);
 		return {
 			line: JSON.stringify({ ok: false, detail: redactSecrets(sentence, secrets) }),
 			exitCode: 0,

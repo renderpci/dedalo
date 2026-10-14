@@ -3,7 +3,9 @@
  * approved mockup's look: `❯` on the cursor, `◉` on the current value, the
  * option's description under it. The cursor starts on what plain mode's Enter
  * would take (`suggested`) — '' too, when '' IS an option (the engine-default
- * media access mode). ↑↓ PgUp PgDn Home End move, Enter or Tab choose.
+ * media access mode) — else on the model's `start` (nothing chosen yet: the
+ * route, on the plan's default route). ↑↓ PgUp PgDn Home End move, Enter or
+ * Tab choose.
  */
 
 import { sanitizeLine } from '../../display_text.ts';
@@ -43,13 +45,21 @@ function optionLines(option: Option, current: boolean, focused: boolean, width: 
 	return [badgedRow(left, markWords(option), 'faint', focused, width), ...description];
 }
 
+/**
+ * Where the cursor starts: on the current value, else on the model's `start`
+ * (nothing chosen yet — the route), else on the first option.
+ */
+function startCursor(options: readonly Option[], current: string, start?: string): number {
+	const at = (value: string | undefined): number =>
+		options.findIndex((option) => option.value === value);
+	const onCurrent = at(current);
+	return onCurrent >= 0 ? onCurrent : Math.max(0, at(start));
+}
+
 export function choiceField(question: Question, done: (answer: string | Nav) => void): Widget {
 	const options = question.options ?? [];
 	const current = suggested(question);
-	let cursor = Math.max(
-		0,
-		options.findIndex((option) => option.value === current),
-	);
+	let cursor = startCursor(options, current, question.start);
 	const choose = (): void => {
 		const option = options[cursor];
 		if (option !== undefined) done(option.value);

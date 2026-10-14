@@ -3,7 +3,7 @@
  * `/var/lib/dedalo-install/instances/<i>.json`, one file per production
  * instance this installer set up on the host. It is what makes the SHARED
  * resources refcounted: the template units, the root-owned Bun of a pin, the
- * SELinux module and the nginx media-map include are removed by an --abort
+ * SELinux module, the nginx media-map include and the catch-all site are removed by an --abort
  * only when NO other instance's file still names them.
  *
  * root:root 0644 (no secret; the instance names are not one).
@@ -19,6 +19,8 @@ export interface InstanceEntry {
 	selinux_module: boolean;
 	/** This instance's map is the one the host-wide nginx include points at. */
 	nginx_map_owner: boolean;
+	/** This instance uses the host-wide catch-all site (web/catch_all.ts — removed with the last user). */
+	catch_all: boolean;
 	/** This instance's MEDIA_PATH (where its generated map lives). */
 	media: string;
 	/** The service user, group, install folder and backup dir (host_identity — one per instance). */
@@ -35,6 +37,7 @@ function emptyEntry(paths: InstancePaths): InstanceEntry {
 		templates: false,
 		selinux_module: false,
 		nginx_map_owner: false,
+		catch_all: false,
 		media: paths.media,
 		user: paths.user,
 		group: paths.group,

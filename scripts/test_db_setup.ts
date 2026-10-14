@@ -123,7 +123,6 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readEnv } from '../src/config/env.ts';
-import { libpqTransportArgs, resolvePgTransport } from '../src/config/pg_transport.ts';
 // DB-free ON PURPOSE (see that module's header): the provenance check below must
 // name the marker table WITHOUT importing the marker module, whose postgres.ts
 // import connects the pool at module scope — a session held on the target makes
@@ -132,6 +131,7 @@ import {
 	TEST_MARKER_PURPOSE,
 	TEST_MARKER_TABLE,
 } from '../src/core/test_data/test_database_marker_constants.ts';
+import { suitePsqlConnArgs, suitePsqlEnv } from '../test/helpers/suite_pg.ts';
 import { readOnlyRoleClusterSql, testDatabaseName } from '../test/helpers/test_database.ts';
 import {
 	rebuildTestExportArtifactsRoot,
@@ -238,19 +238,11 @@ const password = readEnv('DB_PASSWORD') ?? readEnv('DEDALO_PASSWORD_CONN') ?? ''
  * `-h/-p` decided by the engine's ONE transport rule (DB_SOCKET wins, a `/`
  * DB_HOST is a socket directory, else TCP; an unset port is 5432) — the route
  * the suite's own pool takes. readEnv already honours the PHP alias spellings.
+ * Plus `-w` and a PGCONNECT_TIMEOUT (test/helpers/suite_pg.ts): never a
+ * password prompt on the terminal (C3-12).
  */
-const conn = [
-	...libpqTransportArgs(
-		resolvePgTransport({
-			host: readEnv('DB_HOST') ?? 'localhost',
-			port: readEnv('DB_PORT') ?? '',
-			socket: readEnv('DB_SOCKET'),
-		}),
-	),
-	'-U',
-	user,
-];
-const pgEnv = { ...process.env, PGPASSWORD: password };
+const conn = suitePsqlConnArgs(readEnv, user);
+const pgEnv = suitePsqlEnv(process.env, password);
 
 /**
  * The psql binary, resolved the way the ENGINE resolves it.

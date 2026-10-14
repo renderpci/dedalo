@@ -521,6 +521,7 @@ describe('Phase B recovery snapshot', () => {
 			port: config.db.port,
 			user: config.db.user,
 			password: config.db.password,
+			socket: config.db.socket,
 		};
 
 		await assertScratchOnly(async () => {

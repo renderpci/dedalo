@@ -17,17 +17,25 @@
  */
 
 import { afterAll, afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { PHP_KEY_ALIASES, parseEnvFile, seedProcessEnv } from '../../src/config/env.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { persistConfig } from '../../src/core/install/config_persist.ts';
 import { checkDirectories } from '../../src/core/install/directories.ts';
 import {
+	buildInstallPlan,
+	normalizeInstallAnswers,
 	OFFICIAL_CODE_SERVER,
 	OFFICIAL_ONTOLOGY_SERVER,
 } from '../../src/core/install/install_plan.ts';
+import {
+	FALLBACK_LOCALE,
+	FALLBACK_TIMEZONE,
+	hostLocaleDefaults,
+	localeFromPosix,
+} from '../../src/core/install/install_validation.ts';
 import {
 	closeOntologyChoice,
 	collectHierarchyDependencies,
@@ -36,6 +44,7 @@ import {
 	vendoredCoreDeclarers,
 	vendoredOntologyCatalog,
 } from '../../src/core/install/ontology_choice.ts';
+import { directoriesNeedingAttention } from '../../src/core/install/steps.ts';
 import { CORE_ONTOLOGY_TLDS } from '../../src/core/ontology/core_tlds.ts';
 import { getServerState, setServerState } from '../../src/core/resolve/server_state.ts';
 import { markMediaRoot } from '../helpers/media_scratch_root.ts';
@@ -597,5 +606,215 @@ describe('persist_config (P2)', () => {
 			seedProcessEnv({ DEDALO_INSTALL_PRIVATE_DIR: scratch });
 			rmSync(own, { recursive: true, force: true });
 		}
+	});
+});
+
+// ── install campaign 3 (developer route, package P4) ─────────────────────────
+
+describe('campaign 3: what a fresh install writes', () => {
+	test('C3-60: the written .env carries no PHP-era wording', async () => {
+		await persistConfig({ ...BASE_CFG });
+		const body = readFileSync(join(scratch, '.env'), 'utf8');
+		expect(body).toContain('DEDALO_SALT_STRING=');
+		expect(body).not.toMatch(/PHP|coexistence/i);
+	});
+
+	test('C3-44: a production --engine-only plan writes DEDALO_MEDIA_ACCESS_MODE=publication, as the host route does', () => {
+		const raw = { route: 'production', instance: 'museo', entity: 'museo', root_password: 'x' };
+		for (const engineOnly of [true, false]) {
+			const plan = buildInstallPlan({ ...raw, engine_only: engineOnly }, { salt: 's' });
+			const entries = plan.env.flatMap((section) => section.entries);
+			expect(entries.find((item) => item.key === 'DEDALO_MEDIA_ACCESS_MODE')?.value).toBe(
+				'publication',
+			);
+		}
+		// An explicit choice still wins; the developer route still writes nothing.
+		const chosen = normalizeInstallAnswers({ ...raw, media_access_mode: 'private' }).answers;
+		expect(chosen.media_access_mode).toBe('private');
+		expect(normalizeInstallAnswers({ route: 'developer' }).answers.media_access_mode).toBe('');
+	});
+
+	describe("C3-21: the identity defaults are the host's", () => {
+		test('TZ=Etc/UTC, LANG=en_US.UTF-8 → Etc/UTC / en-US (never Europe/Madrid / es-ES)', () => {
+			expect(hostLocaleDefaults({ TZ: 'Etc/UTC', LANG: 'en_US.UTF-8' }, 'Europe/Madrid')).toEqual({
+				timezone: 'Etc/UTC',
+				locale: 'en-US',
+			});
+		});
+
+		test('LC_ALL wins over LANG; C/POSIX/unset fall back to en-US; a bad zone to UTC', () => {
+			expect(hostLocaleDefaults({ LC_ALL: 'de_DE@euro', LANG: 'en_US.UTF-8' }, 'UTC').locale).toBe(
+				'de-DE',
+			);
+			expect(hostLocaleDefaults({ LC_ALL: 'C', LANG: 'fr_FR.UTF-8' }, 'UTC').locale).toBe(
+				FALLBACK_LOCALE,
+			);
+			expect(hostLocaleDefaults({}, 'Not/AZone').timezone).toBe(FALLBACK_TIMEZONE);
+			expect(hostLocaleDefaults({ TZ: ':America/Lima' }, 'UTC').timezone).toBe('America/Lima');
+			expect(localeFromPosix('POSIX')).toBeNull();
+			expect(localeFromPosix('pt_BR.utf8')).toBe('pt-BR');
+		});
+
+		test("the plan defaults to THIS process's host values, and a given answer wins", () => {
+			const host = hostLocaleDefaults();
+			const plain = normalizeInstallAnswers({ route: 'developer' }).answers;
+			expect({ timezone: plain.timezone, locale: plain.locale }).toEqual(host);
+			const given = normalizeInstallAnswers({
+				route: 'developer',
+				timezone: 'Asia/Tokyo',
+				locale: 'ja-JP',
+			}).answers;
+			expect({ timezone: given.timezone, locale: given.locale }).toEqual({
+				timezone: 'Asia/Tokyo',
+				locale: 'ja-JP',
+			});
+		});
+
+		test('a run under TZ=Etc/UTC LANG=en_US.UTF-8 normalizes to Etc/UTC / en-US', () => {
+			const run = Bun.spawnSync(
+				[
+					process.execPath,
+					'-e',
+					"const { normalizeInstallAnswers } = await import('./src/core/install/install_plan.ts'); const a = normalizeInstallAnswers({ route: 'developer' }).answers; console.log(a.timezone + ' ' + a.locale);",
+				],
+				{
+					cwd: join(import.meta.dir, '../..'),
+					env: { PATH: process.env.PATH ?? '', TZ: 'Etc/UTC', LANG: 'en_US.UTF-8', LC_ALL: '' },
+				},
+			);
+			expect(new TextDecoder().decode(run.stdout).trim().split('\n').at(-1)).toBe('Etc/UTC en-US');
+		});
+	});
+});
+
+// ── campaign 3b N4 / C3-55: the engine checks the backup dir the .env records ──
+
+/**
+ * THE DIRECTORY THE ENGINE CHECKS IS THE DIRECTORY THE .env RECORDS
+ * (campaign 3b N4 / C3-55; src/core/install/install_plan.ts cliBootEnv +
+ * backupDbDir, src/core/install/directories.ts, steps.ts check_directories).
+ *
+ * config.ts freezes at import, so a FRESH `--engine-only --backup-dir X` run
+ * (manual_install.md host_engine) used to boot with no DEDALO_BACKUP_DIR: its
+ * check_directories checked and CREATED `<private>/backups/db`, while
+ * persist_config wrote `DEDALO_BACKUP_DIR=X/db` — and the `--resume`, booted
+ * from that .env, found `X/db` missing and stopped ("recorded done but its
+ * outcome is missing … something changed it outside the installer").
+ *
+ * OUTCOME, in a child booted exactly as scripts/install.ts boots
+ * (seedProcessEnv(cliBootEnv(plan)) before the first config import), against a
+ * scratch private dir and a MARKED scratch media root: the create pass makes
+ * `X/db` — the .env's DEDALO_BACKUP_DIR byte for byte — and leaves no
+ * `<private>/backups/db`; the preflight's recorded paths (installDirectoryPaths,
+ * what --abort removes) name the same. The production defaults derive the
+ * backup dir even without the flag, so the defaulted case is gated too. Plus
+ * the verify's sentence names the directory instead of a generic line.
+ */
+
+const REPO = resolve(import.meta.dir, '../..');
+const dirsScratch = mkdtempSync(join(tmpdir(), 'dedalo_engine_only_dirs_'));
+afterAll(() => rmSync(dirsScratch, { recursive: true, force: true }));
+
+/** The child: boot as scripts/install.ts does, then the create pass; prints {paths, dirs}. */
+const CHILD = `
+const R = ${JSON.stringify(REPO)};
+const answers = JSON.parse(process.env.ZZ_ANSWERS);
+const { buildInstallPlan, cliBootEnv } = await import(R + '/src/core/install/install_plan.ts');
+const { seedProcessEnv } = await import(R + '/src/config/env.ts');
+seedProcessEnv(cliBootEnv(buildInstallPlan(answers, { salt: 's' })));
+const d = await import(R + '/src/core/install/directories.ts');
+const report = d.checkDirectories({ create: true, mediaRoot: answers.media_path });
+console.log(JSON.stringify({ paths: d.installDirectoryPaths(), dirs: report.dirs }));
+`;
+
+interface ChildReport {
+	paths: string[];
+	dirs: { label: string; path: string; exists: boolean; writable: boolean }[];
+}
+
+function runChild(answers: Record<string, unknown>, privateDir: string): ChildReport {
+	const env = Object.fromEntries(
+		Object.entries(Bun.env).filter(
+			([key, value]) =>
+				value !== undefined &&
+				!['DEDALO_BACKUP_DIR', 'MEDIA_PATH', 'ENTITY'].includes(key) &&
+				!key.startsWith('DEDALO_INSTALL_'),
+		),
+	) as Record<string, string>;
+	const proc = Bun.spawnSync([process.execPath, '-e', CHILD], {
+		cwd: REPO,
+		env: { ...env, DEDALO_INSTALL_PRIVATE_DIR: privateDir, ZZ_ANSWERS: JSON.stringify(answers) },
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	const out = proc.stdout.toString().trim().split('\n').pop() ?? '';
+	expect(proc.exitCode, proc.stderr.toString()).toBe(0);
+	return JSON.parse(out) as ChildReport;
+}
+
+/** The .env's DEDALO_BACKUP_DIR as the plan writes it. */
+function envBackupDir(answers: Record<string, unknown>): string {
+	const plan = buildInstallPlan(answers, { salt: 's' });
+	const entry = plan.env
+		.flatMap((section) => section.entries)
+		.find((e) => e.key === 'DEDALO_BACKUP_DIR');
+	return entry?.value ?? '';
+}
+
+function engineOnly(
+	name: string,
+	extra: Record<string, unknown>,
+): {
+	answers: Record<string, unknown>;
+	privateDir: string;
+} {
+	const base = join(dirsScratch, name);
+	return {
+		privateDir: join(base, 'private'),
+		answers: {
+			route: 'production',
+			instance: 'zzbackup',
+			entity: 'zzbackup',
+			engine_only: true,
+			media_path: markMediaRoot(join(base, 'media')),
+			...extra,
+		},
+	};
+}
+
+describe('--engine-only: the backup dir the engine checks is the one the .env records (N4)', () => {
+	test('--backup-dir X: the create pass makes X/db, never <private>/backups/db', () => {
+		const backup = join(dirsScratch, 'given', 'backups');
+		const { answers, privateDir } = engineOnly('given', { backup_dir: backup });
+		const recorded = envBackupDir(answers);
+		expect(recorded).toBe(join(backup, 'db'));
+		const report = runChild(answers, privateDir);
+		const row = report.dirs.find((dir) => dir.label === 'Backups');
+		expect(row).toEqual({ label: 'Backups', path: recorded, exists: true, writable: true });
+		expect(existsSync(recorded)).toBe(true);
+		expect(existsSync(join(privateDir, 'backups', 'db'))).toBe(false);
+		// what the preflight records as missing (and --abort removes) is the same dir
+		expect(report.paths).toContain(recorded);
+		expect(report.paths).not.toContain(join(privateDir, 'backups', 'db'));
+	});
+
+	test('the production default backup dir (no flag) is the one checked too', () => {
+		const dir = join(dirsScratch, 'defaulted', 'home');
+		const { answers, privateDir } = engineOnly('defaulted', { install_dir: dir });
+		const recorded = envBackupDir(answers);
+		expect(recorded).toBe(join(dir, 'backups', 'db'));
+		const report = runChild(answers, privateDir);
+		expect(report.dirs.find((row) => row.label === 'Backups')?.path).toBe(recorded);
+		expect(existsSync(join(privateDir, 'backups', 'db'))).toBe(false);
+	});
+
+	test("check_directories' verify names the directory that needs attention", () => {
+		expect(
+			directoriesNeedingAttention([
+				{ label: 'Private config', path: '/p', exists: true, writable: true },
+				{ label: 'Backups', path: '/b/db', exists: false, writable: false },
+				{ label: 'Media', path: '/m', exists: true, writable: false },
+			]),
+		).toBe('Backups /b/db (missing), Media /m (not writable)');
 	});
 });

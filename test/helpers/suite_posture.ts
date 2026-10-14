@@ -17,3 +17,34 @@
  * 2026-09-26 on a .env without the key. The value is only string-compared.
  */
 export const SUITE_MEDIA_EXPORT_BASE = 'http://localhost:8080/dedalo/media';
+
+/**
+ * THE SUITE'S LANGUAGES (install campaign 3, C3-40). The declared data-language
+ * set (`INSTALLED_DATA_LANGS`, src/config/config.ts) is derived from these keys,
+ * and the save chokepoint refuses a write in any other language. Inherited from
+ * a developer's ../private/.env — a fresh install declares two — about 25 gates
+ * that write in the suite's own languages went red as
+ * "lang 'lg-…' is not one this installation declares". Pinned here to the
+ * hosted CI tier's defaults (scripts/ci/hosted_env.sh, held equal by
+ * media_export_base.test.ts), so every machine measures the same language set.
+ * A value the SHELL exports still wins (`suiteLangPins`), as in CI.
+ */
+export const SUITE_LANGS: Readonly<Record<string, string>> = Object.freeze({
+	DEDALO_APPLICATION_LANGS:
+		'{"lg-spa":"Castellano","lg-cat":"Català","lg-eng":"English","lg-fra":"Français","lg-por":"Português","lg-deu":"German","lg-ell":"Ελληνικά","lg-ita":"Italiano"}',
+	DEDALO_APPLICATION_LANGS_DEFAULT: 'lg-spa',
+	DEDALO_DATA_LANG_DEFAULT: 'lg-spa',
+	PROJECTS_DEFAULT_LANGS:
+		'["lg-spa","lg-cat","lg-vlca","lg-eus","lg-eng","lg-por","lg-fra","lg-ara","lg-ell","lg-deu","lg-ita","lg-nep"]',
+});
+
+/**
+ * The SUITE_LANGS entries to write into the process environment: every key the
+ * shell did not set (`shellSets` — the preload passes the engine's own
+ * process-env reader, which also knows each key's alternative spelling). The
+ * process environment outranks ../private/.env, so the developer's file never
+ * reaches the suite.
+ */
+export function suiteLangPins(shellSets: (key: string) => boolean): [string, string][] {
+	return Object.entries(SUITE_LANGS).filter(([key]) => !shellSets(key));
+}

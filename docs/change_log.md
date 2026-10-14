@@ -1681,6 +1681,111 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Installer: one interruption block on Ctrl-C, a resume that re-checks and tells everything, the salt on a terminal resume, and clearer screens.**
+
+    - **Ctrl-C during a step that runs a child** (the engine steps, a build) ends as one *install interrupted* block with exit code 130 and the run recorded *interrupted* — never also an *install failed* block, or exit 1.
+    - **A `--resume` that completes the install** shows the generated `DEDALO_SALT_STRING` when it runs on a terminal (the docs always said so; it printed only the command that reads it), and the closing block reminds you to keep it with your backups. Its closing *To do on this host* lists the notes of every step, the ones done in an earlier run included.
+    - **A `--resume` after earlier steps ran again** (after an `--abort` of a served instance) probes the public address again instead of trusting the old result; every resumed step says whether it was *verified again* or had *nothing to re-check*, and a resume of a complete install says `install already complete — every done step that has a check was verified again`.
+    - **A refusal is worded `refused:`**, never *install failed* — for example `--abort` of a sealed install. An `--abort` that keeps a served instance now closes its run record.
+    - **The ontology's RETIRED-property notices** (for ontology authors) no longer reach the operator's terminal during an install.
+    - **Screens:** the Install type starts on Production, the recommended route; an unsupported system ends with *This system cannot run this route — quit, or go back to choose another route*; a failed check is marked ✗ on the step rail; the System check's warnings stay in view under the next screen, drawn with `!` and `✗`; `back` re-asks the question you left and runs the check again; a re-check before the Review names the answer that changed it; yes/no switches need Enter; the Review's `w` says it writes the answers and quits. In plain mode the bootstrap's dependency install draws no progress bar (`--no-progress`).
+
+- **"Production and by-hand installs: one backup directory from the first run, another web server refused, and an abort that tells a started instance from one that never started."**
+
+    - **`--engine-only --backup-dir`** (the by-hand host procedure) now checks and creates the backup directory it writes to `.env` (`DEDALO_BACKUP_DIR=<backup dir>/db`) from the first run. It used to create `<private>/backups/db` instead, and a `--resume` after an interruption then stopped at `check_directories`. When that check fails, it now names the directory.
+    - **Another web server is refused before any change.** The Production System check refuses a run whose ports (80 and 443, or yours) another program holds, such as another instance's nginx when Apache is chosen, and a run that would install a second web server beside the installed one. The Review's *To do* list names the program before you type `yes`.
+    - **An abort after an interruption inside `host_first_boot`, before the unit was started,** now removes the instance completely. It used to count the instance as served and keep its user, database and code for removal by hand.
+    - **An abort interrupted during `host_packages`** names only the packages and repositories the host really has as kept, never a package the run did not get to install.
+    - **A failed or interrupted `--engine-only` run** says to run the same command again with `--resume` or `--abort`, instead of printing a `bun run scripts/install.ts` command that would run as root with other answers.
+    - **A resume says what it did with each step already done:** checked again (`verified again: …`) or nothing to check, instead of "skipped".
+    - **The Review** marks a directory that already exists on its own `mkdir` line (*exists: not created*).
+    - **Install by hand ([manual_install.md](./install/manual_install.md)):** the host check reads `/etc/os-release` in a subshell, so it no longer overwrites the page's `$NAME` (the public address) with the distribution's name. The host record's `nginx_map_owner` is rendered from what `host_web_site` did. The site file's header names both the installer and the page. Both chain-trust failures that `openssl verify` prints are named. Its *One web server* check now says what the installer refuses: installing one web server beside the other, and any other program on the ports; a host with both already installed goes ahead.
+    - **[Removing an instance](./install/multi_instance.md#removing-an-instance):** take the backup before any `--abort` (a direct `pg_dump` is given for after one), clear the failed units, and remove the instance's web logs and timer stamps. The steps an abort already did are marked.
+    - **[Production](./install/production.md):** the `host_engine` Verify enters the `0750` install folder as the service user, so it no longer fails with *Permission denied*.
+
+- **Docker and trial installs: the local image build reports the release version, nginx always publishes its ports, and a resume re-checks the site.**
+
+    - **A local image build at install time** now goes through `deploy/dedalo-image-build.sh`, the builder the image updater already used: a clean snapshot of the checkout's last commit, so uncommitted and untracked files never reach the image, `/health` reports the release version (never `X.Y.Z.dev`), and the image carries its own version and commit labels instead of the Bun base image's. The Review shows that command.
+    - **nginx is recreated on every start of the stack** and must publish every port it declares. After a start that failed because another program held port 80 or 443, a `--resume` used to reuse a container that came up with no port and report the install complete; it now recreates it, or names the port it cannot publish.
+    - **A `--resume` probes `/health` again** (on the engine's socket and through the published address), even when an earlier run recorded the probe done, so a stack started again is never reported complete without a check.
+    - **An institution certificate whose chain this machine does not trust** is listed on the Review under *TO DO*, before you type `yes`, instead of being refused only after every answer was given.
+    - **Removing an install:** a served `--abort` names the images it keeps and points to the route's own removal section — the new [Removing the stack](./install/docker.md#removing-the-stack) on the Docker route — and both removal sections now say how to reclaim the images, the build cache and the installer's Bun caches. The build-time estimate is one figure everywhere (about 2 to 6 minutes on 2 CPUs).
+
+- **A Docker installation that builds its image here now updates from a clean snapshot of the release, like the install**
+
+    On an installation whose image is built on the host (`DEDALO_IMAGE_MODE=build`), `deploy/dedalo-image-update.sh` used to build the new image straight from the checkout. Every untracked file in it went into the image, and the engine then reported its version as `X.Y.Z.dev` even though the image was tagged `X.Y.Z`. An update now builds the way the installer does, with the same builder (`deploy/dedalo-image-build.sh`). It takes a snapshot of the release commit with `git archive`, builds the image from that snapshot, then deletes the snapshot. The image holds only committed files and reports the release version and its commit date. Changes to tracked files are still refused before the update starts. A tree without git is now refused with a sentence that says why, instead of failing halfway through. If you build an image by hand, use `./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:<version>`. See [a local build](./install/docker.md#a-local-build).
+
+- **An interrupted or stopped install now resumes, an abort says exactly what it undid, and an instance that never served can be removed completely.**
+
+    - **A resume restarts what stopped.** When PostgreSQL, the Docker stack or the instance's unit stopped after the installer started it (a reboot, `docker compose stop`, an abort of a live trial), `--resume` starts it again. Before, it refused with "changed outside the installer; --abort and start again", even though nothing had been changed.
+    - **"Start again" now says what `--abort` costs.** Every message that suggests aborting says that `--abort` deletes the database the install created, unless the instance has already served.
+    - **An instance that never served is removed completely.** Until `host_first_boot` starts the instance's unit, no request has reached it, and `--abort` now takes it apart whole: its engine install, its database, its user, its folders and its record. The engine undoes its own install only after two checks pass: the installer states that the instance never started, and the database still holds exactly the rows it had when the install sealed it. Once the instance has served, `--abort` still undoes only the host steps after the engine. The failure hint and the closing sentence say which case applies, and *Removing an instance* (several instances page) lists what to remove by hand.
+    - **An abort cleans up after itself.** It removes the empty media tree the install created. It keeps the service user while that user still owns a file under the instance's paths, because a removed uid is given to the next account created on the host. On the Developer route it removes the state file and the session store the install created.
+    - **The closing sentence of an abort is built from what it undid.** "Nothing was undone" is no longer followed by "removed: its site, units, user…". On Docker and the trial, the abort uses the stack's own words and lists the images it keeps; the engine's own "the database itself is kept" no longer appears before the host removes the database volume.
+    - **The generated salt is shown once by the run that completes the install**, including a `--resume` that finishes an engine run that went on alone after its parent stopped. When no terminal can show it, the run prints the command that reads it back. It is never written to a log.
+    - **The engine child stops with the installer.** It no longer goes on alone when the installer is killed, and a `--resume` refuses while a child of an earlier run is still working. On Docker, an interrupted run removes the engine's container.
+    - **`--resume` asks only for the passwords a remaining step needs.** An engine run that already set the root password does not ask for it again.
+    - **A refused System check leaves nothing behind.** An unsupported system or an instance folder that already exists stops the run before any record is written, and no resume or abort is offered. `--plan --route production` runs the same checks and reports them in `errors`.
+    - **Quieter, truer installs.** The System check no longer creates `../private` (`ts_state.json`, the session store). The engine checks the backup directory the instance's units write to, not a second one under `private/`. Tools that never call the server no longer print "no server module". The Docker image creates the media root with mode `0750`, so the `mode_differs` warning is gone. An `--engine-only` run ends with the systemd pointer, and an interactive install records `"execute": true`.
+
+- **The Docker and Trial installs now start a working nginx, publish only what they serve, and say why a check failed.**
+
+    - **Docker route:** the generated nginx site includes the media rule files where the engine writes them (`/srv/dedalo/media/dedalo_media_protection*.nginx.conf`). Before, it named files that did not exist in the container, and nginx restarted forever.
+    - **`stack_up` waits for nginx to stay up.** It checks that nginx is running, is not restarting, and accepts its configuration. If not, the step fails and quotes nginx's `[emerg]` line, instead of reporting "the stack is up".
+    - **`--abort` of a completed install keeps PostgreSQL running.** It removes only the `dedalo`, `nginx` and `backup` containers (and `certbot`), so `--resume` can start them again. The abort also names the images it keeps.
+    - **An untrusted certificate is refused early.** On the Docker route, an institution certificate whose chain this host does not trust is refused at the System check, which names its issuer and how to install the CA. A failed `stack_health` probe says why: for example, `the certificate chain is not trusted by this host`.
+    - **The trial publishes plain HTTP only:** no port 443 and no certificate volumes. This needs Docker Compose 2.24.4 or newer.
+    - **A local image build shows each build step as it runs.**
+    - **The backup container stops cleanly** on `docker compose stop` instead of being killed (exit 137).
+    - **The Docker and Trial pages** now cover installing Docker per distribution (Podman is not supported), the `docker` group, the bootstrap tools (`curl`, `unzip`, `git`), the firewall bypass of published ports, and how to read `DEDALO_SALT_STRING` from the volume. The `dc` helper is now `ddc`.
+
+- **The Production install now completes on RHEL 10 with SELinux, says before the install what you must do yourself, and keeps an unknown address away from every instance.**
+
+    - **RHEL 10 with SELinux enforcing:** the socket's file context is written in the spelling the host's policy accepts (`/run/dedalo-<i>(/.*)?`). Before, `semanage` refused the `/var/run` spelling and the step could never pass. `--abort` now removes only the contexts the host really defines.
+    - **The firewall is checked, and the fix printed.** The System check, the Review and the closing *To do on this host* list say whether firewalld's default zone or ufw lets the instance's ports in. When they do not, they print the command that opens them (for example `firewall-cmd --permanent --add-service=http --add-service=https && firewall-cmd --reload`). The installer still never changes the firewall.
+    - **The Review starts with a *To do* list** of what the installer checks but never does: the firewall, the Apache modules (`a2enmod … && systemctl restart apache2`, now also when the installer itself installs Apache on Debian or Ubuntu), and an institution certificate that expires within 30 days or that this server does not trust. Directories that already exist are marked *exists, used as is*.
+    - **An institution certificate this server does not trust is refused at the System check**, naming its issuer and how to add the authority to the system trust store. Before, the install failed at its last step after 90 seconds with "got no answer". A failed public probe now says why (for example, `the certificate chain is not trusted by this host`).
+    - **An address no site declares no longer reaches an instance.** On nginx, the first instance on ports 80 and 443 writes `dedalo-00-default.conf`, a site that serves nothing and comes first; a `default_server` of yours stays the default, and the last instance's `--abort` removes it. On Apache, each instance's site answers any other name with `421 Misdirected Request`.
+    - **Each instance's database is its role's alone:** `CONNECT` and `TEMPORARY` are revoked from `PUBLIC`, so another instance's role can no longer connect to it.
+    - **Installing from a `git` clone works under `sudo`.** `install.sh` installs its dependencies as the clone's owner (root writes nothing in your clone, and nothing in `/root/.bun`), and `host_runtime` archives the checkout without changing any `git` setting. `--route production` on an unsupported system is refused before anything is downloaded.
+    - **A second instance on the same Bun pin** no longer reinstalls the runtime the first one is running. The release tree stays `0750` after extraction.
+    - **Clearer refusals:** a clash with another instance is said once, naming every file that records it, instead of once per file. An unsupported system shows one sentence, the same as the troubleshooting page. On ARM servers the processor row no longer warns. On the Developer route, a `psql` older than the database server is flagged.
+    - **The Production, manual-install, several-instances and web-server pages** cover the certificate trust requirement, the firewall commands, installing from a checkout, the explicit `--media-access-mode` for a hand install, `sudo` on the Verify commands, the files-mode certificate checks, and `ocrmypdf` being unavailable for `aarch64` in EPEL 10.
+
+- **A tch install no longer asks for crm, a local image build reports its real version, and a production instance keeps its backups in one place.**
+
+    - **No false "install it too" warnings after the ontology import.** References from an ontology's external-ontology mapping (`tch` maps itself to CIDOC CRM, `crm`) are no longer reported: only the RDF import reads that mapping. References into a thesaurus that the same install creates (for example `dc`), and references from a branch that no tree reaches, are not reported either. A warning that remains now says that the nodes using the missing ontology do not work until it is installed, and to add it only if you use them.
+    - **A local image build reports the version it is tagged with.** The Docker and Trial routes build from the checkout's last commit (`git archive`), as the production route installs it. `/health` and the page footer show `7.0.0` and the commit date, not `7.0.0.dev`. Changes you have not committed are not in the image.
+    - **One backup directory per production instance.** The installer writes `DEDALO_BACKUP_DIR=<backup dir>/db` to the instance's `.env`, the directory the backup units write. The server's own backups and its directory check use it too, instead of a second `<dir>/private/backups/db`. Install by hand: pass `--backup-dir "$BACKUP_DIR"` to the engine step.
+    - **Install by hand, Apache:** the name guard now escapes the dots of the address, as the installer does (`@@SERVER_NAME_RE@@`).
+    - **Docs:** the socket health checks in Upgrading and Migrating from v6 use `sudo`, because the socket directory is the service group's. The Docker page says that `SERVER_TCP_PORT` listens on the container's loopback unless `SERVER_TCP_HOST` is set.
+    - **Tests:** the suite declares its own languages (the same as CI) instead of the ones in your `.env`, so a fresh install that declares two languages no longer turns about 25 language gates red.
+
+- **The installer's screens now say what each route does, take a typed `yes` everywhere, and write `--write-answers` at the Review.**
+
+    - **The trial asks no HTTPS port**, and its HTTP port is described as plain HTTP. Its acknowledgement now says what the documentation says: for an evaluation only, never real records.
+    - **An acknowledgement takes a typed `yes` on the full screen too**, as in plain mode; Space still ticks it. The screen says how, in its own words.
+    - **A pre-filled answer is replaced by the first key you type**, so the entity name no longer reads `museoMuseo de prueba`. Enter keeps the default.
+    - **`--write-answers` works on an interactive run.** The file is written at every Review whose plan is valid, so quitting there keeps it. A session that ends before a valid Review says the file was not written.
+    - **The Review speaks for the route.** Its "same as" line and the next step after `write <path>` give the route's own command (`sudo sh install.sh` on production, `sh install.sh` on Docker and Trial). "Install now" says whether the image is pulled and verified, pulled from your registry, or built here. The Docker and Trial Review no longer shows the production text about packages. The engine is handed only the passwords the plan uses.
+    - **The Ontologies screen is in English and shows each heading once.** Group names come from the installer's language, every typology is one group, and the typology groupers (`hierarchytype`, `hierarchymtype`) are no longer offered.
+    - **The System check says each row's state once** (`warn: Processor unknown`, not `warn: warn`). An unsupported operating system offers only quit, or back to another route, never "Retry". A check that passes moves on with its rows headed by its name.
+    - **One step count.** Plain mode's `Step n of N` and the full screen's rail count the same steps. A created production database asks only its name: the role is the service user, with no host, port or password.
+    - **The thesaurus advice of an interactive run** points to the Thesauri step and to Maintenance › Install hierarchies, never to command-line flags. The trial's To-do gives this machine's address, not `localhost`.
+    - **Smaller fixes:** the header of an interrupted install no longer says "nothing installed yet"; the route cursor starts on the `--route` default; an empty password field breaks no rule until you type; plain mode's bootstrap output is uncoloured; the footer no longer shows `null` for a development build.
+    - **The installer reference, the troubleshooting page and the installation hub** describe the real screen order, the System check rows per route, the firewall and own-CA cases, `restart` after `a2enmod`, the salt on `--resume`, and what `--abort` keeps once an instance has served.
+
+- **The installer's System check no longer fails on a host without PostgreSQL**
+
+    On a freshly installed server (no PostgreSQL client yet), the **System check** screen of `sh install.sh` failed with `the system probe failed unexpectedly (Error)` and still printed **System ready.** beside it. Now:
+
+    - **Production** shows the PostgreSQL client as `ok` when it is absent — the installer installs PostgreSQL 18 itself — and warns when a client of another major is present.
+    - **Docker** and **Trial** no longer check a host PostgreSQL at all; they show the **Docker**, **Compose** and **Disk** rows instead, with the same sentences the install's own check uses.
+    - **Developer** shows a failed row with the fix: this route installs into an existing PostgreSQL and needs its client.
+    - **System ready.** appears only when nothing failed. A check that could not run says so, with the error's class, its first line and the file holding the full text, to report.
+
+    See [The System check screen](./install/troubleshooting.md#the-system-check-screen).
+
 - **The installer no longer leaves Bun's cache in an existing hosting account's home.**
 
     On the Production route, the commands the installer runs with Bun as the service user (the dependency install, the engine steps, the migration check) now set `HOME` to the install folder on their command line (`runuser … -- /usr/bin/env HOME=<install folder> …`). `runuser` resets `HOME` to the account's own home, so with an existing hosting account whose home is not the install folder, Bun's caches were written there. The Review screen shows the new form, and [Install by hand](./install/manual_install.md) uses the same commands.
@@ -2325,6 +2430,18 @@ Merged since the last release; these ship with the next one.
     [Fetching from other sites](./development/tools/server_contract.md#fetching-from-other-sites-srccoreharvestharvestts).
 
 #### Fixed
+
+- **The developer install and its test suite work over a PostgreSQL socket, never prompt for a password, and keep the dev server on this machine.**
+
+    - **The test suite connects the way `.env` says.** `bun test` and `bun run test:db:setup` use `DB_SOCKET` when it is set, as the engine does. Before, they used `DB_HOST` only: on a socket install the suite reported that an existing test database did not exist, and `test:db:setup` failed with `password authentication failed`.
+    - **No pg client prompts.** Every `psql`, `pg_dump` and `pg_restore` that the engine or the suite starts runs with `-w` and a connection timeout. A missing password now fails at once with `no password supplied`, instead of waiting at `Password for user …:`.
+    - **`test:db:setup` refuses a server without pgvector** before it creates anything, and names the package to install. If a vector build fails after that, it removes its own database, so the next run starts clean without `--force`.
+    - **The development listener binds `127.0.0.1`.** A new key, `SERVER_TCP_HOST`, sets another address on purpose (for example `0.0.0.0`). Before, `SERVER_TCP_PORT` listened on every address, with full error details on.
+    - **The time zone and locale defaults are this machine's** (`TZ`, `LC_ALL`, `LANG`), falling back to `UTC` and `en-US`. Before, they were `Europe/Madrid` and `es-ES` everywhere.
+    - **A production install writes `DEDALO_MEDIA_ACCESS_MODE=publication`**, through the host steps or `--engine-only`, so the first boot no longer reports an unconfigured media mode.
+    - **Quieter output.** A retired ontology property is reported once per property, naming the first node and the command that lists every node, instead of once per node. A development server no longer prints the nginx reload notice, and `.env` no longer carries a comment about the retired engine.
+    - **A test run leaves nothing in the temp directory.** The session store's scratch directory and the scratch directories of two test files are removed.
+    - **The developer quickstart** now covers Linux: creating your PostgreSQL role, the socket directory per system, a RHEL, Rocky and Alma column, `git`, `curl` and `unzip`, pgvector, MariaDB and an AVIF-capable ImageMagick for the suite, which parity gates are expected red, and the GeoIP download at first boot.
 
 - **A save whose value is not shaped like the field's data is now refused instead of stored.**
 

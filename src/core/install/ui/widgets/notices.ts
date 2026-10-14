@@ -47,11 +47,21 @@ function saidRole(line: string): Role {
 	return /^Check passed/.test(line) ? 'ok' : 'muted';
 }
 
+/**
+ * A said line's words as the full screen draws them: the plain mode's `error:`
+ * / `warn:` level words become the screen's ✗ / ! marks (campaign 3b N36 —
+ * troubleshooting.md: "the full screen draws the warning with ! and the failure
+ * with ✗"; the System check's rows said `error:` like plain).
+ */
+export function markedText(line: string): string {
+	return line.replace(/^(\s*)error: /, '$1✗ ').replace(/^(\s*)warn: /, '$1! ');
+}
+
 /** The session's said lines (a running check gets the spinner mark). */
 export function saidLines(said: readonly string[], width: number): Line[] {
 	return said.flatMap((line) => {
 		const role = saidRole(line);
-		return wrapped(`${role === 'accent' ? '◐ ' : ''}${line}`, width, role);
+		return wrapped(`${role === 'accent' ? '◐ ' : ''}${markedText(line)}`, width, role);
 	});
 }
 

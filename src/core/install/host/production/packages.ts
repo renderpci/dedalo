@@ -261,9 +261,37 @@ export const host_packages: HostStepDefinition = {
 		for (const name of addedRepos(ctx)) remember(ctx.created.repos, name);
 	},
 	undo: async (ctx) => {
-		const kept = [...ctx.created.repos, ...ctx.created.packages];
+		const kept = await keptOnHost(ctx);
 		return kept.length === 0
 			? 'no package was added'
 			: `kept (shared host state, never removed): ${kept.join(', ')}`;
 	},
 };
+
+/** The apt sources file the PGDG setup script writes (either spelling, by its version). */
+const PGDG_APT_SOURCES = [
+	'/etc/apt/sources.list.d/pgdg.list',
+	'/etc/apt/sources.list.d/pgdg.sources',
+] as const;
+
+/**
+ * What the abort KEEPS, MEASURED now (campaign 3b N17): the intent recorded
+ * the PLANNED set before apt ran, so an abort of a run interrupted during
+ * `apt-get update` said "kept: apache2" of a package never installed. Only the
+ * planned packages the host has now, and the planned repositories whose marker
+ * (their release package, or PGDG's apt sources file) is there now.
+ */
+async function keptOnHost(ctx: HostCtx): Promise<string[]> {
+	if (ctx.created.repos.length === 0 && ctx.created.packages.length === 0) return [];
+	const installed = await packageFacts(ctx.runner, ctx.row);
+	const measured: HostPlanCtx = { ...ctx, facts: { ...ctx.facts, packages: installed } };
+	const repoThere = (name: string): boolean => {
+		const spec = REPOS.find((repo) => repo.name === name);
+		if (spec === undefined || spec.present(measured)) return true;
+		return name.startsWith('pgdg (apt') && PGDG_APT_SOURCES.some((path) => ctx.fs.exists(path));
+	};
+	return [
+		...ctx.created.repos.filter(repoThere),
+		...ctx.created.packages.filter((name) => installed.includes(name)),
+	];
+}

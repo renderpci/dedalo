@@ -229,6 +229,29 @@ reverse proxy that owns TLS, the static files and the media.
 
 \`\`\`bash
 SERVER_TCP_PORT=3000
+\`\`\`
+
+The listener binds to \`SERVER_TCP_HOST\`, which defaults to this machine only (\`127.0.0.1\`).`,
+	},
+	SERVER_TCP_HOST: {
+		type: 'string',
+		scope: 'operator',
+		default: '127.0.0.1',
+		heading: 'Defining the development TCP address',
+		typeLabel: 'string',
+		typeSuffix: '(optional; development only)',
+		doc: `The address the development TCP listener (\`SERVER_TCP_PORT\`) binds to. Default
+\`127.0.0.1\`: only a browser on the same machine reaches it. A development install also
+shows full error details to the browser (\`DEDALO_DEBUG_API_ERRORS\`), and this listener
+has no TLS and no web server in front of it, so it is not opened to the network unless you
+say so.
+
+Set \`0.0.0.0\` (every IPv4 address) or one address of this machine only when another
+machine must reach the development server, and only on a network you trust. Ignored
+without \`SERVER_TCP_PORT\`.
+
+\`\`\`bash
+SERVER_TCP_HOST=0.0.0.0
 \`\`\``,
 	},
 	SERVER_UNIX_SOCKET: {

@@ -55,6 +55,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { CORE_ONTOLOGY_TLDS, isCoreOntologyTld } from '../ontology/core_tlds.ts';
+import { pickLangValue } from '../ontology/manifest_lang_pick.ts';
 import {
 	normalizeOntologyDependencies,
 	ONTOLOGY_DEPENDENCY_MAINS,
@@ -72,6 +73,26 @@ export const DEFAULT_DOMAIN_ONTOLOGIES: readonly string[] = Object.freeze(['oh']
  * vendored ontology.json `active_ontologies` entry's (see header).
  */
 export const VENDORED_DOMAIN_TLDS: readonly string[] = Object.freeze(['oh']);
+
+/**
+ * The installer's own language (its screens are English): the language a
+ * catalog's multilingual names are picked in for the Ontologies screen and
+ * --list-ontologies (campaign 3 C3-45 — never the exporting installation's
+ * Spanish `name`).
+ */
+export const INSTALLER_LANG = 'lg-eng';
+
+/**
+ * The TLDs a catalog lists that are NOT a collection's domain: the grouper
+ * namespaces of the thesaurus typologies (ontology_tipos.ts
+ * HIERARCHY_TYPE_TLD / HIERARCHY_MODEL_TYPE_TLD — restated here because that
+ * module imports config; gated equal by install_ontology_choice). Never offered
+ * on the Ontologies screen (C3-45); still accepted by name from the flags.
+ */
+export const NOT_OFFERED_ONTOLOGY_TLDS: readonly string[] = Object.freeze([
+	'hierarchytype',
+	'hierarchymtype',
+]);
 
 /** The label key of the explanatory note the front ends show under a TLD. */
 export const ONTOLOGY_NOTE_LABELS: Readonly<Record<string, string>> = Object.freeze({
@@ -926,13 +947,23 @@ function closureMismatch(domain: readonly string[], order: readonly string[]): s
 
 // ── the one view ─────────────────────────────────────────────────────────────
 
+/** An entry's display name in `lang`: picked from its `name_data`, else its export-time `name`. */
+function nameIn(entry: OntologyCatalogEntry, lang: string): string {
+	const items = Array.isArray(entry.name_data)
+		? (entry.name_data as { lang?: string; value?: unknown }[])
+		: [];
+	const picked = pickLangValue(items, lang);
+	return picked !== '' ? picked : entry.name;
+}
+
 function viewEntry(
 	entry: OntologyCatalogEntry,
 	catalog: OntologyCatalog,
+	lang: string,
 ): OntologyCatalogViewEntry {
 	return {
 		tld: entry.tld,
-		name: entry.name,
+		name: nameIn(entry, lang),
 		typology_id: entry.typology_id,
 		typology_name: entry.typology_name,
 		origin: entry.origin,
@@ -953,15 +984,27 @@ function compareViewEntries(a: OntologyCatalogViewEntry, b: OntologyCatalogViewE
 	return byTypology !== 0 ? byTypology : a.tld.localeCompare(b.tld);
 }
 
-/** THE view of a catalog (the Ontologies screen ≡ --list-ontologies). */
-export function describeOntologyCatalog(catalog: OntologyCatalog): OntologyCatalogView {
+/** Is the entry a domain ontology a collection may choose (not core, not a typology grouper)? */
+function offeredDomain(entry: OntologyCatalogEntry): boolean {
+	return !isCoreOntologyTld(entry.tld) && !NOT_OFFERED_ONTOLOGY_TLDS.includes(entry.tld);
+}
+
+/**
+ * THE view of a catalog (the Ontologies screen ≡ --list-ontologies): the
+ * offered domain ontologies, each named in `lang` (the installer's own by
+ * default).
+ */
+export function describeOntologyCatalog(
+	catalog: OntologyCatalog,
+	lang: string = INSTALLER_LANG,
+): OntologyCatalogView {
 	return {
 		source: ontologySourceView(catalog.source),
 		default: [...DEFAULT_DOMAIN_ONTOLOGIES],
 		core: [...CORE_ONTOLOGY_TLDS],
 		entries: catalog.entries
-			.filter((entry) => !isCoreOntologyTld(entry.tld))
-			.map((entry) => viewEntry(entry, catalog))
+			.filter(offeredDomain)
+			.map((entry) => viewEntry(entry, catalog, lang))
 			.sort(compareViewEntries),
 		warnings: [...catalog.warnings],
 	};

@@ -21,6 +21,14 @@
  *   - `diffusion`  a relation FROM a node whose model descends from the
  *                  `diffusion` model grouper (DIFFUSION_MODEL_ROOT): publication
  *                  structure names what is PUBLISHED, which may be absent.
+ *   - `mapping`    any reference FROM a node of an external-ontology mapping —
+ *                  a node of model `external_ontology` (EXTERNAL_ONTOLOGY_MODEL)
+ *                  or one under it in the measured rows: it maps the ontology to
+ *                  an outside vocabulary (its children take their models from
+ *                  that vocabulary's TLD, e.g. tch → crm). Only tool_import_rdf
+ *                  reads it, when pointed at that node; the ontology works
+ *                  without it (campaign 3, C3-28). Opt-in per caller: a caller
+ *                  that passes no mapping set measures it as before.
  *   - `dependency` everything else — a model, a relation of a working node, a
  *                  parent inside the set: it must resolve, or the ontology does
  *                  not work.
@@ -36,6 +44,7 @@ import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
 import { DedaloError } from '../errors/index.ts';
 import {
 	DIFFUSION_MODEL_ROOT,
+	EXTERNAL_ONTOLOGY_MODEL,
 	ONTOLOGY_CONNECTED_TO,
 	ONTOLOGY_MODEL,
 	ONTOLOGY_PARENT,
@@ -55,7 +64,7 @@ export interface OntologyReference {
 	fromModel: string | null;
 }
 
-export type ReferenceClass = 'dependency' | 'graft' | 'diffusion';
+export type ReferenceClass = 'dependency' | 'graft' | 'diffusion' | 'mapping';
 
 /** Why each SOFT class may stay unresolved (prose for reports; no tipo literals). */
 export const SOFT_REFERENCE_CLASSES: Readonly<
@@ -65,6 +74,8 @@ export const SOFT_REFERENCE_CLASSES: Readonly<
 		'a node hung under a parent of another ontology: inert while that ontology is absent (the node is unreachable from its tree, and works where it is reached)',
 	diffusion:
 		'a publication-structure relation (the node model descends from the diffusion model grouper): it names what is published, which may legitimately be absent',
+	mapping:
+		'a node of an external-ontology mapping (at or under a node of model external_ontology): it maps the ontology to an outside vocabulary for the RDF import; the ontology works without it, and only that mapping stays inert while the vocabulary is absent',
 });
 
 /** A tipo test: a set of tipos, or a predicate. */
@@ -175,15 +186,21 @@ function rowOfCopyLine(line: string): ReferenceRow | null {
 }
 
 /**
- * Every structural reference of raw `<tld>.copy.gz` lines (MATRIX_COPY_COLUMNS
- * order): parent = ontology15, model = ontology6, relations = ontology10; a
- * locator `{section_tipo: '<tld>0', section_id: n}` is the tipo `<tld><n>`.
+ * The ontology records of raw `<tld>.copy.gz` lines (MATRIX_COPY_COLUMNS
+ * order) as dd_ontology-shaped rows: parent = ontology15, model = ontology6,
+ * relations = ontology10; a locator `{section_tipo: '<tld>0', section_id: n}`
+ * is the tipo `<tld><n>`. Other lines are skipped.
  */
-export function referencesOfCopyRows(lines: readonly string[]): OntologyReference[] {
+export function rowsOfCopyLines(lines: readonly string[]): ReferenceRow[] {
 	return lines.flatMap((line) => {
 		const row = line === '' ? null : rowOfCopyLine(line);
-		return row === null ? [] : referencesOfRow(row);
+		return row === null ? [] : [row];
 	});
+}
+
+/** Every structural reference of raw `<tld>.copy.gz` lines (see rowsOfCopyLines). */
+export function referencesOfCopyRows(lines: readonly string[]): OntologyReference[] {
+	return referencesOfRows(rowsOfCopyLines(lines));
 }
 
 // ---------------------------------------------------------------------------
@@ -223,13 +240,68 @@ function childrenByParent(
 	return children;
 }
 
+/**
+ * The nodes of the external-ontology mappings in `rows`: every node whose model
+ * is `root` (EXTERNAL_ONTOLOGY_MODEL) and every node under one, by the rows'
+ * parent links. Pass it to the classifier as `isMappingNode`.
+ */
+export function externalMappingNodes(
+	rows: readonly ReferenceRow[],
+	root: string = EXTERNAL_ONTOLOGY_MODEL,
+): Set<string> {
+	return subtreesOf(
+		rows,
+		rows.filter((row) => row.model_tipo === root).map((row) => row.tipo),
+	);
+}
+
+/**
+ * The nodes no tree reaches: every node hung under a parent of ANOTHER TLD that
+ * is not present (a graft into an absent ontology — e.g. a recycle bin of a
+ * TLD the installation never has), and every node under one. The graft's own
+ * reason extends to its subtree: nothing there is reachable, so its references
+ * cannot break a working node. Measured over `rows` (the installed set).
+ */
+export function unreachableNodes(
+	rows: readonly ReferenceRow[],
+	ownTlds: ReadonlySet<string>,
+	isPresent: TipoTest,
+): Set<string> {
+	const present = asPredicate(isPresent);
+	const roots = rows.filter(
+		(row) => row.parent !== null && !ownTlds.has(tldOf(row.parent)) && !present(row.parent),
+	);
+	return subtreesOf(
+		rows,
+		roots.map((row) => row.tipo),
+	);
+}
+
+/** The given nodes and every node under them (by the rows' parent links). */
+function subtreesOf(rows: readonly ReferenceRow[], roots: readonly string[]): Set<string> {
+	const children = childrenByParent(rows);
+	const queue = [...roots];
+	const found = new Set<string>(queue);
+	for (let tipo = queue.shift(); tipo !== undefined; tipo = queue.shift()) {
+		const fresh = (children.get(tipo) ?? []).filter((child) => !found.has(child));
+		for (const child of fresh) found.add(child);
+		queue.push(...fresh);
+	}
+	return found;
+}
+
+/** No tipo: the default `isMappingNode` (a caller that measures no mapping). */
+const NO_TIPO: TipoTest = () => false;
+
 /** The class of one reference (rules in the header). */
 export function classifyReference(
 	ref: OntologyReference,
 	ownTlds: ReadonlySet<string>,
 	isDiffusionModel: TipoTest,
+	isMappingNode: TipoTest = NO_TIPO,
 ): ReferenceClass {
 	if (ref.field === 'parent' && !ownTlds.has(tldOf(ref.to))) return 'graft';
+	if (asPredicate(isMappingNode)(ref.from)) return 'mapping';
 	if (ref.field === 'relations' && isDiffusionModelOf(ref, isDiffusionModel)) return 'diffusion';
 	return 'dependency';
 }
@@ -244,10 +316,13 @@ export function danglingDependencies(
 	ownTlds: ReadonlySet<string>,
 	isPresent: TipoTest,
 	isDiffusionModel: TipoTest,
+	isMappingNode: TipoTest = NO_TIPO,
 ): OntologyReference[] {
 	const present = asPredicate(isPresent);
 	return refs.filter(
-		(ref) => classifyReference(ref, ownTlds, isDiffusionModel) === 'dependency' && !present(ref.to),
+		(ref) =>
+			classifyReference(ref, ownTlds, isDiffusionModel, isMappingNode) === 'dependency' &&
+			!present(ref.to),
 	);
 }
 
@@ -256,10 +331,11 @@ export function foreignDependencyTlds(
 	refs: readonly OntologyReference[],
 	ownTlds: ReadonlySet<string>,
 	isDiffusionModel: TipoTest,
+	isMappingNode: TipoTest = NO_TIPO,
 ): string[] {
 	const foreign = new Set<string>();
 	for (const ref of refs) {
-		if (classifyReference(ref, ownTlds, isDiffusionModel) !== 'dependency') continue;
+		if (classifyReference(ref, ownTlds, isDiffusionModel, isMappingNode) !== 'dependency') continue;
 		const tld = tldOf(ref.to);
 		if (!ownTlds.has(tld)) foreign.add(tld);
 	}

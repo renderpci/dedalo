@@ -102,6 +102,18 @@ export interface HostCreated {
 	backup_timer: boolean;
 	/** The engine child's private dir (its own state lives in <dir>/install). */
 	engine_run_dir: string | null;
+	/**
+	 * The instance COULD HAVE SERVED (campaign 3 C3-11): set when the step that
+	 * first starts the engine as a server (host_first_boot / stack_up) STARTS —
+	 * before its work, and never cleared, not even by that step's undo. Until
+	 * then no request ever reached it, so an abort may take apart a completed
+	 * engine install too (the child's --abort, attested unserved — and the
+	 * child proves its database unchanged since it sealed). From then on the
+	 * instance is LIVE: an abort keeps it (critique B3).
+	 */
+	served: boolean;
+	/** The generated salt reached a TERMINAL (the host owns the one-time display — C3-18). */
+	salt_shown: boolean;
 	/** docker/trial only. */
 	stack?: StackCreated;
 }
@@ -132,5 +144,7 @@ export function emptyHostCreated(): HostCreated {
 		watchdog_armed: false,
 		backup_timer: false,
 		engine_run_dir: null,
+		served: false,
+		salt_shown: false,
 	};
 }

@@ -23,7 +23,9 @@
  *   2. plants DECOYS: another site's nginx file, another local user;
  *   3. mints a drill CA + a certificate for drill.example.org (the institution's
  *      files mode — no Let's Encrypt from a container), the CA in a directory
- *      marked `.dedalo_install_drill` (the probe's CA seam accepts only that);
+ *      marked `.dedalo_install_drill` (the probe's CA seam accepts only that)
+ *      AND in the system trust store, as the operator is told to (the System
+ *      check refuses a chain the host does not trust — campaign 3 C3-13);
  *   4. runs `sh install.sh -- --answers <file> --execute` AS ROOT and KILLS it
  *      (DEDALO_INSTALL_FAULT=<step>:after) after EVERY host step in turn, each
  *      time resuming with `--resume` — then a final `--resume` to completion;
@@ -32,6 +34,9 @@
  *      drill CA, the decoys byte-equal;
  *   6. `--abort --confirm-database` on the LIVE instance: only the host steps
  *      after the engine are undone, the instance and the decoys stay.
+ *   0. (default layout, first) an install killed after host_units — its engine
+ *      install SEALED, its unit never started — and its `--abort`: removed
+ *      whole, the engine's own install included (campaign 3 C3-11).
  *
  * --layout custom (owner decisions 2026-10-12): an EXISTING hosting account
  * (`drill.example.org`, created in the container beforehand, a login shell, its
@@ -59,6 +64,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { apacheModuleCommand } from '../src/core/install/host/web/apache.ts';
 
 const REPO_ROOT = resolve(import.meta.dir, '..');
 const TAG = '[install_host_drill]';
@@ -194,7 +200,9 @@ function dockerfile(os: OsKey): string {
 	const install =
 		family === 'apt'
 			? 'RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends systemd systemd-sysv dbus ca-certificates curl unzip openssl procps iproute2 tar gzip && rm -rf /var/lib/apt/lists/*'
-			: 'RUN dnf install -y systemd procps-ng iproute ca-certificates unzip openssl tar gzip findutils && dnf clean all';
+			: // selinux-policy-targeted: every real EL 10 host has the policy, and the SELinux
+				// spelling leg (C3-3) reads its file_contexts.subs_dist — absent without it.
+				'RUN dnf install -y systemd procps-ng iproute ca-certificates unzip openssl tar gzip findutils selinux-policy-targeted && dnf clean all';
 	return [`FROM ${base}`, install, 'STOPSIGNAL SIGRTMIN+3', 'CMD ["/sbin/init"]', ''].join('\n');
 }
 
@@ -301,6 +309,9 @@ async function prepareHost(sh: ReturnType<typeof inContainer>, args: Args): Prom
 		'openssl x509 -req -in leaf.csr -CA ca.pem -CAkey ca.key -CAcreateserial -out leaf.pem -days 30 -extfile leaf.ext 2>/dev/null',
 		'cat leaf.pem ca.pem > /etc/ssl/drill/fullchain.pem',
 		'chmod 600 /etc/ssl/drill/privkey.pem',
+		// The host TRUSTS the institution's CA, as docs/install/production.md tells an operator
+		// to do: the System check refuses a chain this machine does not trust (campaign 3 C3-13).
+		'if command -v update-ca-certificates >/dev/null; then cp ca.pem /usr/local/share/ca-certificates/dedalo-drill-ca.crt && update-ca-certificates >/dev/null; else cp ca.pem /etc/pki/ca-trust/source/anchors/dedalo-drill-ca.pem && update-ca-trust; fi',
 		'sha256sum /etc/nginx/conf.d/museum-shop.conf | cut -d" " -f1',
 	].join('\n');
 	const prepared = await sh(script);
@@ -412,20 +423,31 @@ async function installer(
 const FRESH = `--answers ${DRILL_DIR}/answers.json --execute`;
 
 /**
+ * The told module command's shape, from the installer's OWN sentence builder
+ * (host/web/apache.ts apacheModuleCommand) — never a copy: a drill regex that
+ * spelled `reload` after the installer moved to `restart` (C3-34) never matched,
+ * and every `--web apache` drill stopped at the module check.
+ */
+const TOLD_MODULES = ((): RegExp => {
+	const [before, after] = apacheModuleCommand(['MODULES'], true).split('MODULES');
+	const quote = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+	return new RegExp(`${quote(before ?? '')}[a-z0-9_ ]+${quote(after ?? '')}`);
+})();
+
+/**
  * The installer TOLD a module command (Apache: enabling modules is the
- * administrator's) — the drill runs it as the operator would; answers whether it did.
+ * administrator's) — the drill runs it EXACTLY as printed, as the operator
+ * would; answers whether it did.
  */
 async function enableToldModules(
 	sh: ReturnType<typeof inContainer>,
 	run: Ran,
 	log: string[],
 ): Promise<boolean> {
-	const told = /(a2enmod [a-z0-9_ ]+) && systemctl reload apache2/.exec(
-		`${run.out}${run.err}`,
-	)?.[1];
+	const told = TOLD_MODULES.exec(`${run.out}${run.err}`)?.[0];
 	if (told === undefined) return false;
-	const enabled = await sh(`${told} && systemctl reload apache2`);
-	log.push(`$ ${told} && systemctl reload apache2`, enabled.out, enabled.err);
+	const enabled = await sh(told);
+	log.push(`$ ${told}`, enabled.out, enabled.err);
 	return enabled.code === 0;
 }
 const RESUME = `--route production --instance ${INSTANCE} --resume`;
@@ -495,6 +517,47 @@ async function outcomeLegs(
 			`[ "$(sha256sum /etc/nginx/conf.d/museum-shop.conf | cut -d' ' -f1)" = "${decoy}" ]`,
 		),
 		await check('the decoy user is untouched', 'getent passwd museum'),
+		...(await campaign3Legs(check, args)),
+	];
+}
+
+/**
+ * The campaign-3 outcomes (2026-10-13), read from the real host: an unknown
+ * name reaches no instance (nginx: the catch-all; Apache: 421), PUBLIC cannot
+ * connect to the instance's database, the release tree stayed 0750, and — on
+ * the RHEL family — the socket rule's spelling is the one THIS policy's
+ * file_contexts.subs_dist accepts (computed by the installer's own code; a
+ * container has no SELinux to enforce it, so the spec is checked, not used).
+ */
+async function campaign3Legs(
+	check: (name: string, script: string) => Promise<Leg>,
+	args: Args,
+): Promise<Leg[]> {
+	const dir = args.layout === 'custom' ? CUSTOM.dir : `/home/ded_${INSTANCE}`;
+	const unknown =
+		args.web === 'nginx'
+			? '[ "$(curl -sk -o /dev/null -w %{http_code} --resolve other.invalid:443:127.0.0.1 https://other.invalid/health)" = 000 ]'
+			: '[ "$(curl -sk -o /dev/null -w %{http_code} --resolve other.invalid:443:127.0.0.1 https://other.invalid/health)" = 421 ]';
+	const subs = '/etc/selinux/targeted/contexts/files/file_contexts.subs_dist';
+	const spec = `cd ${SRC} && /opt/dedalo/bun/*/bun -e 'import { readFileSync } from "node:fs"; import { parseSubs } from "./src/core/install/host/facts.ts"; import { canonicalSpelling } from "./src/core/install/host/production/selinux.ts"; console.log(canonicalSpelling("/run/dedalo-${INSTANCE}", parseSubs(readFileSync("${subs}", "utf8"))))'`;
+	return [
+		await check(
+			`an unknown name reaches no instance (${args.web === 'nginx' ? 'the catch-all refuses the handshake' : '421'})`,
+			unknown,
+		),
+		await check(
+			'PUBLIC cannot connect to the instance database',
+			`[ "$(runuser -u postgres -- psql -XAtc "SELECT has_database_privilege('public', '${DB}', 'CONNECT')")" = f ]`,
+		),
+		await check('the release tree stayed 0750', `[ "$(stat -c %a ${dir}/dedalo)" = 750 ]`),
+		...(IMAGES[args.os].family === 'apt'
+			? []
+			: [
+					await check(
+						"the socket rule's spelling is the one this policy accepts (/run/…)",
+						`test -s ${subs} && [ "$(${spec})" = /run/dedalo-${INSTANCE} ] && grep -qx '/var/run /run' ${subs}`,
+					),
+				]),
 	];
 }
 
@@ -603,6 +666,56 @@ async function failedAbortLegs(sh: ReturnType<typeof inContainer>, log: string[]
 		await check(
 			'custom: the database role this install created is dropped',
 			`[ -z "$(runuser -u postgres -- ${PSQL} -XAtc "SELECT 1 FROM pg_roles WHERE rolname='${CUSTOM.user}'")" ]`,
+		),
+	];
+}
+
+/**
+ * AN INSTANCE THAT NEVER SERVED is removed whole (campaign 3 C3-11): a fresh
+ * install killed after host_units — the engine install SEALED, the unit never
+ * started — then --abort: the engine child's own --abort (the host attests
+ * unserved, the child proves its database unchanged since the seal), then the
+ * database, the user, the folders and the record. Real psql, real userdel.
+ */
+async function unservedAbortLegs(
+	sh: ReturnType<typeof inContainer>,
+	log: string[],
+): Promise<Leg[]> {
+	const check = checker(sh);
+	const killed = await installer(sh, FRESH, 'host_units', log);
+	const aborted = await installer(
+		sh,
+		`--route production --instance ${INSTANCE} --abort --confirm-database ${DB}`,
+		null,
+		log,
+	);
+	return [
+		{
+			name: 'unserved: a fresh install killed after host_units (engine sealed, never started)',
+			ok: killed.code === 137,
+			detail: `exit ${killed.code}`,
+		},
+		{
+			name: 'unserved: --abort --confirm-database exits 0 and says the seal was never served',
+			ok: aborted.code === 0 && `${aborted.out}${aborted.err}`.includes('never served'),
+			detail: `exit ${aborted.code}`,
+		},
+		await check(
+			'unserved: the database is dropped',
+			`[ -z "$(runuser -u postgres -- ${PSQL} -XAtc "SELECT 1 FROM pg_database WHERE datname='${DB}'")" ]`,
+		),
+		await check('unserved: the service user is removed', `! getent passwd ded_${INSTANCE}`),
+		await check(
+			'unserved: no tree of the instance remains',
+			`[ ! -e /home/ded_${INSTANCE} ] && [ ! -e /srv/dedalo/${INSTANCE} ]`,
+		),
+		await check(
+			'unserved: no file of a bare uid is left behind',
+			`[ -z "$(find /srv /home /var/lib/dedalo-install -xdev -nouser -print -quit 2>/dev/null)" ]`,
+		),
+		await check(
+			'unserved: the install record is gone',
+			`[ ! -e /var/lib/dedalo-install/${INSTANCE}/install.state.json ]`,
 		),
 	];
 }
@@ -741,6 +854,10 @@ function printPlan(args: Args): void {
 		console.log(
 			`${TAG}   custom: existing ${CUSTOM.user}, folder ${CUSTOM.dir} (parent root 0555); a failed install killed after host_database, --abort'ed first`,
 		);
+	else
+		console.log(
+			`${TAG}   unserved: an install killed after host_units (engine sealed, never started), --abort'ed whole first (C3-11)`,
+		);
 	for (const step of STEPS) console.log(`${TAG}   kill after ${step}, resume`);
 	console.log(
 		`${TAG}   outcome checks; --abort of the live instance; container removed${args.keep ? ' (kept: --keep)' : ''}`,
@@ -763,7 +880,8 @@ async function main(): Promise<number> {
 		await copySource(name, scratch);
 		const decoy = await prepareHost(sh, args);
 		await writeAnswers(sh, args);
-		const legs = args.layout === 'custom' ? await failedAbortLegs(sh, log) : [];
+		const legs =
+			args.layout === 'custom' ? await failedAbortLegs(sh, log) : await unservedAbortLegs(sh, log);
 		if (legs.every((leg) => leg.ok)) legs.push(...(await installLegs(sh, args, log)));
 		if (legs.every((leg) => leg.ok)) {
 			legs.push(...(await outcomeLegs(sh, decoy, args)));

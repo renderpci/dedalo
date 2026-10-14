@@ -212,16 +212,19 @@ import type { InstallPrompter } from '../src/core/install/prompter_contract.ts';
 import type { RunAnnouncement, RunReporter } from '../src/core/install/run_events.ts';
 import {
 	buildPlanFile,
+	liveLockHolder,
 	type PlanFile,
 	readInstallEnv,
 	readPlanFile,
 	readStateFile,
+	runConfirmed,
 	SECRET_KEYS,
 	type SecretKey,
 	type Secrets,
 	secretsFromEnv,
 } from '../src/core/install/run_files.ts';
-import { DONE_TEXT } from '../src/core/install/screen_text.ts';
+import { ABORT_AND_START_AGAIN } from '../src/core/install/step_loop.ts';
+import { plainReporter as plainRunReporter } from '../src/core/install/ui_plain/reporter.ts';
 import { DEDALO_VERSION } from '../src/core/update/version.ts';
 
 /** Removes the resolved catalog's scratch files (an extracted --ontology-source archive). */
@@ -242,23 +245,47 @@ const invocation = answersFromCliArgs(Bun.argv.slice(2));
 
 // ── --status (the engine child's record, as its host parent verifies it) ─────
 
+/** What `--status --json` answers (host/production/engine_delegate.ts EngineStatus). */
+interface StatusAnswer {
+	exists: boolean;
+	outcome: string | null;
+	failed_step: string | null;
+	/** The secrets a --resume of this record still needs (C3-51: the host parent asks only those). */
+	needs: string[];
+	/** This install generated the salt (C3-18: the host shows it once). */
+	salt_generated: boolean;
+	/** A live process holding this record's install lock (C3-29: a resume never races it). */
+	running: { pid: number; started_at: string } | null;
+}
+
+/** The saved record, read config-free (the run files and the config-free step table). */
+async function statusAnswer(): Promise<StatusAnswer> {
+	const { secretsNeeded } = await import('../src/core/install/steps.ts');
+	const state = readStateFile();
+	const plan = readPlanFile();
+	const failed = Object.entries(state?.steps ?? {}).find(
+		([, record]) => record.status === 'failed',
+	);
+	const holder = liveLockHolder();
+	return {
+		exists: state !== null,
+		outcome: state?.outcome ?? null,
+		failed_step: failed?.[0] ?? null,
+		needs: plan === null ? [] : secretsNeeded(plan, state),
+		salt_generated: state?.created.salt_generated === true,
+		running: holder === null ? null : { pid: holder.pid, started_at: holder.started_at },
+	};
+}
+
 /**
  * --status [--json]: the saved record of THIS process's private dir, then exit
  * — config-free (the run files only). What a host route's host_engine step
  * reads (as the instance user) instead of reading another user's tree.
  */
-function printStatus(): never {
-	let answer: { exists: boolean; outcome: string | null; failed_step: string | null };
+async function printStatus(): Promise<never> {
+	let answer: StatusAnswer;
 	try {
-		const state = readStateFile();
-		const failed = Object.entries(state?.steps ?? {}).find(
-			([, record]) => record.status === 'failed',
-		);
-		answer = {
-			exists: state !== null,
-			outcome: state?.outcome ?? null,
-			failed_step: failed?.[0] ?? null,
-		};
+		answer = await statusAnswer();
 	} catch (error) {
 		console.error(`✖ ${(error as Error).message}`);
 		process.exit(1);
@@ -271,7 +298,7 @@ function printStatus(): never {
 	process.exit(0);
 }
 
-if (invocation.status && invocation.errors.length === 0) printStatus();
+if (invocation.status && invocation.errors.length === 0) await printStatus();
 
 // ── which front end (before ANY read or write) ───────────────────────────────
 
@@ -369,6 +396,7 @@ const REQUEST_SCHEMA = 'dedalo.install.request/1';
 async function stdinInput(): Promise<{
 	secrets: Secrets;
 	answers: Record<string, unknown> | null;
+	unserved: boolean;
 }> {
 	if (invocation.requestStdin) {
 		const request = await stdinObject('--request-stdin');
@@ -378,12 +406,15 @@ async function stdinInput(): Promise<{
 		return {
 			secrets: secretsOf('--request-stdin', secrets),
 			answers: (request.answers ?? {}) as Record<string, unknown>,
+			// The host parent's attestation on an --abort: the instance never served (C3-11).
+			unserved: request.unserved === true,
 		};
 	}
-	if (!invocation.secretsStdin) return { secrets: {}, answers: null };
+	if (!invocation.secretsStdin) return { secrets: {}, answers: null, unserved: false };
 	return {
 		secrets: secretsOf('--secrets-stdin', await stdinObject('--secrets-stdin')),
 		answers: null,
+		unserved: false,
 	};
 }
 
@@ -596,33 +627,11 @@ function announcementOf(plan: InstallPlan): RunAnnouncement {
 }
 
 /**
- * THE PLAIN REPORTER — the headless CLI's (and the plain mode's) printing,
- * byte for byte what this script printed before the full-screen UI existed;
- * the interactive plain mode adds the one-time display of the salt.
+ * THE PLAIN REPORTER (src/core/install/ui_plain/reporter.ts): a headless run's
+ * salt goes to its own stdout when that is a terminal (campaign 3b C3-18).
  */
 function plainReporter(prompter?: InstallPrompter): RunReporter {
-	return {
-		io: {
-			log: (line) => console.log(line),
-			warn: (line) => console.warn(line),
-			...(prompter === undefined ? {} : { showOnce: (lines) => prompter.showOnce(lines) }),
-		},
-		announce: (announcement) => {
-			console.log(`\n${announcement.title}\n`);
-			for (const note of announcement.notes) console.log(`  note: ${note}`);
-			for (const warning of announcement.warnings) console.warn(`  ⚠ ${warning}`);
-			for (const suggestion of announcement.suggestions) console.log(`  suggestion: ${suggestion}`);
-		},
-		finish: async (outcome, context) => {
-			if (outcome.exitCode !== 0) return printFailure(outcome);
-			if (outcome.result === 'aborted')
-				console.log(`\n✔ ${DONE_TEXT.abortedFor(context.ending)}\n`);
-			else
-				console.log(
-					`\n✔ ${DONE_TEXT.complete(context.rootVerified)}. ${DONE_TEXT.next(context.ending)}\n`,
-				);
-		},
-	};
+	return plainRunReporter(prompter === undefined ? {} : { prompter });
 }
 
 /**
@@ -644,6 +653,8 @@ function eventsReporter(): RunReporter {
 				return true;
 			},
 			step: (event) => emit({ event: 'step', ...event }),
+			// The host parent tells how to resume or undo — never this child's own command (C3-54).
+			delegated: true,
 		},
 		announce: (announcement) => emit({ event: 'log', line: announcement.title }),
 		finish: async (outcome) => {
@@ -657,22 +668,6 @@ function headlessReporter(): RunReporter {
 	return invocation.eventsJsonl ? eventsReporter() : plainReporter();
 }
 
-/** A failed run's lines (the hint after a failure that wrote state). */
-function printFailure(outcome: {
-	message: string | null;
-	failedStep: string | null;
-	hint: readonly string[];
-}): void {
-	if (outcome.hint.length === 0) {
-		console.error(`\n✖ install failed: ${outcome.message ?? ''}\n`);
-		return;
-	}
-	const at = outcome.failedStep === null ? '' : ` at step [${outcome.failedStep}]`;
-	console.error(`\n✖ install failed${at}: ${outcome.message ?? ''}`);
-	for (const line of outcome.hint) console.error(line);
-	console.error('');
-}
-
 /** Run the executor and leave with its exit code, the reporter telling the outcome. */
 async function execute(
 	request: import('../src/core/install/executor.ts').ExecutorRequest,
@@ -682,10 +677,17 @@ async function execute(
 	const outcome = await executeInstall(request, reporter.io);
 	cleanupCatalog();
 	const rootVerified = (request.secrets.root_password ?? '') !== '';
+	// An --engine-only run (the by-hand host procedure) ends with the systemd pointer only (C3-54).
+	const engineOnly = normalizeInstallAnswers(raw).answers.engine_only;
 	await reporter.finish(outcome, {
 		mode: request.mode,
 		rootVerified,
-		ending: { route: 'engine', instance: '', keptLive: false },
+		ending: {
+			route: engineOnly ? 'engine_only' : 'engine',
+			instance: '',
+			keptLive: false,
+			undone: [],
+		},
 	});
 	process.exit(outcome.exitCode);
 }
@@ -733,7 +735,12 @@ async function executeHost(
 	await reporter.finish(outcome, {
 		mode: request.mode,
 		rootVerified: false,
-		ending: { route, instance: String(answers.instance ?? ''), keptLive: outcome.keptLive },
+		ending: {
+			route,
+			instance: String(answers.instance ?? ''),
+			keptLive: outcome.keptLive,
+			undone: outcome.undone,
+		},
 	});
 	if (outcome.exitCode === 0) printTold(outcome.told);
 	process.exit(outcome.exitCode);
@@ -781,12 +788,20 @@ async function hostFreshInstall(
 	reporter.announce(announcementOf(plan));
 	const planFile = buildPlanFile(plan, secrets);
 	await beginSteps(reporter, planFile);
-	return executeHost({ mode: 'fresh', execute: invocation.execute, planFile, secrets }, reporter);
+	return executeHost(
+		{
+			mode: 'fresh',
+			execute: runConfirmed(invocation.execute, interactive !== undefined),
+			planFile,
+			secrets,
+		},
+		reporter,
+	);
 }
 
 /** A host route's --resume / --abort: the record under the host run dir the route and instance name. */
 async function hostContinue(request: ContinueRequest, given: InstallAnswers): Promise<never> {
-	const { hostSecretsNeeded, readHostRecord } = await import(
+	const { hostResumeSecrets, readHostRecord } = await import(
 		'../src/core/install/host/host_executor.ts'
 	);
 	const record = readHostRecord(given);
@@ -795,14 +810,17 @@ async function hostContinue(request: ContinueRequest, given: InstallAnswers): Pr
 			`no install record for the ${given.route} route${given.instance === '' ? '' : ` instance '${given.instance}'`}`,
 		);
 	if (request.mode === 'resume') {
-		await promptSecrets(hostSecretsNeeded(record.plan, record.state), secrets, request.prompter);
+		// Only what a remaining step still needs — the engine child is asked (C3-51); asked
+		// only when this run may prompt at all (the child's answer costs a process).
+		if (canPromptSecrets())
+			await promptSecrets(await hostResumeSecrets(given), secrets, request.prompter);
 		request.reporter.prepare?.();
 	}
 	await beginSteps(request.reporter, record.plan);
 	return executeHost(
 		{
 			mode: request.mode,
-			execute: invocation.execute,
+			execute: runConfirmed(invocation.execute, request.prompter !== undefined),
 			givenAnswers: given,
 			givenKeys: Object.keys(plainRaw),
 			secrets,
@@ -914,6 +932,23 @@ interface InteractiveRun {
 	reporter: RunReporter;
 }
 
+/**
+ * `--plan --route production`: the preflight's read-only measurements of THIS
+ * host (the OS, the service account and folder, the names, the certificate) —
+ * the refusals a run would stop on, reported before anything is written
+ * (campaign 3 C3-25). Only over valid answers.
+ */
+async function productionPlanChecks(
+	plan: InstallPlan,
+	errors: readonly string[],
+): Promise<{ errors: string[]; warnings: string[] }> {
+	if (errors.length > 0 || !hostPlanned(plan.answers) || plan.answers.route !== 'production') {
+		return { errors: [], warnings: [] };
+	}
+	const { hostPlanRefusals } = await import('../src/core/install/host/host_executor.ts');
+	return hostPlanRefusals(buildPlanFile(plan, secrets));
+}
+
 /** A FRESH install (or --plan). */
 async function freshInstall(interactive?: InteractiveRun): Promise<never> {
 	const reporter = interactive?.reporter ?? headlessReporter();
@@ -955,6 +990,8 @@ async function freshInstall(interactive?: InteractiveRun): Promise<never> {
 
 	if (invocation.planOnly) {
 		cleanupCatalog();
+		const host = await productionPlanChecks(plan, errors);
+		errors.push(...host.errors);
 		console.log(
 			JSON.stringify({
 				env_keys: [...plan.envKeys],
@@ -968,7 +1005,7 @@ async function freshInstall(interactive?: InteractiveRun): Promise<never> {
 				ontology_install: (plan.ontologyRequest?.items ?? []).map((item) => item.tld),
 				active_ontology_tlds: [...plan.activeOntologyTlds],
 				notes: [...plan.notes],
-				warnings: [...plan.warnings],
+				warnings: [...plan.warnings, ...host.warnings],
 				errors,
 			}),
 		);
@@ -982,7 +1019,7 @@ async function freshInstall(interactive?: InteractiveRun): Promise<never> {
 	return execute(
 		{
 			mode: 'fresh',
-			execute: invocation.execute,
+			execute: runConfirmed(invocation.execute, interactive !== undefined),
 			planFile,
 			plan,
 			secrets,
@@ -1007,7 +1044,7 @@ function resumeSecrets(planFile: PlanFile, state: ReturnType<typeof readStateFil
 	const env = readInstallEnv();
 	if (env === null)
 		fail(
-			'persist_config is recorded done but the install .env is missing — --abort and start again',
+			`persist_config is recorded done but the install .env is missing — put it back (it holds the generated salt), then --resume; ${ABORT_AND_START_AGAIN}`,
 		);
 	const written = secretsFromEnv(env);
 	const given = secrets.db_password;
@@ -1083,9 +1120,10 @@ async function continueInstall(request: ContinueRequest): Promise<never> {
 		return execute(
 			{
 				mode: 'abort',
-				execute: invocation.execute,
+				execute: runConfirmed(invocation.execute, request.prompter !== undefined),
 				secrets: runSecrets,
 				confirmDatabase: request.confirmDatabase,
+				unservedAttested: stdinPart.unserved,
 			},
 			request.reporter,
 		);
@@ -1112,7 +1150,7 @@ async function continueInstall(request: ContinueRequest): Promise<never> {
 	return execute(
 		{
 			mode: 'resume',
-			execute: invocation.execute,
+			execute: runConfirmed(invocation.execute, request.prompter !== undefined),
 			givenAnswers,
 			givenKeys,
 			plan,
@@ -1229,7 +1267,9 @@ async function actOn(
 			reporter,
 		});
 	}
-	if (result.kind === 'quit') return leave(quitCode(result.reason), quitNotice());
+	if (result.kind === 'quit') {
+		return leave(quitCode(result.reason), [...quitNotice(), ...(result.notices ?? [])]);
+	}
 	if (result.kind === 'written') {
 		return activeUi === null ? process.exit(0) : activeUi.written(result.path);
 	}
@@ -1273,7 +1313,10 @@ async function interactiveInstall(
 		);
 		reporter = plainReporter(prompter);
 	}
-	const host = Intl.DateTimeFormat().resolvedOptions();
+	// The host's own zone and locale (TZ / LC_ALL / LANG — C3-21): the same
+	// values the plan defaults to, so the screen and the plan never disagree.
+	const { hostLocaleDefaults } = await import('../src/core/install/install_validation.ts');
+	const host = hostLocaleDefaults();
 	const result = await runInteractiveInstall({
 		prompter,
 		probes: childProbes({
@@ -1286,7 +1329,7 @@ async function interactiveInstall(
 		}),
 		priorEnv,
 		thesauri: thesaurusOffer(),
-		host: { timezone: host.timeZone, locale: host.locale },
+		host: { timezone: host.timezone, locale: host.locale },
 		givenSecrets: { ...secrets },
 		version: DEDALO_VERSION,
 		hostCommands: async (plan) => {

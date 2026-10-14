@@ -16,12 +16,20 @@
  *
  * Trial says what it is instead: NO media access control (its own route).
  * The logged-in half of the gate (the media cookie) is the drill's.
+ *
+ * A RESUME VERIFIES IT (campaign 3b N6): a step recorded done in an earlier
+ * run is re-probed — /health on the socket and through the published address,
+ * read-only — so a stack that stack_up started again (after an --abort, a
+ * reboot, a failed start) is never reported complete unprobed. A probe that
+ * fails runs the step again (restartable), and its refusal says why.
  */
 
+import type { InstallAnswers } from '../../install_plan.ts';
 import type { ExecCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
-import { executeCommands } from '../execute.ts';
-import { probeText, ran } from '../production/common.ts';
+import { executeCommands, requestOf } from '../execute.ts';
+import { ran, verdictOf } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
+import type { RunResult } from '../runner.ts';
 import { mediaGated } from '../web/site.ts';
 import { inCheckout, pollUntil } from './common.ts';
 import { composeCommand, stackExec } from './compose.ts';
@@ -34,7 +42,11 @@ const PROBE_DIR = `${CONTAINER.media}/image/thumb`;
 
 /** The origin a browser types. */
 export function stackOrigin(ctx: HostPlanCtx): string {
-	const { answers } = ctx;
+	return originOf(ctx.answers);
+}
+
+/** The origin of a route's answers (the trial: plain http on localhost). */
+function originOf(answers: Partial<InstallAnswers>): string {
 	if (answers.route === 'trial') {
 		return `http://localhost${answers.http_port === '80' ? '' : `:${answers.http_port}`}`;
 	}
@@ -147,14 +159,62 @@ export function healthCommands(ctx: HostPlanCtx): ExecCommand[] {
 	];
 }
 
+/**
+ * What curl's exit code means, in words (campaign 3 C3-13: an untrusted chain
+ * read as "got 000", identical to a crashed nginx). Exit 0 and the codes it
+ * does not know: nothing to add.
+ */
+const CURL_EXITS: Readonly<Record<number, string>> = Object.freeze({
+	7: 'nothing answers on that port (is nginx running? docker compose … ps nginx)',
+	28: 'no answer within the timeout',
+	35: 'the TLS handshake failed',
+	51: 'the certificate does not name this address',
+	52: 'the server closed the connection without an answer',
+	56: 'the connection broke while reading the answer',
+	60: 'the certificate chain is not trusted by this host: install the issuing CA (Debian/Ubuntu: /usr/local/share/ca-certificates/ + sudo update-ca-certificates; RHEL family: /etc/pki/ca-trust/source/anchors/ + sudo update-ca-trust), then --resume',
+});
+
+/** The reason a probe's curl failed: its exit code in words, and curl's own line. */
+export function curlReason(result: RunResult): string {
+	if (result.timedOut) return 'the probe timed out';
+	if (result.exitCode === 0) return '';
+	const said = result.stderr.trim().split('\n').at(-1) ?? '';
+	const meaning = CURL_EXITS[result.exitCode] ?? `exit ${result.exitCode}`;
+	return said === '' ? meaning : `${meaning} (${said})`;
+}
+
+/** One probe's failure sentence, or null when it answered what it must. */
+async function probeFailure(
+	ctx: HostCtx,
+	command: ExecCommand,
+	expect: string,
+): Promise<string | null> {
+	const result = await ctx.runner.run(requestOf(command, ctx));
+	const status = result.stdout.trim() || 'no answer';
+	if (status === expect && !result.timedOut) return null;
+	const reason = curlReason(result);
+	return `${command.label}: expected ${expect}, got ${status}${reason === '' ? '' : ` — ${reason}`}`;
+}
+
 /** Run every probe; answers the failures, in words. */
 async function failures(ctx: HostCtx): Promise<string[]> {
 	const failed: string[] = [];
 	for (const { command, expect } of stackProbes(ctx)) {
-		const status = (await probeText(ctx, command)).trim() || 'no answer';
-		if (status !== expect) failed.push(`${command.label}: expected ${expect}, got ${status}`);
+		const failure = await probeFailure(ctx, command, expect);
+		if (failure !== null) failed.push(failure);
 	}
 	return failed;
+}
+
+/**
+ * Where a browser opens the trial: THIS machine's address — the trial has no
+ * public name, and `localhost` is right only in a browser on the machine
+ * itself (campaign 3 C3-48: the To-do said `open http://localhost/dedalo/` on
+ * a server).
+ */
+function trialBrowseLine(ctx: HostPlanCtx): string {
+	const port = ctx.answers.http_port === '80' ? '' : `:${ctx.answers.http_port}`;
+	return `open http://<this machine's address>${port}/dedalo/ in a browser (${stackOrigin(ctx)}/dedalo/ from this machine itself)`;
 }
 
 /** What the operator must still do or know (told on Done). */
@@ -162,7 +222,7 @@ function toldLines(ctx: HostPlanCtx): string[] {
 	const { answers } = ctx;
 	if (answers.route === 'trial') {
 		return [
-			`open ${stackOrigin(ctx)}/dedalo/ — THE TRIAL STACK HAS NO MEDIA ACCESS CONTROL: anyone who can reach this machine reads every media file without logging in; plain HTTP: passwords cross the network in clear text`,
+			`${trialBrowseLine(ctx)} — THE TRIAL STACK HAS NO MEDIA ACCESS CONTROL: anyone who can reach this machine reads every media file without logging in; plain HTTP: passwords cross the network in clear text`,
 		];
 	}
 	return [
@@ -201,15 +261,35 @@ async function runHealth(ctx: HostCtx) {
 	);
 }
 
+/** The read-only half of the probes (no probe file): the socket, and /health through nginx. */
+async function verifyHealth(ctx: HostCtx) {
+	const [socket, nginx] = stackProbes(ctx);
+	const failed: string[] = [];
+	for (const probe of [socket, nginx]) {
+		if (probe === undefined) continue;
+		const failure = await probeFailure(ctx, probe.command, probe.expect);
+		if (failure !== null) failed.push(failure);
+	}
+	return verdictOf(
+		failed.map((failure): [boolean, string] => [false, failure]),
+		`${stackOrigin(ctx)} answers /health`,
+	);
+}
+
 export const stack_health: HostStepDefinition = {
 	id: 'stack_health',
 	privilege: 'operator',
 	kind: 'probe',
 	needs: [],
+	// Probing again is the whole repair of a probe step (campaign 3b N6).
+	restartable: true,
+	// A failed run is run again whole: the verify skips the media-gate probes.
+	neverAdopt: true,
 	label: (plan) =>
 		plan.answers.route === 'trial'
-			? '/health through nginx (the trial stack: NO media protection)'
-			: `/health through https://${String(plan.answers.server_name)} and the media gate`,
+			? `/health on the engine's socket and through ${originOf(plan.answers)} (the trial stack: NO media protection)`
+			: `/health on the engine's socket and through ${originOf(plan.answers)}, and the media gate`,
 	commands: healthCommands,
+	verify: verifyHealth,
 	run: runHealth,
 };

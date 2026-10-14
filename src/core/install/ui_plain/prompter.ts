@@ -31,6 +31,7 @@
  * stdout, or stderr / /dev/tty when stdout is redirected.
  */
 
+import { reviewCommandText } from '../display_text.ts';
 import {
 	filtered,
 	MULTI_PAGE,
@@ -64,16 +65,10 @@ import {
 	suggested,
 	textAnswerOf,
 } from '../prompter_contract.ts';
-import type { Option, Question, Screen } from '../screen_model.ts';
-import {
-	RawReader,
-	readLine,
-	sanitizeLine,
-	type TtyOutput,
-	type TtyStreams,
-	wrap,
-	wrapWidth,
-} from './terminal.ts';
+import { type Option, type Question, type Screen, stepTotal } from '../screen_model.ts';
+import { ACKNOWLEDGE_TEXT } from '../screen_text.ts';
+import { showOnceOn } from './reporter.ts';
+import { RawReader, readLine, sanitizeLine, type TtyStreams, wrap, wrapWidth } from './terminal.ts';
 
 // The contract and the multi-select moved to UI-neutral modules (phase 3):
 // re-exported so the plain mode's callers keep one import.
@@ -305,7 +300,7 @@ async function askAcknowledge(
 	question: Question,
 ): Promise<boolean | Nav> {
 	intro(io, question);
-	io.write('Type yes to accept (anything else declines): ');
+	io.write(ACKNOWLEDGE_TEXT.plain);
 	const answer = (await io.visible(reader)).trim();
 	return navOf(answer) ?? answer === 'yes';
 }
@@ -314,7 +309,7 @@ async function askAcknowledge(
 function screenLines(screen: Screen): string[] {
 	return [
 		'',
-		`Step ${screen.index} of ${screen.count}: ${screen.title}`,
+		`Step ${screen.index} of ${stepTotal(screen)}: ${screen.title}`,
 		screen.description,
 		...screen.notices.map(
 			(notice) => `${notice.level === 'info' ? '' : `${notice.level}: `}${notice.text}`,
@@ -349,7 +344,7 @@ export function hostCommandLines(view: ReviewView): string[] {
 	return (view.hostCommands ?? []).flatMap((block) => [
 		`[${block.step}] ${block.label}`,
 		...(block.commands.length === 0 ? ['    (checks only — no command changes the host)'] : []),
-		...block.commands.map((command) => `    $ ${command}`),
+		...block.commands.map((command) => `    ${reviewCommandText(block.step, command)}`),
 	]);
 }
 
@@ -358,7 +353,7 @@ function reviewTextLines(view: ReviewView): string[] {
 	return [
 		...view.lines.map((line) => `${line.label.padEnd(14)} ${line.value}`),
 		...hostCommandLines(view),
-		`commands: ${view.canInstall ? 'install, ' : ''}edit <n> (${numbered}), write <path>, quit`,
+		`commands: ${view.canInstall ? 'install, ' : ''}edit <n> (${numbered}), write <path> (writes the answers and quits), quit`,
 	];
 }
 
@@ -377,13 +372,6 @@ function ioOf(streams: TtyStreams, width: number): Io {
 		visible: (reader) => readLine(reader, streams.output, true),
 		hidden: (reader) => readLine(reader, streams.output, false),
 	};
-}
-
-/** Show `lines` once on a TERMINAL sink; answers whether it was one. */
-function showOnceOn(output: TtyOutput, lines: readonly string[]): boolean {
-	if (output.isTTY !== true) return false;
-	for (const item of lines) output.write(`${sanitizeLine(item)}\n`);
-	return true;
 }
 
 /**

@@ -1,7 +1,8 @@
 # Dédalo TS server — PER-INSTANCE template unit (terminal installer phase 4).
 #
-# WRITTEN BY THE INSTALLER (scripts/install.ts, production route), never copied
-# by hand: host_units renders it to /etc/systemd/system/ once per HOST (every
+# WRITTEN BY THE INSTALLER (scripts/install.ts, production route) or by
+# docs/install/manual_install.md (host_units), which renders the same bytes —
+# never edited in place: host_units renders it to /etc/systemd/system/ once per HOST (every
 # instance shares it — `%i` is the instance name) and writes each instance's
 # own values into a drop-in, dedalo-ts@<i>.service.d/10-dedalo-install.conf:
 # the service user and group, the install folder (WorkingDirectory=, HOME),

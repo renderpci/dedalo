@@ -245,11 +245,18 @@ export interface StepRecord {
 	message: string | null;
 	warnings: string[];
 	error: { code: string; message: string } | null;
+	/**
+	 * What the step TOLD the operator (a host step's to-do: the firewall, the
+	 * modules, the outside check) — kept so the closing To-do of a run that
+	 * completes the install through --resume lists every step's, not only the
+	 * ones that ran in that process (campaign 3b N19). Absent: none.
+	 */
+	told?: string[];
 }
 
 export interface RunRecord {
 	mode: RunMode;
-	/** --execute given (explicitly headless; phase 1 behaves so regardless). */
+	/** Confirmed to execute: --execute given, or the interactive Review's yes (runConfirmed — C3-63). */
 	execute: boolean;
 	pid: number;
 	host: string;
@@ -273,6 +280,19 @@ export interface InstallPreflight {
 	sample_env_existed: boolean;
 	install_status_before: string | null;
 	directories_missing: string[];
+	/**
+	 * The media root held nothing at the preflight (or did not exist): every
+	 * directory under it is this install's, so --abort prunes the empty ones
+	 * (campaign 3 C3-9). Optional: absent on an older record (then only the
+	 * recorded `created.media_tree` is pruned).
+	 */
+	media_root_empty?: boolean;
+	/**
+	 * The server's runtime files that existed at the preflight (the state file,
+	 * the session store): what --abort leaves (C3-9) — one the install created
+	 * is removed. Optional: absent on an older record.
+	 */
+	runtime_files_before?: string[];
 	/** A HOST run's preflight (phase 4 — host/host_executor.ts); absent on an engine run. */
 	host?: HostPreflight;
 }
@@ -291,6 +311,14 @@ export interface InstallCreated {
 	seed_restored: boolean;
 	salt_generated: boolean;
 	salt_shown: boolean;
+	/** The media tree directories check_directories created (absolute; C3-9). Optional on an older record. */
+	media_tree?: string[];
+	/**
+	 * The fingerprint of the database's rows when the install SEALED (after its
+	 * own root login): an abort of a sealed install the host attests UNSERVED
+	 * proceeds only while the database still has exactly these rows (C3-11).
+	 */
+	sealed_fingerprint?: string | null;
 	/**
 	 * What a HOST run created (phase 4): the only host resources its --abort may
 	 * touch. Absent on an engine run — the engine child's state stays the
@@ -349,6 +377,16 @@ export function newInstallState(plan: PlanFile, preflight: InstallPreflight): In
 		},
 		steps: Object.fromEntries(plan.steps.map((step) => [step, pendingStep()])),
 	};
+}
+
+/**
+ * Was the run CONFIRMED to execute — what a run record's `execute` says
+ * (campaign 3 C3-63): `--execute` on the command line, or the interactive
+ * Review's yes (the Resume screen's choice). A headless run without --execute
+ * runs too (on a terminal it asks its missing secrets), unconfirmed.
+ */
+export function runConfirmed(executeFlag: boolean, reviewed: boolean): boolean {
+	return executeFlag || reviewed;
 }
 
 /** A new run record for this process. */
@@ -549,6 +587,23 @@ function readLockHolder(path: string): LockInfo | null {
 /** A holder counts only when it is ANOTHER live process on THIS host. */
 function holderIsLive(holder: LockInfo, mine: LockInfo): boolean {
 	return holder.host === mine.host && holder.pid !== mine.pid && pidAlive(holder.pid);
+}
+
+/**
+ * The LIVE holder of the run lock in `dir` (another process on this host that
+ * is still running), or null — what `--status` tells a host parent, so a
+ * resume never races the child of an earlier run (campaign 3 C3-29).
+ */
+export function liveLockHolder(dir: string): LockInfo | null {
+	const holder = readLockHolder(join(dir, LOCK_FILE));
+	if (holder === null) return null;
+	const me: LockInfo = {
+		pid: process.pid,
+		host: hostname(),
+		started_at: '',
+		mode: holder.mode,
+	};
+	return holderIsLive(holder, me) ? holder : null;
 }
 
 /** The warning a reclaimed lock earns. */

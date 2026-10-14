@@ -5,17 +5,22 @@
 Symptom first. Each entry names the cause and the fix. On a production instance `<i>` is the instance name; on a host you set up by hand, substitute your own unit and paths. If your symptom is not here, start with the two things that answer most questions:
 
 ```shell
-journalctl -u dedalo-ts@<i> -n 100 -o cat            # the engine's own words
-curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
+sudo journalctl -u dedalo-ts@<i> -n 100 -o cat                 # the engine's own words
+sudo curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
 ```
+
+The socket's directory is the instance's own (`0750`): `curl` reaches it as root, or as a member of the service group — hence `sudo`.
 
 | Symptom | Jump to |
 | --- | --- |
 | `install.sh:` refuses, exit code `3` | [The bootstrap refuses](#the-bootstrap-refuses-exit-code-3) |
 | `… is not supported — the production route supports …` | [Unsupported system](#an-unsupported-system) |
 | The System check refuses, naming things that already exist | [The System check refuses](#the-production-system-check-refuses) |
+| A row of the System check screen failed, or the check did not complete | [The System check screen](#the-system-check-screen) |
 | Docker, Compose, disk or image refusals | [Docker and trial refusals](#docker-and-trial-refusals) |
 | Let's Encrypt fails | [Let's Encrypt fails](#lets-encrypt-fails) |
+| `… which this machine does not trust`, or the last check fails with `the certificate chain is not trusted by this host` | [A certificate from your own CA](#a-certificate-from-your-own-certificate-authority) |
+| The install completed, but the site cannot be reached from other machines | [The firewall](#the-firewall-closes-the-sites-ports) |
 | `database '…' is not empty` | [Installing](#installing) |
 | The install stopped part-way | [Resuming and undoing an install](#resuming-and-undoing-an-install) |
 | The server exits at once with code `78` (`[boot] REFUSED — …`) | [Booting](#booting) |
@@ -49,7 +54,7 @@ curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
 
 **Cause.** The Production route supports the newest release of each distribution, matched on the exact distribution and major version. An older release, or a derivative (Fedora, CentOS Stream, Oracle Linux), is refused before anything changes.
 
-**Fix.** Install on a supported release. There is no flag that accepts another one.
+**Fix.** Install on a supported release. There is no flag that accepts another one. The interactive System check shows the same sentence and offers only quit — or back, to choose a route this system supports (Docker or Trial).
 
 ### The production System check refuses
 
@@ -79,14 +84,41 @@ curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
 | `<path> already exists — the installer creates the instance's directories itself and never takes over an existing one` | remove it, or choose another path (a media path under `/var/www`, for example) |
 | nginx older than 1.25.1 | upgrade nginx: the site uses `http2 on;`, which older versions reject |
 | the institution's certificate names another address, has expired, or does not pair with its key | fix the files, or choose Let's Encrypt |
+| `<file>: its chain ends at <issuer>, which this machine does not trust — …` | your certificate authority is not in this machine's trust store — see [A certificate from your own CA](#a-certificate-from-your-own-certificate-authority) |
 
-Then run the same command again — nothing was written, so it starts fresh. The firewall is reported, never changed: if the report shows ports 80 and 443 closed, open them yourself.
+Then run the same command again — nothing was written, so it starts fresh. The firewall is reported, never changed — see [The firewall](#the-firewall-closes-the-sites-ports).
+
+### The firewall closes the site's ports
+
+**Cause.** The installer reads the firewall (firewalld's default zone, or ufw) and never changes it. On the RHEL family firewalld is on by default and allows only `ssh` and `cockpit`, so an install that completed is reachable from the machine itself and from nowhere else.
+
+**Fix.** The System check shows a **Firewall** row, the Review a *To do yourself* line and the closing *To do on this host* list the exact command for the ports this instance uses — for the defaults:
+
+```shell
+sudo firewall-cmd --permanent --add-service=http --add-service=https && sudo firewall-cmd --reload   # firewalld
+sudo ufw allow 80,443/tcp                                                                           # ufw
+```
+
+The Docker and Trial routes are different: Docker publishes their ports with its own packet-filter rules, ahead of the host firewall, so they are reachable whatever firewalld or ufw allows. To restrict them, see *Published ports bypass the host firewall* on [Docker](docker.md).
+
+### A certificate from your own certificate authority
+
+**Cause.** The institution's certificate was issued by a certificate authority of your own (an internal CA), and **this machine** does not trust it. The installer checks the chain the way a browser does — before anything changes (`host_preflight`, `stack_preflight`: `<file>: its chain ends at <issuer>, which this machine does not trust`) and again at the end, through the site's address (`host_public_probe`, `stack_health`: `the certificate chain is not trusted by this host`, curl's error 60).
+
+**Fix.** Install the CA's certificate in this machine's trust store, then run the same command again (or `--resume`):
+
+```shell
+sudo cp <your CA>.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates   # Debian, Ubuntu
+sudo cp <your CA>.crt /etc/pki/ca-trust/source/anchors/ && sudo update-ca-trust          # RHEL family
+```
+
+Every computer that opens the site needs the same CA, or its browser warns.
 
 ### `Apache lacks the modules … — enabling modules is the system administrator's`
 
 **Cause.** The installer checks Apache's modules (`ssl headers http2 rewrite proxy proxy_http`) and never enables one.
 
-**Fix.** Run the command the message prints (`a2enmod … && systemctl reload apache2` on Debian and Ubuntu), then `sudo sh install.sh --route production --instance <i> --resume`.
+**Fix.** Run the command the message prints (`a2enmod … && systemctl restart apache2` on Debian and Ubuntu — a restart, as `a2enmod` itself advises: loading a module is a process change), then `sudo sh install.sh --route production --instance <i> --resume`. The Review lists the same command under *To do yourself* before the install starts, so you can enable the modules first.
 
 ### Let's Encrypt fails
 
@@ -96,7 +128,7 @@ Then run the same command again — nothing was written, so it starts fresh. The
 - port 80 is not reachable from the internet — a firewall, a router without forwarding, a cloud security group;
 - the account hit Let's Encrypt's rate limit after repeated failures.
 
-**Fix.** Fix DNS or the firewall, then `--resume`. To rehearse without spending the rate limit, add `--letsencrypt-staging` to a headless install. The install completes with a test certificate browsers do not trust (its public probe does not verify the chain), and `--abort` cannot take a completed install apart. On Production, the installer's closing *To do on this host* list prints the `certbot certonly … --force-renewal --server https://acme-v02.api.letsencrypt.org/directory` command that replaces it with a real certificate in place. On Docker, the rehearsal stack is destroyed by hand, as in [Removing the trial](quickstart.md#removing-the-trial), and installed again without the flag. If the server cannot be reached from the internet at all, use your institution's certificate (`--tls files`) — or, on the Docker route, a local certificate authority.
+**Fix.** Fix DNS or the firewall, then `--resume`. To rehearse without spending the rate limit, add `--letsencrypt-staging` to a headless install. The install completes with a test certificate browsers do not trust (its public probe does not verify the chain), and `--abort` cannot take a completed install apart. On Production, the installer's closing *To do on this host* list prints the `certbot certonly … --force-renewal --server https://acme-v02.api.letsencrypt.org/directory` command that replaces it with a real certificate in place. On Docker, the rehearsal stack is destroyed by hand, as in [Removing the stack](docker.md#removing-the-stack), and installed again without the flag. If the server cannot be reached from the internet at all, use your institution's certificate (`--tls files`) — or, on the Docker route, a local certificate authority.
 
 ### The public probe fails
 
@@ -105,10 +137,12 @@ Then run the same command again — nothing was written, so it starts fresh. The
 **Fix.** Check by hand, in this order:
 
 ```shell
-curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health   # the engine
-nginx -t                                                                            # or apachectl -t
-curl --fail --resolve <address>:443:127.0.0.1 https://<address>/health            # the site, locally
+sudo curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health   # the engine
+sudo nginx -t                                                                            # or sudo apachectl -t
+curl --fail --resolve <address>:443:127.0.0.1 https://<address>/health                 # the site, locally
 ```
+
+The probe's own sentence says what curl met: `the certificate chain is not trusted by this host` (curl's error 60) is [a certificate from your own CA](#a-certificate-from-your-own-certificate-authority). An answer of `421` (Apache) means the request named a `Host` the site does not declare: each virtual host answers only its own address, and every other name — an IP address, another name of this machine — gets `421`. Use the address you gave the installer.
 
 A green socket and a red site means the web server cannot reach the socket (its user must be in the service group, `ded_<i>` by default; on the RHEL family the engine must run in `dedalo_engine_t`: `ps -o label= -p $(systemctl show -p MainPID --value dedalo-ts@<i>)`). A media answer other than `404` means the gate is not loaded — see [Media](#media). Then `--resume`.
 
@@ -126,7 +160,7 @@ A green socket and a red site means the web server cannot reach the socket (its 
 | --- | --- |
 | `Docker is not installed` | install Docker Engine and its Compose plugin; the installer never installs them |
 | `the Docker daemon does not answer <user>` | start it (`sudo systemctl enable --now docker`) or join the `docker` group (`sudo usermod -aG docker <user>`, then log in again). `DOCKER_HOST` is not passed through: use a docker context |
-| `Docker Compose v2 or newer is required` | install the `docker compose` plugin; the old `docker-compose` v1 does not work |
+| `Docker Compose 2.24.4 or newer is required … — this machine has <v>` | install or update the `docker compose` plugin: the installer's `compose.override.yaml` uses the `!override` tag, which older Compose versions refuse |
 | `only <n> GiB free under <docker root>` | free space (`docker system prune -af`) or move Docker's root to a bigger disk |
 | `this machine already has a Dédalo instance (volume dedalo_private)` | keep that instance, or destroy it first (`… down -v` — it deletes its data) |
 | `.dedalo.env` or `compose.override.yaml` already exists | files of an earlier install: remove them if that install is gone |
@@ -137,6 +171,26 @@ A green socket and a red site means the web server cannot reach the socket (its 
 | `the operator cannot be identified` | `id -un` answered nothing: run the install as a user with a login on this machine, not from a stripped-down environment |
 
 `stack_preflight` refuses an existing instance on purpose: the database restore needs an empty database, so a second install is never a repair.
+
+### The System check screen
+
+The **System check** screen measures this machine before any question about the install. Each row is ok, a warning (told, never blocking) or a failure (fix it, then re-check), and says so once: plain mode prints `ok  <row>`, `warn: <row>` and `error: <row>`, the full screen draws the warning with `!` and the failure with `✗`. **System ready.** appears only when the check completed and no row failed. A failure no fix on this machine can change — an [unsupported system](#an-unsupported-system) — ends with `This system cannot run this route — quit, or go back to choose another route.` and offers only that; any other failure ends with the count (`1 check failed — fix it and re-check.`) and offers retry, edit or quit.
+
+Which rows appear depends on the route:
+
+| Route | PostgreSQL client row | Other rows |
+| --- | --- | --- |
+| **Production** | `ok` when `psql` is absent: the installer installs PostgreSQL 18 itself. A warning when a `psql` of another major is present; the install's own system check (`host_preflight`) refuses another major's cluster on the database port with `--db-mode create` (see [the production System check](#the-production-system-check-refuses)) | **Operating system**, **Privilege** (`root`), **Firewall** (a warning when ports 80 and 443 are closed, with the command that opens them — see [The firewall](#the-firewall-closes-the-sites-ports); not shown on a system the route does not support: the firewall is read the way that system's row reads it, so the **Operating system** refusal comes alone), Bun, the install seed, the private directory (created by the installer), then the diagnostics: platform, memory, processor, disk, ImageMagick and FFmpeg (installed by the installer), cURL, OpenSSL |
+| **Docker**, **Trial** | none: the engine runs in a container and never uses a host `psql` | Bun, the private directory, **Docker**, **Compose**, **Disk** — the same checks, and the same sentences, as [Docker and trial refusals](#docker-and-trial-refusals). A Docker root that cannot be measured is a warning |
+| **Developer** | a failure when no `psql` runs: this route installs into an existing PostgreSQL | Bun, the install seed, the private directory, then the diagnostics: platform, memory, processor, disk, ImageMagick, FFmpeg, cURL, OpenSSL |
+
+The developer route compares `psql` with the **server** once it is connected, on the Database step: a client older than the server is a warning there (`psql <n> is older than the server (PostgreSQL <m>) …`), because the backups' `pg_dump` refuses a newer server.
+
+| The row or line says | Fix |
+| --- | --- |
+| `PostgreSQL client  psql not found — the developer route installs into an existing PostgreSQL …` | install the client (Debian/Ubuntu `apt install postgresql-client`, RHEL `dnf install postgresql`, macOS `brew install postgresql@18`) or set `DEDALO_PG_BIN_PATH` to its `bin` directory — see [`PostgreSQL client (psql) not found`](#postgresql-client-psql-not-found) |
+| `PostgreSQL client  <path> does not run (EACCES)` (or another reason) | a `psql` is there but cannot start: fix its permissions (`chmod +x`), or remove it |
+| `The system check did not complete: the system probe failed unexpectedly (<class>: <first line>) — full text logged to <file>` | an installer defect, not a setting. The file (mode `0600`, under the system temporary directory, e.g. `/tmp/dedalo-install-probe-system-…log`) holds the full text with its stack: report it with that file. No secret is written in it |
 
 ### The full screen is unavailable
 
@@ -196,23 +250,29 @@ Any failure after the install recorded its plan prints how to continue:
 ```text
   Progress saved: …/install.state.json (plan: install.plan.json)
   Fix the cause, then resume:  sudo sh install.sh --route production --instance <i> --resume
-  Or undo this install:        sudo sh install.sh --route production --instance <i> --abort --confirm-database dedalo_<i>
+  Or undo this install:        sudo sh install.sh --route production --instance <i> --abort --confirm-database dedalo_<i>  (deletes the database this install created)
 ```
 
-(`sh install.sh --route docker …` on the stack routes; `bun run scripts/install.ts --resume` on the Developer route.) The rules are in the [installer reference](installer_reference.md#resuming-an-install-resume); the refusals you can meet:
+(`sh install.sh --route docker …` on the stack routes; `bun run scripts/install.ts --resume` on the Developer route.) Once the instance has **served** — production from `host_first_boot` on, docker and trial from `stack_up` on — the last line reads `Or partly undo it: … --abort  (the instance has served: …)` instead: an abort then keeps the instance. A resume runs in plain line mode and asks again only for the secrets a remaining step still needs. The rules are in the [installer reference](installer_reference.md#resuming-an-install-resume); the refusals you can meet:
 
 | Refusal | Cause | Fix |
 | --- | --- | --- |
 | `an install record exists at … — resume it (--resume) or undo it (--abort --confirm-database <db>)` | a fresh run found an earlier install's record | resume or abort it. On the Developer route, if the private directory is being reused deliberately, remove its `install/` directory |
 | `answers differ from the saved plan: <keys>` | a resume was given answers other than the saved ones | drop the flags (a resume takes the saved answers), or abort and start again |
-| `step <id> was recorded done but its outcome is missing … — the install was changed outside the installer` | something the install did was undone by hand since | abort and start again |
-| `the commands of <step> are not the ones this install showed (the installer's own files changed since)` | a resume from another release recomputed different host commands | abort and start again with one release |
+| `step <id> was recorded done but its outcome is missing (<detail>) — something changed it outside the installer: put that back, then --resume; or undo the install with --abort and start again — that DELETES the database this install created …` | something the install did was undone by hand since | put it back (the detail names it), then `--resume`; or abort and start again. A step that only **starts** something — `stack_database`, `stack_up`, `host_first_boot` — is never refused this way: a resume finds it stopped and starts it again (`done in an earlier run, but … — started again`) |
+| `the commands of <step> are not the ones this install showed (the installer's own files changed since) — put the installer's files back (the same release), then --resume; …` | a resume from another release recomputed different host commands | resume with the release the install started with; or abort and start again with one release |
+| `the engine steps of an earlier run are still running (pid <n>…, since <time>) — wait for them to end (or stop that process), then --resume` | an interrupted run's engine child still holds the install (production); on docker and trial, its `dedalo-install-engine` container still runs | wait for it, or stop it (`kill <n>`, or `docker rm -f dedalo-install-engine`), then resume |
 | `this private directory belongs to a SEALED installation — a fresh install never overwrites a live one` | the private directory holds a finished install | install into another private directory; the live one is never overwritten |
-| `this install is SEALED (live) — --abort never undoes a sealed installation` | an engine `--abort` of a finished install | nothing to undo: a finished install is a live one. On a host route, the host `--abort` undoes only the host steps after the engine |
+| `this install is SEALED (live) — --abort never undoes a sealed installation` | an engine `--abort` of a finished install | nothing to undo: a finished install is a live one. On a host route, the host `--abort` of an instance that has served undoes only the host steps after the engine |
+| `this install is SEALED (live) — …: its host says it never served, but the database changed since the install sealed it …` | the engine completed, its host says the instance never started, and the database was written since | something used the database: the instance is treated as live. Remove it by hand — [Removing an instance](multi_instance.md#removing-an-instance) |
+| `user <u> KEPT: it still owns <path> (a removed uid would be reused by the next account) — remove what remains, then remove the user (userdel <u>)` | an abort removed what the install created, but files of the service user remain (yours, or a backup) | remove them if you no longer need them, then `userdel <u>` |
 | `--abort resets and drops the database <db> this install set up: confirm with --confirm-database <db> — nothing was undone` | the abort would touch the database | repeat it with `--confirm-database <db>` once you are sure |
 | `database '<db>' is not stamped by this install … — refusing to reset it` | the database was not seeded by this install | nothing to reset; it is not this install's |
 
-An abort of a production install whose engine completed answers *install partly undone*: the site, the certificate, the units' start and the timers are undone, and the instance, its user, its database and its code are kept. `--resume` puts the undone steps back.
+What an abort takes depends on whether the instance has **served**:
+
+- **Never served** (it stopped before `host_first_boot` on production, before `stack_up` on docker and trial — even after the engine steps completed): the abort removes everything this install created, its database, its user and its media tree included, and says how many steps it undid. The engine's own steps are undone only when its database still holds exactly the rows the install left.
+- **Served**: the abort answers *install partly undone* and undoes only the steps after the engine — on production the site, the certificate, the units' start and the timers; on docker and trial the running stack (`stack_up`). The instance — its user, database and code, or its containers and volumes — is kept, and `--resume` puts the undone steps back. A second abort says *nothing was undone*. Removing a served instance is done by hand: [Removing an instance](multi_instance.md#removing-an-instance), [Removing the trial](quickstart.md#removing-the-trial).
 
 ## Booting
 

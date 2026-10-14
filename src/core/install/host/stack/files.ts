@@ -13,17 +13,20 @@
  *    this install took it;
  *  - `compose.override.yaml`: what the stack files cannot say through a
  *    variable — the Let's Encrypt renewal service and its volumes (docker +
- *    Let's Encrypt), else an empty override. The host library adds it to every
+ *    Let's Encrypt), the trial's plain-HTTP nginx (trial), else an empty override. The host library adds it to every
  *    compose call, so the updater drives the SAME stack;
  *  - the full stack's nginx site (docker): host/web/nginx.ts's renderer — the
  *    same routes, headers and media gate as a production site — for the
  *    container's paths (root /srv, MEDIA_PATH /srv/dedalo/media, the client
  *    volume, the socket volume), with the media gate's http-scope map include
- *    (both includes always: the full stack is the media-gated one), listening
- *    on the container's 80/443 and redirecting to the PUBLISHED https port.
+ *    — both includes name the ENGINE'S OWN rule files in the media volume
+ *    (layout.ts CONTAINER_MEDIA_RULES, campaign 3 C3-2), and both are left out
+ *    together when the media access mode is off — listening on the
+ *    container's 80/443 and redirecting to the PUBLISHED https port.
  *
  * Trial mounts the shipped plain-HTTP deploy/nginx.simple.conf (no certificate,
- * no media gate — its own route). --abort removes only what this install wrote.
+ * no media gate — its own route); its override publishes only the HTTP port and
+ * mounts no certificate (C3-22). --abort removes only what this install wrote.
  */
 
 import type {
@@ -37,7 +40,8 @@ import { executeCommands } from '../execute.ts';
 import { answersDigest, ran, remember, verdictOf } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
 import { dropinStamp } from '../systemd/render.ts';
-import { mapInclude, renderNginxSite } from '../web/nginx.ts';
+import { renderNginxSite } from '../web/nginx.ts';
+import { mediaGated } from '../web/site.ts';
 import {
 	certDirCommand,
 	databasePassword,
@@ -52,6 +56,7 @@ import {
 	CERT_MOUNT,
 	CERTBOT_IMAGE,
 	CONTAINER,
+	CONTAINER_MEDIA_RULES,
 	certPathsOf,
 	ENV_FILE,
 	GENERATED_CONF,
@@ -63,6 +68,7 @@ import {
 	OVERRIDE_FILE,
 	servesTls,
 	stackFileOf,
+	TRIAL_NGINX_VOLUMES,
 } from './layout.ts';
 
 /** What the Review shows (and the digest hashes) in place of the generated password. */
@@ -82,7 +88,8 @@ function tlsLines(ctx: HostPlanCtx): string[] {
 		`SESSION_COOKIE_SECURE=${servesTls(answers) ? 'true' : 'false'}`,
 		`DEDALO_CERT_MOUNT=${CERT_MOUNT}`,
 		`DEDALO_HTTP_PORT=${answers.http_port}`,
-		`DEDALO_HTTPS_PORT=${answers.https_port}`,
+		// Trial publishes no HTTPS port (its override replaces nginx's ports — C3-22).
+		...(answers.route === 'docker' ? [`DEDALO_HTTPS_PORT=${answers.https_port}`] : []),
 		...(answers.route === 'docker' && answers.media_access_mode !== ''
 			? [`DEDALO_MEDIA_ACCESS_MODE=${answers.media_access_mode}`]
 			: []),
@@ -145,15 +152,40 @@ function letsEncryptOverride(): string[] {
 	];
 }
 
-/** compose.override.yaml (the renewal service, or nothing to add). */
+/**
+ * The trial's plain-HTTP nginx (campaign 3 C3-22): the simple stack file
+ * publishes 443 and mounts the certificate volumes for its own TLS variant
+ * (deploy/nginx.simple-tls.conf.tpl); the trial serves neither, so its nginx
+ * gets ONLY the HTTP port and the volumes plain HTTP needs (`!override`
+ * replaces the list — Compose >= 2.24.4, which stack_preflight requires).
+ * Unused, the certificate volumes are never created.
+ */
+function trialOverride(): string[] {
+	return [
+		'services:',
+		'  nginx:',
+		'    # Plain HTTP only: no 443, no certificate volumes (the trial has no TLS).',
+		'    ports: !override',
+		'      - "${DEDALO_HTTP_PORT:-80}:80"',
+		'    volumes: !override',
+		...TRIAL_NGINX_VOLUMES.map((volume) => `      - ${volume}`),
+	];
+}
+
+/** The override's body for this route and certificate source. */
+function overrideBody(ctx: HostPlanCtx): string[] {
+	if (ctx.answers.route === 'trial') return trialOverride();
+	return ctx.answers.tls_mode === 'letsencrypt' ? letsEncryptOverride() : ['services: {}'];
+}
+
+/** compose.override.yaml (the renewal service, the trial's plain-HTTP nginx, or nothing to add). */
 export function renderOverride(ctx: HostPlanCtx): string {
-	const le = ctx.answers.route === 'docker' && ctx.answers.tls_mode === 'letsencrypt';
 	return [
 		stampOf(ctx),
 		`# WRITTEN BY THE INSTALLER (scripts/install.ts, ${ctx.answers.route} route). deploy/dedalo-image-lib.sh`,
 		'# adds this file to every compose call when it exists, so the image updater and your own',
 		'# commands drive the stack this install built. Re-run the installer rather than editing it.',
-		...(le ? letsEncryptOverride() : ['services: {}']),
+		...overrideBody(ctx),
 		'',
 	].join('\n');
 }
@@ -180,8 +212,16 @@ export function renderStackNginx(ctx: HostPlanCtx): string {
 		cert: certPathsOf(answers),
 		acme: answers.tls_mode === 'letsencrypt',
 		logDir: '/var/log/nginx',
+		mediaRules: {
+			...CONTAINER_MEDIA_RULES,
+			note: [
+				'The media gate: the rules the engine generates into the shared media volume',
+				'(mounted read-only here; the engine writes them at boot, before nginx starts).',
+			],
+		},
 	});
-	return withMapInclude(dockerHeader(ctx, site)).replace(
+	const map = mediaGated(answers) ? CONTAINER_MEDIA_RULES.map : null;
+	return withMapInclude(dockerHeader(ctx, site), map).replace(
 		REDIRECT,
 		`return 301 https://$host${answers.https_port === '443' ? '' : `:${answers.https_port}`}$request_uri;`,
 	);
@@ -202,10 +242,12 @@ function dockerHeader(ctx: HostPlanCtx, site: string): string {
 
 /**
  * The media gate's http-scope map include, before the first http-scope
- * directive (the full stack is the media-gated one: both includes, always).
- * The renderer's shape is asserted, never assumed.
+ * directive — whenever the server-scope rules are included (the gate on: both
+ * or neither; with DEDALO_MEDIA_ACCESS_MODE false the engine writes no rule
+ * file, so an include of the map would stop nginx). The renderer's shape is
+ * asserted, never assumed.
  */
-function withMapInclude(site: string): string {
+function withMapInclude(site: string, map: string | null): string {
 	const lines = site.split('\n');
 	const at = lines.findIndex((line) => line.startsWith('limit_req_zone '));
 	if (at < 0 || !site.includes(REDIRECT)) {
@@ -214,16 +256,19 @@ function withMapInclude(site: string): string {
 			'the nginx renderer no longer writes the shape this step adapts (limit_req_zone, the https redirect)',
 		);
 	}
-	const include = mapInclude(CONTAINER.media)
-		.split('\n')
-		.filter((line) => line.startsWith('include '));
+	return [...lines.slice(0, at), ...mapLines(map), ...lines.slice(at)].join('\n');
+}
+
+/** The http-scope lines of the media gate (or why there are none). */
+function mapLines(map: string | null): string[] {
+	if (map === null) {
+		return ['# MEDIA ACCESS CONTROL IS OFF: no media gate, so no http-scope map to include.'];
+	}
 	return [
-		...lines.slice(0, at),
 		"# THE MEDIA GATE: its http-scope map (generated by the engine at boot) — the server's",
 		'# rule file is included in the https server below. Both or neither.',
-		...include,
-		...lines.slice(at),
-	].join('\n');
+		`include ${map};`,
+	];
 }
 
 /** One write, owned by the operator. */
@@ -257,6 +302,17 @@ function envWrite(ctx: HostPlanCtx): WriteCommand {
 	);
 }
 
+/**
+ * Does this step make deploy/certs? Only on the docker route, and only when
+ * stack_tls does not (it makes it for a local CA and the institution's files);
+ * Let's Encrypt keeps its certificate in a volume, but docker-compose.yml still
+ * bind-mounts the directory, and compose would create a missing one as root.
+ * The trial mounts no certificate (its override), so it gets none (C3-48).
+ */
+function makesCertDir(ctx: HostPlanCtx): boolean {
+	return ctx.answers.route === 'docker' && !['local_ca', 'files'].includes(ctx.answers.tls_mode);
+}
+
 /** The writes after the env file (the override, the full stack's site) and deploy/certs. */
 function otherCommands(ctx: HostPlanCtx): HostCommand[] {
 	const docker = ctx.answers.route === 'docker';
@@ -279,7 +335,7 @@ function otherCommands(ctx: HostPlanCtx): HostCommand[] {
 					),
 				]
 			: []),
-		certDirCommand(ctx),
+		...(makesCertDir(ctx) ? [certDirCommand(ctx)] : []),
 	];
 }
 
@@ -328,7 +384,9 @@ function filesIntent(ctx: HostCtx): void {
 	const created = stackCreated(ctx);
 	created.env_file ||= !ctx.fs.exists(inCheckout(ctx, ENV_FILE));
 	created.override ||= !ctx.fs.exists(inCheckout(ctx, OVERRIDE_FILE));
-	if (!ctx.fs.exists(inCheckout(ctx, CERT_DIR))) remember(created.certs, inCheckout(ctx, CERT_DIR));
+	if (makesCertDir(ctx) && !ctx.fs.exists(inCheckout(ctx, CERT_DIR))) {
+		remember(created.certs, inCheckout(ctx, CERT_DIR));
+	}
 	if (ctx.answers.route !== 'docker') return;
 	created.generated_conf ||= !ctx.fs.exists(inCheckout(ctx, `deploy/${GENERATED_CONF}`));
 }

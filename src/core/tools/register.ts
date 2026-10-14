@@ -17,6 +17,7 @@
  */
 
 import { existsSync, readdirSync } from 'node:fs';
+import { readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { config } from '../../config/config.ts';
 import { assertMatrixTable } from '../db/matrix.ts';
@@ -493,6 +494,40 @@ export async function readDeclaredVersion(dir: string): Promise<string | null> {
 	return typeof declared === 'string' && declared !== '' ? declared : null;
 }
 
+/** Does any client file of the tool (`<dir>/js/**`) call `tool_request`? */
+async function clientCallsServer(dir: string): Promise<boolean> {
+	const js = resolve(dir, 'js');
+	let names: string[];
+	try {
+		names = await readdir(js, { recursive: true, encoding: 'utf8' });
+	} catch {
+		return false;
+	}
+	for (const name of names.filter((item) => item.endsWith('.js'))) {
+		// Searched as BYTES (an ASCII name), never decoded: this is no ingest door,
+		// and an implicit text decode is what ingest_encoding_tripwire refuses.
+		const bytes = await Bun.file(resolve(js, name))
+			.bytes()
+			.catch(() => new Uint8Array());
+		if (Buffer.from(bytes).includes('tool_request')) return true;
+	}
+	return false;
+}
+
+/**
+ * The warning a tool WITHOUT a server module earns — only when its client
+ * calls `tool_request` (campaign 3 C3-19): a client-only tool (a viewer, a
+ * print layout, a QR code) needs no server module, and thirteen of them read
+ * as thirteen failures on every clean install.
+ */
+export async function missingServerWarning(
+	dir: string,
+	hasServerModule: boolean,
+): Promise<string | null> {
+	if (hasServerModule || !(await clientCallsServer(dir))) return null;
+	return 'no server module, yet its client calls tool_request — the call will be refused';
+}
+
 /**
  * Reconcile the tools registry. Dry-run (default) validates every tool and
  * reports whether the shared dd1324 registry already matches — writing nothing.
@@ -569,9 +604,8 @@ export async function importTools(
 
 		item.errors.push(...validateRegister(record, name));
 		item.valid = item.errors.length === 0;
-		if (!item.hasServerModule) {
-			item.warnings.push('no server module: tool_request will refuse this tool');
-		}
+		const serverWarning = await missingServerWarning(dir, item.hasServerModule);
+		if (serverWarning !== null) item.warnings.push(serverWarning);
 
 		// Dry-run diff against the current registry row.
 		if (item.valid && item.inRegistry) {

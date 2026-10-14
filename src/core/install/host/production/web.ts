@@ -17,6 +17,15 @@
  * stops, the operator enables them, `--resume` continues); the configuration
  * TESTED before the reload; a reload applies every pending change of the web
  * server's configuration, which the Review says next to the command (A18).
+ *
+ * THE CATCH-ALL (campaign 3 C3-30 — web/catch_all.ts), nginx: host_web_site
+ * also writes the ONE host-wide catch-all site for ports 80/443 when the host
+ * has none of the installer's yet (an instance on the standard ports only; a
+ * port an operator's `default_server` holds is said so); later instances use
+ * it as it is. Refcounted in the registry
+ * (`catch_all`). It is the default by ORDER, never by `default_server`, so an
+ * operator's default (Debian's own, installed with nginx) stays and never
+ * clashes. Apache's vhosts guard their own name instead (web/apache.ts).
  */
 
 import type {
@@ -37,11 +46,19 @@ import {
 	renderApacheSite,
 } from '../web/apache.ts';
 import {
+	CATCH_ALL_PORTS,
+	CATCH_ALL_STAMP,
+	catchAllPath,
+	keptDefaults,
+	renderNginxCatchAll,
+} from '../web/catch_all.ts';
+import {
 	mapConfigHash,
 	mapInclude,
 	NGINX_MAP_INCLUDE,
 	nginxRuleCopies,
 	nginxRulesDir,
+	productionMediaRules,
 	renderNginxSite,
 } from '../web/nginx.ts';
 import { mediaGated, type SiteInput } from '../web/site.ts';
@@ -78,6 +95,7 @@ export function siteText(ctx: HostPlanCtx, cert: SiteInput['cert']): string {
 		cert,
 		acme: ctx.answers.tls_mode === 'letsencrypt',
 		logDir: webFlavor(ctx).logDir,
+		mediaRules: productionMediaRules(ctx.paths.instance),
 	};
 	return ctx.facts.web.kind === 'nginx' ? renderNginxSite(input) : renderApacheSite(input);
 }
@@ -226,6 +244,60 @@ export function ruleRefreshLine(ctx: HostPlanCtx): string {
 	return `the media gate nginx serves is a root-owned COPY of the engine's rules: after changing the media access mode (or an update that changes them), refresh it as root — ${argv.join(' ')}`;
 }
 
+/** Does this instance sit on the standard ports the catch-all covers? */
+function standardPorts(ctx: HostPlanCtx): boolean {
+	return (
+		ctx.answers.http_port === CATCH_ALL_PORTS.http &&
+		ctx.answers.https_port === CATCH_ALL_PORTS.https
+	);
+}
+
+/** The standard ports where an operator's `default_server` stays the default (told). */
+export function keptPorts(ctx: HostPlanCtx): string[] {
+	return keptDefaults(ctx.facts.web.defaults);
+}
+
+/**
+ * nginx's host-wide catch-all site (web/catch_all.ts): written when the host
+ * has none (facts) and this instance is on the standard ports — never
+ * rewritten, never written over another file at its path.
+ */
+export function catchAllCommands(ctx: HostPlanCtx): HostCommand[] {
+	const { web } = ctx.facts;
+	if (web.kind !== 'nginx' || !standardPorts(ctx) || web.catchAll !== 'absent') return [];
+	return [
+		{
+			kind: 'write',
+			path: catchAllPath(webFlavor(ctx)),
+			mode: 0o644,
+			owner: 'root',
+			group: 'root',
+			content: renderNginxCatchAll(),
+			label: 'the host-wide catch-all site (a name no site declares reaches no instance)',
+		},
+	];
+}
+
+/** Does this instance use the catch-all once its site is in place? */
+function usesCatchAll(ctx: HostPlanCtx): boolean {
+	return ctx.facts.web.catchAll === 'ours' || catchAllCommands(ctx).length > 0;
+}
+
+/** What the operator is told about the default site of the standard ports. */
+export function catchAllTold(ctx: HostPlanCtx): string[] {
+	if (ctx.facts.web.kind !== 'nginx' || !standardPorts(ctx)) return [];
+	const path = catchAllPath(webFlavor(ctx));
+	if (ctx.facts.web.catchAll === 'foreign') {
+		return [
+			`${path} exists and is not the installer's: no catch-all site was written — a name no site declares reaches whatever site the web server loads first`,
+		];
+	}
+	return keptPorts(ctx).map((port) => {
+		const file = ctx.facts.web.defaults.find((item) => item.port === port)?.file ?? 'another file';
+		return `port ${port}: the default site stays yours (${file}, default_server) — a name no site declares reaches it, never an instance`;
+	});
+}
+
 /** Stage 2's commands (`mapOwner`: this instance's map is the host's — decided at run time). */
 export function siteCommands(ctx: HostPlanCtx, mapOwner = nginxGated(ctx)): HostCommand[] {
 	return [
@@ -239,6 +311,7 @@ export function siteCommands(ctx: HostPlanCtx, mapOwner = nginxGated(ctx)): Host
 			'the site file (HTTPS, media gate, client)',
 		),
 		...enableCommands(ctx),
+		...catchAllCommands(ctx),
 		configTest(ctx),
 		reloadWeb(ctx),
 	];
@@ -402,41 +475,77 @@ async function applySite(ctx: HostCtx, commands: readonly HostCommand[]): Promis
 	}
 }
 
+/** Is this instance the LAST user of the installer's own catch-all (its registry entry released)? */
+function lastCatchAllUser(ctx: HostCtx): boolean {
+	if (ownEntry(ctx.fs, ctx.paths)?.catch_all !== true) return false;
+	updateEntry(ctx.fs, ctx.paths, { catch_all: false });
+	if (otherEntries(ctx.fs, ctx.paths).some((entry) => entry.catch_all)) return false;
+	const text = ctx.fs.readText(catchAllPath(webFlavor(ctx))) ?? '';
+	return text.startsWith(`${CATCH_ALL_STAMP}\n`);
+}
+
+/**
+ * The catch-all's removal: only when this instance used it, no other
+ * instance's entry still does, and the file is the installer's own.
+ */
+function catchAllRemoval(ctx: HostCtx): HostCommand[] {
+	if (!lastCatchAllUser(ctx)) return [];
+	return [
+		{
+			kind: 'remove',
+			path: catchAllPath(webFlavor(ctx)),
+			label: 'the host-wide catch-all site (no instance uses it any more)',
+		},
+	];
+}
+
+/** The site's removal: a2dissite (Debian Apache), the map handover, our files, the catch-all, test, reload. */
+function siteRemoval(
+	ctx: HostCtx,
+	files: readonly string[],
+	catchAll: HostCommand[],
+): HostCommand[] {
+	if (files.length === 0 && catchAll.length === 0) return [];
+	const disable =
+		webFlavor(ctx).enableWithA2ensite && files.includes(sitePath(ctx))
+			? [
+					exec(ctx, 'a2dissite', [`dedalo-${ctx.paths.instance}`], 'disable this site', {
+						okExit: [0, 1],
+					}),
+				]
+			: [];
+	return [
+		...disable,
+		...mapHandover(ctx),
+		...files.map((path): HostCommand => ({ kind: 'remove', path, label: `remove ${path}` })),
+		...catchAll,
+		configTest(ctx),
+		reloadWeb(ctx),
+	];
+}
+
+/** The web user leaves the instance group — even when a failed step already put the files back. */
+function groupRemoval(ctx: HostCtx): HostCommand[] {
+	if (!ctx.created.web_group_member) return [];
+	return [
+		exec(
+			ctx,
+			'gpasswd',
+			['-d', webFlavor(ctx).user, ctx.paths.group],
+			'remove the web user from the instance group',
+			{ okExit: [0, 3] },
+		),
+	];
+}
+
 /** Undo the site: remove our files (+ a2dissite), hand the map over or remove it, test, reload; the group. */
 async function undoSite(ctx: HostCtx): Promise<string> {
 	const files = ctx.created.site_files.filter((path) => ctx.fs.exists(path));
-	const commands: HostCommand[] = [];
-	if (files.length > 0) {
-		if (webFlavor(ctx).enableWithA2ensite && files.includes(sitePath(ctx))) {
-			commands.push(
-				exec(ctx, 'a2dissite', [`dedalo-${ctx.paths.instance}`], 'disable this site', {
-					okExit: [0, 1],
-				}),
-			);
-		}
-		commands.push(
-			...mapHandover(ctx),
-			...files.map((path): HostCommand => ({ kind: 'remove', path, label: `remove ${path}` })),
-			configTest(ctx),
-			reloadWeb(ctx),
-		);
-	}
-	// The membership goes even when a failed step already put the files back.
-	if (ctx.created.web_group_member) {
-		commands.push(
-			exec(
-				ctx,
-				'gpasswd',
-				['-d', webFlavor(ctx).user, ctx.paths.group],
-				'remove the web user from the instance group',
-				{ okExit: [0, 3] },
-			),
-		);
-	}
-	await executeCommands(commands, ctx);
+	const catchAll = catchAllRemoval(ctx);
+	await executeCommands([...siteRemoval(ctx, files, catchAll), ...groupRemoval(ctx)], ctx);
 	ctx.created.web_group_member = false;
 	removeRuleDirs(ctx);
-	if (files.length === 0) return 'no site file left to remove';
+	if (files.length === 0 && catchAll.length === 0) return 'no site file left to remove';
 	return `${files.join(', ')} removed, ${webFlavor(ctx).service} reloaded`;
 }
 
@@ -507,11 +616,15 @@ export const host_web_site: HostStepDefinition = {
 		recordWeb(ctx, member, 'site');
 		ctx.save();
 		await applySite(ctx, await withoutDoneGroup(ctx, siteCommands(ctx, owner)));
-		if (owner) updateEntry(ctx.fs, ctx.paths, { nginx_map_owner: true });
+		updateEntry(ctx.fs, ctx.paths, {
+			...(owner ? { nginx_map_owner: true } : {}),
+			catch_all: usesCatchAll(ctx),
+		});
 		return ran(`${sitePath(ctx)} — ${webFlavor(ctx).service} reloaded`, {
 			told: [
 				...(nginxGated(ctx) ? [ruleRefreshLine(ctx)] : []),
 				...[sharedGroupLine(ctx)].filter((line): line is string => line !== null),
+				...catchAllTold(ctx),
 			],
 		});
 	},

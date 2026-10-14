@@ -1591,8 +1591,14 @@ compose run without the env file can never pull a public name — it fails loudl
 and `deploy/dedalo-image-lib.sh`, which PARSES the file (never sources it: the
 host updater runs it as root-equivalent). Re-pinner: `deploy/dedalo-image-update.sh`,
 `DEDALO_VERSION` only, by an atomic rewrite that keeps every other line
-byte-identical. No root stack has `build:`; building is the override
-`-f deploy/compose.build.yml`. The engine sees its source as
+byte-identical. No root stack has `build:`. The installer's build and the
+updater's build mode are ONE builder: `dedalo_image_build` (`deploy/dedalo-image-lib.sh`;
+entry point `deploy/dedalo-image-build.sh`) — `git archive HEAD` into
+`.dedalo-install/image-context`, `docker build` of it, the snapshot removed (green
+or red); no `.git` → refused (status 3). Committed files only, `build_info.txt`
+expanded, so the image never reports `.dev` under a release tag (C3-46). The
+override `-f deploy/compose.build.yml` remains for development only (it builds
+the working tree). Gates: `install_sh_image_source`, `image_update_script_native`. The engine sees its source as
 `DEDALO_CONTAINER_IMAGE` / `DEDALO_CONTAINER_IMAGE_MODE` (process env, declared by
 the stacks from the same keys) — the panel labels it official primary, official
 mirror or custom.
@@ -1612,8 +1618,9 @@ signed image's `org.opencontainers.image.version` label equal to the tag pulled 
 `dedalo_verify_release`; a signature alone proves only that SOME official run built
 the bytes, so a mirror re-pointing `:<newer>` at an older signed release would
 otherwise walk the install backwards past the version floor)
-or build (checkout `v<X.Y.Z>`, or the single remote's master / `--ref` for
-`-dev`; the checked-out `version.ts` must declare the target) → re-pin → `up -d
+or build (not a git checkout → refused; checkout `v<X.Y.Z>`, or the single remote's master / `--ref` for
+`-dev`; the checked-out `version.ts` must declare the target; then `dedalo_image_build`
+of that HEAD — the installer's builder, sourced before the checkout) → re-pin → `up -d
 dedalo backup` (never postgres or nginx) → the compose healthcheck: green on the
 first `healthy`; `starting` AND `unhealthy` wait up to `--health-timeout`, default
 900 s (boot migrations run BEFORE the socket binds, so `/health` is red through

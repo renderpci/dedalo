@@ -389,7 +389,7 @@ describe('the installer ontology door (suite DB, zz TLDs)', () => {
 			expect(closure.warnings).toEqual([undeclared]);
 			expect(installed.warnings).toContain(undeclared);
 			expect(installed.warnings).toContain(
-				"'zzjc' references 1 node(s) of 'zzjy' that is not installed (model: e.g. zzjc1→zzjy3) — install 'zzjy' too (--ontologies zzjc,zzjy) or ask the ontology server to declare it",
+				"'zzjc' references 1 node(s) of 'zzjy' that is not installed (model: e.g. zzjc1→zzjy3) — the nodes that use them do not work until 'zzjy' is installed: add it (--ontologies zzjc,zzjy) if you use them, or ask the ontology server to declare it",
 			);
 			const tipos = await scratchTipos();
 			expect(tipos).toContain('zzjc1');

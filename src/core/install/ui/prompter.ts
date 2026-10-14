@@ -14,7 +14,7 @@
 import { sanitizeLine } from '../display_text.ts';
 import type { InstallPrompter, Nav, PasswordFeedback } from '../prompter_contract.ts';
 import { QUIT } from '../prompter_contract.ts';
-import type { Question } from '../screen_model.ts';
+import type { Question, Screen } from '../screen_model.ts';
 import type { PendingView } from '../tui_loader.ts';
 import type { App } from './app.ts';
 import { probePage, resumePage, welcomePage } from './screens/pages.ts';
@@ -34,6 +34,26 @@ export const isProgressLine = (line: string): boolean => PROGRESS.test(line);
 
 /** The question whose acknowledgement is a TYPED yes (the install itself, as in plain mode). */
 const TYPED_YES = 'review.install';
+
+/** A said line that needs the operator's attention (a warning or a failure). */
+const NEEDS_ATTENTION = /^\s*(warn|error)\b/;
+
+/**
+ * What was said on the PREVIOUS screen and is still shown on the next one (a
+ * passed check's verdict: a screen without questions — the System check —
+ * advances on its own) is headed by that screen's title, so its rows never
+ * read as part of the next screen's form (campaign 3 C3-49) — and only what
+ * still matters is carried: the warnings and failures, then the verdict (the
+ * last line). The ok rows stay on the check's own screen: carried whole, a
+ * long check kept only its LAST rows in view and a firewall warning scrolled
+ * off unseen (campaign 3b N18).
+ */
+export function carriedOver(said: string[], previous: Screen | undefined, next: Screen): string[] {
+	if (said.length === 0 || previous === undefined || previous.id === next.id) return said;
+	const last = said.length - 1;
+	const kept = said.filter((line, index) => index === last || NEEDS_ATTENTION.test(line));
+	return [`${previous.title}:`, ...kept];
+}
 
 /** Put a widget on screen; resolve with its answer (or QUIT on an interrupt / a confirmed quit). */
 function ask<T>(app: App, make: (done: (answer: T) => void) => Widget): Promise<T> {
@@ -62,9 +82,14 @@ export function tuiPrompter(app: App): InstallPrompter & { pending(): PendingVie
 	return {
 		interactive: true,
 		view: (view) => {
+			const previous = app.view?.screen;
 			app.view = view;
 			// A finished check's or catalog read's progress line is not kept past the next view.
-			app.said = app.said.filter((line) => !isProgressLine(line));
+			app.said = carriedOver(
+				app.said.filter((line) => !isProgressLine(line)),
+				previous,
+				view.screen,
+			);
 			app.draw();
 		},
 		screen: () => undefined,

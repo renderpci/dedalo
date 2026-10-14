@@ -18,7 +18,10 @@
  *    a user that does not exist is a leftover — never reused by default.
  *  - ONE PER INSTANCE: the user, the group and the folder of every other
  *    instance (instances.ts) are refused, folders component-wise; so is an
- *    account that is a MEMBER of another instance's group.
+ *    account that is a MEMBER of another instance's group. ONE clause per
+ *    problem and instance, naming every file that says so; a clause derived
+ *    from the install-folder one (the default backup folder inside it, the
+ *    other instance's own backup folder) is not repeated (campaign 3 C3-35).
  *  - FOLDER: never a symlinked path; an existing one is used as it is when it
  *    is the user's (and not group/other-writable), ADOPTED when it is ROOT's,
  *    empty, every parent is root's and it lies inside /home, /srv, /data, /mnt
@@ -236,20 +239,50 @@ function unknownSentence(other: OtherInstance): string {
 	return `${head} ${other.unknown} — the installer cannot tell which group it runs as (one group per instance): give it its Group= or remove it`;
 }
 
-/** One other instance's clashes with this install. */
-function clashRules(input: IdentityInput, other: OtherInstance): string[] {
+/**
+ * One collision with another instance: its KEY (the problem and the instance,
+ * never the file that says so) and its sentence over the sources. The same
+ * instance is read from up to three files (the registry, the drop-in, its run
+ * record): grouped by key, each problem is ONE clause naming every file
+ * (campaign 3 C3-35 — it was repeated once per file).
+ */
+interface Clash {
+	key: string;
+	sentence: (sources: string) => string;
+	/** A folder overlap: whose folder, and which (install or backup) — what derived clauses are told from. */
+	folder?: {
+		what: 'install folder' | 'backup folder';
+		mine: string;
+		their: string;
+		theirs: 'install' | 'backup';
+	};
+}
+
+/** One other instance's clashes with this install (keyed — see Clash). */
+function clashRules(input: IdentityInput, other: OtherInstance): Clash[] {
 	const { answers, account } = input;
 	const j = other.instance;
-	if (other.unknown) return [unknownSentence(other)];
+	if (other.unknown) {
+		const text = unknownSentence(other);
+		return [{ key: `unknown|${other.source}`, sentence: () => text }];
+	}
 	return [
 		...(other.user === answers.service_user
 			? [
-					`service user ${answers.service_user} is already the service user of instance ${j} (${other.source}) — one user per instance: choose another --service-user`,
+					{
+						key: `user|${j}`,
+						sentence: (sources: string) =>
+							`service user ${answers.service_user} is already the service user of instance ${j} (${sources}) — one user per instance: choose another --service-user`,
+					},
 				]
 			: []),
 		...(other.group === account.groupName
 			? [
-					`service group ${account.groupName} is already the service group of instance ${j} (${other.source}) — one group per instance: choose another --service-group`,
+					{
+						key: `group|${j}`,
+						sentence: (sources: string) =>
+							`service group ${account.groupName} is already the service group of instance ${j} (${sources}) — one group per instance: choose another --service-group`,
+					},
 				]
 			: []),
 		...memberClash(input, other),
@@ -262,13 +295,17 @@ function clashRules(input: IdentityInput, other: OtherInstance): string[] {
  * primary membership: systemd's User= and runuser call initgroups) — the
  * service would read that instance's tree, media and backups.
  */
-function memberClash(input: IdentityInput, other: OtherInstance): string[] {
+function memberClash(input: IdentityInput, other: OtherInstance): Clash[] {
 	const { account, answers } = input;
 	const theirs = other.group;
 	if (theirs === null || theirs === account.groupName) return [];
 	if (!account.memberOf.some((group) => group.name === theirs)) return [];
 	return [
-		`account ${answers.service_user} is a member of ${theirs}, the service group of instance ${other.instance} (${other.source}) — one group per instance: the service would hold that instance's group; choose an account without it`,
+		{
+			key: `member|${other.instance}|${theirs}`,
+			sentence: (sources) =>
+				`account ${answers.service_user} is a member of ${theirs}, the service group of instance ${other.instance} (${sources}) — one group per instance: the service would hold that instance's group; choose an account without it`,
+		},
 	];
 }
 
@@ -278,23 +315,74 @@ function plainPath(path: string): string {
 	return normal.length > 1 && normal.endsWith('/') ? normal.slice(0, -1) : normal;
 }
 
+/** Another instance's folders, each with which one it is. */
+function theirFolders(other: OtherInstance): { dir: string; theirs: 'install' | 'backup' }[] {
+	const folders: [string | null, 'install' | 'backup'][] = [
+		[other.installDir, 'install'],
+		[other.backupDir, 'backup'],
+	];
+	return folders
+		.filter(
+			(item): item is [string, 'install' | 'backup'] => item[0] !== null && isAbsolute(item[0]),
+		)
+		.map(([dir, theirs]) => ({ dir: plainPath(dir), theirs }));
+}
+
 /** This install's folders against another instance's folders. */
-function folderClashes(input: IdentityInput, other: OtherInstance): string[] {
-	const theirs = [other.installDir, other.backupDir]
-		.filter((dir): dir is string => dir !== null && isAbsolute(dir))
-		.map(plainPath);
-	const mine: [string, string][] = [
+function folderClashes(input: IdentityInput, other: OtherInstance): Clash[] {
+	const mine: ['install folder' | 'backup folder', string][] = [
 		['install folder', input.answers.install_dir],
 		['backup folder', input.answers.backup_dir],
 	];
 	return mine.flatMap(([what, dir]) =>
-		theirs
-			.filter((their) => pathsOverlap(dir, their))
-			.map(
-				(their) =>
-					`${what} ${dir} overlaps instance ${other.instance}'s folder ${their} (${overlapWords(dir, their)}) — choose a folder of its own`,
-			),
+		theirFolders(other)
+			.filter((their) => pathsOverlap(dir, their.dir))
+			.map((their) => ({
+				key: `folder|${other.instance}|${what}|${their.dir}`,
+				folder: { what, mine: dir, their: their.dir, theirs: their.theirs },
+				sentence: () =>
+					`${what} ${dir} overlaps instance ${other.instance}'s folder ${their.dir} (${overlapWords(dir, their.dir)}) — choose a folder of its own`,
+			})),
 	);
+}
+
+/** The install-folder-over-install-folder overlaps (the clause every derived one repeats). */
+function primaryFolderClashes(clashes: readonly Clash[]): Clash[] {
+	return clashes.filter(
+		(clash) => clash.folder?.what === 'install folder' && clash.folder.theirs === 'install',
+	);
+}
+
+/**
+ * Is a folder clause DERIVED from a primary one (C3-35)? A backup folder
+ * inside this install's own folder, or the other instance's folder that lies
+ * inside the install folder already named — the same mistake said again.
+ */
+function derivedFolder(clash: Clash, primary: readonly Clash[], installDir: string): boolean {
+	const folder = clash.folder;
+	if (folder === undefined || primary.includes(clash)) return false;
+	if (folder.what === 'backup folder' && sameOrInside(folder.mine, installDir)) return true;
+	return primary.some((item) => sameOrInside(folder.their, item.folder?.their ?? ''));
+}
+
+/** The clashes grouped by problem: one clause per key, naming every source file. */
+function groupedClashes(input: IdentityInput): { clauses: string[]; sameFolder: boolean } {
+	const found = new Map<string, { clash: Clash; sources: string[] }>();
+	for (const other of input.instances) {
+		for (const clash of clashRules(input, other)) {
+			const entry = found.get(clash.key) ?? { clash, sources: [] };
+			if (!entry.sources.includes(other.source)) entry.sources.push(other.source);
+			found.set(clash.key, entry);
+		}
+	}
+	const all = [...found.values()];
+	const primary = primaryFolderClashes(all.map((entry) => entry.clash));
+	return {
+		clauses: all
+			.filter((entry) => !derivedFolder(entry.clash, primary, input.answers.install_dir))
+			.map((entry) => entry.clash.sentence(entry.sources.join(', '))),
+		sameFolder: primary.length > 0,
+	};
 }
 
 // ── the web sites ────────────────────────────────────────────────────────────
@@ -516,26 +604,44 @@ function groupDecision(input: IdentityInput): IdentityVerdict['group'] {
 	};
 }
 
+/** Is a folder refusal the "already holds an install" one? */
+function heldBy(refusal: string): boolean {
+	return refusal.includes('an install (or its remains) is there');
+}
+
+/** The folder plan's own refusal, unless a same-folder clash with an instance already said it. */
+function folderRefusal(folder: FolderPlan | string, sameFolder: boolean): string[] {
+	if (typeof folder !== 'string') return [];
+	// The folder already holding an install IS the other instance's folder: said once.
+	return sameFolder && heldBy(folder) ? [] : [folder];
+}
+
+/** The user's create/use decision. */
+function userDecision(input: IdentityInput): IdentityVerdict['user'] {
+	const user = input.account.user;
+	return {
+		name: input.answers.service_user,
+		create: user === null,
+		uid: user?.uid ?? null,
+		shell: user?.shell ?? null,
+	};
+}
+
 /** THE verdict (see the header). */
 export function identityVerdict(input: IdentityInput): IdentityVerdict {
 	const folder = folderPlan(input);
-	const user = input.account.user;
+	const clashes = groupedClashes(input);
 	return {
 		problems: [
 			...userRules(input),
 			...groupRules(input),
-			...input.instances.flatMap((other) => clashRules(input, other)),
-			...(typeof folder === 'string' ? [folder] : []),
+			...clashes.clauses,
+			...folderRefusal(folder, clashes.sameFolder),
 			...ancestorRules(input),
 			...webRules(input),
 		],
 		told: toldLines(input),
-		user: {
-			name: input.answers.service_user,
-			create: user === null,
-			uid: user?.uid ?? null,
-			shell: user?.shell ?? null,
-		},
+		user: userDecision(input),
 		group: groupDecision(input),
 		folder: typeof folder === 'string' ? { kind: 'owned', empty: false } : folder,
 		parent: input.account.ancestors.find((fact) => fact.exists)?.path ?? '/',

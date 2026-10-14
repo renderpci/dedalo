@@ -47,7 +47,9 @@ import { answersFromCliArgs } from '../../src/core/install/install_plan.ts';
 import { childProbes, type ProbeProcess } from '../../src/core/install/install_probe_client.ts';
 import { runInteractiveInstall } from '../../src/core/install/install_session.ts';
 import { passwordFeedback } from '../../src/core/install/screen_model.ts';
+import { DONE_TEXT } from '../../src/core/install/screen_text.ts';
 import { ttyInstallPrompter } from '../../src/core/install/ui_plain/prompter.ts';
+import { plainReporter } from '../../src/core/install/ui_plain/reporter.ts';
 import {
 	autoTerminal,
 	FakeTtyOutput,
@@ -440,5 +442,69 @@ describe('a one-time display never goes to a redirected sink (g)', () => {
 		const tty = new FakeTtyOutput();
 		expect(ttyInstallPrompter({ input, output: tty }).showOnce(['salt = \x1b[31mabc'])).toBe(true);
 		expect(tty.text).toBe('salt = abc\n');
+	});
+});
+
+// ── (h) a HEADLESS run's salt reaches its own terminal (campaign 3b C3-18, N28, N24) ──
+
+describe('a headless run (--resume typed at a terminal) shows the salt on its own stdout (h)', () => {
+	const ending = { route: 'trial' as const, instance: '', keptLive: false };
+	const complete = {
+		exitCode: 0,
+		result: 'complete' as const,
+		message: null,
+		failedStep: null,
+		hint: [],
+	};
+
+	test("the default reporter writes the one-time line to this process's stdout when it is a terminal; redirected, it offers no one-time display", async () => {
+		const stdout = process.stdout as { isTTY?: boolean };
+		const wasTty = stdout.isTTY;
+		const written: string[] = [];
+		const write = process.stdout.write;
+		process.stdout.write = ((chunk: string) => {
+			written.push(String(chunk));
+			return true;
+		}) as typeof process.stdout.write;
+		const logged: string[] = [];
+		const sinks = { log: (line: string) => logged.push(line), warn: () => {}, error: () => {} };
+		try {
+			stdout.isTTY = true;
+			const onTty = plainReporter({ sinks });
+			expect(onTty.io.showOnce?.(['  generated DEDALO_SALT_STRING = abc'])).toBe(true);
+			expect(written.join('')).toContain('generated DEDALO_SALT_STRING = abc');
+			// The closing block repeats where it is kept and that it belongs with the backups (N28).
+			await onTty.finish(complete, { mode: 'resume', rootVerified: false, ending });
+			expect(logged.join('\n')).toContain(DONE_TEXT.saltKeep);
+			// Redirected: no one-time display at all (the executors' own rule then applies).
+			written.length = 0;
+			logged.length = 0;
+			stdout.isTTY = false;
+			const redirected = plainReporter({ sinks });
+			expect(redirected.io.showOnce).toBeUndefined();
+			expect(written.join('')).toBe('');
+			await redirected.finish(complete, { mode: 'resume', rootVerified: false, ending });
+			expect(logged.join('\n')).not.toContain(DONE_TEXT.saltKeep);
+		} finally {
+			process.stdout.write = write;
+			stdout.isTTY = wasTty;
+		}
+	});
+
+	test('a refused run is worded refused, never "install failed" (N24)', async () => {
+		const errors: string[] = [];
+		const sinks = { log: () => {}, warn: () => {}, error: (line: string) => errors.push(line) };
+		await plainReporter({ sinks }).finish(
+			{
+				exitCode: 1,
+				result: 'refused',
+				message: 'this install is SEALED (live) — --abort never undoes a sealed installation',
+				failedStep: null,
+				hint: [],
+			},
+			{ mode: 'abort', rootVerified: false, ending },
+		);
+		expect(errors.join('\n')).toContain('✖ refused: this install is SEALED');
+		expect(errors.join('\n')).not.toContain('install failed');
 	});
 });

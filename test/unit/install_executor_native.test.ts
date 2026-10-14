@@ -29,8 +29,16 @@
  * The real step table against a real database is install_resume_drill's.
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { afterAll, describe, expect, spyOn, test } from 'bun:test';
+import {
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -47,7 +55,13 @@ import {
 	type PlanFile,
 	STATE_FILE,
 } from '../../src/core/install/run_files.ts';
+import { DONE_TEXT } from '../../src/core/install/screen_text.ts';
+import { ALREADY_COMPLETE_LINE } from '../../src/core/install/step_loop.ts';
 import { INSTALL_STEPS } from '../../src/core/install/steps.ts';
+import {
+	announceRetiredProperties,
+	resetRetiredPropertyAnnouncements,
+} from '../../src/core/ontology/retired_property_notice.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 import {
 	FAKE_BASE_ANSWERS,
@@ -291,11 +305,18 @@ describe('executor — resume', () => {
 			const landed = new Set<InstallStepId>();
 			const { plan } = await failedRun(dir, 'install_hierarchies', landed);
 			const calls: string[] = [];
-			const outcome = await executeInstall({ mode: 'resume', secrets: {} }, recordingIo().io, {
+			const { io, lines } = recordingIo();
+			const outcome = await executeInstall({ mode: 'resume', secrets: {} }, io, {
 				table: landingTable(calls, landed),
 				host: fakeHost().host,
 			});
 			expect(outcome.result).toBe('complete');
+			// campaign 3b N7: each done step SAYS what the resume did with it — re-checked
+			// (its verify's own detail), or nothing to re-check — never a bare "skipped".
+			const text = lines.join('\n');
+			expect(text).toContain('done in an earlier run — verified again: landed');
+			expect(text).toContain('done in an earlier run — nothing to re-check, not run again');
+			expect(text).not.toContain('— skipped');
 			const at = plan.steps.indexOf('install_hierarchies');
 			// Nothing done before the failure ran again — probes and verify-less steps included.
 			expect(runs(calls)).toEqual(plan.steps.slice(at));
@@ -320,7 +341,14 @@ describe('executor — resume', () => {
 			});
 			expect(outcome.result).toBe('already_complete');
 			expect(runs(calls)).toEqual([]);
-			expect(lines.join('\n')).toContain('install already complete — every step verified');
+			expect(lines.join('\n')).toContain(ALREADY_COMPLETE_LINE);
+			// The reference quotes the line it really prints (campaign 3b N7).
+			expect(
+				readFileSync(
+					join(import.meta.dir, '../../docs/install/installer_reference.md'),
+					'utf8',
+				).replace(/\s+/g, ' '),
+			).toContain(`\`${ALREADY_COMPLETE_LINE}\``);
 		});
 	});
 
@@ -622,6 +650,10 @@ describe('executor — abort', () => {
 			);
 			expect(outcome.exitCode).toBe(1);
 			expect(outcome.message).toContain('SEALED');
+			// A refusal — nothing was undone — is never worded "install failed" (campaign 3b N24).
+			expect(outcome.result).toBe('refused');
+			expect(outcome.failedStep).toBeNull();
+			expect(DONE_TEXT.failure(outcome)).toStartWith('refused: this install is SEALED');
 			expect(calls).toEqual([]);
 			expect(readState(dir).outcome).toBe('complete');
 		});
@@ -708,6 +740,12 @@ describe("executor — what is the install's, and what is not", () => {
 	});
 
 	test("an operator's own .env.bak.* (before the install) survives adoption AND --abort; the install's own goes", async () => {
+		// The test process's OWN session store lives outside the install's private dir
+		// (the preload's scratch): the runtime-file undo must never take it (it did, and
+		// every later session gate of the tier read a deleted sqlite file).
+		const ownStore = String(process.env.DEDALO_SESSION_DB_PATH);
+		const madeStore = !existsSync(ownStore);
+		if (madeStore) writeFileSync(ownStore, '');
 		await withPrivateDir(scratchPrivateDir(), async (dir) => {
 			writeFileSync(join(dir, '.env.bak.1000'), 'OPERATOR=1\n');
 			const { plan, planFile } = fakePlan();
@@ -759,7 +797,12 @@ describe("executor — what is the install's, and what is not", () => {
 			expect(existsSync(join(dir, '.env.bak.1000'))).toBe(true);
 			expect(existsSync(join(dir, '.env.bak.2000'))).toBe(false);
 			expect(existsSync(join(dir, '.env'))).toBe(false);
+			expect(
+				existsSync(ownStore),
+				"a runtime file outside the private dir is not the install's",
+			).toBe(true);
 		});
+		if (madeStore) rmSync(ownStore, { force: true });
 	});
 
 	test('--abort never resets a database that is neither stamped by this install nor empty — and undoes nothing', async () => {
@@ -991,6 +1034,279 @@ describe('executor — the per-item rows and the one-time display (phase 2)', ()
 			await executeInstall(freshRequest(planFile, plan), io, { table: saltTable([], dir), host });
 			expect(lines.filter((line) => line.includes(SALT))).toHaveLength(1);
 			expect(readState(dir).created.salt_shown).toBe(true);
+		});
+	});
+});
+
+// ── campaign 3 (2026-10-13): the unserved seal, the media tree, the child's hints ──
+
+/** An engine-only plan (what a host route's child runs) and a host whose database fingerprint `fp` answers. */
+function engineOnlyRun(fp: { value: string | null }) {
+	const { plan, planFile } = fakePlan({}, { ...FAKE_BASE_ANSWERS, engine_only: true });
+	const { host } = fakeHost();
+	return { plan, planFile, host: { ...host, databaseFingerprint: async () => fp.value } };
+}
+
+describe('executor — a SEALED install is undone only as an UNSERVED host child (C3-11)', () => {
+	const abortRequest = (unservedAttested: boolean): ExecutorRequest => ({
+		mode: 'abort',
+		secrets: {},
+		confirmDatabase: String(FAKE_BASE_ANSWERS.db_database),
+		unservedAttested,
+	});
+
+	test('the seal records the database fingerprint (after its own root login); attested + unchanged → undone', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const fp = { value: 'a'.repeat(32) };
+			const landed = new Set<InstallStepId>();
+			const { plan, planFile, host } = engineOnlyRun(fp);
+			const fresh = await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+				table: landingTable([], landed),
+				host,
+			});
+			expect(fresh.result).toBe('complete');
+			expect(readState(dir).created.sealed_fingerprint).toBe('a'.repeat(32));
+			const calls: string[] = [];
+			const { io, lines } = recordingIo();
+			const outcome = await executeInstall(abortRequest(true), io, {
+				table: landingTable(calls, landed),
+				host,
+			});
+			expect(outcome.message).toBeNull();
+			expect(outcome.result).toBe('aborted');
+			expect(calls).toContain('undo:install_db_from_default_file');
+			expect(lines.join('\n')).toContain('sealed but never served');
+			expect(existsSync(runDirOf(dir))).toBe(false);
+		});
+	});
+
+	for (const [name, attested, change, engineOnly] of [
+		['no host attestation', false, false, true],
+		['attested, but the database changed since the seal (it served)', true, true, true],
+		['attested, but not a host child (no engine_only)', true, false, false],
+	] as const) {
+		test(`refused, nothing undone: ${name}`, async () => {
+			await withPrivateDir(scratchPrivateDir(), async (dir) => {
+				const fp = { value: 'b'.repeat(32) as string | null };
+				const landed = new Set<InstallStepId>();
+				const run = engineOnlyRun(fp);
+				const { plan, planFile } = engineOnly ? run : fakePlan();
+				await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+					table: landingTable([], landed),
+					host: run.host,
+				});
+				if (change) fp.value = 'c'.repeat(32);
+				const calls: string[] = [];
+				const outcome = await executeInstall(abortRequest(attested), recordingIo().io, {
+					table: landingTable(calls, landed),
+					host: run.host,
+				});
+				expect(outcome.exitCode).toBe(1);
+				expect(outcome.message).toContain('SEALED');
+				expect(calls).toEqual([]);
+				expect(readState(dir).outcome).toBe('complete');
+			});
+		});
+	}
+
+	test('a later run never launders a changed database into a new seal', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const fp = { value: 'd'.repeat(32) as string | null };
+			const landed = new Set<InstallStepId>();
+			const { plan, planFile, host } = engineOnlyRun(fp);
+			await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+				table: landingTable([], landed),
+				host,
+			});
+			fp.value = 'e'.repeat(32);
+			const resumed = await executeInstall(
+				{ mode: 'resume', secrets: { root_password: ROOT_PW } },
+				recordingIo().io,
+				{ table: landingTable([], landed), host },
+			);
+			expect(resumed.result).toBe('already_complete');
+			expect(readState(dir).created.sealed_fingerprint).toBe('d'.repeat(32));
+		});
+	});
+});
+
+describe('executor — check_directories records the media tree it made; --abort prunes it (C3-9)', () => {
+	test('the created media tree is recorded (absolute); the real undo removes its EMPTY directories, never one holding a file', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const media = mkdtempSync(join(privateRoot, 'media_'));
+			const created = ['av', 'av/subtitles', 'image', 'image/original'];
+			const { plan, planFile } = fakePlan();
+			const table = fakeTable([], {
+				check_directories: {
+					run: async () => {
+						for (const path of created) mkdirSync(join(media, path), { recursive: true });
+						return { ok: true, msg: 'dirs ok', mediaTree: { root: media, created } };
+					},
+				},
+			});
+			await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+				table,
+				host: fakeHost().host,
+			});
+			const state = readState(dir);
+			expect(state.created.media_tree).toEqual(created.map((path) => join(media, path)));
+			// A file someone put in one of them: that directory (and its parent) stays.
+			writeFileSync(join(media, 'image/original/kept.jpg'), 'x');
+			const said = await (
+				INSTALL_STEPS.check_directories.undo as NonNullable<
+					(typeof INSTALL_STEPS)['check_directories']['undo']
+				>
+			)({ plan: planFile, state, secrets: {} });
+			expect(said).toContain('media tree: 2 empty director(ies) removed');
+			expect(existsSync(join(media, 'av'))).toBe(false);
+			expect(existsSync(join(media, 'image/original/kept.jpg'))).toBe(true);
+			expect(readdirSync(media)).toEqual(['image']);
+		});
+	});
+});
+
+describe("executor — a host route's engine child prints no hint of its own (C3-54)", () => {
+	test('delegated (--events-jsonl): a failure carries no `bun run scripts/install.ts` hint; a plain run does', async () => {
+		for (const delegated of [true, false]) {
+			await withPrivateDir(scratchPrivateDir(), async () => {
+				const { plan, planFile } = fakePlan();
+				const table = fakeTable([], {
+					install_ontologies: {
+						run: async () => {
+							throw new Error('the ontology import failed');
+						},
+					},
+				});
+				const { io } = recordingIo();
+				const outcome = await executeInstall(
+					freshRequest(planFile, plan),
+					delegated ? { ...io, delegated: true } : io,
+					{ table, host: fakeHost().host },
+				);
+				expect(outcome.result).toBe('failed');
+				if (delegated) expect(outcome.hint).toEqual([]);
+				else expect(outcome.hint.join('\n')).toContain('scripts/install.ts --resume');
+			});
+		}
+	});
+});
+
+describe('executor — an --engine-only run by hand names ITS command, not a bare bun run (campaign 3b C3-54)', () => {
+	test("its failure hint says the same command with --resume / --abort, never `bun run scripts/install.ts`; a plain run's keeps it", async () => {
+		for (const engineOnly of [true, false]) {
+			await withPrivateDir(scratchPrivateDir(), async () => {
+				const { plan, planFile } = fakePlan(
+					{},
+					{ ...FAKE_BASE_ANSWERS, ...(engineOnly ? { engine_only: true } : {}) },
+				);
+				const table = fakeTable([], {
+					install_ontologies: {
+						run: async () => {
+							throw new Error('the ontology import failed');
+						},
+					},
+				});
+				const outcome = await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+					table,
+					host: fakeHost().host,
+				});
+				expect(outcome.result).toBe('failed');
+				const hint = outcome.hint.join('\n');
+				const db = String(FAKE_BASE_ANSWERS.db_database);
+				if (engineOnly) {
+					expect(hint).not.toContain('bun run scripts/install.ts');
+					expect(hint).toContain('the same command you ran, with --resume added');
+					expect(hint).toContain(
+						`the same command you ran, with --abort --confirm-database ${db} added`,
+					);
+					expect(hint).toContain('manual_install.md#manual-host_engine');
+				} else {
+					expect(hint).toContain('bun run scripts/install.ts --resume');
+				}
+			});
+		}
+	});
+});
+
+describe('executor — a Ctrl-C that kills the running step is ONE interruption (campaign 3b N12)', () => {
+	test("the step's child dies of the same SIGINT: no failure block, exit 130, the run recorded interrupted", async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const { plan, planFile } = fakePlan();
+			// Ctrl-C reaches the whole process group: the installer's handler AND the step's child,
+			// whose death (exit 130) the step reports as its failure.
+			const table = fakeTable([], {
+				install_ontologies: {
+					run: async () => {
+						process.emit('SIGINT');
+						throw new Error('the engine steps failed (exit 130)');
+					},
+				},
+			});
+			const exits: number[] = [];
+			class Exited extends Error {}
+			const exit = spyOn(process, 'exit').mockImplementation(((code?: number) => {
+				exits.push(code ?? 0);
+				throw new Exited(`exit ${code}`);
+			}) as never);
+			const { io, lines } = recordingIo();
+			let settled: unknown = null;
+			try {
+				settled = await executeInstall(freshRequest(planFile, plan), io, {
+					table,
+					host: fakeHost().host,
+				});
+			} catch (error) {
+				settled = error;
+			} finally {
+				exit.mockRestore();
+			}
+			// It never returned a failure outcome: it left through the interruption's exit.
+			expect(settled).toBeInstanceOf(Exited);
+			expect(exits).toEqual([130]);
+			const said = lines.join('\n');
+			expect(said.match(/install interrupted \(SIGINT\)/g)?.length).toBe(1);
+			expect(said).not.toContain('install failed');
+			const state = readState(dir);
+			expect(state.runs.at(-1)?.result).toBe('interrupted');
+			expect(state.steps.install_ontologies?.status).toBe('failed');
+		});
+	});
+});
+
+describe("executor — the ontology's RETIRED-property lines stay out of the operator's terminal (campaign 3b C3-72)", () => {
+	test('announced during an install: counted, printed nowhere; outside an install: printed', async () => {
+		await withPrivateDir(scratchPrivateDir(), async () => {
+			resetRetiredPropertyAnnouncements();
+			const { plan, planFile } = fakePlan();
+			// What the resolver does on a node carrying a retired key (resolver.ts reportRetiredProperties).
+			const table = fakeTable([], {
+				install_ontologies: {
+					run: async () => {
+						announceRetiredProperties('zz_retired_node', ['multi_value']);
+						return { ok: true, msg: 'ontologies ok' };
+					},
+				},
+			});
+			const printed: string[] = [];
+			const errors = spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+				printed.push(args.map(String).join(' '));
+			});
+			const { io, lines } = recordingIo();
+			try {
+				const outcome = await executeInstall(freshRequest(planFile, plan), io, {
+					table,
+					host: fakeHost().host,
+				});
+				expect(outcome.result).toBe('complete');
+				expect([...printed, ...lines].join('\n')).not.toContain('zz_retired_node');
+				// Positive control: the same announcement outside an install reaches stderr.
+				resetRetiredPropertyAnnouncements();
+				announceRetiredProperties('zz_retired_node', ['multi_value']);
+				expect(printed.join('\n')).toContain('zz_retired_node');
+			} finally {
+				errors.mockRestore();
+				resetRetiredPropertyAnnouncements();
+			}
 		});
 	});
 });

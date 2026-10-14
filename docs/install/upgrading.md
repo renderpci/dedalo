@@ -56,7 +56,7 @@ sudo -u dedalo git -C /opt/dedalo/app/master_dedalo fetch --all --tags
 sudo -u dedalo git -C /opt/dedalo/app/master_dedalo checkout <tag-or-sha>
 sudo -u dedalo bash -c 'cd /opt/dedalo/app/master_dedalo && /opt/dedalo/bin/bun install --frozen-lockfile --production'
 sudo systemctl restart dedalo-ts
-curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
+sudo curl --fail --unix-socket /run/dedalo/dedalo_ts.sock http://localhost/health
 ```
 
 `--frozen-lockfile` refuses to resolve a dependency tree different from the one that was tested: if it errors, the lockfile and `package.json` disagree — fix that upstream, never drop the flag. Three things are yours on such a host, whichever way the code arrives:
@@ -206,7 +206,7 @@ this — the same conversion runs inside the migration itself.
 ## Verify
 
 ```shell
-curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
+sudo curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
 ```
 
 Then, in the browser: log in, open a record, upload an image, run a search. A green health check proves the process and the database; it does not prove the media toolchain or the web server.

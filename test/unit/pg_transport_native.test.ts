@@ -125,7 +125,7 @@ describe('A. resolvePgTransport — the decision table', () => {
 				db_username: 'u',
 			}),
 		);
-		expect(args).toEqual(['-h', '/tmp', '-p', '5433', '-U', 'u']);
+		expect(args).toEqual(['-h', '/tmp', '-p', '5433', '-U', 'u', '-w']);
 	});
 });
 

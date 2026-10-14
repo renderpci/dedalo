@@ -18,12 +18,15 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { existsSync, readdirSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import {
 	applyActiveOverride,
 	convertAuthoringToV7,
 	detectFormat,
+	listToolDirectories,
+	missingServerWarning,
 	validateRegister,
 } from '../../src/core/tools/register.ts';
 import { isGrantOnlyTool } from '../helpers/tool_directory_corpus.ts';
@@ -251,4 +254,39 @@ describe('grant-only tools', () => {
 			});
 		});
 	}
+});
+
+describe('the "no server module" warning is earned only by a client that calls the server (campaign 3 C3-19)', () => {
+	test('over the repo tools: no warning for a tool whose client never calls tool_request — a clean install prints none', async () => {
+		const { getLoadedTool } = await import('../../src/core/tools/loader.ts');
+		const warned: string[] = [];
+		let serverless = 0;
+		for (const { name, dir } of listToolDirectories()) {
+			const hasServer = (await getLoadedTool(name)) !== undefined;
+			if (!hasServer) serverless += 1;
+			if ((await missingServerWarning(dir, hasServer)) !== null) warned.push(name);
+		}
+		// Anti-vacuity: client-only tools exist (13 at campaign 3), and none of them warns.
+		expect(serverless).toBeGreaterThan(5);
+		expect(warned).toEqual([]);
+	});
+
+	test('a tool whose client CALLS tool_request without a server module still warns', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_tool_fixture_'));
+		try {
+			mkdirSync(join(dir, 'js', 'view'), { recursive: true });
+			writeFileSync(
+				join(dir, 'js', 'view', 'render_tool_fixture.js'),
+				"const answer = await self.tool_request({ action: 'go' })\n",
+			);
+			expect(await missingServerWarning(dir, false)).toContain('tool_request');
+			// With its server module: nothing to say.
+			expect(await missingServerWarning(dir, true)).toBeNull();
+			// A client that never calls it: nothing to say either.
+			writeFileSync(join(dir, 'js', 'view', 'render_tool_fixture.js'), 'export const x = 1\n');
+			expect(await missingServerWarning(dir, false)).toBeNull();
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
 });

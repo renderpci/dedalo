@@ -4,6 +4,7 @@
 
 
 import {get_instance} from '../../../core/common/js/instances.js'
+import {render_debug_info_bar} from '../../../core/menu/js/view_default_edit_menu.js'
 
 
 
@@ -37,6 +38,20 @@ describe("PAGE TEST", function() {
 		assert.isObject(page, 'page instance')
 		assert.equal(page.model, 'page')
 		assert.isNull(page_globals.page_error, 'a page-level ApiError leaked into the shell build')
+	})
+
+	it('the debug bar never prints a missing build as "null" (campaign 3 C3-46)', function() {
+		// a dev checkout's dedalo_build is null (WC-2026-08-23-build-provenance)
+		const text = (info_data) => render_debug_info_bar({data : {info_data}})
+			.querySelector('.dedalo_version').textContent
+		const dev = text({dedalo_version : '7.0.0.dev', dedalo_build : null})
+		assert.equal(dev, 'Code v. 7.0.0.dev')
+		assert.notInclude(dev, 'null')
+		// CONTROL: a release's build date is shown
+		assert.equal(
+			text({dedalo_version : '7.0.0', dedalo_build : '2026-10-13T10:00:00+02:00'}),
+			'Code v. 7.0.0 2026-10-13T10:00:00+02:00'
+		)
 	})
 
 	it('renders the wrapper into the content container', function() {

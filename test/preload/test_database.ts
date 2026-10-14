@@ -27,8 +27,9 @@
  * an explicit, typed-out choice to point the suite at your own data, never a default.
  */
 
-import { readEnv } from '../../src/config/env.ts';
-import { SUITE_MEDIA_EXPORT_BASE } from '../helpers/suite_posture.ts';
+import { processEnvValue, readEnv } from '../../src/config/env.ts';
+import { type EnvRead, suiteBunSqlTarget, suitePgEndpoint } from '../helpers/suite_pg.ts';
+import { SUITE_MEDIA_EXPORT_BASE, suiteLangPins } from '../helpers/suite_posture.ts';
 import { testDatabaseName } from '../helpers/test_database.ts';
 
 // Pin the media WEB base to the same-origin relative default for the WHOLE suite
@@ -57,6 +58,12 @@ process.env.DEDALO_CODE_SERVER_DEV_CHANNEL = 'false';
 // The media export base CI runs with (test/helpers/suite_posture.ts). `??=`, like
 // hosted_env.sh's `:=`: a shell export still wins, the developer's .env does not.
 process.env.DEDALO_MEDIA_EXPORT_BASE ??= SUITE_MEDIA_EXPORT_BASE;
+// The suite's languages (C3-40, test/helpers/suite_posture.ts): the declared
+// data-language set the save chokepoint enforces is the suite's, never the one a
+// developer's .env declares. A shell export still wins, like the line above.
+for (const [key, value] of suiteLangPins((name) => processEnvValue(name) !== undefined)) {
+	process.env[key] = value;
+}
 // NOT PINNED HERE: DEDALO_DIFFUSION_SCHEDULER_ENABLED. Turning dispatch off for
 // the whole tier looks tempting (the unit suite does spawn real runner
 // subprocesses), but MEASURED it reds 5 gates that legitimately exercise
@@ -127,24 +134,17 @@ if (process.env.DEDALO_TEST_DB_DISABLE !== 'true') {
 }
 
 /**
- * Host or unix socket, the same way the engine resolves it.
- *
- * DUPLICATED UNDER PROTEST from `src/core/db/postgres.ts` buildSqlOptions
- * (:72-76), which owns this rule. This preload MAY NOT import that module: it
- * builds the pool at module scope, and pulling it in here would freeze the
- * connection before the env is repointed — the very thing this file exists to do.
- *
- * The rule: a host starting with `/` is a socket DIRECTORY, and the socket
- * inside it is named `.s.PGSQL.<port>`. Passing that directory as `hostname`
- * does not fail loudly — it fails as `PostgresError: Connection closed`, which
- * the probe swallowed, so on every socket-based install the answer was a
- * confident, permanent "the test database does not exist" about a database that
- * was right there. Keep the two copies in step.
+ * Host or unix socket, the same way the engine resolves it: the engine's ONE
+ * transport rule (src/config/pg_transport.ts — DB_SOCKET wins, a `/` DB_HOST is
+ * a socket directory), asked through test/helpers/suite_pg.ts, which imports
+ * only that PURE module. This preload may not import src/core/db/postgres.ts
+ * (it builds the pool at module scope, freezing the connection before the env
+ * is repointed). A hand copy of the rule that read DB_HOST alone made every
+ * socket install answer a confident "the test database does not exist" about a
+ * database that was right there (install campaign 3, C3-12).
  */
-function connectionTarget(): { path: string } | { hostname: string; port: number } {
-	const host = readEnv('DB_HOST') ?? 'localhost';
-	const port = Number(readEnv('DB_PORT') ?? 5432);
-	return host.startsWith('/') ? { path: `${host}/.s.PGSQL.${port}` } : { hostname: host, port };
+export function connectionTarget(read: EnvRead = readEnv): ReturnType<typeof suiteBunSqlTarget> {
+	return suiteBunSqlTarget(suitePgEndpoint(read));
 }
 
 /** Cheap existence probe. Any failure (no Postgres at all — the hermetic tier) ⇒ false. */

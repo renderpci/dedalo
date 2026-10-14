@@ -43,24 +43,74 @@ export function resolvePgBinary(
 }
 
 /**
- * True when a psql client can be resolved (config, Homebrew, or PATH).
- *
- * COVERAGE-EXEMPT for execution (plan §4.1.9 → §5.1): both arms are probes of
- * THIS machine — an `existsSync` on a resolved path, or a `Bun.spawnSync('psql
- * --version')` — so any assertion compares a probe against the same probe and
- * answers differently on a clone or in CI. The decidable part, the candidate
- * ORDER, is extracted to `pgBinaryCandidates` and gated in
- * test/unit/tier1_install_native.test.ts.
+ * What probing for a psql client answered — a TYPED answer, never a throw.
+ * `Bun.spawnSync` THROWS when the binary cannot be started (ENOENT: not on
+ * PATH; EACCES: present, not executable); a fresh host has no psql at all, so
+ * a throw here once crashed the installer's whole System check (campaign 3,
+ * 2026-10-13).
+ *  - `found`: it ran and answered `--version` (`version`: its first line);
+ *  - `missing`: no such binary (ENOENT) — the normal state of a fresh host;
+ *  - `unusable`: a binary is there but did not run or answered non-zero
+ *    (`reason`: the errno code, or `exit <n>`).
  */
+export type PsqlProbe =
+	| { state: 'found'; path: string; version: string }
+	| { state: 'missing'; path: string }
+	| { state: 'unusable'; path: string; reason: string };
+
+/** The errno code of a spawn failure ('' when it carries none). */
+function spawnErrorCode(error: unknown): string {
+	const code = (error as { code?: unknown } | null)?.code;
+	return typeof code === 'string' ? code : '';
+}
+
+/**
+ * Probe `psql --version` at the first candidate that exists, else the bare
+ * name on `env.PATH` (Bun resolves a bare argv[0] against the PATH of the
+ * env it is given). Never throws. Exported with its inputs so a gate drives
+ * it over a PATH that holds no psql — the fresh host — on any machine.
+ */
+export function probePsqlAt(candidates: readonly string[], env: Record<string, string>): PsqlProbe {
+	const path = candidates.find((candidate) => existsSync(candidate)) ?? 'psql';
+	try {
+		return ranAnswer(
+			path,
+			Bun.spawnSync([path, '--version'], { stdout: 'pipe', stderr: 'pipe', env }),
+		);
+	} catch (error) {
+		return spawnFailure(path, error);
+	}
+}
+
+/** A psql that ran: found (its first line) when it answered 0, else unusable. */
+function ranAnswer(path: string, run: { exitCode: number; stdout: Buffer }): PsqlProbe {
+	if (run.exitCode !== 0) return { state: 'unusable', path, reason: `exit ${run.exitCode}` };
+	return { state: 'found', path, version: run.stdout.toString().split('\n')[0]?.trim() ?? '' };
+}
+
+/** A psql that could not be started: ENOENT is missing; anything else unusable, named by its errno. */
+function spawnFailure(path: string, error: unknown): PsqlProbe {
+	const code = spawnErrorCode(error);
+	if (code === 'ENOENT') return { state: 'missing', path };
+	return { state: 'unusable', path, reason: code === '' ? 'it could not be started' : code };
+}
+
+/**
+ * THIS machine's psql (config dir, Homebrew newest-first, then PATH).
+ *
+ * COVERAGE-EXEMPT for execution (plan §4.1.9 → §5.1): it is a probe of THIS
+ * machine, so an assertion on it answers differently on a clone or in CI. The
+ * decidable parts are gated over their inputs: the candidate ORDER
+ * (`pgBinaryCandidates`, test/unit/tier1_install_native.test.ts) and the
+ * never-throws answer over a PATH without psql (`probePsqlAt`,
+ * test/unit/install_system_check_native.test.ts).
+ */
+export function probePsql(): PsqlProbe {
+	// Explicit env: Bun's default spawn env is the ORIGINAL environ (config/env.ts liveProcessEnv).
+	return probePsqlAt(pgBinaryCandidates('psql', config.ops.pgBinPath), liveProcessEnv());
+}
+
+/** True when a psql client can be resolved AND runs (never throws — see PsqlProbe). */
 export function psqlResolvable(): boolean {
-	const resolved = resolvePgBinary('psql');
-	if (resolved !== 'psql') return existsSync(resolved);
-	// Bare 'psql' → probe PATH with a --version call.
-	const probe = Bun.spawnSync(['psql', '--version'], {
-		stdout: 'pipe',
-		stderr: 'pipe',
-		// Explicit: Bun's default env is the ORIGINAL environ (config/env.ts liveProcessEnv).
-		env: liveProcessEnv(),
-	});
-	return probe.exitCode === 0;
+	return probePsql().state === 'found';
 }
