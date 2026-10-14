@@ -56,6 +56,7 @@ import {
 	connectionStatusForElement,
 	type DiffusionConnectionStatus,
 	type SectionDiffusionNode,
+	sqlTargetDatabase,
 } from '../../src/diffusion/api/info.ts';
 import { isMariadbTargetFormat, TABLE_FORMATS } from '../../src/diffusion/plan/formats.ts';
 import {
@@ -241,6 +242,19 @@ describe('connection_status — single source of truth and client welding', () =
 		});
 	});
 
+	test('the panel database name is sql-only and SANITIZED, never a throw', () => {
+		// The same chokepoint as the probe: the name shown is the one written to.
+		expect(sqlTargetDatabase('sql', 'Web MDCAT')).toBe('web_mdcat');
+		expect(sqlTargetDatabase('sql', 'web_mdcat')).toBe('web_mdcat');
+		// socrata shares the table target, not the concept: no name to show.
+		for (const type of ['socrata', 'rdf', 'xml', null]) {
+			expect(sqlTargetDatabase(type, 'web_mdcat'), String(type)).toBeNull();
+		}
+		expect(sqlTargetDatabase('sql', null)).toBeNull();
+		expect(sqlTargetDatabase('sql', '')).toBeNull();
+		expect(sqlTargetDatabase('sql', '///')).toBeNull();
+	});
+
 	// (!) CLIENT SWEEP PENDING. The server now emits `{ok, code?, message}`; the
 	// shipped client still reads `.result` / `.msg`
 	// (tools/tool_diffusion/js/render_tool_diffusion.js:594-611 and its
@@ -296,6 +310,8 @@ describe('connection_status — the real get_diffusion_info payload', () => {
 			// The REAL probe, on the database the element names — ready, because the
 			// suite server holds that database for this lane (acquired above).
 			expect(node.connection_status, expected.tipo).toEqual({ ok: true, message: MSG_READY });
+			// The panel names the database the verdict is about.
+			expect(node.database, expected.tipo).toBe(expected.database);
 		}
 		for (const node of section_diffusion_nodes) {
 			const status = node.connection_status;
@@ -318,6 +334,7 @@ describe('connection_status — the real get_diffusion_info payload', () => {
 		for (const node of section_diffusion_nodes) {
 			expect(isMariadbTargetFormat(node.type), node.tipo).toBe(false);
 			expect(node.connection_status, node.tipo).toBeNull();
+			expect(node.database, node.tipo).toBeNull();
 		}
 	});
 });

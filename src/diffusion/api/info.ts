@@ -68,6 +68,9 @@ export interface SectionDiffusionNode {
 	type: string | null;
 	/** `{result,msg}` for a MariaDB target; null otherwise (row omitted). */
 	connection_status: DiffusionConnectionStatus | null;
+	/** Target database name for an `sql` element — the SANITIZED identifier the
+	 * writer publishes into; null for every other type (row omitted). */
+	database: string | null;
 }
 
 /** The oracle's verbatim verdict strings (class.diffusion_utils.php:984/:988). */
@@ -167,6 +170,23 @@ export async function connectionStatusForElement(
 	}
 }
 
+/**
+ * The target database name a panel shows (native addition, no PHP twin). Only
+ * an `sql` element has one worth naming — `socrata` shares the table target but
+ * not the concept. It is the SANITIZED identifier (the same requireSqlIdentifier
+ * chokepoint as the plan and the probe), never the raw label: `Web MDCAT` is
+ * shown as `web_mdcat`, the database actually written to. Unresolvable or
+ * invalid → null, never a throw (a throw would blank the accordion).
+ */
+export function sqlTargetDatabase(type: string | null, database: string | null): string | null {
+	if (type !== 'sql' || database === null || database === '') return null;
+	try {
+		return requireSqlIdentifier(database, 'database');
+	} catch {
+		return null;
+	}
+}
+
 /** PHP get_diffusion_info result payload for one section. */
 export async function buildDiffusionInfo(sectionTipo: string): Promise<{
 	section_diffusion_nodes: SectionDiffusionNode[];
@@ -212,13 +232,10 @@ export async function buildDiffusionInfo(sectionTipo: string): Promise<{
 		}
 		const element = elementOf(node, elementTypesByTipo);
 		const type = element?.type ?? null;
+		const databaseLabel = element === null ? null : getDatabaseNameForElement(tree, element.tipo);
 		// The verdict is memoized per database in the mariadb layer, so N panels
 		// over the same target cost ONE round-trip.
-		const connectionStatus = await connectionStatusForElement(
-			type,
-			element === null ? null : getDatabaseNameForElement(tree, element.tipo),
-			node.tipo,
-		);
+		const connectionStatus = await connectionStatusForElement(type, databaseLabel, node.tipo);
 		items.push({
 			tipo: node.tipo,
 			model: node.model,
@@ -227,6 +244,7 @@ export async function buildDiffusionInfo(sectionTipo: string): Promise<{
 			children,
 			type,
 			connection_status: connectionStatus,
+			database: sqlTargetDatabase(type, databaseLabel),
 		});
 	}
 	return { section_diffusion_nodes: items, resolve_levels: resolveLevels };
