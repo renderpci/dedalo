@@ -49,8 +49,10 @@ const ALLOWED_JOB_KEYS = [
 	'cancel_requested',
 	'counter',
 	'job_id',
+	'linked_counter',
 	'max_attempts',
 	'msg',
+	'phase',
 	'process_id',
 	'state',
 	'total',
@@ -103,6 +105,8 @@ const FIXTURE: ActiveJobRow = {
 	state: 'running',
 	counter_text: '1284300',
 	total_text: '4000000',
+	phase_text: 'selection',
+	linked_counter_text: null,
 	msg: 'Processing records...',
 	cancel_requested: false,
 	attempt: 1,
@@ -116,7 +120,7 @@ describe('follow_queue tripwire', () => {
 		const keys = Object.keys(queueJobView(FIXTURE)).sort();
 		expect(
 			keys,
-			`The follow_queue job frame changed shape.\n\nThis frame is re-serialized once a second for every connected admin. Adding a field is a permanent per-second cost, and the unbounded ones (spec/sqo/errors/checkpoint/result) can make that cost unbounded. It is also the data-minimisation boundary: these frames name EVERY owner's jobs to a global admin.\n\nIf the addition is genuinely needed: bound it, add it here, and update the WC-067 entry in engineering/wire_contract/ in the same commit. If you only need it for one job on demand, the widget's get_value already carries the full row.`,
+			`The follow_queue job frame changed shape.\n\nThis frame is re-serialized once a second for every connected admin. Adding a field is a permanent per-second cost, and the unbounded ones (spec/sqo/errors/checkpoint/result) can make that cost unbounded. It is also the data-minimisation boundary: these frames name EVERY owner's jobs to a global admin.\n\nIf the addition is genuinely needed: bound it, add it here, and update the WC-069 entry in engineering/wire_contract/ in the same commit. If you only need it for one job on demand, the widget's get_value already carries the full row.`,
 		).toEqual([...ALLOWED_JOB_KEYS]);
 	});
 

@@ -306,6 +306,9 @@ describe('runJob — the real publication pipeline on the file element', () => {
 		const seen = PUBLISHABLE_IDS.length + 1;
 		expect(finished.totals.counter).toBe(seen);
 		expect(finished.checkpoint.processed).toBe(seen);
+		// no portal hop on this element → the run never leaves the selection phase
+		expect(finished.totals.phase).toBe('selection');
+		expect(finished.totals.linked_counter).toBe(0);
 		// keyset cursor = the last primary id of the (single) batch
 		expect(Number(finished.checkpoint.cursor)).toBe(Math.max(...PUBLISHABLE_IDS));
 		const runStartedAt = Number(finished.checkpoint.run_started_at);

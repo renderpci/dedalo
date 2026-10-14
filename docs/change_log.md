@@ -1169,6 +1169,17 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **A publication job now says when it has moved on to the linked records.**
+
+    A publication job first publishes the records you selected, then every record they link
+    to (for coin types: their coins, mints, designs…). That second part can be most of
+    the work, but the progress used to stay at "100% (estimated)" the whole time, as if
+    the job were finished. Now the job's message says `Publishing linked records: 12345
+    (coins)...`. In Maintenance → Diffusion server control the bar switches to a moving
+    "Selection done · linked records: 12,345", and the Live activity band says how many
+    jobs are in that phase. The linked part has no estimate, so no percentage or time
+    remaining is shown for it.
+
 - **Large exports no longer load the whole selection into the server's memory.**
 
     An export now reads its records in pages from one consistent snapshot of the selection, instead of loading every record id before writing the first line, so a very large export uses the same memory as a small one. Two limits are now visible: the in-page (non-streamed) export answer is refused with *export.format_limit* above `DEDALO_SEARCH_CLIENT_MAX_LIMIT` records — the streamed and background exports serve the same selection — and each server process runs at most a quarter of `DB_POOL_MAX` exports at once (at least one), answering *export.busy* (retry shortly) to an export asked for directly beyond that, while a background export waits for its turn instead of failing. A server configured with `DB_POOL_MAX=1` cannot run exports; give it at least 2. A streamed export whose reader stops reading for 15 minutes is closed with *export.consumer_idle*, which frees its database connection; an export that keeps being read is never cut, however slow.

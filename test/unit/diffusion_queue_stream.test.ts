@@ -19,7 +19,10 @@
 
 import { describe, expect, test } from 'bun:test';
 // the client progress model is pure and DOM-free, so it tests directly here
-import { aggregate_view } from '../../client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/progress_model.js';
+import {
+	aggregate_view,
+	progress_view,
+} from '../../client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/progress_model.js';
 import {
 	create_rate_tracker,
 	format_duration,
@@ -49,6 +52,8 @@ function activeRow(over: Partial<ActiveJobRow> = {}): ActiveJobRow {
 		state: 'running',
 		counter_text: '1284300',
 		total_text: '4000000',
+		phase_text: 'selection',
+		linked_counter_text: null,
 		msg: 'Processing records...',
 		cancel_requested: false,
 		attempt: 1,
@@ -107,6 +112,8 @@ describe('queueJobView projection', () => {
 			state: 'running',
 			counter: 1284300,
 			total: 4000000,
+			phase: 'selection',
+			linked_counter: 0,
 			msg: 'Processing records...',
 			cancel_requested: false,
 			attempt: 1,
@@ -121,6 +128,16 @@ describe('queueJobView projection', () => {
 		const view = queueJobView(activeRow({ counter_text: 'not-a-number', total_text: null }));
 		expect(view.counter).toBe(0);
 		expect(view.total).toBe(0);
+	});
+
+	test('phase: only the two known values pass; anything else (or a pre-split row) is null', () => {
+		expect(queueJobView(activeRow({ phase_text: 'linked', linked_counter_text: '12345' }))).toMatchObject({
+			phase: 'linked',
+			linked_counter: 12345,
+		});
+		expect(queueJobView(activeRow({ phase_text: null })).phase).toBeNull();
+		expect(queueJobView(activeRow({ phase_text: '<script>' })).phase).toBeNull();
+		expect(queueJobView(activeRow({ linked_counter_text: 'junk' })).linked_counter).toBe(0);
 	});
 
 	test('carries the CLIENT process label, never the job uuid', () => {
@@ -336,6 +353,26 @@ describe('rollup aggregate — the honesty rules', () => {
 		expect(view.caption).toContain('estimate exceeded');
 	});
 
+	test('LINKED phase: the row sweeps with its own tally, never "100% (estimated)"', () => {
+		// the selection is done but the run is still writing the records it points
+		// at — often most of the run's rows
+		const view = progress_view({
+			state: 'running',
+			phase: 'linked',
+			counter: 42137,
+			total: 42137,
+			linked_counter: 123456,
+		});
+		expect(view.indeterminate).toBe(true);
+		expect(view.caption).toBe('Selection done · linked records: 123,456');
+		expect(view.caption).not.toContain('%');
+		// the band keeps the selection's percentage but names the phase
+		const band = aggregate_view([
+			{ state: 'running', phase: 'linked', counter: 42137, total: 42137, linked_counter: 9 },
+		]);
+		expect(band.note).toContain('1 job publishing linked records');
+	});
+
 		test('only RUNNING jobs count, and no running jobs means no band content', () => {
 		expect(aggregate_view([{ state: 'queued', counter: 0, total: 500 }]).show).toBe(false);
 		expect(aggregate_view([{ state: 'completed', counter: 500, total: 500 }]).caption).toBe('');
@@ -387,6 +424,13 @@ describe('time_remaining_view (rollup time remaining)', () => {
 		const withNew = [...later, job('c', 0, 50)];
 		t.observe(withNew, 60_000);
 		expect(time_remaining_view(withNew, t, 60_000)).toContain('estimating');
+	});
+
+	test('a job in the LINKED phase is not projected (no estimate exists for it)', () => {
+		const t = create_rate_tracker();
+		const linked = { ...job('a', 500, 1000), phase: 'linked' };
+		t.observe([linked], 0);
+		expect(time_remaining_view([linked], t, 60_000)).toBe('');
 	});
 
 		test('jobs without an estimate, exceeded, or not running are not projected', () => {

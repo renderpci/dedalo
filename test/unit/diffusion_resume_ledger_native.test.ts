@@ -268,6 +268,7 @@ let reference: {
 	tables: unknown;
 	msg: unknown;
 	zipBytes: Uint8Array;
+	totals: DiffusionJobRow['totals'];
 };
 
 /** The engine's own run-ledger name (never re-derived here: a drifted copy reads an empty nowhere). */
@@ -342,6 +343,7 @@ beforeAll(async () => {
 		tree: treeSnapshot(),
 		tables: finished.result?.tables,
 		msg: finished.result?.msg,
+		totals: finished.totals,
 		zipBytes: new Uint8Array(readFileSync(join(outputDir(), 'diffusion_md.zip'))),
 	};
 	await clearActivity();
@@ -367,6 +369,16 @@ describe('DIFF-1 — a resumed run publishes exactly what an uninterrupted run d
 				'diffusion_md.zip',
 			].sort(),
 		);
+	});
+
+	test('progress is reported in TWO phases: the selection, then the linked records', () => {
+		// `counter` is the selection alone (what the enqueue estimate counted);
+		// the frontier has its own tally and ends the run in the 'linked' phase.
+		// One counter for both left the bar at "100% (estimated)" while most of a
+		// real run's rows were still being written.
+		expect(reference.totals.counter).toBe(PUBLISHABLE_IDS.length + 1);
+		expect(reference.totals.phase).toBe('linked');
+		expect(reference.totals.linked_counter).toBe(ZZDIF_LINKED_IDS.length);
 	});
 
 	/**
@@ -413,6 +425,9 @@ describe('DIFF-1 — a resumed run publishes exactly what an uninterrupted run d
 		expect(finished.state).toBe('completed');
 		// The linked record the crash stopped at, and the archive of the WHOLE run.
 		expect(treeSnapshot()).toEqual(reference.tree);
+		// the linked tally resumes from the checkpoint, it does not restart at 0
+		expect(finished.totals.linked_counter).toBe(reference.totals.linked_counter);
+		expect(finished.totals.counter).toBe(reference.totals.counter);
 		expect(await publishedActivityIds()).toEqual(PUBLISHABLE_IDS);
 		expect(finished.result?.tables).toEqual(reference.tables);
 	}, 120_000);

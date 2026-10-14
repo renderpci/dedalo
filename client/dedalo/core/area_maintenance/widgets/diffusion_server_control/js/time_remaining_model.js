@@ -21,6 +21,9 @@
 *     there is no figure, only "estimating time remaining";
 *   - the remaining work is total - counter, and the total is the client
 *     estimate the server never re-counts, so the result is '(estimated)' too;
+*   - it covers the SELECTION phase only: the linked records published after it
+*     have no estimate to divide by, so a job in that phase is not projected
+*     (aggregate_view's note names it instead);
 *   - running jobs run concurrently, so the band shows the LONGEST job, the time
 *     until the last running job finishes. Queued jobs are not included: when
 *     they start depends on the scheduler, not on anything measurable here.
@@ -161,7 +164,8 @@ export const time_remaining_view = function(jobs, tracker, now) {
 
 	const projectable = (Array.isArray(jobs) ? jobs : []).filter((job) => {
 		const total = Number(job.total) || 0
-		return String(job.state || '')==='running' && total > 0 && (Number(job.counter) || 0) < total
+		return String(job.state || '')==='running' && job.phase!=='linked'
+			&& total > 0 && (Number(job.counter) || 0) < total
 	})
 	if (projectable.length===0) return ''
 

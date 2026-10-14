@@ -163,3 +163,29 @@ shape is FOR, and a future editor reading only the wire half would not see them.
   alone. The dd1758 ledger still keys on the section tipo (unchanged).
 - Gate: `test/unit/diffusion_resolver.test.ts` (primary batches `primary:true`,
   frontier batches `primary:false`).
+
+## Addendum 2026-10-14 — two progress phases (`phase`, `linked_counter`)
+
+- **Job key set: nine → eleven.** Each job frame gains two bounded scalars:
+  `phase: 'selection' | 'linked' | null` and `linked_counter: number`. The
+  same two fields are added to `get_value`'s job rows, so the snapshot and the live
+  patch draw the same bar.
+- **Why.** A run publishes the selection first (the primary batches; `counter`,
+  measured against the estimate `total`). Then it publishes the linked records,
+  the frontier: every record the selection points at, `levels` deep. On a real
+  `numisdata3` run the linked phase wrote about 4x the selection's rows (types
+  421k rows, coins 1.7M). With one counter the bar sat at "100% (estimated)" for
+  most of the run while MariaDB was still being written. `phase` says which half
+  is moving; `linked_counter` is that phase's own tally. It has NO estimate (the
+  frontier is discovered breadth-first as the run goes), so the client draws an
+  indeterminate bar for it and never a percentage. `phase` is null on a row
+  written before this split, and anything other than the two values coerces to
+  null.
+- **`msg` in the linked phase:** `Publishing linked records: <n> (<table>)...`.
+  tool_diffusion's `report_model.js` MSG pins both running prefixes.
+- **Time remaining:** it covers the selection phase only; a job in the linked
+  phase is not projected, and the band's note names it instead.
+- Gates: the `diffusion_queue_stream_tripwire` allowlist,
+  `diffusion_queue_stream.test.ts` (projection + model legs),
+  `diffusion_resume_ledger_native` (two phases on a real frontier run, linked
+  tally resumes from the checkpoint).

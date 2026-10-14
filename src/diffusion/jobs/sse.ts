@@ -15,7 +15,7 @@
  * without infrastructure.
  */
 
-import type { ActiveJobRow, DiffusionJobRow } from './queue.ts';
+import type { ActiveJobRow, DiffusionJobRow, JobPhase } from './queue.ts';
 import type { DiffusionJobState } from './schema.ts';
 
 /**
@@ -193,6 +193,10 @@ export interface QueueJobView {
 	state: DiffusionJobState;
 	counter: number;
 	total: number;
+	/** 'selection' | 'linked' — null on a row written before the split. */
+	phase: JobPhase | null;
+	/** Linked records published so far (the phase with no estimate). */
+	linked_counter: number;
 	msg: string | null;
 	cancel_requested: boolean;
 	attempt: number;
@@ -211,6 +215,8 @@ export function queueJobView(row: ActiveJobRow): QueueJobView {
 		state: row.state,
 		counter: Number(row.counter_text) || 0,
 		total: Number(row.total_text) || 0,
+		phase: row.phase_text === 'selection' || row.phase_text === 'linked' ? row.phase_text : null,
+		linked_counter: Number(row.linked_counter_text) || 0,
 		msg: row.msg ?? null,
 		cancel_requested: row.cancel_requested === true,
 		attempt: row.attempt,

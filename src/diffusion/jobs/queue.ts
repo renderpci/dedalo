@@ -111,6 +111,11 @@ export interface DiffusionJobRow {
 		 * remote id): WC-2026-08-10-section-id-int-canonical. */
 		current?: { section_id?: string | number; time?: number };
 		total_ms?: number;
+		/** Which half of the run is moving: the selection (`counter`, measured
+		 * against `total`) or the linked records after it (`linked_counter`, no
+		 * estimate exists). Absent on rows written before the split. */
+		phase?: JobPhase;
+		linked_counter?: number;
 	};
 	errors: string[];
 	result: Record<string, unknown> | null;
@@ -382,6 +387,8 @@ export async function updateJobProgress(
 	lease: JobLease,
 	update: {
 		counter: number;
+		phase?: JobPhase;
+		linked_counter?: number;
 		msg?: string;
 		section_label?: string;
 		/** Same IR-marker union as DiffusionJobRow.totals.current above. */
@@ -606,6 +613,9 @@ export async function countRunningJobs(): Promise<number> {
 	return rows[0]?.n ?? 0;
 }
 
+/** The run's two progress phases (see DiffusionJobRow.totals.phase). */
+export type JobPhase = 'selection' | 'linked';
+
 /**
  * One ACTIVE job as read for the admin queue stream. Deliberately NOT
  * DiffusionJobRow: the jsonb columns are projected to scalars in SQL and the
@@ -622,6 +632,8 @@ export interface ActiveJobRow {
 	state: DiffusionJobState;
 	counter_text: string | null;
 	total_text: string | null;
+	phase_text: string | null;
+	linked_counter_text: string | null;
 	msg: string | null;
 	cancel_requested: boolean;
 	attempt: number;
@@ -659,6 +671,8 @@ export async function listActiveJobs(): Promise<ActiveJobRow[]> {
 		`SELECT job_id, client_process_id, state,
 		        totals->>'counter' AS counter_text,
 		        totals->>'total'   AS total_text,
+		        totals->>'phase'   AS phase_text,
+		        totals->>'linked_counter' AS linked_counter_text,
 		        totals->>'msg'     AS msg,
 		        cancel_requested, attempt, max_attempts,
 		        (count(*) FILTER (WHERE state = 'running') OVER ())::int AS n_running,

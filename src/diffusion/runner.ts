@@ -99,6 +99,13 @@ function parseArgument(argv: string[], name: string): string | null {
 
 /** The cancellation `msg` line (totals.msg + result.msg) the client renders. */
 const CANCELLED_MSG = 'Process cancelled by user';
+/**
+ * The two running `msg` prefixes — selection, then linked records. Pinned in
+ * tool_diffusion's report_model.js MSG (its no-state fallback classifier reads
+ * both as 'running'); keep the two in step.
+ */
+export const PROCESSING_PREFIX = 'Processing records ';
+export const LINKED_PREFIX = 'Publishing linked records: ';
 
 /** Cap on error strings persisted to the job row (full detail goes to stderr). */
 const MAX_PERSISTED_ERRORS = 50;
@@ -125,7 +132,7 @@ async function runStubJob(job: DiffusionJobRow, lease: JobLease): Promise<void> 
 		await Bun.sleep(STUB_BATCH_DELAY_MS);
 		await updateJobProgress(lease, {
 			counter,
-			msg: `Processing records ${counter} of ${total}...`,
+			msg: `${PROCESSING_PREFIX}${counter} of ${total}...`,
 			current: { section_id: counter, time: STUB_BATCH_DELAY_MS },
 			total_ms: Date.now() - startedAt,
 		});
@@ -163,6 +170,8 @@ interface RunCheckpoint {
 	cursor?: number;
 	run_started_at: number;
 	processed?: number;
+	/** Records of LINKED (frontier) batches published so far — the second phase. */
+	linked_processed?: number;
 	batch_seq: number;
 	writer?: unknown;
 	errors?: string[];
@@ -210,6 +219,7 @@ async function runPublicationJob(job: DiffusionJobRow, lease: JobLease): Promise
 	let batchSeq = stored.v === 2 ? Number(stored.batch_seq) || 0 : 0;
 	let afterSectionId = stored.v === 2 ? Number(stored.cursor) || 0 : 0;
 	let processed = stored.v === 2 ? Number(stored.processed) || 0 : 0;
+	let linkedProcessed = stored.v === 2 ? Number(stored.linked_processed) || 0 : 0;
 	let errors: string[] = [];
 	const trackError = (message: string): void => {
 		errors = mergeErrorLines(errors, [message]);
@@ -225,6 +235,7 @@ async function runPublicationJob(job: DiffusionJobRow, lease: JobLease): Promise
 		batchSeq = 0;
 		afterSectionId = 0;
 		processed = 0;
+		linkedProcessed = 0;
 	};
 	if (stored.v !== 2 && Object.keys(stored).length > 0) await resetRun();
 
@@ -401,12 +412,24 @@ async function runPublicationJob(job: DiffusionJobRow, lease: JobLease): Promise
 						});
 					}
 				}
+				// TWO PHASES, reported apart. The selection (primary batches) is what
+				// the estimate counted; the linked records (frontier: every record the
+				// selection points at, `levels` deep) come after and can be several
+				// times the work — a types run writes ~4x its own rows in coins. With
+				// one counter the bar sat at 100% for most of the run; the phase and
+				// its own counter let every display say what is actually happening.
+				let nextLinked = linkedProcessed;
 				if (batch.primary) nextProcessed += batch.records.length;
+				else nextLinked += batch.records.length;
 				await appendRunLedger(lease, nextSeq, [...batch.ledger, ...artifacts]);
 				const lastRecord = batch.records[batch.records.length - 1];
 				await updateJobProgress(lease, {
 					counter: nextProcessed,
-					msg: `Processing records ${nextProcessed}${job.spec.estimated_total > 0 ? ` of ${job.spec.estimated_total}` : ''}...`,
+					phase: batch.primary ? 'selection' : 'linked',
+					linked_counter: nextLinked,
+					msg: batch.primary
+						? `${PROCESSING_PREFIX}${nextProcessed}${job.spec.estimated_total > 0 ? ` of ${job.spec.estimated_total}` : ''}...`
+						: `${LINKED_PREFIX}${nextLinked} (${batch.section.tableName})...`,
 					current: { section_id: lastRecord?.sectionId, time: Date.now() - startedAt },
 					total_ms: Date.now() - startedAt,
 				});
@@ -415,18 +438,20 @@ async function runPublicationJob(job: DiffusionJobRow, lease: JobLease): Promise
 					cursor: batch.cursor,
 					run_started_at: runStartedAt,
 					processed: nextProcessed,
+					linked_processed: nextLinked,
 					batch_seq: nextSeq,
 					writer: writerCheckpoint,
 					errors: mergeErrorLines(errors, batchErrorLines),
 				};
 				await checkpointJob(lease, checkpoint as unknown as Record<string, unknown>);
-				return nextProcessed;
+				return { processed: nextProcessed, linked: nextLinked };
 			});
 			if (!unit.acquired) {
 				await finishCancelled();
 				return;
 			}
-			processed = unit.value;
+			processed = unit.value.processed;
+			linkedProcessed = unit.value.linked;
 			batchSeq = nextSeq;
 			for (const line of batchErrorLines) trackError(line);
 		}

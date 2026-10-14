@@ -85,6 +85,10 @@ function mapJobToClient(
 		type: row.spec?.type ?? null,
 		counter: row.totals?.counter ?? 0,
 		total: row.totals?.total ?? 0,
+		// the run's phase + the linked-records counter (same fields as the queue
+		// stream frame, so the snapshot and the live patch draw the same bar)
+		phase: row.totals?.phase ?? null,
+		linked_counter: row.totals?.linked_counter ?? 0,
 		msg: row.totals?.msg ?? null,
 		attempt: row.attempt,
 		max_attempts: row.max_attempts,
