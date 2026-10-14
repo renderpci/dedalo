@@ -479,7 +479,9 @@ class tool_diffusion extends tool_common {
 
 					// store errors if occurred
 					if (!empty($chunk_response->errors)) {
-						$response->errors = array_merge($response->errors, $chunk_response->errors);
+						$response->errors = array_values(array_unique(
+							array_merge($response->errors, $chunk_response->errors)
+						));
 					}
 
 					// CLI process data
@@ -632,8 +634,10 @@ class tool_diffusion extends tool_common {
 			// handle errors
 			$response_errors = $update_record_response->errors ?? [];
 			foreach ($response_errors as $current_error) {
-				// append errors
-				$errors[] = $current_error;
+				// append errors (unique: e.g. a failed table creation is reported by every record)
+				if (!in_array($current_error, $errors)) {
+					$errors[] = $current_error;
+				}
 			}
 			// manage errors
 			if ($update_record_response->result===false) {

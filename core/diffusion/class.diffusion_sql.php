@@ -288,13 +288,16 @@ class diffusion_sql extends diffusion  {
 						if (isset($table_properties->global_table_maps)) {
 
 							foreach ($table_properties->global_table_maps as $current_global_table_map) {
-								self::save_global_table_data((object)[
+								$global_save = self::save_global_table_data((object)[
 									'global_table_map'			=> $current_global_table_map,
 									'diffusion_element_tipo'	=> $diffusion_element_tipo,
 									'section_tipo'				=> $section_tipo,
 									'database_name'				=> $database_name,
 									'ar_field_data'				=> $ar_field_data
 								]);
+								if (isset($global_save->result) && $global_save->result===false) {
+									$response->errors[] = 'failed save global table record: '. to_string($global_save->msg ?? 'Unknown error');
+								}
 							}
 						}
 
@@ -331,11 +334,17 @@ class diffusion_sql extends diffusion  {
 					foreach ($parents_recursive as $parents_recursive_locator) {
 
 						// launch parent update record
-						$this->update_record((object)[
+						$parent_response = $this->update_record((object)[
 							'section_tipo'				=> $parents_recursive_locator->section_tipo,
 							'section_id'				=> $parents_recursive_locator->section_id,
 							'diffusion_element_tipo'	=> $diffusion_element_tipo
 						]);
+						// propagate errors (e.g. target table creation failed)
+						if (!empty($parent_response->errors)) {
+							$response->errors = array_values(array_unique(
+								array_merge($response->errors, $parent_response->errors)
+							));
+						}
 					}
 				}
 			}//end if (!empty($ar_field_data['ar_fields']))
@@ -468,7 +477,7 @@ class diffusion_sql extends diffusion  {
 							foreach ((array)$current_ar_section_id as $current_section_id) {
 
 								// Recursion with all references update_record
-									$this->update_record( (object)[
+									$reference_response = $this->update_record( (object)[
 										'section_tipo'				=> $current_section_tipo,
 										'section_id'				=> $current_section_id,
 										'diffusion_element_tipo'	=> $diffusion_element_tipo,
@@ -476,6 +485,12 @@ class diffusion_sql extends diffusion  {
 										'skip_tipos'				=> $skip_tipos,
 										'resolve_references'		=> true
 									]);
+									// propagate errors (e.g. target table creation failed)
+									if (!empty($reference_response->errors)) {
+										$response->errors = array_values(array_unique(
+											array_merge($response->errors, $reference_response->errors)
+										));
+									}
 							}
 						}//end foreach ($group_by_section_tipo as $current_section_tipo => $current_ar_section_id)
 			}//end if ($resolve_references===true)
