@@ -94,6 +94,36 @@ describe('POST /v1/releases/{api}', () => {
     expect(body.reason).toBe('sha_mismatch');
   });
 
+  // D9 over the REAL wire: the engine promotes a held release with an EMPTY body
+  // (src/core/publication_host/api_reconcile.ts bundleBody). Bun 1.4.3's fetch sends that as
+  // `Content-Length: 0`, which Bun.serve hands over as `req.body === null` (1.4.2 sent it
+  // chunked) — a route that required a body refused every promote_existing (the engine
+  // drill's [lockstep] "first tree restored" row went red on the 1.4.3 bump).
+  test('a promote of a held release with an empty body (real fetch → Bun.serve) is reused, body unread', async () => {
+    await routeRequest(post('/v1/releases/v1', installHeaders(A), bundle));
+    await routeRequest(post('/v1/releases/v1', installHeaders(B), bundle));
+    const server = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: (req) => routeRequest(req) });
+    try {
+      const url = `http://127.0.0.1:${server.port}${BASE}/v1/releases/v1`;
+      const headers = { authorization: `Bearer ${config.SERVICE_TOKEN}`, ...installHeaders(A) };
+      const response = await fetch(url, { method: 'POST', headers, body: new Blob([]).stream() });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ api: 'v1', from: B, to: A, reused: true, health: 'ok' });
+      expect(currentRelease('v1')).toBe(A);
+    } finally {
+      server.stop(true);
+    }
+  });
+
+  test('no body for a release the host does not hold is a 400 body_invalid, nothing staged', async () => {
+    const response = await routeRequest(post('/v1/releases/v1', installHeaders(A)));
+    expect(response.status).toBe(400);
+    expect(((await response.json()) as { reason: string }).reason).toBe('body_invalid');
+    expect(await readdir(apiLayout('v1').releases)).toEqual([]);
+    expect(await readdir(apiLayout('v1').staging)).toEqual([]);
+    expect(currentRelease('v1')).toBeNull();
+  });
+
   test('an api outside the closed table is a 404', async () => {
     const response = await routeRequest(post('/v1/releases/v3', installHeaders(A), bundle));
     expect(response.status).toBe(404);
