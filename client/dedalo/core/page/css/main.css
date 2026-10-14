@@ -11819,6 +11819,12 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   margin-right: 0.75rem;
   background: var(--color_danger);
 }
+.wrapper_tool input[type="checkbox"],
+.tool_header input[type="checkbox"],
+.wrapper_tool input[type="radio"],
+.tool_header input[type="radio"] {
+  accent-color: var(--tool_fill, var(--color_input_focus));
+}
 .tool_header {
   contain: content;
   background-color: var(--tool_edge, var(--color_orange_dedalo));

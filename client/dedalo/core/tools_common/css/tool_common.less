@@ -54,6 +54,25 @@
 	}
 }//end .wrapper_tool
 
+// THE TOOL'S CHECKBOXES WEAR THE TOOL'S COLOUR.
+// Native checkbox/radio were painted with the app-wide accent — Dédalo orange
+// (--color_input_focus, layout.less) — even inside a tool whose whole chrome is
+// its identity hue: a checked box in tool_import_files read orange, not the
+// tool's blue. The paint is the tool's own --tool_fill (GENERATED per tool and
+// theme by scripts/tool_colors.ts, i.e. the identity hue clamped to carry its
+// ink off the header), so the widget belongs to the tool it sits in. A tool
+// with no hue falls back to the app default. Scope covers the wrapper AND the
+// header because in a modal the header is slotted OUT of the wrapper (the two
+// are siblings under dd-modal), and a status component can carry a box on the
+// header band.
+.wrapper_tool,
+.tool_header {
+	input[type="checkbox"],
+	input[type="radio"] {
+		accent-color: var(--tool_fill, var(--color_input_focus));
+	}
+}
+
 // tool_header
 // (!) Note that is defined outside wrapper_tool to be compatible with modal and new tab window
 .tool_header {
