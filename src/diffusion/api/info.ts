@@ -187,6 +187,32 @@ export function sqlTargetDatabase(type: string | null, database: string | null):
 	}
 }
 
+/**
+ * The tree nodes that become panels for `sectionTipo`: one panel per
+ * PUBLICATION (nearest diffusion element) and node. A node reachable through
+ * two elements — two `database_alias` nodes pointing at one shared `database`
+ * (numisdata29 + numisdata891 → numisdata869) — is two publications into two
+ * databases and panels twice, as PHP did (get_section_diffusion_nodes kept
+ * every virtual node). Keying on the node tipo alone hid the second element's
+ * panel, and with it its Publish button. The same node twice under ONE element
+ * stays one panel: both would publish identically.
+ */
+export function selectPanelNodes(nodes: VirtualTreeNode[], sectionTipo: string): VirtualTreeNode[] {
+	const selected: VirtualTreeNode[] = [];
+	const seen = new Set<string>();
+	for (const node of nodes) {
+		if (!node.relatedSections.includes(sectionTipo)) continue;
+		const element = node.parents.find(
+			(item) => item.model === 'diffusion_element' || item.model === 'diffusion_element_alias',
+		);
+		const key = `${element?.tipo ?? ''}|${node.tipo}`;
+		if (seen.has(key)) continue;
+		seen.add(key);
+		selected.push(node);
+	}
+	return selected;
+}
+
 /** PHP get_diffusion_info result payload for one section. */
 export async function buildDiffusionInfo(sectionTipo: string): Promise<{
 	section_diffusion_nodes: SectionDiffusionNode[];
@@ -209,13 +235,7 @@ export async function buildDiffusionInfo(sectionTipo: string): Promise<{
 	}
 
 	const items: SectionDiffusionNode[] = [];
-	const seenTipos = new Set<string>();
-	for (const node of tree.nodes) {
-		if (!node.relatedSections.includes(sectionTipo)) continue;
-		// A node reachable through two element paths would panel twice —
-		// one panel per node tipo (first path wins, PHP walk order).
-		if (seenTipos.has(node.tipo)) continue;
-		seenTipos.add(node.tipo);
+	for (const node of selectPanelNodes(tree.nodes, sectionTipo)) {
 		const children: DiffusionNodeChild[] = [];
 		for (const childTipo of node.childrenTipos) {
 			const childNode = await tree.index.nodeOf(childTipo);

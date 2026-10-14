@@ -56,9 +56,11 @@ import {
 	connectionStatusForElement,
 	type DiffusionConnectionStatus,
 	type SectionDiffusionNode,
+	selectPanelNodes,
 	sqlTargetDatabase,
 } from '../../src/diffusion/api/info.ts';
 import { isMariadbTargetFormat, TABLE_FORMATS } from '../../src/diffusion/plan/formats.ts';
+import type { VirtualTreeNode } from '../../src/diffusion/plan/virtual_tree.ts';
 import {
 	closeAllTargetPools,
 	getTargetDatabaseStatus,
@@ -253,6 +255,40 @@ describe('connection_status — single source of truth and client welding', () =
 		expect(sqlTargetDatabase('sql', null)).toBeNull();
 		expect(sqlTargetDatabase('sql', '')).toBeNull();
 		expect(sqlTargetDatabase('sql', '///')).toBeNull();
+	});
+
+	test('a node shared by two publications panels once PER ELEMENT, not once per tipo', () => {
+		// Two elements whose database_alias nodes point at ONE real database: the
+		// walk yields the shared table once under each element (numisdata29 and
+		// numisdata891 → numisdata869 → images numisdata867). Each is its own
+		// publication into its own database — both panels, as PHP emitted them.
+		const tableUnder = (element: string, alias: string): VirtualTreeNode => ({
+			tipo: 'zz_shared_table',
+			model: 'table',
+			label: 'images',
+			properties: null,
+			realTipo: null,
+			isAlias: false,
+			parents: [
+				{ tipo: alias, model: 'database_alias', label: `db_${element}`, realTipo: 'zz_real_db' },
+				{ tipo: element, model: 'diffusion_element', label: element, type: 'sql', realTipo: null },
+			],
+			childrenTipos: [],
+			directChildrenTipos: [],
+			relatedSections: ['zz_section'],
+		});
+		const nodes = [
+			tableUnder('zz_element_one', 'zz_alias_one'),
+			tableUnder('zz_element_two', 'zz_alias_two'),
+			// The same node twice under ONE element would publish identically: one panel.
+			tableUnder('zz_element_two', 'zz_alias_three'),
+		];
+		const panels = selectPanelNodes(nodes, 'zz_section');
+		expect(panels.map((node) => node.parents[1]?.tipo)).toEqual([
+			'zz_element_one',
+			'zz_element_two',
+		]);
+		expect(selectPanelNodes(nodes, 'zz_other_section')).toEqual([]);
 	});
 
 	// (!) CLIENT SWEEP PENDING. The server now emits `{ok, code?, message}`; the
