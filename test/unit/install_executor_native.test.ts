@@ -740,6 +740,12 @@ describe("executor — what is the install's, and what is not", () => {
 	});
 
 	test("an operator's own .env.bak.* (before the install) survives adoption AND --abort; the install's own goes", async () => {
+		// The test process's OWN session store lives outside the install's private dir
+		// (the preload's scratch): the runtime-file undo must never take it (it did, and
+		// every later session gate of the tier read a deleted sqlite file).
+		const ownStore = String(process.env.DEDALO_SESSION_DB_PATH);
+		const madeStore = !existsSync(ownStore);
+		if (madeStore) writeFileSync(ownStore, '');
 		await withPrivateDir(scratchPrivateDir(), async (dir) => {
 			writeFileSync(join(dir, '.env.bak.1000'), 'OPERATOR=1\n');
 			const { plan, planFile } = fakePlan();
@@ -791,7 +797,12 @@ describe("executor — what is the install's, and what is not", () => {
 			expect(existsSync(join(dir, '.env.bak.1000'))).toBe(true);
 			expect(existsSync(join(dir, '.env.bak.2000'))).toBe(false);
 			expect(existsSync(join(dir, '.env'))).toBe(false);
+			expect(
+				existsSync(ownStore),
+				"a runtime file outside the private dir is not the install's",
+			).toBe(true);
 		});
+		if (madeStore) rmSync(ownStore, { force: true });
 	});
 
 	test('--abort never resets a database that is neither stamped by this install nor empty — and undoes nothing', async () => {

@@ -30,7 +30,7 @@
  */
 
 import { copyFileSync, existsSync, readdirSync, renameSync, rmdirSync, rmSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep as pathSep, resolve as resolvePath } from 'node:path';
 import type { ServerState } from '../resolve/server_state.ts';
 import type { InstallStepId } from './install_plan.ts';
 import { installPrivateDir } from './paths.ts';
@@ -214,9 +214,19 @@ async function removeCreatedRuntimeFiles(state: InstallState): Promise<string> {
 	const before = state.preflight.runtime_files_before;
 	if (before === undefined) return '';
 	const { RUNTIME_PATH_CENSUS } = await import('./runtime_paths.ts');
+	// Only a file INSIDE the install's private dir is the install's: a path an
+	// env override points elsewhere (a test run's own session store) is never
+	// this undo's to remove.
+	const privatePrefix = `${resolvePath(installPrivateDir())}${pathSep}`;
 	const created = RUNTIME_PATH_CENSUS.filter((entry) => RUNTIME_FILE_IDS.includes(entry.id))
 		.map((entry) => entry.resolve())
-		.filter((path): path is string => path !== null && !before.includes(path) && existsSync(path));
+		.filter(
+			(path): path is string =>
+				path !== null &&
+				resolvePath(path).startsWith(privatePrefix) &&
+				!before.includes(path) &&
+				existsSync(path),
+		);
 	for (const path of created) {
 		for (const side of SQLITE_SIDE_FILES) rmSync(`${path}${side}`, { force: true });
 	}
