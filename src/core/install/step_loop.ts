@@ -10,6 +10,8 @@
  *    install was changed outside the installer — refused); one without a verify
  *    is skipped. A RESTARTABLE step (a service it started and that stopped
  *    since: campaign 3 C3-8/C3-10) whose verify fails is run again instead;
+ *    a PROBE after a step that ran again in this run is run again in full,
+ *    never only verified (it measured what that step has since redone);
  *  - recorded `running`/`failed`: a verify that passes means the work landed
  *    before the checkpoint — ADOPTED (marked done, skipped), unless the step is
  *    `neverAdopt`; otherwise it runs again;
@@ -314,15 +316,14 @@ function staleProbe(ctx: LoopContext, step: StepId): boolean {
 	return ctx.ranAny && ctx.stepOf(step).kind === 'probe';
 }
 
-/** A done step with nothing to verify: a stale probe runs again, anything else is not re-run. */
+/** A stale probe (staleProbe) runs again, in full: the same probes as a fresh install. */
+function probeAgainInFull(ctx: LoopContext, step: StepId): Promise<void> {
+	say(ctx, '  done in an earlier run, but a step before it ran again in this run — checked again');
+	return runStep(ctx, step);
+}
+
+/** A done step with nothing to verify (a stale probe never gets here): not re-run. */
 async function confirmUnverifiable(ctx: LoopContext, step: StepId): Promise<void> {
-	if (staleProbe(ctx, step)) {
-		say(
-			ctx,
-			'  done in an earlier run, but a step before it ran again in this run — checked again',
-		);
-		return runStep(ctx, step);
-	}
 	// Say WHICH (campaign 3b N7): a re-checked step read "skipped", as if a resume
 	// trusted the record, against the docs that promise the check.
 	say(ctx, '  done in an earlier run — nothing to re-check, not run again');
@@ -331,6 +332,10 @@ async function confirmUnverifiable(ctx: LoopContext, step: StepId): Promise<void
 
 /** A step recorded done: it must still verify (when it has a verify), else drift — or a restart. */
 async function confirmDone(ctx: LoopContext, step: StepId): Promise<void> {
+	// A stale probe is never only verified (campaign 3c D24: after an abort of a
+	// served stack, the resume re-ran stack_up, then stack_health's read-only
+	// verify re-probed /health and took the media gate on trust).
+	if (staleProbe(ctx, step)) return probeAgainInFull(ctx, step);
 	const verdict = await verifyStep(ctx, step);
 	if (verdict === null) return confirmUnverifiable(ctx, step);
 	recordVerdict(recordOf(ctx, step), verdict);

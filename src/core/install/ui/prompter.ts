@@ -35,6 +35,12 @@ export const isProgressLine = (line: string): boolean => PROGRESS.test(line);
 /** The question whose acknowledgement is a TYPED yes (the install itself, as in plain mode). */
 const TYPED_YES = 'review.install';
 
+/**
+ * The most said lines carried whole to the next screen: with their title line,
+ * exactly what the question pane keeps in view (app.ts SAID_KEPT, 8).
+ */
+export const CARRIED_WHOLE = 7;
+
 /** A said line that needs the operator's attention (a warning or a failure). */
 const NEEDS_ATTENTION = /^\s*(warn|error)\b/;
 
@@ -50,6 +56,10 @@ const NEEDS_ATTENTION = /^\s*(warn|error)\b/;
  */
 export function carriedOver(said: string[], previous: Screen | undefined, next: Screen): string[] {
 	if (said.length === 0 || previous === undefined || previous.id === next.id) return said;
+	// A check short enough to stay in view whole is carried whole (campaign 3c D22: the
+	// docker/trial System check — Docker, Compose, the free disk — advanced on its own and
+	// left only "System ready." on the next screen, where the docs promise those rows).
+	if (said.length <= CARRIED_WHOLE) return [`${previous.title}:`, ...said];
 	const last = said.length - 1;
 	const kept = said.filter((line, index) => index === last || NEEDS_ATTENTION.test(line));
 	return [`${previous.title}:`, ...kept];

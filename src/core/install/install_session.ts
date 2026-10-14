@@ -122,7 +122,25 @@ export interface InteractiveDeps {
 	hostCommands?: (plan: InstallPlan) => Promise<NonNullable<ReviewView['hostCommands']>>;
 	/** Why THIS process cannot run the plan's route (production without root), or null. */
 	routeRefusal?: (plan: InstallPlan) => string | null;
+	/**
+	 * What the run's own preflight would refuse for this plan, measured NOW and
+	 * recorded nowhere (host_executor.ts hostPlanRefusals — the same function the
+	 * run asks before it writes anything). The Review shows each as an error and
+	 * does not offer install; a typed `yes` asks it again (campaign 3c D2: an
+	 * untrusted chain, Apache beside nginx, an image version, a held port were
+	 * refused only after `yes`, every answer lost). Absent: none.
+	 */
+	preflightRefusals?: (plan: InstallPlan) => Promise<string[]>;
 }
+
+/**
+ * The deps the CLI (scripts/install.ts) hands the session: its Review hooks
+ * REQUIRED, so dropping one there is a tsc error (campaign 3c D2: the
+ * preflight asked before `yes` was wired by one optional property nothing
+ * checked). Gates pass the hooks they exercise; the CLI passes them all.
+ */
+export type CliInteractiveDeps = InteractiveDeps &
+	Required<Pick<InteractiveDeps, 'hostCommands' | 'routeRefusal' | 'preflightRefusals'>>;
 
 /** An install record left in progress (offered for resume / abort / quit on start). */
 export interface Unfinished {
@@ -162,7 +180,7 @@ const PROBE_SCREEN: Readonly<Partial<Record<ProbeId, ScreenId>>> = Object.freeze
  */
 const PROBE_INPUTS: Readonly<Record<ProbeId, { keys: readonly string[]; secret?: SecretKey }>> =
 	Object.freeze({
-		system: { keys: ['route'] },
+		system: { keys: ['route', 'instance'] },
 		identity: {
 			keys: [
 				'route',
@@ -550,7 +568,8 @@ async function mailerProbe(session: Session): Promise<ProbeOutcome | Nav> {
 /** Each probe, with the one secret it needs. */
 const PROBE_RUNS: Readonly<Record<ProbeId, (session: Session) => Promise<ProbeOutcome | Nav>>> =
 	Object.freeze({
-		system: (session: Session) => session.deps.probes.system(routeOf(session)),
+		system: (session: Session) =>
+			session.deps.probes.system(routeOf(session), previewPlan(inputOf(session)).answers.instance),
 		identity: (session: Session) => session.deps.probes.identity(session.raw),
 		db: (session: Session) =>
 			session.deps.probes.database(session.raw, session.secrets.db_password ?? ''),
@@ -651,7 +670,7 @@ function probeCommand(
 ): 'next' | 'again' | Nav | null {
 	const probe = SCREEN_PROBE[screen.id] as ProbeId;
 	if (!(view.commands as readonly string[]).includes(word)) {
-		session.deps.prompter.say([`'${word}' is not one of: ${view.prompt}`]);
+		session.deps.prompter.say([NOTICE_TEXT.notOffered(word, view.prompt)]);
 		return null;
 	}
 	if (word === 'retry') {
@@ -833,6 +852,16 @@ async function askScreen(
 	return 'ok';
 }
 
+/** Does the screen's check stand FAILED (recorded not ok, not acknowledged)? */
+function failedVerdict(session: Session, id: ScreenId): boolean {
+	const probe = SCREEN_PROBE[id];
+	return (
+		probe !== undefined &&
+		session.probes[probe]?.ok === false &&
+		!session.acknowledged.has(`${id}.probe_override`)
+	);
+}
+
 /** The screen to run and what counts as asked in this pass, or null (absent, or skipped). */
 function enterScreen(
 	session: Session,
@@ -841,7 +870,9 @@ function enterScreen(
 ): { first: Screen; done: Set<string> } | null {
 	// Visited again in full (back, edit): its check runs again, never a cached verdict
 	// shown twice (campaign 3b N37 — the Docker daemon stopped meanwhile read "answers").
-	if (mode === 'all') invalidateProbe(session, id);
+	// A FAILED verdict runs again on any visit: `back` from it and forward again
+	// printed the old rows twice and no `checking:` line (campaign 3c D18).
+	if (mode === 'all' || failedVerdict(session, id)) invalidateProbe(session, id);
 	const first = screenOf(session, id);
 	if (first === undefined) return null;
 	const done = new Set(mode === 'new' ? session.asked : []);
@@ -901,9 +932,25 @@ async function walk(
 		if (screen === undefined || screen.id === 'review') return 'review';
 		const outcome = await runScreen(session, screen.id, mode);
 		if (outcome === QUIT) return 'quit';
-		[index, mode] = stepAfter(outcome, index);
+		[index, mode] = outcome === 'next' ? staleBehind(session, index) : stepAfter(outcome, index);
 	}
 	return 'quit';
+}
+
+/**
+ * After screen `index` passed: an EARLIER gate whose verdict this screen's
+ * answers made stale is checked again NOW — the walk goes back to it (nothing
+ * is asked again; the screens between are skipped as unchanged) and then on
+ * past `index`. Campaign 3c D4: the Identity check, stale once the Web server
+ * was answered at step 5, was re-run only before the Review, after step 12.
+ */
+function staleBehind(session: Session, index: number): [number, 'all' | 'new'] {
+	const stale = firstUnprovenGate(session);
+	if (stale === undefined || !session.seen.has(stale.id)) return [index + 1, 'new'];
+	const at = screensOf(session).findIndex((screen) => screen.id === stale.id);
+	if (at < 0 || at > index) return [index + 1, 'new'];
+	session.deps.prompter.say([recheckLine(session, stale)]);
+	return [at, 'new'];
 }
 
 // ── the review ───────────────────────────────────────────────────────────────
@@ -979,21 +1026,35 @@ function firstUnprovenGate(session: Session): Screen | undefined {
 	return gatedScreens(session).find((screen) => !verdictStands(session, screen));
 }
 
-/**
- * May the Review offer `install`: no plan error, a route that runs here, a
- * root password — and every gate's verdict CURRENT (taken over the answers the
- * install will use, or acknowledged over them).
- */
-/** May THIS process run the plan's route (production needs root)? */
-function routeRunnable(session: Session, plan: InstallPlan): boolean {
-	return (session.deps.routeRefusal?.(plan) ?? null) === null;
+/** Why THIS process cannot run the plan's route (production needs root), or null. */
+function routeRefusalOf(session: Session, plan: InstallPlan): string | null {
+	return session.deps.routeRefusal?.(plan) ?? null;
 }
 
-function installOffered(session: Session, plan: InstallPlan): boolean {
+/**
+ * What the run's preflight would refuse for `plan` now (campaign 3c D2) —
+ * asked only over a plan the run could start (no plan error, a route this
+ * process runs): the plan's own errors already block it, and the production
+ * measure as a normal user is the route refusal's to tell.
+ */
+async function preflightOf(session: Session, plan: InstallPlan): Promise<string[]> {
+	const probe = session.deps.preflightRefusals;
+	if (probe === undefined || plan.errors.length > 0) return [];
+	if (routeRefusalOf(session, plan) !== null) return [];
+	return probe(plan);
+}
+
+/**
+ * May the Review offer `install`: no plan error, a route that runs here, a
+ * root password, nothing the run's preflight would refuse — and every gate's
+ * verdict CURRENT (taken over the answers the install will use, or
+ * acknowledged over them).
+ */
+function installOffered(session: Session, plan: InstallPlan, refused: readonly string[]): boolean {
 	return (
 		plan.errors.length === 0 &&
+		refused.length === 0 &&
 		routeExecutesHere(plan.answers.route) &&
-		routeRunnable(session, plan) &&
 		(session.secrets.root_password ?? '') !== '' &&
 		firstUnprovenGate(session) === undefined
 	);
@@ -1043,15 +1104,16 @@ async function reviewRound(session: Session): Promise<{ round: ReviewRound; view
 	const screens = screensOf(session);
 	const input = inputOf(session);
 	const plan = previewPlan(input);
-	const canInstall = installOffered(session, plan);
-	const refusal = session.deps.routeRefusal?.(plan) ?? null;
+	const refusal = routeRefusalOf(session, plan);
+	const refused = await preflightOf(session, plan);
+	const canInstall = refusal === null && installOffered(session, plan, refused);
 	const view: ReviewView = {
 		screen: screens.at(-1) as Screen,
 		lines: reviewLines(plan, input),
 		canInstall,
 		editable: screens.slice(0, -1).map((item) => ({ n: item.index, title: item.title })),
 		command: sameAsCommand(plan.answers),
-		errors: [...plan.errors, ...(refusal === null ? [] : [refusal])],
+		errors: [...plan.errors, ...(refusal === null ? [] : [refusal]), ...refused],
 		hostCommands: plan.errors.length === 0 ? ((await session.deps.hostCommands?.(plan)) ?? []) : [],
 	};
 	return { round: { screens, plan, canInstall }, view };
@@ -1069,17 +1131,53 @@ function installResult(session: Session, plan: InstallPlan): FrontEndResult {
 	};
 }
 
-/** A Review command's outcome: a result ends the session; null shows the Review again. */
-type ReviewStep = FrontEndResult | null;
+/** A Review shown again WITHOUT measuring again: the round `install` just checked anew. */
+interface Rechecked {
+	readonly rechecked: { round: ReviewRound; view: ReviewView };
+}
 
-async function reviewInstall(session: Session, round: ReviewRound): Promise<ReviewStep> {
+/**
+ * A Review command's outcome: a result ends the session; null shows the Review
+ * again (measured again); `rechecked` shows the round the command measured.
+ */
+type ReviewStep = FrontEndResult | Rechecked | null;
+
+/**
+ * `install` on a REFUSED Review CHECKS AGAIN (campaign 3d C3d-F2): the cause
+ * fixed (the CA trusted, the port freed), the plan is measured anew and, now
+ * clear, install goes on to its typed yes — never "not offered" from a stale
+ * verdict, never an edit round trip to re-check. Still refused: the Review is
+ * shown with what this check found.
+ */
+async function recheckRefused(
+	session: Session,
+): Promise<{ round: ReviewRound; view: ReviewView } | Rechecked> {
+	session.deps.prompter.say([NOTICE_TEXT.recheckReview]);
+	const again = await reviewRound(session);
+	if (again.round.canInstall) return again;
+	session.deps.prompter.say([NOTICE_TEXT.stillRefused]);
+	return { rechecked: again };
+}
+
+async function reviewInstall(session: Session, shown: ReviewRound): Promise<ReviewStep> {
+	let round = shown;
 	if (!round.canInstall) {
-		session.deps.prompter.say(['install is not offered: see the errors above']);
-		return null;
+		const again = await recheckRefused(session);
+		if ('rechecked' in again) return again;
+		round = again.round;
 	}
 	const typed = await session.deps.prompter.acknowledge(installQuestion(round.plan.answers));
 	if (typed === QUIT) return { kind: 'quit' };
-	return typed === true ? installResult(session, round.plan) : null;
+	if (typed !== true) return null;
+	// Measured again at the typed yes: what changed since the Review was drawn
+	// (a port taken meanwhile) keeps the session — and every answer — on the Review.
+	const refused = await preflightOf(session, round.plan);
+	if (refused.length === 0) return installResult(session, round.plan);
+	session.deps.prompter.say([
+		NOTICE_TEXT.refusedAtYes,
+		...refused.map((line) => `  error: ${line}`),
+	]);
+	return null;
 }
 
 async function reviewEdit(
@@ -1156,19 +1254,37 @@ function answersToWrite(session: Session, plan: InstallPlan, answers: string): b
 
 /** The Review loop: install / edit <n> / write <path> / quit (`back` edits the last screen). */
 async function review(session: Session): Promise<FrontEndResult> {
+	let carried: Rechecked['rechecked'] | null = null;
 	for (let round = 0; round < 200; round++) {
-		if ((await recheckGates(session)) === 'quit') return { kind: 'quit' };
-		const { round: shown, view } = await reviewRound(session);
-		writeReviewedAnswers(session, shown.plan);
-		session.seen.add('review');
-		session.deps.prompter.view(viewOf(session, 'review', null));
-		const command = await session.deps.prompter.review(view);
-		if (command === QUIT) return { kind: 'quit' };
-		const text = isNav(command) ? `edit ${shown.screens.length - 1}` : command.trim();
-		const step = await reviewCommand(session, shown, text);
-		if (step !== null) return step;
+		const step = await reviewOnce(session, carried);
+		carried = step !== null && 'rechecked' in step ? step.rechecked : null;
+		if (step !== null && carried === null) return step as FrontEndResult;
 	}
 	return { kind: 'quit' };
+}
+
+/**
+ * One Review: the gates re-checked and the plan measured — or, `carried`, the
+ * round an `install` just measured (shown as it is, never measured twice) —
+ * then the operator's command applied.
+ */
+async function reviewOnce(
+	session: Session,
+	carried: Rechecked['rechecked'] | null,
+): Promise<ReviewStep> {
+	if (carried === null && (await recheckGates(session)) === 'quit') return { kind: 'quit' };
+	const { round: shown, view } = carried ?? (await reviewRound(session));
+	writeReviewedAnswers(session, shown.plan);
+	session.seen.add('review');
+	session.deps.prompter.view(viewOf(session, 'review', null));
+	const command = await session.deps.prompter.review(view);
+	if (command === QUIT) return { kind: 'quit' };
+	return reviewCommand(session, shown, reviewText(command, shown));
+}
+
+/** The Review command as text (`back` edits the last screen). */
+function reviewText(command: string | Nav, shown: ReviewRound): string {
+	return isNav(command) ? `edit ${shown.screens.length - 1}` : command.trim();
 }
 
 // ── the start: welcome, an unfinished install, abort ─────────────────────────

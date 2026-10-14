@@ -27,6 +27,7 @@ import { buildPlanFile } from '../run_files_core.ts';
 import type { HostPlanCtx } from './contract.ts';
 import { gatherHostFacts, type HostFacts } from './facts.ts';
 import { type HostFs, hostFs } from './fs.ts';
+import type { HostExecutorOptions } from './host_executor.ts';
 import { type HostReviewBlock, hostReview } from './host_table.ts';
 import { type InstancePaths, instancePaths, pathsFor } from './layout.ts';
 import { OS_ROWS, osRowById } from './os_support.ts';
@@ -165,9 +166,14 @@ function reviewContext(
 	};
 }
 
+/** Does this plan run no HOST step here (the developer route, the delegated engine child)? */
+function runsNoHostStep(plan: InstallPlan): boolean {
+	return plan.answers.route === 'developer' || plan.answers.engine_only;
+}
+
 /** The Review blocks of a host plan (none for the developer route, the engine child, or an unsupported OS). */
 export async function reviewHostCommands(plan: InstallPlan): Promise<ReviewBlock[]> {
-	if (plan.answers.route === 'developer' || plan.answers.engine_only) return [];
+	if (runsNoHostStep(plan)) return [];
 	const source = sourceTreeRoot();
 	const pin = bunPinOf(source);
 	// The instance-derived names to measure under; the commands take the paths
@@ -180,4 +186,22 @@ export async function reviewHostCommands(plan: InstallPlan): Promise<ReviewBlock
 		return [...todoBlocks(stackReviewTodo(ctx, fs, Date.now())), ...hostReview(ctx)];
 	}
 	return [...todoBlocks(reviewTodo(ctx, fs, Date.now())), ...markExisting(hostReview(ctx), fs)];
+}
+
+/**
+ * What the run's own system check would refuse for this plan, asked BEFORE
+ * `yes` — the session's `preflightRefusals` (install_session.ts), wired by
+ * scripts/install.ts (campaign 3c D2: an untrusted chain, Apache beside nginx,
+ * a held port were refused only after `yes`, every answer lost). The SAME
+ * function the run asks (host_executor.ts hostPlanRefusals), over the plan
+ * with no secret; none for a plan that runs no host step. `options`: a gate's
+ * scratch machine (default: this one, or the scratch seam's when armed).
+ */
+export async function reviewPreflightRefusals(
+	plan: InstallPlan,
+	options: HostExecutorOptions = {},
+): Promise<string[]> {
+	if (runsNoHostStep(plan)) return [];
+	const { hostPlanRefusals } = await import('./host_executor.ts');
+	return (await hostPlanRefusals(buildPlanFile(plan, {}), options)).errors;
 }

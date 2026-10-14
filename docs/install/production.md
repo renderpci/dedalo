@@ -72,7 +72,7 @@ The Identity screen asks, right after the instance name, where the instance live
 
 **The service group.** The web server's user joins it, to reach the socket, the media and the published client. When the service group is an existing account's primary group (by default, or typed), the web server can then read whatever that group can read: the Review says so. A group of its own (`--service-group ded_<i>`) is recommended.
 
-**One account, one group, one folder per instance.** The System check refuses a service user or group that another Dédalo instance on this host already uses, an account that is a member of another instance's group, and an install folder that is, contains or lies inside another instance's folder. The other instances are read from the host registry (`/var/lib/dedalo-install/instances/`), the units' drop-ins, the installer's records of unfinished installs, and any hand-installed `dedalo*.service` (with no `Group=` line, its group is its `User=`'s primary group; when that cannot be resolved, the unit is refused). The refusal names the file it read. An account that did not exist at the System check but exists when `host_identity` runs (a package created it) is refused, never taken for the installer's own.
+**One account, one group, one folder per instance.** The System check refuses a service user or group that another Dédalo instance on this host already uses, an account that is a member of another instance's group, and an install folder that is, contains or lies inside another instance's folder. The other instances are read from the host registry (`/var/lib/dedalo-install/instances/`), the units' drop-ins, the installer's records of unfinished installs, and any hand-installed `dedalo*.service` (with no `Group=` line, its group is its `User=`'s primary group; when that cannot be resolved, the unit is refused). The refusal names the file it read. A name an installed instance already holds (its registry entry or its unit's drop-in) is refused on the System check, right after you type it, naming those files: choose another name — an install never takes over an installed instance, its account, folder or database. An account that did not exist at the System check but exists when `host_identity` runs (a package created it) is refused, never taken for the installer's own.
 
 **The database role** is the service user: PostgreSQL's peer authentication maps the operating-system user to the role of the same name. With `--db-mode create` the role is never asked, and `--db-user` is refused when it differs from the service user. When the account already has a role of its name, use `--db-mode existing`.
 
@@ -125,12 +125,12 @@ Choose **Production** on the first screen and type the instance name there (`--p
 | Screen | What it asks |
 | --- | --- |
 | **Install type** | the route and the instance name |
-| **System check** | nothing: it shows what this host has. A failed row must be fixed before the install |
-| **Identity** | the install folder, the service user and the service group first (the database role is the service user, so they come before the database); then the institution's short code (`entity`) and full name, the install fingerprint (**Information** and **Info key** — keep the defaults unless you are moving a v6 installation; they never change later), the locale and the time zone. The time zone stamps every database timestamp |
+| **System check** | nothing: it shows what this host has, and whether an installed instance already holds the name. A failed row must be fixed before the install |
+| **Identity** | the install folder, the service user and the service group first (the database role is the service user, so they come before the database); then the institution's short code (`entity`) and full name, the install fingerprint (**Information** and **Info key** — keep the defaults unless you are moving a v6 installation; they never change later), the time zone and the locale. The time zone stamps every database timestamp |
 | **Database** | the database mode: **create** (the default — only the database name is asked: the role is the service user, reached by peer login, with no password) or **existing** (its host, port, socket, name, role and password). Defaults follow the instance name |
-| **Web server & TLS** | nginx or Apache, the HTTP and HTTPS ports, the public address, the certificate (Let's Encrypt and its email, or the paths of your files) |
+| **Web server & TLS** | nginx or Apache, the public address, the certificate (Let's Encrypt and its email, or the paths of your files), then the HTTP and HTTPS ports |
 | **Services** | the media root, the socket, the media access mode and the backup directory. The defaults are the layout above |
-| **Ontologies** | the domain ontologies: Oral history (`oh`) is built in and pre-ticked; others come from the update server, with the ontologies they declare. Also whether to use the official update servers |
+| **Ontologies** | whether to use the official update servers, then the domain ontologies: Oral history (`oh`) is built in and pre-ticked; others come from the update server, with the ontologies they declare |
 | **Thesauri** | the thesauri the chosen ontologies declare, pre-ticked. No country's toponymy is pre-selected. The thesauri are created empty: only `lg` and the country toponymies carry terms |
 | **Languages** | the interface and data languages |
 | **Publication** | optional: a MariaDB publication target (tested, or kept untested by typing `yes`) |
@@ -220,8 +220,8 @@ Creates the service user when it does not exist (a system account, no login shel
 
 Root creates the install folder only under root-owned parents (its missing parents `root 0755`). Under a parent the service user owns — `/home/my_domain.org` — the service user creates it. Everything **inside** the folder and inside the instance's web root is created by the service user: root never works by path in a tree another account controls. A shared directory that already exists (`/srv/dedalo` or `/opt/dedalo` on a host with other instances) is used as it is and never re-moded.
 
-- **Verify:** `getent passwd <service user>`; `stat -c '%a %U:%G %n' <dir> <dir>/private /srv/dedalo/<i>/dedalo/media` shows `750`, `700` and `750`, owned by the service user.
-- **Repair:** `--resume`. `--abort` removes, as the service user, what this install left in the folder, then the folder when it created it (an adopted empty folder gets its owner and mode back; a folder used as it is keeps its own content). It removes the user and the group only when it created them — never an existing account — and keeps them, telling you why, while the user still runs processes or backups remain (a removed user id could be given to a later account, which would then read them).
+- **Verify:** `getent passwd <service user>`; `sudo stat -c '%a %U:%G %n' <dir> <dir>/private /srv/dedalo/<i>/dedalo/media` shows `750`, `700` and `750`, owned by the service user (`sudo`: the folder is `0750`, so only root and the service account read inside it).
+- **Repair:** `--resume`. `--abort` removes, as the service user, what this install left in the folder, then the folder when it created it (an adopted empty folder gets its owner and mode back; a folder used as it is keeps its own content). It removes the user and the group only when it created them — never an existing account — after removing, as that user, what it left at the top of `/tmp` and `/var/tmp` (Bun's `bun-node-<hash>` directory and `.<hash>-0.hm` marker), and keeps them, telling you why, while the user still runs processes or backups remain (a removed user id could be given to a later account, which would then read them).
 
 ### `host_runtime` — Bun, the release and the root-run scripts
 
@@ -304,7 +304,7 @@ The socket's rule is written in the spelling the host's policy accepts. The poli
 
 It then loads one host-wide policy module, `dedalo_engine` (`deploy/selinux/dedalo_engine.cil.tpl`), at priority 400. The module gives the engine **its own domain**: systemd starts the pinned runtime (labelled `dedalo_engine_exec_t`) into `dedalo_engine_t`, and the web server may connect to the unix sockets of that domain **only**. A rule naming the generic service domain would let the web server reach every other unconfined service's socket on the host. After loading the module it relabels the runtime (`restorecon -F`). No SELinux boolean is changed.
 
-- **Verify:** `semodule -l | grep dedalo_engine`; `stat -c %C /opt/dedalo/bun/<pin>/bun` contains `dedalo_engine_exec_t`; `ls -Zd /srv/dedalo/<i> <dir>/dedalo <dir>/private`; `semanage fcontext -l -C`.
+- **Verify:** `sudo semodule -l | grep dedalo_engine`; `stat -c %C /opt/dedalo/bun/<pin>/bun` contains `dedalo_engine_exec_t`; `sudo ls -Zd /srv/dedalo/<i> <dir>/dedalo <dir>/private`; `sudo semanage fcontext -l -C`.
 - **Repair:** `--resume`. A module named `dedalo_engine` that this installer did not write is refused, not replaced. `--abort` removes the contexts this install added — only those the host defines (`semanage fcontext -l -C`); a rule you defined for the same path before the install is kept — and the module when no other instance uses it.
 
 ### `host_first_boot` — the first start
@@ -317,7 +317,7 @@ Starts `dedalo-ts@<i>` and waits, with progress, for `/health` on the socket to 
 
     ```shell
     systemctl status dedalo-ts@<i> --no-pager      # active (running), not activating (auto-restart)
-    ls -l /run/dedalo-<i>/dedalo_ts.sock          # srw-rw-rw- <service user> <service group>
+    sudo ls -l /run/dedalo-<i>/dedalo_ts.sock     # srw-rw-rw- <service user> <service group>
     ls -ld /run/dedalo-<i>                        # drwxr-x--- <service user> <service group> — what guards the socket
     sudo curl --fail --unix-socket /run/dedalo-<i>/dedalo_ts.sock http://localhost/health
     # {"result":"ok","entity":"<entity>","db":"ok",…}
@@ -397,7 +397,7 @@ Runs the backup set once (`systemctl start --wait dedalo-backup@<i>`) and verifi
 
 ## Done
 
-The Done screen shows the generated `DEDALO_SALT_STRING` **once** — keep it with your backups — and what comes next. A `--resume` that completes the install shows it too; when no run could show it on a terminal, the end of the run prints the command that reads it back (`sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env`). The instance is running under systemd and starts at boot; the watchdog and the nightly backup are armed.
+The Done screen shows the generated `DEDALO_SALT_STRING` **once** — keep it with your backups — and what comes next. A `--resume` that completes the install shows it too, when no earlier run did. Every run that completes the install, whichever run showed the salt, lists under *To do on this host* the command that reads it back: `sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env`. The instance is running under systemd and starts at boot; the watchdog and the nightly backup are armed.
 
 Open `https://<address>/dedalo/core/page/` and log in as **`root`**. Then follow [After the install](index.md#after-the-install): an admin user, users and projects, the thesauri and toponymies you need (from Maintenance), and a restore test of the backups.
 
@@ -504,7 +504,7 @@ These are the installed defaults. Check that nothing has changed them, because e
 
 ## What the installer does not do after the install
 
-The installer installs; it does not maintain. It refuses to run over a sealed instance, and `--abort` never takes apart an instance that has served. An instance counts as served once `host_first_boot` has issued the start of its unit (an interruption inside that step before the start is not a served instance). After that, `--abort` undoes only the host steps after `host_engine`, and `--resume` puts them back. Before that, `--abort` removes the instance completely, even when its engine install finished. Three things are therefore manual today, with no installer support:
+The installer installs; it does not maintain. It refuses to run over a sealed instance, and `--abort` never takes apart an instance that has served. An instance counts as served once its unit has run: `host_first_boot` started it, or `--abort` measures that systemd ever ran the unit or that the engine answers on its socket. An interruption that stopped the start before the unit ran, even inside that step, is not a served instance. After that, `--abort` undoes only the host steps after `host_engine`, and `--resume` puts them back. Before that, `--abort` removes the instance completely, even when its engine install finished. Three things are therefore manual today, with no installer support:
 
 - **The root-run scripts** in `/opt/dedalo/instances/<i>/bin/` are not refreshed by an in-app code update, which runs as the instance. When a release changes a script under `deploy/`, its release notes say so.
 - **A new Bun pin.** The code update panel refuses a release whose `.bun-version` differs from the running runtime, and the runtime is root-owned at `/opt/dedalo/bun/<pin>/`.

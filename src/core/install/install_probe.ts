@@ -132,7 +132,8 @@ type Probes = typeof import('./probes.ts');
 const PROBE_RUNNERS: Readonly<
 	Record<ProbeName, (probes: Probes, request: ProbeRequest) => Promise<unknown>>
 > = Object.freeze({
-	system: (probes, request) => probes.systemCheck(routeOf(request.answers)),
+	system: (probes, request) =>
+		probes.systemCheck(routeOf(request.answers), {}, String(request.answers.instance ?? '')),
 	identity: (probes, request) => probes.identityProbe(request.answers),
 	db: (probes, request) => probes.databaseProbe(request.answers, request.secrets.db_password ?? ''),
 	media: (probes, request) => probes.mediaProbe(request.answers),

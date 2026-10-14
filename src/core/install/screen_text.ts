@@ -299,7 +299,8 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 		},
 		image_version: {
 			label: 'Image version',
-			description: 'The image tag; empty = the version of this installer.',
+			description:
+				"The image tag; empty = the version of this installer (the only other tag accepted is that version's -dev).",
 		},
 		'route.trial_no_media_protection': {
 			label: 'Trial without media protection',
@@ -490,6 +491,9 @@ export const NOTICE_TEXT = Object.freeze({
 	/** The docker and trial routes' own words (C3-48 — never the production boilerplate). */
 	stackCommands:
 		"Every host command is listed on the Review, exactly as it will run. Docker itself and your user's groups are never installed or changed — they are only checked; the images stay on --abort. The firewall is neither changed nor checked: Docker-published ports bypass it (see Docker install).",
+	/** The trial's own pointer (campaign 3c D23: its firewall warning is the Trial page's, not Docker's). */
+	trialCommands:
+		"Every host command is listed on the Review, exactly as it will run. Docker itself and your user's groups are never installed or changed — they are only checked; the images stay on --abort. The firewall is neither changed nor checked: Docker-published ports bypass it (see the Trial page's firewall warning).",
 	databaseProbe: (msg: string) => `Database check: ${msg}`,
 	noMail: 'Without mail, a forgotten password needs the server console.',
 	probeOk: (msg: string) => `Check passed: ${msg}`,
@@ -514,6 +518,17 @@ export const NOTICE_TEXT = Object.freeze({
 	reviewRoot:
 		'The production route runs as root (sudo sh install.sh); the engine steps then run as the service user.',
 	reviewInstallOffered: 'Type install to start, or edit a step.',
+	/** A word a failed check's prompt does not offer (campaign 3c D19: one plain sentence). */
+	notOffered: (word: string, prompt: string) => `'${word}' is not offered here — type ${prompt}`,
+	/**
+	 * The run's own system check refuses at the typed yes (campaign 3c D2): the
+	 * session stays on the Review with every answer.
+	 */
+	refusedAtYes:
+		'not started — the system check of the run refuses this plan (nothing was changed; your answers are kept): fix the cause, then install again (it checks first), or edit a step',
+	/** `install` on a refused Review: the plan is measured anew (campaign 3d C3d-F2). */
+	recheckReview: 'checking again what the run would refuse…',
+	stillRefused: 'checked again — install is still not offered: see the errors above',
 });
 
 /** The review's line labels. */
@@ -626,6 +641,22 @@ export const DONE_TEXT = Object.freeze({
 	writtenNext: (route: string) =>
 		`Run the install from them with: ${ENTRY_COMMAND[route] ?? ENTRY_COMMAND.developer} --answers <file> (the passwords via DEDALO_INSTALL_* or --secrets-stdin).`,
 	saltStored: "A generated secret is also stored in the install's private .env (0600).",
+	/**
+	 * A run refused after the typed yes (campaign 3c D2): the reviewed answers
+	 * are kept in a file, and the command that runs them again is printed.
+	 */
+	keptAnswers: (path: string, route: string): string[] => [
+		`  Your answers are kept in ${path} (no secret is in it). Fix the cause, then run the install from them:`,
+		`    ${ENTRY_COMMAND[route] ?? ENTRY_COMMAND.developer} --answers ${path}`,
+		'  (the root password is asked again on a terminal; other passwords via DEDALO_INSTALL_* or --secrets-stdin)',
+	],
+	/** The answers could not be written: the equivalent command line keeps them. */
+	keptAsCommand: (refusal: string, command: string): string[] => [
+		`  Your answers could not be written (${refusal}). They are this command line:`,
+		`    ${command}`,
+	],
+	/** The closing list of what the operator does (a host route — campaign 3c D5: every front end). */
+	todoHeading: 'To do on this host:',
 	/** What comes next after a complete install — per route: a host route already started it. */
 	next: (ending: DoneEnding): string => {
 		if (ending.route === 'production') {

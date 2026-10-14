@@ -488,6 +488,29 @@ export interface LockInfo {
 	host: string;
 	started_at: string;
 	mode: RunMode;
+	/**
+	 * Where the holder ran (campaign 3d C3d-F3: "container or host <id>"): a
+	 * container's hostname is its id, so the reclaim note says which. Absent on
+	 * a lock written before it was recorded.
+	 */
+	place?: LockPlace;
+}
+
+/** A lock holder's kind of machine. */
+export type LockPlace = 'container' | 'host';
+
+/**
+ * The files a container runtime puts in every container it starts: Docker's
+ * `/.dockerenv`, Podman's `/run/.containerenv`.
+ */
+export const CONTAINER_MARKERS: readonly string[] = Object.freeze([
+	'/.dockerenv',
+	'/run/.containerenv',
+]);
+
+/** Is THIS process in a container (a runtime's marker present)? `exists` injectable for a gate. */
+export function lockPlace(exists: (path: string) => boolean = existsSync): LockPlace {
+	return CONTAINER_MARKERS.some((path) => exists(path)) ? 'container' : 'host';
 }
 
 /** Is `pid` a live process (on THIS host)? */
@@ -501,15 +524,26 @@ function pidAlive(pid: number): boolean {
 }
 
 /**
+ * What a reclaimed lock earns: a plain note for the EXPECTED case (an earlier,
+ * interrupted run's lock — a resume after Ctrl-C meets it every time), a
+ * warning only for a lock that cannot even be read (campaign 3c D9: the
+ * expected case read "⚠ reclaimed stale install lock of pid 1 on <container id>").
+ */
+export interface LockNotes {
+	note: (line: string) => void;
+	warn: (line: string) => void;
+}
+
+/**
  * Take the run lock. Refuses (returns the holder) only when a LIVE process on
  * THIS host holds it; a dead pid, this very pid (a container restarted with the
- * same pid) or another host (a container's random hostname) is reclaimed with a
- * warning — two hosts on one database are stopped by the advisory lock, not by
- * this file.
+ * same pid) or another host (a container's random hostname) is reclaimed and
+ * said (LockNotes) — two hosts on one database are stopped by the advisory
+ * lock, not by this file.
  */
 export function acquireRunLock(
 	mode: RunMode,
-	warn: (line: string) => void,
+	notes: LockNotes,
 	dir: string,
 ): { ok: true } | { ok: false; holder: LockInfo } {
 	const path = join(dir, LOCK_FILE);
@@ -518,12 +552,13 @@ export function acquireRunLock(
 		host: hostname(),
 		started_at: new Date().toISOString(),
 		mode,
+		place: lockPlace(),
 	};
 	for (let attempt = 0; attempt < 2; attempt++) {
 		if (createLockFile(path, mine)) return { ok: true };
 		const holder = readLockHolder(path);
 		if (holder !== null && holderIsLive(holder, mine)) return { ok: false, holder };
-		if (reclaimStaleLock(path, holder)) warn(reclaimSentence(holder, mine));
+		if (reclaimStaleLock(path, holder)) sayReclaimed(notes, holder, mine);
 	}
 	return runFileRefusal(`cannot take the install lock ${path}`);
 }
@@ -606,11 +641,28 @@ export function liveLockHolder(dir: string): LockInfo | null {
 	return holderIsLive(holder, me) ? holder : null;
 }
 
-/** The warning a reclaimed lock earns. */
-function reclaimSentence(holder: LockInfo | null, mine: LockInfo): string {
-	if (holder === null) return 'reclaimed an unreadable install lock';
-	const where = holder.host === mine.host ? '' : ` on ${holder.host}`;
-	return `reclaimed stale install lock of pid ${holder.pid}${where}`;
+/** Say a reclaimed lock: a note for an earlier run's, the one warning for an unreadable lock. */
+function sayReclaimed(notes: LockNotes, holder: LockInfo | null, mine: LockInfo): void {
+	if (holder === null) notes.warn('reclaimed an unreadable install lock');
+	else notes.note(reclaimSentence(holder, mine));
+}
+
+/**
+ * The note a reclaimed lock of an earlier run earns, in plain words: on THIS
+ * host its process is gone; on another (the engine child's container, named by
+ * its id) it ran elsewhere — the caller stopped that container first (C3-29).
+ */
+export function reclaimSentence(holder: LockInfo, mine: LockInfo): string {
+	const where =
+		holder.host === mine.host ? `process ${holder.pid} is no longer running` : elsewhere(holder);
+	return `the earlier, interrupted run's install lock was released (${where})`;
+}
+
+/** Where another machine's holder ran, by the place its lock recorded (C3d-F3). */
+function elsewhere(holder: LockInfo): string {
+	if (holder.place === 'container') return `it ran in container ${holder.host}`;
+	if (holder.place === 'host') return `it ran on host ${holder.host}`;
+	return `it ran on ${holder.host}, another machine or container`;
 }
 
 /** Release the run lock if this process holds it. */

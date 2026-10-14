@@ -22,6 +22,7 @@ import {
 	DATABASE_VOLUME,
 	ENV_FILE,
 	imageRefOf,
+	POSTGRES_IMAGE,
 	STACK_SERVICE_IMAGES,
 	stackFileOf,
 } from './layout.ts';
@@ -103,11 +104,19 @@ async function removeCreatedVolumes(ctx: HostCtx): Promise<string> {
 /**
  * The images an abort leaves on the machine, named (campaign 3 C3-52) — a
  * cache, not the install; the operator decides whether to reclaim the space.
+ * `postgresRuns`: a SERVED abort keeps PostgreSQL running with the data, so
+ * its image cannot be removed yet — the command names only what `docker image
+ * rm` can remove now, and says when the rest goes (campaign 3c D8: the hint
+ * listed postgres:18 under the container the abort had just kept running).
  */
-export function keptImages(ctx: HostPlanCtx): string {
+export function keptImages(ctx: HostPlanCtx, postgresRuns = false): string {
 	const le = ctx.answers.route === 'docker' && ctx.answers.tls_mode === 'letsencrypt';
 	const images = [imageRefOf(ctx.answers), ...STACK_SERVICE_IMAGES, ...(le ? [CERTBOT_IMAGE] : [])];
-	return `the images are kept (${images.join(', ')}) — remove them with: docker image rm ${images.join(' ')}`;
+	const removable = postgresRuns ? images.filter((image) => image !== POSTGRES_IMAGE) : images;
+	const kept = `the images are kept (${images.join(', ')}) — remove them with: docker image rm ${removable.join(' ')}`;
+	return postgresRuns
+		? `${kept}; ${POSTGRES_IMAGE} runs the kept database — it goes with the instance (see that section)`
+		: kept;
 }
 
 export const stack_database: HostStepDefinition = {

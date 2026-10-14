@@ -142,7 +142,8 @@ meaning.)
 | `--backup-dir` | no | `<install folder>/backups` | `production`: where the nightly backup units write; written as `DEDALO_BACKUP_DIR=<backup dir>/db`, so the server's own backups use the same directory |
 | `--backup-site-builder` | no | off | `production`: also back up the site-builder store (as root, from the root-owned script copy) |
 | `--image-source` | no | `official` | `docker` / `trial`: `official` (a Dédalo registry, cosign-verified), `custom` (a registry of your own — `--image-repository`) or `build` (built here from this checkout) |
-| `--image-repository`, `--image-version` | with `--image-source custom` | the installer's own version | the image; its version must be the installer's (or its `-dev` tag): the engine steps run inside it with this installer's request format |
+| `--image-repository` | with `--image-source custom` | — | the registry repository of your own image |
+| `--image-version` | no — `custom` or `build` | the installer's own version | the image's version: with `custom` the tag pulled, with `build` the tag the local build gets. Only the installer's own version or its `-dev` tag is accepted — the engine steps run inside the image with this installer's request format — and any other value is refused where it is typed (the Image screen), never first after `yes` |
 | `--engine-only` | no | off | run only the ENGINE steps, here, with no host step and no root: the delegated child of `host_engine` / `stack_engine`, and the engine step of an [install by hand](manual_install.md#manual-host_engine) (run as the service user, with `--route production --instance <i>`) |
 | `--request-stdin` | no | off | **internal**: the delegated child's input — ONE JSON object `{schema, answers, secrets}` on standard input, never argv, never a file |
 | `--events-jsonl` | no | off | **internal**: the delegated child's output — its log lines and step events as JSON lines (the one-time salt as a `show_once` frame the parent shows once and never stores) |
@@ -645,7 +646,13 @@ What the screens do for you:
   equivalent command line (without secrets) — `same as`, in the route's own
   form: `sudo sh install.sh …` on production, `sh install.sh …` on docker and
   trial, `bun run scripts/install.ts …` on developer. Then:
-  `install` (typed `yes` to start; offered only when the plan has no error),
+  `install` (typed `yes` to start; offered only when the plan has no error
+  and nothing the run's own system check would refuse — on production, docker
+  and trial the Review measures that check before `yes` and lists what it
+  refuses as errors: an untrusted certificate chain, another web server on the
+  ports, an image version other than the installer's, a port already in use;
+  refused, `install` checks again — the cause fixed, it goes on to the typed
+  `yes` with every answer kept, still refused, it says so),
   `edit <n>` (go back to step `n`; later steps ask only what changed),
   `write <path>` (an [answers file](#the-answers-file-answers), no secret in it;
   the screen then says how to run it — the same entry command with
@@ -658,6 +665,16 @@ run makes: the plan is built again from your answers, the ontology catalog read
 again, and the install refused — `the ontology catalog changed between review
 and install — run again` — if it would now decide anything other than what you
 reviewed.
+
+**A refusal never loses your answers.** The system check is measured again at
+the typed `yes`: when it refuses now (a port taken since the Review was drawn),
+the session stays on the Review, says why, and keeps every answer — fix the
+cause and `install` again (it checks first), or edit a step. A run that is still refused
+after it started, before it changed anything, writes your answers to an
+[answers file](#the-answers-file-answers) — the `--write-answers` path when you
+gave one, else `dedalo-install-answers.json` in your home directory (root's under
+`sudo`) — and prints the command that runs them again (`sh install.sh --answers
+<file>`, `sudo` on production).
 
 Every route installs from the Review. On **production**, **docker** and
 **trial** the Review also lists every host command, exactly as it will run
@@ -713,11 +730,11 @@ screen reader.
 | --- | --- |
 | Anywhere | **Ctrl-C** stops the installer (exit `130`); **Ctrl-Q** asks "Quit?" (exit `0`; an unfinished install is kept for `--resume`); **F1** help (or **?** where you are not typing); **Esc** back to the previous step |
 | A text or password field | **Enter** or **Tab** continue; **Shift-Tab** the previous question of this step; ←→, Backspace, Ctrl-U (clear), Ctrl-W (delete a word) edit; **Ctrl-D** stops (exit `130`). A pre-filled default is drawn dim: the first character you type replaces it, Enter keeps it, an editing key (←→, Backspace) edits it |
-| A choice | ↑↓, PgUp/PgDn, Home/End move; **Enter** chooses. On the first screen the cursor starts on the `--route` default, `developer`: move it to your route |
+| A choice | ↑↓, PgUp/PgDn, Home/End move; **Enter** chooses. On the first screen the cursor starts on **Production**, the route recommended for a museum: move it to yours |
 | An acknowledgement (the trial's missing media protection, no thesaurus, a connection kept untested) | **Space** ticks *I understand*, or type `yes`; **Enter** continues — unticked, Enter declines |
 | A list (ontologies, thesauri, languages) | type to filter; ↑↓ move; **Space** ticks or unticks; **/** starts a new filter; **Esc** clears the filter, then goes back; **Enter** continues |
 | A failed check | **r** retry, **e** edit the answers, **y** keep them untested (where allowed), **q** quit; a failure no fix on this machine can change (an unsupported system) offers only **q** — or **Esc**, back to choose another route |
-| The Review | **Enter** install (then type `yes`), **e** + a step number edit it, **w** + a path write an answers file, **Esc** edit the last step, **Ctrl-Q** quit |
+| The Review | **Enter** install (then type `yes`); when install is not offered, **Enter** checks again and, the cause fixed, asks for `yes`; **e** + a step number edit it, **w** + a path write an answers file, **Esc** edit the last step, **Ctrl-Q** quit |
 | The install | **l** shows the full log; **Ctrl-C** stops — resume later |
 | Done | **Enter** or **q** closes; Ctrl-C closes too, with the install's own exit code |
 
@@ -732,9 +749,10 @@ The screens are the steps listed above, plus:
   itself is never drawn.
 - **Checks** show their result in place; a failed one offers retry / edit /
   keep untested / quit. A check that passes on a screen without questions — the
-  System check — moves on by itself; its warnings, failures and verdict stay
-  visible under the next screen, headed by the check's name (the `ok` rows stay
-  on the check's own screen). A screen whose check failed is marked `✗` on the
+  System check — moves on by itself; its result stays visible under the next
+  screen, headed by the check's name: every row when the check is short (the
+  docker and trial check — Docker, Compose, the free disk), else its warnings,
+  failures and verdict (the `ok` rows of a long check stay on its own screen). A screen whose check failed is marked `✗` on the
   step rail, never `✓`.
 - **Yes/no switches** take `y` or `n` (or ←→, Space) and move on only with
   Enter, so a key pressed after the answer never lands on the next screen.
@@ -747,15 +765,20 @@ The screens are the steps listed above, plus:
   `DEDALO_SALT_STRING` **once** — copy it then (the mouse is not captured, so
   your terminal's own selection works; the value is also kept in the private
   `.env`, mode 0600). Whichever run completes the install shows it, a
-  `--resume` in line mode included; when no run could show it on a terminal,
-  the end of the run prints the command that reads it back instead
+  `--resume` in line mode included; on production, docker and trial the closing
+  *To do on this host* list of every run that completes the install — the one
+  that showed it, a later `--resume`, or one that could not show it on a
+  terminal — names the command that reads it back
   (production: `sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env`;
   docker and trial: `docker compose … exec dedalo grep ^DEDALO_SALT_STRING= /private/.env`). Then what comes next, per route: on production the
   instance is already running under systemd with its watchdog and backup timer
   armed; on docker and trial the stack is up; on developer, start the server
   under a supervisor. Thesauri, toponymies, restores and updates after the
-  install are done in the browser (**Maintenance**), not here. The screen stays until
-  you press a key.
+  install are done in the browser (**Maintenance**), not here. On production,
+  docker and trial the card then lists **To do on this host** — the firewall
+  command, Apache's modules, the outside check, the salt's read command — the
+  same list a headless or `--resume` run prints at its end, and left on your
+  normal screen when the card closes. The screen stays until you press a key.
 
 Whatever way it ends — quit, Ctrl-C, an error, a signal — the installer gives
 the terminal back as it found it and prints the closing message on your normal
@@ -811,8 +834,13 @@ or when the terminal is smaller than 80×24. `NO_COLOR` only turns colour off.
   `missing` — never the password.
 - A check (System check, database, media directory, publication, mail) holds
   only for the answers it tested: when a later answer changes them — an
-  instance name that re-derives the database, a different route — the check
-  runs again before the Review offers `install`.
+  instance name that re-derives the database, a different route, the web
+  server the Identity check reads — the check runs again right after the step
+  that changed it (an edit from the Review: before the Review offers `install`).
+  `back` from a failed check and forward again runs it again (`checking: …`),
+  its rows printed once.
+- After a typed `quit` the installer prints the same closing line as the
+  full-screen UI (`nothing was installed`).
 - Every mark is a word (`default`, `ships terms`, `definition, you fill it`,
   `needed by tch`), never a symbol.
 
@@ -1029,7 +1057,11 @@ For every step, in order:
   says which it was: `done in an earlier run — verified again: <what was
   checked>`, or, for a done step with nothing to verify (a probe, the thesaurus
   import, tool registration), `done in an earlier run — nothing to re-check, not
-  run again`;
+  run again`. A **probe** after a step that ran again in this run (the stack
+  started again after an `--abort`) is never only verified: it runs again in
+  full, the same probes as a fresh install — on docker the media gate with its
+  probe file included (`done in an earlier run, but a step before it ran again
+  in this run — checked again`);
 - a step left **running** or **failed** whose work verifiably landed (the
   process died after the work, before recording it) is recorded done without
   running again; otherwise it runs again. The seed restore is the exception: it
@@ -1112,10 +1144,10 @@ steps, as commands and the full text of every file they write, are in
 | --- | --- | --- |
 | `host_preflight` | measures the host and **refuses**, before any change: an unsupported system (supported: Ubuntu 26.04 LTS, Debian 13, RHEL / Rocky / AlmaLinux 10 — newest releases only), no systemd, no root, nginx older than 1.25.1 (it rejects `http2 on;`), anything already under this instance's names (the database or role, `dedalo-ts@<i>` enabled or with drop-ins, the site file, the socket, the nginx upstream/zone names `dedalo_<i>` and `dedalo_<i>_api` in another file), **any instance directory that already exists** — `/srv/dedalo/<i>`, its web root, media, the backup dir (outside the install folder or inside it), `private/` — the installer never takes over a directory, so a media path under `/var/www` is refused; the install folder itself follows the [install folder rules](production.md#the-install-folder-and-the-service-account) (used as it is when it is the service user's, adopted when it is root's and empty in an operator's place), a web-server configuration it cannot read (`nginx -T`, Apache's `-S`/`-M`), the address served by another site on our ports, any of the instance's ports — 80 and 443 included — held by a program other than the chosen web server (the program is named), the other web server already installed when this run would install the chosen one beside it, another PostgreSQL major on the database port, and the institution's certificate when it does not name the address, has expired, does not pair with its key or ends at a certificate authority this machine does not trust (one expiring within 30 days is a warning). The firewall is **checked and told**, never changed — with the command that opens the instance's ports when they are closed; on Apache, which modules to enable, with the command | — (it changes nothing) |
 | `host_packages` | PostgreSQL 18, the media toolchain (ImageMagick, FFmpeg, Poppler, librsvg, OCRmyPDF), the web server when missing, certbot (Let's Encrypt), the SELinux tools (EL); the repositories they need (PGDG on Debian; EPEL, RPM Fusion, PGDG and CodeReady Builder on EL) | nothing: packages and repositories are **shared host state** — told, never removed (removing a repository would leave its packages without security updates) |
-| `host_identity` | the service user (created: a system account, no login shell, no skeleton files — or an existing account USED AS IS), the service group (its own, a typed one created with `groupadd`, or an existing one used as is), the install folder (`0750`; made by root only under root-owned parents, else by the service user; an empty root-owned folder under root's parents inside `/home`, `/srv`, `/data`, `/mnt` or `/media` adopted) and every directory of the instance at its mode: `private` (`0700`), backups, `/srv/dedalo/<i>` (media at `0750`, never world-readable) — everything inside the folder made by the service user — and the root-owned `/opt/dedalo/…` (a shared one that exists is used as it is, never re-moded). The System check before it refuses another instance's user, group or folder (and an account in another instance's group), a system account, a package's account, a privileged group and a folder it may not use; an account that appeared since (a package made it) is refused here, never recorded as created | as the service user, what the install left in the folder and the empty media tree it made under `/srv/dedalo/<i>`, then the folder it created (an adopted one gets its owner and mode back); the user and group only when it created them — never an existing account — and not while the user runs processes or still owns a file (`user <u> KEPT: it still owns <path> …` — a removed uid could be reused and read them) |
+| `host_identity` | the service user (created: a system account, no login shell, no skeleton files — or an existing account USED AS IS), the service group (its own, a typed one created with `groupadd`, or an existing one used as is), the install folder (`0750`; made by root only under root-owned parents, else by the service user; an empty root-owned folder under root's parents inside `/home`, `/srv`, `/data`, `/mnt` or `/media` adopted) and every directory of the instance at its mode: `private` (`0700`), backups, `/srv/dedalo/<i>` (media at `0750`, never world-readable) — everything inside the folder made by the service user — and the root-owned `/opt/dedalo/…` (a shared one that exists is used as it is, never re-moded). The System check before it refuses another instance's user, group or folder (and an account in another instance's group), a system account, a package's account, a privileged group and a folder it may not use; an account that appeared since (a package made it) is refused here, never recorded as created | as the service user, what the install left in the folder and the empty media tree it made under `/srv/dedalo/<i>`, then the folder it created (an adopted one gets its owner and mode back); the user and group only when it created them — never an existing account — after removing, as that user, its own entries at the top of `/tmp` and `/var/tmp` (Bun's leftovers), and not while the user runs processes or still owns a file (`user <u> KEPT: it still owns <path> …` — a removed uid could be reused and read them) |
 | `host_runtime` | Bun at the release's pin, **root-owned** in `/opt/dedalo/bun/<pin>/` — only from a zip whose sha256 equals the release's committed `.bun-sha256` (the bootstrap's verified cache), and left as it is when the installed copy is byte-identical; the release extracted into `<install folder>/dedalo` by the service user (`git archive` of a checkout runs with `-c safe.directory=<checkout>`: root reads the operator's checkout); its dependencies installed as the instance; the root-run scripts copied root-owned to `/opt/dedalo/instances/<i>/bin` | the release and scripts; Bun when no other instance uses that pin |
 | `host_database` | `--db-mode create`: the role named like the service user (LOGIN, **no password** — peer authentication over the local socket) and the database `dedalo_<i>` it owns (UTF8, from `template0`), with `CONNECT` and `TEMPORARY` revoked from `PUBLIC` and granted to that role alone; then checks the instance reaches it by peer and the three extensions are available. `existing`: nothing | only what it created, only with `--confirm-database`, only an empty database |
-| `host_engine` | the engine steps (seed, ontologies, thesauri, tools, root password) in one child as the service user: `setpriv --pdeathsig KILL -- runuser -u <user> -g <group> -- setpriv --pdeathsig KILL -- /usr/bin/env HOME=<install folder> <bun> run scripts/install.ts --request-stdin --execute --events-jsonl` (`setpriv` at both ends of `runuser`, which forks: the child dies with the installer, never left running unsupervised; `runuser` resets `HOME` to the account's home, `env` sets it back to the install folder) — answers and secrets as ONE JSON object on its standard input. A resume refuses while an earlier run's child still holds the install | the child's own `--abort`: it refuses a sealed install, unless the instance never served (`host_first_boot` never started) and the database is unchanged since the seal |
+| `host_engine` | the engine steps (seed, ontologies, thesauri, tools, root password) in one child as the service user: `setpriv --pdeathsig KILL -- runuser -u <user> -g <group> -- setpriv --pdeathsig KILL -- /usr/bin/env HOME=<install folder> <bun> run scripts/install.ts --request-stdin --execute --events-jsonl` (`setpriv` at both ends of `runuser`, which forks: the child dies with the installer, never left running unsupervised; `runuser` resets `HOME` to the account's home, `env` sets it back to the install folder) — answers and secrets as ONE JSON object on its standard input. A resume refuses while an earlier run's child still holds the install | the child's own `--abort`: it refuses a sealed install, unless the instance never served (its unit never ran) and the database is unchanged since the seal |
 | `host_units` | the shared template units (`deploy/systemd/*@*`) and this instance's drop-ins; `dedalo-ts@<i>` enabled (not started, the watchdog **not** armed) | the drop-ins; the templates when no other instance uses them |
 | `host_selinux` | RHEL family, SELinux enforcing or permissive: the file contexts (the socket directory — in the spelling the host's policy accepts, `/run/dedalo-<i>(/.*)?` on RHEL 10, read from its `file_contexts.subs_dist` equivalences —, `/srv/dedalo/<i>`, the ACME root), the `dedalo_engine` policy module (`deploy/selinux/dedalo_engine.cil.tpl`, priority 400) and `restorecon -F` on the runtime. The module gives the engine its own domain — systemd starts the pinned runtime, labelled `dedalo_engine_exec_t`, into `dedalo_engine_t` — and lets the web server connect to the unix sockets of that domain **only**, never another service's. No boolean is changed | the contexts this install added (a rule defined before it is kept); the module when no other instance uses it |
 | `host_first_boot` | starts `dedalo-ts@<i>`, waits for `/health` on its socket and for **every** migration to be recorded; under SELinux, refuses an engine not running in `dedalo_engine_t` | stops it |
@@ -1180,7 +1212,8 @@ instance record exists, the engine refuses a sealed private directory, and
 - The watchdog and the rollback units use the code-backup root
   `<install folder>/backups/code` (pinned in the units' drop-ins, never read from the
   instance's `.env`); the rollback's file work runs as the instance user.
-- On a **live** instance — one that has served: `host_first_boot` started it —
+- On a **live** instance — one that has served: its unit has run (`host_first_boot`
+  started it, or `--abort` measures that systemd ran it or the engine answers) —
   `--abort` undoes only the host steps after `host_engine` — the units' start,
   SELinux, the watchdog, the site, the certificate, the backup timer — and keeps
   the instance, its user, database and code; `--resume` puts the undone steps
@@ -1218,10 +1251,13 @@ record is `<checkout>/.dedalo-install/`.
 `sh install.sh --route docker --abort --confirm-database dedalo` (`--route trial`
 for a trial) stops the stack and removes only the volumes and files this install
 created, and says which images it keeps (with the `docker image rm` command).
-Once the stack has served (`stack_up` started it), an abort undoes only
-`stack_up` — it removes the containers it started (`dedalo`, `nginx`, `backup`,
-`certbot` with Let's Encrypt) and leaves PostgreSQL running — and keeps the
-data; `--resume` starts the stack again.
+Once the stack has served — its `dedalo` container started (`stack_up`'s `up -d
+dedalo` returned, or `--abort` measures that the container ever started or the
+engine answers) — an abort undoes only `stack_up` — it removes the containers it
+started (`dedalo`, `nginx`, `backup`, `certbot` with Let's Encrypt) and leaves
+PostgreSQL running — and keeps the data; `--resume` starts the stack again. A run
+stopped inside `stack_up` before that container ever started has not served:
+`--abort` removes everything this install created, its database included.
 
 ## `install.sh`, the bootstrap
 
@@ -1375,6 +1411,10 @@ a different mistake: the server names the first missing key and exits 1.
 | `78` | the server | not installed, configuration missing or incomplete, or install not finished — [above](#a-server-that-is-not-installed-refuses-to-start). The shipped units do not restart it |
 
 A step interrupted by `130` or `143` is recorded as failed; `--resume` runs it again.
+An interrupt prints ONE `✖ install interrupted (…) at step […]` block: inside a
+host route's engine step (`host_engine`, `stack_engine`) the engine's own stop
+is an indented line under that step (`engine stopped (SIGTERM) at step
+[set_root_pw]`), never a second `✖` line.
 
 ## The state file
 

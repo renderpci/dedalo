@@ -27,7 +27,7 @@ import { captureConsole, type LogRing, logRing } from './console_capture.ts';
 import { drawModel, type FrameModel, headerLine } from './frame.ts';
 import { type Lifecycle, lifecycle, type ProcessPort } from './lifecycle.ts';
 import { type Palette, paletteFor } from './palette.ts';
-import { isProgressLine, tuiPrompter } from './prompter.ts';
+import { CARRIED_WHOLE, isProgressLine, tuiPrompter } from './prompter.ts';
 import { tuiReporter } from './reporter.ts';
 import { type DoneModel, doneCard, doneSummary } from './screens/done.ts';
 import { installPane, newRunView, type RunView, runStatus } from './screens/install.ts';
@@ -71,8 +71,8 @@ export interface OpenOptions {
 	captureConsole?: boolean;
 }
 
-/** The said lines kept on screen (the newest). */
-const SAID_KEPT = 8;
+/** The said lines kept on screen (the newest): a short check carried whole, with its title line. */
+const SAID_KEPT = CARRIED_WHOLE + 1;
 
 /** The header's route chip. */
 function routeChip(view: ScreenView | null): string {

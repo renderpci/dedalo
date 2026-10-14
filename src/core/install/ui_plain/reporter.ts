@@ -20,7 +20,7 @@
 import { sanitizeLine } from '../display_text.ts';
 import { interactiveSuggestion } from '../install_plan.ts';
 import type { InstallPrompter } from '../prompter_contract.ts';
-import type { RunOutcomeView, RunReporter } from '../run_events.ts';
+import type { RunEnding, RunOutcomeView, RunReporter } from '../run_events.ts';
 import { DONE_TEXT } from '../screen_text.ts';
 import type { TtyOutput } from './terminal.ts';
 
@@ -43,6 +43,26 @@ const CONSOLE: PlainSinks = {
 	warn: (line) => console.warn(line),
 	error: (line) => console.error(line),
 };
+
+/**
+ * A complete run's closing lines. A host route says where the salt is read
+ * back in its To-do (campaign 3c D3); the engine route repeats where it is kept.
+ */
+function completeLines(rootVerified: boolean, ending: RunEnding, saltShown: boolean): string[] {
+	const keep = saltShown && !hostEnding(ending) ? [`  ${DONE_TEXT.saltKeep}`] : [];
+	return [`\n✔ ${DONE_TEXT.complete(rootVerified)}. ${DONE_TEXT.next(ending)}`, ...keep];
+}
+
+/** A host route's ending (its closing block carries the To-do, the salt's read command in it). */
+export function hostEnding(ending: RunEnding): boolean {
+	return ending.route === 'production' || ending.route === 'docker' || ending.route === 'trial';
+}
+
+/** The closing To-do block of a host route (campaign 3c D5 — the same lines on every front end). */
+export function todoLines(ending: RunEnding): string[] {
+	const told = ending.told ?? [];
+	return told.length === 0 ? [] : ['', DONE_TEXT.todoHeading, ...told.map((line) => `  • ${line}`)];
+}
 
 /** A run that did not complete: its first line, then the hint (when a resume or abort is possible). */
 export function printFailure(outcome: RunOutcomeView, sinks: PlainSinks = CONSOLE): void {
@@ -97,15 +117,11 @@ export function plainReporter(options: PlainReporterOptions = {}): RunReporter {
 		},
 		finish: async (outcome, context) => {
 			if (outcome.exitCode !== 0) return printFailure(outcome, sinks);
-			if (outcome.result === 'aborted') {
-				sinks.log(`\n✔ ${DONE_TEXT.abortedFor(context.ending)}\n`);
-				return;
-			}
-			sinks.log(
-				`\n✔ ${DONE_TEXT.complete(context.rootVerified)}. ${DONE_TEXT.next(context.ending)}`,
-			);
-			if (saltShown) sinks.log(`  ${DONE_TEXT.saltKeep}`);
-			sinks.log('');
+			const lines =
+				outcome.result === 'aborted'
+					? [`\n✔ ${DONE_TEXT.abortedFor(context.ending)}`]
+					: completeLines(context.rootVerified, context.ending, saltShown);
+			for (const line of [...lines, ...todoLines(context.ending), '']) sinks.log(line);
 		},
 	};
 }

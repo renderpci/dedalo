@@ -19,9 +19,9 @@
  * keeps nothing of the attempt — campaign 3 C3-23); resume (the saved plan;
  * the frozen facts; a step whose commands no longer equal the ones the run
  * showed is REFUSED — critique A2); abort (reverse order, only what
- * `created` lists — and once the instance COULD HAVE SERVED, i.e. the step
- * that first starts it as a server started (`created.served`), ONLY the host
- * steps after the engine: a live install is never taken apart — critique B3.
+ * `created` lists — and once the instance HAS SERVED (`created.served`:
+ * MEASURED — the unit's start returned, or an issued start found to have
+ * taken effect: campaign 3c D1), ONLY the host steps after the engine: a live install is never taken apart — critique B3.
  * Before that, the engine child's own --abort takes apart a completed engine
  * install too, attested unserved — and it refuses unless its database is
  * unchanged since it sealed: C3-11).
@@ -88,6 +88,7 @@ import { type HostFs, hostFs } from './fs.ts';
 import { hostTable, stepDigest } from './host_table.ts';
 import { INSTALL_STATE_ROOT, pathsFor, STACK_RUN_DIR } from './layout.ts';
 import { OS_ROWS, osRowById, supportedOsList } from './os_support.ts';
+import { instanceTakenSentence } from './production/identity_rules.ts';
 import { ROOT_REQUIRED_SENTENCE } from './production/preflight.ts';
 import { hostRefuse } from './refuse.ts';
 import { type CommandRunner, scratchRunner, systemRunner } from './runner.ts';
@@ -369,7 +370,11 @@ function prepareRunDir(ctx: HostRunContext): void {
 }
 
 function lockRunDir(ctx: HostRunContext): void {
-	const lock = acquireRunLock(ctx.request.mode, (line) => warnLine(ctx, `  ⚠ ${line}`), ctx.runDir);
+	const lock = acquireRunLock(
+		ctx.request.mode,
+		{ note: (line) => say(ctx, `  ${line}`), warn: (line) => warnLine(ctx, `  ⚠ ${line}`) },
+		ctx.runDir,
+	);
 	if (!lock.ok) {
 		hostRefuse(
 			'install.state_conflict',
@@ -404,7 +409,16 @@ function startRun(ctx: HostRunContext, mode: RunMode): void {
 
 /** A fresh run never starts over an existing record. */
 function assertNoRecord(ctx: HostRunContext): void {
-	if (readStateFile(ctx.runDir) === null) return;
+	const state = readStateFile(ctx.runDir);
+	if (state === null) return;
+	const answers = (ctx.plan as PlanFile).answers;
+	if (answers.route === 'production' && state.outcome === 'complete') {
+		// A complete instance is never "resumed" or "undone" by a fresh run of its name (C3d-F1).
+		hostRefuse(
+			'install.state_conflict',
+			instanceTakenSentence(String(answers.instance ?? ''), [join(ctx.runDir, STATE_FILE)]),
+		);
+	}
 	hostRefuse(
 		'install.state_conflict',
 		`an install record exists at ${join(ctx.runDir, STATE_FILE)} — resume it (--resume) or undo it (--abort --confirm-database <db>)`,
@@ -498,15 +512,36 @@ async function resumeRun(ctx: HostRunContext): Promise<void> {
 }
 
 /**
- * Could the instance have served (a LIVE install — never taken apart by a host
- * abort)? Once the step that first starts it as a server ISSUED that start:
- * stack_up's intent, host_first_boot's checkpoint right before `systemctl
- * start` (campaign 3b N9 — a serving step merely STARTED, interrupted before
- * the start, is not a served instance), and nothing clears it (C3-11). The
- * flag alone decides: no TS-era record predates it (v7 beta, no installs).
+ * Has the instance served (a LIVE install — never taken apart by a host
+ * abort)? The flag (C3-11), never cleared: host_first_boot once `systemctl
+ * start` returned, stack_up once `up -d dedalo` did (or measured: servedProbe). Read after `settleServed`.
  */
 function instanceServed(ctx: HostRunContext): boolean {
 	return hostCreated(ctx).served;
+}
+
+/** Did an issued start take effect — the steps' own measurement (unreadable: served)? */
+async function measuredServed(ctx: HostRunContext): Promise<boolean> {
+	for (const step of (ctx.plan as PlanFile).steps) {
+		const probe = hostStep(ctx, step).servedProbe;
+		if (probe === undefined) continue;
+		if (await probe(hostContext(ctx)).catch(() => true)) return true;
+	}
+	return false;
+}
+
+/**
+ * SERVED IS MEASURED (campaign 3c D1): a start ISSUED but not known to have
+ * taken effect (a run killed while `systemctl start` ran) is decided on the
+ * host — the unit ever ran, or the engine answered — before an abort chooses
+ * what it undoes and before a hint says it. Measured served: recorded.
+ */
+async function settleServed(ctx: HostRunContext): Promise<void> {
+	const created = hostCreated(ctx);
+	if (created.served || created.start_issued !== true) return;
+	if (!(await measuredServed(ctx))) return;
+	created.served = true;
+	saveState(ctx);
 }
 
 /** The steps an abort undoes: started ones with an undo, reverse order — after the engine only, when it is live. */
@@ -596,6 +631,7 @@ async function undoOne(ctx: HostRunContext, step: StepId): Promise<void> {
 async function abortRun(ctx: HostRunContext): Promise<void> {
 	lockRunDir(ctx);
 	loadRecord(ctx);
+	await settleServed(ctx);
 	const { steps, live } = undoableSteps(ctx);
 	assertConfirmed(ctx, steps);
 	ctx.keptLive = live;
@@ -663,6 +699,16 @@ function failedOutcome(ctx: HostRunContext, error: unknown): HostExecutorOutcome
 	};
 }
 
+/** settleServed for a hint (no record yet, or a probe that throws: the hint says what the flag says). */
+async function settleServedQuietly(ctx: HostRunContext): Promise<void> {
+	if (ctx.plan === null || ctx.state === null) return;
+	try {
+		await settleServed(ctx);
+	} catch {
+		// best effort: --abort measures again before it undoes anything
+	}
+}
+
 /** The interrupted step's own stop (the engine child's container — C3-29); never throws. */
 async function stopCurrentStep(ctx: HostRunContext): Promise<void> {
 	if (ctx.currentStep === null || ctx.state === null) return;
@@ -680,6 +726,7 @@ async function interrupted(
 ): Promise<never> {
 	await stopChildren(ctx);
 	await stopCurrentStep(ctx);
+	await settleServedQuietly(ctx);
 	recordFailure(ctx, 'install.step_failed', 'interrupted');
 	closeRun(ctx, 'interrupted');
 	releaseLock(ctx);
@@ -765,10 +812,14 @@ function newContext(
 	return ctx;
 }
 
-/** Every plan step's end-of-install task (the engine steps: the salt shown once — C3-18). */
+/**
+ * Every plan step's end-of-install task (the engine steps: the salt shown once
+ * — C3-18); the lines they answer join the closing To-do (campaign 3c D3).
+ */
 async function afterComplete(ctx: HostRunContext): Promise<void> {
 	for (const step of (ctx.plan as PlanFile).steps) {
-		await hostStep(ctx, step).afterComplete?.(hostContext(ctx));
+		const lines = await hostStep(ctx, step).afterComplete?.(hostContext(ctx));
+		if (lines !== undefined) tell(ctx, lines);
 	}
 	saveState(ctx);
 }
@@ -852,6 +903,7 @@ export async function executeHostInstall(
 		// The engine child (or any step's child) that died of the operator's Ctrl-C:
 		// the run ends as that ONE interruption — exit 130, recorded interrupted (N12).
 		if (ctx.interruption !== null) return await ctx.interruption;
+		await settleServedQuietly(ctx);
 		return failedOutcome(ctx, error);
 	} finally {
 		process.off('SIGINT', sigint);

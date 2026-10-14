@@ -48,13 +48,16 @@ import {
 } from '../../src/core/install/executor.ts';
 import type { InstallStepId } from '../../src/core/install/install_plan.ts';
 import {
+	acquireRunLock,
 	type InstallState,
 	LOCK_FILE,
 	modeOf,
 	PLAN_FILE,
 	type PlanFile,
+	releaseRunLock,
 	STATE_FILE,
 } from '../../src/core/install/run_files.ts';
+import { lockPlace } from '../../src/core/install/run_files_core.ts';
 import { DONE_TEXT } from '../../src/core/install/screen_text.ts';
 import { ALREADY_COMPLETE_LINE } from '../../src/core/install/step_loop.ts';
 import { INSTALL_STEPS } from '../../src/core/install/steps.ts';
@@ -554,7 +557,7 @@ async function failedRunWith(
 // ── the run-dir lock ─────────────────────────────────────────────────────────
 
 describe('executor — the run-dir lock', () => {
-	test('a LIVE holder on this host is refused; a dead pid is reclaimed with a warning', async () => {
+	test('a LIVE holder on this host is refused; a dead pid is reclaimed with a plain note', async () => {
 		await withPrivateDir(scratchPrivateDir(), async (dir) => {
 			const { plan, planFile } = fakePlan();
 			const sleeper = Bun.spawn(['sleep', '30']);
@@ -583,12 +586,59 @@ describe('executor — the run-dir lock', () => {
 					host: fakeHost().host,
 				});
 				expect(reclaimed.result).toBe('complete');
-				expect(lines.join('\n')).toContain(`reclaimed stale install lock of pid ${sleeper.pid}`);
+				// campaign 3c D9: the expected case in plain words — a note, never a ⚠ warning.
+				const said = lines.join('\n');
+				expect(said).toContain(
+					`the earlier, interrupted run's install lock was released (process ${sleeper.pid} is no longer running)`,
+				);
+				expect(said).not.toContain('⚠');
+				expect(said).not.toContain('stale');
 				expect(existsSync(lockPath)).toBe(false);
 			} finally {
 				sleeper.kill('SIGKILL');
 			}
 		});
+	});
+});
+
+describe('a reclaimed lock in plain words (campaign 3c D9, 3d C3d-F3)', () => {
+	test('another host (the engine child’s container) is a note naming it; only an unreadable lock is a warning', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'dd-lock-'));
+		try {
+			const notes: string[] = [];
+			const warnings: string[] = [];
+			const sink = {
+				note: (line: string) => notes.push(line),
+				warn: (line: string) => warnings.push(line),
+			};
+			const lock = join(dir, LOCK_FILE);
+			// The place the holder recorded is said — never "container or host" (C3d-F3).
+			const holder = { pid: 1, host: 'a24a29fdf0d3', started_at: 'then', mode: 'fresh' };
+			for (const place of ['container', 'host', undefined] as const) {
+				writeFileSync(lock, JSON.stringify({ ...holder, place }));
+				expect(acquireRunLock('resume', sink, dir).ok).toBe(true);
+				releaseRunLock(dir);
+			}
+			expect(notes).toEqual([
+				"the earlier, interrupted run's install lock was released (it ran in container a24a29fdf0d3)",
+				"the earlier, interrupted run's install lock was released (it ran on host a24a29fdf0d3)",
+				"the earlier, interrupted run's install lock was released (it ran on a24a29fdf0d3, another machine or container)",
+			]);
+			expect(warnings).toEqual([]);
+			// The lock a run takes records its place: a container's runtime marker decides it.
+			expect(acquireRunLock('fresh', sink, dir).ok).toBe(true);
+			expect(JSON.parse(readFileSync(lock, 'utf8')).place).toBe(lockPlace());
+			releaseRunLock(dir);
+			expect(lockPlace((path) => path === '/.dockerenv')).toBe('container');
+			expect(lockPlace((path) => path === '/run/.containerenv')).toBe('container');
+			expect(lockPlace(() => false)).toBe('host');
+			// CONTROL: a lock that cannot be read is odd — the one warning.
+			writeFileSync(lock, 'not json');
+			expect(acquireRunLock('resume', sink, dir).ok).toBe(true);
+			expect(warnings).toEqual(['reclaimed an unreadable install lock']);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
 	});
 });
 
@@ -1270,6 +1320,52 @@ describe('executor — a Ctrl-C that kills the running step is ONE interruption 
 			expect(state.runs.at(-1)?.result).toBe('interrupted');
 			expect(state.steps.install_ontologies?.status).toBe('failed');
 		});
+	});
+});
+
+describe("executor — a host route's engine CHILD says its interrupt as a sub-line (campaign 3c D11)", () => {
+	test('delegated io + SIGTERM: "engine stopped (SIGTERM) at step [x]", no ✖, exit 143; the run’s own keeps its ✖ block', async () => {
+		for (const delegated of [true, false]) {
+			await withPrivateDir(scratchPrivateDir(), async () => {
+				const { plan, planFile } = fakePlan();
+				const table = fakeTable([], {
+					install_ontologies: {
+						run: async () => {
+							process.emit('SIGTERM');
+							throw new Error('the engine steps failed (exit 143)');
+						},
+					},
+				});
+				const exits: number[] = [];
+				class Exited extends Error {}
+				const exit = spyOn(process, 'exit').mockImplementation(((code?: number) => {
+					exits.push(code ?? 0);
+					throw new Exited(`exit ${code}`);
+				}) as never);
+				const recorded = recordingIo();
+				const io = delegated ? { ...recorded.io, delegated: true as const } : recorded.io;
+				let settled: unknown = null;
+				try {
+					settled = await executeInstall(freshRequest(planFile, plan), io, {
+						table,
+						host: fakeHost().host,
+					});
+				} catch (error) {
+					settled = error;
+				} finally {
+					exit.mockRestore();
+				}
+				expect(settled).toBeInstanceOf(Exited);
+				expect(exits).toEqual([143]);
+				const said = recorded.lines.join('\n');
+				if (delegated) {
+					expect(said).toContain('engine stopped (SIGTERM) at step [install_ontologies]');
+					expect(said).not.toContain('✖');
+				} else {
+					expect(said).toContain('✖ install interrupted (SIGTERM) at step [install_ontologies]');
+				}
+			});
+		}
 	});
 });
 

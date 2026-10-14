@@ -36,6 +36,7 @@ export async function measureIdentity(
 		answers,
 		account: identity.account,
 		instances: identity.instances,
+		taken: identity.taken ?? [],
 		webUser: row.web[kind].user,
 		sites: web.sites,
 	});

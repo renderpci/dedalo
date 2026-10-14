@@ -5,6 +5,8 @@
  *
  *  - an unsupported system (the sentence lists the supported ones — newest
  *    releases only), no systemd, no root;
+ *  - an instance ALREADY INSTALLED under this name (its registry entry or
+ *    stamped drop-in): that one refusal, naming the files (campaign 3d C3d-F1);
  *  - nginx older than 1.25.1 (`http2 on;` — no fallback form);
  *  - the SERVICE ACCOUNT and the INSTALL FOLDER (identity_rules.ts — the same
  *    verdict the identity probe showed): root/system accounts and groups, an
@@ -52,6 +54,7 @@ import {
 import { httpNameClash, instanceHttpNames, serverNameClash } from '../web/clash.ts';
 import { ran, sitePath, webFlavor } from './common.ts';
 import { identityOf, instanceDirs, ownedDirs } from './identity.ts';
+import { instanceTakenSentence } from './identity_rules.ts';
 import { institutionCertVerdict } from './tls.ts';
 
 /** Refuse with every problem, joined (the operator fixes them all in one pass). */
@@ -304,6 +307,16 @@ async function evaluate(ctx: HostCtx): Promise<PreflightVerdict> {
 	const facts = await measure(ctx);
 	const system = systemProblems(facts);
 	if (system.length > 0) return { facts, planCtx: null, problems: system, warnings: [] };
+	// An installed instance holds the name: that ONE refusal — never its unit, site, socket,
+	// database and account listed back as if they were in the way (campaign 3d C3d-F1).
+	const taken = facts.taken ?? [];
+	if (taken.length > 0) {
+		const problem = instanceTakenSentence(
+			ctx.paths.instance,
+			taken.map((record) => record.source),
+		);
+		return { facts, planCtx: null, problems: [problem], warnings: [] };
+	}
 	const planCtx: HostPlanCtx = {
 		...ctx,
 		facts,
@@ -341,17 +354,27 @@ async function runPreflight(
 	const { facts } = verdict;
 	const planCtx = verdict.planCtx as HostPlanCtx;
 	ctx.state.preflight.host = { facts, commands_digest: digest(facts) };
+	const firewall = firewallReport(planCtx);
 	return ran(
-		`${facts.osName}, ${facts.web.kind}${facts.web.version === null ? ' (to be installed)' : ` ${facts.web.version}`}`,
+		`${facts.osName}, ${facts.web.kind}${facts.web.version === null ? ' (to be installed)' : ` ${facts.web.version}`}${firewall.said}`,
 		{
 			warnings: verdict.warnings,
-			told: [
-				`firewall (checked, not changed): ${webFirewall(planCtx).line}`,
-				...apacheModulesTodo(planCtx),
-				...identityOf(planCtx).told,
-			],
+			told: [...firewall.told, ...apacheModulesTodo(planCtx), ...identityOf(planCtx).told],
 		},
 	);
+}
+
+/**
+ * The firewall's verdict, told only when there is something to do (campaign
+ * 3c D16: "ufw (active) allows port 80 and 443" sat under To do): closed or
+ * unreadable → the closing To-do; otherwise said once on the step's own line.
+ */
+export function firewallReport(ctx: HostPlanCtx): { told: string[]; said: string } {
+	const verdict = webFirewall(ctx);
+	const line = `firewall (checked, not changed): ${verdict.line}`;
+	return verdict.state === 'closed' || verdict.state === 'unknown'
+		? { told: [line], said: '' }
+		: { told: [], said: `; ${line}` };
 }
 
 /**

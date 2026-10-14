@@ -552,7 +552,10 @@ async function lockDatabase(ctx: RunContext, db: string): Promise<void> {
 
 /** Take the run-dir lock, or refuse. */
 function lockRunDir(ctx: RunContext): void {
-	const lock = acquireRunLock(ctx.request.mode, (line) => warnLine(ctx, `  ⚠ ${line}`));
+	const lock = acquireRunLock(ctx.request.mode, {
+		note: (line) => say(ctx, `  ${line}`),
+		warn: (line) => warnLine(ctx, `  ⚠ ${line}`),
+	});
 	if (!lock.ok) {
 		refuseInstall(
 			'install.state_conflict',
@@ -1031,12 +1034,26 @@ async function interrupted(
 	closeRun(ctx, 'interrupted');
 	await releaseAll(ctx);
 	restoreConsole();
-	const at = ctx.currentStep === null ? '' : ` at step [${ctx.currentStep}]`;
 	if (ctx.currentStep !== null) emit(ctx, ctx.currentStep, 'interrupted', { message: signal });
 	ctx.io.interrupted?.(signal);
-	ctx.io.warn(`\n✖ install interrupted (${signal})${at}`);
+	ctx.io.warn(interruptLine(signal, ctx.currentStep, ctx.io.delegated === true));
 	for (const line of hintFor(ctx)) ctx.io.warn(line);
 	return process.exit(signal === 'SIGINT' ? 130 : 143);
+}
+
+/**
+ * The interrupt's line. A host route's engine CHILD says it as a sub-line of
+ * the parent's step — the parent prints the ONE `✖ install interrupted` block
+ * of the run (campaign 3c D11: Ctrl-C in host_engine printed two ✖ lines, the
+ * child's SIGTERM and the parent's SIGINT).
+ */
+export function interruptLine(
+	signal: 'SIGINT' | 'SIGTERM',
+	step: string | null,
+	delegated: boolean,
+): string {
+	const at = step === null ? '' : ` at step [${step}]`;
+	return delegated ? `engine stopped (${signal})${at}` : `\n✖ install interrupted (${signal})${at}`;
 }
 
 /** A fresh context for one call: the loop's hooks bound to the engine table. */

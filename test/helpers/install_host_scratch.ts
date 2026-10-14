@@ -654,6 +654,12 @@ function certbotAnswers(): RecordedResponse[] {
 	];
 }
 
+/** `systemctl show` of the start stamps: a unit systemd ran / never ran (campaign 3c D1). */
+export const UNIT_RAN =
+	'ExecMainStartTimestampMonotonic=8123456789\nActiveEnterTimestampMonotonic=8123456790\n';
+export const UNIT_NEVER_RAN =
+	'ExecMainStartTimestampMonotonic=0\nActiveEnterTimestampMonotonic=0\n';
+
 /** The first boot, the public probes, the first backup. */
 function serviceAnswers(identity: ScratchIdentity): RecordedResponse[] {
 	const unit = `dedalo-backup@${INSTANCE}.service`;
@@ -669,6 +675,16 @@ function serviceAnswers(identity: ScratchIdentity): RecordedResponse[] {
 			match: '/usr/bin/curl -s -o /dev/null -w %{http_code} --max-time 10 --unix-socket',
 			exit: 7,
 			stdout: '000',
+		},
+		// systemd's start stamps: set once the unit ran (a stop keeps them — campaign 3c D1).
+		{
+			match: `/usr/bin/systemctl show -p ExecMainStartTimestampMonotonic -p ActiveEnterTimestampMonotonic dedalo-ts@${INSTANCE}.service`,
+			after: `/usr/bin/systemctl start dedalo-ts@${INSTANCE}.service`,
+			stdout: UNIT_RAN,
+		},
+		{
+			match: `/usr/bin/systemctl show -p ExecMainStartTimestampMonotonic -p ActiveEnterTimestampMonotonic dedalo-ts@${INSTANCE}.service`,
+			stdout: UNIT_NEVER_RAN,
 		},
 		{
 			match: `/usr/bin/systemctl is-active dedalo-ts-watchdog@${INSTANCE}.timer`,
@@ -984,8 +1000,10 @@ export const COSIGN = '/usr/local/bin/cosign';
 /** The digest the scratch registry answers for every pulled image. */
 export const IMAGE_DIGEST = `sha256:${'d'.repeat(64)}`;
 
-/** The operator's machine: an account, docker, cosign (absent when asked). */
-export function stackHostFiles(options: { docker?: boolean; cosign?: boolean } = {}): HostFiles {
+/** The operator's machine: an account, docker, cosign (absent when asked), `ss` (only when asked). */
+export function stackHostFiles(
+	options: { docker?: boolean; cosign?: boolean; ss?: boolean } = {},
+): HostFiles {
 	const files: HostFiles = new Map([
 		[
 			'/etc/passwd',
@@ -995,6 +1013,7 @@ export function stackHostFiles(options: { docker?: boolean; cosign?: boolean } =
 	]);
 	if (options.docker !== false) files.set(DOCKER, '');
 	if (options.cosign !== false) files.set(COSIGN, '');
+	if (options.ss === true) files.set('/usr/bin/ss', '');
 	return files;
 }
 

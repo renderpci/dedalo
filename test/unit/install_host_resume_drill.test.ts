@@ -352,9 +352,9 @@ async function killThenAbort(step: string): Promise<string[]> {
 		hostState(root)[DECOY[0]] === reference.before[DECOY[0]]
 			? []
 			: [`${step}: the decoy site changed`];
-	// LIVE once the instance could have served: host_first_boot STARTED (C3-11) — a kill
-	// after the engine but before the first start is a full abort (the child's own --abort,
-	// attested unserved).
+	// LIVE once the instance has served: its unit ran (host_first_boot — C3-11, measured
+	// since campaign 3c D1) — a kill after the engine but before the first start is a full
+	// abort (the child's own --abort, attested unserved).
 	const live = STEPS.indexOf(step) >= STEPS.indexOf('host_first_boot');
 	const said = (aborted.outcome.undoing ?? '').replace('→ undoing: ', '');
 	return [

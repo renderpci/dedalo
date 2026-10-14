@@ -1757,6 +1757,14 @@ Merged since the last release; these ship with the next one.
     42137…", "estimate exceeded") while the job was still running. Progress now counts
     only the records you selected; linked records are still published as before.
 
+- **The installer refuses an installed instance's name up front, and a refused Review checks again on install.**
+
+    - **Production, an instance name already installed on the host**: the System check, right after the name, now says `instance <i> is already installed on this host (<registry file or drop-in>)` and asks for another name. The Identity check no longer calls that instance's account "an earlier install's leftover" to remove with `userdel`, and a typed service user that belongs to another instance gets that instance's clash, not the leftover advice. A fresh headless run over a complete install of the name says the same instead of "resume it or undo it".
+    - **A refused Review**: pressing Enter (or typing `install` in `--plain`) measures the plan again; once the cause is fixed (a CA trusted, a port freed) it goes on to the `yes` prompt with every answer kept. The key bar says `enter check again` instead of `enter install`, and the untrusted-chain refusal says "check again" instead of "run this again".
+    - **The first instance on a fresh host**: when the run installs nginx, the closing To-do now includes the note about nginx's own default site on port 80 (`/etc/nginx/sites-enabled/default`).
+    - **Resume after an interrupted Docker install**: the released-lock line says whether the earlier run was in a container or on a host.
+    - **Docs**: `production.md` lists the update-server question before the domain ontologies, in the order the screens ask them.
+
 - **Installer: one interruption block on Ctrl-C, a resume that re-checks and tells everything, the salt on a terminal resume, and clearer screens.**
 
     - **Ctrl-C during a step that runs a child** (the engine steps, a build) ends as one *install interrupted* block with exit code 130 and the run recorded *interrupted* — never also an *install failed* block, or exit 1.
@@ -1787,9 +1795,37 @@ Merged since the last release; these ship with the next one.
     - **An institution certificate whose chain this machine does not trust** is listed on the Review under *TO DO*, before you type `yes`, instead of being refused only after every answer was given.
     - **Removing an install:** a served `--abort` names the images it keeps and points to the route's own removal section — the new [Removing the stack](./install/docker.md#removing-the-stack) on the Docker route — and both removal sections now say how to reclaim the images, the build cache and the installer's Bun caches. The build-time estimate is one figure everywhere (about 2 to 6 minutes on 2 CPUs).
 
+- **Every installer front end ends with the same *To do on this host* list, the salt's read command in it.**
+
+    The full-screen installer's Done screen had no *To do on this host* list: the firewall command, the outside check and the other notes flashed by during the run and were gone. The Done screen now lists them (and leaves them on your normal screen when it closes), as the line mode and `--resume` runs do. On Production, Docker and Trial the list also names the command that reads the generated `DEDALO_SALT_STRING` back, on every run that completes the install — also a `--resume` after an earlier screen had already shown it.
+
+- **Docker and Trial installs probe the media gate again on resume, and name their images and locks correctly.**
+
+    A `--resume` that starts the stack again (after an `--abort`, or a stopped stack) now runs every `stack_health` probe again, the media gate included, instead of `/health` only. A locally built image carries Dédalo's own `source`, `url`, `description` and `licenses` labels instead of empty ones. On a completed install, `--abort` no longer suggests `docker image rm postgres:18`, because PostgreSQL keeps running on that image. A resume after an interrupted run says in plain words that the earlier run's lock was released, with no warning sign. An untrusted certificate chain is refused on the Review, before `yes`. The Docker and Trial pages now give the exact command that reads the salt back, say the salt is not shown again by a later `--resume`, and include `node_modules` in the removal steps. The installer reference says `--image-version` also applies to a local build.
+
+- **Installer re-checks, interrupts and messages say things once and at the right moment.**
+
+    A check made stale by a later answer (the Identity check, once the web server is chosen) runs again right after that step, not at the end. `back` from a failed System check and forward again runs it again, its rows printed once. Ctrl-C during the engine step prints one interruption block. The System check's ok rows say their result once (`ok  Bun  runtime 1.4.2`), the short Docker and Trial check stays visible on the next screen, a typed `quit` in line mode prints the closing line, an unknown word at a failed check gets a plain sentence, the Review's local-build line says how long the build takes, and the Trial's Review points at the Trial page's firewall warning.
+
+- **A Production install interrupted before its server ever ran is removed whole by --abort, and the production pages match what the installer does.**
+
+    On Production, an instance now counts as served only when its unit has actually run or the engine answered. Before, an interruption a few milliseconds into the first start, before the unit ever ran, was treated as served, and `--abort` kept its user, database and code to be removed by hand. Now `--abort` checks systemd and the socket first and removes such an install completely. An `--abort` that removes the service user first removes what that user left at the top of `/tmp` and `/var/tmp` (Bun's `bun-node-<hash>` directory and `.<hash>-0.hm` marker), so no file of a removed account is left behind; the dependency install also keeps its temporary files inside the instance's tree. When the firewall already allows the ports, the closing *To do on this host* list no longer mentions it; the System check line still reports it. The [Production](./install/production.md) page lists the questions in the order they are asked, adds `sudo` to the Verify commands that read inside the install folder and the socket directory, and points to the salt's read command. [Removing an instance](./install/multi_instance.md#removing-an-instance) now says where the backup is written before step 7 deletes it, warns that copies made with `cp -a` keep the service user as owner, and gives the `gpasswd`, `userdel` and `groupdel` commands. [Install by hand](./install/manual_install.md) defines `render` where it is first needed, and its unit loop stops instead of writing empty files when `render` is missing. It also shows the full `--status --json` answer and says that a tree built from a checkout reports a `.dev` version.
+
+- **The installer says what its system check would refuse on the Review, before `yes`, and a refusal never loses your answers.**
+
+    An untrusted certificate chain, Apache beside a running nginx, an image version other than the installer's, or a port already in use were refused only after you typed `yes` — and every answer had to be typed again. The Review now measures the same system check the run makes and lists what it refuses as errors; install is offered once they are fixed. The **Image version** field refuses a tag other than the installer's own (or its `-dev` tag) at once, and the Docker and Trial check refuses a published port something else already listens on. If the check still refuses at `yes`, the session stays on the Review with your answers; if the run is refused after it started, before it changed anything, your answers are written to an answers file and the command that runs them again is printed. See [Installer reference › Interactive mode](./install/installer_reference.md#interactive-mode).
+
 - **A Docker installation that builds its image here now updates from a clean snapshot of the release, like the install**
 
     On an installation whose image is built on the host (`DEDALO_IMAGE_MODE=build`), `deploy/dedalo-image-update.sh` used to build the new image straight from the checkout. Every untracked file in it went into the image, and the engine then reported its version as `X.Y.Z.dev` even though the image was tagged `X.Y.Z`. An update now builds the way the installer does, with the same builder (`deploy/dedalo-image-build.sh`). It takes a snapshot of the release commit with `git archive`, builds the image from that snapshot, then deletes the snapshot. The image holds only committed files and reports the release version and its commit date. Changes to tracked files are still refused before the update starts. A tree without git is now refused with a sentence that says why, instead of failing halfway through. If you build an image by hand, use `./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:<version>`. See [a local build](./install/docker.md#a-local-build).
+
+- **The official Dédalo image carries Dédalo's own url, description and licence labels.**
+
+    The published image set only its title, source, revision, version and creation date, so `docker inspect` showed the base image's url, description and licence, or none. It now carries the same `org.opencontainers.image.source`, `url`, `description` and `licenses` values as an image built locally by the installer, read from one shared definition.
+
+- **On the Docker and trial routes, `--abort` removes an install interrupted before the engine container ever started, database included.**
+
+    The installer counted a Docker or trial instance as *served* — a live instance that `--abort` never takes apart — as soon as `stack_up` began, before the `dedalo` container had started. An install stopped at that moment (a Ctrl-C, a failed `up -d dedalo`) was then kept by `--abort` as if it had served. Whether it served is now measured, as on the production route: the container started, or the engine answers `/health`; when that cannot be read, the instance is kept. An instance that never served is removed whole by `--abort --confirm-database <db>`. See [Resume and abort](./install/installer_reference.md#resuming-an-install-resume).
 
 - **The publication tool shows every publication of a section, including two that share a database definition.**
 

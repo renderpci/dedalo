@@ -71,6 +71,13 @@ export interface IdentityInput {
 	/** The web server's user (it joins the service group). */
 	webUser: string;
 	sites: readonly SiteTuple[];
+	/**
+	 * The records of an instance ALREADY INSTALLED under this name
+	 * (instances.ts sameNameRecords — campaign 3d C3d-F1). Non-empty: the
+	 * verdict is that ONE refusal; the account and the folder are that
+	 * instance's, never judged as leftovers.
+	 */
+	taken?: readonly OtherInstance[];
 }
 
 /** The names the installer CREATES (useradd's default NAME_REGEX — no dot). */
@@ -113,6 +120,11 @@ const ADOPT_ROOTS: readonly string[] = Object.freeze(['/home', '/srv', '/data', 
 /** Shells that log nobody in. */
 const NO_LOGIN = /(?:^|\/)(?:nologin|false)$/;
 
+/** The refusal of a name an installed instance holds (its records' files named). */
+export function instanceTakenSentence(instance: string, sources: readonly string[]): string {
+	return `instance ${instance} is already installed on this host (${[...new Set(sources)].join(', ')}) — choose another instance name: an install never takes over an installed instance, its account, folder or database`;
+}
+
 // ── the account ──────────────────────────────────────────────────────────────
 
 function userRules(input: IdentityInput): string[] {
@@ -137,9 +149,27 @@ function accountRules(input: IdentityInput): string[] {
 		return [`service user ${u} (uid 0) is refused — the service never runs as root`];
 	const { uidMin, uidMax } = account.loginDefs;
 	if (user.uid >= uidMin && user.uid <= uidMax) return membershipRules(input);
+	return systemAccountRules(input, user.uid);
+}
+
+/**
+ * An existing SYSTEM account: never reused — an earlier install's leftover,
+ * unless an instance record names it: then its clash names that instance and
+ * no removal is ever advised (campaign 3d C3d-F1 — `userdel` of a running
+ * instance's account).
+ */
+function systemAccountRules(input: IdentityInput, uid: number): string[] {
+	const u = input.answers.service_user;
+	if (instanceAccount(input, 'user', u)) return [];
+	const { uidMin, uidMax } = input.account.loginDefs;
 	return [
-		`account ${u} is a system account (uid ${user.uid}) — the installer uses only a regular account as it is (uid ${uidMin}-${uidMax}); a system account it did not create in this run is never reused (an earlier install's leftover: remove it with userdel, or choose another name)`,
+		`account ${u} is a system account (uid ${uid}) — the installer uses only a regular account as it is (uid ${uidMin}-${uidMax}); a system account it did not create in this run is never reused (an earlier install's leftover: remove it with userdel, or choose another name)`,
 	];
+}
+
+/** Does an instance record (another one, or this name's installed one) name `name` as its user / group? */
+function instanceAccount(input: IdentityInput, what: 'user' | 'group', name: string): boolean {
+	return [...input.instances, ...(input.taken ?? [])].some((record) => record[what] === name);
 }
 
 /** Is `name` the web server's or PostgreSQL's account (this host's web user included)? */
@@ -208,7 +238,13 @@ function existingGroupRules(input: IdentityInput): string[] {
  */
 function leftoverGroup(input: IdentityInput): boolean {
 	const { account, answers } = input;
-	return answers.service_group === '' && account.user === null && account.sameNamedGroup !== null;
+	return (
+		answers.service_group === '' &&
+		account.user === null &&
+		account.sameNamedGroup !== null &&
+		// Another instance's group: its clash names that instance (C3d-F1).
+		!instanceAccount(input, 'group', account.groupName)
+	);
 }
 
 function leftoverSentence(input: IdentityInput): string {
@@ -631,15 +667,26 @@ function userDecision(input: IdentityInput): IdentityVerdict['user'] {
 export function identityVerdict(input: IdentityInput): IdentityVerdict {
 	const folder = folderPlan(input);
 	const clashes = groupedClashes(input);
+	const taken = input.taken ?? [];
 	return {
-		problems: [
-			...userRules(input),
-			...groupRules(input),
-			...clashes.clauses,
-			...folderRefusal(folder, clashes.sameFolder),
-			...ancestorRules(input),
-			...webRules(input),
-		],
+		// An installed instance of this name: the ONE refusal (its account, group and
+		// folder follow from it — campaign 3d C3d-F1: they read as "leftovers" to userdel).
+		problems:
+			taken.length > 0
+				? [
+						instanceTakenSentence(
+							input.answers.instance,
+							taken.map((record) => record.source),
+						),
+					]
+				: [
+						...userRules(input),
+						...groupRules(input),
+						...clashes.clauses,
+						...folderRefusal(folder, clashes.sameFolder),
+						...ancestorRules(input),
+						...webRules(input),
+					],
 		told: toldLines(input),
 		user: userDecision(input),
 		group: groupDecision(input),

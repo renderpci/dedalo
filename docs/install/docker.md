@@ -79,7 +79,7 @@ The engine's own configuration is not in `.dedalo.env`: it is `/private/.env`, i
 | `stack_database` | starts PostgreSQL and waits for `pg_isready` | `ddc ps postgres` is *healthy* |
 | `stack_engine` | runs the engine steps inside a throw-away container (`run --rm -T dedalo bun run scripts/install.ts --request-stdin --execute --events-jsonl`): the seed, the ontologies, the thesauri, the tools, the `root` password. Answers and secrets go on its standard input, never as `-e` (an environment value shows in `docker inspect`) | `ddc run --rm -T dedalo bun run scripts/install.ts --status --json` prints `"outcome":"complete"` |
 | `stack_up` | starts the engine first, waits for its `/health` (by then it has written the media rule files nginx includes), then the rest of the stack — nginx always in a new container, because a container whose start failed (a port held by another program) comes back *Up* with no port published — and waits for nginx to stay up: running, not restarting, every port it declares published, `nginx -t` passing. If it does not, the step fails with nginx's own `[emerg]` line, or names the port it could not publish | `ddc ps`: `postgres` and `dedalo` *healthy*, `nginx` *Up* with `0.0.0.0:80->80/tcp` and `0.0.0.0:443->443/tcp` |
-| `stack_health` | `/health` on the engine's socket, then through nginx over HTTPS with a verified chain, and the media gate: the marker store and an unpublished probe file both answer `404` to an anonymous request. A failed probe says why (`the certificate chain is not trusted by this host`, `nothing answers on that port`). A `--resume` probes `/health` again, even when an earlier run recorded the step done | [Verify](#verify) |
+| `stack_health` | `/health` on the engine's socket, then through nginx over HTTPS with a verified chain, and the media gate: the marker store and an unpublished probe file both answer `404` to an anonymous request. A failed probe says why (`the certificate chain is not trusted by this host`, `nothing answers on that port`). A `--resume` that started the stack again (after an `--abort`, or a stopped stack) runs every probe again, the media gate included; one that re-did nothing probes `/health` again, read-only | [Verify](#verify) |
 
 `ddc` in this table is the compose command with the stack's three files — see [Day-to-day operation](#day-to-day-operation).
 
@@ -90,16 +90,16 @@ sh install.sh --route docker --resume                              # fix the cau
 sh install.sh --route docker --abort --confirm-database dedalo     # undo this install
 ```
 
-`--abort` stops the stack and removes only what this install created: the files it wrote, the certificates it made, and the volumes it created (the database volume only with `--confirm-database`). The images are kept, and the abort names them (`postgres:18`, `nginx:alpine`, the Dédalo image) with the `docker image rm` command that reclaims the space. A **completed** install is a live instance: `--abort` then undoes only the steps after `stack_engine` — it removes the `dedalo`, `nginx` and `backup` containers (and `certbot`), while PostgreSQL keeps running with the data — and `--resume` starts them again. Removing a completed install is a job by hand: [Removing the stack](#removing-the-stack). See [Resume and abort](installer_reference.md#resuming-an-install-resume).
+`--abort` stops the stack and removes only what this install created: the files it wrote, the certificates it made, and the volumes it created (the database volume only with `--confirm-database`). The images are kept, and the abort names them (`postgres:18`, `nginx:alpine`, the Dédalo image) with the `docker image rm` command that reclaims the space — on a completed install without `postgres:18`, whose container keeps running with the data until you remove the instance. A **completed** install is a live instance: `--abort` then undoes only the steps after `stack_engine` — it removes the `dedalo`, `nginx` and `backup` containers (and `certbot`), while PostgreSQL keeps running with the data — and `--resume` starts them again. An install stopped inside `stack_up` before the `dedalo` container ever started has not served, and `--abort` removes it whole, database included. Removing a completed install is a job by hand: [Removing the stack](#removing-the-stack). See [Resume and abort](installer_reference.md#resuming-an-install-resume).
 
 A `--resume` runs in line mode, not on the full screen, and asks again on the terminal for the secrets the remaining steps need.
 
 When the install completes, open `https://<address>/dedalo/` (add `:<port>` for a non-standard HTTPS port) and log in as **`root`**. With a local certificate authority, the browser warns until you install `deploy/certs/dedalo-local-ca.pem` on that computer. Then continue with [after the install](index.md#after-the-install).
 
-The run that completes the install shows the generated `DEDALO_SALT_STRING` once, on a terminal. Keep it with your backups. A `--resume` that completes the install shows it too. If you did not see it (its output went to a file — the end of the run then prints this command), read it from the `private` volume:
+The generated `DEDALO_SALT_STRING` is shown once, on a terminal, by the first run that has it: the run that completes the install, or the failure screen of an earlier run that got past the engine steps — a later `--resume` does not show it again. Keep it with your backups. Every run that completes the install also lists, under *To do on this host*, the command that reads it back from the `private` volume:
 
 ```shell
-docker compose -f docker-compose.yml -f compose.override.yaml --env-file .dedalo.env exec dedalo grep DEDALO_SALT_STRING /private/.env
+docker compose -f docker-compose.yml -f compose.override.yaml --env-file .dedalo.env exec dedalo grep ^DEDALO_SALT_STRING= /private/.env
 ```
 
 ## The stack
@@ -226,7 +226,7 @@ Then install with `--image-source custom --image-repository registry.example.org
 
 Building here needs this checkout and the network to fetch the base image, the system packages and the JavaScript dependencies. The first build is slow and parks several gigabytes of build cache (`docker builder prune -af` reclaims it once the build is done). Updates rebuild from the release's git tag, so the checkout must keep its git remote.
 
-The installer and every later update build the same way, through one builder: `deploy/dedalo-image-build.sh` archives the checkout's last commit (`git archive`) into `.dedalo-install/image-context`, builds that directory, and removes it afterwards. So the image carries **committed files only** — an uncommitted edit, an untracked file, `.dedalo.env` or a certificate never reach it — and it reports the version it is tagged with and the commit date, never `X.Y.Z.dev`. Its labels are its own: `org.opencontainers.image.version` is the tag and `org.opencontainers.image.revision` the commit, never the labels of the Bun base image it starts from. Its `/health` shows `install_digest: null`: that field names the release archive a tree update installed, and a local build has none. To build by hand, use the same command:
+The installer and every later update build the same way, through one builder: `deploy/dedalo-image-build.sh` archives the checkout's last commit (`git archive`) into `.dedalo-install/image-context`, builds that directory, and removes it afterwards. So the image carries **committed files only** — an uncommitted edit, an untracked file, `.dedalo.env` or a certificate never reach it — and it reports the version it is tagged with and the commit date, never `X.Y.Z.dev`. Its labels are its own: `org.opencontainers.image.version` is the tag and `org.opencontainers.image.revision` the commit; `source`, `url`, `description` and `licenses` name Dédalo (its repository, its site, `AGPL-3.0-only`) — never the labels of the Bun base image it starts from. Its `/health` shows `install_digest: null`: that field names the release archive a tree update installed, and a local build has none. To build by hand, use the same command:
 
 ```shell
 ./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:7.0.1
@@ -453,9 +453,10 @@ Check that nothing is left: `docker volume ls | grep dedalo_` prints nothing. Th
 docker image rm <image>:<version> postgres:18 nginx:alpine   # add certbot/certbot with Let's Encrypt
 docker builder prune -af                                     # a local build's cache (about 3 GB)
 rm -rf ~/.cache/dedalo-install ~/.bun/install/cache          # the installer's Bun and its package cache
+rm -rf node_modules                                          # the installer's packages in this checkout (about 400 MB)
 ```
 
-`docker image ls` names the Dédalo image (`localhost/dedalo` for a local build). Skip the last line if you use Bun for anything else. If the local CA's certificate is installed on staff computers, remove it from their trust stores too.
+`docker image ls` names the Dédalo image (`localhost/dedalo` for a local build). Skip the Bun-cache line if you use Bun for anything else. `node_modules` comes back with the next `sh install.sh`; or delete the whole checkout last. If the local CA's certificate is installed on staff computers, remove it from their trust stores too.
 
 ## Verify
 

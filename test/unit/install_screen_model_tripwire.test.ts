@@ -1184,9 +1184,12 @@ describe('campaign 3: the screens ask what the route uses, in its own words', ()
 		// The Image screen's question never repeats the screen's own description.
 		const image = screenOf({ route: 'trial' }, 'image');
 		expect(image.questions.map((item) => item.description)).not.toContain(image.description);
-		for (const route of ['docker', 'trial'] as const) {
+		for (const [route, words] of [
+			['docker', NOTICE_TEXT.stackCommands],
+			['trial', NOTICE_TEXT.trialCommands],
+		] as const) {
 			const texts = screenOf({ route }, 'review').notices.map((notice) => notice.text);
-			expect(texts, route).toContain(NOTICE_TEXT.stackCommands);
+			expect(texts, route).toContain(words);
 			expect(texts, route).not.toContain(NOTICE_TEXT.hostCommands);
 		}
 		expect(

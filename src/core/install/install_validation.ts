@@ -35,6 +35,7 @@ import { dirname, isAbsolute } from 'node:path';
 import { check_password } from '../../../client/dedalo/core/component_password/js/password_policy.js';
 import { liveProcessEnv } from '../../config/env.ts';
 import { connFieldProblem, pgSocketProblem } from '../../config/pg_transport.ts';
+import { acceptedImageVersions } from './host/stack/layout.ts';
 import type { InstallAnswers } from './install_plan.ts';
 
 /**
@@ -658,6 +659,17 @@ function stackHostErrors(a: InstallAnswers, problems: Problems): void {
 	}
 	if (a.image_source === 'custom' && a.image_repository === '') {
 		problems.push(problem('image_repository', 'image_source custom requires image_repository'));
+	}
+	// The run's preflight refuses any other tag (stack/preflight.ts imageProblems): said on
+	// the Image screen itself, never first after `yes` (campaign 3c D2: `9.9.9` passed the
+	// field and the Review, every answer lost at the refusal).
+	if (a.image_version !== '' && !acceptedImageVersions().includes(a.image_version)) {
+		problems.push(
+			problem(
+				'image_version',
+				`image version ${a.image_version} is not this installer's (${acceptedImageVersions().join(' or ')}) — leave it empty: the engine steps run inside the image with this installer's request format`,
+			),
+		);
 	}
 }
 

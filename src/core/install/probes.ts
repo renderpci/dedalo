@@ -32,6 +32,7 @@ import {
 	ontologySourceFor,
 } from './install_plan.ts';
 import { probeFailureSentence } from './install_probe_failure.ts';
+import { INSTANCE_PATTERN } from './install_validation.ts';
 import type { OntologyCatalog } from './ontology_choice.ts';
 import type { PsqlProbe } from './pg_bin.ts';
 import type { ProbeOutcome, SystemCheckRow } from './screen_model.ts';
@@ -116,7 +117,19 @@ function productionHostRows(host: HostMeasures): SystemCheckRow[] {
 					detail: 'the production route runs as root: sudo sh install.sh (same arguments)',
 				},
 		...(host.firewall === null || host.firewall === undefined ? [] : [firewallRow(host.firewall)]),
+		...(host.instance === undefined ? [] : [instanceRow(host.instance)]),
 	];
+}
+
+/** The instance name's row: free, or the installed instance that holds it (C3d-F1). */
+function instanceRow(instance: NonNullable<HostMeasures['instance']>): SystemCheckRow {
+	return instance.taken === null
+		? { state: 'ok', label: 'Instance', detail: `${instance.name}: no instance of that name here` }
+		: {
+				state: 'fail',
+				label: 'Instance',
+				detail: `${instance.taken} (go back to Install type)`,
+			};
 }
 
 /** A Docker/trial host runs the engine in a container: only Bun and the private dir are its rows. */
@@ -147,8 +160,29 @@ function initRow(init: InitTestResult, spec: (typeof INIT_ROWS)[number]): System
 	const failed = init.errors.find((line) => spec.match.test(line));
 	if (failed !== undefined) return { state: 'fail', label: spec.label, detail: failed };
 	const passed = init.msg.find((line) => spec.match.test(line));
-	return passed === undefined ? null : { state: 'ok', label: spec.label, detail: passed };
+	return passed === undefined
+		? null
+		: { state: 'ok', label: spec.label, detail: passedDetail(spec.label, passed) };
 }
+
+/**
+ * A passed init_test line as an ok row's detail: the row already says `ok`
+ * and its label, so neither is said again (campaign 3c D20: `ok  Bun  Bun
+ * runtime 1.4.2 — OK`) — `ok  Bun  runtime 1.4.2`, `ok  Install seed
+ * present`, `ok  Private directory  writable`.
+ */
+export function passedDetail(label: string, line: string): string {
+	const detail = line.replace(/\s+—\s+OK$/, '');
+	const words = PASSED_WORDS[label];
+	return words === undefined ? detail : words(detail);
+}
+
+/** The words an ok row keeps of its init_test line (the label is the row's). */
+const PASSED_WORDS: Readonly<Record<string, (detail: string) => string>> = Object.freeze({
+	Bun: (detail: string) => detail.replace(/^Bun\s+/, ''),
+	'Install seed': () => 'present',
+	'Private directory': () => 'writable',
+});
 
 /** The major of a `psql --version` line ("psql (PostgreSQL) 16.4" → '16'), or null. */
 export function psqlMajorOf(version: string): string | null {
@@ -284,6 +318,13 @@ export interface HostMeasures {
 	euid: number;
 	/** null: not measured (an unsupported system, or another route). */
 	firewall?: FirewallFacts | null;
+	/**
+	 * The instance name answered on Install type and, when an instance is
+	 * ALREADY INSTALLED under it, the refusal naming its files (campaign 3d
+	 * C3d-F1 — said here, right after the name, never as an account "leftover"
+	 * at the Identity check). Absent/'' : no name to check.
+	 */
+	instance?: { name: string; taken: string | null };
 }
 
 /** What the System check measured besides init_test: the host (production), the stack (docker/trial). */
@@ -357,6 +398,8 @@ export interface SystemCheckSeams {
 	stack?: () => Promise<StackFacts>;
 	/** The production host's firewall (default: measured — measureFirewall). */
 	firewall?: (osRelease: string) => Promise<FirewallFacts | null>;
+	/** An installed instance holding the name: its refusal, or null (default: measured — measureTaken). */
+	taken?: (instance: string) => Promise<string | null>;
 }
 
 /**
@@ -367,6 +410,7 @@ export interface SystemCheckSeams {
 export async function systemCheck(
 	route: InstallRoute,
 	seams: SystemCheckSeams = {},
+	instance = '',
 ): Promise<ProbeOutcome> {
 	const { runInitTest } = await import('./init_test.ts');
 	const { probePsql } = await import('./pg_bin.ts');
@@ -376,7 +420,7 @@ export async function systemCheck(
 		runInitTest((seams.psql ?? probePsql)()),
 		await hostInfo(route),
 		route,
-		await systemMeasures(route, seams),
+		await systemMeasures(route, seams, instance),
 	);
 	const failed = rows.filter((row) => row.state === 'fail').length;
 	return {
@@ -415,17 +459,44 @@ async function routeFirewall(
 	return (seams.firewall ?? measureFirewall)(osRelease);
 }
 
+/** An installed instance named `instance` on this host: its refusal, or null (the Review's machine). */
+async function measureTaken(instance: string): Promise<string | null> {
+	const { reviewMachine } = await import('./host/review.ts');
+	const { sameNameRecords } = await import('./host/production/instances.ts');
+	const { instanceTakenSentence } = await import('./host/production/identity_rules.ts');
+	const records = sameNameRecords(reviewMachine().fs, instance);
+	return records.length === 0
+		? null
+		: instanceTakenSentence(
+				instance,
+				records.map((record) => record.source),
+			);
+}
+
+/** The production instance name's measure (no name, or an invalid one: not measured). */
+async function routeInstance(
+	route: InstallRoute,
+	instance: string,
+	seams: SystemCheckSeams,
+): Promise<HostMeasures['instance']> {
+	if (route !== 'production' || !INSTANCE_PATTERN.test(instance)) return undefined;
+	return { name: instance, taken: await (seams.taken ?? measureTaken)(instance) };
+}
+
 /** The host facts (production's rows read them) and, on docker/trial, the measured stack. */
 async function systemMeasures(
 	route: InstallRoute,
 	seams: SystemCheckSeams,
+	instance: string,
 ): Promise<SystemMeasures> {
 	const osRelease = osReleaseText();
+	const named = await routeInstance(route, instance, seams);
 	return {
 		host: {
 			osRelease,
 			euid: process.geteuid?.() ?? -1,
 			firewall: await routeFirewall(route, osRelease, seams),
+			...(named === undefined ? {} : { instance: named }),
 		},
 		stack: onHost(route) ? null : await (seams.stack ?? measureStack)(),
 	};

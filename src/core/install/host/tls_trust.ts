@@ -82,9 +82,16 @@ export function untrustedIssuer(
 	return current === undefined ? 'no certificate' : oneLine(current.issuer);
 }
 
-/** How to make this machine trust a CA, per family. */
-export const TRUST_CA_HOWTO =
-	'install that CA on this machine (Debian/Ubuntu: copy it to /usr/local/share/ca-certificates/<name>.crt, then sudo update-ca-certificates; RHEL family: copy it to /etc/pki/ca-trust/source/anchors/, then sudo update-ca-trust), then run this again';
+/** How to make this machine trust a CA, per family (what to do next: each caller's own ending). */
+export const TRUST_CA_STEPS =
+	'install that CA on this machine (Debian/Ubuntu: copy it to /usr/local/share/ca-certificates/<name>.crt, then sudo update-ca-certificates; RHEL family: copy it to /etc/pki/ca-trust/source/anchors/, then sudo update-ca-trust)';
+
+/**
+ * The system check's version: true where it is read (campaign 3d C3d-F2 — "run
+ * this again" was wrong on the Review, whose `install` re-checks and keeps every
+ * answer; a headless run is simply run again).
+ */
+export const TRUST_CA_HOWTO = `${TRUST_CA_STEPS}, then check again (on the Review: install, which checks first; a headless run: the same command)`;
 
 /**
  * The verdict on a fullchain against the bundles' texts: a problem sentence,

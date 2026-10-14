@@ -12,6 +12,7 @@
 import { sanitizeLine } from '../display_text.ts';
 import { interactiveSuggestion } from '../install_plan.ts';
 import type { RunReporter } from '../run_events.ts';
+import { todoLines } from '../ui_plain/reporter.ts';
 import type { App } from './app.ts';
 import type { DoneModel } from './screens/done.ts';
 import { applyStepEvent } from './screens/install.ts';
@@ -88,7 +89,8 @@ export function tuiReporter(app: App, showDone: ShowDone): RunReporter {
 					ending: context.ending,
 				},
 				outcome.exitCode,
-				outcome.exitCode === 0 ? [] : [...outcome.hint],
+				// Left on the main screen after the UI closes: the To-do too (campaign 3c D5).
+				outcome.exitCode === 0 ? todoLines(context.ending) : [...outcome.hint],
 			);
 		},
 	};

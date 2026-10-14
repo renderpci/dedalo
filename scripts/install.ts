@@ -161,7 +161,7 @@ import {
 	statSync,
 	writeSync,
 } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { tmpdir, userInfo } from 'node:os';
 import { join } from 'node:path';
 // All config-free — safe to import BEFORE the environment is seeded.
 import {
@@ -173,10 +173,12 @@ import {
 import {
 	type FrontEndChoice,
 	type FrontEndResult,
+	keptAnswersLines,
 	type ReviewedDecisions,
 	reviewedDecisionsRefusal,
 	selectFrontEndFor,
 	type TerminalCaps,
+	withKeptAnswers,
 	writeAnswersFile,
 } from '../src/core/install/front_end.ts';
 import { CORE_HIERARCHIES, hierarchyChoiceView } from '../src/core/install/hierarchy_meta.ts';
@@ -198,6 +200,7 @@ import {
 	SECRET_ANSWER_KEYS,
 	TOPONYMY_SUGGESTION,
 } from '../src/core/install/install_plan.ts';
+import type { CliInteractiveDeps } from '../src/core/install/install_session.ts';
 import {
 	INSTALL_DEFAULT_LANG_CODES,
 	INSTALL_LANG_CATALOG,
@@ -233,11 +236,13 @@ let cleanupCatalog: () => void = () => undefined;
 /** The full-screen UI while it is up (every exit path goes through it: the terminal is restored). */
 let activeUi: import('../src/core/install/tui_loader.ts').TuiFrontEnd | null = null;
 
-function fail(msg: string): never {
+function fail(msg: string, after: readonly string[] = []): never {
 	cleanupCatalog();
 	// The full-screen UI is restored FIRST; the message is printed on the main screen after it.
-	if (activeUi !== null) return activeUi.exitNow(1, [`✖ install failed: ${msg}`]);
-	console.error(`\n✖ install failed: ${msg}\n`);
+	if (activeUi !== null) return activeUi.exitNow(1, [`✖ install failed: ${msg}`, ...after]);
+	console.error(`\n✖ install failed: ${msg}`);
+	for (const line of after) console.error(line);
+	console.error('');
 	process.exit(1);
 }
 
@@ -668,13 +673,45 @@ function headlessReporter(): RunReporter {
 	return invocation.eventsJsonl ? eventsReporter() : plainReporter();
 }
 
-/** Run the executor and leave with its exit code, the reporter telling the outcome. */
+/**
+ * Where the answers of an interactive run refused after its typed yes are
+ * kept (campaign 3c D2): the operator's own home (root's under sudo — the
+ * rerun is sudo too), never the checkout (root never writes in it) nor the
+ * private dir.
+ */
+function keptAnswersPath(): string {
+	return join(userInfo().homedir, 'dedalo-install-answers.json');
+}
+
+/**
+ * An interactive run refused after the typed yes — by the run's own system
+ * check, or because the plan changed since the Review: the answers are KEPT
+ * (front_end.ts keptAnswersLines) — one mechanism for every route (campaign
+ * 3c D2). [] for a headless run (its answers are its command line).
+ */
+async function keptAnswers(plan: InstallPlan, interactive?: InteractiveRun): Promise<string[]> {
+	if (interactive === undefined) return [];
+	const { sameAsCommand } = await import('../src/core/install/screen_model.ts');
+	return keptAnswersLines(
+		plan.answers,
+		interactive.writeAnswers ?? keptAnswersPath(),
+		sameAsCommand,
+	);
+}
+
+/**
+ * Run the executor and leave with its exit code, the reporter telling the
+ * outcome. `keep` is REQUIRED (undefined for a resume/abort, whose answers are
+ * the record's): a fresh run's caller cannot drop the kept answers of a
+ * refusal by omission — tsc refuses it (campaign 3c D2 wiring).
+ */
 async function execute(
 	request: import('../src/core/install/executor.ts').ExecutorRequest,
 	reporter: RunReporter,
+	keep: (() => Promise<string[]>) | undefined,
 ): Promise<never> {
 	const { executeInstall } = await import('../src/core/install/executor.ts');
-	const outcome = await executeInstall(request, reporter.io);
+	const outcome = await withKeptAnswers(await executeInstall(request, reporter.io), keep);
 	cleanupCatalog();
 	const rootVerified = (request.secrets.root_password ?? '') !== '';
 	// An --engine-only run (the by-hand host procedure) ends with the systemd pointer only (C3-54).
@@ -714,20 +751,18 @@ function hostPlanned(answers: InstallAnswers): boolean {
 	return !answers.engine_only && answers.route !== 'developer';
 }
 
-/** The told lines of a host run (firewall, modules, the outside check) — printed after the outcome. */
-function printTold(told: readonly string[]): void {
-	if (told.length === 0) return;
-	console.log('\nTo do on this host (checked by the installer, never changed by it):');
-	for (const line of told) console.log(`  • ${line}`);
-}
-
-/** Run the host executor and leave with its exit code. */
+/**
+ * Run the host executor and leave with its exit code. Its told lines (the
+ * firewall, modules, the outside check, the salt's read command) are the
+ * reporter's closing To-do — every front end's (campaign 3c D5).
+ */
 async function executeHost(
 	request: import('../src/core/install/host/host_executor.ts').HostExecutorRequest,
 	reporter: RunReporter,
+	keep: (() => Promise<string[]>) | undefined,
 ): Promise<never> {
 	const { executeHostInstall } = await import('../src/core/install/host/host_executor.ts');
-	const outcome = await executeHostInstall(request, reporter.io);
+	const outcome = await withKeptAnswers(await executeHostInstall(request, reporter.io), keep);
 	cleanupCatalog();
 	const answers = request.planFile?.answers ?? request.givenAnswers ?? {};
 	const route =
@@ -740,9 +775,9 @@ async function executeHost(
 			instance: String(answers.instance ?? ''),
 			keptLive: outcome.keptLive,
 			undone: outcome.undone,
+			told: outcome.exitCode === 0 ? outcome.told : [],
 		},
 	});
-	if (outcome.exitCode === 0) printTold(outcome.told);
 	process.exit(outcome.exitCode);
 }
 
@@ -784,7 +819,7 @@ async function hostFreshInstall(
 	if (changed !== null) errors.push(changed);
 	if (errors.length === 0)
 		writeAnswersOrFail(interactive?.writeAnswers ?? invocation.writeAnswersPath, plan);
-	if (errors.length > 0) fail(errors.join('; '));
+	if (errors.length > 0) fail(errors.join('; '), await keptAnswers(plan, interactive));
 	reporter.announce(announcementOf(plan));
 	const planFile = buildPlanFile(plan, secrets);
 	await beginSteps(reporter, planFile);
@@ -796,6 +831,7 @@ async function hostFreshInstall(
 			secrets,
 		},
 		reporter,
+		() => keptAnswers(plan, interactive),
 	);
 }
 
@@ -829,6 +865,7 @@ async function hostContinue(request: ContinueRequest, given: InstallAnswers): Pr
 				: { confirmDatabase: request.confirmDatabase }),
 		},
 		request.reporter,
+		undefined,
 	);
 }
 
@@ -1012,7 +1049,7 @@ async function freshInstall(interactive?: InteractiveRun): Promise<never> {
 		process.exit(errors.length === 0 ? 0 : 1);
 	}
 
-	if (errors.length > 0) fail(errors.join('; '));
+	if (errors.length > 0) fail(errors.join('; '), await keptAnswers(plan, interactive));
 	reporter.announce(announcementOf(plan));
 	const planFile = buildPlanFile(plan, secrets);
 	await beginSteps(reporter, planFile);
@@ -1026,6 +1063,7 @@ async function freshInstall(interactive?: InteractiveRun): Promise<never> {
 			ontologyCatalog: resolvedCatalog.catalog,
 		},
 		reporter,
+		() => keptAnswers(plan, interactive),
 	);
 }
 
@@ -1126,6 +1164,7 @@ async function continueInstall(request: ContinueRequest): Promise<never> {
 				unservedAttested: stdinPart.unserved,
 			},
 			request.reporter,
+			undefined,
 		);
 	}
 	// The catalog is re-resolved only while a step that needs it is not done;
@@ -1158,6 +1197,7 @@ async function continueInstall(request: ContinueRequest): Promise<never> {
 			ontologyCatalog: catalog,
 		},
 		request.reporter,
+		undefined,
 	);
 }
 
@@ -1227,9 +1267,14 @@ function quitCode(reason: string | undefined): number {
 	return reason === 'refused' ? 1 : 0;
 }
 
-/** Leave: through the full-screen UI when it is up (the terminal restored first). */
+/**
+ * Leave: through the full-screen UI when it is up (the terminal restored
+ * first, then `lines` printed); the plain mode prints the same closing lines
+ * itself (campaign 3c D21: a plain `quit` ended with none).
+ */
 async function leave(code: number, lines: readonly string[] = []): Promise<never> {
 	if (activeUi !== null) return activeUi.close(code, lines);
+	for (const line of lines) console.log(line);
 	return process.exit(code);
 }
 
@@ -1337,6 +1382,11 @@ async function interactiveInstall(
 			const { reviewHostCommands } = await import('../src/core/install/host/review.ts');
 			return reviewHostCommands(plan);
 		},
+		// What the run's own system check would refuse, asked BEFORE `yes` (campaign 3c D2).
+		preflightRefusals: async (plan) => {
+			const { reviewPreflightRefusals } = await import('../src/core/install/host/review.ts');
+			return reviewPreflightRefusals(plan);
+		},
 		routeRefusal: (plan) =>
 			plan.answers.route === 'production' &&
 			process.geteuid?.() !== 0 &&
@@ -1346,7 +1396,7 @@ async function interactiveInstall(
 		...(invocation.writeAnswersPath === undefined
 			? {}
 			: { writeAnswersPath: invocation.writeAnswersPath }),
-	});
+	} satisfies CliInteractiveDeps);
 	return actOn(result, prompter, reporter);
 }
 

@@ -348,12 +348,24 @@ export function hostCommandLines(view: ReviewView): string[] {
 	]);
 }
 
+/**
+ * The Review's refusals its screen notices do not already carry (the plan's
+ * errors are notices): the route refusal and what the run's system check
+ * would refuse (campaign 3c D2) — said BEFORE `install`, never after it.
+ */
+export function reviewErrorLines(view: ReviewView): string[] {
+	const noticed = new Set(view.screen.notices.map((notice) => notice.text));
+	return view.errors.filter((error) => !noticed.has(error)).map((error) => `error: ${error}`);
+}
+
 function reviewTextLines(view: ReviewView): string[] {
 	const numbered = view.editable.map((item) => `${item.n} ${item.title}`).join(', ');
 	return [
+		...reviewErrorLines(view),
 		...view.lines.map((line) => `${line.label.padEnd(14)} ${line.value}`),
 		...hostCommandLines(view),
-		`commands: ${view.canInstall ? 'install, ' : ''}edit <n> (${numbered}), write <path> (writes the answers and quits), quit`,
+		// Refused, `install` checks again (campaign 3d C3d-F2) — said so, never offered as install.
+		`commands: ${view.canInstall ? 'install' : 'install (checks again — not offered now)'}, edit <n> (${numbered}), write <path> (writes the answers and quits), quit`,
 	];
 }
 

@@ -298,12 +298,25 @@ export async function showSaltLine(
 		);
 }
 
-/** The production engine's one-time salt (see showSaltLine). */
-async function showSaltOnce(ctx: HostCtx): Promise<void> {
-	if (ctx.created.salt_shown) return;
-	const status = await engineStatus(ctx);
-	if (status?.salt_generated !== true) return;
-	await showSaltLine(ctx, () => probeText(ctx, saltProbe(ctx)), saltCommand(ctx));
+/**
+ * The closing To-do's salt line of an install that GENERATED it: on every run
+ * that completes the install — shown just now, by an earlier run, or not at
+ * all — the command that reads it back (campaign 3c D3: production's closing
+ * block said "shown above" with neither the value nor the command; a docker
+ * --resume completing after a failure screen had shown it said nothing).
+ */
+export function saltTodo(command: string): string {
+	return `keep a copy of the generated salt (DEDALO_SALT_STRING) with your backups — the stored passwords cannot be verified without it; read it with: ${command}`;
+}
+
+/** The production engine's one-time salt (see showSaltLine), then its To-do line. */
+async function showSaltOnce(ctx: HostCtx): Promise<string[] | undefined> {
+	if (!ctx.created.salt_shown) {
+		const status = await engineStatus(ctx);
+		if (status?.salt_generated !== true) return undefined;
+		await showSaltLine(ctx, () => probeText(ctx, saltProbe(ctx)), saltCommand(ctx));
+	}
+	return [saltTodo(saltCommand(ctx))];
 }
 
 export const host_engine: HostStepDefinition = {

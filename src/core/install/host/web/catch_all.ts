@@ -37,6 +37,7 @@
  */
 
 import type { WebFlavor } from '../os_support.ts';
+import type { SiteTuple } from './clash.ts';
 
 /** The first line of the catch-all file: what makes it the installer's own. */
 export const CATCH_ALL_STAMP = '# dedalo-install catch-all';
@@ -58,6 +59,11 @@ function ourSite(file: string): boolean {
 export interface PortDefault {
 	port: string;
 	file: string;
+}
+
+/** Every `default_server` of the sites, by port (the file that declares it). */
+export function portDefaults(sites: readonly SiteTuple[]): PortDefault[] {
+	return sites.flatMap((site) => (site.defaults ?? []).map((port) => ({ port, file: site.file })));
 }
 
 /** The standard ports where an OPERATOR'S `default_server` stays the default (told). */

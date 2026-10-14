@@ -22,6 +22,8 @@
  *    THIS machine trusts their chain (tls_trust.ts: stack_health probes the
  *    site with this machine's curl; campaign 3 C3-13);
  *  - Compose older than 2.24.4 (the override's `!override` tag).
+ *  - a port the stack publishes that something already listens on (`ss`;
+ *    campaign 3c D2 — found at stack_up, after the build, before).
  *
  * Then FREEZES the facts and the digest of every stack step's commands in the
  * state file, as host_preflight does: what the rest of the run, and any
@@ -234,6 +236,27 @@ export function stackReviewTodo(
 	];
 }
 
+/** The host ports the stack publishes (the trial serves plain HTTP only). */
+function publishedPorts(answers: HostPlanCtx['answers']): string[] {
+	return answers.route === 'trial' ? [answers.http_port] : [answers.http_port, answers.https_port];
+}
+
+/**
+ * A published port something already listens on (campaign 3c D2: a held 443
+ * passed every check and failed at stack_up, after the image was built). Not
+ * measurable (no `ss`): nothing said — stack_up's own error names it.
+ */
+export function portProblems(answers: HostPlanCtx['answers'], facts: StackFacts): string[] {
+	const listening = facts.listening ?? [];
+	return [...new Set(publishedPorts(answers))]
+		.map((port) => ({ port, holder: listening.find((item) => item.port === port) }))
+		.filter((item) => item.holder !== undefined)
+		.map(
+			({ port, holder }) =>
+				`port ${port} is already in use${holder?.process === 'unknown' ? '' : ` by ${holder?.process}`} — the stack publishes it: stop that program, or choose another port (Containers screen, --http-port / --https-port)`,
+		);
+}
+
 /** Refuse with every problem, joined (the operator fixes them all in one pass). */
 function refuseAll(problems: readonly string[]): void {
 	if (problems.length > 0) hostRefuse('install.state_conflict', problems.join('; '));
@@ -269,6 +292,7 @@ async function evaluateStack(
 		...machineProblems(facts),
 		...instanceProblems(ctx, facts),
 		...imageProblems(withFacts(ctx, facts), facts),
+		...portProblems(ctx.answers, facts),
 		...tls.problems,
 	];
 	return { facts, problems: [...new Set(problems)], warnings: tls.warnings };

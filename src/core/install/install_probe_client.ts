@@ -222,8 +222,8 @@ export function childProbes(options: ChildProbeOptions): InstallProbes {
 	const run = (request: ProbeRequest) => runChild(options, request);
 	const plain = (answers: Readonly<Record<string, unknown>>) => ({ ...answers });
 	return {
-		system: async (route: InstallRoute) =>
-			outcomeOf(await run({ probe: 'system', answers: { route }, secrets: {} })),
+		system: async (route: InstallRoute, instance = '') =>
+			outcomeOf(await run({ probe: 'system', answers: { route, instance }, secrets: {} })),
 		identity: async (answers) =>
 			outcomeOf(await run({ probe: 'identity', answers: plain(answers), secrets: {} })),
 		database: async (answers, dbPassword) =>

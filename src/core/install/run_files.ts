@@ -77,10 +77,10 @@ export function readStateFile(dir: string = installRunDir()): InstallState | nul
 
 export function acquireRunLock(
 	mode: RunMode,
-	warn: (line: string) => void,
+	notes: core.LockNotes,
 	dir: string = installRunDir(),
 ): { ok: true } | { ok: false; holder: LockInfo } {
-	return core.acquireRunLock(mode, warn, dir);
+	return core.acquireRunLock(mode, notes, dir);
 }
 
 export function releaseRunLock(dir: string = installRunDir()): void {

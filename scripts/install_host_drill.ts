@@ -245,6 +245,10 @@ async function startContainer(args: Args, scratch: string): Promise<string> {
 		'/run',
 		'--tmpfs',
 		'/run/lock',
+		// /tmp on its own filesystem, as on most real hosts (campaign 3c D12: Bun leaves a
+		// marker there only when /tmp and its package cache are on different filesystems).
+		'--tmpfs',
+		'/tmp:rw,exec,mode=1777',
 		'--label',
 		'dedalo.install-drill=1',
 		'--name',
@@ -710,8 +714,8 @@ async function unservedAbortLegs(
 			`[ ! -e /home/ded_${INSTANCE} ] && [ ! -e /srv/dedalo/${INSTANCE} ]`,
 		),
 		await check(
-			'unserved: no file of a bare uid is left behind',
-			`[ -z "$(find /srv /home /var/lib/dedalo-install -xdev -nouser -print -quit 2>/dev/null)" ]`,
+			'unserved: no file of a bare uid is left behind (/tmp included — campaign 3c D12)',
+			`[ -z "$(find /srv /home /var/lib/dedalo-install /tmp -xdev -nouser -print -quit 2>/dev/null)" ]`,
 		),
 		await check(
 			'unserved: the install record is gone',

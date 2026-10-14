@@ -50,8 +50,11 @@ import {
 	CATCH_ALL_STAMP,
 	catchAllPath,
 	keptDefaults,
+	type PortDefault,
+	portDefaults,
 	renderNginxCatchAll,
 } from '../web/catch_all.ts';
+import { nginxSites } from '../web/clash.ts';
 import {
 	mapConfigHash,
 	mapInclude,
@@ -253,8 +256,28 @@ function standardPorts(ctx: HostPlanCtx): boolean {
 }
 
 /** The standard ports where an operator's `default_server` stays the default (told). */
-export function keptPorts(ctx: HostPlanCtx): string[] {
-	return keptDefaults(ctx.facts.web.defaults);
+export function keptPorts(
+	ctx: HostPlanCtx,
+	defaults: readonly PortDefault[] = ctx.facts.web.defaults,
+): string[] {
+	return keptDefaults(defaults);
+}
+
+/**
+ * The default sites AS THEY ARE when the site step runs (campaign 3d C3d-F2):
+ * a run that INSTALLS nginx froze none at its preflight — the package writes
+ * its own default site (Debian: sites-enabled/default, `default_server` on
+ * 80) at host_packages, after it — so they are read now, from the live
+ * configuration dump. An nginx the preflight measured: its frozen facts.
+ */
+export async function siteDefaults(ctx: HostCtx): Promise<PortDefault[]> {
+	const { web } = ctx.facts;
+	if (web.kind !== 'nginx' || web.installed) return web.defaults;
+	const dump = await probeText(
+		ctx,
+		probe(ctx, 'nginx', ['-T'], 'the default sites (configuration dump)'),
+	);
+	return portDefaults(nginxSites(dump));
 }
 
 /**
@@ -283,8 +306,11 @@ function usesCatchAll(ctx: HostPlanCtx): boolean {
 	return ctx.facts.web.catchAll === 'ours' || catchAllCommands(ctx).length > 0;
 }
 
-/** What the operator is told about the default site of the standard ports. */
-export function catchAllTold(ctx: HostPlanCtx): string[] {
+/** What the operator is told about the default site of the standard ports (`defaults`: siteDefaults). */
+export function catchAllTold(
+	ctx: HostPlanCtx,
+	defaults: readonly PortDefault[] = ctx.facts.web.defaults,
+): string[] {
 	if (ctx.facts.web.kind !== 'nginx' || !standardPorts(ctx)) return [];
 	const path = catchAllPath(webFlavor(ctx));
 	if (ctx.facts.web.catchAll === 'foreign') {
@@ -292,8 +318,8 @@ export function catchAllTold(ctx: HostPlanCtx): string[] {
 			`${path} exists and is not the installer's: no catch-all site was written — a name no site declares reaches whatever site the web server loads first`,
 		];
 	}
-	return keptPorts(ctx).map((port) => {
-		const file = ctx.facts.web.defaults.find((item) => item.port === port)?.file ?? 'another file';
+	return keptPorts(ctx, defaults).map((port) => {
+		const file = defaults.find((item) => item.port === port)?.file ?? 'another file';
 		return `port ${port}: the default site stays yours (${file}, default_server) — a name no site declares reaches it, never an instance`;
 	});
 }
@@ -624,7 +650,7 @@ export const host_web_site: HostStepDefinition = {
 			told: [
 				...(nginxGated(ctx) ? [ruleRefreshLine(ctx)] : []),
 				...[sharedGroupLine(ctx)].filter((line): line is string => line !== null),
-				...catchAllTold(ctx),
+				...catchAllTold(ctx, await siteDefaults(ctx)),
 			],
 		});
 	},

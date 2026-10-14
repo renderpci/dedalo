@@ -45,6 +45,14 @@
  *     os-release line is run in a bash shell holding NAME, over a planted
  *     os-release: it must print the OS and leave NAME (and no ID) behind.
  *
+ *  7. THE UNIT LOOP NEVER WRITES AN EMPTY TEMPLATE (campaign 3c D26). The page's
+ *     host_units loop, run in bash with its directory pointed into a scratch
+ *     dir: without `render` it writes nothing and says STOP; with it every
+ *     template equals the installer's `renderTemplate`, and a re-run finds none
+ *     that differs.
+ *  8. THE `--status --json` SAMPLE has the keys the engine answers (D27).
+ *  9. THE CHECKOUT VARIANT names the version a stamp-less tree reports (D25).
+ *
  * Proven red in-file: a fake step id, a removed section, a production section
  * without its link, and a drifted render each make the checker report.
  *
@@ -52,17 +60,18 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
 import { instancePaths } from '../../src/core/install/host/layout.ts';
-import { OS_ROWS } from '../../src/core/install/host/os_support.ts';
+import { OS_ROWS, osRowById } from '../../src/core/install/host/os_support.ts';
 import { webServerClash } from '../../src/core/install/host/production/preflight.ts';
 import type { InstanceEntry } from '../../src/core/install/host/registry.ts';
 import {
 	instanceDropins,
 	ROOT_RUN_SCRIPTS,
+	renderTemplate,
 	UNIT_TEMPLATES,
 } from '../../src/core/install/host/systemd/render.ts';
 import { renderApacheSite } from '../../src/core/install/host/web/apache.ts';
@@ -77,6 +86,7 @@ import {
 	type InstallAnswers,
 	PRODUCTION_HOST_STEP_IDS,
 } from '../../src/core/install/install_plan.ts';
+import { parseBuildInfo, prereleaseTagFor } from '../../src/core/update/build_stamp.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const MANUAL = readFileSync(join(REPO_ROOT, 'docs/install/manual_install.md'), 'utf8');
@@ -759,5 +769,80 @@ describe('manual_install.md › One web server: the bullet says what the preflig
 		expect(bulletDisagreements(old)).toContain(
 			'claims the other web server must be absent, the preflight accepts both installed',
 		);
+	});
+});
+
+// ── 7–9. campaign 3c (the by-hand run C3cR3): the page's loop, its samples ───
+
+/**
+ * Run the page's host_units template loop in ONE bash shell — the page's
+ * `render` defined or not — with the systemd directory pointed into `dir`.
+ */
+function runUnitLoop(manual: string, dir: string, withRender: boolean): string {
+	const loop = /^for unit in dedalo-ts@\.service [\s\S]*?\ndone$/m.exec(manual)?.[0];
+	expect(loop).toBeDefined();
+	const script = [withRender ? pageRenderFunction(manual) : '', loop as string]
+		.join('\n')
+		.replaceAll('/etc/systemd/system', dir);
+	const run = Bun.spawnSync(['bash', '-c', script], {
+		env: {
+			PATH: process.env.PATH ?? '/usr/bin:/bin',
+			SRC: REPO_ROOT,
+			PGSVC: osRowById('ubuntu2604').pgService,
+			PIN: '1.4.2',
+		},
+	});
+	return `${run.stdout.toString()}${run.stderr.toString()}`;
+}
+
+describe('manual_install.md: the unit loop never writes an empty template (7, campaign 3c D26)', () => {
+	test('render not defined: nothing is written, the loop says STOP', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_manual_units_'));
+		try {
+			expect(runUnitLoop(MANUAL, dir, false)).toContain('STOP: nothing rendered for');
+			expect(UNIT_TEMPLATES.filter((name) => existsSync(join(dir, name)))).toEqual([]);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test("render defined: every template is the installer's bytes, and a second run finds them equal", () => {
+		const dir = mkdtempSync(join(tmpdir(), 'dedalo_manual_units_'));
+		try {
+			expect(runUnitLoop(MANUAL, dir, true)).toBe('');
+			const row = osRowById('ubuntu2604');
+			for (const name of UNIT_TEMPLATES) {
+				expect(existsSync(join(dir, name)), name).toBe(true);
+				expect(readFileSync(join(dir, name), 'utf8'), name).toBe(
+					renderTemplate(name, row, REPO_ROOT),
+				);
+			}
+			expect(runUnitLoop(MANUAL, dir, true)).not.toContain('differs');
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe('manual_install.md: its samples are what the engine prints (8–9, campaign 3c D27/D25)', () => {
+	test('the `--status --json` sample has exactly the keys the engine answers', () => {
+		const sample = /^# (\{"exists":.*\})$/m.exec(MANUAL)?.[1];
+		expect(sample).toBeDefined();
+		const live = Bun.spawnSync(
+			['bun', 'run', join(REPO_ROOT, 'scripts/install.ts'), '--status', '--json'],
+			{ cwd: REPO_ROOT, timeout: 30_000 },
+		);
+		expect(live.exitCode, live.stderr.toString()).toBe(0);
+		const answer = JSON.parse(live.stdout.toString().trim().split('\n').at(-1) ?? '') as object;
+		expect(Object.keys(JSON.parse(sample as string) as object)).toEqual(Object.keys(answer));
+	});
+
+	test('the checkout variant names the version a tree without the build stamp reports', () => {
+		// A tarred checkout keeps the committed, unexpanded build_info.txt (only `git archive` expands it).
+		const committed = readFileSync(join(REPO_ROOT, 'src/core/update/build_info.txt'), 'utf8');
+		const tag = prereleaseTagFor(parseBuildInfo(committed).build, null);
+		expect(tag).not.toBe('');
+		const checkout = MANUAL.slice(MANUAL.indexOf('**From a checkout**'));
+		expect(checkout.slice(0, 2000)).toContain(`\`<version>${tag}\``);
 	});
 });

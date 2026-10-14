@@ -488,6 +488,12 @@ HERMETIC_TRIPWIRES=(
 	#     the stack files parsed, openssl-minted chains; its Docker checks skip, named, where
 	#     no daemon answers (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
 	test/unit/install_stack_nginx_native.test.ts
+	# --- 2026-10-14 (install campaign 3c, the flow and its words): the scripted session, pure
+	#     renders, one PTY run of the plain installer quitting at its first question.
+	test/unit/install_flow_campaign3c_native.test.ts
+	# --- 2026-10-14 (install campaign 3c, production-manual): the production pages against
+	#     the code that decides each fact — pure reads.
+	test/unit/install_production_docs_native.test.ts
 	# --- 2026-10-13 (install campaign 3, the developer route's tooling): pure option/argv
 	#     builders, a fake password-demanding server, the dev listener; its suite-DB leg
 	#     skips, named, without Postgres (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).

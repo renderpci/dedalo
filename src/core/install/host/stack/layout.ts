@@ -105,6 +105,9 @@ export const STACK_SERVICE_IMAGES: readonly string[] = Object.freeze([
 	'nginx:alpine',
 ]);
 
+/** PostgreSQL's image — the one a served abort keeps RUNNING (its container holds the data). */
+export const POSTGRES_IMAGE = STACK_SERVICE_IMAGES[0] as string;
+
 /**
  * The trial nginx's volumes (docker-compose.simple.yml's nginx volumes WITHOUT
  * the certificate ones — the Let's Encrypt volumes and deploy/certs): the trial

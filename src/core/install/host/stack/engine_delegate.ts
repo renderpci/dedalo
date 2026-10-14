@@ -46,6 +46,7 @@ import {
 	abortRequest,
 	type EngineStatus,
 	relay,
+	saltTodo,
 	showSaltLine,
 	stillNeeded,
 } from '../production/engine_delegate.ts';
@@ -225,22 +226,25 @@ async function undoStackEngine(ctx: HostCtx): Promise<string> {
 	return 'engine steps undone';
 }
 
-/** The command that reads the salt back from the engine container. */
-function stackSaltCommand(ctx: HostPlanCtx): string {
+/** The command that reads the salt back from the engine container (docker.md and quickstart.md quote it — gate: install_stack_steps_native). */
+export function stackSaltCommand(ctx: HostPlanCtx): string {
 	return `docker compose -f ${stackFileOf(ctx.answers)} -f ${OVERRIDE_FILE} --env-file ${ENV_FILE} exec dedalo grep ^DEDALO_SALT_STRING= /private/.env`;
 }
 
 /** The stack engine's one-time salt (production/engine_delegate.ts showSaltLine — C3-18). */
-async function showStackSalt(ctx: HostCtx): Promise<void> {
-	if (ctx.created.salt_shown) return;
-	const status = await stackEngineStatus(ctx);
-	if (status?.salt_generated !== true) return;
-	const read = composeProbe(
-		ctx,
-		['exec', '-T', 'dedalo', 'grep', '-m', '1', '^DEDALO_SALT_STRING=', '/private/.env'],
-		'the generated salt (shown once, never logged)',
-	);
-	await showSaltLine(ctx, () => probeText(ctx, read), stackSaltCommand(ctx));
+async function showStackSalt(ctx: HostCtx): Promise<string[] | undefined> {
+	if (!ctx.created.salt_shown) {
+		const status = await stackEngineStatus(ctx);
+		if (status?.salt_generated !== true) return undefined;
+		const read = composeProbe(
+			ctx,
+			['exec', '-T', 'dedalo', 'grep', '-m', '1', '^DEDALO_SALT_STRING=', '/private/.env'],
+			'the generated salt (shown once, never logged)',
+		);
+		await showSaltLine(ctx, () => probeText(ctx, read), stackSaltCommand(ctx));
+	}
+	// The closing To-do names the read command on EVERY completing run (campaign 3c D3).
+	return [saltTodo(stackSaltCommand(ctx))];
 }
 
 export const stack_engine: HostStepDefinition = {
