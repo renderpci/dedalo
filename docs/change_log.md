@@ -318,6 +318,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The date picker opens again on a phone (edit and search).**
+
+    On a phone — and in a desktop browser's device-emulation mode — the small calendar icon of a date or time field did nothing: the field's own calendar never appeared, so the value had to be typed by hand. The icon now opens the calendar on phones exactly as it does on a desktop, both in the record edit form and in the list's search panel.
+
 - **The projects picker follows a user's project assignments at once.**
 
     When an administrator changed the projects a user belongs to, that user's *Projects* picker (and the project names shown in lists) kept offering the old set — a revoked project stayed selectable and a newly granted one stayed hidden — until an unrelated change cleared the server's memory. The picker is now keyed by the user's current projects, so the next read shows exactly the new set.

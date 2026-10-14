@@ -491,6 +491,15 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 						dateFormat	: date_format,
 						defaultDate	: default_date,
 						allowInput	: true,
+						// disableMobile: keep flatpickr's OWN calendar on a phone.
+						// Its UA-based mobile fallback swaps the picker for a native
+						// <input type="date"> inserted beside the trigger — which here
+						// is a `.button_container` (position:absolute, 1.8rem) that is
+						// `visibility: hidden` / `display: none` until the surrounding
+						// field has focus. On a touch tap the field never keeps focus,
+						// so the native input stays hidden and NO calendar opens (the
+						// report: search-mode date picker dead on a phone).
+						disableMobile	: true,
 						// onClose	: close_flatpickr,
 						onValueUpdate : function(selectedDates, dateStr){
 							// reset style error
@@ -589,6 +598,10 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 						enableSeconds	: true,
 						dateFormat		: time_format,
 						defaultDate		: default_time,
+						// disableMobile: the same reason as the date picker — flatpickr's
+						// mobile fallback hides the picker behind a native input that the
+						// component's hidden-until-focus trigger cannot reveal on a tap.
+						disableMobile	: true,
 						// onClose		: close_flatpickr,
 						// onValueUpdate
 						onClose			: function(selectedDates, dateStr){
