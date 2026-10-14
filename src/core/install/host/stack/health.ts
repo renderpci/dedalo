@@ -17,11 +17,13 @@
  * Trial says what it is instead: NO media access control (its own route).
  * The logged-in half of the gate (the media cookie) is the drill's.
  *
- * A RESUME VERIFIES IT (campaign 3b N6): a step recorded done in an earlier
- * run is re-probed — /health on the socket and through the published address,
- * read-only — so a stack that stack_up started again (after an --abort, a
- * reboot, a failed start) is never reported complete unprobed. A probe that
- * fails runs the step again (restartable), and its refusal says why.
+ * A RESUME PROBES IT AGAIN (campaign 3b N6, 3c D24): when a step before it
+ * ran again in this run (stack_up after an --abort, a stopped stack started
+ * again), it runs again IN FULL — the same probes as a fresh install, the
+ * media gate with its probe file included (step_loop.ts staleProbe) — so the
+ * gate is never taken on trust. Otherwise (nothing re-done) its read-only
+ * verify re-probes /health on the socket and through the published address,
+ * writing nothing; a probe that fails runs the step again (restartable).
  */
 
 import type { InstallAnswers } from '../../install_plan.ts';

@@ -53,7 +53,10 @@ function reviewLine(label: string, value: string, width: number): Line[] {
 function bodyLines(view: ReviewView, width: number): Line[] {
 	return [
 		...noticeLines(view.screen.notices, width),
-		...view.errors.flatMap((error) => wrapped(`✗ ${error}`, width, 'err')),
+		// The plan's errors are the screen's notices already: each refusal drawn once.
+		...view.errors
+			.filter((error) => !view.screen.notices.some((notice) => notice.text === error))
+			.flatMap((error) => wrapped(`✗ ${error}`, width, 'err')),
 		BLANK,
 		...view.lines.flatMap((line) => reviewLine(line.label, line.value, width)),
 		...hostCommandBlock(view, width),

@@ -147,8 +147,29 @@ function initRow(init: InitTestResult, spec: (typeof INIT_ROWS)[number]): System
 	const failed = init.errors.find((line) => spec.match.test(line));
 	if (failed !== undefined) return { state: 'fail', label: spec.label, detail: failed };
 	const passed = init.msg.find((line) => spec.match.test(line));
-	return passed === undefined ? null : { state: 'ok', label: spec.label, detail: passed };
+	return passed === undefined
+		? null
+		: { state: 'ok', label: spec.label, detail: passedDetail(spec.label, passed) };
 }
+
+/**
+ * A passed init_test line as an ok row's detail: the row already says `ok`
+ * and its label, so neither is said again (campaign 3c D20: `ok  Bun  Bun
+ * runtime 1.4.2 — OK`) — `ok  Bun  runtime 1.4.2`, `ok  Install seed
+ * present`, `ok  Private directory  writable`.
+ */
+export function passedDetail(label: string, line: string): string {
+	const detail = line.replace(/\s+—\s+OK$/, '');
+	const words = PASSED_WORDS[label];
+	return words === undefined ? detail : words(detail);
+}
+
+/** The words an ok row keeps of its init_test line (the label is the row's). */
+const PASSED_WORDS: Readonly<Record<string, (detail: string) => string>> = Object.freeze({
+	Bun: (detail: string) => detail.replace(/^Bun\s+/, ''),
+	'Install seed': () => 'present',
+	'Private directory': () => 'writable',
+});
 
 /** The major of a `psql --version` line ("psql (PostgreSQL) 16.4" → '16'), or null. */
 export function psqlMajorOf(version: string): string | null {

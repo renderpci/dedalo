@@ -87,6 +87,12 @@ export interface RunEnding {
 	keptLive: boolean;
 	/** The steps an abort actually undid (its closing sentence says so — C3-50); absent: none. */
 	undone?: readonly string[];
+	/**
+	 * A host route's closing To-do (firewall, modules, the outside check, the
+	 * salt's read command): what the operator does — on EVERY front end's
+	 * closing screen (campaign 3c D5: the full screen showed none). Absent: none.
+	 */
+	told?: readonly string[];
 }
 
 export interface RunOutcomeView {

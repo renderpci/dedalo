@@ -32,9 +32,26 @@ export type DoneModel =
 /** What comes next after a complete install (a host route already started the server). */
 function nextLines(ending: RunEnding, width: number): Line[] {
 	return [
+		// First: a card too short for every line clips the bottom, and these are the operator's to do
+		// (all of them are also left on the main screen when the UI closes).
+		...todoCardLines(ending, width),
 		[seg('Next', 'text', { bold: true })],
 		...wrapped(`1 ${DONE_TEXT.next(ending)}`, width, 'muted'),
 		...wrapped(`2 ${DONE_TEXT.browser}`, width, 'muted'),
+	];
+}
+
+/**
+ * A host route's closing To-do, on the card itself (campaign 3c D5: the full
+ * screen showed none — the lines flashed by under their steps and were gone).
+ */
+function todoCardLines(ending: RunEnding, width: number): Line[] {
+	const told = ending.told ?? [];
+	if (told.length === 0) return [];
+	return [
+		[seg(DONE_TEXT.todoHeading, 'warn', { bold: true })],
+		...told.flatMap((line) => wrapped(`• ${line}`, width, 'text')),
+		BLANK,
 	];
 }
 
@@ -88,7 +105,7 @@ function abortedCard(ending: RunEnding, width: number): CardModel {
 			[seg('Install aborted', 'warn', { bold: true })],
 			...wrapped(DONE_TEXT.abortedFor(ending), width, 'muted'),
 		],
-		below: [],
+		below: todoCardLines(ending, width),
 	};
 }
 

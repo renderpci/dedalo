@@ -44,13 +44,20 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import type { HostCtx, HostStepDefinition } from '../../src/core/install/host/contract.ts';
 import { hostFs } from '../../src/core/install/host/fs.ts';
-import { REVIEW_TODO_STEP, reviewHostCommands } from '../../src/core/install/host/review.ts';
+import { hostPlanRefusals } from '../../src/core/install/host/host_executor.ts';
+import {
+	REVIEW_TODO_STEP,
+	reviewHostCommands,
+	reviewPreflightRefusals,
+} from '../../src/core/install/host/review.ts';
 import {
 	type CommandRunner,
 	type RecordedResponse,
 	recordingRunner,
+	scratchRunner,
 } from '../../src/core/install/host/runner.ts';
 import { keptImages } from '../../src/core/install/host/stack/database.ts';
+import { stackSaltCommand } from '../../src/core/install/host/stack/engine_delegate.ts';
 import { curlReason } from '../../src/core/install/host/stack/health.ts';
 import { IMAGE_BUILDER, imageCommands } from '../../src/core/install/host/stack/image.ts';
 import {
@@ -118,7 +125,12 @@ let counter = 0;
 /** A planted operator machine (the checkout is this repository, mapped under the scratch root). */
 function machine(
 	raw: Record<string, unknown>,
-	options: { docker?: boolean; cosign?: boolean; responses?: readonly RecordedResponse[] } = {},
+	options: {
+		docker?: boolean;
+		cosign?: boolean;
+		ss?: boolean;
+		responses?: readonly RecordedResponse[];
+	} = {},
 ): ScratchHost {
 	counter += 1;
 	const root = join(scratchBase, `m${counter}`);
@@ -310,16 +322,25 @@ describe('the image is verified; the System check refuses before anything change
 			sentence: 'cosign is not installed',
 		},
 		{
-			name: "an image version that is not the installer's",
-			raw: { ...TRIAL, image_version: '6.9.0' },
-			options: {},
-			sentence: "image version 6.9.0 is not this installer's",
-		},
-		{
 			name: 'an operator `id` cannot name',
 			raw: TRIAL,
 			options: { responses: [{ match: '/usr/bin/id -un', stdout: '' }] },
 			sentence: 'the operator cannot be identified',
+		},
+		{
+			// Campaign 3c D2: found at stack_up, after the image was built.
+			name: 'a published port another program already listens on',
+			raw: TRIAL,
+			options: {
+				ss: true,
+				responses: [
+					{
+						match: '/usr/bin/ss -ltnpH',
+						stdout: 'LISTEN 0 5 0.0.0.0:80 0.0.0.0:* users:(("python3",pid=9,fd=3))\n',
+					},
+				],
+			},
+			sentence: 'port 80 is already in use by python3',
 		},
 		{
 			name: 'an instance already on this machine (its private volume)',
@@ -330,6 +351,14 @@ describe('the image is verified; the System check refuses before anything change
 			sentence: 'this machine already has a Dédalo instance (volume dedalo_private)',
 		},
 	];
+	test("an image version that is not the installer's is refused by the plan itself — the Image field, before any run (campaign 3c D2)", () => {
+		const plan = buildInstallPlan(
+			{ ...TRIAL, image_version: '6.9.0' },
+			{ rootPassword: ROOT_PASSWORD, requireRootPassword: true },
+		);
+		expect(plan.errors.join('\n')).toContain("image version 6.9.0 is not this installer's");
+	});
+
 	for (const refusal of refusals) {
 		test(`refused at the System check: ${refusal.name}`, async () => {
 			const host = machine(refusal.raw, refusal.options);
@@ -346,6 +375,44 @@ describe('the image is verified; the System check refuses before anything change
 			).toEqual([]);
 		});
 	}
+});
+
+describe('the Review asks the run’s own preflight before `yes` — the CLI’s hook (campaign 3c D2 wiring)', () => {
+	/** review.ts reviewPreflightRefusals — what scripts/install.ts hands the session as preflightRefusals. */
+	async function reviewRefusals(host: ScratchHost, plan: ReturnType<typeof fresh>['plan']) {
+		const marker = join(host.root, SCRATCH_DIR);
+		return reviewPreflightRefusals(plan, {
+			runner: scratchRunner(marker),
+			fs: hostFs(host.root, join(marker, 'owners.json')),
+			source: host.source,
+			skipPrivilegeCheck: true,
+			sleep: async () => {},
+		});
+	}
+	const HELD_80 = {
+		ss: true,
+		responses: [
+			{
+				match: '/usr/bin/ss -ltnpH',
+				stdout: 'LISTEN 0 5 0.0.0.0:80 0.0.0.0:* users:(("python3",pid=9,fd=3))\n',
+			},
+		],
+	};
+
+	test('a held port is an error of the plan the Review holds; a free one and a plan with no host step are not', async () => {
+		const held = machine(TRIAL, HELD_80);
+		expect((await reviewRefusals(held, fresh(TRIAL).plan)).join('\n')).toContain(
+			'port 80 is already in use by python3',
+		);
+		expect(loggedCommands(held.root).filter((line) => MUTATING.test(line))).toEqual([]);
+		// CONTROL: nothing held — nothing refused.
+		expect(await reviewRefusals(machine(TRIAL, { ss: true }), fresh(TRIAL).plan)).toEqual([]);
+		// The delegated engine child runs no host step here: never asked.
+		const child = machine(TRIAL, HELD_80);
+		const childPlan = buildInstallPlan({ ...TRIAL, engine_only: true });
+		expect(await reviewRefusals(child, childPlan)).toEqual([]);
+		expect(loggedCommands(child.root)).toEqual([]);
+	});
 });
 
 // An operator absent from /etc/passwd is the NORMAL case on macOS (Directory
@@ -677,6 +744,29 @@ describe('a resume VERIFIES stack_health; a re-started stack is never reported c
 		expect(timesLogged(host, publicProbe)).toBeGreaterThan(probes);
 		expect(timesLogged(host, `${compose} up -d`)).toBeGreaterThan(0);
 	});
+
+	test('docker: after a served abort the resume runs the SAME probes as a fresh install — the media gate included, never only /health (campaign 3c D24)', async () => {
+		const host = machine(DOCKER_LE);
+		const { plan, request } = fresh(DOCKER_LE);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		const gate = (line: string) => line.includes('dd_install_probe_dd0_0.jpg');
+		const freshGate = loggedCommands(host.root).filter(gate).length;
+		expect(freshGate).toBeGreaterThanOrEqual(3); // write, anonymous probe, remove
+		await runHost(host, laterRequest('abort', plan));
+		const before = loggedCommands(host.root).length;
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.result).toBe('complete');
+		const again = loggedCommands(host.root).slice(before).filter(gate);
+		expect(again.length).toBe(freshGate);
+		expect(resumed.transcript.lines.join('\n')).toContain(
+			'a step before it ran again in this run — checked again',
+		);
+		// CONTROL: a resume of the complete install re-did nothing — read-only, no probe file.
+		const quiet = loggedCommands(host.root).length;
+		const idle = await runHost(host, laterRequest('resume', plan));
+		expect(idle.outcome.result).toBe('already_complete');
+		expect(loggedCommands(host.root).slice(quiet).filter(gate)).toEqual([]);
+	});
 });
 
 describe('stack_health says why a probe failed (C3-13)', () => {
@@ -780,6 +870,31 @@ describe("the institution's certificate: this machine must trust its chain (C3-1
 		).toEqual([]);
 	});
 
+	/** hostPlanRefusals — what scripts/install.ts preflightRefusals asks before the Review offers install. */
+	async function refusalsOf(host: ScratchHost) {
+		const marker = join(host.root, SCRATCH_DIR);
+		return hostPlanRefusals(fresh(FILES).request.planFile, {
+			runner: scratchRunner(marker),
+			fs: hostFs(host.root, join(marker, 'owners.json')),
+			source: host.source,
+			skipPrivilegeCheck: true,
+			sleep: async () => {},
+		});
+	}
+
+	test('an untrusted chain is an ERROR before `yes` — the Review does not offer install, nothing is lost after it (campaign 3c D2)', async () => {
+		const host = machine(FILES);
+		plant(host.root, files(cert, key, other));
+		const refused = await refusalsOf(host);
+		expect(refused.errors.join('\n')).toContain(
+			`its chain ends at CN=${NAME}, which this machine does not trust`,
+		);
+		expect(loggedCommands(host.root).filter((line) => MUTATING.test(line))).toEqual([]);
+		// CONTROL: trusted — nothing refused.
+		plant(host.root, files(cert, key, `${other}${cert}`));
+		expect((await refusalsOf(host)).errors).toEqual([]);
+	});
+
 	test('positive control: the same chain once the machine trusts it passes the System check', async () => {
 		const host = machine(FILES);
 		plant(host.root, files(cert, key, `${other}${cert}`));
@@ -865,7 +980,18 @@ describe('an install-time build of a checkout goes through the shared clean-snap
 		const labels = run.stdout.trim().split('\n');
 		expect(labels).toContain('org.opencontainers.image.version=7.0.0');
 		expect(labels).toContain(`org.opencontainers.image.revision=${head}`);
-		expect(labels).toContain('org.opencontainers.image.source=');
+		// Dédalo's own description, never blank (campaign 3c D6: source/url/description/licenses
+		// were written as "" — a blank label hides the base image's, and says nothing).
+		const value = (key: string) =>
+			labels.find((label) => label.startsWith(`org.opencontainers.image.${key}=`))?.split('=')[1];
+		for (const key of ['title', 'source', 'url', 'description', 'licenses', 'created']) {
+			expect(value(key) ?? '', key).not.toBe('');
+		}
+		const pkg = JSON.parse(readFileSync(join(REPO_ROOT, 'package.json'), 'utf8')) as {
+			license: string;
+		};
+		expect(value('licenses')).toBe(pkg.license);
+		expect(value('source')).toMatch(/^https:\/\//);
 		// a tag-less reference declares no version (never a registry port)
 		const bare = spawnSync(
 			'bash',
@@ -987,6 +1113,11 @@ describe('a served abort says how the stack is removed, per route, and names the
 					: 'docs/install/quickstart.md#removing-the-trial';
 			expect(said).toContain(doc);
 			expect(said).toContain(`docker image rm ${imageRefOf(stackPlanCtx(raw).answers)}`);
+			// campaign 3c D8: PostgreSQL keeps running on its image — the command never names it.
+			const rm = said.match(/docker image rm [^;\n]*/g) ?? [];
+			expect(rm.length).toBeGreaterThan(0);
+			for (const command of rm) expect(command).not.toContain('postgres:18');
+			expect(said).toContain('postgres:18 runs the kept database');
 			expect(said).not.toContain("the database step's undo");
 			// the closing sentence points to the same section
 			expect(
@@ -1017,7 +1148,27 @@ describe('a served abort says how the stack is removed, per route, and names the
 			expect(removal).toContain('docker image rm');
 			expect(removal).toContain('docker builder prune');
 			expect(removal).toContain('~/.cache/dedalo-install');
+			// campaign 3c D7: the bootstrap's `bun install` left 408 MB in the checkout.
+			expect(removal).toContain('rm -rf node_modules');
 		}
+	});
+
+	test('each page quotes the command the closing To-do prints to read the salt back (campaign 3c D3)', () => {
+		for (const [raw, page] of [
+			[DOCKER_LE, 'docs/install/docker.md'],
+			[TRIAL, 'docs/install/quickstart.md'],
+		] as const) {
+			const text = readFileSync(join(REPO_ROOT, page), 'utf8');
+			expect(text, page).toContain(stackSaltCommand(stackPlanCtx(raw)));
+			expect(text, page).toContain('a later `--resume` does not show it again');
+		}
+	});
+
+	test('installer_reference: --image-version is asked for a local build too (campaign 3c D2, its row :145)', () => {
+		const text = readFileSync(join(REPO_ROOT, 'docs/install/installer_reference.md'), 'utf8');
+		const row = text.split('\n').find((line) => line.startsWith('| `--image-version`'));
+		expect(row ?? '').toContain('with `build` the tag the local build gets');
+		expect(row ?? '').toContain('refused where it is typed');
 	});
 });
 

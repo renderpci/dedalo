@@ -473,8 +473,22 @@ describe('a headless run (--resume typed at a terminal) shows the salt on its ow
 			const onTty = plainReporter({ sinks });
 			expect(onTty.io.showOnce?.(['  generated DEDALO_SALT_STRING = abc'])).toBe(true);
 			expect(written.join('')).toContain('generated DEDALO_SALT_STRING = abc');
-			// The closing block repeats where it is kept and that it belongs with the backups (N28).
-			await onTty.finish(complete, { mode: 'resume', rootVerified: false, ending });
+			// The closing block repeats where it is kept and that it belongs with the backups (N28):
+			// a host route in its To-do, WITH the read command (campaign 3c D3) — the engine route
+			// in the generic sentence.
+			const told = [
+				'keep a copy of the generated salt … read it with: docker compose … exec dedalo grep',
+			];
+			await onTty.finish(complete, {
+				mode: 'resume',
+				rootVerified: false,
+				ending: { ...ending, told },
+			});
+			expect(logged.join('\n')).toContain(`  • ${told[0]}`);
+			expect(logged.join('\n')).not.toContain(DONE_TEXT.saltKeep);
+			logged.length = 0;
+			const engine = { ...ending, route: 'engine' as const };
+			await onTty.finish(complete, { mode: 'resume', rootVerified: false, ending: engine });
 			expect(logged.join('\n')).toContain(DONE_TEXT.saltKeep);
 			// Redirected: no one-time display at all (the executors' own rule then applies).
 			written.length = 0;

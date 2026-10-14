@@ -84,10 +84,10 @@ When the install completes, the Done screen shows the outcome and the generated 
 
 The installer's record of this install is in `<checkout>/.dedalo-install/`. If the install stops part-way, fix the cause and run `sh install.sh --route trial --resume`; it continues from the failed step. A resume runs in line mode, not on the full screen, and asks again for the secrets the remaining steps need. See [Resume and abort](installer_reference.md#resuming-an-install-resume).
 
-Whichever run completes the install shows the salt, a `--resume` included. If you did not see it (its output went to a file — the end of the run then prints this command), read it from the `private` volume:
+The salt is shown once, by the first run that has it — the run that completes the install, or the failure screen of an earlier run that got past the engine steps; a later `--resume` does not show it again. Every run that completes the install also lists, under *To do on this host*, the command that reads it back from the `private` volume:
 
 ```shell
-docker compose -f docker-compose.simple.yml -f compose.override.yaml --env-file .dedalo.env exec dedalo grep DEDALO_SALT_STRING /private/.env
+docker compose -f docker-compose.simple.yml -f compose.override.yaml --env-file .dedalo.env exec dedalo grep ^DEDALO_SALT_STRING= /private/.env
 ```
 
 Then continue with [After the install](index.md#after-the-install).
@@ -115,7 +115,7 @@ sh install.sh --route trial --abort --confirm-database dedalo
 
 It removes, in reverse order, only what this install created: its containers, the volumes it created, the files it wrote and its record. The images stay, and the abort names them with the `docker image rm` command that reclaims the space.
 
-A **completed** trial is a live instance, and `--abort` never takes it apart: it removes the engine, nginx and backup containers and leaves PostgreSQL running with the data, and `--resume` starts them again. To remove a finished trial, destroy it yourself — the volumes hold the database, the media and the secrets, so this deletes everything:
+A **completed** trial is a live instance, and `--abort` never takes it apart: it removes the engine, nginx and backup containers and leaves PostgreSQL running with the data, and `--resume` starts them again. Its `docker image rm` line leaves out `postgres:18`, which that container still runs. To remove a finished trial, destroy it yourself — the volumes hold the database, the media and the secrets, so this deletes everything:
 
 ```shell
 docker compose -f docker-compose.simple.yml -f compose.override.yaml --env-file .dedalo.env down -v
@@ -131,9 +131,10 @@ The images and caches stay on the machine until you remove them — several giga
 docker image rm localhost/dedalo:<version> postgres:18 nginx:alpine   # or the official image you pulled
 docker builder prune -af                                             # a local build's cache (about 3 GB)
 rm -rf ~/.cache/dedalo-install ~/.bun/install/cache                  # the installer's Bun and its package cache
+rm -rf node_modules                                                  # the installer's packages in this checkout (about 400 MB)
 ```
 
-`docker image ls` names the Dédalo image the trial ran. Skip the last line if you use Bun for anything else.
+`docker image ls` names the Dédalo image the trial ran. Skip the Bun-cache line if you use Bun for anything else. `node_modules` comes back with the next `sh install.sh`; or delete the whole checkout last.
 
 ## Moving on from a trial
 

@@ -172,7 +172,9 @@ async function runImage(ctx: HostCtx) {
 export function imageLabel(answers: InstallAnswers): string {
 	const ref = imageRefOf(answers);
 	if (imageModeOf(answers) === 'build') {
-		return `build the image ${ref} here, from this checkout's last commit`;
+		// The Review's [stack_image] line says how long (campaign 3c D10: the Image screen
+		// promised it, and only the confirmation after `install` said it).
+		return `build the image ${ref} here, from this checkout's last commit (${BUILD_DURATION})`;
 	}
 	return imageVerifyOf(answers) === 'cosign'
 		? `pull the image ${ref} and verify Dédalo's signature`

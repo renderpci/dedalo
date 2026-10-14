@@ -196,6 +196,14 @@ export interface HostStepDefinition {
 	 */
 	onInterrupt?(ctx: HostCtx): Promise<void>;
 	/**
+	 * Did the start this step ISSUED take effect (`created.start_issued` set,
+	 * `served` not — campaign 3c D1)? MEASURED on the host: the unit ever ran,
+	 * or the engine answered. Asked before an abort decides what it undoes and
+	 * before an interruption's hint says it. Unreadable: true (kept — an abort
+	 * never takes apart an instance that may have served).
+	 */
+	servedProbe?(ctx: HostCtx): Promise<boolean>;
+	/**
 	 * The preflight's refusals, measured and recorded NOWHERE (campaign 3
 	 * C3-23/C3-25): a fresh run asks them before it writes its record — a
 	 * refused host keeps nothing of the attempt — and `--plan` reports them.
@@ -205,8 +213,10 @@ export interface HostStepDefinition {
 	 * At the end of EVERY run that completes the install (fresh, resume, a
 	 * resume that adopted an orphaned child): the engine steps show the
 	 * generated salt once, when no earlier run reached a terminal with it (C3-18).
+	 * Answers the lines for the closing To-do (the salt's read command — campaign
+	 * 3c D3: a run that completed after the salt was shown said nothing of it).
 	 */
-	afterComplete?(ctx: HostCtx): Promise<void>;
+	afterComplete?(ctx: HostCtx): Promise<string[] | undefined>;
 	/**
 	 * Which of `needs` the step's child still needs (campaign 3 C3-51) — asked
 	 * of the child's own record; null when it cannot answer (then all of them).

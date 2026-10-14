@@ -899,7 +899,9 @@ describe('campaign 3: the session’s words and files (C3-36, C3-48, C3-53, C3-6
 		expect(result.kind).toBe('quit');
 		expect(views[0]?.commands).toEqual(['quit']);
 		expect(views[0]?.prompt).toBe('quit, or back to choose another route');
-		expect(base.said).toContain("'retry' is not one of: quit, or back to choose another route");
+		expect(base.said).toContain(
+			"'retry' is not offered here — type quit, or back to choose another route",
+		);
 		// The verdict never asks for a fix that cannot exist (campaign 3b C3-61).
 		expect(views[0]?.lines.join('\n')).toContain(NOTICE_TEXT.systemUnfixable);
 		expect(views[0]?.lines.join('\n')).not.toContain('fix it and re-check');

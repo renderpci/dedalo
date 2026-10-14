@@ -24,6 +24,7 @@ import { userInfo } from 'node:os';
 import type { HostPlanCtx } from '../contract.ts';
 import type { HostFs } from '../fs.ts';
 import type { CommandRunner, RunResult } from '../runner.ts';
+import { listeningPorts } from '../web/clash.ts';
 
 export interface StackFacts {
 	/** The docker CLI (absolute), or null: Docker is not installed. */
@@ -44,6 +45,13 @@ export interface StackFacts {
 	home: string;
 	/** The volumes named `dedalo_*` that exist now. */
 	volumes: string[];
+	/**
+	 * The TCP ports something listens on now, with the program when this
+	 * operator may see it (`ss -ltnpH`); absent/null: not measurable (no ss —
+	 * macOS). The preflight refuses a published port already held (campaign
+	 * 3c D2: a held 443 was found only at stack_up, after the build).
+	 */
+	listening?: { port: string; process: string }[] | null;
 }
 
 /** Where a docker CLI is looked for (distribution packages, Docker's own, the snap). */
@@ -57,6 +65,14 @@ export const DOCKER_CANDIDATES: readonly string[] = Object.freeze([
 export const COSIGN_CANDIDATES: readonly string[] = Object.freeze([
 	'/usr/local/bin/cosign',
 	'/usr/bin/cosign',
+]);
+
+/** Where `ss` is looked for (iproute2 — every Linux the routes support; absent on macOS). */
+export const SS_CANDIDATES: readonly string[] = Object.freeze([
+	'/usr/bin/ss',
+	'/usr/sbin/ss',
+	'/bin/ss',
+	'/sbin/ss',
 ]);
 
 /** The fixed binaries the stack steps run besides docker and cosign. */
@@ -164,6 +180,18 @@ async function daemonFacts(
 	};
 }
 
+/** The listening TCP ports (see StackFacts.listening): null when `ss` is not here or did not answer. */
+async function listeningFacts(
+	runner: CommandRunner,
+	fs: HostFs,
+	home: string,
+): Promise<{ port: string; process: string }[] | null> {
+	const ss = firstPresent(fs, SS_CANDIDATES);
+	if (ss === null) return null;
+	const result = await probe(runner, [ss, '-ltnpH'], home);
+	return result.exitCode === 0 ? listeningPorts(result.stdout) : null;
+}
+
 /** Gather every stack fact (see the header). */
 export async function gatherStackFacts(runner: CommandRunner, fs: HostFs): Promise<StackFacts> {
 	const home = userInfo().homedir;
@@ -173,5 +201,11 @@ export async function gatherStackFacts(runner: CommandRunner, fs: HostFs): Promi
 		docker === null
 			? { composeVersion: null, daemon: false, dockerRoot: null, freeGib: null, volumes: [] }
 			: await daemonFacts(runner, docker, home);
-	return { ...operator, ...daemon, docker, cosign: firstPresent(fs, COSIGN_CANDIDATES) };
+	return {
+		...operator,
+		...daemon,
+		docker,
+		cosign: firstPresent(fs, COSIGN_CANDIDATES),
+		listening: await listeningFacts(runner, fs, home),
+	};
 }

@@ -1517,7 +1517,7 @@ export function routeExecutesHere(route: InstallRoute | null): boolean {
 const HOST_COMMAND_NOTICES: Readonly<Record<InstallRoute, readonly string[]>> = Object.freeze({
 	production: [NOTICE_TEXT.hostCommands, NOTICE_TEXT.reviewRoot],
 	docker: [NOTICE_TEXT.stackCommands],
-	trial: [NOTICE_TEXT.stackCommands],
+	trial: [NOTICE_TEXT.trialCommands],
 	developer: [],
 });
 

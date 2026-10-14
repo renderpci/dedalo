@@ -103,15 +103,24 @@ export interface HostCreated {
 	/** The engine child's private dir (its own state lives in <dir>/install). */
 	engine_run_dir: string | null;
 	/**
-	 * The instance COULD HAVE SERVED (campaign 3 C3-11): set when the step that
-	 * first starts the engine as a server (host_first_boot / stack_up) STARTS —
-	 * before its work, and never cleared, not even by that step's undo. Until
-	 * then no request ever reached it, so an abort may take apart a completed
-	 * engine install too (the child's --abort, attested unserved — and the
-	 * child proves its database unchanged since it sealed). From then on the
-	 * instance is LIVE: an abort keeps it (critique B3).
+	 * The instance HAS SERVED (campaign 3 C3-11; MEASURED since campaign 3c D1):
+	 * production — set once `systemctl start` of the unit returned, or when a
+	 * later run measures that the unit ever ran or the engine answered
+	 * (`servedProbe`); docker/trial — set by stack_up's intent. Never cleared,
+	 * not even by that step's undo. Until then no request ever reached it, so an
+	 * abort may take apart a completed engine install too (the child's --abort,
+	 * attested unserved — and the child proves its database unchanged since it
+	 * sealed). From then on the instance is LIVE: an abort keeps it (critique B3).
 	 */
 	served: boolean;
+	/**
+	 * host_first_boot ISSUED the start (checkpointed right before `systemctl
+	 * start`): whether it took effect is not known until measured — an abort or
+	 * an interruption's hint asks the step's `servedProbe` (campaign 3c D1: a
+	 * Ctrl-C 7 ms into the step, the unit never started, was kept as "served").
+	 * Absent on a record written before it existed: nothing issued.
+	 */
+	start_issued?: boolean;
 	/** The generated salt reached a TERMINAL (the host owns the one-time display — C3-18). */
 	salt_shown: boolean;
 	/** docker/trial only. */
@@ -145,6 +154,7 @@ export function emptyHostCreated(): HostCreated {
 		backup_timer: false,
 		engine_run_dir: null,
 		served: false,
+		start_issued: false,
 		salt_shown: false,
 	};
 }

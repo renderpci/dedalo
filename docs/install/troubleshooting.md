@@ -154,7 +154,7 @@ A green socket and a red site means the web server cannot reach the socket (its 
 
 ### Docker and trial refusals
 
-`stack_preflight` refuses before anything is pulled or written:
+`stack_preflight` refuses before anything is pulled or written. The interactive installer measures the same check on the Review, before `yes`, and lists each refusal there as an error (install is not offered until it is fixed); a refusal after `yes` keeps your answers — see [Installer reference › Interactive mode](installer_reference.md#interactive-mode):
 
 | Refusal | Fix |
 | --- | --- |
@@ -164,7 +164,8 @@ A green socket and a red site means the web server cannot reach the socket (its 
 | `only <n> GiB free under <docker root>` | free space (`docker system prune -af`) or move Docker's root to a bigger disk |
 | `this machine already has a Dédalo instance (volume dedalo_private)` | keep that instance, or destroy it first (`… down -v` — it deletes its data) |
 | `.dedalo.env` or `compose.override.yaml` already exists | files of an earlier install: remove them if that install is gone |
-| `image version <v> is not this installer's` | use the installer of the matching release |
+| `image version <v> is not this installer's` | leave **Image version** empty (or give the installer's own `-dev` tag), or use the installer of the matching release. The Image screen refuses the value itself |
+| `port <n> is already in use by <program>` | stop that program, or choose another HTTP / HTTPS port (Containers screen, `--http-port` / `--https-port`). Measured with `ss`; where `ss` is missing (macOS) `stack_up` names the port instead: `failed to bind host port … address already in use` |
 | `cosign is not installed` | install `cosign`, or build the image here (`--image-source build`) |
 | `<repository> is not an official Dédalo registry` | the official source accepts only the official registries; for a registry of your own use `--image-source custom` |
 | `docker-compose.yml is not in <directory>` (or `docker-compose.simple.yml`) | run `install.sh` from a Dédalo checkout ([Get Dédalo](index.md#get-dedalo)) |
@@ -253,7 +254,7 @@ Any failure after the install recorded its plan prints how to continue:
   Or undo this install:        sudo sh install.sh --route production --instance <i> --abort --confirm-database dedalo_<i>  (deletes the database this install created)
 ```
 
-(`sh install.sh --route docker …` on the stack routes; `bun run scripts/install.ts --resume` on the Developer route.) Once the instance has **served** — production from `host_first_boot` on, docker and trial from `stack_up` on — the last line reads `Or partly undo it: … --abort  (the instance has served: …)` instead: an abort then keeps the instance. A resume runs in plain line mode and asks again only for the secrets a remaining step still needs. The rules are in the [installer reference](installer_reference.md#resuming-an-install-resume); the refusals you can meet:
+(`sh install.sh --route docker …` on the stack routes; `bun run scripts/install.ts --resume` on the Developer route.) Once the instance has **served** — production once its unit has run (`host_first_boot` started it), docker and trial from `stack_up` on — the last line reads `Or partly undo it: … --abort  (the instance has served: …)` instead: an abort then keeps the instance. A resume runs in plain line mode and asks again only for the secrets a remaining step still needs. The rules are in the [installer reference](installer_reference.md#resuming-an-install-resume); the refusals you can meet:
 
 | Refusal | Cause | Fix |
 | --- | --- | --- |
@@ -271,7 +272,7 @@ Any failure after the install recorded its plan prints how to continue:
 
 What an abort takes depends on whether the instance has **served**:
 
-- **Never served** (it stopped before `host_first_boot` on production, before `stack_up` on docker and trial — even after the engine steps completed): the abort removes everything this install created, its database, its user and its media tree included, and says how many steps it undid. The engine's own steps are undone only when its database still holds exactly the rows the install left.
+- **Never served** (on production its unit never ran: it stopped before `host_first_boot`, or inside it before the start took effect; before `stack_up` on docker and trial — even after the engine steps completed): the abort removes everything this install created, its database, its user and its media tree included, and says how many steps it undid. The engine's own steps are undone only when its database still holds exactly the rows the install left.
 - **Served**: the abort answers *install partly undone* and undoes only the steps after the engine — on production the site, the certificate, the units' start and the timers; on docker and trial the running stack (`stack_up`). The instance — its user, database and code, or its containers and volumes — is kept, and `--resume` puts the undone steps back. A second abort says *nothing was undone*. Removing a served instance is done by hand: [Removing an instance](multi_instance.md#removing-an-instance), [Removing the trial](quickstart.md#removing-the-trial).
 
 ## Booting

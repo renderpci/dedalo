@@ -410,6 +410,8 @@ const TRIPWIRES = [
 	'test/unit/install_host_identity_native.test.ts',
 	'test/unit/install_stack_steps_native.test.ts',
 	'test/unit/install_stack_nginx_native.test.ts',
+	'test/unit/install_flow_campaign3c_native.test.ts',
+	'test/unit/install_production_docs_native.test.ts',
 	'test/unit/test_tooling_socket_native.test.ts',
 	'test/unit/install_bootstrap_sh.test.ts',
 	'test/unit/term_by_tipo_label_guard.test.ts',

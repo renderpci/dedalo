@@ -44,6 +44,7 @@ import type { OntologyCatalog } from './ontology_choice.ts';
 import { installPrivateDir } from './paths.ts';
 import { type Secrets, writeFileAtomic } from './run_files_core.ts';
 import type { ProbeOutcome } from './screen_model.ts';
+import { DONE_TEXT } from './screen_text.ts';
 
 /** The terminal as scripts/install.ts measures it (the only place that reads process state). */
 export interface TerminalCaps {
@@ -317,4 +318,36 @@ export function writeAnswersFile(path: string, answers: InstallAnswers): string 
 		return `--write-answers: ${path}: ${(error as Error).message}`;
 	}
 	return null;
+}
+
+// ── a refusal after the typed yes keeps the answers (campaign 3c D2) ─────────
+
+/**
+ * The lines that KEEP an interactive run's answers when the run is refused
+ * after the typed `yes` (nothing was changed): written as an answers file at
+ * `path` (by `write` — writeAnswersFile), and the command that runs them
+ * again; a file that cannot be written leaves them as the equivalent command
+ * line (`sameAs` — screen_model.ts sameAsCommand). One mechanism for every
+ * route: the run's own preflight refusal and a plan that changed since the
+ * Review (scripts/install.ts).
+ */
+export function keptAnswersLines(
+	answers: InstallAnswers,
+	path: string,
+	sameAs: (answers: InstallAnswers) => string,
+	write: (path: string, answers: InstallAnswers) => string | null = writeAnswersFile,
+): string[] {
+	const refusal = write(path, answers);
+	return refusal === null
+		? DONE_TEXT.keptAnswers(path, answers.route)
+		: DONE_TEXT.keptAsCommand(refusal, sameAs(answers));
+}
+
+/** A REFUSED outcome (nothing changed) carries the kept answers' lines in its hint; any other is as is. */
+export async function withKeptAnswers<T extends { result: string; hint: readonly string[] }>(
+	outcome: T,
+	keep: (() => Promise<string[]>) | undefined,
+): Promise<T> {
+	if (outcome.result !== 'refused' || keep === undefined) return outcome;
+	return { ...outcome, hint: [...outcome.hint, ...(await keep())] };
 }

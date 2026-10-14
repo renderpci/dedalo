@@ -325,6 +325,6 @@ export const stack_up: HostStepDefinition = {
 		);
 		// The instance has served (intent above): the database step is never undone after this
 		// one, so say how the operator removes it — and which images stay (campaign 3b N32, C3-52).
-		return `stopped and removed ${services.join(', ')} — PostgreSQL keeps running with the data, and --resume starts them again; to remove the instance entirely, see ${removalDoc(ctx)}; ${keptImages(ctx)}`;
+		return `stopped and removed ${services.join(', ')} — PostgreSQL keeps running with the data, and --resume starts them again; to remove the instance entirely, see ${removalDoc(ctx)}; ${keptImages(ctx, true)}`;
 	},
 };

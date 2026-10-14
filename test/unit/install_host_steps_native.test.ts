@@ -79,7 +79,10 @@ import {
 	abortRequest,
 	engineAnswers,
 } from '../../src/core/install/host/production/engine_delegate.ts';
-import { REFUSED_BOOT_EXIT } from '../../src/core/install/host/production/first_boot.ts';
+import {
+	REFUSED_BOOT_EXIT,
+	unitEverRan,
+} from '../../src/core/install/host/production/first_boot.ts';
 import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
 import {
 	EXISTS_NOT_CREATED,
@@ -134,6 +137,8 @@ import {
 	scratchFilePaths,
 	sourceFiles,
 	systemCaBundle,
+	UNIT_NEVER_RAN,
+	UNIT_RAN,
 	UNSUPPORTED_OS_RELEASE,
 	variantName,
 } from '../helpers/install_host_scratch.ts';
@@ -329,10 +334,12 @@ describe('every production variant runs end to end: Review ≡ run, files landed
 			expect(mutatingReview(ctx).length).toBeGreaterThan(20);
 			// (b) what landed.
 			expect(landedProblems(host, ctx)).toEqual([]);
-			// The firewall is told, never changed.
+			// The firewall is checked, never changed: said on the preflight's line, and told
+			// (the closing To-do) only when there is something to do — campaign 3c D16.
+			expect(first.transcript.lines.join('\n')).toContain('firewall (checked, not changed)');
 			expect(
 				first.outcome.told.some((line) => line.startsWith('firewall (checked, not changed)')),
-			).toBe(true);
+			).toBe(false);
 			expect(
 				log.some((line) => /firewall-cmd --(add|remove)|ufw (allow|deny|enable)/.test(line)),
 			).toBe(false);
@@ -563,6 +570,14 @@ describe('abort undoes only what this install created (e)', () => {
 		expect(aborted.outcome.keptLive).toBe(false);
 		const log = loggedCommands(host.root);
 		expect(log).toContain(`/usr/sbin/userdel ded_${INSTANCE}`);
+		// What the user left in the shared temp dirs goes first, AS the user (campaign 3c
+		// D12: Bun's /tmp/bun-node-<hash>/ and .<hash>-0.hm outlived the account as files of
+		// a bare uid — the real-host proof is the drill's /tmp tmpfs + `find -nouser` leg).
+		const sweep = log.indexOf(
+			`${asService()} /usr/bin/find /tmp /var/tmp -xdev -mindepth 1 -maxdepth 1 -user ded_${INSTANCE} -exec rm -rf -- {} +`,
+		);
+		expect(sweep).toBeGreaterThan(-1);
+		expect(sweep).toBeLessThan(log.indexOf(`/usr/sbin/userdel ded_${INSTANCE}`));
 		// The folder this install created goes with the user (no file left to a reusable uid):
 		// emptied BY THE SERVICE USER (root never works by path inside a tree another account
 		// controls — critique B1), then removed; never filled by useradd's skeleton.
@@ -579,6 +594,10 @@ describe('abort undoes only what this install created (e)', () => {
 		expect(install?.env.BUN_INSTALL_CACHE_DIR?.startsWith(`/home/ded_${INSTANCE}/dedalo/`)).toBe(
 			true,
 		);
+		// Bun's temporary files in the tree too (campaign 3c D12): a /tmp on another
+		// filesystem got a `.<hash>-0.hm` of the service user, orphaned by --abort's userdel
+		// (the real-host proof: the drill's /tmp tmpfs + `find -nouser` leg).
+		expect(install?.env.TMPDIR).toBe(`/home/ded_${INSTANCE}/dedalo`);
 		expect(log).toContain(
 			`/usr/sbin/runuser -u ded_${INSTANCE} -g ded_${INSTANCE} -- /usr/bin/rm -rf /home/ded_${INSTANCE}/dedalo/.bun-install-cache`,
 		);
@@ -1260,10 +1279,33 @@ describe('what the operator must do is on the Review BEFORE the install (campaig
 			const { todo } = await todoOn(UBUNTU_NGINX_LE, { responses: FIREWALLD(services, ports) });
 			expect(todo, `${services} | ${ports}`).toEqual([]);
 		}
-		const { outcome } = await freshOn(UBUNTU_NGINX_LE, { responses: FIREWALLD('ssh http https') });
-		expect(outcome.told.join('\n')).toContain(
-			'firewalld (default zone public) allows port 80 and 443',
+		// Nothing to do: said once on the preflight's own line, never under To do (campaign 3c D16).
+		const host = scratchHost(UBUNTU_NGINX_LE, { responses: FIREWALLD('ssh http https') });
+		const { planFile } = productionPlan(UBUNTU_NGINX_LE);
+		const { outcome, transcript } = await runHost(host, freshRequest(planFile));
+		expect(outcome.result).toBe('complete');
+		expect(transcript.lines.join('\n')).toContain(
+			'firewall (checked, not changed): firewalld (default zone public) allows port 80 and 443',
 		);
+		expect(outcome.told.join('\n')).not.toContain('firewall');
+	});
+
+	test('ufw active and allowing 80/443: not under To do; ufw closed: told with its command (campaign 3c D16)', async () => {
+		const open = UFW('80,443/tcp                 ALLOW       Anywhere\n');
+		const allowed = await runHost(
+			scratchHost(UBUNTU_NGINX_LE, open),
+			freshRequest(productionPlan(UBUNTU_NGINX_LE).planFile),
+		);
+		expect(allowed.outcome.result).toBe('complete');
+		expect(allowed.outcome.told.join('\n')).not.toContain('firewall');
+		expect(allowed.transcript.lines.join('\n')).toContain('ufw (active) allows port 80 and 443');
+		// CONTROL: closed — the closing To-do carries the command.
+		const closed = await runHost(
+			scratchHost(UBUNTU_NGINX_LE, UFW('')),
+			freshRequest(productionPlan(UBUNTU_NGINX_LE).planFile),
+		);
+		expect(closed.outcome.result).toBe('complete');
+		expect(closed.outcome.told.join('\n')).toContain('ufw allow 80,443/tcp');
 	});
 
 	test('only https missing: only https is opened', async () => {
@@ -1826,6 +1868,99 @@ describe('an instance is LIVE once it could have served — before that, --abort
 		expect(hint).toContain('Or partly undo it');
 		expect(hint).toContain('the instance has served: its user, database and code are kept');
 		expect(hint).not.toContain('--confirm-database');
+	});
+});
+
+/**
+ * SERVED IS MEASURED (campaign 3c D1): the VM run's SIGINT landed 7 ms into
+ * host_first_boot — the start issued, the unit never ran (no journal, no
+ * ActiveEnterTimestamp) — and the hint and --abort kept user, database and
+ * code as "served". The start fails here the same way: issued, never taken.
+ */
+describe('served = the unit ran or the engine answered, never "the start was issued" (campaign 3c D1)', () => {
+	const START = `/usr/bin/systemctl start dedalo-ts@${INSTANCE}.service`;
+	const SHOW = `/usr/bin/systemctl show -p ExecMainStartTimestampMonotonic -p ActiveEnterTimestampMonotonic dedalo-ts@${INSTANCE}.service`;
+	const SOCKET_HEALTH = '/usr/bin/curl -s -o /dev/null -w %{http_code} --max-time 10 --unix-socket';
+	const startTaken = (ran: boolean): RecordedResponse[] => [
+		{ match: START, exit: 1, stderr: `Job for dedalo-ts@${INSTANCE}.service canceled.` },
+		{ match: SOCKET_HEALTH, exit: 7, stdout: '000' },
+		{ match: SHOW, stdout: ran ? UNIT_RAN : UNIT_NEVER_RAN },
+	];
+
+	test('the start issued, the unit never ran: the hint offers the full undo, and --abort removes the instance whole', async () => {
+		const { host, plan, outcome } = await freshOn(UBUNTU_NGINX_LE, {
+			responses: startTaken(false),
+		});
+		expect(outcome.failedStep).toBe('host_first_boot');
+		expect(outcome.hint.join('\n')).toContain(`--abort --confirm-database ${DB}`);
+		expect(outcome.hint.join('\n')).not.toContain('has served');
+		const aborted = await runHost(host, laterRequest('abort', plan, DB));
+		expect(aborted.outcome.message).toBeNull();
+		expect(aborted.outcome.keptLive).toBe(false);
+		expect(aborted.outcome.undone).toContain('host_engine');
+		expect(aborted.outcome.undone).toContain('host_identity');
+		expect(aborted.transcript.lines.join('\n')).not.toContain('has served');
+		expect(loggedCommands(host.root)).toContain(`/usr/sbin/userdel ded_${INSTANCE}`);
+		expect(readPlanFile(join(host.root, RUN_DIR))).toBeNull();
+	});
+
+	test('CONTROL — the start "failed" but systemd ran the unit: served, measured; the abort keeps the instance', async () => {
+		const { host, plan, outcome } = await freshOn(UBUNTU_NGINX_LE, {
+			responses: startTaken(true),
+		});
+		expect(outcome.failedStep).toBe('host_first_boot');
+		expect(outcome.hint.join('\n')).toContain(
+			'the instance has served: its user, database and code are kept',
+		);
+		const aborted = await runHost(host, laterRequest('abort', plan, DB));
+		expect(aborted.outcome.keptLive).toBe(true);
+		expect(aborted.outcome.undone).not.toContain('host_engine');
+		expect(loggedCommands(host.root)).not.toContain(`/usr/sbin/userdel ded_${INSTANCE}`);
+		// Measured once, recorded: the record says served from now on.
+		expect(readStateFile(join(host.root, RUN_DIR))?.created.host?.served).toBe(true);
+	});
+
+	test("systemd's start stamps: zero = never ran, non-zero = ran, unreadable = unknown (kept as served)", () => {
+		expect(unitEverRan(UNIT_NEVER_RAN)).toBe(false);
+		expect(unitEverRan(UNIT_RAN)).toBe(true);
+		expect(
+			unitEverRan('ExecMainStartTimestampMonotonic=0\nActiveEnterTimestampMonotonic=77\n'),
+		).toBe(true);
+		expect(unitEverRan('')).toBeNull();
+	});
+});
+
+describe('the Review refuses Apache beside a running nginx BEFORE `yes` (campaign 3c D2)', () => {
+	test('hostPlanRefusals — what the Review asks before it offers install — names the clash; nginx chosen: nothing', async () => {
+		const listening = ['80', '443']
+			.map((port) => `LISTEN 0 511 0.0.0.0:${port} 0.0.0.0:* users:(("nginx",pid=812,fd=6))\n`)
+			.join('');
+		const running = {
+			files: NGINX_PRESENT,
+			responses: [
+				{ match: '/usr/sbin/nginx -v', stderr: 'nginx version: nginx/1.26.3\n' },
+				{ match: '/usr/sbin/nginx -T', stdout: '' },
+				{ match: '/usr/bin/ss -ltnpH', stdout: listening },
+			],
+		};
+		const apache = await hostPlanRefusals(
+			productionPlan(DEBIAN_APACHE_LE).planFile,
+			hostOptions(scratchHost(DEBIAN_APACHE_LE, running)),
+		);
+		const errors = apache.errors.join('\n');
+		expect(errors).toContain('port 80 is held by nginx — this install configures apache');
+		expect(errors).toContain(
+			'nginx is installed on this host and this run would install apache beside it',
+		);
+		const debianNginx = HOST_VARIANTS.find(
+			(v) => v.os === DEBIAN_APACHE_LE.os && v.web === 'nginx' && v.tls === DEBIAN_APACHE_LE.tls,
+		) as HostVariant;
+		const nginx = await hostPlanRefusals(
+			productionPlan(debianNginx).planFile,
+			hostOptions(scratchHost(debianNginx, running)),
+		);
+		expect(nginx.errors.join('\n')).not.toContain('is held by');
+		expect(nginx.errors.join('\n')).not.toContain('beside it');
 	});
 });
 

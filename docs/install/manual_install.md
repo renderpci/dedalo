@@ -100,7 +100,7 @@ MAP_OWNER=false
 
 `PIN`, the Bun version, is set in [`host_runtime`](#manual-host_runtime) from the release itself.
 
-**Files.** The installer writes its files from templates, and so does this page: each file below is printed with `@@NAME@@` placeholders, and the `render` function fills them in from the variables. Define it once, after `PIN` is set:
+**Files.** The installer writes its files from templates, and so does this page: each file below is printed with `@@NAME@@` placeholders, and the `render` function fills them in from the variables. Define it now, in this same shell: it reads the variables each time it runs, so `PIN`, set later in [`host_runtime`](#manual-host_runtime), is filled in too. The unit loop in [`host_units`](#manual-host_units) stops when `render` is not defined, rather than write empty files:
 
 ```shell
 render() {
@@ -304,7 +304,7 @@ PIN=$(cat "$SRC/.bun-version")
 /usr/bin/git -C "$REL/tree" checkout "v$V"
 ```
 
-The archive step below leaves `.git` out of the release. The archive holds the tree either at its top level or in one top-level directory; `SRC` is wherever `scripts/install.ts` is. Keep `$REL` until [`host_selinux`](#manual-host_selinux): the units and the policy module are copied from it, never from the instance's own tree.
+The archive step below leaves `.git` out of the release, so an instance built from a checkout reports its version as `<version>.dev`, with no build date, on `/health`, the login page and the Maintenance panel: only a published archive carries the build stamp. It runs the same code. `install_digest` on `/health` is `null` on every new install, the installer's included: it names the archive an in-app code update installed, and none has run yet. The archive holds the tree either at its top level or in one top-level directory; `SRC` is wherever `scripts/install.ts` is. Keep `$REL` until [`host_selinux`](#manual-host_selinux): the units and the policy module are copied from it, never from the instance's own tree.
 
 **Bun**, at the release's pin, root-owned. It comes only from a zip whose sha256 is the release's committed row in `.bun-sha256`, checked before it is unpacked:
 
@@ -335,12 +335,12 @@ On a host where another instance already runs this pin, `/opt/dedalo/bun/$PIN/bu
 $RU /usr/bin/install -d -m 0750 "$DIR/dedalo"
 $RU /usr/bin/tar -xf "$REL/release.tar" -C "$DIR/dedalo" --no-same-owner --no-overwrite-dir
 cd "$DIR/dedalo"
-BUN_INSTALL_CACHE_DIR="$DIR/dedalo/.bun-install-cache" \
+BUN_INSTALL_CACHE_DIR="$DIR/dedalo/.bun-install-cache" TMPDIR="$DIR/dedalo" \
   $RU /usr/bin/env HOME="$DIR" "/opt/dedalo/bun/$PIN/bun" install --frozen-lockfile --production
 $RU /usr/bin/rm -rf "$DIR/dedalo/.bun-install-cache"
 ```
 
-The `cd` matters: `runuser` keeps the directory you are standing in. `--no-overwrite-dir` keeps `$DIR/dedalo` at `0750`: the archive's own `./` entry would otherwise give it the source's `0755`. `--frozen-lockfile` refuses any dependency tree other than the tested one, and `--production` leaves out the test harness and the linters. The package cache lives inside the tree and is removed straight after. `runuser` resets `HOME` to the account's own home, so every Bun command on this page sets `HOME` to the install folder, as the installer does: nothing is left in the account's home.
+The `cd` matters: `runuser` keeps the directory you are standing in. `--no-overwrite-dir` keeps `$DIR/dedalo` at `0750`: the archive's own `./` entry would otherwise give it the source's `0755`. `--frozen-lockfile` refuses any dependency tree other than the tested one, and `--production` leaves out the test harness and the linters. The package cache lives inside the tree and is removed straight after. `TMPDIR` keeps Bun's temporary files inside the tree too: with `/tmp` on another filesystem, Bun leaves an empty `/tmp/.<hash>-0.hm` owned by the service user, which would outlive the account if the instance is ever removed. `runuser` resets `HOME` to the account's own home, so every Bun command on this page sets `HOME` to the install folder, as the installer does: nothing is left in the account's home.
 
 **The root-run scripts**, copied root-owned, byte for byte, outside the code tree. A code update moves the whole tree aside, and the rollback has to work exactly when the tree is missing:
 
@@ -411,7 +411,7 @@ The run prints the generated `DEDALO_SALT_STRING` **once**. Keep it with your ba
 
 ```shell
 cd "$DIR/dedalo" && $RU /usr/bin/env HOME="$DIR" "/opt/dedalo/bun/$PIN/bun" run "$DIR/dedalo/scripts/install.ts" --status --json
-# {"exists":true,"outcome":"complete","failed_step":null}
+# {"exists":true,"outcome":"complete","failed_step":null,"needs":[],"salt_generated":true,"running":null}
 ```
 
 If it fails, fix the cause and run the same command with `--resume`. A database it filled is undone with `--abort --confirm-database dedalo_<i>`, which resets it to empty and refuses a completed install.
@@ -424,15 +424,17 @@ Installer: [Production › `host_units`](production.md#host_units-the-systemd-un
 
 ```shell
 for unit in dedalo-ts@.service dedalo-ts-restart@.service dedalo-ts-rollback@.service dedalo-ts-watchdog@.service dedalo-ts-watchdog@.timer dedalo-backup@.service dedalo-backup@.timer dedalo-backup-alert@.service dedalo-backup-site-builder@.service; do
+  text=$(render "$SRC/deploy/systemd/$unit") && [ -n "$text" ] ||
+    { echo "STOP: nothing rendered for $unit — define render first (see Before you start)"; break; }
   if [ -e "/etc/systemd/system/$unit" ]; then
-    render "$SRC/deploy/systemd/$unit" | cmp - "/etc/systemd/system/$unit" || echo "STOP: $unit differs"
+    printf '%s\n' "$text" | cmp - "/etc/systemd/system/$unit" || echo "STOP: $unit differs"
   else
-    render "$SRC/deploy/systemd/$unit" > "/etc/systemd/system/$unit"
+    printf '%s\n' "$text" > "/etc/systemd/system/$unit"
   fi
 done
 ```
 
-The templates name no user and no path of an instance. Each instance-run template runs `/bin/false` until its drop-in gives it a command, so a template without its drop-in never runs anything as root.
+Nothing is written when `render` is missing or renders nothing: an empty template would otherwise stay behind, and a second run of the loop would report it as *differs*. The templates name no user and no path of an instance. Each instance-run template runs `/bin/false` until its drop-in gives it a command, so a template without its drop-in never runs anything as root.
 
 **The drop-ins** are this instance's own. Each one goes to `/etc/systemd/system/<unit>@<i>.<type>.d/10-dedalo-install.conf`. The server: the account, the folder, the pinned runtime, the client publish directory.
 

@@ -263,13 +263,22 @@ dedalo_no_checkout_sentence() {
 	printf '%s is not a git checkout: a local image is built from a clean snapshot of a git commit (git archive), and a release tree has no commit to snapshot (it is its own build context only at install) — pull the image instead (DEDALO_IMAGE_MODE=pull), or install from a git checkout' "${1-this directory}"
 }
 
+# What a local build says it is (dedalo_image_labels): the project, not the checkout.
+DEDALO_IMAGE_SOURCE='https://github.com/dedalia-org/dedalo'
+DEDALO_IMAGE_URL='https://dedalo.dev'
+DEDALO_IMAGE_DESCRIPTION='Dédalo — cultural heritage management system (engine, client and tools)'
+DEDALO_IMAGE_LICENSES='AGPL-3.0-only'
+
 # dedalo_image_labels CHECKOUT TAG — the OCI labels of a local build, one
 # `key=value` per line (campaign 3b N1): without them the image inherits the
 # base image's (`org.opencontainers.image.version=1.4.2-debian`, bun's source and
 # revision), and the version label is what the updater and the installer read as
 # "which release is this". version = TAG's tag part (empty when TAG has none),
 # revision and created = the snapshotted commit; source, url, description and
-# licenses blanked — a local build has no published source to name.
+# licenses = Dédalo's own (DEDALO_IMAGE_SOURCE …), never the base image's and
+# never blank (campaign 3c D6: a local build carried four empty labels). source
+# is the project's repository — the published source a local build's revision
+# belongs to; licenses = package.json's (gate: install_stack_steps_native).
 dedalo_image_labels() {
 	local checkout="${1-}" tag="${2-}" version='' meta=''
 	version="${tag##*:}"
@@ -281,10 +290,10 @@ dedalo_image_labels() {
 		"org.opencontainers.image.version=$version" \
 		"org.opencontainers.image.revision=${meta%% *}" \
 		"org.opencontainers.image.created=${meta#* }" \
-		'org.opencontainers.image.source=' \
-		'org.opencontainers.image.url=' \
-		'org.opencontainers.image.description=' \
-		'org.opencontainers.image.licenses='
+		"org.opencontainers.image.source=$DEDALO_IMAGE_SOURCE" \
+		"org.opencontainers.image.url=$DEDALO_IMAGE_URL" \
+		"org.opencontainers.image.description=$DEDALO_IMAGE_DESCRIPTION" \
+		"org.opencontainers.image.licenses=$DEDALO_IMAGE_LICENSES"
 }
 
 # dedalo_image_build CHECKOUT TAG [DOCKER] — `DOCKER build --tag TAG` of the

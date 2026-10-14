@@ -136,6 +136,43 @@ export async function engineDomainProblem(ctx: HostCtx): Promise<string | null> 
 	return `${serverUnit(ctx)} runs as ${label || 'an unknown label'}, not ${ENGINE_DOMAIN} — the web server cannot reach its socket (ls -Z ${ctx.paths.bun}: dedalo_engine_exec_t expected; restorecon -F it, then systemctl restart ${serverUnit(ctx)})`;
 }
 
+/** The unit's start stamps: non-zero once systemd ever ran it (this boot). */
+export function unitRanProbe(ctx: HostPlanCtx): ExecCommand {
+	return exec(
+		ctx,
+		'systemctl',
+		[
+			'show',
+			'-p',
+			'ExecMainStartTimestampMonotonic',
+			'-p',
+			'ActiveEnterTimestampMonotonic',
+			serverUnit(ctx),
+		],
+		`${serverUnit(ctx)} ever started`,
+		{ mutates: false },
+	);
+}
+
+/** Did the unit ever run, per `unitRanProbe`'s output (null: unreadable)? */
+export function unitEverRan(text: string): boolean | null {
+	const stamps = [
+		...text.matchAll(/^(?:ExecMainStartTimestampMonotonic|ActiveEnterTimestampMonotonic)=(\d+)$/gm),
+	].map((match) => Number(match[1]));
+	return stamps.length === 0 ? null : stamps.some((stamp) => stamp > 0);
+}
+
+/**
+ * SERVED, MEASURED (campaign 3c D1): the engine answers, or systemd ever ran
+ * the unit. Unreadable: served (an abort keeps what may have served). A
+ * reboot clears the stamps, but the unit is enabled by then: a boot that
+ * started it stamps it again.
+ */
+async function servedMeasured(ctx: HostCtx): Promise<boolean> {
+	if (await healthy(ctx)) return true;
+	return unitEverRan(await probeText(ctx, unitRanProbe(ctx))) ?? true;
+}
+
 async function migrated(ctx: HostCtx): Promise<boolean> {
 	return (await pendingMigrations(ctx))?.length === 0;
 }
@@ -198,24 +235,25 @@ export const host_first_boot: HostStepDefinition = {
 		);
 	},
 	run: async (ctx) => {
-		// SERVED = the start was ISSUED (campaign 3b N9), checkpointed BEFORE it, so a kill
-		// at any later instant still finds it. Not the step's start: host_units and
-		// host_selinux take milliseconds, so a Ctrl-C "after the engine" nearly always
-		// landed here before `systemctl start` — and an abort then kept a never-started
-		// instance (user, database, code) for removal by hand. From the start on, the
-		// instance may have served: an abort keeps it (C3-11).
-		ctx.created.served = true;
+		// The start is ISSUED (checkpointed before it, so a kill at any later instant finds
+		// it); whether it took effect is MEASURED, never assumed (campaign 3c D1: a Ctrl-C
+		// 7 ms into this step, the unit never started, was kept as a served instance). Once
+		// `systemctl start` returned the unit ran: SERVED — an abort keeps it (C3-11).
+		ctx.created.start_issued = true;
 		ctx.save();
 		await executeCommands(
 			[systemctl(ctx, 'start', [serverUnit(ctx)], `start ${serverUnit(ctx)}`)],
 			ctx,
 		);
+		ctx.created.served = true;
+		ctx.save();
 		await pollUntil(ctx, () => healthyOrRefused(ctx), 'the engine answering /health');
 		await pollUntil(ctx, () => migrated(ctx), 'every migration recorded');
 		const domain = await engineDomainProblem(ctx);
 		if (domain !== null) hostRefuse('install.step_failed', domain);
 		return ran(`${serverUnit(ctx)} is up; migrations complete`);
 	},
+	servedProbe: servedMeasured,
 	undo: async (ctx) => {
 		await executeCommands(
 			[

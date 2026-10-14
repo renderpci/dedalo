@@ -212,10 +212,17 @@ function releaseCommands(ctx: HostPlanCtx): HostCommand[] {
 			argv: [paths.bun, 'install', '--frozen-lockfile', '--production'],
 			as: 'instance',
 			label:
-				'install the dependencies (as the service user; the package cache inside the tree, removed next)',
+				'install the dependencies (as the service user; the package cache and its temporary files inside the tree, the cache removed next)',
 			mutates: true,
 			cwd: paths.tree,
-			env: { HOME: paths.instanceDir, BUN_INSTALL_CACHE_DIR: installCache(ctx) },
+			// TMPDIR in the tree (campaign 3c D12): with /tmp on another filesystem than the
+			// cache, Bun leaves a `/tmp/.<hash>-0.hm` of the service user there — an orphan
+			// of a removed uid once --abort deletes the account (`find / -nouser`).
+			env: {
+				HOME: paths.instanceDir,
+				BUN_INSTALL_CACHE_DIR: installCache(ctx),
+				TMPDIR: paths.tree,
+			},
 			timeoutMs: 20 * 60_000,
 		},
 		exec(ctx, 'rm', ['-rf', installCache(ctx)], 'remove the package cache (as the service user)', {

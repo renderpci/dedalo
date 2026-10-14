@@ -341,17 +341,27 @@ async function runPreflight(
 	const { facts } = verdict;
 	const planCtx = verdict.planCtx as HostPlanCtx;
 	ctx.state.preflight.host = { facts, commands_digest: digest(facts) };
+	const firewall = firewallReport(planCtx);
 	return ran(
-		`${facts.osName}, ${facts.web.kind}${facts.web.version === null ? ' (to be installed)' : ` ${facts.web.version}`}`,
+		`${facts.osName}, ${facts.web.kind}${facts.web.version === null ? ' (to be installed)' : ` ${facts.web.version}`}${firewall.said}`,
 		{
 			warnings: verdict.warnings,
-			told: [
-				`firewall (checked, not changed): ${webFirewall(planCtx).line}`,
-				...apacheModulesTodo(planCtx),
-				...identityOf(planCtx).told,
-			],
+			told: [...firewall.told, ...apacheModulesTodo(planCtx), ...identityOf(planCtx).told],
 		},
 	);
+}
+
+/**
+ * The firewall's verdict, told only when there is something to do (campaign
+ * 3c D16: "ufw (active) allows port 80 and 443" sat under To do): closed or
+ * unreadable → the closing To-do; otherwise said once on the step's own line.
+ */
+export function firewallReport(ctx: HostPlanCtx): { told: string[]; said: string } {
+	const verdict = webFirewall(ctx);
+	const line = `firewall (checked, not changed): ${verdict.line}`;
+	return verdict.state === 'closed' || verdict.state === 'unknown'
+		? { told: [line], said: '' }
+		: { told: [], said: `; ${line}` };
 }
 
 /**

@@ -463,6 +463,45 @@ async function leftOfUser(ctx: HostCtx, user: string): Promise<string> {
 	return text.trim();
 }
 
+/** The shared temporary directories a process of the service user writes into. */
+export const SHARED_TMP_DIRS = ['/tmp', '/var/tmp'] as const;
+
+/**
+ * What the service user left at the top of the shared temporary directories,
+ * removed AS THE USER before userdel (campaign 3c D12): Bun's own leftovers
+ * (`/tmp/bun-node-<hash>/`, `/tmp/.<hash>-0.hm`) outlived the account as
+ * files of a bare uid (`find / -nouser`). Only the entries the user owns, and
+ * only for an account this install created — an existing account's files are
+ * its own.
+ */
+async function sweepUserTmp(ctx: HostCtx, user: string): Promise<void> {
+	await runExec(
+		exec(
+			ctx,
+			'find',
+			[
+				...SHARED_TMP_DIRS,
+				'-xdev',
+				'-mindepth',
+				'1',
+				'-maxdepth',
+				'1',
+				'-user',
+				user,
+				'-exec',
+				'rm',
+				'-rf',
+				'--',
+				'{}',
+				'+',
+			],
+			`remove what ${user} left in ${SHARED_TMP_DIRS.join(' and ')}`,
+			{ as: 'instance', okExit: [0, 1] },
+		),
+		ctx,
+	);
+}
+
 /** Undo the user (and its group): never an existing one, never while it runs something, owns something or backups remain. */
 async function removeAccount(ctx: HostCtx, keep: string | null): Promise<string> {
 	const user = ctx.created.user;
@@ -470,6 +509,7 @@ async function removeAccount(ctx: HostCtx, keep: string | null): Promise<string>
 		return `user ${ctx.paths.user} USED AS IS — never removed by the installer`;
 	}
 	if (keep !== null) return keep;
+	await sweepUserTmp(ctx, user);
 	const left = await leftOfUser(ctx, user);
 	if (left !== '') {
 		return `user ${user} KEPT: it still owns ${left} (a removed uid would be reused by the next account) — remove what remains, then remove the user (userdel ${user})`;
