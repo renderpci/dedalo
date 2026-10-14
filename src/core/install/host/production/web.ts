@@ -564,6 +564,13 @@ function siteRemoval(
 	];
 }
 
+/**
+ * gpasswd's exit when the user is NOT a member of the group (already out: an
+ * earlier --abort, or by hand) — a harmless outcome for a removal, here and in
+ * multi_instance.md's manual removal list (step 9).
+ */
+export const GPASSWD_NOT_A_MEMBER = 3;
+
 /** The web user leaves the instance group — even when a failed step already put the files back. */
 function groupRemoval(ctx: HostCtx): HostCommand[] {
 	if (!ctx.created.web_group_member) return [];
@@ -573,7 +580,7 @@ function groupRemoval(ctx: HostCtx): HostCommand[] {
 			'gpasswd',
 			['-d', webFlavor(ctx).user, ctx.paths.group],
 			'remove the web user from the instance group',
-			{ okExit: [0, 3] },
+			{ okExit: [0, GPASSWD_NOT_A_MEMBER] },
 		),
 	];
 }

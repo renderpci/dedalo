@@ -77,6 +77,18 @@ export interface Lifecycle {
 
 const RESTORE_WAIT_MS = 2000;
 
+/**
+ * Written ONCE before the first exit line, after the renderer's restore (C3gR1
+ * G1/G2): attributes reset, the cursor to COLUMN 0, the screen erased from
+ * there down. On a terminal that honours the alternate screen the restore put
+ * the cursor back on the operator's fresh prompt line, so this erases nothing;
+ * on one that does not (`screen` without altscreen, a serial console, a
+ * session capture) the frame is still on the screen with the cursor wherever
+ * the last redraw left it — the exit lines then start at column 0 and no
+ * frame cell is left beside or under them.
+ */
+const EXIT_LINES_START = '\x1b[0m\r\x1b[J';
+
 export function lifecycle(port: ProcessPort, host: LifecycleHost): Lifecycle {
 	let phase: Phase = 'walk';
 	let armed = false;
@@ -84,8 +96,14 @@ export function lifecycle(port: ProcessPort, host: LifecycleHost): Lifecycle {
 	let finalCode: number | null = null;
 	const notices: string[] = [];
 	const hooks: (() => void)[] = [];
+	let started = false;
+	/** The exit lines, on the restored screen: one fresh start, then every queued line. */
 	const flush = (): void => {
-		for (const line of notices.splice(0)) port.writeErr(`${line}\n`);
+		const lines = notices.splice(0);
+		if (lines.length === 0) return;
+		if (!started) port.writeErr(EXIT_LINES_START);
+		started = true;
+		for (const line of lines) port.writeErr(`${line}\n`);
 	};
 	const endHooks = (): void => {
 		for (const hook of hooks.splice(0)) {
