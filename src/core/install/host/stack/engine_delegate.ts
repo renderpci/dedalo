@@ -26,8 +26,9 @@
  * Before the child runs, the image tag must still be the verified digest (A16).
  *
  * The child's container is NAMED (campaign 3 C3-29): an interrupted run
- * removes it (`docker rm -f` — a killed `compose run` client leaves its
- * container working), and a resume refuses while one of an earlier run is
+ * stops it (`docker stop`, so the child's own interrupt path runs, then
+ * `docker rm -f` — a killed `compose run` client leaves its container
+ * working), and a resume refuses while one of an earlier run is
  * still running. The salt is the host's to show once (C3-18): read back from
  * /private/.env in the running engine container at the end of the install.
  */
@@ -44,6 +45,8 @@ import { requestOf, succeeded } from '../execute.ts';
 import { confirmFlags, probeText, ran } from '../production/common.ts';
 import {
 	abortRequest,
+	childFailure,
+	childReport,
 	type EngineStatus,
 	relay,
 	saltHintLines,
@@ -135,15 +138,24 @@ function relayContext(ctx: HostCtx): HostCtx {
 	return { ...ctx, paths: { ...ctx.paths, privateDir: `/private (volume ${PRIVATE_VOLUME})` } };
 }
 
-/** Run one child command with its events relayed; refuse with `failed` when it fails. */
-async function runChild(ctx: HostCtx, command: ExecCommand, failed: string): Promise<void> {
+/**
+ * Run one child command with its events relayed; when it fails, refuse with
+ * `<what>: <the child's own reason> — <consequence>` (campaign 3e F4).
+ */
+async function runChild(
+	ctx: HostCtx,
+	command: ExecCommand,
+	what: string,
+	consequence: string,
+): Promise<void> {
 	const relayed = relayContext(ctx);
+	const report = childReport();
 	const result = await ctx.runner.run({
 		...requestOf(command, withDatabasePassword(ctx)),
-		onStdoutLine: (line) => relay(relayed, line),
+		onStdoutLine: (line) => relay(relayed, line, report),
 	});
 	if (!succeeded(command, result))
-		hostRefuse('install.step_failed', `${failed} (exit ${result.exitCode})`);
+		hostRefuse('install.step_failed', childFailure(what, consequence, report, result));
 }
 
 /** The id of the RUNNING engine container ('' when none). */
@@ -162,12 +174,33 @@ async function refuseLiveContainer(ctx: HostCtx): Promise<void> {
 	if (id === '') return;
 	hostRefuse(
 		'install.state_conflict',
-		`the engine steps of an earlier run are still running (container ${ENGINE_CONTAINER}, ${id}) — wait for them to end (or docker rm -f ${ENGINE_CONTAINER}), then --resume`,
+		`the engine steps of an earlier run are still running (container ${ENGINE_CONTAINER}, ${id}) — wait for them to end (or docker stop ${ENGINE_CONTAINER}), then --resume`,
 	);
 }
 
-/** Stop the engine child's container (an interrupted run — C3-29). */
+/**
+ * Seconds the engine child gets to stop itself on an interrupt: its own
+ * SIGTERM path ends its seed restore's database session, stops its psql
+ * children and releases its locks (executor.ts interrupted) — measured at
+ * ~100–250 ms (campaign 3e). Only a child that hangs makes Ctrl-C wait this long.
+ */
+export const ENGINE_STOP_GRACE_SECONDS = 15;
+
+/**
+ * Stop the engine child's container (an interrupted run — C3-29): `docker
+ * stop` FIRST, so the child's own interrupt path runs (campaign 3e F5: a bare
+ * `rm -f` SIGKILLed it mid-COPY, and its restore's session outlived the
+ * container's network on the server for hours), then `rm -f` for whatever is
+ * left (`compose run --rm` usually removed it already).
+ */
 async function removeEngineContainer(ctx: HostCtx): Promise<void> {
+	const stop = dockerCommand(
+		ctx,
+		['stop', '--time', String(ENGINE_STOP_GRACE_SECONDS), ENGINE_CONTAINER],
+		'let the engine container stop itself',
+		{ okExit: [0, 1], timeoutMs: (ENGINE_STOP_GRACE_SECONDS + 30) * 1000 },
+	);
+	await ctx.runner.run(requestOf(stop, ctx));
 	await ctx.runner.run(
 		requestOf(
 			dockerCommand(ctx, ['rm', '-f', ENGINE_CONTAINER], 'stop the engine container', {
@@ -186,7 +219,8 @@ async function runStackEngine(ctx: HostCtx) {
 	await runChild(
 		ctx,
 		stackEngineCommand(ctx, status?.exists === true),
-		`the engine steps failed — their record is in /private/install (volume ${PRIVATE_VOLUME}); the host install resumes them`,
+		'the engine steps failed',
+		`their record is in /private/install (volume ${PRIVATE_VOLUME}); the host install resumes them`,
 	);
 	return ran('engine steps complete');
 }
@@ -222,7 +256,8 @@ async function undoStackEngine(ctx: HostCtx): Promise<string> {
 	await runChild(
 		ctx,
 		command,
-		'the engine child refused its --abort (see above) — nothing before it was undone',
+		'the engine child refused its --abort',
+		'nothing before it was undone',
 	);
 	return 'engine steps undone';
 }

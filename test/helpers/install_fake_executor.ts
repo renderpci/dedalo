@@ -106,6 +106,7 @@ export function emptyTarget(): TargetDatabaseState {
 		userObjects: [],
 		extensions: ['plpgsql'],
 		seedRestoreRunning: null,
+		seedRestoreInstallId: null,
 		installSessions: [],
 		installStamp: null,
 		canStamp: true,

@@ -491,6 +491,69 @@ describe('abort removes only what this install created (f)', () => {
 	});
 });
 
+describe("the engine child's own refusal reaches the host's ✖ block (campaign 3e F4)", () => {
+	test('resume and abort quote the child’s outcome sentence; never "see above" over nothing', async () => {
+		const compose = composePrefix('trial');
+		const run = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const abort = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --abort`;
+		const said = "a seed restore into 'dedalo' is still running (backend pid 124)";
+		const outcome = `{"event":"log","line":"Dédalo TS install — resuming 'dedalo'"}\n{"event":"outcome","exitCode":1,"result":"refused","message":"${said}","failedStep":null,"hint":[]}\n`;
+		const host = machine(TRIAL, {
+			responses: [
+				{ match: run, exit: 1, stdout: outcome },
+				{ match: abort, exit: 1, stdout: outcome },
+				{
+					match: `${compose} run --rm -T --no-deps dedalo bun run scripts/install.ts --status --json`,
+					after: run,
+					stdout:
+						'{"exists":true,"outcome":"in_progress","failed_step":"install_db_from_default_file"}\n',
+				},
+			],
+		});
+		const { plan, request } = fresh(TRIAL);
+		const failed = await runHost(host, request);
+		expect(failed.outcome.failedStep).toBe('stack_engine');
+		expect(failed.outcome.message).toContain(
+			`the engine steps failed: ${said} — their record is in`,
+		);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.message).toContain(`the engine steps failed: ${said}`);
+		const aborted = await runHost(host, laterRequest('abort', plan, 'dedalo'));
+		expect(aborted.outcome.result).not.toBe('aborted');
+		expect(aborted.outcome.message).toContain(
+			`the engine child refused its --abort: ${said} — nothing before it was undone (exit 1)`,
+		);
+		for (const message of [failed, resumed, aborted].map((r) => r.outcome.message ?? ''))
+			expect(message).not.toContain('see above');
+		// The outcome event is quoted once, in the ✖ sentence — never relayed as a raw JSON line.
+		expect(aborted.transcript.lines.join('\n')).not.toContain('"event":"outcome"');
+	});
+
+	test('a child that dies without an outcome: its last stderr line is the reason; none at all is SAID', async () => {
+		const compose = composePrefix('trial');
+		const run = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const crashed = machine(TRIAL, {
+			responses: [
+				{
+					match: run,
+					exit: 125,
+					stderr: 'noise\nError response from daemon: no space left on device\n',
+				},
+			],
+		});
+		const crash = await runHost(crashed, fresh(TRIAL).request);
+		expect(crash.outcome.message).toContain(
+			'the engine steps failed: Error response from daemon: no space left on device — their record',
+		);
+		const silent = machine(TRIAL, { responses: [{ match: run, exit: 137 }] });
+		const killed = await runHost(silent, fresh(TRIAL).request);
+		expect(killed.outcome.message).toContain(
+			'the engine steps failed (the engine child gave no reason) — their record',
+		);
+		expect(killed.outcome.message).toContain('(exit 137)');
+	});
+});
+
 // ── (g) campaign 3: what the stack steps must not hide ───────────────────────
 
 /** The state file of the scratch host's run (null once an abort removed it). */
@@ -1187,7 +1250,7 @@ describe('the image makes the media root at the tree mode (C3-19: every install 
 });
 
 describe('the engine child’s container never outlives the run, and never races a resume (C3-29)', () => {
-	test('an interrupted stack_engine removes the named engine container', async () => {
+	test('an interrupted stack_engine lets the engine stop itself FIRST (campaign 3e F5), then removes the named container', async () => {
 		const runner = recordingRunner({ responses: () => [] });
 		const ctx = {
 			...stackPlanCtx(TRIAL),
@@ -1198,7 +1261,10 @@ describe('the engine child’s container never outlives the run, and never races
 		await (
 			STACK_HOST_STEPS.stack_engine.onInterrupt as NonNullable<HostStepDefinition['onInterrupt']>
 		)(ctx);
+		// A bare `rm -f` SIGKILLed the engine mid-COPY: its seed restore's session outlived the
+		// container's network on the server for two hours (RHEL 10 / Docker, campaign 3e).
 		expect(runner.log.map((entry) => entry.argv.join(' '))).toEqual([
+			`${DOCKER} stop --time 15 dedalo-install-engine`,
 			`${DOCKER} rm -f dedalo-install-engine`,
 		]);
 	});

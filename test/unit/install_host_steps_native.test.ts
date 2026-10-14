@@ -2114,6 +2114,42 @@ describe('the engine child dies with the installer; a resume never races one sti
 	});
 });
 
+describe("the engine child's own refusal reaches the host's ✖ block (campaign 3e F4, production)", () => {
+	test('run and abort quote the child’s outcome sentence (never "see above" over nothing); a crash quotes its stderr', async () => {
+		const said = `a seed restore into '${DB}' is still running (backend pid 124)`;
+		const outcome = `{"event":"outcome","exitCode":1,"result":"refused","message":"${said}","failedStep":null,"hint":[]}\n`;
+		const {
+			host,
+			plan,
+			outcome: crashed,
+		} = await freshOn(UBUNTU_NGINX_LE, {
+			responses: engineFails(),
+		});
+		// engineFails: exit 9 with only a stderr line — the reason, quoted.
+		expect(crashed.message).toContain(
+			'the engine steps failed: the seed restore failed — their record is in',
+		);
+		replaceResponses(host, UBUNTU_NGINX_LE, [
+			{ match: `${ENGINE_DYING} --request-stdin`, exit: 1, stdout: outcome },
+			{ match: `${ENGINE_DYING} --abort`, exit: 1, stdout: outcome },
+			{
+				match: ENGINE_STATUS,
+				stdout:
+					'{"exists":true,"outcome":"in_progress","failed_step":"install_db_from_default_file","needs":[]}\n',
+			},
+		]);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.message).toContain(`the engine steps failed: ${said} — their record`);
+		const aborted = await runHost(host, laterRequest('abort', plan, DB));
+		expect(aborted.outcome.result).not.toBe('aborted');
+		expect(aborted.outcome.message).toContain(
+			`the engine child refused its --abort: ${said} — nothing before it was undone (exit 1)`,
+		);
+		for (const message of [resumed, aborted].map((r) => r.outcome.message ?? ''))
+			expect(message).not.toContain('see above');
+	});
+});
+
 describe('the run record says an install was confirmed to execute (C3-63)', () => {
 	test('--execute or the Review’s yes → execute: true; a headless run without --execute → false', async () => {
 		expect(runConfirmed(false, true)).toBe(true);

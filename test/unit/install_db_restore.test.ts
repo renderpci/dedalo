@@ -210,4 +210,27 @@ describe('db_restore + set_root_pw (P3, load-bearing)', () => {
 		},
 		120000,
 	);
+
+	// campaign 3e F5: a killed container's client vanished without its close reaching the
+	// server, and the seed restore's backend waited on it for the server's default 7200 s
+	// keepalive. Every installer session now SENDS the server its own dead-client bound.
+	test.if(canCreate)(
+		'every installer psql session carries the server-side dead-client bound (keepalive 30/10/3)',
+		async () => {
+			const probe = await runPsql(admin, [
+				'-tAc',
+				`SELECT inet_client_addr() IS NOT NULL, string_agg(name || '=' || setting || '/' || source, ' ' ORDER BY name)
+				   FROM pg_settings WHERE name IN ('tcp_keepalives_idle', 'tcp_keepalives_interval', 'tcp_keepalives_count')`,
+			]);
+			expect(probe.exitCode, probe.stderr).toBe(0);
+			const [tcp, settings = ''] = probe.stdout.split('|');
+			// The server received them from this client (on a unix socket they read 0: no TCP to lose).
+			expect(settings.match(/\/client/g)?.length).toBe(3);
+			if (tcp === 't') {
+				expect(settings).toBe(
+					'tcp_keepalives_count=3/client tcp_keepalives_idle=30/client tcp_keepalives_interval=10/client',
+				);
+			}
+		},
+	);
 });

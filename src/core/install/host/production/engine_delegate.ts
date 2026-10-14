@@ -145,6 +145,60 @@ interface ChildEvent {
 	step?: string;
 	phase?: string;
 	label?: string;
+	/** `outcome`: the child's refusal/failure sentence (redacted by the child), or null. */
+	message?: string | null;
+}
+
+/**
+ * What the child SAID about how it ended (campaign 3e F4): its `outcome`
+ * event's sentence — a refusal such as "a seed restore … is still running" is
+ * printed nowhere else, so the host's ✖ block must carry it.
+ */
+export interface ChildReport {
+	message: string | null;
+}
+
+/** A fresh, empty report for one child run. */
+export function childReport(): ChildReport {
+	return { message: null };
+}
+
+/** The longest child reason quoted into a ✖ line. */
+const REASON_MAX = 400;
+
+/**
+ * Why the child failed, in its own words: its outcome sentence, else the last
+ * line of its stderr (a crash, a compose/docker error — already redacted by the
+ * runner), else null.
+ */
+function childReason(report: ChildReport, stderr: string): string | null {
+	const said = report.message?.trim() ?? '';
+	const reason =
+		said !== ''
+			? said
+			: (stderr
+					.split('\n')
+					.map((line) => line.trim())
+					.filter((line) => line !== '')
+					.at(-1) ?? '');
+	if (reason === '') return null;
+	return reason.length > REASON_MAX ? `${reason.slice(0, REASON_MAX)}…` : reason;
+}
+
+/**
+ * The host's ✖ sentence for a failed child: `<what>: <the child's reason> —
+ * <consequence> (exit N)`. Never "see above": the reason is quoted here, or the
+ * sentence says the child gave none.
+ */
+export function childFailure(
+	what: string,
+	consequence: string,
+	report: ChildReport,
+	result: { exitCode: number; stderr: string },
+): string {
+	const reason = childReason(report, result.stderr);
+	const said = reason === null ? ' (the engine child gave no reason)' : `: ${reason}`;
+	return `${what}${said} — ${consequence} (exit ${result.exitCode})`;
 }
 
 /** The command that reads the salt back (the instance's .env is 0600, its user's). */
@@ -172,13 +226,21 @@ const RELAY: Readonly<Record<string, (ctx: HostCtx, event: ChildEvent) => void>>
 		ctx.say(`    engine ${event.phase ?? ''}: ${event.label ?? event.step ?? ''}`),
 });
 
-/** One JSON line of the child's event stream, relayed (never stored) — the docker delegate's too. */
-export function relay(ctx: HostCtx, line: string): void {
+/**
+ * One JSON line of the child's event stream, relayed (never stored) — the
+ * docker delegate's too. Its `outcome` sentence goes to `report` (the host's ✖
+ * block quotes it), never to the transcript as a line of its own.
+ */
+export function relay(ctx: HostCtx, line: string, report?: ChildReport): void {
 	let event: ChildEvent;
 	try {
 		event = JSON.parse(line) as ChildEvent;
 	} catch {
 		ctx.say(`    ${line}`);
+		return;
+	}
+	if (event.event === 'outcome') {
+		if (report !== undefined) report.message = event.message ?? null;
 		return;
 	}
 	RELAY[event.event ?? '']?.(ctx, event);
@@ -202,14 +264,20 @@ async function runEngine(ctx: HostCtx) {
 	refuseLiveChild(status, ` as ${ctx.paths.user}`);
 	if (status?.outcome === 'complete') return ran('engine install already complete');
 	const command = engineCommand(ctx, status?.exists === true);
+	const report = childReport();
 	const result = await ctx.runner.run({
 		...requestOf(command, ctx),
-		onStdoutLine: (line) => relay(ctx, line),
+		onStdoutLine: (line) => relay(ctx, line, report),
 	});
 	if (!succeeded(command, result)) {
 		hostRefuse(
 			'install.step_failed',
-			`the engine steps failed (exit ${result.exitCode}) — their record is in ${ctx.paths.privateDir}/install; the host install resumes them`,
+			childFailure(
+				'the engine steps failed',
+				`their record is in ${ctx.paths.privateDir}/install; the host install resumes them`,
+				report,
+				result,
+			),
 		);
 	}
 	return ran('engine steps complete');
@@ -248,14 +316,20 @@ async function undoEngine(ctx: HostCtx): Promise<string> {
 			pdeathsig: true,
 		},
 	);
+	const report = childReport();
 	const result = await ctx.runner.run({
 		...requestOf(command, ctx),
-		onStdoutLine: (line) => relay(ctx, line),
+		onStdoutLine: (line) => relay(ctx, line, report),
 	});
 	if (!succeeded(command, result)) {
 		hostRefuse(
 			'install.state_conflict',
-			'the engine child refused its --abort (see above) — nothing before it was undone',
+			childFailure(
+				'the engine child refused its --abort',
+				'nothing before it was undone',
+				report,
+				result,
+			),
 		);
 	}
 	return 'engine steps undone';

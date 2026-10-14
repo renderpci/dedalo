@@ -1071,6 +1071,14 @@ For every step, in order:
   one is completed, and a database that is neither empty nor marked by this
   install — a backup restored into it meanwhile, another install — is refused
   (`… is not empty (<n> objects) and was not seeded by this install — refusing to restore into it`).
+  A restore whose installer was killed can stay on the database server for a
+  while (its client vanished without its connection closing, as when a container
+  is removed mid-restore). The restore carries this install's id in its session
+  name, and every live installer holds the database's install lock, so a
+  `--resume` or `--abort` that holds that lock ends this install's leftover
+  restore and says so
+  (`⚠ ended the seed restore an interrupted run left on '<db>' (backend pid <n>) — its installer is gone, its transaction rolled back`).
+  A Ctrl-C during the restore ends it the same way before the installer exits.
 
 Only the secrets a remaining step still needs are asked again: the database,
 diffusion and SMTP passwords only while `persist_config` has not completed (after
@@ -1120,7 +1128,8 @@ reset), and refuses — before anything is touched:
 - a database that is neither marked by this install nor empty
   (`database '<db>' is not stamped by this install … — refusing to reset it; nothing was undone`);
 - while another install holds the database, or another installer session is
-  still working on it.
+  still working on it (this install's own leftover seed restore excepted: it is
+  ended, see [Resuming an install](#resuming-an-install-resume)).
 
 Backups of `.env` that existed before the install (`.env.bak.*`) are never
 removed — only the ones that appeared since the install started.
