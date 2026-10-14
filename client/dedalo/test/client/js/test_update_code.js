@@ -351,7 +351,7 @@ describe('UPDATE_CODE WIDGET', function() {
 			// demanded, impossible to supply, and unnecessary anyway.
 			const wrapper = render(consumer_with('ok', [
 				{ id : 'staging_clean', state : 'warn' },
-				{ id : 'bun_pin', state : 'warn', detail : '1.4.0 != 1.3.9' }
+				{ id : 'bun_pin', state : 'warn', detail : '1.4.3 != 1.4.2' }
 			]))
 			try {
 				const headline = wrapper.querySelector('.status_verdict')

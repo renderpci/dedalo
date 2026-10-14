@@ -59,7 +59,7 @@ const sha = (body: string): string => createHash('sha256').update(body).digest('
 const FILES: Record<string, string> = {
   [KIT_DRAFT_NAME]: '{"instance":"museum"}\n',
   [KIT_INSTALL_NAME]: '#!/bin/sh\n',
-  [`${KIT_SOURCE_DIR}/.bun-version`]: '1.4.2\n',
+  [`${KIT_SOURCE_DIR}/.bun-version`]: '1.4.3\n',
   [`${KIT_SOURCE_DIR}/publication/host_agent/package.json`]: '{}\n',
   [`${KIT_SOURCE_DIR}/publication/host_agent/node_modules/zod/index.js`]: 'export {};\n',
 };
@@ -181,7 +181,7 @@ describe('verify_kit (after extraction, before use)', () => {
   });
 
   test('a tampered file is refused, naming it', () => {
-    put(`${KIT_SOURCE_DIR}/.bun-version`, '1.4.3\n');
+    put(`${KIT_SOURCE_DIR}/.bun-version`, '1.4.4\n');
     const run = verify();
     expect(run.code).toBe(3);
     expect(run.err).toContain("the kit's 'source/.bun-version' has sha256");

@@ -809,7 +809,7 @@ function declaredHost(homeUid = 1002): { host: FakeHost; declared: DeclaredPorts
   Object.assign(host.handlers, {
     restorecon: () => r(fixture('typed/selinux/restorecon_n.txt')),
     unitState: () => ({ enabled: false, active: false }),
-    bunVersion: () => r('1.4.2\n'),
+    bunVersion: () => r('1.4.3\n'),
   } satisfies Handlers);
   const base = ports(host);
   const declared: DeclaredPorts = {
@@ -901,7 +901,7 @@ describe('observeDeclared — branches', () => {
     const { host, declared, layout } = declaredHost(0);
     const result = observeDeclared(layout, observeHostWide(EL_DRAFT, ports(host)), declared);
     expect(result.ancestorProblems.size).toBe(0);
-    expect(result.bunVersion).toBe('1.4.2');
+    expect(result.bunVersion).toBe('1.4.3');
   });
 
   test('traversable: home_root_t, or httpd_enable_homedirs; null without SELinux; the home probed when pass 1 did not', () => {

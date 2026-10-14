@@ -443,7 +443,7 @@ describe('fcontext_relocate (§5.2)', () => {
 
 describe('Bun (§5.4) and agent code (§5.5)', () => {
   const bun = (): Item =>
-    item({ kind: 'bun_install', archive: `${INIT_DIR}/stage/bun/bun-linux-x64.zip`, sums: null, asset: 'bun-linux-x64', pin: '1.4.2', table: '# bun-v1.4.2', target: `${HOME}/.bun/bin/bun` }, 'change', 'bun.install');
+    item({ kind: 'bun_install', archive: `${INIT_DIR}/stage/bun/bun-linux-x64.zip`, sums: null, asset: 'bun-linux-x64', pin: '1.4.3', table: '# bun-v1.4.3', target: `${HOME}/.bun/bin/bun` }, 'change', 'bun.install');
 
   test('installed through the P5 port and re-verified; a noop at the pin; refusals and failures propagate', () => {
     const w = makeWorld();
@@ -462,7 +462,7 @@ describe('Bun (§5.4) and agent code (§5.5)', () => {
       wrong.host.bunVersions.set(req.target, '1.3.0');
       return { outcome: 'done' };
     };
-    expect(executeItems([bun()], wrong.ctx).outcomes[0]?.detail).toContain('not the pin 1.4.2');
+    expect(executeItems([bun()], wrong.ctx).outcomes[0]?.detail).toContain('not the pin 1.4.3');
   });
 
   const SRC = `${INIT_DIR}/stage/source/publication/host_agent`;
@@ -842,10 +842,10 @@ describe('operator files (§5.10)', () => {
 describe('keep_ref (spec §4.3 item 20)', () => {
   test('the templates are kept root 0600 and rerun.env holds exactly BUN= and AGENT=', () => {
     const w = makeWorld();
-    w.host.seedFile(`${INIT_DIR}/stage/source/.bun-version`, '1.4.2\n');
+    w.host.seedFile(`${INIT_DIR}/stage/source/.bun-version`, '1.4.3\n');
     const report = executeItems([item({ kind: 'keep_ref', files: [`${INIT_DIR}/stage/source/.bun-version`, V2_SAMPLE] }, 'change', 'init.keep_ref')], w.ctx);
     expect(report.exit).toBe(0);
-    expect(w.host.body(`${INIT_DIR}/kept/.bun-version`)).toBe('1.4.2\n');
+    expect(w.host.body(`${INIT_DIR}/kept/.bun-version`)).toBe('1.4.3\n');
     expect(w.host.lstat(`${INIT_DIR}/kept/.bun-version`)?.mode).toBe(0o600);
     expect(w.host.body(`${INIT_DIR}/rerun.env`)).toBe(`BUN=${HOME}/.bun/bin/bun\nAGENT=${HOME}/host_agent\n`);
     expect(w.host.lstat(`${INIT_DIR}/rerun.env`)?.mode).toBe(0o600);

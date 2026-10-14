@@ -1615,7 +1615,7 @@ Merged since the last release; these ship with the next one.
 
 - **The Publication hosts panel now shows in red a publication server whose Bun differs from the version the work system pins.**
 
-    Each host in **Maintenance › Publication hosts** has a new **Bun version** row, with the expected version (this work system's `.bun-version`) and the version the host reports side by side. It is green only when they are exactly equal, red on any difference (for example `1.4.1 != 1.4.2`), and unknown when the host cannot be reached or proved. The install guide now gives each site on a publication server its own Bun, installed by root in `/home/<site>/.bun/` at the pinned version, so each site can be upgraded on its own, and suggests naming each instance after its site's domain (`my-hosts.org` → `my_hosts_org`). See [Publication host agent](./install/publication_host.md#2-declare-the-instance).
+    Each host in **Maintenance › Publication hosts** has a new **Bun version** row, with the expected version (this work system's `.bun-version`) and the version the host reports side by side. It is green only when they are exactly equal, red on any difference (for example `1.4.2 != 1.4.3`), and unknown when the host cannot be reached or proved. The install guide now gives each site on a publication server its own Bun, installed by root in `/home/<site>/.bun/` at the pinned version, so each site can be upgraded on its own, and suggests naming each instance after its site's domain (`my-hosts.org` → `my_hosts_org`). See [Publication host agent](./install/publication_host.md#2-declare-the-instance).
 
     Wire contract: `WC-2026-10-03-publication-hosts-widget`.
 
@@ -1774,7 +1774,7 @@ Merged since the last release; these ship with the next one.
 
 - **Installer re-checks, interrupts and messages say things once and at the right moment.**
 
-    A check made stale by a later answer (the Identity check, once the web server is chosen) runs again right after that step, not at the end. `back` from a failed System check and forward again runs it again, its rows printed once. Ctrl-C during the engine step prints one interruption block. The System check's ok rows say their result once (`ok  Bun  runtime 1.4.2`), the short Docker and Trial check stays visible on the next screen, a typed `quit` in line mode prints the closing line, an unknown word at a failed check gets a plain sentence, the Review's local-build line says how long the build takes, and the Trial's Review points at the Trial page's firewall warning.
+    A check made stale by a later answer (the Identity check, once the web server is chosen) runs again right after that step, not at the end. `back` from a failed System check and forward again runs it again, its rows printed once. Ctrl-C during the engine step prints one interruption block. The System check's ok rows say their result once (`ok  Bun  runtime 1.4.3`), the short Docker and Trial check stays visible on the next screen, a typed `quit` in line mode prints the closing line, an unknown word at a failed check gets a plain sentence, the Review's local-build line says how long the build takes, and the Trial's Review points at the Trial page's firewall warning.
 
 - **A Production install interrupted before its server ever ran is removed whole by --abort, and the production pages match what the installer does.**
 

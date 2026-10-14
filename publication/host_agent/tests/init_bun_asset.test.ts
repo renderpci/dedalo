@@ -107,16 +107,16 @@ describe('verifyArchive', () => {
 
 describe('bunReleaseUrl', () => {
   test('the default base and a mirror', () => {
-    expect(bunReleaseUrl('1.4.2', 'bun-linux-x64')).toBe(`${BUN_RELEASE_BASE}/bun-v1.4.2/bun-linux-x64.zip`);
-    expect(bunReleaseUrl('1.4.2', 'bun-linux-aarch64', 'https://mirror.example.org/bun')).toBe(
-      'https://mirror.example.org/bun/bun-v1.4.2/bun-linux-aarch64.zip',
+    expect(bunReleaseUrl('1.4.3', 'bun-linux-x64')).toBe(`${BUN_RELEASE_BASE}/bun-v1.4.3/bun-linux-x64.zip`);
+    expect(bunReleaseUrl('1.4.3', 'bun-linux-aarch64', 'https://mirror.example.org/bun')).toBe(
+      'https://mirror.example.org/bun/bun-v1.4.3/bun-linux-aarch64.zip',
     );
   });
   test('http, a trailing slash, a bad pin or asset are refused', () => {
-    expect(() => bunReleaseUrl('1.4.2', 'bun-linux-x64', 'http://mirror.example.org')).toThrow(/https/);
-    expect(() => bunReleaseUrl('1.4.2', 'bun-linux-x64', 'https://mirror.example.org/')).toThrow(/https/);
+    expect(() => bunReleaseUrl('1.4.3', 'bun-linux-x64', 'http://mirror.example.org')).toThrow(/https/);
+    expect(() => bunReleaseUrl('1.4.3', 'bun-linux-x64', 'https://mirror.example.org/')).toThrow(/https/);
     expect(() => bunReleaseUrl('1.4', 'bun-linux-x64')).toThrow(/pin/);
-    expect(() => bunReleaseUrl('1.4.2', 'bun-windows-x64')).toThrow(/asset/);
+    expect(() => bunReleaseUrl('1.4.3', 'bun-windows-x64')).toThrow(/asset/);
   });
 });
 

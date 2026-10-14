@@ -29,8 +29,8 @@ function put(rel: string, body: string): void {
 
 /** A complete, minimal staged source. */
 function stageSource(): void {
-  put('.bun-version', '1.4.2\n');
-  put('.bun-sha256', '# bun-v1.4.2\n');
+  put('.bun-version', '1.4.3\n');
+  put('.bun-sha256', '# bun-v1.4.3\n');
   put('publication/host_agent/package.json', JSON.stringify({ dependencies: { zod: '^4' }, devDependencies: { typescript: '^7' } }));
   put('publication/host_agent/src/index.ts', 'export {};\n');
   put('publication/host_agent/node_modules/zod/package.json', '{}');
@@ -47,8 +47,8 @@ beforeEach(async () => {
 describe('readStagedSource', () => {
   test('reads the closed layout into the StagedSource contract', () => {
     const source = readStagedSource(stage, reader);
-    expect(source.pin).toBe('1.4.2');
-    expect(source.shaTable).toBe('# bun-v1.4.2\n');
+    expect(source.pin).toBe('1.4.3');
+    expect(source.shaTable).toBe('# bun-v1.4.3\n');
     expect(source.agentDir).toBe(join(stage, 'publication/host_agent'));
     expect(source.agentDigest).toBe(treeDigest(source.agentDir, reader));
     expect(source.digest).toBe(sourceDigest(stage, reader));
@@ -105,7 +105,7 @@ describe('readStagedSource', () => {
   test('the pin grammar, package.json and the agent tree rules', () => {
     put('.bun-version', 'latest\n');
     expect(() => readStagedSource(stage, reader)).toThrow('.bun-version must match');
-    put('.bun-version', '1.4.2\n');
+    put('.bun-version', '1.4.3\n');
     put('publication/host_agent/package.json', 'not json');
     expect(() => readStagedSource(stage, reader)).toThrow('package.json is not JSON');
     put('publication/host_agent/package.json', JSON.stringify({ dependencies: ['zod'] }));

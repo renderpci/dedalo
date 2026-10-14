@@ -54,6 +54,14 @@ intermittent 60 s hangs in the CI image. Gate: `test/unit/ops_runtime_pin.test.t
 `DATETIME` and `TIMESTAMP` decode as UTC (under `TZ=Europe/Madrid`) and `JSON` as
 objects; bunfig's `[test] timeout` is still ignored (5003 ms kill). Operator order
 is unchanged: install 1.4.3, restart onto it, then apply the update.
+**One behaviour that DID change (bun #35119):** a transaction whose COMMIT Postgres
+answers with ROLLBACK (it was already aborted — an error caught inside the body and
+swallowed, without a savepoint) now REJECTS with `ERR_POSTGRES_COMMIT_ROLLED_BACK`;
+1.4.2 resolved it, so the caller believed rolled-back work had committed. Found by
+the db tier (`statement_ceiling_scope_native`, whose leg caught a 57014 inside
+`withTransaction`; it now lets the error leave the transaction, as production does).
+The rule this enforces was always true: inside `withTransaction`, a caught SQL error
+needs a savepoint, or the error must leave the body.
 
 ## 2. Process supervision (S2-38, S2-17)
 

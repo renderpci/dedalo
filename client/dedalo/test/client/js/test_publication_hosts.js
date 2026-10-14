@@ -352,8 +352,8 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			const self = build_widget(
 				ok_value([
 					build_host({
-						checks: [{ id: 'bun_version', state: 'blocked', detail: '1.4.1 != 1.4.2' }],
-						bun: { expected: '1.4.2', reported: '1.4.1' },
+						checks: [{ id: 'bun_version', state: 'blocked', detail: '1.4.2 != 1.4.3' }],
+						bun: { expected: '1.4.3', reported: '1.4.2' },
 					}),
 				]),
 			);
@@ -362,8 +362,8 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 			const facts = [...card.querySelectorAll('.dd_row')].map((row) => row.textContent);
 			const expected_label = labels().publication_hosts_bun_expected || 'Expected Bun';
 			const reported_label = labels().publication_hosts_bun_reported || 'Reported Bun';
-			assert.include(facts, expected_label + '1.4.2', 'the work system pin shown');
-			assert.include(facts, reported_label + '1.4.1', 'the host Bun shown');
+			assert.include(facts, expected_label + '1.4.3', 'the work system pin shown');
+			assert.include(facts, reported_label + '1.4.2', 'the host Bun shown');
 
 			const row = card.querySelector('.check_row.state_blocked');
 			assert.ok(row, 'the drift is a blocked check row');
@@ -372,7 +372,7 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 				row.querySelector('.dd_k').textContent,
 				labels().publication_hosts_check_bun_version || 'bun_version',
 			);
-			assert.include(row.textContent, '1.4.1 != 1.4.2', 'both versions named');
+			assert.include(row.textContent, '1.4.2 != 1.4.3', 'both versions named');
 		});
 
 		it('nginx map: a managed row shows hashes and the instance count; its state is the server check (drift red)', async function () {
@@ -535,7 +535,7 @@ describe('PUBLICATION_HOSTS WIDGET', function () {
 				ok_value([
 					build_host({
 						checks: [{ id: 'bun_version', state: 'unknown', detail: 'status_unavailable' }],
-						bun: { expected: '1.4.2', reported: null },
+						bun: { expected: '1.4.3', reported: null },
 					}),
 				]),
 			);
