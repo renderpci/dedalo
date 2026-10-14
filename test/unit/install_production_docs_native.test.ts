@@ -33,6 +33,7 @@ import type { HostFs } from '../../src/core/install/host/fs.ts';
 import { instancePaths } from '../../src/core/install/host/layout.ts';
 import { OS_ROWS } from '../../src/core/install/host/os_support.ts';
 import { host_engine } from '../../src/core/install/host/production/engine_delegate.ts';
+import { bunCacheDir } from '../../src/core/install/host/production/runtime.ts';
 import { GPASSWD_NOT_A_MEMBER } from '../../src/core/install/host/production/web.ts';
 import { updateEntry } from '../../src/core/install/host/registry.ts';
 import { backupStores } from '../../src/core/install/host/systemd/render.ts';
@@ -223,6 +224,21 @@ describe("D16: the removal list removes the instance's Bun when unused, and a gp
 		expect(step.indexOf('sudo grep -rl')).toBeGreaterThan(
 			step.indexOf(`${paths.registryDir}/<i>.json`),
 		);
+	});
+
+	// C3h-F1 (VM run C3hR1): the installer's per-pin Bun caches were left unnamed.
+	test("step 7: the installer's per-pin Bun caches (runtime.ts + install.sh), keep or remove", () => {
+		const step = removalStep(7);
+		const script = readFileSync(join(ROOT, 'install.sh'), 'utf8');
+		const root = /^ROOT_CACHE=(\S+)$/m.exec(script)?.[1];
+		const shared = /mkdir -p "\$2\/([\w-]+)\/\$3"/.exec(script)?.[1];
+		expect(root, 'install.sh ROOT_CACHE').toBeDefined();
+		expect(shared, 'install.sh shared_bun dir').toBeDefined();
+		expect(bunCacheDir('<pin>').startsWith(`${root}/`)).toBe(true);
+		for (const dir of [bunCacheDir('<pin>'), `${root}/${shared}/<pin>`]) {
+			expect(step).toContain(`\`${dir}/\``);
+			expect(step).toContain(` ${dir}`);
+		}
 	});
 
 	test('step 9: the gpasswd exit an --abort leaves is named harmless', () => {

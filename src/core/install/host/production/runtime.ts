@@ -56,9 +56,13 @@ export function bunAsset(ctx: HostPlanCtx): string {
 	return ctx.facts.avx2 ? 'bun-linux-x64.zip' : 'bun-linux-x64-baseline.zip';
 }
 
-/** The bootstrap's cache of verified Bun zips (install.sh writes it, this step reuses it). */
+/** The bootstrap's cache of verified Bun zips for a pin (install.sh writes it, this step reuses it). */
+export function bunCacheDir(pin: string): string {
+	return `/var/lib/dedalo-install/bun/${pin}`;
+}
+
 function cacheDir(ctx: HostPlanCtx): string {
-	return `/var/lib/dedalo-install/bun/${pinOf(ctx)}`;
+	return bunCacheDir(pinOf(ctx));
 }
 
 function pinOf(ctx: HostPlanCtx): string {
