@@ -397,7 +397,7 @@ Runs the backup set once (`systemctl start --wait dedalo-backup@<i>`) and verifi
 
 ## Done
 
-The Done screen shows the generated `DEDALO_SALT_STRING` **once** — keep it with your backups — and what comes next. A `--resume` that completes the install shows it too, when no earlier run did. Every run that completes the install, whichever run showed the salt, lists under *To do on this host* the command that reads it back: `sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env`. The instance is running under systemd and starts at boot; the watchdog and the nightly backup are armed.
+The Done screen shows the generated `DEDALO_SALT_STRING` **once** — keep it with your backups — and what comes next. A `--resume` that completes the install shows it too, when no earlier run did. Every run that completes the install, whichever run showed the salt, lists under *To do on this host* the command that reads it back: `sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env`. A run that stops after the engine steps generated the salt — a failure, or a Ctrl-C that leaves the full screen without its card — names the same command in its ✖ block. The instance is running under systemd and starts at boot; the watchdog and the nightly backup are armed.
 
 Open `https://<address>/dedalo/core/page/` and log in as **`root`**. Then follow [After the install](index.md#after-the-install): an admin user, users and projects, the thesauri and toponymies you need (from Maintenance), and a restore test of the backups.
 

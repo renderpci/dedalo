@@ -477,7 +477,7 @@ describe('a headless run (--resume typed at a terminal) shows the salt on its ow
 			// a host route in its To-do, WITH the read command (campaign 3c D3) — the engine route
 			// in the generic sentence.
 			const told = [
-				'keep a copy of the generated salt … read it with: docker compose … exec dedalo grep',
+				'keep a copy of the generated salt … read it with: docker compose … run --rm --no-deps dedalo grep',
 			];
 			await onTty.finish(complete, {
 				mode: 'resume',

@@ -56,7 +56,7 @@ import {
 	recordingRunner,
 	scratchRunner,
 } from '../../src/core/install/host/runner.ts';
-import { keptImages } from '../../src/core/install/host/stack/database.ts';
+import { stackImages } from '../../src/core/install/host/stack/database.ts';
 import { stackSaltCommand } from '../../src/core/install/host/stack/engine_delegate.ts';
 import { curlReason } from '../../src/core/install/host/stack/health.ts';
 import { IMAGE_BUILDER, imageCommands } from '../../src/core/install/host/stack/image.ts';
@@ -563,12 +563,14 @@ describe('an abort of a live stack keeps PostgreSQL up; --resume puts the rest b
 		const host = machine(DOCKER_LE);
 		const { plan, request } = fresh(DOCKER_LE);
 		expect((await runHost(host, request)).outcome.result).toBe('complete');
-		await runHost(host, laterRequest('abort', plan));
+		const aborted = await runHost(host, laterRequest('abort', plan));
 		expect(loggedCommands(host.root)).toContain(
 			`${compose} rm --stop --force dedalo nginx backup certbot`,
 		);
 		const ctx = stackPlanCtx(DOCKER_LE);
-		const kept = keptImages(ctx);
+		expect(stackImages(ctx)).toContain('certbot/certbot');
+		// Every image was pulled on this machine: the served abort names them all (but postgres's rm).
+		const kept = aborted.transcript.lines.join('\n');
 		for (const image of [
 			'postgres:18',
 			'nginx:alpine',
@@ -645,6 +647,70 @@ describe('stack served = the engine container ever started or the engine answere
 		expect(containerEverStarted('0001-01-01T00:00:00Z\n')).toBe(false);
 		expect(containerEverStarted('2026-10-14T09:12:31.48Z\n')).toBe(true);
 		expect(containerEverStarted('')).toBeNull();
+	});
+});
+
+/**
+ * CAMPAIGN 3e (2026-10-14 VM re-test). E4: an UNSERVED abort (stopped before the
+ * engine's container was ever created) said it "stopped and removed dedalo,
+ * nginx, backup" — none existed — and named nginx:alpine, never pulled, in its
+ * `docker image rm` (which then failed). The undo names what it MEASURED.
+ * E3: once the engine steps generated the salt, the ✖ block names its read
+ * command (a Ctrl-C leaves the full screen, where the salt was shown) — never
+ * the value; and the command works with the stack down (`run --rm --no-deps`).
+ */
+describe('campaign 3e: an abort names only what exists; a failure block names the salt read command', () => {
+	const compose = composePrefix('trial');
+	/** `up -d dedalo` killed before it created anything; nginx:alpine never pulled. */
+	const neverCreated: RecordedResponse[] = [
+		{ match: `${compose} up -d dedalo`, exit: 1, stderr: 'context canceled' },
+		{ match: `${compose} exec -T dedalo curl`, exit: 7, stdout: '000' },
+		{ match: `${compose} ps --all --services`, stdout: 'postgres\n' },
+		{ match: `${DOCKER} image inspect --format {{.Id}} nginx:alpine`, exit: 1 },
+	];
+
+	test('E4 unserved: no container named that never existed, no image named that is not here', async () => {
+		const host = machine(TRIAL, { responses: neverCreated });
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.failedStep).toBe('stack_up');
+		const aborted = await runHost(host, laterRequest('abort', plan, 'dedalo'));
+		expect(aborted.outcome.message).toBeNull();
+		const said = aborted.transcript.lines.join('\n');
+		expect(said).toContain('no container of dedalo, nginx, backup was ever created');
+		expect(said).not.toContain('stopped and removed');
+		expect(timesLogged(host, `${compose} rm --stop --force`)).toBe(0);
+		const rm = said.split('\n').find((line) => line.includes('docker image rm')) ?? '';
+		expect(rm).toContain('postgres:18');
+		expect(rm).not.toContain('nginx:alpine');
+	});
+
+	test('E4 CONTROL: a completed (served) stack aborts naming the containers and images that are there', async () => {
+		const host = machine(TRIAL);
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		const said = (await runHost(host, laterRequest('abort', plan))).transcript.lines.join('\n');
+		expect(said).toContain('stopped and removed dedalo, nginx, backup');
+		expect(said).toContain('docker image rm');
+		expect(said).toContain('nginx:alpine');
+	});
+
+	test('E3: past the engine steps the ✖ hint names the salt read command (never the value); before them it does not', async () => {
+		const host = machine(TRIAL, { responses: neverCreated });
+		const { request } = fresh(TRIAL);
+		const failed = await runHost(host, request);
+		expect(failed.outcome.failedStep).toBe('stack_up');
+		const hint = failed.outcome.hint.join('\n');
+		const command = stackSaltCommand(stackPlanCtx(TRIAL));
+		expect(command).toContain('run --rm --no-deps dedalo grep');
+		expect(hint).toContain(`read it with: ${command}`);
+		expect(hint).not.toContain('scratch-stack-salt');
+		// CONTROL: a failure before the engine steps ran says nothing of a salt.
+		const early = machine(TRIAL, {
+			responses: [{ match: `${compose} up -d postgres`, exit: 1, stderr: 'no space' }],
+		});
+		const before = await runHost(early, fresh(TRIAL).request);
+		expect(before.outcome.failedStep).toBe('stack_database');
+		expect(before.outcome.hint.join('\n')).not.toContain('DEDALO_SALT_STRING');
 	});
 });
 

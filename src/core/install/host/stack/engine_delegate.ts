@@ -46,6 +46,7 @@ import {
 	abortRequest,
 	type EngineStatus,
 	relay,
+	saltHintLines,
 	saltTodo,
 	showSaltLine,
 	stillNeeded,
@@ -228,7 +229,7 @@ async function undoStackEngine(ctx: HostCtx): Promise<string> {
 
 /** The command that reads the salt back from the engine container (docker.md and quickstart.md quote it — gate: install_stack_steps_native). */
 export function stackSaltCommand(ctx: HostPlanCtx): string {
-	return `docker compose -f ${stackFileOf(ctx.answers)} -f ${OVERRIDE_FILE} --env-file ${ENV_FILE} exec dedalo grep ^DEDALO_SALT_STRING= /private/.env`;
+	return `docker compose -f ${stackFileOf(ctx.answers)} -f ${OVERRIDE_FILE} --env-file ${ENV_FILE} run --rm --no-deps dedalo grep ^DEDALO_SALT_STRING= /private/.env`;
 }
 
 /** The stack engine's one-time salt (production/engine_delegate.ts showSaltLine — C3-18). */
@@ -269,5 +270,6 @@ export const stack_engine: HostStepDefinition = {
 	undo: undoStackEngine,
 	onInterrupt: removeEngineContainer,
 	afterComplete: showStackSalt,
+	hintLines: (ctx) => saltHintLines(ctx, stackSaltCommand(ctx)),
 	secretsStillNeeded: async (ctx) => stillNeeded(await stackEngineStatus(ctx)),
 };

@@ -327,6 +327,63 @@ async function runningServices(ctx: HostCtx): Promise<string[]> {
 	return text.split('\n').map((line) => line.trim());
 }
 
+/** Every container of the stack's services, started or not (`compose ps --all --services`). */
+function createdServicesProbe(ctx: HostPlanCtx) {
+	return composeProbe(ctx, ['ps', '--all', '--services'], "the stack's containers");
+}
+
+/**
+ * The services stack_up starts that HAVE a container, measured (campaign 3e
+ * E4: an abort before the engine ever started said it "stopped and removed
+ * dedalo, nginx, backup" — none existed). Unreadable: null (every one, said so).
+ */
+async function createdServices(ctx: HostCtx): Promise<string[] | null> {
+	const text = await probeOutput(ctx, createdServicesProbe(ctx));
+	if (text === null) return null;
+	const existing = new Set(text.split('\n').map((line) => line.trim()));
+	return startedServices(ctx).filter((service) => existing.has(service));
+}
+
+/** What the undo stopped and removed, in words true to the measurement. */
+function removedWords(ctx: HostPlanCtx, created: readonly string[] | null): string {
+	if (created === null)
+		return `stopped and removed whichever of ${startedServices(ctx).join(', ')} existed`;
+	if (created.length === 0)
+		return `no container of ${startedServices(ctx).join(', ')} was ever created`;
+	return `stopped and removed ${created.join(', ')}`;
+}
+
+/**
+ * --abort: stop and remove the services stack_up started — the ones that have
+ * a container (measured), never PostgreSQL (see the header).
+ */
+async function undoUp(ctx: HostCtx): Promise<string> {
+	const created = await createdServices(ctx);
+	const services = created ?? startedServices(ctx);
+	if (services.length > 0) {
+		await executeCommands(
+			[
+				composeCommand(
+					ctx,
+					['rm', '--stop', '--force', ...services],
+					'stop and remove the services stack_up started',
+					{ okExit: [0, 1] },
+				),
+			],
+			ctx,
+		);
+	}
+	const removed = removedWords(ctx, created);
+	// Never served (measured — campaign 3c D1): the abort goes on to the engine and database
+	// steps, which remove the rest and name the images they keep.
+	if (!ctx.created.served) {
+		return `${removed} — the instance never served, so this abort removes what the install created`;
+	}
+	// The instance has served: the database step is never undone after this one, so say
+	// how the operator removes it — and which images stay (campaign 3b N32, C3-52).
+	return `${removed} — PostgreSQL keeps running with the data, and --resume starts them again; to remove the instance entirely, see ${removalDoc(ctx)}; ${await keptImages(ctx, true)}`;
+}
+
 export const stack_up: HostStepDefinition = {
 	id: 'stack_up',
 	privilege: 'operator',
@@ -360,28 +417,5 @@ export const stack_up: HostStepDefinition = {
 		ctx.created.start_issued = true;
 	},
 	servedProbe: engineServedMeasured,
-	undo: async (ctx) => {
-		const services = startedServices(ctx);
-		await executeCommands(
-			[
-				composeCommand(
-					ctx,
-					['rm', '--stop', '--force', ...services],
-					'stop and remove the services stack_up started',
-					{
-						okExit: [0, 1],
-					},
-				),
-			],
-			ctx,
-		);
-		// Never served (measured — campaign 3c D1): the abort goes on to the engine and database
-		// steps, which remove the rest and name the images they keep.
-		if (!ctx.created.served) {
-			return `stopped and removed ${services.join(', ')} — the instance never served, so this abort removes what the install created`;
-		}
-		// The instance has served: the database step is never undone after this one, so say
-		// how the operator removes it — and which images stay (campaign 3b N32, C3-52).
-		return `stopped and removed ${services.join(', ')} — PostgreSQL keeps running with the data, and --resume starts them again; to remove the instance entirely, see ${removalDoc(ctx)}; ${keptImages(ctx, true)}`;
-	},
+	undo: undoUp,
 };

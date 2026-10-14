@@ -84,10 +84,10 @@ When the install completes, the Done screen shows the outcome and the generated 
 
 The installer's record of this install is in `<checkout>/.dedalo-install/`. If the install stops part-way, fix the cause and run `sh install.sh --route trial --resume`; it continues from the failed step. A resume runs in line mode, not on the full screen, and asks again for the secrets the remaining steps need. See [Resume and abort](installer_reference.md#resuming-an-install-resume).
 
-The salt is shown once, by the first run that has it — the run that completes the install, or the failure screen of an earlier run that got past the engine steps; a later `--resume` does not show it again. Every run that completes the install also lists, under *To do on this host*, the command that reads it back from the `private` volume:
+The salt is shown once, by the run whose engine steps generate it — on the full screen in the install view and on the card that ends that run (installed, or failed); a later `--resume` does not show it again. A run stopped with Ctrl-C leaves the full screen without that card, so its ✖ block names the command that reads the salt back instead — as does the ✖ block of every run that fails after the salt was generated. Every run that completes the install also lists, under *To do on this host*, the same command, which reads the salt from the `private` volume whether the stack is running or not:
 
 ```shell
-docker compose -f docker-compose.simple.yml -f compose.override.yaml --env-file .dedalo.env exec dedalo grep ^DEDALO_SALT_STRING= /private/.env
+docker compose -f docker-compose.simple.yml -f compose.override.yaml --env-file .dedalo.env run --rm --no-deps dedalo grep ^DEDALO_SALT_STRING= /private/.env
 ```
 
 Then continue with [After the install](index.md#after-the-install).

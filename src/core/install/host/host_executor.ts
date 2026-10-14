@@ -207,7 +207,14 @@ function hostHint(ctx: HostRunContext): string[] {
 		`  Progress saved: ${join(ctx.runDir, STATE_FILE)} (plan: ${PLAN_FILE})`,
 		`  Fix the cause, then resume:  ${prefix} --resume`,
 		undoHint(ctx, prefix),
+		...stepHintLines(ctx, plan),
 	];
+}
+
+/** What the plan's steps repeat in a failure block (the engine's salt read command — campaign 3e E3). */
+function stepHintLines(ctx: HostRunContext, plan: PlanFile): string[] {
+	const host = hostContext(ctx);
+	return plan.steps.flatMap((step) => hostStep(ctx, step).hintLines?.(host) ?? []);
 }
 
 // ── the host context of a step ───────────────────────────────────────────────

@@ -218,6 +218,13 @@ export interface HostStepDefinition {
 	 */
 	afterComplete?(ctx: HostCtx): Promise<string[] | undefined>;
 	/**
+	 * What a FAILURE or INTERRUPTION block repeats once this step's work produced
+	 * it (campaign 3e E3: the engine steps' generated salt was shown only on the
+	 * full screen, which a Ctrl-C leaves — the ✖ block names its read command,
+	 * never the value). Sync, never throws: read from the record only.
+	 */
+	hintLines?(ctx: HostCtx): string[];
+	/**
 	 * Which of `needs` the step's child still needs (campaign 3 C3-51) — asked
 	 * of the child's own record; null when it cannot answer (then all of them).
 	 */

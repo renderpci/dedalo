@@ -88,6 +88,7 @@ import {
 	EXISTS_NOT_CREATED,
 	REVIEW_TODO_STEP,
 	reviewHostCommands,
+	reviewTodo,
 } from '../../src/core/install/host/review.ts';
 import { type RecordedResponse, scratchRunner } from '../../src/core/install/host/runner.ts';
 import { stackFileOf } from '../../src/core/install/host/stack/layout.ts';
@@ -626,6 +627,8 @@ describe('an abort keeps only the packages the host HAS (campaign 3b N17)', () =
 			responses: [{ match: '/usr/bin/apt-get update', exit: 100, stderr: 'E: network down' }],
 		});
 		expect(outcome.failedStep).toBe('host_packages');
+		// Before the engine steps: no salt was generated, the ✖ hint says nothing of one (campaign 3e E3).
+		expect(outcome.hint.join('\n')).not.toContain('DEDALO_SALT_STRING');
 		const aborted = await runHost(host, laterRequest('abort', plan, DB));
 		expect(aborted.outcome.result).toBe('aborted');
 		const text = aborted.transcript.lines.join('\n');
@@ -1218,7 +1221,14 @@ async function reviewOn(host: ScratchHost, plan: ReturnType<typeof productionPla
 	}
 }
 
-/** The Review's to-do lines ([] when it has no to-do block). */
+/** The package default-site note of a run that installs nginx (campaign 3e E5 — its own gate). */
+const PLANNED_DEFAULT =
+	/^port 80: the default site stays yours \(\/etc\/nginx\/sites-enabled\/default,/;
+
+/**
+ * The Review's to-do lines ([] when it has no to-do block) — `todo` without the
+ * nginx package's default-site note (asserted by the E5 gate: `allTodo`).
+ */
 async function todoOn(
 	variant: HostVariant,
 	options: PlantOptions,
@@ -1227,10 +1237,12 @@ async function todoOn(
 	const host = scratchHost(variant, options);
 	const { plan } = productionPlan(variant, extra);
 	const blocks = await reviewOn(host, plan);
+	const allTodo = blocks.find((block) => block.step === REVIEW_TODO_STEP)?.commands ?? [];
 	return {
 		host,
 		blocks,
-		todo: blocks.find((block) => block.step === REVIEW_TODO_STEP)?.commands ?? [],
+		allTodo,
+		todo: allTodo.filter((line) => !PLANNED_DEFAULT.test(line)),
 	};
 }
 
@@ -1634,6 +1646,11 @@ describe('a unit that REFUSED to boot stops the first-boot wait at once (phase 5
 			},
 		);
 		expect(outcome.failedStep).toBe('host_first_boot');
+		// Past the engine steps (campaign 3e E3): the ✖ hint names the salt's read command, never the value.
+		const hint = outcome.hint.join('\n');
+		expect(hint).toContain('(DEDALO_SALT_STRING)');
+		expect(hint).toContain('read it with: sudo grep ^DEDALO_SALT_STRING=');
+		expect(hint).not.toContain('scratch-salt-value');
 		expect(outcome.message).toContain(`dedalo-ts@${INSTANCE}.service refused to boot (exit 78`);
 		expect(outcome.message).toContain(`journalctl -u dedalo-ts@${INSTANCE}.service`);
 		// One poll, not the whole bound.
@@ -2296,6 +2313,31 @@ describe('a run that INSTALLS nginx tells the default site its package wrote (ca
 		);
 		expect(bare.outcome.result).toBe('complete');
 		expect(bare.outcome.told.join('\n')).not.toContain('the default site stays yours');
+	});
+
+	test('campaign 3e E5: the Review (measured, as the installer computes it) carries the note on a host without nginx', async () => {
+		const { allTodo } = await todoOn(UBUNTU_NGINX_LE, {});
+		expect(allTodo.join('\n')).toContain(NOTE);
+		expect(allTodo.filter((line) => PLANNED_DEFAULT.test(line)).length).toBe(1);
+	});
+
+	test('campaign 3e E5: the Review says it BEFORE yes when the run installs nginx (Debian/Ubuntu package)', () => {
+		const fs = { readText: () => null, exists: () => false };
+		const now = Date.now();
+		const planned = productionPlanCtx(UBUNTU_NGINX_LE);
+		expect(planned.facts.web.installed).toBe(false);
+		expect(reviewTodo(planned, fs, now).join('\n')).toContain(NOTE);
+		// CONTROL: nginx already installed — host_web_site measures it, the Review predicts nothing.
+		const present = {
+			...planned,
+			facts: { ...planned.facts, web: { ...planned.facts.web, installed: true } },
+		};
+		expect(reviewTodo(present, fs, now).join('\n')).not.toContain('the default site stays yours');
+		// CONTROL: the RHEL family's nginx package declares no default_server.
+		const el = HOST_VARIANTS.find((item) => item.os === 'el10' && item.web === 'nginx');
+		expect(el).toBeDefined();
+		const elTodo = reviewTodo(productionPlanCtx(el as HostVariant), fs, now);
+		expect(elTodo.join('\n')).not.toContain('the default site stays yours');
 	});
 });
 

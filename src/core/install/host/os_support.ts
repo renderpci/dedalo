@@ -149,6 +149,12 @@ export interface WebFlavor {
 	/** Apache on Debian: enabled with a2ensite (our site only). */
 	readonly enableWithA2ensite: boolean;
 	readonly logDir: string;
+	/**
+	 * The `default_server` the PACKAGE itself installs (Debian/Ubuntu nginx:
+	 * `sites-enabled/default` on 80) — a run that installs the web server tells
+	 * it on the Review, before the package exists to be measured (campaign 3e E5).
+	 */
+	readonly packageDefault?: { readonly port: string; readonly file: string };
 }
 
 export interface RowPackages {
@@ -244,6 +250,7 @@ const APT_WEB: OsRow['web'] = Object.freeze({
 		sitePath: '/etc/nginx/conf.d/dedalo-<i>.conf',
 		enableWithA2ensite: false,
 		logDir: '/var/log/nginx',
+		packageDefault: Object.freeze({ port: '80', file: '/etc/nginx/sites-enabled/default' }),
 	}),
 	apache: Object.freeze({
 		package: Object.freeze(['apache2']),

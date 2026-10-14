@@ -1117,6 +1117,22 @@ export function stackResponses(
 		{ match: `${compose} exec -T dedalo curl`, after: `${compose} up -d dedalo`, stdout: '200' },
 		{ match: `${compose} exec -T dedalo curl`, stdout: '000' },
 		{ match: `${compose} ps --services --status running`, stdout: 'postgres\ndedalo\nnginx\n' },
+		// The containers each start created (an abort names only these — campaign 3e E4).
+		{
+			match: `${compose} ps --all --services`,
+			afterExact: `${compose} up -d`,
+			stdout: 'postgres\ndedalo\nnginx\nbackup\ncertbot\n',
+		},
+		{
+			match: `${compose} ps --all --services`,
+			after: `${compose} up -d dedalo`,
+			stdout: 'postgres\ndedalo\n',
+		},
+		{
+			match: `${compose} ps --all --services`,
+			after: `${compose} up -d postgres`,
+			stdout: 'postgres\n',
+		},
 		// stack_up: nginx settled — its container, running and not restarting (C3-8).
 		{ match: `${compose} ps -q nginx`, stdout: 'scratch-nginx-id\n' },
 		// …publishing every port it declares (campaign 3b N2).

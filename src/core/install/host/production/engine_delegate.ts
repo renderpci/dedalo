@@ -157,6 +157,8 @@ function saltCommand(ctx: HostPlanCtx): string {
  * A4) — recorded shown ONLY when it reached a terminal (C3-18).
  */
 function relayShowOnce(ctx: HostCtx, event: ChildEvent): void {
+	// The child sends this line only for a salt it GENERATED (scripts/install.ts).
+	ctx.created.salt_generated = true;
 	const shown = ctx.io.showOnce?.(event.lines ?? []) ?? false;
 	if (shown) ctx.created.salt_shown = true;
 	else ctx.say(`    the generated salt is stored in ${ctx.paths.privateDir}/.env (0600)`);
@@ -309,6 +311,19 @@ export function saltTodo(command: string): string {
 	return `keep a copy of the generated salt (DEDALO_SALT_STRING) with your backups — the stored passwords cannot be verified without it; read it with: ${command}`;
 }
 
+/**
+ * The failure / interruption block's salt line (campaign 3e E3): once the
+ * engine child generated the salt, every ✖ block names the command that reads
+ * it back — the value itself only ever went to the one-time display, which a
+ * full screen takes with it when a Ctrl-C leaves it. Never the value.
+ */
+export function saltHintLines(ctx: HostCtx, command: string): string[] {
+	if (ctx.created.salt_generated !== true) return [];
+	return [
+		`  The generated salt (DEDALO_SALT_STRING) — keep a copy with your backups; read it with: ${command}`,
+	];
+}
+
 /** The production engine's one-time salt (see showSaltLine), then its To-do line. */
 async function showSaltOnce(ctx: HostCtx): Promise<string[] | undefined> {
 	if (!ctx.created.salt_shown) {
@@ -338,5 +353,6 @@ export const host_engine: HostStepDefinition = {
 	},
 	undo: undoEngine,
 	afterComplete: showSaltOnce,
+	hintLines: (ctx) => saltHintLines(ctx, saltCommand(ctx)),
 	secretsStillNeeded: async (ctx) => stillNeeded(await engineStatus(ctx)),
 };

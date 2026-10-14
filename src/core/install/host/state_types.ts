@@ -125,6 +125,12 @@ export interface HostCreated {
 	start_issued?: boolean;
 	/** The generated salt reached a TERMINAL (the host owns the one-time display — C3-18). */
 	salt_shown: boolean;
+	/**
+	 * The engine child GENERATED the salt (its one-time `show_once` line came) —
+	 * a failure or interruption block from then on names its read command
+	 * (campaign 3e E3). Absent on a record written before it existed: not known.
+	 */
+	salt_generated?: boolean;
 	/** docker/trial only. */
 	stack?: StackCreated;
 }

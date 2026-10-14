@@ -770,7 +770,7 @@ The screens are the steps listed above, plus:
   that showed it, a later `--resume`, or one that could not show it on a
   terminal — names the command that reads it back
   (production: `sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env`;
-  docker and trial: `docker compose … exec dedalo grep ^DEDALO_SALT_STRING= /private/.env`). Then what comes next, per route: on production the
+  docker and trial: `docker compose … run --rm --no-deps dedalo grep ^DEDALO_SALT_STRING= /private/.env`). Then what comes next, per route: on production the
   instance is already running under systemd with its watchdog and backup timer
   armed; on docker and trial the stack is up; on developer, start the server
   under a supervisor. Thesauri, toponymies, restores and updates after the
@@ -944,7 +944,7 @@ finishes it. Keep it with your backups. It is shown only on a terminal and never
 written into a log: when no run could show it there (its output redirected to a
 file), the end of the run prints the command that reads it back instead —
 `sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env` on production,
-`docker compose -f <stack file> -f compose.override.yaml --env-file .dedalo.env exec dedalo grep ^DEDALO_SALT_STRING= /private/.env`
+`docker compose -f <stack file> -f compose.override.yaml --env-file .dedalo.env run --rm --no-deps dedalo grep ^DEDALO_SALT_STRING= /private/.env`
 on docker and trial, `<private>/.env` (`0600`) on developer.
 
 ## Validation before anything is written

@@ -221,6 +221,11 @@ export interface ProbeView {
 	commands: readonly ProbeCommand[];
 	/** The plain mode's prompt (the same words the commands are typed as). */
 	prompt: string;
+	/**
+	 * A check that asks nothing (the System check): the screen `edit` goes
+	 * back to — the one whose answers it checked (campaign 3e E1).
+	 */
+	editGoesTo?: string;
 }
 
 /** The Review: what the install will do, and what the operator may do with it. */

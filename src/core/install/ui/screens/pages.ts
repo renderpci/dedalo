@@ -234,6 +234,20 @@ const PROBE_BUTTONS: Readonly<Record<ProbeCommand, Omit<Button, 'value'>>> = Obj
 	quit: { hotkey: 'q', label: 'Quit', description: 'Nothing has been installed.' },
 });
 
+/**
+ * A failed check's button — `edit` on a check that asks nothing goes back to
+ * the screen whose answers it checked, and says so (campaign 3e E1).
+ */
+function probeButton(view: ProbeView, value: ProbeCommand): Omit<Button, 'value'> {
+	const button = PROBE_BUTTONS[value];
+	if (value !== 'edit' || view.editGoesTo === undefined) return button;
+	return {
+		...button,
+		label: `Back to ${view.editGoesTo}`,
+		description: `This check asks nothing: change the answers it checked on ${view.editGoesTo}.`,
+	};
+}
+
 /** A verdict line's role. */
 function verdictRole(line: string): 'err' | 'ok' | 'warn' | 'muted' {
 	if (/^(error|Check failed|✗)/i.test(line)) return 'err';
@@ -242,7 +256,7 @@ function verdictRole(line: string): 'err' | 'ok' | 'warn' | 'muted' {
 }
 
 export function probePage(view: ProbeView, done: (answer: string | Nav) => void): Widget {
-	const buttons: Button[] = view.commands.map((value) => ({ value, ...PROBE_BUTTONS[value] }));
+	const buttons: Button[] = view.commands.map((value) => ({ value, ...probeButton(view, value) }));
 	/** Only quit is offered: no fix here can change the verdict, Esc goes to another route. */
 	const unfixable = view.commands.length === 1 && view.commands[0] === 'quit';
 	let cursor = 0;
@@ -277,7 +291,13 @@ export function probePage(view: ProbeView, done: (answer: string | Nav) => void)
 			['enter', 'choose'],
 			[
 				buttons.map((button) => button.hotkey).join('/'),
-				buttons.map((button) => button.value).join(' · '),
+				buttons
+					.map((button) =>
+						button.value === 'edit' && view.editGoesTo !== undefined
+							? `edit (back to ${view.editGoesTo})`
+							: button.value,
+					)
+					.join(' · '),
 			],
 			['esc', unfixable ? 'back to choose another route' : 'back'],
 		],

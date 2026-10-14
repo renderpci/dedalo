@@ -324,6 +324,20 @@ export function catchAllTold(
 	});
 }
 
+/**
+ * The Review's default-site note of a run that INSTALLS nginx (campaign 3e E5):
+ * the package's own `default_server` (os row `packageDefault`) does not exist
+ * yet to be measured, so the note host_web_site tells after the run — the same
+ * words (catchAllTold) — is said BEFORE `yes`, from what the package installs.
+ * nginx already installed: [] (host_web_site measures and tells it).
+ */
+export function plannedDefaultTold(ctx: HostPlanCtx): string[] {
+	const { web } = ctx.facts;
+	const shipped = webFlavor(ctx).packageDefault;
+	if (web.kind !== 'nginx' || web.installed || shipped === undefined) return [];
+	return catchAllTold(ctx, [shipped]);
+}
+
 /** Stage 2's commands (`mapOwner`: this instance's map is the host's — decided at run time). */
 export function siteCommands(ctx: HostPlanCtx, mapOwner = nginxGated(ctx)): HostCommand[] {
 	return [
