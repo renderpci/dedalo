@@ -115,7 +115,7 @@ sh install.sh --route trial --abort --confirm-database dedalo
 
 It removes, in reverse order, only what this install created: its containers, the volumes it created, the files it wrote and its record. The images stay, and the abort names them with the `docker image rm` command that reclaims the space.
 
-A **completed** trial is a live instance, and `--abort` never takes it apart: it removes the engine, nginx and backup containers and leaves PostgreSQL running with the data, and `--resume` starts them again. Its `docker image rm` line leaves out `postgres:18`, which that container still runs. To remove a finished trial, destroy it yourself — the volumes hold the database, the media and the secrets, so this deletes everything:
+A **completed** trial is a live instance, and `--abort` never takes it apart: it removes the engine, nginx and backup containers and leaves PostgreSQL running with the data, and `--resume` starts them again (a trial stopped before its `dedalo` container ever started has not served: `--abort` removes it whole). Its `docker image rm` line leaves out `postgres:18`, which that container still runs. To remove a finished trial, destroy it yourself — the volumes hold the database, the media and the secrets, so this deletes everything:
 
 ```shell
 docker compose -f docker-compose.simple.yml -f compose.override.yaml --env-file .dedalo.env down -v

@@ -503,8 +503,8 @@ async function resumeRun(ctx: HostRunContext): Promise<void> {
 
 /**
  * Has the instance served (a LIVE install — never taken apart by a host
- * abort)? The flag (C3-11), never cleared: stack_up's intent, host_first_boot
- * once `systemctl start` returned. Read after `settleServed`.
+ * abort)? The flag (C3-11), never cleared: host_first_boot once `systemctl
+ * start` returned, stack_up once `up -d dedalo` did (or measured: servedProbe). Read after `settleServed`.
  */
 function instanceServed(ctx: HostRunContext): boolean {
 	return hostCreated(ctx).served;

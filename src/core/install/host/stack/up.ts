@@ -16,6 +16,13 @@
  * N2). So nginx is removed before `up -d` creates it again (it holds no state),
  * and its published ports are checked here and on every resume's verify.
  *
+ * SERVED IS MEASURED (campaign 3c D1, the production route's rule): the intent
+ * records only that the engine's start was ISSUED; `served` is set once `up -d
+ * dedalo` returned. A run killed between the two is decided on the host
+ * (`servedProbe`): the engine answers /health, or its container ever started
+ * (State.StartedAt not Docker's zero time) — unreadable: served. Never served,
+ * an abort removes what the install created, the database included.
+ *
  * --abort stops and removes only the services this step started — never
  * PostgreSQL, whose step is still recorded done (an abort of a live install
  * undoes only the steps after the engine, and a --resume verifies the rest:
@@ -24,7 +31,7 @@
 
 import type { HostCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
 import { executeCommands } from '../execute.ts';
-import { probeOk, probeText, ran, verdictOf } from '../production/common.ts';
+import { probeOk, probeOutput, probeText, ran, verdictOf } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
 import { pollUntil, stackCreated } from './common.ts';
 import { composeCommand, composeProbe, dockerProbe } from './compose.ts';
@@ -247,6 +254,9 @@ async function assertNginxSettled(ctx: HostCtx): Promise<void> {
 async function runUp(ctx: HostCtx) {
 	await assertPinnedImage(ctx);
 	await executeCommands([engineUp(ctx)], ctx);
+	// `up -d dedalo` returned: the engine container runs — SERVED, an abort keeps it (C3-11).
+	ctx.created.served = true;
+	ctx.save();
 	const healthy = await pollUntil(
 		ctx,
 		{
@@ -266,6 +276,46 @@ async function runUp(ctx: HostCtx) {
 	await executeCommands([nginxRemoved(ctx), everythingUp(ctx)], ctx);
 	await assertNginxSettled(ctx);
 	return ran('the stack is up (nginx running, its configuration accepted)');
+}
+
+/** The engine's container, started or not ('' when none was ever created). */
+function engineContainerProbe(ctx: HostPlanCtx) {
+	return composeProbe(ctx, ['ps', '--all', '--quiet', 'dedalo'], "the engine's container");
+}
+
+/** When the engine's container last started (the id is appended at run time). */
+function engineStartedAtProbe(ctx: HostPlanCtx, id: string) {
+	return dockerProbe(
+		ctx,
+		['inspect', '--format', '{{.State.StartedAt}}', id],
+		"the engine's container ever started",
+	);
+}
+
+/** Did a container ever start, per its State.StartedAt (null: unreadable)? Docker's zero time: never. */
+export function containerEverStarted(startedAt: string): boolean | null {
+	const text = startedAt.trim();
+	if (text === '') return null;
+	return !text.startsWith('0001-01-01T00:00:00');
+}
+
+/**
+ * SERVED, MEASURED (campaign 3c D1): the engine answers /health, or its
+ * container ever started. No container at all: never served. Unreadable:
+ * served (an abort keeps what may have served).
+ */
+async function engineServedMeasured(ctx: HostCtx): Promise<boolean> {
+	return (await engineHealthy(ctx)) || (await engineContainerStarted(ctx));
+}
+
+/** Did the engine's container ever start? None created: no. Unreadable: yes (kept). */
+async function engineContainerStarted(ctx: HostCtx): Promise<boolean> {
+	const ids = await probeOutput(ctx, engineContainerProbe(ctx));
+	if (ids === null) return true;
+	const id = ids.trim().split('\n')[0]?.trim() ?? '';
+	if (id === '') return false;
+	const startedAt = await probeOutput(ctx, engineStartedAtProbe(ctx, id));
+	return containerEverStarted(startedAt ?? '') ?? true;
 }
 
 /** The services `compose ps` reports running. */
@@ -305,9 +355,11 @@ export const stack_up: HostStepDefinition = {
 	run: runUp,
 	intent: (ctx) => {
 		stackCreated(ctx).containers_started = true;
-		// The engine starts serving here: from now on an abort keeps the instance (C3-11).
-		ctx.created.served = true;
+		// The start is ISSUED, not taken (campaign 3c D1): `served` is set once `up -d dedalo`
+		// returned (runUp), or measured by servedProbe when a run died in between.
+		ctx.created.start_issued = true;
 	},
+	servedProbe: engineServedMeasured,
 	undo: async (ctx) => {
 		const services = startedServices(ctx);
 		await executeCommands(
@@ -323,8 +375,13 @@ export const stack_up: HostStepDefinition = {
 			],
 			ctx,
 		);
-		// The instance has served (intent above): the database step is never undone after this
-		// one, so say how the operator removes it — and which images stay (campaign 3b N32, C3-52).
+		// Never served (measured — campaign 3c D1): the abort goes on to the engine and database
+		// steps, which remove the rest and name the images they keep.
+		if (!ctx.created.served) {
+			return `stopped and removed ${services.join(', ')} — the instance never served, so this abort removes what the install created`;
+		}
+		// The instance has served: the database step is never undone after this one, so say
+		// how the operator removes it — and which images stay (campaign 3b N32, C3-52).
 		return `stopped and removed ${services.join(', ')} — PostgreSQL keeps running with the data, and --resume starts them again; to remove the instance entirely, see ${removalDoc(ctx)}; ${keptImages(ctx, true)}`;
 	},
 };

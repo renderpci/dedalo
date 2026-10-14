@@ -197,8 +197,8 @@ export interface HostStepDefinition {
 	onInterrupt?(ctx: HostCtx): Promise<void>;
 	/**
 	 * Did the start this step ISSUED take effect (`created.start_issued` set,
-	 * `served` not — campaign 3c D1)? MEASURED on the host: the unit ever ran,
-	 * or the engine answered. Asked before an abort decides what it undoes and
+	 * `served` not — campaign 3c D1)? MEASURED on the host: the unit (production)
+	 * or the engine's container (docker/trial) ever ran, or the engine answered. Asked before an abort decides what it undoes and
 	 * before an interruption's hint says it. Unreadable: true (kept — an abort
 	 * never takes apart an instance that may have served).
 	 */

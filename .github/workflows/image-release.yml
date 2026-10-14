@@ -164,6 +164,22 @@ jobs:
         run: |
           bun run scripts/ci/image_release.ts context
 
+      # What the image says it is — source, url, description, licenses — is Dédalo's own,
+      # never the base image's: the SAME values a local build stamps, read from the ONE
+      # source deploy/dedalo-image-lib.sh (dedalo_image_labels) of the release commit just
+      # checked out. A lib without one of them fails the build (`:?`), never a blank label.
+      - name: Image labels (deploy/dedalo-image-lib.sh)
+        id: labels
+        shell: bash
+        run: |
+          . deploy/dedalo-image-lib.sh
+          {
+            printf 'source=%s\n' "${DEDALO_IMAGE_SOURCE:?}"
+            printf 'url=%s\n' "${DEDALO_IMAGE_URL:?}"
+            printf 'description=%s\n' "${DEDALO_IMAGE_DESCRIPTION:?}"
+            printf 'licenses=%s\n' "${DEDALO_IMAGE_LICENSES:?}"
+          } >> "$GITHUB_OUTPUT"
+
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       - name: Log in to ghcr.io (the staging repository)
@@ -185,7 +201,10 @@ jobs:
             DEDALO_RELEASE_ARCHIVE_SHA256=${{ needs.plan.outputs.archive_sha256 }}
           labels: |
             org.opencontainers.image.title=Dédalo
-            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.source=${{ steps.labels.outputs.source }}
+            org.opencontainers.image.url=${{ steps.labels.outputs.url }}
+            org.opencontainers.image.description=${{ steps.labels.outputs.description }}
+            org.opencontainers.image.licenses=${{ steps.labels.outputs.licenses }}
             org.opencontainers.image.revision=${{ needs.plan.outputs.source_sha }}
             org.opencontainers.image.version=${{ needs.plan.outputs.tag }}
             org.opencontainers.image.created=${{ needs.plan.outputs.created }}

@@ -1249,10 +1249,13 @@ record is `<checkout>/.dedalo-install/`.
 `sh install.sh --route docker --abort --confirm-database dedalo` (`--route trial`
 for a trial) stops the stack and removes only the volumes and files this install
 created, and says which images it keeps (with the `docker image rm` command).
-Once the stack has served (`stack_up` started it), an abort undoes only
-`stack_up` — it removes the containers it started (`dedalo`, `nginx`, `backup`,
-`certbot` with Let's Encrypt) and leaves PostgreSQL running — and keeps the
-data; `--resume` starts the stack again.
+Once the stack has served — its `dedalo` container started (`stack_up`'s `up -d
+dedalo` returned, or `--abort` measures that the container ever started or the
+engine answers) — an abort undoes only `stack_up` — it removes the containers it
+started (`dedalo`, `nginx`, `backup`, `certbot` with Let's Encrypt) and leaves
+PostgreSQL running — and keeps the data; `--resume` starts the stack again. A run
+stopped inside `stack_up` before that container ever started has not served:
+`--abort` removes everything this install created, its database included.
 
 ## `install.sh`, the bootstrap
 

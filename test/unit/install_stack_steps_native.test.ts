@@ -67,6 +67,7 @@ import {
 	officialRepositories,
 } from '../../src/core/install/host/stack/layout.ts';
 import { STACK_HOST_STEPS } from '../../src/core/install/host/stack/table.ts';
+import { containerEverStarted } from '../../src/core/install/host/stack/up.ts';
 import { emptyHostCreated } from '../../src/core/install/host/state_types.ts';
 import { buildInstallPlan, type StackHostStepId } from '../../src/core/install/install_plan.ts';
 import { MEDIA_DIR_MODE } from '../../src/core/install/media_tree.ts';
@@ -579,6 +580,74 @@ describe('an abort of a live stack keeps PostgreSQL up; --resume puts the rest b
 	});
 });
 
+/**
+ * SERVED IS MEASURED on the stack route too (campaign 3c D1): stack_up's intent once
+ * recorded `served` BEFORE the engine started, so a run that died before the dedalo
+ * container ever ran was kept by --abort as a live instance. The start fails here the
+ * same way: issued, never taken — or "failed" with the container started after all.
+ */
+describe('stack served = the engine container ever started or the engine answered, never "the start was issued" (campaign 3c D1)', () => {
+	const compose = composePrefix('trial');
+	const startFails = (started: boolean): RecordedResponse[] => [
+		{ match: `${compose} up -d dedalo`, exit: 1, stderr: 'context canceled' },
+		// the engine never answered (the scratch default answers 200 once `up -d dedalo` was logged)
+		{ match: `${compose} exec -T dedalo curl`, exit: 7, stdout: '000' },
+		...(started
+			? [
+					{ match: `${compose} ps --all --quiet dedalo`, stdout: 'scratch-dedalo-id\n' },
+					{
+						match: `${DOCKER} inspect --format {{.State.StartedAt}} scratch-dedalo-id`,
+						stdout: '2026-10-14T09:12:31.48Z\n',
+					},
+				]
+			: []),
+	];
+
+	test('the start issued, the engine container never ran: the hint offers the full undo, and --abort removes the instance whole (database included)', async () => {
+		const host = machine(TRIAL, { responses: startFails(false) });
+		const { plan, request } = fresh(TRIAL);
+		const failed = await runHost(host, request);
+		expect(failed.outcome.failedStep).toBe('stack_up');
+		expect(failed.outcome.hint.join('\n')).toContain('--abort --confirm-database dedalo');
+		expect(failed.outcome.hint.join('\n')).not.toContain('has served');
+		const aborted = await runHost(host, laterRequest('abort', plan, 'dedalo'));
+		expect(aborted.outcome.message).toBeNull();
+		expect(aborted.outcome.keptLive).toBe(false);
+		expect(aborted.outcome.undone).toContain('stack_engine');
+		expect(aborted.outcome.undone).toContain('stack_database');
+		expect(aborted.transcript.lines.join('\n')).not.toContain('has served');
+		expect(
+			loggedCommands(host.root).filter((line) => line.startsWith(`${DOCKER} volume rm`)),
+		).toEqual([expect.stringContaining('dedalo_pgdata')]);
+		expect(stateOf(host)).toBeNull();
+	});
+
+	test('CONTROL — `up -d dedalo` "failed" but the container started: served, measured; the abort keeps the instance', async () => {
+		const host = machine(TRIAL, { responses: startFails(true) });
+		const { plan, request } = fresh(TRIAL);
+		const failed = await runHost(host, request);
+		expect(failed.outcome.failedStep).toBe('stack_up');
+		expect(failed.outcome.hint.join('\n')).toContain(
+			'the instance has served: its containers, volumes (the database) and files are kept',
+		);
+		const aborted = await runHost(host, laterRequest('abort', plan));
+		expect(aborted.outcome.message).toBeNull();
+		expect(aborted.outcome.keptLive).toBe(true);
+		expect(aborted.outcome.undone).toEqual(['stack_up']);
+		expect(
+			loggedCommands(host.root).filter((line) => line.startsWith(`${DOCKER} volume rm`)),
+		).toEqual([]);
+		// Measured once, recorded: the record says served from now on.
+		expect(stateOf(host)?.created.host?.served).toBe(true);
+	});
+
+	test("State.StartedAt: Docker's zero time = never started, a time = started, unreadable = unknown (kept as served)", () => {
+		expect(containerEverStarted('0001-01-01T00:00:00Z\n')).toBe(false);
+		expect(containerEverStarted('2026-10-14T09:12:31.48Z\n')).toBe(true);
+		expect(containerEverStarted('')).toBeNull();
+	});
+});
+
 /** Prepend responses to a scratch machine's table (first match wins): the world changed since. */
 function prependResponses(host: ScratchHost, extra: readonly RecordedResponse[]): void {
 	const path = join(host.root, SCRATCH_DIR, 'responses.json');
@@ -1005,6 +1074,72 @@ describe('an install-time build of a checkout goes through the shared clean-snap
 			{ encoding: 'utf8' },
 		);
 		expect(bare.stdout.split('\n')).toContain('org.opencontainers.image.version=');
+	});
+
+	// Campaign 3c D6, second half: the OFFICIAL image (image-release.yml) said less than a local
+	// build — no url/description/licenses, so it inherited the base image's. Its labels must be fed
+	// from the SAME lib (one source), measured by EXECUTING the workflow's own step, never a copy.
+	test('the release workflow labels the official image with the SAME source/url/description/licenses as a local build, fed from the lib', () => {
+		type Step = { id?: string; uses?: string; run?: string; with?: Record<string, string> };
+		const workflow = Bun.YAML.parse(
+			readFileSync(join(REPO_ROOT, '.github', 'workflows', 'image-release.yml'), 'utf8'),
+		) as { jobs: { build: { steps: Step[] } } };
+		const steps = workflow.jobs.build.steps;
+		const buildAt = steps.findIndex((step) => step.uses?.startsWith('docker/build-push-action@'));
+		expect(buildAt).toBeGreaterThan(-1);
+		const labelLines = String(steps[buildAt]?.with?.labels ?? '')
+			.split('\n')
+			.map((line) => line.trim());
+		const libAt = steps.findIndex((step) =>
+			/\. deploy\/dedalo-image-lib\.sh\b/.test(step.run ?? ''),
+		);
+		expect(libAt, 'a build step sources deploy/dedalo-image-lib.sh').toBeGreaterThan(-1);
+		expect(libAt, 'before the build').toBeLessThan(buildAt);
+		const libStep = steps[libAt] as Step;
+		expect(libStep.id).toBeTruthy();
+
+		// Run the step exactly as the runner would (bash, the checkout as cwd, a GITHUB_OUTPUT file).
+		const scratch = mkdtempSync(join(tmpdir(), 'dedalo-release-labels-'));
+		try {
+			const output = join(scratch, 'output');
+			writeFileSync(output, '');
+			const run = spawnSync('bash', ['-e', '-c', libStep.run as string], {
+				cwd: REPO_ROOT,
+				encoding: 'utf8',
+				env: { PATH: process.env.PATH ?? '', GITHUB_OUTPUT: output },
+			});
+			expect(run.status, run.stderr).toBe(0);
+			const outputs = new Map(
+				readFileSync(output, 'utf8')
+					.split('\n')
+					.filter(Boolean)
+					.map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]),
+			);
+			const local = spawnSync(
+				'bash',
+				[
+					'-c',
+					`. "${join(REPO_ROOT, 'deploy', 'dedalo-image-lib.sh')}" && dedalo_image_labels "$1" "$2"`,
+					'labels',
+					REPO_ROOT,
+					'localhost/dedalo:7.0.0',
+				],
+				{ encoding: 'utf8' },
+			).stdout.split('\n');
+			for (const key of ['source', 'url', 'description', 'licenses']) {
+				const prefix = `org.opencontainers.image.${key}=`;
+				// the label is the step's output — never a literal copy that could drift from the lib
+				expect(
+					labelLines.filter((line) => line.startsWith(prefix)),
+					key,
+				).toEqual([`${prefix}\${{ steps.${libStep.id}.outputs.${key} }}`]);
+				const localValue = local.find((line) => line.startsWith(prefix))?.slice(prefix.length);
+				expect(outputs.get(key) ?? '', key).not.toBe('');
+				expect(outputs.get(key), key).toBe(localValue as string);
+			}
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
+		}
 	});
 });
 

@@ -106,7 +106,9 @@ export interface HostCreated {
 	 * The instance HAS SERVED (campaign 3 C3-11; MEASURED since campaign 3c D1):
 	 * production — set once `systemctl start` of the unit returned, or when a
 	 * later run measures that the unit ever ran or the engine answered
-	 * (`servedProbe`); docker/trial — set by stack_up's intent. Never cleared,
+	 * (`servedProbe`); docker/trial — the same, by stack_up: once `up -d
+	 * dedalo` returned, or measured that the engine's container ever started
+	 * or the engine answered. Never cleared,
 	 * not even by that step's undo. Until then no request ever reached it, so an
 	 * abort may take apart a completed engine install too (the child's --abort,
 	 * attested unserved — and the child proves its database unchanged since it
@@ -114,8 +116,8 @@ export interface HostCreated {
 	 */
 	served: boolean;
 	/**
-	 * host_first_boot ISSUED the start (checkpointed right before `systemctl
-	 * start`): whether it took effect is not known until measured — an abort or
+	 * host_first_boot / stack_up ISSUED the start (checkpointed right before
+	 * `systemctl start` / `up -d dedalo`): whether it took effect is not known until measured — an abort or
 	 * an interruption's hint asks the step's `servedProbe` (campaign 3c D1: a
 	 * Ctrl-C 7 ms into the step, the unit never started, was kept as "served").
 	 * Absent on a record written before it existed: nothing issued.

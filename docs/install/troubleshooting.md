@@ -254,7 +254,7 @@ Any failure after the install recorded its plan prints how to continue:
   Or undo this install:        sudo sh install.sh --route production --instance <i> --abort --confirm-database dedalo_<i>  (deletes the database this install created)
 ```
 
-(`sh install.sh --route docker …` on the stack routes; `bun run scripts/install.ts --resume` on the Developer route.) Once the instance has **served** — production once its unit has run (`host_first_boot` started it), docker and trial from `stack_up` on — the last line reads `Or partly undo it: … --abort  (the instance has served: …)` instead: an abort then keeps the instance. A resume runs in plain line mode and asks again only for the secrets a remaining step still needs. The rules are in the [installer reference](installer_reference.md#resuming-an-install-resume); the refusals you can meet:
+(`sh install.sh --route docker …` on the stack routes; `bun run scripts/install.ts --resume` on the Developer route.) Once the instance has **served** — production once its unit has run (`host_first_boot` started it), docker and trial once `stack_up` started the `dedalo` container (or `--abort` measures that it ever started) — the last line reads `Or partly undo it: … --abort  (the instance has served: …)` instead: an abort then keeps the instance. A resume runs in plain line mode and asks again only for the secrets a remaining step still needs. The rules are in the [installer reference](installer_reference.md#resuming-an-install-resume); the refusals you can meet:
 
 | Refusal | Cause | Fix |
 | --- | --- | --- |
@@ -272,7 +272,7 @@ Any failure after the install recorded its plan prints how to continue:
 
 What an abort takes depends on whether the instance has **served**:
 
-- **Never served** (on production its unit never ran: it stopped before `host_first_boot`, or inside it before the start took effect; before `stack_up` on docker and trial — even after the engine steps completed): the abort removes everything this install created, its database, its user and its media tree included, and says how many steps it undid. The engine's own steps are undone only when its database still holds exactly the rows the install left.
+- **Never served** (on production its unit never ran: it stopped before `host_first_boot`, or inside it before the start took effect; on docker and trial the `dedalo` container never started: it stopped before `stack_up`, or inside it before `up -d dedalo` took effect — even after the engine steps completed): the abort removes everything this install created, its database, its user and its media tree included, and says how many steps it undid. The engine's own steps are undone only when its database still holds exactly the rows the install left.
 - **Served**: the abort answers *install partly undone* and undoes only the steps after the engine — on production the site, the certificate, the units' start and the timers; on docker and trial the running stack (`stack_up`). The instance — its user, database and code, or its containers and volumes — is kept, and `--resume` puts the undone steps back. A second abort says *nothing was undone*. Removing a served instance is done by hand: [Removing an instance](multi_instance.md#removing-an-instance), [Removing the trial](quickstart.md#removing-the-trial).
 
 ## Booting

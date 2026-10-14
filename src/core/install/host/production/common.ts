@@ -64,6 +64,15 @@ export async function probeText(ctx: HostCtx, command: ExecCommand): Promise<str
 	return succeeded(command, result) ? result.stdout : '';
 }
 
+/**
+ * Run a probe; answers its stdout, or null when it FAILED — for a measurement
+ * where "unreadable" and "nothing there" mean different things (campaign 3c D1).
+ */
+export async function probeOutput(ctx: HostCtx, command: ExecCommand): Promise<string | null> {
+	const result = await ctx.runner.run(requestOf(command, ctx));
+	return succeeded(command, result) ? result.stdout : null;
+}
+
 /** A verify verdict from a list of (ok, what-is-missing) checks. */
 export function verdictOf(
 	checks: readonly (readonly [boolean, string])[],
