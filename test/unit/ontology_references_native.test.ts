@@ -307,7 +307,11 @@ describe('ontology_references — the structural classifier', () => {
 		]);
 		const own = new Set(['zzorf']);
 		const present = new Set(['zzry1']);
-		expect([...unreachableNodes(rows, own, present)].sort()).toEqual(['zzorf2', 'zzorf3', 'zzorf4']);
+		expect([...unreachableNodes(rows, own, present)].sort()).toEqual([
+			'zzorf2',
+			'zzorf3',
+			'zzorf4',
+		]);
 		expect([...unreachableNodes(rows, own, new Set([...present, 'zzrx4']))]).toEqual([]);
 	});
 

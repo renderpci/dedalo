@@ -55,10 +55,10 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
 import { instancePaths } from '../../src/core/install/host/layout.ts';
 import { OS_ROWS } from '../../src/core/install/host/os_support.ts';
 import { webServerClash } from '../../src/core/install/host/production/preflight.ts';
-import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
 import type { InstanceEntry } from '../../src/core/install/host/registry.ts';
 import {
 	instanceDropins,
