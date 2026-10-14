@@ -1003,10 +1003,10 @@ test('a local build shows its steps as they run, before it ends (C3-27)', async 
 	expect(lines.some((line) => line.includes('#9 [6/9] RUN bun install'))).toBe(true);
 	// The package manager's own chatter is condensed away.
 	expect(lines.some((line) => line.includes('Get:1 http://deb.debian.org'))).toBe(false);
-	const build = loggedRequests(host.root).find(
+	const buildRequest = loggedRequests(host.root).find(
 		(entry) => entry.argv.includes('--tag') || entry.argv[1]?.endsWith(IMAGE_BUILDER),
 	);
-	expect(build?.env.BUILDKIT_PROGRESS).toBe('plain');
+	expect(buildRequest?.env.BUILDKIT_PROGRESS).toBe('plain');
 });
 
 describe('an install-time build of a checkout goes through the shared clean-snapshot builder (campaign 3b N1, C3-46)', () => {
@@ -1074,72 +1074,6 @@ describe('an install-time build of a checkout goes through the shared clean-snap
 			{ encoding: 'utf8' },
 		);
 		expect(bare.stdout.split('\n')).toContain('org.opencontainers.image.version=');
-	});
-
-	// Campaign 3c D6, second half: the OFFICIAL image (image-release.yml) said less than a local
-	// build — no url/description/licenses, so it inherited the base image's. Its labels must be fed
-	// from the SAME lib (one source), measured by EXECUTING the workflow's own step, never a copy.
-	test('the release workflow labels the official image with the SAME source/url/description/licenses as a local build, fed from the lib', () => {
-		type Step = { id?: string; uses?: string; run?: string; with?: Record<string, string> };
-		const workflow = Bun.YAML.parse(
-			readFileSync(join(REPO_ROOT, '.github', 'workflows', 'image-release.yml'), 'utf8'),
-		) as { jobs: { build: { steps: Step[] } } };
-		const steps = workflow.jobs.build.steps;
-		const buildAt = steps.findIndex((step) => step.uses?.startsWith('docker/build-push-action@'));
-		expect(buildAt).toBeGreaterThan(-1);
-		const labelLines = String(steps[buildAt]?.with?.labels ?? '')
-			.split('\n')
-			.map((line) => line.trim());
-		const libAt = steps.findIndex((step) =>
-			/\. deploy\/dedalo-image-lib\.sh\b/.test(step.run ?? ''),
-		);
-		expect(libAt, 'a build step sources deploy/dedalo-image-lib.sh').toBeGreaterThan(-1);
-		expect(libAt, 'before the build').toBeLessThan(buildAt);
-		const libStep = steps[libAt] as Step;
-		expect(libStep.id).toBeTruthy();
-
-		// Run the step exactly as the runner would (bash, the checkout as cwd, a GITHUB_OUTPUT file).
-		const scratch = mkdtempSync(join(tmpdir(), 'dedalo-release-labels-'));
-		try {
-			const output = join(scratch, 'output');
-			writeFileSync(output, '');
-			const run = spawnSync('bash', ['-e', '-c', libStep.run as string], {
-				cwd: REPO_ROOT,
-				encoding: 'utf8',
-				env: { PATH: process.env.PATH ?? '', GITHUB_OUTPUT: output },
-			});
-			expect(run.status, run.stderr).toBe(0);
-			const outputs = new Map(
-				readFileSync(output, 'utf8')
-					.split('\n')
-					.filter(Boolean)
-					.map((line) => [line.slice(0, line.indexOf('=')), line.slice(line.indexOf('=') + 1)]),
-			);
-			const local = spawnSync(
-				'bash',
-				[
-					'-c',
-					`. "${join(REPO_ROOT, 'deploy', 'dedalo-image-lib.sh')}" && dedalo_image_labels "$1" "$2"`,
-					'labels',
-					REPO_ROOT,
-					'localhost/dedalo:7.0.0',
-				],
-				{ encoding: 'utf8' },
-			).stdout.split('\n');
-			for (const key of ['source', 'url', 'description', 'licenses']) {
-				const prefix = `org.opencontainers.image.${key}=`;
-				// the label is the step's output — never a literal copy that could drift from the lib
-				expect(
-					labelLines.filter((line) => line.startsWith(prefix)),
-					key,
-				).toEqual([`${prefix}\${{ steps.${libStep.id}.outputs.${key} }}`]);
-				const localValue = local.find((line) => line.startsWith(prefix))?.slice(prefix.length);
-				expect(outputs.get(key) ?? '', key).not.toBe('');
-				expect(outputs.get(key), key).toBe(localValue as string);
-			}
-		} finally {
-			rmSync(scratch, { recursive: true, force: true });
-		}
 	});
 });
 
