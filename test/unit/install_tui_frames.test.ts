@@ -807,7 +807,7 @@ describe('campaign 3: the full screen says what its controls do (C3-26, C3-47, C
 
 	test('C3-49 / 3b N18: a passed check carried onto the next screen keeps its warnings and verdict in view, headed by its screen', async () => {
 		await withRig(SIZES[0], async (rig) => {
-			rig.front.prompter.view(viewAt('production', 'system', { instance: 'zz' }));
+			rig.front.prompter.view(viewAt('production', 'system', { instance: 'mus' }));
 			// A production check: the firewall WARNING comes early, a dozen ok rows after it.
 			rig.front.prompter.say([
 				'ok  Operating system  Ubuntu 26.04',
@@ -816,7 +816,7 @@ describe('campaign 3: the full screen says what its controls do (C3-26, C3-47, C
 				...Array.from({ length: 12 }, (_, index) => `ok  Row${index}  fine`),
 				'System ready (1 warning).',
 			]);
-			const view = viewAt('production', 'identity', { instance: 'zz' });
+			const view = viewAt('production', 'identity', { instance: 'mus' });
 			rig.front.prompter.view(view);
 			void rig.front.prompter.text(question(view, 'identity.entity'));
 			const rows = rowsOf(await rig.frame());
@@ -835,7 +835,7 @@ describe('campaign 3: the full screen says what its controls do (C3-26, C3-47, C
 
 	test('3b N34: a screen whose check failed is drawn ✗ on the rail, and the check screen is current', async () => {
 		await withRig(SIZES[0], async (rig) => {
-			const base = viewAt('production', 'route', { instance: 'zz' });
+			const base = viewAt('production', 'route', { instance: 'mus' });
 			const system = base.screens.find((screen) => screen.id === 'system');
 			rig.front.prompter.view({ ...base, seen: ['route', 'system'], failed: ['system'] });
 			void rig.front.prompter.choice(question(base, 'route.route'));
@@ -848,7 +848,7 @@ describe('campaign 3: the full screen says what its controls do (C3-26, C3-47, C
 
 	test('3b N35, N36: a failed check page names each hotkey’s own command, its rows drawn with ✗', async () => {
 		await withRig(SIZES[0], async (rig) => {
-			const view = viewAt('production', 'system', { instance: 'zz' });
+			const view = viewAt('production', 'system', { instance: 'mus' });
 			void rig.front.prompter.probe({
 				screen: view.screen,
 				lines: [

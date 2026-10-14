@@ -296,18 +296,18 @@ describe('ontology_references — the structural classifier', () => {
 
 	test('unreachable: a node grafted into an ABSENT TLD and its subtree; a present graft is reachable', () => {
 		const node = (id: number, parent: string) =>
-			ontologyCopyRow('zzrg', { id, parent, model: 'zzrm3', term: `n${id}` });
+			ontologyCopyRow('zzorf', { id, parent, model: 'zzrm3', term: `n${id}` });
 		const rows = rowsOfCopyLines([
-			node(1, 'zzrg0'),
+			node(1, 'zzorf0'),
 			node(2, 'zzrx4'), // grafted under an absent TLD
-			node(3, 'zzrg2'),
-			node(4, 'zzrg3'),
+			node(3, 'zzorf2'),
+			node(4, 'zzorf3'),
 			node(5, 'zzry1'), // grafted under a PRESENT foreign node
-			node(6, 'zzrg5'),
+			node(6, 'zzorf5'),
 		]);
-		const own = new Set(['zzrg']);
+		const own = new Set(['zzorf']);
 		const present = new Set(['zzry1']);
-		expect([...unreachableNodes(rows, own, present)].sort()).toEqual(['zzrg2', 'zzrg3', 'zzrg4']);
+		expect([...unreachableNodes(rows, own, present)].sort()).toEqual(['zzorf2', 'zzorf3', 'zzorf4']);
 		expect([...unreachableNodes(rows, own, new Set([...present, 'zzrx4']))]).toEqual([]);
 	});
 

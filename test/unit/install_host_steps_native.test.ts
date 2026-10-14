@@ -2074,7 +2074,7 @@ describe('the engine checks the backup directory the units write to (C3-55)', ()
 			`${ctx.paths.backupDir}/db`,
 		);
 		// The developer route has no backup units: it writes no such key.
-		const developer = buildInstallPlan({ route: 'developer', entity: 'zz', root_password: 'x' });
+		const developer = buildInstallPlan({ route: 'developer', entity: 'mus', root_password: 'x' });
 		expect(
 			developer.env
 				.flatMap((section) => section.entries)

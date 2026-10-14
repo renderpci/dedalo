@@ -1198,23 +1198,23 @@ describe('campaign 3: the screens ask what the route uses, in its own words', ()
 
 	test('C3-48: the engine child is handed only the secrets the plan uses', () => {
 		const keys = (raw: Record<string, unknown>) => engineSecretKeys(buildInstallPlan(raw).answers);
-		expect(keys({ route: 'trial', entity: 'zz' })).toEqual(['root_password', 'db_password']);
+		expect(keys({ route: 'trial', entity: 'mus' })).toEqual(['root_password', 'db_password']);
 		expect(
 			keys({
 				route: 'trial',
-				entity: 'zz',
+				entity: 'mus',
 				diffusion: true,
 				mysql_username: 'u',
 				mailer: true,
-				smtp_host: 'smtp.zz.org',
+				smtp_host: 'smtp.mus.org',
 			}),
 		).toEqual(['root_password', 'db_password', 'mysql_password', 'smtp_pass']);
 		// A created production database is peer-only: no password exists to hand over.
-		expect(keys({ route: 'production', instance: 'prado', entity: 'zz' })).toEqual([
+		expect(keys({ route: 'production', instance: 'prado', entity: 'mus' })).toEqual([
 			'root_password',
 		]);
 		expect(
-			keys({ route: 'production', instance: 'prado', entity: 'zz', db_mode: 'existing' }),
+			keys({ route: 'production', instance: 'prado', entity: 'mus', db_mode: 'existing' }),
 		).toEqual(['root_password', 'db_password']);
 	});
 
