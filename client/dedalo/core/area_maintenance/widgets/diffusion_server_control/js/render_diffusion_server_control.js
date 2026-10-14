@@ -31,7 +31,8 @@
 *     engine    : { state, title, checks: { engine, formats } }   // native advisory
 *     scheduler : { running, max_runners, queued, stale_after_seconds, paused }
 *     jobs      : Array<{ job_id, process_id, state, element_tipo, section_tipo,
-*                         type, counter, total, msg, attempt, max_attempts, ... }>
+*                         type, counter, total, total_time, msg, attempt,
+*                         max_attempts, ... }>
 *     pending   : number|null   // pending unpublish deletions; null when not applicable
 *     config    : { native, native_elements, resolve_levels, langs, batch_rows,
 *                   batch_records, target_db_socket, target_db_host,
@@ -503,6 +504,17 @@ const build_progress_cell = function(job, tr) {
 	counter.textContent = Number(job.total) > 0
 		? format_int(job.counter) + ' / ' + format_int(job.total)
 		: format_int(job.counter)
+	// total time the finished job took (server-formatted, the same figure
+	// tool_diffusion prints); null while the job has not finished
+	if (job.total_time) {
+		const total_time = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'job_total_time',
+			title			: 'Total time',
+			parent			: head
+		})
+		total_time.textContent = '· ' + job.total_time
+	}
 	if (job.msg) {
 		const msg = ui.create_dom_element({
 			element_type	: 'span',

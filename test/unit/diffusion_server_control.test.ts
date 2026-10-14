@@ -138,12 +138,15 @@ describe('diffusion_server_control widget (native engine)', () => {
 			'started_at',
 			'state',
 			'total',
+			'total_time',
 			'type',
 		]);
 		// the fields the progress cell reads, with the types it assumes
 		expect(typeof (row as { counter: unknown }).counter).toBe('number');
 		expect(typeof (row as { total: unknown }).total).toBe('number');
 		expect((row as { state: unknown }).state).toBe('queued');
+		// not finished → no total time (the cell prints nothing rather than 0)
+		expect((row as { total_time: unknown }).total_time).toBeNull();
 		// process_id is the CLIENT label, never the job uuid (the row keys off
 		// job_id, but every human-facing string is the label)
 		expect((row as { process_id: unknown }).process_id).toBe(job.job.client_process_id);

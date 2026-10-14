@@ -1401,6 +1401,13 @@ Merged since the last release; these ship with the next one.
 
     The *Job queue* table of the *Diffusion engine & queue* maintenance panel has a new *User* column with the name of the user who launched each publication (or the user id when the account has no name), so an administrator can tell whose job is running or waiting before cancelling it.
 
+- **The publication job queue shows how long each finished job took.**
+
+    In Maintenance → Diffusion server control, a finished job's progress line now ends with
+    its total time (for example "42,137 / 42,137 · 12 min 8 sec"), measured from the first
+    start to the finish, retries included. It is the same figure the publication tool
+    shows when the job ends.
+
 - **The publication server panel shows an estimated time remaining for the running jobs.**
 
     In Maintenance → Diffusion server control, the *Live activity* band now shows next

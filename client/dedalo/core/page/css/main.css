@@ -16039,6 +16039,11 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+.wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_total_time {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
 .wrapper_widget.diffusion_server_control .diffusion_server_control_job_table .job_msg {
   min-width: 0;
   color: var(--fg_muted);

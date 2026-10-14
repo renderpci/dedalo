@@ -67,6 +67,7 @@ async function resolveJobOwnerNames(
 function mapJobToClient(
 	row: DiffusionJobRow,
 	ownerNames: ReadonlyMap<number, string | null>,
+	formatElapsed: (ms: number) => string,
 ): Record<string, unknown> {
 	// job_id is exposed here deliberately: the queue's "auth is never by
 	// id-knowledge" rule is upheld by the global-admin DISPATCH gate, not by
@@ -91,6 +92,13 @@ function mapJobToClient(
 		created_at: row.created_at,
 		started_at: row.started_at,
 		finished_at: row.finished_at,
+		// wall-clock time the job took, first start → finish (retries included),
+		// formatted by the SAME formatter as tool_diffusion's total_time so the two
+		// screens print the same figure. Null until the job has finished.
+		total_time:
+			row.started_at && row.finished_at
+				? formatElapsed(Math.max(0, row.finished_at.getTime() - row.started_at.getTime()))
+				: null,
 		errors: row.errors,
 	};
 }
@@ -109,13 +117,14 @@ function envIntOrNull(raw: string | undefined): number | null {
  * is erased at compile and carries no runtime edge.
  */
 async function diffusionModules() {
-	const [info, queue, scheduler, writers] = await Promise.all([
+	const [info, queue, scheduler, writers, facade] = await Promise.all([
 		import('../../../diffusion/api/info.ts'),
 		import('../../../diffusion/jobs/queue.ts'),
 		import('../../../diffusion/jobs/scheduler.ts'),
 		import('../../../diffusion/writers/registry.ts'),
+		import('../../../diffusion/api/actions.ts'),
 	]);
-	return { info, queue, scheduler, writers };
+	return { info, queue, scheduler, writers, facade };
 }
 
 /**
@@ -125,7 +134,7 @@ async function diffusionModules() {
  * pause flag), the pending-unpublish count and an engine-native config summary.
  */
 export async function diffusionControlGetValue(): Promise<WidgetResponse> {
-	const { info, queue, scheduler, writers } = await diffusionModules();
+	const { info, queue, scheduler, writers, facade } = await diffusionModules();
 	const { readEnv } = await import('../../../config/env.ts');
 	const { readBool } = await import('../../../config/readers.ts');
 	const { config } = await import('../../../config/config.ts');
@@ -173,7 +182,7 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 				paused: scheduler.isSchedulerPaused(),
 				draining: scheduler.isSchedulerDraining(),
 			},
-			jobs: jobs.map((row) => mapJobToClient(row, ownerNames)),
+			jobs: jobs.map((row) => mapJobToClient(row, ownerNames, facade.formatElapsed)),
 			pending,
 			// wire key unchanged; the local const is `configSummary` so it cannot be
 			// confused with the engine `config` object it now reads from.

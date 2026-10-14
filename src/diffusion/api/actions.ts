@@ -92,6 +92,14 @@ export {
 	WIDGET_AUDIT_BUDGET,
 } from '../targets/mariadb/lang_sweep.ts';
 
+/**
+ * The job elapsed-time formatter, re-exported through the FACADE — ONE
+ * definition, in jobs/sse.ts. The diffusion_server_control widget prints a
+ * finished job's total time with it, so the queue table and tool_diffusion's
+ * progress line show the same figure.
+ */
+export { formatElapsed } from '../jobs/sse.ts';
+
 /** Old-engine cadences (pinned): 2s state re-send on diffuse; 15s ":\n" on status. */
 const DIFFUSE_HEARTBEAT_MS = 2000;
 const STATUS_COMMENT_HEARTBEAT_MS = 15000;
