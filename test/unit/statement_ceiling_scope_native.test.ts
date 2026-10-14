@@ -819,6 +819,9 @@ describe('a 57014 that is NOT the ceiling stays raw', () => {
 	});
 	test('a ceiling changed in a way the recorder cannot parse (set_config) is unknown: its 57014 stays raw', () => {
 		const unknown = errorOf('recorder_unknown_raw');
+		expect(unknown.name, `not the driver's raw error: ${JSON.stringify(unknown)}`).toBe(
+			'PostgresError',
+		);
 		expect(unknown.errno).toBe('57014');
 		expect(unknown.dedalo).toBe(false);
 	});
