@@ -131,7 +131,9 @@ describe('queueJobView projection', () => {
 	});
 
 	test('phase: only the two known values pass; anything else (or a pre-split row) is null', () => {
-		expect(queueJobView(activeRow({ phase_text: 'linked', linked_counter_text: '12345' }))).toMatchObject({
+		expect(
+			queueJobView(activeRow({ phase_text: 'linked', linked_counter_text: '12345' })),
+		).toMatchObject({
 			phase: 'linked',
 			linked_counter: 12345,
 		});
@@ -373,7 +375,7 @@ describe('rollup aggregate — the honesty rules', () => {
 		expect(band.note).toContain('1 job publishing linked records');
 	});
 
-		test('only RUNNING jobs count, and no running jobs means no band content', () => {
+	test('only RUNNING jobs count, and no running jobs means no band content', () => {
 		expect(aggregate_view([{ state: 'queued', counter: 0, total: 500 }]).show).toBe(false);
 		expect(aggregate_view([{ state: 'completed', counter: 500, total: 500 }]).caption).toBe('');
 		expect(aggregate_view([]).show).toBe(false);
@@ -403,7 +405,9 @@ describe('time_remaining_view (rollup time remaining)', () => {
 		const t = create_rate_tracker();
 		t.observe([job('a', 0, 1300)], 0);
 		t.observe([job('a', 100, 1300)], 60_000); // 100 rec/min, 1200 left → 12 min
-		expect(time_remaining_view([job('a', 100, 1300)], t, 60_000)).toBe('~12 min remaining (estimated)');
+		expect(time_remaining_view([job('a', 100, 1300)], t, 60_000)).toBe(
+			'~12 min remaining (estimated)',
+		);
 	});
 
 	test('a stall GROWS the estimate instead of freezing it', () => {
@@ -411,7 +415,9 @@ describe('time_remaining_view (rollup time remaining)', () => {
 		t.observe([job('a', 0, 1300)], 0);
 		t.observe([job('a', 100, 1300)], 60_000);
 		t.observe([job('a', 100, 1300)], 120_000); // no movement for a minute → 50 rec/min
-		expect(time_remaining_view([job('a', 100, 1300)], t, 120_000)).toBe('~24 min remaining (estimated)');
+		expect(time_remaining_view([job('a', 100, 1300)], t, 120_000)).toBe(
+			'~24 min remaining (estimated)',
+		);
 	});
 
 	test('concurrent jobs: the LONGEST one; any unmeasured job means "estimating"', () => {
@@ -433,7 +439,7 @@ describe('time_remaining_view (rollup time remaining)', () => {
 		expect(time_remaining_view([linked], t, 60_000)).toBe('');
 	});
 
-		test('jobs without an estimate, exceeded, or not running are not projected', () => {
+	test('jobs without an estimate, exceeded, or not running are not projected', () => {
 		const t = create_rate_tracker();
 		const jobs = [job('a', 10, 0), job('b', 600, 500), job('c', 0, 500, 'queued')];
 		t.observe(jobs, 0);

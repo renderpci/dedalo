@@ -63,6 +63,56 @@ async function resolveJobOwnerNames(
 	return names;
 }
 
+/**
+ * The spec-derived columns, each with its fallback. Extracted from
+ * mapJobToClient so the projection reads as a shape, not a pile of branches —
+ * this file carries a cyclomatic-complexity ratchet (scripts/lib/complexity.ts)
+ * and the flat `??` chains were what pushed the worst function over it.
+ */
+function jobSpecView(spec: DiffusionJobRow['spec']): {
+	element_tipo: string | null;
+	section_tipo: string | null;
+	type: string | null;
+} {
+	return {
+		element_tipo: spec?.diffusion_element_tipo ?? null,
+		section_tipo: spec?.section_tipo ?? null,
+		type: spec?.type ?? null,
+	};
+}
+
+/**
+ * The totals-derived progress columns, each with its fallback. The run's phase
+ * and linked-records counter are the SAME fields the queue stream frame carries,
+ * so the snapshot and the live patch draw the same bar.
+ */
+function jobProgressView(totals: DiffusionJobRow['totals']): {
+	counter: number;
+	total: number;
+	phase: DiffusionJobRow['totals']['phase'] | null;
+	linked_counter: number;
+	msg: string | null;
+} {
+	return {
+		counter: totals?.counter ?? 0,
+		total: totals?.total ?? 0,
+		phase: totals?.phase ?? null,
+		linked_counter: totals?.linked_counter ?? 0,
+		msg: totals?.msg ?? null,
+	};
+}
+
+/**
+ * Wall-clock time the job took, first start → finish (retries included),
+ * formatted by the SAME formatter as tool_diffusion's total_time so the two
+ * screens print the same figure. Null until the job has finished.
+ */
+function jobTotalTime(row: DiffusionJobRow, formatElapsed: (ms: number) => string): string | null {
+	return row.started_at && row.finished_at
+		? formatElapsed(Math.max(0, row.finished_at.getTime() - row.started_at.getTime()))
+		: null;
+}
+
 /** Project a durable job row to the admin-facing shape the widget renders. */
 function mapJobToClient(
 	row: DiffusionJobRow,
@@ -80,29 +130,15 @@ function mapJobToClient(
 		// (null otherwise — the client renders the id rather than inventing one)
 		owner_user_id: row.owner_user_id,
 		owner_name: ownerNames.get(row.owner_user_id) ?? null,
-		element_tipo: row.spec?.diffusion_element_tipo ?? null,
-		section_tipo: row.spec?.section_tipo ?? null,
-		type: row.spec?.type ?? null,
-		counter: row.totals?.counter ?? 0,
-		total: row.totals?.total ?? 0,
-		// the run's phase + the linked-records counter (same fields as the queue
-		// stream frame, so the snapshot and the live patch draw the same bar)
-		phase: row.totals?.phase ?? null,
-		linked_counter: row.totals?.linked_counter ?? 0,
-		msg: row.totals?.msg ?? null,
+		...jobSpecView(row.spec),
+		...jobProgressView(row.totals),
 		attempt: row.attempt,
 		max_attempts: row.max_attempts,
 		cancel_requested: row.cancel_requested,
 		created_at: row.created_at,
 		started_at: row.started_at,
 		finished_at: row.finished_at,
-		// wall-clock time the job took, first start → finish (retries included),
-		// formatted by the SAME formatter as tool_diffusion's total_time so the two
-		// screens print the same figure. Null until the job has finished.
-		total_time:
-			row.started_at && row.finished_at
-				? formatElapsed(Math.max(0, row.finished_at.getTime() - row.started_at.getTime()))
-				: null,
+		total_time: jobTotalTime(row, formatElapsed),
 		errors: row.errors,
 	};
 }

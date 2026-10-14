@@ -34,9 +34,9 @@
 -#}
 <!-- Version warning -->
 <script>
-  var el = document.querySelector("[data-md-component=outdated]")
-  var base = new URL("{{ config.extra.scope | d(base_url) }}", location);
-  var outdated = __md_get("__outdated", sessionStorage, base)
+  const el = document.querySelector("[data-md-component=outdated]")
+  const base = new URL("{{ config.extra.scope | d(base_url) }}", location);
+  const outdated = __md_get("__outdated", sessionStorage, base)
   if (outdated === true && el)
     el.hidden = false
 </script>

@@ -463,7 +463,7 @@ describe('docs versioning: the published layout stays coherent', () => {
 			scriptMatch,
 			'the override has no <script> — has the partial changed shape?',
 		).not.toBeNull();
-		const script = scriptMatch![1];
+		const script = scriptMatch![1]!;
 
 		/**
 		 * Render the partial for one page: resolve the Jinja expression to the
