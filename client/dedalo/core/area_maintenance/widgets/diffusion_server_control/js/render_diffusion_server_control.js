@@ -568,8 +568,8 @@ const build_progress_cell = function(job, tr) {
 * the comment there for why it must be explicit.
 *
 * Source: `value.jobs` — projected durable job rows. Each item shape:
-*   { job_id, process_id, state, element_tipo, section_tipo, type, counter,
-*     total, msg, attempt, max_attempts, cancel_requested, created_at,
+*   { job_id, process_id, state, owner_user_id, owner_name, element_tipo,
+*     section_tipo, type, counter, total, msg, attempt, max_attempts, cancel_requested, created_at,
 *     started_at, finished_at, errors }
 *
 * Buttons (admin only):
@@ -639,6 +639,7 @@ const build_jobs_block = function(self, value, parent) {
 		const headings = [
 			{ label:'Process',	class_name:'dd_th' },
 			{ label:'Target',	class_name:'dd_th' },
+			{ label:'User',		class_name:'dd_th' },
 			{ label:'State',	class_name:'dd_th' },
 			{ label:'Progress',	class_name:'dd_th' },
 			{ label:'Attempt',	class_name:'dd_th num' }
@@ -677,6 +678,14 @@ const build_jobs_block = function(self, value, parent) {
 			const td_target = ui.create_dom_element({ element_type:'div', class_name:'dd_td job_target', parent:tr })
 			td_target.textContent = (job.element_tipo || '?') + ' → ' + (job.section_tipo || '?')
 				+ (job.type ? ' (' + job.type + ')' : '')
+
+			// user who fired the process: name, falling back to the bare id when
+			// the user record has no name (root, an unnamed account)
+			const td_user = ui.create_dom_element({ element_type:'div', class_name:'dd_td job_user', parent:tr })
+			td_user.textContent = job.owner_name || (job.owner_user_id!=null ? '#' + job.owner_user_id : '?')
+			if (job.owner_user_id!=null) {
+				td_user.title = 'User id: ' + job.owner_user_id
+			}
 
 			// state badge. The state word is a single token and is never wrapped;
 			// a requested cancel is a separate sub-line rather than a suffix, so it

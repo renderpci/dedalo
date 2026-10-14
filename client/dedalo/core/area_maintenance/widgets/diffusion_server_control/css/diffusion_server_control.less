@@ -127,12 +127,12 @@
 		flex-direction: column;
 	}
 	.diffusion_server_control_job_table {
-		grid-template-columns: minmax(9rem, 1.1fr) minmax(8rem, 1fr) 7.5rem minmax(10rem, 1.6fr) 4.5rem;
+		grid-template-columns: minmax(9rem, 1.1fr) minmax(8rem, 1fr) minmax(6rem, 0.6fr) 7.5rem minmax(10rem, 1.6fr) 4.5rem;
 		// the template has hard minimums: scroll rather than clip on a narrow panel
 		overflow-x: auto;
 
 		&.with_actions {
-			grid-template-columns: minmax(9rem, 1.1fr) minmax(8rem, 1fr) 7.5rem minmax(10rem, 1.6fr) 4.5rem auto;
+			grid-template-columns: minmax(9rem, 1.1fr) minmax(8rem, 1fr) minmax(6rem, 0.6fr) 7.5rem minmax(10rem, 1.6fr) 4.5rem auto;
 		}
 
 		// machine strings (process id, element → section). They may still break

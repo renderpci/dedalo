@@ -1397,6 +1397,10 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **The diffusion job queue shows who started each publication.**
+
+    The *Job queue* table of the *Diffusion engine & queue* maintenance panel has a new *User* column with the name of the user who launched each publication (or the user id when the account has no name), so an administrator can tell whose job is running or waiting before cancelling it.
+
 - **The publication tool names the target database of an SQL publication.**
 
     Each SQL panel of the publication tool now shows a *Database* row: the MariaDB database the records are published into, which is also the database the *Connection status* refers to. The panel's *Name* row reads *Table name*, because for SQL it is the target table. Panels for other types (RDF, XML…) are unchanged.

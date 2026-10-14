@@ -44,8 +44,30 @@ export async function countPendingDiffusion(): Promise<number> {
 	return Number(rows[0]?.n ?? 0);
 }
 
+/**
+ * Display names of the users who fired the listed jobs — one lookup per
+ * DISTINCT owner (the list holds up to 200 rows, typically a handful of users).
+ */
+async function resolveJobOwnerNames(
+	rows: readonly DiffusionJobRow[],
+): Promise<Map<number, string | null>> {
+	const names = new Map<number, string | null>();
+	const owners = new Set(rows.map((row) => row.owner_user_id));
+	if (owners.size === 0) return names;
+	const { currentApplicationLang } = await import('../../resolve/request_lang.ts');
+	const { resolveUserName } = await import('../../security/user_identity.ts');
+	const lang = currentApplicationLang();
+	for (const owner of owners) {
+		names.set(owner, await resolveUserName(owner, lang));
+	}
+	return names;
+}
+
 /** Project a durable job row to the admin-facing shape the widget renders. */
-function mapJobToClient(row: DiffusionJobRow): Record<string, unknown> {
+function mapJobToClient(
+	row: DiffusionJobRow,
+	ownerNames: ReadonlyMap<number, string | null>,
+): Record<string, unknown> {
 	// job_id is exposed here deliberately: the queue's "auth is never by
 	// id-knowledge" rule is upheld by the global-admin DISPATCH gate, not by
 	// keeping the id secret. Requeue/purge need the unambiguous row id.
@@ -53,6 +75,10 @@ function mapJobToClient(row: DiffusionJobRow): Record<string, unknown> {
 		job_id: row.job_id,
 		process_id: row.client_process_id,
 		state: row.state,
+		// who fired it: the id always, the name when the user record has one
+		// (null otherwise — the client renders the id rather than inventing one)
+		owner_user_id: row.owner_user_id,
+		owner_name: ownerNames.get(row.owner_user_id) ?? null,
 		element_tipo: row.spec?.diffusion_element_tipo ?? null,
 		section_tipo: row.spec?.section_tipo ?? null,
 		type: row.spec?.type ?? null,
@@ -109,6 +135,7 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 		queue.listJobsForCaller(null), // admin scope: all jobs (24h window, LIMIT 200)
 		countPendingDiffusion(),
 	]);
+	const ownerNames = await resolveJobOwnerNames(jobs);
 	const configSummary = {
 		// readBool, not readEnv==='true': the catalog default (true) must apply on
 		// an install that never wrote the key, or this panel reports "external
@@ -146,7 +173,7 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 				paused: scheduler.isSchedulerPaused(),
 				draining: scheduler.isSchedulerDraining(),
 			},
-			jobs: jobs.map(mapJobToClient),
+			jobs: jobs.map((row) => mapJobToClient(row, ownerNames)),
 			pending,
 			// wire key unchanged; the local const is `configSummary` so it cannot be
 			// confused with the engine `config` object it now reads from.
