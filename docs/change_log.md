@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - Dédalo now runs on Bun 1.4.3, which fixes a runtime defect that could leave a process waiting forever, at full CPU, on a program it had started.
     - Every AI request now counts against daily limits set per user and per profile, and generated answers need their own permission.
     - The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start.
     - SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change.
@@ -1674,6 +1675,27 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Dédalo now runs on Bun 1.4.3, which fixes a runtime defect that could leave a process waiting forever, at full CPU, on a program it had started.** *(action needed)*
+
+    On Bun 1.4.2, a process that had already run many synchronous calls to external programs could,
+    now and then, wait forever on one that had already finished, at 100% CPU (Bun issue 34069). The
+    server makes such calls for a few checks (the code update panel's git checks, the versions of the
+    PostgreSQL tools, ImageMagick, ffmpeg and curl); the command-line tools and the test suite make
+    many, which is where it was seen. Bun 1.4.3 fixes it, so the pinned runtime (`.bun-version`)
+    moves from 1.4.2 to 1.4.3, and the update panel refuses this release until the server runs it.
+
+    **Action needed, before you apply this update:**
+
+    - **Host installation:** as root, install the verified 1.4.3 runtime at `/opt/dedalo/bun/1.4.3/bun`
+      exactly as [the `host_runtime` step](./install/manual_install.md#manual-host_runtime) does (with
+      `PIN=1.4.3`, checked against this release's `.bun-sha256`), point the instance's `ExecStart` at
+      it ([the `host_units` step](./install/manual_install.md#manual-host_units)), run
+      `systemctl daemon-reload`, restart the instance, then apply the update.
+    - **Container installation:** nothing extra; the new image carries Bun 1.4.3
+      ([Upgrading](./install/docker.md#upgrading)).
+    - **Publication hosts:** each site's Bun must move to 1.4.3 as well, or its **Bun version** row
+      turns red ([Upgrading a site's Bun](./install/publication_host.md#upgrading-a-sites-bun)).
+
 - **The installer refuses an installed instance's name up front, and a refused Review checks again on install.**
 
     - **Production, an instance name already installed on the host**: the System check, right after the name, now says `instance <i> is already installed on this host (<registry file or drop-in>)` and asks for another name. The Identity check no longer calls that instance's account "an earlier install's leftover" to remove with `userdel`, and a typed service user that belongs to another instance gets that instance's clash, not the leftover advice. A fresh headless run over a complete install of the name says the same instead of "resume it or undo it".
@@ -1689,6 +1711,18 @@ Merged since the last release; these ship with the next one.
     - **The salt after a failure or a Ctrl-C**: once the engine steps have generated `DEDALO_SALT_STRING`, every ✖ block names the command that reads it back. The value itself is never printed there. Ctrl-C leaves the full screen, which was the only place that showed the salt. On docker and trial the command is now `docker compose … run --rm --no-deps dedalo grep ^DEDALO_SALT_STRING= /private/.env`, which works whether or not the stack is running. `docker.md`, `quickstart.md`, `production.md` and the installer reference describe this.
     - **Docker / trial `--abort`**: the undo names only the containers that exist, measured with `compose ps --all`. An install stopped before the engine started now says `no container of dedalo, nginx, backup was ever created`. The kept-images hint and its `docker image rm` command list only images present on the machine, checked with `docker image inspect`. Before, it named `nginx:alpine` even when that image was never pulled, and the command failed.
     - **Production, nginx installed by the run (Debian/Ubuntu)**: the Review's *To do* now says that the package's default site keeps port 80 (`port 80: the default site stays yours (/etc/nginx/sites-enabled/default, default_server) …`). Before, this note appeared only after the run, on the Done card.
+
+- **The installer names a killed engine and shows what the engine said while it stopped.**
+
+    - When the engine steps' process or container is killed (for example out of memory, or
+      `docker kill`), the installer's ✖ line now says so, e.g. "the engine container was killed by
+      SIGKILL — out of memory, or a kill", instead of quoting a Docker Compose progress line such as
+      "Container dedalo-install-engine Created".
+    - After a Ctrl-C, the lines the engine prints while it stops (such as "ended the seed restore's
+      database session") now appear inside the ✖ block, on both the full screen and the plain
+      output. On the Docker routes they were lost before.
+    - On a production install that uses the institution's own certificate, the packages step no
+      longer lists certbot, which it does not install.
 
 - **Installer: one interruption block on Ctrl-C, a resume that re-checks and tells everything, the salt on a terminal resume, and clearer screens.**
 

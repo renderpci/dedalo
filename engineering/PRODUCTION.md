@@ -7,7 +7,7 @@ concern; the reference systemd units live in `deploy/`.
 ## 1. Runtime (S2-36)
 
 The Bun runtime is **pinned**: `.bun-version` + `package.json` `engines.bun`
-(currently `1.4.2`). The code is coupled to version-specific Bun behavior —
+(currently `1.4.3`). The code is coupled to version-specific Bun behavior —
 `Bun.sql` jsonb parameter inference (a drift here is the realized S1-07/S1-08
 corruption class), the Bun.sql MariaDB adapter (diffusion), `Bun.serve`
 defaults. The server echoes its runtime at boot and **warns loudly** when it
@@ -41,6 +41,19 @@ answers — a JS string bound as `$1::jsonb` still lands as a jsonb *string*
 as objects, and bunfig's `[test] timeout` is still ignored (an 8 s test under a
 30000 key died at 5001 ms), so `TEST_TIMEOUT_FLAG` stays load-bearing. Operator
 order is unchanged: install 1.4.2, restart onto it, then apply the update.
+
+**Moved to 1.4.3 (2026-10-14, 1.4.2 -> 1.4.3) for a runtime defect, not for
+features:** on 1.4.2 a GC finalizer that ran inside `Bun.spawnSync` released its
+poll on spawnSync's own, process-lifetime event loop, whose count then drifted
+down until a later call never polled and spun at 100% CPU on an exited child
+(oven-sh/bun#34069, fixed by #44581) — measured as the pre-push gate's
+intermittent 60 s hangs in the CI image. Gate: `test/unit/ops_runtime_pin.test.ts`
+(upstream's reproducer through the runtime under test: red on 1.4.2, green on
+1.4.3). Re-probed on 1.4.3, same answers as 1.4.2: a JS string bound as
+`$1::jsonb` lands as a jsonb *string* (`$1::text::jsonb` → object); MariaDB
+`DATETIME` and `TIMESTAMP` decode as UTC (under `TZ=Europe/Madrid`) and `JSON` as
+objects; bunfig's `[test] timeout` is still ignored (5003 ms kill). Operator order
+is unchanged: install 1.4.3, restart onto it, then apply the update.
 
 ## 2. Process supervision (S2-38, S2-17)
 

@@ -149,7 +149,8 @@ async function runChild(
 	consequence: string,
 ): Promise<void> {
 	const relayed = relayContext(ctx);
-	const report = childReport();
+	// A signal death names the container (campaign 3f F1: `docker kill` read as compose chatter).
+	const report = childReport('the engine container');
 	const result = await ctx.runner.run({
 		...requestOf(command, withDatabasePassword(ctx)),
 		onStdoutLine: (line) => relay(relayed, line, report),
@@ -192,15 +193,39 @@ export const ENGINE_STOP_GRACE_SECONDS = 15;
  * `rm -f` SIGKILLed it mid-COPY, and its restore's session outlived the
  * container's network on the server for hours), then `rm -f` for whatever is
  * left (`compose run --rm` usually removed it already).
+ *
+ * The child's LAST WORDS (campaign 3f F2): the Ctrl-C ends the `compose run`
+ * client at once — it does not wait for, nor relay, its container — so what
+ * the child says while it stops ("ended the seed restore's database session")
+ * reached nobody. `docker logs --follow` from this moment, started before the
+ * stop, relays it (the host keeps it for its ✖ block); it ends when the
+ * container does.
  */
 async function removeEngineContainer(ctx: HostCtx): Promise<void> {
+	const since = (ctx.now() / 1000).toFixed(3);
+	const bound = (ENGINE_STOP_GRACE_SECONDS + 30) * 1000;
+	const lastWords = ctx.runner
+		.run({
+			...requestOf(
+				dockerProbe(
+					ctx,
+					['logs', '--follow', '--since', since, ENGINE_CONTAINER],
+					"the engine container's last lines",
+					{ timeoutMs: bound },
+				),
+				ctx,
+			),
+			onStdoutLine: (line) => relay(relayContext(ctx), line, childReport()),
+		})
+		.catch(() => null);
 	const stop = dockerCommand(
 		ctx,
 		['stop', '--time', String(ENGINE_STOP_GRACE_SECONDS), ENGINE_CONTAINER],
 		'let the engine container stop itself',
-		{ okExit: [0, 1], timeoutMs: (ENGINE_STOP_GRACE_SECONDS + 30) * 1000 },
+		{ okExit: [0, 1], timeoutMs: bound },
 	);
 	await ctx.runner.run(requestOf(stop, ctx));
+	await lastWords;
 	await ctx.runner.run(
 		requestOf(
 			dockerCommand(ctx, ['rm', '-f', ENGINE_CONTAINER], 'stop the engine container', {

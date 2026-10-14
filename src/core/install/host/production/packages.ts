@@ -16,6 +16,8 @@
  * removed under its packages would leave them without security updates).
  */
 
+import { normalizeInstallAnswers } from '../../install_plan.ts';
+import type { PlanFile } from '../../run_files_core.ts';
 import type { ExecCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
 import { executeCommands, runExec } from '../execute.ts';
 import { packageFacts } from '../facts.ts';
@@ -228,12 +230,23 @@ async function runPackages(ctx: HostCtx) {
 	return ran(`${missingPackages(ctx).length} package(s) installed`, { warnings });
 }
 
+/**
+ * The step's headline: what desiredPackages installs for THIS plan — certbot
+ * only with Let's Encrypt (campaign 3f U26: an institution certificate's
+ * Review named certbot over an apt command without it).
+ */
+export function packagesLabel(plan: PlanFile): string {
+	const { answers } = normalizeInstallAnswers(plan.answers as Record<string, unknown>);
+	const certbot = answers.tls_mode === 'letsencrypt' ? ', certbot' : '';
+	return `packages: PostgreSQL 18, the media toolchain, the web server${certbot}`;
+}
+
 export const host_packages: HostStepDefinition = {
 	id: 'host_packages',
 	privilege: 'root',
 	kind: 'action',
 	needs: [],
-	label: () => 'packages: PostgreSQL 18, the media toolchain, the web server, certbot',
+	label: packagesLabel,
 	commands: (ctx) => {
 		const optional = optionalCommand(ctx);
 		return [...packageCommands(ctx), ...(optional === null ? [] : [optional])];

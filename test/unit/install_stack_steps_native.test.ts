@@ -545,12 +545,47 @@ describe("the engine child's own refusal reaches the host's ✖ block (campaign 
 		expect(crash.outcome.message).toContain(
 			'the engine steps failed: Error response from daemon: no space left on device — their record',
 		);
-		const silent = machine(TRIAL, { responses: [{ match: run, exit: 137 }] });
-		const killed = await runHost(silent, fresh(TRIAL).request);
-		expect(killed.outcome.message).toContain(
+		const silent = machine(TRIAL, { responses: [{ match: run, exit: 1 }] });
+		const mute = await runHost(silent, fresh(TRIAL).request);
+		expect(mute.outcome.message).toContain(
 			'the engine steps failed (the engine child gave no reason) — their record',
 		);
+		expect(mute.outcome.message).toContain('(exit 1)');
+	});
+
+	test('a hard-killed engine container is named killed; compose progress chatter is never the reason (campaign 3f F1)', async () => {
+		const compose = composePrefix('trial');
+		const run = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const chatter =
+			' Network dedalo_default Creating\n Network dedalo_default Created\n Container dedalo-install-engine Creating\n Container dedalo-install-engine Created\n';
+		// `docker kill -s KILL dedalo-install-engine` mid-seed: compose run exits 137, its stderr only progress.
+		const killed = await runHost(
+			machine(TRIAL, { responses: [{ match: run, exit: 137, stderr: chatter }] }),
+			fresh(TRIAL).request,
+		);
+		expect(killed.outcome.message).toContain(
+			'the engine steps failed: the engine container was killed by SIGKILL — out of memory, or a kill — their record',
+		);
 		expect(killed.outcome.message).toContain('(exit 137)');
+		expect(killed.outcome.message).not.toContain('Container dedalo-install-engine');
+		// No signal: the last stderr line that is not chatter is the reason.
+		const failed = await runHost(
+			machine(TRIAL, {
+				responses: [
+					{ match: run, exit: 1, stderr: `Error response from daemon: disk full\n${chatter}` },
+				],
+			}),
+			fresh(TRIAL).request,
+		);
+		expect(failed.outcome.message).toContain(
+			'the engine steps failed: Error response from daemon: disk full — their record',
+		);
+		// Stopped by SIGTERM with no outcome of its own: named too.
+		const stopped = await runHost(
+			machine(TRIAL, { responses: [{ match: run, exit: 143, stderr: chatter }] }),
+			fresh(TRIAL).request,
+		);
+		expect(stopped.outcome.message).toContain('the engine container was killed by SIGTERM —');
 	});
 });
 
@@ -1257,13 +1292,16 @@ describe('the engine child’s container never outlives the run, and never races
 			runner,
 			secrets: {},
 			created: emptyHostCreated(),
+			now: () => 1_760_000_000_123,
 		} as unknown as HostCtx;
 		await (
 			STACK_HOST_STEPS.stack_engine.onInterrupt as NonNullable<HostStepDefinition['onInterrupt']>
 		)(ctx);
 		// A bare `rm -f` SIGKILLed the engine mid-COPY: its seed restore's session outlived the
 		// container's network on the server for two hours (RHEL 10 / Docker, campaign 3e).
+		// Its last words are followed from this moment, before the stop (campaign 3f F2).
 		expect(runner.log.map((entry) => entry.argv.join(' '))).toEqual([
+			`${DOCKER} logs --follow --since 1760000000.123 dedalo-install-engine`,
 			`${DOCKER} stop --time 15 dedalo-install-engine`,
 			`${DOCKER} rm -f dedalo-install-engine`,
 		]);
@@ -1432,6 +1470,53 @@ describe('a Ctrl-C that kills the engine child is ONE interruption; an abort run
 		expect(said.match(/install interrupted \(SIGINT\) at step \[stack_engine\]/g)?.length).toBe(1);
 		expect(said).not.toContain('install failed');
 		expect(stateOf(host)?.runs.at(-1)?.result).toBe('interrupted');
+	});
+
+	test("the engine's last words while it stops (`docker logs --follow`, before the stop) are INSIDE the ✖ block (campaign 3f F2)", async () => {
+		const compose = composePrefix('trial');
+		const child = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const ended = "  ended the seed restore's database session (backend pid 169)";
+		const lastWords = `${JSON.stringify({ event: 'log', line: ended })}\n${JSON.stringify({ event: 'warn', line: 'engine stopped (SIGTERM) at step [install_db_from_default_file]' })}\n`;
+		// The Ctrl-C ends the compose client at once (130); only the container's logs carry what it said next.
+		const host = machine(TRIAL, {
+			responses: [
+				{ match: child, exit: 130 },
+				{ match: `${DOCKER} logs --follow --since `, stdout: lastWords },
+			],
+		});
+		const wrapRunner = (inner: CommandRunner): CommandRunner => ({
+			run: async (request) => {
+				const result = await inner.run(request);
+				if (request.argv.join(' ').startsWith(child)) process.emit('SIGINT');
+				return result;
+			},
+		});
+		const exit = spyOn(process, 'exit').mockImplementation(((code?: number) => {
+			throw new Error(`exit ${code}`);
+		}) as never);
+		const transcript = { lines: [] as string[], told: [] as string[], shown: [] as string[] };
+		try {
+			await runHost(host, fresh(TRIAL).request, { wrapRunner, transcript });
+		} catch {
+			// the mocked exit
+		} finally {
+			exit.mockRestore();
+		}
+		const lines = transcript.lines;
+		const block = lines.findIndex((line) => line.includes('✖ install interrupted (SIGINT)'));
+		expect(block).toBeGreaterThan(-1);
+		const at = lines.findIndex((line) => line.includes(ended.trim()));
+		// Said once, AFTER the ✖ header (a full screen keeps only those lines) and before the hint.
+		expect(at).toBeGreaterThan(block);
+		expect(lines.filter((line) => line.includes(ended.trim())).length).toBe(1);
+		const hint = lines.findIndex((line) => line.startsWith('  Progress saved:'));
+		expect(at).toBeLessThan(hint);
+		// The logs follow is started BEFORE the stop that makes the child speak.
+		const log = loggedCommands(host.root);
+		const follow = log.findIndex((line) => line.startsWith(`${DOCKER} logs --follow`));
+		const stop = log.findIndex((line) => line.startsWith(`${DOCKER} stop`));
+		expect(follow).toBeGreaterThan(-1);
+		expect(follow).toBeLessThan(stop);
 	});
 
 	test('a live abort ends its run record: result aborted, finished_at set', async () => {

@@ -152,35 +152,81 @@ interface ChildEvent {
 /**
  * What the child SAID about how it ended (campaign 3e F4): its `outcome`
  * event's sentence — a refusal such as "a seed restore … is still running" is
- * printed nowhere else, so the host's ✖ block must carry it.
+ * printed nowhere else, so the host's ✖ block must carry it. `who` names the
+ * child in a signal-death sentence (campaign 3f F1): the instance's process,
+ * or the docker route's container.
  */
 export interface ChildReport {
 	message: string | null;
+	who: string;
 }
 
 /** A fresh, empty report for one child run. */
-export function childReport(): ChildReport {
-	return { message: null };
+export function childReport(who = 'the engine child'): ChildReport {
+	return { message: null, who };
 }
 
 /** The longest child reason quoted into a ✖ line. */
 const REASON_MAX = 400;
 
 /**
- * Why the child failed, in its own words: its outcome sentence, else the last
- * line of its stderr (a crash, a compose/docker error — already redacted by the
- * runner), else null.
+ * Lines a child's stderr carries that are NEVER a reason (campaign 3f F1: a
+ * `docker kill -s KILL` of the engine container was reported as "Container
+ * dedalo-install-engine Created"): Docker Compose's progress chatter and
+ * runuser's own words when it ends its child on a signal.
  */
-function childReason(report: ChildReport, stderr: string): string | null {
+const NOT_A_REASON: readonly RegExp[] = [
+	/^(Container|Network|Volume|Image)\s+\S+\s+(Creating|Created|Recreate|Recreated|Starting|Started|Stopping|Stopped|Removing|Removed|Running|Waiting|Healthy|Exited|Pulling|Pulled|Building|Built)$/,
+	/^\[\+\]\s/,
+	/^Session terminated, killing shell/,
+	/^\.\.\.\s*killed\.?$/,
+];
+
+/** The last stderr line that can be a reason ('' when none). */
+function stderrReason(stderr: string): string {
+	return (
+		stderr
+			.split('\n')
+			.map((line) => line.trim())
+			.filter((line) => line !== '' && !NOT_A_REASON.some((pattern) => pattern.test(line)))
+			.at(-1) ?? ''
+	);
+}
+
+/** Linux signal numbers (the hosts this installer supports). */
+const SIGNAL_NAMES: Readonly<Record<number, string>> = Object.freeze({
+	1: 'SIGHUP',
+	2: 'SIGINT',
+	3: 'SIGQUIT',
+	6: 'SIGABRT',
+	9: 'SIGKILL',
+	11: 'SIGSEGV',
+	13: 'SIGPIPE',
+	15: 'SIGTERM',
+});
+
+/**
+ * A death by signal, in words (exit 128+N — a shell's, runuser's and
+ * `compose run`'s spelling of it), or null for an ordinary exit. SIGKILL says
+ * who sends one: the kernel out of memory, or a kill.
+ */
+export function signalDeath(who: string, exitCode: number): string | null {
+	const signal = exitCode - 128;
+	if (signal < 1 || signal > 64) return null;
+	const name = SIGNAL_NAMES[signal] ?? `signal ${signal}`;
+	const cause = signal === 9 ? ' — out of memory, or a kill' : '';
+	return `${who} was killed by ${name}${cause}`;
+}
+
+/**
+ * Why the child failed, in its own words: its outcome sentence; else a death
+ * by signal, named; else the last line of its stderr that is not progress
+ * chatter (a crash, a compose/docker error — already redacted by the runner);
+ * else null.
+ */
+function childReason(report: ChildReport, exitCode: number, stderr: string): string | null {
 	const said = report.message?.trim() ?? '';
-	const reason =
-		said !== ''
-			? said
-			: (stderr
-					.split('\n')
-					.map((line) => line.trim())
-					.filter((line) => line !== '')
-					.at(-1) ?? '');
+	const reason = said !== '' ? said : (signalDeath(report.who, exitCode) ?? stderrReason(stderr));
 	if (reason === '') return null;
 	return reason.length > REASON_MAX ? `${reason.slice(0, REASON_MAX)}…` : reason;
 }
@@ -196,7 +242,7 @@ export function childFailure(
 	report: ChildReport,
 	result: { exitCode: number; stderr: string },
 ): string {
-	const reason = childReason(report, result.stderr);
+	const reason = childReason(report, result.exitCode, result.stderr);
 	const said = reason === null ? ' (the engine child gave no reason)' : `: ${reason}`;
 	return `${what}${said} — ${consequence} (exit ${result.exitCode})`;
 }

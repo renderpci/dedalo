@@ -46,7 +46,7 @@
  * minted in memory by the openssl CLI (absent = RED, never a skip).
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, spyOn, test } from 'bun:test';
 import {
 	existsSync,
 	mkdirSync,
@@ -83,6 +83,7 @@ import {
 	REFUSED_BOOT_EXIT,
 	unitEverRan,
 } from '../../src/core/install/host/production/first_boot.ts';
+import { host_packages } from '../../src/core/install/host/production/packages.ts';
 import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
 import {
 	EXISTS_NOT_CREATED,
@@ -90,7 +91,11 @@ import {
 	reviewHostCommands,
 	reviewTodo,
 } from '../../src/core/install/host/review.ts';
-import { type RecordedResponse, scratchRunner } from '../../src/core/install/host/runner.ts';
+import {
+	type CommandRunner,
+	type RecordedResponse,
+	scratchRunner,
+} from '../../src/core/install/host/runner.ts';
 import { stackFileOf } from '../../src/core/install/host/stack/layout.ts';
 import { renderTemplate, UNIT_TEMPLATES } from '../../src/core/install/host/systemd/render.ts';
 import { chainTrustVerdict } from '../../src/core/install/host/tls_trust.ts';
@@ -385,6 +390,21 @@ describe('every production variant runs end to end: Review ≡ run, files landed
 			// The host executor says it too (campaign 3b N7: only the engine did).
 			expect(second.transcript.lines).toContain(ALREADY_COMPLETE_LINE);
 			expect(mutatingLog(loggedCommands(host.root).slice(log.length))).toEqual([]);
+		});
+	}
+});
+
+describe("host_packages' headline names exactly what its commands install (campaign 3f U26)", () => {
+	for (const variant of HOST_VARIANTS) {
+		test(variantName(variant), () => {
+			// A bare host (pending facts: nothing installed): the commands install every desired package.
+			const ctx = productionPlanCtx(variant);
+			const argv = host_packages
+				.commands(ctx)
+				.flatMap((command) => (command.kind === 'exec' ? command.argv : []));
+			const installsCertbot = argv.includes('certbot');
+			expect(installsCertbot).toBe(variant.tls === 'letsencrypt');
+			expect(host_packages.label(ctx.plan).includes('certbot')).toBe(installsCertbot);
 		});
 	}
 });
@@ -2147,6 +2167,64 @@ describe("the engine child's own refusal reaches the host's ✖ block (campaign 
 		);
 		for (const message of [resumed, aborted].map((r) => r.outcome.message ?? ''))
 			expect(message).not.toContain('see above');
+	});
+});
+
+describe('a signal-killed engine child is named killed; runuser chatter is never the reason (campaign 3f F1, production)', () => {
+	test('exit 137 with runuser\'s "Session terminated" stderr: killed by SIGKILL', async () => {
+		const bun = `/opt/dedalo/bun/${BUN_PIN}/bun`;
+		const dying = `${asServiceHomeDying()} ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
+		const { outcome } = await freshOn(UBUNTU_NGINX_LE, {
+			responses: [
+				{
+					match: `${dying} --request-stdin`,
+					exit: 137,
+					stderr: 'Session terminated, killing shell... ...killed.\n',
+				},
+				...engineFails(),
+			],
+		});
+		expect(outcome.message).toContain(
+			'the engine steps failed: the engine child was killed by SIGKILL — out of memory, or a kill — their record is in',
+		);
+		expect(outcome.message).not.toContain('Session terminated');
+	});
+});
+
+describe("the engine child's last words while it stops are INSIDE the ✖ block (campaign 3f F2, production)", () => {
+	test('a line the child prints AFTER the signal: waited for, kept, printed after the ✖ header — once', async () => {
+		const host = scratchHost(UBUNTU_NGINX_LE);
+		const { planFile } = productionPlan(UBUNTU_NGINX_LE);
+		const ended = "  ended the seed restore's database session (backend pid 42800)";
+		const child = `${ENGINE_DYING} --request-stdin`;
+		// Ctrl-C reaches the process group: the child gets it and SPEAKS LATER (its own stop), then exits 130.
+		const wrapRunner = (inner: CommandRunner): CommandRunner => ({
+			run: async (request) => {
+				if (!request.argv.join(' ').startsWith(child)) return inner.run(request);
+				process.emit('SIGINT');
+				await new Promise((done) => setTimeout(done, 0));
+				request.onStdoutLine?.(JSON.stringify({ event: 'log', line: ended }));
+				return { exitCode: 130, stdout: '', stderr: '', timedOut: false };
+			},
+		});
+		const exit = spyOn(process, 'exit').mockImplementation(((code?: number) => {
+			throw new Error(`exit ${code}`);
+		}) as never);
+		const transcript = { lines: [] as string[], told: [] as string[], shown: [] as string[] };
+		try {
+			await runHost(host, freshRequest(planFile), { wrapRunner, transcript });
+		} catch {
+			// the mocked exit
+		} finally {
+			exit.mockRestore();
+		}
+		const lines = transcript.lines;
+		const block = lines.findIndex((line) => line.includes('✖ install interrupted (SIGINT)'));
+		expect(block).toBeGreaterThan(-1);
+		const at = lines.findIndex((line) => line.includes(ended.trim()));
+		expect(at).toBeGreaterThan(block);
+		expect(lines.filter((line) => line.includes(ended.trim())).length).toBe(1);
+		expect(at).toBeLessThan(lines.findIndex((line) => line.startsWith('  Progress saved:')));
 	});
 });
 

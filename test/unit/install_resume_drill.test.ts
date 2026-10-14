@@ -160,7 +160,7 @@ function answersArgv(db: string): string[] {
 
 interface Run {
 	exitCode: number | null;
-	signal: string | null;
+	signal: string | number | null;
 	out: string;
 }
 
