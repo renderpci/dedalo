@@ -30,7 +30,7 @@ import { executeCommands, requestOf } from '../execute.ts';
 import { hostRefuse } from '../refuse.ts';
 import type { RunResult } from '../runner.ts';
 import { readProbeCaSeam } from '../scratch.ts';
-import { TRUST_CA_HOWTO } from '../tls_trust.ts';
+import { TRUST_CA_STEPS } from '../tls_trust.ts';
 import { mediaGated } from '../web/site.ts';
 import { exec, ran, webFlavor } from './common.ts';
 import { pollUntil } from './first_boot.ts';
@@ -166,7 +166,7 @@ function curlMeaning(exitCode: number, service: string): string {
 		51: 'the certificate does not name this address',
 		52: 'the server closed the connection without an answer',
 		56: 'the connection broke while reading the answer',
-		60: `the certificate chain is not trusted by this host — the probe verifies it as a browser does: ${TRUST_CA_HOWTO.replace(', then run this again', ', then --resume')}`,
+		60: `the certificate chain is not trusted by this host — the probe verifies it as a browser does: ${TRUST_CA_STEPS}, then --resume`,
 	};
 	return meanings[exitCode] ?? `curl exit ${exitCode}`;
 }

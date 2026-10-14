@@ -92,6 +92,7 @@ import {
 import { type RecordedResponse, scratchRunner } from '../../src/core/install/host/runner.ts';
 import { stackFileOf } from '../../src/core/install/host/stack/layout.ts';
 import { renderTemplate, UNIT_TEMPLATES } from '../../src/core/install/host/systemd/render.ts';
+import { chainTrustVerdict } from '../../src/core/install/host/tls_trust.ts';
 import {
 	ANSWERS_FILE_SCHEMA,
 	buildInstallPlan,
@@ -2267,5 +2268,45 @@ describe('a resume that re-ran earlier steps probes the public address again (ca
 		const again = await runHost(host, laterRequest('resume', plan));
 		expect(again.outcome.result).toBe('already_complete');
 		expect(probes()).toBe(idle);
+	});
+});
+
+describe('a run that INSTALLS nginx tells the default site its package wrote (campaign 3d C3d-F2)', () => {
+	/** Debian/Ubuntu's nginx package: sites-enabled/default, `default_server` on 80 (after host_packages). */
+	const PACKAGE_DEFAULT: RecordedResponse = {
+		match: '/usr/sbin/nginx -T',
+		after: '/usr/bin/apt-get install -y --no-install-recommends git',
+		stdout:
+			'# configuration file /etc/nginx/sites-enabled/default:\nserver {\n\tlisten 80 default_server;\n\tlisten [::]:80 default_server;\n\troot /var/www/html;\n}\n',
+	};
+	const NOTE =
+		'port 80: the default site stays yours (/etc/nginx/sites-enabled/default, default_server)';
+
+	test('nginx absent at the System check: the first instance still gets the port-80 note', async () => {
+		const host = scratchHost(UBUNTU_NGINX_LE, { responses: [PACKAGE_DEFAULT] });
+		const { outcome } = await runHost(host, freshRequest(productionPlan(UBUNTU_NGINX_LE).planFile));
+		expect(outcome.result).toBe('complete');
+		expect(outcome.told.join('\n')).toContain(NOTE);
+		// Measured, never changed: the dump is a read-only probe of the run.
+		expect(loggedCommands(host.root)).toContain('/usr/sbin/nginx -T');
+		// CONTROL: a package that wrote no default site — no note.
+		const bare = await runHost(
+			scratchHost(UBUNTU_NGINX_LE),
+			freshRequest(productionPlan(UBUNTU_NGINX_LE).planFile),
+		);
+		expect(bare.outcome.result).toBe('complete');
+		expect(bare.outcome.told.join('\n')).not.toContain('the default site stays yours');
+	});
+});
+
+describe('the untrusted-chain refusal names the real recovery path (campaign 3d C3d-F2)', () => {
+	test('"check again" (the Review re-checks on install), never "run this again"', () => {
+		const chain = mintCertificate('x.example.org').cert;
+		const untrusted = chainTrustVerdict(chain, [mintCertificate('y.example.org').cert]).problem;
+		expect(untrusted).toContain('which this machine does not trust');
+		expect(untrusted).not.toContain('run this again');
+		expect(untrusted).toContain('then check again (on the Review: install, which checks first');
+		// CONTROL: the chain in the trust store is no problem.
+		expect(chainTrustVerdict(chain, [chain]).problem).toBeNull();
 	});
 });

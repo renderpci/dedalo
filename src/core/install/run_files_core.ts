@@ -488,6 +488,29 @@ export interface LockInfo {
 	host: string;
 	started_at: string;
 	mode: RunMode;
+	/**
+	 * Where the holder ran (campaign 3d C3d-F3: "container or host <id>"): a
+	 * container's hostname is its id, so the reclaim note says which. Absent on
+	 * a lock written before it was recorded.
+	 */
+	place?: LockPlace;
+}
+
+/** A lock holder's kind of machine. */
+export type LockPlace = 'container' | 'host';
+
+/**
+ * The files a container runtime puts in every container it starts: Docker's
+ * `/.dockerenv`, Podman's `/run/.containerenv`.
+ */
+export const CONTAINER_MARKERS: readonly string[] = Object.freeze([
+	'/.dockerenv',
+	'/run/.containerenv',
+]);
+
+/** Is THIS process in a container (a runtime's marker present)? `exists` injectable for a gate. */
+export function lockPlace(exists: (path: string) => boolean = existsSync): LockPlace {
+	return CONTAINER_MARKERS.some((path) => exists(path)) ? 'container' : 'host';
 }
 
 /** Is `pid` a live process (on THIS host)? */
@@ -529,6 +552,7 @@ export function acquireRunLock(
 		host: hostname(),
 		started_at: new Date().toISOString(),
 		mode,
+		place: lockPlace(),
 	};
 	for (let attempt = 0; attempt < 2; attempt++) {
 		if (createLockFile(path, mine)) return { ok: true };
@@ -630,10 +654,15 @@ function sayReclaimed(notes: LockNotes, holder: LockInfo | null, mine: LockInfo)
  */
 export function reclaimSentence(holder: LockInfo, mine: LockInfo): string {
 	const where =
-		holder.host === mine.host
-			? `process ${holder.pid} is no longer running`
-			: `it ran in container or host ${holder.host}`;
+		holder.host === mine.host ? `process ${holder.pid} is no longer running` : elsewhere(holder);
 	return `the earlier, interrupted run's install lock was released (${where})`;
+}
+
+/** Where another machine's holder ran, by the place its lock recorded (C3d-F3). */
+function elsewhere(holder: LockInfo): string {
+	if (holder.place === 'container') return `it ran in container ${holder.host}`;
+	if (holder.place === 'host') return `it ran on host ${holder.host}`;
+	return `it ran on ${holder.host}, another machine or container`;
 }
 
 /** Release the run lock if this process holds it. */

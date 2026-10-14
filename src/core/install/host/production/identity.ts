@@ -70,6 +70,7 @@ export function identityOf(ctx: HostPlanCtx): IdentityVerdict {
 		answers: ctx.answers,
 		account: ctx.facts.account,
 		instances: ctx.facts.instances,
+		taken: ctx.facts.taken ?? [],
 		webUser: webFlavor(ctx).user,
 		sites: ctx.facts.web.sites,
 	});

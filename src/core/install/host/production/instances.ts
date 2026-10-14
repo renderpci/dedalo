@@ -217,6 +217,22 @@ export function otherInstances(fs: HostFs, instance: string): OtherInstance[] {
 }
 
 /**
+ * THIS NAME'S OWN RECORDS (campaign 3d C3d-F1): the registry entry and the
+ * stamped drop-in of an instance ALREADY INSTALLED under `instance` — what a
+ * FRESH install of that name must be refused for, naming the files, before
+ * any account or folder sentence (its account and folder are that instance's,
+ * never "an earlier install's leftover"). Never the run record: a run's own
+ * `install.state.json` exists while its preflight runs; an unfinished one is
+ * the executor's (an existing record is refused, resume or abort).
+ */
+export function sameNameRecords(fs: HostFs, instance: string): OtherInstance[] {
+	if (instance === '') return [];
+	return [...registryRecords(fs), ...dropinRecords(fs)].filter(
+		(record) => record.instance === instance,
+	);
+}
+
+/**
  * A record with User= but no group: the user's PRIMARY group, by `primaryGroup`
  * (a getent lookup); unresolvable → UNKNOWN (see the header).
  */

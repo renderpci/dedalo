@@ -364,7 +364,8 @@ function reviewTextLines(view: ReviewView): string[] {
 		...reviewErrorLines(view),
 		...view.lines.map((line) => `${line.label.padEnd(14)} ${line.value}`),
 		...hostCommandLines(view),
-		`commands: ${view.canInstall ? 'install, ' : ''}edit <n> (${numbered}), write <path> (writes the answers and quits), quit`,
+		// Refused, `install` checks again (campaign 3d C3d-F2) — said so, never offered as install.
+		`commands: ${view.canInstall ? 'install' : 'install (checks again — not offered now)'}, edit <n> (${numbered}), write <path> (writes the answers and quits), quit`,
 	];
 }
 

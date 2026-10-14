@@ -180,7 +180,7 @@ const PROBE_SCREEN: Readonly<Partial<Record<ProbeId, ScreenId>>> = Object.freeze
  */
 const PROBE_INPUTS: Readonly<Record<ProbeId, { keys: readonly string[]; secret?: SecretKey }>> =
 	Object.freeze({
-		system: { keys: ['route'] },
+		system: { keys: ['route', 'instance'] },
 		identity: {
 			keys: [
 				'route',
@@ -568,7 +568,8 @@ async function mailerProbe(session: Session): Promise<ProbeOutcome | Nav> {
 /** Each probe, with the one secret it needs. */
 const PROBE_RUNS: Readonly<Record<ProbeId, (session: Session) => Promise<ProbeOutcome | Nav>>> =
 	Object.freeze({
-		system: (session: Session) => session.deps.probes.system(routeOf(session)),
+		system: (session: Session) =>
+			session.deps.probes.system(routeOf(session), previewPlan(inputOf(session)).answers.instance),
 		identity: (session: Session) => session.deps.probes.identity(session.raw),
 		db: (session: Session) =>
 			session.deps.probes.database(session.raw, session.secrets.db_password ?? ''),
@@ -1130,13 +1131,40 @@ function installResult(session: Session, plan: InstallPlan): FrontEndResult {
 	};
 }
 
-/** A Review command's outcome: a result ends the session; null shows the Review again. */
-type ReviewStep = FrontEndResult | null;
+/** A Review shown again WITHOUT measuring again: the round `install` just checked anew. */
+interface Rechecked {
+	readonly rechecked: { round: ReviewRound; view: ReviewView };
+}
 
-async function reviewInstall(session: Session, round: ReviewRound): Promise<ReviewStep> {
+/**
+ * A Review command's outcome: a result ends the session; null shows the Review
+ * again (measured again); `rechecked` shows the round the command measured.
+ */
+type ReviewStep = FrontEndResult | Rechecked | null;
+
+/**
+ * `install` on a REFUSED Review CHECKS AGAIN (campaign 3d C3d-F2): the cause
+ * fixed (the CA trusted, the port freed), the plan is measured anew and, now
+ * clear, install goes on to its typed yes — never "not offered" from a stale
+ * verdict, never an edit round trip to re-check. Still refused: the Review is
+ * shown with what this check found.
+ */
+async function recheckRefused(
+	session: Session,
+): Promise<{ round: ReviewRound; view: ReviewView } | Rechecked> {
+	session.deps.prompter.say([NOTICE_TEXT.recheckReview]);
+	const again = await reviewRound(session);
+	if (again.round.canInstall) return again;
+	session.deps.prompter.say([NOTICE_TEXT.stillRefused]);
+	return { rechecked: again };
+}
+
+async function reviewInstall(session: Session, shown: ReviewRound): Promise<ReviewStep> {
+	let round = shown;
 	if (!round.canInstall) {
-		session.deps.prompter.say(['install is not offered: see the errors above']);
-		return null;
+		const again = await recheckRefused(session);
+		if ('rechecked' in again) return again;
+		round = again.round;
 	}
 	const typed = await session.deps.prompter.acknowledge(installQuestion(round.plan.answers));
 	if (typed === QUIT) return { kind: 'quit' };
@@ -1226,19 +1254,37 @@ function answersToWrite(session: Session, plan: InstallPlan, answers: string): b
 
 /** The Review loop: install / edit <n> / write <path> / quit (`back` edits the last screen). */
 async function review(session: Session): Promise<FrontEndResult> {
+	let carried: Rechecked['rechecked'] | null = null;
 	for (let round = 0; round < 200; round++) {
-		if ((await recheckGates(session)) === 'quit') return { kind: 'quit' };
-		const { round: shown, view } = await reviewRound(session);
-		writeReviewedAnswers(session, shown.plan);
-		session.seen.add('review');
-		session.deps.prompter.view(viewOf(session, 'review', null));
-		const command = await session.deps.prompter.review(view);
-		if (command === QUIT) return { kind: 'quit' };
-		const text = isNav(command) ? `edit ${shown.screens.length - 1}` : command.trim();
-		const step = await reviewCommand(session, shown, text);
-		if (step !== null) return step;
+		const step = await reviewOnce(session, carried);
+		carried = step !== null && 'rechecked' in step ? step.rechecked : null;
+		if (step !== null && carried === null) return step as FrontEndResult;
 	}
 	return { kind: 'quit' };
+}
+
+/**
+ * One Review: the gates re-checked and the plan measured — or, `carried`, the
+ * round an `install` just measured (shown as it is, never measured twice) —
+ * then the operator's command applied.
+ */
+async function reviewOnce(
+	session: Session,
+	carried: Rechecked['rechecked'] | null,
+): Promise<ReviewStep> {
+	if (carried === null && (await recheckGates(session)) === 'quit') return { kind: 'quit' };
+	const { round: shown, view } = carried ?? (await reviewRound(session));
+	writeReviewedAnswers(session, shown.plan);
+	session.seen.add('review');
+	session.deps.prompter.view(viewOf(session, 'review', null));
+	const command = await session.deps.prompter.review(view);
+	if (command === QUIT) return { kind: 'quit' };
+	return reviewCommand(session, shown, reviewText(command, shown));
+}
+
+/** The Review command as text (`back` edits the last screen). */
+function reviewText(command: string | Nav, shown: ReviewRound): string {
+	return isNav(command) ? `edit ${shown.screens.length - 1}` : command.trim();
 }
 
 // ── the start: welcome, an unfinished install, abort ─────────────────────────

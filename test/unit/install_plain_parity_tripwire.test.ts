@@ -799,6 +799,10 @@ describe('campaign 3: the session’s words and files (C3-36, C3-48, C3-53, C3-6
 		]);
 	});
 
+	// FOUR whole sessions, ~1 s each (measured 2026-10-14: no process is spawned — the time is
+	// the screen model re-reading and re-validating the vendored thesaurus manifest on every
+	// screen build, hierarchy_meta.ts readHierarchyManifest). Over bun's 5 s default under load
+	// (campaign 3d), so its bound is explicit — the 60 s the other multi-run install gates use.
 	test("C3-53: the Review's 'same as' line and the answers file's next step use the route's own entry command", async () => {
 		const cases: [string, string][] = [
 			['route trial', 'sh install.sh --route=trial'],
@@ -826,7 +830,7 @@ describe('campaign 3: the session’s words and files (C3-36, C3-48, C3-53, C3-6
 		for (const route of ['production', 'docker', 'trial'] as const) {
 			expect(ENTRY_COMMAND[route]).toBe(hostCommandPrefix({ route }));
 		}
-	});
+	}, 60_000);
 
 	test('C3-48: "Install now" says what the image source does — never "pulls" for a local build', async () => {
 		for (const [source, words] of [

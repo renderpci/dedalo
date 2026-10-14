@@ -59,6 +59,11 @@
  *      and for an existing account's primary group (it would be refused as
  *      "not the commands this install showed" otherwise).
  *
+ *  (j) THE NAME OF AN INSTALLED INSTANCE (campaign 3d C3d-F1): its registry
+ *      entry or stamped drop-in → ONE refusal naming the instance and the file,
+ *      never its account as "an earlier install's leftover" to userdel; nor
+ *      another instance's account typed as the service user.
+ *
  * The 0555 root-owned parent the owner named cannot be planted here (the
  * scratch root is written by a non-root process): scripts/install_host_drill.ts
  * --layout custom measures it on a real host.
@@ -92,6 +97,7 @@ import { engineAnswers } from '../../src/core/install/host/production/engine_del
 import {
 	type IdentityInput,
 	identityVerdict,
+	instanceTakenSentence,
 } from '../../src/core/install/host/production/identity_rules.ts';
 import { otherInstances } from '../../src/core/install/host/production/instances.ts';
 import type { RecordedResponse } from '../../src/core/install/host/runner.ts';
@@ -788,6 +794,128 @@ describe('(e) one user, one group, one folder per instance — every discovery s
 				source: source.source,
 			})),
 		);
+	});
+});
+
+// ── campaign 3d C3d-F1: the name of an INSTALLED instance ─────────────────────
+
+describe('C3d-F1: a fresh install under the name of an installed instance', () => {
+	/** The live instance THIS name already is: its account (system uid), its folder with its tree. */
+	const LIVE: PlantSpec = {
+		responses: [
+			{
+				match: `/usr/bin/getent passwd ded_${INSTANCE}`,
+				stdout: `ded_${INSTANCE}:x:999:999::/home/ded_${INSTANCE}:/usr/sbin/nologin\n`,
+			},
+			{
+				match: `/usr/bin/getent group ded_${INSTANCE}`,
+				stdout: `ded_${INSTANCE}:x:999:www-data\n`,
+			},
+		],
+		files: new Map([[`/home/ded_${INSTANCE}/dedalo/`, '']]),
+	};
+	const REGISTRY = `/var/lib/dedalo-install/instances/${INSTANCE}.json`;
+	const DROPIN = `/etc/systemd/system/dedalo-ts@${INSTANCE}.service.d/10-dedalo-install.conf`;
+	const RECORDS: readonly [string, string, string][] = [
+		[
+			'its registry entry',
+			REGISTRY,
+			`${JSON.stringify({ instance: INSTANCE, user: `ded_${INSTANCE}`, group: `ded_${INSTANCE}`, install_dir: `/home/ded_${INSTANCE}` })}\n`,
+		],
+		[
+			'its stamped drop-in',
+			DROPIN,
+			`# dedalo-install ${INSTANCE} 0123456789abcdef\n[Service]\nUser=ded_${INSTANCE}\nGroup=ded_${INSTANCE}\nWorkingDirectory=/home/ded_${INSTANCE}/dedalo\n`,
+		],
+	];
+
+	for (const [name, path, text] of RECORDS) {
+		test(`${name}: ONE refusal naming the instance and the file — never "a leftover" to userdel; nothing changed`, async () => {
+			const files = new Map([...(LIVE.files ?? []), [path, text]]);
+			const { host, outcome } = await freshOn(UBUNTU, { ...LIVE, files }, {});
+			expect(outcome.result).toBe('refused');
+			expect(outcome.failedStep).toBeNull();
+			const message = outcome.message ?? '';
+			// The ONE refusal — not its unit, drop-in, site, database and account listed back.
+			expect(message).toBe(instanceTakenSentence(INSTANCE, [path]));
+			for (const advice of ['userdel', 'leftover', 'already holds', 'already enabled'])
+				expect(message, advice).not.toContain(advice);
+			expect(changed(host)).toEqual([]);
+		});
+	}
+
+	test('a COMPLETE install of the name: a fresh run is told it is installed — never "resume it or undo it"', async () => {
+		const { host, outcome } = await freshOn(UBUNTU, {}, {});
+		expect(outcome.result).toBe('complete');
+		const again = await runHost(host, freshRequest(productionPlan(UBUNTU, {}).planFile));
+		expect(again.outcome.result).toBe('refused');
+		const message = again.outcome.message ?? '';
+		// The record's path as this run reads it (the scratch root's prefix, on a host none).
+		expect(message).toMatch(
+			new RegExp(
+				`^instance ${INSTANCE} is already installed on this host \\(\\S*${RUN_DIR}/install\\.state\\.json\\)`,
+			),
+		);
+		expect(message).not.toContain('--resume');
+		expect(message).not.toContain('--abort');
+	});
+
+	test('CONTROL: the same account and folder with NO instance record — the leftover advice stands', async () => {
+		const { outcome } = await freshOn(UBUNTU, LIVE, {});
+		expect(outcome.result).toBe('refused');
+		expect(outcome.message).toContain('an earlier install');
+		expect(outcome.message).not.toContain('is already installed on this host');
+	});
+
+	test('the Identity check says the same: the verdict over the taken name is that one sentence', () => {
+		const taken = [
+			{
+				instance: INSTANCE,
+				user: `ded_${INSTANCE}`,
+				group: `ded_${INSTANCE}`,
+				installDir: `/home/ded_${INSTANCE}`,
+				backupDir: null,
+				source: REGISTRY,
+				unknown: null,
+			},
+		];
+		const live = input(
+			{},
+			{
+				user: user(`ded_${INSTANCE}`, 999, 999, '/usr/sbin/nologin'),
+				group: { name: `ded_${INSTANCE}`, gid: 999, members: ['www-data'] },
+			},
+		);
+		expect(identityVerdict({ ...live, taken }).problems).toEqual([
+			instanceTakenSentence(INSTANCE, [REGISTRY]),
+		]);
+		// CONTROL: without the record it is judged as an account — the leftover sentence.
+		expect(identityVerdict(live).problems.join('\n')).toContain('userdel');
+	});
+
+	test("ANOTHER instance's system account typed as the service user: its clash, never the leftover advice", () => {
+		const other = {
+			instance: 'prado',
+			user: 'ded_prado',
+			group: 'ded_prado',
+			installDir: '/home/ded_prado',
+			backupDir: null,
+			source: '/var/lib/dedalo-install/instances/prado.json',
+			unknown: null,
+		};
+		const typed = input(
+			{ service_user: 'ded_prado', install_dir: '/srv/museo' },
+			{
+				user: user('ded_prado', 998, 998, '/usr/sbin/nologin'),
+				group: { name: 'ded_prado', gid: 998, members: [] },
+				groupName: 'ded_prado',
+			},
+		);
+		const problems = identityVerdict({ ...typed, instances: [other] }).problems.join('\n');
+		expect(problems).toContain('is already the service user of instance prado');
+		expect(problems).not.toContain('userdel');
+		// CONTROL: no instance names it — a leftover system account, the advice given.
+		expect(identityVerdict(typed).problems.join('\n')).toContain('userdel');
 	});
 });
 

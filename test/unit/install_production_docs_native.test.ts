@@ -4,7 +4,8 @@
  * the code that decides the fact, never with a sentence typed here:
  *
  *  D13 production.md's screen table lists each screen's questions in the order
- *      the screen model asks them (Identity, Web server & TLS).
+ *      the screen model asks them (Identity, Web server & TLS, Ontologies —
+ *      campaign 3d C3d-F4: the update servers come first).
  *  D14 a Verify command of production.md that reads INSIDE a directory only
  *      root and the service account may enter (the 0750 install folder, the
  *      0750 socket dir, the 0750 instance web root), or asks SELinux's
@@ -87,6 +88,18 @@ describe('D13: the screen table lists the questions in the order they are asked'
 			},
 		);
 		expect(order.length).toBe(4);
+		expect(inOrder(order), JSON.stringify(order)).toBe(true);
+	});
+
+	test('Ontologies: whether to use the official update servers, then the domain ontologies (C3d-F4)', () => {
+		const keys = askedKeys('ontologies', {});
+		expect(keys).toContain('update_servers');
+		expect(keys).toContain('ontologies');
+		const order = phraseOrder(tableRow('Ontologies'), keys, {
+			update_servers: 'the official update servers',
+			ontologies: 'the domain ontologies',
+		});
+		expect(order.length).toBe(2);
 		expect(inOrder(order), JSON.stringify(order)).toBe(true);
 	});
 });

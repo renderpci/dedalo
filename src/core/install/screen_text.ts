@@ -525,7 +525,10 @@ export const NOTICE_TEXT = Object.freeze({
 	 * session stays on the Review with every answer.
 	 */
 	refusedAtYes:
-		'not started — the system check of the run refuses this plan (nothing was changed; your answers are kept): fix the cause, then type install again, or edit a step',
+		'not started — the system check of the run refuses this plan (nothing was changed; your answers are kept): fix the cause, then install again (it checks first), or edit a step',
+	/** `install` on a refused Review: the plan is measured anew (campaign 3d C3d-F2). */
+	recheckReview: 'checking again what the run would refuse…',
+	stillRefused: 'checked again — install is still not offered: see the errors above',
 });
 
 /** The review's line labels. */

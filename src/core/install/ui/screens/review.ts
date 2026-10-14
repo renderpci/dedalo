@@ -2,8 +2,10 @@
  * THE REVIEW, DRAWN (terminal installer phase 3, 2026-10-12) — everything the
  * install will do (the model's review lines, its notices and the plan's
  * refusals), the equivalent command line (never a secret), and the walker's
- * Review commands as keys: Enter = `install` (only when offered — otherwise
- * the reason, inline), `e` + a number = `edit <n>`, `w` + a path =
+ * Review commands as keys: Enter = `install` — on a REFUSED Review it checks
+ * again (the walker measures the plan anew and goes on to the typed yes when
+ * it is now clear — campaign 3d C3d-F2), and the key bar and action line say
+ * "check again", never "install" (C3d-F3), `e` + a number = `edit <n>`, `w` + a path =
  * `write <path>`, Esc = back (the walker edits the last screen), Ctrl-Q quit.
  * The command line is shown, not copied (no clipboard escape is written).
  */
@@ -18,16 +20,23 @@ import { BLANK, noticeLines } from '../widgets/notices.ts';
 
 type Mode = 'command' | 'edit' | 'write';
 
+/** The command keys after Enter's own hint (the same whether install is offered or not). */
+const COMMAND_KEYS: readonly KeyHint[] = Object.freeze([
+	['e', 'edit a step'],
+	// Writing ends the session, nothing installed (campaign 3b N29).
+	['w', 'write answers and quit'],
+	['↑↓', 'scroll'],
+	['esc', 'back'],
+	['ctrl+q', 'quit'],
+] as const);
+
+/** What Enter does on the Review: install when offered, else check again (C3d-F3). */
+export function enterHint(canInstall: boolean): KeyHint {
+	return canInstall ? ['enter', 'install'] : ['enter', 'check again'];
+}
+
 const MODE_KEYS: Readonly<Record<Mode, readonly KeyHint[]>> = Object.freeze({
-	command: [
-		['enter', 'install'],
-		['e', 'edit a step'],
-		// Writing ends the session, nothing installed (campaign 3b N29).
-		['w', 'write answers and quit'],
-		['↑↓', 'scroll'],
-		['esc', 'back'],
-		['ctrl+q', 'quit'],
-	],
+	command: [enterHint(true), ...COMMAND_KEYS],
 	edit: [
 		['digits', 'step number'],
 		['enter', 'edit it'],
@@ -92,19 +101,12 @@ export function reviewPage(view: ReviewView, done: (answer: string | Nav) => voi
 	let mode: Mode = 'command';
 	let edit: FieldEdit = editOf('');
 	let scroll = 0;
-	let notice: string | null = null;
 	const enterMode = (next: Mode): void => {
 		mode = next;
 		edit = editOf('');
-		notice = null;
 	};
-	const install = (): void => {
-		if (view.canInstall) {
-			done('install');
-			return;
-		}
-		notice = `install is not offered: ${view.errors[0] ?? 'see the lines above (a route that runs elsewhere, a check that did not pass, no root password)'}`;
-	};
+	// Offered or not, the walker decides: refused, `install` checks again (C3d-F2).
+	const install = (): void => done('install');
 	const submit = (): void => {
 		const text = editText(edit).trim();
 		if (text !== '') done(mode === 'edit' ? `edit ${text}` : `write ${text}`);
@@ -157,9 +159,9 @@ export function reviewPage(view: ReviewView, done: (answer: string | Nav) => voi
 				]
 			: [
 					seg('install is not offered here', 'warn'),
-					seg('   e edit · w write the answers · ctrl+q quit', 'faint'),
+					seg('   enter check again · e edit · w write the answers · ctrl+q quit', 'faint'),
 				];
-		return [head, ...(notice === null ? [] : wrapped(notice, width, 'err'))];
+		return [head];
 	};
 	return {
 		id: 'review',
@@ -180,7 +182,8 @@ export function reviewPage(view: ReviewView, done: (answer: string | Nav) => voi
 			const focus = Math.min(lines.length - 1, scroll + Math.floor(ctx.layout.paneHeight / 2));
 			return { lines, focus: scroll === 0 ? 0 : focus, pinned: [BLANK, ...actionLine(ctx.width)] };
 		},
-		keys: () => MODE_KEYS[mode],
+		keys: () =>
+			mode === 'command' ? [enterHint(view.canInstall), ...COMMAND_KEYS] : MODE_KEYS[mode],
 		onKey: (name: string) => (mode === 'command' ? COMMAND[name]?.() : typing(name)),
 		onPaste: (text: string) => {
 			if (mode === 'write') edit = pasteInto(edit, text);

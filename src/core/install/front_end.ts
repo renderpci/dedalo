@@ -240,7 +240,8 @@ export interface CatalogProbeResult {
  * child (install_probe_client.ts childProbes); a gate injects fakes.
  */
 export interface InstallProbes {
-	system(route: InstallRoute): Promise<ProbeOutcome>;
+	/** The System check of the route; production also checks the instance NAME (`instance`). */
+	system(route: InstallRoute, instance?: string): Promise<ProbeOutcome>;
 	/**
 	 * production: the install folder and the service account against this host
 	 * (host/production/identity_rules.ts — the verdict host_preflight repeats);

@@ -23,6 +23,15 @@
  *  D10 the Review's [stack_image] line of a local build says how long.
  *  D23 the trial Review points at the Trial page, not Docker's.
  *
+ * CAMPAIGN 3d (the VM re-test of this pass, 2026-10-14):
+ *  C3d-F1 the System check (right after the name) fails an instance name an
+ *         installed instance holds, naming its file; the session hands it the name.
+ *  C3d-F2 `install` on a refused Review measures again — clear, it goes on to
+ *         the yes; the words name that path ("install again (it checks first)",
+ *         the CA refusal's "check again"), never "run this again".
+ *  C3d-F3 the refused Review's key bar and action line say "check again",
+ *         never "enter install".
+ *
  * DB-free, network-free; one PTY run of the real plain installer (D21).
  */
 
@@ -34,19 +43,24 @@ import { interruptLine } from '../../src/core/install/executor.ts';
 import { keptAnswersLines, withKeptAnswers } from '../../src/core/install/front_end.ts';
 import type { HostCtx } from '../../src/core/install/host/contract.ts';
 import { host_engine } from '../../src/core/install/host/production/engine_delegate.ts';
+import { instanceTakenSentence } from '../../src/core/install/host/production/identity_rules.ts';
 import { stack_engine } from '../../src/core/install/host/stack/engine_delegate.ts';
 import { pendingStackFacts } from '../../src/core/install/host/stack/facts.ts';
 import { imageLabel } from '../../src/core/install/host/stack/image.ts';
 import { BUILD_DURATION } from '../../src/core/install/host/stack/layout.ts';
 import { portProblems } from '../../src/core/install/host/stack/preflight.ts';
+import type { InitTestResult } from '../../src/core/install/init_test.ts';
 import { buildInstallPlan, type InstallPlan } from '../../src/core/install/install_plan.ts';
 import { runInteractiveInstall } from '../../src/core/install/install_session.ts';
-import { passedDetail } from '../../src/core/install/probes.ts';
+import { passedDetail, systemCheckRows } from '../../src/core/install/probes.ts';
+import type { ReviewView } from '../../src/core/install/prompter_contract.ts';
 import { BACK, QUIT } from '../../src/core/install/prompter_contract.ts';
-import { buildScreens } from '../../src/core/install/screen_model.ts';
+import { buildScreens, type Screen } from '../../src/core/install/screen_model.ts';
 import { DONE_TEXT, NOTICE_TEXT } from '../../src/core/install/screen_text.ts';
 import { carriedOver } from '../../src/core/install/ui/prompter.ts';
 import { doneCard } from '../../src/core/install/ui/screens/done.ts';
+import { reviewPage } from '../../src/core/install/ui/screens/review.ts';
+import type { DrawContext } from '../../src/core/install/ui/widget.ts';
 import { scriptedInstallPrompter } from '../../src/core/install/ui_plain/prompter.ts';
 import { plainReporter } from '../../src/core/install/ui_plain/reporter.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
@@ -116,7 +130,8 @@ describe('D2: what the run would refuse is said before yes, and a refusal keeps 
 		const { result, prompter } = await session('route docker', ['install', 'quit'], () => [HELD]);
 		expect(result.kind).toBe('quit');
 		expect(prompter.said).toContain(`error: ${HELD}`);
-		expect(prompter.said).toContain('install is not offered: see the errors above');
+		// `install` there checks again (campaign 3d C3d-F2) — still refused, it says so.
+		expect(prompter.said).toContain(NOTICE_TEXT.stillRefused);
 		// CONTROL: nothing refused — the same walk installs.
 		const clean = await session('route docker', ['install'], () => []);
 		expect(clean.result.kind).toBe('install');
@@ -452,4 +467,126 @@ describe('D21: a plain quit prints the closing line', () => {
 		expect(code).toBe(0);
 		expect(text.slice(text.lastIndexOf('quit'))).toContain('nothing was installed');
 	}, 60000);
+});
+
+// ── campaign 3d (2026-10-14 VM re-test) ──────────────────────────────────────
+
+describe('C3d-F1: the System check says an installed instance holds the name, right after it', () => {
+	const INIT: InitTestResult = {
+		result: true,
+		errors: [],
+		msg: [],
+		psql: { state: 'missing', path: 'psql' },
+	};
+	const rows = (instance: { name: string; taken: string | null } | undefined) =>
+		systemCheckRows(INIT, null, 'production', {
+			host: { osRelease: '', euid: 0, ...(instance === undefined ? {} : { instance }) },
+		}).filter((row) => row.label === 'Instance');
+
+	test('taken: a FAILED row naming the instance and its file (fixable — another name passes)', () => {
+		const sentence = instanceTakenSentence('museo', [
+			'/var/lib/dedalo-install/instances/museo.json',
+		]);
+		const [taken] = rows({ name: 'museo', taken: sentence });
+		expect(taken?.state).toBe('fail');
+		expect(taken?.detail).toContain(sentence);
+		expect(taken?.fixable).not.toBe(false);
+		// CONTROL: a free name is an ok row; no name measured, no row.
+		expect(rows({ name: 'prado', taken: null })[0]?.state).toBe('ok');
+		expect(rows(undefined)).toEqual([]);
+	});
+
+	test('the session hands the System check the answered instance name (and re-checks when it changes)', async () => {
+		const seen: (string | undefined)[] = [];
+		const { script } = walked('route production + instance (derived names as shown)', ['quit']);
+		const probes = fakeProbes();
+		const fake = probes.system;
+		probes.system = async (route, instance) => {
+			seen.push(instance);
+			return fake(route);
+		};
+		await runInteractiveInstall({
+			prompter: scriptedInstallPrompter(script),
+			probes,
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		const instance = String(script.answers['route.instance'] ?? '');
+		expect(instance).not.toBe('');
+		expect(seen).toContain(instance);
+	});
+});
+
+describe('C3d-F2: install on a refused Review checks again; the words say how', () => {
+	test('refused at the Review, cause fixed: `install` re-checks and goes on to the yes — no edit round trip', async () => {
+		// Refused when the Review is drawn, clear when install is pressed (and at the yes).
+		const { result, prompter, calls } = await session('route docker', ['install'], (call) =>
+			call === 1 ? [HELD] : [],
+		);
+		expect(prompter.said).toContain(`error: ${HELD}`);
+		expect(prompter.said).toContain(NOTICE_TEXT.recheckReview);
+		expect(prompter.said).not.toContain(NOTICE_TEXT.stillRefused);
+		expect(result.kind).toBe('install');
+		expect(calls()).toBe(3); // the Review, the re-check, the typed yes
+		// Nothing was asked again: the walk's answers, as a clean one installs them.
+		const control = await session('route docker', ['install'], () => []);
+		const rawOf = (ended: typeof result): unknown => (ended.kind === 'install' ? ended.raw : null);
+		expect(rawOf(result)).toEqual(rawOf(control.result));
+	});
+
+	test('still refused: the re-check says so and the Review stays, measured once per press', async () => {
+		const { result, prompter, calls } = await session(
+			'route docker',
+			['install', 'install', 'quit'],
+			() => [HELD],
+		);
+		expect(result.kind).toBe('quit');
+		expect(prompter.said.filter((line) => line === NOTICE_TEXT.stillRefused).length).toBe(2);
+		expect(calls()).toBe(3); // the Review, then one re-check per install (shown, not re-measured)
+	});
+
+	test('the words are the recovery path: "install again (it checks first)" (the CA refusal: install_host_steps_native)', () => {
+		expect(NOTICE_TEXT.refusedAtYes).toContain('install again (it checks first)');
+	});
+});
+
+/** The Review page's pinned action line, as text. */
+function pinnedText(page: ReturnType<typeof reviewPage>): string {
+	const ctx = { width: 120, layout: { paneHeight: 30 }, palette: {} } as unknown as DrawContext;
+	return (page.lines(ctx).pinned ?? [])
+		.map((line) => line.map((part) => part.text).join(''))
+		.join('\n');
+}
+
+describe('C3d-F3: the refused Review never says "enter install"', () => {
+	const view = (canInstall: boolean): ReviewView => ({
+		screen: buildScreens(
+			modelInput({ route: 'docker', entity: 'museo', server_name: 'x.example.org' }),
+		).at(-1) as Screen,
+		lines: [],
+		canInstall,
+		editable: [],
+		command: '',
+		errors: canInstall ? [] : [HELD],
+	});
+
+	test('refused: enter is "check again" in the key bar and the action line, and it asks the walker', () => {
+		const answered: unknown[] = [];
+		const page = reviewPage(view(false), (answer) => answered.push(answer));
+		const keys = page.keys();
+		expect(keys[0]).toEqual(['enter', 'check again']);
+		expect(keys.some(([, words]) => words === 'install')).toBe(false);
+		const pinned = pinnedText(page);
+		expect(pinned).toContain('install is not offered here');
+		expect(pinned).toContain('enter check again');
+		page.onKey('enter');
+		expect(answered).toEqual(['install']);
+		// CONTROL: offered — enter installs.
+		const offered = reviewPage(view(true), () => {});
+		expect(offered.keys()[0]).toEqual(['enter', 'install']);
+		expect(pinnedText(offered)).toContain('Install');
+	});
 });

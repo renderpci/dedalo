@@ -54,8 +54,10 @@ import {
 	modeOf,
 	PLAN_FILE,
 	type PlanFile,
+	releaseRunLock,
 	STATE_FILE,
 } from '../../src/core/install/run_files.ts';
+import { lockPlace } from '../../src/core/install/run_files_core.ts';
 import { DONE_TEXT } from '../../src/core/install/screen_text.ts';
 import { ALREADY_COMPLETE_LINE } from '../../src/core/install/step_loop.ts';
 import { INSTALL_STEPS } from '../../src/core/install/steps.ts';
@@ -599,7 +601,7 @@ describe('executor — the run-dir lock', () => {
 	});
 });
 
-describe('a reclaimed lock in plain words (campaign 3c D9)', () => {
+describe('a reclaimed lock in plain words (campaign 3c D9, 3d C3d-F3)', () => {
 	test('another host (the engine child’s container) is a note naming it; only an unreadable lock is a warning', () => {
 		const dir = mkdtempSync(join(tmpdir(), 'dd-lock-'));
 		try {
@@ -610,15 +612,26 @@ describe('a reclaimed lock in plain words (campaign 3c D9)', () => {
 				warn: (line: string) => warnings.push(line),
 			};
 			const lock = join(dir, LOCK_FILE);
-			writeFileSync(
-				lock,
-				JSON.stringify({ pid: 1, host: 'a24a29fdf0d3', started_at: 'then', mode: 'fresh' }),
-			);
-			expect(acquireRunLock('resume', sink, dir).ok).toBe(true);
+			// The place the holder recorded is said — never "container or host" (C3d-F3).
+			const holder = { pid: 1, host: 'a24a29fdf0d3', started_at: 'then', mode: 'fresh' };
+			for (const place of ['container', 'host', undefined] as const) {
+				writeFileSync(lock, JSON.stringify({ ...holder, place }));
+				expect(acquireRunLock('resume', sink, dir).ok).toBe(true);
+				releaseRunLock(dir);
+			}
 			expect(notes).toEqual([
-				"the earlier, interrupted run's install lock was released (it ran in container or host a24a29fdf0d3)",
+				"the earlier, interrupted run's install lock was released (it ran in container a24a29fdf0d3)",
+				"the earlier, interrupted run's install lock was released (it ran on host a24a29fdf0d3)",
+				"the earlier, interrupted run's install lock was released (it ran on a24a29fdf0d3, another machine or container)",
 			]);
 			expect(warnings).toEqual([]);
+			// The lock a run takes records its place: a container's runtime marker decides it.
+			expect(acquireRunLock('fresh', sink, dir).ok).toBe(true);
+			expect(JSON.parse(readFileSync(lock, 'utf8')).place).toBe(lockPlace());
+			releaseRunLock(dir);
+			expect(lockPlace((path) => path === '/.dockerenv')).toBe('container');
+			expect(lockPlace((path) => path === '/run/.containerenv')).toBe('container');
+			expect(lockPlace(() => false)).toBe('host');
 			// CONTROL: a lock that cannot be read is odd — the one warning.
 			writeFileSync(lock, 'not json');
 			expect(acquireRunLock('resume', sink, dir).ok).toBe(true);

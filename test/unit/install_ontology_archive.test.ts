@@ -177,5 +177,7 @@ describe('the archive limits count what is written, not what is walked', () => {
 		}
 		expect(isDedaloError(refusal) ? refusal.code : refusal).toBe('install.invalid_input');
 		expect((refusal as Error).message).toContain(`more than ${MAX_ARCHIVE_FILES} ontology files`);
-	});
+		// MAX_ARCHIVE_FILES + 1 real entries are written and scanned: ~2 s alone, 6.6 s on a
+		// loaded desk — over bun's 5 s default, so the bound is explicit.
+	}, 60_000);
 });

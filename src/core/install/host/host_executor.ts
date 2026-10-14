@@ -88,6 +88,7 @@ import { type HostFs, hostFs } from './fs.ts';
 import { hostTable, stepDigest } from './host_table.ts';
 import { INSTALL_STATE_ROOT, pathsFor, STACK_RUN_DIR } from './layout.ts';
 import { OS_ROWS, osRowById, supportedOsList } from './os_support.ts';
+import { instanceTakenSentence } from './production/identity_rules.ts';
 import { ROOT_REQUIRED_SENTENCE } from './production/preflight.ts';
 import { hostRefuse } from './refuse.ts';
 import { type CommandRunner, scratchRunner, systemRunner } from './runner.ts';
@@ -408,7 +409,16 @@ function startRun(ctx: HostRunContext, mode: RunMode): void {
 
 /** A fresh run never starts over an existing record. */
 function assertNoRecord(ctx: HostRunContext): void {
-	if (readStateFile(ctx.runDir) === null) return;
+	const state = readStateFile(ctx.runDir);
+	if (state === null) return;
+	const answers = (ctx.plan as PlanFile).answers;
+	if (answers.route === 'production' && state.outcome === 'complete') {
+		// A complete instance is never "resumed" or "undone" by a fresh run of its name (C3d-F1).
+		hostRefuse(
+			'install.state_conflict',
+			instanceTakenSentence(String(answers.instance ?? ''), [join(ctx.runDir, STATE_FILE)]),
+		);
+	}
 	hostRefuse(
 		'install.state_conflict',
 		`an install record exists at ${join(ctx.runDir, STATE_FILE)} — resume it (--resume) or undo it (--abort --confirm-database <db>)`,

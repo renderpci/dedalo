@@ -34,10 +34,15 @@ import {
 	pendingAccountFacts,
 	primaryGroupName,
 } from './production/account_facts.ts';
-import { type OtherInstance, otherInstances, withPrimaryGroups } from './production/instances.ts';
+import {
+	type OtherInstance,
+	otherInstances,
+	sameNameRecords,
+	withPrimaryGroups,
+} from './production/instances.ts';
 import type { CommandRunner, RunResult } from './runner.ts';
 import type { StackFacts } from './stack/facts.ts';
-import { CATCH_ALL_STAMP, catchAllPath, type PortDefault } from './web/catch_all.ts';
+import { CATCH_ALL_STAMP, catchAllPath, type PortDefault, portDefaults } from './web/catch_all.ts';
 import {
 	apacheRoots,
 	apacheSites,
@@ -86,6 +91,12 @@ export interface HostFacts {
 	account: AccountFacts;
 	/** The other Dédalo instances of this host (production/instances.ts). */
 	instances: OtherInstance[];
+	/**
+	 * An instance ALREADY INSTALLED under this run's name (its registry entry,
+	 * its stamped drop-in — instances.ts sameNameRecords; campaign 3d C3d-F1).
+	 * Optional: a state frozen before it existed reads as none.
+	 */
+	taken?: OtherInstance[];
 	units: { name: string; state: string }[];
 	dropinExists: boolean;
 	siteFile: { exists: boolean; ours: boolean };
@@ -175,9 +186,7 @@ async function nginxFacts(runner: CommandRunner, row: OsRow): Promise<HostFacts[
 		httpNames: nginxHttpNames(dump),
 		apacheModules: [],
 		probeFailures: failures,
-		defaults: sites.flatMap((site) =>
-			(site.defaults ?? []).map((port) => ({ port, file: site.file })),
-		),
+		defaults: portDefaults(sites),
 		catchAll: 'absent',
 	};
 }
@@ -497,8 +506,9 @@ export async function gatherIdentityFacts(
 	fs: HostFs,
 	row: OsRow,
 	answers: InstallAnswers,
-): Promise<Pick<HostFacts, 'account' | 'instances'>> {
+): Promise<Pick<HostFacts, 'account' | 'instances' | 'taken'>> {
 	return {
+		taken: sameNameRecords(fs, answers.instance),
 		account: await gatherAccountFacts(runner, fs, row, answers),
 		instances: await withPrimaryGroups(otherInstances(fs, answers.instance), (user) =>
 			primaryGroupName(runner, row, user),

@@ -650,7 +650,9 @@ What the screens do for you:
   and nothing the run's own system check would refuse — on production, docker
   and trial the Review measures that check before `yes` and lists what it
   refuses as errors: an untrusted certificate chain, another web server on the
-  ports, an image version other than the installer's, a port already in use),
+  ports, an image version other than the installer's, a port already in use;
+  refused, `install` checks again — the cause fixed, it goes on to the typed
+  `yes` with every answer kept, still refused, it says so),
   `edit <n>` (go back to step `n`; later steps ask only what changed),
   `write <path>` (an [answers file](#the-answers-file-answers), no secret in it;
   the screen then says how to run it — the same entry command with
@@ -667,7 +669,7 @@ reviewed.
 **A refusal never loses your answers.** The system check is measured again at
 the typed `yes`: when it refuses now (a port taken since the Review was drawn),
 the session stays on the Review, says why, and keeps every answer — fix the
-cause and type `install` again, or edit a step. A run that is still refused
+cause and `install` again (it checks first), or edit a step. A run that is still refused
 after it started, before it changed anything, writes your answers to an
 [answers file](#the-answers-file-answers) — the `--write-answers` path when you
 gave one, else `dedalo-install-answers.json` in your home directory (root's under
@@ -732,7 +734,7 @@ screen reader.
 | An acknowledgement (the trial's missing media protection, no thesaurus, a connection kept untested) | **Space** ticks *I understand*, or type `yes`; **Enter** continues — unticked, Enter declines |
 | A list (ontologies, thesauri, languages) | type to filter; ↑↓ move; **Space** ticks or unticks; **/** starts a new filter; **Esc** clears the filter, then goes back; **Enter** continues |
 | A failed check | **r** retry, **e** edit the answers, **y** keep them untested (where allowed), **q** quit; a failure no fix on this machine can change (an unsupported system) offers only **q** — or **Esc**, back to choose another route |
-| The Review | **Enter** install (then type `yes`), **e** + a step number edit it, **w** + a path write an answers file, **Esc** edit the last step, **Ctrl-Q** quit |
+| The Review | **Enter** install (then type `yes`); when install is not offered, **Enter** checks again and, the cause fixed, asks for `yes`; **e** + a step number edit it, **w** + a path write an answers file, **Esc** edit the last step, **Ctrl-Q** quit |
 | The install | **l** shows the full log; **Ctrl-C** stops — resume later |
 | Done | **Enter** or **q** closes; Ctrl-C closes too, with the install's own exit code |
 
