@@ -66,14 +66,18 @@ import {
 } from '../run_files_core.ts';
 import {
 	ABORT_AND_START_AGAIN,
+	ALREADY_COMPLETE_LINE,
 	emit,
+	interruptOnce,
 	type LoopContext,
 	nowIso,
 	readInstallFault,
 	recordFailure,
 	recordOf,
+	redact,
 	redactConsole,
 	runPlanSteps,
+	runStarted,
 	say,
 	stopChildren,
 	warnLine,
@@ -301,8 +305,28 @@ async function performHostStep(ctx: HostRunContext, step: StepId) {
 	assertSameCommands(ctx, step, definition);
 	const result = await definition.run(hostContext(ctx));
 	if (!result.ok) hostRefuse('install.step_failed', result.detail);
-	tell(ctx, result.told ?? []);
+	const told = result.told ?? [];
+	// Kept with the step (checkpointed by its `done`): the closing To-do of a later run (N19).
+	recordOf(ctx, step).told = told.map((line) => redact(ctx, line));
+	tell(ctx, told);
 	return { message: result.detail, warnings: result.warnings ?? [] };
+}
+
+/**
+ * The closing To-do of a run that COMPLETES the install: every plan step's
+ * told lines in plan order — a step done in an earlier run included (told
+ * here now, it never was in this process) — each once (campaign 3b N19: a
+ * run completed by --resume listed only the lines of the steps it ran).
+ */
+function tellEveryStep(ctx: HostRunContext): void {
+	const steps = (ctx.state as InstallState).steps;
+	const recorded = (ctx.plan as PlanFile).steps.flatMap((step) => steps[step]?.told ?? []);
+	tell(
+		ctx,
+		[...new Set(recorded)].filter((line) => !ctx.told.includes(line)),
+	);
+	const ordered = [...new Set([...recorded, ...ctx.told])];
+	ctx.told.splice(0, ctx.told.length, ...ordered);
 }
 
 /** Lines to tell: the front end's own channel when it has one, else the transcript. */
@@ -473,21 +497,16 @@ async function resumeRun(ctx: HostRunContext): Promise<void> {
 	await runPlanSteps(ctx);
 }
 
-/** The steps that first start the engine as a server (their start marks the instance served). */
-const SERVING_STEPS: ReadonlySet<StepId> = new Set(['host_first_boot', 'stack_up']);
-
 /**
  * Could the instance have served (a LIVE install — never taken apart by a host
- * abort)? Once the step that first starts it as a server started: its intent
- * sets `served` before its work, and nothing clears it (C3-11). A record
- * written before the flag existed counts a serving step that ever left
- * pending.
+ * abort)? Once the step that first starts it as a server ISSUED that start:
+ * stack_up's intent, host_first_boot's checkpoint right before `systemctl
+ * start` (campaign 3b N9 — a serving step merely STARTED, interrupted before
+ * the start, is not a served instance), and nothing clears it (C3-11). The
+ * flag alone decides: no TS-era record predates it (v7 beta, no installs).
  */
 function instanceServed(ctx: HostRunContext): boolean {
-	if (hostCreated(ctx).served) return true;
-	return (ctx.plan as PlanFile).steps.some(
-		(step) => SERVING_STEPS.has(step) && recordOf(ctx, step).status !== 'pending',
-	);
+	return hostCreated(ctx).served;
 }
 
 /** The steps an abort undoes: started ones with an undo, reverse order — after the engine only, when it is live. */
@@ -589,7 +608,8 @@ async function abortRun(ctx: HostRunContext): Promise<void> {
 	if (live) {
 		// The instance stays; what was undone is pending again — a --resume puts it back.
 		(ctx.state as InstallState).outcome = 'in_progress';
-		saveState(ctx);
+		// The abort RUN ended (campaign 3b N30: its record kept result/finished_at null).
+		closeRun(ctx, 'aborted');
 		return;
 	}
 	(ctx.state as InstallState).outcome = 'aborted';
@@ -629,12 +649,13 @@ function failedOutcome(ctx: HostRunContext, error: unknown): HostExecutorOutcome
 	recordFailure(ctx, code, message);
 	if (ctx.currentStep !== null) emit(ctx, ctx.currentStep, 'failed', { message });
 	closeRun(ctx, 'failed');
-	const wrote = ctx.state !== null;
+	// REFUSED when this process never started its run (campaign 3b N24).
+	const started = runStarted(ctx);
 	return {
 		exitCode: 1,
-		result: wrote ? 'failed' : 'refused',
+		result: started ? 'failed' : 'refused',
 		message,
-		failedStep: wrote ? ctx.currentStep : null,
+		failedStep: started ? ctx.currentStep : null,
 		hint: hostHint(ctx),
 		told: ctx.told,
 		keptLive: false,
@@ -713,6 +734,7 @@ function newContext(
 		currentStep: null,
 		ranAny: false,
 		unredacted: false,
+		interruption: null,
 		request,
 		runner: seams.runner,
 		fs: seams.fs,
@@ -756,6 +778,22 @@ function recordComplete(dir: string): boolean {
 	return existsSync(join(dir, STATE_FILE)) && readStateFile(dir)?.outcome === 'complete';
 }
 
+/** The end of a run that completed the install: its closing tasks, the record, the result. */
+async function completeRun(
+	ctx: HostRunContext,
+	wasComplete: boolean,
+): Promise<'complete' | 'already_complete'> {
+	ctx.currentStep = null;
+	await afterComplete(ctx);
+	tellEveryStep(ctx);
+	(ctx.state as InstallState).outcome = 'complete';
+	closeRun(ctx, 'complete');
+	if (!wasComplete || ctx.ranAny) return 'complete';
+	// The docs quote it (campaign 3b N7: only the engine said it).
+	say(ctx, ALREADY_COMPLETE_LINE);
+	return 'already_complete';
+}
+
 async function runMode(
 	ctx: HostRunContext,
 	options: HostExecutorOptions,
@@ -778,11 +816,7 @@ async function runMode(
 	await (ctx.request.mode === 'fresh'
 		? freshRun(ctx, options.skipPrivilegeCheck === true)
 		: resumeRun(ctx));
-	ctx.currentStep = null;
-	await afterComplete(ctx);
-	(ctx.state as InstallState).outcome = 'complete';
-	closeRun(ctx, 'complete');
-	const result = wasComplete && !ctx.ranAny ? 'already_complete' : 'complete';
+	const result = await completeRun(ctx, wasComplete);
 	return {
 		exitCode: 0,
 		result,
@@ -807,14 +841,17 @@ export async function executeHostInstall(
 ): Promise<HostExecutorOutcome> {
 	const ctx = newContext(request, io, options);
 	const restore = redactConsole(ctx);
-	const sigint = () => void interrupted(ctx, 'SIGINT', restore);
-	const sigterm = () => void interrupted(ctx, 'SIGTERM', restore);
+	const sigint = () => void interruptOnce(ctx, () => interrupted(ctx, 'SIGINT', restore));
+	const sigterm = () => void interruptOnce(ctx, () => interrupted(ctx, 'SIGTERM', restore));
 	process.on('SIGINT', sigint);
 	process.on('SIGTERM', sigterm);
 	io.signals?.(true);
 	try {
 		return await runMode(ctx, options);
 	} catch (error) {
+		// The engine child (or any step's child) that died of the operator's Ctrl-C:
+		// the run ends as that ONE interruption — exit 130, recorded interrupted (N12).
+		if (ctx.interruption !== null) return await ctx.interruption;
 		return failedOutcome(ctx, error);
 	} finally {
 		process.off('SIGINT', sigint);

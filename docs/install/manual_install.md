@@ -93,6 +93,9 @@ WEB=apache WEBSVC=httpd   WEBUSER=apache   WEBLOG=/var/log/httpd   SITE=/etc/htt
 # Every system: does SELinux apply here (the RHEL family, Enforcing or Permissive)?
 SELINUX_MODULE=false
 getenforce 2>/dev/null | grep -qiE '^(enforcing|permissive)$' && SELINUX_MODULE=true
+
+# Every system: does this instance write nginx's host-wide media map? host_web_site sets it.
+MAP_OWNER=false
 ```
 
 `PIN`, the Bun version, is set in [`host_runtime`](#manual-host_runtime) from the release itself.
@@ -107,7 +110,7 @@ render() {
       -e "s|@@PG_BIN@@|$PGBIN|g" -e "s|@@PG_SERVICE@@|$PGSVC|g" \
       -e "s|@@SERVER_NAME_RE@@|$name_re|g" \
       -e "s|@@SERVER_NAME@@|$NAME|g" -e "s|@@LOG_DIR@@|$WEBLOG|g" \
-      -e "s|@@SELINUX_MODULE@@|$SELINUX_MODULE|g" "$@"
+      -e "s|@@SELINUX_MODULE@@|$SELINUX_MODULE|g" -e "s|@@NGINX_MAP_OWNER@@|$MAP_OWNER|g" "$@"
 }
 ```
 
@@ -124,7 +127,7 @@ Installer: [Production › `host_preflight`](production.md#host_preflight-the-sy
 The installer measures the host and refuses, before any change, everything a later step would trip on. By hand, check the same list:
 
 ```shell
-. /etc/os-release; echo "$ID $VERSION_ID"     # ubuntu 26.04 · debian 13 · rhel|rocky|almalinux 10.x
+( . /etc/os-release; echo "$ID $VERSION_ID" ) # ubuntu 26.04 · debian 13 · rhel|rocky|almalinux 10.x
 test -d /run/systemd/system && echo systemd    # systemd is running
 nginx -v                                       # nginx already installed only: 1.25.1 or newer (`http2 on;`)
 getent passwd "$U"; getent group "$G"          # absent, or the account you mean to use
@@ -138,11 +141,14 @@ ls /var/lib/dedalo-install/instances/ 2>&1     # the other instances on this hos
                                                # PostgreSQL already installed only: prints nothing
 ```
 
+The first line reads `/etc/os-release` in a subshell, `( … )`, on purpose: that file sets `NAME` (and `ID`, `VERSION`, …), and sourced in this root shell it would overwrite the page's own `$NAME`, the public address every later step renders.
+
 On a fresh host, `nginx: command not found` and `runuser: user postgres does not exist` only mean that nginx and PostgreSQL are not installed yet. That is fine: [`host_packages`](#manual-host_packages) installs them.
 
 Also check:
 
 - **The role and the database are free.** No PostgreSQL role named like the service user and no database `dedalo_<i>` exist yet. The installer refuses either one before it changes anything: an existing role may carry a password, `SUPERUSER` or `CREATEDB`, and the engine would then run as it. A hosting account often has a role of its own name already. Stop and choose another service user, or remove what is left of an earlier install.
+- **One web server.** Nothing but your web server listens on ports 80 and 443 (`ss -ltnp 'sport = :80 or sport = :443'` names the program), and, when your web server is not installed yet, the other one is not installed either: the installer refuses a run that would install one web server beside the other, and any program other than your web server holding the ports. With both already installed, it goes ahead as long as only yours holds them.
 - **The address is free.** No other site on this host serves `$NAME` on ports 80 and 443 (`nginx -T`; Apache: `apache2ctl -S` on Debian and Ubuntu, `httpd -S` on the RHEL family, whose `apachectl` does not accept `-S`).
 - **One PostgreSQL major.** No cluster other than PostgreSQL 18 listens on port 5432. On Ubuntu and Debian, check with `pg_lsclusters`.
 - **The folder.** The install folder is absent, or empty, or an existing folder of the service user's. It is not reached through a symbolic link, not writable by group or others, and no web site on this host serves it.
@@ -156,7 +162,7 @@ Also check:
     ufw allow 80,443/tcp
     ```
 
-- **Your institution's certificate**, if you use one, names the address, is valid now, and pairs with its key (`openssl x509 -in <fullchain> -noout -subject -enddate`), and **this host trusts its chain**. The installer's last check runs this host's `curl`, which verifies the chain as a browser does. Check with `openssl verify -untrusted <fullchain> <fullchain>`. When it says *unable to get local issuer certificate*, install your authority's certificate: Debian and Ubuntu, copy it to `/usr/local/share/ca-certificates/<name>.crt`, then `update-ca-certificates`; RHEL family, copy it to `/etc/pki/ca-trust/source/anchors/`, then `update-ca-trust`.
+- **Your institution's certificate**, if you use one, names the address, is valid now, and pairs with its key (`openssl x509 -in <fullchain> -noout -subject -enddate`), and **this host trusts its chain**. The installer's last check runs this host's `curl`, which verifies the chain as a browser does. Check with `openssl verify -untrusted <fullchain> <fullchain>`. When it fails, with *unable to get local issuer certificate*, or with *self-signed certificate in certificate chain* when the file carries your authority's own certificate too, install your authority's certificate: Debian and Ubuntu, copy it to `/usr/local/share/ca-certificates/<name>.crt`, then `update-ca-certificates`; RHEL family, copy it to `/etc/pki/ca-trust/source/anchors/`, then `update-ca-trust`.
 
 ## `host_packages` — packages and repositories {#manual-host_packages}
 
@@ -624,9 +630,10 @@ Write the first stage of the site: the plain-HTTP server with the challenge root
 render > "$SITE" <<'EOF'
 # dedalo-install @@INSTANCE@@ manual
 # Dédalo instance @@INSTANCE@@ — WRITTEN BY THE INSTALLER (scripts/install.ts, production
-# route). Every other site, the default site and the global configuration are untouched.
-# Change the answers and re-run the installer rather than editing this file: a resume
-# compares it with its own render.
+# route) or by docs/install/manual_install.md, which renders the same bytes. Every other
+# site, the default site and the global configuration are untouched. An installer resume
+# compares this file with its own render: change the answers and re-run the installer;
+# a by-hand host edits it only where manual_install.md says.
 
 limit_req_zone $binary_remote_addr zone=dedalo_@@INSTANCE@@_api:10m rate=20r/s;
 upstream dedalo_@@INSTANCE@@ { server unix:/run/dedalo-@@INSTANCE@@/dedalo_ts.sock; }
@@ -650,9 +657,10 @@ EOF
 render > "$SITE" <<'EOF'
 # dedalo-install @@INSTANCE@@ manual
 # Dédalo instance @@INSTANCE@@ — WRITTEN BY THE INSTALLER (scripts/install.ts, production
-# route). Every other site, the default site and the global configuration are untouched.
-# Change the answers and re-run the installer rather than editing this file: a resume
-# compares it with its own render.
+# route) or by docs/install/manual_install.md, which renders the same bytes. Every other
+# site, the default site and the global configuration are untouched. An installer resume
+# compares this file with its own render: change the answers and re-run the installer;
+# a by-hand host edits it only where manual_install.md says.
 
 <VirtualHost *:80>
 	ServerName @@SERVER_NAME@@
@@ -703,7 +711,7 @@ openssl x509 -in <fullchain> -noout -subject -ext subjectAltName -enddate
 [ "$(openssl x509 -in <fullchain> -noout -pubkey | sha256sum)" = "$(openssl pkey -in <key> -pubout | sha256sum)" ] && echo pair
 ```
 
-This host must trust the chain (the public probe verifies it with this host's `curl`): `openssl verify -untrusted <fullchain> <fullchain>` prints `OK` once your authority is in the system trust store, as in [`host_preflight`](#manual-host_preflight).
+This host must trust the chain (the public probe verifies it with this host's `curl`): `openssl verify -untrusted <fullchain> <fullchain>` prints `OK` once your authority is in the system trust store. Until then it fails with *unable to get local issuer certificate*, or *self-signed certificate in certificate chain* when the file carries the authority's own certificate: install it as in [`host_preflight`](#manual-host_preflight).
 
 On the RHEL family, the web server must be able to read them: keep them under `/etc/pki/tls`, or label their directory `cert_t` (`semanage fcontext -a -t cert_t '<dir>(/.*)?' && restorecon -RF <dir>`).
 
@@ -722,13 +730,16 @@ If you skipped [`host_web_http`](#manual-host_web_http) (your institution's cert
 ```shell
 install -d -o root -g root -m 0755 /etc/nginx/dedalo
 "$BIN/dedalo-media-rules.sh" --source "$MEDIA" --dest "/etc/nginx/dedalo/$I"
-test -e /etc/nginx/conf.d/dedalo-00-media-map.conf || render > /etc/nginx/conf.d/dedalo-00-media-map.conf <<'EOF'
+if ! test -e /etc/nginx/conf.d/dedalo-00-media-map.conf; then
+  MAP_OWNER=true   # this instance writes the map: its host record says so
+  render > /etc/nginx/conf.d/dedalo-00-media-map.conf <<'EOF'
 # dedalo-install media map — WRITTEN BY THE INSTALLER. The media gate's map variables
 # are global to nginx: ONE instance's map (its root-owned, validated copy) is included
 # here for every Dédalo instance on this host (the installer refuses an instance whose
 # map differs — keep same-host instances at the same release).
 include /etc/nginx/dedalo/@@INSTANCE@@/media_protection_map.conf;
 EOF
+fi
 ```
 
 When the file exists, it names another instance's copy. Both instances must run the same release, because the map is shared.
@@ -739,9 +750,10 @@ When the file exists, it names another instance's copy. Both instances must run 
 render > "$SITE" <<'EOF'
 # dedalo-install @@INSTANCE@@ manual
 # Dédalo instance @@INSTANCE@@ — WRITTEN BY THE INSTALLER (scripts/install.ts, production
-# route). Every other site, the default site and the global configuration are untouched.
-# Change the answers and re-run the installer rather than editing this file: a resume
-# compares it with its own render.
+# route) or by docs/install/manual_install.md, which renders the same bytes. Every other
+# site, the default site and the global configuration are untouched. An installer resume
+# compares this file with its own render: change the answers and re-run the installer;
+# a by-hand host edits it only where manual_install.md says.
 
 limit_req_zone $binary_remote_addr zone=dedalo_@@INSTANCE@@_api:10m rate=20r/s;
 upstream dedalo_@@INSTANCE@@ { server unix:/run/dedalo-@@INSTANCE@@/dedalo_ts.sock; }
@@ -882,9 +894,10 @@ EOF
 render > "$SITE" <<'EOF'
 # dedalo-install @@INSTANCE@@ manual
 # Dédalo instance @@INSTANCE@@ — WRITTEN BY THE INSTALLER (scripts/install.ts, production
-# route). Every other site, the default site and the global configuration are untouched.
-# Change the answers and re-run the installer rather than editing this file: a resume
-# compares it with its own render.
+# route) or by docs/install/manual_install.md, which renders the same bytes. Every other
+# site, the default site and the global configuration are untouched. An installer resume
+# compares this file with its own render: change the answers and re-run the installer;
+# a by-hand host edits it only where manual_install.md says.
 
 <VirtualHost *:80>
 	ServerName @@SERVER_NAME@@
@@ -1065,7 +1078,7 @@ render > "/var/lib/dedalo-install/instances/$I.json" <<'EOF'
 	"bun_pin": "@@PIN@@",
 	"templates": true,
 	"selinux_module": @@SELINUX_MODULE@@,
-	"nginx_map_owner": false,
+	"nginx_map_owner": @@NGINX_MAP_OWNER@@,
 	"catch_all": true,
 	"media": "/srv/dedalo/@@INSTANCE@@/dedalo/media",
 	"user": "@@USER@@",
@@ -1076,7 +1089,7 @@ render > "/var/lib/dedalo-install/instances/$I.json" <<'EOF'
 EOF
 ```
 
-`"selinux_module"` is rendered from `$SELINUX_MODULE` (set with the variables): `true` whenever [`host_selinux`](#manual-host_selinux) applied on this host (the RHEL family, SELinux `Enforcing` or `Permissive`), whether you loaded the policy module or found it already loaded. The flag means *this instance uses the module*, and an installer `--abort` of another instance keeps the module only while a record says so. Set `"nginx_map_owner": true` if this instance wrote `/etc/nginx/conf.d/dedalo-00-media-map.conf`. Set `"catch_all": false` on Apache, if this instance uses other ports than 80 and 443, or if you skipped the catch-all because the file is not the installer's: the flag counts the instances that use the catch-all, and an `--abort` of another instance removes it only when no record says `true`. `"media"` stays as printed: on this page `MEDIA_PATH` is always `/srv/dedalo/<i>/dedalo/media`.
+`"selinux_module"` is rendered from `$SELINUX_MODULE` (set with the variables): `true` whenever [`host_selinux`](#manual-host_selinux) applied on this host (the RHEL family, SELinux `Enforcing` or `Permissive`), whether you loaded the policy module or found it already loaded. The flag means *this instance uses the module*, and an installer `--abort` of another instance keeps the module only while a record says so. `"nginx_map_owner"` is rendered from `$MAP_OWNER`: `true` when [`host_web_site`](#manual-host_web_site) wrote `/etc/nginx/conf.d/dedalo-00-media-map.conf` for this instance, `false` when another instance had written it, and always `false` on Apache. In a shell other than the one that wrote the map, set `MAP_OWNER=true` by hand before rendering the record. Set `"catch_all": false` on Apache, if this instance uses other ports than 80 and 443, or if you skipped the catch-all because the file is not the installer's: the flag counts the instances that use the catch-all, and an `--abort` of another instance removes it only when no record says `true`. `"media"` stays as printed: on this page `MEDIA_PATH` is always `/srv/dedalo/<i>/dedalo/media`.
 
 ## After the install
 

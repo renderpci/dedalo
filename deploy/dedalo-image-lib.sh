@@ -263,15 +263,41 @@ dedalo_no_checkout_sentence() {
 	printf '%s is not a git checkout: a local image is built from a clean snapshot of a git commit (git archive), and a release tree has no commit to snapshot (it is its own build context only at install) — pull the image instead (DEDALO_IMAGE_MODE=pull), or install from a git checkout' "${1-this directory}"
 }
 
+# dedalo_image_labels CHECKOUT TAG — the OCI labels of a local build, one
+# `key=value` per line (campaign 3b N1): without them the image inherits the
+# base image's (`org.opencontainers.image.version=1.4.2-debian`, bun's source and
+# revision), and the version label is what the updater and the installer read as
+# "which release is this". version = TAG's tag part (empty when TAG has none),
+# revision and created = the snapshotted commit; source, url, description and
+# licenses blanked — a local build has no published source to name.
+dedalo_image_labels() {
+	local checkout="${1-}" tag="${2-}" version='' meta=''
+	version="${tag##*:}"
+	case "$version" in "$tag" | */*) version='' ;; esac
+	meta="$(git -c "safe.directory=$checkout" -c core.fsmonitor=false -C "$checkout" \
+		log -1 --format='%H %cI' HEAD)" || return 1
+	printf '%s\n' \
+		'org.opencontainers.image.title=Dédalo' \
+		"org.opencontainers.image.version=$version" \
+		"org.opencontainers.image.revision=${meta%% *}" \
+		"org.opencontainers.image.created=${meta#* }" \
+		'org.opencontainers.image.source=' \
+		'org.opencontainers.image.url=' \
+		'org.opencontainers.image.description=' \
+		'org.opencontainers.image.licenses='
+}
+
 # dedalo_image_build CHECKOUT TAG [DOCKER] — `DOCKER build --tag TAG` of the
 # checkout's HEAD: archived and extracted into CHECKOUT/DEDALO_IMAGE_CONTEXT
 # (git with safe.directory for this one command — root builds an operator's
 # checkout — and fsmonitor off), the tarball removed before the build reads the
 # dir, the dir removed after the build, green or red. The build's own output is
-# passed through (BUILDKIT_PROGRESS from the caller). Status: 0 built, 1 failed,
-# 2 usage, 3 refused (no git — the sentence on stderr).
+# passed through (BUILDKIT_PROGRESS from the caller). The image's OCI labels are
+# its own (dedalo_image_labels), never the base image's. Status: 0 built,
+# 1 failed, 2 usage, 3 refused (no git — the sentence on stderr).
 dedalo_image_build() {
-	local checkout="${1-}" tag="${2-}" docker="${3:-docker}" dir='' status=0
+	local checkout="${1-}" tag="${2-}" docker="${3:-docker}" dir='' status=0 line='' label=''
+	local labels=()
 	[ -n "$checkout" ] && [ -n "$tag" ] || return 2
 	if ! dedalo_is_checkout "$checkout"; then
 		dedalo_no_checkout_sentence "$checkout" >&2
@@ -281,8 +307,10 @@ dedalo_image_build() {
 	dir="$checkout/$DEDALO_IMAGE_CONTEXT"
 	rm -rf "$dir" "$dir.tar" && mkdir -p "$dir" || return 1
 	if git -c "safe.directory=$checkout" -c core.fsmonitor=false -C "$checkout" \
-		archive --format=tar -o "$dir.tar" HEAD && tar -xf "$dir.tar" -C "$dir" && rm -f "$dir.tar"; then
-		"$docker" build --tag "$tag" "$dir" || status=$?
+		archive --format=tar -o "$dir.tar" HEAD && tar -xf "$dir.tar" -C "$dir" && rm -f "$dir.tar" &&
+		line="$(dedalo_image_labels "$checkout" "$tag")"; then
+		while IFS= read -r label; do labels+=(--label "$label"); done <<<"$line"
+		"$docker" build --tag "$tag" "${labels[@]}" "$dir" || status=$?
 	else
 		printf 'could not archive the last commit of %s\n' "$checkout" >&2
 		status=1

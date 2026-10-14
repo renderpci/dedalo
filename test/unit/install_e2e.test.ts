@@ -425,7 +425,9 @@ describe('TS-native install e2e (P5)', () => {
 		named('--resume on the complete install re-verifies every step and exits 0'),
 		() => {
 			const { exitCode, out } = runCli(['--resume'], false);
-			expect(out).toContain('install already complete — every step verified');
+			expect(out).toContain(
+				'install already complete — every done step that has a check was verified again',
+			);
 			expect(exitCode).toBe(0);
 			const state = JSON.parse(
 				readFileSync(join(scratchDir, 'install', 'install.state.json'), 'utf8'),

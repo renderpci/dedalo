@@ -1218,9 +1218,14 @@ describe('campaign 3: the screens ask what the route uses, in its own words', ()
 		).toEqual(['root_password', 'db_password']);
 	});
 
-	test('C3-58: the route cursor starts on the plan’s own default route — never an answer', () => {
+	test('C3-58 / 3b N13: the route cursor starts on the RECOMMENDED route — never an answer', () => {
 		const route = questions({}).find((item) => item.id === 'route.route') as Question;
-		expect(route.start).toBe(normalizeInstallAnswers({}).answers.route);
+		// Production (index.md, production.md: the recommended route) — never the plan's
+		// Developer fallback, which Enter on a sudo server run picked.
+		expect(route.start).toBe('production');
+		const start = route.options?.find((option) => option.value === route.start);
+		expect(start?.label).toContain('recommended');
+		expect(normalizeInstallAnswers({}).answers.route).toBe('developer');
 		expect(route.value).toBeNull();
 		expect(route.default).toBeNull();
 	});

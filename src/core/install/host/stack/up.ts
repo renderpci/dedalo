@@ -10,6 +10,11 @@
  * Then nginx must SETTLE: running, not restarting, its configuration accepted
  * (`nginx -t` in its container) — `up -d` reports success for a container that
  * then crash-loops (campaign 3 C3-8); a refusal quotes nginx's [emerg] line.
+ * And it must PUBLISH every port it declares: a container whose start failed
+ * (the host port held by another program) is reused by a later `up -d` as
+ * "Up" with no port bound at all — `restart` does not rebind it (campaign 3b
+ * N2). So nginx is removed before `up -d` creates it again (it holds no state),
+ * and its published ports are checked here and on every resume's verify.
  *
  * --abort stops and removes only the services this step started — never
  * PostgreSQL, whose step is still recorded done (an abort of a live install
@@ -23,8 +28,16 @@ import { probeOk, probeText, ran, verdictOf } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
 import { pollUntil, stackCreated } from './common.ts';
 import { composeCommand, composeProbe, dockerProbe } from './compose.ts';
+import { keptImages } from './database.ts';
 import { assertPinnedImage } from './image_verify.ts';
 import { CONTAINER, ENV_FILE, OVERRIDE_FILE, stackFileOf } from './layout.ts';
+
+/** Where removing a stack by hand is described, per route (campaign 3b N16). */
+export function removalDoc(ctx: HostPlanCtx): string {
+	return ctx.answers.route === 'docker'
+		? 'docs/install/docker.md#removing-the-stack'
+		: 'docs/install/quickstart.md#removing-the-trial';
+}
 
 /** The services `up -d` starts besides PostgreSQL (certbot: the Let's Encrypt override's). */
 export function startedServices(ctx: HostPlanCtx): string[] {
@@ -90,6 +103,50 @@ function nginxStateProbe(ctx: HostPlanCtx, id: string) {
 	);
 }
 
+/** The ports nginx's container DECLARES (`{"443/tcp":[…],…}`; the id is appended at run time). */
+function nginxDeclaredPortsProbe(ctx: HostPlanCtx, id: string) {
+	return dockerProbe(
+		ctx,
+		['inspect', '--format', '{{json .HostConfig.PortBindings}}', id],
+		'the ports nginx declares',
+	);
+}
+
+/** The ports nginx's container has BOUND (`443/tcp -> 0.0.0.0:443` per line). */
+function nginxBoundPortsProbe(ctx: HostPlanCtx, id: string) {
+	return dockerProbe(ctx, ['port', id], 'the ports nginx publishes', { okExit: [0, 1] });
+}
+
+/**
+ * The declared ports with no binding: `inspect`'s PortBindings keys minus
+ * `docker port`'s left-hand sides. Unparseable output declares nothing.
+ */
+export function unboundPorts(declaredJson: string, bound: string): string[] {
+	let declared: string[] = [];
+	try {
+		const parsed: unknown = JSON.parse(declaredJson.trim() || 'null');
+		if (parsed !== null && typeof parsed === 'object') declared = Object.keys(parsed);
+	} catch {
+		declared = [];
+	}
+	const published = new Set(
+		bound
+			.split('\n')
+			.map((line) => line.split(' -> ')[0]?.trim() ?? '')
+			.filter(Boolean),
+	);
+	return declared.filter((port) => !published.has(port)).sort();
+}
+
+/** nginx's declared ports that are not bound ([] also when there is no container). */
+async function nginxUnbound(ctx: HostCtx, id: string): Promise<string[]> {
+	if (id === '') return [];
+	return unboundPorts(
+		await probeText(ctx, nginxDeclaredPortsProbe(ctx, id)),
+		await probeText(ctx, nginxBoundPortsProbe(ctx, id)),
+	);
+}
+
 /** nginx accepts its configuration (inside its container). */
 function nginxConfigProbe(ctx: HostPlanCtx) {
 	return composeProbe(
@@ -108,13 +165,30 @@ function nginxLogsProbe(ctx: HostPlanCtx) {
 	);
 }
 
+/**
+ * nginx removed before `up -d` creates it (campaign 3b N2): a container an
+ * earlier run created but could not start keeps no published port when it is
+ * started again. nginx holds no state; absent, this removes nothing.
+ */
+function nginxRemoved(ctx: HostPlanCtx): HostCommand {
+	return composeCommand(
+		ctx,
+		['rm', '--stop', '--force', 'nginx'],
+		'remove an nginx container left by an earlier run (created again, with its ports, by the next command)',
+		{ okExit: [0, 1] },
+	);
+}
+
 export function upCommands(ctx: HostPlanCtx): HostCommand[] {
 	return [
 		engineUp(ctx),
 		socketHealthProbe(ctx),
+		nginxRemoved(ctx),
 		everythingUp(ctx),
 		nginxIdProbe(ctx),
 		nginxStateProbe(ctx, '<nginx container>'),
+		nginxDeclaredPortsProbe(ctx, '<nginx container>'),
+		nginxBoundPortsProbe(ctx, '<nginx container>'),
 		nginxConfigProbe(ctx),
 	];
 }
@@ -125,12 +199,19 @@ export function upCommands(ctx: HostPlanCtx): HostCommand[] {
  * the container is CREATED: a config nginx refuses (an include that is not
  * there) leaves it restarting while `up` reports success (campaign 3 C3-8).
  */
-async function nginxSettled(ctx: HostCtx, seen: { state: string }): Promise<boolean> {
+async function nginxSettled(ctx: HostCtx, seen: NginxSeen): Promise<boolean> {
 	const id = (await probeText(ctx, nginxIdProbe(ctx))).trim();
 	const state = id === '' ? '' : (await probeText(ctx, nginxStateProbe(ctx, id))).trim();
 	const stable = state.startsWith('running ') && state === seen.state;
 	seen.state = state;
-	return stable && (await probeOk(ctx, nginxConfigProbe(ctx)));
+	seen.unbound = stable ? await nginxUnbound(ctx, id) : [];
+	return stable && seen.unbound.length === 0 && (await probeOk(ctx, nginxConfigProbe(ctx)));
+}
+
+/** What the last settle poll saw: nginx's state, and the declared ports it had not bound. */
+interface NginxSeen {
+	state: string;
+	unbound: string[];
 }
 
 /** The line that says why nginx stopped: its [emerg] line, else its last. */
@@ -144,13 +225,19 @@ async function nginxWhy(ctx: HostCtx): Promise<string> {
 
 /** Wait for nginx to settle; refuse with its own words when it does not. */
 async function assertNginxSettled(ctx: HostCtx): Promise<void> {
-	const seen = { state: '' };
+	const seen: NginxSeen = { state: '', unbound: [] };
 	const settled = await pollUntil(
 		ctx,
 		{ limitMs: NGINX_SETTLE_LIMIT_MS, everyMs: 2000, progressEvery: 0, what: 'nginx' },
 		() => nginxSettled(ctx, seen),
 	);
 	if (settled) return;
+	if (seen.unbound.length > 0) {
+		hostRefuse(
+			'install.step_failed',
+			`nginx is running but publishes no port for ${seen.unbound.join(', ')} — another program may hold it (sudo ss -tlnp), or Docker could not bind it: free it, then --resume (the installer recreates nginx)`,
+		);
+	}
 	hostRefuse(
 		'install.step_failed',
 		`nginx did not stay up (${seen.state || 'no container'}): ${await nginxWhy(ctx)} — see: docker compose -f ${stackFileOf(ctx.answers)} -f ${OVERRIDE_FILE} --env-file ${ENV_FILE} logs nginx`,
@@ -176,7 +263,7 @@ async function runUp(ctx: HostCtx) {
 			`the engine did not answer /health within ${STACK_BOOT_LIMIT_MS / 60000} minutes — see: docker compose -f ${stackFileOf(ctx.answers)} --env-file ${ENV_FILE} logs dedalo`,
 		);
 	}
-	await executeCommands([everythingUp(ctx)], ctx);
+	await executeCommands([nginxRemoved(ctx), everythingUp(ctx)], ctx);
 	await assertNginxSettled(ctx);
 	return ran('the stack is up (nginx running, its configuration accepted)');
 }
@@ -201,12 +288,18 @@ export const stack_up: HostStepDefinition = {
 	commands: upCommands,
 	verify: async (ctx) => {
 		const running = await runningServices(ctx);
+		const unbound = running.includes('nginx')
+			? await nginxUnbound(ctx, (await probeText(ctx, nginxIdProbe(ctx))).trim())
+			: [];
 		return verdictOf(
-			['postgres', 'dedalo', 'nginx'].map((service): [boolean, string] => [
-				running.includes(service),
-				`${service} is not running`,
-			]),
-			'postgres, dedalo and nginx are running',
+			[
+				...['postgres', 'dedalo', 'nginx'].map((service): [boolean, string] => [
+					running.includes(service),
+					`${service} is not running`,
+				]),
+				[unbound.length === 0, `nginx publishes no port for ${unbound.join(', ')}`],
+			],
+			'postgres, dedalo and nginx are running, nginx with its ports published',
 		);
 	},
 	run: runUp,
@@ -230,6 +323,8 @@ export const stack_up: HostStepDefinition = {
 			],
 			ctx,
 		);
-		return `stopped and removed ${services.join(', ')} — PostgreSQL keeps running with the data (the database step's undo takes it down)`;
+		// The instance has served (intent above): the database step is never undone after this
+		// one, so say how the operator removes it — and which images stay (campaign 3b N32, C3-52).
+		return `stopped and removed ${services.join(', ')} — PostgreSQL keeps running with the data, and --resume starts them again; to remove the instance entirely, see ${removalDoc(ctx)}; ${keptImages(ctx)}`;
 	},
 };

@@ -177,6 +177,9 @@ export const SCREEN_ORDER: Readonly<Record<InstallRoute, readonly ScreenId[]>> =
  */
 export const RUN_STEPS = ['Install', 'Done'] as const;
 
+/** The route the docs recommend (index.md, production.md) — where the route cursor starts. */
+export const RECOMMENDED_ROUTE: InstallRoute = 'production';
+
 /** How many steps a front end counts for a screen's route (its screens + the run states). */
 export function stepTotal(screen: Pick<Screen, 'count'>): number {
 	return screen.count + RUN_STEPS.length;
@@ -798,7 +801,9 @@ function routeScreen(ctx: Ctx, frame: Frame): Screen {
 				options,
 				required: true,
 				value: ctx.route,
-				start: String(planDefault(ctx, 'route')),
+				// The RECOMMENDED route (campaign 3b N13): Enter on a server never picks
+				// Developer, the plan's own fallback for an answer file without a route.
+				start: RECOMMENDED_ROUTE,
 			}),
 			// The instance names everything the next screens default (database,
 			// role, media, socket), so it is asked WITH the route.
@@ -837,6 +842,8 @@ function versionNotices(outcome: ProbeOutcome): Notice[] {
  * 3, 2026-10-13).
  */
 function systemVerdict(outcome: ProbeOutcome, failed: number, warned: number): Notice {
+	// No fix on this machine changes it: never "fix it and re-check" (campaign 3b C3-61).
+	if (unfixableFailure(outcome)) return { level: 'error', text: NOTICE_TEXT.systemUnfixable };
 	if (failed > 0) return { level: 'error', text: NOTICE_TEXT.systemSummary(failed, warned) };
 	if (!outcome.ok) return { level: 'error', text: NOTICE_TEXT.systemIncomplete(outcome.detail) };
 	return { level: 'info', text: NOTICE_TEXT.systemSummary(0, warned) };

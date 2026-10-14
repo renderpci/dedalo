@@ -22,15 +22,16 @@ import { BLANK, noticeLines, saidLines, screenExtras } from '../widgets/notices.
 /** The run states the rail adds after the model's screens (the model's own — plain counts them too). */
 export const RUN_STATES = RUN_STEPS;
 
-export type RailState = 'done' | 'current' | 'pending' | 'skipped';
+export type RailState = 'done' | 'current' | 'pending' | 'skipped' | 'failed';
 
 /** One rail row: `✓  3 Database` (compact: the mark and the number). */
 function railRow(mark: RailState, index: number, title: string, full: boolean): Line {
-	const MARK: Readonly<Record<RailState, [string, 'ok' | 'accent' | 'faint']>> = {
+	const MARK: Readonly<Record<RailState, [string, 'ok' | 'accent' | 'faint' | 'err']>> = {
 		done: ['✓', 'ok'],
 		current: ['›', 'accent'],
 		pending: ['·', 'faint'],
 		skipped: ['–', 'faint'],
+		failed: ['✗', 'err'],
 	};
 	const [glyph, role] = MARK[mark];
 	const number = String(index).padStart(2, ' ');
@@ -39,11 +40,17 @@ function railRow(mark: RailState, index: number, title: string, full: boolean): 
 	return full ? [...head, seg(` ${title}`, titleRole, { bold: mark === 'current' })] : head;
 }
 
+/** A seen screen's state: a check that failed is never drawn done (campaign 3b N34). */
+function seenState(screen: RouteScreen, failed: readonly string[]): RailState {
+	if (failed.includes(screen.id)) return 'failed';
+	return screen.placeholder ? 'skipped' : 'done';
+}
+
 /** A model screen's rail state. */
 function screenState(screen: RouteScreen, view: ScreenView | null, current: string): RailState {
 	if (screen.id === current) return 'current';
 	if (!(view?.seen ?? []).includes(screen.id)) return 'pending';
-	return screen.placeholder ? 'skipped' : 'done';
+	return seenState(screen, view?.failed ?? []);
 }
 
 /**

@@ -374,6 +374,21 @@ describe('a kill after ANY host step, then --abort --confirm-database, leaves on
 	}, 240_000);
 });
 
+describe('a kill INSIDE host_first_boot before its start is not a served instance (campaign 3b N9)', () => {
+	test('killed after the step started but before `systemctl start`: --abort removes the instance whole', async () => {
+		const root = scratchRoot();
+		const killed = await child(root, 'fresh', 'host_first_boot:before');
+		expect(killed.killed).toBe(true);
+		const log = loggedCommands(root);
+		expect(log.some((line) => line.includes('systemctl start dedalo-ts@'))).toBe(false);
+		const aborted = await child(root, 'abort');
+		expect(aborted.outcome?.result).toBe('aborted');
+		// never "the instance has served": the full undo, the engine install included
+		expect(aborted.outcome?.undoing ?? '').toContain('host_engine');
+		expect(fullAbortProblems(root, 'host_first_boot:before')).toEqual([]);
+	}, 60_000);
+});
+
 // ── (c) custom layouts: the resolved group survives a kill ───────────────────
 
 /**

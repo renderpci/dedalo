@@ -62,6 +62,10 @@ const SRC_DIR = join(import.meta.dir, '..', '..', 'src');
  * it here WITH justification that it carries no request identity.
  */
 const ALLOWLISTED_MODULE_LET = new Set<string>([
+	// Where the retired-property announcements go while an install runs (campaign 3b C3-72): a
+	// process-wide OUTPUT switch like the console itself — set and put back by
+	// executor.ts executeInstall around its run, never per request, no identity.
+	'core/ontology/retired_property_notice.ts:divertedTo',
 	// FOUND 2026-08-31 by widening this census to tools/ (P2-20 / GATE-34) — tool
 	// SERVER code runs in the same process and handles requests.
 	//

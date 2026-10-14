@@ -315,12 +315,14 @@ describe('the bootstrap runs end to end under sh (a)', () => {
 		);
 		expect(result.stderr).toContain('Installing the installer');
 		expect(result.code, result.stderr).toBe(0);
-		// The dependencies: the release's lockfile, production, no lifecycle scripts.
+		// The dependencies: the release's lockfile, production, no lifecycle scripts — and, its
+		// stdout a pipe (the installer's plain mode), no progress bar (campaign 3b N25).
 		expect(result.calls[0]).toEqual([
 			'install',
 			'--frozen-lockfile',
 			'--production',
 			'--ignore-scripts',
+			'--no-progress',
 		]);
 		// The installer: the hand-over flags, the release's bunfig, then EXACTLY the operator's argv.
 		const argv = result.installer ?? [];
@@ -760,11 +762,12 @@ describe('under sudo: the production OS gate, and the dependencies as the checko
 		const cache = join(work, 'cache');
 		mkdirSync(cache);
 		const log = join(work, 'log');
-		// The verified Bun records the colour switches it was run with.
+		// The verified Bun records the colour switches it was run with, and its last argument
+		// (`--no-progress` in plain mode: a progress bar moves the cursor — campaign 3b N25).
 		const bun = join(cache, 'bun-verified');
 		writeFileSync(
 			bun,
-			`#!/bin/sh\nprintf '%s|%s\\n' "\${NO_COLOR:-unset}" "\${FORCE_COLOR:-unset}" >> "${log}"\n`,
+			`#!/bin/sh\nfor last; do :; done\nprintf '%s|%s|%s\\n' "\${NO_COLOR:-unset}" "\${FORCE_COLOR:-unset}" "$last" >> "${log}"\n`,
 		);
 		chmodSync(bun, 0o755);
 		const deps = `install_deps "${bun}" "${tree}" 1000 "${cache}" Darwin ${PIN}`;
@@ -774,10 +777,14 @@ describe('under sudo: the production OS gate, and the dependencies as the checko
 			expect(done.code, done.stderr).toBe(0);
 			return readFileSync(log, 'utf8');
 		};
-		expect(colours('--plain', 'xterm-256color')).toBe('1|0\n');
-		expect(colours('', 'dumb')).toBe('1|0\n');
+		expect(colours('--plain', 'xterm-256color')).toBe('1|0|--no-progress\n');
+		expect(colours('', 'dumb')).toBe('1|0|--no-progress\n');
 		// stdout is a pipe here: the installer's plain mode, so uncoloured too.
-		expect(colours('--route trial', 'xterm-256color')).toBe('1|0\n');
+		expect(colours('--route trial', 'xterm-256color')).toBe('1|0|--no-progress\n');
+		// CONTROL: without plain_colours (the full screen), the bar is the bun default.
+		writeFileSync(log, '');
+		expect(lib(deps, { TERM: 'xterm-256color' }, work).code).toBe(0);
+		expect(readFileSync(log, 'utf8')).toBe('unset|unset|--ignore-scripts\n');
 		// A full terminal and no --plain: the full-screen run keeps its colours. Measured under a pty
 		// where `script` provides one (BSD and util-linux spell it differently).
 		const body = `set -- --lib; . "${INSTALL_SH}"; plain_output --route trial && echo plain || echo full`;

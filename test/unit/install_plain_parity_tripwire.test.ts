@@ -70,8 +70,14 @@ import {
 import { runInteractiveInstall } from '../../src/core/install/install_session.ts';
 import { resolveOntologyCatalog } from '../../src/core/install/ontology_catalog.ts';
 import type { OntologyCatalog } from '../../src/core/install/ontology_choice.ts';
+import { BACK, QUIT, type ScreenView } from '../../src/core/install/prompter_contract.ts';
 import { buildScreens, ROUTE_FIXED, sameAsCommand } from '../../src/core/install/screen_model.ts';
-import { DONE_TEXT, ENTRY_COMMAND, REVIEW_TEXT } from '../../src/core/install/screen_text.ts';
+import {
+	DONE_TEXT,
+	ENTRY_COMMAND,
+	NOTICE_TEXT,
+	REVIEW_TEXT,
+} from '../../src/core/install/screen_text.ts';
 import {
 	scriptedInstallPrompter,
 	ttyInstallPrompter,
@@ -855,7 +861,7 @@ describe('campaign 3: the session’s words and files (C3-36, C3-48, C3-53, C3-6
 	});
 
 	test('C3-61: a failed row no fix on this machine changes offers only quit — retry is refused', async () => {
-		const views: { commands: readonly string[]; prompt: string }[] = [];
+		const views: { commands: readonly string[]; prompt: string; lines: readonly string[] }[] = [];
 		const { script } = walked('route trial', ['quit']);
 		script.answers['system.probe_action'] = 'retry';
 		const base = scriptedInstallPrompter(script);
@@ -863,7 +869,7 @@ describe('campaign 3: the session’s words and files (C3-36, C3-48, C3-53, C3-6
 		const prompter = {
 			...base,
 			probe: async (view: Parameters<typeof base.probe>[0]) => {
-				views.push({ commands: view.commands, prompt: view.prompt });
+				views.push({ commands: view.commands, prompt: view.prompt, lines: view.lines });
 				asks += 1;
 				return asks === 1 ? 'retry' : 'quit';
 			},
@@ -894,6 +900,9 @@ describe('campaign 3: the session’s words and files (C3-36, C3-48, C3-53, C3-6
 		expect(views[0]?.commands).toEqual(['quit']);
 		expect(views[0]?.prompt).toBe('quit, or back to choose another route');
 		expect(base.said).toContain("'retry' is not one of: quit, or back to choose another route");
+		// The verdict never asks for a fix that cannot exist (campaign 3b C3-61).
+		expect(views[0]?.lines.join('\n')).toContain(NOTICE_TEXT.systemUnfixable);
+		expect(views[0]?.lines.join('\n')).not.toContain('fix it and re-check');
 		// CONTROL: a fixable failure still offers retry.
 		probes.system = async () => ({
 			ok: false,
@@ -912,6 +921,7 @@ describe('campaign 3: the session’s words and files (C3-36, C3-48, C3-53, C3-6
 			unfinished: null,
 		});
 		expect(views[0]?.commands).toEqual(['retry', 'edit', 'quit']);
+		expect(views[0]?.lines.join('\n')).toContain('1 check failed — fix it and re-check.');
 	});
 
 	test('C3-64: the interactive Review advises the Thesauri step and Maintenance, never CLI flags', async () => {
@@ -923,5 +933,119 @@ describe('campaign 3: the session’s words and files (C3-36, C3-48, C3-53, C3-6
 		expect(prompter.said.filter((line) => /--hierarchies|--list-hierarchies/.test(line))).toEqual(
 			[],
 		);
+	});
+});
+
+describe('campaign 3b: back, re-checks and the rail (N27, N34, N37)', () => {
+	/** A route case's script (the Review quits). */
+	function scriptOf(name: string) {
+		const answerCase = ALL_CASES.find((item) => item.name === name) as Case;
+		const { raw, plain } = splitCase(answerCase.argv);
+		const flags = planOf(raw, false);
+		expect(flags.errors, name).toEqual([]);
+		return scriptForPlan(flags, Object.keys(plain), { root_password: GOOD_ROOT_PASSWORD }, [
+			'quit',
+		]);
+	}
+
+	test('N37: `back` from a question re-asks it on return, and the check stepped back onto runs again, printed once', async () => {
+		const base = scriptedInstallPrompter(scriptOf('route trial'));
+		let imageAsks = 0;
+		const prompter = {
+			...base,
+			choice: async (question: Parameters<typeof base.choice>[0]) => {
+				if (question.id !== 'image.image_source') return base.choice(question);
+				imageAsks += 1;
+				return imageAsks === 1 ? BACK : base.choice(question);
+			},
+		};
+		const probes = fakeProbes();
+		const result = await runInteractiveInstall({
+			prompter,
+			probes,
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		expect(result.kind).toBe('quit');
+		// The question navigated away from is asked again when the step comes back.
+		expect(imageAsks).toBe(2);
+		// The System check ran again on the way back (never a cached verdict)…
+		expect(probes.calls.filter((call) => call.probe === 'system').length).toBe(2);
+		// …and its rows were printed once per visit, never twice for one.
+		expect(base.said.filter((line) => line.includes('Bun  fake')).length).toBe(2);
+	});
+
+	test('N27: a check re-run before the Review names the answers that changed what it checked', async () => {
+		const script = scriptOf('route production + instance (derived names as shown)');
+		// The Web server is answered AFTER the Identity check, which reads it (R10R1: the
+		// re-check printed after the Administrator password read as if the password changed it).
+		script.answers['web_tls.web_server'] = 'apache';
+		const prompter = scriptedInstallPrompter(script);
+		await runInteractiveInstall({
+			prompter,
+			probes: fakeProbes(),
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		const rechecks = prompter.said.filter((line) => line.startsWith('the answers changed what'));
+		expect(rechecks.length).toBeGreaterThan(0);
+		expect(rechecks).toContain(
+			"the answers changed what 'Identity' checked (Web server): checking again",
+		);
+		for (const line of rechecks) {
+			expect(line).toMatch(/^the answers changed what '[^']+' checked \([^)]+\): checking again$/);
+		}
+	});
+
+	test('N34: the view of a screen whose check failed marks it failed; the screen is shown current before its check', async () => {
+		const base = scriptedInstallPrompter(scriptOf('route trial'));
+		const views: ScreenView[] = [];
+		let probeViewSeen = null as string | null;
+		let failedAtProbe = null as readonly string[] | null;
+		const prompter = {
+			...base,
+			view: (view: ScreenView) => {
+				views.push(view);
+			},
+			probe: async (_view: Parameters<typeof base.probe>[0]) => {
+				probeViewSeen = views.at(-1)?.screen.id ?? null;
+				failedAtProbe = views.at(-1)?.failed ?? null;
+				return QUIT;
+			},
+		};
+		const probes = fakeProbes({ fail: ['system'] });
+		await runInteractiveInstall({
+			prompter,
+			probes,
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		// The failed check's page is drawn under ITS screen, never the route screen's.
+		expect(probeViewSeen).toBe('system');
+		expect(failedAtProbe).toEqual(['system']);
+		// CONTROL: a passing check is never marked failed.
+		const passing: ScreenView[] = [];
+		await runInteractiveInstall({
+			prompter: {
+				...scriptedInstallPrompter(scriptOf('route trial')),
+				view: (view: ScreenView) => void passing.push(view),
+			},
+			probes: fakeProbes(),
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		expect(passing.some((view) => (view.failed ?? []).length > 0)).toBe(false);
 	});
 });

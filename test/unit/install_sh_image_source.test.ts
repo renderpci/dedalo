@@ -802,8 +802,12 @@ describe('F. the installer verifies the image as the library does (stack_image)'
 		const run = Bun.spawnSync(argv, { cwd: repo, env: { PATH: '/usr/bin:/bin', STUB_SEEN: seen } });
 		expect(run.exitCode, run.stderr.toString()).toBe(0);
 		const context = join(repo, BUILD_CONTEXT);
-		expect(readFileSync(`${seen}.argv`, 'utf8').trim()).toBe(
-			`build --tag localhost/dedalo:${imageVersionOf(ctx.answers)} ${context}`,
+		const built = readFileSync(`${seen}.argv`, 'utf8').trim();
+		expect(built).toStartWith(`build --tag localhost/dedalo:${imageVersionOf(ctx.answers)} `);
+		expect(built).toEndWith(` ${context}`);
+		// its own version label, never the base image's (campaign 3b N1)
+		expect(built).toContain(
+			`--label org.opencontainers.image.version=${imageVersionOf(ctx.answers)} `,
 		);
 		// committed content only
 		expect(readFileSync(join(seen, 'tracked.txt'), 'utf8')).toBe('committed\n');

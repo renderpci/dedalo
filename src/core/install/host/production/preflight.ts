@@ -13,8 +13,9 @@
  *    empty, a symlinked or foreign-writable path, a folder a web site serves;
  *  - a CLASH under this instance's names: the database or the role (a created
  *    database), a dedalo-ts@<i> unit or drop-in, the site file, the socket,
- *    the server name on our ports in another site file, a non-standard port
- *    held by another program;
+ *    the server name on our ports in another site file, the instance's ports
+ *    held by any program but the chosen web server, the OTHER web server
+ *    installed beside a chosen one this run would install (campaign 3b N3);
  *  - PostgreSQL: another major's cluster on the database port (critique B5 —
  *    a second cluster would be created beside it on another port, and the
  *    engine and pg_dump would disagree about which one holds the database);
@@ -33,8 +34,10 @@
 import type { HostCtx, HostPlanCtx, HostRunResult, HostStepDefinition } from '../contract.ts';
 import { gatherHostFacts, type HostFacts } from '../facts.ts';
 import { type FirewallVerdict, firewallVerdict } from '../firewall.ts';
+import type { HostFs } from '../fs.ts';
 import { bunPinOfPaths, pathsFor } from '../layout.ts';
 import {
+	binaryOf,
 	NGINX_MIN_VERSION,
 	osRowById,
 	unsupportedOsSentence,
@@ -129,6 +132,44 @@ function databaseProblems(ctx: HostPlanCtx): string[] {
 	];
 }
 
+/** The processes each web server listens as (Debian's apache2, the RHEL family's httpd). */
+const WEB_PROCESSES: Readonly<Record<'nginx' | 'apache', readonly string[]>> = Object.freeze({
+	nginx: ['nginx'],
+	apache: ['apache2', 'httpd'],
+});
+
+/**
+ * ANOTHER WEB SERVER on this host (campaign 3b N3): the instance's ports held
+ * by any program that is not the chosen web server (another web server — a
+ * neighbouring instance's nginx when Apache is chosen, or the reverse — a
+ * proxy, a container), and the OTHER web server installed while the chosen
+ * one is not: the run would install a second web server that cannot bind the
+ * same ports. Refused before any change, naming the program; never "the one
+ * already installed" chosen for the operator behind their answer.
+ */
+export function webServerClash(ctx: HostPlanCtx, fs: Pick<HostFs, 'exists'>): string[] {
+	const { facts, answers, row } = ctx;
+	const kind = facts.web.kind;
+	const other = kind === 'nginx' ? 'apache' : 'nginx';
+	const ports = [answers.http_port, answers.https_port];
+	const holders = facts.ports.filter(
+		(item) => ports.includes(item.port) && !WEB_PROCESSES[kind].includes(item.process),
+	);
+	const otherInstalled =
+		!facts.web.installed && fs.exists(binaryOf(row, other === 'nginx' ? 'nginx' : 'apachectl'));
+	return [
+		...[...new Set(holders.map((item) => item.port))].map(
+			(port) =>
+				`port ${port} is held by ${holders.find((item) => item.port === port)?.process} — this install configures ${kind}, which must listen there: stop that program, or choose the web server that holds the port`,
+		),
+		...(otherInstalled
+			? [
+					`${other} is installed on this host and this run would install ${kind} beside it (both listen on ports ${ports.join('/')}): choose ${other}, the one already installed, or remove ${other} first`,
+				]
+			: []),
+	];
+}
+
 /** The web side: the address served elsewhere on our ports, a port held by another program. */
 function addressProblems(ctx: HostPlanCtx): string[] {
 	const { facts, answers } = ctx;
@@ -139,18 +180,10 @@ function addressProblems(ctx: HostPlanCtx): string[] {
 		instanceHttpNames(ctx.paths.instance),
 		sitePath(ctx),
 	);
-	const webProcesses = ['nginx', 'apache2', 'httpd'];
-	const held = facts.ports.filter(
-		(item) =>
-			ports.includes(item.port) &&
-			!['80', '443'].includes(item.port) &&
-			!webProcesses.includes(item.process),
-	);
 	return [
 		...(clash === null
 			? []
 			: [`${answers.server_name} is already served on port ${ports.join('/')} by ${clash.file}`]),
-		...held.map((item) => `port ${item.port} is held by ${item.process}`),
 		...(named === null
 			? []
 			: [
@@ -281,6 +314,7 @@ async function evaluate(ctx: HostCtx): Promise<PreflightVerdict> {
 	const tls = tlsProblems({ ...ctx, ...planCtx });
 	const problems = [
 		...hostProblems(planCtx),
+		...webServerClash(planCtx, ctx.fs),
 		...dirProblems({ ...ctx, ...planCtx }),
 		...tls.problems,
 	];

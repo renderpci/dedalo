@@ -34,6 +34,16 @@ import {
 import { DEDALO_VERSION } from '../../../update/version.ts';
 import type { InstallAnswers } from '../../install_plan.ts';
 
+/**
+ * How long a local image build takes — the ONE estimate (campaign 3b N11: the
+ * Image screen, the Review and the docs said three different things). Measured
+ * in campaign 3b on 2 vCPU VMs: 2 to 6 minutes for a first build. The Review
+ * (stack_image's label, the install sentence) says it; the docs repeat it
+ * verbatim (gate: install_stack_steps_native).
+ */
+export const BUILD_DURATION =
+	'a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk';
+
 /** The compose project name both stack files declare (`name: dedalo`). */
 export const STACK_PROJECT = 'dedalo';
 

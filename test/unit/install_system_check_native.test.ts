@@ -397,6 +397,27 @@ describe('System check — an unsupported system: ONE sentence, the troubleshoot
 		const doc = readFileSync(join(ROOT, 'docs/install/troubleshooting.md'), 'utf8');
 		expect(doc).toContain(unsupportedOsSentence('<system>'));
 	});
+
+	test('3b N33: no Firewall row on a refused system (not measured there) — and the page says so', () => {
+		// systemMeasures: the firewall of an unsupported system is not read (null).
+		const rows = productionRowsOver({
+			osRelease: 'ID=ubuntu\nVERSION_ID="24.04"\nPRETTY_NAME="Ubuntu 24.04.3 LTS"\n',
+			euid: 0,
+			firewall: null,
+		});
+		expect(rows.map((row) => row.label)).not.toContain('Firewall');
+		const doc = readFileSync(join(ROOT, 'docs/install/troubleshooting.md'), 'utf8');
+		expect(doc).toContain(
+			'not shown on a system the route does not support: the firewall is read the way that system',
+		);
+		// CONTROL: a supported system measured shows it.
+		const supported = productionRowsOver({
+			osRelease: 'ID=ubuntu\nVERSION_ID="26.04"\nPRETTY_NAME="Ubuntu 26.04 LTS"\n',
+			euid: 0,
+			firewall: { tool: 'none' },
+		});
+		expect(supported.map((row) => row.label)).toContain('Firewall');
+	});
 });
 
 describe('System check — the processor on aarch64 (C3-49)', () => {

@@ -22,7 +22,8 @@ const MODE_KEYS: Readonly<Record<Mode, readonly KeyHint[]>> = Object.freeze({
 	command: [
 		['enter', 'install'],
 		['e', 'edit a step'],
-		['w', 'write answers'],
+		// Writing ends the session, nothing installed (campaign 3b N29).
+		['w', 'write answers and quit'],
 		['↑↓', 'scroll'],
 		['esc', 'back'],
 		['ctrl+q', 'quit'],

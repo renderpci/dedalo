@@ -11,6 +11,7 @@
 
 import { sanitizeLine } from '../../display_text.ts';
 import type { RunAnnouncement, RunOutcomeView, StepEvent } from '../../run_events.ts';
+import { DONE_TEXT } from '../../screen_text.ts';
 import type { PaneModel } from '../frame.ts';
 import type { Role } from '../palette.ts';
 import { type Line, seg, spread } from '../styled.ts';
@@ -150,10 +151,9 @@ export function shownOnceLines(lines: readonly string[], width: number): Line[] 
 /** The failure panel: the message, the resume hint. */
 function failureLines(outcome: RunOutcomeView | null, width: number): Line[] {
 	if (outcome === null || outcome.exitCode === 0) return [];
-	const at = outcome.failedStep === null ? '' : ` at step [${outcome.failedStep}]`;
 	return [
 		BLANK,
-		...wrapped(`✗ install failed${at}: ${outcome.message ?? ''}`, width, 'err'),
+		...wrapped(`✗ ${DONE_TEXT.failure(outcome)}`, width, 'err'),
 		...outcome.hint.flatMap((line) => wrapped(line, width, 'muted')),
 	];
 }

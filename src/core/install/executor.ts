@@ -59,6 +59,7 @@ import { existsSync, readdirSync, rmdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { processEnvValue, readEnv } from '../../config/env.ts';
 import { isDedaloError } from '../errors/index.ts';
+import { divertRetiredPropertyNotices } from '../ontology/retired_property_notice.ts';
 import { getServerState, statePath } from '../resolve/server_state.ts';
 import { DEDALO_VERSION } from '../update/version.ts';
 import type { InstallLockHandle, TargetDatabaseState } from './db_restore.ts';
@@ -106,9 +107,11 @@ import {
 } from './run_files.ts';
 import {
 	ABORT_AND_START_AGAIN,
+	ALREADY_COMPLETE_LINE,
 	advanceStep,
 	emit,
 	type InstallFault,
+	interruptOnce,
 	type LoopContext,
 	nowIso,
 	type Performed,
@@ -117,6 +120,7 @@ import {
 	recordOf,
 	redact,
 	redactConsole,
+	runStarted,
 	say,
 	stopChildren,
 	warnLine,
@@ -236,12 +240,28 @@ export function resumeHint(
 		needed.length === 0
 			? []
 			: [`    secrets needed again: ${needed.map((key) => SECRET_SOURCE[key]).join('; ')}`];
+	const db = String(plan.answers.db_database ?? '<db>');
 	return [
 		`  Progress saved: ${join(installRunDir(), STATE_FILE)} (plan: ${PLAN_FILE})`,
-		`  Fix the cause, then resume:  ${commandPrefix()} --resume`,
+		`  Fix the cause, then resume:  ${againWith(plan, '--resume')}`,
 		...secretsLine,
-		`  Or undo this install:        ${commandPrefix()} --abort --confirm-database ${String(plan.answers.db_database ?? '<db>')}`,
+		`  Or undo this install:        ${againWith(plan, `--abort --confirm-database ${db}`)}`,
 	];
+}
+
+/**
+ * The command that runs this install again with `flags`. An `--engine-only`
+ * run is the by-hand host procedure's (manual_install.md host_engine): its
+ * command is the service user's (`runuser … /opt/dedalo/bun/<pin>/bun run …`
+ * with every answer flag), which this process cannot reprint — a bare
+ * `bun run scripts/install.ts` there runs as root, with another Bun and no
+ * answers (campaign 3b C3-54). It is named, never guessed.
+ */
+function againWith(plan: PlanFile, flags: string): string {
+	if (plan.answers.engine_only === true) {
+		return `the same command you ran, with ${flags} added (docs/install/manual_install.md#manual-host_engine)`;
+	}
+	return `${commandPrefix()} ${flags}`;
 }
 
 // ── the real host ────────────────────────────────────────────────────────────
@@ -989,12 +1009,13 @@ function failedOutcome(ctx: RunContext, error: unknown): ExecutorOutcome {
 	recordFailure(ctx, code, message);
 	if (ctx.currentStep !== null) emit(ctx, ctx.currentStep, 'failed', { message });
 	closeRun(ctx, 'failed');
-	const wrote = ctx.state !== null;
+	// REFUSED when this process never started its run (campaign 3b N24).
+	const started = runStarted(ctx);
 	return {
 		exitCode: 1,
-		result: wrote ? 'failed' : 'refused',
+		result: started ? 'failed' : 'refused',
 		message,
-		failedStep: wrote ? ctx.currentStep : null,
+		failedStep: started ? ctx.currentStep : null,
 		hint: hintFor(ctx),
 	};
 }
@@ -1045,6 +1066,7 @@ function newContext(
 		lastOutcome: null,
 		ranAny: false,
 		unredacted: false,
+		interruption: null,
 		stepOf: (step) => engineStep(ctx, step),
 		verifyOwn: async (step) => {
 			const verify = engineStep(ctx, step).verify;
@@ -1073,7 +1095,7 @@ async function runMode(ctx: RunContext): Promise<ExecutorOutcome> {
 	await (ctx.request.mode === 'fresh' ? freshRun(ctx) : resumeRun(ctx));
 	ctx.currentStep = null;
 	const result = await finishRun(ctx, wasComplete);
-	if (result === 'already_complete') say(ctx, 'install already complete — every step verified');
+	if (result === 'already_complete') say(ctx, ALREADY_COMPLETE_LINE);
 	return { exitCode: 0, result, message: null, failedStep: null, hint: [] };
 }
 
@@ -1090,20 +1112,28 @@ export async function executeInstall(
 ): Promise<ExecutorOutcome> {
 	const ctx = newContext(request, io, options);
 	const restoreConsole = redactConsole(ctx);
-	const sigint = () => void interrupted(ctx, 'SIGINT', restoreConsole);
-	const sigterm = () => void interrupted(ctx, 'SIGTERM', restoreConsole);
+	// The ontology's RETIRED-property lines are for an ontology author, never the operator (C3-72).
+	const restoreNotices = divertRetiredPropertyNotices(() => undefined);
+	const restore = (): void => {
+		restoreNotices();
+		restoreConsole();
+	};
+	const sigint = () => void interruptOnce(ctx, () => interrupted(ctx, 'SIGINT', restore));
+	const sigterm = () => void interruptOnce(ctx, () => interrupted(ctx, 'SIGTERM', restore));
 	process.on('SIGINT', sigint);
 	process.on('SIGTERM', sigterm);
 	io.signals?.(true);
 	try {
 		return await runMode(ctx);
 	} catch (error) {
+		// A step that died of the operator's Ctrl-C ends as that interruption (N12).
+		if (ctx.interruption !== null) return await ctx.interruption;
 		return failedOutcome(ctx, error);
 	} finally {
 		process.off('SIGINT', sigint);
 		process.off('SIGTERM', sigterm);
 		io.signals?.(false);
 		await releaseAll(ctx);
-		restoreConsole();
+		restore();
 	}
 }

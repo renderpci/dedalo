@@ -81,7 +81,11 @@ import {
 } from '../../src/core/install/host/production/engine_delegate.ts';
 import { REFUSED_BOOT_EXIT } from '../../src/core/install/host/production/first_boot.ts';
 import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
-import { REVIEW_TODO_STEP, reviewHostCommands } from '../../src/core/install/host/review.ts';
+import {
+	EXISTS_NOT_CREATED,
+	REVIEW_TODO_STEP,
+	reviewHostCommands,
+} from '../../src/core/install/host/review.ts';
 import { type RecordedResponse, scratchRunner } from '../../src/core/install/host/runner.ts';
 import { stackFileOf } from '../../src/core/install/host/stack/layout.ts';
 import { renderTemplate, UNIT_TEMPLATES } from '../../src/core/install/host/systemd/render.ts';
@@ -100,6 +104,7 @@ import {
 	runConfirmed,
 	writeStateFile,
 } from '../../src/core/install/run_files_core.ts';
+import { ALREADY_COMPLETE_LINE } from '../../src/core/install/step_loop.ts';
 import { doneSummary } from '../../src/core/install/ui/screens/done.ts';
 import {
 	asService,
@@ -368,6 +373,8 @@ describe('every production variant runs end to end: Review ≡ run, files landed
 			// (c) idempotent.
 			const second = await runHost(host, laterRequest('resume', plan));
 			expect(second.outcome.result).toBe('already_complete');
+			// The host executor says it too (campaign 3b N7: only the engine did).
+			expect(second.transcript.lines).toContain(ALREADY_COMPLETE_LINE);
 			expect(mutatingLog(loggedCommands(host.root).slice(log.length))).toEqual([]);
 		});
 	}
@@ -398,8 +405,14 @@ describe('the Review shown before the run lists the commands the run executes (a
 			expect(loggedCommands(host.root).length).toBeGreaterThan(before);
 			// The exact TEXT: every Review line equals the run's — the checkout the Review
 			// read its templates from (this repo) and the run's (the scratch source) aside.
+			// The Review's "exists: not created" marker on a mkdir line is display, not a command (N26).
 			const normalize = (line: string) =>
-				line.split(host.source).join('<source>').split(REPO_ROOT).join('<source>');
+				line
+					.replace(EXISTS_NOT_CREATED, '')
+					.split(host.source)
+					.join('<source>')
+					.split(REPO_ROOT)
+					.join('<source>');
 			const run = hostReview(frozenContext(host));
 			// The to-do block runs nothing (review.ts): every OTHER block is a step's list.
 			const steps = shown.filter((block) => block.step !== REVIEW_TODO_STEP);
@@ -584,6 +597,20 @@ describe('abort undoes only what this install created (e)', () => {
 		);
 		// No record is left (a fresh install may start again).
 		expect(readPlanFile(join(host.root, RUN_DIR))).toBeNull();
+	});
+});
+
+describe('an abort keeps only the packages the host HAS (campaign 3b N17)', () => {
+	test('interrupted during `apt-get update`: the abort names no package as kept — none was installed', async () => {
+		const { host, plan, outcome } = await freshOn(DEBIAN_APACHE_LE, {
+			responses: [{ match: '/usr/bin/apt-get update', exit: 100, stderr: 'E: network down' }],
+		});
+		expect(outcome.failedStep).toBe('host_packages');
+		const aborted = await runHost(host, laterRequest('abort', plan, DB));
+		expect(aborted.outcome.result).toBe('aborted');
+		const text = aborted.transcript.lines.join('\n');
+		expect(text).not.toContain('apache2');
+		expect(text).toContain('no package was added');
 	});
 });
 
@@ -880,6 +907,60 @@ describe('refusals, each before anything changes (f)', () => {
 			expect(message).toContain(clash.sentence);
 		});
 	}
+
+	// campaign 3b N3: Apache chosen on a host where a neighbouring instance's nginx serves
+	// 80/443 passed the System check and planned `apt-get install apache2` — and the mirror.
+	const listening = (process: string): string =>
+		['80', '443']
+			.map((port) => `LISTEN 0 511 0.0.0.0:${port} 0.0.0.0:* users:(("${process}",pid=812,fd=6))\n`)
+			.join('');
+	const NGINX_RUNNING = [
+		{ match: '/usr/sbin/nginx -v', stderr: 'nginx version: nginx/1.26.3\n' },
+		{ match: '/usr/sbin/nginx -T', stdout: '' },
+		{ match: '/usr/bin/ss -ltnpH', stdout: listening('nginx') },
+	];
+
+	test('another web server: Apache chosen where nginx is installed and holds 80/443 — refused, naming nginx (N3)', async () => {
+		const message = await preflightRefusal(DEBIAN_APACHE_LE, {
+			files: NGINX_PRESENT,
+			responses: NGINX_RUNNING,
+		});
+		expect(message).toContain('port 80 is held by nginx — this install configures apache');
+		expect(message).toContain('port 443 is held by nginx');
+		expect(message).toContain(
+			'nginx is installed on this host and this run would install apache beside it',
+		);
+	});
+
+	test('the mirror: nginx chosen where Apache is installed and holds 80/443 — refused, naming apache2 (N3)', async () => {
+		const message = await preflightRefusal(UBUNTU_NGINX_LE, {
+			files: new Map([['/usr/sbin/apachectl', '']]),
+			responses: [{ match: '/usr/bin/ss -ltnpH', stdout: listening('apache2') }],
+		});
+		expect(message).toContain('port 80 is held by apache2 — this install configures nginx');
+		expect(message).toContain(
+			'apache is installed on this host and this run would install nginx beside it',
+		);
+	});
+
+	test('control: nginx chosen, installed and holding 80/443 (another instance) is not refused (N3)', async () => {
+		const { outcome } = await freshOn(UBUNTU_NGINX_LE, {
+			files: NGINX_PRESENT,
+			responses: NGINX_RUNNING,
+		});
+		expect(outcome.message ?? '').not.toContain('is held by');
+		expect(outcome.result).toBe('complete');
+	});
+
+	test('the Review says it BEFORE `yes`: the other web server is on its to-do list (N3)', async () => {
+		const { todo } = await todoOn(DEBIAN_APACHE_LE, {
+			files: NGINX_PRESENT,
+			responses: NGINX_RUNNING,
+		});
+		expect(todo.join('\n')).toContain('port 80 is held by nginx — this install configures apache');
+		const clean = await todoOn(UBUNTU_NGINX_LE, { files: NGINX_PRESENT, responses: NGINX_RUNNING });
+		expect(clean.todo.join('\n')).not.toContain('is held by');
+	});
 
 	test('a foreign template unit (another installer, an edited copy): refused, never overwritten', async () => {
 		const foreign = '[Service]\nExecStart=/usr/local/bin/someone-else\n';
@@ -1272,7 +1353,7 @@ describe('what the operator must do is on the Review BEFORE the install (campaig
 		).toHaveLength(1);
 	});
 
-	test('a second instance: the shared directories that exist are marked "exists, used as is" (C3-57)', async () => {
+	test('a second instance: the shared directories that exist are marked "exists, not created" (C3-57)', async () => {
 		const host = scratchHost(UBUNTU_NGINX_LE, {
 			files: new Map([
 				['/srv/dedalo/', ''],
@@ -1282,13 +1363,29 @@ describe('what the operator must do is on the Review BEFORE the install (campaig
 		const { plan } = productionPlan(UBUNTU_NGINX_LE);
 		const blocks = await reviewOn(host, plan);
 		const labels = blocks.map((block) => block.label).join('\n');
-		expect(labels).toContain('exists, used as is: ');
-		expect(labels).toMatch(/exists, used as is: [^\n]*\/srv\/dedalo(,|$)/m);
+		expect(labels).toContain('exists, not created: ');
+		expect(labels).toMatch(/exists, not created: [^\n]*\/srv\/dedalo(,|$)/m);
 		const fresh = await reviewOn(scratchHost(UBUNTU_NGINX_LE), plan);
 		// A fresh host: only what really exists there (the bootstrap's Bun cache) is marked.
 		expect(fresh.map((block) => block.label).join('\n')).not.toMatch(
-			/exists, used as is: [^\n]*\/(srv|opt)\/dedalo(,|$)/m,
+			/exists, not created: [^\n]*\/(srv|opt)\/dedalo(,|$)/m,
 		);
+		// campaign 3b N26: the mkdir line of an existing directory says so ITSELF — never a
+		// header "exists" above a bare `mkdir` of the same path.
+		const lines = (review: typeof blocks): string[] => review.flatMap((block) => block.commands);
+		const bare = (review: typeof blocks, path: string): string[] =>
+			lines(review).filter(
+				(line) => line.startsWith(`mkdir ${path} (`) && !line.endsWith(EXISTS_NOT_CREATED),
+			);
+		expect(lines(blocks).filter((line) => line.startsWith('mkdir /srv/dedalo (')).length).toBe(1);
+		expect(bare(blocks, '/srv/dedalo')).toEqual([]);
+		expect(bare(blocks, '/opt/dedalo')).toEqual([]);
+		// …and the bootstrap's Bun cache on a fresh host (the measured N26 case)
+		const cache = `/var/lib/dedalo-install/bun/${BUN_PIN}`;
+		expect(lines(fresh).some((line) => line.startsWith(`mkdir ${cache} (`))).toBe(true);
+		expect(bare(fresh, cache)).toEqual([]);
+		// a directory that does not exist keeps its plain mkdir line (not vacuous)
+		expect(bare(fresh, '/srv/dedalo')).toHaveLength(1);
 	});
 });
 
@@ -1983,5 +2080,57 @@ describe('the engine checks the backup directory the units write to (C3-55)', ()
 				.flatMap((section) => section.entries)
 				.some((item) => item.key === 'DEDALO_BACKUP_DIR'),
 		).toBe(false);
+	});
+});
+
+describe("the closing To-do of a run completed by --resume lists every step's (campaign 3b N19)", () => {
+	test("the firewall line host_preflight told in the FIRST run is in the resume's closing To-do", async () => {
+		const open =
+			'firewall-cmd --permanent --add-service=http --add-service=https && firewall-cmd --reload';
+		const closed = FIREWALLD('cockpit dhcpv6-client ssh');
+		const { host, plan, outcome } = await freshOn(UBUNTU_NGINX_LE, {
+			responses: [...closed, ...engineFails()],
+		});
+		expect(outcome.failedStep).toBe('host_engine');
+		// The operator fixed the cause; the firewall is still closed.
+		replaceResponses(host, UBUNTU_NGINX_LE, closed);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.result).toBe('complete');
+		// host_preflight ran in the first run only — its told line still closes this one.
+		expect(resumed.outcome.told.join('\n')).toContain(open);
+		expect(resumed.transcript.told.join('\n')).toContain(open);
+		// Each line once.
+		expect(new Set(resumed.outcome.told).size).toBe(resumed.outcome.told.length);
+	});
+});
+
+describe('a resume that re-ran earlier steps probes the public address again (campaign 3b N6, production)', () => {
+	test('complete → abort (live: the web steps undone) → resume: host_public_probe runs again, never "nothing to re-check"', async () => {
+		const host = scratchHost(UBUNTU_NGINX_LE);
+		const { plan, planFile } = productionPlan(UBUNTU_NGINX_LE);
+		expect((await runHost(host, freshRequest(planFile))).outcome.result).toBe('complete');
+		expect((await runHost(host, laterRequest('abort', plan))).outcome.keptLive).toBe(true);
+		const probes = (): number =>
+			loggedCommands(host.root).filter((line) => line === PUBLIC_HEALTH).length;
+		const before = probes();
+		// The scratch world after the resume starts the services again (its `until`s are sticky).
+		replaceResponses(host, UBUNTU_NGINX_LE, [
+			{
+				match: '/usr/bin/curl -s -o /dev/null -w %{http_code} --max-time 10 --unix-socket',
+				stdout: '200',
+			},
+			{ match: `/usr/bin/systemctl is-active dedalo-ts-watchdog@${INSTANCE}.timer` },
+		]);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.message).toBeNull();
+		expect(resumed.outcome.result).toBe('complete');
+		expect(probes()).toBeGreaterThan(before);
+		const said = resumed.transcript.lines.join('\n');
+		expect(said).toContain('a step before it ran again in this run — checked again');
+		// CONTROL: a resume that ran nothing re-runs no probe (already complete).
+		const idle = probes();
+		const again = await runHost(host, laterRequest('resume', plan));
+		expect(again.outcome.result).toBe('already_complete');
+		expect(probes()).toBe(idle);
 	});
 });

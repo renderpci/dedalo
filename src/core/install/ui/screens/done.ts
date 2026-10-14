@@ -62,12 +62,17 @@ function completeCard(model: Extract<DoneModel, { kind: 'run' }>, width: number)
 
 function failedCard(model: Extract<DoneModel, { kind: 'run' }>, width: number): CardModel {
 	const outcome = model.outcome;
+	const refused = outcome.result === 'refused';
 	const at = outcome.failedStep === null ? '' : ` at step [${outcome.failedStep}]`;
 	return {
-		title: 'install failed',
+		title: refused ? 'refused' : 'install failed',
 		tone: 'err',
 		info: [
-			[seg('The install stopped', 'err', { bold: true })],
+			[
+				seg(refused ? 'Refused — nothing was changed' : 'The install stopped', 'err', {
+					bold: true,
+				}),
+			],
 			...wrapped(`${at.trim()} ${outcome.message ?? ''}`.trim(), width, 'text'),
 			...secretLines(model.shownOnce, width),
 		],
@@ -122,8 +127,7 @@ export function doneCard(model: DoneModel, width: number): CardModel {
 /** The one sentence left on the main screen after the UI closes (never a secret). */
 export function doneSummary(model: DoneModel): string {
 	if (model.kind === 'written') return `✔ ${DONE_TEXT.written(model.path)}`;
-	if (model.outcome.exitCode !== 0)
-		return `✖ install failed${model.outcome.failedStep === null ? '' : ` at step [${model.outcome.failedStep}]`}: ${model.outcome.message ?? ''}`;
+	if (model.outcome.exitCode !== 0) return `✖ ${DONE_TEXT.failure(model.outcome)}`;
 	if (model.outcome.result === 'aborted') return `✔ ${DONE_TEXT.abortedFor(model.ending)}`;
 	return `✔ ${DONE_TEXT.complete(model.rootVerified)}. ${DONE_TEXT.next(model.ending)}`;
 }

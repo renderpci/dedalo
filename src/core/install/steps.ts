@@ -311,6 +311,14 @@ export function toolDetails(outcome: StepRawOutcome): string[] {
 	});
 }
 
+/** `<label> <path> (missing|not writable)` for every directory that is not ok, comma-joined. */
+export function directoriesNeedingAttention(dirs: readonly DirectoryRow[]): string {
+	return dirs
+		.filter((dir) => !(dir.exists && dir.writable))
+		.map((dir) => `${dir.label} ${dir.path} (${dir.exists ? 'not writable' : 'missing'})`)
+		.join(', ');
+}
+
 const check_directories: InstallStepDefinition = {
 	id: 'check_directories',
 	kind: 'action',
@@ -339,7 +347,12 @@ const check_directories: InstallStepDefinition = {
 	verify: async () => {
 		const { checkDirectories } = await import('./directories.ts');
 		const report = checkDirectories({ create: false });
-		return { ok: report.ok, detail: report.msg };
+		// NAME the directory (campaign 3b N4): "One or more directories need
+		// attention" read as "something changed it outside the installer".
+		return {
+			ok: report.ok,
+			detail: report.ok ? report.msg : directoriesNeedingAttention(report.dirs),
+		};
 	},
 	undo: async (ctx) => {
 		// The media tree first (campaign 3 C3-9: it was left whole, under a

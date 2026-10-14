@@ -1,7 +1,9 @@
 /**
  * AN ON/OFF TOGGLE AND AN ACKNOWLEDGEMENT (terminal installer phase 3,
  * 2026-10-12).
- *  - confirm: `y` / `n`, ←→ or Space switch, Enter (or Tab) answers; the
+ *  - confirm: `y` / `n` SET the switch (as ←→ or Space toggle it); only Enter
+ *    (or Tab) answers — `n` answered and advanced at once, so the Enter that
+ *    naturally follows a y/n landed on the next screen (campaign 3b N39); the
  *    default is the shared rule (confirmDefault — the current value, else the
  *    plan's default).
  *  - acknowledge (trial without media protection, no thesaurus, a probe kept
@@ -20,8 +22,8 @@ import type { DrawContext, KeyHint, Widget } from '../widget.ts';
 import { labelSeg, wrapped } from './field_parts.ts';
 
 const CONFIRM_KEYS: readonly KeyHint[] = [
-	['y/n', 'answer'],
-	['enter', 'continue'],
+	['y/n', 'choose'],
+	['enter', 'answer'],
 	['shift+tab', 'previous'],
 	['esc', 'back'],
 	['F1', 'help'],
@@ -53,10 +55,18 @@ export function confirmField(question: Question, done: (answer: boolean | Nav) =
 		...navKeys(done),
 		enter: () => done(value),
 		tab: () => done(value),
-		'char:y': () => done(true),
-		'char:Y': () => done(true),
-		'char:n': () => done(false),
-		'char:N': () => done(false),
+		'char:y': () => {
+			value = true;
+		},
+		'char:Y': () => {
+			value = true;
+		},
+		'char:n': () => {
+			value = false;
+		},
+		'char:N': () => {
+			value = false;
+		},
 		left: () => {
 			value = !value;
 		},

@@ -188,7 +188,6 @@ import {
 	cliBootEnv,
 	type InstallAnswers,
 	type InstallPlan,
-	interactiveSuggestion,
 	isInstallStepId,
 	mergeAnswerSources,
 	normalizeInstallAnswers,
@@ -224,8 +223,8 @@ import {
 	type Secrets,
 	secretsFromEnv,
 } from '../src/core/install/run_files.ts';
-import { DONE_TEXT } from '../src/core/install/screen_text.ts';
 import { ABORT_AND_START_AGAIN } from '../src/core/install/step_loop.ts';
+import { plainReporter as plainRunReporter } from '../src/core/install/ui_plain/reporter.ts';
 import { DEDALO_VERSION } from '../src/core/update/version.ts';
 
 /** Removes the resolved catalog's scratch files (an extracted --ontology-source archive). */
@@ -628,37 +627,11 @@ function announcementOf(plan: InstallPlan): RunAnnouncement {
 }
 
 /**
- * THE PLAIN REPORTER — the headless CLI's (and the plain mode's) printing,
- * byte for byte what this script printed before the full-screen UI existed;
- * the interactive plain mode adds the one-time display of the salt.
+ * THE PLAIN REPORTER (src/core/install/ui_plain/reporter.ts): a headless run's
+ * salt goes to its own stdout when that is a terminal (campaign 3b C3-18).
  */
 function plainReporter(prompter?: InstallPrompter): RunReporter {
-	return {
-		io: {
-			log: (line) => console.log(line),
-			warn: (line) => console.warn(line),
-			...(prompter === undefined ? {} : { showOnce: (lines) => prompter.showOnce(lines) }),
-		},
-		announce: (announcement) => {
-			console.log(`\n${announcement.title}\n`);
-			for (const note of announcement.notes) console.log(`  note: ${note}`);
-			for (const warning of announcement.warnings) console.warn(`  ⚠ ${warning}`);
-			// The interactive plain mode words the advice for its screens, never CLI flags (C3-64).
-			for (const suggestion of announcement.suggestions) {
-				const said = prompter === undefined ? suggestion : interactiveSuggestion(suggestion);
-				console.log(`  suggestion: ${said}`);
-			}
-		},
-		finish: async (outcome, context) => {
-			if (outcome.exitCode !== 0) return printFailure(outcome);
-			if (outcome.result === 'aborted')
-				console.log(`\n✔ ${DONE_TEXT.abortedFor(context.ending)}\n`);
-			else
-				console.log(
-					`\n✔ ${DONE_TEXT.complete(context.rootVerified)}. ${DONE_TEXT.next(context.ending)}\n`,
-				);
-		},
-	};
+	return plainRunReporter(prompter === undefined ? {} : { prompter });
 }
 
 /**
@@ -693,22 +666,6 @@ function eventsReporter(): RunReporter {
 /** The headless reporter: JSON lines for a host parent, else the plain transcript. */
 function headlessReporter(): RunReporter {
 	return invocation.eventsJsonl ? eventsReporter() : plainReporter();
-}
-
-/** A failed run's lines (the hint after a failure that wrote state). */
-function printFailure(outcome: {
-	message: string | null;
-	failedStep: string | null;
-	hint: readonly string[];
-}): void {
-	if (outcome.hint.length === 0) {
-		console.error(`\n✖ install failed: ${outcome.message ?? ''}\n`);
-		return;
-	}
-	const at = outcome.failedStep === null ? '' : ` at step [${outcome.failedStep}]`;
-	console.error(`\n✖ install failed${at}: ${outcome.message ?? ''}`);
-	for (const line of outcome.hint) console.error(line);
-	console.error('');
 }
 
 /** Run the executor and leave with its exit code, the reporter telling the outcome. */

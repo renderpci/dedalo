@@ -103,18 +103,19 @@ Each instance updates its own code from its own **Maintenance** panel, so you ca
 
 ## Removing an instance
 
-`--abort` removes an instance completely as long as it has never served. An instance counts as served once `host_first_boot` has started its unit, so an install that stopped before that step is removed whole, even when its engine install finished. The engine child undoes its own install only after it has proved two things. The installer must state that the instance never started. Its database must also still hold exactly the rows it had when the install sealed it.
+`--abort` removes an instance completely as long as it has never served. An instance counts as served once `host_first_boot` has issued the start of its unit, so an install that stopped before that start, even inside that step, is removed whole, even when its engine install finished. The engine child undoes its own install only after it has proved two things. The installer must state that the instance never started. Its database must also still hold exactly the rows it had when the install sealed it.
 
-Once the instance has served, `--abort` undoes only the host steps after the engine install. It keeps the instance, its user, its database and its code, because the database may already hold records. No command removes such an instance. To remove it by hand, work through this list as root, in this order. `<i>` is the instance name, `<user>` its service user and `<dir>` its install folder.
+Once the instance has served, `--abort` undoes only the host steps after the engine install. It keeps the instance, its user, its database and its code, because the database may already hold records. No command removes such an instance. To remove it by hand, work through this list as root, in this order. `<i>` is the instance name, `<user>` its service user, `<dir>` its install folder and `<pgbin>` the PostgreSQL 18 client directory (`/usr/lib/postgresql/18/bin` on Debian and Ubuntu, `/usr/pgsql-18/bin` on the RHEL family).
 
-1. Take a backup and keep it somewhere else: `sudo systemctl start --wait dedalo-backup@<i>.service`.
-2. Stop and disable its units: `sudo systemctl disable --now dedalo-ts@<i>.service dedalo-ts-watchdog@<i>.timer dedalo-backup@<i>.timer`.
-3. Remove its drop-ins, one directory per unit of the instance (`dedalo-ts`, `dedalo-ts-watchdog`, `dedalo-ts-rollback`, `dedalo-backup`, `dedalo-backup-alert`): `sudo rm -r /etc/systemd/system/dedalo-*@<i>.service.d`, then `sudo systemctl daemon-reload`.
-4. Remove its site file and reload the web server. On nginx this is `/etc/nginx/conf.d/dedalo-<i>.conf` and the rule copies under `/etc/nginx/dedalo/<i>/`.
+1. **Take a backup and keep it somewhere else, BEFORE any `--abort`:** `sudo systemctl start --wait dedalo-backup@<i>.service`. That unit runs only while the instance's drop-ins exist, and `--abort` removes them: afterwards the bare template runs `/bin/false`, and the unit is left failed. After an abort, dump the database directly, `sudo -u postgres <pgbin>/pg_dump -Fc dedalo_<i> > dedalo_<i>.dump`, and copy `/srv/dedalo/<i>/dedalo/media/` and `<dir>/private/.env` (it holds the salt).
+2. Stop and disable its units, then clear their failed state: `sudo systemctl disable --now dedalo-ts@<i>.service dedalo-ts-watchdog@<i>.timer dedalo-backup@<i>.timer`, then `sudo systemctl reset-failed 'dedalo-*@<i>.*'`.
+3. Remove its drop-ins, one directory per unit of the instance (`dedalo-ts`, `dedalo-ts-watchdog`, `dedalo-ts-rollback`, `dedalo-backup`, `dedalo-backup-alert`): `sudo rm -r /etc/systemd/system/dedalo-*@<i>.service.d`, then `sudo systemctl daemon-reload`. After an `--abort` they are already gone.
+4. Remove its site file and reload the web server. On nginx this is `/etc/nginx/conf.d/dedalo-<i>.conf` and the rule copies under `/etc/nginx/dedalo/<i>/`. After an `--abort` the site file is already gone.
 5. Remove its certificate, if Let's Encrypt issued one: `sudo certbot delete --cert-name dedalo-<i>`.
 6. Drop its database and role: `sudo -u postgres dropdb dedalo_<i>`, then `sudo -u postgres dropuser <user>`.
 7. Remove its trees: `<dir>`, `/srv/dedalo/<i>/`, `/opt/dedalo/instances/<i>/`, and the installer's record `/var/lib/dedalo-install/<i>/`. Also remove the instance's entry in the host registry, `/var/lib/dedalo-install/instances/<i>.json`.
-8. Remove the service user and group, but only if the install created them, and only when no file of theirs remains: `sudo find / -xdev -user <user> -print -quit` must print nothing first. A removed uid is given to the next account created on the host, and that account would own whatever is left.
+8. Remove what the host kept for it: the web server's logs of the instance, `dedalo-<i>.access.log` and `dedalo-<i>.error.log` under `/var/log/nginx/` (Apache: `/var/log/apache2/` or `/var/log/httpd/`), and the timer stamps, `/var/lib/systemd/timers/stamp-dedalo-*@<i>.timer`.
+9. Remove the service user and group, but only if the install created them, and only when no file of theirs remains: `sudo find / -xdev -user <user> -print -quit` must print nothing first. A removed uid is given to the next account created on the host, and that account would own whatever is left.
 
 On SELinux hosts, also remove the instance's file-context rules: `sudo semanage fcontext -l -C` lists them.
 

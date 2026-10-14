@@ -54,6 +54,8 @@ export interface LoopStep {
 	readonly neverAdopt?: true;
 	/** Recorded done but its outcome gone: run again, never refused as drift (contract.ts). */
 	readonly restartable?: true;
+	/** A probe measures what the steps before it left (both tables' rows carry it). */
+	readonly kind?: 'probe' | 'action';
 }
 
 /**
@@ -63,6 +65,15 @@ export interface LoopStep {
  */
 export const ABORT_AND_START_AGAIN =
 	'or undo the install with --abort and start again — that DELETES the database this install created (an instance that has already served keeps its database: --abort never removes a live one)';
+
+/**
+ * What a resume of an install that was ALREADY complete says at its end —
+ * both executors (campaign 3b N7: the docs promised it, only the engine
+ * printed it, and "every step verified" overstated a loop that re-checks the
+ * steps that HAVE a check). installer_reference.md quotes it verbatim.
+ */
+export const ALREADY_COMPLETE_LINE =
+	'install already complete — every done step that has a check was verified again';
 
 /** The refusal of a done step whose outcome is gone (not restartable). */
 export function driftSentence(step: string, detail: string): string {
@@ -90,6 +101,8 @@ export interface LoopContext {
 	ranAny: boolean;
 	/** True only while the ONE unredacted line (the salt) is printed. */
 	unredacted: boolean;
+	/** The run's interruption once a SIGINT/SIGTERM arrived (interruptOnce), else null. */
+	interruption: Promise<never> | null;
 	stepOf(step: StepId): LoopStep;
 	/** The step's own verify (null = it has none). */
 	verifyOwn(step: StepId): Promise<VerifyResult | null>;
@@ -290,15 +303,40 @@ function restartOrRefuse(ctx: LoopContext, step: StepId, verdict: VerifyResult):
 	return true;
 }
 
+/**
+ * A PROBE with nothing to verify measured what the steps before it left: when
+ * one of them ran again in this run (an abort undid it, a stopped service was
+ * started again), its old verdict proves nothing — it runs again (campaign 3b
+ * N6: a resume after an abort of a served instance re-ran the web steps and
+ * said "install complete" over a public address nobody probed).
+ */
+function staleProbe(ctx: LoopContext, step: StepId): boolean {
+	return ctx.ranAny && ctx.stepOf(step).kind === 'probe';
+}
+
+/** A done step with nothing to verify: a stale probe runs again, anything else is not re-run. */
+async function confirmUnverifiable(ctx: LoopContext, step: StepId): Promise<void> {
+	if (staleProbe(ctx, step)) {
+		say(
+			ctx,
+			'  done in an earlier run, but a step before it ran again in this run — checked again',
+		);
+		return runStep(ctx, step);
+	}
+	// Say WHICH (campaign 3b N7): a re-checked step read "skipped", as if a resume
+	// trusted the record, against the docs that promise the check.
+	say(ctx, '  done in an earlier run — nothing to re-check, not run again');
+	emit(ctx, step, 'skipped');
+}
+
 /** A step recorded done: it must still verify (when it has a verify), else drift — or a restart. */
 async function confirmDone(ctx: LoopContext, step: StepId): Promise<void> {
 	const verdict = await verifyStep(ctx, step);
-	if (verdict !== null) {
-		recordVerdict(recordOf(ctx, step), verdict);
-		if (verdict.conflict === true) hostRefuse('install.state_conflict', verdict.detail);
-		if (!verdict.ok && restartOrRefuse(ctx, step, verdict)) return runStep(ctx, step);
-	}
-	say(ctx, '  done in an earlier run — skipped');
+	if (verdict === null) return confirmUnverifiable(ctx, step);
+	recordVerdict(recordOf(ctx, step), verdict);
+	if (verdict.conflict === true) hostRefuse('install.state_conflict', verdict.detail);
+	if (!verdict.ok && restartOrRefuse(ctx, step, verdict)) return runStep(ctx, step);
+	say(ctx, `  done in an earlier run — verified again: ${verdict.detail}`);
 	emit(ctx, step, 'skipped');
 }
 
@@ -344,6 +382,36 @@ export function recordFailure(ctx: LoopContext, code: string, message: string): 
 	record.status = 'failed';
 	record.finished_at = nowIso();
 	record.error = { code, message: redact(ctx, message) };
+}
+
+/**
+ * Did this process START its run (its run record appended)? A run that ends
+ * before it did changed nothing: it is REFUSED, never worded "install failed"
+ * (campaign 3b N24 — an --abort of a sealed install, a resume whose answers differ).
+ */
+export function runStarted(ctx: { state: InstallState | null; run: unknown }): boolean {
+	return ctx.state !== null && ctx.run !== null;
+}
+
+// ── the interruption ─────────────────────────────────────────────────────────
+
+/**
+ * THE ONE INTERRUPTION of a run (campaign 3b N12). Ctrl-C reaches the whole
+ * foreground process group: the step's child (the engine child, apt, a
+ * build) dies of it too, and its failure races the installer's own signal
+ * handler — the run then printed BOTH "install failed … (exit 130)" and
+ * "install interrupted", or only the failure with exit 1 and a run recorded
+ * `failed`. The signal handler starts the interruption ONCE (here), and a
+ * run that fails while one is under way ends as that interruption — one
+ * block, exit 130/143, the run recorded `interrupted` — never as a failure.
+ */
+export function interruptOnce(ctx: LoopContext, interrupt: () => Promise<never>): Promise<never> {
+	if (ctx.interruption === null) {
+		ctx.interruption = interrupt();
+		// Awaited by the run's own failure path; never an unhandled rejection meanwhile.
+		ctx.interruption.catch(() => undefined);
+	}
+	return ctx.interruption;
 }
 
 // ── the console and the children ─────────────────────────────────────────────

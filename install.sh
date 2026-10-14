@@ -422,16 +422,16 @@ install_deps() {
 		require_tool runuser "to install the dependencies as $_as, the owner of $2"
 		_run=$(shared_bun "$1" "$4" "$6") || exit 3
 		say "  as $_as (the owner of $2: root never writes in it)"
-		(cd "$2" && runuser -u "$_as" -- "$_run" install --frozen-lockfile --production --ignore-scripts) \
+		(cd "$2" && runuser -u "$_as" -- "$_run" install --frozen-lockfile --production --ignore-scripts ${DEPS_QUIET-}) \
 			|| die 'bun install failed — see its output above (this host needs to reach the npm registry once)'
 		return 0
 	fi
 	if [ "$3" = 0 ]; then
-		(cd "$2" && BUN_INSTALL_CACHE_DIR="$4/bun-install-cache" "$1" install --frozen-lockfile --production --ignore-scripts) \
+		(cd "$2" && BUN_INSTALL_CACHE_DIR="$4/bun-install-cache" "$1" install --frozen-lockfile --production --ignore-scripts ${DEPS_QUIET-}) \
 			|| die 'bun install failed — see its output above (this host needs to reach the npm registry once)'
 		return 0
 	fi
-	(cd "$2" && "$1" install --frozen-lockfile --production --ignore-scripts) \
+	(cd "$2" && "$1" install --frozen-lockfile --production --ignore-scripts ${DEPS_QUIET-}) \
 		|| die 'bun install failed — see its output above (this host needs to reach the npm registry once)'
 }
 
@@ -447,10 +447,16 @@ plain_output() {
 }
 
 # plain_colours [installer args…]: in the plain mode nothing the bootstrap runs may colour its
-# output either (NO_COLOR, FORCE_COLOR=0 — the dependency install's bun honours them): the
-# plain mode promises no escape sequence of any kind (campaign 3 C3-58).
+# output either (NO_COLOR, FORCE_COLOR=0 — the dependency install's bun honours them) nor draw
+# a progress bar (DEPS_QUIET=--no-progress): the plain mode promises no escape sequence of any
+# kind (campaign 3 C3-58, 3b N25).
 plain_colours() {
-	if plain_output "$@"; then export NO_COLOR=1 FORCE_COLOR=0; fi
+	if plain_output "$@"; then
+		export NO_COLOR=1 FORCE_COLOR=0
+		# NO_COLOR does not cover cursor movement: the progress bar's ESC[<n>D / ESC[0K
+		# reached the plain transcript (campaign 3b N25).
+		DEPS_QUIET=--no-progress
+	fi
 }
 
 # os_value <os-release file> <KEY>: one value, its quotes removed ('' when absent).

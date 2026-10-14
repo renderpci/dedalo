@@ -16,12 +16,18 @@
  *
  * Trial says what it is instead: NO media access control (its own route).
  * The logged-in half of the gate (the media cookie) is the drill's.
+ *
+ * A RESUME VERIFIES IT (campaign 3b N6): a step recorded done in an earlier
+ * run is re-probed — /health on the socket and through the published address,
+ * read-only — so a stack that stack_up started again (after an --abort, a
+ * reboot, a failed start) is never reported complete unprobed. A probe that
+ * fails runs the step again (restartable), and its refusal says why.
  */
 
 import type { InstallAnswers } from '../../install_plan.ts';
 import type { ExecCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
 import { executeCommands, requestOf } from '../execute.ts';
-import { ran } from '../production/common.ts';
+import { ran, verdictOf } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
 import type { RunResult } from '../runner.ts';
 import { mediaGated } from '../web/site.ts';
@@ -255,15 +261,35 @@ async function runHealth(ctx: HostCtx) {
 	);
 }
 
+/** The read-only half of the probes (no probe file): the socket, and /health through nginx. */
+async function verifyHealth(ctx: HostCtx) {
+	const [socket, nginx] = stackProbes(ctx);
+	const failed: string[] = [];
+	for (const probe of [socket, nginx]) {
+		if (probe === undefined) continue;
+		const failure = await probeFailure(ctx, probe.command, probe.expect);
+		if (failure !== null) failed.push(failure);
+	}
+	return verdictOf(
+		failed.map((failure): [boolean, string] => [false, failure]),
+		`${stackOrigin(ctx)} answers /health`,
+	);
+}
+
 export const stack_health: HostStepDefinition = {
 	id: 'stack_health',
 	privilege: 'operator',
 	kind: 'probe',
 	needs: [],
+	// Probing again is the whole repair of a probe step (campaign 3b N6).
+	restartable: true,
+	// A failed run is run again whole: the verify skips the media-gate probes.
+	neverAdopt: true,
 	label: (plan) =>
 		plan.answers.route === 'trial'
 			? `/health on the engine's socket and through ${originOf(plan.answers)} (the trial stack: NO media protection)`
 			: `/health on the engine's socket and through ${originOf(plan.answers)}, and the media gate`,
 	commands: healthCommands,
+	verify: verifyHealth,
 	run: runHealth,
 };

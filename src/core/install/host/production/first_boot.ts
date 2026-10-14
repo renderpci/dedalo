@@ -198,6 +198,14 @@ export const host_first_boot: HostStepDefinition = {
 		);
 	},
 	run: async (ctx) => {
+		// SERVED = the start was ISSUED (campaign 3b N9), checkpointed BEFORE it, so a kill
+		// at any later instant still finds it. Not the step's start: host_units and
+		// host_selinux take milliseconds, so a Ctrl-C "after the engine" nearly always
+		// landed here before `systemctl start` — and an abort then kept a never-started
+		// instance (user, database, code) for removal by hand. From the start on, the
+		// instance may have served: an abort keeps it (C3-11).
+		ctx.created.served = true;
+		ctx.save();
 		await executeCommands(
 			[systemctl(ctx, 'start', [serverUnit(ctx)], `start ${serverUnit(ctx)}`)],
 			ctx,
@@ -207,10 +215,6 @@ export const host_first_boot: HostStepDefinition = {
 		const domain = await engineDomainProblem(ctx);
 		if (domain !== null) hostRefuse('install.step_failed', domain);
 		return ran(`${serverUnit(ctx)} is up; migrations complete`);
-	},
-	// From the first start on the instance may have served: an abort keeps it (C3-11).
-	intent: (ctx) => {
-		ctx.created.served = true;
 	},
 	undo: async (ctx) => {
 		await executeCommands(

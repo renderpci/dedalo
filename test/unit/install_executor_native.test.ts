@@ -29,7 +29,7 @@
  * The real step table against a real database is install_resume_drill's.
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, spyOn, test } from 'bun:test';
 import {
 	existsSync,
 	mkdirSync,
@@ -55,7 +55,13 @@ import {
 	type PlanFile,
 	STATE_FILE,
 } from '../../src/core/install/run_files.ts';
+import { DONE_TEXT } from '../../src/core/install/screen_text.ts';
+import { ALREADY_COMPLETE_LINE } from '../../src/core/install/step_loop.ts';
 import { INSTALL_STEPS } from '../../src/core/install/steps.ts';
+import {
+	announceRetiredProperties,
+	resetRetiredPropertyAnnouncements,
+} from '../../src/core/ontology/retired_property_notice.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 import {
 	FAKE_BASE_ANSWERS,
@@ -299,11 +305,18 @@ describe('executor — resume', () => {
 			const landed = new Set<InstallStepId>();
 			const { plan } = await failedRun(dir, 'install_hierarchies', landed);
 			const calls: string[] = [];
-			const outcome = await executeInstall({ mode: 'resume', secrets: {} }, recordingIo().io, {
+			const { io, lines } = recordingIo();
+			const outcome = await executeInstall({ mode: 'resume', secrets: {} }, io, {
 				table: landingTable(calls, landed),
 				host: fakeHost().host,
 			});
 			expect(outcome.result).toBe('complete');
+			// campaign 3b N7: each done step SAYS what the resume did with it — re-checked
+			// (its verify's own detail), or nothing to re-check — never a bare "skipped".
+			const text = lines.join('\n');
+			expect(text).toContain('done in an earlier run — verified again: landed');
+			expect(text).toContain('done in an earlier run — nothing to re-check, not run again');
+			expect(text).not.toContain('— skipped');
 			const at = plan.steps.indexOf('install_hierarchies');
 			// Nothing done before the failure ran again — probes and verify-less steps included.
 			expect(runs(calls)).toEqual(plan.steps.slice(at));
@@ -328,7 +341,14 @@ describe('executor — resume', () => {
 			});
 			expect(outcome.result).toBe('already_complete');
 			expect(runs(calls)).toEqual([]);
-			expect(lines.join('\n')).toContain('install already complete — every step verified');
+			expect(lines.join('\n')).toContain(ALREADY_COMPLETE_LINE);
+			// The reference quotes the line it really prints (campaign 3b N7).
+			expect(
+				readFileSync(
+					join(import.meta.dir, '../../docs/install/installer_reference.md'),
+					'utf8',
+				).replace(/\s+/g, ' '),
+			).toContain(`\`${ALREADY_COMPLETE_LINE}\``);
 		});
 	});
 
@@ -630,6 +650,10 @@ describe('executor — abort', () => {
 			);
 			expect(outcome.exitCode).toBe(1);
 			expect(outcome.message).toContain('SEALED');
+			// A refusal — nothing was undone — is never worded "install failed" (campaign 3b N24).
+			expect(outcome.result).toBe('refused');
+			expect(outcome.failedStep).toBeNull();
+			expect(DONE_TEXT.failure(outcome)).toStartWith('refused: this install is SEALED');
 			expect(calls).toEqual([]);
 			expect(readState(dir).outcome).toBe('complete');
 		});
@@ -1153,5 +1177,125 @@ describe("executor — a host route's engine child prints no hint of its own (C3
 				else expect(outcome.hint.join('\n')).toContain('scripts/install.ts --resume');
 			});
 		}
+	});
+});
+
+describe('executor — an --engine-only run by hand names ITS command, not a bare bun run (campaign 3b C3-54)', () => {
+	test("its failure hint says the same command with --resume / --abort, never `bun run scripts/install.ts`; a plain run's keeps it", async () => {
+		for (const engineOnly of [true, false]) {
+			await withPrivateDir(scratchPrivateDir(), async () => {
+				const { plan, planFile } = fakePlan(
+					{},
+					{ ...FAKE_BASE_ANSWERS, ...(engineOnly ? { engine_only: true } : {}) },
+				);
+				const table = fakeTable([], {
+					install_ontologies: {
+						run: async () => {
+							throw new Error('the ontology import failed');
+						},
+					},
+				});
+				const outcome = await executeInstall(freshRequest(planFile, plan), recordingIo().io, {
+					table,
+					host: fakeHost().host,
+				});
+				expect(outcome.result).toBe('failed');
+				const hint = outcome.hint.join('\n');
+				const db = String(FAKE_BASE_ANSWERS.db_database);
+				if (engineOnly) {
+					expect(hint).not.toContain('bun run scripts/install.ts');
+					expect(hint).toContain('the same command you ran, with --resume added');
+					expect(hint).toContain(
+						`the same command you ran, with --abort --confirm-database ${db} added`,
+					);
+					expect(hint).toContain('manual_install.md#manual-host_engine');
+				} else {
+					expect(hint).toContain('bun run scripts/install.ts --resume');
+				}
+			});
+		}
+	});
+});
+
+describe('executor — a Ctrl-C that kills the running step is ONE interruption (campaign 3b N12)', () => {
+	test("the step's child dies of the same SIGINT: no failure block, exit 130, the run recorded interrupted", async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const { plan, planFile } = fakePlan();
+			// Ctrl-C reaches the whole process group: the installer's handler AND the step's child,
+			// whose death (exit 130) the step reports as its failure.
+			const table = fakeTable([], {
+				install_ontologies: {
+					run: async () => {
+						process.emit('SIGINT');
+						throw new Error('the engine steps failed (exit 130)');
+					},
+				},
+			});
+			const exits: number[] = [];
+			class Exited extends Error {}
+			const exit = spyOn(process, 'exit').mockImplementation(((code?: number) => {
+				exits.push(code ?? 0);
+				throw new Exited(`exit ${code}`);
+			}) as never);
+			const { io, lines } = recordingIo();
+			let settled: unknown = null;
+			try {
+				settled = await executeInstall(freshRequest(planFile, plan), io, {
+					table,
+					host: fakeHost().host,
+				});
+			} catch (error) {
+				settled = error;
+			} finally {
+				exit.mockRestore();
+			}
+			// It never returned a failure outcome: it left through the interruption's exit.
+			expect(settled).toBeInstanceOf(Exited);
+			expect(exits).toEqual([130]);
+			const said = lines.join('\n');
+			expect(said.match(/install interrupted \(SIGINT\)/g)?.length).toBe(1);
+			expect(said).not.toContain('install failed');
+			const state = readState(dir);
+			expect(state.runs.at(-1)?.result).toBe('interrupted');
+			expect(state.steps.install_ontologies?.status).toBe('failed');
+		});
+	});
+});
+
+describe("executor — the ontology's RETIRED-property lines stay out of the operator's terminal (campaign 3b C3-72)", () => {
+	test('announced during an install: counted, printed nowhere; outside an install: printed', async () => {
+		await withPrivateDir(scratchPrivateDir(), async () => {
+			resetRetiredPropertyAnnouncements();
+			const { plan, planFile } = fakePlan();
+			// What the resolver does on a node carrying a retired key (resolver.ts reportRetiredProperties).
+			const table = fakeTable([], {
+				install_ontologies: {
+					run: async () => {
+						announceRetiredProperties('zz_retired_node', ['multi_value']);
+						return { ok: true, msg: 'ontologies ok' };
+					},
+				},
+			});
+			const printed: string[] = [];
+			const errors = spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
+				printed.push(args.map(String).join(' '));
+			});
+			const { io, lines } = recordingIo();
+			try {
+				const outcome = await executeInstall(freshRequest(planFile, plan), io, {
+					table,
+					host: fakeHost().host,
+				});
+				expect(outcome.result).toBe('complete');
+				expect([...printed, ...lines].join('\n')).not.toContain('zz_retired_node');
+				// Positive control: the same announcement outside an install reaches stderr.
+				resetRetiredPropertyAnnouncements();
+				announceRetiredProperties('zz_retired_node', ['multi_value']);
+				expect(printed.join('\n')).toContain('zz_retired_node');
+			} finally {
+				errors.mockRestore();
+				resetRetiredPropertyAnnouncements();
+			}
+		});
 	});
 });

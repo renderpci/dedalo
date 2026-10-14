@@ -406,9 +406,10 @@ async function confirmKeys(
 ): Promise<void> {
 	await expectLabel(rig, question.label);
 	if (await navKeys(rig, keys, value)) return;
+	// y/n only SET the switch; Enter answers (campaign 3b N39).
 	if (typeof value === 'boolean')
 		await press(keys, () => rig.setup.mockInput.pressKey(value ? 'y' : 'n'));
-	else await enter(rig, keys);
+	await enter(rig, keys);
 }
 
 async function acknowledgeKeys(

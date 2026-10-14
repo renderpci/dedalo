@@ -16,26 +16,27 @@
  *    (C3-34), the institution's certificate expiring within 30 days or not
  *    trusted by this host (C3-56, C3-13) — the installer checks these, never
  *    does them;
- *  - on each step, the shared directories that already exist, marked
- *    "exists — used as is" (C3-57: a second instance's Review read as if it
- *    would recreate /srv/dedalo, /opt/dedalo…).
+ *  - on each step and on its own mkdir line, the shared directories that
+ *    already exist, marked "exists, not created" (C3-57, N26: a second
+ *    instance's Review read as if it would recreate /srv/dedalo, /opt/dedalo…).
  */
 
 import type { Subprocess } from 'bun';
 import type { InstallPlan } from '../install_plan.ts';
 import { buildPlanFile } from '../run_files_core.ts';
 import type { HostPlanCtx } from './contract.ts';
-import { gatherHostFacts, type HostFacts, pendingFacts } from './facts.ts';
+import { gatherHostFacts, type HostFacts } from './facts.ts';
 import { type HostFs, hostFs } from './fs.ts';
 import { type HostReviewBlock, hostReview } from './host_table.ts';
 import { type InstancePaths, instancePaths, pathsFor } from './layout.ts';
 import { OS_ROWS, osRowById } from './os_support.ts';
-import { operatorTodo } from './production/preflight.ts';
+import { operatorTodo, webServerClash } from './production/preflight.ts';
 import { institutionCertVerdict } from './production/tls.ts';
 import { type CommandRunner, scratchRunner, systemRunner } from './runner.ts';
 import { readHostRootSeam } from './scratch.ts';
 import { bunPinOf, sourceTreeRoot } from './source.ts';
 import { gatherStackFacts } from './stack/facts.ts';
+import { stackPlanFacts, stackReviewTodo } from './stack/preflight.ts';
 
 /** The runner and the fs the Review (and the identity probe) measure through (the scratch seam's when it is armed). */
 export function reviewMachine(): { runner: CommandRunner; fs: HostFs } {
@@ -60,7 +61,7 @@ async function reviewFacts(
 ): Promise<HostFacts> {
 	const { runner, fs } = reviewMachine();
 	if (plan.answers.route !== 'production') {
-		return { ...pendingFacts(), stack: await gatherStackFacts(runner, fs) };
+		return stackPlanFacts(await gatherStackFacts(runner, fs), source);
 	}
 	return gatherHostFacts(runner, fs, plan.answers, paths, osRowById, source);
 }
@@ -77,9 +78,15 @@ export type ReviewBlock = Omit<HostReviewBlock, 'step'> & {
  * What the operator must do before (or for) the install, in words — the
  * firewall, Apache's modules, the institution's certificate. [] when nothing.
  */
-export function reviewTodo(ctx: HostPlanCtx, fs: Pick<HostFs, 'readText'>, now: number): string[] {
+export function reviewTodo(
+	ctx: HostPlanCtx,
+	fs: Pick<HostFs, 'readText' | 'exists'>,
+	now: number,
+): string[] {
 	const cert = ctx.answers.tls_mode === 'files' ? institutionCertVerdict(ctx, fs, now) : null;
 	return [
+		// Another web server on this host: host_preflight refuses it — said BEFORE `yes` (campaign 3b N3).
+		...webServerClash(ctx, fs),
 		...operatorTodo(ctx),
 		...(cert === null
 			? []
@@ -94,17 +101,37 @@ function mkdirPath(line: string): string | null {
 	return /^mkdir (\S+) \(/.exec(line)?.[1] ?? null;
 }
 
-/** Each block's label, with the directories it would create that already exist (used as is). */
+/**
+ * The suffix of a `mkdir` line whose directory already exists (campaign 3b
+ * N26 / C3-57). Not "used as is": the step's mkdir still sets the mode and
+ * owner the line shows (fs.ts fixDirectory) — it only does not create it.
+ */
+export const EXISTS_NOT_CREATED = ' — exists: not created, mode and owner set as shown';
+
+/**
+ * Each block's label, with the directories it would create that already exist
+ * — and each such `mkdir` line says so ITSELF: a header reading "exists, used
+ * as is" above a bare `mkdir` of the same path read as a contradiction
+ * (campaign 3b N26).
+ */
 function markExisting(
 	blocks: readonly HostReviewBlock[],
 	fs: Pick<HostFs, 'exists'>,
 ): HostReviewBlock[] {
 	return blocks.map((block) => {
-		const existing = block.commands
-			.map(mkdirPath)
-			.filter((path): path is string => path !== null && fs.exists(path));
+		const isExisting = (line: string): boolean => {
+			const path = mkdirPath(line);
+			return path !== null && fs.exists(path);
+		};
+		const existing = block.commands.filter(isExisting).map((line) => mkdirPath(line) as string);
 		if (existing.length === 0) return block;
-		return { ...block, label: `${block.label} — exists, used as is: ${existing.join(', ')}` };
+		return {
+			...block,
+			label: `${block.label} — exists, not created: ${existing.join(', ')}`,
+			commands: block.commands.map((line) =>
+				isExisting(line) ? `${line}${EXISTS_NOT_CREATED}` : line,
+			),
+		};
 	});
 }
 
@@ -148,7 +175,9 @@ export async function reviewHostCommands(plan: InstallPlan): Promise<ReviewBlock
 	const facts = await reviewFacts(plan, instancePaths(plan.answers, pin), source);
 	if (plan.answers.route === 'production' && facts.os === null) return [];
 	const ctx = reviewContext(plan, facts, pin, source);
-	if (plan.answers.route !== 'production') return hostReview(ctx);
 	const { fs } = reviewMachine();
+	if (plan.answers.route !== 'production') {
+		return [...todoBlocks(stackReviewTodo(ctx, fs, Date.now())), ...hostReview(ctx)];
+	}
 	return [...todoBlocks(reviewTodo(ctx, fs, Date.now())), ...markExisting(hostReview(ctx), fs)];
 }

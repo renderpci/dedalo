@@ -561,7 +561,7 @@ describe('build mode', () => {
 		const checkout = at(result.calls, /^git checkout -q --detach v7\.0\.1$/);
 		const archive = at(result.calls, / archive --format=tar -o .* HEAD$/);
 		const context = join(stack.dir, BUILD_CONTEXT);
-		const build = result.calls.indexOf(`docker build --tag localhost/dedalo:7.0.1 ${context}`);
+		const build = result.calls.findIndex((call) => isBuildOf(call, '7.0.1', context));
 		expect(checkout).toBeGreaterThan(-1);
 		expect(archive).toBeGreaterThan(checkout);
 		expect(build, result.calls.join('\n')).toBeGreaterThan(archive);
@@ -631,7 +631,7 @@ describe('build mode', () => {
 		expect(result.code, result.stderr).toBe(0);
 		expect(result.outcome).toMatchObject({ status: 'green', mode: 'build' });
 		const context = join(stack.dir, BUILD_CONTEXT);
-		expect(result.calls).toContain(`docker build --tag localhost/dedalo:7.0.1 ${context}`);
+		expect(result.calls.filter((call) => isBuildOf(call, '7.0.1', context))).toHaveLength(1);
 		const seen = join(stack.state, 'context_seen');
 		// the release commit, as committed
 		expect(readFileSync(join(seen, 'src', 'core', 'update', 'version.ts'), 'utf8')).toContain(
@@ -986,3 +986,15 @@ describe('the script itself', () => {
 		expect(source.trimEnd().split('\n').at(-1)).toBe('main "$@"; exit');
 	});
 });
+
+/**
+ * Is `call` the shared builder's `docker build` of `context` as `version` — its
+ * tag, and its OWN version label (campaign 3b N1: never the base image's)?
+ */
+function isBuildOf(call: string, version: string, context: string): boolean {
+	return (
+		call.startsWith(`docker build --tag localhost/dedalo:${version} `) &&
+		call.includes(` --label org.opencontainers.image.version=${version} `) &&
+		call.endsWith(` ${context}`)
+	);
+}

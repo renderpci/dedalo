@@ -1170,12 +1170,21 @@ function servingSection(a: InstallAnswers): EnvSection {
 		// The units' database-backup dir (production): the running server's
 		// Maintenance backups and its directory check use the SAME directory the
 		// backup units write, never a second <private>/backups/db (C3-55).
-		entry('DEDALO_BACKUP_DIR', a.backup_dir === '' ? '' : `${a.backup_dir}/db`),
+		entry('DEDALO_BACKUP_DIR', backupDbDir(a)),
 	];
 	return {
 		comment: '# --- Serving / media ---',
 		entries: candidates.filter((candidate) => candidate.value !== ''),
 	};
+}
+
+/**
+ * DEDALO_BACKUP_DIR of `a` ('' = not written): the units' backup dir + `/db`.
+ * ONE spelling for the .env entry AND the CLI's boot environment (cliBootEnv),
+ * so the directory the engine checks is the directory the .env records.
+ */
+export function backupDbDir(a: Pick<InstallAnswers, 'backup_dir'>): string {
+	return a.backup_dir === '' ? '' : `${a.backup_dir}/db`;
 }
 
 function diffusionSection(a: InstallAnswers): EnvSection {
@@ -1536,6 +1545,11 @@ export function cliBootEnv(plan: InstallPlan): Record<string, string> {
 		DB_PASSWORD: a.db_password,
 		// The directory step's write-probe reads config.media.rootPath.
 		...(a.media_path === '' ? {} : { MEDIA_PATH: a.media_path }),
+		// …and config.ops.backupDir: the SAME directory persist_config writes as
+		// DEDALO_BACKUP_DIR, from the first run on (C3-55 / campaign 3b N4: a fresh
+		// `--engine-only` run checked and created <private>/backups/db, then its
+		// --resume, booted from the written .env, found <backup_dir>/db missing).
+		...(backupDbDir(a) === '' ? {} : { DEDALO_BACKUP_DIR: backupDbDir(a) }),
 		DEDALO_APPLICATION_LANGS: JSON.stringify(l.applicationLangs),
 		PROJECTS_DEFAULT_LANGS: JSON.stringify(l.projectsDefaultLangs),
 		DEDALO_APPLICATION_LANGS_DEFAULT: l.applicationLangsDefault,

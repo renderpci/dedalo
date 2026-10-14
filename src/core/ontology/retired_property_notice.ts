@@ -16,12 +16,24 @@
  * state is request-independent (a key name and a count; no request identity).
  * Gate: test/unit/ontology_property_report_native.test.ts ('the resolver
  * tripline').
+ *
+ * OUT OF THE OPERATOR'S TERMINAL DURING AN INSTALL (campaign 3b C3-72): the
+ * lines are instructions to an ontology AUTHOR about the shipped data — no
+ * install operator can act on them. While an install runs (executor.ts
+ * executeInstall) they are DIVERTED: counted exactly as before, printed
+ * nowhere; the full list stays one command away (the report script).
  */
 
 import { formatRetiredPropertyLine } from './property_census.ts';
 
 /** Retired key → the number of nodes seen carrying it in this process. */
 const nodesPerRetiredKey = new Map<string, number>();
+
+/**
+ * Where announcements go instead of stderr while an install runs (null = stderr).
+ * A process-wide output switch, like the console itself — no request identity.
+ */
+let divertedTo: ((line: string) => void) | null = null;
 
 /** Where the full (node, key) list comes from. */
 export const RETIRED_PROPERTY_REPORT_COMMAND = 'bun run scripts/ontology_property_report.ts';
@@ -38,6 +50,30 @@ export function retiredPropertyAnnouncements(tipo: string, keys: readonly string
 		);
 	}
 	return lines;
+}
+
+/**
+ * Announce `tipo`'s retired keys (the resolver's tripline): each key not
+ * announced before, on stderr — or to the diversion while an install runs.
+ */
+export function announceRetiredProperties(tipo: string, keys: readonly string[]): void {
+	for (const line of retiredPropertyAnnouncements(tipo, keys)) {
+		const text = `[ontology/resolver] ${line}`;
+		if (divertedTo === null) console.error(text);
+		else divertedTo(text);
+	}
+}
+
+/**
+ * Send the announcements to `sink` instead of stderr until the answered
+ * function is called (it puts back the previous destination).
+ */
+export function divertRetiredPropertyNotices(sink: (line: string) => void): () => void {
+	const previous = divertedTo;
+	divertedTo = sink;
+	return () => {
+		divertedTo = previous;
+	};
 }
 
 /** Nodes seen per retired key so far (a snapshot). */

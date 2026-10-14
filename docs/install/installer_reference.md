@@ -732,8 +732,12 @@ The screens are the steps listed above, plus:
   itself is never drawn.
 - **Checks** show their result in place; a failed one offers retry / edit /
   keep untested / quit. A check that passes on a screen without questions — the
-  System check — moves on by itself; its rows stay visible under the next
-  screen, headed by the check's name.
+  System check — moves on by itself; its warnings, failures and verdict stay
+  visible under the next screen, headed by the check's name (the `ok` rows stay
+  on the check's own screen). A screen whose check failed is marked `✗` on the
+  step rail, never `✓`.
+- **Yes/no switches** take `y` or `n` (or ←→, Space) and move on only with
+  Enter, so a key pressed after the answer never lands on the next screen.
 - **The Review** shows what will happen, any errors, and the equivalent command
   line (no secret in it).
 - **Install** lists every step with its state (`◐` running, `✓` done, `↷`
@@ -791,8 +795,9 @@ or when the terminal is smaller than 80×24. `NO_COLOR` only turns colour off.
 - The System check prints one line per row, its state said once: `ok  <row>`,
   `warn: <row>`, `error: <row>`.
 - The output carries no escape sequence, the bootstrap's included: `install.sh`
-  runs its dependency install with `NO_COLOR=1 FORCE_COLOR=0` whenever the
-  installer will run in plain mode.
+  runs its dependency install with `NO_COLOR=1 FORCE_COLOR=0` and
+  `--no-progress` (no progress bar, whose cursor moves are escape sequences
+  too) whenever the installer will run in plain mode.
 - **Lists** (ontologies, thesauri, languages) are numbered in their groups, 20
   lines a page. Type `3`, `3-7` or `3 5 9` to toggle by number, a code (`es`)
   to toggle it, `/word` to filter and `/` to clear, `more` for the next page,
@@ -1020,9 +1025,11 @@ For every step, in order:
   install with --abort and start again — that DELETES the database this install
   created …`). A step that only **starts** something — `stack_database`,
   `stack_up`, `host_first_boot` — is restartable instead: found stopped, it is
-  started again (`done in an earlier run, but … — started again`). A done step
-  with nothing to verify (a probe, the thesaurus import, tool registration) is not
-  run again;
+  started again (`done in an earlier run, but … — started again`). Each line
+  says which it was: `done in an earlier run — verified again: <what was
+  checked>`, or, for a done step with nothing to verify (a probe, the thesaurus
+  import, tool registration), `done in an earlier run — nothing to re-check, not
+  run again`;
 - a step left **running** or **failed** whose work verifiably landed (the
   process died after the work, before recording it) is recorded done without
   running again; otherwise it runs again. The seed restore is the exception: it
@@ -1041,8 +1048,9 @@ record which steps remain before it asks anything, so a resume after the engine
 completed asks no secret at all. A resume runs in plain line mode (it has no
 screens to walk) and asks on the terminal, hidden and typed twice. A resume that no longer has the root password says so
 (`root login not re-verified …`) instead of checking the login. Resuming a
-complete install verifies every step and prints
-`install already complete — every step verified`.
+complete install checks again every done step that has a check, runs nothing,
+and prints
+`install already complete — every done step that has a check was verified again`.
 
 Exit codes are unchanged: `0` done, `1` refused or failed, `130` interrupted
 (Ctrl-C), `143` terminated.
@@ -1102,7 +1110,7 @@ steps, as commands and the full text of every file they write, are in
 
 | Step | What it does | What `--abort` undoes |
 | --- | --- | --- |
-| `host_preflight` | measures the host and **refuses**, before any change: an unsupported system (supported: Ubuntu 26.04 LTS, Debian 13, RHEL / Rocky / AlmaLinux 10 — newest releases only), no systemd, no root, nginx older than 1.25.1 (it rejects `http2 on;`), anything already under this instance's names (the database or role, `dedalo-ts@<i>` enabled or with drop-ins, the site file, the socket, the nginx upstream/zone names `dedalo_<i>` and `dedalo_<i>_api` in another file), **any instance directory that already exists** — `/srv/dedalo/<i>`, its web root, media, the backup dir (outside the install folder or inside it), `private/` — the installer never takes over a directory, so a media path under `/var/www` is refused; the install folder itself follows the [install folder rules](production.md#the-install-folder-and-the-service-account) (used as it is when it is the service user's, adopted when it is root's and empty in an operator's place), a web-server configuration it cannot read (`nginx -T`, Apache's `-S`/`-M`), the address served by another site on our ports, a non-standard port held by another program, another PostgreSQL major on the database port, and the institution's certificate when it does not name the address, has expired, does not pair with its key or ends at a certificate authority this machine does not trust (one expiring within 30 days is a warning). The firewall is **checked and told**, never changed — with the command that opens the instance's ports when they are closed; on Apache, which modules to enable, with the command | — (it changes nothing) |
+| `host_preflight` | measures the host and **refuses**, before any change: an unsupported system (supported: Ubuntu 26.04 LTS, Debian 13, RHEL / Rocky / AlmaLinux 10 — newest releases only), no systemd, no root, nginx older than 1.25.1 (it rejects `http2 on;`), anything already under this instance's names (the database or role, `dedalo-ts@<i>` enabled or with drop-ins, the site file, the socket, the nginx upstream/zone names `dedalo_<i>` and `dedalo_<i>_api` in another file), **any instance directory that already exists** — `/srv/dedalo/<i>`, its web root, media, the backup dir (outside the install folder or inside it), `private/` — the installer never takes over a directory, so a media path under `/var/www` is refused; the install folder itself follows the [install folder rules](production.md#the-install-folder-and-the-service-account) (used as it is when it is the service user's, adopted when it is root's and empty in an operator's place), a web-server configuration it cannot read (`nginx -T`, Apache's `-S`/`-M`), the address served by another site on our ports, any of the instance's ports — 80 and 443 included — held by a program other than the chosen web server (the program is named), the other web server already installed when this run would install the chosen one beside it, another PostgreSQL major on the database port, and the institution's certificate when it does not name the address, has expired, does not pair with its key or ends at a certificate authority this machine does not trust (one expiring within 30 days is a warning). The firewall is **checked and told**, never changed — with the command that opens the instance's ports when they are closed; on Apache, which modules to enable, with the command | — (it changes nothing) |
 | `host_packages` | PostgreSQL 18, the media toolchain (ImageMagick, FFmpeg, Poppler, librsvg, OCRmyPDF), the web server when missing, certbot (Let's Encrypt), the SELinux tools (EL); the repositories they need (PGDG on Debian; EPEL, RPM Fusion, PGDG and CodeReady Builder on EL) | nothing: packages and repositories are **shared host state** — told, never removed (removing a repository would leave its packages without security updates) |
 | `host_identity` | the service user (created: a system account, no login shell, no skeleton files — or an existing account USED AS IS), the service group (its own, a typed one created with `groupadd`, or an existing one used as is), the install folder (`0750`; made by root only under root-owned parents, else by the service user; an empty root-owned folder under root's parents inside `/home`, `/srv`, `/data`, `/mnt` or `/media` adopted) and every directory of the instance at its mode: `private` (`0700`), backups, `/srv/dedalo/<i>` (media at `0750`, never world-readable) — everything inside the folder made by the service user — and the root-owned `/opt/dedalo/…` (a shared one that exists is used as it is, never re-moded). The System check before it refuses another instance's user, group or folder (and an account in another instance's group), a system account, a package's account, a privileged group and a folder it may not use; an account that appeared since (a package made it) is refused here, never recorded as created | as the service user, what the install left in the folder and the empty media tree it made under `/srv/dedalo/<i>`, then the folder it created (an adopted one gets its owner and mode back); the user and group only when it created them — never an existing account — and not while the user runs processes or still owns a file (`user <u> KEPT: it still owns <path> …` — a removed uid could be reused and read them) |
 | `host_runtime` | Bun at the release's pin, **root-owned** in `/opt/dedalo/bun/<pin>/` — only from a zip whose sha256 equals the release's committed `.bun-sha256` (the bootstrap's verified cache), and left as it is when the installed copy is byte-identical; the release extracted into `<install folder>/dedalo` by the service user (`git archive` of a checkout runs with `-c safe.directory=<checkout>`: root reads the operator's checkout); its dependencies installed as the instance; the root-run scripts copied root-owned to `/opt/dedalo/instances/<i>/bin` | the release and scripts; Bun when no other instance uses that pin |
@@ -1195,7 +1203,7 @@ installer tells you how when they are not, and never installs them.
 | Step | What it does |
 | --- | --- |
 | `stack_preflight` | refuses: Docker missing, Compose older than 2.24.4 (the installer's `compose.override.yaml` uses its `!override` tag), the daemon unreachable for this user, under 8 GiB free, an existing instance (`dedalo_private` volume), leftover stack files of an earlier install, an image version that is not the installer's own, an official image without cosign, the institution's certificate when it does not check out — another address, expired, another key, or a chain this machine does not trust. A resume refuses while an earlier run's engine container (`dedalo-install-engine`) still runs |
-| `stack_image` | pulls the image (or builds it here, `--image-source build` — 10 to 20 minutes, its build steps printed as they start); an official image's **signature** is verified with cosign over the ONE digest it carries, and its version label must equal its tag. The verified digest is pinned: a re-pull between verify and run is refused |
+| `stack_image` | pulls the image (or builds it here, `--image-source build`, from a clean snapshot of the checkout's last commit through `deploy/dedalo-image-build.sh` — a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk; its build steps printed as they start); an official image's **signature** is verified with cosign over the ONE digest it carries, and its version label must equal its tag. The verified digest is pinned: a re-pull between verify and run is refused |
 | `stack_tls` | docker only: Let's Encrypt (certbot standalone), a local CA (`deploy/dedalo-tls-rotate.sh`), or the institution's files copied into `deploy/certs` |
 | `stack_files` | `.dedalo.env` (`0600`, with a **generated** database password that is never shown), `compose.override.yaml`, and the full stack's site (`deploy/nginx.docker.generated.conf`) |
 | `stack_database` | starts PostgreSQL and waits for it |
@@ -1253,7 +1261,8 @@ Under `sudo` the bootstrap keeps root out of your files:
 
 When the installer will run in plain mode (`--plain`, `TERM` unset or `dumb`, or
 standard output not a terminal), the dependency install runs with
-`NO_COLOR=1 FORCE_COLOR=0`, so no escape sequence reaches the output.
+`NO_COLOR=1 FORCE_COLOR=0` and `--no-progress`, so no escape sequence reaches
+the output.
 
 ## What `../private/.env` does — and does not — get
 

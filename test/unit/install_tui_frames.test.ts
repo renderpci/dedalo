@@ -43,10 +43,12 @@ import {
 	buildScreens,
 	passwordFeedback,
 	type Question,
+	RECOMMENDED_ROUTE,
 	SCREEN_ORDER,
 	type Screen,
 } from '../../src/core/install/screen_model.ts';
 import { ACKNOWLEDGE_TEXT, ROUTE_TEXT } from '../../src/core/install/screen_text.ts';
+import { reviewPage } from '../../src/core/install/ui/screens/review.ts';
 import { hostCommandLines } from '../../src/core/install/ui_plain/prompter.ts';
 import { localOntologySource } from '../helpers/install_answer_cases.ts';
 import {
@@ -735,7 +737,7 @@ describe('campaign 3: the full screen says what its controls do (C3-26, C3-47, C
 		});
 	});
 
-	test('C3-58: the route cursor rests on the plan’s default route; the empty password field breaks no rule yet', async () => {
+	test('C3-58 / 3b N13: the route cursor rests on the RECOMMENDED route; the empty password field breaks no rule yet', async () => {
 		await withRig(SIZES[0], async (rig) => {
 			// Nothing chosen yet (no route in the answers).
 			const screens = buildScreens(modelInput({}));
@@ -756,9 +758,11 @@ describe('campaign 3: the full screen says what its controls do (C3-26, C3-47, C
 			void rig.front.prompter.choice(question(view, 'route.route'));
 			await rig.frame();
 			const pending = rig.front.prompter.pending();
-			expect(pending?.options?.[pending.cursor ?? -1]).toBe(
-				normalizeInstallAnswers({}).answers.route,
-			);
+			// Production, the recommended route — never the plan's Developer fallback (N13).
+			expect(pending?.options?.[pending.cursor ?? -1]).toBe(RECOMMENDED_ROUTE);
+			expect(RECOMMENDED_ROUTE).toBe('production');
+			expect(ROUTE_TEXT[RECOMMENDED_ROUTE].badge).toContain('recommended');
+			expect(normalizeInstallAnswers({}).answers.route).not.toBe(RECOMMENDED_ROUTE);
 		});
 		await withRig(SIZES[0], async (rig) => {
 			const view = viewAt('developer', 'administrator');
@@ -801,19 +805,88 @@ describe('campaign 3: the full screen says what its controls do (C3-26, C3-47, C
 		});
 	});
 
-	test('C3-49: a passed check’s rows carried onto the next screen are headed by their screen', async () => {
+	test('C3-49 / 3b N18: a passed check carried onto the next screen keeps its warnings and verdict in view, headed by its screen', async () => {
 		await withRig(SIZES[0], async (rig) => {
-			rig.front.prompter.view(viewAt('developer', 'system'));
-			rig.front.prompter.say(['ok  Bun  1.4.2', 'System ready.']);
-			rig.front.prompter.view(viewAt('developer', 'database'));
-			const view = viewAt('developer', 'database');
-			void rig.front.prompter.text(question(view, 'database.db_database'));
-			const frame = await rig.frame();
-			const rows = rowsOf(frame);
+			rig.front.prompter.view(viewAt('production', 'system', { instance: 'zz' }));
+			// A production check: the firewall WARNING comes early, a dozen ok rows after it.
+			rig.front.prompter.say([
+				'ok  Operating system  Ubuntu 26.04',
+				'ok  Privilege  root',
+				'warn: Firewall  ufw does not allow port 80 and 443 — sudo ufw allow 80,443/tcp',
+				...Array.from({ length: 12 }, (_, index) => `ok  Row${index}  fine`),
+				'System ready (1 warning).',
+			]);
+			const view = viewAt('production', 'identity', { instance: 'zz' });
+			rig.front.prompter.view(view);
+			void rig.front.prompter.text(question(view, 'identity.entity'));
+			const rows = rowsOf(await rig.frame());
 			const head = rows.findIndex((row) => row.includes('System check:'));
-			const bun = rows.findIndex((row) => row.includes('ok  Bun  1.4.2'));
+			const firewall = rows.findIndex((row) => row.includes('Firewall  ufw does not allow'));
 			expect(head).toBeGreaterThan(-1);
-			expect(bun).toBe(head + 1);
+			expect(firewall).toBe(head + 1);
+			// Drawn with the screen's own mark, never the plain word (N36).
+			expect(rows[firewall]).toContain('! Firewall');
+			expect(rows[firewall]).not.toContain('warn:');
+			expect(rows.some((row) => row.includes('System ready (1 warning).'))).toBe(true);
+			// The ok rows stay on the check's own screen.
+			expect(rows.some((row) => row.includes('Row11'))).toBe(false);
+		});
+	});
+
+	test('3b N34: a screen whose check failed is drawn ✗ on the rail, and the check screen is current', async () => {
+		await withRig(SIZES[0], async (rig) => {
+			const base = viewAt('production', 'route', { instance: 'zz' });
+			const system = base.screens.find((screen) => screen.id === 'system');
+			rig.front.prompter.view({ ...base, seen: ['route', 'system'], failed: ['system'] });
+			void rig.front.prompter.choice(question(base, 'route.route'));
+			const rail =
+				rowsOf(await rig.frame()).find((row) => row.includes(system?.title ?? '?')) ?? '';
+			expect(rail).toContain('✗');
+			expect(rail).not.toContain('✓');
+		});
+	});
+
+	test('3b N35, N36: a failed check page names each hotkey’s own command, its rows drawn with ✗', async () => {
+		await withRig(SIZES[0], async (rig) => {
+			const view = viewAt('production', 'system', { instance: 'zz' });
+			void rig.front.prompter.probe({
+				screen: view.screen,
+				lines: [
+					'error: Operating system  Zz OS 1 is not supported',
+					'This system cannot run this route.',
+				],
+				gate: 'must_pass',
+				commands: ['quit'],
+				prompt: 'quit, or back to choose another route',
+			});
+			const frame = await rig.frame();
+			expect(frame).toContain('✗ Operating system');
+			expect(frame).not.toContain('error: Operating system');
+			const footer = rowsOf(frame).find((row) => row.includes('esc')) ?? '';
+			expect(footer).not.toContain('q quit, or back');
+			expect(footer).toContain('back to choose another route');
+		});
+	});
+
+	test('3b N39: on a yes/no switch, y/n only choose — Enter answers', async () => {
+		await withRig(SIZES[0], async (rig) => {
+			const view = viewAt('developer', 'publication');
+			rig.front.prompter.view(view);
+			let settled = false;
+			const answer = rig.front.prompter.confirm(question(view, 'publication.diffusion'));
+			void answer.then(() => {
+				settled = true;
+			});
+			await rig.frame();
+			rig.setup.mockInput.pressKey('n');
+			await rig.frame();
+			expect(settled).toBe(false);
+			expect(rig.front.prompter.pending()?.selected).toEqual(['no']);
+			rig.setup.mockInput.pressKey('y');
+			await rig.frame();
+			expect(rig.front.prompter.pending()?.selected).toEqual(['yes']);
+			rig.setup.mockInput.pressEnter();
+			expect(await answer).toBe(true);
 		});
 	});
 
@@ -858,5 +931,22 @@ describe('campaign 3: the full screen says what its controls do (C3-26, C3-47, C
 			expect(frame).not.toContain('requires server_name');
 			expect(frame).not.toContain('✗');
 		});
+	});
+});
+
+describe('campaign 3b: the Review says what `w` does (N29)', () => {
+	test('`w` writes the answers AND ends the session: its key says so', () => {
+		const screens = screensOf('trial');
+		const view: ReviewView = {
+			screen: screens.at(-1) as Screen,
+			lines: [{ label: 'Route', value: 'trial' }],
+			canInstall: true,
+			editable: [],
+			command: 'sh install.sh --route trial',
+			errors: [],
+			hostCommands: [],
+		};
+		const keys = reviewPage(view, () => undefined).keys();
+		expect(keys).toContainEqual(['w', 'write answers and quit']);
 	});
 });

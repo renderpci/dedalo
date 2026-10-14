@@ -291,7 +291,7 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 		image_source: {
 			label: 'Image source',
 			description:
-				'Official: pulled from the Dédalo registry, its signature verified. Custom: pulled from your own registry. Build: built here from this checkout (10 to 20 minutes).',
+				"Official: pulled from the Dédalo registry, its signature verified. Custom: pulled from your own registry. Build: built here from this checkout's last commit (slow the first time: the Review says how long).",
 		},
 		image_repository: {
 			label: 'Image repository',
@@ -489,7 +489,7 @@ export const NOTICE_TEXT = Object.freeze({
 		'Every host command is listed on the Review, exactly as it will run. Packages, repositories and the firewall are never removed or changed behind your back: packages stay installed on --abort, the firewall is only checked.',
 	/** The docker and trial routes' own words (C3-48 — never the production boilerplate). */
 	stackCommands:
-		"Every host command is listed on the Review, exactly as it will run. Docker itself, your user's groups and the firewall are never installed or changed — they are only checked; the images stay on --abort. Docker-published ports bypass the host firewall (see Docker install).",
+		"Every host command is listed on the Review, exactly as it will run. Docker itself and your user's groups are never installed or changed — they are only checked; the images stay on --abort. The firewall is neither changed nor checked: Docker-published ports bypass it (see Docker install).",
 	databaseProbe: (msg: string) => `Database check: ${msg}`,
 	noMail: 'Without mail, a forgotten password needs the server console.',
 	probeOk: (msg: string) => `Check passed: ${msg}`,
@@ -500,6 +500,8 @@ export const NOTICE_TEXT = Object.freeze({
 			? `System ready${warned === 0 ? '' : ` (${warned} warning${warned === 1 ? '' : 's'})`}.`
 			: `${failed} check${failed === 1 ? '' : 's'} failed — fix ${failed === 1 ? 'it' : 'them'} and re-check.`,
 	systemIncomplete: (msg: string) => `The system check did not complete: ${msg}`,
+	/** A failure no fix on this machine can change (an unsupported system — C3-61). */
+	systemUnfixable: 'This system cannot run this route — quit, or go back to choose another route.',
 	envSecret: 'supplied by the environment — kept',
 	trialHttpPort:
 		'The port browsers use: the trial serves plain HTTP only (no HTTPS port, no certificate).',
@@ -575,7 +577,7 @@ function stepsUndone(count: number): string {
 function liveKept(ending: DoneEnding): string {
 	return ending.route === 'production'
 		? 'its user, database and code are kept — removing a served instance is a manual job: docs/install/multi_instance.md#removing-an-instance'
-		: 'its containers and volumes (the database) are kept — to remove it, see docs/install/quickstart.md#removing-the-trial';
+		: `its containers and volumes (the database) are kept — to remove it, see ${ending.route === 'docker' ? 'docs/install/docker.md#removing-the-stack' : 'docs/install/quickstart.md#removing-the-trial'}`;
 }
 
 /** The aborted sentence of a LIVE instance (it has served: an abort keeps it). */
@@ -596,6 +598,22 @@ const HOST_ABORT_KEPT: Readonly<Record<string, string>> = Object.freeze({
 
 export const DONE_TEXT = Object.freeze({
 	complete: (verified: boolean) => `install complete${verified ? ' — root login verified' : ''}`,
+	/**
+	 * A run that did not complete, in one line: a REFUSAL (nothing was done — an
+	 * --abort of a sealed install, a resume whose answers differ) says so, never
+	 * "install failed" (campaign 3b N24).
+	 */
+	failure: (outcome: {
+		readonly result: string;
+		readonly failedStep: string | null;
+		readonly message: string | null;
+	}): string =>
+		outcome.result === 'refused'
+			? `refused: ${outcome.message ?? ''}`
+			: `install failed${outcome.failedStep === null ? '' : ` at step [${outcome.failedStep}]`}: ${outcome.message ?? ''}`,
+	/** What the closing block repeats after a salt shown on this terminal (campaign 3b N28). */
+	saltKeep:
+		'The generated DEDALO_SALT_STRING shown above is also kept in the private .env (0600) — keep a copy with your backups: the stored passwords cannot be verified without it.',
 	/** The engine-only run's next step (a host route says its own: `next`). */
 	supervisor: DONE_TEXT_ENGINE_SUPERVISOR,
 	aborted: DONE_TEXT_ENGINE_ABORTED,

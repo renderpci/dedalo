@@ -67,14 +67,20 @@ export function httpsOrigin(answers: InstallAnswers): string {
 	return answers.https_port === '443' ? '' : `:${answers.https_port}`;
 }
 
-/** The site file's header: the stamp, then why the file must not be hand-edited. */
+/**
+ * The site file's header: the stamp, then who writes it and how it changes.
+ * TWO writers print these bytes — the installer and docs/install/manual_install.md
+ * (whose by-hand host edits the certificate lines in) — so the header names both,
+ * as the unit templates' does (campaign 3b N22).
+ */
 export function siteHeader(input: SiteInput): string[] {
 	return [
 		input.stamp,
 		`# Dédalo instance ${input.paths.instance} — WRITTEN BY THE INSTALLER (scripts/install.ts, production`,
-		'# route). Every other site, the default site and the global configuration are untouched.',
-		'# Change the answers and re-run the installer rather than editing this file: a resume',
-		'# compares it with its own render.',
+		'# route) or by docs/install/manual_install.md, which renders the same bytes. Every other',
+		'# site, the default site and the global configuration are untouched. An installer resume',
+		'# compares this file with its own render: change the answers and re-run the installer;',
+		'# a by-hand host edits it only where manual_install.md says.',
 		'',
 	];
 }

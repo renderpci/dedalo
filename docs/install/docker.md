@@ -20,7 +20,7 @@ The Docker route installs Dédalo as a compose stack on one host: the engine, Po
 - **About 8 GiB free** under Docker's root directory (`df -h /var/lib/docker`): the engine image is about 2.5 GB, PostgreSQL about 0.7 GB, and a local build parks about 3 GB of build cache. Below that the database restore fails part-way, so the installer refuses first.
 - **Ports 80 and 443 free** on the host (`sudo ss -tlnp | grep -E ':(80|443)\b'`), or other ports chosen on the *Containers* screen. A host web server already listening there is the most common failure.
 - **The address**: a fully qualified name (`dedalo.museum.example`), never `localhost` or an IP address — the installer refuses both. It names the site and the certificate, so it is the address everyone opens.
-- **The certificate**: for Let's Encrypt, that name resolving publicly to this host and port 80 reachable from the internet; for a local certificate authority, that name resolving on the staff computers (internal DNS, or a hosts entry on each one); for your institution's certificate, its fullchain and key files, **issued by a CA this host trusts**. The install's last step checks the site with this host's `curl`, against the system trust store, so a certificate from an internal CA needs that CA installed on the host first — Debian and Ubuntu: copy it to `/usr/local/share/ca-certificates/<name>.crt` and run `sudo update-ca-certificates`; the RHEL family: copy it to `/etc/pki/ca-trust/source/anchors/` and run `sudo update-ca-trust`. The System check refuses a chain the host does not trust, and names its issuer.
+- **The certificate**: for Let's Encrypt, that name resolving publicly to this host and port 80 reachable from the internet; for a local certificate authority, that name resolving on the staff computers (internal DNS, or a hosts entry on each one); for your institution's certificate, its fullchain and key files, **issued by a CA this host trusts**. The install's last step checks the site with this host's `curl`, against the system trust store, so a certificate from an internal CA needs that CA installed on the host first — Debian and Ubuntu: copy it to `/usr/local/share/ca-certificates/<name>.crt` and run `sudo update-ca-certificates`; the RHEL family: copy it to `/etc/pki/ca-trust/source/anchors/` and run `sudo update-ca-trust`. The certificate is asked after the System check, so the System check cannot see it: the **Review** lists a chain the host does not trust under *TO DO*, naming its issuer, before you type `yes` — and the run refuses it before anything is written.
 - **`cosign`** on the host to verify an official image's signature. Without it, choose a local build.
 
 !!! warning "Published ports bypass the host firewall"
@@ -40,7 +40,7 @@ Choose **Docker** on the first screen (`--plain` asks the same questions one per
 | --- | --- |
 | **Install type** | the route |
 | **System check** | nothing: it shows Docker, Compose and the free disk. A failed row must be fixed first |
-| **Image** | where the image comes from: an **official** Dédalo registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout. Its version is always the installer's own — see [where the image comes from](#choose-where-the-image-comes-from) |
+| **Image** | where the image comes from: an **official** Dédalo registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout's last commit. **Image version** is the image tag: leave it empty for the installer's own version — the only one accepted besides its `-dev` tag. See [where the image comes from](#choose-where-the-image-comes-from) |
 | **TLS & address** | the public address, and the certificate: **Let's Encrypt** (with its email), a **local certificate authority**, or your institution's **files** |
 | **Containers** | the published HTTP and HTTPS ports (`80` and `443`) |
 | **Identity** | the institution's short code and full name, the install fingerprint (**Information** and **Info key** — keep the defaults unless you are moving a v6 installation), the locale and the time zone |
@@ -73,13 +73,13 @@ The engine's own configuration is not in `.dedalo.env`: it is `/private/.env`, i
 | Step | What it does | Verify by hand |
 | --- | --- | --- |
 | `stack_preflight` | refuses, before anything is pulled or written: Docker or Compose v2 missing, a daemon this user cannot reach, under 8 GiB free, a Dédalo instance already here (the `dedalo_private` volume), stack files of an earlier install (`.dedalo.env`, `compose.override.yaml`), an image version that is not the installer's, an official image without `cosign`, an institution certificate that does not check out | the refusal names each problem |
-| `stack_image` | pulls the image and verifies its `cosign` signature and its version label — or builds it here with `--image-source build`, printing each build step as it starts (a first build takes about 5 minutes on a fast machine, 15 or more on 2 CPUs). The verified digest is pinned: a re-pull between the check and the run is refused | `docker image ls <image>` |
+| `stack_image` | pulls the image and verifies its `cosign` signature and its version label — or builds it here with `--image-source build` through [the local builder](#a-local-build), printing each build step as it starts (a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk). The verified digest is pinned: a re-pull between the check and the run is refused | `docker image ls <image>` |
 | `stack_tls` | Let's Encrypt (certbot in its own container, `--standalone` on port 80, before nginx exists), a local CA (`deploy/dedalo-tls-rotate.sh --mode local-ca`), or your files copied into `deploy/certs` | `ls deploy/certs`, or `docker volume ls \| grep letsencrypt` |
 | `stack_files` | writes `.dedalo.env`, `compose.override.yaml` and the generated nginx site | the three files exist; `.dedalo.env` is `0600` |
 | `stack_database` | starts PostgreSQL and waits for `pg_isready` | `ddc ps postgres` is *healthy* |
 | `stack_engine` | runs the engine steps inside a throw-away container (`run --rm -T dedalo bun run scripts/install.ts --request-stdin --execute --events-jsonl`): the seed, the ontologies, the thesauri, the tools, the `root` password. Answers and secrets go on its standard input, never as `-e` (an environment value shows in `docker inspect`) | `ddc run --rm -T dedalo bun run scripts/install.ts --status --json` prints `"outcome":"complete"` |
-| `stack_up` | starts the engine first, waits for its `/health` (by then it has written the media rule files nginx includes), then the rest of the stack — and waits for nginx to stay up: running, not restarting, `nginx -t` passing. If it does not, the step fails with nginx's own `[emerg]` line | `ddc ps`: `postgres` and `dedalo` *healthy*, `nginx` *Up* |
-| `stack_health` | `/health` on the engine's socket, then through nginx over HTTPS with a verified chain, and the media gate: the marker store and an unpublished probe file both answer `404` to an anonymous request. A failed probe says why (`the certificate chain is not trusted by this host`, `nothing answers on that port`) | [Verify](#verify) |
+| `stack_up` | starts the engine first, waits for its `/health` (by then it has written the media rule files nginx includes), then the rest of the stack — nginx always in a new container, because a container whose start failed (a port held by another program) comes back *Up* with no port published — and waits for nginx to stay up: running, not restarting, every port it declares published, `nginx -t` passing. If it does not, the step fails with nginx's own `[emerg]` line, or names the port it could not publish | `ddc ps`: `postgres` and `dedalo` *healthy*, `nginx` *Up* with `0.0.0.0:80->80/tcp` and `0.0.0.0:443->443/tcp` |
+| `stack_health` | `/health` on the engine's socket, then through nginx over HTTPS with a verified chain, and the media gate: the marker store and an unpublished probe file both answer `404` to an anonymous request. A failed probe says why (`the certificate chain is not trusted by this host`, `nothing answers on that port`). A `--resume` probes `/health` again, even when an earlier run recorded the step done | [Verify](#verify) |
 
 `ddc` in this table is the compose command with the stack's three files — see [Day-to-day operation](#day-to-day-operation).
 
@@ -90,7 +90,7 @@ sh install.sh --route docker --resume                              # fix the cau
 sh install.sh --route docker --abort --confirm-database dedalo     # undo this install
 ```
 
-`--abort` stops the stack and removes only what this install created: the files it wrote, the certificates it made, and the volumes it created (the database volume only with `--confirm-database`). The images are kept, and the abort names them (`postgres:18`, `nginx:alpine`, the Dédalo image) with the `docker image rm` command that reclaims the space. A **completed** install is a live instance: `--abort` then undoes only the steps after `stack_engine` — it removes the `dedalo`, `nginx` and `backup` containers (and `certbot`), while PostgreSQL keeps running with the data — and `--resume` starts them again. See [Resume and abort](installer_reference.md#resuming-an-install-resume).
+`--abort` stops the stack and removes only what this install created: the files it wrote, the certificates it made, and the volumes it created (the database volume only with `--confirm-database`). The images are kept, and the abort names them (`postgres:18`, `nginx:alpine`, the Dédalo image) with the `docker image rm` command that reclaims the space. A **completed** install is a live instance: `--abort` then undoes only the steps after `stack_engine` — it removes the `dedalo`, `nginx` and `backup` containers (and `certbot`), while PostgreSQL keeps running with the data — and `--resume` starts them again. Removing a completed install is a job by hand: [Removing the stack](#removing-the-stack). See [Resume and abort](installer_reference.md#resuming-an-install-resume).
 
 A `--resume` runs in line mode, not on the full screen, and asks again on the terminal for the secrets the remaining steps need.
 
@@ -226,7 +226,7 @@ Then install with `--image-source custom --image-repository registry.example.org
 
 Building here needs this checkout and the network to fetch the base image, the system packages and the JavaScript dependencies. The first build is slow and parks several gigabytes of build cache (`docker builder prune -af` reclaims it once the build is done). Updates rebuild from the release's git tag, so the checkout must keep its git remote.
 
-The installer and every later update build the same way, through one builder: `deploy/dedalo-image-build.sh` archives the checkout's last commit (`git archive`) into `.dedalo-install/image-context`, builds that directory, and removes it afterwards. So the image carries **committed files only** — an uncommitted edit, an untracked file, `.dedalo.env` or a certificate never reach it — and it reports the version it is tagged with and the commit date, never `X.Y.Z.dev`. To build by hand, use the same command:
+The installer and every later update build the same way, through one builder: `deploy/dedalo-image-build.sh` archives the checkout's last commit (`git archive`) into `.dedalo-install/image-context`, builds that directory, and removes it afterwards. So the image carries **committed files only** — an uncommitted edit, an untracked file, `.dedalo.env` or a certificate never reach it — and it reports the version it is tagged with and the commit date, never `X.Y.Z.dev`. Its labels are its own: `org.opencontainers.image.version` is the tag and `org.opencontainers.image.revision` the commit, never the labels of the Bun base image it starts from. Its `/health` shows `install_digest: null`: that field names the release archive a tree update installed, and a local build has none. To build by hand, use the same command:
 
 ```shell
 ./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:7.0.1
@@ -435,6 +435,28 @@ On a host without systemd (a NAS, for instance), run the pass from the checkout 
 
 To turn it off: `sudo ./deploy/dedalo-image-updater.sh uninstall-units`.
 
+## Removing the stack
+
+An install that **failed or was interrupted** is undone with `sh install.sh --route docker --abort --confirm-database dedalo`: it removes what this install created and names the images it keeps.
+
+A **completed** install is a live instance, and `--abort` never takes it apart — it removes only the `dedalo`, `nginx`, `backup` (and `certbot`) containers, keeps PostgreSQL and the data, and names the images it keeps. To remove the instance, destroy it yourself. **Back up first** ([backups](#backups-from-a-container)): the volumes hold the database, the media and the secrets, and this deletes them:
+
+```shell
+ddc down -v
+rm .dedalo.env compose.override.yaml deploy/nginx.docker.generated.conf
+rm -r deploy/certs .dedalo-install
+```
+
+Check that nothing is left: `docker volume ls | grep dedalo_` prints nothing. The images and caches stay until you remove them — several gigabytes:
+
+```shell
+docker image rm <image>:<version> postgres:18 nginx:alpine   # add certbot/certbot with Let's Encrypt
+docker builder prune -af                                     # a local build's cache (about 3 GB)
+rm -rf ~/.cache/dedalo-install ~/.bun/install/cache          # the installer's Bun and its package cache
+```
+
+`docker image ls` names the Dédalo image (`localhost/dedalo` for a local build). Skip the last line if you use Bun for anything else. If the local CA's certificate is installed on staff computers, remove it from their trust stores too.
+
 ## Verify
 
 ```shell
@@ -463,7 +485,7 @@ Container-specific symptoms; installer refusals are in [Troubleshooting › Dock
 | `dedalo-image-update.sh` refuses: `.dedalo.env does not say where this installation's image comes from` | an installation from before the image pin | [add the keys once](#an-installation-from-before-the-image-pin) |
 | The panel shows the host updater as *not heard from recently* | its timer stopped, Docker or the host is down, or it was uninstalled | `systemctl status dedalo-image-updater.timer`, `journalctl -u dedalo-image-updater` |
 | Pages break in odd ways right after an update | a browser tab still holds the previous client | reload the page |
-| `failed to bind host port 0.0.0.0:80/tcp: address already in use` | a web server on the host already holds port 80 or 443 | stop it, or install with other ports |
+| `failed to bind host port 0.0.0.0:80/tcp: address already in use`, or `nginx is running but publishes no port for 443/tcp` | a web server on the host already holds port 80 or 443 | stop it (`sudo ss -tlnp` names it), then `--resume`: the installer recreates nginx with its ports. Or install with other ports |
 | `nginx -t`: `open() "/run/nginx.pid" failed (13: Permission denied)` | you ran the **host's** nginx | `ddc exec nginx nginx -t` |
 | Every request is a **502** | nginx cannot write to the socket | the socket volume must be shared — [problem 2](#2-the-socket-is-invisible-across-containers) |
 | The `dedalo` container restarts about once a minute; its log says `[boot] REFUSED — not installed` | `/private` is not on a volume, or the stack was started before the install | [problem 1](#1-the-private-directory-has-no-parent-to-live-in); otherwise run the installer |

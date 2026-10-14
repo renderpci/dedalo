@@ -43,7 +43,13 @@ import { execute, inCheckout, stackCreated } from './common.ts';
 import { dockerCommand, stackExec } from './compose.ts';
 import { dockerOf, STACK_BINARIES } from './facts.ts';
 import { imagePresentProbe, pinHolds, verifyImage } from './image_verify.ts';
-import { imageModeOf, imageRefOf, imageVerifyOf, LOCAL_REPOSITORY } from './layout.ts';
+import {
+	BUILD_DURATION,
+	imageModeOf,
+	imageRefOf,
+	imageVerifyOf,
+	LOCAL_REPOSITORY,
+} from './layout.ts';
 
 /**
  * THE local builder, shared with the image updater (C3-46 deferred half,
@@ -70,7 +76,7 @@ export function buildContextDir(ctx: HostPlanCtx): string {
  */
 function buildCommand(ctx: HostPlanCtx): ExecCommand {
 	const ref = imageRefOf(ctx.answers);
-	const label = `build ${ref} here from ${ctx.facts.sourceIsGit ? "a clean snapshot of this checkout's last commit (committed files only, stamped with that commit)" : 'this release tree'} (slow: the first build downloads the base image, the media toolchain and the dependencies — about 5 minutes on a fast machine, 15 or more on 2 CPUs; its steps are shown as they run)`;
+	const label = `build ${ref} here from ${ctx.facts.sourceIsGit ? "a clean snapshot of this checkout's last commit (committed files only, stamped with that commit)" : 'this release tree'} (the first build downloads the base image, the media toolchain and the dependencies: ${BUILD_DURATION}; its steps are shown as they run)`;
 	const options = { timeoutMs: 3 * 3600 * 1000, env: { BUILDKIT_PROGRESS: 'plain' } };
 	if (!ctx.facts.sourceIsGit) {
 		return dockerCommand(ctx, ['build', '--tag', ref, ctx.source], label, options);

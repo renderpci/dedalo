@@ -190,6 +190,11 @@ export interface ScreenView {
 	screen: Screen;
 	screens: readonly RouteScreen[];
 	seen: readonly ScreenId[];
+	/**
+	 * The seen screens whose check FAILED and was not kept untested — the rail
+	 * marks them failed, never done (campaign 3b N34). Absent: none.
+	 */
+	failed?: readonly ScreenId[];
 	/** The question id about to be asked; null while probing or between questions. */
 	focus: string | null;
 	probing: boolean;

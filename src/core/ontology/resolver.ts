@@ -29,7 +29,7 @@ import { createOntologyCache } from './cache_factory.ts';
 import { registerOntologyCacheClearer } from './cache_invalidation.ts';
 import { refuseLabelNode } from './label_node_guard.ts';
 import { retiredKeysOf } from './property_census.ts';
-import { retiredPropertyAnnouncements } from './retired_property_notice.ts';
+import { announceRetiredProperties } from './retired_property_notice.ts';
 import { getSectionIdFromTipo } from './tld.ts';
 
 /**
@@ -204,10 +204,8 @@ export async function getNode(tipo: string): Promise<ResolvedNode | null> {
  */
 function reportRetiredProperties(node: ResolvedNode): void {
 	// ONCE PER KEY per process (C3-72): ./retired_property_notice.ts.
-	const keys = retiredKeysOf(node.properties, { skipReportedAtUse: true });
-	for (const line of retiredPropertyAnnouncements(node.tipo, keys)) {
-		console.error(`[ontology/resolver] ${line}`);
-	}
+	// Diverted out of the operator's terminal while an install runs (C3-72).
+	announceRetiredProperties(node.tipo, retiredKeysOf(node.properties, { skipReportedAtUse: true }));
 }
 
 /**

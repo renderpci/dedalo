@@ -50,7 +50,7 @@ Choose **Trial** on the first screen and answer the screens in the terminal; `sh
 | --- | --- |
 | **Install type** | the route, and the acknowledgement that the trial has no media protection (type `yes`; the full screen also ticks it with Space) |
 | **System check** | nothing: it shows what this machine has (Docker, Compose, disk). A failed row must be fixed first |
-| **Image** | where the Dédalo image comes from: an **official** registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout. Its version is always the installer's own |
+| **Image** | where the Dédalo image comes from: an **official** registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout's last commit. **Image version** is the image tag: leave it empty for the installer's own version — the only one accepted besides its `-dev` tag, because the engine steps run inside the image with this installer's request format |
 | **Containers** | the published HTTP port (`80` by default) |
 | **Identity** | the institution's short code (`entity`) and full name, the install fingerprint (**Information** and **Info key** — keep the defaults), the locale and the time zone. The time zone stamps every database timestamp |
 | **Ontologies** | the domain ontologies: Oral history (`oh`) is built in and pre-ticked; others come from the update server, with what they declare. Also whether to use the official update servers |
@@ -69,12 +69,12 @@ Nothing has changed on the machine until you type `yes` here. The Review lists t
 | Step | What it does |
 | --- | --- |
 | `stack_preflight` | checks Docker, Compose v2, the free disk, that no Dédalo instance is already here (`dedalo_private` volume), that no stack files of an earlier install are left (`.dedalo.env`, `compose.override.yaml`), and the image source |
-| `stack_image` | pulls the image and verifies its signature and version label, or builds it here, printing each build step as it starts (a first build takes about 5 minutes on a fast machine, 15 or more on 2 CPUs) |
+| `stack_image` | pulls the image and verifies its signature and version label, or builds it here from a clean snapshot of the checkout's last commit (`deploy/dedalo-image-build.sh`: committed files only, the image labelled with its version), printing each build step as it starts (a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk) |
 | `stack_files` | writes `.dedalo.env` (`0600`, with the generated database password) and `compose.override.yaml` (plain HTTP only: no HTTPS port, no certificate volumes) into the checkout |
 | `stack_database` | starts PostgreSQL and waits for it |
 | `stack_engine` | runs the engine steps inside the container: the database seed, the ontologies, the thesauri, the tools, the `root` password |
-| `stack_up` | starts the engine, waits for it, then starts the rest of the stack, and waits for nginx to stay up (its configuration accepted) |
-| `stack_health` | `/health` on the engine's socket and through nginx over plain HTTP, and the reminder that there is no media protection |
+| `stack_up` | starts the engine, waits for it, then starts the rest of the stack — nginx always in a new container — and waits for nginx to stay up: its configuration accepted and its HTTP port published |
+| `stack_health` | `/health` on the engine's socket and through nginx over plain HTTP, and the reminder that there is no media protection. A `--resume` probes it again, even when an earlier run recorded it done |
 
 At the Review, `write <path>` (or **w** on the full screen) saves your answers as an answers file instead, with no secret in it; `sh install.sh --answers <file>` installs from it later. That run asks nothing: give it the `root` password in `DEDALO_INSTALL_ROOT_PASSWORD`, or on standard input with `--secrets-stdin` ([Secrets](installer_reference.md#secrets)).
 
@@ -124,6 +124,16 @@ rm -r .dedalo-install
 ```
 
 Check that nothing is left: `docker volume ls | grep dedalo_` prints nothing.
+
+The images and caches stay on the machine until you remove them — several gigabytes:
+
+```shell
+docker image rm localhost/dedalo:<version> postgres:18 nginx:alpine   # or the official image you pulled
+docker builder prune -af                                             # a local build's cache (about 3 GB)
+rm -rf ~/.cache/dedalo-install ~/.bun/install/cache                  # the installer's Bun and its package cache
+```
+
+`docker image ls` names the Dédalo image the trial ran. Skip the last line if you use Bun for anything else.
 
 ## Moving on from a trial
 

@@ -333,7 +333,9 @@ describe('install resume drill', () => {
 
 			const resumed = runCli(dirA, ['--resume']);
 			expect(resumed.exitCode, resumed.out).toBe(0);
-			expect(resumed.out).toContain('install already complete — every step verified');
+			expect(resumed.out).toContain(
+				'install already complete — every done step that has a check was verified again',
+			);
 			// It ran nothing: every step still has its one attempt.
 			for (const [step, record] of Object.entries(readState(dirA).steps)) {
 				expect(record.attempts, step).toBe(1);

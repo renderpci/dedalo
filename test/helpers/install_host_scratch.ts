@@ -46,11 +46,14 @@ import { instancePaths } from '../../src/core/install/host/layout.ts';
 import { OS_ROWS, type OsRowId, osRowById } from '../../src/core/install/host/os_support.ts';
 import { fcontextEscape } from '../../src/core/install/host/production/selinux.ts';
 import {
+	type CommandRunner,
 	type RecordedRequest,
 	type RecordedResponse,
 	scratchRunner,
 } from '../../src/core/install/host/runner.ts';
 import { pendingStackFacts, type StackFacts } from '../../src/core/install/host/stack/facts.ts';
+import { IMAGE_BUILDER } from '../../src/core/install/host/stack/image.ts';
+import { stackPlanFacts } from '../../src/core/install/host/stack/preflight.ts';
 import { ROOT_RUN_SCRIPTS } from '../../src/core/install/host/systemd/render.ts';
 import { buildInstallPlan, type InstallPlan } from '../../src/core/install/install_plan.ts';
 import type { RunIo } from '../../src/core/install/run_events.ts';
@@ -756,7 +759,8 @@ export function stackPlanCtx(
 	const plan = buildInstallPlan(raw, { rootPassword: ROOT_PASSWORD, requireRootPassword: true });
 	if (plan.errors.length > 0)
 		throw new Error(`scratch stack plan refused: ${plan.errors.join('; ')}`);
-	const facts: HostFacts = { ...pendingFacts(), stack: scratchStackFacts() };
+	// The run's own derivation (sourceIsGit picks stack_image's builder — campaign 3b N1).
+	const facts: HostFacts = stackPlanFacts(scratchStackFacts(), source);
 	return {
 		plan: buildPlanFile(plan, SECRETS),
 		answers: plan.answers,
@@ -803,13 +807,21 @@ export function transcriptIo(transcript: RunTranscript, terminal = true): RunIo 
 export async function runHost(
 	host: ScratchHost,
 	request: HostExecutorRequest,
-	options: { now?: () => number; terminal?: boolean } = {},
+	options: {
+		now?: () => number;
+		terminal?: boolean;
+		/** Wrap the scratch runner (a gate that acts when a command runs — a Ctrl-C at the engine child). */
+		wrapRunner?: (runner: CommandRunner) => CommandRunner;
+		/** The transcript to write into (a gate reads it even when the run never returns). */
+		transcript?: RunTranscript;
+	} = {},
 ): Promise<{ outcome: HostExecutorOutcome; transcript: RunTranscript }> {
 	const marker = join(host.root, SCRATCH_DIR);
-	const transcript: RunTranscript = { lines: [], told: [], shown: [] };
+	const transcript: RunTranscript = options.transcript ?? { lines: [], told: [], shown: [] };
 	const io = transcriptIo(transcript, options.terminal ?? true);
+	const runner = scratchRunner(marker);
 	const outcome = await executeHostInstall(request, io, {
-		runner: scratchRunner(marker),
+		runner: options.wrapRunner === undefined ? runner : options.wrapRunner(runner),
 		fs: hostFs(host.root, join(marker, 'owners.json')),
 		source: host.source,
 		skipPrivilegeCheck: true,
@@ -992,6 +1004,12 @@ export function composePrefix(route: 'docker' | 'trial'): string {
 	return `${DOCKER} compose -f ${stack} -f compose.override.yaml --env-file .dedalo.env`;
 }
 
+/** The PortBindings nginx's container declares on a route (trial: HTTP only). */
+export function nginxPorts(route: 'docker' | 'trial'): Record<string, unknown[]> {
+	const http = { '80/tcp': [{ HostIp: '', HostPort: '80' }] };
+	return route === 'trial' ? http : { ...http, '443/tcp': [{ HostIp: '', HostPort: '443' }] };
+}
+
 /**
  * What the operator's docker, cosign and curl answer: Compose v2, a daemon, a
  * big disk, an UNRELATED `dedalo_unrelated` volume (an abort must never take
@@ -1031,6 +1049,12 @@ export function stackResponses(
 		{
 			match: `${DOCKER} image inspect --format {{.Id}}`,
 			after: `${DOCKER} build`,
+			stdout: 'sha256:abc\n',
+		},
+		// a checkout's build: the shared builder (campaign 3b N1)
+		{
+			match: `${DOCKER} image inspect --format {{.Id}}`,
+			after: `/bin/bash ${join(REPO_ROOT, IMAGE_BUILDER)}`,
 			stdout: 'sha256:abc\n',
 		},
 		{ match: `${DOCKER} image inspect --format {{.Id}}`, exit: 1 },
@@ -1076,6 +1100,17 @@ export function stackResponses(
 		{ match: `${compose} ps --services --status running`, stdout: 'postgres\ndedalo\nnginx\n' },
 		// stack_up: nginx settled — its container, running and not restarting (C3-8).
 		{ match: `${compose} ps -q nginx`, stdout: 'scratch-nginx-id\n' },
+		// …publishing every port it declares (campaign 3b N2).
+		{
+			match: `${DOCKER} inspect --format {{json .HostConfig.PortBindings}}`,
+			stdout: `${JSON.stringify(nginxPorts(route))}\n`,
+		},
+		{
+			match: `${DOCKER} port scratch-nginx-id`,
+			stdout: Object.keys(nginxPorts(route))
+				.map((port) => `${port} -> 0.0.0.0:${port.split('/')[0]}\n`)
+				.join(''),
+		},
 		{
 			match: `${DOCKER} inspect --format {{.State.Status}} {{.RestartCount}}`,
 			stdout: 'running 0\n',

@@ -31,7 +31,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { HostCtx, HostPlanCtx, HostRunResult, HostStepDefinition } from '../contract.ts';
-import { pendingFacts } from '../facts.ts';
+import { type HostFacts, pendingFacts } from '../facts.ts';
 import { ran } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
 import { checkCertificateFiles } from '../tls_files.ts';
@@ -187,23 +187,31 @@ function imageProblems(ctx: HostPlanCtx, facts: StackFacts): string[] {
 	];
 }
 
-/** The institution's own certificate, checked before it is copied. */
-function tlsVerdict(ctx: HostCtx): { problems: string[]; warnings: string[] } {
-	const { answers } = ctx;
+/**
+ * The institution's own certificate, checked before it is copied — by the
+ * preflight (a refusal), and on the Review (campaign 3b N8: an untrusted chain
+ * was accepted by the TLS screen and the Review and refused only after `yes`,
+ * every answer lost; the Review now lists it under TO DO, before `yes`).
+ */
+export function stackTlsVerdict(
+	answers: HostPlanCtx['answers'],
+	fs: Pick<HostCtx['fs'], 'readText'>,
+	now: number,
+): { problems: string[]; warnings: string[] } {
 	if (answers.route !== 'docker' || answers.tls_mode !== 'files') {
 		return { problems: [], warnings: [] };
 	}
-	const fullchain = ctx.fs.readText(answers.tls_cert_path);
+	const fullchain = fs.readText(answers.tls_cert_path);
 	const verdict = checkCertificateFiles(
 		fullchain,
-		ctx.fs.readText(answers.tls_key_path),
+		fs.readText(answers.tls_key_path),
 		answers.server_name,
-		ctx.now(),
+		now,
 	);
 	// The install's last step probes the site with THIS machine's curl (C3-13).
 	const trust = chainTrustVerdict(
 		fullchain,
-		SYSTEM_CA_BUNDLES.map((path) => ctx.fs.readText(path)),
+		SYSTEM_CA_BUNDLES.map((path) => fs.readText(path)),
 	);
 	return {
 		problems: [...verdict.problems, ...(trust.problem === null ? [] : [trust.problem])].map(
@@ -213,14 +221,40 @@ function tlsVerdict(ctx: HostCtx): { problems: string[]; warnings: string[] } {
 	};
 }
 
+/** The Review's TO DO lines of a stack plan: the institution certificate's problems and warnings. */
+export function stackReviewTodo(
+	ctx: HostPlanCtx,
+	fs: Pick<HostCtx['fs'], 'readText'>,
+	now: number,
+): string[] {
+	const { problems, warnings } = stackTlsVerdict(ctx.answers, fs, now);
+	return [
+		...problems,
+		...warnings.map((line) => `certificate ${ctx.answers.tls_cert_path}: ${line}`),
+	];
+}
+
 /** Refuse with every problem, joined (the operator fixes them all in one pass). */
 function refuseAll(problems: readonly string[]): void {
 	if (problems.length > 0) hostRefuse('install.state_conflict', problems.join('; '));
 }
 
+/**
+ * The facts of a docker/trial plan: no host facts, the stack's — and whether
+ * the source is a git checkout, which picks stack_image's builder (the shared
+ * clean-snapshot builder for a checkout, a plain build of a release tree).
+ * Campaign 3b N1: this was left at the pending `false` on the stack routes, so
+ * every install-time build took the working tree as it was (`X.Y.Z.dev`,
+ * uncommitted files included). ONE function for the run, its frozen digest and
+ * the Review.
+ */
+export function stackPlanFacts(stack: StackFacts, source: string): HostFacts {
+	return { ...pendingFacts(), sourceIsGit: existsSync(join(source, '.git')), stack };
+}
+
 /** The facts a plan context carries once they are frozen. */
 function withFacts(ctx: HostCtx, facts: StackFacts): HostPlanCtx {
-	return { ...ctx, facts: { ...pendingFacts(), stack: facts } };
+	return { ...ctx, facts: stackPlanFacts(facts, ctx.source) };
 }
 
 /** The measured machine's refusals (each sentence once) and warnings — read-only. */
@@ -230,7 +264,7 @@ async function evaluateStack(
 	const facts = await gatherStackFacts(ctx.runner, ctx.fs);
 	const docker = dockerProblems(facts);
 	if (docker.length > 0) return { facts, problems: docker, warnings: [] };
-	const tls = tlsVerdict(ctx);
+	const tls = stackTlsVerdict(ctx.answers, ctx.fs, ctx.now());
 	const problems = [
 		...machineProblems(facts),
 		...instanceProblems(ctx, facts),

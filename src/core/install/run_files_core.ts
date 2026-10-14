@@ -245,6 +245,13 @@ export interface StepRecord {
 	message: string | null;
 	warnings: string[];
 	error: { code: string; message: string } | null;
+	/**
+	 * What the step TOLD the operator (a host step's to-do: the firewall, the
+	 * modules, the outside check) — kept so the closing To-do of a run that
+	 * completes the install through --resume lists every step's, not only the
+	 * ones that ran in that process (campaign 3b N19). Absent: none.
+	 */
+	told?: string[];
 }
 
 export interface RunRecord {

@@ -48,6 +48,7 @@ import {
 	reviewDecisions,
 	writeAnswersFile,
 } from './front_end.ts';
+import { BUILD_DURATION } from './host/stack/layout.ts';
 import {
 	INSTALL_ANSWER_KEYS,
 	type InstallAnswers,
@@ -235,7 +236,9 @@ interface Session {
 	acknowledged: Set<string>;
 	probes: Partial<Record<ProbeId, ProbeOutcome>>;
 	/** The inputs each recorded verdict was taken over (PROBE_INPUTS) — a hash, never a secret. */
-	probeKeys: Partial<Record<ProbeId, string>>;
+	probeKeys: Partial<Record<ProbeId, string[]>>;
+	/** The inputs whose change dropped each verdict (named by the re-check — N27). */
+	changedSince: Partial<Record<ProbeId, string[]>>;
 	catalog: InstallCatalogs['ontology'];
 	/** The (update_servers, ontology_source) the catalog was read for. */
 	catalogKey: string | null;
@@ -291,10 +294,22 @@ function viewOf(session: Session, id: ScreenId, focus: string | null, probing = 
 			placeholder: item.placeholder !== undefined,
 		})),
 		seen: [...session.seen],
+		failed: failedScreens(session),
 		focus,
 		probing,
 		route: typeof session.raw.route === 'string' ? routeOf(session) : null,
 	};
+}
+
+/** The screens whose gating check failed and stands unacknowledged (the rail's ✗ — N34). */
+function failedScreens(session: Session): ScreenId[] {
+	return (Object.entries(session.probes) as [ProbeId, ProbeOutcome | undefined][])
+		.filter(([, outcome]) => outcome !== undefined && !outcome.ok)
+		.map(([probe]) => PROBE_SCREEN[probe])
+		.filter(
+			(screen): screen is ScreenId =>
+				screen !== undefined && !session.acknowledged.has(`${screen}.probe_override`),
+		);
 }
 
 /** The route chosen so far (the model's own reading of the answers). */
@@ -312,26 +327,44 @@ function invalidateProbe(session: Session, screenId: ScreenId): void {
 	session.acknowledged.delete(`${screenId}.probe_override`);
 }
 
-/** The hash of what `probe` would test NOW (PROBE_INPUTS over the normalized answers). */
-function probeInputKey(session: Session, probe: ProbeId): string {
+/**
+ * What `probe` would test NOW, input by input (PROBE_INPUTS over the normalized
+ * answers): one hash per answer key, then the secret's — a hash, never a value.
+ */
+function probeInputKey(session: Session, probe: ProbeId): string[] {
 	const answers = normalizeInstallAnswers(session.raw).answers as unknown as Record<
 		string,
 		unknown
 	>;
 	const inputs = PROBE_INPUTS[probe];
 	const secret = inputs.secret === undefined ? '' : (session.secrets[inputs.secret] ?? '');
-	return String(Bun.hash(JSON.stringify([inputs.keys.map((key) => answers[key] ?? null), secret])));
+	const hashOf = (value: unknown): string => String(Bun.hash(JSON.stringify(value)));
+	return [...inputs.keys.map((key) => hashOf(answers[key] ?? null)), hashOf(secret)];
+}
+
+/** The inputs of `probe` that changed between two input keys (an answer key, or `password`). */
+function changedInputs(
+	probe: ProbeId,
+	before: readonly string[],
+	now: readonly string[],
+): string[] {
+	const names = [...PROBE_INPUTS[probe].keys, 'password'];
+	return names.filter((_name, index) => before[index] !== now[index]);
 }
 
 /**
  * Drop every verdict (and its acknowledged override) whose inputs changed
- * since it was taken — wherever the change was answered.
+ * since it was taken — wherever the change was answered — remembering WHICH
+ * inputs changed (the re-check says so — campaign 3b N27).
  */
 function dropStaleVerdicts(session: Session): void {
 	for (const probe of Object.keys(session.probeKeys) as ProbeId[]) {
-		if (session.probeKeys[probe] === probeInputKey(session, probe)) continue;
+		const now = probeInputKey(session, probe);
+		const changed = changedInputs(probe, session.probeKeys[probe] ?? [], now);
+		if (changed.length === 0) continue;
 		const screen = PROBE_SCREEN[probe];
 		if (screen !== undefined) invalidateProbe(session, screen);
+		session.changedSince[probe] = changed;
 	}
 }
 
@@ -555,6 +588,7 @@ async function probeOutcome(
 	if (isNav(outcome)) return outcome;
 	session.probes[probe] = outcome;
 	session.probeKeys[probe] = key;
+	delete session.changedSince[probe];
 	return outcome;
 }
 
@@ -667,6 +701,8 @@ async function probeRound(
 		session.deps.prompter.say(lines);
 		return 'next';
 	}
+	// The screen as it now stands — its check failed (the rail marks it so — N34).
+	session.deps.prompter.view(viewOf(session, screen.id, null));
 	const view = probeView(session, screen, probe, outcome, lines);
 	const command = await session.deps.prompter.probe(view);
 	if (isNav(command)) return command;
@@ -758,6 +794,24 @@ function fieldBack(session: Session, done: Set<string>, pass: string[]): Nav | n
 	return null;
 }
 
+/** What one answer leaves the screen: null = go on asking; else what ends the pass. */
+function settleAnswer(
+	session: Session,
+	id: ScreenId,
+	answered: { done: Set<string>; pass: string[]; question: Question; before: string },
+	outcome: 'ok' | 'again' | Nav,
+): 'ok' | 'again' | Nav | null {
+	if (outcome === FIELD_BACK) return fieldBack(session, answered.done, answered.pass);
+	// A navigation (back, quit) answered nothing: the question stays pending, so
+	// coming back to the screen asks it (campaign 3b N37 — `back` from Image
+	// source recorded it asked, and the step came back without its question).
+	if (isNav(outcome)) return outcome;
+	recordAsked(session, answered.done, answered.pass, answered.question);
+	if (fingerprint(session) !== answered.before) invalidateProbe(session, id);
+	dropStaleVerdicts(session);
+	return outcome === 'ok' ? null : outcome;
+}
+
 /** Ask every pending question of the screen; answers 'ok' or what interrupted it. */
 async function askScreen(
 	session: Session,
@@ -773,17 +827,36 @@ async function askScreen(
 		session.deps.prompter.view(viewOf(session, id, question.id));
 		const before = fingerprint(session);
 		const outcome = await askQuestion(session, id, question);
-		if (outcome === FIELD_BACK) {
-			const back = fieldBack(session, done, pass);
-			if (back === null) continue;
-			return back;
-		}
-		recordAsked(session, done, pass, question);
-		if (fingerprint(session) !== before) invalidateProbe(session, id);
-		dropStaleVerdicts(session);
-		if (outcome !== 'ok') return outcome;
+		const ended = settleAnswer(session, id, { done, pass, question, before }, outcome);
+		if (ended !== null) return ended;
 	}
 	return 'ok';
+}
+
+/** The screen to run and what counts as asked in this pass, or null (absent, or skipped). */
+function enterScreen(
+	session: Session,
+	id: ScreenId,
+	mode: 'all' | 'new',
+): { first: Screen; done: Set<string> } | null {
+	// Visited again in full (back, edit): its check runs again, never a cached verdict
+	// shown twice (campaign 3b N37 — the Docker daemon stopped meanwhile read "answers").
+	if (mode === 'all') invalidateProbe(session, id);
+	const first = screenOf(session, id);
+	if (first === undefined) return null;
+	const done = new Set(mode === 'new' ? session.asked : []);
+	return skipped(session, first, mode, done) ? null : { first, done };
+}
+
+/**
+ * A screen is entered: seen, and shown CURRENT before anything is asked or
+ * checked (campaign 3b N34: a screen without questions kept the previous
+ * screen current on the rail while its check ran).
+ */
+function showScreen(session: Session, screen: Screen): void {
+	session.seen.add(screen.id);
+	session.deps.prompter.view(viewOf(session, screen.id, null));
+	session.deps.prompter.screen(screen);
 }
 
 /**
@@ -797,12 +870,10 @@ async function runScreen(
 	id: ScreenId,
 	mode: 'all' | 'new',
 ): Promise<'next' | 'again' | Nav> {
-	const first = screenOf(session, id);
-	if (first === undefined) return 'next';
-	const done = new Set(mode === 'new' ? session.asked : []);
-	if (skipped(session, first, mode, done)) return 'next';
-	session.seen.add(id);
-	session.deps.prompter.screen(first);
+	const entered = enterScreen(session, id, mode);
+	if (entered === null) return 'next';
+	const { first, done } = entered;
+	showScreen(session, first);
 	const asked = await askScreen(session, id, done);
 	if (asked !== 'ok') return asked;
 	const screen = screenOf(session, id);
@@ -841,7 +912,7 @@ async function walk(
 const IMAGE_SENTENCE: Readonly<Record<string, string>> = Object.freeze({
 	official: 'pulls the official image and verifies its signature',
 	custom: 'pulls the image from your registry',
-	build: 'builds the image here from this checkout (10 to 20 minutes)',
+	build: `builds the image here from this checkout's last commit (${BUILD_DURATION})`,
 });
 
 /** What `install` will do, in one sentence per route (a stack: per image source). */
@@ -928,6 +999,28 @@ function installOffered(session: Session, plan: InstallPlan): boolean {
 	);
 }
 
+/** An answer key as the screens name it (its question's label), else the key itself. */
+function inputLabel(session: Session, key: string): string {
+	if (key === 'password') return 'the password';
+	const question = screensOf(session)
+		.flatMap((screen) => screen.questions)
+		.find((item) => item.key === key);
+	return question?.label ?? key;
+}
+
+/**
+ * Why a gate is checked again, naming the answers that changed (campaign 3b
+ * N27: "the answers changed what 'Identity' checked" read as if the root
+ * password did — it was the Web server, answered on a later screen).
+ */
+function recheckLine(session: Session, screen: Screen): string {
+	const probe = SCREEN_PROBE[screen.id];
+	const changed = probe === undefined ? [] : (session.changedSince[probe] ?? []);
+	if (changed.length === 0) return `checking '${screen.title}' before the Review`;
+	const names = changed.map((key) => inputLabel(session, key)).join(', ');
+	return `the answers changed what '${screen.title}' checked (${names}): checking again`;
+}
+
 /**
  * Before the Review: a gate whose verdict an edit made stale (or that never
  * ran) is checked again — the walk from its screen re-runs the probe (nothing
@@ -939,9 +1032,7 @@ async function recheckGates(session: Session): Promise<'review' | 'quit'> {
 		const stale = firstUnprovenGate(session);
 		if (stale === undefined) return 'review';
 		const index = screensOf(session).findIndex((screen) => screen.id === stale.id);
-		session.deps.prompter.say([
-			`the answers changed what '${stale.title}' checked: checking again`,
-		]);
+		session.deps.prompter.say([recheckLine(session, stale)]);
 		if ((await walk(session, index, 'new')) === 'quit') return 'quit';
 	}
 	return 'quit';
@@ -1208,6 +1299,7 @@ function newSession(deps: InteractiveDeps): Session {
 		acknowledged: new Set(),
 		probes: {},
 		probeKeys: {},
+		changedSince: {},
 		catalog: { catalog: null, ok: true, detail: '' },
 		catalogKey: null,
 		asked: new Set(),
