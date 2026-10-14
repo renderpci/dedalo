@@ -41,6 +41,16 @@
 		// a bar with no usable denominator is hidden rather than drawn at 0%: an
 		// empty track here would read as "nothing has happened", when the truth
 		// is "no estimate to measure against"
+		// progress left, time remaining right; wraps under it on a phone
+		.dsc_rollup_captions {
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: space-between;
+			gap: 0.2rem 1rem;
+		}
+		.dsc_rollup_remaining {
+			font-variant-numeric: tabular-nums;
+		}
 		.dsc_rollup_bar.hide {
 			display: none;
 		}

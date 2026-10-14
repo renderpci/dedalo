@@ -15935,6 +15935,15 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.diffusion_server_control .diffusion_server_control_rollup .dsc_rollup_progress.hide {
   display: none;
 }
+.wrapper_widget.diffusion_server_control .diffusion_server_control_rollup .dsc_rollup_captions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.2rem 1rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_rollup .dsc_rollup_remaining {
+  font-variant-numeric: tabular-nums;
+}
 .wrapper_widget.diffusion_server_control .diffusion_server_control_rollup .dsc_rollup_bar.hide {
   display: none;
 }

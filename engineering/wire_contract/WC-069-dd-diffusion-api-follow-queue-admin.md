@@ -136,3 +136,17 @@ shape is FOR, and a future editor reading only the wire half would not see them.
   (client + host + honesty + motion halves) and
   `test/unit/diffusion_queue_stream.test.ts` (the aggregate's three honesty
   rules, asserted on the pure model).
+
+## Addendum 2026-10-14 — a measured time remaining
+
+- **Supersedes "there is deliberately no time-remaining figure anywhere".** The
+  rollup band shows `~N min remaining (estimated)`. It is MEASURED in the
+  browser: counter movement over the wall clock per running job, over a 5-minute
+  window (`time_remaining_model.js`). It is never derived from `total_ms`
+  (cumulative elapsed, the basis tool_diffusion's deleted estimate used).
+  Concurrent jobs → the longest one; no figure until a job has been watched long
+  enough for its counter to move. No wire change: it reads the existing
+  `counter`/`total`/`job_id`.
+- Gate: the `diffusion_queue_stream_tripwire` honesty leg (the estimate lives only
+  in `time_remaining_model.js`, which must not read `total_ms`/`started_at`) +
+  the model legs in `diffusion_queue_stream.test.ts`.

@@ -70,9 +70,11 @@ export const format_int = function(value) {
 *   - an overrun is REPORTED as 'Estimate exceeded' rather than clamped into a
 *     plausible-looking number, because a silently-capped 100% bar that keeps
 *     running is the exact lie this label exists to prevent;
-*   - there is deliberately NO time-remaining figure. The engine reports
-*     cumulative elapsed, not per-record, so any ETA derived from it would be
-*     wrong — tool_diffusion deleted its own estimate for this reason.
+*   - no time-remaining figure is derived HERE. The engine reports cumulative
+*     elapsed, not per-record, so an estimate built from it would be wrong
+*     (tool_diffusion deleted its own for this reason). The rollup's time
+*     remaining is MEASURED client-side from counter movement instead — see
+*     time_remaining_model.js.
 *
 * Terminal jobs get no bar at all: the State column already carries the verdict,
 * and a coloured bar on every finished row spends the whole colour budget on

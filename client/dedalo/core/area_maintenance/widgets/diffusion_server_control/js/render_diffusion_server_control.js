@@ -767,7 +767,7 @@ const build_jobs_block = function(self, value, parent) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note diffusion_server_control_estimate_note',
-			inner_html		: 'Percentages use the record estimate supplied when each job was queued — the server never re-counts. "Estimate exceeded" means a job has already processed more records than it estimated; it is not an error.',
+			inner_html		: 'Percentages use the record estimate supplied when each job was queued — the server never re-counts. "Estimate exceeded" means a job has already processed more records than it estimated; it is not an error. The time remaining is measured in this browser from how fast each running job has advanced over the last few minutes, so it needs a few seconds of live updates before it appears, and queued jobs are not included.',
 			parent			: jobs_block
 		})
 	}

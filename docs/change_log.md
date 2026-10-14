@@ -1401,6 +1401,15 @@ Merged since the last release; these ship with the next one.
 
     The *Job queue* table of the *Diffusion engine & queue* maintenance panel has a new *User* column with the name of the user who launched each publication (or the user id when the account has no name), so an administrator can tell whose job is running or waiting before cancelling it.
 
+- **The publication server panel shows an estimated time remaining for the running jobs.**
+
+    In Maintenance → Diffusion server control, the *Live activity* band now shows next
+    to the progress bar roughly how long it will be until the running publication jobs
+    finish (for example "~12 min remaining (estimated)"). It is measured in your browser
+    from how fast each running job has moved over the last few minutes. It appears a few
+    seconds after live updates start, grows if a job stalls, and leaves out queued jobs and
+    jobs queued without a record estimate.
+
 - **The publication tool names the target database of an SQL publication.**
 
     Each SQL panel of the publication tool now shows a *Database* row: the MariaDB database the records are published into, which is also the database the *Connection status* refers to. The panel's *Name* row reads *Table name*, because for SQL it is the target table. Panels for other types (RDF, XML…) are unchanged.
