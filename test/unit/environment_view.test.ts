@@ -51,9 +51,24 @@ function normaliseRss(value: unknown): unknown {
 	if (typeof value === 'string') return RSS_SAMPLE.test(value) ? '<n>M rss' : value;
 	if (Array.isArray(value)) return value.map(normaliseRss);
 	if (value !== null && typeof value === 'object') {
-		return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, normaliseRss(v)]));
+		return Object.fromEntries(
+			Object.entries(value).map(([k, v]) => [
+				k,
+				k === COUNTDOWN_KEY && typeof v === 'number' ? '<seconds left>' : normaliseRss(v),
+			]),
+		);
 	}
 	return value;
+}
+
+/** A live countdown (whole seconds to the session's absolute cap): two reads a second apart differ by one. */
+const COUNTDOWN_KEY = 'dedalo_session_absolute_expires_in';
+
+/** Every value of `key` anywhere in `value`. */
+function valuesOf(value: unknown, key: string): unknown[] {
+	if (Array.isArray(value)) return value.flatMap((item) => valuesOf(item, key));
+	if (value === null || typeof value !== 'object') return [];
+	return Object.entries(value).flatMap(([k, v]) => (k === key ? [v] : valuesOf(v, key)));
 }
 
 describe('environment diagnostic view (dedicated GET, session-gated)', () => {
@@ -83,6 +98,15 @@ describe('environment diagnostic view (dedicated GET, session-gated)', () => {
 		// The payload DOES carry an RSS sample (else the normalisation hides nothing and
 		// proves nothing) — and only the sample is normalised.
 		expect(JSON.stringify(body)).toMatch(/"\d+M rss"/);
+		// The countdown is compared within the second the two reads may straddle.
+		const served = valuesOf(body, COUNTDOWN_KEY);
+		const built = valuesOf(expected, COUNTDOWN_KEY);
+		expect(served.length).toBeGreaterThan(0);
+		expect(served.length).toBe(built.length);
+		served.forEach((seconds, index) => {
+			expect(typeof seconds).toBe('number');
+			expect(Math.abs((seconds as number) - (built[index] as number))).toBeLessThanOrEqual(1);
+		});
 		expect(normaliseRss(body)).toEqual(normaliseRss(expected));
 	});
 });
