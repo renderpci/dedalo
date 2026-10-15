@@ -120,10 +120,25 @@
 						visibility: hidden; // initially hidden
 
 						// icon calendar
+						// The <a> owns the click guard (render_button_calendar),
+						// so it fills the WHOLE trigger: a click on the
+						// container's padding ring would otherwise bubble to the
+						// wrapper and close the picker it opened. It inherits the
+						// ring as its own padding and the mask stays in the
+						// content box at its own 1em, so the icon is unchanged.
 						>.calendar {
 							opacity: 0.6;
 							margin: 0px;
-							padding: 0px;
+							position: absolute;
+							inset: 0;
+							width: auto;
+							height: auto;
+							box-sizing: border-box;
+							padding: inherit;
+							-webkit-mask-origin: content-box;
+									mask-origin: content-box;
+							-webkit-mask-size: 1em; // the icon's own width (was the <a>'s)
+									mask-size: 1em;
 						}
 					}
 

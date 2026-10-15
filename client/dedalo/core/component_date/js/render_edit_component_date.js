@@ -1286,13 +1286,6 @@ const render_button_calendar = function () {
 			e.preventDefault()
 			e.stopPropagation()
 		})
-		// click event. Without stopping it, the click bubbles to the component
-		// wrapper, which ACTIVATES the component; the activation auto-focuses the
-		// first input (ui.js) and that closes the picker the same click opened —
-		// the calendar flashed and the trigger read as dead.
-		button_calendar_container.addEventListener('click', function(e) {
-			e.stopPropagation()
-		})
 
 	// button_calendar
 		const button_calendar = ui.create_dom_element({
@@ -1301,6 +1294,15 @@ const render_button_calendar = function () {
 			parent			: button_calendar_container
 		})
 		button_calendar.tabIndex = -1;
+		// click event. Without stopping it, the click bubbles to the component
+		// wrapper, which ACTIVATES the component; the activation auto-focuses the
+		// first input (ui.js) and that closes the picker the same click opened —
+		// the calendar flashed and the trigger read as dead. Guarded on the <a>
+		// (not the container): its ::after hit area (component_date.less) covers
+		// the whole container, so every click on the trigger lands here.
+		button_calendar.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
 
 
 	return button_calendar_container

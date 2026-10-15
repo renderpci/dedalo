@@ -22237,7 +22237,16 @@ body.inspector_resizing {
 .component_date > .content_data > .content_value > .input-group .button_container.button_calendar_container > .calendar {
   opacity: 0.6;
   margin: 0px;
-  padding: 0px;
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  box-sizing: border-box;
+  padding: inherit;
+  -webkit-mask-origin: content-box;
+  mask-origin: content-box;
+  -webkit-mask-size: 1em;
+  mask-size: 1em;
 }
 .component_date > .content_data > .content_value > .input-group .button_container.button_remove_container {
   right: 1.2rem;

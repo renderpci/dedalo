@@ -2,6 +2,7 @@
 /*global it, describe, assert */
 /*eslint no-undef: "error"*/
 
+import { a11y } from '../../../core/common/js/a11y.js';
 import * as touch_pick from '../../../core/common/js/touch_pick.js';
 import {
 	render_add_field_button,
@@ -117,9 +118,12 @@ describe('SEARCH_PHONE : tap-to-add replaces the field drag on a phone', () => {
 	it('the "+" adds once and eats the row click (drill)', () => {
 		let adds = 0;
 		let row_clicked = false;
+		// the row is an activable drill target, like the real field rows
 		const row = document.createElement('li');
-		row.addEventListener('click', () => {
-			row_clicked = true;
+		a11y.make_activable(row, {
+			on_activate: () => {
+				row_clicked = true;
+			},
 		});
 		const button = render_add_field_button({
 			label: 'Add field',
