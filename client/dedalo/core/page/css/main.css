@@ -9039,15 +9039,31 @@ body:has(.component_av.view_viewer) {
   min-width: 110px;
 }
 .wrapper_search > .search_global_container > .wrapper_sections_selector > .typology_selector {
-  width: 10rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.wrapper_search > .search_global_container > .wrapper_sections_selector > .wrapper_sections_selector_ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 .wrapper_search > .search_global_container > .wrapper_sections_selector > .wrapper_sections_selector_ul > li {
-  display: inline-block;
+  display: block;
+  width: auto;
+  margin: 0;
   height: auto;
   font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+.wrapper_search > .search_global_container > .wrapper_sections_selector > .wrapper_sections_selector_ul > li > label {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.33rem;
 }
 .wrapper_search > .search_global_container > .wrapper_sections_selector > .wrapper_sections_selector_ul > li > label > input {
-  margin-right: 0.33rem;
+  margin: 0.2em 0 0 0;
+  flex: none;
 }
 .wrapper_search > .search_global_container .search_container_selection_presets {
   background-color: var(--color_grey_15);
@@ -10730,21 +10746,23 @@ body:has(.component_av.view_viewer) {
 .wrapper_service_autocomplete > .options_hidden ul.filter_node {
   background-color: var(--color_grey_11);
   border-bottom: 1px solid var(--color_white);
-  display: table;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+  column-gap: 0.5em;
+  row-gap: 1px;
   padding: 0.5em;
   width: 100%;
 }
 .wrapper_service_autocomplete > .options_hidden ul.filter_node > li {
-  display: inline-block;
+  display: block;
+  min-width: 0;
   color: var(--fg_default);
-  margin-top: 1px;
   overflow: hidden;
   padding: 0.25em;
   white-space: nowrap;
-  width: 50%;
 }
 .wrapper_service_autocomplete > .options_hidden ul.filter_node > li.all_selector {
-  width: 100%;
+  grid-column: 1 / -1;
 }
 .wrapper_service_autocomplete > .options_hidden ul.filter_node > li.all_selector label {
   font-weight: bold;

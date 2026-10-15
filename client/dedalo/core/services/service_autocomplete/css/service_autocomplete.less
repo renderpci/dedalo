@@ -124,28 +124,48 @@
 		}
 
 		>.filters_container {
+			// (!) This clip is NOT what keeps the options inside the panel — the
+			// grid below can no longer outgrow it. Left as a belt-and-braces
+			// guard only; it used to hide the overflow defect (see ul.filter_node).
 			overflow: hidden;
 		}
 
-		// filter_node. Box of checkboxes with all available sections
+		// filter_node. Box of checkboxes with all available sections/target values.
+		// GRID, not the old `display: table` + `li { width: 50% }` pair: a CSS
+		// table's used width is max(100%, its intrinsic min-content width), and
+		// the percentage widths resolve to `auto` while that minimum is computed,
+		// so one long unbreakable section name ("Tipologías de ontología",
+		// "Causas de restauración"…) raised the table's floor ABOVE the panel.
+		// The list then grew wider than .filters_container and its overflow:hidden
+		// silently CLIPPED the second column — the checkboxes in it could not even
+		// be scrolled to, so those sections could not be deselected one by one
+		// (only via the "All" master toggle). minmax(0, 1fr) tracks shrink below
+		// the labels' min-content instead (the ellipsis takes over) and auto-fill
+		// splits into a readable single column on a narrow card and the intended
+		// multi-column rhythm once there is room for whole labels. The track MIN
+		// is capped by min(100%, 10rem) so a card narrower than one label still
+		// gets a single track it fits — a bare `10rem` floor would just move the
+		// overflow to that case.
 		ul.filter_node {
 			background-color: @color_grey_11;
 			border-bottom: 1px solid @color_white;
-			display: table;
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+			column-gap: 0.5em;
+			row-gap: 1px; // the old li margin-top: 1px row breathing
 			padding: 0.5em;
 			width: 100%;
 
 			>li {
-				display: inline-block;
+				display: block;
+				min-width: 0; // let the label ellipsis engage inside its track
 				color: var(--fg_default); // was white: 1.9:1 on the light #bbb fill
-				margin-top: 1px;
 				overflow: hidden;
 				padding: 0.25em;
 				white-space: nowrap;
-				width: 50%;
 
 				&.all_selector {
-					width: 100%;
+					grid-column: 1 / -1; // the old `width: 100%`, as a full row
 
 					label {
 						font-weight: bold;
