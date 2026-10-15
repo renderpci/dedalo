@@ -38,6 +38,15 @@ Merged since the last release; these ship with the next one.
 
     Now: the calendar is built into the component and speaks the same date model the catalogue stores. The year field accepts any signed year (with a CE/BCE toggle and decade steps), the month and weekday names follow the interface language, and the footer commits the precision you need — the bare year (`-205`), the year and month (`04/2022`) or a full day. The picker is fully keyboard driven (arrows, PageUp/PageDown, Home/End, Escape; the calendar button is a tab stop, and Alt+ArrowDown opens it from the field), its touch targets grow on phones and tablets, and it follows the light and dark themes. In the search panel the calendar button appears on the field's top-left corner when the field takes focus, a range's two dates share the row in full and its `<>` hangs under the gap between them, so the card keeps the same height as every other search field. The separate clock picker now uses the operating system's own time wheels on touch devices.
 
+#### Fixed
+
+- **Search option tooltips are legible in dark mode.**
+
+    Hovering a search field showed the "Search options" help tooltip as a
+    bright, near-white panel against the dark interface. It now follows the
+    theme like every other floating panel: a dark elevated card with a subtle
+    border in dark mode, a light card in light mode.
+
 ## 7.0.0-beta.6 — 2026-10-15
 
 1110 commits: `git log --no-merges v7.0.0-beta.4..v7.0.0-beta.6`

@@ -1840,8 +1840,9 @@ li .reset_input select {
   position: absolute;
   top: calc(100% + 1em);
   right: 1em;
-  background-color: var(--color_grey_2);
-  color: var(--color_white);
+  background-color: var(--bg_elevated);
+  color: var(--fg_default);
+  border: 1px solid var(--border_default);
   padding: 1em;
   line-height: 1.5em;
   border-radius: var(--radius-lg);
@@ -1855,6 +1856,7 @@ li .reset_input select {
   opacity: 0;
   visibility: hidden;
 }
+.tooltip_toggle > .tooltip:before,
 .tooltip_toggle > .tooltip:after {
   position: absolute;
   bottom: 100%;
@@ -1864,7 +1866,14 @@ li .reset_input select {
   height: 0px;
   width: 0px;
   pointer-events: none;
-  border-bottom-color: var(--color_grey_1);
+}
+.tooltip_toggle > .tooltip:before {
+  border-bottom-color: var(--border_default);
+  border-width: 11px;
+  margin-left: -11px;
+}
+.tooltip_toggle > .tooltip:after {
+  border-bottom-color: var(--bg_elevated);
   border-width: 10px;
   margin-left: -10px;
 }

@@ -862,8 +862,15 @@
 			position: absolute;
 			top: calc(100% + 1em);
 			right: 1em;
-			background-color: @color_grey_2;//rgba(0, 0, 0, 0.9);
-			color: @color_white;
+			// Theme-aware elevated surface: the same role tokens the JSON-editor
+			// tooltip and every other floating panel use. The former pairing
+			// (@color_grey_2 on @color_white) only read as a dark slab because
+			// BOTH ramp steps invert in dark mode, so the tooltip flipped to a
+			// near-white slab (#f2f3f5) that glared against the dark canvas.
+			// Role tokens keep the surface coherent in each theme instead.
+			background-color: var(--bg_elevated);
+			color: var(--fg_default);
+			border: 1px solid var(--border_default);
 			padding: 1em;
 			line-height: 1.5em;
 			border-radius: var(--radius-lg);
@@ -878,6 +885,9 @@
 				visibility: hidden;
 			}
 
+			// Pointer: a fill triangle painted over a 1px-larger outline
+			// triangle, so the box border stays continuous through the notch.
+			&:before,
 			&:after {
 				position: absolute;
 				bottom: 100%;
@@ -887,7 +897,16 @@
 				height: 0px;
 				width: 0px;
 				pointer-events: none;
-				border-bottom-color: @color_grey_1;//rgba(0, 0, 0, 0.8);
+			}
+
+			&:before {
+				border-bottom-color: var(--border_default);
+				border-width: 11px;
+				margin-left: -11px;
+			}
+
+			&:after {
+				border-bottom-color: var(--bg_elevated);
 				border-width: 10px;
 				margin-left: -10px;
 			}
