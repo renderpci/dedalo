@@ -72,3 +72,32 @@
 ## General
 
 - [ ] TODO-046: Evaluate the change of client path to /public/ instead of /dedalo/client/.
+
+## Installation
+- [ ] TODO-047: Seed database profile records (dd234) are not configured at all (see v6 profiles from installation DB)
+- [ ] TODO-048: Database 'role' is the same as database 'user' ? Clarify (In MariaDB config 'user' is used)
+- [ ] TODO-049: Ontologies selector: The labels are in spanish (e.g. España | es). It is intentional? Because the rest of the interface is in english.
+- [ ] TODO-050: Installing into an already installed code fails. This is OK, but the failure message is at end of all the installation process, not at the beginning. Check at beginning of installation process.
+- [ ] TODO-051: Add a sample to https://dedalo.dev/docs/v7/install/#what-you-are-installing where refer 'https://v7.master.dedalo.dev/dedalo/install/code/<version>/<version>.zip'
+See this error:
+```
+sudo sh install.sh --release https://v7.master.dedalo.dev/dedalo/install/code/7/7.0/7.0.0-dev.zip \
+  --release-sha256 https://v7.master.dedalo.dev/dedalo/install/code/7/7.0/7.0.0-dev.zip.sha256
+install.sh: --release needs --release-sha256 <the sha256 the release was published with> (64 hex digits)
+```
+- [ ] TODO-052: Check this error on dev install finish (the installer doesn't install all dependencies):
+```
+bun run dev
+$ DEDALO_SUPERVISED=true bun run scripts/dev.ts
+error: Cannot find package 'less' from '/Users/paco/Sites/v7-install/dedalo/scripts/build_css.ts'
+```
+- [ ] TODO-053: After the installation process (dev), add the information about the URL to access the application.
+- [ ] TODO-054: Dev mode: If the user do not configure the .env file. Nothing is served. He needs to add:
+```
+# --- Development only ----------------------------------------------------
+SERVER_TCP_PORT=3600
+DEDALO_DEV_MODE=true
+SESSION_COOKIE_SECURE=false
+DEDALO_DEBUG_API_ERRORS=true
+```
+to start to work.
