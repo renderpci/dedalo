@@ -14,6 +14,12 @@
  *      writes (the plan's default backup dir and the stores the unit runs) and
  *      warns that step 7 deletes it; step 9 takes every row's web user out of
  *      the group (host_web_site adds it) before `userdel`, then `groupdel`.
+ *  D16 (C3g-F1/F2, VM run C3gR1_ubuntu26) step 7 removes the instance's Bun
+ *      (layout.ts bunDir) only when the documented registry grep finds no
+ *      entry naming its pin — the grep is RUN against an entry written by
+ *      registry.ts updateEntry (it must match that pin, not another); step 9
+ *      says the gpasswd exit an --abort leaves (web.ts GPASSWD_NOT_A_MEMBER)
+ *      is harmless.
  *  D3  production.md quotes the salt's read command the closing To-do prints.
  *
  * Proven red by reverting each page fix. DB-free, pure reads.
@@ -23,9 +29,13 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { HostCtx } from '../../src/core/install/host/contract.ts';
+import type { HostFs } from '../../src/core/install/host/fs.ts';
 import { instancePaths } from '../../src/core/install/host/layout.ts';
 import { OS_ROWS } from '../../src/core/install/host/os_support.ts';
 import { host_engine } from '../../src/core/install/host/production/engine_delegate.ts';
+import { bunCacheDir } from '../../src/core/install/host/production/runtime.ts';
+import { GPASSWD_NOT_A_MEMBER } from '../../src/core/install/host/production/web.ts';
+import { updateEntry } from '../../src/core/install/host/registry.ts';
 import { backupStores } from '../../src/core/install/host/systemd/render.ts';
 import { buildInstallPlan } from '../../src/core/install/install_plan.ts';
 import { buildScreens } from '../../src/core/install/screen_model.ts';
@@ -186,6 +196,55 @@ describe('D15: the removal list names the backup, its owner trap and the web use
 		expect(gpasswd).toBeGreaterThan(-1);
 		expect(step.indexOf('userdel <user>')).toBeGreaterThan(gpasswd);
 		expect(step.indexOf('groupdel <group>')).toBeGreaterThan(step.indexOf('userdel <user>'));
+	});
+});
+
+describe("D16: the removal list removes the instance's Bun when unused, and a gpasswd after an --abort is harmless", () => {
+	const answers = buildInstallPlan({ route: 'production', instance: 'museo' }).answers;
+
+	test("step 7: the Bun dir, and the registry grep that finds the pin's remaining users", () => {
+		const step = removalStep(7);
+		const paths = instancePaths(answers as never, '<pin>');
+		expect(step).toContain(`\`${paths.bunDir}/\``);
+		expect(step).toContain(`\`sudo rm -rf ${paths.bunDir}\``);
+		const grep = new RegExp(`sudo grep -rl '([^']+)' ${paths.registryDir}/`).exec(step);
+		expect(grep, 'the registry grep').not.toBeNull();
+		// The grep, run against what the installer writes into an instance's entry.
+		const written = new Map<string, string>();
+		const fs = {
+			readText: (path: string) => written.get(path) ?? null,
+			write: (path: string, content: string) => written.set(path, content),
+		} as unknown as HostFs;
+		const real = instancePaths(answers as never, '1.4.3');
+		updateEntry(fs, real, { bun_pin: '1.4.3' });
+		const entry = written.get(real.registry) ?? '';
+		const pattern = (pin: string): string => (grep?.[1] ?? '').replace('<pin>', pin);
+		expect(entry.includes(pattern('1.4.3')), entry).toBe(true);
+		expect(entry.includes(pattern('1.4.2'))).toBe(false);
+		expect(step.indexOf('sudo grep -rl')).toBeGreaterThan(
+			step.indexOf(`${paths.registryDir}/<i>.json`),
+		);
+	});
+
+	// C3h-F1 (VM run C3hR1): the installer's per-pin Bun caches were left unnamed.
+	test("step 7: the installer's per-pin Bun caches (runtime.ts + install.sh), keep or remove", () => {
+		const step = removalStep(7);
+		const script = readFileSync(join(ROOT, 'install.sh'), 'utf8');
+		const root = /^ROOT_CACHE=(\S+)$/m.exec(script)?.[1];
+		const shared = /mkdir -p "\$2\/([\w-]+)\/\$3"/.exec(script)?.[1];
+		expect(root, 'install.sh ROOT_CACHE').toBeDefined();
+		expect(shared, 'install.sh shared_bun dir').toBeDefined();
+		expect(bunCacheDir('<pin>').startsWith(`${root}/`)).toBe(true);
+		for (const dir of [bunCacheDir('<pin>'), `${root}/${shared}/<pin>`]) {
+			expect(step).toContain(`\`${dir}/\``);
+			expect(step).toContain(` ${dir}`);
+		}
+	});
+
+	test('step 9: the gpasswd exit an --abort leaves is named harmless', () => {
+		const step = removalStep(9);
+		expect(step).toContain('After an `--abort` the web user is already out of the group');
+		expect(step).toContain(`exits ${GPASSWD_NOT_A_MEMBER}, which is harmless`);
 	});
 });
 

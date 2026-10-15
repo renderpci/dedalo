@@ -26,7 +26,7 @@ import type {
 export const INSTANCE = 'demo';
 export const DOMAIN = 'example.org';
 export const HOME = `/home/${DOMAIN}`;
-export const PIN = '1.4.2';
+export const PIN = '1.4.3';
 
 const SANDBOX = Object.freeze({ protectHome: 'no', protectSystem: 'no', inaccessible: [], readOnly: [], tmpfs: [] });
 

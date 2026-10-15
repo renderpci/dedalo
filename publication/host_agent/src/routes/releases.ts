@@ -5,7 +5,11 @@
  * headers: X-Release-Id, X-Bundle-Sha256, and the X-Dedalo-Actor (requireActor — the one
  * actor convention on every mutation). Rollback takes the actor header and no body. No route
  * takes a path; the api is fixed per row in router.ts ROUTES, so an unknown api is the
- * router's 404. Validation of the id and sha lives in installRelease (one rule for every caller).
+ * router's 404. Validation of the id and sha lives in installRelease (one rule for every caller),
+ * and so does "a bundle is required": a promote of a release the host already holds (D9) carries
+ * none, and an empty body may arrive as `req.body === null` (Bun 1.4.3's fetch sends
+ * `Content-Length: 0`), so only installRelease — which knows whether the release exists — may
+ * refuse a missing one.
  */
 
 import { ValidationError } from '../errors';
@@ -22,9 +26,6 @@ export function releaseInstallRoute(api: ApiName) {
     const contentType = (req.headers.get('content-type') ?? '').split(';')[0].trim().toLowerCase();
     if (!BUNDLE_CONTENT_TYPES.has(contentType)) {
       throw new ValidationError('the release bundle must be sent as application/gzip (or application/octet-stream)', 'body_invalid');
-    }
-    if (req.body === null) {
-      throw new ValidationError('the request body must carry the release bundle', 'body_invalid');
     }
     const result = await installRelease({
       api,

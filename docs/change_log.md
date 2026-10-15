@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - Dédalo now runs on Bun 1.4.3, which fixes a runtime defect that could leave a process waiting forever, at full CPU, on a program it had started.
     - Every AI request now counts against daily limits set per user and per profile, and generated answers need their own permission.
     - The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start.
     - SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change.
@@ -1713,7 +1714,7 @@ Merged since the last release; these ship with the next one.
 
 - **The Publication hosts panel now shows in red a publication server whose Bun differs from the version the work system pins.**
 
-    Each host in **Maintenance › Publication hosts** has a new **Bun version** row, with the expected version (this work system's `.bun-version`) and the version the host reports side by side. It is green only when they are exactly equal, red on any difference (for example `1.4.1 != 1.4.2`), and unknown when the host cannot be reached or proved. The install guide now gives each site on a publication server its own Bun, installed by root in `/home/<site>/.bun/` at the pinned version, so each site can be upgraded on its own, and suggests naming each instance after its site's domain (`my-hosts.org` → `my_hosts_org`). See [Publication host agent](./install/publication_host.md#2-declare-the-instance).
+    Each host in **Maintenance › Publication hosts** has a new **Bun version** row, with the expected version (this work system's `.bun-version`) and the version the host reports side by side. It is green only when they are exactly equal, red on any difference (for example `1.4.2 != 1.4.3`), and unknown when the host cannot be reached or proved. The install guide now gives each site on a publication server its own Bun, installed by root in `/home/<site>/.bun/` at the pinned version, so each site can be upgraded on its own, and suggests naming each instance after its site's domain (`my-hosts.org` → `my_hosts_org`). See [Publication host agent](./install/publication_host.md#2-declare-the-instance).
 
     Wire contract: `WC-2026-10-03-publication-hosts-widget`.
 
@@ -1773,6 +1774,27 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Dédalo now runs on Bun 1.4.3, which fixes a runtime defect that could leave a process waiting forever, at full CPU, on a program it had started.** *(action needed)*
+
+    On Bun 1.4.2, a process that had already run many synchronous calls to external programs could,
+    now and then, wait forever on one that had already finished, at 100% CPU (Bun issue 34069). The
+    server makes such calls for a few checks (the code update panel's git checks, the versions of the
+    PostgreSQL tools, ImageMagick, ffmpeg and curl); the command-line tools and the test suite make
+    many, which is where it was seen. Bun 1.4.3 fixes it, so the pinned runtime (`.bun-version`)
+    moves from 1.4.2 to 1.4.3, and the update panel refuses this release until the server runs it.
+
+    **Action needed, before you apply this update:**
+
+    - **Host installation:** as root, install the verified 1.4.3 runtime at `/opt/dedalo/bun/1.4.3/bun`
+      exactly as [the `host_runtime` step](./install/manual_install.md#manual-host_runtime) does (with
+      `PIN=1.4.3`, checked against this release's `.bun-sha256`), point the instance's `ExecStart` at
+      it ([the `host_units` step](./install/manual_install.md#manual-host_units)), run
+      `systemctl daemon-reload`, restart the instance, then apply the update.
+    - **Container installation:** nothing extra; the new image carries Bun 1.4.3
+      ([Upgrading](./install/docker.md#upgrading)).
+    - **Publication hosts:** each site's Bun must move to 1.4.3 as well, or its **Bun version** row
+      turns red ([Upgrading a site's Bun](./install/publication_host.md#upgrading-a-sites-bun)).
+
 - **Publication progress no longer runs past its estimate while a job is still working.**
 
     When a section links to other records of the same section (for example types
@@ -1788,6 +1810,26 @@ Merged since the last release; these ship with the next one.
     - **The first instance on a fresh host**: when the run installs nginx, the closing To-do now includes the note about nginx's own default site on port 80 (`/etc/nginx/sites-enabled/default`).
     - **Resume after an interrupted Docker install**: the released-lock line says whether the earlier run was in a container or on a host.
     - **Docs**: `production.md` lists the update-server question before the domain ontologies, in the order the screens ask them.
+
+- **The installer's System check edit, Review re-check and default-site note, salt hint and Docker abort messages now match what happens.**
+
+    - **A failed System check**: the check asks no questions, so `edit` (`e` on the full screen, `edit` in `--plain`) now goes back to Install type, the screen whose answers it checked. Before, it only ran the check again. The prompt, the button and the key bar all say `edit (back to Install type)`.
+    - **A refused Review checked again**: the `checking again…` line disappears when the check ends. Before, it stayed frozen under the `yes` prompt or next to the result. When nothing is refused any more, the installer says `checked again — nothing is refused now: install is offered`.
+    - **The salt after a failure or a Ctrl-C**: once the engine steps have generated `DEDALO_SALT_STRING`, every ✖ block names the command that reads it back. The value itself is never printed there. Ctrl-C leaves the full screen, which was the only place that showed the salt. On docker and trial the command is now `docker compose … run --rm --no-deps dedalo grep ^DEDALO_SALT_STRING= /private/.env`, which works whether or not the stack is running. `docker.md`, `quickstart.md`, `production.md` and the installer reference describe this.
+    - **Docker / trial `--abort`**: the undo names only the containers that exist, measured with `compose ps --all`. An install stopped before the engine started now says `no container of dedalo, nginx, backup was ever created`. The kept-images hint and its `docker image rm` command list only images present on the machine, checked with `docker image inspect`. Before, it named `nginx:alpine` even when that image was never pulled, and the command failed.
+    - **Production, nginx installed by the run (Debian/Ubuntu)**: the Review's *To do* now says that the package's default site keeps port 80 (`port 80: the default site stays yours (/etc/nginx/sites-enabled/default, default_server) …`). Before, this note appeared only after the run, on the Done card.
+
+- **The installer names a killed engine and shows what the engine said while it stopped.**
+
+    - When the engine steps' process or container is killed (for example out of memory, or
+      `docker kill`), the installer's ✖ line now says so, e.g. "the engine container was killed by
+      SIGKILL — out of memory, or a kill", instead of quoting a Docker Compose progress line such as
+      "Container dedalo-install-engine Created".
+    - After a Ctrl-C, the lines the engine prints while it stops (such as "ended the seed restore's
+      database session") now appear inside the ✖ block, on both the full screen and the plain
+      output. On the Docker routes they were lost before.
+    - On a production install that uses the institution's own certificate, the packages step no
+      longer lists certbot, which it does not install.
 
 - **Installer: one interruption block on Ctrl-C, a resume that re-checks and tells everything, the salt on a terminal resume, and clearer screens.**
 
@@ -1811,6 +1853,12 @@ Merged since the last release; these ship with the next one.
     - **[Removing an instance](./install/multi_instance.md#removing-an-instance):** take the backup before any `--abort` (a direct `pg_dump` is given for after one), clear the failed units, and remove the instance's web logs and timer stamps. The steps an abort already did are marked.
     - **[Production](./install/production.md):** the `host_engine` Verify enters the `0750` install folder as the service user, so it no longer fails with *Permission denied*.
 
+- **An install interrupted during the database restore can be resumed or undone at once, and the host shows the engine's own refusal.**
+
+    - **Ctrl-C during the seed restore (Docker route above all)**: the restore's database session could outlive the removed engine container on the PostgreSQL server for about two hours, and until then `--resume` and `--abort` refused with `a seed restore into '<db>' is still running`. Now a Ctrl-C ends the restore's session before the installer exits (on Docker the engine container is given time to stop itself before it is removed). A `--resume` or `--abort` that holds the database's install lock ends a restore this install left behind, says so (`⚠ ended the seed restore an interrupted run left on '<db>' …`) and goes on. A restore that belongs to another install is still refused and left alone. Every installer database session also asks the server to drop it within about a minute if its client disappears.
+    - **The engine's reason in the host's ✖ line**: on the docker, trial and production routes, a refused or failed engine child is now quoted (`the engine steps failed: <its reason> — …`, `the engine child refused its --abort: <its reason> — nothing before it was undone`). Before, the reason was lost, and the abort said "see above" with nothing above.
+    - **Docs**: [troubleshooting](./install/troubleshooting.md#resuming-and-undoing-an-install) lists both refusals; the [installer reference](./install/installer_reference.md#resuming-an-install-resume) explains how an installer's own leftover restore is ended.
+
 - **Docker and trial installs: the local image build reports the release version, nginx always publishes its ports, and a resume re-checks the site.**
 
     - **A local image build at install time** now goes through `deploy/dedalo-image-build.sh`, the builder the image updater already used: a clean snapshot of the checkout's last commit, so uncommitted and untracked files never reach the image, `/health` reports the release version (never `X.Y.Z.dev`), and the image carries its own version and commit labels instead of the Bun base image's. The Review shows that command.
@@ -1827,9 +1875,13 @@ Merged since the last release; these ship with the next one.
 
     A `--resume` that starts the stack again (after an `--abort`, or a stopped stack) now runs every `stack_health` probe again, the media gate included, instead of `/health` only. A locally built image carries Dédalo's own `source`, `url`, `description` and `licenses` labels instead of empty ones. On a completed install, `--abort` no longer suggests `docker image rm postgres:18`, because PostgreSQL keeps running on that image. A resume after an interrupted run says in plain words that the earlier run's lock was released, with no warning sign. An untrusted certificate chain is refused on the Review, before `yes`. The Docker and Trial pages now give the exact command that reads the salt back, say the salt is not shown again by a later `--resume`, and include `node_modules` in the removal steps. The installer reference says `--image-version` also applies to a local build.
 
+- **The full-screen installer's closing lines start on a clean line, and the manual removal list covers Bun and a gpasswd after an abort.**
+
+    When the full-screen installer ends (done, failed or interrupted), the closing `✔` or `✖` lines now start at column 0 and nothing of the screen is left beside or under them, also on terminals that do not support the alternate screen (`screen` without altscreen, a serial console, a session recording). The manual list for removing an instance ([Removing an instance](install/multi_instance.md#removing-an-instance)) now removes the instance's Bun runtime under `/opt/dedalo/bun/<pin>/` when no other instance uses that pin, and says that `gpasswd` exiting 3 after an `--abort` is harmless.
+
 - **Installer re-checks, interrupts and messages say things once and at the right moment.**
 
-    A check made stale by a later answer (the Identity check, once the web server is chosen) runs again right after that step, not at the end. `back` from a failed System check and forward again runs it again, its rows printed once. Ctrl-C during the engine step prints one interruption block. The System check's ok rows say their result once (`ok  Bun  runtime 1.4.2`), the short Docker and Trial check stays visible on the next screen, a typed `quit` in line mode prints the closing line, an unknown word at a failed check gets a plain sentence, the Review's local-build line says how long the build takes, and the Trial's Review points at the Trial page's firewall warning.
+    A check made stale by a later answer (the Identity check, once the web server is chosen) runs again right after that step, not at the end. `back` from a failed System check and forward again runs it again, its rows printed once. Ctrl-C during the engine step prints one interruption block. The System check's ok rows say their result once (`ok  Bun  runtime 1.4.3`), the short Docker and Trial check stays visible on the next screen, a typed `quit` in line mode prints the closing line, an unknown word at a failed check gets a plain sentence, the Review's local-build line says how long the build takes, and the Trial's Review points at the Trial page's firewall warning.
 
 - **A Production install interrupted before its server ever ran is removed whole by --abort, and the production pages match what the installer does.**
 

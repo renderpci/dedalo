@@ -66,7 +66,16 @@ export interface InstallRequest {
   releaseId: string;
   sha256: string;
   actor: string;
-  body: ReadableStream<Uint8Array>;
+  /**
+   * The bundle, or null when the request carried none. A promote of a release this host
+   * already holds (D9) is SENT WITHOUT a body — the engine streams nothing — and how an empty
+   * body arrives is the client runtime's choice, not ours: Bun 1.4.2's fetch sent an empty
+   * stream chunked (a non-null, empty `req.body`), Bun 1.4.3's sends `Content-Length: 0`,
+   * which Bun.serve hands over as `req.body === null` (measured 2026-10-14). So "no body" is
+   * decided HERE, after the reuse check, never at the route: only a release this host must
+   * stage needs one (stageRelease refuses null as 400 body_invalid).
+   */
+  body: ReadableStream<Uint8Array> | null;
 }
 export interface InstallResult {
   api: ApiName;
@@ -314,13 +323,20 @@ async function verifyRecordedSha(api: ApiName, releaseId: string, declared: stri
 
 async function stageRelease(req: InstallRequest): Promise<void> {
   const { api, releaseId } = req;
+  const body = req.body;
+  if (body === null) {
+    throw new ValidationError(
+      `the request body must carry the release bundle: release ${releaseId} is not on this host, so it cannot be promoted without one`,
+      'body_invalid',
+    );
+  }
   // Read ONCE: the extraction refuses exactly the config_api/ files prepareV1 then links.
   const reserved = reservedBundlePaths(api);
   const staged = await createStaging(api);
   try {
     let received: { entries: number; bytes: number; sha256: string };
     try {
-      received = await extractBundle(req.body, staged, bundleLimits(), reserved);
+      received = await extractBundle(body, staged, bundleLimits(), reserved);
     } catch (error) {
       if (error instanceof BundleRefused) {
         throw new ReleaseRefusedError('bundle_refused', `the bundle was refused (${error.reason}): ${error.message}`, {
@@ -586,7 +602,8 @@ async function pruneQuietly(api: ApiName): Promise<string[]> {
   }
 }
 
-async function discard(body: ReadableStream<Uint8Array>): Promise<void> {
+async function discard(body: ReadableStream<Uint8Array> | null): Promise<void> {
+  if (body === null) return;
   try {
     await body.cancel();
   } catch {

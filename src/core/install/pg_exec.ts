@@ -143,6 +143,35 @@ export function pgClientEnv(conn: DbConnDescriptor): Record<string, string> {
 }
 
 /**
+ * THE SERVER-SIDE DEAD-CLIENT BOUND of every installer session (campaign 3e
+ * F5, measured on RHEL 10 / Docker): a client that vanishes without its TCP
+ * close reaching the server — a killed container whose network namespace went
+ * with its unsent COPY data — left the seed restore's backend waiting on
+ * ClientRead for the server's default keepalive (7200 s), so --resume and
+ * --abort refused for two hours. These are the server's own per-session
+ * settings (user-settable GUCs, sent as startup options): the server probes an
+ * idle installer client after 30 s and drops it after three unanswered probes
+ * 10 s apart, or after 60 s of unacknowledged data. Ignored on a unix socket
+ * (no TCP to lose). An operator's own PGOPTIONS come after, so they win.
+ */
+export const INSTALL_SESSION_PGOPTIONS =
+	'-c tcp_keepalives_idle=30 -c tcp_keepalives_interval=10 -c tcp_keepalives_count=3 -c tcp_user_timeout=60000';
+
+/** An installer session's environment: the pg client env + the dead-client bound + its name. */
+export function installSessionEnv(
+	conn: DbConnDescriptor,
+	appName?: string,
+): Record<string, string> {
+	const env = pgClientEnv(conn);
+	const own = env.PGOPTIONS ?? '';
+	return {
+		...env,
+		PGOPTIONS: own === '' ? INSTALL_SESSION_PGOPTIONS : `${INSTALL_SESSION_PGOPTIONS} ${own}`,
+		...(appName === undefined ? {} : { PGAPPNAME: appName }),
+	};
+}
+
+/**
  * THE INSTALLER'S CHILD SCOPE. The terminal installer (executor.ts) runs every
  * step inside `trackPsqlChildren`, so a SIGINT/SIGTERM can kill the psql
  * children a step started and AWAIT their exit before it records the step
@@ -197,10 +226,7 @@ export async function runPsql(
 			stdin: options.stdin !== undefined ? 'pipe' : 'ignore',
 			stdout: 'pipe',
 			stderr: 'pipe',
-			env: {
-				...pgClientEnv(conn),
-				...(options.appName === undefined ? {} : { PGAPPNAME: options.appName }),
-			},
+			env: installSessionEnv(conn, options.appName),
 		},
 	);
 	const tracked = psqlChildScope.getStore();

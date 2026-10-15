@@ -1406,3 +1406,117 @@ describe("executor — the ontology's RETIRED-property lines stay out of the ope
 		});
 	});
 });
+
+describe('executor — a seed restore orphaned by a killed run never blocks its own resume/abort (campaign 3e F5)', () => {
+	const OTHER_INSTALL = '00000000-0000-4000-8000-000000000000';
+
+	/** A failed fresh run (at the seed), then the target as the server still shows it. */
+	async function orphanedSeed(dir: string, owner: 'own' | 'other') {
+		const landed = new Set<InstallStepId>();
+		const { plan } = await failedRun(dir, 'install_db_from_default_file', landed);
+		const installId = readState(dir).install_id;
+		const ended: string[] = [];
+		const { host, state } = fakeHost();
+		state.database = {
+			...state.database,
+			seedRestoreRunning: 124,
+			seedRestoreInstallId: owner === 'own' ? installId : OTHER_INSTALL,
+			installSessions: [124],
+		};
+		host.endSeedRestore = async (id) => {
+			ended.push(id);
+			state.database = { ...state.database, seedRestoreRunning: null, installSessions: [] };
+			return [124];
+		};
+		return { plan, installId, ended, host, landed };
+	}
+
+	test('resume: its OWN orphan is ended (said), then the run completes; another install’s refuses, untouched', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const { installId, ended, host, landed } = await orphanedSeed(dir, 'own');
+			const { io, lines } = recordingIo();
+			const outcome = await executeInstall(
+				{ mode: 'resume', secrets: { root_password: ROOT_PW } },
+				io,
+				{
+					table: landingTable([], landed),
+					host,
+				},
+			);
+			expect(outcome.message).toBeNull();
+			expect(outcome.result).toBe('complete');
+			expect(ended).toEqual([installId]);
+			expect(lines.join('\n')).toContain(
+				"ended the seed restore an interrupted run left on 'dedalo_fake_target' (backend pid 124)",
+			);
+		});
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const { ended, host, landed } = await orphanedSeed(dir, 'other');
+			const outcome = await executeInstall(
+				{ mode: 'resume', secrets: { root_password: ROOT_PW } },
+				recordingIo().io,
+				{
+					table: landingTable([], landed),
+					host,
+				},
+			);
+			expect(outcome.result).toBe('refused');
+			expect(outcome.message).toContain(
+				"a seed restore into 'dedalo_fake_target' is still running (backend pid 124)",
+			);
+			expect(ended).toEqual([]);
+		});
+	});
+
+	test('abort: its OWN orphan is ended, then the undo runs', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const { ended, host, installId, landed } = await orphanedSeed(dir, 'own');
+			const outcome = await executeInstall(
+				{ mode: 'abort', secrets: {}, confirmDatabase: 'dedalo_fake_target' },
+				recordingIo().io,
+				{ table: landingTable([], landed), host },
+			);
+			expect(outcome.message).toBeNull();
+			expect(outcome.result).toBe('aborted');
+			expect(ended).toEqual([installId]);
+		});
+	});
+
+	test('Ctrl-C during the seed ends the restore’s server session before the run exits', async () => {
+		await withPrivateDir(scratchPrivateDir(), async (dir) => {
+			const { plan, planFile } = fakePlan();
+			const ended: string[] = [];
+			const { host } = fakeHost();
+			host.endSeedRestore = async (id) => {
+				ended.push(id);
+				return [124];
+			};
+			const table = fakeTable([], {
+				install_db_from_default_file: {
+					run: async () => {
+						process.emit('SIGINT');
+						throw new Error('psql died of the same SIGINT');
+					},
+				},
+			});
+			class Exited extends Error {}
+			const exit = spyOn(process, 'exit').mockImplementation(((code?: number) => {
+				throw new Exited(`exit ${code}`);
+			}) as never);
+			const { io, lines } = recordingIo();
+			let settled: unknown = null;
+			try {
+				settled = await executeInstall(freshRequest(planFile, plan), io, { table, host });
+			} catch (error) {
+				settled = error;
+			} finally {
+				exit.mockRestore();
+			}
+			expect(settled).toBeInstanceOf(Exited);
+			expect(ended).toEqual([readState(dir).install_id]);
+			expect(lines.join('\n')).toContain(
+				"ended the seed restore's database session (backend pid 124)",
+			);
+		});
+	});
+});

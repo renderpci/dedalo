@@ -47,6 +47,8 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { answersFromCliArgs } from '../../src/core/install/install_plan.ts';
+import { lifecycle } from '../../src/core/install/ui/lifecycle.ts';
+import { fakePort } from '../helpers/install_tui_driver.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const FIXTURE = join(ROOT, 'test/fixtures/install_tui_restore_fixture.ts');
@@ -201,6 +203,105 @@ function afterRestore(stream: string): string {
 	return stream.slice(at).replace(ANY_ESCAPE, '');
 }
 
+const PTY_COLS = 104;
+const PTY_ROWS = 30;
+/** A frame cell: the UI's borders (the exit lines never draw a box). */
+const FRAME_CELL = /[│╭╮╰╯]/;
+const CSI_OR_OSC = new RegExp(
+	`^(?:${ESC}\\[([0-?]*)[ -/]*([@-~])|${ESC}\\][^\u0007${ESC}]*(?:\u0007|${ESC}\\\\)|${ESC}.)`,
+);
+
+/** A cursor position on the emulated screen, and the screen itself. */
+interface NoAltView {
+	rows: string[][];
+	/** Where the first visible character after the last ?1049l landed (null: none printed). */
+	firstAfterRestore: { row: number; col: number } | null;
+}
+
+/** One CSI sequence applied to the emulated screen (cursor moves and erases; the rest ignored). */
+function applyCsi(
+	screen: string[][],
+	cursor: { row: number; col: number },
+	params: string,
+	final: string,
+): void {
+	const nums = params.split(';').map((value) => Number(value) || 0);
+	const blankFrom = (row: number, col: number): void => {
+		for (let c = col; c < PTY_COLS; c++) (screen[row] as string[])[c] = ' ';
+	};
+	if (final === 'H' || final === 'f') {
+		cursor.row = Math.min(PTY_ROWS - 1, Math.max(0, (nums[0] || 1) - 1));
+		cursor.col = Math.min(PTY_COLS - 1, Math.max(0, (nums[1] || 1) - 1));
+	} else if (final === 'G') cursor.col = Math.min(PTY_COLS - 1, Math.max(0, (nums[0] || 1) - 1));
+	else if (final === 'K' && (nums[0] ?? 0) === 0) blankFrom(cursor.row, cursor.col);
+	else if (final === 'J' && (nums[0] ?? 0) === 0) {
+		blankFrom(cursor.row, cursor.col);
+		for (let r = cursor.row + 1; r < PTY_ROWS; r++) blankFrom(r, 0);
+	} else if (final === 'J' && nums[0] === 2) for (let r = 0; r < PTY_ROWS; r++) blankFrom(r, 0);
+}
+
+/**
+ * The byte stream on a terminal WITHOUT an alternate screen (?1049 ignored — a
+ * `screen` without altscreen, a serial console, a pyte/`script` capture: the VM
+ * campaign's C3gR1 G1/G2): the frame stays on the one screen, so what the exit
+ * lines do about the cursor is all that decides whether they read cleanly.
+ */
+function noAltScreen(stream: string): NoAltView {
+	const screen = Array.from({ length: PTY_ROWS }, () => Array<string>(PTY_COLS).fill(' '));
+	const cursor = { row: 0, col: 0 };
+	const restoreAt = stream.lastIndexOf('\x1b[?1049l');
+	let firstAfterRestore: NoAltView['firstAfterRestore'] = null;
+	const lineFeed = (): void => {
+		if (cursor.row < PTY_ROWS - 1) cursor.row++;
+		else screen.push(screen.shift()?.fill(' ') ?? Array<string>(PTY_COLS).fill(' '));
+	};
+	let index = 0;
+	while (index < stream.length) {
+		const sequence = stream[index] === ESC ? CSI_OR_OSC.exec(stream.slice(index)) : null;
+		if (sequence !== null) {
+			if (sequence[2] !== undefined) applyCsi(screen, cursor, sequence[1] ?? '', sequence[2]);
+			index += sequence[0].length;
+			continue;
+		}
+		const char = String.fromCodePoint(stream.codePointAt(index) ?? 32);
+		index += char.length;
+		if (char === '\r') cursor.col = 0;
+		else if (char === '\n') lineFeed();
+		else if (char >= ' ') {
+			if (cursor.col >= PTY_COLS) {
+				cursor.col = 0;
+				lineFeed();
+			}
+			if (firstAfterRestore === null && restoreAt >= 0 && index > restoreAt && char !== ' ')
+				firstAfterRestore = { ...cursor };
+			(screen[cursor.row] as string[])[cursor.col] = char;
+			cursor.col++;
+		}
+	}
+	return { rows: screen, firstAfterRestore };
+}
+
+/**
+ * The exit lines read cleanly even where the alternate screen is not honoured:
+ * the first one starts at COLUMN 0, and no frame cell is left on its row or
+ * any row below it ([] = clean).
+ */
+function exitLinesUnclean(stream: string): string[] {
+	const view = noAltScreen(stream);
+	const first = view.firstAfterRestore;
+	if (first === null) return ['nothing printed after the restore (vacuous)'];
+	const problems: string[] = [];
+	if (first.col !== 0) problems.push(`the first exit line starts at column ${first.col}`);
+	view.rows.slice(first.row).forEach((row, offset) => {
+		const text = row.join('');
+		if (FRAME_CELL.test(text))
+			problems.push(
+				`frame cells under the exit lines: row ${first.row + offset}: ${text.trimEnd()}`,
+			);
+	});
+	return problems;
+}
+
 /** Every restore check for one ended run. */
 async function expectRestored(
 	run: PtyRun,
@@ -219,6 +320,7 @@ async function expectRestored(
 		const tail = afterRestore(stream);
 		if (typeof message === 'string') expect(tail).toContain(message);
 		else expect(tail).toMatch(message);
+		expect(exitLinesUnclean(stream), JSON.stringify(stream.slice(-300))).toEqual([]);
 	}
 }
 
@@ -295,7 +397,7 @@ describe('every exit path restores the terminal (a)', () => {
 		await run.waitFor(() => run.output().includes('installed'), 10000, 'the Done card');
 		await Bun.sleep(100);
 		run.write(ENTER);
-		await expectRestored(run, 0);
+		await expectRestored(run, 0, '✔');
 	}, 60000);
 
 	test('Ctrl-C during a blocking install step: exit 130, the interrupt and its resume hint after the restore', async () => {
@@ -329,6 +431,80 @@ describe('the checks are not vacuous (b)', () => {
 		expect(terminalLeftChanged('plain text')).toContain(
 			'never entered the alternate screen (vacuous)',
 		);
+	});
+});
+
+// ── (e) the exit lines where the alternate screen is not honoured ───────────
+
+/**
+ * A full frame (borders on every row), then the cursor parked where the last
+ * redraw left it, then the renderer's restore — the C3gR1 captures: G1 parked
+ * mid-frame (row 18, col 31: the ✖ block drawn over the frame), G2 on the
+ * bottom row at col 40 (the ✔ line starting at column 40).
+ */
+function frameThenRestore(row: number, col: number): string {
+	const cells = Array.from(
+		{ length: PTY_ROWS },
+		(_, r) => `${ESC}[${r + 1};1H│${' '.repeat(PTY_COLS - 2)}│`,
+	).join('');
+	return `${ESC}[?1049h${ESC}[?25l${cells}${ESC}[${row};${col}H${ESC}[0m${ESC}[?25h${ESC}[?1049l${ESC}[?25h`;
+}
+
+/** The lifecycle's exit bytes for one way out (a fake process; the renderer already restored). */
+async function exitBytes(end: 'close' | 'exitNow' | 'final' | 'executor'): Promise<string> {
+	const port = fakePort();
+	const host = {
+		isDestroyed: () => true,
+		destroy: () => undefined,
+		closed: () => Promise.resolve(),
+		cancelAsk: () => false,
+	};
+	const life = lifecycle(port, host);
+	try {
+		if (end === 'close')
+			await life.close(130, ['✖ install interrupted (SIGINT)', 'resume: --resume']);
+		else if (end === 'exitNow') life.exitNow(1, ['✖ install failed: a refusal']);
+		else if (end === 'final') {
+			life.final(0, ['✔ install complete.', 'To do on this host:']);
+			port.fire('SIGTERM');
+			await Bun.sleep(10);
+		} else {
+			// The executor's own interrupt (its handlers armed): its lines, then process.exit.
+			life.phase('run');
+			life.armed(true);
+			life.notice([
+				'\n✖ install interrupted (SIGINT) at step [stack_engine]',
+				'  resume: --resume',
+			]);
+			port.fire('exit');
+		}
+		if (end === 'exitNow') port.fire('exit');
+	} finally {
+		life.dispose();
+	}
+	return port.errs.join('').replaceAll('\n', '\r\n');
+}
+
+describe('the exit lines start at column 0 below no frame, on any terminal (e)', () => {
+	for (const end of ['close', 'exitNow', 'final', 'executor'] as const) {
+		for (const [row, col] of [
+			[18, 31],
+			[PTY_ROWS, 41],
+		] as const) {
+			test(`${end}: cursor parked at ${row};${col} by the last redraw`, async () => {
+				const bytes = await exitBytes(end);
+				expect(bytes).toMatch(/[✖✔]/);
+				expect(exitLinesUnclean(frameThenRestore(row, col) + bytes)).toEqual([]);
+			});
+		}
+	}
+
+	test('CONTROL: the C3gR1 bytes (the lines written straight after the restore) are flagged', () => {
+		expect(exitLinesUnclean(`${frameThenRestore(PTY_ROWS, 41)}✔ install complete\r\n`)).toContain(
+			'the first exit line starts at column 40',
+		);
+		const g1 = exitLinesUnclean(`${frameThenRestore(18, 31)}\r\n✖ install interrupted\r\n`);
+		expect(g1.some((problem) => problem.startsWith('frame cells under the exit lines'))).toBe(true);
 	});
 });
 

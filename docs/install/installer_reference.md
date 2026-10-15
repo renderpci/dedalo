@@ -770,7 +770,7 @@ The screens are the steps listed above, plus:
   that showed it, a later `--resume`, or one that could not show it on a
   terminal — names the command that reads it back
   (production: `sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env`;
-  docker and trial: `docker compose … exec dedalo grep ^DEDALO_SALT_STRING= /private/.env`). Then what comes next, per route: on production the
+  docker and trial: `docker compose … run --rm --no-deps dedalo grep ^DEDALO_SALT_STRING= /private/.env`). Then what comes next, per route: on production the
   instance is already running under systemd with its watchdog and backup timer
   armed; on docker and trial the stack is up; on developer, start the server
   under a supervisor. Thesauri, toponymies, restores and updates after the
@@ -944,7 +944,7 @@ finishes it. Keep it with your backups. It is shown only on a terminal and never
 written into a log: when no run could show it there (its output redirected to a
 file), the end of the run prints the command that reads it back instead —
 `sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env` on production,
-`docker compose -f <stack file> -f compose.override.yaml --env-file .dedalo.env exec dedalo grep ^DEDALO_SALT_STRING= /private/.env`
+`docker compose -f <stack file> -f compose.override.yaml --env-file .dedalo.env run --rm --no-deps dedalo grep ^DEDALO_SALT_STRING= /private/.env`
 on docker and trial, `<private>/.env` (`0600`) on developer.
 
 ## Validation before anything is written
@@ -1071,6 +1071,14 @@ For every step, in order:
   one is completed, and a database that is neither empty nor marked by this
   install — a backup restored into it meanwhile, another install — is refused
   (`… is not empty (<n> objects) and was not seeded by this install — refusing to restore into it`).
+  A restore whose installer was killed can stay on the database server for a
+  while (its client vanished without its connection closing, as when a container
+  is removed mid-restore). The restore carries this install's id in its session
+  name, and every live installer holds the database's install lock, so a
+  `--resume` or `--abort` that holds that lock ends this install's leftover
+  restore and says so
+  (`⚠ ended the seed restore an interrupted run left on '<db>' (backend pid <n>) — its installer is gone, its transaction rolled back`).
+  A Ctrl-C during the restore ends it the same way before the installer exits.
 
 Only the secrets a remaining step still needs are asked again: the database,
 diffusion and SMTP passwords only while `persist_config` has not completed (after
@@ -1120,7 +1128,8 @@ reset), and refuses — before anything is touched:
 - a database that is neither marked by this install nor empty
   (`database '<db>' is not stamped by this install … — refusing to reset it; nothing was undone`);
 - while another install holds the database, or another installer session is
-  still working on it.
+  still working on it (this install's own leftover seed restore excepted: it is
+  ended, see [Resuming an install](#resuming-an-install-resume)).
 
 Backups of `.env` that existed before the install (`.env.bak.*`) are never
 removed — only the ones that appeared since the install started.

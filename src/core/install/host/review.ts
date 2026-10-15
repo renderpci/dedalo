@@ -33,6 +33,7 @@ import { type InstancePaths, instancePaths, pathsFor } from './layout.ts';
 import { OS_ROWS, osRowById } from './os_support.ts';
 import { operatorTodo, webServerClash } from './production/preflight.ts';
 import { institutionCertVerdict } from './production/tls.ts';
+import { plannedDefaultTold } from './production/web.ts';
 import { type CommandRunner, scratchRunner, systemRunner } from './runner.ts';
 import { readHostRootSeam } from './scratch.ts';
 import { bunPinOf, sourceTreeRoot } from './source.ts';
@@ -89,6 +90,8 @@ export function reviewTodo(
 		// Another web server on this host: host_preflight refuses it — said BEFORE `yes` (campaign 3b N3).
 		...webServerClash(ctx, fs),
 		...operatorTodo(ctx),
+		// nginx installed by this run: its package's default site, said before `yes` (campaign 3e E5).
+		...plannedDefaultTold(ctx),
 		...(cert === null
 			? []
 			: [...cert.problems, ...cert.warnings].map(

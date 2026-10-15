@@ -146,6 +146,15 @@ interface HostRunContext extends LoopContext {
 	runLock: boolean;
 	keptLive: boolean;
 	undone: string[];
+	/**
+	 * What the interrupted step said WHILE IT STOPPED (campaign 3f F2): the
+	 * engine child's last lines — "ended the seed restore's database session"
+	 * — arrive after the signal; they are kept here and printed INSIDE the ✖
+	 * block, which both front ends show (a full screen drops its log pane).
+	 */
+	readonly stopping: string[];
+	/** The runner's commands still in flight — an interruption lets them finish (bounded). */
+	readonly inflight: Set<Promise<unknown>>;
 }
 
 // ── where the record lives ───────────────────────────────────────────────────
@@ -207,7 +216,14 @@ function hostHint(ctx: HostRunContext): string[] {
 		`  Progress saved: ${join(ctx.runDir, STATE_FILE)} (plan: ${PLAN_FILE})`,
 		`  Fix the cause, then resume:  ${prefix} --resume`,
 		undoHint(ctx, prefix),
+		...stepHintLines(ctx, plan),
 	];
+}
+
+/** What the plan's steps repeat in a failure block (the engine's salt read command — campaign 3e E3). */
+function stepHintLines(ctx: HostRunContext, plan: PlanFile): string[] {
+	const host = hostContext(ctx);
+	return plan.steps.flatMap((step) => hostStep(ctx, step).hintLines?.(host) ?? []);
 }
 
 // ── the host context of a step ───────────────────────────────────────────────
@@ -249,6 +265,55 @@ function hostCreated(ctx: HostRunContext): HostCreated {
 }
 
 /** The context a host step runs with. */
+/** The most lines a stopping step adds to the ✖ block (the last ones kept). */
+const STOPPING_MAX = 20;
+
+/** A step's line: said — or, once an interruption is under way, kept for the ✖ block (F2). */
+function stepSays(
+	ctx: HostRunContext,
+	line: string,
+	out: (ctx: HostRunContext, line: string) => void,
+): void {
+	if (ctx.interruption === null) {
+		out(ctx, line);
+		return;
+	}
+	ctx.stopping.push(redact(ctx, line));
+	if (ctx.stopping.length > STOPPING_MAX) ctx.stopping.shift();
+}
+
+/** A runner whose in-flight commands an interruption can wait for (F2). */
+function trackedRunner(inner: CommandRunner, inflight: Set<Promise<unknown>>): CommandRunner {
+	return {
+		run: (request) => {
+			const running = inner.run(request);
+			inflight.add(running);
+			const done = () => inflight.delete(running);
+			running.then(done, done);
+			return running;
+		},
+	};
+}
+
+/**
+ * Bound of the wait for the in-flight commands' last output on an interrupt:
+ * runuser ends its child on a signal after 2 s (util-linux su-common); the
+ * engine's own stop is bounded to 8 s.
+ */
+export const STOP_DRAIN_MS = 10_000;
+
+/** Let the commands still in flight deliver their last lines (bounded; never throws). */
+async function drainRuns(ctx: HostRunContext): Promise<void> {
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	await Promise.race([
+		Promise.allSettled([...ctx.inflight]),
+		new Promise((done) => {
+			timer = setTimeout(done, STOP_DRAIN_MS);
+		}),
+	]);
+	clearTimeout(timer);
+}
+
 function hostContext(ctx: HostRunContext): HostCtx {
 	return {
 		...planContext(ctx),
@@ -259,8 +324,8 @@ function hostContext(ctx: HostRunContext): HostCtx {
 		fs: ctx.fs,
 		io: ctx.io,
 		children: ctx.children,
-		say: (line) => say(ctx, line),
-		warn: (line) => warnLine(ctx, line),
+		say: (line) => stepSays(ctx, line, say),
+		warn: (line) => stepSays(ctx, line, warnLine),
 		save: () => saveState(ctx),
 		sleep: ctx.sleep,
 		now: ctx.now,
@@ -709,6 +774,12 @@ async function settleServedQuietly(ctx: HostRunContext): Promise<void> {
 	}
 }
 
+/** The ✖ block's lines of what the step said while it stopped (F2) — none: nothing. */
+export function stoppingLines(ctx: { stopping: readonly string[] }): string[] {
+	if (ctx.stopping.length === 0) return [];
+	return ['  While it stopped, the step said:', ...ctx.stopping.map((line) => `  ${line}`)];
+}
+
 /** The interrupted step's own stop (the engine child's container — C3-29); never throws. */
 async function stopCurrentStep(ctx: HostRunContext): Promise<void> {
 	if (ctx.currentStep === null || ctx.state === null) return;
@@ -726,6 +797,7 @@ async function interrupted(
 ): Promise<never> {
 	await stopChildren(ctx);
 	await stopCurrentStep(ctx);
+	await drainRuns(ctx);
 	await settleServedQuietly(ctx);
 	recordFailure(ctx, 'install.step_failed', 'interrupted');
 	closeRun(ctx, 'interrupted');
@@ -736,6 +808,7 @@ async function interrupted(
 	ctx.io.warn(
 		`\n✖ install interrupted (${signal})${ctx.currentStep === null ? '' : ` at step [${ctx.currentStep}]`}`,
 	);
+	for (const line of stoppingLines(ctx)) ctx.io.warn(line);
 	for (const line of hostHint(ctx)) ctx.io.warn(line);
 	return process.exit(signal === 'SIGINT' ? 130 : 143);
 }
@@ -769,6 +842,7 @@ function newContext(
 		(value): value is string => typeof value === 'string',
 	);
 	const seams = machine(options, children, () => redactions);
+	const inflight = new Set<Promise<unknown>>();
 	const answers = request.planFile?.answers ?? request.givenAnswers ?? {};
 	const runDir = seams.fs.real(hostRunDirOf(answers, source));
 	const ctx: HostRunContext = {
@@ -783,7 +857,9 @@ function newContext(
 		unredacted: false,
 		interruption: null,
 		request,
-		runner: seams.runner,
+		runner: trackedRunner(seams.runner, inflight),
+		stopping: [],
+		inflight,
 		fs: seams.fs,
 		source,
 		sleep: options.sleep ?? ((ms) => new Promise((done) => setTimeout(done, ms))),

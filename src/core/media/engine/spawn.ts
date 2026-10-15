@@ -52,9 +52,10 @@ export interface SpawnResult {
 	 * literal in first-argument position — prose included — so a quoted signal name
 	 * reads as an undocumented config key and reddens both config census gates.
 	 * Kept out of that scanner's suppression list on purpose: the list is what
-	 * stands between the scanner and a genuinely undocumented key.)
+	 * stands between the scanner and a genuinely undocumented key.) A signal with no
+	 * name (a Linux real-time signal) is its number — Bun 1.4.3 reports it so.
 	 */
-	signal: string | null;
+	signal: string | number | null;
 	/**
 	 * The ONE truth about whether the command did its job: exit 0, no signal, no
 	 * timeout. Every runner that produces a FILE must branch on this — audit

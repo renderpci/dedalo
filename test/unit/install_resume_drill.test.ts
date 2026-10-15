@@ -65,7 +65,12 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import { parseEnvFile } from '../../src/config/env.ts';
-import { holdInstallLock, inspectTargetDatabase } from '../../src/core/install/db_restore.ts';
+import {
+	holdInstallLock,
+	inspectTargetDatabase,
+	SEED_APP_NAME,
+	seedAppName,
+} from '../../src/core/install/db_restore.ts';
 import { resolvePgBinary } from '../../src/core/install/pg_bin.ts';
 import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { connArgs, pgClientEnv, runPsql } from '../../src/core/install/pg_exec.ts';
@@ -155,7 +160,7 @@ function answersArgv(db: string): string[] {
 
 interface Run {
 	exitCode: number | null;
-	signal: string | null;
+	signal: string | number | null;
 	out: string;
 }
 
@@ -658,7 +663,31 @@ describe('install resume drill', () => {
 			}
 			expect(await waitFor(async () => (await installerBackends(db)) === 0, 60000)).toBe(true);
 
+			// ── a seed restore orphaned on the server (campaign 3e F5: its client died
+			// with its container) — ANOTHER install's is refused and left alone ──
+			const foreignSeed = sleeper(conn, `${SEED_APP_NAME}:00000000-0000-4000-8000-000000000000`);
+			try {
+				expect(await waitFor(async () => (await seedBackends(db)) > 0, 30000)).toBe(true);
+				const refusedSeed = runCli(dirLg, ['--resume']);
+				expect(refusedSeed.exitCode).toBe(1);
+				expect(refusedSeed.out).toContain(`a seed restore into '${db}' is still running`);
+				expect(await seedBackends(db)).toBe(1);
+			} finally {
+				// The server ends a sleeping backend only when asked (pg_sleep never reads its client).
+				await terminateSeedSleepers(db);
+				foreignSeed.kill('SIGKILL');
+				await foreignSeed.exited;
+			}
+			expect(await waitFor(async () => (await installerBackends(db)) === 0, 60000)).toBe(true);
+			// ── THIS install's: the resume holds the install lock, so no live installer
+			// owns it — ended (said), and the resume finishes ──
+			const ownSeed = sleeper(conn, seedAppName(installId));
+			expect(await waitFor(async () => (await seedBackends(db)) > 0, 30000)).toBe(true);
+
 			const finished = runCli(dirLg, ['--resume']);
+			await ownSeed.exited;
+			expect(finished.out).toContain('ended the seed restore an interrupted run left on');
+			expect(await seedBackends(db)).toBe(0);
 			expect(finished.exitCode, finished.out).toBe(0);
 			expectComplete(dirLg);
 			expect(readState(dirLg).steps.install_db_from_default_file?.attempts).toBe(2);
@@ -725,6 +754,28 @@ async function backendCount(db: string, filter: string): Promise<number> {
 }
 
 const seedBackends = (db: string): Promise<number> =>
-	backendCount(db, "application_name = 'dedalo_install_seed'");
+	backendCount(db, "application_name LIKE 'dedalo\\_install\\_seed%'");
+
+/** End every seed-named backend on `db` (the terminate in the SELECT list of the filtered rows). */
+async function terminateSeedSleepers(db: string): Promise<void> {
+	await runPsql(admin, [
+		'-tAc',
+		`SELECT pg_terminate_backend(pid, 5000) FROM (SELECT pid FROM pg_stat_activity WHERE datname = '${db}' AND application_name LIKE 'dedalo\\_install\\_seed%' OFFSET 0) AS seeds`,
+	]);
+}
+
+/** A psql session named `appName` sleeping on `conn` (a stand-in for an orphaned backend). */
+function sleeper(conn: DbConnDescriptor, appName: string) {
+	return Bun.spawn(
+		[
+			resolvePgBinary('psql'),
+			`--dbname=${conn.database}`,
+			...connArgs(conn),
+			'-tAc',
+			'SELECT pg_sleep(120)',
+		],
+		{ env: { ...pgClientEnv(conn), PGAPPNAME: appName }, stdout: 'ignore', stderr: 'ignore' },
+	);
+}
 const installerBackends = (db: string): Promise<number> =>
 	backendCount(db, "application_name LIKE 'dedalo_install%'");

@@ -324,6 +324,20 @@ export function catchAllTold(
 	});
 }
 
+/**
+ * The Review's default-site note of a run that INSTALLS nginx (campaign 3e E5):
+ * the package's own `default_server` (os row `packageDefault`) does not exist
+ * yet to be measured, so the note host_web_site tells after the run — the same
+ * words (catchAllTold) — is said BEFORE `yes`, from what the package installs.
+ * nginx already installed: [] (host_web_site measures and tells it).
+ */
+export function plannedDefaultTold(ctx: HostPlanCtx): string[] {
+	const { web } = ctx.facts;
+	const shipped = webFlavor(ctx).packageDefault;
+	if (web.kind !== 'nginx' || web.installed || shipped === undefined) return [];
+	return catchAllTold(ctx, [shipped]);
+}
+
 /** Stage 2's commands (`mapOwner`: this instance's map is the host's — decided at run time). */
 export function siteCommands(ctx: HostPlanCtx, mapOwner = nginxGated(ctx)): HostCommand[] {
 	return [
@@ -550,6 +564,13 @@ function siteRemoval(
 	];
 }
 
+/**
+ * gpasswd's exit when the user is NOT a member of the group (already out: an
+ * earlier --abort, or by hand) — a harmless outcome for a removal, here and in
+ * multi_instance.md's manual removal list (step 9).
+ */
+export const GPASSWD_NOT_A_MEMBER = 3;
+
 /** The web user leaves the instance group — even when a failed step already put the files back. */
 function groupRemoval(ctx: HostCtx): HostCommand[] {
 	if (!ctx.created.web_group_member) return [];
@@ -559,7 +580,7 @@ function groupRemoval(ctx: HostCtx): HostCommand[] {
 			'gpasswd',
 			['-d', webFlavor(ctx).user, ctx.paths.group],
 			'remove the web user from the instance group',
-			{ okExit: [0, 3] },
+			{ okExit: [0, GPASSWD_NOT_A_MEMBER] },
 		),
 	];
 }

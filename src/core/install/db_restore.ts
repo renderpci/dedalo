@@ -50,13 +50,25 @@ import {
 	connArgs,
 	connFromConfig,
 	type DbConnDescriptor,
-	pgClientEnv,
+	installSessionEnv,
 	runPsql,
 } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
 /** The seed restore's application_name — what a resume looks for on the server. */
 export const SEED_APP_NAME = 'dedalo_install_seed';
+
+/**
+ * The application_name of a TERMINAL INSTALL's seed restore: SEED_APP_NAME +
+ * `:<install id>` (56 characters, under the server's 63) — so the server
+ * itself says WHICH install a running restore belongs to (campaign 3e F5): an
+ * install may end its own orphaned restore, never another's.
+ */
+export function seedAppName(installId?: string): string {
+	if (installId === undefined) return SEED_APP_NAME;
+	assertInstallId(installId);
+	return `${SEED_APP_NAME}:${installId}`;
+}
 
 /** Every installer psql session's application_name starts with this. */
 export const INSTALL_APP_PREFIX = 'dedalo_install';
@@ -182,7 +194,7 @@ export async function restoreSeed(
 		const restore = await runPsql(
 			connection,
 			['-v', 'ON_ERROR_STOP=1', '--single-transaction', '--quiet', '-f', tmpSql],
-			{ appName: SEED_APP_NAME },
+			{ appName: seedAppName(stampInstallId) },
 		);
 		if (restore.exitCode !== 0) {
 			refuseInstall(
@@ -276,6 +288,8 @@ export interface TargetDatabaseState {
 	extensions: string[];
 	/** The backend pid of a seed restore running on it, or null. */
 	seedRestoreRunning: number | null;
+	/** The terminal install that restore belongs to (its application_name), null when unnamed. */
+	seedRestoreInstallId: string | null;
 	/** Backend pids of OTHER installer sessions (any `dedalo_install*` application name). */
 	installSessions: number[];
 	/** The terminal install id the database is stamped with (see the header), or null. */
@@ -322,7 +336,7 @@ function objectSummary(line: string | null): { count: number; names: string[] } 
 async function installerSessions(
 	conn: DbConnDescriptor,
 	ownAppName: string | undefined,
-): Promise<{ seed: number | null; others: number[] }> {
+): Promise<{ seed: number | null; seedInstallId: string | null; others: number[] }> {
 	const own =
 		ownAppName === undefined ? '' : ` AND application_name <> '${ownAppName.replace(/'/g, "''")}'`;
 	const rows = await scalar(
@@ -338,8 +352,13 @@ async function installerSessions(
 			pid: Number(row.slice(0, row.indexOf(':'))),
 			app: row.slice(row.indexOf(':') + 1),
 		}));
+	const seed = sessions.find(
+		(session) => session.app === SEED_APP_NAME || session.app.startsWith(`${SEED_APP_NAME}:`),
+	);
+	const owner = seed?.app.slice(SEED_APP_NAME.length + 1) ?? '';
 	return {
-		seed: sessions.find((session) => session.app === SEED_APP_NAME)?.pid ?? null,
+		seed: seed?.pid ?? null,
+		seedInstallId: INSTALL_ID_SHAPE.test(owner) ? owner : null,
 		others: sessions.map((session) => session.pid),
 	};
 }
@@ -363,6 +382,7 @@ export async function inspectTargetDatabase(
 		userObjects: [],
 		extensions: [],
 		seedRestoreRunning: null,
+		seedRestoreInstallId: null,
 		installSessions: [],
 		installStamp: null,
 		canStamp: false,
@@ -402,10 +422,40 @@ export async function inspectTargetDatabase(
 		userObjects: objects.names,
 		extensions: (extensions ?? '').split(',').filter((name) => name !== ''),
 		seedRestoreRunning: sessions.seed,
+		seedRestoreInstallId: sessions.seedInstallId,
 		installSessions: sessions.others,
 		installStamp: await installStampOf(conn),
 		canStamp: canStamp === 't',
 	};
+}
+
+/**
+ * END THIS INSTALL'S SEED RESTORE on the server (campaign 3e F5): terminate
+ * every backend named `seedAppName(installId)` on the target database and wait
+ * (up to 5 s each) for it to be gone. The restore is ONE transaction, so the
+ * server rolls it back and the database is as empty as the restore found it.
+ * Called by the engine's own Ctrl-C path (its psql may die without its close
+ * reaching the server) and by a resume/abort that HOLDS the install lock — no
+ * live installer can then own that restore. Answers the pids it ended; never
+ * touches a restore named for another install, or an unnamed one. Gated by
+ * outcome in test/unit/install_resume_drill.test.ts (scenario F).
+ */
+export async function endSeedRestore(conn: DbConnDescriptor, installId: string): Promise<number[]> {
+	const name = seedAppName(installId);
+	// The terminate call sits in the SELECT list of the filtered rows — never in a
+	// WHERE the planner could evaluate before the name filter.
+	const ended = await scalar(
+		conn,
+		`SELECT coalesce(string_agg(pid::text, ',' ORDER BY pid) FILTER (WHERE ended), '')
+		   FROM (SELECT pid, pg_terminate_backend(pid, 5000) AS ended
+		           FROM (SELECT pid FROM pg_stat_activity
+		                  WHERE datname = current_database() AND pid <> pg_backend_pid()
+		                    AND application_name = '${name}' OFFSET 0) AS mine) AS done`,
+	);
+	return (ended ?? '')
+		.split(',')
+		.filter((pid) => pid !== '')
+		.map(Number);
 }
 
 /** The install id the database's comment carries, or null (none, or not an install stamp). */
@@ -672,7 +722,7 @@ export async function holdInstallLock(
 			stdin: 'pipe',
 			stdout: 'pipe',
 			stderr: 'pipe',
-			env: { ...pgClientEnv(conn), PGAPPNAME: appName },
+			env: installSessionEnv(conn, appName),
 		},
 	);
 	child.stdin.write("SELECT pg_try_advisory_lock(hashtext('dedalo_install'));\n");

@@ -32,6 +32,12 @@
  *  C3d-F3 the refused Review's key bar and action line say "check again",
  *         never "enter install".
  *
+ * CAMPAIGN 3e (the second VM re-test, 2026-10-14):
+ *  E1 a failed check that asks nothing (the System check): `edit` goes back to
+ *     the screen whose answers it checked, and every word says so.
+ *  E2 the re-check of a refused Review: its running line is gone once a
+ *     question waits — never frozen under the yes — and its end is said.
+ *
  * DB-free, network-free; one PTY run of the real plain installer (D21).
  */
 
@@ -53,12 +59,14 @@ import type { InitTestResult } from '../../src/core/install/init_test.ts';
 import { buildInstallPlan, type InstallPlan } from '../../src/core/install/install_plan.ts';
 import { runInteractiveInstall } from '../../src/core/install/install_session.ts';
 import { passedDetail, systemCheckRows } from '../../src/core/install/probes.ts';
-import type { ReviewView } from '../../src/core/install/prompter_contract.ts';
+import type { ProbeView, ReviewView } from '../../src/core/install/prompter_contract.ts';
 import { BACK, QUIT } from '../../src/core/install/prompter_contract.ts';
 import { buildScreens, type Screen } from '../../src/core/install/screen_model.ts';
 import { DONE_TEXT, NOTICE_TEXT } from '../../src/core/install/screen_text.ts';
-import { carriedOver } from '../../src/core/install/ui/prompter.ts';
+import type { App } from '../../src/core/install/ui/app.ts';
+import { carriedOver, isProgressLine, tuiPrompter } from '../../src/core/install/ui/prompter.ts';
 import { doneCard } from '../../src/core/install/ui/screens/done.ts';
+import { probePage } from '../../src/core/install/ui/screens/pages.ts';
 import { reviewPage } from '../../src/core/install/ui/screens/review.ts';
 import type { DrawContext } from '../../src/core/install/ui/widget.ts';
 import { scriptedInstallPrompter } from '../../src/core/install/ui_plain/prompter.ts';
@@ -236,7 +244,9 @@ describe('D3: every completing host run names the salt’s read command', () => 
 			answers: { route: 'docker' },
 			created: { salt_shown: true },
 		} as unknown as HostCtx)) as string[];
-		expect(stack.join('\n')).toContain('exec dedalo grep ^DEDALO_SALT_STRING= /private/.env');
+		expect(stack.join('\n')).toContain(
+			'run --rm --no-deps dedalo grep ^DEDALO_SALT_STRING= /private/.env',
+		);
 		const production = (await host_engine.afterComplete?.({
 			paths: { privateDir: '/home/ded_museo/private' },
 			created: { salt_shown: true },
@@ -588,5 +598,117 @@ describe('C3d-F3: the refused Review never says "enter install"', () => {
 		const offered = reviewPage(view(true), () => {});
 		expect(offered.keys()[0]).toEqual(['enter', 'install']);
 		expect(pinnedText(offered)).toContain('Install');
+	});
+});
+
+// ── campaign 3e (2026-10-14 VM re-test) ──────────────────────────────────────
+
+describe('E1: `edit` on the System check goes back to Install type, and says so', () => {
+	test('both UIs: the prompt and the button name Install type; edit walks back to it (never only re-runs the check)', async () => {
+		const { script } = walked('route trial', ['quit']);
+		const base = scriptedInstallPrompter(script);
+		const views: ProbeView[] = [];
+		const prompter = {
+			...base,
+			probe: async (view: ProbeView) => {
+				views.push(view);
+				base.asked.push(`probe:${view.screen.id}`);
+				return views.length === 1 ? 'edit' : QUIT;
+			},
+		};
+		await runInteractiveInstall({
+			prompter,
+			probes: fakeProbes({ fail: ['system'] }),
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		const [first] = views;
+		expect(first?.screen.id).toBe('system');
+		expect(first?.editGoesTo).toBe('Install type');
+		expect(first?.prompt).toContain('edit (back to Install type)');
+		// `edit` went BACK: Install type is shown again before the check runs again.
+		const at = base.asked.indexOf('probe:system');
+		expect(base.asked.slice(at)).toContain('screen:route');
+		// The full screen's button and key bar say the same.
+		const page = probePage(first as ProbeView, () => {});
+		const ctx = { width: 120, layout: { paneHeight: 30 }, palette: {} } as unknown as DrawContext;
+		const text = page
+			.lines(ctx)
+			.lines.map((line) => line.map((part) => part.text).join(''))
+			.join('\n');
+		expect(text).toContain('Back to Install type');
+		expect(text).not.toContain("Ask this screen's questions again");
+		expect(
+			page
+				.keys()
+				.map(([, words]) => words)
+				.join(' '),
+		).toContain('edit (back to Install type)');
+	});
+
+	test('CONTROL: a failed check on a screen with questions keeps `edit` = ask them again', async () => {
+		const { script } = walked('route production + instance (derived names as shown)', ['quit']);
+		const base = scriptedInstallPrompter(script);
+		const views: ProbeView[] = [];
+		const prompter = {
+			...base,
+			probe: async (view: ProbeView) => {
+				views.push(view);
+				return QUIT;
+			},
+		};
+		await runInteractiveInstall({
+			prompter,
+			probes: fakeProbes({ fail: ['identity'] }),
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+		});
+		expect(views[0]?.screen.id).toBe('identity');
+		expect(views[0]?.editGoesTo).toBeUndefined();
+		expect(views[0]?.prompt).toContain('retry, edit, or');
+	});
+});
+
+describe('E2: the refused Review re-check leaves no frozen running line', () => {
+	test('cleared: the running line is a progress line, and the result is said in both UIs', async () => {
+		expect(isProgressLine(NOTICE_TEXT.recheckReview)).toBe(true);
+		const { prompter, result } = await session('route docker', ['install'], (call) =>
+			call === 1 ? [HELD] : [],
+		);
+		expect(result.kind).toBe('install');
+		const at = prompter.said.indexOf(NOTICE_TEXT.recheckReview);
+		expect(at).toBeGreaterThanOrEqual(0);
+		expect(prompter.said.slice(at + 1)).toContain(NOTICE_TEXT.recheckOffered);
+		// CONTROL: still refused says so, never "offered".
+		const refused = await session('route docker', ['install', 'quit'], () => [HELD]);
+		expect(refused.prompter.said).toContain(NOTICE_TEXT.stillRefused);
+		expect(refused.prompter.said).not.toContain(NOTICE_TEXT.recheckOffered);
+	});
+
+	test('full screen: a question put on screen drops the running line said before it (the yes prompt)', () => {
+		const app = {
+			said: [] as string[],
+			view: null,
+			widget: null,
+			overlay: null,
+			cancel: null,
+			stopped: null,
+			run: { shownOnce: [] },
+			draw: () => {},
+		} as unknown as App;
+		const tui = tuiPrompter(app);
+		tui.say([NOTICE_TEXT.recheckReview, NOTICE_TEXT.recheckOffered]);
+		const question = buildScreens(modelInput({ route: 'docker', entity: 'museo' }))
+			.flatMap((screen) => screen.questions)
+			.find((item) => item.kind === 'text');
+		void tui.text(question as NonNullable<typeof question>);
+		expect(app.said).toEqual([NOTICE_TEXT.recheckOffered]);
+		app.cancel?.(null);
 	});
 });

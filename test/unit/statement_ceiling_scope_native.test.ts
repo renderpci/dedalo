@@ -152,10 +152,13 @@ await leg('recorder_set_local', () => withTransaction(async () => {
 // UNKNOWN: the 57014 that follows must stay raw, never typed against a guess.
 // The new ceiling (400ms) is ABOVE the pool's (250ms), so a recorder that lost
 // the set_config detection would keep 250 and TYPE the 57014 (400 >= 250).
+// The error LEAVES the transaction, as in production: caught inside, the body
+// returned normally and committed an aborted transaction — which Bun 1.4.3
+// rejects (ERR_POSTGRES_COMMIT_ROLLED_BACK; 1.4.2 resolved it silently).
 await leg('recorder_unknown_raw', () => withTransaction(async () => {
 	await sql.unsafe("SELECT set_config('statement_timeout', '400', true)", []);
-	try { await sql.unsafe('SELECT pg_sleep(0.6)', []); return 'NO ERROR'; }
-	catch (e) { return describe(e); }
+	await sql.unsafe('SELECT pg_sleep(0.6)', []);
+	return 'NO ERROR';
 }));
 
 // ROLLBACK TO SAVEPOINT reverts a SET LOCAL made after the savepoint (Postgres):
@@ -815,12 +818,12 @@ describe('a 57014 that is NOT the ceiling stays raw', () => {
 		expect((cancelled as ErrorShape).dedalo).toBe(false);
 	});
 	test('a ceiling changed in a way the recorder cannot parse (set_config) is unknown: its 57014 stays raw', () => {
-		const unknown = legValue('recorder_unknown_raw') as ErrorShape | string;
-		expect(typeof unknown, `the statement did not time out: ${JSON.stringify(unknown)}`).toBe(
-			'object',
+		const unknown = errorOf('recorder_unknown_raw');
+		expect(unknown.name, `not the driver's raw error: ${JSON.stringify(unknown)}`).toBe(
+			'PostgresError',
 		);
-		expect((unknown as ErrorShape).errno).toBe('57014');
-		expect((unknown as ErrorShape).dedalo).toBe(false);
+		expect(unknown.errno).toBe('57014');
+		expect(unknown.dedalo).toBe(false);
 	});
 	test('the reserved lane is never mapped (migrate.ts isStoppedRun reads the raw errno)', () => {
 		const reserved = legValue('reserved_raw') as ErrorShape;

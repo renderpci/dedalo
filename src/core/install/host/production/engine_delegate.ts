@@ -145,6 +145,106 @@ interface ChildEvent {
 	step?: string;
 	phase?: string;
 	label?: string;
+	/** `outcome`: the child's refusal/failure sentence (redacted by the child), or null. */
+	message?: string | null;
+}
+
+/**
+ * What the child SAID about how it ended (campaign 3e F4): its `outcome`
+ * event's sentence — a refusal such as "a seed restore … is still running" is
+ * printed nowhere else, so the host's ✖ block must carry it. `who` names the
+ * child in a signal-death sentence (campaign 3f F1): the instance's process,
+ * or the docker route's container.
+ */
+export interface ChildReport {
+	message: string | null;
+	who: string;
+}
+
+/** A fresh, empty report for one child run. */
+export function childReport(who = 'the engine child'): ChildReport {
+	return { message: null, who };
+}
+
+/** The longest child reason quoted into a ✖ line. */
+const REASON_MAX = 400;
+
+/**
+ * Lines a child's stderr carries that are NEVER a reason (campaign 3f F1: a
+ * `docker kill -s KILL` of the engine container was reported as "Container
+ * dedalo-install-engine Created"): Docker Compose's progress chatter and
+ * runuser's own words when it ends its child on a signal.
+ */
+const NOT_A_REASON: readonly RegExp[] = [
+	/^(Container|Network|Volume|Image)\s+\S+\s+(Creating|Created|Recreate|Recreated|Starting|Started|Stopping|Stopped|Removing|Removed|Running|Waiting|Healthy|Exited|Pulling|Pulled|Building|Built)$/,
+	/^\[\+\]\s/,
+	/^Session terminated, killing shell/,
+	/^\.\.\.\s*killed\.?$/,
+];
+
+/** The last stderr line that can be a reason ('' when none). */
+function stderrReason(stderr: string): string {
+	return (
+		stderr
+			.split('\n')
+			.map((line) => line.trim())
+			.filter((line) => line !== '' && !NOT_A_REASON.some((pattern) => pattern.test(line)))
+			.at(-1) ?? ''
+	);
+}
+
+/** Linux signal numbers (the hosts this installer supports). */
+const SIGNAL_NAMES: Readonly<Record<number, string>> = Object.freeze({
+	1: 'SIGHUP',
+	2: 'SIGINT',
+	3: 'SIGQUIT',
+	6: 'SIGABRT',
+	9: 'SIGKILL',
+	11: 'SIGSEGV',
+	13: 'SIGPIPE',
+	15: 'SIGTERM',
+});
+
+/**
+ * A death by signal, in words (exit 128+N — a shell's, runuser's and
+ * `compose run`'s spelling of it), or null for an ordinary exit. SIGKILL says
+ * who sends one: the kernel out of memory, or a kill.
+ */
+export function signalDeath(who: string, exitCode: number): string | null {
+	const signal = exitCode - 128;
+	if (signal < 1 || signal > 64) return null;
+	const name = SIGNAL_NAMES[signal] ?? `signal ${signal}`;
+	const cause = signal === 9 ? ' — out of memory, or a kill' : '';
+	return `${who} was killed by ${name}${cause}`;
+}
+
+/**
+ * Why the child failed, in its own words: its outcome sentence; else a death
+ * by signal, named; else the last line of its stderr that is not progress
+ * chatter (a crash, a compose/docker error — already redacted by the runner);
+ * else null.
+ */
+function childReason(report: ChildReport, exitCode: number, stderr: string): string | null {
+	const said = report.message?.trim() ?? '';
+	const reason = said !== '' ? said : (signalDeath(report.who, exitCode) ?? stderrReason(stderr));
+	if (reason === '') return null;
+	return reason.length > REASON_MAX ? `${reason.slice(0, REASON_MAX)}…` : reason;
+}
+
+/**
+ * The host's ✖ sentence for a failed child: `<what>: <the child's reason> —
+ * <consequence> (exit N)`. Never "see above": the reason is quoted here, or the
+ * sentence says the child gave none.
+ */
+export function childFailure(
+	what: string,
+	consequence: string,
+	report: ChildReport,
+	result: { exitCode: number; stderr: string },
+): string {
+	const reason = childReason(report, result.exitCode, result.stderr);
+	const said = reason === null ? ' (the engine child gave no reason)' : `: ${reason}`;
+	return `${what}${said} — ${consequence} (exit ${result.exitCode})`;
 }
 
 /** The command that reads the salt back (the instance's .env is 0600, its user's). */
@@ -157,6 +257,8 @@ function saltCommand(ctx: HostPlanCtx): string {
  * A4) — recorded shown ONLY when it reached a terminal (C3-18).
  */
 function relayShowOnce(ctx: HostCtx, event: ChildEvent): void {
+	// The child sends this line only for a salt it GENERATED (scripts/install.ts).
+	ctx.created.salt_generated = true;
 	const shown = ctx.io.showOnce?.(event.lines ?? []) ?? false;
 	if (shown) ctx.created.salt_shown = true;
 	else ctx.say(`    the generated salt is stored in ${ctx.paths.privateDir}/.env (0600)`);
@@ -170,13 +272,21 @@ const RELAY: Readonly<Record<string, (ctx: HostCtx, event: ChildEvent) => void>>
 		ctx.say(`    engine ${event.phase ?? ''}: ${event.label ?? event.step ?? ''}`),
 });
 
-/** One JSON line of the child's event stream, relayed (never stored) — the docker delegate's too. */
-export function relay(ctx: HostCtx, line: string): void {
+/**
+ * One JSON line of the child's event stream, relayed (never stored) — the
+ * docker delegate's too. Its `outcome` sentence goes to `report` (the host's ✖
+ * block quotes it), never to the transcript as a line of its own.
+ */
+export function relay(ctx: HostCtx, line: string, report?: ChildReport): void {
 	let event: ChildEvent;
 	try {
 		event = JSON.parse(line) as ChildEvent;
 	} catch {
 		ctx.say(`    ${line}`);
+		return;
+	}
+	if (event.event === 'outcome') {
+		if (report !== undefined) report.message = event.message ?? null;
 		return;
 	}
 	RELAY[event.event ?? '']?.(ctx, event);
@@ -200,14 +310,20 @@ async function runEngine(ctx: HostCtx) {
 	refuseLiveChild(status, ` as ${ctx.paths.user}`);
 	if (status?.outcome === 'complete') return ran('engine install already complete');
 	const command = engineCommand(ctx, status?.exists === true);
+	const report = childReport();
 	const result = await ctx.runner.run({
 		...requestOf(command, ctx),
-		onStdoutLine: (line) => relay(ctx, line),
+		onStdoutLine: (line) => relay(ctx, line, report),
 	});
 	if (!succeeded(command, result)) {
 		hostRefuse(
 			'install.step_failed',
-			`the engine steps failed (exit ${result.exitCode}) — their record is in ${ctx.paths.privateDir}/install; the host install resumes them`,
+			childFailure(
+				'the engine steps failed',
+				`their record is in ${ctx.paths.privateDir}/install; the host install resumes them`,
+				report,
+				result,
+			),
 		);
 	}
 	return ran('engine steps complete');
@@ -246,14 +362,20 @@ async function undoEngine(ctx: HostCtx): Promise<string> {
 			pdeathsig: true,
 		},
 	);
+	const report = childReport();
 	const result = await ctx.runner.run({
 		...requestOf(command, ctx),
-		onStdoutLine: (line) => relay(ctx, line),
+		onStdoutLine: (line) => relay(ctx, line, report),
 	});
 	if (!succeeded(command, result)) {
 		hostRefuse(
 			'install.state_conflict',
-			'the engine child refused its --abort (see above) — nothing before it was undone',
+			childFailure(
+				'the engine child refused its --abort',
+				'nothing before it was undone',
+				report,
+				result,
+			),
 		);
 	}
 	return 'engine steps undone';
@@ -309,6 +431,19 @@ export function saltTodo(command: string): string {
 	return `keep a copy of the generated salt (DEDALO_SALT_STRING) with your backups — the stored passwords cannot be verified without it; read it with: ${command}`;
 }
 
+/**
+ * The failure / interruption block's salt line (campaign 3e E3): once the
+ * engine child generated the salt, every ✖ block names the command that reads
+ * it back — the value itself only ever went to the one-time display, which a
+ * full screen takes with it when a Ctrl-C leaves it. Never the value.
+ */
+export function saltHintLines(ctx: HostCtx, command: string): string[] {
+	if (ctx.created.salt_generated !== true) return [];
+	return [
+		`  The generated salt (DEDALO_SALT_STRING) — keep a copy with your backups; read it with: ${command}`,
+	];
+}
+
 /** The production engine's one-time salt (see showSaltLine), then its To-do line. */
 async function showSaltOnce(ctx: HostCtx): Promise<string[] | undefined> {
 	if (!ctx.created.salt_shown) {
@@ -338,5 +473,6 @@ export const host_engine: HostStepDefinition = {
 	},
 	undo: undoEngine,
 	afterComplete: showSaltOnce,
+	hintLines: (ctx) => saltHintLines(ctx, saltCommand(ctx)),
 	secretsStillNeeded: async (ctx) => stillNeeded(await engineStatus(ctx)),
 };

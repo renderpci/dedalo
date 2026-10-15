@@ -56,7 +56,7 @@ import {
 	recordingRunner,
 	scratchRunner,
 } from '../../src/core/install/host/runner.ts';
-import { keptImages } from '../../src/core/install/host/stack/database.ts';
+import { stackImages } from '../../src/core/install/host/stack/database.ts';
 import { stackSaltCommand } from '../../src/core/install/host/stack/engine_delegate.ts';
 import { curlReason } from '../../src/core/install/host/stack/health.ts';
 import { IMAGE_BUILDER, imageCommands } from '../../src/core/install/host/stack/image.ts';
@@ -491,6 +491,104 @@ describe('abort removes only what this install created (f)', () => {
 	});
 });
 
+describe("the engine child's own refusal reaches the host's ✖ block (campaign 3e F4)", () => {
+	test('resume and abort quote the child’s outcome sentence; never "see above" over nothing', async () => {
+		const compose = composePrefix('trial');
+		const run = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const abort = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --abort`;
+		const said = "a seed restore into 'dedalo' is still running (backend pid 124)";
+		const outcome = `{"event":"log","line":"Dédalo TS install — resuming 'dedalo'"}\n{"event":"outcome","exitCode":1,"result":"refused","message":"${said}","failedStep":null,"hint":[]}\n`;
+		const host = machine(TRIAL, {
+			responses: [
+				{ match: run, exit: 1, stdout: outcome },
+				{ match: abort, exit: 1, stdout: outcome },
+				{
+					match: `${compose} run --rm -T --no-deps dedalo bun run scripts/install.ts --status --json`,
+					after: run,
+					stdout:
+						'{"exists":true,"outcome":"in_progress","failed_step":"install_db_from_default_file"}\n',
+				},
+			],
+		});
+		const { plan, request } = fresh(TRIAL);
+		const failed = await runHost(host, request);
+		expect(failed.outcome.failedStep).toBe('stack_engine');
+		expect(failed.outcome.message).toContain(
+			`the engine steps failed: ${said} — their record is in`,
+		);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.message).toContain(`the engine steps failed: ${said}`);
+		const aborted = await runHost(host, laterRequest('abort', plan, 'dedalo'));
+		expect(aborted.outcome.result).not.toBe('aborted');
+		expect(aborted.outcome.message).toContain(
+			`the engine child refused its --abort: ${said} — nothing before it was undone (exit 1)`,
+		);
+		for (const message of [failed, resumed, aborted].map((r) => r.outcome.message ?? ''))
+			expect(message).not.toContain('see above');
+		// The outcome event is quoted once, in the ✖ sentence — never relayed as a raw JSON line.
+		expect(aborted.transcript.lines.join('\n')).not.toContain('"event":"outcome"');
+	});
+
+	test('a child that dies without an outcome: its last stderr line is the reason; none at all is SAID', async () => {
+		const compose = composePrefix('trial');
+		const run = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const crashed = machine(TRIAL, {
+			responses: [
+				{
+					match: run,
+					exit: 125,
+					stderr: 'noise\nError response from daemon: no space left on device\n',
+				},
+			],
+		});
+		const crash = await runHost(crashed, fresh(TRIAL).request);
+		expect(crash.outcome.message).toContain(
+			'the engine steps failed: Error response from daemon: no space left on device — their record',
+		);
+		const silent = machine(TRIAL, { responses: [{ match: run, exit: 1 }] });
+		const mute = await runHost(silent, fresh(TRIAL).request);
+		expect(mute.outcome.message).toContain(
+			'the engine steps failed (the engine child gave no reason) — their record',
+		);
+		expect(mute.outcome.message).toContain('(exit 1)');
+	});
+
+	test('a hard-killed engine container is named killed; compose progress chatter is never the reason (campaign 3f F1)', async () => {
+		const compose = composePrefix('trial');
+		const run = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const chatter =
+			' Network dedalo_default Creating\n Network dedalo_default Created\n Container dedalo-install-engine Creating\n Container dedalo-install-engine Created\n';
+		// `docker kill -s KILL dedalo-install-engine` mid-seed: compose run exits 137, its stderr only progress.
+		const killed = await runHost(
+			machine(TRIAL, { responses: [{ match: run, exit: 137, stderr: chatter }] }),
+			fresh(TRIAL).request,
+		);
+		expect(killed.outcome.message).toContain(
+			'the engine steps failed: the engine container was killed by SIGKILL — out of memory, or a kill — their record',
+		);
+		expect(killed.outcome.message).toContain('(exit 137)');
+		expect(killed.outcome.message).not.toContain('Container dedalo-install-engine');
+		// No signal: the last stderr line that is not chatter is the reason.
+		const failed = await runHost(
+			machine(TRIAL, {
+				responses: [
+					{ match: run, exit: 1, stderr: `Error response from daemon: disk full\n${chatter}` },
+				],
+			}),
+			fresh(TRIAL).request,
+		);
+		expect(failed.outcome.message).toContain(
+			'the engine steps failed: Error response from daemon: disk full — their record',
+		);
+		// Stopped by SIGTERM with no outcome of its own: named too.
+		const stopped = await runHost(
+			machine(TRIAL, { responses: [{ match: run, exit: 143, stderr: chatter }] }),
+			fresh(TRIAL).request,
+		);
+		expect(stopped.outcome.message).toContain('the engine container was killed by SIGTERM —');
+	});
+});
+
 // ── (g) campaign 3: what the stack steps must not hide ───────────────────────
 
 /** The state file of the scratch host's run (null once an abort removed it). */
@@ -563,12 +661,14 @@ describe('an abort of a live stack keeps PostgreSQL up; --resume puts the rest b
 		const host = machine(DOCKER_LE);
 		const { plan, request } = fresh(DOCKER_LE);
 		expect((await runHost(host, request)).outcome.result).toBe('complete');
-		await runHost(host, laterRequest('abort', plan));
+		const aborted = await runHost(host, laterRequest('abort', plan));
 		expect(loggedCommands(host.root)).toContain(
 			`${compose} rm --stop --force dedalo nginx backup certbot`,
 		);
 		const ctx = stackPlanCtx(DOCKER_LE);
-		const kept = keptImages(ctx);
+		expect(stackImages(ctx)).toContain('certbot/certbot');
+		// Every image was pulled on this machine: the served abort names them all (but postgres's rm).
+		const kept = aborted.transcript.lines.join('\n');
 		for (const image of [
 			'postgres:18',
 			'nginx:alpine',
@@ -645,6 +745,70 @@ describe('stack served = the engine container ever started or the engine answere
 		expect(containerEverStarted('0001-01-01T00:00:00Z\n')).toBe(false);
 		expect(containerEverStarted('2026-10-14T09:12:31.48Z\n')).toBe(true);
 		expect(containerEverStarted('')).toBeNull();
+	});
+});
+
+/**
+ * CAMPAIGN 3e (2026-10-14 VM re-test). E4: an UNSERVED abort (stopped before the
+ * engine's container was ever created) said it "stopped and removed dedalo,
+ * nginx, backup" — none existed — and named nginx:alpine, never pulled, in its
+ * `docker image rm` (which then failed). The undo names what it MEASURED.
+ * E3: once the engine steps generated the salt, the ✖ block names its read
+ * command (a Ctrl-C leaves the full screen, where the salt was shown) — never
+ * the value; and the command works with the stack down (`run --rm --no-deps`).
+ */
+describe('campaign 3e: an abort names only what exists; a failure block names the salt read command', () => {
+	const compose = composePrefix('trial');
+	/** `up -d dedalo` killed before it created anything; nginx:alpine never pulled. */
+	const neverCreated: RecordedResponse[] = [
+		{ match: `${compose} up -d dedalo`, exit: 1, stderr: 'context canceled' },
+		{ match: `${compose} exec -T dedalo curl`, exit: 7, stdout: '000' },
+		{ match: `${compose} ps --all --services`, stdout: 'postgres\n' },
+		{ match: `${DOCKER} image inspect --format {{.Id}} nginx:alpine`, exit: 1 },
+	];
+
+	test('E4 unserved: no container named that never existed, no image named that is not here', async () => {
+		const host = machine(TRIAL, { responses: neverCreated });
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.failedStep).toBe('stack_up');
+		const aborted = await runHost(host, laterRequest('abort', plan, 'dedalo'));
+		expect(aborted.outcome.message).toBeNull();
+		const said = aborted.transcript.lines.join('\n');
+		expect(said).toContain('no container of dedalo, nginx, backup was ever created');
+		expect(said).not.toContain('stopped and removed');
+		expect(timesLogged(host, `${compose} rm --stop --force`)).toBe(0);
+		const rm = said.split('\n').find((line) => line.includes('docker image rm')) ?? '';
+		expect(rm).toContain('postgres:18');
+		expect(rm).not.toContain('nginx:alpine');
+	});
+
+	test('E4 CONTROL: a completed (served) stack aborts naming the containers and images that are there', async () => {
+		const host = machine(TRIAL);
+		const { plan, request } = fresh(TRIAL);
+		expect((await runHost(host, request)).outcome.result).toBe('complete');
+		const said = (await runHost(host, laterRequest('abort', plan))).transcript.lines.join('\n');
+		expect(said).toContain('stopped and removed dedalo, nginx, backup');
+		expect(said).toContain('docker image rm');
+		expect(said).toContain('nginx:alpine');
+	});
+
+	test('E3: past the engine steps the ✖ hint names the salt read command (never the value); before them it does not', async () => {
+		const host = machine(TRIAL, { responses: neverCreated });
+		const { request } = fresh(TRIAL);
+		const failed = await runHost(host, request);
+		expect(failed.outcome.failedStep).toBe('stack_up');
+		const hint = failed.outcome.hint.join('\n');
+		const command = stackSaltCommand(stackPlanCtx(TRIAL));
+		expect(command).toContain('run --rm --no-deps dedalo grep');
+		expect(hint).toContain(`read it with: ${command}`);
+		expect(hint).not.toContain('scratch-stack-salt');
+		// CONTROL: a failure before the engine steps ran says nothing of a salt.
+		const early = machine(TRIAL, {
+			responses: [{ match: `${compose} up -d postgres`, exit: 1, stderr: 'no space' }],
+		});
+		const before = await runHost(early, fresh(TRIAL).request);
+		expect(before.outcome.failedStep).toBe('stack_database');
+		expect(before.outcome.hint.join('\n')).not.toContain('DEDALO_SALT_STRING');
 	});
 });
 
@@ -1121,18 +1285,24 @@ describe('the image makes the media root at the tree mode (C3-19: every install 
 });
 
 describe('the engine child’s container never outlives the run, and never races a resume (C3-29)', () => {
-	test('an interrupted stack_engine removes the named engine container', async () => {
+	test('an interrupted stack_engine lets the engine stop itself FIRST (campaign 3e F5), then removes the named container', async () => {
 		const runner = recordingRunner({ responses: () => [] });
 		const ctx = {
 			...stackPlanCtx(TRIAL),
 			runner,
 			secrets: {},
 			created: emptyHostCreated(),
+			now: () => 1_760_000_000_123,
 		} as unknown as HostCtx;
 		await (
 			STACK_HOST_STEPS.stack_engine.onInterrupt as NonNullable<HostStepDefinition['onInterrupt']>
 		)(ctx);
+		// A bare `rm -f` SIGKILLed the engine mid-COPY: its seed restore's session outlived the
+		// container's network on the server for two hours (RHEL 10 / Docker, campaign 3e).
+		// Its last words are followed from this moment, before the stop (campaign 3f F2).
 		expect(runner.log.map((entry) => entry.argv.join(' '))).toEqual([
+			`${DOCKER} logs --follow --since 1760000000.123 dedalo-install-engine`,
+			`${DOCKER} stop --time 15 dedalo-install-engine`,
 			`${DOCKER} rm -f dedalo-install-engine`,
 		]);
 	});
@@ -1300,6 +1470,53 @@ describe('a Ctrl-C that kills the engine child is ONE interruption; an abort run
 		expect(said.match(/install interrupted \(SIGINT\) at step \[stack_engine\]/g)?.length).toBe(1);
 		expect(said).not.toContain('install failed');
 		expect(stateOf(host)?.runs.at(-1)?.result).toBe('interrupted');
+	});
+
+	test("the engine's last words while it stops (`docker logs --follow`, before the stop) are INSIDE the ✖ block (campaign 3f F2)", async () => {
+		const compose = composePrefix('trial');
+		const child = `${compose} run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin`;
+		const ended = "  ended the seed restore's database session (backend pid 169)";
+		const lastWords = `${JSON.stringify({ event: 'log', line: ended })}\n${JSON.stringify({ event: 'warn', line: 'engine stopped (SIGTERM) at step [install_db_from_default_file]' })}\n`;
+		// The Ctrl-C ends the compose client at once (130); only the container's logs carry what it said next.
+		const host = machine(TRIAL, {
+			responses: [
+				{ match: child, exit: 130 },
+				{ match: `${DOCKER} logs --follow --since `, stdout: lastWords },
+			],
+		});
+		const wrapRunner = (inner: CommandRunner): CommandRunner => ({
+			run: async (request) => {
+				const result = await inner.run(request);
+				if (request.argv.join(' ').startsWith(child)) process.emit('SIGINT');
+				return result;
+			},
+		});
+		const exit = spyOn(process, 'exit').mockImplementation(((code?: number) => {
+			throw new Error(`exit ${code}`);
+		}) as never);
+		const transcript = { lines: [] as string[], told: [] as string[], shown: [] as string[] };
+		try {
+			await runHost(host, fresh(TRIAL).request, { wrapRunner, transcript });
+		} catch {
+			// the mocked exit
+		} finally {
+			exit.mockRestore();
+		}
+		const lines = transcript.lines;
+		const block = lines.findIndex((line) => line.includes('✖ install interrupted (SIGINT)'));
+		expect(block).toBeGreaterThan(-1);
+		const at = lines.findIndex((line) => line.includes(ended.trim()));
+		// Said once, AFTER the ✖ header (a full screen keeps only those lines) and before the hint.
+		expect(at).toBeGreaterThan(block);
+		expect(lines.filter((line) => line.includes(ended.trim())).length).toBe(1);
+		const hint = lines.findIndex((line) => line.startsWith('  Progress saved:'));
+		expect(at).toBeLessThan(hint);
+		// The logs follow is started BEFORE the stop that makes the child speak.
+		const log = loggedCommands(host.root);
+		const follow = log.findIndex((line) => line.startsWith(`${DOCKER} logs --follow`));
+		const stop = log.findIndex((line) => line.startsWith(`${DOCKER} stop`));
+		expect(follow).toBeGreaterThan(-1);
+		expect(follow).toBeLessThan(stop);
 	});
 
 	test('a live abort ends its run record: result aborted, finished_at set', async () => {

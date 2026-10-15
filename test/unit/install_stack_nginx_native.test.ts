@@ -45,7 +45,7 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
 import { siteText } from '../../src/core/install/host/production/web.ts';
-import { keptImages } from '../../src/core/install/host/stack/database.ts';
+import { stackImages } from '../../src/core/install/host/stack/database.ts';
 import {
 	renderEnvFile,
 	renderOverride,
@@ -390,9 +390,9 @@ describe('the abort names the images it keeps (C3-52)', () => {
 				.filter((image) => image !== '' && !image.includes('DEDALO_IMAGE'));
 			expect([file, [...new Set(images)].sort()]).toEqual([file, [...STACK_SERVICE_IMAGES].sort()]);
 		}
-		const kept = keptImages(stackPlanCtx(TRIAL));
+		const kept = stackImages(stackPlanCtx(TRIAL));
 		for (const image of STACK_SERVICE_IMAGES) expect(kept).toContain(image);
-		expect(kept).not.toContain('certbot');
+		expect(kept.join(' ')).not.toContain('certbot');
 	});
 });
 

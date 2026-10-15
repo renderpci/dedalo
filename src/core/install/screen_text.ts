@@ -529,6 +529,8 @@ export const NOTICE_TEXT = Object.freeze({
 	/** `install` on a refused Review: the plan is measured anew (campaign 3d C3d-F2). */
 	recheckReview: 'checking again what the run would refuse…',
 	stillRefused: 'checked again — install is still not offered: see the errors above',
+	/** The re-check found nothing to refuse: the yes prompt follows (campaign 3e E2). */
+	recheckOffered: 'checked again — nothing is refused now: install is offered',
 });
 
 /** The review's line labels. */

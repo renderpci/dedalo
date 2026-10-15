@@ -168,7 +168,7 @@ run:
   declares no Dédalo version (its provenance cannot be read), or when it pins a
   different Bun than the one this server runs — install that Bun first, as for
   an update. In that last case the row also names **both** versions ("This copy
-  pins Bun 1.3.9; this server runs Bun 1.4.0. Install Bun 1.3.9 to restore
+  pins Bun 1.4.2; this server runs Bun 1.4.3. Install Bun 1.4.2 to restore
   it."), so you can read which runtime to install off the row itself, and tell
   apart several restore points cut on either side of a Bun change. A
   development checkout gets no Restore button at all, for the same reason it

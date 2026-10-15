@@ -26,8 +26,12 @@ import { acknowledgeField, confirmField } from './widgets/confirm.ts';
 import { secretField } from './widgets/secret_field.ts';
 import { textField } from './widgets/text_field.ts';
 
-/** The walker's progress lines (`checking: …`, `reading the ontology catalog…`). */
-const PROGRESS = /^(checking: |reading the ontology catalog)/;
+/**
+ * The walker's progress lines (`checking: …`, `checking again what the run
+ * would refuse…`, `checking '<screen>' before the Review`, `reading the
+ * ontology catalog…`) — the lines the screen draws with the running mark.
+ */
+const PROGRESS = /^(checking[: ]|reading the ontology catalog)/;
 
 /** A progress line (shown while the work runs; not a message for the page that follows). */
 export const isProgressLine = (line: string): boolean => PROGRESS.test(line);
@@ -83,6 +87,10 @@ function ask<T>(app: App, make: (done: (answer: T) => void) => Widget): Promise<
 			done(QUIT as T);
 		};
 		app.overlay = null;
+		// A widget waiting for an answer means the work it follows has ENDED: its progress
+		// line (drawn with the running mark) is not kept under the question (campaign 3e E2:
+		// "◐ checking again…" stayed frozen under the yes prompt).
+		app.said = app.said.filter((line) => !isProgressLine(line));
 		app.widget = make(done);
 		app.draw();
 	});

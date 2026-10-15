@@ -46,7 +46,7 @@
  * minted in memory by the openssl CLI (absent = RED, never a skip).
  */
 
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, spyOn, test } from 'bun:test';
 import {
 	existsSync,
 	mkdirSync,
@@ -83,13 +83,19 @@ import {
 	REFUSED_BOOT_EXIT,
 	unitEverRan,
 } from '../../src/core/install/host/production/first_boot.ts';
+import { host_packages } from '../../src/core/install/host/production/packages.ts';
 import { certificatePaths, siteText } from '../../src/core/install/host/production/web.ts';
 import {
 	EXISTS_NOT_CREATED,
 	REVIEW_TODO_STEP,
 	reviewHostCommands,
+	reviewTodo,
 } from '../../src/core/install/host/review.ts';
-import { type RecordedResponse, scratchRunner } from '../../src/core/install/host/runner.ts';
+import {
+	type CommandRunner,
+	type RecordedResponse,
+	scratchRunner,
+} from '../../src/core/install/host/runner.ts';
 import { stackFileOf } from '../../src/core/install/host/stack/layout.ts';
 import { renderTemplate, UNIT_TEMPLATES } from '../../src/core/install/host/systemd/render.ts';
 import { chainTrustVerdict } from '../../src/core/install/host/tls_trust.ts';
@@ -388,6 +394,21 @@ describe('every production variant runs end to end: Review ≡ run, files landed
 	}
 });
 
+describe("host_packages' headline names exactly what its commands install (campaign 3f U26)", () => {
+	for (const variant of HOST_VARIANTS) {
+		test(variantName(variant), () => {
+			// A bare host (pending facts: nothing installed): the commands install every desired package.
+			const ctx = productionPlanCtx(variant);
+			const argv = host_packages
+				.commands(ctx)
+				.flatMap((command) => (command.kind === 'exec' ? command.argv : []));
+			const installsCertbot = argv.includes('certbot');
+			expect(installsCertbot).toBe(variant.tls === 'letsencrypt');
+			expect(host_packages.label(ctx.plan).includes('certbot')).toBe(installsCertbot);
+		});
+	}
+});
+
 // ── (a) the Review the operator saw ─────────────────────────────────────────
 
 describe('the Review shown before the run lists the commands the run executes (a)', () => {
@@ -626,6 +647,8 @@ describe('an abort keeps only the packages the host HAS (campaign 3b N17)', () =
 			responses: [{ match: '/usr/bin/apt-get update', exit: 100, stderr: 'E: network down' }],
 		});
 		expect(outcome.failedStep).toBe('host_packages');
+		// Before the engine steps: no salt was generated, the ✖ hint says nothing of one (campaign 3e E3).
+		expect(outcome.hint.join('\n')).not.toContain('DEDALO_SALT_STRING');
 		const aborted = await runHost(host, laterRequest('abort', plan, DB));
 		expect(aborted.outcome.result).toBe('aborted');
 		const text = aborted.transcript.lines.join('\n');
@@ -1218,7 +1241,14 @@ async function reviewOn(host: ScratchHost, plan: ReturnType<typeof productionPla
 	}
 }
 
-/** The Review's to-do lines ([] when it has no to-do block). */
+/** The package default-site note of a run that installs nginx (campaign 3e E5 — its own gate). */
+const PLANNED_DEFAULT =
+	/^port 80: the default site stays yours \(\/etc\/nginx\/sites-enabled\/default,/;
+
+/**
+ * The Review's to-do lines ([] when it has no to-do block) — `todo` without the
+ * nginx package's default-site note (asserted by the E5 gate: `allTodo`).
+ */
 async function todoOn(
 	variant: HostVariant,
 	options: PlantOptions,
@@ -1227,10 +1257,12 @@ async function todoOn(
 	const host = scratchHost(variant, options);
 	const { plan } = productionPlan(variant, extra);
 	const blocks = await reviewOn(host, plan);
+	const allTodo = blocks.find((block) => block.step === REVIEW_TODO_STEP)?.commands ?? [];
 	return {
 		host,
 		blocks,
-		todo: blocks.find((block) => block.step === REVIEW_TODO_STEP)?.commands ?? [],
+		allTodo,
+		todo: allTodo.filter((line) => !PLANNED_DEFAULT.test(line)),
 	};
 }
 
@@ -1634,6 +1666,11 @@ describe('a unit that REFUSED to boot stops the first-boot wait at once (phase 5
 			},
 		);
 		expect(outcome.failedStep).toBe('host_first_boot');
+		// Past the engine steps (campaign 3e E3): the ✖ hint names the salt's read command, never the value.
+		const hint = outcome.hint.join('\n');
+		expect(hint).toContain('(DEDALO_SALT_STRING)');
+		expect(hint).toContain('read it with: sudo grep ^DEDALO_SALT_STRING=');
+		expect(hint).not.toContain('scratch-salt-value');
 		expect(outcome.message).toContain(`dedalo-ts@${INSTANCE}.service refused to boot (exit 78`);
 		expect(outcome.message).toContain(`journalctl -u dedalo-ts@${INSTANCE}.service`);
 		// One poll, not the whole bound.
@@ -2097,6 +2134,100 @@ describe('the engine child dies with the installer; a resume never races one sti
 	});
 });
 
+describe("the engine child's own refusal reaches the host's ✖ block (campaign 3e F4, production)", () => {
+	test('run and abort quote the child’s outcome sentence (never "see above" over nothing); a crash quotes its stderr', async () => {
+		const said = `a seed restore into '${DB}' is still running (backend pid 124)`;
+		const outcome = `{"event":"outcome","exitCode":1,"result":"refused","message":"${said}","failedStep":null,"hint":[]}\n`;
+		const {
+			host,
+			plan,
+			outcome: crashed,
+		} = await freshOn(UBUNTU_NGINX_LE, {
+			responses: engineFails(),
+		});
+		// engineFails: exit 9 with only a stderr line — the reason, quoted.
+		expect(crashed.message).toContain(
+			'the engine steps failed: the seed restore failed — their record is in',
+		);
+		replaceResponses(host, UBUNTU_NGINX_LE, [
+			{ match: `${ENGINE_DYING} --request-stdin`, exit: 1, stdout: outcome },
+			{ match: `${ENGINE_DYING} --abort`, exit: 1, stdout: outcome },
+			{
+				match: ENGINE_STATUS,
+				stdout:
+					'{"exists":true,"outcome":"in_progress","failed_step":"install_db_from_default_file","needs":[]}\n',
+			},
+		]);
+		const resumed = await runHost(host, laterRequest('resume', plan));
+		expect(resumed.outcome.message).toContain(`the engine steps failed: ${said} — their record`);
+		const aborted = await runHost(host, laterRequest('abort', plan, DB));
+		expect(aborted.outcome.result).not.toBe('aborted');
+		expect(aborted.outcome.message).toContain(
+			`the engine child refused its --abort: ${said} — nothing before it was undone (exit 1)`,
+		);
+		for (const message of [resumed, aborted].map((r) => r.outcome.message ?? ''))
+			expect(message).not.toContain('see above');
+	});
+});
+
+describe('a signal-killed engine child is named killed; runuser chatter is never the reason (campaign 3f F1, production)', () => {
+	test('exit 137 with runuser\'s "Session terminated" stderr: killed by SIGKILL', async () => {
+		const bun = `/opt/dedalo/bun/${BUN_PIN}/bun`;
+		const dying = `${asServiceHomeDying()} ${bun} run /home/ded_${INSTANCE}/dedalo/scripts/install.ts`;
+		const { outcome } = await freshOn(UBUNTU_NGINX_LE, {
+			responses: [
+				{
+					match: `${dying} --request-stdin`,
+					exit: 137,
+					stderr: 'Session terminated, killing shell... ...killed.\n',
+				},
+				...engineFails(),
+			],
+		});
+		expect(outcome.message).toContain(
+			'the engine steps failed: the engine child was killed by SIGKILL — out of memory, or a kill — their record is in',
+		);
+		expect(outcome.message).not.toContain('Session terminated');
+	});
+});
+
+describe("the engine child's last words while it stops are INSIDE the ✖ block (campaign 3f F2, production)", () => {
+	test('a line the child prints AFTER the signal: waited for, kept, printed after the ✖ header — once', async () => {
+		const host = scratchHost(UBUNTU_NGINX_LE);
+		const { planFile } = productionPlan(UBUNTU_NGINX_LE);
+		const ended = "  ended the seed restore's database session (backend pid 42800)";
+		const child = `${ENGINE_DYING} --request-stdin`;
+		// Ctrl-C reaches the process group: the child gets it and SPEAKS LATER (its own stop), then exits 130.
+		const wrapRunner = (inner: CommandRunner): CommandRunner => ({
+			run: async (request) => {
+				if (!request.argv.join(' ').startsWith(child)) return inner.run(request);
+				process.emit('SIGINT');
+				await new Promise((done) => setTimeout(done, 0));
+				request.onStdoutLine?.(JSON.stringify({ event: 'log', line: ended }));
+				return { exitCode: 130, stdout: '', stderr: '', timedOut: false };
+			},
+		});
+		const exit = spyOn(process, 'exit').mockImplementation(((code?: number) => {
+			throw new Error(`exit ${code}`);
+		}) as never);
+		const transcript = { lines: [] as string[], told: [] as string[], shown: [] as string[] };
+		try {
+			await runHost(host, freshRequest(planFile), { wrapRunner, transcript });
+		} catch {
+			// the mocked exit
+		} finally {
+			exit.mockRestore();
+		}
+		const lines = transcript.lines;
+		const block = lines.findIndex((line) => line.includes('✖ install interrupted (SIGINT)'));
+		expect(block).toBeGreaterThan(-1);
+		const at = lines.findIndex((line) => line.includes(ended.trim()));
+		expect(at).toBeGreaterThan(block);
+		expect(lines.filter((line) => line.includes(ended.trim())).length).toBe(1);
+		expect(at).toBeLessThan(lines.findIndex((line) => line.startsWith('  Progress saved:')));
+	});
+});
+
 describe('the run record says an install was confirmed to execute (C3-63)', () => {
 	test('--execute or the Review’s yes → execute: true; a headless run without --execute → false', async () => {
 		expect(runConfirmed(false, true)).toBe(true);
@@ -2296,6 +2427,31 @@ describe('a run that INSTALLS nginx tells the default site its package wrote (ca
 		);
 		expect(bare.outcome.result).toBe('complete');
 		expect(bare.outcome.told.join('\n')).not.toContain('the default site stays yours');
+	});
+
+	test('campaign 3e E5: the Review (measured, as the installer computes it) carries the note on a host without nginx', async () => {
+		const { allTodo } = await todoOn(UBUNTU_NGINX_LE, {});
+		expect(allTodo.join('\n')).toContain(NOTE);
+		expect(allTodo.filter((line) => PLANNED_DEFAULT.test(line)).length).toBe(1);
+	});
+
+	test('campaign 3e E5: the Review says it BEFORE yes when the run installs nginx (Debian/Ubuntu package)', () => {
+		const fs = { readText: () => null, exists: () => false };
+		const now = Date.now();
+		const planned = productionPlanCtx(UBUNTU_NGINX_LE);
+		expect(planned.facts.web.installed).toBe(false);
+		expect(reviewTodo(planned, fs, now).join('\n')).toContain(NOTE);
+		// CONTROL: nginx already installed — host_web_site measures it, the Review predicts nothing.
+		const present = {
+			...planned,
+			facts: { ...planned.facts, web: { ...planned.facts.web, installed: true } },
+		};
+		expect(reviewTodo(present, fs, now).join('\n')).not.toContain('the default site stays yours');
+		// CONTROL: the RHEL family's nginx package declares no default_server.
+		const el = HOST_VARIANTS.find((item) => item.os === 'el10' && item.web === 'nginx');
+		expect(el).toBeDefined();
+		const elTodo = reviewTodo(productionPlanCtx(el as HostVariant), fs, now);
+		expect(elTodo.join('\n')).not.toContain('the default site stays yours');
 	});
 });
 

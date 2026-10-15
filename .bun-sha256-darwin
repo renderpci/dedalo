@@ -1,5 +1,5 @@
-# bun-v1.4.2
+# bun-v1.4.3
 # signed-by: F3DCC08A8572C0749B3E18888EAB4D40A7B22B59
-90987a3a16d7db556d886ac3d551e7b6d3edf0a1cf43acaed622e8676be1d12f  bun-darwin-aarch64.zip
-bad5bbd6cf14d0980d115f5954c9ff904df619d5e994d2da1ffccd3f316300b0  bun-darwin-x64-baseline.zip
-80520d7e17526308c9185d261679ac6d27798d3803a0e9f7ff9121ab8affb012  bun-darwin-x64.zip
+80afd4c069b46a6fa8f3ec520bebc750a7843e4a8d5b9583d29ad436c00a3403  bun-darwin-aarch64.zip
+0fde04e8b092156b97fe6432e899baf16d9ed6ce52cbb4218d2d9c07a2f827ef  bun-darwin-x64-baseline.zip
+62660e6438eb872278877acca77e1152d5d031324df368d4a81b428211489d2d  bun-darwin-x64.zip

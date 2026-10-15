@@ -271,7 +271,7 @@ DEDALO_IMAGE_LICENSES='AGPL-3.0-only'
 
 # dedalo_image_labels CHECKOUT TAG — the OCI labels of a local build, one
 # `key=value` per line (campaign 3b N1): without them the image inherits the
-# base image's (`org.opencontainers.image.version=1.4.2-debian`, bun's source and
+# base image's (`org.opencontainers.image.version=1.4.3-debian`, bun's source and
 # revision), and the version label is what the updater and the installer read as
 # "which release is this". version = TAG's tag part (empty when TAG has none),
 # revision and created = the snapshotted commit; source, url, description and

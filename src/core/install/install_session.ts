@@ -618,11 +618,31 @@ type ProbeGate = NonNullable<Screen['probe']>;
  * machine can change (an unsupported operating system — C3-61) offers only
  * quit, or back to another route: "retry" would only fail again.
  */
-function probePrompt(gate: ProbeGate['gate'], outcome: ProbeOutcome): string {
+function probePrompt(
+	gate: ProbeGate['gate'],
+	outcome: ProbeOutcome,
+	editGoesTo: string | undefined,
+): string {
 	if (unfixableFailure(outcome)) return 'quit, or back to choose another route';
+	const edit = editGoesTo === undefined ? 'edit' : `edit (back to ${editGoesTo})`;
 	return gate === 'pass_or_acknowledge'
-		? 'retry, edit, or yes to keep these settings untested'
-		: 'retry, edit, or quit (this check must pass)';
+		? `retry, ${edit}, or yes to keep these settings untested`
+		: `retry, ${edit}, or quit (this check must pass)`;
+}
+
+/**
+ * Where `edit` goes on a check that asks NOTHING (the System check): the
+ * previous screen, whose answers it checked — campaign 3e E1: the words said
+ * "go back to Install type" while `edit` only ran the check again. A screen
+ * with questions: undefined (`edit` asks them again).
+ */
+function editGoesTo(session: Session, screen: Screen): string | undefined {
+	const current = screenOf(session, screen.id) ?? screen;
+	const asks = current.questions.some((item) => !item.id.endsWith('.probe_override'));
+	if (asks) return undefined;
+	const screens = screensOf(session);
+	const index = screens.findIndex((item) => item.id === screen.id);
+	return index > 0 ? screens[index - 1]?.title : undefined;
 }
 
 /** The commands a failed probe offers (quit always works). */
@@ -641,20 +661,26 @@ function probeView(
 	outcome: ProbeOutcome,
 	lines: string[],
 ): ProbeView {
+	const goesTo = editGoesTo(session, screen);
 	return {
 		screen: screenOf(session, screen.id) ?? screen,
 		lines,
 		gate: probe.gate,
 		commands: probeCommands(probe.gate, outcome),
-		prompt: probePrompt(probe.gate, outcome),
+		prompt: probePrompt(probe.gate, outcome, goesTo),
+		...(goesTo === undefined ? {} : { editGoesTo: goesTo }),
 	};
 }
 
-/** `edit` after a failed probe: forget the verdict, ask the screen's kept secrets again. */
-function editAfterProbe(session: Session, screen: Screen): 'again' {
+/**
+ * `edit` after a failed probe: forget the verdict, ask the screen's kept
+ * secrets again — on a check that asks nothing, go back to the screen whose
+ * answers it checked (campaign 3e E1).
+ */
+function editAfterProbe(session: Session, screen: Screen, view: ProbeView): 'again' | Nav {
 	invalidateProbe(session, screen.id);
 	for (const key of SCREEN_SECRETS[screen.id] ?? []) session.kept.delete(key);
-	return 'again';
+	return view.editGoesTo === undefined ? 'again' : BACK;
 }
 
 /**
@@ -678,7 +704,7 @@ function probeCommand(
 		delete session.probeKeys[probe];
 		return null;
 	}
-	if (word === 'edit') return editAfterProbe(session, screen);
+	if (word === 'edit') return editAfterProbe(session, screen, view);
 	if (word === 'quit') return QUIT;
 	session.acknowledged.add(`${screen.id}.probe_override`);
 	return 'next';
@@ -1154,8 +1180,10 @@ async function recheckRefused(
 ): Promise<{ round: ReviewRound; view: ReviewView } | Rechecked> {
 	session.deps.prompter.say([NOTICE_TEXT.recheckReview]);
 	const again = await reviewRound(session);
+	session.deps.prompter.say([
+		again.round.canInstall ? NOTICE_TEXT.recheckOffered : NOTICE_TEXT.stillRefused,
+	]);
 	if (again.round.canInstall) return again;
-	session.deps.prompter.say([NOTICE_TEXT.stillRefused]);
 	return { rechecked: again };
 }
 

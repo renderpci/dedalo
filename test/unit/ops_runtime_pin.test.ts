@@ -193,6 +193,65 @@ describe('server-spawning gates use the runtime under test, not $PATH', () => {
 	});
 });
 
+/**
+ * THE PINNED RUNTIME'S spawnSync POLLS FOR ITS CHILD (oven-sh/bun#34069, fixed in 1.4.3 by #44581).
+ *
+ * Bun.spawnSync waits on an event loop of its own, reused for the life of the process. Up to
+ * 1.4.2 it pointed the VM at that loop for the length of the call, so a GC finalizer that ran
+ * inside the call (an earlier test's stdio writer, a dead subprocess's poll) released its
+ * FilePoll on spawnSync's loop: that loop's `num_polls` drifted down for good. Once the drift
+ * cancels a later call's polls, `us_loop_run_bun_tick` returns without polling (`num_polls ==
+ * 0`) and the call spins at 100% CPU; without a `timeout` forever, its exited child an unreaped
+ * zombie, until bun test's auto-killer ends it at the test timeout (exit null, empty stderr).
+ *
+ * MEASURED 2026-10-14 in the CI image (c07879b31109, aarch64, bun 1.4.2), the pre-push gate's
+ * intermittent hangs (pre_push_gate_native, site_builder_single_source, release_root_entries,
+ * render_escape): a stuck `bun test` spun in `spawn_maybe_sync` → `tick_with_timeout` with no
+ * syscalls, its spawnSync loop at `num_polls = 0` and the child's readable pidfd registered in
+ * it; a sampler read that loop's idle count fall 0 → -2 across the two signal cases of
+ * pre_push_gate_native in one full hermetic run. This case is upstream's deterministic
+ * reproducer (test/helpers/spawnsync_drift_child.ts, its own process), through the runtime
+ * under test: RED 3/3 on 1.4.2 (the second call times out with
+ * no output), GREEN 3/3 on 1.4.3.
+ *
+ * Anti-vacuity: the three writers must be collected DURING the first call (the GC really ran
+ * where the defect lives) — a run where they were not proves nothing, and is red too.
+ */
+describe('the pinned runtime: spawnSync polls for its child (bun#34069)', () => {
+	test('what a GC finalizes during spawnSync does not stop the next spawnSync polling', async () => {
+		const cwd = mkdtempSync(join(tmpdir(), 'dedalo-spawnsync-probe-'));
+		try {
+			const child = Bun.spawn(
+				[process.execPath, join(ROOT, 'test/helpers/spawnsync_drift_child.ts')],
+				{
+					cwd,
+					// BUN_JSC_slowPathAllocsBetweenGCs collects every few slow-path allocations, so the
+					// collection the getter's drop enables runs before the first call returns.
+					env: { PATH: process.env.PATH ?? '/usr/bin:/bin', BUN_JSC_slowPathAllocsBetweenGCs: '3' },
+					stdin: 'ignore',
+					stdout: 'pipe',
+					stderr: 'pipe', // pollable: what makes each writer register
+				},
+			);
+			const [out, , exitCode] = await Promise.all([
+				new Response(child.stdout).text(),
+				new Response(child.stderr).text(),
+				child.exited,
+			]);
+			expect({ result: out.trim(), exitCode }).toEqual({
+				result: JSON.stringify({
+					collectedDuringCall: 3,
+					stdout: 'polled\n',
+					exitedDueToTimeout: false,
+				}),
+				exitCode: 0,
+			});
+		} finally {
+			rmSync(cwd, { recursive: true, force: true });
+		}
+	});
+});
+
 describe('ambient env may not steer the DB connection (Bun 1.4 PGSSLMODE)', () => {
 	const source = readFileSync(join(ROOT, 'src/core/db/postgres.ts'), 'utf-8');
 

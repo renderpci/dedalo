@@ -165,6 +165,11 @@ export interface ExecutorHost {
 	runtimeFiles?(): Promise<string[]>;
 	/** The database's row fingerprint (served_guard.ts), or null. */
 	databaseFingerprint?(): Promise<string | null>;
+	/**
+	 * End THIS install's seed restore on the server (db_restore.ts endSeedRestore —
+	 * campaign 3e F5): the pids ended.
+	 */
+	endSeedRestore?(installId: string): Promise<number[]>;
 }
 
 export interface ExecutorRequest {
@@ -317,6 +322,11 @@ export function engineHost(appName: string): ExecutorHost {
 			const { databaseFingerprint } = await import('./served_guard.ts');
 			const { connFromConfig } = await import('./pg_exec.ts');
 			return databaseFingerprint(connFromConfig());
+		},
+		endSeedRestore: async (installId) => {
+			const { endSeedRestore } = await import('./db_restore.ts');
+			const { connFromConfig } = await import('./pg_exec.ts');
+			return endSeedRestore(connFromConfig(), installId);
 		},
 	};
 }
@@ -711,9 +721,35 @@ function assertSameOntologyDecisions(ctx: RunContext, plan: PlanFile): void {
 	);
 }
 
+/**
+ * THIS install's seed restore still on the server while this run HOLDS the
+ * install lock (campaign 3e F5) is an ORPHAN: every live installer of the
+ * database holds that lock first, so its client is gone (a killed container
+ * whose close never reached the server). It is ended — its one transaction
+ * rolls back — and the run says so. Answers the database as it is afterwards.
+ * A restore named for another install, or unnamed, is never touched.
+ */
+async function endOrphanSeedRestore(
+	ctx: RunContext,
+	db: string,
+	target: TargetDatabaseState,
+): Promise<TargetDatabaseState> {
+	const installId = (ctx.state as InstallState).install_id;
+	if (target.seedRestoreRunning === null || target.seedRestoreInstallId !== installId) {
+		return target;
+	}
+	const ended = (await ctx.host.endSeedRestore?.(installId)) ?? [];
+	if (ended.length === 0) return target;
+	warnLine(
+		ctx,
+		`  ⚠ ended the seed restore an interrupted run left on '${db}' (backend pid ${ended.join(', ')}) — its installer is gone, its transaction rolled back`,
+	);
+	return ctx.host.inspectDatabase();
+}
+
 /** No other installer session may be working on the target (an orphan psql of a killed run). */
 async function assertNoInstallerSessions(ctx: RunContext, db: string): Promise<void> {
-	const target = await ctx.host.inspectDatabase();
+	const target = await endOrphanSeedRestore(ctx, db, await ctx.host.inspectDatabase());
 	refuseIf(
 		!target.reachable,
 		'install.step_failed',
@@ -1023,12 +1059,38 @@ function failedOutcome(ctx: RunContext, error: unknown): ExecutorOutcome {
 	};
 }
 
+/**
+ * Ctrl-C during the seed: end the restore's session ON THE SERVER first
+ * (campaign 3e F5) — a killed psql's close can be lost with its container's
+ * network, leaving the backend waiting on its client for hours. Only while
+ * this run holds the install lock (the restore is then provably its own);
+ * bounded, never fatal — the resume's lock-held check ends what this misses.
+ */
+async function endOwnSeedRestore(ctx: RunContext): Promise<void> {
+	const installId = ctx.state?.install_id;
+	if (ctx.dbLock === null || installId === undefined || ctx.host.endSeedRestore === undefined) {
+		return;
+	}
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const ended = await Promise.race([
+		ctx.host.endSeedRestore(installId).catch(() => [] as number[]),
+		new Promise<number[]>((done) => {
+			timer = setTimeout(() => done([]), 8000);
+		}),
+	]);
+	clearTimeout(timer);
+	if (ended.length > 0) {
+		say(ctx, `  ended the seed restore's database session (backend pid ${ended.join(', ')})`);
+	}
+}
+
 /** SIGINT/SIGTERM: stop the children, record the step failed, release, exit 130/143. */
 async function interrupted(
 	ctx: RunContext,
 	signal: 'SIGINT' | 'SIGTERM',
 	restoreConsole: () => void,
 ): Promise<never> {
+	await endOwnSeedRestore(ctx);
 	await stopChildren(ctx);
 	recordFailure(ctx, 'install.step_failed', 'interrupted');
 	closeRun(ctx, 'interrupted');

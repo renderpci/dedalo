@@ -15,7 +15,7 @@ import { executeCommands } from '../execute.ts';
 import { probeOk, ran, verdictOf } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
 import { pollUntil, rememberNewVolumes, stackCreated } from './common.ts';
-import { composeCommand, composeProbe, dockerCommand } from './compose.ts';
+import { composeCommand, composeProbe, dockerCommand, dockerProbe } from './compose.ts';
 import { stackFactsOf } from './facts.ts';
 import {
 	CERTBOT_IMAGE,
@@ -101,22 +101,56 @@ async function removeCreatedVolumes(ctx: HostCtx): Promise<string> {
 	return `; volumes removed: ${names.join(', ')}`;
 }
 
+/** Every image this stack can use (the Dédalo image, the service images, certbot on Let's Encrypt). */
+export function stackImages(ctx: HostPlanCtx): string[] {
+	const le = ctx.answers.route === 'docker' && ctx.answers.tls_mode === 'letsencrypt';
+	return [imageRefOf(ctx.answers), ...STACK_SERVICE_IMAGES, ...(le ? [CERTBOT_IMAGE] : [])];
+}
+
+/** `docker image inspect` of one image: present on this machine? */
+function imagePresentProbe(ctx: HostPlanCtx, image: string) {
+	return dockerProbe(
+		ctx,
+		['image', 'inspect', '--format', '{{.Id}}', image],
+		`${image} is present`,
+	);
+}
+
+/**
+ * The stack's images ON THIS MACHINE, measured (campaign 3e E4: an abort
+ * before nginx ever started named nginx:alpine — never pulled — and its
+ * `docker image rm` failed with "No such image").
+ */
+export async function presentImages(ctx: HostCtx): Promise<string[]> {
+	const present: string[] = [];
+	for (const image of stackImages(ctx)) {
+		if (await probeOk(ctx, imagePresentProbe(ctx, image))) present.push(image);
+	}
+	return present;
+}
+
 /**
  * The images an abort leaves on the machine, named (campaign 3 C3-52) — a
  * cache, not the install; the operator decides whether to reclaim the space.
- * `postgresRuns`: a SERVED abort keeps PostgreSQL running with the data, so
- * its image cannot be removed yet — the command names only what `docker image
- * rm` can remove now, and says when the rest goes (campaign 3c D8: the hint
- * listed postgres:18 under the container the abort had just kept running).
+ * `images` are the ones PRESENT (presentImages — campaign 3e E4). `postgresRuns`:
+ * a SERVED abort keeps PostgreSQL running with the data, so its image cannot
+ * be removed yet — the command names only what `docker image rm` can remove
+ * now, and says when the rest goes (campaign 3c D8).
  */
-export function keptImages(ctx: HostPlanCtx, postgresRuns = false): string {
-	const le = ctx.answers.route === 'docker' && ctx.answers.tls_mode === 'letsencrypt';
-	const images = [imageRefOf(ctx.answers), ...STACK_SERVICE_IMAGES, ...(le ? [CERTBOT_IMAGE] : [])];
+export function keptImagesLine(images: readonly string[], postgresRuns = false): string {
+	if (images.length === 0) return 'no image of this stack is on this machine';
 	const removable = postgresRuns ? images.filter((image) => image !== POSTGRES_IMAGE) : images;
-	const kept = `the images are kept (${images.join(', ')}) — remove them with: docker image rm ${removable.join(' ')}`;
-	return postgresRuns
+	const remove =
+		removable.length === 0 ? '' : ` — remove them with: docker image rm ${removable.join(' ')}`;
+	const kept = `the images are kept (${images.join(', ')})${remove}`;
+	return postgresRuns && images.includes(POSTGRES_IMAGE)
 		? `${kept}; ${POSTGRES_IMAGE} runs the kept database — it goes with the instance (see that section)`
 		: kept;
+}
+
+/** The kept images of this stack, measured on the machine (keptImagesLine). */
+export async function keptImages(ctx: HostCtx, postgresRuns = false): Promise<string> {
+	return keptImagesLine(await presentImages(ctx), postgresRuns);
 }
 
 export const stack_database: HostStepDefinition = {
@@ -137,6 +171,6 @@ export const stack_database: HostStepDefinition = {
 	intent: (ctx) => rememberNewVolumes(ctx, [DATABASE_VOLUME], stackFactsOf(ctx).volumes),
 	undo: async (ctx) => {
 		await stackDown(ctx);
-		return `the stack is down${await removeCreatedVolumes(ctx)}; ${keptImages(ctx)}`;
+		return `the stack is down${await removeCreatedVolumes(ctx)}; ${await keptImages(ctx)}`;
 	},
 };
