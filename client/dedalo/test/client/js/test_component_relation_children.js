@@ -474,8 +474,11 @@ describe(`COMPONENT_RELATION_CHILDREN DATA OPERATIONS`, async function() {
 	// WC-2026-10-02-relation-children-write-through). The block BUILDS its
 	// situation — a fresh parent and child created through the engine, swept in
 	// after() — because the children of a SHARED record are whatever any other
-	// suite linked to it (test_components_data_changes gives test3/10 a random
-	// test71 parent; 1 run in 25 that parent was test3/1).
+	// suite linked to it (the component sweeps used to give test3/10 and test3/1
+	// a random test71 parent: 1 run in 25 that parent was test3/1, and on a fresh
+	// suite database it could be the very id this block's parent is born at —
+	// GitHub run 38650819505. They now link to a record they build and sweep,
+	// owned_target.js). 'a fresh record has no children' stays the alarm.
 	// Bun half: test/unit/relation_children_write_through_native.test.ts.
 
 	describe(`CHANGE DATA (write-through)`, function() {

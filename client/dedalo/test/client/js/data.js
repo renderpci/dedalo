@@ -87,6 +87,24 @@
 		return [result]
 	}
 
+	// target_locator: a random_locator-shaped value whose section_id is the
+	// record the suite BUILT for it (an element's `owned_target`, see
+	// owned_target.js) — never a drawn id. Refuses without one, loudly: a
+	// caller that does not build the target must not point at a guessed id.
+	export const target_locator = function(params, target_section_id) {
+		const section_id = Number(target_section_id)
+		if (!Number.isInteger(section_id) || section_id < 1) {
+			throw new Error(`target_locator: no owned target record was built (got ${target_section_id})`)
+		}
+		return {
+			type				: "dd151",
+			section_id			: section_id,
+			section_tipo		: params[0],
+			from_component_tipo	: params[1],
+			id					: 1
+		}
+	}
+
 	export const custom_locator = function() {
 		const section_tipo			= arguments[0][0]
 		const section_id			= arguments[0][1]

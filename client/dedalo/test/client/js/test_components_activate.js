@@ -8,6 +8,7 @@ import {
 import {get_instance} from '../../../core/common/js/instances.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {pause} from '../../../core/common/js/utils/util.js'
+import {owned_target} from './owned_target.js'
 
 
 
@@ -71,6 +72,23 @@ describe("COMPONENTS ACTIVATE", async function() {
 
 		describe(`component: ${element.model} ${element.mode} ${element.view} :`,  function() {
 
+			// OWNED TARGET: the deactivate save below lands on the SHARED record
+			// (element.section_id). An element whose value is a link read back from
+			// the other side (owned_target.js) points at a record built here and
+			// swept after, with the shared record's value restored first.
+			const target = (element.test_save!==false && element.owned_target)
+				? owned_target(element, element.section_id)
+				: null
+			let target_section_id = null
+			if (target) {
+				before(async function() {
+					target_section_id = await target.setup()
+				})
+				after(async function() {
+					await target.teardown()
+				})
+			}
+
 			// const component_instance = await get_instance(element)
 			// await component_instance.build(true)
 			// const node = await component_instance.render()
@@ -125,7 +143,7 @@ describe("COMPONENTS ACTIVATE", async function() {
 						// console.log(`${element.model} entries:`, entries);
 
 						// new_value. Calculated as random proper data for current component
-						const new_value = element.new_value(element.new_value_params)
+						const new_value = element.new_value(element.new_value_params, target_section_id)
 						// console.log(`${element.model} new_value:`, new_value);
 
 						// change data

@@ -386,8 +386,12 @@ export const additional_text_area_section_id = 16 // test_additional_text_area o
 		section_id			: section_id,
 		mode				: mode,
 		lang				: page_globals?.dedalo_data_nolan ?? 'lg-nolan',
-		new_value			: fn.random_locator,
+		// a parent link is read back from the other side (the target's children),
+		// so it points at a record the saving suite BUILDS, never a drawn id
+		// (owned_target.js — the GitHub run 38650819505 children red)
+		new_value			: fn.target_locator, // (params, owned target section_id)
 		new_value_params	: [section_tipo,'test71'],
+		owned_target		: section_tipo,
 		test_save			: true
 	})
 
