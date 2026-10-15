@@ -25,6 +25,7 @@ import { ABORT_AND_START_AGAIN } from '../../step_loop.ts';
 import type { ExecCommand, HostCtx, HostPlanCtx } from '../contract.ts';
 import { probeText } from '../production/common.ts';
 import { hostRefuse } from '../refuse.ts';
+import type { CommandRunner, RunResult } from '../runner.ts';
 import type { StackImage } from '../state_types.ts';
 import { execute, stackCreated } from './common.ts';
 import { dockerProbe, stackExec } from './compose.ts';
@@ -164,4 +165,107 @@ export async function assertPinnedImage(ctx: HostCtx): Promise<void> {
 		'install.state_conflict',
 		`${imageRefOf(ctx.answers)} no longer resolves to the image this install verified — it was re-pulled or removed: pull the verified digest (${stackCreated(ctx).image?.digest ?? 'see the install record'}) back, then --resume; ${ABORT_AND_START_AGAIN}`,
 	);
+}
+
+// ── is the official image of this version PUBLISHED? (asked before `yes`) ────
+
+/**
+ * Whether the registry holds `<official repository>:<version>`, asked BEFORE
+ * `yes` (beta.6 fix, owner 2026-10-15): image-release.yml publishes STABLE tags
+ * only — a prerelease (v7.0.0-beta.N) and a development build have no official
+ * image, and an operator who took the defaults failed at stack_image, after
+ * `yes`. The TypeScript twin of deploy/dedalo-image-lib.sh's
+ * dedalo_image_available: `docker manifest inspect` first, then `docker buildx
+ * imagetools inspect`; READ-ONLY (nothing is pulled), as the operator (their
+ * HOME: the registry logins `docker pull` will use).
+ *
+ *  - published: either answered;
+ *  - absent: the registry SAID so — no such manifest / manifest unknown / not
+ *    found, or `denied` / `unauthorized` (ghcr answers `denied` for a
+ *    repository nobody may pull anonymously: the pull would fail the same way);
+ *  - unknown: anything else (offline, a proxy, no buildx, a timeout) — never a
+ *    refusal: stack_image's pull says what happened.
+ */
+export type ImageAvailability = 'published' | 'absent' | 'unknown';
+
+/** A registry saying the reference is not there (or not pullable by this operator). */
+const REGISTRY_SAYS_ABSENT =
+	/no such manifest|manifest unknown|: not found\s*$|\bdenied\b|\bunauthorized\b/im;
+
+/** Not the registry speaking: a local tool failure whose words could read as "absent". */
+const LOCAL_FAILURE =
+	/error getting credentials|executable file not found|is not a docker command/i;
+
+/** The two read-only probes, in order (the argv the gates fake). */
+export function imageAvailabilityProbes(docker: string, ref: string): string[][] {
+	return [
+		[docker, 'manifest', 'inspect', ref],
+		[docker, 'buildx', 'imagetools', 'inspect', ref],
+	];
+}
+
+/** Did this probe's output come from a registry saying the reference is absent? */
+export function registrySaysAbsent(said: string): boolean {
+	return REGISTRY_SAYS_ABSENT.test(said) && !LOCAL_FAILURE.test(said);
+}
+
+/** The probe's last words, one short line (what the Review quotes). */
+function lastWords(result: RunResult): string {
+	const text = `${result.stderr}\n${result.stdout}`.trim();
+	const line =
+		text
+			.split('\n')
+			.filter((item) => item.trim() !== '')
+			.at(-1) ?? '';
+	return line.trim().slice(0, 160);
+}
+
+/** One probe's answer: did it find the image, and its last words. */
+interface RegistryAnswer {
+	found: boolean;
+	words: string;
+}
+
+/** Run one probe (a runner that throws — no such binary — answered nothing). */
+async function askRegistry(
+	runner: CommandRunner,
+	argv: string[],
+	home: string,
+): Promise<RegistryAnswer> {
+	try {
+		const result = await runner.run({ argv, env: { HOME: home }, timeoutMs: 30_000 });
+		return { found: result.exitCode === 0 && !result.timedOut, words: lastWords(result) };
+	} catch {
+		return { found: false, words: '' };
+	}
+}
+
+/** The verdict of the probes' answers: published by either; absent when a registry SAID so; else unknown. */
+export function availabilityOf(answers: readonly RegistryAnswer[]): {
+	availability: ImageAvailability;
+	said: string;
+} {
+	if (answers.some((answer) => answer.found)) return { availability: 'published', said: '' };
+	const absent = answers.find((answer) => registrySaysAbsent(answer.words));
+	if (absent !== undefined) return { availability: 'absent', said: absent.words };
+	return {
+		availability: 'unknown',
+		said: answers.find((answer) => answer.words !== '')?.words ?? '',
+	};
+}
+
+/** Ask the registry (see ImageAvailability); `said`: what it answered ('' when published). */
+export async function probeImageAvailability(
+	runner: CommandRunner,
+	docker: string,
+	ref: string,
+	home: string,
+): Promise<{ availability: ImageAvailability; said: string }> {
+	const answers: RegistryAnswer[] = [];
+	for (const argv of imageAvailabilityProbes(docker, ref)) {
+		const answer = await askRegistry(runner, argv, home);
+		answers.push(answer);
+		if (answer.found) break;
+	}
+	return availabilityOf(answers);
 }

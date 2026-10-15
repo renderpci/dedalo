@@ -163,7 +163,7 @@ function fresh(raw: Record<string, unknown>) {
 
 /** A docker command that CHANGES something (pull, build, run, up, down, volume rm, exec writes). */
 const MUTATING = new RegExp(
-	`^(/bin/bash \\S+/deploy/dedalo-image-build\\.sh |${DOCKER} (pull|build|run --rm -p|volume rm|compose .* (up|down|run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin|exec -T dedalo (mkdir|tee|rm))))`,
+	`^(/bin/bash \\S+/deploy/dedalo-image-build\\.sh |${DOCKER} (pull |build |run --rm -p|volume rm|compose .* (up|down|run --rm --name dedalo-install-engine -T dedalo bun run scripts/install.ts --request-stdin|exec -T dedalo (mkdir|tee|rm))))`,
 );
 
 /** Every file under `dir`, as text. */
@@ -414,6 +414,126 @@ describe('the Review asks the run’s own preflight before `yes` — the CLI’s
 		expect(await reviewRefusals(child, childPlan)).toEqual([]);
 		expect(loggedCommands(child.root)).toEqual([]);
 	});
+});
+
+// beta.6 fix (owner 2026-10-15): image-release.yml publishes STABLE tags only, so a
+// prerelease has no official image — and the default source (official) failed at
+// stack_image, AFTER `yes`, every answer lost. The registry is asked before `yes`.
+describe('the official image of this version must be PUBLISHED — asked before `yes` (beta.6)', () => {
+	const REF = imageRefOf(stackPlanCtx(TRIAL).answers);
+	const MANIFEST = `${DOCKER} manifest inspect ${REF}`;
+	const IMAGETOOLS = `${DOCKER} buildx imagetools inspect ${REF}`;
+	const ABSENT: RecordedResponse[] = [
+		{ match: MANIFEST, exit: 1, stderr: `no such manifest: ${REF}\n` },
+		{ match: IMAGETOOLS, exit: 1, stderr: `ERROR: ${REF}: not found\n` },
+	];
+	// ghcr's answer for a repository nobody may pull anonymously (measured 2026-10-15).
+	const DENIED: RecordedResponse[] = [
+		{
+			match: MANIFEST,
+			exit: 1,
+			stderr: `Get "https://ghcr.io/v2/dedalia-org/dedalo/manifests/${imageVersionOf(stackPlanCtx(TRIAL).answers)}": denied\n`,
+		},
+		{
+			match: IMAGETOOLS,
+			exit: 1,
+			stderr:
+				'ERROR: failed to authorize: failed to fetch anonymous token: unexpected status from GET request to https://ghcr.io/token: 403 Forbidden\n',
+		},
+	];
+	const OFFLINE: RecordedResponse[] = [
+		{
+			match: MANIFEST,
+			exit: 1,
+			stderr: 'Get "https://ghcr.io/v2/": dial tcp: lookup ghcr.io: no such host\n',
+		},
+		{
+			match: IMAGETOOLS,
+			exit: 1,
+			stderr: 'ERROR: dial tcp: lookup ghcr.io: no such host\n',
+		},
+	];
+	const MISSING = `no official image ${REF} is published for this version yet`;
+	const UNCHECKED = `whether the official image ${REF} is published could not be checked`;
+
+	async function refusalsOf(host: ScratchHost, raw: Record<string, unknown>) {
+		const marker = join(host.root, SCRATCH_DIR);
+		return reviewPreflightRefusals(fresh(raw).plan, {
+			runner: scratchRunner(marker),
+			fs: hostFs(host.root, join(marker, 'owners.json')),
+			source: host.source,
+			skipPrivilegeCheck: true,
+			sleep: async () => {},
+		});
+	}
+	async function todoOf(host: ScratchHost, raw: Record<string, unknown>): Promise<string> {
+		const previous = process.env.DEDALO_INSTALL_HOST_ROOT;
+		process.env.DEDALO_INSTALL_HOST_ROOT = host.root;
+		try {
+			const blocks = await reviewHostCommands(fresh(raw).plan);
+			return (blocks.find((block) => block.step === REVIEW_TODO_STEP)?.commands ?? []).join('\n');
+		} finally {
+			if (previous === undefined) delete process.env.DEDALO_INSTALL_HOST_ROOT;
+			else process.env.DEDALO_INSTALL_HOST_ROOT = previous;
+		}
+	}
+	const probed = (host: ScratchHost) =>
+		loggedCommands(host.root).filter((line) => line === MANIFEST || line === IMAGETOOLS);
+
+	for (const [name, responses] of [
+		['the registry says no such manifest', ABSENT],
+		['ghcr says denied (no public package)', DENIED],
+	] as const) {
+		test(`${name}: an ERROR of the Review (install not offered), and the run refuses before anything changes`, async () => {
+			const host = machine(TRIAL, { responses });
+			const refused = (await refusalsOf(host, TRIAL)).join('\n');
+			expect(refused).toContain(MISSING);
+			expect(refused).toContain('stable releases only');
+			expect(refused).toContain('--image-source build');
+			expect(refused).toContain('--image-source custom');
+			expect(probed(host).length).toBeGreaterThan(0);
+			const { outcome } = await runHost(host, fresh(TRIAL).request);
+			expect(outcome.result).toBe('refused');
+			expect(outcome.failedStep).toBeNull();
+			expect(outcome.message).toContain(MISSING);
+			expect(loggedCommands(host.root).filter((line) => MUTATING.test(line))).toEqual([]);
+		});
+	}
+
+	test('CONTROL: published — no refusal, nothing on the Review, and the registry WAS asked', async () => {
+		const host = machine(TRIAL, { responses: [{ match: MANIFEST, stdout: '{}\n' }] });
+		expect(await refusalsOf(host, TRIAL)).toEqual([]);
+		expect(await todoOf(host, TRIAL)).not.toContain(REF);
+		expect(probed(host)).toContain(MANIFEST);
+	});
+
+	test('the registry cannot be reached (offline): NOT refused — the Review says it could not be checked', async () => {
+		const host = machine(TRIAL, { responses: OFFLINE });
+		expect(await refusalsOf(host, TRIAL)).toEqual([]);
+		const todo = await todoOf(host, TRIAL);
+		expect(todo).toContain(UNCHECKED);
+		expect(todo).toContain('no such host');
+		expect(probed(host)).toEqual(expect.arrayContaining([MANIFEST, IMAGETOOLS]));
+		// the docker route too
+		const docker = machine(DOCKER_LE, { responses: OFFLINE });
+		expect(await todoOf(docker, DOCKER_LE)).toContain(UNCHECKED);
+	});
+
+	for (const raw of [
+		{ ...TRIAL, image_source: 'build' },
+		{ ...TRIAL, image_source: 'custom', image_repository: 'registry.example.org/museo/dedalo' },
+	]) {
+		test(`${raw.image_source}: never probed, never refused for it`, async () => {
+			const host = machine(raw, { responses: ABSENT });
+			expect(await refusalsOf(host, raw)).toEqual([]);
+			expect(await todoOf(host, raw)).not.toContain('official image');
+			expect(
+				loggedCommands(host.root).filter((line) =>
+					/ manifest inspect | imagetools inspect /.test(line),
+				),
+			).toEqual([]);
+		});
+	}
 });
 
 // An operator absent from /etc/passwd is the NORMAL case on macOS (Directory

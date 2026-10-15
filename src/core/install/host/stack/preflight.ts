@@ -23,7 +23,9 @@
  *    site with this machine's curl; campaign 3 C3-13);
  *  - Compose older than 2.24.4 (the override's `!override` tag).
  *  - a port the stack publishes that something already listens on (`ss`;
- *    campaign 3c D2 — found at stack_up, after the build, before).
+ *    campaign 3c D2 — found at stack_up, after the build, before);
+ *  - an official image that is not published for this version (prereleases
+ *    never are — officialImageVerdict; not checkable offline: said, not refused).
  *
  * Then FREEZES the facts and the digest of every stack step's commands in the
  * state file, as host_preflight does: what the rest of the run, and any
@@ -40,9 +42,11 @@ import { checkCertificateFiles } from '../tls_files.ts';
 import { chainTrustVerdict, SYSTEM_CA_BUNDLES } from '../tls_trust.ts';
 import { inCheckout } from './common.ts';
 import { gatherStackFacts, type StackFacts } from './facts.ts';
+import { probeImageAvailability } from './image_verify.ts';
 import {
 	acceptedImageVersions,
 	ENV_FILE,
+	imageRefOf,
 	imageRepositoryOf,
 	imageVerifyOf,
 	imageVersionOf,
@@ -190,6 +194,53 @@ function imageProblems(ctx: HostPlanCtx, facts: StackFacts): string[] {
 }
 
 /**
+ * Is the OFFICIAL image of this version published (image_verify.ts
+ * probeImageAvailability)? Asked only of an `official` source naming an
+ * official repository at this installer's version — a build or a registry of
+ * the operator's own is never probed (beta.6 fix: no image is published for a
+ * prerelease, and the default source failed at stack_image, after `yes`).
+ * Absent: a refusal (the Review does not offer install, the answers are kept);
+ * not checkable (offline…): a line on the Review, never a refusal.
+ */
+export async function officialImageVerdict(
+	ctx: Pick<HostCtx, 'answers' | 'runner'>,
+	facts: StackFacts,
+): Promise<{ problems: string[]; warnings: string[] }> {
+	const { answers } = ctx;
+	if (facts.docker === null || !probesOfficialImage(answers)) return { problems: [], warnings: [] };
+	const ref = imageRefOf(answers);
+	const { availability, said } = await probeImageAvailability(
+		ctx.runner,
+		facts.docker,
+		ref,
+		facts.home,
+	);
+	return {
+		problems: availability === 'absent' ? [imageNotPublished(ref, said)] : [],
+		warnings: availability === 'unknown' ? [imageNotChecked(ref, said)] : [],
+	};
+}
+
+/** Is the registry asked: an `official` source, an official repository, this installer's version? */
+function probesOfficialImage(answers: HostPlanCtx['answers']): boolean {
+	return (
+		answers.image_source === 'official' &&
+		isOfficialRepository(imageRepositoryOf(answers)) &&
+		acceptedImageVersions().includes(imageVersionOf(answers))
+	);
+}
+
+/** The refusal: no official image of this version. */
+function imageNotPublished(ref: string, said: string): string {
+	return `no official image ${ref} is published for this version yet (the registry answered: ${said}) — official images are published for stable releases only, never for a prerelease (beta) or a development build: choose Build on the Image screen (--image-source build), or a registry of your own (Custom, --image-source custom)`;
+}
+
+/** The Review line: the registry could not be asked. */
+function imageNotChecked(ref: string, said: string): string {
+	return `whether the official image ${ref} is published could not be checked (${said === '' ? 'the registry did not answer' : said}) — stack_image pulls it and says so if it is not there; a prerelease (beta) has no official image: choose Build (--image-source build)`;
+}
+
+/**
  * The institution's own certificate, checked before it is copied — by the
  * preflight (a refusal), and on the Review (campaign 3b N8: an untrusted chain
  * was accepted by the TLS screen and the Review and refused only after `yes`,
@@ -288,14 +339,20 @@ async function evaluateStack(
 	const docker = dockerProblems(facts);
 	if (docker.length > 0) return { facts, problems: docker, warnings: [] };
 	const tls = stackTlsVerdict(ctx.answers, ctx.fs, ctx.now());
+	const published = await officialImageVerdict(ctx, facts);
 	const problems = [
 		...machineProblems(facts),
 		...instanceProblems(ctx, facts),
 		...imageProblems(withFacts(ctx, facts), facts),
+		...published.problems,
 		...portProblems(ctx.answers, facts),
 		...tls.problems,
 	];
-	return { facts, problems: [...new Set(problems)], warnings: tls.warnings };
+	return {
+		facts,
+		problems: [...new Set(problems)],
+		warnings: [...published.warnings, ...tls.warnings],
+	};
 }
 
 /**

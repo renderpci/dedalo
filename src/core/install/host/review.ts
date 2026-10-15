@@ -37,8 +37,8 @@ import { plannedDefaultTold } from './production/web.ts';
 import { type CommandRunner, scratchRunner, systemRunner } from './runner.ts';
 import { readHostRootSeam } from './scratch.ts';
 import { bunPinOf, sourceTreeRoot } from './source.ts';
-import { gatherStackFacts } from './stack/facts.ts';
-import { stackPlanFacts, stackReviewTodo } from './stack/preflight.ts';
+import { gatherStackFacts, pendingStackFacts } from './stack/facts.ts';
+import { officialImageVerdict, stackPlanFacts, stackReviewTodo } from './stack/preflight.ts';
 
 /** The runner and the fs the Review (and the identity probe) measure through (the scratch seam's when it is armed). */
 export function reviewMachine(): { runner: CommandRunner; fs: HostFs } {
@@ -184,9 +184,18 @@ export async function reviewHostCommands(plan: InstallPlan): Promise<ReviewBlock
 	const facts = await reviewFacts(plan, instancePaths(plan.answers, pin), source);
 	if (plan.answers.route === 'production' && facts.os === null) return [];
 	const ctx = reviewContext(plan, facts, pin, source);
-	const { fs } = reviewMachine();
+	const { runner, fs } = reviewMachine();
 	if (plan.answers.route !== 'production') {
-		return [...todoBlocks(stackReviewTodo(ctx, fs, Date.now())), ...hostReview(ctx)];
+		// An official image whose publication could not be checked (offline): said
+		// before `yes`, never refused — an ABSENT one is a preflight refusal.
+		const image = await officialImageVerdict(
+			{ answers: plan.answers, runner },
+			facts.stack ?? pendingStackFacts(),
+		);
+		return [
+			...todoBlocks([...image.warnings, ...stackReviewTodo(ctx, fs, Date.now())]),
+			...hostReview(ctx),
+		];
 	}
 	return [...todoBlocks(reviewTodo(ctx, fs, Date.now())), ...markExisting(hostReview(ctx), fs)];
 }

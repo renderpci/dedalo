@@ -968,6 +968,11 @@
 			{
 				"type": "fixed",
 				"audience": "admin",
+				"title": "The Docker and Trial installers check, before you type `yes`, that the official image of your version is published — a beta has none, so choose Build."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
 				"title": "Dédalo now runs on Bun 1.4.3, which fixes a runtime defect that could leave a process waiting forever, at full CPU, on a program it had started."
 			},
 			{

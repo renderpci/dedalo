@@ -1,0 +1,7 @@
+---
+title: The Docker and Trial installers check, before you type `yes`, that the official image of your version is published — a beta has none, so choose Build.
+type: fixed
+audience: admin
+date: 2026-10-15
+---
+Official Dédalo images are published for **stable releases only**: a prerelease (a beta) and a development checkout have no official image. Until now the Docker and Trial routes defaulted to the official image anyway, so on a beta an install that kept the defaults failed at `stack_image`, after `yes`, with every answer lost. The Review now asks the registry first (`docker manifest inspect`, then `docker buildx imagetools inspect` — nothing is pulled). When the image of your version is not published, the Review says so and does not offer to install; your answers are kept, so go back to the Image screen and choose **Build** (`--image-source build`) or a registry of your own. When the registry cannot be reached, the Review says it could not be checked and does not block the install. A local build or a registry of your own is never checked this way. See [official images are stable releases only](./install/docker.md#official-images-are-stable-releases-only).
