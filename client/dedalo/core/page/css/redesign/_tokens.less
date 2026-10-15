@@ -292,6 +292,9 @@
 		--checkbox_bg:         #34322c;
 		--checkbox_border:     #7a7568; // 3.5:1 on the field fill, 3.3:1 on surface (was #47443c, 1.6)
 		--checkbox_checked_bg: var(--accent-text);
+		// this fill is the BRIGHT accent-text, so its tick/dot is dark ink;
+		// overrides the shared dark default (#fff, for classic's deepened fill)
+		--checkbox_checkmark:  var(--fg_on_brand);
 		--input_bg:            #211f1b;
 		--input_fg:            #e8e5df;
 		--field_rest_bg:       var(--input_bg);

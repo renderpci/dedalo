@@ -662,8 +662,8 @@ template {
   --debug_info_bar_text: var(--color_grey_9);
   --checkbox_bg: var(--color_grey_16);
   --checkbox_border: var(--color_grey_8);
-  --checkbox_checked_bg: var(--color_input_focus);
-  --checkbox_checkmark: var(--fg_on_brand);
+  --checkbox_checked_bg: #db760f;
+  --checkbox_checkmark: #fff;
   --option_chip_checked_bg: #fbb266;
   --option_chip_checked_fg: var(--fg_on_brand);
   --input_bg: var(--color_grey_16);
@@ -908,8 +908,8 @@ template {
   --debug_info_bar_text: var(--fg_muted);
   --checkbox_bg: #4a5059;
   --checkbox_border: #4a5059;
-  --checkbox_checked_bg: var(--color_input_focus);
-  --checkbox_checkmark: var(--fg_on_brand);
+  --checkbox_checked_bg: #db760f;
+  --checkbox_checkmark: #fff;
   --option_chip_checked_bg: var(--color_orange_dedalo);
   --option_chip_checked_fg: var(--fg_on_brand);
   --input_bg: #1f2227;
@@ -4974,7 +4974,7 @@ button.button_spinner.success::before {
 }
 input[type="checkbox"],
 input[type="radio"] {
-  accent-color: var(--color_input_focus);
+  accent-color: var(--checkbox_checked_bg);
 }
 .dd_input {
   font-size: 1em;
@@ -7458,7 +7458,7 @@ body:has(.component_av.view_viewer) {
   margin-bottom: var(--space-3);
   padding: 0px;
   width: 100%;
-  accent-color: var(--color_orange_dedalo);
+  accent-color: var(--checkbox_checked_bg);
   background-color: transparent;
 }
 .inspector.inspector_fixed {
@@ -12101,7 +12101,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .tool_header input[type="checkbox"],
 .wrapper_tool input[type="radio"],
 .tool_header input[type="radio"] {
-  accent-color: var(--tool_fill, var(--color_input_focus));
+  accent-color: var(--tool_fill, var(--checkbox_checked_bg));
 }
 .tool_header {
   contain: content;
@@ -19912,7 +19912,7 @@ body.inspector_resizing {
 .open_relations_modal .option_row input[type="radio"] {
   flex: 0 0 auto;
   margin: 0;
-  accent-color: var(--color_input_focus);
+  accent-color: var(--checkbox_checked_bg);
   cursor: pointer;
 }
 .open_relations_modal .option_row:hover {
@@ -26040,15 +26040,15 @@ body.inspector_resizing {
   transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 .component_radio_button input[type="radio"]:hover {
-  border-color: var(--color_orange_dedalo);
+  border-color: var(--checkbox_checked_bg);
 }
 .component_radio_button input[type="radio"]:focus-visible {
   outline: 2px solid var(--focus_ring);
   outline-offset: 1px;
 }
 .component_radio_button input[type="radio"]:checked {
-  background-color: var(--color_orange_dedalo);
-  border-color: var(--color_orange_dedalo);
+  background-color: var(--checkbox_checked_bg);
+  border-color: var(--checkbox_checked_bg);
 }
 .component_radio_button input[type="radio"]:checked:after {
   content: '';
@@ -28146,6 +28146,7 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
   --checkbox_bg: #34322c;
   --checkbox_border: #7a7568;
   --checkbox_checked_bg: var(--accent-text);
+  --checkbox_checkmark: var(--fg_on_brand);
   --input_bg: #211f1b;
   --input_fg: #e8e5df;
   --field_rest_bg: var(--input_bg);

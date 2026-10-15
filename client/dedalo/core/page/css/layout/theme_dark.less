@@ -213,8 +213,11 @@
 	--debug_info_bar_text:      var(--fg_muted); // #aeb4bd — 6.1:1 on --debug_info_bar_bg (was 4.0:1)
 	--checkbox_bg:              #4a5059;
 	--checkbox_border:          #4a5059;
-	--checkbox_checked_bg:      var(--color_input_focus); // Dédalo orange (was blue --color_primary)
-	--checkbox_checkmark:       var(--fg_on_brand);
+	// Same deepened fill + white-tick law as the light block: this token is the
+	// native accent-color AND the custom-drawn fill; #db760f is 3.18:1 against
+	// white and 5.3:1 against --bg_surface.
+	--checkbox_checked_bg:      #db760f;
+	--checkbox_checkmark:       #fff;
 	--option_chip_checked_bg:     var(--color_orange_dedalo); // solid pill reads well on dark
 	--option_chip_checked_fg:     var(--fg_on_brand);
 	--input_bg:                 #1f2227;

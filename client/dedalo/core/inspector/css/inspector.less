@@ -20,9 +20,9 @@
 	margin-bottom: var(--space-3);
 	padding: 0px;
 	width: 100%;
-	// native controls (project tree checkboxes, radios) pick up the Dédalo
-	// accent instead of the browser default blue
-	accent-color: var(--color_orange_dedalo);
+	// native controls (project tree checkboxes, radios) pick up the checked-fill
+	// token — deepened so the engine-painted tick is white (see vars_tokens)
+	accent-color: var(--checkbox_checked_bg);
 	// the panel itself draws nothing: it is transparent and lets the page's
 	// light-gray canvas show through. Only the white content cards float on it.
 	background-color: transparent;

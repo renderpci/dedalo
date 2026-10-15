@@ -46,13 +46,15 @@
 		}
 	}
 
-// native checkbox / radio: Dédalo orange everywhere (was the browser's blue
-// outside the inspector, which set it for its own area only). The custom-drawn
-// dark-mode boxes (component_check_box/filter/radio) take the same colour via
-// --checkbox_checked_bg.
+// native checkbox / radio: the CHECKED fill token, deepened so every engine
+// paints the tick/dot WHITE (>= 3:1 against white; Chromium's threshold — see
+// vars_tokens.less). The brand #f78a1c (--color_input_focus) is 2.44:1, which
+// is why Chrome painted a black tick there. The custom-drawn boxes
+// (component_check_box/filter in dark, component_radio_button in both themes)
+// take the same fill via the token.
 	input[type="checkbox"],
 	input[type="radio"] {
-		accent-color: var(--color_input_focus);
+		accent-color: var(--checkbox_checked_bg);
 	}
 
 // generic html inputs appearance. Used by search, tools, etc.

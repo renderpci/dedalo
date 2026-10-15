@@ -183,7 +183,8 @@
 }//end .component_radio_button
 
 // custom radio inputs (BOTH themes — replaces the browser default): a calm
-// token-driven circle that warms to the Dédalo orange when checked. The
+// token-driven circle that takes the checked-fill token when checked, so the
+// engine-free dot follows the same white-tick law as every checkbox. The
 // view_rating variant is unaffected (its radios render at opacity: 0).
 .component_radio_button input[type="radio"] {
 	background-color: var(--checkbox_bg);
@@ -200,7 +201,7 @@
 	transition: border-color var(--transition-fast), background-color var(--transition-fast);
 
 	&:hover {
-		border-color: var(--color_orange_dedalo);
+		border-color: var(--checkbox_checked_bg);
 	}
 
 	// keyboard focus: the global input focus-visible rule does not cover radios
@@ -210,8 +211,8 @@
 	}
 
 	&:checked {
-		background-color: var(--color_orange_dedalo);
-		border-color: var(--color_orange_dedalo);
+		background-color: var(--checkbox_checked_bg);
+		border-color: var(--checkbox_checked_bg);
 
 		&:after {
 			content: '';

@@ -350,8 +350,13 @@
 	--debug_info_bar_text:      var(--color_grey_9); // #aaaaaa, 5.3:1 on --debug_info_bar_bg #353535 (was grey_8 #6c6c6c, 2.9:1)
 	--checkbox_bg:              var(--color_grey_16);
 	--checkbox_border:          var(--color_grey_8);
-	--checkbox_checked_bg:      var(--color_input_focus); // Dédalo orange, like every native checkbox/radio (accent-color, layout.less)
-	--checkbox_checkmark:       var(--fg_on_brand);       // dark ink: white on the orange fill is too faint
+	// The checked fill. This is ALSO the native accent-color (layout.less), so it
+	// carries the white-tick law: an engine paints the tick/dot WHITE only on a
+	// fill dark enough for it — Chromium (the strictest, and why the brand
+	// #f78a1c at 2.44:1 got a black tick) requires >= 3:1 against white, i.e.
+	// relative luminance <= 0.30. #db760f is 3.18:1. Any retune must stay <= 0.30.
+	--checkbox_checked_bg:      #db760f;
+	--checkbox_checkmark:       #fff; // ink ON the checked fill; redesign+dark pairs its bright fill with dark ink instead
 	// Checked option chip (component_radio_button). Light: the full brand
 	// fill shouts on a white surface, so the pill is a softer brand orange
 	// with the same dark brand ink (#16181b on #fbb266 = 10.2:1). Dark keeps
