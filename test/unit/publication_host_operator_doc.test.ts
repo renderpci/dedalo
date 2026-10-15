@@ -4,7 +4,7 @@
  * must not meet a refusal the page never warned about.
  */
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { EXIT } from '../../publication/host_agent/src/provision/cli';
 import {
@@ -54,6 +54,21 @@ const example = JSON.parse(
 		'utf8',
 	),
 ) as { listen: { host: string; port: number } };
+
+/**
+ * A changelog fragment's text wherever it lives: changes/unreleased/ until a release is
+ * cut, then changes/<version>/ (`bun run changelog release` MOVES it) — a gate that names
+ * the unreleased path goes red at every release cut.
+ */
+function fragmentText(name: string): string {
+	const changes = join(repoRoot, 'changes');
+	const found = readdirSync(changes, { withFileTypes: true })
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => join(changes, entry.name, name))
+		.filter((path) => existsSync(path));
+	expect(found, `exactly one changes/*/${name}`).toHaveLength(1);
+	return readFileSync(found[0] as string, 'utf8');
+}
 
 /** The page between two headings (the end heading excluded). */
 function section(start: string, end: string): string {
@@ -174,10 +189,7 @@ describe('publication host operator page', () => {
 		expect(page).toMatch(
 			/cannot be reached the marker stays, and the files are \*\*still public\*\*/,
 		);
-		const fragment = readFileSync(
-			join(repoRoot, 'changes/unreleased/publication-host-lockstep-copy-probe.md'),
-			'utf8',
-		);
+		const fragment = fragmentText('publication-host-lockstep-copy-probe.md');
 		expect(fragment).not.toMatch(/"not found" at once/);
 	});
 
@@ -191,10 +203,7 @@ describe('publication host operator page', () => {
 
 	test('the API push is promised after a CODE update/restore only; a database restore sends nothing', () => {
 		// post_restore.ts runs publication_apis DRY; only boot_confirm (a code sentinel) pushes.
-		const fragment = readFileSync(
-			join(repoRoot, 'changes/unreleased/publication-host-lockstep-copy-probe.md'),
-			'utf8',
-		);
+		const fragment = fragmentText('publication-host-lockstep-copy-probe.md');
 		for (const text of [page, fragment]) {
 			expect(text).not.toMatch(/after every restore/i);
 			expect(text).not.toMatch(/every code update or restore/i);
