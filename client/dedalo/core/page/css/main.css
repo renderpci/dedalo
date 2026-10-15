@@ -22277,7 +22277,25 @@ body.inspector_resizing {
   display: none;
 }
 .component_date.search .button.calendar {
-  cursor: default;
+  cursor: pointer;
+}
+.component_date.search > .content_data > .content_value {
+  position: relative;
+  padding-right: 2.1rem;
+}
+.component_date.search > .content_data > .content_value > .input-group {
+  position: static;
+}
+.component_date.search > .content_data > .content_value > .input-group > .button_container.button_calendar_container {
+  top: 50%;
+  transform: translateY(-50%);
+  right: 0;
+  height: 1.8rem;
+  width: 1.8rem;
+  padding: 0.15rem;
+  padding-left: 0.3rem;
+  display: inline-block;
+  visibility: visible;
 }
 .component_date.view_line.edit {
   display: inline-block;

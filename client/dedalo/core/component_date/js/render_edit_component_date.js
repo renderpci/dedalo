@@ -500,6 +500,12 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 						// so the native input stays hidden and NO calendar opens (the
 						// report: search-mode date picker dead on a phone).
 						disableMobile	: true,
+						// clickOpens: the picker is opened by OUR `mouseup` handler
+						// (which builds the instance and calls open()). flatpickr's
+						// own click-toggle would then fire on the SAME click and
+						// close it again — the picker flashed and the click read as
+						// dead. One opener, deterministically.
+						clickOpens		: false,
 						// onClose	: close_flatpickr,
 						onValueUpdate : function(selectedDates, dateStr){
 							// reset style error
@@ -602,6 +608,10 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 						// mobile fallback hides the picker behind a native input that the
 						// component's hidden-until-focus trigger cannot reveal on a tap.
 						disableMobile	: true,
+						// clickOpens: same as the date picker — our own `mouseup`
+						// opens the instance, so flatpickr must NOT also toggle on the
+						// same click (that closed it immediately).
+						clickOpens		: false,
 						// onClose		: close_flatpickr,
 						// onValueUpdate
 						onClose			: function(selectedDates, dateStr){
@@ -1270,6 +1280,17 @@ const render_button_calendar = function () {
 		})
 		// mousedown event
 		button_calendar_container.addEventListener('mousedown', function(e) {
+			// Don't let the trigger steal focus from the input. Losing focus hides
+			// the (focus-revealed) trigger BEFORE the `mouseup` that opens the
+			// picker, so the click reads as dead; also avoids text selection.
+			e.preventDefault()
+			e.stopPropagation()
+		})
+		// click event. Without stopping it, the click bubbles to the component
+		// wrapper, which ACTIVATES the component; the activation auto-focuses the
+		// first input (ui.js) and that closes the picker the same click opened —
+		// the calendar flashed and the trigger read as dead.
+		button_calendar_container.addEventListener('click', function(e) {
 			e.stopPropagation()
 		})
 

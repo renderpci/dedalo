@@ -326,6 +326,12 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The date picker button works in the search panel on a phone**
+
+    In the search panel a date field's calendar button was floated above its input — in the compact search card that put it **on the label** and under the field's close (✕) control, and it stayed hidden until the field had focus. Clicking it did nothing: on a phone the ✕ sat on top, and the click activated the field (auto-focusing the input), which closed the picker the same click had opened.
+
+    The button now sits at the **end of the input row**, always visible, clear of the label and the field controls, and its click opens the calendar and keeps it open. A date range gets a single picker button for the row.
+
 - **The date picker opens again on a phone (edit and search).**
 
     On a phone — and in a desktop browser's device-emulation mode — the small calendar icon of a date or time field did nothing: the field's own calendar never appeared, so the value had to be typed by hand. The icon now opens the calendar on phones exactly as it does on a desktop, both in the record edit form and in the list's search panel.
