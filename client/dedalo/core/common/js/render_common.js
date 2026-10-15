@@ -56,7 +56,11 @@
 * @param {Object} options - Configuration object.
 * @param {Object} options.self - Caller instance (e.g. search or tool_export); must
 *   expose `calculate_component_path`, `get_section_id`, `on_dragstart`,
-*   and `get_section_elements_context`.
+*   and `get_section_elements_context`. Optionally it may expose
+*   `on_component_row({node, element, path})`, called once per draggable row
+*   after that row is built — the hook a caller uses to add its own affordance
+*   (search: a phone-only "+" that adds the field, since a finger cannot drag).
+*   Callers without the hook are unaffected.
 * @param {string} options.section_tipo - Ontology tipo of the section whose components
 *   are being listed.
 * @param {HTMLElement} options.target_div - Container to render into; its children
@@ -199,6 +203,17 @@ export const render_components_list = function(options) {
 
 				// add
 					ar_components.push(component)
+
+				// caller hook. Let the caller decorate the row (search adds a
+				// phone-only "+" so a finger can add a field; a finger cannot
+				// drag). Optional — tools sharing this builder omit it.
+					if (typeof caller.on_component_row === 'function') {
+						caller.on_component_row({
+							node	: component,
+							element	: element,
+							path	: calculated_component_path
+						})
+					}
 
 				// Portals and autocomplete only
 				// Pointer to open "children" target section (portals and autocompletes)

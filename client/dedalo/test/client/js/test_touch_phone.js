@@ -5,6 +5,10 @@
 import * as touch_pick from '../../../core/common/js/touch_pick.js';
 import { render_pane_switch } from '../../../core/tools_common/js/pane_switch.js';
 import { render_phone_reorder } from '../../../core/tools_common/js/phone_reorder.js';
+import {
+	render_add_field_button,
+	synthetic_drop_event,
+} from '../../../core/search/js/search_phone.js';
 
 // The phone gestures shared by the tools (responsive-tools plan). Backend-free:
 // synthetic DOM, no API.
@@ -106,6 +110,44 @@ describe('PHONE_REORDER : up/down replaces drag-sort on a phone', function () {
 
 	it('requires on_move and both labels', function () {
 		assert.throws(() => render_phone_reorder({ on_move: () => {}, labels: { up: 'Up' } }));
+	});
+});
+
+describe('SEARCH_PHONE : tap-to-add replaces the field drag on a phone', function () {
+	it('the "+" adds once and eats the row click (drill)', function () {
+		let adds = 0;
+		let row_clicked = false;
+		const row = document.createElement('li');
+		row.addEventListener('click', () => {
+			row_clicked = true;
+		});
+		const button = render_add_field_button({
+			label: 'Add field',
+			field_label: 'Title',
+			on_add: () => {
+				adds++;
+			},
+		});
+		row.appendChild(button);
+
+		button.click();
+
+		assert.equal(adds, 1);
+		assert.equal(row_clicked, false, 'the row click must not fire (has_subquery drill)');
+		assert.equal(button.type, 'button');
+		assert.equal(button.getAttribute('aria-label'), 'Add field: Title');
+	});
+
+	it('requires on_add', function () {
+		assert.throws(() => render_add_field_button({ label: 'x' }));
+	});
+
+	it('synthetic_drop_event feeds the one drop handler the same payload', function () {
+		const data = JSON.stringify({ path: '[]', section_id: '0' });
+		const event = synthetic_drop_event(data);
+		assert.equal(typeof event.preventDefault, 'function');
+		assert.equal(typeof event.stopPropagation, 'function');
+		assert.equal(event.dataTransfer.getData('text/plain'), data);
 	});
 });
 

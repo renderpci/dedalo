@@ -254,6 +254,14 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **The search pane on a phone: tap a field to add it, no drag needed**
+
+    Building a search filter used to mean dragging a field from the FIELDS list onto a search group. A touch screen never fires a drag, so on a phone the filter could not be built at all.
+
+    Every field in the list now carries a **+** button on a touch screen: tap it and the field is added to the search. Opening a group's **Add a field** slot still shows the FIELDS list, and the tap remembers which group the next field belongs to; the list closes once the field is added so the result is visible.
+
+    Below 1024px — **tablet and phone** — the pane stops being a three-column desktop: the TYPE / FIELDS / PRESET tabs become a row of chips above the region each controls, every panel and the filter canvas take the full width and stack in one column, and a drilled-in section list replaces the list it came from instead of opening a second column that ran off the screen. A long field name now ellipsizes instead of stretching the section sideways (the list is an auto table that grew past the screen, leaving the label overlapping the add and drill controls). The saved-search list (CONFIG) becomes compact one-line rows — name, apply, edit and delete, with a long name ellipsized — and its empty paginator strip is dropped, instead of the desktop four-column grid that squeezed it into unreadable slivers. A mouse keeps the drag exactly as before.
+
 - **The search group operator (AND / OR) now shows a "Search operator" tooltip on hover.**
 
     When you hover the AND / OR button at the top of a search group, a tooltip now reads
@@ -1181,6 +1189,12 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-10-12-install-surface-removed`, `WC-2026-10-08-install-ip-denied-names-address`.
 
 #### Changed
+
+- **The debug info bar is one thin line on a tablet or phone**
+
+    On a narrow screen the developer info strip under the menu (server code version, database, PostgreSQL and runtime versions, memory, sapi…) wrapped to **three lines**, taking a large slice of the screen before any content.
+
+    Below 1024px it is now **one thin line** whose values scroll sideways, so every value stays reachable and nothing is hidden; the menu reserves far less height for it. On a desktop it is unchanged.
 
 - **The diffusion publication ledger drops the indexes it never used.**
 

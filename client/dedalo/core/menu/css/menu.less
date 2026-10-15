@@ -27,6 +27,12 @@
 
 	&.with_debug_info {
 		min-height: calc(var(--menu_heigth) * 2);
+
+		// compact: the debug strip is ONE thin line, so the menu is barely
+		// taller than the menu itself (it used to reserve a 2nd menu row)
+		@media screen and (max-width: @width_break_point_0) {
+			min-height: calc(var(--menu_heigth) + 1.7rem);
+		}
 	}
 
 	>.content_data {
@@ -678,6 +684,47 @@
 				margin-left: 1rem;
 			}
 		}
+
+		// COMPACT (tablet + phone). The strip is developer chrome; left to wrap
+		// it took THREE lines on a phone (~half the menu's screen budget). Here
+		// it is ONE thin line whose items scroll sideways, so every value stays
+		// reachable and nothing is hidden.
+		@media screen and (max-width: @width_break_point_0) {
+			min-height: 0;
+			// the strip is a flex item of the (flex) menu: without min-width:0
+			// its nowrap content would force the whole menu wider than the phone
+			min-width: 0;
+			max-width: 100vw;
+			padding: 0.1rem 0.5rem;
+			font-size: 0.8rem;
+			line-height: 1.4rem;
+			flex-wrap: nowrap;
+			overflow-x: auto;
+			overflow-y: hidden;
+			white-space: nowrap;
+			-webkit-overflow-scrolling: touch;
+			scrollbar-width: none;
+
+			&::-webkit-scrollbar {
+				display: none; // the line scrolls by swipe; a bar would add height
+			}
+
+			>div {
+				flex: 0 0 auto; // keep each value whole; the line scrolls instead
+				padding-left: 0.75rem;
+			}
+
+			// the icon buttons shrink to the line, not the other way round
+			>.service_worker_active {
+				width: 1rem;
+				height: 1.2rem;
+				margin-left: 0.6rem;
+			}
+			>.environment {
+				margin-left: 0.6rem;
+				height: 1.2rem;
+			}
+		}
 	}
 }
 
@@ -733,5 +780,11 @@
 	&.placeholder_debug {
 		height: calc(var(--menu_heigth) * 2);
 		min-height: calc(var(--menu_heigth) * 2);
+
+		// compact: match the thin one-line debug strip (see .debug_info_bar)
+		@media screen and (max-width: @width_break_point_0) {
+			height: calc(var(--menu_heigth) + 1.7rem);
+			min-height: calc(var(--menu_heigth) + 1.7rem);
+		}
 	}
 }

@@ -124,6 +124,10 @@ export const search = function() {
 	search.prototype.render_filter					= render_search.prototype.render_filter
 	search.prototype.render_search_group			= render_search.prototype.render_search_group
 	search.prototype.build_search_component			= render_search.prototype.build_search_component
+	// phone. on_component_row decorates each field row; add_field_to_search adds
+	// it on a tap (search_phone.js)
+	search.prototype.on_component_row				= render_search.prototype.on_component_row
+	search.prototype.add_field_to_search			= render_search.prototype.add_field_to_search
 	// drag
 	search.prototype.on_dragstart					= on_dragstart
 	search.prototype.on_dragover					= on_dragover
@@ -237,6 +241,9 @@ search.prototype.init = async function(options) {
 		self.wrapper_sections_selector			= null
 		self.search_children_recursive_node		= null
 		self.max_input 							= null
+		// pending_group: the group a phone-added field should land in (set when a
+		// group's "Add a field" slot is tapped; search_phone.js). Null = root.
+		self.pending_group						= null
 
 		self.node								= null
 
