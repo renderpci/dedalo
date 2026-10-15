@@ -221,54 +221,42 @@
 			cursor: pointer; // it IS a button (was 'default')
 		}
 
-		// THE TRIGGER FLOATS OVER THE FIELD'S TOP-LEFT CORNER (the proposed
-		// look): below the label line (`top: -0.6rem` — its descenders end
-		// ~1.95rem from the card top, the circle starts at 2.0rem) and over
-		// the 0.5rem GAP around the field (`left: -0.5rem`), so it never
-		// crosses onto the operator chip or the range's other half. It is
-		// always visible — part of the field's chrome in search, like the
-		// old trigger — and the card's own close/reorder controls at the
-		// top-RIGHT stay clear of it.
+		// THE TRIGGER SITS ON THE FIELD'S TOP-LEFT CORNER (the proposed
+		// look): its centre on the field's left edge (`left: -0.9rem`, half
+		// its 1.8rem), raised so only its lower quarter overlaps the field's
+		// top border (`top: -1.4rem`). The value keeps the WHOLE field, so the
+		// input needs no icon slot and the text stays centred. Like the edit
+		// view it stays hidden until the field takes focus (the base
+		// `:focus-within` reveal; coarse pointers keep it always visible), so
+		// the card keeps the panel's one-line height and the raised trigger
+		// may cover the label line only while the field is in use.
 		>.content_data >.content_value >.input-group >.button_container.button_calendar_container {
-			left: -0.5rem;
+			left: -0.9rem;
 			right: auto;
-			top: -0.6rem;
-			display: inline-block;
-			visibility: visible;
-			height: 1.6rem;
-			width: 1.6rem;
-
-			@media (pointer: coarse) {
-				left: -0.4rem;
-				height: 1.8rem;
-				width: 1.8rem;
-			}
+			top: -1.4rem;
+			height: 1.8rem;
+			width: 1.8rem;
 		}
 
-		// AND THE VALUE KEEPS ITS OWN SLOT, so glyph and data can never meet:
-		// the circle intrudes 1.1rem into the field (its right edge), and the
-		// input reserves that plus a clearance in its OWN padding — inside
-		// the field, so the row loses no width and no gap opens between
-		// fields. The text stays CENTRED after the slot, exactly like the
-		// proposal.
+		// AND THE VALUE GETS THE FULL WIDTH: a slim inset instead of the
+		// panel's 0.5rem field padding, so a full DD/MM/YYYY fits a half of a
+		// narrow range card at a readable size.
 		// (!) The `:has(…)` argument carries TWO classes on purpose: it lifts
 		// the selector to (0,7,1), the weight of the search panel's generic
 		// field padding (search.less `input:not(…)…`), so source order — this
 		// sheet loads after it — decides in our favour.
 		>.content_data >.content_value >.input-group:has(>.button_container.button_calendar_container) > input {
-			padding-left: 1.4rem;
-
-			@media (pointer: coarse) {
-				padding-left: 1.7rem;
-			}
+			padding-left: 0.2rem;
+			padding-right: 0.2rem;
 		}
 
 		// THE ROW'S HORIZONTAL SPACE BELONGS TO THE VALUES. A range's two
-		// halves share the full track, and its `<>` separator drops BELOW
-		// them (full-width, centred) instead of eating the middle of the row:
-		// the user's data is what needs the room.
+		// halves share the full track, and its `<>` separator hangs just
+		// BELOW the gap between them, out of flow, in the card's bottom
+		// inset: it eats neither the middle of the row nor a line of its own.
 		>.content_data >.content_value:has(>.dates_separator) {
-			flex-wrap: wrap;
+			flex-wrap: nowrap;
+			position: relative;
 
 			>.input-group {
 				flex: 1 1 0;
@@ -277,18 +265,26 @@
 			}
 
 			// the date size follows the track so a full DD/MM/YYYY survives
-			// next to the icon slot on a narrow card (the pair shares the
-			// row: 12.4em per half, plus the two icon slots and the gap).
+			// on a narrow card (the pair shares the row: ~6.2em of text per
+			// half, plus the insets, borders and the gap).
 			// Wide cards keep the normal 1rem.
+			// (search.less floors a date input at 7.5rem: in a range that
+			// floor overflows each half and the two fields overlap)
 			>.input-group input {
-				font-size: clamp(0.75rem, calc((100cqi - 70px) / 12.4), 1rem);
+				min-width: 0;
+				font-size: clamp(0.75rem, calc((100cqi - 1.25rem) / 12.4), 1rem);
 			}
 
+			// centred on the gap: both halves flex equally, so the gap's
+			// centre is the row's centre
 			>.dates_separator {
-				order: 3; // after BOTH fields, whatever the flex line
-				flex: 0 0 100%;
-				width: 100%;
-				text-align: center;
+				position: absolute;
+				top: calc(100% - 2px); // overlaps the fields' bottom edge, like the mockup
+				left: 50%;
+				transform: translateX(-50%);
+				padding: 0;
+				line-height: 1;
+				pointer-events: none;
 				opacity: 0.6;
 			}
 		}

@@ -22296,31 +22296,19 @@ body.inspector_resizing {
   cursor: pointer;
 }
 .component_date.search > .content_data > .content_value > .input-group > .button_container.button_calendar_container {
-  left: -0.5rem;
+  left: -0.9rem;
   right: auto;
-  top: -0.6rem;
-  display: inline-block;
-  visibility: visible;
-  height: 1.6rem;
-  width: 1.6rem;
-}
-@media (pointer: coarse) {
-  .component_date.search > .content_data > .content_value > .input-group > .button_container.button_calendar_container {
-    left: -0.4rem;
-    height: 1.8rem;
-    width: 1.8rem;
-  }
+  top: -1.4rem;
+  height: 1.8rem;
+  width: 1.8rem;
 }
 .component_date.search > .content_data > .content_value > .input-group:has(>.button_container.button_calendar_container) > input {
-  padding-left: 1.4rem;
-}
-@media (pointer: coarse) {
-  .component_date.search > .content_data > .content_value > .input-group:has(>.button_container.button_calendar_container) > input {
-    padding-left: 1.7rem;
-  }
+  padding-left: 0.2rem;
+  padding-right: 0.2rem;
 }
 .component_date.search > .content_data > .content_value:has(>.dates_separator) {
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  position: relative;
 }
 .component_date.search > .content_data > .content_value:has(>.dates_separator) > .input-group {
   flex: 1 1 0;
@@ -22328,13 +22316,17 @@ body.inspector_resizing {
   width: auto;
 }
 .component_date.search > .content_data > .content_value:has(>.dates_separator) > .input-group input {
-  font-size: clamp(0.75rem, calc((100cqi - 70px) / 12.4), 1rem);
+  min-width: 0;
+  font-size: clamp(0.75rem, calc((100cqi - 1.25rem) / 12.4), 1rem);
 }
 .component_date.search > .content_data > .content_value:has(>.dates_separator) > .dates_separator {
-  order: 3;
-  flex: 0 0 100%;
-  width: 100%;
-  text-align: center;
+  position: absolute;
+  top: calc(100% - 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0;
+  line-height: 1;
+  pointer-events: none;
   opacity: 0.6;
 }
 .component_date.search > .content_data > .content_value > .input-group {
