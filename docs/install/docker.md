@@ -40,7 +40,7 @@ Choose **Docker** on the first screen (`--plain` asks the same questions one per
 | --- | --- |
 | **Install type** | the route |
 | **System check** | nothing: it shows Docker, Compose and the free disk. A failed row must be fixed first |
-| **Image** | where the image comes from: an **official** Dédalo registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout's last commit. **Image version** is the image tag: leave it empty for the installer's own version — the only one accepted besides its `-dev` tag. See [where the image comes from](#choose-where-the-image-comes-from) |
+| **Image** | where the image comes from: an **official** Dédalo registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout's last commit. Official images exist for **stable releases only**: on a beta, choose **Build**. **Image version** is the image tag: leave it empty for the installer's own version — the only one accepted besides its `-dev` tag. See [where the image comes from](#choose-where-the-image-comes-from) |
 | **TLS & address** | the public address, and the certificate: **Let's Encrypt** (with its email), a **local certificate authority**, or your institution's **files** |
 | **Containers** | the published HTTP and HTTPS ports (`80` and `443`) |
 | **Identity** | the institution's short code and full name, the install fingerprint (**Information** and **Info key** — keep the defaults unless you are moving a v6 installation), the locale and the time zone |
@@ -72,7 +72,7 @@ The engine's own configuration is not in `.dedalo.env`: it is `/private/.env`, i
 
 | Step | What it does | Verify by hand |
 | --- | --- | --- |
-| `stack_preflight` | refuses, before anything is pulled or written: Docker or Compose v2 missing, a daemon this user cannot reach, under 8 GiB free, a Dédalo instance already here (the `dedalo_private` volume), stack files of an earlier install (`.dedalo.env`, `compose.override.yaml`), an image version that is not the installer's, an official image without `cosign`, an institution certificate that does not check out | the refusal names each problem |
+| `stack_preflight` | refuses, before anything is pulled or written: Docker or Compose v2 missing, a daemon this user cannot reach, under 8 GiB free, a Dédalo instance already here (the `dedalo_private` volume), stack files of an earlier install (`.dedalo.env`, `compose.override.yaml`), an image version that is not the installer's, an official image without `cosign`, an official image the registry does not publish for this version (a beta: see [Official images are stable releases only](#official-images-are-stable-releases-only)), an institution certificate that does not check out | the refusal names each problem |
 | `stack_image` | pulls the image and verifies its `cosign` signature and its version label — or builds it here with `--image-source build` through [the local builder](#a-local-build), printing each build step as it starts (a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk). The verified digest is pinned: a re-pull between the check and the run is refused | `docker image ls <image>` |
 | `stack_tls` | Let's Encrypt (certbot in its own container, `--standalone` on port 80, before nginx exists), a local CA (`deploy/dedalo-tls-rotate.sh --mode local-ca`), or your files copied into `deploy/certs` | `ls deploy/certs`, or `docker volume ls \| grep letsencrypt` |
 | `stack_files` | writes `.dedalo.env`, `compose.override.yaml` and the generated nginx site | the three files exist; `.dedalo.env` is `0600` |
@@ -172,6 +172,12 @@ Dédalo publishes the engine image — built once per release, signed, and ident
 | **`build`** | the image is built here, from this checkout's last commit (committed files only, so it reports the release version and the commit date, like the production route) | an air-gapped host, a modified image, a version no registry publishes |
 
 Whatever the source, the image's version must be the installer's own (or its `-dev` tag): the engine steps run inside the image with this installer's request format.
+
+### Official images are stable releases only
+
+Dédalo publishes official images for **stable releases only** (`7.0.1`, never `7.0.0-beta.6`): a prerelease (a beta) and a development checkout have **no official image**. Installing a beta, choose **Build** on the Image screen (`--image-source build`) — a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk — or a registry of your own that holds an image of this version (`--image-source custom`).
+
+The Review asks the registry before you type `yes` (`docker manifest inspect`, then `docker buildx imagetools inspect`, as you — nothing is pulled). When the official image of this version is not published, the Review says so and does not offer to install: your answers are kept — go back to the Image screen, choose Build, and review again. While it asks, the screen shows `checking the official image <image>…`; it asks once each time the Review is built, and each question waits at most 15 seconds — a registry that does not answer by then counts as not reachable, never as "not published". When the registry cannot be reached (no network, a proxy, a firewall that drops the connection), the Review says it could not be checked, in plain words — `the registry did not answer within 15 s` or `could not reach ghcr.io` — and lets you install: `stack_image` then reports what the pull found. Docker's own error message is written to the install log of the run, not shown on the Review.
 
 ### Dédalo's registries
 

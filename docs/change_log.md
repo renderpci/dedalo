@@ -15,6 +15,33 @@ shape by the id under which the source tree records each one
 
 Merged since the last release; these ship with the next one.
 
+### For users
+
+#### Changed
+
+- **Checkboxes and radio buttons fill with a deeper orange so the white tick shows in every browser**
+
+    A ticked checkbox or a picked radio button no longer depends on which browser you
+    use. The checked fill was the bright brand orange, and each browser picks the
+    tick's colour from it: Chrome and Edge drew a near-black tick, Firefox and Safari
+    a white one, so the same box disagreed from one browser to the next.
+
+    The checked fill is now a deeper Dédalo orange (`#db760f`), dark enough that every
+    browser draws the tick — and the radio dot — in **white**, and it clears the 3:1
+    contrast floor a checked control needs to read as checked. The app's own drawn
+    boxes in the dark theme take the same white tick. Unchecked boxes, focus rings and
+    the rest of the bright accent are unchanged.
+
+- **The date field's calendar now writes the dates the catalogue actually stores — including year-only, year+month and BCE (negative) years — with localized month names and full keyboard and touch support.**
+
+    Before: clicking the calendar opened a third-party picker that only understood complete CE dates in a four-digit year (it also showed English month names regardless of the interface language). Opening it on a year-only, year+month or BCE value fell back to *today*, and picking a day there replaced the value with a full modern date.
+
+    Now: the calendar is built into the component and speaks the same date model the catalogue stores. The year field accepts any signed year (with a CE/BCE toggle and decade steps), the month and weekday names follow the interface language, and the footer commits the precision you need — the bare year (`-205`), the year and month (`04/2022`) or a full day. The picker is fully keyboard driven (arrows, PageUp/PageDown, Home/End, Escape; the calendar button is a tab stop, and Alt+ArrowDown opens it from the field), its touch targets grow on phones and tablets, and it follows the light and dark themes. In the search panel the calendar button appears on the field's top-left corner when the field takes focus, a range's two dates share the row in full and its `<>` hangs under the gap between them, so the card keeps the same height as every other search field. The separate clock picker now uses the operating system's own time wheels on touch devices.
+
+## 7.0.0-beta.6 — 2026-10-15
+
+1110 commits: `git log --no-merges v7.0.0-beta.4..v7.0.0-beta.6`
+
 !!! warning "Action needed when you update"
 
     - Dédalo now runs on Bun 1.4.3, which fixes a runtime defect that could leave a process waiting forever, at full CPU, on a program it had started.
@@ -95,25 +122,6 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-10-06-consultation-only-no-section-tools`.
 
 #### Changed
-
-- **Checkboxes and radio buttons fill with a deeper orange so the white tick shows in every browser**
-
-    A ticked checkbox or a picked radio button no longer depends on which browser you
-    use. The checked fill was the bright brand orange, and each browser picks the
-    tick's colour from it: Chrome and Edge drew a near-black tick, Firefox and Safari
-    a white one, so the same box disagreed from one browser to the next.
-
-    The checked fill is now a deeper Dédalo orange (`#db760f`), dark enough that every
-    browser draws the tick — and the radio dot — in **white**, and it clears the 3:1
-    contrast floor a checked control needs to read as checked. The app's own drawn
-    boxes in the dark theme take the same white tick. Unchecked boxes, focus rings and
-    the rest of the bright accent are unchanged.
-
-- **The date field's calendar now writes the dates the catalogue actually stores — including year-only, year+month and BCE (negative) years — with localized month names and full keyboard and touch support.**
-
-    Before: clicking the calendar opened a third-party picker that only understood complete CE dates in a four-digit year (it also showed English month names regardless of the interface language). Opening it on a year-only, year+month or BCE value fell back to *today*, and picking a day there replaced the value with a full modern date.
-
-    Now: the calendar is built into the component and speaks the same date model the catalogue stores. The year field accepts any signed year (with a CE/BCE toggle and decade steps), the month and weekday names follow the interface language, and the footer commits the precision you need — the bare year (`-205`), the year and month (`04/2022`) or a full day. The picker is fully keyboard driven (arrows, PageUp/PageDown, Home/End, Escape; the calendar button is a tab stop, and Alt+ArrowDown opens it from the field), its touch targets grow on phones and tablets, and it follows the light and dark themes. In the search panel the calendar button appears on the field's top-left corner when the field takes focus, a range's two dates share the row in full and its `<>` hangs under the gap between them, so the card keeps the same height as every other search field. The separate clock picker now uses the operating system's own time wheels on touch devices.
 
 - **Checkboxes and radio buttons inside a tool now wear the tool's colour, not Dédalo orange**
 
@@ -1792,6 +1800,10 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-10-03-publication-hosts-widget`.
 
 #### Fixed
+
+- **The Docker and Trial installers check, before you type `yes`, that the official image of your version is published — a beta has none, so choose Build.**
+
+    Official Dédalo images are published for **stable releases only**: a prerelease (a beta) and a development checkout have no official image. Until now the Docker and Trial routes defaulted to the official image anyway, so on a beta an install that kept the defaults failed at `stack_image`, after `yes`, with every answer lost. The Review now asks the registry first (`docker manifest inspect`, then `docker buildx imagetools inspect` — nothing is pulled). When the image of your version is not published, the Review says so and does not offer to install; your answers are kept, so go back to the Image screen and choose **Build** (`--image-source build`) or a registry of your own. When the registry cannot be reached, the Review says it could not be checked and does not block the install. That check waits at most 15 seconds, shows `checking the official image …` while it waits, runs once per Review, and says what happened in plain words (the registry did not answer, or could not be reached) — Docker's own error goes to the install log. A local build or a registry of your own is never checked this way. See [official images are stable releases only](./install/docker.md#official-images-are-stable-releases-only).
 
 - **Dédalo now runs on Bun 1.4.3, which fixes a runtime defect that could leave a process waiting forever, at full CPU, on a program it had started.** *(action needed)*
 

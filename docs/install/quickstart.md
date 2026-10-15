@@ -22,6 +22,7 @@ The Trial route installs a complete Dédalo in containers on one machine, for an
 - **About 8 GiB free** under Docker's root directory: the engine image is about 2.5 GB and PostgreSQL about 0.7 GB, and a local image build parks about 3 GB of build cache. Below that the database restore fails part-way with `No space left on device`, so the installer refuses first. A Docker root it cannot measure (a VM, a remote daemon) skips the check.
 - **Port 80 free** on the machine, or another HTTP port chosen on the *Containers* screen. The trial publishes no HTTPS port.
 - **`cosign`**, if you install an official image: its signature is verified. Without `cosign`, choose a local build instead.
+- **A beta needs a local build.** Official images are published for **stable releases only**: a prerelease (a beta) and a development checkout have none. Installing a beta, choose **Build** on the Image screen (`--image-source build`; a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk). The Review checks the registry before you type `yes`: an official image that is not published is refused there, with your answers kept ([Docker: official images are stable releases only](docker.md#official-images-are-stable-releases-only)).
 
 Check by hand first if you like:
 
@@ -68,7 +69,7 @@ Nothing has changed on the machine until you type `yes` here. The Review lists t
 
 | Step | What it does |
 | --- | --- |
-| `stack_preflight` | checks Docker, Compose v2, the free disk, that no Dédalo instance is already here (`dedalo_private` volume), that no stack files of an earlier install are left (`.dedalo.env`, `compose.override.yaml`), and the image source |
+| `stack_preflight` | checks Docker, Compose v2, the free disk, that no Dédalo instance is already here (`dedalo_private` volume), that no stack files of an earlier install are left (`.dedalo.env`, `compose.override.yaml`), and the image source — an official image must be published for this version (stable releases only) |
 | `stack_image` | pulls the image and verifies its signature and version label, or builds it here from a clean snapshot of the checkout's last commit (`deploy/dedalo-image-build.sh`: committed files only, the image labelled with its version), printing each build step as it starts (a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk) |
 | `stack_files` | writes `.dedalo.env` (`0600`, with the generated database password) and `compose.override.yaml` (plain HTTP only: no HTTPS port, no certificate volumes) into the checkout |
 | `stack_database` | starts PostgreSQL and waits for it |

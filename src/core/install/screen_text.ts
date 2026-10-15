@@ -291,7 +291,7 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 		image_source: {
 			label: 'Image source',
 			description:
-				"Official: pulled from the Dédalo registry, its signature verified. Custom: pulled from your own registry. Build: built here from this checkout's last commit (slow the first time: the Review says how long).",
+				"Official: pulled from the Dédalo registry, its signature verified — published for STABLE releases only: a prerelease (beta) or a development build has none, choose Build (the Review checks the registry before you install). Custom: pulled from your own registry. Build: built here from this checkout's last commit (slow the first time: the Review says how long).",
 		},
 		image_repository: {
 			label: 'Image repository',
@@ -434,7 +434,10 @@ export const OPTION_TEXT = Object.freeze({
 		},
 	} as Record<string, { label: string; description: string }>,
 	image_source: {
-		official: { label: 'Official', description: 'The signed Dédalo image, verified before use.' },
+		official: {
+			label: 'Official',
+			description: 'The signed Dédalo image, verified before use (stable releases only).',
+		},
 		custom: { label: 'Custom', description: 'An image from your own registry.' },
 		build: { label: 'Build', description: 'Built here from this checkout.' },
 	} as Record<string, { label: string; description: string }>,

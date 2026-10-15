@@ -1,0 +1,1460 @@
+{
+	"version": "7.0.0-beta.6",
+	"date": "2026-10-15",
+	"from": "v7.0.0-beta.4",
+	"to": "v7.0.0-beta.6",
+	"commits": 1110,
+	"wire_contract": [
+		"WC-2026-08-24-install-ip-gate-fail-closed",
+		"WC-2026-08-24-media-auth-session-scoped",
+		"WC-2026-08-24-media-protection-default-closed",
+		"WC-2026-08-24-media-svg-response-headers",
+		"WC-2026-08-24-proxy-trust-and-password-cost",
+		"WC-2026-08-25-update-code-restore-point",
+		"WC-2026-08-25-update-code-waive-backup",
+		"WC-2026-08-27-csv-ingest-refusals",
+		"WC-2026-08-27-duplicate-reminted-dataframe-targets",
+		"WC-2026-08-27-tm-lang-slice-restore-merge",
+		"WC-2026-08-27-write-language-provenance",
+		"WC-2026-08-28-export-gate-b-refuses-unresolvable-segment",
+		"WC-2026-08-28-idempotency-key",
+		"WC-2026-08-28-login-active-account",
+		"WC-2026-08-28-root-self-service-write",
+		"WC-2026-08-28-search-path-acl-every-hop",
+		"WC-2026-08-29-tm-apply-value-confirm-label",
+		"WC-2026-08-30-remove-requires-item-id",
+		"WC-2026-08-30-section-id-counter-is-a-high-water-mark",
+		"WC-2026-08-31-client-reads-three-fields-the-engine-never-emits",
+		"WC-2026-08-31-import-code-lookup-refuses-a-truncated-candidate-set",
+		"WC-2026-08-31-time-machine-history-belongs-to-a-generation",
+		"WC-2026-09-01-children-recursive-search",
+		"WC-2026-09-01-ts-object-svg-url",
+		"WC-2026-09-03-bulk-revert-skipped-typed-entries",
+		"WC-2026-09-03-duplicate-record-new-activity-row",
+		"WC-2026-09-03-info-stored-value-never-served",
+		"WC-2026-09-03-maintenance-reconcile-status-widget",
+		"WC-2026-09-03-monovalue-insert-replaces",
+		"WC-2026-09-03-read-door-component-acl",
+		"WC-2026-09-04-client-limit-bound",
+		"WC-2026-09-04-committed-third-party-bundles-leave-the-client-tree",
+		"WC-2026-09-04-context-render-class",
+		"WC-2026-09-05-children-order-one-rule",
+		"WC-2026-09-05-diffusion-lease-epoch-fence",
+		"WC-2026-09-05-multi-locator-order-is-deterministic",
+		"WC-2026-09-05-preauth-intake-bounds",
+		"WC-2026-09-05-search-terms-are-literal",
+		"WC-2026-09-06-dataframe-delete-policy-on-slot",
+		"WC-2026-09-23-relation-q-is-a-locator",
+		"WC-2026-09-24-external-foreign-target-and-verbatim-id",
+		"WC-2026-09-24-external-record-4xx-is-not-found",
+		"WC-2026-09-24-external-record-field-set",
+		"WC-2026-09-24-multi-section-search-identity-dedup",
+		"WC-2026-09-24-tool-export-server-built-artifacts",
+		"WC-2026-09-27-bulk-revert-undo-log",
+		"WC-2026-09-27-csv-import-append-mode",
+		"WC-2026-09-27-external-allowlist-at-door-only",
+		"WC-2026-09-28-maintenance-serve-code-widget",
+		"WC-2026-09-28-maintenance-serve-ontology-widget",
+		"WC-2026-09-29-code-release-channel-refs",
+		"WC-2026-09-29-dataframe-hard-delete-retired",
+		"WC-2026-09-29-number-not-equal",
+		"WC-2026-09-29-rdf-per-uri-error-wire-body",
+		"WC-2026-09-29-search-deep-leaf-mixed-rule",
+		"WC-2026-09-29-search-where-parts-parenthesized",
+		"WC-2026-09-29-select-family-mode-datalist",
+		"WC-2026-09-29-tm-preview-frame-children-as-of",
+		"WC-2026-09-30-agent-tool-grant",
+		"WC-2026-09-30-backup-freshness-deep-async",
+		"WC-2026-09-30-backup-part-promotion",
+		"WC-2026-09-30-db-typed-503",
+		"WC-2026-09-30-diffusion-attach-scope",
+		"WC-2026-09-30-diffusion-run-ledger",
+		"WC-2026-09-30-diffusion-target-fence",
+		"WC-2026-09-30-diffusion-zip-streamed",
+		"WC-2026-09-30-guarded-text-pinned-typed-transport",
+		"WC-2026-09-30-mcp-search-section-grant",
+		"WC-2026-09-30-media-key-locked-transform",
+		"WC-2026-09-30-media-pair-scope",
+		"WC-2026-09-30-move-transform-execute-job",
+		"WC-2026-09-30-ontology-identifier-grammar",
+		"WC-2026-09-30-password-hash-never-served",
+		"WC-2026-09-30-password-policy-enforced",
+		"WC-2026-09-30-record-write-obligation-ledger",
+		"WC-2026-09-30-search-root-step-acl",
+		"WC-2026-09-30-transcription-record-tipo",
+		"WC-2026-09-30-update-engine-atomic",
+		"WC-2026-09-30-update-manifest-local-origin-refusal",
+		"WC-2026-09-30-write-door",
+		"WC-2026-10-01-ai-spend-budget",
+		"WC-2026-10-01-change-plan-write-door",
+		"WC-2026-10-01-delete-locator-write-door",
+		"WC-2026-10-01-identify-vision-grant",
+		"WC-2026-10-01-ontology-overwrite-scoped",
+		"WC-2026-10-01-rdf-harvest-door",
+		"WC-2026-10-01-rdf-ontology-import",
+		"WC-2026-10-01-relation-search-display-paths",
+		"WC-2026-10-01-search-hop-configured-targets",
+		"WC-2026-10-01-site-builder-confinement-codes",
+		"WC-2026-10-01-tool-grant-one-decision",
+		"WC-2026-10-01-unit-test-widget-dev-gate",
+		"WC-2026-10-01-write-door-delegations",
+		"WC-2026-10-02-relation-children-write-through",
+		"WC-2026-10-02-select-lang-missing-entry",
+		"WC-2026-10-03-publication-hosts-widget",
+		"WC-2026-10-03-save-refuses-malformed-value-shape",
+		"WC-2026-10-06-consultation-only-no-section-tools",
+		"WC-2026-10-07-acquisition-tools-ts-only",
+		"WC-2026-10-07-ontology-area-admin-grant",
+		"WC-2026-10-07-update-code-root-entries-stamp",
+		"WC-2026-10-08-install-ip-denied-names-address",
+		"WC-2026-10-08-install-plan-update-servers-core-lg",
+		"WC-2026-10-08-make-backup-scheduled-evidence",
+		"WC-2026-10-09-code-manifest-release-notes",
+		"WC-2026-10-09-install-domain-ontologies",
+		"WC-2026-10-09-ontology-manifest-dependencies",
+		"WC-2026-10-09-publication-host-panel-setup",
+		"WC-2026-10-09-publication-host-v2-only-site",
+		"WC-2026-10-09-update-code-image-channel",
+		"WC-2026-10-10-hierarchy-json-manifest",
+		"WC-2026-10-10-ontology-dependencies-hierarchy60",
+		"WC-2026-10-10-update-ontology-confirm-text",
+		"WC-2026-10-11-children-recursive-one-statement",
+		"WC-2026-10-11-export-buffered-cap-and-admission",
+		"WC-2026-10-11-parent-link-cycle-every-door",
+		"WC-2026-10-11-pdf-extractor-render-class",
+		"WC-2026-10-11-relation-reads-client-page",
+		"WC-2026-10-11-rich-text-sanitizer-tokenizer",
+		"WC-2026-10-11-session-user-beside-csrf-token",
+		"WC-2026-10-11-site-builder-reason-codes",
+		"WC-2026-10-11-site-builder-turn-error-frames",
+		"WC-2026-10-12-ddengine-removed",
+		"WC-2026-10-12-install-surface-removed",
+		"WC-2026-10-12-user-activity-what-labels",
+		"WC-2026-10-14-diffusion-info-node-database"
+	],
+	"notes": {
+		"action_needed": [
+			"Dédalo now runs on Bun 1.4.3, which fixes a runtime defect that could leave a process waiting forever, at full CPU, on a program it had started.",
+			"Every AI request now counts against daily limits set per user and per profile, and generated answers need their own permission.",
+			"The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start.",
+			"SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change.",
+			"The terminal installer sets up the whole host: production, Docker and trial install in one run.",
+			"The site builder's OpenCode driver loads only the configuration the site builder states.",
+			"A site builder agent turn can no longer leave configuration in its home directory for the next turn to read.",
+			"Thesauri are offered from one exported manifest, hierarchy.json, and nothing but declared dependencies is pre-selected.",
+			"The PostgreSQL socket you give the installer is now the one the server connects through (`DB_SOCKET`).",
+			"Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`.",
+			"Installations now choose their domain ontologies (Oral history by default) and install what each one declares it depends on; the install database carries only the core ontologies and no test data.",
+			"\"The Publication API v1 on a publication host answers again: its configuration names the release that runs.\"",
+			"New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`.",
+			"\"A publication host can now be installed with one guided command, `provision init`, on Debian, Ubuntu 24.04 and 26.04, and RHEL, Rocky or Alma 9 and 10 with SELinux; the Publication API v1 runs in a FastCGI pool of its own.\"",
+			"The publication host provisioner now refuses an instance declaration that anyone other than root could change.",
+			"Publication host provisioning works with Apache on Debian and Ubuntu.",
+			"Several publication hosts on one server are checked for isolation.",
+			"The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to.",
+			"The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief.",
+			"A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run.",
+			"The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts.",
+			"Only profiles granted the assistant tool can use the assistant.",
+			"The site builder can no longer start its agent units through polkit",
+			"Outbound fetches now refuse every IPv6 route to an internal address."
+		],
+		"entries": [
+			{
+				"type": "security",
+				"audience": "user",
+				"title": "Logging back in as another user no longer saves the previous user's pending edit."
+			},
+			{
+				"type": "security",
+				"audience": "user",
+				"title": "Rich text is cleaned by a real HTML parser when it is saved."
+			},
+			{
+				"type": "security",
+				"audience": "user",
+				"title": "Searching or sorting by a field the user may not see no longer reveals its values."
+			},
+			{
+				"type": "security",
+				"audience": "user",
+				"title": "A search whose conditions are joined by OR at the top level no longer returns records outside the user's projects."
+			},
+			{
+				"type": "removed",
+				"audience": "user",
+				"title": "Activity and Time-machine sections no longer offer a section toolbar"
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "Checkboxes and radio buttons inside a tool now wear the tool's colour, not Dédalo orange"
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "The user activity chart names actions in your language."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "Searching a thesaurus branch with all its descendants costs the same however large the branch."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "The site builder now says why it refused, and which refusals clear by themselves."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "A failed agent turn in the site builder now says what went wrong, in your language."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "The tools of a section list are now grouped in one Tools menu."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "The audio/video viewer window now fits the media: no size jump on play, no black bars."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "A slow server shows one quiet progress bar instead of a pile of warning bubbles."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "A tool that opens in a dialog appears at once, even on a slow connection."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "The password field shows its requirements and says clearly whether a password was saved."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "Tools no longer show a “Developed by” footer; *Update cache* uses the standard tool action button."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "The history of a field that links records is one timeline, whatever the working language."
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "Tools work on phones"
+			},
+			{
+				"type": "changed",
+				"audience": "user",
+				"title": "Tool windows and dialogs: readable buttons and one consistent header"
+			},
+			{
+				"type": "added",
+				"audience": "user",
+				"title": "The search pane on a phone: tap a field to add it, no drag needed"
+			},
+			{
+				"type": "added",
+				"audience": "user",
+				"title": "The search group operator (AND / OR) now shows a \"Search operator\" tooltip on hover."
+			},
+			{
+				"type": "added",
+				"audience": "user",
+				"title": "A new tool imports journal articles from any OAI-PMH/OJS source directly into Publication records."
+			},
+			{
+				"type": "added",
+				"audience": "user",
+				"title": "A new tool imports coin-auction lots (jesusvico.com, biddr.com, aureo.com, numisbids.com, sixbid.com) directly into Numismatic Data records."
+			},
+			{
+				"type": "added",
+				"audience": "user",
+				"title": "The RDF import fills the record again, and links or creates its related records."
+			},
+			{
+				"type": "added",
+				"audience": "user",
+				"title": "The CSV import can now add a column's values to what a record already holds, instead of replacing them."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The date picker button works in the search panel on a phone"
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The date picker opens again on a phone (edit and search)."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The projects picker follows a user's project assignments at once."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "No change can place a thesaurus term below itself any more — not two tree moves made at the same moment, nor an edit, import or restore — and two people changing a term's broader terms at the same time no longer erase each other's change."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The PDF extractor shows extracted text exactly as the PDF holds it, and its HTML mode is cleaned on the server."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Moving, adding and reordering terms in the thesaurus tree is recorded in each term's history and updates its \"modified by\" and \"modified date\"."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The Time Machine history of a Hierarchies record opens again instead of failing with an internal error."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Thesaurus: adding a child to a term now shows its expand arrow at once."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The error page shows its Raspa background again."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Confirm-dialog buttons keep the space between icon and label on a phone."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The CSV import's column mapper shows a real value from the file as each column's *Sample data*, not the column's own name."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The CSV importer recognises the common record columns again (created and modified by/date, and the rest of the record information)."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The pinned-records chip of a section list tells where the pins come from and disappears when they are cleared."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The \"Show buttons\" label no longer covers the search buttons on a phone."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The MARC21 and Zotero imports refuse a computed field, and an AI agent can remove one child of a thesaurus term."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Error messages now show their details instead of placeholders like `{section_tipo}`."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Adding or removing a term's children from its Children field now saves."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "A language field whose stored language is no longer a project language shows it again."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The subtitles tool opens again instead of failing with an error."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Browsers that ran Dédalo v6 no longer load stale v6 scripts after the upgrade to v7."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Autocomplete searches work again in pickers with a related-record field, and the field inputs search as you type"
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Result lists spanning several sections show every row again"
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "RDF import now works with linked-data servers that redirect, and respects their robots.txt."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Small editing forms no longer show tool buttons they turn off."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "A duplicated record never points at the original record's image or document files."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Export — a marker shows where a dragged column will land."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Export preset editor — the name field no longer offers a second value."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Export presets panel — one-line rows, lighter design, click a row to apply."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Dialogs with an edit form leave room for the field's button bar."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "A tall dialog title no longer covers the dialog's content."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The Ontology parser button in the Ontology area is readable again"
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Restoring or undeleting a record now updates every list and search that shows who references it."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Tool action buttons show a spinning ring while working, not a solid disc."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The Update cache tool scrolls to its result"
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Reverting the same bulk run a second time no longer reports records as \"not reverted\" when nothing changed."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Removing a dataframe frame no longer deletes the frame's target record."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Choosing an option in a radio-button field no longer makes the field flicker."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Applying a Time Machine value no longer breaks a record's rated portal."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Searches through a related section now answer negations and combined conditions correctly."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "The time machine shows a field's frames and their values as they were at the chosen change."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "A section that fails to load says why, and can be reloaded"
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Deleting a record's data now also empties every dataframe of its fields."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "A field's history now keeps its dataframe with it, and restoring an entry restores both."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "A field's history now shows the dataframe it had at that moment."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "A transliteration saved in its language no longer replaces the base form."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Reverting a batch run now restores exactly what the run replaced, and says what it could not."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "A CSV import that carries the modification date and user keeps them on records whose cells embed dataframe frames."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Searching through a related record (e.g. a coin's type → its mint → the mint's name) is much faster."
+			},
+			{
+				"type": "fixed",
+				"audience": "user",
+				"title": "Saving a language selector is instant again and keeps showing only the project languages."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Every AI request now counts against daily limits set per user and per profile, and generated answers need their own permission."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "SELinux lets the web server reach the Dédalo engine only, and no backup or rollback step runs as root on files the service user can change."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "The site builder's OpenCode driver loads only the configuration the site builder states."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "A site builder agent turn can no longer leave configuration in its home directory for the next turn to read."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Root's writes under a directory another account controls now land only in the exact directory expected."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "The publication host provisioner now refuses an instance declaration that anyone other than root could change."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Master media folders are protected whatever their letter case"
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Uploaded script files under the media folder answer \"not found\" on Apache"
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Working files under the media folder are never served, on Apache or nginx"
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "The assistant no longer proposes changes its own apply step would refuse."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Removing a linked record from a portal now checks the portal field and the record's projects."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Asking a vision model for proposals, or identifying a photograph with an external encoder, now requires the identification tool permission."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Searches through a related field only reach the sections that field links to, and that the user may read"
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "The site builder's Claude Code agent no longer loads configuration from the site's own files, and refuses a Claude Code that cannot be told not to."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "The site builder's agent can no longer choose its own agent program, read another site's activity, or stall a turn with a planted brief."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "A site's AI turn no longer runs commands planted in the site's git settings, and the site builder says why it refuses a run."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "The site builder runs each site's AI agent as that site's own system user, from units that root installs. systemd 248 is now enough, and `provision apply` must run before the updated daemon starts."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "The thesaurus term picker grants link mode only from a profile, never from a blanket rule."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Translation, imports, cache rebuilds, uploads and bulk reverts now check permissions on every record and field they write."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "The assistant can no longer search or count records of a section the user may not read."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Only profiles granted the assistant tool can use the assistant."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Translation, transcription and RDF-import fetches now connect to the address the SSRF guard vetted (DNS rebinding closed); network failures report a typed reason."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Posterframes, audio streams and clip downloads now respect the component's own permission and the user's projects."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Ontology identifiers are checked on every read and write, and the database now refuses malformed ones."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Stored password hashes are no longer sent to the browser."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Site builder agent turns and builds run in a private network namespace and reach the outside only by hostname, through the daemon's egress gate; the Publication API key no longer reaches the agent, and AGENT_EGRESS_ALLOW is refused."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "The site builder can no longer start its agent units through polkit"
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Transcription actions check the audiovisual component and the user's projects before they touch a recording."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Every write through a tool, the assistant or the record doors now asks the same four questions, in the same order."
+			},
+			{
+				"type": "security",
+				"audience": "admin",
+				"title": "Outbound fetches now refuse every IPv6 route to an internal address."
+			},
+			{
+				"type": "removed",
+				"audience": "admin",
+				"title": "The browser installer is gone — install with the terminal installer; a server with no configuration now refuses to start."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "The debug info bar is one thin line on a tablet or phone"
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "The diffusion publication ledger drops the indexes it never used."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "A publication job now says when it has moved on to the linked records."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "Large exports no longer load the whole selection into the server's memory."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "Thesauri are offered from one exported manifest, hierarchy.json, and nothing but declared dependencies is pre-selected."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "Ontology dependencies are declared in the master's *Dependencies* field, say whether an ontology or a thesaurus is needed, and can be optional."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "Installations now choose their domain ontologies (Oral history by default) and install what each one declares it depends on; the install database carries only the core ontologies and no test data."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "\"On a publication host with fapolicyd, the trust of the agent, its Bun and every Publication API release it installs is now kept by the host itself: no trust lines to run by hand, and a rollback is trusted too.\""
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "\"On RHEL, Rocky and Alma, the v2 API of a site installed in its home now uses the publication host's own SELinux type, as in the system layout.\""
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "The guided publication-host install now proposes the v1 database connection it finds on the host."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "\"`install.sh` now asks you to trust its Bun in the instance's own fapolicyd file, and says when to remove it.\""
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "The publication host's guided install is now proven on Ubuntu 26.04, including the agent's one root permission under its new sudo."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "A publication host on its own machine is now proven on Ubuntu 26.04, from the panel's kit to the first publication."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "New installations are connected to the official update server and always have the Languages thesaurus; a server restarted by systemd or Docker must now declare `DEDALO_SUPERVISED=true`."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "\"`provision check` now refuses a publication host where a service could not read or run its own code, and an `engine_group` that is one of the instance's own groups.\""
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "The Ontology area can now be opened by global administrators whose profile grants it, not only by root."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "Preparing the publication host agent now installs exactly the locked dependency versions, and only the ones it runs with."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "\"`provision check` no longer reads as an error when it lists the changes to make.\""
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "The in-browser AI runtime is updated to transformers.js 4.3.0, running on the exact ONNX Runtime build it was made for."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "The code-update panel now leads with its verdict and the update button; the reference facts fold away."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "The maintenance *Unit test area* only offers the JS test runner and the test-table reset where they can work."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "Hitting a database limit now shows a clear \"try again\" error, and maintenance runs on its own database connections."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "The official update server for v7 installations is v7.master.dedalo.dev."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "A published code release is now built from a release tag (`vX.Y.Z`); developer builds come from `master`."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "Building and serving code releases now has its own maintenance panel, Serve Code."
+			},
+			{
+				"type": "changed",
+				"audience": "admin",
+				"title": "Serving your ontology to other installations now has its own maintenance panel, Serve Ontology."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The diffusion job queue shows who started each publication."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The publication job queue shows how long each finished job took."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The publication server panel shows an estimated time remaining for the running jobs."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The publication tool names the target database of an SQL publication."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "A Production instance can be installed by hand again, step by step, exactly as the installer does it."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "A production install can live in any folder and run as an existing account."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The terminal installer sets up the whole host: production, Docker and trial install in one run."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The installer asks its questions in the terminal, checks each answer as you give it, and shows the whole plan before it installs anything."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The terminal installer draws full-screen at a capable terminal, and can abort an interrupted install"
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The command-line installer checks every answer before it writes anything, and an interrupted install can be resumed."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "Docker installations now pull a published, signed Dédalo image, or build it locally if you prefer, and record the choice in `.dedalo.env`."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "A publication host on another machine installs from one kit file built on the work host."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "After an install from a kit converges, `provision init` offers to remove the kit file it was given."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "Two-machine publication hosts pair from one sealed, passphrase-protected file."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "\"`provision init` reports the sealed pairing package as stale once the work host has used it, and removes it on request.\""
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "A new publication host can be drafted, kitted and paired from the Publication hosts panel."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "A publication host whose declaration drops the Publication API v1 now has its v1 pool, log rotation and v1 files removed by `provision apply`."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "A publication host can now serve the Publication API v2 only, without the Publication API v1."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "On Docker installations, the Update code panel now shows how to install each release, and can hand the update to an optional host updater."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The Update code panel shows each release's notes before you install it."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The backup panel now says when backups are manual."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "On an nginx publication host, the media map is now pushed by Apply media rules, and shared safely by every instance on the host."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "\"A publication host can now be installed with one guided command, `provision init`, on Debian, Ubuntu 24.04 and 26.04, and RHEL, Rocky or Alma 9 and 10 with SELinux; the Publication API v1 runs in a FastCGI pool of its own.\""
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The Publication hosts panel now shows in red a publication server whose Bun differs from the version the work system pins."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "Several publication hosts on one server are checked for isolation."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "A paired publication server now gets the Publication APIs matching the work system's version, can keep a verified copy of the published media, and is checked from the public side."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The publication hosts panel shows each copy-mode host's media copy, and root can bring one host back in sync on demand."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "A separate publication server can now run a small agent that the work system pairs with, to install the Publication APIs, apply media rules and report status, without root access."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "A separate publication server can now serve published media from shared storage, with its own access rules."
+			},
+			{
+				"type": "added",
+				"audience": "admin",
+				"title": "The maintenance panel now shows each paired publication server, and can apply its media rules or roll back a Publication API release."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The Docker and Trial installers check, before you type `yes`, that the official image of your version is published — a beta has none, so choose Build."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Dédalo now runs on Bun 1.4.3, which fixes a runtime defect that could leave a process waiting forever, at full CPU, on a program it had started."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Publication progress no longer runs past its estimate while a job is still working."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The installer refuses an installed instance's name up front, and a refused Review checks again on install."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The installer's System check edit, Review re-check and default-site note, salt hint and Docker abort messages now match what happens."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The installer names a killed engine and shows what the engine said while it stopped."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Installer: one interruption block on Ctrl-C, a resume that re-checks and tells everything, the salt on a terminal resume, and clearer screens."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"Production and by-hand installs: one backup directory from the first run, another web server refused, and an abort that tells a started instance from one that never started.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "An install interrupted during the database restore can be resumed or undone at once, and the host shows the engine's own refusal."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Docker and trial installs: the local image build reports the release version, nginx always publishes its ports, and a resume re-checks the site."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Every installer front end ends with the same *To do on this host* list, the salt's read command in it."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Docker and Trial installs probe the media gate again on resume, and name their images and locks correctly."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The full-screen installer's closing lines start on a clean line, and the manual removal list covers Bun and a gpasswd after an abort."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Installer re-checks, interrupts and messages say things once and at the right moment."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A Production install interrupted before its server ever ran is removed whole by --abort, and the production pages match what the installer does."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The installer says what its system check would refuse on the Review, before `yes`, and a refusal never loses your answers."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A Docker installation that builds its image here now updates from a clean snapshot of the release, like the install"
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The official Dédalo image carries Dédalo's own url, description and licence labels."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "On the Docker and trial routes, `--abort` removes an install interrupted before the engine container ever started, database included."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The publication tool shows every publication of a section, including two that share a database definition."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "An interrupted or stopped install now resumes, an abort says exactly what it undid, and an instance that never served can be removed completely."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The Docker and Trial installs now start a working nginx, publish only what they serve, and say why a check failed."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The Production install now completes on RHEL 10 with SELinux, says before the install what you must do yourself, and keeps an unknown address away from every instance."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A tch install no longer asks for crm, a local image build reports its real version, and a production instance keeps its backups in one place."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The installer's screens now say what each route does, take a typed `yes` everywhere, and write `--write-answers` at the Review."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The installer's System check no longer fails on a host without PostgreSQL"
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The installer no longer leaves Bun's cache in an existing hosting account's home."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The update-ontology warning no longer claims your local ontology will be deleted."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The PostgreSQL socket you give the installer is now the one the server connects through (`DB_SOCKET`)."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "On Docker, the browser client now always matches the engine that is running."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The installation guides now install the watchdog and rollback scripts, tell existing servers how to declare supervision, and give RHEL a complete systemd unit."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The install database is compiled from the repository and proven by a fresh install before it ships."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"**Probe media** on a new copy-mode publication host no longer reports a problem before anything is published.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"The guided publication-host install now runs on RHEL 9 with SELinux enforcing and fapolicyd: the polkit rules directory, the SELinux tools and fapolicyd's trust are judged as EL ships them.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"On RHEL, Rocky and Alma with SELinux, the Publication API v2 of a site installed in its home now starts: systemd may read its settings and its release links.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"The guided install of a publication host now gives a working command for the newer AppStream runtime of the v1 API on RHEL, Rocky and Alma 10.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"On a publication host with fapolicyd's `allow_filesystem_mark = 1`, the agent keeps its right to reload the web server and start its services.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "On an nginx publication host, a media map that stops nginx at its reload is now rolled back and nginx restarted, and the panel counts a map that is not loaded as a red check."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The publication host's guided install now configures the running web server when both Apache and nginx are installed."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"When `provision apply` is refused and you answer `manual`, the guided install no longer goes on with the steps that need it.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"The guided install no longer refuses when you keep the default answer of an optional question.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"Pairing from the sealed package: the guide puts the copy where the Dédalo user can read it, and an unreadable copy says why.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"On RHEL, Rocky and Alma, a publication host in the system layout now starts its v2 API: the provisioner installs its own small SELinux policy module.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"Rotating a publication host's token now restarts its agent.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"Upgrading a publication host's agent from a new kit no longer leaves the agent stopped on a host with fapolicyd.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"The Publication API v1 on a publication host answers again: its configuration names the release that runs.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The Publication API v1 error log on a publication host is now rotated."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"Publication API v1 releases install on a publication host with fapolicyd's `allow_filesystem_mark = 1`.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Container installs take their nightly backups again, and the full-stack install no longer stops at \"directories\"."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"`./install.sh` runs on macOS again (and wherever Docker's storage lives in a VM).\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "\"The publication-host pairing command now names a command you can run, and says why it cannot read a copied file.\""
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The auction-URL and journal-URL import tools now declare the sections they belong to."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Ontologies re-installed by an ontology update keep their typology and name instead of moving to \"Others\"."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A tool whose code fails to load no longer appears in every section."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Code updates no longer refuse over a file an older release shipped and a newer one removed."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Publishing no longer fails creating a MariaDB integer column sized by `varchar`."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A publication table too wide for MariaDB is refused by name before publishing starts."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Publication host provisioning works with Apache on Debian and Ubuntu."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The Docker image can now write AVIF, so `.avif` alternative versions of images work out of the box."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Interlaced videos are now deinterlaced when their web versions are built."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The audio encoder for video and audio derivatives is chosen from what the configured ffmpeg can actually encode, and a failed encode names its error."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The profile permissions tree opens in a fraction of a second instead of several seconds."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Published files survive a power cut, and deleting a record no longer races a running publication into the same directory."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Resetting a hierarchy to its seed can no longer delete it without restoring it."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Local ontology overrides now apply to the node they point at, and change only what they state."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The Publication server API maintenance panel shows its \"Open Swagger UI\" buttons again."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Creating a site twice at the same moment can no longer overwrite or delete the first site."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Deleting a site while an agent session or a build is running is refused, and no longer blocks the site name."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Site builder state survives a power cut, and a damaged driver record is reported at startup."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A second Site Builder started by hand no longer stops the running service's agent runs."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Administrators' toolbars now show only the tools their profile grants."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Rebuilding a user's activity statistics can no longer lose them half-way."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A database backup counts only once it has been read back completely."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A database backup that is still being written no longer appears as a backup."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A publication run that crashes, is cancelled or meets another run now publishes exactly what it should — and large archives no longer exhaust memory."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Duplicating a record now files the history of a transliterable or IRI field in the language it was saved in."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Regenerating the media cache no longer undoes an upload made while it runs."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A move_* data transform can be stopped, and only one runs at a time."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A failed ontology update now says why, inside the Update ontology panel"
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The Update ontology panel scrolls to its result"
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Updating the ontology works from every configured master, not only the first"
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A site builder turn whose egress gate fails to close now still ends, instead of leaving the session running forever."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "A data update now applies completely or not at all, and two updates can no longer run at once."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Error reports now include logged client errors"
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "An update server with no public host now says so, instead of sending download links that point at localhost."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "Time machine restore no longer fails on installs whose outbound host allowlist is empty."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The multi-instance Apache example now sets an empty `DocumentRoot` and the entry redirects."
+			},
+			{
+				"type": "fixed",
+				"audience": "admin",
+				"title": "The developer information bar is shown to developers and root again, on any server."
+			},
+			{
+				"type": "security",
+				"audience": "developer",
+				"title": "The RDF import no longer shows the internal address a refused link resolved to."
+			},
+			{
+				"type": "changed",
+				"audience": "developer",
+				"title": "Related-record lists answer one bounded page, and say so when they cut it."
+			},
+			{
+				"type": "changed",
+				"audience": "developer",
+				"title": "The test suite now runs its diffusion gates against its own MariaDB server, never an installation's."
+			},
+			{
+				"type": "added",
+				"audience": "developer",
+				"title": "Each release is published as a signed multi-architecture image, with the same digest on every Dédalo registry."
+			},
+			{
+				"type": "added",
+				"audience": "developer",
+				"title": "Tool authors can read other sites through `harvestFetch`, a harvesting door that obeys robots.txt and paces its requests."
+			},
+			{
+				"type": "fixed",
+				"audience": "developer",
+				"title": "The developer install and its test suite work over a PostgreSQL socket, never prompt for a password, and keep the dev server on this machine."
+			},
+			{
+				"type": "fixed",
+				"audience": "developer",
+				"title": "A save whose value is not shaped like the field's data is now refused instead of stored."
+			},
+			{
+				"type": "fixed",
+				"audience": "developer",
+				"title": "The client-library version table in the manual is generated from the pins, so it can no longer go stale."
+			},
+			{
+				"type": "fixed",
+				"audience": "developer",
+				"title": "A refused save no longer leaves an empty record behind."
+			},
+			{
+				"type": "fixed",
+				"audience": "developer",
+				"title": "A relation search with an unreadable value now fails with an error instead of quietly matching every record."
+			}
+		]
+	}
+}

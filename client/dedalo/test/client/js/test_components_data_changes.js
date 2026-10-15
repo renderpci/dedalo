@@ -7,6 +7,7 @@ import {
 } from './elements.js'
 import {get_instance} from '../../../core/common/js/instances.js'
 import {response_data} from '../../../core/common/js/api_error.js'
+import {owned_target} from './owned_target.js'
 
 
 
@@ -76,11 +77,27 @@ describe("COMPONENTS DATA CHANGES", async function() {
 
 			// new_value. Calculated as random proper data for current component,
 			// never a link from the sweep record to itself (see AUTOREFERENCE).
-				const new_value = without_autoreference(
-					element.new_value(element.new_value_params),
+			// An element declaring `owned_target` points at a record this suite
+			// BUILDS in before() and sweeps in after() (owned_target.js), so its
+			// value is only known once that record exists.
+				const make_new_value = (target_section_id) => without_autoreference(
+					element.new_value(element.new_value_params, target_section_id),
 					element.section_tipo,
 					sweep_section_id
 				)
+				const target = element.owned_target
+					? owned_target(element, sweep_section_id)
+					: null
+				let new_value = target ? null : make_new_value()
+
+				if (target) {
+					before(async function() {
+						new_value = make_new_value(await target.setup())
+					})
+					after(async function() {
+						await target.teardown()
+					})
+				}
 
 			// TEST data save
 				it(`${element.model}. Data save using API`, async function() {
