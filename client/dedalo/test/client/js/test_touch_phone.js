@@ -3,18 +3,18 @@
 /*eslint no-undef: "error"*/
 
 import * as touch_pick from '../../../core/common/js/touch_pick.js';
-import { render_pane_switch } from '../../../core/tools_common/js/pane_switch.js';
-import { render_phone_reorder } from '../../../core/tools_common/js/phone_reorder.js';
 import {
 	render_add_field_button,
 	synthetic_drop_event,
 } from '../../../core/search/js/search_phone.js';
+import { render_pane_switch } from '../../../core/tools_common/js/pane_switch.js';
+import { render_phone_reorder } from '../../../core/tools_common/js/phone_reorder.js';
 
 // The phone gestures shared by the tools (responsive-tools plan). Backend-free:
 // synthetic DOM, no API.
 
-describe('TOUCH_PICK : tap to pick, tap to place', function () {
-	it('pick holds the payload, shows the bar, as_drop_event hands it over once', function () {
+describe('TOUCH_PICK : tap to pick, tap to place', () => {
+	it('pick holds the payload, shows the bar, as_drop_event hands it over once', () => {
 		const payload = JSON.stringify({
 			locator: { section_tipo: 'test3', section_id: '1' },
 			caller: 'tool_cataloging',
@@ -38,7 +38,7 @@ describe('TOUCH_PICK : tap to pick, tap to place', function () {
 		assert.equal(document.body.classList.contains('touch_pick_active'), false);
 	});
 
-	it('cancel drops the payload without placing it', function () {
+	it('cancel drops the payload without placing it', () => {
 		touch_pick.pick('{"a":1}', 'x');
 		document.querySelector('.touch_pick_cancel').click();
 		assert.equal(touch_pick.active(), false);
@@ -46,7 +46,7 @@ describe('TOUCH_PICK : tap to pick, tap to place', function () {
 		assert.equal(document.querySelector('.touch_pick_bar'), null);
 	});
 
-	it('a second pick replaces the first (one payload per page)', function () {
+	it('a second pick replaces the first (one payload per page)', () => {
 		touch_pick.pick('"first"', 'a');
 		touch_pick.pick('"second"', 'b');
 		assert.equal(document.querySelectorAll('.touch_pick_bar').length, 1);
@@ -54,8 +54,8 @@ describe('TOUCH_PICK : tap to pick, tap to place', function () {
 	});
 });
 
-describe('PANE_SWITCH : one pane at a time on a phone', function () {
-	it('marks the first pane active and switches on click', function () {
+describe('PANE_SWITCH : one pane at a time on a phone', () => {
+	it('marks the first pane active and switches on click', () => {
 		const host = document.createElement('div');
 		const a = document.createElement('div');
 		a.dataset.pane = 'media';
@@ -80,15 +80,15 @@ describe('PANE_SWITCH : one pane at a time on a phone', function () {
 		assert.equal(nav.querySelectorAll('.pane_btn')[1].getAttribute('aria-selected'), 'true');
 	});
 
-	it('refuses fewer than two panes', function () {
+	it('refuses fewer than two panes', () => {
 		assert.throws(() =>
 			render_pane_switch(document.createElement('div'), [{ key: 'a', label: 'A' }]),
 		);
 	});
 });
 
-describe('PHONE_REORDER : up/down replaces drag-sort on a phone', function () {
-	it('calls on_move with -1 / 1 and disables the ends', async function () {
+describe('PHONE_REORDER : up/down replaces drag-sort on a phone', () => {
+	it('calls on_move with -1 / 1 and disables the ends', async () => {
 		const moves = [];
 		const node = render_phone_reorder({
 			on_move: (d) => {
@@ -108,13 +108,13 @@ describe('PHONE_REORDER : up/down replaces drag-sort on a phone', function () {
 		assert.deepEqual(moves, [1]);
 	});
 
-	it('requires on_move and both labels', function () {
+	it('requires on_move and both labels', () => {
 		assert.throws(() => render_phone_reorder({ on_move: () => {}, labels: { up: 'Up' } }));
 	});
 });
 
-describe('SEARCH_PHONE : tap-to-add replaces the field drag on a phone', function () {
-	it('the "+" adds once and eats the row click (drill)', function () {
+describe('SEARCH_PHONE : tap-to-add replaces the field drag on a phone', () => {
+	it('the "+" adds once and eats the row click (drill)', () => {
 		let adds = 0;
 		let row_clicked = false;
 		const row = document.createElement('li');
@@ -138,11 +138,11 @@ describe('SEARCH_PHONE : tap-to-add replaces the field drag on a phone', functio
 		assert.equal(button.getAttribute('aria-label'), 'Add field: Title');
 	});
 
-	it('requires on_add', function () {
+	it('requires on_add', () => {
 		assert.throws(() => render_add_field_button({ label: 'x' }));
 	});
 
-	it('synthetic_drop_event feeds the one drop handler the same payload', function () {
+	it('synthetic_drop_event feeds the one drop handler the same payload', () => {
 		const data = JSON.stringify({ path: '[]', section_id: '0' });
 		const event = synthetic_drop_event(data);
 		assert.equal(typeof event.preventDefault, 'function');

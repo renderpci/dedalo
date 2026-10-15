@@ -3,9 +3,7 @@
 /*eslint no-undef: "error"*/
 
 // imports
-	import {ui} from '../../common/js/ui.js'
-
-
+import { ui } from '../../common/js/ui.js';
 
 /**
  * SEARCH_PHONE
@@ -23,8 +21,6 @@
  * coarse pointer, not a width — a narrow desktop window still drags).
  */
 
-
-
 /**
  * SYNTHETIC_DROP_EVENT
  * The minimal DragEvent shape a drop handler reads
@@ -36,17 +32,13 @@
  * @param {string} data - exactly what dragstart puts in dataTransfer 'text/plain'
  * @returns {Object} a synthetic drop event
  */
-export const synthetic_drop_event = function (data) {
-	return {
-		preventDefault	: () => {},
-		stopPropagation	: () => {},
-		dataTransfer	: {
-			getData : () => data
-		}
-	}
-}//end synthetic_drop_event
-
-
+export const synthetic_drop_event = (data) => ({
+	preventDefault: () => {},
+	stopPropagation: () => {},
+	dataTransfer: {
+		getData: () => data,
+	},
+}); //end synthetic_drop_event
 
 /**
  * RENDER_ADD_FIELD_BUTTON
@@ -59,37 +51,32 @@ export const synthetic_drop_event = function (data) {
  * @param {function():void} options.on_add - called once per tap (the search does the add)
  * @returns {HTMLElement} the button node (caller appends it to the row)
  */
-export const render_add_field_button = function (options) {
-
+export const render_add_field_button = (options) => {
 	if (!options || typeof options.on_add !== 'function') {
-		throw new Error('render_add_field_button: on_add is required')
+		throw new Error('render_add_field_button: on_add is required');
 	}
 
-	const label = options.label || get_label.add_field || 'Add field'
+	const label = options.label || get_label.add_field || 'Add field';
 
 	const button = ui.create_dom_element({
-		element_type	: 'button',
-		type			: 'button',
-		class_name		: 'add_field_button',
-		title			: label,
-		aria			: {
-			label : options.field_label
-				? label + ': ' + options.field_label
-				: label
-		}
-	})
+		element_type: 'button',
+		type: 'button',
+		class_name: 'add_field_button',
+		title: label,
+		aria: {
+			label: options.field_label ? label + ': ' + options.field_label : label,
+		},
+	});
 
 	button.addEventListener('click', (e) => {
 		// the row itself may drill into a child section (has_subquery): a tap on
 		// the "+" is an add, never that
-		e.stopPropagation()
-		e.preventDefault()
-		options.on_add()
-	})
+		e.stopPropagation();
+		e.preventDefault();
+		options.on_add();
+	});
 
-	return button
-}//end render_add_field_button
-
-
+	return button;
+}; //end render_add_field_button
 
 // @license-end
