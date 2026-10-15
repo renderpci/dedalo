@@ -43,7 +43,7 @@
 *  self.diffusion_info  {Object} — result of dd_diffusion_api::get_diffusion_info.
 *    .section_diffusion_nodes  {Array}  flat array of ontology nodes that target this
 *      section.  Each node: { tipo, model, label, parents, children?,
-*      connection_status? }.  The `parents` path is used to find the
+*      connection_status?, database? }.  The `parents` path is used to find the
 *      diffusion_group and diffusion_element (or diffusion_element_alias)
 *      ancestors.
 *    .resolve_levels              {number}  default ontology resolution depth.
@@ -446,7 +446,8 @@ const get_content_data = async function(self) {
 *  3. Renders a collapsible panel with:
 *     - Name, type, diffusion element tipo, and diffusion node tipo rows, each
 *       with a link to open the ontology node in the dd5 documentation tool.
-*     - DB connection status (if reported by the server).
+*     - Target database name (sql only) and DB connection status (if reported
+*       by the server). An sql element's Name row reads 'Table name'.
 *     - A fields sub-grid listing target column → source Dédalo component
 *       (collapsed by default; click label to expand).
 *     - A container_bottom with Publish button and SSE progress area.
@@ -539,10 +540,12 @@ export const render_publication_items = function(self) {
 							parent			: publication_item_body
 						})
 
-					// name
+					// name (an sql element publishes the node as a table)
 						const name_label = ui.create_dom_element({
 							element_type	: 'span',
-							text_content	: get_label.name || 'Name',
+							text_content	: type==='sql'
+								? (get_label.table_name || 'Table name')
+								: (get_label.name || 'Name'),
 							class_name		: 'label',
 							parent			: publication_items_grid
 						})
@@ -618,6 +621,22 @@ export const render_publication_items = function(self) {
 							window.open(url, 'docu_window')
 						}
 						diffusion_tipo_link_node.addEventListener('click', diffusion_tipo_click_handler)
+
+					// database (sql only: the sanitized target the writer publishes into)
+						if (type==='sql' && typeof node.database==='string' && node.database.length) {
+							ui.create_dom_element({
+								element_type	: 'span',
+								text_content	: get_label.database || 'Database',
+								class_name		: 'label',
+								parent			: publication_items_grid
+							})
+							ui.create_dom_element({
+								element_type	: 'div',
+								text_content	: node.database,
+								class_name		: 'value',
+								parent			: publication_items_grid
+							})
+						}
 
 					// DB connection_status
 						if (node.connection_status) {

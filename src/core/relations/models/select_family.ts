@@ -26,6 +26,7 @@
  * select-family value into subdatum rows.
  */
 
+import { configOwnerOf } from '../../concepts/emit_row.ts';
 import { getNode } from '../../ontology/resolver.ts';
 import type { DataItem } from '../../resolve/component_data.ts';
 import { buildDataItem } from '../../resolve/component_data.ts';
@@ -69,7 +70,7 @@ async function listLabels(
 	return getRelationListValue(
 		context.ddo.tipo,
 		properties,
-		context.row.section_tipo,
+		configOwnerOf(context.row).section_tipo,
 		context.ddoLang,
 		storedLocators,
 	);
@@ -110,7 +111,7 @@ async function buildOptionsItem(
 	const datalist = await getEditDatalist(
 		context.ddo.tipo,
 		properties,
-		context.row.section_tipo,
+		configOwnerOf(context.row).section_tipo,
 		context.ddoLang,
 		storedLocators,
 	);

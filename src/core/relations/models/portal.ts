@@ -25,6 +25,7 @@
  */
 
 import type { Ddo } from '../../concepts/ddo.ts';
+import { configOwnerOf, type EmitRow } from '../../concepts/emit_row.ts';
 import { type ConfigDdoMapSource, flattenConfigDdoMaps } from '../config_ddo_map.ts';
 import type { RelationEmitContext, RelationModelResolver } from '../registry.ts';
 import { expandPortal } from '../relation_core.ts';
@@ -94,6 +95,19 @@ export const filterResolver: RelationModelResolver = {
 };
 
 /**
+ * The section a portal cell's OWN config resolves against. A host row (dd15)
+ * names the component's own record first: the ddo's section_tipo there is the
+ * HOST's (it binds the cell), not the owner. Otherwise the ddo's declared
+ * section, else the row's.
+ */
+function ownConfigSectionTipo(ddo: Ddo, row: EmitRow): string {
+	if (row.config_owner !== undefined) return row.config_owner.section_tipo;
+	return (
+		(Array.isArray(ddo.section_tipo) ? ddo.section_tipo[0] : ddo.section_tipo) ?? row.section_tipo
+	);
+}
+
+/**
  * The child ddos of a portal whose CALLER declared none — built from the
  * component's own effective config, and returned as the FULL descendant map
  * (every level, keyed by `parent`), not just this portal's own children.
@@ -109,7 +123,7 @@ export const filterResolver: RelationModelResolver = {
  */
 async function buildOwnConfigDescendants(args: {
 	ddo: Ddo;
-	row: { section_tipo: string; section_id: number };
+	row: EmitRow;
 	defaultLang: string;
 	isListCell: boolean;
 }): Promise<Ddo[]> {
@@ -196,12 +210,10 @@ async function buildOwnConfigDescendants(args: {
 		const node = await getNode(ddo.tipo);
 		const ownConfig = await buildRequestConfigForElement(node?.properties ?? null, {
 			ownerTipo: ddo.tipo,
-			ownerSectionTipo:
-				(Array.isArray(ddo.section_tipo) ? ddo.section_tipo[0] : ddo.section_tipo) ??
-				row.section_tipo,
+			ownerSectionTipo: ownConfigSectionTipo(ddo, row),
 			mode: 'edit',
 			ownerIsSection: false,
-			ownerSectionId: row.section_id,
+			ownerSectionId: configOwnerOf(row).section_id,
 			lang: defaultLang,
 		});
 		// PHP get_subdatum builds ONE full_ddo_map out of EVERY config

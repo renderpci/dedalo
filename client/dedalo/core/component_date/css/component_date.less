@@ -120,10 +120,25 @@
 						visibility: hidden; // initially hidden
 
 						// icon calendar
+						// The <a> owns the click guard (render_button_calendar),
+						// so it fills the WHOLE trigger: a click on the
+						// container's padding ring would otherwise bubble to the
+						// wrapper and close the picker it opened. It inherits the
+						// ring as its own padding and the mask stays in the
+						// content box at its own 1em, so the icon is unchanged.
 						>.calendar {
 							opacity: 0.6;
 							margin: 0px;
-							padding: 0px;
+							position: absolute;
+							inset: 0;
+							width: auto;
+							height: auto;
+							box-sizing: border-box;
+							padding: inherit;
+							-webkit-mask-origin: content-box;
+									mask-origin: content-box;
+							-webkit-mask-size: 1em; // the icon's own width (was the <a>'s)
+									mask-size: 1em;
 						}
 					}
 
@@ -185,7 +200,41 @@
 		}
 
 		.button.calendar {
-			cursor: default;
+			cursor: pointer; // it IS a button (was 'default')
+		}
+
+		// The picker trigger is floated 1.5rem ABOVE its input in edit mode
+		// (.button_container). In the search panel's compact card that position
+		// lands on the card's LABEL row, under the reorder/close controls — the
+		// close button (z-index 3) then covers it, so a phone tap hit the wrong
+		// control. Anchor it to the ROW's right end instead: the input-group
+		// drops its own positioning so the button resolves against the (relative)
+		// content_value, which reserves its width. Only the focused input's
+		// trigger shows, so a date range gets ONE button at the row end.
+		>.content_data >.content_value {
+			position: relative;
+			padding-right: 2.1rem;
+
+			>.input-group {
+				position: static;
+
+				>.button_container.button_calendar_container {
+					top: 50%;
+					transform: translateY(-50%);
+					right: 0;
+					height: 1.8rem;
+					width: 1.8rem;
+					padding: 0.15rem;
+					padding-left: 0.3rem;
+					// ALWAYS shown in search. The shared reveal keeps the trigger
+					// `display: none` (and `visibility: hidden`) until the field has
+					// focus; a tap on the trigger drops that focus and the `mouseup`
+					// that opens flatpickr never lands — the click read as dead on a
+					// phone. No hover exists to bring it back, so show it outright.
+					display: inline-block;
+					visibility: visible;
+				}
+			}
 		}
 	}
 

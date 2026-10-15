@@ -19,7 +19,17 @@
 
 import { describe, expect, test } from 'bun:test';
 // the client progress model is pure and DOM-free, so it tests directly here
-import { aggregate_view } from '../../client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/progress_model.js';
+import {
+	aggregate_view,
+	progress_view,
+} from '../../client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/progress_model.js';
+import {
+	create_rate_tracker,
+	format_duration,
+	MIN_SPAN_MS,
+	time_remaining_view,
+	WINDOW_MS,
+} from '../../client/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/time_remaining_model.js';
 import type { QueueSnapshot } from '../../src/diffusion/api/actions.ts';
 import { buildQueueFollowStream, queueRefusalStream } from '../../src/diffusion/api/actions.ts';
 import type { ActiveJobRow } from '../../src/diffusion/jobs/queue.ts';
@@ -42,6 +52,8 @@ function activeRow(over: Partial<ActiveJobRow> = {}): ActiveJobRow {
 		state: 'running',
 		counter_text: '1284300',
 		total_text: '4000000',
+		phase_text: 'selection',
+		linked_counter_text: null,
 		msg: 'Processing records...',
 		cancel_requested: false,
 		attempt: 1,
@@ -100,6 +112,8 @@ describe('queueJobView projection', () => {
 			state: 'running',
 			counter: 1284300,
 			total: 4000000,
+			phase: 'selection',
+			linked_counter: 0,
 			msg: 'Processing records...',
 			cancel_requested: false,
 			attempt: 1,
@@ -114,6 +128,18 @@ describe('queueJobView projection', () => {
 		const view = queueJobView(activeRow({ counter_text: 'not-a-number', total_text: null }));
 		expect(view.counter).toBe(0);
 		expect(view.total).toBe(0);
+	});
+
+	test('phase: only the two known values pass; anything else (or a pre-split row) is null', () => {
+		expect(
+			queueJobView(activeRow({ phase_text: 'linked', linked_counter_text: '12345' })),
+		).toMatchObject({
+			phase: 'linked',
+			linked_counter: 12345,
+		});
+		expect(queueJobView(activeRow({ phase_text: null })).phase).toBeNull();
+		expect(queueJobView(activeRow({ phase_text: '<script>' })).phase).toBeNull();
+		expect(queueJobView(activeRow({ linked_counter_text: 'junk' })).linked_counter).toBe(0);
 	});
 
 	test('carries the CLIENT process label, never the job uuid', () => {
@@ -329,10 +355,128 @@ describe('rollup aggregate — the honesty rules', () => {
 		expect(view.caption).toContain('estimate exceeded');
 	});
 
+	test('LINKED phase: the row sweeps with its own tally, never "100% (estimated)"', () => {
+		// the selection is done but the run is still writing the records it points
+		// at — often most of the run's rows
+		const view = progress_view({
+			state: 'running',
+			phase: 'linked',
+			counter: 42137,
+			total: 42137,
+			linked_counter: 123456,
+		});
+		expect(view.indeterminate).toBe(true);
+		expect(view.caption).toBe('Selection done · linked records: 123,456');
+		expect(view.caption).not.toContain('%');
+		// the band keeps the selection's percentage but names the phase
+		const band = aggregate_view([
+			{ state: 'running', phase: 'linked', counter: 42137, total: 42137, linked_counter: 9 },
+		]);
+		expect(band.note).toContain('1 job publishing linked records');
+	});
+
 	test('only RUNNING jobs count, and no running jobs means no band content', () => {
 		expect(aggregate_view([{ state: 'queued', counter: 0, total: 500 }]).show).toBe(false);
 		expect(aggregate_view([{ state: 'completed', counter: 500, total: 500 }]).caption).toBe('');
 		expect(aggregate_view([]).show).toBe(false);
+	});
+});
+
+describe('time_remaining_view (rollup time remaining)', () => {
+	// Measured, not derived: counter movement over the wall clock. These pin the
+	// decisions that keep the figure from lying.
+	const job = (id: string, counter: number, total: number, state = 'running') => ({
+		job_id: id,
+		state,
+		counter,
+		total,
+	});
+
+	test('no figure until the counter has moved over MIN_SPAN_MS', () => {
+		const t = create_rate_tracker();
+		t.observe([job('a', 0, 1000)], 0);
+		expect(time_remaining_view([job('a', 0, 1000)], t, 0)).toBe('estimating time remaining…');
+		// moved, but watched too briefly
+		t.observe([job('a', 10, 1000)], MIN_SPAN_MS - 1);
+		expect(time_remaining_view([job('a', 10, 1000)], t, MIN_SPAN_MS - 1)).toContain('estimating');
+	});
+
+	test('rate = records moved / time watched; remaining = (total - counter) / rate', () => {
+		const t = create_rate_tracker();
+		t.observe([job('a', 0, 1300)], 0);
+		t.observe([job('a', 100, 1300)], 60_000); // 100 rec/min, 1200 left → 12 min
+		expect(time_remaining_view([job('a', 100, 1300)], t, 60_000)).toBe(
+			'~12 min remaining (estimated)',
+		);
+	});
+
+	test('a stall GROWS the estimate instead of freezing it', () => {
+		const t = create_rate_tracker();
+		t.observe([job('a', 0, 1300)], 0);
+		t.observe([job('a', 100, 1300)], 60_000);
+		t.observe([job('a', 100, 1300)], 120_000); // no movement for a minute → 50 rec/min
+		expect(time_remaining_view([job('a', 100, 1300)], t, 120_000)).toBe(
+			'~24 min remaining (estimated)',
+		);
+	});
+
+	test('concurrent jobs: the LONGEST one; any unmeasured job means "estimating"', () => {
+		const t = create_rate_tracker();
+		t.observe([job('a', 0, 1100), job('b', 0, 10_100)], 0);
+		const later = [job('a', 100, 1100), job('b', 100, 10_100)];
+		t.observe(later, 60_000);
+		expect(time_remaining_view(later, t, 60_000)).toBe('~1 h 40 min remaining (estimated)');
+		// a third job just appeared: no basis for it yet, so no confident figure
+		const withNew = [...later, job('c', 0, 50)];
+		t.observe(withNew, 60_000);
+		expect(time_remaining_view(withNew, t, 60_000)).toContain('estimating');
+	});
+
+	test('a job in the LINKED phase is not projected (no estimate exists for it)', () => {
+		const t = create_rate_tracker();
+		const linked = { ...job('a', 500, 1000), phase: 'linked' };
+		t.observe([linked], 0);
+		expect(time_remaining_view([linked], t, 60_000)).toBe('');
+	});
+
+	test('jobs without an estimate, exceeded, or not running are not projected', () => {
+		const t = create_rate_tracker();
+		const jobs = [job('a', 10, 0), job('b', 600, 500), job('c', 0, 500, 'queued')];
+		t.observe(jobs, 0);
+		expect(time_remaining_view(jobs, t, 0)).toBe('');
+	});
+
+	test('a counter going backwards (retry) resets that job; finished jobs are forgotten', () => {
+		const t = create_rate_tracker();
+		t.observe([job('a', 0, 1000)], 0);
+		t.observe([job('a', 500, 1000)], 60_000);
+		t.observe([job('a', 0, 1000)], 61_000); // new attempt
+		expect(t.rate('a', 61_000)).toBeNull();
+		t.observe([job('a', 0, 1000, 'completed')], 62_000);
+		expect(t.size()).toBe(0);
+	});
+
+	test('old samples leave the window, keeping one anchor', () => {
+		const t = create_rate_tracker();
+		t.observe([job('a', 0, 100_000)], 0); // fast start: 1000 rec/min
+		t.observe([job('a', 1000, 100_000)], 60_000);
+		// then 100 rec/min for a long while — the old burst must stop counting
+		let c = 1000;
+		for (let m = 2; m <= 20; m++) {
+			c += 100;
+			t.observe([job('a', c, 100_000)], m * 60_000);
+		}
+		const rate = t.rate('a', 20 * 60_000) as number;
+		const perMin = rate * 60_000;
+		expect(perMin).toBeGreaterThan(90);
+		expect(perMin).toBeLessThan(120);
+		expect(WINDOW_MS).toBeGreaterThan(MIN_SPAN_MS);
+	});
+
+	test('durations are coarse', () => {
+		expect(format_duration(20_000)).toBe('under a minute');
+		expect(format_duration(90 * 60_000)).toBe('~1 h 30 min');
+		expect(format_duration(50 * 3600_000)).toBe('~2 d 2 h');
 	});
 });
 

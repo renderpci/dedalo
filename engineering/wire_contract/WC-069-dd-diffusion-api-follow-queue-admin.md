@@ -136,3 +136,56 @@ shape is FOR, and a future editor reading only the wire half would not see them.
   (client + host + honesty + motion halves) and
   `test/unit/diffusion_queue_stream.test.ts` (the aggregate's three honesty
   rules, asserted on the pure model).
+
+## Addendum 2026-10-14 — a measured time remaining
+
+- **Supersedes "there is deliberately no time-remaining figure anywhere".** The
+  rollup band shows `~N min remaining (estimated)`. It is MEASURED in the
+  browser: counter movement over the wall clock per running job, over a 5-minute
+  window (`time_remaining_model.js`). It is never derived from `total_ms`
+  (cumulative elapsed, the basis tool_diffusion's deleted estimate used).
+  Concurrent jobs → the longest one; no figure until a job has been watched long
+  enough for its counter to move. No wire change: it reads the existing
+  `counter`/`total`/`job_id`.
+- Gate: the `diffusion_queue_stream_tripwire` honesty leg (the estimate lives only
+  in `time_remaining_model.js`, which must not read `total_ms`/`started_at`) +
+  the model legs in `diffusion_queue_stream.test.ts`.
+
+## Addendum 2026-10-14 — `counter` counts the selection only
+
+- **Semantics fix, no shape change.** `counter` used to add every batch whose
+  section tipo equalled the job's section. On a self-linked section (types →
+  related types) the frontier drains batches of the primary's own tipo, holding
+  records OUTSIDE the selection, and `counter` overran `total` mid-run
+  ("estimate exceeded", `Processing records 42206 of 42137...`). The resolver now
+  flags each batch (`ResolvedBatch.primary`) and only primary batches advance
+  `counter`, so it stays comparable to the estimate, which counted the selection
+  alone. The dd1758 ledger still keys on the section tipo (unchanged).
+- Gate: `test/unit/diffusion_resolver.test.ts` (primary batches `primary:true`,
+  frontier batches `primary:false`).
+
+## Addendum 2026-10-14 — two progress phases (`phase`, `linked_counter`)
+
+- **Job key set: nine → eleven.** Each job frame gains two bounded scalars:
+  `phase: 'selection' | 'linked' | null` and `linked_counter: number`. The
+  same two fields are added to `get_value`'s job rows, so the snapshot and the live
+  patch draw the same bar.
+- **Why.** A run publishes the selection first (the primary batches; `counter`,
+  measured against the estimate `total`). Then it publishes the linked records,
+  the frontier: every record the selection points at, `levels` deep. On a real
+  `numisdata3` run the linked phase wrote about 4x the selection's rows (types
+  421k rows, coins 1.7M). With one counter the bar sat at "100% (estimated)" for
+  most of the run while MariaDB was still being written. `phase` says which half
+  is moving; `linked_counter` is that phase's own tally. It has NO estimate (the
+  frontier is discovered breadth-first as the run goes), so the client draws an
+  indeterminate bar for it and never a percentage. `phase` is null on a row
+  written before this split, and anything other than the two values coerces to
+  null.
+- **`msg` in the linked phase:** `Publishing linked records: <n> (<table>)...`.
+  tool_diffusion's `report_model.js` MSG pins both running prefixes.
+- **Time remaining:** it covers the selection phase only; a job in the linked
+  phase is not projected, and the band's note names it instead.
+- Gates: the `diffusion_queue_stream_tripwire` allowlist,
+  `diffusion_queue_stream.test.ts` (projection + model legs),
+  `diffusion_resume_ledger_native` (two phases on a real frontier run, linked
+  tally resumes from the checkpoint).

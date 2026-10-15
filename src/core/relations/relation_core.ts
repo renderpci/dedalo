@@ -21,6 +21,7 @@
  */
 
 import type { Ddo } from '../concepts/ddo.ts';
+import { configOwnerOf, type EmitRow } from '../concepts/emit_row.ts';
 import { canonicalizeStoredSectionId, isSectionId } from '../concepts/section_id.ts';
 import { dataframeEntryMatches } from '../concepts/subdatum.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
@@ -403,7 +404,7 @@ export async function expandPortal(
 	childDdos: Ddo[],
 	portalMode: string,
 	portalLang: string,
-	row: { section_tipo: string; section_id: number },
+	row: EmitRow,
 	callerTipo: string,
 	emission: EmissionContext,
 	emitDdo: EmitDdoFn,
@@ -486,7 +487,7 @@ export async function expandPortal(
 				locators,
 				effectiveProperties,
 				portalDdo.tipo,
-				row.section_tipo,
+				configOwnerOf(row).section_tipo,
 			);
 			if (reordered !== null) orderedLocators = reordered as typeof locators;
 		}

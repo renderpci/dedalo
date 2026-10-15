@@ -1,0 +1,42 @@
+{#-
+  THE THEME'S OWN outdated-banner script, VENDORED to repair one bug.
+
+  (See the note at the top of ../../main.html for why these overrides live at
+  the repo root rather than under docs/.)
+
+  mkdocs-material 9.7.6 through 9.7.7 — the current pin — and upstream master
+  as of 2026-10-14 write the site's base URL into a URL constructor with NO
+  BASE ARGUMENT:
+
+      var base = new URL(base_url)
+
+  `base_url` is a RELATIVE path — "." at the site root, ".." one level down
+  (MkDocs' get_relative_url). A relative string with no base is not a URL, so
+  the constructor throws on EVERY page:
+
+      Uncaught TypeError: Failed to construct 'URL': Invalid URL
+
+  Nothing visibly breaks, which is why it shipped: the banner stays `hidden`
+  until this script unhides it, and on the latest version it never should. The
+  error only reaches the console — and the feature it disables (unhiding the
+  "older version" banner) is exactly the one that starts mattering the day v7
+  stops being `latest`. Silence here is a broken banner later.
+
+  THE FIX IS THE BASE ARGUMENT. Material's own scope line
+  (partials/javascripts/base.html) already shows the idiom — new URL(scope,
+  location); this partial simply forgot the ", location", so it never resolved
+  and never matched the scope the bundle stored under. Reusing the same
+  expression as base.html keeps this script's storage key identical to
+  __md_scope even when `extra.scope` is set.
+
+  Delete this file the day upstream fixes the partial; nothing else here is
+  Dédalo-specific. Gate: docs_versioning_tripwire ("older version banner").
+-#}
+<!-- Version warning -->
+<script>
+  const el = document.querySelector("[data-md-component=outdated]")
+  const base = new URL("{{ config.extra.scope | d(base_url) }}", location);
+  const outdated = __md_get("__outdated", sessionStorage, base)
+  if (outdated === true && el)
+    el.hidden = false
+</script>

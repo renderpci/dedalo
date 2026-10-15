@@ -96,6 +96,15 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Checkboxes and radio buttons inside a tool now wear the tool's colour, not Dédalo orange**
+
+    A ticked box or radio button inside a tool was filled with Dédalo's orange,
+    whatever the tool — so a checkbox in a blue tool disagreed with the toolbar and
+    header around it. The checked widget now takes the tool's own identity colour,
+    the same colour its header edge and its action buttons use; the browser picks a
+    tick that contrasts with the fill. Covers the tool body and the status controls
+    on the tool header, so every tool follows automatically.
+
 - **The user activity chart names actions in your language.**
 
     The *Activity by type* chart of a user's activity (Login, Save, Edit, Upload complete…)
@@ -246,6 +255,14 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **The search pane on a phone: tap a field to add it, no drag needed**
+
+    Building a search filter used to mean dragging a field from the FIELDS list onto a search group. A touch screen never fires a drag, so on a phone the filter could not be built at all.
+
+    Every field in the list now carries a **+** button on a touch screen: tap it and the field is added to the search. Opening a group's **Add a field** slot still shows the FIELDS list, and the tap remembers which group the next field belongs to; the list closes once the field is added so the result is visible.
+
+    Below 1024px — **tablet and phone** — the pane stops being a three-column desktop: the TYPE / FIELDS / PRESET tabs become a row of chips above the region each controls, every panel and the filter canvas take the full width and stack in one column, and a drilled-in section list replaces the list it came from instead of opening a second column that ran off the screen. A long field name now ellipsizes instead of stretching the section sideways (the list is an auto table that grew past the screen, leaving the label overlapping the add and drill controls). The saved-search list (CONFIG) becomes compact one-line rows — name, apply, edit and delete, with a long name ellipsized — and its empty paginator strip is dropped, instead of the desktop four-column grid that squeezed it into unreadable slivers. A mouse keeps the drag exactly as before.
+
 - **The search group operator (AND / OR) now shows a "Search operator" tooltip on hover.**
 
     When you hover the AND / OR button at the top of a search group, a tooltip now reads
@@ -310,6 +327,16 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The date picker button works in the search panel on a phone**
+
+    In the search panel a date field's calendar button was floated above its input — in the compact search card that put it **on the label** and under the field's close (✕) control, and it stayed hidden until the field had focus. Clicking it did nothing: on a phone the ✕ sat on top, and the click activated the field (auto-focusing the input), which closed the picker the same click had opened.
+
+    The button now sits at the **end of the input row**, always visible, clear of the label and the field controls, and its click opens the calendar and keeps it open. A date range gets a single picker button for the row.
+
+- **The date picker opens again on a phone (edit and search).**
+
+    On a phone — and in a desktop browser's device-emulation mode — the small calendar icon of a date or time field did nothing: the field's own calendar never appeared, so the value had to be typed by hand. The icon now opens the calendar on phones exactly as it does on a desktop, both in the record edit form and in the list's search panel.
+
 - **The projects picker follows a user's project assignments at once.**
 
     When an administrator changed the projects a user belongs to, that user's *Projects* picker (and the project names shown in lists) kept offering the old set — a revoked project stayed selectable and a newly granted one stayed hidden — until an unrelated change cleared the server's memory. The picker is now keyed by the user's current projects, so the next read shows exactly the new set.
@@ -335,6 +362,13 @@ Merged since the last release; these ship with the next one.
     Now each of these changes is recorded like an edit made in the form. The moved term's history shows the move as one change (its broader term before and after), the new position among its siblings is recorded too, and every term whose position changed shows who changed it and when. See [the thesaurus tree](./core/thesaurus/index.md).
 
     Wire contract: `WC-2026-10-11-parent-link-cycle-every-door`.
+
+- **The Time Machine history of a Hierarchies record opens again instead of failing with an internal error.**
+
+    Opening the history of a record whose section has a field that takes its choices
+    from another field's value (in Hierarchies: *General term* and *General term model*) answered
+    an internal error instead of the list of changes. The history now lists those columns
+    like any other, offering the same choices as the record itself.
 
 - **Thesaurus: adding a child to a term now shows its expand arrow at once.**
 
@@ -1163,6 +1197,45 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The debug info bar is one thin line on a tablet or phone**
+
+    On a narrow screen the developer info strip under the menu (server code version, database, PostgreSQL and runtime versions, memory, sapi…) wrapped to **three lines**, taking a large slice of the screen before any content.
+
+    Below 1024px it is now **one thin line** whose values scroll sideways, so every value stays reachable and nothing is hidden; the menu reserves far less height for it. On a desktop it is unchanged.
+
+- **The diffusion publication ledger drops the indexes it never used.**
+
+    The publication ledger (`matrix_activity_diffusion`, the `dd1758` section) records one row per
+    record per publication run, and it had accumulated indexes the engine never reads:
+
+    - four on columns no component of the section ever writes (`geo`, `iri`, `media`,
+      `relation_search) — the section's fields are id, date, relations, number, text and a select,
+      so those columns are always empty;
+    - one on `misc`, whose only use is the retry stamp, read as an expression a GIN index cannot
+      serve;
+    - four that merely duplicate an index already kept, on a table whose `section_tipo` holds a
+      single value (`section_id`, `section_tipo`, `section_id DESC`, and a second `id` index
+      alongside the primary key).
+
+    Every one of them was maintained on **every published record** — a permanent tax on publishing,
+    paid for indexes that were never chosen. On update the useless GINs are dropped at boot and the
+    redundant btrees removed. The indexes that matter stay: the one that answers the pending-unpublish
+    checks, the one that answers the ledger's own record lookups, and the one the retention window
+    uses. Publishing gets slightly cheaper and the database slightly smaller; no search behaviour
+    changes. If you have already run **Maintenance → Database info → Optimize tables** on an older
+    version, these drops are a no-op.
+
+- **A publication job now says when it has moved on to the linked records.**
+
+    A publication job first publishes the records you selected, then every record they link
+    to (for coin types: their coins, mints, designs…). That second part can be most of
+    the work, but the progress used to stay at "100% (estimated)" the whole time, as if
+    the job were finished. Now the job's message says `Publishing linked records: 12345
+    (coins)...`. In Maintenance → Diffusion server control the bar switches to a moving
+    "Selection done · linked records: 12,345", and the Live activity band says how many
+    jobs are in that phase. The linked part has no estimate, so no percentage or time
+    remaining is shown for it.
+
 - **Large exports no longer load the whole selection into the server's memory.**
 
     An export now reads its records in pages from one consistent snapshot of the selection, instead of loading every record id before writing the first line, so a very large export uses the same memory as a small one. Two limits are now visible: the in-page (non-streamed) export answer is refused with *export.format_limit* above `DEDALO_SEARCH_CLIENT_MAX_LIMIT` records — the streamed and background exports serve the same selection — and each server process runs at most a quarter of `DB_POOL_MAX` exports at once (at least one), answering *export.busy* (retry shortly) to an export asked for directly beyond that, while a background export waits for its turn instead of failing. A server configured with `DB_POOL_MAX=1` cannot run exports; give it at least 2. A streamed export whose reader stops reading for 15 minutes is closed with *export.consumer_idle*, which frees its database connection; an export that keeps being read is never cut, however slow.
@@ -1390,6 +1463,32 @@ Merged since the last release; these ship with the next one.
     Wire contract: `WC-2026-09-28-maintenance-serve-ontology-widget`.
 
 #### Added
+
+- **The diffusion job queue shows who started each publication.**
+
+    The *Job queue* table of the *Diffusion engine & queue* maintenance panel has a new *User* column with the name of the user who launched each publication (or the user id when the account has no name), so an administrator can tell whose job is running or waiting before cancelling it.
+
+- **The publication job queue shows how long each finished job took.**
+
+    In Maintenance → Diffusion server control, a finished job's progress line now ends with
+    its total time (for example "42,137 / 42,137 · 12 min 8 sec"), measured from the first
+    start to the finish, retries included. It is the same figure the publication tool
+    shows when the job ends.
+
+- **The publication server panel shows an estimated time remaining for the running jobs.**
+
+    In Maintenance → Diffusion server control, the *Live activity* band now shows next
+    to the progress bar roughly how long it will be until the running publication jobs
+    finish (for example "~12 min remaining (estimated)"). It is measured in your browser
+    from how fast each running job has moved over the last few minutes. It appears a few
+    seconds after live updates start, grows if a job stalls, and leaves out queued jobs and
+    jobs queued without a record estimate.
+
+- **The publication tool names the target database of an SQL publication.**
+
+    Each SQL panel of the publication tool now shows a *Database* row: the MariaDB database the records are published into, which is also the database the *Connection status* refers to. The panel's *Name* row reads *Table name*, because for SQL it is the target table. Panels for other types (RDF, XML…) are unchanged.
+
+    Wire contract: `WC-2026-10-14-diffusion-info-node-database`.
 
 - **A Production instance can be installed by hand again, step by step, exactly as the installer does it.**
 
@@ -1696,6 +1795,14 @@ Merged since the last release; these ship with the next one.
     - **Publication hosts:** each site's Bun must move to 1.4.3 as well, or its **Bun version** row
       turns red ([Upgrading a site's Bun](./install/publication_host.md#upgrading-a-sites-bun)).
 
+- **Publication progress no longer runs past its estimate while a job is still working.**
+
+    When a section links to other records of the same section (for example types
+    related to other types), the publication job counted those linked records as part of
+    the selection. The progress then passed its estimate ("Processing records 42206 of
+    42137…", "estimate exceeded") while the job was still running. Progress now counts
+    only the records you selected; linked records are still published as before.
+
 - **The installer refuses an installed instance's name up front, and a refused Review checks again on install.**
 
     - **Production, an instance name already installed on the host**: the System check, right after the name, now says `instance <i> is already installed on this host (<registry file or drop-in>)` and asks for another name. The Identity check no longer calls that instance's account "an earlier install's leftover" to remove with `userdel`, and a typed service user that belongs to another instance gets that instance's clash, not the leftover advice. A fresh headless run over a complete install of the name says the same instead of "resume it or undo it".
@@ -1795,6 +1902,10 @@ Merged since the last release; these ship with the next one.
 - **On the Docker and trial routes, `--abort` removes an install interrupted before the engine container ever started, database included.**
 
     The installer counted a Docker or trial instance as *served* — a live instance that `--abort` never takes apart — as soon as `stack_up` began, before the `dedalo` container had started. An install stopped at that moment (a Ctrl-C, a failed `up -d dedalo`) was then kept by `--abort` as if it had served. Whether it served is now measured, as on the production route: the container started, or the engine answers `/health`; when that cannot be read, the instance is kept. An instance that never served is removed whole by `--abort --confirm-database <db>`. See [Resume and abort](./install/installer_reference.md#resuming-an-install-resume).
+
+- **The publication tool shows every publication of a section, including two that share a database definition.**
+
+    When two publications reach the same table through their own *database alias* pointing at one shared database definition (for example a production and a pre-production web), the publication tool showed only the first one, so the second could not be published from the tool. Each publication now has its own panel, with its own database, connection status and *Publish* button.
 
 - **An interrupted or stopped install now resumes, an abort says exactly what it undid, and an instance that never served can be removed completely.**
 
@@ -2564,7 +2675,7 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-23-relation-q-is-a-locator`.
 
-??? note "Wire contract — 125 entries"
+??? note "Wire contract — 126 entries"
 
     - `WC-2026-08-24-install-ip-gate-fail-closed`
     - `WC-2026-08-24-media-auth-session-scoped`
@@ -2691,6 +2802,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-12-ddengine-removed`
     - `WC-2026-10-12-install-surface-removed`
     - `WC-2026-10-12-user-activity-what-labels`
+    - `WC-2026-10-14-diffusion-info-node-database`
 
 ## 7.0.0-beta.4 — 2026-08-24
 

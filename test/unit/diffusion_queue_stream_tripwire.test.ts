@@ -49,8 +49,10 @@ const ALLOWED_JOB_KEYS = [
 	'cancel_requested',
 	'counter',
 	'job_id',
+	'linked_counter',
 	'max_attempts',
 	'msg',
+	'phase',
 	'process_id',
 	'state',
 	'total',
@@ -103,6 +105,8 @@ const FIXTURE: ActiveJobRow = {
 	state: 'running',
 	counter_text: '1284300',
 	total_text: '4000000',
+	phase_text: 'selection',
+	linked_counter_text: null,
 	msg: 'Processing records...',
 	cancel_requested: false,
 	attempt: 1,
@@ -116,7 +120,7 @@ describe('follow_queue tripwire', () => {
 		const keys = Object.keys(queueJobView(FIXTURE)).sort();
 		expect(
 			keys,
-			`The follow_queue job frame changed shape.\n\nThis frame is re-serialized once a second for every connected admin. Adding a field is a permanent per-second cost, and the unbounded ones (spec/sqo/errors/checkpoint/result) can make that cost unbounded. It is also the data-minimisation boundary: these frames name EVERY owner's jobs to a global admin.\n\nIf the addition is genuinely needed: bound it, add it here, and update the WC-067 entry in engineering/wire_contract/ in the same commit. If you only need it for one job on demand, the widget's get_value already carries the full row.`,
+			`The follow_queue job frame changed shape.\n\nThis frame is re-serialized once a second for every connected admin. Adding a field is a permanent per-second cost, and the unbounded ones (spec/sqo/errors/checkpoint/result) can make that cost unbounded. It is also the data-minimisation boundary: these frames name EVERY owner's jobs to a global admin.\n\nIf the addition is genuinely needed: bound it, add it here, and update the WC-069 entry in engineering/wire_contract/ in the same commit. If you only need it for one job on demand, the widget's get_value already carries the full row.`,
 		).toEqual([...ALLOWED_JOB_KEYS]);
 	});
 
@@ -299,8 +303,8 @@ describe('follow_queue tripwire', () => {
 			'utf8',
 		);
 		const live = readFileSync(join(REPO_ROOT, WIDGET, 'live_diffusion_server_control.js'), 'utf8');
-		// the ETA ban is about CODE — the modules explain at length WHY there is
-		// no ETA, and that explanation must not fail the gate
+		// the time-remaining confinement is about CODE — the modules explain WHY,
+		// and that explanation must not fail the gate
 		const codeSources = [model, render, live].map(codeOf);
 
 		// One definition, two importers. A second copy would not fail loudly — it
@@ -333,9 +337,24 @@ describe('follow_queue tripwire', () => {
 		for (const src of codeSources) {
 			expect(
 				/\b(time_remaining|eta|remaining_time)\b/i.test(src),
-				'A time-remaining estimate reappeared. The engine reports CUMULATIVE elapsed, not per-record, so any ETA derived from it is wrong — tool_diffusion deleted its own for exactly this reason.',
+				'A time-remaining estimate appeared outside time_remaining_model.js. There is ONE, measured from counter movement — never a second copy.',
 			).toBe(false);
 		}
+
+		// The time remaining is MEASURED (counter delta / wall clock), never
+		// derived from the engine's cumulative elapsed: total_ms is not per-record,
+		// so an estimate built from it is wrong — tool_diffusion deleted its own
+		// for exactly this reason.
+		const remaining = readFileSync(join(REPO_ROOT, WIDGET, 'time_remaining_model.js'), 'utf8');
+		const remainingCode = codeOf(remaining);
+		expect(
+			/total_ms|started_at|elapsed/.test(remainingCode),
+			'time_remaining_model.js must measure throughput from counter movement, not read elapsed/started_at.',
+		).toBe(false);
+		expect(
+			remaining.includes('remaining (estimated)'),
+			'The time remaining must be labelled "(estimated)": the remaining work is total - counter, and the total is a client estimate.',
+		).toBe(true);
 	});
 
 	test('every infinite animation has a reduced-motion escape, and motion lives in the kit', () => {

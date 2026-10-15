@@ -4703,41 +4703,6 @@ CREATE INDEX matrix_activity_diffusion_date_gin_idx ON public.matrix_activity_di
 
 
 --
--- Name: matrix_activity_diffusion_geo_gin_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX matrix_activity_diffusion_geo_gin_idx ON public.matrix_activity_diffusion USING gin (geo jsonb_path_ops);
-
-
---
--- Name: matrix_activity_diffusion_id_desc_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX matrix_activity_diffusion_id_desc_idx ON public.matrix_activity_diffusion USING btree (id DESC NULLS LAST);
-
-
---
--- Name: matrix_activity_diffusion_iri_gin_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX matrix_activity_diffusion_iri_gin_idx ON public.matrix_activity_diffusion USING gin (iri jsonb_path_ops);
-
-
---
--- Name: matrix_activity_diffusion_media_gin_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX matrix_activity_diffusion_media_gin_idx ON public.matrix_activity_diffusion USING gin (media jsonb_path_ops);
-
-
---
--- Name: matrix_activity_diffusion_misc_gin_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX matrix_activity_diffusion_misc_gin_idx ON public.matrix_activity_diffusion USING gin (misc jsonb_path_ops);
-
-
---
 -- Name: matrix_activity_diffusion_number_gin_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -4749,34 +4714,6 @@ CREATE INDEX matrix_activity_diffusion_number_gin_idx ON public.matrix_activity_
 --
 
 CREATE INDEX matrix_activity_diffusion_relation_gin_idx ON public.matrix_activity_diffusion USING gin (relation jsonb_path_ops);
-
-
---
--- Name: matrix_activity_diffusion_relation_search_gin_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX matrix_activity_diffusion_relation_search_gin_idx ON public.matrix_activity_diffusion USING gin (relation_search jsonb_path_ops);
-
-
---
--- Name: matrix_activity_diffusion_section_id_desc_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX matrix_activity_diffusion_section_id_desc_idx ON public.matrix_activity_diffusion USING btree (section_id DESC NULLS LAST);
-
-
---
--- Name: matrix_activity_diffusion_section_id_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX matrix_activity_diffusion_section_id_idx ON public.matrix_activity_diffusion USING btree (section_id);
-
-
---
--- Name: matrix_activity_diffusion_section_tipo_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX matrix_activity_diffusion_section_tipo_idx ON public.matrix_activity_diffusion USING btree (section_tipo);
 
 
 --

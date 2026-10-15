@@ -82,6 +82,8 @@
 	import {
 		apply_semantic_from_preset
 	} from './render_semantic.js'
+	import {is_touch} from '../../common/js/touch_pick.js'
+	import {render_add_field_button, synthetic_drop_event} from './search_phone.js'
 
 
 
@@ -805,15 +807,23 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 	// Add field slot: the dashed drop target after the group's fields (kept
 	// there by CSS order — fields dropped later are appended after it in the
 	// DOM). Fields come from the FIELDS panel by drag, so a click opens it.
+	// On a touch screen a finger cannot drag: the label names the tap gesture
+	// instead, and tapping it also arms this group as the target of the next
+	// "+" (search_phone.js).
+		const add_field_label = is_touch()
+			? (get_label.add_field || 'Add field')
+			: (get_label.drop_field_here || 'Drag a field here')
 		const search_group_add_field = ui.create_dom_element({
 			element_type	: 'button',
 			type			: 'button',
 			class_name		: 'add_field',
-			inner_html		: get_label.drop_field_here || 'Drag a field here',
+			inner_html		: add_field_label,
 			parent			: search_group
 		})
 		search_group_add_field.addEventListener('click', function(e){
 			e.stopPropagation()
+			// phone: remember which group the next added field belongs to
+			self.pending_group = search_group
 			if (self.search_container_selector?.classList.contains('display_none')) {
 				toggle_fields(self)
 			}
@@ -1078,6 +1088,96 @@ render_search.prototype.build_search_component = async function(options) {
 	return true
 }//end build_search_component
 
+
+
+/**
+* ON_COMPONENT_ROW
+* Caller hook for `render_components_list` (common/js/render_common.js): called
+* once per draggable field row. On a touch screen it appends the phone "+" that
+* adds the field on a tap (search_phone.js) — a finger cannot drag, so without
+* it the filter cannot be built at all. On a fine pointer it does nothing and
+* the row stays drag-only, exactly as before.
+*
+* @param {Object} options - {node, element, path} from render_components_list
+* @returns {boolean} true when the "+" was added
+*/
+render_search.prototype.on_component_row = function(options) {
+
+	const self = this
+
+	if (!is_touch()) {
+		return false
+	}
+
+	const node = options.node
+	if (!node || node.querySelector(':scope > .add_field_button')) {
+		return false
+	}
+
+	// the row is draggable chrome: mark it so CSS drops the drag handle and
+	// reserves room for the button
+	node.classList.add('has_add_button')
+
+	const button = render_add_field_button({
+		label		: get_label.add_field || 'Add field',
+		field_label	: node.textContent ? node.textContent.trim() : '',
+		on_add		: () => {
+			self.add_field_to_search({
+				// the row's serialized path — exactly what on_dragstart puts in
+				// dataTransfer (options.path is the same path as an ARRAY)
+				path		: node.dataset.path,
+				section_id	: node.dataset.section_id
+			})
+		}
+	})
+	node.appendChild(button)
+
+	return true
+}//end on_component_row
+
+
+
+/**
+* ADD_FIELD_TO_SEARCH
+* Adds one field to the filter canvas, the way dropping a dragged field row
+* does. The group the field lands in is the one whose "Add a field" slot was
+* last tapped (`self.pending_group`, set in render_search_group), falling back
+* to the root group. The add is delegated to `on_drop` so a mouse drop and this
+* tap share ONE implementation.
+*
+* @param {Object} options
+* @param {string} options.path - JSON string of the field path (row data-path)
+* @param {string} options.section_id - row section_id (search scoping)
+* @returns {boolean}
+*/
+render_search.prototype.add_field_to_search = function(options) {
+
+	const self = this
+
+	const target = (self.pending_group && self.pending_group.isConnected)
+		? self.pending_group
+		: self.root_search_group
+
+	if (!target) {
+		return false
+	}
+
+	const data = JSON.stringify({
+		path		: options.path,
+		section_id	: options.section_id
+	})
+
+	// the SAME drop path a dragged field takes
+	self.on_drop(target, synthetic_drop_event(data))
+
+	// on a phone the FIELDS list is a sheet over the canvas: close it so the
+	// field that was just added is visible
+	if (self.search_container_selector && !self.search_container_selector.classList.contains('display_none')) {
+		toggle_fields(self)
+	}
+
+	return true
+}//end add_field_to_search
 
 
 

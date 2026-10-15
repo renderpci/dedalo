@@ -70,9 +70,11 @@ export const format_int = function(value) {
 *   - an overrun is REPORTED as 'Estimate exceeded' rather than clamped into a
 *     plausible-looking number, because a silently-capped 100% bar that keeps
 *     running is the exact lie this label exists to prevent;
-*   - there is deliberately NO time-remaining figure. The engine reports
-*     cumulative elapsed, not per-record, so any ETA derived from it would be
-*     wrong — tool_diffusion deleted its own estimate for this reason.
+*   - no time-remaining figure is derived HERE. The engine reports cumulative
+*     elapsed, not per-record, so an estimate built from it would be wrong
+*     (tool_diffusion deleted its own for this reason). The rollup's time
+*     remaining is MEASURED client-side from counter movement instead — see
+*     time_remaining_model.js.
 *
 * Terminal jobs get no bar at all: the State column already carries the verdict,
 * and a coloured bar on every finished row spends the whole colour budget on
@@ -96,6 +98,22 @@ export const progress_view = function(job) {
 	// queued: an empty track, so the row keeps its height across queued → running
 	if (state==='queued') {
 		return { show:true, indeterminate:false, percent:0, severity:'', caption:'Queued' }
+	}
+
+	// LINKED PHASE: the selection is done and the run is publishing the records
+	// it points at (the frontier). That work has no estimate — it is discovered
+	// as the run goes, and can be several times the selection — so the bar
+	// sweeps and the caption says what is happening. A full "100% (estimated)"
+	// here read as "finished" for most of a long run.
+	if (job.phase==='linked') {
+		const linked = Number(job.linked_counter) || 0
+		return {
+			show			: true,
+			indeterminate	: true,
+			percent			: 0,
+			severity		: '',
+			caption			: 'Selection done · linked records: ' + format_int(linked)
+		}
 	}
 
 	// running without a usable estimate: sweep, and say the estimate is missing
@@ -150,6 +168,12 @@ export const aggregate_view = function(jobs) {
 	const running	= list.filter((job) => String(job.state || '')==='running')
 	const estimated	= running.filter((job) => (Number(job.total) || 0) > 0)
 	const without	= running.length - estimated.length
+	const linked	= running.filter((job) => job.phase==='linked').length
+	// the selection says nothing about the linked phase: name it, or a band at
+	// 100% reads as "done" while the run writes most of its rows
+	const linked_note = linked>0
+		? ' · ' + linked + (linked===1 ? ' job publishing' : ' jobs publishing') + ' linked records'
+		: ''
 
 	if (running.length===0) {
 		return { show:false, percent:0, severity:'', caption:'', note:'' }
@@ -163,7 +187,7 @@ export const aggregate_view = function(jobs) {
 			percent		: 0,
 			severity	: '',
 			caption		: format_int(counter) + ' records processed',
-			note		: running.length + (running.length===1 ? ' running job' : ' running jobs') + ' · no estimate'
+			note		: running.length + (running.length===1 ? ' running job' : ' running jobs') + ' · no estimate' + linked_note
 		}
 	}
 
@@ -182,7 +206,7 @@ export const aggregate_view = function(jobs) {
 		severity	: exceeded ? 'state_warning' : '',
 		caption		: format_int(counter) + ' / ' + format_int(total) + ' · ' +
 			(exceeded ? 'estimate exceeded' : percent + '% (estimated)'),
-		note		: 'across ' + scope + excluded
+		note		: 'across ' + scope + excluded + linked_note
 	}
 }//end aggregate_view
 

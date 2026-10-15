@@ -491,6 +491,21 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 						dateFormat	: date_format,
 						defaultDate	: default_date,
 						allowInput	: true,
+						// disableMobile: keep flatpickr's OWN calendar on a phone.
+						// Its UA-based mobile fallback swaps the picker for a native
+						// <input type="date"> inserted beside the trigger — which here
+						// is a `.button_container` (position:absolute, 1.8rem) that is
+						// `visibility: hidden` / `display: none` until the surrounding
+						// field has focus. On a touch tap the field never keeps focus,
+						// so the native input stays hidden and NO calendar opens (the
+						// report: search-mode date picker dead on a phone).
+						disableMobile	: true,
+						// clickOpens: the picker is opened by OUR `mouseup` handler
+						// (which builds the instance and calls open()). flatpickr's
+						// own click-toggle would then fire on the SAME click and
+						// close it again — the picker flashed and the click read as
+						// dead. One opener, deterministically.
+						clickOpens		: false,
 						// onClose	: close_flatpickr,
 						onValueUpdate : function(selectedDates, dateStr){
 							// reset style error
@@ -589,6 +604,14 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 						enableSeconds	: true,
 						dateFormat		: time_format,
 						defaultDate		: default_time,
+						// disableMobile: the same reason as the date picker — flatpickr's
+						// mobile fallback hides the picker behind a native input that the
+						// component's hidden-until-focus trigger cannot reveal on a tap.
+						disableMobile	: true,
+						// clickOpens: same as the date picker — our own `mouseup`
+						// opens the instance, so flatpickr must NOT also toggle on the
+						// same click (that closed it immediately).
+						clickOpens		: false,
 						// onClose		: close_flatpickr,
 						// onValueUpdate
 						onClose			: function(selectedDates, dateStr){
@@ -1257,6 +1280,10 @@ const render_button_calendar = function () {
 		})
 		// mousedown event
 		button_calendar_container.addEventListener('mousedown', function(e) {
+			// Don't let the trigger steal focus from the input. Losing focus hides
+			// the (focus-revealed) trigger BEFORE the `mouseup` that opens the
+			// picker, so the click reads as dead; also avoids text selection.
+			e.preventDefault()
 			e.stopPropagation()
 		})
 
@@ -1267,6 +1294,15 @@ const render_button_calendar = function () {
 			parent			: button_calendar_container
 		})
 		button_calendar.tabIndex = -1;
+		// click event. Without stopping it, the click bubbles to the component
+		// wrapper, which ACTIVATES the component; the activation auto-focuses the
+		// first input (ui.js) and that closes the picker the same click opened —
+		// the calendar flashed and the trigger read as dead. Guarded on the <a>
+		// (not the container): its ::after hit area (component_date.less) covers
+		// the whole container, so every click on the trigger lands here.
+		button_calendar.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
 
 
 	return button_calendar_container

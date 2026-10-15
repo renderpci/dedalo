@@ -6,6 +6,14 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {aggregate_view, format_int} from './progress_model.js'
+	import {create_rate_tracker, time_remaining_view} from './time_remaining_model.js'
+
+
+
+// One tracker for the page, keyed by job_id: a membership-change reload rebuilds
+// the band, and the measured rates must survive that rebuild or every job start
+// or finish would throw the whole estimate back to "estimating".
+	const rate_tracker = create_rate_tracker()
 
 
 
@@ -106,10 +114,21 @@ export const build_rollup_block = function(value, parent) {
 		class_name		: 'dd_bar_fill',
 		parent			: bar
 	})
+	// caption line: progress on the left, time remaining on the right
+	const captions = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'dsc_rollup_captions',
+		parent			: aggregate
+	})
 	ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: 'dd_bar_note dsc_rollup_caption',
-		parent			: aggregate
+		parent			: captions
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dd_bar_note dsc_rollup_remaining',
+		parent			: captions
 	})
 
 	// paint it from the snapshot we already have; the live layer repaints the
@@ -182,6 +201,7 @@ export const paint_rollup = function(block, scheduler, jobs, failed) {
 	const bar		= block.querySelector('.dsc_rollup_bar')
 	const fill		= block.querySelector('.dsc_rollup_bar .dd_bar_fill')
 	const caption	= block.querySelector('.dsc_rollup_caption')
+	const remaining	= block.querySelector('.dsc_rollup_remaining')
 
 	if (progress) progress.classList.toggle('hide', view.caption==='')
 	if (bar) {
@@ -196,6 +216,13 @@ export const paint_rollup = function(block, scheduler, jobs, failed) {
 	}
 	if (caption) {
 		caption.textContent = view.caption + (view.note ? ' ' + view.note : '')
+	}
+
+	// every paint is a throughput sample (1 Hz while the stream is live)
+	const now = Date.now()
+	rate_tracker.observe(jobs, now)
+	if (remaining) {
+		remaining.textContent = time_remaining_view(jobs, rate_tracker, now)
 	}
 }//end paint_rollup
 

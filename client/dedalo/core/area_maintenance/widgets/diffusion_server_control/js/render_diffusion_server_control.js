@@ -31,7 +31,8 @@
 *     engine    : { state, title, checks: { engine, formats } }   // native advisory
 *     scheduler : { running, max_runners, queued, stale_after_seconds, paused }
 *     jobs      : Array<{ job_id, process_id, state, element_tipo, section_tipo,
-*                         type, counter, total, msg, attempt, max_attempts, ... }>
+*                         type, counter, total, total_time, msg, attempt,
+*                         max_attempts, ... }>
 *     pending   : number|null   // pending unpublish deletions; null when not applicable
 *     config    : { native, native_elements, resolve_levels, langs, batch_rows,
 *                   batch_records, target_db_socket, target_db_host,
@@ -503,6 +504,17 @@ const build_progress_cell = function(job, tr) {
 	counter.textContent = Number(job.total) > 0
 		? format_int(job.counter) + ' / ' + format_int(job.total)
 		: format_int(job.counter)
+	// total time the finished job took (server-formatted, the same figure
+	// tool_diffusion prints); null while the job has not finished
+	if (job.total_time) {
+		const total_time = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'job_total_time',
+			title			: 'Total time',
+			parent			: head
+		})
+		total_time.textContent = '· ' + job.total_time
+	}
 	if (job.msg) {
 		const msg = ui.create_dom_element({
 			element_type	: 'span',
@@ -568,8 +580,8 @@ const build_progress_cell = function(job, tr) {
 * the comment there for why it must be explicit.
 *
 * Source: `value.jobs` — projected durable job rows. Each item shape:
-*   { job_id, process_id, state, element_tipo, section_tipo, type, counter,
-*     total, msg, attempt, max_attempts, cancel_requested, created_at,
+*   { job_id, process_id, state, owner_user_id, owner_name, element_tipo,
+*     section_tipo, type, counter, total, msg, attempt, max_attempts, cancel_requested, created_at,
 *     started_at, finished_at, errors }
 *
 * Buttons (admin only):
@@ -639,6 +651,7 @@ const build_jobs_block = function(self, value, parent) {
 		const headings = [
 			{ label:'Process',	class_name:'dd_th' },
 			{ label:'Target',	class_name:'dd_th' },
+			{ label:'User',		class_name:'dd_th' },
 			{ label:'State',	class_name:'dd_th' },
 			{ label:'Progress',	class_name:'dd_th' },
 			{ label:'Attempt',	class_name:'dd_th num' }
@@ -677,6 +690,14 @@ const build_jobs_block = function(self, value, parent) {
 			const td_target = ui.create_dom_element({ element_type:'div', class_name:'dd_td job_target', parent:tr })
 			td_target.textContent = (job.element_tipo || '?') + ' → ' + (job.section_tipo || '?')
 				+ (job.type ? ' (' + job.type + ')' : '')
+
+			// user who fired the process: name, falling back to the bare id when
+			// the user record has no name (root, an unnamed account)
+			const td_user = ui.create_dom_element({ element_type:'div', class_name:'dd_td job_user', parent:tr })
+			td_user.textContent = job.owner_name || (job.owner_user_id!=null ? '#' + job.owner_user_id : '?')
+			if (job.owner_user_id!=null) {
+				td_user.title = 'User id: ' + job.owner_user_id
+			}
 
 			// state badge. The state word is a single token and is never wrapped;
 			// a requested cancel is a separate sub-line rather than a suffix, so it
@@ -758,7 +779,7 @@ const build_jobs_block = function(self, value, parent) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dd_note diffusion_server_control_estimate_note',
-			inner_html		: 'Percentages use the record estimate supplied when each job was queued — the server never re-counts. "Estimate exceeded" means a job has already processed more records than it estimated; it is not an error.',
+			inner_html		: 'Percentages use the record estimate supplied when each job was queued — the server never re-counts. "Estimate exceeded" means a job has already processed more records than it estimated; it is not an error. The time remaining is measured in this browser from how fast each running job has advanced over the last few minutes, so it needs a few seconds of live updates before it appears, and queued jobs are not included.',
 			parent			: jobs_block
 		})
 	}

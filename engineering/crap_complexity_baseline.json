@@ -4,9 +4,9 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 756,
-		"functions": 11474,
-		"functionsOverCap": 673,
+		"files": 763,
+		"functions": 11981,
+		"functionsOverCap": 672,
 		"filesOverCap": 258
 	},
 	"ledger": [
@@ -144,6 +144,11 @@
 		{
 			"generated": "2026-10-12",
 			"functionsOverCap": 673,
+			"filesOverCap": 258
+		},
+		{
+			"generated": "2026-10-14",
+			"functionsOverCap": 672,
 			"filesOverCap": 258
 		}
 	],
@@ -300,7 +305,7 @@
 		"src/core/relations/dataframe.ts": 9,
 		"src/core/relations/datalist.ts": 21,
 		"src/core/relations/filter_projects.ts": 15,
-		"src/core/relations/models/portal.ts": 24,
+		"src/core/relations/models/portal.ts": 22,
 		"src/core/relations/models/relation_index.ts": 19,
 		"src/core/relations/models/relation_related.ts": 10,
 		"src/core/relations/order_locators.ts": 8,

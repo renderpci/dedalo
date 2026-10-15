@@ -62,8 +62,6 @@ const RETIRED_FAMILIES = [
  * stays total — "not in ar_index" must never quietly mean "ignored".
  */
 const UNGOVERNED_SEED_INDEXES: readonly string[] = [
-	'matrix_activity_diffusion_id_desc_idx',
-	'matrix_activity_diffusion_section_id_desc_idx',
 	'matrix_activity_diffusion_timestamp_idx',
 	'matrix_activity_timestamp_date_idx',
 	'matrix_time_machine_lang_idx',

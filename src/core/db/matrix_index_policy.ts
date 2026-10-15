@@ -1,18 +1,22 @@
 /**
- * MATRIX INDEX POLICY — the single source of truth for which indexes the two
+ * MATRIX INDEX POLICY — the single source of truth for which indexes the
  * append-only log tables (matrix_activity = dd542 Activity, matrix_time_machine
- * = dd15 Time Machine) SHOULD carry, and which are dead weight to prune.
+ * = dd15 Time Machine, matrix_activity_diffusion = dd1758 Diffusion publication
+ * ledger) SHOULD carry, and which are dead weight to prune.
  *
- * WHY THIS EXISTS. Both tables reach production scale (mdcat: activity 32.9M
- * rows / 85 GB, TM 50.5M rows / 46 GB) and have accreted indexes over the PHP
- * era — mdcat carried ~9.8 GB of indexes on activity and ~13 GB on TM, much of
- * it never chosen by the planner for the query shapes this TS engine actually
- * emits. Every one of those indexes is maintained on the HOTTEST insert path in
- * the system (every save appends a TM row; many append an activity row) — pure
- * write amplification. This module states, per table and per index SIGNATURE
- * (not name — names vary by install), what to keep and why. The executor is
- * db_assets.pruneMatrixIndexes, run against the ACTIVE database as the first
- * step of the Database-info widget's "Optimize tables" action (WC-046).
+ * WHY THIS EXISTS. These tables reach production scale (mdcat: activity 32.9M
+ * rows / 85 GB, TM 50.5M rows / 46 GB; the diffusion ledger appends one row per
+ * record per publish run and its retention default is 0 = keep everything) and
+ * have accreted indexes over the PHP era — mdcat carried ~9.8 GB of indexes on
+ * activity and ~13 GB on TM, much of it never chosen by the planner for the
+ * query shapes this TS engine actually emits. Every one of those indexes is
+ * maintained on the HOTTEST insert path in the system (every save appends a TM
+ * row; many append an activity row; every published record appends a ledger
+ * row) — pure write amplification. This module states, per table and per index
+ * SIGNATURE (not name — names vary by install), what to keep and why. The
+ * executor is db_assets.pruneMatrixIndexes, run against the ACTIVE database as
+ * the first step of the Database-info widget's "Optimize tables" action
+ * (WC-046).
  *
  * The query shapes this policy is calibrated for (see WC-044/WC-054 + read_tm.ts):
  *  - Activity list: single-section, insertion order (When → section_id; the
@@ -194,6 +198,107 @@ const ACTIVITY: MatrixTablePolicy = {
 	],
 };
 
+/**
+ * dd1758 — the DIFFUSION PUBLICATION LEDGER (matrix_activity_diffusion).
+ *
+ * One row per record per publish run, append-only, retention default 0 (keep
+ * everything) — so it grows linearly with how often a catalogue is published.
+ * The traced shapes are few (diffusion_delete.ts, targets/mariadb/
+ * public_tier_reconcile.ts, area_maintenance/widgets/diffusion_server_control.ts):
+ *   - pending-unpublish reads — WHOLE-COLUMN containment `relation @> <probe>`
+ *     (the debt count, the retry queue, the admin widget count);
+ *   - the retention prune — `"timestamp" < cutoff AND NOT <pending>`;
+ *   - the flip/stamp UPDATE — `(section_tipo = dd1758, section_id = the row)`.
+ * Everything else the asset layer provisions for every matrix table (the
+ * per-column GIN family, the bare section_id / section_tipo btrees) indexes
+ * columns dd1758 never writes, or an alias of an index already kept.
+ */
+const DIFFUSION_ACTIVITY: MatrixTablePolicy = {
+	table: 'matrix_activity_diffusion',
+	requiredSignatures: [
+		'using btree (id)', // PK — flip page scan + retention DELETE … RETURNING id
+		'using btree (section_tipo, section_id desc)', // flip/stamp UPDATE + list order
+		'using gin (relation jsonb_path_ops)', // every pending-unpublish probe
+		'using btree ("timestamp")', // the retention prune's range
+	],
+	entries: [
+		// --- keep (traced emitters) ---------------------------------------------
+		{
+			signature: 'using btree (id)',
+			disposition: 'keep',
+			reason:
+				'PK — the deep-page flip page scan and the retention `DELETE … RETURNING id` ride it; also everything the duplicate id_desc index was for.',
+		},
+		{
+			signature: 'using btree (section_tipo, section_id desc)',
+			disposition: 'keep',
+			reason:
+				'The ledger flip/stamp UPDATE binds (section_tipo = dd1758, section_id = the row) — the only index that answers it without a walk (diffusion_delete.ts flipPendingRowUnpublished / stampPendingRow) — and the dd1758 browse orders on section_id within the section.',
+		},
+		{
+			signature: 'using gin (relation jsonb_path_ops)',
+			disposition: 'keep',
+			reason:
+				'THE hot index. Every pending-unpublish read is whole-column containment `relation @> <probe>` — the admin widget count (diffusion_server_control.ts), reconcile debtCounts (public_tier_reconcile.ts) and the retry queue (diffusion_delete.ts retryPendingDiffusion) — and the arrow form seq-scans the multi-million-row table. The probe payload is owned by the ledger writer (diffusionActionContains).',
+		},
+		{
+			signature: 'using btree ("timestamp")',
+			disposition: 'keep',
+			reason:
+				'The retention prune range: `WHERE "timestamp" < cutoff AND NOT <pending>` (diffusion_delete.ts pruneSettledLedgerRows). The one window-shaped predicate on the table.',
+		},
+		// --- review (populated + plausibly searched; report, opt-in to drop) -----
+		...['date', 'number', 'string'].map(
+			(col): IndexPolicyEntry => ({
+				signature: `using gin (${col} jsonb_path_ops)`,
+				disposition: 'review',
+				reason: `GIN on ${col}: the dd1758 section exposes dd1761 (date), dd1764 (number), dd1765 (string), so a ledger list search CAN target it — no traced emitter today, and the list's section_id ordering usually wins the plan, but it is asset-provisioned for every matrix table and NOT provably dead. Report it; drop only with the operator's explicit opt-in.`,
+			}),
+		),
+		// --- drop-dead (no emitted shape can use these) --------------------------
+		{
+			signature: 'using gin (misc jsonb_path_ops)',
+			disposition: 'drop-dead',
+			reason:
+				'GIN on misc: the only misc predicate is the retry stamp read as an EXPRESSION (misc->dd1758_retry->>terminal / ->>last_attempt), which a jsonb_path_ops GIN cannot serve — pure write amplification on the publish path.',
+		},
+		...['geo', 'iri', 'media', 'relation_search'].map(
+			(col): IndexPolicyEntry => ({
+				signature: `using gin (${col} jsonb_path_ops)`,
+				disposition: 'drop-dead',
+				reason: `GIN on ${col}: dd1758 has NO component that writes this column — its children are section_id/date/relation/number/string/select (dd1760-67) and the ledger writer INSERTs only relation/string/date/number/misc — so the column is ALWAYS NULL and the index indexes nothing while being maintained on every publish.`,
+			}),
+		),
+		// --- drop-redundant (covered by a kept index on this single-tipo table) --
+		{
+			signature: 'using btree (section_id)',
+			disposition: 'drop-redundant',
+			requiresSingleTipo: true,
+			reason:
+				'Single-tipo table ⇒ ≡ the list/UPDATE index (section_tipo, section_id DESC); no emitted shape filters section_id WITHOUT section_tipo.',
+		},
+		{
+			signature: 'using btree (section_tipo)',
+			disposition: 'drop-redundant',
+			requiresSingleTipo: true,
+			reason:
+				'A prefix of (section_tipo, section_id DESC) on a table whose section_tipo has ONE value — the predicate is a constant, so the index is dead weight on every insert.',
+		},
+		{
+			signature: 'using btree (section_id desc nulls last)',
+			disposition: 'drop-redundant',
+			requiresSingleTipo: true,
+			reason: 'Single-tipo table ⇒ an alias of the (section_tipo, section_id DESC) list index.',
+		},
+		{
+			signature: 'using btree (id desc nulls last)',
+			disposition: 'drop-redundant',
+			reason:
+				'Superseded by the (id) PK, which a backward scan serves for `ORDER BY id DESC`; a PHP-era duplicate.',
+		},
+	],
+};
+
 const TIME_MACHINE: MatrixTablePolicy = {
 	table: 'matrix_time_machine',
 	// TM is MULTI-tipo (no UNIQUE (section_id, section_tipo) key) and its list
@@ -309,7 +414,11 @@ const TIME_MACHINE: MatrixTablePolicy = {
 	],
 };
 
-export const MATRIX_INDEX_POLICIES: readonly MatrixTablePolicy[] = [ACTIVITY, TIME_MACHINE];
+export const MATRIX_INDEX_POLICIES: readonly MatrixTablePolicy[] = [
+	ACTIVITY,
+	DIFFUSION_ACTIVITY,
+	TIME_MACHINE,
+];
 
 /** The policy for a table, or undefined if this table is not policy-governed. */
 export function policyForTable(table: string): MatrixTablePolicy | undefined {

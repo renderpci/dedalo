@@ -79,6 +79,13 @@ import {
  */
 export { purgeTerminalJobs } from '../jobs/queue.ts';
 /**
+ * The job elapsed-time formatter, re-exported through the FACADE — ONE
+ * definition, in jobs/sse.ts. The diffusion_server_control widget prints a
+ * finished job's total time with it, so the queue table and tool_diffusion's
+ * progress line show the same figure.
+ */
+export { formatElapsed } from '../jobs/sse.ts';
+/**
  * The published-lang coherence audit, re-exported through the FACADE — ONE
  * definition, in targets/mariadb/lang_sweep.ts. src/core/ may read it (the
  * check_config maintenance widget's coherence row does) and

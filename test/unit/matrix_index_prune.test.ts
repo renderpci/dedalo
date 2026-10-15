@@ -43,4 +43,25 @@ describe('pruneMatrixIndexes executor (dry-run)', () => {
 		// PK + record-history scope are load-bearing → at least the required count kept.
 		expect(report.kept).toBeGreaterThanOrEqual(2);
 	}, 30000);
+
+	test('matrix_activity_diffusion: governed; the ledger load-bearers are never dropped', async () => {
+		const report = await pruneMatrixIndexes('matrix_activity_diffusion', { dryRun: true });
+		expect(report).not.toBeNull();
+		if (report === null) return;
+		const policy = policyForTable('matrix_activity_diffusion');
+		expect(policy).toBeDefined();
+		// Every dropped index must map to a policy entry that is NOT 'keep'.
+		const keepReasons = new Set(
+			(policy?.entries ?? []).filter((e) => e.disposition === 'keep').map((e) => e.reason),
+		);
+		for (const dropped of report.dropped) {
+			expect(keepReasons.has(dropped.reason)).toBe(false);
+		}
+		expect(report.kept).toBeGreaterThanOrEqual((policy?.requiredSignatures ?? []).length);
+		// The pending-probe GIN, the flip/stamp composite and the prune range survive.
+		const droppedNames = report.dropped.map((d) => d.name);
+		expect(droppedNames.some((n) => /relation_gin_idx/.test(n))).toBe(false);
+		expect(droppedNames.some((n) => /section_tipo_section_id_desc/.test(n))).toBe(false);
+		expect(droppedNames.some((n) => /timestamp_idx/.test(n))).toBe(false);
+	}, 30000);
 });

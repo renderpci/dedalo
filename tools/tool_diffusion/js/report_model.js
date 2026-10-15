@@ -95,6 +95,7 @@ export const ZONE_OPEN = Object.freeze({
 export const MSG = Object.freeze({
 	starting			: 'Starting diffusion...',
 	processing_prefix	: 'Processing records ',
+	linked_prefix		: 'Publishing linked records: ',
 	done				: 'OK. Request done',
 	done_legacy			: 'OK. Diffusion done',
 	partial_prefix		: 'Partial success: ',
@@ -207,6 +208,7 @@ export function classify_outcome(sse) {
 	if (msg.startsWith(MSG.partial_prefix))				return 'partial'
 	if (msg.startsWith(MSG.failed_prefix))				return 'failed'
 	if (msg.startsWith(MSG.processing_prefix))			return 'running'
+	if (msg.startsWith(MSG.linked_prefix))				return 'running'
 	if (msg === MSG.starting)							return 'queued'
 	if (msg.startsWith(MSG.error_prefix))				return 'failed'
 

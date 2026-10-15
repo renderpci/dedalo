@@ -1106,3 +1106,336 @@
 		}
 	}
 }
+
+// phone "+" on a field row (search_phone.js). A finger cannot drag, so on a
+// touch screen every field row carries a tap-to-add button that feeds the SAME
+// drop path. The node is created by JS only when `is_touch()` is true, so it
+// needs no width gate — a narrow desktop window still drags. The row becomes a
+// single 44px tap line: label left, one trailing "+" right (WCAG 2.5.5).
+.components_list_container .component_label {
+
+	&.has_add_button {
+		display: block;
+		min-height: 44px;
+		line-height: 44px; // one line: the label sits centred in the tap row
+		padding: 0 3rem 0 0.75rem;
+		cursor: pointer;
+		// one line, ellipsized before the trailing "+": the label must never run
+		// done under the controls (the long "Capas de dibujo de imágenes" case)
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		// the draggable.svg grip (and its dark-theme :before twin) is a desktop
+		// hint a finger cannot use; !important beats its :hover reveal
+		background-image: none !important;
+
+		&:before {
+			display: none;
+		}
+	}
+
+	// a subquery row carries a drill chevron LEFT of the "+". The label's
+	// ellipsis stops at the content edge, so that edge must clear the chevron —
+	// reserve BOTH controls or a long label overlaps the arrow.
+	&.has_subquery.has_add_button {
+		padding-right: calc(3rem + 1.65rem);
+	}
+	&.has_subquery.has_add_button:after {
+		right: 3.15rem;
+		top: 50%;
+		transform: translateY(-50%);
+	}
+
+	>.add_field_button {
+		position: absolute;
+		right: 0;
+		top: 50%;
+		transform: translateY(-50%);
+		width: 2.9rem;
+		// the global `button { height: min-content }` collapses an empty
+		// button: give the tap target its own definite height
+		height: 44px;
+		min-height: 44px;
+		margin: 0;
+		padding: 0;
+		border: none;
+		border-radius: 0;
+		background-color: transparent;
+		color: @color_grey_4;
+		cursor: pointer;
+		// the global button base paints a mask: this is a plain box
+		-webkit-mask-image: none;
+				mask-image: none;
+
+		// a crisp CSS plus. add.svg is a filled disc — too heavy as a repeated
+		// row affordance; currentColor keeps the glyph legible in both themes.
+		&:before,
+		&:after {
+			content: '';
+			position: absolute;
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, -50%);
+			background-color: currentColor;
+			border-radius: 1px;
+		}
+		&:before {
+			width: 1em;
+			height: 2px;
+		}
+		&:after {
+			width: 2px;
+			height: 1em;
+		}
+
+		&:active {
+			background-color: @color_hilite;
+		}
+	}
+}
+
+// ── COMPACT TIER — TABLET + PHONE ────────────────────────────────────────────
+// Below @width_break_point_0 the app "stops being a multi-column desktop"
+// (layout/vars.less), so the search pane stops being one too: the TYPE / FIELDS
+// / PRESET rails become a single chip row above the region each controls;
+// opening a chip drops its panel in as a card, the filter canvas closes the
+// column, and the fields list is a bounded sheet whose row "+" adds a field
+// (search_phone.js — shown where the pointer is coarse). Above the tier the
+// three-column desktop layout is unchanged.
+@media screen and (max-width: @width_break_point_0) {
+
+	@phone_hit: 44px; // WCAG 2.5.5, the same figure as the tools tier
+
+	// The search pane lives inside the section's `display: table` shells
+	// (section.less `.section`, page.less `.page > .content_data`). An AUTO
+	// table grows to its content's min-content width, so ONE long nowrap field
+	// label stretched the whole section sideways and the labels then overlapped
+	// the row controls. Fixed layout honours `width: 100%`, so the pane clips
+	// instead of growing. Scoped to sections that host the pane.
+	section.wrapper_section:has(.wrapper_search),
+	section.wrapper_section:has(.wrapper_search) > .content_data {
+		table-layout: fixed;
+	}
+
+	.wrapper_search > .search_global_container {
+		// flex-wrap IS the chip row: the rail tabs (order 1) share the first
+		// line; every panel (order 2) and the canvas (order 3) claim a full line.
+		flex-direction: row;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		// the chips share one line, so a COLUMN gap spaces them; the panels are
+		// each alone on their line and get none. The chips carry no side margin,
+		// so their outer edges line up with the panels below (both inset by the
+		// container padding) instead of being indented by an extra margin.
+		column-gap: 0.4rem;
+		row-gap: 0;
+		width: 100%;
+		// no side padding: the panels and chips use the container's full width
+		// (the page/section already provides the outer inset). Vertical padding
+		// stays so the row keeps its breathing room top and bottom.
+		padding: 0.5rem 0;
+		background-color: @color_grey_14;
+		outline: none;
+
+		// chips (TYPE / FIELDS / PRESET)
+		>.toggle_container_selector,
+		>.toggle_container_selection_presets {
+			writing-mode: horizontal-tb;
+			order: 1;
+			flex: 1 1 0;
+			min-width: 0;
+			min-height: @phone_hit;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			margin: 0 0 0.4rem;
+			padding: 0 0.5rem;
+			border: 1px solid @color_grey_13;
+			border-radius: var(--radius-md);
+			background-color: @color_white;
+			color: @color_grey_4;
+			font-size: 0.85em;
+			font-weight: 600;
+			letter-spacing: 0.05em;
+			// a longer translation ("FELDER") shrinks with an ellipsis instead
+			// of pushing its chip off the row
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			transition: background-color var(--transition-fast), border-color var(--transition-fast);
+
+			// the chip of an OPEN panel is filled (fields and type FOLLOW their
+			// chip; the presets panel precedes its chip — its own rule below)
+			&:has(+ .search_container_selector:not(.display_none)),
+			&:has(+ .wrapper_sections_selector:not(.display_none)) {
+				background-color: @color_orange_dedalo;
+				border-color: @color_orange_dedalo;
+				color: var(--fg_on_brand);
+			}
+		}
+
+		// the presets panel PRECEDES its chip in the DOM
+		>.search_container_selection_presets:not(.display_none) + .toggle_container_selection_presets {
+			background-color: @color_orange_dedalo;
+			border-color: @color_orange_dedalo;
+			color: var(--fg_on_brand);
+		}
+
+		// panels: one full-width card each, stacked under the chips
+		>.wrapper_sections_selector,
+		>.search_container_selector,
+		>.search_container_selection_presets {
+			order: 2;
+			flex: 1 1 100%;
+			width: 100%;
+			min-width: 0;
+			max-width: 100%;
+			margin-bottom: 0.5rem;
+		}
+		// fields list — a bounded sheet, ONE column. EVERY level of the drill
+		// fills the panel: a level is a <ul>, a row a full-width <li> (the
+		// desktop side-by-side drill columns become one stacked list, so the
+		// empty strip the two-column layout used to leave on the right is gone).
+		>.search_container_selector {
+			display: block;
+			width: 100%;
+			border: 1px solid @color_grey_13;
+			border-radius: var(--radius-md);
+			overflow: hidden;
+			background-color: @color_grey_16;
+
+			ul.list_container,
+			ul.target_list_container {
+				display: block;
+				width: 100%;
+				max-width: 100%;
+				max-height: 50vh;
+				border-left: none;
+			}
+			// a drilled child level REPLACES its parent list (its × returns)
+			.list_container:not(.target_list_container):has(~ .target_list_container:not(:empty)) {
+				display: none;
+			}
+		}
+
+		// thesaurus TYPE selector
+		>.wrapper_sections_selector {
+			max-width: none;
+			padding: 0.5rem;
+			border: 1px solid @color_grey_13;
+			border-radius: var(--radius-md);
+			background-color: @color_white;
+
+			>.typology_selector {
+				width: 100%;
+			}
+		}
+
+		// presets
+		>.search_container_selection_presets {
+			border: 1px solid @color_grey_13;
+			border-radius: var(--radius-md);
+			overflow: hidden;
+
+			// the section list reserves a 39px paginator strip even when there
+			// is nothing to paginate, and lets .list_body stretch to 100% — both
+			// are dead space inside a phone-size panel
+			// full-bleed: the section list grows to the panel on every axis
+			>.wrapper_section {
+				width: 100%;
+			}
+			>.wrapper_section > .paginator_container {
+				height: auto;
+				min-height: 0;
+			}
+			>.wrapper_section > .list_body {
+				height: auto;
+				width: 100%;
+			}
+
+			// A phone preset row is ONE line: [apply][edit][name][delete]. The
+			// desktop rule kept a fixed 4-track grid (1.5rem 1.1rem 1fr 1.5rem),
+			// which on a phone squeezed every track to a sliver — the stacked
+			// mobile labels rendered VERTICALLY. Flex + one ellipsized name
+			// column, the labels dropped, the icon controls given real targets.
+			>.wrapper_section > .list_body .section_record {
+				display: flex;
+				align-items: center;
+				min-height: 48px;
+
+				>.column {
+					display: flex;
+					align-items: center;
+					justify-content: flex-start;
+					min-width: 0;
+					flex: 1 1 auto;
+					padding: 0 0.4rem;
+
+					&:before {
+						display: none; // the stacked labels are noise in a one-line row
+					}
+				}
+
+				// the leading/trailing controls are icon spans: one column each,
+				// the button stretched to the row as a real 44px tap target while
+				// the GLYPH stays icon-sized (a stretched mask turned the long
+				// arrow_link into a full-width line)
+				>.column_apply_preset,
+				>.column_edit,
+				>.column_delete {
+					flex: 0 0 2.75rem;
+					justify-content: center;
+					padding: 0;
+
+					>.button.icon {
+						width: 100%;
+						height: 100%;
+						min-height: 44px;
+						margin: 0;
+						// icon-sized glyph, not stretched to the box
+						-webkit-mask-size: 1.4rem;
+								mask-size: 1.4rem;
+						-webkit-mask-position: center;
+								mask-position: center;
+					}
+				}
+			}
+		}
+
+		// filter canvas — closes the column, full width, no sticky rail
+		>.search_container_selection {
+			position: static;
+			top: auto;
+			order: 3;
+			flex: 1 1 100%;
+			width: 100%;
+			min-width: 0;
+			max-width: 100%;
+			margin: 0;
+			padding: 0;
+			background-color: transparent;
+
+			>.search_group_container {
+				flex-direction: column;
+				align-items: stretch;
+				justify-content: flex-start;
+				padding: 0;
+				gap: 0.5rem;
+
+				>.search_group {
+					grid-template-columns: minmax(0, 1fr);
+					min-width: 0;
+				}
+
+				>.search_buttons_container {
+					width: 100%;
+					// the actions are a card of their own, like the group above
+					padding: 0.5rem;
+					background-color: @color_white;
+					border: 1px solid @color_grey_13;
+					border-radius: var(--radius-md);
+				}
+			}
+		}
+	}
+}

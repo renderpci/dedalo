@@ -22,6 +22,7 @@
  */
 
 import type { Ddo } from '../../concepts/ddo.ts';
+import { configOwnerOf } from '../../concepts/emit_row.ts';
 import { clampClientLimit } from '../../concepts/sqo.ts';
 import { memoizedReadMatrixRecord } from '../../db/record_memo.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
@@ -129,7 +130,10 @@ export const relationIndexResolver: RelationModelResolver = {
 			await portalResolver.emitDdoItems(context);
 			return;
 		}
-		const config = await resolveIndexConfig(context.ddo.tipo, context.row.section_tipo);
+		const config = await resolveIndexConfig(
+			context.ddo.tipo,
+			configOwnerOf(context.row).section_tipo,
+		);
 		if (config.hasRequestConfig) {
 			await emitOwnConfigIndexData(context, config);
 			return;

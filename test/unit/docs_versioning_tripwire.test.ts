@@ -70,6 +70,13 @@
  *     Material's `document$` (emits on load AND after each swap). Checked by
  *     RUNNING it against a fake `document$`, not by reading it.
  *
+ *  9. THE "OLDER VERSION" BANNER SCRIPT DOES NOT THROW. mkdocs-material
+ *     9.7.6–9.7.7 ship a partial that writes the site's RELATIVE base_url into
+ *     `new URL()` with no base argument, which throws on every page — silently,
+ *     because the banner is hidden until that script unhides it and on the
+ *     latest version it should stay hidden. `overrides/` supplies the fixed
+ *     partial; checked by RUNNING it for the root and two nesting depths.
+ *
  * The manifest is EMPTY until the first publish, and that is a real state, not
  * a stub: no v7 URL is public yet, so no v7 rename can break anything yet.
  * Assertion 4 states that emptiness rather than passing silently; the
@@ -81,10 +88,12 @@
  * diverged the moment `exclude_docs` appeared — the script recorded a page as
  * published that the build had excluded.
  *
- * HONEST LIMIT: this proves the WIRING and the CONFIG, never the rendered page.
- * The privacy plugin rewrites assets to absolute URLs under site_url, so a
- * local build loads them from dedalo.dev — diagrams can only be checked on the
- * published site.
+ * HONEST LIMIT: this proves the WIRING, the CONFIG and the two shipped SCRIPTS
+ * it runs (assertions 8 and 9) — never the fully RENDERED page. The privacy
+ * plugin rewrites assets to absolute URLs under site_url, so a local build
+ * loads them from dedalo.dev; diagrams can only be checked on the published
+ * site, and that a tree actually reached the server is `docs:publish` rsync's
+ * business.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -418,6 +427,88 @@ describe('docs versioning: the published layout stays coherent', () => {
 		// The landing view keeps the browser's own document.referrer.
 		const first = calls.findIndex((c) => c[0] === 'trackPageView');
 		expect(calls.slice(0, first).some((c) => c[0] === 'setReferrerUrl')).toBe(false);
+	});
+
+	test('the "older version" banner runs without throwing (theme-partial override)', () => {
+		// THE ONE RENDERED-PAGE FAILURE THIS FILE CAN STILL CATCH. Everything
+		// above proves wiring and config; this proves a script we SHIP runs.
+		//
+		// mkdocs-material 9.7.6–9.7.7 (and upstream master, 2026-10-14) ship
+		// partials/javascripts/outdated.html as `new URL("{{ base_url }}")` —
+		// no base argument. base_url is RELATIVE ("." at the site root, ".." one
+		// level down), so the constructor throws on every page:
+		//
+		//   Uncaught TypeError: Failed to construct 'URL': Invalid URL
+		//
+		// The page looked fine: the banner is `hidden` until this script unhides
+		// it, and on the latest version it should stay hidden. So the build was
+		// green, the HTML was correct, and the only symptom was a console error
+		// — while the feature it silently disabled (the banner) is the one that
+		// starts mattering the day v7 stops being `latest`. That shape is why
+		// this is a gate and not a note.
+		//
+		// Dédalo's `overrides/` custom_dir supplies the fixed partial. This test
+		// RUNS it (like the analytics test above) rather than grepping it: a
+		// regression that reintroduces a URL with no base throws here.
+		const path = join(REPO_ROOT, 'overrides/partials/javascripts/outdated.html');
+		expect(
+			existsSync(path),
+			'overrides/partials/javascripts/outdated.html is missing — the unfixed theme ' +
+				'partial takes over again and every page throws "Failed to construct \'URL\'".',
+		).toBe(true);
+
+		const template = readFileSync(path, 'utf8');
+		const scriptMatch = template.match(/<script>([\s\S]*?)<\/script>/);
+		expect(
+			scriptMatch,
+			'the override has no <script> — has the partial changed shape?',
+		).not.toBeNull();
+		const script = scriptMatch![1]!;
+
+		/**
+		 * Render the partial for one page: resolve the Jinja expression to the
+		 * page's `base_url`, then run the script the browser will run.
+		 *
+		 * `location`/`store` are the only DOM the script touches; `__md_get` is
+		 * Material's real storage reader, scope key = `${scope.pathname}.${name}`
+		 * (see partials/javascripts/base.html).
+		 */
+		const run = (baseUrl: string, href: string, outdatedValue: boolean | null) => {
+			const src = script.replace(/\{\{.*?\}\}/g, baseUrl);
+			const location = { href, toString: () => href };
+			const wantKey = `${new URL(baseUrl, href).pathname}.__outdated`;
+			const el = { hidden: true };
+			const doc = { querySelector: () => el };
+			const storage = {
+				getItem: (k: string) =>
+					outdatedValue !== null && k === wantKey ? JSON.stringify(outdatedValue) : null,
+			};
+			const mdGet = (name: string, _storage: unknown, scope: { pathname: string }) =>
+				JSON.parse(storage.getItem(`${scope.pathname}.${name}`) ?? 'null');
+			new Function('document', 'location', 'sessionStorage', '__md_get', src)(
+				doc,
+				location,
+				storage,
+				mdGet,
+			);
+			return el.hidden;
+		};
+
+		// Every page of the manual has a relative base_url; the root and two
+		// depths are enough to prove the base argument is present and correct.
+		const pages: Array<[string, string]> = [
+			['.', 'https://dedalo.dev/docs/v7/'],
+			['..', 'https://dedalo.dev/docs/v7/core/'],
+			['../../..', 'https://dedalo.dev/docs/v7/a/b/c/'],
+		];
+		for (const [baseUrl, href] of pages) {
+			// The regression: no base argument throws before any banner logic.
+			expect(() => run(baseUrl, href, null), `threw for base_url ${baseUrl}`).not.toThrow();
+			// The point of the script: an outdated version unhides the banner.
+			expect(run(baseUrl, href, true), `banner stayed hidden for base_url ${baseUrl}`).toBe(false);
+			// …and a current version leaves it hidden.
+			expect(run(baseUrl, href, false), `banner unhid for base_url ${baseUrl}`).toBe(true);
+		}
 	});
 
 	test('the routing file states the v6-only exceptions in mod_rewrite, above the catch-all', () => {

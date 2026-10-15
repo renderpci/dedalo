@@ -129,23 +129,34 @@ describe('diffusion_server_control widget (native engine)', () => {
 			'errors',
 			'finished_at',
 			'job_id',
+			'linked_counter',
 			'max_attempts',
 			'msg',
+			'owner_name',
+			'owner_user_id',
+			'phase',
 			'process_id',
 			'section_tipo',
 			'started_at',
 			'state',
 			'total',
+			'total_time',
 			'type',
 		]);
 		// the fields the progress cell reads, with the types it assumes
 		expect(typeof (row as { counter: unknown }).counter).toBe('number');
 		expect(typeof (row as { total: unknown }).total).toBe('number');
 		expect((row as { state: unknown }).state).toBe('queued');
+		// not finished → no total time (the cell prints nothing rather than 0)
+		expect((row as { total_time: unknown }).total_time).toBeNull();
 		// process_id is the CLIENT label, never the job uuid (the row keys off
 		// job_id, but every human-facing string is the label)
 		expect((row as { process_id: unknown }).process_id).toBe(job.job.client_process_id);
 		expect((row as { process_id: unknown }).process_id).not.toBe(job.job.job_id);
+		// the user who fired it: the id always; the name is a string or null
+		expect((row as { owner_user_id: unknown }).owner_user_id).toBe(OWNER);
+		const ownerName = (row as { owner_name: unknown }).owner_name;
+		expect(ownerName === null || typeof ownerName === 'string').toBe(true);
 	});
 
 	test('removed lifecycle methods deny loudly (no daemon to control)', async () => {

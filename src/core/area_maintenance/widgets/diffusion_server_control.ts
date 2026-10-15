@@ -44,8 +44,81 @@ export async function countPendingDiffusion(): Promise<number> {
 	return Number(rows[0]?.n ?? 0);
 }
 
+/**
+ * Display names of the users who fired the listed jobs — one lookup per
+ * DISTINCT owner (the list holds up to 200 rows, typically a handful of users).
+ */
+async function resolveJobOwnerNames(
+	rows: readonly DiffusionJobRow[],
+): Promise<Map<number, string | null>> {
+	const names = new Map<number, string | null>();
+	const owners = new Set(rows.map((row) => row.owner_user_id));
+	if (owners.size === 0) return names;
+	const { currentApplicationLang } = await import('../../resolve/request_lang.ts');
+	const { resolveUserName } = await import('../../security/user_identity.ts');
+	const lang = currentApplicationLang();
+	for (const owner of owners) {
+		names.set(owner, await resolveUserName(owner, lang));
+	}
+	return names;
+}
+
+/**
+ * The spec-derived columns, each with its fallback. Extracted from
+ * mapJobToClient so the projection reads as a shape, not a pile of branches —
+ * this file carries a cyclomatic-complexity ratchet (scripts/lib/complexity.ts)
+ * and the flat `??` chains were what pushed the worst function over it.
+ */
+function jobSpecView(spec: DiffusionJobRow['spec']): {
+	element_tipo: string | null;
+	section_tipo: string | null;
+	type: string | null;
+} {
+	return {
+		element_tipo: spec?.diffusion_element_tipo ?? null,
+		section_tipo: spec?.section_tipo ?? null,
+		type: spec?.type ?? null,
+	};
+}
+
+/**
+ * The totals-derived progress columns, each with its fallback. The run's phase
+ * and linked-records counter are the SAME fields the queue stream frame carries,
+ * so the snapshot and the live patch draw the same bar.
+ */
+function jobProgressView(totals: DiffusionJobRow['totals']): {
+	counter: number;
+	total: number;
+	phase: DiffusionJobRow['totals']['phase'] | null;
+	linked_counter: number;
+	msg: string | null;
+} {
+	return {
+		counter: totals?.counter ?? 0,
+		total: totals?.total ?? 0,
+		phase: totals?.phase ?? null,
+		linked_counter: totals?.linked_counter ?? 0,
+		msg: totals?.msg ?? null,
+	};
+}
+
+/**
+ * Wall-clock time the job took, first start → finish (retries included),
+ * formatted by the SAME formatter as tool_diffusion's total_time so the two
+ * screens print the same figure. Null until the job has finished.
+ */
+function jobTotalTime(row: DiffusionJobRow, formatElapsed: (ms: number) => string): string | null {
+	return row.started_at && row.finished_at
+		? formatElapsed(Math.max(0, row.finished_at.getTime() - row.started_at.getTime()))
+		: null;
+}
+
 /** Project a durable job row to the admin-facing shape the widget renders. */
-function mapJobToClient(row: DiffusionJobRow): Record<string, unknown> {
+function mapJobToClient(
+	row: DiffusionJobRow,
+	ownerNames: ReadonlyMap<number, string | null>,
+	formatElapsed: (ms: number) => string,
+): Record<string, unknown> {
 	// job_id is exposed here deliberately: the queue's "auth is never by
 	// id-knowledge" rule is upheld by the global-admin DISPATCH gate, not by
 	// keeping the id secret. Requeue/purge need the unambiguous row id.
@@ -53,18 +126,19 @@ function mapJobToClient(row: DiffusionJobRow): Record<string, unknown> {
 		job_id: row.job_id,
 		process_id: row.client_process_id,
 		state: row.state,
-		element_tipo: row.spec?.diffusion_element_tipo ?? null,
-		section_tipo: row.spec?.section_tipo ?? null,
-		type: row.spec?.type ?? null,
-		counter: row.totals?.counter ?? 0,
-		total: row.totals?.total ?? 0,
-		msg: row.totals?.msg ?? null,
+		// who fired it: the id always, the name when the user record has one
+		// (null otherwise — the client renders the id rather than inventing one)
+		owner_user_id: row.owner_user_id,
+		owner_name: ownerNames.get(row.owner_user_id) ?? null,
+		...jobSpecView(row.spec),
+		...jobProgressView(row.totals),
 		attempt: row.attempt,
 		max_attempts: row.max_attempts,
 		cancel_requested: row.cancel_requested,
 		created_at: row.created_at,
 		started_at: row.started_at,
 		finished_at: row.finished_at,
+		total_time: jobTotalTime(row, formatElapsed),
 		errors: row.errors,
 	};
 }
@@ -83,13 +157,14 @@ function envIntOrNull(raw: string | undefined): number | null {
  * is erased at compile and carries no runtime edge.
  */
 async function diffusionModules() {
-	const [info, queue, scheduler, writers] = await Promise.all([
+	const [info, queue, scheduler, writers, facade] = await Promise.all([
 		import('../../../diffusion/api/info.ts'),
 		import('../../../diffusion/jobs/queue.ts'),
 		import('../../../diffusion/jobs/scheduler.ts'),
 		import('../../../diffusion/writers/registry.ts'),
+		import('../../../diffusion/api/actions.ts'),
 	]);
-	return { info, queue, scheduler, writers };
+	return { info, queue, scheduler, writers, facade };
 }
 
 /**
@@ -99,7 +174,7 @@ async function diffusionModules() {
  * pause flag), the pending-unpublish count and an engine-native config summary.
  */
 export async function diffusionControlGetValue(): Promise<WidgetResponse> {
-	const { info, queue, scheduler, writers } = await diffusionModules();
+	const { info, queue, scheduler, writers, facade } = await diffusionModules();
 	const { readEnv } = await import('../../../config/env.ts');
 	const { readBool } = await import('../../../config/readers.ts');
 	const { config } = await import('../../../config/config.ts');
@@ -109,6 +184,7 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 		queue.listJobsForCaller(null), // admin scope: all jobs (24h window, LIMIT 200)
 		countPendingDiffusion(),
 	]);
+	const ownerNames = await resolveJobOwnerNames(jobs);
 	const configSummary = {
 		// readBool, not readEnv==='true': the catalog default (true) must apply on
 		// an install that never wrote the key, or this panel reports "external
@@ -146,7 +222,7 @@ export async function diffusionControlGetValue(): Promise<WidgetResponse> {
 				paused: scheduler.isSchedulerPaused(),
 				draining: scheduler.isSchedulerDraining(),
 			},
-			jobs: jobs.map(mapJobToClient),
+			jobs: jobs.map((row) => mapJobToClient(row, ownerNames, facade.formatElapsed)),
 			pending,
 			// wire key unchanged; the local const is `configSummary` so it cannot be
 			// confused with the engine `config` object it now reads from.

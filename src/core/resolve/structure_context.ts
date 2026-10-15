@@ -693,6 +693,14 @@ async function stampSearchParentGrouperLabel(
 	};
 }
 
+/** The section an element's request_config resolves against (see `configSectionTipo`). */
+function requestConfigSectionTipo(options: {
+	sectionTipo: string;
+	configSectionTipo?: string;
+}): string {
+	return options.configSectionTipo ?? options.sectionTipo;
+}
+
 export async function buildStructureContext(options: {
 	tipo: string;
 	sectionTipo: string;
@@ -767,6 +775,15 @@ export async function buildStructureContext(options: {
 	 * (ui.add_tools), so an empty array needs no client change.
 	 */
 	isTemporal?: boolean;
+	/**
+	 * The section the element's request_config resolves against, when it is NOT
+	 * `sectionTipo`: a HOST section listing another section's component (the
+	 * Time Machine dd15 lists a record's components as its columns). The entry
+	 * still binds to `sectionTipo`; only 'self', `field_value` and the other
+	 * owner-derived sources move. Default `sectionTipo`. Data-side twin:
+	 * `concepts/emit_row.ts` (`config_owner`).
+	 */
+	configSectionTipo?: string;
 }): Promise<StructureContextEntry | null> {
 	const core = await buildCore(options.tipo, options.sectionTipo, options.mode);
 	if (core === null) return null;
@@ -1087,7 +1104,7 @@ export async function buildStructureContext(options: {
 		const { processRqoChildren } = await import('../relations/request_config/explicit.ts');
 		const requestConfigContext = {
 			ownerTipo: options.tipo,
-			ownerSectionTipo: options.sectionTipo,
+			ownerSectionTipo: requestConfigSectionTipo(options),
 			mode: options.mode,
 			ownerIsSection: core.model === 'section',
 			lang: options.lang,

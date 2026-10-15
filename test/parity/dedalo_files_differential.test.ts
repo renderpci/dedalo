@@ -230,6 +230,8 @@ const POST_HARVEST_CLIENT_ADDITIONS: readonly string[] = [
 	'/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/live_diffusion_server_control.js',
 	'/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/progress_model.js',
 	'/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/rollup_panel.js',
+	// its measured time-remaining estimate — census-adopted post-harvest addition
+	'/dedalo/core/area_maintenance/widgets/diffusion_server_control/js/time_remaining_model.js',
 	// thesaurus picker (WC-2026-08-14-thesaurus-picker-caller-declared)
 	'/dedalo/core/area_thesaurus/js/thesaurus_picker.js',
 	// errors v2 client contract (WC-2026-08-16-error-envelope-compat-removal,

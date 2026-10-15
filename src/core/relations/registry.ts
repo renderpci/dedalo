@@ -26,6 +26,7 @@
 import { getComponentModel } from '../components/registry.ts';
 import type { RelationResolverId } from '../components/types.ts';
 import type { Ddo } from '../concepts/ddo.ts';
+import type { EmitRow } from '../concepts/emit_row.ts';
 import type { MatrixRecord } from '../db/matrix.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import type { DataItem, EmissionContext, SectionsEnvelope } from '../resolve/component_data.ts';
@@ -47,7 +48,7 @@ export type EmitDdoFn = (
 	ddo: Ddo,
 	ddoMap: Ddo[],
 	record: MatrixRecord,
-	row: { section_tipo: string; section_id: number },
+	row: EmitRow,
 	defaultMode: string,
 	defaultLang: string,
 	callerTipo: string,
@@ -64,8 +65,8 @@ export interface RelationEmitContext {
 	ddoMap: Ddo[];
 	/** The host record the relation data is stored on. */
 	record: MatrixRecord;
-	/** The host row identity (outer record). */
-	row: { section_tipo: string; section_id: number };
+	/** The host row identity (outer record); its config side via configOwnerOf. */
+	row: EmitRow;
 	/** Canonical model of the ddo (post alias map). */
 	model: string;
 	/**

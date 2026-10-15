@@ -268,6 +268,7 @@ describe('frontier: levels budget + per-run dedup', () => {
 		const level0 = await runResolution(singleRecordOptions(publishableId, 0));
 		expect(level0).toHaveLength(1);
 		expect(level0[0]?.section.sectionTipo).toBe(SECTION_TIPO);
+		expect(level0[0]?.primary).toBe(true);
 
 		const level1 = await runResolution(singleRecordOptions(publishableId, 1));
 		const linkedSections = new Set(level1.slice(1).map((batch) => batch.section.sectionTipo));
@@ -278,7 +279,11 @@ describe('frontier: levels budget + per-run dedup', () => {
 			// every frontier batch belongs to a plan section, one level down
 			expect(plan.sections.some((s) => s.sectionTipo === batch.section.sectionTipo)).toBe(true);
 			expect(batch.level).toBe(0);
+			// the runner's progress counter keys on this, never on the section
+			// tipo: a self-linked section drains frontier batches of its own tipo
+			expect(batch.primary).toBe(false);
 		}
+		expect(level1[0]?.primary).toBe(true);
 	}, 240_000);
 
 	test('no (section_tipo, section_id) is emitted twice in one run', async () => {

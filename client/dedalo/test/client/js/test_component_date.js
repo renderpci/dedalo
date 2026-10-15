@@ -849,6 +849,35 @@ describe(`COMPONENT_DATE SEARCH MODE`, function() {
 
 
 
+	it(`search mode calendar does not fall back to a native mobile input`, async function() {
+
+		// The calendar is built on click. Its trigger is a `.button_container`
+		// (position:absolute, 1.8rem) that stays `visibility: hidden` /
+		// `display: none` until the field has focus — and flatpickr's UA-based
+		// mobile fallback (its `isMobile` path) parks a native
+		// `<input type="date">` INSIDE that hidden trigger instead of opening the
+		// calendar. On a phone the tap therefore produced no picker at all.
+		// `disableMobile: true` keeps flatpickr's own calendar, phone included.
+		const input		= node.querySelector('.input_date')
+		assert.isOk(input, 'expected .input_date in search mode')
+
+		const trigger	= node.querySelector('.button_calendar_container')
+		assert.isOk(trigger, 'expected .button_calendar_container in search mode')
+
+		// reveal the trigger (as the field's focus does) and click it
+		input.focus()
+		trigger.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+
+		const picker = trigger._flatpickr
+		assert.isOk(picker, 'expected a flatpickr instance bound to the calendar trigger')
+		assert.isTrue(picker.config.disableMobile, 'expected disableMobile true, so a phone gets the calendar and not a native input')
+
+		// the picker's calendar lives in <body>: do not leak it into later suites
+		picker.destroy()
+	});
+
+
+
 	it(`destroy after search tests`, async function() {
 
 		if (instance) {
