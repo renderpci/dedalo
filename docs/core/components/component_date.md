@@ -296,7 +296,7 @@ Modes: `edit`, `list`, `tm` (Time Machine, read-only — `tm` reuses the `list` 
 
 | View | edit | list | Notes |
 | --- | :---: | :---: | --- |
-| `default` | ✓ | ✓ | standard input group per `date_mode`; uses the flatpickr calendar in edit |
+| `default` | ✓ | ✓ | standard input group per `date_mode`; uses the built-in dd_date calendar in edit |
 | `mini` | ✓ | ✓ | compact variant for tight layouts |
 | `line` | ✓ | — | inline single-line edit |
 | `print` | ✓ | — | edit renderer forced to read-only (`permissions = 1`), shares the `default` view markup |
@@ -343,6 +343,6 @@ See the full date import definition [here](../importing_data.md#dates).
 - **Diffusion.** Dates are published as a SQL-friendly `Y-m-d H:i:s` string per `date_mode` (ranges joined with `,`, periods rendered as *"N years N months N days"*). Only the first record is currently published when several exist.
 - **Calculation widget input.** The component's flat value (`flatValue: 'date'` on the descriptor) can be read by the [component_info](component_info.md) calculation widget (`src/core/components/component_info/widgets/calculation/`) as a computation input.
 - **Default tools.** `tool_time_machine`, `tool_replace_component_data`, `tool_add_component_data` (the component sample also exposes `tool_propagate_component_data`). There is no `tool_lang` because the component is non-translatable.
-- **Client editor.** The edit/search views lazy-load the bundled `flatpickr` calendar (`load_editor()`).
+- **Client editor.** The edit/search views open the built-in dd_date calendar/clock picker (`client/dedalo/core/component_date/js/calendar_popup.js`, warmed by `load_editor()`): signed years (BCE), localized names and year / year+month / full-day precisions. No third-party date library.
 
 Related components: [component_input_text](component_input_text.md) (for descriptive / uncertain dates), [component_number](component_number.md) (numeric literals), [component_dataframe](component_dataframe.md) (pairing qualifiers/uncertainty with a date item), [component_portal](component_portal.md) (which can `sort_by_column` on a date column). See the typology overview in the [components index](index.md).

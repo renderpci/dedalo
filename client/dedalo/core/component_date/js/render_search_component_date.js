@@ -73,10 +73,11 @@ export const render_search_component_date = function() {
 *
 * Entry point called by the component lifecycle when `mode === 'search'`.
 * Builds the `content_data` subtree (q_operator input + date value inputs),
-* then — unless `render_level === 'content'` — loads the flatpickr calendar
-* library and wraps everything in `ui.component.build_wrapper_search`.
+* then — unless `render_level === 'content'` — warms the built-in
+* calendar/clock picker module (js/calendar_popup.js) and wraps everything in
+* `ui.component.build_wrapper_search`.
 *
-* The calendar library (`self.load_editor()`) is loaded here rather than in the
+* The picker module is warmed here rather than in the
 * edit renderer because search mode still supports the calendar picker button
 * embedded inside each date input via `render_input_element_*` helpers.
 *

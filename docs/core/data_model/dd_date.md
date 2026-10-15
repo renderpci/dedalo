@@ -218,7 +218,7 @@ period             →  { period: { year, month, day } }
 The client's own date parsing/editing never sets `time` — it reads the
 display order (`dmy` / `ymd` / `mdy`) from the global
 `page_globals.dedalo_date_order`, not from a per-component property.
-Parsing, formatting and the flatpickr editor all live in the JS model;
+Parsing, formatting and the built-in calendar editor all live in the JS model;
 mismatched fields are flagged rather than silently coerced. See the warning
 in [§2](#2-canonical-json-shape) for who is currently responsible for
 supplying `time` on a general field.

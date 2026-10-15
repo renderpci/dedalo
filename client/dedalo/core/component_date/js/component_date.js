@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, DEDALO_ROOT_WEB */
+/*global get_label, page_globals */
 /*eslint no-undef: "error"*/
 
 
@@ -13,7 +13,7 @@
 *   - Provides the date/time utility layer shared by all render sub-modules:
 *       parse/format helpers (`date_to_string`, `parse_string_date`, `time_to_string`,
 *       `parse_string_time`, `parse_string_period`, `date_time_to_string`),
-*       calendar-library loading (`load_editor`), placeholder generation
+*       calendar-module warming (`load_editor`), placeholder generation
 *       (`get_placeholder_value`), date-mode inspection (`get_date_mode`), and
 *       display value serialisation (`value_to_string_value`).
 *   - Delegates lifecycle, save and change-data operations to `component_common`.
@@ -41,6 +41,9 @@
 * Display order (dmy / ymd / mdy) is read from `page_globals.dedalo_date_order`
 * and is a global application setting, not a per-component property.
 *
+* The edit/search calendar and clock pickers are the built-in modules in
+* `js/calendar_popup.js` (no third-party date library).
+*
 * @see docs/core/components/component_date.md  Full data-model and import/export spec.
 */
 
@@ -48,13 +51,19 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
-	import {load_style} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {events_subscription} from '../../component_input_text/js/events_subscription.js'
 	import {render_edit_component_date} from '../../component_date/js/render_edit_component_date.js'
 	import {render_search_component_date} from '../../component_date/js/render_search_component_date.js'
 	import {render_list_component_date} from '../../component_date/js/render_list_component_date.js'
 	import {ApiError} from '../../common/js/api_error.js'
+
+
+
+// module state — the ONE in-flight import of the calendar module, shared by
+// every instance (see load_editor). Module-level by design: the import map
+// serves one module instance per page anyway.
+	let calendar_module_promise = null
 
 
 
@@ -137,38 +146,25 @@ export const component_date = function() {
 
 /**
 * LOAD_EDITOR
-* Lazily loads the flatpickr calendar library (JS + CSS) the first time an edit
-* or search widget is rendered.  If flatpickr has already been loaded by another
-* component instance in the same page, the check short-circuits so the files are
-* fetched only once per page lifetime.
+* Warms the built-in calendar module (js/calendar_popup.js) the first time an
+* edit or search widget is rendered, so the trigger's activation handler can
+* import it from the module cache instead of a cold fetch.
 *
-* The CSS is injected via `load_style`; the JS is imported as a dynamic module.
-* Both assets are fetched in parallel through `Promise.all`.
+* There is no third-party date library any more: the picker is this
+* component's own code, themable, localized and BCE-capable. The call sites in
+* `render_edit_component_date` / `render_search_component_date` keep their
+* `await self.load_editor()` contract, which is also the one place a future
+* picker's assets would be preloaded from.
 *
-* Called from `render_edit_component_date` and `render_search_component_date`
-* before constructing the input widget so the `flatpickr` global is guaranteed
-* to be defined by the time the calendar button is clicked.
-*
-* @returns {Promise<boolean>} Resolves to `true` when both assets are ready.
+* @returns {Promise<boolean>} Resolves to `true` when the module is ready.
 */
 component_date.prototype.load_editor = async function() {
 
-
-	// flatpickr calendar. load dependencies js/css if not already loaded
-		if (typeof flatpickr==='undefined') {
-
-			const load_promises = []
-
-			// css file load
-				const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
-				load_promises.push( load_style(lib_css_file) )
-
-			// js module import
-				const js_file_load = import('../../../lib/flatpickr/dist/flatpickr.min.js') // used minified version for now
-				load_promises.push( js_file_load )
-
-			await Promise.all(load_promises)
+	// warm the calendar module once per page (the import map caches it)
+		if (!calendar_module_promise) {
+			calendar_module_promise = import('./calendar_popup.js')
 		}
+		await calendar_module_promise
 
 
 	return true

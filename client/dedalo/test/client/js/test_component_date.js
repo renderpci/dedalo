@@ -9,6 +9,7 @@ import {get_instance} from '../../../core/common/js/instances.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
 import {ui} from '../../../core/common/js/ui.js'
 import {change_handler, build_date_changed_data_item} from '../../../core/component_date/js/render_edit_component_date.js'
+import {open_date_picker, open_time_picker} from '../../../core/component_date/js/calendar_popup.js'
 
 
 
@@ -849,31 +850,84 @@ describe(`COMPONENT_DATE SEARCH MODE`, function() {
 
 
 
-	it(`search mode calendar does not fall back to a native mobile input`, async function() {
+	it(`search mode calendar trigger opens the built-in dd_date picker`, async function() {
 
-		// The calendar is built on click. Its trigger is a `.button_container`
-		// (position:absolute, 1.8rem) that stays `visibility: hidden` /
-		// `display: none` until the field has focus — and flatpickr's UA-based
-		// mobile fallback (its `isMobile` path) parks a native
-		// `<input type="date">` INSIDE that hidden trigger instead of opening the
-		// calendar. On a phone the tap therefore produced no picker at all.
-		// `disableMobile: true` keeps flatpickr's own calendar, phone included.
+		// The trigger is a `.button_calendar_container` whose <a class="calendar">
+		// carries the activation (a11y.make_activable → click AND Enter/Space).
+		// There is no third-party picker and no mobile UA fallback any more: the
+		// built-in module (calendar_popup.js) is what opens, phone included.
 		const input		= node.querySelector('.input_date')
 		assert.isOk(input, 'expected .input_date in search mode')
 
-		const trigger	= node.querySelector('.button_calendar_container')
-		assert.isOk(trigger, 'expected .button_calendar_container in search mode')
+		// test hygiene: a leftover popup from a failed previous test must not be
+		// mistaken for the one this test opens
+		const leftover = document.body.querySelector('.dd_calendar_popup')
+		if (leftover) {
+			leftover.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+		}
 
-		// reveal the trigger (as the field's focus does) and click it
+		const trigger	= node.querySelector('.button_calendar_container .calendar')
+		assert.isOk(trigger, 'expected the .calendar trigger in search mode')
+		assert.equal(trigger.getAttribute('role'), 'button', 'expected the trigger to expose a button role (keyboard path)')
+		assert.equal(trigger.tabIndex, 0, 'expected the trigger to be a tab stop')
+
+		// reveal + open: the trigger shares the edit layout (floated over the
+		// input's top-right corner) and the reveal-on-focus contract, so the
+		// field is focused first — the real user path
 		input.focus()
-		trigger.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
+		await new Promise((resolve)=>setTimeout(resolve, 30))
+		trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
 
-		const picker = trigger._flatpickr
-		assert.isOk(picker, 'expected a flatpickr instance bound to the calendar trigger')
-		assert.isTrue(picker.config.disableMobile, 'expected disableMobile true, so a phone gets the calendar and not a native input')
+		let popup = document.body.querySelector('.dd_calendar_popup')
+		for (let i = 0; i < 40 && !popup; i++) {
+			await new Promise((resolve)=>setTimeout(resolve, 10))
+			popup = document.body.querySelector('.dd_calendar_popup')
+		}
+		assert.isOk(popup, 'expected the built-in picker popup in the document')
+		assert.isOk(popup.querySelector('.dp_grid'), 'expected a day grid in the picker')
+		assert.isOk(popup.querySelector('.dp_day'), 'expected day cells in the picker')
+		// the popup opens on the VALUE the field carries (the search field holds a
+		// date by now — an empty field opens on today, covered by the module tests)
+		assert.isOk(popup.querySelector('.dp_action_year'), 'expected the year precision chip')
 
-		// the picker's calendar lives in <body>: do not leak it into later suites
-		picker.destroy()
+		// Escape closes it and returns focus to the field
+		popup.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+		assert.isNull(document.body.querySelector('.dd_calendar_popup'), 'expected the popup removed after Escape')
+	});
+
+
+
+	it(`search mode: picking a day writes the formatted date into the field`, async function() {
+
+		const input		= node.querySelector('.input_date')
+		const trigger	= node.querySelector('.button_calendar_container .calendar')
+
+		// hygiene as above, then an EMPTY field so the picker opens on today
+		const leftover = document.body.querySelector('.dd_calendar_popup')
+		if (leftover) {
+			leftover.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+		}
+		input.value = ''
+		input.focus()
+		await new Promise((resolve)=>setTimeout(resolve, 30))
+		trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+		let popup = document.body.querySelector('.dd_calendar_popup')
+		for (let i = 0; i < 40 && !popup; i++) {
+			await new Promise((resolve)=>setTimeout(resolve, 10))
+			popup = document.body.querySelector('.dd_calendar_popup')
+		}
+		assert.isOk(popup, 'expected the built-in picker popup')
+
+		// pick TODAY (an empty field opens the picker on the current month)
+		const today_button = popup.querySelector('.dp_day.dp_today')
+		assert.isOk(today_button, 'expected a today cell in the month the empty field opens on')
+		today_button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+		const now		= new Date()
+		const expected	= instance.date_to_string({year: now.getFullYear(), month: now.getMonth() + 1, day: now.getDate()})
+		assert.equal(input.value, expected, 'expected the field to carry the picked date in the app date order')
+		assert.isNull(document.body.querySelector('.dd_calendar_popup'), 'expected the picker to close after a pick')
 	});
 
 
@@ -978,6 +1032,162 @@ describe(`COMPONENT_DATE IS_EMPTY`, function() {
 		assert.equal(instance.is_empty(), false, 'expected is_empty false for period with values')
 
 		await instance.destroy(true)
+	});
+});
+
+
+
+describe(`COMPONENT_DATE BUILT-IN PICKER (module level)`, function() {
+
+	this.timeout(15000);
+
+	let anchor = null
+
+	// every picker hangs off a real (detached-ish) trigger; body-appended so
+	// positioning and focus behave like production
+	beforeEach(function() {
+		anchor = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'test_picker_anchor',
+			parent			: document.body
+		})
+	})
+
+	afterEach(function() {
+		if (anchor) {
+			anchor.remove()
+			anchor = null
+		}
+		// never leak a popup into a later suite
+		const leftover = document.body.querySelector('.dd_calendar_popup')
+		if (leftover) {
+			leftover.remove()
+		}
+	})
+
+
+
+	it(`commits a BCE year-only selection (the value flatpickr could not express)`, async function() {
+
+		let selected = null
+		const controller = open_date_picker({
+			anchor		: anchor,
+			initial		: {},
+			on_select	: (dd_date) => { selected = dd_date },
+			labels		: {}
+		})
+		const popup = controller.popup
+
+		// type a signed (BCE) year and commit ONLY the year — a partial date
+		const year_input = popup.querySelector('.dp_year')
+		year_input.value = '-205'
+		year_input.dispatchEvent(new Event('change'))
+
+		const era_button = popup.querySelector('.dp_era')
+		assert.equal(era_button.textContent, 'BCE', 'expected the era chip to read BCE for a negative year')
+		assert.equal(era_button.getAttribute('aria-pressed'), 'true', 'expected aria-pressed on the era toggle')
+
+		popup.querySelector('.dp_action_year').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		assert.deepEqual(selected, {year: -205}, 'expected a BCE year-only dd_date')
+		assert.isNull(document.body.querySelector('.dd_calendar_popup'), 'expected the popup to close after committing')
+	});
+
+
+
+	it(`era toggle flips the sign of the shown year`, async function() {
+
+		const controller = open_date_picker({ anchor: anchor, initial: {}, on_select: () => {}, labels: {} })
+		const popup = controller.popup
+
+		const year_input = popup.querySelector('.dp_year')
+		const era_button = popup.querySelector('.dp_era')
+		const positive = Number(year_input.value)
+		assert.isTrue(positive > 0, 'expected a positive starting year')
+
+		era_button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		assert.equal(Number(year_input.value), -positive, 'expected the era toggle to negate the year field')
+
+		era_button.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		assert.equal(Number(year_input.value), positive, 'expected a second toggle to restore the year')
+
+		controller.close()
+	});
+
+
+
+	it(`commits a year+month precision (partial date)`, async function() {
+
+		let selected = null
+		const controller = open_date_picker({
+			anchor		: anchor,
+			initial		: { year: 2022, month: 4 },
+			on_select	: (dd_date) => { selected = dd_date },
+			labels		: {}
+		})
+		const popup = controller.popup
+
+		popup.querySelector('.dp_action_month').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		assert.deepEqual(selected, {year: 2022, month: 4}, 'expected the year+month precision to commit')
+	});
+
+
+
+	it(`day grid is one tab stop and arrows rove across days`, async function() {
+
+		let selected = null
+		const controller = open_date_picker({
+			anchor		: anchor,
+			initial		: { year: 2024, month: 3, day: 15 },
+			on_select	: (dd_date) => { selected = dd_date },
+			labels		: {}
+		})
+		const popup = controller.popup
+
+		const selected_day = popup.querySelector('.dp_day.dp_selected')
+		assert.isOk(selected_day, 'expected the initial day to be marked selected')
+		assert.equal(selected_day.textContent, '15', 'expected the 15th selected')
+		assert.equal(selected_day.tabIndex, 0, 'expected the selected day to be the single tab stop')
+
+		// ArrowRight: roving focus to the 16th
+		popup.querySelector('.dp_grid tbody').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }))
+		assert.equal(document.activeElement.textContent, '16', 'expected focus on the 16th after ArrowRight')
+		assert.equal(document.activeElement.tabIndex, 0, 'expected the focused day to be the roving tab stop')
+
+		// ArrowDown: +7 days
+		popup.querySelector('.dp_grid tbody').dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+		assert.equal(document.activeElement.textContent, '23', 'expected focus on the 23rd after ArrowDown')
+
+		// PageDown: next month, same day
+		popup.querySelector('.dp_grid tbody').dispatchEvent(new KeyboardEvent('keydown', { key: 'PageDown', bubbles: true }))
+		assert.equal(document.activeElement.textContent, '23', 'expected the same day of the next month')
+
+		// click commits the focused day
+		const target = document.activeElement
+		target.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		assert.deepEqual(selected, {year: 2024, month: 4, day: 23}, 'expected the April 23rd commit')
+	});
+
+
+
+	it(`time picker commits hour/minute/second`, async function() {
+
+		let selected = null
+		const controller = open_time_picker({
+			anchor		: anchor,
+			initial		: { hour: 14, minute: 30, second: 0 },
+			on_select	: (dd_time) => { selected = dd_time },
+			labels		: {}
+		})
+		const popup = controller.popup
+
+		const hour_select = popup.querySelector('.dp_time_hour')
+		assert.equal(hour_select.value, '14', 'expected the initial hour in the select')
+
+		hour_select.value = '9'
+		hour_select.dispatchEvent(new Event('change'))
+		assert.deepEqual(selected, {hour: 9, minute: 30, second: 0}, 'expected a full time object on commit')
+
+		controller.close()
 	});
 });
 

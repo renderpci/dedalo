@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global get_label, page_globals, SHOW_DEBUG, flatpickr */
+/* global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -29,7 +29,7 @@
 *   component instance (`self`)
 *     └─ self.data.entries  (Array of date-entry objects)
 *         └─ per entry → get_content_value() → mode-specific render_input_element_*()
-*              └─ flatpickr calendar (lazy-loaded by self.load_editor())
+*              └─ built-in calendar/clock picker (js/calendar_popup.js, warmed by self.load_editor())
 *
 * Date mode variants (from `self.get_date_mode()` → `context.properties.date_mode`):
 *   'date'       → single date input       (render_input_element_date)
@@ -79,8 +79,8 @@ export const view_line_edit_date = function() {
 * content_data subtree when `options.render_level === 'content'`.
 *
 * Side effects:
-*   - Calls `self.load_editor()` which may dynamically import the flatpickr
-*     library and inject its CSS if not already loaded in the page.
+*   - Calls `self.load_editor()` (warms the built-in calendar module; no
+*     third-party assets to fetch).
 *   - Adds the active `date_mode` string (e.g. 'date', 'range', 'period') as a
 *     CSS class on the returned wrapper, enabling mode-specific styling.
 *   - Sets `wrapper.content_data` as a DOM pointer for callers that need to
@@ -89,7 +89,7 @@ export const view_line_edit_date = function() {
 * Rendering pipeline:
 *   1. Resolve `render_level` ('full' by default, 'content' for partial refresh).
 *   2. Resolve `date_mode` from ontology properties.
-*   3. Await flatpickr load (no-op if already loaded).
+*   3. Await editor availability (no-op once warmed).
 *   4. Build content_data subtree via `get_content_data`.
 *   5. If render_level === 'content', return content_data directly.
 *   6. Otherwise wrap in the standard component wrapper with `label: null`

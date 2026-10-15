@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global get_label, page_globals, SHOW_DEBUG, flatpickr */
+/* global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -63,8 +63,6 @@
 *   get_label  — localised label map ({new:'New', delete:'Delete', sure:'Are you sure?', …})
 *   SHOW_DEBUG — boolean flag; not currently used inside this module but declared for
 *                parity with the rest of the component family.
-*   flatpickr  — date-picker library declared here for the broader component family;
-*                not used by this module directly.
 */
 export const render_edit_component_number = function() {
 

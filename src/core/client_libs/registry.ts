@@ -118,7 +118,6 @@ export const CLIENT_LIBS: Readonly<Record<string, ClientLib>> = {
 		probe: 'turf.min.js',
 		note: "Was bundled *inside* leaflet's `dist/`; now its own dep.",
 	},
-	flatpickr: { base: 'node_modules/flatpickr', source: 'npm', probe: 'dist/flatpickr.min.js' },
 	split: {
 		base: 'node_modules/split.js',
 		source: 'npm',

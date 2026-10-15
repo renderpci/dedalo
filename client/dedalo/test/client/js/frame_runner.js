@@ -84,7 +84,7 @@ if (ready) {
 	// run mocha
 	mocha.checkLeaks(false)
 	mocha.setup({
-		globals: ['flatpickr']
+		globals: []
 	})
 
 	const runner = mocha.run()

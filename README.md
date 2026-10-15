@@ -117,7 +117,7 @@ Some projects that use Dédalo to manage their Cultural Heritage and/or Oral Arc
 
 ### Client-side libraries
 
-Dédalo's client uses: flatpickr, leaflet, geoman, d3, nvd3, svgCanvas, pdfjs, pdfkit, ckeditor 5+, and others. These are bundled with the client source.
+Dédalo's client uses: leaflet, geoman, d3, nvd3, svgCanvas, pdfjs, pdfkit, ckeditor 5+, and others. These are bundled with the client source.
 
 ---
 

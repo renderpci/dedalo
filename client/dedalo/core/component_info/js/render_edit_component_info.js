@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global get_label, page_globals, SHOW_DEBUG, flatpickr */
+/* global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -48,8 +48,6 @@
 *
 * Global references (declared in /*global*\/ above):
 *   get_label, page_globals, SHOW_DEBUG — standard Dédalo runtime globals.
-*   flatpickr — date-picker library; declared as global for ESLint but not directly
-*               referenced in this file (it is used by widget modules loaded at runtime).
 */
 export const render_edit_component_info = function() {
 

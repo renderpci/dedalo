@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global get_label, page_globals, SHOW_DEBUG, flatpickr */
+/* global get_label, page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -37,7 +37,7 @@
 * only when the user types into the input field (see view_default_edit_password).
 *
 * Global references (declared in host pages; resolved at runtime):
-*   get_label, page_globals, SHOW_DEBUG, flatpickr — declared in the
+*   get_label, page_globals, SHOW_DEBUG — declared in the
 *   /*global*\/ directive above but none of these are used directly in this
 *   module. They are listed for eslint compatibility with the host environment.
 */

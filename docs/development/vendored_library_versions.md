@@ -29,7 +29,7 @@ the repo any more. **Two** sources back that URL, and that is the whole story:
 
 | Source | Count | Root | In git? |
 |---|---|---|---|
-| **npm** | 16 | `node_modules/` | no — `bun install` |
+| **npm** | 15 | `node_modules/` | no — `bun install` |
 | **vendor** | 5 | `vendor/` | **yes** — committed (ckeditor, json-view, lz-string, pdfjs, transformers) |
 
 <!-- END GENERATED client-libs:sources -->
@@ -83,7 +83,6 @@ they were prose (eight found 2026-08-28, five more 2026-10-02).
 | leaflet | `leaflet` | 1.9.4 | dependency |  |
 | geoman | `@geoman-io/leaflet-geoman-free` | 2.20.2 | dependency | Was bundled *inside* leaflet's `dist/`; now its own dep. |
 | turf | `@turf/turf` | 7.4.0 | dependency | Was bundled *inside* leaflet's `dist/`; now its own dep. |
-| flatpickr | `flatpickr` | 4.6.13 | dependency |  |
 | split | `split.js` | 1.6.5 | dependency | Used by the indexation tool. |
 | iro | `@jaames/iro` | 5.5.2 | dependency |  |
 | codex-tooltip | `codex-tooltip` | 1.0.6 | dependency |  |

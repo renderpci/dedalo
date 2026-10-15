@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global get_label, page_globals, flatpickr */
+/* global get_label, page_globals */
 /*eslint no-undef: "error"*/
 
 
@@ -45,7 +45,10 @@
 * Globals consumed (declared above in the /*global*\/ directive):
 *   get_label       — localised UI label map (e.g. get_label.year, get_label.sure)
 *   page_globals    — application-wide settings (dedalo_date_order: 'dmy'|'mdy'|'ymd')
-*   flatpickr       — third-party date/time picker library, lazy-loaded by component_date.load_editor()
+*
+* The calendar/clock pickers are the built-in dd_date components
+* (js/calendar_popup.js), warmed by component_date.load_editor() and imported
+* on demand by the trigger's activation handler.
 */
 
 // imports
@@ -53,6 +56,7 @@
 	import {view_mini_date} from './view_mini_date.js'
 	import {view_line_edit_date} from './view_line_edit_date.js'
 	import {ui} from '../../common/js/ui.js'
+	import {a11y} from '../../common/js/a11y.js'
 	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {stop_page_shortcuts} from '../../common/js/utils/keyboard.js'
@@ -405,22 +409,56 @@ const attach_input_handlers = function(input, self, change_callback, options={})
 
 
 /**
+* GET_PICKER_LABELS
+* The localized strings the built-in calendar/clock pickers draw (see
+* js/calendar_popup.js). Existing label keys where the catalog has them;
+* short English fallbacks otherwise, so a picker opened in a context where
+* get_label is not populated (a bare unit frame) still renders.
+* @returns {Object}
+*/
+const get_picker_labels = () => {
+
+	return {
+		calendar	: get_label.calendar || 'Calendar',
+		time		: get_label.time || 'Time',
+		today		: get_label.today || 'Today',
+		year		: get_label.year || 'year',
+		month		: get_label.month || 'month',
+		day			: get_label.day || 'day',
+		years		: get_label.years || 'years',
+		previous	: get_label.previous || 'Previous',
+		next		: get_label.next || 'Next',
+		ce			: get_label.ce || 'CE',
+		bce			: get_label.bce || 'BCE',
+		hour		: get_label.hour || 'hour',
+		minute		: get_label.minute || 'minute',
+		second		: get_label.second || 'second'
+	}
+}//end get_picker_labels
+
+
+
+/**
 * GET_INPUT_DATE_NODE
 * Build a single date input widget composed of a text <input> and a calendar picker button.
 *
 * The text input accepts free-form typed dates; characters not matching /[0-9-\/\.,]/ are
-* filtered out on each keystroke. The calendar button opens a flatpickr date picker whose
-* dateFormat is derived from page_globals.dedalo_date_order ('dmy'|'mdy'|'ymd') joined
-* by self.date_separator. Selecting a date in flatpickr writes to input.value and
-* programmatically fires a 'change' event so that change_handler is invoked exactly as
-* if the user had typed the date.
+* filtered out on each keystroke and remain the fast path for every precision. The calendar
+* button opens the built-in dd_date picker (js/calendar_popup.js): signed years (BCE
+* included), localized month/weekday names, and three committable precisions — year only,
+* year+month, or a full date — so the picker produces exactly the partial values the
+* component stores. Selecting a date writes to input.value through the component's ONE
+* formatter (self.date_to_string) and programmatically fires a 'change' event so that
+* change_handler is invoked exactly as if the user had typed the date.
+*
+* The trigger is a real control: a11y.make_activable gives the icon anchor role=button,
+* a tab stop, an accessible name and the SAME activation callback on click and
+* Enter/Space. Alt+ArrowDown inside the field opens the picker too (the platform
+* convention), and the picker itself is fully keyboard driven once open.
 *
 * The input_wrap container (<div class="input-group">) is the node returned; the caller
 * appends it to the appropriate content_value container and may append additional controls
 * (e.g. a remove button) after the fact.
-*
-* (!) flatpickr is loaded lazily by self.load_editor() and is referenced as a global.
-*     It must be loaded before this factory function is called.
 *
 * @param {number}      i           - Zero-based index of the data entry (used in change_handler)
 * @param {string}      date_input  - Which date bound this field represents: 'start' or 'end'
@@ -461,66 +499,71 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 				input_filter_regex : /[^0-9-\/\.,]/g
 			})
 
-	// button_calendar
-		const button_calendar = render_button_calendar()
-		// mouseup event
-			const fn_calendar_mouseup = function() {
+	// button_calendar. The container goes into the input-group; the INNER
+	// <a class="calendar"> is the activable control — its inset:0 hit area
+	// (component_date.less) covers the whole ring, so every click on the
+	// trigger lands on it.
+		const button_calendar_container = render_button_calendar()
+		const button_calendar = button_calendar_container.querySelector('a.calendar')
 
-				const dd_date_format	= page_globals.dedalo_date_order || 'dmy'
-				const input_wrap		= input.parentNode
+		// activate: open the built-in dd_date calendar (js/calendar_popup.js).
+		// The module is imported on demand; load_editor() has normally warmed it.
+		const activate_calendar = async function(e) {
 
-				// map the Dédalo date order setting to the flatpickr format token order
-				const ar_date_format = (dd_date_format === 'dmy')
-					? ['d','m','Y']
-					: (dd_date_format === 'ymd')
-						? ['Y','m','d']
-						: (dd_date_format === 'mdy')
-							? ['m','d','Y']
-							: ''
-				const date_format = ar_date_format.join(self.date_separator)
-				const default_date = input.value
+			e.preventDefault()
+			e.stopPropagation()
 
-				// datePicker
-					// destroy any previous flatpickr bound to this button before creating a
-					// new one — otherwise each calendar open leaks the prior instance's DOM
-					// and document listeners (flatpickr stores its instance on element._flatpickr).
-					if (button_calendar._flatpickr) {
-						button_calendar._flatpickr.destroy()
-					}
-					const datePicker = flatpickr(button_calendar, {
-						dateFormat	: date_format,
-						defaultDate	: default_date,
-						allowInput	: true,
-						// disableMobile: keep flatpickr's OWN calendar on a phone.
-						// Its UA-based mobile fallback swaps the picker for a native
-						// <input type="date"> inserted beside the trigger — which here
-						// is a `.button_container` (position:absolute, 1.8rem) that is
-						// `visibility: hidden` / `display: none` until the surrounding
-						// field has focus. On a touch tap the field never keeps focus,
-						// so the native input stays hidden and NO calendar opens (the
-						// report: search-mode date picker dead on a phone).
-						disableMobile	: true,
-						// clickOpens: the picker is opened by OUR `mouseup` handler
-						// (which builds the instance and calls open()). flatpickr's
-						// own click-toggle would then fire on the SAME click and
-						// close it again — the picker flashed and the click read as
-						// dead. One opener, deterministically.
-						clickOpens		: false,
-						// onClose	: close_flatpickr,
-						onValueUpdate : function(selectedDates, dateStr){
-							// reset style error
-							ui.component.error(false, input_wrap)
-							// set input value
-							input.value = dateStr
-							// fire change event
-							input.dispatchEvent(new Event('change'))
-						}
-					})
-					datePicker.open()
-			}//end fn_calendar_mouseup
-			button_calendar.addEventListener('mouseup', fn_calendar_mouseup)
-		// add to input_wrap
-		input_wrap.appendChild(button_calendar)
+			const {open_date_picker} = await import('./calendar_popup.js')
+
+			// the input's current value is the calendar's starting point; a
+			// partial or BCE value parses (an unparseable one simply opens at
+			// today — the calendar is additive, it never overwrites by opening)
+			const parsed	= self.parse_string_date(input.value)
+			const initial	= (parsed.data && Number.isInteger(parsed.data.year)) ? parsed.data : {}
+
+			open_date_picker({
+				anchor			: button_calendar,
+				initial			: initial,
+				format			: (dd_date) => self.date_to_string(dd_date),
+				return_focus	: input,
+				labels			: get_picker_labels(),
+				on_select		: (dd_date) => {
+					// ONE formatter: the component's date_to_string writes the
+					// value; the native change event keeps the save flowing
+					// through change_handler exactly as if it had been typed.
+					ui.component.error(false, input_wrap)
+					input.value = self.date_to_string(dd_date)
+					input.dispatchEvent(new Event('change'))
+				}
+			})
+		}//end activate_calendar
+
+		// keyboard + pointer activation (role, tab stop, name and the same
+		// callback for click and Enter/Space) — the ONE chokepoint for
+		// non-native controls (client_keyboard_activation_tripwire)
+		a11y.make_activable(button_calendar, {
+			on_activate	: activate_calendar,
+			label		: get_label.calendar || 'Calendar'
+		})
+		// Don't let the trigger steal focus from the input. Losing focus hides
+		// the (focus-revealed) trigger BEFORE the click that opens the picker,
+		// so the click would read as dead; also avoids text selection.
+		button_calendar.addEventListener('mousedown', function(e) {
+			e.preventDefault()
+			e.stopPropagation()
+		})
+
+		// Alt+ArrowDown opens the picker from the field itself (the platform
+		// convention for date inputs; the trigger covers the pointer/screen
+		// reader path, this covers a keyboard user already typing)
+		input.addEventListener('keydown', function(e) {
+			if (e.altKey && e.key === 'ArrowDown') {
+				activate_calendar(e)
+			}
+		})
+
+	// add to input_wrap
+		input_wrap.appendChild(button_calendar_container)
 
 
 	return input_wrap
@@ -534,14 +577,12 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 *
 * Analogous to get_input_date_node but configured for time entry.
 * The input filter restricts characters to digits and colons (/[^0-9:]/g).
-* The flatpickr picker is opened in time-only mode (noCalendar:true, enableTime:true,
-* time_24hr:true, enableSeconds:true). The time format is built from self.time_separator
-* joining the flatpickr tokens ['H','i','S'] (24-hour, minutes, seconds).
+* The clock button opens the built-in time picker (js/calendar_popup.js): three native
+* selects — hours / minutes / seconds, 24-hour — which on phones get the OS's own wheel
+* UI, and commit through time_to_string + a 'change' event, exactly like typing.
 *
-* Unlike the date picker which uses onValueUpdate, the time picker uses onClose to
-* synchronise the input value. This fires when the picker is dismissed — either by
-* selecting a time or clicking outside. (!) self.update_value_flatpickr, referenced in
-* a commented-out line, is not present in the module; the comment is left as-is.
+* The trigger is a real control (a11y.make_activable: role, tab stop, name; the same
+* callback on click and Enter/Space); Alt+ArrowDown in the field opens it too.
 *
 * @param {number}      i           - Zero-based index of the data entry (used in change_handler)
 * @param {string}      date_input  - Which time bound this field represents: 'start' or 'end'
@@ -582,53 +623,59 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 				input_filter_regex : /[^0-9:]/g
 			})
 
-	// button_calendar
-		const button_calendar = render_button_calendar()
-		// mouseup event
-			const fn_calendar_mouseup = function() {
-				// short vars
-					const default_time		= input.value
-					const ar_time_format	= ['H','i','S']
-					const time_format		= ar_time_format.join(self.time_separator)
+	// button_calendar. The container goes into the input-group; the inner
+	// <a class="calendar"> is the activable control (see get_input_date_node).
+		const button_calendar_container = render_button_calendar()
+		const button_calendar = button_calendar_container.querySelector('a.calendar')
 
-				// datePicker
-					// destroy any previous flatpickr bound to this button before creating a
-					// new one to avoid leaking the prior instance's DOM and document listeners.
-					if (button_calendar._flatpickr) {
-						button_calendar._flatpickr.destroy()
-					}
-					const datePicker = flatpickr(button_calendar, {
-						enableTime		: true,
-						noCalendar		: true,
-						time_24hr		: true,
-						enableSeconds	: true,
-						dateFormat		: time_format,
-						defaultDate		: default_time,
-						// disableMobile: the same reason as the date picker — flatpickr's
-						// mobile fallback hides the picker behind a native input that the
-						// component's hidden-until-focus trigger cannot reveal on a tap.
-						disableMobile	: true,
-						// clickOpens: same as the date picker — our own `mouseup`
-						// opens the instance, so flatpickr must NOT also toggle on the
-						// same click (that closed it immediately).
-						clickOpens		: false,
-						// onClose		: close_flatpickr,
-						// onValueUpdate
-						onClose			: function(selectedDates, dateStr){
-							// reset style error
-							ui.component.error(false, input_wrap)
-							// set input value
-							input.value = dateStr
-							// fire change event
-							input.dispatchEvent(new Event('change'))
-							// self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
-						}
-					})
-					datePicker.open()
+		// activate: open the built-in time picker (js/calendar_popup.js)
+		const activate_time = async function(e) {
+
+			e.preventDefault()
+			e.stopPropagation()
+
+			const {open_time_picker} = await import('./calendar_popup.js')
+
+			// the input's current time is the picker's starting point; an empty
+			// or unparseable value simply starts at the current clock time
+			const parsed	= self.parse_string_time(input.value)
+			const data		= parsed.data || {}
+			const initial	= (Number.isInteger(data.hour) || Number.isInteger(data.minute) || Number.isInteger(data.second))
+				? data
+				: {}
+
+			open_time_picker({
+				anchor			: button_calendar,
+				initial			: initial,
+				return_focus	: input,
+				labels			: get_picker_labels(),
+				on_select		: (dd_time) => {
+					ui.component.error(false, input_wrap)
+					input.value = self.time_to_string(dd_time)
+					input.dispatchEvent(new Event('change'))
+				}
+			})
+		}//end activate_time
+
+		a11y.make_activable(button_calendar, {
+			on_activate	: activate_time,
+			label		: get_label.time || 'Time'
+		})
+		// keep the input's focus (see get_input_date_node)
+		button_calendar.addEventListener('mousedown', function(e) {
+			e.preventDefault()
+			e.stopPropagation()
+		})
+
+		// Alt+ArrowDown opens the picker from the field itself
+		input.addEventListener('keydown', function(e) {
+			if (e.altKey && e.key === 'ArrowDown') {
+				activate_time(e)
 			}
-			button_calendar.addEventListener('mouseup', fn_calendar_mouseup)
-		// add to input_wrap
-		input_wrap.appendChild(button_calendar)
+		})
+
+	// add to input_wrap
+		input_wrap.appendChild(button_calendar_container)
 
 
 	return input_wrap
@@ -1238,8 +1285,15 @@ const render_button_remove = function (self, id) {
 			element_type	: 'span',
 			class_name		: 'button_container button_remove_container hidden_button'
 		})
-		// mousedown event
-		button_remove_container.addEventListener('mousedown', fn_mousedown)
+		// activation: pointer (mousedown, the timing this surface always used —
+		// it flushes the focused input's pending change first) AND Enter/Space,
+		// through the ONE a11y chokepoint (a bare mousedown on a span is
+		// keyboard-dead: activation keys dispatch click, never mousedown)
+		a11y.make_activable(button_remove_container, {
+			on_activate		: fn_mousedown,
+			label			: get_label.delete || 'Delete',
+			pointer_event	: 'mousedown'
+		})
 
 	// button_remove
 		const button_remove = ui.create_dom_element({
@@ -1258,15 +1312,15 @@ const render_button_remove = function (self, id) {
 
 /**
 * RENDER_BUTTON_CALENDAR
-* Build the calendar/clock picker trigger button shared by date and time input nodes.
+* Build the calendar/clock picker trigger shared by date and time input nodes.
 *
-* The button itself is an <a> element styled as a button with CSS class 'calendar'.
-* The container stops mousedown propagation so clicking the calendar icon does not
-* activate/deactivate the component wrapper. The actual flatpickr opening logic is
-* attached by the caller (get_input_date_node / get_input_time_node) via 'mouseup'.
-*
-* The button is rendered with tabIndex = -1 so it is skipped by keyboard Tab navigation;
-* the text input next to it is the focusable element for accessibility.
+* The node returned is the container; the returned `.calendar` <a> inside it is
+* the actual control. The container is positioned by CSS (absolute, revealed on
+* the field's focus-within — or permanently on coarse pointers), and the caller
+* (get_input_date_node / get_input_time_node) attaches activation through
+* `a11y.make_activable`: role=button, a tab stop, an accessible name and the same
+* callback on click and Enter/Space. The <a> (not the container) owns that
+* wiring, its ::after hit area covering the whole container.
 *
 * @returns {HTMLElement} button_calendar_container — <span class="button_container button_calendar_container hidden_button">
 *   containing an <a class="input-group-addon button calendar">
@@ -1278,30 +1332,12 @@ const render_button_calendar = function () {
 			element_type	: 'span',
 			class_name		: 'button_container button_calendar_container hidden_button'
 		})
-		// mousedown event
-		button_calendar_container.addEventListener('mousedown', function(e) {
-			// Don't let the trigger steal focus from the input. Losing focus hides
-			// the (focus-revealed) trigger BEFORE the `mouseup` that opens the
-			// picker, so the click reads as dead; also avoids text selection.
-			e.preventDefault()
-			e.stopPropagation()
-		})
 
 	// button_calendar
 		const button_calendar = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'input-group-addon button calendar',
 			parent			: button_calendar_container
-		})
-		button_calendar.tabIndex = -1;
-		// click event. Without stopping it, the click bubbles to the component
-		// wrapper, which ACTIVATES the component; the activation auto-focuses the
-		// first input (ui.js) and that closes the picker the same click opened —
-		// the calendar flashed and the trigger read as dead. Guarded on the <a>
-		// (not the container): its ::after hit area (component_date.less) covers
-		// the whole container, so every click on the trigger lands here.
-		button_calendar.addEventListener('click', function(e) {
-			e.stopPropagation()
 		})
 
 
