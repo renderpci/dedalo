@@ -23,6 +23,7 @@
 
 import type { Subprocess } from 'bun';
 import type { InstallPlan } from '../install_plan.ts';
+import type { ReviewMeasure } from '../review_measure.ts';
 import { buildPlanFile } from '../run_files_core.ts';
 import type { HostPlanCtx } from './contract.ts';
 import { gatherHostFacts, type HostFacts } from './facts.ts';
@@ -174,8 +175,15 @@ function runsNoHostStep(plan: InstallPlan): boolean {
 	return plan.answers.route === 'developer' || plan.answers.engine_only;
 }
 
-/** The Review blocks of a host plan (none for the developer route, the engine child, or an unsupported OS). */
-export async function reviewHostCommands(plan: InstallPlan): Promise<ReviewBlock[]> {
+/**
+ * The Review blocks of a host plan (none for the developer route, the engine
+ * child, or an unsupported OS). `measure`: the session's scope for this Review
+ * build (review_measure.ts — the image probe the refusals also need runs once).
+ */
+export async function reviewHostCommands(
+	plan: InstallPlan,
+	measure?: ReviewMeasure,
+): Promise<ReviewBlock[]> {
 	if (runsNoHostStep(plan)) return [];
 	const source = sourceTreeRoot();
 	const pin = bunPinOf(source);
@@ -184,20 +192,27 @@ export async function reviewHostCommands(plan: InstallPlan): Promise<ReviewBlock
 	const facts = await reviewFacts(plan, instancePaths(plan.answers, pin), source);
 	if (plan.answers.route === 'production' && facts.os === null) return [];
 	const ctx = reviewContext(plan, facts, pin, source);
-	const { runner, fs } = reviewMachine();
-	if (plan.answers.route !== 'production') {
-		// An official image whose publication could not be checked (offline): said
-		// before `yes`, never refused — an ABSENT one is a preflight refusal.
-		const image = await officialImageVerdict(
-			{ answers: plan.answers, runner },
-			facts.stack ?? pendingStackFacts(),
-		);
-		return [
-			...todoBlocks([...image.warnings, ...stackReviewTodo(ctx, fs, Date.now())]),
-			...hostReview(ctx),
-		];
-	}
+	if (plan.answers.route !== 'production') return stackReviewBlocks(ctx, measure);
+	const { fs } = reviewMachine();
 	return [...todoBlocks(reviewTodo(ctx, fs, Date.now())), ...markExisting(hostReview(ctx), fs)];
+}
+
+/** A docker/trial plan's Review blocks: the TO DO (image, certificate), then the steps. */
+async function stackReviewBlocks(
+	ctx: HostPlanCtx,
+	measure: ReviewMeasure | undefined,
+): Promise<ReviewBlock[]> {
+	const { runner, fs } = reviewMachine();
+	// An official image whose publication could not be checked (offline): said
+	// before `yes`, never refused — an ABSENT one is a preflight refusal.
+	const image = await officialImageVerdict(
+		{ answers: ctx.answers, runner, ...(measure === undefined ? {} : { measure }) },
+		ctx.facts.stack ?? pendingStackFacts(),
+	);
+	return [
+		...todoBlocks([...image.warnings, ...stackReviewTodo(ctx, fs, Date.now())]),
+		...hostReview(ctx),
+	];
 }
 
 /**

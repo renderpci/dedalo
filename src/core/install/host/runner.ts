@@ -200,6 +200,8 @@ export interface RecordedResponse {
 	exit?: number;
 	stdout?: string;
 	stderr?: string;
+	/** The command was killed at its timeout (a registry that never answers — C3i-F2). */
+	timedOut?: boolean;
 	/**
 	 * Host paths the command "creates" (scratch root only): a path ending in `/`
 	 * becomes a directory, any other an empty file — how a scratch run's verify
@@ -285,7 +287,7 @@ function resultOf(response: RecordedResponse | undefined): RunResult {
 		exitCode: response?.exit ?? 0,
 		stdout: response?.stdout ?? '',
 		stderr: response?.stderr ?? '',
-		timedOut: false,
+		timedOut: response?.timedOut ?? false,
 	};
 }
 

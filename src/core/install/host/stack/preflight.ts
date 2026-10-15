@@ -42,7 +42,7 @@ import { checkCertificateFiles } from '../tls_files.ts';
 import { chainTrustVerdict, SYSTEM_CA_BUNDLES } from '../tls_trust.ts';
 import { inCheckout } from './common.ts';
 import { gatherStackFacts, type StackFacts } from './facts.ts';
-import { probeImageAvailability } from './image_verify.ts';
+import { type ImageProbeOutcome, probeImageAvailability } from './image_verify.ts';
 import {
 	acceptedImageVersions,
 	ENV_FILE,
@@ -200,25 +200,58 @@ function imageProblems(ctx: HostPlanCtx, facts: StackFacts): string[] {
  * the operator's own is never probed (beta.6 fix: no image is published for a
  * prerelease, and the default source failed at stack_image, after `yes`).
  * Absent: a refusal (the Review does not offer install, the answers are kept);
- * not checkable (offline…): a line on the Review, never a refusal.
+ * not checkable (offline…): a line on the Review, never a refusal — in plain
+ * words; docker's raw error goes to the install log (`ctx.say`) only (C3i-F3).
+ *
+ * Bounded and said (campaign C3i-F2): the probe is bounded (image_verify.ts
+ * IMAGE_PROBE_TIMEOUT_MS), a `checking the official image …` line is said
+ * BEFORE it runs, and within one Review build it runs ONCE (`measure`: the
+ * session's scope, shared by the TO-DO block and the refusals — a new build
+ * gets a new scope and probes again).
  */
 export async function officialImageVerdict(
-	ctx: Pick<HostCtx, 'answers' | 'runner'>,
+	ctx: VerdictCtx,
 	facts: StackFacts,
 ): Promise<{ problems: string[]; warnings: string[] }> {
 	const { answers } = ctx;
 	if (facts.docker === null || !probesOfficialImage(answers)) return { problems: [], warnings: [] };
 	const ref = imageRefOf(answers);
-	const { availability, said } = await probeImageAvailability(
-		ctx.runner,
+	const { availability, said, detail } = await measuredAvailability(
+		ctx,
 		facts.docker,
 		ref,
 		facts.home,
 	);
+	if (availability === 'unknown')
+		ctx.say?.(`    ${ref} could not be checked — docker said: ${detail}`);
 	return {
 		problems: availability === 'absent' ? [imageNotPublished(ref, said)] : [],
 		warnings: availability === 'unknown' ? [imageNotChecked(ref, said)] : [],
 	};
+}
+
+/** What officialImageVerdict runs with: the Review's scope (`measure`) or the run's transcript (`say`). */
+type VerdictCtx = Pick<HostCtx, 'answers' | 'runner'> & Partial<Pick<HostCtx, 'say' | 'measure'>>;
+
+/** The probe, its `checking` line said first — once per Review build when a scope is given. */
+function measuredAvailability(
+	ctx: VerdictCtx,
+	docker: string,
+	ref: string,
+	home: string,
+): Promise<ImageProbeOutcome> {
+	const { measure } = ctx;
+	const progress = measure?.say ?? ctx.say ?? (() => {});
+	const probe = (): Promise<ImageProbeOutcome> => {
+		progress(imageCheckingLine(ref));
+		return probeImageAvailability(ctx.runner, docker, ref, home);
+	};
+	return measure === undefined ? probe() : measure.once(`official-image ${ref}`, probe);
+}
+
+/** The progress line said while the registry is asked (a `checking` line: the running mark). */
+export function imageCheckingLine(ref: string): string {
+	return `checking the official image ${ref}…`;
 }
 
 /** Is the registry asked: an `official` source, an official repository, this installer's version? */
@@ -237,7 +270,7 @@ function imageNotPublished(ref: string, said: string): string {
 
 /** The Review line: the registry could not be asked. */
 function imageNotChecked(ref: string, said: string): string {
-	return `whether the official image ${ref} is published could not be checked (${said === '' ? 'the registry did not answer' : said}) — stack_image pulls it and says so if it is not there; a prerelease (beta) has no official image: choose Build (--image-source build)`;
+	return `whether the official image ${ref} is published could not be checked (${said}) — stack_image pulls it and says so if it is not there; a prerelease (beta) has no official image: choose Build (--image-source build)`;
 }
 
 /**

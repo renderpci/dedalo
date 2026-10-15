@@ -1377,15 +1377,16 @@ async function interactiveInstall(
 		host: { timezone: host.timezone, locale: host.locale },
 		givenSecrets: { ...secrets },
 		version: DEDALO_VERSION,
-		hostCommands: async (plan) => {
+		// Both hooks of one Review build share `measure`: the registry is asked once (C3i-F2).
+		hostCommands: async (plan, measure) => {
 			if (!hostPlanned(plan.answers)) return [];
 			const { reviewHostCommands } = await import('../src/core/install/host/review.ts');
-			return reviewHostCommands(plan);
+			return reviewHostCommands(plan, measure);
 		},
 		// What the run's own system check would refuse, asked BEFORE `yes` (campaign 3c D2).
-		preflightRefusals: async (plan) => {
+		preflightRefusals: async (plan, measure) => {
 			const { reviewPreflightRefusals } = await import('../src/core/install/host/review.ts');
-			return reviewPreflightRefusals(plan);
+			return reviewPreflightRefusals(plan, { measure });
 		},
 		routeRefusal: (plan) =>
 			plan.answers.route === 'production' &&

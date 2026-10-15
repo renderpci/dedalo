@@ -68,6 +68,7 @@ import {
 	type ReviewView,
 	type ScreenView,
 } from './prompter_contract.ts';
+import { type ReviewMeasure, reviewMeasure } from './review_measure.ts';
 import {
 	type InstallState,
 	readInstallEnv,
@@ -119,7 +120,10 @@ export interface InteractiveDeps {
 	 * A host route's Review commands for a plan (the host facts measured by the
 	 * caller — scripts/install.ts; host/host_table.ts hostReview). Absent: none.
 	 */
-	hostCommands?: (plan: InstallPlan) => Promise<NonNullable<ReviewView['hostCommands']>>;
+	hostCommands?: (
+		plan: InstallPlan,
+		measure: ReviewMeasure,
+	) => Promise<NonNullable<ReviewView['hostCommands']>>;
 	/** Why THIS process cannot run the plan's route (production without root), or null. */
 	routeRefusal?: (plan: InstallPlan) => string | null;
 	/**
@@ -129,8 +133,12 @@ export interface InteractiveDeps {
 	 * does not offer install; a typed `yes` asks it again (campaign 3c D2: an
 	 * untrusted chain, Apache beside nginx, an image version, a held port were
 	 * refused only after `yes`, every answer lost). Absent: none.
+	 *
+	 * Both hooks of ONE Review build get the SAME `measure` (review_measure.ts):
+	 * a probe both need (the official image's registry) runs once and says its
+	 * `checking …` line while it waits (campaign C3i-F2); a new build, a new scope.
 	 */
-	preflightRefusals?: (plan: InstallPlan) => Promise<string[]>;
+	preflightRefusals?: (plan: InstallPlan, measure: ReviewMeasure) => Promise<string[]>;
 }
 
 /**
@@ -1063,11 +1071,20 @@ function routeRefusalOf(session: Session, plan: InstallPlan): string | null {
  * process runs): the plan's own errors already block it, and the production
  * measure as a normal user is the route refusal's to tell.
  */
-async function preflightOf(session: Session, plan: InstallPlan): Promise<string[]> {
+async function preflightOf(
+	session: Session,
+	plan: InstallPlan,
+	measure: ReviewMeasure,
+): Promise<string[]> {
 	const probe = session.deps.preflightRefusals;
 	if (probe === undefined || plan.errors.length > 0) return [];
 	if (routeRefusalOf(session, plan) !== null) return [];
-	return probe(plan);
+	return probe(plan, measure);
+}
+
+/** A new measurement scope (one Review build, or the typed yes's re-check): its lines on screen. */
+function newMeasure(session: Session): ReviewMeasure {
+	return reviewMeasure((line) => session.deps.prompter.say([line]));
 }
 
 /**
@@ -1131,7 +1148,9 @@ async function reviewRound(session: Session): Promise<{ round: ReviewRound; view
 	const input = inputOf(session);
 	const plan = previewPlan(input);
 	const refusal = routeRefusalOf(session, plan);
-	const refused = await preflightOf(session, plan);
+	// ONE scope for this build: what both hooks measure is measured once (C3i-F2).
+	const measure = newMeasure(session);
+	const refused = await preflightOf(session, plan, measure);
 	const canInstall = refusal === null && installOffered(session, plan, refused);
 	const view: ReviewView = {
 		screen: screens.at(-1) as Screen,
@@ -1140,7 +1159,8 @@ async function reviewRound(session: Session): Promise<{ round: ReviewRound; view
 		editable: screens.slice(0, -1).map((item) => ({ n: item.index, title: item.title })),
 		command: sameAsCommand(plan.answers),
 		errors: [...plan.errors, ...(refusal === null ? [] : [refusal]), ...refused],
-		hostCommands: plan.errors.length === 0 ? ((await session.deps.hostCommands?.(plan)) ?? []) : [],
+		hostCommands:
+			plan.errors.length === 0 ? ((await session.deps.hostCommands?.(plan, measure)) ?? []) : [],
 	};
 	return { round: { screens, plan, canInstall }, view };
 }
@@ -1199,7 +1219,7 @@ async function reviewInstall(session: Session, shown: ReviewRound): Promise<Revi
 	if (typed !== true) return null;
 	// Measured again at the typed yes: what changed since the Review was drawn
 	// (a port taken meanwhile) keeps the session — and every answer — on the Review.
-	const refused = await preflightOf(session, round.plan);
+	const refused = await preflightOf(session, round.plan, newMeasure(session));
 	if (refused.length === 0) return installResult(session, round.plan);
 	session.deps.prompter.say([
 		NOTICE_TEXT.refusedAtYes,

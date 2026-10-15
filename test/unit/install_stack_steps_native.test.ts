@@ -61,22 +61,36 @@ import { stackSaltCommand } from '../../src/core/install/host/stack/engine_deleg
 import { curlReason } from '../../src/core/install/host/stack/health.ts';
 import { IMAGE_BUILDER, imageCommands } from '../../src/core/install/host/stack/image.ts';
 import {
+	IMAGE_PROBE_TIMEOUT_MS,
+	probeImageAvailability,
+	registryHostOf,
+} from '../../src/core/install/host/stack/image_verify.ts';
+import {
 	BUILD_DURATION,
 	imageRefOf,
 	imageVersionOf,
 	officialRepositories,
 } from '../../src/core/install/host/stack/layout.ts';
+import { imageCheckingLine } from '../../src/core/install/host/stack/preflight.ts';
 import { STACK_HOST_STEPS } from '../../src/core/install/host/stack/table.ts';
 import { containerEverStarted } from '../../src/core/install/host/stack/up.ts';
 import { emptyHostCreated } from '../../src/core/install/host/state_types.ts';
-import { buildInstallPlan, type StackHostStepId } from '../../src/core/install/install_plan.ts';
+import {
+	buildInstallPlan,
+	type InstallPlan,
+	type StackHostStepId,
+} from '../../src/core/install/install_plan.ts';
+import { runInteractiveInstall } from '../../src/core/install/install_session.ts';
 import { MEDIA_DIR_MODE } from '../../src/core/install/media_tree.ts';
+import { type ReviewMeasure, reviewMeasure } from '../../src/core/install/review_measure.ts';
 import {
 	buildPlanFile,
 	type InstallState,
 	readStateFile,
 } from '../../src/core/install/run_files_core.ts';
 import { DONE_TEXT, NOTICE_TEXT } from '../../src/core/install/screen_text.ts';
+import { isProgressLine } from '../../src/core/install/ui/prompter.ts';
+import { scriptedInstallPrompter } from '../../src/core/install/ui_plain/prompter.ts';
 import { loadImageRegistries } from '../../src/core/update/image_registries.ts';
 import {
 	COSIGN,
@@ -99,6 +113,13 @@ import {
 	stackPlanCtx,
 	stackResponses,
 } from '../helpers/install_host_scratch.ts';
+import { allCases, splitCase } from '../helpers/install_parity_cases.ts';
+import {
+	fakeProbes,
+	GOOD_ROOT_PASSWORD,
+	scriptForPlan,
+	thesaurusOffer,
+} from '../helpers/install_plain_script.ts';
 
 const scratchBase = mkdtempSync(join(tmpdir(), 'dedalo_install_stack_steps_'));
 afterAll(() => rmSync(scratchBase, { recursive: true, force: true }));
@@ -456,7 +477,11 @@ describe('the official image of this version must be PUBLISHED — asked before 
 	const MISSING = `no official image ${REF} is published for this version yet`;
 	const UNCHECKED = `whether the official image ${REF} is published could not be checked`;
 
-	async function refusalsOf(host: ScratchHost, raw: Record<string, unknown>) {
+	async function refusalsOf(
+		host: ScratchHost,
+		raw: Record<string, unknown>,
+		measure?: ReviewMeasure,
+	) {
 		const marker = join(host.root, SCRATCH_DIR);
 		return reviewPreflightRefusals(fresh(raw).plan, {
 			runner: scratchRunner(marker),
@@ -464,13 +489,18 @@ describe('the official image of this version must be PUBLISHED — asked before 
 			source: host.source,
 			skipPrivilegeCheck: true,
 			sleep: async () => {},
+			...(measure === undefined ? {} : { measure }),
 		});
 	}
-	async function todoOf(host: ScratchHost, raw: Record<string, unknown>): Promise<string> {
+	async function todoOf(
+		host: ScratchHost,
+		raw: Record<string, unknown>,
+		measure?: ReviewMeasure,
+	): Promise<string> {
 		const previous = process.env.DEDALO_INSTALL_HOST_ROOT;
 		process.env.DEDALO_INSTALL_HOST_ROOT = host.root;
 		try {
-			const blocks = await reviewHostCommands(fresh(raw).plan);
+			const blocks = await reviewHostCommands(fresh(raw).plan, measure);
 			return (blocks.find((block) => block.step === REVIEW_TODO_STEP)?.commands ?? []).join('\n');
 		} finally {
 			if (previous === undefined) delete process.env.DEDALO_INSTALL_HOST_ROOT;
@@ -512,11 +542,150 @@ describe('the official image of this version must be PUBLISHED — asked before 
 		expect(await refusalsOf(host, TRIAL)).toEqual([]);
 		const todo = await todoOf(host, TRIAL);
 		expect(todo).toContain(UNCHECKED);
-		expect(todo).toContain('no such host');
+		// C3i-F3: what happened, in plain words — docker's raw error is the install log's only.
+		expect(todo).toContain(`(could not reach ${registryHostOf(REF)})`);
+		expect(todo).not.toContain('no such host');
+		expect(todo).not.toContain('dial tcp');
 		expect(probed(host)).toEqual(expect.arrayContaining([MANIFEST, IMAGETOOLS]));
 		// the docker route too
 		const docker = machine(DOCKER_LE, { responses: OFFLINE });
 		expect(await todoOf(docker, DOCKER_LE)).toContain(UNCHECKED);
+	});
+
+	// Campaign C3i-F2 (VM C3iR1, rhel10): ghcr.io blackholed — the full-screen UI froze ~2 min
+	// before the Review: each probe waited for docker's own network timeout, and the Review
+	// asked the registry twice (its TO-DO block and its refusals), saying nothing meanwhile.
+	const TIMED_OUT: RecordedResponse[] = [
+		{
+			match: MANIFEST,
+			exit: 137,
+			timedOut: true,
+			stderr: 'ERROR: failed to do request: Head "https://ghcr.io/v2/": context canceled\n',
+		},
+	];
+
+	test('a registry that never answers: `unknown` within the bound (never absent), the second probe not asked', async () => {
+		// The runner seam: a registry that never answers is killed at the timeout the probe asks for.
+		const asked: (number | undefined)[] = [];
+		let waited = 0;
+		const silent: CommandRunner = {
+			run: async (request) => {
+				asked.push(request.timeoutMs);
+				waited += request.timeoutMs ?? Number.POSITIVE_INFINITY;
+				// partial words that would read as "absent" — a killed probe never counts as the registry speaking
+				return { exitCode: 137, stdout: '', stderr: 'manifest unknown', timedOut: true };
+			},
+		};
+		const outcome = await probeImageAvailability(silent, DOCKER, REF, '/home/operator');
+		expect(outcome.availability).toBe('unknown');
+		expect(waited).toBeLessThanOrEqual(15_000);
+		expect(asked).toEqual([IMAGE_PROBE_TIMEOUT_MS]);
+		expect(outcome.said).toBe('the registry did not answer within 15 s');
+		expect(outcome.detail).toContain('killed after 15 s');
+	});
+
+	test('timed out on the scratch host: the Review says it plainly, the raw error stays off the screen; not refused', async () => {
+		const host = machine(TRIAL, { responses: TIMED_OUT });
+		expect(await refusalsOf(host, TRIAL)).toEqual([]);
+		const todo = await todoOf(host, TRIAL);
+		expect(todo).toContain(`${UNCHECKED} (the registry did not answer within 15 s)`);
+		expect(todo).not.toContain('context canceled');
+		expect(todo).not.toContain('ERROR');
+		// a probe that timed out ends the asking: imagetools would wait the same
+		expect(probed(host).filter((line) => line === IMAGETOOLS)).toEqual([]);
+		// the registry host, as `could not reach` names it
+		expect(registryHostOf('ghcr.io/dedalia-org/dedalo:7.0.0')).toBe('ghcr.io');
+		expect(registryHostOf('localhost:5000/dedalo:7.0.0')).toBe('localhost:5000');
+		expect(registryHostOf('dedalo/dedalo:7.0.0')).toBe('docker.io');
+	});
+
+	test('the run: the raw docker words reach the install log, the warning line stays plain', async () => {
+		const host = machine(TRIAL, { responses: OFFLINE });
+		const { transcript } = await runHost(host, fresh(TRIAL).request);
+		const lines = transcript.lines.join('\n');
+		expect(lines).toContain(`${REF} could not be checked — docker said:`);
+		expect(lines).toContain('no such host');
+		const warning = transcript.lines.find((line) => line.includes(UNCHECKED)) ?? '';
+		expect(warning).toContain(`could not reach ${registryHostOf(REF)}`);
+		expect(warning).not.toContain('no such host');
+	});
+
+	test('ONE Review build asks the registry ONCE (its refusals and its TO-DO share the scope), saying so first; a new build asks again', async () => {
+		const host = machine(TRIAL, { responses: TIMED_OUT });
+		const said: string[] = [];
+		const probedWhenSaid: number[] = [];
+		const build = () =>
+			reviewMeasure((line) => {
+				said.push(line);
+				probedWhenSaid.push(probed(host).length);
+			});
+		const manifests = () => probed(host).filter((line) => line === MANIFEST).length;
+		const first = build();
+		await refusalsOf(host, TRIAL, first);
+		const todo = await todoOf(host, TRIAL, first);
+		expect(todo).toContain(UNCHECKED);
+		expect(manifests()).toBe(1);
+		// the progress line comes BEFORE the probe, and is drawn as a running check
+		expect(said).toEqual([imageCheckingLine(REF)]);
+		expect(probedWhenSaid).toEqual([0]);
+		expect(isProgressLine(said[0] as string)).toBe(true);
+		// back / edit / re-check: a NEW build — measured again, never a cached verdict (3c D18)
+		const second = build();
+		await todoOf(host, TRIAL, second);
+		await refusalsOf(host, TRIAL, second);
+		expect(manifests()).toBe(2);
+		expect(said).toHaveLength(2);
+	});
+
+	test('the session hands both Review hooks ONE scope per build, and a new scope to every re-check', async () => {
+		const answerCase = allCases(join(scratchBase, 'unused_source')).find(
+			(item) => item.name === 'route docker',
+		);
+		if (answerCase === undefined) throw new Error("no case 'route docker'");
+		const { raw, plain } = splitCase(answerCase.argv);
+		const script = scriptForPlan(
+			buildInstallPlan(raw),
+			Object.keys(plain),
+			{ root_password: GOOD_ROOT_PASSWORD },
+			['install', 'quit'],
+		);
+		const prompter = scriptedInstallPrompter(script);
+		const scopes: { hook: string; measure: ReviewMeasure }[] = [];
+		let probes = 0;
+		const probeOnce = (hook: string, measure: ReviewMeasure) => {
+			scopes.push({ hook, measure });
+			return measure.once('official-image', async () => {
+				measure.say(imageCheckingLine(REF));
+				probes += 1;
+				return probes;
+			});
+		};
+		const result = await runInteractiveInstall({
+			prompter,
+			probes: fakeProbes(),
+			priorEnv: {},
+			thesauri: thesaurusOffer(),
+			host: {},
+			givenSecrets: {},
+			unfinished: null,
+			// refused: `install` checks again (campaign 3d C3d-F2) — a second Review build
+			preflightRefusals: async (_plan: InstallPlan, measure) => {
+				await probeOnce('refusals', measure);
+				return ['port 443 is already in use by python3'];
+			},
+			hostCommands: async (_plan: InstallPlan, measure) => {
+				await probeOnce('todo', measure);
+				return [];
+			},
+		});
+		expect(result.kind).toBe('quit');
+		expect(scopes.map((item) => item.hook)).toEqual(['refusals', 'todo', 'refusals', 'todo']);
+		const [a, b, c, d] = scopes.map((item) => item.measure);
+		expect(a).toBe(b as ReviewMeasure);
+		expect(c).toBe(d as ReviewMeasure);
+		expect(a).not.toBe(c as ReviewMeasure);
+		expect(probes).toBe(2);
+		expect(prompter.said.filter((line) => line === imageCheckingLine(REF))).toHaveLength(2);
 	});
 
 	for (const raw of [

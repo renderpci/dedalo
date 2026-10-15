@@ -41,6 +41,7 @@ import {
 	normalizeInstallAnswers,
 	type StepId,
 } from '../install_plan.ts';
+import type { ReviewMeasure } from '../review_measure.ts';
 import type { RunIo, RunOutcomeView } from '../run_events.ts';
 import {
 	acquireRunLock,
@@ -128,6 +129,8 @@ export interface HostExecutorOptions {
 	source?: string;
 	/** Skip the euid check (a gate's scratch run; the preflight's `id -u` still decides). */
 	skipPrivilegeCheck?: boolean;
+	/** The Review build's measurement scope (review_measure.ts) — hostPlanRefusals only. */
+	measure?: ReviewMeasure;
 }
 
 /** One host run's context (never module state). */
@@ -138,6 +141,7 @@ interface HostRunContext extends LoopContext {
 	readonly source: string;
 	readonly sleep: (ms: number) => Promise<void>;
 	readonly now: () => number;
+	readonly measure: ReviewMeasure | undefined;
 	readonly runDir: string;
 	readonly table: { readonly [K in HostStepId]: HostStepDefinition };
 	readonly told: string[];
@@ -332,6 +336,7 @@ function hostContext(ctx: HostRunContext): HostCtx {
 		...(ctx.request.confirmDatabase === undefined
 			? {}
 			: { confirmDatabase: ctx.request.confirmDatabase }),
+		...(ctx.measure === undefined ? {} : { measure: ctx.measure }),
 	};
 }
 
@@ -864,6 +869,7 @@ function newContext(
 		source,
 		sleep: options.sleep ?? ((ms) => new Promise((done) => setTimeout(done, ms))),
 		now: options.now ?? (() => Date.now()),
+		measure: options.measure,
 		runDir,
 		table: hostTable(() => {
 			const { facts: _facts, row: _row, paths: _paths, ...base } = planContext(ctx);

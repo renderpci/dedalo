@@ -20,6 +20,7 @@
 
 import type { Subprocess } from 'bun';
 import type { InstallAnswers } from '../install_plan.ts';
+import type { ReviewMeasure } from '../review_measure.ts';
 import type { RunIo } from '../run_events.ts';
 import type { InstallState, PlanFile, SecretKey, Secrets } from '../run_files_core.ts';
 import type { VerifyResult } from '../step_loop.ts';
@@ -149,6 +150,8 @@ export interface HostCtx extends HostPlanCtx {
 	now(): number;
 	/** --confirm-database (abort only). */
 	readonly confirmDatabase?: string;
+	/** The Review build's measurement scope (a probe both Review hooks need runs once); absent in a run. */
+	readonly measure?: ReviewMeasure;
 }
 
 /** A host step's own run result — an internal shape (never the wire's failure spelling). */

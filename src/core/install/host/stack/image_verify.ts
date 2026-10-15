@@ -185,6 +185,13 @@ export async function assertPinnedImage(ctx: HostCtx): Promise<void> {
  *    repository nobody may pull anonymously: the pull would fail the same way);
  *  - unknown: anything else (offline, a proxy, no buildx, a timeout) — never a
  *    refusal: stack_image's pull says what happened.
+ *
+ * BOUNDED (campaign C3i-F2: an unreachable registry froze the Review ~2 min,
+ * each probe waiting for docker's own network timeout): each probe is killed
+ * after IMAGE_PROBE_TIMEOUT_MS, and a probe that timed out ends the asking
+ * (the second would wait the same) — the outcome is `unknown`, never
+ * `absent`. What an `unknown` says is a plain sentence (unknownReason); the
+ * raw docker words go to the install log only (`detail`).
  */
 export type ImageAvailability = 'published' | 'absent' | 'unknown';
 
@@ -195,6 +202,13 @@ const REGISTRY_SAYS_ABSENT =
 /** Not the registry speaking: a local tool failure whose words could read as "absent". */
 const LOCAL_FAILURE =
 	/error getting credentials|executable file not found|is not a docker command/i;
+
+/** How long one registry probe may take before it is killed (the Review waits at most this, per probe). */
+export const IMAGE_PROBE_TIMEOUT_MS = 15_000;
+
+/** docker's words for a registry it could not reach (DNS, connection, its own network timeout). */
+const UNREACHABLE =
+	/no such host|server misbehaving|dial tcp|connection refused|connection reset|no route to host|network is unreachable|i\/o timeout|tls handshake timeout|deadline exceeded|context canceled/i;
 
 /** The two read-only probes, in order (the argv the gates fake). */
 export function imageAvailabilityProbes(docker: string, ref: string): string[][] {
@@ -220,52 +234,97 @@ function lastWords(result: RunResult): string {
 	return line.trim().slice(0, 160);
 }
 
-/** One probe's answer: did it find the image, and its last words. */
+/** One probe's answer: did it find the image, did it time out, and its last words. */
 interface RegistryAnswer {
 	found: boolean;
+	timedOut: boolean;
 	words: string;
 }
 
-/** Run one probe (a runner that throws — no such binary — answered nothing). */
+/** Run one probe, bounded (a runner that throws — no such binary — answered nothing). */
 async function askRegistry(
 	runner: CommandRunner,
 	argv: string[],
 	home: string,
 ): Promise<RegistryAnswer> {
 	try {
-		const result = await runner.run({ argv, env: { HOME: home }, timeoutMs: 30_000 });
-		return { found: result.exitCode === 0 && !result.timedOut, words: lastWords(result) };
+		const result = await runner.run({
+			argv,
+			env: { HOME: home },
+			timeoutMs: IMAGE_PROBE_TIMEOUT_MS,
+		});
+		return {
+			found: result.exitCode === 0 && !result.timedOut,
+			timedOut: result.timedOut,
+			words: lastWords(result),
+		};
 	} catch {
-		return { found: false, words: '' };
+		return { found: false, timedOut: false, words: '' };
 	}
 }
 
-/** The verdict of the probes' answers: published by either; absent when a registry SAID so; else unknown. */
-export function availabilityOf(answers: readonly RegistryAnswer[]): {
+/** The registry host of an image reference (Docker Hub when the first part names none). */
+export function registryHostOf(ref: string): string {
+	const first = ref.split('/')[0] ?? '';
+	return ref.includes('/') && (/[.:]/.test(first) || first === 'localhost') ? first : 'docker.io';
+}
+
+/** Why the registry could not be asked, in plain words (never docker's raw error). */
+export function unknownReason(answers: readonly RegistryAnswer[], ref: string): string {
+	if (answers.some((answer) => answer.timedOut)) {
+		return `the registry did not answer within ${IMAGE_PROBE_TIMEOUT_MS / 1000} s`;
+	}
+	if (answers.some((answer) => UNREACHABLE.test(answer.words))) {
+		return `could not reach ${registryHostOf(ref)}`;
+	}
+	if (answers.some((answer) => answer.words !== '')) return 'docker could not ask the registry';
+	return 'the registry did not answer';
+}
+
+/** One probe's raw outcome, as the install log keeps it. */
+function rawWords(answer: RegistryAnswer): string {
+	if (!answer.timedOut) return answer.words === '' ? 'no answer' : answer.words;
+	return `killed after ${IMAGE_PROBE_TIMEOUT_MS / 1000} s${answer.words === '' ? '' : ` (${answer.words})`}`;
+}
+
+/** What the probes answered: the verdict, what the Review says, and docker's raw words (the log's). */
+export interface ImageProbeOutcome {
 	availability: ImageAvailability;
+	/** absent: the registry's words; unknown: a plain sentence (unknownReason); published: ''. */
 	said: string;
-} {
-	if (answers.some((answer) => answer.found)) return { availability: 'published', said: '' };
-	const absent = answers.find((answer) => registrySaysAbsent(answer.words));
-	if (absent !== undefined) return { availability: 'absent', said: absent.words };
+	/** docker's own last words ('' when published) — for the install log, never the screen. */
+	detail: string;
+}
+
+/** The verdict of the probes' answers: published by either; absent when a registry SAID so; else unknown. */
+export function availabilityOf(answers: readonly RegistryAnswer[], ref: string): ImageProbeOutcome {
+	if (answers.some((answer) => answer.found)) {
+		return { availability: 'published', said: '', detail: '' };
+	}
+	// A probe killed at the bound never counts as the registry speaking.
+	const absent = answers.find((answer) => !answer.timedOut && registrySaysAbsent(answer.words));
+	if (absent !== undefined) {
+		return { availability: 'absent', said: absent.words, detail: absent.words };
+	}
 	return {
 		availability: 'unknown',
-		said: answers.find((answer) => answer.words !== '')?.words ?? '',
+		said: unknownReason(answers, ref),
+		detail: answers.map(rawWords).join(' | '),
 	};
 }
 
-/** Ask the registry (see ImageAvailability); `said`: what it answered ('' when published). */
+/** Ask the registry (see ImageAvailability), each probe bounded; a timeout ends the asking. */
 export async function probeImageAvailability(
 	runner: CommandRunner,
 	docker: string,
 	ref: string,
 	home: string,
-): Promise<{ availability: ImageAvailability; said: string }> {
+): Promise<ImageProbeOutcome> {
 	const answers: RegistryAnswer[] = [];
 	for (const argv of imageAvailabilityProbes(docker, ref)) {
 		const answer = await askRegistry(runner, argv, home);
 		answers.push(answer);
-		if (answer.found) break;
+		if (answer.found || answer.timedOut) break;
 	}
-	return availabilityOf(answers);
+	return availabilityOf(answers, ref);
 }
