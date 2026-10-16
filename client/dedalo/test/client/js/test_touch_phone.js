@@ -3,8 +3,8 @@
 /*eslint no-undef: "error"*/
 
 import { a11y } from '../../../core/common/js/a11y.js';
-import { ui } from '../../../core/common/js/ui.js';
 import * as touch_pick from '../../../core/common/js/touch_pick.js';
+import { ui } from '../../../core/common/js/ui.js';
 import {
 	render_add_field_button,
 	synthetic_drop_event,
@@ -212,7 +212,11 @@ describe('TOOLS_MENU : a tap must reach the row (dismissal cannot precede the ta
 			assert.equal(panel.matches(':popover-open'), true, 'the panel opens');
 
 			panel.querySelector('button[role="menuitem"]').dispatchEvent(
-				new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', cancelable: true }),
+				new PointerEvent('pointerdown', {
+					bubbles: true,
+					pointerType: 'touch',
+					cancelable: true,
+				}),
 			);
 
 			assert.equal(

@@ -199,6 +199,7 @@ const AMBIENT_GLOBALS = new Set([
 	'Event',
 	'CustomEvent',
 	'MouseEvent',
+	'PointerEvent',
 	'KeyboardEvent',
 	'DragEvent',
 	'MutationObserver',
