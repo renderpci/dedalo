@@ -12,13 +12,46 @@ The Trial route installs a complete Dédalo in containers on one machine, for an
 ## What you need
 
 - **Docker Engine and the Compose v2 plugin, 2.24.4 or newer** (`docker compose`, not the old `docker-compose`). The installer checks them and tells you how to fix what is missing; it never installs Docker or changes group membership. To install them:
-    - **Ubuntu:** `sudo apt install docker.io docker-compose-v2 docker-buildx`.
+    - **Ubuntu:**
+
+        ```shell
+        sudo apt install docker.io docker-compose-v2 docker-buildx
+        ```
+
     - **Debian and the RHEL family** (RHEL, AlmaLinux, Rocky): Docker's own repository, as [docs.docker.com/engine/install](https://docs.docker.com/engine/install/) describes for each distribution. On the RHEL family that procedure first removes the `podman`, `buildah` and `runc` packages the system ships.
+
     - **macOS:** Docker Desktop.
 
     **Podman, and `podman-docker`, are not supported.**
-- **Your user in the `docker` group**, so the daemon answers without `sudo`: `sudo usermod -aG docker "$USER"`, then log out and in again (or run `newgrp docker` in the shell you install from). Membership of `docker` is root-equivalent.
-- **`curl`, `unzip`, `sha256sum` and `git`**: `install.sh` downloads the Bun runtime with `curl`, checks it with `sha256sum` and unpacks it with `unzip`, and `git` gets the checkout. On Ubuntu and Debian, `sudo apt install curl unzip git`; on the RHEL family, `sudo dnf install curl unzip git` (`sha256sum` comes with the system).
+
+- **Your user in the `docker` group**, so the daemon answers without `sudo`:
+
+    ```shell
+    sudo usermod -aG docker "$USER"
+    ```
+
+    then log out and in again or run
+
+    ```shell
+    newgrp docker
+    ```
+
+    in the shell you install from. Membership of `docker` is root-equivalent.
+
+- **`curl`, `unzip`, `sha256sum` and `git`**: `install.sh` downloads the Bun runtime with `curl`, checks it with `sha256sum` and unpacks it with `unzip`, and `git` gets the checkout.
+
+    On Ubuntu and Debian,
+
+    ```shell
+    sudo apt install curl unzip git
+    ```
+
+    on the RHEL family (`sha256sum` comes with the system),
+
+    ```shell
+    sudo dnf install curl unzip git
+    ```
+
 - **About 8 GiB free** under Docker's root directory: the engine image is about 2.5 GB and PostgreSQL about 0.7 GB, and a local image build parks about 3 GB of build cache. Below that the database restore fails part-way with `No space left on device`, so the installer refuses first. A Docker root it cannot measure (a VM, a remote daemon) skips the check.
 - **Port 80 free** on the machine, or another HTTP port chosen on the *Containers* screen. The trial publishes no HTTPS port.
 - **`cosign`**, if you install an official image: its signature is verified. Without `cosign`, choose a local build instead.
