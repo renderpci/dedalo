@@ -2186,6 +2186,11 @@
 			"skipped": 0,
 			"assertions": 335
 		},
+		"test/unit/install_host_ip_claims_native.test.ts": {
+			"tests": 68,
+			"skipped": 4,
+			"assertions": 290
+		},
 		"test/unit/install_host_local_ca_native.test.ts": {
 			"tests": 31,
 			"skipped": 0,
