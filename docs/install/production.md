@@ -76,16 +76,15 @@ The Identity screen asks, right after the instance name, where the instance live
 
 **The database role** is the service user: PostgreSQL's peer authentication maps the operating-system user to the role of the same name. With `--db-mode create` the role is never asked, and `--db-user` is refused when it differs from the service user. When the account already has a role of its name, use `--db-mode existing`.
 
-**The public address.** A fully qualified name (not `localhost`, not an IP address) whose DNS points at this server. It goes into the site file and the certificate.
+**The public address.** A fully qualified name (not `localhost`, not an IP address) whose DNS points at this server. It goes into the site file and the certificate. With a local certificate authority it needs to resolve only where staff work (the intranet's DNS, or each computer's `hosts` file), and **Other addresses** (`--tls-extra-names dedalo.lan,archivo.museo.lan`) adds the other names staff type: the site answers to them and the certificate names them. An IP address is refused on this route: a browser sends no server name for an IP address, so a host that serves several sites cannot tell which certificate to present. Give staff a name instead (the intranet's DNS, or each computer's `hosts` file). The Docker route accepts IPv4 addresses, because its web server serves one site.
 
 **The certificate.**
 
 | Choice | What you need |
 | --- | --- |
 | **Let's Encrypt** (default) | the name resolves publicly to this server, port 80 is reachable from the internet (the HTTP-01 challenge), and an email address for expiry notices |
+| **Local CA** | nothing outside this server: for an intranet with no public name, or a test machine without a domain ([Trying the production route in a virtual machine](#vm-test)). The installer makes a certificate authority on this server and a certificate for the address (and the other addresses). Each staff computer then trusts the authority **once** — the Done screen says where its file is, its fingerprint and how. The authority can certify exactly this install's addresses, `localhost` and `127.0.0.1` — not even a name below one of them, such as `mail.<address>` — so a stolen key cannot impersonate another website or another machine of your network; for the same reason no address may lie inside another (`museo.lan` and `dedalo.museo.lan` together are refused). The certificate renews itself from the same authority, so the staff computers never trust anything again |
 | **Your institution's certificate** | the fullchain and the key as files on this server. They must name the address, be valid now (a warning under 30 days, shown on the Review) and pair with each other, and **this server must trust the chain**: the installer's last step checks the site with this machine's `curl`, exactly as a browser would. A certificate from your institution's own certificate authority needs that authority in the system trust store first (Debian and Ubuntu: copy it to `/usr/local/share/ca-certificates/<name>.crt`, then `sudo update-ca-certificates`; RHEL family: copy it to `/etc/pki/ca-trust/source/anchors/`, then `sudo update-ca-trust`). The System check refuses an untrusted chain and names its issuer. The installer uses the files where they are and never copies or changes them |
-
-A local certificate authority is never offered on this route.
 
 **The web server.** nginx (at least 1.25.1) or Apache. On a host that has one already, choose that one; when there is none, the installer installs the one you choose on the *Web server & TLS* screen (nginx by default). It refuses, before any change, a run that would install the other web server beside an installed one, and a run whose ports (80 and 443, or yours) another program holds: another web server, such as another instance's, a proxy or a container. The Review's *To do* list names that program before you type `yes`. It writes **one site file** for this instance and, on nginx, once per host the [catch-all site](reverse_proxy.md#the-catch-all-site) that keeps a name no site declares away from every instance (on Apache, each site refuses any name but its own). It never edits another site, another default site or the global configuration.
 
@@ -128,7 +127,7 @@ Choose **Production** on the first screen and type the instance name there (`--p
 | **System check** | nothing: it shows what this host has, and whether an installed instance already holds the name. A failed row must be fixed before the install |
 | **Identity** | the install folder, the service user and the service group first (the database role is the service user, so they come before the database); then the institution's short code (`entity`) and full name, the install fingerprint (**Information** and **Info key** — keep the defaults unless you are moving a v6 installation; they never change later), the time zone and the locale. The time zone stamps every database timestamp |
 | **Database** | the database mode: **create** (the default — only the database name is asked: the role is the service user, reached by peer login, with no password) or **existing** (its host, port, socket, name, role and password). Defaults follow the instance name |
-| **Web server & TLS** | nginx or Apache, the public address, the certificate (Let's Encrypt and its email, or the paths of your files), then the HTTP and HTTPS ports |
+| **Web server & TLS** | nginx or Apache, the public address, the certificate (Let's Encrypt and its email, a local CA and its other addresses, or the paths of your files), then the HTTP and HTTPS ports |
 | **Services** | the media root, the socket, the media access mode and the backup directory. The defaults are the layout above |
 | **Ontologies** | whether to use the official update servers, then the domain ontologies: Oral history (`oh`) is built in and pre-ticked; others come from the update server, with the ontologies they declare |
 | **Thesauri** | the thesauri the chosen ontologies declare, pre-ticked. No country's toponymy is pre-selected. The thesauri are created empty: only `lg` and the country toponymies carry terms |
@@ -229,7 +228,7 @@ By hand: [Install by hand › `host_runtime`](manual_install.md#manual-host_runt
 
 - **Bun** at the release's pin, **owned by root**, in `/opt/dedalo/bun/<pin>/`. It is taken only from a zip whose sha256 equals the release's committed `.bun-sha256` row — the bootstrap's verified cache. The unit runs it as the instance, but the instance can never replace what it runs. When another instance already runs the same pin, the binary there is byte-identical (`cmp`) and is not installed again.
 - **The release** extracted into `<dir>/dedalo` **by the service user** (from a root-owned hand-over directory under `/var/lib/dedalo-install/`), and its dependencies installed as the service user (`bun install --frozen-lockfile --production`). From a checkout, the release is its checked-out commit (`git -c safe.directory=<checkout> -c core.fsmonitor=false archive … HEAD`). The `safe.directory` exception applies to this one command and changes no `git` configuration. When `git` refuses, the step's message quotes its `fatal:` line.
-- **The root-run scripts** — backup, watchdog, rollback, alert and media-rule scripts — copied root-owned (`0755`) to `/opt/dedalo/instances/<i>/bin/`, outside the code tree: a code update moves the whole tree aside, and the rollback has to work exactly when the tree is missing.
+- **The root-run scripts** — backup, watchdog, rollback, alert and media-rule scripts, and the local-CA generator `dedalo-tls-rotate.sh` — copied root-owned (`0755`) to `/opt/dedalo/instances/<i>/bin/`, outside the code tree: a code update moves the whole tree aside, and the rollback has to work exactly when the tree is missing.
 
 !!! danger "Never `bun upgrade` on a production server"
     The engine is coupled to version-specific runtime behaviour — JSONB parameter inference in `Bun.sql` above all — and a silent drift there is a data-corruption class, not a performance regression. The server echoes its runtime at boot and warns loudly when it does not match the pin. The rationale is in `engineering/PRODUCTION.md` §1.
@@ -276,6 +275,7 @@ Writes the shared template units from `deploy/systemd/` into `/etc/systemd/syste
 | `dedalo-backup@<i>.service` + `.timer` | the nightly backup set, run as the instance |
 | `dedalo-backup-site-builder@<i>.service` | the site-builder store, run as root in its own unit (only with `--backup-site-builder`) |
 | `dedalo-backup-alert@<i>.service` | reports a failed backup |
+| `dedalo-tls-renew@<i>.timer` + `.service` | local CA only: renews the site certificate from the same authority (written here, enabled by `host_tls`) |
 
 Why both `Restart=always` and the watchdog: the server reads its configuration **once**, at boot, so a configuration change needs a restart, and any crash must bring the process back — `Restart=always` does that. The watchdog catches a different class: *process alive, service dead* (database down, pool wedged), which `Restart=always` cannot see. systemd's own `WatchdogSec` needs `sd_notify`, which the runtime does not speak, so the timer stands in.
 
@@ -351,12 +351,14 @@ By hand: [Install by hand › `host_tls`](manual_install.md#manual-host_tls).
 
 - **Let's Encrypt:** `certbot certonly --webroot` against the challenge root, as the certificate `dedalo-<i>`, with a deploy hook that reloads the web server, and the distribution's renewal timer enabled (`certbot.timer`; `certbot-renew.timer` on the RHEL family). `--letsencrypt-staging` (headless only) uses the staging authority: the install completes with a certificate browsers do not trust, and the closing *To do on this host* list prints the `certbot` command that replaces it with a real one.
 - **Your institution's files:** checked again (the address, the expiry, the key, and that this server trusts the chain) and used where they are.
+- **Local CA:** `/opt/dedalo/instances/<i>/bin/dedalo-tls-rotate.sh --mode local-ca --host <address> [--host <other address> …] --dir /opt/dedalo/instances/<i>/tls --no-reload` — the same script the docker route and every rotation use. In `/opt/dedalo/instances/<i>/tls/` (root's; the keys `0600`, labelled `cert_t` on the RHEL family) it writes the authority staff computers trust (`dedalo-local-ca.pem`), the issuing authority whose key signs renewals, and the site certificate (`fullchain.pem` + `privkey.pem`, valid 397 days). The authority is restricted to the addresses it was made for; the key of the authority itself is deleted once it has signed. Then it writes the drop-in of `dedalo-tls-renew@<i>.service` and enables `dedalo-tls-renew@<i>.timer`: once a day the script checks the certificate and, in its last 30 days, re-issues it from the same authority and reloads the web server (`systemctl reload nginx`, `apache2` or `httpd`). A directory that already holds an authority for these addresses is used as it is (no new authority to trust); one made for other addresses is refused on the System check.
 
 On the RHEL family the web server must be able to read your certificate files: keep them under `/etc/pki/tls` or label them `cert_t`.
 
 - **Verify (Let's Encrypt):** `certbot certificates --cert-name dedalo-<i>`; `systemctl is-enabled certbot.timer`.
+- **Verify (local CA):** `openssl verify -CAfile /opt/dedalo/instances/<i>/tls/dedalo-local-ca.pem -untrusted /opt/dedalo/instances/<i>/tls/dedalo-issuing-ca.pem /opt/dedalo/instances/<i>/tls/fullchain.pem` prints `OK`; `systemctl list-timers 'dedalo-tls-renew@*'`; a renewal now, to see it work: `systemctl start dedalo-tls-renew@<i>` (it does nothing until the last 30 days) and `journalctl -u dedalo-tls-renew@<i>`.
 - **Verify (your files):** `openssl x509 -noout -subject -enddate -in <fullchain>` names the address and a date ahead; `openssl s_client -connect <address>:443 -servername <address> </dev/null | grep 'Verify return code'` prints `0 (ok)` once the site is up.
-- **Repair:** a failed Let's Encrypt request is almost always DNS or port 80 — see [Troubleshooting › Let's Encrypt](troubleshooting.md#lets-encrypt-fails). Then `--resume`. `--abort` deletes only a certificate this install issued.
+- **Repair:** a failed Let's Encrypt request is almost always DNS or port 80 — see [Troubleshooting › Let's Encrypt](troubleshooting.md#lets-encrypt-fails). Then `--resume`. `--abort` deletes only a certificate this install issued; for a local CA, it disables the renewal timer, removes its drop-in and deletes the certificate directory when this install created it (remove the authority from the staff computers too).
 
 ### `host_web_site` — the full site
 
@@ -398,6 +400,20 @@ Runs the backup set once (`systemctl start --wait dedalo-backup@<i>`) and verifi
 ## Done
 
 The Done screen shows the generated `DEDALO_SALT_STRING` **once** — keep it with your backups — and what comes next. A `--resume` that completes the install shows it too, when no earlier run did. Every run that completes the install, whichever run showed the salt, lists under *To do on this host* the command that reads it back: `sudo grep ^DEDALO_SALT_STRING= <install folder>/private/.env`. A run that stops after the engine steps generated the salt — a failure, or a Ctrl-C that leaves the full screen without its card — names the same command in its ✖ block. The instance is running under systemd and starts at boot; the watchdog and the nightly backup are armed.
+
+With a **local CA**, the *To do on this host* list names the authority's file, `/opt/dedalo/instances/<i>/tls/dedalo-local-ca.pem`, and its SHA-256 fingerprint. Copy the file to each computer that uses Dédalo, check the fingerprint there, and trust it once:
+
+| System | How |
+| --- | --- |
+| Windows | save it as `dedalo-local-ca.crt` (Windows opens `.crt` files as certificates, not `.pem` files), double-click it → *Install Certificate* → *Local Machine* → *Trusted Root Certification Authorities*; or, as Administrator, `certutil -addstore -f Root dedalo-local-ca.pem` |
+| macOS | open it in *Keychain Access*, *System* keychain → *Always Trust* |
+| Debian, Ubuntu | copy it to `/usr/local/share/ca-certificates/dedalo-local-ca.crt`, then `sudo update-ca-certificates` |
+| Fedora, RHEL family | copy it to `/etc/pki/ca-trust/source/anchors/`, then `sudo update-ca-trust` |
+| Firefox (its own store, every system) | *Settings* → *Privacy & Security* → *Certificates* → *View Certificates* → *Authorities* → *Import*, then tick *Trust this CA to identify websites* (it is off by default) |
+
+Check from a staff computer: `curl --cacert dedalo-local-ca.pem https://<address>/health` answers `200`. The certificate renews itself; the authority lasts ten years. To replace it (a compromised server, an authority near its end), rotate it with the same script, as root: `/opt/dedalo/instances/<i>/bin/dedalo-tls-rotate.sh --mode local-ca --dir /opt/dedalo/instances/<i>/tls --reload systemd --unit <nginx|apache2|httpd> --host <address> [--host …]` — then each staff computer trusts the new authority and deletes the old one. Give exactly the addresses in `/opt/dedalo/instances/<i>/tls/dedalo-local-ca.names`, in its order (the address first): an address left out is no longer certified, and a `--resume` refuses an authority whose list differs from the install's.
+
+A rotation does not add an address. The web site answers only to the addresses it was installed with (its site file names them; another name meets the host's catch-all, or Apache's `421`), and an installed instance cannot change its addresses yet — the installer does not run over a completed install. Choose every address staff will type before you install.
 
 Open `https://<address>/dedalo/core/page/` and log in as **`root`**. Then follow [After the install](index.md#after-the-install): an admin user, users and projects, the thesauri and toponymies you need (from Maintenance), and a restore test of the backups.
 
@@ -511,3 +527,34 @@ The installer installs; it does not maintain. It refuses to run over a sealed in
 - **Removing an instance that has served.** No command removes it. [Removing an instance](multi_instance.md#removing-an-instance) lists what to remove by hand.
 
 See [Upgrading](upgrading.md) for what the in-app code update does cover.
+
+## Trying the production route in a virtual machine {#vm-test}
+
+To rehearse a production install, or to test the route while working on Dédalo, on a virtual machine that has no domain name, choose the **Local CA** certificate. Let's Encrypt needs a public name and port 80 open to the internet; a local certificate authority needs nothing outside the machine and the computer you browse from.
+
+1. **The machine.** A virtual machine running a [supported system](index.md#supported-systems), with internet access (the packages and the release are downloaded) and an address your computer can reach: a *bridged* or *host-only* network adapter, not NAT alone. `ip -4 addr` on the machine prints its address. Take a snapshot before the install: `--abort` never takes apart an instance that has served, so going back to the snapshot is the clean way to start again.
+2. **A name.** Choose one under `.test`, which is reserved for testing and never exists in public DNS, for example `dedalo-vm.test`. Avoid `.local`: macOS and most Linux desktops resolve it through multicast DNS, not through the hosts file. The machine itself needs no DNS for the name: the installer's own checks connect to it directly.
+3. **The install**, on the machine, from the release ([Get Dédalo](index.md#get-dedalo)). On the screens, choose **Local CA** on *Web server & TLS*; headless:
+
+    ```shell
+    read -rsp 'New root password: ' DEDALO_INSTALL_ROOT_PASSWORD; echo; export DEDALO_INSTALL_ROOT_PASSWORD
+    sudo --preserve-env=DEDALO_INSTALL_ROOT_PASSWORD sh install.sh -- \
+      --route production --instance vmtest --entity vmtest \
+      --server-name dedalo-vm.test --tls local_ca --execute
+    unset DEDALO_INSTALL_ROOT_PASSWORD
+    ```
+
+    The Done screen prints the authority's file, `/opt/dedalo/instances/vmtest/tls/dedalo-local-ca.pem`, and its SHA-256 fingerprint.
+4. **Your computer finds the name.** Add one line, `<the machine's address> dedalo-vm.test`, to its hosts file: `/etc/hosts` on macOS and Linux (with `sudo`), `C:\Windows\System32\drivers\etc\hosts` on Windows (as Administrator).
+5. **Your computer trusts the authority.** Copy the file from the machine, compare the fingerprint with the one the Done screen printed, and check the site with `curl` before you trust anything:
+
+    ```shell
+    scp <user>@<the machine's address>:/opt/dedalo/instances/vmtest/tls/dedalo-local-ca.pem .
+    openssl x509 -in dedalo-local-ca.pem -noout -fingerprint -sha256
+    curl --cacert dedalo-local-ca.pem https://dedalo-vm.test/health
+    ```
+
+    Then trust it as in the table under [Done](#done). For a test, Firefox in a profile of its own keeps the authority out of your everyday browser and system: `firefox -CreateProfile dedalo-vm`, then `firefox -P dedalo-vm` and import it there. The authority can certify exactly `dedalo-vm.test`, `localhost` and `127.0.0.1`, but remove it from wherever you added it when the machine is gone. Its subject, `Dedalo local CA <stamp>`, tells it apart from any other.
+6. Open `https://dedalo-vm.test/dedalo/core/page/` and log in as **`root`**.
+
+The certificate renews itself on the machine, as on a real server. Every install makes a new authority: after going back to the snapshot and installing again, trust the new one and remove the old.

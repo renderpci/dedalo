@@ -11,8 +11,11 @@
  *    proxy never stops. `--keep-until-expiring`: a resumed run never re-issues;
  *  - local_ca: deploy/dedalo-tls-rotate.sh --mode local-ca — the ONE generator
  *    of local-CA material, the same script a rotation runs (so the certificate
- *    an install gets and a rotation gets cannot drift in SAN, lifetime or modes);
- *    skipped when its CA and certificate are already there;
+ *    an install gets and a rotation gets cannot drift in SAN, lifetime or modes;
+ *    the authority is name-constrained to the install's names, its root key
+ *    deleted at issue — engineering/PRODUCTION.md §13.2); skipped when its CA
+ *    and certificate are already there — and REFUSED when that authority
+ *    cannot serve the answered addresses (stackAuthorityConflict);
  *  - files: the institution's fullchain + key, CHECKED by stack_preflight
  *    (address, expiry, key), COPIED into deploy/certs (key 0600) — a later
  *    `compose up` cannot break on a path that moved.
@@ -25,7 +28,10 @@ import { resolve } from 'node:path';
 import type { HostCommand, HostCtx, HostPlanCtx, HostStepDefinition } from '../contract.ts';
 import { executeCommands } from '../execute.ts';
 import { probeOk, ran, remember, verdictOf } from '../production/common.ts';
+import { hostRefuse } from '../refuse.ts';
+import { authorityConflict } from '../tls_authority.ts';
 import { checkCertificateFiles } from '../tls_files.ts';
+import { siteNames } from '../web/site.ts';
 import { certDirCommand, inCheckout, rememberNewVolumes, stackCreated } from './common.ts';
 import { dockerCommand, dockerProbe, stackExec } from './compose.ts';
 import { STACK_BINARIES, stackFactsOf } from './facts.ts';
@@ -95,14 +101,15 @@ function localCaCommands(ctx: HostPlanCtx): HostCommand[] {
 				inCheckout(ctx, 'deploy/dedalo-tls-rotate.sh'),
 				'--mode',
 				'local-ca',
-				'--host',
-				ctx.answers.server_name,
+				// The server name first (the certificate's subject), then the extra addresses:
+				// the authority is constrained to exactly this list.
+				...siteNames(ctx.answers).flatMap((name) => ['--host', name]),
 				'--dir',
 				inCheckout(ctx, CERT_DIR),
 				'--no-reload',
 				'--quiet',
 			],
-			`create a local certificate authority and the certificate for ${ctx.answers.server_name}`,
+			`create a local certificate authority and the certificate for ${siteNames(ctx.answers).join(', ')}`,
 			{
 				unless: stackExec(
 					ctx,
@@ -113,6 +120,29 @@ function localCaCommands(ctx: HostPlanCtx): HostCommand[] {
 			},
 		),
 	];
+}
+
+/**
+ * The authority already in deploy/certs that cannot serve the answers (made for
+ * other addresses; or a pre-2026-10-16 one whose certificate does not name
+ * them all), or null — host/tls_authority.ts, ONE rule with the native route.
+ * The issue above is skipped when its files exist, so without this a re-run
+ * with new addresses completes on a certificate that does not name them.
+ * stack_preflight refuses with it first; stack_tls again (a resume).
+ */
+export function stackAuthorityConflict(ctx: HostCtx): string | null {
+	if (ctx.answers.tls_mode !== 'local_ca') return null;
+	const dir = inCheckout(ctx, CERT_DIR);
+	const wanted = siteNames(ctx.answers);
+	return authorityConflict(
+		ctx.fs,
+		{
+			dir,
+			route: 'docker',
+			rotate: `bash ${inCheckout(ctx, 'deploy/dedalo-tls-rotate.sh')} --mode local-ca --dir ${dir} --no-reload ${wanted.map((name) => `--host ${name}`).join(' ')}`,
+		},
+		wanted,
+	);
 }
 
 /** One `install -m <mode> <from> <to>` (none when the answer already IS the destination). */
@@ -201,7 +231,17 @@ function tlsIntent(ctx: HostCtx): void {
 		return;
 	}
 	const files = certFiles(ctx);
-	const local = ['dedalo-local-ca.key', 'dedalo-local-ca.srl']
+	// Every file the generator can write: the two-tier constrained authority
+	// (issuing CA + names list; the root key never persists) and the legacy
+	// single-tier key/serial, so an undo removes exactly what this install made.
+	const local = [
+		'dedalo-local-ca.key',
+		'dedalo-local-ca.srl',
+		'dedalo-issuing-ca.key',
+		'dedalo-issuing-ca.pem',
+		'dedalo-issuing-ca.srl',
+		'dedalo-local-ca.names',
+	]
 		.map((name) => inCheckout(ctx, `${CERT_DIR}/${name}`))
 		.concat(inCheckout(ctx, LOCAL_CA_FILE));
 	const candidates = [
@@ -257,6 +297,8 @@ export const stack_tls: HostStepDefinition = {
 	commands: tlsCommands,
 	verify: verifyTls,
 	run: async (ctx) => {
+		const conflict = stackAuthorityConflict(ctx);
+		if (conflict !== null) hostRefuse('install.state_conflict', conflict);
 		await executeCommands(tlsCommands(ctx), ctx);
 		return ran(`certificate (${ctx.answers.tls_mode}) in place for ${ctx.answers.server_name}`);
 	},

@@ -23,7 +23,11 @@
  *   /run/dedalo-<i>/dedalo_ts.sock    the socket (systemd RuntimeDirectory)
  *   /opt/dedalo/bun/<pin>/bun         the runtime, ROOT-OWNED (Q4/F2: a root-run unit
  *                                     never executes a file the instance user can replace)
- *   /opt/dedalo/instances/<i>/bin/    the root-run scripts (backup, watchdog, rollback, alert)
+ *   /opt/dedalo/instances/<i>/bin/    the root-run scripts (backup, watchdog, rollback, alert,
+ *                                     the local-CA generator)
+ *   /opt/dedalo/instances/<i>/tls/    local_ca only: the authority, its issuing key and the
+ *                                     site certificate (root 0755, keys 0600 — the web
+ *                                     server reads them as root, before it drops privileges)
  *   /var/lib/dedalo-install/<i>/      the host run's plan + state (0700)
  *   /var/lib/dedalo-install/acme/<i>/ the HTTP-01 challenge root (Let's Encrypt)
  *   /var/lib/dedalo-install/instances/<i>.json   the host registry (refcounts)
@@ -60,6 +64,8 @@ export interface InstancePaths {
 	readonly bunDir: string;
 	readonly bun: string;
 	readonly binDir: string;
+	/** local_ca: the certificate directory (deploy/dedalo-tls-rotate.sh --dir). */
+	readonly tlsDir: string;
 	readonly stateDir: string;
 	readonly acmeDir: string;
 	readonly registryDir: string;
@@ -133,6 +139,7 @@ export function instancePaths(
 		bunDir: `/opt/dedalo/bun/${bunPin}`,
 		bun: `/opt/dedalo/bun/${bunPin}/bun`,
 		binDir: `/opt/dedalo/instances/${i}/bin`,
+		tlsDir: `/opt/dedalo/instances/${i}/tls`,
 		stateDir: `${INSTALL_STATE_ROOT}/${i}`,
 		acmeDir: `${INSTALL_STATE_ROOT}/acme/${i}`,
 		registryDir: `${INSTALL_STATE_ROOT}/instances`,

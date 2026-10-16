@@ -143,15 +143,27 @@ function maximalRaw(route: InstallRoute): Record<string, unknown> {
 /**
  * The maximal answers of `route` AND their mutually exclusive alternatives
  * (phase 4: the certificate paths are asked under `tls_mode files`, the Let's
- * Encrypt contact under `letsencrypt`; the image repository for a custom image)
+ * Encrypt contact under `letsencrypt`, the extra addresses under `local_ca`;
+ * the image repository for a custom image)
  * — one walk cannot turn both on, the union of the walks must.
  */
 function maximalRaws(route: InstallRoute): Record<string, unknown>[] {
 	const base = maximalRaw(route);
 	// A created database's role IS the service user (never asked); an existing one's is.
+	// The local CA's extra addresses are asked under `tls_mode local_ca` only (2026-10-16).
 	if (route === 'production')
-		return [base, { ...base, tls_mode: 'files' }, { ...base, db_mode: 'existing' }];
-	if (route === 'docker') return [base, { ...base, tls_mode: 'files', image_source: 'custom' }];
+		return [
+			base,
+			{ ...base, tls_mode: 'files' },
+			{ ...base, tls_mode: 'local_ca' },
+			{ ...base, db_mode: 'existing' },
+		];
+	if (route === 'docker')
+		return [
+			base,
+			{ ...base, tls_mode: 'files', image_source: 'custom' },
+			{ ...base, tls_mode: 'local_ca' },
+		];
 	if (route === 'trial') return [base, { ...base, image_source: 'custom' }];
 	return [base];
 }

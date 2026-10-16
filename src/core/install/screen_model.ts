@@ -229,6 +229,7 @@ const DEVELOPER_HOST_KEYS: Readonly<Record<string, string>> = Object.freeze({
 	http_port: NO_HOST_STEPS,
 	https_port: NO_HOST_STEPS,
 	tls_mode: NO_HOST_STEPS,
+	tls_extra_names: NO_HOST_STEPS,
 	letsencrypt_email: NO_HOST_STEPS,
 	tls_cert_path: NO_HOST_STEPS,
 	tls_key_path: NO_HOST_STEPS,
@@ -294,6 +295,7 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 			...IDENTITY_FIXED,
 			server_name: TRIAL_NO_TLS,
 			tls_mode: TRIAL_NO_TLS,
+			tls_extra_names: TRIAL_NO_TLS,
 			letsencrypt_email: TRIAL_NO_TLS,
 			tls_cert_path: TRIAL_NO_TLS,
 			tls_key_path: TRIAL_NO_TLS,
@@ -560,6 +562,7 @@ const VISIBILITY: readonly VisibilityRule[] = Object.freeze<VisibilityRule[]>([
 	{ keys: ['https_port'], when: (_raw, route) => route !== 'developer' && route !== 'trial' },
 	{ keys: ['server_name', 'tls_mode'], when: addressed },
 	{ keys: ['letsencrypt_email'], when: tlsIs('letsencrypt') },
+	{ keys: ['tls_extra_names'], when: tlsIs('local_ca') },
 	{ keys: ['tls_cert_path', 'tls_key_path'], when: tlsIs('files') },
 	{ keys: ['image_source', 'image_version'], when: onStack },
 	{
@@ -1021,6 +1024,7 @@ function tlsQuestions(ctx: Ctx, id: ScreenId, modes: readonly string[]): Questio
 	return [
 		ask(ctx, id, 'server_name', 'text', { required: true }),
 		ask(ctx, id, 'tls_mode', 'choice', { options: vocabularyOptions(modes, OPTION_TEXT.tls_mode) }),
+		ask(ctx, id, 'tls_extra_names', 'text', { emptyAllowed: true }),
 		ask(ctx, id, 'letsencrypt_email', 'text', { required: true }),
 		ask(ctx, id, 'tls_cert_path', 'text', { required: true }),
 		ask(ctx, id, 'tls_key_path', 'text', { required: true }),
@@ -1034,7 +1038,7 @@ function webTlsScreen(ctx: Ctx, frame: Frame): Screen {
 			ask(ctx, 'web_tls', 'web_server', 'choice', {
 				options: vocabularyOptions(['', 'nginx', 'apache'], OPTION_TEXT.web_server),
 			}),
-			...tlsQuestions(ctx, 'web_tls', ['letsencrypt', 'files']),
+			...tlsQuestions(ctx, 'web_tls', ['letsencrypt', 'local_ca', 'files']),
 			ask(ctx, 'web_tls', 'http_port', 'text'),
 			ask(ctx, 'web_tls', 'https_port', 'text'),
 		]),
@@ -1934,7 +1938,8 @@ function certificateValue(a: InstallAnswers): string {
 	if (a.tls_mode === 'letsencrypt')
 		return `Let's Encrypt · ${a.letsencrypt_email}${a.letsencrypt_staging ? ' (staging)' : ''}`;
 	if (a.tls_mode === 'files') return `${a.tls_cert_path} + ${a.tls_key_path}`;
-	return a.tls_mode === 'local_ca' ? 'local CA' : 'none (plain HTTP)';
+	if (a.tls_mode !== 'local_ca') return 'none (plain HTTP)';
+	return a.tls_extra_names === '' ? 'local CA' : `local CA · also ${a.tls_extra_names}`;
 }
 
 /** The host route's lines: the identity (production), the address, the certificate, the backups. */

@@ -110,7 +110,8 @@ render() {
       -e "s|@@PG_BIN@@|$PGBIN|g" -e "s|@@PG_SERVICE@@|$PGSVC|g" \
       -e "s|@@SERVER_NAME_RE@@|$name_re|g" \
       -e "s|@@SERVER_NAME@@|$NAME|g" -e "s|@@LOG_DIR@@|$WEBLOG|g" \
-      -e "s|@@SELINUX_MODULE@@|$SELINUX_MODULE|g" -e "s|@@NGINX_MAP_OWNER@@|$MAP_OWNER|g" "$@"
+      -e "s|@@SELINUX_MODULE@@|$SELINUX_MODULE|g" -e "s|@@NGINX_MAP_OWNER@@|$MAP_OWNER|g" \
+      -e "s|@@WEB_SERVICE@@|$WEBSVC|g" "$@"
 }
 ```
 
@@ -345,7 +346,7 @@ The `cd` matters: `runuser` keeps the directory you are standing in. `--no-overw
 **The root-run scripts**, copied root-owned, byte for byte, outside the code tree. A code update moves the whole tree aside, and the rollback has to work exactly when the tree is missing:
 
 ```shell
-for script in dedalo-backup-step.sh dedalo-db-backup.sh dedalo-tree-backup.sh dedalo-site-builder-backup.sh dedalo-backup-alert.sh dedalo-ts-watchdog.sh dedalo-code-rollback.sh dedalo-media-rules.sh; do
+for script in dedalo-backup-step.sh dedalo-db-backup.sh dedalo-tree-backup.sh dedalo-site-builder-backup.sh dedalo-backup-alert.sh dedalo-ts-watchdog.sh dedalo-code-rollback.sh dedalo-media-rules.sh dedalo-tls-rotate.sh; do
   /usr/bin/install -m 0755 -o root -g root "$SRC/deploy/$script" "$BIN/$script"
 done
 ```
@@ -423,7 +424,7 @@ Installer: [Production › `host_units`](production.md#host_units-the-systemd-un
 **The templates.** The units are shared by every instance on the host, and `%i` is the instance. Their only placeholder is the PostgreSQL unit. A template that already exists (another instance's) must be byte-equal to yours. If it differs, stop: the installer refuses to overwrite it, and so should you.
 
 ```shell
-for unit in dedalo-ts@.service dedalo-ts-restart@.service dedalo-ts-rollback@.service dedalo-ts-watchdog@.service dedalo-ts-watchdog@.timer dedalo-backup@.service dedalo-backup@.timer dedalo-backup-alert@.service dedalo-backup-site-builder@.service; do
+for unit in dedalo-ts@.service dedalo-ts-restart@.service dedalo-ts-rollback@.service dedalo-ts-watchdog@.service dedalo-ts-watchdog@.timer dedalo-backup@.service dedalo-backup@.timer dedalo-backup-alert@.service dedalo-backup-site-builder@.service dedalo-tls-renew@.service dedalo-tls-renew@.timer; do
   text=$(render "$SRC/deploy/systemd/$unit") && [ -n "$text" ] ||
     { echo "STOP: nothing rendered for $unit — define render first (see Before you start)"; break; }
   if [ -e "/etc/systemd/system/$unit" ]; then
@@ -706,6 +707,35 @@ test -s "/etc/letsencrypt/live/dedalo-$I/fullchain.pem" || \
 
 Add `--staging` to try the challenge against the staging authority first. Its certificate is not trusted by browsers, so issue the real one afterwards (`certbot certonly … --cert-name "dedalo-$I" --force-renewal` without `--staging`). A failed request is almost always DNS or port 80: see [Troubleshooting › Let's Encrypt](troubleshooting.md#lets-encrypt-fails).
 
+**A local certificate authority** (an intranet with no public name, a test machine without a domain). The root-owned copy of `deploy/dedalo-tls-rotate.sh` from [`host_runtime`](#manual-host_runtime) makes it — the same script the docker route and every rotation use, so do not write certificates with `openssl` by hand. Give every address staff type as a `--host`, the public address first: the authority certifies exactly those names, never one below them, so no name may lie inside another (adding one later means a new authority, and the name in the site file you write in `host_web_site`). The certificate directory is root's; the script makes the keys `0600`:
+
+```shell
+TLS=/opt/dedalo/instances/$I/tls
+install -d -o root -g root -m 0755 "$TLS"
+test -s "$TLS/fullchain.pem" -a -s "$TLS/dedalo-local-ca.pem" || \
+  "$BIN/dedalo-tls-rotate.sh" --mode local-ca --host "$NAME" --dir "$TLS" --no-reload --quiet
+# more addresses: --host "$NAME" --host dedalo.lan (names only on this route: no IP address)
+[ "$SELINUX_MODULE" = true ] && semanage fcontext -a -t cert_t "$TLS(/.*)?" && restorecon -RF "$TLS"
+```
+
+In the full site of [`host_web_site`](#manual-host_web_site), the certificate lines name `$TLS/fullchain.pem` and `$TLS/privkey.pem` instead of the Let's Encrypt paths, and every extra address joins the server name: nginx's `server_name` lists them all; Apache adds `ServerAlias <the others>` under `ServerName` and its name guard reads `!^(<name>|<other>…)(:<port>)?$`, each name with its dots escaped.
+
+The certificate renews itself from the same authority, so the staff computers never trust anything again: the drop-in of the renewal unit, then its timer (a daily check; the script acts only in the certificate's last 30 days, then reloads the web server):
+
+```shell
+mkdir -p "/etc/systemd/system/dedalo-tls-renew@$I.service.d"
+render > "/etc/systemd/system/dedalo-tls-renew@$I.service.d/10-dedalo-install.conf" <<'EOF'
+# dedalo-install @@INSTANCE@@ manual
+[Service]
+ExecStart=
+ExecStart=/opt/dedalo/instances/@@INSTANCE@@/bin/dedalo-tls-rotate.sh --mode renew --dir /opt/dedalo/instances/@@INSTANCE@@/tls --reload systemd --unit @@WEB_SERVICE@@
+EOF
+/usr/bin/systemctl daemon-reload
+/usr/bin/systemctl enable --now "dedalo-tls-renew@$I.timer"
+```
+
+Then trust `$TLS/dedalo-local-ca.pem` on every staff computer, once — [Production › Done](production.md#done) says how on each system. `openssl x509 -in "$TLS/dedalo-local-ca.pem" -noout -fingerprint -sha256` prints the fingerprint to compare there.
+
 **Your institution's files** are used where they are, never copied. Check that they name the address, are valid now (renew under 30 days) and pair with each other:
 
 ```shell
@@ -717,7 +747,7 @@ This host must trust the chain (the public probe verifies it with this host's `c
 
 On the RHEL family, the web server must be able to read them: keep them under `/etc/pki/tls`, or label their directory `cert_t` (`semanage fcontext -a -t cert_t '<dir>(/.*)?' && restorecon -RF <dir>`).
 
-**Verify:** with Let's Encrypt, `certbot certificates --cert-name "dedalo-$I"` and `systemctl is-enabled "$CERTBOT_TIMER"`. With your own files, `openssl x509 -noout -subject -enddate -in <fullchain>` names the address and a date ahead; once the site is up, `openssl s_client -connect "$NAME:443" -servername "$NAME" </dev/null | grep 'Verify return code'` prints `0 (ok)`.
+**Verify:** with Let's Encrypt, `certbot certificates --cert-name "dedalo-$I"` and `systemctl is-enabled "$CERTBOT_TIMER"`. With a local CA, `openssl verify -CAfile "$TLS/dedalo-local-ca.pem" -untrusted "$TLS/dedalo-issuing-ca.pem" "$TLS/fullchain.pem"` prints `OK` and `systemctl is-enabled "dedalo-tls-renew@$I.timer"` prints `enabled`. With your own files, `openssl x509 -noout -subject -enddate -in <fullchain>` names the address and a date ahead; once the site is up, `openssl s_client -connect "$NAME:443" -servername "$NAME" </dev/null | grep 'Verify return code'` prints `0 (ok)`.
 
 ## `host_web_site` — the full site {#manual-host_web_site}
 

@@ -85,6 +85,25 @@ export function siteHeader(input: SiteInput): string[] {
 	];
 }
 
+/**
+ * Every address the site answers to: the server name, then the local CA's
+ * extra addresses (tls_extra_names — a LAN name; an IPv4 address on the docker
+ * route only, where this site is its nginx's one HTTPS server and so the
+ * no-SNI default: on a native host an IP's handshake is the catch-all's or the
+ * first vhost's, and the plan refuses it — install_validation.ts nativeIpError;
+ * '' on every other mode). The certificate names exactly these, so the site
+ * must too: nginx's catch-all would otherwise reject the handshake of an extra
+ * name, and Apache's name guard refuse it (421).
+ */
+export function siteNames(
+	answers: Pick<InstallAnswers, 'server_name' | 'tls_extra_names'>,
+): string[] {
+	// `?? ''`: the plan file of a run recorded before the answer existed lacks it.
+	const listed = answers.tls_extra_names ?? '';
+	const extra = listed === '' ? [] : listed.split(',');
+	return [answers.server_name, ...extra.filter((name) => name !== answers.server_name)];
+}
+
 /** Is the media gate on (DEDALO_MEDIA_ACCESS_MODE not false/off/0)? Off: the media is served open. */
 export function mediaGated(answers: InstallAnswers): boolean {
 	return !['false', 'off', '0'].includes(answers.media_access_mode);

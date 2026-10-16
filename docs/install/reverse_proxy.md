@@ -50,7 +50,7 @@ It is rendered from the routes of the shipped reference configurations (`deploy/
 
 - **every name made the instance's own** — the nginx `upstream dedalo_<i>`, the rate-limit zone `dedalo_<i>_api`, the log files `dedalo-<i>.*.log` — so two instances on one host never share a name;
 - **the instance's paths** — the socket `/run/dedalo-<i>/dedalo_ts.sock`, the client the engine publishes at `/srv/dedalo/<i>/client` (the web server never reads the code tree), the site's `root /srv/dedalo/<i>`;
-- **the certificate** — `/etc/letsencrypt/live/dedalo-<i>/` for Let's Encrypt, or your institution's files where they are;
+- **the certificate** — `/etc/letsencrypt/live/dedalo-<i>/` for Let's Encrypt, `/opt/dedalo/instances/<i>/tls/` for a local certificate authority (whose other addresses join the server name), or your institution's files where they are;
 - `http2 on;` (nginx 1.25.1 or newer), `server_tokens off`, and the security headers (`Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`) in every location that sets its own headers.
 
 Before every reload the configuration is tested, and a failed test puts the files back as they were. A reload applies every pending change of the web server's configuration, not only this site's, which the Review says next to the command.

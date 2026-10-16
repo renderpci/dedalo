@@ -229,7 +229,11 @@ export function isInstallStepId(step: string): step is InstallStepId {
 
 /** The production web servers the host steps render a site file for. */
 export const WEB_SERVERS = ['nginx', 'apache'] as const;
-/** TLS modes: production letsencrypt|files; docker adds local_ca; trial is none. */
+/**
+ * TLS modes: production and docker letsencrypt|local_ca|files (local_ca on
+ * production since 2026-10-16 — an isolated intranet with no public name);
+ * trial is none.
+ */
 export const TLS_MODES = ['letsencrypt', 'files', 'local_ca', 'none'] as const;
 /** The production database: created by the installer (peer role), or an existing one probed. */
 export const DB_MODES = ['create', 'existing'] as const;
@@ -299,8 +303,15 @@ export interface InstallAnswers {
 	server_name: string;
 	http_port: string;
 	https_port: string;
-	/** TLS_MODES, per route (production: letsencrypt|files; docker: +local_ca; trial: none). */
+	/** TLS_MODES, per route (production, docker: letsencrypt|local_ca|files; trial: none). */
 	tls_mode: string;
+	/**
+	 * local_ca only: the OTHER addresses staff type (a LAN name; an IPv4
+	 * address on the docker route only — install_validation.ts) — canonical `a,b` (lowercase, de-duplicated, '' = none). The
+	 * leaf names them beside server_name and the authority is constrained to
+	 * exactly that list (deploy/dedalo-tls-rotate.sh). See {@link extraTlsNames}.
+	 */
+	tls_extra_names: string;
 	letsencrypt_email: string;
 	/** Let's Encrypt's staging CA (a drill / a rate-limit-safe rehearsal). Flags only. */
 	letsencrypt_staging: boolean;
@@ -397,6 +408,7 @@ const ANSWER_CLASS: Readonly<Record<keyof InstallAnswers, 'secret' | 'plain'>> =
 	http_port: 'plain',
 	https_port: 'plain',
 	tls_mode: 'plain',
+	tls_extra_names: 'plain',
 	letsencrypt_email: 'plain',
 	letsencrypt_staging: 'plain',
 	tls_cert_path: 'plain',
@@ -426,6 +438,7 @@ export const HOST_ONLY_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.f
 	'http_port',
 	'https_port',
 	'tls_mode',
+	'tls_extra_names',
 	'letsencrypt_email',
 	'letsencrypt_staging',
 	'tls_cert_path',
@@ -552,6 +565,22 @@ function optionalText(raw: RawAnswers, key: string): string | undefined {
 function listOf(value: unknown): string[] {
 	const items = Array.isArray(value) ? value : String(value).split(',');
 	return items.map((item) => String(item).trim()).filter((item) => item !== '');
+}
+
+/**
+ * A list of addresses (a comma/space string or an array) → its canonical
+ * answer: lowercase, de-duplicated, in the order given, joined by `,`.
+ */
+function canonicalNameList(value: unknown): string {
+	if (value === undefined || value === null) return '';
+	const items = Array.isArray(value) ? value.map(String) : String(value).split(/[\s,]+/);
+	const names = items.map((item) => item.trim().toLowerCase()).filter((item) => item !== '');
+	return [...new Set(names)].join(',');
+}
+
+/** The extra local-CA addresses of the answers, as a list (the canonical answer split). */
+export function extraTlsNames(answers: Pick<InstallAnswers, 'tls_extra_names'>): string[] {
+	return answers.tls_extra_names === '' ? [] : answers.tls_extra_names.split(',');
 }
 
 /** langs: absent → undefined (the default working languages); otherwise the listed codes. */
@@ -918,6 +947,7 @@ function hostAnswers(raw: RawAnswers, d: RouteDefaults) {
 		http_port: textOr(raw, 'http_port', '80'),
 		https_port: textOr(raw, 'https_port', '443'),
 		tls_mode: textOr(raw, 'tls_mode', d.tls_mode),
+		tls_extra_names: canonicalNameList(raw.tls_extra_names),
 		letsencrypt_email: text(raw, 'letsencrypt_email'),
 		letsencrypt_staging: flag(raw, 'letsencrypt_staging'),
 		tls_cert_path: text(raw, 'tls_cert_path'),
@@ -1629,6 +1659,7 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--http-port', key: 'http_port', kind: 'value' },
 	{ flag: '--https-port', key: 'https_port', kind: 'value' },
 	{ flag: '--tls', key: 'tls_mode', kind: 'value' },
+	{ flag: '--tls-extra-names', key: 'tls_extra_names', kind: 'value' },
 	{ flag: '--letsencrypt-email', key: 'letsencrypt_email', kind: 'value' },
 	{ flag: '--tls-cert', key: 'tls_cert_path', kind: 'value' },
 	{ flag: '--tls-key', key: 'tls_key_path', kind: 'value' },

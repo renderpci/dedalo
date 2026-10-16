@@ -80,6 +80,7 @@ import {
 	instanceDropins,
 	ROOT_RUN_SCRIPTS,
 	renderTemplate,
+	tlsRenewDropin,
 	UNIT_TEMPLATES,
 } from '../../src/core/install/host/systemd/render.ts';
 import { renderApacheSite } from '../../src/core/install/host/web/apache.ts';
@@ -225,6 +226,7 @@ function placeholderAnswers(overrides: Partial<InstallAnswers> = {}): InstallAns
 		https_port: '443',
 		media_access_mode: 'publication',
 		tls_mode: 'letsencrypt',
+		tls_extra_names: '',
 		...overrides,
 	} as InstallAnswers;
 }
@@ -243,6 +245,9 @@ function renderedBlocks(): Map<string, string> {
 		const unit = /system\/([a-z-]+)@/.exec(dropin.path)?.[1] ?? dropin.path;
 		blocks.set(`drop-in ${unit}`, dropin.content);
 	}
+	// The local CA's renewal drop-in (host_tls writes it, local_ca only); the page fills
+	// the web server's unit from $WEBSVC.
+	blocks.set('drop-in dedalo-tls-renew', tlsRenewDropin(paths, '@@WEB_SERVICE@@', MANUAL_STAMP));
 	const cert = {
 		fullchain: '/etc/letsencrypt/live/dedalo-@@INSTANCE@@/fullchain.pem',
 		key: '/etc/letsencrypt/live/dedalo-@@INSTANCE@@/privkey.pem',

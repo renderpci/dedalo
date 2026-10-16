@@ -161,6 +161,8 @@ export interface RowPackages {
 	/** Always (the media toolchain, PostgreSQL 18, the archive tools). */
 	readonly base: readonly string[];
 	readonly certbot: readonly string[];
+	/** local_ca: what deploy/dedalo-tls-rotate.sh runs (the openssl CLI). */
+	readonly localCa: readonly string[];
 	/** Installed in a separate transaction whose failure only warns (EL: ocrmypdf — L28). */
 	readonly optional: readonly string[];
 	/** SELinux management (semanage). */
@@ -236,6 +238,7 @@ const APT_PACKAGES: RowPackages = Object.freeze({
 		'librsvg2-bin',
 	]),
 	certbot: Object.freeze(['certbot']),
+	localCa: Object.freeze(['openssl']),
 	optional: Object.freeze([]),
 	selinuxTools: Object.freeze([]),
 });
@@ -354,6 +357,7 @@ export const OS_ROWS: readonly OsRow[] = Object.freeze([
 				'librsvg2-tools',
 			]),
 			certbot: Object.freeze(['certbot']),
+			localCa: Object.freeze(['openssl']),
 			// Not in EPEL 10 at every point release (campaign 2 L28): warned, never fatal.
 			optional: Object.freeze(['ocrmypdf']),
 			selinuxTools: Object.freeze(['policycoreutils-python-utils']),

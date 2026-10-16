@@ -85,6 +85,12 @@ import { identityOf } from './identity.ts';
 export function certificatePaths(ctx: HostPlanCtx): { fullchain: string; key: string } {
 	if (ctx.answers.tls_mode === 'files')
 		return { fullchain: ctx.answers.tls_cert_path, key: ctx.answers.tls_key_path };
+	// The local CA's directory (host_tls): the generator writes these two names.
+	if (ctx.answers.tls_mode === 'local_ca')
+		return {
+			fullchain: `${ctx.paths.tlsDir}/fullchain.pem`,
+			key: `${ctx.paths.tlsDir}/privkey.pem`,
+		};
 	const live = `/etc/letsencrypt/live/dedalo-${ctx.paths.instance}`;
 	return { fullchain: `${live}/fullchain.pem`, key: `${live}/privkey.pem` };
 }

@@ -340,10 +340,67 @@ const BAD_ROWS: readonly BadRow[] = [
 		answers: { ...PRODUCTION, https_port: '0' },
 		error: "https_port '0' must be an integer 1-65535",
 	},
+	// A local CA on production (owner decision 2026-10-16 — it was refused there before).
 	{
-		name: 'a local CA on production (owner: no local CA there)',
-		answers: { ...PRODUCTION, tls_mode: 'local_ca' },
-		error: 'tls_mode must be letsencrypt|files on the production route',
+		name: 'an unknown certificate mode on production',
+		answers: { ...PRODUCTION, tls_mode: 'self_signed' },
+		error: 'tls_mode must be letsencrypt|local_ca|files on the production route',
+	},
+	{
+		name: "a local CA's extra address that is not an address",
+		answers: { ...PRODUCTION, tls_mode: 'local_ca', tls_extra_names: 'dedalo.lan,no_such_name' },
+		error:
+			"tls_extra_names: 'no_such_name' must be a fully qualified domain name or an IPv4 address",
+	},
+	{
+		name: "a local CA's extra address that is IPv6",
+		answers: { ...PRODUCTION, tls_mode: 'local_ca', tls_extra_names: 'fd00::20' },
+		error:
+			'tls_extra_names: fd00::20 — IPv6 addresses are not supported for the local CA (use a name or an IPv4 address)',
+	},
+	{
+		name: "a local CA's extra IPv4 address out of range",
+		answers: { ...PRODUCTION, tls_mode: 'local_ca', tls_extra_names: '192.168.1.300' },
+		error:
+			"tls_extra_names: '192.168.1.300' must be a fully qualified domain name or an IPv4 address",
+	},
+	{
+		name: "a local CA's extra address that is loopback",
+		answers: { ...PRODUCTION, tls_mode: 'local_ca', tls_extra_names: '127.0.0.2' },
+		error:
+			'tls_extra_names: 127.0.0.2 is a loopback address (127.0.0.1 is in every certificate already)',
+	},
+	{
+		// No SNI for an IP-literal URL: a multi-site host picks the handshake's certificate
+		// by address alone (engineering/PRODUCTION.md §13.2) — the docker stack's one site can.
+		name: "a local CA's extra IPv4 address on the production route",
+		answers: { ...PRODUCTION, tls_mode: 'local_ca', tls_extra_names: 'dedalo.lan,192.168.1.20' },
+		error:
+			"tls_extra_names: 192.168.1.20 — an IP address cannot be served on the production route (a browser sends no server name for an IP address, so this host's web server cannot tell this site's certificate from the others'); give staff a LAN name instead (internal DNS or each computer's hosts file)",
+	},
+	{
+		// The authority excludes every name BELOW each listed name (exact names).
+		name: "a local CA's extra address under the server name",
+		answers: { ...PRODUCTION, tls_mode: 'local_ca', tls_extra_names: 'archivo.prado.example.org' },
+		error:
+			'archivo.prado.example.org lies under prado.example.org: the local CA certifies each name exactly, never the names below it — give staff names that are not inside one another',
+	},
+	{
+		name: "a local CA's server name under an extra address",
+		answers: { ...PRODUCTION, tls_mode: 'local_ca', tls_extra_names: 'example.org' },
+		error:
+			'prado.example.org lies under example.org: the local CA certifies each name exactly, never the names below it — give staff names that are not inside one another',
+	},
+	{
+		name: "a local CA's server name under localhost",
+		answers: { ...PRODUCTION, tls_mode: 'local_ca', server_name: 'dedalo.localhost' },
+		error:
+			'dedalo.localhost lies under localhost: the local CA certifies each name exactly, never the names below it — give staff names that are not inside one another',
+	},
+	{
+		name: 'extra addresses with a certificate that cannot name them',
+		answers: { ...PRODUCTION, tls_extra_names: '192.168.1.20' },
+		error: 'tls_extra_names is only meaningful with tls_mode local_ca (tls_mode is letsencrypt)',
 	},
 	{
 		name: "the institution's files without the key",
@@ -574,6 +631,26 @@ describe('install validation — every bad answer refused by the plan, identical
 		const production = buildInstallPlan({ ...answers, ...PRODUCTION });
 		expect(production.errors).toEqual([]);
 		expect(production.answers.mysql_database).toBe('web_prado');
+	});
+
+	test("a local CA's extra names on production, and an IPv4 one on docker, are CLEAN on all three (the IP row is the route's, not the shape's)", () => {
+		expect(
+			errorsThreeWays({
+				...BASE,
+				...PRODUCTION,
+				tls_mode: 'local_ca',
+				tls_extra_names: 'dedalo.lan,archivo.museo.lan',
+			}),
+		).toEqual({ argv: [], file: [], record: [] });
+		expect(
+			errorsThreeWays({
+				...BASE,
+				route: 'docker',
+				server_name: 'd.example.org',
+				tls_mode: 'local_ca',
+				tls_extra_names: 'dedalo.lan,192.168.1.20',
+			}),
+		).toEqual({ argv: [], file: [], record: [] });
 	});
 
 	test('a valid production instance is CLEAN on all three (the route rows are not vacuous)', () => {

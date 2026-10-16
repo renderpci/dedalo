@@ -21,6 +21,8 @@
  *  - the institution's certificate files (address, expiry, key) — and that
  *    THIS machine trusts their chain (tls_trust.ts: stack_health probes the
  *    site with this machine's curl; campaign 3 C3-13);
+ *  - a local CA already in deploy/certs that cannot serve the answered
+ *    addresses (host/tls_authority.ts — stack_tls would skip its issue);
  *  - Compose older than 2.24.4 (the override's `!override` tag).
  *  - a port the stack publishes that something already listens on (`ss`;
  *    campaign 3c D2 — found at stack_up, after the build, before);
@@ -58,6 +60,7 @@ import {
 	PRIVATE_VOLUME,
 	stackFileOf,
 } from './layout.ts';
+import { stackAuthorityConflict } from './tls.ts';
 
 /** The disk floor (see the header). */
 export const STACK_MIN_FREE_GIB = 8;
@@ -405,6 +408,9 @@ async function evaluateStack(
 		...published.problems,
 		...portProblems(ctx.answers, facts),
 		...tls.problems,
+		// A local CA already in deploy/certs that cannot serve the answers (stack_tls
+		// would skip its issue) — refused here, before anything is built.
+		...[stackAuthorityConflict(ctx)].filter((line): line is string => line !== null),
 	];
 	return {
 		facts,

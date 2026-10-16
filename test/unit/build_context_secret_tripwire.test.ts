@@ -857,6 +857,16 @@ function runRotate(args: string[]): { code: number | null; err: string } {
 	return { code: proc.exitCode, err: proc.stderr.toString() };
 }
 
+/** `openssl verify` of a chain against an authority. Since 2026-10-16 the
+ * authority is two-tier (root trusted by workstations, issuing CA on the
+ * server), and `verify` reads only the FIRST certificate of a file — the
+ * issuing CA must be named as untrusted, as a browser takes it from the chain. */
+function verifyExit(caPem: string, chain: string, issuing?: string): number | null {
+	const args = [OPENSSL as string, 'verify', '-CAfile', caPem];
+	if (issuing !== undefined) args.push('-untrusted', issuing);
+	return Bun.spawnSync([...args, chain], { stdout: 'pipe', stderr: 'pipe' }).exitCode;
+}
+
 function opensslText(args: string[]): string {
 	const proc = Bun.spawnSync([OPENSSL as string, ...args], { stdout: 'pipe', stderr: 'pipe' });
 	return proc.stdout.toString();
@@ -947,31 +957,31 @@ describe('H. a key that already shipped in an image can be ROTATED', () => {
 				]).code,
 			).toBe(0);
 			for (const name of [
-				'dedalo-local-ca.key',
+				'dedalo-issuing-ca.key',
+				'dedalo-issuing-ca.pem',
 				'dedalo-local-ca.pem',
 				'privkey.pem',
 				'fullchain.pem',
 			]) {
 				expect({ name, present: existsSync(join(dir, name)) }).toEqual({ name, present: true });
 			}
-			const verified = Bun.spawnSync(
-				[
-					OPENSSL as string,
-					'verify',
-					'-CAfile',
+			// The ROOT key is deleted at issue (only the name-constrained issuing
+			// CA's key stays on the server — tls_local_ca_native holds the rest).
+			expect(existsSync(join(dir, 'dedalo-local-ca.key'))).toBe(false);
+			expect(
+				verifyExit(
 					join(dir, 'dedalo-local-ca.pem'),
 					join(dir, 'fullchain.pem'),
-				],
-				{ stdout: 'pipe', stderr: 'pipe' },
-			);
-			expect(verified.exitCode).toBe(0);
+					join(dir, 'dedalo-issuing-ca.pem'),
+				),
+			).toBe(0);
 			expect(
 				opensslText(['x509', '-in', join(dir, 'dedalo-local-ca.pem'), '-noout', '-subject']),
 			).toMatch(/Dedalo local CA \d{4}-\d{2}-\d{2}T\d{6}Z/);
 		});
 
 		test('rotating replaces BOTH keys and archives the predecessors intact', () => {
-			const previousCaKey = readFileSync(join(dir, 'dedalo-local-ca.key'), 'utf-8');
+			const previousCaKey = readFileSync(join(dir, 'dedalo-issuing-ca.key'), 'utf-8');
 			const previousSiteKey = readFileSync(join(dir, 'privkey.pem'), 'utf-8');
 			const previousCaPem = readFileSync(join(dir, 'dedalo-local-ca.pem'), 'utf-8');
 
@@ -988,20 +998,15 @@ describe('H. a key that already shipped in an image can be ROTATED', () => {
 				]).code,
 			).toBe(0);
 
-			expect(readFileSync(join(dir, 'dedalo-local-ca.key'), 'utf-8')).not.toBe(previousCaKey);
+			expect(readFileSync(join(dir, 'dedalo-issuing-ca.key'), 'utf-8')).not.toBe(previousCaKey);
 			expect(readFileSync(join(dir, 'privkey.pem'), 'utf-8')).not.toBe(previousSiteKey);
 			// The new chain verifies against the NEW authority…
 			expect(
-				Bun.spawnSync(
-					[
-						OPENSSL as string,
-						'verify',
-						'-CAfile',
-						join(dir, 'dedalo-local-ca.pem'),
-						join(dir, 'fullchain.pem'),
-					],
-					{ stdout: 'pipe', stderr: 'pipe' },
-				).exitCode,
+				verifyExit(
+					join(dir, 'dedalo-local-ca.pem'),
+					join(dir, 'fullchain.pem'),
+					join(dir, 'dedalo-issuing-ca.pem'),
+				),
 			).toBe(0);
 			// …and NOT against the old one: rotation is a replacement, not a re-issue.
 			const archives = Bun.spawnSync(['sh', '-c', `ls -d ${dir}/rotated-* | head -1`], {
@@ -1011,18 +1016,20 @@ describe('H. a key that already shipped in an image can be ROTATED', () => {
 				.trim();
 			expect(archives.length).toBeGreaterThan(0);
 			expect(readFileSync(join(archives, 'dedalo-local-ca.pem'), 'utf-8')).toBe(previousCaPem);
-			expect(readFileSync(join(archives, 'dedalo-local-ca.key'), 'utf-8')).toBe(previousCaKey);
+			expect(readFileSync(join(archives, 'dedalo-issuing-ca.key'), 'utf-8')).toBe(previousCaKey);
 			expect(
-				Bun.spawnSync(
-					[
-						OPENSSL as string,
-						'verify',
-						'-CAfile',
-						join(archives, 'dedalo-local-ca.pem'),
-						join(dir, 'fullchain.pem'),
-					],
-					{ stdout: 'pipe', stderr: 'pipe' },
-				).exitCode,
+				verifyExit(
+					join(archives, 'dedalo-local-ca.pem'),
+					join(dir, 'fullchain.pem'),
+					join(dir, 'dedalo-issuing-ca.pem'),
+				),
+			).not.toBe(0);
+			expect(
+				verifyExit(
+					join(archives, 'dedalo-local-ca.pem'),
+					join(dir, 'fullchain.pem'),
+					join(archives, 'dedalo-issuing-ca.pem'),
+				),
 			).not.toBe(0);
 			// The IP branch of the SAN, which is what a LAN install actually gets.
 			expect(opensslText(['x509', '-in', join(dir, 'fullchain.pem'), '-noout', '-text'])).toContain(
@@ -1109,11 +1116,11 @@ describe('H. a key that already shipped in an image can be ROTATED', () => {
 			// spellings are incompatible, and on GNU `-f` means --file-system, so a
 			// shelled-out probe reads filesystem data on Linux and the gate goes red
 			// in CI while passing on macOS.
-			for (const name of ['privkey.pem', 'dedalo-local-ca.key']) {
+			for (const name of ['privkey.pem', 'dedalo-issuing-ca.key']) {
 				const octal = (statSync(join(dir, name)).mode & 0o777).toString(8);
 				expect({ name, octal }).toEqual({ name, octal: '600' });
 			}
-			for (const name of ['fullchain.pem', 'dedalo-local-ca.pem']) {
+			for (const name of ['fullchain.pem', 'dedalo-local-ca.pem', 'dedalo-issuing-ca.pem']) {
 				// The certificates are PUBLIC — the CA file has to be copied to every
 				// workstation, so a 600 here would be a support call, not security.
 				const octal = (statSync(join(dir, name)).mode & 0o777).toString(8);

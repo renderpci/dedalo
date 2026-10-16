@@ -95,6 +95,12 @@ export interface HostCreated {
 	site_files: string[];
 	/** The Let's Encrypt certificate name this install issued, or null. */
 	cert_name: string | null;
+	/**
+	 * local_ca: the certificate directory THIS install created (removed whole by
+	 * --abort — every file in it is the generator's), or null. Absent on a
+	 * record written before it existed: none.
+	 */
+	tls_dir?: string | null;
 	selinux_fcontexts: string[];
 	/** The host-wide SELinux module was installed by this install (refcounted). */
 	selinux_module: boolean;
@@ -156,6 +162,7 @@ export function emptyHostCreated(): HostCreated {
 		web_group_member: false,
 		site_files: [],
 		cert_name: null,
+		tls_dir: null,
 		selinux_fcontexts: [],
 		selinux_module: false,
 		watchdog_armed: false,

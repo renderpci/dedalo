@@ -41,7 +41,7 @@ Choose **Docker** on the first screen (`--plain` asks the same questions one per
 | **Install type** | the route |
 | **System check** | nothing: it shows Docker, Compose and the free disk. A failed row must be fixed first |
 | **Image** | where the image comes from: an **official** Dédalo registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout's last commit. The official image is the one of the installer's **own release** — `7.0.1`, or `7.0.0-beta.7` for a prerelease; a development build has none, and **Build** is preselected for it. **Image version** is the image tag: leave it empty for the installer's own release — the only one accepted besides its data version's `-dev` tag. See [where the image comes from](#choose-where-the-image-comes-from) |
-| **TLS & address** | the public address, and the certificate: **Let's Encrypt** (with its email), a **local certificate authority**, or your institution's **files** |
+| **TLS & address** | the public address, and the certificate: **Let's Encrypt** (with its email), a **local certificate authority** (with the other addresses staff type), or your institution's **files** |
 | **Containers** | the published HTTP and HTTPS ports (`80` and `443`) |
 | **Identity** | the institution's short code and full name, the install fingerprint (**Information** and **Info key** — keep the defaults unless you are moving a v6 installation), the locale and the time zone |
 | **Ontologies**, **Thesauri**, **Languages** | the domain ontologies (Oral history, `oh`, built in), the declared thesauri (created empty: only `lg` and the country toponymies carry terms), the languages |
@@ -94,7 +94,7 @@ sh install.sh --route docker --abort --confirm-database dedalo     # undo this i
 
 A `--resume` runs in line mode, not on the full screen, and asks again on the terminal for the secrets the remaining steps need.
 
-When the install completes, open `https://<address>/dedalo/` (add `:<port>` for a non-standard HTTPS port) and log in as **`root`**. With a local certificate authority, the browser warns until you install `deploy/certs/dedalo-local-ca.pem` on that computer. Then continue with [after the install](index.md#after-the-install).
+When the install completes, open `https://<address>/dedalo/` (add `:<port>` for a non-standard HTTPS port) and log in as **`root`**. With a local certificate authority, the browser warns until you install `deploy/certs/dedalo-local-ca.pem` on that computer — how, on each system: [Production › Done](production.md#done). Then continue with [after the install](index.md#after-the-install).
 
 The generated `DEDALO_SALT_STRING` is shown once, on a terminal, by the run whose engine steps generate it: on the full screen in the install view and again on the card that ends that run (installed, or failed), in line mode in the output — a later `--resume` does not show it again. Keep it with your backups. A run stopped with Ctrl-C leaves the full screen without that card, so its ✖ block names the command that reads the salt back instead — as does the ✖ block of every run that fails after the salt was generated. Every run that completes the install also lists, under *To do on this host*, the same command, which reads the salt from the `private` volume whether the stack is running or not:
 
@@ -289,16 +289,37 @@ The certificate nginx serves is the one `stack_tls` provided:
 TLS is not optional on this route: `SESSION_COOKIE_SECURE` is `true`, so over plain HTTP the browser discards the session cookie and nobody can log in.
 
 !!! note "The local CA: one step on each staff computer"
-    A local certificate authority is trusted only where you install it, so until you do, browsers warn about the site. Install `deploy/certs/dedalo-local-ca.pem` on each computer that uses Dédalo. That authority's **private key** is the most powerful secret this install creates: whoever holds it can mint a certificate those computers trust, for any hostname. It stays in `deploy/certs/` — never committed, never inside an image. If it may have escaped, rotate it.
+    A local certificate authority is trusted only where you install it, so until you do, browsers warn about the site. Install `deploy/certs/dedalo-local-ca.pem` on each computer that uses Dédalo. The authority can certify exactly the names it was issued for (the server name, any extra `--host` addresses, `localhost`) — not even a name below one of them, so no name may lie inside another (`museo.lan` with `dedalo.museo.lan` is refused): the key that stays on the server, `deploy/certs/dedalo-issuing-ca.key`, signs under that restriction, and the key of the authority itself is deleted the moment it has signed. Keep `deploy/certs/` private all the same — never committed, never inside an image. If the key may have escaped, rotate it.
+
+    An authority issued before 2026-10-16 is not restricted: its key, `deploy/certs/dedalo-local-ca.key`, can mint a certificate for any hostname. It keeps working; your next rotation replaces it with a restricted one.
+
+### Renewing the local-CA certificate
+
+The site certificate lives 397 days; the authority lives ten years. Renewing re-issues the site certificate from the SAME authority, so nothing changes on the staff computers. On this route nothing renews it for you: put a reminder in your calendar, or run the renewal from a monthly cron job, because it does nothing until the certificate is inside its last 30 days:
+
+```shell
+deploy/dedalo-tls-rotate.sh --mode renew --compose-file docker-compose.yml
+```
+
+Run it from the checkout directory. It reloads nginx inside the stack, so `docker` must be on the job's `PATH` — cron's default `PATH` often lacks it (on macOS it is in `/usr/local/bin` or `/opt/homebrew/bin`), for example:
+
+```cron
+0 3 1 * * cd /srv/dedalo && PATH=/usr/local/bin:/usr/bin:/bin deploy/dedalo-tls-rotate.sh --mode renew --compose-file docker-compose.yml --quiet
+```
+
+If the new certificate is in place but nginx could not be reloaded, the run exits with status 3 (cron mails the error to the crontab's owner when mail is set up). Every later run tries the reload again and exits 3 until it works, so a failed reload is never forgotten.
+
+It re-issues for the names recorded in `deploy/certs/dedalo-local-ca.names` (`--force` renews now; `--host` names a subset). A name outside the authority's list is refused and the working certificate stays in place. Adding a name needs more than a new authority (rotation, below): the installer's nginx site names the addresses it was installed with (`server_name`), so a rotation alone gives the new name a certificate but no site — and an installed stack cannot change its addresses yet. Choose every address staff will type before you install. An authority issued before 2026-10-16 has no names file — pass `--host <name>` for each address.
 
 ### Rotating TLS material
 
 The same script that issued the local CA rotates it, so the first issue and every rotation cannot drift:
 
 ```shell
-# a new local authority and a new site certificate
+# a new local authority and a new site certificate (repeat --host for each
+# address staff type: a LAN name, an IPv4 address)
 deploy/dedalo-tls-rotate.sh --mode local-ca --host dedalo.example.org \
-  --compose-file docker-compose.yml
+  --host 192.168.1.20 --compose-file docker-compose.yml
 
 # a replacement certificate from your institution
 deploy/dedalo-tls-rotate.sh --mode existing \

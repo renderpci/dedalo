@@ -34,6 +34,7 @@ import { TRUST_CA_STEPS } from '../tls_trust.ts';
 import { mediaGated } from '../web/site.ts';
 import { exec, ran, webFlavor } from './common.ts';
 import { pollUntil } from './first_boot.ts';
+import { localCaFile } from './tls.ts';
 
 const PROBE_NAME = 'dd_install_probe_dd0_0.jpg';
 
@@ -48,14 +49,17 @@ function origin(ctx: HostPlanCtx): string {
 }
 
 /**
- * How curl trusts the chain: the drill's CA seam, else NOTHING for a Let's
- * Encrypt STAGING certificate (untrusted by design — the operator asked for a
- * test certificate; without this the probe could never pass and a staging
- * install could never complete — stack/health.ts trustArgs is the twin), else
- * the system's store, verified.
+ * How curl trusts the chain: the drill's CA seam, else the install's own local
+ * CA (its file — this host's store never holds it; the chain is verified
+ * against it as a staff browser that trusts it does, never skipped), else
+ * NOTHING for a Let's Encrypt STAGING certificate (untrusted by design — the
+ * operator asked for a test certificate; without this the probe could never
+ * pass and a staging install could never complete — stack/health.ts trustArgs
+ * is the twin), else the system's store, verified.
  */
 function trustArgs(ctx: HostPlanCtx, ca: string | null): string[] {
 	if (ca !== null) return ['--cacert', ca];
+	if (ctx.answers.tls_mode === 'local_ca') return ['--cacert', localCaFile(ctx)];
 	return ctx.answers.tls_mode === 'letsencrypt' && ctx.answers.letsencrypt_staging
 		? ['--insecure']
 		: [];

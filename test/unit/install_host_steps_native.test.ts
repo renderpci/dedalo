@@ -41,12 +41,21 @@
  *      file, socket, the address served by another site, a port held, another
  *      PostgreSQL major on the port), a foreign template unit, and the
  *      institution's certificate expired, for another address or with another key.
+ *  (g) THE LOCAL CA ON PRODUCTION (owner decision 2026-10-16), every row ×
+ *      nginx|apache: the same (a)–(c) end to end; the ONE generator run from
+ *      its root-owned copy with every address as a --host, no certbot, no
+ *      challenge site; the renewal drop-in and timer; the public probe trusting
+ *      the install's own authority; Done telling its file and fingerprint; an
+ *      abort removing exactly the timer, the drop-in and the directory this
+ *      install made — never an authority that was there before; an authority
+ *      for OTHER addresses refused on the System check.
  *
  * DB-FREE and network-free (the hermetic tier runs it): the certificate is
  * minted in memory by the openssl CLI (absent = RED, never a skip).
  */
 
 import { afterAll, describe, expect, spyOn, test } from 'bun:test';
+import { X509Certificate } from 'node:crypto';
 import {
 	existsSync,
 	mkdirSync,
@@ -127,7 +136,11 @@ import {
 	hostFiles,
 	hostResponses,
 	INSTANCE,
+	LOCAL_CA_DIR,
+	LOCAL_CA_EXTRA_NAMES,
+	LOCAL_CA_VARIANTS,
 	laterRequest,
+	localCaScratchAuthority,
 	loggedCommands,
 	loggedRequests,
 	mintCertificate,
@@ -2466,3 +2479,194 @@ describe('the untrusted-chain refusal names the real recovery path (campaign 3d 
 		expect(chainTrustVerdict(chain, [chain]).problem).toBeNull();
 	});
 });
+
+// ── (g) the local CA on production (owner decision 2026-10-16) ───────────────
+
+describe('the local CA on production: end to end on every row × web server (g)', () => {
+	const GENERATOR = `/opt/dedalo/instances/${INSTANCE}/bin/dedalo-tls-rotate.sh`;
+	const TIMER = `dedalo-tls-renew@${INSTANCE}.timer`;
+	const DROPIN = `/etc/systemd/system/dedalo-tls-renew@${INSTANCE}.service.d/10-dedalo-install.conf`;
+	const NAMES = [SERVER_NAME, ...LOCAL_CA_EXTRA_NAMES.split(',')];
+
+	test('the matrix: every supported row × nginx|apache', () => {
+		expect(LOCAL_CA_VARIANTS.length).toBe(6);
+		expect(new Set(LOCAL_CA_VARIANTS.map((variant) => variant.os))).toEqual(
+			new Set(['ubuntu2604', 'debian13', 'el10']),
+		);
+	});
+
+	for (const variant of LOCAL_CA_VARIANTS) {
+		test(`${variantName(variant)}: Review ≡ run, files landed, the generator, the timer, the trust told, idempotent`, async () => {
+			const host = scratchHost(variant);
+			const { plan, planFile } = productionPlan(variant);
+			expect(plan.steps).not.toContain('host_web_http');
+			const first = await runHost(host, freshRequest(planFile));
+			expect(first.outcome.message).toBeNull();
+			expect(first.outcome.result).toBe('complete');
+			const ctx = frozenContext(host);
+			const log = loggedCommands(host.root);
+			expect(reviewEqualsRun(ctx, log)).toEqual([]);
+			expect(landedProblems(host, ctx)).toEqual([]);
+			// The ONE generator, from its root-owned copy, every address a --host (the subject first).
+			expect(log.filter((line) => line.includes('dedalo-tls-rotate.sh'))).toEqual([
+				[
+					GENERATOR,
+					'--mode local-ca',
+					...NAMES.map((name) => `--host ${name}`),
+					`--dir ${LOCAL_CA_DIR} --no-reload --quiet`,
+				].join(' '),
+			]);
+			// No ACME anywhere: no certbot command, no certbot package, no challenge root.
+			expect(log.filter((line) => /certbot|acme/.test(line))).toEqual([]);
+			expect(existsSync(join(host.root, `/var/lib/dedalo-install/acme/${INSTANCE}`))).toBe(false);
+			// The renewal: the drop-in pins the root-owned generator, this directory, the host web server.
+			const service = osRowById(variant.os).web[variant.web].service;
+			expect(readFileSync(join(host.root, DROPIN), 'utf8')).toContain(
+				`ExecStart=${GENERATOR} --mode renew --dir ${LOCAL_CA_DIR} --reload systemd --unit ${service}\n`,
+			);
+			expect(log).toContain(`/usr/bin/systemctl enable --now ${TIMER}`);
+			// EL: the certificate directory is relabelled cert_t after the generator wrote it.
+			const relabel = log.indexOf(`/usr/sbin/restorecon -RF ${LOCAL_CA_DIR}`);
+			expect(relabel >= 0).toBe(variant.os === 'el10');
+			if (relabel >= 0)
+				expect(relabel).toBeGreaterThan(
+					log.indexOf(log.find((l) => l.startsWith(GENERATOR)) ?? ''),
+				);
+			// The site names the local CA's files and every address.
+			const site = readFileSync(join(host.root, sitePathOf(variant)), 'utf8');
+			expect(site).toContain(`${LOCAL_CA_DIR}/fullchain.pem`);
+			expect(site).toContain(`${LOCAL_CA_DIR}/privkey.pem`);
+			for (const name of NAMES) expect(site).toContain(name);
+			// The public probe verified the chain against the install's OWN authority.
+			expect(
+				log.some(
+					(line) =>
+						line.includes('/health') &&
+						line.includes(`--cacert ${LOCAL_CA_DIR}/dedalo-local-ca.pem`),
+				),
+			).toBe(true);
+			expect(log.some((line) => line.includes('--insecure'))).toBe(false);
+			// Done: where the authority is, its fingerprint, how to trust it, the curl check.
+			const told = first.outcome.told.join('\n');
+			const fingerprint = new X509Certificate(localCaScratchAuthority().cert).fingerprint256;
+			expect(told).toContain(
+				`${LOCAL_CA_DIR}/dedalo-local-ca.pem — SHA-256 fingerprint ${fingerprint}`,
+			);
+			for (const how of [
+				'Windows',
+				'macOS',
+				'update-ca-certificates',
+				'update-ca-trust',
+				'Firefox',
+				// Windows opens no .pem as a certificate (no Install button): a .crt copy, or certutil.
+				'save it as dedalo-local-ca.crt',
+				'certutil -addstore -f Root dedalo-local-ca.pem',
+				// Firefox imports with website trust OFF unless the box is ticked.
+				"tick 'Trust this CA to identify websites'",
+			])
+				expect(told).toContain(how);
+			expect(told).toContain(`curl --cacert dedalo-local-ca.pem https://${SERVER_NAME}/health`);
+			// Idempotent.
+			const second = await runHost(host, laterRequest('resume', plan));
+			expect(second.outcome.result).toBe('already_complete');
+			expect(mutatingLog(loggedCommands(host.root).slice(log.length))).toEqual([]);
+		});
+	}
+
+	test('abort removes exactly what the local CA made: the timer, its drop-in, the directory', async () => {
+		const variant = LOCAL_CA_VARIANTS[0] as HostVariant;
+		const host = scratchHost(variant);
+		const { plan, planFile } = productionPlan(variant);
+		expect((await runHost(host, freshRequest(planFile))).outcome.result).toBe('complete');
+		const before = loggedCommands(host.root).length;
+		const abort = await runHost(host, laterRequest('abort', plan));
+		expect(abort.outcome.result).toBe('aborted');
+		const undone = loggedCommands(host.root).slice(before);
+		expect(undone).toContain(`/usr/bin/systemctl disable --now ${TIMER}`);
+		expect(undone).toContain(`/usr/bin/rm -rf ${LOCAL_CA_DIR}`);
+		// (The recording runner executes no `rm`: the logged command is the outcome; the
+		// drop-in is removed through the HostFs, measured on the scratch root.)
+		expect(existsSync(join(host.root, DROPIN))).toBe(false);
+		// Nothing else under the instance's root-owned dir (the bin dir is host_runtime's).
+		expect(
+			undone.filter((line) => line.includes('rm -rf') && line.includes('/opt/dedalo/instances/')),
+		).toEqual([`/usr/bin/rm -rf ${LOCAL_CA_DIR}`]);
+	});
+
+	test('an authority that was there BEFORE (same addresses) is used as it is, and an abort keeps it', async () => {
+		const variant = LOCAL_CA_VARIANTS[0] as HostVariant;
+		const authority = localCaScratchAuthority();
+		const files = new Map([
+			[`${LOCAL_CA_DIR}/dedalo-local-ca.pem`, authority.cert],
+			[`${LOCAL_CA_DIR}/fullchain.pem`, authority.cert],
+			[`${LOCAL_CA_DIR}/dedalo-local-ca.names`, `${NAMES.join('\n')}\n`],
+		]);
+		const host = scratchHost(variant, {
+			files,
+			responses: [
+				// The authority is there from the start: the issue is skipped.
+				{
+					match: `/usr/bin/test -s ${LOCAL_CA_DIR}/fullchain.pem -a -s ${LOCAL_CA_DIR}/dedalo-local-ca.pem`,
+				},
+			],
+		});
+		writeFileSync(join(host.root, LOCAL_CA_DIR, 'privkey.pem'), authority.key, { mode: 0o600 });
+		const { plan, planFile } = productionPlan(variant);
+		expect((await runHost(host, freshRequest(planFile))).outcome.result).toBe('complete');
+		expect(loggedCommands(host.root).some((line) => line.startsWith(GENERATOR))).toBe(false);
+		await runHost(host, laterRequest('abort', plan));
+		expect(readFileSync(join(host.root, LOCAL_CA_DIR, 'dedalo-local-ca.pem'), 'utf8')).toBe(
+			authority.cert,
+		);
+	});
+
+	test('an authority made for OTHER addresses is refused on the System check, before anything changes', async () => {
+		const variant = LOCAL_CA_VARIANTS[0] as HostVariant;
+		const authority = localCaScratchAuthority();
+		const host = scratchHost(variant, {
+			files: new Map([
+				[`${LOCAL_CA_DIR}/dedalo-local-ca.pem`, authority.cert],
+				[`${LOCAL_CA_DIR}/dedalo-local-ca.names`, 'old.example.org\n'],
+			]),
+		});
+		const { planFile } = productionPlan(variant);
+		const run = await runHost(host, freshRequest(planFile));
+		expect(run.outcome.result).not.toBe('complete');
+		expect(run.outcome.message ?? '').toContain(
+			`${LOCAL_CA_DIR} already holds a local certificate authority for old.example.org`,
+		);
+		expect(mutatingLog(loggedCommands(host.root))).toEqual([]);
+	});
+
+	test('a pre-2026-10-16 authority (unconstrained, no names list) is refused on the System check — never adopted silently', async () => {
+		const variant = LOCAL_CA_VARIANTS[0] as HostVariant;
+		const authority = localCaScratchAuthority();
+		// What a copied docker deploy/certs of that era holds: the single-tier root and its
+		// key, the leaf — a certificate that even names every address. Refused all the same.
+		const host = scratchHost(variant, {
+			files: new Map([
+				[`${LOCAL_CA_DIR}/dedalo-local-ca.pem`, authority.cert],
+				[`${LOCAL_CA_DIR}/fullchain.pem`, authority.cert],
+			]),
+		});
+		writeFileSync(join(host.root, LOCAL_CA_DIR, 'dedalo-local-ca.key'), authority.key, {
+			mode: 0o600,
+		});
+		const { planFile } = productionPlan(variant);
+		const run = await runHost(host, freshRequest(planFile));
+		expect(run.outcome.result).not.toBe('complete');
+		expect(run.outcome.message ?? '').toContain(
+			`${LOCAL_CA_DIR} already holds a local certificate authority made before 2026-10-16 — UNCONSTRAINED`,
+		);
+		expect(run.outcome.message ?? '').toContain(
+			`${GENERATOR} --mode local-ca --dir ${LOCAL_CA_DIR}`,
+		);
+		expect(mutatingLog(loggedCommands(host.root))).toEqual([]);
+		expect(loggedCommands(host.root).some((line) => line.startsWith(GENERATOR))).toBe(false);
+	});
+});
+
+/** The site file of a variant's instance. */
+function sitePathOf(variant: HostVariant): string {
+	return osRowById(variant.os).web[variant.web].sitePath.replace('<i>', INSTANCE);
+}

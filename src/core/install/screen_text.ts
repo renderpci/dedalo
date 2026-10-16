@@ -259,6 +259,11 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 		http_port: { label: 'HTTP port', description: 'Plain HTTP (redirects to HTTPS).' },
 		https_port: { label: 'HTTPS port', description: 'The port browsers use.' },
 		tls_mode: { label: 'Certificate', description: 'Where the TLS certificate comes from.' },
+		tls_extra_names: {
+			label: 'Other addresses',
+			description:
+				'Optional: other names staff type (e.g. dedalo.lan), comma-separated; IPv4 addresses (e.g. 192.168.1.20) on the Docker route only. The certificate names them, and the local authority can certify nothing else.',
+		},
 		letsencrypt_email: {
 			label: "Let's Encrypt e-mail",
 			description: "Expiry notices from Let's Encrypt go here.",
@@ -430,7 +435,8 @@ export const OPTION_TEXT = Object.freeze({
 		},
 		local_ca: {
 			label: 'Local CA',
-			description: 'A certificate from a local authority (internal networks; Docker only).',
+			description:
+				'A certificate authority made by the installer, for a network with no public name (an intranet): each staff computer trusts it once.',
 		},
 	} as Record<string, { label: string; description: string }>,
 	image_source: {

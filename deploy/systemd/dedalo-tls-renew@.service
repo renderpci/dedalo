@@ -1,0 +1,24 @@
+# One instance's local-CA certificate renewal (written by the installer;
+# enabled by host_tls only when the instance's certificate comes from the
+# local certificate authority). It re-issues the site certificate from the SAME
+# authority shortly before it expires (deploy/dedalo-tls-rotate.sh --mode
+# renew: nothing happens until the certificate is inside its last 30 days) and
+# reloads the HOST web server, so the staff computers that trust the authority
+# never re-trust anything. It runs as root (the keys are root's 0600), so its
+# command is PINNED in its drop-in — the root-owned copy of the script in the
+# instance's bin dir, the certificate directory, the web server's unit — and
+# never resolved from anything the instance writes. Exit 3 (the certificate is
+# renewed but the web server did not reload) fails the unit: `systemctl
+# status` shows it, and every later run retries the reload.
+# Without its drop-in this template runs nothing (fail-closed).
+
+[Unit]
+Description=Renew the Dedalo local-CA certificate of %i
+
+[Service]
+Type=oneshot
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ExecStart=/bin/false

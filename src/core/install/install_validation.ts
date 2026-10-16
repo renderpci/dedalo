@@ -343,9 +343,14 @@ function instanceShapeErrors(a: InstallAnswers, problems: Problems): void {
 
 // ── the host-step answers (phase 4, 2026-10-12) ─────────────────────────────
 
-/** The TLS modes each route takes (trial has none: it is the evaluation stack). */
+/**
+ * The TLS modes each route takes (trial has none: it is the evaluation stack).
+ * local_ca on production (owner decision 2026-10-16): an install that runs on
+ * an isolated intranet with no public name — Let's Encrypt cannot reach it,
+ * and `files` would leave the operator making certificates by hand.
+ */
 const ROUTE_TLS: Readonly<Record<string, readonly string[]>> = Object.freeze({
-	production: ['letsencrypt', 'files'],
+	production: ['letsencrypt', 'local_ca', 'files'],
 	docker: ['letsencrypt', 'local_ca', 'files'],
 	trial: ['none'],
 });
@@ -400,6 +405,94 @@ function tlsErrors(a: InstallAnswers, problems: Problems): void {
 	}
 	if (a.tls_mode === 'letsencrypt') letsEncryptErrors(a, problems);
 	if (a.tls_mode === 'files') tlsFileErrors(a, problems);
+	extraNameErrors(a, problems);
+	if (a.tls_mode === 'local_ca') nestedNameErrors(a, problems);
+}
+
+/**
+ * The local CA certifies each of its DNS names EXACTLY: the generator writes
+ * `excluded;DNS:.<name>` beside each permitted name, so nothing BELOW a name
+ * verifies (deploy/dedalo-tls-rotate.sh header, EXACT NAMES — a stolen issuing
+ * key must not mint `mail.museo.lan` because the list holds `museo.lan`). A
+ * name under another listed name — localhost included, which every leaf
+ * carries — would then be refused by its own authority; the generator refuses
+ * the list, so it is refused here first, before anything is installed.
+ */
+function nestedNameErrors(a: InstallAnswers, problems: Problems): void {
+	const extras = a.tls_extra_names === '' ? [] : a.tls_extra_names.split(',');
+	const names = [a.server_name, ...extras].filter((name) => !IPV4_PATTERN.test(name));
+	for (const lower of names) {
+		const upper = [...names, 'localhost'].find((name) => lower.endsWith(`.${name}`));
+		if (upper === undefined) continue;
+		problems.push(
+			problem(
+				lower === a.server_name ? 'server_name' : 'tls_extra_names',
+				`${lower} lies under ${upper}: the local CA certifies each name exactly, never the names below it — give staff names that are not inside one another`,
+			),
+		);
+	}
+}
+
+/** A dotted IPv4 address, every octet 0-255 (no leading zeros: one spelling per address). */
+const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+
+/**
+ * The local CA's extra addresses: each a name shaped like server_name or an
+ * IPv4 address — the generator constrains the authority to exactly this list,
+ * so a malformed entry is refused here, before anything is issued. IPv6 is
+ * refused (the authority's IP constraint is written per family; the generator
+ * refuses it too). A loopback address and the server name itself are already
+ * in every certificate. Only meaningful with local_ca: Let's Encrypt and the
+ * institution's files name what their issuer certified.
+ */
+function extraNameErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.tls_extra_names === '') return;
+	if (a.tls_mode !== 'local_ca') {
+		problems.push(
+			problem(
+				'tls_extra_names',
+				`tls_extra_names is only meaningful with tls_mode local_ca (tls_mode is ${a.tls_mode})`,
+			),
+		);
+		return;
+	}
+	for (const name of a.tls_extra_names.split(',')) {
+		const message = extraNameError(name, a.server_name, a.route);
+		if (message !== null) problems.push(problem('tls_extra_names', message));
+	}
+}
+
+/**
+ * An IPv4 extra address on the NATIVE route is refused: a browser sends no SNI
+ * for an IP-literal URL (RFC 6066 §3), so the host's web server picks the
+ * handshake's certificate by the listening address alone — the host-wide
+ * catch-all (nginx, `ssl_reject_handshake`) or the first vhost loaded (Apache,
+ * another instance's certificate). Claiming the address instead
+ * (`listen <ip>:443`, `<VirtualHost <ip>:443>`) routes EVERY name arriving on
+ * it to this instance — other instances and the catch-all included (measured
+ * with nginx, 2026-10-16). The docker stack's nginx serves one site, which is
+ * the address's default there, so an IP works on that route.
+ * engineering/PRODUCTION.md §13.2.
+ */
+function nativeIpError(name: string, route: string): string | null {
+	return route === 'production'
+		? `tls_extra_names: ${name} — an IP address cannot be served on the production route (a browser sends no server name for an IP address, so this host's web server cannot tell this site's certificate from the others'); give staff a LAN name instead (internal DNS or each computer's hosts file)`
+		: null;
+}
+
+/** One extra address's refusal, or null. */
+function extraNameError(name: string, serverName: string, route: string): string | null {
+	if (name === serverName) return `tls_extra_names: ${name} is already the server_name`;
+	if (name.includes(':'))
+		return `tls_extra_names: ${name} — IPv6 addresses are not supported for the local CA (use a name or an IPv4 address)`;
+	if (IPV4_PATTERN.test(name)) {
+		return name.startsWith('127.')
+			? `tls_extra_names: ${name} is a loopback address (127.0.0.1 is in every certificate already)`
+			: nativeIpError(name, route);
+	}
+	return FQDN_PATTERN.test(name)
+		? null
+		: `tls_extra_names: '${name}' must be a fully qualified domain name or an IPv4 address`;
 }
 
 /** Let's Encrypt: an address for expiry notices, and the HTTP-01 challenge on port 80. */

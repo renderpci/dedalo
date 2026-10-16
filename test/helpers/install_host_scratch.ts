@@ -156,7 +156,7 @@ export const FAKE_BUN_ZIP = 'fake bun zip bytes — never executed\n';
 export const BUN_PIN = readFileSync(join(REPO_ROOT, '.bun-version'), 'utf8').trim();
 
 export type WebKind = 'nginx' | 'apache';
-export type TlsKind = 'letsencrypt' | 'files';
+export type TlsKind = 'letsencrypt' | 'files' | 'local_ca';
 
 export interface HostVariant {
 	os: OsRowId;
@@ -172,6 +172,33 @@ export const HOST_VARIANTS: readonly HostVariant[] = Object.freeze(
 		),
 	),
 );
+
+/**
+ * The LOCAL-CA variants (owner decision 2026-10-16: local_ca on production):
+ * every supported row × nginx|apache. Kept beside HOST_VARIANTS, not in it —
+ * the matrix gates count that one; the local-CA gates run these.
+ */
+export const LOCAL_CA_VARIANTS: readonly HostVariant[] = Object.freeze(
+	OS_ROWS.flatMap((row) =>
+		(['nginx', 'apache'] as const).map((web) => ({ os: row.id, web, tls: 'local_ca' as const })),
+	),
+);
+
+/**
+ * The extra addresses a scratch local-CA install names: two LAN names. Names
+ * only — the production route refuses an IP address (install_validation.ts
+ * nativeIpError: no SNI for an IP, so a multi-site host cannot pick the
+ * certificate).
+ */
+export const LOCAL_CA_EXTRA_NAMES = 'demo.lan,archivo.museo.lan';
+
+/** The certificate answers of a variant. */
+function tlsRaw(variant: HostVariant): Record<string, unknown> {
+	if (variant.tls === 'letsencrypt') return { letsencrypt_email: 'ops@example.org' };
+	if (variant.tls === 'local_ca')
+		return { tls_mode: 'local_ca', tls_extra_names: LOCAL_CA_EXTRA_NAMES };
+	return { tls_mode: 'files', tls_cert_path: CERT_PATHS.cert, tls_key_path: CERT_PATHS.key };
+}
 
 export function variantName(variant: HostVariant): string {
 	return `${variant.os} + ${variant.web} + ${variant.tls}`;
@@ -210,9 +237,7 @@ export function productionRaw(
 		app_lang_default: 'lg-eng',
 		data_lang_default: 'lg-eng',
 		hierarchies: [],
-		...(variant.tls === 'letsencrypt'
-			? { letsencrypt_email: 'ops@example.org' }
-			: { tls_mode: 'files', tls_cert_path: CERT_PATHS.cert, tls_key_path: CERT_PATHS.key }),
+		...tlsRaw(variant),
 		...extra,
 	};
 }
@@ -291,7 +316,11 @@ export function sourceFiles(): Map<string, string> {
 export type HostFiles = Map<string, string>;
 
 /** The certificate and key, minted in memory by the openssl CLI (nothing on disk). */
-export function mintCertificate(commonName: string, days = 60): { cert: string; key: string } {
+export function mintCertificate(
+	commonName: string,
+	days = 60,
+	extraNames: readonly string[] = [],
+): { cert: string; key: string } {
 	const openssl = Bun.which('openssl');
 	if (openssl === null) throw new Error('openssl is not on PATH (the CI image ships it)');
 	const run = Bun.spawnSync(
@@ -311,7 +340,10 @@ export function mintCertificate(commonName: string, days = 60): { cert: string; 
 			'-subj',
 			`/CN=${commonName}`,
 			'-addext',
-			`subjectAltName=DNS:${commonName}`,
+			// The extra names (a local CA leaf's other addresses): DNS, or IP for a dotted quad.
+			`subjectAltName=${[commonName, ...extraNames]
+				.map((name) => (/^\d+(\.\d+){3}$/.test(name) ? `IP:${name}` : `DNS:${name}`))
+				.join(',')}`,
 			'-days',
 			String(days),
 		],
@@ -382,6 +414,7 @@ function installedAfter(variant: HostVariant): RecordedResponse[] {
 		...row.packages.base,
 		...web,
 		...row.packages.certbot,
+		...row.packages.localCa,
 		...row.packages.selinuxTools,
 		...row.packages.optional,
 	];
@@ -497,6 +530,7 @@ function selinuxAnswers(variant: HostVariant, identity: ScratchIdentity): Record
 		`/run/dedalo-${INSTANCE}(/.*)?`,
 		`/srv/dedalo/${INSTANCE}(/.*)?`,
 		...(variant.tls === 'letsencrypt' ? [`/var/lib/dedalo-install/acme/${INSTANCE}(/.*)?`] : []),
+		...(variant.tls === 'local_ca' ? [`${fcontextEscape(LOCAL_CA_DIR)}(/.*)?`] : []),
 		fcontextEscape(identity.dir),
 		...['dedalo', 'private', 'backups'].map(
 			(name) => `${fcontextEscape(`${identity.dir}/${name}`)}(/.*)?`,
@@ -654,6 +688,64 @@ function certbotAnswers(): RecordedResponse[] {
 	];
 }
 
+/** The local CA's certificate directory of the scratch instance (layout.ts tlsDir). */
+export const LOCAL_CA_DIR = `/opt/dedalo/instances/${INSTANCE}/tls`;
+
+/** The scratch authority every local-CA run "issues" (a real certificate: its fingerprint is told). */
+let scratchAuthority: { cert: string; key: string } | null = null;
+export function localCaScratchAuthority(): { cert: string; key: string } {
+	scratchAuthority ??= mintCertificate('Dedalo local CA scratch', 3650);
+	return scratchAuthority;
+}
+
+/**
+ * The local CA: what the generator leaves (deploy/dedalo-tls-rotate.sh — its
+ * real behaviour is tls_local_ca_native's and install_host_local_ca_native's:
+ * here only its files, keys 0600), the issue probe, the renewal timer enabled.
+ */
+function localCaAnswers(variant: HostVariant): RecordedResponse[] {
+	if (variant.tls !== 'local_ca') return [];
+	const generator = `/opt/dedalo/instances/${INSTANCE}/bin/dedalo-tls-rotate.sh --mode local-ca`;
+	const authority = localCaScratchAuthority();
+	const timer = `dedalo-tls-renew@${INSTANCE}.timer`;
+	return [
+		{
+			match: `/usr/bin/test -s ${LOCAL_CA_DIR}/fullchain.pem -a -s ${LOCAL_CA_DIR}/dedalo-local-ca.pem`,
+			after: generator,
+		},
+		{
+			match: `/usr/bin/test -s ${LOCAL_CA_DIR}/fullchain.pem -a -s ${LOCAL_CA_DIR}/dedalo-local-ca.pem`,
+			exit: 1,
+		},
+		{
+			match: generator,
+			creates: [
+				{ path: `${LOCAL_CA_DIR}/dedalo-local-ca.pem`, content: authority.cert, mode: 0o644 },
+				{ path: `${LOCAL_CA_DIR}/dedalo-issuing-ca.pem`, content: authority.cert, mode: 0o644 },
+				{ path: `${LOCAL_CA_DIR}/dedalo-issuing-ca.key`, content: authority.key, mode: 0o600 },
+				{ path: `${LOCAL_CA_DIR}/fullchain.pem`, content: authority.cert, mode: 0o644 },
+				{ path: `${LOCAL_CA_DIR}/privkey.pem`, content: authority.key, mode: 0o600 },
+				{
+					path: `${LOCAL_CA_DIR}/dedalo-local-ca.names`,
+					content: `${[SERVER_NAME, ...LOCAL_CA_EXTRA_NAMES.split(',')].join('\n')}\n`,
+					mode: 0o644,
+				},
+			],
+		},
+		{
+			match: `/usr/bin/systemctl is-enabled ${timer}`,
+			after: `/usr/bin/systemctl enable --now ${timer}`,
+			until: `/usr/bin/systemctl disable --now ${timer}`,
+		},
+		{ match: `/usr/bin/systemctl is-enabled ${timer}`, exit: 1 },
+		// The public probe trusts the install's own authority (its file — never the system store).
+		{
+			match: `/usr/bin/curl -sS -o /dev/null -w %{http_code} --max-time 20 --resolve ${SERVER_NAME}:443:127.0.0.1 --cacert ${LOCAL_CA_DIR}/dedalo-local-ca.pem https://${SERVER_NAME}/health`,
+			stdout: '200',
+		},
+	];
+}
+
 /** `systemctl show` of the start stamps: a unit systemd ran / never ran (campaign 3c D1). */
 export const UNIT_RAN =
 	'ExecMainStartTimestampMonotonic=8123456789\nActiveEnterTimestampMonotonic=8123456790\n';
@@ -735,6 +827,7 @@ export function hostResponses(
 		...engineAnswers(identity),
 		...runtimeAnswers(identity),
 		...certbotAnswers(),
+		...localCaAnswers(variant),
 		{
 			match: `/usr/bin/curl -sS -o /dev/null -w %{http_code} --max-time 20 --resolve ${SERVER_NAME}:443:127.0.0.1 https://${SERVER_NAME}/health`,
 			stdout: '200',

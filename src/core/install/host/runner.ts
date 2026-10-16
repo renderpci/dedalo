@@ -25,7 +25,14 @@
  * DEDALO_INSTALL_HOST_ROOT (host/scratch.ts), injected directly in-process.
  */
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+	appendFileSync,
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from 'node:fs';
 import { dirname, isAbsolute, join } from 'node:path';
 import type { Subprocess } from 'bun';
 import { redactSecrets } from '../run_files_core.ts';
@@ -206,8 +213,10 @@ export interface RecordedResponse {
 	 * Host paths the command "creates" (scratch root only): a path ending in `/`
 	 * becomes a directory, any other an empty file — how a scratch run's verify
 	 * sees a real command's effect on the filesystem (`tar -x` → package.json).
+	 * `mode`: the file's mode as the real command leaves it (a generated key's
+	 * 0600 — what a verify checks); absent = the process umask's.
 	 */
-	creates?: (string | { path: string; content: string })[];
+	creates?: (string | { path: string; content: string; mode?: number })[];
 }
 
 /** One logged request (stdin is NEVER kept — it may carry secrets; only whether there was one). */
@@ -332,7 +341,10 @@ export function recordingRunner(options: {
  * so a resumed process sees what the killed one did.
  */
 /** One created path under a scratch root: a directory for `…/`, else a file (empty, or `content`). */
-function createOne(root: string, item: string | { path: string; content: string }): void {
+function createOne(
+	root: string,
+	item: string | { path: string; content: string; mode?: number },
+): void {
 	const path = typeof item === 'string' ? item : item.path;
 	const real = join(root, path);
 	if (path.endsWith('/')) {
@@ -341,6 +353,7 @@ function createOne(root: string, item: string | { path: string; content: string 
 	}
 	mkdirSync(dirname(real), { recursive: true });
 	writeFileSync(real, typeof item === 'string' ? '' : item.content);
+	if (typeof item !== 'string' && item.mode !== undefined) chmodSync(real, item.mode);
 }
 
 /** A scratch root's `creates` (under the root only). */

@@ -21,6 +21,36 @@ Merged since the last release; these ship with the next one.
 
 ### For administrators
 
+#### Security
+
+- **A local certificate authority can now only certify the install's own addresses, and its site certificate can be renewed without touching the staff computers.**
+
+    Every staff computer trusts the local certificate authority an install creates, and
+    until now that authority could sign a certificate for any website: whoever obtained
+    its key on the server could impersonate any site to those computers. A new authority
+    is now restricted to the addresses it was issued for (the server name, any extra
+    `--host` addresses, `localhost`) — exactly those names, not the names below them, so
+    an authority for `museo.lan` cannot certify `mail.museo.lan` (a list where one name lies
+    inside another is therefore refused) — and the key of the authority itself is deleted as
+    soon as it has signed; the key that stays on the server can only sign under that
+    restriction. The authority is also limited to website certificates, so that key cannot
+    sign e-mail or software either.
+
+    `deploy/dedalo-tls-rotate.sh` gains `--mode renew`: it re-issues the site certificate
+    (now valid 397 days) from the same authority, so staff computers change nothing. It
+    does nothing until the certificate is inside its last 30 days. On the Docker route,
+    run it yourself once a year or from a monthly cron job (`docs/install/docker.md`,
+    "Renewing the local-CA certificate"). `--host` can be given several times, for a LAN
+    name, or (on the Docker route) an IPv4 address, beside the server name. When the new certificate is in place
+    but the web server could not be reloaded (for example `docker` missing from cron's
+    `PATH`), the script now exits with status 3 instead of reporting success, and every
+    later run retries the reload until it works.
+
+    An authority created before this change is not restricted. It keeps working and its
+    certificate can be renewed (`--mode renew --host <name>`). Your next rotation
+    (`--mode local-ca`) replaces it with a restricted one, which each staff computer then
+    trusts in place of the old entry.
+
 #### Changed
 
 - **The Docker and Trial installer installs the image of its own release — `7.0.0-beta.7` for a beta — and a stack built from an earlier beta needs `--skip-version-check` once on its next image update.** *(action needed)*
@@ -82,6 +112,39 @@ Merged since the last release; these ship with the next one.
     itself a developer build).
 
     Wire contract: `WC-2026-10-15-release-identity-from-tag`.
+
+#### Added
+
+- **The production installer can now make a local certificate authority, for an intranet with no public name.**
+
+    A museum that installs Dédalo with internet access and then runs it on an isolated
+    intranet has no public name, so Let's Encrypt cannot reach it, and until now the only
+    other choice on the production route was to make certificates by hand. The *Web server
+    & TLS* screen now offers **Local CA** (`--tls local_ca`), as the Docker route already
+    did. **Other addresses** (`--tls-extra-names dedalo.lan,archivo.museo.lan`) adds the
+    other names staff type: the certificate names them and the site answers to them. The
+    production route refuses an IP address there: a browser sends no server name for an IP
+    address, so a host that serves several sites cannot pick the right certificate. Give
+    staff a name instead (the intranet's DNS, or each computer's `hosts` file). The Docker
+    route, whose web server serves one site, also accepts IPv4 addresses.
+
+    The installer makes the authority and the site certificate in
+    `/opt/dedalo/instances/<i>/tls/`, with the same script the Docker route and every
+    rotation use. The authority can only certify the install's own addresses, exactly. When the
+    install ends, the *To do on this host* list names the authority's file and its SHA-256
+    fingerprint, how to trust it once on Windows, macOS, Linux and Firefox, and the `curl`
+    command that checks it from a staff computer. The site certificate then renews itself
+    from the same authority (`dedalo-tls-renew@<i>.timer`), so staff computers never trust
+    anything again. `--abort` removes only what this install made: the timer, its drop-in
+    and the certificate directory.
+
+    On both routes, an install over a certificate directory that already holds an authority
+    stops at the *System check* when that authority cannot serve the answered addresses,
+    and names the rotation command. That happens when it was made for other addresses, or
+    when it was made before this release and its certificate does not name them all. The
+    production route also refuses an authority made before this release, because it is not
+    restricted. See [Production install](./install/production.md); its last section is a
+    recipe for trying the production route in a virtual machine with no domain name.
 
 ??? note "Wire contract — 1 entry"
 

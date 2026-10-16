@@ -1653,6 +1653,70 @@ describe("the institution's certificate: this machine must trust its chain (C3-1
 	});
 });
 
+describe('a local CA already in deploy/certs must serve the answered addresses (host/tls_authority.ts — docker)', () => {
+	const NAME = 'dedalo.example.org';
+	const LOCAL_CA = {
+		route: 'docker',
+		entity: 'museo',
+		server_name: NAME,
+		tls_mode: 'local_ca',
+		tls_extra_names: 'dedalo.lan,192.168.1.20',
+	};
+	const CERTS = join(REPO_ROOT, 'deploy/certs');
+	const ROTATE = `bash ${join(REPO_ROOT, 'deploy/dedalo-tls-rotate.sh')} --mode local-ca --dir ${CERTS} --no-reload --host ${NAME} --host dedalo.lan --host 192.168.1.20`;
+	const authority = mintCertificate('Dedalo local CA scratch', 3650).cert;
+	/** deploy/certs as an earlier install left it: the authority, a leaf for `leafNames`, maybe its names list. */
+	const certs = (leafNames: readonly string[], names: string | null): HostFiles => {
+		const planted: HostFiles = new Map([
+			[`${CERTS}/dedalo-local-ca.pem`, authority],
+			[`${CERTS}/fullchain.pem`, mintCertificate(NAME, 60, leafNames).cert],
+		]);
+		if (names !== null) planted.set(`${CERTS}/dedalo-local-ca.names`, names);
+		return planted;
+	};
+	const refusedAtSystemCheck = async (planted: HostFiles, sentence: string) => {
+		const host = machine(LOCAL_CA);
+		plant(host.root, planted);
+		const { outcome } = await runHost(host, fresh(LOCAL_CA).request);
+		expect(outcome.result).toBe('refused'); // before any record
+		expect(outcome.failedStep).toBeNull();
+		expect(outcome.message).toContain(sentence);
+		expect(outcome.message).toContain(ROTATE);
+		expect(loggedCommands(host.root).filter((line) => MUTATING.test(line))).toEqual([]);
+		expect(loggedCommands(host.root).some((line) => line.includes('dedalo-tls-rotate.sh'))).toBe(
+			false,
+		);
+	};
+	const passesSystemCheck = async (planted: HostFiles) => {
+		const host = machine(LOCAL_CA);
+		plant(host.root, planted);
+		const { outcome } = await runHost(host, fresh(LOCAL_CA).request);
+		expect(outcome.failedStep).not.toBe('stack_preflight');
+		expect(stateOf(host)?.steps.stack_preflight?.status).toBe('done');
+	};
+
+	test('an authority made for OTHER addresses (its names list) is refused before anything changes', async () => {
+		await refusedAtSystemCheck(
+			certs(['dedalo.lan', '192.168.1.20'], `${NAME}\n`),
+			`${CERTS} already holds a local certificate authority for ${NAME} — not for ${NAME}, dedalo.lan, 192.168.1.20`,
+		);
+	});
+
+	test('a pre-2026-10-16 authority whose certificate does not name every address is refused (read from the certificate)', async () => {
+		await refusedAtSystemCheck(
+			certs(['dedalo.lan'], null),
+			`whose certificate ${CERTS}/fullchain.pem does not name 192.168.1.20`,
+		);
+	});
+
+	test('control: the same names list, or a pre-2026-10-16 certificate naming every address, passes (it keeps working)', async () => {
+		await passesSystemCheck(
+			certs(['dedalo.lan', '192.168.1.20'], `${NAME}\ndedalo.lan\n192.168.1.20\n`),
+		);
+		await passesSystemCheck(certs(['dedalo.lan', '192.168.1.20'], null));
+	});
+});
+
 /** The shared builder's argv over this checkout (stack_image of a git checkout — campaign 3b N1). */
 function builderArgv(ref: string): string {
 	return `/bin/bash ${join(REPO_ROOT, IMAGE_BUILDER)} ${REPO_ROOT} ${ref} ${DOCKER}`;
