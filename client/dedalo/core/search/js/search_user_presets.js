@@ -513,7 +513,11 @@ export const load_search_preset = async function(options) {
 * save_arguments true; only an explicit "No" makes save_preset store a
 * values-less template. Consumed by save_preset.
 *
-* @param {string|number} section_id - The preset record id (dd623).
+* Only consulted for NAMED presets (dd623): the temp editing preset (dd655) is
+* the live-panel autosave and must never be a template (see save_preset). dd648
+* is editable only through the preset modal, which edits a dd623 record.
+*
+* @param {string|number} section_id - The named preset record id (dd623).
 * @returns {Promise<boolean>} true = save q values; false = template (structure only).
 */
 export const load_preset_save_arguments = async function(section_id) {
@@ -836,11 +840,17 @@ export const save_preset = async function(options) {
 	}
 
 	// filter value
-	// save_arguments (dd648): true (the default) bakes the live q values into the
-	// stored filter; when the user set it to "No" only the field structure is
-	// saved (a template). Read the flag from the preset so it actually governs the
-	// save — previously the stored dd648 was ignored (always saved with values).
-	const save_arguments = await load_preset_save_arguments(section_id)
+	// save_arguments (dd648): true bakes the live q values into the stored
+	// filter; "No" stores only the field structure (a template).
+	//
+	// The flag is a NAMED-preset (dd623) editor concept — dd648 is editable only
+	// through the preset modal, which edits a dd623 record — so it governs only
+	// dd623 saves. The temp editing preset (dd655) is the autosave that restores
+	// the live search panel and must ALWAYS carry the q values; reading its
+	// (unsettable, often pre-seeded) dd648 wrongly stored structure-only filters.
+	const save_arguments = section_tipo === presets_section_tipo
+		? await load_preset_save_arguments(section_id)
+		: true
 	// Note that filter_obj may contain empty values.
 	// This is normal, as we need to save empty components in the search panel of the preset.
 	const parsed = self.parse_dom_to_json_filter({
