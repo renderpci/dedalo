@@ -36,6 +36,10 @@ import { afterAll, describe, expect, test } from 'bun:test';
 import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import {
+	INSTALLER_IDENTITY_SEAM,
+	installerVersionLabel,
+} from '../../src/core/install/installer_identity.ts';
 import { SEED_DUMP_PATH } from '../../src/core/install/paths.ts';
 import type { PsqlProbe } from '../../src/core/install/pg_bin.ts';
 import { systemCheckRows } from '../../src/core/install/probes.ts';
@@ -204,7 +208,8 @@ describe('probe child — system', () => {
 		const { exitCode, stdout, answer } = child(request('system', { route: 'developer' }));
 		expect(exitCode).toBe(0);
 		expect(typeof answer.ok).toBe('boolean');
-		expect(answer.version).toBe(DEDALO_VERSION);
+		// the installer's release identity (installer_identity.ts), never the bare data version
+		expect(answer.version).toBe(installerVersionLabel());
 		expect(answer.seedPath).toBe(SEED_DUMP_PATH);
 		const labels = (answer.rows as { label: string; state: string }[]).map((row) => row.label);
 		for (const label of ['Bun', 'Private directory', 'Platform', 'ImageMagick', 'FFmpeg']) {
@@ -212,6 +217,21 @@ describe('probe child — system', () => {
 		}
 		expectNoSentinel(stdout);
 	}, 60000);
+
+	// Release identity (design §2.4): the System check names WHICH release this installer is,
+	// its kind said — a beta and the stable release share the data version `7.0.0` (C3i-F1).
+	test('the System check names the release identity and its kind (stable, prerelease, development build)', () => {
+		for (const [pinned, shown] of [
+			[DEDALO_VERSION, DEDALO_VERSION],
+			[`${DEDALO_VERSION}-beta.7`, `${DEDALO_VERSION}-beta.7 (prerelease)`],
+			[`${DEDALO_VERSION}.dev`, `${DEDALO_VERSION}.dev (development build)`],
+		] as const) {
+			const { answer } = child(request('system', { route: 'trial' }), {
+				[INSTALLER_IDENTITY_SEAM]: pinned,
+			});
+			expect({ pinned, version: answer.version }).toEqual({ pinned, version: shown });
+		}
+	}, 120000);
 
 	test('docker / trial: only the host rows (no psql, PostgreSQL, ImageMagick, FFmpeg)', () => {
 		for (const route of ['docker', 'trial']) {

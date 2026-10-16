@@ -291,7 +291,7 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 		image_source: {
 			label: 'Image source',
 			description:
-				"Official: pulled from the Dédalo registry, its signature verified — published for STABLE releases only: a prerelease (beta) or a development build has none, choose Build (the Review checks the registry before you install). Custom: pulled from your own registry. Build: built here from this checkout's last commit (slow the first time: the Review says how long).",
+				"Official: pulled from the Dédalo registry under this installer's own version (a stable release or a prerelease such as 7.0.0-beta.7), its signature verified — the Review checks the registry before you install. A development build (a commit with no release tag) has no official image: Build is preselected for it. Custom: pulled from your own registry. Build: built here from this checkout's last commit (slow the first time: the Review says how long).",
 		},
 		image_repository: {
 			label: 'Image repository',
@@ -300,7 +300,7 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 		image_version: {
 			label: 'Image version',
 			description:
-				"The image tag; empty = the version of this installer (the only other tag accepted is that version's -dev).",
+				"The image tag; empty = this installer's own release (7.0.0, 7.0.0-beta.7, or 7.0.0-dev for a development build; the only other tag accepted is its data version's -dev).",
 		},
 		'route.trial_no_media_protection': {
 			label: 'Trial without media protection',
@@ -436,7 +436,8 @@ export const OPTION_TEXT = Object.freeze({
 	image_source: {
 		official: {
 			label: 'Official',
-			description: 'The signed Dédalo image, verified before use (stable releases only).',
+			description:
+				'The signed Dédalo image of this release, verified before use (not for a development build).',
 		},
 		custom: { label: 'Custom', description: 'An image from your own registry.' },
 		build: { label: 'Build', description: 'Built here from this checkout.' },

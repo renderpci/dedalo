@@ -45,6 +45,18 @@ DEDALO_INSTALL_FAULT="install_ontologies:before"
 DEDALO_INSTALL_HOST_ROOT="/tmp/dedalo_host_scratch"
 \`\`\``,
 	},
+	DEDALO_INSTALL_RELEASE_IDENTITY: {
+		type: 'string',
+		scope: 'test_seam',
+		default: undefined,
+		heading: "Pinning the installer's release identity in a test",
+		typeLabel: 'string',
+		doc: `Test seam, not a setting. The installer runs as the release it is — \`7.0.0\` from a stable tag, \`7.0.0-beta.7\` from a prerelease tag, \`7.0.0.dev\` from an untagged checkout — and three of its Docker decisions follow from that: the image tag it installs, whether the Review asks the registry for the official image, and which image source it preselects. The checks of the installer pin the identity with this key so that they test each kind on any commit. It is honoured only inside a test process and only for an identity of the installer's own data version; anywhere else the installer refuses to start. It is read from the process environment only, never from the configuration file.
+
+\`\`\`bash
+DEDALO_INSTALL_RELEASE_IDENTITY="7.0.0-beta.7"
+\`\`\``,
+	},
 	DEDALO_INSTALL_PROBE_CA_FILE: {
 		type: 'string',
 		scope: 'test_seam',

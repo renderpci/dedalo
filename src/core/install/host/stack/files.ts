@@ -105,6 +105,8 @@ function imageLines(ctx: HostPlanCtx): string[] {
 		'# updater. Only the image updater rewrites it, and only DEDALO_VERSION.',
 		`DEDALO_COMPOSE_FILE=${stackFileOf(answers)}`,
 		`DEDALO_IMAGE=${imageRepositoryOf(answers)}`,
+		// The image TAG of the installer's release identity (`7.0.0`, `7.0.0-beta.7`, `7.0.0-dev`):
+		// a beta's stack is pinned to its own image, never to the bare `7.0.0` (C3i-F1).
 		`DEDALO_VERSION=${imageVersionOf(answers)}`,
 		`DEDALO_IMAGE_MODE=${imageModeOf(answers)}`,
 		`DEDALO_IMAGE_VERIFY=${imageVerifyOf(answers)}`,

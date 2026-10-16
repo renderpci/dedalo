@@ -36,6 +36,22 @@ describe('buildHealthPayload', () => {
 		});
 	});
 
+	test("release_kind names the identity's kind when given, and is ABSENT (never guessed) otherwise", () => {
+		// WC-2026-10-15-release-identity-from-tag: `version` widened to the release
+		// identity; `release_kind` says which kind it is so no reader infers it.
+		for (const kind of ['stable', 'prerelease', 'dev'] as const) {
+			const payload = buildHealthPayload({
+				...BASE,
+				dbOk: true,
+				version: '7.0.0-beta.6',
+				releaseKind: kind,
+			});
+			expect(payload.release_kind).toBe(kind);
+			expect(payload.version).toBe('7.0.0-beta.6');
+		}
+		expect('release_kind' in buildHealthPayload({ ...BASE, dbOk: true })).toBe(false);
+	});
+
 	test('a down database still answers, with db:down and result:error', () => {
 		const payload = buildHealthPayload({ ...BASE, dbOk: false });
 		expect(payload.result).toBe('error');

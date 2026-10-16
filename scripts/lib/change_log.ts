@@ -34,6 +34,10 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import {
+	compareReleaseIdentities,
+	RELEASE_VERSION_RE,
+} from '../../src/core/update/release_identity.ts';
 
 export const TYPES = ['security', 'removed', 'deprecated', 'changed', 'added', 'fixed'] as const;
 export const AUDIENCES = ['user', 'admin', 'developer'] as const;
@@ -110,7 +114,12 @@ export interface ChangeSet {
 
 const SLUG_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const VERSION_RE = /^\d+\.\d+\.\d+(-[a-z]+\.\d+)?$/;
+/**
+ * A release directory is named by its release identity — the ONE grammar the
+ * engine reads its own tag with (src/core/update/release_identity.ts), so a
+ * `changes/<version>/` the tag check looks for can always exist.
+ */
+const VERSION_RE = RELEASE_VERSION_RE;
 /** Both ledger grammars: the frozen sequential `WC-nnn` and the dated `WC-yyyy-mm-dd-slug`. */
 export const WC_ID_RE = /^WC-(\d{3}|\d{4}-\d{2}-\d{2}-[a-z0-9]+(-[a-z0-9]+)*)$/;
 
@@ -268,7 +277,7 @@ export function parseRelease(file: string, text: string): Release {
 	}
 	const { version, date, from, to, commits, wire_contract } = obj;
 	if (typeof version !== 'string' || !VERSION_RE.test(version)) {
-		fail(file, `version '${String(version)}' is not <major>.<minor>.<patch>[-<pre>.<n>]`);
+		fail(file, `version '${String(version)}' is not <major>.<minor>.<patch>[-(alpha|beta|rc).<n>]`);
 	}
 	if (typeof date !== 'string' || !isValidDate(date))
 		fail(file, `date '${String(date)}' is not yyyy-mm-dd`);
@@ -296,26 +305,12 @@ export function parseRelease(file: string, text: string): Release {
 	return release;
 }
 
-/** Release order: numeric major.minor.patch, and a prerelease sorts before its release. */
-export function compareVersions(a: string, b: string): number {
-	const split = (v: string) => {
-		const [core = '', pre] = v.split('-', 2);
-		return { nums: core.split('.').map(Number), pre };
-	};
-	const x = split(a);
-	const y = split(b);
-	for (let i = 0; i < 3; i++) {
-		const d = (x.nums[i] ?? 0) - (y.nums[i] ?? 0);
-		if (d !== 0) return d;
-	}
-	if (x.pre === y.pre) return 0;
-	if (x.pre === undefined) return 1;
-	if (y.pre === undefined) return -1;
-	const [xl = '', xn = '0'] = x.pre.split('.');
-	const [yl = '', yn = '0'] = y.pre.split('.');
-	if (xl !== yl) return xl < yl ? -1 : 1;
-	return Number(xn) - Number(yn);
-}
+/**
+ * Release order: semver precedence, a prerelease before its release — the ONE
+ * comparator the engine orders identities with (release_identity.ts), so the
+ * page and the update walk can never disagree about which release is newer.
+ */
+export const compareVersions: (a: string, b: string) => number = compareReleaseIdentities;
 
 // ---------------------------------------------------------------------------
 // Rendering

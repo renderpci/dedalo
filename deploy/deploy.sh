@@ -80,8 +80,29 @@ health_wait() { # up to 30s for /health over the unix socket
 PREV="$(git rev-parse HEAD)"
 echo "== deploy: $PREV -> $REF on $(hostname) ($APP_DIR)"
 
+# --tags: the engine names itself after the exact annotated release tag of its
+# commit (a checkout asks git describe at boot), so the tags must be here.
 git fetch --all --tags --prune
 git checkout --detach "$REF"
+
+# A release ref must BE that release: a lightweight tag, a tag on another commit or
+# one naming another version than version.ts would run as X.Y.Z.dev and pass for
+# nothing (release identity, owner 2026-10-15). Judged by the deployed tree's own
+# library (dedalo_release_identity — the engine resolver's shell twin); a ref that
+# predates it is deployed unchecked, and says so.
+IDENTITY='' RELEASE_REF=''
+if [ -f deploy/dedalo-image-lib.sh ] && IDENTITY="$(bash -c '. deploy/dedalo-image-lib.sh && command -v dedalo_release_identity >/dev/null && dedalo_release_identity .')"; then
+	RELEASE_REF="$(bash -c '. deploy/dedalo-image-lib.sh && dedalo_release_tag_version "$1"' ref "$REF" || true)"
+	if [ -n "$RELEASE_REF" ] && [ "v$IDENTITY" != "$REF" ]; then
+		echo "ERROR: $REF is not a release this tree can call itself (it says $IDENTITY: a lightweight tag, or a tag naming another version) — not deployed." >&2
+		git checkout --detach "$PREV"
+		exit 1
+	fi
+	echo "== deploy: $REF is release identity $IDENTITY"
+else
+	IDENTITY=''
+	echo "== deploy: $REF predates the release identity — not checked"
+fi
 
 # pinned bun; the server itself re-asserts the .bun-version pin at boot
 BUN="$(eval echo "$REMOTE_BUN")"
@@ -96,7 +117,7 @@ fi
 
 sudo systemctl restart "$SERVICE"
 if health_wait; then
-	echo "== deploy: GREEN at $(git rev-parse HEAD)"
+	echo "== deploy: GREEN at $(git rev-parse HEAD)${IDENTITY:+ ($IDENTITY)}"
 	exit 0
 fi
 

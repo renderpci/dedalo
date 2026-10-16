@@ -89,6 +89,7 @@ import {
 	INSTANCE_PATTERN,
 	rootPasswordErrors,
 } from './install_validation.ts';
+import { defaultImageSource } from './installer_identity.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
 import {
 	activeOntologyTldsOf,
@@ -636,9 +637,20 @@ const STACK_DEFAULTS: RouteDefaults = Object.freeze({
 	install_dir: '',
 	service_user: '',
 	backup_dir: '',
-	image_source: 'official',
+	// The image source is the installer's identity's (stackDefaults): Official, or Build for a dev build.
+	image_source: '',
 	media_access_mode: '',
 });
+
+/**
+ * The docker/trial defaults: the Image screen PRESELECTS Official for a stable
+ * or prerelease installer and Build for a development build — no official image
+ * is an untagged commit's code (installer_identity.ts, owner Q6). Read per call:
+ * the identity is a process fact a gate may pin.
+ */
+function stackDefaults(): RouteDefaults {
+	return { ...STACK_DEFAULTS, image_source: defaultImageSource() };
+}
 
 /** The local PostgreSQL socket directory a created (peer) production database is reached through. */
 export const LOCAL_PG_SOCKET_DIR = '/var/run/postgresql';
@@ -719,8 +731,8 @@ export function routeDefaults(
 	instance: string,
 	level: IdentityLevel | null = null,
 ): RouteDefaults {
-	if (route === 'docker') return STACK_DEFAULTS;
-	if (route === 'trial') return { ...STACK_DEFAULTS, tls_mode: 'none' };
+	if (route === 'docker') return stackDefaults();
+	if (route === 'trial') return { ...stackDefaults(), tls_mode: 'none' };
 	if (route === 'production') return productionDefaults(instance, level);
 	return DEVELOPER_DEFAULTS;
 }

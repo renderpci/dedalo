@@ -365,6 +365,7 @@ function freshRepo(remotes: string[] = ['origin'], internal: string[] = []): str
 				scripts: {
 					'baselines:bank': `sh ${join(stubDir, 'bank.sh')}`,
 					'ci:local': `sh ${join(stubDir, 'ci.sh')}`,
+					'push:release-tag': `sh ${join(stubDir, 'tag.sh')}`,
 				},
 			},
 			null,
@@ -439,6 +440,17 @@ beforeAll(() => {
 			'fi',
 			'[ "$code" = 3 ] && printf "{\\"floor\\": 1}\\n" >floors/banked_floor.json',
 			'exit "$code"',
+			'',
+		].join('\n'),
+	);
+	// push:release-tag — logs argv (`tag <tag> <commit>`), exits STUB_TAG_CODE (default 0).
+	// The check's RULES are gated on a real repository in release_tag_native.
+	writeFileSync(
+		join(stubDir, 'tag.sh'),
+		[
+			'printf "tag %s\\n" "$*" >>"$STUB_LOG"',
+			'[ "${STUB_TAG_CODE:-0}" = 0 ] || echo "release-tag: REFUSED — stub says no" >&2',
+			'exit "${STUB_TAG_CODE:-0}"',
 			'',
 		].join('\n'),
 	);
@@ -1038,6 +1050,93 @@ describe('pre-push gate: a release tag needs a FULL green for its commit, on any
 		const r = run(['git', 'push', 'gitdedalo', 'v7.0.5-beta.1'], repo);
 		expect(r.code, r.err).toBe(0);
 		expect(ciCalls()).toEqual([]);
+	});
+});
+
+const tagCalls = (): string[] => stubLog().filter((line) => line.startsWith('tag '));
+
+describe('pre-push gate: every v* tag is checked as a CUT release first (gate 11, push:release-tag)', () => {
+	test('a stable and a prerelease tag are each checked at THEIR commit, before any gate', () => {
+		const repo = freshRepo(['gitdedalo'], ['gitdedalo']);
+		const old = git(repo, 'rev-parse', 'HEAD');
+		git(repo, 'tag', '-a', '-m', 'beta', 'v7.0.6-beta.1', old);
+		write(repo, 'src/a.ts', 'export const a = 13;\n');
+		const sha = commitAll(repo, 'release');
+		git(repo, 'tag', '-a', '-m', 'release', 'v7.0.6');
+		const r = run(['git', 'push', 'gitdedalo', 'v7', 'v7.0.6-beta.1', 'v7.0.6'], repo);
+		expect(r.code, r.err).toBe(0);
+		expect(tagCalls().sort()).toEqual([`tag v7.0.6 ${sha}`, `tag v7.0.6-beta.1 ${old}`].sort());
+		// The check ran BEFORE the gate: the first tag line precedes the first ci line.
+		const log = stubLog();
+		expect(log.findIndex((line) => line.startsWith('tag '))).toBeLessThan(
+			log.findIndex((line) => line.startsWith('ci ')),
+		);
+	});
+
+	test('a failing check refuses the push: nothing gated, nothing pushed, the reason shown', () => {
+		const repo = freshRepo(['gitdedalo'], ['gitdedalo']);
+		git(repo, 'tag', '-a', '-m', 'beta', 'v7.0.7-beta.1');
+		const r = run(['git', 'push', 'gitdedalo', 'v7.0.7-beta.1'], repo, { STUB_TAG_CODE: '1' });
+		expect(r.code).not.toBe(0);
+		expect(r.err).toContain('stub says no');
+		expect(r.err).toContain('REFUSED — tag v7.0.7-beta.1');
+		expect(ciCalls()).toEqual([]);
+		expect(stubLog().some((line) => line.startsWith('bank '))).toBe(false);
+		expect(git(repo, 'ls-remote', 'gitdedalo', 'refs/tags/v7.0.7-beta.1')).toBe('');
+	});
+
+	// End to end through the REAL check (scripts/lib/release_tag.ts), not the stub: a
+	// historical tag published before the cut rule rides along with a new one.
+	const realCheckRepo = (): string => {
+		const repo = freshRepo(['gitdedalo'], ['gitdedalo']);
+		const pkg = JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8'));
+		pkg.scripts['push:release-tag'] = `bun ${join(REPO_ROOT, 'scripts/lib/release_tag.ts')} check`;
+		write(repo, 'package.json', `${JSON.stringify(pkg, null, '\t')}\n`);
+		// The pre-rule tag sits on the initial commit, already on the remote: no version.ts,
+		// no cut — exactly what v7.0.0-beta.5 and older are.
+		git(repo, 'tag', '-a', '-m', 'history', 'v7.0.0-beta.5', 'HEAD');
+		write(
+			repo,
+			'src/core/update/version.ts',
+			'export const DEDALO_VERSION_TRIPLE: readonly [number, number, number] = Object.freeze([\n\t7, 0, 1,\n]) as [number, number, number];\n',
+		);
+		write(
+			repo,
+			'changes/7.0.1-beta.1/release.json',
+			`${JSON.stringify({ version: '7.0.1-beta.1', to: 'v7.0.1-beta.1' })}\n`,
+		);
+		commitAll(repo, 'cut 7.0.1-beta.1');
+		resetLog();
+		return repo;
+	};
+
+	test('REAL check: a pre-rule historical tag next to a cut new tag is not refused', () => {
+		const repo = realCheckRepo();
+		git(repo, 'tag', '-a', '-m', 'beta', 'v7.0.1-beta.1');
+		const r = run(['git', 'push', 'gitdedalo', 'v7.0.0-beta.5', 'v7.0.1-beta.1'], repo);
+		expect(r.code, r.err).toBe(0);
+		expect(r.err).toContain('v7.0.0-beta.5 predates the cut rule');
+		for (const tag of ['v7.0.0-beta.5', 'v7.0.1-beta.1'])
+			expect(git(repo, 'ls-remote', 'gitdedalo', `refs/tags/${tag}`), tag).not.toBe('');
+	});
+
+	test('REAL check: an UNCUT new tag is still refused, the historical one beside it or not', () => {
+		const repo = realCheckRepo();
+		git(repo, 'tag', '-a', '-m', 'beta', 'v7.0.1-beta.2');
+		const r = run(['git', 'push', 'gitdedalo', 'v7.0.0-beta.5', 'v7.0.1-beta.2'], repo);
+		expect(r.code).not.toBe(0);
+		expect(r.err).toContain('carries no changes/7.0.1-beta.2/release.json');
+		expect(r.err).toContain('REFUSED — tag v7.0.1-beta.2');
+		expect(ciCalls()).toEqual([]);
+		expect(git(repo, 'ls-remote', 'gitdedalo', 'refs/tags/v7.0.1-beta.2')).toBe('');
+	});
+
+	test('a tag outside v* is never checked (nothing to hold)', () => {
+		const repo = freshRepo(['gitdedalo'], ['gitdedalo']);
+		git(repo, 'tag', 'snapshot-2026');
+		const r = run(['git', 'push', 'gitdedalo', 'snapshot-2026'], repo, { STUB_TAG_CODE: '1' });
+		expect(r.code, r.err).toBe(0);
+		expect(tagCalls()).toEqual([]);
 	});
 });
 

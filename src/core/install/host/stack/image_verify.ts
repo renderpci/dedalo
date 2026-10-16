@@ -171,10 +171,11 @@ export async function assertPinnedImage(ctx: HostCtx): Promise<void> {
 
 /**
  * Whether the registry holds `<official repository>:<version>`, asked BEFORE
- * `yes` (beta.6 fix, owner 2026-10-15): image-release.yml publishes STABLE tags
- * only — a prerelease (v7.0.0-beta.N) and a development build have no official
- * image, and an operator who took the defaults failed at stack_image, after
- * `yes`. The TypeScript twin of deploy/dedalo-image-lib.sh's
+ * `yes` (beta.6 fix, owner 2026-10-15): an operator who took the defaults while
+ * the official image of this release was not published failed at stack_image,
+ * after `yes`. `<version>` is the installer's release identity's tag (a beta
+ * asks for `:7.0.0-beta.N` — design RELEASE_IDENTITY §2.5); a development
+ * build is refused before this is ever asked (preflight.ts officialImageVerdict). The TypeScript twin of deploy/dedalo-image-lib.sh's
  * dedalo_image_available: `docker manifest inspect` first, then `docker buildx
  * imagetools inspect`; READ-ONLY (nothing is pulled), as the operator (their
  * HOME: the registry logins `docker pull` will use).

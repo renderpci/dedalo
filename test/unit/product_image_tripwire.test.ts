@@ -15,9 +15,11 @@
  *     `docker` Dependabot entry for "/" — its updater — exists.
  *  C. PROVENANCE IS HONEST. The provenance RUN is EXECUTED in a scratch tree, the way
  *     the builder runs it (ARG values arrive as environment variables): no arguments →
- *     no stamp (a local build stays `.dev`); a valid channel + archive digest → a stamp
- *     `parseInstallStamp` accepts, whose channel gives `prereleaseTagFor` '' (master) or
- *     '.dev' (dev) on an expanded build; a half-set, unknown-channel or malformed digest
+ *     no stamp (an untagged local build stays `.dev`); a valid channel + archive digest → a
+ *     stamp `parseInstallStamp` accepts, whose channel the release identity reads (a
+ *     legacy two-field stamp: '' on master, '.dev' on dev — release_identity.ts rule 4;
+ *     a tagged archive is named by its tag on either channel, rule 5 — gate 1 in
+ *     release_identity_native); a half-set, unknown-channel or malformed digest
  *     → the build FAILS and writes nothing. No instruction writes build_info.txt (git
  *     archive expands it; build_stamp_native holds the committed placeholder).
  *  D. /srv/dedalo/client is created bun-owned (the engine publishes its client into the
@@ -30,8 +32,8 @@ import { describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { prereleaseTagFor } from '../../src/core/update/build_stamp.ts';
 import { INSTALL_STAMP_PATH, parseInstallStamp } from '../../src/core/update/install_stamp.ts';
+import { resolveReleaseIdentity } from '../../src/core/update/release_identity.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
 const read = (rel: string): string => readFileSync(join(ROOT, rel), 'utf8');
@@ -225,7 +227,6 @@ function runProvenance(args: Record<string, string>): {
 }
 
 const DIGEST = 'a'.repeat(32) + '0123456789abcdef'.repeat(2);
-const EXPANDED_BUILD = '2026-10-09T10:00:00+02:00';
 
 describe('C. the provenance step, EXECUTED', () => {
 	test('it declares its two build arguments and never writes build_info.txt', () => {
@@ -237,11 +238,17 @@ describe('C. the provenance step, EXECUTED', () => {
 		);
 	});
 
-	test('no arguments: no stamp — a local build reports .dev', () => {
+	test('no arguments: no stamp — an untagged local build reports .dev', () => {
 		const result = runProvenance({});
 		expect(result.code).toBe(0);
 		expect(result.stamp).toBeNull();
-		expect(prereleaseTagFor(null, null)).toBe('.dev');
+		expect(
+			resolveReleaseIdentity({
+				triple: [7, 0, 0],
+				describe: '',
+				provenance: { stamp: 'other', channel: null },
+			}).kind,
+		).toBe('dev');
 	});
 
 	test.each([
@@ -255,7 +262,13 @@ describe('C. the provenance step, EXECUTED', () => {
 		expect(result.code, result.stderr).toBe(0);
 		const stamp = parseInstallStamp(result.stamp ?? '');
 		expect(stamp).toEqual({ digest: DIGEST, channel });
-		expect(prereleaseTagFor(EXPANDED_BUILD, stamp?.channel ?? null)).toBe(tag);
+		// a LEGACY expanded stamp (no describe field) takes its suffix from the channel
+		const identity = resolveReleaseIdentity({
+			triple: [7, 0, 0],
+			describe: null,
+			provenance: { stamp: 'legacy', channel: stamp?.channel ?? null },
+		});
+		expect(identity.version.slice('7.0.0'.length)).toBe(tag);
 	});
 
 	test.each([

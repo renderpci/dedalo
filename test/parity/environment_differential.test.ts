@@ -34,6 +34,7 @@ import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
 import { resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import { parseReleaseVersion } from '../../src/core/update/release_identity.ts';
 import { hasPhpCredentials, PhpApiClient } from './php_client.ts';
 
 /**
@@ -223,6 +224,16 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		expect('dedalo_search_client_max_limit' in phpGlobals).toBe(false);
 		// biome-ignore lint/performance/noDelete: same as the WC-031 strip above — undefined would keep the key in Object.keys()
 		delete tsGlobals.dedalo_search_client_max_limit;
+		// engineering/wire_contract/WC-2026-10-15-release-identity-from-tag.md:
+		// `dedalo_data_version` is a TS-ONLY page_globals key — the bare data triple
+		// beside `dedalo_version`, which became the RELEASE IDENTITY (`7.0.0-beta.6`).
+		// PHP had no twin: its version string WAS the data version. Gated on the
+		// session like `dedalo_version` (API-03), so the oracle's anonymous or
+		// logged capture decides the value; only its presence is a contract here.
+		expect('dedalo_data_version' in tsGlobals).toBe(true);
+		expect('dedalo_data_version' in phpGlobals).toBe(false);
+		// biome-ignore lint/performance/noDelete: same as the WC-031 strip above — undefined would keep the key in Object.keys()
+		delete tsGlobals.dedalo_data_version;
 		expect(Object.keys(tsGlobals).sort()).toEqual(Object.keys(phpGlobals).sort());
 		// engineering/wire_contract/WC-2026-08-23-projects-default-langs-derived.md:
 		// `dedalo_projects_default_langs` is DERIVED per installation now, and its ORDER
@@ -251,9 +262,22 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		expect((tsGlobals[PROJECT_LANGS_KEY] as { value: string }[]).map((e) => e.value)).toEqual([
 			...config.menu.projectsDefaultLangs,
 		]);
+		// engineering/wire_contract/WC-2026-10-15-release-identity-from-tag.md:
+		// `dedalo_version` is the RELEASE IDENTITY now, read from the git tag of the
+		// tree serving it (`7.0.0` / `7.0.0-beta.6` / `7.0.0.dev`) — a fact about
+		// the checkout, like `dedalo_build`. The frozen value (`7.0.0.dev`, an
+		// untagged PHP-era checkout) is compared for what still binds: it is an
+		// identity of the SAME data triple. A tag-less byte compare would pass on
+		// an untagged checkout only and red on every tagged one.
+		const tsIdentity = parseReleaseVersion(String(tsGlobals.dedalo_version));
+		const phpIdentity = parseReleaseVersion(String(phpGlobals.dedalo_version));
+		expect(tsIdentity).not.toBeNull();
+		expect(phpIdentity).not.toBeNull();
+		expect([...(tsIdentity?.triple ?? [])]).toEqual([...(phpIdentity?.triple ?? [])]);
 		for (const key of Object.keys(phpGlobals)) {
 			if (ENGINE_SPECIFIC_KEYS.has(key)) continue;
 			if (key === PROJECT_LANGS_KEY) continue; // asserted order-insensitively above
+			if (key === 'dedalo_version') continue; // asserted by data triple above (WC-2026-10-15)
 			expect({ [key]: tsGlobals[key] }).toEqual({ [key]: phpGlobals[key] });
 		}
 		// Presence-only is not value-free: the installation facts must still be

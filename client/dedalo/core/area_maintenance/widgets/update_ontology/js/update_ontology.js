@@ -39,6 +39,7 @@
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_update_ontology} from './render_update_ontology.js'
+	import {code_satisfies} from '../../../../common/js/release_identity.js'
 
 
 
@@ -134,21 +135,10 @@ export const update_ontology = function() {
 */
 update_ontology.prototype.supported_code_version = (required_version) => {
 
-	// Parse version strings into arrays of integers
-	const required_version_parts	= required_version.split('.').map(Number);
-	const current_version_parts		= page_globals.dedalo_version.split('.').map(Number);
-
-	// Iterate over version parts and compare
-	for (let i = 0; i < required_version_parts.length; i++) {
-		if (current_version_parts[i] > required_version_parts[i]) {
-			return true; // Current version is greater
-		} else if (current_version_parts[i] < required_version_parts[i]) {
-			return false; // Current version is less
-		}
-	}
-
-	// If all parts are equal, current version is supported
-	return true;
+	// The running code's DATA triple against the requirement — never the release
+	// identity split on dots ('7.0.0-beta.6' → NaN, which waved every newer
+	// requirement through). See common/js/release_identity.js.
+	return code_satisfies(required_version, page_globals.dedalo_version)
 }//end supported_code_version
 
 

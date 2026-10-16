@@ -59,7 +59,7 @@ must be cited by a fragment's `wc:` — a deliberate wire change is a reader-vis
 ```bash
 bun run changelog release 7.0.1            # --from <tag> only for the first release
 git add changes docs/change_log.md && git commit -m "release: 7.0.1"
-git tag v7.0.1
+git tag -a v7.0.1 -m 'Dédalo 7.0.1'   # annotated: a lightweight tag builds a '.dev' identity
 ```
 
 `release` moves `unreleased/` into `changes/<version>/` and freezes `release.json`: the

@@ -20,8 +20,12 @@
  * and what was never touched (postgres, nginx).
  *
  * The engine CLI (`scripts/ops/image_update_channel.ts check-target`) is stubbed
- * to its contract: exit 0 ok, 3 refused + a reason id on stdout, anything else
- * unavailable.
+ * to its contract (exit 0 ok, 3 refused + a reason id on stdout, anything else
+ * unavailable) where a case sets the verdict; a PRERELEASE tag — and every ask of a
+ * case that sets `engine_real` — is answered by the REAL CLI of this checkout, so
+ * the prerelease cases meet the engine a stack really runs (an always-ok stub hid
+ * that every engine refuses a prerelease tag as `malformed_version`). Those cases
+ * name their versions from DEDALO_VERSION_TRIPLE: the real engine walks from it.
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
@@ -39,10 +43,12 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { BUILD_CONTEXT } from '../../src/core/install/host/stack/image.ts';
-import { parseBuildInfo, prereleaseTagFor } from '../../src/core/update/build_stamp.ts';
+import { BUILD_INFO_PATH, readReleaseIdentityOf } from '../../src/core/update/build_stamp.ts';
 import { loadImageRegistries } from '../../src/core/update/image_registries.ts';
+import { DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
+const ENGINE_CLI = join(REPO_ROOT, 'scripts', 'ops', 'image_update_channel.ts');
 // realpath: the script resolves its env file against the PHYSICAL cwd (/private/var on macOS).
 const SCRATCH = realpathSync(mkdtempSync(join(tmpdir(), 'dedalo-image-update-')));
 let scratchCount = 0;
@@ -89,8 +95,19 @@ if [ "$1" = compose ]; then
 			[ "$1" = -T ] && shift
 			svc="$1"
 			if [ "$svc" = dedalo ]; then
-				cat "$S/check_out" 2>/dev/null || true
-				exit "$(cat "$S/check_code" 2>/dev/null || echo 0)"
+				# check_code set: the contract stub. A prerelease tag, or engine_real
+				# set: the REAL CLI of this checkout answers — its grammar and walk are
+				# what a stack meets. Otherwise: ok.
+				tag="$(last_arg "$@")"
+				if [ -e "$S/check_code" ]; then
+					cat "$S/check_out" 2>/dev/null || true
+					exit "$(cat "$S/check_code")"
+				fi
+				case "$tag" in
+					*-alpha.* | *-beta.* | *-rc.*) exec "$ENGINE_BUN" "$ENGINE_CLI" check-target "$tag" ;;
+				esac
+				[ -e "$S/engine_real" ] && exec "$ENGINE_BUN" "$ENGINE_CLI" check-target "$tag"
+				exit 0
 			fi
 			[ -e "$S/backup_fail" ] && { echo 'dedalo-db-backup: pg_dump failed' >&2; exit 1; }
 			echo "dedalo-db-backup: dumping 'dedalo' -> ${BACKUP}"
@@ -145,8 +162,13 @@ exit 0
 `;
 
 /**
- * git: a checkout of the release ref rewrites version.ts to $STUB_STATE/target_triple;
- * `archive` tars $STUB_STATE/commit (the "committed" tree) to its -o file.
+ * git: a checkout of the release ref rewrites version.ts to $STUB_STATE/target_triple
+ * and records the ref as HEAD; `describe --exact-match` answers the exact tag of
+ * HEAD — the ref itself when it is a `v…` tag (unless $STUB_STATE/lightweight: then
+ * no annotated tag, as git says), $STUB_STATE/describe when that file exists (empty
+ * = untagged), else "no tag"; `archive` tars $STUB_STATE/commit (the "committed"
+ * tree) to its -o file, with version.ts and an EXPANDED build_info.txt in it, as
+ * export-subst writes it.
  */
 const GIT_STUB = `#!/bin/bash
 S="$STUB_STATE"
@@ -155,7 +177,18 @@ while [ "$1" = -c ] || [ "$1" = -C ]; do shift 2; done
 write_version() {
 	printf 'export const DEDALO_VERSION_TRIPLE = Object.freeze([\\n\\t%s,\\n]);\\n' "$(printf '%s' "$1" | sed 's/\\./, /g')" > src/core/update/version.ts
 }
+exact_tag() {
+	if [ -e "$S/describe" ]; then cat "$S/describe"; return 0; fi
+	h="$(cat "$S/head_ref" 2>/dev/null || true)"
+	case "$h" in v[0-9]*) [ -e "$S/lightweight" ] || printf '%s' "$h" ;; esac
+}
 case "$1" in
+	describe)
+		tag="$(exact_tag)"
+		[ -n "$tag" ] && { echo "$tag"; exit 0; }
+		echo "fatal: no tag exactly matches 'abc1234def'" >&2
+		exit 128
+		;;
 	status) cat "$S/git_dirty" 2>/dev/null || true ;;
 	rev-parse) echo prevsha0000 ;;
 	symbolic-ref) echo master ;;
@@ -163,11 +196,15 @@ case "$1" in
 	archive)
 		out=''
 		while [ $# -gt 0 ]; do [ "$1" = -o ] && out="$2"; shift; done
+		mkdir -p "$S/commit/src/core/update"
+		cp src/core/update/version.ts "$S/commit/src/core/update/version.ts"
+		printf 'abc1234def 2026-10-15T00:00:00Z %s\\n' "$(exact_tag)" > "$S/commit/src/core/update/build_info.txt"
 		tar -cf "$out" -C "$S/commit" .
 		;;
 	remote) cat "$S/git_remotes" 2>/dev/null || echo origin ;;
 	checkout)
 		for ref in "$@"; do :; done
+		printf '%s' "$ref" > "$S/head_ref"
 		if [ "$ref" = master ] || [ "$ref" = prevsha0000 ]; then write_version "$(cat "$S/orig_triple")"; exit 0; fi
 		[ -e "$S/checkout_fail" ] && exit 1
 		write_version "$(cat "$S/target_triple")"
@@ -208,6 +245,11 @@ interface Stack {
 	envBefore: string;
 }
 
+/** The data version (X.Y.Z) an image tag names. */
+function tripleOf(tag: string): string {
+	return (tag.match(/^\d+\.\d+\.\d+/) as RegExpMatchArray)[0];
+}
+
 function makeStack(situation: Situation = {}): Stack {
 	scratchCount += 1;
 	const root = join(SCRATCH, `case-${scratchCount}`);
@@ -232,7 +274,7 @@ function makeStack(situation: Situation = {}): Stack {
 	const pinned = situation.pinned ?? '7.0.0';
 	writeFileSync(
 		join(dir, 'src', 'core', 'update', 'version.ts'),
-		`export const T = Object.freeze([${pinned.replace(/-dev$/, '').split('.').join(', ')}]);\n`,
+		`export const T = Object.freeze([${tripleOf(pinned).split('.').join(', ')}]);\n`,
 	);
 	const envText =
 		situation.envText ??
@@ -261,7 +303,7 @@ function makeStack(situation: Situation = {}): Stack {
 	const flags: Record<string, string> = {
 		running_dedalo: '',
 		running_backup: '',
-		orig_triple: pinned.replace(/-dev$/, ''),
+		orig_triple: tripleOf(pinned),
 		tags: 'rollback-20260101T000000Z\n7.0.0\nrollback-20261001T000000Z\n',
 		...situation.state,
 	};
@@ -280,8 +322,8 @@ function git(cwd: string, ...args: string[]): void {
 
 /**
  * A build-mode stack that is a REAL git repository (git is NOT stubbed): master
- * at 7.0.0, the tag v7.0.1 one commit ahead, build_info.txt export-subst as in
- * the repo; then what a live checkout holds and no commit does — an untracked
+ * at 7.0.0, the ANNOTATED tag v7.0.1 one commit ahead (release tags are annotated),
+ * the repo's REAL build_info.txt placeholder, export-subst as in the repo; then what a live checkout holds and no commit does — an untracked
  * file at the root, one nested in the code tree, and .dedalo.env itself.
  */
 function realGitStack(): Stack {
@@ -289,7 +331,7 @@ function realGitStack(): Stack {
 	rmSync(join(stack.state, '..', 'bin', 'git'));
 	rmSync(join(stack.dir, '.git'), { recursive: true });
 	const { dir } = stack;
-	writeFileSync(join(dir, 'src', 'core', 'update', 'build_info.txt'), '$Format:%H %cI$\n');
+	writeFileSync(join(dir, BUILD_INFO_PATH), readFileSync(join(REPO_ROOT, BUILD_INFO_PATH)));
 	writeFileSync(
 		join(dir, '.gitattributes'),
 		readFileSync(join(REPO_ROOT, '.gitattributes'), 'utf8')
@@ -307,7 +349,7 @@ function realGitStack(): Stack {
 		'export const T = Object.freeze([7, 0, 1]);\n',
 	);
 	git(dir, 'commit', '-q', '-am', '7.0.1');
-	git(dir, 'tag', 'v7.0.1');
+	git(dir, 'tag', '-a', 'v7.0.1', '-m', 'release 7.0.1');
 	git(dir, 'checkout', '-q', 'master');
 	writeFileSync(join(dir, 'stray_untracked.txt'), 'never committed\n');
 	writeFileSync(join(dir, 'src', 'core', 'stray_untracked.ts'), 'export const stray = 1;\n');
@@ -334,7 +376,12 @@ function runUpdate(stack: Stack, args: string[]): Result {
 		],
 		{
 			cwd: stack.dir,
-			env: { PATH: `${join(stack.state, '..', 'bin')}:/usr/bin:/bin`, STUB_STATE: stack.state },
+			env: {
+				PATH: `${join(stack.state, '..', 'bin')}:/usr/bin:/bin`,
+				STUB_STATE: stack.state,
+				ENGINE_BUN: process.execPath,
+				ENGINE_CLI: ENGINE_CLI,
+			},
 		},
 	);
 	const calls = existsSync(join(stack.state, 'calls.log'))
@@ -395,7 +442,7 @@ const DETAILS = [
 	'malformed_request',
 ];
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
-const VERSION = /^\d+\.\d+\.\d+(-dev)?$/;
+const VERSION = /^\d+\.\d+\.\d+(-dev|-(alpha|beta|rc)\.\d+)?$/;
 
 /** Every violation of the 5.4 shape in `outcome`, as words. */
 function outcomeViolations(outcome: Record<string, unknown> | null): string[] {
@@ -595,6 +642,23 @@ describe('build mode', () => {
 		expect(result.env).toBe(stack.envBefore);
 	});
 
+	test('a -dev build whose commit declares ANOTHER data version: refused (with and without --ref), the checkout restored, nothing built', () => {
+		// 7.0.2's migrations must never run under a 7.0.1-dev pin
+		for (const ref of [[], ['--ref', 'feature/x']]) {
+			const stack = makeStack({
+				mode: 'build',
+				image: 'localhost/dedalo',
+				state: { target_triple: '7.0.2' },
+			});
+			const result = runUpdate(stack, ['--version', '7.0.1-dev', ...ref]);
+			expect({ ref, detail: result.outcome?.detail }).toEqual({ ref, detail: 'version_refused' });
+			expect(result.stderr).toContain('is 7.0.2.dev, not 7.0.1-dev');
+			expect(at(result.calls, /^docker build /)).toBe(-1);
+			expect(result.calls.at(-1)).toBe('git checkout -q master');
+			expect(result.env).toBe(stack.envBefore);
+		}
+	});
+
 	test('a failed build: failed/build_failed, the checkout restored', () => {
 		const stack = makeStack({
 			mode: 'build',
@@ -625,7 +689,7 @@ describe('build mode', () => {
 		expect(result.env).toBe(stack.envBefore);
 	});
 
-	test('OUTCOME over a REAL git checkout: no uncommitted or untracked file in the build context, build_info expanded (no .dev)', () => {
+	test('OUTCOME over a REAL git checkout: no uncommitted or untracked file in the build context, build_info expanded (no .dev)', async () => {
 		const stack = realGitStack();
 		const result = runUpdate(stack, ['--version', '7.0.1']);
 		expect(result.code, result.stderr).toBe(0);
@@ -642,17 +706,16 @@ describe('build mode', () => {
 			expect(existsSync(join(stack.dir, stray)), `${stray} is in the checkout`).toBe(true);
 			expect(existsSync(join(seen, stray)), `${stray} reached the build context`).toBe(false);
 		}
-		// export-subst expanded: the image reports the version it is tagged with
-		const stamp = parseBuildInfo(
-			readFileSync(join(seen, 'src', 'core', 'update', 'build_info.txt'), 'utf8'),
+		// export-subst expanded: the image calls itself by the tag it was built from
+		expect(await readReleaseIdentityOf(seen, { triple: [7, 0, 1] })).toMatchObject({
+			version: '7.0.1',
+			kind: 'stable',
+			tag: 'v7.0.1',
+		});
+		// the working tree is the untagged 7.0.0 commit: it would call itself .dev
+		expect((await readReleaseIdentityOf(stack.dir, { triple: [7, 0, 0] })).version).toBe(
+			'7.0.0.dev',
 		);
-		expect(stamp.build).not.toBeNull();
-		expect(prereleaseTagFor(stamp.build, null)).toBe('');
-		// the working tree's own stamp is the placeholder: a build from it would say .dev
-		const tree = parseBuildInfo(
-			readFileSync(join(stack.dir, 'src', 'core', 'update', 'build_info.txt'), 'utf8'),
-		);
-		expect(prereleaseTagFor(tree.build, null)).toBe('.dev');
 		expect(existsSync(context)).toBe(false);
 	});
 
@@ -713,6 +776,206 @@ describe('build mode', () => {
 				status: 'refused',
 			},
 		);
+	});
+});
+
+// The real engine of this checkout walks from its own data version, so the
+// prerelease cases name theirs from it: T is what the running engine is at.
+const T = DEDALO_VERSION_TRIPLE.join('.');
+const T_NEXT = [
+	DEDALO_VERSION_TRIPLE[0],
+	DEDALO_VERSION_TRIPLE[1],
+	DEDALO_VERSION_TRIPLE[2] + 1,
+].join('.');
+const T_SKIP = [
+	DEDALO_VERSION_TRIPLE[0],
+	DEDALO_VERSION_TRIPLE[1],
+	DEDALO_VERSION_TRIPLE[2] + 2,
+].join('.');
+
+/** The check-target asks the run made, in order. */
+function engineAsks(calls: string[]): string[] {
+	return calls
+		.map((line) =>
+			/ exec -T dedalo bun scripts\/ops\/image_update_channel\.ts check-target (\S+)$/.exec(line),
+		)
+		.filter((match): match is RegExpExecArray => match !== null)
+		.map((match) => match[1] as string);
+}
+
+describe('prereleases — the release identity (design step 6, owner Q3/Q4), against the REAL engine CLI', () => {
+	test('the real engine cannot read a prerelease tag (malformed_version, exit 3) — the premise of the data-walk re-ask', () => {
+		const run = Bun.spawnSync([process.execPath, ENGINE_CLI, 'check-target', `${T}-beta.7`]);
+		expect({ out: run.stdout.toString().trim(), code: run.exitCode }).toEqual({
+			out: 'malformed_version',
+			code: 3,
+		});
+	});
+
+	test('pull: beta.6 → beta.7 moves forward; the engine is asked the DATA walk (X.Y.Z-dev) and agrees — no flag needed', () => {
+		const stack = makeStack({ pinned: `${T}-beta.6`, state: { engine_real: '' } });
+		const result = runUpdate(stack, ['--version', `${T}-beta.7`]);
+		expect(result.code, result.stderr).toBe(0);
+		expect(engineAsks(result.calls)).toEqual([`${T}-beta.7`, `${T}-dev`]);
+		expect(result.stderr).toContain('does not know prerelease versions');
+		expect(result.calls).toContain(`docker pull ghcr.io/dedalia-org/dedalo:${T}-beta.7`);
+		expect(result.env).toBe(repinned(stack, `${T}-beta.7`));
+		expect(result.outcome).toMatchObject({
+			from: `${T}-beta.6`,
+			to: `${T}-beta.7`,
+			status: 'green',
+		});
+		expectStackHygiene(stack, result);
+	});
+
+	test('the data walk of a prerelease of ANOTHER X.Y.Z: the next rung is legal, a rung skip is the engine refusal no flag waives', () => {
+		const next = makeStack({ pinned: T, state: { engine_real: '' } });
+		const green = runUpdate(next, ['--version', `${T_NEXT}-beta.1`]);
+		expect(green.code, green.stderr).toBe(0);
+		expect(engineAsks(green.calls)).toEqual([`${T_NEXT}-beta.1`, `${T_NEXT}-dev`]);
+		for (const flags of [[], ['--skip-version-check']]) {
+			const skip = makeStack({ pinned: T, state: { engine_real: '' } });
+			const refused = runUpdate(skip, ['--version', `${T_SKIP}-beta.1`, ...flags]);
+			expect({ flags, detail: refused.outcome?.detail }).toEqual({
+				flags,
+				detail: 'version_refused',
+			});
+			expect(refused.stderr).toContain(`the engine refuses ${T_SKIP}-dev: version_skip`);
+			expect(refused.env).toBe(skip.envBefore);
+			expect(at(refused.calls, /^docker (tag|pull)|exec -T backup| up /)).toBe(-1);
+		}
+	});
+
+	test('order: rc.1 → X.Y.Z forward (the engine, seeing X.Y.Z → X.Y.Z, is asked the data walk); beta.7 → beta.6 and X.Y.Z → rc.1 are steps back', () => {
+		const forward = runUpdate(makeStack({ pinned: `${T}-rc.1`, state: { engine_real: '' } }), [
+			'--version',
+			T,
+		]);
+		expect(forward.code, forward.stderr).toBe(0);
+		expect(engineAsks(forward.calls)).toEqual([T, `${T}-dev`]);
+		for (const [pinned, target] of [
+			[`${T}-beta.7`, `${T}-beta.6`],
+			[`${T}-rc.1`, `${T}-beta.10`],
+			[T, `${T}-rc.1`],
+		] as const) {
+			const stack = makeStack({ pinned, state: { engine_real: '' } });
+			const result = runUpdate(stack, ['--version', target]);
+			expect({ pinned, target, detail: result.outcome?.detail }).toEqual({
+				pinned,
+				target,
+				detail: 'downgrade_refused',
+			});
+			expect(result.env).toBe(stack.envBefore);
+		}
+	});
+
+	test('the same X.Y.Z re-installed from a RELEASE pin is not blind: the engine refusal stands', () => {
+		// A bare pin is not a prerelease, so X.Y.Z → X.Y.Z (waived at step 3) is
+		// still the engine's downgrade_or_same_version — no data-walk re-ask.
+		const stack = makeStack({ pinned: T, state: { engine_real: '' } });
+		const result = runUpdate(stack, ['--version', T, '--skip-version-check']);
+		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });
+		expect(engineAsks(result.calls)).toEqual([T]);
+	});
+
+	test('Q4: a bare X.Y.Z pin (a beta BUILT before beta.7) → X.Y.Z-beta.7 is refused, the refusal names --skip-version-check and why; with it, the REAL engine lets it through', () => {
+		const stack = makeStack({ pinned: T, state: { engine_real: '' } });
+		const result = runUpdate(stack, ['--version', `${T}-beta.7`]);
+		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'downgrade_refused' });
+		expect(result.stderr).toContain('--skip-version-check');
+		expect(result.stderr).toContain('built from a beta before 7.0.0-beta.7');
+		expect(result.env).toBe(stack.envBefore);
+		expect(at(result.calls, /^docker (tag|pull)|exec -T backup| up /)).toBe(-1);
+		// …and the flag waives it ONCE, within the same data version — the documented
+		// command (docs/install/docker.md) green end to end
+		const waived = makeStack({ pinned: T, state: { engine_real: '' } });
+		const green = runUpdate(waived, ['--version', `${T}-beta.7`, '--skip-version-check']);
+		expect(green.code, green.stderr).toBe(0);
+		expect(engineAsks(green.calls)).toEqual([`${T}-beta.7`, `${T}-dev`]);
+		expect(green.env).toBe(repinned(waived, `${T}-beta.7`));
+		expect(green.stderr).toContain(`waived (--skip-version-check: same data version ${T}`);
+	});
+
+	test('Q4: the flag never waives a step back to an OLDER data version (its migrations ran)', () => {
+		for (const [pinned, target] of [
+			['7.0.1', '7.0.0-beta.7'],
+			['7.0.1-beta.1', '7.0.0'],
+			['7.0.1', '6.9.9'],
+		] as const) {
+			const stack = makeStack({ pinned });
+			const result = runUpdate(stack, ['--version', target, '--skip-version-check']);
+			expect({ pinned, target, detail: result.outcome?.detail }).toEqual({
+				pinned,
+				target,
+				detail: 'downgrade_refused',
+			});
+			expect(result.stderr).not.toContain('re-run ONCE');
+			expect(result.env).toBe(stack.envBefore);
+		}
+	});
+
+	test('build: the prerelease TAG is checked out and built, labelled with its identity', () => {
+		const stack = makeStack({
+			mode: 'build',
+			image: 'localhost/dedalo',
+			pinned: `${T}-beta.6`,
+			state: { target_triple: T, engine_real: '' },
+		});
+		const result = runUpdate(stack, ['--version', `${T}-beta.7`]);
+		expect(result.code, result.stderr).toBe(0);
+		expect(result.calls).toContain(`git checkout -q --detach v${T}-beta.7`);
+		const context = join(stack.dir, BUILD_CONTEXT);
+		expect(result.calls.filter((call) => isBuildOf(call, `${T}-beta.7`, context))).toHaveLength(1);
+		expect(result.env).toBe(repinned(stack, `${T}-beta.7`));
+	});
+
+	test('build, --ref (Q3): a prerelease may be named by another ref — when that commit IS the prerelease', () => {
+		const named = makeStack({
+			mode: 'build',
+			image: 'localhost/dedalo',
+			pinned: `${T}-beta.6`,
+			state: { target_triple: T, describe: `v${T}-beta.7`, engine_real: '' },
+		});
+		const green = runUpdate(named, ['--version', `${T}-beta.7`, '--ref', 'release/beta-7']);
+		expect(green.code, green.stderr).toBe(0);
+		expect(green.calls).toContain('git checkout -q --detach release/beta-7');
+		// a ref at ANOTHER release: refused before anything is built, the checkout restored
+		const other = makeStack({
+			mode: 'build',
+			image: 'localhost/dedalo',
+			pinned: `${T}-beta.6`,
+			state: { target_triple: T, describe: `v${T}-beta.6`, engine_real: '' },
+		});
+		const refused = runUpdate(other, ['--version', `${T}-beta.7`, '--ref', 'release/beta-6']);
+		expect(refused.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });
+		expect(refused.stderr).toContain(`release/beta-6 is ${T}-beta.6, not ${T}-beta.7`);
+		expect(at(refused.calls, /^docker build /)).toBe(-1);
+		expect(refused.calls.at(-1)).toBe('git checkout -q master');
+		expect(refused.env).toBe(other.envBefore);
+	});
+
+	test('build: a LIGHTWEIGHT prerelease tag is no release (the image would call itself X.Y.Z.dev): refused, nothing built', () => {
+		const stack = makeStack({
+			mode: 'build',
+			image: 'localhost/dedalo',
+			pinned: `${T}-beta.6`,
+			state: { target_triple: T, lightweight: '', engine_real: '' },
+		});
+		const result = runUpdate(stack, ['--version', `${T}-beta.7`]);
+		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });
+		expect(result.stderr).toContain(`v${T}-beta.7 is ${T}.dev, not ${T}-beta.7`);
+		expect(at(result.calls, /^docker build /)).toBe(-1);
+		expect(result.env).toBe(stack.envBefore);
+	});
+
+	test('build, REAL git: a lightweight v7.0.1 (the annotated one deleted) is refused; the annotated one builds', () => {
+		const stack = realGitStack();
+		git(stack.dir, 'tag', '-d', 'v7.0.1');
+		git(stack.dir, 'tag', 'v7.0.1', 'HEAD@{1}');
+		const result = runUpdate(stack, ['--version', '7.0.1']);
+		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });
+		expect(result.stderr).toContain('v7.0.1 is 7.0.1.dev, not 7.0.1');
+		expect(at(result.calls, /^docker build /)).toBe(-1);
 	});
 });
 
@@ -845,7 +1108,15 @@ describe('refusals before anything changes', () => {
 	};
 
 	test('grammar: not a version → version_refused', () => {
-		for (const bad of ['7.0', 'v7.0.1', '7.0.1-beta.1', 'latest']) {
+		for (const bad of [
+			'7.0',
+			'v7.0.1',
+			'7.0.1-pre.1',
+			'7.0.1-beta',
+			'07.0.1',
+			'7.0.1.dev',
+			'latest',
+		]) {
 			const stack = makeStack();
 			const result = runUpdate(stack, ['--version', bad]);
 			expect({ bad, outcome: result.outcome?.detail }).toEqual({ bad, outcome: 'version_refused' });
@@ -905,8 +1176,11 @@ describe('refusals before anything changes', () => {
 	});
 
 	test('an incomplete .dedalo.env: env_incomplete, and the exact lines to add', () => {
+		// The checkout is AT the beta tag (version.ts 7.0.0): the suggested pin is the image
+		// tag of its release identity, never the bare data version (C3i-F1).
 		const stack = makeStack({
 			envText: 'POSTGRES_PASSWORD=x\nDEDALO_NGINX_CONF=nginx.simple.conf\nDEDALO_IMAGE=bad"image\n',
+			state: { describe: 'v7.0.0-beta.6' },
 		});
 		const result = runUpdate(stack, ['--version', '7.0.1']);
 		expect(result.outcome).toMatchObject({
@@ -918,7 +1192,7 @@ describe('refusals before anything changes', () => {
 		for (const line of [
 			'DEDALO_COMPOSE_FILE=docker-compose.simple.yml',
 			'DEDALO_IMAGE=localhost/dedalo',
-			'DEDALO_VERSION=7.0.0',
+			'DEDALO_VERSION=7.0.0-beta.6',
 			'DEDALO_IMAGE_MODE=build',
 			'DEDALO_IMAGE_VERIFY=none',
 		]) {
@@ -926,7 +1200,16 @@ describe('refusals before anything changes', () => {
 			// verbatim gives a line compose and the updater read identically.
 			expect(result.stderr.split('\n')).toContain(line);
 		}
-		expect(result.calls).toEqual([]);
+		// nothing but the read-only question to git (which tag is this checkout at?)
+		expect(
+			result.calls.filter((call) => !/ describe --exact-match --match v\[0-9\]\* HEAD$/.test(call)),
+		).toEqual([]);
+		expect(result.calls.length).toBe(1);
+		// an untagged checkout suggests its -dev tag
+		const untagged = makeStack({ envText: 'POSTGRES_PASSWORD=x\n', state: { describe: '' } });
+		expect(runUpdate(untagged, ['--version', '7.0.1']).stderr.split('\n')).toContain(
+			'DEDALO_VERSION=7.0.0-dev',
+		);
 		expect(outcomeViolations(result.outcome)).toEqual([]);
 	});
 

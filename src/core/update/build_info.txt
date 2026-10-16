@@ -1,1 +1,1 @@
-$Format:%H %cI$
+$Format:%H %cI %(describe:match=v[0-9]*,abbrev=40)$

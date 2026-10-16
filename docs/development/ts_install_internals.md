@@ -602,6 +602,12 @@ All read from the **process** environment only, never from `../private/.env`:
   and the fs directly.
 - `DEDALO_INSTALL_PROBE_CA_FILE` — the public probe's trust anchor, accepted only
   inside a directory marked `.dedalo_install_drill`.
+- `DEDALO_INSTALL_RELEASE_IDENTITY` — the installer's release identity
+  (`7.0.0`, `7.0.0-beta.7`, `7.0.0.dev`), pinned so a check tests each kind on any
+  commit: the image tag, the official-image decision and the preselected source
+  follow from it (`src/core/install/installer_identity.ts`). Honoured only in a test
+  process and only for an identity of the installer's own data version; anywhere
+  else the installer refuses to start.
 
 ### Drills
 

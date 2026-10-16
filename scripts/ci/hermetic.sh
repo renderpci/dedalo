@@ -179,6 +179,9 @@ HERMETIC_TRIPWIRES=(
 	test/unit/tool_lossless_writeback_tripwire.test.ts
 	test/unit/ws_a_tripwires.test.ts
 	test/unit/update_ownership_tripwire.test.ts
+	# Release identity gate 9 (2026-10-15): transpile + flow scan of src/, tools/*/server and the
+	# client, no DB. Verified DB-less (DB_PORT=59999).
+	test/unit/release_identity_separation_tripwire.test.ts
 	test/unit/install_restart_supervisor_tripwire.test.ts
 	test/unit/ci_workflow_tripwire.test.ts
 	test/unit/backup_restorability_native.test.ts

@@ -150,6 +150,10 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ needs.plan.outputs.source_sha }}
+          # The archive's build_info.txt expands %(describe) from the TAGS this clone has:
+          # a default shallow, tagless checkout archives an empty field — different bytes
+          # from the plan's (the context step refuses) and an image calling itself .dev.
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version-file: .bun-version # the load-bearing pin — never inline a version
@@ -221,8 +225,10 @@ jobs:
           cache-from: ${{ needs.plan.outputs.channel == 'dev' && format('type=registry,ref={0}:cache-dev-{1}', needs.plan.outputs.staging, matrix.arch) || '' }}
           cache-to: ${{ needs.plan.outputs.channel == 'dev' && format('type=registry,ref={0}:cache-dev-{1},mode=max', needs.plan.outputs.staging, matrix.arch) || '' }}
 
-      # The exact bytes just pushed, by digest — never a tag that could have moved. On
-      # success it hands the digest on as digest_<arch>.
+      # The exact bytes just pushed, by digest — never a tag that could have moved. Among
+      # its assertions: the image's own server, booted, SERVES /health version = the plan's
+      # expected_engine_version (the tag's identity). On success it hands the digest on as
+      # digest_<arch>.
       - name: Smoke test the pushed image
         id: smoke
         env:

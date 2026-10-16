@@ -3,8 +3,11 @@
  * PHP twin: core/base/version.inc (DEDALO_VERSION/DEDALO_MAJOR_VERSION) +
  * shared/core_functions.php get_dedalo_version(). Every engine/data version
  * literal derives from the triple below; the update_ownership_tripwire literal
- * scan keeps new hardcodes out of src/. Leaf module — imports nothing.
+ * scan keeps new hardcodes out of src/. Leaf module — imports only the pure
+ * release-identity grammar (release_identity.ts, itself a leaf).
  */
+
+import { parseReleaseVersion } from './release_identity.ts';
 
 /** The engine version triple (PHP get_dedalo_version() shape). */
 export const DEDALO_VERSION_TRIPLE: readonly [number, number, number] = Object.freeze([
@@ -14,10 +17,9 @@ export const DEDALO_VERSION_TRIPLE: readonly [number, number, number] = Object.f
 /** '7.0.0' — the data-version string (matrix_updates rows, login About panel). */
 export const DEDALO_VERSION: string = DEDALO_VERSION_TRIPLE.join('.');
 
-// The COMPOSED code-version string (DEDALO_VERSION + prerelease tag) lives in
-// build_stamp.ts: the tag is build-provenance-derived ('.dev' on a dev
-// checkout, '' on a `git archive` release), and provenance needs fs — this
-// module stays a leaf.
+// The code's RELEASE IDENTITY (`7.0.0`, `7.0.0-beta.6`, `7.0.0.dev`) lives in
+// build_stamp.ts / release_identity.ts: it is derived from the git tag, and
+// reading that needs fs/git — this module stays a leaf.
 
 /** '7.0' — the ontology IO directory segment (patch releases share one dir, PHP parity). */
 export const DEDALO_VERSION_MAJOR_MINOR: string = `${DEDALO_VERSION_TRIPLE[0]}.${DEDALO_VERSION_TRIPLE[1]}`;
@@ -37,8 +39,17 @@ export function compareVersionArrays(a: readonly number[], b: readonly number[])
 	return 0;
 }
 
-/** '7.0.0.dev' → [7,0,0]: strip a trailing prerelease tag, split on dots. */
+/**
+ * A version string → its numeric parts. Any RELEASE IDENTITY (`7.0.0`,
+ * `7.0.0-beta.6`, `7.0.0-rc.1`, `7.0.0.dev`) → its data triple [7,0,0]: a
+ * prerelease is the same data version as its release, and a peer that sends
+ * one (an engine calling itself by its tag) must be read, never refused as
+ * NaN. Anything else keeps the historical split (a trailing `.dev` stripped,
+ * extra parts preserved, garbage → NaN parts for the caller to refuse).
+ */
 export function parseVersionString(version: string): number[] {
+	const identity = parseReleaseVersion(version);
+	if (identity !== null) return [...identity.triple];
 	return version
 		.replace(/\.dev$/, '')
 		.split('.')

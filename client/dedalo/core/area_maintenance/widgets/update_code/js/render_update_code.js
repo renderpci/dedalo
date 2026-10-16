@@ -2085,7 +2085,7 @@ export const render_restore_modal = function( self, point, body_response, runnin
 	// (see above) — the restore point's is what its own version.ts declares
 	// (null when it cannot be read: then the version compare cannot be made and
 	// the waiver is asked for, never skipped).
-		const from_version		= String(running_version || page_globals.dedalo_version || '')
+		const from_version		= String(running_version || page_globals.dedalo_data_version || '')
 		const to_version		= point.version ? String(point.version) : null
 		const version_changes	= to_version===null || to_version!==from_version
 

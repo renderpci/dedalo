@@ -40,7 +40,7 @@ Choose **Docker** on the first screen (`--plain` asks the same questions one per
 | --- | --- |
 | **Install type** | the route |
 | **System check** | nothing: it shows Docker, Compose and the free disk. A failed row must be fixed first |
-| **Image** | where the image comes from: an **official** Dédalo registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout's last commit. Official images exist for **stable releases only**: on a beta, choose **Build**. **Image version** is the image tag: leave it empty for the installer's own version — the only one accepted besides its `-dev` tag. See [where the image comes from](#choose-where-the-image-comes-from) |
+| **Image** | where the image comes from: an **official** Dédalo registry (verified with `cosign`), a registry of your **own**, or a local **build** from this checkout's last commit. The official image is the one of the installer's **own release** — `7.0.1`, or `7.0.0-beta.7` for a prerelease; a development build has none, and **Build** is preselected for it. **Image version** is the image tag: leave it empty for the installer's own release — the only one accepted besides its data version's `-dev` tag. See [where the image comes from](#choose-where-the-image-comes-from) |
 | **TLS & address** | the public address, and the certificate: **Let's Encrypt** (with its email), a **local certificate authority**, or your institution's **files** |
 | **Containers** | the published HTTP and HTTPS ports (`80` and `443`) |
 | **Identity** | the institution's short code and full name, the install fingerprint (**Information** and **Info key** — keep the defaults unless you are moving a v6 installation), the locale and the time zone |
@@ -72,7 +72,7 @@ The engine's own configuration is not in `.dedalo.env`: it is `/private/.env`, i
 
 | Step | What it does | Verify by hand |
 | --- | --- | --- |
-| `stack_preflight` | refuses, before anything is pulled or written: Docker or Compose v2 missing, a daemon this user cannot reach, under 8 GiB free, a Dédalo instance already here (the `dedalo_private` volume), stack files of an earlier install (`.dedalo.env`, `compose.override.yaml`), an image version that is not the installer's, an official image without `cosign`, an official image the registry does not publish for this version (a beta: see [Official images are stable releases only](#official-images-are-stable-releases-only)), an institution certificate that does not check out | the refusal names each problem |
+| `stack_preflight` | refuses, before anything is pulled or written: Docker or Compose v2 missing, a daemon this user cannot reach, under 8 GiB free, a Dédalo instance already here (the `dedalo_private` volume), stack files of an earlier install (`.dedalo.env`, `compose.override.yaml`), an image version that is not the installer's, an official image without `cosign`, an official image the registry does not publish for this release, or any official image for a development build (see [which official image the installer asks for](#which-official-image-the-installer-asks-for)), an institution certificate that does not check out | the refusal names each problem |
 | `stack_image` | pulls the image and verifies its `cosign` signature and its version label — or builds it here with `--image-source build` through [the local builder](#a-local-build), printing each build step as it starts (a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk). The verified digest is pinned: a re-pull between the check and the run is refused | `docker image ls <image>` |
 | `stack_tls` | Let's Encrypt (certbot in its own container, `--standalone` on port 80, before nginx exists), a local CA (`deploy/dedalo-tls-rotate.sh --mode local-ca`), or your files copied into `deploy/certs` | `ls deploy/certs`, or `docker volume ls \| grep letsencrypt` |
 | `stack_files` | writes `.dedalo.env`, `compose.override.yaml` and the generated nginx site | the three files exist; `.dedalo.env` is `0600` |
@@ -169,15 +169,25 @@ Dédalo publishes the engine image — built once per release, signed, and ident
 | --- | --- | --- |
 | **`official`** | the stack pulls the published image from one of Dédalo's registries; its signature is verified with `cosign` | almost every installation — no build on your server |
 | **`custom`** (`--image-repository`) | the stack pulls from a registry of your own, trusted as pulled | an institution that keeps every image it runs in its own registry |
-| **`build`** | the image is built here, from this checkout's last commit (committed files only, so it reports the release version and the commit date, like the production route) | an air-gapped host, a modified image, a version no registry publishes |
+| **`build`** | the image is built here, from this checkout's last commit (committed files only, so it reports the release it was built from and the commit date, like the production route) | an air-gapped host, a modified image, a version no registry publishes |
 
-Whatever the source, the image's version must be the installer's own (or its `-dev` tag): the engine steps run inside the image with this installer's request format.
+Whatever the source, the image's version must be the installer's own release (or its data version's `-dev` tag): the engine steps run inside the image with this installer's request format.
 
-### Official images are stable releases only
+<a id="official-images-are-stable-releases-only"></a>
 
-Dédalo publishes official images for **stable releases only** (`7.0.1`, never `7.0.0-beta.6`): a prerelease (a beta) and a development checkout have **no official image**. Installing a beta, choose **Build** on the Image screen (`--image-source build`) — a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk — or a registry of your own that holds an image of this version (`--image-source custom`).
+### Which official image the installer asks for
 
-The Review asks the registry before you type `yes` (`docker manifest inspect`, then `docker buildx imagetools inspect`, as you — nothing is pulled). When the official image of this version is not published, the Review says so and does not offer to install: your answers are kept — go back to the Image screen, choose Build, and review again. While it asks, the screen shows `checking the official image <image>…`; it asks once each time the Review is built, and each question waits at most 15 seconds — a registry that does not answer by then counts as not reachable, never as "not published". When the registry cannot be reached (no network, a proxy, a firewall that drops the connection), the Review says it could not be checked, in plain words — `the registry did not answer within 15 s` or `could not reach ghcr.io` — and lets you install: `stack_image` then reports what the pull found. Docker's own error message is written to the install log of the run, not shown on the Review.
+The installer knows which release it is from the git tag of the checkout or release archive it runs from, and shows it in its header: `7.0.0` for a stable release, `7.0.0-beta.7 (prerelease)` for a prerelease, `7.0.0.dev (development build)` for a commit that carries no release tag. That name decides the image:
+
+| The installer is | Image tag | Official |
+| --- | --- | --- |
+| a stable release (`7.0.0`) | `7.0.0` | the Review asks the registry for `:7.0.0` |
+| a prerelease (`7.0.0-beta.7`) | `7.0.0-beta.7` | the Review asks the registry for `:7.0.0-beta.7` — never for `:7.0.0`, which is the stable release's image |
+| a development build (`7.0.0.dev`) | `7.0.0-dev` | refused straight away, no registry is asked: no published image holds this commit. **Build** is preselected |
+
+A local build is tagged and labelled with the same tag, `.dedalo.env` pins it as `DEDALO_VERSION`, and the engine's `/health` reports the release itself (`7.0.0-beta.7`, or `7.0.0.dev` for a development build).
+
+The Review asks the registry before you type `yes` (`docker manifest inspect`, then `docker buildx imagetools inspect`, as you — nothing is pulled). When the official image of this release is not published — a prerelease whose image is not out yet, for example — the Review says so and does not offer to install: your answers are kept — go back to the Image screen, choose **Build** (`--image-source build`; a first build takes about 2 to 6 minutes on 2 CPUs, longer on a slow network or disk) or a registry of your own that holds an image of this release (`--image-source custom`), and review again. While it asks, the screen shows `checking the official image <image>…`; it asks once each time the Review is built, and each question waits at most 15 seconds — a registry that does not answer by then counts as not reachable, never as "not published". When the registry cannot be reached (no network, a proxy, a firewall that drops the connection), the Review says it could not be checked, in plain words — `the registry did not answer within 15 s` or `could not reach ghcr.io` — and lets you install: `stack_image` then reports what the pull found. Docker's own error message is written to the install log of the run, not shown on the Review.
 
 ### Dédalo's registries
 
@@ -232,7 +242,7 @@ Then install with `--image-source custom --image-repository registry.example.org
 
 Building here needs this checkout and the network to fetch the base image, the system packages and the JavaScript dependencies. The first build is slow and parks several gigabytes of build cache (`docker builder prune -af` reclaims it once the build is done). Updates rebuild from the release's git tag, so the checkout must keep its git remote.
 
-The installer and every later update build the same way, through one builder: `deploy/dedalo-image-build.sh` archives the checkout's last commit (`git archive`) into `.dedalo-install/image-context`, builds that directory, and removes it afterwards. So the image carries **committed files only** — an uncommitted edit, an untracked file, `.dedalo.env` or a certificate never reach it — and it reports the version it is tagged with and the commit date, never `X.Y.Z.dev`. Its labels are its own: `org.opencontainers.image.version` is the tag and `org.opencontainers.image.revision` the commit; `source`, `url`, `description` and `licenses` name Dédalo (its repository, its site, `AGPL-3.0-only`) — never the labels of the Bun base image it starts from. Its `/health` shows `install_digest: null`: that field names the release archive a tree update installed, and a local build has none. To build by hand, use the same command:
+The installer and every later update build the same way, through one builder: `deploy/dedalo-image-build.sh` archives the checkout's last commit (`git archive`) into `.dedalo-install/image-context`, builds that directory, and removes it afterwards. So the image carries **committed files only** — an uncommitted edit, an untracked file, `.dedalo.env` or a certificate never reach it — and it reports the release of that commit — its git tag (`7.0.1`, `7.0.0-beta.7`), or `X.Y.Z.dev` for a commit without one — and the commit date. Its labels are its own: `org.opencontainers.image.version` is the tag and `org.opencontainers.image.revision` the commit; `source`, `url`, `description` and `licenses` name Dédalo (its repository, its site, `AGPL-3.0-only`) — never the labels of the Bun base image it starts from. Its `/health` shows `install_digest: null`: that field names the release archive a tree update installed, and a local build has none. To build by hand, use the same command:
 
 ```shell
 ./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:7.0.1
@@ -248,7 +258,7 @@ The image half of `.dedalo.env` is the contract the image updater reads:
 | --- | --- | --- |
 | `DEDALO_COMPOSE_FILE` | the stack file in this directory | `docker-compose.yml` (`docker-compose.simple.yml` on the trial route) |
 | `DEDALO_IMAGE` | the repository, **without** a tag | a repository from the table above, yours, or `localhost/dedalo` for a local build |
-| `DEDALO_VERSION` | the version this installation runs — the image tag | `7.0.1`, or `7.0.1-dev` |
+| `DEDALO_VERSION` | the version this installation runs — the image tag | `7.0.1`, `7.0.0-beta.7` (a prerelease), or `7.0.1-dev` |
 | `DEDALO_IMAGE_MODE` | `pull` (a registry) or `build` (a local build) | `pull` |
 | `DEDALO_IMAGE_VERIFY` | `cosign` (check Dédalo's signature on every pull) or `none` | `cosign` |
 
@@ -368,13 +378,13 @@ A container installation updates by replacing its **image** — the code lives i
 ./deploy/dedalo-image-update.sh --version 7.0.2
 ```
 
-The version is a release the code server lists — the [code update panel](../management/updates/updating_code.md) shows them, with their release notes and this exact command — or a `X.Y.Z-dev` developer image. What the script does, each step refusing before the next one changes anything:
+The version is a release the code server lists — the [code update panel](../management/updates/updating_code.md) shows them, with their release notes and this exact command — a prerelease of one (`X.Y.Z-alpha.N`, `X.Y.Z-beta.N`, `X.Y.Z-rc.N`), or a `X.Y.Z-dev` developer image. What the script does, each step refusing before the next one changes anything:
 
 1. **Reads `.dedalo.env`** to know where the image comes from. If the file does not say, it prints the exact lines to add and stops (see [an installation from before the image pin](#an-installation-from-before-the-image-pin)).
-2. **Checks the version**: it must move forward from the pinned `DEDALO_VERSION` (the same version only for a `-dev` image), and the running engine must agree it is the next step on the upgrade path.
+2. **Checks the version**: it must move forward from the pinned `DEDALO_VERSION` (the same version only for a `-dev` image), and the running engine must agree it is the next step on the upgrade path. Versions are ordered as releases are: a prerelease comes before its release, so `7.0.0-beta.6` < `7.0.0-beta.7` < `7.0.0-rc.1` < `7.0.0` < `7.0.1`. A step back to an older `X.Y.Z` is always refused. An engine that does not know prerelease versions yet is asked about the data version instead (`7.0.1-dev` for `7.0.1-beta.2`): the same `X.Y.Z` or the next one is accepted, a skipped one refused. A step back within the same `X.Y.Z` crosses no database migration, and `--skip-version-check` waives it (see [a stack installed from a beta before 7.0.0-beta.7](#a-stack-installed-from-a-beta-before-700-beta7)).
 3. **Takes a database backup** through the stack's `backup` service and checks it is readable (`/backups/db/<time>.<database>.postgresql_pre-image-update.custom.backup`). There is no update without it; `--no-backup` waives it, and is never the default.
 4. **Keeps the running image** under a `rollback-<time>` tag.
-5. **Gets the new image**: `pull` mode pulls `<DEDALO_IMAGE>:<version>` and, with `DEDALO_IMAGE_VERIFY=cosign`, refuses it unless the signature checks out; `build` mode checks out the release tag `v<version>` in this checkout and builds it from a clean snapshot of that commit — the same build as the installer's, so the image holds committed files only and reports the release version, never `.dev`. Local changes to tracked files are refused first (the checkout itself moves to the release); untracked files may stay, they never reach the image. A tree without git cannot be rebuilt: the script refuses and says so.
+5. **Gets the new image**: `pull` mode pulls `<DEDALO_IMAGE>:<version>` and, with `DEDALO_IMAGE_VERIFY=cosign`, refuses it unless the signature checks out; `build` mode checks out the release tag `v<version>` in this checkout (`v7.0.0-beta.7` for a prerelease) and builds it from a clean snapshot of that commit — the same build as the installer's, so the image holds committed files only and reports the release version, never `.dev`. The commit must **be** that release: a tag that is not annotated, or that names another version than the code declares, is refused before anything is built. For a `-dev` image, or to reach a prerelease's commit under another name, `--ref <git ref>` names what to check out; without it a `-dev` build takes the `master` branch of the checkout's only remote. Local changes to tracked files are refused first (the checkout itself moves to the release); untracked files may stay, they never reach the image. A tree without git cannot be rebuilt: the script refuses and says so.
 6. **Re-pins `DEDALO_VERSION`** in `.dedalo.env` — the only line it changes.
 7. **Recreates `dedalo` and `backup`** — never `postgres` or `nginx` — and waits for the engine's healthcheck, up to 15 minutes (`--health-timeout`), since boot migrations on a large database take time.
 8. **Healthy**: done, and only the newest rollback tag is kept. **Not healthy**: it puts the previous image back under its old version, re-pins it, brings it up and says *rolled back* — or, if even that is not healthy, *rollback failed* with the path of the backup it took.
@@ -409,7 +419,7 @@ DEDALO_IMAGE_MODE=build
 DEDALO_IMAGE_VERIFY=none
 ```
 
-`DEDALO_VERSION` is the version this checkout declares (the script prints it). Then build once under the new name and recreate the engine:
+`DEDALO_VERSION` is the version this checkout calls itself (the script prints it): `7.0.1` when it is at the release tag `v7.0.1`, `7.0.1-beta.2` at a prerelease tag, `7.0.1-dev` on a commit with no release tag. Then build once under the new name and recreate the engine:
 
 ```shell
 ./deploy/dedalo-image-build.sh "$PWD" localhost/dedalo:7.0.1
@@ -417,6 +427,22 @@ docker compose -f docker-compose.yml --env-file .dedalo.env up -d
 ```
 
 The first update from an image built before the update channel existed needs `--skip-version-check`: that image cannot answer the version question yet.
+
+### A stack installed from a beta before 7.0.0-beta.7
+
+Until 7.0.0-beta.6, a beta named its image after the stable release it precedes: a stack built from a beta checkout is pinned at the bare `DEDALO_VERSION=7.0.0`. From 7.0.0-beta.7 on, a beta is pinned under its own name (`7.0.0-beta.7`). Because a prerelease comes **before** its stable release, the update from the old bare pin to `7.0.0-beta.7` reads as a downgrade and is refused.
+
+The update script in such a stack is still the one of its old beta, and that script does not accept a prerelease version at all: it refuses `7.0.0-beta.7` as "not a version" before it reads any flag. So first bring this checkout's scripts to the new release, then run the update once with `--skip-version-check`:
+
+```shell
+git fetch --tags
+git checkout v7.0.0-beta.7
+./deploy/dedalo-image-update.sh --version 7.0.0-beta.7 --skip-version-check
+```
+
+The checkout must have no local changes to tracked files (the script refuses them anyway). If the update rolls back, the image and `DEDALO_VERSION` return to the old beta but the checkout stays at `v7.0.0-beta.7`; `git checkout -` takes it back too.
+
+Only that first update needs the flag: it re-pins `DEDALO_VERSION=7.0.0-beta.7`, and later updates compare prerelease names correctly. The running engine of an old beta cannot read a prerelease version either; the script then asks it about the data version instead (`7.0.0-dev` for `7.0.0-beta.7`) and says so, which needs no flag. The database is not affected — its data version is `7.0.0` either way. The flag waives a step back only within one data version (`7.0.0` here); it never lets an update return to an older one such as `6.9.9`.
 
 ### The host updater (optional)
 

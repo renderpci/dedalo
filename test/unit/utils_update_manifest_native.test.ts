@@ -131,6 +131,11 @@ describe('authorizeUpdateManifest — gate 2: the version', () => {
 	test.each([
 		['7.0.0', [7, 0, 0]],
 		['7.0.0.dev', [7, 0, 0]], // parseVersionString strips the prerelease tail
+		// A peer naming itself by a PRERELEASE identity is read as its data triple
+		// (design gate 4): before, Number('0-beta') = NaN refused every beta asker.
+		['7.0.0-beta.6', [7, 0, 0]],
+		['7.0.0-alpha.1', [7, 0, 0]],
+		['7.0.0-rc.2', [7, 0, 0]],
 		['7.0.0.1', [7, 0, 0, 1]], // extra parts are PRESERVED, not truncated
 	])('requiredParts 3 accepts %p → %p', (versionRaw, expected) => {
 		expect(authorizeUpdateManifest(codeInput({ versionRaw }))).toEqual({
@@ -139,12 +144,15 @@ describe('authorizeUpdateManifest — gate 2: the version', () => {
 		});
 	});
 
-	test.each([['7.0.x'], ['7.0.0.dev.1']])('requiredParts 3 refuses %p', (versionRaw) => {
-		expect(authorizeUpdateManifest(codeInput({ versionRaw }))).toEqual({
-			ok: false,
-			msg: 'Error. Invalid version number',
-		});
-	});
+	test.each([['7.0.x'], ['7.0.0.dev.1'], ['7.0.0-pre.1'], ['7.0.0-beta']])(
+		'requiredParts 3 refuses %p',
+		(versionRaw) => {
+			expect(authorizeUpdateManifest(codeInput({ versionRaw }))).toEqual({
+				ok: false,
+				msg: 'Error. Invalid version number',
+			});
+		},
+	);
 
 	test('MOVED FAITHFULLY, NOT FIXED: ".0" is accepted as version [0,0]', () => {
 		// Number('') === 0 makes a leading-dot string a valid "major". This is the

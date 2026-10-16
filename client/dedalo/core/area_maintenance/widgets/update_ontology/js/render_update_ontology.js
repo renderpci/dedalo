@@ -43,6 +43,7 @@
 *   render_update_ontology  — prototype constructor (`list`/`edit` assigned in
 *                             update_ontology.js).
 *   render_servers_list     — exported for reuse by the server-picker.
+*   get_update_info         — exported for its executed wire gate.
 */
 
 // imports
@@ -52,6 +53,7 @@
 	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {request_failed, response_data, response_extension} from '../../../../common/js/api_error.js'
 	import {error_text} from '../../../../common/js/render_api_error.js'
+	import {data_version_of} from '../../../../common/js/release_identity.js'
 
 
 
@@ -262,11 +264,14 @@ export const build_failure = function (api_error) {
 * Phase 1 of the update: ask a master for its manifest (available files + the
 * version info). Called from TWO places — the reference block's "Fetch list"
 * button and the submit flow — so the request shape lives in ONE place.
+* Exported so its wire shape (the DATA triple as `options.version`, never the
+* release identity) is gated by EXECUTING it:
+* test/unit/client_release_identity_wire.test.ts.
 *
 * @param {Object} server - a `value.servers` entry (url + code)
 * @returns {Promise<Object>} the raw api_response (caller inspects the envelope)
 */
-const get_update_info = async function (server) {
+export const get_update_info = async function (server) {
 
 	const api_response = await data_manager.request({
 		url		: server.url,
@@ -276,7 +281,10 @@ const get_update_info = async function (server) {
 			prevent_lock	: true,
 			source			: { action : 'update_ontology' },
 			options : {
-				version	: page_globals.dedalo_version,
+				// the DATA triple: an ontology server reads major.minor of it,
+				// and an older one parses integers only (published beside the
+				// identity as page_globals.dedalo_data_version; derived as fallback)
+				version	: page_globals.dedalo_data_version || data_version_of(page_globals.dedalo_version),
 				code	: server.code
 			}
 		},

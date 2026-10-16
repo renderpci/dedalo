@@ -34,7 +34,6 @@ import {
 } from '../../src/core/area_maintenance/widgets/support.ts';
 import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import type { Principal } from '../../src/core/security/permissions.ts';
-import { DEDALO_ENGINE_VERSION } from '../../src/core/update/build_stamp.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
@@ -307,7 +306,7 @@ describe('engine-version single source (core/update/version.ts)', () => {
 	test('self-check: the derived regexes match the current version (a dead regex is a dead gate)', () => {
 		expect(stringLiteral.test(`'${DEDALO_VERSION}'`)).toBe(true);
 		expect(stringLiteral.test(`"${DEDALO_VERSION}.dev"`)).toBe(true);
-		expect(stringLiteral.test(`\`${DEDALO_ENGINE_VERSION}\``)).toBe(true);
+		expect(stringLiteral.test(`\`${DEDALO_VERSION}.dev\``)).toBe(true);
 		expect(arrayLiteral.test(`[${DEDALO_VERSION_TRIPLE.join(', ')}]`)).toBe(true);
 		expect(arrayLiteral.test(`[${DEDALO_VERSION_TRIPLE.join(',')}]`)).toBe(true);
 		// quote-anchoring: an IP-shaped bare occurrence must NOT trip

@@ -233,6 +233,11 @@ describe('release notes: frozen at the cut, equal to the derivation, written by 
 			join(REPO_ROOT, 'scripts', 'lib', 'change_log.ts'),
 			join(SCRATCH, 'scripts', 'lib', 'change_log.ts'),
 		);
+		// …and the engine's release grammar + comparator the library imports (a pure leaf)
+		cpSync(
+			join(REPO_ROOT, 'src', 'core', 'update', 'release_identity.ts'),
+			join(SCRATCH, 'src', 'core', 'update', 'release_identity.ts'),
+		);
 		file('changes/README.md', '# changes\n');
 		file(
 			'changes/7.0.0/release.json',

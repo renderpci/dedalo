@@ -78,6 +78,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { privateDir, projectRoot } from '../src/config/env.ts';
+import { parseReleaseVersion } from '../src/core/update/release_identity.ts';
 
 // ---------------------------------------------------------------------------
 // Fixed facts of this probe
@@ -387,10 +388,15 @@ async function main(): Promise<void> {
 	// is brought TO that version (re-materialized below when it does not match)
 	// rather than the version being derived from the museum.
 	//
-	// The `.dev` tag is stripped before parsing either way: a museum already
-	// running a developer build reports `7.0.1.dev`, and the strict triple test
-	// below would otherwise refuse to start a second cycle on it.
-	const museumVersion = String(consumerHealth.version ?? '').replace(/\.dev$/, '');
+	// The museum's /health names its RELEASE IDENTITY (`7.0.1`, `7.0.1.dev` on a
+	// developer build, `7.0.1-beta.2` on a prerelease): its DATA triple is what
+	// the cycle walks from, and the strict triple test below would otherwise
+	// refuse to start a second cycle on a dev or prerelease museum.
+	const museumIdentity = parseReleaseVersion(String(consumerHealth.version ?? ''));
+	const museumVersion =
+		museumIdentity === null
+			? String(consumerHealth.version ?? '')
+			: museumIdentity.triple.join('.');
 	must(
 		/^\d+\.\d+\.\d+$/.test(museumVersion),
 		`the museum's /health carries no parseable version ('${museumVersion}') — it must be on a post-2026-08 build for repeat cycles`,
@@ -626,7 +632,26 @@ async function main(): Promise<void> {
 	await run(['git', '-C', cloneDir, 'branch', '-M', 'master'], 'branch master');
 	const releaseRef = devChannel ? 'master' : `refs/tags/v${RELEASE_VERSION}`;
 	if (!devChannel) {
-		await run(['git', '-C', cloneDir, 'tag', '-f', `v${RELEASE_VERSION}`], 'release tag');
+		// ANNOTATED, like every real release tag: the archive's %(describe) ignores
+		// lightweight tags, and the release would call itself `.dev`.
+		await run(
+			[
+				'git',
+				'-C',
+				cloneDir,
+				'-c',
+				'user.name=museum probe',
+				'-c',
+				'user.email=probe@localhost',
+				'tag',
+				'-f',
+				'-a',
+				'-m',
+				`v${RELEASE_VERSION}`,
+				`v${RELEASE_VERSION}`,
+			],
+			'release tag',
+		);
 	}
 	const targetDir = join(CODE_FILES_DIR, '7', '7.0');
 	mkdirSync(targetDir, { recursive: true });

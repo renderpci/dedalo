@@ -79,8 +79,27 @@ export async function cloneForReleaseCommit(options: ReleaseCloneOptions): Promi
 	);
 	// `-f`: the shared clone inherits the source's tags, and a rehearsal of an
 	// already-tagged version must tag THIS commit, not the historical one.
+	// ANNOTATED, as every real release tag is (owner Q7): the archive's
+	// build_info.txt %(describe) ignores lightweight tags, so a lightweight one
+	// would build a release that calls itself `.dev` (release_identity.ts).
 	if (tag !== undefined) {
-		await runGit(['-C', cloneDir, 'tag', '-f', tag], `tag ${tag}`);
+		await runGit(
+			[
+				'-C',
+				cloneDir,
+				'-c',
+				'user.name=update drill',
+				'-c',
+				'user.email=drill@localhost',
+				'tag',
+				'-f',
+				'-a',
+				'-m',
+				tag,
+				tag,
+			],
+			`tag ${tag}`,
+		);
 	}
 }
 

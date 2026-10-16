@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 763,
-		"functions": 11981,
+		"files": 766,
+		"functions": 12096,
 		"functionsOverCap": 672,
 		"filesOverCap": 258
 	},
@@ -322,7 +322,7 @@
 		"src/core/relations/select_lang.ts": 9,
 		"src/core/resolve/component_data.ts": 11,
 		"src/core/resolve/dd_info.ts": 12,
-		"src/core/resolve/environment.ts": 16,
+		"src/core/resolve/environment.ts": 14,
 		"src/core/resolve/lang_fallback.ts": 7,
 		"src/core/resolve/media_list_value.ts": 9,
 		"src/core/resolve/optimize_tc.ts": 14,

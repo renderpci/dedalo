@@ -21,7 +21,9 @@
  * PURE AND CONFIG-FREE: imports only src/config/pg_transport.ts and the client
  * password policy module (the bytes the browser checklist and the server
  * refusal both run — core/security/password_policy.ts wraps the same function
- * but pulls in the error registry, so it is not imported here).
+ * but pulls in the error registry, so it is not imported here) — plus the
+ * installer's release identity (installer_identity.ts: a process constant read
+ * once from this tree's build stamp), which decides the image answers.
  *
  * TAGGED (phase 2, 2026-10-12): every refusal is a {@link FieldError} — the
  * sentence AND the answer key it is about. The plan's `errors` carry the
@@ -37,6 +39,7 @@ import { liveProcessEnv } from '../../config/env.ts';
 import { connFieldProblem, pgSocketProblem } from '../../config/pg_transport.ts';
 import { acceptedImageVersions } from './host/stack/layout.ts';
 import type { InstallAnswers } from './install_plan.ts';
+import { officialRefusedFor } from './installer_identity.ts';
 
 /**
  * The entity name: a letter, then letters/digits/underscore. It becomes a
@@ -660,6 +663,7 @@ function stackHostErrors(a: InstallAnswers, problems: Problems): void {
 	if (a.image_source === 'custom' && a.image_repository === '') {
 		problems.push(problem('image_repository', 'image_source custom requires image_repository'));
 	}
+	officialSourceErrors(a, problems);
 	// The run's preflight refuses any other tag (stack/preflight.ts imageProblems): said on
 	// the Image screen itself, never first after `yes` (campaign 3c D2: `9.9.9` passed the
 	// field and the Review, every answer lost at the refusal).
@@ -671,6 +675,16 @@ function stackHostErrors(a: InstallAnswers, problems: Problems): void {
 			),
 		);
 	}
+}
+
+/**
+ * A development build (untagged) has no official image: refused from the identity
+ * itself, on the Image screen — the Review never asks a registry for it (Q6).
+ */
+function officialSourceErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.image_source !== 'official') return;
+	const refused = officialRefusedFor();
+	if (refused !== null) problems.push(problem('image_source', refused));
 }
 
 /** The answers that make the host steps (production, docker) — skipped for the engine child (A14). */

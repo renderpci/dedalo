@@ -96,7 +96,7 @@ import {
 import { startToolBootHooks, toolHttpRouteFor } from './core/tools/loader.ts';
 import { safeRealpath } from './core/tools/paths.ts';
 import { serveToolsRequest } from './core/tools/serving.ts';
-import { DEDALO_ENGINE_VERSION } from './core/update/build_stamp.ts';
+import { DEDALO_ENGINE_VERSION, RELEASE_IDENTITY } from './core/update/build_stamp.ts';
 import { ensureCodeFilesDirAtBoot } from './core/update/code_files_dir.ts';
 import { CODE_RELEASE_URL_PREFIX, serveCodeReleaseRequest } from './core/update/code_serving.ts';
 import { INSTALLED_DIGEST } from './core/update/install_stamp.ts';
@@ -974,6 +974,9 @@ export async function handleRequest(request: Request, context: RequestContext): 
 				// across a same-version dev-channel swap. NOT the database name — see
 				// test_db_marker_tripwire's /health rule.
 				version: DEDALO_ENGINE_VERSION,
+				// …and which kind that identity is (stable | prerelease | dev), so
+				// no reader infers it from the string's shape.
+				releaseKind: RELEASE_IDENTITY.kind,
 				installDigest: INSTALLED_DIGEST,
 				requestId: context.requestId,
 				// Dev mode only, and an opaque hash even then (see above).
@@ -1484,6 +1487,13 @@ function echoRuntimeVersion(): void {
 		console.warn(
 			`[runtime] Bun ${Bun.version} does NOT match the verified pin ${pinned} (.bun-version). Bun.sql/Bun.serve behavior is version-coupled (audit S2-36) — verify before relying on this runtime.`,
 		);
+	}
+	// The release identity is read once at import (build_stamp.ts); evidence it
+	// did NOT believe — a tag naming another version, an archive whose describe
+	// field an old git never expanded, a checkout git could not answer for — is
+	// said here, once, instead of silently becoming `.dev` (design rule 3).
+	if (RELEASE_IDENTITY.notice !== null) {
+		console.warn(`[release] ${RELEASE_IDENTITY.notice}`);
 	}
 	// DEDALO_DEBUG_API_ERRORS COLLAPSES THE ENTIRE DISCLOSURE LADDER (P2-8 / SEC-19).
 	//

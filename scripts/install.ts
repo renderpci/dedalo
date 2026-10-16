@@ -228,7 +228,6 @@ import {
 } from '../src/core/install/run_files.ts';
 import { ABORT_AND_START_AGAIN } from '../src/core/install/step_loop.ts';
 import { plainReporter as plainRunReporter } from '../src/core/install/ui_plain/reporter.ts';
-import { DEDALO_VERSION } from '../src/core/update/version.ts';
 
 /** Removes the resolved catalog's scratch files (an extracted --ontology-source archive). */
 let cleanupCatalog: () => void = () => undefined;
@@ -1248,11 +1247,13 @@ async function openTuiFront(): Promise<
 > {
 	clearOpenTuiEnv();
 	const { openFullScreen } = await import('../src/core/install/tui_loader.ts');
+	const { installerVersionLabel } = await import('../src/core/install/installer_identity.ts');
 	const opened = await openFullScreen({
 		stdin: process.stdin,
 		stdout: process.stdout,
 		noColor: terminalCaps().noColor,
-		version: DEDALO_VERSION,
+		// The header names the release identity and its kind (`7.0.0-beta.7 (prerelease)`).
+		version: installerVersionLabel(),
 	});
 	if (opened.kind === 'tui') return opened.front;
 	process.stderr.write(
@@ -1341,6 +1342,7 @@ async function interactiveInstall(
 ): Promise<never> {
 	const { runInteractiveInstall } = await import('../src/core/install/install_session.ts');
 	const { childProbes } = await import('../src/core/install/install_probe_client.ts');
+	const { installerVersionLabel } = await import('../src/core/install/installer_identity.ts');
 	activeUi = choice.ui === 'tui' ? await openTuiFront() : null;
 	let prompter: InstallPrompter;
 	let reporter: RunReporter;
@@ -1376,7 +1378,7 @@ async function interactiveInstall(
 		thesauri: thesaurusOffer(),
 		host: { timezone: host.timezone, locale: host.locale },
 		givenSecrets: { ...secrets },
-		version: DEDALO_VERSION,
+		version: installerVersionLabel(),
 		// Both hooks of one Review build share `measure`: the registry is asked once (C3i-F2).
 		hostCommands: async (plan, measure) => {
 			if (!hostPlanned(plan.answers)) return [];

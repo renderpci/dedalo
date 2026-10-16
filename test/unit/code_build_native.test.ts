@@ -23,6 +23,7 @@ import {
 	releaseTagsNewestFirst,
 	releaseTagVersion,
 } from '../../src/core/update/code_build_plan.ts';
+import { MIN_GIT_FOR_DESCRIBE } from '../../src/core/update/release_identity.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 
 // Snapshot the REAL config module ONCE at top level: mock.restore() does NOT
@@ -465,6 +466,81 @@ describe('buildVersionFromGit — real git archive', () => {
 			mock.restore();
 		}
 	}, 60000);
+});
+
+describe('buildVersionFromGit — a git too old to stamp the release tag is refused', () => {
+	test.if(GIT_PRESENT)(
+		`a git older than ${MIN_GIT_FOR_DESCRIBE} refuses BEFORE anything is written; the minimum builds`,
+		async () => {
+			const base = join(ROOT, 'oldgit');
+			const repo = join(base, 'repo');
+			const filesDir = join(base, 'files');
+			const bin = join(base, 'bin');
+			mkdirSync(repo, { recursive: true });
+			mkdirSync(filesDir, { recursive: true });
+			mkdirSync(bin, { recursive: true });
+			const realGit = Bun.which('git') as string;
+			// The stub answers `git … --version` with STUB_GIT_VERSION; every other call is real git.
+			writeFileSync(
+				join(bin, 'git'),
+				`#!/bin/sh\nfor a in "$@"; do [ "$a" = --version ] && { echo "$STUB_GIT_VERSION"; exit 0; }; done\nexec ${realGit} "$@"\n`,
+				{ mode: 0o755 },
+			);
+			const gitEnv = {
+				...process.env,
+				GIT_CONFIG_GLOBAL: '/dev/null',
+				GIT_CONFIG_SYSTEM: '/dev/null',
+			};
+			const g = (...args: string[]) =>
+				expect(Bun.spawnSync([realGit, '-C', repo, ...args], { env: gitEnv }).exitCode).toBe(0);
+			writeFileSync(join(repo, 'package.json'), '{"name":"dedalo"}');
+			g('init', '-q', '-b', 'master');
+			g('-c', 'user.email=t@t', '-c', 'user.name=t', 'add', 'package.json');
+			g('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'seed');
+			g('tag', 'v7.0.1');
+			const savedPath = process.env.PATH;
+			const savedVersion = process.env.STUB_GIT_VERSION;
+			try {
+				mock.module('../../src/config/config.ts', () => ({
+					...REAL_CONFIG,
+					config: {
+						...REAL_CONFIG.config,
+						update: {
+							...REAL_CONFIG.config.update,
+							isCodeServer: true,
+							codeServerGitDir: repo,
+							codeFilesDir: filesDir,
+						},
+					},
+				}));
+				process.env.PATH = `${bin}:${savedPath ?? '/usr/bin:/bin'}`;
+				process.env.STUB_GIT_VERSION = 'git version 2.34.8';
+				const refused = await buildVersionFromGit({ version: '7.0.1', channel: 'master' }).then(
+					() => null,
+					(caught: unknown) => caught,
+				);
+				expect(isDedaloError(refused)).toBe(true);
+				expect((refused as { code: string }).code).toBe('update.refused');
+				expect((refused as { publicMessage?: string }).publicMessage).toContain(
+					`older than ${MIN_GIT_FOR_DESCRIBE}`,
+				);
+				expect((refused as Error).message).toContain('git 2.34 cannot expand %(describe');
+				// Nothing provisioned, nothing archived.
+				expect(existsSync(join(filesDir, '7'))).toBe(false);
+				process.env.STUB_GIT_VERSION = `git version ${MIN_GIT_FOR_DESCRIBE}.0`;
+				const built = await buildVersionFromGit({ version: '7.0.1', channel: 'master' });
+				expect(built.ok).toBe(true);
+				expect(existsSync(join(filesDir, '7', '7.0', '7.0.1.zip'))).toBe(true);
+			} finally {
+				process.env.PATH = savedPath;
+				if (savedVersion === undefined) delete process.env.STUB_GIT_VERSION;
+				else process.env.STUB_GIT_VERSION = savedVersion;
+				mock.module('../../src/config/config.ts', () => REAL_CONFIG);
+				mock.restore();
+			}
+		},
+		60000,
+	);
 });
 
 // ---------------------------------------------------------------------------

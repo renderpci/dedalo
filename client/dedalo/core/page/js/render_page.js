@@ -89,7 +89,10 @@ render_page.prototype.edit = async function(options) {
 		// styles
 		const classes = ['wrapper',self.type]
 		if (page_globals?.dedalo_version) {
-			classes.push( 'version_' + page_globals.dedalo_version.replaceAll('.','_') )
+			// One class token, whatever the identity holds: '7.0.0-beta.6' →
+			// 'version_7_0_0-beta_6'. Anything outside [A-Za-z0-9_-] becomes '_' — a
+			// space would make classList.add THROW and take the whole page down with it.
+			classes.push( 'version_' + String(page_globals.dedalo_version).replace(/[^A-Za-z0-9_-]/g, '_') )
 		}
 		wrapper.classList.add(...classes)
 
@@ -126,8 +129,9 @@ render_page.prototype.edit = async function(options) {
 * Builds the inner `div.content_data` element that holds every page element.
 *
 * Execution order:
-* 1. **Version gate**: compares the runtime `dedalo_version` (major.minor.patch)
-*    from `page_globals` with the DB schema `data_version`. If they diverge the
+* 1. **Version gate**: compares the DATA triple of the runtime release identity
+*    (`page_globals.dedalo_version`, e.g. 7.0.0-beta.6 → 7.0.0) with the DB
+*    schema `data_version`. If they diverge the
 *    function returns early with the maintenance/update widget so the user can
 *    upgrade the database — no page elements are rendered.
 * 2. **Status banners**: prepends recovery-mode and maintenance-mode banners when
@@ -166,12 +170,21 @@ const get_content_data = async function(self) {
 	// When the data is not updated, stop load page and require the recovery key
 	// if user provide the correct key, load the update data widget.
 		// check the data and code versions
-		// Normalise to major.minor.patch (3 segments) before comparing; `data_version`
-		// may arrive as an array (from PHP json_encode of a PHP array) or a plain string.
-		const dedalo_version	= page_globals?.dedalo_version?.split('.').slice(0, 3).join(".") || '';
-		const data_version		= Array.isArray(page_globals?.data_version) ? page_globals.data_version.join('.') : (page_globals?.data_version || '');
+		// `dedalo_version` is the code's RELEASE IDENTITY ('7.0.0-beta.6') — never
+		// compared. The server publishes the code's DATA triple beside it
+		// (`dedalo_data_version`, '7.0.0'), and that bare string is what must equal
+		// the stored `data_version` (an array or a plain string). Deriving it from
+		// the identity (common/js/release_identity.js — never a dot-split) is only
+		// the fallback for a page_globals without the key; lazy, so the boot graph
+		// stays within its shrink-only budget (test/unit/page_load_budget_native.test.ts).
+		const code_data_version	= page_globals?.dedalo_data_version
+			?? (page_globals?.dedalo_version
+				? (await import('../../common/js/release_identity.js')).data_version_of(page_globals.dedalo_version)
+				: '')
+		const data_version		= Array.isArray(page_globals?.data_version) ? page_globals.data_version.join('.') : (page_globals?.data_version || '')
+		const versions_differ	= Boolean(code_data_version && data_version && code_data_version!==data_version)
 
-		if( dedalo_version && data_version && dedalo_version!==data_version ){
+		if( versions_differ ){
 			// Lazy (engineering/CONVENTIONS.md §2, rationale 3 — rarely hit): only a
 			// data/code version mismatch renders this widget, so it stays off the
 			// boot graph (test/unit/page_load_budget_native.test.ts).

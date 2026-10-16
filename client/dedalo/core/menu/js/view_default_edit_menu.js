@@ -249,8 +249,9 @@ view_default_edit_menu.render = async function(self, options) {
 		when_in_viewport(wrapper, () => {
 			resize_observer.observe(content_data);
 			// update class from version
-			// version dots replaced with underscores to form a valid CSS class, e.g. 'v7_0_3'
-			wrapper.classList.add('v'+page_globals.dedalo_version.replaceAll('.','_'))
+			// One class token from the release identity, e.g. '7.0.0-beta.6' → 'v7_0_0-beta_6':
+			// anything outside [A-Za-z0-9_-] becomes '_' (same rule as render_page.js)
+			wrapper.classList.add('v'+String(page_globals.dedalo_version).replace(/[^A-Za-z0-9_-]/g, '_'))
 		})
 
 

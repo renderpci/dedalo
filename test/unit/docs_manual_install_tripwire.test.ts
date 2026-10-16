@@ -60,7 +60,15 @@
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { HostPlanCtx } from '../../src/core/install/host/contract.ts';
@@ -86,7 +94,8 @@ import {
 	type InstallAnswers,
 	PRODUCTION_HOST_STEP_IDS,
 } from '../../src/core/install/install_plan.ts';
-import { parseBuildInfo, prereleaseTagFor } from '../../src/core/update/build_stamp.ts';
+import { readReleaseIdentityOf } from '../../src/core/update/build_stamp.ts';
+import { DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const MANUAL = readFileSync(join(REPO_ROOT, 'docs/install/manual_install.md'), 'utf8');
@@ -837,10 +846,20 @@ describe('manual_install.md: its samples are what the engine prints (8–9, camp
 		expect(Object.keys(JSON.parse(sample as string) as object)).toEqual(Object.keys(answer));
 	});
 
-	test('the checkout variant names the version a tree without the build stamp reports', () => {
-		// A tarred checkout keeps the committed, unexpanded build_info.txt (only `git archive` expands it).
-		const committed = readFileSync(join(REPO_ROOT, 'src/core/update/build_info.txt'), 'utf8');
-		const tag = prereleaseTagFor(parseBuildInfo(committed).build, null);
+	test('the checkout variant names the version a tree without the build stamp reports', async () => {
+		// A tarred checkout keeps the committed, unexpanded build_info.txt (only `git archive`
+		// expands it) and carries no `.git` to ask for a tag: judge exactly that tree.
+		const tarred = mkdtempSync(join(tmpdir(), 'dedalo-tarred-checkout-'));
+		mkdirSync(join(tarred, 'src/core/update'), { recursive: true });
+		copyFileSync(
+			join(REPO_ROOT, 'src/core/update/build_info.txt'),
+			join(tarred, 'src/core/update/build_info.txt'),
+		);
+		const identity = await readReleaseIdentityOf(tarred, { triple: DEDALO_VERSION_TRIPLE });
+		rmSync(tarred, { recursive: true, force: true });
+		const data = DEDALO_VERSION_TRIPLE.join('.');
+		expect(identity.version.startsWith(data)).toBe(true);
+		const tag = identity.version.slice(data.length);
 		expect(tag).not.toBe('');
 		const checkout = MANUAL.slice(MANUAL.indexOf('**From a checkout**'));
 		expect(checkout.slice(0, 2000)).toContain(`\`<version>${tag}\``);

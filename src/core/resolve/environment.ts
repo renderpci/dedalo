@@ -24,7 +24,7 @@ import type { Principal } from '../security/permissions.ts';
 import { SESSION_IDLE_TTL_SECONDS, type Session } from '../security/session_store.ts';
 import { getAdditionalToolsUrlMap } from '../tools/paths.ts';
 import { DEDALO_BUILD, DEDALO_ENGINE_VERSION } from '../update/build_stamp.ts';
-import { DEDALO_VERSION_TRIPLE } from '../update/version.ts';
+import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from '../update/version.ts';
 import { getAlpha2FromCode, getLangNameFromCode } from './lang_names.ts';
 import { currentApplicationLang, currentDataLang } from './request_lang.ts';
 import { getServerState } from './server_state.ts';
@@ -186,11 +186,7 @@ export async function buildPageGlobals(
 		dedalo_session_ttl_seconds: isLogged ? SESSION_IDLE_TTL_SECONDS : null,
 		dedalo_session_absolute_expires_in: session?.absoluteExpiresIn ?? null,
 		dedalo_session_warning_seconds: isLogged ? Number(readString('SESSION_WARNING_SECONDS')) : null,
-		// API-03: version strings only for authenticated callers.
-		dedalo_version: isLogged ? DEDALO_ENGINE_VERSION : null,
-		// Build provenance (build_stamp.ts): the release commit date, null on a
-		// dev checkout. Key always present; still gated on isLogged (API-03).
-		dedalo_build: isLogged ? DEDALO_BUILD : null,
+		...versionFacts(isLogged),
 		mode: 'list',
 		// dedalo_application_langs_default is the INSTALL default (PHP
 		// DEDALO_APPLICATION_LANGS_DEFAULT); the two live langs reflect the
@@ -244,6 +240,27 @@ export async function buildPageGlobals(
 }
 
 /**
+ * The version keys of page_globals — API-03: version strings only for
+ * authenticated callers. Spread in place by buildPageGlobals, so the wire key
+ * order is unchanged.
+ *  - `dedalo_version` is the RELEASE IDENTITY (`7.0.0`, `7.0.0-beta.6`,
+ *    `7.0.0.dev`) — for display. Anything the client COMPARES or SENDS to
+ *    another server reads `dedalo_data_version` beside it: the bare data triple
+ *    this code belongs to, so no client ever parses one out of the identity
+ *    (WC-2026-10-15-release-identity-from-tag).
+ *  - `dedalo_build`: build provenance (build_stamp.ts), the release commit
+ *    date, null on a dev checkout. Key always present.
+ */
+function versionFacts(isLogged: boolean): Record<string, string | null> {
+	if (!isLogged) return { dedalo_version: null, dedalo_data_version: null, dedalo_build: null };
+	return {
+		dedalo_version: DEDALO_ENGINE_VERSION,
+		dedalo_data_version: DEDALO_VERSION,
+		dedalo_build: DEDALO_BUILD,
+	};
+}
+
+/**
  * Reconnaissance-sensitive engine facts (DB name, exact PG/runtime version,
  * process memory) — AUTHENTICATED callers only. An unauthenticated get_environment
  * must not hand out the database name and precise version strings for targeted
@@ -270,6 +287,8 @@ async function engineFacts(isLogged: boolean): Promise<Record<string, string | n
 export async function buildInfoData(): Promise<Record<string, unknown>> {
 	return {
 		dedalo_version: DEDALO_ENGINE_VERSION,
+		// The data triple beside the identity (same split as page_globals).
+		dedalo_data_version: DEDALO_VERSION,
 		dedalo_build: DEDALO_BUILD, // release commit date; null on a dev checkout
 		dedalo_db_name: config.db.database,
 		pg_version: await getPgVersion(),

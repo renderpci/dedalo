@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, test } from 'bun:test';
-import { DEDALO_ENGINE_VERSION, DEDALO_PRERELEASE_TAG } from '../../src/core/update/build_stamp.ts';
+import { DEDALO_ENGINE_VERSION, RELEASE_IDENTITY } from '../../src/core/update/build_stamp.ts';
 import {
 	compareVersionArrays,
 	DEDALO_VERSION,
@@ -24,7 +24,9 @@ describe('version exports (byte-pinned wire values)', () => {
 
 	test('the derived shapes follow the triple (relational — a bump touches one line)', () => {
 		expect(DEDALO_VERSION).toBe(DEDALO_VERSION_TRIPLE.join('.'));
-		expect(DEDALO_ENGINE_VERSION).toBe(`${DEDALO_VERSION}${DEDALO_PRERELEASE_TAG}`);
+		// the code identity names the data version it belongs to (release_identity.ts)
+		expect(DEDALO_ENGINE_VERSION).toBe(RELEASE_IDENTITY.version);
+		expect(RELEASE_IDENTITY.triple).toEqual(DEDALO_VERSION_TRIPLE);
 		expect(DEDALO_VERSION_MAJOR_MINOR).toBe(
 			`${DEDALO_VERSION_TRIPLE[0]}.${DEDALO_VERSION_TRIPLE[1]}`,
 		);
@@ -56,6 +58,16 @@ describe('parseVersionString', () => {
 		expect(parseVersionString('7.0.0.dev')).toEqual([7, 0, 0]);
 		expect(parseVersionString('7.0.0')).toEqual([7, 0, 0]);
 		expect(parseVersionString('6.8.10')).toEqual([6, 8, 10]);
+	});
+
+	test('a prerelease identity is its data triple (alpha|beta|rc — the one release grammar)', () => {
+		expect(parseVersionString('7.0.0-beta.6')).toEqual([7, 0, 0]);
+		expect(parseVersionString('7.0.1-alpha.1')).toEqual([7, 0, 1]);
+		expect(parseVersionString('7.0.0-rc.12')).toEqual([7, 0, 0]);
+		// a foreign suffix is no identity: its NaN part is the caller's refusal
+		expect(parseVersionString('7.0.0-pre.1').some((n) => !Number.isInteger(n))).toBe(true);
+		// the historical split is kept for everything else
+		expect(parseVersionString('7.0.0.1')).toEqual([7, 0, 0, 1]);
 	});
 
 	test('round-trips the exported strings back to the triple', () => {

@@ -103,6 +103,12 @@ import {
 	scriptForPlan,
 	thesaurusOffer,
 } from '../helpers/install_plain_script.ts';
+import { PINNED_IDENTITY, pinInstallerIdentity } from '../helpers/installer_identity.ts';
+
+// The installer's release identity is the checkout's (a tagged commit says `-beta.N`, the
+// next commit `.dev`) and the image decisions follow its kind: these cases are written for
+// a STABLE installer, so they pin one (test/helpers/installer_identity.ts).
+pinInstallerIdentity(PINNED_IDENTITY.stable);
 
 const scratchRoot = mkdtempSync(join(tmpdir(), 'dedalo_install_plain_parity_'));
 

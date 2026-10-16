@@ -881,8 +881,14 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// ONLY when this instance is a code master, to callers presenting a
 		// configured CODE_SERVERS code. PHP refusal bytes preserved. Advertises
 		// only built release archives on the caller's linear upgrade path.
+		// `version` is the asker's DATA triple (a bare `X.Y.Z` — the shape every
+		// master, older ones included, parses); `release` is its RELEASE
+		// IDENTITY (`7.0.0-beta.6`), optional and today informational only: no
+		// answer depends on it until the identity walk orders prereleases
+		// (WC-2026-10-15-release-identity-from-tag). Never parsed for the triple.
 		const options = (rqo.options ?? {}) as {
 			version?: unknown;
+			release?: unknown;
 			code?: unknown;
 			channel?: unknown;
 		};

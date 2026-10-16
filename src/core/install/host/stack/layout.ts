@@ -21,7 +21,8 @@
  * from the environment), custom (a registry of the operator's: trusted as
  * pulled, said so) or build (here, from this checkout). Its version is this
  * installer's (owner question Q7: the delegated engine steps and their request
- * format must be the installer's own).
+ * format must be the installer's own) — its RELEASE IDENTITY's image tag
+ * (installer_identity.ts): `7.0.0`, `7.0.0-beta.7`, `7.0.0-dev`.
  *
  * PURE.
  */
@@ -31,8 +32,9 @@ import {
 	normalizeRepository,
 	provisionedRegistries,
 } from '../../../update/image_registries.ts';
-import { DEDALO_VERSION } from '../../../update/version.ts';
+import { imageTagOf, type ReleaseIdentity } from '../../../update/release_identity.ts';
 import type { InstallAnswers } from '../../install_plan.ts';
+import { installerIdentity } from '../../installer_identity.ts';
 
 /**
  * How long a local image build takes — the ONE estimate (campaign 3b N11: the
@@ -139,14 +141,29 @@ export function nginxConfOf(answers: InstallAnswers): string {
 	return answers.route === 'trial' ? TRIAL_CONF : GENERATED_CONF;
 }
 
-/** The image version: the installer's own (the plan may only repeat it, or its -dev tag). */
-export function imageVersionOf(answers: InstallAnswers): string {
-	return answers.image_version === '' ? DEDALO_VERSION : answers.image_version;
+/**
+ * The image version: the tag of the installer's own release identity (the plan
+ * may only repeat it, or name its data version's -dev tag). A beta asks for
+ * `:7.0.0-beta.7`, never `:7.0.0` — after the stable release that tag is
+ * another image, and its label would refuse it (C3i-F1).
+ */
+export function imageVersionOf(
+	answers: InstallAnswers,
+	identity: ReleaseIdentity = installerIdentity(),
+): string {
+	return answers.image_version === '' ? imageTagOf(identity.version) : answers.image_version;
 }
 
-/** The versions an image of this installer may carry. */
-export function acceptedImageVersions(): string[] {
-	return [DEDALO_VERSION, `${DEDALO_VERSION}-dev`];
+/**
+ * The versions an image of this installer may carry: its identity's tag and,
+ * named explicitly, the `-dev` tag of its data version (the dev branch's
+ * image — design §2.4). Nothing else: the engine steps run inside the image
+ * with this installer's request format.
+ */
+export function acceptedImageVersions(identity: ReleaseIdentity = installerIdentity()): string[] {
+	const own = imageTagOf(identity.version);
+	const dev = `${identity.triple.join('.')}-dev`;
+	return own === dev ? [own] : [own, dev];
 }
 
 /** The official repositories, primary first (the ONE list — never an environment value). */

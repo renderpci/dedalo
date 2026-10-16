@@ -45,6 +45,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { privateDir } from '../../config/env.ts';
 import { isRepositoryReference } from './image_registries.ts';
+import { identityOfImageTag, parseReleaseVersion } from './release_identity.ts';
 import { parseImageTag } from './version_walk.ts';
 
 export const IMAGE_UPDATE_DIR_MODE = 0o750;
@@ -96,7 +97,11 @@ export interface ImageUpdateRequest {
 	/** `X.Y.Z`. */
 	version: string;
 	channel: 'master' | 'dev';
-	/** The engine version that asked (`X.Y.Z` or `X.Y.Z.dev`). */
+	/**
+	 * The engine that asked, by its RELEASE IDENTITY (release_identity.ts):
+	 * `X.Y.Z`, `X.Y.Z-(alpha|beta|rc).N` or `X.Y.Z.dev`. Informational — the
+	 * host orders by `tag`/`version`, never by this.
+	 */
 	from_version: string;
 	requested_at: string;
 	/** The requesting user's id. */
@@ -162,7 +167,6 @@ type Rule = (value: unknown) => boolean;
 const UUID4_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const ISO_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
 const DIGEST_RE = /^sha256:[0-9a-f]{64}$/;
-const ENGINE_VERSION_RE = /^\d{1,6}\.\d{1,6}\.\d{1,6}(\.dev)?$/;
 const TRIPLE_RE = /^\d{1,6}\.\d{1,6}\.\d{1,6}$/;
 const BACKUP_PATH_RE = /^\/[A-Za-z0-9._/+:-]{1,1024}$/;
 
@@ -183,9 +187,27 @@ function integerIn(min: number, max: number): Rule {
 }
 
 export const isUuid4: Rule = matching(UUID4_RE);
+/**
+ * A release identity, by the ONE grammar the engine names itself with — a
+ * private grammar here once refused every prerelease engine's own request.
+ * Bounded in length like the other string fields.
+ */
+const isEngineVersion: Rule = (value) =>
+	typeof value === 'string' && value.length <= 64 && parseReleaseVersion(value) !== null;
 export const isIsoInstant: Rule = (value) =>
 	matching(ISO_RE)(value) && !Number.isNaN(Date.parse(value as string));
 const isTag: Rule = (value) => parseImageTag(value) !== null;
+/**
+ * A tag the HOST reports (the heartbeat's pin, an outcome's from/to): the host
+ * library's image-tag grammar (deploy/dedalo-image-lib.sh DEDALO_VERSION_RE =
+ * identityOfImageTag — a prerelease pin `7.0.0-beta.7` since design step 6, the
+ * installer writes one for every beta stack), or a tag this engine walks. A
+ * DESCRIPTIVE field: refusing it would blind the panel to the very stack the
+ * installer built. A request's TARGET stays isTag — what the engine may walk to.
+ */
+const isHostTag: Rule = (value) =>
+	isTag(value) ||
+	(typeof value === 'string' && value.length <= 64 && identityOfImageTag(value) !== null);
 const isDigest: Rule = matching(DIGEST_RE);
 const isRepository: Rule = (value) => isRepositoryReference(value);
 
@@ -206,7 +228,7 @@ const HEARTBEAT_RULES: Readonly<Record<string, Rule>> = Object.freeze({
 	interval_seconds: integerIn(10, 3600),
 	mode: oneOf(['pull', 'build']),
 	image: isRepository,
-	pinned: isTag,
+	pinned: isHostTag,
 	verify: oneOf(['cosign', 'none']),
 	running_digest: orNull(isDigest),
 });
@@ -217,7 +239,7 @@ const REQUEST_RULES: Readonly<Record<string, Rule>> = Object.freeze({
 	tag: isTag,
 	version: matching(TRIPLE_RE),
 	channel: oneOf(['master', 'dev']),
-	from_version: matching(ENGINE_VERSION_RE),
+	from_version: isEngineVersion,
 	requested_at: isIsoInstant,
 	requested_by: integerIn(-1, Number.MAX_SAFE_INTEGER),
 });
@@ -225,8 +247,8 @@ const REQUEST_RULES: Readonly<Record<string, Rule>> = Object.freeze({
 const OUTCOME_RULES: Readonly<Record<string, Rule>> = Object.freeze({
 	schema: oneOf([1]),
 	request_id: orNull(isUuid4),
-	from: orEmpty(isTag),
-	to: orEmpty(isTag),
+	from: orEmpty(isHostTag),
+	to: orEmpty(isHostTag),
 	mode: orNull(oneOf(['pull', 'build'])),
 	image: orEmpty(isRepository),
 	status: oneOf(OUTCOME_STATUSES),

@@ -14,7 +14,8 @@
 # THE .dedalo.env CONTRACT (host side only — never the engine's /private/.env):
 #   DEDALO_COMPOSE_FILE   the stack: docker-compose.simple.yml | docker-compose.yml
 #   DEDALO_IMAGE          the repository, no tag (localhost/dedalo for a local build)
-#   DEDALO_VERSION        the pinned tag: X.Y.Z, or X.Y.Z-dev for a developer image
+#   DEDALO_VERSION        the pinned tag: X.Y.Z, X.Y.Z-(alpha|beta|rc).N for a prerelease,
+#                         or X.Y.Z-dev for a developer image (dedalo_version_grammar)
 #   DEDALO_IMAGE_MODE     pull | build
 #   DEDALO_IMAGE_VERIFY   cosign | none
 # Writer: the terminal installer (src/core/install/host/stack/files.ts — docker and
@@ -34,13 +35,30 @@
 # Bash 3.2 (macOS): no ${x,,}, no mapfile, no associative arrays; an EMPTY array
 # is never expanded bare under `set -u`. Every function is `set -euo pipefail`
 # safe and returns a status instead of exiting. Gates:
-# test/unit/install_sh_image_source.test.ts, test/unit/image_update_script_native.test.ts.
+# test/unit/install_sh_image_source.test.ts, test/unit/image_update_script_native.test.ts,
+# test/unit/release_identity_shell_parity.test.ts (the release identity, its
+# grammars and its order, held to the engine's src/core/update/release_identity.ts).
 
 # --- grammar ------------------------------------------------------------------
 
 DEDALO_ENV_KEY_RE='^[A-Z_][A-Z0-9_]*$'
-# A release tag (X.Y.Z) or a developer tag (X.Y.Z-dev) — the code server's names.
-DEDALO_VERSION_RE='^[0-9]+\.[0-9]+\.[0-9]+(-dev)?$'
+# One canonical version number: no leading zero, so `7.0.01` can never name a
+# second `7.0.1` (release_identity.ts RELEASE_VERSION_RE, the same rule).
+DEDALO_NUMBER_RE='(0|[1-9][0-9]*)'
+DEDALO_TRIPLE_PART_RE="${DEDALO_NUMBER_RE}\\.${DEDALO_NUMBER_RE}\\.${DEDALO_NUMBER_RE}"
+# The prerelease labels, in semver precedence order (owner Q9) — the twin of
+# PRERELEASE_LABELS. The grammar and dedalo_prerelease_rank both read this list.
+DEDALO_PRERELEASE_LABELS='alpha beta rc'
+DEDALO_PRERELEASE_RE="-(${DEDALO_PRERELEASE_LABELS// /|})\\.${DEDALO_NUMBER_RE}"
+# THE RELEASE IDENTITY (src/core/update/release_identity.ts — what a tree CALLS
+# ITSELF): X.Y.Z for an exact stable tag, X.Y.Z-(alpha|beta|rc).N for an exact
+# prerelease tag, X.Y.Z.dev for anything untagged.
+DEDALO_RELEASE_VERSION_RE="^${DEDALO_TRIPLE_PART_RE}(${DEDALO_PRERELEASE_RE})?$"
+DEDALO_DEV_IDENTITY_RE="^${DEDALO_TRIPLE_PART_RE}\\.dev$"
+# AN IMAGE TAG (DEDALO_VERSION, --version): the identity it names, spelled the
+# way an image tag can carry it — a release or prerelease identity IS its tag,
+# a dev identity is X.Y.Z-dev (imageTagOf / identityOfImageTag).
+DEDALO_VERSION_RE="^${DEDALO_TRIPLE_PART_RE}(-dev|${DEDALO_PRERELEASE_RE})?$"
 # isRepositoryReference (src/core/update/image_registries.ts), in ERE: an optional
 # host[:port]/, then lowercase path components — and NO tag or digest.
 DEDALO_REPO_HOST_RE='[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*(:[0-9]{1,5})?'
@@ -73,24 +91,142 @@ dedalo_digest_grammar() {
 	[[ "${1-}" =~ $DEDALO_DIGEST_RE ]]
 }
 
-# dedalo_version_cmp A B — prints -1, 0 or 1 over the numeric X.Y.Z triples
-# (a -dev suffix is ignored here; the callers decide what an equal -dev means).
-dedalo_version_cmp() {
-	local a1='' a2='' a3='' b1='' b2='' b3=''
-	dedalo_version_grammar "${1-}" && dedalo_version_grammar "${2-}" || return 2
-	IFS=. read -r a1 a2 a3 <<<"${1%-dev}"
-	IFS=. read -r b1 b2 b3 <<<"${2%-dev}"
-	dedalo_triple_cmp "$a1" "$a2" "$a3" "$b1" "$b2" "$b3"
+# --- the release identity: grammar and order ---------------------------------
+
+dedalo_identity_grammar() {
+	[[ "${1-}" =~ $DEDALO_RELEASE_VERSION_RE ]] || [[ "${1-}" =~ $DEDALO_DEV_IDENTITY_RE ]]
 }
 
-dedalo_triple_cmp() {
-	local left=("$1" "$2" "$3") right=("$4" "$5" "$6") i=0
-	while [ "$i" -lt 3 ]; do
-		if ((10#${left[i]} > 10#${right[i]})); then echo 1; return 0; fi
-		if ((10#${left[i]} < 10#${right[i]})); then echo -1; return 0; fi
+# dedalo_identity_of_tag TAG — the identity an image tag names (identityOfImageTag):
+# X.Y.Z-dev → X.Y.Z.dev, a release or prerelease tag → itself. Status 1 for a
+# string that is no image tag.
+dedalo_identity_of_tag() {
+	dedalo_version_grammar "${1-}" || return 1
+	case "$1" in
+		*-dev) printf '%s.dev' "${1%-dev}" ;;
+		*) printf '%s' "$1" ;;
+	esac
+}
+
+# dedalo_image_tag_of IDENTITY — the image tag an identity is built and published
+# under (imageTagOf): X.Y.Z.dev → X.Y.Z-dev, any other identity → itself.
+dedalo_image_tag_of() {
+	dedalo_identity_grammar "${1-}" || return 1
+	case "$1" in
+		*.dev) printf '%s-dev' "${1%.dev}" ;;
+		*) printf '%s' "$1" ;;
+	esac
+}
+
+# dedalo_version_triple TAG|IDENTITY — the X.Y.Z (the DATA version) either names:
+# everything from the first `-` or `.` that starts a word (-beta.6, -dev, .dev).
+# (Parameter expansion, not BASH_REMATCH: every name this library reads is one it
+# sets — deploy_env_contract_tripwire.)
+dedalo_version_triple() {
+	dedalo_version_grammar "${1-}" || dedalo_identity_grammar "${1-}" || return 1
+	printf '%s' "${1%%[-.][a-z]*}"
+}
+
+# dedalo_prerelease_rank LABEL — its index in DEDALO_PRERELEASE_LABELS.
+dedalo_prerelease_rank() {
+	local label='' rank=0
+	for label in $DEDALO_PRERELEASE_LABELS; do
+		if [ "$label" = "${1-}" ]; then
+			echo "$rank"
+			return 0
+		fi
+		rank=$((rank + 1))
+	done
+	return 1
+}
+
+# dedalo_identity_key IDENTITY — five canonical numbers `X Y Z R N` that order as
+# semver §11 does: R is the prerelease's rank (alpha 0, beta 1, rc 2) and N its
+# number; a release has R = the label count, after every prerelease of its triple.
+# A .dev identity is keyed as ITS TRIPLE — equal to that release — exactly as
+# compareReleaseIdentities treats it: it names no point in the release sequence,
+# and a caller that needs an order for it must ask about .dev itself.
+dedalo_identity_key() {
+	local identity="${1-}" major='' minor='' patch='' prerelease='' labels=''
+	dedalo_identity_grammar "$identity" || return 1
+	IFS=. read -r major minor patch <<<"$(dedalo_version_triple "$identity")"
+	case "$identity" in
+		*.dev) : ;;
+		*-*) prerelease="${identity#*-}" ;; # label.N
+	esac
+	if [ -n "$prerelease" ]; then
+		printf '%s %s %s %s %s' "$major" "$minor" "$patch" \
+			"$(dedalo_prerelease_rank "${prerelease%%.*}")" "${prerelease#*.}"
+	else
+		# shellcheck disable=SC2086 # deliberate split: count the labels
+		labels="$(set -- $DEDALO_PRERELEASE_LABELS && echo "$#")"
+		printf '%s %s %s %s 0' "$major" "$minor" "$patch" "$labels"
+	fi
+}
+
+# dedalo_number_cmp A B — -1, 0 or 1 between two CANONICAL numbers of any length
+# (no arithmetic, so no overflow past 2^63: the grammar does not bound a number,
+# so neither may the comparison). Canonical: a longer number is the larger one.
+dedalo_number_cmp() {
+	if [ "${#1}" -ne "${#2}" ]; then
+		if [ "${#1}" -gt "${#2}" ]; then echo 1; else echo -1; fi
+	elif [ "$1" = "$2" ]; then
+		echo 0
+	elif [[ "$1" > "$2" ]]; then
+		echo 1
+	else
+		echo -1
+	fi
+}
+
+# dedalo_identity_cmp A B — prints -1, 0 or 1 between two RELEASE IDENTITIES in
+# semver §11 precedence (compareReleaseIdentities, held to the ONE ordering
+# fixture test/fixtures/release_identity/ordering.json):
+#   7.0.0-alpha.1 < 7.0.0-beta.5 < 7.0.0-beta.6 < 7.0.0-rc.1 < 7.0.0 < 7.0.1
+# Status 2 for anything that is no identity: a silent order for garbage is how a
+# downgrade gets waved through.
+dedalo_identity_cmp() {
+	local left='' right='' order=0 i=0
+	left="$(dedalo_identity_key "${1-}")" && right="$(dedalo_identity_key "${2-}")" || return 2
+	# shellcheck disable=SC2206 # deliberate split: five canonical numbers each
+	local left_key=($left) right_key=($right)
+	while [ "$i" -lt 5 ]; do
+		order="$(dedalo_number_cmp "${left_key[i]}" "${right_key[i]}")"
+		if [ "$order" != 0 ]; then
+			echo "$order"
+			return 0
+		fi
 		i=$((i + 1))
 	done
 	echo 0
+}
+
+# dedalo_version_cmp A B — prints -1, 0 or 1 between two IMAGE TAGS, ordered as the
+# identities they name (dedalo_identity_cmp): X.Y.Z-dev orders as X.Y.Z, so the
+# callers decide what an equal -dev means. Status 2 for a string that is no tag.
+dedalo_version_cmp() {
+	local left='' right=''
+	left="$(dedalo_identity_of_tag "${1-}")" && right="$(dedalo_identity_of_tag "${2-}")" || return 2
+	dedalo_identity_cmp "$left" "$right"
+}
+
+# dedalo_is_dev_tag TAG — status 0 for a developer image tag (X.Y.Z-dev).
+dedalo_is_dev_tag() {
+	dedalo_version_grammar "${1-}" && [ "${1%-dev}" != "$1" ]
+}
+
+# dedalo_is_prerelease_tag TAG — status 0 for a prerelease tag (X.Y.Z-beta.N …).
+dedalo_is_prerelease_tag() {
+	dedalo_version_grammar "${1-}" && [ "${1#*-}" != "$1" ] && ! dedalo_is_dev_tag "$1"
+}
+
+# dedalo_release_tag_version TAG — the version an EXACT release tag names
+# (`v7.0.0-beta.6` → `7.0.0-beta.6`; releaseVersionOfTag), status 1 for anything
+# else: a describe past a tag, a foreign suffix, a non-canonical number.
+dedalo_release_tag_version() {
+	case "${1-}" in v*) : ;; *) return 1 ;; esac
+	[[ "${1#v}" =~ $DEDALO_RELEASE_VERSION_RE ]] || return 1
+	printf '%s' "${1#v}"
 }
 
 # dedalo_repository_normalize REF — the comparable form (normalizeRepository):
@@ -235,6 +371,162 @@ dedalo_checkout_version() {
 	printf '%s.%s.%s' "$1" "$2" "$3"
 }
 
+# --- the release identity of a tree -----------------------------------------------
+#
+# THE SHELL TWIN of src/core/update/release_identity.ts resolveReleaseIdentity +
+# build_stamp.ts readReleaseIdentityOf (owner decision 2026-10-15, C3i-F1): what a
+# Dédalo tree CALLS ITSELF, decided from that tree's own evidence, by the same rules
+# in the same order. Its one consumer that matters is the image label: a local
+# build is labelled with the identity the engine inside it will report, read from
+# the very snapshot docker builds. Held to the engine resolver over the same real
+# git trees by test/unit/release_identity_shell_parity.test.ts.
+#
+# The evidence:
+#  - src/core/update/build_info.txt: `<sha> <date> <describe>` in a `git archive`
+#    (export-subst; <describe> is the exact `v*` tag, a past-the-tag describe or
+#    empty), the legacy `<sha> <date>` of an archive made before 2026-10-15, or the
+#    unexpanded `$Format:` placeholder in a checkout;
+#  - a CHECKOUT (placeholder + .git): one bounded `git describe --exact-match`;
+#  - src/core/update/install_stamp.json's channel — read only for a legacy stamp.
+# The rules:
+#  1/2. an exact stable or prerelease tag naming version.ts's triple → that version;
+#  3.   anything else with describe evidence (untagged, past a tag, a tag naming
+#       another triple, an old git's unexpanded field) → X.Y.Z.dev;
+#  4.   a legacy stamp → X.Y.Z, or X.Y.Z.dev on a dev-channel install;
+#  5.   the channel never overrides a tag (owner Q5).
+#  No evidence at all (a placeholder with no git to ask) → X.Y.Z.dev.
+
+DEDALO_BUILD_INFO='src/core/update/build_info.txt'
+DEDALO_INSTALL_STAMP='src/core/update/install_stamp.json'
+# The stamp lines parseBuildInfo accepts (release_identity.ts SHA / ISO_DATE). The
+# describe field may be EMPTY (no `v*` tag reachable): its separating space stays,
+# and that space is what tells an untagged three-field stamp from a legacy one.
+DEDALO_STAMP_SHA_RE='[0-9a-f]{7,64}'
+DEDALO_STAMP_DATE_RE='[0-9]{4}-[0-9]{2}-[0-9]{2}T[-0-9:.+Z]+'
+DEDALO_DESCRIBED_STAMP_RE="^(${DEDALO_STAMP_SHA_RE}) (${DEDALO_STAMP_DATE_RE}) ([^[:space:]]*)$"
+DEDALO_LEGACY_STAMP_RE="^(${DEDALO_STAMP_SHA_RE}) (${DEDALO_STAMP_DATE_RE})$"
+# How long a checkout's git may take to name its tag (CHECKOUT_DESCRIBE_TIMEOUT_MS,
+# 3 s). Whole seconds: `date +%s` is the only portable clock.
+DEDALO_DESCRIBE_TIMEOUT_S=3
+
+# dedalo_release_identity DIR — prints the release identity of the Dédalo tree at
+# DIR (X.Y.Z | X.Y.Z-(alpha|beta|rc).N | X.Y.Z.dev). Never fails on odd evidence
+# (it says .dev, as the engine does); status 1 only when DIR declares no version.
+dedalo_release_identity() {
+	local dir="${1-}" triple='' line='' describe='' evidence='none' legacy='false' tagged=''
+	triple="$(dedalo_checkout_version "$dir")" || return 1
+	triple="$(dedalo_canonical_triple "$triple")"
+	line="$(dedalo_stamp_line "$dir/$DEDALO_BUILD_INFO")"
+	if [[ "$line" =~ $DEDALO_DESCRIBED_STAMP_RE ]]; then
+		describe="${line#* }"     # drop the sha…
+		describe="${describe#* }" # …and the date (neither holds a space)
+		evidence='stamp'
+	elif [[ "$line" =~ $DEDALO_LEGACY_STAMP_RE ]]; then
+		legacy='true'
+	elif [ -e "$dir/.git" ] && describe="$(dedalo_checkout_describe "$dir")"; then
+		# no expanded stamp, and git is there to ask (a checkout)
+		evidence='git'
+	fi
+	if [ "$evidence" = 'none' ]; then
+		if [ "$legacy" = 'true' ] && [ "$(dedalo_install_channel "$dir")" != 'dev' ]; then
+			printf '%s' "$triple"
+		else
+			printf '%s.dev' "$triple"
+		fi
+		return 0
+	fi
+	if tagged="$(dedalo_release_tag_version "$describe")" &&
+		[ "$(dedalo_version_triple "$tagged")" = "$triple" ]; then
+		printf '%s' "$tagged"
+	else
+		printf '%s.dev' "$triple"
+	fi
+}
+
+# dedalo_canonical_triple X.Y.Z — the triple as numbers (`07` → `7`): the engine
+# reads version.ts's literals as numbers, so a tag compares against those.
+dedalo_canonical_triple() {
+	local a='' b='' c=''
+	IFS=. read -r a b c <<<"$1"
+	printf '%s.%s.%s' "$((10#$a))" "$((10#$b))" "$((10#$c))"
+}
+
+# dedalo_stamp_line FILE — the stamp's first line as parseBuildInfo reads it:
+# leading whitespace (blank lines included) dropped, the line terminator (and a
+# CR) removed, nothing else — a trailing space is meaningful (see above).
+dedalo_stamp_line() {
+	local content='' line=''
+	content="$(cat "${1-}" 2>/dev/null)" || content=''
+	content="${content#"${content%%[![:space:]]*}"}"
+	line="${content%%$'\n'*}"
+	printf '%s' "${line%$'\r'}"
+}
+
+# dedalo_install_channel DIR — `master` or `dev` from the tree's install stamp when
+# it is one parseInstallStamp trusts (a 64-hex digest AND a known channel); nothing
+# otherwise. A KEY:"value" reader, not a JSON parser: the engine's stamp is one
+# line of plain keys, and an escaped quote can never complete a match.
+dedalo_install_channel() {
+	local file="${1-}/$DEDALO_INSTALL_STAMP" flat='' channel=''
+	[ -f "$file" ] || return 0
+	flat="$(tr '\011\012\013\014\015' '     ' <"$file")"
+	printf '%s' "$flat" | grep -qE '"digest"[[:space:]]*:[[:space:]]*"[a-f0-9]{64}"' || return 0
+	channel="$(printf '%s' "$flat" | grep -oE '"channel"[[:space:]]*:[[:space:]]*"(master|dev)"' | tail -n 1)" || true
+	case "$channel" in
+		*'"master"') printf 'master' ;;
+		*'"dev"') printf 'dev' ;;
+	esac
+}
+
+# dedalo_checkout_describe DIR — the exact `v*` tag of the checkout's HEAD (status
+# 0; empty when git answers "no exact tag" — a normal untagged commit), or status 1
+# when git could not answer (absent, too slow, any other error). The same question
+# build_stamp.ts readCheckoutDescribe asks, the same way:
+#  - --exact-match: only a commit that IS a release may call itself one;
+#  - --match 'v[0-9]*': a newer non-release annotated tag on the same commit must
+#    not hide the release tag;
+#  - no --tags: lightweight tags are ignored, as the archive's %(describe) ignores
+#    them — a checkout and an archive of one commit always agree (owner Q7);
+#  - safe.directory for THIS tree only (root reads an operator's checkout), no
+#    fsmonitor helper, no inherited GIT_* (a GIT_DIR would describe ANOTHER
+#    repository), the C locale (a translated git's "no tag" must still read as one);
+#  - BOUNDED: git runs in the background with its output in files, and is killed
+#    at the deadline — nothing waits on a pipe a stray grandchild could hold open.
+dedalo_checkout_describe() {
+	local dir='' work='' pid='' started='' status=0 out=''
+	started="$(date +%s)" || return 1
+	dir="$(cd "${1-}" 2>/dev/null && pwd -P)" || return 1
+	work="$(mktemp -d "${TMPDIR:-/tmp}/dedalo-describe.XXXXXX")" || return 1
+	(
+		for name in $(compgen -e); do
+			case "$name" in GIT_* | LANGUAGE) unset "$name" 2>/dev/null || true ;; esac
+		done
+		LC_ALL=C
+		export LC_ALL
+		exec git -c "safe.directory=$dir" -c core.fsmonitor=false -C "$dir" \
+			describe --exact-match --match 'v[0-9]*' HEAD
+	) >"$work/out" 2>"$work/err" </dev/null &
+	pid=$!
+	while kill -0 "$pid" 2>/dev/null; do
+		if [ $(($(date +%s) - started)) -gt "$DEDALO_DESCRIBE_TIMEOUT_S" ]; then
+			kill -9 "$pid" 2>/dev/null || true
+			wait "$pid" 2>/dev/null || true
+			rm -rf "$work"
+			return 1
+		fi
+		sleep 0.1
+	done
+	wait "$pid" || status=$?
+	out="$(tr -d '[:space:]' <"$work/out")"
+	if [ "$status" -ne 0 ]; then
+		out=''
+		grep -qiE 'no tag exactly matches|no names found|cannot describe' "$work/err" || status=-1
+	fi
+	rm -rf "$work"
+	[ "$status" -ge 0 ] || return 1
+	printf '%s' "$out"
+}
+
 # --- the local build ------------------------------------------------------------
 #
 # THE ONE LOCAL BUILD (C3-46, owner 2026-10-14). The installer's stack_image
@@ -269,20 +561,26 @@ DEDALO_IMAGE_URL='https://dedalo.dev'
 DEDALO_IMAGE_DESCRIPTION='Dédalo — cultural heritage management system (engine, client and tools)'
 DEDALO_IMAGE_LICENSES='AGPL-3.0-only'
 
-# dedalo_image_labels CHECKOUT TAG — the OCI labels of a local build, one
+# dedalo_image_labels CHECKOUT [TREE] — the OCI labels of a local build, one
 # `key=value` per line (campaign 3b N1): without them the image inherits the
 # base image's (`org.opencontainers.image.version=1.4.3-debian`, bun's source and
 # revision), and the version label is what the updater and the installer read as
-# "which release is this". version = TAG's tag part (empty when TAG has none),
-# revision and created = the snapshotted commit; source, url, description and
+# "which release is this". version = the RELEASE IDENTITY of TREE (default: the
+# checkout) spelled as an image tag (dedalo_image_tag_of — `7.0.0-beta.7`, or
+# `7.0.0-dev` for an untagged commit): what the engine inside the image will call
+# itself, never whatever the image is tagged (C3i-F1: a beta built as `:7.0.0`
+# was labelled `7.0.0` and passed for the stable release). The builder passes
+# the snapshot it builds, so the label is read from the very bytes docker gets.
+# revision and created = the checkout's HEAD; source, url, description and
 # licenses = Dédalo's own (DEDALO_IMAGE_SOURCE …), never the base image's and
 # never blank (campaign 3c D6: a local build carried four empty labels). source
 # is the project's repository — the published source a local build's revision
 # belongs to; licenses = package.json's (gate: install_stack_steps_native).
+# Status 1 when TREE declares no version or the checkout has no commit.
 dedalo_image_labels() {
-	local checkout="${1-}" tag="${2-}" version='' meta=''
-	version="${tag##*:}"
-	case "$version" in "$tag" | */*) version='' ;; esac
+	local checkout="${1-}" tree="${2:-${1-}}" identity='' version='' meta=''
+	identity="$(dedalo_release_identity "$tree")" || return 1
+	version="$(dedalo_image_tag_of "$identity")" || return 1
 	meta="$(git -c "safe.directory=$checkout" -c core.fsmonitor=false -C "$checkout" \
 		log -1 --format='%H %cI' HEAD)" || return 1
 	printf '%s\n' \
@@ -296,16 +594,26 @@ dedalo_image_labels() {
 		"org.opencontainers.image.licenses=$DEDALO_IMAGE_LICENSES"
 }
 
+# dedalo_tag_part REF — the tag of an image reference (empty when it has none: a
+# colon followed by a path is a registry port, not a tag).
+dedalo_tag_part() {
+	local part="${1##*:}"
+	case "$part" in "$1" | */*) part='' ;; esac
+	printf '%s' "$part"
+}
+
 # dedalo_image_build CHECKOUT TAG [DOCKER] — `DOCKER build --tag TAG` of the
 # checkout's HEAD: archived and extracted into CHECKOUT/DEDALO_IMAGE_CONTEXT
 # (git with safe.directory for this one command — root builds an operator's
 # checkout — and fsmonitor off), the tarball removed before the build reads the
 # dir, the dir removed after the build, green or red. The build's own output is
 # passed through (BUILDKIT_PROGRESS from the caller). The image's OCI labels are
-# its own (dedalo_image_labels), never the base image's. Status: 0 built,
-# 1 failed, 2 usage, 3 refused (no git — the sentence on stderr).
+# its own (dedalo_image_labels over the snapshot), never the base image's. A TAG
+# that names another release than the snapshot's identity is BUILT (the tag is
+# the operator's name for it) but SAID: the label tells the truth. Status: 0
+# built, 1 failed, 2 usage, 3 refused (no git — the sentence on stderr).
 dedalo_image_build() {
-	local checkout="${1-}" tag="${2-}" docker="${3:-docker}" dir='' status=0 line='' label=''
+	local checkout="${1-}" tag="${2-}" docker="${3:-docker}" dir='' status=0 line='' label='' named=''
 	local labels=()
 	[ -n "$checkout" ] && [ -n "$tag" ] || return 2
 	if ! dedalo_is_checkout "$checkout"; then
@@ -317,8 +625,12 @@ dedalo_image_build() {
 	rm -rf "$dir" "$dir.tar" && mkdir -p "$dir" || return 1
 	if git -c "safe.directory=$checkout" -c core.fsmonitor=false -C "$checkout" \
 		archive --format=tar -o "$dir.tar" HEAD && tar -xf "$dir.tar" -C "$dir" && rm -f "$dir.tar" &&
-		line="$(dedalo_image_labels "$checkout" "$tag")"; then
+		line="$(dedalo_image_labels "$checkout" "$dir")"; then
 		while IFS= read -r label; do labels+=(--label "$label"); done <<<"$line"
+		named="$(printf '%s\n' "$line" | sed -n 's/^org\.opencontainers\.image\.version=//p')"
+		if [ "$(dedalo_tag_part "$tag")" != "$named" ]; then
+			printf 'note: %s holds a commit that calls itself %s — its version label says so\n' "$tag" "$named" >&2
+		fi
 		"$docker" build --tag "$tag" "${labels[@]}" "$dir" || status=$?
 	else
 		printf 'could not archive the last commit of %s\n' "$checkout" >&2

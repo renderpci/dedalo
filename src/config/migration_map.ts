@@ -822,6 +822,8 @@ export const NEW_IN_V7: readonly string[] = [
 	// scratch root + recording runner, and the drill's probe CA. New in v7.
 	'DEDALO_INSTALL_HOST_ROOT',
 	'DEDALO_INSTALL_PROBE_CA_FILE',
+	// The installer's release-identity pin (2026-10-15, release identity from the tag). New in v7.
+	'DEDALO_INSTALL_RELEASE_IDENTITY',
 	// diffusion (the native engine)
 	'DEDALO_DIFFUSION_NATIVE',
 	'DEDALO_DIFFUSION_NATIVE_ELEMENTS',
