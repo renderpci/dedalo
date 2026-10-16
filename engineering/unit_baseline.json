@@ -2186,6 +2186,11 @@
 			"skipped": 0,
 			"assertions": 335
 		},
+		"test/unit/install_host_local_ca_native.test.ts": {
+			"tests": 31,
+			"skipped": 0,
+			"assertions": 276
+		},
 		"test/unit/install_host_privilege_tripwire.test.ts": {
 			"tests": 5,
 			"skipped": 0,
@@ -4885,6 +4890,11 @@
 			"tests": 13,
 			"skipped": 0,
 			"assertions": 28
+		},
+		"test/unit/tls_local_ca_native.test.ts": {
+			"tests": 13,
+			"skipped": 0,
+			"assertions": 138
 		},
 		"test/unit/tm_bulk_revert.test.ts": {
 			"tests": 7,
