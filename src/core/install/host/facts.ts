@@ -40,15 +40,23 @@ import {
 	sameNameRecords,
 	withPrimaryGroups,
 } from './production/instances.ts';
+import { otherClaims } from './registry.ts';
 import type { CommandRunner, RunResult } from './runner.ts';
 import type { StackFacts } from './stack/facts.ts';
-import { CATCH_ALL_STAMP, catchAllPath, type PortDefault, portDefaults } from './web/catch_all.ts';
+import {
+	type AddressClaim,
+	CATCH_ALL_STAMP,
+	catchAllPath,
+	type PortDefault,
+	portDefaults,
+} from './web/catch_all.ts';
 import {
 	apacheRoots,
 	apacheSites,
 	type HttpName,
 	listeningPorts,
 	nginxHttpNames,
+	nginxIncludes,
 	nginxSites,
 	type SiteTuple,
 } from './web/clash.ts';
@@ -74,11 +82,29 @@ export interface HostFacts {
 		apacheModules: string[];
 		/** A configuration probe that failed (host_preflight refuses: an unread dump is no evidence). */
 		probeFailures: string[];
+		/**
+		 * nginx: the `include` patterns in load order (web/clash.ts
+		 * nginxIncludes — patterns only). Optional: a state frozen before it
+		 * existed, and Apache, carry none.
+		 */
+		includes?: string[];
 		/** nginx: each port's `default_server` and its file (web/catch_all.ts keeps an operator's). */
 		defaults: PortDefault[];
-		/** nginx's host-wide catch-all site (web/catch_all.ts): absent, the installer's, or another file there. */
+		/** The host-wide catch-all site (web/catch_all.ts): absent, the installer's, or another file there. */
 		catchAll: 'absent' | 'ours' | 'foreign';
+		/**
+		 * The IPv4 addresses OTHER instances claim (their registry entries —
+		 * web/catch_all.ts renders them beside this one's). Optional: a state
+		 * frozen before claims existed reads as none.
+		 */
+		claims?: AddressClaim[];
 	};
+	/**
+	 * This host's own IPv4 addresses (loopback excluded — /proc/net/fib_trie's
+	 * LOCAL routes): a claimed address must be one of them. null = unreadable;
+	 * optional: a state frozen before claims existed.
+	 */
+	addresses?: string[] | null;
 	packages: string[];
 	/** apt: `pg_lsclusters`; EL: the installed postgresqlNN-server versions (port unknown). */
 	pgClusters: { version: string; port: string }[];
@@ -184,6 +210,7 @@ async function nginxFacts(runner: CommandRunner, row: OsRow): Promise<HostFacts[
 		version: nginxVersionOf(`${version.stderr}${version.stdout}`),
 		sites,
 		httpNames: nginxHttpNames(dump),
+		includes: nginxIncludes(dump),
 		apacheModules: [],
 		probeFailures: failures,
 		defaults: portDefaults(sites),
@@ -247,15 +274,38 @@ export async function webFacts(
 ): Promise<HostFacts['web']> {
 	const binary = binaryOf(row, kind === 'nginx' ? 'nginx' : 'apachectl');
 	if (!fs.exists(binary)) return emptyWeb(kind);
-	if (kind === 'apache') return apacheFacts(runner, row, fs);
-	return { ...(await nginxFacts(runner, row)), catchAll: catchAllState(fs, row) };
+	const facts =
+		kind === 'apache' ? await apacheFacts(runner, row, fs) : await nginxFacts(runner, row);
+	return { ...facts, catchAll: catchAllState(fs, row, kind) };
 }
 
-/** The nginx catch-all site file: absent, the installer's (its stamp), or another file at that path. */
-function catchAllState(fs: HostFs, row: OsRow): HostFacts['web']['catchAll'] {
-	const text = fs.readText(catchAllPath(row.web.nginx));
+/** The catch-all site file: absent, the installer's (its stamp), or another file at that path. */
+function catchAllState(
+	fs: HostFs,
+	row: OsRow,
+	kind: 'nginx' | 'apache',
+): HostFacts['web']['catchAll'] {
+	const text = fs.readText(catchAllPath(row.web[kind]));
 	if (text === null) return 'absent';
 	return text.startsWith(`${CATCH_ALL_STAMP}\n`) ? 'ours' : 'foreign';
+}
+
+/**
+ * The host's own IPv4 addresses from `/proc/net/fib_trie` (every Linux kernel;
+ * no binary: iproute2's path differs per row): an address line (`|-- a.b.c.d`)
+ * followed by its `/32 host LOCAL` route is one this host answers on.
+ * Loopback is left out (never claimed — install_validation.ts). PURE.
+ */
+export function hostAddresses(fibTrie: string): string[] {
+	const found = new Set<string>();
+	let last: string | null = null;
+	for (const line of fibTrie.split('\n')) {
+		const address = /\|--\s+(\d+\.\d+\.\d+\.\d+)\s*$/.exec(line)?.[1];
+		if (address !== undefined) last = address;
+		else if (last !== null && /^\s*\/32 host LOCAL\s*$/.test(line) && !last.startsWith('127.'))
+			found.add(last);
+	}
+	return [...found].sort();
 }
 
 /** apt: `pg_lsclusters`; EL: the postgresqlNN-server packages. */
@@ -490,6 +540,12 @@ export function pendingFacts(): HostFacts {
 	return unsupportedFacts({ os: null, osName: 'not measured yet' }, -1);
 }
 
+/** The host's IPv4 addresses (hostAddresses), or null when /proc/net/fib_trie is unreadable. */
+function addressFacts(fs: HostFs): string[] | null {
+	const text = fs.readText('/proc/net/fib_trie');
+	return text === null ? null : hostAddresses(text);
+}
+
 /** The effective user id (through the runner, so a scratch run answers for its fake host). */
 async function euidOf(runner: CommandRunner): Promise<number> {
 	const result = await probe(runner, ['/usr/bin/id', '-u']);
@@ -541,7 +597,8 @@ export async function gatherHostFacts(
 		...(await cpuFacts(runner, fs)),
 		euid,
 		systemd: fs.exists('/run/systemd/system'),
-		web: await webFacts(runner, fs, row, kind),
+		web: { ...(await webFacts(runner, fs, row, kind)), claims: otherClaims(fs, paths) },
+		addresses: addressFacts(fs),
 		packages,
 		...(await pgFacts(runner, fs, row, answers, packages)),
 		...(await gatherIdentityFacts(runner, fs, row, answers)),

@@ -262,7 +262,7 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 		tls_extra_names: {
 			label: 'Other addresses',
 			description:
-				'Optional: other names staff type (e.g. dedalo.lan), comma-separated; IPv4 addresses (e.g. 192.168.1.20) on the Docker route only. The certificate names them, and the local authority can certify nothing else.',
+				"Optional: other names or IPv4 addresses staff type (e.g. dedalo.lan,192.168.1.20), comma-separated. On the production route an IP address must be one of this server's and claimed by no other instance. The certificate names them, and the local authority can certify nothing else.",
 		},
 		letsencrypt_email: {
 			label: "Let's Encrypt e-mail",

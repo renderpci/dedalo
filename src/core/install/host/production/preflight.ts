@@ -16,7 +16,8 @@
  *  - a CLASH under this instance's names: the database or the role (a created
  *    database), a dedalo-ts@<i> unit or drop-in, the site file, the socket,
  *    the server name (and a local CA's extra addresses) on our ports in
- *    another site file, the instance's ports
+ *    another site file, an IPv4 address it claims (address_claims.ts: this
+ *    host's, no other instance's, the catch-all able to serve it), the instance's ports
  *    held by any program but the chosen web server, the OTHER web server
  *    installed beside a chosen one this run would install (campaign 3b N3);
  *  - PostgreSQL: another major's cluster on the database port (critique B5 —
@@ -55,6 +56,7 @@ import {
 } from '../web/apache.ts';
 import { httpNameClash, instanceHttpNames, serverNameClash } from '../web/clash.ts';
 import { siteNames } from '../web/site.ts';
+import { claimProblems } from './address_claims.ts';
 import { ran, sitePath, webFlavor } from './common.ts';
 import { identityOf, instanceDirs, ownedDirs } from './identity.ts';
 import { instanceTakenSentence } from './identity_rules.ts';
@@ -297,6 +299,7 @@ function hostProblems(ctx: HostPlanCtx): string[] {
 		...nameProblems(ctx),
 		...databaseProblems(ctx),
 		...addressProblems(ctx),
+		...claimProblems(ctx),
 	];
 }
 

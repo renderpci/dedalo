@@ -264,9 +264,15 @@ export function tlsRenewUnit(instance: string, kind: 'service' | 'timer'): strin
  * generator, the instance's certificate directory and the HOST web server's
  * unit to reload — all pinned here, none read from the instance (F2). Written
  * by host_tls, on local_ca only. `service` is the row's web unit (nginx,
- * apache2, httpd) — the generator's own allowlist.
+ * apache2, httpd) — the generator's own allowlist; `keyGroup` the group
+ * that reads the site key (null: root-only).
  */
-export function tlsRenewDropin(paths: InstancePaths, service: string, stamp: string): string {
+export function tlsRenewDropin(
+	paths: InstancePaths,
+	service: string,
+	stamp: string,
+	keyGroup: string | null = null,
+): string {
 	return [
 		stamp,
 		'[Service]',
@@ -275,6 +281,9 @@ export function tlsRenewDropin(paths: InstancePaths, service: string, stamp: str
 			`${paths.binDir}/dedalo-tls-rotate.sh`,
 			...['--mode', 'renew', '--dir', paths.tlsDir],
 			...['--reload', 'systemd', '--unit', service],
+			// A claimed IP address on nginx: the renewed key stays readable by the web
+			// server's workers (production/address_claims.ts keyGroup).
+			...(keyGroup === null ? [] : ['--key-group', keyGroup]),
 		].join(' ')}`,
 		'',
 	].join('\n');

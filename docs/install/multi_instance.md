@@ -72,7 +72,7 @@ sudo --preserve-env=DEDALO_INSTALL_ROOT_PASSWORD sh install.sh -- \
 
 The System check refuses, before any change, anything that would collide with what is already on the host: the user, database or role of that name, its unit or drop-ins, its site file, its socket, the nginx `upstream` and rate-limit zone names, any of its directories, and **the address already served by another site** on the same ports. Every refusal is listed in [Troubleshooting › The System check refuses](troubleshooting.md#the-production-system-check-refuses).
 
-Each instance has its own public address and its own certificate. The installer writes one site file per instance and never edits another instance's. On nginx, the catch-all site is written by the first instance on ports 80 and 443 and used as it is by the others; on Apache, every instance's site refuses any name but its own. Either way, a request for an address no instance declares never reaches one of them.
+Each instance has its own public address and its own certificate. The installer writes one site file per instance and never edits another instance's. On nginx, the catch-all site is written by the first instance on ports 80 and 443 and used as it is by the others (an instance that claims an IP address rewrites it with its claim: [Reaching an instance by IP address](reverse_proxy.md#reaching-an-instance-by-ip-address)); on Apache, every instance's site refuses any name but its own. Either way, a request for an address no instance declares never reaches one of them.
 
 ## The isolation model, stated plainly
 

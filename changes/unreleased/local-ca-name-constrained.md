@@ -20,7 +20,7 @@ sign e-mail or software either.
 does nothing until the certificate is inside its last 30 days. On the Docker route,
 run it yourself once a year or from a monthly cron job (`docs/install/docker.md`,
 "Renewing the local-CA certificate"). `--host` can be given several times, for a LAN
-name, or (on the Docker route) an IPv4 address, beside the server name. When the new certificate is in place
+name or an IPv4 address beside the server name. When the new certificate is in place
 but the web server could not be reloaded (for example `docker` missing from cron's
 `PATH`), the script now exits with status 3 instead of reporting success, and every
 later run retries the reload until it works.

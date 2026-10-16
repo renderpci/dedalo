@@ -371,14 +371,6 @@ const BAD_ROWS: readonly BadRow[] = [
 			'tls_extra_names: 127.0.0.2 is a loopback address (127.0.0.1 is in every certificate already)',
 	},
 	{
-		// No SNI for an IP-literal URL: a multi-site host picks the handshake's certificate
-		// by address alone (engineering/PRODUCTION.md §13.2) — the docker stack's one site can.
-		name: "a local CA's extra IPv4 address on the production route",
-		answers: { ...PRODUCTION, tls_mode: 'local_ca', tls_extra_names: 'dedalo.lan,192.168.1.20' },
-		error:
-			"tls_extra_names: 192.168.1.20 — an IP address cannot be served on the production route (a browser sends no server name for an IP address, so this host's web server cannot tell this site's certificate from the others'); give staff a LAN name instead (internal DNS or each computer's hosts file)",
-	},
-	{
 		// The authority excludes every name BELOW each listed name (exact names).
 		name: "a local CA's extra address under the server name",
 		answers: { ...PRODUCTION, tls_mode: 'local_ca', tls_extra_names: 'archivo.prado.example.org' },
@@ -633,13 +625,13 @@ describe('install validation — every bad answer refused by the plan, identical
 		expect(production.answers.mysql_database).toBe('web_prado');
 	});
 
-	test("a local CA's extra names on production, and an IPv4 one on docker, are CLEAN on all three (the IP row is the route's, not the shape's)", () => {
+	test("a local CA's extra names AND IPv4 addresses are CLEAN on all three, on production and docker (owner 2026-10-16: whether an IP is this host's and no other instance's is the System check's — address_claims.ts)", () => {
 		expect(
 			errorsThreeWays({
 				...BASE,
 				...PRODUCTION,
 				tls_mode: 'local_ca',
-				tls_extra_names: 'dedalo.lan,archivo.museo.lan',
+				tls_extra_names: 'dedalo.lan,archivo.museo.lan,192.168.1.20',
 			}),
 		).toEqual({ argv: [], file: [], record: [] });
 		expect(

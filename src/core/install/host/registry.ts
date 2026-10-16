@@ -11,6 +11,7 @@
 
 import type { HostFs } from './fs.ts';
 import type { InstancePaths } from './layout.ts';
+import type { AddressClaim } from './web/catch_all.ts';
 
 export interface InstanceEntry {
 	instance: string;
@@ -21,6 +22,14 @@ export interface InstanceEntry {
 	nginx_map_owner: boolean;
 	/** This instance uses the host-wide catch-all site (web/catch_all.ts — removed with the last user). */
 	catch_all: boolean;
+	/**
+	 * The IPv4 addresses this instance CLAIMS (a local CA's tls_extra_names
+	 * IPs — web/catch_all.ts renders every instance's claims) and the
+	 * certificate a nameless handshake to them gets. Absent: an entry written
+	 * before claims existed — none.
+	 */
+	addresses?: string[];
+	certificate?: { fullchain: string; key: string };
 	/** This instance's MEDIA_PATH (where its generated map lives). */
 	media: string;
 	/** The service user, group, install folder and backup dir (host_identity — one per instance). */
@@ -96,4 +105,18 @@ export function otherEntries(fs: HostFs, paths: InstancePaths): InstanceEntry[] 
 		.filter((name) => name.endsWith('.json') && name !== `${paths.instance}.json`)
 		.map((name) => readEntry(fs, `${paths.registryDir}/${name}`))
 		.filter((entry): entry is InstanceEntry => entry !== null);
+}
+
+/** Every OTHER instance's claimed addresses (web/catch_all.ts renders them all). */
+export function otherClaims(fs: HostFs, paths: InstancePaths): AddressClaim[] {
+	return otherEntries(fs, paths).flatMap((entry) => {
+		const certificate = entry.certificate;
+		if (certificate === undefined) return [];
+		return (entry.addresses ?? []).map((address) => ({
+			address,
+			instance: entry.instance,
+			fullchain: certificate.fullchain,
+			key: certificate.key,
+		}));
+	});
 }

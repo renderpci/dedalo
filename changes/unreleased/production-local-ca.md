@@ -9,11 +9,21 @@ intranet has no public name, so Let's Encrypt cannot reach it, and until now the
 other choice on the production route was to make certificates by hand. The *Web server
 & TLS* screen now offers **Local CA** (`--tls local_ca`), as the Docker route already
 did. **Other addresses** (`--tls-extra-names dedalo.lan,archivo.museo.lan`) adds the
-other names staff type: the certificate names them and the site answers to them. The
-production route refuses an IP address there: a browser sends no server name for an IP
-address, so a host that serves several sites cannot pick the right certificate. Give
-staff a name instead (the intranet's DNS, or each computer's `hosts` file). The Docker
-route, whose web server serves one site, also accepts IPv4 addresses.
+other names staff type: the certificate names them and the site answers to them.
+
+On an intranet with no local DNS, **Other addresses** can also list the server's IPv4
+addresses (`--tls-extra-names dedalo.lan,192.168.1.20`), on both routes: staff then open
+`https://192.168.1.20/`, and `http://` to it redirects to `https://`. A browser sends no
+server name for an IP address, so on the production route the instance *claims* the
+address in the installer's host-wide catch-all, which hands a handshake to that address
+the instance's certificate. Every other site on the server keeps answering by name, on
+that address too, and a handshake to an address no instance claims is refused as
+before. The System check refuses an address that is not this server's, one another
+instance already claims, one a site of yours listens on itself, a site of yours on port
+443 that loads before the catch-all (it would answer visits by IP address), and IPv6. On nginx the
+claiming instance's site key becomes readable by the web server's group, because nginx
+loads that certificate per connection; on Apache, one instance per server can claim
+addresses. See [Reaching an instance by IP address](./install/reverse_proxy.md#reaching-an-instance-by-ip-address).
 
 The installer makes the authority and the site certificate in
 `/opt/dedalo/instances/<i>/tls/`, with the same script the Docker route and every

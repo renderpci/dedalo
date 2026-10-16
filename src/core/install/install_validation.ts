@@ -457,38 +457,25 @@ function extraNameErrors(a: InstallAnswers, problems: Problems): void {
 		return;
 	}
 	for (const name of a.tls_extra_names.split(',')) {
-		const message = extraNameError(name, a.server_name, a.route);
+		const message = extraNameError(name, a.server_name);
 		if (message !== null) problems.push(problem('tls_extra_names', message));
 	}
 }
 
-/**
- * An IPv4 extra address on the NATIVE route is refused: a browser sends no SNI
- * for an IP-literal URL (RFC 6066 §3), so the host's web server picks the
- * handshake's certificate by the listening address alone — the host-wide
- * catch-all (nginx, `ssl_reject_handshake`) or the first vhost loaded (Apache,
- * another instance's certificate). Claiming the address instead
- * (`listen <ip>:443`, `<VirtualHost <ip>:443>`) routes EVERY name arriving on
- * it to this instance — other instances and the catch-all included (measured
- * with nginx, 2026-10-16). The docker stack's nginx serves one site, which is
- * the address's default there, so an IP works on that route.
- * engineering/PRODUCTION.md §13.2.
- */
-function nativeIpError(name: string, route: string): string | null {
-	return route === 'production'
-		? `tls_extra_names: ${name} — an IP address cannot be served on the production route (a browser sends no server name for an IP address, so this host's web server cannot tell this site's certificate from the others'); give staff a LAN name instead (internal DNS or each computer's hosts file)`
-		: null;
-}
-
 /** One extra address's refusal, or null. */
-function extraNameError(name: string, serverName: string, route: string): string | null {
+function extraNameError(name: string, serverName: string): string | null {
 	if (name === serverName) return `tls_extra_names: ${name} is already the server_name`;
 	if (name.includes(':'))
 		return `tls_extra_names: ${name} — IPv6 addresses are not supported for the local CA (use a name or an IPv4 address)`;
 	if (IPV4_PATTERN.test(name)) {
+		// An IPv4 address is served on BOTH routes: the docker stack's one site is the
+		// address's default; on a native host the installer's catch-all picks this
+		// instance's certificate for a CLAIMED address (host/web/catch_all.ts) — that
+		// the address is this host's and no other instance's is the System check's
+		// (host/production/address_claims.ts), not the answers'.
 		return name.startsWith('127.')
 			? `tls_extra_names: ${name} is a loopback address (127.0.0.1 is in every certificate already)`
-			: nativeIpError(name, route);
+			: null;
 	}
 	return FQDN_PATTERN.test(name)
 		? null

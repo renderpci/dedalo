@@ -1893,19 +1893,53 @@ but only while its site certificate names every answered address (read from
 the certificate itself), else it is refused the same way. Gates:
 `install_host_steps_native` (g), `install_stack_local_ca_native`.
 
-**IPv4 extra addresses: the docker route only.** A browser sends no SNI for
-an IP-literal URL (RFC 6066 §3), so the web server picks the handshake's
-certificate by the listening address alone. In the docker stack the
-instance's site is the container's only HTTPS server, so an IP works. On a
-native host the default for an address is the host-wide catch-all
-(`ssl_reject_handshake`, nginx) or the first vhost loaded (Apache): an IP
-would get no certificate or another instance's. Claiming the address
-(`listen <ip>:443` / `<VirtualHost <ip>:443>`) is not a fix — both servers
-then route EVERY name arriving on that address to the claimant (measured with
-nginx: another site's name and an unknown name both reached it, bypassing the
-catch-all). So the native route refuses an IPv4 `tls_extra_names` entry at
-validation and tells the operator to give staff a LAN name instead (internal
-DNS or each workstation's hosts file).
+**IPv4 extra addresses: both routes (native since 2026-10-16).** A browser
+sends no SNI for an IP-literal URL (RFC 6066 §3), so the web server picks the
+handshake's certificate by the listening address alone. In the docker stack
+the instance's site is the container's only HTTPS server, so an IP works
+there as it is. On a native host the default for an address is the host-wide
+catch-all, and claiming the address in a site (`listen <ip>:443` /
+`<VirtualHost <ip>:443>`) is not a fix — both servers then route EVERY name
+arriving on that address to the claimant (nginx request_processing.html;
+Apache vhosts/details.html: an exact address match hides every `*` vhost).
+So a native instance CLAIMS the address in the installer-owned catch-all
+(`src/core/install/host/web/catch_all.ts`, re-rendered from every instance's
+`addresses` in the host registry): nginx picks the certificate per handshake
+(`ssl_certificate $dedalo_catch_all_certificate`, a map on
+`"$server_addr|$ssl_server_name"` — only a NAMELESS handshake to a CLAIMED
+address gets one; every other handshake the catch-all sees finds a file that
+never exists and is refused, logged in `dedalo-catch-all.error.log`). A
+certificate named by a variable is loaded by a nginx WORKER, so the claiming
+instance's site key is `root:<web group> 0640` — the generator's
+`--key-group`, in host_tls's key-access run and the renewal drop-in, applied
+even by a no-op renewal. Apache has no per-address certificate: while ONE
+instance claims addresses its catch-all is the first `*:443` vhost with that
+instance's certificate (SSL settings equal to the instance vhost's — mod_ssl
+answers 421 to a request whose vhost's SSL setup differs from the
+handshake's), 421 for any undeclared Host; a second claimant is refused. The
+System check (`production/address_claims.ts`) refuses an address that is not
+this host's (`/proc/net/fib_trie`), one another instance claims, non-standard
+ports, a foreign catch-all, an operator site BOUND to the claimed address
+(`listen <ip>:80|443` / `<VirtualHost <ip>:80|443>`, or a listen on a host
+name — the address is kept by the `nginx -T` / `-S` parsers in
+`web/clash.ts`: such a bind takes every connection to the address from the
+wildcard sites, catch-all included), nginx's operator `default_server` on 443
+or an operator 443 server loaded BEFORE the catch-all (the first server is the
+port's default; load order from the dump's `include` order —
+`nginxIncludes`/`nginxLoadOrder`, unknown refused), and on Apache another claimant or an operator `*:443` vhost loaded before the
+catch-all. host_web_site re-checks the claim against the LIVE registry and
+renders from it (`liveClaimCheck`): a claim landed since this run's Review
+refuses the run (`install.state_conflict`) — never last-writer-wins; the
+render keeps one map key per address (nginx refuses a duplicate). Its verify
+reads the catch-all (`catchAllServes`), so a resume never adopts a step
+stopped before the catch-all write; the registry's `catch_all` use is recorded
+before the work. The generator REMEMBERS `--key-group` in
+`<dir>/dedalo-key-group`, so a hand rotation without the flag keeps the
+key's 0640. `--abort` re-renders the catch-all without the instance's
+addresses (nginx) or removes it with the last user. IPv6 stays refused at
+validation (the generator constrains IPv4 only). Gate:
+`install_host_ip_claims_native` (real nginx and Apache in `dedalo-ci:local`
+when Docker is present).
 
 **Lifetimes and renewal.** The leaf lives 397 days, the authorities ten years.
 `--mode renew` re-issues the leaf (new key, new serial) from the SAME
@@ -1915,7 +1949,8 @@ subset. A name outside the authority's list fails `openssl verify` in staging
 and nothing is replaced. An authority that would not outlive a full-length
 leaf refuses to renew and says to rotate. The NATIVE route renews from a
 systemd timer: `host_tls` (`src/core/install/host/production/tls.ts`) issues
-into `/opt/dedalo/instances/<i>/tls/` (root 0755, keys 0600, `cert_t` on EL)
+into `/opt/dedalo/instances/<i>/tls/` (root 0755, keys 0600 — the site key
+0640 to the web group with a claimed IP on nginx — `cert_t` on EL)
 with the ROOT-OWNED copy of the script in `/opt/dedalo/instances/<i>/bin/`
 (a ROOT_RUN_SCRIPT — never the instance's tree, F2), every address
 (`server_name` + `tls_extra_names`) a `--host`, `--no-reload` (the site is

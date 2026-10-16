@@ -59,7 +59,8 @@ function backend(input: SiteInput, path: string): string {
  * museo). Each vhost therefore refuses any Host but its own with 421
  * Misdirected Request before anything is served or proxied. (nginx gets the
  * host-wide catch-all site instead — web/catch_all.ts: it needs no
- * certificate there, while an Apache catch-all on 443 would.)
+ * certificate there, while an Apache catch-all on 443 would; Apache gets one
+ * only while an instance claims an IPv4 address, with that instance's.)
  */
 function nameGuard(names: readonly string[], port: string): string[] {
 	const escaped = names.map((name) => name.replace(/[.^$*+?()[\]{}|\\]/g, '\\$&'));

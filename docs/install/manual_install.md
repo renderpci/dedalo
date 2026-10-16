@@ -714,7 +714,8 @@ TLS=/opt/dedalo/instances/$I/tls
 install -d -o root -g root -m 0755 "$TLS"
 test -s "$TLS/fullchain.pem" -a -s "$TLS/dedalo-local-ca.pem" || \
   "$BIN/dedalo-tls-rotate.sh" --mode local-ca --host "$NAME" --dir "$TLS" --no-reload --quiet
-# more addresses: --host "$NAME" --host dedalo.lan (names only on this route: no IP address)
+# more addresses: --host "$NAME" --host dedalo.lan (names only by hand: an IP address needs the
+# installer, which claims it in the host's catch-all — reverse_proxy.md, Reaching an instance by IP address)
 [ "$SELINUX_MODULE" = true ] && semanage fcontext -a -t cert_t "$TLS(/.*)?" && restorecon -RF "$TLS"
 ```
 

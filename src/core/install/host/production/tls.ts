@@ -20,7 +20,9 @@
  *    generator (the docker route's, a rotation's and a renewal's: no second
  *    one in TypeScript), run from the ROOT-OWNED copy host_runtime placed in
  *    the instance's bin dir (F2: never a file of the instance's tree) into
- *    /opt/dedalo/instances/<i>/tls (root 0755, keys 0600). The authority is
+ *    /opt/dedalo/instances/<i>/tls (root 0755, keys 0600 — the site key
+ *    root:<web group> 0640 when nginx serves a claimed IPv4 address:
+ *    address_claims.ts keyGroup). The authority is
  *    NAME-CONSTRAINED to the server name and the extra addresses
  *    (tls_extra_names) + localhost, and its root key is deleted at issue
  *    (engineering/PRODUCTION.md §13.2). `--no-reload`: the site that names the
@@ -57,6 +59,7 @@ import { authorityConflict, authorityFile } from '../tls_authority.ts';
 import { checkCertificateFiles, type TlsFileVerdict } from '../tls_files.ts';
 import { chainTrustVerdict, SYSTEM_CA_BUNDLES } from '../tls_trust.ts';
 import { siteNames } from '../web/site.ts';
+import { keyGroup } from './address_claims.ts';
 import {
 	exec,
 	probe,
@@ -99,7 +102,7 @@ export function tlsRenewWrite(ctx: HostPlanCtx): WriteCommand {
 		mode: 0o644,
 		owner: 'root',
 		group: 'root',
-		content: tlsRenewDropin(ctx.paths, webFlavor(ctx).service, stampOf(ctx)),
+		content: tlsRenewDropin(ctx.paths, webFlavor(ctx).service, stampOf(ctx), keyGroup(ctx)),
 		label: `drop-in ${path.slice(SYSTEMD_DIR.length + 1)} (the renewal: the root-owned generator, this certificate directory, reload ${webFlavor(ctx).service})`,
 	};
 }
@@ -132,6 +135,31 @@ function issueCommand(ctx: HostPlanCtx): ExecCommand {
 	};
 }
 
+/**
+ * A claimed IP address on nginx (production/address_claims.ts keyGroup): the
+ * site key root:<web group> 0640 — the generator's own `--key-group`, through
+ * a renewal that re-issues only when due, so an authority adopted from an
+ * earlier run (the issue skipped) gets it too. None otherwise.
+ */
+function keyAccessCommands(ctx: HostPlanCtx): HostCommand[] {
+	const group = keyGroup(ctx);
+	if (group === null) return [];
+	return [
+		{
+			kind: 'exec',
+			argv: [
+				generator(ctx),
+				...['--mode', 'renew', '--dir', ctx.paths.tlsDir, '--key-group', group],
+				'--no-reload',
+				'--quiet',
+			],
+			as: 'root',
+			label: `let nginx's workers read the site key (group ${group}, 0640): the catch-all loads this certificate per handshake for a claimed IP address`,
+			mutates: true,
+		},
+	];
+}
+
 /** The local CA's commands: its directory, the issue, its label (EL), the renewal timer. */
 function localCaCommands(ctx: HostPlanCtx): HostCommand[] {
 	const dir = ctx.paths.tlsDir;
@@ -146,6 +174,7 @@ function localCaCommands(ctx: HostPlanCtx): HostCommand[] {
 			label: 'the certificate directory (root; the keys in it 0600)',
 		},
 		issueCommand(ctx),
+		...keyAccessCommands(ctx),
 		...(selinuxApplies(ctx)
 			? [exec(ctx, 'restorecon', ['-RF', dir], `label ${dir} cert_t (the web server reads it)`)]
 			: []),
@@ -205,10 +234,22 @@ export function localCaTold(ctx: HostCtx): string[] {
 	];
 }
 
-/** The local CA in place: its files (the key root-only), the renewal drop-in, the timer enabled. */
+/**
+ * The site key's access as the plan wants it: root-only, or root:<group> 0640
+ * with a claimed IP address on nginx (keyAccessCommands).
+ */
+function keyAccessOk(ctx: HostCtx, key: ReturnType<HostCtx['fs']['stat']>): boolean {
+	if (key === null || key.owner !== 'root') return false;
+	const group = keyGroup(ctx);
+	if (group === null) return (key.mode & 0o077) === 0;
+	return key.group === group && (key.mode & 0o777) === 0o640;
+}
+
+/** The local CA in place: its files (the key's access), the renewal drop-in, the timer enabled. */
 async function localCaVerify(ctx: HostCtx) {
 	const dir = ctx.paths.tlsDir;
 	const key = ctx.fs.stat(`${dir}/privkey.pem`);
+	const group = keyGroup(ctx);
 	const write = tlsRenewWrite(ctx);
 	const timer = tlsRenewUnit(ctx.paths.instance, 'timer');
 	return verdictOf(
@@ -216,8 +257,8 @@ async function localCaVerify(ctx: HostCtx) {
 			[ctx.fs.exists(localCaFile(ctx)), `${localCaFile(ctx)} missing`],
 			[ctx.fs.exists(`${dir}/fullchain.pem`), `${dir}/fullchain.pem missing`],
 			[
-				key !== null && key.owner === 'root' && (key.mode & 0o077) === 0,
-				`${dir}/privkey.pem is missing or not root-only`,
+				keyAccessOk(ctx, key),
+				`${dir}/privkey.pem is missing or not ${group === null ? 'root-only' : `root:${group} 0640`}`,
 			],
 			[ctx.fs.readText(write.path) === write.content, `${write.path} differs from its render`],
 			[

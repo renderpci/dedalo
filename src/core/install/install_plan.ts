@@ -306,8 +306,9 @@ export interface InstallAnswers {
 	/** TLS_MODES, per route (production, docker: letsencrypt|local_ca|files; trial: none). */
 	tls_mode: string;
 	/**
-	 * local_ca only: the OTHER addresses staff type (a LAN name; an IPv4
-	 * address on the docker route only — install_validation.ts) — canonical `a,b` (lowercase, de-duplicated, '' = none). The
+	 * local_ca only: the OTHER addresses staff type (a LAN name or an IPv4
+	 * address — install_validation.ts; on the production route an IP must be
+	 * this host's and no other instance's: host/production/address_claims.ts) — canonical `a,b` (lowercase, de-duplicated, '' = none). The
 	 * leaf names them beside server_name and the authority is constrained to
 	 * exactly that list (deploy/dedalo-tls-rotate.sh). See {@link extraTlsNames}.
 	 */

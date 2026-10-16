@@ -186,9 +186,9 @@ export const LOCAL_CA_VARIANTS: readonly HostVariant[] = Object.freeze(
 
 /**
  * The extra addresses a scratch local-CA install names: two LAN names. Names
- * only — the production route refuses an IP address (install_validation.ts
- * nativeIpError: no SNI for an IP, so a multi-site host cannot pick the
- * certificate).
+ * only, so these variants keep the catch-all without claims; the claimed IPv4
+ * addresses (owner 2026-10-16) have their own gate:
+ * test/unit/install_host_ip_claims_native.test.ts.
  */
 export const LOCAL_CA_EXTRA_NAMES = 'demo.lan,archivo.museo.lan';
 

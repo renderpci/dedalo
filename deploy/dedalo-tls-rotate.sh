@@ -111,6 +111,18 @@
 #   --renew-days <n>       renew: re-issue when the certificate expires within n days (default 30)
 #   --force                renew: re-issue now, whatever the expiry
 #   --quiet                no operator epilogue (the installer prints its own)
+#   --key-group <group>    the site key root:<group> 0640 instead of root 0600 —
+#                          applied on EVERY run (a renewal with nothing to renew
+#                          included). For a host web server that loads the
+#                          certificate in its unprivileged WORKERS: the native
+#                          route's nginx catch-all picks a claimed IP address's
+#                          certificate per handshake (ssl_certificate with
+#                          variables). REMEMBERED in <dir>/dedalo-key-group, so
+#                          a later run WITHOUT the flag (a rotation typed by
+#                          hand, a renewal) keeps the access instead of putting
+#                          the key back to 0600 and cutting the address off;
+#                          delete that file to go back to 0600. Never given
+#                          nor remembered: 0600, as always.
 #
 # EXIT: 0 done (or renew had nothing to do); 1 refused / failed, nothing
 # changed; 3 the new certificate is in place but the web server could not be
@@ -130,7 +142,7 @@
 set -euo pipefail
 
 MODE='' CERT_IN='' KEY_IN='' QUIET='false' RELOAD='docker' UNIT='' FORCE='false'
-RENEW_DAYS='30' CERT_DIR='' COMPOSE_FILE='docker-compose.simple.yml'
+RENEW_DAYS='30' CERT_DIR='' COMPOSE_FILE='docker-compose.simple.yml' KEY_GROUP=''
 NAMES=()
 
 # Lifetimes. 397 days: the leaf lifetime every current client accepts (Apple's
@@ -171,6 +183,7 @@ while [ $# -gt 0 ]; do
 		--renew-days) RENEW_DAYS="${2-}"; shift 2 ;;
 		--force) FORCE='true'; shift ;;
 		--quiet) QUIET='true'; shift ;;
+		--key-group) KEY_GROUP="${2-}"; shift 2 ;;
 		*) fail "unknown argument: $1" ;;
 	esac
 done
@@ -195,6 +208,13 @@ case "$RELOAD" in
 	*) fail '--reload is docker | systemd | none.' ;;
 esac
 [ -n "$CERT_DIR" ] || CERT_DIR="$REPO_ROOT/deploy/certs"
+
+# A group NAME (useradd's default pattern): it reaches chgrp, run as root by
+# the renewal timer — never a free string.
+KEY_GROUP_PATTERN='^[a-z_][a-z0-9_-]*$'
+if [ -n "$KEY_GROUP" ] && ! [[ "$KEY_GROUP" =~ $KEY_GROUP_PATTERN ]]; then
+	fail "--key-group takes a group name: $KEY_GROUP"
+fi
 
 case "$RENEW_DAYS" in
 	''|*[!0-9]*) fail '--renew-days takes a whole number of days.' ;;
@@ -300,6 +320,15 @@ ISSUING_SRL="$CERT_DIR/dedalo-issuing-ca.srl"
 NAMES_FILE="$CERT_DIR/dedalo-local-ca.names"
 SITE_KEY="$CERT_DIR/privkey.pem"
 SITE_CRT="$CERT_DIR/fullchain.pem"
+# The site key's group, remembered from the run that gave --key-group (USAGE):
+# the documented rotation command carries no such flag, and a rotation that
+# put the key back to 0600 would leave nginx's workers unable to load it — the
+# claimed IP address refused until the next timer run. Validated like the flag.
+KEY_GROUP_FILE="$CERT_DIR/dedalo-key-group"
+if [ -z "$KEY_GROUP" ] && [ -s "$KEY_GROUP_FILE" ]; then
+	KEY_GROUP="$(head -n 1 "$KEY_GROUP_FILE")"
+	[[ "$KEY_GROUP" =~ $KEY_GROUP_PATTERN ]] || fail "$KEY_GROUP_FILE does not hold a group name — fix or delete it."
+fi
 
 # The DIRECTORY permission is left alone on purpose: the shipped stacks
 # bind-mount deploy/certs into the nginx container, and tightening a directory a
@@ -348,6 +377,27 @@ STAGE=''
 new_stage() {
 	STAGE="$(umask 077 && mktemp -d "$CERT_DIR/.dedalo-tls.XXXXXX")" || fail "Could not create a staging directory in $CERT_DIR."
 	CLEANUP+=("$STAGE")
+}
+
+# The site key's access: root 0600, or root:<KEY_GROUP> 0640 (--key-group).
+# Applied to the STAGED key before it is moved in, so the served file never
+# passes through a mode the web server's workers cannot read.
+key_access() {
+	if [ -n "$KEY_GROUP" ]; then
+		chgrp "$KEY_GROUP" "$1" || fail "Could not give the group $KEY_GROUP the key $1."
+		chmod 640 "$1"
+	else
+		chmod 600 "$1"
+	fi
+}
+
+# Remember the group for the runs that will not repeat the flag (KEY_GROUP_FILE)
+# — written only once the key carries it, so a refused run changes nothing.
+remember_key_group() {
+	if [ -n "$KEY_GROUP" ]; then
+		printf '%s\n' "$KEY_GROUP" >"$KEY_GROUP_FILE"
+		chmod 644 "$KEY_GROUP_FILE"
+	fi
 }
 
 # The SAN list: every requested name + localhost + the loopback address.
@@ -459,6 +509,9 @@ renew() {
 
 	if [ "$FORCE" != 'true' ] && [ -s "$SITE_CRT" ] \
 		&& openssl x509 -in "$SITE_CRT" -noout -checkend "$((RENEW_DAYS * 86400))" >/dev/null 2>&1; then
+		# Nothing to re-issue — the key's access is still this run's to keep
+		# (--key-group: an install that claims an IP address after the issue).
+		if [ -n "$KEY_GROUP" ] && [ -f "$SITE_KEY" ]; then key_access "$SITE_KEY"; remember_key_group; fi
 		if [ "$RELOAD" != 'none' ] && [ -f "$RELOAD_PENDING" ]; then
 			# Nothing to re-issue, but an earlier run put this certificate on disk
 			# and could not reload: the web server may still serve the old one.
@@ -497,7 +550,8 @@ renew() {
 	if [ -n "$untrusted" ]; then cat "$stage/leaf.pem" "$untrusted" >"$stage/fullchain.pem"; else cp "$stage/leaf.pem" "$stage/fullchain.pem"; fi
 	verify_chain "$stage/fullchain.pem" "$stage/privkey.pem" "$untrusted" \
 		|| fail "The renewed certificate does not verify against $CA_CRT — a name outside the authority's list? (${NAMES[*]}). Nothing was replaced. Adding a name needs a new authority: --mode local-ca."
-	chmod 600 "$stage/privkey.pem" "$stage/serial.srl" "$ca_key"
+	chmod 600 "$stage/serial.srl" "$ca_key"
+	key_access "$stage/privkey.pem"
 	chmod 644 "$stage/fullchain.pem"
 	mark_reload_pending
 	mv -f "$stage/serial.srl" "$srl"
@@ -538,6 +592,7 @@ issue() {
 			"$stage/dedalo-issuing-ca.srl" "$config"
 	)
 	[ ! -e "$root_key" ] || fail 'The root key was not deleted.'
+	key_access "$stage/privkey.pem"
 	cat "$stage/leaf.pem" "$stage/dedalo-issuing-ca.pem" >"$stage/fullchain.pem"
 	printf '%s\n' "${NAMES[@]}" >"$stage/dedalo-local-ca.names"
 	(
@@ -609,11 +664,12 @@ else
 	fi
 fi
 
-# Keys 600, certificates and the names list 644 — the CA certificate has to be
+# Keys 600 (the site key 640 to --key-group), certificates and the names list 644 — the CA certificate has to be
 # copied to every workstation, so a 600 there would be a support call, not
 # security. `[ -f x ] && chmod …` as a bare statement returns non-zero when the
 # file is absent, and `set -e` would exit on it — hence the if-forms.
-chmod 600 "$SITE_KEY"
+key_access "$SITE_KEY"
+remember_key_group
 chmod 644 "$SITE_CRT"
 for secret in "$ISSUING_KEY" "$LEGACY_CA_KEY" "$ISSUING_SRL" "$LEGACY_CA_SRL"; do
 	if [ -f "$secret" ]; then chmod 600 "$secret"; fi

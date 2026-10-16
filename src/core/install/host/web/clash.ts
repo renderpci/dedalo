@@ -32,6 +32,41 @@ export interface SiteTuple {
 	 * its file, never counted as an operator's default.
 	 */
 	defaults?: string[];
+	/**
+	 * The ADDRESS-SPECIFIC listens of the site — nginx `listen 10.0.0.5:443`,
+	 * Apache `<VirtualHost 10.0.0.5:443>` (the `-S` address column) — wildcards
+	 * (`443`, `*:443`, `0.0.0.0`, `[::]`) left out. Such a bind takes every
+	 * connection to that address:port away from the wildcard sites (the
+	 * documents cited in web/catch_all.ts, CLAIMED), so a claimed address must
+	 * have none (production/address_claims.ts). Absent: none.
+	 */
+	binds?: SiteBind[];
+}
+
+/** One address-specific listen (`address` as written: an IP literal, or a name the server resolves). */
+export interface SiteBind {
+	address: string;
+	port: string;
+}
+
+/** Wildcard addresses: every address of the host, never a specific one. */
+const WILDCARD_ADDRESSES: readonly string[] = Object.freeze(['*', '0.0.0.0', '[::]', '_default_']);
+
+/** A bind of `address` (as listed) on `port`, or null for a wildcard / no address. */
+function bindOf(address: string | undefined, port: string): SiteBind | null {
+	if (address === undefined || address === '' || WILDCARD_ADDRESSES.includes(address)) return null;
+	return { address, port };
+}
+
+/** One nginx `listen` value → its address-specific bind, or null (wildcard, port only, unix socket). */
+function listenBind(value: string): SiteBind | null {
+	const first = value.trim().split(/\s+/)[0] ?? '';
+	if (first.startsWith('unix:') || /^\d+$/.test(first)) return null;
+	const withPort = /^(.*):(\d+)$/.exec(first);
+	// An address alone listens on 80 (nginx's listen default).
+	return withPort === null
+		? bindOf(first, '80')
+		: bindOf(withPort[1] as string, withPort[2] as string);
 }
 
 /** nginx `root` / `alias` values of a server block (nested locations included). */
@@ -67,17 +102,50 @@ function nginxSections(dump: string): { file: string; text: string }[] {
 	return sections;
 }
 
+/**
+ * `nginx -T` → its `include` patterns, in the order the dump lists them, made
+ * absolute (a relative one is resolved against the directory of the main
+ * file, the dump's first: nginx's configuration prefix). The dump lists the
+ * files in the order nginx reads them, so the pattern order is the LOAD order
+ * of the directories they name — what tells whether a site loads before the
+ * installer's catch-all when that file does not exist yet
+ * (production/address_claims.ts nginxLoadOrder). Patterns only, never text.
+ */
+export function nginxIncludes(dump: string): string[] {
+	const sections = nginxSections(dump);
+	const main = sections[0]?.file ?? '';
+	const prefix = main.slice(0, main.lastIndexOf('/') + 1);
+	return sections.flatMap(({ text }) =>
+		[...text.replace(/#[^\n]*/g, '').matchAll(/(?:^|[;{}\s])include\s+([^;\s]+)\s*;/g)].map((m) => {
+			const pattern = (m[1] as string).replace(/^["']|["']$/g, '');
+			return pattern.startsWith('/') ? pattern : `${prefix}${pattern}`;
+		}),
+	);
+}
+
+/** The `listen` values of one server block's body. */
+function listenValues(body: string): string[] {
+	return [...body.matchAll(/^\s*listen\s+([^;]+);/gm)].map((m) => m[1] as string);
+}
+
 /** The directives of one server block's body: names, ports, and the ports it is the default of. */
 function serverDirectives(body: string): string[][] {
 	const names = [...body.matchAll(/^\s*server_name\s+([^;]+);/gm)].flatMap((m) =>
 		(m[1] as string).trim().split(/\s+/),
 	);
-	const listens = [...body.matchAll(/^\s*listen\s+([^;]+);/gm)].map((m) => m[1] as string);
+	const listens = listenValues(body);
 	const ports = listens.map(listenPort);
 	const defaults = listens
 		.filter((value) => /\s(default_server|default)(\s|$)/.test(value))
 		.map(listenPort);
 	return [names, ports.length === 0 ? ['80'] : ports, [...new Set(defaults)]];
+}
+
+/** The address-specific binds of one server block's body. */
+function serverBinds(body: string): SiteBind[] {
+	return listenValues(body)
+		.map(listenBind)
+		.filter((bind): bind is SiteBind => bind !== null);
 }
 
 /** The top-level `server { … }` bodies of a text (brace depth; comments removed). */
@@ -109,12 +177,14 @@ export function nginxSites(dump: string): SiteTuple[] {
 	return nginxSections(dump).flatMap(({ file, text }) =>
 		serverBlocks(text).map((body) => {
 			const [names = [], ports = [], defaults = []] = serverDirectives(body);
+			const binds = serverBinds(body);
 			return {
 				file,
 				names,
 				ports,
 				roots: nginxRoots(body),
 				...(defaults.length === 0 ? {} : { defaults }),
+				...(binds.length === 0 ? {} : { binds }),
 			};
 		}),
 	);
@@ -156,23 +226,47 @@ export function httpNameClash(
 	return defined.find((item) => item.file !== ownFile && names.includes(item.name)) ?? null;
 }
 
-/** `apache2ctl -S` / `httpd -S` → the site tuples (one per named vhost line, aliases folded in). */
+/**
+ * `apache2ctl -S` / `httpd -S` → the site tuples (one per named vhost line,
+ * aliases folded in). The address column: a single vhost's own line
+ * (`10.0.0.5:443 name (file:line)`), or the `10.0.0.5:443 is a NameVirtualHost`
+ * header its indented `port N namevhost` lines belong to (`binds`).
+ */
 export function apacheSites(output: string): SiteTuple[] {
 	const sites: SiteTuple[] = [];
-	for (const line of output.split('\n')) {
-		const vhost = /port (\d+) namevhost (\S+) \((.+?):\d+\)/.exec(line);
-		const fallback = /^\S*:(\d+)\s+(\S+) \((.+?):\d+\)/.exec(line.trim());
-		const alias = /^\s+alias (\S+)/.exec(line);
-		const match = vhost ?? fallback;
-		if (match)
-			sites.push({
-				file: match[3] as string,
-				names: [match[2] as string],
-				ports: [match[1] as string],
-			});
-		else if (alias && sites.length > 0) sites.at(-1)?.names.push(alias[1] as string);
-	}
+	const scan = { group: undefined as string | undefined };
+	for (const line of output.split('\n')) apacheLine(line, sites, scan);
 	return sites;
+}
+
+/** One `-S` line into `sites` (`scan.group`: the NameVirtualHost address the next namevhost lines belong to). */
+function apacheLine(line: string, sites: SiteTuple[], scan: { group: string | undefined }): void {
+	const header = /^(\S+):\d+\s+is a NameVirtualHost/.exec(line.trim());
+	const vhost = /port (\d+) namevhost (\S+) \((.+?):\d+\)/.exec(line);
+	const single = /^(\S*):(\d+)\s+(\S+) \((.+?):\d+\)/.exec(line.trim());
+	const alias = /^\s+alias (\S+)/.exec(line);
+	if (header) scan.group = header[1];
+	else if (vhost) sites.push(apacheSite(vhost[3], vhost[2], vhost[1], scan.group));
+	else if (single) {
+		scan.group = undefined;
+		sites.push(apacheSite(single[4], single[3], single[2], single[1]));
+	} else if (alias) sites.at(-1)?.names.push(alias[1] as string);
+}
+
+/** One Apache vhost tuple (`address`: its `-S` address column — a wildcard binds nothing). */
+function apacheSite(
+	file: string | undefined,
+	name: string | undefined,
+	port: string | undefined,
+	address: string | undefined,
+): SiteTuple {
+	const bind = bindOf(address, port as string);
+	return {
+		file: file as string,
+		names: [name as string],
+		ports: [port as string],
+		...(bind === null ? {} : { binds: [bind] }),
+	};
 }
 
 /**
