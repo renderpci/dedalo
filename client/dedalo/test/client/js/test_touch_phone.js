@@ -3,6 +3,7 @@
 /*eslint no-undef: "error"*/
 
 import { a11y } from '../../../core/common/js/a11y.js';
+import { ui } from '../../../core/common/js/ui.js';
 import * as touch_pick from '../../../core/common/js/touch_pick.js';
 import {
 	render_add_field_button,
@@ -152,6 +153,94 @@ describe('SEARCH_PHONE : tap-to-add replaces the field drag on a phone', () => {
 		assert.equal(typeof event.preventDefault, 'function');
 		assert.equal(typeof event.stopPropagation, 'function');
 		assert.equal(event.dataTransfer.getData('text/plain'), data);
+	});
+});
+
+describe('TOOLS_MENU : a tap must reach the row (dismissal cannot precede the tap)', () => {
+	// ui.add_tools_menu collapses a section list's tools into ONE 'Tools' trigger
+	// plus a native popover panel. It once dismissed the menu on a CAPTURE
+	// pointerdown. On a touch tap that fires BEFORE the browser's compatibility
+	// mousedown, so hiding the panel (display:none) makes that mousedown be
+	// hit-tested against whatever is under the finger, the row's own mousedown
+	// handler never runs, and the tool never opens — the mobile-dead Tools menu
+	// (verified in a real touch run: the tap's mousedown landed on a DIV, not the
+	// button). Dismissal must ride the row's OWN press.
+
+	const build_menu = () => {
+		const container = ui.create_dom_element({ element_type: 'div', parent: document.body });
+		ui.add_tools_menu(
+			{
+				type: 'section',
+				tipo: 'test3',
+				id: 'test_touch_phone_tools_menu',
+				tools: [
+					{ model: 'tool_export', name: 'tool_export', label: 'Export', icon: '/x.svg' },
+					{ model: 'tool_import', name: 'tool_import', label: 'Import', icon: '/x.svg' },
+					{ model: 'tool_cache', name: 'tool_cache', label: 'Cache', icon: '/x.svg' },
+				],
+			},
+			container,
+		);
+		return container;
+	};
+
+	it('renders one trigger and one sorted menuitem per tool', () => {
+		const container = build_menu();
+		try {
+			const trigger = container.querySelector('.tools_menu_button');
+			const panel = container.querySelector('.tools_menu_panel');
+			assert.ok(trigger && panel, 'trigger + panel render');
+			assert.equal(trigger.getAttribute('popovertarget'), panel.id);
+			assert.equal(panel.getAttribute('role'), 'menu');
+			const rows = [...panel.querySelectorAll(':scope > button[role="menuitem"]')];
+			assert.deepEqual(
+				rows.map((r) => r.textContent.trim()),
+				['Cache', 'Export', 'Import'],
+				'rows are sorted by label',
+			);
+			assert.equal(rows[0].dataset.tool, 'tool_cache', 'each row carries its tool name');
+		} finally {
+			container.remove();
+		}
+	});
+
+	it('a lone pointerdown on a row keeps the menu open (it precedes the tap mousedown)', () => {
+		const container = build_menu();
+		try {
+			const panel = container.querySelector('.tools_menu_panel');
+			panel.showPopover();
+			assert.equal(panel.matches(':popover-open'), true, 'the panel opens');
+
+			panel.querySelector('button[role="menuitem"]').dispatchEvent(
+				new PointerEvent('pointerdown', { bubbles: true, pointerType: 'touch', cancelable: true }),
+			);
+
+			assert.equal(
+				panel.matches(':popover-open'),
+				true,
+				'a pointerdown must not dismiss: it precedes the compatibility mousedown that opens the tool',
+			);
+		} finally {
+			const panel = container.querySelector('.tools_menu_panel');
+			if (panel?.matches(':popover-open')) panel.hidePopover();
+			container.remove();
+		}
+	});
+
+	it('a mousedown on the panel background keeps it open (only a row dismisses)', () => {
+		const container = build_menu();
+		try {
+			const panel = container.querySelector('.tools_menu_panel');
+			panel.showPopover();
+
+			panel.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+
+			assert.equal(panel.matches(':popover-open'), true);
+		} finally {
+			const panel = container.querySelector('.tools_menu_panel');
+			if (panel?.matches(':popover-open')) panel.hidePopover();
+			container.remove();
+		}
 	});
 });
 

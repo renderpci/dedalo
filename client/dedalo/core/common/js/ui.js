@@ -2354,16 +2354,22 @@ export const ui = {
 			panel.setAttribute('role', 'menu')
 			for (const item of listed) {
 				item.tool_button.setAttribute('role', 'menuitem')
+				// Dismissal rides the SAME press that opens the tool, never an
+				// earlier pointerdown. Hiding the panel early (display:none) makes
+				// a touch tap's compatibility mousedown be hit-tested against
+				// whatever is now under the finger, so the row handler never runs
+				// and the tool never opens — the mobile-dead menu. The row's own
+				// mousedown handler is registered first (build_section_tool_button),
+				// so the tool opens and THEN the menu closes; a mousedown that
+				// stops propagation still reaches this same-element listener. The
+				// keyboard path below dispatches this same mousedown.
+				item.tool_button.addEventListener('mousedown', () => panel.hidePopover())
 				panel.appendChild(item.tool_button)
 			}
-			// Dismissal, not activation: any pointer press on a row closes the
-			// menu. Tool buttons open on mousedown and stop its propagation, so
-			// close on the earlier pointerdown, in the CAPTURE phase (the row
-			// still receives its mousedown). The keyboard path closes itself below.
-			panel.addEventListener('pointerdown', () => panel.hidePopover(), true)
 			// Keyboard: section tool buttons open on mousedown only, which Enter /
 			// Space never fire — route them to the same mousedown so a menu row
-			// is operable from the keyboard. Arrow keys move between rows. Handled
+			// is operable from the keyboard (the row's mousedown listener above
+			// then closes the menu). Arrow keys move between rows. Handled
 			// keys stop here: page.js binds document-level Enter (open/run the
 			// section search) and Escape (blur) that must not fire inside the menu.
 			panel.addEventListener('keydown', (e) => {
@@ -2372,7 +2378,6 @@ export const ui = {
 				if ((e.key==='Enter' || e.key===' ') && index!==-1) {
 					e.preventDefault()
 					e.stopPropagation()
-					panel.hidePopover()
 					rows[index].dispatchEvent(new MouseEvent('mousedown', { bubbles : true }))
 				} else if (e.key==='ArrowDown' || e.key==='ArrowUp') {
 					e.preventDefault()
