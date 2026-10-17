@@ -19434,36 +19434,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   width: 100%;
   padding: 0px;
 }
-.area_thesaurus > .buttons_container > .show_other_buttons_button,
-.area_ontology > .buttons_container > .show_other_buttons_button {
-  height: 2.2rem;
-  transform: rotate(90deg);
-  width: 1rem;
-  padding: 12px;
-}
-.area_thesaurus > .buttons_container > .show_other_buttons_button:before,
-.area_ontology > .buttons_container > .show_other_buttons_button:before {
-  content: attr(data-label);
-  display: block;
-  transform: rotate(-90deg);
-  margin-top: 9rem;
-  white-space: nowrap;
-  padding-right: 1.1rem;
-}
-.area_thesaurus > .buttons_container > .show_other_buttons_button.up:before,
-.area_ontology > .buttons_container > .show_other_buttons_button.up:before {
-  display: none;
-}
-.area_thesaurus > .buttons_container > .show_other_buttons_button:focus,
-.area_ontology > .buttons_container > .show_other_buttons_button:focus {
-  outline: none;
-}
-@media screen and (max-width: 600px) {
-  .area_thesaurus > .buttons_container > .show_other_buttons_button:before,
-  .area_ontology > .buttons_container > .show_other_buttons_button:before {
-    display: none;
-  }
-}
 .area_thesaurus > .search_container,
 .area_ontology > .search_container {
   position: relative;
@@ -19950,20 +19920,6 @@ body.inspector_resizing {
 .section.list > .buttons_container > .search_buttons_container {
   display: flex;
 }
-@media screen and (max-width: 600px) {
-  .section.list > .buttons_container {
-    flex-wrap: wrap;
-    gap: 0.25rem;
-  }
-  .section.list > .buttons_container > .search_buttons_container {
-    flex-wrap: wrap;
-    min-width: 0;
-    max-width: 100%;
-  }
-  .section.list > .buttons_container .semantic_pinned_chip {
-    max-width: 100%;
-  }
-}
 .section.list > .buttons_container > .other_buttons_block {
   display: flex;
   flex-wrap: wrap;
@@ -20030,6 +19986,37 @@ body.inspector_resizing {
 @media screen and (max-width: 600px) {
   .section.list > .buttons_container > .show_other_buttons_button:before {
     display: none;
+  }
+}
+@media screen and (max-width: 600px) {
+  .section.list > .buttons_container {
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+  .section.list > .buttons_container > .search_buttons_container {
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .section.list > .buttons_container > .other_buttons_block {
+    order: 2;
+  }
+  .section.list > .buttons_container > .show_other_buttons_button {
+    order: 1;
+    flex: 0 0 auto;
+    transform: none;
+    width: 3rem;
+    height: 3rem;
+    padding: 0;
+    justify-content: center;
+  }
+  .section.list > .buttons_container > .show_other_buttons_button:after {
+    position: static;
+    margin: 0;
+  }
+  .section.list > .buttons_container .semantic_pinned_chip {
+    max-width: 100%;
   }
 }
 .section.list > .paginator_container {

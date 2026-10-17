@@ -300,25 +300,6 @@ body.inspector_resizing {
 				display: flex;
 			}
 
-			// phone: the row wraps. Unwrapped, a semantic-search pin chip
-			// (render_semantic.js) joined Buscar / Mostrar todos on one line and
-			// widened the whole list page to 415px — every card stretched with it
-			// and the fixed-edge launchers (error-report tab, menu buttons) left
-			// the screen.
-			@media screen and (max-width: @width_break_point_phone) {
-				flex-wrap: wrap;
-				gap: 0.25rem;
-
-				>.search_buttons_container {
-					flex-wrap: wrap;
-					min-width: 0;
-					max-width: 100%;
-				}
-				.semantic_pinned_chip {
-					max-width: 100%;
-				}
-			}
-
 			// other_buttons_block
 			>.other_buttons_block {
 				display: flex;
@@ -407,6 +388,67 @@ body.inspector_resizing {
 					&:before {
 						display: none;
 					}
+				}
+			}
+
+			// phone: the row wraps. Unwrapped, a semantic-search pin chip
+			// (render_semantic.js) joined Buscar / Mostrar todos on one line and
+			// widened the whole list page to 415px — every card stretched with it
+			// and the fixed-edge launchers (error-report tab, menu buttons) left
+			// the screen.
+			//
+			// The actions block is `width:100%`, so once it wraps it owns a whole
+			// line. The disclosure toggle is the LAST flex item, so it used to be
+			// pushed onto a THIRD line, alone and hard LEFT (space-between with one
+			// item) — and it jumped back to the right edge when collapsed. On phone
+			// the toggle therefore keeps the SEARCH row's right edge and the block
+			// keeps its own full row underneath: `order` re-sequences the two
+			// without touching DOM order (desktop is unaffected). The rotated thin
+			// tab becomes a real un-rotated 44px chevron button whose direction is
+			// honest (base glyph points down = reveal below; `.up` flips to hide),
+			// with the label still hidden (title + a11y name carry it).
+			//
+			// (!) This block MUST stay AFTER the base rules above it: a media query
+			// adds no specificity, so at equal specificity the LATER declaration
+			// wins — declared earlier, `transform: none`/`width`/`padding: 0` here
+			// would silently lose to the base `rotate(90deg)`/`1rem`/`12px` and the
+			// toggle would render as the old rotated tab in its new position.
+			@media screen and (max-width: @width_break_point_phone) {
+				flex-wrap: wrap;
+				gap: 0.25rem;
+
+				>.search_buttons_container {
+					flex-wrap: wrap;
+					flex: 1 1 auto;
+					min-width: 0;
+					max-width: 100%;
+				}
+
+				>.other_buttons_block {
+					order: 2;
+				}
+
+				>.show_other_buttons_button {
+					order: 1;
+					flex: 0 0 auto;
+					transform: none;
+					// 3rem, not 2.75rem: the phone tier's root font-size is ~15px,
+					// so 2.75rem renders 41px — under the 44px touch target. 3rem
+					// renders 45px at that root (48 at 16px).
+					width: 3rem;
+					height: 3rem;
+					padding: 0;
+					justify-content: center;
+
+					// the base glyph is absolutely placed at the right edge; flow it
+					// so the button's own flex centring positions it
+					&:after {
+						position: static;
+						margin: 0;
+					}
+				}
+				.semantic_pinned_chip {
+					max-width: 100%;
 				}
 			}
 		}

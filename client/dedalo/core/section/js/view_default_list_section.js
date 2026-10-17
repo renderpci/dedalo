@@ -492,10 +492,12 @@ const sync_pinned_chip = function(self) {
 *     ├─ search_buttons_container
 *     │    ├─ filter_button         (toggles the search panel via event_manager)
 *     │    └─ show_all_button       (resets filters by calling self.filter.show_all)
-*     ├─ other_buttons_block        (hidden by default; toggled by show_other_buttons_button)
+*     ├─ other_buttons_block        (hidden by default; toggled by show_other_buttons_button;
+*     │    │                         carries an id the toggle points aria-controls at)
 *     │    ├─ <dynamic action buttons from self.context.buttons>
 *     │    └─ <tool buttons via ui.add_tools_menu: pinned + one Tools popover>
-*     └─ show_other_buttons_button  (collapse/expand toggle with persistent state)
+*     └─ show_other_buttons_button  (collapse/expand toggle with persistent state;
+*                                    aria-controls + aria-expanded report the block)
 *
 * Button models handled in the action button loop:
 *   'button_new'              – publishes 'new_section_{id}' to create a new record.
@@ -610,10 +612,12 @@ const get_buttons = function(self) {
 			return fragment
 		}
 
-	// other_buttons_block
+	// other_buttons_block. Synthesized id: the disclosure toggle points its
+	// aria-controls at it (the block is what the toggle shows/hides).
 		const other_buttons_block = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'other_buttons_block hide',
+			id				: a11y.generate_id('other_buttons_block'),
 			parent			: buttons_container
 		})
 
@@ -716,6 +720,10 @@ const get_buttons = function(self) {
 		// a11y: icon-only toggle — the title is the name the operator reads on
 		// hover, so it is the name the accessibility tree gets too.
 		a11y.set_label(show_other_buttons_button, show_other_buttons_label)
+		// disclosure contract: the toggle names the region it controls and
+		// reports its state (default_state is 'closed' below).
+		show_other_buttons_button.setAttribute('aria-controls', other_buttons_block.id)
+		a11y.set_expanded(show_other_buttons_button, false)
 		show_other_buttons_button.addEventListener('click', function(e) {
 			e.stopPropagation()
 		})
@@ -725,8 +733,14 @@ const get_buttons = function(self) {
 			toggler				: show_other_buttons_button,
 			container			: other_buttons_block,
 			collapsed_id		: 'section_other_buttons_block',
-			collapse_callback	: () => {show_other_buttons_button.classList.remove('up')},
-			expose_callback		: () => {show_other_buttons_button.classList.add('up')},
+			collapse_callback	: () => {
+				show_other_buttons_button.classList.remove('up')
+				a11y.set_expanded(show_other_buttons_button, false)
+			},
+			expose_callback		: () => {
+				show_other_buttons_button.classList.add('up')
+				a11y.set_expanded(show_other_buttons_button, true)
+			},
 			default_state		: 'closed'
 		})
 

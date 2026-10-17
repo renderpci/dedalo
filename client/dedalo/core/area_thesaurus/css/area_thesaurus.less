@@ -21,48 +21,16 @@
 			white-space: nowrap;
 		}
 
-		// other_buttons_block
+		// other_buttons_block. This area renders its actions through
+		// ui.add_tools and NEVER creates the collapse toggle, so it carries no
+		// `.show_other_buttons_button` rules (the rotated-tab copy that used to
+		// live here styled a node no code produced).
 		>.other_buttons_block {
 			display: flex;
 			flex-wrap: wrap;
 			justify-content: flex-end;
 			width: 100%;
 			padding: 0px;
-		}
-
-		// button show_other_buttons_button
-		>.show_other_buttons_button {
-			height: 2.2rem;
-			transform: rotate(90deg);
-			width: 1rem;
-			padding: 12px;
-
-			&:before {
-				// content: 'Toggle buttons';
-				content: attr(data-label);
-				display: block;
-				transform: rotate(-90deg);
-				margin-top: 9rem;
-				white-space: nowrap;
-				padding-right: 1.1rem;
-			}
-
-			&.up {
-				&:before {
-					display: none;
-				}
-			}
-			&:focus {
-				outline: none;
-			}
-
-			// phone: the rotated label overprints the search buttons (see
-			// section.less). Arrow only; title + a11y name keep the label.
-			@media screen and (max-width: @width_break_point_phone) {
-				&:before {
-					display: none;
-				}
-			}
 		}
 	}
 

@@ -55,6 +55,7 @@
 	import {get_instance} from '../../common/js/instances.js'
 	import {clone, object_to_url_vars, group_objects_by, same_section_id} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {a11y} from '../../common/js/a11y.js'
 	import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {open_tool} from '../../../core/tools_common/js/tool_common.js'
 	import {
@@ -447,10 +448,12 @@ const get_buttons = function(self) {
 			return fragment
 		}
 
-	// other_buttons_block
+	// other_buttons_block. Synthesized id: the disclosure toggle points its
+	// aria-controls at it (the block is what the toggle shows/hides).
 		const other_buttons_block = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'other_buttons_block hide',
+			id				: a11y.generate_id('other_buttons_block'),
 			parent			: buttons_container
 		})
 
@@ -533,6 +536,13 @@ const get_buttons = function(self) {
 			},
 			parent			: buttons_container
 		})
+		// a11y: icon-only toggle — the title is the name the operator reads on
+		// hover, so it is the name the accessibility tree gets too.
+		a11y.set_label(show_other_buttons_button, show_other_buttons_label)
+		// disclosure contract: the toggle names the region it controls and
+		// reports its state (default_state is 'closed' below).
+		show_other_buttons_button.setAttribute('aria-controls', other_buttons_block.id)
+		a11y.set_expanded(show_other_buttons_button, false)
 		show_other_buttons_button.addEventListener('click', function(e) {
 			e.stopPropagation()
 		})
@@ -548,9 +558,11 @@ const get_buttons = function(self) {
 		})
 		function collapse() {
 			show_other_buttons_button.classList.remove('up')
+			a11y.set_expanded(show_other_buttons_button, false)
 		}
 		function expose() {
 			show_other_buttons_button.classList.add('up')
+			a11y.set_expanded(show_other_buttons_button, true)
 		}
 
 

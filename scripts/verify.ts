@@ -416,6 +416,7 @@ const TRIPWIRES = [
 	'test/unit/install_bootstrap_sh.test.ts',
 	'test/unit/term_by_tipo_label_guard.test.ts',
 	'test/unit/release_identity_separation_tripwire.test.ts',
+	'test/unit/section_toolbar_phone_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

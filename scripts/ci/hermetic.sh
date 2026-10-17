@@ -502,6 +502,9 @@ HERMETIC_TRIPWIRES=(
 	#     skips, named, without Postgres (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
 	test/unit/test_tooling_socket_native.test.ts
 	test/unit/install_bootstrap_sh.test.ts
+	# --- 2026-10-17 (section list toolbar, phone tier). DB-free: source scans of two
+	#     stylesheets and two client view modules, comments stripped; no import, no DOM.
+	test/unit/section_toolbar_phone_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

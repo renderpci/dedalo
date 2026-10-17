@@ -44,6 +44,20 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **Export: columns are added and reordered by tap on a phone**
+
+    The **Export** tool built its column list by dragging: a field dragged from the
+    available-fields list onto the *Active elements* list to add a column, and a
+    selected column dragged up or down to reorder it. A finger cannot drag, so on a
+    phone neither could be done at all — the tool opened, but its columns could not
+    be chosen.
+
+    On a touch screen each field in the available-fields list now carries a **+**
+    that adds it as a column on a tap, and every selected column carries **up / down**
+    buttons that move it in the list. Both do exactly what the drag did (a field
+    already added is pointed at rather than duplicated). On a computer nothing
+    changes: the drag is still the gesture there.
+
 - **On a phone, a drilled search field level shows its path**
 
     In the search **Fields** list, drilling into a link field (a portal) opens the target
@@ -102,6 +116,21 @@ Merged since the last release; these ship with the next one.
     closing a level is as easy as adding a field. The group bands between the rows
     ("Identification"…) take the same height, so the whole list is one rhythm. On a
     computer nothing changes.
+
+- **On a phone, the section list buttons and their show/hide arrow no longer overlap or jump around.**
+
+    The list toolbar of every section has a small arrow that shows or hides the row of
+    action buttons (New, Delete, Tools). On a phone the action row used to wrap onto its own
+    line and push that arrow onto a **third** line, alone and stuck to the left edge, while
+    the collapsed state kept it on the right of the search row — so the arrow jumped across
+    the screen as the row was shown or hidden.
+
+    Now the arrow keeps the right edge of the search row in both states, the action buttons
+    keep their own full row underneath, and the arrow is a normal (no longer rotated) button
+    that is big enough to tap comfortably. On a desktop nothing changes.
+
+    Screen readers also get the state of that button (`aria-expanded`) and the region it
+    controls (`aria-controls`), which they did not before.
 
 - **Tools on a phone use the phone's own spacing and header height; only part of the phone adjustments were reaching the screen.**
 
