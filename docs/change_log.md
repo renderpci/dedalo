@@ -67,7 +67,9 @@ Merged since the last release; these ship with the next one.
 
     The **Export presets** editor (and its Search twin) opens as the full-width
     sheet on a phone — maximum room for the form — while staying the small card on a
-    computer.
+    computer. And a saved preset is one tidy line in the panel on a phone — the
+    apply ring, the name, then Edit and Delete — instead of the desktop columns
+    squeezed to slivers with their labels stacked one letter per line.
 
 - **On a phone, a drilled search field level shows its path**
 

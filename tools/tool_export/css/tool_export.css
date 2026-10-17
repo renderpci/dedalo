@@ -462,6 +462,49 @@
     pointer-events: auto;
   }
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record {
+    display: flex;
+    align-items: center;
+    column-gap: 0;
+    min-height: 48px;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 0;
+    flex: 1 1 auto;
+    height: auto;
+    padding: 0 0.4rem;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column:before {
+    display: none;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_edit,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_delete {
+    flex: 0 0 2.75rem;
+    justify-content: center;
+    padding: 0;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_edit > .button.icon,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_delete > .button.icon {
+    width: 100%;
+    height: 100%;
+    min-height: 44px;
+    margin: 0;
+    -webkit-mask-size: 1.4rem;
+    mask-size: 1.4rem;
+    -webkit-mask-position: center;
+    mask-position: center;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body .section_record > .column_apply_preset {
+    flex: 0 0 2.75rem;
+    justify-content: center;
+    padding: 0;
+    min-height: 44px;
+  }
+}
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config .section_label {
   font-size: 1.25rem;
   line-height: 1.5rem;
