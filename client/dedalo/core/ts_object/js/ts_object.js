@@ -2275,7 +2275,10 @@ ts_object.prototype.show_indexations = async function(options) {
 *   3. open_search_branches    — opens branches top-down so children are always
 *      attached before their own children are rendered (no detached-node races).
 *   4. hilite_search_results   — applies 'element_hilite', scrolls to first match,
-*      publishes a notification.
+*      publishes a notification. AWAITED: resolves only after the hilite styles
+*      are painted and the scroll decision is committed, so the caller's
+*      'loading' state (area_thesaurus navigate) covers the whole visual
+*      sequence and is removed in sync with the result.
 * Orphaned nodes (no ancestor in the data set) are logged and notified.
 * (!) Method name in original was 'PARSER_SEARCH_RESULT' — corrected in doc-block;
 * the function identifier parse_search_result is unchanged.
@@ -2339,8 +2342,11 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 	// a child branch only opens after its parent rendered it)
 	await open_search_branches(node_info, to_open)
 
-	// 4. Hilite found nodes and scroll to the first one
-	hilite_search_results(node_info, hilite_set, to_hilite.length)
+	// 4. Hilite found nodes and scroll to the first one.
+	// (!) Awaited on purpose: the 'loading' state of the calling navigate()
+	// stays visible until the hilite is painted and the scroll decision is
+	// taken, instead of disappearing before the user sees any result.
+	await hilite_search_results(node_info, hilite_set, to_hilite.length)
 
 	// debug
 	if(SHOW_DEBUG===true) {
@@ -2598,52 +2604,71 @@ const open_search_branches = async function(node_info, to_open) {
 * Phase 4 of parse_search_result.
 * Applies 'element_hilite' to term_node of each matched instance using
 * dd_request_idle_callback (deferred after the expensive branch rendering
-* to avoid blocking). Scrolls to the first match via scroll_to_node and
-* publishes a notification with the hit count.
+* to avoid blocking). Scrolls to the first match via scroll_to_node (which
+* skips the scroll when the node is already in view) and publishes a
+* notification with the hit count.
+* The returned Promise resolves AFTER the hilite styles have been painted
+* (one requestAnimationFrame) and the scroll decision is committed. Callers
+* showing a 'loading' state (area_thesaurus navigate) await it so the state
+* is removed in sync with the visual result.
 * @param {Map} node_info - Map built by build_search_instances.
 * @param {Set<string>} hilite_set - Set of ts_id strings to highlight.
 * @param {number} total_found - Total number of search matches (for notification).
-* @returns {void}
+* @returns {Promise<boolean>} true once the hilite is committed.
 */
 const hilite_search_results = function(node_info, hilite_set, total_found) {
 
-	// Set node to scroll. Used to scroll page when is needed.
-	let node_to_scroll = null
+	return new Promise((resolve) => {
 
-	dd_request_idle_callback(()=>{
+		dd_request_idle_callback(async () => {
 
-		for (const ts_id of hilite_set) {
+			// Set node to scroll. Used to scroll page when is needed.
+			let node_to_scroll = null
 
-			const info = node_info.get(ts_id)
-			if (!info) {
-				continue
-			}
-			const instance = get_instance_by_id(info.key)
-			if (!instance || !instance.term_node) {
-				continue
-			}
+			for (const ts_id of hilite_set) {
 
-			if(SHOW_DEBUG===true) {
-				console.log('Hiliting instance:', ts_id, instance);
-			}
-			requestAnimationFrame(() => {
+				const info = node_info.get(ts_id)
+				if (!info) {
+					continue
+				}
+				const instance = get_instance_by_id(info.key)
+				if (!instance || !instance.term_node) {
+					continue
+				}
+
+				if(SHOW_DEBUG===true) {
+					console.log('Hiliting instance:', ts_id, instance);
+				}
+				// already inside an idle callback: the class application will be
+				// painted in the next frame without a per-node rAF deferral
 				instance.hilite_element(instance.term_node, false)
-			});
 
-			if (!node_to_scroll) {
-				// scroll page to first found element
-				node_to_scroll = instance.term_node
+				if (!node_to_scroll) {
+					// scroll page to first found element
+					node_to_scroll = instance.term_node
+				}
+			}
+
+			// wait one paint frame: the 'element_hilite' styles are on screen
+			// before the caller removes its 'loading' state
+			await new Promise((r) => requestAnimationFrame(() => r(true)))
+
+			// scroll page to first found element (scroll_to_node itself skips
+			// the scroll when the node is already fully visible)
+			if (node_to_scroll) {
 				when_in_dom(node_to_scroll, ()=> {
 					scroll_to_node(node_to_scroll)
 				});
 			}
-		}
 
-		// Display result info
-		event_manager.publish('notification', {
-			msg			: `Displaying ${total_found} records`,
-			type		: total_found > 0 ? 'success' : 'warning',
-			remove_time	: total_found == 1 ? 1000 : 6000
+			// Display result info
+			event_manager.publish('notification', {
+				msg			: `Displaying ${total_found} records`,
+				type		: total_found > 0 ? 'success' : 'warning',
+				remove_time	: total_found == 1 ? 1000 : 6000
+			})
+
+			resolve(true)
 		})
 	})
 }//end hilite_search_results
@@ -2652,12 +2677,17 @@ const hilite_search_results = function(node_info, hilite_set, total_found) {
 
 /**
 * SCROLL_TO_NODE
-* Scrolls the viewport to center the given DOM node using an
-* IntersectionObserver + setInterval retry strategy. Stops when the element
-* reaches >5% viewport visibility, when the user manually scrolls (wheel
-* event detected), or after MAX_SCROLL_ATTEMPTS (10) retries at 350 ms
-* intervals. A 10-second absolute timeout disconnects the observer as a
-* safety fallback.
+* Scrolls the viewport to center the given DOM node ONLY when it is out of
+* view. When the node is already fully visible nothing is scrolled (a single
+* delayed verification covers late layout shifts from slow tree parses: it
+* scrolls again only if the node is no longer visible).
+* When a scroll is needed it uses an IntersectionObserver + setInterval retry
+* strategy. Stops when the element reaches >5% viewport visibility, when the
+* user manually scrolls (wheel event detected), or after MAX_SCROLL_ATTEMPTS
+* (10) retries at 350 ms intervals. A 10-second absolute timeout disconnects
+* the observer as a safety fallback.
+* Scrolling is vertical (element centered); the horizontal axis is moved only
+* when the node lies outside the viewport width.
 * The inner center_with_scroll_to helper computes absolute scroll coordinates
 * to center the element, used in preference to scrollIntoView for finer
 * positioning control.
@@ -2668,6 +2698,16 @@ const scroll_to_node = (node_to_scroll) => {
 
 	let scrolled = false
 
+	// fully visible check. A node that already fits the viewport height does
+	// not need any scroll (prevents unnecessary page movement).
+	const is_fully_visible = (el) => {
+		const rect = el.getBoundingClientRect()
+		if (rect.height <= 0) {
+			return false
+		}
+		return rect.top >= 0 && rect.bottom <= window.innerHeight
+	}
+
 	const center_with_scroll_to = (el, offsetTop = 0)=> {
 		const rect   = el.getBoundingClientRect(); // position relative to viewport
 		const scrollTop  = window.pageYOffset || document.documentElement.scrollTop;
@@ -2676,8 +2716,12 @@ const scroll_to_node = (node_to_scroll) => {
 		// Desired Y coordinate of the element’s top edge after scrolling
 		const desiredY = scrollTop + rect.top - (window.innerHeight / 2) + (rect.height / 2) + offsetTop;
 
-		// Desired X coordinate – center horizontally
-		const desiredX = scrollLeft + rect.left - (window.innerWidth / 2) + (rect.width / 2);
+		// Desired X coordinate – moved ONLY when the node is outside the
+		// viewport width, to prevent unnecessary horizontal shifts.
+		const out_of_view_x = (rect.left < 0 || rect.right > window.innerWidth)
+		const desiredX = out_of_view_x
+			? scrollLeft + rect.left - (window.innerWidth / 2) + (rect.width / 2)
+			: scrollLeft
 
 		window.scrollTo({
 			top:   desiredY,
@@ -2694,12 +2738,18 @@ const scroll_to_node = (node_to_scroll) => {
 	let user_scroll = false
 	const wheel_handler = () => {
 		user_scroll = true
-		window.removeEventListener('wheel', wheel_handler, { passive: true });
 	}
 	window.addEventListener('wheel', wheel_handler, { passive: true });
 
+	// cleanup helper. The wheel listener is removed in EVERY exit path
+	// (success, user scroll, max attempts, timeout, already-visible).
+	const cleanup_wheel = () => {
+		window.removeEventListener('wheel', wheel_handler, { passive: true });
+	}
+
 	const scroll_node = () => {
 		if (user_scroll) {
+			cleanup_wheel()
 			return
 		}
 		// node_to_scroll.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" })
@@ -2709,6 +2759,20 @@ const scroll_to_node = (node_to_scroll) => {
 	let scroll_interval = null;
 	let scroll_attempts = 0;
 	const MAX_SCROLL_ATTEMPTS = 10; // Prevent infinite scrolling
+
+	// already fully visible case: no scroll needed now. A single delayed
+	// verification protects against late layout shifts (slow tree parses)
+	// moving the node out of sight: it scrolls only when really needed
+	// instead of the previous unconditional re-centering.
+	if (is_fully_visible(node_to_scroll)) {
+		cleanup_wheel()
+		setTimeout(() => {
+			if (!is_fully_visible(node_to_scroll)) {
+				center_with_scroll_to(node_to_scroll, 0)
+			}
+		}, 2000)
+		return
+	}
 
 	// Create observer
 	const observer = new IntersectionObserver((entries) => {
@@ -2724,8 +2788,8 @@ const scroll_to_node = (node_to_scroll) => {
 					if (scroll_interval) {
 						clearInterval(scroll_interval);
 						scroll_interval = null;
-					}				            					            	// try again to prevent slow tree parses
-					setTimeout(scroll_node, 2000)
+					}
+					cleanup_wheel()
 				}
 			} else {
 				// console.log('Element is not visible:', entry.target);
@@ -2745,6 +2809,7 @@ const scroll_to_node = (node_to_scroll) => {
 						console.warn('Max scroll attempts reached, giving up');
 						clearInterval(scroll_interval);
 						observer.disconnect();
+						cleanup_wheel()
 						return;
 					}
 
@@ -2770,6 +2835,7 @@ const scroll_to_node = (node_to_scroll) => {
 		if (scroll_interval) {
 			clearInterval(scroll_interval);
 		}
+		cleanup_wheel()
 		if (!scrolled) {
 			console.log('Scroll operation timed out after 10 seconds');
 		}

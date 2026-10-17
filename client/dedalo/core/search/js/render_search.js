@@ -652,14 +652,21 @@ render_search.prototype.render_search_buttons = function(){
 			document.activeElement.blur()
 			// exec decoupled to allow UI to update before search starts
 			dd_request_idle_callback(async ()=>{
-				// exec search command (return promise resolved as bool)
-				await self.exec_search()
-				// toggle filter container if there are results
-				const caller = self.caller
-				if (!caller) return
-				const entries = caller.data?.entries || []
-				if(entries.length > 0) {
-					toggle_search_panel(self) // toggle to open from default state close
+				// busy feedback on the button while the search pipeline runs
+				// (the generic .loading style dims it and blocks re-clicks)
+				submit_button.classList.add('loading')
+				try {
+					// exec search command (return promise resolved as bool)
+					await self.exec_search()
+					// toggle filter container if there are results
+					const caller = self.caller
+					if (!caller) return
+					const entries = caller.data?.entries || []
+					if(entries.length > 0) {
+						toggle_search_panel(self) // toggle to open from default state close
+					}
+				} finally {
+					submit_button.classList.remove('loading')
 				}
 			})
 		}

@@ -44,6 +44,19 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Ontology and thesaurus search: the result highlight and the loading state are now in sync.**
+
+    Searching in the Ontology and Thesaurus areas showed a confusing sequence: the
+    loading state ended before the results were highlighted, so the page looked
+    finished and only afterwards the matched term popped in and the page scrolled,
+    sometimes re-centering even when the term was already on screen.
+
+    Now the whole sequence is one coherent transition: the loading dim lasts until
+    the matched terms are highlighted, the page scrolls only when the first match
+    is out of view (and never shifts sideways without need), a brief pulse marks
+    the highlighted term even when no scroll happens, and the search panel's Apply
+    button shows a busy state while the search runs.
+
 - **The autocomplete options panel no longer clips its section list**
 
     In a search or edit field that offers an autocomplete, the gear panel that lists

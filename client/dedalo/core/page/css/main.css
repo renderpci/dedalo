@@ -21122,6 +21122,15 @@ body.inspector_resizing {
   margin-left: -0.33rem;
   padding-right: 0.33rem;
   margin-right: -0.33rem;
+  animation: element_hilite_pulse 1.5s ease-out 1;
+}
+@keyframes element_hilite_pulse {
+  0% {
+    box-shadow: 0 0 0 6px var(--color_hilite_yellow);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+  }
 }
 .wrap_ts_object > .content_data > .elements_container .button_show_indexations,
 .wrap_ts_object > .content_data > .elements_container .default {

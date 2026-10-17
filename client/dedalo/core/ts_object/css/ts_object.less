@@ -408,6 +408,18 @@
 				margin-left: -0.33rem;
 				padding-right: 0.33rem;
 				margin-right: -0.33rem;
+				// brief ring that fades out. Marks where the search landed even
+				// when the node was already in view and no page scroll happened
+				animation: element_hilite_pulse 1.5s ease-out 1;
+			}
+
+			@keyframes element_hilite_pulse {
+				0% {
+					box-shadow: 0 0 0 6px @color_hilite_yellow;
+				}
+				100% {
+					box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+				}
 			}
 
 			// indexations
