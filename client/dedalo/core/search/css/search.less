@@ -1331,6 +1331,34 @@
 			.list_container:not(.target_list_container):has(~ .target_list_container:not(:empty)) {
 				display: none;
 			}
+
+			// Level header of a DRILLED level: it carries the navigation PATH
+			// ("People / Projects") — the context the replaced parent columns used
+			// to give. The deeper terms are the meaningful ones, so an overlong path
+			// ellipsizes on the LEFT (…/Level two/Projects) instead of dropping them.
+			ul li.section_bar_label.deep_path {
+				padding-right: 1.6rem; // room for the ×
+				>.section_bar_full_path {
+					display: block;
+					overflow: hidden;
+					white-space: nowrap;
+					text-overflow: ellipsis;
+					direction: rtl;    // puts the ellipsis on the LEFT
+					text-align: left;  // keeps the visible tail left-aligned
+				}
+				>.section_bar_section_name {
+					display: none; // the standalone name is the desktop label
+				}
+				// the × is an ::after float in layout.less; take it out of the text
+				// flow so the single-line path can ellipsize up to it
+				&:after {
+					position: absolute;
+					right: 0.5rem;
+					top: 50%;
+					transform: translateY(-50%);
+					float: none;
+				}
+			}
 		}
 
 		// thesaurus TYPE selector

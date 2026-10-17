@@ -72,6 +72,11 @@
 *   `target_section_tipo` for portal/autocomplete linkage.
 * @param {Array|null} [options.ar_components_exclude=null] - Optional list of component
 *   tipos to suppress; forwarded verbatim to recursive calls.
+ * @param {Array<string>} [options.ar_section_path=[]] - Ancestor SECTION labels, root first,
+ *   nearest last, accumulated through the recursive portal drill-downs (`[]` at the root).
+ *   Each level's bar renders the path (e.g. "People / Projects") in a `.section_bar_full_path`
+ *   span. The phone layout shows it (a drilled level REPLACES its parents there, so the path
+ *   is the only remaining context); the desktop layout keeps the plain level name.
 * @returns {Array} Flat array of all `<li>` HTMLElement nodes created for individual
 *   components (excludes section/group header nodes).
 */
@@ -86,6 +91,7 @@ export const render_components_list = function(options) {
 		const path					= options.path
 		const section_elements		= options.section_elements
 		const ar_components_exclude = options.ar_components_exclude || null
+		const ar_section_path		= options.ar_section_path || []
 
 	// clean target_div
 		target_div.replaceChildren()
@@ -116,6 +122,10 @@ export const render_components_list = function(options) {
 		})
 
 	let section_group
+	// this level's section label and its full ancestor path (root → here), used by the
+	// section bar header and threaded down into the recursive portal drill-downs.
+	let section_label
+	let ar_path_labels = ar_section_path
 
 	const len = section_elements.length
 	for (let i = 0; i < len; i++) {
@@ -125,15 +135,35 @@ export const render_components_list = function(options) {
 
 			case element.model==='section': {
 				// section title bar
-				// The `close_hide` class is added only at root depth (path.length===0)
-				// because nested portal calls carry a non-empty path and the bar should
-				// remain visible in those contexts.
+				section_label = element.label || element.tipo
+				// Full navigation path (ancestors + this level). A drilled level REPLACES its
+				// parents on a phone, so this path is the user's only context there.
+				ar_path_labels = ar_section_path.concat([section_label])
 				const section_bar = ui.create_dom_element({
 					element_type	: 'li',
 					class_name		: 'section_bar_label',
-					inner_html		: element.label || element.tipo,
 					parent			: list_container
 				})
+				if (ar_section_path.length > 0) {
+					// deep level: the path is rendered on the phone (see search.less)
+					section_bar.classList.add('deep_path')
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'section_bar_full_path',
+						inner_html		: ar_path_labels.map(strip_tags).join(' / '),
+						parent			: section_bar
+					})
+				}
+				// the level's own name (plain single label: desktop + root)
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'section_bar_section_name',
+					inner_html		: section_label,
+					parent			: section_bar
+				})
+				// The `close_hide` class is added only at root depth (path.length===0)
+				// because nested portal calls carry a non-empty path and the bar should
+				// remain visible in those contexts.
 				if (path.length===0) {
 					section_bar.classList.add('close_hide')
 				}
@@ -243,7 +273,8 @@ export const render_components_list = function(options) {
 									section_tipo		: target_section,
 									target_div			: target_list_container,
 									path				: calculated_component_path,
-									section_elements	: current_section_elements
+									section_elements	: current_section_elements,
+									ar_section_path		: ar_path_labels
 								})
 							// Reset active in current wrap
 							// Clear 'active' on any previously selected item in the same
@@ -278,6 +309,18 @@ export const render_components_list = function(options) {
 
 	return ar_components
 }//end render_components_list
+
+
+
+/**
+* STRIP_TAGS
+* Plain text of an ontology label: labels may carry markup (rich-text tool
+* definitions), which must not leak into the joined breadcrumb string.
+*
+* @param {string} label
+* @returns {string}
+*/
+const strip_tags = (label) => String(label ?? '').replace(/<[^>]*>/g, '') //end strip_tags
 
 
 

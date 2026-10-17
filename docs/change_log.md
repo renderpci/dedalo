@@ -42,6 +42,17 @@ Merged since the last release; these ship with the next one.
 
     Now: the calendar is built into the component and speaks the same date model the catalogue stores. The year field accepts any signed year (with a CE/BCE toggle and decade steps), the month and weekday names follow the interface language, and the footer commits the precision you need — the bare year (`-205`), the year and month (`04/2022`) or a full day. The picker is fully keyboard driven (arrows, PageUp/PageDown, Home/End, Escape; the calendar button is a tab stop, and Alt+ArrowDown opens it from the field), its touch targets grow on phones and tablets, and it follows the light and dark themes. In the search panel the calendar button appears on the field's top-left corner when the field takes focus, a range's two dates share the row in full and its `<>` hangs under the gap between them, so the card keeps the same height as every other search field. The separate clock picker now uses the operating system's own time wheels on touch devices.
 
+#### Added
+
+- **On a phone, a drilled search field level shows its path**
+
+    In the search **Fields** list, drilling into a link field (a portal) opens the target
+    section as a new level. On a phone each level replaces the previous one, so the list
+    header now shows where you are: the section path, e.g. `People / Projects`, instead of
+    only the current section name. When the path is too long for the header it is shortened
+    on the **left** (`… / Level two / Projects`), so the deepest — most relevant — terms stay
+    readable. On a desktop, where the levels stay side by side, the header is unchanged.
+
 #### Fixed
 
 - **Ontology and thesaurus search: the result highlight and the loading state are now in sync.**

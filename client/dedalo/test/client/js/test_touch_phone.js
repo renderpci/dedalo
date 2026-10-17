@@ -9,6 +9,7 @@ import {
 	render_add_field_button,
 	synthetic_drop_event,
 } from '../../../core/search/js/search_phone.js';
+import { render_components_list } from '../../../core/common/js/render_common.js';
 import { render_pane_switch } from '../../../core/tools_common/js/pane_switch.js';
 import { render_phone_reorder } from '../../../core/tools_common/js/phone_reorder.js';
 
@@ -244,6 +245,105 @@ describe('TOOLS_MENU : a tap must reach the row (dismissal cannot precede the ta
 			const panel = container.querySelector('.tools_menu_panel');
 			if (panel?.matches(':popover-open')) panel.hidePopover();
 			container.remove();
+		}
+	});
+});
+
+describe('FIELDS_SELECTOR_PATH : a drilled level labels the navigation path', () => {
+	// render_components_list is the FIELDS picker shared by search and tool_export.
+	// It drills through portals recursively; on a phone a drilled level REPLACES its
+	// parents (search.less), so the level bar must carry the PATH (see render_common
+	// ar_section_path) and the phone layout reveals it instead of the plain name.
+	const make_caller = () => ({
+		calculate_component_path: (element, path) =>
+			path.concat([
+				{
+					section_tipo: element.section_tipo,
+					component_tipo: element.tipo,
+					name: element.label,
+				},
+			]),
+		get_section_id: () => 'tmp_search_1',
+		get_section_elements_context: async () => [],
+		on_dragstart: () => {},
+	});
+
+	const section_elements = [
+		{ model: 'section', tipo: 'test3', label: 'Proyectos' },
+		{ model: 'section_group', tipo: 'test3g1', label: 'Información general' },
+		{ model: 'component_portal', tipo: 'test3p1', label: 'Proyecto', section_tipo: 'test3' },
+	];
+
+	it('root level: the plain section name, no deep_path', () => {
+		const target_div = document.createElement('div');
+		document.body.appendChild(target_div);
+		try {
+			render_components_list({
+				self: make_caller(),
+				section_tipo: 'test3',
+				target_div,
+				path: [],
+				section_elements,
+			});
+			const bar = target_div.querySelector('li.section_bar_label');
+			assert.ok(bar, 'the level bar renders');
+			assert.equal(bar.classList.contains('deep_path'), false);
+			assert.equal(bar.querySelector('.section_bar_full_path'), null, 'no path at root');
+			assert.equal(bar.querySelector('.section_bar_section_name').textContent, 'Proyectos');
+		} finally {
+			target_div.remove();
+		}
+	});
+
+	it('drilled level: full path in section_bar_full_path, plain name kept', () => {
+		const target_div = document.createElement('div');
+		document.body.appendChild(target_div);
+		try {
+			render_components_list({
+				self: make_caller(),
+				section_tipo: 'test3',
+				target_div,
+				path: [],
+				section_elements,
+				ar_section_path: ['Personas'],
+			});
+			const bar = target_div.querySelector('li.section_bar_label');
+			assert.ok(bar.classList.contains('deep_path'), 'a drilled level is marked');
+			assert.equal(
+				bar.querySelector('.section_bar_full_path').textContent,
+				'Personas / Proyectos',
+				'root → level path',
+			);
+			assert.equal(
+				bar.querySelector('.section_bar_section_name').textContent,
+				'Proyectos',
+				'the plain level name stays for the desktop layout',
+			);
+		} finally {
+			target_div.remove();
+		}
+	});
+
+	it('markup in section labels does not leak into the joined path', () => {
+		const target_div = document.createElement('div');
+		document.body.appendChild(target_div);
+		try {
+			render_components_list({
+				self: make_caller(),
+				section_tipo: 'test3',
+				target_div,
+				path: [],
+				section_elements: [
+					{ model: 'section', tipo: 'test3', label: '<em>Proyectos</em>' },
+				],
+				ar_section_path: ['Personas'],
+			});
+			assert.equal(
+				target_div.querySelector('.section_bar_full_path').textContent,
+				'Personas / Proyectos',
+			);
+		} finally {
+			target_div.remove();
 		}
 	});
 });

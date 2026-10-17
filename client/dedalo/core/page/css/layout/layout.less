@@ -1259,6 +1259,14 @@
 					pointer-events: none;
 					padding-right: 0.5rem;
 
+					// Navigation path (ancestors + this level). The desktop drill shows
+					// the ancestor columns side by side, so the plain level name is enough
+					// here; the phone layout REPLACES the parents and reveals this path
+					// instead (see search.less).
+					>.section_bar_full_path {
+						display: none;
+					}
+
 					&:after {
 						content: '×';
 						display: block;
