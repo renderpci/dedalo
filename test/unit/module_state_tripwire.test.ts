@@ -62,6 +62,11 @@ const SRC_DIR = join(import.meta.dir, '..', '..', 'src');
  * it here WITH justification that it carries no request identity.
  */
 const ALLOWLISTED_MODULE_LET = new Set<string>([
+	// The scratch trust stores a GATE hands the developer-route trust step's doors
+	// (install_dev_tls_native). Honoured only while DEDALO_TEST_TRUST_STORE_OFF is
+	// set (a test run), set and put back by that gate; an installer value, never
+	// per request, no identity.
+	'core/install/dev_trust.ts:scratchTrustEnvironment',
 	// Where the retired-property announcements go while an install runs (campaign 3b C3-72): a
 	// process-wide OUTPUT switch like the console itself — set and put back by
 	// executor.ts executeInstall around its run, never per request, no identity.

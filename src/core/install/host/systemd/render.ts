@@ -47,6 +47,8 @@ export const UNIT_TEMPLATES = [
 	'dedalo-backup@.timer',
 	'dedalo-backup-alert@.service',
 	'dedalo-backup-site-builder@.service',
+	'dedalo-tls-renew@.service',
+	'dedalo-tls-renew@.timer',
 ] as const;
 
 /** The root-run site-builder store's verdict and destination (root-owned, outside the instance's home). */
@@ -76,6 +78,8 @@ export const ROOT_RUN_SCRIPTS = [
 	'dedalo-ts-watchdog.sh',
 	'dedalo-code-rollback.sh',
 	'dedalo-media-rules.sh',
+	// The ONE local-CA generator (issue, renew, rotate) — the renewal unit runs this copy.
+	'dedalo-tls-rotate.sh',
 ] as const;
 
 /** One template rendered for a row. */
@@ -245,6 +249,41 @@ export function watchdogDropin(paths: InstancePaths, stamp: string): string {
 			...['--service', `dedalo-ts@${i}.service`, '--grace', '900'],
 			...['--restart-unit', `dedalo-ts-restart@${i}.service`],
 			...['--rollback-unit', `dedalo-ts-rollback@${i}.service`],
+		].join(' ')}`,
+		'',
+	].join('\n');
+}
+
+/** The local-CA renewal unit of an instance. */
+export function tlsRenewUnit(instance: string, kind: 'service' | 'timer'): string {
+	return `dedalo-tls-renew@${instance}.${kind}`;
+}
+
+/**
+ * The local-CA renewal unit's drop-in (it runs as root): the root-owned
+ * generator, the instance's certificate directory and the HOST web server's
+ * unit to reload — all pinned here, none read from the instance (F2). Written
+ * by host_tls, on local_ca only. `service` is the row's web unit (nginx,
+ * apache2, httpd) — the generator's own allowlist; `keyGroup` the group
+ * that reads the site key (null: root-only).
+ */
+export function tlsRenewDropin(
+	paths: InstancePaths,
+	service: string,
+	stamp: string,
+	keyGroup: string | null = null,
+): string {
+	return [
+		stamp,
+		'[Service]',
+		'ExecStart=',
+		`ExecStart=${[
+			`${paths.binDir}/dedalo-tls-rotate.sh`,
+			...['--mode', 'renew', '--dir', paths.tlsDir],
+			...['--reload', 'systemd', '--unit', service],
+			// A claimed IP address on nginx: the renewed key stays readable by the web
+			// server's workers (production/address_claims.ts keyGroup).
+			...(keyGroup === null ? [] : ['--key-group', keyGroup]),
 		].join(' ')}`,
 		'',
 	].join('\n');

@@ -32,6 +32,7 @@ import {
 } from './code_build_plan.ts';
 import { ensureCodeFilesDir } from './code_files_dir.ts';
 import { refuseUpdate } from './refuse.ts';
+import { gitDescribeSupportFault, MIN_GIT_FOR_DESCRIBE } from './release_identity.ts';
 
 /**
  * The build's answer IS the wire body (the update_code widget returns it
@@ -206,6 +207,29 @@ async function resolveReleaseVersionOrRefuse(
 	return version;
 }
 
+/**
+ * Refuse a build whose git cannot stamp the release tag into the archive.
+ * build_info.txt's `%(describe:match=…,abbrev=…)` needs git >= MIN_GIT_FOR_DESCRIBE
+ * (release_identity.ts, where the version is sourced): an older git leaves the
+ * placeholder unexpanded, and every installation of that zip would call itself
+ * `X.Y.Z.dev` instead of the release it is. Asked before anything is written.
+ */
+async function refuseUnlessGitStampsTags(gitDir: string): Promise<void> {
+	const child = Bun.spawn(['git', '-C', gitDir, '--version'], {
+		stdout: 'pipe',
+		stderr: 'ignore',
+		env: envSnapshot() as Record<string, string>,
+	});
+	const [exitCode, answer] = await Promise.all([child.exited, new Response(child.stdout).text()]);
+	const fault = gitDescribeSupportFault(exitCode === 0 ? answer : '');
+	if (fault === null) return;
+	// The parsed fault goes to the LOG side; the wire gets the operator sentence.
+	throw new DedaloError('update.refused', {
+		message: `code build: ${fault}`,
+		publicMessage: `Error. The code server's git is older than ${MIN_GIT_FOR_DESCRIBE}: its archive would not carry the release tag, so the release would call itself a developer build. Upgrade git on the code server, then build again.`,
+	});
+}
+
 /** `git archive` into `filePath`, or a refusal. A zero-byte artifact is a failure. */
 async function runGitArchiveOrRefuse(gitDir: string, ref: string, filePath: string): Promise<void> {
 	// -C <gitDir> selects the repo; argv array, no shell.
@@ -282,6 +306,7 @@ export async function buildVersionFromGit(options: {
 		});
 	}
 	const { gitDir, targetDir, filePath } = plan;
+	await refuseUnlessGitStampsTags(gitDir);
 	provisionReleaseDirOrRefuse(targetDir);
 
 	await runGitArchiveOrRefuse(gitDir, ref, filePath);

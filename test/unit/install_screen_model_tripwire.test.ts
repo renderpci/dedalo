@@ -143,17 +143,30 @@ function maximalRaw(route: InstallRoute): Record<string, unknown> {
 /**
  * The maximal answers of `route` AND their mutually exclusive alternatives
  * (phase 4: the certificate paths are asked under `tls_mode files`, the Let's
- * Encrypt contact under `letsencrypt`; the image repository for a custom image)
+ * Encrypt contact under `letsencrypt`, the extra addresses under `local_ca`;
+ * the image repository for a custom image)
  * — one walk cannot turn both on, the union of the walks must.
  */
 function maximalRaws(route: InstallRoute): Record<string, unknown>[] {
 	const base = maximalRaw(route);
 	// A created database's role IS the service user (never asked); an existing one's is.
+	// The local CA's extra addresses are asked under `tls_mode local_ca` only (2026-10-16).
 	if (route === 'production')
-		return [base, { ...base, tls_mode: 'files' }, { ...base, db_mode: 'existing' }];
-	if (route === 'docker') return [base, { ...base, tls_mode: 'files', image_source: 'custom' }];
+		return [
+			base,
+			{ ...base, tls_mode: 'files' },
+			{ ...base, tls_mode: 'local_ca' },
+			{ ...base, db_mode: 'existing' },
+		];
+	if (route === 'docker')
+		return [
+			base,
+			{ ...base, tls_mode: 'files', image_source: 'custom' },
+			{ ...base, tls_mode: 'local_ca' },
+		];
 	if (route === 'trial') return [base, { ...base, image_source: 'custom' }];
-	return [base];
+	// The developer listener's own certificate files are asked under `tls_mode files` only.
+	return [base, { ...base, tls_mode: 'files' }];
 }
 
 /** The keys the maximal walks of `route` ask, together. */
@@ -289,9 +302,17 @@ describe('screen model — the order (b)', () => {
 		expect(SCREEN_ORDER.production).toEqual(OWNER_PRODUCTION);
 		expect(SCREEN_ORDER.docker).toEqual(OWNER_DOCKER);
 		expect(SCREEN_ORDER.trial).toEqual(OWNER_DOCKER.filter((id) => id !== 'tls_address'));
+		// The developer's development server follows the identity (DEV_ROUTE_SERVE §1.1).
 		expect(SCREEN_ORDER.developer).toEqual(
 			(
-				['route', 'system', 'database', 'identity', ...OWNER_PRODUCTION.slice(4)] as ScreenId[]
+				[
+					'route',
+					'system',
+					'database',
+					'identity',
+					'dev_server',
+					...OWNER_PRODUCTION.slice(4),
+				] as ScreenId[]
 			).filter((id) => id !== 'web_tls' && id !== 'services'),
 		);
 	});
@@ -326,6 +347,14 @@ const DEFAULT_EXEMPTIONS: Readonly<Record<string, string>> = {
 	langs: 'the language derivation (deriveLangConfig) — the plan leaves the answer absent',
 	app_lang_default: 'the language derivation over the ticked set',
 	data_lang_default: 'the language derivation over the ticked set',
+	// The developer listener (DEV_ROUTE_SERVE §1.1): its answers stay '' ("the plan
+	// decides") so a re-run keeps the .env's own value — the question shows what that is.
+	dev_port:
+		"the developer listener's port in effect: the prior .env's SERVER_TCP_PORT, else 3500 (D3)",
+	dev_host:
+		"the developer listener's address in effect: the prior .env's SERVER_TCP_HOST, else 127.0.0.1",
+	tls_mode:
+		"developer only: the prior .env's pair kept (''), else local_ca (D1); every other route the plain read-back",
 };
 
 describe('screen model — every default is the plan’s (c)', () => {
@@ -372,8 +401,47 @@ describe('screen model — every default is the plan’s (c)', () => {
 		expect(questionFor(bad, 'locale')?.default).toBe(plain.locale);
 		expect(questionFor(input, 'route')?.default).toBeNull();
 		expect(Object.keys(DEFAULT_EXEMPTIONS).sort()).toEqual(
-			['app_lang_default', 'data_lang_default', 'langs', 'locale', 'route', 'timezone'].sort(),
+			[
+				'app_lang_default',
+				'data_lang_default',
+				'dev_host',
+				'dev_port',
+				'langs',
+				'locale',
+				'route',
+				'timezone',
+				'tls_mode',
+			].sort(),
 		);
+		// The developer listener: the route defaults on a fresh machine (D1, D3) …
+		expect(questionFor(input, 'dev_port')?.default).toBe('3500');
+		expect(questionFor(input, 'dev_host')?.default).toBe('127.0.0.1');
+		expect(questionFor(input, 'tls_mode')?.default).toBe('local_ca');
+		// … what the prior .env already holds on a re-run (PRESERVE) …
+		const rerun = modelInput(
+			{ route: 'developer' },
+			{
+				priorEnv: {
+					SERVER_TCP_PORT: '3600',
+					SERVER_TCP_HOST: '0.0.0.0',
+					SERVER_TCP_TLS_CERT_FILE: '/k/fullchain.pem',
+					SERVER_TCP_TLS_KEY_FILE: '/k/privkey.pem',
+				},
+			},
+		);
+		expect(questionFor(rerun, 'dev_port')?.default).toBe('3600');
+		expect(questionFor(rerun, 'dev_host')?.default).toBe('0.0.0.0');
+		const keep = questionFor(rerun, 'tls_mode');
+		expect(keep?.default).toBe('');
+		expect(keep?.options?.map((option) => option.value)).toEqual(['', 'local_ca', 'none', 'files']);
+		// … and every other route's tls_mode is still the plain read-back.
+		for (const route of ['production', 'docker'] as const) {
+			const raw = maximalRaw(route);
+			const { tls_mode: _drop, ...without } = raw;
+			expect(questionFor(modelInput(raw), 'tls_mode')?.default, route).toBe(
+				normalizeInstallAnswers(without).answers.tls_mode,
+			);
+		}
 	});
 
 	test('production: the names derive from the instance (the peer role ded_<i>, the root-rule media path); docker/trial: the stack constants', () => {

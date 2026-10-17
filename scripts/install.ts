@@ -228,7 +228,6 @@ import {
 } from '../src/core/install/run_files.ts';
 import { ABORT_AND_START_AGAIN } from '../src/core/install/step_loop.ts';
 import { plainReporter as plainRunReporter } from '../src/core/install/ui_plain/reporter.ts';
-import { DEDALO_VERSION } from '../src/core/update/version.ts';
 
 /** Removes the resolved catalog's scratch files (an extracted --ontology-source archive). */
 let cleanupCatalog: () => void = () => undefined;
@@ -716,6 +715,12 @@ async function execute(
 	const rootVerified = (request.secrets.root_password ?? '') !== '';
 	// An --engine-only run (the by-hand host procedure) ends with the systemd pointer only (C3-54).
 	const engineOnly = normalizeInstallAnswers(raw).answers.engine_only;
+	// The developer route's closing block (TODO-053): the command, the URLs and the
+	// certificate, read back from the .env the run WROTE — null when it opens no listener.
+	const served =
+		outcome.exitCode === 0 && outcome.result !== 'aborted' && !engineOnly
+			? await (await import('../src/core/install/dev_serve.ts')).devServedView()
+			: null;
 	await reporter.finish(outcome, {
 		mode: request.mode,
 		rootVerified,
@@ -724,6 +729,7 @@ async function execute(
 			instance: '',
 			keptLive: false,
 			undone: [],
+			...(served === null ? {} : { served }),
 		},
 	});
 	process.exit(outcome.exitCode);
@@ -1248,11 +1254,13 @@ async function openTuiFront(): Promise<
 > {
 	clearOpenTuiEnv();
 	const { openFullScreen } = await import('../src/core/install/tui_loader.ts');
+	const { installerVersionLabel } = await import('../src/core/install/installer_identity.ts');
 	const opened = await openFullScreen({
 		stdin: process.stdin,
 		stdout: process.stdout,
 		noColor: terminalCaps().noColor,
-		version: DEDALO_VERSION,
+		// The header names the release identity and its kind (`7.0.0-beta.7 (prerelease)`).
+		version: installerVersionLabel(),
 	});
 	if (opened.kind === 'tui') return opened.front;
 	process.stderr.write(
@@ -1341,6 +1349,7 @@ async function interactiveInstall(
 ): Promise<never> {
 	const { runInteractiveInstall } = await import('../src/core/install/install_session.ts');
 	const { childProbes } = await import('../src/core/install/install_probe_client.ts');
+	const { installerVersionLabel } = await import('../src/core/install/installer_identity.ts');
 	activeUi = choice.ui === 'tui' ? await openTuiFront() : null;
 	let prompter: InstallPrompter;
 	let reporter: RunReporter;
@@ -1376,7 +1385,7 @@ async function interactiveInstall(
 		thesauri: thesaurusOffer(),
 		host: { timezone: host.timezone, locale: host.locale },
 		givenSecrets: { ...secrets },
-		version: DEDALO_VERSION,
+		version: installerVersionLabel(),
 		// Both hooks of one Review build share `measure`: the registry is asked once (C3i-F2).
 		hostCommands: async (plan, measure) => {
 			if (!hostPlanned(plan.answers)) return [];
@@ -1384,9 +1393,15 @@ async function interactiveInstall(
 			return reviewHostCommands(plan, measure);
 		},
 		// What the run's own system check would refuse, asked BEFORE `yes` (campaign 3c D2).
+		// The developer listener's port too (D3): the Review refuses while it is in use —
+		// and a local authority already there for other names (dev_tls.ts).
 		preflightRefusals: async (plan, measure) => {
 			const { reviewPreflightRefusals } = await import('../src/core/install/host/review.ts');
-			return reviewPreflightRefusals(plan, { measure });
+			const { devListenerRefusals } = await import('../src/core/install/dev_listener_check.ts');
+			return [
+				...(await reviewPreflightRefusals(plan, { measure })),
+				...(await devListenerRefusals(plan.devListener, plan.devCertificate)),
+			];
 		},
 		routeRefusal: (plan) =>
 			plan.answers.route === 'production' &&

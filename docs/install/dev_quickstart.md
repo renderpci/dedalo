@@ -2,7 +2,7 @@
 
 > See also: [Installation hub](index.md) · [Installer reference](installer_reference.md) · [Troubleshooting](troubleshooting.md) · [Production install](production.md)
 
-A working Dédalo on your laptop in about ten minutes. This is a **development** setup: plain HTTP, a TCP listener, no reverse proxy, no systemd — `bun run dev` is its own restart loop (it declares `DEDALO_SUPERVISED=true`). Do not run it this way on a server — for that, see [production](production.md).
+A working Dédalo on your laptop in about ten minutes. This is a **development** setup: a TCP listener on this machine (HTTPS from a local certificate authority, or plain HTTP if you choose), no reverse proxy, no systemd — `bun run dev` is its own restart loop (it declares `DEDALO_SUPERVISED=true`). Do not run it this way on a server — for that, see [production](production.md).
 
 ## 1. What you need
 
@@ -78,7 +78,7 @@ The installer restores **into** this database and refuses a non-empty one. It ne
 
 ## 4. Run the installer
 
-The Developer route installs into the database you just created and writes `../private/.env`. It runs no host step: no packages, no units, no web site, no certificate. Interactively:
+The Developer route installs into the database you just created and writes `../private/.env`. It runs no host step: no packages, no units, no web site. It installs the checkout's development dependencies, writes the development listener `bun run dev` serves on, issues that listener's certificate and asks this machine to trust it (step 5). Interactively:
 
 ```shell
 bun run scripts/install.ts            # the full-screen installer: choose Developer on the first screen
@@ -117,36 +117,60 @@ The installer writes it to `.env` as `DB_SOCKET`; the engine and the test suite 
 
 With no `--hierarchies`, only the thesauri the chosen ontologies declare are installed — no country's toponymy is ever pre-selected; `--hierarchies none` skips even those. The Languages thesaurus is activated with the database either way. With no `--ontologies`, the default domain ontology, Oral history (`oh`), is installed from the copy built into the repo — no network needed; `--ontologies oh,tch` downloads `tch` and what it declares from the update server. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server (add `--no-update-servers` to leave both empty) and lists the installed ontologies in `ACTIVE_ONTOLOGY_TLDS`.
 
-It ends with `✔ install complete — root login verified`. If it stops part-way, fix the cause and run `bun run scripts/install.ts --resume`; `--abort --confirm-database dedalo_dev` undoes it ([Resume and abort](installer_reference.md#resuming-an-install-resume)).
+Its last step proves the install serves before it says so: it starts `bun run dev` once, the way you will, asks the development listener for `/health` (over HTTPS, with the local certificate authority as the only trust anchor), logs in as `root` over it, and stops it again. If that fails, the install is **not** reported complete and the message names the cause: the port taken by another program, a certificate the server cannot read, the database unreachable, a development dependency missing, or another Dédalo server on the same unix socket. Fix it and run `bun run scripts/install.ts --resume`, which runs the check again.
 
-## 5. Configure the dev listener
+When it passes, the installer ends with what to do next, built from the keys it wrote:
 
-The installer writes the database, entity, language, secret, update-server and active-ontology keys (and `MEDIA_PATH`, `SERVER_UNIX_SOCKET`, `DEDALO_MEDIA_ACCESS_MODE` when you pass their flags) — you add the rest. Two of them are not optional on a laptop:
+<!-- dev-final-screen -->
+```text
+✔ install complete — root login verified.
 
-```shell
-cat >> ../private/.env <<'ENV'
-
-# --- Development only ----------------------------------------------------
-SERVER_TCP_PORT=3600
-DEDALO_DEV_MODE=true
-SESSION_COOKIE_SECURE=false
-DEDALO_DEBUG_API_ERRORS=true
-ENV
+  Start:   bun run dev   (Ctrl-C stops it)
+  Open:    https://127.0.0.1:3500/dedalo/core/page/
+           https://localhost:3500/dedalo/core/page/
+  Log in:  root, with the password set during this install
+  TLS:     local certificate authority /home/me/dev/dedalo/private/tls/dedalo-local-ca.pem
+           SHA-256 3F:A2:…:9C
+           trusted on this machine: the browser opens it without a warning
 ```
+
+The URLs, the certificate authority's path and its SHA-256 fingerprint are your install's own. Opened to the local network (`--dev-host 0.0.0.0`), the list adds this machine's network addresses. If this machine does not trust the authority yet (you cancelled the password dialog), the last line says so and gives the command that trusts it.
+
+If the install stops part-way, fix the cause and run `bun run scripts/install.ts --resume`; `--abort --confirm-database dedalo_dev` undoes it before the install is sealed ([Resume and abort](installer_reference.md#resuming-an-install-resume)).
+
+## 5. What the installer writes for `bun run dev`
+
+The installer writes a *Development only* section into `../private/.env`. With the defaults — the local certificate authority (`--tls local_ca`) — and with plain HTTP (`--tls none`), it holds:
+
+<!-- dev-env-table -->
+| Key | `--tls local_ca` (default) | `--tls none` |
+| --- | --- | --- |
+| `SERVER_TCP_PORT` | `3500` | `3500` |
+| `SERVER_TCP_HOST` | `127.0.0.1` | `127.0.0.1` |
+| `SERVER_TCP_TLS_CERT_FILE` | `<private>/tls/fullchain.pem` | not written |
+| `SERVER_TCP_TLS_KEY_FILE` | `<private>/tls/privkey.pem` | not written |
+| `SESSION_COOKIE_SECURE` | `true` | `false` |
+| `DEDALO_DEV_MODE` | `true` | `true` |
+| `DEDALO_DEBUG_API_ERRORS` | `true` | `true` |
+
+`<private>` is `../private`, next to the checkout. `--tls files --tls-cert <fullchain> --tls-key <key>` writes your own pair instead (made with mkcert, for example).
+
+- **`SERVER_TCP_PORT`** — the engine always listens on a unix socket; a browser cannot. This opens an extra TCP listener for development. Leave it **unset in production**. `--dev-port` chooses another port. When another program already uses the port, the installer refuses before it writes anything and names the next free one; it never picks a port for you.
+- **`SERVER_TCP_HOST`** — `127.0.0.1`: only a browser on this machine reaches a server that shows full error details. `--dev-host 0.0.0.0` opens it to your network on purpose (the Review warns).
+- **`SERVER_TCP_TLS_CERT_FILE`**, **`SERVER_TCP_TLS_KEY_FILE`** — the listener's certificate. The installer issues it from a certificate authority it makes in `<private>/tls`, restricted to `localhost`, `127.0.0.1` and the addresses the listener is opened on. It then makes this machine trust that authority: on macOS in your login keychain (macOS asks for your password), on Linux in the system store through `sudo` for that one command. A cancelled prompt does not stop the install; the final screen says *not trusted yet* and how to trust it. `bun run tls:renew` renews the certificate from the same authority, and `bun run tls:untrust` removes the authority from every store the installer put it in.
+- **`SESSION_COOKIE_SECURE`** — follows the listener: `true` over HTTPS, `false` over plain HTTP, where a browser drops a `Secure` cookie and every login silently fails.
+- **`DEDALO_DEV_MODE=true`** — serves the browser test harness and the dev-only libraries.
+- **`DEDALO_DEBUG_API_ERRORS=true`** — echoes exception text to the client instead of only a request id. Very useful locally; a disclosure hole anywhere else.
+
+A re-run of the installer keeps the port, address, certificate pair and modes your `.env` already has, unless you answer them again.
 
 !!! tip "Media works with no configuration"
     Unset, `MEDIA_PATH` **derives** to `../private/media` (`config.media.rootPath`) — outside the code tree, so a code update never carries it away — and the engine serves media itself on the dev listener — session-gated — because there is no web server in front of it here. Set `MEDIA_PATH` only to put the media tree somewhere else. In production media is served by the web server from generated rule files, and the engine's fallback is structurally unreachable (the socket never serves media): see [media protection](../config/media_protection.md).
 
-!!! danger "`SESSION_COOKIE_SECURE` defaults to **true** — you cannot log in until you set it to `false`"
-    A `Secure` cookie is dropped by the browser over plain `http://`. The login request succeeds, the server sets the cookie, the browser throws it away, and the next request arrives with no session — so you land back on the login form with no error message worth reading. This is the single most common "my dev install is broken" report, and it is one line of configuration.
+!!! danger "Edited the `.env` by hand? Keep `SESSION_COOKIE_SECURE` matched to the listener"
+    A `Secure` cookie is dropped by the browser over plain `http://`. The login request succeeds, the server sets the cookie, the browser throws it away, and the next request arrives with no session — so you land back on the login form with no error message worth reading. The installer writes the right value; if you switch the listener between HTTPS and plain HTTP by hand, switch this key with it.
 
     Never set it to `false` anywhere a real user can reach.
-
-The other keys:
-
-- **`SERVER_TCP_PORT`** — the engine always listens on a unix socket; a browser cannot. This opens an extra TCP listener for development. Leave it **unset in production**. The listener binds `127.0.0.1` only, so no other machine reaches a server that shows full error details. To open it to your network on purpose, set `SERVER_TCP_HOST=0.0.0.0`.
-- **`DEDALO_DEV_MODE=true`** — serves the browser test harness and the dev-only libraries.
-- **`DEDALO_DEBUG_API_ERRORS=true`** — echoes exception text to the client instead of only a request id. Very useful locally; a disclosure hole anywhere else.
 
 !!! note "One download at first boot"
     On its first start the server downloads the free DB-IP country database (from `https://download.db-ip.com`) into `../private/geoip/`. The Activity section uses it to show a country flag beside an IP address, and the server refreshes it monthly. Offline, the server starts anyway and shows no flags. To make no download at all, set `DEDALO_GEOIP_AUTO_UPDATE=false` (or `DEDALO_GEOIP_ENABLED=false`).
@@ -164,11 +188,13 @@ bun run dev          # watch mode; `bun run start:supervised` runs it without th
 
 ```text
 Dédalo TS server listening on unix socket /tmp/dedalo_ts.sock (entity: dev)
-Dédalo TS dev listener on http://localhost:3600/dedalo/core/page/
+Dédalo TS dev listener on https://localhost:3500/dedalo/core/page/
 ```
 
-Open **`http://localhost:3600/dedalo/core/page/`** and log in as `root` with the
-password you set in step 4.
+Open the URL the installer printed — **`https://127.0.0.1:3500/dedalo/core/page/`** with the defaults — and log in as `root` with the password you set in step 4.
+
+!!! note "One unix socket per server"
+    The developer route does not write `SERVER_UNIX_SOCKET`, so every checkout's server listens on the default `/tmp/dedalo_ts.sock`. A second server on the same machine refuses to start until it has its own (`--socket` at install time, or `SERVER_UNIX_SOCKET` in its `.env`). The installer's last step names it when that happens; by then the install is sealed, so set `SERVER_UNIX_SOCKET` in the `.env` and run the installer again with `--resume`.
 
 ## 7. Run the tests
 
@@ -223,7 +249,10 @@ bun run test:client:server   # the suite server, kept alive for browsing (Ctrl-C
 
 ## When something does not work
 
-- **Cannot log in, no error** → `SESSION_COOKIE_SECURE=false`. See above.
+- **Cannot log in, no error** → `SESSION_COOKIE_SECURE` does not match the listener (`false` over plain HTTP). See step 5.
+- **The browser warns that the certificate is not trusted** → the installer could not make this machine trust the local authority (a cancelled password dialog). The final screen printed the command that trusts it on your system: run it once.
+- **The installer's last step (`verify_dev_server`) fails with the port in use** → something took the port after the installer checked it. The install is already sealed, so `--dev-port` is not accepted any more: stop the other program, or set `SERVER_TCP_PORT` in the `.env` to the free port the message names, then run the installer again with `--resume`.
+- **`bun run dev` stops with `the CSS watcher stopped`** → a development dependency is missing (the error above it names it, for example `Cannot find package 'less'`). Run `bun install` in the checkout.
 - **`address already in use` / the server exits 1 at boot** → another instance is already listening on `/tmp/dedalo_ts.sock`. The double-start guard probes the socket and refuses to steal it. Stop the other one, or point `SERVER_UNIX_SOCKET` somewhere else.
 - **The server exits at once with `[boot] REFUSED — not installed`** (exit code 78) → it found none of the four required keys. It is not reading your `.env` — check that it is at `../private/.env`, one level above the repo (or run the installer).
 - Everything else → [troubleshooting](troubleshooting.md).

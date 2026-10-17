@@ -340,6 +340,8 @@ export const RUNTIME_PATH_SCAN_EXEMPTIONS: Readonly<Record<string, string>> = Ob
 		'catalog default thunks (legacyAwareDefaultDir): every path they can produce is a census-registered default, and the legacy existence check must name the in-tree location',
 	'src/core/install/runtime_paths.ts':
 		'the census itself: the legacy recovery-file path and the backup_path default must name in-tree/sibling locations to report them',
+	'src/core/install/dev_tls.ts':
+		'names the ONE local-CA generator shipped in the checkout (deploy/dedalo-tls-rotate.sh) to RUN it — code, replaced WITH the tree; the material it writes goes to <private>/tls (paths.ts devTlsDir), never under projectRoot',
 	'src/core/install/paths.ts':
 		'shipped install assets (seed dump, vendored hierarchy imports, sample.env template) — release content replaced WITH the tree, not runtime data',
 	'src/core/client_libs/registry.ts':

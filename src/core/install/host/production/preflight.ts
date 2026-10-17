@@ -15,7 +15,9 @@
  *    empty, a symlinked or foreign-writable path, a folder a web site serves;
  *  - a CLASH under this instance's names: the database or the role (a created
  *    database), a dedalo-ts@<i> unit or drop-in, the site file, the socket,
- *    the server name on our ports in another site file, the instance's ports
+ *    the server name (and a local CA's extra addresses) on our ports in
+ *    another site file, an IPv4 address it claims (address_claims.ts: this
+ *    host's, no other instance's, the catch-all able to serve it), the instance's ports
  *    held by any program but the chosen web server, the OTHER web server
  *    installed beside a chosen one this run would install (campaign 3b N3);
  *  - PostgreSQL: another major's cluster on the database port (critique B5 —
@@ -23,7 +25,8 @@
  *    engine and pg_dump would disagree about which one holds the database);
  *  - the institution's certificate files (address, expiry, key) — and that
  *    this host trusts their chain (host_public_probe verifies it with this
- *    host's curl: campaign 3 C3-13).
+ *    host's curl: campaign 3 C3-13); a local CA's directory holding an
+ *    authority made for other addresses.
  *
  * Then FREEZES the facts and the digest of every step's commands in the state
  * file (state_types.ts): what the rest of the run, and any resume, executes.
@@ -52,10 +55,12 @@ import {
 	REQUIRED_APACHE_MODULES,
 } from '../web/apache.ts';
 import { httpNameClash, instanceHttpNames, serverNameClash } from '../web/clash.ts';
+import { siteNames } from '../web/site.ts';
+import { claimProblems } from './address_claims.ts';
 import { ran, sitePath, webFlavor } from './common.ts';
 import { identityOf, instanceDirs, ownedDirs } from './identity.ts';
 import { instanceTakenSentence } from './identity_rules.ts';
-import { institutionCertVerdict } from './tls.ts';
+import { foreignAuthority, institutionCertVerdict } from './tls.ts';
 
 /** Refuse with every problem, joined (the operator fixes them all in one pass). */
 function refuseAll(problems: readonly string[]): void {
@@ -177,16 +182,20 @@ export function webServerClash(ctx: HostPlanCtx, fs: Pick<HostFs, 'exists'>): st
 function addressProblems(ctx: HostPlanCtx): string[] {
 	const { facts, answers } = ctx;
 	const ports = [answers.http_port, answers.https_port];
-	const clash = serverNameClash(facts.web.sites, answers.server_name, ports, sitePath(ctx));
+	// Every address the site answers to (a local CA's extra ones included).
+	const clashes = siteNames(answers).flatMap((name) => {
+		const clash = serverNameClash(facts.web.sites, name, ports, sitePath(ctx));
+		return clash === null
+			? []
+			: [`${name} is already served on port ${ports.join('/')} by ${clash.file}`];
+	});
 	const named = httpNameClash(
 		facts.web.httpNames,
 		instanceHttpNames(ctx.paths.instance),
 		sitePath(ctx),
 	);
 	return [
-		...(clash === null
-			? []
-			: [`${answers.server_name} is already served on port ${ports.join('/')} by ${clash.file}`]),
+		...clashes,
 		...(named === null
 			? []
 			: [
@@ -225,9 +234,17 @@ function dirProblems(ctx: HostCtx): string[] {
 	];
 }
 
-/** The institution's own certificate, checked before use. */
+/**
+ * The institution's own certificate, checked before use; a local CA's
+ * directory that already holds an authority for OTHER addresses (host_tls
+ * would refuse it after the install is half built — said here first).
+ */
 function tlsProblems(ctx: HostCtx): { problems: string[]; warnings: string[] } {
 	const { answers } = ctx;
+	if (answers.tls_mode === 'local_ca') {
+		const foreign = foreignAuthority(ctx);
+		return { problems: foreign === null ? [] : [foreign], warnings: [] };
+	}
 	if (answers.tls_mode !== 'files') return { problems: [], warnings: [] };
 	const verdict = institutionCertVerdict(ctx, ctx.fs, ctx.now());
 	return {
@@ -282,6 +299,7 @@ function hostProblems(ctx: HostPlanCtx): string[] {
 		...nameProblems(ctx),
 		...databaseProblems(ctx),
 		...addressProblems(ctx),
+		...claimProblems(ctx),
 	];
 }
 

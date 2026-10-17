@@ -42,10 +42,25 @@ minor within the major, no skipping).
    the desk (it gates it full when the tag names HEAD), and image-release.yml's
    `plan` refuses a tag whose commit has no successful push run of BOTH ci.yml
    and db.yml. A push to the internal remote alone (gitdedalo — hermetic only)
-   never qualifies a commit. **Tag the release commit**
-   (`git tag v7.0.1 && git push <remote> v7.0.1`). The tag IS the release: its
-   name and the commit's `version.ts` must agree (the build refuses a
-   `v7.0.1` tag whose tree declares another version), and prerelease tags
+   never qualifies a commit. **Cut the changelog in the release commit** —
+   `bun run changelog release 7.0.1` writes `changes/7.0.1/release.json`
+   (rules: `changes/README.md`) — **then tag that commit**
+   with an ANNOTATED tag (`git tag -a v7.0.1 -m 'Dédalo 7.0.1' && git push <remote> v7.0.1`)
+   — the engine reads its release identity from `git describe`, which ignores a
+   lightweight tag, so a lightweight tag builds a tree calling itself `7.0.1.dev`
+   (`src/core/update/release_identity.ts`). The tag IS the release: its
+   name and the commit's `version.ts` must agree, and the commit must carry
+   its changelog cut (`changes/<identity>/release.json`, version = the tag's
+   identity, `to` = the tag). ONE check holds both (`scripts/lib/release_tag.ts`):
+   the pre-push hook runs it on every pushed `v*` tag (`bun run
+   push:release-tag <tag> <commit>`) and image-release.yml's `plan` runs it
+   again. At the push door a tag whose identity sorts below `FIRST_CUT_RELEASE`
+   (7.0.0-beta.6, the first release cut under the rule) is published history
+   and passes with a note — `git push --tags` to a new mirror is never driven to
+   `--no-verify`; `plan` stays strict. The code-server build also refuses a tag whose tree declares
+   another version. Archives are built only with git >= 2.35 (the
+   `%(describe:match=…,abbrev=…)` stamp; `MIN_GIT_FOR_DESCRIBE`) — the
+   code-server build and the image pipeline refuse an older git. Prerelease tags
    (`v7.0.1-beta.1`) are never published: while a major is in beta there is
    no release, and its code reaches installations only as developer builds of
    `master`. PHP-era tags (`v6.x`) are never candidates — a tag is publishable
@@ -107,6 +122,10 @@ minor within the major, no skipping).
     (`bun run ci:cosign:pin`), otherwise the run refuses to publish anything; and the
     `v*` tag ruleset exists (engineering/CI.md, activation runbook step 8) — only a
     release maintainer can push the tag, which is what makes the reviewer binding.
+    Each arch's smoke test BOOTS the image's own server (no database) and requires its
+    `/health` to serve `version` = the tag's identity (`7.0.1`) and `release_kind`
+    `stable` — for a developer build, the identity its archive resolves to
+    (`7.0.1.dev`, or the tag when the commit is exactly tagged).
 
 13. **Check the publication.** The run's summary lists every registry (pushed /
     unchanged / skipped with its reason) and the digest; the `image-release` artifact is

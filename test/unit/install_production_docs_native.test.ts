@@ -21,6 +21,16 @@
  *      says the gpasswd exit an --abort leaves (web.ts GPASSWD_NOT_A_MEMBER)
  *      is harmless.
  *  D3  production.md quotes the salt's read command the closing To-do prints.
+ *  D17 (local CA on production, 2026-10-16) every table and sentence of
+ *      docs/install that lists the certificate modes of a route lists exactly
+ *      the modes the route ACCEPTS — measured by asking the plan validator
+ *      (buildInstallPlan) and the screen model (the tls_mode options it offers),
+ *      which must agree with each other; no page says the local CA is
+ *      Docker-only while production accepts it.
+ *  D18 production.md's Done section says what host_tls's closing To-do tells
+ *      for a local CA (tls.ts localCaTold): the authority's file, the curl
+ *      check, and per system a trust row whose every `command` and *menu item*
+ *      is in the told line for that system — and no told system lacks a row.
  *
  * Proven red by reverting each page fix. DB-free, pure reads.
  */
@@ -34,16 +44,27 @@ import { instancePaths } from '../../src/core/install/host/layout.ts';
 import { OS_ROWS } from '../../src/core/install/host/os_support.ts';
 import { host_engine } from '../../src/core/install/host/production/engine_delegate.ts';
 import { bunCacheDir } from '../../src/core/install/host/production/runtime.ts';
+import { localCaTold } from '../../src/core/install/host/production/tls.ts';
 import { GPASSWD_NOT_A_MEMBER } from '../../src/core/install/host/production/web.ts';
 import { updateEntry } from '../../src/core/install/host/registry.ts';
 import { backupStores } from '../../src/core/install/host/systemd/render.ts';
 import { buildInstallPlan } from '../../src/core/install/install_plan.ts';
 import { buildScreens } from '../../src/core/install/screen_model.ts';
+import { docsPages } from '../helpers/docs_corpus.ts';
+import {
+	INSTANCE,
+	LOCAL_CA_VARIANTS,
+	productionPlanCtx,
+	SERVER_NAME,
+} from '../helpers/install_host_scratch.ts';
 import { modelInput } from '../helpers/install_plain_script.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
 const PRODUCTION = readFileSync(join(ROOT, 'docs/install/production.md'), 'utf8');
 const MULTI = readFileSync(join(ROOT, 'docs/install/multi_instance.md'), 'utf8');
+const INDEX = readFileSync(join(ROOT, 'docs/install/index.md'), 'utf8');
+const DOCKER = readFileSync(join(ROOT, 'docs/install/docker.md'), 'utf8');
+const REFERENCE = readFileSync(join(ROOT, 'docs/install/installer_reference.md'), 'utf8');
 
 /** The question keys a production screen asks, in order. */
 function askedKeys(screenId: string, raw: Record<string, unknown>): string[] {
@@ -95,6 +116,23 @@ describe('D13: the screen table lists the questions in the order they are asked'
 				tls_mode: 'the certificate',
 				http_port: 'the HTTP and HTTPS ports',
 				https_port: 'the HTTP and HTTPS ports',
+			},
+		);
+		expect(order.length).toBe(4);
+		expect(inOrder(order), JSON.stringify(order)).toBe(true);
+	});
+
+	test('Web server & TLS with a local CA: the certificate, then its other addresses, then the ports', () => {
+		const keys = askedKeys('web_tls', { tls_mode: 'local_ca' });
+		expect(keys).toContain('tls_extra_names');
+		const order = phraseOrder(
+			tableRow('Web server &amp; TLS') || tableRow('Web server & TLS'),
+			keys,
+			{
+				server_name: 'the public address',
+				tls_mode: 'the certificate',
+				tls_extra_names: 'a local CA and its other addresses',
+				http_port: 'the HTTP and HTTPS ports',
 			},
 		);
 		expect(order.length).toBe(4);
@@ -258,5 +296,185 @@ describe('D3: production.md quotes the salt read command the closing To-do print
 		expect(command).toBeDefined();
 		expect(PRODUCTION).toContain(`\`${command}\``);
 		expect(PRODUCTION).toContain('Every run that completes the install');
+	});
+});
+
+// ── D17: the certificate modes a page lists are the modes the route accepts ──
+
+/** Every mode a route could name (trial's `none` included: a page must not offer it elsewhere). */
+const TLS_UNIVERSE = ['letsencrypt', 'local_ca', 'files', 'none'] as const;
+type TlsMode = (typeof TLS_UNIVERSE)[number];
+
+/** The modes the plan validator accepts on `route` (no `tls_mode must be …` refusal). */
+function acceptedModes(route: 'production' | 'docker'): TlsMode[] {
+	return TLS_UNIVERSE.filter(
+		(mode) =>
+			!buildInstallPlan({
+				route,
+				instance: 'museo',
+				server_name: 'museo.example.org',
+				tls_mode: mode,
+			}).errors.some((error) => error.startsWith('tls_mode must be')),
+	);
+}
+
+/** The tls_mode options the screen model offers on `route`'s certificate screen. */
+function offeredModes(route: 'production' | 'docker', screenId: string): string[] {
+	const screen = buildScreens(
+		modelInput({ route, instance: 'museo', server_name: 'museo.example.org' }),
+	).find((item) => item.id === screenId);
+	const question = screen?.questions.find((item) => item.key === 'tls_mode');
+	return (question?.options ?? []).map((option) => option.value);
+}
+
+/** A table row of `page` starting with `start`, or ''. */
+function rowOf(page: string, start: string): string {
+	return page.split('\n').find((line) => line.startsWith(start)) ?? '';
+}
+
+/** How each page names a mode (null: the page has no word for it — it must never be accepted there). */
+const PAGE_WORDS: Record<string, Record<TlsMode, RegExp | null>> = {
+	'index.md route table': {
+		letsencrypt: /Let's Encrypt/,
+		local_ca: /local certificate authority/,
+		files: /institution's certificate|your own certificate/,
+		none: /none: plain HTTP/,
+	},
+	'production.md certificate table': {
+		letsencrypt: /^\| \*\*Let's Encrypt\*\*/m,
+		local_ca: /^\| \*\*Local CA\*\*/m,
+		files: /^\| \*\*Your institution's certificate\*\*/m,
+		none: /^\| \*\*None\*\*/m,
+	},
+	'docker.md screen table': {
+		letsencrypt: /\*\*Let's Encrypt\*\*/,
+		local_ca: /\*\*local certificate authority\*\*/,
+		files: /\*\*files\*\*/,
+		none: /plain HTTP/,
+	},
+};
+
+/** production.md's "The certificate" table (between its header and the next blank line). */
+function certificateTable(): string {
+	const lines = PRODUCTION.split('\n');
+	const start = lines.indexOf('| Choice | What you need |');
+	const end = lines.findIndex((line, at) => at > start && line.trim() === '');
+	return start === -1 ? '' : lines.slice(start, end).join('\n');
+}
+
+/** The modes a page fragment names, by its words. */
+function namedModes(fragment: string, words: Record<TlsMode, RegExp | null>): TlsMode[] {
+	return TLS_UNIVERSE.filter((mode) => words[mode]?.test(fragment) === true);
+}
+
+describe('D17: every list of certificate modes in docs/install is the set the route accepts', () => {
+	const production = acceptedModes('production');
+	const docker = acceptedModes('docker');
+
+	test('the validator and the screen model agree (the source the pages are compared with)', () => {
+		expect(production.length).toBeGreaterThan(0);
+		expect(offeredModes('production', 'web_tls').sort()).toEqual([...production].sort());
+		expect(offeredModes('docker', 'tls_address').sort()).toEqual([...docker].sort());
+	});
+
+	test("index.md's route table: the TLS cell of Production and Docker", () => {
+		const cell = (route: string) => rowOf(INDEX, `| **${route}** |`).split('|')[5] ?? '';
+		expect(cell('Production')).not.toBe('');
+		expect(namedModes(cell('Production'), PAGE_WORDS['index.md route table']!)).toEqual(production);
+		expect(namedModes(cell('Docker'), PAGE_WORDS['index.md route table']!)).toEqual(docker);
+	});
+
+	test("production.md's certificate table has one row per accepted mode", () => {
+		const table = certificateTable();
+		expect(table).not.toBe('');
+		expect(namedModes(table, PAGE_WORDS['production.md certificate table']!)).toEqual(production);
+	});
+
+	test("docker.md's TLS & address screen row names every accepted mode", () => {
+		const row = rowOf(DOCKER, '| **TLS &');
+		expect(row).not.toBe('');
+		expect(namedModes(row, PAGE_WORDS['docker.md screen table']!)).toEqual(docker);
+	});
+
+	test("installer_reference.md's --tls row names every mode either route accepts", () => {
+		const row = rowOf(REFERENCE, '| `--tls` |');
+		expect(row).not.toBe('');
+		for (const mode of new Set([...production, ...docker])) expect(row).toContain(`\`${mode}\``);
+	});
+
+	test('no page under docs/install says the local CA is Docker-only while production accepts it', () => {
+		expect(production).toContain('local_ca');
+		const localCa = /local (certificate authority|CA)|local_ca/i;
+		const dockerOnly =
+			/Docker only|only on the Docker|on the Docker route, a local|never offered on (this route|`production`)/i;
+		const offending: string[] = [];
+		// Every page of the install manual, from the manual's one lister (a page added later is read too).
+		const pages = docsPages().filter((path) => path.startsWith('docs/install/'));
+		expect(pages.length).toBeGreaterThan(10);
+		for (const page of pages) {
+			const text = readFileSync(join(ROOT, page), 'utf8');
+			for (const sentence of text.split(/(?<=[.!?])\s+|\n/)) {
+				if (localCa.test(sentence) && dockerOnly.test(sentence))
+					offending.push(`${page}: ${sentence}`);
+			}
+		}
+		expect(offending).toEqual([]);
+	});
+});
+
+// ── D18: the Done section says what the local CA's closing To-do tells ───────
+
+/** The production Done section (up to the next ## heading). */
+function doneSection(): string {
+	const start = PRODUCTION.indexOf('\n## Done\n');
+	const end = PRODUCTION.indexOf('\n## ', start + 1);
+	return start === -1 ? '' : PRODUCTION.slice(start, end === -1 ? undefined : end);
+}
+
+/** The page's trust row for a system the told line names (told label → row label). */
+const TRUST_ROWS: Record<string, string> = {
+	Windows: '| Windows |',
+	macOS: '| macOS |',
+	'Debian/Ubuntu': '| Debian, Ubuntu |',
+	'Fedora/RHEL': '| Fedora, RHEL family |',
+	Firefox: '| Firefox',
+};
+
+describe("D18: production.md's Done section says what host_tls tells for a local CA", () => {
+	const variant = LOCAL_CA_VARIANTS[0];
+	if (variant === undefined) throw new Error('no local-CA fixture variant');
+	// The told lines need no file on disk: an unreadable authority names the openssl command instead.
+	const told = localCaTold({
+		...productionPlanCtx(variant),
+		fs: { readText: () => null },
+	} as unknown as HostCtx);
+	const done = doneSection();
+	const generic = (line: string) =>
+		line
+			.replaceAll(`/instances/${INSTANCE}/`, '/instances/<i>/')
+			.replaceAll(SERVER_NAME, '<address>');
+
+	test("the authority's file and the curl check, in the page's placeholders", () => {
+		const file = /the local certificate authority is (\S+)/.exec(told[0] ?? '')?.[1];
+		expect(file).toBeDefined();
+		expect(done).toContain(`\`${generic(file as string)}\``);
+		const curl = /(curl --cacert \S+ https:\/\/\S+)/.exec(told.join('\n'))?.[1];
+		expect(curl).toBeDefined();
+		expect(done).toContain(`\`${generic(curl as string)}\``);
+	});
+
+	test('every told system has a row, and every command and menu item of a row is in its told clause', () => {
+		const trust = told.find((line) => line.startsWith('trust it ONCE')) ?? '';
+		const clauses = trust.slice(trust.indexOf(': ') + 2).split('; ');
+		expect(clauses.length).toBe(Object.keys(TRUST_ROWS).length);
+		for (const clause of clauses) {
+			const system = Object.keys(TRUST_ROWS).find((label) => clause.startsWith(label));
+			expect(system, clause).toBeDefined();
+			const row = rowOf(done.slice(1), TRUST_ROWS[system as string] as string);
+			expect(row, system).not.toBe('');
+			const spans = [...row.matchAll(/`([^`]+)`|\*([^*|]+)\*/g)].map((m) => m[1] ?? m[2] ?? '');
+			expect(spans.length, system).toBeGreaterThan(0);
+			for (const span of spans) expect(clause, `${system}: ${span}`).toContain(span);
+		}
 	});
 });

@@ -38,6 +38,7 @@ import {
 	SECURITY_HEADERS,
 	type SiteInput,
 	siteHeader,
+	siteNames,
 } from './site.ts';
 
 /** The security header lines at `indent`. */
@@ -72,7 +73,7 @@ function httpServer(input: SiteInput): string[] {
 		'server {',
 		`\tlisten ${answers.http_port};`,
 		`\tlisten [::]:${answers.http_port};`,
-		`\tserver_name ${answers.server_name};`,
+		`\tserver_name ${siteNames(answers).join(' ')};`,
 		'\tserver_tokens off;',
 		...acme,
 		`\tlocation / { return 301 https://$host${httpsOrigin(answers)}$request_uri; }`,
@@ -176,7 +177,7 @@ function httpsServer(input: SiteInput, cert: { fullchain: string; key: string })
 		`\tlisten ${answers.https_port} ssl;`,
 		`\tlisten [::]:${answers.https_port} ssl;`,
 		'\thttp2 on;',
-		`\tserver_name ${answers.server_name};`,
+		`\tserver_name ${siteNames(answers).join(' ')};`,
 		'\tserver_tokens off;',
 		`\tssl_certificate     ${cert.fullchain};`,
 		`\tssl_certificate_key ${cert.key};`,

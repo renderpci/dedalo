@@ -21,7 +21,9 @@
  * PURE AND CONFIG-FREE: imports only src/config/pg_transport.ts and the client
  * password policy module (the bytes the browser checklist and the server
  * refusal both run — core/security/password_policy.ts wraps the same function
- * but pulls in the error registry, so it is not imported here).
+ * but pulls in the error registry, so it is not imported here) — plus the
+ * installer's release identity (installer_identity.ts: a process constant read
+ * once from this tree's build stamp), which decides the image answers.
  *
  * TAGGED (phase 2, 2026-10-12): every refusal is a {@link FieldError} — the
  * sentence AND the answer key it is about. The plan's `errors` carry the
@@ -31,12 +33,15 @@
  * test/unit/install_screen_model_tripwire.test.ts.
  */
 
+import { isIP } from 'node:net';
 import { dirname, isAbsolute } from 'node:path';
 import { check_password } from '../../../client/dedalo/core/component_password/js/password_policy.js';
 import { liveProcessEnv } from '../../config/env.ts';
 import { connFieldProblem, pgSocketProblem } from '../../config/pg_transport.ts';
+import { DEV_TLS_MODES, type DevListenerPlan } from './dev_listener.ts';
 import { acceptedImageVersions } from './host/stack/layout.ts';
 import type { InstallAnswers } from './install_plan.ts';
+import { officialRefusedFor } from './installer_identity.ts';
 
 /**
  * The entity name: a letter, then letters/digits/underscore. It becomes a
@@ -340,9 +345,14 @@ function instanceShapeErrors(a: InstallAnswers, problems: Problems): void {
 
 // ── the host-step answers (phase 4, 2026-10-12) ─────────────────────────────
 
-/** The TLS modes each route takes (trial has none: it is the evaluation stack). */
+/**
+ * The TLS modes each route takes (trial has none: it is the evaluation stack).
+ * local_ca on production (owner decision 2026-10-16): an install that runs on
+ * an isolated intranet with no public name — Let's Encrypt cannot reach it,
+ * and `files` would leave the operator making certificates by hand.
+ */
 const ROUTE_TLS: Readonly<Record<string, readonly string[]>> = Object.freeze({
-	production: ['letsencrypt', 'files'],
+	production: ['letsencrypt', 'local_ca', 'files'],
 	docker: ['letsencrypt', 'local_ca', 'files'],
 	trial: ['none'],
 });
@@ -397,6 +407,81 @@ function tlsErrors(a: InstallAnswers, problems: Problems): void {
 	}
 	if (a.tls_mode === 'letsencrypt') letsEncryptErrors(a, problems);
 	if (a.tls_mode === 'files') tlsFileErrors(a, problems);
+	extraNameErrors(a, problems);
+	if (a.tls_mode === 'local_ca') nestedNameErrors(a, problems);
+}
+
+/**
+ * The local CA certifies each of its DNS names EXACTLY: the generator writes
+ * `excluded;DNS:.<name>` beside each permitted name, so nothing BELOW a name
+ * verifies (deploy/dedalo-tls-rotate.sh header, EXACT NAMES — a stolen issuing
+ * key must not mint `mail.museo.lan` because the list holds `museo.lan`). A
+ * name under another listed name — localhost included, which every leaf
+ * carries — would then be refused by its own authority; the generator refuses
+ * the list, so it is refused here first, before anything is installed.
+ */
+function nestedNameErrors(a: InstallAnswers, problems: Problems): void {
+	const extras = a.tls_extra_names === '' ? [] : a.tls_extra_names.split(',');
+	const names = [a.server_name, ...extras].filter((name) => !IPV4_PATTERN.test(name));
+	for (const lower of names) {
+		const upper = [...names, 'localhost'].find((name) => lower.endsWith(`.${name}`));
+		if (upper === undefined) continue;
+		problems.push(
+			problem(
+				lower === a.server_name ? 'server_name' : 'tls_extra_names',
+				`${lower} lies under ${upper}: the local CA certifies each name exactly, never the names below it — give staff names that are not inside one another`,
+			),
+		);
+	}
+}
+
+/** A dotted IPv4 address, every octet 0-255 (no leading zeros: one spelling per address). */
+const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+
+/**
+ * The local CA's extra addresses: each a name shaped like server_name or an
+ * IPv4 address — the generator constrains the authority to exactly this list,
+ * so a malformed entry is refused here, before anything is issued. IPv6 is
+ * refused (the authority's IP constraint is written per family; the generator
+ * refuses it too). A loopback address and the server name itself are already
+ * in every certificate. Only meaningful with local_ca: Let's Encrypt and the
+ * institution's files name what their issuer certified.
+ */
+function extraNameErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.tls_extra_names === '') return;
+	if (a.tls_mode !== 'local_ca') {
+		problems.push(
+			problem(
+				'tls_extra_names',
+				`tls_extra_names is only meaningful with tls_mode local_ca (tls_mode is ${a.tls_mode})`,
+			),
+		);
+		return;
+	}
+	for (const name of a.tls_extra_names.split(',')) {
+		const message = extraNameError(name, a.server_name);
+		if (message !== null) problems.push(problem('tls_extra_names', message));
+	}
+}
+
+/** One extra address's refusal, or null. */
+function extraNameError(name: string, serverName: string): string | null {
+	if (name === serverName) return `tls_extra_names: ${name} is already the server_name`;
+	if (name.includes(':'))
+		return `tls_extra_names: ${name} — IPv6 addresses are not supported for the local CA (use a name or an IPv4 address)`;
+	if (IPV4_PATTERN.test(name)) {
+		// An IPv4 address is served on BOTH routes: the docker stack's one site is the
+		// address's default; on a native host the installer's catch-all picks this
+		// instance's certificate for a CLAIMED address (host/web/catch_all.ts) — that
+		// the address is this host's and no other instance's is the System check's
+		// (host/production/address_claims.ts), not the answers'.
+		return name.startsWith('127.')
+			? `tls_extra_names: ${name} is a loopback address (127.0.0.1 is in every certificate already)`
+			: null;
+	}
+	return FQDN_PATTERN.test(name)
+		? null
+		: `tls_extra_names: '${name}' must be a fully qualified domain name or an IPv4 address`;
 }
 
 /** Let's Encrypt: an address for expiry notices, and the HTTP-01 challenge on port 80. */
@@ -660,6 +745,7 @@ function stackHostErrors(a: InstallAnswers, problems: Problems): void {
 	if (a.image_source === 'custom' && a.image_repository === '') {
 		problems.push(problem('image_repository', 'image_source custom requires image_repository'));
 	}
+	officialSourceErrors(a, problems);
 	// The run's preflight refuses any other tag (stack/preflight.ts imageProblems): said on
 	// the Image screen itself, never first after `yes` (campaign 3c D2: `9.9.9` passed the
 	// field and the Review, every answer lost at the refusal).
@@ -671,6 +757,109 @@ function stackHostErrors(a: InstallAnswers, problems: Problems): void {
 			),
 		);
 	}
+}
+
+/**
+ * A development build (untagged) has no official image: refused from the identity
+ * itself, on the Image screen — the Review never asks a registry for it (Q6).
+ */
+function officialSourceErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.image_source !== 'official') return;
+	const refused = officialRefusedFor();
+	if (refused !== null) problems.push(problem('image_source', refused));
+}
+
+// ── the developer route's development listener (DEV_ROUTE_SERVE §1.1–1.2) ────
+
+/** The listener answers only the developer route reads (dev_listener.ts). */
+const DEV_LISTENER_KEYS = ['dev_port', 'dev_host'] as const;
+
+/**
+ * The development listener: a port and an address the server can bind, and a
+ * TLS mode a checkout has (no Let's Encrypt: no public name). '' = the plan
+ * decides (the prior .env's, else the defaults). On any other route the answers
+ * are refused rather than silently ignored: they would write nothing.
+ */
+function devListenerErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.route !== 'developer' || a.engine_only) {
+		offDeveloperListenerErrors(a, problems);
+		return;
+	}
+	devPortErrors(a, problems);
+	devHostErrors(a, problems);
+	devTlsErrors(a, problems);
+}
+
+/** The developer listener's answers given on another route (they would write nothing). */
+function offDeveloperListenerErrors(a: InstallAnswers, problems: Problems): void {
+	for (const key of DEV_LISTENER_KEYS) {
+		if (a[key] === '') continue;
+		problems.push(
+			problem(key, `${key} is only meaningful on the developer route (route is ${a.route})`),
+		);
+	}
+}
+
+/** The development port, when given: 1-65535. */
+function devPortErrors(a: InstallAnswers, problems: Problems): void {
+	const message = a.dev_port === '' ? null : portError('dev_port', a.dev_port);
+	if (message !== null) problems.push(problem('dev_port', message));
+}
+
+/** A development address the server can bind: localhost or an IP literal. */
+function isDevHost(value: string): boolean {
+	return value === 'localhost' || isIP(value) !== 0;
+}
+
+const DEV_HOST_RULE =
+	'must be 127.0.0.1 (this machine), 0.0.0.0 (the local network) or one IP address of this machine';
+
+/** The development address, when given: localhost or an IP literal (what the server binds). */
+function devHostErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.dev_host === '' || isDevHost(a.dev_host)) return;
+	problems.push(problem('dev_host', `dev_host '${a.dev_host}' ${DEV_HOST_RULE}`));
+}
+
+/**
+ * The listener values the plan KEPT from the prior .env (PRESERVE), held to the
+ * SAME rules as an answer: an unanswered re-run over `SERVER_TCP_PORT=abc`
+ * would otherwise reach the port probe with NaN (an untyped bind error) or
+ * write a .env whose `bun run dev` cannot boot. Tagged with the answer that
+ * replaces the value, so the screen attaches the refusal where it is fixed.
+ */
+export function keptDevListenerProblems(
+	listener: Pick<DevListenerPlan, 'port' | 'host' | 'kept'> | null,
+): FieldError[] {
+	if (listener === null) return [];
+	const problems: Problems = [];
+	if (listener.kept.includes('SERVER_TCP_PORT') && portError('p', listener.port) !== null) {
+		problems.push(
+			problem(
+				'dev_port',
+				`SERVER_TCP_PORT '${listener.port}' kept from your .env must be an integer 1-65535 — answer dev_port (--dev-port) to replace it`,
+			),
+		);
+	}
+	if (listener.kept.includes('SERVER_TCP_HOST') && !isDevHost(listener.host)) {
+		problems.push(
+			problem(
+				'dev_host',
+				`SERVER_TCP_HOST '${listener.host}' kept from your .env ${DEV_HOST_RULE} — answer dev_host (--dev-host) to replace it`,
+			),
+		);
+	}
+	return problems;
+}
+
+/** The developer listener's TLS mode, and what `files` needs. */
+function devTlsErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.tls_mode !== '' && !(DEV_TLS_MODES as readonly string[]).includes(a.tls_mode)) {
+		problems.push(
+			problem('tls_mode', `tls_mode must be ${DEV_TLS_MODES.join('|')} on the developer route`),
+		);
+		return;
+	}
+	if (a.tls_mode === 'files') tlsFileErrors(a, problems);
 }
 
 /** The answers that make the host steps (production, docker) — skipped for the engine child (A14). */
@@ -699,6 +888,7 @@ export function answerProblems(a: InstallAnswers): FieldError[] {
 	vocabularyErrors(a, problems);
 	localeErrors(a, problems);
 	fingerprintErrors(a, problems);
+	devListenerErrors(a, problems);
 	hostErrors(a, problems);
 	return problems;
 }

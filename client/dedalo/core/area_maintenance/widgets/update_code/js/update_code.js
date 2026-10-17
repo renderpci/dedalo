@@ -55,6 +55,7 @@
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_update_code} from './render_update_code.js'
+	import {data_version_of} from '../../../../common/js/release_identity.js'
 
 
 
@@ -194,7 +195,15 @@ update_code.prototype.get_code_update_info = async function ( server, channel ) 
 	// short vars
 		const code				= server.code
 		const url				= server.url
-		const dedalo_version	= page_globals.dedalo_version
+		// `version` is the DATA triple, never the release identity: a master (this
+		// version or an OLDER one — its parser reads three integers) refuses
+		// '7.0.0-beta.6' as an invalid version. The server publishes the triple
+		// beside the identity (page_globals.dedalo_data_version); deriving it is
+		// the fallback for a page_globals without the key.
+		// `release` carries the identity itself, optional and informational
+		// (WC-2026-10-15-release-identity-from-tag).
+		const data_version		= page_globals.dedalo_data_version || data_version_of(page_globals.dedalo_version)
+		const release			= page_globals.dedalo_version || null
 
 	const api_response = await data_manager.request({
 		url		: url,
@@ -204,7 +213,8 @@ update_code.prototype.get_code_update_info = async function ( server, channel ) 
 			prevent_lock	: true,
 			source			: {},
 			options			: {
-				version	: dedalo_version,
+				version	: data_version,
+				release	: release,
 				code	: code,
 				// 'dev' asks the master to ALSO offer developer builds (branch
 				// builds, same version — no bump). It is an ask, not a right: a

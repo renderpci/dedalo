@@ -1,0 +1,14 @@
+# One instance's local-CA renewal cadence (written by the installer). Daily: a
+# renewal only acts inside the certificate's last 30 days, so a host that was
+# off for weeks still renews in time (Persistent= runs a missed check at boot).
+
+[Unit]
+Description=Check the Dedalo local-CA certificate of %i daily
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+RandomizedDelaySec=3600
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -107,9 +107,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { privateDir, projectRoot } from '../src/config/env.ts';
 import { libpqTransportArgs, resolvePgTransport } from '../src/config/pg_transport.ts';
-import { DEDALO_ENGINE_VERSION } from '../src/core/update/build_stamp.ts';
+import { PLAIN_HTTP_DEV_LISTENER_ENV } from '../src/config/tcp_listener.ts';
+import { DEDALO_ENGINE_VERSION, readReleaseIdentityOf } from '../src/core/update/build_stamp.ts';
 import { UPDATE_CATALOG, type UpdateDescriptor } from '../src/core/update/catalog.ts';
-import { compareVersionArrays } from '../src/core/update/version.ts';
+import { parseReleaseVersion } from '../src/core/update/release_identity.ts';
+import { compareVersionArrays, DEDALO_VERSION } from '../src/core/update/version.ts';
 import {
 	assertServedDatabase,
 	findFreePort,
@@ -316,6 +318,29 @@ async function fetchHealth(origin: string): Promise<HealthBody> {
 	return (await response.json()) as HealthBody;
 }
 
+/**
+ * The release identity the materialized consumer will answer on /health,
+ * read from ITS OWN evidence by the engine's own resolver (build_stamp.ts
+ * readReleaseIdentityOf): the expanded build_info.txt of the HEAD archive, no
+ * install stamp, and the data triple the consumer was pinned to (RUNG.from).
+ * Never the bare triple: HEAD exactly at `v7.0.0-beta.6` archives an identity
+ * of `7.0.0-beta.6`, an untagged HEAD one of `7.0.0.dev` (a tag naming another
+ * triple than the pinned one, too) — only a pre-describe two-field stamp says
+ * the bare triple. The data triple is asserted separately: whatever the
+ * identity, it must belong to the rung's FROM end.
+ */
+async function consumerIdentityOf(consumerTree: string): Promise<string> {
+	const identity = await readReleaseIdentityOf(consumerTree, {
+		triple: RUNG.from as [number, number, number],
+	});
+	const parsed = parseReleaseVersion(identity.version);
+	must(
+		parsed !== null && parsed.triple.join('.') === CURRENT_VERSION,
+		`consumer identity ${identity.version} does not belong to the rung's FROM end ${CURRENT_VERSION}`,
+	);
+	return identity.version;
+}
+
 async function waitHealthy(
 	origin: string,
 	options: { expectedVersion: string; fingerprint: string; timeoutMs: number; label: string },
@@ -505,6 +530,10 @@ function instanceEnvironment(options: {
 		PATH: process.env.PATH ?? '/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin',
 		HOME: process.env.HOME ?? tmpdir(),
 		SERVER_TCP_PORT: String(options.port),
+		// PLAIN HTTP: the drill's origins are `http://127.0.0.1:<port>`, and
+		// operatorConfig() above carries the developer's TLS pair (with paths that
+		// need not resolve from the scratch tree).
+		...PLAIN_HTTP_DEV_LISTENER_ENV,
 		SERVER_UNIX_SOCKET: options.socketPath,
 		DEDALO_TS_STATE_PATH: options.stateFilePath,
 		DEDALO_SESSION_DB_PATH: options.sessionDbPath,
@@ -653,8 +682,12 @@ function plantDatabaseBackup(path: string, bytes: Uint8Array, minutesOld: number
  * files — never a dev checkout's operator dirs (rewrite/, audits/, agent
  * aliases, .DS_Store) — and the pipeline's ROOT WHITELIST correctly refuses
  * any tree carrying them. Exporting HEAD gives the honest previous release:
- * byte-identical to what the new release replaces, version stamp unexpanded
- * ('.dev' posture included), with nothing untracked at the root.
+ * byte-identical to what the new release replaces, its build stamp EXPANDED
+ * by export-subst exactly as a release zip's is, with nothing untracked at the
+ * root. What that stamp makes the consumer call itself depends on HEAD (an
+ * exact release tag, an untagged commit, a pre-describe two-field placeholder)
+ * — the caller reads it back with the engine's own resolver
+ * (consumerIdentityOf), never assumes it.
  */
 function materializeConsumer(fromRoot: string, to: string): Promise<void> {
 	return (async () => {
@@ -891,6 +924,8 @@ async function main(): Promise<void> {
 		const consumerTree = join(scratch, 'consumer');
 		console.log('[drill] copying the checkout as the consumer install…');
 		await materializeConsumer(projectRoot, consumerTree);
+		const consumerIdentity = await consumerIdentityOf(consumerTree);
+		console.log(`[drill] the consumer calls itself ${consumerIdentity} (data ${CURRENT_VERSION})`);
 		// A real install is configured by its own <private>/.env; give the copy
 		// one — the OPERATOR CONFIG rendered as a file (0600): the private file if
 		// there is one, overlaid by the catalog keys of this process's environment,
@@ -948,9 +983,9 @@ async function main(): Promise<void> {
 		sealStateFile(join(scratch, 'consumer_state.json'));
 		supervisor = spawnSupervisor(supervisedLoop, consumerTree, consumerEnv);
 		await waitHealthy(consumerOrigin, {
-			// A git-archive export is a RELEASE tree: its build stamp is expanded
-			// (export-subst), so it self-identifies WITHOUT the '.dev' tag.
-			expectedVersion: CURRENT_VERSION,
+			// The RELEASE IDENTITY its expanded stamp resolves to (consumerIdentityOf)
+			// — /health names the identity, never the bare data triple.
+			expectedVersion: consumerIdentity,
 			fingerprint,
 			timeoutMs: 150_000,
 			label: 'consumer boot',
@@ -1003,9 +1038,9 @@ async function main(): Promise<void> {
 		// `serverVersion: DEDALO_VERSION_TRIPLE`), NOT the rung's FROM end — the
 		// two only coincided while this checkout still sat on 7.0.0. The master
 		// here runs this unpatched checkout, so the honest expectation is the
-		// running engine's data version: DEDALO_ENGINE_VERSION minus its
-		// prerelease tag, which is what the manifest reports.
-		const masterDataVersion = DEDALO_ENGINE_VERSION.replace(/\.dev$/, '');
+		// running engine's DATA version (version.ts) — never derived from the
+		// release identity, which may be `7.0.0-beta.6` on a tagged checkout.
+		const masterDataVersion = DEDALO_VERSION;
 		must(
 			info.info.version === masterDataVersion,
 			`manifest reports server version ${info.info.version}, expected ${masterDataVersion}`,
@@ -1105,7 +1140,7 @@ async function main(): Promise<void> {
 		);
 		const healthyAfterUnwaived = await fetchHealth(consumerOrigin);
 		must(
-			healthyAfterUnwaived.version === CURRENT_VERSION,
+			healthyAfterUnwaived.version === consumerIdentity,
 			'server moved off the old version on a refused (unwaived) update',
 		);
 		must(
@@ -1157,7 +1192,7 @@ async function main(): Promise<void> {
 			'verify phase did not report the mismatch',
 		);
 		const healthyAfterNegative = await fetchHealth(consumerOrigin);
-		must(healthyAfterNegative.version === CURRENT_VERSION, 'server moved off the old version');
+		must(healthyAfterNegative.version === consumerIdentity, 'server moved off the old version');
 		must(
 			readFileSync(join(consumerTree, 'package.json'), 'utf8') === livePackageJsonBefore,
 			'live tree changed on a refused update',

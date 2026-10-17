@@ -79,29 +79,27 @@
 - [ ] TODO-049: Ontologies selector: The labels are in spanish (e.g. España | es). It is intentional? Because the rest of the interface is in english.
 - [ ] TODO-050: Installing into an already installed code fails. This is OK, but the failure message is at end of all the installation process, not at the beginning. Check at beginning of installation process.
 - [ ] TODO-051: Add a sample to https://dedalo.dev/docs/v7/install/#what-you-are-installing where refer 'https://v7.master.dedalo.dev/dedalo/install/code/<version>/<version>.zip'
-  See this error:
-  ```
-  sudo sh install.sh --release https://v7.master.dedalo.dev/dedalo/install/code/7/7.0/7.0.0-dev.zip \
-    --release-sha256 https://v7.master.dedalo.dev/dedalo/install/code/7/7.0/7.0.0-dev.zip.sha256
-  install.sh: --release needs --release-sha256 <the sha256 the release was published with> (64 hex digits)
-  ```
-- [ ] TODO-052: Check this error on dev install finish (the installer doesn't install all dependencies):
-  ```
-  bun run dev
-  $ DEDALO_SUPERVISED=true bun run scripts/dev.ts
-  error: Cannot find package 'less' from '/Users/raspa/Sites/v7-install/dedalo/scripts/build_css.ts'
-  ```
-  Root cause: install.sh's install_deps (install.sh:419-435) always runs bun install --frozen-lockfile --production --ignore-scripts, so a Developer-route install via sh install.sh gets no devDependencies — and on that route the tree is the runtime. bun run dev → scripts/dev.ts:37 → scripts/build_css.ts:30 (import less) crashes.
-
-- [ ] TODO-053: After the installation process (dev), add the information about the URL to access the application.
-- [ ] TODO-054: Dev mode: If the user do not configure the .env file. Nothing is served. He needs to add:
-  ```
-  # --- Development only ----------------------------------------------------
-  SERVER_TCP_PORT=3600
-  DEDALO_DEV_MODE=true
-  SESSION_COOKIE_SECURE=false
-  DEDALO_DEBUG_API_ERRORS=true
-  ```
-  to start to work.
-- [ ] TODO-055: Add Cady as elegible web server (auto manage certificates).
-- [ ] TODO-056: Add local certificate (self signed certificate) as option for easy install in intranets or local environments.
+See this error:
+```
+sudo sh install.sh --release https://v7.master.dedalo.dev/dedalo/install/code/7/7.0/7.0.0-dev.zip \
+  --release-sha256 https://v7.master.dedalo.dev/dedalo/install/code/7/7.0/7.0.0-dev.zip.sha256
+install.sh: --release needs --release-sha256 <the sha256 the release was published with> (64 hex digits)
+```
+- [x] TODO-052: Check this error on dev install finish (the installer doesn't install all dependencies): (2026-10-17: the developer route's install_dev_dependencies step; `bun run dev` stops when its CSS watcher dies, and the serve check names the missing package. Gates test/unit/install_dev_dependencies_native.test.ts, test/unit/install_dev_serve_native.test.ts C.)
+```
+bun run dev
+$ DEDALO_SUPERVISED=true bun run scripts/dev.ts
+error: Cannot find package 'less' from '/Users/paco/Sites/v7-install/dedalo/scripts/build_css.ts'
+```
+- [x] TODO-053: After the installation process (dev), add the information about the URL to access the application. (2026-10-17: verify_dev_server boots `bun run dev` once — /health + root login over the listener — before "complete"; the final screen (DONE_TEXT.served) gives the command, every URL from the written keys, the CA path + SHA-256 + trust. Gate test/unit/install_dev_serve_native.test.ts.)
+- [x] TODO-054: Dev mode: If the user do not configure the .env file. Nothing is served. He needs to add: (2026-10-17: the developer route writes the Development only section — dev_listener.ts; gate test/unit/install_dev_route_listener_native.test.ts.)
+```
+# --- Development only ----------------------------------------------------
+SERVER_TCP_PORT=3600
+DEDALO_DEV_MODE=true
+SESSION_COOKIE_SECURE=false
+DEDALO_DEBUG_API_ERRORS=true
+```
+to start to work.
+- [x] TODO-055: include a local certificate for developer path. (2026-10-17: local_ca by default from deploy/dedalo-tls-rotate.sh into <private>/tls, trusted on this machine, HTTPS dev listener; `bun run tls:renew` / `tls:untrust`. Gates test/unit/install_dev_tls_native.test.ts, test/unit/dev_listener_tls_native.test.ts. Closes the earlier open item "local certificate (self signed) for easy install in intranets or local environments" — the production Local CA covers that route too.)
+- [ ] TODO-056: Add Caddy as an eligible web server (auto-manages certificates).

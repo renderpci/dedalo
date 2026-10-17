@@ -1795,40 +1795,216 @@ the other direction — that no tracked file the engine needs was narrowed away.
 **Adding a top-level entry to the repo means regenerating both artifacts.** The
 gate is red until you do, and it prints what it expected.
 
-### 13.2 Rotating TLS material
+### 13.2 Rotating and renewing TLS material
 
-`deploy/dedalo-tls-rotate.sh` is the ONE generator of local-CA material —
-`install.sh` calls it for the first issue, so an install and a rotation produce
-the same shape of certificate. It archives the previous material into
-`deploy/certs/rotated-<UTC stamp>/` (700, never overwritten, outside the build
-context and outside every release archive) before it writes anything new, so a
-half-finished rotation can always be put back.
+`deploy/dedalo-tls-rotate.sh` is the ONE generator of local-CA material, for
+both install routes — the docker route's `stack_tls` step calls it for the
+first issue, and the native (production) route's TLS step and renewal timer
+call it too, so an install, a rotation and a renewal produce the same shape of
+certificate (no second generator: `build_context_secret_tripwire` H). A
+rotation archives the previous material into `<cert dir>/rotated-<UTC stamp>/`
+(700, never overwritten, outside the build context and outside every release
+archive) before it installs anything new, and the new material is made and
+VERIFIED in a private staging directory first, so a failed issue leaves the
+install as it was.
 
 ```shell
-# a local certificate authority (install.sh option 2)
-deploy/dedalo-tls-rotate.sh --mode local-ca --host dedalo.local
+# a new local certificate authority + site certificate (repeat --host for every
+# address staff type: the server name, a LAN name, an IPv4 address)
+deploy/dedalo-tls-rotate.sh --mode local-ca --host dedalo.local --host 192.168.1.20
 
-# a certificate your institution issues (install.sh option 3)
+# a new site certificate from the SAME authority (workstations change nothing)
+deploy/dedalo-tls-rotate.sh --mode renew [--force] [--renew-days 30]
+
+# a certificate your institution issues
 deploy/dedalo-tls-rotate.sh --mode existing --cert /path/fullchain.pem --key /path/privkey.pem
 ```
+
+**The authority is name-constrained (2026-10-16), and its root key does not
+survive the issue.** Before, the CA was a single unconstrained self-signed root
+whose key sat next to the site certificate: every workstation trusts it, so a
+leaked key could mint a browser-trusted certificate for ANY site (the OPS-01
+class, §13.3). Now:
+
+- the authority workstations trust (`dedalo-local-ca.pem`) and the issuing
+  authority under it (`dedalo-issuing-ca.pem`) both carry
+  `nameConstraints = critical, permitted;DNS:<name>…, permitted;IP:<ip>/32…,
+  excluded;DNS:.<name>…`
+  — exactly the requested names plus `localhost`/`127.0.0.1` (which every
+  leaf names; it also keeps both name types constrained — a type with no
+  permitted entry would be unconstrained, RFC 5280 §4.2.1.10, and an IPv4
+  `/32` refuses every IPv6 address);
+- both authorities also carry `extendedKeyUsage = serverAuth`. The name
+  constraint covers only the name TYPES it lists (DNS, IP): e-mail addresses
+  and the subject DN stay open under RFC 5280, so without a usage limit a
+  leaked issuing key could still mint an S/MIME certificate for any mailbox or
+  a code-signing certificate with any publisher name — and Windows trusts an
+  imported root for every purpose. An EKU on a CA restricts the whole chain
+  (Windows CryptoAPI, NSS, Chrome; OpenSSL for S/MIME — `openssl verify
+  -purpose smimesign` refuses, measured by the gate; OpenSSL's `codesign`
+  purpose checks the leaf only, so the gate asserts the authorities' EKU is
+  exactly serverAuth). Authorities issued before this line have no EKU; the
+  next rotation adds it;
+- the ROOT key is generated in the staging directory, signs the issuing CA
+  once and is deleted; only the issuing CA's key (`dedalo-issuing-ca.key`,
+  0600) stays on the server, to sign renewals.
+
+Two tiers because constraints on a TRUST ANCHOR are optional in RFC 5280 and
+client support is uneven: OpenSSL, Firefox/NSS and Chromium/Chrome/Edge ≥ 112
+enforce them on the anchor, Apple's system verifier has been reported not to
+(Safari, Secure-Transport curl); constraints on an INTERMEDIATE are mandatory
+path processing that every verifier applies. The sources are in the script
+header. A DNS constraint alone permits the name AND its subdomains, so an
+authority for `museo.lan` would certify `mail.museo.lan`, and every one for
+`x.localhost`; each DNS name is therefore also EXCLUDED with a leading dot
+(`excluded;DNS:.<name>`), which matches only names below it, and an exclusion
+overrides a permission — the authority certifies exactly its list. The
+leading-dot rule was read in OpenSSL/LibreSSL (measured by the gate), NSS
+(`pkixnames.cpp`), Chromium (BoringSSL `pki/name_constraints.cc`), Apple
+trustd (`nameconstraints.c`) and Wine's crypt32 for CryptoAPI (sources in the
+script header); a verifier without it falls back to the subtree behaviour,
+never to refusing the install's own name. Hence no listed name may lie under
+another (the script and the installer's validator refuse it). The price:
+adding a name needs a NEW authority (a rotation, then re-trust), since only
+the deleted root could certify a wider issuing CA — and the installed site
+file names the addresses too, so a rotation alone does not add one. `test/unit/tls_local_ca_native.test.ts`
+proves it with a real `openssl verify` (OpenSSL and, on macOS, LibreSSL): a
+leaf signed with the issuing key for another domain, a look-alike suffix,
+another IPv4 or an IPv6 address, a name below one of the install's names or
+below `localhost` is REFUSED; the install's own names are accepted; a leaf for signed mail under a foreign mailbox is REFUSED too.
+
+**Existing unconstrained authorities keep working.** A pre-2026-10-16 install
+still has `dedalo-local-ca.key` and `--mode renew --host <name>` re-issues its
+leaf from it (it has no `dedalo-local-ca.names`). The next `--mode local-ca`
+rotation produces a constrained authority; workstations then trust the new one
+and delete the old entry, as for any rotation.
+
+**An installer run over an existing authority** (`src/core/install/host/tls_authority.ts`,
+both routes): the issue is skipped when the authority and the certificate are
+already in the directory, so the installer first compares that authority with
+the answers. Made for OTHER addresses (`dedalo-local-ca.names` differs from
+`server_name` + `tls_extra_names`) → refused at the System check and again in
+the TLS step, with the rotate command — it cannot certify the new list, and a
+skipped issue would leave a certificate the browsers reject. With NO names
+list (a pre-2026-10-16, unconstrained authority): the native route refuses it
+(never adopted silently — it is unconstrained, and its renewal timer would
+fail daily for want of names); the docker route keeps it working as before,
+but only while its site certificate names every answered address (read from
+the certificate itself), else it is refused the same way. Gates:
+`install_host_steps_native` (g), `install_stack_local_ca_native`.
+
+**IPv4 extra addresses: both routes (native since 2026-10-16).** A browser
+sends no SNI for an IP-literal URL (RFC 6066 §3), so the web server picks the
+handshake's certificate by the listening address alone. In the docker stack
+the instance's site is the container's only HTTPS server, so an IP works
+there as it is. On a native host the default for an address is the host-wide
+catch-all, and claiming the address in a site (`listen <ip>:443` /
+`<VirtualHost <ip>:443>`) is not a fix — both servers then route EVERY name
+arriving on that address to the claimant (nginx request_processing.html;
+Apache vhosts/details.html: an exact address match hides every `*` vhost).
+So a native instance CLAIMS the address in the installer-owned catch-all
+(`src/core/install/host/web/catch_all.ts`, re-rendered from every instance's
+`addresses` in the host registry): nginx picks the certificate per handshake
+(`ssl_certificate $dedalo_catch_all_certificate`, a map on
+`"$server_addr|$ssl_server_name"` — only a NAMELESS handshake to a CLAIMED
+address gets one; every other handshake the catch-all sees finds a file that
+never exists and is refused, logged in `dedalo-catch-all.error.log`). A
+certificate named by a variable is loaded by a nginx WORKER, so the claiming
+instance's site key is `root:<web group> 0640` — the generator's
+`--key-group`, in host_tls's key-access run and the renewal drop-in, applied
+even by a no-op renewal. Apache has no per-address certificate: while ONE
+instance claims addresses its catch-all is the first `*:443` vhost with that
+instance's certificate (SSL settings equal to the instance vhost's — mod_ssl
+answers 421 to a request whose vhost's SSL setup differs from the
+handshake's), 421 for any undeclared Host; a second claimant is refused. The
+System check (`production/address_claims.ts`) refuses an address that is not
+this host's (`/proc/net/fib_trie`), one another instance claims, non-standard
+ports, a foreign catch-all, an operator site BOUND to the claimed address
+(`listen <ip>:80|443` / `<VirtualHost <ip>:80|443>`, or a listen on a host
+name — the address is kept by the `nginx -T` / `-S` parsers in
+`web/clash.ts`: such a bind takes every connection to the address from the
+wildcard sites, catch-all included), nginx's operator `default_server` on 443
+or an operator 443 server loaded BEFORE the catch-all (the first server is the
+port's default; load order from the dump's `include` order —
+`nginxIncludes`/`nginxLoadOrder`, unknown refused), and on Apache another claimant or an operator `*:443` vhost loaded before the
+catch-all. host_web_site re-checks the claim against the LIVE registry and
+renders from it (`liveClaimCheck`): a claim landed since this run's Review
+refuses the run (`install.state_conflict`) — never last-writer-wins; the
+render keeps one map key per address (nginx refuses a duplicate). Its verify
+reads the catch-all (`catchAllServes`), so a resume never adopts a step
+stopped before the catch-all write; the registry's `catch_all` use is recorded
+before the work. The generator REMEMBERS `--key-group` in
+`<dir>/dedalo-key-group`, so a hand rotation without the flag keeps the
+key's 0640. `--abort` re-renders the catch-all without the instance's
+addresses (nginx) or removes it with the last user. IPv6 stays refused at
+validation (the generator constrains IPv4 only). Gate:
+`install_host_ip_claims_native` (real nginx and Apache in `dedalo-ci:local`
+when Docker is present).
+
+**Lifetimes and renewal.** The leaf lives 397 days, the authorities ten years.
+`--mode renew` re-issues the leaf (new key, new serial) from the SAME
+authority when it expires within `--renew-days` (default 30; a no-op otherwise,
+byte-exact), for the names in `dedalo-local-ca.names`; `--host` may name a
+subset. A name outside the authority's list fails `openssl verify` in staging
+and nothing is replaced. An authority that would not outlive a full-length
+leaf refuses to renew and says to rotate. The NATIVE route renews from a
+systemd timer: `host_tls` (`src/core/install/host/production/tls.ts`) issues
+into `/opt/dedalo/instances/<i>/tls/` (root 0755, keys 0600 — the site key
+0640 to the web group with a claimed IP on nginx — `cert_t` on EL)
+with the ROOT-OWNED copy of the script in `/opt/dedalo/instances/<i>/bin/`
+(a ROOT_RUN_SCRIPT — never the instance's tree, F2), every address
+(`server_name` + `tls_extra_names`) a `--host`, `--no-reload` (the site is
+written next); then the `dedalo-tls-renew@<i>.service` drop-in pins
+`--mode renew --dir <that dir> --reload systemd --unit <the row's web unit>`
+and `dedalo-tls-renew@<i>.timer` (daily, Persistent) runs it. `--abort`
+disables the timer, removes the drop-in and deletes the directory only when
+that install created it. Gates: `install_host_local_ca_native` (the plan's
+commands EXECUTED: constraint refusal, renewal keeps the authority, the
+reload of nginx/apache2/httpd), `install_host_steps_native` (g). The DOCKER
+route has no timer: the operator renews (the
+operator-facing procedure, `docs/install/docker.md` "Renewing the local-CA
+certificate", suggests a calendar reminder or a monthly cron line — the run
+is a no-op until the last 30 days).
+
+**Reloading.** `--reload docker` (the default) runs `nginx -s reload` inside
+the stack — `--compose-file` names it (default `docker-compose.simple.yml`;
+pass `docker-compose.yml` on the full one); only the SIMPLE stack's proxy also
+reloads itself every six hours, so on the full stack a missed reload keeps
+serving the OLD certificate. `--reload systemd --unit nginx|apache2|httpd`
+reloads the HOST web server (native route; never docker; `--dir` is required
+there): a server that is not running reads the certificate when it starts; a
+running one that refuses the reload exits 3 with the certificate in place, so
+a renewal timer shows the failure. A failed `--reload docker` exits 3 too (a
+cron renewal where `docker` is not on PATH must not read as success). The
+obligation is REMEMBERED in `.dedalo-reload-pending` in the certificate
+directory, written before the served files are replaced and removed only when
+the reload worked (or the host server was not running): without it, the next
+run — a no-op, since the leaf on disk is fresh — would exit 0, the failed timer
+would turn green, and the web server would serve the old leaf from memory until
+it expired. Every run retries the pending reload and stays exit 3 until it
+works. `--no-reload` skips the reload and leaves no obligation: the caller owns
+it (the docker installer, which then starts the stack).
+
+**Killed runs.** Every run first removes `.dedalo-tls.*` staging directories
+older than ten minutes in the certificate directory: an issue killed by SIGKILL,
+the OOM killer or a power loss between creating the root key and deleting it
+would otherwise leave that key — able to sign a new, unconstrained
+intermediate — next to the certificates. Younger ones are left alone (a
+concurrent run's live staging). Gate: `tls_local_ca_native` C/D.
 
 The OPERATOR-facing version of this procedure is `docs/install/docker.md`
 ("Rotating TLS material"), linked from the simple install's after-install steps
 and its troubleshooting table — a rotation only an engineer can find is not
-delivered. This section is the same procedure with the reasoning.
+delivered. This section is the same procedure with the reasoning. A rotation
+prints the new CA file with its SHA-256 fingerprint. Each CA carries its issue
+stamp in the subject (`CN=Dedalo local CA <stamp>`) — two authorities both
+called "Dedalo local CA" are indistinguishable in a Windows or macOS trust
+store, and an operator rotating away from a compromised key must be able to
+tell which entry to delete.
 
-It reloads nginx when it can reach the stack — `--compose-file` names the stack
-(default `docker-compose.simple.yml`; pass `docker-compose.yml` on the full
-one), `--no-reload` skips it. Only the SIMPLE stack's proxy also reloads itself
-every six hours; on the full stack a missed reload keeps serving the OLD
-certificate until you reload it yourself. It then prints the new CA file with
-its SHA-256 fingerprint. Each CA carries its issue stamp in the subject
-(`CN=Dedalo local CA <stamp>`) — two authorities both called "Dedalo local CA"
-are indistinguishable in a Windows or macOS trust store, and an operator
-rotating away from a compromised key must be able to tell which entry to delete.
-
-**Let's Encrypt (option 1) needs none of this**: its key lives in the
-`letsencrypt` named volume, never in the build context, and it renews itself.
+**Let's Encrypt needs none of this**: its key lives in the `letsencrypt` named
+volume (docker) or certbot's own directory (native), never in the build
+context, and it renews itself.
 
 ### 13.3 If you have already distributed an image — read this
 

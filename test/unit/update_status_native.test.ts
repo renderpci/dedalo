@@ -35,6 +35,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { projectRoot } from '../../src/config/env.ts';
 import { SUPERUSER_ID } from '../../src/core/security/permissions.ts';
+import { RELEASE_IDENTITY } from '../../src/core/update/build_stamp.ts';
 import { detectDeploymentChannel } from '../../src/core/update/channel.ts';
 import { planCodeBuild } from '../../src/core/update/code_build_plan.ts';
 import { backupRootIsInsideTree } from '../../src/core/update/code_update.ts';
@@ -116,6 +117,11 @@ describe('consumer status', () => {
 		// the tree also SAYS which channel it came from, so the panel can name it
 		expect(status.engine).toHaveProperty('install_channel');
 		expect(status.engine).toHaveProperty('install_digest');
+		// the RELEASE IDENTITY and its kind travel together, read from the tag —
+		// never inferred from the string (WC-2026-10-15-release-identity-from-tag)
+		expect(status.engine.engine_version).toBe(RELEASE_IDENTITY.version);
+		expect(status.engine.release_kind).toBe(RELEASE_IDENTITY.kind);
+		expect(['stable', 'prerelease', 'dev']).toContain(status.engine.release_kind);
 	});
 
 	test('every check uses the closed state vocabulary', async () => {

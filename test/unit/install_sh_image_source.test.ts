@@ -16,7 +16,9 @@
  *  B. the .dedalo.env reader/writer: a set keeps every other line byte for
  *     byte, appends an absent key, is atomic and owner-only;
  *  C. the grammars equal isRepositoryReference / normalizeRepository /
- *     compareVersionArrays over a corpus;
+ *     the release identity's image-tag grammar and semver order
+ *     (identityOfImageTag / compareReleaseIdentities) over a corpus — the full
+ *     parity is release_identity_shell_parity;
  *  D. the registry probe (available / absent / unknown) and the default rule:
  *     the first official registry that publishes the version, else a build;
  *  E. the offered set equals the provisioned entries of the ONE list
@@ -69,7 +71,7 @@ import {
 } from '../../src/core/install/host/stack/layout.ts';
 import { emptyHostCreated, type StackImage } from '../../src/core/install/host/state_types.ts';
 import { newInstallState } from '../../src/core/install/run_files_core.ts';
-import { parseBuildInfo, prereleaseTagFor } from '../../src/core/update/build_stamp.ts';
+import { BUILD_INFO_PATH, readReleaseIdentityOf } from '../../src/core/update/build_stamp.ts';
 import { parseDeclaredTriple } from '../../src/core/update/code_build_plan.ts';
 import {
 	isRepositoryReference,
@@ -77,9 +79,24 @@ import {
 	normalizeRepository,
 	provisionedRegistries,
 } from '../../src/core/update/image_registries.ts';
-import { compareVersionArrays } from '../../src/core/update/version.ts';
+import {
+	compareReleaseIdentities,
+	identityOfImageTag,
+	imageTagOf,
+} from '../../src/core/update/release_identity.ts';
+import { DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
 import { stackPlanCtx } from '../helpers/install_host_scratch.ts';
+import {
+	PINNED_IDENTITY,
+	pinInstallerIdentity,
+	withInstallerIdentity,
+} from '../helpers/installer_identity.ts';
 import { scratchRunEntries } from '../helpers/scratch_run_entries.ts';
+
+// The installer's release identity is the checkout's (a tagged commit says `-beta.N`, the
+// next commit `.dev`) and the image decisions follow its kind: these cases are written for
+// a STABLE installer, so they pin one (test/helpers/installer_identity.ts).
+pinInstallerIdentity(PINNED_IDENTITY.stable);
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const LIB = join(REPO_ROOT, 'deploy', 'dedalo-image-lib.sh');
@@ -342,37 +359,54 @@ describe('C. the grammars are the engine grammars', () => {
 		}
 	});
 
-	test('version: X.Y.Z or X.Y.Z-dev, literal dots, nothing else', () => {
+	// The FULL parity (every fixture string, both spellings, the ordering fixture)
+	// is test/unit/release_identity_shell_parity.test.ts; these are the .dedalo.env
+	// reader's own edges, judged against the engine's image-tag grammar.
+	test('version: an image tag — X.Y.Z, X.Y.Z-(alpha|beta|rc).N or X.Y.Z-dev — ≡ identityOfImageTag', () => {
 		const verdict = (value: string): boolean =>
 			bash('dedalo_version_grammar "$1"', { args: [value] }).code === 0;
-		for (const ok of ['7.0.0', '7.0.1-dev', '10.20.300', '0.0.0'])
-			expect({ ok, v: verdict(ok) }).toEqual({ ok, v: true });
+		for (const ok of ['7.0.0', '7.0.1-dev', '10.20.300', '0.0.0', '7.0.0-beta.1', '7.0.0-rc.12'])
+			expect({ ok, v: verdict(ok), engine: identityOfImageTag(ok) !== null }).toEqual({
+				ok,
+				v: true,
+				engine: true,
+			});
 		for (const bad of [
 			'7.0',
 			'7x0x1',
-			'7.0.0-beta.1',
+			'7.0.0-pre.1',
+			'7.0.0-beta',
+			'7.0.0-beta.1-dev',
+			'07.0.0',
 			'v7.0.0',
 			'7.0.0-DEV',
 			'7.0.0.dev',
 			'',
 			' 7.0.0',
 		])
-			expect({ bad, v: verdict(bad) }).toEqual({ bad, v: false });
+			expect({ bad, v: verdict(bad), engine: identityOfImageTag(bad) !== null }).toEqual({
+				bad,
+				v: false,
+				engine: false,
+			});
 	});
 
-	test('version order: dedalo_version_cmp ≡ compareVersionArrays (the -dev suffix ignored)', () => {
+	test('version order: dedalo_version_cmp ≡ compareReleaseIdentities of the identities the tags name', () => {
 		const pairs: [string, string][] = [
 			['7.0.1', '7.0.0'],
 			['7.0.0', '7.0.1'],
 			['7.0.0-dev', '7.0.0'],
 			['7.10.0', '7.9.9'],
 			['8.0.0', '7.99.99'],
-			['07.0.0', '7.0.0'],
+			['7.0.0-beta.7', '7.0.0'],
+			['7.0.0-beta.10', '7.0.0-beta.9'],
+			['7.0.0-rc.1', '7.0.0-beta.9'],
+			['7.0.0-dev', '7.0.0-rc.1'],
 		];
 		for (const [a, b] of pairs) {
-			const expected = compareVersionArrays(
-				a.replace(/-dev$/, '').split('.').map(Number),
-				b.replace(/-dev$/, '').split('.').map(Number),
+			const expected = compareReleaseIdentities(
+				identityOfImageTag(a) as string,
+				identityOfImageTag(b) as string,
 			);
 			expect({
 				a,
@@ -385,6 +419,7 @@ describe('C. the grammars are the engine grammars', () => {
 			});
 		}
 		expect(bash('dedalo_version_cmp 7.0 7.0.0').code).toBe(2);
+		expect(bash('dedalo_version_cmp 07.0.0 7.0.0').code).toBe(2);
 	});
 });
 
@@ -783,7 +818,7 @@ describe('F. the installer verifies the image as the library does (stack_image)'
 		expect(built.log).toEqual([]);
 	});
 
-	test("C3-46 OUTCOME: the installer's build command over a checkout with a dirty and an untracked file builds a context without them, stamped (no .dev)", () => {
+	test("C3-46 OUTCOME: the installer's build command over a checkout with a dirty and an untracked file builds a context without them, stamped (export-subst expanded)", async () => {
 		const { repo, seen, docker } = builderFixture();
 		writeFileSync(join(repo, 'tracked.txt'), 'an uncommitted edit\n');
 		writeFileSync(join(repo, 'stray_untracked.txt'), 'never committed\n');
@@ -805,29 +840,66 @@ describe('F. the installer verifies the image as the library does (stack_image)'
 		const built = readFileSync(`${seen}.argv`, 'utf8').trim();
 		expect(built).toStartWith(`build --tag localhost/dedalo:${imageVersionOf(ctx.answers)} `);
 		expect(built).toEndWith(` ${context}`);
-		// its own version label, never the base image's (campaign 3b N1)
+		// its own version label, never the base image's (campaign 3b N1) — and never the
+		// tag's word for it: the commit carries no release tag, so the label says the
+		// identity the engine in the image reports, as an image tag (X.Y.Z-dev), even
+		// under a `:X.Y.Z` tag (C3i-F1); the builder says so
+		const contextIdentity = await readReleaseIdentityOf(seen, { triple: DEDALO_VERSION_TRIPLE });
 		expect(built).toContain(
-			`--label org.opencontainers.image.version=${imageVersionOf(ctx.answers)} `,
+			`--label org.opencontainers.image.version=${imageTagOf(contextIdentity.version)} `,
+		);
+		expect(imageTagOf(contextIdentity.version)).not.toBe(imageVersionOf(ctx.answers));
+		expect(run.stderr.toString()).toContain(
+			`calls itself ${imageTagOf(contextIdentity.version)} — its version label says so`,
 		);
 		// committed content only
 		expect(readFileSync(join(seen, 'tracked.txt'), 'utf8')).toBe('committed\n');
 		for (const stray of ['stray_untracked.txt', 'src/core/stray_untracked.ts']) {
 			expect(existsSync(join(seen, stray)), `${stray} reached the build context`).toBe(false);
 		}
-		// export-subst expanded: the engine reports the version the image is tagged with
-		const archived = parseBuildInfo(
-			readFileSync(join(seen, 'src', 'core', 'update', 'build_info.txt'), 'utf8'),
-		);
-		expect(archived.build).not.toBeNull();
-		expect(prereleaseTagFor(archived.build, null)).toBe('');
-		// the working tree's own file is the dev placeholder: a build from it reports .dev
-		const tree = parseBuildInfo(
-			readFileSync(join(repo, 'src', 'core', 'update', 'build_info.txt'), 'utf8'),
-		);
-		expect(prereleaseTagFor(tree.build, null)).toBe('.dev');
+		// export-subst expanded (a stamped context, not the placeholder) — and the commit
+		// carries no release tag, so the engine in that image honestly calls itself .dev
+		// (release identity from the tag, owner decision 2026-10-15; C3i-F1)
+		const identity = await readReleaseIdentityOf(seen, { triple: DEDALO_VERSION_TRIPLE });
+		expect(readFileSync(join(seen, BUILD_INFO_PATH), 'utf8')).not.toStartWith('$Format:');
+		expect(identity).toMatchObject({ kind: 'dev', notice: null });
 		// the snapshot is removed after the build
 		expect(existsSync(context)).toBe(false);
 		expect(existsSync(`${context}.tar`)).toBe(false);
+	});
+
+	// Release identity, gate 6 (design §2.5): a prerelease installer's Build is tagged, labelled
+	// AND self-named by its identity — the three agree, and none of them is the bare data version.
+	test('prerelease + Build: tag, version label and the built engine’s own identity are all X.Y.Z-beta.N', async () => {
+		const beta = PINNED_IDENTITY.prerelease;
+		await withInstallerIdentity(beta, async () => {
+			const { repo, seen, docker } = builderFixture({ tag: `v${beta}` });
+			const base = stackPlanCtx({ ...TRIAL, image_source: 'build' }, repo);
+			const ctx = {
+				...base,
+				facts: {
+					...base.facts,
+					sourceIsGit: true,
+					stack: { ...(base.facts.stack as NonNullable<typeof base.facts.stack>), docker },
+				},
+			};
+			expect(imageVersionOf(ctx.answers)).toBe(beta);
+			const [command] = imageCommands(ctx);
+			const argv = command?.kind === 'exec' ? [...command.argv] : [];
+			const run = Bun.spawnSync(argv, {
+				cwd: repo,
+				env: { PATH: '/usr/bin:/bin', STUB_SEEN: seen },
+			});
+			expect(run.exitCode, run.stderr.toString()).toBe(0);
+			const built = readFileSync(`${seen}.argv`, 'utf8').trim();
+			expect(built).toStartWith(`build --tag localhost/dedalo:${beta} `);
+			expect(built).toContain(`--label org.opencontainers.image.version=${beta} `);
+			// what /health of that image will say: the archive's identity is the tag
+			const identity = await readReleaseIdentityOf(seen, { triple: DEDALO_VERSION_TRIPLE });
+			expect(identity).toMatchObject({ version: beta, kind: 'prerelease', notice: null });
+			// and the stack is pinned to it
+			expect(renderEnvFile(ctx, 'pw')).toContain(`\nDEDALO_VERSION=${beta}\n`);
+		});
 	});
 
 	test('the builder: a failed build removes its snapshot (status 1); a tree without git is refused with the sentence (status 3)', () => {
@@ -861,7 +933,7 @@ describe('F. the installer verifies the image as the library does (stack_image)'
  * all committed — and a stub docker that copies the context its `build` reads
  * to `seen` (its argv to `seen.argv`), or fails.
  */
-function builderFixture(options: { fail?: boolean } = {}): {
+function builderFixture(options: { fail?: boolean; tag?: string } = {}): {
 	repo: string;
 	seen: string;
 	docker: string;
@@ -875,7 +947,12 @@ function builderFixture(options: { fail?: boolean } = {}): {
 	for (const file of ['dedalo-image-build.sh', 'dedalo-image-lib.sh']) {
 		writeFileSync(join(repo, 'deploy', file), readFileSync(join(REPO_ROOT, 'deploy', file)));
 	}
-	writeFileSync(join(repo, 'src', 'core', 'update', 'build_info.txt'), '$Format:%H %cI$\n');
+	writeFileSync(join(repo, BUILD_INFO_PATH), readFileSync(join(REPO_ROOT, BUILD_INFO_PATH)));
+	// a Dédalo tree declares its data version: the builder labels the identity it resolves to
+	writeFileSync(
+		join(repo, 'src', 'core', 'update', 'version.ts'),
+		readFileSync(join(REPO_ROOT, 'src', 'core', 'update', 'version.ts')),
+	);
 	writeFileSync(join(repo, '.gitattributes'), 'src/core/update/build_info.txt export-subst\n');
 	writeFileSync(join(repo, '.gitignore'), '/.dedalo-install/\n');
 	writeFileSync(join(repo, 'tracked.txt'), 'committed\n');
@@ -889,6 +966,8 @@ function builderFixture(options: { fail?: boolean } = {}): {
 	git('init', '-q', '-b', 'master');
 	git('add', '-A');
 	git('commit', '-q', '-m', 'fixture');
+	// release tags are annotated (owner Q7): `%(describe)` in the archive reads only those
+	if (options.tag !== undefined) git('tag', '-a', options.tag, '-m', options.tag);
 	writeFileSync(
 		docker,
 		`#!/bin/bash\nfor a in "$@"; do last="$a"; done\nprintf '%s\\n' "$*" > "$STUB_SEEN.argv"\ncp -R "$last" "$STUB_SEEN"\n${options.fail === true ? 'exit 1' : 'exit 0'}\n`,

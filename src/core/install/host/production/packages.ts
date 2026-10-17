@@ -2,7 +2,9 @@
  * host_packages — THE PACKAGES OF A PRODUCTION INSTANCE (terminal installer
  * phase 4, 2026-10-12): PostgreSQL 18 (server, client, contrib), the media
  * toolchain (ffmpeg, ImageMagick, poppler, librsvg, ocrmypdf), the archive
- * tools, the web server when it is missing, certbot for Let's Encrypt,
+ * tools, the web server when it is missing, certbot for Let's Encrypt (never
+ * for a local CA: no ACME client on a host that cannot be reached — openssl,
+ * which deploy/dedalo-tls-rotate.sh runs, instead),
  * semanage on the RHEL family — only what the frozen facts say is MISSING, so
  * a host that has them all runs no package command.
  *
@@ -30,6 +32,7 @@ export function desiredPackages(ctx: HostPlanCtx): string[] {
 		...row.packages.base,
 		...webFlavor(ctx).package,
 		...(answers.tls_mode === 'letsencrypt' ? row.packages.certbot : []),
+		...(answers.tls_mode === 'local_ca' ? row.packages.localCa : []),
 		...(row.selinux ? row.packages.selinuxTools : []),
 	];
 }
@@ -237,8 +240,11 @@ async function runPackages(ctx: HostCtx) {
  */
 export function packagesLabel(plan: PlanFile): string {
 	const { answers } = normalizeInstallAnswers(plan.answers as Record<string, unknown>);
-	const certbot = answers.tls_mode === 'letsencrypt' ? ', certbot' : '';
-	return `packages: PostgreSQL 18, the media toolchain, the web server${certbot}`;
+	const tool: Readonly<Record<string, string>> = {
+		letsencrypt: ', certbot',
+		local_ca: ', openssl',
+	};
+	return `packages: PostgreSQL 18, the media toolchain, the web server${tool[answers.tls_mode] ?? ''}`;
 }
 
 export const host_packages: HostStepDefinition = {

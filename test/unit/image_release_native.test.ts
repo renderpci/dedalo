@@ -24,11 +24,23 @@
  * The plan rules run on a REAL scratch git repository (tags, version.ts, branches): a
  * stable tag whose version.ts agrees publishes; a disagreeing tag, a prerelease tag and
  * a developer build off another branch are refused; a developer build of master is
- * X.Y.Z-dev / X.Y.Z.dev.
+ * X.Y.Z-dev / X.Y.Z.dev. The plan reads the identity its OWN archive expands to (the real
+ * placeholder): a lightweight release tag is refused, a dev build of a release commit expects
+ * the tag; and the context step, run in a full clone and in a shallow tagless one, agrees with
+ * or refuses the plan's archive digest.
  *
- * HONEST LIMIT: `smoke` is checked for what it asks the container to prove (the pulled
- * reference, the expectations, every assertion in its script) — the script itself runs
- * only inside the Debian image (uid 1000, GNU stat), i.e. on the first real release run.
+ * A release TAG must also be CUT (gate 11, scripts/lib/release_tag.ts — the function the
+ * pre-push hook runs too): a tag whose commit carries no changes/<identity>/release.json is
+ * refused. An archiving git older than MIN_GIT_FOR_DESCRIBE is refused before any archive.
+ *
+ * GATE 10 — the identity the image SERVES: the smoke's /health fragment
+ * (SMOKE_HEALTH_SCRIPT) is EXECUTED here against this checkout — the real server booted
+ * in smoke mode with no database — and passes only when /health serves the expected
+ * identity and kind; a wrong expectation is red.
+ *
+ * HONEST LIMIT: the rest of `smoke` is checked for what it asks the container to prove
+ * (the pulled reference, the expectations, every assertion in its script) — those lines
+ * run only inside the Debian image (uid 1000, GNU stat), i.e. on the first real release run.
  *
  * DB-free; spawns bun, bash and git in scratch directories: hermetic tier.
  */
@@ -44,7 +56,7 @@ import {
 	writeFileSync,
 } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import {
 	FULL_GATE_WORKFLOWS,
 	fullGateFault,
@@ -52,16 +64,21 @@ import {
 	type PlanGit,
 	Refusal,
 	resolvePlan,
+	SMOKE_HEALTH_SCRIPT,
 	SMOKE_SCRIPT,
 	sha256File,
 } from '../../scripts/ci/image_release.ts';
+import { BUILD_INFO_PATH, RELEASE_IDENTITY } from '../../src/core/update/build_stamp.ts';
 import {
 	IMAGE_REGISTRIES_PATH,
 	type ImageRegistryList,
 	validateImageRegistries,
 } from '../../src/core/update/image_registries.ts';
+import { MIN_GIT_FOR_DESCRIBE } from '../../src/core/update/release_identity.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
+/** The real git, behind the plan's `git --version` stub. */
+const REAL_GIT = Bun.which('git') ?? '/usr/bin/git';
 const PROGRAM = join(ROOT, 'scripts', 'ci', 'image_release.ts');
 /**
  * A FIXTURE list: the real one with its Docker Hub entry provisioned at a fixture
@@ -465,16 +482,53 @@ describe('plan — which release a run publishes', () => {
 	};
 	let releaseSha = '';
 	let masterSha = '';
+	/** A commit declaring 7.0.3 under a LIGHTWEIGHT v7.0.3 (describe ignores it). */
+	let lightSha = '';
+	/** A dev-branch commit that IS a release commit: annotated v7.0.2-rc.1. */
+	let rcSha = '';
+	const annotated = (tag: string) =>
+		git('-c', 'user.name=t', '-c', 'user.email=t@t', 'tag', '-a', tag, '-m', tag);
+	/** The changelog cut of `identity` (`bun run changelog release`), committed with the next commit. */
+	const cut = (identity: string) => {
+		mkdirSync(join(repo, 'changes', identity), { recursive: true });
+		writeFileSync(
+			join(repo, 'changes', identity, 'release.json'),
+			`${JSON.stringify({ version: identity, date: '2026-10-15', from: null, to: `v${identity}`, commits: 1, wire_contract: [] }, null, '\t')}\n`,
+		);
+	};
+	/** An ANNOTATED v7.0.4 whose version.ts agrees but whose release was never CUT. */
+	let uncutSha = '';
 
 	beforeAll(() => {
 		repo = mkdtempSync(join(tmpdir(), 'dedalo-image-plan-'));
 		git('init', '--quiet', '-b', 'master');
+		// The REAL stamp machinery: the committed placeholder + its export-subst line,
+		// so the plan reads the identity a real archive of each commit expands to.
+		mkdirSync(join(repo, 'src', 'core', 'update'), { recursive: true });
+		writeFileSync(join(repo, BUILD_INFO_PATH), readFileSync(join(ROOT, BUILD_INFO_PATH), 'utf8'));
+		writeFileSync(join(repo, '.gitattributes'), `${BUILD_INFO_PATH} export-subst\n`);
+		cut('7.0.1');
 		releaseSha = commitVersion('7.0.1');
-		git('tag', 'v7.0.1');
+		annotated('v7.0.1');
+		git('branch', 'rel');
 		git('tag', 'v7.0.2'); // a tag whose tree still declares 7.0.1
 		git('tag', 'v7.0.1-beta.1');
 		masterSha = commitVersion('7.0.2');
 		git('branch', 'v7');
+		git('checkout', '--quiet', '-b', 'light');
+		cut('7.0.3');
+		lightSha = commitVersion('7.0.3');
+		git('tag', 'v7.0.3');
+		git('checkout', '--quiet', '-b', 'uncut', masterSha);
+		uncutSha = commitVersion('7.0.4');
+		annotated('v7.0.4');
+		git('checkout', '--quiet', '-b', 'rc', masterSha);
+		writeFileSync(join(repo, 'rc.txt'), 'rc\n');
+		git('add', '.');
+		git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--quiet', '-m', 'rc');
+		rcSha = git('rev-parse', 'HEAD');
+		annotated('v7.0.2-rc.1');
+		git('checkout', '--quiet', 'master');
 	});
 	afterAll(() => rmSync(repo, { recursive: true, force: true }));
 
@@ -503,6 +557,17 @@ describe('plan — which release a run publishes', () => {
 					'  */db.yml/runs*) echo "${STUB_GH_DB:-1}" ;;',
 					'  *) echo "unexpected gh call" >&2; exit 2 ;;',
 					'esac',
+					'',
+				].join('\n'),
+				{ mode: 0o755 },
+			);
+			// `git` stub: STUB_GIT_VERSION answers `git --version`; everything else is the real git.
+			writeFileSync(
+				join(bin, 'git'),
+				[
+					'#!/bin/sh',
+					'if [ -n "${STUB_GIT_VERSION:-}" ] && [ "$1" = --version ]; then echo "$STUB_GIT_VERSION"; exit 0; fi',
+					`exec ${REAL_GIT} "$@"`,
 					'',
 				].join('\n'),
 				{ mode: 0o755 },
@@ -570,6 +635,40 @@ describe('plan — which release a run publishes', () => {
 		expect(result.out).toEqual({});
 	});
 
+	test('a release tag whose commit carries no changelog cut (changes/<v>/release.json) is refused, nothing planned', () => {
+		const result = plan({
+			GITHUB_EVENT_NAME: 'push',
+			GITHUB_REF: 'refs/tags/v7.0.4',
+			GITHUB_SHA: uncutSha,
+		});
+		expect(result.code).toBe(1);
+		expect(result.text).toContain('carries no changes/7.0.4/release.json');
+		expect(result.text).toContain('bun run changelog release 7.0.4');
+		expect(result.out).toEqual({});
+	});
+
+	test(`an archiving git older than ${MIN_GIT_FOR_DESCRIBE} is refused before the archive; ${MIN_GIT_FOR_DESCRIBE} passes`, () => {
+		const old = plan({
+			GITHUB_EVENT_NAME: 'workflow_dispatch',
+			GITHUB_REF: 'refs/heads/master',
+			GITHUB_SHA: masterSha,
+			INPUT_CHANNEL: 'dev',
+			STUB_GIT_VERSION: 'git version 2.34.8',
+		});
+		expect(old.code).toBe(1);
+		expect(old.text).toContain(`git 2.34 cannot expand %(describe`);
+		expect(old.text).not.toContain('git archive --format=tar');
+		expect(old.out).toEqual({});
+		const minimum = plan({
+			GITHUB_EVENT_NAME: 'workflow_dispatch',
+			GITHUB_REF: 'refs/heads/master',
+			GITHUB_SHA: masterSha,
+			INPUT_CHANNEL: 'dev',
+			STUB_GIT_VERSION: `git version ${MIN_GIT_FOR_DESCRIBE}.0`,
+		});
+		expect(minimum.code, minimum.text).toBe(0);
+	});
+
 	test('a prerelease tag is refused', () => {
 		const result = plan({
 			GITHUB_EVENT_NAME: 'push',
@@ -592,6 +691,33 @@ describe('plan — which release a run publishes', () => {
 			tag: '7.0.2-dev',
 			channel: 'dev',
 			expected_engine_version: '7.0.2.dev',
+		});
+	});
+
+	test('a release whose tag is LIGHTWEIGHT is refused before any build (its archive would say .dev)', () => {
+		const result = plan({
+			GITHUB_EVENT_NAME: 'push',
+			GITHUB_REF: 'refs/tags/v7.0.3',
+			GITHUB_SHA: lightSha,
+		});
+		expect(result.code).toBe(1);
+		expect(result.text).toContain('calls itself 7.0.3.dev, not 7.0.3');
+		expect(result.text).toContain('ANNOTATED');
+		expect(result.out).toEqual({});
+	});
+
+	test('a dev dispatch whose commit IS a release commit expects the TAG identity (owner Q5)', () => {
+		const result = plan({
+			GITHUB_EVENT_NAME: 'workflow_dispatch',
+			GITHUB_REF: 'refs/heads/master',
+			GITHUB_SHA: rcSha,
+			INPUT_CHANNEL: 'dev',
+		});
+		expect(result.code, result.text).toBe(0);
+		expect(result.out).toMatchObject({
+			tag: '7.0.2-dev',
+			channel: 'dev',
+			expected_engine_version: '7.0.2-rc.1',
 		});
 	});
 
@@ -682,6 +808,95 @@ describe('plan — which release a run publishes', () => {
 		expect(dev.gh).toEqual([]);
 	});
 
+	// THE BUILD JOB'S ARCHIVE MUST BE THE PLAN'S. build_info.txt expands %(describe) from
+	// the tags the archiving clone holds and from git's abbreviation length, so the
+	// context step runs here in OTHER clones of the fixture, as the build job's runner
+	// would, against the digest the plan published.
+	function context(clone: string, sha: string, expected: string): { code: number; text: string } {
+		const tmp = mkdtempSync(join(tmpdir(), 'dedalo-image-context-run-'));
+		try {
+			const proc = Bun.spawnSync([process.execPath, PROGRAM, 'context'], {
+				cwd: clone,
+				env: {
+					PATH: process.env.PATH ?? '/usr/bin:/bin',
+					HOME: tmp,
+					RUNNER_TEMP: tmp,
+					GITHUB_OUTPUT: join(tmp, 'out'),
+					SOURCE_SHA: sha,
+					EXPECTED_ARCHIVE_SHA256: expected,
+				},
+				stdout: 'pipe',
+				stderr: 'pipe',
+			});
+			return { code: proc.exitCode ?? 1, text: proc.stdout.toString() + proc.stderr.toString() };
+		} finally {
+			rmSync(tmp, { recursive: true, force: true });
+		}
+	}
+	function cloneOf(...args: string[]): string {
+		const dir = join(mkdtempSync(join(tmpdir(), 'dedalo-image-clone-')), 'c');
+		const cloned = Bun.spawnSync(['git', 'clone', '--quiet', ...args, `file://${repo}`, dir], {
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect(cloned.exitCode, cloned.stderr.toString()).toBe(0);
+		return dir;
+	}
+
+	test("another FULL clone archives the plan's exact bytes — also off a tag, whatever its core.abbrev", () => {
+		const release = plan({ ...tagPush, GITHUB_SHA: releaseSha });
+		const dev = plan({
+			GITHUB_EVENT_NAME: 'workflow_dispatch',
+			GITHUB_REF: 'refs/heads/master',
+			GITHUB_SHA: masterSha,
+			INPUT_CHANNEL: 'dev',
+		});
+		expect(release.code, release.text).toBe(0);
+		expect(dev.code, dev.text).toBe(0);
+		const clone = cloneOf();
+		// A different default abbreviation is what another runner's object count gives.
+		expect(Bun.spawnSync(['git', '-C', clone, 'config', 'core.abbrev', '13']).exitCode).toBe(0);
+		try {
+			const releaseContext = context(clone, releaseSha, release.out.archive_sha256 as string);
+			expect(releaseContext.code, releaseContext.text).toBe(0);
+			const devContext = context(clone, masterSha, dev.out.archive_sha256 as string);
+			expect(devContext.code, devContext.text).toBe(0);
+		} finally {
+			rmSync(join(clone, '..'), { recursive: true, force: true });
+		}
+	});
+
+	test("a SHALLOW, TAGLESS clone (actions/checkout's default) is refused at the context step", () => {
+		const release = plan({ ...tagPush, GITHUB_SHA: releaseSha });
+		expect(release.code, release.text).toBe(0);
+		const shallow = cloneOf('--depth=1', '--no-tags', '--branch', 'rel');
+		try {
+			const refused = context(shallow, releaseSha, release.out.archive_sha256 as string);
+			expect(refused.code).toBe(1);
+			expect(refused.text).toContain('the arches would carry different provenance');
+		} finally {
+			rmSync(join(shallow, '..'), { recursive: true, force: true });
+		}
+	});
+
+	test('so every image-release job that archives (plan, context) checks out the full history with its tags', () => {
+		type Step = { uses?: string; run?: string; with?: Record<string, unknown> };
+		const workflow = Bun.YAML.parse(
+			readFileSync(join(ROOT, '.github', 'workflows', 'image-release.yml'), 'utf8'),
+		) as { jobs: Record<string, { steps: Step[] }> };
+		const archiving = Object.entries(workflow.jobs).filter(([, job]) =>
+			job.steps.some((step) => /image_release\.ts (plan|context)\b/.test(step.run ?? '')),
+		);
+		expect(archiving.map(([name]) => name).sort()).toEqual(['build', 'plan']);
+		for (const [name, job] of archiving) {
+			const checkouts = job.steps.filter((step) =>
+				(step.uses ?? '').startsWith('actions/checkout@'),
+			);
+			expect(checkouts.length, name).toBeGreaterThan(0);
+			for (const checkout of checkouts) expect(checkout.with?.['fetch-depth'], name).toBe(0);
+		}
+	});
+
 	test('fullGateFault: green only when every full-gate workflow has ≥1 successful push run', () => {
 		const of = (ci: number | null, db: number | null) =>
 			fullGateFault(
@@ -698,7 +913,7 @@ describe('plan — which release a run publishes', () => {
 	});
 
 	test('any other event never publishes', () => {
-		const fake: PlanGit = { declaredAt: () => '7.0.1', commitOf: () => 'x' };
+		const fake: PlanGit = { declaredAt: () => '7.0.1', commitOf: () => 'x', fileAt: () => null };
 		for (const event of ['pull_request', 'schedule', 'workflow_run'])
 			expect(() =>
 				resolvePlan(
@@ -764,7 +979,14 @@ describe('smoke — what the container is asked to prove', () => {
 			expect(lines[1]).toContain(
 				`docker run --rm -e WANT_BUN=${readFileSync(join(ROOT, '.bun-version'), 'utf8').trim()}`,
 			);
-			expect(lines[1]).toContain('-e WANT_VERSION=7.0.1 -e WANT_CHANNEL=master');
+			expect(lines[1]).toContain(
+				'-e WANT_VERSION=7.0.1 -e WANT_KIND=stable -e WANT_CHANNEL=master',
+			);
+			// An expectation that is no release identity is refused before anything runs.
+			rmSync(log, { force: true });
+			const garbage = smokeRun({ EXPECTED_ENGINE_VERSION: '7.0.1-pre.1' });
+			expect(garbage.exitCode).toBe(1);
+			expect(garbage.stdout.toString()).toContain('is not a release identity');
 			expect(lines[1]).toContain(`${image} sh -euc`);
 		} finally {
 			rmSync(dir, { recursive: true, force: true });
@@ -778,12 +1000,49 @@ describe('smoke — what the container is asked to prove', () => {
 			'id -u)" = 1000',
 			'/srv/dedalo/client',
 			'master_dedalo/deploy',
-			'DEDALO_ENGINE_VERSION',
 			'INSTALLED_CHANNEL',
 			'INSTALLED_DIGEST',
 		])
 			expect(SMOKE_SCRIPT, assertion).toContain(assertion);
+		// The served-identity fragment is PART of the container's script, not a side copy.
+		expect(SMOKE_SCRIPT).toContain(
+			SMOKE_HEALTH_SCRIPT.slice(SMOKE_HEALTH_SCRIPT.indexOf('P="$(mktemp')),
+		);
 		// The script is valid POSIX sh.
 		expect(Bun.spawnSync(['sh', '-n', '-c', SMOKE_SCRIPT]).exitCode).toBe(0);
 	});
+});
+
+describe('smoke — GATE 10: the identity the image SERVES on /health', () => {
+	/** SMOKE_HEALTH_SCRIPT run as the container runs it — here, in this checkout's tree. */
+	const servedCheck = (want: { version: string; kind: string }) => {
+		const proc = Bun.spawnSync(['sh', '-euc', SMOKE_HEALTH_SCRIPT], {
+			cwd: ROOT,
+			env: {
+				PATH: `${dirname(process.execPath)}:/usr/bin:/bin`,
+				WANT_VERSION: want.version,
+				WANT_KIND: want.kind,
+			},
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		return { code: proc.exitCode ?? 1, text: proc.stdout.toString() + proc.stderr.toString() };
+	};
+
+	test("the real server, booted with no database, serves this tree's own identity — and only that passes", () => {
+		const own = { version: RELEASE_IDENTITY.version, kind: RELEASE_IDENTITY.kind };
+		const served = servedCheck(own);
+		expect(served.code, served.text).toBe(0);
+		// Negative control: a wrong expectation is red, and its failure carries the server's
+		// own log — the value compared is what a listener SERVED, not a constant read.
+		const wrong = servedCheck({ version: `${own.version}-not-this`, kind: own.kind });
+		expect(wrong.code).toBe(1);
+		expect(wrong.text).toContain(`/health serves '${own.version} ${own.kind}'`);
+		expect(wrong.text).toContain('listening on unix socket');
+		const wrongKind = servedCheck({
+			version: own.version,
+			kind: own.kind === 'dev' ? 'stable' : 'dev',
+		});
+		expect(wrongKind.code).toBe(1);
+	}, 120_000);
 });

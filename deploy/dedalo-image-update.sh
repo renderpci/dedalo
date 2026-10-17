@@ -13,10 +13,15 @@
 # included. The engine refuses the in-container swap and points here.
 #
 # Usage (from anywhere; it works in the stack directory — this checkout):
-#   ./deploy/dedalo-image-update.sh --version <X.Y.Z | X.Y.Z-dev>
+#   ./deploy/dedalo-image-update.sh --version <X.Y.Z | X.Y.Z-(alpha|beta|rc).N | X.Y.Z-dev>
 #       [--env-file .dedalo.env] [--outcome-file FILE] [--request-id UUID]
 #       [--no-backup] [--health-timeout SECONDS (default 900)]
-#       [--skip-version-check] [--ref <git ref> (build mode, -dev only)]
+#       [--skip-version-check] [--ref <git ref> (build mode, a -dev or prerelease version)]
+#
+# A VERSION IS AN IMAGE TAG, and names a RELEASE IDENTITY (deploy/dedalo-image-lib.sh
+# — the twin of src/core/update/release_identity.ts): X.Y.Z a release,
+# X.Y.Z-beta.N (alpha, beta, rc) a prerelease of it, X.Y.Z-dev a developer build.
+# They order as semver does — 7.0.0-beta.6 < 7.0.0-beta.7 < 7.0.0-rc.1 < 7.0.0.
 #
 # EVERYTHING ELSE COMES FROM .dedalo.env (parsed through deploy/dedalo-image-lib.sh):
 # the stack (DEDALO_COMPOSE_FILE), the repository (DEDALO_IMAGE), the pinned
@@ -30,11 +35,18 @@
 #    1. one run at a time (a mkdir lock in the stack directory);
 #    2. .dedalo.env is complete, or the exact lines to add are printed (the
 #       adoption path of an installation that predates the image pin);
-#    3. the version is grammatical and moves FORWARD (equal only for -dev);
+#    3. the version is grammatical and moves FORWARD in release order (equal
+#       only for -dev); a refusal WITHIN one data version (X.Y.Z) — a step back
+#       that crosses no migration — is waived by --skip-version-check, which the
+#       first update of a stack BUILT from a beta before 7.0.0-beta.7 needs (it is
+#       pinned at the bare X.Y.Z although it runs the beta: owner Q4); a step back
+#       to an older data version is never waived;
 #    4. the RUNNING engine walks the version (scripts/ops/image_update_channel.ts
 #       check-target: exit 0 ok, 3 refused + reason, anything else unavailable —
 #       refused unless --skip-version-check, which the first update from an image
-#       that predates that program needs);
+#       that predates that program needs); an engine blind to prereleases (it
+#       cannot read the tag, or sees rc.1 → X.Y.Z as X.Y.Z → X.Y.Z) is asked about
+#       the DATA walk instead, X.Y.Z-dev (engine_blind_to_identity);
 #    5. a verified database dump through the stack's `backup` service, unless
 #       --no-backup (a waiver the operator types, never the default);
 #    6. the running image is tagged <DEDALO_IMAGE>:rollback-<UTC stamp>;
@@ -42,8 +54,11 @@
 #       DEDALO_IMAGE_VERIFY=cosign), or the release checked out and built here
 #       from a CLEAN SNAPSHOT of that commit — the installer's own builder,
 #       dedalo_image_build (git archive → docker build → snapshot removed): no
-#       uncommitted or untracked file in the image, no `.dev` in its version;
-#       a tree without git is refused (nothing to check out or snapshot);
+#       uncommitted or untracked file in the image; the commit checked out must
+#       BE the version asked for (its release identity — a release or prerelease
+#       is its exact annotated tag v<version>, a -dev build any commit of that
+#       data version), or it is refused before anything is built; a tree without
+#       git is refused (nothing to check out or snapshot);
 #    8. DEDALO_VERSION is re-pinned (the ONE key this script writes);
 #    9. `up -d dedalo backup` — postgres and nginx are never touched;
 #   10. the compose healthcheck: `healthy` is green; `starting` AND `unhealthy` keep
@@ -58,7 +73,7 @@
 #
 # THE OUTCOME (one object, every value from a closed set or a checked grammar —
 # no quote or backslash can reach it; read by scripts/ops/image_update_channel.ts):
-#   {"schema":1,"request_id":uuid|null,"from":"X.Y.Z","to":"X.Y.Z","mode":"pull"|"build"|null,
+#   {"schema":1,"request_id":uuid|null,"from":"<tag>","to":"<tag>","mode":"pull"|"build"|null,
 #    "image":"<repository>","status":"green"|"rolled_back"|"rollback_failed"|"refused"|"failed",
 #    "detail":"healthy"|"health_timeout"|"unhealthy"|"pull_failed"|"verify_failed"|
 #             "build_failed"|"backup_failed"|"version_refused"|"downgrade_refused"|
@@ -81,7 +96,7 @@ set -euo pipefail
 say() { printf '== image-update: %s\n' "$*" >&2; }
 
 usage() {
-	printf 'Usage: %s --version <X.Y.Z|X.Y.Z-dev> [--env-file F] [--outcome-file F] [--request-id UUID]\n' "$0" >&2
+	printf 'Usage: %s --version <X.Y.Z|X.Y.Z-(alpha|beta|rc).N|X.Y.Z-dev> [--env-file F] [--outcome-file F] [--request-id UUID]\n' "$0" >&2
 	printf '         [--no-backup] [--health-timeout SECONDS] [--skip-version-check] [--ref <git ref>]\n' >&2
 	exit 2
 }
@@ -233,36 +248,100 @@ suggested_value() {
 	case "$1" in
 		DEDALO_COMPOSE_FILE) echo 'docker-compose.simple.yml' ;;
 		DEDALO_IMAGE) echo 'localhost/dedalo' ;;
-		DEDALO_VERSION) dedalo_checkout_version . || echo '<the version this installation runs>' ;;
+		# the image tag of this checkout's own release identity (7.0.0-beta.7, 7.0.0-dev):
+		# what a build here is tagged and labelled — never the bare data version (C3i-F1)
+		DEDALO_VERSION) checkout_image_tag || echo '<the version this installation runs>' ;;
 		DEDALO_IMAGE_MODE) echo 'build' ;;
 		DEDALO_IMAGE_VERIFY) echo 'none' ;;
 	esac
 }
 
+checkout_image_tag() {
+	local identity=''
+	identity="$(dedalo_release_identity .)" && dedalo_image_tag_of "$identity"
+}
+
 # --- 3. the version -------------------------------------------------------------
 
 check_version() {
-	local order=''
-	dedalo_version_grammar "$TARGET" || finish refused version_refused "'$TARGET' is not a version (X.Y.Z, or X.Y.Z-dev)"
-	if [ -n "$GIT_REF" ] && { [ "$MODE" != 'build' ] || [ "${TARGET%-dev}" = "$TARGET" ]; }; then
-		finish refused version_refused '--ref names a developer build: build mode and a -dev version only'
+	local order='' why=''
+	dedalo_version_grammar "$TARGET" ||
+		finish refused version_refused "'$TARGET' is not a version (X.Y.Z, X.Y.Z-alpha.N / -beta.N / -rc.N, or X.Y.Z-dev)"
+	# --ref picks the commit of a build that has no fixed one (-dev), or names the
+	# prerelease tag another way (owner Q3); a release is built from its own tag only.
+	if [ -n "$GIT_REF" ] && { [ "$MODE" != 'build' ] || ! { dedalo_is_dev_tag "$TARGET" || dedalo_is_prerelease_tag "$TARGET"; }; }; then
+		finish refused version_refused '--ref names what to build: build mode, and a -dev or prerelease version only (a release is built from its own tag)'
 	fi
 	order="$(dedalo_version_cmp "$TARGET" "$FROM")"
-	if [ "$order" = '-1' ]; then finish refused downgrade_refused "$TARGET is older than the pinned $FROM"; fi
-	if [ "$order" = '0' ] && [ "${TARGET%-dev}" = "$TARGET" ]; then
-		finish refused downgrade_refused "$TARGET is the pinned version — only a -dev image is re-installed at the same version"
+	case "$order" in
+		-1) why="$TARGET comes before the pinned $FROM" ;;
+		0) dedalo_is_dev_tag "$TARGET" || why="$TARGET is the pinned version — only a -dev image is re-installed at the same version" ;;
+	esac
+	[ -n "$why" ] || return 0
+	# Back to an older DATA version: never — its migrations ran on this database.
+	if [ "$(dedalo_version_triple "$TARGET")" != "$(dedalo_version_triple "$FROM")" ]; then
+		finish refused downgrade_refused "$why"
 	fi
+	# Within ONE data version no migration separates the two, so the operator may
+	# waive the order — and one installation must (owner Q4): a stack BUILT from a
+	# beta before 7.0.0-beta.7 is pinned at the bare X.Y.Z while it runs that beta,
+	# so its first prerelease update reads as a step back.
+	if [ "$SKIP_VERSION_CHECK" = 'true' ]; then
+		say "$why — waived (--skip-version-check: same data version $(dedalo_version_triple "$FROM"), no migration between them)"
+		return 0
+	fi
+	finish refused downgrade_refused "$why. A stack built from a beta before 7.0.0-beta.7 is pinned at the bare $(dedalo_version_triple "$FROM") although it runs that beta: if this is one, re-run ONCE with --skip-version-check (it waives this order within the data version $(dedalo_version_triple "$FROM") only — never a step back to an older one; docs/install/docker.md)"
 }
 
 # --- 4. the engine's own walk ---------------------------------------------------
 
+ENGINE_SAID='' ENGINE_CODE=0
+
+# engine_check TAG — ask the running engine; its reason id in ENGINE_SAID (a-z_
+# only, bounded: it reaches the terminal), its exit code in ENGINE_CODE.
+engine_check() {
+	local said=''
+	ENGINE_CODE=0
+	said="$(dc exec -T dedalo bun scripts/ops/image_update_channel.ts check-target "$1" 2>/dev/null)" || ENGINE_CODE=$?
+	ENGINE_SAID="$(printf '%s' "$said" | tr -cd 'a-z_' | head -c 64)"
+}
+
+# engine_blind_to_identity — status 0 when the engine's refusal of TARGET is about
+# a PRERELEASE it cannot see, not about the data walk. Every engine up to
+# 7.0.0-beta.6 (and every one until the identity walk lands, design step 9c) reads
+# only X.Y.Z(-dev) and knows only its own X.Y.Z — and the engine that answers is
+# the OLD image, so no later engine fixes this for the stack being updated. Two
+# answers are blind: `malformed_version` for a prerelease target (it cannot read
+# the tag), and `downgrade_or_same_version` for a release from a prerelease of the
+# same X.Y.Z (rc.1 → 7.0.0: it sees 7.0.0 → 7.0.0). The walk of either is its DATA
+# walk (design 2.8.3: the same X.Y.Z crosses no migration, another X.Y.Z must be
+# the next rung), and an engine of any age answers exactly that for X.Y.Z-dev:
+# the same X.Y.Z or the next rung legal, a skip or a step back refused. Release
+# order WITHIN the data version was step 3's job.
+engine_blind_to_identity() {
+	[ "$ENGINE_CODE" = 3 ] || return 1
+	case "$ENGINE_SAID" in
+		malformed_version) dedalo_is_prerelease_tag "$TARGET" ;;
+		downgrade_or_same_version)
+			dedalo_is_prerelease_tag "$FROM" && ! dedalo_is_dev_tag "$TARGET" &&
+				[ "$(dedalo_version_triple "$TARGET")" = "$(dedalo_version_triple "$FROM")" ]
+			;;
+		*) return 1 ;;
+	esac
+}
+
 check_with_engine() {
-	local said='' code=0
+	local asked="$TARGET"
 	[ -n "$(running_container dedalo)" ] || finish refused not_running 'the dedalo service is not running — start it (up -d dedalo) and run this again'
-	said="$(dc exec -T dedalo bun scripts/ops/image_update_channel.ts check-target "$TARGET" 2>/dev/null)" || code=$?
-	case "$code" in
+	engine_check "$TARGET"
+	if engine_blind_to_identity; then
+		asked="$(dedalo_version_triple "$TARGET")-dev"
+		say "the running engine does not know prerelease versions: asking it about the data version of $TARGET ($asked) instead"
+		engine_check "$asked"
+	fi
+	case "$ENGINE_CODE" in
 		0) return 0 ;;
-		3) finish refused version_refused "the engine refuses $TARGET: $(printf '%s' "$said" | tr -cd 'a-z_' | head -c 64)" ;;
+		3) finish refused version_refused "the engine refuses $asked: $ENGINE_SAID" ;;
 	esac
 	if [ "$SKIP_VERSION_CHECK" = 'true' ]; then
 		say 'the engine could not check the version walk — skipped (--skip-version-check)'
@@ -319,14 +398,25 @@ pull_image() {
 
 build_ref() {
 	local remotes=''
-	if [ "${TARGET%-dev}" = "$TARGET" ]; then
-		echo "v$TARGET"
-	elif [ -n "$GIT_REF" ]; then
+	if [ -n "$GIT_REF" ]; then
 		echo "$GIT_REF"
+	elif ! dedalo_is_dev_tag "$TARGET"; then
+		echo "v$TARGET"
 	else
 		remotes="$(git remote)"
 		[ -n "$remotes" ] && [ "$(printf '%s\n' "$remotes" | wc -l | tr -d ' ')" = '1' ] || return 1
 		echo "$remotes/master"
+	fi
+}
+
+# builds_target IDENTITY — status 0 when a commit of that identity builds TARGET.
+builds_target() {
+	if dedalo_is_dev_tag "$TARGET"; then
+		# any commit of the target's DATA version: another X.Y.Z would run its
+		# migrations under a pin that names this one
+		[ -n "$1" ] && [ "$(dedalo_version_triple "$1")" = "$(dedalo_version_triple "$TARGET")" ]
+	else
+		[ "$(dedalo_image_tag_of "$1" || true)" = "$TARGET" ]
 	fi
 }
 
@@ -344,8 +434,13 @@ restore_checkout() {
 # file reaches the image and it reports the version it is tagged with. The
 # library was sourced before the checkout: the builder that runs is this one.
 # Tracked changes are still refused: the checkout itself moves to the release.
+# WHAT was checked out is judged by its RELEASE IDENTITY (dedalo_release_identity
+# — what the engine built from it will call itself), not by the triple version.ts
+# declares: a release or prerelease target must be exactly that tagged release
+# (a lightweight tag, a tag on another commit or naming another version all say
+# .dev), a -dev target any commit of its data version.
 build_image() {
-	local ref='' declared=''
+	local ref='' identity=''
 	dedalo_is_checkout "$(pwd)" || finish refused build_failed "$(dedalo_no_checkout_sentence "$(pwd)")"
 	[ -z "$(git status --porcelain --untracked-files=no)" ] ||
 		finish refused build_failed 'this checkout has local changes to tracked files — commit or discard them first'
@@ -354,10 +449,10 @@ build_image() {
 	git fetch --all --tags --quiet || finish failed build_failed 'git fetch failed'
 	ref="$(build_ref)" || finish refused version_refused 'a developer build needs ONE git remote, or --ref'
 	git checkout -q --detach "$ref" || finish refused build_failed "could not check out $ref"
-	declared="$(dedalo_checkout_version . || true)"
-	if [ "$declared" != "${TARGET%-dev}" ]; then
+	identity="$(dedalo_release_identity . || true)"
+	if ! builds_target "$identity"; then
 		restore_checkout
-		finish refused version_refused "$ref declares ${declared:-no version}, not ${TARGET%-dev}"
+		finish refused version_refused "$ref is ${identity:-no Dédalo version}, not $TARGET"
 	fi
 	if ! dedalo_image_build "$(pwd)" "$IMAGE:$TARGET"; then
 		restore_checkout

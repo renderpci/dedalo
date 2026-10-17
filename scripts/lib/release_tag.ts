@@ -1,0 +1,154 @@
+/**
+ * release_tag.ts — THE check a release tag must pass before it is published
+ * (RELEASE_IDENTITY gate 11). ONE implementation, two doors:
+ *   - the pre-push hook (scripts/hooks/pre-push), for every `refs/tags/v*` a push
+ *     lands — through `bun run push:release-tag <tag> <commit>`;
+ *   - image-release.yml's `plan` (scripts/ci/image_release.ts releasePlanFor),
+ *     which imports releaseTagFault — the half no `--no-verify` reaches.
+ *
+ * A tag `v<identity>` (the shared grammar, release_identity.ts) names a release
+ * only when ITS OWN COMMIT says so:
+ *   1. the commit's version.ts declares the tag's data triple — a tag whose tree
+ *      is another version would publish bytes under the wrong name;
+ *   2. the commit carries `changes/<identity>/release.json` naming exactly this
+ *      version and ending at this tag — the release was CUT (`bun run changelog
+ *      release <identity>`) before it was tagged, so the release notes every
+ *      update panel shows exist. The FILE's full grammar is change_log_tripwire's
+ *      (scripts/lib/change_log.ts parseRelease), run by the full gate a release
+ *      commit must pass; this check reads only the two keys that bind it to the
+ *      tag. It does not import the changelog module: that module also WALKS
+ *      changes/, and a check over git objects must not carry a working-tree walk
+ *      into every gate that imports it (census_derivation_tripwire).
+ * Everything is read from the git object store at the tag's commit, never from
+ * the working tree: what is checked is what is published.
+ *
+ *   bun run scripts/lib/release_tag.ts check <tag> <commit>
+ *
+ * A LIBRARY with a CLI, not a CI stage: no hosted chain runs it by name (the image
+ * pipeline imports it), so it lives in scripts/lib/ (tier_wiring_tripwire rule I).
+ *     exit 0: a release tag that passes, a tag that is no release identity
+ *             (v6.0.0.beta.1 — nothing to hold), or a tag published before the
+ *             rule (below FIRST_CUT_RELEASE — see there); exit 1: refused, with
+ *             the sentence.
+ */
+
+import { parseDeclaredTriple, VERSION_TS_PATH } from '../../src/core/update/code_build_plan.ts';
+import {
+	compareReleaseIdentities,
+	parseReleaseVersion,
+	releaseVersionOfTag,
+} from '../../src/core/update/release_identity.ts';
+
+/** What the check reads from git, injectable so the rules are testable on fixtures. */
+export interface ReleaseTagGit {
+	/** The bytes of `path` at commit `rev`, or null when the commit has no such file. */
+	fileAt(rev: string, path: string): string | null;
+}
+
+/**
+ * The first release cut and tagged under this rule. Every identity BELOW it was
+ * published before the rule existed and cannot meet it at its own commit: v4–v6
+ * and v7.0.0-alpha.1..beta.1 carry no version.ts, beta.2..4 were cut AFTER their
+ * tag, beta.5 was never cut. Those tags are immutable history, yet a push still
+ * carries them (`git push --tags` to a new mirror or a re-created lane remote,
+ * `--mirror`), and refusing them would leave `--no-verify` — which skips every
+ * gate — as the only way through. So the PUSH door passes them, saying so.
+ *
+ * A floor, not a list: a tag below it named today would be a new tag in the past
+ * of the release line, which the image pipeline and the updater's forward-only
+ * order refuse anyway. releaseTagFault itself stays strict — the image-release
+ * plan never publishes a pre-rule tag.
+ */
+export const FIRST_CUT_RELEASE = '7.0.0-beta.6';
+
+/** True when `identity` predates the rule (sorts below FIRST_CUT_RELEASE). */
+export function predatesReleaseCutRule(identity: string): boolean {
+	return compareReleaseIdentities(identity, FIRST_CUT_RELEASE) < 0;
+}
+
+/** The changelog snapshot a release identity must carry (changes/README.md "Cutting a release"). */
+export function releaseNotesPath(identity: string): string {
+	return `changes/${identity}/release.json`;
+}
+
+/**
+ * Why tag `tag` (a bare name, `v7.0.1` / `v7.0.1-beta.2`) on commit `commit`
+ * may NOT be published, or null when it may. A name outside the release grammar
+ * is refused here too — the caller decides which tags are release tags.
+ */
+export function releaseTagFault(tag: string, commit: string, git: ReleaseTagGit): string | null {
+	const identity = releaseVersionOfTag(tag);
+	const parsed = identity === null ? null : parseReleaseVersion(identity);
+	if (identity === null || parsed === null)
+		return `'${tag}' is not a release tag v<X.Y.Z>[-(alpha|beta|rc).N]`;
+	const triple = parsed.triple.join('.');
+	const versionTs = git.fileAt(commit, VERSION_TS_PATH);
+	const declared = versionTs === null ? null : parseDeclaredTriple(versionTs);
+	if (declared !== triple)
+		return `tag ${tag} names version ${triple}, but ${VERSION_TS_PATH} at ${commit} declares ${declared ?? 'nothing'} — bump the version (or tag the commit that declares it)`;
+	const notesPath = releaseNotesPath(identity);
+	const notes = git.fileAt(commit, notesPath);
+	const cut = `cut the release first (bun run changelog release ${identity}), commit it, and tag THAT commit`;
+	if (notes === null) return `tag ${tag}: ${commit} carries no ${notesPath} — ${cut}`;
+	const release = cutOf(notes);
+	if (release === null)
+		return `tag ${tag}: ${notesPath} at ${commit} is not a JSON object — ${cut}`;
+	if (release.version !== identity || release.to !== tag)
+		return `tag ${tag}: ${notesPath} at ${commit} is the cut of ${String(release.version)} up to ${String(release.to)}, not of ${identity} up to ${tag} — ${cut}`;
+	return null;
+}
+
+/** The two keys of a release.json that bind it to a tag, or null when it is no JSON object. */
+function cutOf(text: string): { version: unknown; to: unknown } | null {
+	try {
+		const value: unknown = JSON.parse(text);
+		if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+		const { version, to } = value as Record<string, unknown>;
+		return { version, to };
+	} catch {
+		return null;
+	}
+}
+
+/** The real lookups: `git show <rev>:<path>` in `cwd`. */
+export function gitShowLookups(cwd: string): ReleaseTagGit {
+	return {
+		fileAt: (rev, path) => {
+			const shown = Bun.spawnSync(['git', 'show', `${rev}:${path}`], {
+				cwd,
+				stdout: 'pipe',
+				stderr: 'ignore',
+			});
+			return shown.exitCode === 0 ? shown.stdout.toString() : null;
+		},
+	};
+}
+
+/** The CLI: `check <tag> <commit>`. Returns the process exit code. */
+export function main(argv: readonly string[], cwd: string = process.cwd()): number {
+	const [verb, tag, commit] = argv;
+	if (verb !== 'check' || tag === undefined || commit === undefined || argv.length !== 3) {
+		console.error('usage: bun run scripts/lib/release_tag.ts check <tag> <commit>');
+		return 2;
+	}
+	const identity = releaseVersionOfTag(tag);
+	if (identity === null) {
+		console.log(`release-tag: ${tag} is not a release identity tag — nothing to hold`);
+		return 0;
+	}
+	if (predatesReleaseCutRule(identity)) {
+		console.log(
+			`release-tag: ${tag} predates the cut rule (first cut release v${FIRST_CUT_RELEASE}) — published history, not held`,
+		);
+		return 0;
+	}
+	const fault = releaseTagFault(tag, commit, gitShowLookups(cwd));
+	if (fault !== null) {
+		console.error(`release-tag: REFUSED — ${fault}`);
+		return 1;
+	}
+	console.log(`release-tag: ${tag} at ${commit} — version.ts and the changelog cut agree`);
+	return 0;
+}
+
+if (import.meta.main) process.exit(main(process.argv.slice(2)));

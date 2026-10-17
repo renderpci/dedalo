@@ -76,6 +76,8 @@
 
 import { resolve } from 'node:path';
 import { DedaloError } from '../errors/dedalo_error.ts';
+import { type DevCertificatePlan, devCertificatePlan } from './dev_certificate.ts';
+import { type DevListenerPlan, devListenerPlan, devListenerWarnings } from './dev_listener.ts';
 import {
 	type HierarchyMeta,
 	isCoreHierarchyTld,
@@ -87,8 +89,10 @@ import {
 	type FieldError,
 	hostLocaleDefaults,
 	INSTANCE_PATTERN,
+	keptDevListenerProblems,
 	rootPasswordErrors,
 } from './install_validation.ts';
+import { defaultImageSource } from './installer_identity.ts';
 import { deriveLangConfig } from './lang_catalog.ts';
 import {
 	activeOntologyTldsOf,
@@ -113,6 +117,7 @@ import {
 	vendoredCoreDeclarers,
 	vendoredOntologyCatalog,
 } from './ontology_choice.ts';
+import { devTlsDir } from './paths.ts';
 
 /** One master server entry, as ONTOLOGY_SERVERS / CODE_SERVERS carry it. */
 export interface MasterServerEntry {
@@ -157,6 +162,11 @@ export const INSTALL_STEP_IDS = [
 	'test_db_connection',
 	'test_diffusion_connection',
 	'test_mailer_connection',
+	// developer route only (TODO-052): the checkout's devDependencies — `bun run dev` needs them
+	'install_dev_dependencies',
+	// developer route, local_ca only (TODO-055): the ONE generator's certificate, then this machine's trust
+	'dev_tls_certificate',
+	'dev_trust_ca',
 	'persist_config',
 	'check_directories',
 	'stage_ontologies',
@@ -166,6 +176,9 @@ export const INSTALL_STEP_IDS = [
 	'install_hierarchies',
 	'register_tools',
 	'install_finish',
+	// developer route only (TODO-053, D4): `bun run dev` started once — /health and a root
+	// login over the development listener — then stopped. After the seal: the server boots only then.
+	'verify_dev_server',
 ] as const;
 export type InstallStepId = (typeof INSTALL_STEP_IDS)[number];
 
@@ -228,7 +241,11 @@ export function isInstallStepId(step: string): step is InstallStepId {
 
 /** The production web servers the host steps render a site file for. */
 export const WEB_SERVERS = ['nginx', 'apache'] as const;
-/** TLS modes: production letsencrypt|files; docker adds local_ca; trial is none. */
+/**
+ * TLS modes: production and docker letsencrypt|local_ca|files (local_ca on
+ * production since 2026-10-16 — an isolated intranet with no public name);
+ * trial is none.
+ */
 export const TLS_MODES = ['letsencrypt', 'files', 'local_ca', 'none'] as const;
 /** The production database: created by the installer (peer role), or an existing one probed. */
 export const DB_MODES = ['create', 'existing'] as const;
@@ -298,14 +315,37 @@ export interface InstallAnswers {
 	server_name: string;
 	http_port: string;
 	https_port: string;
-	/** TLS_MODES, per route (production: letsencrypt|files; docker: +local_ca; trial: none). */
+	/**
+	 * TLS_MODES, per route (production, docker: letsencrypt|local_ca|files; trial:
+	 * none; developer: local_ca|none|files for its development listener — '' =
+	 * the plan decides: the prior .env's pair when it has one, else local_ca, D1).
+	 */
 	tls_mode: string;
+	/**
+	 * local_ca only: the OTHER addresses staff type (a LAN name or an IPv4
+	 * address — install_validation.ts; on the production route an IP must be
+	 * this host's and no other instance's: host/production/address_claims.ts) — canonical `a,b` (lowercase, de-duplicated, '' = none). The
+	 * leaf names them beside server_name and the authority is constrained to
+	 * exactly that list (deploy/dedalo-tls-rotate.sh). See {@link extraTlsNames}.
+	 */
+	tls_extra_names: string;
 	letsencrypt_email: string;
 	/** Let's Encrypt's staging CA (a drill / a rate-limit-safe rehearsal). Flags only. */
 	letsencrypt_staging: boolean;
 	/** The institution's own certificate: absolute paths (fullchain + key), checked before use. */
 	tls_cert_path: string;
 	tls_key_path: string;
+	/**
+	 * developer: the development listener's port (SERVER_TCP_PORT) — '' = the
+	 * plan decides: the prior .env's value when it has one (PRESERVE), else 3500
+	 * (D3). dev_listener.ts.
+	 */
+	dev_port: string;
+	/**
+	 * developer: the address it binds (SERVER_TCP_HOST) — '' = the prior .env's,
+	 * else 127.0.0.1 (this machine); 0.0.0.0 or one address opens it to the network.
+	 */
+	dev_host: string;
 	/** production: 'create' (the installer creates role + database) | 'existing' (probed only). */
 	db_mode: string;
 	/**
@@ -396,10 +436,13 @@ const ANSWER_CLASS: Readonly<Record<keyof InstallAnswers, 'secret' | 'plain'>> =
 	http_port: 'plain',
 	https_port: 'plain',
 	tls_mode: 'plain',
+	tls_extra_names: 'plain',
 	letsencrypt_email: 'plain',
 	letsencrypt_staging: 'plain',
 	tls_cert_path: 'plain',
 	tls_key_path: 'plain',
+	dev_port: 'plain',
+	dev_host: 'plain',
 	db_mode: 'plain',
 	install_dir: 'plain',
 	service_user: 'plain',
@@ -425,6 +468,7 @@ export const HOST_ONLY_ANSWER_KEYS: readonly (keyof InstallAnswers)[] = Object.f
 	'http_port',
 	'https_port',
 	'tls_mode',
+	'tls_extra_names',
 	'letsencrypt_email',
 	'letsencrypt_staging',
 	'tls_cert_path',
@@ -471,6 +515,16 @@ export interface InstallPlan {
 	readonly langConfig: ReturnType<typeof deriveLangConfig>;
 	/** The .env body sections, in file order. */
 	readonly env: readonly EnvSection[];
+	/**
+	 * The developer route's development listener (port, address, TLS, the
+	 * derived cookie flag, what a re-run keeps); null on every other route.
+	 */
+	readonly devListener: DevListenerPlan | null;
+	/**
+	 * The developer listener's local-CA certificate (where, for which names);
+	 * null unless it presents the generator's pair (dev_tls.ts).
+	 */
+	readonly devCertificate: DevCertificatePlan | null;
 	/** Every key the plan OWNS, in file order (DEDALO_SALT_STRING included). */
 	readonly envKeys: readonly string[];
 	readonly steps: readonly StepId[];
@@ -553,6 +607,22 @@ function listOf(value: unknown): string[] {
 	return items.map((item) => String(item).trim()).filter((item) => item !== '');
 }
 
+/**
+ * A list of addresses (a comma/space string or an array) → its canonical
+ * answer: lowercase, de-duplicated, in the order given, joined by `,`.
+ */
+function canonicalNameList(value: unknown): string {
+	if (value === undefined || value === null) return '';
+	const items = Array.isArray(value) ? value.map(String) : String(value).split(/[\s,]+/);
+	const names = items.map((item) => item.trim().toLowerCase()).filter((item) => item !== '');
+	return [...new Set(names)].join(',');
+}
+
+/** The extra local-CA addresses of the answers, as a list (the canonical answer split). */
+export function extraTlsNames(answers: Pick<InstallAnswers, 'tls_extra_names'>): string[] {
+	return answers.tls_extra_names === '' ? [] : answers.tls_extra_names.split(',');
+}
+
 /** langs: absent → undefined (the default working languages); otherwise the listed codes. */
 function parseLangs(value: unknown): string[] | undefined {
 	return value === undefined || value === null ? undefined : listOf(value);
@@ -595,7 +665,10 @@ function parseRoute(value: unknown, problems: FieldError[]): InstallRoute {
  *  - docker / trial: the compose stack's constants (install.sh passes the
  *    SAME values as explicit flags — an older pulled image does not know
  *    `--route`; gate: install_screen_model_tripwire); trial has no TLS;
- *  - developer: no database name or user (asked), media and socket not written.
+ *  - developer: no database name or user (asked), media and socket not written;
+ *    its development listener (port, address, TLS mode) is decided over the
+ *    prior .env by dev_listener.ts — '' answers here, never a route default, so
+ *    a re-run keeps what the operator already has (the PRESERVE rule).
  *  - DEDALO_MEDIA_ACCESS_MODE: `publication` on production (written, so the
  *    first boot never reports an unconfigured mode — C3-44); '' elsewhere.
  */
@@ -636,9 +709,20 @@ const STACK_DEFAULTS: RouteDefaults = Object.freeze({
 	install_dir: '',
 	service_user: '',
 	backup_dir: '',
-	image_source: 'official',
+	// The image source is the installer's identity's (stackDefaults): Official, or Build for a dev build.
+	image_source: '',
 	media_access_mode: '',
 });
+
+/**
+ * The docker/trial defaults: the Image screen PRESELECTS Official for a stable
+ * or prerelease installer and Build for a development build — no official image
+ * is an untagged commit's code (installer_identity.ts, owner Q6). Read per call:
+ * the identity is a process fact a gate may pin.
+ */
+function stackDefaults(): RouteDefaults {
+	return { ...STACK_DEFAULTS, image_source: defaultImageSource() };
+}
 
 /** The local PostgreSQL socket directory a created (peer) production database is reached through. */
 export const LOCAL_PG_SOCKET_DIR = '/var/run/postgresql';
@@ -719,8 +803,8 @@ export function routeDefaults(
 	instance: string,
 	level: IdentityLevel | null = null,
 ): RouteDefaults {
-	if (route === 'docker') return STACK_DEFAULTS;
-	if (route === 'trial') return { ...STACK_DEFAULTS, tls_mode: 'none' };
+	if (route === 'docker') return stackDefaults();
+	if (route === 'trial') return { ...stackDefaults(), tls_mode: 'none' };
 	if (route === 'production') return productionDefaults(instance, level);
 	return DEVELOPER_DEFAULTS;
 }
@@ -906,10 +990,14 @@ function hostAnswers(raw: RawAnswers, d: RouteDefaults) {
 		http_port: textOr(raw, 'http_port', '80'),
 		https_port: textOr(raw, 'https_port', '443'),
 		tls_mode: textOr(raw, 'tls_mode', d.tls_mode),
+		tls_extra_names: canonicalNameList(raw.tls_extra_names),
 		letsencrypt_email: text(raw, 'letsencrypt_email'),
 		letsencrypt_staging: flag(raw, 'letsencrypt_staging'),
 		tls_cert_path: text(raw, 'tls_cert_path'),
 		tls_key_path: text(raw, 'tls_key_path'),
+		// '' = the plan decides (dev_listener.ts: the prior .env's, else the route default).
+		dev_port: text(raw, 'dev_port').trim(),
+		dev_host: text(raw, 'dev_host').trim(),
 		db_mode: textOr(raw, 'db_mode', d.db_mode),
 		install_dir: textOr(raw, 'install_dir', d.install_dir),
 		service_user: textOr(raw, 'service_user', d.service_user),
@@ -1219,6 +1307,21 @@ function mailerSection(a: InstallAnswers): EnvSection {
 	};
 }
 
+/**
+ * DEVELOPMENT ONLY (TODO-054): the developer route's listener and mode
+ * (dev_listener.ts decides; null on every other route — production writes none
+ * of these, the catalog says "unset in production"). The header says why the
+ * keys exist to whoever reads the .env later.
+ */
+function devSection(listener: DevListenerPlan | null): EnvSection {
+	if (listener === null) return { comment: '', entries: [] };
+	return {
+		comment:
+			'# --- Development only (the developer route: `bun run dev` serves the browser here; never in production) ---',
+		entries: listener.entries.map((item) => entry(item.key, item.value)),
+	};
+}
+
 /** The .env body sections in file order; an empty section is omitted. */
 function envSections(
 	a: InstallAnswers,
@@ -1226,6 +1329,7 @@ function envSections(
 	salt: string,
 	prior: Readonly<Record<string, string>>,
 	activeOntologyTlds: readonly string[],
+	listener: DevListenerPlan | null,
 ): EnvSection[] {
 	return [
 		databaseSection(a),
@@ -1237,6 +1341,7 @@ function envSections(
 		servingSection(a),
 		diffusionSection(a),
 		mailerSection(a),
+		devSection(listener),
 	].filter((section) => section.entries.length > 0);
 }
 
@@ -1263,12 +1368,27 @@ export function hasIllegalControlCharacter(value: string): boolean {
 
 // ── the steps ────────────────────────────────────────────────────────────────
 
-/** The ENGINE step list: the optional probes and tool registration follow the answers. */
-export function engineSteps(a: InstallAnswers): InstallStepId[] {
+/**
+ * The ENGINE step list: the optional probes and tool registration follow the
+ * answers; the development dependencies are the developer route's alone — a
+ * host route's delegated engine child keeps its route's name (engine_only), and
+ * production / docker / trial keep the bootstrap's `--production` tree.
+ */
+export function engineSteps(
+	a: InstallAnswers,
+	devCertificate: DevCertificatePlan | null = null,
+): InstallStepId[] {
+	const developer = a.route === 'developer' && !a.engine_only;
 	const optional: Partial<Record<InstallStepId, boolean>> = {
 		test_diffusion_connection: a.diffusion,
 		test_mailer_connection: a.mailer,
+		install_dev_dependencies: developer,
+		// The local CA's certificate and this machine's trust in it (D1/D2): only
+		// when the listener presents the generator's pair.
+		dev_tls_certificate: developer && devCertificate !== null,
+		dev_trust_ca: developer && devCertificate !== null,
 		register_tools: a.register_tools,
+		verify_dev_server: developer,
 	};
 	return INSTALL_STEP_IDS.filter((step) => optional[step] !== false);
 }
@@ -1291,11 +1411,14 @@ function stackSteps(a: InstallAnswers): StackHostStepId[] {
  * `stack_engine`, in a child); the developer route and every `engine_only`
  * child run the engine steps here.
  */
-export function installSteps(a: InstallAnswers): StepId[] {
+export function installSteps(
+	a: InstallAnswers,
+	devCertificate: DevCertificatePlan | null = null,
+): StepId[] {
 	if (a.engine_only) return engineSteps(a);
 	if (a.route === 'production') return productionSteps(a);
 	if (a.route === 'docker' || a.route === 'trial') return stackSteps(a);
-	return engineSteps(a);
+	return engineSteps(a, devCertificate);
 }
 
 // ── the ontologies ───────────────────────────────────────────────────────────
@@ -1453,6 +1576,10 @@ export function buildInstallPlan(
 		rootPassword?: string;
 		/** A fresh terminal install sets it, so it must be supplied. */
 		requireRootPassword?: boolean;
+		/** Where the developer route's local-CA material lives (default: paths.ts devTlsDir). */
+		devTlsDir?: string;
+		/** This machine's IPv4 network addresses (default: dev_tls.ts machineIpv4Addresses). */
+		lanAddresses?: () => readonly string[];
 	} = {},
 ): InstallPlan {
 	const { answers, notes, errors, fieldErrors: answerFieldErrors } = normalizeInstallAnswers(raw);
@@ -1467,12 +1594,20 @@ export function buildInstallPlan(
 		dataLangDefault: answers.data_lang_default,
 	});
 	const ontologies = planOntologies(answers, prior, context.ontologyCatalog);
+	const tlsDir = context.devTlsDir ?? devTlsDir();
+	const devListener = devListenerPlan(answers, prior, tlsDir);
+	const devCertificate = devCertificatePlan(devListener, tlsDir, context.lanAddresses);
+	const keptListenerErrors = [
+		...keptDevListenerProblems(devListener),
+		...(devCertificate?.errors ?? []),
+	];
 	const env = envSections(
 		answers,
 		langConfig,
 		context.salt ?? '',
 		prior,
 		ontologies.activeOntologyTlds,
+		devListener,
 	);
 	const thesauri = closedThesauri(
 		[
@@ -1489,8 +1624,10 @@ export function buildInstallPlan(
 		answers,
 		langConfig,
 		env,
+		devListener,
+		devCertificate,
 		envKeys: env.flatMap((section) => section.entries.map((item) => item.key)),
-		steps: installSteps(answers),
+		steps: installSteps(answers, devCertificate),
 		hierarchies,
 		hierarchyDependencies: mergeHierarchyDependencyLists(
 			ontologies.hierarchyDependencies,
@@ -1502,17 +1639,24 @@ export function buildInstallPlan(
 		ontologySource: ontologySourceView(ontologies.source),
 		ontologyRequest: ontologies.request,
 		activeOntologyTlds: ontologies.activeOntologyTlds,
-		notes: [...notes, ...ontologies.notes, ...thesauri.notes],
-		warnings: [...ontologies.warnings, ...thesauri.warnings],
+		notes: [...notes, ...ontologies.notes, ...thesauri.notes, ...(devCertificate?.notes ?? [])],
+		warnings: [...ontologies.warnings, ...thesauri.warnings, ...devListenerWarnings(devListener)],
 		rootPasswordErrors: passwordErrors,
 		errors: [
-			...new Set([...errors, ...ontologies.errors, ...thesauri.errors, ...suggestionErrors]),
+			...new Set([
+				...errors,
+				...keptListenerErrors.map((item) => item.message),
+				...ontologies.errors,
+				...thesauri.errors,
+				...suggestionErrors,
+			]),
 			...langConfig.errors.map((error) => `languages: ${error}`),
 			...controlCharacterErrors(env),
 			...passwordErrors,
 		],
 		fieldErrors: [
 			...answerFieldErrors,
+			...keptListenerErrors,
 			...ontologies.fieldErrors,
 			// A chosen thesaurus whose declared ontology is not installed (closeThesaurusChoice).
 			...thesauri.choiceErrors.map((message) => ({ key: 'hierarchies', message })),
@@ -1617,9 +1761,13 @@ export const INSTALL_CLI_FLAGS: readonly {
 	{ flag: '--http-port', key: 'http_port', kind: 'value' },
 	{ flag: '--https-port', key: 'https_port', kind: 'value' },
 	{ flag: '--tls', key: 'tls_mode', kind: 'value' },
+	{ flag: '--tls-extra-names', key: 'tls_extra_names', kind: 'value' },
 	{ flag: '--letsencrypt-email', key: 'letsencrypt_email', kind: 'value' },
 	{ flag: '--tls-cert', key: 'tls_cert_path', kind: 'value' },
 	{ flag: '--tls-key', key: 'tls_key_path', kind: 'value' },
+	// The developer route's development listener (DEV_ROUTE_SERVE §1.1).
+	{ flag: '--dev-port', key: 'dev_port', kind: 'value' },
+	{ flag: '--dev-host', key: 'dev_host', kind: 'value' },
 	{ flag: '--db-mode', key: 'db_mode', kind: 'value' },
 	{ flag: '--install-dir', key: 'install_dir', kind: 'value' },
 	{ flag: '--service-user', key: 'service_user', kind: 'value' },

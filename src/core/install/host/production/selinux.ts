@@ -17,6 +17,9 @@
  *                                       which an update replaces unlabelled: B13)
  *      /var/lib/dedalo-install/acme/<i>(/.*)?  httpd_sys_content_t (the HTTP-01
  *                                       challenge root — var_lib_t is denied: B13)
+ *      /opt/dedalo/instances/<i>/tls(/.*)?  cert_t (local_ca: the certificate
+ *                                       directory — relabelled by host_tls, which
+ *                                       creates it after this step)
  *      <install folder>/{dedalo,private,backups}(/.*)?  var_lib_t — and the
  *                                       backup dir when it lies outside, and the
  *                                       folder itself (not recursive) when this
@@ -121,7 +124,10 @@ function socketSpecs(ctx: HostPlanCtx): string[] {
 export interface FcontextRule {
 	spec: string;
 	type: string;
-	/** The path relabelled now (null: systemd creates it at each start — labelled by the rule). */
+	/**
+	 * The path relabelled now (null: created later — systemd at each start, or
+	 * host_tls, which relabels it itself).
+	 */
 	path: string | null;
 	/** Relabelled as the service user (inside the install folder — B1). */
 	byUser?: true;
@@ -144,7 +150,20 @@ function webRules(ctx: HostPlanCtx): FcontextRule[] {
 		...(ctx.answers.tls_mode === 'letsencrypt'
 			? [treeRule(paths.acmeDir, 'httpd_sys_content_t')]
 			: []),
+		...tlsRules(ctx),
 	];
+}
+
+/**
+ * local_ca: the certificate directory is cert_t — the type the web server
+ * (httpd_t) reads certificates and keys as, wherever they are. Its path is
+ * relabelled by host_tls, which creates it AFTER this step (a new directory
+ * gets its parent's type, never the rule's, until restorecon); the renewals
+ * write inside it and inherit cert_t.
+ */
+function tlsRules(ctx: HostPlanCtx): FcontextRule[] {
+	if (ctx.answers.tls_mode !== 'local_ca') return [];
+	return [{ ...treeRule(ctx.paths.tlsDir, 'cert_t'), path: null }];
 }
 
 /** The install folder itself — only when this install created it (never an existing folder). */

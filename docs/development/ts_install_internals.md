@@ -57,10 +57,14 @@ than fetching.
   `install_finish` seals it.
 - **The steps** (`INSTALL_STEP_IDS`) are the keys of the one step table:
   `test_db_connection`, `test_diffusion_connection` (diffusion only),
-  `test_mailer_connection` (mailer only), `persist_config`, `check_directories`,
+  `test_mailer_connection` (mailer only), `install_dev_dependencies` (developer
+  route only — never a host route nor its engine child), `dev_tls_certificate` and
+  `dev_trust_ca` (developer route, only when the listener presents the local CA's
+  pair in `<private>/tls`), `persist_config`, `check_directories`,
   `stage_ontologies`, `install_db_from_default_file`, `install_ontologies`,
   `set_root_pw`, `install_hierarchies` (always — possibly with an empty list),
-  `register_tools` (unless skipped), `install_finish`. The pre-flight and the
+  `register_tools` (unless skipped), `install_finish`, `verify_dev_server`
+  (developer route only — after the seal, since the server boots only then). The pre-flight and the
   closing login check are the installer's own affordances, not plan steps.
 - **Update servers.** The plan writes `ONTOLOGY_SERVERS` and `CODE_SERVERS`
   (raw JSON) — `OFFICIAL_ONTOLOGY_SERVER` / `OFFICIAL_CODE_SERVER` by default,
@@ -92,6 +96,9 @@ maps back (`ontologyRequestFromActive`) to the very request the plan stages.
 | pre-flight | `init_test.ts`, `server_info.ts` | `init_test.result` gates the run; `server_info` feeds the probes' host facts (`probes.ts`) |
 | `test_db_connection` | `db_probe.ts` | psql `SELECT 1` on POSTED creds; falls back to the `postgres` DB to tell "missing DB" from "auth wrong" |
 | `test_diffusion_connection` | `db_probe.ts` → `diffusion/api/` facade | one-shot MariaDB probe (facade-only, boundary rule) |
+| `install_dev_dependencies` | `dev_dependencies.ts` | developer route only: `bun install --frozen-lockfile --ignore-scripts` over the bootstrap's `--production` tree, as the tree's owner (root in another user's tree refuses); spawns nothing when every devDependency is at its `bun.lock` version (also its `verify`); the package manager gets no install secret |
+| `dev_tls_certificate` | `dev_tls.ts` (names: `dev_certificate.ts`) | developer + local CA: `deploy/dedalo-tls-rotate.sh --mode local-ca --reload none` (or `--mode renew` over an authority already there for the same names) into `<private>/tls`, as the tree's owner; the generator gets no install secret; an authority for other names is refused in the preflight (`dev_listener_check.ts`). `verify` = the chain on disk (signatures, names, expiry, key pair, 0600 keys); `undo` = the directory, only when this install created it (`created.dev_tls_dir`); while `dedalo-trust.json` still lists entries (the trust undo, which runs first, was refused) it keeps that record and the authority, so `bun run tls:untrust` can still remove them |
+| `dev_trust_ca` | `dev_trust.ts` | macOS login keychain (`security add-trusted-cert`, no root), Linux anchors + update through ONE `sudo` (none as root), Firefox NSS via `certutil`; measures trust before asking (no second prompt); a refusal is a done step with a "not trusted yet" warning, never a failure. Every entry it adds is recorded in `<private>/tls/dedalo-trust.json`: `undo` removes this install's, `bun run tls:untrust` (`scripts/dev_tls.ts`) all of them. `add-trusted-cert` imports before it asks, so a cancelled macOS dialog deletes the import again (recorded instead when the keychain refuses the delete). Under `DEDALO_TEST_TRUST_STORE_OFF` the doors change no store, or drive the scratch store a gate sets with `useScratchTrustEnvironment`. No `verify` |
 | `persist_config` | `config_persist.ts` | atomic `.env` write (0600, backup-on-overwrite, preserve-or-generate secrets) + state |
 | `check_directories` | `directories.ts` | private/sessions/cache/media/backups, write+unlink probe |
 | (catalog, before the plan) | `ontology_catalog.ts` | `resolveOntologyCatalog` — the caller resolves the catalog of the selected source (the official/configured server, a local `--ontology-source`, or the offline view) and hands it to the plan |
@@ -102,6 +109,7 @@ maps back (`ontologyRequestFromActive`) to the very request the plan stages.
 | `install_hierarchies` | `hierarchy_import.ts` | optional thesauri only: `\copy` into `matrix_hierarchy` + counter consolidate + activation; a core TLD is activation-only, an empty list is a no-op |
 | `register_tools` | `register_tools.ts` | reuses `core/tools/register.ts importTools({dryRun:false})` |
 | `install_finish` | `finish.ts` | seal guard (root + password exist) → `install_status='sealed'` |
+| `verify_dev_server` | `dev_serve.ts` | developer route only: `bun run dev` once from the checkout (its environment minus every key the written `.env` names, `DEDALO_PRIVATE_DIR` = the install's), the port probed free first; `curl --cacert <local CA>` → `/health`, a root login + `/api/v1/counters` with the same cookie jar (the password through stdin); stopped with SIGTERM and the port waited free. A boot that throws is named after 5 s with nothing listening (`bun --watch` keeps the entry alive, waiting for a file change). Red names the cause and fails the step (sealed: `--resume` re-runs it). curl, not `fetch`: Bun's TLS client refuses the name-constrained authority. The child is tracked in the run's child scope (`trackInstallChild`), so an interrupt stops it. No `verify`, no `undo`. The final screen reads the written `.env` again (`devServedView`) |
 
 ## Domain ontologies
 
@@ -602,6 +610,12 @@ All read from the **process** environment only, never from `../private/.env`:
   and the fs directly.
 - `DEDALO_INSTALL_PROBE_CA_FILE` — the public probe's trust anchor, accepted only
   inside a directory marked `.dedalo_install_drill`.
+- `DEDALO_INSTALL_RELEASE_IDENTITY` — the installer's release identity
+  (`7.0.0`, `7.0.0-beta.7`, `7.0.0.dev`), pinned so a check tests each kind on any
+  commit: the image tag, the official-image decision and the preselected source
+  follow from it (`src/core/install/installer_identity.ts`). Honoured only in a test
+  process and only for an identity of the installer's own data version; anywhere
+  else the installer refuses to start.
 
 ### Drills
 

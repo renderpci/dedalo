@@ -80,6 +80,11 @@ The socket's directory is the instance's own (`0750`): `curl` reaches it as root
 | `database dedalo_<i> already exists`, `role <service user> already exists` | choose another name, or use that database with `--db-mode existing` (it must be empty) |
 | `PostgreSQL <n> already runs on this host` | another major version holds the database port: stop it, or use `--db-mode existing` with your own server |
 | `<address> is already served on port 80/443 by <file>` | another site answers for that name: remove it, or install under another address. The installer never edits another site |
+| `tls_extra_names: <ip> is not an address of this host (its IPv4 addresses: …)` | list one of the addresses the sentence names, or give staff a name. A certificate for an address the server does not hold reaches nobody |
+| `tls_extra_names claims <ip>, but this host's addresses could not be read (/proc/net/fib_trie) …` | the installer serves an address only once it knows it is this server's: check that `/proc/net/fib_trie` is readable (a container or a hardened kernel may hide it), or give staff a name |
+| `tls_extra_names: <ip> is already claimed by instance <j>` | an IP address reaches exactly one instance: give this one another address of the server, or a name |
+| `tls_extra_names: an IP address needs the standard ports 80/443 …` | install on ports 80 and 443, or give staff a name: the catch-all that picks the certificate by address covers those ports only |
+| `an IP address cannot reach this instance: …` | the sentence names what holds the address: a site of yours that listens on it itself (or on a host name), a `default_server` of yours on port 443 (nginx), a site or vhost of yours on port 443 that loads before the catch-all (nginx answers an unnamed handshake with the first server of the port, Apache with the first vhost — rename or move it so it loads after), another instance that already claims an address (Apache), or a file at the catch-all's path the installer did not write. Change that site, or give staff a name — [Reaching an instance by IP address](reverse_proxy.md#reaching-an-instance-by-ip-address) |
 | `nginx name dedalo_<i> is already defined in <file>` | an `upstream` or rate-limit zone of that name exists elsewhere (nginx names are global): choose another instance name |
 | `<path> already exists — the installer creates the instance's directories itself and never takes over an existing one` | remove it, or choose another path (a media path under `/var/www`, for example) |
 | nginx older than 1.25.1 | upgrade nginx: the site uses `http2 on;`, which older versions reject |
@@ -128,7 +133,7 @@ Every computer that opens the site needs the same CA, or its browser warns.
 - port 80 is not reachable from the internet — a firewall, a router without forwarding, a cloud security group;
 - the account hit Let's Encrypt's rate limit after repeated failures.
 
-**Fix.** Fix DNS or the firewall, then `--resume`. To rehearse without spending the rate limit, add `--letsencrypt-staging` to a headless install. The install completes with a test certificate browsers do not trust (its public probe does not verify the chain), and `--abort` cannot take a completed install apart. On Production, the installer's closing *To do on this host* list prints the `certbot certonly … --force-renewal --server https://acme-v02.api.letsencrypt.org/directory` command that replaces it with a real certificate in place. On Docker, the rehearsal stack is destroyed by hand, as in [Removing the stack](docker.md#removing-the-stack), and installed again without the flag. If the server cannot be reached from the internet at all, use your institution's certificate (`--tls files`) — or, on the Docker route, a local certificate authority.
+**Fix.** Fix DNS or the firewall, then `--resume`. To rehearse without spending the rate limit, add `--letsencrypt-staging` to a headless install. The install completes with a test certificate browsers do not trust (its public probe does not verify the chain), and `--abort` cannot take a completed install apart. On Production, the installer's closing *To do on this host* list prints the `certbot certonly … --force-renewal --server https://acme-v02.api.letsencrypt.org/directory` command that replaces it with a real certificate in place. On Docker, the rehearsal stack is destroyed by hand, as in [Removing the stack](docker.md#removing-the-stack), and installed again without the flag. If the server cannot be reached from the internet at all, use a local certificate authority (`--tls local_ca`) or your institution's certificate (`--tls files`).
 
 ### The public probe fails
 
@@ -497,6 +502,12 @@ modules. Roll back to the previous ref ([upgrading](upgrading.md#rollback)) and
 report it.
 
 ## Serving
+
+### `https://<IP address>/` fails at the handshake, or answers `421`
+
+**Cause.** A browser sends no server name in the TLS handshake for an IP address, so the web server cannot pick a site by name. On nginx the host's catch-all answers it: an address **no instance claims** gets no certificate, and the browser reports a protocol error (Chrome `ERR_SSL_UNRECOGNIZED_NAME_ALERT` or `ERR_SSL_PROTOCOL_ERROR`; curl `tlsv1 unrecognized name` or `tlsv1 alert internal error`). With an instance claiming addresses, each refusal is a line in `/var/log/nginx/dedalo-catch-all.error.log`. On Apache the handshake gets the first virtual host's certificate (a name mismatch warning), then `421 Misdirected Request`. It is the intended answer for an address the install was not given: nothing is served under an address nobody declared.
+
+**Fix.** An instance serves an IP address only when it was installed with it in **Other addresses** (`--tls-extra-names`, with a local certificate authority): see [Reaching an instance by IP address](reverse_proxy.md#reaching-an-instance-by-ip-address). Check which addresses it claims in `/opt/dedalo/instances/<i>/tls/dedalo-local-ca.names`. An installed instance cannot change its addresses: give staff a name (the intranet's DNS, or each computer's `hosts` file), or install again with the address listed.
 
 ### Every request is a `502`
 

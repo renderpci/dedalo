@@ -606,6 +606,16 @@
 			"skipped": 0,
 			"assertions": 71
 		},
+		"test/unit/client_release_identity.test.ts": {
+			"tests": 16,
+			"skipped": 0,
+			"assertions": 96
+		},
+		"test/unit/client_release_identity_wire.test.ts": {
+			"tests": 27,
+			"skipped": 0,
+			"assertions": 98
+		},
 		"test/unit/client_render_budget_native.test.ts": {
 			"tests": 11,
 			"skipped": 0,
@@ -1180,6 +1190,11 @@
 			"tests": 16,
 			"skipped": 0,
 			"assertions": 55
+		},
+		"test/unit/dev_listener_tls_native.test.ts": {
+			"tests": 17,
+			"skipped": 0,
+			"assertions": 81
 		},
 		"test/unit/developer_flags_native.test.ts": {
 			"tests": 5,
@@ -2136,6 +2151,26 @@
 			"skipped": 0,
 			"assertions": 26
 		},
+		"test/unit/install_dev_dependencies_native.test.ts": {
+			"tests": 12,
+			"skipped": 0,
+			"assertions": 82
+		},
+		"test/unit/install_dev_route_listener_native.test.ts": {
+			"tests": 31,
+			"skipped": 0,
+			"assertions": 136
+		},
+		"test/unit/install_dev_serve_native.test.ts": {
+			"tests": 24,
+			"skipped": 0,
+			"assertions": 138
+		},
+		"test/unit/install_dev_tls_native.test.ts": {
+			"tests": 28,
+			"skipped": 1,
+			"assertions": 194
+		},
 		"test/unit/install_e2e.test.ts": {
 			"tests": 3,
 			"skipped": 0,
@@ -2175,6 +2210,16 @@
 			"tests": 50,
 			"skipped": 0,
 			"assertions": 335
+		},
+		"test/unit/install_host_ip_claims_native.test.ts": {
+			"tests": 68,
+			"skipped": 4,
+			"assertions": 290
+		},
+		"test/unit/install_host_local_ca_native.test.ts": {
+			"tests": 31,
+			"skipped": 0,
+			"assertions": 276
 		},
 		"test/unit/install_host_privilege_tripwire.test.ts": {
 			"tests": 5,
@@ -2375,6 +2420,11 @@
 			"tests": 10,
 			"skipped": 0,
 			"assertions": 26
+		},
+		"test/unit/installer_identity_native.test.ts": {
+			"tests": 10,
+			"skipped": 0,
+			"assertions": 68
 		},
 		"test/unit/ip_allowlist.test.ts": {
 			"tests": 19,
@@ -3976,10 +4026,35 @@
 			"skipped": 0,
 			"assertions": 6
 		},
+		"test/unit/release_identity_native.test.ts": {
+			"tests": 49,
+			"skipped": 0,
+			"assertions": 1089
+		},
+		"test/unit/release_identity_separation_tripwire.test.ts": {
+			"tests": 44,
+			"skipped": 0,
+			"assertions": 165
+		},
+		"test/unit/release_identity_served_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 21
+		},
+		"test/unit/release_identity_shell_parity.test.ts": {
+			"tests": 51,
+			"skipped": 0,
+			"assertions": 1645
+		},
 		"test/unit/release_root_entries_tripwire.test.ts": {
 			"tests": 3,
 			"skipped": 0,
 			"assertions": 9
+		},
+		"test/unit/release_tag_native.test.ts": {
+			"tests": 16,
+			"skipped": 0,
+			"assertions": 55
 		},
 		"test/unit/relogin_identity_tripwire.test.ts": {
 			"tests": 6,
@@ -4845,6 +4920,11 @@
 			"tests": 13,
 			"skipped": 0,
 			"assertions": 28
+		},
+		"test/unit/tls_local_ca_native.test.ts": {
+			"tests": 13,
+			"skipped": 0,
+			"assertions": 138
 		},
 		"test/unit/tm_bulk_revert.test.ts": {
 			"tests": 7,

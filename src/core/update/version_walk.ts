@@ -109,8 +109,14 @@ export interface ImageTag {
 
 /**
  * The code server's release vocabulary, as image tags: `<v>.zip` ↔ `:<v>`,
- * `<v>-dev.zip` ↔ `:<v>-dev` (deploy/dedalo-image-lib.sh DEDALO_VERSION_RE —
- * the same grammar, bounded per segment). Anything else is null.
+ * `<v>-dev.zip` ↔ `:<v>-dev`. Anything else is null. NARROWER than the host's
+ * image-tag grammar (deploy/dedalo-image-lib.sh DEDALO_VERSION_RE =
+ * release_identity.ts identityOfImageTag), which also accepts a prerelease
+ * `:<v>-beta.N` since design step 6: the engine walks a prerelease only once
+ * the identity walk lands (RELEASE_IDENTITY design step 9c). Until then
+ * `check-target` REFUSES a prerelease tag as `malformed_version` (exit 3), and
+ * deploy/dedalo-image-update.sh re-asks the data walk as `<v>-dev`
+ * (engine_blind_to_identity) — as it must for every older engine anyway.
  */
 export const IMAGE_TAG_RE = /^(\d{1,6})\.(\d{1,6})\.(\d{1,6})(-dev)?$/;
 

@@ -79,6 +79,31 @@ export interface RunAnnouncement {
 }
 
 /** How a run's result is told: the outcome as the executor answered it. */
+/**
+ * What the developer route's final screen tells (TODO-053 — dev_serve.ts
+ * devServedView builds it from the WRITTEN .env; screen_text.ts
+ * DONE_TEXT.served words it): the command, every URL, the certificate.
+ */
+export interface DevServedView {
+	readonly start: string;
+	/** Every address a browser opens the client by (dev_listener_address.ts devListenerUrls). */
+	readonly urls: readonly string[];
+	/** Other machines reach the listener. */
+	readonly network: boolean;
+	readonly tls:
+		| {
+				readonly kind: 'local_ca';
+				readonly caFile: string;
+				readonly fingerprint: string | null;
+				/** Measured at the end of the run; null = not measured (the test seam). */
+				readonly trusted: boolean | null;
+				/** The manual way, for "not trusted yet". */
+				readonly manual: string;
+		  }
+		| { readonly kind: 'files'; readonly certFile: string }
+		| null;
+}
+
 /** How a run ended, for the Done sentences (the route and instance, a live instance kept by an abort). */
 export interface RunEnding {
 	/** `engine_only`: the by-hand host procedure's engine run (its next step is systemd — C3-54). */
@@ -93,6 +118,8 @@ export interface RunEnding {
 	 * closing screen (campaign 3c D5: the full screen showed none). Absent: none.
 	 */
 	told?: readonly string[];
+	/** The developer route's development server, as the written .env opens it. Absent: none. */
+	served?: DevServedView;
 }
 
 export interface RunOutcomeView {

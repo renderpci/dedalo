@@ -21,11 +21,15 @@
  *  - the institution's certificate files (address, expiry, key) — and that
  *    THIS machine trusts their chain (tls_trust.ts: stack_health probes the
  *    site with this machine's curl; campaign 3 C3-13);
+ *  - a local CA already in deploy/certs that cannot serve the answered
+ *    addresses (host/tls_authority.ts — stack_tls would skip its issue);
  *  - Compose older than 2.24.4 (the override's `!override` tag).
  *  - a port the stack publishes that something already listens on (`ss`;
  *    campaign 3c D2 — found at stack_up, after the build, before);
- *  - an official image that is not published for this version (prereleases
- *    never are — officialImageVerdict; not checkable offline: said, not refused).
+ *  - an official image that is not published for this release identity
+ *    (officialImageVerdict: the registry asked for a stable or prerelease
+ *    identity — not checkable offline: said, not refused; a development build
+ *    refused from its identity alone, no registry asked).
  *
  * Then FREEZES the facts and the digest of every stack step's commands in the
  * state file, as host_preflight does: what the rest of the run, and any
@@ -34,6 +38,7 @@
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { installerIdentity, officialRefusedFor } from '../../installer_identity.ts';
 import type { HostCtx, HostPlanCtx, HostRunResult, HostStepDefinition } from '../contract.ts';
 import { type HostFacts, pendingFacts } from '../facts.ts';
 import { ran } from '../production/common.ts';
@@ -55,6 +60,7 @@ import {
 	PRIVATE_VOLUME,
 	stackFileOf,
 } from './layout.ts';
+import { stackAuthorityConflict } from './tls.ts';
 
 /** The disk floor (see the header). */
 export const STACK_MIN_FREE_GIB = 8;
@@ -194,14 +200,21 @@ function imageProblems(ctx: HostPlanCtx, facts: StackFacts): string[] {
 }
 
 /**
- * Is the OFFICIAL image of this version published (image_verify.ts
- * probeImageAvailability)? Asked only of an `official` source naming an
- * official repository at this installer's version — a build or a registry of
- * the operator's own is never probed (beta.6 fix: no image is published for a
- * prerelease, and the default source failed at stack_image, after `yes`).
- * Absent: a refusal (the Review does not offer install, the answers are kept);
- * not checkable (offline…): a line on the Review, never a refusal — in plain
- * words; docker's raw error goes to the install log (`ctx.say`) only (C3i-F3).
+ * Is the OFFICIAL image of this release published (image_verify.ts
+ * probeImageAvailability)? Decided by the installer's RELEASE IDENTITY
+ * (installer_identity.ts, design §2.5, owner Q1/Q6):
+ *  - a stable or prerelease identity: the registry is asked for
+ *    `:<imageTagOf(identity)>` (`:7.0.0`, `:7.0.0-beta.7` — a beta never asks
+ *    for `:7.0.0`). Absent (e.g. the tag is pushed and its image not yet
+ *    approved for publication): a refusal (the Review does not offer install,
+ *    the answers are kept); not checkable (offline…): a line on the Review,
+ *    never a refusal — in plain words; docker's raw error goes to the install
+ *    log (`ctx.say`) only (C3i-F3).
+ *  - a dev identity (an untagged checkout): refused from the identity itself —
+ *    NO registry is asked: no published image is this commit's code.
+ * Only an `official` source naming an official repository is decided here — a
+ * build or a registry of the operator's own is never probed (beta.6 fix: the
+ * default source failed at stack_image, after `yes`).
  *
  * Bounded and said (campaign C3i-F2): the probe is bounded (image_verify.ts
  * IMAGE_PROBE_TIMEOUT_MS), a `checking the official image …` line is said
@@ -214,18 +227,28 @@ export async function officialImageVerdict(
 	facts: StackFacts,
 ): Promise<{ problems: string[]; warnings: string[] }> {
 	const { answers } = ctx;
-	if (facts.docker === null || !probesOfficialImage(answers)) return { problems: [], warnings: [] };
-	const ref = imageRefOf(answers);
-	const { availability, said, detail } = await measuredAvailability(
-		ctx,
-		facts.docker,
-		ref,
-		facts.home,
-	);
+	if (!decidesOfficial(answers)) return { problems: [], warnings: [] };
+	// The identity alone decides a dev build: no registry is asked.
+	const refused = officialRefusedFor(installerIdentity());
+	if (refused !== null) return { problems: [refused], warnings: [] };
+	if (facts.docker === null || !acceptedImageVersions().includes(imageVersionOf(answers)))
+		return { problems: [], warnings: [] };
+	return registryVerdict(ctx, facts.docker, facts.home);
+}
+
+/** The registry's answer for the official image of this release, in the Review's words. */
+async function registryVerdict(
+	ctx: VerdictCtx,
+	docker: string,
+	home: string,
+): Promise<{ problems: string[]; warnings: string[] }> {
+	const ref = imageRefOf(ctx.answers);
+	const { availability, said, detail } = await measuredAvailability(ctx, docker, ref, home);
 	if (availability === 'unknown')
 		ctx.say?.(`    ${ref} could not be checked — docker said: ${detail}`);
 	return {
-		problems: availability === 'absent' ? [imageNotPublished(ref, said)] : [],
+		problems:
+			availability === 'absent' ? [imageNotPublished(ref, imageVersionOf(ctx.answers), said)] : [],
 		warnings: availability === 'unknown' ? [imageNotChecked(ref, said)] : [],
 	};
 }
@@ -254,23 +277,28 @@ export function imageCheckingLine(ref: string): string {
 	return `checking the official image ${ref}…`;
 }
 
-/** Is the registry asked: an `official` source, an official repository, this installer's version? */
-function probesOfficialImage(answers: HostPlanCtx['answers']): boolean {
-	return (
-		answers.image_source === 'official' &&
-		isOfficialRepository(imageRepositoryOf(answers)) &&
-		acceptedImageVersions().includes(imageVersionOf(answers))
-	);
+/** Is the official image decided here: an `official` source naming an official repository? */
+function decidesOfficial(answers: HostPlanCtx['answers']): boolean {
+	return answers.image_source === 'official' && isOfficialRepository(imageRepositoryOf(answers));
 }
 
-/** The refusal: no official image of this version. */
-function imageNotPublished(ref: string, said: string): string {
-	return `no official image ${ref} is published for this version yet (the registry answered: ${said}) — official images are published for stable releases only, never for a prerelease (beta) or a development build: choose Build on the Image screen (--image-source build), or a registry of your own (Custom, --image-source custom)`;
+/**
+ * The refusal: no official image of the asked tag. Two different absences: the
+ * identity's own tag (a release whose image is not published yet — it will be),
+ * and an explicit `X.Y.Z-dev` tag (the dev BRANCH's mutable head, which no
+ * release tag ever publishes — telling the operator to wait would be false).
+ */
+function imageNotPublished(ref: string, version: string, said: string): string {
+	const choose =
+		'choose Build on the Image screen (--image-source build), or a registry of your own (Custom, --image-source custom)';
+	if (version.endsWith('-dev'))
+		return `no official image ${ref} is published (the registry answered: ${said}) — a \`-dev\` image is the development branch's own, published by no release tag, so waiting will not bring it: ${choose}`;
+	return `no official image ${ref} is published for this release yet (the registry answered: ${said}) — an official image appears once its release (stable or prerelease) is published, which can follow the release tag by a while: ${choose}`;
 }
 
 /** The Review line: the registry could not be asked. */
 function imageNotChecked(ref: string, said: string): string {
-	return `whether the official image ${ref} is published could not be checked (${said}) — stack_image pulls it and says so if it is not there; a prerelease (beta) has no official image: choose Build (--image-source build)`;
+	return `whether the official image ${ref} is published could not be checked (${said}) — stack_image pulls it and says so if it is not there; to install without the registry, choose Build (--image-source build)`;
 }
 
 /**
@@ -380,6 +408,9 @@ async function evaluateStack(
 		...published.problems,
 		...portProblems(ctx.answers, facts),
 		...tls.problems,
+		// A local CA already in deploy/certs that cannot serve the answers (stack_tls
+		// would skip its issue) — refused here, before anything is built.
+		...[stackAuthorityConflict(ctx)].filter((line): line is string => line !== null),
 	];
 	return {
 		facts,

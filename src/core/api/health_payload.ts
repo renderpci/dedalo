@@ -13,11 +13,24 @@
  * Leaf module: no config, no DB, no fs.
  */
 
+import type { ReleaseKind } from '../update/release_identity.ts';
+
 export interface HealthPayload {
 	result: 'ok' | 'error';
 	entity: string;
-	/** The running ENGINE version string (carries the `.dev` tag when it applies). */
+	/**
+	 * The running engine's RELEASE IDENTITY (release_identity.ts): `X.Y.Z` for an
+	 * exact stable tag, `X.Y.Z-(alpha|beta|rc).N` for an exact prerelease tag,
+	 * `X.Y.Z.dev` for anything untagged (WC-2026-10-15-release-identity-from-tag).
+	 * Opaque to a reader that orders: the data triple is never parsed out of it.
+	 */
 	version: string;
+	/**
+	 * Which of the three kinds `version` is — so a reader never infers it from
+	 * the string's shape. OPTIONAL on the wire: a server predating the release
+	 * identity omits it, and a mid-restart poll may still be talking to one.
+	 */
+	release_kind?: ReleaseKind;
 	db: 'ok' | 'down';
 	/**
 	 * sha256 of the archive this tree was installed from (install_stamp.ts), or
@@ -36,6 +49,7 @@ export function buildHealthPayload(options: {
 	dbOk: boolean;
 	entity: string;
 	version?: string;
+	releaseKind?: ReleaseKind;
 	installDigest: string | null;
 	requestId: string;
 	testDatabase?: string | null;
@@ -44,6 +58,7 @@ export function buildHealthPayload(options: {
 		result: options.dbOk ? 'ok' : 'error',
 		entity: options.entity,
 		version: options.version ?? '',
+		...(options.releaseKind === undefined ? {} : { release_kind: options.releaseKind }),
 		db: options.dbOk ? 'ok' : 'down',
 		install_digest: options.installDigest,
 		request_id: options.requestId,

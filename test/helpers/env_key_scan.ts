@@ -61,6 +61,10 @@ const NOT_ENV_KEYS = new Set([
 	// (src/core/media/engine/verify_content.ts): the four bytes that terminate a
 	// PNG stream, not a setting anyone can configure.
 	'IEND',
+	// A PREFIX, not a key: build_stamp.ts gitFreeEnv strips every inherited `GIT_*`
+	// variable (`key.startsWith('GIT_')`) before asking git for this tree's tag. No
+	// `GIT_` setting exists; the engine reads none of them.
+	'GIT_',
 ]);
 
 /**

@@ -79,6 +79,16 @@
 # REFUSED. On GitHub the tag is held again, unbypassably: image-release.yml's plan
 # refuses a tag whose commit has no green push run of ci.yml AND db.yml.
 #
+# A RELEASE TAG IS CUT BEFORE IT IS PUSHED. Every pushed `v*` tag that names a
+# release identity (vX.Y.Z or vX.Y.Z-(alpha|beta|rc).N) is checked at ITS commit by
+# `bun run push:release-tag <tag> <commit>` (scripts/lib/release_tag.ts): version.ts
+# declares the tag's triple AND changes/<identity>/release.json is the changelog cut
+# of exactly that release. A failing tag is refused before any gate runs. The same
+# function holds a published tag again in image-release.yml's plan. A tag whose
+# identity predates the rule (below FIRST_CUT_RELEASE, v7.0.0-beta.6) is published
+# history the check cannot hold — it passes with a note, so `git push --tags` to a
+# new mirror is not driven to --no-verify.
+#
 # THE GATED TREE IS THE PUSHED COMMIT. ci:local gets `--ref <HEAD sha>`: the
 # container checks out exactly that commit, no working-tree overlay; and the
 # bank runs in a `git worktree` of that commit — a push sends commits, so an
@@ -225,6 +235,27 @@ HERMETIC_ONLY_PATHS='presentation/ overrides/ License.md'
 say() { printf '%s\n' "pre-push: $*" >&2; }
 rule() { printf '%s\n' '────────────────────────────────────────────────────────────────────' >&2; }
 
+# Tools are FOUND, never assumed on PATH (see "bun and docker are FOUND" below).
+find_tool() { # <name> <candidate dir>... — prepends the first dir holding it
+	tool="$1"
+	shift
+	command -v "$tool" >/dev/null 2>&1 && return 0
+	for dir in "$@"; do
+		if [ -x "$dir/$tool" ]; then
+			PATH="$dir:$PATH"
+			export PATH
+			return 0
+		fi
+	done
+	return 1
+}
+find_bun_or_refuse() {
+	find_tool bun "${BUN_INSTALL:-${HOME:-/nonexistent}/.bun}/bin" && return 0
+	say "REFUSED — bun is not on PATH, nor at ${BUN_INSTALL:-${HOME:-\$HOME}/.bun}/bin."
+	say '  Push from a shell where `bun --version` works, or set BUN_INSTALL.'
+	exit 1
+}
+
 repo_root="$(git rev-parse --show-toplevel)" || exit 1
 git_dir="$(git rev-parse --absolute-git-dir)" || exit 1
 
@@ -284,6 +315,8 @@ audit_key=''
 gated_refs=''
 # `<remote ref> <commit>` per release tag in this push (see "A RELEASE TAG NEEDS A FULL GREEN").
 release_tags=''
+# `<tag>=<commit>` per `v*` tag in this push, stable or prerelease (see "A RELEASE TAG IS CUT").
+version_tags=''
 while read -r local_ref local_sha remote_ref remote_sha; do
 	[ -n "${local_sha:-}" ] || continue
 	# A deletion carries no code.
@@ -296,6 +329,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 			if printf '%s' "${remote_ref#refs/tags/}" | grep -Eq "$RELEASE_TAG_RE"; then
 				release_tags="$release_tags ${remote_ref#refs/tags/}=$commit"
 			fi
+			case "${remote_ref#refs/tags/}" in v*) version_tags="$version_tags ${remote_ref#refs/tags/}=$commit" ;; esac
 			;;
 	esac
 
@@ -339,6 +373,25 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 		audit_key=forced
 	fi
 done <"$refs_file"
+
+# ── release tags: version.ts and the changelog cut, at the TAG'S commit ─────
+# Before anything else about a tag (a full green is worthless on a tag naming the
+# wrong version), and for EVERY `v*` tag: the check itself decides which names are
+# release identities (scripts/lib/release_tag.ts — the one implementation; image-release
+# plan runs the same function).
+for entry in $version_tags; do
+	tag="${entry%%=*}"
+	tag_sha="${entry#*=}"
+	find_bun_or_refuse
+	if ! bun run push:release-tag "$tag" "$tag_sha" </dev/null >&2; then
+		rule
+		say "REFUSED — tag $tag ($tag_sha) is not a cut release (the reason is printed above)."
+		say 'Nothing was gated or pushed. Fix the release commit, move the tag, push again.'
+		say "Bypass: git push --no-verify (image-release.yml's plan still refuses the same tag)."
+		rule
+		exit 1
+	fi
+done
 
 green_file="$(git rev-parse --git-path dedalo-prepush-green)"
 
@@ -460,25 +513,9 @@ fi
 # non-interactive shell is guaranteed to have (measured 2026-09-26: `bun:
 # command not found` at the bank step). Each tool's own install locations are
 # tried before giving up, and giving up names the fix. It sits HERE, after the
-# ref scan, so a push with nothing to gate never needs either tool.
-find_tool() { # <name> <candidate dir>... — prepends the first dir holding it
-	tool="$1"
-	shift
-	command -v "$tool" >/dev/null 2>&1 && return 0
-	for dir in "$@"; do
-		if [ -x "$dir/$tool" ]; then
-			PATH="$dir:$PATH"
-			export PATH
-			return 0
-		fi
-	done
-	return 1
-}
-if ! find_tool bun "${BUN_INSTALL:-${HOME:-/nonexistent}/.bun}/bin"; then
-	say "REFUSED — bun is not on PATH, nor at ${BUN_INSTALL:-${HOME:-\$HOME}/.bun}/bin."
-	say '  Push from a shell where `bun --version` works, or set BUN_INSTALL.'
-	exit 1
-fi
+# ref scan, so a push with nothing to gate never needs either tool (a TAG push
+# needs bun earlier, for the release-tag check — find_bun_or_refuse is shared).
+find_bun_or_refuse
 find_tool docker /usr/local/bin /Applications/Docker.app/Contents/Resources/bin "${HOME:-/nonexistent}/.docker/bin" || :
 
 # ── Docker: required, never silently skipped ────────────────────────────────

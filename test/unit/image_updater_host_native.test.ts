@@ -457,6 +457,38 @@ describe('the host floors hold whatever the engine says', () => {
 		});
 	}
 
+	// The host floor orders prerelease tags as releases are ordered (design step 6), and a
+	// prerelease-pinned stack (the installer pins every beta at its own tag) beats its
+	// heartbeat. The claim is answered raw: the engine's own request grammar reaches
+	// prereleases only with the identity walk (design step 9c), but the HOST holds the floor.
+	test('prereleases: beta.6 → beta.7 runs; beta.7 → beta.6 and 7.0.0 → rc.1 are steps back, refused and recorded, never run', async () => {
+		const id = crypto.randomUUID();
+		const forward = makeStack({
+			pinned: '7.0.0-beta.6',
+			state: { claim_out: `${id} 7.0.0-beta.7\n` },
+		});
+		const ran = runUpdater(forward);
+		expect(ran.code, ran.stderr).toBe(0);
+		expect(readFileSync(join(forward.state, 'update_argv'), 'utf8')).toStartWith(
+			'--version 7.0.0-beta.7 ',
+		);
+		for (const [pinned, tag] of [
+			['7.0.0-beta.7', '7.0.0-beta.6'],
+			['7.0.0', '7.0.0-rc.1'],
+		] as const) {
+			const back = makeStack({ pinned, state: { claim_out: `${id} ${tag}\n` } });
+			const result = runUpdater(back);
+			expect(result.code).toBe(0);
+			expect(existsSync(join(back.state, 'update_argv')), `${tag} over ${pinned}`).toBe(false);
+			expect((await readChannelStatus(new Date(), back.channel)).last_outcome).toMatchObject({
+				from: pinned,
+				to: tag,
+				status: 'refused',
+				detail: 'downgrade_refused',
+			});
+		}
+	});
+
 	test('a tag that is not a version (a compromised engine answering claim) is refused and recorded', async () => {
 		const id = crypto.randomUUID();
 		for (const tag of ['latest', '7.0.1;id', '7.0.1 --no-backup', 'v7.0.1']) {

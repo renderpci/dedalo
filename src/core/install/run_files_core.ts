@@ -320,6 +320,13 @@ export interface InstallCreated {
 	 */
 	sealed_fingerprint?: string | null;
 	/**
+	 * The developer certificate's directory (`<private>/tls`) did not exist when
+	 * dev_tls_certificate first ran: everything in it is this install's, so
+	 * --abort removes it. false = it was there (an earlier install's authority,
+	 * which this one only renewed) and stays. Optional: absent on an older record.
+	 */
+	dev_tls_dir?: boolean;
+	/**
 	 * What a HOST run created (phase 4): the only host resources its --abort may
 	 * touch. Absent on an engine run — the engine child's state stays the
 	 * engine's (A13: optional, so one schema serves both processes).

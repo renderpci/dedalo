@@ -40,7 +40,12 @@ import { getServerState } from '../resolve/server_state.ts';
 import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
 import { isLoopbackHost } from '../security/ssrf_guard.ts';
 import { type CodeUpdateSentinel, codeUpdateSentinelPath } from './boot_confirm.ts';
-import { DEDALO_BUILD, DEDALO_BUILD_SHA, DEDALO_ENGINE_VERSION } from './build_stamp.ts';
+import {
+	DEDALO_BUILD,
+	DEDALO_BUILD_SHA,
+	DEDALO_ENGINE_VERSION,
+	RELEASE_IDENTITY,
+} from './build_stamp.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
 import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import {
@@ -83,6 +88,7 @@ import {
 	installedRootEntriesOf,
 } from './install_stamp.ts';
 import { type BackupVerifyOptions, backupFreshnessWithin, PANEL_WAIT_MS } from './preconditions.ts';
+import type { ReleaseKind } from './release_identity.ts';
 import { type DeleteBlockReason, deletabilityOf, RESTORE_POINT_PREFIX } from './restore_points.ts';
 import { isSupervised } from './supervision.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from './version.ts';
@@ -203,8 +209,17 @@ export interface RestorePoint {
 
 export interface ConsumerStatus {
 	engine: {
+		/** The DATA triple (`7.0.0`). */
 		version: string;
+		/** The RELEASE IDENTITY (`7.0.0`, `7.0.0-beta.6`, `7.0.0.dev`). */
 		engine_version: string;
+		/**
+		 * Which kind the identity is — from the tag, never inferred from the
+		 * string. Independent of `posture` (the CHANNEL a tree came from): a
+		 * dev-channel archive of an exact tag is `prerelease`/`stable` here and
+		 * still `dev` there (design rule 5).
+		 */
+		release_kind: ReleaseKind;
 		build: string | null;
 		sha: string | null;
 		posture: 'release' | 'dev';
@@ -603,6 +618,7 @@ export async function consumerStatus(
 		engine: {
 			version: DEDALO_VERSION,
 			engine_version: DEDALO_ENGINE_VERSION,
+			release_kind: RELEASE_IDENTITY.kind,
 			build: DEDALO_BUILD,
 			sha: DEDALO_BUILD_SHA,
 			posture: enginePosture(DEDALO_BUILD, INSTALLED_CHANNEL),

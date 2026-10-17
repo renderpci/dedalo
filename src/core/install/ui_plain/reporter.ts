@@ -50,7 +50,22 @@ const CONSOLE: PlainSinks = {
  */
 function completeLines(rootVerified: boolean, ending: RunEnding, saltShown: boolean): string[] {
 	const keep = saltShown && !hostEnding(ending) ? [`  ${DONE_TEXT.saltKeep}`] : [];
+	// The developer route: the served block says what comes next (the command, the URLs).
+	if (ending.served !== undefined) {
+		return [`\n✔ ${DONE_TEXT.complete(rootVerified)}.`, ...keep, ...servedLines(ending)];
+	}
 	return [`\n✔ ${DONE_TEXT.complete(rootVerified)}. ${DONE_TEXT.next(ending)}`, ...keep];
+}
+
+/**
+ * The developer route's served block (screen_text.ts DONE_TEXT.served) — the
+ * same lines on every front end: printed here, left on the main screen by the
+ * full-screen one when it closes (TODO-053). [] on every other route.
+ */
+export function servedLines(ending: RunEnding): string[] {
+	return ending.served === undefined
+		? []
+		: ['', ...DONE_TEXT.served(ending.served).map((line) => `  ${line}`)];
 }
 
 /** A host route's ending (its closing block carries the To-do, the salt's read command in it). */

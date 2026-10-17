@@ -19,6 +19,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { ReportWire } from '../../src/core/error_report/schema.ts';
 import type { ToolActionContext } from '../../src/core/tools/module.ts';
+import { DEDALO_ENGINE_VERSION } from '../../src/core/update/build_stamp.ts';
 import {
 	buildSendReportHandler,
 	masterUrlAllowed,
@@ -129,7 +130,8 @@ describe('tool_error_report send_report (WC-019)', () => {
 		// Server-stamped, never browser-supplied:
 		expect(body.options.user_id).toBe(7);
 		expect(typeof body.options.entity).toBe('string');
-		expect(body.options.dedalo_version).toBe('7.0.0.dev');
+		// the running tree's RELEASE IDENTITY (7.0.0.dev untagged, the tag on a release commit)
+		expect(body.options.dedalo_version).toBe(DEDALO_ENGINE_VERSION);
 		expect(body.options.report_version).toBe(1);
 		expect(typeof body.options.sent_at).toBe('string');
 		// The browser-supplied part survives verbatim:

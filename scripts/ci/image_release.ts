@@ -69,7 +69,15 @@ import {
 	loadImageRegistries,
 	parseImageRegistries,
 } from '../../src/core/update/image_registries.ts';
+import {
+	gitDescribeSupportFault,
+	parseBuildInfo,
+	parseReleaseVersion,
+	type ReleaseKind,
+	resolveReleaseIdentity,
+} from '../../src/core/update/release_identity.ts';
 import { cosignDownloadUrl, isPinSet, readCosignPin } from '../ci_cosign_pin.ts';
+import { type ReleaseTagGit, releaseTagFault } from '../lib/release_tag.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 
@@ -125,8 +133,11 @@ export interface PlanFacts {
 	inputTag: string;
 }
 
-/** What the plan needs from git, injectable so the rules are testable without a repository. */
-export interface PlanGit {
+/**
+ * What the plan needs from git, injectable so the rules are testable without a
+ * repository. `fileAt` is the release-tag check's own lookup (release_tag.ts).
+ */
+export interface PlanGit extends ReleaseTagGit {
 	/** The X.Y.Z a commit's version.ts declares, or null. */
 	declaredAt(rev: string): string | null;
 	/** The commit a ref names, or null when it does not exist. */
@@ -141,7 +152,11 @@ export interface ReleasePlan {
 	channel: 'master' | 'dev';
 	source_sha: string;
 	staging: string;
-	/** What the image's own DEDALO_ENGINE_VERSION must say: X.Y.Z or X.Y.Z.dev. */
+	/**
+	 * What the image's own DEDALO_ENGINE_VERSION must say — the release identity
+	 * its archive resolves to (archiveIdentityPlan): X.Y.Z for a release; for a
+	 * developer build X.Y.Z.dev, or the tag when the commit is exactly tagged (Q5).
+	 */
 	expected_engine_version: string;
 }
 
@@ -157,11 +172,10 @@ function releasePlanFor(tagRef: string, git: PlanGit, staging: string): ReleaseP
 	const commit = git.commitOf(qualifiedReleaseTag(version));
 	if (commit === null)
 		throw new Refusal(`release tag v${version} does not exist in this repository`);
-	const declared = git.declaredAt(commit);
-	if (declared !== version)
-		throw new Refusal(
-			`tag v${version} names version ${version}, but its ${VERSION_TS_PATH} declares ${declared ?? 'nothing'}`,
-		);
+	// THE release-tag check (gate 11) — the pre-push hook runs the same function:
+	// version.ts at the tag's commit declares its triple, and the changelog was cut.
+	const fault = releaseTagFault(`v${version}`, commit, git);
+	if (fault !== null) throw new Refusal(fault);
 	return {
 		version,
 		tag: version,
@@ -268,10 +282,15 @@ export function fullGateGreens(env: Env, run: Runner, sha: string): Map<string, 
 
 /** The real git lookups, in the checkout this program runs from. */
 export function gitLookups(run: Runner, cwd: string): PlanGit {
+	const fileAt = (rev: string, path: string): string | null => {
+		const shown = run(['git', 'show', `${rev}:${path}`], { cwd });
+		return shown.code === 0 ? shown.stdout : null;
+	};
 	return {
+		fileAt,
 		declaredAt: (rev) => {
-			const shown = run(['git', 'show', `${rev}:${VERSION_TS_PATH}`], { cwd });
-			return shown.code === 0 ? parseDeclaredTriple(shown.stdout) : null;
+			const source = fileAt(rev, VERSION_TS_PATH);
+			return source === null ? null : parseDeclaredTriple(source);
 		},
 		commitOf: (ref) => {
 			const parsed = run(['git', 'rev-parse', '--verify', '--quiet', `${ref}^{commit}`], { cwd });
@@ -288,8 +307,58 @@ export function sha256File(path: string): string {
 	return createHash('sha256').update(readFileSync(path)).digest('hex');
 }
 
-/** `git archive --format=tar <sha>` into `tarPath`; returns the stream's sha256. */
+/** build_info.txt's path inside the archive (build_stamp.ts BUILD_INFO_PATH). */
+const BUILD_INFO_IN_ARCHIVE = 'src/core/update/build_info.txt';
+
+/**
+ * The plan, held against what its ARCHIVE will call itself. The image's engine
+ * reads its release identity from the archive's expanded build_info.txt
+ * (release_identity.ts), so that — not the plan's arithmetic — is what the smoke
+ * step will find. Resolved here exactly as the engine resolves it, with the
+ * install channel the image is stamped with:
+ *  - a release whose archive does not call itself the tag is REFUSED before any
+ *    build: a lightweight tag (describe ignores it) or a clone without the tags
+ *    would ship an image that says `.dev`;
+ *  - a developer build expects whatever its archive says: `X.Y.Z.dev`, or the
+ *    tag when the dev branch's head IS a release commit (owner Q5).
+ * `stamp` is the archived build_info.txt, '' when the archive has none.
+ */
+export function archiveIdentityPlan(plan: ReleasePlan, stamp: string): ReleasePlan {
+	const declared = parseReleaseVersion(plan.version);
+	if (declared === null || declared.prerelease !== null || declared.dev)
+		throw new Refusal(`the plan's version '${plan.version}' is not a data triple`);
+	const info = parseBuildInfo(stamp);
+	const identity = resolveReleaseIdentity({
+		triple: declared.triple,
+		describe: info.describe,
+		provenance: { stamp: info.legacy ? 'legacy' : 'other', channel: plan.channel },
+	});
+	if (plan.channel === 'master') {
+		if (identity.version !== plan.expected_engine_version)
+			throw new Refusal(
+				`the archive of ${plan.source_sha} calls itself ${identity.version}, not ${plan.expected_engine_version}: ` +
+					`a release tag must be ANNOTATED (git tag -a — the archive's %(describe) ignores lightweight tags) ` +
+					`and the archiving clone must hold the tags${identity.notice === null ? '' : ` (${identity.notice})`}`,
+			);
+		return plan;
+	}
+	return { ...plan, expected_engine_version: identity.version };
+}
+
+/** The archived build_info.txt of `tarPath`, '' when the archive has none. */
+function archivedStamp(run: Runner, tarPath: string): string {
+	const shown = run(['tar', '-xOf', tarPath, BUILD_INFO_IN_ARCHIVE]);
+	return shown.code === 0 ? shown.stdout : '';
+}
+
+/**
+ * `git archive --format=tar <sha>` into `tarPath`; returns the stream's sha256.
+ * Refused on a git too old to expand build_info.txt's `%(describe:…)` (release_identity.ts
+ * MIN_GIT_FOR_DESCRIBE): its archive would carry no tag, and the image would call itself `.dev`.
+ */
 export function archiveTree(run: Runner, cwd: string, sha: string, tarPath: string): string {
+	const tooOld = gitDescribeSupportFault(must(run(['git', '--version'], { cwd }), 'git --version'));
+	if (tooOld !== null) throw new Refusal(`refusing to archive ${sha}: ${tooOld}`);
 	must(run(['git', 'archive', '--format=tar', '-o', tarPath, sha], { cwd }), `git archive ${sha}`);
 	return sha256File(tarPath);
 }
@@ -298,14 +367,65 @@ export function archiveTree(run: Runner, cwd: string, sha: string, tarPath: stri
 // smoke — the exact bytes, run and asserted
 // ─────────────────────────────────────────────────────────────────────────────
 
+/** The refusal helper every smoke fragment shares (POSIX sh). */
+const SMOKE_FAIL = `fail() { echo "smoke: FAIL $*" >&2; exit 1; }
+`;
+
+/**
+ * GATE 10 — the identity the image SERVES (RELEASE_IDENTITY_DESIGN §3): boot the
+ * image's own server, in its own tree (the current directory), and read `/health`
+ * the way every consumer reads it — the update panel's post-restart poll, the
+ * installer, an operator's curl. `version` must be WANT_VERSION (the identity of
+ * the tag/ref the run was planned for: the tag's `X.Y.Z` for a release; for a
+ * developer build its archive's identity, the tag when the commit is exactly
+ * tagged, else `X.Y.Z.dev`) and `release_kind` WANT_KIND. A module import would
+ * prove what a constant says; this proves what the listener answers.
+ *
+ * How it boots with no database and no installation: DEDALO_SMOKE_BOOT (the code
+ * updater's pre-swap check — no migrations, schedulers or writers), a throwaway
+ * private dir holding a sealed ts_state.json, the four required config keys plus
+ * the language keys, a unix socket in that dir, and `env -i` so nothing of the
+ * runner's (or a test's) environment leaks in. The DB host is a path that does
+ * not exist: /health then answers 503 `db: down` — and STILL carries the
+ * identity, which is the point (a poisoned process answers without `version`,
+ * and is refused). Bun itself is the HTTP client: the image has no promise of curl.
+ */
+const SMOKE_HEALTH_ASSERTION = `P="$(mktemp -d)"
+printf '{"install_status":"sealed"}\n' >"$P/ts_state.json"
+env -i PATH="$PATH" HOME="$P" DEDALO_SMOKE_BOOT=true SERVER_UNIX_SOCKET="$P/health.sock" SERVER_TCP_PORT= \
+  DEDALO_PRIVATE_DIR="$P" DEDALO_SESSION_DB_PATH="$P/sessions.sqlite" DEDALO_TS_STATE_PATH="$P/ts_state.json" \
+  ENTITY=smoke DB_NAME=smoke DB_USER=smoke DB_HOST="$P/no-database" \
+  DEDALO_APPLICATION_LANGS='{"lg-eng":"English"}' DEDALO_APPLICATION_LANGS_DEFAULT=lg-eng \
+  DEDALO_DATA_LANG_DEFAULT=lg-eng PROJECTS_DEFAULT_LANGS='["lg-eng"]' \
+  bun run src/server.ts >"$P/server.log" 2>&1 &
+server=$!
+served="$(bun -e '
+const socket = process.argv[1];
+for (const deadline = Date.now() + 60000; Date.now() < deadline; await Bun.sleep(250)) {
+  try {
+    const body = await (await fetch("http://localhost/health", { unix: socket, signal: AbortSignal.timeout(5000) })).json();
+    console.log(\`\${body.version ?? "<none>"} \${body.release_kind ?? "<none>"}\`);
+    process.exit(0);
+  } catch {}
+}
+process.exit(1);
+' "$P/health.sock")" || { kill "$server" 2>/dev/null; tail -n 30 "$P/server.log" >&2; fail "the image's server never answered /health"; }
+kill -TERM "$server" 2>/dev/null || :
+wait "$server" || :
+[ "$served" = "$WANT_VERSION $WANT_KIND" ] || { tail -n 30 "$P/server.log" >&2; fail "/health serves '$served', expected '$WANT_VERSION $WANT_KIND'"; }
+rm -rf "\${P:?}"
+`;
+
+/** The /health identity check alone, runnable from any Dédalo tree (the gate runs it on the checkout). */
+export const SMOKE_HEALTH_SCRIPT = SMOKE_FAIL + SMOKE_HEALTH_ASSERTION;
+
 /**
  * The in-container assertions (POSIX sh, run as the image's own user). `SMOKE_ROOT`
  * prefixes the filesystem paths so the gate can execute this text against a scratch
  * tree; in the image it is empty.
  */
 export const SMOKE_SCRIPT = `R="\${SMOKE_ROOT:-}"
-fail() { echo "smoke: FAIL $*" >&2; exit 1; }
-[ "$(bun --version)" = "$WANT_BUN" ] || fail "bun $(bun --version) is not .bun-version $WANT_BUN"
+${SMOKE_FAIL}[ "$(bun --version)" = "$WANT_BUN" ] || fail "bun $(bun --version) is not .bun-version $WANT_BUN"
 [ -f "$R/etc/dedalo/image_tree" ] || fail "no image-channel marker /etc/dedalo/image_tree"
 pg_dump --version | grep -q "PostgreSQL) 18\\." || fail "pg_dump is not PostgreSQL 18"
 for b in ffmpeg ffprobe magick pdftoppm pdfinfo pdftotext gs rsvg-convert ocrmypdf git rsync unzip; do
@@ -315,10 +435,19 @@ done
 [ "$(stat -c %u "$R/srv/dedalo/client")" = 1000 ] || fail "/srv/dedalo/client is not owned by bun"
 [ ! -e "$R/opt/dedalo/master_dedalo/deploy" ] || fail "deploy/ is inside the image"
 cd "$R/opt/dedalo/master_dedalo"
-got="$(bun -e 'const b = await import("./src/core/update/build_stamp.ts"); const s = await import("./src/core/update/install_stamp.ts"); console.log([b.DEDALO_ENGINE_VERSION, s.INSTALLED_CHANNEL, s.INSTALLED_DIGEST].join(" "))')"
-[ "$got" = "$WANT_VERSION $WANT_CHANNEL $WANT_DIGEST" ] || fail "the engine reports '$got', expected '$WANT_VERSION $WANT_CHANNEL $WANT_DIGEST'"
-echo "smoke: ok"
+got="$(bun -e 'const s = await import("./src/core/update/install_stamp.ts"); console.log([s.INSTALLED_CHANNEL, s.INSTALLED_DIGEST].join(" "))')"
+[ "$got" = "$WANT_CHANNEL $WANT_DIGEST" ] || fail "the install stamp says '$got', expected '$WANT_CHANNEL $WANT_DIGEST'"
+${SMOKE_HEALTH_ASSERTION}echo "smoke: ok"
 `;
+
+/** The `release_kind` /health must serve for an expected identity; a non-identity is refused. */
+export function expectedReleaseKind(identity: string): ReleaseKind {
+	const parsed = parseReleaseVersion(identity);
+	if (parsed === null)
+		throw new Refusal(`EXPECTED_ENGINE_VERSION '${identity}' is not a release identity`);
+	if (parsed.dev) return 'dev';
+	return parsed.prerelease === null ? 'stable' : 'prerelease';
+}
 
 function requireEnv(env: Env, keys: readonly string[]): Record<string, string> {
 	const missing = keys.filter((key) => (env[key] ?? '') === '');
@@ -364,6 +493,7 @@ function smoke(env: Env, run: Runner): number {
 	const vars = {
 		WANT_BUN: wantBun,
 		WANT_VERSION: input.EXPECTED_ENGINE_VERSION,
+		WANT_KIND: expectedReleaseKind(input.EXPECTED_ENGINE_VERSION as string),
 		WANT_CHANNEL: input.CHANNEL,
 		WANT_DIGEST: input.ARCHIVE_SHA256,
 	};
@@ -866,8 +996,10 @@ function planVerb(env: Env, run: Runner): number {
 		console.log(`plan: full gate green on ${plan.source_sha} (${FULL_GATE_WORKFLOWS.join(' + ')})`);
 	}
 	const tmp = requireEnv(env, ['RUNNER_TEMP']).RUNNER_TEMP as string;
-	const archive = archiveTree(run, cwd, plan.source_sha, join(tmp, 'plan-source.tar'));
-	writeOutputs(env, { ...plan, archive_sha256: archive, created: new Date().toISOString() });
+	const tarPath = join(tmp, 'plan-source.tar');
+	const archive = archiveTree(run, cwd, plan.source_sha, tarPath);
+	const held = archiveIdentityPlan(plan, archivedStamp(run, tarPath));
+	writeOutputs(env, { ...held, archive_sha256: archive, created: new Date().toISOString() });
 	return 0;
 }
 

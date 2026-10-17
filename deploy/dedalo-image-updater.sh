@@ -34,8 +34,9 @@
 #      timeout) is recorded as failed / interrupted;
 #   6. CLAIM: the pending request, if any, becomes in flight;
 #   7. HOST FLOORS, checked here whatever the engine said: a UUID request id, a
-#      version tag (X.Y.Z or X.Y.Z-dev), and no downgrade against the PINNED
-#      DEDALO_VERSION (the same version only for a -dev image). A request that
+#      version tag (X.Y.Z, X.Y.Z-(alpha|beta|rc).N or X.Y.Z-dev), and no
+#      downgrade against the PINNED DEDALO_VERSION in release order (a prerelease
+#      before its release; the same version only for a -dev image). A request that
 #      fails one is recorded as refused and nothing runs;
 #   8. `./deploy/dedalo-image-update.sh --version <tag> --request-id <id>
 #      --outcome-file <tmp>` — with its backup, health check and rollback. It is

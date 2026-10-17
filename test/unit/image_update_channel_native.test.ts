@@ -255,6 +255,78 @@ describe('heartbeat', () => {
 	}
 });
 
+describe('host-reported tags read the host grammar (design step 6): a prerelease pin and outcome are RECORDED', () => {
+	const data = DEDALO_VERSION_TRIPLE.join('.');
+	// The installer pins every beta stack at its own `X.Y.Z-beta.N` (design step 5) and
+	// the host library writes such tags back; a reader refusing them blinded the panel.
+	test.each([`${data}-beta.7`, `${data}-rc.1`, `${data}-alpha.0`])(
+		'heartbeat pinned %p is stored',
+		(pinned) => {
+			const dir = scratchDir();
+			expect(cli(['heartbeat', '--dir', dir], JSON.stringify({ ...HEARTBEAT, pinned })).code).toBe(
+				0,
+			);
+			expect(readJson(join(dir, 'host_updater.json')).pinned).toBe(pinned);
+		},
+	);
+
+	test.each([`${data}.dev`, `${data}-pre.1`, `${data}-beta.01`, `${data}-beta`])(
+		'heartbeat pinned %p (no image tag) is refused',
+		(pinned) => {
+			const dir = scratchDir();
+			expect(cli(['heartbeat', '--dir', dir], JSON.stringify({ ...HEARTBEAT, pinned })).code).toBe(
+				2,
+			);
+		},
+	);
+
+	test('an outcome from/to a prerelease is recorded', async () => {
+		const dir = scratchDir();
+		const body = outcome(null, { from: `${data}-beta.6`, to: `${data}-beta.7` });
+		expect(cli(['outcome', '--dir', dir], JSON.stringify(body)).code).toBe(0);
+		expect((await readChannelStatus(new Date(), dir)).last_outcome).toMatchObject({
+			from: `${data}-beta.6`,
+			to: `${data}-beta.7`,
+		});
+	});
+
+	test('a REQUEST still targets only what the engine walks: a prerelease target is refused (identity walk: design step 9c)', async () => {
+		const dir = scratchDir();
+		const pending = { ...request(`${MAJOR}.${MINOR}.${PATCH + 1}`), tag: `${data}-beta.7` };
+		expect(await writeRequest(pending, dir)).toEqual({ ok: false, reason: 'invalid' });
+	});
+});
+
+describe('from_version — the asking engine names itself by its RELEASE IDENTITY (design gate 5)', () => {
+	const data = DEDALO_VERSION_TRIPLE.join('.');
+	// A private grammar here once refused a prerelease engine's OWN request: every
+	// image-update click from a `7.0.0-beta.6` failed its own validation.
+	test.each([data, `${data}.dev`, `${data}-alpha.1`, `${data}-beta.6`, `${data}-rc.2`])(
+		'%p is written, and the host claims it',
+		async (fromVersion) => {
+			const dir = scratchDir();
+			const pending = { ...request(`${MAJOR}.${MINOR}.${PATCH + 1}`), from_version: fromVersion };
+			expect(await writeRequest(pending, dir)).toEqual({ ok: true });
+			expect(cli(['claim', '--dir', dir]).out.trim()).toBe(`${pending.id} ${pending.tag}`);
+		},
+	);
+
+	test.each([
+		`${data}-pre.1`,
+		`${data}-beta`,
+		`${data}-beta.01`,
+		`v${data}`,
+		`${data}-dev`,
+		'',
+		`${data}-beta.${'9'.repeat(70)}`,
+	])('%p is not an identity: refused, nothing written', async (fromVersion) => {
+		const dir = scratchDir();
+		const pending = { ...request(`${MAJOR}.${MINOR}.${PATCH + 1}`), from_version: fromVersion };
+		expect(await writeRequest(pending, dir)).toEqual({ ok: false, reason: 'invalid' });
+		expect(existsSync(join(dir, 'request.json'))).toBe(false);
+	});
+});
+
 describe('claim / orphan / outcome', () => {
 	test('nothing pending: claim and orphan print nothing, exit 0', () => {
 		const dir = scratchDir();

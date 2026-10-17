@@ -71,7 +71,10 @@ import {
 	imageVersionOf,
 	officialRepositories,
 } from '../../src/core/install/host/stack/layout.ts';
-import { imageCheckingLine } from '../../src/core/install/host/stack/preflight.ts';
+import {
+	imageCheckingLine,
+	officialImageVerdict,
+} from '../../src/core/install/host/stack/preflight.ts';
 import { STACK_HOST_STEPS } from '../../src/core/install/host/stack/table.ts';
 import { containerEverStarted } from '../../src/core/install/host/stack/up.ts';
 import { emptyHostCreated } from '../../src/core/install/host/state_types.ts';
@@ -91,7 +94,10 @@ import {
 import { DONE_TEXT, NOTICE_TEXT } from '../../src/core/install/screen_text.ts';
 import { isProgressLine } from '../../src/core/install/ui/prompter.ts';
 import { scriptedInstallPrompter } from '../../src/core/install/ui_plain/prompter.ts';
+import { readReleaseIdentityOf } from '../../src/core/update/build_stamp.ts';
 import { loadImageRegistries } from '../../src/core/update/image_registries.ts';
+import { imageTagOf } from '../../src/core/update/release_identity.ts';
+import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
 import {
 	COSIGN,
 	composePrefix,
@@ -109,6 +115,7 @@ import {
 	type ScratchHost,
 	SECRETS,
 	scratchFilePaths,
+	scratchStackFacts,
 	stackHostFiles,
 	stackPlanCtx,
 	stackResponses,
@@ -120,6 +127,16 @@ import {
 	scriptForPlan,
 	thesaurusOffer,
 } from '../helpers/install_plain_script.ts';
+import {
+	PINNED_IDENTITY,
+	pinInstallerIdentity,
+	withInstallerIdentity,
+} from '../helpers/installer_identity.ts';
+
+// The installer's release identity is the checkout's (a tagged commit says `-beta.N`, the
+// next commit `.dev`) and the image decisions follow its kind: these cases are written for
+// a STABLE installer, so they pin one (test/helpers/installer_identity.ts).
+pinInstallerIdentity(PINNED_IDENTITY.stable);
 
 const scratchBase = mkdtempSync(join(tmpdir(), 'dedalo_install_stack_steps_'));
 afterAll(() => rmSync(scratchBase, { recursive: true, force: true }));
@@ -437,9 +454,9 @@ describe('the Review asks the run’s own preflight before `yes` — the CLI’s
 	});
 });
 
-// beta.6 fix (owner 2026-10-15): image-release.yml publishes STABLE tags only, so a
-// prerelease has no official image — and the default source (official) failed at
+// beta.6 fix (owner 2026-10-15): an official image that is not published failed at
 // stack_image, AFTER `yes`, every answer lost. The registry is asked before `yes`.
+// (This file pins a STABLE installer; the identity kinds are the next describe's.)
 describe('the official image of this version must be PUBLISHED — asked before `yes` (beta.6)', () => {
 	const REF = imageRefOf(stackPlanCtx(TRIAL).answers);
 	const MANIFEST = `${DOCKER} manifest inspect ${REF}`;
@@ -474,7 +491,7 @@ describe('the official image of this version must be PUBLISHED — asked before 
 			stderr: 'ERROR: dial tcp: lookup ghcr.io: no such host\n',
 		},
 	];
-	const MISSING = `no official image ${REF} is published for this version yet`;
+	const MISSING = `no official image ${REF} is published for this release yet`;
 	const UNCHECKED = `whether the official image ${REF} is published could not be checked`;
 
 	async function refusalsOf(
@@ -518,7 +535,7 @@ describe('the official image of this version must be PUBLISHED — asked before 
 			const host = machine(TRIAL, { responses });
 			const refused = (await refusalsOf(host, TRIAL)).join('\n');
 			expect(refused).toContain(MISSING);
-			expect(refused).toContain('stable releases only');
+			expect(refused).toContain('once its release (stable or prerelease) is published');
 			expect(refused).toContain('--image-source build');
 			expect(refused).toContain('--image-source custom');
 			expect(probed(host).length).toBeGreaterThan(0);
@@ -703,6 +720,216 @@ describe('the official image of this version must be PUBLISHED — asked before 
 			).toEqual([]);
 		});
 	}
+});
+
+// ── the installer's RELEASE IDENTITY decides the image (design RELEASE_IDENTITY §2.5, gate 6) ──
+//
+// Owner 2026-10-15 (Q1, Q6; finding C3i-F1): a prerelease IS a release — its official image is
+// published as `:X.Y.Z-beta.N` and asked for by that tag, never by the bare `:X.Y.Z` (after the
+// stable release that is ANOTHER image). A development build (untagged) names no release: Official
+// is refused from the identity itself, NO registry is asked, and Build is the preselected source.
+describe('the image follows the installer’s RELEASE IDENTITY: stable, prerelease, development build (gate 6)', () => {
+	const registryAsked = (host: ScratchHost) =>
+		loggedCommands(host.root).filter((line) =>
+			/ manifest inspect | imagetools inspect /.test(line),
+		);
+	async function refusals(host: ScratchHost, raw: Record<string, unknown>): Promise<string[]> {
+		const marker = join(host.root, SCRATCH_DIR);
+		return reviewPreflightRefusals(fresh(raw).plan, {
+			runner: scratchRunner(marker),
+			fs: hostFs(host.root, join(marker, 'owners.json')),
+			source: host.source,
+			skipPrivilegeCheck: true,
+			sleep: async () => {},
+		});
+	}
+	const envOf = (host: ScratchHost): string =>
+		hostFs(host.root, join(host.root, SCRATCH_DIR, 'owners.json')).readText(
+			join(REPO_ROOT, '.dedalo.env'),
+		) ?? '';
+	const BETA = PINNED_IDENTITY.prerelease;
+	const BETA_REF = `${FIRST}:${BETA}`;
+
+	test('stable (control): Official preselected, the registry asked for :X.Y.Z', async () => {
+		await withInstallerIdentity(PINNED_IDENTITY.stable, async () => {
+			const { answers } = stackPlanCtx(TRIAL);
+			expect(answers.image_source).toBe('official');
+			expect(imageRefOf(answers)).toBe(`${FIRST}:${DEDALO_VERSION}`);
+			const host = machine(TRIAL);
+			expect(await refusals(host, TRIAL)).toEqual([]);
+			expect(registryAsked(host)).toContain(
+				`${DOCKER} manifest inspect ${FIRST}:${DEDALO_VERSION}`,
+			);
+		});
+	});
+
+	test('prerelease + Official, not yet published: the registry is asked for :<identity> ONLY — refused, Build and Custom named', async () => {
+		await withInstallerIdentity(BETA, async () => {
+			const { answers } = stackPlanCtx(TRIAL);
+			expect(answers.image_source).toBe('official');
+			expect(imageRefOf(answers)).toBe(BETA_REF);
+			const host = machine(TRIAL, {
+				responses: [
+					{
+						match: `${DOCKER} manifest inspect ${BETA_REF}`,
+						exit: 1,
+						stderr: `no such manifest: ${BETA_REF}\n`,
+					},
+					{
+						match: `${DOCKER} buildx imagetools inspect ${BETA_REF}`,
+						exit: 1,
+						stderr: `ERROR: ${BETA_REF}: not found\n`,
+					},
+				],
+			});
+			const refused = (await refusals(host, TRIAL)).join('\n');
+			expect(refused).toContain(`no official image ${BETA_REF} is published for this release yet`);
+			expect(refused).toContain('--image-source build');
+			expect(refused).toContain('--image-source custom');
+			const asked = registryAsked(host);
+			expect(asked).toContain(`${DOCKER} manifest inspect ${BETA_REF}`);
+			// never the bare data version's tag — that is the stable release's image
+			expect(asked.filter((line) => line.endsWith(`:${DEDALO_VERSION}`))).toEqual([]);
+		});
+	});
+
+	test('prerelease + Official with an explicit X.Y.Z-dev tag, absent: refused as the dev branch’s image — never told to wait for a release', async () => {
+		await withInstallerIdentity(BETA, async () => {
+			const raw = { ...TRIAL, image_source: 'official', image_version: `${DEDALO_VERSION}-dev` };
+			const devRef = `${FIRST}:${DEDALO_VERSION}-dev`;
+			expect(imageRefOf(stackPlanCtx(raw).answers)).toBe(devRef);
+			const host = machine(raw, {
+				responses: [
+					{
+						match: `${DOCKER} manifest inspect ${devRef}`,
+						exit: 1,
+						stderr: `no such manifest: ${devRef}\n`,
+					},
+					{
+						match: `${DOCKER} buildx imagetools inspect ${devRef}`,
+						exit: 1,
+						stderr: `ERROR: ${devRef}: not found\n`,
+					},
+				],
+			});
+			const refused = (await refusals(host, raw)).join('\n');
+			expect(refused).toContain(`no official image ${devRef} is published`);
+			expect(refused).toContain('development branch');
+			expect(refused).not.toContain('once its release');
+			expect(refused).not.toContain('for this release yet');
+			expect(refused).toContain('--image-source build');
+			expect(refused).toContain('--image-source custom');
+			expect(registryAsked(host)).toContain(`${DOCKER} manifest inspect ${devRef}`);
+		});
+	});
+
+	test('prerelease + Official, published: pulled as :<identity>, its label checked against the identity, cosign-verified; .dedalo.env pins the identity', async () => {
+		await withInstallerIdentity(BETA, async () => {
+			const host = machine(TRIAL);
+			const { outcome } = await runHost(host, fresh(TRIAL).request);
+			expect(outcome.message).toBeNull();
+			expect(outcome.result).toBe('complete');
+			const log = loggedCommands(host.root);
+			expect(log).toContain(`${DOCKER} pull ${BETA_REF}`);
+			expect(log.filter((line) => line.startsWith(`${COSIGN} verify`)).length).toBe(1);
+			expect(log.filter((line) => line.startsWith(`${DOCKER} pull`))).toEqual([
+				`${DOCKER} pull ${BETA_REF}`,
+			]);
+			expect(envOf(host)).toMatch(
+				new RegExp(`^DEDALO_VERSION=${BETA.replace(/\./g, '\\.')}$`, 'm'),
+			);
+		});
+	});
+
+	test('prerelease: an official image whose label is the bare stable version is NOT this release — refused at stack_image', async () => {
+		await withInstallerIdentity(BETA, async () => {
+			const host = machine(TRIAL, {
+				responses: [
+					{
+						match: `${DOCKER} image inspect --format {{index .Config.Labels`,
+						stdout: `${DEDALO_VERSION}\n`,
+					},
+				],
+			});
+			const { outcome } = await runHost(host, fresh(TRIAL).request);
+			expect(outcome.result).not.toBe('complete');
+			expect(outcome.message).toContain(`declares version '${DEDALO_VERSION}', not ${BETA}`);
+		});
+	});
+
+	test('development build: Build PRESELECTED; the run builds localhost/dedalo:X.Y.Z-dev and never asks a registry', async () => {
+		await withInstallerIdentity(PINNED_IDENTITY.dev, async () => {
+			const { answers } = stackPlanCtx(TRIAL);
+			expect(answers.image_source).toBe('build');
+			const ref = `localhost/dedalo:${DEDALO_VERSION}-dev`;
+			expect(imageRefOf(answers)).toBe(ref);
+			const host = machine(TRIAL);
+			expect(await refusals(host, TRIAL)).toEqual([]);
+			const { outcome } = await runHost(host, fresh(TRIAL).request);
+			expect(outcome.message).toBeNull();
+			expect(outcome.result).toBe('complete');
+			expect(registryAsked(host)).toEqual([]);
+			expect(
+				loggedCommands(host.root).some(
+					(line) => line.includes(` ${ref} `) || line.endsWith(` ${ref}`),
+				),
+			).toBe(true);
+			expect(envOf(host)).toContain(`DEDALO_VERSION=${DEDALO_VERSION}-dev\n`);
+		});
+	});
+
+	test('development build + Official: refused from the identity — on the Image screen (its question) and by the System check — with NO registry call, `-dev` tag or not', async () => {
+		await withInstallerIdentity(PINNED_IDENTITY.dev, async () => {
+			for (const raw of [
+				{ ...TRIAL, image_source: 'official' },
+				{ ...TRIAL, image_source: 'official', image_version: `${DEDALO_VERSION}-dev` },
+			]) {
+				// the plan: on the image_source question, before any Review
+				const plan = buildInstallPlan(raw, {
+					rootPassword: ROOT_PASSWORD,
+					requireRootPassword: true,
+				});
+				const tagged = plan.fieldErrors.filter((error) => error.key === 'image_source');
+				expect(tagged.map((error) => error.message).join('\n')).toContain('development build');
+				expect(tagged.map((error) => error.message).join('\n')).toContain('--image-source build');
+				// the System check's own verdict (a plan written by another installer): refused, the runner never called
+				const asked: string[] = [];
+				const runner: CommandRunner = {
+					run: async (request) => {
+						asked.push(request.argv.join(' '));
+						return { exitCode: 0, stdout: '{}\n', stderr: '', timedOut: false };
+					},
+				};
+				const verdict = await officialImageVerdict(
+					{ answers: { ...plan.answers, image_source: 'official' }, runner },
+					scratchStackFacts(),
+				);
+				expect(verdict.problems.join('\n')).toContain(`development build (${PINNED_IDENTITY.dev}`);
+				expect(verdict.warnings).toEqual([]);
+				expect(asked).toEqual([]);
+			}
+		});
+	});
+
+	test('CONTROL: the same verdict under a stable identity DOES ask the registry (the dev refusal is not a dead probe)', async () => {
+		await withInstallerIdentity(PINNED_IDENTITY.stable, async () => {
+			const asked: string[] = [];
+			const runner: CommandRunner = {
+				run: async (request) => {
+					asked.push(request.argv.join(' '));
+					return { exitCode: 0, stdout: '{}\n', stderr: '', timedOut: false };
+				},
+			};
+			const verdict = await officialImageVerdict(
+				{ answers: stackPlanCtx(TRIAL).answers, runner },
+				scratchStackFacts(),
+			);
+			expect(verdict.problems).toEqual([]);
+			expect(
+				asked.some((line) => line.includes(` manifest inspect ${FIRST}:${DEDALO_VERSION}`)),
+			).toBe(true);
+		});
+	});
 });
 
 // An operator absent from /etc/passwd is the NORMAL case on macOS (Directory
@@ -1426,6 +1653,70 @@ describe("the institution's certificate: this machine must trust its chain (C3-1
 	});
 });
 
+describe('a local CA already in deploy/certs must serve the answered addresses (host/tls_authority.ts — docker)', () => {
+	const NAME = 'dedalo.example.org';
+	const LOCAL_CA = {
+		route: 'docker',
+		entity: 'museo',
+		server_name: NAME,
+		tls_mode: 'local_ca',
+		tls_extra_names: 'dedalo.lan,192.168.1.20',
+	};
+	const CERTS = join(REPO_ROOT, 'deploy/certs');
+	const ROTATE = `bash ${join(REPO_ROOT, 'deploy/dedalo-tls-rotate.sh')} --mode local-ca --dir ${CERTS} --no-reload --host ${NAME} --host dedalo.lan --host 192.168.1.20`;
+	const authority = mintCertificate('Dedalo local CA scratch', 3650).cert;
+	/** deploy/certs as an earlier install left it: the authority, a leaf for `leafNames`, maybe its names list. */
+	const certs = (leafNames: readonly string[], names: string | null): HostFiles => {
+		const planted: HostFiles = new Map([
+			[`${CERTS}/dedalo-local-ca.pem`, authority],
+			[`${CERTS}/fullchain.pem`, mintCertificate(NAME, 60, leafNames).cert],
+		]);
+		if (names !== null) planted.set(`${CERTS}/dedalo-local-ca.names`, names);
+		return planted;
+	};
+	const refusedAtSystemCheck = async (planted: HostFiles, sentence: string) => {
+		const host = machine(LOCAL_CA);
+		plant(host.root, planted);
+		const { outcome } = await runHost(host, fresh(LOCAL_CA).request);
+		expect(outcome.result).toBe('refused'); // before any record
+		expect(outcome.failedStep).toBeNull();
+		expect(outcome.message).toContain(sentence);
+		expect(outcome.message).toContain(ROTATE);
+		expect(loggedCommands(host.root).filter((line) => MUTATING.test(line))).toEqual([]);
+		expect(loggedCommands(host.root).some((line) => line.includes('dedalo-tls-rotate.sh'))).toBe(
+			false,
+		);
+	};
+	const passesSystemCheck = async (planted: HostFiles) => {
+		const host = machine(LOCAL_CA);
+		plant(host.root, planted);
+		const { outcome } = await runHost(host, fresh(LOCAL_CA).request);
+		expect(outcome.failedStep).not.toBe('stack_preflight');
+		expect(stateOf(host)?.steps.stack_preflight?.status).toBe('done');
+	};
+
+	test('an authority made for OTHER addresses (its names list) is refused before anything changes', async () => {
+		await refusedAtSystemCheck(
+			certs(['dedalo.lan', '192.168.1.20'], `${NAME}\n`),
+			`${CERTS} already holds a local certificate authority for ${NAME} — not for ${NAME}, dedalo.lan, 192.168.1.20`,
+		);
+	});
+
+	test('a pre-2026-10-16 authority whose certificate does not name every address is refused (read from the certificate)', async () => {
+		await refusedAtSystemCheck(
+			certs(['dedalo.lan'], null),
+			`whose certificate ${CERTS}/fullchain.pem does not name 192.168.1.20`,
+		);
+	});
+
+	test('control: the same names list, or a pre-2026-10-16 certificate naming every address, passes (it keeps working)', async () => {
+		await passesSystemCheck(
+			certs(['dedalo.lan', '192.168.1.20'], `${NAME}\ndedalo.lan\n192.168.1.20\n`),
+		);
+		await passesSystemCheck(certs(['dedalo.lan', '192.168.1.20'], null));
+	});
+});
+
 /** The shared builder's argv over this checkout (stack_image of a git checkout — campaign 3b N1). */
 function builderArgv(ref: string): string {
 	return `/bin/bash ${join(REPO_ROOT, IMAGE_BUILDER)} ${REPO_ROOT} ${ref} ${DOCKER}`;
@@ -1482,17 +1773,11 @@ describe('an install-time build of a checkout goes through the shared clean-snap
 		});
 	}
 
-	test("the builder stamps the image with its OWN OCI labels (the tag, the commit), never the base image's", () => {
+	test("the builder stamps the image with its OWN OCI labels (the release identity, the commit), never the base image's", async () => {
 		const lib = join(REPO_ROOT, 'deploy', 'dedalo-image-lib.sh');
 		const run = spawnSync(
 			'bash',
-			[
-				'-c',
-				`. "${lib}" && dedalo_image_labels "$1" "$2"`,
-				'labels',
-				REPO_ROOT,
-				'localhost/dedalo:7.0.0',
-			],
+			['-c', `. "${lib}" && dedalo_image_labels "$1"`, 'labels', REPO_ROOT],
 			{ encoding: 'utf8' },
 		);
 		expect(run.status, run.stderr).toBe(0);
@@ -1500,7 +1785,10 @@ describe('an install-time build of a checkout goes through the shared clean-snap
 			encoding: 'utf8',
 		}).stdout.trim();
 		const labels = run.stdout.trim().split('\n');
-		expect(labels).toContain('org.opencontainers.image.version=7.0.0');
+		// the version label is what the engine built from this checkout will call itself
+		// (its release identity as an image tag) — whatever this checkout's tag is today
+		const identity = await readReleaseIdentityOf(REPO_ROOT, { triple: DEDALO_VERSION_TRIPLE });
+		expect(labels).toContain(`org.opencontainers.image.version=${imageTagOf(identity.version)}`);
 		expect(labels).toContain(`org.opencontainers.image.revision=${head}`);
 		// Dédalo's own description, never blank (campaign 3c D6: source/url/description/licenses
 		// were written as "" — a blank label hides the base image's, and says nothing).
@@ -1514,19 +1802,14 @@ describe('an install-time build of a checkout goes through the shared clean-snap
 		};
 		expect(value('licenses')).toBe(pkg.license);
 		expect(value('source')).toMatch(/^https:\/\//);
-		// a tag-less reference declares no version (never a registry port)
+		// a tree that declares no version gets NO labels (never an invented version)
 		const bare = spawnSync(
 			'bash',
-			[
-				'-c',
-				`. "${lib}" && dedalo_image_labels "$1" "$2"`,
-				'labels',
-				REPO_ROOT,
-				'localhost:5000/dedalo',
-			],
+			['-c', `. "${lib}" && dedalo_image_labels "$1" "$2"`, 'labels', REPO_ROOT, scratchBase],
 			{ encoding: 'utf8' },
 		);
-		expect(bare.stdout.split('\n')).toContain('org.opencontainers.image.version=');
+		expect(bare.status).toBe(1);
+		expect(bare.stdout).toBe('');
 	});
 });
 

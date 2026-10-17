@@ -89,7 +89,13 @@ import {
 	HIERARCHY_MODEL_TYPE_TLD,
 	HIERARCHY_TYPE_TLD,
 } from '../../src/core/ontology/ontology_tipos.ts';
+import { devServeIsolationEnv } from '../helpers/dev_serve_isolation.ts';
+import { freeTcpPort } from '../helpers/free_tcp_port.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
+import { expectTrustSeamHeld } from '../helpers/trust_seam.ts';
+
+/** The developer listener's port for every run of this file (one value: a resume compares answers). */
+const DEV_PORT = freeTcpPort();
 
 const SCRATCH_PREFIX = 'dedalo_install_e2e_';
 const SCRATCH_DB = `${SCRATCH_PREFIX}${process.pid}`;
@@ -190,6 +196,9 @@ function cliArgs(): string[] {
 		'--entity',
 		'e2etest',
 		'--skip-tools',
+		// A free development port: 3500 may be a running `bun run dev` here (D3 refuses it).
+		'--dev-port',
+		String(DEV_PORT),
 	];
 }
 
@@ -217,6 +226,9 @@ function runCli(extraArgs: string[] = [], withAnswers = true): { exitCode: numbe
 			DEDALO_INSTALL_PRIVATE_DIR: scratchDir,
 			DEDALO_TS_STATE_PATH: join(scratchDir, 'ts_state.json'),
 			DEDALO_SESSION_DB_PATH: join(scratchDir, 'sessions.sqlite'),
+			// The serve check boots this install's server (verify_dev_server): its own
+			// socket, media root and processes dir — never the suite's.
+			...devServeIsolationEnv(),
 		},
 		stdout: 'pipe',
 		stderr: 'pipe',
@@ -323,6 +335,20 @@ describe('TS-native install e2e (P5)', () => {
 			console.log(`[install_e2e] CLI install took ${Math.round(performance.now() - started)} ms`);
 			expect(out).toContain('root login verified');
 			expect(exitCode).toBe(0);
+			// "Finished" means served (TODO-053): the serve check booted `bun run dev` with the
+			// written .env, verified /health and a root login over the listener, then stopped it;
+			// the closing block names the command and the URL from the written keys. This run
+			// writes a scratch private dir (DEDALO_INSTALL_PRIVATE_DIR), which a plain
+			// `bun run dev` would not read: the command booted and the one shown name it.
+			const start = `DEDALO_PRIVATE_DIR=${resolve(scratchDir)} bun run dev`;
+			expect(out).toContain(
+				`\`${start}\` served https://localhost:${DEV_PORT}/dedalo/core/page/: /health ok (verified against the local authority), root login verified over it; stopped again`,
+			);
+			expect(out).toContain(`Start:   ${start}   (Ctrl-C stops it)`);
+			expect(out).toContain(`Open:    https://127.0.0.1:${DEV_PORT}/dedalo/core/page/`);
+			expect(out).toContain('TLS:     local certificate authority');
+			// The developer route's trust step touched no store of this machine.
+			expectTrustSeamHeld(out, scratchDir);
 			// No secret rode argv, so no argv-secret warning was earned.
 			expect(out).not.toContain('visible to other users');
 

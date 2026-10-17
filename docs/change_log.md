@@ -15,6 +15,10 @@ shape by the id under which the source tree records each one
 
 Merged since the last release; these ship with the next one.
 
+!!! warning "Action needed when you update"
+
+    - The Docker and Trial installer installs the image of its own release — `7.0.0-beta.7` for a beta — and a stack built from an earlier beta needs `--skip-version-check` once on its next image update.
+
 ### For users
 
 #### Changed
@@ -66,6 +70,270 @@ Merged since the last release; these ship with the next one.
     On a phone or any touch screen, opening **Tools** in a section list showed the menu, but tapping a tool in it (Export, Import, Diffusion, Update cache…) did nothing: the menu closed and no tool opened.
 
     The menu was dismissed by the first touch of the tap, before the tap had reached the row; on a touch screen that left the press landing on the list behind the menu instead of on the tool. It now closes on the same press that opens the tool, so a finger works as the mouse and the keyboard already did.
+
+### For administrators
+
+#### Security
+
+- **A local certificate authority can now only certify the install's own addresses, and its site certificate can be renewed without touching the staff computers.**
+
+    Every staff computer trusts the local certificate authority an install creates, and
+    until now that authority could sign a certificate for any website: whoever obtained
+    its key on the server could impersonate any site to those computers. A new authority
+    is now restricted to the addresses it was issued for (the server name, any extra
+    `--host` addresses, `localhost`) — exactly those names, not the names below them, so
+    an authority for `museo.lan` cannot certify `mail.museo.lan` (a list where one name lies
+    inside another is therefore refused) — and the key of the authority itself is deleted as
+    soon as it has signed; the key that stays on the server can only sign under that
+    restriction. The authority is also limited to website certificates, so that key cannot
+    sign e-mail or software either.
+
+    `deploy/dedalo-tls-rotate.sh` gains `--mode renew`: it re-issues the site certificate
+    (now valid 397 days) from the same authority, so staff computers change nothing. It
+    does nothing until the certificate is inside its last 30 days. On the Docker route,
+    run it yourself once a year or from a monthly cron job (`docs/install/docker.md`,
+    "Renewing the local-CA certificate"). `--host` can be given several times, for a LAN
+    name or an IPv4 address beside the server name. When the new certificate is in place
+    but the web server could not be reloaded (for example `docker` missing from cron's
+    `PATH`), the script now exits with status 3 instead of reporting success, and every
+    later run retries the reload until it works.
+
+    An authority created before this change is not restricted. It keeps working and its
+    certificate can be renewed (`--mode renew --host <name>`). Your next rotation
+    (`--mode local-ca`) replaces it with a restricted one, which each staff computer then
+    trusts in place of the old entry.
+
+#### Changed
+
+- **The Docker and Trial installer installs the image of its own release — `7.0.0-beta.7` for a beta — and a stack built from an earlier beta needs `--skip-version-check` once on its next image update.** *(action needed)*
+
+    The installer now knows which release it is from the git tag of the checkout or
+    release archive it runs from, and says so in its header and on the System check:
+    `7.0.0`, `7.0.0-beta.7 (prerelease)`, or `7.0.0.dev (development build)` for a
+    commit with no release tag. That decides the image of a Docker or Trial install:
+
+    - **A stable release or a prerelease** installs the image tagged with its own name.
+      A beta asks the registry for `:7.0.0-beta.7`, never for `:7.0.0` — after the
+      stable release that tag is a different image. The Review still asks the registry
+      before `yes` and refuses an official image that is not published yet, with
+      **Build** and **Custom** offered.
+    - **A development build** has no official image: **Build** is preselected, and
+      **Official** is refused on the Image screen without asking any registry.
+
+    A local build is tagged and labelled with that name, and `.dedalo.env` pins it as
+    `DEDALO_VERSION` (`7.0.0-beta.7`, or `7.0.0-dev` for a development build).
+
+    The image updater (`deploy/dedalo-image-update.sh`) accepts prerelease versions and
+    orders them as releases are ordered: `7.0.0-beta.6` < `7.0.0-beta.7` < `7.0.0-rc.1` <
+    `7.0.0`. In `build` mode it checks out `v7.0.0-beta.7` for a prerelease (or the ref you
+    name with `--ref`) and refuses a commit that is not that release — a tag that is not
+    annotated, or names another version — before anything is built; a local build's version
+    label is always what the engine inside it reports. `--skip-version-check` now also waives
+    a step back within one data version, and never one to an older data version. A running
+    engine that cannot read a prerelease version is asked about its data version instead
+    (`7.0.0-dev` for `7.0.0-beta.7`), so a skipped `X.Y.Z` is still refused.
+
+    **Action needed** for a stack installed from a beta up to 7.0.0-beta.6 with **Build**:
+    it is pinned at the bare `DEDALO_VERSION=7.0.0`, and a prerelease comes before its
+    stable release, so the move to `7.0.0-beta.7` reads as a downgrade. Its update script
+    is still the old beta's, which refuses any prerelease version, so first move the
+    stack's checkout to the new release (`git fetch --tags && git checkout v7.0.0-beta.7`),
+    then run that one update with `--skip-version-check`; later updates need nothing. See
+    [a stack installed from a beta before 7.0.0-beta.7](./install/docker.md#a-stack-installed-from-a-beta-before-700-beta7).
+
+    Wire contract: `WC-2026-10-15-release-identity-from-tag`.
+
+- **A prerelease build now calls itself by its tag (`7.0.0-beta.7`), and its data version is published beside it.**
+
+    Before, a build made from a beta tag reported the bare version of the release it
+    precedes (`7.0.0`), so a beta could not be told apart from the stable release in
+    `/health`, the About panels or the **Update code** panel. Now the program names
+    itself by its git tag: `7.0.0` for a stable release, `7.0.0-beta.7` (or `-alpha.N`,
+    `-rc.N`) for a prerelease, `7.0.0.dev` for any untagged build.
+
+    The **data** version is unchanged and still the bare `7.0.0`: databases, updates and
+    code servers keep comparing that. API consumers get it beside the name —
+    `page_globals.dedalo_data_version`, and `/health` and the update status carry a new
+    `release_kind` (`stable`, `prerelease` or `dev`) — so nothing needs to parse a
+    version out of the name. A beta asking a code server for updates keeps sending the
+    bare data version, which every code server, older ones included, understands.
+
+    A code server reads the release name from the tag when it builds an archive, which
+    needs **git 2.35 or newer** on the code server: with an older git, *Build release*
+    now refuses (before, the archive was built and every installation of it called
+    itself a developer build).
+
+    Wire contract: `WC-2026-10-15-release-identity-from-tag`.
+
+#### Added
+
+- **The production installer can now make a local certificate authority, for an intranet with no public name.**
+
+    A museum that installs Dédalo with internet access and then runs it on an isolated
+    intranet has no public name, so Let's Encrypt cannot reach it, and until now the only
+    other choice on the production route was to make certificates by hand. The *Web server
+    & TLS* screen now offers **Local CA** (`--tls local_ca`), as the Docker route already
+    did. **Other addresses** (`--tls-extra-names dedalo.lan,archivo.museo.lan`) adds the
+    other names staff type: the certificate names them and the site answers to them.
+
+    On an intranet with no local DNS, **Other addresses** can also list the server's IPv4
+    addresses (`--tls-extra-names dedalo.lan,192.168.1.20`), on both routes: staff then open
+    `https://192.168.1.20/`, and `http://` to it redirects to `https://`. A browser sends no
+    server name for an IP address, so on the production route the instance *claims* the
+    address in the installer's host-wide catch-all, which hands a handshake to that address
+    the instance's certificate. Every other site on the server keeps answering by name, on
+    that address too, and a handshake to an address no instance claims is refused as
+    before. The System check refuses an address that is not this server's, one another
+    instance already claims, one a site of yours listens on itself, a site of yours on port
+    443 that loads before the catch-all (it would answer visits by IP address), and IPv6. On nginx the
+    claiming instance's site key becomes readable by the web server's group, because nginx
+    loads that certificate per connection; on Apache, one instance per server can claim
+    addresses. See [Reaching an instance by IP address](./install/reverse_proxy.md#reaching-an-instance-by-ip-address).
+
+    The installer makes the authority and the site certificate in
+    `/opt/dedalo/instances/<i>/tls/`, with the same script the Docker route and every
+    rotation use. The authority can only certify the install's own addresses, exactly. When the
+    install ends, the *To do on this host* list names the authority's file and its SHA-256
+    fingerprint, how to trust it once on Windows, macOS, Linux and Firefox, and the `curl`
+    command that checks it from a staff computer. The site certificate then renews itself
+    from the same authority (`dedalo-tls-renew@<i>.timer`), so staff computers never trust
+    anything again. `--abort` removes only what this install made: the timer, its drop-in
+    and the certificate directory.
+
+    On both routes, an install over a certificate directory that already holds an authority
+    stops at the *System check* when that authority cannot serve the answered addresses,
+    and names the rotation command. That happens when it was made for other addresses, or
+    when it was made before this release and its certificate does not name them all. The
+    production route also refuses an authority made before this release, because it is not
+    restricted. See [Production install](./install/production.md); its last section is a
+    recipe for trying the production route in a virtual machine with no domain name.
+
+### For developers
+
+#### Changed
+
+- **A developer install is reported complete only once `bun run dev` has served, and it ends by saying where to open it.**
+
+    **Served, then complete.** A developer install used to end with "install complete"
+    without anything having served the browser. Its last step, `verify_dev_server`, now
+    starts `bun run dev` once with the `.env` the install wrote, asks the development
+    listener for `/health` over HTTPS (the local certificate authority as the trust
+    anchor), logs in as `root` over it (every cookie the login sets must be `Secure` exactly
+    when the listener is HTTPS), and stops it again. It refuses to run as root in a
+    checkout another user owns. If it fails, the install is not reported complete and
+    the message names the cause: the port taken by another program, a certificate the
+    server cannot read or that does not verify, the database unreachable, a
+    development dependency missing, another Dédalo server on the same unix socket, a
+    cookie flag that does not match the listener, or the login refused. The install is
+    sealed by then, so the message names the key to edit in the written `.env`
+    (`SERVER_TCP_PORT`, `SERVER_UNIX_SOCKET`) rather than an installer flag, and the
+    failure hint no longer offers `--abort`. Fix it and run the installer with
+    `--resume`, which runs the check again. An install written to another private
+    directory is started, and shown, as `DEDALO_PRIVATE_DIR=<dir> bun run dev`.
+
+    **Where to open it.** The installer then ends with what to do next, built from the
+    keys it wrote: `bun run dev`, every address the client answers on
+    (`https://127.0.0.1:3500/dedalo/core/page/` and `https://localhost:3500/…` with the
+    defaults, plus this machine's network addresses when it is opened to the network),
+    the `root` login, and the certificate authority's path, SHA-256 fingerprint and
+    whether this machine trusts it. The full-screen installer leaves these lines on the
+    terminal when it closes. See the
+    [developer quickstart](./install/dev_quickstart.md#4-run-the-installer).
+
+    **`bun run dev` stops when its CSS watcher dies.** The stylesheet watcher never
+    stops on a LESS error, so when it exits something is wrong — usually a missing
+    development dependency (`Cannot find package 'less'`). `bun run dev` now stops with
+    it and says so, instead of serving on while every stylesheet edit is lost.
+
+#### Added
+
+- **A developer install now issues the development listener's HTTPS certificate and makes this machine trust it; `bun run tls:renew` and `bun run tls:untrust` manage it afterwards.**
+
+    **The certificate.** With the default `--tls local_ca`, the developer route issues
+    the development listener's certificate with the same generator the other routes use
+    (`deploy/dedalo-tls-rotate.sh`), into `<private>/tls`, as the checkout's owner. Its
+    certificate authority can certify only `localhost`, `127.0.0.1` and, when the
+    listener is opened to the network, the IPv4 address it binds (or this machine's IPv4
+    network addresses with `0.0.0.0`). IPv6 addresses are not certified: a listener on
+    this machine is opened as `https://localhost:…`, which the certificate names, and a
+    specific IPv6 `--dev-host` with `local_ca` is refused. A re-run keeps the authority
+    and renews its certificate when it has less than 30 days left. An authority made
+    for other addresses is refused before anything is written, and the refusal names
+    the command that replaces it.
+
+    **Trust.** The installer prints the authority's path and SHA-256 fingerprint and
+    installs it into this machine's trust store. The installer itself stays your user;
+    only this step asks for more. On macOS the authority goes into your login keychain,
+    and macOS asks for your password. On Linux it is copied into the system anchors
+    through `sudo` for one command. Firefox profiles get it through `certutil` when it
+    is installed; otherwise the step tells you to set
+    `security.enterprise_roots.enabled`. If you cancel the prompt, the install still
+    completes and reports *not trusted yet* with the manual command; `bun run dev`
+    serves either way. On macOS a cancelled dialog leaves no certificate behind in the
+    keychain. If this machine already trusts the authority, nothing is asked.
+
+    **Afterwards.** `bun run tls:renew` (`--force` to renew now) issues a new
+    certificate from the same authority, so nothing needs to be trusted again.
+    `bun run tls:untrust` removes the authority from every store the installer put it
+    in. `--abort` removes what the aborted install added; if that removal is refused,
+    it keeps the record in `../private/tls/` so `bun run tls:untrust` can finish it.
+
+#### Fixed
+
+- **A developer install now installs the development dependencies `bun run dev` needs, and the development listener can serve HTTPS (`SERVER_TCP_TLS_CERT_FILE` + `SERVER_TCP_TLS_KEY_FILE`).**
+
+    **Development dependencies.** The installer's bootstrap installs only its own,
+    production dependencies, so after a developer install the first `bun run dev`
+    crashed with `Cannot find package 'less'`. The developer route now has an
+    `install_dev_dependencies` step (`bun install --frozen-lockfile --ignore-scripts`),
+    run as the checkout's owner, that installs only what is missing; a checkout that
+    already has them is left as it is. Production, Docker and Trial installs keep the
+    production-only tree. If the step cannot reach the npm registry, the install fails
+    and quotes bun's error. Run as root in a checkout another user owns, the step refuses.
+
+    **HTTPS on the development listener.** Two new keys, `SERVER_TCP_TLS_CERT_FILE` and
+    `SERVER_TCP_TLS_KEY_FILE`, give the `SERVER_TCP_PORT` listener a certificate: it then
+    speaks HTTPS and the boot log prints an `https://` address. Set both or neither: a
+    half pair, an unreadable file, a file that is not a certificate or a key of another
+    certificate stops the server at boot (exit 78) with the key and path named. It never
+    falls back to plain HTTP. While the certificate has less than 30 days left, every
+    boot warns and names `bun run tls:renew`. Without the keys, nothing changes; without
+    `SERVER_TCP_PORT` the keys are ignored. The test and update-drill servers always
+    serve plain HTTP, whatever the pair in `../private/.env`. The
+    warning for a listener opened to the network now says "no TLS" only when that is
+    true.
+
+- **A developer install now writes a development listener, so `bun run dev` serves the browser on port 3500.**
+
+    **The listener is written.** A developer install used to write no `SERVER_TCP_PORT`,
+    so `bun run dev` served only its unix socket and the browser reached nothing until
+    the `.env` was edited by hand. The developer route now writes a *Development only*
+    section: `SERVER_TCP_PORT` (default `3500`, `--dev-port`), `SERVER_TCP_HOST`
+    (default `127.0.0.1`, this machine only; `--dev-host 0.0.0.0` opens it to the
+    local network, and the Review and a headless run's summary warn), `DEDALO_DEV_MODE=true`,
+    `DEDALO_DEBUG_API_ERRORS=true`, and the listener's certificate. The interactive
+    installer asks these on a new **Development server** step.
+
+    **The certificate.** `--tls` on the developer route is `local_ca` by default (a
+    local certificate authority kept in `<private>/tls`), `none` (plain HTTP) or `files`
+    (your own pair, with `--tls-cert` and `--tls-key`). `SESSION_COOKIE_SECURE` is
+    written to match: `true` over HTTPS, `false` over plain HTTP, where a browser on
+    another machine would otherwise drop the login cookie.
+
+    **A port in use is refused.** When another program already listens on the port,
+    the Review does not offer `install`, and a headless run stops before writing
+    anything; the refusal names the next free port. The installer never picks another
+    port for you.
+
+    **A re-run keeps your values.** The port, the address, a certificate pair and the
+    two modes your `.env` already has are kept unless you answer them again, and the
+    Review lists them as kept. A kept port or address that is not valid is refused
+    like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
+    writes any of these keys.
+
+??? note "Wire contract — 1 entry"
+
+    - `WC-2026-10-15-release-identity-from-tag`
 
 ## 7.0.0-beta.6 — 2026-10-15
 

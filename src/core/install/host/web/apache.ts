@@ -31,6 +31,7 @@ import {
 	SECURITY_HEADERS,
 	type SiteInput,
 	siteHeader,
+	siteNames,
 } from './site.ts';
 
 /** The modules the vhost needs (checked, told — never enabled by the installer). */
@@ -58,15 +59,24 @@ function backend(input: SiteInput, path: string): string {
  * museo). Each vhost therefore refuses any Host but its own with 421
  * Misdirected Request before anything is served or proxied. (nginx gets the
  * host-wide catch-all site instead — web/catch_all.ts: it needs no
- * certificate there, while an Apache catch-all on 443 would.)
+ * certificate there, while an Apache catch-all on 443 would; Apache gets one
+ * only while an instance claims an IPv4 address, with that instance's.)
  */
-function nameGuard(serverName: string, port: string): string[] {
-	const name = serverName.replace(/[.^$*+?()[\]{}|\\]/g, '\\$&');
+function nameGuard(names: readonly string[], port: string): string[] {
+	const escaped = names.map((name) => name.replace(/[.^$*+?()[\]{}|\\]/g, '\\$&'));
+	// One name: the guard as it always was; several (a local CA's extra addresses): any of them.
+	const pattern = escaped.length === 1 ? escaped[0] : `(${escaped.join('|')})`;
 	return [
 		"\t# Only this site's own name: any other Host is refused (421), never served.",
-		`\tRewriteCond %{HTTP_HOST} !^${name}(:${port})?$ [NC]`,
+		`\tRewriteCond %{HTTP_HOST} !^${pattern}(:${port})?$ [NC]`,
 		'\tRewriteRule ^ - [R=421,L]',
 	];
+}
+
+/** The local CA's extra addresses as a ServerAlias (none on every other mode). */
+function serverAlias(input: SiteInput): string[] {
+	const extra = siteNames(input.answers).slice(1);
+	return extra.length === 0 ? [] : [`\tServerAlias ${extra.join(' ')}`];
 }
 
 /** The plain-HTTP vhost: the name guard, the challenge root (Let's Encrypt) and the redirect. */
@@ -86,10 +96,11 @@ function httpVhost(input: SiteInput): string[] {
 	return [
 		`<VirtualHost *:${answers.http_port}>`,
 		`\tServerName ${answers.server_name}`,
+		...serverAlias(input),
 		`\tDocumentRoot ${APACHE_EMPTY_ROOT}`,
 		...acme,
 		'\tRewriteEngine On',
-		...nameGuard(answers.server_name, answers.http_port),
+		...nameGuard(siteNames(answers), answers.http_port),
 		...challenge,
 		`\tRewriteRule ^ https://%{HTTP_HOST}${httpsOrigin(answers)}%{REQUEST_URI} [R=301,L]`,
 		'</VirtualHost>',
@@ -162,6 +173,7 @@ function httpsVhost(input: SiteInput, cert: { fullchain: string; key: string }):
 	return [
 		`<VirtualHost *:${answers.https_port}>`,
 		`\tServerName ${answers.server_name}`,
+		...serverAlias(input),
 		'\tProtocols h2 http/1.1',
 		'\tSSLEngine on',
 		`\tSSLCertificateFile    ${cert.fullchain}`,
@@ -172,7 +184,7 @@ function httpsVhost(input: SiteInput, cert: { fullchain: string; key: string }):
 		`\tCustomLog ${input.logDir}/dedalo-${paths.instance}.access.log combined`,
 		'\tLimitRequestBody 314572800',
 		'\tRewriteEngine On',
-		...nameGuard(answers.server_name, answers.https_port),
+		...nameGuard(siteNames(answers), answers.https_port),
 		...proxyLines(input),
 		...mediaLines(input),
 		...clientLines(input),

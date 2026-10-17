@@ -54,9 +54,14 @@ import {
 	HIERARCHY_MODEL_TYPE_TLD,
 	HIERARCHY_TYPE_TLD,
 } from '../../src/core/ontology/ontology_tipos.ts';
+import { devServeIsolationEnv } from '../helpers/dev_serve_isolation.ts';
+import { freeTcpPort } from '../helpers/free_tcp_port.ts';
 import { markExportArtifactsRoot, markMediaRoot } from '../helpers/media_scratch_root.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 import { markProcessesDir } from '../helpers/test_media_root.ts';
+
+/** The developer listener's port for every run of this file (one value: a resume compares answers). */
+const DEV_PORT = freeTcpPort();
 
 const ROOT = resolve(import.meta.dir, '../..');
 const CLI = join(ROOT, 'scripts/install.ts');
@@ -127,6 +132,9 @@ function cliArgs(): string[] {
 		'--entity',
 		'zztldprov',
 		'--skip-tools',
+		// A free development port: 3500 may be a running `bun run dev` here (D3 refuses it).
+		'--dev-port',
+		String(DEV_PORT),
 	];
 }
 const installEnv = (): Record<string, string | undefined> => ({
@@ -136,6 +144,9 @@ const installEnv = (): Record<string, string | undefined> => ({
 	DEDALO_INSTALL_PRIVATE_DIR: scratchDir,
 	DEDALO_TS_STATE_PATH: join(scratchDir, 'ts_state.json'),
 	DEDALO_SESSION_DB_PATH: join(scratchDir, 'sessions.sqlite'),
+	// The serve check boots this install's server (verify_dev_server): its own socket,
+	// media root and processes dir — never the suite's (dev_serve_isolation.ts).
+	...devServeIsolationEnv(),
 });
 
 async function scratchScalar(query: string): Promise<string> {

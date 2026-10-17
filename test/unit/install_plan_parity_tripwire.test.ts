@@ -288,6 +288,13 @@ await persistConfig(answers);`;
 	return readFileSync(join(privateDir, '.env'), 'utf8');
 }
 
+/** An .env's values with its own private dir spelled `<private>` (the runs' only legitimate difference). */
+function privateRelative(env: Record<string, string>, privateDir: string): Record<string, string> {
+	return Object.fromEntries(
+		Object.entries(env).map(([key, value]) => [key, value.split(privateDir).join('<private>')]),
+	);
+}
+
 function scratchDir(name: string): string {
 	return mkdtempSync(join(scratchRoot, `${name}_`));
 }
@@ -433,8 +440,16 @@ describe('install plan — the written .env (c, d)', () => {
 		};
 		// The CLI hands persistConfig the plan's normalized answers (scripts/install.ts).
 		const cliAnswers = { ...cliPlan(answerCase.argv).answers };
-		const cliEnv = parseEnvFile(persistInChild(cliAnswers, scratchDir('cli')));
-		const recordEnv = parseEnvFile(persistInChild(answerCase.record, scratchDir('record')));
+		const cliDir = scratchDir('cli');
+		const recordDir = scratchDir('record');
+		const cliEnv = privateRelative(parseEnvFile(persistInChild(cliAnswers, cliDir)), cliDir);
+		const recordEnv = privateRelative(
+			parseEnvFile(persistInChild(answerCase.record, recordDir)),
+			recordDir,
+		);
+		// The developer listener's local-CA pair lives in EACH install's own private
+		// dir (DEV_ROUTE_SERVE §1.2): the two runs differ only by that prefix.
+		expect(recordEnv.SERVER_TCP_TLS_CERT_FILE).toBe('<private>/tls/fullchain.pem');
 		expect(Object.keys(cliEnv).length).toBeGreaterThan(30);
 		expect(cliEnv.DEDALO_SALT_STRING).toMatch(/^[0-9a-f]{64}$/);
 		const { DEDALO_SALT_STRING: _cliSalt, ...cliRest } = cliEnv;

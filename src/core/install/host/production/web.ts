@@ -26,6 +26,17 @@
  * (`catch_all`). It is the default by ORDER, never by `default_server`, so an
  * operator's default (Debian's own, installed with nginx) stays and never
  * clashes. Apache's vhosts guard their own name instead (web/apache.ts).
+ *
+ * CLAIMED IPv4 ADDRESSES (2026-10-16 — production/address_claims.ts): an
+ * instance whose local CA lists IP addresses RE-RENDERS the catch-all with
+ * every instance's claims (nginx; Apache: writes its one, a2ensite on Debian)
+ * and records its claims in its registry entry; its --abort re-renders the
+ * catch-all from the claims left (or removes it with the last user). The run
+ * re-checks and renders against the registry AS IT IS when the step runs
+ * (liveClaimCheck), never the preflight's frozen copy: another install that
+ * claimed the address in between refuses this one — one address, one
+ * instance, never last-writer-wins. The verify reads the catch-all too
+ * (catchAllServes), so a resume never adopts a step stopped before it.
  */
 
 import type {
@@ -38,7 +49,7 @@ import type {
 import { executeCommands, requestOf, succeeded } from '../execute.ts';
 import { binaryOf } from '../os_support.ts';
 import { hostRefuse } from '../refuse.ts';
-import { otherEntries, ownEntry, setMapOwner, updateEntry } from '../registry.ts';
+import { otherClaims, otherEntries, ownEntry, setMapOwner, updateEntry } from '../registry.ts';
 import {
 	APACHE_EMPTY_ROOT,
 	apacheModuleCommand,
@@ -46,12 +57,14 @@ import {
 	renderApacheSite,
 } from '../web/apache.ts';
 import {
-	CATCH_ALL_PORTS,
+	type AddressClaim,
 	CATCH_ALL_STAMP,
 	catchAllPath,
+	catchAllServes,
 	keptDefaults,
 	type PortDefault,
 	portDefaults,
+	renderApacheCatchAll,
 	renderNginxCatchAll,
 } from '../web/catch_all.ts';
 import { nginxSites } from '../web/clash.ts';
@@ -65,6 +78,14 @@ import {
 	renderNginxSite,
 } from '../web/nginx.ts';
 import { mediaGated, type SiteInput } from '../web/site.ts';
+import {
+	claimConflicts,
+	claimsTold,
+	loadedCatchAllPath,
+	localCaCertificate,
+	ownClaims,
+	standardPorts,
+} from './address_claims.ts';
 import {
 	configTest,
 	exec,
@@ -85,6 +106,8 @@ import { identityOf } from './identity.ts';
 export function certificatePaths(ctx: HostPlanCtx): { fullchain: string; key: string } {
 	if (ctx.answers.tls_mode === 'files')
 		return { fullchain: ctx.answers.tls_cert_path, key: ctx.answers.tls_key_path };
+	// The local CA's directory (host_tls): the generator writes these two names.
+	if (ctx.answers.tls_mode === 'local_ca') return localCaCertificate(ctx.paths);
 	const live = `/etc/letsencrypt/live/dedalo-${ctx.paths.instance}`;
 	return { fullchain: `${live}/fullchain.pem`, key: `${live}/privkey.pem` };
 }
@@ -247,14 +270,6 @@ export function ruleRefreshLine(ctx: HostPlanCtx): string {
 	return `the media gate nginx serves is a root-owned COPY of the engine's rules: after changing the media access mode (or an update that changes them), refresh it as root — ${argv.join(' ')}`;
 }
 
-/** Does this instance sit on the standard ports the catch-all covers? */
-function standardPorts(ctx: HostPlanCtx): boolean {
-	return (
-		ctx.answers.http_port === CATCH_ALL_PORTS.http &&
-		ctx.answers.https_port === CATCH_ALL_PORTS.https
-	);
-}
-
 /** The standard ports where an operator's `default_server` stays the default (told). */
 export function keptPorts(
 	ctx: HostPlanCtx,
@@ -280,29 +295,93 @@ export async function siteDefaults(ctx: HostCtx): Promise<PortDefault[]> {
 	return portDefaults(nginxSites(dump));
 }
 
-/**
- * nginx's host-wide catch-all site (web/catch_all.ts): written when the host
- * has none (facts) and this instance is on the standard ports — never
- * rewritten, never written over another file at its path.
- */
-export function catchAllCommands(ctx: HostPlanCtx): HostCommand[] {
-	const { web } = ctx.facts;
-	if (web.kind !== 'nginx' || !standardPorts(ctx) || web.catchAll !== 'absent') return [];
+/** A catch-all write (0644 root). */
+function catchAllWrite(ctx: HostPlanCtx, content: string, label: string): HostCommand {
+	return {
+		kind: 'write',
+		path: catchAllPath(webFlavor(ctx)),
+		mode: 0o644,
+		owner: 'root',
+		group: 'root',
+		content,
+		label,
+	};
+}
+
+/** Debian's a2ensite/a2dissite of the Apache catch-all (no command elsewhere). */
+function catchAllSiteToggle(ctx: HostPlanCtx, verb: 'a2ensite' | 'a2dissite'): HostCommand[] {
+	if (ctx.facts.web.kind !== 'apache' || !webFlavor(ctx).enableWithA2ensite) return [];
+	const label =
+		verb === 'a2ensite'
+			? 'enable the catch-all (it answers a handshake that names no site)'
+			: 'disable the catch-all';
+	// a2dissite of a site already disabled exits 1: harmless for a removal (as the instance's).
 	return [
-		{
-			kind: 'write',
-			path: catchAllPath(webFlavor(ctx)),
-			mode: 0o644,
-			owner: 'root',
-			group: 'root',
-			content: renderNginxCatchAll(),
-			label: 'the host-wide catch-all site (a name no site declares reaches no instance)',
-		},
+		exec(ctx, verb, ['dedalo-00-default'], label, verb === 'a2dissite' ? { okExit: [0, 1] } : {}),
+	];
+}
+
+/** The other instances' claims as the preflight froze them (the Review's render). */
+function frozenClaims(ctx: HostPlanCtx): AddressClaim[] {
+	return ctx.facts.web.claims ?? [];
+}
+
+/**
+ * The host-wide catch-all site (web/catch_all.ts), never written over another
+ * file at its path, on the standard ports only:
+ *  - nginx: written when the host has none (facts); RE-RENDERED with every
+ *    instance's claims (`others` + this one's) when this instance claims an
+ *    address — never rewritten by one that claims none. `others`: the
+ *    preflight's for the Review, the LIVE registry's when the step runs.
+ *  - Apache: only when this instance claims an address (its certificate is
+ *    the one a nameless handshake gets), enabled on Debian.
+ */
+export function catchAllCommands(
+	ctx: HostPlanCtx,
+	others: readonly AddressClaim[] = frozenClaims(ctx),
+): HostCommand[] {
+	const { web } = ctx.facts;
+	if (!standardPorts(ctx.answers) || web.catchAll === 'foreign') return [];
+	return web.kind === 'apache' ? apacheCatchAll(ctx) : nginxCatchAll(ctx, others);
+}
+
+/** Apache's catch-all: only with this instance's claims (enabled on Debian). */
+function apacheCatchAll(ctx: HostPlanCtx): HostCommand[] {
+	const own = ownClaims(ctx);
+	const first = own[0];
+	if (first === undefined) return [];
+	const addresses = own.map((claim) => claim.address);
+	return [
+		catchAllWrite(
+			ctx,
+			renderApacheCatchAll(first, addresses),
+			`the host-wide catch-all site (a handshake that names no site gets this instance's certificate: ${addresses.join(', ')})`,
+		),
+		...catchAllSiteToggle(ctx, 'a2ensite'),
+	];
+}
+
+/** nginx's catch-all: written when absent; re-rendered with every claim when this instance claims. */
+function nginxCatchAll(ctx: HostPlanCtx, others: readonly AddressClaim[]): HostCommand[] {
+	const own = ownClaims(ctx);
+	if (ctx.facts.web.catchAll === 'ours' && own.length === 0) return [];
+	const claims = [...others, ...own];
+	const reached =
+		claims.length === 0
+			? ''
+			: `; the claimed addresses ${claims.map((claim) => claim.address).join(', ')} reach their instance`;
+	return [
+		catchAllWrite(
+			ctx,
+			renderNginxCatchAll(claims, webFlavor(ctx).logDir),
+			`the host-wide catch-all site (a name no site declares reaches no instance${reached})`,
+		),
 	];
 }
 
 /** Does this instance use the catch-all once its site is in place? */
 function usesCatchAll(ctx: HostPlanCtx): boolean {
+	if (ctx.facts.web.kind === 'apache') return catchAllCommands(ctx).length > 0;
 	return ctx.facts.web.catchAll === 'ours' || catchAllCommands(ctx).length > 0;
 }
 
@@ -311,7 +390,7 @@ export function catchAllTold(
 	ctx: HostPlanCtx,
 	defaults: readonly PortDefault[] = ctx.facts.web.defaults,
 ): string[] {
-	if (ctx.facts.web.kind !== 'nginx' || !standardPorts(ctx)) return [];
+	if (ctx.facts.web.kind !== 'nginx' || !standardPorts(ctx.answers)) return [];
 	const path = catchAllPath(webFlavor(ctx));
 	if (ctx.facts.web.catchAll === 'foreign') {
 		return [
@@ -338,8 +417,15 @@ export function plannedDefaultTold(ctx: HostPlanCtx): string[] {
 	return catchAllTold(ctx, [shipped]);
 }
 
-/** Stage 2's commands (`mapOwner`: this instance's map is the host's — decided at run time). */
-export function siteCommands(ctx: HostPlanCtx, mapOwner = nginxGated(ctx)): HostCommand[] {
+/**
+ * Stage 2's commands (`mapOwner`: this instance's map is the host's;
+ * `others`: the other instances' claims — both decided at run time).
+ */
+export function siteCommands(
+	ctx: HostPlanCtx,
+	mapOwner = nginxGated(ctx),
+	others: readonly AddressClaim[] = frozenClaims(ctx),
+): HostCommand[] {
 	return [
 		groupCommand(ctx),
 		...apacheRootCommands(ctx),
@@ -351,10 +437,30 @@ export function siteCommands(ctx: HostPlanCtx, mapOwner = nginxGated(ctx)): Host
 			'the site file (HTTPS, media gate, client)',
 		),
 		...enableCommands(ctx),
-		...catchAllCommands(ctx),
+		...catchAllCommands(ctx, others),
 		configTest(ctx),
 		reloadWeb(ctx),
 	];
+}
+
+/**
+ * The other instances' claims AS THE REGISTRY HOLDS THEM NOW — re-checked
+ * against this instance's (claimConflicts, the Review's own words): an
+ * install that claimed one of these addresses after this run's Review (or,
+ * on Apache, any address) refuses this run before anything is written; the
+ * catch-all is then rendered from these, so a claim made since the Review is
+ * never dropped.
+ */
+export function liveClaimCheck(ctx: HostCtx): AddressClaim[] {
+	const others = otherClaims(ctx.fs, ctx.paths);
+	const conflicts = claimConflicts(ctx, others);
+	if (conflicts.length > 0) {
+		hostRefuse(
+			'install.state_conflict',
+			`${conflicts.join('; ')} (claimed by another install after this run's Review — nothing of the site was written; abort one of the two installs with --abort)`,
+		);
+	}
+	return others;
 }
 
 /** Apache's modules: checked, the enabling command TOLD — never enabled (owner). */
@@ -424,12 +530,39 @@ function assertSameMap(ctx: HostCtx, owner: { instance: string; media: string })
 	);
 }
 
-/** After a reload: the configuration test passes and our file is the render. */
-async function siteVerdict(ctx: HostCtx, text: string, copies = false) {
+/**
+ * With a claim on the standard ports: the installer's catch-all serves every
+ * claimed address with this instance's certificate (catchAllServes) — and, on
+ * Debian Apache, is enabled. Without it a step stopped between the site write
+ * and the catch-all write would be ADOPTED by a resume, the address unserved.
+ */
+function catchAllClaimCheck(ctx: HostCtx): [boolean, string][] {
+	const own = ownClaims(ctx);
+	if (own.length === 0 || !standardPorts(ctx.answers)) return [];
+	const path = catchAllPath(webFlavor(ctx));
+	const kind = ctx.facts.web.kind;
+	const served = catchAllServes(kind, ctx.fs.readText(path) ?? '', own);
+	const enabled = kind !== 'apache' || ctx.fs.exists(loadedCatchAllPath(ctx));
+	return [
+		[
+			served && enabled,
+			`${path} does not serve ${own.map((claim) => claim.address).join(', ')} with this instance's certificate`,
+		],
+	];
+}
+
+/** After a reload: the configuration test passes and our file is the render (`extra`: more checks). */
+async function siteVerdict(
+	ctx: HostCtx,
+	text: string,
+	copies = false,
+	extra: readonly [boolean, string][] = [],
+) {
 	const rules = nginxRuleCopies(ctx.paths.instance);
 	return verdictOf(
 		[
 			[ctx.fs.readText(sitePath(ctx)) === text, `${sitePath(ctx)} differs from its render`],
+			...extra,
 			[
 				!copies || (ctx.fs.exists(rules.server) && ctx.fs.exists(rules.map)),
 				`the root-owned media-rule copies are missing in ${nginxRulesDir(ctx.paths.instance)}`,
@@ -451,6 +584,23 @@ function recordWeb(ctx: HostCtx, member: boolean, stage: 'http' | 'site'): void 
 	remember(ctx.created.site_files, sitePath(ctx));
 	if (ctx.facts.web.kind === 'apache') rememberNewDir(ctx, APACHE_EMPTY_ROOT);
 	if (stage === 'site' && nginxGated(ctx)) recordRuleCopies(ctx);
+}
+
+/**
+ * This instance's claimed addresses and its use of the catch-all into its
+ * registry entry — BEFORE the catch-all names them, so an --abort of a run
+ * that stops after the write (an error, or a killed process the snapshot
+ * never restored) still knows to re-render it without them, and the refcount
+ * counts this instance (catchAllRemoval; a catch-all put back to absent is
+ * never the installer's, so a recorded use removes nothing).
+ */
+function recordClaims(ctx: HostCtx): void {
+	const claims = ownClaims(ctx);
+	updateEntry(ctx.fs, ctx.paths, {
+		addresses: claims.map((claim) => claim.address),
+		...(claims.length === 0 ? {} : { certificate: localCaCertificate(ctx.paths) }),
+		...(usesCatchAll(ctx) ? { catch_all: true } : {}),
+	});
 }
 
 /** The rule-copy directories this install created, once empty (a live abort keeps the identity step's). */
@@ -485,6 +635,8 @@ async function restoreSnapshot(ctx: HostCtx, snapshot: readonly Snapshot[]): Pro
 		if (before === null) ctx.fs.remove(path);
 		else ctx.fs.write(path, before, 0o644, 'root', 'root');
 	}
+	const catchAll = snapshot.find((item) => item.path === catchAllPath(webFlavor(ctx)));
+	if (catchAll?.before === null) await executeCommands(catchAllSiteToggle(ctx, 'a2dissite'), ctx);
 	const site = snapshot.find((item) => item.path === sitePath(ctx));
 	if (site?.before === null && enableCommands(ctx).length > 0) {
 		await executeCommands(
@@ -526,16 +678,42 @@ function lastCatchAllUser(ctx: HostCtx): boolean {
 
 /**
  * The catch-all's removal: only when this instance used it, no other
- * instance's entry still does, and the file is the installer's own.
+ * instance's entry still does, and the file is the installer's own. Not the
+ * last user but a claimant (nginx): re-rendered from the claims left — this
+ * instance's addresses no longer reach anything.
  */
-function catchAllRemoval(ctx: HostCtx): HostCommand[] {
-	if (!lastCatchAllUser(ctx)) return [];
+export function catchAllRemoval(ctx: HostCtx): HostCommand[] {
+	const claimed = releaseClaims(ctx);
+	if (lastCatchAllUser(ctx)) {
+		return [
+			...catchAllSiteToggle(ctx, 'a2dissite'),
+			{
+				kind: 'remove',
+				path: catchAllPath(webFlavor(ctx)),
+				label: 'the host-wide catch-all site (no instance uses it any more)',
+			},
+		];
+	}
+	return claimed ? catchAllWithoutOwn(ctx) : [];
+}
+
+/** Empty this instance's claims in its entry; answers whether it had any. */
+function releaseClaims(ctx: HostCtx): boolean {
+	const claimed = (ownEntry(ctx.fs, ctx.paths)?.addresses ?? []).length > 0;
+	if (claimed) updateEntry(ctx.fs, ctx.paths, { addresses: [] });
+	return claimed;
+}
+
+/** nginx's catch-all (the installer's own) re-rendered from the OTHER instances' claims. */
+function catchAllWithoutOwn(ctx: HostCtx): HostCommand[] {
+	const text = ctx.fs.readText(catchAllPath(webFlavor(ctx))) ?? '';
+	if (ctx.facts.web.kind !== 'nginx' || !text.startsWith(`${CATCH_ALL_STAMP}\n`)) return [];
 	return [
-		{
-			kind: 'remove',
-			path: catchAllPath(webFlavor(ctx)),
-			label: 'the host-wide catch-all site (no instance uses it any more)',
-		},
+		catchAllWrite(
+			ctx,
+			renderNginxCatchAll(otherClaims(ctx.fs, ctx.paths), webFlavor(ctx).logDir),
+			`the host-wide catch-all site, without instance ${ctx.paths.instance}'s addresses`,
+		),
 	];
 }
 
@@ -655,14 +833,22 @@ export const host_web_site: HostStepDefinition = {
 	label: (plan) =>
 		`web: the site of ${String(plan.answers.server_name)} (HTTPS, media gate, client)`,
 	commands: (ctx) => siteCommands(ctx),
-	verify: async (ctx) => siteVerdict(ctx, siteText(ctx, certificatePaths(ctx)), nginxGated(ctx)),
+	verify: async (ctx) =>
+		siteVerdict(
+			ctx,
+			siteText(ctx, certificatePaths(ctx)),
+			nginxGated(ctx),
+			catchAllClaimCheck(ctx),
+		),
 	run: async (ctx) => {
 		await assertApacheModules(ctx);
 		const owner = await mapOwnership(ctx);
+		const others = liveClaimCheck(ctx);
 		const member = await inGroup(ctx);
 		recordWeb(ctx, member, 'site');
+		recordClaims(ctx);
 		ctx.save();
-		await applySite(ctx, await withoutDoneGroup(ctx, siteCommands(ctx, owner)));
+		await applySite(ctx, await withoutDoneGroup(ctx, siteCommands(ctx, owner, others)));
 		updateEntry(ctx.fs, ctx.paths, {
 			...(owner ? { nginx_map_owner: true } : {}),
 			catch_all: usesCatchAll(ctx),
@@ -672,6 +858,7 @@ export const host_web_site: HostStepDefinition = {
 				...(nginxGated(ctx) ? [ruleRefreshLine(ctx)] : []),
 				...[sharedGroupLine(ctx)].filter((line): line is string => line !== null),
 				...catchAllTold(ctx, await siteDefaults(ctx)),
+				...claimsTold(ctx),
 			],
 		});
 	},

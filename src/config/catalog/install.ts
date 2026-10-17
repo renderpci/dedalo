@@ -45,6 +45,30 @@ DEDALO_INSTALL_FAULT="install_ontologies:before"
 DEDALO_INSTALL_HOST_ROOT="/tmp/dedalo_host_scratch"
 \`\`\``,
 	},
+	DEDALO_TEST_TRUST_STORE_OFF: {
+		type: 'boolean',
+		scope: 'test_seam',
+		default: false,
+		heading: "Keeping the installer out of this machine's trust stores in a test",
+		typeLabel: 'boolean',
+		doc: `Test seam, not a setting. On the developer route the installer puts its local certificate authority into this machine's trust stores (the macOS login keychain, the Linux system anchors through \`sudo\`, Firefox profiles) — a change to the computer itself, and on macOS a password dialog that waits for a person. When this key is \`true\` the trust step changes no store and asks nothing: it reports the authority as not trusted yet, naming this key, and an abort or \`bun run tls:untrust\` removes nothing either. The test suite sets it for every run (\`test/preload/session_db.ts\`), so an installer test never touches the machine it runs on; the trust step's own checks drive scratch stores directly. It is read from the process environment only, never from the configuration file.
+
+\`\`\`bash
+DEDALO_TEST_TRUST_STORE_OFF=true
+\`\`\``,
+	},
+	DEDALO_INSTALL_RELEASE_IDENTITY: {
+		type: 'string',
+		scope: 'test_seam',
+		default: undefined,
+		heading: "Pinning the installer's release identity in a test",
+		typeLabel: 'string',
+		doc: `Test seam, not a setting. The installer runs as the release it is — \`7.0.0\` from a stable tag, \`7.0.0-beta.7\` from a prerelease tag, \`7.0.0.dev\` from an untagged checkout — and three of its Docker decisions follow from that: the image tag it installs, whether the Review asks the registry for the official image, and which image source it preselects. The checks of the installer pin the identity with this key so that they test each kind on any commit. It is honoured only inside a test process and only for an identity of the installer's own data version; anywhere else the installer refuses to start. It is read from the process environment only, never from the configuration file.
+
+\`\`\`bash
+DEDALO_INSTALL_RELEASE_IDENTITY="7.0.0-beta.7"
+\`\`\``,
+	},
 	DEDALO_INSTALL_PROBE_CA_FILE: {
 		type: 'string',
 		scope: 'test_seam',

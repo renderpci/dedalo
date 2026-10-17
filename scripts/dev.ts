@@ -26,7 +26,8 @@
  * copy — gate: supervision_declaration_tripwire.test.ts.
  *
  * Ctrl-C stops both. The CSS watcher is killed on every exit path, so it cannot outlive the
- * server and leave an orphan holding the LESS tree.
+ * server and leave an orphan holding the LESS tree — and the reverse: a CSS watcher that dies
+ * (a missing development dependency) stops the server too (see below).
  */
 
 // IMPORTED, never re-typed. The supervisor must key on the SAME exit code the server
@@ -54,6 +55,24 @@ function stopChildren(): void {
 	if (server !== null && !server.killed) server.kill();
 }
 
+/**
+ * A DEAD CSS WATCHER STOPS THE LOOP. The watcher never exits on its own: a LESS error is
+ * printed and it keeps watching (build_css.ts). So an exit is a real failure — above all a
+ * missing development dependency (`Cannot find package 'less'`, TODO-052) — and a loop that
+ * kept serving without it would look healthy while every stylesheet edit is silently lost.
+ * Stopping makes `bun run dev` fail where the developer (and the installer's serve check,
+ * src/core/install/dev_serve.ts) sees it.
+ */
+void cssWatcher.exited.then((code) => {
+	if (shuttingDown) return;
+	shuttingDown = true;
+	console.error(
+		`[dev] the CSS watcher stopped (exit ${code}) — \`bun run dev\` stops with it (see its error above)`,
+	);
+	stopChildren();
+	process.exit(code === 0 ? 1 : code);
+});
+
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
 	process.on(signal, () => {
 		shuttingDown = true;
@@ -73,6 +92,7 @@ try {
 		// RESPAWN on exactly RESTART_EXIT_CODE, and on nothing else: a graceful ^C exits 0 and
 		// must QUIT, a crash exits non-zero and must NOT hot-loop (it would hide the crash).
 		if (code !== RESTART_EXIT_CODE) {
+			shuttingDown = true;
 			stopChildren();
 			process.exit(code);
 		}

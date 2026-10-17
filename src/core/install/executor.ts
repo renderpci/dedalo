@@ -63,6 +63,8 @@ import { divertRetiredPropertyNotices } from '../ontology/retired_property_notic
 import { getServerState, statePath } from '../resolve/server_state.ts';
 import { DEDALO_VERSION } from '../update/version.ts';
 import type { InstallLockHandle, TargetDatabaseState } from './db_restore.ts';
+import type { DevCertificatePlan } from './dev_certificate.ts';
+import type { DevListenerPlan } from './dev_listener.ts';
 import {
 	type InstallAnswers,
 	type InstallPlan,
@@ -71,7 +73,7 @@ import {
 	type StepId,
 } from './install_plan.ts';
 import type { OntologyCatalog } from './ontology_choice.ts';
-import { installPrivateDir } from './paths.ts';
+import { devTlsDir, installPrivateDir } from './paths.ts';
 import { trackPsqlChildren } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 import type { RunIo } from './run_events.ts';
@@ -170,6 +172,18 @@ export interface ExecutorHost {
 	 * campaign 3e F5): the pids ended.
 	 */
 	endSeedRestore?(installId: string): Promise<number[]>;
+	/**
+	 * What the developer listener's address refuses right now (D3: a port in use,
+	 * the next free one suggested — dev_listener_check.ts; and a local authority
+	 * already there for other names); [] for a plan that opens none. The SAME
+	 * function the interactive Review asks. REQUIRED, not optional: a host
+	 * without it would answer "no refusal" silently and a fresh run would write
+	 * a .env whose `bun run dev` collides.
+	 */
+	devListenerRefusals(
+		listener: DevListenerPlan | null,
+		certificate: DevCertificatePlan | null,
+	): Promise<string[]>;
 }
 
 export interface ExecutorRequest {
@@ -238,7 +252,7 @@ function commandPrefix(): string {
 /** The lines that tell the operator how to resume or undo (the failure hint). */
 export function resumeHint(
 	plan: PlanFile,
-	_state: InstallState,
+	state: InstallState,
 	needed: readonly SecretKey[],
 ): string[] {
 	const secretsLine =
@@ -246,11 +260,18 @@ export function resumeHint(
 			? []
 			: [`    secrets needed again: ${needed.map((key) => SECRET_SOURCE[key]).join('; ')}`];
 	const db = String(plan.answers.db_database ?? '<db>');
+	// A step after the seal (the developer route's verify_dev_server) fails on a
+	// SEALED install, which --abort refuses (SEALED_REFUSAL): offering it there
+	// points the operator at a command that cannot work. An engine-only child's
+	// host may still attest an unserved seal (assertUnservedSeal), so it keeps it.
+	const sealed = recordedDone(state, 'install_finish') && plan.answers.engine_only !== true;
 	return [
 		`  Progress saved: ${join(installRunDir(), STATE_FILE)} (plan: ${PLAN_FILE})`,
 		`  Fix the cause, then resume:  ${againWith(plan, '--resume')}`,
 		...secretsLine,
-		`  Or undo this install:        ${againWith(plan, `--abort --confirm-database ${db}`)}`,
+		...(sealed
+			? []
+			: [`  Or undo this install:        ${againWith(plan, `--abort --confirm-database ${db}`)}`]),
 	];
 }
 
@@ -322,6 +343,10 @@ export function engineHost(appName: string): ExecutorHost {
 			const { databaseFingerprint } = await import('./served_guard.ts');
 			const { connFromConfig } = await import('./pg_exec.ts');
 			return databaseFingerprint(connFromConfig());
+		},
+		devListenerRefusals: async (listener, certificate) => {
+			const { devListenerRefusals } = await import('./dev_listener_check.ts');
+			return devListenerRefusals(listener, certificate);
 		},
 		endSeedRestore: async (installId) => {
 			const { endSeedRestore } = await import('./db_restore.ts');
@@ -395,6 +420,10 @@ const INTENT: Partial<Record<InstallStepId, (created: InstallState['created']) =
 	},
 	persist_config: (created) => {
 		created.env_file = true;
+	},
+	// The FIRST attempt decides: a retry finds the directory its own attempt made.
+	dev_tls_certificate: (created) => {
+		created.dev_tls_dir ??= !existsSync(devTlsDir());
 	},
 };
 
@@ -616,11 +645,26 @@ async function claimEmptyDatabase(ctx: RunContext, db: string): Promise<TargetDa
 	return target;
 }
 
+/**
+ * The developer listener's port must be free BEFORE anything is written (D3):
+ * a fresh install whose `bun run dev` would collide is refused with the next
+ * free port named, never moved to it silently.
+ */
+async function assertListenerFree(ctx: RunContext): Promise<void> {
+	const listener = ctx.request.plan?.devListener ?? null;
+	const refusals = await ctx.host.devListenerRefusals(
+		listener,
+		ctx.request.plan?.devCertificate ?? null,
+	);
+	refuseIf(refusals.length > 0, 'install.state_conflict', () => refusals.join('; '));
+}
+
 /** Every refusal of a fresh run happens here — before anything is written. */
 async function freshPreconditions(ctx: RunContext, plan: PlanFile): Promise<InstallPreflight> {
 	lockRunDir(ctx);
 	assertNoRecord();
 	await assertMachineReady(ctx);
+	await assertListenerFree(ctx);
 	const target = await claimEmptyDatabase(ctx, String(plan.answers.db_database ?? ''));
 	return freshPreflight(ctx, target);
 }

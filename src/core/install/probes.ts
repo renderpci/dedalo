@@ -415,7 +415,9 @@ export async function systemCheck(
 	const { runInitTest } = await import('./init_test.ts');
 	const { probePsql } = await import('./pg_bin.ts');
 	const { SEED_DUMP_PATH } = await import('./paths.ts');
-	const { DEDALO_VERSION } = await import('../update/version.ts');
+	// The installer's release identity, its kind said (`7.0.0-beta.7 (prerelease)`) — never the
+	// bare data version, which a beta shares with the stable release (C3i-F1).
+	const { installerVersionLabel } = await import('./installer_identity.ts');
 	const rows = systemCheckRows(
 		runInitTest((seams.psql ?? probePsql)()),
 		await hostInfo(route),
@@ -427,7 +429,7 @@ export async function systemCheck(
 		ok: failed === 0,
 		detail: failed === 0 ? 'system ready' : `${failed} check(s) failed`,
 		rows,
-		version: DEDALO_VERSION,
+		version: installerVersionLabel(),
 		seedPath: SEED_DUMP_PATH,
 	};
 }

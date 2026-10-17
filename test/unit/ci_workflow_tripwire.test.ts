@@ -3400,10 +3400,9 @@ describe('the official image (image-release.yml) is labelled from deploy/dedalo-
 			const local = Bun.spawnSync([
 				'bash',
 				'-c',
-				`. "${join(repoRoot, 'deploy', 'dedalo-image-lib.sh')}" && dedalo_image_labels "$1" "$2"`,
+				`. "${join(repoRoot, 'deploy', 'dedalo-image-lib.sh')}" && dedalo_image_labels "$1"`,
 				'labels',
 				repoRoot,
-				'localhost/dedalo:7.0.0',
 			])
 				.stdout.toString()
 				.split('\n');

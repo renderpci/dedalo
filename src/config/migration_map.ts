@@ -595,6 +595,8 @@ export const NEW_IN_V7: readonly string[] = [
 	'SERVER_UNIX_SOCKET',
 	'SERVER_TCP_PORT',
 	'SERVER_TCP_HOST',
+	'SERVER_TCP_TLS_CERT_FILE',
+	'SERVER_TCP_TLS_KEY_FILE',
 	'SERVER_MAX_BODY_BYTES',
 	'SERVER_IDLE_TIMEOUT_S',
 	'SERVER_SHUTDOWN_GRACE_MS',
@@ -822,6 +824,10 @@ export const NEW_IN_V7: readonly string[] = [
 	// scratch root + recording runner, and the drill's probe CA. New in v7.
 	'DEDALO_INSTALL_HOST_ROOT',
 	'DEDALO_INSTALL_PROBE_CA_FILE',
+	// The installer's release-identity pin (2026-10-15, release identity from the tag). New in v7.
+	'DEDALO_INSTALL_RELEASE_IDENTITY',
+	// The developer route's trust-store seam (2026-10-17): v6 installed no certificate authority. New in v7.
+	'DEDALO_TEST_TRUST_STORE_OFF',
 	// diffusion (the native engine)
 	'DEDALO_DIFFUSION_NATIVE',
 	'DEDALO_DIFFUSION_NATIVE_ELEMENTS',

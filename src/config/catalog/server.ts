@@ -217,21 +217,26 @@ SERVER_SHUTDOWN_GRACE_MS=10000
 		heading: 'Defining the development TCP port',
 		typeLabel: 'int',
 		typeSuffix: '(optional; development only)',
-		doc: `When set, the engine opens an **additional** plain-HTTP listener on this port, on top of
-the unix socket, and the client is reachable at \`http://localhost:<port>/dedalo/core/page/\`.
-It exists because a browser cannot talk to a unix socket directly, so a developer would
-otherwise need a web server in front of every local checkout.
+		doc: `When set, the engine opens an **additional** listener on this port, on top of the unix
+socket, and the client is reachable at \`http://localhost:<port>/dedalo/core/page/\` — or
+\`https://…\` when \`SERVER_TCP_TLS_CERT_FILE\` and \`SERVER_TCP_TLS_KEY_FILE\` give it a
+certificate. It exists because a browser cannot talk to a unix socket directly, so a
+developer would otherwise need a web server in front of every local checkout.
 
-Leave it **unset in production**. This listener terminates no TLS, and it is the only one
-that will serve media straight from the engine when media protection is unconfigured — with
-no per-record access control. A production install serves on the socket only, behind the
+Leave it **unset in production**. This listener is the only one that will serve media
+straight from the engine when media protection is unconfigured — with no per-record access
+control. A production install serves on the socket only, behind the
 reverse proxy that owns TLS, the static files and the media.
 
 \`\`\`bash
 SERVER_TCP_PORT=3000
 \`\`\`
 
-The listener binds to \`SERVER_TCP_HOST\`, which defaults to this machine only (\`127.0.0.1\`).`,
+The listener binds to \`SERVER_TCP_HOST\`, which defaults to this machine only (\`127.0.0.1\`).
+
+The developer route of the installer writes it (\`3500\` unless you choose another port) and,
+before it reports the install complete, starts \`bun run dev\` once and checks that this
+listener answers \`/health\` and a root login.`,
 	},
 	SERVER_TCP_HOST: {
 		type: 'string',
@@ -243,8 +248,8 @@ The listener binds to \`SERVER_TCP_HOST\`, which defaults to this machine only (
 		doc: `The address the development TCP listener (\`SERVER_TCP_PORT\`) binds to. Default
 \`127.0.0.1\`: only a browser on the same machine reaches it. A development install also
 shows full error details to the browser (\`DEDALO_DEBUG_API_ERRORS\`), and this listener
-has no TLS and no web server in front of it, so it is not opened to the network unless you
-say so.
+has no web server in front of it (and no TLS unless \`SERVER_TCP_TLS_CERT_FILE\` is set),
+so it is not opened to the network unless you say so.
 
 Set \`0.0.0.0\` (every IPv4 address) or one address of this machine only when another
 machine must reach the development server, and only on a network you trust. Ignored
@@ -252,6 +257,53 @@ without \`SERVER_TCP_PORT\`.
 
 \`\`\`bash
 SERVER_TCP_HOST=0.0.0.0
+\`\`\``,
+	},
+	SERVER_TCP_TLS_CERT_FILE: {
+		// Read with its pair by src/config/tcp_listener.ts (devTcpListener), which
+		// refuses a half pair and an unreadable file at boot — never a silent
+		// fall back to plain HTTP.
+		type: 'string',
+		scope: 'operator',
+		default: undefined,
+		heading: 'Serving the development listener over HTTPS',
+		typeLabel: 'path',
+		typeSuffix: '(optional; development only; set with SERVER_TCP_TLS_KEY_FILE)',
+		doc: `The certificate (PEM, the leaf first and then any intermediate certificate) the
+development TCP listener (\`SERVER_TCP_PORT\`) presents. With it and
+\`SERVER_TCP_TLS_KEY_FILE\` set, the listener speaks HTTPS and the boot log prints an
+\`https://\` address; with neither, it serves plain HTTP as before.
+
+Set **both or neither**: one without the other, a file the server cannot read, a file that
+is not a certificate, or a key that does not belong to the certificate refuses the boot
+with the key and the path named — the listener never falls back to plain HTTP behind your
+back. While the certificate has less than 30 days left, every boot warns and names
+\`bun run tls:renew\`. Ignored without \`SERVER_TCP_PORT\`: a server with no development
+listener does not read the pair, so a leftover line never stops it.
+
+The developer route of the installer writes both, pointing at the certificate it issues
+from the local certificate authority in \`../private/tls/\`. Leave both **unset in
+production**: there the reverse proxy owns TLS and the engine listens on its socket only.
+
+\`\`\`bash
+SERVER_TCP_TLS_CERT_FILE=/home/me/dedalo/private/tls/fullchain.pem
+\`\`\``,
+	},
+	SERVER_TCP_TLS_KEY_FILE: {
+		type: 'string',
+		scope: 'operator',
+		default: undefined,
+		heading: 'The private key of the development listener',
+		typeLabel: 'path',
+		typeSuffix: '(optional; development only; set with SERVER_TCP_TLS_CERT_FILE)',
+		doc: `The private key (PEM) of the certificate in \`SERVER_TCP_TLS_CERT_FILE\`. Keep the file
+readable by the account that runs the server and by nobody else (mode \`0600\`).
+
+Set **both or neither** — see \`SERVER_TCP_TLS_CERT_FILE\` for what a half pair, an
+unreadable file or a key of another certificate does at boot.
+
+\`\`\`bash
+SERVER_TCP_TLS_KEY_FILE=/home/me/dedalo/private/tls/privkey.pem
 \`\`\``,
 	},
 	SERVER_UNIX_SOCKET: {

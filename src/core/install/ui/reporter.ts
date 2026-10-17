@@ -12,7 +12,7 @@
 import { sanitizeLine } from '../display_text.ts';
 import { interactiveSuggestion } from '../install_plan.ts';
 import type { RunReporter } from '../run_events.ts';
-import { todoLines } from '../ui_plain/reporter.ts';
+import { servedLines, todoLines } from '../ui_plain/reporter.ts';
 import type { App } from './app.ts';
 import type { DoneModel } from './screens/done.ts';
 import { applyStepEvent } from './screens/install.ts';
@@ -90,7 +90,10 @@ export function tuiReporter(app: App, showDone: ShowDone): RunReporter {
 				},
 				outcome.exitCode,
 				// Left on the main screen after the UI closes: the To-do too (campaign 3c D5).
-				outcome.exitCode === 0 ? todoLines(context.ending) : [...outcome.hint],
+				// …and the developer route's served block: the URL must outlive the UI (TODO-053).
+				outcome.exitCode === 0
+					? [...servedLines(context.ending), ...todoLines(context.ending)]
+					: [...outcome.hint],
 			);
 		},
 	};
