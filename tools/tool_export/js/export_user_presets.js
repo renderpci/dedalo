@@ -216,6 +216,9 @@ export const apply_export_preset = async function(options) {
 			self.ar_ddo_to_export.push(ddo)
 		}
 
+	// phone up/down buttons follow the rebuilt order
+		self.update_phone_reorder_state()
+
 	// data_format
 		if (config.data_format && ['value','grid_value','dedalo_raw'].includes(config.data_format)) {
 			self.data_format = config.data_format

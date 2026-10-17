@@ -982,6 +982,26 @@
 		}
 	}//end dd-modal.dd_confirm
 
+// dd-modal.dd_presets
+// The per-user preset editors (export presets dd1781, search presets dd623):
+// a narrow form card on a desktop, the FULL sheet on a phone — the two-column
+// form needs the room there. Declarative (`::part`), like dd_confirm, and NOT an
+// imperative `modal_content.style.width`: an inline width beats the shadow's
+// 600px full-sheet tier, which is exactly how this dialog opened half-width.
+	dd-modal.dd_presets {
+
+		&::part(content) {
+			width: 20rem;
+			max-width: 92vw;
+
+			// the phone sheet is full width, like every other modal there
+			@media screen and (max-width: @width_break_point_phone) {
+				width: 100vw;
+				max-width: 100vw;
+			}
+		}
+	}//end dd-modal.dd_presets
+
 // disabled_component
 	.disabled_component {
 		// pointer-events: none !important;

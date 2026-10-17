@@ -50,6 +50,12 @@
 		on_drop,
 		set_sort_payload
 	} from './drag_tool_export.js'
+	import {
+		on_component_row,
+		add_export_component_from_row,
+		move_export_component,
+		update_phone_reorder_state
+	} from './phone_tool_export.js'
 
 
 
@@ -131,6 +137,12 @@ export const tool_export = function () {
 	tool_export.prototype.on_drop						= on_drop
 	tool_export.prototype.on_dragend					= on_dragend
 	tool_export.prototype.set_sort_payload				= set_sort_payload
+	// phone gestures (touch twins of the two drags): add via a tap "+", reorder
+	// via up/down buttons. See phone_tool_export.js
+	tool_export.prototype.on_component_row				= on_component_row
+	tool_export.prototype.add_export_component_from_row	= add_export_component_from_row
+	tool_export.prototype.move_export_component			= move_export_component
+	tool_export.prototype.update_phone_reorder_state	= update_phone_reorder_state
 
 
 

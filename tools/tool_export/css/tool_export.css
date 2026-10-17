@@ -216,6 +216,25 @@
   outline: 2px dashed var(--tool_export_fill);
   outline-offset: -2px;
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component > .button.close {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+    flex: 0 0 44px;
+    -webkit-mask-size: 1.15rem;
+    mask-size: 1.15rem;
+    -webkit-mask-position: center;
+    mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .selection_list_contaniner .user_selection_list > .export_component > .export_component_parents {
+    min-height: 44px;
+    padding-right: 0.5rem;
+  }
+}
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config {
   background-color: var(--color_grey_16);
   padding: 1em;
@@ -581,6 +600,24 @@
   z-index: 3;
   clip-path: inset(0 100% 0 0);
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header {
+    min-height: 44px;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header > .export_presets_new,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_header > .export_presets_toggle {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .options_to_check > .check_label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    grid-column: 1 / -1;
+  }
+}
 .wrapper_tool.tool_export > .content_data > .export_buttons_options {
   width: 100%;
   margin-top: 1em;
@@ -677,6 +714,14 @@
   border: 1px solid var(--color_grey_13);
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_export > .content_data > .export_data_container {
+    max-width: 100%;
+  }
+  .wrapper_tool.tool_export > .content_data > .export_data_container:empty {
+    display: none;
+  }
 }
 .wrapper_tool.tool_export > .content_data > .export_data_container .export_column_pager {
   position: sticky;
@@ -789,10 +834,135 @@
 .wrapper_tool.tool_export > .content_data > .export_data_container .export_flat_table td a:hover {
   text-decoration: underline;
 }
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_export .user_selection_list > .export_component {
+    gap: 0.25rem;
+  }
+  .wrapper_tool.tool_export .user_selection_list > .export_component > .component_label {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow-wrap: anywhere;
+  }
+}
 .wrapper_tool.tool_export .select_style {
   width: fit-content;
   height: 2em;
   font-size: 0.8em;
+}
+@media screen and (max-width: 960px) {
+  @keyframes tool_export_level_in_forward {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @keyframes tool_export_level_in_back {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container {
+    overflow: hidden;
+    display: block;
+    width: 100%;
+    max-width: 100%;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container > .target_list_container:empty {
+    display: none;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container .list_container:not(.target_list_container):has( ~ .target_list_container:not(:empty)) {
+    display: none;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul.list_container,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul.target_list_container {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    max-height: 50vh;
+    border-left: none;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label.deep_path {
+    padding-right: 1.6rem;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label.deep_path > .section_bar_full_path {
+    display: block;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    direction: rtl;
+    text-align: left;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label.deep_path > .section_bar_section_name {
+    display: none;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label.deep_path:after {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    float: none;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul.target_list_container.level_slide_forward {
+    animation: tool_export_level_in_forward 200ms ease-out both;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul.list_container.level_slide_back {
+    animation: tool_export_level_in_back 200ms ease-out both;
+  }
+}
+@media (pointer: coarse) {
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label.deep_path,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_group_label {
+    box-sizing: border-box;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label:after,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label.deep_path:after {
+    position: static;
+    float: none;
+    top: auto;
+    right: auto;
+    transform: none;
+    display: flex;
+    flex: 0 0 44px;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    line-height: 1;
+    margin: 0;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label.close_hide:after {
+    display: none;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label,
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label.deep_path {
+    padding-left: 0.75rem;
+    padding-right: 0;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label.deep_path > .section_bar_full_path {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_bar_label > .section_bar_section_name {
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .wrapper_tool.tool_export > .content_data > .grid_top > .components_list_container ul li.section_group_label.closed:after {
+    top: 50%;
+    transform: translateY(-50%);
+  }
 }
 .tool_export_modal .quality_selector {
   margin: 1rem;

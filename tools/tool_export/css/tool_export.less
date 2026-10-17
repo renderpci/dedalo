@@ -279,6 +279,31 @@
 							outline: 2px dashed var(--tool_export_fill);
 							outline-offset: -2px;
 						}
+
+						// phone: the remove ✕ and the per-column parents toggle are
+						// 44px tap targets — the ✕ is the only way to drop a column
+						// (WCAG 2.5.5; the shared tier does not reach either).
+						@media screen and (max-width: @width_break_point_phone) {
+							>.button.close {
+								// 44px TARGET, small glyph: the mask icon would
+								// otherwise fill the box and out-shout the ▲▼
+								width: 44px;
+								min-width: 44px;
+								height: 44px;
+								min-height: 44px;
+								flex: 0 0 44px;
+								-webkit-mask-size: 1.15rem;
+										mask-size: 1.15rem;
+								-webkit-mask-position: center;
+										mask-position: center;
+								-webkit-mask-repeat: no-repeat;
+										mask-repeat: no-repeat;
+							}
+							>.export_component_parents {
+								min-height: 44px;
+								padding-right: 0.5rem;
+							}
+						}
 					}
 				}
 			}//end .user_selection_list
@@ -748,6 +773,30 @@
 						}
 					}
 				}
+			// ── phone: the panel's tap targets the shared tier cannot reach (they
+			// are spans, not buttons). Same 44px line as the field rows (WCAG 2.5.5).
+			@media screen and (max-width: @width_break_point_phone) {
+				// preset panel header (the collapse target) and its + / chevron
+				>.export_presets >.export_presets_header {
+					min-height: 44px;
+
+					>.export_presets_new,
+					>.export_presets_toggle {
+						width: 44px;
+						height: 44px;
+						flex: 0 0 44px;
+					}
+				}
+				// the option checkboxes: ONE 44px tap line each (the base collapses
+				// the label with display:contents, leaving a ~15px target)
+				>.options_to_check >.check_label {
+					display: flex;
+					align-items: center;
+					gap: 0.5rem;
+					min-height: 44px;
+					grid-column: 1 / -1;
+				}
+			}
 			}//end .export_buttons_config
 		}//end .grid_top
 
@@ -866,6 +915,21 @@
 			border: 1px solid @color_grey_13;
 			border-radius: 8px;
 			box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+
+			// phone: the preview fills its panel. The `calc(100vw - 3rem)` cap is
+			// a desktop guard against the sideways page scroll the table can
+			// cause; on a phone it just left a 3rem dead band on the right while
+			// the pager beside it ran full width. The table still scrolls inside
+			// its own box.
+			@media screen and (max-width: @width_break_point_phone) {
+				max-width: 100%;
+
+				// with nothing exported yet the box is a 40vh blank panel that
+				// reads as a broken area; it takes no space until it holds a page
+				&:empty {
+					display: none;
+				}
+			}
 
 			// export_column_pager. A wide export's column window ('Columns 101–200
 			// of 4,000' + prev/next), above the table; sticks left while the
@@ -1012,6 +1076,31 @@
 		}//end .export_data_container
 	}//end >.content_data
 
+	// ------------------------------------------------------------------
+	// PHONE — the fields picker (render_common.js) and the column list
+	// ------------------------------------------------------------------
+
+	// 1. add. The row "+" is the SHARED fields-picker control (class
+	// `add_field_button`, row marker `has_add_button`): its 44px row styling
+	// lives ONCE, in the fields-picker sheet — search.less' `.components_list_container`
+	// block, loaded by main.css on every page. The tool renders the same control
+	// (phone_tool_export.js), so nothing is restated here.
+
+	// 2. reorder. The up/down buttons (tools_common/js/phone_reorder.js) are
+	// always in the row and shown only at the phone tier; the row must then make
+	// room for them and let the label shrink instead of overflowing.
+	.user_selection_list >.export_component {
+		@media screen and (max-width: @width_break_point_phone) {
+			gap: 0.25rem;
+
+			>.component_label {
+				min-width: 0;
+				flex: 1 1 auto;
+				overflow-wrap: anywhere;
+			}
+		}
+	}
+
 	// select style
 	.select_style {
 		width: fit-content;
@@ -1019,6 +1108,173 @@
 		font-size: 0.80em;
 	}
 }//end .wrapper_tool.tool_export
+
+
+// ── THE FIELDS PICKER ON A PHONE ─────────────────────────────────────────────
+// render_components_list (core/common/js/render_common.js) is SHARED by the
+// search pane and this tool. Its phone presentation — a drilled level REPLACES
+// its parent and slides in, its header carries the navigation path — is stated
+// in search.less SCOPED TO THE SEARCH PANEL, so the tool states the same
+// presentation for its own picker: the two consumers stay coherent. Scoped to
+// `.components_list_container` (the picker), keyframes the tool's own (the
+// search pair is search-scoped).
+@media screen and (max-width: @width_break_point_1) {
+	@keyframes tool_export_level_in_forward {
+		from { transform: translateX(100%); }
+		to   { transform: translateX(0); }
+	}
+	@keyframes tool_export_level_in_back {
+		from { transform: translateX(-100%); }
+		to   { transform: translateX(0); }
+	}
+
+	// the exact DOM chain (the base picker rules are nested this deep, so these
+	// must match it and sit later to win)
+	.wrapper_tool.tool_export >.content_data >.grid_top >.components_list_container {
+		// clip the entering level's off-screen start edge
+		overflow: hidden;
+
+		// ONE full-width column. The desktop keeps the two levels side by side
+		// (layout.less: `display: flex; width: fit-content` on this container,
+		// each level a column), so unless the CONTAINER itself becomes a
+		// full-width block the single list fills only its own column — half the
+		// panel, the other half the empty drill column (the phone straggler).
+		display: block;
+		width: 100%;
+		max-width: 100%;
+
+		// no drilled level: the empty child column takes no room
+		>.target_list_container:empty {
+			display: none;
+		}
+
+		// a drilled child level REPLACES its parent (its × returns): ONE column,
+		// not the desktop's side-by-side drill columns
+		.list_container:not(.target_list_container):has(~ .target_list_container:not(:empty)) {
+			display: none;
+		}
+
+		// every level is one full-width, bounded, scrollable list
+		ul.list_container,
+		ul.target_list_container {
+			display: block;
+			width: 100%;
+			max-width: 100%;
+			max-height: 50vh;
+			border-left: none;
+		}
+
+		// the drilled level's header carries the PATH ("People / Projects") — the
+		// context the replaced parent columns used to give. The deeper terms are
+		// the meaningful ones, so an overlong path ellipsizes on the LEFT.
+		ul li.section_bar_label.deep_path {
+			padding-right: 1.6rem; // room for the ×
+			>.section_bar_full_path {
+				display: block;
+				overflow: hidden;
+				white-space: nowrap;
+				text-overflow: ellipsis;
+				direction: rtl;    // puts the ellipsis on the LEFT
+				text-align: left;
+			}
+			>.section_bar_section_name {
+				display: none; // the standalone name is the desktop label
+			}
+			// the × is an ::after float (layout.less); lift it out of the text
+			// flow so the single-line path can ellipsize up to it
+			&:after {
+				position: absolute;
+				right: 0.5rem;
+				top: 50%;
+				transform: translateY(-50%);
+				float: none;
+			}
+		}
+
+		// the entering/returning level slides (render_common play_level_transition)
+		ul.target_list_container.level_slide_forward {
+			animation: tool_export_level_in_forward 200ms ease-out both;
+		}
+		ul.list_container.level_slide_back {
+			animation: tool_export_level_in_back 200ms ease-out both;
+		}
+	}
+}
+
+// The bars take the field rows' own 44px line (borders included), and their one
+// control — the × that leaves a level, the arrow that folds a group — the same
+// trailing tap column as the rows' "+" (WCAG 2.5.5). Gated by the POINTER, not a
+// width, so it can never disagree with the rows (search does the same).
+@media (pointer: coarse) {
+	.wrapper_tool.tool_export >.content_data >.grid_top >.components_list_container {
+		ul li.section_bar_label,
+		ul li.section_bar_label.deep_path,
+		ul li.section_group_label {
+			box-sizing: border-box;
+			min-height: 44px; // @phone_hit_target (tools_common/css/tool_responsive.less)
+			display: flex;
+			align-items: center;
+			padding-top: 0;
+			padding-bottom: 0;
+		}
+
+		// the × is the header's LAST flex item — a tap column as wide as the row
+		// is tall. The compact placement is reset: a surviving translateY would
+		// drag the glyph off its centre.
+		ul li.section_bar_label:after,
+		ul li.section_bar_label.deep_path:after {
+			position: static;
+			float: none;
+			top: auto;
+			right: auto;
+			transform: none;
+			display: flex;
+			flex: 0 0 44px;
+			align-items: center;
+			justify-content: center;
+			width: 44px;
+			height: 44px;
+			line-height: 1;
+			margin: 0;
+		}
+
+		// root depth has nothing to go back to: render_common marks that bar
+		// `close_hide` and layout.less hides the ×
+		ul li.section_bar_label.close_hide:after {
+			display: none;
+		}
+
+		// the header's text column: aligned with the rows' labels, no right pad —
+		// the × column is flush with the rows' "+" column
+		ul li.section_bar_label,
+		ul li.section_bar_label.deep_path {
+			padding-left: 0.75rem;
+			padding-right: 0;
+		}
+
+		// a flex item will not shrink below its content unless told to: without
+		// this the path overflows past the × instead of ellipsizing
+		ul li.section_bar_label.deep_path >.section_bar_full_path {
+			flex: 1 1 auto;
+			min-width: 0;
+		}
+
+		// the level's own name (root depth): one line, stops before the ×
+		ul li.section_bar_label >.section_bar_section_name {
+			min-width: 0;
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+		}
+
+		// the group label's disclosure arrow rides the same line: centred, not
+		// pinned near the top of a band that just grew (layout.less: top 0.33rem)
+		ul li.section_group_label.closed:after {
+			top: 50%;
+			transform: translateY(-50%);
+		}
+	}
+}
 
 
 // tool_export_modal

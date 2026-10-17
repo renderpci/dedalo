@@ -43,7 +43,7 @@ The export pipeline resolves each cell through the **list-mode leaf-value contra
 - `tool_export.js` is the instance and the wire (`start_export_job`, `get_export_preview`, `list_export_jobs`, `delete_export_job`, `start_export_file`, `stop_export_process`). Reads are sent with `retries: 2`; background submissions and the delete with `retries: 0`.
 - `render_tool_export.js` builds the three-pane UI and runs the export. Export submits the job and follows it through `job_follow.js`. The preview is one page with a pager and a page-size select (25/50/100/200). Download buttons are enabled once the export ends. Opening the tool reconnects to the caller's latest export of the section.
 - `flat_table.js` only draws one page; it holds no accumulator and builds no files.
-- `drag_tool_export.js` is the drag-and-drop column model.
+- `drag_tool_export.js` is the drag-and-drop column model. `phone_tool_export.js` is its touch twin (a finger cannot drag): a tap-to-add `+` on each available field and up/down buttons on each selected column, both routed through the same drop model (`render_phone_reorder`, `tools_common/js/phone_reorder.js`).
 - `export_user_presets.js` manages the per-user presets (section **dd1781**).
 
 The DOM never holds more than one page (at most 200 records), whatever the size of the export. The tool opens in its own window (`properties.open_as = "window"`).
@@ -229,4 +229,4 @@ A component with [dataframe](../../../core/components/component_dataframe.md) sl
 - [Export user guide](../../../tools/using_export.md) · [Exporting data](../../../core/exporting_data.md) — the end-user + developer guide for this tool (UI walkthrough, formats, breakdown, presets, NDJSON protocol, downloads, retention).
 - [tool_import_dedalo_csv](tool_import_dedalo_csv.md) — consumes the `dedalo_raw` export (loading edited cells back, not a restore); see [Importing data](../../../core/importing_data.md).
 - [Creating new tools](../creating_tools.md) · [Server contract](../server_contract.md) — the tool model, `apiActions`, gates and lifecycle this page builds on.
-- Source: `tools/tool_export/server/{index,tool_export,export_job,preview,download,access,artifact_store,spool_reader}.ts`, `tools/tool_export/server/writers/`, `tools/tool_export/register.json`, `tools/tool_export/js/{tool_export,render_tool_export,flat_table,drag_tool_export,export_user_presets}.js`; the reused resolution core: `src/core/resolve/relation_list.ts`.
+- Source: `tools/tool_export/server/{index,tool_export,export_job,preview,download,access,artifact_store,spool_reader}.ts`, `tools/tool_export/server/writers/`, `tools/tool_export/register.json`, `tools/tool_export/js/{tool_export,render_tool_export,flat_table,drag_tool_export,phone_tool_export,export_user_presets}.js`; the reused resolution core: `src/core/resolve/relation_list.ts`.

@@ -549,8 +549,9 @@ export const render_column_id = function(options) {
 * using dd_request_idle_callback to avoid a focus race with the CSS transition
 * of the modal opening animation.
 *
-* The modal width is overridden to 20rem via a dd_modal callback because the
-* default small modal is wider than needed for a few-field form.
+* The modal carries the `dd_presets` class: layout.less sizes it (a 20rem card
+* on a desktop, the full sheet on a phone) — no imperative inline width, which
+* would beat the phone tier.
 *
 * @param {Object}        options            - Options bag.
 * @param {Object}        options.caller     - The section instance (presets list).
@@ -579,7 +580,10 @@ export const render_preset_modal = function (options) {
 			footer		: null,
 			size		: 'small',
 			callback	: (dd_modal) => {
-				dd_modal.modal_content.style.width = '20rem'
+				// `dd_presets` carries the width (layout.less `::part(content)`):
+				// 20rem on a desktop, the full sheet on a phone. An inline width
+				// here would defeat the phone tier.
+				dd_modal.classList.add('dd_presets')
 			},
 			on_close	: on_close
 		})

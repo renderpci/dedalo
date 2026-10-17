@@ -72,6 +72,8 @@
 
 // imports
 	import {render_components_list} from '../../../core/common/js/render_common.js'
+	import {render_phone_reorder} from '../../../core/tools_common/js/phone_reorder.js'
+	import {is_touch} from '../../../core/common/js/touch_pick.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {request_failed, response_data, response_extension, normalize_stream_error} from '../../../core/common/js/api_error.js'
 	import {error_text, error_debug_suffix} from '../../../core/common/js/render_api_error.js'
@@ -304,10 +306,15 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'empty_space',
 			parent			: selection_list_contaniner
 		})
+		// the empty-state hint must name the gesture the user HAS. On a touch
+		// screen the fields carry a "+" (a finger cannot drag), so a "drag a field
+		// here" hint would be a dead instruction; it points at the "+" instead.
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'drop_hint',
-			text_content	: get_label.drop_field_here || 'Drag a field here',
+			text_content	: is_touch()
+				? '＋ ' + (get_label.add_field || 'Add field')
+				: (get_label.drop_field_here || 'Drag a field here'),
 			parent			: empty_space
 		})
 
@@ -343,6 +350,8 @@ const get_content_data_edit = async function(self) {
 							user_selection_list.appendChild(export_component_node)
 							// Update the ddo_export
 							self.ar_ddo_to_export.push(ddo)
+							// phone up/down buttons follow the order
+							self.update_phone_reorder_state()
 						})
 					}
 					if(SHOW_DEBUG===true) {
@@ -689,6 +698,9 @@ const get_content_data_edit = async function(self) {
 
 							// save local db data
 							self.update_local_db_data()
+
+							// phone up/down buttons follow the order
+							self.update_phone_reorder_state()
 						})
 				}//end for (let i = 0; i < ar_components_length; i++)
 			})
@@ -3014,6 +3026,22 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 			self.update_local_db_data()
 		})
 
+	// phone reorder. Drag-sort is desktop-only; at the phone tier (CSS:
+	// tools_common/css/tool_responsive.less) these up/down buttons show instead
+	// and perform the SAME move (move_export_component). The initial
+	// is_first/is_last are corrected by update_phone_reorder_state after every
+	// list mutation (called at the end of sync_ar_ddo_to_export).
+		const phone_reorder = render_phone_reorder({
+			labels	: {
+				up		: self.get_tool_label('move_up') || 'Move up',
+				down	: self.get_tool_label('move_down') || 'Move down'
+			},
+			on_move	: (direction) => self.move_export_component(export_component, direction)
+		})
+		// BEFORE the close ✕, so the row reads label · parents · ▲▼ · ✕
+		// (remove at the trailing edge, as elsewhere)
+		export_component.insertBefore(phone_reorder, export_component_button_close)
+
 
 	return export_component
 }//end build_export_component
@@ -3117,6 +3145,9 @@ render_tool_export.prototype.sync_ar_ddo_to_export = function() {
 	self.ar_ddo_to_export = [...container.children]
 		.filter(node => node.classList && node.classList.contains('export_component') && node.ddo)
 		.map(node => node.ddo)
+
+	// the phone up/down buttons' first/last disabled state follows the order
+	self.update_phone_reorder_state()
 }//end sync_ar_ddo_to_export
 
 

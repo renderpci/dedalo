@@ -26,6 +26,10 @@
  *    (below the last row = after it, never before), a duplicate shows no marker
  *    and is refused, a sort onto its own position is a no-op, and the drop
  *    lands exactly where the marker was.
+ *
+ * 5. The PHONE GESTURES (phone_tool_export.js): a tap-to-add "+" builds the
+ *    same column the drag does (append, duplicate refused), and the up/down
+ *    reorder buttons perform the same move the sort drop does.
  */
 
 import {tool_export} from '../../../tools/tool_export/js/tool_export.js'
@@ -45,6 +49,13 @@ import {
 	on_drop,
 	set_sort_payload
 } from '../../../tools/tool_export/js/drag_tool_export.js'
+import {
+	render_add_column_button,
+	add_export_component_from_row,
+	move_export_component,
+	update_phone_reorder_state
+} from '../../../tools/tool_export/js/phone_tool_export.js'
+import {render_phone_reorder} from '../../../core/tools_common/js/phone_reorder.js'
 
 
 
@@ -1627,6 +1638,129 @@ describe('TOOL_EXPORT DROP MODEL (one zone, one marker)', function() {
 		on_dragend.call(self)
 		assert.equal(list.querySelector('.drop_marker'), null)
 		assert.equal(self.drag_payload, null)
+	})
+})
+
+describe('TOOL_EXPORT PHONE GESTURES (tap to add, buttons to reorder)', function() {
+
+	// The touch twins of the two drags (phone_tool_export.js). The same fake
+	// tool the DROP MODEL uses, plus the phone methods under test.
+	let list, self
+
+	const make_row = (id) => {
+		const node = document.createElement('div')
+		node.className = 'export_component'
+		node.textContent = id
+		node.ddo = {id, tipo: id, lang: 'lg-eng'}
+		// the phone reorder control every selected row carries
+		// (build_export_component)
+		node.appendChild(render_phone_reorder({
+			labels	: {up: 'Up', down: 'Down'},
+			on_move	: (direction) => self.move_export_component(node, direction)
+		}))
+		return node
+	}
+	const order = () => [...list.children]
+		.filter(n => n.classList.contains('export_component'))
+		.map(n => n.ddo.id)
+
+	before(function() {
+		list = document.createElement('div')
+		document.body.appendChild(list)
+	})
+	after(function() {
+		list.remove()
+	})
+
+	const reset = () => {
+		list.replaceChildren()
+		self = {
+			user_selection_list		: list,
+			compose_id				: (ddo) => ddo.tipo,
+			on_drop					: on_drop,
+			sync_ar_ddo_to_export() { this.synced = order() },
+			update_local_db_data() { this.saved = true },
+			build_export_component	: async (ddo) => make_row(ddo.id),
+			add_export_component_from_row	: add_export_component_from_row,
+			move_export_component			: move_export_component,
+			update_phone_reorder_state		: update_phone_reorder_state
+		}
+	}
+
+	it('the "+" adds a column through the one drop path (append)', async function() {
+		reset()
+		const row = document.createElement('li')
+		row.ddo = {tipo: 'new', lang: 'lg-eng', label: 'new'}
+
+		let added = 0
+		const button = render_add_column_button({
+			label		: 'Add column',
+			field_label	: 'New',
+			on_add		: () => {
+				added++
+				self.add_export_component_from_row(row, [])
+			}
+		})
+		assert.equal(button.type, 'button', 'a real button')
+		assert.equal(button.getAttribute('aria-label'), 'Add column: New', 'accessible name')
+
+		button.click()
+		assert.equal(added, 1, 'the tap fires the add once')
+		await new Promise(resolve => setTimeout(resolve, 0))
+		assert.deepEqual(order(), ['new'], 'the column landed (append)')
+		assert.deepEqual(self.synced, ['new'], 'the order is synced from the DOM')
+		assert.equal(self.saved, true, 'persisted')
+	})
+
+	it('requires on_add', function() {
+		assert.throws(() => render_add_column_button({label: 'x'}))
+	})
+
+	it('a duplicate tap is refused and points at the existing row', function() {
+		reset()
+		list.appendChild(make_row('a'))
+		const row = document.createElement('li')
+		row.ddo = {tipo: 'a', lang: 'lg-eng'}
+
+		assert.equal(add_export_component_from_row.call(self, row, []), false, 'no second column')
+		assert.deepEqual(order(), ['a'])
+		assert.ok(list.children[0].classList.contains('drop_duplicate'), 'the existing row is pointed at')
+	})
+
+	it('move_export_component reorders and syncs (the same move the sort drop does)', function() {
+		reset()
+		list.append(make_row('a'), make_row('b'), make_row('c'))
+		const rows = [...list.children]
+
+		assert.equal(self.move_export_component(rows[0], 1), true, 'a moves down')
+		assert.deepEqual(order(), ['b', 'a', 'c'])
+		assert.deepEqual(self.synced, ['b', 'a', 'c'], 'synced')
+		assert.equal(self.saved, true, 'persisted')
+
+		self.move_export_component(rows[0], -1)
+		assert.deepEqual(order(), ['a', 'b', 'c'], 'and back up')
+	})
+
+	it('an out-of-range move is a no-op (first cannot go up, last cannot go down)', function() {
+		reset()
+		list.append(make_row('a'), make_row('b'))
+		const [first, last] = [...list.children]
+
+		assert.equal(self.move_export_component(first, -1), false)
+		assert.equal(self.move_export_component(last, 1), false)
+		assert.deepEqual(order(), ['a', 'b'])
+	})
+
+	it('update_phone_reorder_state disables the two ends', function() {
+		reset()
+		list.append(make_row('a'), make_row('b'), make_row('c'))
+		self.update_phone_reorder_state()
+
+		const ends = [...list.children].map(row => {
+			const [up, down] = row.querySelectorAll('.phone_reorder > .phone_reorder_btn')
+			return [up.disabled, down.disabled]
+		})
+		assert.deepEqual(ends, [[true, false], [false, false], [false, true]])
 	})
 })
 

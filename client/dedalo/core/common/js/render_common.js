@@ -145,12 +145,14 @@ export const render_components_list = function(options) {
 					parent			: list_container
 				})
 				if (ar_section_path.length > 0) {
-					// deep level: the path is rendered on the phone (see search.less)
+					// deep level: the path is rendered on the phone (see search.less).
+					// It is PLAIN TEXT (strip_tags) — text_content, never inner_html:
+					// a breadcrumb is data, and the render boundary has ONE escaper.
 					section_bar.classList.add('deep_path')
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'section_bar_full_path',
-						inner_html		: ar_path_labels.map(strip_tags).join(' / '),
+						text_content	: ar_path_labels.map(strip_tags).join(' / '),
 						parent			: section_bar
 					})
 				}
