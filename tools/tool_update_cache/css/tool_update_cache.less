@@ -243,11 +243,6 @@
 	@media screen and (max-width: @width_break_point_phone) {
 
 		>.content_data {
-			// The shared phone padding (tool_responsive.less) is imported ABOVE
-			// tool_common's own `.wrapper_tool > .content_data` padding in
-			// main.css, so the base rule wins the cascade and that padding never
-			// lands on any tool. State it here, where it can be read.
-			padding: 0.5rem;
 
 			.section_info {
 				>.section_name,

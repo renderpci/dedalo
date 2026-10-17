@@ -140,9 +140,6 @@
   padding-left: 0px;
 }
 @media screen and (max-width: 600px) {
-  .wrapper_tool.tool_update_cache > .content_data {
-    padding: 0.5rem;
-  }
   .wrapper_tool.tool_update_cache > .content_data .section_info > .section_name,
   .wrapper_tool.tool_update_cache > .content_data .section_info > .section_tipo {
     font-size: 1.25rem;
