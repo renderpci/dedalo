@@ -21129,7 +21129,7 @@ body.inspector_resizing {
     box-shadow: 0 0 0 6px var(--color_hilite_yellow);
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
+    box-shadow: 0 0 0 0 transparent;
   }
 }
 .wrap_ts_object > .content_data > .elements_container .button_show_indexations,
