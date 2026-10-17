@@ -34,6 +34,14 @@
 
 import { check_password } from '../../../client/dedalo/core/component_password/js/password_policy.js';
 import masterLabels from '../labels/master.json';
+import { devTrustReviewText } from './dev_certificate.ts';
+import {
+	DEV_HOST_DEFAULT,
+	DEV_HOST_NETWORK,
+	devListenerNetworkWarning,
+	devListenerPlan,
+	priorTlsPair,
+} from './dev_listener.ts';
 import { CORE_HIERARCHIES, type hierarchyChoiceView } from './hierarchy_meta.ts';
 import type { IdentityVerdict } from './host/production/identity_rules.ts';
 import { identityLines } from './identity_verdict.ts';
@@ -92,6 +100,7 @@ export type ScreenId =
 	| 'tls_address'
 	| 'containers'
 	| 'identity'
+	| 'dev_server'
 	| 'web_tls'
 	| 'services'
 	| 'ontologies'
@@ -154,11 +163,14 @@ export const SCREEN_ORDER: Readonly<Record<InstallRoute, readonly ScreenId[]>> =
 		'administrator',
 		'review',
 	] as const),
+	// The development server after the identity (DEV_ROUTE_SERVE §1.1): where
+	// `bun run dev` serves the browser, and over which transport.
 	developer: Object.freeze([
 		'route',
 		'system',
 		'database',
 		'identity',
+		'dev_server',
 		'ontologies',
 		'thesauri',
 		'languages',
@@ -213,6 +225,14 @@ const NOT_PRODUCTION =
 const NOT_STACK = 'only the docker and trial routes run an image';
 const NO_INSTANCE_DIR =
 	'only a production install has an install folder and service account of its own';
+const NO_DEV_LISTENER =
+	'only a checkout opens the development listener (`bun run dev`); this route is served by its web server';
+
+/** The developer listener's answers no other route asks. */
+const DEV_LISTENER_FIXED: Readonly<Record<string, string>> = Object.freeze({
+	dev_port: NO_DEV_LISTENER,
+	dev_host: NO_DEV_LISTENER,
+});
 
 /** The production identity answers no other route asks. */
 const IDENTITY_FIXED: Readonly<Record<string, string>> = Object.freeze({
@@ -228,11 +248,8 @@ const DEVELOPER_HOST_KEYS: Readonly<Record<string, string>> = Object.freeze({
 	server_name: NO_HOST_STEPS,
 	http_port: NO_HOST_STEPS,
 	https_port: NO_HOST_STEPS,
-	tls_mode: NO_HOST_STEPS,
 	tls_extra_names: NO_HOST_STEPS,
 	letsencrypt_email: NO_HOST_STEPS,
-	tls_cert_path: NO_HOST_STEPS,
-	tls_key_path: NO_HOST_STEPS,
 	db_mode: NO_HOST_STEPS,
 	backup_dir: NO_HOST_STEPS,
 	image_source: NO_HOST_STEPS,
@@ -257,6 +274,7 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 			image_source: NOT_STACK,
 			image_repository: NOT_STACK,
 			image_version: NOT_STACK,
+			...DEV_LISTENER_FIXED,
 		}),
 		developer: Object.freeze({
 			instance: NO_INSTANCE,
@@ -279,6 +297,7 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 			db_password: NOTICE_STACK_DB_PASSWORD,
 			...STACK_PRODUCTION_KEYS,
 			...IDENTITY_FIXED,
+			...DEV_LISTENER_FIXED,
 		}),
 		trial: Object.freeze({
 			instance: NO_INSTANCE,
@@ -300,6 +319,7 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 			tls_cert_path: TRIAL_NO_TLS,
 			tls_key_path: TRIAL_NO_TLS,
 			https_port: TRIAL_NO_TLS,
+			...DEV_LISTENER_FIXED,
 		}),
 	});
 
@@ -502,6 +522,7 @@ function tlsModeOf(raw: Readonly<Record<string, unknown>>, route: InstallRoute |
 	if (typeof given === 'string' && given !== '') return given;
 	return route === 'trial' ? 'none' : 'letsencrypt';
 }
+const onDeveloper = (_raw: unknown, route: InstallRoute | null): boolean => route === 'developer';
 const diffusionOn = (raw: Readonly<Record<string, unknown>>): boolean => raw.diffusion === true;
 const mailerOn = (raw: Readonly<Record<string, unknown>>): boolean => raw.mailer === true;
 
@@ -564,6 +585,12 @@ const VISIBILITY: readonly VisibilityRule[] = Object.freeze<VisibilityRule[]>([
 	{ keys: ['letsencrypt_email'], when: tlsIs('letsencrypt') },
 	{ keys: ['tls_extra_names'], when: tlsIs('local_ca') },
 	{ keys: ['tls_cert_path', 'tls_key_path'], when: tlsIs('files') },
+	// The developer route's development listener (DEV_ROUTE_SERVE §1.1–1.2).
+	{ keys: ['dev_port', 'dev_host', 'tls_mode'], when: onDeveloper },
+	{
+		keys: ['tls_cert_path', 'tls_key_path'],
+		when: (raw, route) => onDeveloper(raw, route) && raw.tls_mode === 'files',
+	},
 	{ keys: ['image_source', 'image_version'], when: onStack },
 	{
 		keys: ['image_repository'],
@@ -634,6 +661,29 @@ function planDefault(ctx: Ctx, key: keyof InstallAnswers): unknown {
 	return normalizeInstallAnswers(without(ctx.input.raw, key)).answers[key];
 }
 
+/**
+ * The developer listener the answers WITHOUT `key` decide, over the prior .env
+ * — what an unanswered listener question takes (the PRESERVE rule: the
+ * operator's kept value, else the route default).
+ */
+function devListenerDefault(ctx: Ctx, key: keyof InstallAnswers) {
+	const answers = normalizeInstallAnswers(without(ctx.input.raw, key)).answers;
+	return devListenerPlan(answers, ctx.input.priorEnv, '');
+}
+
+/**
+ * The developer `tls_mode` an unanswered question takes: '' (keep) when the
+ * prior .env already holds a complete pair, else the local CA (D1). Every other
+ * route: the plan's read-back.
+ */
+function tlsModeDefault(ctx: Ctx): unknown {
+	if (ctx.route !== 'developer') return planDefault(ctx, 'tls_mode');
+	const listener = devListenerDefault(ctx, 'tls_mode');
+	return listener?.tlsSource === 'kept'
+		? ''
+		: (listener?.tlsSource ?? planDefault(ctx, 'tls_mode'));
+}
+
 /** The keys whose default is not the plain read-back (see the header). */
 const SPECIAL_DEFAULTS: Readonly<Partial<Record<keyof InstallAnswers, (ctx: Ctx) => unknown>>> =
 	Object.freeze({
@@ -647,6 +697,10 @@ const SPECIAL_DEFAULTS: Readonly<Partial<Record<keyof InstallAnswers, (ctx: Ctx)
 		app_lang_default: (ctx: Ctx) =>
 			deriveLangConfig({ langs: ctx.answers.langs }).applicationLangsDefault,
 		data_lang_default: (ctx: Ctx) => deriveLangConfig({ langs: ctx.answers.langs }).dataLangDefault,
+		// The developer listener: the value a re-run keeps, else the route's (dev_listener.ts).
+		dev_port: (ctx: Ctx) => devListenerDefault(ctx, 'dev_port')?.port ?? '',
+		dev_host: (ctx: Ctx) => devListenerDefault(ctx, 'dev_host')?.host ?? '',
+		tls_mode: tlsModeDefault,
 	});
 
 /** THE default of `key`: the plan's normalization of the answers without it (see the header). */
@@ -1059,6 +1113,94 @@ function servicesScreen(ctx: Ctx, frame: Frame): Screen {
 		notices: probeNotices(ctx.input.probes.media, 'error', (msg) => NOTICE_TEXT.mediaProbe(msg)),
 		probe: { id: 'media', gate: 'must_pass' },
 		help: [HELP_LINKS.production, HELP_LINKS.multiInstance],
+	});
+}
+
+/**
+ * The developer listener's address options: this machine, the local network —
+ * and an address given by flag or kept from the .env, so a choice never hides
+ * the value in effect.
+ */
+function devHostOptions(current: unknown, fallback: unknown): Option[] {
+	const extra = [current, fallback].filter(
+		(value): value is string =>
+			typeof value === 'string' &&
+			value !== '' &&
+			value !== DEV_HOST_DEFAULT &&
+			value !== DEV_HOST_NETWORK,
+	);
+	return [
+		...vocabularyOptions([DEV_HOST_DEFAULT, DEV_HOST_NETWORK], OPTION_TEXT.dev_host),
+		...[...new Set(extra)].map((value) => plainOption(value, value, OPTION_TEXT.devHostOther)),
+	];
+}
+
+/** The developer TLS options: keep (only when the .env holds a pair), the local CA, none, own files. */
+function devTlsOptions(ctx: Ctx): Option[] {
+	const kept = priorTlsPair(ctx.input.priorEnv);
+	return [
+		...(kept === null
+			? []
+			: [
+					plainOption(
+						'',
+						OPTION_TEXT.devTlsKept.label,
+						OPTION_TEXT.devTlsKept.description(kept.certFile),
+					),
+				]),
+		...vocabularyOptions(['local_ca', 'none', 'files'], OPTION_TEXT.dev_tls_mode),
+	];
+}
+
+/** The developer server screen's notices: what a re-run keeps, the network and transport warnings. */
+function devServerNotices(ctx: Ctx): Notice[] {
+	const listener = ctx.plan.devListener;
+	if (listener === null) return [];
+	return [
+		{ level: 'info', text: NOTICE_TEXT.devServerUrl(listener.url) },
+		...when<Notice>(listener.kept.length > 0, {
+			level: 'info',
+			text: NOTICE_TEXT.devServerKept(listener.kept),
+		}),
+		...when<Notice>(listener.networkReachable, {
+			level: 'warn',
+			text: devListenerNetworkWarning(listener.host, listener.tls !== null),
+		}),
+		...when<Notice>(listener.tls === null, { level: 'info', text: NOTICE_TEXT.devServerPlain }),
+	];
+}
+
+/**
+ * A developer listener question: its answer is '' until given ("the plan
+ * decides"), so its VALUE is the value in effect — the kept one or the
+ * default — and a front end never offers an empty choice that is not an
+ * option (the plain prompter takes the current value on Enter).
+ */
+function askDevListener(
+	ctx: Ctx,
+	key: 'dev_port' | 'dev_host' | 'tls_mode',
+	kind: Question['kind'],
+	extra: Partial<Question> = {},
+): Question {
+	const question = ask(ctx, 'dev_server', key, kind, extra);
+	if (question.value === '') question.value = question.default;
+	return question;
+}
+
+/** Developer: the development listener — port, who reaches it, the certificate. */
+function devServerScreen(ctx: Ctx, frame: Frame): Screen {
+	const host = askDevListener(ctx, 'dev_host', 'choice');
+	host.options = devHostOptions(host.value, host.default);
+	return screen('dev_server', frame, {
+		questions: shown(ctx, [
+			askDevListener(ctx, 'dev_port', 'text'),
+			host,
+			askDevListener(ctx, 'tls_mode', 'choice', { options: devTlsOptions(ctx) }),
+			ask(ctx, 'dev_server', 'tls_cert_path', 'text', { required: true }),
+			ask(ctx, 'dev_server', 'tls_key_path', 'text', { required: true }),
+		]),
+		notices: devServerNotices(ctx),
+		help: [HELP_LINKS.devQuickstart],
 	});
 }
 
@@ -1557,6 +1699,7 @@ const BUILDERS: Readonly<Record<ScreenId, (ctx: Ctx, frame: Frame) => Screen>> =
 	tls_address: tlsAddressScreen,
 	containers: containersScreen,
 	identity: identityScreen,
+	dev_server: devServerScreen,
 	web_tls: webTlsScreen,
 	services: servicesScreen,
 	ontologies: ontologiesScreen,
@@ -1959,6 +2102,40 @@ function hostLines(a: InstallAnswers, input: ScreenModelInput): ReviewLine[] {
 	];
 }
 
+/** The developer listener's Review lines: where `bun run dev` serves, over what, and what is kept. */
+function devListenerLines(plan: InstallPlan): ReviewLine[] {
+	const listener = plan.devListener;
+	if (listener === null) return [];
+	return [
+		{ label: REVIEW_TEXT.devServer, value: listener.url },
+		{
+			label: REVIEW_TEXT.certificate,
+			value: REVIEW_TEXT.devCertificate(listener.tlsSource, listener.tls?.certFile ?? ''),
+		},
+		...when(listener.kept.length > 0, {
+			label: REVIEW_TEXT.kept,
+			value: listener.kept.join(', '),
+		}),
+		...devCertificateLines(plan),
+	];
+}
+
+/**
+ * The local CA's names and the trust step's elevation, stated BEFORE it is
+ * asked (DEV_ROUTE_SERVE §1.2, D2) — only when the plan issues the certificate.
+ */
+function devCertificateLines(plan: InstallPlan): ReviewLine[] {
+	const certificate = plan.devCertificate;
+	if (certificate === null) return [];
+	return [
+		{ label: REVIEW_TEXT.devNames, value: certificate.names.join(', ') },
+		{
+			label: REVIEW_TEXT.devTrust,
+			value: `${certificate.caFile} — ${devTrustReviewText(process.platform, process.geteuid?.() ?? null)}`,
+		},
+	];
+}
+
 /** One Review line. */
 export interface ReviewLine {
 	label: string;
@@ -1987,6 +2164,7 @@ export function reviewLines(plan: InstallPlan, input: ScreenModelInput): ReviewL
 		{ label: REVIEW_TEXT.media, value: pathValue(a.media_path) },
 		{ label: REVIEW_TEXT.socket, value: pathValue(a.unix_socket) },
 		...hostLines(a, input),
+		...devListenerLines(plan),
 		...adminLines(input),
 		{ label: REVIEW_TEXT.steps, value: plan.steps.join(', ') },
 		{ label: REVIEW_TEXT.envKeys, value: plan.envKeys.join(', ') },

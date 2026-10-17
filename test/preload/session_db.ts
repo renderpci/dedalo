@@ -28,6 +28,14 @@ function scratchDir(): string {
 	return scratchDirValue;
 }
 
+// Trust-store isolation seam (2026-10-17, DEV_ROUTE_SERVE §1.2): a developer-route
+// install run by a test (the CLI e2e, the resume drill) must never put a scratch
+// certificate authority into THIS machine's keychain / system anchors / Firefox
+// profiles, nor wait on the macOS password dialog. The trust step's own gate
+// (install_dev_tls_native) drives scratch stores through an injected environment.
+// Inherited by every installer child the suite spawns.
+process.env.DEDALO_TEST_TRUST_STORE_OFF = 'true';
+
 if (process.env.DEDALO_SESSION_DB_PATH === undefined) {
 	process.env.DEDALO_SESSION_DB_PATH = join(scratchDir(), 'sessions.sqlite');
 }

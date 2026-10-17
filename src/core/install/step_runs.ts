@@ -59,6 +59,19 @@ export const STEP_RUNS: {
 		const { testMailerConnection } = await import('./mailer_probe.ts');
 		return { ...(await testMailerConnection({ ...inputs.posted })) };
 	},
+	install_dev_dependencies: async () => {
+		const { installDevDependencies } = await import('./dev_dependencies.ts');
+		return { ...(await installDevDependencies()) };
+	},
+	dev_tls_certificate: async (inputs) => {
+		const { devStepTarget, ensureDevCertificate } = await import('./dev_tls.ts');
+		return { ...ensureDevCertificate(devStepTarget(inputs.posted)) };
+	},
+	dev_trust_ca: async (inputs) => {
+		const { trustDevAuthorityOnMachine } = await import('./dev_trust.ts');
+		const { devTlsDir } = await import('./paths.ts');
+		return { ...(await trustDevAuthorityOnMachine(devTlsDir(), inputs.installId ?? null)) };
+	},
 	persist_config: async (inputs) => {
 		const { persistConfig } = await import('./config_persist.ts');
 		return {
@@ -115,5 +128,18 @@ export const STEP_RUNS: {
 	install_finish: async () => {
 		const { installFinish } = await import('./finish.ts');
 		return { ...(await installFinish()) };
+	},
+	verify_dev_server: async (inputs) => {
+		const { verifyDevServe } = await import('./dev_serve.ts');
+		const result = await verifyDevServe({ rootPassword: inputs.rootPassword ?? '' });
+		if (!result.served) {
+			const { refuseInstall } = await import('./refuse.ts');
+			// The cause, named; the install is sealed by now, so --resume runs the check again
+			// (its remedies name the written .env: the sealed plan's answers are fixed).
+			// Root in a user's tree is the same conflict install_dev_dependencies refuses.
+			const code = result.cause === 'owner' ? 'install.state_conflict' : 'install.step_failed';
+			return refuseInstall(code, `${result.message} — then --resume`);
+		}
+		return { ok: true, msg: result.message, url: result.url, warnings: result.warnings };
 	},
 });

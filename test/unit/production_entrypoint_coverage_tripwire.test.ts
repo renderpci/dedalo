@@ -313,7 +313,10 @@ const TOOLING_SCRIPT_PREFIXES = new Set([
 // `media:*` (2026-10-03, `media:publication-host-rules`) is OPERATOR-run: it renders the
 // web-server gate of a publication host serving an installation's media. Covered by
 // test/unit/media_publication_host_rules_cli.test.ts (imports the CLI's runner).
-const PRODUCTION_SCRIPT_PREFIXES = new Set(['start', 'dedalo', 'media']);
+// `tls:*` (2026-10-17, DEV_ROUTE_SERVE §1.2): renew / untrust the developer
+// route's local authority — it acts on an INSTALLATION's certificate and this
+// machine's trust stores, so it is operator-run (gate: install_dev_tls_native).
+const PRODUCTION_SCRIPT_PREFIXES = new Set(['start', 'dedalo', 'media', 'tls']);
 
 function scriptPrefix(key: string): string {
 	return key.split(':')[0] as string;

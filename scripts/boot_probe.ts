@@ -20,6 +20,7 @@
 
 import { config } from '../src/config/config.ts';
 import { readEnv } from '../src/config/env.ts';
+import { devTcpListener } from '../src/config/tcp_listener.ts';
 import { PhpApiClient } from '../test/parity/php_client.ts';
 
 // --- args --------------------------------------------------------------------
@@ -36,6 +37,16 @@ const HEAVY_SECTION = args.get('heavy') ?? 'numisdata6';
 const LANG = args.get('lang') ?? 'lg-spa';
 
 const TS_PORT = (readEnv('SERVER_TCP_PORT') ?? '3500') as string;
+// The dev server's scheme follows its configuration: a developer-route install
+// serves HTTPS from a local authority (SERVER_TCP_TLS_*). Bun's fetch rejects
+// that authority's IP name constraint (Bun 1.4.3: "unsupported name constraint
+// type"), so this probe refuses loudly rather than timing a failed handshake.
+if (devTcpListener(TS_PORT, '127.0.0.1')?.tls) {
+	console.error(
+		'[boot_probe] the dev listener is configured for HTTPS (SERVER_TCP_TLS_*); this probe speaks plain HTTP. Start the server with SERVER_TCP_TLS_CERT_FILE= SERVER_TCP_TLS_KEY_FILE= bun run dev, and run this probe with the same two empty keys.',
+	);
+	process.exit(2);
+}
 const TS_ORIGIN = `http://localhost:${TS_PORT}`;
 const TS_API_URL = `${TS_ORIGIN}/dedalo/core/api/v1/json/`;
 

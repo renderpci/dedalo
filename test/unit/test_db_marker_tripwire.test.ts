@@ -199,6 +199,8 @@ const EXEMPT_WRITERS: Readonly<Record<string, string>> = {
 		"WRITES NO SUITE DATA — `restoreSeedRaw` restores an install seed into a scratch database the CALLING gate created moments before (`dedalo_seedcheck_<pid>` / `dedalo_seedcommitted_<pid>`, swept and FORCE-dropped by that gate), via a plain-SQL temp file in tmpdir it removes; it never connects to the suite database. The suite database cannot be its target: a restore refuses a non-empty database (the seed's CREATE TABLEs collide).",
 	'test/helpers/install_host_scratch.ts':
 		"WRITES NO DATA — `plantOwned` plants a directory or file with an OWNER into the CALLER's own installer scratch host (a mkdtemp root marked `.dedalo_install_scratch`, host/scratch.ts): the real path and the scratch HostFs owners sidecar. No database connection; the installer's host gates never touch the suite database.",
+	'test/helpers/dev_serve_isolation.ts':
+		"WRITES NO DATA — it makes a mkdtemp scratch dir (removed at process exit) holding a marked media root, its export-store sibling and a marked processes dir, through the media helpers' own doors, and returns ENV for a developer-route install CLI the CALLING gate runs against its own scratch `<prefix><pid>` database. No database connection; the server that env reaches is that scratch install's.",
 	'test/helpers/child_driver.ts':
 		"WRITES NO DATA — its one write is a throwaway TS driver file in its own mkdtemp scratch dir (removed on cleanup), run in a CHILD bun process that inherits this run's environment: the preload-repointed suite DB and marked media root. It holds no database connection itself; every driver it runs writes only through test-data doors that call assertTestDatabase (PERF-11/OPS-6 gates).",
 	'test/helpers/isolated_gate.ts':

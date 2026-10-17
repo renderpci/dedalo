@@ -85,14 +85,14 @@ sudo sh install.sh --release https://v7.master.dedalo.dev/dedalo/install/code/7/
   --release-sha256 https://v7.master.dedalo.dev/dedalo/install/code/7/7.0/7.0.0-dev.zip.sha256
 install.sh: --release needs --release-sha256 <the sha256 the release was published with> (64 hex digits)
 ```
-- [ ] TODO-052: Check this error on dev install finish (the installer doesn't install all dependencies):
+- [x] TODO-052: Check this error on dev install finish (the installer doesn't install all dependencies): (2026-10-17: the developer route's install_dev_dependencies step; `bun run dev` stops when its CSS watcher dies, and the serve check names the missing package. Gates test/unit/install_dev_dependencies_native.test.ts, test/unit/install_dev_serve_native.test.ts C.)
 ```
 bun run dev
 $ DEDALO_SUPERVISED=true bun run scripts/dev.ts
 error: Cannot find package 'less' from '/Users/paco/Sites/v7-install/dedalo/scripts/build_css.ts'
 ```
-- [ ] TODO-053: After the installation process (dev), add the information about the URL to access the application.
-- [ ] TODO-054: Dev mode: If the user do not configure the .env file. Nothing is served. He needs to add:
+- [x] TODO-053: After the installation process (dev), add the information about the URL to access the application. (2026-10-17: verify_dev_server boots `bun run dev` once — /health + root login over the listener — before "complete"; the final screen (DONE_TEXT.served) gives the command, every URL from the written keys, the CA path + SHA-256 + trust. Gate test/unit/install_dev_serve_native.test.ts.)
+- [x] TODO-054: Dev mode: If the user do not configure the .env file. Nothing is served. He needs to add: (2026-10-17: the developer route writes the Development only section — dev_listener.ts; gate test/unit/install_dev_route_listener_native.test.ts.)
 ```
 # --- Development only ----------------------------------------------------
 SERVER_TCP_PORT=3600
@@ -101,3 +101,4 @@ SESSION_COOKIE_SECURE=false
 DEDALO_DEBUG_API_ERRORS=true
 ```
 to start to work.
+- [x] TODO-055: include a local certificate for developer path. (2026-10-17: local_ca by default from deploy/dedalo-tls-rotate.sh into <private>/tls, trusted on this machine, HTTPS dev listener; `bun run tls:renew` / `tls:untrust`. Gates test/unit/install_dev_tls_native.test.ts, test/unit/dev_listener_tls_native.test.ts.)

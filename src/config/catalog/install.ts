@@ -45,6 +45,18 @@ DEDALO_INSTALL_FAULT="install_ontologies:before"
 DEDALO_INSTALL_HOST_ROOT="/tmp/dedalo_host_scratch"
 \`\`\``,
 	},
+	DEDALO_TEST_TRUST_STORE_OFF: {
+		type: 'boolean',
+		scope: 'test_seam',
+		default: false,
+		heading: "Keeping the installer out of this machine's trust stores in a test",
+		typeLabel: 'boolean',
+		doc: `Test seam, not a setting. On the developer route the installer puts its local certificate authority into this machine's trust stores (the macOS login keychain, the Linux system anchors through \`sudo\`, Firefox profiles) — a change to the computer itself, and on macOS a password dialog that waits for a person. When this key is \`true\` the trust step changes no store and asks nothing: it reports the authority as not trusted yet, naming this key, and an abort or \`bun run tls:untrust\` removes nothing either. The test suite sets it for every run (\`test/preload/session_db.ts\`), so an installer test never touches the machine it runs on; the trust step's own checks drive scratch stores directly. It is read from the process environment only, never from the configuration file.
+
+\`\`\`bash
+DEDALO_TEST_TRUST_STORE_OFF=true
+\`\`\``,
+	},
 	DEDALO_INSTALL_RELEASE_IDENTITY: {
 		type: 'string',
 		scope: 'test_seam',

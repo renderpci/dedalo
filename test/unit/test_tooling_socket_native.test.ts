@@ -303,9 +303,12 @@ describe('C. C3-32: a vector build never leaves an unmarked database', () => {
 });
 
 describe('D. C3-31: the dev listener binds this machine only, unless told otherwise', () => {
+	// TLS pinned to null (plain HTTP) in every call: this block is about the
+	// ADDRESS, and must not read the machine's SERVER_TCP_TLS_* (a developer-route
+	// .env holds a pair). The TLS half is dev_listener_tls_native's.
 	test('the catalog default is 127.0.0.1, and an empty value is that default', () => {
 		expect(SERVER_KEYS.SERVER_TCP_HOST.default).toBe('127.0.0.1');
-		expect(devTcpListener('3600', '')).toMatchObject({
+		expect(devTcpListener('3600', '', null)).toMatchObject({
 			hostname: '127.0.0.1',
 			port: 3600,
 			url: 'http://localhost:3600/dedalo/core/page/',
@@ -314,19 +317,19 @@ describe('D. C3-31: the dev listener binds this machine only, unless told otherw
 	});
 
 	test('no SERVER_TCP_PORT: no listener (production is socket-only)', () => {
-		expect(devTcpListener('', '0.0.0.0')).toBeNull();
-		expect(devTcpListener('  ', '0.0.0.0')).toBeNull();
+		expect(devTcpListener('', '0.0.0.0', null)).toBeNull();
+		expect(devTcpListener('  ', '0.0.0.0', null)).toBeNull();
 	});
 
 	test('an operator address is used and flagged as reachable from the network', () => {
-		expect(devTcpListener('3600', '0.0.0.0')).toMatchObject({
+		expect(devTcpListener('3600', '0.0.0.0', null)).toMatchObject({
 			hostname: '0.0.0.0',
 			networkReachable: true,
 		});
 	});
 
 	test('a server started with the default options is bound to loopback only', () => {
-		const options = devTcpListener('0', '') as NonNullable<ReturnType<typeof devTcpListener>>;
+		const options = devTcpListener('0', '', null) as NonNullable<ReturnType<typeof devTcpListener>>;
 		const server = Bun.serve({
 			hostname: options.hostname,
 			port: 0,

@@ -78,6 +78,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import { privateDir, projectRoot } from '../src/config/env.ts';
+import { PLAIN_HTTP_DEV_LISTENER_ENV } from '../src/config/tcp_listener.ts';
 import { parseReleaseVersion } from '../src/core/update/release_identity.ts';
 
 // ---------------------------------------------------------------------------
@@ -561,6 +562,9 @@ async function main(): Promise<void> {
 				...(process.env as Record<string, string>),
 				SERVER_TCP_PORT: MASTER_PORT,
 				SERVER_TCP_HOST: '0.0.0.0',
+				// PLAIN HTTP: the museum container names the master by an http://
+				// LAN origin and does not trust this machine's local authority.
+				...PLAIN_HTTP_DEV_LISTENER_ENV,
 			},
 			stdio: ['ignore', devLog, devLog],
 			detached: true,

@@ -84,6 +84,8 @@ export const MAXIMAL_ALTERNATIVES: readonly Readonly<Record<string, unknown>>[] 
 	Object.freeze({ route: 'docker', image_source: 'custom', diffusion: true, mailer: true }),
 	Object.freeze({ route: 'trial', image_source: 'custom', diffusion: true, mailer: true }),
 	Object.freeze({ route: 'developer', diffusion: true, mailer: true, update_servers: 'none' }),
+	// The developer listener's own certificate files (DEV_ROUTE_SERVE §1.2).
+	Object.freeze({ route: 'developer', tls_mode: 'files' }),
 ]);
 
 /**

@@ -33,10 +33,12 @@
  * test/unit/install_screen_model_tripwire.test.ts.
  */
 
+import { isIP } from 'node:net';
 import { dirname, isAbsolute } from 'node:path';
 import { check_password } from '../../../client/dedalo/core/component_password/js/password_policy.js';
 import { liveProcessEnv } from '../../config/env.ts';
 import { connFieldProblem, pgSocketProblem } from '../../config/pg_transport.ts';
+import { DEV_TLS_MODES, type DevListenerPlan } from './dev_listener.ts';
 import { acceptedImageVersions } from './host/stack/layout.ts';
 import type { InstallAnswers } from './install_plan.ts';
 import { officialRefusedFor } from './installer_identity.ts';
@@ -767,6 +769,99 @@ function officialSourceErrors(a: InstallAnswers, problems: Problems): void {
 	if (refused !== null) problems.push(problem('image_source', refused));
 }
 
+// ── the developer route's development listener (DEV_ROUTE_SERVE §1.1–1.2) ────
+
+/** The listener answers only the developer route reads (dev_listener.ts). */
+const DEV_LISTENER_KEYS = ['dev_port', 'dev_host'] as const;
+
+/**
+ * The development listener: a port and an address the server can bind, and a
+ * TLS mode a checkout has (no Let's Encrypt: no public name). '' = the plan
+ * decides (the prior .env's, else the defaults). On any other route the answers
+ * are refused rather than silently ignored: they would write nothing.
+ */
+function devListenerErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.route !== 'developer' || a.engine_only) {
+		offDeveloperListenerErrors(a, problems);
+		return;
+	}
+	devPortErrors(a, problems);
+	devHostErrors(a, problems);
+	devTlsErrors(a, problems);
+}
+
+/** The developer listener's answers given on another route (they would write nothing). */
+function offDeveloperListenerErrors(a: InstallAnswers, problems: Problems): void {
+	for (const key of DEV_LISTENER_KEYS) {
+		if (a[key] === '') continue;
+		problems.push(
+			problem(key, `${key} is only meaningful on the developer route (route is ${a.route})`),
+		);
+	}
+}
+
+/** The development port, when given: 1-65535. */
+function devPortErrors(a: InstallAnswers, problems: Problems): void {
+	const message = a.dev_port === '' ? null : portError('dev_port', a.dev_port);
+	if (message !== null) problems.push(problem('dev_port', message));
+}
+
+/** A development address the server can bind: localhost or an IP literal. */
+function isDevHost(value: string): boolean {
+	return value === 'localhost' || isIP(value) !== 0;
+}
+
+const DEV_HOST_RULE =
+	'must be 127.0.0.1 (this machine), 0.0.0.0 (the local network) or one IP address of this machine';
+
+/** The development address, when given: localhost or an IP literal (what the server binds). */
+function devHostErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.dev_host === '' || isDevHost(a.dev_host)) return;
+	problems.push(problem('dev_host', `dev_host '${a.dev_host}' ${DEV_HOST_RULE}`));
+}
+
+/**
+ * The listener values the plan KEPT from the prior .env (PRESERVE), held to the
+ * SAME rules as an answer: an unanswered re-run over `SERVER_TCP_PORT=abc`
+ * would otherwise reach the port probe with NaN (an untyped bind error) or
+ * write a .env whose `bun run dev` cannot boot. Tagged with the answer that
+ * replaces the value, so the screen attaches the refusal where it is fixed.
+ */
+export function keptDevListenerProblems(
+	listener: Pick<DevListenerPlan, 'port' | 'host' | 'kept'> | null,
+): FieldError[] {
+	if (listener === null) return [];
+	const problems: Problems = [];
+	if (listener.kept.includes('SERVER_TCP_PORT') && portError('p', listener.port) !== null) {
+		problems.push(
+			problem(
+				'dev_port',
+				`SERVER_TCP_PORT '${listener.port}' kept from your .env must be an integer 1-65535 — answer dev_port (--dev-port) to replace it`,
+			),
+		);
+	}
+	if (listener.kept.includes('SERVER_TCP_HOST') && !isDevHost(listener.host)) {
+		problems.push(
+			problem(
+				'dev_host',
+				`SERVER_TCP_HOST '${listener.host}' kept from your .env ${DEV_HOST_RULE} — answer dev_host (--dev-host) to replace it`,
+			),
+		);
+	}
+	return problems;
+}
+
+/** The developer listener's TLS mode, and what `files` needs. */
+function devTlsErrors(a: InstallAnswers, problems: Problems): void {
+	if (a.tls_mode !== '' && !(DEV_TLS_MODES as readonly string[]).includes(a.tls_mode)) {
+		problems.push(
+			problem('tls_mode', `tls_mode must be ${DEV_TLS_MODES.join('|')} on the developer route`),
+		);
+		return;
+	}
+	if (a.tls_mode === 'files') tlsFileErrors(a, problems);
+}
+
 /** The answers that make the host steps (production, docker) — skipped for the engine child (A14). */
 function hostErrors(a: InstallAnswers, problems: Problems): void {
 	if (a.engine_only || a.route === 'developer') return;
@@ -793,6 +888,7 @@ export function answerProblems(a: InstallAnswers): FieldError[] {
 	vocabularyErrors(a, problems);
 	localeErrors(a, problems);
 	fingerprintErrors(a, problems);
+	devListenerErrors(a, problems);
 	hostErrors(a, problems);
 	return problems;
 }

@@ -31,6 +31,13 @@ export type DoneModel =
 
 /** What comes next after a complete install (a host route already started the server). */
 function nextLines(ending: RunEnding, width: number): Line[] {
+	// The developer route: the served block IS what comes next (TODO-053).
+	if (ending.served !== undefined) {
+		return [
+			[seg('Next', 'text', { bold: true })],
+			...DONE_TEXT.served(ending.served).flatMap((line) => wrapped(line, width, 'text')),
+		];
+	}
 	return [
 		// First: a card too short for every line clips the bottom, and these are the operator's to do
 		// (all of them are also left on the main screen when the UI closes).

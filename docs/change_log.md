@@ -156,6 +156,129 @@ Merged since the last release; these ship with the next one.
     restricted. See [Production install](./install/production.md); its last section is a
     recipe for trying the production route in a virtual machine with no domain name.
 
+### For developers
+
+#### Changed
+
+- **A developer install is reported complete only once `bun run dev` has served, and it ends by saying where to open it.**
+
+    **Served, then complete.** A developer install used to end with "install complete"
+    without anything having served the browser. Its last step, `verify_dev_server`, now
+    starts `bun run dev` once with the `.env` the install wrote, asks the development
+    listener for `/health` over HTTPS (the local certificate authority as the trust
+    anchor), logs in as `root` over it (every cookie the login sets must be `Secure` exactly
+    when the listener is HTTPS), and stops it again. It refuses to run as root in a
+    checkout another user owns. If it fails, the install is not reported complete and
+    the message names the cause: the port taken by another program, a certificate the
+    server cannot read or that does not verify, the database unreachable, a
+    development dependency missing, another Dédalo server on the same unix socket, a
+    cookie flag that does not match the listener, or the login refused. The install is
+    sealed by then, so the message names the key to edit in the written `.env`
+    (`SERVER_TCP_PORT`, `SERVER_UNIX_SOCKET`) rather than an installer flag, and the
+    failure hint no longer offers `--abort`. Fix it and run the installer with
+    `--resume`, which runs the check again. An install written to another private
+    directory is started, and shown, as `DEDALO_PRIVATE_DIR=<dir> bun run dev`.
+
+    **Where to open it.** The installer then ends with what to do next, built from the
+    keys it wrote: `bun run dev`, every address the client answers on
+    (`https://127.0.0.1:3500/dedalo/core/page/` and `https://localhost:3500/…` with the
+    defaults, plus this machine's network addresses when it is opened to the network),
+    the `root` login, and the certificate authority's path, SHA-256 fingerprint and
+    whether this machine trusts it. The full-screen installer leaves these lines on the
+    terminal when it closes. See the
+    [developer quickstart](./install/dev_quickstart.md#4-run-the-installer).
+
+    **`bun run dev` stops when its CSS watcher dies.** The stylesheet watcher never
+    stops on a LESS error, so when it exits something is wrong — usually a missing
+    development dependency (`Cannot find package 'less'`). `bun run dev` now stops with
+    it and says so, instead of serving on while every stylesheet edit is lost.
+
+#### Added
+
+- **A developer install now issues the development listener's HTTPS certificate and makes this machine trust it; `bun run tls:renew` and `bun run tls:untrust` manage it afterwards.**
+
+    **The certificate.** With the default `--tls local_ca`, the developer route issues
+    the development listener's certificate with the same generator the other routes use
+    (`deploy/dedalo-tls-rotate.sh`), into `<private>/tls`, as the checkout's owner. Its
+    certificate authority can certify only `localhost`, `127.0.0.1` and, when the
+    listener is opened to the network, the IPv4 address it binds (or this machine's IPv4
+    network addresses with `0.0.0.0`). IPv6 addresses are not certified: a listener on
+    this machine is opened as `https://localhost:…`, which the certificate names, and a
+    specific IPv6 `--dev-host` with `local_ca` is refused. A re-run keeps the authority
+    and renews its certificate when it has less than 30 days left. An authority made
+    for other addresses is refused before anything is written, and the refusal names
+    the command that replaces it.
+
+    **Trust.** The installer prints the authority's path and SHA-256 fingerprint and
+    installs it into this machine's trust store. The installer itself stays your user;
+    only this step asks for more. On macOS the authority goes into your login keychain,
+    and macOS asks for your password. On Linux it is copied into the system anchors
+    through `sudo` for one command. Firefox profiles get it through `certutil` when it
+    is installed; otherwise the step tells you to set
+    `security.enterprise_roots.enabled`. If you cancel the prompt, the install still
+    completes and reports *not trusted yet* with the manual command; `bun run dev`
+    serves either way. On macOS a cancelled dialog leaves no certificate behind in the
+    keychain. If this machine already trusts the authority, nothing is asked.
+
+    **Afterwards.** `bun run tls:renew` (`--force` to renew now) issues a new
+    certificate from the same authority, so nothing needs to be trusted again.
+    `bun run tls:untrust` removes the authority from every store the installer put it
+    in. `--abort` removes what the aborted install added; if that removal is refused,
+    it keeps the record in `../private/tls/` so `bun run tls:untrust` can finish it.
+
+#### Fixed
+
+- **A developer install now installs the development dependencies `bun run dev` needs, and the development listener can serve HTTPS (`SERVER_TCP_TLS_CERT_FILE` + `SERVER_TCP_TLS_KEY_FILE`).**
+
+    **Development dependencies.** The installer's bootstrap installs only its own,
+    production dependencies, so after a developer install the first `bun run dev`
+    crashed with `Cannot find package 'less'`. The developer route now has an
+    `install_dev_dependencies` step (`bun install --frozen-lockfile --ignore-scripts`),
+    run as the checkout's owner, that installs only what is missing; a checkout that
+    already has them is left as it is. Production, Docker and Trial installs keep the
+    production-only tree. If the step cannot reach the npm registry, the install fails
+    and quotes bun's error. Run as root in a checkout another user owns, the step refuses.
+
+    **HTTPS on the development listener.** Two new keys, `SERVER_TCP_TLS_CERT_FILE` and
+    `SERVER_TCP_TLS_KEY_FILE`, give the `SERVER_TCP_PORT` listener a certificate: it then
+    speaks HTTPS and the boot log prints an `https://` address. Set both or neither: a
+    half pair, an unreadable file, a file that is not a certificate or a key of another
+    certificate stops the server at boot (exit 78) with the key and path named. It never
+    falls back to plain HTTP. While the certificate has less than 30 days left, every
+    boot warns and names `bun run tls:renew`. Without the keys, nothing changes; without
+    `SERVER_TCP_PORT` the keys are ignored. The test and update-drill servers always
+    serve plain HTTP, whatever the pair in `../private/.env`. The
+    warning for a listener opened to the network now says "no TLS" only when that is
+    true.
+
+- **A developer install now writes a development listener, so `bun run dev` serves the browser on port 3500.**
+
+    **The listener is written.** A developer install used to write no `SERVER_TCP_PORT`,
+    so `bun run dev` served only its unix socket and the browser reached nothing until
+    the `.env` was edited by hand. The developer route now writes a *Development only*
+    section: `SERVER_TCP_PORT` (default `3500`, `--dev-port`), `SERVER_TCP_HOST`
+    (default `127.0.0.1`, this machine only; `--dev-host 0.0.0.0` opens it to the
+    local network, and the Review and a headless run's summary warn), `DEDALO_DEV_MODE=true`,
+    `DEDALO_DEBUG_API_ERRORS=true`, and the listener's certificate. The interactive
+    installer asks these on a new **Development server** step.
+
+    **The certificate.** `--tls` on the developer route is `local_ca` by default (a
+    local certificate authority kept in `<private>/tls`), `none` (plain HTTP) or `files`
+    (your own pair, with `--tls-cert` and `--tls-key`). `SESSION_COOKIE_SECURE` is
+    written to match: `true` over HTTPS, `false` over plain HTTP, where a browser on
+    another machine would otherwise drop the login cookie.
+
+    **A port in use is refused.** When another program already listens on the port,
+    the Review does not offer `install`, and a headless run stops before writing
+    anything; the refusal names the next free port. The installer never picks another
+    port for you.
+
+    **A re-run keeps your values.** The port, the address, a certificate pair and the
+    two modes your `.env` already has are kept unless you answer them again, and the
+    Review lists them as kept. A kept port or address that is not valid is refused
+    like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
+    writes any of these keys.
+
 ??? note "Wire contract — 1 entry"
 
     - `WC-2026-10-15-release-identity-from-tag`

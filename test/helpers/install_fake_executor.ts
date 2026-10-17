@@ -140,6 +140,8 @@ export function fakeHost(
 		installStatus: () => state.installStatus,
 		verifyRootLogin: async () => state.loginOk,
 		statePathProblem: () => null,
+		// No listener refusal by default; the D3 gates pass the real check.
+		devListenerRefusals: async () => [],
 	};
 	return { host, state };
 }

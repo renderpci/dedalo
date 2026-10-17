@@ -44,6 +44,7 @@ import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readEnv } from '../src/config/env.ts';
+import { PLAIN_HTTP_DEV_LISTENER_ENV } from '../src/config/tcp_listener.ts';
 import { applicationDatabaseName, testDatabaseName } from '../test/helpers/test_database.ts';
 import { ensureTestMediaRoot } from '../test/helpers/test_media_root.ts';
 import { suiteRagDatabaseName } from '../test/helpers/test_rag_database.ts';
@@ -193,6 +194,10 @@ export function suiteServerEnvironment(options: {
 		// The run's OWN vector database (see repointProcessToSuiteDatabase).
 		DEDALO_TEST_RAG_DB_NAME: process.env.DEDALO_TEST_RAG_DB_NAME as string,
 		SERVER_TCP_PORT: String(options.port),
+		// PLAIN HTTP, whatever ../private/.env says: the runner's origin is
+		// `http://localhost:<port>` and a developer-route install keeps a TLS pair
+		// there the spawned server would otherwise inherit.
+		...PLAIN_HTTP_DEV_LISTENER_ENV,
 		// Never the developer's socket: the running `bun run dev` owns that one and
 		// the server refuses to steal it (and rightly so).
 		SERVER_UNIX_SOCKET: options.socketPath,

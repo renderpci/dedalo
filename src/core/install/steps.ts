@@ -30,10 +30,13 @@
  */
 
 import { copyFileSync, existsSync, readdirSync, renameSync, rmdirSync, rmSync } from 'node:fs';
-import { join, sep as pathSep, resolve as resolvePath } from 'node:path';
+import { basename, join, sep as pathSep, resolve as resolvePath } from 'node:path';
+import { projectRoot } from '../../config/env.ts';
 import type { ServerState } from '../resolve/server_state.ts';
+import { devTrustReviewText } from './dev_certificate.ts';
+import { authorityFile } from './host/tls_authority.ts';
 import type { InstallStepId } from './install_plan.ts';
-import { installPrivateDir } from './paths.ts';
+import { devTlsDir, installPrivateDir } from './paths.ts';
 import {
 	envBackups,
 	type InstallState,
@@ -329,6 +332,96 @@ export function directoriesNeedingAttention(dirs: readonly DirectoryRow[]): stri
 		.join(', ');
 }
 
+const install_dev_dependencies: InstallStepDefinition = {
+	id: 'install_dev_dependencies',
+	kind: 'action',
+	needs: [],
+	label: () => 'development dependencies (bun install)',
+	run: STEP_RUNS.install_dev_dependencies,
+	verify: async () => {
+		const { describeGaps, devDependencyGaps } = await import('./dev_dependencies.ts');
+		const gaps = devDependencyGaps(projectRoot);
+		return {
+			ok: gaps.length === 0,
+			detail:
+				gaps.length === 0
+					? 'every development dependency at its locked version'
+					: `not usable: ${describeGaps(gaps)}`,
+		};
+	},
+	// Never removed: the checkout's node_modules is the developer's (and the
+	// installer's own dependencies live in the same tree).
+	undo: async () => 'development dependencies kept (the checkout is yours)',
+};
+
+const dev_tls_certificate: InstallStepDefinition = {
+	id: 'dev_tls_certificate',
+	kind: 'action',
+	needs: [],
+	label: () =>
+		`development certificate (the local CA generator, deploy/dedalo-tls-rotate.sh → ${devTlsDir()})`,
+	run: STEP_RUNS.dev_tls_certificate,
+	verify: async (ctx) => {
+		const { devCertificateProblems, devStepTarget } = await import('./dev_tls.ts');
+		const target = devStepTarget(ctx.plan.answers);
+		const problems = devCertificateProblems(target.dir, target.names);
+		return {
+			ok: problems.length === 0,
+			detail:
+				problems.length === 0
+					? `certificate for ${target.names.join(', ')} chains to the local authority in ${target.dir}`
+					: problems.join('; '),
+		};
+	},
+	// Only a directory this install created: an earlier install's authority (which
+	// this one only renewed) is the developer's, trusted on this machine already.
+	undo: async (ctx) => {
+		const dir = devTlsDir();
+		if (ctx.state.created.dev_tls_dir !== true) {
+			return `development certificate kept (${dir} was there before this install)`;
+		}
+		// The trust undo runs first (reverse order); an entry it could NOT remove (a
+		// cancelled dialog, a refused sudo) is still trusted on this machine. Its
+		// record — and the authority it names — must outlive this directory's
+		// removal, or `bun run tls:untrust` has nothing left to take it back with.
+		const { readTrustRecord, TRUST_RECORD_NAME } = await import('./dev_trust.ts');
+		if (readTrustRecord(dir).length > 0) {
+			const keep = new Set([TRUST_RECORD_NAME, basename(authorityFile(dir))]);
+			for (const name of readdirSync(dir)) {
+				if (!keep.has(name)) rmSync(join(dir, name), { recursive: true, force: true });
+			}
+			return `development certificate removed, but ${dir} keeps ${[...keep].join(' and ')}: the authority is still trusted on this machine — run \`bun run tls:untrust\``;
+		}
+		rmSync(dir, { recursive: true, force: true });
+		return `development certificate removed (${dir})`;
+	},
+};
+
+/**
+ * Trust the development authority on this machine (D2). No `verify`: a
+ * cancelled prompt is a DONE step with a warning ("not trusted yet" — the
+ * server serves either way), and the run itself measures the trust before it
+ * asks anything, so a resume never prompts twice.
+ */
+const dev_trust_ca: InstallStepDefinition = {
+	id: 'dev_trust_ca',
+	kind: 'action',
+	needs: [],
+	label: () =>
+		`development authority trusted on this machine: ${devTrustReviewText(process.platform, process.geteuid?.() ?? null)}`,
+	run: STEP_RUNS.dev_trust_ca,
+	warnings: ownWarnings,
+	undo: async (ctx) => {
+		const { untrustDevAuthorityOnMachine } = await import('./dev_trust.ts');
+		const result = await untrustDevAuthorityOnMachine(devTlsDir(), ctx.state.install_id);
+		const removed =
+			result.removed.length === 0 ? 'nothing this install trusted' : result.removed.join(', ');
+		return result.failed.length === 0
+			? `trust removed: ${removed}`
+			: `trust removed: ${removed}; NOT removed (do it by hand): ${result.failed.join('; ')}`;
+	},
+};
+
 const check_directories: InstallStepDefinition = {
 	id: 'check_directories',
 	kind: 'action',
@@ -580,12 +673,36 @@ const install_finish: InstallStepDefinition = {
 	},
 };
 
+/**
+ * THE DEVELOPER ROUTE IS FINISHED WHEN IT SERVES (TODO-053, D4 — dev_serve.ts):
+ * the operator's own `bun run dev`, started once with the written .env; /health
+ * over the development listener (the local authority as the trust anchor) and a
+ * root login over it; stopped again. A red check fails the step, naming the
+ * cause, so the install is never reported complete on a listener nothing
+ * served. No `verify` (a done step is not booted again on a resume) and no
+ * `undo` (the server is stopped and the port waited free; what the boot writes —
+ * the session store, the logs, the rebuilt CSS — is the operator's own
+ * `bun run dev`'s, written as the checkout's owner: the check refuses root).
+ */
+const verify_dev_server: InstallStepDefinition = {
+	id: 'verify_dev_server',
+	kind: 'action',
+	needs: [],
+	label: () =>
+		'serve check: `bun run dev` started once — /health and a root login over the development listener — then stopped',
+	run: STEP_RUNS.verify_dev_server,
+	warnings: ownWarnings,
+};
+
 /** EXHAUSTIVE over InstallStepId: a new step id fails to compile until it has a row. */
 export const INSTALL_STEPS: { readonly [K in InstallStepId]: InstallStepDefinition } =
 	Object.freeze({
 		test_db_connection,
 		test_diffusion_connection,
 		test_mailer_connection,
+		install_dev_dependencies,
+		dev_tls_certificate,
+		dev_trust_ca,
 		persist_config,
 		check_directories,
 		stage_ontologies,
@@ -595,4 +712,5 @@ export const INSTALL_STEPS: { readonly [K in InstallStepId]: InstallStepDefiniti
 		install_hierarchies,
 		register_tools,
 		install_finish,
+		verify_dev_server,
 	});

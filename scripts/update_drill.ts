@@ -107,6 +107,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { privateDir, projectRoot } from '../src/config/env.ts';
 import { libpqTransportArgs, resolvePgTransport } from '../src/config/pg_transport.ts';
+import { PLAIN_HTTP_DEV_LISTENER_ENV } from '../src/config/tcp_listener.ts';
 import { DEDALO_ENGINE_VERSION, readReleaseIdentityOf } from '../src/core/update/build_stamp.ts';
 import { UPDATE_CATALOG, type UpdateDescriptor } from '../src/core/update/catalog.ts';
 import { parseReleaseVersion } from '../src/core/update/release_identity.ts';
@@ -529,6 +530,10 @@ function instanceEnvironment(options: {
 		PATH: process.env.PATH ?? '/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin',
 		HOME: process.env.HOME ?? tmpdir(),
 		SERVER_TCP_PORT: String(options.port),
+		// PLAIN HTTP: the drill's origins are `http://127.0.0.1:<port>`, and
+		// operatorConfig() above carries the developer's TLS pair (with paths that
+		// need not resolve from the scratch tree).
+		...PLAIN_HTTP_DEV_LISTENER_ENV,
 		SERVER_UNIX_SOCKET: options.socketPath,
 		DEDALO_TS_STATE_PATH: options.stateFilePath,
 		DEDALO_SESSION_DB_PATH: options.sessionDbPath,

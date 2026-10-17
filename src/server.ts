@@ -78,7 +78,16 @@ import { publicOrigin, publicOriginIsLocal } from './core/resolve/public_origin.
 // reach it transitively — the seam must not depend on incidental import paths.
 import './core/components/registry.ts';
 import { readString } from './config/readers.ts';
-import { devTcpListener } from './config/tcp_listener.ts';
+import {
+	DEV_LISTENER_REFUSED_EXIT_CODE,
+	type DevListenerTlsMaterial,
+	DevListenerTlsRefusal,
+	type DevTcpListener,
+	devListenerExpiryWarning,
+	devListenerNetworkWarning,
+	devTcpListener,
+	loadDevListenerTls,
+} from './config/tcp_listener.ts';
 import { HIERARCHY_EXPORT_URL_PREFIX } from './core/area_maintenance/widgets/export_hierarchy.ts';
 import { rqoSchema } from './core/concepts/rqo.ts';
 import { toErrorEnvelope } from './core/errors/convert.ts';
@@ -897,11 +906,35 @@ export function mediaSvgSafetyHeaders(
  *
  * Advisory only: it never throws and never changes what is served.
  */
-function announceUnconfiguredMediaProtection(): void {
+function announceUnconfiguredMediaProtection(hasDevListener: boolean): void {
 	const { mode, source } = resolveMediaAccessModeDetail();
 	if (source !== 'default' || mode === false) return;
 	// Worded for this server: a development server has no web server to reload (C3-60).
-	console.warn(unconfiguredMediaProtectionNotice(String(mode), devTcpListener() !== null));
+	console.warn(unconfiguredMediaProtectionNotice(String(mode), hasDevListener));
+}
+
+/**
+ * The dev listener and its TLS material, resolved ONCE at boot, before any
+ * listener binds — or the process exits EX_CONFIG with the operator's
+ * sentence. A half pair or an unreadable/mismatched certificate is a config
+ * error a restart cannot fix, and a silent fall back to plain HTTP would hand
+ * the browser an origin its Secure session cookie is dropped on (TODO-055).
+ */
+async function resolveDevListenerOrRefuse(): Promise<{
+	listener: DevTcpListener | null;
+	tls: DevListenerTlsMaterial | null;
+}> {
+	try {
+		const listener = devTcpListener();
+		const tls = listener?.tls ? await loadDevListenerTls(listener.tls) : null;
+		return { listener, tls };
+	} catch (error) {
+		if (!(error instanceof DevListenerTlsRefusal)) throw error;
+		console.error(
+			`[boot] REFUSED — ${error.message} (exit ${DEV_LISTENER_REFUSED_EXIT_CODE}; supervisors must not restart)`,
+		);
+		process.exit(DEV_LISTENER_REFUSED_EXIT_CODE);
+	}
 }
 
 /**
@@ -1756,6 +1789,10 @@ export async function startServer() {
 	// module-level writer ran; this repeats it for a programmatic caller.)
 	refuseBootWhenNotInstalled();
 
+	// The dev listener's configuration is checked here, before this function's boot writers
+	// and any listener: a refused TLS pair leaves nothing half-started.
+	const dev = await resolveDevListenerOrRefuse();
+
 	// SMOKE BOOT (core/update/smoke_boot.ts): the code updater boots the
 	// QUARANTINE tree once, pre-swap, with DEDALO_SMOKE_BOOT=true. Under the
 	// flag this process is READ-ONLY BY CONSTRUCTION: boot migrations,
@@ -2093,7 +2130,7 @@ export async function startServer() {
 		// meantime. Config-hash guarded, so this is normally a no-op.
 		try {
 			writeRuleFiles();
-			announceUnconfiguredMediaProtection();
+			announceUnconfiguredMediaProtection(dev.listener !== null);
 			// One-shot migration: the day-global auth store is dead once the credential
 			// is per-session, and a file full of live-looking credentials left on disk is
 			// what gets restored from a backup years later. Renamed, not unlinked, so an
@@ -2422,13 +2459,16 @@ export async function startServer() {
 	// (NOT process.env only — a plain `bun run` doesn't export the private .env,
 	// which silently dropped the dev listener on restart).
 	// Bound to SERVER_TCP_HOST (default 127.0.0.1 — C3-31): never every address
-	// unless an operator says so (src/config/tcp_listener.ts).
-	const devListener = devTcpListener();
+	// unless an operator says so (src/config/tcp_listener.ts). HTTPS when
+	// SERVER_TCP_TLS_CERT_FILE + _KEY_FILE are set (TODO-055): the material was
+	// read and checked at the top of startServer (resolveDevListenerOrRefuse).
+	const devListener = dev.listener;
 	if (devListener !== null) {
 		servers.push(
 			Bun.serve({
 				hostname: devListener.hostname,
 				port: devListener.port,
+				...(dev.tls === null ? {} : { tls: { cert: dev.tls.cert, key: dev.tls.key } }),
 				maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
 				idleTimeout: config.ops.idleTimeoutSeconds,
 				fetch(request, server) {
@@ -2457,11 +2497,10 @@ export async function startServer() {
 			}),
 		);
 		console.log(`Dédalo TS dev listener on ${devListener.url}`);
-		if (devListener.networkReachable) {
-			console.warn(
-				`[server] the dev listener is bound to ${devListener.hostname} (SERVER_TCP_HOST): other machines can reach it, with full error details and no TLS. Use it only on a network you trust.`,
-			);
-		}
+		const networkWarning = devListenerNetworkWarning(devListener);
+		if (networkWarning !== null) console.warn(networkWarning);
+		const expiryWarning = dev.tls === null ? null : devListenerExpiryWarning(dev.tls.notAfter);
+		if (expiryWarning !== null) console.warn(expiryWarning);
 	}
 
 	// Graceful shutdown (audit S2-17): supervisors send SIGTERM; operators ^C.

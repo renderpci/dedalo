@@ -190,6 +190,19 @@ export function trackPsqlChildren<T>(
 	return psqlChildScope.run(children, work);
 }
 
+/**
+ * Record a long-lived child a step starts that is not psql (the developer
+ * route's one `bun run dev` boot — dev_serve.ts) in the same scope, so an
+ * interrupted install stops it and waits for it instead of orphaning a server
+ * that holds the development port. Removed once it exits; a no-op outside the
+ * executor.
+ */
+export function trackInstallChild(child: Subprocess): void {
+	const tracked = psqlChildScope.getStore();
+	tracked?.add(child);
+	void child.exited.finally(() => tracked?.delete(child));
+}
+
 export interface PsqlRunResult {
 	exitCode: number;
 	stdout: string;

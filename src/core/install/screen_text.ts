@@ -32,6 +32,10 @@ export const HELP_LINKS = Object.freeze({
 		url: 'https://dedalo.dev/docs/v7/install/multi_instance/',
 	},
 	docker: { label: 'Docker install', url: 'https://dedalo.dev/docs/v7/install/docker/' },
+	devQuickstart: {
+		label: 'Developer quick start',
+		url: 'https://dedalo.dev/docs/v7/install/dev_quickstart/',
+	},
 });
 
 /** Screen titles and descriptions, by screen id. */
@@ -61,6 +65,11 @@ export const SCREEN_TEXT: Readonly<Record<string, { title: string; description: 
 				'Where this instance lives and who it belongs to (production: the install folder and the service account first). The install fingerprint can never change later.',
 		},
 		web_tls: { title: 'Web server & TLS', description: 'How browsers reach this instance.' },
+		dev_server: {
+			title: 'Development server',
+			description:
+				'Where `bun run dev` serves the browser: the port, who can reach it, and its certificate. A value your .env already has is kept unless you change it here.',
+		},
 		services: {
 			title: 'Services',
 			description: 'Where this instance keeps its media and listens for the web server.',
@@ -288,6 +297,32 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 			label: 'Key file',
 			description: 'The private key PEM, absolute path; checked against the certificate.',
 		},
+		// The developer listener's own words (DEV_ROUTE_SERVE §1.1–1.2).
+		dev_port: {
+			label: 'Port',
+			description:
+				'The port `bun run dev` serves the browser on (SERVER_TCP_PORT). If another program already uses it, the Review refuses and suggests the next free one.',
+		},
+		dev_host: {
+			label: 'Reachable from',
+			description:
+				'This machine only, or the local network (SERVER_TCP_HOST). A development install shows full error details to the browser: open it to the network only on one you trust.',
+		},
+		'dev_server.tls_mode': {
+			label: 'Certificate',
+			description:
+				'HTTPS with a local certificate authority (a secure context like production: Secure cookies, clipboard, service workers), plain HTTP, or your own certificate files.',
+		},
+		'dev_server.tls_cert_path': {
+			label: 'Certificate file',
+			description:
+				'Your fullchain PEM (e.g. made with mkcert), absolute path; the server reads it where it is.',
+		},
+		'dev_server.tls_key_path': {
+			label: 'Key file',
+			description:
+				'Its private key PEM, absolute path, readable by your account only; the server refuses to start with a key of another certificate.',
+		},
 		backup_dir: {
 			label: 'Backup directory',
 			description:
@@ -439,6 +474,38 @@ export const OPTION_TEXT = Object.freeze({
 				'A certificate authority made by the installer, for a network with no public name (an intranet): each staff computer trusts it once.',
 		},
 	} as Record<string, { label: string; description: string }>,
+	/** The developer listener's address. */
+	dev_host: {
+		'127.0.0.1': {
+			label: 'This machine',
+			description: 'Only a browser on this computer (127.0.0.1).',
+		},
+		'0.0.0.0': {
+			label: 'The local network',
+			description: 'Every address of this computer (0.0.0.0) — with full error details shown.',
+		},
+	} as Record<string, { label: string; description: string }>,
+	devHostOther: 'This address of the computer (given by flag or kept from your .env).',
+	/** The developer listener's certificate (no Let's Encrypt: a checkout has no public name). */
+	dev_tls_mode: {
+		local_ca: {
+			label: 'Local CA (HTTPS)',
+			description:
+				'A certificate authority made for this checkout in <private>/tls; this computer trusts it once.',
+		},
+		none: {
+			label: 'None (plain HTTP)',
+			description: 'http:// only — the session cookie is then sent without the Secure flag.',
+		},
+		files: {
+			label: 'My own certificate',
+			description: 'A fullchain and key you already have (e.g. from mkcert).',
+		},
+	} as Record<string, { label: string; description: string }>,
+	devTlsKept: {
+		label: 'Keep the current certificate',
+		description: (cert: string) => `The pair your .env already names (${cert}).`,
+	},
 	image_source: {
 		official: {
 			label: 'Official',
@@ -522,6 +589,13 @@ export const NOTICE_TEXT = Object.freeze({
 	trialProbesSkipped:
 		'The stack is not running yet, so the connection is tested by the install inside the container.',
 	mediaProbe: (msg: string) => `Media directory: ${msg}`,
+	/** The developer listener (DEV_ROUTE_SERVE §1.1). */
+	devServerUrl: (url: string) => `bun run dev will serve ${url}`,
+	devServerKept: (keys: readonly string[]) =>
+		`Kept from your .env (not rewritten): ${keys.join(', ')}.`,
+	// The network warning is the plan's own sentence: dev_listener.ts devListenerNetworkWarning.
+	devServerPlain:
+		'Plain HTTP: SESSION_COOKIE_SECURE is written false so the browser keeps the login cookie on http://.',
 	identityProbe: (msg: string) => `Install folder and service account: ${msg}`,
 	reviewEnvHelp:
 		'The .env keys below are written to <private>/.env (0600); the values are never shown here.',
@@ -572,6 +646,16 @@ export const REVIEW_TEXT = Object.freeze({
 	certificate: 'certificate',
 	backups: 'backups',
 	hostCommands: 'host commands',
+	devServer: 'development server',
+	devNames: 'certificate names',
+	devTrust: 'trust store',
+	kept: 'kept from .env',
+	devCertificate: (source: string, cert: string): string => {
+		if (source === 'none') return 'none (plain HTTP)';
+		if (source === 'kept') return `kept · ${cert}`;
+		if (source === 'files') return `your own · ${cert}`;
+		return `local CA · ${cert}`;
+	},
 	/** The identity lines (identity_verdict.ts labels → words). */
 	identity: Object.freeze({
 		'install folder': 'install folder',
@@ -679,8 +763,24 @@ export const DONE_TEXT = Object.freeze({
 			const compose = `docker compose -f ${ending.route === 'trial' ? 'docker-compose.simple.yml' : 'docker-compose.yml'} -f compose.override.yaml --env-file .dedalo.env`;
 			return `The stack is up under Docker and restarts with it — from this checkout: \`${compose} ps\` / \`${compose} logs dedalo\` (all three files, or compose resolves its built-in defaults).`;
 		}
-		return ending.route === 'engine_only' ? DONE_TEXT_ENGINE_ONLY : DONE_TEXT_ENGINE_SUPERVISOR;
+		return engineNext(ending);
 	},
+	/**
+	 * The developer route's closing block (TODO-053, DEV_ROUTE_SERVE §1.3): the
+	 * command, every URL (built from the WRITTEN keys — dev_serve.ts), the root
+	 * login, the certificate — on every front end (plain, full screen, and left
+	 * on the main screen after it closes). docs/install/dev_quickstart.md quotes
+	 * it; gated against this function.
+	 */
+	served: (view: ServedEnding): string[] => [
+		`Start:   ${view.start}   (Ctrl-C stops it)`,
+		...view.urls.map((url, index) => `${index === 0 ? 'Open:   ' : '        '} ${url}`),
+		'Log in:  root, with the password set during this install',
+		...servedTlsLines(view.tls),
+		...(view.network
+			? ['Network: other machines reach it, with full error details — only on a network you trust']
+			: []),
+	],
 	/**
 	 * The aborted sentence — per route, whether a live instance was kept, and
 	 * built from what the abort ACTUALLY undid (campaign 3 C3-50: never "removed:
@@ -704,4 +804,55 @@ interface DoneEnding {
 	readonly instance: string;
 	readonly keptLive: boolean;
 	readonly undone?: readonly string[];
+	readonly served?: ServedEnding;
+}
+
+/** What comes next on an engine run: the served developer listener, systemd, or the supervisor. */
+function engineNext(ending: DoneEnding): string {
+	if (ending.served !== undefined) {
+		return `Start it with \`${ending.served.start}\`, then open ${ending.served.urls[0] ?? ''} and log in as root.`;
+	}
+	return ending.route === 'engine_only' ? DONE_TEXT_ENGINE_ONLY : DONE_TEXT_ENGINE_SUPERVISOR;
+}
+
+/** The developer route's served listener (structurally run_events.ts DevServedView). */
+export interface ServedEnding {
+	readonly start: string;
+	readonly urls: readonly string[];
+	readonly network: boolean;
+	readonly tls:
+		| {
+				readonly kind: 'local_ca';
+				readonly caFile: string;
+				readonly fingerprint: string | null;
+				readonly trusted: boolean | null;
+				readonly manual: string;
+		  }
+		| { readonly kind: 'files'; readonly certFile: string }
+		| null;
+}
+
+/** The certificate lines of the served block. */
+function servedTlsLines(tls: ServedEnding['tls']): string[] {
+	if (tls === null) {
+		return [
+			'TLS:     none — plain HTTP (SESSION_COOKIE_SECURE=false; the installer with --tls local_ca serves HTTPS)',
+		];
+	}
+	if (tls.kind === 'files') {
+		return [
+			`TLS:     your own certificate, ${tls.certFile} — its authority must be trusted by the browser`,
+		];
+	}
+	const trust =
+		tls.trusted === true
+			? 'trusted on this machine: the browser opens it without a warning'
+			: tls.trusted === false
+				? `not trusted yet — the browser warns until you trust it once: ${tls.manual}`
+				: 'trust not measured (DEDALO_TEST_TRUST_STORE_OFF: a test run)';
+	return [
+		`TLS:     local certificate authority ${tls.caFile}`,
+		`         SHA-256 ${tls.fingerprint ?? '(unreadable)'}`,
+		`         ${trust}`,
+	];
 }

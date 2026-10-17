@@ -76,7 +76,13 @@ import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { connArgs, pgClientEnv, runPsql } from '../../src/core/install/pg_exec.ts';
 import { rootPasswordMatches, rootPasswordState } from '../../src/core/install/root_pw.ts';
 import type { InstallState, PlanFile } from '../../src/core/install/run_files.ts';
+import { devServeIsolationEnv } from '../helpers/dev_serve_isolation.ts';
+import { freeTcpPort } from '../helpers/free_tcp_port.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
+import { expectTrustSeamHeld } from '../helpers/trust_seam.ts';
+
+/** The developer listener's port for every run of this file (one value: a resume compares answers). */
+const DEV_PORT = freeTcpPort();
 
 const PREFIX = 'dedalo_install_drill_';
 const dbName = (scenario: string): string => `${PREFIX}${process.pid}_${scenario}`;
@@ -155,6 +161,9 @@ function answersArgv(db: string): string[] {
 		'drill',
 		'--hierarchies',
 		'none',
+		// A free development port: 3500 may be a running `bun run dev` here (D3 refuses it).
+		'--dev-port',
+		String(DEV_PORT),
 	];
 }
 
@@ -183,6 +192,9 @@ function childEnv(dir: string, extra: Record<string, string> = {}): Record<strin
 		DEDALO_SESSION_DB_PATH: join(dir, 'sessions.sqlite'),
 		DEDALO_INSTALL_ROOT_PASSWORD: ROOT_PASSWORD,
 		DEDALO_INSTALL_DB_PASSWORD: DB_PASSWORD,
+		// The serve check boots this install's server (verify_dev_server): its own socket,
+		// media root and processes dir — never the suite's (dev_serve_isolation.ts).
+		...devServeIsolationEnv(),
 		...extra,
 	};
 }
@@ -277,6 +289,9 @@ async function fingerprint(db: string, dir: string): Promise<Fingerprint> {
 	}
 	const env = parseEnvFile(readFileSync(join(dir, '.env'), 'utf8'));
 	for (const key of PER_INSTALL_ENV_KEYS) delete env[key];
+	// A path inside the install's OWN private dir (the developer listener's
+	// local-CA pair, <private>/tls) is compared relative to it: each run has its own dir.
+	for (const [key, value] of Object.entries(env)) env[key] = value.split(dir).join('<private>');
 	return {
 		ontology: await rows(db, 'SELECT tld, count(*) FROM dd_ontology GROUP BY tld ORDER BY tld'),
 		tables: counts,
@@ -325,6 +340,8 @@ describe('install resume drill', () => {
 		async () => {
 			const first = runCli(dirA, answersArgv(dbName('a')));
 			expect(first.exitCode, first.out).toBe(0);
+			// childEnv strips DEDALO_INSTALL_*: the trust seam must still reach the child.
+			expectTrustSeamHeld(first.out, dirA);
 			expectComplete(dirA);
 			expect(leaked(first.out + runFilesText(dirA))).toEqual([]);
 			expect(saltCount(dirA, first.out)).toBe(1);

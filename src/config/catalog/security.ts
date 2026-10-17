@@ -446,6 +446,9 @@ development listener on localhost — a browser silently discards a \`Secure\` c
 \`http://\`, so login there appears to succeed and then does nothing. Never set it on a
 server that anyone else can reach; terminate TLS at the web server instead.
 
+The installer writes it to match the listener it sets up: \`true\` over HTTPS, \`false\` on
+a developer install that serves plain HTTP (\`--tls none\`).
+
 \`\`\`bash
 SESSION_COOKIE_SECURE=true
 \`\`\``,

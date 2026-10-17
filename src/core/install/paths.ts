@@ -54,6 +54,16 @@ export function installOntologyStagingDir(): string {
 	return join(installPrivateDir(), 'install', 'ontology_staging');
 }
 
+/**
+ * Where the developer route keeps its development listener's certificate
+ * material (DEV_ROUTE_SERVE §1.2): `<private>/tls` — outside the checkout, so
+ * never in a release zip or an image; issued by the ONE local-CA generator
+ * (deploy/dedalo-tls-rotate.sh `--dir`), owned by the developer (never root).
+ */
+export function devTlsDir(): string {
+	return join(installPrivateDir(), 'tls');
+}
+
 /** Directory holding the vendored hierarchy import files + metadata JSONs. */
 export const HIERARCHY_IMPORT_DIR: string = join(projectRoot, 'install/import/hierarchy');
 

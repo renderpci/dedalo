@@ -204,10 +204,13 @@ export function imageVerifyOf(answers: InstallAnswers): 'cosign' | 'none' {
 	return pulled && isOfficialRepository(imageRepositoryOf(answers)) ? 'cosign' : 'none';
 }
 
-/** Does this install carry a certificate (docker), or serve plain HTTP (trial)? */
-export function servesTls(answers: InstallAnswers): boolean {
-	return answers.route === 'docker' && answers.tls_mode !== 'none';
-}
+/**
+ * Does this install carry a certificate (docker), or serve plain HTTP (trial)?
+ * The ONE function every route's SESSION_COOKIE_SECURE is written from (the
+ * developer route's listener included — dev_listener.ts), re-exported here for
+ * the stack's own files.
+ */
+export { servesTls } from '../../dev_listener.ts';
 
 /** The certificate files nginx reads (inside its container). */
 export function certPathsOf(answers: InstallAnswers): { fullchain: string; key: string } {

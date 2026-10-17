@@ -317,7 +317,9 @@ describe('the run under the full-screen reporter (f)', () => {
 	test('the log view shows the redaction marker, never the password; the salt only on the Done frame', async () => {
 		const DB = SECRETS.db.value;
 		const SALT = 'Salt-NarwhalSaffron-66';
-		const rig = await openRig({ captureConsole: true });
+		// Tall enough that the log view's TAIL still holds install_ontologies' lines: the
+		// developer plan ends with verify_dev_server (TODO-053), two lines after them.
+		const rig = await openRig({ captureConsole: true, height: 34 });
 		const framesBeforeSalt: string[] = [];
 		let saltShown = false;
 		try {

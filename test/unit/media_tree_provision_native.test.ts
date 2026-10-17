@@ -936,6 +936,12 @@ interface DirModeRow {
 
 const DIR_MODE_REGISTER: Readonly<Record<string, DirModeRow>> = Object.freeze({
 	// ---- not_media: deliberately NOT the media tree's mode -------------------
+	'src/core/install/dev_tls.ts': {
+		modes: ['0o700'],
+		kind: 'not_media',
+		reason:
+			'<private>/tls — the developer certificate directory (the issuing CA key and the site key); owner-only by design',
+	},
 	'src/core/install/config_persist.ts': {
 		modes: ['0o700'],
 		kind: 'not_media',

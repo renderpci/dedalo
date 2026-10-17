@@ -131,7 +131,9 @@ meaning.)
 | `--server-name` | with `--route production` / `docker` | — | the public address browsers use, a fully qualified name (not `localhost`, not an IP address): the site file's `server_name`, the certificate's name |
 | `--web-server` | no | the one installed, else `nginx` | `production`: `nginx` or `apache` — the server the [site file](#the-site-file) is written for |
 | `--http-port`, `--https-port` | no | `80`, `443` | the published ports (distinct). Let's Encrypt needs `--http-port 80` (its HTTP-01 challenge) |
-| `--tls` | no | `letsencrypt` (`none` on `trial`) | the certificate on `production` and `docker`: `letsencrypt` (certbot + its renewal timer), `local_ca` (a certificate authority made on this machine for a network with no public name — restricted to the install's addresses; on `production` the certificate renews itself) or `files` (the institution's own); `trial` has none |
+| `--tls` | no | `letsencrypt` (`none` on `trial`; `local_ca` on `developer`) | the certificate on `production` and `docker`: `letsencrypt` (certbot + its renewal timer), `local_ca` (a certificate authority made on this machine for a network with no public name — restricted to the install's addresses; on `production` the certificate renews itself) or `files` (the institution's own); `trial` has none. On `developer` it is the development listener's: `local_ca` (HTTPS from a certificate authority kept in `<private>/tls`), `none` (plain HTTP) or `files` (your own pair, e.g. from mkcert, with `--tls-cert` / `--tls-key`). Left out on a re-run, a pair your `.env` already names is kept |
+| `--dev-port` | no | `3500` | `developer`: the port `bun run dev` serves the browser on, written as `SERVER_TCP_PORT`. When another program already uses it, the install is refused before anything is written, and the refusal names the next free port: choose it (or another) yourself. Left out on a re-run, the port your `.env` already names is kept — and held to the same rule: a kept value that is not a port is refused, and `--dev-port` replaces it. Refused on any other route |
+| `--dev-host` | no | `127.0.0.1` | `developer`: the address the development listener binds, written as `SERVER_TCP_HOST` — `127.0.0.1` (this machine only), `0.0.0.0` (the local network) or one IP address of this machine. A development install shows full error details to the browser: the Review (and a headless run's summary) warns when other machines can reach it. Left out on a re-run, the address your `.env` already names is kept — a kept value that is not an address is refused, and `--dev-host` replaces it. Refused on any other route |
 | `--tls-extra-names` | no | — | with `--tls local_ca` only: the other addresses staff type, comma-separated — fully qualified names (`dedalo.lan,archivo.museo.lan`) and IPv4 addresses (`192.168.1.20`). No IPv6, no loopback, no name inside another (the authority certifies each name exactly, never the names below it). On the production route an IPv4 address must be one of this server's, and no other instance may claim it: the host's catch-all then hands that address this instance's certificate ([Reaching an instance by IP address](reverse_proxy.md#reaching-an-instance-by-ip-address)). The certificate names them beside `--server-name`, the site answers to them, and the authority can certify nothing else |
 | `--letsencrypt-email` | with `--tls letsencrypt` | — | the address for Let's Encrypt's expiry notices |
 | `--letsencrypt-staging` | no | off | flags only: issue from Let's Encrypt's staging CA (a test certificate browsers do not trust). The public probe then does not verify the chain, so the install completes; on production the closing *To do on this host* list prints the `certbot` command that replaces the certificate with a real one |
@@ -177,7 +179,8 @@ give falls back to. It never changes the steps, and a flag you give always wins.
 | database socket | — | `/var/run/postgresql` | — |
 | media root (`MEDIA_PATH`) | not written | `/srv/dedalo/<i>/dedalo/media` (the web root rule: the site's `root` is `/srv/dedalo/<i>`, so `/dedalo/media/…` is `MEDIA_PATH/…`; a production `MEDIA_PATH` must end in `/dedalo/media`) | `/srv/dedalo/media` |
 | backups | — | `<install folder>/backups` | the `backups` volume |
-| certificate (`--tls`) | — | `letsencrypt` | `letsencrypt` (`trial`: none) |
+| certificate (`--tls`) | `local_ca` (the development listener's) | `letsencrypt` | `letsencrypt` (`trial`: none) |
+| development listener (`--dev-port`, `--dev-host`) | `3500` on `127.0.0.1` | — | — |
 | HTTPS port (`--https-port`) | — | `443` | `443` (`trial`: none — the trial publishes plain HTTP only and does not ask it) |
 | server socket (`SERVER_UNIX_SOCKET`) | not written | `/run/dedalo-<i>/dedalo_ts.sock` | `/run/dedalo/dedalo_ts.sock` |
 | publication database (`--mysql-name`) | `web_dedalo` | `web_<i>` | `web_dedalo` |
@@ -236,22 +239,66 @@ installer's own affordances.
 5. **`test_diffusion_connection`** *(only with `--diffusion`)* and
    **`test_mailer_connection`** *(only with `--mailer`)* — probes that **warn** on
    failure and let the install continue.
-6. **`persist_config`** — writes `../private/.env`; see the next section. Any
+6. **`install_dev_dependencies`** *(developer route only)* — installs the
+   checkout's development dependencies (`bun install --frozen-lockfile
+   --ignore-scripts`: the bootstrap's install without `--production`), as the
+   checkout's owner. `bun run dev` needs them — its CSS watcher imports `less`.
+   Only what is missing is installed; a checkout that already has every
+   development dependency at its locked version is left as it is. A failed
+   install (this machine must reach the npm registry once) **fails the install**,
+   with bun's own words. Production, docker and trial keep the production-only
+   tree. Run as root in a checkout another user owns, the step refuses: root
+   never writes in a user's tree.
+7. **`dev_tls_certificate`** *(developer route, `--tls local_ca` only — the
+   default)* — the development listener's certificate, issued by the same
+   generator the other routes use (`deploy/dedalo-tls-rotate.sh --mode local-ca
+   --reload none`) into `<private>/tls` (directory `0700`, keys `0600`), as the
+   checkout's owner. The certificate authority is restricted to exactly
+   `localhost` and `127.0.0.1`, plus the address the listener binds when it is
+   opened to the network: the one IPv4 address of `--dev-host`, or this
+   machine's IPv4 network addresses with `0.0.0.0` / `::`. IPv6 addresses are
+   never certified: a loopback listener is opened as `https://localhost:…`,
+   which the certificate names whatever the address family; a specific IPv6
+   `--dev-host` with `local_ca` is refused (choose an IPv4 address, `none` or
+   `files`). On a re-run the authority already there is kept and its
+   certificate renewed when it expires within 30 days; an authority made for
+   other addresses is refused before anything is written, and the refusal
+   names the command that replaces it. `--abort` removes `<private>/tls` only
+   when this install created it.
+8. **`dev_trust_ca`** *(with `dev_tls_certificate`)* — prints the authority's
+   path and SHA-256 fingerprint and makes this machine trust it. On macOS the
+   authority goes into your login keychain (`security add-trusted-cert`), and
+   macOS asks for your password in a system dialog. On Linux it is copied into
+   the system anchors and the store is rebuilt (`update-ca-certificates` or
+   `update-ca-trust`), through `sudo` for that one command; as root, no `sudo`.
+   Firefox keeps its own store: with `certutil` installed the authority is
+   added to every Firefox profile, otherwise the step tells you to set
+   `security.enterprise_roots.enabled`. A cancelled dialog, a refused `sudo` or
+   another system does **not** fail the install: the step reports *not trusted
+   yet* with the manual command, and `bun run dev` serves either way (the
+   browser warns until you trust it). Nothing is asked when this machine
+   already trusts it. On macOS a cancelled dialog leaves nothing behind: the
+   certificate the keychain had already imported is deleted again. `--abort`
+   takes back what this install added; if that removal is refused, `--abort`
+   keeps `dedalo-trust.json` and the authority in `../private/tls/` so that
+   `bun run tls:untrust` can still remove it. `bun run tls:untrust` takes back
+   everything the installer added, for a finished install.
+9. **`persist_config`** — writes `../private/.env`; see the next section. Any
    previous `.env` is first copied to `.env.bak.<timestamp>`, then the new file
    replaces it in one rename (the `.env` is never missing in between).
-7. **`check_directories`** — creates and write-probes the private directory, the
+10. **`check_directories`** — creates and write-probes the private directory, the
    session store, the backups directory, and the media root: `--media-path` when
    given, otherwise the default `<private dir>/media` (a legacy in-tree
    `<repo>/media` that already holds files is kept instead). It then provisions
    the media tree under that root. Writability is proven by writing and deleting a probe file, not by
    reading permission bits — a network mount can lie about the bits.
-8. **`stage_ontologies`** — fetches (update server) or copies (built-in `oh`,
+11. **`stage_ontologies`** — fetches (update server) or copies (built-in `oh`,
    `--ontology-source`) every chosen domain ontology file, dependencies first,
    into the staging directory, and verifies each one (decompression and row
-   format) **before the database is touched**. This is the install's only
-   network phase: an unreachable server or a damaged file stops the install
+   format) **before the database is touched**. Apart from the developer
+   route's development dependencies, this is the install's only network phase: an unreachable server or a damaged file stops the install
    here, with the database still empty.
-9. **`install_db_from_default_file`** — restores the database from the core-only
+12. **`install_db_from_default_file`** — restores the database from the core-only
    seed (refused unless the database is empty) as **one transaction** — a restore
    that fails or is killed part-way leaves the database empty, never half-built —
    **then** builds the derived search
@@ -259,12 +306,12 @@ installer's own affordances.
    Languages thesaurus (`lg`)**. Its terms already ship in the seed, so activation
    is all it needs — there is no separate step for it, and nothing about it to
    choose.
-10. **`install_ontologies`** — imports the staged domain ontologies through the
+13. **`install_ontologies`** — imports the staged domain ontologies through the
    same import routine the ontology update panel uses, then checks their
    references (see [Domain ontologies](#domain-ontologies)). An import failure
    **fails the install**.
-11. **`set_root_pw`** — the root password, hashed with Argon2id.
-12. **`install_hierarchies`** — imports and activates the **optional** thesauri you
+14. **`set_root_pw`** — the root password, hashed with Argon2id.
+15. **`install_hierarchies`** — imports and activates the **optional** thesauri you
    chose (`none`, or nothing chosen, adds none), plus the thesauri the installed
    ontologies declare, unless declined. A declined mandatory thesaurus is a
    warning, never a failure. Each selected TLD has its listed term files verified against their
@@ -276,15 +323,57 @@ installer's own affordances.
    does not exist for the engine until its ontology does), so a TLD whose activation
    fails is a **failed** hierarchy — and a failed hierarchy **fails the install**:
    nothing is sealed.
-13. **`register_tools`** (unless `--skip-tools`).
-14. **`install_finish`** — seals the install, refused unless a root user with a
+16. **`register_tools`** (unless `--skip-tools`).
+17. **`install_finish`** — seals the install, refused unless a root user with a
     password actually exists. A forged *finish* can never seal a half-built
     instance.
-15. **Verify the root login** — an actual login against the freshly installed
+18. **`verify_dev_server`** *(developer route only)* — the install is complete
+    only once it serves. The step starts `bun run dev` once in the background,
+    the way you will (the CSS watcher and the supervised server), with the
+    `.env` it wrote: every key that file names is removed from the command's
+    environment, so the server reads the file. It then asks the development
+    listener for `/health` (over HTTPS with the local certificate authority as
+    the only trust anchor: whether this machine already trusts it does not
+    matter here), logs in as `root` over the listener, checks that every
+    cookie the login sets is `Secure` exactly when the listener is HTTPS
+    (`SESSION_COOKIE_SECURE`), checks that the next request carries the
+    session cookie, and stops the server again, waiting until the port is
+    free. Before it starts anything it checks that no other program holds the
+    port: a foreign server would otherwise answer for it. It refuses to run as
+    root in a checkout another user owns: the server it starts writes the
+    session store, logs and compiled CSS there. A failure **fails the
+    install** and names the cause: the port taken, a certificate the server
+    refuses (its own boot refusal, key and path named), the database
+    unreachable (`/health` answers `db: down`), a development dependency
+    missing (the package named), another Dédalo server on the same unix
+    socket, the certificate not verifying, a cookie flag that does not match
+    the listener, or the login refused. The install is sealed by then, so
+    `--abort` refuses and the failure hint does not offer it, and a `--resume`
+    with another `--dev-port` or `--socket` is refused as a changed answer:
+    fix the cause — stop the other program, or edit the key the message names
+    (`SERVER_TCP_PORT`, `SERVER_UNIX_SOCKET`) in the written `.env` — then
+    `--resume`, which runs the check again with that file. An install written
+    to another private directory (`DEDALO_INSTALL_PRIVATE_DIR`) is started as
+    `DEDALO_PRIVATE_DIR=<dir> bun run dev`, by the check and on the final
+    screen alike. Without `bun` on your `PATH`
+    (an install started through `install.sh`), the check runs with the
+    installer's own Bun and warns that `bun run dev` will not start from your
+    shell.
+19. **Verify the root login** — an actual login against the freshly installed
     database. This is the end-to-end proof, and it is why the CLI prints
     `✔ install complete — root login verified`. The generated secret
     (`DEDALO_SALT_STRING`) is shown here, once, by the run that completes the
     install — a `--resume` included — and never mid-run (see [Secrets](#secrets)).
+    On the developer route the closing lines then say what to do next, from
+    the keys the install wrote: start the server with `bun run dev`, open the
+    client at every address it answers on (`https://127.0.0.1:3500/dedalo/core/page/`
+    and `https://localhost:3500/…` with the defaults, plus this machine's
+    network addresses when it is opened to the network), log in as `root`, and
+    the certificate authority's path, SHA-256 fingerprint and whether this
+    machine trusts it now (with the command that trusts it, when it does not).
+    The full-screen installer leaves the same lines on the terminal when it
+    closes. The [developer quickstart](dev_quickstart.md#4-run-the-installer)
+    shows them.
 
 !!! note "Only declared thesauri are pre-selected"
     The CLI's default and the interactive installer's pre-ticked boxes are the
@@ -585,7 +674,7 @@ plain mode's `Step <n> of <N>` and the full screen's rail number the same steps.
 | Route | Steps |
 | --- | --- |
 | production | Install type → System check → Identity → Database → Web server & TLS → Services → Ontologies → Thesauri → Languages → Publication → Mail → Administrator → Review plan |
-| developer | Install type → System check → Database → Identity → Ontologies → Thesauri → Languages → Publication → Mail → Administrator → Review plan |
+| developer | Install type → System check → Database → Identity → Development server → Ontologies → Thesauri → Languages → Publication → Mail → Administrator → Review plan |
 | docker | Install type → System check → Image → TLS & address → Containers → Identity → Ontologies → Thesauri → Languages → Publication → Mail → Administrator → Review plan |
 | trial | as docker, without TLS & address |
 
@@ -978,6 +1067,8 @@ come from flags, an answers file or the interactive screens:
 | `locale` | a well-formed language tag | `locale '<v>' is not a valid BCP 47 tag` |
 | `langs`, `app_lang_default`, `data_lang_default` | at least one language; the defaults are members of the set | `languages: …` |
 | `information`, `info_key` | no line break or NUL | `information contains an illegal control character` |
+| `dev_port`, `dev_host` (developer) | a port 1–65535; `127.0.0.1`, `0.0.0.0`, `localhost` or one IP address; refused on any other route | `dev_port '<v>' must be an integer 1-65535`, `dev_host '<v>' must be 127.0.0.1 (this machine), 0.0.0.0 (the local network) or one IP address of this machine`, `dev_port is only meaningful on the developer route (route is <r>)` |
+| `tls_mode` (developer) | `local_ca`, `none` or `files` (with `--tls-cert` and `--tls-key`, absolute) | `tls_mode must be local_ca\|none\|files on the developer route` |
 | root password | supplied (for an install), and passes the password policy | `root password is required (…)`, `root password does not meet the password policy (<rule>)` |
 
 The thesaurus, ontology and declined-dependency refusals described above are
@@ -1329,6 +1420,7 @@ owns are these:
 | Serving / media *(each only when it has a value: on production, docker and trial the [route defaults](#route-defaults) give `MEDIA_PATH` and `SERVER_UNIX_SOCKET` one; on developer only `--media-path` / `--socket` do)* | `MEDIA_PATH`, `SERVER_UNIX_SOCKET`, `DEDALO_MEDIA_ACCESS_MODE`, `DEDALO_PG_BIN_PATH`, `DEDALO_BACKUP_DIR` (production: `<backup dir>/db`, the directory the backup units write) |
 | Diffusion *(only with `--diffusion`)* | `DEDALO_DIFFUSION_NATIVE`, `DEDALO_DIFFUSION_DB_*` |
 | Outbound email *(only with `--mailer`, or the installer's optional *Mail* screen)* | `DEDALO_SMTP_HOST`, `DEDALO_SMTP_PORT`, `DEDALO_SMTP_SECURE`, `DEDALO_SMTP_USER`, `DEDALO_SMTP_PASS`, `DEDALO_SMTP_FROM`, `DEDALO_SMTP_FROM_NAME` |
+| Development only *(the developer route only — no other route writes any of these)* | `SERVER_TCP_PORT`, `SERVER_TCP_HOST`, `SERVER_TCP_TLS_CERT_FILE`, `SERVER_TCP_TLS_KEY_FILE` (none with `--tls none`), `SESSION_COOKIE_SECURE` (`true` over HTTPS, `false` over plain HTTP — always rewritten to match the listener), `DEDALO_DEV_MODE=true`, `DEDALO_DEBUG_API_ERRORS=true`. A re-run that does not answer them keeps the port, address, certificate pair and modes the file already has; `--tls none` over a kept pair writes both certificate keys empty |
 
 ### The update servers
 

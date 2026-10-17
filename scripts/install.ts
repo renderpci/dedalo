@@ -715,6 +715,12 @@ async function execute(
 	const rootVerified = (request.secrets.root_password ?? '') !== '';
 	// An --engine-only run (the by-hand host procedure) ends with the systemd pointer only (C3-54).
 	const engineOnly = normalizeInstallAnswers(raw).answers.engine_only;
+	// The developer route's closing block (TODO-053): the command, the URLs and the
+	// certificate, read back from the .env the run WROTE — null when it opens no listener.
+	const served =
+		outcome.exitCode === 0 && outcome.result !== 'aborted' && !engineOnly
+			? await (await import('../src/core/install/dev_serve.ts')).devServedView()
+			: null;
 	await reporter.finish(outcome, {
 		mode: request.mode,
 		rootVerified,
@@ -723,6 +729,7 @@ async function execute(
 			instance: '',
 			keptLive: false,
 			undone: [],
+			...(served === null ? {} : { served }),
 		},
 	});
 	process.exit(outcome.exitCode);
@@ -1386,9 +1393,15 @@ async function interactiveInstall(
 			return reviewHostCommands(plan, measure);
 		},
 		// What the run's own system check would refuse, asked BEFORE `yes` (campaign 3c D2).
+		// The developer listener's port too (D3): the Review refuses while it is in use —
+		// and a local authority already there for other names (dev_tls.ts).
 		preflightRefusals: async (plan, measure) => {
 			const { reviewPreflightRefusals } = await import('../src/core/install/host/review.ts');
-			return reviewPreflightRefusals(plan, { measure });
+			const { devListenerRefusals } = await import('../src/core/install/dev_listener_check.ts');
+			return [
+				...(await reviewPreflightRefusals(plan, { measure })),
+				...(await devListenerRefusals(plan.devListener, plan.devCertificate)),
+			];
 		},
 		routeRefusal: (plan) =>
 			plan.answers.route === 'production' &&
