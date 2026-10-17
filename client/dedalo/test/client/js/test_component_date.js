@@ -932,6 +932,51 @@ describe(`COMPONENT_DATE SEARCH MODE`, function() {
 
 
 
+	it(`search mode: a second press on the calendar trigger closes the picker (toggle)`, async function() {
+
+		const input		= node.querySelector('.input_date')
+		const trigger	= node.querySelector('.button_calendar_container .calendar')
+
+		// hygiene, then open the picker
+		const leftover = document.body.querySelector('.dd_calendar_popup')
+		if (leftover) {
+			leftover.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+		}
+		input.focus()
+		await new Promise((resolve)=>setTimeout(resolve, 30))
+		trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+		let popup = document.body.querySelector('.dd_calendar_popup')
+		for (let i = 0; i < 40 && !popup; i++) {
+			await new Promise((resolve)=>setTimeout(resolve, 10))
+			popup = document.body.querySelector('.dd_calendar_popup')
+		}
+		assert.isOk(popup, 'expected the picker open after the first press')
+
+		// the toggle: a press that STARTS with the picker open must close it.
+		// The real path (a browser) light-dismisses on release BEFORE the click,
+		// which is why the decision is judged at pointerdown; a synthetic press
+		// reproduces the same pointerdown→click order.
+		trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+		trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+
+		assert.isNull(document.body.querySelector('.dd_calendar_popup'), 'expected the second press to close the picker, not re-open it')
+
+		// and a third press opens it again (the toggle is not stuck closed)
+		trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }))
+		trigger.dispatchEvent(new MouseEvent('click', { bubbles: true }))
+		let reopened = document.body.querySelector('.dd_calendar_popup')
+		for (let i = 0; i < 40 && !reopened; i++) {
+			await new Promise((resolve)=>setTimeout(resolve, 10))
+			reopened = document.body.querySelector('.dd_calendar_popup')
+		}
+		assert.isOk(reopened, 'expected a further press to open the picker again')
+
+		reopened.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+	});
+
+
+
 	it(`destroy after search tests`, async function() {
 
 		if (instance) {

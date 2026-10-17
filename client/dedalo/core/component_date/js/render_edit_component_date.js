@@ -456,6 +456,11 @@ const get_picker_labels = () => {
 * Enter/Space. Alt+ArrowDown inside the field opens the picker too (the platform
 * convention), and the picker itself is fully keyboard driven once open.
 *
+* The trigger is a TOGGLE: pressing it while its picker is open closes the picker
+* instead of re-opening it. The open/closed decision is taken at pointerdown (the
+* press is judged before a native popover's light dismiss closes the picker on
+* release, which would otherwise hide the "already open" state from the click).
+*
 * The input_wrap container (<div class="input-group">) is the node returned; the caller
 * appends it to the appropriate content_value container and may append additional controls
 * (e.g. a remove button) after the fact.
@@ -506,12 +511,45 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 		const button_calendar_container = render_button_calendar()
 		const button_calendar = button_calendar_container.querySelector('a.calendar')
 
+		// The picker THIS field currently has open (the module keeps the global
+		// "one picker at a time" rule; this reference is only the toggle state).
+		let picker_controller = null
+		const is_picker_open = () => Boolean(picker_controller)
+		const close_picker = () => {
+			if (picker_controller) {
+				// focus_back: closing on purpose, the field keeps the focus
+				picker_controller.close({ focus_back: true })
+				picker_controller = null
+			}
+		}
+
+		// The trigger is a TOGGLE: a second press on the icon closes the picker
+		// instead of re-opening it. The decision must be taken at POINTERDOWN,
+		// because a native popover's light dismiss closes the picker on the
+		// release, BEFORE the click that reaches activate_calendar — so by click
+		// time "already open" is no longer observable.
+		let press_started_open = false
+		button_calendar.addEventListener('pointerdown', function() {
+			press_started_open = is_picker_open()
+		})
+
 		// activate: open the built-in dd_date calendar (js/calendar_popup.js).
 		// The module is imported on demand; load_editor() has normally warmed it.
 		const activate_calendar = async function(e) {
 
 			e.preventDefault()
 			e.stopPropagation()
+
+			// toggle. A press that began with the picker open means "close"; it is
+			// trusted on the pointer path only (keyboard activation carries no
+			// pointerdown), and a stale flag from an aborted press is ignored.
+			const from_pointer	= Boolean(e && e.type === 'click')
+			const toggle_close	= from_pointer && press_started_open
+			press_started_open	= false
+			if (toggle_close || is_picker_open()) {
+				close_picker()
+				return
+			}
 
 			const {open_date_picker} = await import('./calendar_popup.js')
 
@@ -521,12 +559,15 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 			const parsed	= self.parse_string_date(input.value)
 			const initial	= (parsed.data && Number.isInteger(parsed.data.year)) ? parsed.data : {}
 
-			open_date_picker({
+			picker_controller = open_date_picker({
 				anchor			: button_calendar,
 				initial			: initial,
 				format			: (dd_date) => self.date_to_string(dd_date),
 				return_focus	: input,
 				labels			: get_picker_labels(),
+				// any close path (selection, Escape, light dismiss) clears the
+				// toggle state, so the next press opens again
+				on_close		: () => { picker_controller = null },
 				on_select		: (dd_date) => {
 					// ONE formatter: the component's date_to_string writes the
 					// value; the native change event keeps the save flowing
@@ -583,6 +624,7 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 *
 * The trigger is a real control (a11y.make_activable: role, tab stop, name; the same
 * callback on click and Enter/Space); Alt+ArrowDown in the field opens it too.
+* Like the calendar trigger it is a TOGGLE: a second press closes the open picker.
 *
 * @param {number}      i           - Zero-based index of the data entry (used in change_handler)
 * @param {string}      date_input  - Which time bound this field represents: 'start' or 'end'
@@ -628,11 +670,36 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 		const button_calendar_container = render_button_calendar()
 		const button_calendar = button_calendar_container.querySelector('a.calendar')
 
+		// Toggle state and its pointerdown judgement — same contract as
+		// get_input_date_node (the press is judged at pointerdown, before a
+		// native popover's light dismiss closes the picker on release)
+		let picker_controller = null
+		const is_picker_open = () => Boolean(picker_controller)
+		const close_picker = () => {
+			if (picker_controller) {
+				picker_controller.close({ focus_back: true })
+				picker_controller = null
+			}
+		}
+		let press_started_open = false
+		button_calendar.addEventListener('pointerdown', function() {
+			press_started_open = is_picker_open()
+		})
+
 		// activate: open the built-in time picker (js/calendar_popup.js)
 		const activate_time = async function(e) {
 
 			e.preventDefault()
 			e.stopPropagation()
+
+			// toggle. A press that began with the picker open means "close"
+			const from_pointer	= Boolean(e && e.type === 'click')
+			const toggle_close	= from_pointer && press_started_open
+			press_started_open	= false
+			if (toggle_close || is_picker_open()) {
+				close_picker()
+				return
+			}
 
 			const {open_time_picker} = await import('./calendar_popup.js')
 
@@ -644,11 +711,12 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 				? data
 				: {}
 
-			open_time_picker({
+			picker_controller = open_time_picker({
 				anchor			: button_calendar,
 				initial			: initial,
 				return_focus	: input,
 				labels			: get_picker_labels(),
+				on_close		: () => { picker_controller = null },
 				on_select		: (dd_time) => {
 					ui.component.error(false, input_wrap)
 					input.value = self.time_to_string(dd_time)
