@@ -12,6 +12,12 @@
 @space_s:    0.25rem;
 @card_inset: 0.75rem;
 
+// WCAG 2.5.5 tap target — the same figure as the tools tier
+// (`@phone_hit_target`, tools_common/css/tool_responsive.less). File-scoped
+// because TWO blocks need it and they are not nested in each other: the compact
+// tier (its chips) and the coarse-pointer rows of the fields sheet.
+@phone_hit:  44px;
+
 // search_component (shared at least by unit_test preview)
 	// A search field is ONE card: white surface on the grey group, one border,
 	// one radius. Its grid track (not a flex basis) sets its width — see
@@ -1219,8 +1225,6 @@
 // three-column desktop layout is unchanged.
 @media screen and (max-width: @width_break_point_0) {
 
-	@phone_hit: 44px; // WCAG 2.5.5, the same figure as the tools tier
-
 	// Moving between fields levels (drill / back). A drilled level REPLACES its
 	// parent (see the `:has` rule below), so only the ENTERING list is on screen:
 	// it slides in from the edge it came from, making the move read as lateral
@@ -1503,6 +1507,114 @@
 					border-radius: var(--radius-md);
 				}
 			}
+		}
+	}
+}
+
+// ── THE FIELDS SHEET'S ROWS ARE TAP LINES ─────────────────────────────────────
+// The field rows get their 44px line from `.has_add_button` (above), and that
+// class exists exactly where the pointer is COARSE — `search_phone.js` asks
+// `touch_pick.js`'s `is_touch()`, which IS `(pointer: coarse)`. So this block is
+// gated by the pointer and not by a width, deliberately: the gate cannot disagree
+// with the rows, at any width (a touch tablet in landscape takes it too), and a
+// narrow window on a FINE pointer keeps the compact presentation and drag rows it
+// has today. A control a finger cannot hit is a control that does not exist.
+//
+// The level header and the group label were the two exceptions to the sheet's own
+// rhythm: ~29px bands (vs the rows' 44px) whose one control — the × that leaves a
+// drilled level, the arrow that folds a group — was a ~15px glyph inside them.
+// They are rows of the same list and take the same line now, their control the
+// same trailing column as the rows' "+", so the whole sheet is one rhythm and
+// closing a level is as easy as adding a field.
+//
+// (!) the × matters more than "a control": the header bar is `pointer-events:none`
+// and the glyph is the ONLY part that receives the click (layout.less), so its box
+// IS the target. It is the way back out of a level.
+@media (pointer: coarse) {
+	.wrapper_search > .search_global_container > .search_container_selector {
+
+		// `.deep_path` is named beside `.section_bar_label` throughout this block on
+		// purpose, and it is NOT redundant: the compact tier styles the drilled bar
+		// with ONE CLASS MORE than the plain one (`… .section_bar_label.deep_path`),
+		// so a rule written for the plain bar alone loses to it — the × would keep
+		// the compact tier's absolute placement, its 1.6rem text reserve and its
+		// -50% transform. Same declaration, the deeper twin.
+		//
+		// one row height for the bars. `padding-top/bottom: 0` is load-bearing: the
+		// floor is a border-box min-height, so `li`'s own vertical pad would add to
+		// it and leave these bars TALLER than the rows beside them.
+		ul li.section_bar_label,
+		ul li.section_bar_label.deep_path,
+		ul li.section_group_label {
+			box-sizing: border-box;
+			min-height: @phone_hit;
+			display: flex;
+			align-items: center;
+			padding-top: 0;
+			padding-bottom: 0;
+		}
+
+		// the × is an ::after in layout.less (1em glyph, floated right) and the
+		// compact tier places it absolutely; here it is the header's LAST FLEX ITEM
+		// — a tap column as wide as the row is tall, glyph centred in it, i.e. the
+		// rows' trailing "+" column. The placement the other rules would have left
+		// is reset: on a static box `top`/`right` are inert but a surviving
+		// `transform: translateY(-50%)` would drag the glyph off its centre.
+		ul li.section_bar_label:after,
+		ul li.section_bar_label.deep_path:after {
+			position: static;
+			float: none;
+			top: auto;
+			right: auto;
+			transform: none;
+			display: flex;
+			flex: 0 0 @phone_hit;
+			align-items: center;
+			justify-content: center;
+			width: @phone_hit;
+			height: @phone_hit;
+			line-height: 1;
+			margin: 0;
+		}
+
+		// root depth has nothing to go back to: render_common marks that bar
+		// `close_hide` and layout.less hides the ×. This block outranks that rule
+		// (it names the whole ancestor chain), so the refusal is restated here
+		// rather than inherited.
+		ul li.section_bar_label.close_hide:after {
+			display: none;
+		}
+
+		// the header's text column: left aligned with the field rows' labels, no
+		// right padding — the × column is flush with the rows' "+" column
+		ul li.section_bar_label,
+		ul li.section_bar_label.deep_path {
+			padding-left: 0.75rem;
+			padding-right: 0;
+		}
+
+		// the drilled level's path is a flex item, but a flex item will not shrink
+		// below its content unless told to — without this it overflows past the ×
+		// instead of ellipsizing (the display/ellipsis itself is the compact tier's)
+		ul li.section_bar_label.deep_path >.section_bar_full_path {
+			flex: 1 1 auto;
+			min-width: 0;
+		}
+
+		// the level's own name (root depth; a drilled level shows the path instead):
+		// one line, and it stops before the ×
+		ul li.section_bar_label >.section_bar_section_name {
+			min-width: 0;
+			overflow: hidden;
+			white-space: nowrap;
+			text-overflow: ellipsis;
+		}
+
+		// the group label's disclosure arrow rides the same line: centred, not
+		// pinned near the top of a band that just grew (layout.less: top 0.33rem)
+		ul li.section_group_label.closed:after {
+			top: 50%;
+			transform: translateY(-50%);
 		}
 	}
 }

@@ -53,6 +53,14 @@ Merged since the last release; these ship with the next one.
     on the **left** (`… / Level two / Projects`), so the deepest — most relevant — terms stay
     readable. On a desktop, where the levels stay side by side, the header is unchanged.
 
+- **On a phone, moving between search field levels now slides**
+
+    In the search **Fields** list, opening a link field (a portal) to reach a deeper section —
+    or returning with the level's `×` — now animates: the incoming level slides in from the
+    side it comes from (right when drilling in, left when going back) instead of the list
+    swapping with no motion. It makes it clear that you are moving between levels of the field
+    selector, not replacing its contents. Desktop (side-by-side levels) is unchanged.
+
 #### Fixed
 
 - **Ontology and thesaurus search: the result highlight and the loading state are now in sync.**
@@ -67,6 +75,21 @@ Merged since the last release; these ship with the next one.
     is out of view (and never shifts sideways without need), a brief pulse marks
     the highlighted term even when no scroll happens, and the search panel's Apply
     button shows a busy state while the search runs.
+
+- **Search on a phone: the fields panel's level header is as easy to tap as the fields themselves**
+
+    The **Search** panel's fields list lets you drill into a related section, and the grey
+    band at the top of the list names the level you are in ("People / Projects") and
+    carries the **×** that takes you back out of it. On a phone that band was about a
+    third shorter than the field rows under it, so the × was the smallest thing on
+    screen — a thumb aimed at it usually missed, and the way back out of a level was
+    easy to lose.
+
+    The band is now the same height as the field rows, and the × has a full-height tap
+    target of its own at the end of it — the same target the rows give their **+** — so
+    closing a level is as easy as adding a field. The group bands between the rows
+    ("Identification"…) take the same height, so the whole list is one rhythm. On a
+    computer nothing changes.
 
 - **Tools on a phone use the phone's own spacing and header height; only part of the phone adjustments were reaching the screen.**
 
