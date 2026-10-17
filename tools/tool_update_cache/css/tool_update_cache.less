@@ -59,23 +59,43 @@
 					font-size: 1.1rem;
 					overflow: visible;
 
+					// THE THREE COLUMNS ARE THE GROUP'S, NOT THE ROW'S. Every row
+					// used to size its own tracks from its own content, so a row
+					// whose Info cell holds the long token `component_relation_parent`
+					// pushed that track out to ~160px while the group header — its
+					// OWN grid, the same track holding the short caption "Info" —
+					// settled at ~80px: the header captions never lined up with the
+					// columns they name, and the Info text ran off the right edge of
+					// the panel. The LIST is the grid; each row takes its tracks as a
+					// subgrid, so what sizes a column is the widest cell anywhere in
+					// the group and header and rows cannot drift apart.
+					//
+					// `fr` (not `minmax(0, …fr)`): a track keeps its `auto` minimum,
+					// so the longest label, option and model/tipo token get the room
+					// they need instead of breaking mid-word.
+					display: grid;
+					grid-template-columns: 2fr 2fr 1fr;
+					// a subgrid takes the PARENT's gutters — a `column-gap` on the
+					// row itself is ignored
+					column-gap: 0.5rem;
+
 					// common li_line (section_group_label & li_container)
 					>.li_line {
 						display: grid;
-						grid-template-columns: 2fr 2fr 1fr;
-						column-gap: 0.5rem;
+						grid-template-columns: subgrid;
+						grid-column: 1 / -1;
 						min-height: 2rem;
 						align-items: center;
-
-						// columns
-						>span {
-						}
 					}
 
 					// li section group line (section group name | Regenerate options | Info)
 					>.section_group_label {
 						cursor: default;
-						padding: 0.5rem;
+						// VERTICAL only. Horizontal padding here would inset this row's
+						// grid by 0.5rem, putting every caption half a gutter to the
+						// left of the column it names; the row must sit on the same
+						// tracks as the component rows.
+						padding: 0.5rem 0;
 
 						&:active {
 							opacity: unset;
@@ -98,6 +118,10 @@
 							width: 100%;
 							height: 100%;
 							cursor: pointer;
+							// last resort: a label word longer than the column (the
+							// column is sized by the longest one, see ul_regular)
+							// breaks inside itself instead of escaping the cell
+							overflow-wrap: break-word;
 
 							&.hilite {
 								background-color: @color_hilite;
@@ -144,6 +168,10 @@
 						>.info_node {
 							color: @color_grey_8;
 							font-size: 1rem;
+							// last resort: the model / tipo pair is a long
+							// unbreakable token; a column too narrow for it breaks
+							// inside the token instead of overflowing the panel
+							overflow-wrap: break-word;
 						}
 					}
 				}
@@ -197,4 +225,132 @@
 			}
 		}
 	}//end content_data
+
+	// ── PHONE TIER ──────────────────────────────────────────────────────────
+	// THREE COLUMNS DO NOT FIT A PHONE. At 360–600px the identity / regenerate /
+	// info grid gives the label column ~120px (a component's name over two or
+	// three lines) while the Info column overflows the panel and lines up with
+	// nothing. The row becomes a stacked block instead:
+	//
+	//   [☐ Apellidos (single/maiden)]
+	//      component_input_text - rsc283
+	//      ☐ Delete normalised files
+	//
+	// The secondary lines hang under the LABEL TEXT (label padding 0.5rem +
+	// checkbox 1rem + gap 0.5rem = 2rem), the label row is the 44px tap target,
+	// and the group header keeps only its NAME: "Regenerate options" and "Info"
+	// are captions for two columns this tier no longer has.
+	@media screen and (max-width: @width_break_point_phone) {
+
+		>.content_data {
+			// The shared phone padding (tool_responsive.less) is imported ABOVE
+			// tool_common's own `.wrapper_tool > .content_data` padding in
+			// main.css, so the base rule wins the cascade and that padding never
+			// lands on any tool. State it here, where it can be read.
+			padding: 0.5rem;
+
+			.section_info {
+				>.section_name,
+				>.section_tipo {
+					font-size: 1.25rem;
+					padding: 0.5rem;
+				}
+			}
+
+			// the list spans the content box: the label's own 0.5rem padding is
+			// what indents a row, so the section name above it lines up with the
+			// group name
+			>.components_list_container {
+				padding: 0;
+
+				>.list_container >.ul_regular {
+
+					// one column: the rows take it as a subgrid, so their cells
+					// stack on it in DOM order... except the info node, which
+					// `order` lifts to a subtitle under the label
+					grid-template-columns: minmax(0, 1fr);
+
+					// group header: the group name only (see the tier comment)
+					>.section_group_label {
+						// stacked, the row's own indent comes from the label cell, so
+						// the group name takes the same 0.5rem to sit over the
+						// checkbox (the base rule is vertical-only, see above)
+						padding: 0.5rem;
+
+						>span:not(:first-child) {
+							display: none;
+						}
+					}
+
+					>.li_container {
+
+						// the highlight lives on the label cell; stacked, that
+						// would paint only the first line — lift it to the row
+						&:has(>.component_label.hilite) {
+							background-color: @color_hilite;
+						}
+
+						// column component_label — the row's tap target. The
+						// checkbox is inside the label, so the whole row toggles.
+						>.component_label {
+							display: flex;
+							align-items: center;
+							gap: 0.5rem;
+							min-height: 44px; // @phone_hit_target (tool_responsive.less)
+
+							>input {
+								flex: 0 0 auto;
+								width: 1rem;
+								height: 1rem;
+								margin-right: 0; // `gap` spaces it now
+							}
+						}
+
+						// the stacked lines align under the label text:
+						// label padding 0.5rem + box 1rem + gap 0.5rem
+						>.info_node,
+						>.regenerate_container {
+							padding-left: 2rem;
+							padding-right: 0.5rem;
+						}
+
+						// model / tipo reads as a subtitle under the label; the
+						// options are a control, so they go last (DOM order is
+						// label / regenerate / info)
+						>.info_node {
+							order: 2;
+							font-size: 0.9rem;
+							padding-bottom: 0.5rem;
+						}
+						>.regenerate_container {
+							order: 3;
+
+							// most components carry no regenerate options: no
+							// empty line under the info of every row
+							&:not(:empty) {
+								padding-bottom: 0.5rem;
+							}
+
+							// a regenerate option is a control: the same 44px row
+							// and the same tap contract as the component's own
+							// checkbox (which the option sits under)
+							.regenerate_options_container >.body_node >label {
+								display: flex;
+								align-items: center;
+								gap: 0.5rem;
+								min-height: 44px; // @phone_hit_target (tool_responsive.less)
+
+								>input {
+									flex: 0 0 auto;
+									width: 1rem;
+									height: 1rem;
+									margin-right: 0; // `gap` spaces it now
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}//end phone tier
 }//end wrapper_tool
