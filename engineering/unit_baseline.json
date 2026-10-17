@@ -1191,6 +1191,11 @@
 			"skipped": 0,
 			"assertions": 55
 		},
+		"test/unit/dev_listener_tls_native.test.ts": {
+			"tests": 17,
+			"skipped": 0,
+			"assertions": 81
+		},
 		"test/unit/developer_flags_native.test.ts": {
 			"tests": 5,
 			"skipped": 0,
@@ -2145,6 +2150,26 @@
 			"tests": 6,
 			"skipped": 0,
 			"assertions": 26
+		},
+		"test/unit/install_dev_dependencies_native.test.ts": {
+			"tests": 12,
+			"skipped": 0,
+			"assertions": 82
+		},
+		"test/unit/install_dev_route_listener_native.test.ts": {
+			"tests": 31,
+			"skipped": 0,
+			"assertions": 136
+		},
+		"test/unit/install_dev_serve_native.test.ts": {
+			"tests": 24,
+			"skipped": 0,
+			"assertions": 138
+		},
+		"test/unit/install_dev_tls_native.test.ts": {
+			"tests": 28,
+			"skipped": 1,
+			"assertions": 194
 		},
 		"test/unit/install_e2e.test.ts": {
 			"tests": 3,
