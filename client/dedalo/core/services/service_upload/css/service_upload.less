@@ -156,6 +156,24 @@
 
 
 
+	// THE ICON→LABEL GAP. The shared `fn_append_icon` (buttons.less) squeezes
+	// its `::before` margin to 2px below @width_break_point_1, which is meant for
+	// CRAMPED icon toolbars. This widget's buttons are full-width LABELLED
+	// buttons, and at 2px the glyph reads as touching the word — worse, the gap
+	// looks uneven across the row, because one icon's art fills its 1em box
+	// (upload, cancel, trash) and another's does not (add_light). Put the desktop
+	// gap back wherever the squeeze would apply, exactly as dd-modal's footer
+	// already does for its lone labelled buttons. Higher specificity than the
+	// squeeze's `button.<class>::before`, so order does not matter.
+	@media screen and (max-width: @width_break_point_1) {
+		.buttons_container button::before,
+		.row_buttons button::before {
+			margin-right: 0.25rem;
+		}
+	}
+
+
+
 	// MULTIPLE (the upload QUEUE renderer)
 	//
 	// The rules that used to live in service_dropzone.less, now a modifier of the
@@ -197,6 +215,29 @@
 				font-size: 1.3rem;
 
 				.buttons_container {
+					// the master 'select all' control. It is a LABELLED box now:
+					// the caption ('All') is what says what it ticks, and the
+					// label is the tap target, so on a phone it is not a bare 16px
+					// square. (The row boxes keep their own `.delete_checkbox`.)
+					.all_delete_checkbox_label {
+						display: inline-flex;
+						align-items: center;
+						gap: 0.35rem;
+						cursor: pointer;
+						user-select: none;
+						line-height: 1.2;
+
+						.all_delete_checkbox {
+							margin: 0;
+							flex: 0 0 auto;
+						}
+
+						// a real tap target on a phone (the box itself is not)
+						@media screen and (max-width: @width_break_point_phone) {
+							min-height: 44px;
+						}
+					}
+
 					@media screen and (max-width: @width_break_point_0) { // 1024px
 						display: flex;
 						align-items: center;
@@ -205,7 +246,7 @@
 							width: 100%;
 							margin-top: .5rem;
 						}
-						.all_delete_checkbox {
+						.all_delete_checkbox_label {
 							margin-top: .5rem;
 						}
 					}
@@ -267,6 +308,62 @@
 							background-size: contain;
 							background-position: center;
 							display: block;
+						}
+					}
+
+					// PHONE / NARROW. The desktop grid — a fixed 128px thumbnail
+					// plus six tracks — cannot fit a 360px phone: the tracks
+					// shrink until a filename stands one letter per line, and the
+					// per-row controls run past the 360px edge, where the phone
+					// tier's `.wrapper_tool { overflow-x: clip }` puts them OUT OF
+					// REACH instead of on screen.
+					//
+					// Below @width_break_point_0 the row stacks — thumbnail,
+					// details, options, buttons. This is the relayout every
+					// importing tool already declared in its own sheet
+					// (tool_import_files.less) and never actually got: this
+					// sheet's `.service_upload.multiple …` selector out-ranked
+					// theirs, so their phone rule was dead. ONE home for the
+					// `.file-row` layout is here, where the class is emitted.
+					// (Same break as the `.row .buttons_container` rule above, so
+					// the toolbar and the rows stack together.)
+					@media screen and (max-width: @width_break_point_0) {
+						display: flex;
+						flex-direction: column;
+						align-items: stretch;
+						gap: 0.5rem;
+
+						// A CARD PER FILE. Stacked, two files ran together with no
+						// seam — the first row's controls, the second row's
+						// thumbnail and both rows' selects read as one long column,
+						// so where a file began and ended was anyone's guess. A
+						// bordered surface, a radius and a gap make each file's
+						// start and end unmistakable. Tokens, not literals, so the
+						// dark theme and the redesign line follow.
+						background-color: var(--bg_surface);
+						border: 1px solid var(--border_default);
+						border-radius: 0.5rem;
+						padding: 0.75rem;
+						margin-bottom: 0.75rem;
+
+						>* {
+							margin-right: 0;
+						}
+
+						// keep it a thumbnail, not a full-width panel
+						.preview_wrapp {
+							width: 128px;
+							height: 96px;
+							align-self: flex-start;
+						}
+
+						// the per-row selector wrapper (processor + target): stacked
+						// with a gap, or the two selects' borders touch and read as
+						// one split box
+						.component {
+							display: flex;
+							flex-direction: column;
+							gap: 0.35rem;
 						}
 					}
 				}//end >.file-row

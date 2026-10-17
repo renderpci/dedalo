@@ -11147,6 +11147,12 @@ body:has(.component_av.view_viewer) {
 .service_upload > .content_data .info_container > label {
   padding-right: 2em;
 }
+@media screen and (max-width: 960px) {
+  .service_upload .buttons_container button::before,
+  .service_upload .row_buttons button::before {
+    margin-right: 0.25rem;
+  }
+}
 .service_upload.multiple > .content_data > .button.info {
   right: 0;
   top: 0;
@@ -11162,6 +11168,23 @@ body:has(.component_av.view_viewer) {
 .service_upload.multiple > .content_data > .row {
   font-size: 1.3rem;
 }
+.service_upload.multiple > .content_data > .row .buttons_container .all_delete_checkbox_label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.2;
+}
+.service_upload.multiple > .content_data > .row .buttons_container .all_delete_checkbox_label .all_delete_checkbox {
+  margin: 0;
+  flex: 0 0 auto;
+}
+@media screen and (max-width: 600px) {
+  .service_upload.multiple > .content_data > .row .buttons_container .all_delete_checkbox_label {
+    min-height: 44px;
+  }
+}
 @media screen and (max-width: 1024px) {
   .service_upload.multiple > .content_data > .row .buttons_container {
     display: flex;
@@ -11172,7 +11195,7 @@ body:has(.component_av.view_viewer) {
     width: 100%;
     margin-top: 0.5rem;
   }
-  .service_upload.multiple > .content_data > .row .buttons_container .all_delete_checkbox {
+  .service_upload.multiple > .content_data > .row .buttons_container .all_delete_checkbox_label {
     margin-top: 0.5rem;
   }
 }
@@ -11219,6 +11242,32 @@ body:has(.component_av.view_viewer) {
   background-size: contain;
   background-position: center;
   display: block;
+}
+@media screen and (max-width: 1024px) {
+  .service_upload.multiple > .content_data .table.table-striped > .file-row {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    background-color: var(--bg_surface);
+    border: 1px solid var(--border_default);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .service_upload.multiple > .content_data .table.table-striped > .file-row > * {
+    margin-right: 0;
+  }
+  .service_upload.multiple > .content_data .table.table-striped > .file-row .preview_wrapp {
+    width: 128px;
+    height: 96px;
+    align-self: flex-start;
+  }
+  .service_upload.multiple > .content_data .table.table-striped > .file-row .component {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
 }
 /**
 * service_ckeditor
@@ -22472,6 +22521,25 @@ body.inspector_resizing {
 }
 .component_date.search > .content_data > .content_value > .input-group > input {
   width: 100%;
+}
+@media screen and (max-width: 600px) {
+  .component_date.edit > .content_data > .content_value > .input-group {
+    width: 100%;
+  }
+  .component_date.edit > .content_data > .content_value > .input-group > input.input_date,
+  .component_date.edit > .content_data > .content_value > .input-group > input.input_time {
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .component_date.edit > .content_data > .content_value > .input-group > .button_container.button_calendar_container {
+    position: relative;
+    inset: auto;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    margin: 0 0 2px 0.25rem;
+  }
 }
 .component_date.view_line.edit {
   display: inline-block;

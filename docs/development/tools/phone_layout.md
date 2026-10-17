@@ -80,6 +80,6 @@ To add a tool, give it a probe in `test/helpers/tool_phone_ratchet.ts`. For a to
 tool_my_tool: test3('test52', 'component_input_text', 'lg-spa'),
 ```
 
-Other probe kinds cover a list button, a `section_tool`, a real tap, and a launcher's own open function; a probe can also build a scratch record, which is swept afterwards. To find which live elements offer your tool: `bun run test:tools:phone --discover test3/1`.
+Other probe kinds cover a list button, a `section_tool`, a real tap, and a launcher's own open function; a probe can also build a scratch record, which is swept afterwards. A tool whose screen only exists once a file is queued (`service_upload`) adds `queue_file: true` so the harness puts one scratch file into its upload queue before judging — without it the tool opens empty and its per-file row goes unmeasured. To find which live elements offer your tool: `bun run test:tools:phone --discover test3/1`.
 
 The ratchet only shrinks: a tool in `NOT_YET_PHONE` whose probe starts passing turns the run red until it moves to `PHONE_CASES`. `test/unit/tool_phone_tripwire.test.ts` keeps the list complete — a new tool directory must appear in one of the two lists.

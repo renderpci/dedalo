@@ -65,7 +65,7 @@
 *   │   │   ├── button.primary.upload.start
 *   │   │   ├── button.warning.cancel
 *   │   │   ├── button.danger.delete
-*   │   │   └── input[checkbox].all_delete_checkbox
+*   │   │   └── label.all_delete_checkbox_label > input[checkbox].all_delete_checkbox
 *   │   └── div.col-lg-5.column_right > span.fileupload-process > div.progress…
 *   └── div.table.table-striped
 *       └── div.file-row  × N
@@ -542,12 +542,27 @@ export const get_content_data_queue = async function(self) {
 			parent			: buttons_container
 		})
 
-	// delete_check_box (master)
+	// delete_check_box (master). A LABELLED control: a bare box said nothing
+	// about what it ticks (every row's Delete), and on a phone there was nothing
+	// to hit but the 16px box. The label carries the caption and IS the tap
+	// target (tapping it toggles the box), so the control is usable and named.
+		const delete_check_box_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'all_delete_checkbox_label',
+			parent			: buttons_container
+		})
 		const delete_check_box = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'checkbox',
 			class_name		: 'all_delete_checkbox',
-			parent			: buttons_container
+			parent			: delete_check_box_label
+		})
+		// text_content: a UI caption from the repo catalog, never an HTML sink
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'checkbox-label',
+			text_content	: get_label.all || 'All',
+			parent			: delete_check_box_label
 		})
 
 	// column_right

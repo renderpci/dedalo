@@ -62,8 +62,22 @@ export type ToolPhoneProbe =
 				lang: string;
 			};
 			build?: string;
+			/**
+			 * Queue one scratch file into the live `service_upload` queue before
+			 * judging, so the per-file ROW is part of what is measured. Without it
+			 * a queue tool opens EMPTY: its `.file-row` layout, selects and row
+			 * buttons are never rendered, and a break in them passes unseen.
+			 */
+			queue_file?: boolean;
 	  }
-	| { kind: 'button'; section: string; button: string; build?: string }
+	| {
+			kind: 'button';
+			section: string;
+			button: string;
+			build?: string;
+			/** @see the `context` variant's `queue_file`. */
+			queue_file?: boolean;
+	  }
 	| { kind: 'section_tool'; section_tool: string; build?: 'target' }
 	| { kind: 'click'; url: string; clicks: string[]; root?: string }
 	/** a live instance's own handler, where the UI door is closed to the suite's root login */
@@ -153,9 +167,24 @@ export const PHONE_CASES: Record<string, ToolPhoneProbe> = {
 			lang: 'lg-nolan',
 		},
 		build: 'test1030',
+		// the tool's break was IN a queued row (the grid never stacked and its
+		// controls ran off the 360px edge); an empty queue would not show it.
+		queue_file: true,
 	},
-	tool_import_marc21: { kind: 'button', section: 'rsc205', button: 'rsc363', build: 'rsc205' },
-	tool_import_zotero: { kind: 'button', section: 'rsc205', button: 'rsc227', build: 'rsc205' },
+	tool_import_marc21: {
+		kind: 'button',
+		section: 'rsc205',
+		button: 'rsc363',
+		build: 'rsc205',
+		queue_file: true,
+	},
+	tool_import_zotero: {
+		kind: 'button',
+		section: 'rsc205',
+		button: 'rsc227',
+		build: 'rsc205',
+		queue_file: true,
+	},
 	tool_indexation: { kind: 'section_tool', section_tool: 'test6879', build: 'target' },
 	tool_lang: test3('test52', 'component_input_text', 'lg-spa'),
 	tool_lang_multi: test3('test52', 'component_input_text', 'lg-spa'),

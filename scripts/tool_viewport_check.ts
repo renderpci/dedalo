@@ -305,6 +305,42 @@ try {
 			// not its first paint (the assistant builds its composer after)
 			await toolPage.waitForNetworkIdle({ idleTime: 500, timeout: 20_000 }).catch(() => {});
 			await new Promise((r) => setTimeout(r, 500));
+			// a queue tool opens EMPTY. Queue one scratch file through its own
+			// file input — the exact path a user takes to add files — so the
+			// per-file ROW is rendered and judged. The row is where such a tool
+			// actually breaks (an empty panel can look perfect while every queued
+			// row is a clipped desktop grid), and a probe without this step
+			// measures nothing but the empty toolbox.
+			//
+			// This runs on toolPage, so it works in whichever realm the tool
+			// rendered (a modal stays in the opener; a window tool's instance
+			// lives in its popup). No module import: the input's own change
+			// handler does the work.
+			if ((probe as { queue_file?: boolean }).queue_file) {
+				const queued = await toolPage.evaluate((toolName: string) => {
+					const input = document.querySelector<HTMLInputElement>(
+						`.wrapper_tool.${toolName} .queue_file_input`,
+					);
+					if (!input) return 'no .queue_file_input on the opened tool';
+					const transfer = new DataTransfer();
+					transfer.items.add(
+						new File([new Uint8Array([0xff, 0xd8, 0xff, 0xd9])], 'phone_probe.jpg', {
+							type: 'image/jpeg',
+						}),
+					);
+					input.files = transfer.files;
+					input.dispatchEvent(new Event('change', { bubbles: true }));
+					return 'ok';
+				}, tool);
+				if (queued !== 'ok') {
+					problems.push(`queue_file: ${queued}`);
+				} else {
+					await toolPage
+						.waitForSelector(`.wrapper_tool.${tool} .file-row`, { timeout: 10_000 })
+						.catch(() => problems.push('queue_file: no .file-row rendered'));
+					await new Promise((r) => setTimeout(r, 300));
+				}
+			}
 			problems.push(...(await judge(toolPage, tool, toolPage === opener, opened.root)));
 			if (shotsDir)
 				await toolPage.screenshot({ path: join(shotsDir, `${tool}.png`), fullPage: true });

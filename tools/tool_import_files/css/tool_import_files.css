@@ -24,17 +24,6 @@
   justify-content: space-around;
   align-items: center;
 }
-@media screen and (max-width: 1024px) {
-  .wrapper_tool.tool_import_files > .content_data > .options_container {
-    display: flex;
-    align-items: flex-start;
-    flex-direction: column;
-  }
-  .wrapper_tool.tool_import_files > .content_data > .options_container span {
-    margin: 1rem;
-    margin-top: 1rem;
-  }
-}
 .wrapper_tool.tool_import_files > .content_data > .options_container .switcher {
   cursor: pointer;
   display: inline-block;
@@ -130,6 +119,58 @@
 .wrapper_tool.tool_import_files > .content_data > .options_container > .tool_configuration_options > .title {
   padding-bottom: 0.5rem;
 }
+@media screen and (max-width: 1024px) {
+  .wrapper_tool.tool_import_files > .content_data > .options_container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+    padding: 0.5rem;
+  }
+  .wrapper_tool.tool_import_files > .content_data > .options_container > .processor_selector_container,
+  .wrapper_tool.tool_import_files > .content_data > .options_container > .target_component,
+  .wrapper_tool.tool_import_files > .content_data > .options_container > .target_quality,
+  .wrapper_tool.tool_import_files > .content_data > .options_container > .tool_name_match_options,
+  .wrapper_tool.tool_import_files > .content_data > .options_container > .tool_configuration_options {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
+  }
+  .wrapper_tool.tool_import_files > .content_data > .options_container .label.title {
+    text-align: left;
+    font-size: 1.05rem;
+  }
+  .wrapper_tool.tool_import_files > .content_data > .options_container .label.match {
+    padding-bottom: 0;
+  }
+}
+@media screen and (max-width: 600px) {
+  .wrapper_tool.tool_import_files > .content_data > .options_container {
+    gap: 1.25rem;
+  }
+  .wrapper_tool.tool_import_files > .content_data > .options_container .name_control {
+    height: auto;
+    min-height: 44px;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.5rem;
+    margin-bottom: 0;
+  }
+  .wrapper_tool.tool_import_files > .content_data > .options_container .name_control .switcher {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .wrapper_tool.tool_import_files > .content_data > .options_container .name_control .checkbox-label {
+    margin: 0;
+    min-width: 0;
+  }
+  .wrapper_tool.tool_import_files > .content_data > .options_container .name_control .info_options_select {
+    flex: 1 1 100%;
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+}
 .wrapper_tool.tool_import_files > .content_data > .drop_zone {
   background-color: var(--color_blue_light);
 }
@@ -152,71 +193,6 @@
 }
 .wrapper_tool.tool_import_files > .content_data > .template_container.same_name_section {
   background-color: var(--color_purple_light);
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container > .row {
-  display: flex;
-  margin: 1rem;
-  margin-bottom: 0px;
-  padding-bottom: 0px;
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container > .table {
-  margin-top: 1rem;
-  margin-bottom: 1rem;
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container .file-row {
-  margin: 1em;
-  margin-bottom: 0px;
-  margin-top: 0.5rem;
-  min-height: 72px;
-  display: grid;
-  grid-template-columns: 128px 1fr auto 1fr auto auto 1.5rem;
-  align-items: center;
-}
-@media screen and (max-width: 1024px) {
-  .wrapper_tool.tool_import_files > .content_data > .template_container .file-row {
-    display: flex;
-    align-items: center;
-    flex-direction: column;
-    outline: 1px solid var(--color_grey_13);
-    margin-bottom: 0.75rem;
-    padding: 0.75rem;
-  }
-  .wrapper_tool.tool_import_files > .content_data > .template_container .file-row .component {
-    display: flex;
-    flex-direction: column;
-  }
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container .file-row > * {
-  margin-right: 1em;
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container .file-row > .preview_wrapp {
-  overflow: hidden;
-  height: 100%;
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container .file-row > .preview_wrapp img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container .file-row .details_wrapp {
-  padding: 0.5rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container .file-row .details_wrapp > .name {
-  margin-right: 0.33rem;
-  font-weight: 500;
-  font-size: 1.1rem;
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container .file-row .details_wrapp > .error {
-  margin-right: 0.33rem;
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container .file-row .details_wrapp > .size {
-  margin-right: 0.33rem;
-}
-.wrapper_tool.tool_import_files > .content_data > .template_container .file-row .details_wrapp > .size strong {
-  font-weight: normal;
-  color: var(--color_grey_7);
 }
 .wrapper_tool.tool_import_files > .content_data > .inputs_container {
   margin-top: 1.5rem;

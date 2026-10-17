@@ -63,6 +63,18 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The date field's calendar button is a full-size tap target and no longer covers the field label**
+
+    On a touch screen the date field's small round calendar button — the one that opens the date picker — sat on top of the field's own label (for example *Fecha de captación*), so part of the label was hidden behind it, and the button itself was too small to tap reliably.
+
+    On a phone the button now sits inside the field row, at the end of the date box, at the size of the app's other touch targets. The label and the date value are fully readable, and the button is easy to hit.
+
+- **The Import files tool's options panel lines up on a phone**
+
+    The panel at the top of **Tools → Import files** — Processor, Target field, Quality, and the matching / new-files switches — was laid out for a wide window. On a phone its labels and their drop-downs landed at different left edges, the drop-downs ran off the right edge of the screen, the section headings were centred over left-aligned content, and each switch caption sat a full space away from its own switch.
+
+    On a phone the panel is now one option per row: the label sits above its drop-down, every drop-down spans the full width and starts at the same left edge, the headings read left like the rows beneath them, and each switch row is a full-height tap target with its caption beside its switch. The suffix-to-field legend ("- A -> Obverse") drops to its own full-width line instead of squeezing in beside its caption. Desktop is unchanged.
+
 - **Ontology and thesaurus search: the result highlight and the loading state are now in sync.**
 
     Searching in the Ontology and Thesaurus areas showed a confusing sequence: the
@@ -104,6 +116,30 @@ Merged since the last release; these ship with the next one.
     A phone now shows one component per row: the checkbox and its name on a 44px tap row, the model/tipo as a small subtitle under it, and any regeneration option (e.g. *delete normalized files*) as the last line of the row. Every secondary line hangs under the name's text, and the group headings keep only the group name, since the two column captions describe a layout a phone no longer has.
 
     The same three columns also line up with their headings again on wide screens: a column is now sized by the whole list rather than by each row separately, so the headings and the values beneath them cannot drift apart, and no model name is cut off or broken mid-word.
+
+- **Upload buttons keep a clear gap between their icon and their label on a phone**
+
+    On a narrow screen the icon inside a labelled button was pushed to within two pixels of its text, so the button read as *⤒Start upload* with the glyph touching the word — and the gap looked uneven from one button to the next, because one icon's drawing fills its box and another's does not.
+
+    The upload tools' buttons (**Add files**, **Start upload**, **Cancel upload**, **Delete file**, and the same controls on each queued file) now keep the same icon-to-label spacing they have on a wide screen, so the icon reads as a separate mark before the word and the buttons line up as one set.
+
+- **Each file in the upload queue is a card, so you can see where one file ends and the next begins**
+
+    In the upload queue (**Tools → Import files**, and the MARC 21 and Zotero importers) each file's thumbnail, name, option menus and buttons ran straight into the next file's, with nothing between them — on a phone the list read as one long column and it was easy to lose which name, which menu and which Delete button belonged to which file.
+
+    Every file is now a bordered card: a white panel with a rounded border and a gap before the next one. A file's start and end are unmistakable, and its menus and buttons sit inside its own card.
+
+- **Uploaded-file rows stack on a phone instead of running off the side**
+
+    The file rows in **Tools → Import files** (and in the MARC 21 and Zotero importers, which use the same upload widget) were laid out as a single desktop row — a thumbnail, the filename, the file's two option menus and its Start / Cancel / Delete controls side by side. On a phone that row is wider than the screen, so the part past the right edge was simply not there: the row's menus and its Delete and Cancel controls could not be reached at all, and a long filename was squeezed into a column so narrow it broke one letter per line.
+
+    Each uploaded file now takes its own block on a phone: the thumbnail, then the filename and size, then the file's option menus full width, then its controls, one under the other. Nothing runs off the side, and every control is on screen.
+
+- **The upload queue's "select all" checkbox says what it does again**
+
+    Above the list of files waiting to be uploaded there is a checkbox that ticks every file's Delete box at once. It had lost its caption, so it showed as a bare square with nothing to say what it selected — easy to miss and easy to misread.
+
+    The checkbox carries its label again — **All** (in the interface language) — and the label is part of the control, so tapping the word ticks the box just like tapping the box itself. Each file's own Delete checkbox is unchanged.
 
 - **The autocomplete options panel no longer clips its section list**
 

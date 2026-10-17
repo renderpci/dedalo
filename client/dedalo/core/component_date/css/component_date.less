@@ -303,6 +303,46 @@
 		}
 	}
 
+	// PHONE — the trigger is a REAL target, IN the field's row.
+	//
+	// The calendar/clock trigger is revealed permanently on coarse pointers
+	// (`@media (pointer: coarse)` above) so a tap finds it without a prior
+	// focus stop. It was still the desktop 1.8rem ring (~29px) floating at
+	// `top: -1.5rem`, which on a phone is BOTH a sub-44px target (WCAG 2.5.5)
+	// and a disc parked over the field's own label ("Fecha de captación").
+	//
+	// Below @width_break_point_phone the trigger becomes a 44px
+	// (@phone_hit_target) square laid INTO the row: the input flexes to fill
+	// and the trigger sits at its end. Nothing floats over the label or the
+	// value, and every gesture stays reachable. EDIT only — the search panel
+	// hangs its trigger on the field corner by design (see `&.search`).
+	// (.edit also keeps the search block's higher-specificity overrides out.)
+	&.edit {
+		@media screen and (max-width: @width_break_point_phone) {
+			>.content_data >.content_value >.input-group {
+				width: 100%;
+
+				// direct-child date/time inputs only: the period inputs live in
+				// their own `.pair_container` and keep their 2.4rem width
+				>input.input_date,
+				>input.input_time {
+					width: auto;
+					flex: 1 1 auto;
+					min-width: 0;
+				}
+
+				>.button_container.button_calendar_container {
+					position: relative;
+					inset: auto;
+					flex: 0 0 @phone_hit_target;
+					width: @phone_hit_target;
+					height: @phone_hit_target;
+					margin: 0 0 2px 0.25rem;
+				}
+			}
+		}
+	}
+
 	&.view_line {
 		&.edit {
 			display: inline-block;
