@@ -8,7 +8,13 @@
 // per-tool --tool_edge / --tool_fill / --tool_on_fill (GENERATED: scripts/tool_colors.ts)
 @import (once) "tool_colors";
 @import (once, reference) "tool_mixins";
-@import (once) "tool_responsive";
+// (!) tool_responsive is imported LAST, at the foot of this file. It is the
+// PHONE TIER: it overrides the base geometry below (`.content_data` padding,
+// `.tool_header` padding, the title size…), and LESS inlines an `@import` where
+// it is written, so importing it here made every override lose the cascade to
+// an equal-specificity base rule declared further down — the phone padding and
+// the phone header height were silently dead in every tool. See the import at
+// the end of this file.
 
 // THE TOOL HEADER CONTROLS BAND — shared geometry.
 // One height and one padding for every tool, so the band does not stand at a
@@ -231,7 +237,7 @@
 
 			// phone: the container is a COLUMN (tool_responsive.less), where the
 			// 18rem basis would be a height. Stated HERE, not in tool_responsive:
-			// that sheet is imported above this block and loses the cascade.
+			// the tier owns the direction, this row owns the basis it invalidates.
 			@media screen and (max-width: @width_break_point_phone) {
 				flex: none;
 			}
@@ -261,6 +267,14 @@
 		gap: 0.5rem;
 		// bleed over the header padding so the band spans the full width
 		margin: 1rem -1rem -1rem -1rem;
+		// (!) the bottom bleed CANCELS the header's bottom padding, so it follows
+		// the tier's phone padding (tool_responsive.less: 0.5rem at
+		// @width_break_point_phone). Left at -1rem the band's bottom edge hangs
+		// half a gutter past the header's bottom edge — clipped by the header's
+		// own `contain: content`, i.e. a seam instead of a flush edge.
+		@media screen and (max-width: @width_break_point_phone) {
+			margin-bottom: -0.5rem;
+		}
 		padding: @tool_header_band_padding_v @tool_header_band_padding_h;
 		// THE BAND IS ONE HEIGHT FOR EVERY TOOL.
 		// It used to size to its contents, and its contents were whatever each
@@ -349,9 +363,10 @@
 			vertical-align: middle;
 
 			// phone: the band's one control height becomes the tap target
-			// (@phone_hit_target, tool_responsive.less). Stated HERE, not in
-			// tool_responsive: that sheet is imported above this block, so an
-			// equal-specificity override there loses the cascade.
+			// (@phone_hit_target, tool_responsive.less). The HEIGHT is stated
+			// here because the band owns line-height: the tier raises min-height
+			// to 44px and a 1.75rem line-height inside a 44px box drops the
+			// caption to the top of the control.
 			@media screen and (max-width: @width_break_point_phone) {
 				height: @phone_hit_target;
 				min-height: @phone_hit_target;
@@ -685,3 +700,21 @@
 		}
 	}
 }//end tool_header dark theme
+
+
+
+// ── THE PHONE TIER, LAST ────────────────────────────────────────────────────
+// tool_responsive.less is the shared phone tier (@width_break_point_phone): the
+// base geometry is tightened there — `.wrapper_tool > .content_data` padding,
+// the `.tool_header` height, the title size, the title/description stack — so it
+// MUST be inlined after every base rule it overrides. Written at the top of the
+// file (where it used to be) each of those overrides lost the cascade to the
+// base rule declared below it: every tool kept its desktop padding and header
+// height on a phone, and the tier looked half-applied.
+//
+// Two phone rules stay inline above, and for a value-specific reason rather
+// than the cascade: `.description { flex: none }` (a column container turns the
+// 18rem basis into a height) and the band controls' `line-height: normal` (the
+// tier sets only min-height). Everything a tool sheet needs to know about the
+// phone contract is still the header of tool_responsive.less.
+@import (once) "tool_responsive";

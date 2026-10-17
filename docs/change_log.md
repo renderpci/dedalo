@@ -57,6 +57,12 @@ Merged since the last release; these ship with the next one.
     the highlighted term even when no scroll happens, and the search panel's Apply
     button shows a busy state while the search runs.
 
+- **Tools on a phone use the phone's own spacing and header height; only part of the phone adjustments were reaching the screen.**
+
+    Every tool panel carries a set of adjustments for small screens: tighter page padding, a shorter header, a smaller tool name. Half of them did not reach the browser — the shared stylesheet declared them *before* the styles they were meant to override, so the desktop values won and each tool kept its desktop padding and header height on a phone. The result was a panel whose content started lower and whose header (which stays pinned while you scroll) took more of the screen than it was designed to.
+
+    The panel now uses the phone measurements throughout: the body keeps a half-rem gutter instead of a full one, the header is a little shorter, the tool name sits at the phone size, and the header's controls band still spans the full width with its bottom edge flush with the header. Desktop layouts are unchanged.
+
 - **The Update cache tool reads properly on a phone: one component per row, its options and model under it, all lined up.**
 
     On a phone, **Update cache** squeezed three columns (component · regeneration options · model/tipo) into 360–600px. The component name wrapped over two or three lines, the long model names spilled past the right edge of the panel, and the column headings no longer sat above the columns they name — so the list read as a ragged staircase and the tap row for a component was about 30px tall.

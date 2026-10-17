@@ -11928,176 +11928,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   --tool_fill_hover: #bb2a3f;
   --tool_on_fill: #ffffff;
 }
-/**
-* TOOL_RESPONSIVE — the PHONE tier shared by every tool surface.
-*
-* Imported from tool_common.less. Contract (rewrite plan phase 0, gated by
-* test/unit/tool_phone_tripwire.test.ts + scripts/tool_viewport_check.ts):
-* at @min_target_viewport (360px) a tool renders with no page-level
-* horizontal scroll, every control on screen and at least 44px tall.
-* Usable, not comfortable.
-*
-* LAYOUT ONLY. Colours stay in the theme / generated tool tokens; nothing
-* here may paint.
-*
-* A tool that needs its own phone rules writes them in its own sheet, against
-* @width_break_point_phone — never a literal width.
-*/
-@media screen and (max-width: 600px) {
-  .wrapper_tool {
-    min-width: 0;
-    max-width: 100vw;
-    overflow-x: clip;
-  }
-  .wrapper_tool > .content_data {
-    min-width: 0;
-    padding: 0.5rem;
-    padding-top: 1rem;
-  }
-  .wrapper_tool img,
-  .wrapper_tool video,
-  .wrapper_tool canvas,
-  .wrapper_tool svg:not(.icon) {
-    max-width: 100%;
-    height: auto;
-  }
-  .wrapper_tool iframe {
-    max-width: 100%;
-  }
-  .wrapper_tool table {
-    display: block;
-    max-width: 100%;
-    overflow-x: auto;
-  }
-  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-  .wrapper_tool select,
-  .wrapper_tool textarea {
-    max-width: 100%;
-    font-size: max(16px, 1em);
-  }
-  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
-  .wrapper_tool select {
-    min-height: 44px;
-  }
-  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
-    min-width: 44px;
-  }
-  .wrapper_tool .leaflet-touch .leaflet-bar a,
-  .wrapper_tool .leaflet-bar a,
-  .wrapper_tool .leaflet-buttons-control-button {
-    width: 44px;
-    height: 44px;
-    line-height: 44px;
-  }
-  .tool_header {
-    position: sticky;
-    top: 0;
-    padding-top: calc(0.5rem + 4px);
-    padding-bottom: 0.5rem;
-  }
-  .tool_header > .tool_name_container {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-    margin-right: 0;
-    padding-right: 3rem;
-    min-width: 0;
-    max-width: 100%;
-  }
-  .tool_header > .tool_name_container > .label {
-    font-size: 1.15rem;
-    white-space: normal;
-    overflow-wrap: break-word;
-  }
-  .tool_header > .tool_name_container > .description {
-    padding: 0;
-    font-size: 0.9rem;
-    line-height: 1.25rem;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    line-clamp: 2;
-    overflow: hidden;
-  }
-  .tool_header .selector {
-    max-width: 100%;
-  }
-  .tool_header > .tool_buttons_container > div:not(.wrapper_component),
-  .tool_header > .tool_buttons_container > button,
-  .tool_header > .tool_buttons_container > select {
-    flex: 1 1 auto;
-    min-height: 44px;
-  }
-  .wrapper_tool button,
-  .wrapper_tool .button.tool_button,
-  .wrapper_tool [role="button"],
-  .tool_header button {
-    min-height: 44px;
-  }
-  .wrapper_tool .phone_stack {
-    display: flex !important;
-    flex-direction: column;
-    min-width: 0;
-  }
-  .wrapper_tool .phone_stack > * {
-    min-width: 0;
-    max-width: 100%;
-  }
-}
-.pane_switch {
-  display: none;
-}
-@media screen and (max-width: 600px) {
-  .pane_switch {
-    display: flex;
-    width: 100%;
-    gap: 0.25rem;
-    padding: 0.25rem;
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background-color: var(--bg_surface_alt);
-  }
-  .pane_switch > .pane_btn {
-    flex: 1 1 0;
-    min-height: 44px;
-    border: 1px solid var(--border_default);
-    border-radius: 4px;
-    background: transparent;
-    color: var(--fg_default);
-  }
-  .pane_switch > .pane_btn.active {
-    border-color: var(--tool_edge, var(--border_default));
-    box-shadow: inset 0 -3px 0 var(--tool_edge, var(--fg_default));
-  }
-  .pane_host.pane_switch_on [data-pane] {
-    display: none !important;
-  }
-  .pane_host.pane_switch_on [data-pane].pane_active {
-    display: block !important;
-  }
-}
-.phone_reorder {
-  display: none;
-}
-@media screen and (max-width: 600px) {
-  .phone_reorder {
-    display: inline-flex;
-    gap: 0.25rem;
-    flex-shrink: 0;
-  }
-  .phone_reorder > .phone_reorder_btn {
-    min-width: 44px;
-    min-height: 44px;
-    border: 1px solid var(--border_default);
-    border-radius: 4px;
-    background: transparent;
-    color: var(--fg_default);
-  }
-  .phone_reorder > .phone_reorder_btn:disabled {
-    opacity: 0.35;
-  }
-}
 .wrapper_tool {
   contain: content;
   margin: 0px;
@@ -12206,6 +12036,11 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   box-sizing: border-box;
   border-top: 1px solid var(--border_default);
   background-color: var(--bg_surface);
+}
+@media screen and (max-width: 600px) {
+  .tool_header > .tool_buttons_container {
+    margin-bottom: -0.5rem;
+  }
 }
 .tool_header > .tool_buttons_container:empty {
   display: none !important;
@@ -12413,6 +12248,176 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 :root[data-theme="dark"] .tool_header > .tool_buttons_container > .tool_button > img.icon,
 :root[data-theme="dark"] .tool_header > .tool_buttons_container > .tool_button > .icon {
   filter: var(--toolbar_btn_icon_filter);
+}
+/**
+* TOOL_RESPONSIVE — the PHONE tier shared by every tool surface.
+*
+* Imported from tool_common.less. Contract (rewrite plan phase 0, gated by
+* test/unit/tool_phone_tripwire.test.ts + scripts/tool_viewport_check.ts):
+* at @min_target_viewport (360px) a tool renders with no page-level
+* horizontal scroll, every control on screen and at least 44px tall.
+* Usable, not comfortable.
+*
+* LAYOUT ONLY. Colours stay in the theme / generated tool tokens; nothing
+* here may paint.
+*
+* A tool that needs its own phone rules writes them in its own sheet, against
+* @width_break_point_phone — never a literal width.
+*/
+@media screen and (max-width: 600px) {
+  .wrapper_tool {
+    min-width: 0;
+    max-width: 100vw;
+    overflow-x: clip;
+  }
+  .wrapper_tool > .content_data {
+    min-width: 0;
+    padding: 0.5rem;
+    padding-top: 1rem;
+  }
+  .wrapper_tool img,
+  .wrapper_tool video,
+  .wrapper_tool canvas,
+  .wrapper_tool svg:not(.icon) {
+    max-width: 100%;
+    height: auto;
+  }
+  .wrapper_tool iframe {
+    max-width: 100%;
+  }
+  .wrapper_tool table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  .wrapper_tool select,
+  .wrapper_tool textarea {
+    max-width: 100%;
+    font-size: max(16px, 1em);
+  }
+  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  .wrapper_tool select {
+    min-height: 44px;
+  }
+  .wrapper_tool input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]) {
+    min-width: 44px;
+  }
+  .wrapper_tool .leaflet-touch .leaflet-bar a,
+  .wrapper_tool .leaflet-bar a,
+  .wrapper_tool .leaflet-buttons-control-button {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+  }
+  .tool_header {
+    position: sticky;
+    top: 0;
+    padding-top: calc(0.5rem + 4px);
+    padding-bottom: 0.5rem;
+  }
+  .tool_header > .tool_name_container {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+    margin-right: 0;
+    padding-right: 3rem;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .tool_header > .tool_name_container > .label {
+    font-size: 1.15rem;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+  .tool_header > .tool_name_container > .description {
+    padding: 0;
+    font-size: 0.9rem;
+    line-height: 1.25rem;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+  }
+  .tool_header .selector {
+    max-width: 100%;
+  }
+  .tool_header > .tool_buttons_container > div:not(.wrapper_component),
+  .tool_header > .tool_buttons_container > button,
+  .tool_header > .tool_buttons_container > select {
+    flex: 1 1 auto;
+    min-height: 44px;
+  }
+  .wrapper_tool button,
+  .wrapper_tool .button.tool_button,
+  .wrapper_tool [role="button"],
+  .tool_header button {
+    min-height: 44px;
+  }
+  .wrapper_tool .phone_stack {
+    display: flex !important;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .wrapper_tool .phone_stack > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+.pane_switch {
+  display: none;
+}
+@media screen and (max-width: 600px) {
+  .pane_switch {
+    display: flex;
+    width: 100%;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background-color: var(--bg_surface_alt);
+  }
+  .pane_switch > .pane_btn {
+    flex: 1 1 0;
+    min-height: 44px;
+    border: 1px solid var(--border_default);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--fg_default);
+  }
+  .pane_switch > .pane_btn.active {
+    border-color: var(--tool_edge, var(--border_default));
+    box-shadow: inset 0 -3px 0 var(--tool_edge, var(--fg_default));
+  }
+  .pane_host.pane_switch_on [data-pane] {
+    display: none !important;
+  }
+  .pane_host.pane_switch_on [data-pane].pane_active {
+    display: block !important;
+  }
+}
+.phone_reorder {
+  display: none;
+}
+@media screen and (max-width: 600px) {
+  .phone_reorder {
+    display: inline-flex;
+    gap: 0.25rem;
+    flex-shrink: 0;
+  }
+  .phone_reorder > .phone_reorder_btn {
+    min-width: 44px;
+    min-height: 44px;
+    border: 1px solid var(--border_default);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--fg_default);
+  }
+  .phone_reorder > .phone_reorder_btn:disabled {
+    opacity: 0.35;
+  }
 }
 /**
 * login
