@@ -174,7 +174,11 @@ export const render_components_list = function(options) {
 				const handle_click = (e) => {
 					e.stopPropagation()
 					if (target_div.classList.contains('target_list_container')) {
+						// The parent list (this container's previous sibling) was hidden while
+						// the drilled level existed; it returns, so slide it in from the left.
+						const parent_list = target_div.previousElementSibling
 						target_div.replaceChildren()
+						play_level_transition(parent_list, 'back')
 					}
 				}
 				section_bar.addEventListener('click', handle_click)
@@ -289,6 +293,10 @@ export const render_components_list = function(options) {
 
 							// loading
 							target_list_container.classList.remove('loading')
+
+							// the drilled level slides in from the right (phone tier; the
+							// keyframes live in search.less and the desktop layout ignores it)
+							play_level_transition(target_list_container, 'forward')
 						}//end target_click_handler
 
 						// Event on click load "children" section inside target_list_container recursively
@@ -321,6 +329,32 @@ export const render_components_list = function(options) {
 * @returns {string}
 */
 const strip_tags = (label) => String(label ?? '').replace(/<[^>]*>/g, '') //end strip_tags
+
+
+
+/**
+* PLAY_LEVEL_TRANSITION
+* Slides a fields level in while the user moves between portal levels (drill-down
+* and back). The keyframes exist ONLY in the phone tier of search.less — on a
+* desktop the class is inert, so the side-by-side columns are unchanged.
+*
+* The element is REUSED across visits to the same level (the recursion clears and
+* repopulates the same container), so an in-flight animation must be restarted
+* explicitly: remove the classes, force a reflow, then re-add.
+*
+* @param {HTMLElement|null} node - the entering list (child on drill, parent on back)
+* @param {'forward'|'back'} direction - forward: enter from the right; back: return from the left
+* @returns {void}
+*/
+const play_level_transition = (node, direction) => {
+	if (!node) {
+		return
+	}
+	const class_name = direction === 'back' ? 'level_slide_back' : 'level_slide_forward'
+	node.classList.remove('level_slide_forward', 'level_slide_back')
+	void node.offsetWidth // reflow: lets the animation run again on the same node
+	node.classList.add(class_name)
+} //end play_level_transition
 
 
 

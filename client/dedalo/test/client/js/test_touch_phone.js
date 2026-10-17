@@ -264,14 +264,24 @@ describe('FIELDS_SELECTOR_PATH : a drilled level labels the navigation path', ()
 				},
 			]),
 		get_section_id: () => 'tmp_search_1',
-		get_section_elements_context: async () => [],
+		// the drilled child section (fetched on a portal row's click)
+		get_section_elements_context: async () => [
+			{ model: 'section', tipo: 'test3child', label: 'Proyectos' },
+			{ model: 'component_input_text', tipo: 'test3child1', label: 'Id', section_tipo: 'test3child' },
+		],
 		on_dragstart: () => {},
 	});
 
 	const section_elements = [
 		{ model: 'section', tipo: 'test3', label: 'Proyectos' },
 		{ model: 'section_group', tipo: 'test3g1', label: 'Información general' },
-		{ model: 'component_portal', tipo: 'test3p1', label: 'Proyecto', section_tipo: 'test3' },
+		{
+			model: 'component_portal',
+			tipo: 'test3p1',
+			label: 'Proyecto',
+			section_tipo: 'test3',
+			target_section_tipo: ['test3child'],
+		},
 	];
 
 	it('root level: the plain section name, no deep_path', () => {
@@ -318,6 +328,60 @@ describe('FIELDS_SELECTOR_PATH : a drilled level labels the navigation path', ()
 				bar.querySelector('.section_bar_section_name').textContent,
 				'Proyectos',
 				'the plain level name stays for the desktop layout',
+			);
+		} finally {
+			target_div.remove();
+		}
+	});
+
+	it('drilling slides the child level in (level_slide_forward)', async () => {
+		const target_div = document.createElement('div');
+		document.body.appendChild(target_div);
+		try {
+			render_components_list({
+				self: make_caller(),
+				section_tipo: 'test3',
+				target_div,
+				path: [],
+				section_elements,
+			});
+			const portal_row = target_div.querySelector('li.has_subquery');
+			assert.ok(portal_row, 'the portal row renders');
+			portal_row.click();
+			// the drill fetches the child context, then renders: let it settle
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			const child = target_div.querySelector('ul.target_list_container');
+			assert.ok(child.children.length > 0, 'the child level rendered');
+			assert.ok(
+				child.classList.contains('level_slide_forward'),
+				'the entering level carries the slide-in class',
+			);
+		} finally {
+			target_div.remove();
+		}
+	});
+
+	it('closing a level slides its parent back in (level_slide_back)', async () => {
+		const target_div = document.createElement('div');
+		document.body.appendChild(target_div);
+		try {
+			render_components_list({
+				self: make_caller(),
+				section_tipo: 'test3',
+				target_div,
+				path: [],
+				section_elements,
+			});
+			target_div.querySelector('li.has_subquery').click();
+			await new Promise((resolve) => setTimeout(resolve, 20));
+			const child = target_div.querySelector('ul.target_list_container');
+			// the child level's own bar is its close control
+			child.querySelector('li.section_bar_label').click();
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			assert.equal(child.children.length, 0, 'the drilled level left');
+			assert.ok(
+				target_div.querySelector('ul.list_container').classList.contains('level_slide_back'),
+				'the returning parent carries the slide-back class',
 			);
 		} finally {
 			target_div.remove();

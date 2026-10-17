@@ -1221,6 +1221,21 @@
 
 	@phone_hit: 44px; // WCAG 2.5.5, the same figure as the tools tier
 
+	// Moving between fields levels (drill / back). A drilled level REPLACES its
+	// parent (see the `:has` rule below), so only the ENTERING list is on screen:
+	// it slides in from the edge it came from, making the move read as lateral
+	// travel through the panels rather than a silent swap. Triggered by
+	// render_common.js play_level_transition (phone tier only — the classes are
+	// inert on desktop, where the levels stay side by side).
+	@keyframes search_level_in_forward {
+		from { transform: translateX(100%); }
+		to   { transform: translateX(0); }
+	}
+	@keyframes search_level_in_back {
+		from { transform: translateX(-100%); }
+		to   { transform: translateX(0); }
+	}
+
 	// The search pane lives inside the section's `display: table` shells
 	// (section.less `.section`, page.less `.page > .content_data`). An AUTO
 	// table grows to its content's min-content width, so ONE long nowrap field
@@ -1358,6 +1373,15 @@
 					transform: translateY(-50%);
 					float: none;
 				}
+			}
+
+			// ENTER / BACK slide (see the keyframes above). The panel's
+			// `overflow: hidden` clips the off-screen start edge.
+			ul.target_list_container.level_slide_forward {
+				animation: search_level_in_forward 200ms ease-out both;
+			}
+			ul.list_container.level_slide_back {
+				animation: search_level_in_back 200ms ease-out both;
 			}
 		}
 
