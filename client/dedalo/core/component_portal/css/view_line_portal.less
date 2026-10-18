@@ -19,7 +19,13 @@
 
 		>.component_placeholder {
 			padding-left: 0.5rem;
-			color: @color_grey_10;
+			// The portal's empty-value hint. It was --color_grey_10, whose RAMP slot
+			// has no background of its own to be judged against, so no static gate
+			// saw it and it shipped at 1.92:1 in light (#bbbbbb) and 2.67:1 in dark
+			// (#5a606a) — the two palettes failing in opposite directions, which is
+			// why neither palette's retune caught it. A hint is muted ink:
+			// --fg_muted is AA on every surface of both palettes.
+			color: var(--fg_muted);
 			font-style: italic;
 			margin-top: -0.55rem;
 		}

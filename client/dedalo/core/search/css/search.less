@@ -506,7 +506,7 @@
 			>.search_container_selection {
 				flex-grow: 1;
 				align-self: flex-start;
-				background-color: @color_grey_14;
+				background-color: var(--bg_app); // the band is PAGE canvas, so it travels with it (grey_14 inverts in dark)
 				padding-top: 0px;
 				position: sticky;
 				top: 0.25rem;
@@ -1268,7 +1268,7 @@
 		// (the page/section already provides the outer inset). Vertical padding
 		// stays so the row keeps its breathing room top and bottom.
 		padding: 0.5rem 0;
-		background-color: @color_grey_14;
+		background-color: var(--bg_app); // page canvas, as above — not a ramp step
 		outline: none;
 
 		// chips (TYPE / FIELDS / PRESET)

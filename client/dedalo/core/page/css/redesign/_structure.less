@@ -234,13 +234,9 @@
 		font-weight: 500;
 	}
 
-	// The portal's empty-value hint is a ramp grey (grey_10) in classic, where
-	// it sits on a transparent field and no static gate sees it; this line's
-	// field is a SUNKEN fill, and grey_10 on it is 1.9:1. A hint is muted ink.
-	.component_portal.view_line > .content_data > .component_placeholder,
-	.portal.view_line > .content_data > .component_placeholder {
-		color: var(--fg_muted);
-	}
+	// (the portal's empty-value hint was re-pointed here from grey_10 to
+	// --fg_muted; classic now does the same in view_line_portal.less, so the
+	// duplicate is gone and the ink is declared once, per role)
 
 	// ---------------------------------------------------------------
 	// Stage 4 — inspector as a stack of quiet cards

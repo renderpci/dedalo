@@ -81,11 +81,19 @@
 	}//end .dd_input
 
 // placeholder common style
+	// The ink is THEMED, not left to the UA: Chrome paints a placeholder with its
+	// own light-scheme default (#757575) unless a rule sets one, and this document
+	// never declares `color-scheme: dark`, so that default lands on the dark
+	// palette's #1f2227 input fill at 3.1:1 — under AA, on the FIRST surface a
+	// curator meets (the login form). --fg_muted is the muted-ink role and is AA
+	// on the input fills of both palettes (#666666 light, #aeb4bd dark).
 	input::-webkit-input-placeholder { /* Chrome/Safari/Edge */
+	  color: var(--fg_muted);
 	  font-style: italic;
 	  opacity: 0.95;
 	}
 	input::placeholder {
+	  color: var(--fg_muted);
 	  font-style: italic;
 	  opacity: 0.95;
 	}

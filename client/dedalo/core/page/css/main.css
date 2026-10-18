@@ -1055,7 +1055,7 @@ body {
   height: 100%;
   margin: 0;
   padding: 0;
-  background-color: var(--color_grey_14);
+  background-color: var(--bg_app);
 }
 b,
 strong {
@@ -1498,7 +1498,7 @@ select:focus,
 .section_record.edit .wrapper_component.edit input::placeholder,
 .section_record.edit .wrapper_component.edit textarea::placeholder {
   color: var(--field_label_fg);
-  opacity: 0.7;
+  opacity: 1;
 }
 select {
   width: auto;
@@ -5009,10 +5009,12 @@ input[type="radio"] {
 }
 input::-webkit-input-placeholder {
   /* Chrome/Safari/Edge */
+  color: var(--fg_muted);
   font-style: italic;
   opacity: 0.95;
 }
 input::placeholder {
+  color: var(--fg_muted);
   font-style: italic;
   opacity: 0.95;
 }
@@ -8758,7 +8760,7 @@ body:has(.component_av.view_viewer) {
 .wrapper_search > .search_global_container > .search_container_selection {
   flex-grow: 1;
   align-self: flex-start;
-  background-color: var(--color_grey_14);
+  background-color: var(--bg_app);
   padding-top: 0px;
   position: sticky;
   top: 0.25rem;
@@ -9332,7 +9334,7 @@ body:has(.component_av.view_viewer) {
     row-gap: 0;
     width: 100%;
     padding: 0.5rem 0;
-    background-color: var(--color_grey_14);
+    background-color: var(--bg_app);
     outline: none;
   }
   .wrapper_search > .search_global_container > .toggle_container_selector,
@@ -25311,7 +25313,7 @@ body.inspector_resizing {
 .component_portal.view_line > .content_data > .component_placeholder,
 .portal.view_line > .content_data > .component_placeholder {
   padding-left: 0.5rem;
-  color: var(--color_grey_10);
+  color: var(--fg_muted);
   font-style: italic;
   margin-top: -0.55rem;
 }
@@ -28820,10 +28822,6 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 :root[data-design="redesign"] .wrapper_component > .content_data > .label {
   color: var(--fg_muted);
   font-weight: 500;
-}
-:root[data-design="redesign"] .component_portal.view_line > .content_data > .component_placeholder,
-:root[data-design="redesign"] .portal.view_line > .content_data > .component_placeholder {
-  color: var(--fg_muted);
 }
 :root[data-design="redesign"] .wrapper_inspector .selection_info_label {
   font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif;

@@ -61,8 +61,17 @@
 		height: 100%;
 		margin: 0; // Remove default margin for body
 		padding: 0; // Remove default padding for body
-		background-color: var(--color_grey_14); // #f0f0f0 page canvas (light gray); white surfaces sit above it
-		// (palette token used directly so a stale tool-css :root cannot override it back to white)
+		background-color: var(--bg_app); // the page canvas: surfaces sit ABOVE it in both themes
+		// THE CANVAS IS A ROLE, NOT A RAMP STEP. This read --color_grey_14 directly,
+		// which is right only because light's grey_14 IS its canvas (#f0f0f0, and
+		// --bg_app is an alias of it there — no light change here). The dark palette
+		// INVERTS the ramp, so grey_14 becomes #2a2e35 — lighter than every content
+		// surface (--bg_surface #1b1d20, _alt #1f2227, _elevated #24272d) and the
+		// whole page read inside-out: cards sank into a lighter field. --bg_app is
+		// the token whose job this is, and in dark it is the one value below all
+		// three (#15171a).
+		// (a semantic token, not --color_white, so a stale tool-css :root cannot
+		// override it back to white)
 	}
 
 	b,
@@ -552,9 +561,12 @@
 		}
 
 		// placeholders / empty affordance read clearly lighter than real values
+		// (the field's own label ink, full strength — NOT opacity-damped: at 0.7 it
+		// composited to 3.94:1 on the dark card, under AA, and the ink is already the
+		// quieter of the two the field draws)
 		input::placeholder, textarea::placeholder {
 			color: var(--field_label_fg);
-			opacity: 0.7;
+			opacity: 1;
 		}
 	}
 
