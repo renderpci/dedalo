@@ -375,8 +375,9 @@
 		}
 
 		&.empty {
+			// keep the grid stretch (NO width:0). The bottom line of a row is each
+			// cell's own 1px box-shadow, so a zero-width cell punches a gap in it.
 			padding: 0px;
-			width: 0px;
 		}
 		&::empty {
 			padding: 0px;

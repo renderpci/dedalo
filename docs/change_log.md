@@ -181,6 +181,17 @@ Merged since the last release; these ship with the next one.
     back to ', '; a separator the context does define — empty included — is
     respected as before.
 
+- **The line under a list row is unbroken across empty columns**
+
+    A list row draws its separator as a 1px line under each cell. A cell that held no
+    value was given a zero width, so it painted no line: in a relation table the
+    separator stopped where the record's first empty column began, and the row read as
+    if it ended there.
+
+    An empty cell now keeps the width of its column, so the line continues to the end
+    of the row. No column moves: the column widths come from the grid, not from the
+    cells.
+
 - **The date field's calendar button is a full-size tap target and no longer covers the field label**
 
     On a touch screen the date field's small round calendar button — the one that opens the date picker — sat on top of the field's own label (for example *Fecha de captación*), so part of the label was hidden behind it, and the button itself was too small to tap reliably.
