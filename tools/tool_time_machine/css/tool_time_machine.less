@@ -95,6 +95,19 @@
 			height: 100%;
 			grid-column-start: 1;
 			grid-column-end: 3;
+
+			// read-only cells: the ontology context css gives value wrappers
+			// overflow:auto, and a 1px line-height rounding overflow (glyph
+			// descenders count in scrollHeight) then paints a scrollbar thumb
+			// mid-text. Nothing here is meant to scroll internally — the row
+			// itself is the action — so no scrollbar is shown.
+			.list_body .wrapper_component {
+				scrollbar-width: none;
+
+				&::-webkit-scrollbar {
+					display: none;
+				}
+			}
 		}//end .wrapper_tm
 
 		// header section list
@@ -106,6 +119,156 @@
 		.button_view {
 			height: 100%;
 			width: 100%;
+		}
+
+		// PHONE. The generic list phone rules stack every column of a row
+		// vertically with its label as `::before`, which turns a snapshot into an
+		// unbounded run of label/value rows that bleeds into the next version.
+		// Four fixes, scoped to this tool:
+		//   1. One CARD per snapshot — a bordered, rounded, separated block. The
+		//      generic `.column_section_id` is `position: sticky`, meant to pin the
+		//      Id over a scrolling table; inside a card that makes it HOVER over
+		//      unrelated records. `overflow: hidden` caps the sticky to the card,
+		//      so each Id header stays on top of its own snapshot.
+		//   2. Value-less cells (marked `empty_column` by view_tm_list_section)
+		//      are hidden: the card shows only what the version carries.
+		//   3. A single unbroken label band, header to bottom border.
+		//   4. The Id row's restore action is a round chip in the tool colour.
+		@media screen and (max-width: @width_break_point_0) {
+
+			// the container must not show around the cards: its generic white
+			// surface + padding read as a broken second card edge. The cards sit
+			// directly on the page background instead.
+			.wrapper_section.dd15 {
+				background-color: transparent;
+				border-radius: 0px;
+				padding: 0px;
+			}
+
+			.wrapper_section.dd15 .list_body {
+				background-color: transparent;
+				border-radius: 0px;
+				padding: 0px;
+			}
+
+			.wrapper_section.dd15 .content_data.list.section {
+				>.section_record.list {
+					background-color: @color_white;
+					// the label BAND runs the full card height, header to bottom
+					// border, painted once on the card (a hard stop at the same
+					// 22% the ::before label occupies). Per-column paint broke
+					// the band at the last row and left the bottom air blank.
+					background-image: linear-gradient(90deg, @color_grey_14 0px, @color_grey_14 22%, transparent 22%);
+					border: 1px solid @color_grey_12;
+					border-radius: 0.7rem;
+					box-shadow: 0px 2px 4px 0px @color_grey_10;
+					margin: 0 0.5rem 1.25rem;
+					// the generic rows carry padding-TOP only (rows separate each
+					// other), so the LAST row's value sits on the card border —
+					// the card owns the bottom air
+					padding-bottom: 0.5rem;
+					// the generic list row is width:100%, which ignores the
+					// side margins and overflows the screen edge — auto lets
+					// them count, so the card centers between the paddings
+					width: auto;
+					overflow: hidden;
+				}
+
+				// Id header: first cell of the card. Its grey comes from the
+				// card's band (so the band is unbroken through the header too);
+				// its generic sticky shadow paints detached (4px down), so a 1px
+				// border is the separator inside the card.
+				>.section_record.list >.column.column_section_id {
+					margin: 0px;
+					padding-top: 0px;
+					box-shadow: none;
+					border-bottom: 1px solid @color_grey_10;
+					// two columns only: the Id next to its label, the action
+					// chip at the card's right edge (the generic 22%/1fr/1fr
+					// left the button stranded mid-card)
+					grid-template-columns: 22% 1fr;
+
+					// the card's ONE action: orange clock glyph on a round light
+					// chip, pinned right. The icon is a MASK filled with its
+					// background-color (buttons.less fn_add_mask) — colour goes
+					// in background-color, and the chip is drawn by ::after
+					// (a mask swallows the element's own pseudo).
+					.button_view {
+						justify-content: flex-start;
+						gap: 0.5rem;
+						position: relative;
+						// the chip is anchored to the PADDING box and the glyph to
+						// the CONTENT box: zeroing the right padding puts both on
+						// the same edge, so the glyph's margin-right can centre it
+						padding-right: 0px;
+
+						.section_id {
+							font-size: 1.3rem;
+						}
+
+						.icon.history {
+							margin-left: auto;
+							// = chip inset 0.25rem + (chip 2.2rem − glyph 1.1rem)/2
+							// — the two MUST move together, or the glyph drifts off
+							// the chip's centre
+							margin-right: 0.8rem;
+							position: relative;
+							z-index: 1;
+							width: 1.1rem;
+							height: 1.1rem;
+							background-color: @tool_color;
+						}
+
+						&::after {
+							content: '';
+							position: absolute;
+							right: 0.25rem;
+							top: 50%;
+							transform: translateY(-50%);
+							width: 2.2rem;
+							height: 2.2rem;
+							border-radius: 50%;
+							background-color: @color_orange_light;
+							pointer-events: none;
+						}
+					}
+				}
+
+				// fields the snapshot does not carry (marker set in JS)
+				>.section_record.list >.column.empty_column {
+					display: none;
+				}
+
+				// value rows: the label block comes from the card's band, so the
+				// ::before keeps only the layout (22% flex item) and its text
+				>.section_record.list >.column {
+					// the pseudo resolves against the content box and would paint
+					// slivers at the column's padding edges — strip its paint
+					&::before {
+						top: 0px;
+						height: 100%;
+						background-color: transparent;
+						border-bottom: none;
+					}
+
+					flex-wrap: nowrap;
+
+					>.wrapper_component {
+						flex: 1 1 0;
+						min-width: 0;
+						width: auto;
+					}
+				}
+
+				// every visible row paints a 1px bottom separator (its generic
+				// box-shadow) — except the LAST VISIBLE one, where it falls
+				// inside the card's bottom padding and reads as a stray line
+				// above the border (the truly-last children are the hidden
+				// empty_column cells, so :last-child cannot be used)
+				>.section_record.list >.column:not(.empty_column):not(:has(~ .column:not(.empty_column))) {
+					box-shadow: none;
+				}
+			}
 		}
 
 	}//end >.content_data

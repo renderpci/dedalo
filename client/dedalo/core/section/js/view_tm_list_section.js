@@ -94,11 +94,43 @@ view_tm_list_section.render = async function(self, options={}) {
 		// render_column_id is undefined, so the list silently falls back to the plain
 		// Id cell and every row loses its restore/preview action — no error, just a
 		// dead list.
-		return view_default_list_section.render.call(view_tm_list_section, self, options)
+		const node = await view_default_list_section.render.call(view_tm_list_section, self, options)
+		mark_empty_columns(node)
+		return node
 	}
 
 	return compact_render(self, options, tm_view)
 }//end render
+
+
+
+/**
+* MARK_EMPTY_COLUMNS
+* Stamps `empty_column` on every value-less cell of every row (tool list only).
+*
+* WHY: on small screens the list stacks ALL columns of a snapshot vertically
+* under its Id header, and a section carries ~15 fields while a snapshot touches
+* a handful — the empty cells drown the data. The class is only a MARKER: the
+* hiding is CSS, scoped to the phone breakpoint (tool_time_machine.less), so the
+* desktop table keeps every column aligned.
+*
+* A column counts as empty when it has no text AND no media/control inside —
+* image-only values (thumbnails) must survive. Runs on every render, so list
+* refreshes re-mark; the class is idempotent.
+*/
+const mark_empty_columns = function(node) {
+
+	const rows = node.querySelectorAll('.section_record')
+	for (const row of rows) {
+		const columns = row.querySelectorAll(':scope > .column')
+		for (const column of columns) {
+			const has_content = column.querySelector('img, svg, iframe, video, canvas, button, input, textarea')
+			if (!has_content && column.textContent.trim()==='') {
+				column.classList.add('empty_column')
+			}
+		}
+	}
+}//end mark_empty_columns
 
 
 

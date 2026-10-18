@@ -23,6 +23,14 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Time machine tool list on phone renders as one card per version**
+
+    The time machine list (tool_time_machine) on small screens no longer stacks
+    every field of every version into one unbounded run of label/value rows. Each
+    version now renders as a distinct bordered card with its ID header on top, the
+    restore icon takes the tool colour, and fields the snapshot does not carry are
+    hidden (they remain visible in the desktop table).
+
 - **Checkboxes and radio buttons fill with a deeper orange so the white tick shows in every browser**
 
     A ticked checkbox or a picked radio button no longer depends on which browser you
@@ -97,6 +105,14 @@ Merged since the last release; these ship with the next one.
     header and the "no presets" message on an empty list. The collapsed paginator
     now takes no space; a preset list long enough to paginate still renders its
     pagination.
+
+- **Plain-text filter values join terms with ', ' when the section map defines no separator**
+
+    component_filter in the 'text' list view smashed its selected terms together
+    when the section context supplied no `fields_separator` ("MIB
+    AntigüedadBibliografíaMIB medieval-moderno"). An absent separator now falls
+    back to ', '; a separator the context does define — empty included — is
+    respected as before.
 
 - **The date field's calendar button is a full-size tap target and no longer covers the field label**
 

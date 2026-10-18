@@ -70,10 +70,8 @@ export const view_text_list_filter = function() {
 *                                e.g. ', ' or ' | '. Sourced from the section-map
 *                                `fields_separator` property for the host section type
 *                                (see core/section/class.section_map.php ::get_fields_separator).
-*                                (!) No fallback is applied here; if the property is absent
-*                                from context, entries.join(undefined) produces the literal
-*                                string 'undefined' between values. The section-map should
-*                                always supply this value for sections that use the 'text' view.
+ *                                An absent property falls back to ', '; a DEFINED
+ *                                separator ('' included) is always respected.
 *
 * @param {Object} self    - component_filter instance. Must expose:
 *                           `self.data`                {Object}        may be undefined (guarded with || {})
@@ -94,7 +92,14 @@ view_text_list_filter.render = async function(self, options) {
 		// Join the pre-resolved label strings using the separator defined in the section-map
 		// context. innerHTML is used (not textContent) so that embedded HTML tags in labels
 		// (e.g. <mark> from search highlighting) are rendered rather than escaped.
-		const value_string	= render_join(entries, self.context.fields_separator, self.context.render_class)
+		// (!) A MISSING separator (absent from the context, as in the dd15 time
+		// machine list) fell through as '' and SMASHED the terms together —
+		// 'MIB AntigüedadBibliografíaMIB medieval-moderno' — producing a long
+		// unbreakable token that overflows its cell and paints a scrollbar
+		// thumb. A defined separator ('' included) is respected; an absent one
+		// takes the standard ', '.
+		const separator		= self.context.fields_separator ?? ', '
+		const value_string	= render_join(entries, separator, self.context.render_class)
 
 	// wrapper. Set as span
 		// A bare <span> is used instead of ui.component.build_wrapper_list so that
