@@ -210,7 +210,19 @@
 			// background-color: @color_grey_14;
 			// border-right: 1px solid @color_grey_13;
 			box-shadow: 0px 1px 0px 0px @color_grey_13;
-			overflow: hidden;
+			// (!) THE VERTICAL AXIS MUST STAY VISIBLE — WebKit trap.
+			// `.header_wrapper_list` is `display: contents`, so these cells are
+			// direct grid items of `.list_body` (a grid). With `overflow: hidden`
+			// WebKit keeps a WRONG intrinsic height for row 1 after pagination
+			// replaces `content_data` (`common.render` render_level 'content'):
+			// the header row collapses to a sliver and every cell clips its
+			// title to ~2px. Measured in WebKit on oh1: 48.1px → 22.1px on
+			// page 1 and 35.1px on page 2, persisting across every swap;
+			// Chrome/Gecko are unaffected. `overflow-x: clip` keeps the
+			// horizontal clip (the label ellipsis itself lives on `.name` —
+			// see truncate_text below) while leaving the height intrinsic.
+			overflow-x: clip;
+			overflow-y: visible;
 			color: @color_grey_5;
 			font-weight: 300;
 			padding: 0.5rem;
@@ -243,7 +255,10 @@
 				padding-left: 0px;
 				padding-right: 0px;
 				padding-bottom: 0px;
-				overflow: hidden;
+				// same WebKit trap as `.head_column` above: never clip the
+				// vertical axis (the header row's intrinsic height depends on it)
+				overflow-x: clip;
+				overflow-y: visible;
 				text-overflow: ellipsis;
 				white-space: nowrap;
 				width: 100%;

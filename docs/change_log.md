@@ -44,6 +44,12 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **List headers stay readable in Safari, even when rows have different heights**
+
+    In Safari, after paging through a list whose rows have different heights (for example the interviews list, with its identifying images and information widgets), the column headers could collapse into a thin, clipped strip and the first rows below them were hard to read. The header cells no longer let Safari recompute the header height from the data rows after a page change, so paging, sorting and late-loading widgets leave the header intact in every page.
+
+    No action is needed on update.
+
 - **Ontology and thesaurus search: the result highlight and the loading state are now in sync.**
 
     Searching in the Ontology and Thesaurus areas showed a confusing sequence: the

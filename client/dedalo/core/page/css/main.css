@@ -6553,7 +6553,8 @@ dd-modal.dd_confirm .footer.content > button::before {
 .header_wrapper_list .head_column {
   display: flex;
   box-shadow: 0px 1px 0px 0px var(--color_grey_13);
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   color: var(--color_grey_5);
   font-weight: 300;
   padding: 0.5rem;
@@ -6581,7 +6582,8 @@ dd-modal.dd_confirm .footer.content > button::before {
   padding-left: 0px;
   padding-right: 0px;
   padding-bottom: 0px;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
