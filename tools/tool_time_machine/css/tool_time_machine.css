@@ -81,6 +81,10 @@
   width: 100%;
 }
 @media screen and (max-width: 1024px) {
+  .wrapper_tool.tool_time_machine > .content_data {
+    display: flex;
+    flex-direction: column;
+  }
   .wrapper_tool.tool_time_machine > .content_data .wrapper_section.dd15 {
     background-color: transparent;
     border-radius: 0px;
@@ -158,6 +162,53 @@
   }
   .wrapper_tool.tool_time_machine > .content_data .wrapper_section.dd15 .content_data.list.section > .section_record.list > .column:not(.empty_column):not(:has( ~ .column:not(.empty_column))) {
     box-shadow: none;
+  }
+  .wrapper_tool.tool_time_machine > .content_data .current_component_container,
+  .wrapper_tool.tool_time_machine > .content_data .preview_component_container {
+    margin-left: 0px;
+    margin-right: 0px;
+    display: flex;
+    flex-direction: column;
+  }
+  .wrapper_tool.tool_time_machine > .content_data .current_component_container > .time_label,
+  .wrapper_tool.tool_time_machine > .content_data .preview_component_container > .time_label {
+    order: -1;
+    padding: 0.2rem 0.5rem;
+    text-align: left;
+    font-size: 0.9rem;
+    border-radius: 0.4rem;
+    background-color: var(--color_orange_light);
+    color: var(--color_orange_dark);
+  }
+  .wrapper_tool.tool_time_machine > .content_data .preview_component_container:empty {
+    display: none;
+  }
+  .wrapper_tool.tool_time_machine > .content_data .tool_bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0px;
+  }
+  .wrapper_tool.tool_time_machine > .content_data .tool_bar > label {
+    height: auto;
+    padding: 0px;
+  }
+  .wrapper_tool.tool_time_machine > .content_data .tool_bar select {
+    flex: 1 1 6rem;
+  }
+  .wrapper_tool.tool_time_machine > .content_data .tool_bar .button_apply,
+  .wrapper_tool.tool_time_machine > .content_data .tool_bar .button_bulk_revert_process {
+    flex: 1 1 100%;
+    justify-content: center;
+    margin-left: 0px;
+  }
+  .wrapper_tool.tool_time_machine > .content_data .tool_bar .revert_label {
+    flex: 1 1 100%;
+    margin-left: 0px;
+  }
+  .wrapper_tool.tool_time_machine > .content_data .wrapper_section.dd15 .paginator_container .displayed_records {
+    display: none;
   }
 }
 /*# sourceMappingURL=tool_time_machine.css.map */

@@ -272,6 +272,91 @@
 					box-shadow: none;
 				}
 			}
+
+
+			// THE TOP BAND — the two version panels and the actions toolbar.
+			//
+			// 5. ONE COLUMN. The panels are a `1fr 1fr` grid built to be compared
+			//    side by side; on a phone each gets half a 360px row, so the live
+			//    value hugs the left edge with a void beside it, the still-empty
+			//    preview paints a second void, and the toolbar's Apply button
+			//    floats up into the captions. Stacked, every block gets the row.
+			& {
+				display: flex;
+				flex-direction: column;
+			}
+
+			// 6. CAPTION ABOVE ITS VALUE. `Ahora` / the snapshot date is what
+			//    tells the two stacked blocks apart, so it heads its own block
+			//    instead of trailing it; the half-column side margins go with
+			//    the half-columns. It is a full-width strip in the tool's chip
+			//    pair (`--color_orange_light` fill, `--color_orange_dark` ink —
+			//    the AA pair the tokens declare) so its edge does not have to
+			//    line up with the component's own inward text inset.
+			.current_component_container,
+			.preview_component_container {
+				margin-left: 0px;
+				margin-right: 0px;
+				display: flex;
+				flex-direction: column;
+
+				>.time_label {
+					order: -1;
+					padding: 0.2rem 0.5rem;
+					text-align: left;
+					font-size: 0.9rem;
+					border-radius: 0.4rem;
+					background-color: @color_orange_light;
+					color: @color_orange_dark;
+				}
+			}
+
+			// 7. THE PREVIEW IS EMPTY UNTIL A ROW IS PICKED. In the desktop
+			//    two-column band that void is the reserved preview slot; stacked,
+			//    it is a blank strip between the live value and the toolbar.
+			.preview_component_container:empty {
+				display: none;
+			}
+
+			// 8. TOOLBAR: one wrapped row. The lang selector takes the free width
+			//    and the Apply action — the tool's one primary action — gets the
+			//    whole next line instead of floating into the caption above.
+			//    (`float: right` from the desktop rule is inert on a flex item.)
+			.tool_bar {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 0.5rem;
+				margin-top: 0px;
+
+				>label {
+					height: auto;
+					padding: 0px;
+				}
+				select {
+					flex: 1 1 6rem;
+				}
+
+				.button_apply,
+				.button_bulk_revert_process {
+					flex: 1 1 100%;
+					justify-content: center;
+					margin-left: 0px;
+				}
+				.revert_label {
+					flex: 1 1 100%;
+					margin-left: 0px;
+				}
+			}
+
+			// 9. PAGINATOR: `Registros mostrados de 1 a 2 de 2` is the longest
+			//    thing in the row and the first to wrap — it pushed the nav
+			//    chevrons onto a line of their own. The page counter already says
+			//    where you are, and the inspector drops the same string for the
+			//    same reason (inspector.less).
+			.wrapper_section.dd15 .paginator_container .displayed_records {
+				display: none;
+			}
 		}
 
 	}//end >.content_data
