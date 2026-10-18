@@ -6674,6 +6674,32 @@ dd-modal.dd_presets::part(content) {
   background-image: url('../../themes/default/icons/sort_asc.svg');
   transform: rotate(180deg);
 }
+.wrapper_component > .list_body > .header_wrapper_list > .head_column {
+  border-top: 1px solid var(--color_grey_14);
+}
+.wrapper_component > .list_body > .header_wrapper_list > .head_column:first-child {
+  border-left: 1px solid var(--color_grey_14);
+}
+.wrapper_component > .list_body > .header_wrapper_list > .head_column:last-child {
+  border-right: 1px solid var(--color_grey_14);
+}
+.wrapper_component > .list_body > .content_data > .section_record > .column:first-child::after,
+.wrapper_component > .list_body > .content_data > .section_record > .column:last-child::after {
+  content: '';
+  display: block;
+  position: absolute;
+  top: -1px;
+  bottom: 0px;
+  width: 1px;
+  background-color: var(--color_grey_14);
+  pointer-events: none;
+}
+.wrapper_component > .list_body > .content_data > .section_record > .column:first-child::after {
+  left: 0px;
+}
+.wrapper_component > .list_body > .content_data > .section_record > .column:last-child::after {
+  right: 0px;
+}
 .column {
   position: relative;
   display: flex;

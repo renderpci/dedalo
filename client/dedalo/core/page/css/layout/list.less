@@ -261,11 +261,9 @@
 				margin: 0.5rem;
 			}
 
-			// NO outline here. A header cell inside a component (portal case) used
-			// to carry `outline: 1px solid @color_grey_14` — a box per cell, so
-			// neighbours drew TWO vertical rules between them. The row of titles
-			// is closed under by the cell's own box-shadow (above) and by nothing
-			// else; no vertical rule is drawn.
+			// NO vertical rule here: the table's frame is drawn on the table
+			// itself (see 'table frame inside a component' below). This cell keeps
+			// only the line under the titles, from its own box-shadow above.
 
 			// header column sub-labels inside sub_header container
 			.sub_header {
@@ -332,6 +330,51 @@
 			}//end >.order
 		}
 	}//end header_wrapper_list
+
+// table frame inside a component (portal case)
+//
+// The strip of titles and the rows are ONE table, so its two vertical edges
+// belong to the table: a left rule and a right rule run its whole height. The old
+// `outline: 1px solid @color_grey_14` on every .head_column drew a box per cell —
+// TWO rules between neighbours — and stopped at the header, leaving its left line
+// hanging above the rows.
+//
+// A row's edge rides its first/last cell and is painted by ::after, so it costs
+// no layout and may start 1px ABOVE the cell: the id cell carries `margin-top: 1px`
+// and a border would break the line at every row boundary.
+	.wrapper_component >.list_body >.header_wrapper_list >.head_column {
+		border-top: 1px solid @color_grey_14;
+
+		&:first-child {
+			border-left: 1px solid @color_grey_14;
+		}
+
+		&:last-child {
+			border-right: 1px solid @color_grey_14;
+		}
+	}
+
+	.wrapper_component >.list_body >.content_data >.section_record >.column {
+		&:first-child::after,
+		&:last-child::after {
+			content: '';
+			display: block;
+			position: absolute;
+			top: -1px;
+			bottom: 0px;
+			width: 1px;
+			background-color: @color_grey_14;
+			pointer-events: none;
+		}
+
+		&:first-child::after {
+			left: 0px;
+		}
+
+		&:last-child::after {
+			right: 0px;
+		}
+	}
 
 // column
 	.column {
