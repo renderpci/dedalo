@@ -188,8 +188,11 @@
 					// left the button stranded mid-card)
 					grid-template-columns: 22% 1fr;
 
-					// the card's ONE action: orange clock glyph on a round light
-					// chip, pinned right. The icon is a MASK filled with its
+					// the card's ONE action, pinned right: the tool colour glyph
+					// on a round light chip. The glyph itself is `history` (clock,
+					// restore) when the tool was opened on a SECTION and `eye`
+					// (preview) on a COMPONENT — both are the same action slot, so
+					// both are placed here. The icon is a MASK filled with its
 					// background-color (buttons.less fn_add_mask) — colour goes
 					// in background-color, and the chip is drawn by ::after
 					// (a mask swallows the element's own pseudo).
@@ -206,7 +209,7 @@
 							font-size: 1.3rem;
 						}
 
-						.icon.history {
+						.icon {
 							margin-left: auto;
 							// = chip inset 0.25rem + (chip 2.2rem − glyph 1.1rem)/2
 							// — the two MUST move together, or the glyph drifts off
