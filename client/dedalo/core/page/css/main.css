@@ -5300,7 +5300,15 @@ input::placeholder {
 .wrapper_component.edit.active:not(.hilite_element),
 .wrapper_component.search.active:not(.hilite_element),
 .wrapper_component.player.active:not(.hilite_element) {
-  background-color: var(--color_orange_light);
+  background-color: var(--color_hilite);
+}
+.wrapper_component.edit.active:not(.hilite_element) .list_body,
+.wrapper_component.search.active:not(.hilite_element) .list_body,
+.wrapper_component.player.active:not(.hilite_element) .list_body,
+.wrapper_component.edit.active:not(.hilite_element) .column_remove,
+.wrapper_component.search.active:not(.hilite_element) .column_remove,
+.wrapper_component.player.active:not(.hilite_element) .column_remove {
+  background-color: transparent;
 }
 .wrapper_component.edit.active .show_on_active,
 .wrapper_component.search.active .show_on_active,

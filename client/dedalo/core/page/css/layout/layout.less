@@ -431,8 +431,28 @@
 				color: @color_orange_dedalo;
 				// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 				overflow: initial; // !important
+				// --color_orange_light (#fffaf5) is 1.02:1 on the light card —
+				// the tint was invisible, so only the orange label read as
+				// "active". --color_hilite is the palette's declared orange field
+				// tint (light #fce8d2 / dark #4a3424), already paired per theme
+				// and per redesign accent, so the whole field lights up in both
+				// modes. The guard keeps the search hilite of a valued field.
 				&:not(.hilite_element) {
-					background-color: @color_orange_light;
+					background-color: @color_hilite;
+
+					// The tint is the surface of everything the field holds, so
+					// the list surfaces painted INSIDE it stop painting: the
+					// list card — at every depth, because a nested portal draws
+					// its own — and each row's grey remove column. Measured on
+					// numisdata3/2 numisdata249 (1 row): the only white inside
+					// the tinted field was `.list_body` #ffffff, and the grey
+					// `.column_remove` slab beside it. Paint only: padding,
+					// radius, min-height and flex/grid are untouched, so nothing
+					// reflows. Empty portals read the same way, with no card.
+					.list_body,
+					.column_remove {
+						background-color: transparent;
+					}
 				}
 
 				.show_on_active {

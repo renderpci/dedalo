@@ -126,6 +126,24 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The selected field is fully tinted orange — its list surfaces included — in both themes**
+
+    When you clicked a field, only its label turned orange: the tint behind the whole
+    component was `#fffaf5`, 1.02:1 on the light card — invisible, so an active field
+    looked much like an inactive one.
+
+    The active field now paints the palette's own orange field tint, on the whole
+    component (label and value), in light and dark, and follows the design/accent a
+    reader has chosen.
+
+    Nothing paints a slab of its own over that tint any more. A portal's list draws a
+    card — white in light, near-black in dark — for its rows to sit on, and each row
+    carries a grey remove column; both sat as boxes in the middle of the lit field.
+    Inside a selected field those surfaces no longer paint, at every depth, so a
+    portal nested in a row behaves like the one holding it, and an empty portal reads
+    as the fields around it. The rows, their columns and every control keep their
+    place: only the paint goes, so nothing moves.
+
 - **Dark mode: the page canvas no longer sits above the cards, and empty-field hints are legible**
 
     In **dark mode**, the page background was painted with the light theme's canvas
