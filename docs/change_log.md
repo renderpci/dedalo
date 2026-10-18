@@ -29,9 +29,8 @@ Merged since the last release; these ship with the next one.
     neighbours drew two vertical rules between them and the titles read as a grid of
     sealed cells.
 
-    The strip keeps its frame: the rule above the titles and the two side rules are
-    there. No vertical rule is drawn between the titles, so they read as one row, and
-    the rest of the table does not move.
+    The titles are labels, not fields, so the boxes are gone. The line under the
+    header stays, and the rest of the table does not move.
 
 - **Time machine tool list on phone renders as one card per version**
 
