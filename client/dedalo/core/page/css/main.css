@@ -6618,6 +6618,15 @@ dd-modal.dd_presets::part(content) {
   padding-right: 0.75em !important;
   margin: 0.5rem;
 }
+.wrapper_component .header_wrapper_list .head_column {
+  border-top: 1px solid var(--color_grey_14);
+}
+.wrapper_component .header_wrapper_list .head_column:first-child {
+  border-left: 1px solid var(--color_grey_14);
+}
+.wrapper_component .header_wrapper_list .head_column:last-child {
+  border-right: 1px solid var(--color_grey_14);
+}
 .header_wrapper_list .head_column .sub_header {
   display: grid;
 }

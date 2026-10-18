@@ -261,11 +261,22 @@
 				margin: 0.5rem;
 			}
 
-			// NO outline here. A header cell inside a component (portal case) used
-			// to carry `outline: 1px solid @color_grey_14` — a box per cell, so
-			// neighbours drew TWO vertical rules between them. The row of titles
-			// is closed under by the cell's own box-shadow (above) and by nothing
-			// else; no vertical rule is drawn.
+			// inside component (portal case). The strip of titles is FRAMED: a top
+			// rule on every cell (all coincide, so one line) plus the two side
+			// rules on the outer cells only. A box per cell — the old
+			// `outline: 1px solid @color_grey_14` — drew a rule on EVERY cell
+			// edge, i.e. TWO vertical rules between neighbours.
+			.wrapper_component & {
+				border-top: 1px solid @color_grey_14;
+
+				&:first-child {
+					border-left: 1px solid @color_grey_14;
+				}
+
+				&:last-child {
+					border-right: 1px solid @color_grey_14;
+				}
+			}
 
 			// header column sub-labels inside sub_header container
 			.sub_header {
