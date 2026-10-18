@@ -365,6 +365,13 @@
 			width: 1px;
 			background-color: @color_grey_14;
 			pointer-events: none;
+			// (!) the section-record hilite targets this same pseudo-element
+			// (`section_record.less`, `>.column:first-of-type:after`): its blurred
+			// dark shadow, 3px radius and `height: 100%` would fatten the 1px line
+			// and cut it 1px short at the bottom of every row.
+			box-shadow: none;
+			border-radius: 0px;
+			height: auto;
 		}
 
 		&:first-child::after {

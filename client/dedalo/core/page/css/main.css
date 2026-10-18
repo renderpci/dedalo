@@ -6693,6 +6693,9 @@ dd-modal.dd_presets::part(content) {
   width: 1px;
   background-color: var(--color_grey_14);
   pointer-events: none;
+  box-shadow: none;
+  border-radius: 0px;
+  height: auto;
 }
 .wrapper_component > .list_body > .content_data > .section_record > .column:first-child::after {
   left: 0px;
