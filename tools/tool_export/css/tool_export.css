@@ -340,6 +340,7 @@
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .paginator_container {
   height: unset;
+  min-height: 0;
   padding: 0 0.75rem;
 }
 .wrapper_tool.tool_export > .content_data > .grid_top > .export_buttons_config > .export_presets > .export_presets_panel > .export_presets_list > .wrapper_section > .list_body {

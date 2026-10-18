@@ -90,6 +90,14 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Tool Export — the presets panel no longer shows a blank band between its header and the presets.**
+
+    The Export tool's presets panel kept an empty pagination block (39px of blank
+    space) between the "Export presets" header and the first row, and between the
+    header and the "no presets" message on an empty list. The collapsed paginator
+    now takes no space; a preset list long enough to paginate still renders its
+    pagination.
+
 - **The date field's calendar button is a full-size tap target and no longer covers the field label**
 
     On a touch screen the date field's small round calendar button — the one that opens the date picker — sat on top of the field's own label (for example *Fecha de captación*), so part of the label was hidden behind it, and the button itself was too small to tap reliably.

@@ -443,8 +443,11 @@
 							>.wrapper_section {
 								padding: 0;
 
+								// collapsed empty paginator: core min-height (39px) reserved a
+								// blank band between the header and the first row
 								>.paginator_container {
 									height: unset;
+									min-height: 0;
 									padding: 0 @presets_gutter;
 								}
 
