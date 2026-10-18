@@ -203,6 +203,21 @@ Merged since the last release; these ship with the next one.
     of the row. No column moves: the column widths come from the grid, not from the
     cells.
 
+- **A portal row's edit cell now fills the row, like its trash cell.**
+
+    Hovering a row of a portal list — a component like *Autoridad*, or *Monedas* —
+    lit two cells: the id cell turned green behind the number and its pen, the last
+    cell turned red behind the trash. They were not the same box. The red covered the
+    row's whole height; the green stopped at the icon's own height, leaving a strip of
+    untouched row under it — more of the row on a two-line value, most of it on a tall
+    media row.
+
+    Both cells are the row's height now, so a row reads as one band and the pen and
+    the trash are equally easy to hit. The number and its pen hold the row's first
+    line, level with the trash icon at the other end, so a row still reads along a
+    single line. Nothing else moved: rows, columns, their widths, the height a row
+    takes and every other control are the same.
+
 - **The date field's calendar button is a full-size tap target and no longer covers the field label**
 
     On a touch screen the date field's small round calendar button — the one that opens the date picker — sat on top of the field's own label (for example *Fecha de captación*), so part of the label was hidden behind it, and the button itself was too small to tap reliably.

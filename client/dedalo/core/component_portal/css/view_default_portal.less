@@ -40,6 +40,32 @@
 				position: relative;
 			}
 
+			// Row action cells paint their WHOLE cell. The trash cell already did:
+			// `.column_remove > button.button_remove` carries the 1rem bottom
+			// padding that is, in fact, the row's height floor — while the pen sat
+			// at its content height (27px of a 40px row; 27 of 97 in a media row),
+			// a smaller green box beside a full-height red one on the same row.
+			// GROW, never `height: 100%`: a cell holding two action buttons
+			// (edit + delete, tree + edit) SHARES the height instead of pushing
+			// the second one out of the row.
+			// TOP, not centred: the box takes the row's height, its content stays
+			// on the row's first line — a centred number floated in the middle of
+			// a tall row.
+			.column.column_section_id > .button_edit,
+			.column.column_section_id > .button_delete,
+			.column.column_remove > button.button_remove {
+				flex: 1 1 auto;
+				align-items: flex-start;
+			}
+
+			// One line per row: the pen takes the SAME 0.5em top padding
+			// `button.button_remove` carries, so the number and the trash icon
+			// sit level instead of 2px apart.
+			.column.column_section_id > .button_edit,
+			.column.column_section_id > .button_delete {
+				padding-top: 0.5em;
+			}
+
 			// portal inside, in view_text
 			.component_portal {
 				.section_record.view_text {

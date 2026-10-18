@@ -25098,6 +25098,21 @@ body.inspector_resizing {
 .portal.view_default.edit > .list_body .button_edit {
   position: relative;
 }
+.component_portal.view_default.edit > .list_body .column.column_section_id > .button_edit,
+.portal.view_default.edit > .list_body .column.column_section_id > .button_edit,
+.component_portal.view_default.edit > .list_body .column.column_section_id > .button_delete,
+.portal.view_default.edit > .list_body .column.column_section_id > .button_delete,
+.component_portal.view_default.edit > .list_body .column.column_remove > button.button_remove,
+.portal.view_default.edit > .list_body .column.column_remove > button.button_remove {
+  flex: 1 1 auto;
+  align-items: flex-start;
+}
+.component_portal.view_default.edit > .list_body .column.column_section_id > .button_edit,
+.portal.view_default.edit > .list_body .column.column_section_id > .button_edit,
+.component_portal.view_default.edit > .list_body .column.column_section_id > .button_delete,
+.portal.view_default.edit > .list_body .column.column_section_id > .button_delete {
+  padding-top: 0.5em;
+}
 .component_portal.view_default.edit > .list_body .component_portal .section_record.view_text .button_edit,
 .portal.view_default.edit > .list_body .component_portal .section_record.view_text .button_edit {
   margin-left: 0px;
