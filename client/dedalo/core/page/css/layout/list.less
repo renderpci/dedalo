@@ -261,10 +261,11 @@
 				margin: 0.5rem;
 			}
 
-			// inside component (portal case)
-			.wrapper_component & {
-				outline: 1px solid @color_grey_14;
-			}
+			// NO outline here. A header cell inside a component (portal case) used
+			// to carry `outline: 1px solid @color_grey_14` — a box per cell, so
+			// neighbours drew TWO vertical rules between them. The row of titles
+			// is closed under by the cell's own box-shadow (above) and by nothing
+			// else; no vertical rule is drawn.
 
 			// header column sub-labels inside sub_header container
 			.sub_header {
