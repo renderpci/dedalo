@@ -67,6 +67,15 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common, load_component} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
+	import {ui} from '../../../core/common/js/ui.js'
+
+
+
+// Below this width the version panels STACK above the list
+// (tool_time_machine.less keys its phone block on `@width_break_point_0`), so a
+// row tapped below the fold needs the preview pane revealed. Must match that
+// media query.
+const STACKED_LAYOUT_MAX_VIEWPORT = 1024
 
 
 
@@ -240,6 +249,24 @@ tool_time_machine.prototype.init = async function(options) {
 				self.selected_bulk_process_id = null
 				self.button_bulk_revert_process.classList.add('hide','lock')
 				self.label_bulk_revert_process.classList.add('hide','lock')
+			}
+
+			// PHONE WIDTH. Long history: the row the user tapped is below the
+			// fold, so the version just picked — and the Apply button under it —
+			// is off screen. Bring the preview pane to the top of the view.
+			if (window.innerWidth <= STACKED_LAYOUT_MAX_VIEWPORT) {
+				// The tool header is STICKY at this width (tool_responsive.less),
+				// so a plain reveal lands the pane behind it. scrollIntoView
+				// honours scroll-margin-top (the mechanism update_code uses) and
+				// the header height is not a constant — the title wraps — so it
+				// is measured.
+				const tool_header = self.preview_component_container
+					.closest('.wrapper_tool')?.querySelector('.tool_header')
+				if (tool_header) {
+					self.preview_component_container.style.scrollMarginTop =
+						`${tool_header.getBoundingClientRect().height}px`
+				}
+				ui.reveal(self.preview_component_container, { block: 'start' })
 			}
 		}//end fn_tm_edit_record
 		self.events_tokens.push(
