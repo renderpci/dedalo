@@ -4486,6 +4486,11 @@
 			"skipped": 0,
 			"assertions": 19
 		},
+		"test/unit/section_toolbar_phone_tripwire.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 38
+		},
 		"test/unit/security_access_datalist_cache_native.test.ts": {
 			"tests": 7,
 			"skipped": 0,
