@@ -74,6 +74,23 @@
 					>.wrapper_component.active {
 						background-color: transparent;
 					}
+
+					// the chip carries ONE value: centre it in the cell both ways. The
+					// wrapper is a full-width flex item, so its value box sat at the
+					// cell's top-left and a height-full widget (the publication inline(-flex)
+					// switcher) rode the top edge instead of the middle.
+					>.wrapper_component > .content_data > .content_value {
+						display: grid;
+						place-items: center;
+						height: 100%;
+					}
+				}
+
+				// component_publication's pill keeps a line-view gap for the exit button
+				// that follows it in a row; with nothing to its right, inside a centred
+				// chip that gap would push the pill off the cell's centre.
+				.switcher_publication > i {
+					margin-right: 0;
 				}
 
 				>.column_section_id {
@@ -85,17 +102,22 @@
 					border-bottom-right-radius: 0.5rem;
 
 					.button_edit {
-						position: absolute;
-						left: 0;
-						top: 0;
+						// IN FLOW on purpose: an absolutely positioned child gives the
+						// chip no intrinsic width, so `width: max-content` (see &.edit
+						// `.column_section_id`) had nothing to size to and a 5+ digit id
+						// was shaved to the cell's 73px — leading digits lost.
+						position: static;
 						height: inherit;
 					}
 
 					.drag.icon {
+						// OUT OF FLOW: hovering the chip reveals this handle, and it
+						// hangs BELOW the chip. In flow it would count into the chip's
+						// `width: max-content` and be laid out beside the button.
+						position: absolute;
 						top: 2.7rem;
 						left: 0;
-						width:100%;
-						position: relative;
+						width: 100%;
 						border-radius: unset;
 						border-bottom-right-radius: 0.5rem;
 					}
@@ -212,6 +234,15 @@
 			.column {
 				outline: unset;
 				width: 100%;
+
+				// ...except the id chip, which is sized to its CONTENT: a 5+ digit id
+				// plus the edit icon does not fit the cell, and the tile's
+				// `overflow: hidden` shaved its leading digits off (the hover chip's
+				// button is in flow so that max-content has something to measure).
+				&.column_section_id {
+					width: max-content;
+					min-width: 73px;
+				}
 
 				>.wrapper_component {
 					height: inherit;

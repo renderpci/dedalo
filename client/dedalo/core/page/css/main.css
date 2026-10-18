@@ -25187,6 +25187,16 @@ body.inspector_resizing {
 .portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column > .wrapper_component.active {
   background-color: transparent;
 }
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column > .wrapper_component > .content_data > .content_value,
+.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column > .wrapper_component > .content_data > .content_value {
+  display: grid;
+  place-items: center;
+  height: 100%;
+}
+.component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover .switcher_publication > i,
+.portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover .switcher_publication > i {
+  margin-right: 0;
+}
 .component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id,
 .portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id {
   grid-column-start: 1;
@@ -25198,17 +25208,15 @@ body.inspector_resizing {
 }
 .component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .button_edit,
 .portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .button_edit {
-  position: absolute;
-  left: 0;
-  top: 0;
+  position: static;
   height: inherit;
 }
 .component_portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .drag.icon,
 .portal.view_mosaic > .list_body > .content_data .sr_mosaic_hover > .column_section_id .drag.icon {
+  position: absolute;
   top: 2.7rem;
   left: 0;
   width: 100%;
-  position: relative;
   border-radius: unset;
   border-bottom-right-radius: 0.5rem;
 }
@@ -25317,6 +25325,11 @@ body.inspector_resizing {
 .portal.view_mosaic.edit > .list_body > .content_data > .section_record .column {
   outline: unset;
   width: 100%;
+}
+.component_portal.view_mosaic.edit > .list_body > .content_data > .section_record .column.column_section_id,
+.portal.view_mosaic.edit > .list_body > .content_data > .section_record .column.column_section_id {
+  width: max-content;
+  min-width: 73px;
 }
 .component_portal.view_mosaic.edit > .list_body > .content_data > .section_record .column > .wrapper_component,
 .portal.view_mosaic.edit > .list_body > .content_data > .section_record .column > .wrapper_component {
