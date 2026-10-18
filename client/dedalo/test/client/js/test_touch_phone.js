@@ -3,13 +3,13 @@
 /*eslint no-undef: "error"*/
 
 import { a11y } from '../../../core/common/js/a11y.js';
+import { render_components_list } from '../../../core/common/js/render_common.js';
 import * as touch_pick from '../../../core/common/js/touch_pick.js';
 import { ui } from '../../../core/common/js/ui.js';
 import {
 	render_add_field_button,
 	synthetic_drop_event,
 } from '../../../core/search/js/search_phone.js';
-import { render_components_list } from '../../../core/common/js/render_common.js';
 import { render_pane_switch } from '../../../core/tools_common/js/pane_switch.js';
 import { render_phone_reorder } from '../../../core/tools_common/js/phone_reorder.js';
 
@@ -267,7 +267,12 @@ describe('FIELDS_SELECTOR_PATH : a drilled level labels the navigation path', ()
 		// the drilled child section (fetched on a portal row's click)
 		get_section_elements_context: async () => [
 			{ model: 'section', tipo: 'test3child', label: 'Proyectos' },
-			{ model: 'component_input_text', tipo: 'test3child1', label: 'Id', section_tipo: 'test3child' },
+			{
+				model: 'component_input_text',
+				tipo: 'test3child1',
+				label: 'Id',
+				section_tipo: 'test3child',
+			},
 		],
 		on_dragstart: () => {},
 	});
@@ -397,9 +402,7 @@ describe('FIELDS_SELECTOR_PATH : a drilled level labels the navigation path', ()
 				section_tipo: 'test3',
 				target_div,
 				path: [],
-				section_elements: [
-					{ model: 'section', tipo: 'test3', label: '<em>Proyectos</em>' },
-				],
+				section_elements: [{ model: 'section', tipo: 'test3', label: '<em>Proyectos</em>' }],
 				ar_section_path: ['Personas'],
 			});
 			assert.equal(
