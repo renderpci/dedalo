@@ -157,6 +157,15 @@
 									mask-origin: content-box;
 							-webkit-mask-size: 1em; // the icon's own width (was the <a>'s)
 									mask-size: 1em;
+
+							// TAP TARGET (WCAG 2.5.5, the tool phone contract): the
+							// 1.8rem circle is too small for a thumb. A NEGATIVE inset
+							// grows the <a> to 44×44 around the circle's centre; the
+							// mask stays centred at 1em in its content box, so nothing
+							// painted moves — only the hit area grows.
+							@media (pointer: coarse), screen and (max-width: @width_break_point_phone) {
+								inset: calc((1.8rem - 44px) / 2);
+							}
 						}
 					}
 

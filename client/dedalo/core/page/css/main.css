@@ -22304,6 +22304,11 @@ body.inspector_resizing {
   -webkit-mask-size: 1em;
   mask-size: 1em;
 }
+@media (pointer: coarse), screen and (max-width: 600px) {
+  .component_date > .content_data > .content_value > .input-group .button_container.button_calendar_container > .calendar {
+    inset: calc((1.8rem - 44px) / 2);
+  }
+}
 .component_date > .content_data > .content_value > .input-group .button_container.button_remove_container {
   right: 1.2rem;
   visibility: hidden;
