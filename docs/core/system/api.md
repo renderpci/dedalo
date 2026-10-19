@@ -242,7 +242,7 @@ The default handler class. Every action is an
 
 | action | purpose |
 | --- | --- |
-| `start` | Build the first-boot context (`environment` + a structure context). Not logged in → the login element context; logged in → the deep-linked page element (or the default section in list mode) plus the optional menu shell. |
+| `start` | Build the first-boot context (`environment` + a structure context). Not logged in → the login element context; logged in → the deep-linked page element (or the default section in list mode) plus the optional menu shell. A **section** deep link that carries a record id (`?tipo=<section>&section_id=<id>`) is answered in **edit** mode, whatever mode the link asks for — the record id *is* the edit request; component and area links keep their requested mode. |
 | `read` | Read records as context+data. Gates on `(section_tipo, tipo)` and on every SQO target section. Routing is owned by `src/core/section/read_facade.ts`: menu reads, area reads, `get_relation_list`, `resolve_data` (search-filter chips), `get_data` (a single component / portal pagination), Time Machine reads, else the whole section via `readSection`. |
 | `read_raw` | The full raw stored value(s) for a SQO's matched records; read-gated (level ≥ 1) on every SQO target section. |
 | `create` | Create a record in the target section; write-gated (level ≥ 2). Returns the new `section_id`. |

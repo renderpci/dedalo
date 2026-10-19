@@ -144,6 +144,20 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Opening a record by link no longer lands on a one-row list.**
+
+    A link that names a record — `?tipo=<section>&section_id=<id>`, which is what the
+    inspector's **Local Ontology** pen, a list row's edit button and a job's record
+    link all produce — used to open the record as a **list of one**: the columns of the
+    section list, no edit form, no inspector. It now opens the record for editing, as
+    it did before the engine rewrite.
+
+    The cause was on the server: the first-boot request (`start`) received the record
+    id but described the page element in *list* mode, and the page then inherited that
+    mode into its own data request. A section link that carries a record id is now
+    always answered in **edit** mode, whatever mode the link asks for. Links to a
+    component or an area keep the mode they ask for.
+
 - **The Section id search field fills its card like every other search field.**
 
     In the search panel, the *Id* field of a section rendered its value box at its content width: the box stayed short and left dead space inside the card, while every other field's box spanned the card. It now fills the card like the rest, in both the empty and the valued (highlighted) state.

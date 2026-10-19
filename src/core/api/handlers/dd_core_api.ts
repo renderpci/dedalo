@@ -1309,11 +1309,20 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// Promise.all branch, engineering/REQUEST_ISOLATION.md); the context array is
 		// then assembled in the original order (menu first) for wire stability.
 		const menuWanted = (rqo.options as { menu?: boolean } | undefined)?.menu === true;
+		// A SECTION deep link carrying a record id is the EDIT view (PHP start
+		// :477-501 forces set_mode('edit')): `?tipo=rsc0&section_id=1054` means
+		// "open this record", never a one-row list. The client inherits the mode
+		// into its instance and its first read, so without this the record opens
+		// as a list of one with no edit form (the inspector's "Local Ontology"
+		// pen is one such caller). Components/areas keep their requested mode,
+		// exactly like PHP's switch, which only forces on the section branch.
+		const sectionRecordDeepLink =
+			pageSectionId !== null && (await getModelByTipo(pageTipo)) === 'section';
 		const [sectionContext, menuContext, environment] = await Promise.all([
 			buildStructureContext({
 				tipo: pageTipo,
 				sectionTipo: pageSectionTipo,
-				mode: pageMode === 'edit' ? 'edit' : 'list',
+				mode: sectionRecordDeepLink || pageMode === 'edit' ? 'edit' : 'list',
 				lang: currentDataLang(),
 				langOverride: currentDataLang(),
 				permissions: pagePermissions,
