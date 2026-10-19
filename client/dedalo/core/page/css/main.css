@@ -6586,7 +6586,8 @@ dd-modal.dd_presets::part(content) {
 .header_wrapper_list .head_column {
   display: flex;
   box-shadow: 0px 1px 0px 0px var(--color_grey_13);
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   color: var(--color_grey_5);
   font-weight: 300;
   padding: 0.5rem;
@@ -6614,7 +6615,8 @@ dd-modal.dd_presets::part(content) {
   padding-left: 0px;
   padding-right: 0px;
   padding-bottom: 0px;
-  overflow: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: 100%;
@@ -18416,22 +18418,31 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.update_code > .content_data > .dd_note {
   margin: 0.5rem 0;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row {
+.wrapper_widget.update_code > .content_data > .channel_row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
   margin: 0.75rem 0 0.25rem 0;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label {
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_heading {
+  font-weight: bold;
+}
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
-  font-weight: bold;
   padding-bottom: 0px;
-  color: var(--color_blue_2);
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label > .dev_channel_check {
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option > .channel_radio {
   height: initial;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label > .dev_channel_icon {
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option_prerelease,
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option_dev {
+  color: var(--color_blue_2);
+}
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option_dev > .dev_channel_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -18447,11 +18458,13 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   mask-position: center;
   background-color: var(--color_blue_2);
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dd_note.dev_channel_note {
-  margin: 0.25rem 0 0 3.1rem;
+.wrapper_widget.update_code > .content_data > .channel_row > .dd_note.channel_note {
+  flex-basis: 100%;
+  margin: 0.25rem 0 0 0;
   max-width: 60rem;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row:not(:has(.dev_channel_check:checked)) > .dd_note.dev_channel_note {
+.wrapper_widget.update_code > .content_data > .channel_row:not(:has(.channel_option_prerelease >.channel_radio:checked)) > .dd_note.channel_note_prerelease,
+.wrapper_widget.update_code > .content_data > .channel_row:not(:has(.channel_option_dev >.channel_radio:checked)) > .dd_note.channel_note_dev {
   display: none;
 }
 .wrapper_widget.update_code > .content_data .update_status {
@@ -22492,6 +22505,11 @@ body.inspector_resizing {
   mask-origin: content-box;
   -webkit-mask-size: 1em;
   mask-size: 1em;
+}
+@media (pointer: coarse), screen and (max-width: 600px) {
+  .component_date > .content_data > .content_value > .input-group .button_container.button_calendar_container > .calendar {
+    inset: calc((1.8rem - 44px) / 2);
+  }
 }
 .component_date > .content_data > .content_value > .input-group .button_container.button_remove_container {
   right: 1.2rem;

@@ -26,8 +26,8 @@
  *      remote peer, served to a same-machine one, only AFTER authorization.
  */
 
-import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { config } from '../../src/config/config.ts';
 import type { ApiRequestContext } from '../../src/core/api/dispatch.ts';
@@ -514,4 +514,99 @@ describe('publicOriginIsLocal — the predicate BOTH the refusal above and the b
 		expect(server).toMatch(/isOntologyServer\s*\|\|\s*config\.update\.isCodeServer/);
 		expect(server).toMatch(/publicOriginIsLocal\(\)\s*\)\s*\{[\s\S]{0,600}?console\.warn\(/);
 	});
+});
+
+/**
+ * GATE 14, THE DOOR (RELEASE_IDENTITY_DESIGN §2.8 item 2). The code door reads
+ * the consumer's `channel` token and `release` identity and this master's
+ * DEDALO_CODE_SERVER_PRERELEASE_CHANNEL switch — driven in a CHILD configured
+ * as a code master over a real archive tree (config is frozen at load), so the
+ * outcome is what a consumer receives, not a source spelling.
+ */
+describe('get_code_update_info: the prerelease channel, through the door', () => {
+	const HANDLER = join(import.meta.dir, '../../src/core/api/handlers/dd_utils_api.ts');
+	const CODE = 'zzcode';
+	const FILES = join(
+		process.env.TMPDIR ?? '/tmp',
+		`dedalo_prerelease_door_${process.pid}_${Math.random().toString(36).slice(2)}`,
+	);
+
+	interface Manifest {
+		files?: { version: string; release?: string; channel?: string }[];
+		channels?: string[];
+		error?: string;
+	}
+
+	function ask(options: Record<string, unknown>, prereleaseSwitch: boolean): Manifest {
+		const script = `
+			const { utilsApiActions } = await import(${JSON.stringify(HANDLER)});
+			const context = { requestId: 'probe', clientIp: '203.0.113.9', session: null, sessionToken: null, csrfCandidate: null };
+			const rqo = { dd_api: 'dd_utils_api', action: 'get_code_update_info', options: ${JSON.stringify({ version: '7.0.0', code: CODE, ...options })} };
+			try {
+				const answer = await utilsApiActions.get_code_update_info(rqo, context);
+				const data = answer.body.data;
+				console.log(JSON.stringify({ files: data.files, channels: data.info.channels }));
+			} catch (error) {
+				console.log(JSON.stringify({ error: String(error?.publicMessage ?? error?.message ?? error) }));
+			}
+			process.exit(0);`;
+		const env: Record<string, string> = {
+			...(process.env as Record<string, string>),
+			IS_A_CODE_SERVER: 'true',
+			CODE_SERVERS: JSON.stringify([{ name: 'p', url: 'https://p.test', code: CODE }]),
+			DEDALO_HOST: 'dedalo.test',
+			DEDALO_CODE_FILES_DIR: FILES,
+			DEDALO_CODE_SERVER_DEV_CHANNEL: 'false',
+			DEDALO_CODE_SERVER_PRERELEASE_CHANNEL: prereleaseSwitch ? 'true' : 'false',
+		};
+		const run = Bun.spawnSync(['bun', '-e', script], { env, cwd: join(import.meta.dir, '../..') });
+		const out = run.stdout.toString().trim().split('\n').at(-1) ?? '';
+		if (run.exitCode !== 0 || !out.startsWith('{')) {
+			throw new Error(
+				`probe child failed (${run.exitCode}): ${run.stderr.toString().slice(-2000)}`,
+			);
+		}
+		return JSON.parse(out) as Manifest;
+	}
+	const offered = (answer: Manifest) => (answer.files ?? []).map((f) => f.release ?? f.version);
+
+	beforeAll(() => {
+		mkdirSync(join(FILES, '7', '7.0'), { recursive: true });
+		for (const name of ['7.0.0-beta.6.zip', '7.0.0-beta.7.zip', '7.0.0.zip']) {
+			writeFileSync(join(FILES, '7', '7.0', name), `PK-${name}`);
+			writeFileSync(join(FILES, '7', '7.0', `${name}.sha256`), `${'a'.repeat(64)}  ${name}\n`);
+		}
+	});
+	afterAll(() => {
+		rmSync(FILES, { recursive: true, force: true });
+	});
+
+	test('an opted-in master offers a prerelease asker what sits above its identity, and says so', () => {
+		const answer = ask({ channel: 'prerelease', release: '7.0.0-beta.6' }, true);
+		expect(answer.error).toBeUndefined();
+		expect(offered(answer)).toEqual(['7.0.0-beta.7', '7.0.0']);
+		expect(answer.channels).toEqual(['master', 'prerelease']);
+	}, 30_000);
+
+	test('a RELEASE asker on the same master never sees the prerelease', () => {
+		const answer = ask({ channel: 'master', release: '7.0.0-beta.6' }, true);
+		expect(offered(answer)).toEqual(['7.0.0']);
+		expect(answer.channels).toEqual(['master']);
+	}, 30_000);
+
+	test('an unknown channel token is the release channel — never a refusal, never wider', () => {
+		for (const channel of ['PRERELEASE', 'beta', 7, null]) {
+			const answer = ask({ channel, release: '7.0.0-beta.6' }, true);
+			expect(answer.error).toBeUndefined();
+			expect(offered(answer)).toEqual(['7.0.0']);
+			expect(answer.channels).toEqual(['master']);
+		}
+	}, 60_000);
+
+	test('a master WITHOUT the switch answers a prerelease ask as a release ask (no enumeration)', () => {
+		const answer = ask({ channel: 'prerelease', release: '7.0.0-beta.6' }, false);
+		expect(answer.error).toBeUndefined();
+		expect(offered(answer)).toEqual(['7.0.0']);
+		expect(answer.channels).toEqual(['master']);
+	}, 30_000);
 });

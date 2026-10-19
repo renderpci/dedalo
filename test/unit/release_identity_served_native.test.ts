@@ -2,7 +2,7 @@
  * THE RELEASE IDENTITY WHERE IT IS SERVED — /health and page_globals / info
  * read from the real doors, not from hand-built payloads
  * (WC-2026-10-15-release-identity-from-tag; release identity design gates 3/4,
- * server half).
+ * server half; page_globals `release_kind`, owner Q11).
  *
  * health_payload_native pins the pure builder with a kind it is handed, and
  * client_release_identity_wire executes the client against page_globals it
@@ -44,6 +44,13 @@ function dataTripleOf(identity: string): string {
 	const parsed = parseReleaseVersion(identity);
 	if (parsed === null) throw new Error(`'${identity}' is no release identity`);
 	return parsed.triple.join('.');
+}
+
+/** The kind a release identity string IS, by the engine's one parser (throws on garbage). */
+function kindOf(identity: string): 'stable' | 'prerelease' | 'dev' {
+	const parsed = parseReleaseVersion(identity);
+	if (parsed === null) throw new Error(`'${identity}' is no release identity`);
+	return parsed.dev ? 'dev' : parsed.prerelease ? 'prerelease' : 'stable';
 }
 
 /** A bare stable data version: `X.Y.Z`, nothing after it. */
@@ -88,10 +95,7 @@ describe('/health — the served route names the identity AND its kind', () => {
 			createRequestContext(),
 		);
 		const body = (await response.json()) as { version: string; release_kind: unknown };
-		const parsed = parseReleaseVersion(body.version);
-		expect(parsed).not.toBeNull();
-		const kindOfString = parsed?.dev ? 'dev' : parsed?.prerelease ? 'prerelease' : 'stable';
-		expect(body.release_kind).toBe(kindOfString);
+		expect(body.release_kind).toBe(kindOf(body.version));
 	});
 });
 
@@ -113,10 +117,20 @@ describe('page_globals — dedalo_data_version is the bare data triple, never th
 		expect(globals.dedalo_data_version).toBe(stored);
 	});
 
-	test('anonymous: neither version is published (API-03)', async () => {
+	test('logged in: release_kind = RELEASE_IDENTITY.kind, the kind the served identity IS (owner Q11)', async () => {
+		const globals = await loggedInGlobals();
+		expect(globals.release_kind).toBe(RELEASE_IDENTITY.kind);
+		// derived from the SERVED string, so a hardcoded kind reds on any checkout
+		// whose identity is of another kind
+		expect(globals.release_kind).toBe(kindOf(String(globals.dedalo_version)));
+	});
+
+	test('anonymous: neither version nor its kind is published (API-03)', async () => {
 		const globals = await buildPageGlobals(null, null);
 		expect(globals.dedalo_version).toBeNull();
 		expect(globals.dedalo_data_version).toBeNull();
+		expect('release_kind' in globals).toBe(true);
+		expect(globals.release_kind).toBeNull();
 	});
 });
 

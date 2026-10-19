@@ -7,23 +7,34 @@ serving: `code_serving.ts`, install side: `code_update.ts`); the operating
 context (sentinel, rollback, deployment channels) is
 `engineering/PRODUCTION.md` §12.
 
-**The two channels (policy 2026-09-29).** A PUBLISHED release (`<v>.zip`,
-advertised to every consumer) is built from a stable **release tag**
-`vX.Y.Z` — a version that was cut and tagged, never a moving branch tip. The
-DEVELOPER channel (`<v>-dev.zip`, offered only to consumers that ask, on a
-master with `DEDALO_CODE_SERVER_DEV_CHANNEL=true`) is the tip of branch
-**`master`**: the latest integrated code, before its release. The code
-server's checked-out branch is irrelevant to both; the refs are resolved on
-the server (`code_build.ts resolveBuildRefOrRefuse`).
+**The three channels (policy 2026-09-29; prerelease 2026-10-18).** A
+PUBLISHED release (`<v>.zip`, advertised to every consumer) is built from a
+stable **release tag** `vX.Y.Z` — a version that was cut and tagged, never a
+moving branch tip. A PRERELEASE (`<X.Y.Z-beta.N>.zip`, offered only to
+consumers that choose *Prereleases* or *Developer builds*, on a master with
+`DEDALO_CODE_SERVER_PRERELEASE_CHANNEL=true`) is built from an annotated
+prerelease tag `vX.Y.Z-(alpha|beta|rc).N` — immutable and sha-verified like a
+release. The DEVELOPER channel (`<v>-dev.zip`, offered only to consumers that
+choose *Developer builds*, on a master with `DEDALO_CODE_SERVER_DEV_CHANNEL=true`)
+is the tip of branch **`master`**: the latest integrated code, before its
+release. The consumer's choice is a LADDER — `master ⊂ prerelease ⊂ dev`, each
+also offered what the one before it is (`code_manifest.ts channelExposure`);
+the two master switches stay separate. The code server's checked-out branch is
+irrelevant to all three; the refs are resolved on the server
+(`code_build.ts resolveBuildRefOrRefuse`).
 
 The example below publishes `7.0.1` from a master running `7.0.0`. Substitute
 your versions; the walk is strictly linear (`code_manifest.ts` — the next
 minor within the major, no skipping).
 
 1. **Bump the engine version.** Edit `DEDALO_VERSION_TRIPLE` in
-   `src/core/update/version.ts` to `[7, 0, 1]`. The master must RUN the
-   version it publishes — the manifest advertises releases strictly above the
-   consumer's version and on the linear walk from it.
+   `src/core/update/version.ts` to `[7, 0, 1]`. That bump is what names the
+   release: the build reads the TAG's own `version.ts`, never the running
+   process (step 6), and the manifest advertises releases strictly above the
+   CONSUMER's version and on the linear walk from it. The bump (and step 2)
+   lands ONCE per triple: with its first prerelease when it has any, and then
+   neither its later prereleases nor its release repeat it (*Cutting a
+   prerelease* below).
 
 2. **Add the catalog descriptor.** Append a `7.0.1` `UpdateDescriptor` to
    `UPDATE_CATALOG` (`src/core/update/catalog.ts`) stating what the release
@@ -38,8 +49,9 @@ minor within the major, no skipping).
    have passed the FULL gate** (hermetic + db + instance): push it to a public
    mirror first (`bun run push`, or `git push github master` — public pushes are
    gated full) and let ci.yml + db.yml go green on GitHub. Two gates hold this:
-   the pre-push hook refuses a `vX.Y.Z` tag whose commit has no FULL green on
-   the desk (it gates it full when the tag names HEAD), and image-release.yml's
+   the pre-push hook refuses a release tag — stable `vX.Y.Z` or prerelease
+   `vX.Y.Z-(alpha|beta|rc).N`, a prerelease IS a release — whose commit has no
+   FULL green on the desk (it gates it full when the tag names HEAD), and image-release.yml's
    `plan` refuses a tag whose commit has no successful push run of BOTH ci.yml
    and db.yml. A push to the internal remote alone (gitdedalo — hermetic only)
    never qualifies a commit. **Cut the changelog in the release commit** —
@@ -48,31 +60,41 @@ minor within the major, no skipping).
    with an ANNOTATED tag (`git tag -a v7.0.1 -m 'Dédalo 7.0.1' && git push <remote> v7.0.1`)
    — the engine reads its release identity from `git describe`, which ignores a
    lightweight tag, so a lightweight tag builds a tree calling itself `7.0.1.dev`
-   (`src/core/update/release_identity.ts`). The tag IS the release: its
+   (`src/core/update/release_identity.ts`); the pre-push hook REFUSES a
+   lightweight release tag, and the code-server build refuses an archive that
+   does not call itself the tag. The tag IS the release: its
    name and the commit's `version.ts` must agree, and the commit must carry
    its changelog cut (`changes/<identity>/release.json`, version = the tag's
    identity, `to` = the tag). ONE check holds both (`scripts/lib/release_tag.ts`):
    the pre-push hook runs it on every pushed `v*` tag (`bun run
-   push:release-tag <tag> <commit>`) and image-release.yml's `plan` runs it
+   push:release-tag <tag> <commit> <object>`) and image-release.yml's `plan` runs it
    again. At the push door a tag whose identity sorts below `FIRST_CUT_RELEASE`
    (7.0.0-beta.6, the first release cut under the rule) is published history
    and passes with a note — `git push --tags` to a new mirror is never driven to
    `--no-verify`; `plan` stays strict. The code-server build also refuses a tag whose tree declares
    another version. Archives are built only with git >= 2.35 (the
    `%(describe:match=…,abbrev=…)` stamp; `MIN_GIT_FOR_DESCRIBE`) — the
-   code-server build and the image pipeline refuse an older git. Prerelease tags
-   (`v7.0.1-beta.1`) are never published: while a major is in beta there is
-   no release, and its code reaches installations only as developer builds of
-   `master`. PHP-era tags (`v6.x`) are never candidates — a tag is publishable
-   only if its tree carries `src/core/update/version.ts`.
+   code-server build and the image pipeline refuse an older git. A prerelease
+   tag (`v7.0.1-beta.1`) is built by the code server's *Build prerelease*
+   (step 6) into `<X>/<X.Y>/7.0.1-beta.1.zip`, and its push publishes the image
+   `:7.0.1-beta.1` (step 12). PHP-era tags
+   (`v6.x`) are never candidates — a tag is publishable only if its tree
+   carries `src/core/update/version.ts`.
 
 4. **Bring the build checkout up to date**: `git fetch --tags` (and pull
    `master`) in `DEDALO_CODE_SERVER_GIT_DIR` — the panel reads LOCAL refs; a
    tag that was never fetched does not exist for it.
 
-5. **Deploy the master itself** so it RUNS what it publishes (its own channel:
-   tree swap or image, `PRODUCTION.md` §12). After the restart the boot log
-   and the maintenance area must both show `7.0.1`.
+5. **Deploy the master itself.** The rule (policy, owner 2026-10-15): the code
+   server runs the newest STABLE release it publishes, or a prerelease /
+   developer build of the NEXT triple — it is never required to run each
+   prerelease to serve it. Nothing mechanical ties the two: the archive is
+   named from the tag's own `version.ts` (step 6) and the manifest's
+   `info.version` (`serverVersion`, `code_manifest.ts`) is informational, so a
+   master running `7.0.0` builds and serves `7.0.1-beta.1` (gate 13,
+   `code_build_native`). For a STABLE release, deploy it now through the
+   master's own channel (tree swap or image, `PRODUCTION.md` §12); after the
+   restart the boot log and the maintenance area must both show `7.0.1`.
 
 6. **Build the archive.** In the master's maintenance area, open the
    *serve code* panel and use its *Build release* button (served only when
@@ -80,6 +102,15 @@ minor within the major, no skipping).
    `DEDALO_CODE_FILES_DIR` are configured). It archives the NEWEST release
    tag — the panel's *Release tag* row names it before you press — with
    `git archive --format=zip --prefix=dedalo_code/ refs/tags/v7.0.1`.
+   *Build prerelease* beside it archives the newest prerelease tag that sorts
+   ABOVE the newest release tag (the *Prerelease tag* row names it; it refuses
+   when there is none — a beta a release superseded is never built) as
+   `<X>/<X.Y>/<X.Y.Z-beta.N>.zip`. Both are IMMUTABLE: an identity already
+   published (`.zip` + `.sha256`) is never rebuilt — the build refuses, and
+   different bytes need a new tag. Before publishing, the build reads the
+   archive's own `build_info.txt` back and refuses one that would not call
+   itself the tag. The master does not have to RUN a prerelease to build it:
+   the name comes from the tag's own `version.ts`, not the running process.
 
 7. **Verify the artifact on disk:**
    `<DEDALO_CODE_FILES_DIR>/7/7.0/7.0.1.zip` **and** its `7.0.1.zip.sha256`
@@ -126,16 +157,25 @@ minor within the major, no skipping).
     `/health` to serve `version` = the tag's identity (`7.0.1`) and `release_kind`
     `stable` — for a developer build, the identity its archive resolves to
     (`7.0.1.dev`, or the tag when the commit is exactly tagged).
+    A PRERELEASE tag push (`v7.0.1-beta.1`) publishes the same way, held to the same
+    gates (the release-tag check, a full green, the reviewer), as `:7.0.1-beta.1` ONLY —
+    install-stamp channel `prerelease`, `/health` `7.0.1-beta.1` / `prerelease`. A run
+    writes exactly one tag and never a floating one: no `latest`, no `:7` / `:7.0`, and
+    a prerelease never touches `:7.0.1` (`image_release.ts` `publishTagFault`; gate:
+    `image_release_native`). The workflow's trigger globs are wider than the tag grammar;
+    `plan` refuses a non-canonical name (`v7.0.1-beta.01`).
 
 13. **Check the publication.** The run's summary lists every registry (pushed /
     unchanged / skipped with its reason) and the digest; the `image-release` artifact is
     the same record as JSON. A skipped provisioned registry (`missing_secret: …`) is a
     red flag: add its secrets and dispatch the `release` channel for this tag. Then
-    verify ONE target as an operator would:
+    verify ONE target as an operator would (the identity is `signing.identity_regexp` of
+    `engineering/image_registries.json` verbatim — it accepts stable and prerelease tags;
+    `image_registries_docs_tripwire` holds this command equal to it):
 
     ```
     cosign verify ghcr.io/dedalia-org/dedalo@<digest> \
-      --certificate-identity-regexp '^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+|heads/master)$' \
+      --certificate-identity-regexp '^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?|heads/master)$' \
       --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
     ```
 
@@ -158,7 +198,66 @@ against a real host — it is not a step of this runbook.
 Automated twin: steps 1–11 are rehearsed end to end by
 `bun run test:update` (`scripts/update_drill.ts`) — a scratch clone gets the
 release commit and its `v<version>` tag, a real master instance builds and serves it, and a git-archive
-copy installs it across the planned-death restart. Run it after changing
+copy installs it across the planned-death restart. Before that it runs the
+PRERELEASE leg: the clone cuts `v<version>-beta.1`, `-beta.2` and `v<version>` on three
+annotated commits, the master (prerelease channel on, running this checkout — never the betas it serves)
+builds each (*Build prerelease* / *Build release*; a rebuild and a superseded beta
+refused), a prerelease-channel consumer walks beta.1 → beta.2 → stable across three
+restarts with `/health` naming each identity and digest, and stable-channel askers
+are offered no beta at any point. Run it after changing
 ANYTHING under `src/core/update/`, the update widgets, or `.gitattributes`
 export rules; it is the only gate that exercises build → serve → discover →
 install → restart as one wire-true sequence.
+
+## Cutting a prerelease
+
+A prerelease (`vX.Y.Z-(alpha|beta|rc).N`) IS a release (owner Q1, 2026-10-15):
+the same steps as above, held to the same gates, minus the version bump. The
+example publishes `7.0.1-beta.2`.
+
+1. **No version bump.** `version.ts` already declares `[7, 0, 1]` — the bump
+   and the `UPDATE_CATALOG` descriptor (steps 1–2) landed with the triple's
+   first prerelease (`7.0.1-beta.1`); a prerelease contributes no descriptor of
+   its own (the triple's runs once, on the first identity of it an install
+   receives). The tag's triple must equal the tree's `version.ts` — every door
+   below refuses a disagreement.
+2. **Cut the changelog** in the prerelease commit: `bun run changelog release
+   7.0.1-beta.2` writes `changes/7.0.1-beta.2/release.json` (its notes are what
+   the update panel shows for that row).
+3. **FULL green on a public mirror** for that commit (step 3: ci.yml + db.yml
+   on GitHub; the internal remote alone never qualifies).
+4. **Annotated tag**: `git tag -a v7.0.1-beta.2 -m 'Dédalo 7.0.1-beta.2' &&
+   git push <remote> v7.0.1-beta.2`. The pre-push hook holds it exactly as a
+   stable tag (`scripts/lib/release_tag.ts`: annotated, the changelog cut, a
+   FULL green); a lightweight tag is refused.
+5. **Build prerelease on the code server**: `git fetch --tags` in
+   `DEDALO_CODE_SERVER_GIT_DIR` (step 4), then *serve code* → *Build
+   prerelease* (step 6) — its *Prerelease tag* row must name `v7.0.1-beta.2`.
+   It writes `<DEDALO_CODE_FILES_DIR>/7/7.0/7.0.1-beta.2.zip` + `.sha256`
+   (verify as step 7; URL
+   `…/dedalo/install/code/7.0.1/7.0.1-beta.2.zip.sha256`, step 8). The code
+   server does NOT deploy it (step 5): it keeps running its stable release. It
+   OFFERS the archive only with `DEDALO_CODE_SERVER_PRERELEASE_CHANNEL=true`,
+   and only to a consumer that chooses *Prereleases* or *Developer builds*;
+   check both sides of step 9 — a *Published releases* consumer must NOT see it.
+6. **Approve the image.** The tag push runs `image-release.yml` (step 12): a
+   reviewer of the `image-release` environment approves `publish`, which pushes
+   `:7.0.1-beta.2` ONLY — never `:7.0.1`, `:7.0`, `:7` or `latest`.
+7. **cosign verify** one target exactly as step 13 (the same
+   `identity_regexp` accepts prerelease tags).
+
+A beta that a release has superseded is never built (*Build prerelease* only
+sees prerelease tags above the newest stable one), and a published prerelease
+is immutable like a release: different bytes need a new tag.
+
+**Bootstrap (design §2.8 item 5).** An install running `7.0.0-beta.6` or
+older has no `prerelease` channel token and calls itself the bare `7.0.0`, so
+it is never offered a prerelease: it reaches the first prerelease release
+(`7.0.0-beta.7`) by a fresh image (`docs/install/docker.md`, *A stack installed
+from a beta before 7.0.0-beta.7*) or, on a tree install, through the dev
+channel: it installs the `7.0.0-dev.zip` developer build, then — still on a
+`dev` ask — is offered every tag-built archive of `7.0.0` (`code_manifest.ts`
+`sameTripleItemsFor`: a `.dev` cannot say which tags are older than it), and
+the swap door admits them because the tree's own stamp says the dev channel
+installed it (`code_update.ts` `walkChannelOf`). The beta.7 release notes say
+so (changelog fragment `prereleases-are-published`).

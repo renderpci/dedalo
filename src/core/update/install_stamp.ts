@@ -33,8 +33,26 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** The channel the installed archive was built on (code_build_plan.ts releaseFileName). */
-export type InstallChannel = 'master' | 'dev';
+/**
+ * The channel the installed archive was offered on (code_manifest.ts) — the
+ * LADDER `master ⊂ prerelease ⊂ dev` (RELEASE_IDENTITY_DESIGN §2.8 item 2,
+ * owner Q8): `master` = a stable `<v>.zip`, `prerelease` = an immutable
+ * `<X.Y.Z-beta.N>.zip`, `dev` = a branch build `<v>-dev.zip`. Each opt-in also
+ * sees the channels before it.
+ */
+export type InstallChannel = 'master' | 'prerelease' | 'dev';
+
+/** Every InstallChannel, in ladder order — the one list a parser validates against. */
+export const INSTALL_CHANNELS: readonly InstallChannel[] = Object.freeze([
+	'master',
+	'prerelease',
+	'dev',
+]);
+
+/** Is `value` one of the {@link INSTALL_CHANNELS}? (Exact string, never a coercion.) */
+export function isInstallChannel(value: unknown): value is InstallChannel {
+	return typeof value === 'string' && (INSTALL_CHANNELS as readonly string[]).includes(value);
+}
 
 export interface InstallStamp {
 	/** sha256 of the installed archive, as verified by the updater. */
@@ -58,8 +76,8 @@ export const INSTALL_STAMP_PATH = 'src/core/update/install_stamp.json';
 /**
  * Parse stamp content. ANY malformed shape → null (never a throw): a stamp is
  * evidence, and evidence that does not parse is simply absent. The digest must
- * be a plain 64-hex sha256 and the channel one of the two built ones — a stamp
- * that fails either is not partially trusted.
+ * be a plain 64-hex sha256 and the channel one of the three built ones — a
+ * stamp that fails either is not partially trusted.
  */
 export function parseInstallStamp(content: string): InstallStamp | null {
 	let raw: unknown;
@@ -82,7 +100,7 @@ export function parseInstallStamp(content: string): InstallStamp | null {
 
 /**
  * The two fields a stamp cannot be trusted without: a plain 64-hex sha256 and
- * one of the two built channels. Null when either fails — a stamp is never
+ * one of the three built channels. Null when either fails — a stamp is never
  * PARTIALLY trusted.
  */
 function requiredStampFields(
@@ -90,7 +108,7 @@ function requiredStampFields(
 ): { digest: string; channel: InstallChannel } | null {
 	const { digest, channel } = raw;
 	if (typeof digest !== 'string' || !/^[a-f0-9]{64}$/.test(digest)) return null;
-	if (channel !== 'master' && channel !== 'dev') return null;
+	if (!isInstallChannel(channel)) return null;
 	return { digest, channel };
 }
 

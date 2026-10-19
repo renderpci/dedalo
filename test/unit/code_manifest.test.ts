@@ -24,6 +24,7 @@ import {
 	codeReleasePath,
 	linearUpgradeTargets,
 	readReleaseNotes,
+	releaseArchiveNameOf,
 } from '../../src/core/update/code_manifest.ts';
 
 /** A minimal descriptor: only the target triple drives the linear walk. */
@@ -170,7 +171,8 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 			date: new Date(mtime).toISOString(),
 		});
 		// info.version is the SERVER version, not the client's
-		expect(info.info).toEqual({ version: '7.1.0', ...BASE_INFO });
+		// info.channels: every rung this master HONOURED — a release ask, releases
+		expect(info.info).toEqual({ version: '7.1.0', ...BASE_INFO, channels: ['master'] });
 	});
 
 	test('a -dev build on disk is NEVER advertised to a consumer that did not ask for one', () => {
@@ -367,6 +369,237 @@ describe('buildCodeUpdateInfo (manifest assembly)', () => {
 // changes/<version>/release.json; a developer item never does; anything
 // missing or malformed leaves the field absent.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// GATE 14 — CHANNEL EXPOSURE (RELEASE_IDENTITY_DESIGN §2.8 items 2-3, owner Q8).
+// The ladder master ⊂ prerelease ⊂ dev, each rung needing BOTH the asker's
+// token and this master's own switch (DEDALO_CODE_SERVER_PRERELEASE_CHANNEL,
+// separate from the dev one). Outcomes over a real archive tree: a 7.0.0
+// triple holding beta.6, beta.7 and the stable 7.0.0, and a 7.0.1 rung holding
+// ONLY a prerelease — the newest identity on the master, which a stable asker
+// must still never see.
+// ---------------------------------------------------------------------------
+describe('gate 14: the prerelease channel (manifest exposure)', () => {
+	const PRE_ROOT = join(ROOT, 'prerelease');
+	const PRE_FILES = join(PRE_ROOT, 'files');
+	const PRE_CHANGES = join(PRE_ROOT, 'changes');
+	const ARCHIVES: readonly [string, string][] = [
+		['7.0', '7.0.0-beta.6.zip'],
+		['7.0', '7.0.0-beta.7.zip'],
+		['7.0', '7.0.0.zip'],
+		['7.0', '7.0.1-beta.1.zip'],
+		// not an identity in the shared grammar: never listed
+		['7.0', '7.0.0-pre.1.zip'],
+	];
+	const shaOf = (fileName: string) =>
+		[...fileName]
+			.reduce((sum, char) => sum + char.charCodeAt(0), 0)
+			.toString(16)
+			.padStart(64, '0');
+
+	beforeAll(() => {
+		mkdirSync(join(PRE_FILES, '7', '7.0'), { recursive: true });
+		for (const [dir, fileName] of ARCHIVES) {
+			const path = join(PRE_FILES, '7', dir, fileName);
+			writeFileSync(path, `PK-${fileName}`);
+			writeFileSync(`${path}.sha256`, `${shaOf(fileName)}  ${fileName}\n`);
+		}
+		mkdirSync(join(PRE_CHANGES, '7.0.0-beta.7'), { recursive: true });
+		writeFileSync(
+			join(PRE_CHANGES, '7.0.0-beta.7', 'release.json'),
+			JSON.stringify({
+				version: '7.0.0-beta.7',
+				date: '2026-10-18',
+				notes: { action_needed: [], entries: [{ type: 'fixed', audience: 'user', title: 'B7.' }] },
+			}),
+		);
+	});
+	afterAll(() => {
+		rmSync(PRE_ROOT, { recursive: true, force: true });
+	});
+
+	type Ask = Partial<
+		Pick<
+			Parameters<typeof buildCodeUpdateInfo>[0],
+			'channel' | 'clientRelease' | 'devChannelEnabled' | 'prereleaseChannelEnabled'
+		>
+	>;
+	function manifest(ask: Ask) {
+		return buildCodeUpdateInfo({
+			clientVersion: [7, 0, 0],
+			serverVersion: [7, 0, 0],
+			codeFilesDir: PRE_FILES,
+			publicBaseUrl: 'http://m',
+			info: { ...BASE_INFO },
+			catalog: catalogOf(target(7, 0, 1)),
+			changesDir: PRE_CHANGES,
+			...ask,
+		});
+	}
+	/** What the operator would see: the identity each row installs. */
+	const offered = (info: ReturnType<typeof manifest>) =>
+		info.files.map((item) => item.release ?? item.version);
+	const OPTED_IN = { prereleaseChannelEnabled: true, devChannelEnabled: true } as const;
+
+	test('a MASTER asker never sees a prerelease — not even the newest identity on the master', () => {
+		for (const clientRelease of ['7.0.0', undefined, '7.0.0-beta.6']) {
+			const info = manifest({ ...OPTED_IN, channel: 'master', clientRelease });
+			expect(info.files.some((item) => item.channel === 'prerelease')).toBe(false);
+			expect(info.files.some((item) => item.release !== undefined)).toBe(false);
+			expect(info.files.some((item) => /-(alpha|beta|rc)\./.test(item.url))).toBe(false);
+			expect(info.info.channels).toEqual(['master']);
+		}
+	});
+
+	test('a master asker BELOW the stable release of its triple is offered that release (a release is no exposure)', () => {
+		const info = manifest({ ...OPTED_IN, channel: 'master', clientRelease: '7.0.0-beta.6' });
+		expect(offered(info)).toEqual(['7.0.0']);
+		// …and one AT it (or not saying) is offered nothing of its own triple
+		expect(offered(manifest({ ...OPTED_IN, channel: 'master', clientRelease: '7.0.0' }))).toEqual(
+			[],
+		);
+		expect(offered(manifest({ ...OPTED_IN, channel: 'master' }))).toEqual([]);
+	});
+
+	test("a PRERELEASE asker at beta.6 sees beta.7 AND 7.0.0 above it, then the rung's newest prerelease", () => {
+		const info = manifest({ ...OPTED_IN, channel: 'prerelease', clientRelease: '7.0.0-beta.6' });
+		expect(offered(info)).toEqual(['7.0.0-beta.7', '7.0.0', '7.0.1-beta.1']);
+		expect(info.info.channels).toEqual(['master', 'prerelease']);
+		const beta7 = info.files[0];
+		// version = the DATA triple (every update door parses it), the identity beside it
+		expect(beta7).toMatchObject({
+			version: '7.0.0',
+			release: '7.0.0-beta.7',
+			channel: 'prerelease',
+			url: 'http://m/7.0.0/7.0.0-beta.7.zip',
+			sha256: shaOf('7.0.0-beta.7.zip'),
+		});
+		// the prerelease's OWN frozen notes, never its triple's
+		expect(beta7?.notes?.entries.map((entry) => entry.title)).toEqual(['B7.']);
+		// the stable item of the triple is a plain published item
+		expect(Object.hasOwn(info.files[1] as object, 'channel')).toBe(false);
+		// beta.6 itself (the running identity) and the foreign `-pre.1` are not offered
+		expect(info.files.some((item) => item.url.includes('beta.6'))).toBe(false);
+		expect(info.files.some((item) => item.url.includes('-pre.'))).toBe(false);
+	});
+
+	test('a master that did NOT opt into prereleases never advertises one, whatever is asked', () => {
+		for (const channel of ['prerelease', 'dev'] as const) {
+			const info = manifest({
+				channel,
+				clientRelease: '7.0.0-beta.6',
+				prereleaseChannelEnabled: false,
+				devChannelEnabled: true,
+			});
+			expect(info.files.some((item) => item.channel === 'prerelease')).toBe(false);
+			expect(offered(info)).toEqual(['7.0.0']);
+		}
+		expect(
+			manifest({ channel: 'prerelease', clientRelease: '7.0.0-beta.6' }).info.channels,
+		).toEqual(['master']);
+	});
+
+	test('THE LADDER: a dev asker sees prereleases too; the two master switches stay separate', () => {
+		const both = manifest({ ...OPTED_IN, channel: 'dev', clientRelease: '7.0.0-beta.6' });
+		expect(offered(both)).toEqual(['7.0.0-beta.7', '7.0.0', '7.0.1-beta.1']);
+		expect(both.info.channels).toEqual(['master', 'prerelease', 'dev']);
+		// prerelease switch alone: a dev ask is honoured up to the prerelease rung
+		const preOnly = manifest({
+			channel: 'dev',
+			clientRelease: '7.0.0-beta.6',
+			prereleaseChannelEnabled: true,
+			devChannelEnabled: false,
+		});
+		expect(preOnly.info.channels).toEqual(['master', 'prerelease']);
+		expect(offered(preOnly)).toEqual(['7.0.0-beta.7', '7.0.0', '7.0.1-beta.1']);
+		// a prerelease ask never reaches the developer rung, even with both on
+		const preAsk = manifest({ ...OPTED_IN, channel: 'prerelease' });
+		expect(preAsk.info.channels).toEqual(['master', 'prerelease']);
+		expect(preAsk.files.some((item) => item.channel === 'dev')).toBe(false);
+		// dev switch alone: a dev ask honours `dev` WITHOUT `prerelease` — the
+		// answer must not claim the betas it did not expose (a "highest rung"
+		// of 'dev' would, and the panel would then read "no prereleases here"
+		// as "none exist")
+		const devOnly = manifest({
+			channel: 'dev',
+			clientRelease: '7.0.0-beta.6',
+			prereleaseChannelEnabled: false,
+			devChannelEnabled: true,
+		});
+		expect(devOnly.info.channels).toEqual(['master', 'dev']);
+		expect(devOnly.files.some((item) => item.channel === 'prerelease')).toBe(false);
+	});
+
+	test("§2.8.5 bootstrap: a DEVELOPER BUILD asking on dev is offered every tag of its triple (the walk's dev exception)", () => {
+		// beta.6 reports its bare triple; it installs 7.0.0-dev.zip and then
+		// runs 7.0.0.dev — which may sit before or after any tag of 7.0.0, so
+		// each tag-built archive is a legal next step (version_walk.ts
+		// sameTripleRefusal), in release order, then the next rung's newest
+		const dev = manifest({ ...OPTED_IN, channel: 'dev', clientRelease: '7.0.0.dev' });
+		expect(offered(dev)).toEqual(['7.0.0-beta.6', '7.0.0-beta.7', '7.0.0', '7.0.1-beta.1']);
+		// each item keeps its OWN kind token: what the tree becomes, never `dev`
+		expect(dev.files.find((item) => item.release === '7.0.0-beta.7')?.channel).toBe('prerelease');
+		expect(Object.hasOwn(dev.files[2] as object, 'channel')).toBe(false);
+		// the prereleases still need THIS master's prerelease switch; the release does not
+		const devOnly = manifest({
+			channel: 'dev',
+			clientRelease: '7.0.0.dev',
+			prereleaseChannelEnabled: false,
+			devChannelEnabled: true,
+		});
+		expect(offered(devOnly)).toEqual(['7.0.0']);
+		// off the dev ask a .dev is its bare triple: nothing of 7.0.0 is newer,
+		// and a master ask never sees a prerelease
+		expect(
+			offered(manifest({ ...OPTED_IN, channel: 'master', clientRelease: '7.0.0.dev' })),
+		).toEqual([]);
+		expect(
+			offered(manifest({ ...OPTED_IN, channel: 'prerelease', clientRelease: '7.0.0.dev' })),
+		).toEqual(['7.0.1-beta.1']);
+		// a .dev of ANOTHER triple is no claim about this asker (askerIdentity)
+		expect(offered(manifest({ ...OPTED_IN, channel: 'dev', clientRelease: '7.0.9.dev' }))).toEqual([
+			'7.0.1-beta.1',
+		]);
+	});
+
+	test('an untrusted release claim places the asker at its bare triple — never higher exposure, never a throw', () => {
+		// a claim of ANOTHER triple — below it would make every archive of 7.0.0
+		// "above" the asker — is no claim about this asker at all
+		for (const clientRelease of [
+			'6.0.0-beta.1',
+			'6.9.9',
+			'9.9.9-beta.1',
+			'7.0.0-beta.6; rm -rf /',
+			'7.0.0-pre.1',
+			42,
+			null,
+		]) {
+			const info = manifest({ ...OPTED_IN, channel: 'prerelease', clientRelease });
+			// nothing of the 7.0.0 triple (the bare triple = its stable release)
+			expect(offered(info)).toEqual(['7.0.1-beta.1']);
+		}
+	});
+
+	test("a rung's STABLE release outranks its prereleases: one item per rung, the newest identity", () => {
+		const stable = join(PRE_FILES, '7', '7.0', '7.0.1.zip');
+		writeFileSync(stable, 'PK-7.0.1');
+		writeFileSync(`${stable}.sha256`, `${shaOf('7.0.1.zip')}  7.0.1.zip\n`);
+		try {
+			const info = manifest({ ...OPTED_IN, channel: 'prerelease', clientRelease: '7.0.0' });
+			expect(offered(info)).toEqual(['7.0.1']);
+		} finally {
+			rmSync(stable, { force: true });
+			rmSync(`${stable}.sha256`, { force: true });
+		}
+	});
+
+	test('readReleaseNotes reads a prerelease identity and refuses anything outside the grammar', () => {
+		expect(readReleaseNotes(PRE_CHANGES, '7.0.0-beta.7')?.entries).toHaveLength(1);
+		for (const bad of ['../7.0.0-beta.7', '7.0.0-beta.7/..', '7.0.0-pre.1', '07.0.0']) {
+			expect(readReleaseNotes(PRE_CHANGES, bad)).toBeNull();
+		}
+	});
+});
+
 describe('release notes on the manifest', () => {
 	const CHANGES = join(ROOT, 'changes');
 	const devZip = join(FILES_DIR, '7', '7.0', '7.0.0-dev.zip');
@@ -493,6 +726,40 @@ describe('codeReleasePath (filename-grammar gate + layout)', () => {
 		);
 		for (const bad of ['7.0.1-devx.zip', '7.0.1-dev.tar', '../7.0.1-dev.zip', '7.0.1-DEV.zip']) {
 			expect(codeReleasePath(FILES_DIR, [7, 0, 1], bad)).toBeNull();
+		}
+	});
+
+	test('a PRERELEASE archive resolves in its triple dir; only the shared grammar does (design §2.8)', () => {
+		for (const name of ['7.0.1-beta.1.zip', '7.0.1-rc.12.zip', '7.0.1-alpha.0.zip']) {
+			expect(codeReleasePath(FILES_DIR, [7, 0, 1], name)).toBe(join(FILES_DIR, '7', '7.0', name));
+		}
+		expect(releaseArchiveNameOf('7.0.1-beta.2.zip')).toEqual({
+			triple: '7.0.1',
+			kind: 'prerelease',
+			identity: '7.0.1-beta.2',
+		});
+		expect(releaseArchiveNameOf('7.0.1.zip')).toEqual({
+			triple: '7.0.1',
+			kind: 'stable',
+			identity: '7.0.1',
+		});
+		expect(releaseArchiveNameOf('7.0.1-dev.zip')).toEqual({
+			triple: '7.0.1',
+			kind: 'dev',
+			identity: null,
+		});
+		for (const bad of [
+			'7.0.1-pre.1.zip', // foreign label
+			'7.0.1-beta.01.zip', // non-canonical
+			'07.0.1.zip',
+			'7.0.1-beta.zip',
+			'7.0.1-beta.1-dev.zip',
+			'7.0.1-beta.1.zip.partial',
+			'7.0.1.dev.zip',
+			'../7.0.1-beta.1.zip',
+			'7.0.1-BETA.1.zip',
+		]) {
+			expect(codeReleasePath(FILES_DIR, [7, 0, 1], bad), bad).toBeNull();
 		}
 	});
 

@@ -22,14 +22,27 @@
  * Everything is read from the git object store at the tag's commit, never from
  * the working tree: what is checked is what is published.
  *
- *   bun run scripts/lib/release_tag.ts check <tag> <commit>
+ * THE PUSH DOOR ALSO HOLDS THE TAG OBJECT (owner Q7, design gate 18): a release
+ * tag must be ANNOTATED. A lightweight tag is invisible to build_info.txt's
+ * `%(describe)` (it sees annotated tags only), so its archive — the code
+ * server's zip, the release image — would call itself `X.Y.Z.dev`, not the
+ * release. The code server and the image plan refuse such an archive after the
+ * fact; the push refuses the tag before it exists anywhere else.
+ *
+ *   bun run scripts/lib/release_tag.ts check <tag> <commit> <object>
+ *
+ * (`<object>` = what the pushed ref names: the tag object of an annotated tag,
+ * the commit itself of a lightweight one.)
  *
  * A LIBRARY with a CLI, not a CI stage: no hosted chain runs it by name (the image
  * pipeline imports it), so it lives in scripts/lib/ (tier_wiring_tripwire rule I).
- *     exit 0: a release tag that passes, a tag that is no release identity
- *             (v6.0.0.beta.1 — nothing to hold), or a tag published before the
- *             rule (below FIRST_CUT_RELEASE — see there); exit 1: refused, with
- *             the sentence.
+ *     exit 0: a HELD release tag that passes — the hook then demands a FULL
+ *             green for its commit, stable and prerelease alike (a prerelease
+ *             IS a release, owner Q1);
+ *     exit 3: nothing to hold — a tag that is no release identity
+ *             (v6.0.0.beta.1), or one published before the rule (below
+ *             FIRST_CUT_RELEASE — see there): it passes, and needs no gate;
+ *     exit 1: refused, with the sentence; exit 2: a malformed call.
  */
 
 import { parseDeclaredTriple, VERSION_TS_PATH } from '../../src/core/update/code_build_plan.ts';
@@ -43,6 +56,19 @@ import {
 export interface ReleaseTagGit {
 	/** The bytes of `path` at commit `rev`, or null when the commit has no such file. */
 	fileAt(rev: string, path: string): string | null;
+}
+
+/** The exit code that says "a v* name with nothing to hold" (see the header). */
+export const NOTHING_TO_HOLD = 3;
+
+/**
+ * Why a pushed release tag OBJECT may not be published, or null: it must be an
+ * annotated tag (`git cat-file -t` says `tag`). `objectType` null = git could
+ * not say — refused too (fail closed: an unreadable object is no evidence).
+ */
+export function lightweightTagFault(tag: string, objectType: string | null): string | null {
+	if (objectType === 'tag') return null;
+	return `tag ${tag} is ${objectType === null ? 'an object git cannot read' : `a LIGHTWEIGHT tag (it names a ${objectType})`} — a release tag must be annotated (git tag -a ${tag} -m '…' <commit>): build_info.txt's %(describe) sees annotated tags only, so the release's archive and image would call themselves a developer build. Delete it (git tag -d ${tag}) and tag again with -a`;
 }
 
 /**
@@ -110,6 +136,16 @@ function cutOf(text: string): { version: unknown; to: unknown } | null {
 	}
 }
 
+/** `git cat-file -t <object>` in `cwd` (`tag`, `commit`, …), or null when git cannot answer. */
+export function gitObjectType(cwd: string, object: string): string | null {
+	const typed = Bun.spawnSync(['git', 'cat-file', '-t', object], {
+		cwd,
+		stdout: 'pipe',
+		stderr: 'ignore',
+	});
+	return typed.exitCode === 0 ? typed.stdout.toString().trim() : null;
+}
+
 /** The real lookups: `git show <rev>:<path>` in `cwd`. */
 export function gitShowLookups(cwd: string): ReleaseTagGit {
 	return {
@@ -124,30 +160,40 @@ export function gitShowLookups(cwd: string): ReleaseTagGit {
 	};
 }
 
-/** The CLI: `check <tag> <commit>`. Returns the process exit code. */
+/** The CLI: `check <tag> <commit> <object>`. Returns the process exit code. */
 export function main(argv: readonly string[], cwd: string = process.cwd()): number {
-	const [verb, tag, commit] = argv;
-	if (verb !== 'check' || tag === undefined || commit === undefined || argv.length !== 3) {
-		console.error('usage: bun run scripts/lib/release_tag.ts check <tag> <commit>');
+	const [verb, tag, commit, object] = argv;
+	if (
+		verb !== 'check' ||
+		tag === undefined ||
+		commit === undefined ||
+		object === undefined ||
+		argv.length !== 4
+	) {
+		console.error('usage: bun run scripts/lib/release_tag.ts check <tag> <commit> <object>');
 		return 2;
 	}
 	const identity = releaseVersionOfTag(tag);
 	if (identity === null) {
 		console.log(`release-tag: ${tag} is not a release identity tag — nothing to hold`);
-		return 0;
+		return NOTHING_TO_HOLD;
 	}
 	if (predatesReleaseCutRule(identity)) {
 		console.log(
 			`release-tag: ${tag} predates the cut rule (first cut release v${FIRST_CUT_RELEASE}) — published history, not held`,
 		);
-		return 0;
+		return NOTHING_TO_HOLD;
 	}
-	const fault = releaseTagFault(tag, commit, gitShowLookups(cwd));
+	const fault =
+		lightweightTagFault(tag, gitObjectType(cwd, object)) ??
+		releaseTagFault(tag, commit, gitShowLookups(cwd));
 	if (fault !== null) {
 		console.error(`release-tag: REFUSED — ${fault}`);
 		return 1;
 	}
-	console.log(`release-tag: ${tag} at ${commit} — version.ts and the changelog cut agree`);
+	console.log(
+		`release-tag: ${tag} at ${commit} — annotated, and version.ts and the changelog cut agree`,
+	);
 	return 0;
 }
 

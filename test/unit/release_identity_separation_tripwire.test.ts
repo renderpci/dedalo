@@ -114,7 +114,10 @@ const DATA_CONSUMERS: ReadonlyArray<{
 		functions: ['resumeRun'],
 	},
 	{ module: 'src/core/update/boot_confirm.ts', why: 'confirms the booted code by data version' },
-	{ module: 'src/core/update/version_walk.ts', why: 'the linear upgrade walk is on triples' },
+	{
+		module: 'src/core/update/version_walk.ts',
+		why: 'the walk is a pure rule: each door hands it the running identity, it imports none (the data walk is on triples)',
+	},
 	{ module: 'src/core/update/catalog.ts', why: 'UPDATE_CATALOG is keyed by triple' },
 	{
 		module: 'src/core/update/engine.ts',
@@ -173,8 +176,8 @@ const MIXED: ReadonlyMap<string, string> = new Map([
 		'INSTALL_STEPS reaches the image steps (identity image tag); resumeRun is a data consumer (above)',
 	],
 	[
-		'src/core/update/image_update_request.ts',
-		'from_version = identity (display site below); the data triple selects the target',
+		'src/core/update/code_update.ts',
+		'the identity walk starts from the running identity (design §2.8 item 3); the backup dir / sentinel previousVersion name the data version boot_confirm compares',
 	],
 ]);
 
@@ -204,6 +207,19 @@ const DISPLAY_SITES: readonly DisplaySite[] = [
 		module: 'tools/tool_error_report/server/index.ts',
 		fn: 'buildSendReportHandler',
 		key: 'dedalo_version',
+	},
+];
+
+/**
+ * Display CONSTANTS: a module-scope value that names the program to the outside
+ * (no function, no key a DisplaySite could anchor on). The exported binding
+ * must carry the identity and its module read no data-version alias at all.
+ */
+const DISPLAY_CONSTANTS: ReadonlyArray<{ module: string; name: string; why: string }> = [
+	{
+		module: 'src/core/harvest/identity.ts',
+		name: 'HARVEST_USER_AGENT',
+		why: "the harvest door's User-Agent names the software that sent the request (owner Q10)",
 	},
 ];
 
@@ -321,6 +337,25 @@ describe('3. display sites name the identity, never the data version', () => {
 					`\`${value.expression}\` does not reach the release identity`,
 				).not.toEqual([]);
 			}
+		});
+	}
+});
+
+describe('3b. display constants carry the identity, and only the identity', () => {
+	for (const constant of DISPLAY_CONSTANTS) {
+		test(`${constant.module} ${constant.name}`, () => {
+			expect(
+				model.modules.has(constant.module),
+				`${constant.module} is gone — update the list`,
+			).toBe(true);
+			expect(
+				model.exportCarriesIdentity(constant.module, constant.name),
+				`${constant.name} does not reach the release identity (${constant.why})`,
+			).toBe(true);
+			expect(
+				readsDataVersion(model, constant.module),
+				`${constant.module} reads the DATA version — ${constant.name} would call a beta by the stable release it precedes (${constant.why})`,
+			).toBe(false);
 		});
 	}
 });
@@ -452,6 +487,26 @@ describe('5. positive controls — every evasion the model claims to see is red'
 		const [good] = siteValues(fake, { module: 'src/zz/display.ts', fn: 'good', key: 'version' });
 		expect(good?.identity).toContain('DEDALO_ENGINE_VERSION');
 		expect(good?.data).toEqual([]);
+	});
+
+	test('a display constant built from the data version is red; from the identity, green', () => {
+		const constants = buildFlowModel(
+			new Map([
+				...fakes,
+				[
+					'src/zz/ua_data.ts',
+					"import { DEDALO_VERSION } from '../core/update/version.ts';\nexport const UA = `dedalo/${DEDALO_VERSION} (+x)`;",
+				],
+				[
+					'src/zz/ua_identity.ts',
+					"import { DEDALO_ENGINE_VERSION } from '../core/update/build_stamp.ts';\nexport const UA = `dedalo/${DEDALO_ENGINE_VERSION} (+x)`;",
+				],
+			]),
+		);
+		expect(constants.exportCarriesIdentity('src/zz/ua_data.ts', 'UA')).toBe(false);
+		expect(readsDataVersion(constants, 'src/zz/ua_data.ts')).toBe(true);
+		expect(constants.exportCarriesIdentity('src/zz/ua_identity.ts', 'UA')).toBe(true);
+		expect(readsDataVersion(constants, 'src/zz/ua_identity.ts')).toBe(false);
 	});
 
 	test('a value mixing both versions is red even when hoisted: module const, local helper, imported helper', () => {

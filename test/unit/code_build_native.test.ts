@@ -17,9 +17,13 @@ import * as realConfigModule from '../../src/config/config.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { buildVersionFromGit } from '../../src/core/update/code_build.ts';
 import {
+	BUILD_INFO_TREE_PATH,
 	newestPublishableTag,
 	parseDeclaredTriple,
+	placeholderNamesItsTag,
 	planCodeBuild,
+	prereleaseTagAbove,
+	releaseTagIdentity,
 	releaseTagsNewestFirst,
 	releaseTagVersion,
 } from '../../src/core/update/code_build_plan.ts';
@@ -59,6 +63,23 @@ afterAll(() => {
 	mock.restore();
 	rmSync(ROOT, { recursive: true, force: true });
 });
+
+/**
+ * What makes a scratch repository's archives carry their release tag: THIS
+ * repository's own build_info.txt placeholder and its export-subst rule — read
+ * from the real files, so a drift in either reaches these gates. A tag build
+ * reads the stamp back out of its archive and refuses one that does not call
+ * itself the tag (code_build.ts refuseUnlessArchiveIsIdentity).
+ */
+const BUILD_INFO_PLACEHOLDER = readFileSync(
+	join(import.meta.dir, '../../src/core/update/build_info.txt'),
+	'utf8',
+);
+function writeReleaseStamp(repo: string): void {
+	mkdirSync(join(repo, 'src', 'core', 'update'), { recursive: true });
+	writeFileSync(join(repo, 'src', 'core', 'update', 'build_info.txt'), BUILD_INFO_PLACEHOLDER);
+	writeFileSync(join(repo, '.gitattributes'), 'src/core/update/build_info.txt export-subst\n');
+}
 
 /** Narrow to the refusal arm (and fail loudly, not silently, when it is not). */
 function refusal(plan: ReturnType<typeof planCodeBuild>): { msg: string; error: string } {
@@ -147,6 +168,7 @@ describe('planCodeBuild — version guard', () => {
 			gitDir: '/g',
 			ref: 'refs/tags/v7.0.1',
 			versionString: '7.0.1',
+			identity: '7.0.1',
 			targetDir: '/f/7/7.0',
 			filePath: '/f/7/7.0/7.0.1.zip',
 		});
@@ -169,15 +191,37 @@ describe('planCodeBuild — version guard', () => {
 			'main',
 			'v7',
 			'refs/heads/v7',
-			'v7.0.1-beta.1',
 			'refs/heads/v7.0.1',
+			'refs/heads/v7.0.1-beta.1',
+			// not the shared grammar: a foreign label, a non-canonical number
+			'v7.0.1-pre.1',
+			'v7.0.1-beta.01',
 			'7.0.1',
 			'x/master',
 		]) {
 			const plan = planCodeBuild({ version: '7.0.1', ref: devRef }, OK_CFG);
 			if (plan.ok !== true) throw new Error('expected an ok plan');
 			expect(plan.filePath).toBe('/f/7/7.0/7.0.1-dev.zip');
+			expect(plan.identity, devRef).toBeNull();
 		}
+	});
+
+	test('a PRERELEASE tag claims its identity name beside the release (design §2.8 item 1)', () => {
+		for (const [tagRef, identity] of [
+			['v7.0.1-beta.1', '7.0.1-beta.1'],
+			['refs/tags/v7.0.1-rc.12', '7.0.1-rc.12'],
+			['v7.0.1-alpha.0', '7.0.1-alpha.0'],
+		] as const) {
+			const plan = planCodeBuild({ version: '7.0.1', ref: tagRef }, OK_CFG);
+			if (plan.ok !== true) throw new Error(`expected an ok plan for ${tagRef}`);
+			expect(plan.identity).toBe(identity);
+			// same <X>/<X.Y>/ dir as the release; never the release's own name
+			expect(plan.targetDir).toBe('/f/7/7.0');
+			expect(plan.filePath).toBe(`/f/7/7.0/${identity}.zip`);
+		}
+		// the tag names its DATA triple, and it must be the bytes' own
+		const lying = planCodeBuild({ version: '7.0.1', ref: 'refs/tags/v7.0.2-beta.1' }, OK_CFG);
+		expect(refusal(lying).error).toBe('tag/version mismatch: refs/tags/v7.0.2-beta.1 vs 7.0.1');
 	});
 
 	test("accepts the prerelease form '7.0.1.dev' and normalises it to '7.0.1'", () => {
@@ -299,11 +343,84 @@ describe('release tag helpers', () => {
 		}
 	});
 
-	test('releaseTagsNewestFirst orders numerically and skips prereleases', () => {
-		expect(
-			releaseTagsNewestFirst(['v6.9.7', 'v7.10.0', 'v7.9.3', 'v8.0.0-beta.1', 'v7.0.0-alpha.1']),
-		).toEqual(['v7.10.0', 'v7.9.3', 'v6.9.7']);
-		expect(releaseTagsNewestFirst(['v7.0.0-beta.5', 'v7'])).toEqual([]);
+	test('releaseTagIdentity reads stable AND prerelease tags through the shared grammar', () => {
+		expect(releaseTagIdentity('v7.0.1')).toBe('7.0.1');
+		expect(releaseTagIdentity('refs/tags/v7.0.1-beta.12')).toBe('7.0.1-beta.12');
+		expect(releaseTagVersion('v7.0.1-beta.12')).toBeNull(); // the RELEASE channel's rule
+		for (const not of [
+			'v7.0.1-pre.1',
+			'v7.0.1-beta',
+			'v7.0.1-beta.01',
+			'v7.0.1.dev',
+			'refs/heads/v7.0.1-beta.1',
+			'7.0.1-beta.1',
+		]) {
+			expect(releaseTagIdentity(not), not).toBeNull();
+		}
+	});
+
+	test('releaseTagsNewestFirst orders by SEMVER precedence (compareReleaseIdentities), never lexically', () => {
+		const tags = [
+			'v6.9.7',
+			'v7.10.0',
+			'v7.9.3',
+			'v8.0.0-beta.1',
+			'v7.0.0-alpha.1',
+			'v7.0.0-beta.9',
+			'v7.0.0-beta.10',
+			'v7.0.0-rc.1',
+			'v7.0.0',
+			'v7', // no release identity
+			'v7.0.0-pre.1', // foreign label
+		];
+		expect(releaseTagsNewestFirst(tags)).toEqual([
+			'v8.0.0-beta.1',
+			'v7.10.0',
+			'v7.9.3',
+			'v7.0.0',
+			'v7.0.0-rc.1',
+			'v7.0.0-beta.10',
+			'v7.0.0-beta.9',
+			'v7.0.0-alpha.1',
+			'v6.9.7',
+		]);
+		expect(releaseTagsNewestFirst(tags, 'stable')).toEqual([
+			'v7.10.0',
+			'v7.9.3',
+			'v7.0.0',
+			'v6.9.7',
+		]);
+		expect(releaseTagsNewestFirst(tags, 'prerelease')).toEqual([
+			'v8.0.0-beta.1',
+			'v7.0.0-rc.1',
+			'v7.0.0-beta.10',
+			'v7.0.0-beta.9',
+			'v7.0.0-alpha.1',
+		]);
+	});
+
+	test('prereleaseTagAbove: only a prerelease above the newest release is built', () => {
+		expect(prereleaseTagAbove('v7.0.1-beta.2', 'v7.0.0')).toBe('v7.0.1-beta.2');
+		expect(prereleaseTagAbove('v7.0.0-beta.6', null)).toBe('v7.0.0-beta.6'); // no release yet
+		// superseded: the release of its own triple, or a newer one, exists
+		expect(prereleaseTagAbove('v7.0.1-rc.1', 'v7.0.1')).toBeNull();
+		expect(prereleaseTagAbove('v7.0.0-rc.9', 'v7.0.1')).toBeNull();
+		expect(prereleaseTagAbove(null, 'v7.0.1')).toBeNull();
+		// a stable tag is never "a prerelease"
+		expect(prereleaseTagAbove('v7.0.2', 'v7.0.1')).toBeNull();
+	});
+
+	test('placeholderNamesItsTag: only a placeholder carrying the describe field names its tag', async () => {
+		const { BUILD_INFO_PATH } = await import('../../src/core/update/build_stamp.ts');
+		expect(BUILD_INFO_TREE_PATH).toBe(BUILD_INFO_PATH);
+		// the real committed placeholder names its tag
+		expect(placeholderNamesItsTag(BUILD_INFO_PLACEHOLDER)).toBe(true);
+		expect(placeholderNamesItsTag('$Format:%H %cI %(describe)$\n')).toBe(true);
+		// the legacy two-field placeholder (every pre-stamp tag) and garbage do not
+		expect(placeholderNamesItsTag('$Format:%H %cI$\n')).toBe(false);
+		expect(placeholderNamesItsTag('')).toBe(false);
+		expect(placeholderNamesItsTag('$Format:%H %cI$\n%(describe)\n')).toBe(false);
+		expect(placeholderNamesItsTag('$Format:%H %cI %(describer)$')).toBe(false);
 	});
 
 	test('newestPublishableTag skips tags whose tree is not this engine (the v6 case)', () => {
@@ -385,6 +502,7 @@ describe('buildVersionFromGit — real git archive', () => {
 		mkdirSync(repo, { recursive: true });
 		mkdirSync(filesDir, { recursive: true });
 		writeFileSync(join(repo, 'package.json'), '{"name":"dedalo"}');
+		writeReleaseStamp(repo);
 		const git = async (...args: string[]) => {
 			const child = Bun.spawn(['git', '-C', repo, ...args], {
 				stdout: 'ignore',
@@ -397,11 +515,11 @@ describe('buildVersionFromGit — real git archive', () => {
 		await git('init', '-q');
 		await git('config', 'user.email', 'test@dedalo.dev');
 		await git('config', 'user.name', 'test');
-		await git('add', 'package.json');
+		await git('add', '-A');
 		await git('commit', '-q', '-m', 'seed');
 		// the PUBLISHED channel is a release TAG; `master` is the developer channel
 		await git('branch', '-M', 'master');
-		await git('tag', 'v7.0.1');
+		await git('tag', '-a', '-m', 'release', 'v7.0.1');
 
 		try {
 			mock.module('../../src/config/config.ts', () => ({
@@ -494,10 +612,11 @@ describe('buildVersionFromGit — a git too old to stamp the release tag is refu
 			const g = (...args: string[]) =>
 				expect(Bun.spawnSync([realGit, '-C', repo, ...args], { env: gitEnv }).exitCode).toBe(0);
 			writeFileSync(join(repo, 'package.json'), '{"name":"dedalo"}');
+			writeReleaseStamp(repo);
 			g('init', '-q', '-b', 'master');
-			g('-c', 'user.email=t@t', '-c', 'user.name=t', 'add', 'package.json');
+			g('-c', 'user.email=t@t', '-c', 'user.name=t', 'add', '-A');
 			g('-c', 'user.email=t@t', '-c', 'user.name=t', 'commit', '-q', '-m', 'seed');
-			g('tag', 'v7.0.1');
+			g('-c', 'user.email=t@t', '-c', 'user.name=t', 'tag', '-a', '-m', 'release', 'v7.0.1');
 			const savedPath = process.env.PATH;
 			const savedVersion = process.env.STUB_GIT_VERSION;
 			try {
@@ -588,6 +707,7 @@ describe('the release channel builds the NEWEST release tag (policy 2026-09-29)'
 			// the PHP-era history the real repository carries: a stable tag whose tree
 			// has no version.ts — the newest STABLE tag while v7 is still in beta
 			writeFileSync(join(repo, 'index.php'), '<?php');
+			writeReleaseStamp(repo);
 			await git('add', '-A');
 			await git('commit', '-q', '-m', 'php era');
 			await git('tag', 'v6.9.7');
@@ -631,9 +751,9 @@ describe('the release channel builds the NEWEST release tag (policy 2026-09-29)'
 					'No release tag v7.0.5',
 				);
 
-				await git('tag', 'v7.0.1');
+				await git('tag', '-a', '-m', 'release', 'v7.0.1');
 				await commitVersion('7.0.2');
-				await git('tag', 'v7.0.2');
+				await git('tag', '-a', '-m', 'release', 'v7.0.2');
 				await commitVersion('7.0.3'); // master moves on: never published
 				const out = await buildVersionFromGit({ channel: 'master' });
 				expect(out.file_path).toBe(join(filesDir, '7', '7.0', '7.0.2.zip'));
@@ -705,5 +825,295 @@ describe('the release version comes from the ref, not the process', () => {
 		);
 		expect(plan.match(/\[A-Za-z0-9\._\/\]\[A-Za-z0-9\._\/-\]/g)?.length ?? 0).toBe(1);
 		expect(build).not.toContain('A-Za-z0-9');
+	});
+});
+
+// ---------------------------------------------------------------------------
+// GATE 13 (RELEASE_IDENTITY_DESIGN §3, §2.8 items 1 + 7): A PRERELEASE TAG IS A
+// RELEASE. The code server builds it beside the stable release under its own
+// identity name, the archive calls itself the tag (read back out of the bytes),
+// a published identity is never rebuilt, a tag whose bytes are another version
+// is refused — and a server RUNNING the current version builds and serves the
+// NEXT triple's prerelease (it never has to run a beta to publish it).
+// Real git, real archives, real serving resolver; config mocked to a scratch
+// code server. Owner-gated by nothing here: the widget's gate is serve_code's.
+// ---------------------------------------------------------------------------
+describe('GATE 13 — prerelease builds: identity name, self-naming archive, immutability', () => {
+	test.skipIf(!GIT_PRESENT)(
+		'a server running X.Y.Z builds + serves X.Y.(Z+1)-beta.N; rebuild refused; lightweight / mismatched / superseded tags refused',
+		async () => {
+			const { DEDALO_VERSION_TRIPLE } = await import('../../src/core/update/version.ts');
+			const { resolveCodeReleaseFile, serveCodeReleaseRequest } = await import(
+				'../../src/core/update/code_serving.ts'
+			);
+			const { codeServerStatus } = await import('../../src/core/update/status.ts');
+			const { parseBuildInfo, resolveReleaseIdentity } = await import(
+				'../../src/core/update/release_identity.ts'
+			);
+			const { createHash } = await import('node:crypto');
+			const { readdirSync, statSync } = await import('node:fs');
+			const [major, minor, patch] = DEDALO_VERSION_TRIPLE;
+			const RUNNING = `${major}.${minor}.${patch}`;
+			const NEXT = `${major}.${minor}.${patch + 1}`;
+			const AFTER = `${major}.${minor}.${patch + 2}`;
+			const dir = `${major}/${major}.${minor}`;
+
+			const base = join(ROOT, 'prerelease');
+			const repo = join(base, 'repo');
+			const filesDir = join(base, 'files');
+			const releaseDir = join(filesDir, dir);
+			mkdirSync(repo, { recursive: true });
+			mkdirSync(filesDir, { recursive: true });
+			const env = {
+				...process.env,
+				GIT_CONFIG_GLOBAL: '/dev/null',
+				GIT_CONFIG_SYSTEM: '/dev/null',
+			};
+			const git = (...args: string[]) => {
+				const r = Bun.spawnSync(
+					['git', '-C', repo, '-c', 'user.email=t@t', '-c', 'user.name=t', ...args],
+					{
+						env,
+						stdout: 'pipe',
+						stderr: 'pipe',
+					},
+				);
+				if (r.exitCode !== 0) throw new Error(`git ${args.join(' ')}: ${r.stderr.toString()}`);
+				return r.stdout.toString().trim();
+			};
+			const commitVersion = (triple: string, note: string) => {
+				writeFileSync(
+					join(repo, 'src', 'core', 'update', 'version.ts'),
+					`export const V = Object.freeze([${triple.replaceAll('.', ', ')}]);\n`,
+				);
+				writeFileSync(join(repo, 'note.txt'), note);
+				git('add', '-A');
+				git('commit', '-q', '-m', note);
+			};
+			const refusalOf = async (options: Parameters<typeof buildVersionFromGit>[0]) => {
+				const caught = await buildVersionFromGit(options).then(
+					() => null,
+					(error: unknown) => error,
+				);
+				expect(isDedaloError(caught)).toBe(true);
+				return caught as { code: string; publicMessage?: string; message: string };
+			};
+			const digestOf = (path: string) =>
+				createHash('sha256').update(readFileSync(path)).digest('hex');
+			const partials = () => readdirSync(releaseDir).filter((name) => name.includes('.partial'));
+			const stampIn = (zip: string) =>
+				Bun.spawnSync(['unzip', '-p', zip, 'dedalo_code/src/core/update/build_info.txt'], {
+					stdout: 'pipe',
+				}).stdout.toString();
+
+			git('init', '-q', '-b', 'master');
+			writeReleaseStamp(repo);
+			commitVersion(RUNNING, 'the running release');
+			git('tag', '-a', '-m', 'release', `v${RUNNING}`);
+			commitVersion(NEXT, 'the next triple, in beta');
+			git('tag', '-a', '-m', 'beta', `v${NEXT}-beta.1`);
+
+			try {
+				mock.module('../../src/config/config.ts', () => ({
+					...REAL_CONFIG,
+					config: {
+						...REAL_CONFIG.config,
+						update: {
+							...REAL_CONFIG.config.update,
+							isCodeServer: true,
+							codeServerGitDir: repo,
+							codeFilesDir: filesDir,
+						},
+					},
+				}));
+				const serving = { isCodeServer: true, codeFilesDir: filesDir };
+
+				// Build release is UNCHANGED: the newest STABLE tag, never the newer beta.
+				const stable = await buildVersionFromGit({ channel: 'master' });
+				expect(stable.file_path).toBe(join(releaseDir, `${RUNNING}.zip`));
+
+				// Build prerelease: the next triple's beta, named after its IDENTITY.
+				const beta = await buildVersionFromGit({ channel: 'prerelease' });
+				const betaZip = join(releaseDir, `${NEXT}-beta.1.zip`);
+				expect(beta.file_path).toBe(betaZip);
+				expect(beta.msg).toContain(`Built release ${NEXT}-beta.1.zip`);
+				const digest = digestOf(betaZip);
+				expect(beta.sha256).toBe(digest);
+				expect(readFileSync(`${betaZip}.sha256`, 'utf8')).toBe(`${digest}  ${NEXT}-beta.1.zip\n`);
+				// …and the archive CALLS ITSELF the tag, resolved as an installed engine resolves it
+				const info = parseBuildInfo(stampIn(betaZip));
+				expect(info.describe).toBe(`v${NEXT}-beta.1`);
+				const said = resolveReleaseIdentity({
+					triple: [major, minor, patch + 1],
+					describe: info.describe,
+					provenance: { stamp: 'other', channel: 'master' },
+				});
+				expect(said.version).toBe(`${NEXT}-beta.1`);
+				expect(said.kind).toBe('prerelease');
+				// The running engine is NOT that version (§2.8 item 7: the master never runs the beta).
+				expect(RUNNING).not.toBe(NEXT);
+
+				// SERVED at the URL grammar of its triple — bytes and sidecar.
+				const url = `/dedalo/install/code/${NEXT}/${NEXT}-beta.1.zip`;
+				expect(resolveCodeReleaseFile(url, serving)?.path).toBe(betaZip);
+				expect(resolveCodeReleaseFile(`${url}.sha256`, serving)?.path).toBe(`${betaZip}.sha256`);
+				const served = await serveCodeReleaseRequest(url, serving);
+				expect(served.status).toBe(200);
+				expect(
+					createHash('sha256')
+						.update(new Uint8Array(await served.arrayBuffer()))
+						.digest('hex'),
+				).toBe(digest);
+				// never under a neighbour triple's dir
+				expect(
+					resolveCodeReleaseFile(`/dedalo/install/code/${RUNNING}/${NEXT}-beta.1.zip`, serving),
+				).toBeNull();
+
+				// IMMUTABLE: the same identity is never rebuilt; the bytes stay, nothing staged is left.
+				const mtime = statSync(betaZip).mtimeMs;
+				const again = await refusalOf({ channel: 'prerelease' });
+				expect(again.code).toBe('update.refused');
+				expect(again.publicMessage).toContain(`Release ${NEXT}-beta.1 is already published`);
+				expect(digestOf(betaZip)).toBe(digest);
+				expect(statSync(betaZip).mtimeMs).toBe(mtime);
+				// …a stable release alike, and through an explicit ref too
+				const stableDigest = digestOf(join(releaseDir, `${RUNNING}.zip`));
+				expect((await refusalOf({ channel: 'master' })).publicMessage).toContain('immutable');
+				expect((await refusalOf({ ref: `v${NEXT}-beta.1` })).publicMessage).toContain('immutable');
+				expect(digestOf(join(releaseDir, `${RUNNING}.zip`))).toBe(stableDigest);
+				expect(partials()).toEqual([]);
+
+				// A LIGHTWEIGHT tag: its archive calls itself the previous tag / .dev — refused,
+				// nothing published under its name, nothing staged left behind.
+				commitVersion(NEXT, 'beta.2 work');
+				git('tag', `v${NEXT}-beta.2`);
+				const light = await refusalOf({ channel: 'prerelease' });
+				expect(light.code).toBe('update.refused');
+				expect(light.publicMessage).toContain(
+					`The archive of tag v${NEXT}-beta.2 would not call itself ${NEXT}-beta.2`,
+				);
+				expect(light.publicMessage).toContain('ANNOTATED');
+				expect(existsSync(join(releaseDir, `${NEXT}-beta.2.zip`))).toBe(false);
+				expect(partials()).toEqual([]);
+				git('tag', '-d', `v${NEXT}-beta.2`);
+
+				// A tag naming ANOTHER triple than its bytes' version.ts: refused before any archive.
+				git('tag', '-a', '-m', 'wrong', `v${AFTER}-beta.1`);
+				const lying = await refusalOf({ channel: 'prerelease' });
+				expect(lying.code).toBe('update.refused');
+				expect(lying.publicMessage).toContain(`names version ${AFTER}`);
+				expect(readdirSync(releaseDir).some((name) => name.startsWith(AFTER))).toBe(false);
+				git('tag', '-d', `v${AFTER}-beta.1`);
+
+				// An INTERRUPTED build's archive (no sidecar — never installable) is replaced.
+				const orphan = join(releaseDir, `${NEXT}-beta.3.zip`);
+				writeFileSync(orphan, 'half an archive');
+				git('tag', '-a', '-m', 'beta', `v${NEXT}-beta.3`);
+				const beta3 = await buildVersionFromGit({ channel: 'prerelease' });
+				expect(beta3.file_path).toBe(orphan);
+				expect(readFileSync(orphan).toString('binary')).toContain('dedalo_code/note.txt');
+				expect(parseBuildInfo(stampIn(orphan)).describe).toBe(`v${NEXT}-beta.3`);
+
+				// The PANEL reads the same rule and the same disk.
+				const panel = codeServerStatus('https://example.test/dedalo/install/code');
+				expect(panel.source.release_ref).toBe(`v${RUNNING}`);
+				expect(panel.source.prerelease_ref).toBe(`v${NEXT}-beta.3`);
+				expect(panel.source.prerelease_version).toBe(NEXT);
+				const listed = panel.releases.find((release) => release.identity === `${NEXT}-beta.3`);
+				expect(listed?.channel).toBe('prerelease');
+				expect(listed?.version).toBe(NEXT);
+				expect(listed?.url).toBe(
+					`https://example.test/dedalo/install/code/${NEXT}/${NEXT}-beta.3.zip`,
+				);
+
+				// A PRE-STAMP tree (the legacy two-field placeholder every prerelease cut before
+				// 2026-10-15 carries — v7.0.0-beta.6 among them): even ANNOTATED, its archive
+				// cannot name itself. Never offered (the panel and the channel skip it — the
+				// newest STAMPED beta stays the candidate), and an explicit build is refused
+				// with the legacy reason — not the re-tagging advice, which cannot fix it.
+				writeFileSync(join(repo, 'src', 'core', 'update', 'build_info.txt'), '$Format:%H %cI$\n');
+				commitVersion(NEXT, 'a beta cut before the release stamp');
+				git('tag', '-a', '-m', 'beta', `v${NEXT}-beta.4`);
+				expect(
+					codeServerStatus('https://example.test/dedalo/install/code').source.prerelease_ref,
+				).toBe(`v${NEXT}-beta.3`);
+				expect((await refusalOf({ channel: 'prerelease' })).publicMessage).toContain(
+					`Release ${NEXT}-beta.3 is already published`,
+				);
+				const legacy = await refusalOf({ ref: `v${NEXT}-beta.4` });
+				expect(legacy.code).toBe('update.refused');
+				expect(legacy.publicMessage).toContain(
+					`tag v${NEXT}-beta.4 predates the release-identity stamp`,
+				);
+				expect(legacy.publicMessage).not.toContain('ANNOTATED');
+				expect(existsSync(join(releaseDir, `${NEXT}-beta.4.zip`))).toBe(false);
+				expect(partials()).toEqual([]);
+				git('tag', '-d', `v${NEXT}-beta.4`);
+				writeReleaseStamp(repo);
+				commitVersion(NEXT, 'the release stamp is back');
+
+				// SUPERSEDED: once v<NEXT> is released, no beta of it (or below) is built.
+				git('tag', '-a', '-m', 'release', `v${NEXT}`);
+				const none = await refusalOf({ channel: 'prerelease' });
+				expect(none.code).toBe('update.refused');
+				expect(none.publicMessage).toContain('No prerelease to build');
+				expect(
+					codeServerStatus('https://example.test/dedalo/install/code').source.prerelease_ref,
+				).toBeNull();
+				expect(partials()).toEqual([]);
+
+				// The read-back guards a STABLE tag as much as a prerelease: a LIGHTWEIGHT
+				// v<AFTER> would publish an archive whose engine calls itself <AFTER>.dev
+				// (its stamp describes past v<NEXT>) — refused through the channel and an
+				// explicit ref alike, nothing published, nothing staged left behind.
+				commitVersion(AFTER, 'a stable cut with a lightweight tag');
+				git('tag', `v${AFTER}`);
+				for (const options of [{ channel: 'master' as const }, { ref: `v${AFTER}` }]) {
+					const lightStable = await refusalOf(options);
+					expect(lightStable.code).toBe('update.refused');
+					expect(lightStable.publicMessage).toContain(
+						`The archive of tag v${AFTER} would not call itself ${AFTER}`,
+					);
+					expect(lightStable.publicMessage).toContain('ANNOTATED');
+					expect(existsSync(join(releaseDir, `${AFTER}.zip`))).toBe(false);
+					expect(partials()).toEqual([]);
+				}
+			} finally {
+				mock.module('../../src/config/config.ts', () => REAL_CONFIG);
+				mock.restore();
+			}
+		},
+		120000,
+	);
+});
+
+describe('GATE 13 — the publish CLAIMS an identity name (a racing build never overwrites)', () => {
+	test('a published name that appeared after the pre-check is refused, its bytes kept; an orphan is replaced; a dev build is replaced', async () => {
+		const { publishArchive } = await import('../../src/core/update/code_build.ts');
+		const dir = join(ROOT, 'claim');
+		mkdirSync(dir, { recursive: true });
+		const target = join(dir, '7.0.1-beta.1.zip');
+		const staged = join(dir, 'staged.partial');
+		// A racing build published first (it was not there at this build's pre-check: orphan=false).
+		writeFileSync(target, 'the published bytes');
+		writeFileSync(staged, 'this build');
+		let caught: unknown = null;
+		try {
+			publishArchive(staged, target, '7.0.1-beta.1', false);
+		} catch (error) {
+			caught = error;
+		}
+		expect(isDedaloError(caught)).toBe(true);
+		expect((caught as { publicMessage?: string }).publicMessage).toContain('immutable');
+		expect(readFileSync(target, 'utf8')).toBe('the published bytes');
+		// An orphan this build found at its pre-check (no sidecar) is replaced.
+		publishArchive(staged, target, '7.0.1-beta.1', true);
+		expect(readFileSync(target, 'utf8')).toBe('this build');
+		// A developer build replaces its -dev.zip.
+		const dev = join(dir, '7.0.1-dev.zip');
+		writeFileSync(dev, 'old dev');
+		writeFileSync(staged, 'new dev');
+		publishArchive(staged, dev, null, false);
+		expect(readFileSync(dev, 'utf8')).toBe('new dev');
 	});
 });

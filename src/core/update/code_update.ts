@@ -109,8 +109,10 @@ import { dirIsWritable } from '../install/dir_probe.ts';
 import { runtimePathsInsideTree } from '../install/runtime_paths.ts';
 import type { Principal } from '../security/permissions.ts';
 import { currentRequestContext } from '../security/request_context.ts';
+import { DEDALO_ENGINE_VERSION, readReleaseIdentityOf } from './build_stamp.ts';
 import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import { downloadReleaseArchive } from './code_download.ts';
+import { type ReleaseArchiveName, releaseArchiveNameOf } from './code_manifest.ts';
 import {
 	availableBytesAt,
 	checkUpdateSpace,
@@ -120,8 +122,10 @@ import {
 } from './disk_space.ts';
 import {
 	INSTALL_STAMP_PATH,
+	INSTALLED_CHANNEL,
 	type InstallChannel,
 	installedRootEntriesOf,
+	isInstallChannel,
 	readInstallStampOf,
 } from './install_stamp.ts';
 import { engineOwnsInstall } from './ownership.ts';
@@ -136,13 +140,16 @@ import {
 } from './preconditions.ts';
 import { writePublicationManifest } from './publication_manifest.ts';
 import { refuseUpdate, rethrowOrRefuseUpdate } from './refuse.ts';
+import { parseReleaseVersion } from './release_identity.ts';
 import { smokeBootQuarantine } from './smoke_boot.ts';
 import { isSupervised, supervisorRefusalMessage } from './supervision.ts';
-import { DEDALO_VERSION_TRIPLE, parseVersionString } from './version.ts';
-import { assertLinearUpgrade } from './version_walk.ts';
+import { DEDALO_VERSION_TRIPLE } from './version.ts';
+import { assertLinearUpgrade, identityWalkRefusal } from './version_walk.ts';
 
 // The walk rule moved to its leaf (version_walk.ts, 2026-10-09); re-exported so
-// every existing caller keeps importing it from here.
+// every existing caller keeps importing it from here. The swap asks the
+// IDENTITY walk (identityWalkRefusal, 2026-10-18), which delegates to this data
+// walk whenever a move crosses a data triple.
 export { assertLinearUpgrade };
 
 /**
@@ -340,6 +347,20 @@ export interface CodeUpdateSeams {
 	 * at its two long boundaries and never swaps under a job already shown as
 	 * stopped (`refuseIfStopped`). */
 	signal?: AbortSignal;
+	/**
+	 * The RELEASE IDENTITY the walk starts from (default: this engine's own,
+	 * build_stamp.ts DEDALO_ENGINE_VERSION). A gate pins it: the checkout a
+	 * suite runs in is `X.Y.Z.dev` on a branch and the tag's identity on a
+	 * release commit, and a verdict must not change with that.
+	 */
+	runningRelease?: string;
+	/**
+	 * The channel the RUNNING tree was installed from (default: its own stamp,
+	 * install_stamp.ts INSTALLED_CHANNEL — null on an unstamped checkout). Read
+	 * with {@link runningRelease} to place the asker on the walk
+	 * ({@link walkChannelOf}); a gate pins both.
+	 */
+	runningChannel?: InstallChannel | null;
 }
 
 function sha256Of(filePath: string): string {
@@ -820,7 +841,13 @@ async function installDepsReal(codeRoot: string): Promise<void> {
 }
 
 interface UpdateCodeOptions {
-	file?: { version?: unknown; url?: unknown; sha256?: unknown; channel?: unknown };
+	file?: {
+		version?: unknown;
+		url?: unknown;
+		sha256?: unknown;
+		channel?: unknown;
+		release?: unknown;
+	};
 	waive_backup?: unknown;
 }
 
@@ -829,8 +856,14 @@ interface UpdateRequest {
 	url: string;
 	version: string;
 	declaredSha: string;
-	/** The channel the manifest advertised this archive on ('master' unless 'dev'). */
+	/** The channel the manifest advertised this archive on ('master' unless a known token). */
 	channel: InstallChannel;
+	/**
+	 * The RELEASE IDENTITY of the item (`file.release`, set by the manifest on a
+	 * prerelease item only — code_manifest.ts CodeReleaseItem.release); '' when
+	 * absent. Shape-checked with the rest (assertReleaseShape).
+	 */
+	release: string;
 	/**
 	 * The operator explicitly proceeded without a verified restore point. Carried
 	 * so it can be RECORDED (sentinel + progress frames), not just warned about
@@ -939,8 +972,38 @@ async function parseUpdateRequest(
 		checkUpdatePreconditions(principal);
 	}
 	const request: UpdateRequest = { ...readReleaseFields(options), backupWaived: waiveBackup };
-	assertReleaseShape(request);
+	assertReleaseShape(request, {
+		release: seams.runningRelease ?? DEDALO_ENGINE_VERSION,
+		channel: seams.runningChannel === undefined ? INSTALLED_CHANNEL : seams.runningChannel,
+	});
 	return request;
+}
+
+/**
+ * The channel the identity walk judges the move on: the item's own token,
+ * except for a tree that RUNS A DEVELOPER BUILD it was installed as — its
+ * identity is `.dev` AND its own stamp says the dev channel put it there.
+ * That tree stands on the developer channel whatever it installs next, so the
+ * walk's dev same-triple exception is its own: a `.dev` cannot tell whether it
+ * sits before or after its triple's tags, and it got here by opting into
+ * exactly that. This is how an install bootstrapped off `7.0.0-beta.6` through
+ * a developer build reaches `7.0.0-beta.7` and `7.0.0` (release identity design
+ * §2.8 item 5): the manifest offers them to a `.dev` asker on a `dev` ask
+ * (code_manifest.ts sameTripleItemsFor), and those items keep their own kind
+ * token (`prerelease`, or none) — which names what the tree BECOMES, so the
+ * stamp written next records that, never `dev`.
+ *
+ * The standing is read from the tree, never from the request: a crafted item
+ * token cannot buy it, and a `.dev` with no dev stamp (an unstamped checkout,
+ * an archive an old git could not tag) keeps the conservative reading — its
+ * bare triple, off the dev channel.
+ */
+function walkChannelOf(
+	itemChannel: InstallChannel,
+	running: { release: string; channel: InstallChannel | null },
+): InstallChannel {
+	const runsDevBuild = parseReleaseVersion(running.release)?.dev === true;
+	return runsDevBuild && running.channel === 'dev' ? 'dev' : itemChannel;
 }
 
 /** The `file.*` strings, shape-untrusted (assertReleaseShape gates them next). */
@@ -950,33 +1013,50 @@ function readReleaseFields(options: UpdateCodeOptions): Omit<UpdateRequest, 'bac
 		url: typeof file.url === 'string' ? file.url : '',
 		version: typeof file.version === 'string' ? file.version : '',
 		declaredSha: typeof file.sha256 === 'string' ? file.sha256 : '',
-		// Anything that is not exactly 'dev' is the release channel: an unknown
-		// or absent value must never be the one that relaxes a guard.
-		channel: file.channel === 'dev' ? 'dev' : 'master',
+		// Anything that is not exactly a channel token is the release channel: an
+		// unknown or absent value must never be the one that relaxes a guard.
+		// The token ADMITS a target kind (version_walk.ts identityWalkRefusal: a
+		// prerelease needs `prerelease`/`dev`, a branch build `dev`) and is
+		// carried so the stamp records what the tree was offered as.
+		channel: isInstallChannel(file.channel) ? file.channel : 'master',
+		release: stringOr(file.release),
 	};
+}
+
+/** A wire field as a string, `''` when it is anything else (the shape check refuses later). */
+function stringOr(value: unknown): string {
+	return typeof value === 'string' ? value : '';
 }
 
 /**
  * The request-shape refusal chain, in its LOAD-BEARING order: missing fields →
- * malformed version → linear-upgrade guard → malformed/missing sha. All before
- * any network fetch, by contract.
+ * malformed version → malformed release → the identity walk → malformed/missing
+ * sha. All before any network fetch, by contract.
  */
-function assertReleaseShape({ url, version, declaredSha, channel }: UpdateRequest): void {
+function assertReleaseShape(
+	request: UpdateRequest,
+	running: { release: string; channel: InstallChannel | null },
+): void {
+	const { url, version, declaredSha } = request;
 	if (url === '' || version === '') {
 		refuseUpdate(
 			'request.invalid_options',
 			'Error. Missing release file/version (file.url and file.version are required)',
 		);
 	}
-	if (!/^\d+(\.\d+){1,3}$/.test(version)) {
+	if (!isBareReleaseTriple(version)) {
 		refuseUpdate(
 			'request.invalid_options',
 			'Error. Malformed release version (a numeric dotted release is required, e.g. 7.0.1)',
 		);
 	}
-	const linear = assertLinearUpgrade(DEDALO_VERSION_TRIPLE, parseVersionString(version), channel);
-	if (linear !== null) {
-		refuseUpdate('update.refused', `Error. ${linear}`);
+	const walk = identityWalkRefusal(
+		running.release,
+		targetIdentityOf(request),
+		walkChannelOf(request.channel, running),
+	);
+	if (walk !== null) {
+		refuseUpdate('update.refused', `Error. ${walk.reason}`);
 	}
 	if (!/^[a-f0-9]{64}$/.test(declaredSha)) {
 		refuseUpdate(
@@ -984,6 +1064,140 @@ function assertReleaseShape({ url, version, declaredSha, channel }: UpdateReques
 			'Error. Malformed or missing release checksum (sha256 must be 64 hex chars)',
 		);
 	}
+	refuseForeignArchiveName(request);
+}
+
+/**
+ * The archive the URL names must BE the release the walk just judged. The walk
+ * is asked about `file.version`/`release`/`channel`, but the bytes come from
+ * `file.url` — and nothing tied the two: `{version:'7.0.1',
+ * url:'…/7.0.1-beta.2.zip'}` (a buggy code server, a crafted request) passed
+ * as the stable 7.0.1 and installed a prerelease on a stable consumer. The
+ * file name is the archive's identity in the shared grammar
+ * (code_manifest.ts releaseArchiveNameOf, the name every manifest item is
+ * built from), so a mismatch is refused HERE, before any fetch. The archive's
+ * OWN stamp is checked again after extraction (refuseForeignQuarantine).
+ */
+function refuseForeignArchiveName(request: UpdateRequest): void {
+	const fileName = request.url.split(/[?#]/)[0]?.split('/').pop() ?? '';
+	const named = releaseArchiveNameOf(fileName);
+	if (named === null || archiveNameIdentityOf(named) !== targetIdentityOf(request)) {
+		refuseUpdate(
+			'request.invalid_options',
+			`Error. The release archive '${fileName}' is not the release the request names (${targetIdentityOf(request)})`,
+		);
+	}
+}
+
+/** What an archive's file name says it is, in the walk's identity terms (`X.Y.Z.dev` for a developer build). */
+function archiveNameIdentityOf(named: ReleaseArchiveName): string {
+	return named.identity ?? `${named.triple}.dev`;
+}
+
+/**
+ * After extraction: the quarantine's OWN stamp (build_info.txt's describe —
+ * the tag `git archive` wrote into it) must resolve to the identity the walk
+ * judged, read against the request's data triple exactly as the new tree will
+ * read itself at boot (build_stamp.ts readReleaseIdentityOf). Otherwise the
+ * swap would land a tree that calls itself something else, /health would
+ * answer that, and the panel could only report a rollback after the fact.
+ * A developer build is exempt: what it calls itself is its archive's to say
+ * (an exact tag or `.dev`), and its triple is the request's by construction.
+ */
+async function refuseForeignQuarantine(codeRoot: string, request: UpdateRequest): Promise<void> {
+	const expected = expectedIdentityOf(request);
+	if (expected === null) return;
+	// `version` is a canonical bare triple by now (assertReleaseShape).
+	const triple = request.version.split('.').map(Number) as [number, number, number];
+	const own = await readReleaseIdentityOf(codeRoot, { triple });
+	if (own.version !== expected) {
+		refuseUpdate(
+			'update.refused',
+			`Error. The downloaded archive calls itself ${own.version}, not the requested ${expected} — nothing was swapped`,
+		);
+	}
+}
+
+/**
+ * `version` is a canonical bare data triple — the SHARED identity grammar
+ * (release_identity.ts RELEASE_VERSION_RE, no suffix), never a wider regex of
+ * its own. Until 2026-10-18 the door kept `^\d+(\.\d+){1,3}$`, which still let
+ * `7.0` and `07.0.1` through to the identity walk — and the walk THROWS on
+ * garbage (a raw RangeError ending the job as internal.unexpected), so a
+ * malformed version must be refused HERE, as the typed caller fault it is.
+ * `file.version` is the item's data triple; the prerelease suffix rides
+ * `file.release`.
+ */
+function isBareReleaseTriple(version: string): boolean {
+	const parsed = parseReleaseVersion(version);
+	return parsed !== null && parsed.prerelease === null && !parsed.dev;
+}
+
+/**
+ * The release identity the request asks for — what the identity walk is asked
+ * about, and what /health must answer once the new tree boots:
+ *  - a prerelease item names it (`release`, which must be a prerelease OF the
+ *    item's data triple — anything else is refused: the walk would otherwise
+ *    judge one release while the swap installs another's directory);
+ *  - a developer build is `<triple>.dev` to the walk (what its archive calls
+ *    itself — a tag's identity or `.dev` — is decided by its bytes);
+ *  - anything else is the stable release of its triple.
+ * `version` is already a canonical bare triple (assertReleaseShape).
+ */
+function targetIdentityOf({ version, channel, release }: UpdateRequest): string {
+	const triple = version;
+	if (release !== '') return requirePrereleaseOf(release, triple);
+	return channel === 'dev' ? `${triple}.dev` : triple;
+}
+
+/** `release`, when it is a prerelease of `triple` — else the request is refused as malformed. */
+function requirePrereleaseOf(release: string, triple: string): string {
+	const parsed = parseReleaseVersion(release);
+	if (parsed === null || parsed.prerelease === null || parsed.triple.join('.') !== triple) {
+		refuseUpdate(
+			'request.invalid_options',
+			'Error. Malformed release identity (file.release must be a prerelease of file.version, e.g. 7.0.1-beta.2)',
+		);
+	}
+	return release;
+}
+
+/**
+ * The swap landed: the LAST frame before the restart, the restart, the
+ * success envelope. The identity /health will answer (a prerelease's
+ * `7.0.1-beta.2`, a release's `7.0.1`) is the frame's `expected_version` —
+ * the client uses it to tell "restarting into new code" from "died", then
+ * polls /health; the IDENTITY, not the triple, because a same-triple walk
+ * (beta.6 → beta.7) leaves the triple unchanged. A developer build's identity
+ * is its archive's to say, so it keeps the data triple and the panel's digest
+ * decides. `release` rides in the envelope only when it says more than
+ * `version` (a prerelease): a release's envelope stays byte-unchanged for
+ * every reader that knows only `version` (update_code_phases.js reads
+ * `release ?? version`).
+ */
+function restartIntoInstalled(
+	request: UpdateRequest,
+	phases: PhaseTracker,
+	restart: (reason: string) => void,
+): CodeUpdateResponse {
+	const { version } = request;
+	const expected = expectedIdentityOf(request);
+	const installed = expected ?? version;
+	const msg = `OK. Installed Dédalo ${installed} (clean). Restarting to load the new code.`;
+	phases.start('restart', { expected_version: installed });
+	restart(`code update to ${installed}`);
+	const release = installed === version ? {} : { release: installed };
+	return ok({ version, ...release }, { requestId: currentRequestId(), extend: { msg } });
+}
+
+/**
+ * The identity /health answers once the new tree boots, when the request
+ * names it — null for a developer build (its archive decides: the digest is
+ * what tells the trees apart there).
+ */
+function expectedIdentityOf(request: UpdateRequest): string | null {
+	const identity = targetIdentityOf(request);
+	return identity.endsWith('.dev') ? null : identity;
 }
 
 /**
@@ -1623,6 +1837,7 @@ export async function updateCode(
 		const quarantine = join(stagingDir, 'extract');
 		const codeRoot = await extractArchive(zipPath, quarantine);
 		writeInstallStampSync(codeRoot, request);
+		await refuseForeignQuarantine(codeRoot, request);
 		// The Publication API census (publication_manifest.ts, publication host
 		// L1): what was verified is what the engine may later push to a
 		// publication host. Written with the stamp, before the deps install and
@@ -1668,12 +1883,7 @@ export async function updateCode(
 			seams,
 		);
 
-		const msg = `OK. Installed Dédalo ${version} (clean). Restarting to load the new code.`;
-		// The LAST frame before the restart: the client uses expected_version to
-		// tell "restarting into new code" apart from "died", then polls /health.
-		phases.start('restart', { expected_version: version });
-		restart(`code update to ${version}`);
-		return ok({ version }, { requestId: currentRequestId(), extend: { msg } });
+		return restartIntoInstalled(request, phases, restart);
 	} catch (error) {
 		phases.fail(errorText(error));
 		rethrowOrRefuseUpdate(error, 'update.failed', 'Error. Code update failed');

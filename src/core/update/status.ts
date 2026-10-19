@@ -49,15 +49,23 @@ import {
 import { UPDATE_CATALOG } from './catalog.ts';
 import { type DeploymentChannel, detectDeploymentChannel } from './channel.ts';
 import {
+	BUILD_INFO_TREE_PATH,
 	DEV_REF,
 	newestPublishableTag,
 	parseDeclaredTriple,
+	placeholderNamesItsTag,
 	planCodeBuild,
+	prereleaseTagAbove,
 	qualifiedReleaseTag,
 	releaseTagVersion,
 	VERSION_TS_PATH,
 } from './code_build_plan.ts';
-import { buildCodeUpdateInfo, type CodeReleaseItem, codeReleaseUrl } from './code_manifest.ts';
+import {
+	buildCodeUpdateInfo,
+	type CodeReleaseItem,
+	codeReleaseUrl,
+	releaseArchiveNameOf,
+} from './code_manifest.ts';
 import {
 	bunPinOf,
 	declaredVersionOf,
@@ -665,9 +673,16 @@ function probeBackupRoot(): string {
  */
 
 export interface PublishedRelease {
+	/** The DATA triple — the `<X>/<X.Y>/` dir and the URL's version segment. */
 	version: string;
-	/** `master` claims the advertised `<v>.zip`; `dev` is servable but never advertised. */
-	channel: 'master' | 'dev';
+	/**
+	 * `master` = the stable `<v>.zip`; `prerelease` = `<X.Y.Z-beta.N>.zip`
+	 * (RELEASE_IDENTITY_DESIGN §2.8); `dev` = `<v>-dev.zip`, offered only on
+	 * request.
+	 */
+	channel: 'master' | 'prerelease' | 'dev';
+	/** The release identity the archive is named after (`7.0.1`, `7.0.1-beta.2`); null for a dev build. */
+	identity: string | null;
 	file: string;
 	bytes: number;
 	stamp: number;
@@ -683,6 +698,12 @@ export interface CodeServerStatus {
 	 * cannot tell "the consumer never asked" from "I refused to answer".
 	 */
 	dev_channel: boolean;
+	/**
+	 * This master OFFERS prereleases to consumers that ask for the prerelease
+	 * or dev channel (DEDALO_CODE_SERVER_PRERELEASE_CHANNEL) — a separate switch
+	 * from {@link dev_channel}.
+	 */
+	prerelease_channel: boolean;
 	checks: StatusCheck[];
 	ready: boolean;
 	source: {
@@ -709,6 +730,17 @@ export interface CodeServerStatus {
 		 * while the process and the ref happen to agree.
 		 */
 		release_version: string | null;
+		/**
+		 * The PRERELEASE channel's ref: the newest `vX.Y.Z-(alpha|beta|rc).N`
+		 * tag of this engine that sorts ABOVE `release_ref` (short name), or
+		 * null — then *Build prerelease* has nothing to build
+		 * (code_build_plan.ts prereleaseTagAbove).
+		 */
+		prerelease_ref: string | null;
+		prerelease_sha: string | null;
+		prerelease_date: string | null;
+		/** The DATA triple the prerelease tag's own `version.ts` declares (the build refuses a mismatch). */
+		prerelease_version: string | null;
 		/** The developer channel's ref — always {@link DEV_REF} (`master`). */
 		dev_ref: string;
 		dev_sha: string | null;
@@ -853,13 +885,24 @@ function readBunPin(gitDir: string): string | null {
  * null: stable `vX.Y.Z` AND a tree of this engine (code_build_plan.ts
  * newestPublishableTag — the PHP-era `v6.x` tags share the repository).
  */
-function readReleaseTag(gitDir: string): string | null {
+function readReleaseTags(gitDir: string): { release: string | null; prerelease: string | null } {
 	const listing = git(gitDir, ['tag', '--list', 'v*']);
-	if (listing === null) return null;
-	return newestPublishableTag(
-		listing.split('\n'),
-		(tag) => git(gitDir, ['cat-file', '-e', `refs/tags/${tag}:${VERSION_TS_PATH}`]) !== null,
+	if (listing === null) return { release: null, prerelease: null };
+	const tags = listing.split('\n');
+	const isEngineTree = (tag: string) =>
+		git(gitDir, ['cat-file', '-e', `refs/tags/${tag}:${VERSION_TS_PATH}`]) !== null;
+	const release = newestPublishableTag(tags, isEngineTree);
+	// The prerelease the *Build prerelease* button would build — the SAME rule
+	// code_build.ts applies (newest engine prerelease whose tree stamps its own
+	// tag, above the newest release). A pre-stamp beta is never offered: its
+	// build could only be refused (code_build_plan.ts placeholderNamesItsTag).
+	const namesItsTag = (tag: string) =>
+		placeholderNamesItsTag(git(gitDir, ['show', `refs/tags/${tag}:${BUILD_INFO_TREE_PATH}`]) ?? '');
+	const prerelease = prereleaseTagAbove(
+		newestPublishableTag(tags, (tag) => isEngineTree(tag) && namesItsTag(tag), 'prerelease'),
+		release,
 	);
+	return { release, prerelease };
 }
 
 /** A ref's commit, date and declared version — all null when the ref is absent. */
@@ -885,16 +928,25 @@ function readChannelRefs(
 	| 'release_sha'
 	| 'release_date'
 	| 'release_version'
+	| 'prerelease_ref'
+	| 'prerelease_sha'
+	| 'prerelease_date'
+	| 'prerelease_version'
 	| 'dev_ref'
 	| 'dev_sha'
 	| 'dev_date'
 	| 'dev_version'
 	| 'divergence'
 > {
-	const tag = readReleaseTag(gitDir);
+	const tags = readReleaseTags(gitDir);
+	const tag = tags.release;
 	const tagRef = tag === null ? null : `refs/tags/${tag}`;
 	const hasDev = git(gitDir, ['rev-parse', '--verify', '--quiet', DEV_REF]) !== null;
 	const release = refFacts(gitDir, tagRef);
+	const prerelease = refFacts(
+		gitDir,
+		tags.prerelease === null ? null : `refs/tags/${tags.prerelease}`,
+	);
 	const dev = refFacts(gitDir, hasDev ? DEV_REF : null);
 	return {
 		has_master_ref: hasDev,
@@ -902,6 +954,10 @@ function readChannelRefs(
 		release_sha: release.sha,
 		release_date: release.date,
 		release_version: release.version,
+		prerelease_ref: tags.prerelease,
+		prerelease_sha: prerelease.sha,
+		prerelease_date: prerelease.date,
+		prerelease_version: prerelease.version,
 		dev_ref: DEV_REF,
 		dev_sha: dev.sha,
 		dev_date: dev.date,
@@ -925,6 +981,10 @@ function readSource(gitDir: string | null): CodeServerStatus['source'] {
 			release_sha: null,
 			release_date: null,
 			release_version: null,
+			prerelease_ref: null,
+			prerelease_sha: null,
+			prerelease_date: null,
+			prerelease_version: null,
 			dev_ref: DEV_REF,
 			dev_sha: null,
 			dev_date: null,
@@ -1035,9 +1095,11 @@ function collectReleaseDir(dir: string, publicBaseUrl: string, into: PublishedRe
 		return false;
 	}
 	for (const file of entries) {
-		const match = /^(\d+\.\d+\.\d+)(-dev)?\.zip$/.exec(file);
-		if (match === null) continue;
-		const version = match[1] as string;
+		// THE archive grammar (code_manifest.ts) — the one the server serves
+		// through — so the panel lists exactly what a consumer could fetch.
+		const named = releaseArchiveNameOf(file);
+		if (named === null) continue;
+		const version = named.triple;
 		let stat: ReturnType<typeof statSync>;
 		try {
 			stat = statSync(join(dir, file));
@@ -1046,7 +1108,8 @@ function collectReleaseDir(dir: string, publicBaseUrl: string, into: PublishedRe
 		}
 		into.push({
 			version,
-			channel: match[2] === undefined ? 'master' : 'dev',
+			channel: named.kind === 'stable' ? 'master' : named.kind,
+			identity: named.identity,
 			file,
 			bytes: stat.size,
 			stamp: stat.mtimeMs,
@@ -1119,6 +1182,9 @@ export function enginePosture(
 	installChannel: InstallChannel | null,
 ): 'dev' | 'release' {
 	if (build === null) return 'dev';
+	// A PRERELEASE install is a release posture: its archive is an immutable,
+	// sha-verified tag build (RELEASE_IDENTITY_DESIGN §2.8) — only a branch
+	// build is unreleased code.
 	return installChannel === 'dev' ? 'dev' : 'release';
 }
 
@@ -1326,6 +1392,7 @@ export function codeServerStatus(publicBaseUrl: string): CodeServerStatus {
 		ready: !checks.some((entry) => entry.state === 'blocked'),
 		source,
 		dev_channel: config.update.devChannelEnabled,
+		prerelease_channel: config.update.prereleaseChannelEnabled,
 		files_dir: filesDir ?? null,
 		releases: published.releases,
 		releases_unreadable: published.unreadable,

@@ -68,13 +68,18 @@ import {
 	SMOKE_SCRIPT,
 	sha256File,
 } from '../../scripts/ci/image_release.ts';
+import { acceptedImageVersions, imageVersionOf } from '../../src/core/install/host/stack/layout.ts';
 import { BUILD_INFO_PATH, RELEASE_IDENTITY } from '../../src/core/update/build_stamp.ts';
 import {
 	IMAGE_REGISTRIES_PATH,
 	type ImageRegistryList,
 	validateImageRegistries,
 } from '../../src/core/update/image_registries.ts';
-import { MIN_GIT_FOR_DESCRIBE } from '../../src/core/update/release_identity.ts';
+import {
+	MIN_GIT_FOR_DESCRIBE,
+	parseBuildInfo,
+	resolveReleaseIdentity,
+} from '../../src/core/update/release_identity.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
 /** The real git, behind the plan's `git --version` stub. */
@@ -118,6 +123,8 @@ me="$(basename "$0")"
 printf '%s %s\\n' "$me" "$*" >> "$STUB_LOG"
 key() { printf '%s' "$1" | tr '/:@' '___'; }
 digest_of() { case "$1" in *@sha256:*) printf '%s' "\${1#*@}" ;; *) cat "$STUB_STATE/$(key "$1")" 2>/dev/null ;; esac; }
+# Every reference the stub registry is made to hold, one per line (the run's write set).
+put() { printf '%s' "$2" > "$STUB_STATE/$(key "$1")"; printf '%s\n' "$1" >> "$STUB_STATE.writes"; }
 case "$me" in
   curl)
     out=""; while [ $# -gt 0 ]; do [ "$1" = "-o" ] && out="$2"; shift; done
@@ -125,7 +132,7 @@ case "$me" in
   docker)
     case "$1 $2 $3" in
       "login "*) cat >/dev/null; exit 0 ;;
-      "buildx imagetools create") printf '%s' "$STUB_BUILT" > "$STUB_STATE/$(key "$5")"; exit 0 ;;
+      "buildx imagetools create") put "$5" "$STUB_BUILT"; exit 0 ;;
       "buildx imagetools inspect")
         if [ -n "\${STUB_INSPECT_ERROR:-}" ] && [ "$4" = "$STUB_INSPECT_ERROR" ]; then echo "unauthorized: denied" >&2; exit 1; fi
         d="$(digest_of "$4")"
@@ -140,9 +147,15 @@ case "$me" in
         [ "$2" = "--force" ] && shift
         d="$(digest_of "$2")"
         [ -n "\${STUB_COPY_WRONG:-}" ] && [ "$3" = "$STUB_COPY_WRONG" ] && d="sha256:$(printf 'f%.0s' $(seq 64))"
-        printf '%s' "$d" > "$STUB_STATE/$(key "$3")"; exit 0 ;;
+        put "$3" "$d"; exit 0 ;;
       verify)
         case " \${STUB_UNSIGNED:-} " in *" $(digest_of "$2") "*) echo "no matching signatures" >&2; exit 1 ;; esac
+        # STUB_SIGNER = the certificate identity (SAN) the run's keyless signature carries:
+        # verify then passes only when --certificate-identity-regexp accepts it, as cosign does.
+        if [ -n "\${STUB_SIGNER:-}" ]; then
+          re=""; while [ $# -gt 0 ]; do [ "$1" = "--certificate-identity-regexp" ] && re="$2"; shift; done
+          printf '%s' "$STUB_SIGNER" | grep -Eq -- "$re" || { echo "none of the expected identities matched" >&2; exit 1; }
+        fi
         exit 0 ;;
     esac ;;
 esac
@@ -180,13 +193,18 @@ interface Run {
 	log: string[];
 	record: Record<string, unknown> | null;
 	state: (ref: string) => string | null;
+	/**
+	 * Every tag `repository` holds after the run: the preset references plus every one
+	 * the run made the stub registry hold (its write log), sorted, unique.
+	 */
+	tagsHeld: (repository: string) => string[];
 }
 
 let runCounter = 0;
 
 /** One `publish` run in a fresh state dir; `preset` seeds the stub registry. */
 function publish(options: {
-	channel?: 'master' | 'dev';
+	channel?: 'master' | 'prerelease' | 'dev';
 	preset?: Record<string, string>;
 	env?: Record<string, string>;
 	pin?: { version: string | null; linux_amd64_sha256: string | null };
@@ -220,7 +238,7 @@ function publish(options: {
 		DIGEST_AMD64: ARCH_AMD64,
 		DIGEST_ARM64: ARCH_ARM64,
 		VERSION: '7.0.1',
-		TAG: channel === 'dev' ? '7.0.1-dev' : '7.0.1',
+		TAG: { master: '7.0.1', prerelease: '7.0.1-beta.2', dev: '7.0.1-dev' }[channel],
 		CHANNEL: channel,
 		STAGING,
 		RUN_ID: '42',
@@ -248,6 +266,16 @@ function publish(options: {
 			: null,
 		state: (ref) =>
 			existsSync(join(state, key(ref))) ? readFileSync(join(state, key(ref)), 'utf8') : null,
+		tagsHeld: (repository) => {
+			const writes = `${state}.writes`;
+			const written = existsSync(writes) ? readFileSync(writes, 'utf8').split('\n') : [];
+			const refs = [...Object.keys(options.preset ?? {}), ...written];
+			const prefix = `${repository}:`;
+			const tags = refs
+				.filter((ref) => ref.startsWith(prefix))
+				.map((ref) => ref.slice(prefix.length));
+			return [...new Set(tags)].sort();
+		},
 	};
 }
 
@@ -439,6 +467,187 @@ describe('publish — immutability of a release', () => {
 	});
 });
 
+// GATE 16 (RELEASE_IDENTITY_DESIGN §3) — a run writes ONE tag to every target and never a
+// floating one. Read from the OUTCOME: the tags each target registry holds after the run.
+describe('publish — GATE 16: the tag SET a run writes', () => {
+	const FLOATING = ['latest', '7', '7.0'];
+
+	test.each([
+		['master', '7.0.1'],
+		['prerelease', '7.0.1-beta.2'],
+		['dev', '7.0.1-dev'],
+	] as const)('channel %s: every target ends holding exactly {%s}', (channel, tag) => {
+		const run = publish({ channel });
+		expect(run.code, run.stdout).toBe(0);
+		for (const repository of [GHCR, HUB]) expect(run.tagsHeld(repository)).toEqual([tag]);
+		for (const floating of FLOATING)
+			expect(
+				run.log.some((line) => line.includes(`:${floating} `) || line.endsWith(`:${floating}`)),
+			).toBe(false);
+		expect(run.record).toMatchObject({ tag, channel, version: '7.0.1' });
+	});
+
+	test('a prerelease never touches its triple: an existing stable :7.0.1 keeps its digest, no :7.0.1 is written', () => {
+		const stable = D(9);
+		const run = publish({
+			channel: 'prerelease',
+			preset: { [`${GHCR}:7.0.1`]: stable },
+		});
+		expect(run.code, run.stdout).toBe(0);
+		expect(run.tagsHeld(GHCR)).toEqual(['7.0.1', '7.0.1-beta.2']);
+		expect(run.state(`${GHCR}:7.0.1`)).toBe(stable);
+		expect(run.tagsHeld(HUB)).toEqual(['7.0.1-beta.2']);
+		expect(run.log.some((line) => /^cosign copy .* \S+:7\.0\.1$/.test(line))).toBe(false);
+	});
+
+	test('a published prerelease is IMMUTABLE: the existing digest is spread, never re-signed or forced', () => {
+		const existing = D(7);
+		const run = publish({ channel: 'prerelease', preset: { [`${GHCR}:7.0.1-beta.2`]: existing } });
+		expect(run.code, run.stdout).toBe(0);
+		expect(run.log.some((line) => line.startsWith('cosign sign '))).toBe(false);
+		expect(run.log.filter((line) => line.startsWith('cosign copy '))).toEqual([
+			`cosign copy ${GHCR}@${existing} ${HUB}:7.0.1-beta.2`,
+		]);
+	});
+
+	test.each([
+		['prerelease', '7.0.1', 'its bare triple'],
+		['prerelease', '7.0.2-beta.1', "another triple's prerelease"],
+		['prerelease', '7.0.1-dev', 'a dev tag'],
+		['master', 'latest', 'latest'],
+		['master', '7.0', 'a minor float'],
+		['master', '7', 'a major float'],
+		['master', '7.0.1-beta.2', 'a prerelease'],
+		['dev', '7.0.1', 'a release tag'],
+		['dev', 'latest', 'latest'],
+	] as const)('channel %s refuses TAG %s (%s) before ANY command', (channel, tag) => {
+		const run = publish({ channel, env: { TAG: tag } });
+		expect(run.code).toBe(1);
+		expect(run.stdout).toContain(`TAG '${tag}' is not the`);
+		expect(run.log).toEqual([]);
+	});
+});
+
+// GATE 16, second half — the SIGNING IDENTITY of a prerelease-tag run. A keyless signature
+// carries the workflow's identity at the ref the run was triggered from
+// (…/image-release.yml@refs/tags/v7.0.1-beta.2); `cosign verify` — the publish verb's own,
+// the installer's, the image updater's, the operator's — accepts it only through
+// engineering/image_registries.json signing.identity_regexp. The stub verifies exactly that.
+const SIGNER = (ref: string) =>
+	`https://github.com/dedalia-org/dedalo/.github/workflows/image-release.yml@${ref}`;
+
+describe('publish — GATE 16: a prerelease-tag run passes the verify that reads the list', () => {
+	test('signed at refs/tags/v7.0.1-beta.2: every target verifies with the list regexp', () => {
+		const run = publish({
+			channel: 'prerelease',
+			env: { STUB_SIGNER: SIGNER('refs/tags/v7.0.1-beta.2') },
+		});
+		expect(run.code, run.stdout).toBe(0);
+		const verified = (run.record?.registries as { id: string; verified: boolean }[]).filter(
+			(item) => item.verified,
+		);
+		expect(verified.map((item) => item.id)).toEqual(['ghcr', 'dockerhub']);
+	});
+
+	test('CONTROL: a signature from another ref fails the same verify, and the run with it', () => {
+		const run = publish({
+			channel: 'prerelease',
+			env: { STUB_SIGNER: SIGNER('refs/heads/feature') },
+		});
+		expect(run.code).toBe(1);
+		expect(run.stdout).toContain('with a valid signature');
+	});
+
+	test('the regexp accepts every release tag of the shared grammar and the dev branch — nothing else', () => {
+		const identity = new RegExp(LIST.signing.identity_regexp);
+		const ordering = JSON.parse(
+			readFileSync(join(ROOT, 'test', 'fixtures', 'release_identity', 'ordering.json'), 'utf8'),
+		) as { ascending: string[]; not_identities: string[] };
+		expect(ordering.ascending.length).toBeGreaterThan(10);
+		for (const version of ordering.ascending)
+			expect(identity.test(SIGNER(`refs/tags/v${version}`)), version).toBe(true);
+		expect(identity.test(SIGNER('refs/heads/master'))).toBe(true);
+		for (const ref of [
+			'refs/heads/feature',
+			'refs/tags/v7.0.1-beta.2-evil',
+			'refs/tags/v7.0.1-gamma.1',
+			'refs/tags/v7.0.1-beta',
+			'refs/tags/v7.0.1.dev',
+			'refs/tags/x7.0.1',
+		])
+			expect(identity.test(SIGNER(ref)), ref).toBe(false);
+		expect(
+			identity.test(
+				'https://github.com/dedalia-org/dedalo/.github/workflows/ci.yml@refs/tags/v7.0.1-beta.2',
+			),
+		).toBe(false);
+	});
+});
+
+/**
+ * A GitHub Actions filter pattern (the subset image-release.yml's `on.push.tags` uses) as
+ * a RegExp over the whole tag name: `[…]` a class, `+` one or more of the preceding
+ * character/class, `*` any run without `/`, `?` zero or one of the preceding; everything
+ * else literal (`.` included — GitHub treats it as a plain character).
+ */
+function githubFilter(pattern: string): RegExp {
+	let source = '';
+	for (let i = 0; i < pattern.length; i++) {
+		const char = pattern[i] as string;
+		if (char === '[') {
+			const end = pattern.indexOf(']', i);
+			source += pattern.slice(i, end + 1);
+			i = end;
+		} else if (char === '+' || char === '?') source += char;
+		else if (char === '*') source += '[^/]*';
+		else source += char.replace(/[.\\^$|(){}]/g, '\\$&');
+	}
+	return new RegExp(`^${source}$`);
+}
+
+describe('the trigger — every release tag reaches `plan`, which validates it exactly', () => {
+	const workflow = Bun.YAML.parse(
+		readFileSync(join(ROOT, '.github', 'workflows', 'image-release.yml'), 'utf8'),
+	) as { on: { push: { tags: string[] } } };
+	const triggers = workflow.on.push.tags.map(githubFilter);
+	const ordering = JSON.parse(
+		readFileSync(join(ROOT, 'test', 'fixtures', 'release_identity', 'ordering.json'), 'utf8'),
+	) as { ascending: string[]; not_identities: string[] };
+	const fake: PlanGit = { declaredAt: () => null, commitOf: () => null, fileAt: () => null };
+	const planOf = (tag: string) =>
+		resolvePlan(
+			{ event: 'push', ref: `refs/tags/${tag}`, sha: 'x', inputChannel: '', inputTag: '' },
+			fake,
+			STAGING,
+		);
+
+	test('every stable AND prerelease identity of the shared ordering fixture triggers a run', () => {
+		expect(ordering.ascending.some((version) => version.includes('-'))).toBe(true);
+		for (const version of ordering.ascending)
+			expect(
+				triggers.some((trigger) => trigger.test(`v${version}`)),
+				`v${version}`,
+			).toBe(true);
+	});
+
+	test('no trigger fires for a branch-shaped or developer name', () => {
+		for (const name of ['v7.0.0.dev', 'v7.0.0-dev', 'v7.0', 'release-7.0.0', 'v7.0.0-pre.1'])
+			expect(
+				triggers.some((trigger) => trigger.test(name)),
+				name,
+			).toBe(false);
+	});
+
+	test('what the globs cannot say, plan refuses: every non-identity, trigger-matching ones included', () => {
+		const matching = ordering.not_identities.filter((name) =>
+			triggers.some((trigger) => trigger.test(`v${name}`)),
+		);
+		expect(matching).toContain('7.0.0-beta.01'); // the glob is wider than the grammar
+		for (const name of ordering.not_identities)
+			expect(() => planOf(`v${name}`), name).toThrow('is not a release tag');
+	});
+});
+
 describe('the pure verdicts', () => {
 	test('immutability: absent everywhere is fresh, and an error is never read as absent', async () => {
 		const { immutabilityVerdict } = await import('../../scripts/ci/image_release.ts');
@@ -498,6 +707,10 @@ describe('plan — which release a run publishes', () => {
 	};
 	/** An ANNOTATED v7.0.4 whose version.ts agrees but whose release was never CUT. */
 	let uncutSha = '';
+	/** An ANNOTATED, CUT prerelease v7.0.2-beta.1 (declares 7.0.2). */
+	let betaSha = '';
+	/** A CUT prerelease v7.0.2-beta.2 under a LIGHTWEIGHT tag (describe ignores it). */
+	let lightBetaSha = '';
 
 	beforeAll(() => {
 		repo = mkdtempSync(join(tmpdir(), 'dedalo-image-plan-'));
@@ -528,6 +741,14 @@ describe('plan — which release a run publishes', () => {
 		git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '--quiet', '-m', 'rc');
 		rcSha = git('rev-parse', 'HEAD');
 		annotated('v7.0.2-rc.1');
+		git('checkout', '--quiet', '-b', 'beta', masterSha);
+		cut('7.0.2-beta.1');
+		betaSha = commitVersion('7.0.2');
+		annotated('v7.0.2-beta.1');
+		git('checkout', '--quiet', '-b', 'lightbeta', masterSha);
+		cut('7.0.2-beta.2');
+		lightBetaSha = commitVersion('7.0.2');
+		git('tag', 'v7.0.2-beta.2');
 		git('checkout', '--quiet', 'master');
 	});
 	afterAll(() => rmSync(repo, { recursive: true, force: true }));
@@ -669,14 +890,89 @@ describe('plan — which release a run publishes', () => {
 		expect(minimum.code, minimum.text).toBe(0);
 	});
 
-	test('a prerelease tag is refused', () => {
+	// A PRERELEASE TAG IS A RELEASE (RELEASE_IDENTITY_DESIGN §2.8.4, owner Q1).
+	const betaPush = {
+		GITHUB_EVENT_NAME: 'push',
+		GITHUB_REF: 'refs/tags/v7.0.2-beta.1',
+	};
+	test('a prerelease tag push publishes its identity: tag X.Y.Z-beta.N, channel prerelease, held to the full gate', () => {
+		const result = plan({ ...betaPush, GITHUB_SHA: betaSha });
+		expect(result.code, result.text).toBe(0);
+		expect(result.out).toMatchObject({
+			version: '7.0.2',
+			tag: '7.0.2-beta.1',
+			channel: 'prerelease',
+			source_sha: betaSha,
+			staging: STAGING,
+			expected_engine_version: '7.0.2-beta.1',
+		});
+		expect(result.gh).toHaveLength(FULL_GATE_WORKFLOWS.length);
+		const red = plan({ ...betaPush, GITHUB_SHA: betaSha, STUB_GH_CI: '0' });
+		expect(red.code).toBe(1);
+		expect(red.text).toContain('has no green FULL gate');
+		expect(red.out).toEqual({});
+	});
+
+	test('GATE 16, end to end: the prerelease plan → publish writes {X.Y.Z-beta.N} only, the tag the installer asks for', () => {
+		const planned = plan({ ...betaPush, GITHUB_SHA: betaSha });
+		expect(planned.code, planned.text).toBe(0);
+		const { version, tag, channel } = planned.out as Record<string, string>;
+		const run = publish({
+			channel: channel as 'prerelease',
+			env: { VERSION: version as string, TAG: tag as string },
+		});
+		expect(run.code, run.stdout).toBe(0);
+		for (const repository of [GHCR, HUB])
+			expect(run.tagsHeld(repository)).toEqual(['7.0.2-beta.1']);
+		// The installer of THIS release (its archive's own build stamp, resolved as the
+		// engine resolves it) asks the registry for exactly the tag the run wrote (§2.5).
+		const tar = join(repo, '..', `beta-stamp-${Date.now()}.tar`);
+		git('archive', '--format=tar', '-o', tar, betaSha, BUILD_INFO_PATH);
+		const stamp = Bun.spawnSync(['tar', '-xOf', tar, BUILD_INFO_PATH], { stdout: 'pipe' });
+		rmSync(tar, { force: true });
+		const identity = resolveReleaseIdentity({
+			triple: [7, 0, 2],
+			describe: parseBuildInfo(stamp.stdout.toString()).describe,
+			provenance: { stamp: 'other', channel: 'prerelease' },
+		});
+		expect(identity.version).toBe(planned.out.expected_engine_version as string);
+		const answers = { image_version: '' } as Parameters<typeof imageVersionOf>[0];
+		expect(imageVersionOf(answers, identity)).toBe(tag as string);
+		expect(acceptedImageVersions(identity)).toContain(tag as string);
+	});
+
+	test('the release-tag check (gate 11) runs for a prerelease tag: an uncut v7.0.2-rc.1 is refused', () => {
 		const result = plan({
 			GITHUB_EVENT_NAME: 'push',
-			GITHUB_REF: 'refs/tags/v7.0.1-beta.1',
-			GITHUB_SHA: releaseSha,
+			GITHUB_REF: 'refs/tags/v7.0.2-rc.1',
+			GITHUB_SHA: rcSha,
 		});
 		expect(result.code).toBe(1);
-		expect(result.text).toContain('prerelease tags are never published');
+		expect(result.text).toContain('carries no changes/7.0.2-rc.1/release.json');
+		expect(result.out).toEqual({});
+	});
+
+	test('a prerelease whose tag is LIGHTWEIGHT is refused before any build (its archive would say .dev)', () => {
+		const result = plan({
+			GITHUB_EVENT_NAME: 'push',
+			GITHUB_REF: 'refs/tags/v7.0.2-beta.2',
+			GITHUB_SHA: lightBetaSha,
+		});
+		expect(result.code).toBe(1);
+		expect(result.text).toContain('calls itself 7.0.2.dev, not 7.0.2-beta.2');
+		expect(result.out).toEqual({});
+	});
+
+	test('a release dispatch re-publishes an existing PRERELEASE tag, also run from that tag', () => {
+		const result = plan({
+			GITHUB_EVENT_NAME: 'workflow_dispatch',
+			GITHUB_REF: 'refs/tags/v7.0.2-beta.1',
+			GITHUB_SHA: betaSha,
+			INPUT_CHANNEL: 'release',
+			INPUT_TAG: 'v7.0.2-beta.1',
+		});
+		expect(result.code, result.text).toBe(0);
+		expect(result.out).toMatchObject({ tag: '7.0.2-beta.1', channel: 'prerelease' });
 	});
 
 	test('a dev dispatch from master is X.Y.Z-dev, reporting X.Y.Z.dev', () => {

@@ -11,8 +11,14 @@
  *
  * What is pinned:
  *   1. check-target's verdict IS the walk rule: for a census of targets around
- *      the running version, exit 0 ⇔ assertLinearUpgrade answers null, and a
- *      refusal prints the id walkRefusalOf names (or malformed_version);
+ *      the running version, exit 0 ⇔ the identity walk answers null (and, for
+ *      a release or -dev tag, ⇔ the data walk assertLinearUpgrade does), and a
+ *      refusal prints the id walkRefusalOf names (or malformed_version). The
+ *      CLI runs from an engine tree that calls itself the RELEASE of the data
+ *      version (test/helpers/engine_cli_tree.ts): the checkout's own identity
+ *      is `.dev` on a branch and the tag on a release commit, and the walk
+ *      starts from it. The prerelease rows are gate 15
+ *      (release_identity_walk_native);
  *   2. heartbeat / outcome accept exactly the closed shapes and stamp their
  *      own instant (seen_at / recorded_at are the CLI's, never the host's);
  *   3. claim moves request → inflight atomically and prints `<id> <tag>`;
@@ -38,9 +44,14 @@ import {
 	parseImageTag,
 	walkRefusalOf,
 } from '../../src/core/update/version_walk.ts';
+import { engineCliAt } from '../helpers/engine_cli_tree.ts';
 
-const CLI = join(import.meta.dir, '..', '..', 'scripts', 'ops', 'image_update_channel.ts');
 const SCRATCH: string[] = [];
+/** The running engine: the stable release of this checkout's data version. */
+const RUNNING = DEDALO_VERSION_TRIPLE.join('.');
+const ENGINE_ROOT = mkdtempSync(join(tmpdir(), 'dedalo_image_channel_engine_'));
+SCRATCH.push(ENGINE_ROOT);
+const CLI = engineCliAt(ENGINE_ROOT, RUNNING);
 
 afterAll(() => {
 	for (const dir of SCRATCH) rmSync(dir, { recursive: true, force: true });
@@ -61,7 +72,7 @@ interface Run {
 
 /** Run the CLI exactly as the host does. */
 function cli(args: string[], stdin?: string): Run {
-	const result = Bun.spawnSync(['bun', CLI, ...args], {
+	const result = Bun.spawnSync([process.execPath, CLI, ...args], {
 		stdin: stdin === undefined ? 'ignore' : Buffer.from(stdin),
 		stdout: 'pipe',
 		stderr: 'pipe',
@@ -92,7 +103,17 @@ const TARGETS: readonly string[] = [
 	...(MAJOR > 0 ? [`${MAJOR - 1}.9.9`] : []), // downgrade (major)
 ];
 
-const MALFORMED: readonly string[] = ['7.0', 'v7.0.1', '7.0.1-beta.1', '7.0.1.dev', '7.0.1;id', ''];
+const MALFORMED: readonly string[] = [
+	'7.0',
+	'v7.0.1',
+	'7.0.1.dev', // an identity, never a tag
+	'7.0.1-pre.1', // not a prerelease label (owner Q9: alpha|beta|rc)
+	'7.0.1-beta.01', // non-canonical number
+	'7.0.1-beta',
+	'07.0.1',
+	'7.0.1;id',
+	'',
+];
 
 function uuid(): string {
 	return crypto.randomUUID();
@@ -167,7 +188,7 @@ describe('check-target: the verdict IS the walk rule', () => {
 		test(`${tag}: exit and reason equal assertLinearUpgrade / walkRefusalOf`, () => {
 			const parsed = parseImageTag(tag);
 			if (parsed === null) throw new Error(`census tag ${tag} does not parse`);
-			const expected = walkRefusalOf(DEDALO_VERSION_TRIPLE, parsed.triple, parsed.channel);
+			const expected = walkRefusalOf(RUNNING, parsed.identity, parsed.channel);
 			// the id partition agrees with the sentence rule it is derived from
 			expect(expected === null).toBe(
 				assertLinearUpgrade(DEDALO_VERSION_TRIPLE, parsed.triple, parsed.channel) === null,
@@ -180,7 +201,7 @@ describe('check-target: the verdict IS the walk rule', () => {
 
 	test('the same version is refused on the release channel and accepted as a developer image', () => {
 		const same = DEDALO_VERSION_TRIPLE.join('.');
-		expect(cli(['check-target', same]).out).toBe('downgrade_or_same_version');
+		expect(cli(['check-target', same]).out).toBe('not_newer_release');
 		expect(cli(['check-target', `${same}-dev`]).code).toBe(0);
 	});
 

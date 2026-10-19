@@ -106,6 +106,7 @@ describe('build_version_from_git_master option mapping', () => {
 		// honoured as the explicit ref it names; an unknown channel is dropped
 		await action?.({ channel: 'master' }, {} as never);
 		await action?.({ channel: 'dev' }, {} as never);
+		await action?.({ channel: 'prerelease' }, {} as never);
 		await action?.({ channel: 'v7' }, {} as never);
 		for (const branch of ['master', 'developer']) {
 			await action?.({ branch }, {} as never);
@@ -120,6 +121,7 @@ describe('build_version_from_git_master option mapping', () => {
 		expect(calls).toEqual([
 			{ channel: 'master' },
 			{ channel: 'dev' },
+			{ channel: 'prerelease' },
 			{},
 			{ ref: 'master' },
 			{ ref: 'developer' },

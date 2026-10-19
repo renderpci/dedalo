@@ -70,24 +70,28 @@
 #   sh scripts/hooks/pre-push --remote-id "$(git remote get-url --push gitdedalo)"
 # DEDALO_PREPUSH=full forces the full gate on an internal push too.
 #
-# A RELEASE TAG NEEDS A FULL GREEN, TO ANY REMOTE. A pushed ref landing on
-# `refs/tags/vX.Y.Z` (the stable-release shape image-release.yml and the code
-# server publish) requires a FULL green for the tag's commit: remembered in the
-# green file below, or gated full now when the tag names HEAD — even when the
-# commit itself is already on the remote (a tag push carries no new commit, so
-# nothing else would gate it). A tag on any other commit without a full green is
-# REFUSED. On GitHub the tag is held again, unbypassably: image-release.yml's plan
-# refuses a tag whose commit has no green push run of ci.yml AND db.yml.
+# A RELEASE TAG IS CUT, AND ANNOTATED, BEFORE IT IS PUSHED. Every pushed `v*` tag
+# is checked at ITS commit by `bun run push:release-tag <tag> <commit> <object>`
+# (scripts/lib/release_tag.ts — the ONE grammar and the one rule; this hook holds
+# no tag regex of its own). A HELD release tag — a release identity, stable
+# vX.Y.Z or prerelease vX.Y.Z-(alpha|beta|rc).N (a prerelease IS a release:
+# immutable, published) — must be ANNOTATED (a lightweight tag is invisible to
+# the archive's %(describe), so the release would call itself `.dev`), version.ts
+# must declare its triple AND changes/<identity>/release.json must be the
+# changelog cut of exactly that release. A failing tag is refused before any gate
+# runs. The same cut check holds a published tag again in image-release.yml's
+# plan. A `v*` name that is no release identity, or whose identity predates the
+# rule (below FIRST_CUT_RELEASE, v7.0.0-beta.6), is published history the check
+# cannot hold — it passes with a note (exit 3: nothing to hold, no gate), so
+# `git push --tags` to a new mirror is not driven to --no-verify.
 #
-# A RELEASE TAG IS CUT BEFORE IT IS PUSHED. Every pushed `v*` tag that names a
-# release identity (vX.Y.Z or vX.Y.Z-(alpha|beta|rc).N) is checked at ITS commit by
-# `bun run push:release-tag <tag> <commit>` (scripts/lib/release_tag.ts): version.ts
-# declares the tag's triple AND changes/<identity>/release.json is the changelog cut
-# of exactly that release. A failing tag is refused before any gate runs. The same
-# function holds a published tag again in image-release.yml's plan. A tag whose
-# identity predates the rule (below FIRST_CUT_RELEASE, v7.0.0-beta.6) is published
-# history the check cannot hold — it passes with a note, so `git push --tags` to a
-# new mirror is not driven to --no-verify.
+# A RELEASE TAG NEEDS A FULL GREEN, TO ANY REMOTE. Every HELD release tag (exit 0
+# above — stable and prerelease alike) requires a FULL green for the tag's commit:
+# remembered in the green file below, or gated full now when the tag names HEAD —
+# even when the commit itself is already on the remote (a tag push carries no new
+# commit, so nothing else would gate it). A tag on any other commit without a full
+# green is REFUSED. On GitHub the tag is held again, unbypassably: image-release.yml's
+# plan refuses a tag whose commit has no green push run of ci.yml AND db.yml.
 #
 # THE GATED TREE IS THE PUSHED COMMIT. ci:local gets `--ref <HEAD sha>`: the
 # container checks out exactly that commit, no working-tree overlay; and the
@@ -132,10 +136,6 @@
 set -u
 
 ZERO_SHA_RE='^0*$'
-
-# The stable release tag (image-release.yml's trigger, code_build_plan's rule):
-# prerelease tags (v7.0.0-beta.1) are never published, so they need no full green.
-RELEASE_TAG_RE='^v[0-9]+\.[0-9]+\.[0-9]+$'
 
 # INTERNAL remotes, by IDENTITY: `git hash-object` of the normalized URL (see
 # "THE GATE IS PER REMOTE" above). Space-separated; one entry today — gitdedalo.
@@ -313,9 +313,12 @@ gated_any=0
 # new branch (`before` = 000…). Never left to ci:local's upstream fallback.
 audit_key=''
 gated_refs=''
-# `<remote ref> <commit>` per release tag in this push (see "A RELEASE TAG NEEDS A FULL GREEN").
+# `<tag>:<commit>` per HELD release tag in this push (see "A RELEASE TAG NEEDS A FULL
+# GREEN") — filled by the release-tag check below, never by a regex here. `:` is the
+# separator because git forbids it in a ref name.
 release_tags=''
-# `<tag>=<commit>` per `v*` tag in this push, stable or prerelease (see "A RELEASE TAG IS CUT").
+# `<tag>:<commit>:<object>` per `v*` tag in this push (see "A RELEASE TAG IS CUT"):
+# <object> is what the pushed ref names — the tag object of an annotated tag.
 version_tags=''
 while read -r local_ref local_sha remote_ref remote_sha; do
 	[ -n "${local_sha:-}" ] || continue
@@ -326,10 +329,7 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 	# The name it LANDS under on the remote decides (`git push r HEAD:refs/tags/v7.0.1`).
 	case "${remote_ref:-}" in
 		refs/tags/*)
-			if printf '%s' "${remote_ref#refs/tags/}" | grep -Eq "$RELEASE_TAG_RE"; then
-				release_tags="$release_tags ${remote_ref#refs/tags/}=$commit"
-			fi
-			case "${remote_ref#refs/tags/}" in v*) version_tags="$version_tags ${remote_ref#refs/tags/}=$commit" ;; esac
+			case "${remote_ref#refs/tags/}" in v*) version_tags="$version_tags ${remote_ref#refs/tags/}:$commit:$local_sha" ;; esac
 			;;
 	esac
 
@@ -374,23 +374,32 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 	fi
 done <"$refs_file"
 
-# ── release tags: version.ts and the changelog cut, at the TAG'S commit ─────
+# ── release tags: annotated, version.ts and the changelog cut, at the TAG'S commit ─
 # Before anything else about a tag (a full green is worthless on a tag naming the
 # wrong version), and for EVERY `v*` tag: the check itself decides which names are
-# release identities (scripts/lib/release_tag.ts — the one implementation; image-release
-# plan runs the same function).
+# HELD release identities (scripts/lib/release_tag.ts — the one implementation;
+# image-release plan runs the same cut check). Exit 0 = held and passes (it then
+# needs a FULL green), 3 = nothing to hold, anything else = refused.
 for entry in $version_tags; do
-	tag="${entry%%=*}"
-	tag_sha="${entry#*=}"
+	tag="${entry%%:*}"
+	tag_rest="${entry#*:}"
+	tag_sha="${tag_rest%%:*}"
+	tag_object="${tag_rest#*:}"
 	find_bun_or_refuse
-	if ! bun run push:release-tag "$tag" "$tag_sha" </dev/null >&2; then
-		rule
-		say "REFUSED — tag $tag ($tag_sha) is not a cut release (the reason is printed above)."
-		say 'Nothing was gated or pushed. Fix the release commit, move the tag, push again.'
-		say "Bypass: git push --no-verify (image-release.yml's plan still refuses the same tag)."
-		rule
-		exit 1
-	fi
+	bun run push:release-tag "$tag" "$tag_sha" "$tag_object" </dev/null >&2
+	tag_code=$?
+	case "$tag_code" in
+		0) release_tags="$release_tags $tag:$tag_sha" ;;
+		3) ;;
+		*)
+			rule
+			say "REFUSED — tag $tag ($tag_sha) is not an annotated, cut release (the reason is printed above)."
+			say 'Nothing was gated or pushed. Fix the release commit, move the tag, push again.'
+			say "Bypass: git push --no-verify (image-release.yml's plan still refuses the same tag)."
+			rule
+			exit 1
+			;;
+	esac
 done
 
 green_file="$(git rev-parse --git-path dedalo-prepush-green)"
@@ -398,8 +407,8 @@ green_file="$(git rev-parse --git-path dedalo-prepush-green)"
 # ── release tags: a FULL green for the tag's commit, or gate it full now ────
 release_needs_gate=0
 for entry in $release_tags; do
-	tag="${entry%%=*}"
-	tag_sha="${entry#*=}"
+	tag="${entry%%:*}"
+	tag_sha="${entry#*:}"
 	if [ -f "$green_file" ] && grep -Eq "^$tag_sha full " "$green_file"; then
 		say "release tag $tag: $tag_sha already gated green at the FULL level."
 	elif [ "$tag_sha" = "$head_sha" ]; then

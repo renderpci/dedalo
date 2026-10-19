@@ -54,6 +54,14 @@ const master_labels = JSON.parse(
 ) as Record<string, string>;
 
 import {
+	CODE_CHANNELS,
+	channel_shortfall,
+	channel_shortfall_note,
+	channel_token,
+	honoured_channels,
+	item_release,
+} from '../../client/dedalo/core/area_maintenance/widgets/update_code/js/update_code_channel.js';
+import {
 	apply_phase_frame,
 	init_phase_state,
 	resolve_final_frame,
@@ -438,6 +446,29 @@ describe('a terminal ok frame hands off to health polling, never straight to suc
 		// …and the old version still reads as a rollback, which is the point.
 		expect(resolve_health_outcome(carried, '7.0.0').outcome).toBe('rolled_back');
 	});
+
+	test('a PRERELEASE install: the expectation is the IDENTITY, exactly — never its bare triple', () => {
+		// The job names what it installs by the identity /health will answer
+		// (code_update.ts: restart frame `expected_version`, envelope `release`).
+		// Since the identity walk (design step 9c) the door walks WITHIN a triple,
+		// so the rolled-back tree answers the same triple: a triple match would
+		// read every such rollback as an update. Gate 15 runs the whole table.
+		const exact = { ...init_phase_state('7.0.1-beta.2'), mode: 'polling' };
+		expect(resolve_health_outcome(exact, '7.0.1-beta.2').outcome).toBe('updated');
+		expect(resolve_health_outcome(exact, '7.0.1-beta.1').outcome).toBe('rolled_back');
+		expect(resolve_health_outcome(exact, '7.0.1').outcome).toBe('rolled_back');
+		// rc.1 → 7.0.1 rolled back: /health answers rc.1, which a triple match took for 7.0.1
+		const release = { ...init_phase_state('7.0.1'), mode: 'polling' };
+		for (const old of ['7.0.1-rc.1', '7.0.1-beta.6', '7.0.1.dev', '7.0.0']) {
+			expect(resolve_health_outcome(release, old).outcome, old).toBe('rolled_back');
+		}
+		// the resume path reads the identity from the final envelope's `release`
+		const ending = resolve_final_frame(init_phase_state(null), {
+			is_running: false,
+			data: { ok: true, data: { version: '7.0.1', release: '7.0.1-beta.2' } },
+		});
+		expect(ending).toEqual({ outcome: 'updated', version: '7.0.1-beta.2' });
+	});
 });
 
 // ---------------------------------------------------------------------------
@@ -662,6 +693,190 @@ describe('update_code restore control', () => {
 // these behaviours need is spread across a DOM factory this suite cannot boot,
 // so the gate is that the load-bearing lines exist and stay honest.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// GATE 14, THE CONSUMER (RELEASE_IDENTITY_DESIGN §2.8 item 2). The panel's
+// switch became a 3-way choice — published / prereleases / developer builds —
+// sent as `options.channel`. The decisions live in the dependency-free leaf
+// update_code_channel.js and are EXECUTED here; the wiring into the DOM factory
+// (which this tier cannot boot) is pinned by source shape below.
+//
+// AN OLDER MASTER: every v7 master since 2026-08-24 parses the token as
+// `channel === 'dev' ? 'dev' : 'master'` (before that it read no channel at
+// all) — it never REFUSES `prerelease`, it answers it as a release ask, and its
+// answer carries no `info.channels`. So there is nothing to retry; what must
+// not happen is that answer passing for "there are no prereleases".
+// ---------------------------------------------------------------------------
+describe('update_code channel choice (gate 14, consumer half)', () => {
+	/**
+	 * The older master's channel parse, built FROM ITS SHIPPED BYTES: the line is
+	 * vendored byte-exact (test/fixtures/release_identity/legacy_channel_parse.json)
+	 * and checked against the tag's own blob below. Parsed, never re-typed: a
+	 * line in any other shape throws here instead of passing for the old parse.
+	 */
+	const LEGACY = JSON.parse(
+		readFileSync(
+			join(import.meta.dir, '../fixtures/release_identity/legacy_channel_parse.json'),
+			'utf8',
+		),
+	) as { tag: string; path: string; line: string };
+	const legacyParse =
+		/^\s*channel: options\.channel === '([a-z]+)' \? '([a-z]+)' : '([a-z]+)',$/.exec(LEGACY.line);
+	if (legacyParse === null)
+		throw new Error(`vendored legacy parse is not a channel ternary: ${LEGACY.line}`);
+	const [, legacyMatch, legacyThen, legacyElse] = legacyParse;
+	const legacyMasterChannel = (channel: unknown) =>
+		channel === legacyMatch ? legacyThen : legacyElse;
+	/** An older master's answer: the manifest of the channel it parsed, no `info.channels`. */
+	const legacyAnswer = (asked: string, files: Record<string, unknown>[] = []) => ({
+		info: { version: '7.0.0', date: 'd', entity_id: 1, entity: 'e', host: 'h' },
+		files: legacyMasterChannel(asked) === 'dev' ? files : files.filter((f) => !f.channel),
+	});
+	const currentAnswer = (channels: string[], files: Record<string, unknown>[] = []) => ({
+		info: { version: '7.0.0', date: 'd', entity_id: 1, entity: 'e', host: 'h', channels },
+		files,
+	});
+
+	test('the ladder, in order, and the token for a choice: exact or the release channel', () => {
+		expect([...CODE_CHANNELS]).toEqual(['master', 'prerelease', 'dev']);
+		for (const token of CODE_CHANNELS) expect(channel_token(token)).toBe(token);
+		for (const junk of ['Prerelease', 'beta', '', undefined, null, 1, {}]) {
+			expect(channel_token(junk)).toBe('master');
+		}
+	});
+
+	// The vendored line IS the shipped one. Needs the tag's objects: a shallow
+	// CI checkout has none, and says so in the test name instead of passing.
+	const tagBlob = Bun.spawnSync(['git', 'show', `${LEGACY.tag}:${LEGACY.path}`], {
+		cwd: join(import.meta.dir, '../..'),
+		stdout: 'pipe',
+		stderr: 'pipe',
+	});
+	if (tagBlob.exitCode === 0) {
+		test(`the vendored legacy parse is byte-exact in ${LEGACY.tag}:${LEGACY.path}`, () => {
+			expect(tagBlob.stdout.toString().split('\n')).toContain(LEGACY.line);
+		});
+	} else {
+		test.skip(`the vendored legacy parse vs ${LEGACY.tag} (tag not in this clone — shallow checkout)`, () => {});
+	}
+
+	test('the shipped parse answers a prerelease ask as a release ask, never a refusal', () => {
+		expect(legacyMasterChannel('prerelease')).toBe('master');
+		expect(legacyMasterChannel('dev')).toBe('dev');
+	});
+
+	test('an OLDER master (no info.channels) answering a prerelease ask is read as "not offered"', () => {
+		const answer = legacyAnswer('prerelease', [{ version: '7.0.1' }]);
+		expect(honoured_channels('prerelease', answer)).toEqual(['master']);
+		expect(channel_shortfall('prerelease', answer)).toEqual(['prerelease']);
+		expect(channel_shortfall_note('prerelease', answer)).toBe(
+			'update_code_channel_not_offered_prerelease',
+		);
+	});
+
+	test('a CURRENT master says every rung it honoured; the shortfall follows the ladder', () => {
+		expect(channel_shortfall('prerelease', currentAnswer(['master', 'prerelease']))).toBeNull();
+		expect(channel_shortfall('prerelease', currentAnswer(['master']))).toEqual(['prerelease']);
+		expect(channel_shortfall('dev', currentAnswer(['master', 'prerelease', 'dev']))).toBeNull();
+		// dev asked, only the prerelease rung honoured: the developer builds are missing
+		expect(channel_shortfall('dev', currentAnswer(['master', 'prerelease']))).toEqual(['dev']);
+		expect(channel_shortfall('dev', currentAnswer(['master']))).toEqual(['prerelease', 'dev']);
+		// dev asked, the dev rung honoured WITHOUT prereleases (separate master
+		// switches): the prereleases are missing, and the note must say so
+		expect(channel_shortfall('dev', currentAnswer(['master', 'dev']))).toEqual(['prerelease']);
+		expect(channel_shortfall_note('dev', currentAnswer(['master', 'dev']))).toBe(
+			'update_code_channel_not_offered_prerelease_with_dev',
+		);
+		expect(channel_shortfall_note('dev', currentAnswer(['master']))).toBe(
+			'update_code_channel_not_offered_dev',
+		);
+		expect(channel_shortfall_note('dev', currentAnswer(['master', 'prerelease']))).toBe(
+			'update_code_channel_not_offered_dev',
+		);
+		// remote data: unknown tokens widen nothing
+		expect(honoured_channels('dev', currentAnswer(['dev ', 'Prerelease']))).toEqual(['master']);
+		// a release ask never has a shortfall
+		expect(channel_shortfall('master', currentAnswer(['master']))).toBeNull();
+		expect(channel_shortfall_note('master', currentAnswer(['master']))).toBeNull();
+		expect(channel_shortfall(undefined as unknown as string, currentAnswer(['master']))).toBeNull();
+	});
+
+	test('every note the leaf can decide is a master.json label the panel references', () => {
+		for (const key of [
+			'update_code_channel_not_offered_prerelease',
+			'update_code_channel_not_offered_prerelease_with_dev',
+			'update_code_channel_not_offered_dev',
+		]) {
+			expect(typeof master_labels[key], key).toBe('string');
+			expect(render_src).toContain(`get_label.${key} ||`);
+		}
+	});
+
+	test('an older master answering a DEV ask: dev honoured when dev items came back (never prereleases), otherwise unknown (no note)', () => {
+		const devItem = { version: '7.0.0', channel: 'dev' };
+		expect(honoured_channels('dev', legacyAnswer('dev', [devItem]))).toEqual(['master', 'dev']);
+		// an older master has no prerelease rung at all: the developer builds came
+		// back, the prereleases cannot have
+		expect(channel_shortfall('dev', legacyAnswer('dev', [devItem]))).toEqual(['prerelease']);
+		expect(channel_shortfall_note('dev', legacyAnswer('dev', [devItem]))).toBe(
+			'update_code_channel_not_offered_prerelease_with_dev',
+		);
+		// an opted-in older master with no developer build on disk looks exactly
+		// like one that never opted in: the panel claims nothing
+		expect(honoured_channels('dev', legacyAnswer('dev'))).toBeNull();
+		expect(channel_shortfall('dev', legacyAnswer('dev'))).toBeNull();
+	});
+
+	test('a prerelease row is named by its identity, never by the bare triple of its version', () => {
+		expect(item_release({ version: '7.0.1', channel: 'prerelease', release: '7.0.1-beta.2' })).toBe(
+			'7.0.1-beta.2',
+		);
+		expect(item_release({ version: '7.0.1' })).toBe('7.0.1');
+		expect(item_release({ version: '7.0.0', channel: 'dev' })).toBe('7.0.0');
+		// remote data: a prerelease item whose identity is not in the grammar is not offered
+		for (const release of [
+			undefined,
+			'7.0.1',
+			'7.0.1-pre.1',
+			'7.0.1-beta.2 ',
+			'<b>',
+			'07.0.1-beta.1',
+		]) {
+			expect(item_release({ version: '7.0.1', channel: 'prerelease', release })).toBeNull();
+		}
+	});
+
+	test('the panel sends the CHOSEN token and reads the shortfall back (wiring)', () => {
+		// a radio group, not the old checkbox: three exact tokens
+		expect(render_src).toContain("type			: 'radio'");
+		expect(render_src).not.toContain("class_name		: 'dev_channel_check'");
+		for (const token of ["token	: 'master'", "token	: 'prerelease'", "token	: 'dev'"]) {
+			expect(render_src).toContain(token);
+		}
+		expect(/get_code_update_info\(\s*server,\s*asked_channel\s*\)/.test(render_src)).toBe(true);
+		expect(render_src).toContain('render_info_modal( self, result, body_response, asked_channel )');
+		expect(render_src).toContain('channel_shortfall_note(asked_channel, versions_info)');
+		expect(render_src).toContain('item_release(current_version)');
+		// the model never narrows the token back to master|dev
+		expect(model_src).toContain('channel	: channel_token(channel)');
+		expect(model_src).not.toContain("channel==='dev' ? 'dev' : 'master'");
+		expect(status_src).toContain('return item_release(item)');
+	});
+
+	test('its labels are defined in the master catalog', () => {
+		for (const key of [
+			'update_code_channel_choice',
+			'update_code_channel_published',
+			'update_code_prerelease_channel',
+			'update_code_prerelease_channel_note',
+			'update_code_channel_not_offered_prerelease',
+			'update_code_channel_not_offered_dev',
+		]) {
+			expect(typeof master_labels[key], `${key} missing from master.json`).toBe('string');
+			expect(render_src).toContain(`get_label.${key}`);
+		}
+	});
+});
+
 describe('update_code developer-builds switch', () => {
 	test('the manifest request carries the channel the operator asked for', () => {
 		// The switch is the ARMING: a master only offers developer builds to a
@@ -671,7 +886,7 @@ describe('update_code developer-builds switch', () => {
 	});
 
 	test('the panel offers the switch and re-lists through it', () => {
-		expect(render_src).toContain('dev_channel');
+		expect(render_src).toContain('channel_row');
 		expect(render_src).toContain('update_code_dev_channel');
 	});
 
@@ -705,7 +920,7 @@ describe('update_code developer-builds switch', () => {
 		// followed; with the blocks gone a left-behind `.role_body >` matches
 		// NOTHING and the styles silently vanish.
 		expect(css_src).not.toContain('.role_body');
-		for (const node of ['button_submit', 'dd_readout', 'dd_note', 'dev_channel_row']) {
+		for (const node of ['button_submit', 'dd_readout', 'dd_note', 'channel_row']) {
 			expect(new RegExp(`^\\t\\t>\\.${node}\\b`, 'm').test(css_src), `>.${node}`).toBe(true);
 		}
 	});

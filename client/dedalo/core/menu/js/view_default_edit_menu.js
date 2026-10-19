@@ -696,7 +696,7 @@ const get_content_data_edit = function(self) {
 * (bootstrap globals) so the bar works even if info_data is missing.
 *
 * Elements rendered (left to right):
-*   dedalo_version  — code version + build stamp; adds class 'beta' for v7.0.x builds
+*   dedalo_version  — code version + build stamp; class 'beta' / 'dev' from page_globals.release_kind
 *   dedalo_db_name  — active PostgreSQL database name
 *   pg_version      — PostgreSQL server version string
 *   php_version     — PHP interpreter version
@@ -734,10 +734,18 @@ export const render_debug_info_bar = (self) => {
 		})
 
 	// dedalo_version
-	// Adds the 'beta' CSS class for v7.0.x builds to visually mark pre-stable releases
-		const version_style = dedalo_version.indexOf('7.0')!==-1
-			? ' beta'
-			: ''
+	// Marks a pre-stable build: 'beta' for a prerelease (alpha|beta|rc), 'dev' for
+	// an untagged one, nothing for a stable release. Read from the server's
+	// classification page_globals.release_kind (stable|prerelease|dev), never
+	// sniffed from the identity string: '7.0' in '7.0.0' would mark the stable
+	// release beta too (WC-2026-10-15-release-identity-from-tag, addendum 2026-10-18).
+		const version_style = (() => {
+			switch (page_globals.release_kind) {
+				case 'prerelease'	: return ' beta'
+				case 'dev'			: return ' dev'
+				default				: return ''
+			}
+		})()
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dedalo_version' + version_style,

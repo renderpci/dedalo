@@ -23,7 +23,7 @@ import { createDataCache } from '../ontology/cache_factory.ts';
 import type { Principal } from '../security/permissions.ts';
 import { SESSION_IDLE_TTL_SECONDS, type Session } from '../security/session_store.ts';
 import { getAdditionalToolsUrlMap } from '../tools/paths.ts';
-import { DEDALO_BUILD, DEDALO_ENGINE_VERSION } from '../update/build_stamp.ts';
+import { DEDALO_BUILD, DEDALO_ENGINE_VERSION, RELEASE_IDENTITY } from '../update/build_stamp.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_TRIPLE } from '../update/version.ts';
 import { getAlpha2FromCode, getLangNameFromCode } from './lang_names.ts';
 import { currentApplicationLang, currentDataLang } from './request_lang.ts';
@@ -248,14 +248,26 @@ export async function buildPageGlobals(
  *    another server reads `dedalo_data_version` beside it: the bare data triple
  *    this code belongs to, so no client ever parses one out of the identity
  *    (WC-2026-10-15-release-identity-from-tag).
+ *  - `release_kind`: which of the three the identity is (`stable` |
+ *    `prerelease` | `dev`, RELEASE_IDENTITY.kind — the /health vocabulary), so
+ *    the client marks a pre-stable build without sniffing the identity's
+ *    shape (the menu's version badge; owner Q11). Gated like the identity.
  *  - `dedalo_build`: build provenance (build_stamp.ts), the release commit
  *    date, null on a dev checkout. Key always present.
  */
 function versionFacts(isLogged: boolean): Record<string, string | null> {
-	if (!isLogged) return { dedalo_version: null, dedalo_data_version: null, dedalo_build: null };
+	if (!isLogged) {
+		return {
+			dedalo_version: null,
+			dedalo_data_version: null,
+			release_kind: null,
+			dedalo_build: null,
+		};
+	}
 	return {
 		dedalo_version: DEDALO_ENGINE_VERSION,
 		dedalo_data_version: DEDALO_VERSION,
+		release_kind: RELEASE_IDENTITY.kind,
 		dedalo_build: DEDALO_BUILD,
 	};
 }

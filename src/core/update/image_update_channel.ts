@@ -45,6 +45,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { privateDir } from '../../config/env.ts';
 import { isRepositoryReference } from './image_registries.ts';
+import { INSTALL_CHANNELS, type InstallChannel } from './install_stamp.ts';
 import { identityOfImageTag, parseReleaseVersion } from './release_identity.ts';
 import { parseImageTag } from './version_walk.ts';
 
@@ -92,11 +93,11 @@ export interface StoredHeartbeat extends HostHeartbeat {
 export interface ImageUpdateRequest {
 	schema: 1;
 	id: string;
-	/** `X.Y.Z` or `X.Y.Z-dev` — the image tag the host installs. */
+	/** `X.Y.Z`, `X.Y.Z-(alpha|beta|rc).N` or `X.Y.Z-dev` — the image tag the host installs. */
 	tag: string;
-	/** `X.Y.Z`. */
+	/** `X.Y.Z` — the data version the tag names. */
 	version: string;
-	channel: 'master' | 'dev';
+	channel: InstallChannel;
 	/**
 	 * The engine that asked, by its RELEASE IDENTITY (release_identity.ts):
 	 * `X.Y.Z`, `X.Y.Z-(alpha|beta|rc).N` or `X.Y.Z.dev`. Informational — the
@@ -238,7 +239,9 @@ const REQUEST_RULES: Readonly<Record<string, Rule>> = Object.freeze({
 	id: isUuid4,
 	tag: isTag,
 	version: matching(TRIPLE_RE),
-	channel: oneOf(['master', 'dev']),
+	// the InstallChannel ladder (install_stamp.ts INSTALL_CHANNELS): a
+	// prerelease tag is its own channel since the identity walk (design step 9c)
+	channel: oneOf(INSTALL_CHANNELS),
 	from_version: isEngineVersion,
 	requested_at: isIsoInstant,
 	requested_by: integerIn(-1, Number.MAX_SAFE_INTEGER),

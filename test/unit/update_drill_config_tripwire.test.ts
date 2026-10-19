@@ -48,9 +48,19 @@ import {
 	operatorConfig,
 	renderEnvFile,
 } from '../../scripts/lib/operator_config.ts';
-import { cloneForReleaseCommit, currentBranch, runGit } from '../../scripts/lib/release_clone.ts';
+import {
+	cloneForReleaseCommit,
+	currentBranch,
+	overlayWorkingTree,
+	runGit,
+	tagNextCommit,
+} from '../../scripts/lib/release_clone.ts';
 import { CONFIG_CATALOG } from '../../src/config/catalog/index.ts';
 import { PHP_KEY_ALIASES, parseEnvFile } from '../../src/config/env.ts';
+import {
+	prereleaseTagAbove,
+	releaseTagsNewestFirst,
+} from '../../src/core/update/code_build_plan.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const DRILL = 'scripts/update_drill.ts';
@@ -323,6 +333,128 @@ describe('update drill config — operator config, catalog keys only', () => {
 			);
 			expect(untouched.stdout.toString().trim()).toBe('one');
 			expect(existsSync(join(attached, 'a.txt'))).toBe(true);
+		} finally {
+			rmSync(scratch, { recursive: true, force: true });
+		}
+	});
+
+	test('5. the drill tests the WORKING TREE: uncommitted edits reach the clone and the consumer export; each prerelease-leg tag gets its own annotated commit', async () => {
+		const scratch = join(tmpdir(), `dedalo_overlay_gate_${process.pid}_${Date.now()}`);
+		mkdirSync(scratch, { recursive: true });
+		const git = (cwd: string, ...args: string[]) => runGit(['-C', cwd, ...args], args[0] as string);
+		const stdout = (cwd: string, ...args: string[]) =>
+			Bun.spawnSync(['git', '-C', cwd, ...args], { stdout: 'pipe', stderr: 'pipe' })
+				.stdout.toString()
+				.trim();
+		try {
+			const source = join(scratch, 'source');
+			const stampDir = join(source, 'src', 'core', 'update');
+			mkdirSync(stampDir, { recursive: true });
+			await runGit(['init', '--quiet', '-b', 'master', source], 'init');
+			writeFileSync(join(source, 'kept.txt'), 'committed\n');
+			writeFileSync(join(source, 'gone.txt'), 'committed\n');
+			writeFileSync(join(stampDir, 'build_info.txt'), '$Format:%H$\n');
+			await git(source, 'add', '-A');
+			await git(
+				source,
+				'-c',
+				'user.name=g',
+				'-c',
+				'user.email=g@localhost',
+				'commit',
+				'--quiet',
+				'-m',
+				'one',
+			);
+			// The UNCOMMITTED state a developer runs the drill on.
+			writeFileSync(join(source, 'kept.txt'), 'edited\n');
+			rmSync(join(source, 'gone.txt'));
+			mkdirSync(join(source, 'src', 'new'), { recursive: true });
+			writeFileSync(join(source, 'src', 'new', 'leaf.ts'), 'untracked\n');
+			writeFileSync(join(source, 'stray_root.txt'), 'not ours\n');
+			// never carried: the archive expands the stamp, the checkout holds a placeholder
+			writeFileSync(join(stampDir, 'build_info.txt'), 'edited placeholder\n');
+
+			// The consumer shape: a `git archive HEAD` export, then the overlay.
+			const exported = join(scratch, 'export');
+			mkdirSync(exported);
+			const tar = Bun.spawnSync(
+				['bash', '-c', `git -C '${source}' archive --format=tar HEAD | tar -x -C '${exported}'`],
+				{ stdout: 'ignore', stderr: 'pipe' },
+			);
+			expect(tar.exitCode).toBe(0);
+			// NEGATIVE CONTROL — HEAD alone is the old drill: the edit is absent.
+			expect(readFileSync(join(exported, 'kept.txt'), 'utf8')).toBe('committed\n');
+			const overlay = overlayWorkingTree(source, exported);
+			expect(readFileSync(join(exported, 'kept.txt'), 'utf8')).toBe('edited\n');
+			expect(existsSync(join(exported, 'gone.txt')), 'a deleted file survived the overlay').toBe(
+				false,
+			);
+			expect(readFileSync(join(exported, 'src', 'new', 'leaf.ts'), 'utf8')).toBe('untracked\n');
+			expect(
+				existsSync(join(exported, 'stray_root.txt')),
+				'an untracked ROOT file was carried',
+			).toBe(false);
+			expect(readFileSync(join(exported, 'src', 'core', 'update', 'build_info.txt'), 'utf8')).toBe(
+				'$Format:%H$\n',
+			);
+			expect(overlay.copied.sort()).toEqual(['kept.txt', 'src/new/leaf.ts']);
+			expect(overlay.removed).toEqual(['gone.txt']);
+			expect(overlay.skipped).toEqual(['stray_root.txt']);
+			// The source is read, never written: its uncommitted state is untouched.
+			expect(stdout(source, 'status', '--porcelain').split('\n').length).toBe(5);
+
+			// The source ALREADY holds release tags of the leg's triple and above —
+			// the real `v7.0.1` once it is cut, a real rc, a later beta — plus an
+			// older one. A shared clone inherits them all.
+			const inherited = ['v7.0.0', 'v7.0.1', 'v7.0.1-rc.1', 'v7.0.2-beta.1'];
+			for (const tag of inherited) await git(source, 'tag', tag);
+
+			// The release-clone shape: the overlay inside the edit is COMMITTED.
+			const cloneDir = join(scratch, 'clone');
+			const cloned = await cloneForReleaseCommit({
+				source,
+				cloneDir,
+				releaseBranch: 'master',
+				tag: 'v7.0.1-beta.1',
+				dropReleaseTagsFrom: [7, 0, 1],
+				message: 'release (gate)',
+				edit: (dir) => {
+					overlayWorkingTree(source, dir);
+				},
+			});
+			// OUTCOME, as Build prerelease computes it over the clone's whole tag set
+			// (code_build_plan.ts): the drill's own first tag is THE prerelease to
+			// build — not superseded by the inherited `v7.0.1`, not displaced by the
+			// inherited rc.
+			const cloneTags = stdout(cloneDir, 'tag', '--list', 'v*').split('\n');
+			expect(
+				prereleaseTagAbove(
+					releaseTagsNewestFirst(cloneTags, 'prerelease')[0] ?? null,
+					releaseTagsNewestFirst(cloneTags, 'stable')[0] ?? null,
+				),
+				'an inherited release tag decides what the leg builds',
+			).toBe('v7.0.1-beta.1');
+			expect(cloned.droppedTags.sort()).toEqual(['v7.0.1', 'v7.0.1-rc.1', 'v7.0.2-beta.1']);
+			expect(cloneTags.sort()).toEqual(['v7.0.0', 'v7.0.1-beta.1']);
+			// the SOURCE's tags are untouched: the clone's refs are its own
+			expect(stdout(source, 'tag', '--list').split('\n').sort()).toEqual(inherited.sort());
+			expect(stdout(cloneDir, 'show', 'HEAD:kept.txt')).toBe('edited');
+			expect(stdout(cloneDir, 'show', 'HEAD:src/new/leaf.ts')).toBe('untracked');
+			expect(stdout(cloneDir, 'status', '--porcelain')).toBe('');
+
+			// tagNextCommit: a NEW commit per tag, annotated — so each archive's
+			// %(describe) names exactly its own tag.
+			await tagNextCommit(cloneDir, 'v7.0.1-beta.2');
+			await tagNextCommit(cloneDir, 'v7.0.1');
+			const commits = ['v7.0.1-beta.1', 'v7.0.1-beta.2', 'v7.0.1'].map((tag) =>
+				stdout(cloneDir, 'rev-list', '-n', '1', tag),
+			);
+			expect(new Set(commits).size, 'two tags share a commit').toBe(3);
+			for (const tag of ['v7.0.1-beta.2', 'v7.0.1']) {
+				expect(stdout(cloneDir, 'cat-file', '-t', tag), `${tag} is lightweight`).toBe('tag');
+				expect(stdout(cloneDir, 'describe', '--exact-match', `${tag}^{commit}`)).toBe(tag);
+			}
 		} finally {
 			rmSync(scratch, { recursive: true, force: true });
 		}

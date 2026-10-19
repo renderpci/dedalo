@@ -15,7 +15,9 @@
  *  - the IMAGE-UPDATE REQUEST and its cancel (installer unification D3/D4,
  *     2026-10-09; core/update/image_update_request.ts): every refusal id, in the
  *     gate order, against a scratch channel dir; success writes exactly ONE
- *     request; the walk verdict is assertLinearUpgrade's; a claimed request
+ *     request; the walk verdict is the identity walk's (version_walk.ts
+ *     identityWalkRefusal — the data walk's on a release or -dev target, a
+ *     prerelease named by its identity); a claimed request
  *     cannot be cancelled. The widget's own door is asked once, on this real
  *     checkout, for the refusal → `coordinates.reason` mapping.
  */
@@ -26,6 +28,7 @@ import {
 	mkdirSync,
 	mkdtempSync,
 	readdirSync,
+	readFileSync,
 	rmSync,
 	utimesSync,
 	writeFileSync,
@@ -277,11 +280,16 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 	}
 
 	const CURRENT = [7, 0, 0] as const;
-	const seams = (dir: string, channel: 'image' | 'tree_swap' = 'image') => ({
+	/** The engine the walk starts from — pinned: the checkout's own identity moves with the commit. */
+	const RUNNING = '7.0.0';
+	const seams = (
+		dir: string,
+		channel: 'image' | 'tree_swap' = 'image',
+	): import('../../src/core/update/image_update_request.ts').ImageRequestSeams => ({
 		dir,
 		channel,
 		now: NOW,
-		current: CURRENT,
+		running: RUNNING,
 	});
 	const requestFiles = (dir: string) =>
 		readdirSync(dir).filter((name) => name === 'request.json' || name === 'inflight.json');
@@ -332,14 +340,14 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 		expect(requestFiles(fresh)).toEqual([]);
 	});
 
-	test('the walk verdict is assertLinearUpgrade’s, by id', async () => {
+	test('the walk verdict is the identity walk’s, by id (the data walk’s for a release or -dev target)', async () => {
 		const m = await modules();
 		const cases: [Record<string, unknown>, string | null][] = [
 			[{ version: '7.0.1' }, null],
 			[{ version: '7.1.0' }, null],
 			[{ version: '8.0.0' }, null],
 			[{ version: '7.0.0', channel: 'dev' }, null],
-			[{ version: '7.0.0' }, 'downgrade_or_same_version'],
+			[{ version: '7.0.0' }, 'not_newer_release'],
 			[{ version: '6.9.9' }, 'downgrade_or_same_version'],
 			[{ version: '7.0.2' }, 'version_skip'],
 			[{ version: '7.2.0' }, 'version_skip'],
@@ -351,6 +359,7 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 			// the expectation table agrees with THE rule (positive control on the table)
 			const sentence = m.assertLinearUpgrade(CURRENT, target?.triple ?? [], target?.channel);
 			expect(sentence === null).toBe(walk === null);
+			expect(m.walkRefusalOf(RUNNING, target?.identity ?? '', target?.channel)).toBe(walk as never);
 			// an installation already on developer images, so the walk is what decides
 			const result = await m.requestImageUpdate(
 				options,
@@ -360,6 +369,54 @@ describe('the image-update request (D3/D4): gates, one write, and the walk rule'
 			if (walk === null) expect(result.ok).toBe(true);
 			else expect(result as unknown).toEqual({ ok: false, reason: 'version_refused', walk });
 		}
+	});
+
+	test('a PRERELEASE item is requested by its identity: the tag IS the release, the walk starts from the running identity', async () => {
+		const m = await modules();
+		// malformed: no release, a release of another triple, a release that is no prerelease
+		for (const options of [
+			{ version: '7.0.1', channel: 'prerelease' },
+			{ version: '7.0.1', channel: 'prerelease', release: '7.0.2-beta.1' },
+			{ version: '7.0.1', channel: 'prerelease', release: '7.0.1' },
+			{ version: '7.0.1', channel: 'prerelease', release: '7.0.1-pre.1' },
+		]) {
+			const dir = channelDir();
+			expect(await m.requestImageUpdate(options, m.superuser, seams(dir))).toEqual({
+				ok: false,
+				reason: 'malformed_version',
+			});
+			expect(requestFiles(dir)).toEqual([]);
+		}
+		// the next rung's prerelease from a release: recorded, tagged by the identity
+		const dir = channelDir();
+		const result = await m.requestImageUpdate(
+			{ version: '7.0.1', channel: 'prerelease', release: '7.0.1-beta.2' },
+			m.superuser,
+			seams(dir),
+		);
+		expect(result.ok).toBe(true);
+		const written = JSON.parse(readFileSync(join(dir, 'request.json'), 'utf8'));
+		expect({ tag: written.tag, version: written.version, channel: written.channel }).toEqual({
+			tag: '7.0.1-beta.2',
+			version: '7.0.1',
+			channel: 'prerelease',
+		});
+		// within a triple the IDENTITY orders: forward from beta.6, back from rc.1
+		const within = { version: '7.0.0', channel: 'prerelease', release: '7.0.0-beta.7' };
+		expect(
+			(
+				await m.requestImageUpdate(within, m.superuser, {
+					...seams(channelDir()),
+					running: '7.0.0-beta.6',
+				})
+			).ok,
+		).toBe(true);
+		expect(
+			await m.requestImageUpdate(within, m.superuser, {
+				...seams(channelDir()),
+				running: '7.0.0-rc.1',
+			}),
+		).toEqual({ ok: false, reason: 'version_refused', walk: 'not_newer_release' });
 	});
 
 	test('a RELEASE installation never requests a -dev image: dev_channel_not_enabled, nothing written', async () => {

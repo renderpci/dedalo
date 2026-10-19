@@ -220,8 +220,10 @@ COPY .bun-sha256 .bun-sha256-darwin .bun-version .dockerignore .gitattributes .g
 # step writes the install stamp a tree-swap install writes for the same purpose:
 #   both empty      no-op — a local build (a checkout, unexpanded build_info.txt)
 #                   stays honestly `.dev`;
-#   channel master  the release posture (bare X.Y.Z);
-#   channel dev     `.dev` on an expanded build (X.Y.Z.dev);
+#   channel master      a stable release (`X.Y.Z`, the tag its archive expands to);
+#   channel prerelease  a prerelease release (`X.Y.Z-beta.N`, ditto) — release
+#                       posture, offered on the `prerelease` channel (install_stamp.ts);
+#   channel dev         `.dev` on an expanded build (X.Y.Z.dev);
 #   anything else   (one set without the other, another channel, a digest that is
 #                   not 64 lowercase hex) FAILS the build — a half-stated provenance
 #                   is a lie in an image somebody will sign.
@@ -231,7 +233,7 @@ ARG DEDALO_RELEASE_ARCHIVE_SHA256=""
 RUN set -eu; \
     channel="${DEDALO_RELEASE_CHANNEL:-}"; digest="${DEDALO_RELEASE_ARCHIVE_SHA256:-}"; \
     if [ -z "$channel" ] && [ -z "$digest" ]; then echo "provenance: none (a local build reports .dev)"; exit 0; fi; \
-    case "$channel" in master|dev) ;; *) echo "DEDALO_RELEASE_CHANNEL must be master or dev, set together with DEDALO_RELEASE_ARCHIVE_SHA256 (got channel '$channel')" >&2; exit 1 ;; esac; \
+    case "$channel" in master|prerelease|dev) ;; *) echo "DEDALO_RELEASE_CHANNEL must be master, prerelease or dev, set together with DEDALO_RELEASE_ARCHIVE_SHA256 (got channel '$channel')" >&2; exit 1 ;; esac; \
     case "$digest" in *[!0-9a-f]*|'') echo "DEDALO_RELEASE_ARCHIVE_SHA256 must be 64 lowercase hex, set together with DEDALO_RELEASE_CHANNEL" >&2; exit 1 ;; esac; \
     if [ "${#digest}" -ne 64 ]; then echo "DEDALO_RELEASE_ARCHIVE_SHA256 must be 64 lowercase hex (got ${#digest} characters)" >&2; exit 1; fi; \
     printf '{"digest":"%s","channel":"%s"}\n' "$digest" "$channel" > src/core/update/install_stamp.json; \

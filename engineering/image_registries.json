@@ -3,7 +3,7 @@
 	"schema": 1,
 	"signing": {
 		"issuer": "https://token.actions.githubusercontent.com",
-		"identity_regexp": "^https://github\\.com/dedalia-org/dedalo/\\.github/workflows/image-release\\.yml@refs/(tags/v[0-9]+\\.[0-9]+\\.[0-9]+|heads/master)$"
+		"identity_regexp": "^https://github\\.com/dedalia-org/dedalo/\\.github/workflows/image-release\\.yml@refs/(tags/v[0-9]+\\.[0-9]+\\.[0-9]+(-(alpha|beta|rc)\\.[0-9]+)?|heads/master)$"
 	},
 	"ci": {
 		"staging_repository": "ghcr.io/dedalia-org/dedalo-build"

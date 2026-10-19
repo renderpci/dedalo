@@ -4,9 +4,12 @@
  *
  *   bun scripts/ops/image_update_channel.ts <verb> [--dir D]
  *
- *   check-target <tag>  may the RUNNING engine walk to <tag> (X.Y.Z | X.Y.Z-dev)?
+ *   check-target <tag>  may the RUNNING engine walk to <tag>
+ *                       (X.Y.Z | X.Y.Z-(alpha|beta|rc).N | X.Y.Z-dev)?
  *                       exit 0 yes; exit 3 no, the reason id on stdout
- *                       (downgrade_or_same_version | version_skip | malformed_version)
+ *                       (version_walk.ts WalkRefusal: downgrade_or_same_version |
+ *                       version_skip | not_newer_release | channel_refused — or
+ *                       malformed_version)
  *   heartbeat           stdin: the host updater's heartbeat JSON; stamps seen_at
  *   claim               prints `<id> <tag>` when it claimed the pending request;
  *                       nothing when there is none (or one is already in flight)
@@ -23,14 +26,21 @@
  *
  * WHY A LEAF. It runs inside the image the operator is about to replace, in
  * whatever state that engine is in — not yet installed included — and must answer
- * fast. So it imports the channel module and the version walk only, never
- * config.ts (which would demand a configured instance and open the pool).
- * The walk is THE rule the tree swap and the panel request use
- * (src/core/update/version_walk.ts), so all three doors agree by construction.
+ * fast. So it imports the channel module, the version walk and the build
+ * stamp only, never config.ts (which would demand a configured instance and
+ * open the pool). The walk is THE rule the tree swap and the panel request use
+ * (src/core/update/version_walk.ts identityWalkRefusal), so all three doors
+ * agree by construction — and it starts from what this image CALLS ITSELF
+ * (build_stamp.ts DEDALO_ENGINE_VERSION, read from the image's own expanded
+ * build_info.txt), so a prerelease target is answered directly: `7.0.0-beta.6`
+ * → `7.0.0-beta.7` is legal, `7.0.0` → `7.0.0-rc.1` is not. An engine that
+ * predates the identity walk answers `malformed_version` there, which
+ * deploy/dedalo-image-update.sh still re-asks as the data walk.
  *
  * Gate: test/unit/image_update_channel_native.test.ts (executes every verb).
  */
 
+import { DEDALO_ENGINE_VERSION } from '../../src/core/update/build_stamp.ts';
 import {
 	claimRequest,
 	imageUpdateDir,
@@ -39,7 +49,6 @@ import {
 	recordHeartbeat,
 	recordOutcome,
 } from '../../src/core/update/image_update_channel.ts';
-import { DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
 import { parseImageTag, walkRefusalOf } from '../../src/core/update/version_walk.ts';
 
 const EXIT_OK = 0;
@@ -86,7 +95,7 @@ function checkTarget(args: readonly string[], io: CliIo): number {
 		io.out('malformed_version');
 		return EXIT_REFUSED;
 	}
-	const refusal = walkRefusalOf(DEDALO_VERSION_TRIPLE, target.triple, target.channel);
+	const refusal = walkRefusalOf(DEDALO_ENGINE_VERSION, target.identity, target.channel);
 	if (refusal === null) return EXIT_OK;
 	io.out(refusal);
 	return EXIT_REFUSED;

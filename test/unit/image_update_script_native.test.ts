@@ -21,11 +21,21 @@
  *
  * The engine CLI (`scripts/ops/image_update_channel.ts check-target`) is stubbed
  * to its contract (exit 0 ok, 3 refused + a reason id on stdout, anything else
- * unavailable) where a case sets the verdict; a PRERELEASE tag — and every ask of a
- * case that sets `engine_real` — is answered by the REAL CLI of this checkout, so
- * the prerelease cases meet the engine a stack really runs (an always-ok stub hid
- * that every engine refuses a prerelease tag as `malformed_version`). Those cases
- * name their versions from DEDALO_VERSION_TRIPLE: the real engine walks from it.
+ * unavailable) where a case sets the verdict; a case that names an `engine` is
+ * answered by a REAL engine instead, so the prerelease cases meet the engine a
+ * stack really runs (an always-ok stub once hid that every engine refused a
+ * prerelease tag as `malformed_version`):
+ *  - `engine: '<identity>'` — the CURRENT engine: this checkout's CLI run from an
+ *    engine tree that calls itself that identity (test/helpers/engine_cli_tree.ts —
+ *    the identity walk starts from what the image calls itself);
+ *  - `engine: 'old'` — an engine that PREDATES the identity walk (7.0.0-beta.6
+ *    and older, the old image a stack is often updated FROM): its exact
+ *    check-target contract — the X.Y.Z(-dev) grammar, `malformed_version` for
+ *    anything else, the triple walk from its X.Y.Z — over the unchanged data
+ *    walk it ran (version_walk.ts assertLinearUpgrade). The host's data-walk
+ *    re-ask exists for this engine.
+ * A prerelease ask with no engine named is a loud stub failure, never an "ok".
+ * Those cases name their versions from DEDALO_VERSION_TRIPLE (T).
  */
 
 import { afterAll, describe, expect, test } from 'bun:test';
@@ -46,12 +56,45 @@ import { BUILD_CONTEXT } from '../../src/core/install/host/stack/image.ts';
 import { BUILD_INFO_PATH, readReleaseIdentityOf } from '../../src/core/update/build_stamp.ts';
 import { loadImageRegistries } from '../../src/core/update/image_registries.ts';
 import { DEDALO_VERSION_TRIPLE } from '../../src/core/update/version.ts';
+import { engineCliAt } from '../helpers/engine_cli_tree.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
-const ENGINE_CLI = join(REPO_ROOT, 'scripts', 'ops', 'image_update_channel.ts');
 // realpath: the script resolves its env file against the PHYSICAL cwd (/private/var on macOS).
 const SCRATCH = realpathSync(mkdtempSync(join(tmpdir(), 'dedalo-image-update-')));
 let scratchCount = 0;
+
+/**
+ * The engine that PREDATES the identity walk, as its check-target contract
+ * (the header): written once, run by the pinned bun like the real CLI.
+ */
+const OLD_ENGINE_CLI = join(SCRATCH, 'old_engine_check_target.ts');
+writeFileSync(
+	OLD_ENGINE_CLI,
+	`import { compareVersionArrays, DEDALO_VERSION_TRIPLE } from ${JSON.stringify(join(REPO_ROOT, 'src', 'core', 'update', 'version.ts'))};
+import { assertLinearUpgrade } from ${JSON.stringify(join(REPO_ROOT, 'src', 'core', 'update', 'version_walk.ts'))};
+const match = /^(\\d{1,6})\\.(\\d{1,6})\\.(\\d{1,6})(-dev)?$/.exec(process.argv[3] ?? '');
+if (process.argv[2] !== 'check-target' || match === null) {
+	console.log('malformed_version');
+	process.exit(3);
+}
+const triple = [Number(match[1]), Number(match[2]), Number(match[3])];
+if (assertLinearUpgrade(DEDALO_VERSION_TRIPLE, triple, match[4] ? 'dev' : 'master') === null) process.exit(0);
+console.log(compareVersionArrays(triple, DEDALO_VERSION_TRIPLE) === 1 ? 'version_skip' : 'downgrade_or_same_version');
+process.exit(3);
+`,
+);
+
+/** One engine tree per identity, shared by the cases (a copy of the engine sources each). */
+const ENGINE_TREES = new Map<string, string>();
+function engineCliOf(engine: string): string {
+	if (engine === 'old') return OLD_ENGINE_CLI;
+	let cli = ENGINE_TREES.get(engine);
+	if (cli === undefined) {
+		cli = engineCliAt(join(SCRATCH, `engine-${ENGINE_TREES.size}`), engine);
+		ENGINE_TREES.set(engine, cli);
+	}
+	return cli;
+}
 
 afterAll(() => rmSync(SCRATCH, { recursive: true, force: true }));
 
@@ -95,18 +138,18 @@ if [ "$1" = compose ]; then
 			[ "$1" = -T ] && shift
 			svc="$1"
 			if [ "$svc" = dedalo ]; then
-				# check_code set: the contract stub. A prerelease tag, or engine_real
-				# set: the REAL CLI of this checkout answers — its grammar and walk are
-				# what a stack meets. Otherwise: ok.
+				# check_code set: the contract stub. An engine named (engine_cli): that
+				# REAL engine answers — its grammar and walk are what a stack meets. A
+				# prerelease ask with none named is a stub failure. Otherwise: ok.
 				tag="$(last_arg "$@")"
 				if [ -e "$S/check_code" ]; then
 					cat "$S/check_out" 2>/dev/null || true
 					exit "$(cat "$S/check_code")"
 				fi
+				[ -e "$S/engine_cli" ] && exec "$ENGINE_BUN" "$(cat "$S/engine_cli")" check-target "$tag"
 				case "$tag" in
-					*-alpha.* | *-beta.* | *-rc.*) exec "$ENGINE_BUN" "$ENGINE_CLI" check-target "$tag" ;;
+					*-alpha.* | *-beta.* | *-rc.*) echo 'stub_names_no_engine'; exit 9 ;;
 				esac
-				[ -e "$S/engine_real" ] && exec "$ENGINE_BUN" "$ENGINE_CLI" check-target "$tag"
 				exit 0
 			fi
 			[ -e "$S/backup_fail" ] && { echo 'dedalo-db-backup: pg_dump failed' >&2; exit 1; }
@@ -236,6 +279,8 @@ interface Situation {
 	cosign?: boolean;
 	/** No `.git` in the stack directory (a release tree). */
 	noGit?: boolean;
+	/** The REAL engine that answers check-target: a release identity, or 'old' (see the header). */
+	engine?: string;
 }
 
 interface Stack {
@@ -305,6 +350,7 @@ function makeStack(situation: Situation = {}): Stack {
 		running_backup: '',
 		orig_triple: tripleOf(pinned),
 		tags: 'rollback-20260101T000000Z\n7.0.0\nrollback-20261001T000000Z\n',
+		...(situation.engine === undefined ? {} : { engine_cli: engineCliOf(situation.engine) }),
 		...situation.state,
 	};
 	for (const [name, content] of Object.entries(flags)) writeFileSync(join(state, name), content);
@@ -380,7 +426,6 @@ function runUpdate(stack: Stack, args: string[]): Result {
 				PATH: `${join(stack.state, '..', 'bin')}:/usr/bin:/bin`,
 				STUB_STATE: stack.state,
 				ENGINE_BUN: process.execPath,
-				ENGINE_CLI: ENGINE_CLI,
 			},
 		},
 	);
@@ -803,17 +848,20 @@ function engineAsks(calls: string[]): string[] {
 		.map((match) => match[1] as string);
 }
 
-describe('prereleases — the release identity (design step 6, owner Q3/Q4), against the REAL engine CLI', () => {
-	test('the real engine cannot read a prerelease tag (malformed_version, exit 3) — the premise of the data-walk re-ask', () => {
-		const run = Bun.spawnSync([process.execPath, ENGINE_CLI, 'check-target', `${T}-beta.7`]);
-		expect({ out: run.stdout.toString().trim(), code: run.exitCode }).toEqual({
-			out: 'malformed_version',
-			code: 3,
-		});
+describe('prereleases against an engine that PREDATES the identity walk (design step 6, owner Q3/Q4): the host re-asks the data walk', () => {
+	test('the emulated old engine is that engine: a prerelease is malformed_version, its data walk answers (control)', () => {
+		const ask = (tag: string) => {
+			const run = Bun.spawnSync([process.execPath, OLD_ENGINE_CLI, 'check-target', tag]);
+			return { out: run.stdout.toString().trim(), code: run.exitCode };
+		};
+		expect(ask(`${T}-beta.7`)).toEqual({ out: 'malformed_version', code: 3 });
+		expect(ask(`${T}-dev`)).toEqual({ out: '', code: 0 });
+		expect(ask(T)).toEqual({ out: 'downgrade_or_same_version', code: 3 });
+		expect(ask(`${T_SKIP}-dev`)).toEqual({ out: 'version_skip', code: 3 });
 	});
 
 	test('pull: beta.6 → beta.7 moves forward; the engine is asked the DATA walk (X.Y.Z-dev) and agrees — no flag needed', () => {
-		const stack = makeStack({ pinned: `${T}-beta.6`, state: { engine_real: '' } });
+		const stack = makeStack({ pinned: `${T}-beta.6`, engine: 'old' });
 		const result = runUpdate(stack, ['--version', `${T}-beta.7`]);
 		expect(result.code, result.stderr).toBe(0);
 		expect(engineAsks(result.calls)).toEqual([`${T}-beta.7`, `${T}-dev`]);
@@ -829,12 +877,12 @@ describe('prereleases — the release identity (design step 6, owner Q3/Q4), aga
 	});
 
 	test('the data walk of a prerelease of ANOTHER X.Y.Z: the next rung is legal, a rung skip is the engine refusal no flag waives', () => {
-		const next = makeStack({ pinned: T, state: { engine_real: '' } });
+		const next = makeStack({ pinned: T, engine: 'old' });
 		const green = runUpdate(next, ['--version', `${T_NEXT}-beta.1`]);
 		expect(green.code, green.stderr).toBe(0);
 		expect(engineAsks(green.calls)).toEqual([`${T_NEXT}-beta.1`, `${T_NEXT}-dev`]);
 		for (const flags of [[], ['--skip-version-check']]) {
-			const skip = makeStack({ pinned: T, state: { engine_real: '' } });
+			const skip = makeStack({ pinned: T, engine: 'old' });
 			const refused = runUpdate(skip, ['--version', `${T_SKIP}-beta.1`, ...flags]);
 			expect({ flags, detail: refused.outcome?.detail }).toEqual({
 				flags,
@@ -847,10 +895,7 @@ describe('prereleases — the release identity (design step 6, owner Q3/Q4), aga
 	});
 
 	test('order: rc.1 → X.Y.Z forward (the engine, seeing X.Y.Z → X.Y.Z, is asked the data walk); beta.7 → beta.6 and X.Y.Z → rc.1 are steps back', () => {
-		const forward = runUpdate(makeStack({ pinned: `${T}-rc.1`, state: { engine_real: '' } }), [
-			'--version',
-			T,
-		]);
+		const forward = runUpdate(makeStack({ pinned: `${T}-rc.1`, engine: 'old' }), ['--version', T]);
 		expect(forward.code, forward.stderr).toBe(0);
 		expect(engineAsks(forward.calls)).toEqual([T, `${T}-dev`]);
 		for (const [pinned, target] of [
@@ -858,7 +903,7 @@ describe('prereleases — the release identity (design step 6, owner Q3/Q4), aga
 			[`${T}-rc.1`, `${T}-beta.10`],
 			[T, `${T}-rc.1`],
 		] as const) {
-			const stack = makeStack({ pinned, state: { engine_real: '' } });
+			const stack = makeStack({ pinned, engine: 'old' });
 			const result = runUpdate(stack, ['--version', target]);
 			expect({ pinned, target, detail: result.outcome?.detail }).toEqual({
 				pinned,
@@ -872,14 +917,14 @@ describe('prereleases — the release identity (design step 6, owner Q3/Q4), aga
 	test('the same X.Y.Z re-installed from a RELEASE pin is not blind: the engine refusal stands', () => {
 		// A bare pin is not a prerelease, so X.Y.Z → X.Y.Z (waived at step 3) is
 		// still the engine's downgrade_or_same_version — no data-walk re-ask.
-		const stack = makeStack({ pinned: T, state: { engine_real: '' } });
+		const stack = makeStack({ pinned: T, engine: 'old' });
 		const result = runUpdate(stack, ['--version', T, '--skip-version-check']);
 		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });
 		expect(engineAsks(result.calls)).toEqual([T]);
 	});
 
 	test('Q4: a bare X.Y.Z pin (a beta BUILT before beta.7) → X.Y.Z-beta.7 is refused, the refusal names --skip-version-check and why; with it, the REAL engine lets it through', () => {
-		const stack = makeStack({ pinned: T, state: { engine_real: '' } });
+		const stack = makeStack({ pinned: T, engine: 'old' });
 		const result = runUpdate(stack, ['--version', `${T}-beta.7`]);
 		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'downgrade_refused' });
 		expect(result.stderr).toContain('--skip-version-check');
@@ -888,7 +933,7 @@ describe('prereleases — the release identity (design step 6, owner Q3/Q4), aga
 		expect(at(result.calls, /^docker (tag|pull)|exec -T backup| up /)).toBe(-1);
 		// …and the flag waives it ONCE, within the same data version — the documented
 		// command (docs/install/docker.md) green end to end
-		const waived = makeStack({ pinned: T, state: { engine_real: '' } });
+		const waived = makeStack({ pinned: T, engine: 'old' });
 		const green = runUpdate(waived, ['--version', `${T}-beta.7`, '--skip-version-check']);
 		expect(green.code, green.stderr).toBe(0);
 		expect(engineAsks(green.calls)).toEqual([`${T}-beta.7`, `${T}-dev`]);
@@ -913,13 +958,65 @@ describe('prereleases — the release identity (design step 6, owner Q3/Q4), aga
 			expect(result.env).toBe(stack.envBefore);
 		}
 	});
+});
+
+describe('prereleases against the CURRENT engine: the identity walk answers directly, no re-ask (design step 9c)', () => {
+	test('the current engine reads a prerelease tag and walks it from what it calls itself — the premise the re-ask no longer needs', () => {
+		const ask = (engine: string, tag: string) => {
+			const run = Bun.spawnSync([process.execPath, engineCliOf(engine), 'check-target', tag]);
+			return { out: run.stdout.toString().trim(), code: run.exitCode };
+		};
+		expect(ask(`${T}-beta.6`, `${T}-beta.7`)).toEqual({ out: '', code: 0 });
+		expect(ask(`${T}-rc.1`, T)).toEqual({ out: '', code: 0 });
+		expect(ask(`${T}-beta.7`, `${T}-beta.6`)).toEqual({ out: 'not_newer_release', code: 3 });
+		expect(ask(T, `${T}-rc.1`)).toEqual({ out: 'not_newer_release', code: 3 });
+		expect(ask(T, `${T_NEXT}-beta.1`)).toEqual({ out: '', code: 0 });
+		expect(ask(T, `${T_SKIP}-beta.1`)).toEqual({ out: 'version_skip', code: 3 });
+	});
+
+	test('pull: beta.6 → beta.7 and rc.1 → X.Y.Z are asked ONCE, as themselves', () => {
+		for (const [pinned, target] of [
+			[`${T}-beta.6`, `${T}-beta.7`],
+			[`${T}-rc.1`, T],
+		] as const) {
+			const stack = makeStack({ pinned, engine: pinned });
+			const result = runUpdate(stack, ['--version', target]);
+			expect(result.code, result.stderr).toBe(0);
+			expect(engineAsks(result.calls)).toEqual([target]);
+			expect(result.stderr).not.toContain('does not know prerelease versions');
+			expect(result.env).toBe(repinned(stack, target));
+			expectStackHygiene(stack, result);
+		}
+	});
+
+	test('an INFORMED refusal is never re-asked away: the engine runs a newer beta than the pin says', () => {
+		// the pin says beta.6 (step 3 lets beta.7 through), the image calls itself
+		// beta.8: the engine's not_newer_release stands — the old engine's blind
+		// downgrade_or_same_version is the only refusal the host re-asks
+		const stack = makeStack({ pinned: `${T}-beta.6`, engine: `${T}-beta.8` });
+		const result = runUpdate(stack, ['--version', `${T}-beta.7`, '--skip-version-check']);
+		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });
+		expect(result.stderr).toContain(`the engine refuses ${T}-beta.7: not_newer_release`);
+		expect(engineAsks(result.calls)).toEqual([`${T}-beta.7`]);
+		expect(result.env).toBe(stack.envBefore);
+		expect(at(result.calls, /^docker (tag|pull)|exec -T backup| up /)).toBe(-1);
+	});
+
+	test('a rung skip to a prerelease is the engine refusal, asked once', () => {
+		const stack = makeStack({ pinned: T, engine: T });
+		const result = runUpdate(stack, ['--version', `${T_SKIP}-beta.1`, '--skip-version-check']);
+		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });
+		expect(result.stderr).toContain(`the engine refuses ${T_SKIP}-beta.1: version_skip`);
+		expect(engineAsks(result.calls)).toEqual([`${T_SKIP}-beta.1`]);
+	});
 
 	test('build: the prerelease TAG is checked out and built, labelled with its identity', () => {
 		const stack = makeStack({
 			mode: 'build',
 			image: 'localhost/dedalo',
 			pinned: `${T}-beta.6`,
-			state: { target_triple: T, engine_real: '' },
+			state: { target_triple: T },
+			engine: `${T}-beta.6`,
 		});
 		const result = runUpdate(stack, ['--version', `${T}-beta.7`]);
 		expect(result.code, result.stderr).toBe(0);
@@ -934,7 +1031,8 @@ describe('prereleases — the release identity (design step 6, owner Q3/Q4), aga
 			mode: 'build',
 			image: 'localhost/dedalo',
 			pinned: `${T}-beta.6`,
-			state: { target_triple: T, describe: `v${T}-beta.7`, engine_real: '' },
+			state: { target_triple: T, describe: `v${T}-beta.7` },
+			engine: `${T}-beta.6`,
 		});
 		const green = runUpdate(named, ['--version', `${T}-beta.7`, '--ref', 'release/beta-7']);
 		expect(green.code, green.stderr).toBe(0);
@@ -944,7 +1042,8 @@ describe('prereleases — the release identity (design step 6, owner Q3/Q4), aga
 			mode: 'build',
 			image: 'localhost/dedalo',
 			pinned: `${T}-beta.6`,
-			state: { target_triple: T, describe: `v${T}-beta.6`, engine_real: '' },
+			state: { target_triple: T, describe: `v${T}-beta.6` },
+			engine: `${T}-beta.6`,
 		});
 		const refused = runUpdate(other, ['--version', `${T}-beta.7`, '--ref', 'release/beta-6']);
 		expect(refused.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });
@@ -959,7 +1058,8 @@ describe('prereleases — the release identity (design step 6, owner Q3/Q4), aga
 			mode: 'build',
 			image: 'localhost/dedalo',
 			pinned: `${T}-beta.6`,
-			state: { target_triple: T, lightweight: '', engine_real: '' },
+			state: { target_triple: T, lightweight: '' },
+			engine: `${T}-beta.6`,
 		});
 		const result = runUpdate(stack, ['--version', `${T}-beta.7`]);
 		expect(result.outcome).toMatchObject({ status: 'refused', detail: 'version_refused' });

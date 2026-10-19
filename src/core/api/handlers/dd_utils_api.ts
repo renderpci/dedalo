@@ -925,9 +925,11 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		// only built release archives on the caller's linear upgrade path.
 		// `version` is the asker's DATA triple (a bare `X.Y.Z` — the shape every
 		// master, older ones included, parses); `release` is its RELEASE
-		// IDENTITY (`7.0.0-beta.6`), optional and today informational only: no
-		// answer depends on it until the identity walk orders prereleases
-		// (WC-2026-10-15-release-identity-from-tag). Never parsed for the triple.
+		// IDENTITY (`7.0.0-beta.6`), optional: it places the asker in the
+		// release sequence, so a prerelease install is offered what sits ABOVE
+		// it in its own triple (code_manifest.ts askerIdentity — validated
+		// there, never trusted as given). Never parsed for the triple
+		// (WC-2026-10-15-release-identity-from-tag).
 		const options = (rqo.options ?? {}) as {
 			version?: unknown;
 			release?: unknown;
@@ -958,15 +960,22 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		const { buildCodeUpdateInfo, RELEASE_NOTES_DIR } = await import(
 			'../../update/code_manifest.ts'
 		);
+		const { isInstallChannel } = await import('../../update/install_stamp.ts');
 		const info = buildCodeUpdateInfo({
 			clientVersion,
 			serverVersion: DEDALO_VERSION_TRIPLE,
 			codeFilesDir: config.update.codeFilesDir,
 			publicBaseUrl: `${publicOrigin()}/dedalo/install/code`,
-			// The consumer's panel switch. Anything but the exact string 'dev' is the
-			// release channel, and it only matters on a master that opted in.
-			channel: options.channel === 'dev' ? 'dev' : 'master',
+			// The consumer's panel choice. Anything but an exact channel token is
+			// the release channel, and a token only matters on a master that
+			// opted into that channel. `prerelease` is new (RELEASE_IDENTITY_DESIGN
+			// §2.8); an OLDER master parses `=== 'dev' ? 'dev' : 'master'` and so
+			// answers a prerelease ask as a release one — never a refusal — which
+			// the client reads from the absent `info.channels` (update_code_channel.js).
+			channel: isInstallChannel(options.channel) ? options.channel : 'master',
+			clientRelease: options.release,
 			devChannelEnabled: config.update.devChannelEnabled,
+			prereleaseChannelEnabled: config.update.prereleaseChannelEnabled,
 			// the master's own frozen release notes (changes/<version>/release.json,
 			// WC-2026-10-09-code-manifest-release-notes)
 			changesDir: RELEASE_NOTES_DIR,

@@ -83,6 +83,7 @@ import {
 	type PinnedHopResponse,
 	SSRF_REFUSAL_KINDS,
 } from '../../src/core/security/ssrf_guard.ts';
+import { RELEASE_IDENTITY } from '../../src/core/update/build_stamp.ts';
 
 // ---------------------------------------------------------------------------
 // The fake site
@@ -1367,6 +1368,14 @@ describe('harvestFetch — the request the door sends', () => {
 		expect(page?.headers.get('accept-language')).toBe('es');
 		expect(page?.headers.get('user-agent')).toBe(HARVEST_USER_AGENT);
 		expect(HARVEST_USER_AGENT.toLowerCase().startsWith('dedalo/')).toBe(true);
+		// The product version is the RELEASE IDENTITY (design Q10): what the sent
+		// header names is the software that sent it. Bites on any non-stable
+		// checkout — there the data version (`7.0.0`) is not the identity
+		// (`7.0.0.dev`, `7.0.0-beta.N`), and the space after the version keeps a
+		// `7.0.0` prefix of `7.0.0.dev` from matching.
+		expect(
+			page?.headers.get('user-agent')?.startsWith(`dedalo/${RELEASE_IDENTITY.version} (`),
+		).toBe(true);
 		for (const name of ['Authorization', 'Host', 'User-Agent', 'Cookie', 'cookie', 'Origin']) {
 			expect(
 				await codeOf(harvest(site, { url: 'https://ua.test/', headers: { [name]: 'x' } })),

@@ -15,4 +15,4 @@ DEDALO_REGISTRY_LABELS=('GitHub Container Registry' 'Docker Hub')
 DEDALO_REGISTRY_ROLES=('mirror' 'mirror')
 DEDALO_REGISTRY_REPOSITORIES=('ghcr.io/dedalia-org/dedalo' 'docker.io/dedalia/dedalo')
 DEDALO_IMAGE_SIGNING_ISSUER='https://token.actions.githubusercontent.com'
-DEDALO_IMAGE_SIGNING_IDENTITY_REGEXP='^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+|heads/master)$'
+DEDALO_IMAGE_SIGNING_IDENTITY_REGEXP='^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?|heads/master)$'
