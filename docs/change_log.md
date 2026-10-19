@@ -137,6 +137,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The Section id search field fills its card like every other search field.**
+
+    In the search panel, the *Id* field of a section rendered its value box at its content width: the box stayed short and left dead space inside the card, while every other field's box spanned the card. It now fills the card like the rest, in both the empty and the valued (highlighted) state.
+
 - **The selected field is fully tinted orange — its list surfaces included — and its label stays readable in both themes**
 
     When you clicked a field, only its label turned orange: the tint behind the whole

@@ -26645,7 +26645,6 @@ body.inspector_resizing {
 }
 .component_section_id.search {
   color: initial;
-  flex-grow: initial !important;
 }
 .component_section_id.search > .label {
   flex: initial;

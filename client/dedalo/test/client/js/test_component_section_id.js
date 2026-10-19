@@ -414,6 +414,23 @@ describe(`COMPONENT_SECTION_ID SEARCH DATA OPERATIONS`, function() {
 
 
 
+	it(`search field fills its card`, function() {
+
+		// the card is a flex row and the wrapper is its only in-flow item, so it
+		// must keep the shared grow (a `flex-grow: 0` on component_section_id
+		// .search left the value box at content width, alone among the fields).
+		// Asserted as the style, not as a measured width: on this page the card
+		// is wide enough that the contraction is invisible (the value box only
+		// fell short of the card in the app's ~16rem tracks).
+		assert.isOk(node.closest('.search_component'), 'wrapper expected inside a .search_component card')
+
+		const { flexGrow } = window.getComputedStyle(node)
+
+		assert.notEqual(flexGrow, '0', 'expected the search field to grow and fill its card')
+	});
+
+
+
 	it(`destroy search instance`, async function() {
 
 		if (instance) {
