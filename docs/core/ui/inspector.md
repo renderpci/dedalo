@@ -137,7 +137,8 @@ record on the inspector (cleared on `save` and on every section render), so
 leaving a field re-renders the panel from the cache with no request. To keep the
 panel from jumping, a row waiting for its values keeps the height of the
 previous render, or — on first paint — reserves two lines (date + user; one for
-*Published*). A response for a record the inspector has already left is
+*Published*). Values that arrive after the panel is on screen fade in (200 ms,
+none under reduced motion); values from the cache show at once. A response for a record the inspector has already left is
 dropped. User names are written as text, never as markup.
 
 !!! note "Publication history retention"

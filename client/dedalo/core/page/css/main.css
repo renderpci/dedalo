@@ -7889,10 +7889,17 @@ body:has(.component_av.view_viewer) {
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .value.record_info_value.loading {
   min-height: calc(2lh + 2 * var(--space-2));
-  opacity: 0.5;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .value.record_info_value.loading.published {
   min-height: calc(1lh + 2 * var(--space-2));
+}
+.inspector > .inspector_content_data > .element_info_wrap > .element_info .value.record_info_value.fade_in {
+  animation: record_info_fade_in var(--transition-base) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .inspector > .inspector_content_data > .element_info_wrap > .element_info .value.record_info_value.fade_in {
+    animation: none;
+  }
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .value.code {
   white-space: pre-wrap;
@@ -7909,7 +7916,7 @@ body:has(.component_av.view_viewer) {
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .value.code .button_value_copy {
   align-self: center;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   margin: 0px;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .value.code .button_value_copy:active {
@@ -8112,6 +8119,11 @@ body:has(.component_av.view_viewer) {
   }
   .inspector > .inspector_content_data > .element_info_wrap > .element_info {
     font-size: 0.95rem;
+  }
+}
+@keyframes record_info_fade_in {
+  from {
+    opacity: 0;
   }
 }
 /**

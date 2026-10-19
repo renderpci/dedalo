@@ -1485,7 +1485,7 @@ export const format_record_info_date = function(date) {
 /**
 * FILL_RECORD_INFO_NODES
 * Writes record_info into the three value nodes. Text nodes only — user names
-* are data, never markup.
+* are data, never markup. A row that was waiting on screen gets 'fade_in'.
 * @param {Object} nodes - { created, modified, published } value nodes
 * @param {Object|null} record_info - get_record_info payload
 * @returns {void}
@@ -1510,8 +1510,12 @@ export const fill_record_info_nodes = function(nodes, record_info) {
 		})
 	}
 
+	// a row that waited on screen fades its values in; one filled before attach
+	// (the cache path of render_section_info) shows at once
 	for (const node of [nodes.created, nodes.modified, nodes.published]) {
+		const fade = node.classList.contains('loading') && node.isConnected
 		node.classList.remove('loading')
+		node.classList.toggle('fade_in', fade)
 		node.style.minHeight = ''
 	}
 
@@ -1688,8 +1692,8 @@ export const render_component_info = function(self, component) {
 
 		// button copy value (created once)
 		const button_value_copy_node = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button_value_copy warning hide',
+			element_type	: 'button',
+			class_name		: 'button_value_copy primary light hide',
 			inner_html		: get_label.copy || 'Copy',
 			parent			: value_node
 		})

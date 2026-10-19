@@ -135,6 +135,18 @@ describe(`INSPECTOR RECORD INFO`, function() {
 	})
 
 
+	it(`only a row waiting on screen fades in`, function() {
+		const nodes = make_nodes() // attached: a row waiting on screen
+		nodes.created.classList.add('loading')
+		nodes.modified.remove()
+		nodes.modified.classList.add('loading') // detached: the cache path
+		fill_record_info_nodes(nodes, payload)
+		assert.isTrue(nodes.created.classList.contains('fade_in'), 'attached + waiting → fade')
+		assert.isFalse(nodes.modified.classList.contains('fade_in'), 'detached → at once')
+		assert.isFalse(nodes.published.classList.contains('fade_in'), 'not waiting → at once')
+	})
+
+
 	it(`a failed load releases the reservation to the empty values`, async function() {
 		data_manager.request = async () => ({ data: false })
 		const self = make_self(5)

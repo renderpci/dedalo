@@ -377,10 +377,18 @@
 				// A re-render carries the previous measured height inline instead.
 				&.record_info_value.loading {
 					min-height: calc(2lh + 2 * var(--space-2));
-					opacity: 0.5;
 
 					&.published {
 						min-height: calc(1lh + 2 * var(--space-2));
+					}
+				}
+				// values that arrive after paint fade in (fill_record_info_nodes);
+				// a row filled from the cache before attach shows at once.
+				&.record_info_value.fade_in {
+					animation: record_info_fade_in var(--transition-base) both;
+
+					@media (prefers-reduced-motion: reduce) {
+						animation: none;
 					}
 				}
 
@@ -400,7 +408,7 @@
 
 					.button_value_copy {
 						align-self: center;
-						font-size: 0.9rem;
+						font-size: 0.8rem;
 						margin: 0px;
 
 						&:active {
@@ -719,3 +727,7 @@
 	}
 
 }//end .inspector
+
+@keyframes record_info_fade_in {
+	from { opacity: 0; }
+}
