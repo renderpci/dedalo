@@ -7871,6 +7871,8 @@ body:has(.component_av.view_viewer) {
   grid-column-end: 3;
   text-align: center;
   justify-content: center;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .value {
   background-color: transparent;
