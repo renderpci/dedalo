@@ -7674,7 +7674,7 @@ body:has(.component_av.view_viewer) {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-4) 1.6rem var(--space-3) var(--space-4);
+  padding: 0.5rem 1.6rem 0.5rem 0.5rem;
   color: var(--color_grey_7);
   font-weight: 600;
   font-size: 0.72rem;
@@ -8078,8 +8078,6 @@ body:has(.component_av.view_viewer) {
   .inspector > .inspector_content_data .time_machine_list_head,
   .inspector > .inspector_content_data .component_history_head,
   .inspector > .inspector_content_data .activity_info_head {
-    padding-top: var(--space-4);
-    padding-bottom: var(--space-4);
     font-size: 0.92rem;
   }
   .inspector > .inspector_content_data > .buttons_container.top > span,
