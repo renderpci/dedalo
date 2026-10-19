@@ -149,6 +149,7 @@ const SAME_KEYS: readonly string[] = [
 	'DEDALO_CODE_FILES_DIR',
 	'DEDALO_CODE_SERVER_GIT_DIR',
 	'DEDALO_CODE_SERVER_DEV_CHANNEL',
+	'DEDALO_CODE_SERVER_PRERELEASE_CHANNEL',
 	'DEDALO_SOURCE_VERSION_LOCAL_DIR',
 	// How many code restore points survive retention. NEW_IN_V7 by construction:
 	// v6's updater overwrote the tree in place and kept nothing to roll back to,

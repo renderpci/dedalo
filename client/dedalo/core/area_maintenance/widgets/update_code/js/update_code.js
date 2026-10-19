@@ -56,6 +56,7 @@
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
 	import {render_update_code} from './render_update_code.js'
 	import {data_version_of} from '../../../../common/js/release_identity.js'
+	import {channel_token} from './update_code_channel.js'
 
 
 
@@ -167,8 +168,10 @@ export const update_code = function() {
 * @param {string} server.code - Server authentication / identifier code passed
 *   to the remote API so it can scope the response to this installation.
 * @param {string} server.url  - Full URL of the remote dd_utils_api endpoint.
-* @param {string} [channel] - 'dev' to ALSO ask for developer builds (the panel's
-*   "Developer builds" switch); anything else asks for published releases only.
+* @param {string} [channel] - the panel's channel choice, the ladder
+*   'master' ⊂ 'prerelease' ⊂ 'dev' (update_code_channel.js): 'prerelease' ALSO
+*   asks for prereleases, 'dev' for prereleases and developer builds; anything
+*   else asks for published releases only.
 * @returns {Promise<Object>} api_response — envelope from the remote server:
 *   {
 *     data : {
@@ -216,11 +219,14 @@ update_code.prototype.get_code_update_info = async function ( server, channel ) 
 				version	: data_version,
 				release	: release,
 				code	: code,
-				// 'dev' asks the master to ALSO offer developer builds (branch
-				// builds, same version — no bump). It is an ask, not a right: a
-				// master that did not opt in answers exactly as it does for
-				// 'master'. Anything but 'dev' is the release channel.
-				channel	: channel==='dev' ? 'dev' : 'master'
+				// 'prerelease' asks the master to ALSO offer prereleases (immutable
+				// betas), 'dev' prereleases and developer builds (branch builds,
+				// same version — no bump). An ask, not a right: a master that did
+				// not opt into a rung — or an OLDER master, which knows only 'dev'
+				// — answers as for 'master' (the panel reads that back from
+				// info.channels: update_code_channel.js channel_shortfall).
+				// Anything but an exact token is the release channel.
+				channel	: channel_token(channel)
 			}
 		},
 		retries : 1, // one try only
@@ -438,8 +444,12 @@ update_code.prototype.delete_restore_point = async function ( options ) {
 * @param {Object} options
 * @param {string} options.version - the release's 'X.Y.Z' exactly as the code
 *   server's manifest listed it
-* @param {string} [options.channel] - 'dev' for a developer item (the manifest
-*   item's own `channel`), anything else is the release channel
+* @param {string} [options.channel] - the manifest item's own `channel`: 'dev'
+*   for a developer item, 'prerelease' for a prerelease (an engine without
+*   prerelease images refuses it as a malformed version — loudly, never as
+*   the stable image of the same triple), anything else the release channel
+* @param {string} [options.release] - a prerelease item's release identity
+*   ('7.0.1-beta.2'): the image tag it names (sent only when given)
 * @returns {Promise<Object>} api_response — `data.request` (the recorded request)
 *   on success; `error` with `coordinates.reason` on a refusal
 */
@@ -456,7 +466,10 @@ update_code.prototype.request_image_update = async function ( options ) {
 			},
 			options	: {
 				version	: options.version,
-				channel	: options.channel==='dev' ? 'dev' : 'master'
+				channel	: channel_token(options.channel),
+				// a prerelease item's identity (code_manifest CodeReleaseItem.release):
+				// the server tags the request by it (image_update_request.ts requestedTag)
+				...(typeof options.release==='string' ? { release : options.release } : {})
 			}
 		},
 		retries : 1, // one try only: a request is not idempotent

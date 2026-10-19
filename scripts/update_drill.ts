@@ -22,6 +22,19 @@
  * with the version fixed on both sides of the swap, only the installed archive
  * digest can tell the new tree from a rolled-back one.
  *
+ * The release pass (no `--dev`) first runs THE PRERELEASE LEG (gate 17 of the
+ * release-identity design, the only end-to-end proof of the prerelease
+ * channel): the clone cuts `v<to>-beta.1`, `-beta.2` and `v<to>` on three
+ * commits (annotated); the master, opted into the prerelease channel and
+ * running THIS checkout (it never runs the betas it publishes), builds each
+ * through *Build prerelease* / *Build release* — a rebuild of a published
+ * identity, and a prerelease below the stable, refused; a second consumer on
+ * the prerelease channel walks `<from>` → beta.1 → beta.2 → `<to>` across
+ * three planned-death restarts, /health naming the exact identity and the
+ * installed digest at every hop; and a stable-channel asker (with and without
+ * a channel token, and one already running beta.1) is offered no beta at any
+ * point. Steps 5–9 below then run unchanged against the same master.
+ *
  * This drill IS that scenario, end to end, entirely on scratch surfaces:
  *
  *   RELEASE.md steps 1–8 (the master side)
@@ -120,7 +133,12 @@ import {
 	resolveSuiteDatabase,
 } from './client_test_server.ts';
 import { operatorConfig, renderEnvFile } from './lib/operator_config.ts';
-import { cloneForReleaseCommit } from './lib/release_clone.ts';
+import {
+	cloneForReleaseCommit,
+	overlayWorkingTree,
+	tagNextCommit,
+	type WorkingTreeOverlay,
+} from './lib/release_clone.ts';
 
 // ---------------------------------------------------------------------------
 // Fixed drill facts
@@ -195,6 +213,26 @@ const CURRENT_TRIPLE_LITERAL = `[${RUNG.from.join(', ')}]`;
 const RELEASE_TRIPLE_LITERAL = DEV_CHANNEL_MODE
 	? CURRENT_TRIPLE_LITERAL
 	: `[${RUNG.to.join(', ')}]`;
+/**
+ * THE PRERELEASE LEG (RELEASE_IDENTITY_DESIGN §2.8 items 3/7, gate 17) rides
+ * the release pass, never `--dev`: the release clone cuts `v<to>-beta.1`, then
+ * `-beta.2`, then the stable `v<to>` (each on its own commit, annotated), the
+ * master — opted into the prerelease channel and running THIS checkout, so a
+ * code server that never ran the betas it publishes — builds each through the
+ * panel's *Build prerelease* action, and a consumer on the prerelease channel
+ * walks beta.1 → beta.2 → stable across three planned-death restarts, /health
+ * answering the exact identity at every hop. A stable-channel asker is shown
+ * none of the betas at any point. The stable consumer of steps 5–9 then
+ * rehearses the release channel over the same master and the same `<to>.zip`.
+ */
+const PRERELEASE_LEG = !DEV_CHANNEL_MODE;
+/** The prerelease identities the leg cuts, in walk order (the stable `<to>` comes last). */
+const PRERELEASE_IDENTITIES = [`${RUNG.to.join('.')}-beta.1`, `${RUNG.to.join('.')}-beta.2`];
+/**
+ * The tag STEP 1 cuts with the release commit: the first beta on the release
+ * pass (the leg tags the rest), none on `--dev` (a branch tip names no release).
+ */
+const FIRST_TAG = PRERELEASE_LEG ? `v${PRERELEASE_IDENTITIES[0]}` : undefined;
 /** The archive's file name on each channel (code_build_plan.ts releaseFileName). */
 const RELEASE_FILE_NAME = DEV_CHANNEL_MODE
 	? `${RELEASE_VERSION}-dev.zip`
@@ -205,12 +243,13 @@ const API_PATH = '/api/v1/json';
 /**
  * The whole-run ceiling. It must stay ABOVE the sum of the per-step budgets
  * below (boots 120s + 150s, streams 120s + 180s + 420s, post-restart health 150s,
- * plus the git/copy/build work) — otherwise a cold machine trips this generic
+ * plus the git/copy/build work — and on the release pass the prerelease leg's
+ * second consumer: a boot 150s + three hops of 420s + 150s + 30s) — otherwise a cold machine trips this generic
  * deadline instead of the step that is actually slow, and the failure names
  * the wrong thing. Warm runtime is 2–5 min; this is a hang-breaker, not a
  * performance budget.
  */
-const TOTAL_DEADLINE_MS = 25 * 60 * 1000;
+const TOTAL_DEADLINE_MS = 50 * 60 * 1000;
 
 interface Envelope {
 	ok?: boolean;
@@ -590,6 +629,8 @@ function updateRequestBody(
 		sha256?: string;
 		/** Forwarded VERBATIM from the manifest item — the dev channel travels here. */
 		channel?: string;
+		/** A prerelease item's identity (`7.0.1-beta.2`), forwarded verbatim like the rest. */
+		release?: string;
 	},
 	{ waiveBackup = false }: { waiveBackup?: boolean } = {},
 ): Record<string, unknown> {
@@ -707,6 +748,9 @@ function materializeConsumer(fromRoot: string, to: string): Promise<void> {
 		for (const alias of ['.claude', 'CLAUDE.md']) {
 			rmSync(join(to, alias), { recursive: true, force: true });
 		}
+		// The checkout's UNCOMMITTED edits, as the release clone gets them: the
+		// consumer is the code under test, never a HEAD that predates it.
+		reportOverlay('consumer', overlayWorkingTree(fromRoot, to));
 		// PIN the consumer to the rung's FROM end. The export carries HEAD's
 		// triple, which stops being the upgrade's starting point the moment the
 		// checkout moves past it — after cutting a release, HEAD IS the release,
@@ -732,10 +776,551 @@ function materializeConsumer(fromRoot: string, to: string): Promise<void> {
 	})();
 }
 
+/**
+ * Say LOUDLY when a tree is not HEAD: a drill that tested the working tree must
+ * not be mistaken for one that tested the commit (and the reverse).
+ */
+function reportOverlay(whose: string, overlay: WorkingTreeOverlay): void {
+	const touched = overlay.copied.length + overlay.removed.length;
+	if (touched === 0 && overlay.skipped.length === 0) return;
+	console.log(
+		`[drill] ${whose}: HEAD + ${overlay.copied.length} uncommitted file(s) of the checkout, ${overlay.removed.length} deleted — the drill tests the WORKING TREE`,
+	);
+	if (overlay.skipped.length > 0) {
+		console.log(
+			`[drill] ${whose}: left out (untracked root file or symlink): ${overlay.skipped.join(', ')}`,
+		);
+	}
+}
+
 /** A sealed state file: a finished install, so neither instance's boot is refused (exit 78). */
 function sealStateFile(path: string): void {
 	mkdirSync(join(path, '..'), { recursive: true });
 	writeFileSync(path, `${JSON.stringify({ install_status: 'sealed' })}\n`);
+}
+
+// ---------------------------------------------------------------------------
+// Shared legs — the master's build, the manifest ask, a consumer, one hop
+// ---------------------------------------------------------------------------
+
+/** A manifest item, exactly as the master advertises it (code_manifest.ts CodeReleaseItem). */
+interface ReleaseItem {
+	version: string;
+	url: string;
+	sha256?: string;
+	channel?: string;
+	release?: string;
+}
+
+/**
+ * The serve_code panel's build buttons, through the wire. The prerelease
+ * button sends the CHANNEL alone, as the panel does (a triple names no single
+ * prerelease — the server picks the newest prerelease tag above the newest
+ * stable one); the release and developer passes keep the version claim the
+ * build checks against the ref's own version.ts.
+ */
+function buildThroughWire(
+	masterOrigin: string,
+	masterAuth: Auth,
+	channel: 'master' | 'prerelease' | 'dev',
+): Promise<Envelope> {
+	return apiPost(
+		masterOrigin,
+		{
+			dd_api: 'dd_area_maintenance_api',
+			action: 'widget_request',
+			prevent_lock: true,
+			source: { type: 'widget', model: 'serve_code', action: 'build_version_from_git_master' },
+			options: channel === 'prerelease' ? { channel } : { version: RELEASE_VERSION, channel },
+		},
+		masterAuth,
+	);
+}
+
+/**
+ * A build that must succeed, checked against the disk exactly where RELEASE.md
+ * step 7 looks: the archive `<X>/<X.Y>/<fileName>` and a sidecar naming the
+ * same digest the build answered.
+ */
+async function buildOrFail(
+	masterOrigin: string,
+	masterAuth: Auth,
+	channel: 'master' | 'prerelease' | 'dev',
+	codeFilesDir: string,
+	fileName: string,
+): Promise<string> {
+	const built = await buildThroughWire(masterOrigin, masterAuth, channel);
+	must(
+		built.ok === true,
+		`master build (${channel}) refused: ${JSON.stringify(built.error ?? built)}`,
+	);
+	const builtData = built.data as Record<string, unknown>;
+	const builtSha = typeof builtData?.sha256 === 'string' ? builtData.sha256 : '';
+	must(/^[a-f0-9]{64}$/.test(builtSha), `built sha256 (${channel}) is not 64 hex chars`);
+	const zip = join(codeFilesDir, String(RUNG.to[0]), `${RUNG.to[0]}.${RUNG.to[1]}`, fileName);
+	must(existsSync(zip), `release archive missing at ${zip}`);
+	const sidecar = (readFileSync(`${zip}.sha256`, 'utf8').trim().split(/\s+/)[0] ?? '').trim();
+	must(sidecar === builtSha, `sidecar digest of ${fileName} does not match the build answer`);
+	console.log(`[drill] built ${fileName} (${channel}) sha256 ${builtSha.slice(0, 12)}…`);
+	return builtSha;
+}
+
+/**
+ * get_code_update_info exactly as update_code.js sends it: `version` the
+ * asker's DATA triple, `release` its identity, `channel` its panel choice
+ * (absent = the release channel, as an older client sends it).
+ */
+async function askManifest(
+	masterOrigin: string,
+	ask: { version: string; release?: string; channel?: string },
+): Promise<{ files: ReleaseItem[]; info: { version: string; channels?: string[] } }> {
+	const manifest = await apiPost(masterOrigin, {
+		dd_api: 'dd_utils_api',
+		action: 'get_code_update_info',
+		prevent_lock: true,
+		source: {},
+		options: { ...ask, code: DRILL_CODE },
+	});
+	must(
+		manifest.ok === true,
+		`manifest refused (${JSON.stringify(ask)}): ${JSON.stringify(manifest.error ?? manifest)}`,
+	);
+	const data = manifest.data as {
+		files: ReleaseItem[];
+		info: { version: string; channels?: string[] };
+	};
+	must(Array.isArray(data?.files), `manifest (${JSON.stringify(ask)}) carries no files list`);
+	return data;
+}
+
+/** What a manifest answer offers, as identities — the readable form every leg assertion prints. */
+function offeredIdentities(files: readonly ReleaseItem[]): string[] {
+	return files.map((item) => item.release ?? item.version);
+}
+
+/** Everything one supervised consumer install is, once it answers /health. */
+interface Consumer {
+	role: string;
+	tree: string;
+	origin: string;
+	auth: Auth;
+	/** Its CODE backups (DEDALO_BACKUP_PATH): the swap's backup dirs + the sentinel. */
+	backupRoot: string;
+	/** Its DATABASE backups (DEDALO_BACKUP_DIR): what the update precondition judges. */
+	dbBackupDir: string;
+	supervisor: ManagedProcess;
+}
+
+/**
+ * A CONSUMER install (STEP 5): a pristine HEAD export pinned to the rung's FROM
+ * end, configured by its own rendered `.env`, booted under the supervisor loop
+ * on its own port/socket/session/state/backup dirs (named after `role`, so two
+ * consumers of one run never share a surface), and logged in. Returns once
+ * /health answers the identity the tree's own stamp resolves to.
+ */
+async function bootConsumer(options: {
+	role: string;
+	scratch: string;
+	suiteDb: string;
+	fingerprint: string;
+	testMediaRoot: string;
+	masterOrigin: string;
+	portFloor: number;
+	/** The suite login credential (src/core/test_data/suite_login.ts). */
+	password: string;
+	onSupervisor: (supervisor: ManagedProcess) => void;
+}): Promise<Consumer & { identity: string }> {
+	const { role, scratch } = options;
+	const tree = join(scratch, role);
+	console.log(`[drill] copying the checkout as the ${role} install…`);
+	await materializeConsumer(projectRoot, tree);
+	const identity = await consumerIdentityOf(tree);
+	console.log(`[drill] the ${role} calls itself ${identity} (data ${CURRENT_VERSION})`);
+	// A real install is configured by its own <private>/.env; give the copy
+	// one — the OPERATOR CONFIG rendered as a file (0600): the private file if
+	// there is one, overlaid by the catalog keys of this process's environment,
+	// so the required keys resolve on a developer machine AND on a hosted
+	// runner that has no file, while EVERY runtime surface below stays pinned
+	// to the scratch dirs — process env outranks the file, exactly as in
+	// production. Never a byte copy of the live file, and never the runner's
+	// PATH or token: scripts/lib/operator_config.ts.
+	const consumerPrivateDir = join(scratch, `${role}_private`);
+	mkdirSync(consumerPrivateDir, { recursive: true });
+	const consumerEnvFile = join(consumerPrivateDir, '.env');
+	writeFileSync(consumerEnvFile, renderEnvFile(operatorConfig()), { mode: 0o600 });
+	const backupRoot = join(scratch, `${role}_code_backups`);
+	// The consumer's DATABASE backups (what the update precondition judges) —
+	// its own scratch dir, never the operator's backups.
+	const dbBackupDir = join(scratch, `${role}_db_backups`);
+	mkdirSync(dbBackupDir, { recursive: true });
+	const port = await findFreePort(options.portFloor);
+	const origin = `http://127.0.0.1:${port}`;
+	const env = instanceEnvironment({
+		suiteDb: options.suiteDb,
+		port,
+		socketPath: join(scratch, `${role}.sock`),
+		sessionDbPath: join(scratch, `${role}_sessions.sqlite`),
+		stateFilePath: join(scratch, `${role}_state.json`),
+		scratch,
+		extra: {
+			DRILL_ROLE: role,
+			DEDALO_TEST_MEDIA_ROOT: options.testMediaRoot,
+			DEDALO_BACKUP_DIR: dbBackupDir,
+			CODE_SERVERS: JSON.stringify([
+				{ name: 'drill master', url: `${options.masterOrigin}${API_PATH}`, code: DRILL_CODE },
+			]),
+			// A pure CONSUMER: this role must not depend on the live .env's
+			// IS_A_CODE_SERVER (the panel asserts the negative) nor inherit its
+			// code-master paths — census-registered keys an operator points at
+			// THEIR master would land inside this tree and refuse the swap.
+			IS_A_CODE_SERVER: 'false',
+			DEDALO_CODE_FILES_DIR: '',
+			DEDALO_CODE_SERVER_GIT_DIR: '',
+			DEDALO_SOURCE_VERSION_LOCAL_DIR: '',
+			DEDALO_SUPERVISED: 'true',
+		},
+	});
+	env.BUN = process.execPath;
+	// The loop must RE-RESOLVE the app path every iteration: after the swap
+	// renames, the shell's inherited cwd follows the OLD tree's inode into
+	// the backup dir (systemd re-resolves WorkingDirectory per spawn — this
+	// is the same contract).
+	env.APP_DIR = tree;
+	const supervisedLoop =
+		'while :; do cd "$APP_DIR" || exit 9; "$BUN" run src/server.ts; code=$?; echo "[supervisor] exit $code — respawning"; sleep 0.3; done';
+	console.log(`[drill] starting the ${role} on ${origin} under a supervisor…`);
+	sealStateFile(join(scratch, `${role}_state.json`));
+	const supervisor = spawnSupervisor(supervisedLoop, tree, env);
+	options.onSupervisor(supervisor);
+	await waitHealthy(origin, {
+		// The RELEASE IDENTITY its expanded stamp resolves to (consumerIdentityOf)
+		// — /health names the identity, never the bare data triple.
+		expectedVersion: identity,
+		fingerprint: options.fingerprint,
+		timeoutMs: 150_000,
+		label: `${role} boot`,
+	});
+	const auth = await wireLogin(origin, 'root', options.password);
+	return { role, tree, origin, auth, backupRoot, dbBackupDir, supervisor, identity };
+}
+
+/** Maintenance mode ON through the operator's own action (STEP 6c) — idempotent. */
+async function maintenanceOn(consumer: Consumer): Promise<void> {
+	const flipped = await apiPost(
+		consumer.origin,
+		{
+			dd_api: 'dd_area_maintenance_api',
+			action: 'widget_request',
+			prevent_lock: true,
+			source: { type: 'widget', model: 'check_config', action: 'set_maintenance_mode' },
+			options: { value: true },
+		},
+		consumer.auth,
+	);
+	must(flipped.ok === true, `set_maintenance_mode refused: ${JSON.stringify(flipped.error)}`);
+}
+
+/**
+ * ONE HOP of the prerelease walk: the item installed UNWAIVED over a complete
+ * restore point, the stream dying at the planned restart, and the proof the
+ * NEW tree is live — read three independent ways, because a same-triple hop
+ * (beta.1 → beta.2 → stable) leaves the data version unchanged and so the
+ * version alone can never tell the new tree from a rolled-back one:
+ *  - /health answers the EXACT identity (`7.0.1-beta.2`, never the triple) AND
+ *    the digest of the archive just installed;
+ *  - the sentinel is confirmed by boot_confirm for that digest;
+ *  - the tree's install stamp names that digest and the channel the item was
+ *    offered on.
+ */
+async function installHop(
+	consumer: Consumer,
+	item: ReleaseItem,
+	expectedIdentity: string,
+	hopsBefore: number,
+): Promise<void> {
+	const sha = item.sha256 ?? '';
+	await maintenanceOn(consumer);
+	console.log(
+		`[drill][${consumer.role}] installing ${expectedIdentity} (the stream will DIE at restart — by design)…`,
+	);
+	const submitted = await apiPost(consumer.origin, updateRequestBody(item), consumer.auth);
+	must(
+		submitted.ok === true,
+		`[${consumer.role}] update to ${expectedIdentity} refused: ${JSON.stringify(submitted.error)}`,
+	);
+	const pid = typeof submitted.pid === 'number' ? submitted.pid : 0;
+	const pfile = typeof submitted.pfile === 'string' ? submitted.pfile : '';
+	must(pid !== 0 && pfile !== '', `[${consumer.role}] no pid/pfile handle returned`);
+	const frames = await followJobStream(consumer.origin, consumer.auth, pid, pfile, 420_000);
+	const phases = frames
+		.map((frame) => frame.data?.phase)
+		.filter((p): p is string => typeof p === 'string');
+	console.log(
+		`[drill][${consumer.role}] phases streamed: ${phases.join(' -> ') || '<connection died before frames>'}`,
+	);
+	const failed = frames.find((frame) => frame.is_running === false && frame.error !== undefined);
+	must(
+		failed === undefined,
+		`[${consumer.role}] the ${expectedIdentity} job failed: ${JSON.stringify(failed)}`,
+	);
+	const restartFrame = frames.find((frame) => frame.data?.phase === 'restart');
+	if (restartFrame !== undefined) {
+		// The IDENTITY, not the triple: on a same-triple hop the triple would
+		// let the client accept the rolled-back tree as "restarted".
+		must(
+			restartFrame.data?.expected_version === expectedIdentity,
+			`[${consumer.role}] restart frame expects ${String(restartFrame.data?.expected_version)}, not ${expectedIdentity}`,
+		);
+	}
+	const until = Date.now() + 150_000;
+	let health: HealthBody = {};
+	while (Date.now() < until) {
+		checkDeadline(`${consumer.role} health after ${expectedIdentity}`);
+		try {
+			health = await fetchHealth(consumer.origin);
+			if (
+				health.db === 'ok' &&
+				health.version === expectedIdentity &&
+				health.install_digest === sha
+			) {
+				break;
+			}
+		} catch {
+			/* down — keep polling */
+		}
+		await Bun.sleep(700);
+	}
+	must(
+		health.version === expectedIdentity && health.install_digest === sha,
+		`[${consumer.role}] never came back on ${expectedIdentity} / ${sha}: ${JSON.stringify(health)}`,
+	);
+	console.log(
+		`[drill][${consumer.role}] /health answers ${expectedIdentity} — the new tree is LIVE`,
+	);
+
+	const sentinelPath = join(consumer.backupRoot, 'last_code_update.json');
+	const sentinelUntil = Date.now() + 30_000;
+	let sentinel: Record<string, unknown> = {};
+	while (Date.now() < sentinelUntil) {
+		try {
+			sentinel = JSON.parse(readFileSync(sentinelPath, 'utf8')) as Record<string, unknown>;
+			if (sentinel.status === 'confirmed' && sentinel.installDigest === sha) break;
+		} catch {
+			/* not written yet */
+		}
+		await Bun.sleep(500);
+	}
+	must(
+		sentinel.status === 'confirmed' && sentinel.installDigest === sha,
+		`[${consumer.role}] sentinel not confirmed for ${expectedIdentity}: ${JSON.stringify(sentinel)}`,
+	);
+	const stamp = JSON.parse(
+		readFileSync(join(consumer.tree, 'src', 'core', 'update', 'install_stamp.json'), 'utf8'),
+	) as Record<string, unknown>;
+	must(stamp.digest === sha, `[${consumer.role}] the live tree is stamped with another archive`);
+	const offeredOn = item.channel ?? 'master';
+	must(
+		stamp.channel === offeredOn,
+		`[${consumer.role}] the live tree records channel ${String(stamp.channel)}, the item was offered on ${offeredOn}`,
+	);
+	// One backup per hop: every swap kept the tree it replaced (rollback).
+	const backups = readdirSync(consumer.backupRoot).filter((n) => n.startsWith('dedalo_'));
+	must(
+		backups.length === hopsBefore + 1,
+		`[${consumer.role}] expected ${hopsBefore + 1} code backup dir(s) after ${expectedIdentity}, got ${backups.join(', ')}`,
+	);
+}
+
+/**
+ * THE PRERELEASE LEG (gate 17 — see PRERELEASE_LEG). Runs between the master's
+ * boot and the stable consumer; leaves the master holding beta.1, beta.2 and
+ * the stable `<to>.zip`, and answers the stable archive's digest, which steps
+ * 5–9 then install on the release channel.
+ */
+async function prereleaseLeg(ctx: {
+	masterOrigin: string;
+	masterAuth: Auth;
+	cloneDir: string;
+	codeFilesDir: string;
+	manifestBase: string;
+	drillArchive: string;
+	bootConsumer: () => Promise<Consumer & { identity: string }>;
+}): Promise<string> {
+	const { masterOrigin, masterAuth, cloneDir, codeFilesDir } = ctx;
+	const [beta1, beta2] = PRERELEASE_IDENTITIES as [string, string];
+	const releaseDir = join(codeFilesDir, String(RUNG.to[0]), `${RUNG.to[0]}.${RUNG.to[1]}`);
+	// What a STABLE consumer at the FROM end asks — on the release channel, and
+	// with no channel at all (an older client's body). It must be shown NO beta,
+	// at every point of the sequence, also while a beta is the newest thing the
+	// master holds.
+	const stableAsks = [
+		{ version: CURRENT_VERSION, release: CURRENT_VERSION, channel: 'master' },
+		{ version: CURRENT_VERSION },
+	];
+	const assertStableAskersSee = async (expected: string[], when: string): Promise<void> => {
+		for (const ask of stableAsks) {
+			const { files } = await askManifest(masterOrigin, ask);
+			must(
+				JSON.stringify(offeredIdentities(files)) === JSON.stringify(expected),
+				`${when}: a stable asker ${JSON.stringify(ask)} was offered ${JSON.stringify(offeredIdentities(files))}, expected ${JSON.stringify(expected)}`,
+			);
+			must(
+				files.every((item) => item.channel === undefined && item.release === undefined),
+				`${when}: a stable asker was offered a channel-marked item: ${JSON.stringify(files)}`,
+			);
+		}
+	};
+
+	// --- beta.1: Build prerelease on a master that never ran it --------------
+	const beta1Sha = await buildOrFail(
+		masterOrigin,
+		masterAuth,
+		'prerelease',
+		codeFilesDir,
+		`${beta1}.zip`,
+	);
+	// IMMUTABLE (§2.8 item 1): the same identity is never rebuilt, and the
+	// published bytes do not move.
+	const beta1Bytes = readFileSync(join(releaseDir, `${beta1}.zip`));
+	const rebuilt = await buildThroughWire(masterOrigin, masterAuth, 'prerelease');
+	// The REASON, not only the code: about ten refusals share `update.refused`
+	// (code_build.ts), so the code alone would pass on any of them.
+	must(
+		rebuilt.ok !== true &&
+			rebuilt.error?.code === 'update.refused' &&
+			(rebuilt.error.message ?? '').includes(`Release ${beta1} is already published`),
+		`a second Build prerelease of ${beta1} was not refused as IMMUTABLE: ${JSON.stringify(rebuilt.error ?? rebuilt)}`,
+	);
+	must(
+		readFileSync(join(releaseDir, `${beta1}.zip`)).equals(beta1Bytes),
+		`the refused rebuild changed the published ${beta1}.zip`,
+	);
+	await assertStableAskersSee([], `after ${beta1}`);
+
+	// The PRERELEASE consumer, at the FROM end.
+	const consumer = await ctx.bootConsumer();
+	plantDatabaseBackup(
+		join(consumer.dbBackupDir, 'drill_complete.custom.backup'),
+		readFileSync(ctx.drillArchive),
+		5,
+	);
+	const firstAsk = await askManifest(masterOrigin, {
+		version: CURRENT_VERSION,
+		release: consumer.identity,
+		channel: 'prerelease',
+	});
+	must(
+		JSON.stringify(firstAsk.info.channels) === JSON.stringify(['master', 'prerelease']),
+		`the opted-in master does not report the prerelease channel honoured: ${JSON.stringify(firstAsk.info)}`,
+	);
+	must(
+		JSON.stringify(offeredIdentities(firstAsk.files)) === JSON.stringify([beta1]),
+		`the prerelease asker at ${consumer.identity} was offered ${JSON.stringify(offeredIdentities(firstAsk.files))}, expected [${beta1}]`,
+	);
+	const beta1Item = firstAsk.files[0] as ReleaseItem;
+	must(
+		beta1Item.channel === 'prerelease' &&
+			beta1Item.version === RELEASE_VERSION &&
+			beta1Item.sha256 === beta1Sha,
+		`the ${beta1} item is malformed: ${JSON.stringify(beta1Item)}`,
+	);
+	must(
+		new URL(beta1Item.url).origin === new URL(ctx.manifestBase).origin &&
+			beta1Item.url.endsWith(`/${beta1}.zip`),
+		`the ${beta1} item URL is not the master's prerelease archive: ${beta1Item.url}`,
+	);
+	const servedBeta = await fetch(beta1Item.url);
+	must(servedBeta.ok, `the ${beta1} serving URL answered ${servedBeta.status}`);
+	await servedBeta.body?.cancel();
+	await installHop(consumer, beta1Item, beta1, 0);
+
+	// --- beta.2: the same-triple hop ----------------------------------------
+	await tagNextCommit(cloneDir, `v${beta2}`);
+	const beta2Sha = await buildOrFail(
+		masterOrigin,
+		masterAuth,
+		'prerelease',
+		codeFilesDir,
+		`${beta2}.zip`,
+	);
+	await assertStableAskersSee([], `after ${beta2}`);
+	// A stable-channel asker that ALREADY runs beta.1 is not walked to beta.2
+	// either: the channel, not the running identity, is the opt-in.
+	const stableAtBeta1 = await askManifest(masterOrigin, {
+		version: RELEASE_VERSION,
+		release: beta1,
+		channel: 'master',
+	});
+	must(
+		stableAtBeta1.files.length === 0,
+		`a release-channel asker at ${beta1} was offered ${JSON.stringify(offeredIdentities(stableAtBeta1.files))}`,
+	);
+	const secondAsk = await askManifest(masterOrigin, {
+		version: RELEASE_VERSION,
+		release: beta1,
+		channel: 'prerelease',
+	});
+	must(
+		JSON.stringify(offeredIdentities(secondAsk.files)) === JSON.stringify([beta2]),
+		`the prerelease asker at ${beta1} was offered ${JSON.stringify(offeredIdentities(secondAsk.files))}, expected [${beta2}]`,
+	);
+	const beta2Item = secondAsk.files[0] as ReleaseItem;
+	must(beta2Item.sha256 === beta2Sha, `the ${beta2} item digest is not the build's`);
+	await installHop(consumer, beta2Item, beta2, 1);
+
+	// --- the stable release: beta.2 → <to> ----------------------------------
+	await tagNextCommit(cloneDir, `v${RELEASE_VERSION}`);
+	const stableSha = await buildOrFail(
+		masterOrigin,
+		masterAuth,
+		'master',
+		codeFilesDir,
+		RELEASE_FILE_NAME,
+	);
+	// A beta the stable release superseded is never built again.
+	const superseded = await buildThroughWire(masterOrigin, masterAuth, 'prerelease');
+	// The REASON: a broken superseded filter would pick the published beta.2 and
+	// be refused as immutable instead — same code, wrong guarantee.
+	must(
+		superseded.ok !== true &&
+			superseded.error?.code === 'update.refused' &&
+			(superseded.error.message ?? '').includes('No prerelease to build'),
+		`Build prerelease after ${RELEASE_VERSION} was not refused as SUPERSEDED: ${JSON.stringify(superseded.error ?? superseded)}`,
+	);
+	await assertStableAskersSee([RELEASE_VERSION], `after ${RELEASE_VERSION}`);
+	const thirdAsk = await askManifest(masterOrigin, {
+		version: RELEASE_VERSION,
+		release: beta2,
+		channel: 'prerelease',
+	});
+	must(
+		JSON.stringify(offeredIdentities(thirdAsk.files)) === JSON.stringify([RELEASE_VERSION]),
+		`the prerelease asker at ${beta2} was offered ${JSON.stringify(offeredIdentities(thirdAsk.files))}, expected [${RELEASE_VERSION}]`,
+	);
+	const stableItem = thirdAsk.files[0] as ReleaseItem;
+	must(
+		stableItem.sha256 === stableSha && stableItem.channel === undefined,
+		`the ${RELEASE_VERSION} item is not the published release: ${JSON.stringify(stableItem)}`,
+	);
+	await installHop(consumer, stableItem, RELEASE_VERSION, 2);
+	// At the stable release there is nothing above it on any channel.
+	const afterStable = await askManifest(masterOrigin, {
+		version: RELEASE_VERSION,
+		release: RELEASE_VERSION,
+		channel: 'prerelease',
+	});
+	must(
+		afterStable.files.length === 0,
+		`the consumer at ${RELEASE_VERSION} is still offered ${JSON.stringify(offeredIdentities(afterStable.files))}`,
+	);
+
+	// Free the second consumer (its tree is a full copy) before the stable one boots.
+	await consumer.supervisor.stop();
+	rmSync(consumer.tree, { recursive: true, force: true });
+	console.log(
+		`[drill] PRERELEASE LEG PASS — ${CURRENT_VERSION} -> ${beta1} -> ${beta2} -> ${RELEASE_VERSION} across three planned-death restarts; stable askers offered no beta.`,
+	);
+	return stableSha;
 }
 
 // ---------------------------------------------------------------------------
@@ -771,12 +1356,14 @@ async function main(): Promise<void> {
 	// Each instance's job registry (instanceEnvironment: `<role>_processes`),
 	// DECLARED: the instances run armed (DEDALO_TEST_MEDIA_ROOT), and an armed job
 	// manager refuses an unmarked processes dir (src/core/media/jobs.ts).
-	for (const role of ['master', 'consumer', 'instance']) {
+	for (const role of ['master', 'consumer', 'prerelease_consumer', 'instance']) {
 		markProcessesDir(join(scratch, `${role}_processes`));
 	}
 
 	let master: ManagedProcess | null = null;
-	let supervisor: ManagedProcess | null = null;
+	// Every consumer's supervisor loop (the prerelease leg's and the stable one),
+	// stopped in `finally` whatever step failed.
+	const supervisors: ManagedProcess[] = [];
 
 	try {
 		// ---------------------------------------------------------------
@@ -790,13 +1377,22 @@ async function main(): Promise<void> {
 		// release TAG claims the published <v>.zip name (code_build_plan.ts); `--dev`
 		// deliberately tags nothing and builds the `master` tip, so the build lands
 		// as `<v>-dev.zip` — a real developer build, not a release under another name.
-		await cloneForReleaseCommit({
+		const cloned = await cloneForReleaseCommit({
 			source: projectRoot,
 			cloneDir,
 			releaseBranch: RELEASE_BRANCH,
-			...(DEV_CHANNEL_MODE ? {} : { tag: `v${RELEASE_VERSION}` }),
+			// The release pass cuts the FIRST BETA here; the prerelease leg tags
+			// `-beta.2` and the stable on later commits (tagNextCommit). Inherited
+			// release tags of the rung's `to` triple or above are dropped first: the
+			// leg's betas and stable must be the ONLY identities of that triple, or
+			// a real `v<to>` (the release just cut) refuses beta.1 as superseded and
+			// a real `v<to>-rc.N` is built in its place.
+			...(FIRST_TAG === undefined ? {} : { tag: FIRST_TAG, dropReleaseTagsFrom: RUNG.to }),
 			message: `release ${RELEASE_VERSION} (update drill)`,
 			edit: (dir) => {
+				// The release carries the checkout's UNCOMMITTED edits too — the
+				// code under test (overlayWorkingTree; a no-op on a clean checkout).
+				reportOverlay('release clone', overlayWorkingTree(projectRoot, dir));
 				const versionTsPath = join(dir, 'src', 'core', 'update', 'version.ts');
 				writeFileSync(
 					versionTsPath,
@@ -829,6 +1425,13 @@ async function main(): Promise<void> {
 				);
 			},
 		});
+		if (cloned.droppedTags.length > 0) {
+			console.log(
+				`[drill] release clone: dropped ${cloned.droppedTags.length} inherited release tag(s) ` +
+					`at or above ${RUNG.to.join('.')} so the leg's tags are that triple's only ones: ` +
+					cloned.droppedTags.join(', '),
+			);
+		}
 
 		// ---------------------------------------------------------------
 		// STEPS 2–4 — the MASTER: boot, build through the wire, serve
@@ -856,6 +1459,11 @@ async function main(): Promise<void> {
 				// master answers a `channel:'dev'` ask with releases only (which the
 				// release pass of this drill relies on staying true).
 				...(DEV_CHANNEL_MODE ? { DEDALO_CODE_SERVER_DEV_CHANNEL: 'true' } : {}),
+				// The master half of the PRERELEASE channel (the release pass only):
+				// a separate switch, so the betas never expose branch builds — and
+				// the release-channel assertions of steps 6b run against a master
+				// that DOES hold prereleases, which is the exposure they must withhold.
+				...(PRERELEASE_LEG ? { DEDALO_CODE_SERVER_PRERELEASE_CHANNEL: 'true' } : {}),
 				DEDALO_CODE_FILES_DIR: codeFilesDir,
 				DEDALO_CODE_SERVER_GIT_DIR: cloneDir,
 				CODE_SERVERS: JSON.stringify([
@@ -881,39 +1489,39 @@ async function main(): Promise<void> {
 		});
 
 		const masterAuth = await wireLogin(masterOrigin, 'root', SUITE_LOGIN_PASSWORD);
-		const built = await apiPost(
+		// STEP 4's serving base, and the restore point every unwaived install
+		// runs over (both consumers plant it).
+		const manifestBase = `${masterOrigin}/dedalo/install/code`;
+		const drillArchive = await buildDrillArchive(scratch, suiteDb);
+		const consumerOptions = (role: string, portFloor: number) => ({
+			role,
+			scratch,
+			suiteDb,
+			fingerprint,
+			testMediaRoot,
 			masterOrigin,
-			{
-				dd_api: 'dd_area_maintenance_api',
-				action: 'widget_request',
-				prevent_lock: true,
-				source: {
-					type: 'widget',
-					model: 'serve_code',
-					action: 'build_version_from_git_master',
-				},
-				// the panel's own shape — a CHANNEL; the server resolves the ref (the
-				// release pass: refs/tags/v<version>; --dev: master). `version` is the
-				// claim the build checks against the ref's own version.ts.
-				options: { version: RELEASE_VERSION, channel: BUILD_CHANNEL },
-			},
-			masterAuth,
-		);
-		must(built.ok === true, `master build refused: ${JSON.stringify(built.error ?? built)}`);
-		const builtData = built.data as Record<string, unknown>;
-		const builtSha = typeof builtData?.sha256 === 'string' ? builtData.sha256 : '';
-		must(/^[a-f0-9]{64}$/.test(builtSha), 'built sha256 is not 64 hex chars');
+			portFloor,
+			password: SUITE_LOGIN_PASSWORD,
+			onSupervisor: (started: ManagedProcess) => supervisors.push(started),
+		});
 
-		// The artifact on disk, exactly where RELEASE.md step 7 looks.
-		const releaseZip = join(codeFilesDir, '7', '7.0', RELEASE_FILE_NAME);
-		must(existsSync(releaseZip), `release archive missing at ${releaseZip}`);
-		const sidecarDigest = (
-			readFileSync(`${releaseZip}.sha256`, 'utf8').trim().split(/\s+/)[0] ?? ''
-		).trim();
-		must(sidecarDigest === builtSha, 'sidecar digest does not match the build answer');
+		// STEP 3 — the archive the stable consumer installs, built THROUGH THE
+		// WIRE. On the release pass the prerelease leg builds it (beta.1 → beta.2
+		// → the stable, in tag order) and walks its own consumer up to it first;
+		// `--dev` builds the tip of `master`.
+		const builtSha = PRERELEASE_LEG
+			? await prereleaseLeg({
+					masterOrigin,
+					masterAuth,
+					cloneDir,
+					codeFilesDir,
+					manifestBase,
+					drillArchive,
+					bootConsumer: () => bootConsumer(consumerOptions('prerelease_consumer', masterPort + 1)),
+				})
+			: await buildOrFail(masterOrigin, masterAuth, BUILD_CHANNEL, codeFilesDir, RELEASE_FILE_NAME);
 
 		// STEP 4 — the serving URL answers anonymously (code_serving route).
-		const manifestBase = `${masterOrigin}/dedalo/install/code`;
 		const served = await fetch(`${manifestBase}/${RELEASE_VERSION}/${RELEASE_FILE_NAME}`);
 		must(served.ok, `serving URL answered ${served.status}`);
 		await served.body?.cancel();
@@ -921,76 +1529,15 @@ async function main(): Promise<void> {
 		// ---------------------------------------------------------------
 		// STEP 5 — the CONSUMER: a full copy under a supervisor loop
 		// ---------------------------------------------------------------
-		const consumerTree = join(scratch, 'consumer');
-		console.log('[drill] copying the checkout as the consumer install…');
-		await materializeConsumer(projectRoot, consumerTree);
-		const consumerIdentity = await consumerIdentityOf(consumerTree);
-		console.log(`[drill] the consumer calls itself ${consumerIdentity} (data ${CURRENT_VERSION})`);
-		// A real install is configured by its own <private>/.env; give the copy
-		// one — the OPERATOR CONFIG rendered as a file (0600): the private file if
-		// there is one, overlaid by the catalog keys of this process's environment,
-		// so the required keys resolve on a developer machine AND on a hosted
-		// runner that has no file, while EVERY runtime surface above stays pinned
-		// to the scratch dirs — process env outranks the file, exactly as in
-		// production. Never a byte copy of the live file, and never the runner's
-		// PATH or token: scripts/lib/operator_config.ts.
-		const consumerPrivateDir = join(scratch, 'private');
-		mkdirSync(consumerPrivateDir, { recursive: true });
-		const consumerEnvFile = join(consumerPrivateDir, '.env');
-		writeFileSync(consumerEnvFile, renderEnvFile(operatorConfig()), { mode: 0o600 });
-		const consumerBackupRoot = join(scratch, 'consumer_code_backups');
-		// The consumer's DATABASE backups (what the update precondition judges) —
-		// its own scratch dir, never the operator's backups.
-		const consumerDbBackupDir = join(scratch, 'consumer_db_backups');
-		mkdirSync(consumerDbBackupDir, { recursive: true });
-		const drillArchive = await buildDrillArchive(scratch, suiteDb);
-		const consumerPort = await findFreePort(masterPort + 1);
-		const consumerOrigin = `http://127.0.0.1:${consumerPort}`;
-		const consumerEnv = instanceEnvironment({
-			suiteDb,
-			port: consumerPort,
-			socketPath: join(scratch, 'consumer.sock'),
-			sessionDbPath: join(scratch, 'consumer_sessions.sqlite'),
-			stateFilePath: join(scratch, 'consumer_state.json'),
-			scratch,
-			extra: {
-				DRILL_ROLE: 'consumer',
-				DEDALO_TEST_MEDIA_ROOT: testMediaRoot,
-				DEDALO_BACKUP_DIR: consumerDbBackupDir,
-				CODE_SERVERS: JSON.stringify([
-					{ name: 'drill master', url: `${masterOrigin}${API_PATH}`, code: DRILL_CODE },
-				]),
-				// A pure CONSUMER: this role must not depend on the live .env's
-				// IS_A_CODE_SERVER (the panel asserts the negative) nor inherit its
-				// code-master paths — census-registered keys an operator points at
-				// THEIR master would land inside this tree and refuse the swap.
-				IS_A_CODE_SERVER: 'false',
-				DEDALO_CODE_FILES_DIR: '',
-				DEDALO_CODE_SERVER_GIT_DIR: '',
-				DEDALO_SOURCE_VERSION_LOCAL_DIR: '',
-				DEDALO_SUPERVISED: 'true',
-			},
-		});
-		consumerEnv.BUN = process.execPath;
-		// The loop must RE-RESOLVE the app path every iteration: after the swap
-		// renames, the shell's inherited cwd follows the OLD tree's inode into
-		// the backup dir (systemd re-resolves WorkingDirectory per spawn — this
-		// is the same contract).
-		consumerEnv.APP_DIR = consumerTree;
-		const supervisedLoop =
-			'while :; do cd "$APP_DIR" || exit 9; "$BUN" run src/server.ts; code=$?; echo "[supervisor] exit $code — respawning"; sleep 0.3; done';
-		console.log(`[drill] starting the CONSUMER on ${consumerOrigin} under a supervisor…`);
-		sealStateFile(join(scratch, 'consumer_state.json'));
-		supervisor = spawnSupervisor(supervisedLoop, consumerTree, consumerEnv);
-		await waitHealthy(consumerOrigin, {
-			// The RELEASE IDENTITY its expanded stamp resolves to (consumerIdentityOf)
-			// — /health names the identity, never the bare data triple.
-			expectedVersion: consumerIdentity,
-			fingerprint,
-			timeoutMs: 150_000,
-			label: 'consumer boot',
-		});
-		const consumerAuth = await wireLogin(consumerOrigin, 'root', SUITE_LOGIN_PASSWORD);
+		const consumer = await bootConsumer(consumerOptions('consumer', masterPort + 1));
+		const {
+			tree: consumerTree,
+			origin: consumerOrigin,
+			auth: consumerAuth,
+			backupRoot: consumerBackupRoot,
+			dbBackupDir: consumerDbBackupDir,
+			identity: consumerIdentity,
+		} = consumer;
 		const livePackageJsonBefore = readFileSync(join(consumerTree, 'package.json'), 'utf8');
 
 		// ---------------------------------------------------------------
@@ -1031,7 +1578,7 @@ async function main(): Promise<void> {
 		});
 		must(manifest.ok === true, `manifest refused: ${JSON.stringify(manifest.error ?? manifest)}`);
 		const info = manifest.data as {
-			files: { version: string; url: string; sha256?: string; channel?: string }[];
+			files: ReleaseItem[];
 			info: { version: string };
 		};
 		// `info.version` is the MASTER's OWN version (code_manifest.ts passes
@@ -1053,13 +1600,16 @@ async function main(): Promise<void> {
 				(DEV_CHANNEL_MODE ? info.files.length >= 1 : info.files.length === 1),
 			`expected ${DEV_CHANNEL_MODE ? 'at least the developer build' : `exactly the ${RELEASE_VERSION} rung`}`,
 		);
-		const file = info.files[0] as {
-			version: string;
-			url: string;
-			sha256?: string;
-			channel?: string;
-		};
+		const file = info.files[0] as ReleaseItem;
 		must(file.version === RELEASE_VERSION, 'wrong rung advertised');
+		if (PRERELEASE_LEG) {
+			// The master holds beta.1 and beta.2 of this very rung by now: the
+			// release-channel ask must still be the published release, unmarked.
+			must(
+				file.channel === undefined && file.release === undefined,
+				`the release channel was offered a prerelease item: ${JSON.stringify(file)}`,
+			);
+		}
 		if (DEV_CHANNEL_MODE) {
 			must(file.channel === 'dev', 'the developer build is not marked channel:dev');
 			must(file.url.endsWith('-dev.zip'), `the advertised URL is not the dev archive: ${file.url}`);
@@ -1084,18 +1634,7 @@ async function main(): Promise<void> {
 		// ---------------------------------------------------------------
 		// STEP 6c — maintenance mode ON, through the operator's own action
 		// ---------------------------------------------------------------
-		const flipped = await apiPost(
-			consumerOrigin,
-			{
-				dd_api: 'dd_area_maintenance_api',
-				action: 'widget_request',
-				prevent_lock: true,
-				source: { type: 'widget', model: 'check_config', action: 'set_maintenance_mode' },
-				options: { value: true },
-			},
-			consumerAuth,
-		);
-		must(flipped.ok === true, `set_maintenance_mode refused: ${JSON.stringify(flipped.error)}`);
+		await maintenanceOn(consumer);
 
 		// ---------------------------------------------------------------
 		// STEP 6d — NEGATIVE, UNWAIVED: a truncated dump is not a restore point
@@ -1360,7 +1899,7 @@ async function main(): Promise<void> {
 			`[drill] PASS — build -> serve -> discover -> refuse-bad-sha -> install -> planned-death restart -> confirmed sentinel.`,
 		);
 	} finally {
-		if (supervisor !== null) await supervisor.stop();
+		for (const started of supervisors) await started.stop();
 		if (master !== null) await master.stop();
 		if (keepScratch) {
 			console.log(`[drill] --keep: scratch left at ${scratch}`);

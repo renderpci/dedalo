@@ -215,7 +215,7 @@ running Bun and this tree's pin, and the bytes free where the update stages.
 
     Choose the server to obtain the code. The panel lists the servers in `CODE_SERVERS`, in `../private/.env`. The installers write the official Dédalo server there by default; an install made with the air-gapped option has `CODE_SERVERS=[]`, and an empty or absent `CODE_SERVERS` means no code servers at all — nothing to choose, no update offered. To change that, edit the value on the existing `CODE_SERVERS` line — replace the `[]`, or add the official server, a mirror or another provider inside the list (see the [Configuration Administrator Guide](../../config/administration.md)) — then **restart the server**: the list, and the browser's `connect-src` that lets the panel reach a code server, are built at boot. The same applies when you switch an air-gapped install (`CODE_SERVERS=[]`) back to the official server.
 
-    Press "Check available updates", choose the version you want, and press `Update`. The panel then shows the pipeline's phase track (download → verify → extract → deps → preflight → swap → restart → health) while the update runs; the server restarts itself during the `restart` phase and the panel polls its health endpoint until the new version answers.
+    Choose what to be offered — **Published releases** (the default), **Prereleases** or **Developer builds** — then press "Check available updates", choose the version you want, and press `Update`. See [Choosing what to be offered](#choosing-what-to-be-offered). The panel then shows the pipeline's phase track (download → verify → extract → deps → preflight → swap → restart → health) while the update runs; the server restarts itself during the `restart` phase and the panel polls its health endpoint until the new version answers.
 
     The panel scrolls that track into view when the run starts and keeps it readable without any scrolling on your part: the progress bar stays pinned while the run lasts, the phase rows scroll inside their own box rather than filling the window, and the live process output — and whatever sentence ends the run, whether it succeeded, refused or lost the connection — stays visible underneath. If a run appears to stop with nothing to show, the panel is not hiding the reason further down; look instead at the server log.
 
@@ -237,6 +237,64 @@ running Bun and this tree's pin, and the bytes free where the update stages.
     Revert the maintenance status to `false`.
 
 7. Log out and re-login with a normal user.
+
+### Choosing what to be offered
+
+Above "Check available updates" the panel asks what to offer. Each choice
+also offers everything the one before it offers:
+
+- **Published releases** — stable releases only. This is the default, and the
+  only choice for a production installation.
+- **Prereleases** — also the alpha, beta and release-candidate builds of the
+  next version (for example `7.0.1-beta.2`). A prerelease is a fixed,
+  checksum-verified build, exactly like a release, of a version that is not yet
+  stable: use it to try a coming release before it is published.
+- **Developer builds** — also prereleases and the builds of the `master`
+  branch (see [Testing development work on a real installation](#testing-development-work-on-a-real-installation)).
+
+The code server decides too: it offers prereleases only when it sets
+`DEDALO_CODE_SERVER_PRERELEASE_CHANNEL=true`, and developer builds only with
+`DEDALO_CODE_SERVER_DEV_CHANNEL=true`. The two settings are separate. A code
+server that does not offer part of what you chose lists only what it does
+offer, and the panel names the missing part above the list, for example *This
+code server does not offer prereleases* — a missing choice is never shown as if
+there were nothing to offer. A code server running an older
+Dédalo version does not know the prerelease choice at all and answers in the
+same way.
+
+A prerelease row is named by its full version (`7.0.1-beta.2`). An
+installation that runs a prerelease is offered the later prereleases and the
+release of its own version above it: from `7.0.0-beta.7`, `7.0.0-beta.8` and
+`7.0.0`. (An installation on `7.0.0-beta.6` or an earlier beta is the
+exception: see the warning below.) An installation that asks for published
+releases is never offered a prerelease, even when a prerelease is the newest
+version on the code server.
+
+!!! note "Moving within the version you already run"
+    Moving from one prerelease to a later one of the same version
+    (`7.0.0-beta.7` → `7.0.0-beta.8`, or on to `7.0.0`) needs no data update:
+    the prereleases and the release of one version share its database. You may
+    skip prereleases (`7.0.0-beta.7` → `7.0.0-rc.1`). Moving back
+    (`7.0.0-beta.8` → `7.0.0-beta.7`, or from `7.0.0` to one of its
+    prereleases) is refused. A move to the NEXT version still goes one version
+    at a time, and its data update runs once, on the first build of that
+    version you install. After the restart the panel reports the update as
+    landed only when the server answers with the exact version it installed.
+
+!!! warning "An installation on 7.0.0-beta.6 or an earlier beta"
+    Prereleases are published from 7.0.0-beta.7 on. An earlier beta reports
+    the bare version `7.0.0`, and its panel has no **Prereleases** choice, so
+    it is offered neither `7.0.0-beta.7` nor, later, `7.0.0`. Choose
+    **Developer builds** and install the developer build of `7.0.0` the code
+    server offers. The installation then runs a developer build, and its
+    panel has the **Prereleases** choice. Keep **Developer builds** chosen
+    for the next step: a developer build cannot tell which published builds of
+    its own version are older than it, so it is offered all of them —
+    `7.0.0-beta.7` and the later prereleases (when the code server publishes
+    prereleases), and `7.0.0` itself once it is released. Install one, and
+    from then on **Prereleases** or **Published releases** works as described
+    above. A Docker installation updates its image instead (see
+    [a stack installed from a beta before 7.0.0-beta.7](../../install/docker.md#a-stack-installed-from-a-beta-before-700-beta7)).
 
 ## Restoring a previous code version
 
@@ -363,16 +421,21 @@ publish at all:
 
 ### Building a release
 
-On a code server, the **Serve Code** panel shows two buttons, "Build
-release" and "Build developer release", each beside the archive it writes:
+On a code server, the **Serve Code** panel shows three buttons, "Build
+release", "Build prerelease" and "Build developer release", each beside the
+archive it writes:
 
 - **Build release** archives the **newest release tag** (`vX.Y.Z`) of the
   configured git checkout — a version that was cut and tagged, never a moving
-  branch. Prerelease tags (`v7.0.1-beta.1`) are not releases, and neither
-  are tags of the earlier engine (v6): while a version is in beta there is
-  nothing to publish, and its code reaches installations only as developer
-  builds. A tag whose version file declares a different version than its name
-  is refused.
+  branch. Tags of the earlier engine (v6) are never candidates. A tag whose
+  version file declares a different version than its name is refused.
+- **Build prerelease** archives the **newest prerelease tag**
+  (`vX.Y.Z-alpha.N`, `-beta.N` or `-rc.N`) that is newer than the newest
+  release tag. The *Prerelease tag* row names it before you press the button.
+  A beta that a release has already replaced is never built: once `v7.0.1`
+  exists, `v7.0.1-beta.2` is not offered. The archive is offered only to
+  installations that choose **Prereleases** (or **Developer builds**), and only
+  when this code server sets `DEDALO_CODE_SERVER_PRERELEASE_CHANNEL=true`.
 - **Build developer release** archives the tip of the **`master`** branch —
   the latest integrated code, before its release. It gets a `-dev` suffix, so
   it can never overwrite the published release of the same version.
@@ -381,12 +444,23 @@ Each archive is named after the version its own source declares, not after
 the running engine:
 
 ```
-<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>.zip        (release tag vX.Y.Z)
-<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>-dev.zip    (master)
+<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>.zip         (release tag vX.Y.Z)
+<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>-beta.N.zip  (prerelease tag vX.Y.Z-beta.N)
+<DEDALO_CODE_FILES_DIR>/<major>/<major.minor>/<version>-dev.zip     (master)
 ```
 
+A release and a prerelease **cannot be rebuilt**. If the archive and its
+`.sha256` sidecar are already on disk, the build is refused and the files are
+not changed: an installation that verified that checksum, or a bug report that
+names that version, must keep pointing at the same code. To publish different
+code, tag a new release. Before an archive is published, the code server
+checks that the archive gives the tag's name as its version. A tag made
+without `-a` (a lightweight tag) fails this check, so the build is refused and
+nothing is published. A developer build is rebuilt each time you press its
+button.
+
 A button with nothing to build says why instead: no release tag in the
-checkout, no `master` branch, or a `master` with no commits beyond the release
+checkout, no prerelease tag newer than the release, no `master` branch, or a `master` with no commits beyond the release
 tag (a developer build would then be identical to the release).
 
 Each archive is written together with its `.sha256` sidecar — that sidecar is
@@ -416,11 +490,19 @@ reads `was 11:41:43` beside a row dated `173 MB · 28/08/2026, 11:45:09`.
 !!! note "Developer builds are only offered when both sides ask for them"
     A `-dev` archive is never offered to an install that did not ask for one.
     Two switches must be on: this code server must set
-    `DEDALO_CODE_SERVER_DEV_CHANNEL=true`, and the receiving install must tick
+    `DEDALO_CODE_SERVER_DEV_CHANNEL=true`, and the receiving install must choose
     **Developer builds** in its own "Update code" panel. A code server that
     leaves the setting unset answers a developer-channel request exactly as it
     answers a normal one. The archive is served at its own URL either way
     (`/dedalo/install/code/<version>/<version>-dev.zip`).
+
+!!! note "Prereleases are offered the same way"
+    A prerelease archive is offered only when this code server sets
+    `DEDALO_CODE_SERVER_PRERELEASE_CHANNEL=true` **and** the receiving install
+    chooses **Prereleases** or **Developer builds**. The two settings are
+    separate: a code server can publish prereleases without publishing
+    developer builds. The archive is served at
+    `/dedalo/install/code/<version>/<version>-beta.N.zip` either way.
 
 ### Reclaiming disk
 
@@ -472,7 +554,7 @@ be installed again as often as `master` moves. While a major version is in beta
 (no `vX.Y.Z` tag yet), developer builds are the only way its code reaches an
 installation.
 
-The receiving install ticks **Developer builds**, checks for updates, and picks
+The receiving install chooses **Developer builds**, checks for updates, and picks
 the build (marked as a developer build, and listed first). Everything else is
 the ordinary update: superuser, maintenance mode, a recent backup, the same
 `.sha256` verification, the same backup, smoke boot, swap and rollback.

@@ -192,7 +192,13 @@ export const resolve_final_frame = function(state, frame) {
 	const result = frame.data
 	const is_envelope = !!(result && typeof result==='object')
 	if (is_envelope && result.ok===true && result.data && typeof result.data.version==='string') {
-		return { outcome : 'updated', version : result.data.version }
+		// `release` (the identity the new tree answers /health with) when the job
+		// named one — a prerelease or a release; a developer build's is its
+		// archive's to say, so only its data triple rides (code_update.ts)
+		return {
+			outcome : 'updated',
+			version : typeof result.data.release==='string' ? result.data.release : result.data.version
+		}
 	}
 	// the reconciled job: terminal, but it never reported an outcome. An
 	// EXPLICIT ok:false envelope outranks it — that is the pipeline itself
@@ -240,6 +246,15 @@ export const resolve_final_frame = function(state, frame) {
 * answers null, and calling that a rollback would break every update against an
 * older install. Version compare is the honest answer there — the same answer
 * this function always gave.
+*
+* THE EXPECTATION IS AN IDENTITY (2026-10-18, the identity walk). The job names
+* what it installs by the release identity /health will answer
+* (code_update.ts: the restart frame's `expected_version`, the envelope's
+* `release`; the click passes the item's own, update_code_channel.js
+* item_release), so the compare is EXACT. A prerelease never "meets" its bare
+* triple: since the door walks within a triple (beta.6 → beta.7 → 7.0.0), the
+* rolled-back tree answers the SAME triple, and a triple match would read every
+* such rollback as an update.
 *
 * @param {Object} state - reducer state (mode 'polling')
 * @param {string|null} health_version - `version` from /health, null when the

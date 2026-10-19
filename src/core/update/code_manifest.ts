@@ -22,7 +22,14 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { projectRoot } from '../../config/env.ts';
 import { UPDATE_CATALOG } from './catalog.ts';
+import type { InstallChannel } from './install_stamp.ts';
+import {
+	compareReleaseIdentities,
+	parseReleaseVersion,
+	RELEASE_VERSION_RE,
+} from './release_identity.ts';
 import { compareVersionArrays } from './version.ts';
+import { newestOfRung } from './version_walk.ts';
 
 /**
  * One advertised release (PHP file_item).
@@ -40,13 +47,22 @@ export interface CodeReleaseItem {
 	/** sha256 of the archive, from the `<file>.zip.sha256` sidecar (WC-024). */
 	sha256?: string;
 	/**
-	 * Present, and 'dev', ONLY on a developer-channel item (2026-08-24). A
-	 * published release carries no `channel` at all, so the release manifest is
-	 * byte-unchanged by this feature. The consumer forwards the whole item back
-	 * as `options.file`, and `code_update.ts` reads this to know that a
-	 * same-version install is the one it was offered.
+	 * Present ONLY on a developer-channel item ('dev', 2026-08-24) or a
+	 * prerelease item ('prerelease', RELEASE_IDENTITY_DESIGN §2.8). A published
+	 * release carries no `channel` at all, so the release manifest is
+	 * byte-unchanged by either feature. The consumer forwards the whole item
+	 * back as `options.file`, and `code_update.ts` reads this to know which
+	 * channel the archive was offered on.
 	 */
-	channel?: 'dev';
+	channel?: 'dev' | 'prerelease';
+	/**
+	 * The RELEASE IDENTITY a prerelease item is (`7.0.1-beta.2`) — present only
+	 * on a prerelease item. `version` stays the DATA triple (the URL's dir
+	 * segment, and the one shape every consumer's update door parses — an older
+	 * engine refuses `7.0.1-beta.2` as a malformed version), so the identity
+	 * rides beside it, never in its place.
+	 */
+	release?: string;
 	/** The release's notes (published items only; absent when the master froze none). */
 	notes?: CodeReleaseNotes;
 }
@@ -78,6 +94,19 @@ export interface CodeUpdateInfo {
 		entity_id: number | string | null;
 		entity: string | null;
 		host: string | null;
+		/**
+		 * EVERY rung this master HONOURED for the ask, in ladder order — always
+		 * `master` first, then `prerelease` and/or `dev` (RELEASE_IDENTITY_DESIGN
+		 * §2.8 item 2). A SET, not the highest rung: the two master switches are
+		 * separate, so a `dev` ask on a master that publishes developer builds but
+		 * no prereleases honours `dev` WITHOUT `prerelease`, and a single "highest
+		 * rung" would claim the betas too. The consumer compares it with what it
+		 * asked to say "this server does not offer prereleases" instead of
+		 * silently listing less. ABSENT from an older master's answer, which never
+		 * honours `prerelease` (its channel parse is `=== 'dev' ? 'dev' :
+		 * 'master'`): the client reads that absence itself (update_code_channel.js).
+		 */
+		channels?: InstallChannel[];
 	};
 	files: CodeReleaseItem[];
 }
@@ -160,10 +189,20 @@ export interface CodeUpdateInfoOptions {
 	publicBaseUrl: string;
 	info: Omit<CodeUpdateInfo['info'], 'version'>;
 	catalog?: typeof UPDATE_CATALOG;
-	/** What the CONSUMER asked for (its panel switch). Default: releases only. */
-	channel?: 'master' | 'dev';
+	/** What the CONSUMER asked for (its panel choice). Default: releases only. */
+	channel?: InstallChannel;
+	/**
+	 * The consumer's RELEASE IDENTITY (`options.release`, e.g. `7.0.0-beta.6`) —
+	 * what decides which prereleases and same-triple releases sit ABOVE it.
+	 * Untrusted wire text: used only when it parses AND names the asker's own
+	 * data triple; otherwise the asker is placed at its bare triple (the stable
+	 * release of it), which offers nothing of its own triple — never more.
+	 */
+	clientRelease?: unknown;
 	/** Whether THIS master publishes developer builds (DEDALO_CODE_SERVER_DEV_CHANNEL). */
 	devChannelEnabled?: boolean;
+	/** Whether THIS master publishes prereleases (DEDALO_CODE_SERVER_PRERELEASE_CHANNEL). */
+	prereleaseChannelEnabled?: boolean;
 	/** The master's `changes/` dir — where each release's frozen notes live. Absent ⇒ no notes. */
 	changesDir?: string;
 }
@@ -174,31 +213,206 @@ export interface CodeUpdateInfoOptions {
  */
 export function buildCodeUpdateInfo(options: CodeUpdateInfoOptions): CodeUpdateInfo {
 	const targets = linearUpgradeTargets(options.clientVersion, options.catalog ?? UPDATE_CATALOG);
+	const exposure = channelExposure(options);
 	return {
-		info: { version: options.serverVersion.join('.'), ...options.info },
-		files: manifestFiles(options, targets),
+		info: {
+			version: options.serverVersion.join('.'),
+			...options.info,
+			channels: honouredChannels(exposure),
+		},
+		files: manifestFiles(options, targets, exposure),
 	};
 }
 
-/** Every item this manifest advertises: the dev rows (when both switches are on) then the published ones. */
+/** What one ask is shown, after BOTH halves of each switch are read. */
+interface ChannelExposure {
+	dev: boolean;
+	prerelease: boolean;
+}
+
+/**
+ * THE LADDER (owner Q8: `master ⊂ prerelease ⊂ dev`), each rung needing BOTH
+ * switches — the consumer's ask and this master's own opt-in, never one
+ * alone:
+ *  - developer builds: a `dev` ask on a master with
+ *    DEDALO_CODE_SERVER_DEV_CHANNEL;
+ *  - prereleases: a `prerelease` OR `dev` ask (a developer also tests the
+ *    betas) on a master with DEDALO_CODE_SERVER_PRERELEASE_CHANNEL.
+ * The two master switches stay SEPARATE (same reasoning as codeReleasePath's
+ * note on the dev switch): publishing immutable betas must not expose branch
+ * builds, nor the other way round. A master that opted into neither answers
+ * every ask exactly as it answers a release one — nothing is enumerable.
+ */
+function channelExposure(options: CodeUpdateInfoOptions): ChannelExposure {
+	const asked = options.channel ?? 'master';
+	return {
+		dev: asked === 'dev' && options.devChannelEnabled === true,
+		prerelease: asked !== 'master' && options.prereleaseChannelEnabled === true,
+	};
+}
+
+/** Every rung the exposure reached, in ladder order — what `info.channels` reports back. */
+function honouredChannels(exposure: ChannelExposure): InstallChannel[] {
+	const rungs: InstallChannel[] = ['master'];
+	if (exposure.prerelease) rungs.push('prerelease');
+	if (exposure.dev) rungs.push('dev');
+	return rungs;
+}
+
+/**
+ * Every item this manifest advertises, in this order: the dev rows (both dev
+ * switches on), then — ascending by release identity — the archives of the
+ * asker's OWN triple that sit above its identity, then one item per upgrade
+ * rung.
+ */
 function manifestFiles(
 	options: CodeUpdateInfoOptions,
 	targets: readonly number[][],
+	exposure: ChannelExposure,
 ): CodeReleaseItem[] {
 	if (options.codeFilesDir === undefined || !existsSync(options.codeFilesDir)) return [];
-	// BOTH switches, or nothing: a master that never opted in answers a dev ask
-	// exactly as it answers a release one.
-	const dev =
-		options.channel === 'dev' && options.devChannelEnabled === true
-			? devItemsFor(options.codeFilesDir, options.publicBaseUrl, options.clientVersion, targets)
-			: [];
-	const published = masterItemsFor(options.codeFilesDir, options.publicBaseUrl, targets);
+	const dev = exposure.dev
+		? devItemsFor(options.codeFilesDir, options.publicBaseUrl, options.clientVersion, targets)
+		: [];
+	const published = [
+		...sameTripleItemsFor(options, exposure),
+		...rungItemsFor(options.codeFilesDir, options.publicBaseUrl, targets, exposure),
+	];
 	return [...dev, ...published.map((item) => withReleaseNotes(item, options.changesDir))];
 }
 
-/** A published item with its frozen notes, when the master has them. */
+/**
+ * Where the asker stands in the release sequence: its `clientRelease` when
+ * that is an identity OF ITS OWN data triple, else the bare triple. The bare
+ * triple is the conservative reading — an asker that did not say (an older
+ * client) or said something else is treated as running the stable release of
+ * its triple, so nothing of that triple is offered to it. A `.dev` identity
+ * compares as its triple too (compareReleaseIdentities), the same answer —
+ * except on a dev ask ({@link sameTripleItemsFor}).
+ */
+function askerIdentity(options: CodeUpdateInfoOptions): string {
+	const triple = normalizedClientTriple(options.clientVersion).join('.');
+	const claimed = typeof options.clientRelease === 'string' ? options.clientRelease : '';
+	const parsed = parseReleaseVersion(claimed);
+	return parsed !== null && parsed.triple.join('.') === triple ? claimed : triple;
+}
+
+/**
+ * The archives of the asker's OWN data triple above its identity — how a
+ * prerelease install moves on without a version bump (`7.0.0-beta.6` →
+ * `7.0.0-beta.7` → `7.0.0`; RELEASE_IDENTITY_DESIGN §2.8 item 3). The stable
+ * release of the triple is offered to ANY asker below it (a stable release is
+ * no exposure), its prereleases only when the prerelease rung is exposed. An
+ * asker at the stable release (or at its bare triple) is offered nothing here.
+ *
+ * A DEVELOPER BUILD asking on the dev channel is the exception, as it is the
+ * walk's (version_walk.ts sameTripleRefusal): a `.dev` cannot say whether it
+ * sits before or after its triple's tags, so EVERY tag-built archive of its
+ * triple is a legal next step and is offered — the stable release, and the
+ * prereleases where that rung is exposed. That is the §2.8 item 5 bootstrap:
+ * an install on `7.0.0-beta.6` (which reports its bare triple) installs a
+ * developer build, then is offered `7.0.0-beta.7` and `7.0.0` from it. The
+ * swap door grants the same exception only to a tree whose own stamp says the
+ * dev channel installed it (code_update.ts walkChannelOf).
+ */
+function sameTripleItemsFor(
+	options: CodeUpdateInfoOptions,
+	exposure: ChannelExposure,
+): CodeReleaseItem[] {
+	const triple = normalizedClientTriple(options.clientVersion);
+	const running = askerIdentity(options);
+	const devStanding = options.channel === 'dev' && parseReleaseVersion(running)?.dev === true;
+	return archivesOfTriple(options.codeFilesDir as string, triple)
+		.filter((name) => name.kind === 'stable' || exposure.prerelease)
+		.filter((name) => devStanding || compareReleaseIdentities(name.identity as string, running) > 0)
+		.sort((a, b) => compareReleaseIdentities(a.identity as string, b.identity as string))
+		.map((name) => identityItemFor(options.codeFilesDir as string, options.publicBaseUrl, name))
+		.filter((item): item is CodeReleaseItem => item !== null);
+}
+
+/**
+ * ONE item per upgrade rung: the NEWEST identity of that triple the asker may
+ * see — the stable `<v>.zip` when it exists (a release outranks every
+ * prerelease of its triple), else, on an exposed prerelease rung, the newest
+ * prerelease. A stable asker is therefore never offered a prerelease, even
+ * when a prerelease is the newest thing this master holds. The choice is THE
+ * walk's own (version_walk.ts newestOfRung — the identity walk's
+ * `not_newest_of_rung` clause asks the same function), so what is offered and
+ * what the walk calls the rung's target cannot drift.
+ */
+function rungItemsFor(
+	codeFilesDir: string,
+	publicBaseUrl: string,
+	targets: readonly number[][],
+	exposure: ChannelExposure,
+): CodeReleaseItem[] {
+	const items: CodeReleaseItem[] = [];
+	const channel = exposure.prerelease ? 'prerelease' : 'master';
+	for (const triple of targets) {
+		const archives = archivesOfTriple(codeFilesDir, triple);
+		const newest = newestOfRung(
+			archives.map((name) => name.identity as string),
+			triple,
+			channel,
+		);
+		const name = archives.find((archive) => archive.identity === newest);
+		const item = name === undefined ? null : identityItemFor(codeFilesDir, publicBaseUrl, name);
+		if (item !== null) items.push(item);
+	}
+	return items;
+}
+
+/**
+ * The TAG-BUILT archives (stable + prerelease, never `-dev`) in `triple`'s
+ * `<X>/<X.Y>/` dir, by their file names — the shared grammar
+ * ({@link releaseArchiveNameOf}), so a stray or foreign file is never listed.
+ * An unreadable dir lists nothing (the panel reports it; the manifest stays an
+ * answer).
+ */
+function archivesOfTriple(
+	codeFilesDir: string,
+	triple: readonly number[],
+): (ReleaseArchiveName & { fileName: string })[] {
+	const dir = join(codeFilesDir, String(triple[0]), `${triple[0]}.${triple[1]}`);
+	let entries: string[];
+	try {
+		entries = readdirSync(dir);
+	} catch {
+		return [];
+	}
+	const wanted = triple.join('.');
+	const found: (ReleaseArchiveName & { fileName: string })[] = [];
+	for (const fileName of entries) {
+		const name = releaseArchiveNameOf(fileName);
+		if (name !== null && name.kind !== 'dev' && name.triple === wanted) {
+			found.push({ ...name, fileName });
+		}
+	}
+	return found;
+}
+
+/** A stable or prerelease archive as an item (null when it vanished / is unconfined). */
+function identityItemFor(
+	codeFilesDir: string,
+	publicBaseUrl: string,
+	name: ReleaseArchiveName & { fileName: string },
+): CodeReleaseItem | null {
+	const triple = name.triple.split('.').map(Number);
+	if (name.kind === 'stable') return releaseItemFor(codeFilesDir, publicBaseUrl, triple);
+	const item = archiveItemFor(codeFilesDir, publicBaseUrl, triple, name.fileName);
+	return item === null
+		? null
+		: { ...item, channel: 'prerelease', release: name.identity as string };
+}
+
+/**
+ * A published item with its frozen notes, when the master has them — a
+ * prerelease's own (`changes/<X.Y.Z-beta.N>/release.json`, the cut every
+ * prerelease gets), never its triple's.
+ */
 function withReleaseNotes(item: CodeReleaseItem, changesDir: string | undefined): CodeReleaseItem {
-	const notes = changesDir === undefined ? null : readReleaseNotes(changesDir, item.version);
+	const notes =
+		changesDir === undefined ? null : readReleaseNotes(changesDir, item.release ?? item.version);
 	return notes === null ? item : { ...item, notes };
 }
 
@@ -232,7 +446,9 @@ function notesShape(notes: unknown): Omit<CodeReleaseNotes, 'date'> | null {
  * (no snapshot, no notes in it, anything malformed). Never throws.
  */
 export function readReleaseNotes(changesDir: string, version: string): CodeReleaseNotes | null {
-	if (!/^\d+\.\d+\.\d+$/.test(version)) return null;
+	// THE shared grammar (a stable or prerelease identity): it is joined into a
+	// path, and nothing it accepts holds a separator or `..`.
+	if (!RELEASE_VERSION_RE.test(version)) return null;
 	try {
 		const snapshot = JSON.parse(readFileSync(join(changesDir, version, 'release.json'), 'utf8'));
 		const notes = notesShape(snapshot?.notes);
@@ -240,20 +456,6 @@ export function readReleaseNotes(changesDir: string, version: string): CodeRelea
 	} catch {
 		return null;
 	}
-}
-
-/** The published (`master`-channel) rungs that actually exist on disk. */
-function masterItemsFor(
-	codeFilesDir: string,
-	publicBaseUrl: string,
-	targets: readonly number[][],
-): CodeReleaseItem[] {
-	const items: CodeReleaseItem[] = [];
-	for (const triple of targets) {
-		const item = releaseItemFor(codeFilesDir, publicBaseUrl, triple);
-		if (item !== null) items.push(item);
-	}
-	return items;
 }
 
 /**
@@ -300,6 +502,19 @@ function releaseItemFor(
 ): CodeReleaseItem | null {
 	const versionString = triple.join('.');
 	const fileName = channel === 'dev' ? `${versionString}-dev.zip` : `${versionString}.zip`;
+	const item = archiveItemFor(codeFilesDir, publicBaseUrl, triple, fileName);
+	if (item === null) return null;
+	return channel === 'dev' ? { ...item, channel: 'dev' as const } : item;
+}
+
+/** The channel-less facts of one archive file of `triple` (null when absent or unconfined). */
+function archiveItemFor(
+	codeFilesDir: string,
+	publicBaseUrl: string,
+	triple: readonly number[],
+	fileName: string,
+): CodeReleaseItem | null {
+	const versionString = triple.join('.');
 	const filePath = codeReleasePath(codeFilesDir, triple, fileName);
 	if (filePath === null || !existsSync(filePath)) return null;
 	const sha256 = readShaSidecar(filePath);
@@ -308,7 +523,6 @@ function releaseItemFor(
 		url: codeReleaseUrl(publicBaseUrl, versionString, fileName),
 		date: new Date(statSync(filePath).mtimeMs).toISOString(),
 		...(sha256 === null ? {} : { sha256 }),
-		...(channel === 'dev' ? { channel: 'dev' as const } : {}),
 	};
 }
 
@@ -329,12 +543,54 @@ function readShaSidecar(archivePath: string): string | null {
 	return /^[a-f0-9]{64}$/.test(digest) ? digest : null;
 }
 
+/** What a release archive's FILE NAME says (code_build_plan.ts releaseFileName). */
+export interface ReleaseArchiveName {
+	/** The data triple ('7.0.1') — the `<X>/<X.Y>/` directory it lives in. */
+	triple: string;
+	/** `stable` = `<X.Y.Z>.zip`, `prerelease` = `<X.Y.Z-beta.N>.zip`, `dev` = `<X.Y.Z>-dev.zip`. */
+	kind: 'stable' | 'prerelease' | 'dev';
+	/** The release identity a tag build is named after; null for a developer build. */
+	identity: string | null;
+}
+
+/**
+ * Parse a release archive file name, or null when it is none: the identity
+ * part is THE shared grammar (release_identity.ts RELEASE_VERSION_RE —
+ * canonical numbers, `alpha|beta|rc` only), the developer suffix the fixed
+ * `-dev` token. Every character this accepts is `[0-9a-z.-]`, never a
+ * separator — which is what lets the name be joined into a path below.
+ */
+export function releaseArchiveNameOf(fileName: string): ReleaseArchiveName | null {
+	if (!fileName.endsWith('.zip')) return null;
+	const stem = fileName.slice(0, -'.zip'.length);
+	return stem.endsWith('-dev') ? devArchiveNameOf(stem) : identityArchiveNameOf(stem);
+}
+
+/** `<X.Y.Z>-dev` — the developer build's fixed token after a bare triple. */
+function devArchiveNameOf(stem: string): ReleaseArchiveName | null {
+	const triple = stem.slice(0, -'-dev'.length);
+	return /^[0-9]+\.[0-9]+\.[0-9]+$/.test(triple) ? { triple, kind: 'dev', identity: null } : null;
+}
+
+/** `<X.Y.Z>` or `<X.Y.Z-(alpha|beta|rc).N>` — a release identity in the shared grammar. */
+function identityArchiveNameOf(stem: string): ReleaseArchiveName | null {
+	const parsed = RELEASE_VERSION_RE.test(stem) ? parseReleaseVersion(stem) : null;
+	if (parsed === null) return null;
+	return {
+		triple: parsed.triple.join('.'),
+		kind: parsed.prerelease === null ? 'stable' : 'prerelease',
+		identity: stem,
+	};
+}
+
 /**
  * Release archive path: <codeFilesDir>/<major>/<major.minor>/<file>. Confined.
  *
- * TWO channels resolve: the published `<v>.zip` and the developer
- * `<v>-dev.zip` (code_build_plan.ts releaseFileName), both servable through
- * code_serving.ts.
+ * THREE names resolve: the published `<v>.zip`, the prerelease
+ * `<X.Y.Z-(alpha|beta|rc).N>.zip` (RELEASE_IDENTITY_DESIGN §2.8 item 1) and the
+ * developer `<v>-dev.zip` (code_build_plan.ts releaseFileName), all servable
+ * through code_serving.ts. Which of them a manifest ADVERTISES, and to whom, is
+ * code_manifest's channel rule, not this grammar's.
  *
  * A dev build is advertised ONLY when the consumer explicitly asked for the dev
  * channel AND this master opted in (2026-08-24). The property to preserve is
@@ -347,7 +603,7 @@ export function codeReleasePath(
 	triple: readonly number[],
 	fileName: string,
 ): string | null {
-	if (!/^[0-9]+\.[0-9]+\.[0-9]+(-dev)?\.zip$/.test(fileName)) return null;
+	if (releaseArchiveNameOf(fileName) === null) return null;
 	const dir = join(codeFilesDir, String(triple[0]), `${triple[0]}.${triple[1]}`);
 	const resolved = resolve(join(dir, fileName));
 	if (!resolved.startsWith(`${resolve(codeFilesDir)}${sep}`)) return null;

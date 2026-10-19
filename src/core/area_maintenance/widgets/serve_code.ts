@@ -24,6 +24,7 @@
  */
 
 import { config } from '../../../config/config.ts';
+import type { CodeBuildChannel } from '../../update/code_build.ts';
 import {
 	engineDenied,
 	fromEnvelope,
@@ -86,9 +87,10 @@ async function withReachability(
  */
 async function buildVersionOwned(options: Record<string, unknown>): Promise<WidgetResponse> {
 	const { buildVersionFromGit } = await import('../../update/code_build.ts');
-	// The panel's two buttons send a CHANNEL ('master' = release, 'dev') and
-	// nothing else: the ref is resolved on the server (code_build.ts
-	// resolveBuildRefOrRefuse — release = the newest `vX.Y.Z` tag, dev = the tip
+	// The panel's three buttons send a CHANNEL ('master' = release,
+	// 'prerelease', 'dev') and nothing else: the ref is resolved on the server
+	// (code_build.ts resolveBuildRefOrRefuse — release = the newest `vX.Y.Z`
+	// tag, prerelease = the newest `vX.Y.Z-beta.N` tag above it, dev = the tip
 	// of `master`), never baked into the client. The release is named after the
 	// version THE REF DECLARES, not the running process: taking the name from the
 	// process while the bytes came from a ref published mislabelled archives
@@ -107,8 +109,8 @@ async function buildVersionOwned(options: Record<string, unknown>): Promise<Widg
 }
 
 /** The panel's channel, or undefined for anything that is not exactly one. */
-function channelOption(value: unknown): 'master' | 'dev' | undefined {
-	return value === 'dev' || value === 'master' ? value : undefined;
+function channelOption(value: unknown): CodeBuildChannel | undefined {
+	return value === 'dev' || value === 'master' || value === 'prerelease' ? value : undefined;
 }
 
 /**

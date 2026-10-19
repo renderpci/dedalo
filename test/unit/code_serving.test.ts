@@ -88,6 +88,9 @@ describe('resolveCodeReleaseFile', () => {
 		for (const url of [
 			'/dedalo/install/code/7.0.1/7.0.2.zip', // a neighbour release under our dir
 			'/dedalo/install/code/7.0.1/7.0.2-dev.zip', // a neighbour dev build
+			'/dedalo/install/code/7.0.1/7.0.2-beta.1.zip', // a neighbour triple's prerelease
+			'/dedalo/install/code/7.0.1/7.0.1-pre.1.zip', // not the shared prerelease grammar
+			'/dedalo/install/code/7.0.1/7.0.1-beta.1.zip.partial', // a build's staging file
 			'/dedalo/install/code/7.0.1/7.0.1-dev.tar', // dev channel, wrong grammar
 			'/dedalo/install/code/7.0.1/7.0.1-devx.zip', // not the fixed -dev token
 			'/dedalo/install/code/7.0.1/7.0.1.tar', // not the zip grammar

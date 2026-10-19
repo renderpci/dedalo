@@ -8,13 +8,14 @@
  *
  * Fail-closed, same posture as `serveOntologyIoFile` (server.ts):
  *  - only when IS_A_CODE_SERVER is set and DEDALO_CODE_FILES_DIR is configured;
- *  - only a version-shaped dir segment, and only that release's own
- *    `<version>.zip` or `<version>-dev.zip` (or their `.sha256` sidecars — the
- *    digest the consumer verifies, harmless to publish and useful to an
- *    operator). The `-dev` channel (code_build_plan.ts releaseFileName) is
- *    SERVABLE but NEVER ADVERTISED: `buildCodeUpdateInfo` only looks for
- *    `<v>.zip`, so a developer build reaches only an operator who types its
- *    URL, never a consumer following the manifest;
+ *  - only a version-shaped dir segment, and only an archive OF THAT TRIPLE:
+ *    `<version>.zip`, a prerelease `<version>-(alpha|beta|rc).N.zip`
+ *    (RELEASE_IDENTITY_DESIGN §2.8 item 1) or `<version>-dev.zip` (or their
+ *    `.sha256` sidecars — the digest the consumer verifies, harmless to
+ *    publish and useful to an operator). The `-dev` channel
+ *    (code_build_plan.ts releaseFileName) is SERVABLE but advertised only on
+ *    request (code_manifest.ts), so a developer build never reaches a
+ *    consumer that did not ask for one;
  *  - the on-disk path is re-derived through `codeReleasePath`, the SAME
  *    confinement gate the manifest uses, never string-joined from the request.
  * Anonymous by design: the archive is public code, and the manifest that names
@@ -24,7 +25,7 @@
 import { SECURITY_HEADERS } from '../api/static_asset.ts';
 import { toErrorEnvelope } from '../errors/convert.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
-import { codeReleasePath } from './code_manifest.ts';
+import { codeReleasePath, releaseArchiveNameOf } from './code_manifest.ts';
 
 const RELEASE_URL_RE = /^\/dedalo\/install\/code\/(\d+\.\d+\.\d+)\/([A-Za-z0-9_.-]+)$/;
 
@@ -63,14 +64,12 @@ function parseReleaseUrl(
 	const match = pathname.match(RELEASE_URL_RE);
 	if (match === null) return null;
 	const [, version, fileName] = match as unknown as [string, string, string];
-	// A release dir holds its own archive on two channels: the published
-	// `<v>.zip` and the un-advertised developer `<v>-dev.zip`. Anything else
-	// (a neighbour version, another grammar) is a probe.
-	const archiveName = fileName.startsWith(`${version}-dev`)
-		? `${version}-dev.zip`
-		: `${version}.zip`;
-	const isSidecar = fileName === `${archiveName}.sha256`;
-	if (!isSidecar && fileName !== archiveName) return null;
+	// A release dir holds the archives OF ITS OWN TRIPLE: the published
+	// `<v>.zip`, its prereleases `<v>-beta.N.zip`, the developer `<v>-dev.zip`.
+	// Anything else (a neighbour version, another grammar) is a probe.
+	const isSidecar = fileName.endsWith('.sha256');
+	const archiveName = isSidecar ? fileName.slice(0, -'.sha256'.length) : fileName;
+	if (releaseArchiveNameOf(archiveName)?.triple !== version) return null;
 	return { version, triple: version.split('.').map(Number), archiveName, isSidecar };
 }
 

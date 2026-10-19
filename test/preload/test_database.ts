@@ -55,6 +55,7 @@ process.env.DEDALO_SMTP_HOST = '';
 process.env.IS_A_CODE_SERVER = 'false';
 process.env.IS_AN_ONTOLOGY_SERVER = 'false';
 process.env.DEDALO_CODE_SERVER_DEV_CHANNEL = 'false';
+process.env.DEDALO_CODE_SERVER_PRERELEASE_CHANNEL = 'false';
 // The media export base CI runs with (test/helpers/suite_posture.ts). `??=`, like
 // hosted_env.sh's `:=`: a shell export still wins, the developer's .env does not.
 process.env.DEDALO_MEDIA_EXPORT_BASE ??= SUITE_MEDIA_EXPORT_BASE;

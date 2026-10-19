@@ -253,6 +253,7 @@ describe('C. the provenance step, EXECUTED', () => {
 
 	test.each([
 		['master', ''],
+		['prerelease', ''],
 		['dev', '.dev'],
 	] as const)('channel %s: a stamp the engine parses, posture "%s"', (channel, tag) => {
 		const result = runProvenance({
@@ -269,6 +270,25 @@ describe('C. the provenance step, EXECUTED', () => {
 			provenance: { stamp: 'legacy', channel: stamp?.channel ?? null },
 		});
 		expect(identity.version.slice('7.0.0'.length)).toBe(tag);
+	});
+
+	test('channel prerelease: the image of a prerelease tag stamps it, and calls itself the tag (release posture)', () => {
+		// image-release.yml builds a prerelease tag with DEDALO_RELEASE_CHANNEL=prerelease
+		// (scripts/ci/image_release.ts releasePlanFor): the step must accept it, and the
+		// engine reading that stamp beside the archive's expanded describe must say the tag.
+		const result = runProvenance({
+			DEDALO_RELEASE_CHANNEL: 'prerelease',
+			DEDALO_RELEASE_ARCHIVE_SHA256: DIGEST,
+		});
+		expect(result.code, result.stderr).toBe(0);
+		const stamp = parseInstallStamp(result.stamp ?? '');
+		expect(stamp).toEqual({ digest: DIGEST, channel: 'prerelease' });
+		const identity = resolveReleaseIdentity({
+			triple: [7, 0, 0],
+			describe: 'v7.0.0-beta.7',
+			provenance: { stamp: 'other', channel: stamp?.channel ?? null },
+		});
+		expect([identity.version, identity.kind]).toEqual(['7.0.0-beta.7', 'prerelease']);
 	});
 
 	test.each([

@@ -43,8 +43,15 @@ describe('parseInstallStamp', () => {
 		expect(stamp?.channel).toBe('master');
 	});
 
+	test('a PRERELEASE-channel stamp reads back as prerelease (the third rung, design §2.8 item 2)', () => {
+		const stamp = parseInstallStamp(JSON.stringify({ digest: DIGEST, channel: 'prerelease' }));
+		expect(stamp?.channel).toBe('prerelease');
+	});
+
 	test.each([
 		['not json at all', 'not json at all'],
+		['a near-miss channel', JSON.stringify({ digest: DIGEST, channel: 'Prerelease' })],
+		['a label as channel', JSON.stringify({ digest: DIGEST, channel: 'beta' })],
 		['an empty file', ''],
 		['a non-hex digest', JSON.stringify({ digest: 'nope', channel: 'dev' })],
 		['a truncated digest', JSON.stringify({ digest: 'c'.repeat(63), channel: 'dev' })],

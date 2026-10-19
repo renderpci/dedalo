@@ -1,0 +1,262 @@
+{
+	"about": "THE IDENTITY WALK truth table (RELEASE_IDENTITY design §2.8 item 3, gate 15). One fixture, three readers: version_walk.ts identityWalkRefusal (the rule every door asks), the image-update channel CLI check-target run from an engine tree that calls itself `running` (test/helpers/engine_cli_tree.ts), and the client's post-restart verdict (update_code_phases.js resolve_health_outcome: a legal walk to a named identity must tell the new tree from the rolled-back one). `verdict` is null (legal) or the WalkRefusal id. `offered` (optional) is what a manifest lists for the target's rung — only the manifest knows it, so the CLI reader skips those rows. A developer-build target is written `X.Y.Z.dev`; the CLI reader asks it as the image tag `X.Y.Z-dev`.",
+	"rows": [
+		{
+			"name": "beta.6 → beta.7 (same triple, no rung)",
+			"running": "7.0.0-beta.6",
+			"target": "7.0.0-beta.7",
+			"channel": "prerelease",
+			"verdict": null
+		},
+		{
+			"name": "beta.6 → beta.8 (skipping betas within a triple is legal)",
+			"running": "7.0.0-beta.6",
+			"target": "7.0.0-beta.8",
+			"channel": "prerelease",
+			"verdict": null
+		},
+		{
+			"name": "beta.7 → rc.1",
+			"running": "7.0.0-beta.7",
+			"target": "7.0.0-rc.1",
+			"channel": "prerelease",
+			"verdict": null
+		},
+		{
+			"name": "rc.1 → 7.0.0 (a release on the release channel)",
+			"running": "7.0.0-rc.1",
+			"target": "7.0.0",
+			"channel": "master",
+			"verdict": null
+		},
+		{
+			"name": "beta.7 → 7.0.0 (a release on the release channel)",
+			"running": "7.0.0-beta.7",
+			"target": "7.0.0",
+			"channel": "master",
+			"verdict": null
+		},
+		{
+			"name": "beta.7 → 7.0.0 on the prerelease channel (the ladder includes releases)",
+			"running": "7.0.0-beta.7",
+			"target": "7.0.0",
+			"channel": "prerelease",
+			"verdict": null
+		},
+		{
+			"name": "beta.7 → beta.6 (back within the triple)",
+			"running": "7.0.0-beta.7",
+			"target": "7.0.0-beta.6",
+			"channel": "prerelease",
+			"verdict": "not_newer_release"
+		},
+		{
+			"name": "rc.1 → beta.10 (rc outranks beta whatever the number)",
+			"running": "7.0.0-rc.1",
+			"target": "7.0.0-beta.10",
+			"channel": "prerelease",
+			"verdict": "not_newer_release"
+		},
+		{
+			"name": "7.0.0 → rc.1 (a release never steps back to its own prerelease)",
+			"running": "7.0.0",
+			"target": "7.0.0-rc.1",
+			"channel": "prerelease",
+			"verdict": "not_newer_release"
+		},
+		{
+			"name": "same identity, a release",
+			"running": "7.0.0",
+			"target": "7.0.0",
+			"channel": "master",
+			"verdict": "not_newer_release"
+		},
+		{
+			"name": "same identity, a prerelease",
+			"running": "7.0.0-beta.7",
+			"target": "7.0.0-beta.7",
+			"channel": "prerelease",
+			"verdict": "not_newer_release"
+		},
+		{
+			"name": "7.0.0 → 7.0.1-beta.1 on the prerelease channel (next rung)",
+			"running": "7.0.0",
+			"target": "7.0.1-beta.1",
+			"channel": "prerelease",
+			"verdict": null
+		},
+		{
+			"name": "7.0.0 → 7.0.1-beta.1 on the release channel",
+			"running": "7.0.0",
+			"target": "7.0.1-beta.1",
+			"channel": "master",
+			"verdict": "channel_refused"
+		},
+		{
+			"name": "7.0.0 → 7.0.1-beta.1 on the dev channel (the ladder: dev includes prereleases)",
+			"running": "7.0.0",
+			"target": "7.0.1-beta.1",
+			"channel": "dev",
+			"verdict": null
+		},
+		{
+			"name": "7.0.0 → 7.0.2-beta.1 (rung skip)",
+			"running": "7.0.0",
+			"target": "7.0.2-beta.1",
+			"channel": "prerelease",
+			"verdict": "version_skip"
+		},
+		{
+			"name": "7.0.0-beta.6 → 7.0.1 (another triple: the data walk, from the prerelease's triple)",
+			"running": "7.0.0-beta.6",
+			"target": "7.0.1",
+			"channel": "master",
+			"verdict": null
+		},
+		{
+			"name": "7.0.5-beta.6 → 7.1.0-rc.1 (next minor on .0)",
+			"running": "7.0.5-beta.6",
+			"target": "7.1.0-rc.1",
+			"channel": "prerelease",
+			"verdict": null
+		},
+		{
+			"name": "7.0.1-beta.2 → 7.0.0 (an older data version)",
+			"running": "7.0.1-beta.2",
+			"target": "7.0.0",
+			"channel": "master",
+			"verdict": "downgrade_or_same_version"
+		},
+		{
+			"name": "7.0.0 → 8.0.0-beta.1 (next major)",
+			"running": "7.0.0",
+			"target": "8.0.0-beta.1",
+			"channel": "prerelease",
+			"verdict": null
+		},
+		{
+			"name": "7.0.0 → 9.0.0-beta.1 (major skip)",
+			"running": "7.0.0",
+			"target": "9.0.0-beta.1",
+			"channel": "prerelease",
+			"verdict": "version_skip"
+		},
+		{
+			"name": "dev keeps its same-triple exception (a release)",
+			"running": "7.0.0",
+			"target": "7.0.0.dev",
+			"channel": "dev",
+			"verdict": null
+		},
+		{
+			"name": "dev keeps its same-triple exception (a prerelease)",
+			"running": "7.0.0-beta.6",
+			"target": "7.0.0.dev",
+			"channel": "dev",
+			"verdict": null
+		},
+		{
+			"name": "a developer build off the dev channel",
+			"running": "7.0.0",
+			"target": "7.0.0.dev",
+			"channel": "master",
+			"verdict": "channel_refused"
+		},
+		{
+			"name": "a developer build of the next rung",
+			"running": "7.0.0",
+			"target": "7.0.1.dev",
+			"channel": "dev",
+			"verdict": null
+		},
+		{
+			"name": "a developer build skipping a rung",
+			"running": "7.0.0",
+			"target": "7.0.2.dev",
+			"channel": "dev",
+			"verdict": "version_skip"
+		},
+		{
+			"name": "a RUNNING developer build returns to any release of its triple on the dev channel",
+			"running": "7.0.0.dev",
+			"target": "7.0.0",
+			"channel": "dev",
+			"verdict": null
+		},
+		{
+			"name": "a RUNNING developer build moves to a prerelease of its triple on the dev channel",
+			"running": "7.0.0.dev",
+			"target": "7.0.0-beta.7",
+			"channel": "dev",
+			"verdict": null
+		},
+		{
+			"name": "off the dev channel a RUNNING .dev is its bare triple: the same release is not newer",
+			"running": "7.0.1.dev",
+			"target": "7.0.1",
+			"channel": "master",
+			"verdict": "not_newer_release"
+		},
+		{
+			"name": "off the dev channel a RUNNING .dev is its bare triple: a prerelease of it is older",
+			"running": "7.0.1.dev",
+			"target": "7.0.1-beta.1",
+			"channel": "prerelease",
+			"verdict": "not_newer_release"
+		},
+		{
+			"name": "off the dev channel a RUNNING .dev still walks to the next rung",
+			"running": "7.0.0.dev",
+			"target": "7.0.1",
+			"channel": "master",
+			"verdict": null
+		},
+		{
+			"name": "a RUNNING developer build still walks the data rungs",
+			"running": "7.0.0.dev",
+			"target": "7.0.2",
+			"channel": "master",
+			"verdict": "version_skip"
+		},
+		{
+			"name": "the rung's newest on the release channel: its stable release",
+			"running": "7.0.0",
+			"target": "7.0.1",
+			"channel": "master",
+			"offered": ["7.0.1-beta.2", "7.0.1"],
+			"verdict": null
+		},
+		{
+			"name": "a prerelease of a rung whose release is out",
+			"running": "7.0.0",
+			"target": "7.0.1-beta.2",
+			"channel": "prerelease",
+			"offered": ["7.0.1-beta.2", "7.0.1"],
+			"verdict": "not_newest_of_rung"
+		},
+		{
+			"name": "an older prerelease of the rung",
+			"running": "7.0.0",
+			"target": "7.0.1-beta.1",
+			"channel": "prerelease",
+			"offered": ["7.0.1-beta.1", "7.0.1-beta.2"],
+			"verdict": "not_newest_of_rung"
+		},
+		{
+			"name": "the rung's newest prerelease",
+			"running": "7.0.0",
+			"target": "7.0.1-beta.2",
+			"channel": "prerelease",
+			"offered": ["7.0.1-beta.1", "7.0.1-beta.2"],
+			"verdict": null
+		},
+		{
+			"name": "the release-channel newest ignores prereleases",
+			"running": "7.0.0",
+			"target": "7.0.1",
+			"channel": "master",
+			"offered": ["7.0.1", "7.0.1-rc.1", "7.0.2"],
+			"verdict": null
+		}
+	]
+}

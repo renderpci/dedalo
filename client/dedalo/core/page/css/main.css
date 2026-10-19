@@ -18203,22 +18203,31 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.update_code > .content_data > .dd_note {
   margin: 0.5rem 0;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row {
+.wrapper_widget.update_code > .content_data > .channel_row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 1.25rem;
   margin: 0.75rem 0 0.25rem 0;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label {
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_heading {
+  font-weight: bold;
+}
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   cursor: pointer;
-  font-weight: bold;
   padding-bottom: 0px;
-  color: var(--color_blue_2);
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label > .dev_channel_check {
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option > .channel_radio {
   height: initial;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dev_channel_label > .dev_channel_icon {
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option_prerelease,
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option_dev {
+  color: var(--color_blue_2);
+}
+.wrapper_widget.update_code > .content_data > .channel_row > .channel_option_dev > .dev_channel_icon {
   content: ' ';
   display: inline-block;
   flex: 0 0 auto;
@@ -18234,11 +18243,13 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   mask-position: center;
   background-color: var(--color_blue_2);
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row > .dd_note.dev_channel_note {
-  margin: 0.25rem 0 0 3.1rem;
+.wrapper_widget.update_code > .content_data > .channel_row > .dd_note.channel_note {
+  flex-basis: 100%;
+  margin: 0.25rem 0 0 0;
   max-width: 60rem;
 }
-.wrapper_widget.update_code > .content_data > .dev_channel_row:not(:has(.dev_channel_check:checked)) > .dd_note.dev_channel_note {
+.wrapper_widget.update_code > .content_data > .channel_row:not(:has(.channel_option_prerelease >.channel_radio:checked)) > .dd_note.channel_note_prerelease,
+.wrapper_widget.update_code > .content_data > .channel_row:not(:has(.channel_option_dev >.channel_radio:checked)) > .dd_note.channel_note_dev {
   display: none;
 }
 .wrapper_widget.update_code > .content_data .update_status {

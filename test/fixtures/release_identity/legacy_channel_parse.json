@@ -1,0 +1,6 @@
+{
+	"_comment": "VENDORED SHIPPED BYTES: the channel parse of get_code_update_info in the last released code-server engine, copied byte-exact from git. client_update_code_render.test.ts builds the older master's answer FROM this line, and checks the line against the tag's own blob whenever the tag is in the clone. Never edit the line by hand: it is what shipped.",
+	"tag": "v7.0.0-beta.6",
+	"path": "src/core/api/handlers/dd_utils_api.ts",
+	"line": "\t\t\tchannel: options.channel === 'dev' ? 'dev' : 'master',"
+}

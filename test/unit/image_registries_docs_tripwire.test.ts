@@ -26,9 +26,14 @@
  *   D. a `cosign verify` command on the page carries the list's identity regexp
  *      and issuer exactly;
  *   E. positive controls: a stale table, a missing marker and a drifted identity
- *      are each caught by the same predicates.
+ *      are each caught by the same predicates;
+ *   F. the release runbooks print the SAME check (2026-10-18, RELEASE_IDENTITY gate 16:
+ *      the identity widened to prerelease tags): every `cosign verify` command with an
+ *      identity in docker.md, engineering/RELEASE.md (§13, the maintainer's check of a
+ *      publication) and engineering/CI.md carries the list's identity and issuer
+ *      verbatim — each page holds at least one, and a stale (pre-widening) identity is red.
  *
- * Hermetic: reads two repo files, writes nothing.
+ * Hermetic: reads four repo files, writes nothing.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -84,6 +89,21 @@ function verifiesWith(page: string, identity: string, issuer: string): boolean {
 			command.includes(`--certificate-oidc-issuer '${issuer}'`),
 	);
 }
+
+/** Every identity-carrying `cosign verify` on a page, and whether each is exactly the list's. */
+function identityCommands(page: string, identity: string, issuer: string): boolean[] {
+	return cosignVerifyCommands(page)
+		.filter((command) => command.includes('--certificate-identity-regexp'))
+		.map(
+			(command) =>
+				command.includes(`--certificate-identity-regexp '${identity}'`) &&
+				command.includes(`--certificate-oidc-issuer '${issuer}'`),
+		);
+}
+
+/** The pages that print the operator's / maintainer's signature check. */
+const VERIFY_PAGES = [REGISTRY_DOCS_PATH, 'engineering/RELEASE.md', 'engineering/CI.md'] as const;
+const pageText = (path: string): string => readFileSync(join(REPO_ROOT, path), 'utf8');
 
 describe('the registry table in docs/install/docker.md', () => {
 	test('A. both markers, once each, in order', () => {
@@ -154,5 +174,29 @@ describe('E. positive controls — the predicates catch what they guard', () => 
 			verifiesWith(PAGE, identity.replace('image-release', 'other'), LIST.signing.issuer),
 		).toBe(false);
 		expect(verifiesWith(PAGE, identity, 'https://issuer.example.org')).toBe(false);
+	});
+});
+
+describe('F. every page that prints the signature check prints THE list identity', () => {
+	test.each(VERIFY_PAGES)(
+		'%s: ≥1 identity-carrying cosign verify, every one exactly the list',
+		(path) => {
+			const verdicts = identityCommands(
+				pageText(path),
+				LIST.signing.identity_regexp,
+				LIST.signing.issuer,
+			);
+			expect(verdicts.length).toBeGreaterThan(0);
+			expect(verdicts.every(Boolean)).toBe(true);
+		},
+	);
+
+	test('CONTROL: a page still printing the stable-only identity (before prerelease tags) is red', () => {
+		const stale = LIST.signing.identity_regexp.replace('(-(alpha|beta|rc)\\.[0-9]+)?', '');
+		expect(stale).not.toBe(LIST.signing.identity_regexp);
+		const page = pageText('engineering/RELEASE.md').replace(LIST.signing.identity_regexp, stale);
+		expect(identityCommands(page, LIST.signing.identity_regexp, LIST.signing.issuer)).toContain(
+			false,
+		);
 	});
 });

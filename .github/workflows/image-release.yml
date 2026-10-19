@@ -10,11 +10,15 @@
 # with its reason; a provisioned one whose secrets are missing is skipped LOUDLY.
 #
 # A RELEASE HERE IS A RELEASE OF THE CODE SERVER (engineering/RELEASE.md): the stable tag
-# vX.Y.Z whose version.ts declares X.Y.Z → `:X.Y.Z` (immutable: a published release is
-# never rebuilt or overwritten; a later run copies the existing digest to a registry that
-# lacks it). The developer channel is the tip of `master`, built on DISPATCH ONLY →
-# `:X.Y.Z-dev` (mutable, like the code server's on-demand `<v>-dev.zip`). Never `latest`.
-# Prerelease tags (v7.0.0-beta.N) do not match the trigger and are refused by `plan`.
+# vX.Y.Z whose version.ts declares X.Y.Z → `:X.Y.Z`, or a PRERELEASE tag
+# vX.Y.Z-(alpha|beta|rc).N (a prerelease IS a release, 2026-10-15) → `:X.Y.Z-beta.N`
+# ONLY. Both immutable: a published release is never rebuilt or overwritten; a later run
+# copies the existing digest to a registry that lacks it. The developer channel is the tip
+# of `master`, built on DISPATCH ONLY → `:X.Y.Z-dev` (mutable, like the code server's
+# on-demand `<v>-dev.zip`). One tag per run and never a floating one: no `latest`, no
+# `:X` / `:X.Y`, and a prerelease never touches `:X.Y.Z` (image_release.ts
+# publishTagFault). The trigger globs below are wider than the grammar (GitHub filter
+# patterns cannot say "no leading zero"); `plan` validates the tag exactly.
 #
 # HOW. `plan` resolves the release (code_build_plan.ts's own rules) and REFUSES a release
 # whose commit has no successful push run of ci.yml AND db.yml — a release is cut only from
@@ -33,7 +37,7 @@
 # SAME digest and passes the operator's own `cosign verify`. It records the result in the
 # job summary and an `image-release` artifact.
 #
-# TRIGGERS. push of a stable tag; workflow_dispatch (channel dev | release; release
+# TRIGGERS. push of a release tag (stable or prerelease); workflow_dispatch (channel dev | release; release
 # publishes an EXISTING tag — e.g. to fill a newly provisioned mirror). NO pull_request,
 # pull_request_target, workflow_run or schedule: publishing needs `packages: write`,
 # `id-token: write` and the registry secrets, which fork or scheduled code must never
@@ -65,6 +69,9 @@ on:
   push:
     tags:
       - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-alpha.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-beta.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-rc.[0-9]+"
   workflow_dispatch:
     inputs:
       channel:
@@ -76,7 +83,7 @@ on:
           - dev
           - release
       tag:
-        description: "release channel only: the existing release tag, vX.Y.Z"
+        description: "release channel only: the existing release tag, vX.Y.Z or vX.Y.Z-(alpha|beta|rc).N"
         required: false
         default: ""
 

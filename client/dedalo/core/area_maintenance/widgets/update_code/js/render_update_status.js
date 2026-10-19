@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {item_release} from './update_code_channel.js'
 
 
 
@@ -232,14 +233,22 @@ const check_counts = function(parent, checks) {
 
 
 
-/** The two build channels, in the order the readout lists them. */
-export const CHANNELS = ['master', 'dev']
+/**
+* The three build channels, in the order the readout lists them: the stable
+* release, the prerelease (a `vX.Y.Z-beta.N` tag, published like a release —
+* RELEASE_IDENTITY_DESIGN §2.8), the developer build of `master`.
+*/
+export const CHANNELS = ['master', 'prerelease', 'dev']
 
 /** What a channel is CALLED (the badge vocabulary, reused as a fallback title). */
 export const channel_label = function(channel) {
-	return channel==='master'
-		? (get_label.update_code_channel_master || 'published')
-		: (get_label.update_code_channel_dev || 'developer')
+	if (channel==='master') {
+		return get_label.update_code_channel_master || 'published'
+	}
+	if (channel==='prerelease') {
+		return get_label.update_code_channel_prerelease || 'prerelease'
+	}
+	return get_label.update_code_channel_dev || 'developer'
 }//end channel_label
 
 
@@ -701,7 +710,9 @@ const same_day = function(a, b) {
 * IMAGE_COMMAND_TAG
 * The image tag a manifest release item installs: its version, plus `-dev` for
 * a developer item — the code server's own release names (`<v>.zip` ↔ `:<v>`,
-* `<v>-dev.zip` ↔ `:<v>-dev`).
+* `<v>-dev.zip` ↔ `:<v>-dev`) — and a prerelease item's own IDENTITY
+* (`<X.Y.Z-beta.N>.zip` ↔ `:<X.Y.Z-beta.N>`, never the floating `:<X.Y.Z>`,
+* which names the stable release of the triple: a different image).
 *
 * The version is REMOTE data that ends up in a command the operator pastes into
 * a root shell on the Docker host, so it is composed only from the exact
@@ -712,6 +723,11 @@ const same_day = function(a, b) {
 * @returns {string|null}
 */
 export const image_command_tag = function(item) {
+
+	// a prerelease: its identity, in the exact grammar, or nothing at all
+	if (item && item.channel==='prerelease') {
+		return item_release(item)
+	}
 
 	const version = String((item && item.version) ?? '')
 	if (!/^[0-9]{1,6}\.[0-9]{1,6}\.[0-9]{1,6}$/.test(version)) {

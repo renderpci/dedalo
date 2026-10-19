@@ -234,6 +234,14 @@ describe.if(hasPhpCredentials())('environment payload differential (Phase 7 gate
 		expect('dedalo_data_version' in phpGlobals).toBe(false);
 		// biome-ignore lint/performance/noDelete: same as the WC-031 strip above — undefined would keep the key in Object.keys()
 		delete tsGlobals.dedalo_data_version;
+		// Same entry, addendum 2026-10-18 (owner Q11): `release_kind` — TS-ONLY, the
+		// identity's kind (`stable` | `prerelease` | `dev`) the menu's version badge
+		// reads instead of sniffing the identity. PHP had no identity to classify.
+		// Gated like `dedalo_version`, so only presence is a contract here.
+		expect('release_kind' in tsGlobals).toBe(true);
+		expect('release_kind' in phpGlobals).toBe(false);
+		// biome-ignore lint/performance/noDelete: same as the WC-031 strip above — undefined would keep the key in Object.keys()
+		delete tsGlobals.release_kind;
 		expect(Object.keys(tsGlobals).sort()).toEqual(Object.keys(phpGlobals).sort());
 		// engineering/wire_contract/WC-2026-08-23-projects-default-langs-derived.md:
 		// `dedalo_projects_default_langs` is DERIVED per installation now, and its ORDER

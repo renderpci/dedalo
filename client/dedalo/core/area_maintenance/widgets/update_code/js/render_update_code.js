@@ -22,6 +22,11 @@
 		image_command_tag
 	} from './render_update_status.js'
 	import {
+		channel_shortfall_note,
+		channel_token,
+		item_release
+	} from './update_code_channel.js'
+	import {
 		UPDATE_PHASES,
 		init_phase_state,
 		apply_phase_frame,
@@ -378,52 +383,92 @@ const get_content_data_edit = async function(self) {
 			})
 		}
 
-	// dev_channel switch — ask the code server for DEVELOPER BUILDS too.
-	// A developer build is a build of the 'master' tip (a release is a tag), so it carries
-	// NO version bump and installs over the same version: it is how unreleased
-	// work is tested on a real installation. Flipping this switch is the ARMING
-	// on this side — everything else (superuser, maintenance mode, a recent
-	// backup, the sha256 check) is unchanged. The code server must have opted in
-	// too, and one that did not simply answers with releases only.
-		const dev_channel_row = ui.create_dom_element({
+	// channel choice — WHAT to ask the code server for: published releases,
+	// prereleases too, or developer builds too (the ladder master ⊂ prerelease ⊂
+	// dev, update_code_channel.js). One radio group, published pre-selected.
+	// A PRERELEASE is an immutable, sha-verified tag build of a version that is
+	// not yet stable (7.0.1-beta.2). A DEVELOPER BUILD is a build of the 'master'
+	// tip (a release is a tag), so it carries NO version bump and installs over
+	// the same version: it is how unreleased work is tested on a real
+	// installation. Choosing either is the ARMING on this side — everything else
+	// (superuser, maintenance mode, a recent backup, the sha256 check) is
+	// unchanged. The code server must have opted into that rung too, and one
+	// that did not answers with releases only (said so above the list:
+	// channel_shortfall_note).
+		const channel_row = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'dev_channel_row',
+			class_name		: 'channel_row',
 			parent			: consumer_body
 		})
-		// label WRAPS the input (the house pattern — move_lang/move_locator): the
-		// click target is the whole row without an id/for pair to keep in sync.
-		const dev_channel_label = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'dev_channel_label',
-			text_content	: get_label.update_code_dev_channel || 'Developer builds',
-			parent			: dev_channel_row
-		})
-		const dev_channel_input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'checkbox',
-			class_name		: 'dev_channel_check',
-			name			: 'update_code_dev_channel'
-		})
-		// the icon reads BEFORE the words: this row is the only development-facing
-		// control on an otherwise production panel. Masked svg, same vocabulary the
-		// area map uses for its 'dev' category (bug.svg).
-		const dev_channel_icon = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'dev_channel_icon'
-		})
-		dev_channel_label.prepend(dev_channel_icon)
-		dev_channel_label.prepend(dev_channel_input)
-		// the caution is SHOWN once the switch is armed (CSS :has(:checked)) —
-		// it is what the operator has to read before checking WITH it on — and
-		// rides the label's tooltip before that, so the unarmed panel stays quiet
-		const dev_channel_note = get_label.update_code_dev_channel_note || "Also offers developer builds made from the 'master' branch: the latest integrated code, not yet released. A developer build may carry the same version number as the installed one, and is then installed over it. Use them to test development work, never on a production installation."
-		dev_channel_label.title = dev_channel_note
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'dd_note dev_channel_note',
-			text_content	: dev_channel_note,
-			parent			: dev_channel_row
+			class_name		: 'channel_heading',
+			text_content	: get_label.update_code_channel_choice || 'Offer',
+			parent			: channel_row
 		})
+		// per-panel group name: two panels on one page never share a radio group
+		const channel_group = 'update_code_channel_' + (++modal_seq)
+		const channel_options = [
+			{
+				token	: 'master',
+				label	: get_label.update_code_channel_published || 'Published releases',
+				note	: null
+			},
+			{
+				token	: 'prerelease',
+				label	: get_label.update_code_prerelease_channel || 'Prereleases',
+				note	: get_label.update_code_prerelease_channel_note || 'Also offers prereleases (alpha, beta, release candidate): fixed, verified builds of a version that is not yet stable. Use them to try a coming release before it is published, not on a production installation.'
+			},
+			{
+				token	: 'dev',
+				label	: get_label.update_code_dev_channel || 'Developer builds',
+				note	: get_label.update_code_dev_channel_note || "Also offers developer builds made from the 'master' branch: the latest integrated code, not yet released. A developer build may carry the same version number as the installed one, and is then installed over it. Use them to test development work, never on a production installation."
+			}
+		]
+		const channel_inputs = channel_options.map(option => {
+			// label WRAPS the input (the house pattern — move_lang/move_locator): the
+			// click target is the whole option without an id/for pair to keep in sync.
+			const option_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'channel_option channel_option_' + option.token,
+				text_content	: option.label,
+				parent			: channel_row
+			})
+			const input = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'radio',
+				class_name		: 'channel_radio',
+				name			: channel_group,
+				value			: option.token
+			})
+			input.checked = option.token==='master'
+			// the developer option's icon reads BEFORE the words: it is the only
+			// development-facing control on an otherwise production panel. Masked
+			// svg, same vocabulary the area map uses for its 'dev' category (bug.svg).
+			if (option.token==='dev') {
+				option_label.prepend(ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'dev_channel_icon'
+				}))
+			}
+			option_label.prepend(input)
+			// the caution is SHOWN once its option is chosen (CSS :has(:checked)) —
+			// it is what the operator has to read before checking WITH it on — and
+			// rides the option's tooltip before that, so the default panel stays quiet
+			if (option.note) {
+				option_label.title = option.note
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'dd_note channel_note channel_note_' + option.token,
+					text_content	: option.note,
+					parent			: channel_row
+				})
+			}
+			return input
+		})
+		// the chosen token, read at click time (never cached: the operator may
+		// change it between two checks)
+		const chosen_channel = () => channel_token(channel_inputs.find(el => el.checked===true)?.value)
 
 	// button_submit (check available updates)
 		const button_submit = ui.create_dom_element({
@@ -489,10 +534,10 @@ const get_content_data_edit = async function(self) {
 				body_response.prepend(spinner)
 
 			// Code information. Call selected remote server API to get updates list
-				const dev_channel = dev_channel_input.checked===true
+				const asked_channel = chosen_channel()
 				const server_code_api_response = await self.get_code_update_info(
 					server,
-					dev_channel ? 'dev' : 'master'
+					asked_channel
 				)
 				if(SHOW_DEBUG===true) {
 					console.log('))) get_content_data_edit server_code_api_response:', server_code_api_response);
@@ -567,7 +612,7 @@ const get_content_data_edit = async function(self) {
 				// show info modal
 				// `result` shape: { info: {version, date, entity_id, entity, host},
 				//                   files: [{version, url, date}] }
-					render_info_modal( self, result, body_response )
+					render_info_modal( self, result, body_response, asked_channel )
 
 				// remove spinner
 				e.target.classList.remove('lock')
@@ -1148,9 +1193,12 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 * @param {Object} self - update_code widget instance
 * @param {Object} versions_info - result object from get_code_update_info
 * @param {HTMLElement} body_response - the PANEL response surface (phase track home)
+* @param {string} [asked_channel] - the channel token the list was asked with
+*   ('master' when omitted): a rung the code server did not honour is said so
+*   above the list (update_code_channel.js channel_shortfall_note)
 * @returns {HTMLElement} modal element (already attached to the DOM)
 */
-export const render_info_modal = function( self, versions_info, body_response ) {
+export const render_info_modal = function( self, versions_info, body_response, asked_channel ) {
 
 	// blur any selection
 		document.activeElement.blur();
@@ -1180,6 +1228,27 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 			{ k : (get_label.version || 'Version'), v : info.version, mono : true },
 			{ k : (get_label.update_ontology_master_server || 'Master server'), v : info.host }
 		]))
+
+	// a rung the code server did not honour: an OLDER master answers a
+	// prerelease ask as a release one (it knows only 'dev'), a master that did
+	// not opt in does the same. The list below is then releases only, and must
+	// not read as "there are no prereleases".
+		const shortfall_note = channel_shortfall_note(asked_channel, versions_info)
+		if (shortfall_note) {
+			// static get_label references (the label gates read them), keyed by
+			// the note the leaf decided
+			const note_text = {
+				update_code_channel_not_offered_prerelease			: get_label.update_code_channel_not_offered_prerelease || 'This code server does not offer prereleases: only published releases are listed.',
+				update_code_channel_not_offered_prerelease_with_dev	: get_label.update_code_channel_not_offered_prerelease_with_dev || 'This code server does not offer prereleases: published releases and developer builds are listed.',
+				update_code_channel_not_offered_dev					: get_label.update_code_channel_not_offered_dev || 'This code server does not offer developer builds: only the releases it publishes are listed.'
+			}
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'dd_note state_warning channel_shortfall',
+				text_content	: note_text[shortfall_note],
+				parent			: body
+			})
+		}
 
 	// files_container
 		const files_container = ui.create_dom_element({
@@ -1232,7 +1301,7 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 			if (button_update && button_update.parentNode===footer) {
 				footer.insertBefore(waive_backup_row, button_update)
 			}
-			// label WRAPS the input (the house pattern, same as dev_channel_row):
+			// label WRAPS the input (the house pattern, same as channel_row):
 			// the click target is the whole row without an id/for pair to keep in sync.
 			const waive_backup_label = ui.create_dom_element({
 				element_type	: 'label',
@@ -1279,17 +1348,24 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 
 			const current_version = files[i];
 
+			// a prerelease row is named by its identity (7.0.1-beta.2), never by
+			// the bare data triple its `version` carries; a malformed one is
+			// not offered at all (item_release → null)
+			const release_name = item_release(current_version)
+			if (release_name===null) {
+				continue
+			}
+
 			const file_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'file_container',
 				parent			: files_container
 			})
 			file_container.dataset.version = String(current_version.version ?? '')
-
 			const version_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'version_label unselectable',
-				text_node		: String(current_version.version ?? ''),
+				text_node		: release_name,
 				parent			: file_container
 			})
 
@@ -1344,12 +1420,12 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 			// the code server's frozen changes/<version>/release.json notes)
 			render_release_notes(file_container, current_version.notes)
 
-			// by default index 0 is pre-selected. The server sorts ASCENDING
+			// by default the first OFFERED row is pre-selected. The server sorts ASCENDING
 			// (code_manifest.ts linearUpgradeTargets), so index 0 is the NEXT
 			// rung on the linear upgrade path — the only choice the consumer's
 			// assertLinearUpgrade accepts. Never "the newest": picking the last
 			// entry would offer a version the install cannot legally jump to.
-			if(i===0){
+			if(valid_files.length===0){
 				input_radio.checked = true
 				current_version.active = true
 				version_label.classList.add('active')
@@ -1511,11 +1587,15 @@ export const render_info_modal = function( self, versions_info, body_response ) 
 					if (typeof modal.close==='function') {
 						modal.close()
 					}
+					// the expectation is the RELEASE IDENTITY /health will answer
+					// (a prerelease's 7.0.1-beta.2, a release's 7.0.1), never the
+					// bare triple: a same-triple walk (beta.6 → beta.7) leaves the
+					// triple unchanged on both sides of the swap
 					track_process(
 						pid,
 						pfile,
 						body_response,
-						String(file_active.version ?? '') || null,
+						item_release(file_active) || null,
 						String(file_active.sha256 ?? '') || null
 					)
 				}
@@ -1785,7 +1865,8 @@ const submit_image_request = async function(self, item, response) {
 	response.textContent = ''
 	const api_response = await self.request_image_update({
 		version	: String(item.version ?? ''),
-		channel	: item.channel==='dev' ? 'dev' : 'master'
+		channel	: channel_token(item.channel),
+		...(item.channel==='prerelease' ? { release : String(item.release ?? '') } : {})
 	})
 	if (request_failed(api_response)) {
 		response.textContent = image_refusal_text(api_response.error)

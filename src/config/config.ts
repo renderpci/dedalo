@@ -244,6 +244,13 @@ export interface UpdateConfig {
 	 * builds are never enumerable from outside. v7-native (no PHP twin).
 	 */
 	readonly devChannelEnabled: boolean;
+	/**
+	 * This code master PUBLISHES prereleases (`<X.Y.Z-beta.N>.zip`) to consumers
+	 * that ask for the prerelease or dev channel (DEDALO_CODE_SERVER_PRERELEASE_CHANNEL).
+	 * A SEPARATE switch from {@link devChannelEnabled}: a master may publish
+	 * immutable betas without exposing branch builds. Default false.
+	 */
+	readonly prereleaseChannelEnabled: boolean;
 }
 
 /** One configured ontology master (PHP ONTOLOGY_SERVERS entry). */
@@ -1289,6 +1296,7 @@ export const config: DedaloConfig = Object.freeze({
 		codeFilesDir: readEnv('DEDALO_CODE_FILES_DIR'),
 		codeServerGitDir: readEnv('DEDALO_CODE_SERVER_GIT_DIR'),
 		devChannelEnabled: readString('DEDALO_CODE_SERVER_DEV_CHANNEL') === 'true',
+		prereleaseChannelEnabled: readString('DEDALO_CODE_SERVER_PRERELEASE_CHANNEL') === 'true',
 		restorePointsKeep: readNumber('DEDALO_CODE_RESTORE_POINTS_KEEP'),
 	}),
 	ontologyIo: Object.freeze({

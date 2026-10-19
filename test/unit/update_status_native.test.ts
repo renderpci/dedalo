@@ -288,6 +288,13 @@ describe('code server status', () => {
 		expect(status.dev_channel).toBe(config.update.devChannelEnabled);
 	});
 
+	test('states whether this master PUBLISHES prereleases — its own switch, not the dev one', () => {
+		const { config } =
+			require('../../src/config/config.ts') as typeof import('../../src/config/config.ts');
+		expect(typeof status.prerelease_channel).toBe('boolean');
+		expect(status.prerelease_channel).toBe(config.update.prereleaseChannelEnabled);
+	});
+
 	test('every check id carries a label', () => {
 		const missing = status.checks
 			.map((check) => `update_code_check_${check.id}`)
@@ -321,8 +328,18 @@ describe('code server status', () => {
 
 	test('a published release is distinguished from a developer one', () => {
 		for (const release of status.releases) {
-			// Only `<v>.zip` is ever advertised; `-dev` is servable, never offered.
-			expect(release.channel).toBe(release.file.includes('-dev') ? 'dev' : 'master');
+			// The file name IS the channel: `<v>.zip` published, `<v>-beta.N.zip`
+			// prerelease (RELEASE_IDENTITY_DESIGN §2.8), `<v>-dev.zip` developer.
+			expect(release.channel).toBe(
+				release.file.endsWith('-dev.zip')
+					? 'dev'
+					: /-(alpha|beta|rc)\.\d+\.zip$/.test(release.file)
+						? 'prerelease'
+						: 'master',
+			);
+			expect(release.identity).toBe(
+				release.channel === 'dev' ? null : release.file.replace(/\.zip$/, ''),
+			);
 			// EXACT, not endsWith: the panel used to append the
 			// /dedalo/install/code prefix to a base that already carried it,
 			// emitting a doubled path that resolveCodeReleaseFile refuses —
@@ -413,6 +430,7 @@ describe('the advertised release URL is probed, and the failure NAMES the layer'
 		{
 			version: '7.0.1',
 			channel: 'master' as const,
+			identity: '7.0.1',
 			file: '7.0.1.zip',
 			bytes: 10,
 			stamp: 2,
@@ -422,6 +440,7 @@ describe('the advertised release URL is probed, and the failure NAMES the layer'
 		{
 			version: '7.0.2',
 			channel: 'dev' as const,
+			identity: null,
 			file: '7.0.2-dev.zip',
 			bytes: 10,
 			stamp: 9,

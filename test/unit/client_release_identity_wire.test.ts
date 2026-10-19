@@ -36,6 +36,12 @@
  *     major.minor and would accept the identity too, so the value is the
  *     assertion, acceptance is checked on top.
  *
+ *   - view_default_edit_menu's debug bar marks the version badge from
+ *     `page_globals.release_kind` (owner Q11): `beta` for a prerelease, `dev`
+ *     for a dev build, nothing for a stable release — whatever the identity
+ *     string says. The pre-Q11 sniff (`dedalo_version.indexOf('7.0')`) marked
+ *     the stable `7.0.0` beta and missed a `9.1.0-rc.1`.
+ *
  * The SERVER half (what /health, page_globals and info_data actually publish)
  * is release_identity_served_native.test.ts: this gate writes its own
  * page_globals.
@@ -57,6 +63,7 @@ if (!isIsolatedGateChild(import.meta.path)) mirrorIsolatedGate(import.meta.path)
 else {
 	const CORE = join(import.meta.dir, '..', '..', 'client', 'dedalo', 'core');
 	const COMMON = join(CORE, 'common', 'js');
+	const MENU = join(CORE, 'menu', 'js');
 	const UPDATE_CODE = join(CORE, 'area_maintenance', 'widgets', 'update_code', 'js');
 	const UPDATE_ONTOLOGY = join(CORE, 'area_maintenance', 'widgets', 'update_ontology', 'js');
 
@@ -87,6 +94,7 @@ else {
 		prepend(child: FakeElement) {
 			this.children.unshift(child);
 		}
+		addEventListener() {}
 	}
 
 	/**
@@ -127,6 +135,7 @@ else {
 	let pageEdit: PageEdit;
 	let getCodeUpdateInfo: (server: unknown, channel: string) => Promise<unknown>;
 	let getOntologyUpdateInfo: (server: unknown) => Promise<unknown>;
+	let renderDebugInfoBar: (self: { data: { info_data: Record<string, unknown> } }) => FakeElement;
 	let authorizeUpdateManifest: (input: Record<string, unknown>) => {
 		ok: boolean;
 		version?: number[];
@@ -151,7 +160,8 @@ else {
 		}));
 		mock.module(join(COMMON, 'event_manager.js'), () => ({
 			...exportStubs(join(COMMON, 'event_manager.js')),
-			event_manager: { publish() {} },
+			// subscribe: view_default_edit_menu.js subscribes at import
+			event_manager: { publish() {}, subscribe() {} },
 		}));
 		mock.module(join(COMMON, 'data_manager.js'), () => ({
 			...exportStubs(join(COMMON, 'data_manager.js')),
@@ -201,6 +211,23 @@ else {
 			...exportStubs(join(UPDATE_CODE, 'render_update_code.js')),
 			render_update_code: { prototype: {} },
 		}));
+
+		// view_default_edit_menu.js's other leaves: only render_debug_info_bar runs,
+		// and it reads none of them — plain export stubs keep the browser-bound
+		// modules (login, menu tree, theme) out of the process.
+		for (const leaf of [
+			join(CORE, 'login', 'js', 'login.js'),
+			join(MENU, 'render_menu.js'),
+			join(MENU, 'render_menu_tree.js'),
+			join(MENU, 'render_menu_mobile.js'),
+			join(CORE, 'page', 'js', 'theme.js'),
+			join(CORE, 'page', 'js', 'design.js'),
+		]) {
+			mock.module(leaf, () => exportStubs(leaf));
+		}
+		({ render_debug_info_bar: renderDebugInfoBar } = (await import(
+			join(MENU, 'view_default_edit_menu.js')
+		)) as { render_debug_info_bar: typeof renderDebugInfoBar });
 
 		const { render_page } = (await import(join(CORE, 'page', 'js', 'render_page.js'))) as {
 			render_page: { prototype: { edit: PageEdit } };
@@ -422,6 +449,43 @@ else {
 			expect(legacyOntologyMasterAccepts(options.version)).toBe(true);
 			const accepted = currentOntologyMasterAccepts(options.version);
 			expect(accepted.ok).toBe(true);
+		});
+	});
+
+	describe("the menu's version badge reads page_globals.release_kind, never the identity string (Q11)", () => {
+		/** The `.dedalo_version` element's classes for a page whose identity / kind are given. */
+		const badgeClasses = (identity: string, releaseKind: unknown): string[] => {
+			globals.page_globals =
+				releaseKind === undefined
+					? { dedalo_version: identity }
+					: { dedalo_version: identity, release_kind: releaseKind };
+			const bar = renderDebugInfoBar({ data: { info_data: { dedalo_version: identity } } });
+			const badge = bar.children.find((child) => child.classes.includes('dedalo_version'));
+			expect(badge, 'the debug bar renders no version badge').toBeDefined();
+			return badge?.classes ?? [];
+		};
+
+		test.each([
+			['7.0.0-beta.6', 'prerelease', ['dedalo_version', 'beta']],
+			['7.0.0-rc.1', 'prerelease', ['dedalo_version', 'beta']],
+			['7.0.0.dev', 'dev', ['dedalo_version', 'dev']],
+			// a stable 7.0.0 is not beta — the old '7.0' sniff marked it so
+			['7.0.0', 'stable', ['dedalo_version']],
+		])('identity %p, release_kind %p → %p', (identity, kind, classes) => {
+			expect(badgeClasses(identity, kind)).toEqual(classes);
+		});
+
+		test('the KIND decides, not the string: a kind that contradicts the identity wins', () => {
+			// no '7.0' in it, yet a prerelease — the sniff left it unmarked
+			expect(badgeClasses('9.1.0-rc.1', 'prerelease')).toEqual(['dedalo_version', 'beta']);
+			// '7.0' in it, yet the server says stable
+			expect(badgeClasses('7.0.0-beta.6', 'stable')).toEqual(['dedalo_version']);
+		});
+
+		test('an older server (no release_kind) or a foreign value marks nothing and does not throw', () => {
+			for (const kind of [undefined, null, '', 'constructor', '__proto__', 'beta']) {
+				expect(badgeClasses('7.0.0-beta.6', kind), String(kind)).toEqual(['dedalo_version']);
+			}
 		});
 	});
 }

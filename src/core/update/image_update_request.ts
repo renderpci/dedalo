@@ -23,8 +23,11 @@
  *      moves a release installation onto unreleased code — that move is the
  *      operator's own act on the host. The host updater holds the same floor
  *      (deploy/dedalo-image-updater.sh host_floor_refusal);
- *   6. the target is a version on the LINEAR walk (version_walk.ts, THE rule
- *      the tree swap and the host CLI's check-target use).
+ *   6. the target is a legal step of the IDENTITY walk from what this engine
+ *      calls itself (version_walk.ts identityWalkRefusal, THE rule the tree
+ *      swap and the host CLI's check-target use): a prerelease target is
+ *      named by its release identity (`release`, a prerelease item's own —
+ *      code_manifest.ts), never by the bare triple its `version` carries.
  * Refusals are returned as machine ids; the widget turns them into
  * `maintenance.action_refused` with `coordinates.reason`, the client words them.
  *
@@ -49,7 +52,7 @@ import {
 	writeRequest,
 } from './image_update_channel.ts';
 import { checkUpdatePreconditions } from './preconditions.ts';
-import { DEDALO_VERSION_TRIPLE } from './version.ts';
+import { parseReleaseVersion } from './release_identity.ts';
 import { type ImageTag, parseImageTag, type WalkRefusal, walkRefusalOf } from './version_walk.ts';
 
 /** Why a request is refused — the closed id set the client labels. */
@@ -70,20 +73,40 @@ export interface ImageRequestSeams {
 	channel?: DeploymentChannel;
 	dir?: string;
 	now?: Date;
-	/** The running version (default: this engine's). */
-	current?: readonly number[];
+	/**
+	 * The RELEASE IDENTITY the walk starts from (default: this engine's own,
+	 * build_stamp.ts DEDALO_ENGINE_VERSION) — a gate pins it, because the
+	 * checkout a suite runs in is `.dev` on a branch and the tag on a release commit.
+	 */
+	running?: string;
 }
 
 /** The tag suffix of each channel a manifest item can carry (an absent channel is a release). */
 const CHANNEL_SUFFIX: Readonly<Record<string, string>> = Object.freeze({ master: '', dev: '-dev' });
 
-/** The target the options name: {version:'X.Y.Z', channel?:'dev'|'master'}, or null. */
+/**
+ * The target the options name, or null: `{version:'X.Y.Z', channel?:'master'|'dev'}`,
+ * or a prerelease `{version:'X.Y.Z', channel:'prerelease', release:'X.Y.Z-beta.N'}`
+ * — the manifest item's own fields (code_manifest.ts CodeReleaseItem), whose
+ * `release` must be a prerelease OF that `version`: the image tag IS the
+ * identity (release_identity.ts imageTagOf), and a release naming another
+ * triple would pick one image while the walk judged another.
+ */
 export function requestedTag(options: Record<string, unknown>): ImageTag | null {
-	const suffix = CHANNEL_SUFFIX[String(options.channel ?? 'master')];
 	const version = options.version;
-	if (suffix === undefined || typeof version !== 'string' || !/^\d+\.\d+\.\d+$/.test(version))
+	if (typeof version !== 'string' || !/^\d+\.\d+\.\d+$/.test(version)) return null;
+	if (options.channel === 'prerelease') return prereleaseTag(version, options.release);
+	const suffix = CHANNEL_SUFFIX[String(options.channel ?? 'master')];
+	return suffix === undefined ? null : parseImageTag(`${version}${suffix}`);
+}
+
+/** A prerelease target: its identity, a prerelease of `version`, as a tag. */
+function prereleaseTag(version: string, release: unknown): ImageTag | null {
+	if (typeof release !== 'string') return null;
+	const parsed = parseReleaseVersion(release);
+	if (parsed === null || parsed.prerelease === null || parsed.triple.join('.') !== version)
 		return null;
-	return parseImageTag(`${version}${suffix}`);
+	return parseImageTag(release);
 }
 
 /** Gates 2-4: the state of this installation, before the target is looked at. */
@@ -151,7 +174,11 @@ async function recordTarget(
 	seams: ImageRequestSeams,
 	dir: string,
 ): Promise<ImageRequestResult> {
-	const walk = walkRefusalOf(seams.current ?? DEDALO_VERSION_TRIPLE, target.triple, target.channel);
+	const walk = walkRefusalOf(
+		seams.running ?? DEDALO_ENGINE_VERSION,
+		target.identity,
+		target.channel,
+	);
 	if (walk !== null) return { ok: false, reason: 'version_refused', walk };
 	const result = await writeTarget(target, principal, seams.now ?? new Date(), dir);
 	// the request is an instruction to replace the running code: who asked is

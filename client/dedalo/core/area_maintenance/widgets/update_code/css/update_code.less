@@ -52,44 +52,59 @@
 			margin: 0.5rem 0;
 		}
 
-		// DEVELOPER-BUILDS switch — the arming for same-version (branch) builds.
-		// Deliberately quiet: it sits above the submit button as one checkbox row
-		// plus its note, never a warning bar (the note carries the caution).
-		>.dev_channel_row {
+		// CHANNEL choice — published / prereleases / developer builds (the
+		// ladder, update_code_channel.js). Deliberately quiet: it sits above the
+		// submit button as one radio row plus the chosen option's note, never a
+		// warning bar (the note carries the caution).
+		>.channel_row {
+			display: flex;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 0.25rem 1.25rem;
 			margin: 0.75rem 0 0.25rem 0;
 
-			>.dev_channel_label {
+			>.channel_heading {
+				font-weight: bold;
+			}
+
+			>.channel_option {
 				display: flex;
 				align-items: center;
 				gap: 0.5rem;
 				cursor: pointer;
-				font-weight: bold;
 				padding-bottom: 0px;
-				color: var(--color_blue_2);
 
-				>.dev_channel_check {
+				>.channel_radio {
 					height: initial;
-				}
-
-				// reads BEFORE the words: the one development-facing control on an
-				// otherwise production panel. Masked svg in the area_maintenance
-				// vocabulary — the same bug.svg its map uses for the 'dev' category.
-				// Tinted with the row's own accent, not the muted grey, so the icon
-				// belongs to the label rather than to the panel chrome.
-				>.dev_channel_icon {
-					.fn_maintenance_icon('bug.svg');
-					background-color: var(--color_blue_2);
 				}
 			}
 
-			>.dd_note.dev_channel_note {
-				margin: 0.25rem 0 0 3.1rem;
+			// the development-facing options read in the row's accent
+			>.channel_option_prerelease,
+			>.channel_option_dev {
+				color: var(--color_blue_2);
+			}
+
+			// reads BEFORE the words: the one development-facing control on an
+			// otherwise production panel. Masked svg in the area_maintenance
+			// vocabulary — the same bug.svg its map uses for the 'dev' category.
+			// Tinted with the row's own accent, not the muted grey, so the icon
+			// belongs to the label rather than to the panel chrome.
+			>.channel_option_dev >.dev_channel_icon {
+				.fn_maintenance_icon('bug.svg');
+				background-color: var(--color_blue_2);
+			}
+
+			>.dd_note.channel_note {
+				flex-basis: 100%;
+				margin: 0.25rem 0 0 0;
 				max-width: 60rem;
 			}
 
-			// the caution reads once the switch is armed; the label's title
+			// a caution reads once its option is chosen; the option's title
 			// carries it before that (render_update_code.js)
-			&:not(:has(.dev_channel_check:checked)) >.dd_note.dev_channel_note {
+			&:not(:has(.channel_option_prerelease >.channel_radio:checked)) >.dd_note.channel_note_prerelease,
+			&:not(:has(.channel_option_dev >.channel_radio:checked)) >.dd_note.channel_note_dev {
 				display: none;
 			}
 		}

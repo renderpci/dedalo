@@ -864,14 +864,20 @@ provisioned names no address (`repository: null` + a reason) and every consumer 
 as unavailable. Gate: `image_registries_tripwire`.
 
 - **Tags = the code server's release names.** A stable tag `vX.Y.Z` whose `version.ts`
-  declares X.Y.Z publishes `:X.Y.Z` (like `<v>.zip`) — IMMUTABLE. A dispatch on the `dev`
+  declares X.Y.Z publishes `:X.Y.Z` (like `<v>.zip`) — IMMUTABLE. A prerelease tag
+  `vX.Y.Z-(alpha|beta|rc).N` (2026-10-18; a prerelease IS a release) publishes
+  `:X.Y.Z-beta.N` ONLY (like `<X.Y.Z-beta.N>.zip`) — IMMUTABLE, install-stamp channel
+  `prerelease`, held to the same release-tag check and full gate. A dispatch on the `dev`
   channel from `master` publishes `:X.Y.Z-dev` (like the on-demand `<v>-dev.zip`) —
-  mutable, overwritten by the next dev build. No build per master push, no `latest`,
-  prerelease tags never match. The rules are `code_build_plan.ts`'s, imported by `plan`.
+  mutable, overwritten by the next dev build. One tag per run, never a floating one: no
+  build per master push, no `latest`, no `:X` / `:X.Y`, and a prerelease never `:X.Y.Z`
+  (`publishTagFault`, gate `image_release_native`). The trigger globs list the three
+  prerelease labels and are wider than the grammar; `plan` validates the tag exactly. The
+  rules are `code_build_plan.ts`'s, imported by `plan`.
 - **The context is a `git archive`** of the release commit — the code server's mechanism —
   so `build_info.txt` is expanded exactly as in the release zip. The workflow passes the
   channel and the sha256 of that tar stream as build args; the Dockerfile's provenance step
-  writes the install stamp, so the image reports `X.Y.Z` (release) or `X.Y.Z.dev` (dev),
+  writes the install stamp, so the image reports `X.Y.Z` (release), `X.Y.Z-beta.N` (prerelease) or `X.Y.Z.dev` (dev),
   and a local build with no args stays `.dev`. `smoke` asserts it on the pushed bytes,
   with bun = `.bun-version`, pg_dump 18, the media tools, uid 1000, a bun-owned
   `/srv/dedalo/client` and no `deploy/` in the image.
@@ -899,7 +905,7 @@ as unavailable. Gate: `image_registries_tripwire`.
 
   ```shell
   cosign verify <repository>@sha256:<digest> \
-    --certificate-identity-regexp '^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+|heads/master)$' \
+    --certificate-identity-regexp '^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?|heads/master)$' \
     --certificate-oidc-issuer 'https://token.actions.githubusercontent.com'
   ```
 

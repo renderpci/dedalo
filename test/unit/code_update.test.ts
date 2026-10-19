@@ -57,7 +57,7 @@ import {
 	unwritableSwapDirs,
 	updateCode,
 } from '../../src/core/update/code_update.ts';
-import { INSTALL_STAMP_PATH } from '../../src/core/update/install_stamp.ts';
+import { INSTALL_STAMP_PATH, type InstallChannel } from '../../src/core/update/install_stamp.ts';
 import * as realOwnershipModule from '../../src/core/update/ownership.ts';
 import {
 	PUBLICATION_MANIFEST_PATH,
@@ -109,10 +109,24 @@ afterAll(() => {
  * stays LIVE (a hardcoded pin would make every pipeline test exercise the
  * refusal instead of the path under test).
  */
-async function buildReleaseZip(dir: string, extra?: (codeDir: string) => void): Promise<string> {
+/**
+ * A synthetic release archive. It carries the build stamp `git archive` writes
+ * into every real one (build_info.txt with its exact tag), naming `identity` —
+ * the swap refuses a quarantine that calls itself anything but the release the
+ * request names (refuseForeignQuarantine).
+ */
+async function buildReleaseZip(
+	dir: string,
+	extra?: (codeDir: string) => void,
+	identity = '7.0.1',
+): Promise<string> {
 	const stage = join(dir, 'stage');
 	const codeDir = join(stage, 'dedalo_code');
-	mkdirSync(join(codeDir, 'src'), { recursive: true });
+	mkdirSync(join(codeDir, 'src', 'core', 'update'), { recursive: true });
+	writeFileSync(
+		join(codeDir, 'src', 'core', 'update', 'build_info.txt'),
+		`${'a'.repeat(40)} 2026-10-18T00:00:00Z v${identity}\n`,
+	);
 	writeFileSync(join(codeDir, 'package.json'), '{"name":"dedalo"}');
 	writeFileSync(join(codeDir, 'src', 'server.ts'), '// server');
 	writeFileSync(join(codeDir, '.bun-version'), Bun.version);
@@ -166,6 +180,13 @@ afterAll(() => {
 /** Default no-op pipeline seams + backup waiver options for a swap test. */
 function pipelineSeams(overrides: Partial<CodeUpdateSeams> = {}): CodeUpdateSeams {
 	return {
+		// The walk starts from the STABLE release of the data version unless a case
+		// says otherwise: the checkout's own identity is `.dev` on a branch and the
+		// tag on a release commit, and no verdict here may move with that.
+		runningRelease: DEDALO_VERSION_TRIPLE.join('.'),
+		// …and from an UNSTAMPED tree: the checkout's own install stamp (if any)
+		// must not grant a case the dev standing (code_update.ts walkChannelOf)
+		runningChannel: null,
 		restart: () => {},
 		supervised: true,
 		installDeps: async () => {},
@@ -1511,6 +1532,34 @@ describe('full swap chain on the DEV CHANNEL (same version)', () => {
 		);
 		expect(refusal.message).toContain('same-version install');
 	});
+
+	// The `prerelease` token (RELEASE_IDENTITY_DESIGN §2.8 item 2) is carried to
+	// the stamp, and alone it relaxes NO guard: what moves within a triple is a
+	// NEWER IDENTITY (the identity walk, below) — the stable release of the
+	// running triple is no newer than itself on any channel but `dev`, and a
+	// near-miss token is the release channel.
+	test.each(['prerelease', 'Prerelease', 'DEV'])(
+		'the same-version release is REFUSED on channel %p',
+		async (channel) => {
+			const version = DEDALO_VERSION_TRIPLE.join('.');
+			const refusal = await refusalOf(
+				updateCode(
+					{
+						file: {
+							version,
+							url: `http://localhost:1/${version}.zip`,
+							sha256: 'e'.repeat(64),
+							channel,
+						},
+						waive_backup: true,
+					},
+					SUPERUSER,
+					pipelineSeams({ targetRoot: join(ROOT, 'never_touched') }),
+				),
+			);
+			expect(refusal.message).toContain('same-version install');
+		},
+	);
 });
 
 describe('the root whitelist', () => {
@@ -2159,4 +2208,286 @@ describe('the instance-dir rule: an update, a restore and a rollback never write
 			unmockUpdateEnv();
 		}
 	});
+});
+
+// ---------------------------------------------------------------------------
+// THE IDENTITY WALK AT THE SWAP DOOR (RELEASE_IDENTITY design §2.8 item 3,
+// 2026-10-18). The door walks from what this engine CALLS ITSELF to what the
+// item names (`file.release` on a prerelease item): within a data triple a
+// newer identity is legal with no rung, and the frames carry the IDENTITY
+// /health will answer — the triple is the same on both sides of such a swap.
+// The full truth table is gate 15 (release_identity_walk_native).
+// ---------------------------------------------------------------------------
+describe('the identity walk at the swap door', () => {
+	const T = DEDALO_VERSION_TRIPLE.join('.');
+
+	/**
+	 * The refusal an update request draws before any fetch (url points nowhere).
+	 * The url names the archive the item names (`release`, else `version`), as a
+	 * manifest item's does — the name check is its own case below.
+	 */
+	async function walkRefusal(
+		file: Record<string, unknown>,
+		runningRelease: string,
+		runningChannel: InstallChannel | null = null,
+	) {
+		const name = typeof file.release === 'string' ? file.release : String(file.version);
+		return refusalOf(
+			updateCode(
+				{
+					file: { url: `http://localhost:1/${name}.zip`, sha256: 'e'.repeat(64), ...file },
+					waive_backup: true,
+				},
+				SUPERUSER,
+				pipelineSeams({
+					targetRoot: join(ROOT, 'never_touched'),
+					runningRelease,
+					runningChannel,
+				}),
+			),
+		);
+	}
+
+	test('§2.8.5 bootstrap: a tree RUNNING a developer build it was installed as walks to every tag of its triple', async () => {
+		// beta.6 → 7.0.0-dev.zip (stamped `dev`, calls itself .dev) → the
+		// triple's prereleases AND its release, each under the item's own token
+		const STAMPED_DEV = [`${T}.dev`, 'dev'] as const;
+		for (const file of [
+			{ version: T, release: `${T}-beta.7`, channel: 'prerelease' },
+			{ version: T, release: `${T}-beta.6`, channel: 'prerelease' },
+			{ version: T, channel: 'master' },
+		]) {
+			const passed = await walkRefusal(file, ...STAMPED_DEV);
+			// past the walk: what refuses now is the download from nowhere
+			expect(passed.message, JSON.stringify(file)).not.toContain('same-version install');
+			expect(passed.message, JSON.stringify(file)).not.toContain('installs only on');
+		}
+		// the standing is the TREE's, never the request's: a .dev that no dev
+		// stamp put there (unstamped checkout, a master-stamped archive) keeps
+		// the conservative reading — its bare triple, nothing of it is newer
+		for (const stamp of [null, 'master', 'prerelease'] as const) {
+			for (const file of [
+				{ version: T, release: `${T}-beta.7`, channel: 'prerelease' },
+				{ version: T, channel: 'master' },
+			]) {
+				expect(
+					(await walkRefusal(file, `${T}.dev`, stamp)).message,
+					`${stamp} ${JSON.stringify(file)}`,
+				).toContain('same-version install');
+			}
+		}
+		// a dev stamp under a TAGGED identity (a dev-channel archive of a tag
+		// calls itself the tag) is no developer build: the release order holds
+		expect(
+			(
+				await walkRefusal(
+					{ version: T, release: `${T}-beta.6`, channel: 'prerelease' },
+					`${T}-beta.7`,
+					'dev',
+				)
+			).message,
+		).toContain('same-version install');
+	});
+
+	test('a newer identity of the SAME triple passes the walk; an older or equal one is refused', async () => {
+		const legal = await walkRefusal(
+			{ version: T, release: `${T}-beta.7`, channel: 'prerelease' },
+			`${T}-beta.6`,
+		);
+		// past the walk: what refuses now is the download from nowhere, never the walk
+		expect(legal.message).not.toContain('same-version install');
+		expect(legal.message).not.toContain('prerelease');
+		for (const [file, running] of [
+			[{ version: T, release: `${T}-beta.6`, channel: 'prerelease' }, `${T}-beta.7`],
+			[{ version: T, release: `${T}-rc.1`, channel: 'prerelease' }, T],
+			[{ version: T, channel: 'master' }, T],
+		] as const) {
+			expect((await walkRefusal(file, running)).message, JSON.stringify(file)).toContain(
+				'same-version install',
+			);
+		}
+		// a release of the running prerelease's triple is the newer identity
+		const release = await walkRefusal({ version: T, channel: 'master' }, `${T}-rc.1`);
+		expect(release.message).not.toContain('same-version install');
+	});
+
+	test('a version outside the shared grammar is a TYPED refusal, never the walk throwing', async () => {
+		// `7.0` and `07.0.1` passed the door's old wider regex and reached the
+		// walk, which throws a raw RangeError on garbage (job ends unexpected).
+		for (const version of ['7.0', '07.0.1', `${T}.4`, `${T}-beta.1`, `${T}.dev`]) {
+			const refusal = await walkRefusal({ version, channel: 'prerelease' }, T);
+			expect(refusal.code, version).toBe('request.invalid_options');
+			expect(refusal.message, version).toContain('Malformed release version');
+		}
+	});
+
+	test('a prerelease needs the prerelease channel; a release naming another triple is malformed', async () => {
+		const next = [
+			DEDALO_VERSION_TRIPLE[0],
+			DEDALO_VERSION_TRIPLE[1],
+			DEDALO_VERSION_TRIPLE[2] + 1,
+		].join('.');
+		expect(
+			(await walkRefusal({ version: next, release: `${next}-beta.1`, channel: 'master' }, T))
+				.message,
+		).toContain('installs only on the prerelease');
+		for (const release of [
+			`${T}-beta.1`,
+			`${next}-pre.1`,
+			next,
+			`${next}.dev`,
+			`${next}-beta.01`,
+		]) {
+			const refusal = await walkRefusal({ version: next, release, channel: 'prerelease' }, T);
+			expect(refusal.code, release).toBe('request.invalid_options');
+			expect(refusal.message, release).toContain('Malformed release identity');
+		}
+	});
+
+	test('beta.6 → beta.7 installs end to end; the restart frame and the envelope carry the IDENTITY', async () => {
+		// no silent early-out (gate_vacuity_tripwire): without zip this is red, like the canary
+		expect(zipAvailable, 'the zip CLI builds the synthetic release').toBe(true);
+		const base = join(ROOT, 'identity_swap');
+		const zipPath = await buildReleaseZip(base, undefined, `${T}-beta.7`);
+		const sha = createHash('sha256').update(readFileSync(zipPath)).digest('hex');
+		const server = Bun.serve({ port: 0, fetch: () => new Response(readFileSync(zipPath)) });
+		const origin = `http://localhost:${server.port}`;
+		const targetRoot = join(base, 'live');
+		buildLiveTree(targetRoot);
+		const frames: Record<string, unknown>[] = [];
+		try {
+			mockUpdateEnv(origin);
+			const out = await updateCode(
+				{
+					file: {
+						version: T,
+						release: `${T}-beta.7`,
+						url: `${origin}/${T}-beta.7.zip`,
+						sha256: sha,
+						channel: 'prerelease',
+					},
+					waive_backup: true,
+				},
+				SUPERUSER,
+				pipelineSeams({
+					targetRoot,
+					backupRoot: join(base, 'backups'),
+					runningRelease: `${T}-beta.6`,
+					onPhase: (frame) => frames.push(frame as unknown as Record<string, unknown>),
+				}),
+			);
+			expect(out.ok).toBe(true);
+			expect(out.data).toEqual({ version: T, release: `${T}-beta.7` });
+			const restart = frames.find((frame) => frame.phase === 'restart');
+			expect(restart?.expected_version).toBe(`${T}-beta.7`);
+			const stamp = JSON.parse(
+				readFileSync(join(targetRoot, 'src', 'core', 'update', 'install_stamp.json'), 'utf8'),
+			) as Record<string, unknown>;
+			expect(stamp.channel).toBe('prerelease');
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	}, 60000);
+
+	test('the url must name the archive the walk judged — refused before any fetch', async () => {
+		const next = [
+			DEDALO_VERSION_TRIPLE[0],
+			DEDALO_VERSION_TRIPLE[1],
+			DEDALO_VERSION_TRIPLE[2] + 1,
+		].join('.');
+		let fetched = 0;
+		const server = Bun.serve({
+			port: 0,
+			fetch: () => {
+				fetched += 1;
+				return new Response('not a zip');
+			},
+		});
+		const origin = `http://localhost:${server.port}`;
+		const ask = (file: Record<string, unknown>) =>
+			refusalOf(
+				updateCode(
+					{ file: { sha256: 'e'.repeat(64), ...file }, waive_backup: true },
+					SUPERUSER,
+					pipelineSeams({ targetRoot: join(ROOT, 'never_touched') }),
+				),
+			);
+		try {
+			mockUpdateEnv(origin);
+			for (const [file, name] of [
+				// a stable request whose url is a prerelease of the same triple
+				[{ version: next, url: `${origin}/7/7.0/${next}-beta.2.zip` }, `${next}-beta.2.zip`],
+				// a prerelease request whose url is another prerelease
+				[
+					{
+						version: next,
+						release: `${next}-beta.3`,
+						channel: 'prerelease',
+						url: `${origin}/${next}-beta.2.zip`,
+					},
+					`${next}-beta.2.zip`,
+				],
+				// a developer build request served a stable archive (and the reverse)
+				[{ version: next, channel: 'dev', url: `${origin}/${next}.zip` }, `${next}.zip`],
+				[{ version: next, url: `${origin}/${next}-dev.zip` }, `${next}-dev.zip`],
+				// not an archive name at all
+				[{ version: next, url: `${origin}/latest.zip?v=${next}` }, 'latest.zip'],
+			] as const) {
+				const refusal = await ask(file);
+				expect(refusal.code, JSON.stringify(file)).toBe('request.invalid_options');
+				expect(refusal.message, JSON.stringify(file)).toContain(
+					`The release archive '${name}' is not the release the request names`,
+				);
+			}
+			expect(fetched).toBe(0);
+			// CONTROL: the matching name gets past the check (to the download)
+			const control = await ask({ version: next, url: `${origin}/${next}.zip` });
+			expect(control.message).not.toContain('is not the release the request names');
+			expect(fetched).toBe(1);
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	});
+
+	test('a quarantine that calls itself another release is refused before the swap', async () => {
+		expect(zipAvailable, 'the zip CLI builds the synthetic release').toBe(true);
+		const base = join(ROOT, 'foreign_quarantine');
+		// a correctly NAMED 7.0.1.zip whose own stamp is the 7.0.1-beta.2 tag
+		const zipPath = await buildReleaseZip(base, undefined, '7.0.1-beta.2');
+		const sha = createHash('sha256').update(readFileSync(zipPath)).digest('hex');
+		const server = Bun.serve({ port: 0, fetch: () => new Response(readFileSync(zipPath)) });
+		const origin = `http://localhost:${server.port}`;
+		const targetRoot = join(base, 'live');
+		buildLiveTree(targetRoot);
+		const before = treeDigest(targetRoot);
+		let restarted = false;
+		try {
+			mockUpdateEnv(origin);
+			const refusal = await refusalOf(
+				updateCode(
+					{
+						file: { version: '7.0.1', url: `${origin}/7.0.1.zip`, sha256: sha },
+						waive_backup: true,
+					},
+					SUPERUSER,
+					pipelineSeams({
+						targetRoot,
+						backupRoot: join(base, 'backups'),
+						restart: () => {
+							restarted = true;
+						},
+					}),
+				),
+			);
+			expect(refusal.code).toBe('update.refused');
+			expect(refusal.message).toContain('calls itself 7.0.1-beta.2, not the requested 7.0.1');
+			expect(treeDigest(targetRoot)).toBe(before);
+			expect(restarted).toBe(false);
+		} finally {
+			server.stop(true);
+			unmockUpdateEnv();
+		}
+	}, 60000);
 });

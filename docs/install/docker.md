@@ -206,9 +206,10 @@ Images are published per **release**. The tags follow the code server's release 
 | Tag | What it is |
 | --- | --- |
 | `X.Y.Z` (for example `7.0.1`) | a release. Immutable: once published, a release tag always names the same image |
+| `X.Y.Z-alpha.N`, `X.Y.Z-beta.N`, `X.Y.Z-rc.N` (for example `7.0.1-beta.2`) | a prerelease: a test version published before its release, signed and immutable like a release. It is published only under its own name — never as `7.0.1`, which is the release's image |
 | `X.Y.Z-dev` | a developer image of unreleased work, built on demand and rebuilt in place — never use it in production |
 
-There is no `latest` tag, on purpose: an installation always names the version it runs.
+There is no `latest` tag, and no `7` or `7.0` tag that moves to the newest image, on purpose: an installation always names the version it runs.
 
 ### Checking the signature
 
@@ -216,7 +217,7 @@ Every published image is signed by Dédalo's release workflow with [Sigstore](ht
 
 ```shell
 cosign verify \
-  --certificate-identity-regexp '^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+|heads/master)$' \
+  --certificate-identity-regexp '^https://github\.com/dedalia-org/dedalo/\.github/workflows/image-release\.yml@refs/(tags/v[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)\.[0-9]+)?|heads/master)$' \
   --certificate-oidc-issuer 'https://token.actions.githubusercontent.com' \
   <repository>:<version>
 ```
@@ -402,7 +403,7 @@ A container installation updates by replacing its **image** — the code lives i
 The version is a release the code server lists — the [code update panel](../management/updates/updating_code.md) shows them, with their release notes and this exact command — a prerelease of one (`X.Y.Z-alpha.N`, `X.Y.Z-beta.N`, `X.Y.Z-rc.N`), or a `X.Y.Z-dev` developer image. What the script does, each step refusing before the next one changes anything:
 
 1. **Reads `.dedalo.env`** to know where the image comes from. If the file does not say, it prints the exact lines to add and stops (see [an installation from before the image pin](#an-installation-from-before-the-image-pin)).
-2. **Checks the version**: it must move forward from the pinned `DEDALO_VERSION` (the same version only for a `-dev` image), and the running engine must agree it is the next step on the upgrade path. Versions are ordered as releases are: a prerelease comes before its release, so `7.0.0-beta.6` < `7.0.0-beta.7` < `7.0.0-rc.1` < `7.0.0` < `7.0.1`. A step back to an older `X.Y.Z` is always refused. An engine that does not know prerelease versions yet is asked about the data version instead (`7.0.1-dev` for `7.0.1-beta.2`): the same `X.Y.Z` or the next one is accepted, a skipped one refused. A step back within the same `X.Y.Z` crosses no database migration, and `--skip-version-check` waives it (see [a stack installed from a beta before 7.0.0-beta.7](#a-stack-installed-from-a-beta-before-700-beta7)).
+2. **Checks the version**: it must move forward from the pinned `DEDALO_VERSION` (the same version only for a `-dev` image), and the running engine must agree it is the next step on the upgrade path. Versions are ordered as releases are: a prerelease comes before its release, so `7.0.0-beta.6` < `7.0.0-beta.7` < `7.0.0-rc.1` < `7.0.0` < `7.0.1`. A step back to an older `X.Y.Z` is always refused. The running engine checks the step from the version it calls itself: a later prerelease or the release of the same `X.Y.Z` is accepted, an earlier one refused, and another `X.Y.Z` must be the next one. An engine older than 7.0.0-beta.7 does not know prerelease versions: it is asked about the data version instead (`7.0.1-dev` for `7.0.1-beta.2`), and accepts the same `X.Y.Z` or the next one and refuses a skipped one. A step back within the same `X.Y.Z` crosses no database migration, and `--skip-version-check` waives it (see [a stack installed from a beta before 7.0.0-beta.7](#a-stack-installed-from-a-beta-before-700-beta7)).
 3. **Takes a database backup** through the stack's `backup` service and checks it is readable (`/backups/db/<time>.<database>.postgresql_pre-image-update.custom.backup`). There is no update without it; `--no-backup` waives it, and is never the default.
 4. **Keeps the running image** under a `rollback-<time>` tag.
 5. **Gets the new image**: `pull` mode pulls `<DEDALO_IMAGE>:<version>` and, with `DEDALO_IMAGE_VERIFY=cosign`, refuses it unless the signature checks out; `build` mode checks out the release tag `v<version>` in this checkout (`v7.0.0-beta.7` for a prerelease) and builds it from a clean snapshot of that commit — the same build as the installer's, so the image holds committed files only and reports the release version, never `.dev`. The commit must **be** that release: a tag that is not annotated, or that names another version than the code declares, is refused before anything is built. For a `-dev` image, or to reach a prerelease's commit under another name, `--ref <git ref>` names what to check out; without it a `-dev` build takes the `master` branch of the checkout's only remote. Local changes to tracked files are refused first (the checkout itself moves to the release); untracked files may stay, they never reach the image. A tree without git cannot be rebuilt: the script refuses and says so.

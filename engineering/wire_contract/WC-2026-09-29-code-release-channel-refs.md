@@ -66,3 +66,55 @@
   confirm placeholders in every catalog), `update_drill_config_tripwire.test.ts`
   (release clone tags the commit). End to end: `bun run test:update` /
   `test:update:dev` (`scripts/update_drill.ts`), `probe:update`.
+
+## Addendum 2026-10-18 — prerelease tags are releases too
+
+Extended by `WC-2026-10-15-release-identity-from-tag` (its addendum 2026-10-18):
+a third build channel `prerelease` (`<X.Y.Z-beta.N>.zip`, the newest
+prerelease tag above the newest stable one), one shared tag grammar ordered by
+semver precedence, immutable tag builds, and an archive that must call itself
+its tag. "While a major is in beta there is no publishable tag" above no longer
+holds for the code server: a beta tag is published by *Build prerelease*.
+
+## Addendum 2026-10-18 — a third channel token on the consumer wire
+
+Extended by `WC-2026-10-15-release-identity-from-tag` (its addendum "the
+`prerelease` update channel"): `get_code_update_info` `options.channel` ∈
+`master | prerelease | dev` (the ladder; `DEDALO_CODE_SERVER_PRERELEASE_CHANNEL`
+is the master's switch), the manifest's `info.channels` reports every honoured
+rung, and a prerelease item carries `release` + `channel: 'prerelease'` beside
+its bare `version`.
+
+## Addendum 2026-10-19 — superseded clauses (design §2.8 item 8; final)
+
+With prerelease publication landed (`WC-2026-10-15-release-identity-from-tag`,
+its addenda of 2026-10-18 — build, the `prerelease` update channel, the identity
+walk, the official image), these clauses of the entry above NO LONGER HOLD; the
+rest (a release is a TAG, `dev` = branch `master`, refs resolved on the server,
+the checked-out branch selects nothing) stands.
+- **Decision** "stable canonical `vX.Y.Z` (no prerelease suffix …)" and "While
+  a major is in beta there is no publishable tag: its code is exposed ONLY
+  through the developer channel" → three channels: RELEASE (`master`, newest
+  stable tag), PRERELEASE (`prerelease`, the newest `vX.Y.Z-(alpha|beta|rc).N`
+  tag above the newest stable one, `code_build_plan.ts prereleaseTagAbove`),
+  DEVELOPER (`dev`). One tag grammar, `release_identity.ts RELEASE_VERSION_RE`,
+  ordered by `compareReleaseIdentities`.
+- **Channel token** — build `options.channel` `master | dev` →
+  `master | prerelease | dev`; consumer `get_code_update_info` and
+  `update_code` `options.channel` likewise, read as a LADDER
+  `master ⊂ prerelease ⊂ dev` (anything else = `master`, never wider), each
+  rung gated by the master's own switch (`DEDALO_CODE_SERVER_PRERELEASE_CHANNEL`
+  beside `DEDALO_CODE_SERVER_DEV_CHANNEL`); install stamp `channel` gains
+  `prerelease`.
+- **File grammar** — "only a release-tag ref (no prerelease suffix) →
+  `<v>.zip`; everything else → `<v>-dev.zip`" → `<X.Y.Z>.zip` (stable tag) |
+  `<X.Y.Z-(alpha|beta|rc).N>.zip` (prerelease tag) | `<X.Y.Z>-dev.zip`
+  (`master`), all under `<X>/<X.Y>/`; a tag build is IMMUTABLE and must call
+  itself its tag (`code_manifest.ts releaseArchiveNameOf` / `codeReleasePath`).
+- **Manifest domain** — "Unchanged: the manifest" → `info.channels` (every
+  honoured rung), same-triple archives above the asker's `release` identity,
+  one item per upgrade rung (the rung's newest identity on the asker's
+  channel), and a prerelease item `{version: <triple>, release, channel:
+  'prerelease', …}`; a `master` asker is never offered a prerelease. Published
+  items are byte-unchanged.
+- Gates: as listed in the WC-2026-10-15 addenda (gates 13–18).

@@ -17,6 +17,7 @@ Merged since the last release; these ship with the next one.
 
 !!! warning "Action needed when you update"
 
+    - Dédalo prereleases are now published releases — from 7.0.0-beta.7 on, each beta is a fixed, signed version you can install and update.
     - The Docker and Trial installer installs the image of its own release — `7.0.0-beta.7` for a beta — and a stack built from an earlier beta needs `--skip-version-check` once on its next image update.
 
 ### For users
@@ -124,6 +125,35 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **Dédalo prereleases are now published releases — from 7.0.0-beta.7 on, each beta is a fixed, signed version you can install and update.** *(action needed)*
+
+    Until 7.0.0-beta.6, a beta was never published: its code reached an installation only
+    as a developer build, and its Docker image only by building it yourself. From
+    7.0.0-beta.7 on, every prerelease (`-alpha.N`, `-beta.N`, `-rc.N`) is published the way
+    a release is, under its own name: a code archive with a checksum on the code server, and
+    a signed official image `:7.0.0-beta.7`. Neither is ever rebuilt, so a bug report that
+    names a prerelease names exact code. An installation is offered prereleases only when it
+    chooses **Prereleases** (or **Developer builds**) in the *Update code* panel, and only
+    from a code server that publishes them; the default, **Published releases**, never
+    offers one.
+
+    **Action needed** for an installation running 7.0.0-beta.6 or an earlier beta: it
+    reports the bare version `7.0.0` and does not know about prereleases, so it is offered
+    neither 7.0.0-beta.7 nor, later, 7.0.0. To move on:
+
+    - a **Docker** installation updates its image to `7.0.0-beta.7`, as described in
+      [a stack installed from a beta before 7.0.0-beta.7](./install/docker.md#a-stack-installed-from-a-beta-before-700-beta7);
+    - an installation **updated from the panel** chooses **Developer builds** and installs
+      the developer build of 7.0.0 the code server offers (see
+      [testing development work on a real installation](./management/updates/updating_code.md#testing-development-work-on-a-real-installation)).
+      With **Developer builds** still chosen, it is then
+      offered every published build of 7.0.0 — 7.0.0-beta.7 and the later prereleases (from
+      a code server that publishes prereleases), and 7.0.0 once it is released — because a
+      developer build cannot tell which of them are older than it. Once it runs one of
+      them, its panel's **Prereleases** and **Published releases** choices work as usual.
+
+    Wire contract: `WC-2026-10-15-release-identity-from-tag`, `WC-2026-09-29-code-release-channel-refs`.
+
 - **The Docker and Trial installer installs the image of its own release — `7.0.0-beta.7` for a beta — and a stack built from an earlier beta needs `--skip-version-check` once on its next image update.** *(action needed)*
 
     The installer now knows which release it is from the git tag of the checkout or
@@ -186,6 +216,91 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **"A code server can publish a prerelease (`Build prerelease`), and a published release is never rebuilt."**
+
+    The *serve code* panel has a third button, *Build prerelease*, beside *Build release*.
+    It builds the newest prerelease tag (for example `v7.0.1-beta.2`) that is newer than the
+    newest release tag, into `<X>/<X.Y>/7.0.1-beta.2.zip` with its `.sha256` file. The
+    *Prerelease tag* row names the tag before you press the button. When there is no such
+    tag, the row says so and offers no button. *Build release* still builds only stable
+    `vX.Y.Z` tags.
+
+    A built release or prerelease cannot be built again. If its `.zip` and `.sha256` are
+    already on disk, the build is refused and the files are not changed. To publish
+    different code, tag a new release. Before the code server publishes an archive, it
+    checks that the archive gives the tag's name as its version. A tag made without `-a`
+    (a lightweight tag) fails this check, so the build is refused. A prerelease tag made
+    before this check existed (up to `v7.0.0-beta.6`) cannot pass it either, so the panel
+    does not offer it; the first prerelease that can be built is one tagged after it.
+
+    For developers: the pre-push hook now refuses a lightweight release tag. It also asks
+    for a full green gate for a prerelease tag, in the same way as for a stable tag.
+    `bun run push:release-tag` now takes the pushed tag object as a third argument.
+
+    Wire contract: `WC-2026-10-15-release-identity-from-tag`.
+
+- **"Code updates move between prereleases of one version: beta to later beta, beta to its release."**
+
+    An installation that runs a prerelease can now install a later prerelease of the same
+    version, or that version's release, from the *Update code* panel or with
+    `deploy/dedalo-image-update.sh`: `7.0.0-beta.6` → `7.0.0-beta.7` → `7.0.0-rc.1` →
+    `7.0.0`. These moves need no data update, and prereleases may be skipped. Moving back
+    (`7.0.0-beta.7` → `7.0.0-beta.6`, or from `7.0.0` to one of its prereleases) is refused.
+    A move to the next version still goes one version at a time; its data update runs once,
+    on the first build of that version you install.
+
+    A prerelease needs the *Prereleases* (or *Developer builds*) choice of the panel. On a
+    container installation the panel can now request a prerelease image too, and the running
+    engine checks a prerelease version itself instead of refusing it as malformed.
+
+    After the restart, the panel reports an update as landed only when the server answers
+    with the exact version it installed; a server that answers with another build of the
+    same version is reported as rolled back.
+
+    An update is refused, before anything is swapped, when the archive it would download is not
+    the release it names, or when the downloaded archive calls itself another release.
+
+    Wire contract: `WC-2026-10-15-release-identity-from-tag`.
+
+- **"Prereleases have an official image: `:7.0.1-beta.2`, signed, and never under a release's tag."**
+
+    Pushing a prerelease tag (for example `v7.0.1-beta.2`) now publishes the official Docker
+    image `:7.0.1-beta.2`, in the same way as a release: built from the tag's code, signed,
+    with the same digest in every registry, and never rebuilt once published. The image is
+    published only under its own name. It never replaces `:7.0.1`, which is the image of the
+    release, and no image is tagged `latest`, `7` or `7.0`.
+
+    So the installer of a prerelease can now use the **Official** image: it asks the registry
+    for `:7.0.1-beta.2`, and finds it once the image is published.
+
+    The signature check accepts prerelease tags. If you verify images by hand with
+    `cosign verify`, use the identity printed in the Docker installation guide, which now
+    includes them. The old command still verifies release images, but it refuses a prerelease
+    image.
+
+    Wire contract: `WC-2026-10-15-release-identity-from-tag`.
+
+- **"The update panel can ask for prereleases: choose published releases, prereleases or developer builds."**
+
+    The *Developer builds* checkbox of the *Update code* panel is now a choice of three:
+    **Published releases** (the default), **Prereleases** and **Developer builds**. Each
+    choice also offers what the one before it offers. A prerelease (for example
+    `7.0.1-beta.2`) is a fixed, checksum-verified build of a version that is not yet stable,
+    and its row shows that full version. An installation that asks for published releases
+    is never offered a prerelease.
+
+    A code server offers prereleases only when it sets the new
+    `DEDALO_CODE_SERVER_PRERELEASE_CHANNEL=true`, which is separate from
+    `DEDALO_CODE_SERVER_DEV_CHANNEL`. When the code server does not offer part of what you
+    chose (it is not set up for it, or it runs an older Dédalo version), it lists only what it
+    does offer and the panel names the missing part above the list.
+
+    An installation that runs a prerelease is also shown the later prereleases and the
+    release of its own version, and can install them (see the entry on moving between
+    prereleases).
+
+    Wire contract: `WC-2026-10-15-release-identity-from-tag`.
+
 - **The production installer can now make a local certificate authority, for an intranet with no public name.**
 
     A museum that installs Dédalo with internet access and then runs it on an isolated
@@ -230,6 +345,21 @@ Merged since the last release; these ship with the next one.
 ### For developers
 
 #### Changed
+
+- **"`page_globals` now says what kind of build is running (`release_kind`), and the harvesting user agent names the release."**
+
+    `page_globals` has a new key, `release_kind`: `stable`, `prerelease` or `dev`, the same
+    values as `/health`. Like `dedalo_version`, it is `null` for a visitor who is not
+    logged in. The version badge in the menu's debug bar uses it. It shows `beta` for a
+    prerelease and `dev` for an untagged build. Before, the badge said `beta` for every
+    `7.0` version, including the stable release.
+
+    The `User-Agent` header sent by the harvesting tools now carries the release name,
+    for example `dedalo/7.0.0-beta.7 (+https://dedalo.dev; heritage cataloguing)`. Before,
+    it carried the bare data version (`dedalo/7.0.0`). The `dedalo` token that a
+    `robots.txt` group addresses is unchanged.
+
+    Wire contract: `WC-2026-10-15-release-identity-from-tag`.
 
 - **A developer install is reported complete only once `bun run dev` has served, and it ends by saying where to open it.**
 

@@ -5,10 +5,16 @@
  * version → ref → path confinement. Moving a gate changes the error a caller
  * sees, so the order is part of the contract, not an implementation detail.
  *
- * Leaf module: imports only the version parser — no config, no fs, no spawn.
+ * Leaf module: imports only the version parser and the pure release-identity
+ * grammar — no config, no fs, no spawn.
  */
 
 import { join, resolve, sep } from 'node:path';
+import {
+	compareReleaseIdentities,
+	parseReleaseVersion,
+	releaseVersionOfTag,
+} from './release_identity.ts';
 import { parseVersionString } from './version.ts';
 
 /**
@@ -39,6 +45,26 @@ export function parseDeclaredTriple(versionTsSource: string): string | null {
 export const VERSION_TS_PATH = 'src/core/update/version.ts';
 
 /**
+ * Where the release stamp's placeholder lives inside any Dédalo tree — the
+ * value of build_stamp.ts BUILD_INFO_PATH, restated here because this planner
+ * is pure and build_stamp.ts reads the running tree on import (equality gated
+ * in code_build_native).
+ */
+export const BUILD_INFO_TREE_PATH = 'src/core/update/build_info.txt';
+
+/**
+ * Can a tag's archive NAME ITSELF? True when the tree's committed
+ * build_info.txt placeholder (as `git show <tag>:<path>` prints it) carries the
+ * `%(describe…)` field. The pre-2026-10-15 two-field placeholder
+ * (`$Format:%H %cI$` — every prerelease tag cut before the stamp, v7.0.0-beta.6
+ * included) expands to a stamp an installed engine reads as `X.Y.Z.dev`, so a
+ * prerelease from such a tree is never offered as buildable (design §2.8.5).
+ */
+export function placeholderNamesItsTag(placeholder: string): boolean {
+	return /%\(describe[:)]/.test(placeholder.split(/\r?\n/)[0] ?? '');
+}
+
+/**
  * A safe git ref: refs/heads/… or a plain branch/tag name. No shell metachars,
  * and — CMD-05 (2026-07-28 audit) — NO leading `-`: the ref is the last argv
  * element of `git archive … -o <file> <ref>`, so a `-`-leading value like
@@ -65,15 +91,19 @@ export function isSafeGitRef(ref: string): boolean {
 }
 
 /**
- * THE TWO CHANNELS' REFS (policy 2026-09-29).
+ * THE CHANNELS' REFS (policy 2026-09-29; prerelease publication 2026-10-15,
+ * RELEASE_IDENTITY_DESIGN §2.8 — owner Q1: a prerelease tag IS a release).
  *
- * - RELEASE (`master` channel on the wire, `<v>.zip`, advertised): a RELEASE
- *   TAG `vX.Y.Z` — a version that was cut and tagged in git, never a moving
- *   branch tip. Prerelease tags (`v7.0.0-beta.5`) are not releases: while a
- *   major is in beta its code is exposed ONLY through the developer channel.
- *   And only a tag whose tree IS this engine is publishable (see
- *   {@link newestPublishableTag}) — the PHP-era `v6.x` tags live in the same
- *   repository and must never surface as a v7 release.
+ * - RELEASE (`master` channel on the wire, `<v>.zip`, advertised): a STABLE
+ *   RELEASE TAG `vX.Y.Z` — a version that was cut and tagged in git, never a
+ *   moving branch tip. Only a tag whose tree IS this engine is publishable
+ *   (see {@link newestPublishableTag}) — the PHP-era `v6.x` tags live in the
+ *   same repository and must never surface as a v7 release.
+ * - PRERELEASE (`<X.Y.Z-beta.N>.zip`): a canonical prerelease tag
+ *   `vX.Y.Z-(alpha|beta|rc).N`, built exactly like a release (immutable,
+ *   sha-verified, its archive calling itself the tag) — the newest one ABOVE
+ *   the newest stable release ({@link prereleaseTagAbove}); a beta a stable
+ *   release has already superseded is never built.
  * - DEVELOPER (`dev` channel, `<v>-dev.zip`, advertised only on request): the
  *   tip of branch `master` — the latest integrated code, before its release.
  *
@@ -86,43 +116,77 @@ export function isSafeGitRef(ref: string): boolean {
 export const DEV_REF = 'master';
 
 /**
- * `vX.Y.Z` or `refs/tags/vX.Y.Z` — stable only, no prerelease suffix, and
- * CANONICAL (no leading zeros): `v07.0.2` would normalise to `7.0.2` and be
- * re-qualified as a `refs/tags/v7.0.2` that does not exist.
+ * The release IDENTITY a release-tag ref names — `7.0.1` for `v7.0.1` /
+ * `refs/tags/v7.0.1`, `7.0.1-beta.2` for `v7.0.1-beta.2` — or null when the
+ * ref is not one. THE shared grammar (release_identity.ts RELEASE_VERSION_RE:
+ * canonical numbers, `alpha|beta|rc` only): `v07.0.2` would normalise to
+ * `7.0.2` and be re-qualified as a `refs/tags/v7.0.2` that does not exist, so
+ * a non-canonical name is no release tag at all. `refs/heads/v7.0.1` is a
+ * branch, never a tag.
  */
-const RELEASE_TAG_RE = /^(?:refs\/tags\/)?v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
-
-/** The version a release-tag ref names ('7.0.1'), or null when the ref is not one. */
-export function releaseTagVersion(ref: string): string | null {
-	const matched = RELEASE_TAG_RE.exec(ref);
-	if (matched === null) return null;
-	return `${Number(matched[1])}.${Number(matched[2])}.${Number(matched[3])}`;
-}
-
-/** The fully-qualified ref of a release tag — a branch that happens to be named `v7.0.1` never resolves in its place. */
-export function qualifiedReleaseTag(version: string): string {
-	return `refs/tags/v${version}`;
+export function releaseTagIdentity(ref: string): string | null {
+	const name = ref.startsWith('refs/tags/') ? ref.slice('refs/tags/'.length) : ref;
+	return releaseVersionOfTag(name);
 }
 
 /**
- * The stable release tags among `tags` (short names, as `git tag --list`
- * prints them), NEWEST FIRST by numeric semver — never by lexical order, where
- * `v7.10.0` sorts before `v7.9.0`.
+ * The version a STABLE release-tag ref names ('7.0.1'), or null — for a
+ * prerelease tag too: the RELEASE channel (`<v>.zip`, the image pipeline's
+ * stable plan) only ever publishes a stable tag. For a tag of either kind use
+ * {@link releaseTagIdentity}.
  */
-export function releaseTagsNewestFirst(tags: readonly string[]): string[] {
-	const found: { tag: string; triple: number[] }[] = [];
+export function releaseTagVersion(ref: string): string | null {
+	const identity = releaseTagIdentity(ref);
+	return identity !== null && parseReleaseVersion(identity)?.prerelease === null ? identity : null;
+}
+
+/** The DATA triple ('7.0.1') a release tag of either kind names, or null. */
+function releaseTagTriple(ref: string): string | null {
+	const identity = releaseTagIdentity(ref);
+	return identity === null ? null : (parseReleaseVersion(identity)?.triple.join('.') ?? null);
+}
+
+/**
+ * The fully-qualified ref of a release tag (a stable or prerelease identity) —
+ * a branch that happens to be named `v7.0.1` never resolves in its place.
+ */
+export function qualifiedReleaseTag(identity: string): string {
+	return `refs/tags/v${identity}`;
+}
+
+/** Which release tags a listing asks for. */
+export type ReleaseTagKind = 'stable' | 'prerelease' | 'any';
+
+/**
+ * The release tags among `tags` (short names, as `git tag --list` prints
+ * them), NEWEST FIRST by semver precedence (release_identity.ts
+ * compareReleaseIdentities: `7.0.0-beta.6 < 7.0.0-rc.1 < 7.0.0 < 7.0.1`) —
+ * never by lexical order, where `v7.10.0` sorts before `v7.9.0` and
+ * `v7.0.0-beta.10` before `v7.0.0-beta.9`. `kind` narrows the list to stable
+ * or prerelease tags; a name outside the shared grammar is never listed.
+ */
+export function releaseTagsNewestFirst(
+	tags: readonly string[],
+	kind: ReleaseTagKind = 'any',
+): string[] {
+	const found: { tag: string; identity: string }[] = [];
 	for (const raw of tags) {
 		const tag = raw.trim();
-		const version = releaseTagVersion(tag);
-		if (version !== null) found.push({ tag, triple: version.split('.').map(Number) });
+		const identity = releaseTagIdentity(tag);
+		if (identity === null) continue;
+		const prerelease = parseReleaseVersion(identity)?.prerelease !== null;
+		if (kind === 'any' || (kind === 'prerelease') === prerelease) found.push({ tag, identity });
 	}
-	return found.sort((a, b) => compareTriples(b.triple, a.triple)).map((entry) => entry.tag);
+	return found
+		.sort((a, b) => compareReleaseIdentities(b.identity, a.identity))
+		.map((entry) => entry.tag);
 }
 
 /**
- * The newest PUBLISHABLE release tag: the newest stable `vX.Y.Z` whose tree is
- * this engine — it carries {@link VERSION_TS_PATH} (`isEngineTree`, asked of the
- * object store by the caller). Null when there is none.
+ * The newest PUBLISHABLE tag of `kind` (stable by default): the newest one
+ * whose tree is this engine — it carries {@link VERSION_TS_PATH}
+ * (`isEngineTree`, asked of the object store by the caller). Null when there
+ * is none.
  *
  * WHY THE TREE AND NOT A VERSION FLOOR: the repository also holds the PHP
  * engine's history, `v6.9.7` included — the newest stable tag of this repo
@@ -133,19 +197,36 @@ export function releaseTagsNewestFirst(tags: readonly string[]): string[] {
 export function newestPublishableTag(
 	tags: readonly string[],
 	isEngineTree: (tag: string) => boolean,
+	kind: Exclude<ReleaseTagKind, 'any'> = 'stable',
 ): string | null {
-	for (const tag of releaseTagsNewestFirst(tags)) {
+	for (const tag of releaseTagsNewestFirst(tags, kind)) {
 		if (isEngineTree(tag)) return tag;
 	}
 	return null;
 }
 
-function compareTriples(a: readonly number[], b: readonly number[]): number {
-	for (let i = 0; i < 3; i++) {
-		const diff = (a[i] ?? 0) - (b[i] ?? 0);
-		if (diff !== 0) return diff;
-	}
-	return 0;
+/**
+ * The prerelease tag the *Build prerelease* action builds: `prerelease` (the
+ * newest publishable prerelease tag) when it sorts ABOVE `stable` (the newest
+ * publishable stable tag), else null. A beta below the newest release —
+ * `v7.0.1-beta.2` once `v7.0.1` exists, or a `v7.0.0-rc.N` after `v7.0.1` —
+ * is superseded history: building it would publish an archive no consumer is
+ * ever walked to, so the action refuses instead (design §2.8 item 1).
+ */
+export function prereleaseTagAbove(
+	prerelease: string | null,
+	stable: string | null,
+): string | null {
+	const pre = prereleaseIdentityOf(prerelease);
+	if (pre === null) return null;
+	const top = stable === null ? null : releaseTagIdentity(stable);
+	return top === null || compareReleaseIdentities(pre, top) > 0 ? prerelease : null;
+}
+
+/** The identity a PRERELEASE tag names, or null (no tag, a stable tag, no release tag at all). */
+function prereleaseIdentityOf(tag: string | null): string | null {
+	const identity = tag === null ? null : releaseTagIdentity(tag);
+	return (parseReleaseVersion(identity ?? '')?.prerelease ?? null) !== null ? identity : null;
 }
 
 /** Config slice the planner needs (the `config.update` shape). */
@@ -162,6 +243,13 @@ export type CodeBuildPlan =
 			gitDir: string;
 			ref: string;
 			versionString: string;
+			/**
+			 * The release identity a TAG build's archive must call itself (the
+			 * tag's: `7.0.1`, `7.0.1-beta.2`) — the build reads it back out of
+			 * the archive and refuses a disagreement (code_build.ts). Null for a
+			 * developer build: a branch tip names no release.
+			 */
+			identity: string | null;
 			targetDir: string;
 			filePath: string;
 	  }
@@ -216,11 +304,12 @@ function configGateOf(cfg: CodeBuildConfig): { gitDir: string; filesDir: string 
  * A RELEASE TAG NAMES ITS VERSION TWICE — in the tag and in its own version.ts
  * — and the two must agree: `v7.0.2` cut on a commit still declaring 7.0.1
  * would publish a `7.0.1.zip` under a tag nobody will look for, or (named after
- * the tag) a `7.0.2.zip` whose tree reports 7.0.1.
+ * the tag) a `7.0.2.zip` whose tree reports 7.0.1. A PRERELEASE tag names its
+ * DATA triple the same way (`v7.0.2-beta.1` → 7.0.2) and is held to it alike.
  */
 function refRefusalOf(ref: string, versionString: string): CodeBuildPlan | null {
 	if (!GIT_REF_RE.test(ref)) return refused('Error. Invalid git ref', `invalid ref: ${ref}`);
-	const tagged = releaseTagVersion(ref);
+	const tagged = releaseTagTriple(ref);
 	if (tagged === null || tagged === versionString) return null;
 	return refused(
 		`Error. Tag '${ref}' names version ${tagged}, but its version.ts declares ${versionString}`,
@@ -250,30 +339,35 @@ export function planCodeBuild(
 	const refRefusal = refRefusalOf(ref, versionString);
 	if (refRefusal !== null) return refRefusal;
 	const targetDir = join(filesDir, String(triple[0]), `${triple[0]}.${triple[1]}`);
-	const filePath = join(targetDir, releaseFileName(versionString, ref));
+	const identity = releaseTagIdentity(ref);
+	const filePath = join(targetDir, releaseFileName(versionString, identity));
 	// LEDGERED UNREACHABLE BRANCH — reason: the version guard above proves the
-	// triple is three NON-NEGATIVE INTEGERS, so every path segment interpolated
-	// here is `[0-9]+`; no traversal or absolute segment can be constructed and
-	// `filePath` is always under `filesDir`. Kept as a defence-in-depth backstop
+	// triple is three NON-NEGATIVE INTEGERS, so every DIRECTORY segment
+	// interpolated here is `[0-9]+`; the file name is the triple plus `-dev`, or
+	// an identity that matched RELEASE_VERSION_RE (`[0-9]+` + `.` + an optional
+	// `-(alpha|beta|rc).[0-9]+` — no separator, no `..`). No traversal or
+	// absolute segment can be constructed and `filePath` is always under
+	// `filesDir`. Kept as a defence-in-depth backstop
 	// in case the version guard is ever loosened; deliberately NOT covered by a
 	// test (no input can reach it).
 	if (!resolve(filePath).startsWith(`${resolve(filesDir)}${sep}`)) {
 		return refused('Error. Unconfined release path', 'unconfined release path');
 	}
-	return { ok: true, gitDir, ref, versionString, targetDir, filePath };
+	return { ok: true, gitDir, ref, versionString, identity, targetDir, filePath };
 }
 
 /**
- * RELEASE CHANNEL in the filename (computed after every refusal gate — the
+ * THE CHANNEL IS IN THE FILE NAME (computed after every refusal gate — the
  * gate order in planCodeBuild is the wire contract). Only a RELEASE TAG build
- * claims the published `<v>.zip` name that code_manifest.ts advertises; any
- * other ref — `master` included, which is the developer channel — gets the
- * sanitized `-dev` suffix, so a branch build can never OVERWRITE the published
- * release of the same version. Dev zips are advertised only to a consumer that
- * asked for them on a master that opted in (code_manifest.ts). The suffix is a
- * fixed sanitized token — no ref bytes reach the path, so confinement still
- * derives solely from the validated triple.
+ * claims an identity name — `<X.Y.Z>.zip` for a stable tag (what
+ * code_manifest.ts advertises), `<X.Y.Z-beta.N>.zip` for a prerelease tag
+ * (RELEASE_IDENTITY_DESIGN §2.8 item 1), both under `<X>/<X.Y>/`. Any other
+ * ref — `master` included, which is the developer channel — gets the fixed
+ * `-dev` suffix, so a branch build can never OVERWRITE a release of the same
+ * version. Dev zips are advertised only to a consumer that asked for them on a
+ * master that opted in (code_manifest.ts). No ref bytes reach the path: the
+ * identity is the shared grammar's (canonical numbers, a closed label set).
  */
-function releaseFileName(versionString: string, ref: string): string {
-	return releaseTagVersion(ref) !== null ? `${versionString}.zip` : `${versionString}-dev.zip`;
+function releaseFileName(versionString: string, identity: string | null): string {
+	return identity !== null ? `${identity}.zip` : `${versionString}-dev.zip`;
 }

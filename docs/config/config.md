@@ -5647,6 +5647,24 @@ DEDALO_CODE_SERVER_DEV_CHANNEL=true
 
 ---
 
+### Publishing prereleases from a code server
+
+DEDALO_CODE_SERVER_PRERELEASE_CHANNEL `bool`
+
+This parameter lets a code server OFFER prereleases (`<version>-beta.N.zip`, built from a prerelease tag such as `v7.0.1-beta.2`, or `-alpha.N` / `-rc.N`) to installations that explicitly ask for them. Published releases (`<version>.zip`) are offered regardless of this setting.
+
+A prerelease is a real release — fixed bytes, verified against its `.sha256` sidecar — of a version that is not yet stable, so it is offered only to an installation whose code-update panel is set to **Prereleases** (or to **Developer builds**, which includes prereleases). An installation that asks for published releases never sees one, even when a prerelease is the newest version on this server. A code server that leaves this unset answers a prerelease request exactly as it answers a normal one.
+
+This switch is separate from `DEDALO_CODE_SERVER_DEV_CHANNEL`: a server can publish prereleases without publishing developer builds, and the other way round.
+
+```bash
+DEDALO_CODE_SERVER_PRERELEASE_CHANNEL=true
+```
+
+*Default: false*
+
+---
+
 ### Defining source versions local directory to save the new code
 
 DEDALO_SOURCE_VERSION_LOCAL_DIR `string`

@@ -1439,6 +1439,26 @@ Publishing side (the master's runbook): `engineering/RELEASE.md`. This section
 is the CONSUMER side — what an install does with a release, and what catches
 it when the release is bad. Engine: `src/core/update/code_update.ts`.
 
+**Release channels (what an install is offered; 2026-10-18).** The update ask
+(`get_code_update_info` `options.channel`) is one rung of a LADDER,
+`master ⊂ prerelease ⊂ dev`: published releases `<X.Y.Z>.zip`; also the
+prereleases `<X.Y.Z-(alpha|beta|rc).N>.zip`; also the developer builds
+`<X.Y.Z>-dev.zip`. Each rung needs BOTH the consumer's choice (the panel's
+3-way switch; the default and the only production choice is *Published
+releases*) and the master's own switch (`DEDALO_CODE_SERVER_PRERELEASE_CHANNEL`,
+`DEDALO_CODE_SERVER_DEV_CHANNEL` — separate). A prerelease is fixed bytes with a
+sha256 like a release; the install stamp records `channel: 'prerelease'`, and
+posture stays `release`. Every door that moves the install judges the move by
+ONE rule from what the engine CALLS ITSELF (`version_walk.ts`
+`identityWalkRefusal`): within a data triple only a newer identity
+(`beta.6 → beta.7 → rc.1 → X.Y.Z`, skips allowed, no migration rungs); across
+triples the linear data walk, to the rung's newest identity on the asker's
+channel. A tree that runs a developer build its own stamp says the dev channel
+installed (`.dev` identity + `channel: 'dev'`) is judged on the dev channel
+whatever item it installs (`code_update.ts` `walkChannelOf`), so it may move
+to any tag of its own triple — the beta.6 bootstrap. Wire:
+`WC-2026-10-15-release-identity-from-tag`.
+
 **The swap pipeline.** Download (TLS-on, origin-pinned, capped) → sha256
 verified against the manifest sidecar → zip entries pre-validated (no
 absolute/`..`/symlink entries) → extracted into a QUARANTINE dir, never over
@@ -1590,7 +1610,7 @@ it finds runtime data in the tree, naming the key to set). Per-key recipe:
 Operator manual: `docs/install/docker.md` (*Choose where the image comes from*,
 *Upgrading*, *The host updater*). Publishing side: the release workflow
 `.github/workflows/image-release.yml` pushes ONE signed multi-arch digest per
-release tag to every PROVISIONED registry of `engineering/image_registries.json`
+release or prerelease tag — under that tag only, never a floating one — to every PROVISIONED registry of `engineering/image_registries.json`
 (`engineering/CI.md`).
 
 **The `.dedalo.env` contract** (host side only — compose substitution and the host
@@ -1601,7 +1621,7 @@ the TLS keys `install.sh` writes:
 |---|---|
 | `DEDALO_COMPOSE_FILE` | `docker-compose.simple.yml` or `docker-compose.yml` |
 | `DEDALO_IMAGE` | the repository, no tag (`localhost/dedalo` for a local build) |
-| `DEDALO_VERSION` | the PINNED tag: `X.Y.Z`, or `X.Y.Z-dev` for a developer image |
+| `DEDALO_VERSION` | the PINNED tag: `X.Y.Z`, `X.Y.Z-alpha.N` / `-beta.N` / `-rc.N` for a prerelease image, or `X.Y.Z-dev` for a developer image |
 | `DEDALO_IMAGE_MODE` | `pull` \| `build` |
 | `DEDALO_IMAGE_VERIFY` | `cosign` \| `none` |
 
@@ -1627,8 +1647,9 @@ mirror or custom.
 **The updater** (`deploy/dedalo-image-update.sh --version <tag>`, from the stack
 dir; gate `image_update_script_native`), each step refusing before the next
 changes anything: mkdir lock → `.dedalo.env` complete (else the exact lines to
-add are printed — the adoption path of a pre-pin install) → grammar + numeric
-downgrade floor (equal only for `-dev`) → the RUNNING engine's walk verdict
+add are printed — the adoption path of a pre-pin install) → grammar + release-order
+downgrade floor (`dedalo_version_cmp`: a prerelease before its release; equal only
+for `-dev`) → the RUNNING engine's walk verdict
 (`scripts/ops/image_update_channel.ts check-target`: exit 0 ok, 3 refused + reason
 id, anything else = unavailable, refused unless `--skip-version-check`) → a
 verified `pg_dump` through the `backup` service (`--label pre-image-update`;
@@ -1639,8 +1660,10 @@ signed image's `org.opencontainers.image.version` label equal to the tag pulled 
 `dedalo_verify_release`; a signature alone proves only that SOME official run built
 the bytes, so a mirror re-pointing `:<newer>` at an older signed release would
 otherwise walk the install backwards past the version floor)
-or build (not a git checkout → refused; checkout `v<X.Y.Z>`, or the single remote's master / `--ref` for
-`-dev`; the checked-out `version.ts` must declare the target; then `dedalo_image_build`
+or build (not a git checkout → refused; checkout `v<tag>` — `v7.0.0-beta.7` for a prerelease —, or the
+single remote's master / `--ref` for `-dev`; the checked-out commit's RELEASE IDENTITY
+(`dedalo_release_identity`) must build the target — a release or prerelease only from its exact
+annotated tag, a `-dev` image from any commit of its data triple; then `dedalo_image_build`
 of that HEAD — the installer's builder, sourced before the checkout) → re-pin → `up -d
 dedalo backup` (never postgres or nginx) → the compose healthcheck: green on the
 first `healthy`; `starting` AND `unhealthy` wait up to `--health-timeout`, default

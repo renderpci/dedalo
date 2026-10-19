@@ -77,7 +77,7 @@ describe('serve_code split', () => {
 			expect(status_src).toContain(`export const ${helper} = function(`);
 			expect(has(`const ${helper} = function(`), `const ${helper} = function(`).toBe(false);
 		}
-		expect(status_src).toContain("export const CHANNELS = ['master', 'dev']");
+		expect(status_src).toContain("export const CHANNELS = ['master', 'prerelease', 'dev']");
 	});
 
 	test('check-id-derived label keys were NOT renamed with the split', () => {
@@ -351,5 +351,50 @@ describe('serve_code build feedback', () => {
 		expect(css_src).toContain('&.building');
 		expect(css_src).toContain('.build_file_previous');
 		expect(css_src).toContain('&.built_updated');
+	});
+});
+
+describe('serve_code prerelease channel (RELEASE_IDENTITY_DESIGN §2.8 item 1)', () => {
+	test('a third row, Build prerelease, beside Build release — the server resolves its tag', () => {
+		// the readout lists the channels in this order; the button sends the channel alone
+		expect(status_src).toContain("export const CHANNELS = ['master', 'prerelease', 'dev']");
+		expect(has('serve_code_build_prerelease'), 'serve_code_build_prerelease').toBe(true);
+		expect(has('source.prerelease_ref'), 'source.prerelease_ref').toBe(true);
+		// none above the newest release: the row says why instead of a button
+		expect(
+			has('serve_code_build_prerelease_unavailable'),
+			'serve_code_build_prerelease_unavailable',
+		).toBe(true);
+		// several betas share one triple: the row pairs with its archive by IDENTITY
+		expect(
+			has("release.channel === 'prerelease' ? release.identity : release.version"),
+			"release.channel === 'prerelease' ? release.identity : release.version",
+		).toBe(true);
+		expect(status_src).toContain('update_code_channel_prerelease');
+	});
+
+	test('every translation of the prerelease confirm keeps each NAMED placeholder exactly once', () => {
+		// all three are substituted by NAME (their order differs per language); a dropped
+		// or doubled one ships a sentence naming no tag, or the file twice.
+		const catalog_dir = join(import.meta.dir, '../../src/core/labels/catalog');
+		const key = 'serve_code_build_prerelease_confirm';
+		const sentences: Array<[string, string]> = [['master', master_labels[key] as string]];
+		for (const file of readdirSync(catalog_dir).filter((name) => name.endsWith('.json'))) {
+			const labels = JSON.parse(readFileSync(join(catalog_dir, file), 'utf8')) as Record<
+				string,
+				string
+			>;
+			if (typeof labels[key] === 'string') sentences.push([file, labels[key]]);
+		}
+		expect(sentences.length).toBeGreaterThan(10);
+		for (const [where, sentence] of sentences) {
+			for (const token of ['%identity%', '%tag%', '%file%']) {
+				expect(`${where} ${token}: ${sentence.split(token).length - 1}`).toBe(
+					`${where} ${token}: 1`,
+				);
+				expect(has(`replaceAll('${token}'`), `replaceAll('${token}'`).toBe(true);
+			}
+			expect(`${where}: ${sentence.split('%s').length - 1}`).toBe(`${where}: 0`);
+		}
 	});
 });

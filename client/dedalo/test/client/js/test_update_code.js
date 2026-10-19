@@ -851,6 +851,19 @@ describe('UPDATE_CODE WIDGET', function() {
 			assert.isNull(image_update_command(image, { version : '$(id)' }))
 			assert.isNull(image_update_command({}, { version : '9.9.10' }), 'no program fact, no command')
 		})
+
+		it('a PRERELEASE item installs its own identity tag, never the stable image of its triple', function() {
+
+			const image = image_block('alive')
+			// version is the bare DATA triple; the image is the identity's (`:9.9.10-beta.2`)
+			assert.strictEqual(
+				image_update_command(image, { version : '9.9.10', channel : 'prerelease', release : '9.9.10-beta.2' }),
+				'./deploy/dedalo-image-update.sh --version 9.9.10-beta.2'
+			)
+			// a malformed identity is no command at all — never a fallback to `:9.9.10`
+			assert.isNull(image_update_command(image, { version : '9.9.10', channel : 'prerelease' }))
+			assert.isNull(image_update_command(image, { version : '9.9.10', channel : 'prerelease', release : '9.9.10-beta.2; id' }))
+		})
 	})
 
 

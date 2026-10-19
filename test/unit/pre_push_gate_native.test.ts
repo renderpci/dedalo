@@ -443,12 +443,15 @@ beforeAll(() => {
 			'',
 		].join('\n'),
 	);
-	// push:release-tag — logs argv (`tag <tag> <commit>`), exits STUB_TAG_CODE (default 0).
+	// push:release-tag — logs argv (`tag <tag> <commit> <object>`), exits STUB_TAG_CODE
+	// (default 0 = a HELD release tag that passes; 3 = nothing to hold; else refused).
+	// STUB_TAG_HELD=<tag>: only that tag answers STUB_TAG_CODE, every other one 3.
 	// The check's RULES are gated on a real repository in release_tag_native.
 	writeFileSync(
 		join(stubDir, 'tag.sh'),
 		[
 			'printf "tag %s\\n" "$*" >>"$STUB_LOG"',
+			'[ -n "${STUB_TAG_HELD:-}" ] && [ "$1" != "$STUB_TAG_HELD" ] && exit 3',
 			'[ "${STUB_TAG_CODE:-0}" = 0 ] || echo "release-tag: REFUSED — stub says no" >&2',
 			'exit "${STUB_TAG_CODE:-0}"',
 			'',
@@ -1044,12 +1047,42 @@ describe('pre-push gate: a release tag needs a FULL green for its commit, on any
 		expect(ciCalls()).toEqual([]);
 	});
 
-	test('a PRERELEASE tag (never published) needs no full green', () => {
+	test('GATE 18: a PRERELEASE tag IS a release — no FULL green off HEAD is refused, at HEAD it is gated full', () => {
+		// Owner Q1 (2026-10-15): a prerelease tag is published like a release, so it is
+		// held like one. Which tags are HELD is the check's answer (exit 0), not a regex here.
 		const repo = freshRepo(['gitdedalo'], ['gitdedalo']);
-		git(repo, 'tag', 'v7.0.5-beta.1');
-		const r = run(['git', 'push', 'gitdedalo', 'v7.0.5-beta.1'], repo);
-		expect(r.code, r.err).toBe(0);
+		const old = git(repo, 'rev-parse', 'HEAD');
+		write(repo, 'src/a.ts', 'export const a = 14;\n');
+		const sha = commitAll(repo, 'beta work');
+		git(repo, 'tag', '-a', '-m', 'beta', 'v7.0.5-beta.1', old);
+		const refused = run(['git', 'push', 'gitdedalo', 'v7.0.5-beta.1'], repo);
+		expect(refused.code).not.toBe(0);
+		expect(refused.err).toContain(
+			`REFUSED — release tag v7.0.5-beta.1 names ${old}, which has no FULL green`,
+		);
 		expect(ciCalls()).toEqual([]);
+		expect(git(repo, 'ls-remote', 'gitdedalo', 'refs/tags/v7.0.5-beta.1')).toBe('');
+		git(repo, 'tag', '-a', '-m', 'beta', 'v7.0.5-beta.2');
+		const r = run(['git', 'push', 'gitdedalo', 'v7', 'v7.0.5-beta.2'], repo);
+		expect(r.code, r.err).toBe(0);
+		expect(r.err).toContain('release tag v7.0.5-beta.2 names HEAD');
+		expect(ciCalls()).toEqual([
+			expect.stringMatching(new RegExp(`^ci --docker --hermetic --db --instance --ref ${sha} `)),
+		]);
+	});
+
+	test('a tag the check has nothing to hold in (exit 3: no identity, or history) needs no full green', () => {
+		const repo = freshRepo(['gitdedalo'], ['gitdedalo']);
+		const old = git(repo, 'rev-parse', 'HEAD');
+		write(repo, 'src/a.ts', 'export const a = 15;\n');
+		commitAll(repo, 'moved on');
+		resetLog();
+		git(repo, 'tag', '-a', '-m', 'history', 'v7.0.0-beta.4', old);
+		const r = run(['git', 'push', 'gitdedalo', 'v7.0.0-beta.4'], repo, { STUB_TAG_CODE: '3' });
+		expect(r.code, r.err).toBe(0);
+		expect(tagCalls()).toHaveLength(1);
+		expect(ciCalls()).toEqual([]);
+		expect(git(repo, 'ls-remote', 'gitdedalo', 'refs/tags/v7.0.0-beta.4')).not.toBe('');
 	});
 });
 
@@ -1063,9 +1096,20 @@ describe('pre-push gate: every v* tag is checked as a CUT release first (gate 11
 		write(repo, 'src/a.ts', 'export const a = 13;\n');
 		const sha = commitAll(repo, 'release');
 		git(repo, 'tag', '-a', '-m', 'release', 'v7.0.6');
-		const r = run(['git', 'push', 'gitdedalo', 'v7', 'v7.0.6-beta.1', 'v7.0.6'], repo);
+		// Only the stable tag is HELD here (the stub answers 3 for the other): a held
+		// prerelease off HEAD would need its own FULL green (gate 18, the describe above).
+		const r = run(['git', 'push', 'gitdedalo', 'v7', 'v7.0.6-beta.1', 'v7.0.6'], repo, {
+			STUB_TAG_HELD: 'v7.0.6',
+		});
 		expect(r.code, r.err).toBe(0);
-		expect(tagCalls().sort()).toEqual([`tag v7.0.6 ${sha}`, `tag v7.0.6-beta.1 ${old}`].sort());
+		const object = (tag: string) => git(repo, 'rev-parse', `refs/tags/${tag}`);
+		expect(object('v7.0.6')).not.toBe(sha); // annotated: the object is not the commit
+		expect(tagCalls().sort()).toEqual(
+			[
+				`tag v7.0.6 ${sha} ${object('v7.0.6')}`,
+				`tag v7.0.6-beta.1 ${old} ${object('v7.0.6-beta.1')}`,
+			].sort(),
+		);
 		// The check ran BEFORE the gate: the first tag line precedes the first ci line.
 		const log = stubLog();
 		expect(log.findIndex((line) => line.startsWith('tag '))).toBeLessThan(
@@ -1118,6 +1162,36 @@ describe('pre-push gate: every v* tag is checked as a CUT release first (gate 11
 		expect(r.err).toContain('v7.0.0-beta.5 predates the cut rule');
 		for (const tag of ['v7.0.0-beta.5', 'v7.0.1-beta.1'])
 			expect(git(repo, 'ls-remote', 'gitdedalo', `refs/tags/${tag}`), tag).not.toBe('');
+	});
+
+	test('REAL check, GATE 18: the cut PRERELEASE at HEAD is held — gated FULL; history beside it is not', () => {
+		const repo = realCheckRepo();
+		const sha = git(repo, 'rev-parse', 'HEAD');
+		git(repo, 'tag', '-a', '-m', 'beta', 'v7.0.1-beta.1');
+		const r = run(['git', 'push', 'gitdedalo', 'v7.0.0-beta.5', 'v7.0.1-beta.1'], repo);
+		expect(r.code, r.err).toBe(0);
+		expect(r.err).toContain('release tag v7.0.1-beta.1 names HEAD');
+		expect(r.err).not.toContain('release tag v7.0.0-beta.5');
+		expect(ciCalls()).toEqual([
+			expect.stringMatching(new RegExp(`^ci --docker --hermetic --db --instance --ref ${sha} `)),
+		]);
+	});
+
+	test('REAL check, GATE 18: a LIGHTWEIGHT cut release tag is refused — nothing gated or pushed; lightweight history passes', () => {
+		const repo = realCheckRepo();
+		git(repo, 'tag', 'v7.0.1-beta.1');
+		const r = run(['git', 'push', 'gitdedalo', 'v7.0.1-beta.1'], repo);
+		expect(r.code).not.toBe(0);
+		expect(r.err).toContain('tag v7.0.1-beta.1 is a LIGHTWEIGHT tag');
+		expect(r.err).toContain('REFUSED — tag v7.0.1-beta.1');
+		expect(ciCalls()).toEqual([]);
+		expect(git(repo, 'ls-remote', 'gitdedalo', 'refs/tags/v7.0.1-beta.1')).toBe('');
+		// history below FIRST_CUT_RELEASE is not held to the annotation rule either
+		git(repo, 'tag', 'v7.0.0-beta.3', 'HEAD~1');
+		const old = run(['git', 'push', 'gitdedalo', 'v7.0.0-beta.3'], repo);
+		expect(old.code, old.err).toBe(0);
+		expect(old.err).toContain('v7.0.0-beta.3 predates the cut rule');
+		expect(ciCalls()).toEqual([]);
 	});
 
 	test('REAL check: an UNCUT new tag is still refused, the historical one beside it or not', () => {

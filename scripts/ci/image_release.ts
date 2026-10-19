@@ -9,11 +9,21 @@
  *   bun run scripts/ci/image_release.ts publish   index → immutability → sign → copy → verify → record
  *
  * WHAT A RELEASE IS here is what it is for the code server (engineering/RELEASE.md):
- * the stable tag `vX.Y.Z` whose own version.ts declares X.Y.Z — `<v>.zip` there,
- * `:<v>` here — or the developer build of `master` — `<v>-dev.zip` there, `:<v>-dev`
- * here. The rules are code_build_plan.ts's (`releaseTagVersion`, `parseDeclaredTriple`,
- * `DEV_REF`), imported, never restated; a prerelease tag never publishes, and no image
- * is ever tagged `latest`.
+ * a release tag whose own version.ts declares its data triple — the stable `vX.Y.Z`
+ * (`<v>.zip` there, `:<v>` here) or, since 2026-10-18 (RELEASE_IDENTITY_DESIGN §2.8.4,
+ * owner Q1: a prerelease tag IS a release), the prerelease `vX.Y.Z-(alpha|beta|rc).N`
+ * (`<X.Y.Z-beta.N>.zip` there, `:<X.Y.Z-beta.N>` here, install-stamp channel
+ * `prerelease`) — or the developer build of `master` (`<v>-dev.zip` there, `:<v>-dev`
+ * here). The rules are code_build_plan.ts's (`releaseTagIdentity`, `parseDeclaredTriple`,
+ * `DEV_REF`), imported, never restated.
+ *
+ * ONE TAG PER RUN, NEVER A FLOATING ONE. The image tag a run writes to a target registry
+ * is `imageTagOf(identity)` (release_identity.ts — the function the installer's Official
+ * probe asks with) and nothing else: no `latest`, no `X` / `X.Y`, and for a prerelease
+ * never its triple `X.Y.Z` — after the stable release that tag is another image, and a
+ * beta must never be what a stable consumer pulls. `publish` writes `<target>:<plan tag>`
+ * only (copyTo); the staging repository gets run-scoped names only. Gate 16:
+ * image_release_native ("the tag SET").
  *
  * A RELEASE NEEDS THE FULL GATE GREEN ON ITS COMMIT (2026-10-10). `plan` refuses a
  * release whose commit has no SUCCESSFUL `push` run of BOTH ci.yml (hermetic) and db.yml
@@ -60,7 +70,7 @@ import {
 	DEV_REF,
 	parseDeclaredTriple,
 	qualifiedReleaseTag,
-	releaseTagVersion,
+	releaseTagIdentity,
 	VERSION_TS_PATH,
 } from '../../src/core/update/code_build_plan.ts';
 import {
@@ -69,8 +79,11 @@ import {
 	loadImageRegistries,
 	parseImageRegistries,
 } from '../../src/core/update/image_registries.ts';
+import { type InstallChannel, isInstallChannel } from '../../src/core/update/install_stamp.ts';
 import {
 	gitDescribeSupportFault,
+	identityOfImageTag,
+	imageTagOf,
 	parseBuildInfo,
 	parseReleaseVersion,
 	type ReleaseKind,
@@ -145,11 +158,19 @@ export interface PlanGit extends ReleaseTagGit {
 }
 
 export interface ReleasePlan {
+	/** The DATA triple X.Y.Z (version.ts) — for a prerelease too; the identity is in `tag`. */
 	version: string;
-	/** The image tag: X.Y.Z (release, immutable) or X.Y.Z-dev (developer, mutable). */
+	/**
+	 * The ONE image tag the run writes: `imageTagOf(identity)` — X.Y.Z (release,
+	 * immutable), X.Y.Z-(alpha|beta|rc).N (prerelease, immutable) or X.Y.Z-dev
+	 * (developer, mutable).
+	 */
 	tag: string;
-	/** The install-stamp channel: master (release) or dev. */
-	channel: 'master' | 'dev';
+	/**
+	 * The install-stamp channel the image carries (the Dockerfile's provenance step,
+	 * install_stamp.ts InstallChannel): master (stable), prerelease, or dev.
+	 */
+	channel: InstallChannel;
 	source_sha: string;
 	staging: string;
 	/**
@@ -162,27 +183,33 @@ export interface ReleasePlan {
 
 const DEV_BRANCH_REF = `refs/heads/${DEV_REF}`;
 
-/** A stable release tag → its plan, or the refusal. The code server's rules, imported. */
+/**
+ * A release tag (stable or prerelease, the shared grammar) → its plan, or the refusal.
+ * The code server's rules, imported. The workflow's trigger globs are wider than the
+ * grammar (`v7.0.0-beta.01` matches them): THIS is the exact check.
+ */
 function releasePlanFor(tagRef: string, git: PlanGit, staging: string): ReleasePlan {
-	const version = releaseTagVersion(tagRef);
-	if (version === null)
+	const identity = releaseTagIdentity(tagRef);
+	const parsed = identity === null ? null : parseReleaseVersion(identity);
+	if (identity === null || parsed === null)
 		throw new Refusal(
-			`'${tagRef}' is not a stable release tag vX.Y.Z — prerelease tags are never published`,
+			`'${tagRef}' is not a release tag v<X.Y.Z>[-(alpha|beta|rc).N] (canonical numbers)`,
 		);
-	const commit = git.commitOf(qualifiedReleaseTag(version));
+	const commit = git.commitOf(qualifiedReleaseTag(identity));
 	if (commit === null)
-		throw new Refusal(`release tag v${version} does not exist in this repository`);
-	// THE release-tag check (gate 11) — the pre-push hook runs the same function:
-	// version.ts at the tag's commit declares its triple, and the changelog was cut.
-	const fault = releaseTagFault(`v${version}`, commit, git);
+		throw new Refusal(`release tag v${identity} does not exist in this repository`);
+	// THE release-tag check (gate 11) — the pre-push hook runs the same function, for
+	// stable and prerelease tags alike: version.ts at the tag's commit declares its
+	// triple, and the changelog was cut for this identity.
+	const fault = releaseTagFault(`v${identity}`, commit, git);
 	if (fault !== null) throw new Refusal(fault);
 	return {
-		version,
-		tag: version,
-		channel: 'master',
+		version: parsed.triple.join('.'),
+		tag: imageTagOf(identity),
+		channel: parsed.prerelease === null ? 'master' : 'prerelease',
 		source_sha: commit,
 		staging,
-		expected_engine_version: version,
+		expected_engine_version: identity,
 	};
 }
 
@@ -211,7 +238,7 @@ function devPlanFor(facts: PlanFacts, git: PlanGit, staging: string): ReleasePla
  * the very verify step that operators run.
  */
 function dispatchedReleasePlan(facts: PlanFacts, git: PlanGit, staging: string): ReleasePlan {
-	if (facts.ref !== DEV_BRANCH_REF && releaseTagVersion(facts.ref) === null)
+	if (facts.ref !== DEV_BRANCH_REF && releaseTagIdentity(facts.ref) === null)
 		throw new Refusal(
 			`a release dispatch runs from ${DEV_BRANCH_REF} or a release tag (this run is on ${facts.ref})`,
 		);
@@ -333,7 +360,7 @@ export function archiveIdentityPlan(plan: ReleasePlan, stamp: string): ReleasePl
 		describe: info.describe,
 		provenance: { stamp: info.legacy ? 'legacy' : 'other', channel: plan.channel },
 	});
-	if (plan.channel === 'master') {
+	if (plan.channel !== 'dev') {
 		if (identity.version !== plan.expected_engine_version)
 			throw new Refusal(
 				`the archive of ${plan.source_sha} calls itself ${identity.version}, not ${plan.expected_engine_version}: ` +
@@ -613,12 +640,13 @@ export type Immutability =
 	| { kind: 'existing'; digest: string; holder: string };
 
 /**
- * Step 4, pure. Dev tags are mutable by definition. A release tag held anywhere IS the
+ * Step 4, pure. Dev tags are mutable by definition. A release tag (stable or
+ * prerelease — both immutable) held anywhere IS the
  * release: every holder must agree on one digest, which the missing targets then
  * receive; disagreement or an unreadable target refuses before anything is signed.
  */
 export function immutabilityVerdict(
-	channel: 'master' | 'dev',
+	channel: InstallChannel,
 	existing: readonly { repository: string; state: ManifestState }[],
 ): Immutability {
 	if (channel === 'dev') return { kind: 'fresh', overwrite: true };
@@ -654,7 +682,7 @@ export interface ReleaseRecord {
 	schema: 1;
 	version: string;
 	tag: string;
-	channel: 'master' | 'dev';
+	channel: InstallChannel;
 	source_sha: string;
 	archive_sha256: string;
 	digest: string;
@@ -842,6 +870,13 @@ function skippedRecord(verdict: Extract<TargetVerdict, { publish: false }>): Reg
 	};
 }
 
+/** How the summary names each channel. */
+const CHANNEL_WORDS: Readonly<Record<InstallChannel, string>> = {
+	master: 'release',
+	prerelease: 'prerelease',
+	dev: 'developer',
+};
+
 /** Render the job summary for a finished (or failed) publication. */
 export function renderSummary(record: ReleaseRecord, list: ImageRegistryList): string {
 	const rows = record.registries.map(
@@ -851,7 +886,7 @@ export function renderSummary(record: ReleaseRecord, list: ImageRegistryList): s
 	const verifiedTarget =
 		record.registries.find((item) => item.verified)?.repository ?? '<repository>';
 	return [
-		`### Dédalo image ${record.tag} (${record.channel === 'master' ? 'release' : 'developer'})`,
+		`### Dédalo image ${record.tag} (${CHANNEL_WORDS[record.channel]})`,
 		'',
 		`- source: \`${record.source_sha}\` (git archive sha256 \`${record.archive_sha256}\`)`,
 		`- digest: \`${record.digest}\` — the SAME on every registry below`,
@@ -878,6 +913,44 @@ function writeRecord(env: Env, record: ReleaseRecord, list: ImageRegistryList): 
 	console.log(`record: ${path}`);
 }
 
+/**
+ * Why `tag` may NOT be the one tag a `channel` run of data version `version` writes,
+ * or null. THE floating-tag decision (gate 16): the publish verb writes exactly
+ * `<target>:<TAG>`, so this is where a `latest`, an `X` / `X.Y`, or a prerelease's
+ * bare triple would enter — and is refused, before any download or push:
+ *   master      TAG = version (a stable identity IS its tag);
+ *   prerelease  TAG = a prerelease identity of version's triple (`7.0.0-beta.6`) —
+ *               never `7.0.0`, which after the stable release is another image;
+ *   dev         TAG = `<version>-dev`.
+ * Pure.
+ */
+export function publishTagFault(
+	version: string,
+	tag: string,
+	channel: InstallChannel,
+): string | null {
+	const identity = identityOfImageTag(tag);
+	const parsed = identity === null ? null : parseReleaseVersion(identity);
+	const kind: ReleaseKind | null =
+		parsed === null
+			? null
+			: parsed.dev
+				? 'dev'
+				: parsed.prerelease === null
+					? 'stable'
+					: 'prerelease';
+	const wanted: ReleaseKind = CHANNEL_KIND[channel];
+	if (parsed !== null && kind === wanted && parsed.triple.join('.') === version) return null;
+	return `TAG '${tag}' is not the ${CHANNEL_WORDS[channel]} tag of ${version} — a ${channel} run writes exactly ${channel === 'master' ? version : channel === 'dev' ? `${version}-dev` : `${version}-(alpha|beta|rc).N`}, never a floating tag (latest, X, X.Y${channel === 'prerelease' ? `, ${version}` : ''})`;
+}
+
+/** The release kind each install channel publishes. */
+const CHANNEL_KIND: Readonly<Record<InstallChannel, ReleaseKind>> = {
+	master: 'stable',
+	prerelease: 'prerelease',
+	dev: 'dev',
+};
+
 function publishPlan(env: Env): PublishContext['plan'] {
 	const input = requireEnv(env, [
 		'VERSION',
@@ -888,8 +961,10 @@ function publishPlan(env: Env): PublishContext['plan'] {
 		'SOURCE_SHA',
 		'ARCHIVE_SHA256',
 	]);
-	if (input.CHANNEL !== 'master' && input.CHANNEL !== 'dev')
-		throw new Refusal(`CHANNEL must be master or dev (got ${input.CHANNEL})`);
+	if (!isInstallChannel(input.CHANNEL))
+		throw new Refusal(`CHANNEL must be master, prerelease or dev (got ${input.CHANNEL})`);
+	const tagFault = publishTagFault(input.VERSION as string, input.TAG as string, input.CHANNEL);
+	if (tagFault !== null) throw new Refusal(tagFault);
 	return {
 		version: input.VERSION as string,
 		tag: input.TAG as string,
@@ -990,7 +1065,8 @@ function planVerb(env: Env, run: Runner): number {
 	const cwd = process.cwd();
 	const list = registriesOf(env);
 	const plan = resolvePlan(planFactsOf(env), gitLookups(run, cwd), list.ci.staging_repository);
-	if (plan.channel === 'master') {
+	// A prerelease IS a release (owner Q1): held to the same full gate as a stable one.
+	if (plan.channel !== 'dev') {
 		const fault = fullGateFault(plan.source_sha, fullGateGreens(env, run, plan.source_sha));
 		if (fault !== null) throw new Refusal(fault);
 		console.log(`plan: full gate green on ${plan.source_sha} (${FULL_GATE_WORKFLOWS.join(' + ')})`);

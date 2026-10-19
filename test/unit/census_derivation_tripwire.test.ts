@@ -721,6 +721,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		roots: [],
 		scope: 'NOT a corpus: `readdirSync` lists the suite media base for marked shard twins to sweep',
 	},
+	'scripts/lib/release_clone.ts': {
+		roots: [['.']],
+		scope:
+			"the checkout's UNCOMMITTED paths — `overlayWorkingTree` lists `git diff --name-only HEAD` + `git ls-files --others --exclude-standard` of the root it is handed (scripts/update_drill.ts: this checkout, `.`; update_drill_config_tripwire: a scratch repo) to lay them over the drill's release clone and consumer export. It decides no gate's corpus.",
+	},
 	'test/helpers/suite_mariadb_lanes.ts': {
 		roots: [],
 		scope:

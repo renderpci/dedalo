@@ -211,6 +211,13 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
 		true,
 	);
 	fact_row(release, get_label.serve_code_release_date || 'Release date', source.release_date, true);
+	// the prerelease a 'Build prerelease' would build (null: none above the release)
+	fact_row(
+		release,
+		get_label.serve_code_prerelease_ref || 'Prerelease tag',
+		source.prerelease_ref,
+		true,
+	);
 	fact_row(release, get_label.serve_code_dev_ref || 'Development branch', source.dev_ref, true);
 	fact_row(release, get_label.serve_code_dev_commit || 'Development commit', source.dev_sha, true);
 	fact_row(
@@ -251,15 +258,18 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
 	// key is the version a build of THAT channel would produce — the release
 	// tag's declared version, or master's (they differ once master is bumped
 	// ahead of the last tag) — so the row shows the artifact the button beside
-	// it would overwrite.
+	// it would write. A prerelease pairs by its IDENTITY (the tag minus its
+	// 'v'): several betas of one triple share a version and differ only there.
 	const releases = code_server.releases || [];
 	const target_versions = {
 		master: source.release_version || null,
+		prerelease: source.prerelease_ref ? String(source.prerelease_ref).replace(/^v/, '') : null,
 		dev: source.dev_version || null,
 	};
 	const is_target = (release) => {
 		const target = target_versions[release.channel];
-		return target === null || target === undefined || release.version === target;
+		const key = release.channel === 'prerelease' ? release.identity : release.version;
+		return target === null || target === undefined || key === target;
 	};
 	const build = section(wrapper, get_label.serve_code_build_publish || 'Build and publish');
 	CHANNELS.forEach((channel) => {
@@ -362,12 +372,17 @@ const render_code_server_status = function (parent, code_server, mount_builder, 
  * side by side) and calls back here to mount the action, which is the only part
  * that needs the widget's wire machinery (`self.caller.init_form`).
  *
- * Two channels, and the difference is load-bearing (policy 2026-09-29):
- *   - 'master' → `<v>.zip`     — the published release, built from the newest
- *                                 `vX.Y.Z` release TAG (the wire keeps the
- *                                 historical token 'master')
- *   - 'dev'    → `<v>-dev.zip` — the tip of branch `master`; never overwrites
- *                                 the release archive of the same version
+ * Three channels, and the difference is load-bearing (policy 2026-09-29,
+ * prereleases 2026-10-15):
+ *   - 'master'     → `<v>.zip`          — the published release, built from the
+ *                                          newest `vX.Y.Z` release TAG (the wire
+ *                                          keeps the historical token 'master')
+ *   - 'prerelease' → `<v>-beta.N.zip`   — the newest `vX.Y.Z-(alpha|beta|rc).N`
+ *                                          tag above that release; IMMUTABLE
+ *                                          like a release (the server refuses to
+ *                                          rebuild a published identity)
+ *   - 'dev'        → `<v>-dev.zip`      — the tip of branch `master`; never
+ *                                          overwrites a release archive
  * The button sends only the CHANNEL; the server resolves the ref.
  *
  * No cross-widget event on completion: a build writes an archive for OTHER
@@ -427,6 +442,10 @@ const make_builder_mounter = function (self, body_response, code_server, on_buil
 	// into the client — the old hardcoded 'v7' refused on every server that did
 	// not carry that branch.
 	const release_tag = source.release_ref || null;
+	const prerelease_tag = source.prerelease_ref || null;
+	// the identity a prerelease build names its archive after: the tag minus 'v'
+	const prerelease_identity = prerelease_tag ? String(prerelease_tag).replace(/^v/, '') : '';
+	const prerelease_parts = version_parts(source.prerelease_version);
 	const dev_ref = source.dev_ref || 'master';
 	// a ref whose own version file cannot be read cannot name its archive
 	const version_unknown = (ref) =>
@@ -448,13 +467,35 @@ const make_builder_mounter = function (self, body_response, code_server, on_buil
 				.replace('%s', release_parts.version)
 				.replace('%s', `\n\n${release_parts.release_dir}${release_parts.version}.zip\n`)
 				.replaceAll('%tag%', String(release_tag)),
-			// no publishable tag is the normal state while a major is in beta:
-			// its code then reaches installations only as developer builds
+			// no stable tag is the normal state while a major is in beta: its
+			// code then reaches installations as prereleases or developer builds
 			unavailable: !release_tag
 				? get_label.serve_code_build_master_unavailable ||
-					'No release yet: a release is built from a vX.Y.Z tag of this engine, and pre-release (beta) tags are never published. Until one exists, installations get this code only as developer builds'
+					'No release yet: a release is built from a stable vX.Y.Z tag of this engine (a prerelease tag is built with Build prerelease). Until one exists, installations get this code only as prereleases or developer builds'
 				: !source.release_version
 					? version_unknown(release_tag)
+					: null,
+		},
+		prerelease: {
+			// a release in every respect but stability: same weight as dev
+			button_class: 'light',
+			submit_label: get_label.serve_code_build_prerelease || 'Build prerelease',
+			// NAMED placeholders only: the identity, tag and file appear in a
+			// different order in each translated sentence
+			confirm_text: (
+				get_label.serve_code_build_prerelease_confirm ||
+				"Prerelease %identity% will be created from tag '%tag%' as: %file% A published prerelease is immutable: it is never rebuilt."
+			)
+				.replaceAll('%identity%', prerelease_identity)
+				.replaceAll('%file%', `\n\n${prerelease_parts.release_dir}${prerelease_identity}.zip\n\n`)
+				// LAST: a tag name is the only value that is not ours
+				.replaceAll('%tag%', String(prerelease_tag)),
+			// none above the newest release: nothing to build, say why
+			unavailable: !prerelease_tag
+				? get_label.serve_code_build_prerelease_unavailable ||
+					'No prerelease to build: a prerelease is built from the newest vX.Y.Z-(alpha|beta|rc).N tag of this engine that sorts above the newest release tag'
+				: !source.prerelease_version
+					? version_unknown(prerelease_tag)
 					: null,
 		},
 		dev: {

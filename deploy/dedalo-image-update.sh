@@ -307,11 +307,13 @@ engine_check() {
 }
 
 # engine_blind_to_identity — status 0 when the engine's refusal of TARGET is about
-# a PRERELEASE it cannot see, not about the data walk. Every engine up to
-# 7.0.0-beta.6 (and every one until the identity walk lands, design step 9c) reads
-# only X.Y.Z(-dev) and knows only its own X.Y.Z — and the engine that answers is
-# the OLD image, so no later engine fixes this for the stack being updated. Two
-# answers are blind: `malformed_version` for a prerelease target (it cannot read
+# a PRERELEASE it cannot see, not about the data walk. Every engine that predates
+# the identity walk (7.0.0-beta.6 and older) reads only X.Y.Z(-dev) and knows only
+# its own X.Y.Z — and the engine that answers is the OLD image, so no later engine
+# fixes this for the stack being updated. A current engine answers a prerelease
+# itself (scripts/ops/image_update_channel.ts: the identity walk from what the image
+# calls itself) and never says either blind answer for one: its same-X.Y.Z refusal
+# is `not_newer_release`, which is never re-asked. Two answers are blind: `malformed_version` for a prerelease target (it cannot read
 # the tag), and `downgrade_or_same_version` for a release from a prerelease of the
 # same X.Y.Z (rc.1 → 7.0.0: it sees 7.0.0 → 7.0.0). The walk of either is its DATA
 # walk (design 2.8.3: the same X.Y.Z crosses no migration, another X.Y.Z must be
