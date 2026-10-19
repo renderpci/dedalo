@@ -108,6 +108,8 @@ export const render_inspector = function() {
 	const WIDTH_KEY			= 'inspector_width'      // {value:'24rem'} user chosen width
 	const DEFAULT_WIDTH		= '19rem'                // matches --inspector_width CSS default
 	const RAIL_WIDTH_VAR	= 'var(--inspector_rail_width)' // narrow strip that shows only icons
+	const DATA_HEIGHT_KEY	= 'inspector_data_height' // {value:'180px'} user dragged height of the component Data box
+	const DATA_MAX_ENTRIES	= 25                      // above this the Data box shows a notice instead of the JSON
 
 
 
@@ -558,12 +560,14 @@ render_inspector.prototype.edit = async function(options) {
 
 	// persisted rail / width state (global keys). Read before first paint so the
 	// container can be sized correctly in view_default_edit_section (no flicker)
-		const [rail_rec, width_rec] = await Promise.all([
+		const [rail_rec, width_rec, data_height_rec] = await Promise.all([
 			data_manager.get_local_db_data(RAIL_STATE_KEY, 'status', true),
-			data_manager.get_local_db_data(WIDTH_KEY, 'status', true)
+			data_manager.get_local_db_data(WIDTH_KEY, 'status', true),
+			data_manager.get_local_db_data(DATA_HEIGHT_KEY, 'status', true)
 		])
 		self._rail_collapsed	= rail_rec?.value===true
 		self._saved_width		= width_rec?.value || DEFAULT_WIDTH
+		self._data_height		= data_height_rec?.value || null // null = CSS default (10rem)
 
 	// content data
 		const content_data = get_content_data(self)
@@ -1371,11 +1375,13 @@ export const render_section_info = function(self) {
 			fill_record_info_nodes(record_info_nodes, self.record_info_cache.value)
 		}
 
-	// clean and set container
-		container.replaceChildren(fragment)
+	// clean and set the section panel; the component panel keeps its nodes
+		container.section_panel.replaceChildren(fragment)
+		container.component_panel.classList.add('hide')
+		container.section_panel.classList.remove('hide')
 
 	// re-activate tooltips
-	activate_inspector_tooltips(container)
+	activate_inspector_tooltips(container.section_panel)
 
 	return fragment
 }//end render_section_info
@@ -1542,236 +1548,267 @@ export const fill_record_info_nodes = function(nodes, record_info) {
 
 
 /**
+* BUILD_COMPONENT_PANEL
+* Creates the component info rows (tipo, info, model, translatable, view, data)
+* ONCE per inspector render, inside container.component_panel. Selecting another
+* component only patches these nodes (render_component_info) — no row, no Data box
+* and no collapse state is rebuilt, so the blocks below the panel do not move.
+* Handlers read self.actived_component at event time, never a captured component.
+* The Data box has a fixed, user-resizable height (resize: vertical) persisted
+* under DATA_HEIGHT_KEY ('status' table); self._data_height was read in edit()
+* before first paint.
+* @param {Object} self - Inspector instance.
+* @param {HTMLElement} container - self.element_info_container
+* @returns {Object} nodes - stored as container.component_info_nodes
+*/
+const build_component_panel = function(self, container) {
+
+	const panel = container.component_panel
+
+	// copy-on-click value row
+		const copy_on_click = (node, get_value) => {
+			node.title = 'Click to copy'
+			node.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				const value = get_value()
+				if (value && navigator?.clipboard) {
+					navigator.clipboard.writeText( value )
+				}
+			})
+		}
+
+	// key/value row builder
+		const add_row = (key_text, value_class='value') => {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				text_content	: key_text,
+				parent			: panel
+			})
+			return ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: value_class,
+				parent			: panel
+			})
+		}
+
+	const nodes = {}
+
+	// tipo
+		nodes.tipo = add_row('tipo', 'value bold')
+		copy_on_click(nodes.tipo, () => self.actived_component?.tipo)
+
+	// info (docu links, the only part rebuilt per selection)
+		nodes.info = add_row('info')
+
+	// model
+		nodes.model = add_row(get_label.model || 'Model')
+		copy_on_click(nodes.model, () => self.actived_component?.model)
+
+	// translatable
+		nodes.translatable = add_row(get_label.translatable || 'Translatable')
+
+	// view
+		nodes.view = add_row('View')
+
+	// data label (toggler + copy button)
+		nodes.data_label = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'key wide icon_arrow data_label',
+			parent			: panel
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'data_label_text',
+			text_content	: get_label.data || 'Data',
+			parent			: nodes.data_label
+		})
+		// icon-only copy button (label in title / aria-label); flashes .copied
+		nodes.copy_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button_value_copy hide',
+			title			: get_label.copy || 'Copy',
+			parent			: nodes.data_label
+		})
+		nodes.copy_button.setAttribute('aria-label', get_label.copy || 'Copy')
+		let copied_timer = null
+		nodes.copy_button.addEventListener('click', (e) => {
+			// do not toggle the Data block
+			e.stopPropagation()
+			if (navigator?.clipboard) {
+				const entries = self.actived_component?.data?.entries || []
+				navigator.clipboard.writeText( JSON.stringify(entries) )
+				nodes.copy_button.classList.add('copied')
+				clearTimeout(copied_timer)
+				copied_timer = setTimeout(() => nodes.copy_button.classList.remove('copied'), 1200)
+			}
+		})
+
+	// data box. Fixed height (CSS default 10rem), resizable, persisted
+		nodes.data_box = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value wide code monospace hide',
+			parent			: panel
+		})
+		if (self._data_height) {
+			nodes.data_box.style.height = self._data_height
+		}
+		nodes.data_text = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value_text',
+			parent			: nodes.data_box
+		})
+		// dblclick: fit content / back to the user height (not persisted)
+		nodes.data_box.addEventListener('dblclick', (e) => {
+			e.stopPropagation()
+			nodes.data_box.classList.toggle('auto_height')
+		})
+		// persist the dragged height. `resize: vertical` fires no event of its own;
+		// the ResizeObserver is the one signal there is (it also fires on layout,
+		// hide and auto_height — those are skipped).
+		if (typeof ResizeObserver!=='undefined') {
+			let save_timer = null
+			container.data_resize_observer = new ResizeObserver(() => {
+				clearTimeout(save_timer)
+				save_timer = setTimeout(() => {
+					const box = nodes.data_box
+					if (!box.isConnected || box.classList.contains('hide') || box.classList.contains('auto_height')) {
+						return
+					}
+					const h = box.offsetHeight
+					if (h<=0) {
+						return
+					}
+					const value = h + 'px'
+					// first layout at the CSS default: nothing chosen yet, nothing to save
+					if (value===self._data_height || (!self._data_height && !box.style.height)) {
+						return
+					}
+					self._data_height = value
+					data_manager.set_local_db_data({ id: DATA_HEIGHT_KEY, value }, 'status')
+				}, 300)
+			})
+			container.data_resize_observer.observe(nodes.data_box)
+		}
+
+	// track collapse toggle state of the Data box (once per inspector render)
+		ui.collapse_toggle_track({
+			toggler				: nodes.data_label,
+			container			: nodes.data_box,
+			collapsed_id		: 'inspector_component_value',
+			collapse_callback	: () => nodes.data_label.classList.remove('up'),
+			expose_callback		: () => nodes.data_label.classList.add('up'),
+			default_state		: 'closed'
+		})
+
+	container.component_info_nodes = nodes
+
+	return nodes
+}//end build_component_panel
+
+
+
+/**
+* FILL_COMPONENT_DATA
+* Writes the selected component entries into the Data box (JSON, monospace).
+* Empty data shows a muted 'Empty' notice; more than DATA_MAX_ENTRIES shows a
+* size notice (e.g. component_security_access) but keeps the copy button.
+* @param {Object} nodes - container.component_info_nodes
+* @param {Object} component - Component instance.
+* @returns {void}
+*/
+const fill_component_data = function(nodes, component) {
+
+	const entries = component.data?.entries || []
+
+	if (entries.length > DATA_MAX_ENTRIES) {
+		nodes.data_text.textContent = `Data is too big for display (${entries.length} entries)`
+		nodes.data_box.classList.add('notice')
+		nodes.copy_button.classList.remove('hide')
+		return
+	}
+
+	if (entries.length===0) {
+		nodes.data_text.textContent = get_label.empty || 'Empty'
+		nodes.data_box.classList.add('notice')
+		nodes.copy_button.classList.add('hide')
+		return
+	}
+
+	// one block per JSON line with a hanging indent (padding = own indent + 2ch,
+	// text-indent -2ch): a long value that wraps continues under its key, not at
+	// column 0. Copy reads the entries, never this text.
+	const fragment = new DocumentFragment()
+	const lines = JSON.stringify(entries, null, 1).split('\n')
+	for (const line of lines) {
+		const indent = line.length - line.trimStart().length
+		const line_node = document.createElement('span')
+		line_node.className = 'json_line'
+		line_node.style.paddingLeft = (indent + 2) + 'ch'
+		line_node.textContent = line.slice(indent)
+		fragment.appendChild(line_node)
+	}
+	nodes.data_text.replaceChildren(fragment)
+	nodes.data_box.classList.remove('notice')
+	nodes.copy_button.classList.remove('hide')
+}//end fill_component_data
+
+
+
+/**
 * RENDER_COMPONENT_INFO
-* Renders detailed metadata and current data of a selected component into the inspector.
-* Handles data parsing asynchronously and subscribes to value updates.
+* Shows metadata and current data of the selected component in the inspector.
+* The panel is built once (build_component_panel) and PATCHED here on every
+* selection, so the Data box keeps its node, height and collapse state and the
+* blocks below it do not jump. Subscribes to the component value updates.
 * @param {Object} self - Inspector instance.
 * @param {Object} component - Component instance to display.
-* @returns {DocumentFragment} fragment - The rendered component info structure.
+* @returns {HTMLElement} container.component_panel
 */
 export const render_component_info = function(self, component) {
 
 	const container	= self.element_info_container
+	const nodes		= container.component_info_nodes || build_component_panel(self, container)
 
 	// values from caller (section)
 		const tipo			= component.tipo
-		const model			= component.model
-		const mode			= component.mode
 		const view			= component.view || 'default'
 		const translatable	= component.context?.translatable
 			? JSON.stringify(component.context.translatable)
 			: 'no'
 
-	// DocumentFragment
-		const fragment = new DocumentFragment();
+	// patch values
+		nodes.tipo.textContent			= tipo
+		nodes.model.textContent			= component.model
+		nodes.translatable.textContent	= translatable
+		nodes.view.textContent			= view + ' - ' + component.mode
+		nodes.info.replaceChildren( render_docu_links(self, tipo) )
 
-	// tipo
-		// label
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'key',
-				text_content	: 'tipo',
-				parent			: fragment
-			})
-		// value
-			const tipo_info = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'value bold',
-				text_content	: tipo,
-				title			: 'Click to copy',
-				parent			: fragment
-			})
-			tipo_info.addEventListener('mousedown', function(e) {
-				e.stopPropagation()
-				if (navigator?.clipboard) {
-					navigator.clipboard.writeText( tipo )
-				}
-			})
+	// data. Synchronous on selection (capped at DATA_MAX_ENTRIES, cheap) so no
+	// placeholder pass; value updates refresh it on idle.
+		fill_component_data(nodes, component)
+		nodes.data_box.scrollTop = 0
 
-	// info
-		// label
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'key',
-				text_content	: 'info',
-				parent			: fragment
-			})
-		// value
-			const info_container = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'value',
-				parent			: fragment
-			})
-			// render_docu_links
-			const docu_links = render_docu_links(self, tipo)
-			info_container.appendChild(docu_links)
-
-	// model
-		// label
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'key',
-				text_content	: get_label.model || 'Model',
-				parent			: fragment
-			})
-		// value
-			const model_info = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'value',
-				text_content	: model,
-				title			: 'Click to copy',
-				parent			: fragment
-			})
-			model_info.addEventListener('mousedown', function(e) {
-				e.stopPropagation()
-				if (navigator?.clipboard) {
-					navigator.clipboard.writeText( model )
-				}
-			})
-
-	// translatable
-		// label
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'key',
-				text_content	: get_label.translatable || 'Translatable',
-				parent			: fragment
-			})
-		// value
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'value',
-				text_content	: translatable,
-				parent			: fragment
-			})
-
-	// view
-		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			text_content	: 'View',
-			parent			: fragment
-		})
-		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			text_content	: view + ' - ' + mode,
-			parent			: fragment
-		})
-
-	// value
-		// label
-		const value_label_node = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key wide icon_arrow',
-			text_content	: get_label.data || 'Data',
-			parent			: fragment
-		})
-		// value container
-		const value_node = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value wide code hide',
-			parent			: fragment
-		})
-		// value text
-		const value_text_node = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value_text',
-			text_content	: 'Parsing data..',
-			parent			: value_node
-		})
-
-		// dblclick event
-		value_node.addEventListener('dblclick', (e) => {
-			e.stopPropagation()
-			// toggle value container max-height from default to none
-			container.classList.toggle('auto_height')
-		})
-
-		// button copy value (created once)
-		const button_value_copy_node = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'button_value_copy primary light hide',
-			inner_html		: get_label.copy || 'Copy',
-			parent			: value_node
-		})
-		// click event
-		button_value_copy_node.addEventListener('click', (e) => {
-			e.stopPropagation()
-			if (navigator?.clipboard) {
-				const entries = component.data?.entries || []
-				navigator.clipboard.writeText( JSON.stringify(entries) )
-			}
-		})
-
-		// parse data. This time out prevents lock component selection
-		const callback = () => {
-
-			const entries = component.data?.entries || []
-
-			// Limit data size to display (data.value is an array of values)
-			// e.g. component_security_access case. Do not try to parse the big array of the data.
-				if (entries.length > 25) {
-					value_text_node.textContent = 'Data is too big for display'
-					value_text_node.classList.add('loading')
-					button_value_copy_node.classList.add('hide')
-					return
-				}
-
-			// set value
-				const value = entries.length>0
-					? JSON.stringify(entries, null, 1)
-					: ''
-				value_text_node.textContent = value
-
-			// show/hide copy button
-				button_value_copy_node.classList.toggle('hide', value==='')
-
-			// monospace for JSON data
-				// Note that this node is rendered again on each user component selection
-				if (value.indexOf('[\n {')===0) {
-					value_node.classList.add('monospace')
-				} else {
-					value_node.classList.remove('monospace')
-				}
-		}
-		const exec_idle_callback = ()=>{ dd_request_idle_callback(callback) }
-		exec_idle_callback()
-
-		// event subscribe
+	// event subscribe
 		if (container.update_value_event_token) {
 			// unsubscribe previous component subscription
 			event_manager.unsubscribe(container.update_value_event_token)
 		}
 		// store subscription token on container to allow clean it when section info is rendered or new component selected
-		container.update_value_event_token = event_manager.subscribe('update_value_'+ component.id_base, exec_idle_callback)
+		container.update_value_event_token = event_manager.subscribe(
+			'update_value_'+ component.id_base,
+			() => dd_request_idle_callback(() => fill_component_data(nodes, component))
+		)
 
-	// track collapse toggle state of content
-		ui.collapse_toggle_track({
-			toggler				: value_label_node,
-			container			: value_node,
-			collapsed_id		: 'inspector_component_value',
-			collapse_callback	: collapse,
-			expose_callback		: expose,
-			default_state		: 'closed'
-		})
-		function collapse() {
-			value_label_node.classList.remove('up')
-		}
-		function expose() {
-			value_label_node.classList.add('up')
-		}
+	// show component panel
+		container.section_panel.classList.add('hide')
+		container.component_panel.classList.remove('hide')
 
-	// clean and set container
-		container.replaceChildren(fragment)
-
-	// re-activate tooltips
-	activate_inspector_tooltips(container)
+	// activate tooltips (new docu links only; active ones are skipped)
+	activate_inspector_tooltips(nodes.info)
 
 
-	return fragment
+	return container.component_panel
 }//end render_component_info
 
 
@@ -1825,6 +1862,21 @@ const render_element_info = function(self) {
 		})
 		// fix pointer to node placeholder
 		self.element_info_container = element_info_body
+
+	// two persistent panels (display: contents — rows stay on the body grid):
+	// render_section_info fills section_panel, render_component_info patches
+	// component_panel (built once on the first selection). Switching between
+	// them only toggles 'hide'.
+		element_info_body.section_panel = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_panel section_panel',
+			parent			: element_info_body
+		})
+		element_info_body.component_panel = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_panel component_panel hide',
+			parent			: element_info_body
+		})
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({

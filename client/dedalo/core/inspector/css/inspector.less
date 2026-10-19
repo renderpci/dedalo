@@ -319,6 +319,12 @@
 			// airy key/value sheet: no cell fills, no separator lines — the
 			// muted-key / ink-value contrast carries the structure
 
+			// section / component panels: rows stay on this grid (render_inspector
+			// render_element_info); switching panels only toggles .hide
+			>.info_panel {
+				display: contents;
+			}
+
 			// docu links row. Keep the generic button glyphs (link.svg, pen.svg,
 			// tree.svg, edit.svg) — the legacy set reads more harmonious here
 			// than the light family.
@@ -355,6 +361,79 @@
 					padding-top: 0.5rem;
     				padding-bottom: 0.5rem;
 				}
+
+				// component Data header: toggler + copy button pinned right, so the
+				// button stays reachable whatever the box scroll
+				// component Data header = the code box's own title bar: the label
+				// left-aligned on the box edge, a quiet icon-only copy button and the
+				// chevron on the right, same surface as the box, one hairline between.
+				// Collapsed (no .up) the bar stands alone with all corners rounded.
+				&.data_label {
+					justify-content: flex-start;
+					gap: var(--space-2);
+					margin-top: var(--space-2);
+					padding: var(--space-1) 1.8rem var(--space-1) var(--space-3);
+					min-height: 1.9rem;
+					box-sizing: border-box;
+					background-color: var(--bg_surface_alt);
+					border-radius: var(--radius-md) var(--radius-md) 0 0;
+					border-bottom: 1px solid var(--border_default);
+					text-transform: uppercase;
+					letter-spacing: 0.06em;
+					font-size: 0.68rem;
+					font-weight: 600;
+
+					&:not(.up) {
+						border-radius: var(--radius-md);
+						border-bottom-color: transparent;
+					}
+
+					.data_label_text {
+						flex: 1 1 auto;
+						text-align: left;
+					}
+
+					.button_value_copy {
+						flex: 0 0 auto;
+						width: 1.6rem;
+						height: 1.6rem;
+						margin: 0px;
+						padding: 0px;
+						border: 0px;
+						border-radius: var(--radius-sm);
+						background-color: transparent;
+						display: inline-flex;
+						align-items: center;
+						justify-content: center;
+						cursor: pointer;
+						transition: background-color var(--transition-fast);
+
+						&:before {
+							content: '';
+							width: 0.95rem;
+							height: 0.95rem;
+							.fn_add_mask('copy.svg');
+							background-color: var(--fg_muted);
+							transition: background-color var(--transition-fast);
+						}
+
+						&:hover {
+							background-color: var(--bg_surface);
+							&:before { background-color: var(--color_orange_dedalo); }
+						}
+						&:focus-visible {
+							outline: 2px solid var(--color_orange_dedalo);
+							outline-offset: 1px;
+						}
+						&:active {
+							opacity: 0.5;
+						}
+						// brief confirmation after a copy
+						&.copied:before {
+							background-color: var(--color_orange_dedalo);
+						}
+					}
+				}
 			}
 			.value {
 				background-color: transparent;
@@ -365,7 +444,6 @@
 				&.wide {
 					grid-column-start: 1;
 					grid-column-end: 3;
-					max-height: 16.6rem;
 					overflow: auto;
 					word-break: break-word;
 				}
@@ -392,40 +470,59 @@
 					}
 				}
 
+				// component Data box: FIXED height whatever the data (empty, one
+				// locator, 25 entries), so the blocks below never move on selection.
+				// The user drags it taller/shorter (resize: vertical); the height is
+				// persisted inline (render_inspector build_component_panel).
+				// dblclick toggles .auto_height (fit content, not persisted).
 				&.code {
+					display: block;
+					box-sizing: border-box;
 					white-space: pre-wrap;
-					display: flex;
-					flex-direction: column;
 					background-color: var(--bg_surface_alt);
-					border-radius: var(--radius-md);
+					border-radius: 0 0 var(--radius-md) var(--radius-md);
+					height: 10rem;
 					min-height: 3rem;
+					max-height: 80vh;
+					resize: vertical;
 
 					&.monospace {
-						word-break: break-all;
+						// wrap at spaces (a long value moves to the next line whole);
+						// break inside a token only when it alone overflows
+						word-break: normal;
+						overflow-wrap: anywhere;
 						font-family: monospace;
 						font-size: 0.76rem;
+						line-height: 1.45;
+
+						// hanging indent per JSON line (fill_component_data sets
+						// padding-left = indent + 2ch); the box's own padding is the gutter
+						.json_line {
+							display: block;
+							text-indent: -2ch;
+						}
 					}
 
-					.button_value_copy {
-						align-self: center;
-						font-size: 0.8rem;
-						margin: 0px;
+					// empty / too big: muted centred notice in the same box
+					&.notice {
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						text-align: center;
+						font-family: inherit;
+						color: var(--fg_muted);
+					}
 
-						&:active {
-							opacity: 0.5;
-						}
+					&.auto_height {
+						height: auto !important; // beats the persisted inline height
+						max-height: none;
+						resize: none;
 					}
 				}
 
 				&.bold {
 					font-size: 0.9rem;
 					font-weight: 600;
-				}
-			}
-
-			&.auto_height {
-				.code {
-					max-height: none;
 				}
 			}
 		}
