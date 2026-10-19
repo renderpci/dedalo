@@ -1458,7 +1458,7 @@ textarea:focus,
 select:focus,
 .contenteditable:focus {
   outline-offset: 0;
-  outline: 2px solid var(--focus_ring);
+  outline: 1px solid var(--focus_ring);
   box-shadow: var(--shadow-focus);
   opacity: 1;
   z-index: 1;
@@ -1924,7 +1924,7 @@ button[type='submit']:focus-visible,
 textarea:focus-visible,
 select:focus-visible,
 .contenteditable:focus-visible {
-  outline: 1.5px solid var(--focus_ring);
+  outline: 1px solid var(--focus_ring);
   outline-offset: 1px;
 }
 /* selection + scrollbar polish (theme-token driven, both themes)
@@ -5002,7 +5002,7 @@ input[type="radio"] {
 }
 .dd_input:focus {
   outline-offset: 0;
-  outline: 2px solid var(--focus_ring);
+  outline: 1px solid var(--focus_ring);
   box-shadow: var(--shadow-focus);
   opacity: 1;
   z-index: 1;
@@ -21866,7 +21866,7 @@ body.inspector_resizing {
 }
 .component_3d.edit > .content_data .posterframe:focus {
   outline-offset: -1px;
-  outline: 2px solid var(--focus_ring);
+  outline: 1px solid var(--focus_ring);
   box-shadow: var(--shadow-focus);
   opacity: 1;
   z-index: 1;
@@ -21943,7 +21943,7 @@ body.inspector_resizing {
 }
 .component_av .posterframe:focus {
   outline-offset: -1px;
-  outline: 2px solid var(--focus_ring);
+  outline: 1px solid var(--focus_ring);
   box-shadow: var(--shadow-focus);
   opacity: 1;
   z-index: 1;
@@ -23670,7 +23670,7 @@ body.inspector_resizing {
 }
 .component_image.edit > .content_data > .content_value .image_container .img:focus {
   outline-offset: -1px;
-  outline: 2px solid var(--focus_ring);
+  outline: 1px solid var(--focus_ring);
   box-shadow: var(--shadow-focus);
   opacity: 1;
   z-index: 1;
@@ -23688,7 +23688,7 @@ body.inspector_resizing {
 }
 .component_image.edit > .content_data > .content_value .image_container .image:focus {
   outline-offset: -1px;
-  outline: 2px solid var(--focus_ring);
+  outline: 1px solid var(--focus_ring);
   box-shadow: var(--shadow-focus);
   opacity: 1;
   z-index: 1;
