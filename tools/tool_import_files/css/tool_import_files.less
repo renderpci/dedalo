@@ -48,10 +48,46 @@
 			transform: scale(1.2);
 		}
 
+		// THREE BLOCKS, ONE PER QUESTION (desktop clarity pass 2026-10-19).
+		// It used to be `flex + space-around`: five blocks of different heights
+		// and widths spread across the bare page canvas, each label landing on
+		// its own baseline. A card (surface + border + radius) lifts the panel
+		// off the canvas; inside it the five groups read as THREE columns —
+		// what the file goes into (the three selectors, stacked), how an
+		// existing record is replaced, and how a new one is named. The auto-fit
+		// grid this replaces gave each of the five its own column, so the row
+		// read as five unrelated fields. Unlike the viewport query below, the
+		// grid reflows by the TOOL's own width, so the columns also stack in a
+		// narrow modal instead of only below 1024px of screen.
 		>.options_container {
-			display: flex;
-			justify-content: space-around;
-			align-items: center;
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 0.75rem 1.5rem;
+			align-items: start;
+			background-color: var(--bg_surface);
+			border: 1px solid var(--border_default);
+			border-radius: var(--radius-lg);
+			padding: 0.75rem 1rem;
+
+			// column 1: the three source selectors, stacked
+			>.source_options {
+				display: flex;
+				flex-direction: column;
+				gap: 0.75rem;
+				min-width: 0;
+			}
+
+			// one group per cell: label over its own control, full width
+			>.source_options > .processor_selector_container,
+			>.source_options > .target_component,
+			>.source_options > .target_quality,
+			>.tool_name_match_options,
+			>.tool_configuration_options {
+				display: flex;
+				flex-direction: column;
+				gap: 0.35rem;
+				min-width: 0;
+			}
 
 			// IOS style switch
 			@switch_height: 20px;
@@ -129,9 +165,16 @@
 
 			.label {
 
+				// a group caption, not centered bold prose: the same muted
+				// small-caps idiom the redesign uses for section headers
 				&.title {
-					font-weight: bold;
-					text-align: center;
+					font-size: 0.7rem;
+					font-weight: 600;
+					text-transform: uppercase;
+					letter-spacing: 0.08em;
+					color: var(--fg_muted);
+					text-align: left;
+					padding-bottom: 0.75rem;
 				}
 
 				&.match {
@@ -144,82 +187,31 @@
 				margin-right: 0.5rem;
 			}
 
+			// One toggle ROW (switch + caption + sometimes a long select). Each
+			// column gets ~1/3 of the panel's width: the row WRAPS inside its
+			// cell instead of squeezing the select — a flex row never shrinks a
+			// control below its min-content width, which is what ran the legend
+			// select out past the panel's right edge. min-height, not height, so
+			// the wrapped line has somewhere to go.
 			.name_control {
 				margin-bottom: 1px;
-				height: 1.9rem;
+				min-height: 1.9rem;
 				display: flex;
 				align-items: center;
-			}
+				flex-wrap: wrap;
 
-			>.target_component {
-				display: block;
-			}
-
-			>.target_quality {
-				display: block;
-			}
-
-			>.tool_name_match_options {
-				display: block;
-
-				>.title {
-					padding-bottom: 0.25rem;
+				>.info_options_select {
+					min-width: 0;
+					max-width: 100%;
 				}
 			}
 
-			>.tool_configuration_options {
-				display: block;
-
-				>.title {
-					padding-bottom: 0.5rem;
-				}
-
-				>.name_control_field {
-
-				}
-
-				>.name_control_section_id {
-
-				}
-
-				>.same_name_same_section {
-
-				}
-			}
-
-			// Below @width_break_point_0 the panel STACKS: one option per row, its
-			// label above its control, every row the same width. (It used to be a
-			// bare left-aligned column plus a blanket `span { margin: 1rem }` that
-			// also hit the switch captions — so labels and controls landed at
-			// different left edges, the selects ran off the right edge, and each
-			// caption drifted a full rem away from its own switch.)
+			// Below @width_break_point_0 the three columns become ONE, in reading
+			// order: the three selectors, then replace-existing, then new-files.
 			@media screen and (max-width: @width_break_point_0) { // 1024px
-				flex-direction: column;
-				align-items: stretch;
+				grid-template-columns: 1fr;
 				gap: 1rem;
-				// the panel's own gutter: without it the first label sat flush
-				// against the sheet edge while the upload box below is inset —
-				// the two read as different panels
-				padding: 0.5rem;
 
-				// one group per row: label over control, full width
-				>.processor_selector_container,
-				>.target_component,
-				>.target_quality,
-				>.tool_name_match_options,
-				>.tool_configuration_options {
-					display: flex;
-					flex-direction: column;
-					align-items: stretch;
-					gap: 0.5rem;
-					width: 100%;
-				}
-
-				// captions read left, like the rows under them
-				.label.title {
-					text-align: left;
-					font-size: 1.05rem;
-				}
 				.label.match {
 					padding-bottom: 0;
 				}
@@ -235,9 +227,7 @@
 				gap: 1.25rem;
 
 				.name_control {
-					height: auto;
 					min-height: @phone_target;
-					flex-wrap: wrap;
 					gap: 0.25rem 0.5rem;
 					margin-bottom: 0;
 				}
@@ -260,30 +250,28 @@
 
 
 
-		>.drop_zone {
-			background-color: @color_blue_light;
-		}
-
-		// template_container. Where de rows are placed
+		// template_container. Where the rows are placed
 		>.template_container {
-			outline: 1px solid @color_grey_13;
-			padding: 0.25rem;
-			padding-left: 0.25rem;
-			padding-bottom: 0.25rem;
-			margin-top: 1em;
-			border-radius: 1em;
+			background-color: var(--bg_surface);
+			border: 1px solid var(--border_default);
+			border-radius: var(--radius-lg);
+			padding: 0.5rem;
+			margin-top: 1rem;
 
+			// The naming mode used to REPAINT the whole queue a saturated fill —
+			// louder than the files inside it, and the fill under a card is not a
+			// state, it is a wall. The mode survives as a 3px inset edge.
 			&.match{
-				background-color: @color_mandatory;
+				box-shadow: inset 3px 0 0 @color_mandatory;
 			}
 			&.match_freename{
-				background-color: @color_green_light;
+				box-shadow: inset 3px 0 0 @color_green_success;
 			}
 			&.name_id{
-				background-color: @color_hilite;
+				box-shadow: inset 3px 0 0 @color_hilite;
 			}
 			&.same_name_section{
-				background-color: @color_purple_light;
+				box-shadow: inset 3px 0 0 @color_purple_light;
 			}
 
 			// The upload QUEUE's `.row` / `.table` / `.file-row` are NOT styled
@@ -300,20 +288,39 @@
 			// tools get it too.
 		}
 
+		// Values. The caption was a grey TAB floating over an unbordered field
+		// list — a tab with no panel behind it. Card + real header instead
+		// (no overflow: hidden, so component dropdowns are never clipped).
 		>.inputs_container {
-			margin-top: 1.5rem;
-			margin-bottom: 1.5rem;
+			background-color: var(--bg_surface);
+			border: 1px solid var(--border_default);
+			border-radius: var(--radius-lg);
+			margin-top: 1rem;
+			margin-bottom: 1rem;
 
 			.inputs_container_caption {
-				display: inline-block;
-				background-color: @color_grey_13;
-				width: auto;
-				padding: 0.5rem;
-				padding-left: 2rem;
-				padding-right: 2rem;
-				border-top-left-radius: 0.33rem;
-				border-top-right-radius: 0.33rem;
-				margin-left: -1px;
+				background-color: var(--bg_surface_alt);
+				border-bottom: 1px solid var(--border_default);
+				// CONCENTRIC with the card's 1px border: the card's radius is
+				// measured at the BORDER box, the caption's at the CONTENT box
+				// one pixel inside it. Equal radii left the two arcs crossing at
+				// both top corners — the "ugly union" of header and card.
+				border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+				padding: 0.5rem 1rem;
+				font-size: 0.7rem;
+				font-weight: 600;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: var(--fg_muted);
+			}
+
+			// The tmp section IS this card's body, not a card inside a card. Its
+			// own border + 12px radius drew a second rounded corner right under
+			// the caption's — the top-right "step" — and doubled the outline.
+			// The card's border and radius are the only chrome here.
+			>.service_tmp_section {
+				border: 0;
+				border-radius: 0;
 			}
 		}
 
@@ -328,10 +335,20 @@
 			}
 		}
 
+		// The primary action used to sit 2rem + 5rem below the last field, so on
+		// a long queue the one thing the user came to do was the one thing off
+		// screen. A sticky footer bar keeps it in reach.
 		>.buttons_bottom_container {
 			display: flex;
-			justify-content: center;
-			margin-bottom: 5rem;
+			justify-content: flex-end;
+			position: sticky;
+			bottom: 0;
+			z-index: 1;
+			background-color: var(--bg_app);
+			border-top: 1px solid var(--border_default);
+			padding: 0.5rem 1rem;
+			// content_data pads 1rem: bleed the bar to both edges
+			margin: 0 -1rem -1rem;
 
 			// button_process_import
 			>.button_process_import {
@@ -343,7 +360,7 @@
 				// --fg_on_warning exists for; --fg_on_brand is the opposite profile).
 				// 5.24:1 light, 5.20:1 redesign, 6.46:1 dark, 6.51:1 redesign-dark.
 				color: var(--fg_on_warning);
-				margin: 2rem;
+				margin: 0;
 				padding-left: 1.5em;
 				padding-right: 1.5em;
 				background-color: var(--tool_import_files_fill);

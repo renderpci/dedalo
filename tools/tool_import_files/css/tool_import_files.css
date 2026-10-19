@@ -20,9 +20,30 @@
   transform: scale(1.2);
 }
 .wrapper_tool.tool_import_files > .content_data > .options_container {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem 1.5rem;
+  align-items: start;
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1rem;
+}
+.wrapper_tool.tool_import_files > .content_data > .options_container > .source_options {
   display: flex;
-  justify-content: space-around;
-  align-items: center;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+.wrapper_tool.tool_import_files > .content_data > .options_container > .source_options > .processor_selector_container,
+.wrapper_tool.tool_import_files > .content_data > .options_container > .source_options > .target_component,
+.wrapper_tool.tool_import_files > .content_data > .options_container > .source_options > .target_quality,
+.wrapper_tool.tool_import_files > .content_data > .options_container > .tool_name_match_options,
+.wrapper_tool.tool_import_files > .content_data > .options_container > .tool_configuration_options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
 }
 .wrapper_tool.tool_import_files > .content_data > .options_container .switcher {
   cursor: pointer;
@@ -85,8 +106,13 @@
   transform: translate3d(22px, 2px, 0);
 }
 .wrapper_tool.tool_import_files > .content_data > .options_container .label.title {
-  font-weight: bold;
-  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg_muted);
+  text-align: left;
+  padding-bottom: 0.75rem;
 }
 .wrapper_tool.tool_import_files > .content_data > .options_container .label.match {
   padding-bottom: 0.7rem;
@@ -97,49 +123,19 @@
 }
 .wrapper_tool.tool_import_files > .content_data > .options_container .name_control {
   margin-bottom: 1px;
-  height: 1.9rem;
+  min-height: 1.9rem;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
 }
-.wrapper_tool.tool_import_files > .content_data > .options_container > .target_component {
-  display: block;
-}
-.wrapper_tool.tool_import_files > .content_data > .options_container > .target_quality {
-  display: block;
-}
-.wrapper_tool.tool_import_files > .content_data > .options_container > .tool_name_match_options {
-  display: block;
-}
-.wrapper_tool.tool_import_files > .content_data > .options_container > .tool_name_match_options > .title {
-  padding-bottom: 0.25rem;
-}
-.wrapper_tool.tool_import_files > .content_data > .options_container > .tool_configuration_options {
-  display: block;
-}
-.wrapper_tool.tool_import_files > .content_data > .options_container > .tool_configuration_options > .title {
-  padding-bottom: 0.5rem;
+.wrapper_tool.tool_import_files > .content_data > .options_container .name_control > .info_options_select {
+  min-width: 0;
+  max-width: 100%;
 }
 @media screen and (max-width: 1024px) {
   .wrapper_tool.tool_import_files > .content_data > .options_container {
-    flex-direction: column;
-    align-items: stretch;
+    grid-template-columns: 1fr;
     gap: 1rem;
-    padding: 0.5rem;
-  }
-  .wrapper_tool.tool_import_files > .content_data > .options_container > .processor_selector_container,
-  .wrapper_tool.tool_import_files > .content_data > .options_container > .target_component,
-  .wrapper_tool.tool_import_files > .content_data > .options_container > .target_quality,
-  .wrapper_tool.tool_import_files > .content_data > .options_container > .tool_name_match_options,
-  .wrapper_tool.tool_import_files > .content_data > .options_container > .tool_configuration_options {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.5rem;
-    width: 100%;
-  }
-  .wrapper_tool.tool_import_files > .content_data > .options_container .label.title {
-    text-align: left;
-    font-size: 1.05rem;
   }
   .wrapper_tool.tool_import_files > .content_data > .options_container .label.match {
     padding-bottom: 0;
@@ -150,9 +146,7 @@
     gap: 1.25rem;
   }
   .wrapper_tool.tool_import_files > .content_data > .options_container .name_control {
-    height: auto;
     min-height: 44px;
-    flex-wrap: wrap;
     gap: 0.25rem 0.5rem;
     margin-bottom: 0;
   }
@@ -171,43 +165,46 @@
     margin-top: 0.25rem;
   }
 }
-.wrapper_tool.tool_import_files > .content_data > .drop_zone {
-  background-color: var(--color_blue_light);
-}
 .wrapper_tool.tool_import_files > .content_data > .template_container {
-  outline: 1px solid var(--color_grey_13);
-  padding: 0.25rem;
-  padding-left: 0.25rem;
-  padding-bottom: 0.25rem;
-  margin-top: 1em;
-  border-radius: 1em;
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: var(--radius-lg);
+  padding: 0.5rem;
+  margin-top: 1rem;
 }
 .wrapper_tool.tool_import_files > .content_data > .template_container.match {
-  background-color: var(--color_mandatory);
+  box-shadow: inset 3px 0 0 var(--color_mandatory);
 }
 .wrapper_tool.tool_import_files > .content_data > .template_container.match_freename {
-  background-color: var(--color_green_light);
+  box-shadow: inset 3px 0 0 var(--color_green_success);
 }
 .wrapper_tool.tool_import_files > .content_data > .template_container.name_id {
-  background-color: var(--color_hilite);
+  box-shadow: inset 3px 0 0 var(--color_hilite);
 }
 .wrapper_tool.tool_import_files > .content_data > .template_container.same_name_section {
-  background-color: var(--color_purple_light);
+  box-shadow: inset 3px 0 0 var(--color_purple_light);
 }
 .wrapper_tool.tool_import_files > .content_data > .inputs_container {
-  margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
+  background-color: var(--bg_surface);
+  border: 1px solid var(--border_default);
+  border-radius: var(--radius-lg);
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 .wrapper_tool.tool_import_files > .content_data > .inputs_container .inputs_container_caption {
-  display: inline-block;
-  background-color: var(--color_grey_13);
-  width: auto;
-  padding: 0.5rem;
-  padding-left: 2rem;
-  padding-right: 2rem;
-  border-top-left-radius: 0.33rem;
-  border-top-right-radius: 0.33rem;
-  margin-left: -1px;
+  background-color: var(--bg_surface_alt);
+  border-bottom: 1px solid var(--border_default);
+  border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+  padding: 0.5rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg_muted);
+}
+.wrapper_tool.tool_import_files > .content_data > .inputs_container > .service_tmp_section {
+  border: 0;
+  border-radius: 0;
 }
 .wrapper_tool.tool_import_files > .content_data > .response_message {
   padding-left: 1rem;
@@ -220,12 +217,18 @@
 }
 .wrapper_tool.tool_import_files > .content_data > .buttons_bottom_container {
   display: flex;
-  justify-content: center;
-  margin-bottom: 5rem;
+  justify-content: flex-end;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  background-color: var(--bg_app);
+  border-top: 1px solid var(--border_default);
+  padding: 0.5rem 1rem;
+  margin: 0 -1rem -1rem;
 }
 .wrapper_tool.tool_import_files > .content_data > .buttons_bottom_container > .button_process_import {
   color: var(--fg_on_warning);
-  margin: 2rem;
+  margin: 0;
   padding-left: 1.5em;
   padding-right: 1.5em;
   background-color: var(--tool_import_files_fill);

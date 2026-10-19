@@ -32,15 +32,14 @@
 *  - The edit UI is composed of:
 *      1. An options_container (processor selector, target-field selector, quality
 *         selector, matching options, configuration options).
-*      2. A drop_zone area managed by `self.service_upload` (multi-file mode).
-*      3. A template_container that renders the upload QUEUE widget — its own
-*         drop target plus one `.file-row` per file — via the same
-*         service_upload, using dd_request_idle_callback for deferred load.
-*      4. An inputs_container that renders `input_component` ddo_map entries via
+*      2. A template_container that renders the upload QUEUE widget — its own
+*         drop target plus one `.file-row` per file — via `self.service_upload`,
+*         using dd_request_idle_callback for deferred load.
+*      3. An inputs_container that renders `input_component` ddo_map entries via
 *         `self.service_tmp_section` (a temporary section with live edit widgets).
-*      5. A response_message area that streams SSE progress from the PHP background
+*      4. A response_message area that streams SSE progress from the PHP background
 *         process via `update_process_status`.
-*      6. A bottom "IMPORT" button that collects per-file choices + component data
+*      5. A bottom "IMPORT" button that collects per-file choices + component data
 *         before dispatching `self.import_files(...)` to the API.
 *
 * Import modes (driven by tool_config.import_mode):
@@ -125,14 +124,15 @@ render_tool_import_files.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA_EDIT
 * Constructs the content_data node containing all interactive sections of the
-* import UI: options, drop zone, template rows, input components, progress
+* import UI: options, template rows, input components, progress
 * message area, and the import button.
 *
 * DOM structure produced:
 *   .content_data
-*     .options_container      — global options (processor, target, quality, modes)
-*     .drop_zone              — legacy empty mount point (the queue brings its own
-*                               drop target; kept because the tool CSS styles it)
+*     .options_container      — global options in three blocks:
+*                               .source_options (processor, target field,
+*                               quality, stacked), .tool_name_match_options,
+*                               .tool_configuration_options
 *     .template_container     — the upload queue widget (populated by service_upload)
 *     .inputs_container       — "Values" section with service_tmp_section widgets
 *     .response_message       — SSE progress output area
@@ -164,13 +164,6 @@ const get_content_data_edit = async function(self) {
 		const options_container = render_options_container(self, content_data)
 		lock_items.push(options_container)
 		content_data.appendChild(options_container)
-
-	// drop_zone
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'drop_zone',
-			parent			: content_data
-		})
 
 	// template_container
 		const template_container = ui.create_dom_element({
@@ -470,19 +463,28 @@ const render_options_container = function (self, content_data) {
 		class_name		: 'options_container'
 	})
 
+	// source options
+	// The three selectors are ONE block (column 1 of the panel): what the file
+	// goes into. They are stacked, not spread as three sibling columns.
+	const source_options_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'source_options',
+		parent			: options_container
+	})
+
 	// processor
 	// file processor options of the files, it could be defined in the preferences or could be the caller
 	const file_processor_options = self.tool_config?.file_processor;
 	if(file_processor_options){
 		const processor_selector_container = render_file_processor_selector(self, options_container, file_processor_options, content_data);
-		options_container.appendChild(processor_selector_container)
+		source_options_container.appendChild(processor_selector_container)
 		// set pointer
 		options_container.processor = processor_selector_container
 	}
 
 	// target field
 	const target_field_selector_container = render_target_field_selector(self, options_container, option_components, content_data);
-	options_container.appendChild(target_field_selector_container)
+	source_options_container.appendChild(target_field_selector_container)
 	// set pointer
 	options_container.target_component = target_field_selector_container
 
@@ -497,7 +499,7 @@ const render_options_container = function (self, content_data) {
 		self.custom_target_quality		= default_target_quality || null
 
 		const quality_selector_container = render_quality_selector(self, options_container, ar_quality, default_target_quality)
-		options_container.appendChild(quality_selector_container)
+		source_options_container.appendChild(quality_selector_container)
 	}//end if(features)
 
 	// matching options
