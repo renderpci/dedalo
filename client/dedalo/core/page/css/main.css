@@ -5301,6 +5301,7 @@ input::placeholder {
 .wrapper_component.search.active:not(.hilite_element),
 .wrapper_component.player.active:not(.hilite_element) {
   background-color: var(--color_hilite);
+  border-radius: 3px;
 }
 .wrapper_component.edit.active:not(.hilite_element) .list_body,
 .wrapper_component.search.active:not(.hilite_element) .list_body,
