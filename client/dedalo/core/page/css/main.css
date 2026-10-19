@@ -7885,6 +7885,13 @@ body:has(.component_av.view_viewer) {
   overflow: auto;
   word-break: break-word;
 }
+.inspector > .inspector_content_data > .element_info_wrap > .element_info .value.record_info_value.loading {
+  min-height: calc(2lh + 2 * var(--space-2));
+  opacity: 0.5;
+}
+.inspector > .inspector_content_data > .element_info_wrap > .element_info .value.record_info_value.loading.published {
+  min-height: calc(1lh + 2 * var(--space-2));
+}
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .value.code {
   white-space: pre-wrap;
   display: flex;

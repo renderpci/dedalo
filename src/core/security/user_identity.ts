@@ -17,6 +17,17 @@ export const USERS_SECTION = 'dd128';
 const USER_NAME_COMPONENT = 'dd132';
 
 /**
+ * A users-section record id read off a stored locator / stamp, or null.
+ * Any non-zero integer: root is a REAL user record at -1 (it stamps every
+ * install-time and superuser edit), so a `> 0` test silently erases it.
+ */
+export function userRecordId(value: unknown): number | null {
+	if (value === null || value === undefined || value === '') return null;
+	const id = Number(value);
+	return Number.isInteger(id) && id !== 0 ? id : null;
+}
+
+/**
  * The user's display name, or null when the record or the component has none.
  *
  * Null is a real answer, not a failure: a user record whose name component was

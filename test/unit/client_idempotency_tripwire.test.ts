@@ -163,6 +163,7 @@ const IDEMPOTENT_CEILING: ReadonlySet<string> = new Set([
 	'dd_utils_api:get_lock_status',
 	'dd_utils_api:get_activity',
 	'dd_utils_api:get_record_jobs',
+	'dd_utils_api:get_record_info', // pure read: the inspector's created / modified / published stamps
 	'dd_utils_api:get_job_events',
 	'dd_utils_api:get_process_status',
 	'dd_utils_api:get_system_info',

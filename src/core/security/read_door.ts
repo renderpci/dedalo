@@ -520,6 +520,15 @@ export const READ_DOOR_POSTURE: ReadonlyMap<string, ReadDoorPosture> = new Map<
 		'dd_utils_api:get_record_jobs',
 		{ posture: 'record_identity', reason: 'jobs running for a record — identity + job state.' },
 	],
+	[
+		'dd_utils_api:get_record_info',
+		{
+			posture: 'component',
+			gate: 'test/unit/record_info_native.test.ts',
+			reason:
+				'a record’s created / modified stamps (audit components dd199/dd200/dd201/dd197, each behind the standing metadata grant or the component grant) + its dd1758 publication history, behind the section grant and the record scope.',
+		},
+	],
 	['dd_utils_api:get_activity', { posture: 'structure_only', reason: 'the caller’s own jobs.' }],
 	['dd_utils_api:stop_process', { posture: 'mutating', reason: 'stops a job.' }],
 	['dd_utils_api:get_system_info', { posture: 'structure_only', reason: 'upload limits.' }],

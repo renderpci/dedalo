@@ -48,7 +48,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 }
 
 /** A dd_date {year, month, day, …} → the 'YYYY-MM-DD HH:MM:SS' the `data` column stores. */
-function ddDateToDbTimestamp(date: Record<string, unknown>): string | null {
+export function ddDateToDbTimestamp(date: Record<string, unknown>): string | null {
 	const year = Number(date.year);
 	if (!Number.isFinite(year)) return null;
 	const pad = (value: unknown, fallback: number): string =>

@@ -678,7 +678,8 @@ PENDING rows (an unpublish still owed to a public target) are NEVER pruned, what
 set to: they are outstanding debt, not history.
 
 The default is \`0\`: keep everything. Set a window if your publication history does not need
-to be permanent.
+to be permanent — but the inspector's *Published (first/last)* row reads this ledger, so with a
+window set "first" becomes the oldest publication still kept, not the first ever.
 
 \`\`\`bash
 DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS=365

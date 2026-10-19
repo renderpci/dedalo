@@ -123,7 +123,7 @@ handler bodies live in `src/core/api/handlers/<class>.ts`.
 | `dd_api` key | Concern |
 | --- | --- |
 | `dd_core_api` | The core data lifecycle: `start`, `read`, `read_raw`, `create`, `duplicate`, `delete`, `save`, `count`, the element/section contexts, `get_section_terms`, `get_indexation_grid`, `get_environment`. |
-| `dd_utils_api` | Utilities: `login`, `quit`, `change_lang`, locks, uploads, `get_system_info`, `get_login_context`, the SQO→SQL dev console, and the update-server surfaces. |
+| `dd_utils_api` | Utilities: `login`, `quit`, `change_lang`, locks, uploads, `get_system_info`, `get_login_context`, `get_record_info` (a record's created / modified / published metadata — [inspector](../ui/inspector.md)), the SQO→SQL dev console, and the update-server surfaces. |
 | `dd_tools_api` | `user_tools` and `tool_request` (per-tool action dispatch). |
 | `dd_ts_api` | Tree operations: `get_node_data`, `get_children_data`, `add_child`, `update_parent_data`, `save_order`. |
 | `dd_area_maintenance_api` | The maintenance widgets: `widget_request`, `get_widget_value`, `lock_components_actions` — admin-gated inside the dispatcher. |

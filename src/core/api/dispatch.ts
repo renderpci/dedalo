@@ -484,6 +484,7 @@ export const ACTION_IDEMPOTENCY: ReadonlyMap<string, ActionIdempotency> = new Ma
 	['dd_utils_api:get_lock_status', 'idempotent'],
 	['dd_utils_api:get_activity', 'idempotent'],
 	['dd_utils_api:get_record_jobs', 'idempotent'],
+	['dd_utils_api:get_record_info', 'idempotent'],
 	['dd_utils_api:get_job_events', 'idempotent'],
 	['dd_utils_api:get_process_status', 'idempotent'],
 	['dd_utils_api:get_system_info', 'idempotent'],

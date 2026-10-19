@@ -300,6 +300,48 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 			body: ok(true, { requestId: context.requestId, extend: { jobs: rows } }),
 		};
 	},
+	get_record_info: async (rqo, context) => {
+		// The inspector's Information panel: created / modified / published.
+		// Its OWN request, fetched after the section renders, so the section read
+		// never pays for it (core/section/record/record_info.ts). Authorized by
+		// the section grant AND the record's project scope — the same record a
+		// read would refuse is refused here.
+		const principal = requirePrincipal(context);
+		const ref = parseRecordRef(rqo.options);
+		if (ref === null) {
+			throw new DedaloError('request.invalid_options', {
+				publicMessage: 'options.section_tipo and an integer options.section_id are required',
+			});
+		}
+		const { sectionTipo, sectionId } = ref;
+		const level = await getPermissions(principal, sectionTipo, sectionTipo);
+		const { principalCanAccessRecord } = await import('../../security/record_scope.ts');
+		if (level < 1 || !(await principalCanAccessRecord(sectionTipo, sectionId, principal))) {
+			throw new DedaloError('perm.denied', {
+				coordinates: { section_tipo: sectionTipo, section_id: sectionId },
+			});
+		}
+		const { getRecordInfo } = await import('../../section/record/record_info.ts');
+		const { resolveUserName } = await import('../../security/user_identity.ts');
+		const { currentApplicationLang } = await import('../../resolve/request_lang.ts');
+		const lang = currentApplicationLang();
+		// The audit stamps are component values: each passes the standing
+		// metadata grant (searchSurfaceGrants — the rule that offers them to every
+		// searcher) or the caller's own component grant.
+		const { ddoIsAuthorized, searchSurfaceGrants } = await import('../../security/permissions.ts');
+		const recordInfo = await getRecordInfo(sectionTipo, sectionId, {
+			resolveName: (userId) => resolveUserName(userId, lang),
+			canReadAudit: async (tipo) =>
+				searchSurfaceGrants(sectionTipo, tipo) ||
+				(await ddoIsAuthorized(principal, sectionTipo, tipo)),
+		});
+		// `record_info` is the owned top-level key the inspector reads by name;
+		// null = no such record (a deleted / never-saved id).
+		return {
+			status: 200,
+			body: ok(true, { requestId: context.requestId, extend: { record_info: recordInfo } }),
+		};
+	},
 	get_activity: async (_rqo, context) => {
 		// The activity tray's read model — the caller's OWN work across BOTH job
 		// systems (core/api/activity.ts explains why aggregating is the point).

@@ -82,16 +82,68 @@ it renders is read straight off the caller, *not* re-fetched:
 - `self.caller.context.buttons` — to detect `button_new` / `button_delete`.
 - `self.caller.context.config.relation_list_tipo` — present ⇒ render the
   Relations block.
-- `self.caller.data.entries[0]` — the record metadata (created/modified/
-  published dates and users).
 - `self.caller.tools` — to detect `tool_diffusion` (the dedicated diffusion
   button) and to open tools via `open_tool`.
 - `self.caller.section_tipo` / `section_id` / `model` / `label` / `mode` /
   `view` / `rqo` — identity, paginator and the `read_raw` RQO.
 
-The inspector only issues its own API calls for two things: the raw-record
-fetch (`get_raw_record`) and the on-demand `service_time_machine` /
-`relation_list` instances.
+The inspector issues its own API calls for three things: the raw-record
+fetch (`get_raw_record`), the on-demand `service_time_machine` /
+`relation_list` instances, and the record's created / modified / published
+metadata (`load_record_info`, below).
+
+### Record info: created, modified, published
+
+The section read does **not** carry the record's creation, modification and
+publication metadata — every read (lists included) would pay for a panel that
+shows one record. The inspector fetches it with its **own** request, sent after
+the section has rendered:
+
+```json
+{ "dd_api": "dd_utils_api", "action": "get_record_info",
+  "options": { "section_tipo": "test3", "section_id": 1 } }
+```
+
+The answer carries the owned top-level key `record_info` (`null` when the record
+does not exist):
+
+```json
+{ "record_info": {
+    "created":  { "date": "2017-11-19 17:41:43", "user_id": null, "user_name": null },
+    "modified": { "date": "2026-07-10 13:25:05", "user_id": -1, "user_name": "root" },
+    "publication": { "first": null, "last": null, "state": null } } }
+```
+
+- **created / modified** come off the record's audit components:
+  `dd199` (created date), `dd200` (created by), `dd201` (modified date),
+  `dd197` (modified by). When `dd199` / `dd200` are absent, the created pair
+  falls back to the record header (`data.created_date` /
+  `data.created_by_user_id`) — the case of the `test3` record above. A user id
+  is any non-zero integer — root is the user record `-1`.
+- **publication** comes off the publication ledger (`dd1758`, table
+  `matrix_activity_diffusion`), not off the record: `first` / `last` are the
+  first and last *publish* rows, `state` is the latest action of any kind —
+  `published`, `unpublished`, `pending` (a withdrawal still owed to a public
+  target) or `null` (never in the ledger).
+- Dates are `YYYY-MM-DD HH:MM:SS` in the installation's time zone; the panel
+  shows `DD-MM-YYYY HH:MM:SS`.
+- The server answers only with the section read grant **and** the record in the
+  user's project scope; each audit value also needs its read grant (the
+  metadata components are granted to everyone who can search the section).
+
+On the client, `render_section_info` renders the three rows and
+`load_record_info` fills them in an idle callback. The result is cached per
+record on the inspector (cleared on `save` and on every section render), so
+leaving a field re-renders the panel from the cache with no request. To keep the
+panel from jumping, a row waiting for its values keeps the height of the
+previous render, or — on first paint — reserves two lines (date + user; one for
+*Published*). A response for a record the inspector has already left is
+dropped. User names are written as text, never as markup.
+
+!!! note "Publication history retention"
+    With `DEDALO_DIFFUSION_LEDGER_RETENTION_DAYS` above `0`, settled ledger rows
+    are pruned, and *first* becomes the oldest publication still kept, not the
+    first ever. See [the configuration reference](../../config/config.md).
 
 ### Section view vs component view
 
@@ -230,9 +282,9 @@ apply_inspector_state(self.inspector, inspector_container) // rail/width before 
 
 | event | handler effect |
 | --- | --- |
-| `render_<caller.id>` | `update_section_info()` — reset active component, re-render section info, reload the time-machine list, clear component history, sync the paginator section_id. |
+| `render_<caller.id>` | Clear the record-info cache, then `update_section_info()` — reset active component, re-render section info, load the record info, reload the time-machine list, clear component history, sync the paginator section_id. |
 | `activate_component` | Store `self.actived_component`, update selection label, `render_component_info()`, load that component's history; in developer mode re-point an open ontology window. |
-| `save` | If the saved instance is the active component, reload its history; always reload the section time-machine list and push an `activity_info` bubble. |
+| `save` | Clear the record-info cache (the *Modified* stamp moved). If the saved instance is the active component, reload its history; always reload the section time-machine list and push an `activity_info` bubble. |
 | `deactivate_component` | After a 250 ms debounce, if no component is active, `update_section_info()` (back to the section view). |
 | `render_component_filter_<section_tipo>` | Capture the rendered `component_filter` node (published by `render_edit_section_record`) and refresh the project block body. |
 
@@ -286,7 +338,7 @@ event handlers and by the section view.
 | `get_content_data(self)` | | Build the whole content: paginator, top button bar, inspector tool buttons, and append every card block. |
 | `render_selection_info(self)` | | The orange "current element" label card (+ List nav button via `update_label`). |
 | `render_element_info(self)` | | The collapsible "Info" card shell; sets `self.element_info_container`. |
-| `render_section_info(self)` | export | Fill Info with **section** metadata (tipo, model, matrix_table, created/modified/published, docu links). |
+| `render_section_info(self)` | export | Fill Info with **section** metadata (tipo, model, matrix_table, docu links) and the three record-info rows — filled at once from the cache, else reserved for `load_record_info`. |
 | `render_component_info(self, component)` | export | Fill Info with the **active component** (tipo, model, translatable, live JSON value + copy); subscribes `update_value_<id_base>`. |
 | `render_project_block(self)` | | The "Project" card wrapping the section's `component_filter` node. |
 | `update_project_container_body(self)` | export | Swap the project card body to the current filter node. |
@@ -303,6 +355,9 @@ event handlers and by the section view.
 | `load_time_machine_list(self)` | export | **Serializing entry point.** Chains each load onto the previous one through `self.tm_list_loading`, then delegates to `load_time_machine_list_run`. |
 | `load_time_machine_list_run(self)` | | The actual load: instance a `dd15` `section` (mode `list`, `tm_view` `mini`) for the current record and render it into the Latest-changes body; skips when collapsed/destroyed, destroys the previous `tm_list`. |
 | `load_component_history(self, component)` | export | Instance a `service_time_machine` (view `history`) for the active component + its notes (`rsc329`/`rsc832`) and render it; clears when `component` is null. |
+| `load_record_info(self)` | export | Fetch `dd_utils_api::get_record_info` for the current record (edit mode, saved record only), cache it, fill the rows; drops a stale response. |
+| `fill_record_info_nodes(nodes, record_info)` | export | Write a `record_info` payload into the created / modified / published rows (text only) and release their reserved height. |
+| `format_record_info_date(date)` | export | `YYYY-MM-DD HH:MM:SS` → `DD-MM-YYYY HH:MM:SS`. |
 | `load_activity_info(self, options)` | export | Render one notification bubble (`render_node_info`) and prepend it to the activity body. |
 | `open_ontology_window(self, url, docu_type, focus=false)` | export | Open/recycle the shared `window.docu_window` at the given ontology URL. |
 

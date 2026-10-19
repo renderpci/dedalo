@@ -98,6 +98,16 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **The inspector shows again who created, last modified and published a record, and when.**
+
+    In edit mode, the inspector's *Information* panel always showed `-` for *Created* and
+    *Modified* and `Never` for *Published*. It now shows the date and user of each, and for
+    publication the first and last time the record was published. If the record was later
+    withdrawn from publication, the panel says so. The values load just after the record
+    appears, so opening a record is not slower.
+
+    Wire contract: `WC-2026-10-19-inspector-record-info`.
+
 - **Export: columns are added and reordered by tap on a phone**
 
     The **Export** tool built its column list by dragging: a field dragged from the
@@ -646,9 +656,10 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 1 entry"
+??? note "Wire contract — 2 entries"
 
     - `WC-2026-10-15-release-identity-from-tag`
+    - `WC-2026-10-19-inspector-record-info`
 
 ## 7.0.0-beta.6 — 2026-10-15
 

@@ -45,6 +45,7 @@
 *   render_section_info
 *   render_component_info
 *   render_time_machine_list
+*   load_record_info            — fills the created / modified / published rows (own request)
 *   load_time_machine_list
 *   render_component_history (private, consumed via inspector.js init)
 *   load_component_history
@@ -66,6 +67,7 @@
 		data_manager,
 		download_data
 	} from '../../common/js/data_manager.js'
+	import { response_data } from '../../common/js/api_error.js'
 	import {
 		when_in_viewport,
 		dd_request_idle_callback,
@@ -1191,9 +1193,6 @@ export const render_section_info = function(self) {
 	// short vars
 		const container		= self.element_info_container
 		const section		= self.caller
-		const section_data	= section.data?.entries && section.data?.entries[0]
-			? section.data.entries[0]
-			: {}
 
 	// unsubscribe previous component value update event if exists
 		if (container.update_value_event_token) {
@@ -1210,9 +1209,6 @@ export const render_section_info = function(self) {
 
 	// DocumentFragment
 		const fragment = new DocumentFragment();
-
-	// Helper for safe multiline strings (omits undefined/null values)
-		const format_info = (...args) => args.filter(Boolean).join('<br>') || '-'
 
 	// tipo
 		// label
@@ -1333,60 +1329,47 @@ export const render_section_info = function(self) {
 			parent			: fragment
 		})
 
-	// section created
-		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			text_content	: get_label.created || 'Created',
-			parent			: fragment
-		})
-		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: format_info(section_data.created_date, section_data.created_by_user_name),
-			parent			: fragment
-		})
-
-	// section modified
-		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			text_content	: get_label.modified || 'Modified',
-			parent			: fragment
-		})
-		// value
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: format_info(section_data.modified_date, section_data.modified_by_user_name),
-			parent			: fragment
-		})
-
-	// published
-		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'key',
-			inner_html		: (get_label.published || 'Published') + ' (first/last)',
-			parent			: fragment
-		})
-		// value
-		const pub_data = [
-			section_data.publication_first_date,
-			section_data.publication_first_user,
-			section_data.publication_last_date,
-			section_data.publication_last_user
-		].filter(Boolean)
-
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'value',
-			inner_html		: pub_data.length > 0 ? pub_data.join('<br>') : (get_label.never || 'Never'),
-			parent			: fragment
-		})
+	// record info: created / modified / published
+		// The values are NOT in the section read (it stays lean): load_record_info
+		// fills them from their own request (dd_utils_api::get_record_info),
+		// scheduled by inspector.update_section_info. NO JUMP: a cached record
+		// fills here, synchronously; otherwise each row keeps the height the
+		// previous render measured (or the CSS reservation on first paint) until
+		// fill_record_info_nodes releases it.
+		const previous_nodes	= container.record_info_nodes
+		const previous_heights	= previous_nodes && previous_nodes.created?.isConnected
+			? {
+				created		: previous_nodes.created.offsetHeight,
+				modified	: previous_nodes.modified.offsetHeight,
+				published	: previous_nodes.published.offsetHeight
+			  }
+			: null
+		const record_info_row = (name, label_text) => {
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				text_content	: label_text,
+				parent			: fragment
+			})
+			const node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value record_info_value ' + name + ' loading',
+				parent			: fragment
+			})
+			if (previous_heights?.[name] > 0) {
+				node.style.minHeight = previous_heights[name] + 'px'
+			}
+			return node
+		}
+		const record_info_nodes = container.record_info_nodes = {
+			created		: record_info_row('created', get_label.created || 'Created'),
+			modified	: record_info_row('modified', get_label.modified || 'Modified'),
+			published	: record_info_row('published', (get_label.published || 'Published') + ' (first/last)')
+		}
+		const cache_key = section_tipo + '_' + parseInt(section.section_id)
+		if (self.record_info_cache?.key===cache_key) {
+			fill_record_info_nodes(record_info_nodes, self.record_info_cache.value)
+		}
 
 	// clean and set container
 		container.replaceChildren(fragment)
@@ -1396,6 +1379,161 @@ export const render_section_info = function(self) {
 
 	return fragment
 }//end render_section_info
+
+
+
+/**
+* LOAD_RECORD_INFO
+* Fills the Created / Modified / Published rows rendered by render_section_info.
+* The values come from their OWN request (dd_utils_api::get_record_info), sent
+* after the section has rendered, so the section read never pays for them.
+* A response that arrives after the inspector moved to another record (or after
+* the panel re-rendered) is dropped: the nodes it was asked for are gone.
+* The result is cached per record on the inspector; the 'save' and section
+* render handlers clear it (inspector.js) so a change is re-read.
+* @param {Object} self - Inspector instance.
+* @returns {Promise<Object|null>} record_info, or null when nothing was loaded
+*/
+export const load_record_info = async function(self) {
+
+	const section	= self.caller
+	const nodes		= self.element_info_container?.record_info_nodes
+	const id		= parseInt(section?.section_id)
+	if (!nodes || section?.mode!=='edit' || !(id > 0)) {
+		return null
+	}
+	const key = section.section_tipo + '_' + id
+
+	let record_info = self.record_info_cache?.key===key
+		? self.record_info_cache.value
+		: undefined
+	if (record_info===undefined) {
+		try {
+			const response = await data_manager.request({
+				body : {
+					dd_api	: 'dd_utils_api',
+					action	: 'get_record_info',
+					options	: {
+						section_tipo	: section.section_tipo,
+						section_id		: id
+					}
+				}
+			})
+			if (!response || response_data(response)!==true) {
+				release_record_info_nodes(self, nodes)
+				return null
+			}
+			record_info = response.record_info || null
+			self.record_info_cache = { key, value: record_info }
+		} catch (error) {
+			console.warn('load_record_info failed:', error)
+			release_record_info_nodes(self, nodes)
+			return null
+		}
+	}
+
+	// stale: the panel was re-rendered or the record changed meanwhile
+	if (self.element_info_container?.record_info_nodes!==nodes
+		|| section.section_tipo + '_' + parseInt(section.section_id)!==key) {
+		return null
+	}
+
+	fill_record_info_nodes(nodes, record_info)
+
+	return record_info
+}//end load_record_info
+
+
+
+/**
+* RELEASE_RECORD_INFO_NODES
+* A load that failed must not leave the rows reserved and blank forever: they
+* fall back to the empty values ('-' / Never) — only while they are still the
+* panel's current nodes.
+* @param {Object} self - Inspector instance.
+* @param {Object} nodes - { created, modified, published } value nodes
+* @returns {void}
+*/
+const release_record_info_nodes = function(self, nodes) {
+	if (self.element_info_container?.record_info_nodes===nodes) {
+		fill_record_info_nodes(nodes, null)
+	}
+}//end release_record_info_nodes
+
+
+
+/**
+* FORMAT_RECORD_INFO_DATE
+* 'YYYY-MM-DD HH:MM:SS' (Dédalo wall-clock, as the server stamps it) →
+* 'DD-MM-YYYY HH:MM:SS', the form the inspector has always shown.
+* @param {string|null} date
+* @returns {string|null}
+*/
+export const format_record_info_date = function(date) {
+	if (typeof date!=='string' || date==='') {
+		return null
+	}
+	const match = date.match(/^(-?\d{1,})-(\d{2})-(\d{2})(?:[ T](\d{2}:\d{2}:\d{2}))?/)
+	if (!match) {
+		return date
+	}
+	return match[3] + '-' + match[2] + '-' + match[1] + (match[4] ? ' ' + match[4] : '')
+}//end format_record_info_date
+
+
+
+/**
+* FILL_RECORD_INFO_NODES
+* Writes record_info into the three value nodes. Text nodes only — user names
+* are data, never markup.
+* @param {Object} nodes - { created, modified, published } value nodes
+* @param {Object|null} record_info - get_record_info payload
+* @returns {void}
+*/
+export const fill_record_info_nodes = function(nodes, record_info) {
+
+	const lines_of = (event) => event
+		? [format_record_info_date(event.date), event.user_name || (event.user_id ? '#' + event.user_id : null)]
+		: []
+	const set_lines = (node, lines, fallback) => {
+		const values = lines.filter(Boolean)
+		node.replaceChildren()
+		if (values.length===0) {
+			node.textContent = fallback
+			return
+		}
+		values.forEach((value, index) => {
+			if (index > 0) {
+				node.appendChild(document.createElement('br'))
+			}
+			node.appendChild(document.createTextNode(value))
+		})
+	}
+
+	for (const node of [nodes.created, nodes.modified, nodes.published]) {
+		node.classList.remove('loading')
+		node.style.minHeight = ''
+	}
+
+	set_lines(nodes.created, lines_of(record_info?.created), '-')
+	set_lines(nodes.modified, lines_of(record_info?.modified), '-')
+
+	const publication = record_info?.publication || {}
+	const state_label = publication.state==='unpublished'
+		? (get_label.unpublished || 'Unpublished')
+		: publication.state==='pending'
+			? (get_label.publication_withdrawal_pending || 'Withdrawal pending')
+			: null
+	set_lines(
+		nodes.published,
+		[
+			...lines_of(publication.first),
+			...lines_of(publication.last),
+			state_label
+		],
+		get_label.never || 'Never'
+	)
+}//end fill_record_info_nodes
 
 
 

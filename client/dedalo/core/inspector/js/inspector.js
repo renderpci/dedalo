@@ -14,6 +14,7 @@
 	import {
 		render_inspector,
 		render_section_info,
+		load_record_info,
 		render_component_info,
 		load_time_machine_list,
 		load_component_history,
@@ -155,6 +156,8 @@ inspector.prototype.init = async function(options) {
 
 		// render_ section
 			const render_handler = () => {
+				// a section render (load, pagination, refresh) re-reads the record info
+				self.record_info_cache = null
 				dd_request_idle_callback(
 					() => update_section_info(self)
 				)
@@ -202,6 +205,8 @@ inspector.prototype.init = async function(options) {
 		// save. When selected component is saved, update component_history, time_machine_list and activity_info
 			const save_handler = (options) => {
 				const instance = options.instance
+				// the save moved the Modified stamp: the next section-info render re-reads it
+				self.record_info_cache = null
 				if (self.actived_component && self.actived_component.id===instance.id) {
 					// component_history update changes list if saved is current selected.
 					// The save moved the data, so the cached block must be re-read.
@@ -310,6 +315,11 @@ const update_section_info = (self) => {
 
 	// update section info
 	render_section_info(self)
+
+	// record info (created / modified / published) — its own request, after render
+	dd_request_idle_callback(
+		() => load_record_info(self)
+	)
 
 	// time_machine_list load info. The section re-rendered (pagination or a new
 	// record): the record-scoped blocks must re-read.

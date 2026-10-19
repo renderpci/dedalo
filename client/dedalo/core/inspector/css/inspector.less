@@ -368,6 +368,20 @@
 					word-break: break-word;
 				}
 
+				// record info rows (created / modified / published): while their own
+				// request is in flight the row holds its usual height — date + user
+				// for created / modified, one line for published — so the panel does
+				// not jump when the values land (render_inspector.js load_record_info).
+				// A re-render carries the previous measured height inline instead.
+				&.record_info_value.loading {
+					min-height: calc(2lh + 2 * var(--space-2));
+					opacity: 0.5;
+
+					&.published {
+						min-height: calc(1lh + 2 * var(--space-2));
+					}
+				}
+
 				&.code {
 					white-space: pre-wrap;
 					display: flex;
