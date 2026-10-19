@@ -19,8 +19,8 @@
  * `scripts/build_css.ts` derives, compiled in memory by the same `buildOne` the
  * build runs (so the corpus is exactly what ships, and a stale committed `.css`
  * cannot fake a pass). The root palette COMBINATIONS are DERIVED from the
- * attribute selectors present on the served roots (the theme axis today —
- * `base`), never
+ * attribute selectors present on the served roots (no non-theme axis today, so
+ * the only combination is `base`), never
  * enumerated, so a new axis is judged the day its first `:root[data-…]` ships.
  * The cascade is MODELLED, not asserted: for a given `<html>` attribute set the
  * winning declaration is the most specific applicable one, byte order breaking
@@ -62,8 +62,8 @@
  *      at-rule (an OS-keyed `prefers-color-scheme` palette is outside the
  *      attribute axis the client sets and this gate judges).
  *
- * DAY-ONE STATE (2026-09-06) is BANKED, shrink-only, set-equal: the tool_assistant
- * dark-only block (14 orphans, leg 2), nine dead tokens (leg 3) and eleven
+ * DAY-ONE STATE (2026-09-06) is BANKED, shrink-only, set-equal: the dark-only
+ * block (leg 2) has emptied; eight dead tokens (leg 3) and eleven
  * light-dead tokens (leg 3) are live defects in files this change does not own;
  * each is listed with its file and the fix, and an entry that stops failing is
  * red as stale — a bank that is not lowered hides progress and lets it regress.
@@ -86,7 +86,7 @@
  * to an in-sheet twin, and today declare no root token at all — that leg is
  * honestly vacuous until one does.
  *
- * COST: compiles the 43 entrypoints (~1s), reads 775 served JS files and two
+ * COST: compiles the 45 entrypoints (~1s), reads 820 served JS files and two
  * vendor files. DB-less, network-less → hermetic tier.
  */
 

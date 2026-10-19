@@ -221,7 +221,6 @@ else {
 			join(MENU, 'render_menu_tree.js'),
 			join(MENU, 'render_menu_mobile.js'),
 			join(CORE, 'page', 'js', 'theme.js'),
-			join(CORE, 'page', 'js', 'design.js'),
 		]) {
 			mock.module(leaf, () => exportStubs(leaf));
 		}

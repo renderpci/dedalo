@@ -207,10 +207,10 @@ const ORPHAN_EXEMPTIONS: ReadonlyArray<{ file: string; reason: string; removal: 
  * `MAX_ORPHANS` below is the one ratchet here, and it is shrink-only.
  */
 
-/** 46 tracked+present .css under client/+tools/: 43 built + 2 ckeditor orphans + 1 third-party stub. */
-const MIN_TRACKED_STYLESHEETS = 46;
-/** 43 entrypoints: main + 37 tools + 2 pdfjs + the client-test harness + 2 dead sheets. */
-const MIN_ENTRYPOINTS = 43;
+/** 48 tracked+present .css under client/+tools/: 45 built + 2 ckeditor orphans + 1 third-party stub. */
+const MIN_TRACKED_STYLESHEETS = 48;
+/** 45 entrypoints: main + 39 tools + 2 pdfjs + the client-test harness + 2 dead sheets. */
+const MIN_ENTRYPOINTS = 45;
 /** The one committed third-party stylesheet. If this reaches 0 the derivation broke. */
 const MIN_THIRD_PARTY_STYLESHEETS = 1;
 /** Registered tools, each with exactly one entry sheet. */
@@ -642,8 +642,8 @@ const declarationKey = (declaration: RootDeclaration): string =>
 const MIN_ROOT_DECLARATIONS = 680;
 const MIN_ROOT_SELECTORS = 2;
 const MIN_ROOT_TOKEN_NAMES = 380;
-/** main.css + the 37 tool sheets injected into the same document. */
-const MIN_SPA_SHEETS = 38;
+/** main.css + the 39 tool sheets injected into the same document. */
+const MIN_SPA_SHEETS = 40;
 
 describe('css corpus — each palette token is declared once per root, in compiled space', () => {
 	test('the compiled walk stayed in sync and saw the whole palette (anti-vacuity)', () => {

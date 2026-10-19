@@ -112,9 +112,9 @@ const AA_LARGE = 3.0;
  * silently shrink" assertion, not a target; lower one only with the commit that
  * legitimately removes what it counted, and say so there.
  */
-/** `entrypoints()` derived 43 sheets (main + 37 tools + unit_test + button_common + test_info + 2 pdfjs). */
-const MIN_SERVED_SHEETS = 43;
-/** main.css parsed into 4,072 rules; the 37 tool sheets together into 1,819. */
+/** `entrypoints()` derived 45 sheets (main + 39 tools + unit_test + button_common + test_info + 2 pdfjs). */
+const MIN_SERVED_SHEETS = 45;
+/** main.css parsed into 4,072 rules; the 39 tool sheets together into 1,819. */
 const MIN_MAIN_RULES = 4000;
 const MIN_TOOL_RULES = 1750;
 /** Root palettes derived from the served bytes: light, dark. */

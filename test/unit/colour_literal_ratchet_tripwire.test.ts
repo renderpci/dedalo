@@ -66,10 +66,10 @@
  * drifted: nothing ASSERTS this prose, so its class breakdown had stopped summing to its
  * own total — 27+38+5+71+141 = 282, never 274. Every figure here was printed by the
  * gate's own classifier.)
- *   corpus   43 served documents (`entrypoints()`, compiled by `buildOne()`), 6057 rules,
- *            273 root-declared colour tokens carrying 397 distinct values, 1051 colour
- *            literals in all positions — of which 738 are the palette declaring itself
- *            and 40 are grammar-exempt (url()/gradient/mask/filter);
+ *   corpus   45 served documents (`entrypoints()`, compiled by `buildOne()`), 6539 rules,
+ *            268 root-declared colour tokens carrying 278 distinct values, 1141 colour
+ *            literals in all positions — of which 834 are the palette declaring itself
+ *            and the rest are grammar-exempt (url()/gradient/mask/filter);
  *   CSS      273 literals in a paint position = 27 HAS_TOKEN + 38 STALE_FB
  *            + 5 UNDECL_FB (drift: 70) + 68 coherent fallbacks + 135 unmatched;
  *   JS       776 files under client/ + tools/ minus lib/, 21 of them carrying a colour;
@@ -126,7 +126,7 @@
  *     the files never declare in light but the sheet itself declares under
  *     `[data-theme="dark"]`, are STALE here and "undeclared" there.
  *
- * COST: compiles the 43 entrypoints (~1s) and reads the client/tools JS tree. DB-less,
+ * COST: compiles the 45 entrypoints (~1s) and reads the client/tools JS tree. DB-less,
  * network-less → hermetic tier.
  */
 

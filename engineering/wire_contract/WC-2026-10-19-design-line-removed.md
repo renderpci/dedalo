@@ -4,8 +4,8 @@
   vehicle for a redesign that has landed; the mechanism is removed).
 - **Supersedes:** `WC-063-ts-native-core-client-files-absent` — the
   `design.js` / `design-init.js` bullet ONLY (its other three files stand).
-- **Scope:** the client. The server, the API actions, the envelopes and the
-  ontology are untouched.
+- **Scope:** the client and its label catalogs (`src/core/labels/`). The engine,
+  the API actions, the envelopes and the ontology are untouched.
 
 ## Shape before
 
