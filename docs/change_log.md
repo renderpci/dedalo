@@ -23,6 +23,13 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **An active component's background is now a lighter tint.**
+
+    Clicking a component in a section put a light-orange field behind it; the tint is now a
+    lighter cream (#fef1e4), so the active field reads more gently while its orange label
+    still marks it. The same tint is used by the search highlight and text selection, which
+    lighten with it.
+
 - **A relation table is framed, with no rules between its column titles**
 
     The column titles of a relation table sat in a box each, so every pair of

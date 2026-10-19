@@ -286,7 +286,7 @@ const process_rule = function(selector, json_css_values, skip_insert) {
  * dark theme uses. Expressed with CSS relative colour syntax so the browser
  * does the conversion and any colour notation is accepted:
  *
- *   #fce8d2 (surface) -> hsl(from #fce8d2 h calc(s * 0.42) 18%) ~= #3c2f26
+ *   #fef1e4 (surface) -> hsl(from #fef1e4 h calc(s * 0.42) 18%) ~= #402e1c
  *                        (theme_dark's hand-picked --color_hilite is #4a3424)
  *
  * Only single-token literal colours are adapted. `var(…)` values are already
