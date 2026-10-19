@@ -412,6 +412,118 @@ const decorate_block_header = (header, icon_class, label_html) => {
 
 
 /**
+* LOAD_BLOCK
+* The ONE lazy-load path for every inspector block whose body comes from the
+* server (relations, latest changes, component history).
+*
+* Why it exists: these blocks used to empty or dim an EMPTY body and then wait
+* for the round trip, so on a slow network or a busy server the click looked
+* dead. Here the shared 'Loading …' placeholder + spinner is installed
+* SYNCHRONOUSLY (first call, before any await) and ui.load_item_with_spinner
+* swaps in the result — or the engine's own error panel when the task throws,
+* so a failing server never leaves a blank card.
+*
+* Serialized per container: a trigger arriving while a load is in flight
+* (section pagination while the block is open) joins the chain instead of
+* racing the in-flight task — the same protection load_time_machine_list used
+* to own privately, now the shared behaviour.
+*
+* NOT LOADING TWICE is the other half of the contract, and the `key` carries it:
+* a block whose key is unchanged is already displayed, so re-opening it reuses
+* that content and asks the server nothing. Only `reload:true` (a save changed
+* the data, the section re-rendered, the list turned a page) goes back to the
+* server. A FAILED load is not remembered as loaded, and any caller that clears
+* its own container clears the key with it.
+*
+* @param {Object} options
+* @param {HTMLElement} options.container - the block body to fill
+* @param {string} options.label - block label, appended to 'Loading'
+* @param {string|null} [options.key=null] - identity of the content the body
+*   shows; null means 'never reusable'. A repeat of the same key reuses the DOM
+*   (or joins the load already in flight).
+* @param {boolean} [options.reload=false] - force a fresh load even when the key
+*   is unchanged (a save, a section re-render, a page turn)
+* @param {Function} options.task - async () => HTMLElement|DocumentFragment
+* @returns {Promise<HTMLElement|DocumentFragment|null>}
+*/
+export const load_block = async function(options) {
+
+	const { container, label, task, key = null, reload = false } = options
+
+	// ALREADY LOADED — or already loading: the SAME identity is never asked for
+	// twice. `key` names the content the body shows (the record locator, plus the
+	// component for the component-history block). `reload:true` is the forced path
+	// — a save just changed the data, or the section re-rendered — and bypasses it.
+	// shortcut: a re-open therefore serves the content as of the last load, so a
+	// relation added by ANOTHER user while the block sat collapsed is unseen until
+	// a forced path fires; upgrade by folding the record's modified_date into key.
+	if (!reload && key !== null && container._block_key === key) {
+		// a load for this key is already in flight: join it, never duplicate it
+		return container._block_load || container
+	}
+
+	const start = () => {
+		container.setAttribute('aria-busy', 'true')
+		let failed = false
+		return ui.load_item_with_spinner({
+			container,
+			label,
+			callback	: async () => {
+				try {
+					return await task()
+				} catch (error) {
+					failed = true
+					throw error
+				}
+			}
+		})
+		.then((node) => {
+			// a FAILED load is not 'loaded': the next open must ask again
+			if (failed===true && container._block_key===key) {
+				container._block_key = null
+			}
+			return node
+		})
+	}
+
+	// claim the identity NOW, so a trigger arriving while this one loads joins it
+	container._block_key = key
+
+	// one load at a time per container: a queued trigger waits for the current
+	const previous = container._block_load
+	const chain = previous
+		? previous.catch(() => null).then(start)
+		: start()
+	container._block_load = chain
+
+	try {
+		return await chain
+	} finally {
+		// release only if no newer load took the slot
+		if (container._block_load===chain) {
+			container._block_load = null
+			container.removeAttribute('aria-busy')
+		}
+	}
+}//end load_block
+
+
+
+/**
+* BLOCK_KEY
+* Identity of a RECORD-scoped inspector block's content. A block reloads only
+* when this changes or when a forced reload is asked for (save, section
+* re-render, a page turn inside the list).
+* @param {Object} self - Inspector instance.
+* @returns {string}
+*/
+const block_key = function(self) {
+	return self.caller.section_tipo + '_' + self.caller.section_id
+}//end block_key
+
+
+
+/**
 * EDIT
 * Builds the full inspector DOM tree and returns the outermost wrapper element.
 * This is the prototype method assigned to render_inspector.prototype.edit and
@@ -1718,11 +1830,8 @@ const render_relation_list = function(self) {
 		 * Callback for relation list pagination events.
 		 */
 		const fn_relation_list_paginator = function(relation_list) {
-			relation_list_body.classList.add('loading')
-			load_relation_list(relation_list)
-			.then(function(){
-				relation_list_body.classList.remove('loading')
-			})
+			// a page turn is NEW content for the same key: force the load
+			load_relation_list(relation_list, { reload: true })
 		}
 		self.events_tokens.push(
 			event_manager.subscribe('relation_list_paginator_'+self.section_tipo, fn_relation_list_paginator)
@@ -1735,7 +1844,8 @@ const render_relation_list = function(self) {
 		const fn_updated_section = function() {
 			const is_open = !relation_list_body.classList.contains('hide')
 			if (is_open) {
-				load_relation_list()
+				// the section re-rendered (pagination / record change): refresh
+				load_relation_list(undefined, { reload: true })
 			}
 		}
 		self.events_tokens.push(
@@ -1748,35 +1858,46 @@ const render_relation_list = function(self) {
 		 * Asynchronously loads and renders the list of relations.
 		 * @param {Object} [instance] - Existing relation_list instance (pagination case).
 		 */
-		const load_relation_list = async function(instance) {
+		const load_relation_list = async function(instance, options = {}) {
 
 			relation_list_head.classList.add('up')
 
 			const relation_list_tipo = self.caller.context?.config?.relation_list_tipo
 
-			const relation_list	= (instance && instance.model==='relation_list')
-				? instance // pagination case: reuse existing instance
-				: await get_instance({
-					model			: 'relation_list',
-					tipo			: relation_list_tipo,
-					section_tipo	: self.caller.section_tipo,
-					section_id		: self.caller.section_id,
-					mode			: self.mode
-				})
+			// the placeholder covers the whole load, pagination included. `key` is
+			// the record: a re-open of the SAME record reuses what is displayed.
+			return load_block({
+				container	: relation_list_body,
+				label		: get_label.relations || 'Relations',
+				key			: block_key(self),
+				reload		: options.reload===true,
+				task		: async () => {
 
-			await relation_list.build()
-			const rendered_node = await relation_list.render()
+					const relation_list	= (instance && instance.model==='relation_list')
+						? instance // pagination case: reuse existing instance
+						: await get_instance({
+							model			: 'relation_list',
+							tipo			: relation_list_tipo,
+							section_tipo	: self.caller.section_tipo,
+							section_id		: self.caller.section_id,
+							mode			: self.mode
+						})
 
-			// Replace all children with the new list (modern and efficient)
-			relation_list_body.replaceChildren(rendered_node)
+					await relation_list.build()
+
+					// the rendered node replaces the placeholder
+					return relation_list.render()
+				}
+			})
 		}
 
 		/**
-		 * unload_relation_list
-		 * Clears the relation list container.
+		 * collapse
+		 * Resets the disclosure state only. The rendered list is KEPT so a re-open
+		 * reuses it (load_block's key); the forced paths — a section re-render or a
+		 * page turn — still reload it.
 		 */
-		const unload_relation_list = function() {
-			relation_list_body.replaceChildren()
+		const collapse = function() {
 			relation_list_head.classList.remove('up')
 		}
 
@@ -1784,16 +1905,14 @@ const render_relation_list = function(self) {
 			toggler				: relation_list_head,
 			container			: relation_list_body,
 			collapsed_id		: 'inspector_relation_list',
-			collapse_callback	: unload_relation_list,
+			collapse_callback	: collapse,
 			expose_callback		: expose,
 			default_state		: 'closed'
 		})
 
 		function expose() {
-			dd_request_idle_callback(() => {
-				load_relation_list()
-				relation_list_head.classList.add('up')
-			})
+			// no idle deferral: the loading placeholder must land on the click tick
+			load_relation_list()
 		}
 
 	return relation_list_container
@@ -1804,9 +1923,10 @@ const render_relation_list = function(self) {
 /**
 * RENDER_TIME_MACHINE_LIST
 * Builds the collapsible "Latest changes" block in the inspector.  When the user
-* opens (exposes) the block, load_time_machine_list() is called via
-* dd_request_idle_callback to lazily load the tm_list instance that
-* renders a mini grid of recent component-value changes across the whole section.
+* opens (exposes) the block, load_time_machine_list() runs immediately (the
+* loading placeholder lands on the click tick) to lazily load the tm_list
+* instance that renders a mini grid of recent component-value changes across
+* the whole section.
 *
 * The time_machine_list_body element pointer is stored as
 * self.time_machine_list_container so that load_time_machine_list() can locate
@@ -1871,12 +1991,9 @@ export const render_time_machine_list = function(self) {
 			time_machine_list_head.classList.remove('up')
 		}
 		function expose() {
-			dd_request_idle_callback(
-				() => {
-					load_time_machine_list(self)
-					time_machine_list_head.classList.add('up')
-				}
-			)
+			// no idle deferral: the loading placeholder must land on the click tick
+			load_time_machine_list(self)
+			time_machine_list_head.classList.add('up')
 		}
 
 
@@ -1910,53 +2027,46 @@ export const render_time_machine_list = function(self) {
 *
 * @param {Object} self - Inspector instance. Must have self.time_machine_list_container,
 *   self.caller (section), and self.section_tipo populated.
-* @returns {Promise<HTMLElement|null>} The body container element on success,
-*   or null when loading was skipped or the inspector was destroyed.
+* @returns {Promise<HTMLElement|null>} The rendered list node on success, or null
+*   when loading was skipped (collapsed container).
 */
-export const load_time_machine_list = async function(self) {
-
-	// SERIALIZE. Two independent triggers (the expose callback and the 'save' /
-	// update_section_info idle callbacks) can fire in the same frame. Running them
-	// in parallel means the second call destroys self.tm_list — nullifying the
-	// caller of every section_record it owns — while the first call's row render is
-	// still awaiting its columns, which used to throw
-	// "Cannot read properties of null (reading 'model')" and left the panel loading.
-	// Chain instead: each load waits for the previous one to finish.
-		const previous = self.tm_list_loading || Promise.resolve()
-		const current = previous
-			.catch(() => null) // a failed load must not poison the chain
-			.then(() => load_time_machine_list_run(self))
-		self.tm_list_loading = current
-		try {
-			return await current
-		} finally {
-			// release the chain pointer only if no newer load took it
-			if (self.tm_list_loading===current) {
-				self.tm_list_loading = null
-			}
-		}
-}//end load_time_machine_list
-
-
-
-/**
-* LOAD_TIME_MACHINE_LIST_RUN
-* The actual load. Never call directly: go through load_time_machine_list, which
-* serializes concurrent calls.
-* @param {Object} self - Inspector instance.
-* @returns {Promise<HTMLElement|null>}
-*/
-const load_time_machine_list_run = async function(self) {
+export const load_time_machine_list = async function(self, options = {}) {
 
 	// container. Prevent to load data when the viewer is collapsed
+	// (!) merged with LOAD_TIME_MACHINE_LIST_RUN: the guard, then the shared
+	// block-loading contract (placeholder + spinner + serialization).
 		const container	= self.time_machine_list_container
 		const is_open	= container && !container.classList.contains('hide')
 		if (!is_open) {
 			return null
 		}
 
-	// set as loading
-		container.classList.add('loading')
+	// SERIALIZED by load_block on this container. Two independent triggers (the
+	// expose callback and the 'save' / update_section_info callbacks) can fire in
+	// the same frame; running them in parallel means the second load destroys
+	// self.tm_list — nullifying the caller of every section_record it owns — while
+	// the first call's row render is still awaiting its columns.
+	// `reload` is how the save / section-render callers say the data moved; a bare
+	// re-open of the block passes nothing and reuses what is displayed.
+	return load_block({
+		container	: container,
+		label		: get_label.latest_changes || 'Latest changes',
+		key			: block_key(self),
+		reload		: options.reload===true,
+		task		: () => load_time_machine_list_instance(self)
+	})
+}//end load_time_machine_list
+
+
+
+/**
+* LOAD_TIME_MACHINE_LIST_INSTANCE
+* The actual list build/render, behind the loading placeholder installed by
+* load_time_machine_list.
+* @param {Object} self - Inspector instance.
+* @returns {Promise<HTMLElement>} the rendered list node
+*/
+const load_time_machine_list_instance = async function(self) {
 
 	// (!) Note that expose is called on each section pagination, whereby must be generated
 	// even if user close and re-open the time_machine_list inspector tab
@@ -2029,27 +2139,13 @@ const load_time_machine_list_run = async function(self) {
 		tm_list.tm_template_columns	= '1fr 1.5fr 2fr'
 
 		await tm_list.build(true)
-		const time_machine_list_wrap = await tm_list.render()
 
 	// set new tm_list
 		self.tm_list = tm_list
 
-	// remove previous node if a pointer exists
-		if (container.time_machine_list_wrap) {
-			container.time_machine_list_wrap.remove()
-		}
-
-	// append node
-		container.appendChild(time_machine_list_wrap)
-		// set pointers
-		container.time_machine_list_wrap = time_machine_list_wrap
-
-	// set as loaded
-		container.classList.remove('loading')
-
-
-	return container
-}//end load_time_machine_list_run
+	// the rendered node replaces the placeholder (load_block contract)
+	return tm_list.render()
+}//end load_time_machine_list_instance
 
 
 
@@ -2104,12 +2200,9 @@ const render_component_history = function(self) {
 			component_history_head.classList.remove('up')
 		}
 		function expose() {
-			dd_request_idle_callback(
-				() => {
-					load_component_history(self, self.actived_component)
-					component_history_head.classList.add('up')
-				}
-			)
+			// no idle deferral: the loading placeholder must land on the click tick
+			load_component_history(self, self.actived_component)
+			component_history_head.classList.add('up')
 		}
 
 
@@ -2145,9 +2238,9 @@ const render_component_history = function(self) {
 *   and self.section_tipo set.
 * @param {Object|null} component - The component instance to show history for,
 *   or null to clear the container.
-* @returns {Promise<HTMLElement|null>} The container element on success, or null.
+* @returns {Promise<HTMLElement|null>} The rendered history node on success, or null.
 */
-export const load_component_history = async function(self, component) {
+export const load_component_history = async function(self, component, options = {}) {
 
 	// container
 		const container	= self.component_history_container
@@ -2158,6 +2251,10 @@ export const load_component_history = async function(self, component) {
 			if (container) {
 				container.replaceChildren()
 				delete container.component_history_wrap
+				// the container is empty again: its cached identity must go with the
+				// content, or the next activation of that component would 'reuse'
+				// nothing
+				container._block_key = null
 			}
 			// destroy the previous list too: record navigation lands here first
 			// (update_section_info resets actived_component), and the stale
@@ -2182,8 +2279,32 @@ export const load_component_history = async function(self, component) {
 			return null
 		}
 
-	// set as loading
-		container.classList.add('loading')
+	// the shared block-loading contract: placeholder + spinner + serialization.
+	// Serialized per container: this loader is keyed by COMPONENT, so a fast
+	// A→B activation must run A then B in order — no concurrent builds of the
+	// shared dd15 instance, and self.component_history_list ends on B.
+	// `key` is record + component + lang: re-activating what is already displayed
+	// reuses it; `reload:true` (a save of this component) asks for it again.
+	return load_block({
+		container	: container,
+		label		: get_label.component_history || 'Component history',
+		key			: block_key(self) + '_' + component.tipo + '_' + component.lang,
+		reload		: options.reload===true,
+		task		: () => load_component_history_instance(self, component)
+	})
+}//end load_component_history
+
+
+
+/**
+* LOAD_COMPONENT_HISTORY_INSTANCE
+* The actual list build/render, behind the loading placeholder installed by
+* load_component_history. Never call directly.
+* @param {Object} self - Inspector instance.
+* @param {Object} component - the component to show history for.
+* @returns {Promise<HTMLElement>} the rendered history node
+*/
+const load_component_history_instance = async function(self, component) {
 
 	// destroy previous list to avoid instance leaks across navigation events
 		if (self.component_history_list) {
@@ -2243,23 +2364,13 @@ export const load_component_history = async function(self, component) {
 		tm_list.tm_view				= 'history'
 
 		await tm_list.build(true)
-		const history_node = await tm_list.render()
 
 	// keep the pointer so the next load can destroy this instance
 		self.component_history_list = tm_list
 
-	// Replace previous content with the new node
-		if (container) {
-			container.replaceChildren(history_node)
-			// set pointer
-			container.component_history_wrap = history_node
-			// set as loaded
-			container.classList.remove('loading')
-		}
-
-
-	return container
-}//end load_component_history
+	// the rendered node replaces the placeholder (load_block contract)
+	return tm_list.render()
+}//end load_component_history_instance
 
 
 

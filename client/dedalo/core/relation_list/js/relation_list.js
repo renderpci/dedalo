@@ -320,17 +320,24 @@ relation_list.prototype.build = async function(autoload=true){
 		}
 		self.rqo = rqo
 
+	// read + count run CONCURRENTLY. They are independent (the count SQO ignores
+	// limit/offset): run in sequence, a busy server made the panel wait for two
+	// round trips back to back before it could paint.
+		const tasks = []
+
 	// load data if not yet received as an option
 		if (autoload===true) {
 
-			const api_response = await data_manager.request({
-				use_worker	: true,
-				body		: self.rqo
-			})
-			// console.log("RELATION_LIST api_response:", self.id, api_response);
-
-			// set the result to the datum
-				self.datum = response_data(api_response)
+			tasks.push(
+				data_manager.request({
+					use_worker	: true,
+					body		: self.rqo
+				})
+				.then((api_response) => {
+					// set the result to the datum
+					self.datum = response_data(api_response)
+				})
+			)
 		}
 
 	// total
@@ -358,16 +365,20 @@ relation_list.prototype.build = async function(autoload=true){
 			}
 
 			// set the response to the self.total
-			self.total = await data_manager.request({
-				body		: rqo,
-				use_worker	: true
-			})
-			.then(function(response){
-				if(!request_failed(response)){
-					return response_data(response).total
-				}
-			})
+			tasks.push(
+				data_manager.request({
+					body		: rqo,
+					use_worker	: true
+				})
+				.then(function(response){
+					if(!request_failed(response)){
+						self.total = response_data(response).total
+					}
+				})
+			)
 		}
+
+		await Promise.all(tasks)
 
 	// status update
 		self.status = 'built'

@@ -7723,6 +7723,11 @@ body:has(.component_av.view_viewer) {
   background-color: var(--fg_muted);
   transition: transform 0.26s var(--ease-standard), background-color var(--transition-fast);
 }
+.inspector > .inspector_content_data .relation_list_container:has(> .relation_list_body[aria-busy="true"]) > .relation_list_head,
+.inspector > .inspector_content_data .time_machine_list:has(> .time_machine_list_body[aria-busy="true"]) > .time_machine_list_head,
+.inspector > .inspector_content_data .component_history:has(> .component_history_body[aria-busy="true"]) > .component_history_head {
+  cursor: progress;
+}
 .inspector > .inspector_content_data > .paginator_container {
   contain: content;
   min-height: 73px;
@@ -7960,6 +7965,11 @@ body:has(.component_av.view_viewer) {
 }
 .inspector > .inspector_content_data > .component_history .component_history_body {
   contain: content;
+}
+.inspector > .inspector_content_data .relation_list_body > .container_placeholder,
+.inspector > .inspector_content_data .time_machine_list_body > .container_placeholder,
+.inspector > .inspector_content_data .component_history_body > .container_placeholder {
+  font-size: 1rem;
 }
 .inspector > .inspector_content_data .activity_info {
   contain: content;

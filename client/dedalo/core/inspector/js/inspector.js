@@ -203,14 +203,15 @@ inspector.prototype.init = async function(options) {
 			const save_handler = (options) => {
 				const instance = options.instance
 				if (self.actived_component && self.actived_component.id===instance.id) {
-					// component_history update changes list if saved is current selected
+					// component_history update changes list if saved is current selected.
+					// The save moved the data, so the cached block must be re-read.
 					dd_request_idle_callback(
-						() => load_component_history(self, self.actived_component)
+						() => load_component_history(self, self.actived_component, { reload: true })
 					)
 				}
 				// time_machine_list update info on every component save
 				dd_request_idle_callback(
-					() => load_time_machine_list(self)
+					() => load_time_machine_list(self, { reload: true })
 				)
 
 				// activity_info. render notification bubbles on every component save action
@@ -310,9 +311,10 @@ const update_section_info = (self) => {
 	// update section info
 	render_section_info(self)
 
-	// time_machine_list load info
+	// time_machine_list load info. The section re-rendered (pagination or a new
+	// record): the record-scoped blocks must re-read.
 	dd_request_idle_callback(
-		() => load_time_machine_list(self)
+		() => load_time_machine_list(self, { reload: true })
 	)
 
 	// component_history remove content id exists

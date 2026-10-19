@@ -172,6 +172,15 @@
 			}
 		}
 
+		// a block whose body is loading (load_block marks the body aria-busy).
+		// The visible affordance is the body's shared placeholder + spinner; the
+		// header only reports the wait so the whole block reads as pending.
+		.relation_list_container:has(> .relation_list_body[aria-busy="true"]) > .relation_list_head,
+		.time_machine_list:has(> .time_machine_list_body[aria-busy="true"]) > .time_machine_list_head,
+		.component_history:has(> .component_history_body[aria-busy="true"]) > .component_history_head {
+			cursor: progress;
+		}
+
 		// paginator. Not a card: it sits flat and transparent on the panel,
 		// with the nav controls and page info centred across the inspector.
 		>.paginator_container {
@@ -500,6 +509,20 @@
 		>.component_history {
 			.component_history_body {
 				contain: content;
+			}
+		}
+
+		// The loading placeholder is the SAME text in every server-loaded block.
+		// The tm body sets a smaller font for its ROWS (0.78rem) and the shared
+		// placeholder used to inherit it, so 'Loading latest changes' rendered
+		// smaller than 'Loading relations'. One size for all three: 1rem is the
+		// panel's own baseline (nothing between the root and these bodies sets a
+		// font-size), so this is a no-op for the other two.
+		.relation_list_body,
+		.time_machine_list_body,
+		.component_history_body {
+			> .container_placeholder {
+				font-size: 1rem;
 			}
 		}
 

@@ -140,7 +140,11 @@ render_common_section.render_delete_record_dialog = async (options) => {
 		const sqo			= options.sqo
 
 	// short vars
-		const total			= await section.get_total()
+		// total. Only BATCH mode (no section_id) needs it, for its summary label.
+		// Single-record deletes — the inspector's Delete button — used to pay a
+		// get_total round trip BEFORE the modal existed, which read as a hang on a
+		// busy server. The modal now opens on the click.
+		const total			= section_id ? null : await section.get_total()
 		const label 		= section.label || section_tipo
 
 		// In single-record mode use the id directly; in batch mode show a summary string
