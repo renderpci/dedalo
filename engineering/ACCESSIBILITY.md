@@ -151,7 +151,7 @@ BOTH shipped palettes. The palette carries the roles that make this possible:
 |---|---|
 | `--color_orange_dedalo` | the accent FILL, the official `#f78a1c` in BOTH themes — a brand fact, never retuned to buy contrast. It is never ink: on the light card it is 2.44:1. |
 | `--fg_on_brand` | the ink on the brand fill — dark in both themes (`#16181b`, 7.29:1), so no rule has to know which. |
-| `--color_orange_dark` | the DEEP-orange INK: the ink on an orange field. Retuned to `#98510a` when the active field's tinted surface (`--color_hilite`, one step deeper than `--color_orange_light`) put the old value at 4.00:1; light 5.0:1 on that tint, dark `#f0a355` 5.6:1, and each design/accent carries its own pair. |
+| `--color_orange_dark` | the DEEP-orange INK: the ink on an orange field. Retuned to `#98510a` when the active field's tinted surface (`--color_hilite`, one step deeper than `--color_orange_light`) put the old value at 4.00:1; light 5.0:1 on that tint, dark `#f0a355` 5.6:1. |
 | `--fg_on_accent` | the ink on a light COLOUR-CODED fill (the indexation amber and its siblings). Curators read those tags by hue, so the accessible fix is to flip the ink — 8.5:1 — not to mute the colour. |
 | `--bg_fill_inverse` | a neutral fill that carries the inverse ink at AA. Column headers and chips used the grey ramp's mid steps with white text (1.92:1); the ramp is structural (borders, dividers) and must not be darkened to serve one use, so the use got its own token. |
 | `--fg_inverse` | white in BOTH themes. `--color_white` is the theme's SURFACE ink and is DARK in dark, so a coloured chip's ink is `--fg_inverse`, never `--color_white`. |

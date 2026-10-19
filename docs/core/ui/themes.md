@@ -157,11 +157,10 @@ accent ring). That is the "quiet grid" the section edit view is built on.
     transparent in both themes. One token, no per-theme answer, fixes both
     disagreements at once.
 
-    A design line that *wants* sunken fields re-points the token rather than
-    writing a rule: `redesign/_tokens.less` sets
+    A variant palette that *wants* sunken fields re-points the token rather than
+    writing a rule: it sets
     `--field_rest_bg: var(--input_bg)`. It has to, because the shared `FIELD
-    GRID` rule is five classes deep and out-specifies
-    `.wrapper_component .input_value` in `redesign/_structure.less` — a
+    GRID` rule is five classes deep and out-specifies a wrapper rule — a
     background declared there would lose silently.
 
 !!! warning "Do not hard-code a field inset"

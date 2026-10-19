@@ -434,8 +434,8 @@
 				// --color_orange_light (#fffaf5) is 1.02:1 on the light card —
 				// the tint was invisible, so only the orange label read as
 				// "active". --color_hilite is the palette's declared orange field
-				// tint (light #fef1e4 / dark #4a3424), already paired per theme
-				// and per redesign accent, so the whole field lights up in both
+				// tint (light #fef1e4 / dark #4a3424), already paired per theme,
+				// so the whole field lights up in both
 				// modes. The guard keeps the search hilite of a valued field.
 				&:not(.hilite_element) {
 					background-color: @color_hilite;
@@ -460,8 +460,7 @@
 				// so the label reads in the palette's DEEP orange —
 				// `--color_orange_dedalo` is a FILL (2.05:1 on the light tint,
 				// 4.76 dark) and no rule may put it behind text as ink.
-				// --color_orange_dark is 5.0:1 here (5.6 dark; each design and
-				// accent carries its own pair). Explicit because the shared
+				// --color_orange_dark is 5.0:1 here (5.6 dark). Explicit because the shared
 				// label rule above paints every mode's label grey — 4.4:1 on
 				// the tint, under AA.
 				>.label {
@@ -731,8 +730,7 @@
 		// refined active state: the tint (painted by the `.active` rule above)
 		// IS the orange field, so the label ink is the palette's deep orange —
 		// the brand FILL is 2.05:1 on --color_hilite and can never be ink there.
-		// --color_orange_dark is 5.0:1 on the light tint (5.6 dark, and each
-		// design/accent carries its own pair); values keep readable ink.
+		// --color_orange_dark is 5.0:1 on the light tint (5.6 dark); values keep readable ink.
 		&.active {
 			>.label {
 				color: var(--color_orange_dark); // explicit: the label rule above outranks the wrapper-level orange

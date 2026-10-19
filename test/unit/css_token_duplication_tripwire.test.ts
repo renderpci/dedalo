@@ -6,8 +6,7 @@
  * one asks whether the bytes match their source, this one asks who is allowed to emit them).
  *
  * "The palette" now means the whole of it: ONE light palette file (`vars_tokens.less`) and ONE
- * dark-override file (`theme_dark.less`) — plus `redesign/_tokens.less`, the same names on a
- * second, ORTHOGONAL axis (design, not theme). Those three are PALETTE_FILES and assertion 5
+ * dark-override file (`theme_dark.less`). Those two are PALETTE_FILES and assertion 5
  * holds the line; every other `:root` custom property in the app is declared in that set. It was not always. `layout/theme_tokens.less` used to carry a SECOND
  * palette — the 28 `--ut_*` tokens, light + dark — next to its LESS `@font_*`/`@size_*` vars,
  * and was imported by BOTH `main.less` and `test/client/css/unit_test.less`, whose compiled
@@ -138,8 +137,6 @@ const PALETTE_FILES: Record<string, string> = {
 		'the light palette — the base every override is written against, on plain `:root`',
 	'client/dedalo/core/page/css/layout/theme_dark.less':
 		'the dark palette — the same names under `:root[data-theme="dark"]`, the theme axis',
-	'client/dedalo/core/page/css/redesign/_tokens.less':
-		'the "Calm Scholarly" design line — the same names under `:root[data-design="redesign"]` (and its own dark companion). A SECOND, orthogonal axis (design, not theme), which is why the rule is "the named palette files", not "two files": a scoped variant of the palette is legitimate, an unnamed one is not',
 };
 
 /**
@@ -394,7 +391,7 @@ describe('css token duplication tripwire', () => {
 			});
 		expect(
 			offenders,
-			`A file outside PALETTE_FILES declares a vars_tokens property on a global root (:root / html / body / *).\n\nIt lands in main.css like any partial, so assertions 1 and 2 cannot see it — and it silently retunes the palette for the whole document.\n\nIf this is a legitimate NEW AXIS of the palette (the way redesign/_tokens.less is a design axis alongside the theme axis), add it to PALETTE_FILES with the axis it varies. If it is one component's override, SCOPE it to that component's selector instead — a scoped custom property is the sanctioned idiom and is bounded by its selector.\n\nOffenders:\n${offenders.map((o) => `  ${o}`).join('\n')}`,
+			`A file outside PALETTE_FILES declares a vars_tokens property on a global root (:root / html / body / *).\n\nIt lands in main.css like any partial, so assertions 1 and 2 cannot see it — and it silently retunes the palette for the whole document.\n\nIf this is a legitimate NEW AXIS of the palette (a second axis alongside the theme axis), add it to PALETTE_FILES with the axis it varies. If it is one component's override, SCOPE it to that component's selector instead — a scoped custom property is the sanctioned idiom and is bounded by its selector.\n\nOffenders:\n${offenders.map((o) => `  ${o}`).join('\n')}`,
 		).toEqual([]);
 
 		// and the allowlist cannot rot into paths that no longer declare anything

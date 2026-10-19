@@ -40,8 +40,8 @@
  * no timezone drift, exact for negative years. `Date` is used for *now* only.
  *
  * THEME. Every colour is a theme token (--bg_elevated, --fg_default,
- * --color_orange_dedalo with --fg_on_brand ink, …), so light, dark and the
- * redesign line all resolve here for free; styles live in component_date.less
+ * --color_orange_dedalo with --fg_on_brand ink, …), so light and dark both
+ * resolve here for free; styles live in component_date.less
  * (the popup is appended to <body>, outside `.component_date`).
  */
 

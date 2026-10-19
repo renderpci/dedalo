@@ -38,9 +38,8 @@
  * document. Folding them in DELETED the special case instead of splitting a
  * second pair: there is one place to look per axis.
  *
- * The axes are NAMED, not merely two: this file (light), `theme_dark.less`
- * (theme axis) and `redesign/_tokens.less` (design axis — the same names under
- * `[data-design="redesign"]`). A file outside that set declaring a palette token
+ * The axes are NAMED: this file (light) and `theme_dark.less` (theme axis, the
+ * same names under `[data-theme="dark"]`). A file outside that set declaring a palette token
  * on a bare root retunes the whole document and is invisible once LESS flattens
  * it into main.css, so the set is gated by name — PALETTE_FILES in
  * `test/unit/css_token_duplication_tripwire.test.ts`. Scoping an override to a
@@ -101,8 +100,8 @@
 	// What an editable field's box looks like AT REST. Transparent: the value sits
 	// on the card, and the box appears on hover/focus (general.less reveals the
 	// outline, layout.less the hover tint) — the "quiet grid" the section edit view
-	// is built on. A token, not a literal, because it is a DESIGN DECISION: the
-	// redesign line deliberately reads its fields as gently sunken and re-points
+	// is built on. A token, not a literal, because it is a DESIGN DECISION: a
+	// scoped or axis palette reads its fields as gently sunken and re-points
 	// this to --bg_input.
 	// It has no dark override on purpose. The bug this closes was exactly a
 	// per-theme answer: general.less painted --input_bg on inputs under
@@ -182,9 +181,8 @@
 	// and keeps the orange exactly as the institution specifies it.
 	//
 	// So the pairing rule is: this token is a FILL, and the ink that goes on it
-	// is `--fg_on_brand` (below), never `--color_white`. The redesign line
-	// reached the same conclusion independently and split fill from text ink for
-	// the same reason ("pure orange is too light for text on near-white").
+	// is `--fg_on_brand` (below), never `--color_white`. Splitting fill from
+	// text ink for the same reason ("pure orange is too light for text on near-white").
 	//
 	// `--color_orange_dedalo_bright` was a second declaration of this same hue,
 	// kept "for decoration only"; it had ZERO consumers ever and was removed
@@ -356,7 +354,7 @@
 	// #f78a1c at 2.44:1 got a black tick) requires >= 3:1 against white, i.e.
 	// relative luminance <= 0.30. #db760f is 3.18:1. Any retune must stay <= 0.30.
 	--checkbox_checked_bg:      #db760f;
-	--checkbox_checkmark:       #fff; // ink ON the checked fill; redesign+dark pairs its bright fill with dark ink instead
+	--checkbox_checkmark:       #fff; // ink ON the checked fill
 	// Checked option chip (component_radio_button). Light: the full brand
 	// fill shouts on a white surface, so the pill is a softer brand orange
 	// with the same dark brand ink (#16181b on #fbb266 = 10.2:1). Dark keeps
@@ -425,10 +423,6 @@
 	--color_danger_hover_bg:         #d32535;
 	--color_danger_hover_border:     #ca2333;
 	--color_danger_dark:             #bd2130;
-	// button: orange / warning
-	--color_orange_border:           #f78512;
-	--color_orange_hover_bg:         #f17d08;
-	--color_orange_hover_border:     #e77808;
 	// button: warning. Its FILL/INK pair is the one the alert surfaces already
 	// use (--color_warning + --fg_on_warning): the warning button painted
 	// the BRAND fill with the brand's dark ink, so asking for white ink on it
@@ -445,8 +439,8 @@
 	// deeper than --color_orange_light, and #b15c06 was 4.00:1 on it — under
 	// AA. Measured on its surfaces: 5.0:1 on the active tint (--color_hilite),
 	// 5.8:1 on --color_orange_light, 6.0:1 on the card, 5.2:1 on the canvas.
-	// Same value the redesign line declares as --accent-text, one hue across
-	// both lines. Dark twin: theme_dark.less (#f0a355, 5.6:1 on the dark tint).
+	// One hue across both themes: used as text ink on the brand tints.
+	// Dark twin: theme_dark.less (#f0a355, 5.6:1 on the dark tint).
 	--color_orange_dark:             #98510a;
 	--color_orange_light:            #fffaf5;
 	// button: info

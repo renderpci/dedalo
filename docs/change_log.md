@@ -21,6 +21,22 @@ Merged since the last release; these ship with the next one.
 
 ### For users
 
+#### Removed
+
+- **The hidden 'Calm Scholarly' design preview is removed.**
+
+    Dédalo carried a second, optional interface design that only a developer could
+    reach, by adding `?design_preview=1` to an address or by setting one browser
+    value. It was a temporary vehicle for a redesign, and that work is now part of
+    the standard interface.
+
+    The preview is gone: the design switch in the menu, the startup script that
+    applied it, and the second palette behind it. Nothing changes for a user who
+    never opted in. A user who did opt in returns to the standard design, and their
+    browser keeps a setting that no longer has any effect.
+
+    Wire contract: `WC-2026-10-19-design-line-removed`.
+
 #### Changed
 
 - **An active component's background is now a lighter tint.**
@@ -179,11 +195,11 @@ Merged since the last release; these ship with the next one.
     looked much like an inactive one.
 
     The active field now paints the palette's own orange field tint, on the whole
-    component (label and value), in light and dark, and follows the design/accent a
+    component (label and value), in light and dark, and follows the theme a
     reader has chosen.
 
     The label on that tint is the palette's deep orange — 5.0:1 in light, 5.6:1 in
-    dark, and each design and accent carries its own pair. The bright Dédalo orange
+    dark. The bright Dédalo orange
     it was painted with before is a *fill* colour: on the tint it measured 2.05:1,
     which is why the header of a selected Date or Text field was hard to read.
 
@@ -656,9 +672,10 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 2 entries"
+??? note "Wire contract — 3 entries"
 
     - `WC-2026-10-15-release-identity-from-tag`
+    - `WC-2026-10-19-design-line-removed`
     - `WC-2026-10-19-inspector-record-info`
 
 ## 7.0.0-beta.6 — 2026-10-15

@@ -140,14 +140,12 @@ function isLangFileEntry(entry: ManifestEntry): boolean {
 	return entry.url.startsWith('/dedalo/core/common/js/lang/');
 }
 
-/** TS-native core client files with no PHP twin (WC-063): the design-line
- * toggle (design.js/design-init.js) and the idle-session countdown
- * (session_expiry.js, behaviour ledgered under WC-051). Filtered from BOTH
+/** TS-native core client files with no PHP twin (WC-063): the idle-session
+ * countdown (session_expiry.js, behaviour ledgered under WC-051) and the two
+ * search client panels. Filtered from BOTH
  * sides; the every-TS-url-resolves gate still proves they serve. */
 function isTsNativeCoreFileEntry(entry: ManifestEntry): boolean {
 	return (
-		entry.url === '/dedalo/core/page/js/design.js' ||
-		entry.url === '/dedalo/core/page/js/design-init.js' ||
 		entry.url === '/dedalo/core/common/js/session_expiry.js' ||
 		entry.url === '/dedalo/core/search/js/preset_scope.js' ||
 		entry.url === '/dedalo/core/search/js/render_semantic.js'

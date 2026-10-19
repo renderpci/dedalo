@@ -368,7 +368,7 @@
 // the Popover API — so it lives OUTSIDE `.component_date` and needs top-level
 // class names. Every colour is a theme token (`--bg_elevated`, `--fg_default`,
 // `--border_default`, the brand orange with its own `--fg_on_brand` ink …),
-// so light, `:root[data-theme="dark"]` and the redesign line all resolve here
+// so light and `:root[data-theme="dark"]` both resolve here
 // with no per-theme block. Sizes are in rem: the app's root font is 13px, so
 // 1.9rem ≈ 25px (over the 24px WCAG 2.5.8 floor) and the coarse-pointer
 // media query lifts every target to ≈ 33–38px for thumbs.

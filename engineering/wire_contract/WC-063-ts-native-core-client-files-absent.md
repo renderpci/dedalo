@@ -15,3 +15,5 @@ TS `get_dedalo_files` census:
 Handled like WC-013/WC-019: `isTsNativeCoreFileEntry` in
 `test/parity/dedalo_files_differential.test.ts` filters them from BOTH sides of
 the set compare; the every-TS-url-resolves gate still proves they serve.
+
+## Addendum 2026-10-19 — the design-line bullet is superseded by WC-2026-10-19-design-line-removed (those two files are deleted; three remain)

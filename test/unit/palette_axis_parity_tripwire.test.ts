@@ -19,15 +19,13 @@
  * `scripts/build_css.ts` derives, compiled in memory by the same `buildOne` the
  * build runs (so the corpus is exactly what ships, and a stale committed `.css`
  * cannot fake a pass). The root palette COMBINATIONS are DERIVED from the
- * attribute selectors present on the served roots (`data-theme` × `data-design`
- * × `data-accent` today — `base`, `redesign`, `redesign+pine`), never
+ * attribute selectors present on the served roots (the theme axis today —
+ * `base`), never
  * enumerated, so a new axis is judged the day its first `:root[data-…]` ships.
  * The cascade is MODELLED, not asserted: for a given `<html>` attribute set the
  * winning declaration is the most specific applicable one, byte order breaking
- * ties — which is what makes the redesign tie (C3) visible: `:root[data-design]`
- * (0,2,0) is emitted AFTER `:root[data-theme="dark"]` (0,2,0), so a redesign
- * light literal without a redesign-dark twin WINS under redesign+dark, and this
- * gate reads that result instead of counting lines in a block. Five legs:
+ * ties, so a light literal that out-ranks the dark root is read as a RESULT
+ * instead of counting lines in a block. Four legs:
  *
  *   1. TWIN PRESENCE. For every colour-valued token and every combination C:
  *      flipping the theme must change WHICH DECLARATION supplies the value
@@ -43,7 +41,7 @@
  *      in `theme_dark.less` — never moving the token into the core palette,
  *      which `css_token_duplication_tripwire` forbids. Exempt: THEME_INVARIANT
  *      (reason each; an entry that gains a twin is red) and tokens with no
- *      consumer at all (leg 4 owns those — the honest defect is not "needs a
+ *      consumer at all (leg 3 owns those — the honest defect is not "needs a
  *      twin"). A fully transparent value needs no twin: it paints nothing.
  *   2. DARK-ONLY ORPHAN. A token with a dark winner and NO light winner under
  *      the same combination: light computes it to nothing and every consuming
@@ -51,20 +49,13 @@
  *      different greens from scattered fallbacks). Carried from the retired
  *      gate, with the vendor register (`--ck-color-*`: CKEditor's own bundle
  *      declares the light half) verified against the vendor file.
- *   3. RESOLVED DIVERGENCE. Every token whose RESOLVED value differs between
- *      base light and base dark must ALSO resolve differently under every other
- *      combination's light and dark. This is the cascade RESULT, not a line's
- *      presence: a redesign light literal that beats theme_dark by source order
- *      resolves identically in both themes and is red here even when leg 1 is
- *      satisfied by a base twin; a copied twin INSIDE the design line is red
- *      here too (a copy is not a dark value).
- *   4. DECLARED-BUT-UNCONSUMED. A colour token declared on a global root with
+ *   3. DECLARED-BUT-UNCONSUMED. A colour token declared on a global root with
  *      zero `var()` consumers in the served CSS and no reader in served JS
  *      (`ui.css_var`, dd-modal's shadow sheet) is red — and a token declared
  *      for light whose every consumer is scoped under the dark root is red as
  *      LIGHT-DEAD (the light theme has a token nobody reads, so its light
  *      surface is painted by something else — `--debug_info_bar_bg`, C10).
- *   5. PRECONDITIONS the model needs: no name is declared at the same
+ *   4. PRECONDITIONS the model needs: no name is declared at the same
  *      combination by two served sheets with different values (the winner
  *      would depend on `load_style()` injection order, which no static reading
  *      can know), and no colour token sits on a root INSIDE a conditional
@@ -72,8 +63,8 @@
  *      attribute axis the client sets and this gate judges).
  *
  * DAY-ONE STATE (2026-09-06) is BANKED, shrink-only, set-equal: the tool_assistant
- * dark-only block (14 orphans, leg 2), nine dead tokens (leg 4) and eleven
- * light-dead tokens (leg 4) are live defects in files this change does not own;
+ * dark-only block (14 orphans, leg 2), nine dead tokens (leg 3) and eleven
+ * light-dead tokens (leg 3) are live defects in files this change does not own;
  * each is listed with its file and the fix, and an entry that stops failing is
  * red as stale — a bank that is not lowered hides progress and lets it regress.
  *
@@ -126,11 +117,11 @@ const MIN_ROOT_NAMES = 400;
 const MIN_COLOUR_NAMES = 340;
 /** colour-valued names declared by tool sheets (the population the retired gate never saw): 95 */
 const MIN_TOOL_COLOUR_NAMES = 90;
-/** colour names whose RESOLVED value theme_dark changes relative to base (leg 3's population): 265 */
+/** colour names whose RESOLVED value theme_dark changes relative to base: 265 */
 const MIN_THEME_CHANGED = 260;
-/** root palette combinations derived from the served selectors: base, redesign, redesign+pine */
-const MIN_COMBINATIONS = 3;
-/** `var()` references across the served set (the consumer corpus legs 1 and 4 read): 3897 */
+/** root palette combinations derived from the served selectors: base */
+const MIN_COMBINATIONS = 1;
+/** `var()` references across the served set (the consumer corpus legs 1 and 3 read): 3897 */
 const MIN_VAR_REFS = 3800;
 /** served JS files scanned for token readers: 775 */
 const MIN_JS_FILES = 700;
@@ -174,7 +165,7 @@ const THEME_INVARIANT: ReadonlyArray<{ token: string; file: string; reason: stri
  * Vendor namespaces: names the served CSS declares or overrides for a library
  * whose OWN stylesheet is the other half — outside the served set, but on disk
  * and registered in `src/core/client_libs/registry.ts`. Leg 2 accepts the
- * vendor as the light declarer, leg 4 as the consumer, ONLY for names the
+ * vendor as the light declarer, leg 3 as the consumer, ONLY for names the
  * vendor file actually contains: a name the vendor never reads is judged like
  * any other (see `--ck-color-button-default-color` in DEAD_TOKENS).
  */
@@ -212,14 +203,13 @@ const DARK_ONLY_ORPHANS: ReadonlyArray<{ file: string; tokens: string[]; fix: st
 ];
 
 /**
- * DAY-ONE DEAD TOKENS (leg 4), banked shrink-only: declared on a global root,
+ * DAY-ONE DEAD TOKENS (leg 3), banked shrink-only: declared on a global root,
  * consumed by no served rule and read by no served JS. The fix is deletion or a
  * consumer, decided by the file's owner — never a dark twin.
  */
 const DEAD_TOKENS: ReadonlyArray<{ token: string; file: string }> = [
 	{ token: '--color_purple', file: 'client/dedalo/core/page/css/layout/vars_tokens.less' },
 	{ token: '--modal_mini_header_bg', file: 'client/dedalo/core/page/css/layout/vars_tokens.less' },
-	{ token: '--accent-hover', file: 'client/dedalo/core/page/css/redesign/_tokens.less' },
 	{
 		token: '--ck-color-button-default-color',
 		file: 'client/dedalo/core/services/service_ckeditor/css/service_ckeditor.less (dark root only; CKEditor 5 42.0.1 never reads this name — an orphan AND dead)',
@@ -241,7 +231,7 @@ const DEAD_TOKENS: ReadonlyArray<{ token: string; file: string }> = [
 ];
 
 /**
- * DAY-ONE LIGHT-DEAD TOKENS (leg 4), banked shrink-only: declared for light,
+ * DAY-ONE LIGHT-DEAD TOKENS (leg 3), banked shrink-only: declared for light,
  * every consumer under the dark root. In light the surface those consumers
  * paint comes from somewhere else (a literal, an alias) — the shape C10 found
  * under `--debug_info_bar_bg`. The fix is one unconditional consumer per token
@@ -351,7 +341,7 @@ function parseRootCompound(
 
 /**
  * Walk one compiled sheet. Rule bodies are flat in compiled CSS; the brace
- * stack is kept so a rule under `@media …` knows it (leg 5) and a `@media`
+ * stack is kept so a rule under `@media …` knows it (leg 4) and a `@media`
  * wrapper is never mistaken for a selector. Every `var(--x)` in any body is a
  * consumer; every `--x:` on a root compound is a declaration.
  */
@@ -406,8 +396,7 @@ function readSheet(
 }
 
 // ---------------------------------------------------------------------------
-// The cascade model. An `<html>` attribute set A (e.g. ["data-design=redesign",
-// "data-theme=dark"]) selects the applicable declarations; the winner is the
+// The cascade model. An `<html>` attribute set A (e.g. ["data-theme=dark"]) selects the applicable declarations; the winner is the
 // deepest element, then the most specific, then the last in byte order.
 // ---------------------------------------------------------------------------
 
@@ -614,7 +603,6 @@ const comboLabel = (C: string[]): string => (C.length === 0 ? 'base' : C.join('+
 interface Findings {
 	untwinned: string[];
 	orphans: string[];
-	nonDiverging: string[];
 	dead: string[];
 	lightDead: string[];
 	conflicting: string[];
@@ -638,7 +626,6 @@ function analyse(
 	const f: Findings = {
 		untwinned: [],
 		orphans: [],
-		nonDiverging: [],
 		dead: [],
 		lightDead: [],
 		conflicting: [],
@@ -651,12 +638,12 @@ function analyse(
 
 	for (const name of colourNames) {
 		const decls = corpus.declarationsOf(name);
-		// leg 5b: a root palette under a conditional at-rule is outside the attribute axis
+		// leg 4b: a root palette under a conditional at-rule is outside the attribute axis
 		for (const d of decls) {
 			if (d.atRules.length > 0)
 				f.underAtRule.push(`${name} under ${d.atRules.join(' ')} (${d.file})`);
 		}
-		// leg 5a: same combination, two sheets/elements, different values → winner is load-order
+		// leg 4a: same combination, two sheets/elements, different values → winner is load-order
 		const byCombo = new Map<string, RootDecl[]>();
 		for (const d of decls) {
 			const k = `${d.positive.join('&')}|${d.negated.join('&')}`;
@@ -673,9 +660,9 @@ function analyse(
 		const vendored = exempt.vendor.has(name);
 		const dead = exempt.dead.has(name);
 
-		// leg 4: declared, never consumed
+		// leg 3: declared, never consumed
 		if (!consumed && !vendored) f.dead.push(name);
-		// leg 4b: declared for light, consumed only under dark
+		// leg 3b: declared for light, consumed only under dark
 		if (consumed && !vendored && !dead && corpus.winner(name, []) !== undefined) {
 			const cs = corpus.consumersOf(name);
 			if (cs.length > 0 && cs.every((c) => c.darkScoped) && !corpus.jsText.includes(name))
@@ -702,7 +689,7 @@ function analyse(
 		}
 	}
 
-	// leg 3: every base-theme-changed token diverges under every other combination
+	// anti-vacuity population: every base-theme-changed token
 	for (const theme of themes) {
 		const base = combos.find((c) => c.length === 0) ?? [];
 		for (const name of colourNames) {
@@ -710,15 +697,6 @@ function analyse(
 			const d = corpus.resolve(`var(${name})`, [...base, theme]);
 			if (l === d || l === null || d === null) continue;
 			f.themeChanged.push(name);
-			for (const C of combos) {
-				if (C.length === 0) continue;
-				const cl = corpus.resolve(`var(${name})`, C);
-				const cd = corpus.resolve(`var(${name})`, [...C, theme]);
-				if (cl === cd)
-					f.nonDiverging.push(
-						`${name} @ ${comboLabel(C)}: ${cl} under both themes (${corpus.winner(name, [...C, theme])?.file})`,
-					);
-			}
 		}
 	}
 	return f;
@@ -802,7 +780,7 @@ describe('palette_axis_parity_tripwire', () => {
 		expect(jsFiles.length, 'served JS files scanned for token readers').toBeGreaterThanOrEqual(
 			MIN_JS_FILES,
 		);
-		// the axes are DERIVED: a theme value and at least the three combinations that ship today
+		// the axes are DERIVED: a theme value and the combination that ships today
 		expect(corpus.themeValues(), 'theme values named by served roots').toContain(
 			`${THEME_ATTR}=dark`,
 		);
@@ -812,14 +790,14 @@ describe('palette_axis_parity_tripwire', () => {
 		).toBeGreaterThanOrEqual(MIN_COMBINATIONS);
 		expect(
 			findings.themeChanged.length,
-			'tokens whose resolved value the dark theme changes (leg 3 population)',
+			'tokens whose resolved value the dark theme changes',
 		).toBeGreaterThanOrEqual(MIN_THEME_CHANGED);
 	});
 
 	test('leg 1 — every consumed colour token has a value chosen for dark, under every combination', () => {
 		expect(
 			findings.untwinned,
-			`A colour-valued custom property is declared for light and, under the named combination, the SAME declaration serves dark: the token keeps its light value where the ink over it follows the theme (the 1.09:1 --tool_identify_soft slab, the .menu_mobile_wrapper bug).\n\nFix: declare the dark value where the light one lives — a tool sheet adds its own \`:root[data-theme="dark"] { … }\` beside its \`:root\` (tool_print, tool_identify), or a line in theme_dark.less; the redesign line adds it to its dark twin. NEVER move a tool token into the core palette (css_token_duplication_tripwire forbids it), and never fix a ratio by darkening the brand fill. If the hue is one value on purpose, register it in THEME_INVARIANT with the reason.\n\nUntwinned:\n${list(findings.untwinned)}`,
+			`A colour-valued custom property is declared for light and, under the named combination, the SAME declaration serves dark: the token keeps its light value where the ink over it follows the theme (the 1.09:1 --tool_identify_soft slab, the .menu_mobile_wrapper bug).\n\nFix: declare the dark value where the light one lives — a tool sheet adds its own \`:root[data-theme="dark"] { … }\` beside its \`:root\` (tool_print, tool_identify), or a line in theme_dark.less. NEVER move a tool token into the core palette (css_token_duplication_tripwire forbids it), and never fix a ratio by darkening the brand fill. If the hue is one value on purpose, register it in THEME_INVARIANT with the reason.\n\nUntwinned:\n${list(findings.untwinned)}`,
 		).toEqual([]);
 	});
 
@@ -838,14 +816,7 @@ describe('palette_axis_parity_tripwire', () => {
 		).toEqual([]);
 	});
 
-	test('leg 3 — every token the dark theme changes resolves differently under dark in every combination', () => {
-		expect(
-			findings.nonDiverging,
-			`Under the named combination a token that theme_dark.less retunes computes to the SAME value in light and dark. That is the cascade result of the redesign tie (\`:root[data-design]\` and \`:root[data-theme="dark"]\` are both (0,2,0); the design line is emitted last, so its LIGHT literal wins under redesign+dark — button.light:hover shipped at 1.17:1 this way) or of a twin that is a COPY of the light value.\n\nDeclare the token in that combination's dark twin with a dark value.\n\nNon-diverging:\n${list(findings.nonDiverging)}`,
-		).toEqual([]);
-	});
-
-	test('leg 4 — no dead colour token beyond the banked day-one set, and the bank is exact', () => {
+	test('leg 3 — no dead colour token beyond the banked day-one set, and the bank is exact', () => {
 		const dead = new Set(findings.dead);
 		const unbanked = [...dead].filter((t) => !bankedDead.has(t));
 		expect(
@@ -859,7 +830,7 @@ describe('palette_axis_parity_tripwire', () => {
 		).toEqual([]);
 	});
 
-	test('leg 4b — no light-dead colour token beyond the banked day-one set, and the bank is exact', () => {
+	test('leg 3b — no light-dead colour token beyond the banked day-one set, and the bank is exact', () => {
 		const lightDead = new Set(findings.lightDead);
 		const unbanked = [...lightDead].filter((t) => !bankedLightDead.has(t));
 		expect(
@@ -873,14 +844,14 @@ describe('palette_axis_parity_tripwire', () => {
 		).toEqual([]);
 	});
 
-	test('leg 5 — the cascade is decidable: no cross-sheet conflict, no root palette under an at-rule', () => {
+	test('leg 4 — the cascade is decidable: no cross-sheet conflict, no root palette under an at-rule', () => {
 		expect(
 			findings.conflicting,
 			`Two served sheets (or two root elements) declare the same custom property at the same combination with DIFFERENT values. Tool sheets are injected by load_style() in whatever order the user opens tools, so the winner is runtime state no static reading can know — and this gate's legs 1–3 read a winner. Declare each name once per combination.\n\nConflicts:\n${list(findings.conflicting)}`,
 		).toEqual([]);
 		expect(
 			findings.underAtRule,
-			`A colour token is declared on a global root INSIDE a conditional at-rule (\`@media (prefers-color-scheme: …)\`). The palette axis is the \`data-theme\` / \`data-design\` / \`data-accent\` attributes the client sets; an OS-keyed root palette is outside it and outside this gate. Put the value under the attribute root.\n\nUnder at-rules:\n${list(findings.underAtRule)}`,
+			`A colour token is declared on a global root INSIDE a conditional at-rule (\`@media (prefers-color-scheme: …)\`). The palette axis is the \`data-theme\` attribute the client sets; an OS-keyed root palette is outside it and outside this gate. Put the value under the attribute root.\n\nUnder at-rules:\n${list(findings.underAtRule)}`,
 		).toEqual([]);
 	});
 
@@ -1001,7 +972,6 @@ describe('palette_axis_parity_tripwire', () => {
 			),
 		);
 		expect(f.untwinned).toEqual([]);
-		expect(f.nonDiverging).toEqual([]); // not theme-changed at base either: 2.c's case entirely
 	});
 
 	test('control — pairing by inheritance: a var() chain is paired iff its referent is', () => {
@@ -1021,51 +991,7 @@ describe('palette_axis_parity_tripwire', () => {
 		expect(unpaired.untwinned.map(nameOf).sort()).toEqual(['--fixed', '--tool_x']);
 	});
 
-	test('control — the redesign tie is read from the cascade result (legs 1 and 3)', () => {
-		// the design root is emitted AFTER the dark root and ties it at (0,2,0):
-		// its light literal wins under redesign+dark
-		const tie = analyse(
-			new Corpus(
-				[
-					core(
-						':root[data-design="redesign"] { --ink: #333333 } :root[data-design="redesign"][data-theme="dark"] { --canvas: #201e1b }',
-					),
-				],
-				'',
-			),
-		);
-		// --edge is `var(--ink)`: paired by inheritance in base, and unpaired with it here
-		expect(tie.untwinned.map(nameOf).sort()).toEqual(['--edge', '--ink']);
-		expect(tie.nonDiverging.map(nameOf).sort()).toEqual(['--edge', '--ink']);
-		// a COPIED twin inside the design line satisfies leg 1 and is still red in leg 3
-		const copied = analyse(
-			new Corpus(
-				[
-					core(
-						':root[data-design="redesign"] { --ink: #333333 } :root[data-design="redesign"][data-theme="dark"] { --ink: #333333; --canvas: #201e1b }',
-					),
-				],
-				'',
-			),
-		);
-		expect(copied.untwinned).toEqual([]);
-		expect(copied.nonDiverging.map(nameOf).sort()).toEqual(['--edge', '--ink']);
-		// a real twin is green on both
-		const twinned = analyse(
-			new Corpus(
-				[
-					core(
-						':root[data-design="redesign"] { --ink: #333333 } :root[data-design="redesign"][data-theme="dark"] { --ink: #f0ede6; --canvas: #201e1b }',
-					),
-				],
-				'',
-			),
-		);
-		expect(twinned.untwinned).toEqual([]);
-		expect(twinned.nonDiverging).toEqual([]);
-	});
-
-	test('control — a dark-only token is an orphan (leg 2); a dead token and a light-dead token are caught (leg 4)', () => {
+	test('control — a dark-only token is an orphan (leg 2); a dead token and a light-dead token are caught (leg 3)', () => {
 		const f = analyse(
 			new Corpus(
 				[
@@ -1089,7 +1015,7 @@ describe('palette_axis_parity_tripwire', () => {
 		expect(js.dead).toEqual([]);
 	});
 
-	test('control — the model refuses what it cannot decide (leg 5) and sees :not() and light-dark()', () => {
+	test('control — the model refuses what it cannot decide (leg 4) and sees :not() and light-dark()', () => {
 		const conflict = analyse(
 			new Corpus([core(), tool(':root { --ink: #000000 } .x { color: var(--ink) }')], ''),
 		);

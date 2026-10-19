@@ -1715,7 +1715,7 @@ export const ui = {
 			// rides the same ::before / --icon-path path as every registry button,
 			// so it is icon-consistent AND spinner-capable (ui.set_button_busy).
 			// The icon colour follows the `.warning` colour class (white on the
-			// classic orange, muted on the redesign-quiet variant).
+			// classic orange).
 			const tool_button = ui.build_button({
 				class_name		: 'warning ' + tool_context.model,
 				label			: tool_context.label,

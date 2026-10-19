@@ -349,7 +349,7 @@ const DECLARED: ReadonlyArray<Classification> = [
 		entrypoint: 'client/dedalo/core/page/css/main.less',
 		role: 'SPA_DOCUMENT',
 		document: 'client/dedalo/core/page/index.html — the one <link> the application boots with',
-		why: 'The application stylesheet: ~120 partials compiled into one file, carrying every root palette (classic light/dark, redesign light/dark, redesign+pine light/dark). Everything else in the app is injected into THIS document, which is why assertion 3 treats main.css plus the injected set as one cascade.',
+		why: 'The application stylesheet: ~120 partials compiled into one file, carrying every root palette (classic light/dark). Everything else in the app is injected into THIS document, which is why assertion 3 treats main.css plus the injected set as one cascade.',
 	},
 	{
 		entrypoint: 'client/dedalo/core/component_pdf/css/pdfjs_default_edit.less',
@@ -634,14 +634,14 @@ const declarationKey = (declaration: RootDeclaration): string =>
 	`${declaration.context}||${declaration.selector}||${declaration.name}`;
 
 /**
- * FLOORS for assertion 3, measured on 2026-09-06 over main.css + 37 tool sheets:
- * 871 root declarations, 6 distinct root selectors, 388 distinct token names.
+ * FLOORS for assertion 3, measured over main.css + 37 tool sheets:
+ * 691 root declarations, 2 distinct root selectors, 385 distinct token names.
  * Set AT the measurement. If a refactor moves the palette somewhere this walker
  * cannot see, these are what says so instead of "0 duplicates, green".
  */
-const MIN_ROOT_DECLARATIONS = 871;
-const MIN_ROOT_SELECTORS = 6;
-const MIN_ROOT_TOKEN_NAMES = 388;
+const MIN_ROOT_DECLARATIONS = 680;
+const MIN_ROOT_SELECTORS = 2;
+const MIN_ROOT_TOKEN_NAMES = 380;
 /** main.css + the 37 tool sheets injected into the same document. */
 const MIN_SPA_SHEETS = 38;
 
@@ -660,7 +660,7 @@ describe('css corpus — each palette token is declared once per root, in compil
 		expect(spaRootDeclarations.length).toBeGreaterThanOrEqual(MIN_ROOT_DECLARATIONS);
 		expect(
 			new Set(spaRootDeclarations.map((declaration) => declaration.selector)).size,
-			'Root palettes vanished from the compiled bytes: the theme × design × accent axes are ' +
+			'Root palettes vanished from the compiled bytes: the theme axis is ' +
 				'derived from the selectors this walk finds, so a drop here means whole palettes stopped ' +
 				'being judged.',
 		).toBeGreaterThanOrEqual(MIN_ROOT_SELECTORS);

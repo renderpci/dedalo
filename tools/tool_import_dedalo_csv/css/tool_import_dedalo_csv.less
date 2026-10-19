@@ -171,13 +171,10 @@
 				.warning {
 					// THE BRAND ORANGE IS A FILL, AND ITS INK IS --fg_on_brand.
 					// `@color_white` here was #ffffff on #f78a1c = 2.44:1 in the
-					// light theme every user sees (2.42:1 under the redesign
-					// palette): the official orange is a mid-tone, and no ink
+					// light theme every user sees: the official orange is a mid-tone, and no ink
 					// clears AA on it except the near-black the palette declares
-					// for exactly this purpose (--fg_on_brand, 7.29:1 classic /
-					// 7.34:1 redesign / 9.09:1 dark, and #fffefc under the pine
-					// accent, where the same token flips because the accent fill
-					// is a deep pine — which is the point of the token).
+					// for exactly this purpose (--fg_on_brand, 7.29:1 light /
+					// 9.09:1 dark — the same token the brand fill declares).
 					// The orange is NEVER darkened to buy contrast: it is
 					// Dédalo's identity colour (vars_tokens.less).
 					background-color: @color_orange_dedalo;

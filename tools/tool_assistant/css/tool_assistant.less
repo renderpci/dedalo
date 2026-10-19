@@ -33,7 +33,7 @@
 
 	// --- the indigo that CARRIES TEXT: the same hue, deepened enough for
 	// white. Same split the brand fix made (--color_orange_dedalo fill /
-	// --fg_on_brand ink) and the redesign line uses (--accent / --accent-text).
+	// --fg_on_brand ink).
 	--assistant_fill:       #4f46e5; // indigo-600: --assistant_on_fill on it 6.29:1 (was #6366f1, 4.47:1)
 	--assistant_fill_hover: #4338ca; // indigo-700: 7.90:1 under the same ink — hover deepens, never lightens toward the dead zone
 	--assistant_on_fill:    #ffffff; // ink on --assistant_fill. Flips per theme like --fg_on_brand (see the dark block)
@@ -67,7 +67,7 @@
 // Dark twins. Self-contained, like tool_print / tool_identify: nothing in
 // layout/theme_dark.less names this tool. `:root[data-theme="dark"]` (0,2,0)
 // outranks the bare `:root` above from any sheet, so these win under every
-// dark palette combination (dark, redesign-dark, redesign-pine-dark).
+// dark theme combination.
 //
 // The text-bearing fill follows the brand's dark-theme rule: the fill goes
 // LIGHT and its ink goes DARK (theme_dark.less --color_orange_dedalo #ffa54a /

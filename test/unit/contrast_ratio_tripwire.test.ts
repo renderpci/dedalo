@@ -13,31 +13,24 @@
  * any value and every gate stayed green.
  *
  * WHAT WAS WRONG, SECOND TIME. The first version of this gate read ONE file,
- * `main.css`, under TWO palettes, and excluded the design axis BY NAME. So:
+ * `main.css`, under TWO palettes. So:
  *   - the 37 runtime-injected tool sheets (334 KB, ~1,800 rules, appended to the
  *     SAME document by `load_style()`) were judged by nothing — 39 sub-AA pairs
  *     in 15 sheets shipped with every gate green, down to 1.61:1
  *     (`tool_print .flow_continuation_badge`) and 1.67:1 (`tool_tc .button_apply`
- *     in dark, `#00e801` on a tool token that dark had re-pointed to white);
- *   - the `[data-design="redesign"]` line — four root palettes that ship in
- *     `main.css` and are one URL parameter away — had no legibility floor at
- *     all: 35 light + 13 dark pairs below AA, minimum 2.17:1, and 29 + 12 of
- *     them were CLASSIC rules re-tokened by the palette, which is precisely the
- *     "paired-but-unreadable token" shape this gate exists to catch;
- *   - the accent axis (`[data-accent="pine"]`) was not even known to exist here,
- *     so `button.warning.new` at 2.69:1 under pine stayed green.
+ *     in dark, `#00e801` on a tool token that dark had re-pointed to white).
  *
  * WHAT THIS ASSERTS. For every SERVED stylesheet — the set is DERIVED from the
  * build (`entrypoints()` in scripts/build_css.ts, the single source of truth for
  * "what is compiled and shipped"; this gate re-globs nothing) — and for every
  * ROOT PALETTE the served bytes declare — DERIVED from every `:root`/`html`
- * selector carrying only `[data-*=…]` attribute constraints, so the (theme ×
- * design × accent) combinations are read off the CSS, not listed here by name —
+ * selector carrying only `[data-*=…]` attribute constraints, so the theme
+ * combinations are read off the CSS, not listed here by name —
  * every rule that declares BOTH a foreground and a background colour meets the
  * WCAG 2.1 relative-luminance contrast ratio of 4.5:1 (3:1 where the same rule
  * declares large text, SC 1.4.3's own exception), scored only under the
  * palettes its selector CAN match (`:not([data-theme="dark"])` is never scored
- * in dark; a `[data-design="redesign"]` rule is never scored in classic).
+ * in dark).
  *
  * THE DOCUMENT MODEL, because getting it wrong fills the gate with false reds:
  * a tool sheet is injected into the document that ALREADY carries `main.css`, so
@@ -124,14 +117,14 @@ const MIN_SERVED_SHEETS = 43;
 /** main.css parsed into 4,072 rules; the 37 tool sheets together into 1,819. */
 const MIN_MAIN_RULES = 4000;
 const MIN_TOOL_RULES = 1750;
-/** Root palettes derived from the served bytes: light, dark, redesign, redesign-dark, redesign-pine, redesign-pine-dark. */
-const MIN_PALETTES = 6;
-/** Every palette resolves > 220 tokens (measured: light 238, redesign 242, dark 334, redesign-dark 338). */
+/** Root palettes derived from the served bytes: light, dark. */
+const MIN_PALETTES = 2;
+/** Every palette resolves > 220 tokens (measured: light 238, dark 334). */
 const MIN_TOKENS_PER_PALETTE = 220;
-/** Pairs judged in main.css, summed over its 6 palettes (measured 1,172: light 179 … redesign-dark 208). */
-const MIN_MAIN_PAIRS = 1150;
-/** Pairs judged across the 37 tool sheets, summed over the 6 palettes (measured 492: 82 per palette). */
-const MIN_TOOL_PAIRS = 480;
+/** Pairs judged in main.css, summed over its palettes (measured 406: light 200, dark 206). */
+const MIN_MAIN_PAIRS = 400;
+/** Pairs judged across the 37 tool sheets, summed over the palettes (measured 172). */
+const MIN_TOOL_PAIRS = 160;
 
 /**
  * Entrypoints loaded into a document that does NOT carry main.css, so their
@@ -407,7 +400,7 @@ const satisfies = (c: AxisConstraint, palette: Palette): boolean =>
 
 /**
  * The AXES of a palette set: the attribute names that appear on root palettes
- * (`data-theme`, `data-design`, `data-accent` today — derived, never listed).
+ * (`data-theme` today — derived, never listed).
  * Any other `[data-*=…]` in a selector (`[data-category="…"]`, `[data-state=…]`)
  * is ELEMENT state, not a root axis, and constrains nothing here.
  */
@@ -424,20 +417,15 @@ function canMatchUnder(selector: string, palette: Palette, axes: Set<string>): b
 }
 
 /**
- * A readable, stable name for a palette: `light`, `dark`, `redesign-pine-dark`…
- * Design line first, then accent, then any axis this gate does not know yet
- * (alphabetical), the theme last — the theme is the axis every combination
- * has a value for, and `light` is its unnamed default.
+ * A readable, stable name for a palette: `light`, `dark`, `alt-dark`…
+ * Any axis this gate does not know about is ordered alphabetically, the theme
+ * last — the theme is the axis every combination has a value for, and `light`
+ * is its unnamed default.
  */
-const AXIS_ORDER = ['data-design', 'data-accent'];
 function paletteName(attrs: Record<string, string>): string {
-	const rank = (attr: string) => {
-		const i = AXIS_ORDER.indexOf(attr);
-		return i === -1 ? AXIS_ORDER.length : i;
-	};
 	const parts = Object.entries(attrs)
 		.filter(([attr]) => attr !== 'data-theme')
-		.sort(([a], [b]) => rank(a) - rank(b) || a.localeCompare(b))
+		.sort(([a], [b]) => a.localeCompare(b))
 		.map(([, value]) => value);
 	const theme = attrs['data-theme'];
 	if (theme !== undefined) parts.push(theme);
@@ -447,7 +435,7 @@ function paletteName(attrs: Record<string, string>): string {
 /**
  * The root palettes a document declares: one per DISTINCT attribute set on a
  * root-only selector, plus the bare default. Derived, never listed — a new axis
- * (`data-accent`) or a new value enters the judgement the moment its root block
+ * or a new value enters the judgement the moment its root block
  * ships, instead of waiting for someone to name it here.
  */
 function derivePalettes(sheets: CssRule[][]): Palette[] {
@@ -692,12 +680,11 @@ describe('contrast_ratio_tripwire', () => {
 	test('the palettes are DERIVED from the served root selectors, and every one resolves a full token map', () => {
 		const names = judgement.palettes.map((p) => p.name);
 		expect(names.length).toBeGreaterThanOrEqual(MIN_PALETTES);
-		// the two axes the client itself sets (theme.js toggles data-theme; the
-		// design toggle sets data-design) must both be present as root palettes —
-		// asserted on the ATTRIBUTE, not on a file name
+		// the theme axis the client itself sets (theme.js toggles data-theme)
+		// must be present as a root palette — asserted on the ATTRIBUTE, not on a
+		// file name
 		expect(judgement.palettes.some((p) => Object.keys(p.attrs).length === 0)).toBe(true);
 		expect(judgement.palettes.some((p) => p.attrs['data-theme'] === 'dark')).toBe(true);
-		expect(judgement.palettes.some((p) => p.attrs['data-design'] !== undefined)).toBe(true);
 		for (const palette of judgement.palettes) {
 			expect(
 				judgement.tokensPerPalette.get(palette.name) ?? 0,
@@ -785,19 +772,19 @@ describe('contrast_ratio_tripwire', () => {
 	test('a rule is scored only under the palettes its selector CAN match', () => {
 		const css = parseRules(
 			[
-				':root{--x:#aaaaaa;} :root[data-theme="dark"]{--x:#aaaaaa;} :root[data-design="redesign"]{--x:#aaaaaa;}',
+				':root{--x:#aaaaaa;} :root[data-theme="dark"]{--x:#aaaaaa;} :root[data-variant="alt"]{--x:#aaaaaa;}',
 				':root:not([data-theme="dark"]) .light_only{color:var(--x);background:#fff;}',
 				':root[data-theme="dark"] .dark_only{color:var(--x);background:#fff;}',
-				':root[data-design="redesign"] .design_only{color:var(--x);background:#fff;}',
+				':root[data-variant="alt"] .variant_only{color:var(--x);background:#fff;}',
 				'.everywhere{color:var(--x);background:#fff;}',
 				// element STATE, not a root axis: painted under every palette
 				'.chip[data-category="x"]{color:var(--x);background:#fff;}',
 			].join(' '),
 		);
 		const palettes = derivePalettes([css]);
-		expect(palettes.map((p) => p.name)).toEqual(['dark', 'light', 'redesign']);
+		expect(palettes.map((p) => p.name)).toEqual(['alt', 'dark', 'light']);
 		const axes = axesOf(palettes);
-		expect([...axes].sort()).toEqual(['data-design', 'data-theme']);
+		expect([...axes].sort()).toEqual(['data-theme', 'data-variant']);
 		const scored = (name: string) =>
 			judgeSheet('c', css, [css], palettes.find((p) => p.name === name) as Palette, axes)
 				.pairs.map((p) => p.selector)
@@ -812,12 +799,12 @@ describe('contrast_ratio_tripwire', () => {
 			'.everywhere',
 			':root[data-theme="dark"] .dark_only',
 		]);
-		expect(scored('redesign')).toEqual([
+		expect(scored('alt')).toEqual([
 			'.chip[data-category="x"]',
 			'.everywhere',
-			// redesign carries no data-theme, so a `:not([data-theme="dark"])` rule paints there too
+			// the variant root carries no data-theme, so a `:not([data-theme="dark"])` rule paints there too
 			':root:not([data-theme="dark"]) .light_only',
-			':root[data-design="redesign"] .design_only',
+			':root[data-variant="alt"] .variant_only',
 		]);
 	});
 
@@ -825,19 +812,19 @@ describe('contrast_ratio_tripwire', () => {
 		const css = parseRules(
 			[
 				':root{--a:1;} html{--b:2;} :root[data-theme="dark"]{--a:3;}',
-				':root[data-design="redesign"][data-accent="pine"][data-theme="dark"]{--a:4;}',
+				':root[data-variant="alt"][data-theme="dark"]{--a:4;}',
 				// scoped overrides are NOT palettes, and declare no combination
 				':root:not([data-theme="dark"]) .tool_header{--a:5;} :root[data-theme="dark"] .menu{--a:6;}',
 				'[data-theme="dark"] .x{--a:7;}',
 			].join(' '),
 		);
 		const palettes = derivePalettes([css]);
-		expect(palettes.map((p) => p.name)).toEqual(['dark', 'light', 'redesign-pine-dark']);
-		// `html` (0,0,1) is outranked by `:root` (0,1,0); the pine-dark root inherits
+		expect(palettes.map((p) => p.name)).toEqual(['alt-dark', 'dark', 'light']);
+		// `html` (0,0,1) is outranked by `:root` (0,1,0); the alt-dark root inherits
 		// the dark root's declarations it does not itself override
 		const tokens = collectTokens(
 			[css],
-			palettes.find((p) => p.name === 'redesign-pine-dark') as Palette,
+			palettes.find((p) => p.name === 'alt-dark') as Palette,
 		);
 		expect(tokens.get('--a')).toBe('4');
 		expect(tokens.get('--b')).toBe('2');

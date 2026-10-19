@@ -39,8 +39,7 @@
  * A literal is DRIFT when it has, or should have, a token, decided mechanically:
  *   HAS_TOKEN   a bare literal in a paint position whose value, normalised to 8-bit
  *               RGBA, EQUALS a value some custom property declared on a global root of
- *               the same served document already carries (in any axis: light, dark,
- *               design). It is by construction swappable for that `var()` today with
+ *               the same served document already carries (in either theme). It is by construction swappable for that `var()` today with
  *               zero pixel change — and it is exactly the site that will NOT move on
  *               the next retune.
  *   STALE_FB    `var(--x, <literal>)` where `--x` IS declared on a root of the document
@@ -193,19 +192,19 @@ const BANK = {
  * corpus is red instead of green. They are not the bank: these numbers may grow freely.
  */
 const FLOOR = {
-	/** served documents compiled — 43 today, and asserted equal to entrypoints() */
-	documents: 43,
-	/** CSS rules parsed across the corpus — 6057 today */
+	/** served documents compiled — 45 today, and asserted equal to entrypoints() */
+	documents: 45,
+	/** CSS rules parsed across the corpus — 6539 today */
 	rules: 5900,
-	/** root-declared custom properties resolving to a colour, in main.css — 273 today */
+	/** root-declared custom properties resolving to a colour, in main.css — 268 today */
 	token_names: 260,
-	/** distinct 8-bit RGBA values those tokens carry — 397 today */
-	token_values: 380,
-	/** literals on the right of a `--x:` — the palette defining itself — 738 today */
+	/** distinct 8-bit RGBA values those tokens carry — 278 today */
+	token_values: 270,
+	/** literals on the right of a `--x:` — the palette defining itself — 834 today */
 	token_declaration_literals: 650,
-	/** colour literals seen anywhere in the compiled corpus, any position — 1051 today */
+	/** colour literals seen anywhere in the compiled corpus, any position — 1141 today */
 	css_literals_seen: 1040,
-	/** JS files scanned under client/ + tools/, minus lib/ — 776 today */
+	/** JS files scanned under client/ + tools/, minus lib/ — 820 today */
 	js_files: 760,
 	/** of those, files carrying at least one colour literal — 21 today */
 	js_files_with_colour: 20,
@@ -468,7 +467,7 @@ function parseRules(css: string): CssRule[] {
 /**
  * A GLOBAL ROOT selector — the only place a declaration reaches the whole document.
  * Same grammar as `css_token_duplication_tripwire`: `body`/`*` count, attribute
- * qualifiers (`[data-theme="dark"]`, `[data-design="redesign"]`) count, a descendant
+ * qualifiers (`[data-theme="dark"]`) count, a descendant
  * (`:root .tool_x`) does not — a scoped override is bounded by its selector and is not
  * the palette.
  */
@@ -484,8 +483,7 @@ const isRootSelector = (selector: string): boolean =>
 
 /**
  * The document's palette: every custom property declared on a global root, with EVERY
- * value it takes across every axis the sheet declares (light `:root`, the dark root, the
- * design root…). A name is "declared" if any axis declares it; a literal "matches" the
+ * value it takes across every axis the sheet declares (light `:root`, the dark root). A name is "declared" if any axis declares it; a literal "matches" the
  * name if it equals any of those values — deliberately generous, because a literal that
  * equals the dark value and not the light one is coherent with a real decision
  * somewhere, and the drift this bank is about is the literal nobody can point at.

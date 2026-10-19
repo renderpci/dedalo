@@ -26,8 +26,7 @@
 	// direction each theme's hover naturally takes.
 	--tool_print_fill: #2a7d6f;
 	// Danger as INK on --bg_input (the Cancel and Delete buttons). --color_danger
-	// is tuned for the SURFACE: under redesign the input field is sunken
-	// (#f1efea) and #b25c50 on it is 4.03:1. The deep variant every light palette
+	// is tuned for the SURFACE: as ink on a light input field #b25c50 is 4.03:1. The deep variant every light palette
 	// tunes "under --fg_inverse" is deep enough to be read as ink too — #bd2130
 	// on #ffffff = 6.13:1, #7d4038 on #f1efea = 6.86:1 — while the dark palettes
 	// (twinned below) already carry --color_danger on their inputs (#ef5560 on
@@ -117,7 +116,7 @@
 			}
 			.tool_button.flash_ok { background: var(--color_green_success); color:#fff; border-color: var(--color_green_success); }
 			// --color_danger is the SURFACE-tuned red (4.53:1 under white in light,
-			// 3.42:1 in dark, 3.15:1 redesign-dark): as a slab under white ink it is
+			// 3.42:1 in dark): as a slab under white ink it is
 			// too bright in the dark palettes. --color_danger_dark is the one every
 			// palette tunes "under --fg_inverse" (6.13 / 8.24 / 7.89 / 6.62:1); the
 			// bright red stays on the border, where it is seen, not read.
@@ -612,8 +611,7 @@
 				font-weight: 600;
 				line-height: 1.4;
 				// An inverted chip: the theme's ink as the FILL, its surface as the ink
-				// (light #ffffff on #444444 = 9.74:1; dark #1b1d20 on #e5e7ea = 13.6:1;
-				// redesign 15.9:1, redesign-dark 12.3:1). It used to borrow the dashed
+				// (light #ffffff on #444444 = 9.74:1; dark #1b1d20 on #e5e7ea = 13.6:1). It used to borrow the dashed
 				// border's grey as a fill, but --border_strong is a LINE colour, tuned to
 				// separate surfaces, not to carry text: white on it is 1.66:1 in light.
 				// Inverting the theme pair keeps the chip legible on every axis and

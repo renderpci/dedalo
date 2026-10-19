@@ -22,7 +22,7 @@
 	// is an EDGE: the header's top edge, the drag-over outline, the spinner, the
 	// progress bar's colour — none of them carry text. Under dark, theme_dark
 	// brightens the edge hue to #9070c8 and --color_white inverts to the near-
-	// black surface ink, and that pair is 4.29:1 (3.94:1 under redesign-dark):
+	// black surface ink, and that pair is 4.29:1:
 	// a hue tuned to be SEEN at 4px is not a hue tuned to be READ under. So the
 	// fill is its own token, twinned below — light keeps the edge's exact value
 	// (#ffffff on #7152a5 = 6.08:1), dark lifts it just enough to carry the
@@ -32,8 +32,8 @@
 	--tool_export_fill: #7152a5;
 }
 :root[data-theme="dark"] {
-	// #1b1d20 (dark --color_white) on it = 5.61:1; #26241f (redesign-dark) =
-	// 5.15:1; as ink on the dark surfaces #1b1d20 / #1f2227 = 5.61 / 5.30:1.
+	// #1b1d20 (dark --color_white) on it = 5.61:1;
+	// as ink on the dark surfaces #1b1d20 / #1f2227 = 5.61 / 5.30:1.
 	// Hue-matched to the ramp theme_dark declares (between the #9070c8 edge and
 	// the #a080d8 :active fill, so the states stay distinguishable).
 	--tool_export_fill: #a08ac9;
