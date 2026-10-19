@@ -42,7 +42,7 @@ import { PINNED_IDENTITY, withInstallerIdentity } from '../helpers/installer_ide
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
 const TRIAL = { route: 'trial', entity: 'trial_museum' };
-const PLAN_OPTIONS = { rootPassword: 'Zz-Root-Secret-49q', requireRootPassword: true };
+const PLAN_OPTIONS = { rootPassword: 'Sentinel-Root-Kestrel-91', requireRootPassword: true };
 /** The data version docs/install/docker.md uses in its examples (not necessarily the current one). */
 const DOCS_EXAMPLE_TRIPLE = '7.0.0';
 
