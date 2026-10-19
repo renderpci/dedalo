@@ -170,6 +170,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The unit tier reads release tags' own blobs (client_update_code_render's
+          # legacy channel parse vs v7.0.0-beta.6): a shallow checkout has no tags,
+          # so that gate would SKIP here while the CI image (and its recorded floor)
+          # runs it — a skip the per-file floor rightly calls a regression.
+          fetch-depth: 0
 
       - name: Install dependencies (frozen lockfile)
         run: bun install --frozen-lockfile
