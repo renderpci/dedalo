@@ -429,7 +429,15 @@
 	--color_orange_border:           #f78512;
 	--color_orange_hover_bg:         #f17d08;
 	--color_orange_hover_border:     #e77808;
-	--color_orange_dark:             #b15c06; // AA as ink on --color_orange_light (was #c06407, 4.00:1)
+	// The DEEP-ORANGE INK (the fill/ink split: --color_orange_dedalo is a FILL,
+	// this is what may carry text on an orange field). Retuned #b15c06 →
+	// #98510a because the active field's tint is --color_hilite, one step
+	// deeper than --color_orange_light, and #b15c06 was 4.00:1 on it — under
+	// AA. Measured on its surfaces: 5.0:1 on the active tint (--color_hilite),
+	// 5.8:1 on --color_orange_light, 6.0:1 on the card, 5.2:1 on the canvas.
+	// Same value the redesign line declares as --accent-text, one hue across
+	// both lines. Dark twin: theme_dark.less (#f0a355, 5.6:1 on the dark tint).
+	--color_orange_dark:             #98510a;
 	--color_orange_light:            #fffaf5;
 	// button: info
 	--color_info_border:             #169aaf;

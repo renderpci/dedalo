@@ -149,14 +149,22 @@ BOTH shipped palettes. The palette carries the roles that make this possible:
 
 | Token | Role |
 |---|---|
-| `--color_orange_dedalo` | the accent FILL. Retuned in light to `#ad5e0d` (4.83:1 under white); the dark palette already retuned this same token, which is what proves the value is themeable and the brand lives in the logo asset. |
-| `--color_orange_dedalo_bright` | the bright logo orange, for DECORATION only — never behind text. |
-| `--fg_on_brand` | the ink on the brand fill. It flips per theme (white in light, near-black in dark), so no rule has to know which. |
+| `--color_orange_dedalo` | the accent FILL, the official `#f78a1c` in BOTH themes — a brand fact, never retuned to buy contrast. It is never ink: on the light card it is 2.44:1. |
+| `--fg_on_brand` | the ink on the brand fill — dark in both themes (`#16181b`, 7.29:1), so no rule has to know which. |
+| `--color_orange_dark` | the DEEP-orange INK: the ink on an orange field. Retuned to `#98510a` when the active field's tinted surface (`--color_hilite`, one step deeper than `--color_orange_light`) put the old value at 4.00:1; light 5.0:1 on that tint, dark `#f0a355` 5.6:1, and each design/accent carries its own pair. |
 | `--fg_on_accent` | the ink on a light COLOUR-CODED fill (the indexation amber and its siblings). Curators read those tags by hue, so the accessible fix is to flip the ink — 8.5:1 — not to mute the colour. |
 | `--bg_fill_inverse` | a neutral fill that carries the inverse ink at AA. Column headers and chips used the grey ramp's mid steps with white text (1.92:1); the ramp is structural (borders, dividers) and must not be darkened to serve one use, so the use got its own token. |
 | `--fg_inverse` | white in BOTH themes. `--color_white` is the theme's SURFACE ink and is DARK in dark, so a coloured chip's ink is `--fg_inverse`, never `--color_white`. |
 
 Gate: `test/unit/contrast_ratio_tripwire.test.ts`.
+
+That gate's own limit — a rule that paints ink and inherits its background is
+not a pair it can judge — is the ACTIVE field exactly: the label declares only a
+colour, and the tint behind it comes from the ancestor `.active` rule. The
+browser tier judges that rendered pair on its own named surface,
+`component_edit_active` (a wrapper built as production builds it, with the class
+`ui.component.activate` adds), added 2026-10-19 after the brand FILL shipped as
+the active label's ink at 2.05:1 with every gate green.
 
 ---
 
@@ -168,7 +176,7 @@ Gate: `test/unit/contrast_ratio_tripwire.test.ts`.
 | `client_keyboard_activation_tripwire` | hermetic | TOTAL census: every element a file creates and wires to a pointer event is keyboard-activable or enumerated in `engineering/client_a11y_backlog.json` | a listener on a node the file did not create has no resolvable element type; those sites are counted and floored, never judged |
 | `client_control_naming_tripwire` | hermetic | the naming chokepoint EXECUTED over a nested group tree (each control named by its OWN group, a named control left alone) AND over the SHIPPED label-less line-view shape, through whatever export `build_wrapper_edit`'s suppressed-label branch really calls + a TOTAL floored census that every `view_line_edit_*` goes through that chokepoint + a TOTAL, floored census that every text-entry control the login screen creates is named in the same file | it runs the module against a minimal DOM and reads the login source; that a real screen reader hears those names on the real surfaces is the browser tier |
 | `client_a11y_budget_tripwire` | hermetic | the axe verdict's every leg, and that the runner PROCESS exits on it (`--replay` subprocess) | whether axe finds a given violation is the browser tier's own run |
-| axe phase of `bun run test:client` | browser | axe-core over the named surfaces, judged against `engineering/client_a11y_budget.json` | it judges the named surfaces, not every page of the application |
+| axe phase of `bun run test:client` | browser | axe-core over the named surfaces — the record-edit field in its INACTIVE and ACTIVE state included — judged against `engineering/client_a11y_budget.json` | it judges the named surfaces, not every page of the application |
 | `test_a11y_keyboard` (browser suite) | browser | real `KeyboardEvent`s activate the real surfaces; a portal row's sibling columns each announce their OWN label (never the portal's) whether the control was committed with the subtree or arrived after it; the login form's fields carry names of their own; the dialog — built through `ui.attach_to_modal`, in production order — names itself from the header slotted after connect, inerts a background control at its own nesting level, traps Tab across both trees, restores focus, gives the page back when PARKED (minimize, driven by its own Enter path) and re-arms on restore, and never isolates anything when the caller declared it non-blocking | it drives the surfaces the module builds, not a live record |
 
 The two budgets — `client_a11y_budget.json` (axe, per surface and rule) and

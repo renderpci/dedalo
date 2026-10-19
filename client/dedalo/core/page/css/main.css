@@ -706,7 +706,7 @@ template {
   --color_orange_border: #f78512;
   --color_orange_hover_bg: #f17d08;
   --color_orange_hover_border: #e77808;
-  --color_orange_dark: #b15c06;
+  --color_orange_dark: #98510a;
   --color_orange_light: #fffaf5;
   --color_info_border: #169aaf;
   --color_info_hover_bg: #148ea1;
@@ -5310,6 +5310,11 @@ input::placeholder {
 .wrapper_component.player.active:not(.hilite_element) .column_remove {
   background-color: transparent;
 }
+.wrapper_component.edit.active > .label,
+.wrapper_component.search.active > .label,
+.wrapper_component.player.active > .label {
+  color: var(--color_orange_dark);
+}
 .wrapper_component.edit.active .show_on_active,
 .wrapper_component.search.active .show_on_active,
 .wrapper_component.player.active .show_on_active {
@@ -5493,7 +5498,7 @@ dd-modal .wrapper_component > .content_data.vertical,
   color: var(--field_value_fg);
 }
 .section_record.edit .wrapper_component.edit.active > .label {
-  color: var(--color_orange_dedalo);
+  color: var(--color_orange_dark);
 }
 .section_record.edit .wrapper_component.edit.active > .content_data {
   color: var(--field_value_fg);

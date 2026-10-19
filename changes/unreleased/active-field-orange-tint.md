@@ -1,5 +1,5 @@
 ---
-title: The selected field is fully tinted orange — its list surfaces included — in both themes
+title: The selected field is fully tinted orange — its list surfaces included — and its label stays readable in both themes
 type: fixed
 audience: user
 date: 2026-10-18
@@ -11,6 +11,11 @@ looked much like an inactive one.
 The active field now paints the palette's own orange field tint, on the whole
 component (label and value), in light and dark, and follows the design/accent a
 reader has chosen.
+
+The label on that tint is the palette's deep orange — 5.0:1 in light, 5.6:1 in
+dark, and each design and accent carries its own pair. The bright Dédalo orange
+it was painted with before is a *fill* colour: on the tint it measured 2.05:1,
+which is why the header of a selected Date or Text field was hard to read.
 
 Nothing paints a slab of its own over that tint any more. A portal's list draws a
 card — white in light, near-black in dark — for its rows to sit on, and each row

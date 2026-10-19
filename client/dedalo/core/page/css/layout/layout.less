@@ -455,6 +455,18 @@
 					}
 				}
 
+				// THE LABEL'S INK ON THE TINT. The tint IS the field's surface,
+				// so the label reads in the palette's DEEP orange —
+				// `--color_orange_dedalo` is a FILL (2.05:1 on the light tint,
+				// 4.76 dark) and no rule may put it behind text as ink.
+				// --color_orange_dark is 5.0:1 here (5.6 dark; each design and
+				// accent carries its own pair). Explicit because the shared
+				// label rule above paints every mode's label grey — 4.4:1 on
+				// the tint, under AA.
+				>.label {
+					color: var(--color_orange_dark);
+				}
+
 				.show_on_active {
 					display: block;
 				}
@@ -705,11 +717,14 @@
 			color: var(--field_value_fg); // full-strength value ink (was color_grey_4)
 		}
 
-		// refined active state: the orange accent stays on the label and the
-		// wrapper background/chrome; values keep readable ink while editing
+		// refined active state: the tint (painted by the `.active` rule above)
+		// IS the orange field, so the label ink is the palette's deep orange —
+		// the brand FILL is 2.05:1 on --color_hilite and can never be ink there.
+		// --color_orange_dark is 5.0:1 on the light tint (5.6 dark, and each
+		// design/accent carries its own pair); values keep readable ink.
 		&.active {
 			>.label {
-				color: var(--color_orange_dedalo); // explicit: the label rule above outranks the wrapper-level orange
+				color: var(--color_orange_dark); // explicit: the label rule above outranks the wrapper-level orange
 				// font-weight: 600;
 			}
 			>.content_data {

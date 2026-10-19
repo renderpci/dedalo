@@ -49,10 +49,11 @@ const mount_host = function (name) {
  * form goes through (ui.component.build_wrapper_edit) — the CLI-10 surface. The
  * input is appended AFTER the wrapper is built, which is the asynchronous shape
  * the real components have.
+ * @param {Object} [options] - {name, active}
  * @return {HTMLElement}
  */
-export const build_component_edit = function () {
-	const host = mount_host('component_edit');
+export const build_component_edit = function (options = {}) {
+	const host = mount_host(options.name || 'component_edit');
 
 	const instance = {
 		model: 'component_input_text',
@@ -64,13 +65,18 @@ export const build_component_edit = function () {
 		show_interface: { label: true },
 		permissions: 2,
 		context: { css: null, properties: {} },
-		active: false,
+		active: options.active === true,
 		filter: null,
 		paginator: null,
 	};
 
 	const content_data = ui.component.build_content_data(instance);
 	const wrapper = ui.component.build_wrapper_edit(instance, { content_data: content_data });
+	// what ui.component.activate adds (its step 4): the class IS the active
+	// state's whole visual contract — the field tint and, on it, the label ink.
+	if (options.active === true) {
+		wrapper.classList.add('active');
+	}
 	host.appendChild(wrapper);
 
 	// the control arrives after the wrapper is in the document, exactly as a real
@@ -84,6 +90,19 @@ export const build_component_edit = function () {
 
 	return { host, wrapper, input };
 }; //end build_component_edit
+
+/**
+ * BUILD_COMPONENT_EDIT_ACTIVE
+ * The SAME field, ACTIVATED. The active state is the one surface the contrast
+ * gate cannot see (the label declares no background; the tint comes from the
+ * ancestor rule) and the one the flat `component_edit` surface never mounted
+ * (`active: false`), so `#f78a1c` shipped at 2.05:1 on the tint with every gate
+ * green. Here axe reads the RENDERED pair.
+ * @return {Object}
+ */
+export const build_component_edit_active = function () {
+	return build_component_edit({ name: 'component_edit_active', active: true });
+}; //end build_component_edit_active
 
 /**
  * COMPONENT_INSTANCE
@@ -557,6 +576,7 @@ export const build_modal_non_blocking = function () {
  */
 export const SURFACE_BUILDERS = {
 	component_edit: build_component_edit,
+	component_edit_active: build_component_edit_active,
 	component_group_nested: build_component_group_nested,
 	component_line_row: build_component_line_row,
 	login_form: build_login_form,
