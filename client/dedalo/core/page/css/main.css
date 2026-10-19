@@ -5490,6 +5490,10 @@ dd-modal .wrapper_component > .content_data.vertical,
 .section_record.edit .wrapper_component.edit:hover:not(.active):not(.disabled_component):not(.component_section_id) {
   background-color: var(--field_hover_bg);
 }
+.section_record.edit .wrapper_component.edit:hover:not(.active):not(.disabled_component):not(.component_section_id) .list_body,
+.section_record.edit .wrapper_component.edit:hover:not(.active):not(.disabled_component):not(.component_section_id) .column_remove {
+  background-color: transparent;
+}
 .section_record.edit .wrapper_component.edit > .label {
   color: var(--field_label_fg);
   font-size: 1rem;

@@ -705,6 +705,16 @@
 		// tint never repaints that badge on hover
 		&:hover:not(.active):not(.disabled_component):not(.component_section_id) {
 			background-color: var(--field_hover_bg);
+
+			// Same law as the `.active` rule above: the tint IS the field's
+			// surface, so the list card and the grey remove slab painted inside
+			// it stop painting. Without this a portal shows a white band under
+			// its label the moment the pointer enters (empty portal: a bare
+			// white box; the tint's own colour was the only thing being hidden).
+			.list_body,
+			.column_remove {
+				background-color: transparent;
+			}
 		}
 
 		>.label {
