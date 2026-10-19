@@ -706,6 +706,9 @@ template {
   --color_orange_border: #f78512;
   --color_orange_hover_bg: #f17d08;
   --color_orange_hover_border: #e77808;
+  --color_warning_border: #bb4a17;
+  --color_warning_hover_bg: #b84a15;
+  --color_warning_hover_border: #ad4511;
   --color_orange_dark: #98510a;
   --color_orange_light: #fffaf5;
   --color_info_border: #169aaf;
@@ -873,6 +876,9 @@ template {
   --color_orange_border: #ff9a40;
   --color_orange_hover_bg: #ff9a40;
   --color_orange_hover_border: #ee8a30;
+  --color_warning_border: #f7935c;
+  --color_warning_hover_bg: #f7935c;
+  --color_warning_hover_border: #fa9d68;
   --color_orange_dark: #f0a355;
   --color_orange_light: #2a2218;
   --color_info_border: #30b8cc;
@@ -2202,16 +2208,17 @@ button.ghost:hover {
   background-color: var(--color_grey_15);
 }
 button.warning {
-  background-color: var(--color_orange_dedalo);
-  border-color: var(--color_orange_border);
-  color: var(--fg_on_brand);
+  background-color: var(--color_warning);
+  border-color: var(--color_warning_border);
+  color: var(--fg_on_warning);
+  --button-bg-color: var(--fg_on_warning);
 }
 button.warning:before {
   background-color: var(--button-bg-color, var(--color_white)) !important;
 }
 button.warning:hover {
-  background-color: var(--color_orange_hover_bg);
-  border-color: var(--color_orange_hover_border);
+  background-color: var(--color_warning_hover_bg);
+  border-color: var(--color_warning_hover_border);
 }
 button.info {
   background-color: var(--color_info);
@@ -4947,10 +4954,10 @@ button.button_spinner.success::before {
 .buttons_container .other_buttons_block button.warning:hover,
 .buttons_container > button.warning.search:hover,
 .buttons_container > button.warning.show_all:hover {
-  background-color: var(--color_orange_dedalo);
-  border-color: var(--color_orange_border);
-  color: var(--fg_on_brand);
-  --button-bg-color: var(--fg_on_brand);
+  background-color: var(--color_warning);
+  border-color: var(--color_warning_border);
+  color: var(--fg_on_warning);
+  --button-bg-color: var(--fg_on_warning);
 }
 /**
 * layout
@@ -28780,6 +28787,7 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 :root[data-design="redesign"] button.warning.new:hover,
 :root[data-design="redesign"] .button.warning.new:hover {
   background-color: var(--color_orange_hover_bg);
+  border-color: var(--color_orange_hover_border);
 }
 :root[data-design="redesign"] .header_wrapper_list .head_column {
   color: var(--fg_muted);
@@ -28841,6 +28849,7 @@ dd-modal > .text_area_draw_selector .layer_selector_container .layer_ul > li:hov
 }
 :root[data-design="redesign"] .search_global_container .search_container_selection .search_group_container .search_buttons_container .button.submit:hover {
   background-color: var(--color_orange_hover_bg);
+  border-color: var(--color_orange_hover_border);
 }
 :root[data-design="redesign"] .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group > .operator.and,
 :root[data-design="redesign"] .wrapper_search > .search_global_container > .search_container_selection .search_group_container .search_group > .operator.or {

@@ -240,15 +240,20 @@ button {
 		}
 	}
 	&.warning {
-		background-color: @color_orange_dedalo;
-		border-color: @color_orange_border;
-		color: var(--fg_on_brand) ;
+		background-color: @color_warning;
+		border-color: var(--color_warning_border);
+		color: var(--fg_on_warning) ;
+		// the icon takes the ink, not the literal white the other families fall
+		// back to: --fg_on_warning is the ONE ink that flips with the fill's
+		// lightness (white on the light theme's dark orange, near-black on the
+		// dark theme's bright one), so the glyph has to follow it
+		--button-bg-color: var(--fg_on_warning);
 		&:before {
 			background-color: var(--button-bg-color, @color_white) !important;
 		}
 		&:hover {
-			background-color: @color_orange_hover_bg;
-			border-color: @color_orange_hover_border;
+			background-color: var(--color_warning_hover_bg);
+			border-color: var(--color_warning_hover_border);
 		}
 	}
 	&.info {
@@ -787,9 +792,9 @@ button.button_spinner {
 	--button-bg-color: var(--fg_muted);
 
 	&:hover {
-		background-color: @color_orange_dedalo;
-		border-color: @color_orange_border;
-		color: var(--fg_on_brand);
-		--button-bg-color: var(--fg_on_brand);
+		background-color: @color_warning;
+		border-color: var(--color_warning_border);
+		color: var(--fg_on_warning);
+		--button-bg-color: var(--fg_on_warning);
 	}
 }

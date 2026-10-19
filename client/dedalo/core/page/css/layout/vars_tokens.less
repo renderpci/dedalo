@@ -429,6 +429,16 @@
 	--color_orange_border:           #f78512;
 	--color_orange_hover_bg:         #f17d08;
 	--color_orange_hover_border:     #e77808;
+	// button: warning. Its FILL/INK pair is the one the alert surfaces already
+	// use (--color_warning + --fg_on_warning): the warning button painted
+	// the BRAND fill with the brand's dark ink, so asking for white ink on it
+	// was 2.44:1. White is only possible off the brand fill, and --color_warning
+	// is that fill (4.62:1 under white). These are its edge and hover steps, same
+	// shape as the families above: border a touch deeper than the fill, hover
+	// deeper still — 5.21:1 under white.
+	--color_warning_border:          #bb4a17;
+	--color_warning_hover_bg:        #b84a15;
+	--color_warning_hover_border:    #ad4511;
 	// The DEEP-ORANGE INK (the fill/ink split: --color_orange_dedalo is a FILL,
 	// this is what may carry text on an orange field). Retuned #b15c06 →
 	// #98510a because the active field's tint is --color_hilite, one step
