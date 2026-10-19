@@ -204,7 +204,7 @@ a class). All event publishes are keyed to `self.id`, which is
 
 | method | publishes | purpose |
 | --- | --- | --- |
-| `paginate(offset)` | `paginator_goto_<id>` (payload: `offset`) | The core "go to this offset" action. Guards on caller/paginator `status` being ready, adds a `loading` class while the caller refreshes. |
+| `paginate(offset)` | `paginator_goto_<id>` (payload: `offset`) | The core "go to this offset" action. Guards on caller/paginator `status` being ready, adds a `loading` class while the caller refreshes, and measures the caller's `.list_body` so the page-turn height change can be animated (see below). |
 | `go_to_page_json(page)` | (via `paginate`) | Validates `1 ≤ page ≤ total_pages` and `page !== current`, converts page → offset (`(page-1) * limit`), then calls `paginate()`. |
 | `navigate_to_next_page()` | (via `go_to_page_json`) | Page `+ 1`. |
 | `navigate_to_previous_page()` | (via `go_to_page_json`) | Page `- 1`. |
@@ -217,6 +217,26 @@ a class). All event publishes are keyed to `self.id`, which is
     `caller.rqo.sqo.offset` and then re-navigates, which re-renders the
     paginator with the new state. Keeping one writer avoids the paginator and the
     caller drifting out of sync.
+
+### The page turn is animated
+
+The new page is often a different height than the old one (a value that took one
+line on one page takes six on the next). Replacing the rows used to snap the
+caller's `.list_body` to the new height in one frame, which moved the content
+below it — on a phone, the whole form under the user's finger.
+
+`paginate()` measures `.list_body` before publishing the event. When the caller
+publishes `render_<caller.id>`, a **one-shot** listener removes the `loading`
+class and animates the container from the measured height to the new one
+(200 ms, `--transition-base`), clipped while it runs so no row paints over the
+paginator. A page turn of equal height, a hidden list, or a user who asked for
+reduced motion gets the instant swap.
+
+The listener is one-shot on purpose: a repeating one would replay the stale
+`height_from` on every later render of the caller (a save, a mode change).
+
+The paginator's own `loading` dim is deferred (350 ms) in CSS, so a fast page
+turn no longer blinks the controls; the pointer lock is still immediate.
 
 ## How it fits with the rest of Dédalo
 
@@ -241,8 +261,8 @@ a class). All event publishes are keyed to `self.id`, which is
 - **[event_manager](../events.md)** — the decoupling layer. The paginator and its
   caller never hold direct references for navigation; they communicate purely
   through `paginator_goto_<id>` / `paginator_show_all_<id>` /
-  `reset_paginator_<id>` and the caller's `render_<caller.id>` event (the
-  paginator subscribes to it to drop its `loading` class).
+  `reset_paginator_<id>` and the caller's `render_<caller.id>` event (a one-shot
+  subscription drops the `loading` class and smooths the page-turn height).
 
 ## The caller contract
 
@@ -256,8 +276,8 @@ Any object can be a paginator caller if it provides:
 | `caller.get_total()` | async total count |
 | `caller.permissions` | inherited in `build()` |
 | `caller.status` / `caller.model` | `paginate()` readiness guard (`status==='rendered'`, except `model==='time_machine'`) |
-| `caller.node` | the element that gets the `loading` class during `paginate()` |
-| event `render_<caller.id>` | published by the caller after refresh; clears the `loading` class |
+| `caller.node` | the element that gets the `loading` class during `paginate()`; its `.list_body` is the height that gets smoothed |
+| event `render_<caller.id>` | published by the caller after refresh; the one-shot listener clears `loading` and animates the page-turn height |
 
 ## Examples
 

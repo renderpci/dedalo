@@ -8553,6 +8553,15 @@ body:has(.component_av.view_viewer) {
 .paginator.micro > .content_data .page_info {
   padding-left: 0.1rem;
 }
+.wrapper_paginator.loading {
+  opacity: 1;
+  animation: paginator_loading_dim 0.2s ease-out 0.35s forwards;
+}
+@keyframes paginator_loading_dim {
+  to {
+    opacity: 0.4;
+  }
+}
 @keyframes paginator_stale_spin {
   to {
     transform: rotate(360deg);

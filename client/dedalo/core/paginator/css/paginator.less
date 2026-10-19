@@ -238,6 +238,20 @@
 
 }//end .wrapper_paginator
 
+// A page turn is in flight. The global `.loading` dim (general.less) is applied
+// the moment the user clicks and removed when the new page renders, so a fast
+// response blinked the whole control row to 40% for one frame. Pointer lock is
+// still IMMEDIATE (the buttons really are unusable while the request runs); only
+// the dim is deferred, so it appears when the turn is actually slow.
+.wrapper_paginator.loading {
+	opacity: 1;
+	animation: paginator_loading_dim 0.2s ease-out 0.35s forwards;
+}
+
+@keyframes paginator_loading_dim {
+	to { opacity: 0.4; }
+}
+
 @keyframes paginator_stale_spin {
 	to { transform: rotate(360deg); }
 }

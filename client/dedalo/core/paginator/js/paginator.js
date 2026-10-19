@@ -398,6 +398,60 @@ paginator.prototype.get_offset = function() {
 
 
 /**
+* SMOOTH_PAGE_SWAP
+* The rows change height from page to page (a record's value is one line on one
+* page and eight on the next), and replacing them made the panel jump — on a
+* phone, where the inspector sits above the section, that jump moves the whole
+* form under the user's finger.
+*
+* A page turn is a FLIP: the new rows are already in the DOM when this runs, so
+* the FIRST keyframe (the height before the request) is applied before the next
+* paint, and the browser grows/shrinks the container over the page turn instead
+* of snapping it. The container is clipped while it animates, so the new rows
+* never paint over the paginator on the way down.
+*
+* @param {HTMLElement|null} node - The persistent rows container (.list_body).
+* @param {number} height_from - Its height, measured BEFORE the page turn.
+* @returns {void}
+*/
+const smooth_page_swap = function(node, height_from) {
+
+	if (!node || !(height_from>0) || typeof node.animate!=='function') {
+		return
+	}
+
+	const height_to = node.getBoundingClientRect().height
+	// nothing to smooth: same height, an empty page, or not laid out
+	if (!(height_to>0) || Math.abs(height_to-height_from)<2) {
+		return
+	}
+	// the user asked for less motion: a page turn is not an animation surface
+	if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+		return
+	}
+
+	const previous_overflow	= node.style.overflow
+	node.style.overflow		= 'hidden'
+
+	// 200ms = --transition-base, same curve as --ease-standard: a page turn is
+	// the same weight of change as the rest of the interface's motion.
+	const animation = node.animate(
+		[
+			{ height: height_from + 'px' },
+			{ height: height_to + 'px' }
+		],
+		{ duration: 200, easing: 'cubic-bezier(0.2, 0, 0, 1)' }
+	)
+	const restore = () => {
+		node.style.overflow = previous_overflow
+	}
+	animation.addEventListener('finish', restore)
+	animation.addEventListener('cancel', restore)
+}//end smooth_page_swap
+
+
+
+/**
 * PAGINATE
 * Navigates to the page starting at the given absolute record offset.
 *
@@ -438,6 +492,15 @@ paginator.prototype.paginate = async function(offset) {
 		// 	self.caller.node[0].style.minHeight = self.caller.node[0].offsetHeight + 'px'
 		// }
 
+	// the rows container whose height changes with the page. Measured NOW, while
+	// the old page is still mounted (see smooth_page_swap).
+		const height_node = self.caller.node?.querySelector
+			? (self.caller.node.querySelector('.list_body') || self.caller.node)
+			: null
+		const height_from = height_node
+			? height_node.getBoundingClientRect().height
+			: 0
+
 	// set the new offset to the current paginator
 		// self.offset = offset
 
@@ -452,7 +515,12 @@ paginator.prototype.paginate = async function(offset) {
 			self.node.classList.remove('loading')
 		}
 		self.events_tokens.push(
-			event_manager.subscribe('render_'+self.caller.id, render_handler)
+			// ONE-SHOT: a repeating listener would replay the stale `height_from`
+			// on every later render of the caller (a save, a mode change).
+			event_manager.subscribe_once('render_'+self.caller.id, () => {
+				render_handler()
+				smooth_page_swap(height_node, height_from)
+			})
 		)
 		// on destroy, remove loading class to the node	(! do not include this subscription into events_tokens)
 		event_manager.subscribe('render_'+self.id, render_handler)
