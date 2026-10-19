@@ -197,6 +197,17 @@ Merged since the last release; these ship with the next one.
     always answered in **edit** mode, whatever mode the link asks for. Links to a
     component or an area keep the mode they ask for.
 
+- **Inspector history panels read as blocks on a phone or tablet**
+
+    Below the desktop break the inspector drops its rail and renders inline, where
+    *Latest changes* and *Component history* kept a narrow multi-column table shape
+    designed for the side panel. The column labels were squeezed into 15px-wide
+    strips (one letter per line) and the values were pushed out of their cells.
+
+    Each history entry is now one block: the date (orange) and author on the first
+    line, what changed next, and the snapshot value last, separated by a hairline.
+    The desktop side panel is unchanged.
+
 - **The Section id search field fills its card like every other search field.**
 
     In the search panel, the *Id* field of a section rendered its value box at its content width: the box stayed short and left dead space inside the card, while every other field's box spanned the card. It now fills the card like the rest, in both the empty and the valued (highlighted) state.

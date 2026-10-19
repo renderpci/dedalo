@@ -266,4 +266,152 @@
 		}
 	}//end panel fit
 
+
+	// ---------------------------------------------------------------------
+	// PHONE / TABLET — the inspector panels go inline full-width below the
+	// desktop break (section.less drops the rail), and there the generic LIST
+	// mobile shape takes over: the header row is hidden and `.column:before`
+	// paints each cell's label as a 22%-wide band. In a three/four-column panel
+	// that band is 15-30px wide, so "Quién" / "Dónde" / "Valor" were set one
+	// letter per line and the values were pushed out of their cells.
+	//
+	// These panels do not need the generic band: their rows are short enough to
+	// read as one block per change. Collapse to a single column and place the
+	// cells explicitly — date (orange) and author on the first line, what
+	// changed next, the snapshot value last.
+	// ---------------------------------------------------------------------
+	@media screen and (max-width: @width_break_point_0) {
+
+		&.tm_view_mini {
+
+			// the three-column mini grid belongs to the ~300px desktop rail
+			> .list_body {
+				display: block;
+			}
+
+			> .list_body > .content_data > .section_record {
+				display: grid;
+				grid-template-columns: 1fr auto auto;
+				align-items: baseline;
+				column-gap: var(--space-3);
+				padding: var(--space-2) var(--space-3);
+
+				// hairline BETWEEN entries only
+				& + .section_record {
+					border-top: 1px solid var(--border_default);
+				}
+
+				.column_section {
+					display: block;
+					width: auto;
+					padding: 0;
+					box-shadow: none;
+					overflow: visible;
+
+					&::before {
+						display: none;
+					}
+
+					// When
+					&.column_dd559 {
+						grid-column: 1;
+						grid-row: 1;
+						color: var(--color_orange_dedalo);
+						font-weight: 600;
+					}
+					// Who
+					&.column_dd578 {
+						grid-column: 3;
+						grid-row: 1;
+						color: var(--fg_muted);
+						text-align: right;
+					}
+					// What
+					&.column_dd577 {
+						grid-column: 1 / -1;
+						grid-row: 2;
+						padding-top: var(--space-1);
+					}
+					// Value (raw snapshot preview)
+					&.column_dd1574 {
+						grid-column: 1 / -1;
+						grid-row: 3;
+						padding-top: var(--space-1);
+						color: var(--fg_muted);
+						font-size: 0.8rem;
+					}
+				}
+			}
+
+			// the snapshot value stays a preview, not a wall of text
+			.span_value {
+				display: -webkit-box;
+				-webkit-line-clamp: 3;
+				line-clamp: 3;
+				-webkit-box-orient: vertical;
+				overflow: hidden;
+				height: auto;
+			}
+		}//end &.tm_view_mini
+
+		&.tm_view_history {
+
+			> .list_body {
+				display: block;
+			}
+
+			> .list_body > .content_data > .section_record {
+				display: grid;
+				grid-template-columns: 1fr auto auto;
+				align-items: baseline;
+				column-gap: var(--space-3);
+				padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+				border-top: 1px solid var(--border_default);
+
+				.column {
+					display: block;
+					width: auto;
+					padding: 0;
+					box-shadow: none;
+					overflow: visible;
+					// the desktop rows tint their meta cells; the phone block is
+					// one surface, separated by the hairline above
+					background-color: transparent;
+
+					&::before {
+						display: none;
+					}
+
+					// When
+					&:nth-child(1) {
+						grid-column: 1;
+						grid-row: 1;
+						color: var(--color_orange_dedalo);
+						font-weight: 600;
+					}
+					// Who
+					&:nth-child(2) {
+						grid-column: 2;
+						grid-row: 1;
+						color: var(--fg_muted);
+						text-align: right;
+					}
+					// the component's own value
+					&:nth-child(3) {
+						grid-column: 1 / -1;
+						grid-row: 2;
+						padding-top: var(--space-1);
+					}
+					// note button
+					&:nth-child(4) {
+						grid-column: 3;
+						grid-row: 2;
+						align-self: end;
+					}
+				}
+			}
+		}//end &.tm_view_history
+
+	}//end phone / tablet
+
 }//end .tm_list
