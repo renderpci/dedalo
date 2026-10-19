@@ -72,7 +72,8 @@
 ## General
 
 - [ ] TODO-046: Evaluate the change of client path to /public/ instead of /dedalo/client/.
-- [ ] TODO-057: Update documentation to include backups procedures for schedule.
+- [ ] TODO-058: Update documentation to include backups procedures for schedule.
+- [ ] TODO-059: Remove AI agent button. The functionality will be integrated with external systems (Opencode, Claude Code, etc.).
 
 ## Installation
 - [ ] TODO-047: Seed database profile records (dd234) are not configured at all (see v6 profiles from installation DB)
@@ -104,4 +105,5 @@ DEDALO_DEBUG_API_ERRORS=true
 to start to work.
 - [x] TODO-055: include a local certificate for developer path. (2026-10-17: local_ca by default from deploy/dedalo-tls-rotate.sh into <private>/tls, trusted on this machine, HTTPS dev listener; `bun run tls:renew` / `tls:untrust`. Gates test/unit/install_dev_tls_native.test.ts, test/unit/dev_listener_tls_native.test.ts. Closes the earlier open item "local certificate (self signed) for easy install in intranets or local environments" — the production Local CA covers that route too.)
 - [ ] TODO-056: Add Caddy as an eligible web server (auto-manages certificates).
+
 
