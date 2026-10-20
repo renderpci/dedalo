@@ -229,6 +229,14 @@ Merged since the last release; these ship with the next one.
     instant swap instead. The paginator's own dim is deferred too: a fast page turn
     no longer blinks the arrows, and a slow one still fades.
 
+- **Search: the drag-a-field slot is the same height as the field cards beside it**
+
+    The search panel's third slot (**Drag a field here**) was taller or shorter than
+    the field cards next to it, so a row of filters looked ragged. Every card in a
+    row now takes the row's height: the tallest field card, or the drop slot, sets it
+    for all of them. A drop slot alone on a row still matches a field card. Its **+** and the one on
+    **Add group** are the light outlined glyph, not the filled disc.
+
 - **Thesaurus lists are sorted by name in the reader's language.**
 
     The installer's *Thesauri* step and the *Add hierarchy* maintenance panel now list thesauri in the same order: alphabetically by their name in your language, with accents ignored, inside each typology group. Before, the installer sorted by code, so *Spain* (`es`) appeared between *Eritrea* and *Ethiopia*, and the panel used a third order that put accented names after Z.

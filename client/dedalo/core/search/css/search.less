@@ -12,6 +12,10 @@
 @space_s:    0.25rem;
 @card_inset: 0.75rem;
 
+// One settled card height, shared by a field card and the empty drop slot, so
+// a row of a single card and a row with a field read the same.
+@card_min_height: calc(3 * @card_inset + 0.85rem * 1.3 + 2rem + 2px);
+
 // WCAG 2.5.5 tap target — the same figure as the tools tier
 // (`@phone_hit_target`, tools_common/css/tool_responsive.less). File-scoped
 // because TWO blocks need it and they are not nested in each other: the compact
@@ -41,7 +45,7 @@
 		// does not jump while the page loads. Built from the same parts the
 		// card is made of — label (inset + line + inset), value line (2rem)
 		// + bottom inset, borders — so it tracks them if they change.
-		min-height: calc(3 * @card_inset + 0.85rem * 1.3 + 2rem + 2px);
+		min-height: @card_min_height;
 		transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 
 		// allow to view tooltip / open autocomplete over other components.
@@ -540,7 +544,9 @@
 						grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
 						gap: @space;
 						align-content: start;
-						align-items: start; // each card keeps its own height
+						// every card in a row takes the row's height: the tallest
+						// field card, or the drop slot, sets it for all of them
+						align-items: stretch;
 
 						// grid order: fields (0) → add_field slot (1) → nested
 						// groups (2) → add_group (3). Fields dropped later are
@@ -636,7 +642,9 @@
 						>.add_field {
 							order: 1;
 							width: 100%; // global button is max-content: fill the track like a card
-							min-height: 4.5rem; // an empty card's height
+							height: auto; // the global `button { height: min-content }` would opt out of the grid stretch
+							align-self: stretch;
+							min-height: @card_min_height; // same as an empty field card, so a lone slot still matches
 							display: flex;
 							align-items: center;
 							justify-content: center;
@@ -656,8 +664,8 @@
 								width: 1em;
 								height: 1em;
 								background-color: currentColor;
-								-webkit-mask: url(../../themes/default/icons/add.svg) center / contain no-repeat;
-										mask: url(../../themes/default/icons/add.svg) center / contain no-repeat;
+								-webkit-mask: url(../../themes/default/icons/add_light.svg) center / contain no-repeat;
+										mask: url(../../themes/default/icons/add_light.svg) center / contain no-repeat;
 							}
 
 							&:hover, &:focus-visible {
@@ -694,8 +702,8 @@
 								width: 1em;
 								height: 1em;
 								background-color: currentColor;
-								-webkit-mask: url(../../themes/default/icons/add.svg) center / contain no-repeat;
-										mask: url(../../themes/default/icons/add.svg) center / contain no-repeat;
+								-webkit-mask: url(../../themes/default/icons/add_light.svg) center / contain no-repeat;
+										mask: url(../../themes/default/icons/add_light.svg) center / contain no-repeat;
 							}
 
 							&:hover, &:focus-visible {
