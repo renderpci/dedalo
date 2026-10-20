@@ -226,7 +226,9 @@ const same = await get_instance({
 ```js
 // model omitted: get_instance calls data_manager.get_element_context to learn
 // the model and the authoritative lang, and injects options.context to avoid a
-// second round-trip during init().
+// second round-trip during init(). The returned lang REPLACES options.lang: the
+// request sends none, so the server answers the user's data lang for a
+// translatable component and lg-nolan for a non-translatable one.
 const element = await get_instance({
     tipo         : 'oh15',
     section_tipo : 'oh1',

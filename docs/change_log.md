@@ -183,6 +183,18 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Translatable fields in tool forms show the value in your data language, not always in Spanish**
+
+    Some forms build their fields by asking the server for each field's definition — the
+    Hierarchy tool's *Name*, for example. When that request named no language, the server
+    answered Spanish, so a record holding *Unofficial toponymy* in English and
+    *Toponimia no oficial* in Spanish showed the Spanish value to a user working in English,
+    and an edit there was saved into the Spanish value.
+
+    Those fields now use your current data language, as every other field does.
+
+    Wire contract: `WC-2026-10-20-element-context-default-lang`.
+
 - **Clicking a field puts the cursor in it, every time**
 
     Clicking into an Email or Number field while another field was selected
@@ -901,11 +913,12 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 3 entries"
+??? note "Wire contract — 4 entries"
 
     - `WC-2026-10-15-release-identity-from-tag`
     - `WC-2026-10-19-design-line-removed`
     - `WC-2026-10-19-inspector-record-info`
+    - `WC-2026-10-20-element-context-default-lang`
 
 ## 7.0.0-beta.6 — 2026-10-15
 

@@ -1417,16 +1417,11 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		}
 		const sectionTipo = source.section_tipo ?? tipo;
 		const mode = source.mode ?? 'list';
-		// LEDGER — coverage plan §4.4 D9, KNOWN-OPEN: the fallback lang is HARDCODED
-		// 'lg-spa' in a codebase whose request lang is ALS-scoped
-		// (resolve/request_lang.ts currentApplicationLang / currentDataLang), so a
-		// caller that omits source.lang gets Spanish rather than its own request lang.
-		// GATED AS CURRENT BEHAVIOUR (not as desirable) by
-		// test/unit/get_element_context_native.test.ts ("source.lang defaults to
-		// 'lg-spa'"), which is the one element family where the default is observable
-		// on the wire — changing it is therefore a wire edit needing an
-		// engineering/wire_contract/ entry, not a silent repair.
-		const lang = source.lang ?? 'lg-spa';
+		// Omitted source.lang = the REQUEST's data lang (PHP DEDALO_DATA_LANG), never
+		// an install literal: get_instance builds a model-less component from this
+		// context's lang — a literal reads a translatable field in the wrong
+		// language (WC-2026-10-20-element-context-default-lang).
+		const lang = source.lang ?? currentDataLang();
 		const { getModelByTipo } = await import('../../ontology/resolver.ts');
 		const model = source.model ?? (await getModelByTipo(tipo));
 		// Covered element families: sections, components, and the area models

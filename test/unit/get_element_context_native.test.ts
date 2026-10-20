@@ -28,10 +28,15 @@
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { config } from '../../src/config/config.ts';
 import { dispatchRqo } from '../../src/core/api/dispatch.ts';
 import { coreApiActions } from '../../src/core/api/handlers/dd_core_api.ts';
 import { getPermissions, resolvePrincipal } from '../../src/core/security/permissions.ts';
-import { createSession, getSession } from '../../src/core/security/session_store.ts';
+import {
+	createSession,
+	getSession,
+	setSessionLangs,
+} from '../../src/core/security/session_store.ts';
 import {
 	ACL_ADMIN_USER_ID,
 	ACL_NON_ADMIN_USER_ID,
@@ -46,7 +51,7 @@ const GRANTED_SECTION = 'test3';
  * dd88 (maintenance) — model `area_maintenance`, granted at 2 to the fixture
  * ADMIN and refused to the non-admin. It is also TRANSLATABLE, so its context
  * entry echoes the request lang: the one element family where the handler's
- * `source.lang` default is observable on the wire.
+ * `source.lang` default (the request data lang) is observable on the wire.
  */
 const ADMIN_ONLY_AREA = 'dd88';
 /** dd151 — a `relation_type` node: a real tipo the generic builder cannot build. */
@@ -57,8 +62,11 @@ const UNCOVERED_MODEL = 'relation_type';
 const RESTRICTED_TOOL = 'tool_export';
 /** A registered `always_active` tool — authorized for BOTH identities. */
 const ALWAYS_ACTIVE_TOOL = 'tool_user_admin';
-/** The hardcoded default in `source.lang ?? 'lg-spa'`. */
-const DEFAULT_LANG = 'lg-spa';
+/**
+ * A data lang the session picks that is NOT the install default, so the
+ * session lane and the install-default lane answer differently.
+ */
+const SESSION_DATA_LANG = config.menu.dataLang === 'lg-eng' ? 'lg-cat' : 'lg-eng';
 
 function contextFor(userId: number, isGlobalAdmin: boolean, principal: unknown) {
 	const token = createSession(userId, `zzcnt_${userId}`, isGlobalAdmin);
@@ -260,22 +268,40 @@ describe.if(DB_READY)('dd_core_api.get_element_context', () => {
 		});
 	});
 
-	test("source.lang defaults to 'lg-spa' and an explicit lang overrides it", async () => {
+	test('source.lang defaults to the request data lang and an explicit lang overrides it', async () => {
 		// dd88 is an AREA and translatable, so buildStructureContext stamps the
-		// request lang verbatim instead of forcing lg-nolan — the only place this
-		// hardcoded default is visible on the wire.
-		const defaulted = await dispatchRqo(
+		// request lang verbatim instead of forcing lg-nolan. WC-2026-10-20-
+		// element-context-default-lang: an omitted lang is the REQUEST's data lang
+		// (session override → install default), never a literal — get_instance
+		// builds a model-less component from this lang.
+		const noOverride = await dispatchRqo(
 			elementRqo({ tipo: ADMIN_ONLY_AREA }) as never,
 			adminContext as never,
 		);
-		expect(defaulted.status).toBe(200);
-		expect(entriesOf(defaulted.body)[0]?.lang).toBe(DEFAULT_LANG);
+		expect(noOverride.status).toBe(200);
+		expect(entriesOf(noOverride.body)[0]?.lang).toBe(config.menu.dataLang);
+
+		// The session's own data lang wins over the install default.
+		const token = createSession(ACL_ADMIN_USER_ID, `zzcnt_lang_${ACL_ADMIN_USER_ID}`, true);
+		setSessionLangs(token, { dataLang: SESSION_DATA_LANG });
+		const session = getSession(token);
+		expect(session?.dataLang).toBe(SESSION_DATA_LANG);
+		const sessionContext = {
+			...(adminContext as Record<string, unknown>),
+			session,
+			csrfCandidate: session?.csrfToken ?? null,
+		};
+		const fromSession = await dispatchRqo(
+			elementRqo({ tipo: ADMIN_ONLY_AREA }) as never,
+			sessionContext as never,
+		);
+		expect(entriesOf(fromSession.body)[0]?.lang).toBe(SESSION_DATA_LANG);
 
 		const explicit = await dispatchRqo(
-			elementRqo({ tipo: ADMIN_ONLY_AREA, lang: 'lg-eng' }) as never,
-			adminContext as never,
+			elementRqo({ tipo: ADMIN_ONLY_AREA, lang: 'lg-fra' }) as never,
+			sessionContext as never,
 		);
-		expect(entriesOf(explicit.body)[0]?.lang).toBe('lg-eng');
+		expect(entriesOf(explicit.body)[0]?.lang).toBe('lg-fra');
 	});
 
 	test('source.mode rides through to the built entry (default list)', async () => {

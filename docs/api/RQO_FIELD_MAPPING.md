@@ -287,7 +287,7 @@ Unauthenticated (`session === null`) `start` returns the **login element context
   - `tipo`: string (required for section/component; omitted for a tool, which sends `model: "tool_x"`)
   - `section_tipo`: string (optional, defaults to `tipo`)
   - `mode`: string (optional, default `"list"`)
-  - `lang`: string (optional)
+  - `lang`: string (optional, default = the request's data language: the session's choice, else `DEDALO_DATA_LANG`). A translatable element's entry echoes it as `lang`; a non-translatable one answers `lg-nolan`
   - `model`: string (optional)
 
 **Permission gate**: level ≥ 1 on `(section_tipo, tipo)`. `data` is an array of one context entry (empty when nothing resolves).
