@@ -7837,6 +7837,9 @@ body:has(.component_av.view_viewer) {
   margin-bottom: var(--space-2);
   font-size: 0.86rem;
 }
+.inspector > .inspector_content_data > .element_info_wrap > .element_info:has( > .info_panel.component_panel:not(.hide)) {
+  margin-bottom: 0px;
+}
 .inspector > .inspector_content_data > .element_info_wrap > .element_info > .info_panel {
   display: contents;
 }
@@ -7888,7 +7891,6 @@ body:has(.component_av.view_viewer) {
   font-weight: 600;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .key.data_label:not(.up) {
-  border-radius: var(--radius-md);
   border-bottom-color: transparent;
 }
 .inspector > .inspector_content_data > .element_info_wrap > .element_info .key.data_label .data_label_text {
@@ -7972,7 +7974,7 @@ body:has(.component_av.view_viewer) {
   box-sizing: border-box;
   white-space: pre-wrap;
   background-color: var(--bg_surface_alt);
-  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  border-radius: 0;
   height: 10rem;
   min-height: 3rem;
   max-height: 80vh;

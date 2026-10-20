@@ -319,6 +319,13 @@
 			// airy key/value sheet: no cell fills, no separator lines — the
 			// muted-key / ink-value contrast carries the structure
 
+			// component panel: its Data block is the card's last row, so the grey
+			// bar / code box reach the card's bottom edge (the card's own radius
+			// clips them) instead of the grid's bottom gap showing as a white seam
+			&:has(>.info_panel.component_panel:not(.hide)) {
+				margin-bottom: 0px;
+			}
+
 			// section / component panels: rows stay on this grid (render_inspector
 			// render_element_info); switching panels only toggles .hide
 			>.info_panel {
@@ -367,7 +374,8 @@
 				// component Data header = the code box's own title bar: the label
 				// left-aligned on the box edge, a quiet icon-only copy button and the
 				// chevron on the right, same surface as the box, one hairline between.
-				// Collapsed (no .up) the bar stands alone with all corners rounded.
+				// Bottom corners stay square: the bar is the card's last row and the
+				// card clips them (collapsed it IS the last row).
 				&.data_label {
 					justify-content: flex-start;
 					gap: var(--space-2);
@@ -384,7 +392,6 @@
 					font-weight: 600;
 
 					&:not(.up) {
-						border-radius: var(--radius-md);
 						border-bottom-color: transparent;
 					}
 
@@ -480,7 +487,9 @@
 					box-sizing: border-box;
 					white-space: pre-wrap;
 					background-color: var(--bg_surface_alt);
-					border-radius: 0 0 var(--radius-md) var(--radius-md);
+					// square bottom corners: the box ends at the card's bottom edge and
+					// the card's own radius clips it
+					border-radius: 0;
 					height: 10rem;
 					min-height: 3rem;
 					max-height: 80vh;
