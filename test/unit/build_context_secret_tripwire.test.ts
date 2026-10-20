@@ -580,8 +580,7 @@ describe('F. the context is not narrowed past what the engine needs', () => {
 
 	test('every tracked file is IN the context unless it sits under a named exclusion', () => {
 		const dropped = tracked.filter(
-			(path) =>
-				!excludedEntries.has(path.split('/')[0] as string) && CONTEXT.excludes(path),
+			(path) => !excludedEntries.has(path.split('/')[0] as string) && CONTEXT.excludes(path),
 		);
 		expect(dropped).toEqual([]);
 	});
