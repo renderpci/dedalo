@@ -229,6 +229,10 @@ Merged since the last release; these ship with the next one.
     instant swap instead. The paginator's own dim is deferred too: a fast page turn
     no longer blinks the arrows, and a slow one still fades.
 
+- **Thesaurus lists are sorted by name in the reader's language.**
+
+    The installer's *Thesauri* step and the *Add hierarchy* maintenance panel now list thesauri in the same order: alphabetically by their name in your language, with accents ignored, inside each typology group. Before, the installer sorted by code, so *Spain* (`es`) appeared between *Eritrea* and *Ethiopia*, and the panel used a third order that put accented names after Z.
+
 - **Opening a record by link no longer lands on a one-row list.**
 
     A link that names a record — `?tipo=<section>&section_id=<id>`, which is what the

@@ -32,7 +32,8 @@ import {data_manager} from '../../../core/common/js/data_manager.js'
 // DOM container
 	const container = document.getElementById('content');
 
-// fixtures (fresh per case: the block sorts the arrays it is handed)
+// fixtures (fresh per case). Deliberately NOT A→Z: the block renders the server's
+// order (hierarchyChoiceView) and must never re-sort it.
 	const build_value = () => {
 		return {
 			hierarchies : [
@@ -136,13 +137,17 @@ describe('ADD_HIERARCHY WIDGET', function() {
 		assert.strictEqual(host.querySelectorAll('.hierarchy_checkbox').length, 4, 'four importable rows (model skipped)')
 		assert.strictEqual(row_of(host, 'zzmodel'), null, 'no row for a model entry')
 
-		// typology groups A→Z, each holding its own hierarchies
+		// typology groups in the SERVER's order, each holding its own hierarchies
 		const headings = [...host.querySelectorAll('.typology_label')].map(el => el.textContent)
-		assert.deepEqual(headings, ['Thesaurus', 'Toponymy'], 'typology headings in A→Z order')
+		assert.deepEqual(headings, ['Toponymy', 'Thesaurus'], 'typology headings in the order handed')
 		const groups = [...host.querySelectorAll('.hierarchy_ul')]
 		assert.strictEqual(groups.length, 2)
-		assert.ok(groups[1].contains(row_of(host, 'es')), 'es under Toponymy')
-		assert.ok(groups[0].contains(row_of(host, 'technique')), 'technique under Thesaurus')
+		assert.ok(groups[0].contains(row_of(host, 'es')), 'es under Toponymy')
+		assert.ok(groups[1].contains(row_of(host, 'technique')), 'technique under Thesaurus')
+
+		// rows in the SERVER's order too — never re-sorted by the client
+		const tlds = [...host.querySelectorAll('.hierarchy_checkbox')].map(el => el.closest('li').querySelector('.hierarchy_label').textContent.match(/\[(\w+)\]/)[1])
+		assert.deepEqual(tlds, ['es', 'fr', 'material', 'technique'], 'rows in the order handed')
 
 		// installed chip on the installed TLD only; nothing ticked on open
 		assert.ok(row_of(host, 'es').querySelector('.installed_hierarchy'), 'es carries the installed chip')
@@ -172,7 +177,7 @@ describe('ADD_HIERARCHY WIDGET', function() {
 		assert.strictEqual(count.textContent, '1 / 4')
 		assert.isFalse(row_of(host, 'fr').hidden, 'France visible')
 		assert.isTrue(row_of(host, 'es').hidden, 'Spain hidden')
-		assert.isTrue(host.querySelectorAll('.hierarchy_ul')[0].hidden, 'the emptied Thesaurus group is hidden')
+		assert.isTrue(host.querySelectorAll('.hierarchy_ul')[1].hidden, 'the emptied Thesaurus group is hidden')
 		assert.isTrue(no_matches.hidden)
 
 		type_filter(host, 'no such hierarchy')

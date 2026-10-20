@@ -387,6 +387,7 @@ describe('install plan — the CLI runs the module (b)', () => {
 			core: string[];
 			entries: {
 				tld: string;
+				label: string;
 				has_data: boolean;
 				typology_id: number;
 				dependencies: { tld: string; mandatory: boolean }[];
@@ -394,21 +395,22 @@ describe('install plan — the CLI runs the module (b)', () => {
 			suggestion: string;
 			errors: string[];
 		};
-		const offer = offeredHierarchies();
-		expect(offer.length).toBeGreaterThan(0);
+		// The manifest offer, in THE order the screens show (hierarchyChoiceView: by name).
+		const shown = hierarchyChoiceView('lg-eng').hierarchies;
+		const offerOf = new Map(offeredHierarchies().map((entry) => [entry.tld, entry]));
+		expect(shown.length).toBeGreaterThan(0);
+		expect(new Set(shown.map((item) => item.tld))).toEqual(new Set(offerOf.keys()));
 		expect(printed.core).toEqual(CORE_HIERARCHIES.map((item) => item.tld));
-		expect(printed.entries.map((entry) => entry.tld)).toEqual(offer.map((entry) => entry.tld));
+		expect(printed.entries.map((entry) => entry.tld)).toEqual(shown.map((item) => item.tld));
+		expect(printed.entries.map((entry) => entry.label)).toEqual(shown.map((item) => item.label));
 		expect(printed.entries.map((entry) => entry.has_data)).toEqual(
-			offer.map((entry) => entry.data_files.length > 0),
+			shown.map((item) => (offerOf.get(item.tld)?.data_files.length ?? 0) > 0),
 		);
 		expect(printed.suggestion).toBe(TOPONYMY_SUGGESTION);
 		expect(printed.errors).toHaveLength(0);
 		// Each entry's DECLARED thesauri (hierarchy60), from THE view the screens read.
-		const view = new Map(
-			hierarchyChoiceView('lg-eng').hierarchies.map((item) => [item.tld, item.dependencies]),
-		);
 		expect(printed.entries.map((entry) => entry.dependencies)).toEqual(
-			offer.map((entry) => view.get(entry.tld) ?? []),
+			shown.map((item) => item.dependencies),
 		);
 	});
 

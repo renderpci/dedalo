@@ -179,9 +179,10 @@ const api_call_with_spinner = async function(options) {
 * RENDER_HIERARCHIES_IMPORT_BLOCK
 * Builds the hierarchy import UI.
 *
-* Hierarchies are grouped by typology and sorted alphabetically (reversed, because the
-* render loops iterate from last to first — the visual order is therefore A→Z
-* top-to-bottom). Each hierarchy is a labelled checkbox; pre-checked items come from
+* Hierarchies are grouped by typology and rendered in the SERVER's order (the
+* add_hierarchy payload, hierarchy_meta.ts hierarchyChoiceView: by label in the
+* user's language collation — the same order the installer shows; never re-sorted
+* here). Each hierarchy is a labelled checkbox; pre-checked items come from
 * options.default_checked. Already-installed hierarchies carry an 'installed' chip and
 * can still be ticked (import skips them; reset re-seeds them).
 *
@@ -240,11 +241,6 @@ export const render_hierarchies_import_block = function(options) {
 
 	// DocumentFragment
 		const fragment = new DocumentFragment();
-
-		// Sort both arrays in descending alphabetical order. The rendering loops iterate
-		// from last-to-first (i-- / j--), so the final on-screen order is ascending A→Z.
-		hierarchies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
-		hierarchy_typologies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
 
 	// info
 		ui.create_dom_element({
@@ -306,7 +302,7 @@ export const render_hierarchies_import_block = function(options) {
 		// Count of importable rows actually rendered — the filter's "of N" denominator.
 		let total_hierarchies = 0
 		const hierarchy_typologies_length = hierarchy_typologies.length
-		for (let i = hierarchy_typologies_length - 1; i >= 0; i--) {
+		for (let i = 0; i < hierarchy_typologies_length; i++) {
 
 			const current_hierarchy_typology = hierarchy_typologies[i]
 
@@ -332,7 +328,7 @@ export const render_hierarchies_import_block = function(options) {
 			})
 
 			const hierarchies_len = found_hierarchies.length
-			for (let j = hierarchies_len - 1; j >= 0; j--) {
+			for (let j = 0; j < hierarchies_len; j++) {
 
 				// hierarchy object
 					const current_hierarchy = found_hierarchies[j]

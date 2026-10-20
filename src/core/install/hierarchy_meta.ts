@@ -160,11 +160,29 @@ function labelIn(
 }
 
 /**
+ * The collation of `lang` (a Dédalo `lg-xxx` code). Intl canonicalizes the
+ * ISO 639-3 suffix itself (`spa` → `es`); a suffix that is no BCP-47 tag
+ * (`lg-vlca`) collates as English.
+ */
+export function labelCollator(lang: string): Intl.Collator {
+	const options: Intl.CollatorOptions = { sensitivity: 'base', numeric: true };
+	try {
+		return new Intl.Collator(lang.replace(/^lg-/, ''), options);
+	} catch {
+		return new Intl.Collator('en', options);
+	}
+}
+
+/**
  * THE client view of the offer — the `{tld, label, typology}` /
  * `{typology, label}` shape render_hierarchies_import_block groups by (served
  * by the add_hierarchy widget), derived from the
  * manifest in this ONE place. Labels are picked in `lang` — the requesting
  * user's application language (the caller passes currentApplicationLang()).
+ *
+ * ORDER is decided HERE, once: both lists by label in `lang`'s collation
+ * (tld/typology id breaks a tie). Every front end keeps it — the manifest's
+ * tld order is storage, never presentation (`es` Spain sorts under S).
  */
 export function hierarchyChoiceView(
 	lang: string,
@@ -174,6 +192,7 @@ export function hierarchyChoiceView(
 	hierarchy_typologies: HierarchyTypologyView[];
 } {
 	const manifest = readHierarchyManifest(dir);
+	const collator = labelCollator(lang);
 	return {
 		hierarchies: manifest.active_hierarchies
 			.filter((entry) => !isCoreHierarchyTld(entry.tld))
@@ -185,10 +204,13 @@ export function hierarchyChoiceView(
 				dependencies: (entry.dependencies ?? [])
 					.filter((item) => item.main === 'hierarchy1' && !isCoreHierarchyTld(item.tld))
 					.map((item) => ({ tld: item.tld, mandatory: item.mandatory })),
-			})),
-		hierarchy_typologies: manifest.typologies.map((item) => ({
-			typology: item.typology_id,
-			label: labelIn(item.name_data, item.name, lang, String(item.typology_id)),
-		})),
+			}))
+			.sort((a, b) => collator.compare(a.label, b.label) || a.tld.localeCompare(b.tld)),
+		hierarchy_typologies: manifest.typologies
+			.map((item) => ({
+				typology: item.typology_id,
+				label: labelIn(item.name_data, item.name, lang, String(item.typology_id)),
+			}))
+			.sort((a, b) => collator.compare(a.label, b.label) || a.typology - b.typology),
 	};
 }

@@ -570,19 +570,27 @@ if (invocation.listOntologies) await listOntologies();
 function listHierarchies(): never {
 	const errors = [...parseErrors];
 	const offer = offeredThesauri(errors);
-	// The declared thesaurus dependencies (hierarchy60), from THE client view.
+	// The declared thesaurus dependencies (hierarchy60) and THE order (by name),
+	// from THE client view — the list a script reads is the list the screen shows.
 	const dependenciesOf = new Map<string, { tld: string; mandatory: boolean }[]>();
+	const labelOf = new Map<string, string>();
+	const rank = new Map<string, number>();
 	if (errors.length === 0) {
-		for (const item of hierarchyChoiceView('lg-eng').hierarchies) {
+		for (const [index, item] of hierarchyChoiceView('lg-eng').hierarchies.entries()) {
 			dependenciesOf.set(item.tld, item.dependencies);
+			labelOf.set(item.tld, item.label);
+			rank.set(item.tld, index);
 		}
 	}
+	offer.sort((a, b) => (rank.get(a.tld) ?? 0) - (rank.get(b.tld) ?? 0));
 	console.log(
 		JSON.stringify({
 			core: CORE_HIERARCHIES.map((item) => item.tld),
 			entries: offer.map((entry) => ({
 				tld: entry.tld,
 				name: entry.name,
+				// The name the screen shows (and sorts by): `name` is the export-time pick.
+				label: labelOf.get(entry.tld) ?? entry.name,
 				typology_id: entry.typology_id,
 				typology_name: entry.typology_name,
 				has_data: entry.data_files.length > 0,

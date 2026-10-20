@@ -1456,6 +1456,12 @@ function externalThesauri(ctx: Ctx): ReadonlySet<string> {
 	return new Set(plan.ontologyHierarchyDependencies.map((item) => item.tld));
 }
 
+/** A group's place in the view's typology order (an unnamed one after every named one). */
+function rankOf(named: readonly string[], group: string): number {
+	const index = named.indexOf(group);
+	return index === -1 ? named.length : index;
+}
+
 function thesauriQuestion(ctx: Ctx): Question {
 	const thesauri = ctx.input.catalogs.thesauri;
 	const view = 'view' in thesauri ? thesauri.view : { hierarchies: [], hierarchy_typologies: [] };
@@ -1485,9 +1491,13 @@ function thesauriQuestion(ctx: Ctx): Question {
 			external: external.has(entry.tld),
 		};
 	});
-	// Groups A→Z by typology; open when they hold a ticked entry.
-	const groupIds = [...new Set(options.map((option) => option.group as string))].sort((a, b) =>
-		a.localeCompare(b),
+	// The view's order (hierarchyChoiceView: typologies and entries by label) is
+	// kept: groups follow the typology list, an unnamed typology last; the stable
+	// sort keeps the entries' name order inside each group. Open when they hold a
+	// ticked entry.
+	const named = view.hierarchy_typologies.map((item) => item.label);
+	const groupIds = [...new Set(options.map((option) => option.group as string))].sort(
+		(a, b) => rankOf(named, a) - rankOf(named, b) || a.localeCompare(b),
 	);
 	const order = new Map(groupIds.map((id, index) => [id, index]));
 	options.sort((a, b) => (order.get(a.group as string) ?? 0) - (order.get(b.group as string) ?? 0));
