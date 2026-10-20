@@ -141,6 +141,11 @@ services:
       DEDALO_CLIENT_PUBLISH_DIR: /srv/dedalo/client
       SERVER_UNIX_SOCKET: /run/dedalo/dedalo_ts.sock
       MEDIA_PATH: /srv/dedalo/media
+      # ONTOLOGY FILES LIVE IN /private, NEVER THE IMAGE TREE. Unset, the default
+      # resolves to the in-tree install/import/ontology (it ships the vendored
+      # seeds), and the image tree is root-owned: every ontology update died
+      # EACCES on its .staging dir. /private is the engine's own volume.
+      ONTOLOGY_DATA_IO_DIR: /private/import/ontology
       # MEDIA IS SERVED OPENLY HERE, and since 2026-08-24 that is a property of
       # THIS STACK'S NGINX, not of the engine's mode. deploy/nginx.simple.conf
       # does not `include` the generated rule files, so nothing enforces a gate
