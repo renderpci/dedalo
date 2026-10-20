@@ -570,23 +570,9 @@ function trackedFiles(): string[] {
 		.filter((path) => path.length > 0);
 }
 
-/**
- * Tracked files the DERIVED census drops anyway, each with the reason it is
- * safe. Shrink-only, and staleness is failure: an entry that stops being
- * tracked, or stops being dropped, reddens this gate rather than rotting.
- */
-const CENSUS_OVERRIDES: ReadonlyArray<{ path: string; reason: string }> = [
-	{
-		path: 'publication/server_api/v2/tsconfig.tsbuildinfo',
-		reason:
-			"A 130 KB TypeScript INCREMENTAL-BUILD CACHE committed by accident (3d5492e79f, a dependency bump) against .gitignore's own `*.tsbuildinfo` rule. Nothing reads it at runtime and `tsc` rebuilds it, so the census dropping it from the image is correct; the repo-side fix is `git rm --cached`, which is not this change's file to make.",
-	},
-];
-
 describe('F. the context is not narrowed past what the engine needs', () => {
 	const tracked = trackedFiles();
 	const excludedEntries = new Set(IMAGE_EXCLUSIONS.map((one) => one.entry));
-	const overridden = new Set(CENSUS_OVERRIDES.map((one) => one.path));
 
 	test('the tracked tree was read (anti-vacuity floor)', () => {
 		expect(tracked.length).toBeGreaterThan(4000);
@@ -595,23 +581,9 @@ describe('F. the context is not narrowed past what the engine needs', () => {
 	test('every tracked file is IN the context unless it sits under a named exclusion', () => {
 		const dropped = tracked.filter(
 			(path) =>
-				!excludedEntries.has(path.split('/')[0] as string) &&
-				!overridden.has(path) &&
-				CONTEXT.excludes(path),
+				!excludedEntries.has(path.split('/')[0] as string) && CONTEXT.excludes(path),
 		);
 		expect(dropped).toEqual([]);
-	});
-
-	test('every census override is still tracked AND still dropped (no rot)', () => {
-		const trackedSet = new Set(tracked);
-		for (const override of CENSUS_OVERRIDES) {
-			expect({
-				path: override.path,
-				tracked: trackedSet.has(override.path),
-				dropped: CONTEXT.excludes(override.path),
-			}).toEqual({ path: override.path, tracked: true, dropped: true });
-			expect(override.reason.length).toBeGreaterThan(30);
-		}
 	});
 
 	test('every named exclusion is still real (staleness is failure)', () => {
