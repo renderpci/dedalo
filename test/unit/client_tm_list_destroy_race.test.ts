@@ -226,22 +226,29 @@ else {
 	describe('load_time_machine_list serializes its two triggers', () => {
 		const source = readFileSync(INSPECTOR_PATH, 'utf8');
 
-		test('the exported entry point chains through self.tm_list_loading', () => {
+		test('the exported entry point routes through the shared serializer load_block', () => {
 			const entry = source.slice(source.indexOf('export const load_time_machine_list'));
 			const body = entry.slice(0, entry.indexOf('}//end load_time_machine_list'));
 
-			expect(body).toContain('self.tm_list_loading');
-			// the previous load is awaited BEFORE the run that destroys self.tm_list
-			expect(body).toContain('load_time_machine_list_run(self)');
-			// a failed load must not poison the chain for every later trigger
-			expect(body).toMatch(/\.catch\(/);
-			// the destroy lives in the serialized run, never in the entry point
+			expect(body).toContain('load_block(');
+			// the run that destroys self.tm_list is the SERIALIZED task
+			expect(body).toContain('load_time_machine_list_instance(self)');
+			// the destroy lives in the serialized task, never in the entry point
 			expect(body).not.toContain('self.tm_list.destroy');
 		});
 
-		test('the destroy that nullifies section_record callers is inside the serialized run', () => {
-			const run = source.slice(source.indexOf('const load_time_machine_list_run'));
-			const body = run.slice(0, run.indexOf('}//end load_time_machine_list_run'));
+		test('load_block chains each load per container, and a failure does not poison the chain', () => {
+			const entry = source.slice(source.indexOf('export const load_block'));
+			const body = entry.slice(0, entry.indexOf('}//end load_block'));
+
+			// the previous load is awaited BEFORE the next one starts
+			expect(body).toContain('container._block_load');
+			expect(body).toMatch(/previous\s*\.catch\(\s*\(\)\s*=>\s*null\s*\)\s*\.then\(start\)/);
+		});
+
+		test('the destroy that nullifies section_record callers is inside the serialized task', () => {
+			const run = source.slice(source.indexOf('const load_time_machine_list_instance'));
+			const body = run.slice(0, run.indexOf('}//end load_time_machine_list_instance'));
 
 			expect(body).toContain('self.tm_list.destroy');
 		});

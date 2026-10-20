@@ -168,8 +168,12 @@ function pathErrors(a: InstallAnswers, problems: Problems): void {
 			problems.push(problem(name, `${name} must be an absolute path`));
 		}
 	}
-	// The OS binds no longer socket path: the server would fail at its first boot.
-	const socketLength = a.unix_socket === '' ? null : unixSocketLengthProblem(a.unix_socket);
+	socketLengthErrors(a.unix_socket, problems);
+}
+
+/** The OS binds no longer socket path: the server would fail at its first boot. */
+function socketLengthErrors(unixSocket: string, problems: Problems): void {
+	const socketLength = unixSocket === '' ? null : unixSocketLengthProblem(unixSocket);
 	if (socketLength !== null) problems.push(problem('unix_socket', `unix_socket ${socketLength}`));
 }
 

@@ -78,7 +78,6 @@ import { publicOrigin, publicOriginIsLocal } from './core/resolve/public_origin.
 // reach it transitively — the seam must not depend on incidental import paths.
 import './core/components/registry.ts';
 import { readString } from './config/readers.ts';
-import { unixSocketIsLive } from './config/unix_socket.ts';
 import {
 	DEV_LISTENER_REFUSED_EXIT_CODE,
 	type DevListenerTlsMaterial,
@@ -89,6 +88,7 @@ import {
 	devTcpListener,
 	loadDevListenerTls,
 } from './config/tcp_listener.ts';
+import { unixSocketIsLive } from './config/unix_socket.ts';
 import { HIERARCHY_EXPORT_URL_PREFIX } from './core/area_maintenance/widgets/export_hierarchy.ts';
 import { rqoSchema } from './core/concepts/rqo.ts';
 import { toErrorEnvelope } from './core/errors/convert.ts';
