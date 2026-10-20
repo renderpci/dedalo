@@ -1886,6 +1886,11 @@
 			"skipped": 0,
 			"assertions": 44
 		},
+		"test/unit/hierarchy_choice_order.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 17
+		},
 		"test/unit/hierarchy_generate_native.test.ts": {
 			"tests": 3,
 			"skipped": 0,
@@ -5225,6 +5230,11 @@
 			"tests": 25,
 			"skipped": 0,
 			"assertions": 54
+		},
+		"test/unit/tool_import_csv_section_tipo_client.test.ts": {
+			"tests": 17,
+			"skipped": 0,
+			"assertions": 34
 		},
 		"test/unit/tool_import_dedalo_csv.test.ts": {
 			"tests": 25,
