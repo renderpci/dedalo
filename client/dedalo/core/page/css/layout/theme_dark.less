@@ -54,12 +54,14 @@
 
 	// Text selection. --color_hilite (#4a3424) is a *surface* tint, too close to
 	// the dark greys to read as a dragged range, so selection gets its own,
-	// stronger warm brown. _blur must be a dark neutral: CKEditor's #d9d9d9
-	// default painted a near-white slab under near-white text.
+	// stronger warm brown. It must also clear the active field's own #4a3424
+	// tint (inputs are transparent over it): #96622e is 2.3:1 against it, where
+	// the old #6a4526 was 1.38:1. _blur must be a dark neutral: CKEditor's
+	// #d9d9d9 default painted a near-white slab under near-white text.
 	// No --selection_fg here on purpose: vars.less points it at --color_black,
-	// which this file already inverts to #ffffff — white on #6a4526 is 8.4:1.
+	// which this file already inverts to #ffffff — white on #96622e is 5.1:1.
 	// Redeclaring it would be a copy that drifts the day --color_black moves.
-	--selection_bg:                   #6a4526;
+	--selection_bg:                   #96622e;
 	--selection_bg_blur:              #3d434c;
 
 	--color_orange:                   #4a3a20;

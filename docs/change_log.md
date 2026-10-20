@@ -233,6 +233,18 @@ Merged since the last release; these ship with the next one.
 
     The installer's *Thesauri* step and the *Add hierarchy* maintenance panel now list thesauri in the same order: alphabetically by their name in your language, with accents ignored, inside each typology group. Before, the installer sorted by code, so *Spain* (`es`) appeared between *Eritrea* and *Ethiopia*, and the panel used a third order that put accented names after Z.
 
+- **Selected text is visibly highlighted in every field, active or not**
+
+    Dragging over the text of a field used to paint the range in the same pale
+    orange as the surface behind it — exactly the tint of the field you had just
+    activated, and nearly the white of every other field. You could not tell
+    whether the text was selected.
+
+    A selection now paints as a clear amber slab with dark ink (11.8:1) in the
+    light theme, and as a stronger warm brown with white ink (5.1:1) in dark. It
+    reads clearly against the active field's tint and against the plain card, in
+    inputs and text editors alike.
+
 - **Opening a record by link no longer lands on a one-row list.**
 
     A link that names a record — `?tipo=<section>&section_id=<id>`, which is what the

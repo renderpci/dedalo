@@ -559,7 +559,7 @@ template {
   --color_hilite: #fef1e4;
   --color_hilite_2: #ffda86;
   --color_hilite_yellow: #ffef3d;
-  --selection_bg: var(--color_hilite);
+  --selection_bg: #ffb347;
   --selection_fg: var(--color_black);
   --selection_bg_blur: #d9d9d9;
   --color_orange: #f8b544;
@@ -795,7 +795,7 @@ template {
   --color_hilite: #4a3424;
   --color_hilite_2: #4a4020;
   --color_hilite_yellow: #4a4520;
-  --selection_bg: #6a4526;
+  --selection_bg: #96622e;
   --selection_bg_blur: #3d434c;
   --color_orange: #4a3a20;
   --color_orange_dedalo: #ffa54a;

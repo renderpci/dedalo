@@ -159,12 +159,16 @@
 	--color_hilite_2:                 #ffda86; // used in tool cataloging and tool_numismatic_order_coins drag
 	--color_hilite_yellow:            #ffef3d; // used in ts_object to hilite terms
 
-	// Text selection (::selection). Kept apart from --color_hilite so the range
-	// a user drags can be tuned for legibility without moving every hilited
-	// surface. _blur is the range left behind when the editable loses focus
-	// (CKEditor's --ck-color-editable-blur-selection), which is the normal state
-	// in tool_indexation: the user selects a fragment, then clicks a term.
-	--selection_bg:                   var(--color_hilite);
+	// Text selection (::selection). It must NOT be --color_hilite: the active
+	// field wrapper is painted that same #fef1e4 (layout.less `.active`) and a
+	// literal's input is transparent over it, so a hilite-coloured range was
+	// 1.00:1 against its own surface and unreadable as a selection (1.11:1 on
+	// the white card anywhere else). A clear amber keeps the slab legible without
+	// shouting: black ink on #ffb347 is 11.8:1 (AA), 1.6:1 against the active tint.
+	// _blur is the range left behind when the editable loses focus (CKEditor's
+	// --ck-color-editable-blur-selection), which is the normal state in
+	// tool_indexation: the user selects a fragment, then clicks a term.
+	--selection_bg:                   #ffb347;
 	--selection_fg:                   var(--color_black);
 	--selection_bg_blur:              #d9d9d9; // CKEditor default, kept in light
 
