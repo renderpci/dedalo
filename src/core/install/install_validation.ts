@@ -38,17 +38,12 @@ import { dirname, isAbsolute } from 'node:path';
 import { check_password } from '../../../client/dedalo/core/component_password/js/password_policy.js';
 import { liveProcessEnv } from '../../config/env.ts';
 import { connFieldProblem, pgSocketProblem } from '../../config/pg_transport.ts';
+import { unixSocketLengthProblem } from '../../config/unix_socket.ts';
 import { DEV_TLS_MODES, type DevListenerPlan } from './dev_listener.ts';
+import { ENTITY_PATTERN } from './entity_name.ts';
 import { acceptedImageVersions } from './host/stack/layout.ts';
 import type { InstallAnswers } from './install_plan.ts';
 import { officialRefusedFor } from './installer_identity.ts';
-
-/**
- * The entity name: a letter, then letters/digits/underscore. It becomes a
- * directory and a key prefix; the retired browser wizard enforced it
- * client-side only and the CLI not at all — now the plan does.
- */
-export const ENTITY_PATTERN = /^[A-Za-z][A-Za-z0-9_]*$/;
 
 /**
  * The INSTANCE name of a production install (multi-instance hosts —
@@ -173,6 +168,9 @@ function pathErrors(a: InstallAnswers, problems: Problems): void {
 			problems.push(problem(name, `${name} must be an absolute path`));
 		}
 	}
+	// The OS binds no longer socket path: the server would fail at its first boot.
+	const socketLength = a.unix_socket === '' ? null : unixSocketLengthProblem(a.unix_socket);
+	if (socketLength !== null) problems.push(problem('unix_socket', `unix_socket ${socketLength}`));
 }
 
 /** Does `timeZone` name an IANA zone this runtime knows? */
@@ -826,9 +824,10 @@ function devHostErrors(a: InstallAnswers, problems: Problems): void {
  * would otherwise reach the port probe with NaN (an untyped bind error) or
  * write a .env whose `bun run dev` cannot boot. Tagged with the answer that
  * replaces the value, so the screen attaches the refusal where it is fixed.
+ * The socket too, kept OR derived from the entity (unansweredSocketProblems).
  */
 export function keptDevListenerProblems(
-	listener: Pick<DevListenerPlan, 'port' | 'host' | 'kept'> | null,
+	listener: Pick<DevListenerPlan, 'port' | 'host' | 'kept' | 'socket' | 'socketSource'> | null,
 ): FieldError[] {
 	if (listener === null) return [];
 	const problems: Problems = [];
@@ -848,7 +847,39 @@ export function keptDevListenerProblems(
 			),
 		);
 	}
+	problems.push(...unansweredSocketProblems(listener));
 	return problems;
+}
+
+/**
+ * The developer socket the operator did NOT type (an answer is refused by
+ * pathErrors): one kept from the .env must be absolute, and a kept or derived
+ * one bindable — a long entity makes a derived path the OS refuses.
+ */
+function unansweredSocketProblems(
+	listener: Pick<DevListenerPlan, 'socket' | 'socketSource'>,
+): FieldError[] {
+	if (listener.socketSource === 'answered') return [];
+	const origin =
+		listener.socketSource === 'kept' ? 'kept from your .env' : 'derived from the entity';
+	const replace = 'answer unix_socket (--socket) to replace it';
+	if (listener.socketSource === 'kept' && !isAbsolute(listener.socket)) {
+		return [
+			problem(
+				'unix_socket',
+				`SERVER_UNIX_SOCKET '${listener.socket}' ${origin} must be an absolute path — ${replace}`,
+			),
+		];
+	}
+	const length = unixSocketLengthProblem(listener.socket);
+	return length === null
+		? []
+		: [
+				problem(
+					'unix_socket',
+					`SERVER_UNIX_SOCKET '${listener.socket}' ${origin} ${length} — ${replace}`,
+				),
+			];
 }
 
 /** The developer listener's TLS mode, and what `files` needs. */

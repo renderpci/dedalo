@@ -112,7 +112,7 @@ meaning.)
 | `--decline-dependencies` | no | *(none)* | the declared dependencies you do not want, a comma list. Each item is a TLD (declines it as an ontology and as a thesaurus) or `<tld>:ontology35` / `<tld>:hierarchy1` (declines only one of the two). Any **thesaurus** can be declined; declining a mandatory one prints a warning (strongly recommended, installable later). A mandatory **ontology** cannot be declined: naming one has no effect, and it is installed. A malformed item is refused |
 | `--ontology-source` | no | *(unset)* | a local directory, or a `.tar` / `.tar.gz` / `.tgz` archive of one, in the ontology server's export layout. The non-built-in ontologies come from it instead of the update server — a fully [offline install](#offline-installs-ontology-source) |
 | `--media-path` | no | see [Route defaults](#route-defaults) | the media root; write-probed during install **and persisted** to `.env` as `MEDIA_PATH` (replaces the old `MEDIA_PATH=…` env prefix) |
-| `--socket` | no | see [Route defaults](#route-defaults) | persisted as `SERVER_UNIX_SOCKET`. On the developer route nothing is written unless you give it, and the server listens on its built-in default |
+| `--socket` | no | see [Route defaults](#route-defaults) | persisted as `SERVER_UNIX_SOCKET`. On the developer route it is asked on the Development server screen and always written: by default `/tmp/dedalo_ts_<entity>.sock` (the entity in lowercase), so two checkouts on one machine never share a socket. Left out on a re-run, the socket your `.env` already names is kept. When a running server already answers on it, the install is refused before anything is written. A path longer than 103 bytes (the operating system's limit) is refused |
 | `--media-access-mode` | no | *(unset = `publication`, fail-closed)* | persisted as `DEDALO_MEDIA_ACCESS_MODE` — `private`, `publication`, or `false` to deliberately serve an open media tree |
 | `--diffusion` | no | off | writes the MariaDB keys; pair with `--mysql-host/-port/-socket/-name/-user/-password`. `--mysql-user` is required; `--mysql-name` defaults to `web_dedalo` (`web_<instance>` on production). The MariaDB connection is probed; a failure warns but does not stop the install |
 | `--mailer` | no | off | writes the outbound-email (SMTP) keys, enabling [password recovery](../management/password_recovery.md); requires `--smtp-host`, pair with `--smtp-port` (587), `--smtp-secure` (`tls`\|`ssl`\|`none`), `--smtp-user`, `--smtp-password`, `--smtp-from`, `--smtp-from-name`. The relay is probed (connection + auth, no email sent); a failure warns but does not stop the install |
@@ -182,7 +182,7 @@ give falls back to. It never changes the steps, and a flag you give always wins.
 | certificate (`--tls`) | `local_ca` (the development listener's) | `letsencrypt` | `letsencrypt` (`trial`: none) |
 | development listener (`--dev-port`, `--dev-host`) | `3500` on `127.0.0.1` | — | — |
 | HTTPS port (`--https-port`) | — | `443` | `443` (`trial`: none — the trial publishes plain HTTP only and does not ask it) |
-| server socket (`SERVER_UNIX_SOCKET`) | not written | `/run/dedalo-<i>/dedalo_ts.sock` | `/run/dedalo/dedalo_ts.sock` |
+| server socket (`SERVER_UNIX_SOCKET`) | `/tmp/dedalo_ts_<entity>.sock` | `/run/dedalo-<i>/dedalo_ts.sock` | `/run/dedalo/dedalo_ts.sock` |
 | publication database (`--mysql-name`) | `web_dedalo` | `web_<i>` | `web_dedalo` |
 
 The backups and the database user follow the install folder and the service

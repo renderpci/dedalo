@@ -429,13 +429,13 @@ for (const row of ROWS) {
 			expect(refused?.message).toContain('--host 192.168.1.20');
 			expect(snapshot(dir)).toEqual(before);
 			const preflight = await devListenerRefusals(
-				{ host: '127.0.0.1', port: String(freeTcpPort()) },
+				{ host: '127.0.0.1', socket: join(dir, 'absent.sock'), port: String(freeTcpPort()) },
 				{ dir, names: wider },
 			);
 			expect(preflight).toEqual([devAuthorityRefusal(dir, wider) as string]);
 			expect(
 				await devListenerRefusals(
-					{ host: '127.0.0.1', port: String(freeTcpPort()) },
+					{ host: '127.0.0.1', socket: join(dir, 'absent.sock'), port: String(freeTcpPort()) },
 					{ dir, names },
 				),
 			).toEqual([]);

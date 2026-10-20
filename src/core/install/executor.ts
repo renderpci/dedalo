@@ -174,8 +174,9 @@ export interface ExecutorHost {
 	endSeedRestore?(installId: string): Promise<number[]>;
 	/**
 	 * What the developer listener's address refuses right now (D3: a port in use,
-	 * the next free one suggested — dev_listener_check.ts; and a local authority
-	 * already there for other names); [] for a plan that opens none. The SAME
+	 * the next free one suggested — dev_listener_check.ts; a running server on
+	 * its unix socket; and a local authority already there for other names); []
+	 * for a plan that opens none. The SAME
 	 * function the interactive Review asks. REQUIRED, not optional: a host
 	 * without it would answer "no refusal" silently and a fresh run would write
 	 * a .env whose `bun run dev` collides.

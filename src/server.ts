@@ -78,6 +78,7 @@ import { publicOrigin, publicOriginIsLocal } from './core/resolve/public_origin.
 // reach it transitively — the seam must not depend on incidental import paths.
 import './core/components/registry.ts';
 import { readString } from './config/readers.ts';
+import { unixSocketIsLive } from './config/unix_socket.ts';
 import {
 	DEV_LISTENER_REFUSED_EXIT_CODE,
 	type DevListenerTlsMaterial,
@@ -1588,37 +1589,6 @@ function echoRuntimeVersion(): void {
 	}
 }
 
-/**
- * True when a live process is LISTENING on the unix socket (audit S2-17b): a
- * second `startServer` used to silently unlink the FIRST instance's socket and
- * bind fresh, orphaning the old process. connect() answering = live instance.
- */
-async function socketIsLive(socketPath: string): Promise<boolean> {
-	try {
-		await new Promise<void>((resolvePromise, rejectPromise) => {
-			Bun.connect({
-				unix: socketPath,
-				socket: {
-					open(socket) {
-						socket.end();
-						resolvePromise();
-					},
-					data() {},
-					error(_socket, error) {
-						rejectPromise(error);
-					},
-					connectError(_socket, error) {
-						rejectPromise(error);
-					},
-				},
-			}).catch(rejectPromise);
-		});
-		return true;
-	} catch {
-		return false;
-	}
-}
-
 /** Idempotency latch for the signal handlers (a repeated SIGTERM must not re-drain). */
 let shuttingDown = false;
 
@@ -2341,7 +2311,7 @@ export async function startServer() {
 	// first PROBE it (S2-17b): if something answers, another instance is live
 	// and starting would silently orphan it. Refuse loudly instead.
 	if (existsSync(socketPath)) {
-		if (await socketIsLive(socketPath)) {
+		if (await unixSocketIsLive(socketPath)) {
 			console.error(
 				`FATAL: another server instance is already listening on ${socketPath} — refusing to steal its socket. Stop the running instance first (or point SERVER_UNIX_SOCKET elsewhere).`,
 			);

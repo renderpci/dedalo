@@ -1397,7 +1397,8 @@ async function interactiveInstall(
 		},
 		// What the run's own system check would refuse, asked BEFORE `yes` (campaign 3c D2).
 		// The developer listener's port too (D3): the Review refuses while it is in use —
-		// and a local authority already there for other names (dev_tls.ts).
+		// a running server on its unix socket, and a local authority already there for
+		// other names (dev_tls.ts).
 		preflightRefusals: async (plan, measure) => {
 			const { reviewPreflightRefusals } = await import('../src/core/install/host/review.ts');
 			const { devListenerRefusals } = await import('../src/core/install/dev_listener_check.ts');

@@ -229,14 +229,14 @@ bun run dev          # watch mode; `bun run start:supervised` runs it without th
     `bun run dev`, `bun run dev:server` and `bun run start:supervised` restart the server when it asks for a fresh process, so each **declares** `DEDALO_SUPERVISED=true` in its own command line. Plain `bun run start` restarts nothing and deliberately declares nothing: the [code update panel](../management/updates/updating_code.md) refuses to swap code under it rather than leave the server dead. Do not put `DEDALO_SUPERVISED` in `../private/.env` — every launch method reads that file, so the engine ignores the key there.
 
 ```text
-Dédalo TS server listening on unix socket /tmp/dedalo_ts.sock (entity: dev)
+Dédalo TS server listening on unix socket /tmp/dedalo_ts_dev.sock (entity: dev)
 Dédalo TS dev listener on https://localhost:3500/dedalo/core/page/
 ```
 
 Open the URL the installer printed — **`https://127.0.0.1:3500/dedalo/core/page/`** with the defaults — and log in as `root` with the password you set in step 5.
 
 !!! note "One unix socket per server"
-    The developer route does not write `SERVER_UNIX_SOCKET`, so every checkout's server listens on the default `/tmp/dedalo_ts.sock`. A second server on the same machine refuses to start until it has its own (`--socket` at install time, or `SERVER_UNIX_SOCKET` in its `.env`). The installer's last step names it when that happens; by then the install is sealed, so set `SERVER_UNIX_SOCKET` in the `.env` and run the installer again with `--resume`.
+    The engine also listens on a unix socket in development, and two servers cannot share one. The installer asks for it on the Development server screen and writes it as `SERVER_UNIX_SOCKET`. The default carries your entity, `/tmp/dedalo_ts_<entity>.sock`, so two checkouts of different entities each get their own. Change it there, or with `--socket`. When a running server already answers on that socket (another checkout's `bun run dev`), the Review refuses to install until you stop it or choose another one. On a re-run, the socket your `.env` already names is kept.
 
 ## 8. Run the tests
 
@@ -296,6 +296,6 @@ bun run test:client:server   # the suite server, kept alive for browsing (Ctrl-C
 - **The installer's last step (`verify_dev_server`) fails with the port in use** → something took the port after the installer checked it. The install is already sealed, so `--dev-port` is not accepted any more: stop the other program, or set `SERVER_TCP_PORT` in the `.env` to the free port the message names, then run the installer again with `--resume`.
 - **`install refused: this checkout has no dependencies (no node_modules)`** → `bun install` was skipped. Run it in the checkout (step 3), then start the installer again.
 - **`bun run dev` stops with `the CSS watcher stopped`** → a development dependency is missing (the error above it names it, for example `Cannot find package 'less'`). Run `bun install` in the checkout.
-- **`address already in use` / the server exits 1 at boot** → another instance is already listening on `/tmp/dedalo_ts.sock`. The double-start guard probes the socket and refuses to steal it. Stop the other one, or point `SERVER_UNIX_SOCKET` somewhere else.
+- **`address already in use` / the server exits 1 at boot** → another instance is already listening on your `SERVER_UNIX_SOCKET` (by default `/tmp/dedalo_ts_<entity>.sock`). The double-start guard probes the socket and refuses to steal it. Stop the other one, or point `SERVER_UNIX_SOCKET` somewhere else.
 - **The server exits at once with `[boot] REFUSED — not installed`** (exit code 78) → it found none of the four required keys. It is not reading your `.env` — check that it is at `../private/.env`, one level above the repo (or run the installer).
 - Everything else → [troubleshooting](troubleshooting.md).

@@ -76,7 +76,7 @@ import type { DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import { connArgs, pgClientEnv, runPsql } from '../../src/core/install/pg_exec.ts';
 import { rootPasswordMatches, rootPasswordState } from '../../src/core/install/root_pw.ts';
 import type { InstallState, PlanFile } from '../../src/core/install/run_files.ts';
-import { devServeIsolationEnv } from '../helpers/dev_serve_isolation.ts';
+import { devServeIsolationEnv, devServeSocketArgs } from '../helpers/dev_serve_isolation.ts';
 import { freeTcpPort } from '../helpers/free_tcp_port.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 import { expectTrustSeamHeld } from '../helpers/trust_seam.ts';
@@ -164,6 +164,8 @@ function answersArgv(db: string): string[] {
 		// A free development port: 3500 may be a running `bun run dev` here (D3 refuses it).
 		'--dev-port',
 		String(DEV_PORT),
+		// Its own socket: the written .env's SERVER_UNIX_SOCKET is what the serve check boots on.
+		...devServeSocketArgs(),
 	];
 }
 

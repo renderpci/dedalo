@@ -355,6 +355,8 @@ const DEFAULT_EXEMPTIONS: Readonly<Record<string, string>> = {
 		"the developer listener's address in effect: the prior .env's SERVER_TCP_HOST, else 127.0.0.1",
 	tls_mode:
 		"developer only: the prior .env's pair kept (''), else local_ca (D1); every other route the plain read-back",
+	unix_socket:
+		"developer only: the prior .env's SERVER_UNIX_SOCKET, else the entity's /tmp/dedalo_ts_<entity>.sock; every other route the plain read-back",
 };
 
 describe('screen model — every default is the plan’s (c)', () => {
@@ -411,12 +413,27 @@ describe('screen model — every default is the plan’s (c)', () => {
 				'route',
 				'timezone',
 				'tls_mode',
+				'unix_socket',
 			].sort(),
 		);
 		// The developer listener: the route defaults on a fresh machine (D1, D3) …
 		expect(questionFor(input, 'dev_port')?.default).toBe('3500');
 		expect(questionFor(input, 'dev_host')?.default).toBe('127.0.0.1');
 		expect(questionFor(input, 'tls_mode')?.default).toBe('local_ca');
+		// The socket: the engine default with no entity, the entity's own with one.
+		expect(questionFor(input, 'unix_socket')?.default).toBe('/tmp/dedalo_ts.sock');
+		const named = modelInput({ route: 'developer', entity: 'Test' });
+		expect(questionFor(named, 'unix_socket')?.default).toBe('/tmp/dedalo_ts_test.sock');
+		expect(questionFor(named, 'unix_socket')?.value).toBe('/tmp/dedalo_ts_test.sock');
+		expect(
+			questionFor(
+				modelInput(
+					{ route: 'developer', entity: 'test' },
+					{ priorEnv: { SERVER_UNIX_SOCKET: '/run/me/d.sock' } },
+				),
+				'unix_socket',
+			)?.default,
+		).toBe('/run/me/d.sock');
 		// … what the prior .env already holds on a re-run (PRESERVE) …
 		const rerun = modelInput(
 			{ route: 'developer' },
@@ -442,6 +459,11 @@ describe('screen model — every default is the plan’s (c)', () => {
 				normalizeInstallAnswers(without).answers.tls_mode,
 			);
 		}
+		// … and production's socket (the services screen) is still the plain read-back.
+		const { unix_socket: _socket, ...noSocket } = maximalRaw('production');
+		expect(questionFor(modelInput(noSocket), 'unix_socket')?.default).toBe(
+			normalizeInstallAnswers(noSocket).answers.unix_socket,
+		);
 	});
 
 	test('production: the names derive from the instance (the peer role ded_<i>, the root-rule media path); docker/trial: the stack constants', () => {

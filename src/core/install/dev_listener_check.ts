@@ -21,10 +21,20 @@
  * a refusal of its own, named by its code. The probe listener is closed before
  * the answer: nothing stays bound.
  *
+ * THE SOCKET. `bun run dev` also binds SERVER_UNIX_SOCKET, and the server
+ * refuses to boot when another live instance answers on it (server.ts, S2-17b).
+ * Two checkouts on one machine used to share the default socket, so the second
+ * install sealed and then failed its first boot. The SAME liveness probe the
+ * server uses (src/config/unix_socket.ts) now refuses it here, before anything
+ * is written. A leftover file nobody answers on is no refusal: the server
+ * removes it at boot.
+ *
  * Gate: test/unit/install_dev_route_listener_native.test.ts.
  */
 
+import { existsSync } from 'node:fs';
 import { connect, createServer } from 'node:net';
+import { unixSocketIsLive } from '../../config/unix_socket.ts';
 import type { DevCertificatePlan } from './dev_certificate.ts';
 import type { DevListenerPlan } from './dev_listener.ts';
 import { devAuthorityRefusal } from './dev_tls.ts';
@@ -126,23 +136,41 @@ export function devPortBindRefusal(port: string, host: string, code: string): st
 	return `the development listener cannot bind ${host}:${port} (${code}) — choose another port (above 1023) or address on the Development server step (--dev-port / --dev-host)`;
 }
 
+/** Does a running server answer on the socket at `path` right now? */
+export type SocketProbe = (path: string) => Promise<boolean>;
+
+/** The live check: the file exists and a server answers on it. */
+export async function socketHeld(path: string): Promise<boolean> {
+	return existsSync(path) && (await unixSocketIsLive(path));
+}
+
+/** The refusal when a running server answers on the socket. */
+export function devSocketInUseRefusal(path: string): string {
+	return `the unix socket ${path} (SERVER_UNIX_SOCKET) is held by a running server — another checkout's \`bun run dev\`? Stop it, or choose another socket on the Development server step (--socket)`;
+}
+
 /**
  * What the run refuses about the developer listener RIGHT NOW: [] when the
- * plan opens none (every other route) or its port is free on its address —
+ * plan opens none (every other route) or its port is free on its address and
+ * no running server answers on its socket —
  * and, under the local CA, an authority already in its directory that was made
  * for other names (dev_tls.ts devAuthorityRefusal: refused before anything is
  * written, never rotated behind the operator's back).
  */
 export async function devListenerRefusals(
-	listener: Pick<DevListenerPlan, 'host' | 'port'> | null,
+	listener: Pick<DevListenerPlan, 'host' | 'port' | 'socket'> | null,
 	certificate: Pick<DevCertificatePlan, 'dir' | 'names'> | null = null,
 	probe: typeof probeListenPort = probeListenPort,
+	socketProbe: SocketProbe = socketHeld,
 ): Promise<string[]> {
 	if (listener === null) return [];
 	const authority =
 		certificate === null ? null : devAuthorityRefusal(certificate.dir, certificate.names);
 	const port = await devPortRefusals(listener, probe);
-	return authority === null ? port : [...port, authority];
+	const socket = (await socketProbe(listener.socket))
+		? [devSocketInUseRefusal(listener.socket)]
+		: [];
+	return [...port, ...socket, ...(authority === null ? [] : [authority])];
 }
 
 /** The port half of devListenerRefusals. */

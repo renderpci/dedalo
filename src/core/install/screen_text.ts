@@ -323,6 +323,11 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 			description:
 				'Its private key PEM, absolute path, readable by your account only; the server refuses to start with a key of another certificate.',
 		},
+		'dev_server.unix_socket': {
+			label: 'Server socket',
+			description:
+				'The unix socket `bun run dev` also binds (SERVER_UNIX_SOCKET), absolute path. One per checkout: the default carries the entity (/tmp/dedalo_ts_<entity>.sock), so two installs on this machine never share one. If a running server already answers on it, the Review refuses.',
+		},
 		backup_dir: {
 			label: 'Backup directory',
 			description:

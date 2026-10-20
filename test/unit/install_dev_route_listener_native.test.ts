@@ -26,6 +26,15 @@
  *     (a field error, never a raw bind exception), and a listener other
  *     machines reach is a PLAN warning — the Review and the real CLI's
  *     headless plan carry it; this machine only carries none;
+ *  S. the SOCKET — the developer route always writes SERVER_UNIX_SOCKET in the
+ *     Serving section (never a listener key): the entity's own
+ *     `/tmp/dedalo_ts_<entity>.sock` (lowercased; the engine default without
+ *     an entity), the prior .env's kept, an answer replacing both; a path the
+ *     OS cannot bind (a long entity, a long answer) and a relative kept one are
+ *     field errors on `unix_socket`; the REAL writer puts it in the .env; the
+ *     Review and the dev_server screen show it; and a REALLY live socket is
+ *     refused by devListenerRefusals (the Review's and the executor's check)
+ *     while a leftover file nobody answers on is not;
  *  G. GATE 3 — a REAL login over the REAL dev listener, with the plan's own
  *     keys: the cookie the login sets is carried by the next request (curl's
  *     cookie jar applies the browser rule: a Secure cookie is never sent to a
@@ -58,9 +67,14 @@ import {
 	DEV_LISTENER_ENV_KEYS,
 	type DevListenerPlan,
 	devListenerNetworkWarning,
+	devSocketDefault,
 	servesTls,
 } from '../../src/core/install/dev_listener.ts';
-import { devListenerRefusals, probeListenPort } from '../../src/core/install/dev_listener_check.ts';
+import {
+	devListenerRefusals,
+	devSocketInUseRefusal,
+	probeListenPort,
+} from '../../src/core/install/dev_listener_check.ts';
 import { executeInstall } from '../../src/core/install/executor.ts';
 import { servesTls as stackServesTls } from '../../src/core/install/host/stack/layout.ts';
 import { buildInstallPlan, type InstallPlan } from '../../src/core/install/install_plan.ts';
@@ -93,6 +107,8 @@ afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 const DEV = { route: 'developer', ...BASE_RECORD } as const;
 const TLS_DIR = '/zz/private/tls';
+/** A socket path no server answers on (the socket half of devListenerRefusals stays quiet). */
+const NO_SOCKET = join(scratch, 'absent.sock');
 
 /** A developer plan over `prior` (the plan's own builder — what every front end renders). */
 function devPlan(
@@ -366,7 +382,11 @@ async function holding<T>(work: (port: number) => Promise<T>): Promise<T> {
 describe('F. D3 — a port in use is refused, the next free one suggested', () => {
 	test('a held port: refused, named, and the suggested port really binds', async () => {
 		await holding(async (port) => {
-			const refusals = await devListenerRefusals({ host: '127.0.0.1', port: String(port) });
+			const refusals = await devListenerRefusals({
+				host: '127.0.0.1',
+				socket: NO_SOCKET,
+				port: String(port),
+			});
 			expect(refusals.length).toBe(1);
 			expect(refusals[0]).toContain(`port ${port} (SERVER_TCP_PORT) is already in use`);
 			const suggested = Number(refusals[0]?.match(/; (\d+) is free$/)?.[1]);
@@ -376,9 +396,13 @@ describe('F. D3 — a port in use is refused, the next free one suggested', () =
 	});
 
 	test('a free port: nothing refused; no listener (another route): nothing asked', async () => {
-		expect(await devListenerRefusals({ host: '127.0.0.1', port: String(freeTcpPort()) })).toEqual(
-			[],
-		);
+		expect(
+			await devListenerRefusals({
+				host: '127.0.0.1',
+				socket: NO_SOCKET,
+				port: String(freeTcpPort()),
+			}),
+		).toEqual([]);
 		expect(await devListenerRefusals(null)).toEqual([]);
 	});
 
@@ -533,7 +557,7 @@ describe('H. kept values are validated; a network listener is a plan warning', (
 
 	test('the port check names a malformed port instead of throwing', async () => {
 		for (const port of ['abc', '0', '70000', '']) {
-			const refusals = await devListenerRefusals({ host: '127.0.0.1', port });
+			const refusals = await devListenerRefusals({ host: '127.0.0.1', socket: NO_SOCKET, port });
 			expect(refusals).toEqual([
 				`the development port '${port}' (SERVER_TCP_PORT) must be an integer 1-65535 — choose another port on the Development server step (--dev-port)`,
 			]);
@@ -694,6 +718,85 @@ function loginRoundTrip(origin: string): { loginOk: boolean; setCookie: string; 
 		counters: counters.out,
 	};
 }
+
+// ── S. the socket ───────────────────────────────────────────────────────────
+
+/** The plan's "Serving / media" section as [key, value] pairs. */
+function servingEntries(plan: InstallPlan): [string, string][] {
+	const section = plan.env.find((item) => item.comment.includes('Serving / media'));
+	return (section?.entries ?? []).map((item) => [item.key, item.value]);
+}
+
+const socketOf = (plan: InstallPlan): string | undefined =>
+	servingEntries(plan).find(([key]) => key === 'SERVER_UNIX_SOCKET')?.[1];
+
+describe('S. the developer socket: one per entity, written, kept, refused while live', () => {
+	test('derived from the entity (lowercased), written in Serving — never a listener key', () => {
+		expect(devSocketDefault('Test')).toBe('/tmp/dedalo_ts_test.sock');
+		expect(devSocketDefault('')).toBe('/tmp/dedalo_ts.sock');
+		expect(devSocketDefault('1bad')).toBe('/tmp/dedalo_ts.sock');
+		const plan = devPlan({ entity: 'Test' });
+		expect(socketOf(plan)).toBe('/tmp/dedalo_ts_test.sock');
+		expect(listenerOf(plan).socketSource).toBe('derived');
+		expect(devSection(plan).map(([key]) => key)).not.toContain('SERVER_UNIX_SOCKET');
+		expect(DEV_LISTENER_ENV_KEYS).not.toContain('SERVER_UNIX_SOCKET');
+		expect(plan.errors).toEqual([]);
+	});
+
+	test('PRESERVE: the prior .env’s socket is kept (not rewritten); an answer replaces it', () => {
+		const prior = { SERVER_UNIX_SOCKET: '/run/me/dedalo.sock' };
+		const kept = devPlan({ entity: 'test' }, prior);
+		expect(socketOf(kept)).toBeUndefined();
+		expect(listenerOf(kept).socket).toBe('/run/me/dedalo.sock');
+		expect(listenerOf(kept).kept).toContain('SERVER_UNIX_SOCKET');
+		const answered = devPlan({ entity: 'test', unix_socket: '/tmp/mine.sock' }, prior);
+		expect(socketOf(answered)).toBe('/tmp/mine.sock');
+		expect(listenerOf(answered).socketSource).toBe('answered');
+	});
+
+	test('a socket the OS cannot bind, or a relative kept one, is a field error on unix_socket', () => {
+		const long = devPlan({ entity: `e${'x'.repeat(100)}` });
+		expect(long.fieldErrors.filter((item) => item.key === 'unix_socket').length).toBe(1);
+		expect(long.errors.some((error) => error.includes('derived from the entity'))).toBe(true);
+		const typed = devPlan({ unix_socket: `/tmp/${'y'.repeat(100)}.sock` });
+		expect(typed.fieldErrors.some((item) => item.key === 'unix_socket')).toBe(true);
+		const relative = devPlan({}, { SERVER_UNIX_SOCKET: 'run/d.sock' });
+		expect(relative.errors.some((error) => error.includes('kept from your .env'))).toBe(true);
+		// The answer that replaces a bad kept value clears it.
+		expect(
+			devPlan({ unix_socket: '/tmp/ok.sock' }, { SERVER_UNIX_SOCKET: 'run/d.sock' }).errors,
+		).toEqual([]);
+	});
+
+	test('the REAL writer puts it in the .env; the Review and the screen show it', () => {
+		const dir = privateDir('socket');
+		const env = parseEnvFile(persistInChild({ ...DEV, entity: 'zzsock' }, dir));
+		expect(env.SERVER_UNIX_SOCKET).toBe('/tmp/dedalo_ts_zzsock.sock');
+		const input = modelInput({ ...DEV, entity: 'zzsock' });
+		const review = reviewLines(devPlan({ entity: 'zzsock' }), input);
+		expect(review.some((line) => line.value === '/tmp/dedalo_ts_zzsock.sock')).toBe(true);
+		const question = buildScreens(input)
+			.find((screen) => screen.id === 'dev_server')
+			?.questions.find((item) => item.key === 'unix_socket');
+		expect(question?.value).toBe('/tmp/dedalo_ts_zzsock.sock');
+	});
+
+	test('a LIVE socket is refused; a leftover file nobody answers on is not', async () => {
+		const dir = privateDir('live');
+		const path = join(dir, 's.sock');
+		const listener = { host: '127.0.0.1', port: String(freeTcpPort()), socket: path };
+		expect(await devListenerRefusals(listener)).toEqual([]);
+		const server = Bun.serve({ unix: path, fetch: () => new Response('ok') });
+		try {
+			expect(await devListenerRefusals(listener)).toEqual([devSocketInUseRefusal(path)]);
+		} finally {
+			server.stop(true);
+		}
+		// A stale file (an unclean stop) the server removes at boot: no refusal.
+		writeFileSync(path, '');
+		expect(await devListenerRefusals(listener)).toEqual([]);
+	});
+});
 
 describe('G. gate 3 — the login cookie survives the next request on the listener the plan writes', () => {
 	beforeAll(async () => {

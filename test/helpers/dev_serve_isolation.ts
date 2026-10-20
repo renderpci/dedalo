@@ -10,8 +10,13 @@
  * second server on this machine needs, or it collides with the suite (and a
  * developer's running `bun run dev`):
  *
- *  - its own unix socket (the default /tmp/dedalo_ts.sock may be a running
- *    `bun run dev` here: the double-start guard would refuse the boot);
+ *  - its own unix socket (the default /tmp/dedalo_ts_<entity>.sock may be a
+ *    running `bun run dev` here: the double-start guard would refuse the boot,
+ *    and the install's own preflight refuses it first). The developer route
+ *    WRITES SERVER_UNIX_SOCKET and the serve check reads the file, so the socket
+ *    travels as the `--socket` ANSWER ({@link devServeSocketArgs}), never as an
+ *    environment key: the .env would win. ONE per test process, so a resume
+ *    hands the same answer the fresh run saved;
  *  - its own marked media root + export store: the suite's would be claimed by
  *    this server's boot sweep for ANOTHER database, and every later export
  *    gate refused as a foreign install;
@@ -37,9 +42,8 @@ import { markProcessesDir } from './test_media_root.ts';
 /** This process's scratch dirs, removed by ONE exit hook (a drill asks for many). */
 const made: string[] = [];
 
-/** The env a test hands a developer-route install CLI (see the header); one scratch dir per call. */
-export function devServeIsolationEnv(): Record<string, string> {
-	// Short: macOS caps a unix socket path at 104 bytes.
+/** A scratch dir of this process's, removed at exit. Short: macOS caps a unix socket path at 104 bytes. */
+function scratchDir(): string {
 	const dir = mkdtempSync(join(tmpdir(), 'zzserve_'));
 	if (made.length === 0) {
 		process.once('exit', () => {
@@ -47,10 +51,30 @@ export function devServeIsolationEnv(): Record<string, string> {
 		});
 	}
 	made.push(dir);
+	return dir;
+}
+
+let socket: string | null = null;
+
+/** THIS process's install socket (see the header): one per process, never a running server's. */
+export function devServeSocket(): string {
+	socket ??= join(scratchDir(), 's.sock');
+	return socket;
+}
+
+/** The `--socket` answer a developer-route install CLI run by a test passes (see the header). */
+export function devServeSocketArgs(): string[] {
+	return ['--socket', devServeSocket()];
+}
+
+/** The env a test hands a developer-route install CLI (see the header); one scratch dir per call. */
+export function devServeIsolationEnv(): Record<string, string> {
+	const dir = scratchDir();
 	const media = markMediaRoot(join(dir, 'media'));
 	markExportArtifactsRoot(`${media}.export_artifacts`);
 	return {
-		SERVER_UNIX_SOCKET: join(dir, 's.sock'),
+		// What a `--socket`-less run boots on — the written .env wins over it (see the header).
+		SERVER_UNIX_SOCKET: devServeSocket(),
 		DEDALO_TEST_MEDIA_ROOT: media,
 		DEDALO_MEDIA_PROCESSES_DIR: markProcessesDir(join(dir, 'processes')),
 		DEDALO_DIFFUSION_SCHEDULER_ENABLED: 'false',

@@ -54,7 +54,7 @@ import {
 	HIERARCHY_MODEL_TYPE_TLD,
 	HIERARCHY_TYPE_TLD,
 } from '../../src/core/ontology/ontology_tipos.ts';
-import { devServeIsolationEnv } from '../helpers/dev_serve_isolation.ts';
+import { devServeIsolationEnv, devServeSocketArgs } from '../helpers/dev_serve_isolation.ts';
 import { freeTcpPort } from '../helpers/free_tcp_port.ts';
 import { markExportArtifactsRoot, markMediaRoot } from '../helpers/media_scratch_root.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
@@ -135,6 +135,8 @@ function cliArgs(): string[] {
 		// A free development port: 3500 may be a running `bun run dev` here (D3 refuses it).
 		'--dev-port',
 		String(DEV_PORT),
+		// Its own socket: the written .env's SERVER_UNIX_SOCKET is what the serve check boots on.
+		...devServeSocketArgs(),
 	];
 }
 const installEnv = (): Record<string, string | undefined> => ({

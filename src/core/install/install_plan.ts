@@ -665,10 +665,11 @@ function parseRoute(value: unknown, problems: FieldError[]): InstallRoute {
  *  - docker / trial: the compose stack's constants (install.sh passes the
  *    SAME values as explicit flags — an older pulled image does not know
  *    `--route`; gate: install_screen_model_tripwire); trial has no TLS;
- *  - developer: no database name or user (asked), media and socket not written;
- *    its development listener (port, address, TLS mode) is decided over the
- *    prior .env by dev_listener.ts — '' answers here, never a route default, so
- *    a re-run keeps what the operator already has (the PRESERVE rule).
+ *  - developer: no database name or user (asked), media not written; its
+ *    development listener (port, address, TLS mode) AND its socket (the
+ *    entity's `/tmp/dedalo_ts_<entity>.sock`) are decided over the prior .env
+ *    by dev_listener.ts — '' answers here, never a route default, so a re-run
+ *    keeps what the operator already has (the PRESERVE rule).
  *  - DEDALO_MEDIA_ACCESS_MODE: `publication` on production (written, so the
  *    first boot never reports an unconfigured mode — C3-44); '' elsewhere.
  */
@@ -1247,12 +1248,19 @@ function ontologiesSection(activeOntologyTlds: readonly string[]): EnvSection {
 /**
  * Serving / media: written ONLY when provided, so a re-save that does not carry
  * them preserves a prior value instead of clobbering it. SERVER_UNIX_SOCKET is
- * the load-bearing one: its default mismatches a systemd + reverse-proxy deploy.
+ * the load-bearing one: its default mismatches a systemd + reverse-proxy deploy,
+ * and on the developer route two checkouts on one machine would share it — so
+ * there the listener plan decides it (dev_listener.ts: answered, kept or the
+ * entity's own) and it is written unless kept.
  */
-function servingSection(a: InstallAnswers): EnvSection {
+function servingSection(a: InstallAnswers, listener: DevListenerPlan | null): EnvSection {
+	const socket =
+		listener === null
+			? [entry('SERVER_UNIX_SOCKET', a.unix_socket)]
+			: listener.serving.map((item) => entry(item.key, item.value));
 	const candidates = [
 		entry('MEDIA_PATH', a.media_path),
-		entry('SERVER_UNIX_SOCKET', a.unix_socket),
+		...socket,
 		entry('DEDALO_MEDIA_ACCESS_MODE', a.media_access_mode),
 		entry('DEDALO_PG_BIN_PATH', a.pg_bin_path),
 		// The units' database-backup dir (production): the running server's
@@ -1338,7 +1346,7 @@ function envSections(
 		secretSection(salt),
 		updateServersSection(a, prior),
 		ontologiesSection(activeOntologyTlds),
-		servingSection(a),
+		servingSection(a, listener),
 		diffusionSection(a),
 		mailerSection(a),
 		devSection(listener),

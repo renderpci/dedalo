@@ -279,7 +279,6 @@ export const ROUTE_FIXED: Readonly<Record<InstallRoute, Readonly<Record<string, 
 		developer: Object.freeze({
 			instance: NO_INSTANCE,
 			media_path: 'a checkout keeps the engine default media root (flag-settable: --media-path)',
-			unix_socket: 'a checkout serves on its own port or socket (flag-settable: --socket)',
 			media_access_mode: 'the engine default (flag-settable: --media-access-mode)',
 			...DEVELOPER_HOST_KEYS,
 			...IDENTITY_FIXED,
@@ -586,7 +585,7 @@ const VISIBILITY: readonly VisibilityRule[] = Object.freeze<VisibilityRule[]>([
 	{ keys: ['tls_extra_names'], when: tlsIs('local_ca') },
 	{ keys: ['tls_cert_path', 'tls_key_path'], when: tlsIs('files') },
 	// The developer route's development listener (DEV_ROUTE_SERVE §1.1–1.2).
-	{ keys: ['dev_port', 'dev_host', 'tls_mode'], when: onDeveloper },
+	{ keys: ['dev_port', 'dev_host', 'tls_mode', 'unix_socket'], when: onDeveloper },
 	{
 		keys: ['tls_cert_path', 'tls_key_path'],
 		when: (raw, route) => onDeveloper(raw, route) && raw.tls_mode === 'files',
@@ -701,6 +700,11 @@ const SPECIAL_DEFAULTS: Readonly<Partial<Record<keyof InstallAnswers, (ctx: Ctx)
 		dev_port: (ctx: Ctx) => devListenerDefault(ctx, 'dev_port')?.port ?? '',
 		dev_host: (ctx: Ctx) => devListenerDefault(ctx, 'dev_host')?.host ?? '',
 		tls_mode: tlsModeDefault,
+		// The developer socket: the value a re-run keeps, else the entity's (dev_listener.ts).
+		unix_socket: (ctx: Ctx) =>
+			ctx.route === 'developer'
+				? (devListenerDefault(ctx, 'unix_socket')?.socket ?? '')
+				: planDefault(ctx, 'unix_socket'),
 	});
 
 /** THE default of `key`: the plan's normalization of the answers without it (see the header). */
@@ -1178,7 +1182,7 @@ function devServerNotices(ctx: Ctx): Notice[] {
  */
 function askDevListener(
 	ctx: Ctx,
-	key: 'dev_port' | 'dev_host' | 'tls_mode',
+	key: 'dev_port' | 'dev_host' | 'tls_mode' | 'unix_socket',
 	kind: Question['kind'],
 	extra: Partial<Question> = {},
 ): Question {
@@ -1187,7 +1191,7 @@ function askDevListener(
 	return question;
 }
 
-/** Developer: the development listener — port, who reaches it, the certificate. */
+/** Developer: the development listener — port, who reaches it, the certificate — and the socket. */
 function devServerScreen(ctx: Ctx, frame: Frame): Screen {
 	const host = askDevListener(ctx, 'dev_host', 'choice');
 	host.options = devHostOptions(host.value, host.default);
@@ -1198,6 +1202,7 @@ function devServerScreen(ctx: Ctx, frame: Frame): Screen {
 			askDevListener(ctx, 'tls_mode', 'choice', { options: devTlsOptions(ctx) }),
 			ask(ctx, 'dev_server', 'tls_cert_path', 'text', { required: true }),
 			ask(ctx, 'dev_server', 'tls_key_path', 'text', { required: true }),
+			askDevListener(ctx, 'unix_socket', 'text'),
 		]),
 		notices: devServerNotices(ctx),
 		help: [HELP_LINKS.devQuickstart],
@@ -2162,7 +2167,8 @@ export function reviewLines(plan: InstallPlan, input: ScreenModelInput): ReviewL
 		},
 		...serviceLines(a, input),
 		{ label: REVIEW_TEXT.media, value: pathValue(a.media_path) },
-		{ label: REVIEW_TEXT.socket, value: pathValue(a.unix_socket) },
+		// The developer route's socket is the listener plan's (answered, kept or the entity's).
+		{ label: REVIEW_TEXT.socket, value: pathValue(plan.devListener?.socket ?? a.unix_socket) },
 		...hostLines(a, input),
 		...devListenerLines(plan),
 		...adminLines(input),

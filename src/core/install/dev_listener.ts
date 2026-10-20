@@ -21,7 +21,16 @@
  *  - SESSION_COOKIE_SECURE derived from that answer by {@link servesTls} — the
  *    SAME function the docker stack writes its own from (host/stack/files.ts);
  *  - DEDALO_DEV_MODE=true and DEDALO_DEBUG_API_ERRORS=true (the route IS a
- *    development install).
+ *    development install);
+ *  - SERVER_UNIX_SOCKET — the engine also binds its unix socket in development,
+ *    and every checkout on one machine used to share the catalog default
+ *    `/tmp/dedalo_ts.sock`: the second `bun run dev` refused to boot. The
+ *    default is now the entity's own, `/tmp/dedalo_ts_<entity>.sock`
+ *    ({@link devSocketDefault}), ALWAYS written (never left to the engine
+ *    default). It is not a listener key ({@link DEV_LISTENER_ENV_KEYS}): every
+ *    route writes it, so the plan's Serving section renders it ({@link
+ *    DevListenerPlan.serving}). Whether a server already answers on it is the
+ *    machine half (dev_listener_check.ts).
  *
  * THE PRESERVE RULE. A re-run keeps what the operator already has: an answer
  * left at its default (`''` — "the plan decides") writes nothing for a key the
@@ -40,6 +49,7 @@
 
 import { join } from 'node:path';
 import { devListenerUrl, isLoopbackBind } from '../../config/dev_listener_address.ts';
+import { ENTITY_PATTERN } from './entity_name.ts';
 import type { InstallAnswers } from './install_plan.ts';
 
 /** D3: the development port the route offers first. */
@@ -52,6 +62,8 @@ export const DEV_HOST_NETWORK = '0.0.0.0';
 export const DEV_TLS_MODES = ['local_ca', 'none', 'files'] as const;
 /** D1: an unanswered developer `tls_mode` is the local authority. */
 export const DEV_TLS_DEFAULT = 'local_ca';
+/** The engine's own socket default (src/config/catalog/server.ts SERVER_UNIX_SOCKET). */
+export const DEV_SOCKET_FALLBACK = '/tmp/dedalo_ts.sock';
 /** The generator's leaf files (deploy/dedalo-tls-rotate.sh SITE_CRT / SITE_KEY). */
 export const DEV_TLS_CERT_NAME = 'fullchain.pem';
 export const DEV_TLS_KEY_NAME = 'privkey.pem';
@@ -63,6 +75,8 @@ const KEY_KEY = 'SERVER_TCP_TLS_KEY_FILE';
 const SECURE_KEY = 'SESSION_COOKIE_SECURE';
 const DEV_MODE_KEY = 'DEDALO_DEV_MODE';
 const DEBUG_KEY = 'DEDALO_DEBUG_API_ERRORS';
+/** Written by every route that has one (install_plan.ts servingSection) — never a listener key. */
+export const DEV_SOCKET_KEY = 'SERVER_UNIX_SOCKET';
 
 /**
  * Every key the developer route's listener section may write — and that no
@@ -77,6 +91,21 @@ export const DEV_LISTENER_ENV_KEYS: readonly string[] = Object.freeze([
 	DEV_MODE_KEY,
 	DEBUG_KEY,
 ]);
+
+/**
+ * The developer route's socket for `entity`: `/tmp/dedalo_ts_<entity>.sock`
+ * (lowercased — a case-insensitive file system makes `Test` and `test` one
+ * file anyway), so two checkouts of two entities never share one; the engine's
+ * own default while the entity is unset or malformed (its own error says so).
+ */
+export function devSocketDefault(entity: string): string {
+	return ENTITY_PATTERN.test(entity)
+		? `/tmp/dedalo_ts_${entity.toLowerCase()}.sock`
+		: DEV_SOCKET_FALLBACK;
+}
+
+/** Where the plan's socket comes from: the answer, the prior .env (PRESERVE) or the entity. */
+export type DevSocketSource = 'answered' | 'kept' | 'derived';
 
 /**
  * Where the listener's certificate comes from: an answered mode, or `kept` —
@@ -108,6 +137,11 @@ export interface DevListenerPlan {
 	readonly entries: readonly { readonly key: string; readonly value: string }[];
 	/** The keys the prior .env keeps (not written: config_persist carries the line). */
 	readonly kept: readonly string[];
+	/** SERVER_UNIX_SOCKET in effect (written or kept). */
+	readonly socket: string;
+	readonly socketSource: DevSocketSource;
+	/** The Serving-section entries the plan writes (the socket, unless kept). */
+	readonly serving: readonly { readonly key: string; readonly value: string }[];
 }
 
 type Prior = Readonly<Record<string, string>>;
@@ -207,6 +241,12 @@ function tlsEntries(
 	}
 }
 
+/** How SectionBuilder.answered decided the socket. */
+function devSocketSource(answer: string, kept: readonly string[]): DevSocketSource {
+	if (answer !== '') return 'answered';
+	return kept.includes(DEV_SOCKET_KEY) ? 'kept' : 'derived';
+}
+
 /**
  * The developer listener of `answers` over the prior .env, or null for every
  * other route (and for a host route's delegated engine child): they write none
@@ -217,6 +257,8 @@ export function devListenerPlan(
 		InstallAnswers,
 		| 'route'
 		| 'engine_only'
+		| 'entity'
+		| 'unix_socket'
 		| 'dev_port'
 		| 'dev_host'
 		| 'tls_mode'
@@ -237,6 +279,12 @@ export function devListenerPlan(
 	section.write(SECURE_KEY, sessionCookieSecure ? 'true' : 'false');
 	section.answered(DEV_MODE_KEY, '', 'true');
 	section.answered(DEBUG_KEY, '', 'true');
+	const serving = new SectionBuilder(prior);
+	const socket = serving.answered(
+		DEV_SOCKET_KEY,
+		answers.unix_socket,
+		devSocketDefault(answers.entity),
+	);
 	return {
 		port,
 		host,
@@ -246,7 +294,10 @@ export function devListenerPlan(
 		url: devListenerUrl(host, port, tls !== null),
 		networkReachable: !isLoopbackBind(host),
 		entries: section.entries,
-		kept: section.kept,
+		kept: [...section.kept, ...serving.kept],
+		socket,
+		socketSource: devSocketSource(answers.unix_socket, serving.kept),
+		serving: serving.entries,
 	};
 }
 

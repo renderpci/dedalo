@@ -2955,8 +2955,10 @@ The unix socket the engine listens on. In production this is the **only** listen
 server owns TCP and TLS, serves the client files and the media, and forwards the API and the
 dynamic routes to this socket.
 
-Default `/tmp/dedalo_ts.sock`. On a system that cleans `/tmp`, prefer a directory of your
-own (`/run/dedalo/`). The path must be writable by the user the engine runs as and reachable
+Default `/tmp/dedalo_ts.sock`. The installer always writes it: the developer route
+`/tmp/dedalo_ts_<entity>.sock` (one socket per checkout), the production route
+`/run/dedalo-<instance>/dedalo_ts.sock`. On a system that cleans `/tmp`, prefer a directory
+of your own (`/run/dedalo/`). The path must be writable by the user the engine runs as and reachable
 by the user the web server runs as — a socket neither can open is the usual cause of a
 "bad gateway" that looks like the engine is down.
 
