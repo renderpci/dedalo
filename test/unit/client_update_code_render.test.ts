@@ -181,6 +181,18 @@ describe('update_code source shape', () => {
 		expect(/\.update_stream \.display_json_box\s*\{\s*display:\s*none;/.test(css_src)).toBe(true);
 	});
 
+	test('the generic render_stream line is hidden: the track and the ending note own the outcome', () => {
+		// render_stream prints "Process <seconds>" on any failed run and appends
+		// a ui.show_message banner with the same sentence — position:absolute, so
+		// it floated OVER the phase rows. The widget hides that line locally
+		// (same precedent as the JSON mirror) instead of touching render_common.
+		expect(css_src).toContain('.update_stream .process_status_node');
+		expect(/>\.info_node\s*\{\s*display:\s*none;/.test(css_src)).toBe(true);
+		// the live cues survive, in flow, so the row collapses with the job
+		expect(/>\.button_stop_process\s*\{\s*position:\s*static;/.test(css_src)).toBe(true);
+		expect(css_src).toContain('position: static !important;'); // the spinner
+	});
+
 	test('stream death vs job death: interrupted keeps the resume key, refusal renders its sentence', () => {
 		// FINDING 3: a pre-swap stream death is INDETERMINATE — the tracker must
 		// restore the resume key (render_stream's teardown deletes it) and say
@@ -1033,6 +1045,19 @@ describe('update_code tracking surface', () => {
 		// in client_ui_reveal.test.ts), not a local scrollIntoView copy
 		expect(tracker).toContain("const reveal = (node) => ui.reveal(node, { block:'center' })");
 		expect(tracker).not.toContain('scrollIntoView');
+	});
+
+	test('a pre-phase refusal drops the all-pending track and says the failure once', () => {
+		// eight rows stuck on "Pending" over a refusal that never started a phase
+		// read as "the update is hanging". The sentence is the whole story.
+		const failed = tracker.slice(
+			tracker.indexOf('const finish_failed'),
+			tracker.indexOf('const finish_interrupted'),
+		);
+		expect(failed).toContain('if (is_refusal)');
+		expect(failed).toContain('track.node.remove()');
+		// and the bar note must not echo a terminal failure the ending note states
+		expect(render_src).toContain("(state.mode==='failed' || state.mode==='rolled_back')");
 	});
 
 	test('the pinned phase track cannot own its scrollport', () => {

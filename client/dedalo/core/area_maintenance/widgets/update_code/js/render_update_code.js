@@ -722,9 +722,12 @@ const render_phase_track = function(parent) {
 		} else if (state.mode==='rolled_back') {
 			bar_fill.classList.add('state_warning')
 		}
-		if (state.message) {
-			bar_note.textContent = state.message
-		}
+		// while the run is live the bar note IS its progress sentence. On a
+		// terminal failure the ending note below states it — echoing it here
+		// printed the same sentence twice.
+		bar_note.textContent = (state.mode==='failed' || state.mode==='rolled_back')
+			? ''
+			: (state.message || '')
 	}
 
 	return { node : node, paint : paint }
@@ -956,6 +959,11 @@ const track_process = function(pid, pfile, body_response, expected_version, expe
 			// starts no phase at all: the track is all-pending, so the refusal
 			// sentence IS the whole story — render it prominently.
 			const is_refusal = state.last_phase===null
+			// …and an all-pending table is then pure noise above that sentence:
+			// drop it so the refusal is the only thing on the surface.
+			if (is_refusal) {
+				track.node.remove()
+			}
 			reveal(ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: is_refusal ? 'dd_note state_danger update_refusal' : 'dd_note state_danger',

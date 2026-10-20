@@ -198,6 +198,34 @@
 				display: none;
 			}
 
+			// render_stream's GENERIC status line is not this widget's surface
+			// either: on a failed run it prints "Process 2" (a completion label
+			// with the run's duration) and a ui.show_message banner carrying the
+			// same sentence again — and that banner is position:absolute, so it
+			// landed ON the phase rows. The track is the progress, the ending
+			// note is the outcome. Hidden, not removed (shared surface intact).
+			.update_stream .process_status_node {
+				// the two live cues (spinner, Stop) stay, in FLOW: absolutely
+				// positioned they would sit over the ending note once the
+				// message is gone, and a fixed min-height would leave a hole
+				// after the job ends. In flow the row collapses with the job.
+				display: flex;
+				align-items: center;
+				justify-content: flex-end;
+				gap: 0.5rem;
+
+				>.spinner {
+					position: static !important;
+					margin: 0 !important;
+				}
+				>.button_stop_process {
+					position: static;
+				}
+				>.info_node {
+					display: none;
+				}
+			}
+
 			// a pre-phase refusal is the whole story (the track is all-pending):
 			// render its sentence prominently
 			.dd_note.update_refusal {

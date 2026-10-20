@@ -18753,6 +18753,22 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .wrapper_widget.update_code > .content_data .body_response .update_stream .display_json_box {
   display: none;
 }
+.wrapper_widget.update_code > .content_data .body_response .update_stream .process_status_node {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.wrapper_widget.update_code > .content_data .body_response .update_stream .process_status_node > .spinner {
+  position: static !important;
+  margin: 0 !important;
+}
+.wrapper_widget.update_code > .content_data .body_response .update_stream .process_status_node > .button_stop_process {
+  position: static;
+}
+.wrapper_widget.update_code > .content_data .body_response .update_stream .process_status_node > .info_node {
+  display: none;
+}
 .wrapper_widget.update_code > .content_data .body_response .dd_note.update_refusal {
   font-weight: bold;
   font-size: 1.1em;
