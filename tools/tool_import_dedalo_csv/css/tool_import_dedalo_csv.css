@@ -303,13 +303,12 @@
   line-height: 1.2rem;
 }
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item .result_container > .result_info_container > .failed_container {
-  padding-top: 1em;
-  padding-left: 1em;
+  padding: 1rem;
+  border-radius: 3px;
 }
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item .result_container > .result_info_container > .failed_data_container {
-  padding-top: 1em;
-  padding-left: 2em;
-  padding-bottom: 0.5em;
+  padding: 1rem;
+  border-radius: 3px;
 }
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .submit_container {
   padding: 1rem;
