@@ -28,7 +28,7 @@ defaults, plus this machine's network addresses when it is opened to the network
 the `root` login, and the certificate authority's path, SHA-256 fingerprint and
 whether this machine trusts it. The full-screen installer leaves these lines on the
 terminal when it closes. See the
-[developer quickstart](./install/dev_quickstart.md#4-run-the-installer).
+[developer quickstart](./install/dev_quickstart.md#5-run-the-installer).
 
 **`bun run dev` stops when its CSS watcher dies.** The stylesheet watcher never
 stops on a LESS error, so when it exits something is wrong — usually a missing

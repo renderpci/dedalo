@@ -420,7 +420,7 @@ function bunOnPath(env: Record<string, string>): string[] {
 	const dir = dirname(process.execPath);
 	env.PATH = env.PATH === undefined || env.PATH === '' ? dir : `${dir}:${env.PATH}`;
 	return [
-		`\`bun\` is not on your PATH, so \`${DEV_START_COMMAND}\` will not start from your shell: install Bun at the checkout's pin (docs/install/dev_quickstart.md, step 2) or add ${dir} to PATH — this check ran with the installer's own Bun`,
+		`\`bun\` is not on your PATH, so \`${DEV_START_COMMAND}\` will not start from your shell: install Bun at the checkout's pin (docs/install/dev_quickstart.md, step 3) or add ${dir} to PATH — this check ran with the installer's own Bun`,
 	];
 }
 
