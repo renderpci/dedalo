@@ -1722,6 +1722,106 @@
             "lang": "lg-nep",
             "name": "append_layer",
             "value": "नयाँ तहको रूपमा थप्नुहोस्"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "remembered",
+            "value": "remembered"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "remembered",
+            "value": "recordado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "remembered",
+            "value": "recordat"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "remembered",
+            "value": "gogoratua"
+          },
+          {
+            "lang": "lg-por",
+            "name": "remembered",
+            "value": "lembrado"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "remembered",
+            "value": "mémorisé"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "remembered",
+            "value": "gemerkt"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "remembered",
+            "value": "memorizzato"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "remembered",
+            "value": "απομνημονευμένο"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "remembered",
+            "value": "सम्झिएको"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "remembered_title",
+            "value": "Saved in this browser for this file name. Click to forget it"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "remembered_title",
+            "value": "Guardado en este navegador para este nombre de archivo. Haz clic para olvidarlo"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "remembered_title",
+            "value": "Desat en aquest navegador per a aquest nom de fitxer. Feu clic per oblidar-lo"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "remembered_title",
+            "value": "Nabigatzaile honetan gordea fitxategi-izen honetarako. Egin klik ahazteko"
+          },
+          {
+            "lang": "lg-por",
+            "name": "remembered_title",
+            "value": "Guardado neste navegador para este nome de ficheiro. Clique para o esquecer"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "remembered_title",
+            "value": "Enregistré dans ce navigateur pour ce nom de fichier. Cliquez pour l'oublier"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "remembered_title",
+            "value": "In diesem Browser für diesen Dateinamen gespeichert. Klicken, um es zu vergessen"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "remembered_title",
+            "value": "Salvato in questo browser per questo nome di file. Fai clic per dimenticarlo"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "remembered_title",
+            "value": "Αποθηκεύτηκε σε αυτό το πρόγραμμα περιήγησης για αυτό το όνομα αρχείου. Κάντε κλικ για να το ξεχάσετε"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "remembered_title",
+            "value": "यो फाइल नामका लागि यस ब्राउजरमा सुरक्षित गरिएको। बिर्सन क्लिक गर्नुहोस्"
           }
         ]
       }

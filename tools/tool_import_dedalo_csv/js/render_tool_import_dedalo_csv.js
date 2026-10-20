@@ -12,6 +12,7 @@
 	import {request_failed, response_data} from '../../../core/common/js/api_error.js'
 	import {error_text} from '../../../core/common/js/render_api_error.js'
 	import {handle_api_error} from '../../../core/common/js/error_dispatch.js'
+	import {get_section_tipo_candidates} from './section_tipo_from_file_name.js'
 
 
 
@@ -385,6 +386,14 @@ export const import_mode_allowed = function(column_map, policy) {
 
 
 /**
+* DATALIST_COUNTER
+* Unique suffix for each file card's section_tipo datalist id.
+*/
+let datalist_counter = 0
+
+
+
+/**
 * RENDER_FILE_INFO
 * Renders a single file card for one uploaded CSV file.
 *
@@ -453,17 +462,18 @@ const render_file_info = function(self, item) {
 			})
 
 		// section_tipo
-			// Auto-detect the section tipo from the filename suffix pattern:
-			//   exported_<description>_<section_id>-<section_tipo>.csv
-			// e.g. 'exported_oral-history_-1-oh1.csv' → section_tipo 'oh1'
-			// Falls back to the caller's own tipo when the regex yields nothing.
-			const regex			= /.*-([a-z0-9]{3,}) ?.*\.csv/g;
-			const res			= regex.exec(item.name)
-			let section_tipo	= (res && res[1]) ? res[1] : null
-			// empty case. Fallback to current section caller tipo
-			if (!section_tipo || !section_tipo.length) {
-				section_tipo = self.caller.tipo
-			}
+			// Resolution order:
+			//   1. the user's manual correction for this file name, remembered in this browser
+			//   2. the guess from the file name: the last word with the tipo grammar
+			//      e.g. 'export_Ceca_07-10-2026-numisdata6-raw.csv' → 'numisdata6'
+			//   3. the caller's own tipo
+			// Every tipo-shaped word of the name is offered in a datalist, so an
+			// ambiguous name is fixed with one pick.
+			const candidates			= get_section_tipo_candidates(item.name)
+			const detected_section_tipo	= candidates.length ? candidates[candidates.length - 1] : null
+			const default_section_tipo	= detected_section_tipo || self.caller.tipo
+			const remembered			= self.section_tipo_corrections?.[item.name]
+			const section_tipo			= remembered || default_section_tipo
 
 			const section_tipo_label = ui.create_dom_element({
 				element_type	: 'label',
@@ -478,11 +488,60 @@ const render_file_info = function(self, item) {
 				class_name		: 'input_section_tipo',
 				parent			: section_tipo_label
 			})
-			item.section_tipo = section_tipo // assign to item
-			input_section_tipo.addEventListener('keyup', function(){
-				item.section_tipo = input_section_tipo.value // update item value
+			// candidates datalist (browser-native suggestions)
+			const datalist_values = [...new Set([...candidates, self.caller.tipo].filter(Boolean))]
+			if (datalist_values.length>1) {
+				const datalist_id = 'section_tipo_candidates_' + (++datalist_counter)
+				const datalist = ui.create_dom_element({
+					element_type	: 'datalist',
+					id				: datalist_id,
+					parent			: section_tipo_label
+				})
+				for (const value of datalist_values) {
+					ui.create_dom_element({
+						element_type	: 'option',
+						value			: value,
+						parent			: datalist
+					})
+				}
+				input_section_tipo.setAttribute('list', datalist_id)
+			}
+			// remembered mark. Visible while a manual correction is stored; click forgets it
+			const remembered_mark = ui.create_dom_element({
+				element_type	: 'button',
+				type			: 'button',
+				class_name		: 'section_tipo_remembered' + (remembered ? '' : ' hide'),
+				text_content	: self.get_tool_label('remembered') || 'remembered',
+				title			: self.get_tool_label('remembered_title') || 'Saved in this browser for this file name. Click to forget it',
+				parent			: section_tipo_label
+			})
+			remembered_mark.addEventListener('click', function(e){
+				e.preventDefault()
+				e.stopPropagation()
+				self.save_section_tipo_correction(item.name, null, detected_section_tipo)
+				remembered_mark.classList.add('hide')
+				input_section_tipo.value	= default_section_tipo
+				item.section_tipo			= default_section_tipo
 				update_section_warn()
 			})
+			item.section_tipo = section_tipo // assign to item
+			// 'input' (not keyup): a datalist pick fires no key event
+			input_section_tipo.addEventListener('input', function(){
+				item.section_tipo = input_section_tipo.value.trim() // update item value
+				update_section_warn()
+			})
+			// remember a valid manual value (debounced: one write per pause, not per key)
+			let save_timer = null
+			const remember_section_tipo = function() {
+				clearTimeout(save_timer)
+				save_timer = setTimeout(function(){
+					self.save_section_tipo_correction(item.name, item.section_tipo, detected_section_tipo)
+					.then(function(){
+						const is_remembered = !!self.section_tipo_corrections?.[item.name]
+						remembered_mark.classList.toggle('hide', !is_remembered)
+					})
+				}, 400)
+			}
 			function update_section_warn() {
 
 				// clean columns_maper
@@ -509,6 +568,9 @@ const render_file_info = function(self, item) {
 				}else{
 					section_warn.classList.add('hide')
 					columns_maper.classList.add('loading')
+
+					// remember the value when it is a manual correction
+					remember_section_tipo()
 
 					// render again columns_maper
 					render_columns_mapper(self, item)

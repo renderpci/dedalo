@@ -15,6 +15,7 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../../core/tools_common/js/tool_common.js'
 	import {render_tool_import_dedalo_csv} from './render_tool_import_dedalo_csv.js' // self tool rendered (called from render common)
+	import {apply_section_tipo_correction} from './section_tipo_from_file_name.js'
 
 
 
@@ -59,7 +60,17 @@ export const tool_import_dedalo_csv = function () {
 	// Tool-specific fields.
 	this.csv_files_list		= null // {Array} fetched by load_csv_files_list; each entry is a file descriptor object
 	this.csv_files_notices	= null // {Array<string>} what the server DID to a staged file to read it (an encoding conversion); rendered by render()
+	this.section_tipo_corrections = {} // {Object} {file_name: section_tipo} the user typed by hand; browser-local (see load_section_tipo_corrections)
 }//end tool_import_dedalo_csv
+
+
+
+/**
+* SECTION_TIPO_CORRECTIONS_ID
+* Local DB ('data' table) key of the user's manual section_tipo corrections.
+* Browser-only convenience: never sent to the server.
+*/
+const SECTION_TIPO_CORRECTIONS_ID = 'tool_import_dedalo_csv_section_tipo'
 
 
 
@@ -162,6 +173,9 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 
 		// load files list from dir (defined in Dédalo config file constants DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH)
 			self.csv_files_list = await self.load_csv_files_list()
+
+		// section_tipo_corrections. Manual section_tipo per file name, remembered in this browser
+			self.section_tipo_corrections = await self.load_section_tipo_corrections()
 
 		// service_upload
 			// get instance and init
@@ -370,6 +384,9 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 			'status' // string table
 		)
 
+	// forget the remembered section_tipo of the deleted file
+		self.save_section_tipo_correction(item.name, null, null)
+
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'delete_csv_file')
@@ -400,6 +417,69 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 			})
 		})
 }//end remove_file
+
+
+
+/**
+* LOAD_SECTION_TIPO_CORRECTIONS
+* Reads the user's remembered section_tipo corrections from the browser local DB.
+* Never throws: an unavailable/blocked IndexedDB just means nothing is remembered.
+* @returns {Promise<Object>} {file_name: section_tipo}
+*/
+tool_import_dedalo_csv.prototype.load_section_tipo_corrections = async function() {
+
+	try {
+		const response = await data_manager.get_local_db_data(
+			SECTION_TIPO_CORRECTIONS_ID,
+			'data'
+		)
+		const value = response && response.value
+		return (value && typeof value==='object' && !Array.isArray(value))
+			? value
+			: {}
+	} catch (error) {
+		console.warn('[load_section_tipo_corrections] local DB unavailable:', error)
+		return {}
+	}
+}//end load_section_tipo_corrections
+
+
+
+/**
+* SAVE_SECTION_TIPO_CORRECTION
+* Remembers (or forgets) the section_tipo the user set for a file name.
+* A value equal to the file-name guess, or null, removes the entry
+* (see apply_section_tipo_correction). Skips the write when nothing changed.
+* @param {string} file_name
+* @param {string|null} section_tipo
+* @param {string|null} detected_section_tipo - guess from the file name
+* @returns {Promise<boolean>} true when the store changed
+*/
+tool_import_dedalo_csv.prototype.save_section_tipo_correction = async function(file_name, section_tipo, detected_section_tipo) {
+
+	const self = this
+
+	const current	= self.section_tipo_corrections || {}
+	const next		= apply_section_tipo_correction(current, file_name, section_tipo, detected_section_tipo)
+	if (current[file_name]===next[file_name]) {
+		return false
+	}
+	self.section_tipo_corrections = next
+
+	try {
+		await data_manager.set_local_db_data(
+			{
+				id		: SECTION_TIPO_CORRECTIONS_ID,
+				value	: next
+			},
+			'data'
+		)
+	} catch (error) {
+		console.warn('[save_section_tipo_correction] local DB unavailable:', error)
+	}
+
+	return true
+}//end save_section_tipo_correction
 
 
 

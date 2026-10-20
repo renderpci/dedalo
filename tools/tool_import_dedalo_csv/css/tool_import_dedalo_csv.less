@@ -116,6 +116,26 @@
 							border-radius: 3px;
 						}
 
+						>.section_tipo_remembered {
+							margin-left: 0.33rem;
+							padding: 0 0.4rem;
+							font-size: 0.75rem;
+							line-height: 1.3rem;
+							border-radius: 3px;
+							border: 1px solid @color_grey_13;
+							color: @color_grey_6;
+							background-color: transparent;
+							cursor: pointer;
+
+							&:hover {
+								text-decoration: line-through;
+							}
+
+							&.hide {
+								display: none;
+							}
+						}
+
 						>.section_name {
 							display: inline-block;
 							margin-left: 0.5rem;

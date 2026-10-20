@@ -89,6 +89,23 @@
   border: 1px solid var(--color_grey_13);
   border-radius: 3px;
 }
+.wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item > .file_line .section_tipo_label > .section_tipo_remembered {
+  margin-left: 0.33rem;
+  padding: 0 0.4rem;
+  font-size: 0.75rem;
+  line-height: 1.3rem;
+  border-radius: 3px;
+  border: 1px solid var(--color_grey_13);
+  color: var(--color_grey_6);
+  background-color: transparent;
+  cursor: pointer;
+}
+.wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item > .file_line .section_tipo_label > .section_tipo_remembered:hover {
+  text-decoration: line-through;
+}
+.wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item > .file_line .section_tipo_label > .section_tipo_remembered.hide {
+  display: none;
+}
 .wrapper_tool.tool_import_dedalo_csv > .content_data > .files_list > .file_item > .file_line .section_tipo_label > .section_name {
   display: inline-block;
   margin-left: 0.5rem;
