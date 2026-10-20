@@ -92,12 +92,13 @@ const get_display_value = (item) => {
 *     and pre-populate it with the locator currently attached to `view_tag`,
 *     if any.
 *  3. Render the modal. "Apply" either:
-*       - saves a brand-new locator via `component_tags_reference.add_value()`
-*         and writes a view-tag to the editor via `text_editor.set_reference()`,
+*       - saves a brand-new locator via `component_tags_reference.link_records()`,
+*         REPLACING any previous locator of the tag (one locator per tag), and
+*         writes a view-tag to the editor via `text_editor.set_reference()`,
 *       - or reuses an existing locator (selected from the "Reuse" list) without
-*         writing a new entry.
-*  4. "Delete" calls `component_tags_reference.unlink_record()` to remove the
-*     locator entry then `text_editor.remove_reference()` to strip the attribute.
+*         writing a new entry (the original tag locators are unlinked).
+*  4. "Delete" calls `component_tags_reference.unlink_record()` to remove ALL the
+*     tag locator entries then `text_editor.remove_reference()` to strip the attribute.
 *  5. On modal close the temporal component is reset and destroyed so its
 *     Session-side data is cleared and instance memory is released.
 *
@@ -253,6 +254,10 @@ export const render_reference = async function(options) {
 				})
 				return false
 			}
+			// data_limit. Only one locator is allowed by reference tag. Instance only:
+			// the ontology node is shared, so it is not set there. Read by the
+			// client cap data_limit_reached (autocomplete / add_new_element paths).
+			reference_component.context.properties = Object.assign({}, reference_component.context.properties, {data_limit : 1})
 			// force to prevent to show tool buttons
 			reference_component.show_interface.tools = false
 
@@ -410,7 +415,10 @@ export const render_reference = async function(options) {
 						// data_manager.request, which published its ApiError, and
 						// error_dispatch's deduped_toast rendered it ONCE. A direct
 						// render_error_toast would double-notice the same failure.
-						const removed = await component_tags_reference.unlink_record(locator[0]);
+						// ALL the tag locators are removed in one save: legacy data can hold
+					// more than one locator by tag, and unlinking only the first one
+					// left the rest alive in the tags_reference portal.
+					const removed = await component_tags_reference.unlink_record(locator);
 						// refresh the component of the tags to get the real data
 						// component_tags_reference.reset_filter_data()
 						if (removed!==true) {
@@ -442,11 +450,11 @@ export const render_reference = async function(options) {
 				// if a reuse is active, the locator already exist into the portal
 				if(selected_tag.reuse === false){
 
-					const locator = reference_component.data.entries
+					const temp_entries = reference_component.data.entries
 
 					// If the autocomplete is empty (user clicked Apply without selecting
 					// a record), treat this as a delete: remove the tag from the editor.
-					if(!locator || locator.length === 0){
+					if(!temp_entries || temp_entries.length === 0){
 						button_remove.click()
 						return
 					}
@@ -454,7 +462,7 @@ export const render_reference = async function(options) {
 					// set the tag_id and tag_type into the locator to be saved
 					// Stamp the tag_id and tag_type from the clicked view-tag onto the
 					// new locator so the server can correlate it back to this text span.
-					const new_locator = locator[0]
+					const new_locator = temp_entries[0]
 						new_locator.tag_id = view_tag.tag_id
 						new_locator.tag_type = 'reference'
 
@@ -478,11 +486,32 @@ export const render_reference = async function(options) {
 					// through change_value -> data_manager.request, which published its
 					// ApiError, and error_dispatch's deduped_toast rendered it ONCE. A
 					// direct render_error_toast would double-notice the same failure.
-					const link_outcome	= await component_tags_reference.link_records([new_locator]);
-					const already_linked	= link_outcome.refused.some(el => el.reason==='duplicate')
-					if (link_outcome.linked.length!==1 && already_linked===false) {
-						console.error('(!) [render_reference] reference NOT stamped: link refused', link_outcome.refused);
-						return
+					// ONE LOCATOR BY TAG. The previous tag locators are replaced, not kept:
+					// keeping them piled up every pick of the tag in the tags_reference
+					// portal, and a value deleted in this modal (temporal) never left it.
+					// - new locator already linked to the tag: only the others are unlinked
+					//   (link_records would refuse it as `duplicate` before its removes run).
+					// - else: `replace_entries` removes them in the SAME save as the insert.
+					const same_locator = (el) => el.section_tipo===new_locator.section_tipo
+						&& same_section_id(el.section_id, new_locator.section_id)
+					const already_in_tag = locator.some(same_locator)
+					if (already_in_tag) {
+						const stale_entries = locator.filter(el => !same_locator(el))
+						if (stale_entries.length > 0) {
+							const unlinked = await component_tags_reference.unlink_record(stale_entries)
+							if (unlinked!==true) {
+								return
+							}
+						}
+					}else{
+						const link_outcome	= await component_tags_reference.link_records([new_locator], {
+							replace_entries : locator
+						});
+						const already_linked	= link_outcome.refused.some(el => el.reason==='duplicate')
+						if (link_outcome.linked.length!==1 && already_linked===false) {
+							console.error('(!) [render_reference] reference NOT stamped: link refused', link_outcome.refused);
+							return
+						}
 					}
 
 					// get the data from the new locator
@@ -504,6 +533,13 @@ export const render_reference = async function(options) {
 					 // the server fallback slice — see get_display_value wire notes)
 					 // if nothing resolves, empty space is used to create the text for the collapse selection
 					 selected_tag.fallback_value = get_display_value(locator_data) || ' '
+				 }else if (selected_tag.tag_id!==view_tag.tag_id && locator.length > 0) {
+					// reuse case. The span moves to another tag_id: unlink the original
+					// tag locators to prevent orphan values in the tags_reference portal
+					const unlinked = await component_tags_reference.unlink_record(locator)
+					if (unlinked!==true) {
+						return
+					}
 				 }
 
 				// create the new tag for the reference, it's necessary to change the referenceIn tag only
