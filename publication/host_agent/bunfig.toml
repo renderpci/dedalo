@@ -1,5 +1,7 @@
 [install]
 peer = false
+# No by-name fetch outside bun.lock (see the root bunfig.toml).
+auto = "disable"
 
 [test]
 # ENFORCED from the first commit (the site_builder reporting-only exemption is NOT

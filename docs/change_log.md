@@ -460,6 +460,15 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Bun no longer fetches packages by name outside the lockfile.**
+
+    Running a Bun command in a checkout where `bun install` had not been run let
+    Bun's auto-install download any imported package straight from the registry by
+    name, ignoring `bun.lock` — so neither the pinned versions nor their integrity
+    hashes applied. Auto-install is now off in the engine and in each publication
+    package: a missing install stops with `Cannot find package`, and dependencies
+    come only from `bun install` against the lockfile.
+
 - **A local certificate authority can now only certify the install's own addresses, and its site certificate can be renewed without touching the staff computers.**
 
     Every staff computer trusts the local certificate authority an install creates, and

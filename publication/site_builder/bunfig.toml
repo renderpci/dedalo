@@ -1,5 +1,7 @@
 [install]
 peer = false
+# No by-name fetch outside bun.lock (see the root bunfig.toml).
+auto = "disable"
 
 [test]
 # COVERAGE IS REPORTED HERE, AND NOT YET ENFORCED (P2-23 / GATE-43).

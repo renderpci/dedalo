@@ -275,7 +275,61 @@ describe('dependency integrity — installed', () => {
 		]);
 		expect(lockProblems('.', 'zod', ['zod@4.4.3', '', {}, 'sha512-abc'])).toEqual([]);
 	});
+
+	test('every locked package turns Bun auto-install OFF (no by-name fetch around bun.lock)', () => {
+		// Bun's auto-install resolves a bare import BY NAME from the registry when a
+		// command runs in a checkout with no node_modules — ignoring bun.lock, so the
+		// lockfile digests above pin nothing on that path. Measured on 1.4.3
+		// (2026-10-20, fake registry): default → GET /<name>; `auto = "disable"` →
+		// no request. Bun reads the bunfig of the cwd, so EVERY package needs its own.
+		const offenders: string[] = [];
+		for (const root of PACKAGES) {
+			if (Object.hasOwn(AUTO_INSTALL_EXEMPTIONS, root)) continue;
+			offenders.push(...autoInstallProblems(root, join(REPO_ROOT, root, 'bunfig.toml')));
+		}
+		expect(offenders).toEqual([]);
+		// Shrink-only, and every entry still names a real package.
+		for (const root of Object.keys(AUTO_INSTALL_EXEMPTIONS)) {
+			expect(PACKAGES as readonly string[], `stale exemption ${root}`).toContain(root);
+		}
+		expect(Object.keys(AUTO_INSTALL_EXEMPTIONS).length).toBeLessThanOrEqual(1);
+	});
+
+	test('POSITIVE CONTROL — a missing bunfig, a missing key and a non-disable value are caught', () => {
+		const dir = mkdtempSync(join(tmpdir(), 'dd_autoinstall_'));
+		try {
+			const file = join(dir, 'bunfig.toml');
+			expect(autoInstallProblems('x', file)).toHaveLength(1);
+			writeFileSync(file, '[install]\npeer = false\n');
+			expect(autoInstallProblems('x', file)).toHaveLength(1);
+			writeFileSync(file, '[install]\nauto = "fallback"\n');
+			expect(autoInstallProblems('x', file)).toHaveLength(1);
+			writeFileSync(file, '[install]\nauto = "disable"\n');
+			expect(autoInstallProblems('x', file)).toEqual([]);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
 });
+
+/**
+ * Packages whose bunfig is NOT this gate's to require, with the reason. Shrink-only.
+ */
+const AUTO_INSTALL_EXEMPTIONS: Record<string, string> = {
+	'publication/site_builder/templates/basic':
+		'scaffolded into each site workspace, which the agent owns and may rewrite: a bunfig there ' +
+		'is a setting the agent controls, not a guarantee this gate could hold. Whether the ' +
+		'scaffold ships one is the site builder’s own decision (open follow-up), not this one.',
+};
+
+function autoInstallProblems(root: string, file: string): string[] {
+	if (!existsSync(file)) return [`${root}: no bunfig.toml — Bun auto-install is ON by default`];
+	const parsed = Bun.TOML.parse(readFileSync(file, 'utf-8')) as { install?: { auto?: unknown } };
+	const auto = parsed.install?.auto;
+	return auto === 'disable'
+		? []
+		: [`${root}/bunfig.toml: [install] auto = ${JSON.stringify(auto)} — must be "disable"`];
+}
 
 describe('dependency integrity — committed under vendor/', () => {
 	test('vendor/ directories and vendor_manifest.json rows are exact complements', () => {
