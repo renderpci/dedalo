@@ -145,8 +145,8 @@ export const QUESTION_TEXT: Readonly<Record<string, { label: string; description
 		},
 		db_database: { label: 'Database name', description: 'The database to install into.' },
 		db_username: {
-			label: 'Database role',
-			description: 'The PostgreSQL role that owns the database.',
+			label: 'Database user',
+			description: 'The PostgreSQL user (a login role) Dédalo connects as; it owns the database.',
 		},
 		db_password: {
 			label: 'Database password',

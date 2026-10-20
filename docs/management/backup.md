@@ -123,7 +123,7 @@ at the first thing that is wrong, and leaves your database exactly as it was
 whenever it refuses.
 
 You need shell access to the server with administration privileges, and the
-database role Dédalo connects with needs the `CREATEDB` privilege (the door
+database user Dédalo connects with needs the `CREATEDB` privilege (the door
 builds the restored database beside the current one and swaps them by name):
 
 ```sql

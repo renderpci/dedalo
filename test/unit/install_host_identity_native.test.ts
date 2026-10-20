@@ -1385,7 +1385,7 @@ describe('(g) the account rules — one verdict, every sentence exact', () => {
 			`install folder: /home/ded_${INSTANCE} — CREATED (ded_${INSTANCE}:ded_${INSTANCE} 0750; parent /home unchanged)`,
 			`service user: ded_${INSTANCE} — CREATED (system account, no login shell)`,
 			`service group: ded_${INSTANCE} — CREATED`,
-			`database role: ded_${INSTANCE} (peer: the service user)`,
+			`database user: ded_${INSTANCE} (peer: the service user)`,
 		]);
 		const hosting = input(SITE, {
 			user: user('site', 1600, 1600),
@@ -1404,7 +1404,7 @@ describe('(g) the account rules — one verdict, every sentence exact', () => {
 			'install folder: /home/site/dedalo — CREATED (site:site 0750, by site; parent /home/site unchanged)',
 			'service user: site — USED AS IS (uid 1600; never created or deleted by the installer)',
 			'service group: site — USED AS IS (primary group of site)',
-			'database role: site (peer: the service user)',
+			'database user: site (peer: the service user)',
 		]);
 		expect(used.filter((line) => line.startsWith('note: ')).length).toBe(2);
 	});

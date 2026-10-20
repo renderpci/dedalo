@@ -499,6 +499,12 @@ Merged since the last release; these ship with the next one.
 
 #### Changed
 
+- **The installer field *Database role* is now *Database user*.**
+
+    Same field, same value: the PostgreSQL user (a login role) Dédalo connects as and that
+    owns the database — the name you pass to `psql -U`. The install summary says
+    *database user* too. Nothing to change on an existing installation.
+
 - **Dédalo prereleases are now published releases — from 7.0.0-beta.7 on, each beta is a fixed, signed version you can install and update.** *(action needed)*
 
     Until 7.0.0-beta.6, a beta was never published: its code reached an installation only

@@ -76,7 +76,7 @@ const WEAK_ROOT = 'weakling';
 const ANSWERS: readonly [RegExp, string][] = [
 	[/^Install type/, 'developer'],
 	[/^Database name/, 'dedalo_plain_secrets'],
-	[/^Database role/, 'plain_role'],
+	[/^Database user/, 'plain_role'],
 	[/^Database password again \(hidden\)/, SECRETS.db.value],
 	[/^Database password \(hidden\)/, SECRETS.db.value],
 	[/^Entity code/, 'plainsecrets'],

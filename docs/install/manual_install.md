@@ -398,7 +398,7 @@ $RU /usr/bin/env HOME="$DIR" "/opt/dedalo/bun/$PIN/bun" run "$DIR/dedalo/scripts
 ```
 
 - `--route production --instance "$I"` gives the Production defaults that follow the instance name: the database `dedalo_<i>` over the socket `/var/run/postgresql`, `MEDIA_PATH=/srv/dedalo/<i>/dedalo/media`, and the socket `/run/dedalo-<i>/dedalo_ts.sock`.
-- `--db-user "$U"` is required whenever the service user is not `ded_<i>`: the database role is the service user, and the default would be `ded_<i>`.
+- `--db-user "$U"` is required whenever the service user is not `ded_<i>`: the database user is the service user, and the default would be `ded_<i>`.
 - `--pg-bin-path "$PGBIN"` is written as `DEDALO_PG_BIN_PATH`, so the backups dump with the PostgreSQL 18 client.
 - `--backup-dir "$BACKUP_DIR"` is written as `DEDALO_BACKUP_DIR=$BACKUP_DIR/db`, the directory the backup units write. The server's own backups and its directory check then use that directory too, and the instance has one backup location.
 - `--media-access-mode publication` is the Production default, spelled out so the choice is visible. The installer writes it as `DEDALO_MEDIA_ACCESS_MODE`, with or without the flag, as the installer's own route does, so the first boot does not report an unconfigured mode. Choose `private` or `false` here if that is your choice: [Production › The media access mode](production.md#before-you-start).

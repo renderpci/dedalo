@@ -15,7 +15,7 @@ import type { InstallAnswers } from './install_plan.ts';
 
 /** One labelled Review line. */
 export interface IdentityLine {
-	label: 'install folder' | 'service user' | 'service group' | 'database role' | 'note';
+	label: 'install folder' | 'service user' | 'service group' | 'database user' | 'note';
 	value: string;
 }
 
@@ -58,7 +58,7 @@ function groupValue(verdict: IdentityVerdict): string {
 /** The role line (a created database only: its role IS the service user). */
 function roleLines(answers: InstallAnswers): IdentityLine[] {
 	return answers.db_mode === 'create'
-		? [{ label: 'database role', value: `${answers.db_username} (peer: the service user)` }]
+		? [{ label: 'database user', value: `${answers.db_username} (peer: the service user)` }]
 		: [];
 }
 

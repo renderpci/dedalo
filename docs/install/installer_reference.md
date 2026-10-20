@@ -94,7 +94,7 @@ meaning.)
 | `--route` | no | `developer` | how this Dédalo runs: `production` (native services, a named instance), `docker` (the compose stack), `trial` (Docker **without** media protection — evaluation only) or `developer` (a git checkout; the behaviour before routes). The route changes the [defaults below](#route-defaults), never what is installed. An unknown route is refused |
 | `--instance` | with `--route production` | — | the instance name on a production host that can carry several: a lowercase letter, then `a-z`, `0-9` or `_`, 28 characters at most (it becomes the default service user `ded_<instance>`, the database `dedalo_<instance>` owned by the service user's peer role, a path segment and a systemd instance — see [Several instances on one host](multi_instance.md) and [Production host steps](#production-host-steps)). Refused on any other route |
 | `--db-name` | **yes** (except `production` / `docker` / `trial`, which derive it) | see [Route defaults](#route-defaults) | the **empty** database you created |
-| `--db-user` | **yes** (except `production` / `docker` / `trial`) | see [Route defaults](#route-defaults) | the role that owns it |
+| `--db-user` | **yes** (except `production` / `docker` / `trial`) | see [Route defaults](#route-defaults) | the PostgreSQL user (a login role) Dédalo connects as; it owns the database |
 | `--entity` | **yes** | — | this instance's identifier, e.g. `myentity` |
 | root password | **yes** | — | `DEDALO_INSTALL_ROOT_PASSWORD` in the environment, or `--secrets-stdin`; held to the password policy **before anything is written** (see [Secrets](#secrets)) |
 | database password | no | *(empty)* | `DEDALO_INSTALL_DB_PASSWORD`, or `--secrets-stdin`; empty means peer/trust auth over a local socket. `--db-password` still works but warns |
@@ -175,7 +175,7 @@ give falls back to. It never changes the steps, and a flag you give always wins.
 | database name | — (required) | `dedalo_<i>` | `dedalo` |
 | install folder (`--install-dir`) | — | `/home/ded_<i>` | — |
 | service user / group | — | `ded_<i>` / its own group | — |
-| database role | — (required) | the service user — its PEER role (no password at rest; `--db-mode create`) | `dedalo` |
+| database user | — (required) | the service user — its PEER role (no password at rest; `--db-mode create`) | `dedalo` |
 | database socket | — | `/var/run/postgresql` | — |
 | media root (`MEDIA_PATH`) | not written | `/srv/dedalo/<i>/dedalo/media` (the web root rule: the site's `root` is `/srv/dedalo/<i>`, so `/dedalo/media/…` is `MEDIA_PATH/…`; a production `MEDIA_PATH` must end in `/dedalo/media`) | `/srv/dedalo/media` |
 | backups | — | `<install folder>/backups` | the `backups` volume |
@@ -185,10 +185,10 @@ give falls back to. It never changes the steps, and a flag you give always wins.
 | server socket (`SERVER_UNIX_SOCKET`) | not written | `/run/dedalo-<i>/dedalo_ts.sock` | `/run/dedalo/dedalo_ts.sock` |
 | publication database (`--mysql-name`) | `web_dedalo` | `web_<i>` | `web_dedalo` |
 
-The backups and the database role follow the install folder and the service
+The backups and the database user follow the install folder and the service
 user **you gave**, not the instance name: `--install-dir /home/my_domain.org/dedalo
 --service-user my_domain.org` backs up into `/home/my_domain.org/dedalo/backups`
-and owns the database as the role `my_domain.org`. An explicit `--backup-dir` wins.
+and owns the database as the user `my_domain.org`. An explicit `--backup-dir` wins.
 
 The docker and trial host steps hand these to the engine child inside the
 container, so the stack's values live in one place (`src/core/install/install_plan.ts`).

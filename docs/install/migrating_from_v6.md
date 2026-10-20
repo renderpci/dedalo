@@ -241,7 +241,7 @@ pg_restore --host localhost --username <v7 user> --dbname <v7 db> --no-owner --n
 
 Do **not** pass `--clean`: the target is empty by requirement. The [backup page](../management/backup.md#restore-a-backup-for-the-work-system) covers the general restore, including the existing-database case, as background.
 
-The role that owns the target database must be able to `CREATE EXTENSION`: `pg_trgm`, `unaccent` and `btree_gin` are required. If policy forbids that, have a superuser create the three extensions in the empty database first.
+The database user that owns the target database must be able to `CREATE EXTENSION`: `pg_trgm`, `unaccent` and `btree_gin` are required. If policy forbids that, have a superuser create the three extensions in the empty database first.
 
 Then copy the media tree. The per-type folder names do not change between v6 and v7 — `image`, `av`, `pdf`, `3d`, `svg` — so the subtree carries over as it is. **Only the root moves.** Whatever absolute directory contains those folders on the new host is the value you will set as `MEDIA_PATH` in the next phase.
 
