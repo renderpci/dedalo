@@ -287,6 +287,9 @@ const get_content_value = (i, current_value, self) => {
 						// mousedown event
 							input_title.addEventListener('mousedown', (e) => {
 								e.stopPropagation()
+								if (!self.active) {
+									ui.component.activate(self, false)
+								}
 							})
 						// keyup event
 							const input_title_keyup_handler = (e) => {
@@ -359,6 +362,9 @@ const get_content_value = (i, current_value, self) => {
 				// mousedown event
 					const mousedown_handler = (e) => {
 						e.stopPropagation()
+						if (!self.active) {
+							ui.component.activate(self, false)
+						}
 					}
 					input_iri.addEventListener('mousedown', mousedown_handler)
 				// focus event

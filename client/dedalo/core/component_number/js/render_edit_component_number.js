@@ -215,8 +215,9 @@ export const get_content_data = function(self) {
 * range-clamping logic.
 *
 * Events attached to the input element:
-*   mousedown — stopPropagation; prevents the parent activation handler from firing
-*               a second activate while the user simply clicks into the field.
+*   mousedown — stopPropagation (the wrapper handler never sees it) and activates
+*               the component via ui.component.activate(self, false) before the
+*               focus moves.
 *   focus     — activates the component via ui.component.activate(self, false) when
 *               not already active; supports keyboard tab-navigation into the field.
 *   keydown   — stopPropagation on all keys; on Tab, explicitly deactivates the
@@ -269,9 +270,13 @@ export const get_content_value = (i, current_value, self, options={}) => {
 		})
 		input.step = self.get_steps()
 
-		// mousedown event. Capture event propagation
+		// mousedown event. Capture event propagation and activate here, before the
+		// focus moves: the wrapper handler never sees this event
 		input.addEventListener('mousedown', (e) => {
 			e.stopPropagation()
+			if (!self.active) {
+				ui.component.activate(self, false)
+			}
 		})
 
 		// focus event

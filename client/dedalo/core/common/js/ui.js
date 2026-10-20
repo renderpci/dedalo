@@ -285,11 +285,51 @@ export const ui = {
 					}
 
 				// Event Listeners
+					// refocus_active. A mousedown on a non-interactive area (label, padding)
+					// of the ALREADY active component: keep the focused element, else focus the
+					// first input. activate() does it for an inactive one, so without this the
+					// browser default left the focus on the body.
+					// Left alone, by design:
+					//  - components with their own focus_first_input (portal, check_box,
+					//    radio_button, iri, text_area): they own their focus placement;
+					//  - interactive targets (buttons, toolbar, links, labels, editors, the
+					//    paginator/filter, draggable rows): their own default must run;
+					//  - an input owned by a NESTED component: focusing it would activate the
+					//    child and deactivate this one.
+					// preventDefault only when acting: it also cancels text selection/drag.
+					const refocus_active = (e) => {
+						if (typeof instance.focus_first_input==='function') {
+							return
+						}
+						const content_data = wrapper.content_data || instance.node?.content_data
+						if (!content_data || e.button!==0) {
+							return
+						}
+						const interactive = 'input, select, textarea, button, a, label, [contenteditable], [draggable="true"], .button, .buttons_container, .paginator_container, .filter'
+						// (matched inside this wrapper only: a component in a draggable portal row still refocuses)
+						const hit = e.target.closest(interactive)
+						if (hit && wrapper.contains(hit)) {
+							return
+						}
+						const first_input = content_data[0]
+							? content_data[0].querySelector('input, select')
+							: null
+						if (!first_input || first_input.disabled || first_input.closest('.wrapper_component')!==wrapper) {
+							return
+						}
+						e.preventDefault() // keeps the current focus
+						if (!content_data.contains(document.activeElement)) {
+							first_input.focus({ preventScroll: true })
+						}
+					}
+
 					const mousedown_handler = (e) => {
 						e.stopPropagation()
 
 						if (!instance.active) {
 							ui.component.activate(instance)
+						}else{
+							refocus_active(e)
 						}
 
 						if (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === true) {
@@ -813,9 +853,11 @@ export const ui = {
 		*     if it is a different instance; this saves any pending changed_data.
 		*  4. Adds the 'active' CSS class to component.node; also adds 'inside' when the
 		*     component overlaps the inspector panel (avoids visual overlap on wide screens).
-		*  5. Attempts to focus the first focusable input inside content_data (unless
-		*     component.focus_first_input is defined — components like component_text_area
-		*     override this to handle cursor placement themselves).
+		*  5. Attempts to focus the first focusable input inside content_data, unless
+		*     an element inside content_data already holds (or, after the idle tick,
+		*     received) the focus, or component.focus_first_input is defined —
+		*     components like component_text_area override this to handle cursor
+		*     placement themselves.
 		*  6. Updates page_globals.component_active.
 		*  7. Publishes the 'activate_component' event via event_manager.
 		*  8. Calls check_unsaved_data({flush_only:true}) so a pending edit of another
@@ -911,33 +953,29 @@ export const ui = {
 						component.focus_first_input()
 					}else{
 
-						// check if any component input is already focused
-							const already_focus = (()=>{
-								if (!document.activeElement) {
-									return false
-								}
-								const all_inputs = component.node?.content_data
-									? component.node.content_data.querySelectorAll('input, select')
-									: [];
-								const all_inputs_length = all_inputs.length
-								for (let i = 0; i < all_inputs_length; i++) {
-									if (document.activeElement === all_inputs[i]) {
-										return true
-									}
-								}
-								return false
-							})()
+						// check if any component element is already focused
+						// (!) Any focused element inside content_data counts, not only the
+						// first input: a click on the third checkbox, a second input or a
+						// row button keeps its focus.
+							const content_data = component.node?.content_data || null
+							const has_focus_inside = () => {
+								return !!(content_data && document.activeElement && content_data.contains(document.activeElement))
+							}
+							const already_focus = has_focus_inside()
 
 						// auto-focus first input
 							if (!already_focus) {
 								// generic try of first input node
-								const first_input = component.node?.content_data && component.node.content_data[0]
-										? component.node.content_data[0].querySelector('input, select')
+								const first_input = content_data && content_data[0]
+										? content_data[0].querySelector('input, select')
 										: null;
 								if (first_input) {
 									dd_request_idle_callback(
 										() => {
-											if (component.active && first_input !== document.activeElement) {
+											// (!) Re-checked here, not only above: activation from a
+											// mousedown runs before the browser moves the focus to the
+											// clicked element, so already_focus was false at that time.
+											if (component.active && !has_focus_inside()) {
 
 												// check another focus elements like q_operator
 												if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
@@ -1025,9 +1063,15 @@ export const ui = {
 				}
 
 			// blur active Element. This forces the component update changed_data
+			// (!) Never blur an element owned by ANOTHER component: when the activation
+			// comes from a focus event (Tab, a component focus handler) the incoming
+			// input already holds the focus here, and blurring it lost the selection.
 				const input_active = document.activeElement
 				if (input_active) {
-					input_active.blur()
+					const owner = input_active.closest('.wrapper_component')
+					if (!owner || component.node?.contains(input_active)) {
+						input_active.blur()
+					}
 				}
 
 			// styles. Remove wrapper css active if exists

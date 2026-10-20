@@ -200,7 +200,8 @@ export const get_content_data = function(self) {
 *
 * Event strategy:
 *   - `mousedown` / `click` on the input call `stopPropagation` to prevent
-*     the section container from intercepting the event and stealing focus.
+*     the section container from intercepting the event and stealing focus;
+*     `mousedown` activates the component (the wrapper never sees it).
 *   - `focus` activates the component (needed when the user tabs into the field).
 *   - `keydown` with Tab key deactivates the component and lets the browser
 *     move focus naturally.
@@ -234,9 +235,13 @@ const get_content_value = (i, current_value, self) => {
 			value			: current_value?.value,
 			parent			: content_value
 		})
-		// mousedown event. Capture event propagation
+		// mousedown event. Capture event propagation and activate here, before the
+		// focus moves: the wrapper handler never sees this event
 		const mousedown_handler = (e) => {
 			e.stopPropagation()
+			if (!self.active) {
+				ui.component.activate(self, false)
+			}
 		}
 		input.addEventListener('mousedown', mousedown_handler)
 

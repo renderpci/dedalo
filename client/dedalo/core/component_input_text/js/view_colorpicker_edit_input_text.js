@@ -254,9 +254,13 @@ const get_content_value = (i, current_value, self) => {
 				e.stopPropagation()
 			})
 
-		// mousedown event. Capture event propagation
+		// mousedown event. Capture event propagation and activate here, before the
+		// focus moves: the wrapper handler never sees this event
 			input.addEventListener('mousedown', (e) => {
 				e.stopPropagation()
+				if (!self.active) {
+					ui.component.activate(self, false)
+				}
 			})
 
 		// change event

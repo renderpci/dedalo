@@ -337,8 +337,9 @@ export const get_ar_raw_data_value = (self) => {
 * Unifies the event handling pattern across all input types.
 *
 * Handlers installed:
-*   mousedown — either calls input.focus() (focus_on_mousedown) or stops event propagation
-*               to prevent the component wrapper's own mousedown from stealing focus.
+*   mousedown — activates the component (before the focus moves), then either calls
+*               input.focus() (focus_on_mousedown) or stops event propagation to prevent
+*               the component wrapper's own mousedown from stealing focus.
 *   click     — always stops propagation so clicking inside the field does not collapse/
 *               expand a parent section or portal.
 *   focus     — activates the component (ui.component.activate) when it is not yet active.
@@ -367,8 +368,12 @@ const attach_input_handlers = function(input, self, change_callback, options={})
 	const focus_on_mousedown	= options.focus_on_mousedown || false
 	const input_filter_regex	= options.input_filter_regex || null
 
-	// mousedown event
+	// mousedown event. Activate here, before the focus moves (the focus handler
+	// alone activated too late: see ui.component.deactivate)
 		input.addEventListener('mousedown', function(e) {
+			if (!self.active) {
+				ui.component.activate(self, false)
+			}
 			if (focus_on_mousedown) {
 				input.focus()
 			} else {

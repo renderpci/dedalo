@@ -173,6 +173,9 @@ const get_content_data = function(self) {
 		})
 		input_q_operator.addEventListener('mousedown', function(e) {
 			e.stopPropagation();
+			if (!self.active) {
+				ui.component.activate(self, false)
+			}
 		})
 		input_q_operator.addEventListener('change', function(){
 			// value

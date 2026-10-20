@@ -180,6 +180,138 @@ describe("COMPONENTS ACTIVATE", async function() {
 });
 
 
+// COMPONENTS FOCUS ON ACTIVATION — the selection flow keeps the element the user
+// targeted. Regressions it pins (all measured with real clicks in the browser):
+//  - an input activating only on focus (email, number) was blurred by the
+//    deactivate of the PREVIOUS active component: the click landed on the body;
+//  - activate() focused the FIRST input after the click had focused another one;
+//  - a click on the label of the ALREADY active component left the focus on the
+//    body (build_wrapper_edit refocus_active), while a portal is left alone.
+// A synthetic mousedown runs the handlers but never moves the focus, so every
+// case performs the browser default itself: mousedown, then focus().
+describe("COMPONENTS FOCUS ON ACTIVATION", async function() {
+
+	this.timeout(10000);
+
+	const container	= document.getElementById('content');
+	const by_model	= (model) => elements.find(el => el.model===model)
+	const mousedown	= (node) => {
+		const e = new MouseEvent('mousedown', {bubbles: true, cancelable: true, button: 0})
+		node.dispatchEvent(e)
+		return e
+	}
+	const first_input = (instance) => instance.node.content_data[0].querySelector('input, select')
+
+	const mounted = []
+	const mount = async (model) => {
+		const element = by_model(model)
+		const instance = await get_instance_rendered({
+			id_variant		: 'focus-' + Math.random(),
+			lang			: element.lang,
+			model			: element.model,
+			section_id		: element.section_id,
+			section_tipo	: element.section_tipo,
+			tipo			: element.tipo,
+			mode			: 'edit',
+			view			: 'default'
+		})
+		container.prepend(instance.node)
+		mounted.push(instance)
+		return instance
+	}
+
+	afterEach(async function() {
+		if (page_globals.component_active) {
+			await ui.component.deactivate(page_globals.component_active)
+		}
+		while (mounted.length) {
+			const instance = mounted.pop()
+			instance.node?.remove()
+			await instance.destroy(true, true, true)
+		}
+	})
+
+	for (const model of ['component_email', 'component_number']) {
+
+		it(`${model}. Input click while another component is active keeps the focus`, async function() {
+			const previous	= await mount('component_input_text')
+			const instance	= await mount(model)
+			await ui.component.activate(previous, false)
+			first_input(previous).focus()
+
+			const input = first_input(instance)
+			mousedown(input)
+			input.focus()
+			await pause(300)
+
+			assert(instance.active===true, `${model} is NOT active`)
+			assert(document.activeElement===input, `${model} input lost the focus to: ${document.activeElement?.tagName}`)
+		});
+
+		it(`${model}. Focus arriving with another component active (Tab) keeps the focus`, async function() {
+			// the previous one does not deactivate itself on Tab (portal-like)
+			const previous	= await mount('component_input_text')
+			const instance	= await mount(model)
+			await ui.component.activate(previous, false)
+
+			const input = first_input(instance)
+			input.focus()
+			await pause(300)
+
+			assert(instance.active===true, `${model} is NOT active`)
+			assert(page_globals.component_active===instance, `page_globals.component_active is NOT ${model}`)
+			assert(document.activeElement===input, `${model} input lost the focus to: ${document.activeElement?.tagName}`)
+		});
+
+		it(`${model}. Label click on the active component focuses the first input`, async function() {
+			const instance = await mount(model)
+			await ui.component.activate(instance, false)
+			document.activeElement?.blur()
+
+			const e = mousedown(instance.node.label)
+
+			assert(e.defaultPrevented===true, `mousedown default NOT prevented (the browser would blur the input)`)
+			assert(document.activeElement===first_input(instance), `first input NOT focused: ${document.activeElement?.tagName}`)
+		});
+	}
+
+	it(`component_number. activate() keeps a focused element that is not the first input`, async function() {
+		const instance	= await mount('component_number')
+		const other		= ui.create_dom_element({
+			element_type	: 'button',
+			parent			: instance.node.content_data[0]
+		})
+		// activation from a mousedown runs BEFORE the browser moves the focus
+		await ui.component.activate(instance)
+		other.focus()
+		await pause(300)
+
+		assert(document.activeElement===other, `activate() moved the focus to: ${document.activeElement?.tagName}`)
+	});
+
+	it(`component_portal. Label click on the active portal is left alone`, async function() {
+		const instance = await mount('component_portal')
+		await ui.component.activate(instance, false)
+
+		const e = mousedown(instance.node.label)
+
+		assert(e.defaultPrevented===false, `portal mousedown default was prevented`)
+	});
+
+	it(`component_email. Toolbar mousedown on the active component is left alone`, async function() {
+		const instance = await mount('component_email')
+		await ui.component.activate(instance, false)
+		const button = instance.node.querySelector('.buttons_container .button')
+		assert(button, `email toolbar button NOT found`)
+
+		const e = mousedown(button)
+
+		assert(e.defaultPrevented===false, `toolbar mousedown default was prevented`)
+	});
+});
+
+
+
 async function get_instance_rendered(options) {
 
 	const component_instance =  await get_instance(options)
