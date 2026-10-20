@@ -9,19 +9,119 @@ The Docker route installs Dédalo as a compose stack on one host: the engine, Po
 
 ## What you need
 
-- **Docker Engine and the Compose v2 plugin, 2.24.4 or newer** (`docker compose`; the legacy standalone `docker-compose` v1 cannot read the stack's profiles and health-gated dependencies, and an older plugin cannot read the installer's override). The installer checks these and tells you how to fix what is missing; it never installs Docker or changes group membership. To install them:
-    - **Ubuntu:** `sudo apt install docker.io docker-compose-v2 docker-buildx`.
-    - **Debian and the RHEL family** (RHEL, AlmaLinux, Rocky): Docker's own repository, as [docs.docker.com/engine/install](https://docs.docker.com/engine/install/) describes for each distribution. On the RHEL family that procedure first removes the `podman`, `buildah` and `runc` packages the system ships.
-    - **macOS:** Docker Desktop.
+A checklist; each item is explained below.
 
-    **Podman, and `podman-docker`, are not supported**: the stack relies on Docker's compose plugin, its volume ownership and its restart policies.
-- **Your user in the `docker` group**, so the daemon answers without `sudo`: `sudo usermod -aG docker "$USER"`, then log out and in again (or run `newgrp docker` in the shell you install from). `sudo` would start the installer as another user, and whatever it writes in the checkout would end up owned by root. Membership of `docker` is root-equivalent — exactly what `sudo docker` already was.
-- **`git`**, to get the checkout ([Get Dédalo](index.md#get-dedalo)) and, with a local build, to update it later. Minimal RHEL-family images do not have it: `sudo dnf install git`.
-- **About 8 GiB free** under Docker's root directory (`df -h /var/lib/docker`): the engine image is about 2.5 GB, PostgreSQL about 0.7 GB, and a local build parks about 3 GB of build cache. Below that the database restore fails part-way, so the installer refuses first.
-- **Ports 80 and 443 free** on the host (`sudo ss -tlnp | grep -E ':(80|443)\b'`), or other ports chosen on the *Containers* screen. A host web server already listening there is the most common failure.
-- **The address**: a fully qualified name (`dedalo.museum.example`), never `localhost` or an IP address — the installer refuses both. It names the site and the certificate, so it is the address everyone opens.
-- **The certificate**: for Let's Encrypt, that name resolving publicly to this host and port 80 reachable from the internet; for a local certificate authority, that name resolving on the staff computers (internal DNS, or a hosts entry on each one); for your institution's certificate, its fullchain and key files, **issued by a CA this host trusts**. The install's last step checks the site with this host's `curl`, against the system trust store, so a certificate from an internal CA needs that CA installed on the host first — Debian and Ubuntu: copy it to `/usr/local/share/ca-certificates/<name>.crt` and run `sudo update-ca-certificates`; the RHEL family: copy it to `/etc/pki/ca-trust/source/anchors/` and run `sudo update-ca-trust`. The certificate is asked after the System check, so the System check cannot see it: the **Review** lists a chain the host does not trust under *TO DO*, naming its issuer, before you type `yes` — and the run refuses it before anything is written.
-- **`cosign`** on the host to verify an official image's signature. Without it, choose a local build.
+| Need | Check |
+| --- | --- |
+| Docker Engine + Compose v2 plugin ≥ 2.24.4 | `docker compose version` |
+| your user in the `docker` group | `docker info` works without `sudo` |
+| `git` | `git --version` |
+| `cosign` (official image only) | `cosign version` |
+| about 8 GiB free for Docker | `df -h /var/lib/docker` |
+| ports 80 and 443 free | `sudo ss -tlnp \| grep -E ':(80\|443)\b'` prints nothing |
+| a fully qualified address | e.g. `dedalo.museum.example` |
+| a certificate plan | Let's Encrypt, local CA, or your institution's files |
+
+The installer checks the Docker items on its *System check* screen and tells you how to fix what is missing. It never installs Docker or changes group membership: do that first.
+
+### 1. Docker Engine and Compose
+
+You need **Docker Engine** and the **Compose v2 plugin, 2.24.4 or newer** (the `docker compose` command). The legacy standalone `docker-compose` v1 cannot read the stack's profiles and health-gated dependencies, and an older plugin cannot read the installer's override.
+
+**Ubuntu:**
+
+```shell
+sudo apt install docker.io docker-compose-v2 docker-buildx
+```
+
+**Debian, RHEL, AlmaLinux, Rocky:** install from Docker's own repository, following [docs.docker.com/engine/install](https://docs.docker.com/engine/install/) for your distribution. On the RHEL family that procedure first removes the `podman`, `buildah` and `runc` packages the system ships — expected, see the note below.
+
+**macOS:** install Docker Desktop.
+
+Then check the version:
+
+```shell
+docker compose version
+```
+
+!!! warning "Podman is not supported"
+    Neither Podman nor its `podman-docker` compatibility package works: the stack relies on Docker's compose plugin, its volume ownership and its restart policies. Use Docker Engine.
+
+### 2. Run Docker as your own user
+
+Run the installer as yourself, never with `sudo`: `sudo` would start it as root, and everything it writes in the checkout would end up owned by root. For Docker to answer you without `sudo`, add your user to the `docker` group (not needed on macOS with Docker Desktop):
+
+```shell
+sudo usermod -aG docker "$USER"
+```
+
+The new group applies to new logins only. Log out and in again, or open it in the current shell:
+
+```shell
+newgrp docker
+```
+
+Check that Docker answers without `sudo`:
+
+```shell
+docker info
+```
+
+Membership of `docker` is root-equivalent — exactly what `sudo docker` already was.
+
+### 3. Host tools
+
+**`git`**, to get the checkout ([Get Dédalo](index.md#get-dedalo)) and, with a local build, to update it later. Minimal RHEL-family systems do not have it:
+
+```shell
+sudo dnf install git
+```
+
+**`cosign`**, to verify the signature of an official image. Without it, choose a local build on the *Image* screen.
+
+### 4. Disk and ports
+
+**About 8 GiB free** under Docker's root directory: the engine image is about 2.5 GB, PostgreSQL about 0.7 GB, and a local build parks about 3 GB of build cache. Below that the database restore fails part-way, so the installer refuses first.
+
+```shell
+df -h /var/lib/docker
+```
+
+**Ports 80 and 443 free** on the host, or other ports chosen on the *Containers* screen. A host web server already listening there is the most common failure. This must print nothing:
+
+```shell
+sudo ss -tlnp | grep -E ':(80|443)\b'
+```
+
+### 5. The address and the certificate
+
+**The address** is a fully qualified name (`dedalo.museum.example`), never `localhost` or an IP address — the installer refuses both. It names the site and the certificate, so it is the address everyone opens.
+
+**The certificate**, one of:
+
+| Choice | What it needs |
+| --- | --- |
+| Let's Encrypt | the name resolving publicly to this host, and port 80 reachable from the internet |
+| a local certificate authority | the name resolving on the staff computers (internal DNS, or a hosts entry on each one) |
+| your institution's certificate | its fullchain and key files, **issued by a CA this host trusts** |
+
+The install's last step checks the site with this host's `curl`, against the system trust store. So a certificate from an internal CA needs that CA installed **on the host** first.
+
+Debian and Ubuntu:
+
+```shell
+sudo cp <ca>.crt /usr/local/share/ca-certificates/<name>.crt
+sudo update-ca-certificates
+```
+
+RHEL family:
+
+```shell
+sudo cp <ca>.crt /etc/pki/ca-trust/source/anchors/
+sudo update-ca-trust
+```
+
+The certificate is asked after the *System check*, so that screen cannot see it: the **Review** lists a chain the host does not trust under *TO DO*, naming its issuer, before you type `yes` — and the run refuses it before anything is written.
 
 !!! warning "Published ports bypass the host firewall"
     Docker writes its own packet-filter rules (nftables or iptables) for every published port, ahead of the host firewall's: a port the stack publishes is reachable from the network even when `firewalld` or `ufw` does not allow it. To restrict who reaches the stack, either publish on one address only — in `docker-compose.yml`, `"127.0.0.1:${DEDALO_HTTPS_PORT:-443}:443"` instead of `"${DEDALO_HTTPS_PORT:-443}:443"` (behind a proxy on the same host, for instance) — or filter in Docker's `DOCKER-USER` chain, which it consults before its own rules ([Docker and the firewall](https://docs.docker.com/engine/network/packet-filtering-firewalls/)).
