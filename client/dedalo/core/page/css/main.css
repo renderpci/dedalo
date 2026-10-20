@@ -11238,7 +11238,6 @@ body:has(.component_av.view_viewer) {
 }
 .service_upload > .content_data > form > .ocr_options_container {
   padding-top: 1.5rem;
-  background-color: var(--color_white);
 }
 .service_upload > .content_data > form > .ocr_options_container .checkbox_label input {
   margin-right: 0.5rem;
