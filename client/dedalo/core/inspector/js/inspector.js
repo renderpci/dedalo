@@ -83,12 +83,12 @@ export const inspector = function() {
 		// clean up active component value update event if exists
 		if (self.element_info_container?.update_value_event_token) {
 			event_manager.unsubscribe(self.element_info_container.update_value_event_token)
-			delete self.element_info_container.update_value_event_token
+			self.element_info_container.update_value_event_token = undefined
 		}
 		// stop watching the component Data box height (render_inspector build_component_panel)
 		if (self.element_info_container?.data_resize_observer) {
 			self.element_info_container.data_resize_observer.disconnect()
-			delete self.element_info_container.data_resize_observer
+			self.element_info_container.data_resize_observer = undefined
 		}
 		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
 	}

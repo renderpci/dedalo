@@ -12845,6 +12845,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   text-align: center;
   transition: all 0.17s ease, padding 0s;
   background-color: var(--color_orange_dedalo);
+  color: var(--fg_on_brand);
 }
 .login > .content_data > .login_form > .button_enter.white {
   background-color: transparent;
@@ -12887,6 +12888,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   align-items: center;
   transition: all 0.17s ease, padding 0s;
   background-color: var(--color_orange_dedalo);
+  color: var(--fg_on_brand);
 }
 .login > .content_data > .login_form > .login_step > .button_enter.white {
   background-color: transparent;
@@ -13055,6 +13057,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   align-items: center;
   transition: all 0.17s ease, padding 0s;
   background-color: var(--color_orange_dedalo);
+  color: var(--fg_on_brand);
 }
 .login > .content_data > .reset_request_form > .button_enter.white,
 .login > .content_data > .reset_confirm_form > .button_enter.white {

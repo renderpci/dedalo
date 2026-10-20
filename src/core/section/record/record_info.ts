@@ -19,7 +19,7 @@
  */
 
 import { AUDIT_TIPOS } from '../../concepts/section.ts';
-import { readMatrixRecord } from '../../db/matrix.ts';
+import { memoizedReadMatrixRecord } from '../../db/record_memo.ts';
 import { readPublicationHistory } from '../../diffusion_bridge/publication_history.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { userRecordId } from '../../security/user_identity.ts';
@@ -135,7 +135,7 @@ export async function getRecordInfo(
 	if (table === null) return null;
 	const auditTipos = Object.values(AUDIT_TIPOS);
 	const [record, history, grants] = await Promise.all([
-		readMatrixRecord(table, sectionTipo, sectionId),
+		memoizedReadMatrixRecord(table, sectionTipo, sectionId),
 		readPublicationHistory(sectionTipo, sectionId),
 		Promise.all(auditTipos.map((tipo) => deps.canReadAudit(tipo))),
 	]);

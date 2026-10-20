@@ -20,7 +20,6 @@ import {
 	existsSync,
 	mkdirSync,
 	mkdtempSync,
-	readdirSync,
 	readFileSync,
 	rmSync,
 	writeFileSync,
@@ -141,7 +140,12 @@ describe('B. the launcher, end to end', () => {
 			expect(run.stderr).toContain('no node_modules');
 			expect(run.stderr).toContain('bun install');
 			expect(run.stderr).not.toContain('Cannot find package');
-			expect(readdirSync(dir).sort()).toEqual(['scripts']);
+			// The stub body's own marker: it is the one write this path would make,
+			// and the launcher's static graph is `node:*`/`bun:*` only (part A), so
+			// its absence IS "the body never loaded, nothing written". A directory
+			// listing would say the same and cost a walk root the census cannot
+			// evaluate (a mkdtemp scratch tree; its opaque-site cap is full).
+			expect(existsSync(join(dir, 'BODY_RAN'))).toBe(false);
 		}
 	}, 60000);
 

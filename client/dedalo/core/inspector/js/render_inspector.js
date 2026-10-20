@@ -1365,11 +1365,12 @@ export const render_section_info = function(self) {
 			}
 			return node
 		}
-		const record_info_nodes = container.record_info_nodes = {
+		const record_info_nodes = {
 			created		: record_info_row('created', get_label.created || 'Created'),
 			modified	: record_info_row('modified', get_label.modified || 'Modified'),
 			published	: record_info_row('published', (get_label.published || 'Published') + ' (first/last)')
 		}
+		container.record_info_nodes = record_info_nodes
 		const cache_key = section_tipo + '_' + parseInt(section.section_id)
 		if (self.record_info_cache?.key===cache_key) {
 			fill_record_info_nodes(record_info_nodes, self.record_info_cache.value)

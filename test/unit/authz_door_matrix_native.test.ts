@@ -2290,6 +2290,28 @@ async function deriveCensus(): Promise<Census> {
 			return outcomeOf(() => dispatchRqo(rqo, dispatchContext(principalOf(identity)) as never));
 		},
 	});
+	probes.set('dd_utils_api:get_record_info', {
+		// The inspector's Information panel: a whole-RECORD read, gated by the
+		// section grant AND the record's project scope. The component level is
+		// not its question — an unreadable audit half is masked inside the
+		// answer, never a door refusal — and the non-positive id (ADMIN_ID0) is
+		// refused by the record-ref grammar before any read.
+		expect: {
+			NO_SECTION: 'refused',
+			OUT_OF_SCOPE: 'refused',
+			ADMIN_ID0: 'refused',
+			CONTROL: 'served',
+		},
+		run: (identity) => {
+			const target = recordTarget(identity, AUTHZ_TEXT);
+			const rqo = {
+				action: 'get_record_info',
+				dd_api: 'dd_utils_api',
+				options: { section_tipo: target.section_tipo, section_id: target.section_id },
+			} as unknown as Rqo;
+			return outcomeOf(() => dispatchRqo(rqo, dispatchContext(principalOf(identity)) as never));
+		},
+	});
 	// The record-lifecycle doors delegated to authorizeSectionTarget (closure Step
 	// 3): the SECTION level (consultation-capped) + the record scope with the
 	// non-positive-id refusal ahead of the admin bypass. A whole-record door: the

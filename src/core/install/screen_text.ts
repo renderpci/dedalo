@@ -661,7 +661,7 @@ export const REVIEW_TEXT = Object.freeze({
 		'install folder': 'install folder',
 		'service user': 'service user',
 		'service group': 'service group',
-		'database role': 'database role',
+		'database user': 'database user',
 		note: 'note',
 	}),
 });

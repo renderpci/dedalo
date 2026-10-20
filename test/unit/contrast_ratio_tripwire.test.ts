@@ -822,10 +822,7 @@ describe('contrast_ratio_tripwire', () => {
 		expect(palettes.map((p) => p.name)).toEqual(['alt-dark', 'dark', 'light']);
 		// `html` (0,0,1) is outranked by `:root` (0,1,0); the alt-dark root inherits
 		// the dark root's declarations it does not itself override
-		const tokens = collectTokens(
-			[css],
-			palettes.find((p) => p.name === 'alt-dark') as Palette,
-		);
+		const tokens = collectTokens([css], palettes.find((p) => p.name === 'alt-dark') as Palette);
 		expect(tokens.get('--a')).toBe('4');
 		expect(tokens.get('--b')).toBe('2');
 		const html = parseRules('html{--a:html;} :root{--a:root;}');
