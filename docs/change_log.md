@@ -707,6 +707,17 @@ Merged since the last release; these ship with the next one.
     restricted. See [Production install](./install/production.md); its last section is a
     recipe for trying the production route in a virtual machine with no domain name.
 
+#### Fixed
+
+- **The installer says what to do when the checkout's dependencies are missing.**
+
+    `bun run scripts/install.ts` in a checkout where `bun install` had not been run
+    stopped at once with `Cannot find package 'zod'`, which named neither the cause
+    nor the fix. It now refuses with one sentence: run `bun install` in the checkout
+    first. Nothing is written. `sh install.sh` is unchanged and still installs the
+    dependencies itself. See
+    [Running the installer without `install.sh`](./install/installer_reference.md#running-the-installer-without-installsh).
+
 ### For developers
 
 #### Changed
@@ -752,7 +763,7 @@ Merged since the last release; these ship with the next one.
     the `root` login, and the certificate authority's path, SHA-256 fingerprint and
     whether this machine trusts it. The full-screen installer leaves these lines on the
     terminal when it closes. See the
-    [developer quickstart](./install/dev_quickstart.md#4-run-the-installer).
+    [developer quickstart](./install/dev_quickstart.md#5-run-the-installer).
 
     **`bun run dev` stops when its CSS watcher dies.** The stylesheet watcher never
     stops on a LESS error, so when it exits something is wrong — usually a missing

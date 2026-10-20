@@ -372,7 +372,7 @@ installer's own affordances.
     the certificate authority's path, SHA-256 fingerprint and whether this
     machine trusts it now (with the command that trusts it, when it does not).
     The full-screen installer leaves the same lines on the terminal when it
-    closes. The [developer quickstart](dev_quickstart.md#4-run-the-installer)
+    closes. The [developer quickstart](dev_quickstart.md#5-run-the-installer)
     shows them.
 
 !!! note "Only declared thesauri are pre-selected"
@@ -1401,6 +1401,13 @@ When the installer will run in plain mode (`--plain`, `TERM` unset or `dumb`, or
 standard output not a terminal), the dependency install runs with
 `NO_COLOR=1 FORCE_COLOR=0` and `--no-progress`, so no escape sequence reaches
 the output.
+
+### Running the installer without `install.sh`
+
+`bun run scripts/install.ts` needs the checkout's dependencies: run `bun install`
+in the checkout first ([developer quickstart](dev_quickstart.md), step 3). Without
+`node_modules` the installer refuses with exit `3`, writes nothing, and says so.
+It never installs them itself; `sh install.sh` does, before it starts the installer.
 
 ## What `../private/.env` does — and does not — get
 

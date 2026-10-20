@@ -180,7 +180,9 @@ const cliEnv = (): Record<string, string> => {
 describe('the installer loads the UI only on the full-screen path (c)', () => {
 	test('scripts/install.ts reaches ui/app.ts through the dynamic import only', () => {
 		const withDynamic = reachableModules(true, ['scripts/install.ts']).map(rel);
-		const staticOnly = reachableModules(false, ['scripts/install.ts']).map(rel);
+		// The installer's body sits behind the launcher's own dynamic import
+		// (install_launcher_native): its STATIC graph is the one to confine.
+		const staticOnly = reachableModules(false, ['scripts/install_main.ts']).map(rel);
 		expect(withDynamic).toContain('src/core/install/ui/app.ts');
 		expect(withDynamic).toContain(LOADER);
 		expect(staticOnly.length).toBeGreaterThan(20);

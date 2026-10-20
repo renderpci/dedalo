@@ -505,6 +505,9 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-17 (section list toolbar, phone tier). DB-free: source scans of two
 	#     stylesheets and two client view modules, comments stripped; no import, no DOM.
 	test/unit/section_toolbar_phone_tripwire.test.ts
+	# --- 2026-10-20 (installer launcher). DB-free: an import-graph scan and the real
+	#     launcher in scratch trees with a stub installer body.
+	test/unit/install_launcher_native.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

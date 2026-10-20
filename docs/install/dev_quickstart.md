@@ -14,7 +14,7 @@ A working Dédalo on your laptop in about ten minutes. This is a **development**
 | Media tools | `brew install ffmpeg imagemagick poppler ocrmypdf librsvg` | `sudo apt install ffmpeg imagemagick poppler-utils ocrmypdf librsvg2-bin` | `sudo dnf install ffmpeg ImageMagick poppler-utils librsvg2-tools` |
 | MariaDB (for the test suite) | `brew install mariadb` | `sudo apt install mariadb-server` | `sudo dnf install mariadb-server` |
 
-Bun comes in step 2, inside the checkout, because the version it installs is the one the checkout pins.
+Bun comes in step 3, inside the checkout, because the version it installs is the one the checkout pins.
 
 Debian 13 and RHEL-family 10 do not ship PostgreSQL 18 themselves, and RHEL-family 10 needs extra repositories for FFmpeg and ImageMagick. Add them first, exactly as the [manual install](manual_install.md) does: the PostgreSQL project's repository (PGDG) on Debian, and EPEL, CodeReady Builder, RPM Fusion free and PGDG on RHEL, Rocky and Alma. On RHEL-family, PGDG's server also needs its data directory created and the service started:
 
@@ -23,7 +23,7 @@ sudo /usr/pgsql-18/bin/postgresql-18-setup initdb
 sudo systemctl enable --now postgresql-18
 ```
 
-MariaDB is not needed by a development install. The test suite starts its own private MariaDB server from these binaries, and without them the publication tests fail rather than skip (see step 7).
+MariaDB is not needed by a development install. The test suite starts its own private MariaDB server from these binaries, and without them the publication tests fail rather than skip (see step 8).
 
 !!! note "macOS binary base"
     Media binaries are looked up under `/opt/homebrew/bin` on macOS and `/usr/bin` on Linux, automatically. Override the base with `DEDALO_BINARY_BASE`, or any single binary with its own key (`DEDALO_AV_FFMPEG_PATH`, `DEDALO_MAGICK_PATH`, …). On an Intel Mac, Homebrew installs to `/usr/local/bin` — set `DEDALO_BINARY_BASE=/usr/local/bin`.
@@ -31,24 +31,66 @@ MariaDB is not needed by a development install. The test suite starts its own pr
 !!! note "Several PostgreSQL versions installed?"
     `psql` must not be older than the server. A version-suffixed Homebrew install is detected automatically, newest first. If you have a stranger layout, point at it explicitly with `DEDALO_PG_BIN_PATH=/opt/homebrew/opt/postgresql@18/bin`.
 
-## 2. Clone, install Bun and the dependencies
+## 2. Clone the Dédalo code
+
+Clone into a directory of its own: the installer puts the private directory **next to** the checkout, so give both a common parent.
 
 ```shell
-git clone <your-dedalo-remote> ~/dev/dedalo/master_dedalo
+mkdir -p ~/dev/dedalo
+git clone https://github.com/dedalia-org/dedalo.git ~/dev/dedalo/master_dedalo
 cd ~/dev/dedalo/master_dedalo
-curl -fsSL https://bun.sh/install | bash -s "bun-v$(cat .bun-version)"   # the version this checkout pins
-exec "$SHELL" -l                                                         # puts ~/.bun/bin on your PATH
-bun install
 ```
 
-Run the Bun line **inside the checkout**: it reads `.bun-version` from the current directory. Run elsewhere, the version is empty and the download fails.
+The clone is on `master`, the development branch. To work on a published release instead, check out its tag:
 
-That is the whole setup. The browser libraries the client loads ship **with the repo** — from `node_modules/` or from the committed `vendor/` tree. Nothing is fetched or copied at install time.
+```shell
+git tag --list 'v7.*'        # the releases
+git checkout v<version>      # for example: git checkout v7.0.0-beta.6
+```
+
+The resulting layout:
+
+```text
+~/dev/dedalo/
+├── master_dedalo/    # the checkout: code, client, install seed, .bun-version
+└── private/          # created by the installer in step 5: .env, media, certificates
+```
 
 !!! note "The private directory is a sibling of the repo"
     The installer will create `~/dev/dedalo/private/` — one level **above** the repo. Make sure that directory is writable (it will be, if you cloned into a directory you own).
 
-## 3. Create an empty database
+## 3. Install Bun (the Dédalo engine)
+
+Bun runs the Dédalo server, the installer and the tests. Install the exact version the checkout pins in `.bun-version` — **from inside the checkout**:
+
+```shell
+cd ~/dev/dedalo/master_dedalo
+cat .bun-version                                                         # the pinned version
+curl -fsSL https://bun.sh/install | bash -s "bun-v$(cat .bun-version)"   # installs it into ~/.bun
+exec "$SHELL" -l                                                         # puts ~/.bun/bin on your PATH
+```
+
+The Bun line reads `.bun-version` from the current directory. Run elsewhere, the version is empty and the download fails.
+
+Check that the Bun on your `PATH` is the pinned one:
+
+```shell
+which bun                  # ~/.bun/bin/bun
+bun --version              # must print the same version as .bun-version
+[ "$(bun --version)" = "$(cat .bun-version)" ] && echo "Bun OK" || echo "Bun version mismatch"
+```
+
+`which bun` naming another path (Homebrew's `/opt/homebrew/bin/bun`, for example) means an older Bun shadows this one: remove it, or put `~/.bun/bin` first in your `PATH`. When a later `git pull` changes `.bun-version`, run the same `curl` line again: it replaces the installed Bun with the new pin.
+
+Then the checkout's dependencies:
+
+```shell
+bun install                # required: the installer refuses to start without them
+```
+
+That is the whole setup. The browser libraries the client loads ship **with the repo** — from `node_modules/` or from the committed `vendor/` tree. Nothing is fetched or copied at install time.
+
+## 4. Create an empty database
 
 On **macOS**, Homebrew's PostgreSQL already has a superuser named after you:
 
@@ -76,16 +118,16 @@ A role with a password connects over TCP (`localhost`), and you give the install
 
 The installer restores **into** this database and refuses a non-empty one. It never creates the database itself.
 
-## 4. Run the installer
+## 5. Run the installer
 
-The Developer route installs into the database you just created and writes `../private/.env`. It runs no host step: no packages, no units, no web site. It installs the checkout's development dependencies, writes the development listener `bun run dev` serves on, issues that listener's certificate and asks this machine to trust it (step 5). Interactively:
+The Developer route installs into the database you just created and writes `../private/.env`. It runs no host step: no packages, no units, no web site. It installs the checkout's development dependencies, writes the development listener `bun run dev` serves on, issues that listener's certificate and asks this machine to trust it (step 6). Interactively:
 
 ```shell
 bun run scripts/install.ts            # the full-screen installer: choose Developer on the first screen
 bun run scripts/install.ts --plain    # the same questions, one per line
 ```
 
-`sh install.sh` from the [installation hub](index.md) starts the same installer: it fetches and verifies the pinned Bun itself, installs the installer's dependencies, then runs `scripts/install.ts` with your arguments. In a checkout where Bun is already installed (step 2), `bun run scripts/install.ts` is the shorter way to the same questions.
+`sh install.sh` from the [installation hub](index.md) starts the same installer: it fetches and verifies the pinned Bun itself, installs the installer's dependencies, then runs `scripts/install.ts` with your arguments. In a checkout where Bun is already installed (step 3), `bun run scripts/install.ts` is the shorter way to the same questions.
 
 The *System check* screen shows Bun, the seed, the private directory and the PostgreSQL client (`psql`, required), then this machine's platform, memory, processor, disk, ImageMagick and FFmpeg; a failed row must be fixed first. A `psql` older than the server is reported by the *Database* screen, once the server's version is known. The *Database* screen checks that the database exists, is reachable and is empty.
 
@@ -104,16 +146,16 @@ bun run scripts/install.ts \
 
 Add `--write-answers ~/dedalo-dev.answers.json` once and the next fresh install is `bun run scripts/install.ts --answers ~/dedalo-dev.answers.json` (the file holds no secret). `--plan` shows the keys and steps a command would produce without touching anything.
 
-No `--media-path`: the media root defaults to `../private/media` (see step 5). To keep it elsewhere, add `--media-path "$HOME/dev/dedalo/media"`; the installer creates that directory and writes it to `.env` as `MEDIA_PATH`. Setting `MEDIA_PATH=…` in front of the command does not work: the installer would probe that directory, but `.env` would not get it.
+No `--media-path`: the media root defaults to `../private/media` (see step 6). To keep it elsewhere, add `--media-path "$HOME/dev/dedalo/media"`; the installer creates that directory and writes it to `.env` as `MEDIA_PATH`. Setting `MEDIA_PATH=…` in front of the command does not work: the installer would probe that directory, but `.env` would not get it.
 
-`--db-socket` connects over the local unix socket, as the role from step 3 does, so no password is needed. The socket directory depends on how PostgreSQL was installed:
+`--db-socket` connects over the local unix socket, as the role from step 4 does, so no password is needed. The socket directory depends on how PostgreSQL was installed:
 
 | PostgreSQL from | `--db-socket` |
 | --- | --- |
 | Ubuntu, Debian, PGDG on RHEL / Rocky / Alma | `/var/run/postgresql` |
 | Homebrew (macOS) | `/tmp` |
 
-The installer writes it to `.env` as `DB_SOCKET`; the engine and the test suite both connect through it. Without `--db-socket`, the installer connects to `localhost` over TCP, which needs a role with a password (step 3).
+The installer writes it to `.env` as `DB_SOCKET`; the engine and the test suite both connect through it. Without `--db-socket`, the installer connects to `localhost` over TCP, which needs a role with a password (step 4).
 
 With no `--hierarchies`, only the thesauri the chosen ontologies declare are installed — no country's toponymy is ever pre-selected; `--hierarchies none` skips even those. The Languages thesaurus is activated with the database either way. With no `--ontologies`, the default domain ontology, Oral history (`oh`), is installed from the copy built into the repo — no network needed; `--ontologies oh,tch` downloads `tch` and what it declares from the update server. The `.env` it writes points `ONTOLOGY_SERVERS` and `CODE_SERVERS` at the official Dédalo update server (add `--no-update-servers` to leave both empty) and lists the installed ontologies in `ACTIVE_ONTOLOGY_TLDS`.
 
@@ -138,7 +180,7 @@ The URLs, the certificate authority's path and its SHA-256 fingerprint are your 
 
 If the install stops part-way, fix the cause and run `bun run scripts/install.ts --resume`; `--abort --confirm-database dedalo_dev` undoes it before the install is sealed ([Resume and abort](installer_reference.md#resuming-an-install-resume)).
 
-## 5. What the installer writes for `bun run dev`
+## 6. What the installer writes for `bun run dev`
 
 The installer writes a *Development only* section into `../private/.env`. With the defaults — the local certificate authority (`--tls local_ca`) — and with plain HTTP (`--tls none`), it holds:
 
@@ -175,7 +217,7 @@ A re-run of the installer keeps the port, address, certificate pair and modes yo
 !!! note "One download at first boot"
     On its first start the server downloads the free DB-IP country database (from `https://download.db-ip.com`) into `../private/geoip/`. The Activity section uses it to show a country flag beside an IP address, and the server refreshes it monthly. Offline, the server starts anyway and shows no flags. To make no download at all, set `DEDALO_GEOIP_AUTO_UPDATE=false` (or `DEDALO_GEOIP_ENABLED=false`).
 
-## 6. Run it
+## 7. Run it
 
 ```shell
 bun run dev          # watch mode; `bun run start:supervised` runs it without the watchers
@@ -191,12 +233,12 @@ Dédalo TS server listening on unix socket /tmp/dedalo_ts.sock (entity: dev)
 Dédalo TS dev listener on https://localhost:3500/dedalo/core/page/
 ```
 
-Open the URL the installer printed — **`https://127.0.0.1:3500/dedalo/core/page/`** with the defaults — and log in as `root` with the password you set in step 4.
+Open the URL the installer printed — **`https://127.0.0.1:3500/dedalo/core/page/`** with the defaults — and log in as `root` with the password you set in step 5.
 
 !!! note "One unix socket per server"
     The developer route does not write `SERVER_UNIX_SOCKET`, so every checkout's server listens on the default `/tmp/dedalo_ts.sock`. A second server on the same machine refuses to start until it has its own (`--socket` at install time, or `SERVER_UNIX_SOCKET` in its `.env`). The installer's last step names it when that happens; by then the install is sealed, so set `SERVER_UNIX_SOCKET` in the `.env` and run the installer again with `--resume`.
 
-## 7. Run the tests
+## 8. Run the tests
 
 The suite has its **own database** — it never reads or writes the one your app uses:
 
@@ -242,16 +284,17 @@ bun run test:client:server   # the suite server, kept alive for browsing (Ctrl-C
 | `scripts/dev_instance.sh` | a second instance beside the first, on its own port and socket (`scripts/dev_instance.sh --help`) |
 | `bun run css:build` | compile the LESS once (needed if you edited a `.less` without `dev` running) |
 | `bun test test/unit/…` | targeted unit gates (the whole suite takes minutes) |
-| `bun run test:client` | the browser client suite; it starts its own server on the suite database (step 7) and stops it |
+| `bun run test:client` | the browser client suite; it starts its own server on the suite database (step 8) and stops it |
 | `bunx tsc --noEmit` | type check |
 | `bun run lint` | the linter |
 | `bun run scripts/verify.ts` | the pre-merge gate: typecheck, lint, all tripwires, neighbours |
 
 ## When something does not work
 
-- **Cannot log in, no error** → `SESSION_COOKIE_SECURE` does not match the listener (`false` over plain HTTP). See step 5.
+- **Cannot log in, no error** → `SESSION_COOKIE_SECURE` does not match the listener (`false` over plain HTTP). See step 6.
 - **The browser warns that the certificate is not trusted** → the installer could not make this machine trust the local authority (a cancelled password dialog). The final screen printed the command that trusts it on your system: run it once.
 - **The installer's last step (`verify_dev_server`) fails with the port in use** → something took the port after the installer checked it. The install is already sealed, so `--dev-port` is not accepted any more: stop the other program, or set `SERVER_TCP_PORT` in the `.env` to the free port the message names, then run the installer again with `--resume`.
+- **`install refused: this checkout has no dependencies (no node_modules)`** → `bun install` was skipped. Run it in the checkout (step 3), then start the installer again.
 - **`bun run dev` stops with `the CSS watcher stopped`** → a development dependency is missing (the error above it names it, for example `Cannot find package 'less'`). Run `bun install` in the checkout.
 - **`address already in use` / the server exits 1 at boot** → another instance is already listening on `/tmp/dedalo_ts.sock`. The double-start guard probes the socket and refuses to steal it. Stop the other one, or point `SERVER_UNIX_SOCKET` somewhere else.
 - **The server exits at once with `[boot] REFUSED — not installed`** (exit code 78) → it found none of the four required keys. It is not reading your `.env` — check that it is at `../private/.env`, one level above the repo (or run the installer).
