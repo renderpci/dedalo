@@ -113,6 +113,8 @@ export const render_reference = async function(options) {
 				})
 				return false
 			}
+			// data_limit. Only one locator is allowed by reference tag (instance only, the ontology node is shared)
+			reference_component.context.properties = Object.assign({}, reference_component.context.properties, {data_limit : 1})
 			// force to prevent to show tool buttons
 			reference_component.show_interface.tools = false
 
@@ -244,16 +246,9 @@ export const render_reference = async function(options) {
 				// if yes, delete the note section in the server
 				if(window.confirm(delete_label)) {
 
-					if(locator.length > 0){
-
-						// if the locator is not empty, remove it of the component.
-						component_tags_reference.unlink_record({
-							paginated_key	: locator[0].paginated_key,
-							row_key			: null,
-							section_id		: locator[0].section_id
-						});
-						// refresh the component of the tags to get the real data
-						// component_tags_reference.reset_filter_data()
+					if(locator && locator.length > 0){
+						// remove all locators of the tag from the component (don't wait)
+						remove_tag_locators(component_tags_reference, view_tag.tag_id)
 					}
 					// remove the reference attribute of the text selected in the component_text_area
 						text_editor.remove_reference()
@@ -274,21 +269,21 @@ export const render_reference = async function(options) {
 				text_content	: get_label.apply || 'Apply',
 				parent			: footer
 			})
-			button_apply.addEventListener('mouseup',function(e) {
+			button_apply.addEventListener('mouseup', async function(e) {
 
 				// save the locator when is a new tag_id
 				// if a reuse is active, the locator already exist into the portal
 				if(selected_tag.reuse === false){
 
-					const locator = reference_component.data.value
+					const temp_value = reference_component.data.value
 
-					if(!locator || locator.length === 0){
+					if(!temp_value || temp_value.length === 0){
 						button_remove.click()
 						return
 					}
 
 					// set the tag_id and tag_type into the locator to be saved
-					const new_locator = locator[0]
+					const new_locator = temp_value[0]
 						new_locator.tag_id = view_tag.tag_id
 						new_locator.tag_type = 'reference'
 
@@ -296,7 +291,17 @@ export const render_reference = async function(options) {
 					// see the ontology node properties
 					delete new_locator.type
 
-					component_tags_reference.add_value(new_locator);
+					// unchanged. The tag already has this unique locator
+					const unchanged = locator && locator.length===1
+						&& locator[0].section_tipo===new_locator.section_tipo
+						&& locator[0].section_id==new_locator.section_id
+					if (!unchanged) {
+						// replace previous tag locators (only one locator is allowed by tag)
+						if (locator && locator.length > 0) {
+							await remove_tag_locators(component_tags_reference, view_tag.tag_id)
+						}
+						await component_tags_reference.add_value(new_locator)
+					}
 
 					// get the data from the new locator
 					const locator_data = new_locator
@@ -313,6 +318,9 @@ export const render_reference = async function(options) {
 					 selected_tag.fallback_value  = locator_data
 					 	? locator_data.fallback_value.join(' | ')
 					 	: ' '
+				 }else if (selected_tag.tag_id!==view_tag.tag_id && locator && locator.length > 0) {
+					// reuse case. Remove the original tag locators to prevent orphan values
+					await remove_tag_locators(component_tags_reference, view_tag.tag_id)
 				 }
 
 				// create the new tag for the reference, it's necessary to change the referenceIn tag only
@@ -375,6 +383,45 @@ export const render_reference = async function(options) {
 
 	return true
 }//end render_note
+
+
+
+/**
+* REMOVE_TAG_LOCATORS
+* Removes all reference locators of given tag_id from the tags component (saved in server)
+* and refresh the component to sync the client data
+* @param object component_tags_reference
+* @param string tag_id
+* @return bool
+*/
+const remove_tag_locators = async function(component_tags_reference, tag_id) {
+
+	// delete_locator. Removes all locators matching tag_id and tag_type
+		const api_response = await component_tags_reference.delete_locator(
+			{
+				tag_id		: tag_id,
+				tag_type	: 'reference'
+			},
+			['tag_id','tag_type']
+		)
+		if (!api_response || api_response.result===false) {
+			console.error('Error on remove tag locators:', api_response);
+			return false
+		}
+
+	// refresh to get the real data
+		await component_tags_reference.refresh({
+			build_autoload : true
+		})
+
+	// check if the component has active a tag_id filter
+		if(component_tags_reference.active_tag){
+			await component_tags_reference.filter_data_by_tag_id(component_tags_reference.active_tag)
+		}
+
+
+	return true
+}//end remove_tag_locators
 
 
 
