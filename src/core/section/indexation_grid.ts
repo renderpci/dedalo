@@ -1361,13 +1361,7 @@ export async function scopeIndexationGroups<T>(
 	principal: Principal,
 ): Promise<Map<string, Map<string, T[]>>> {
 	const { scopeInverseReferenceHits } = await import('../security/record_scope.ts');
-	const hits = [...groups].flatMap(([topTipo, byId]) =>
-		[...byId.keys()].map((topId) => ({
-			section_tipo: topTipo,
-			section_id: Number(topId),
-			key: topId,
-		})),
-	);
+	const hits = sectionTopGroupHits(groups);
 	const allowed = await scopeInverseReferenceHits(hits, principal);
 	const allowedKeys = new Set(allowed.map((hit) => `${hit.section_tipo}|${hit.key}`));
 
@@ -1382,6 +1376,24 @@ export async function scopeIndexationGroups<T>(
 		if (kept.size > 0) scoped.set(topTipo, kept);
 	}
 	return scoped;
+}
+
+/**
+ * The record each section_top GROUP is scoped as — the page's half of the
+ * key the past probe projects in SQL (sectionTopProjection). Exported for
+ * the twin's gate (client_page_doors_native), which compares the two shape
+ * by shape.
+ */
+export function sectionTopGroupHits<T>(
+	groups: Map<string, Map<string, T[]>>,
+): { section_tipo: string; section_id: number; key: string }[] {
+	return [...groups].flatMap(([topTipo, byId]) =>
+		[...byId.keys()].map((topId) => ({
+			section_tipo: topTipo,
+			section_id: Number(topId),
+			key: topId,
+		})),
+	);
 }
 
 // ---------------------------------------------------------------------------
@@ -1438,7 +1450,7 @@ function indexationSinkQuery(
  * SCOPED, like the page itself (AUTHZ-05), and BOUNDED whatever the tail: the
  * breakdown's rows past the page (findInverseReferenceLocatorsPast — the
  * sink's own question, plan and order) are projected onto their section_top
- * (SECTION_TOP_SQL, the SQL twin of groupBySectionTop) and asked ONE question
+ * (sectionTopProjection, the SQL twin of groupBySectionTop) and asked ONE question
  * (record_scope anyRowInScope: the section grant, then one EXISTS under the
  * list's own record predicate — the halves scopeIndexationGroups applies). So
  * the notice answers only "is there anything for you past this page" — a
@@ -1463,13 +1475,26 @@ export async function indexationRowsPast(
 	);
 	if (tail === null) return false;
 	const { anyRowInScope } = await import('../security/record_scope.ts');
-	return anyRowInScope(
-		{
-			sql: `SELECT ${SECTION_TOP_TIPO_SQL} AS section_tipo, ${SECTION_TOP_ID_SQL} AS section_id FROM (${tail.sql}) AS breakdown`,
-			params: tail.params,
-		},
-		principal,
-	);
+	return anyRowInScope(sectionTopProjection(tail), principal);
+}
+
+/**
+ * Breakdown rows (`section_tipo, section_id, locator_data`) projected onto the
+ * record their section_top GROUP is scoped as (SECTION_TOP_TIPO_SQL /
+ * SECTION_TOP_ID_SQL) — the SQL half of groupBySectionTop + sectionTopGroupHits.
+ * A HAND TWIN by necessity (the past probe asks a tail of unbounded length one
+ * question in SQL; the page groups the hits it read in JS), so it is gated shape
+ * by shape against the JS half: equal, or — only for the stored forms the
+ * strict-integer rule refuses — naming no record (client_page_doors_native).
+ */
+export function sectionTopProjection(breakdown: { sql: string; params: readonly unknown[] }): {
+	sql: string;
+	params: readonly unknown[];
+} {
+	return {
+		sql: `SELECT ${SECTION_TOP_TIPO_SQL} AS section_tipo, ${SECTION_TOP_ID_SQL} AS section_id FROM (${breakdown.sql}) AS breakdown`,
+		params: breakdown.params,
+	};
 }
 
 /**
@@ -1495,14 +1520,14 @@ const SECTION_TOP_ID_SQL = `CASE
 END`;
 
 /** One breakdown hit as the grid reads it (the matched locator rides `locator_data`). */
-type IndexationHit = { section_tipo: string; section_id: number; locator_data?: unknown };
+export type IndexationHit = { section_tipo: string; section_id: number; locator_data?: unknown };
 
 /**
  * The sink's hits as the grid's IndexLocators, grouped by section_top (PHP
- * get_ar_section_top_tipo) — the unit the grid renders AND scopes. ONE
- * derivation, shared by the page read and the past-the-window probe.
+ * get_ar_section_top_tipo) — the unit the grid renders AND scopes. Its SQL
+ * twin is sectionTopProjection (exported, with it, for the twin's gate).
  */
-function groupBySectionTop(
+export function groupBySectionTop(
 	hits: readonly IndexationHit[],
 ): Map<string, Map<string, IndexLocator[]>> {
 	const groups = new Map<string, Map<string, IndexLocator[]>>();

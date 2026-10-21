@@ -780,6 +780,17 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **An export's record selection now respects the database statement ceiling.**
+
+    With `DB_STATEMENT_TIMEOUT_MS` set, computing an export's record selection could still run
+    far past it: PostgreSQL lifts the statement ceiling at the moment it builds the selection.
+    Now the selection runs under the same ceiling as every other request: an export whose
+    selection takes longer to compute is stopped at the ceiling with `db.statement_timeout`,
+    before its first line, and its database connection is freed. Installations that keep the
+    default `0` (no ceiling) see no change.
+
+    Wire contract: `WC-2026-10-11-export-buffered-cap-and-admission`.
+
 - **Docker stacks — ontology update no longer fails with EACCES**
 
     Both Docker stacks now set `ONTOLOGY_DATA_IO_DIR=/private/import/ontology`. Before this, the engine fell back to the in-tree `install/import/ontology`, which is root-owned in the image, so **Maintenance → Update ontology** died with `EACCES: permission denied, mkdir '…/install/import/ontology/7.0/.staging'`. Existing installs pick this up from the updated compose file: `docker compose up -d` recreates the engine container, and no manual `chown` is needed.

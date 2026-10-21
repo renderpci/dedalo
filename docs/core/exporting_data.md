@@ -425,7 +425,10 @@ covers the whole search result rather than the client's clamped page limit.
 That selection is read in pages from ONE snapshot taken when the export opens
 (a server-side cursor), never loaded whole, so a large export costs the server
 the same memory as a small one; `meta.total` is the snapshot's exact count, and
-a record saved while the export runs is not part of it. Each server process runs
+a record saved while the export runs is not part of it. Computing that snapshot
+runs under the same statement ceiling as any request (`DB_STATEMENT_TIMEOUT_MS`):
+a selection that takes longer is refused with `db.statement_timeout` before the
+first line. Each server process runs
 at most a quarter of `DB_POOL_MAX` exports at once (at least one); beyond that
 a `get_export_grid` request is refused with `export.busy` — try again shortly —
 while a background export (`build_export_artifact`) waits for the next free

@@ -69,7 +69,22 @@
  *   - THE SET-SHAPED SCOPE IS THE LIST'S: anyRowInScope answers record by record
  *     what scopeInverseReferenceHits answers, for the reader and the admin, with
  *     the projects filter, the section grant and a dd478 allow-list each
- *     deciding at least one reader cell;
+ *     deciding at least one reader cell; and its PER-RECORD half
+ *     (buildAnyRowInScopeSql), with the granted list FORCED so the SQL alone
+ *     decides, answers single rows AND multi-row sets exactly as the list's
+ *     predicate (isRecordInScope over the granted rows) — the Users root
+ *     exclusion, the section_tipo join, the per-section guard of a mixed set,
+ *     a projects-filter-EXEMPT table carrying a component_filter (zzpg18,
+ *     matrix_list) and an empty granted list each decide a cell; a row naming
+ *     no section is no record;
+ *   - THE GRID'S SECTION_TOP TWIN: the SQL projection the past probe asks
+ *     (sectionTopProjection) names, stored shape by stored shape, the record the
+ *     page scopes each group as (groupBySectionTop → sectionTopGroupHits) — or,
+ *     only for forms the strict-integer rule refuses, none; and end to end,
+ *     three hosts whose row past the page has an owner and a section_top that
+ *     disagree for the reader (HOST3 owner visible / top hidden, HOST4 owner
+ *     hidden / top visible, HOST5 top in an unreadable section) get the notice
+ *     exactly when the TOP is the reader's;
  *   - A DDO-BORNE WINDOW: a section read's literal show.ddo_map naming a
  *     component_relation_index with a hostile `limit` (0, over the ceiling,
  *     MAX_SAFE_INTEGER) emits at most the ceiling of inverse locators, its
@@ -106,7 +121,9 @@
  * lands in the SAME commit as the rqo.ts wire hunk, or after it; routing that
  * door's page through clampClientPage in read.ts removes the dependency.
  *
- * Situation `zzpg` (matrix_test via test24, ids 900740..901021, dropped with a
+ * Situation `zzpg` (matrix_test via test24, ids 900740..901021 and
+ * 901024..901032; zzpg18 in matrix_list via dd22, ids 901022..901023 — dropped
+ * with a
  * residue-0 assertion).
  */
 
@@ -209,6 +226,30 @@ else {
 	 * the row-level allow-list alone.
 	 */
 	const HOST_OUTSIDE_ALLOW_LIST = 901021;
+	/**
+	 * A section in a PROJECTS-FILTER-EXEMPT table (matrix_list, via dd22) that
+	 * nevertheless carries a component_filter: the list ignores its projects
+	 * (sectionNeedsRecordAcl), so both records are in scope for any reader — one
+	 * in the reader's project, one in the second suite project.
+	 */
+	const EXEMPT_SECTION = 'zzpg18';
+	const EXEMPT_IDS = [901022, 901023];
+	/**
+	 * THE SECTION_TOP HOSTS (the grid's past probe scopes a row as its top, never
+	 * its owner). Each host is indexed by the three TOP_PAGE records (visible to
+	 * the reader, each its own top — a full page) and by ONE row past the page
+	 * whose owner and section_top disagree for the reader (see the grid leg).
+	 */
+	const HOST3_ID = 901024;
+	const HOST4_ID = 901025;
+	const HOST5_ID = 901026;
+	const TOP_PAGE = [901027, 901028, 901029];
+	/** Owner VISIBLE, top a HIDDEN zzpg3 record (HOST3). */
+	const TOP_HIDDEN_ROW = 901030;
+	/** Owner HIDDEN, top a VISIBLE zzpg3 record (HOST4). */
+	const TOP_VISIBLE_ROW = 901031;
+	/** Owner VISIBLE, top the visible id but in zzpg11, a section the reader may not read (HOST5). */
+	const TOP_OTHER_SECTION_ROW = 901032;
 	/** A component_relation_index declaring its OWN request_config (the own-config emission). */
 	const OWN_CONFIG_INDEX = 'zzpg17';
 	/** Each referencing record's column value — what a door's answer is counted by. */
@@ -245,6 +286,41 @@ else {
 					section_id: hostId,
 					from_component_tipo: 'zzpg8',
 				})),
+			},
+		},
+	});
+
+	/** One zzpg3 record indexing ONE host through zzpg8 with a stored section_top. */
+	const topRef = (
+		id: number,
+		hostId: number,
+		projectId: number,
+		top: { section_top_tipo: string; section_top_id: number },
+	) => ({
+		section_tipo: REF_SECTION,
+		section_id: id,
+		columns: {
+			string: { zzpg4: [{ id: 1, lang: 'lg-nolan', value: marker(id) }] },
+			relation: {
+				zzpg10: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_tipo: 'dd153',
+						section_id: projectId,
+						from_component_tipo: 'zzpg10',
+					},
+				],
+				zzpg8: [
+					{
+						id: 1,
+						type: 'dd96',
+						section_tipo: HOST_SECTION,
+						section_id: hostId,
+						from_component_tipo: 'zzpg8',
+						...top,
+					},
+				],
 			},
 		},
 	});
@@ -386,6 +462,21 @@ else {
 					row: { show: { ddo_map: [{ tipo: 'zzpg12', section_tipo: 'self', parent: 'self' }] } },
 				},
 			},
+			// A projects-filter-EXEMPT table with a component_filter (EXEMPT_SECTION).
+			{
+				tipo: EXEMPT_SECTION,
+				parent: 'test1',
+				model: 'section',
+				term: { 'lg-spa': 'Lista exenta página', 'lg-eng': 'Page exempt list' },
+				relations: [{ tipo: 'dd22' }],
+			},
+			{
+				tipo: 'zzpg19',
+				parent: EXEMPT_SECTION,
+				model: 'component_filter',
+				term: { 'lg-eng': 'Projects' },
+				relations: [{ tipo: 'dd153' }],
+			},
 			{
 				tipo: 'zzpg7',
 				parent: 'zzpg3',
@@ -417,6 +508,41 @@ else {
 			),
 			...TAIL_SHORT_HIDDEN.map((id) => refRecord(id, [HOST_SHORT], SUITE_SECOND_PROJECT_ID)),
 			refRecord(TAIL_LAST, [HOST_LONG_END], ACL_PROJECT_ID),
+			...[HOST3_ID, HOST4_ID, HOST5_ID].map((id) => ({
+				section_tipo: HOST_SECTION,
+				section_id: id,
+				columns: { data: {} },
+			})),
+			...TOP_PAGE.map((id) => refRecord(id, [HOST3_ID, HOST4_ID, HOST5_ID], ACL_PROJECT_ID)),
+			topRef(TOP_HIDDEN_ROW, HOST3_ID, ACL_PROJECT_ID, {
+				section_top_tipo: REF_SECTION,
+				section_top_id: REF_IDS[0] as number,
+			}),
+			topRef(TOP_VISIBLE_ROW, HOST4_ID, SUITE_SECOND_PROJECT_ID, {
+				section_top_tipo: REF_SECTION,
+				section_top_id: PAST_REFS[0]?.id as number,
+			}),
+			topRef(TOP_OTHER_SECTION_ROW, HOST5_ID, ACL_PROJECT_ID, {
+				section_top_tipo: SECOND_REF_SECTION,
+				section_top_id: PAST_REFS[0]?.id as number,
+			}),
+			...EXEMPT_IDS.map((id, index) => ({
+				section_tipo: EXEMPT_SECTION,
+				section_id: id,
+				columns: {
+					relation: {
+						zzpg19: [
+							{
+								id: 1,
+								type: 'dd151',
+								section_tipo: 'dd153',
+								section_id: index === 0 ? ACL_PROJECT_ID : SUITE_SECOND_PROJECT_ID,
+								from_component_tipo: 'zzpg19',
+							},
+						],
+					},
+				},
+			})),
 			...SECOND_REF_IDS.map((id) => ({
 				section_tipo: SECOND_REF_SECTION,
 				section_id: id,
@@ -654,7 +780,16 @@ else {
 			{
 				id: 1,
 				tipo: HOST_SECTION,
-				value: [HOST_ID, HOST2_ID, HOST_LONG_END, HOST_LONG_HIDDEN, HOST_SHORT],
+				value: [
+					HOST_ID,
+					HOST2_ID,
+					HOST_LONG_END,
+					HOST_LONG_HIDDEN,
+					HOST_SHORT,
+					HOST3_ID,
+					HOST4_ID,
+					HOST5_ID,
+				],
 			},
 		];
 		await sql.unsafe(
@@ -1157,6 +1292,294 @@ else {
 				`${reader(HOST_SECTION, HOST_OUTSIDE_ALLOW_LIST)}: false`,
 			]);
 			expect(readerVisible.filter((visible) => !visible).length).toBeGreaterThan(0);
+		});
+
+		test("the set-shaped scope's PER-RECORD half (buildAnyRowInScopeSql) is the list's predicate, arm by arm, on row SETS", async () => {
+			// The leg above drives anyRowInScope END TO END, so every cell whose
+			// SECTION the reader may not read (dd128, dd153, zzpg11) is decided by
+			// the grant leg before the SQL is ever built, and every row set holds ONE
+			// row — the per-record arms behind the grant (the Users root exclusion,
+			// the section_tipo join, the per-section guard of a multi-section set,
+			// the projects-exempt tables) were unproven. Here the granted list is
+			// FORCED, so the SQL alone decides, and it must answer exactly the list's
+			// per-record predicate (isRecordInScope, the assembler's own WHERE):
+			//   expected(rows, granted) = some row r: r's section ∈ granted AND
+			//                             isRecordInScope(r) —
+			// for the reader AND the global admin (the admin arm of the SQL is the
+			// existence half alone).
+			const { isRecordInScope } = await import('../../src/core/security/record_scope.ts');
+			const { buildAnyRowInScopeSql } = await import('../../src/core/search/sql_assembler.ts');
+			type Row = { section_tipo: string; section_id: number };
+			const rowsSql = (rows: readonly Row[]) => ({
+				sql: `SELECT v.section_tipo, v.section_id FROM (VALUES ${rows
+					.map((_, index) => `($${index * 2 + 1}::text, $${index * 2 + 2}::int)`)
+					.join(', ')}) AS v(section_tipo, section_id)`,
+				params: rows.flatMap((row) => [row.section_tipo, row.section_id]),
+			});
+			const askSet = async (
+				rows: readonly Row[],
+				granted: readonly string[],
+				principal: Awaited<ReturnType<typeof resolvePrincipal>>,
+			): Promise<boolean> => {
+				const query = await buildAnyRowInScopeSql(rowsSql(rows), granted, principal);
+				const found = (await sql.unsafe(query.sql, query.params as never)) as { found: boolean }[];
+				return found[0]?.found === true;
+			};
+			const askList = async (
+				rows: readonly Row[],
+				granted: readonly string[],
+				principal: Awaited<ReturnType<typeof resolvePrincipal>>,
+			): Promise<boolean> => {
+				for (const row of rows) {
+					if (!granted.includes(row.section_tipo)) continue;
+					if (await isRecordInScope(row.section_tipo, row.section_id, principal)) return true;
+				}
+				return false;
+			};
+			const singles: Row[] = [
+				{ section_tipo: REF_SECTION, section_id: REF_IDS[0] as number },
+				{ section_tipo: REF_SECTION, section_id: PAST_REFS[0]?.id as number },
+				{ section_tipo: HOST_SECTION, section_id: HOST_ID },
+				{ section_tipo: HOST_SECTION, section_id: HOST_OUTSIDE_ALLOW_LIST },
+				{ section_tipo: HOST_SECTION, section_id: 999_999_999 },
+				{ section_tipo: SECOND_REF_SECTION, section_id: SECOND_REF_IDS[0] as number },
+				// another section's record in the SAME table (matrix_test): not this record
+				{ section_tipo: REF_SECTION, section_id: HOST_ID },
+				{ section_tipo: HOST_SECTION, section_id: PAST_REFS[0]?.id as number },
+				// the users section: the root, the reader's own account
+				{ section_tipo: 'dd128', section_id: -1 },
+				{ section_tipo: 'dd128', section_id: ACL_NON_ADMIN_USER_ID },
+				// the projects section (ungated by the projects filter itself)
+				{ section_tipo: 'dd153', section_id: ACL_PROJECT_ID },
+				{ section_tipo: 'dd153', section_id: SUITE_SECOND_PROJECT_ID },
+				// a projects-filter-EXEMPT table whose section has a component_filter
+				...EXEMPT_IDS.map((id) => ({ section_tipo: EXEMPT_SECTION, section_id: id })),
+			];
+			// Multi-row sets: [rows, granted]. A row of an UNGRANTED section must never
+			// answer through a granted section's arm; a hidden row never masks a
+			// visible one; an empty granted list answers false.
+			const sets: [Row[], string[]][] = [
+				[[{ section_tipo: REF_SECTION, section_id: REF_IDS[0] as number }], [HOST_SECTION]],
+				[
+					[
+						{ section_tipo: REF_SECTION, section_id: PAST_REFS[0]?.id as number },
+						{ section_tipo: HOST_SECTION, section_id: HOST_OUTSIDE_ALLOW_LIST },
+					],
+					[HOST_SECTION],
+				],
+				[
+					[
+						{ section_tipo: REF_SECTION, section_id: REF_IDS[0] as number },
+						{ section_tipo: REF_SECTION, section_id: PAST_REFS[0]?.id as number },
+					],
+					[REF_SECTION],
+				],
+				[
+					[
+						{ section_tipo: REF_SECTION, section_id: REF_IDS[0] as number },
+						{ section_tipo: HOST_SECTION, section_id: HOST_OUTSIDE_ALLOW_LIST },
+						{ section_tipo: 'dd128', section_id: -1 },
+					],
+					[REF_SECTION, HOST_SECTION, 'dd128'],
+				],
+				[[{ section_tipo: HOST_SECTION, section_id: HOST_ID }], []],
+			];
+			const seen: string[] = [];
+			const expected: string[] = [];
+			for (const userId of [ACL_NON_ADMIN_USER_ID, -1]) {
+				const principal = await resolvePrincipal(userId);
+				const cases: [Row[], string[]][] = [
+					...singles.map((row): [Row[], string[]] => [[row], [row.section_tipo]]),
+					...sets,
+				];
+				for (const [rows, granted] of cases) {
+					const cell = `${userId} [${rows.map((row) => `${row.section_tipo}/${row.section_id}`).join(' ')}] granted [${granted.join(' ')}]`;
+					seen.push(`${cell}: ${await askSet(rows, granted, principal)}`);
+					expected.push(`${cell}: ${await askList(rows, granted, principal)}`);
+				}
+			}
+			expect(seen).toEqual(expected);
+			// Non-degeneracy: the cells each arm decides, with the answer the list gives.
+			const at = (userId: number, rows: Row[], granted: string[]) =>
+				expected.find((line) =>
+					line.startsWith(
+						`${userId} [${rows.map((row) => `${row.section_tipo}/${row.section_id}`).join(' ')}] granted [${granted.join(' ')}]:`,
+					),
+				);
+			const single = (userId: number, row: Row) => at(userId, [row], [row.section_tipo]);
+			expect([
+				// the Users root exclusion — for the admin too
+				single(-1, { section_tipo: 'dd128', section_id: -1 }),
+				// the section_tipo join: another section's record is not this one
+				single(-1, { section_tipo: REF_SECTION, section_id: HOST_ID }),
+				// existence: the admin arm still needs the record
+				single(-1, { section_tipo: HOST_SECTION, section_id: 999_999_999 }),
+				// the per-section guard: an ungranted section's row never answers
+				at(-1, [{ section_tipo: REF_SECTION, section_id: REF_IDS[0] as number }], [HOST_SECTION]),
+				// the projects-exempt table: a record of ANOTHER project, no projects filter applied
+				single(ACL_NON_ADMIN_USER_ID, {
+					section_tipo: EXEMPT_SECTION,
+					section_id: EXEMPT_IDS[1] as number,
+				}),
+				// the projects filter and the dd478 allow-list, each deciding a reader cell
+				single(ACL_NON_ADMIN_USER_ID, {
+					section_tipo: REF_SECTION,
+					section_id: REF_IDS[0] as number,
+				}),
+				single(ACL_NON_ADMIN_USER_ID, {
+					section_tipo: HOST_SECTION,
+					section_id: HOST_OUTSIDE_ALLOW_LIST,
+				}),
+				// a hidden row never masks a visible one
+				at(
+					ACL_NON_ADMIN_USER_ID,
+					[
+						{ section_tipo: REF_SECTION, section_id: REF_IDS[0] as number },
+						{ section_tipo: REF_SECTION, section_id: PAST_REFS[0]?.id as number },
+					],
+					[REF_SECTION],
+				),
+				// an empty granted list
+				at(-1, [{ section_tipo: HOST_SECTION, section_id: HOST_ID }], []),
+			]).toEqual([
+				`-1 [dd128/-1] granted [dd128]: false`,
+				`-1 [${REF_SECTION}/${HOST_ID}] granted [${REF_SECTION}]: false`,
+				`-1 [${HOST_SECTION}/999999999] granted [${HOST_SECTION}]: false`,
+				`-1 [${REF_SECTION}/${REF_IDS[0]}] granted [${HOST_SECTION}]: false`,
+				`${ACL_NON_ADMIN_USER_ID} [${EXEMPT_SECTION}/${EXEMPT_IDS[1]}] granted [${EXEMPT_SECTION}]: true`,
+				`${ACL_NON_ADMIN_USER_ID} [${REF_SECTION}/${REF_IDS[0]}] granted [${REF_SECTION}]: false`,
+				`${ACL_NON_ADMIN_USER_ID} [${HOST_SECTION}/${HOST_OUTSIDE_ALLOW_LIST}] granted [${HOST_SECTION}]: false`,
+				`${ACL_NON_ADMIN_USER_ID} [${REF_SECTION}/${REF_IDS[0]} ${REF_SECTION}/${PAST_REFS[0]?.id}] granted [${REF_SECTION}]: true`,
+				`-1 [${HOST_SECTION}/${HOST_ID}] granted []: false`,
+			]);
+		});
+
+		test("the grid's SQL section_top projection is the page's group key, stored shape by stored shape", async () => {
+			// The past probe projects breakdown rows onto their section_top in SQL
+			// (sectionTopProjection); the page groups the hits it read in JS
+			// (groupBySectionTop → sectionTopGroupHits) and scopes each group as that
+			// record. A hand twin: every stored form of section_top_tipo/_id must
+			// project to the SAME record — or, only where the strict-integer rule
+			// refuses a form the page's Number() reads as a record ('007', ' 7',
+			// '7.0', past 15 digits), to NO record (the probe may miss a visible group,
+			// never claim a hidden one). The relation of each shape is pinned, so
+			// an arm that stops matching moves an 'equal' to 'sql-none' and reddens.
+			const { groupBySectionTop, sectionTopGroupHits, sectionTopProjection } = await import(
+				'../../src/core/section/indexation_grid.ts'
+			);
+			const owner = { section_tipo: REF_SECTION, section_id: REF_IDS[0] as number };
+			const shapes: [string, 'equal' | 'sql-none' | 'both-none'][] = [
+				['{}', 'equal'],
+				['{"section_top_tipo":"zzpg11","section_top_id":900757}', 'equal'],
+				['{"section_top_id":null}', 'equal'],
+				['{"section_top_tipo":null,"section_top_id":5}', 'equal'],
+				['{"section_top_tipo":5}', 'equal'],
+				['{"section_top_tipo":"zzpg11"}', 'equal'],
+				['{"section_top_id":"7"}', 'equal'],
+				['{"section_top_id":"0"}', 'equal'],
+				['{"section_top_id":"-4"}', 'equal'],
+				['{"section_top_id":7.0}', 'equal'],
+				['{"section_top_id":-3}', 'equal'],
+				['{"section_top_id":123456789012345}', 'equal'],
+				['{"section_top_id":"007"}', 'sql-none'],
+				['{"section_top_id":" 7"}', 'sql-none'],
+				['{"section_top_id":"7.0"}', 'sql-none'],
+				['{"section_top_id":1234567890123456}', 'sql-none'],
+				['{"section_top_id":7.5}', 'both-none'],
+				['{"section_top_id":"abc"}', 'both-none'],
+				['{"section_top_id":true}', 'both-none'],
+				['{"section_top_id":1e20}', 'both-none'],
+				['{"section_top_id":9007199254740993}', 'both-none'],
+			];
+			const seen: string[] = [];
+			const expected: string[] = [];
+			for (const [locatorData, relation] of shapes) {
+				const [page] = sectionTopGroupHits(
+					groupBySectionTop([{ ...owner, locator_data: JSON.parse(locatorData) }]),
+				);
+				const projected = sectionTopProjection({
+					sql: 'SELECT $1::text AS section_tipo, $2::int AS section_id, $3::text::jsonb AS locator_data',
+					params: [owner.section_tipo, owner.section_id, locatorData],
+				});
+				const [row] = (await sql.unsafe(projected.sql, projected.params as never)) as {
+					section_tipo: string;
+					section_id: unknown;
+				}[];
+				const sqlId = row?.section_id === null ? null : Number(row?.section_id);
+				const pageId = Number.isSafeInteger(page?.section_id) ? page?.section_id : null;
+				const actual =
+					row?.section_tipo !== page?.section_tipo
+						? `tipo ${row?.section_tipo} vs ${page?.section_tipo}`
+						: sqlId === pageId && sqlId !== null
+							? 'equal'
+							: sqlId === null && pageId === null
+								? 'both-none'
+								: sqlId === null
+									? 'sql-none'
+									: `id ${sqlId} vs ${page?.section_id}`;
+				seen.push(`${locatorData}: ${actual}`);
+				expected.push(`${locatorData}: ${relation}`);
+			}
+			expect(seen).toEqual(expected);
+		});
+
+		test('get_indexation_grid: the past probe scopes each row as its SECTION_TOP group, never its owner', async () => {
+			// Three hosts, each a full visible page (TOP_PAGE, every record its own
+			// top) and ONE row past it whose owner and section_top disagree for the
+			// reader — the page renders and scopes that row as its top, so the
+			// probe must too:
+			//   - HOST3: owner VISIBLE, top a HIDDEN record → nothing past is the
+			//     reader's: no notice (an owner-scoped probe claims one);
+			//   - HOST4: owner HIDDEN, top a VISIBLE record → the reader can page to
+			//     it: the notice is owed (an owner-scoped probe drops it);
+			//   - HOST5: owner VISIBLE, top the same id in a section the reader may
+			//     not read (zzpg11) → no notice (a probe that kept the owner's
+			//     section would ask about a visible zzpg3 record).
+			const door = PAGE_DOORS.find((page) => page.door.key === 'dd_core_api:get_indexation_grid')
+				?.door as Door;
+			const cells: [number, boolean][] = [
+				[HOST3_ID, false],
+				[HOST4_ID, true],
+				[HOST5_ID, false],
+			];
+			for (const [hostId, owed] of cells) {
+				const onHost = atHost(INDEXATION_TEMPLATE, hostId, [REF_SECTION]);
+				const reader = await drive(door, onHost, ABSENT, 0, 'reader');
+				expect({
+					host: hostId,
+					status: reader.status,
+					markers: reader.markers,
+					notice: noticeCodes(reader.body).includes('search.page_clamped'),
+				}).toEqual({ host: hostId, status: 200, markers: CEILING, notice: owed });
+				// CONTROL: the admin (unscoped) is owed the notice on every host.
+				const admin = await drive(door, onHost, ABSENT, 0, 'admin');
+				expect({
+					host: hostId,
+					notice: noticeCodes(admin.body).includes('search.page_clamped'),
+				}).toEqual({ host: hostId, notice: true });
+			}
+		});
+
+		test('anyRowInScope: a row naming no section is no record — it neither throws nor masks a visible row', async () => {
+			const { anyRowInScope } = await import('../../src/core/security/record_scope.ts');
+			const reader = await resolvePrincipal(ACL_NON_ADMIN_USER_ID);
+			const ask = (rows: [string | null, number][]) =>
+				anyRowInScope(
+					{
+						sql: `SELECT v.section_tipo, v.section_id FROM (VALUES ${rows
+							.map((_, index) => `($${index * 2 + 1}::text, $${index * 2 + 2}::int)`)
+							.join(', ')}) AS v(section_tipo, section_id)`,
+						params: rows.flat(),
+					},
+					reader,
+				);
+			expect([
+				await ask([[null, PAST_REFS[0]?.id as number]]),
+				await ask([
+					[null, PAST_REFS[0]?.id as number],
+					[REF_SECTION, PAST_REFS[0]?.id as number],
+				]),
+			]).toEqual([false, true]);
 		});
 
 		for (const { door, template } of PAGE_DOORS) {

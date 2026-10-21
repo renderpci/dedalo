@@ -340,10 +340,14 @@ export async function anyRowInScope(rows: BoundRows, principal: Principal): Prom
 		)) as { found: boolean }[];
 		return found[0]?.found === true;
 	}
+	// A row naming no section (NULL) names no record: it reaches the grant leg as
+	// no readable section and is dropped there — no SQL guard of its own (W3
+	// review: an ungated IS NOT NULL changed no answer; client_page_doors_native
+	// pins the outcome).
 	const sections = (await sql.unsafe(
-		`SELECT DISTINCT scoped_rows.section_tipo FROM (${rows.sql}) AS scoped_rows WHERE scoped_rows.section_tipo IS NOT NULL`,
+		`SELECT DISTINCT scoped_rows.section_tipo FROM (${rows.sql}) AS scoped_rows`,
 		bound,
-	)) as { section_tipo: string }[];
+	)) as { section_tipo: string | null }[];
 	const { granted } = await hitsWithSectionGrant(
 		sections.map((row) => ({ section_tipo: String(row.section_tipo), section_id: 0 })),
 		principal,

@@ -7,16 +7,36 @@
  * export held a million rows in the process before hydrating the first. Now the
  * selection is a server-side cursor on a reserved connection:
  *
- *   DECLARE <name> SCROLL CURSOR WITH HOLD FOR <selection>   (autocommit)
+ *   BEGIN
+ *   SELECT set_config('transaction_timeout', current_setting('statement_timeout'), true)
+ *   DECLARE <name> SCROLL CURSOR WITH HOLD FOR <selection>
+ *   COMMIT
  *
- * The implicit commit MATERIALIZES the result once, in ONE snapshot (a hold
- * cursor outlives its transaction by being computed in full at commit), so the
- * order is the one-statement order by construction and a record written
- * mid-export is neither emitted nor counted. `MOVE FORWARD ALL` answers the
- * exact total from its command tag (Bun's `.count`) without moving a row to the
- * process; `MOVE ABSOLUTE 0` rewinds; each page is one `FETCH FORWARD
- * <pageRows>`. The materialization runs under the same statement_timeout the
- * single selection statement had.
+ * The COMMIT MATERIALIZES the result once, in ONE snapshot (a hold cursor
+ * outlives its transaction by being computed in full at commit), so the order
+ * is the one-statement order by construction and a record written mid-export
+ * is neither emitted nor counted. `MOVE FORWARD ALL` answers the exact total
+ * from its command tag (Bun's `.count`) without moving a row to the process;
+ * `MOVE ABSOLUTE 0` rewinds; each page is one `FETCH FORWARD <pageRows>`.
+ *
+ * THE MATERIALIZATION IS BOUNDED BY THE CONNECTION'S OWN CEILING. PostgreSQL
+ * disarms `statement_timeout` BEFORE a commit runs (postgres.c
+ * finish_xact_command), so the commit that computes a hold cursor ran the
+ * whole selection with no ceiling at all — an autocommit DECLARE outlived a
+ * 300 ms ceiling by seconds (W3 review, measured). `transaction_timeout`
+ * (PostgreSQL 17+; the engine targets 18) stays armed THROUGH the commit, so
+ * the cursor's transaction carries it, set transaction-locally to the reserved
+ * connection's own `statement_timeout`: the request pool's
+ * DB_STATEMENT_TIMEOUT_MS, the maintenance pool's 0 (unbounded) — the same
+ * ceiling the single selection statement had, never a second key. A selection
+ * past it is the typed 503 `db.statement_timeout` (PostgreSQL ends that
+ * backend — 25P04 is FATAL — and the pool replaces the connection). Like every
+ * request statement under that ceiling, a materialization IN FLIGHT is not cut
+ * by the caller's Stop or a disconnect (docs: DB_STATEMENT_TIMEOUT_MS); it is
+ * bounded by the ceiling, and the abort releases the cursor the moment the
+ * open returns. Transaction-local (`set_config(…, true)`), so no exit — commit,
+ * rollback, a killed backend — leaves the GUC on a pooled connection; a failed
+ * open ROLLs BACK before the connection goes back (close()).
  *
  * ONE TOTAL PATH, measured: the command tag's count is the only source of the
  * total. A driver that stopped surfacing it is refused loudly at open
@@ -74,7 +94,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { config } from '../../config/config.ts';
-import { sql } from '../../core/db/postgres.ts';
+import { sql, sqlStateOf } from '../../core/db/postgres.ts';
 import { DedaloError } from '../../core/errors/index.ts';
 
 /** Selection cursors open at once in this process (see module doc). */
@@ -203,6 +223,22 @@ export interface SelectionCursorOptions {
 	idleMs?: number;
 }
 
+/** The cursor transaction's control statements (see the module doc). */
+const CURSOR_TX = { begin: 'BEGIN', commit: 'COMMIT', rollback: 'ROLLBACK' } as const;
+
+/** SQLSTATE transaction_timeout — the materialization's ceiling (see the module doc). */
+const TRANSACTION_TIMEOUT = '25P04';
+
+/** A 25P04 out of the open IS the connection's statement ceiling → the typed 503; else raw. */
+function ceilingFailure(error: unknown, ceiling: string): unknown {
+	if (sqlStateOf(error) !== TRANSACTION_TIMEOUT) return error;
+	return new DedaloError('db.statement_timeout', {
+		message: `export selection cursor: materializing the selection ran past the connection's ${ceiling} statement ceiling`,
+		cause: error,
+		coordinates: { lane: 'reserved', ceiling },
+	});
+}
+
 function exportBusy(reason: string): DedaloError {
 	return new DedaloError('export.busy', {
 		message: `export selection cursor refused: ${reason}`,
@@ -234,6 +270,10 @@ export async function openSelectionCursor<Row>(
 	const params = built.params as never;
 	let connection: Awaited<ReturnType<typeof sql.reserve>> | null = null;
 	let declared = false;
+	/** BEGIN sent, COMMIT not yet answered (close() rolls back). */
+	let inTransaction = false;
+	/** The connection's statement ceiling, as PostgreSQL spells it (the typed refusal names it). */
+	let ceiling = '';
 	let closed = false;
 	/** The one close in flight — every caller awaits the SAME release. */
 	let closing: Promise<void> | null = null;
@@ -257,6 +297,10 @@ export async function openSelectionCursor<Row>(
 			connection = null;
 			try {
 				if (held !== null) {
+					// An open that failed inside its bounded transaction: the connection
+					// goes back OUT of it (an aborted transaction on a pooled connection
+					// fails every statement the next borrower sends).
+					if (inTransaction) await held.unsafe(CURSOR_TX.rollback).catch(() => undefined);
 					if (declared) await held.unsafe(`CLOSE ${name}`).catch(() => undefined);
 					held.release();
 				}
@@ -286,7 +330,15 @@ export async function openSelectionCursor<Row>(
 	let total: number;
 	try {
 		connection = await sql.reserve();
+		await connection.unsafe(CURSOR_TX.begin);
+		inTransaction = true;
+		const bound = (await connection.unsafe(
+			"SELECT set_config('transaction_timeout', current_setting('statement_timeout'), true) AS ceiling",
+		)) as { ceiling: string }[];
+		ceiling = String(bound[0]?.ceiling ?? '');
 		await connection.unsafe(`DECLARE ${name} SCROLL CURSOR WITH HOLD FOR ${selection}`, params);
+		await connection.unsafe(CURSOR_TX.commit);
+		inTransaction = false;
 		declared = true;
 		const moved = (await connection.unsafe(`MOVE FORWARD ALL IN ${name}`)) as { count?: unknown };
 		if (typeof moved.count !== 'number' || !Number.isSafeInteger(moved.count)) {
@@ -299,7 +351,7 @@ export async function openSelectionCursor<Row>(
 		await connection.unsafe(`MOVE ABSOLUTE 0 IN ${name}`);
 	} catch (error) {
 		await close();
-		throw error;
+		throw ceilingFailure(error, ceiling);
 	}
 
 	// An export aborted before it opened still answers its total (the protocol's

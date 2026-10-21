@@ -56,3 +56,21 @@
   and on a LATER chunk of the same page (no page pull in between) and a slow consumer
   complete, a stalled consumer is closed out with `export.consumer_idle`; a cancelled stream
   resolves after release).
+
+## Addendum 2026-10-21 — the selection is computed under the statement ceiling
+
+- **Shape before:** the hold cursor was declared in autocommit; PostgreSQL computes a hold
+  cursor IN FULL at commit and disarms `statement_timeout` before that commit, so the whole
+  selection ran with NO ceiling (measured: 300 ms ceiling, a 2343 ms selection served) — an
+  export's selection was the one request-path statement `DB_STATEMENT_TIMEOUT_MS` did not
+  bound.
+- **Shape after:** the cursor's transaction carries a transaction-local `transaction_timeout`
+  equal to the reserved connection's own `statement_timeout` (the request pool's
+  `DB_STATEMENT_TIMEOUT_MS`; 0 = unbounded, unchanged). A selection past it is refused at
+  open — before `meta` — with `db.statement_timeout` (503, not retryable), the code every
+  other statement past the ceiling already answers; the slot and the connection are back
+  (PostgreSQL ends that backend; the pool replaces it). With the default `0` nothing changes.
+- **Gate:** `test/unit/export_selection_cursor_native.test.ts` leg 15 (a process booted with
+  a 300 ms ceiling: a 3 s selection refused with `db.statement_timeout` within the bound, a
+  quick one served, every pooled connection fresh after the refusal and after a failed
+  DECLARE) and leg 16 (a pre-aborted open answers its total and releases at once).
