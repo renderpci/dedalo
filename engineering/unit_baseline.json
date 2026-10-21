@@ -241,6 +241,11 @@
 			"skipped": 0,
 			"assertions": 7
 		},
+		"test/unit/archive_restore_projection_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 21
+		},
 		"test/unit/area_activity_metric.test.ts": {
 			"tests": 3,
 			"skipped": 0,
@@ -3240,6 +3245,11 @@
 			"tests": 1,
 			"skipped": 0,
 			"assertions": 3
+		},
+		"test/unit/ontology_root_registry_native.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 27
 		},
 		"test/unit/ontology_single_writer_tripwire.test.ts": {
 			"tests": 7,
