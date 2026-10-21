@@ -8915,6 +8915,17 @@ body:has(.component_av.view_viewer) {
 .wrapper_search > .search_global_container.hide {
   padding: 0px;
 }
+@media screen and (min-width: 1025px) {
+  .wrapper_search > .search_global_container {
+    border-radius: var(--radius-lg);
+  }
+  .wrapper_search > .search_global_container > .toggle_container_selector:first-child {
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  }
+  .wrapper_search > .search_global_container > .toggle_container_selection_presets:last-child {
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  }
+}
 .wrapper_search > .search_global_container > .toggle_container_selector {
   margin: 0px;
 }
