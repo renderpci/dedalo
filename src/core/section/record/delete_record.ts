@@ -73,6 +73,7 @@ import {
 } from '../../relations/dataframe_slots.ts';
 import { NOLAN } from '../../relations/main_lanes.ts';
 import { enqueueObservedChange } from '../../section_record/obligation_ledger.ts';
+import { projectOntologyRecordLifecycle } from '../../section_record/ontology_projection.ts';
 import { fireRagRecordEvent, fireSaveEvent } from '../../section_record/save_event.ts';
 import { bulkIdOf } from './bulk_capture.ts';
 
@@ -289,8 +290,19 @@ export async function deleteSectionRecord(
 				options.bulkProcessId ?? null,
 			);
 
-			// 4. Remove the row. (Ontology-node cleanup ledgered.)
+			// 4. Remove the row.
 			const removedCount = await deleteMatrixRecord(table, sectionTipo, sectionId);
+
+			// 4a. THE ONTOLOGY NODE moves with its record (ONT-3; PHP delete removed
+			//     it): a `<tld>0` record's node `<tld><id>` goes, an override
+			//     (localontology0) re-projects the node it overrode — inside this
+			//     transaction, so a rolled-back delete keeps its node. Covers every
+			//     delete door; the tld-teardown cascade (ontology_delete.ts) then
+			//     finds nothing left to retract for these records. Any other
+			//     section answers 'none' without touching the database.
+			if (removedCount > 0) {
+				await projectOntologyRecordLifecycle(sectionTipo, sectionId, 'death', snapshot.relation);
+			}
 
 			// 4b. THE RECORD'S OWN EDGES, to the observer ledger (step 9 (b)): the
 			//     record is GONE, so everything it pointed at is a removal — every
@@ -1152,6 +1164,14 @@ export async function deleteSectionData(
 			await applyOwnFramePolicies(emptiedFrames, userId, options.bulkProcessId);
 			// Modified stamps (PHP update_modified_section_data 'update_record').
 			await persistModifiedStamp({ table, sectionTipo, sectionId }, { userId, now });
+			// THE ONTOLOGY NODE (ONT-3, PHP parity): an emptied `<tld>0` record
+			// projects nothing, so its node goes; an emptied override re-projects
+			// the node it overrode (the locked pre-wipe relation names it). LEDGERED:
+			// a later Time Machine data-restore of this record takes the persist
+			// 'updated' branch and does NOT re-project — saves stay explicit-project
+			// (tool_ontology); only a BIRTH (writeBirth) re-projects. Any other
+			// section answers 'none' without touching the database.
+			await projectOntologyRecordLifecycle(sectionTipo, sectionId, 'death', record.relation);
 			return { record, emptiedMedia };
 		},
 	);

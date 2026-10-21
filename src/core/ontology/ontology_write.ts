@@ -17,30 +17,39 @@
  * helper expresses.
  *
  * TRANSACTIONS: setRecords is partial-success (each record independent — PHP does
- * not wrap it). regenerate uses the BACKUP-TABLE protocol as its rollback (NOT a
- * transaction — matches PHP + two-server coexistence) and LEAVES dd_ontology_bk
- * on success (PHP-pinned).
+ * not wrap it). The whole-tld writers (rebuild, retract, registry activation)
+ * live in ontology_state.ts, each ONE transaction; the PHP regenerate and its
+ * backup-table protocol are retired.
+ *
+ * THE PROJECTION GUARD (ONT-2): every per-record dd_ontology write here goes
+ * through section_record/ontology_projection.ts — a governed record `<tld>0/<id>`
+ * projects the node `<tld><id>` or nothing (a record whose ontology7 names another
+ * tld is refused, `ontology.invalid_node`), and a section no tld governs is not an
+ * ontology node section at all.
  *
  * LEDGER / divergences (per no-silent-narrowing):
- *  - setRecords LIST mode = full-section scan; PHP filters by the session SQO,
- *    which TS keeps no twin of. Documented divergence.
+ *  - setRecords LIST mode takes an EXPLICIT id list (the tool resolves the
+ *    request's SQO; WC-043) — PHP read the session SQO, which TS keeps no twin of.
  */
 
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import {
 	type DdOntologyNode,
-	deleteTldNodes,
-	getActiveTlds,
 	readDdOntologyRow,
 	updateDdOntologyColumns,
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { updateMatrixKeyData } from '../db/matrix_write.ts';
-import { sql } from '../db/postgres.ts';
+import { sql, withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { getLangSectionIdByCode } from '../relations/select_lang.ts';
 import { createSectionRecord } from '../section/record/create_record.ts';
+import {
+	ForeignOntologyNodeRefused,
+	ontologyNodeAddress,
+	projectOntologyNode,
+} from '../section_record/ontology_projection.ts';
 import { isCoreOntologyTld } from './core_tlds.ts';
 import {
 	dependenciesMiscItems,
@@ -55,9 +64,13 @@ import {
 	HIERARCHY_FILTER,
 	HIERARCHY_GENERAL_TERM,
 	HIERARCHY_LANG,
+	HIERARCHY_MODEL_TYPE_GROUP,
+	HIERARCHY_MODEL_TYPE_TLD,
 	HIERARCHY_TARGET_SECTION,
 	HIERARCHY_TERM,
 	HIERARCHY_TLD,
+	HIERARCHY_TYPE_GROUP,
+	HIERARCHY_TYPE_TLD,
 	HIERARCHY_TYPES_NAME,
 	HIERARCHY_TYPES_SECTION,
 	HIERARCHY_TYPOLOGY,
@@ -82,13 +95,14 @@ import {
 	STRUCTURE_LANG,
 	YES_NO_SECTION,
 } from './ontology_tipos.ts';
-import { getTermIdFromLocator, parseSectionRecordToOntologyNode } from './parser.ts';
+import { getTermIdFromLocator } from './parser.ts';
 import { getMatrixTableFromTipo } from './resolver.ts';
 import {
 	getSectionIdFromTipo,
 	getTldFromTipo,
 	LOCAL_ONTOLOGY_SECTION,
 	mapTldToTargetSectionTipo,
+	requiredOntologyTld,
 	safeTld,
 } from './tld.ts';
 
@@ -258,19 +272,31 @@ export async function getMainNameData(
 
 /**
  * Parse one matrix record and upsert its dd_ontology row (PHP
- * insert_dd_ontology_record). Returns the node tipo, or null when the record is
- * invalid (missing TLD).
+ * insert_dd_ontology_record) — a thin delegate of the guarded primitive
+ * (section_record/ontology_projection.ts projectOntologyNode). Returns the node
+ * tipo, or null when the record declares no tld (or is absent).
+ *
+ * THROWS `ontology.invalid_node` — never a silent null — when `sectionTipo` is
+ * not an ontology node section (`localontology0`, `ontology35`, `test3`, …) or the
+ * record parses into another tld's namespace: createParentGrouper discards the
+ * return value and hierarchy provisioning must roll back loudly.
  */
 export async function insertDdOntologyRecord(
 	sectionTipo: string,
 	sectionId: number | string,
 ): Promise<string | null> {
-	const node = await parseSectionRecordToOntologyNode(sectionTipo, sectionId);
-	if (node === null) {
-		return null;
+	const address = ontologyNodeAddress(sectionTipo, sectionId);
+	if (address === null) {
+		throw new DedaloError('ontology.invalid_node', {
+			message:
+				requiredOntologyTld(sectionTipo) === null
+					? `'${sectionTipo}' is not an ontology node section — nothing written`
+					: `'${sectionTipo}/${sectionId}': section_id is not a positive integer — nothing written`,
+			coordinates: { section_tipo: sectionTipo, section_id: String(sectionId) },
+		});
 	}
-	await upsertDdOntologyNode(node);
-	return node.tipo;
+	const projected = await projectOntologyNode(address);
+	return projected.kind === 'projected' ? projected.tipo : null;
 }
 
 // --- root node (PHP create_dd_ontology_ontology_section_node) -----------------
@@ -657,33 +683,14 @@ function grouperNameData(tld: string): { lang: string; value: string }[] {
 }
 
 /**
- * Ensure a typology grouper node exists in dd_ontology + the matrix and return
- * its tipo (PHP create_parent_grouper). Resilient to partial-bootstrap: creates
- * the grouper's own TLD registration, the `<parentTld>0` parent node/record, and
- * the typology matrix node `<tld><typologyId>` on demand.
- *
- * Groupers: ontology → ('ontology40','ontologytype'); hierarchy →
- * ('hierarchy56','hierarchytype'); hierarchy-model → ('hierarchy57','hierarchymtype').
+ * The node + matrix record a typology grouper hangs under (`<parentTld>0` and
+ * `<parentTld>0/<id>` of the parent group, e.g. ontology0 + ontology0/40) — ensured,
+ * never rewritten (createParentGrouper).
  */
-export async function createParentGrouper(
+async function ensureGrouperParent(
 	parentGroup: string,
-	tld: string,
-	typologyId: number,
-	userId = -1,
-): Promise<string> {
-	const nameData = grouperNameData(tld);
-	const fileData: FileItem = {
-		tld,
-		typology_id: typologyId,
-		name_data: nameData,
-		parent_grouper_tipo: 'ontologytype14', // fixed — prevents grouper recursion
-	};
-
-	// Register the grouper's own TLD (matrix_ontology_main + <groupTld>0 node):
-	// create-if-missing — an existing grouper row is the installation's.
-	await ensureMainSection(fileData, userId);
-	await createDdOntologyRootNode(fileData, userId);
-
+	userId: number,
+): Promise<{ parentNodeTipo: string; parentSectionId: string | null }> {
 	// Parent node (e.g. ontology0 for parent group ontology40).
 	const parentTld = getTldFromTipo(parentGroup);
 	const parentSectionId = getSectionIdFromTipo(parentGroup);
@@ -720,6 +727,45 @@ export async function createParentGrouper(
 	if (parentSectionId !== null) {
 		await ensureMatrixRecord(parentNodeTipo, Number(parentSectionId), userId);
 	}
+	return { parentNodeTipo, parentSectionId };
+}
+
+/**
+ * Ensure a typology grouper node exists in dd_ontology + the matrix and return
+ * its tipo (PHP create_parent_grouper). Resilient to partial-bootstrap: creates
+ * the grouper's own TLD registration, the `<parentTld>0` parent node/record, and
+ * the typology matrix node `<tld><typologyId>` on demand.
+ *
+ * Groupers: ontology → ('ontology40','ontologytype'); hierarchy →
+ * ('hierarchy56','hierarchytype'); hierarchy-model → ('hierarchy57','hierarchymtype').
+ *
+ * `register: false` skips the grouper tld's own registration (registry row + `<tld>0`
+ * root): ensureReferencedGrouperRecords, where the package import just provisioned that
+ * tld from its definition and a rewrite with the generic grouper labels would undo it.
+ */
+export async function createParentGrouper(
+	parentGroup: string,
+	tld: string,
+	typologyId: number,
+	userId = -1,
+	options: { register?: boolean } = {},
+): Promise<string> {
+	const nameData = grouperNameData(tld);
+	const fileData: FileItem = {
+		tld,
+		typology_id: typologyId,
+		name_data: nameData,
+		parent_grouper_tipo: 'ontologytype14', // fixed — prevents grouper recursion
+	};
+
+	// Register the grouper's own TLD (matrix_ontology_main + <groupTld>0 node):
+	// create-if-missing — an existing grouper row is the installation's.
+	if (options.register !== false) {
+		await ensureMainSection(fileData, userId);
+		await createDdOntologyRootNode(fileData, userId);
+	}
+
+	const { parentNodeTipo, parentSectionId } = await ensureGrouperParent(parentGroup, userId);
 
 	// Typology matrix node record: <tld>0 / <typologyId> (e.g. ontologytype/14).
 	const typologySectionTipo = `${tld}0`;
@@ -801,6 +847,77 @@ export async function createParentGrouper(
 	return `${tld}${typologyId}`;
 }
 
+// --- grouper records follow what hangs under them -----------------------------
+
+/** The typology grouper namespaces → the parent group (`<parentTld>0/<id>`) each hangs under. */
+const TYPOLOGY_GROUPER_PARENT: ReadonlyMap<string, string> = new Map([
+	[ONTOLOGY_TYPE_TLD, ONTOLOGY_TYPE_GROUP],
+	[HIERARCHY_TYPE_TLD, HIERARCHY_TYPE_GROUP],
+	[HIERARCHY_MODEL_TYPE_TLD, HIERARCHY_MODEL_TYPE_GROUP],
+]);
+
+/** Whether `tld` is one of the three typology grouper namespaces. */
+export function isTypologyGrouperTld(tld: string): boolean {
+	return TYPOLOGY_GROUPER_PARENT.has(tld);
+}
+
+/**
+ * GROUPER RECORDS FOLLOW WHAT HANGS UNDER THEM (WC-2026-10-21-ontology-update-rebuild).
+ *
+ * A grouper record `<grouper>0/<N>` is made ON DEMAND by createParentGrouper, by the
+ * installation (a thesaurus of typology N, a tld registered under typology N), while the
+ * release's grouper package carries only the master's typologies. Its import is a scoped
+ * DELETE + COPY of the whole `<grouper>0` section, so it wipes every installation-made one —
+ * and the update's re-derive (rebuildOntology, which sweeps orphans) would then delete the
+ * node, leaving every `<tld>0` root / `<tld>1`, `<tld>2` thesaurus node under it dangling.
+ *
+ * So, after the import and BEFORE the derive, every typology still REFERENCED and no longer
+ * backed by a record is re-made (createParentGrouper `register: false`, one transaction each):
+ *   - a matrix_ontology record of another section whose parent locator (ontology15) points
+ *     into `<grouper>0` — the thesaurus descriptor / model records;
+ *   - a `<tld>0` root node (is_main) whose parent is `<grouper><N>` — roots are built from the
+ *     registry's typology (createDdOntologyRootNode), never parsed from a record.
+ * Returns the typology ids re-made, ascending ([] for a tld that is not a grouper).
+ * Gate: ontology_derive_packages_native G1h.
+ */
+export async function ensureReferencedGrouperRecords(tld: string, userId = -1): Promise<number[]> {
+	const parentGroup = TYPOLOGY_GROUPER_PARENT.get(tld);
+	if (parentGroup === undefined) return [];
+	const missing = await unbackedGrouperTypologies(tld);
+	for (const typologyId of missing) {
+		await withTransaction(() =>
+			createParentGrouper(parentGroup, tld, typologyId, userId, { register: false }),
+		);
+	}
+	return missing;
+}
+
+/** Typology ids referenced under `<grouper>` (see ensureReferencedGrouperRecords) with no record. */
+async function unbackedGrouperTypologies(tld: string): Promise<number[]> {
+	const sectionTipo = `${tld}0`;
+	const rows = (await sql.unsafe(
+		`SELECT DISTINCT ref.id::bigint AS id FROM (
+		   SELECT locator->>'section_id' AS id
+		     FROM matrix_ontology record,
+		          jsonb_array_elements(record.relation->$2::text) AS locator
+		    WHERE record.section_tipo <> $1
+		      AND record.relation @> jsonb_build_object($2::text, jsonb_build_array(jsonb_build_object('section_tipo', $1::text)))
+		      AND locator->>'section_tipo' = $1
+		   UNION
+		   SELECT substr(parent, length($3::text) + 1) AS id
+		     FROM dd_ontology
+		    WHERE is_main AND left(parent, length($3::text)) = $3::text
+		 ) AS ref
+		 WHERE ref.id ~ '^[1-9][0-9]{0,17}$'
+		   AND NOT EXISTS (
+		     SELECT 1 FROM matrix_ontology grouper
+		      WHERE grouper.section_tipo = $1 AND grouper.section_id = ref.id::bigint)
+		 ORDER BY 1`,
+		[sectionTipo, ONTOLOGY_PARENT, tld],
+	)) as { id: number | string }[];
+	return rows.map((row) => Number(row.id));
+}
+
 /** Read the typology's name (hierarchy16 off hierarchy13/typologyId), all langs. */
 async function readTypologyTermItems(typologyId: number): Promise<Record<string, unknown>[]> {
 	const table = await getMatrixTableFromTipo(HIERARCHY_TYPES_SECTION);
@@ -825,10 +942,11 @@ export interface SetRecordsTarget {
 	 */
 	sectionIds?: readonly number[];
 	/**
-	 * Deliberate WHOLE-SECTION rebuild. Opt-in and greppable ON PURPOSE: this is
-	 * the only way to reach the unbounded scan, so no request that merely OMITS a
-	 * parameter can trigger it. Internal rebuild callers only (an ontology-file
-	 * import re-deriving a whole TLD's flat index) — never a user-facing action.
+	 * Deliberate WHOLE-SECTION re-derive. INSTALLER ONLY — RETIRING: a whole tld's
+	 * projection is ontology_state.rebuildOntology's job (the id-stable reconcile,
+	 * which also removes orphans); the ontology update already moved there (ONT-1).
+	 * Opt-in and greppable ON PURPOSE: no request that merely OMITS a parameter can
+	 * reach the unbounded scan. Never a user-facing action.
 	 */
 	wholeSection?: boolean;
 	userId?: number;
@@ -861,11 +979,19 @@ async function scopedRecordIds(target: SetRecordsTarget, table: string): Promise
  * foreground, behind a client that gives up at 60s while the server keeps
  * writing). A caller now states its scope: one id, an explicit id list, or
  * `wholeSection: true`.
+ *
+ * ONT-2: only a governed `<tld>0` section is accepted (refused otherwise, before
+ * any scope work), and each record goes through the guarded primitive — one that
+ * parses into another tld's namespace is an error line, nothing written for it.
+ * The registry section (ontology35) is NOT a projection: its door is
+ * ontology_state.syncOntologyActivation — a drifted tld that still holds rows is
+ * re-derived, a converged one has only its root re-planted, a tld with no rows is
+ * left empty. Nothing is retracted there; only ontology_delete retracts a tld
+ * (retractOntology).
  */
 export async function setRecordsInDdOntology(
 	target: SetRecordsTarget,
 ): Promise<OntologyWriteResponse> {
-	const userId = target.userId ?? -1;
 	const response: OntologyWriteResponse = {
 		ok: false,
 		msg: '',
@@ -881,6 +1007,19 @@ export async function setRecordsInDdOntology(
 			`'${LOCAL_ONTOLOGY_SECTION}' records are overrides, not nodes — re-parse the overridden node (ontology42) instead`,
 		);
 		response.msg = `Error. Refusing to parse override records of '${LOCAL_ONTOLOGY_SECTION}' as nodes`;
+		return response;
+	}
+	// ONT-2: only a `<tld>0` section holds ontology NODES. A registry record
+	// (ontology35) is an ACTIVATION, not a projection — ontology_state's
+	// syncOntologyActivation; any other section (`ontology1..N`, `test3`) never
+	// projects, whatever an `ontology7` in its data says.
+	if (requiredOntologyTld(target.sectionTipo) === null) {
+		response.errors.push(
+			target.sectionTipo === ONTOLOGY_MAIN_SECTION
+				? `${target.sectionTipo} is not governed by an ontology tld — registry records are activated through ontology_state.syncOntologyActivation`
+				: `${target.sectionTipo} is not governed by an ontology tld (an ontology node section is '<tld>0')`,
+		);
+		response.msg = `Error. '${target.sectionTipo}' is not an ontology node section`;
 		return response;
 	}
 
@@ -911,36 +1050,17 @@ export async function setRecordsInDdOntology(
 	let processed = 0;
 	for (const sectionId of ids) {
 		let termId: string | null = null;
-		if (target.sectionTipo === ONTOLOGY_MAIN_SECTION) {
-			const tld = await getMainTld(sectionId, target.sectionTipo);
-			const activeTlds = await getActiveTlds();
-			if (tld === null || !activeTlds.includes(tld)) {
-				const safe = tld === null ? null : safeTld(tld);
-				if (safe === null) {
-					response.errors.push(`Invalid TLD for deletion: ${tld}`);
-					continue;
-				}
-				const deleted = await deleteTldNodes(safe);
-				if (!deleted) {
-					response.errors.push(`Unable to delete TLD nodes for: ${tld}`);
-					continue;
-				}
-				termId = `${safe}0`;
-			} else {
-				const typologyId = await getMainTypologyId(tld);
-				const nameData = await getMainNameData(tld);
-				termId = await createDdOntologyRootNode(
-					{
-						tld,
-						typology_id: typologyId,
-						name_data: nameData,
-						parent_grouper_tipo: `${ONTOLOGY_TYPE_TLD}${typologyId}`,
-					},
-					userId,
-				);
-			}
-		} else {
+		try {
 			termId = await insertDdOntologyRecord(target.sectionTipo, sectionId);
+		} catch (error) {
+			// A record parsing outside its own namespace (ONT-2): named, nothing
+			// written, the rest of the batch still runs (partial success). ONLY that
+			// refusal: a grammar / DB-constraint `ontology.invalid_node` stays fatal.
+			if (error instanceof ForeignOntologyNodeRefused) {
+				response.errors.push(error.line);
+				continue;
+			}
+			throw error;
 		}
 
 		if (termId === null || termId === '') {

@@ -19,15 +19,27 @@
  * This module replaces that with ONE READ and ONE WRITE:
  *   - `inspectOntology(tld)`  — pure read. The drift: which nodes are missing, stale or
  *     orphaned, and whether the main node is present. Nothing today can show you this.
- *   - `rebuildOntology(tld)`  — the wipe-and-rebuild, but TRANSACTIONAL: the delete +
- *     reinsert run inside ONE `withTransaction`, so a mid-run failure rolls back
- *     automatically — no backup table, no leftover, no corruption window.
+ *   - `rebuildOntology(tld)`  — the re-derive, TRANSACTIONAL and ID-STABLE: inside ONE
+ *     `withTransaction` every row the parse does not produce is deleted (orphans) and every
+ *     parsed node is upserted over its existing row, so a mid-run failure rolls back
+ *     automatically — no backup table, no leftover, no corruption window — and a surviving
+ *     node keeps its dd_ontology id (the outcome equals wipe-and-reinsert, minus the churn).
+ * plus two whole-tld doors built on them: `retractOntology` (the tld teardown empties its
+ * projection) and `syncOntologyActivation` (a registry record's ACTIVE tld → re-derived when it
+ * drifted, root re-planted when it did not; a tld with no rows stays empty).
+ *
+ * THE INVARIANT these doors keep (ONT-1/2/3, audit 2026-09-26): dd_ontology(tld) equals the
+ * parse of matrix_ontology(<tld>0) for every tld that holds a projection (getActiveTlds), and
+ * a torn-down tld holds none. "Inactive ⇒ empty" is NOT enforced by activation: active is
+ * defined by having rows (syncOntologyActivation; hierarchy4 = owner question Q1). The
+ * per-record and lifecycle doors live in section_record/ontology_projection.ts (its header
+ * names every door and the gates).
  *
  * WHY THERE IS NO INCREMENTAL RECONCILE (removed 2026-08-11). An `ensureOntology` used to sit
  * between the two: upsert the missing/stale nodes, delete the orphaned ones, fill the main node
  * if absent. Its ONLY claim over rebuild was "NO WIPE, so the runtime ontology is never
  * momentarily empty" — and that claim died the day rebuild became transactional. Under MVCC no
- * other session ever observes the empty window: readers see the old rows until the commit
+ * other session ever observes an intermediate state: readers see the old rows until the commit
  * publishes the new ones atomically. What remained was a strictly weaker writer (it FILLS the
  * main node; rebuild re-derives it) offered next to the stronger one, i.e. a decision the
  * operator had to make with no criterion to make it by — and a second write path to keep in
@@ -49,9 +61,9 @@
  * tld 'act'`), which is the only thing an operator can act on. Without that scoping the foreign
  * node could never appear in `stored`, so it was reported `missing` forever (an unfixable false
  * failure), re-upserted on every run (breaking idempotency), and WRITTEN into the other tld's
- * namespace by a per-tld operation — where `deleteTldNodes(tld)` could never take it back.
+ * namespace by a per-tld operation — where this tld's own delete could never take it back.
  * Nothing here touches a byte outside the tld it was asked about: cleaning up a node the old bug
- * leaked into tld X is X's own rebuild (its wipe is scoped to X). The comparison is
+ * leaked into tld X is X's own rebuild (its delete is scoped to X). The comparison is
  * EXACT, not case- or whitespace-insensitive: `ontology7 = "ES"` is a misfiled record too, and
  * saying so beats silently minting an `ES7` tipo. Gated by
  * test/unit/ontology_state_foreign_tld.test.ts.
@@ -83,10 +95,13 @@
  * update of its tld (with the dd_ontology CHECK constraints live, projecting the value would
  * roll the whole rebuild back).
  *
- * SINGLE WRITER: nothing outside this module wipe-and-rebuilds a TLD's dd_ontology, and
- * inside it there is exactly ONE writer. The legacy `regenerateRecordsInDdOntology` is
- * retired onto `rebuildOntology`. Guarded by
- * test/unit/ontology_single_writer_tripwire.test.ts.
+ * SINGLE WRITER: nothing outside this module deletes a TLD's dd_ontology wholesale (rebuild,
+ * retract, activation), and the re-derive has exactly ONE writer. The legacy
+ * `regenerateRecordsInDdOntology` is retired onto `rebuildOntology`; the ontology update
+ * (ontology_update.ts deriveOntologyPackages), the registry activation and the tld teardown
+ * (ontology_delete.ts) all route here. Census:
+ * test/unit/ontology_single_writer_tripwire.test.ts; outcomes:
+ * ontology_derive_packages_native / ontology_update_shell_native.
  */
 
 import {
@@ -94,14 +109,28 @@ import {
 	type DdOntologyNode,
 	type DdOntologyRow,
 	deleteDdOntologyRowsReturning,
-	deleteTldNodes,
+	deleteTldNodesExcept,
+	deleteTldNodesReturningTipos,
+	getActiveTlds,
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import type { ReconcileDefinition } from '../reconcile/registry.ts';
-import { ONTOLOGY_TLD } from './ontology_tipos.ts';
-import { createDdOntologyRootNode, ensureMainSection } from './ontology_write.ts';
+import {
+	ONTOLOGY_MAIN_SECTION,
+	ONTOLOGY_TLD,
+	ONTOLOGY_TYPE_TLD,
+	STRUCTURE_LANG,
+} from './ontology_tipos.ts';
+import {
+	createDdOntologyRootNode,
+	ensureMainSection,
+	getMainTld,
+	getMainTypologyId,
+	getOntologyMainFromTld,
+	type OntologyWriteResponse,
+} from './ontology_write.ts';
 import { type OntologyNodeDefect, parseSectionRecordToOntologyNodeWithDefects } from './parser.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from './resolver.ts';
 import { LOCAL_ONTOLOGY_SECTION, mapTldToTargetSectionTipo, safeTld } from './tld.ts';
@@ -288,7 +317,27 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 			});
 		}
 	}
+	resolveModelsAgainstParse(own);
 	return { own, foreign, tldless, invalidReferences };
+}
+
+/**
+ * MODEL FIXPOINT. `model` is the one column a node takes from ANOTHER node: the parser reads
+ * `dd_ontology(model_tipo).term[STRUCTURE_LANG]` off the STORED row (parser.ts projectModel).
+ * A whole-tld parse runs before any upsert, so for a model node of the SAME tld that stored row
+ * is the pre-rebuild one: a model the release adds, or renames, would leave every instance with
+ * `model = NULL` / the old name until a second pass. Resolve those against the parse being
+ * written instead (same strict rule: that node's term in STRUCTURE_LANG, no fallback), so one
+ * rebuild converges and inspect compares against the fixpoint. A model of ANOTHER tld is the
+ * update's second pass (ontology_update.ts deriveOntologyPackages). Gate:
+ * ontology_derive_packages_native G1f.
+ */
+function resolveModelsAgainstParse(own: Map<string, DdOntologyNode>): void {
+	for (const node of own.values()) {
+		if (node.model_tipo === null) continue;
+		const modelNode = own.get(node.model_tipo);
+		if (modelNode !== undefined) node.model = modelNode.term?.[STRUCTURE_LANG] ?? null;
+	}
 }
 
 /** The operator-facing line for one misfiled record: what is wrong, where, and that nothing ran. */
@@ -544,12 +593,53 @@ async function ensureMainNode(tld: string, userId: number): Promise<void> {
 }
 
 /**
- * Wipe and rebuild ONE TLD's dd_ontology from its matrix source — the ONE writer,
- * TRANSACTIONAL. The delete + reinsert run inside one `withTransaction`: a failure at any
- * point rolls the whole thing back, so there is no window where the runtime ontology is
- * empty and no leftover backup table. Concurrent readers never see the wipe — MVCC publishes
- * the new projection atomically at commit — which is why no incremental companion is needed
- * (module header).
+ * The `<tld>0` main node, by mode (RebuildOntologyOptions.mainNode). `'existing'` writes
+ * NOTHING outside this tld: with a registry row the root is re-derived from it and hung
+ * under its typology grouper BY NAME (`ontologytype<N>`, the grouper itself is not built —
+ * createParentGrouper would ensure the grouper tld's registry row and rewrite the shared
+ * `ontologytype0/<N>` record with hard-coded values, no Time Machine); without one the
+ * stored `<tld>0` (kept by the reconcile delete) stands untouched — the seed compiler's
+ * rows-only pass 1 has no registry yet, and must not mint one. Gate:
+ * ontology_derive_packages_native G1d.
+ */
+async function settleMainNode(
+	tld: string,
+	userId: number,
+	mode: 'ensure' | 'existing',
+): Promise<string> {
+	if (mode === 'ensure') {
+		await ensureMainNode(tld, userId);
+		return `main node ${tld}0`;
+	}
+	if ((await getOntologyMainFromTld(tld)) !== null) {
+		await createDdOntologyRootNode(
+			{ tld, parent_grouper_tipo: await rootGrouperTipo(tld) },
+			userId,
+		);
+		return `main node ${tld}0 (from its registry row)`;
+	}
+	return `main node ${tld}0 left as stored (no registry row)`;
+}
+
+/**
+ * The grouper tipo a tld's `<tld>0` root hangs under, named WITHOUT building it — exactly
+ * what the 'ensure' path's createParentGrouper(ONTOLOGY_TYPE_GROUP, ONTOLOGY_TYPE_TLD,
+ * typology) returns: `ontologytype<typology>`, the registry row's typology (15 = 'others'
+ * when it states none, resolveRootIdentity's default).
+ */
+async function rootGrouperTipo(tld: string): Promise<string> {
+	return `${ONTOLOGY_TYPE_TLD}${(await getMainTypologyId(tld)) ?? 15}`;
+}
+
+/**
+ * Re-derive ONE TLD's dd_ontology from its matrix source — the ONE writer, TRANSACTIONAL and
+ * ID-STABLE. Inside one `withTransaction`: parse, delete every stored row of the tld the parse
+ * does not produce (orphans; the `<tld>0` main node is kept for the main-node step), upsert
+ * every parsed node (the upsert sets EVERY column, so a stale row is overwritten in place and
+ * keeps its id), settle the main node. A failure at any point rolls the whole thing back, so
+ * there is no intermediate state and no leftover backup table. The outcome equals
+ * wipe-and-reinsert; concurrent readers see the old projection until the commit (module
+ * header).
  */
 export interface RebuildOntologyOptions {
 	/**
@@ -560,6 +650,20 @@ export interface RebuildOntologyOptions {
 	 * its tipo comes back (from this tld's source) or not.
 	 */
 	reclaimIds?: readonly number[];
+	/**
+	 * How the `<tld>0` main node is settled (settleMainNode). `'ensure'` (the default — the
+	 * parser tool, the reconcile, provisioning): create the registry row when missing, then
+	 * re-derive `<tld>0` from it. `'existing'` (the ontology update, the registry
+	 * activation, the seed compiler): never write the registry.
+	 */
+	mainNode?: 'ensure' | 'existing';
+}
+
+/** Delete the SURF-1 reclaimed rows by id (RebuildOntologyOptions.reclaimIds); the applied line. */
+async function reclaimRows(ids: readonly number[] | undefined): Promise<string[]> {
+	const reclaimed = await deleteDdOntologyRowsReturning(ids ?? []);
+	if (reclaimed.length === 0) return [];
+	return [`reclaimed ${reclaimed.map((row) => JSON.stringify(row.tipo)).join(', ')}`];
 }
 
 export async function rebuildOntology(
@@ -587,23 +691,22 @@ export async function rebuildOntology(
 			// per-insert check in upsertDdOntologyNode is then a no-op, and two rebuilds never
 			// both upgrade a held ROW EXCLUSIVE into the alignment lock (deadlock).
 			await alignDdOntologyIdSequence();
-			// Parse BEFORE the wipe: a bad record aborts the tx with the live data intact.
+			// Parse BEFORE any delete: a bad record aborts the tx with the live data intact.
 			const { own: parsed, foreign } = await parseMatrixNodes(tld);
-			// Misfiled records are reported, never rebuilt: `deleteTldNodes(tld)` below scopes
-			// the wipe to THIS tld, so writing a foreign node would plant a row this rebuild
-			// could never take back. A misfiled record does not block the tld's own rebuild —
-			// it only keeps the outcome honest (ok=false while the source stays wrong).
+			// Misfiled records are reported, never rebuilt: the delete below is scoped to THIS
+			// tld, so writing a foreign node would plant a row this rebuild could never take
+			// back. A misfiled record does not block the tld's own rebuild — it only keeps the
+			// outcome honest (ok=false while the source stays wrong).
 			for (const item of foreign) errors.push(foreignError(item, tld));
-			await deleteTldNodes(tld);
-			const reclaimed = await deleteDdOntologyRowsReturning(options.reclaimIds ?? []);
-			if (reclaimed.length > 0) {
-				applied.push(`reclaimed ${reclaimed.map((row) => JSON.stringify(row.tipo)).join(', ')}`);
-			}
+			// Orphans out; every row about to be upserted (and the main node) keeps its id.
+			const removed = await deleteTldNodesExcept(tld, [...parsed.keys(), `${tld}0`]);
+			if (removed.length > 0) applied.push(`removed ${removed.length} orphaned node(s)`);
+			applied.push(...(await reclaimRows(options.reclaimIds)));
 			for (const node of parsed.values()) {
 				await upsertDdOntologyNode(node);
 			}
-			await ensureMainNode(tld, userId);
-			applied.push(`rebuilt ${parsed.size} node(s)`, `main node ${tld}0`);
+			applied.push(`rebuilt ${parsed.size} node(s)`);
+			applied.push(await settleMainNode(tld, userId, options.mainNode ?? 'ensure'));
 		});
 	} catch (error) {
 		errors.push(String(error));
@@ -630,6 +733,121 @@ export async function rebuildOntology(
 		state,
 		applied,
 	};
+}
+
+/**
+ * Retract ONE tld: every dd_ontology row of it goes, in one transaction (the tld teardown,
+ * ontology_delete.ts: an uninstalled tld holds no nodes). Returns the removed tipos. The tld MUST be safe — a
+ * mismatch is refused loudly by the delete primitive, never widened.
+ */
+export async function retractOntology(tld: string): Promise<string[]> {
+	return withTransaction(() => deleteTldNodesReturningTipos(tld));
+}
+
+/**
+ * Sync the projection of each REGISTRY record (`ontology35`, matrix_ontology_main) with its
+ * tld. The PHP original (set_records_in_dd_ontology on ontology35) re-planted only the
+ * `<tld>0` root of an active tld, so an active tld whose nodes had gone missing stayed broken.
+ *
+ * ACTIVE means what getActiveTlds (PHP check_active_tld) says: dd_ontology still holds rows of
+ * the tld — NOT the registry's hierarchy4 flag (owner question Q1 of the ONT plan, open). So:
+ *   - an ACTIVE tld whose projection DRIFTED (inspectOntology: a missing / stale / orphaned /
+ *     foreign node, or no main node) is RE-DERIVED in full (rebuildOntology, `mainNode:
+ *     'existing'` — the registry is the input here, never written);
+ *   - an ACTIVE tld already in sync only has its `<tld>0` root re-planted from the registry
+ *     row (the PHP behaviour, cheap): a list-mode run over the whole registry re-derives what
+ *     is broken and nothing else, instead of a foreground full rebuild of every installed tld
+ *     (the WC-043 runaway shape). Its cost is one parse per tld (~0.14 ms per node measured);
+ *   - a tld with NO rows is left EMPTY: it cannot be (re-)activated through this door, and
+ *     nothing here ever retracts — under this definition a tld with rows is active by
+ *     construction. Retraction and re-activation become real only if activation is keyed on
+ *     hierarchy4 (Q1); until then retracting is ontology_delete's job (retractOntology).
+ * Gate: ontology_derive_packages_native G1e.
+ *
+ * Partial success, the setRecordsInDdOntology response shape: ok when at least one record
+ * was processed; an unreadable / invalid tld, a rolled-back rebuild, a misfiled record or a
+ * wholly tld-less section is an error line.
+ */
+export async function syncOntologyActivation(
+	mainSectionIds: readonly number[],
+	userId = -1,
+): Promise<OntologyWriteResponse> {
+	const errors: string[] = [];
+	let processed = 0;
+	for (const sectionId of mainSectionIds) {
+		const step = await activateRegistryRecord(sectionId, userId);
+		errors.push(...step.errors);
+		if (step.processed) processed++;
+	}
+	return activationResponse(mainSectionIds.length, processed, errors);
+}
+
+/** One activation step's outcome: whether the record counts as processed, and its error lines. */
+interface ActivationStep {
+	processed: boolean;
+	errors: string[];
+}
+
+/** One registry record's activation (see syncOntologyActivation). */
+async function activateRegistryRecord(sectionId: number, userId: number): Promise<ActivationStep> {
+	const { raw, tld } = await registryTld(sectionId);
+	if (tld === null) {
+		const line = `${ONTOLOGY_MAIN_SECTION}/${sectionId}: invalid or missing tld ${JSON.stringify(raw)}`;
+		return { processed: false, errors: [line] };
+	}
+	// No projection: not active, nothing to re-derive and nothing to retract.
+	if (!(await getActiveTlds()).includes(tld)) return { processed: true, errors: [] };
+	if ((await inspectOntology(tld)).inSync) {
+		await withTransaction(() => settleMainNode(tld, userId, 'existing'));
+		return { processed: true, errors: [] };
+	}
+	return rederiveActiveTld(tld, userId);
+}
+
+/** The tld a registry record names (`raw`, for the error line) and its safe form (null: absent / invalid). */
+async function registryTld(sectionId: number): Promise<{ raw: string | null; tld: string | null }> {
+	const raw = await getMainTld(sectionId, ONTOLOGY_MAIN_SECTION);
+	return { raw, tld: raw === null ? null : safeTld(raw) };
+}
+
+/** A drifted active tld re-derived in full; processed unless it rolled back or projected nothing. */
+async function rederiveActiveTld(tld: string, userId: number): Promise<ActivationStep> {
+	const rebuilt = await rebuildOntology(tld, userId, { mainNode: 'existing' });
+	const failure = rebuildFailure(tld, rebuilt);
+	if (failure !== null) return { processed: false, errors: [...rebuilt.errors, failure] };
+	return { processed: rebuilt.applied.length > 0, errors: rebuilt.errors };
+}
+
+/** The setRecordsInDdOntology-shaped outcome of an activation run (partial success). */
+function activationResponse(
+	total: number,
+	processed: number,
+	errors: string[],
+): OntologyWriteResponse {
+	const succeeded = errors.length === 0 || processed > 0;
+	const msg =
+		total === 0
+			? `OK. No records found to process for ${ONTOLOGY_MAIN_SECTION}`
+			: errors.length === 0
+				? `OK. Request completed successfully for ${ONTOLOGY_MAIN_SECTION}`
+				: processed > 0
+					? `Partial success. Some records processed for ${ONTOLOGY_MAIN_SECTION}`
+					: `Request failed for ${ONTOLOGY_MAIN_SECTION}`;
+	return { ok: succeeded, msg, errors, total, processed_count: processed };
+}
+
+/**
+ * The error line a re-derive owes on top of its own `errors` (the rollback text, the
+ * misfiled records), or null: a section holding records of which NONE declares a tld
+ * projected nothing at all — a wholesale failure, never a per-record warning. Drift
+ * without errors (a model whose tld is not imported yet, mid-install) is not an error.
+ */
+export function rebuildFailure(tld: string, rebuilt: OntologyWriteResult): string | null {
+	if (rebuilt.errors.length > 0) return null;
+	if (rebuilt.state.matrixNodes === 0 && rebuilt.state.tldlessNodes > 0) {
+		return `${tld}: none of ${rebuilt.state.tldlessNodes} record(s) of ${tld}0 declares a tld — nothing projected`;
+	}
+	return null;
 }
 
 /** Rebuild several TLDs, collecting a per-TLD outcome. */

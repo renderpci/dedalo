@@ -74,6 +74,12 @@ import {
 import { reportMissingDependencies } from './dependency_report.ts';
 import { termByTipo } from './labels.ts';
 import {
+	inspectOntology,
+	type OntologyWriteResult,
+	rebuildFailure,
+	rebuildOntology,
+} from './ontology_state.ts';
+import {
 	type OntologyUpdateCatalog,
 	resolveUpdateTarget,
 	type StagedFile,
@@ -81,7 +87,8 @@ import {
 } from './ontology_update_target.ts';
 import {
 	createDdOntologyRootNode,
-	setRecordsInDdOntology,
+	ensureReferencedGrouperRecords,
+	isTypologyGrouperTld,
 	syncMainSectionFromDefinition,
 } from './ontology_write.ts';
 import { getOrderedSubtree } from './resolver.ts';
@@ -200,25 +207,93 @@ export async function importOntologyPackage(
 }
 
 /**
- * The dd_ontology re-derive of every imported package that projects nodes
- * (not matrix_dd, not override records). wholeSection: this IS the deliberate
- * full-TLD re-derive after an ontology-file import — not a request-driven batch
- * (WC-043).
+ * The dd_ontology re-derive of every imported package that projects nodes (not
+ * matrix_dd, not override records) — through the ONE whole-tld writer,
+ * ontology_state.rebuildOntology (ONT-1, WC-2026-10-21-ontology-update-rebuild):
+ * one transaction per tld, a node the package no longer carries is REMOVED (no
+ * orphan), a record declaring another tld is refused and named, surviving nodes
+ * keep their ids. `mainNode: 'existing'`: the registry is never written here
+ * (importOntologyPackage's provisioning owns it; the seed compiler's rows-only
+ * pass 1 has none, and keeps the `<tld>0` it holds).
+ *
+ * Severity (unchanged): every tld's message goes to `messages`; `errors` gets a
+ * rolled-back rebuild, each misfiled record, and a tld of which NO record declares
+ * a tld (wholesale failure) — a warning line in the update panel, fatal in the
+ * installer and the seed compiler. Drift without errors stays a message: mid-run a
+ * model may live in a tld not imported yet. A `model` column is converged twice
+ * over: against the parse inside rebuildOntology (same tld), then by pass 2 below
+ * (a model in another staged tld). One message per tld (its last derive).
+ *
+ * Pass 0 — a staged GROUPER package (ontologytype / hierarchytype / hierarchymtype) wiped
+ * the installation-made grouper records its scoped import does not carry; every typology
+ * still referenced is re-made BEFORE the sweep could delete its node
+ * (ontology_write.ensureReferencedGrouperRecords), and named in `messages`.
  */
 export async function deriveOntologyPackages(
 	staged: readonly StagedFile[],
 	userId: number,
 ): Promise<{ messages: string[]; errors: string[] }> {
+	const regrouped = await ensureStagedGrouperRecords(staged, userId);
+	const outcomes = new Map<string, OntologyWriteResult>();
+	for (const file of staged.filter(derivesNodes)) {
+		outcomes.set(file.tld, await rebuildOntology(file.tld, userId, { mainNode: 'existing' }));
+	}
+	if (outcomes.size > 1) await rederiveStaleModels(outcomes, userId);
+	const report = deriveReport(outcomes);
+	report.messages.unshift(...regrouped);
+	return report;
+}
+
+/** Pass 0 (see deriveOntologyPackages): one message per staged grouper tld that re-made records. */
+async function ensureStagedGrouperRecords(
+	staged: readonly StagedFile[],
+	userId: number,
+): Promise<string[]> {
+	const messages: string[] = [];
+	for (const file of staged.filter((item) => isTypologyGrouperTld(item.tld))) {
+		const remade = await ensureReferencedGrouperRecords(file.tld, userId);
+		if (remade.length > 0) {
+			messages.push(
+				`${file.tld}: re-made grouper record(s) ${remade.join(', ')} — referenced by this installation, absent from the package`,
+			);
+		}
+	}
+	return messages;
+}
+
+/**
+ * Pass 2 — CROSS-PACKAGE MODELS. A node's `model` is its model node's term, read from the
+ * stored row (a same-tld model resolves inside rebuildOntology). A tld derived BEFORE the tld
+ * that adds or renames one of its models was parsed against the old row, so every tld that
+ * committed in pass 1 is re-inspected AFTER all of them and re-derived when a `model` column
+ * is stale — one pass reaches the fixpoint (no node's term depends on another node). A
+ * rolled-back tld keeps its failure. Gate: ontology_derive_packages_native G1f.
+ */
+async function rederiveStaleModels(
+	outcomes: Map<string, OntologyWriteResult>,
+	userId: number,
+): Promise<void> {
+	for (const [tld, first] of outcomes) {
+		if (first.applied.length === 0 || !(await hasStaleModel(tld))) continue;
+		outcomes.set(tld, await rebuildOntology(tld, userId, { mainNode: 'existing' }));
+	}
+}
+
+async function hasStaleModel(tld: string): Promise<boolean> {
+	const { drift } = await inspectOntology(tld);
+	return drift.some((item) => item.kind === 'stale' && item.diffColumns.includes('model'));
+}
+
+/** Every tld's last derive → the step messages and error lines (module doc: severity). */
+function deriveReport(outcomes: ReadonlyMap<string, OntologyWriteResult>): {
+	messages: string[];
+	errors: string[];
+} {
 	const result = { messages: [] as string[], errors: [] as string[] };
-	for (const file of staged) {
-		if (!derivesNodes(file)) continue;
-		const rebuilt = await setRecordsInDdOntology({
-			sectionTipo: file.sectionTipo,
-			wholeSection: true,
-			userId,
-		});
+	for (const [tld, rebuilt] of outcomes) {
+		const failure = rebuildFailure(tld, rebuilt);
 		result.messages.push(rebuilt.msg);
-		if (rebuilt.ok !== true) result.errors.push(...rebuilt.errors);
+		result.errors.push(...rebuilt.errors, ...(failure === null ? [] : [failure]));
 	}
 	return result;
 }

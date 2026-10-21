@@ -107,6 +107,7 @@ import {
 	type ObservedDeclaration,
 	type WriteReceipt,
 } from './obligation_ledger.ts';
+import { projectOntologyRecordLifecycle } from './ontology_projection.ts';
 import { fireRagRecordEvent, fireSaveEvent } from './save_event.ts';
 
 /** The record a write targets. The table comes from the ontology (getMatrixTableFromTipo). */
@@ -1286,6 +1287,20 @@ async function writeBirth(
 		return null;
 	}
 	await assertRelationBagAcyclic(target, values.relation, 'birth');
+	// THE ONTOLOGY NODE comes back with its record (ONT-3): an undelete of a
+	// `<tld>0` record re-projects `<tld><id>` (only into a projected tld, never
+	// into another tld's namespace), an override's undelete re-projects the node
+	// it overrides — HERE, inside the birth's transaction (not the post-COMMIT
+	// ledger drain): a rolled-back undelete takes its node with it, and no drift
+	// window follows the commit. Every door that births at a known address
+	// passes here (TM undelete, bulk revert); create/duplicate do not (PHP parity).
+	// Any other section answers 'none' without touching the database.
+	await projectOntologyRecordLifecycle(
+		target.sectionTipo,
+		target.sectionId,
+		'birth',
+		values.relation,
+	);
 	await afterRecordWrite(target, {
 		door,
 		touchedKeys: columnKeys(values),

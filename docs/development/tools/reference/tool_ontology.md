@@ -6,7 +6,7 @@ Developer-only tool that parses ontology section records and synchronises them i
 
 Dédalo's data model is *ontology-driven*: every section and component is described by ontology records (in the `area_ontology` / `area_thesaurus` sections, with tipos such as `ontology16`…`ontology35` and the per-project TLD roots like `dmm0`). At runtime, however, the resolver does not read those editorial records directly — it reads a flattened, denormalised projection of them held in the **`dd_ontology`** table. That projection is what the ontology resolver (`src/core/ontology/resolver.ts`) and the thesaurus/tree builder consult to answer "what is the model of this tipo, what is its label, what are its children". When a developer edits the ontology, the editorial record changes but the `dd_ontology` projection does **not** update automatically — it must be re-parsed and re-written.
 
-`tool_ontology` is the operator-facing button that performs exactly that re-parse and re-write. It takes the ontology record(s) the developer is looking at (one record in edit mode, or the whole current list/selection in list mode), feeds them through `ontology::set_records_in_dd_ontology()`, and upserts the resulting node definitions into `dd_ontology`. After a successful run it also clears the `active_elements` session cache used by the thesaurus tree API, so the change is visible immediately.
+`tool_ontology` is the operator-facing button that performs exactly that re-parse and re-write. It takes the ontology record(s) the developer is looking at (one record in edit mode, or the records the current list matches in list mode), feeds them through `setRecordsInDdOntology()`, and upserts the resulting node definitions into `dd_ontology`. After a successful run it also clears the `active_elements` session cache used by the thesaurus tree API, so the change is visible immediately.
 
 Because it rewrites the rows that drive the live data model, the tool is **strictly developer/superuser only** — both the server method and the surfacing are gated to developers. It is not a cataloguing aid for end users; it is an ontology-maintenance control.
 
@@ -18,12 +18,18 @@ Use it when: you have edited ontology records (single or in bulk) and need the `
 
 **Server.** `tools/tool_ontology/server/{index,tool_ontology}.ts` is a thin, privileged wrapper around the ontology write engine (`src/core/ontology/ontology_write.ts::setRecordsInDdOntology` — see the `dedalo-ontology-ts` skill). It declares a **declaratively-gated** `apiActions` entry, `set_records_in_dd_ontology: { permission: 'developer', handler: toolOntologySetRecords }`. The handler additionally re-checks `context.principal.isDeveloper` itself as defense-in-depth, so the developer requirement is enforced twice.
 
-`toolOntologySetRecords` reads `section_tipo` (required — refuses with an error if missing) and `section_id` (optional), then processes records in one of two modes:
+`toolOntologySetRecords` reads `section_tipo` (required — refuses with an error if missing) and `section_id` (optional). Before any search or write it **admits** the section — a rule deliberately narrower than the registered `affected_tipos`:
 
-- **Edit mode** (`section_id` present): a single-record scan — just that one `{section_tipo, section_id}` locator.
-- **List mode** (`section_id` absent): does a **full-section scan** — it re-syncs every record of `section_tipo`, unfiltered, in ascending `section_id` order. There is no session-scoped list filter on this engine to narrow the batch to "just the records the current list view matches"; list mode always processes the whole section. This is documented in `ontology_write.ts`'s own comments.
+- `ontology35` (a TLD registry record) → **activation**: `syncOntologyActivation()` (`src/core/ontology/ontology_state.ts`). An **active** TLD — one `dd_ontology` still holds rows of — whose projection drifted (nodes missing, stale or orphaned, or no root) is re-derived in full (`rebuildOntology()`); one already in sync only gets its `<tld>0` root re-planted, so running the action over the whole registry list re-derives only what is broken. A TLD with **no** rows is left empty: this action cannot re-activate a TLD, and it never removes one;
+- a `<tld>0` section (`dd0`, `dmm0`, …) → **projection**: `setRecordsInDdOntology()`;
+- anything else (`ontology1`…`ontologyN`, `localontology0`, a content section such as `test3`) → refused with `request.invalid_options` (*section_tipo '…' is not an ontology node section*).
 
-It then delegates the real work to `setRecordsInDdOntology`. That core function runs the per-record sync logic: for a `matrix_ontology_main` (TLD root, `ontology35`) record it deletes the TLD's `dd_ontology` nodes when the TLD is inactive or upserts the root node when active; otherwise it upserts the node. It uses **partial-success** semantics (some-ok/some-failed → `result: true` with a "Partial success" message and the failing records enumerated in `errors`) and returns `{result, msg, errors, total, processed_count}`. After a successful sync, every `dd_ontology` write (`upsertDdOntologyNode`/`deleteTldNodes`) fans out through the ontology cache-invalidation hub (`src/core/ontology/cache_invalidation.ts`), which drops every registered ontology-derived cache in one pass — the resolver, label, section_map and term-resolver caches, and the thesaurus/tree children-tipo cache (`src/core/area/tree.ts`) among others — so a freshly-synced node is visible on the next read, no page reload required.
+It then processes records in one of two modes:
+
+- **Edit mode** (`section_id` present): that one record.
+- **List mode** (`section_id` absent): the records the caller's **live list search** (`options.sqo`, required — no whole-section default) matches. The search's `section_tipo` must be exactly `[section_tipo]`, otherwise the request is refused; pagination is stripped so the whole matched set is processed. Each matched row is projected under its **own** section, and the whole request is refused when any matched section is not a `<tld>0` section.
+
+A record is always projected at its own address: a record of `dd0` with `section_id` 55 writes the node `dd55` and nothing else. A record whose TLD field (`ontology7`) names another TLD is reported in `errors` and skipped — it can never overwrite that TLD's node. The run uses **partial-success** semantics (some-ok/some-failed → a "Partial success" message and the failing records enumerated in `errors`; all failed → `tool.action_failed`). After a successful sync, every `dd_ontology` write fans out through the ontology cache-invalidation hub (`src/core/ontology/cache_invalidation.ts`), which drops every registered ontology-derived cache in one pass — the resolver, label, section_map and term-resolver caches, and the thesaurus/tree children-tipo cache (`src/core/area/tree.ts`) among others — so a freshly-synced node is visible on the next read, no page reload required.
 
 **Client (JS).** `tools/tool_ontology/js/` wires the standard `tool_common` lifecycle:
 
@@ -38,14 +44,14 @@ The tool opens **as a modal** and registers a `keyup` event so **Ctrl+S** trigge
 
 | `apiActions` (declarative) | Permission gate | Reads from `options` | Returns |
 | --- | --- | --- | --- |
-| `set_records_in_dd_ontology` | `permission: 'developer'` (dispatcher-enforced before the handler) **plus** an imperative `isDeveloper` re-check inside the handler (defense in depth). | `section_tipo` (**required**); `section_id` (optional — its presence selects edit vs. list mode; list mode is a full-section scan — see above). `mode` is sent by the client but the server infers edit/list from `section_id`. | `{ result: bool, msg: string, errors: string[] }`. On success, `result`/`msg`/`errors` are forwarded from `setRecordsInDdOntology()` (which additionally carries `total` and `processed_count`, and may report *Partial success*). |
+| `set_records_in_dd_ontology` | `permission: 'developer'` (dispatcher-enforced before the handler) **plus** an imperative `isDeveloper` re-check inside the handler (defense in depth). | `section_tipo` (**required**, `ontology35` or a `<tld>0` section); `section_id` (optional — its presence selects edit vs. list mode); `sqo` (**required in list mode**, its `section_tipo` exactly `[section_tipo]`, no `children_recursive`). `mode` is sent by the client but the server infers edit/list from `section_id`. | `{ summary, errors }` on success (*Partial success* when some records were refused); a refusal is `request.invalid_options` (admission, missing or misaimed sqo) or `tool.action_failed` (no record processed). |
 
 Two operating modes of the single action:
 
 | Mode | Triggered when | SQO built | Effect |
 | --- | --- | --- | --- |
-| **Edit** | `section_id` is present | single-record SQO (`limit: 1`, `filter_by_locators: [{section_tipo, section_id}]`) | Re-syncs that one ontology record into `dd_ontology`. |
-| **List / batch** | `section_id` is absent | full-section scan: every `section_id` of `section_tipo`, ascending order | Re-syncs every record of the section; a failing record is skipped without losing the others (partial success). |
+| **Edit** | `section_id` is present | none — the id is the scope | Re-syncs that one ontology record into `dd_ontology` (or, for `ontology35`, its TLD's activation). |
+| **List / batch** | `section_id` is absent | the caller's live list sqo (required), pagination stripped | Re-syncs every matched record of the section; a failing record is skipped without losing the others (partial success). An sqo with `children_recursive: true` (the search panel's recursive-children option) is refused with `request.invalid_options`: the search would hand the action records of this section that share an id with the descendants, not the descendants themselves. |
 
 > Lifecycle hooks: `tool_ontology`'s module does **not** declare `isAvailable`, `onRegister` or `onRemove` — surfacing is governed by `affected_models` / `affected_tipos` and the developer-only authorization, not by an availability hook. (As always, these hooks must never appear inside `apiActions`.)
 
@@ -56,7 +62,7 @@ Two operating modes of the single action:
 - `dd1326` name = `tool_ontology`; `dd1327` version = `1.0.4`; `dd1328` minimum Dédalo version = `7.0.0`; `dd1644` developer = `Dédalo team`; `dd612` description (*Handles Ontology transformation to 'jer_dd' records*).
 - `dd799` label = *Ontology* (localized across all project languages).
 - `dd1330` **affected_models** — the models the button attaches to (the ontology/registry record models, related from dd1342).
-- `dd1350` **affected_tipos** — `["ontology16","ontology17","ontology18","ontology19","ontology35","/^[a-z]+0$/"]`. The trailing regex matches every per-project **TLD root tipo** (e.g. `dmm0`, `oh0`), so the tool surfaces on any project's ontology root as well as on the generic ontology component tipos. (This is the `affected_tipos`-restriction path in `getElementTools`: only matching tipos pass.)
+- `dd1350` **affected_tipos** — `["ontology35", "/^(?!localontology0)[a-z]+0$/", "/^ontology[0-9]+$/"]`. The middle regex matches every per-project **TLD root tipo** (e.g. `dmm0`, `oh0`) except the local-override section, so the tool surfaces on any project's ontology root. (This is the `affected_tipos`-restriction path in `getElementTools`: only matching tipos pass.) The server's admission is narrower: an `ontology<N>` section surfaces the button but is refused by the action.
 - `dd1331` **show_in_inspector** = yes — the button renders in the section **inspector** panel (the path used for **list / batch** mode).
 - `dd1332` **show_in_component** = yes — the button renders inline on the matching **component** (the path used for **edit** mode on a single record).
 - `dd1333` require_translatable = no; `dd1354` active = yes; `dd1601` always_active = no.
@@ -89,12 +95,13 @@ const response = await data_manager.request({
 // response → { result:true, msg:"OK. Request completed … | 12 ms", errors:[] }
 ```
 
-**List / batch mode** is the same call with `section_id` omitted — the server then re-syncs every record of that `section_tipo` (a full scan, unfiltered) in one partial-success batch:
+**List / batch mode** is the same call with `section_id` omitted and the caller list's live sqo attached — the server re-syncs every record that sqo matches in one partial-success batch:
 
 ```js
 options : {
-    section_tipo : self.caller.section_tipo,   // every record of this section_tipo is re-synced (full scan)
+    section_tipo : self.caller.section_tipo,   // e.g. 'dmm0'
     section_id   : null,                       // absent → list mode (batch)
+    sqo          : structuredClone(list_sqo),  // its section_tipo must be exactly ['dmm0']
     mode         : self.caller.mode
 }
 // response → { result:true, msg:"OK. … | 84 ms", errors:[] }

@@ -459,20 +459,24 @@ flowchart TD
    `inspect_ontologies` calls `inspectOntology(tld)`, a pure read that diffs the
    runtime projection against the parsed source (missing / stale / orphaned).
    `regenerate_ontologies` calls `rebuildOntology(tld)`: a **transactional**
-   wipe-and-rebuild (delete + reinsert in one `withTransaction`, rolled back on
-   failure — no backup table). Because it commits atomically, no reader ever sees
-   the empty window, which is why there is no incremental companion any more (the
-   `ensureOntology` reconcile was removed 2026-08-11). It does **not** rebuild the
+   re-derive (orphans deleted, every parsed node upserted over its row — surviving
+   nodes keep their ids — in one `withTransaction`, rolled back on failure, no
+   backup table). Because it commits atomically, no reader ever sees an
+   intermediate state, which is why there is no incremental companion any more
+   (the `ensureOntology` reconcile was removed 2026-08-11). An ontology update
+   re-derives each updated TLD through the same function. It does **not** rebuild the
    LLM map or any other export file — those are refreshed by `export_ontologies`
    (WC-2026-08-11-regenerate-drops-llm-map-post-step).
-3. **Compile one section (or one record)** without a full regenerate with
-   `setRecordsInDdOntology({sectionTipo, sectionId})` (`tools/tool_ontology`).
-   With no `sectionId`, list mode is a **full-section scan**: every record of
-   the section is recompiled.
+3. **Compile one record (or the records a list shows)** without a full
+   regenerate with `setRecordsInDdOntology({sectionTipo, sectionId})`
+   (`tools/tool_ontology`). In list mode the tool sends the list's live search,
+   which must target exactly that section; there is no whole-section default.
+   Only `<tld>0` sections are accepted, and a record whose TLD field names
+   another TLD is reported and skipped — it can never overwrite that TLD's node.
 4. **Compile a single node** with
    `insertDdOntologyRecord(sectionTipo, sectionId)`.
 5. **Cache invalidation is automatic, not a manual step.** Every `dd_ontology`
-   write (`upsertDdOntologyNode`, `updateDdOntologyColumns`, `deleteTldNodes`)
+   write (`upsertDdOntologyNode`, `updateDdOntologyColumns`, the TLD deletes)
    ends by calling `clearOntologyDerivedCaches()` —
    the single chokepoint in `src/core/ontology/cache_invalidation.ts` that every
    cache-owning module (the resolver's node/matrix-table/filter caches,
@@ -481,7 +485,7 @@ flowchart TD
 
 !!! warning "Rebuild is a heavy write-side operation"
     `rebuildOntology()` / `setRecordsInDdOntology()` parse and upsert a node for
-    *every* matched record of the TLD, so it belongs to the authoring/recovery
+    *every* record in scope, so it belongs to the authoring/recovery
     flow, not a normal request. Run `inspectOntology()` first to see whether
     anything drifted at all. Normal reads always go through `resolver.ts`.
 

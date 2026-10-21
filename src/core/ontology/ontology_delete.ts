@@ -5,7 +5,7 @@
  * wrong record:
  *
  *  - `deleteOntologyByTld` — uninstall a TLD's ONTOLOGY and nothing else:
- *      1. every dd_ontology node with that tld (DELETE ... WHERE tld = $1);
+ *      1. every dd_ontology node with that tld (ontology_state retractOntology);
  *      2. the ontology_main registry row resolved FROM THE TLD (PHP
  *         get_ontology_main_from_tld) — NOT the caller's record;
  *      3. every node record of the '{tld}0' section (per-record delete pipeline
@@ -22,9 +22,9 @@
  * tld can match. Empty or unsafe tld → refuse (never guess).
  */
 
-import { deleteTldNodesReturningTipos } from '../db/dd_ontology.ts';
 import { sql } from '../db/postgres.ts';
 import { clearOntologyDerivedCaches } from './cache_invalidation.ts';
+import { retractOntology } from './ontology_state.ts';
 import { ONTOLOGY_MAIN_SECTION } from './ontology_tipos.ts';
 import { getOntologyMainFromTld } from './ontology_write.ts';
 import { getMatrixTableFromTipo } from './resolver.ts';
@@ -92,9 +92,12 @@ export async function deleteOntologyByTld(
 		return outcome;
 	}
 
-	// 1. dd_ontology nodes of the tld.
-	// The DELETE lives in db/dd_ontology.ts (T2): this module issues no DML.
-	outcome.deletedNodes = (await deleteTldNodesReturningTipos(safe)).length;
+	// 1. dd_ontology nodes of the tld — through the whole-tld authority
+	// (ontology_state.ts retractOntology; ontology_single_writer_tripwire): this
+	// module issues no DML. Step 3's record deletes would unproject each node
+	// themselves (the record lifecycle), but a node with no source record (an
+	// orphan) is only reached here.
+	outcome.deletedNodes = (await retractOntology(safe)).length;
 
 	// 2. the ontology_main registry row FOR THIS TLD (PHP delete_ontology step 2).
 	// Resolved from the tld, never from the caller — the caller may be a

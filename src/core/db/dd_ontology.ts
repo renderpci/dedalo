@@ -563,10 +563,16 @@ export async function updateDdOntologyColumns(
 	return true;
 }
 
-/** Delete one node by tipo (PHP delete()). Fans out cache invalidation. */
-export async function deleteDdOntologyNode(tipo: string): Promise<void> {
-	await sql`DELETE FROM dd_ontology WHERE tipo = ${tipo}`;
+/**
+ * Delete one node by tipo (PHP delete()). Returns the rows removed (0 or 1).
+ * Fans out cache invalidation.
+ */
+export async function deleteDdOntologyNode(tipo: string): Promise<number> {
+	const removed = (await sql`DELETE FROM dd_ontology WHERE tipo = ${tipo} RETURNING tipo`) as {
+		tipo: string;
+	}[];
 	await clearOntologyDerivedCaches();
+	return removed.length;
 }
 
 /** A search filter entry: scalar (→ '=') or {operator, value}. */
@@ -814,9 +820,10 @@ export async function alignDdOntologyIdSequence(): Promise<boolean> {
 }
 
 /**
- * The ONE dd_ontology tld-delete statement (T2): every row of the tld goes, the
- * removed tipos come back so a cascade (ontology_delete.ts) can count and report
- * them. `tld` MUST already be safeTld-validated by the caller; a mismatch is
+ * The whole-tld delete statement (T2): every row of the tld goes, the removed
+ * tipos come back so a caller (ontology_state.ts retractOntology — only the tld
+ * teardown, ontology_delete.ts, routes through it; the activation never retracts)
+ * can count and report them. `tld` MUST already be safeTld-validated by the caller; a mismatch is
  * refused loudly rather than turned into a wider delete. Fans out cache
  * invalidation.
  */
@@ -830,6 +837,33 @@ export async function deleteTldNodesReturningTipos(tld: string): Promise<string[
 	const removed = (await sql.unsafe('DELETE FROM dd_ontology WHERE tld = $1 RETURNING tipo', [
 		tld,
 	])) as { tipo: string }[];
+	await clearOntologyDerivedCaches();
+	return removed.map((row) => row.tipo);
+}
+
+/**
+ * The RECONCILE delete of one tld (ontology_state.ts rebuildOntology): every row of
+ * the tld EXCEPT `keepTipos` goes — the rows the re-derive is about to upsert keep
+ * their ids (no id churn), everything else (orphans) is removed. Same safe-tld
+ * refusal as deleteTldNodesReturningTipos; returns the removed tipos. Fans out
+ * cache invalidation.
+ */
+export async function deleteTldNodesExcept(
+	tld: string,
+	keepTipos: readonly string[],
+): Promise<string[]> {
+	if (safeTld(tld) !== tld) {
+		throw new DedaloError('internal.invariant', {
+			message: `deleteTldNodesExcept: '${tld}' is not a safe tld`,
+			coordinates: { tld },
+		});
+	}
+	const removed = (await sql.unsafe(
+		`DELETE FROM dd_ontology WHERE tld = $1 AND NOT (tipo = ANY(string_to_array($2::text, ',')))
+		 RETURNING tipo`,
+		// Tipos are letters+digits (the identifier grammar), so a comma join is lossless.
+		[tld, keepTipos.join(',')],
+	)) as { tipo: string }[];
 	await clearOntologyDerivedCaches();
 	return removed.map((row) => row.tipo);
 }

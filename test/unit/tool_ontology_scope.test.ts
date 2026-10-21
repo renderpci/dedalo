@@ -27,6 +27,22 @@ import { refusalOf } from '../helpers/refusal.ts';
 /** An ontology section with real rows in the suite DB: a sweep would resolve 216. */
 const POPULATED_SECTION = 'test0';
 
+/**
+ * This file's OWN governed scratch section (tld `zzqw`, owned here alone —
+ * scratch_tld_uniqueness_tripwire). Nothing ever writes to it: every case that
+ * names it asserts it EMPTY first, so "absent record / nothing written" is
+ * measured, never assumed from the ambient DB.
+ */
+const EMPTY_GOVERNED_SECTION = 'zzqw0';
+
+async function scratchSectionRecords(): Promise<number> {
+	const rows = (await sql.unsafe(
+		'SELECT count(*)::int AS c FROM matrix_ontology WHERE section_tipo = $1',
+		[EMPTY_GOVERNED_SECTION],
+	)) as { c: number }[];
+	return rows[0]?.c ?? 0;
+}
+
 const DEVELOPER: Principal = { userId: -1, isGlobalAdmin: true, isDeveloper: true };
 const PLAIN_USER: Principal = { userId: 7, isGlobalAdmin: false, isDeveloper: false };
 
@@ -90,15 +106,28 @@ describe('setRecordsInDdOntology — no whole-section default', () => {
 	});
 
 	test('wholeSection:true is still available to internal rebuild callers', async () => {
-		// The ontology-file import re-derives a whole TLD deliberately. A tipo with
-		// no matrix table stops it harmlessly while proving the guard lets it past.
+		// The installer re-derives a whole TLD deliberately (until integrator request #1
+		// retires the flag onto ontology_state.rebuildOntology). A GOVERNED scratch section with
+		// no records proves the scope guard lets it past while writing nothing.
+		expect(await scratchSectionRecords()).toBe(0);
+		const response = await setRecordsInDdOntology({
+			sectionTipo: EMPTY_GOVERNED_SECTION,
+			wholeSection: true,
+			userId: -1,
+		});
+		expect(response.ok).toBe(true);
+		expect(response.total).toBe(0);
+		expect(response.errors.join(' ')).not.toMatch(/no scope/i);
+	});
+
+	test('a section no ontology tld governs is refused before any scope work (ONT-2)', async () => {
 		const response = await setRecordsInDdOntology({
 			sectionTipo: 'zzz999',
 			wholeSection: true,
 			userId: -1,
 		});
-		expect(response.errors.join(' ')).toMatch(/matrix table/i);
-		expect(response.errors.join(' ')).not.toMatch(/no scope/i);
+		expect(response.ok).toBe(false);
+		expect(response.errors.join(' ')).toMatch(/not governed/i);
 	});
 });
 
@@ -145,14 +174,24 @@ describe('the handler takes its scope from the request', () => {
 	});
 
 	test('EDIT mode (an explicit section_id) still passes the scope guard', async () => {
-		// A tipo with no matrix table stops the run harmlessly AFTER the scope
-		// check, proving the guard does not block the single-record path.
+		// A governed section whose record is absent stops the run harmlessly AFTER the
+		// scope check, proving the guard does not block the single-record path.
+		expect(await scratchSectionRecords()).toBe(0);
 		const refusal = await refusalOf(
-			toolOntologySetRecords(ctx(DEVELOPER, { section_tipo: 'zzz999', section_id: 1 })),
+			toolOntologySetRecords(
+				ctx(DEVELOPER, { section_tipo: EMPTY_GOVERNED_SECTION, section_id: 1 }),
+			),
 		);
 		expect(refusal.code).toBe('tool.action_failed');
 		// The write's per-check detail joins the LOG-only message.
-		expect(refusal.message).toMatch(/matrix table/i);
 		expect(refusal.message).not.toMatch(/sqo/i);
+	});
+
+	test('a section that is not an ontology node section is refused as invalid options (ONT-2)', async () => {
+		const refusal = await refusalOf(
+			toolOntologySetRecords(ctx(DEVELOPER, { section_tipo: 'zzz999', section_id: 1 })),
+		);
+		expect(refusal.code).toBe('request.invalid_options');
+		expect(String(refusal.publicMessage)).toContain('is not an ontology node section');
 	});
 });

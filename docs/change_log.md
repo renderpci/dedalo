@@ -814,6 +814,31 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-11-export-buffered-cap-and-admission`.
 
+- **Deleting or restoring an ontology record now removes or restores its runtime node.**
+
+    Deleting an ontology record (or emptying its data) left its node in the runtime ontology, still
+    served everywhere; restoring a deleted record from the Time Machine brought the record back
+    without its node. Both now move the node with the record, in the same transaction. A local
+    override follows the same rule: deleting or restoring it re-applies the node it overrides. See
+    [Ontology write pipeline](./core/ontology/ontology_write.md).
+
+    Wire contract: `WC-2026-10-21-ontology-record-lifecycle`.
+
+- **An ontology update now removes the nodes a new package no longer carries.**
+
+    Before, **Update ontology** only added and refreshed nodes: a node dropped upstream stayed in the
+    runtime ontology for good, and a record whose TLD field named another TLD was silently written
+    into that other TLD. Each updated TLD is now re-derived in one transaction by the same writer the
+    ontology parser uses: dropped nodes go, a misfiled record is skipped and named in the update's
+    warnings, and the nodes that remain keep their internal ids. A model that the update adds or
+    renames now reaches every component that uses it in the same update, including components in
+    another updated TLD. A typology grouper that this installation created (for a thesaurus or TLD
+    of a typology the release does not ship) is kept: the update re-creates its record instead of
+    removing it, so the thesauri under it stay in the ontology tree. See
+    [Ontology write pipeline](./core/ontology/ontology_write.md).
+
+    Wire contract: `WC-2026-10-21-ontology-update-rebuild`.
+
 - **Docker stacks — ontology update no longer fails with EACCES**
 
     Both Docker stacks now set `ONTOLOGY_DATA_IO_DIR=/private/import/ontology`. Before this, the engine fell back to the in-tree `install/import/ontology`, which is root-owned in the image, so **Maintenance → Update ontology** died with `EACCES: permission denied, mkdir '…/install/import/ontology/7.0/.staging'`. Existing installs pick this up from the updated compose file: `docker compose up -d` recreates the engine container, and no manual `chown` is needed.
@@ -936,6 +961,21 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The ontology tool's "set records" can no longer write a node into another TLD's namespace.**
+
+    A record of `<tld>0` now only ever produces the node `<tld><id>`. A record whose TLD field
+    names another TLD is reported and skipped instead of overwriting that TLD's node; the tool
+    refuses sections that hold no ontology nodes (`test3`, `ontology1`, `localontology0`…) with
+    `request.invalid_options`; in list mode the search must target exactly the tool's section, and
+    a search with "recursive children" ticked is refused, because it would pick records the search
+    did not select. On a TLD registry record (`ontology35`), a TLD that still has rows in
+    `dd_ontology` but whose nodes drifted (for example only its root is left) is now re-derived in
+    full, not just its root; a TLD already in sync only has its root refreshed, and a TLD with no
+    rows stays empty — this action does not re-activate a TLD. See
+    [tool_ontology](./development/tools/reference/tool_ontology.md).
+
+    Wire contract: `WC-2026-10-21-ontology-projection-guard`.
+
 - **A developer install now installs the development dependencies `bun run dev` needs, and the development listener can serve HTTPS (`SERVER_TCP_TLS_CERT_FILE` + `SERVER_TCP_TLS_KEY_FILE`).**
 
     **Development dependencies.** The installer's bootstrap installs only its own,
@@ -987,12 +1027,15 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 4 entries"
+??? note "Wire contract — 7 entries"
 
     - `WC-2026-10-15-release-identity-from-tag`
     - `WC-2026-10-19-design-line-removed`
     - `WC-2026-10-19-inspector-record-info`
     - `WC-2026-10-20-element-context-default-lang`
+    - `WC-2026-10-21-ontology-projection-guard`
+    - `WC-2026-10-21-ontology-record-lifecycle`
+    - `WC-2026-10-21-ontology-update-rebuild`
 
 ## 7.0.0-beta.6 — 2026-10-15
 

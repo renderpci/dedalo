@@ -1369,12 +1369,14 @@ else {
 		},
 		'tools/tool_ontology/server/tool_ontology.ts :: toolOntologySetRecords': {
 			doors: {
-				setRecordsInDdOntology: {
+				// setRecordsInDdOntology (the projection route) is no longer a matrix door:
+				// since ONT-2 it writes dd_ontology only, through the guarded primitive.
+				syncOntologyActivation: {
 					verdict: 'derived-state',
 					bypass_reason: BYPASS.ontology,
 					sites: 2,
 					reason:
-						'parses the ontology section records into dd_ontology (the single write driver): ontology DEFINITIONS derived from the matrix_ontology records, with their own gates — not a curated value.',
+						"the ontology35 route (ONT-1/2): projection of the registry activation — a tld that still holds rows and DRIFTED is re-derived from its records (ontology_state.rebuildOntology, mainNode 'existing': the registry is read, never written, and the root names its typology grouper without building it); a converged one only has its `<tld>0` root re-planted; a tld with no rows is left empty, and nothing is retracted. It stays a matrix door STATICALLY only because rebuildOntology's 'ensure' main-node branch (ensureMainSection / createParentGrouper) is reachable from it. Ontology DEFINITIONS derived from the matrix_ontology records, with their own gates — not a curated value.",
 				},
 			},
 		},
