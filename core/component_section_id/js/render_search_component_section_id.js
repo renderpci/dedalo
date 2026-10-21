@@ -117,11 +117,15 @@ const get_input_element_search = (i, current_value, self) => {
 				const paste = (e.clipboardData || window.clipboardData).getData("text");
 				if (paste) {
 
+					// insert at caret/selection (preserves existing value)
+					const start	= input.selectionStart ?? input.value.length
+					const end	= input.selectionEnd ?? input.value.length
+
 					const beats = paste.split('\n')
 					const beats_length = beats.length
 
 					if (beats_length<2) {
-						e.target.value = paste;
+						input.setRangeText(paste, start, end, 'end')
 						change_handler()
 						return
 					}
@@ -137,10 +141,24 @@ const get_input_element_search = (i, current_value, self) => {
 						}
 					}
 
-					// change \n by , (paste list of section_id from import cases)
-					const value = parts.join(',')
+					if (parts.length<1) {
+						return
+					}
 
-					e.target.value = value;
+					// change \n by , (paste list of section_id from import cases)
+					let value = parts.join(',')
+
+					// add separators against adjacent existing values
+					const before	= input.value.slice(0, start).trim()
+					const after		= input.value.slice(end).trim()
+					if (before.length>0 && !before.endsWith(',')) {
+						value = ',' + value
+					}
+					if (after.length>0 && !after.startsWith(',')) {
+						value = value + ','
+					}
+
+					input.setRangeText(value, start, end, 'end')
 					change_handler()
 				}
 			}
