@@ -7,11 +7,14 @@
  *     into a running daemon with a surprising default. A site builder that came up with an
  *     empty SERVICE_TOKEN, or pointing its workspaces at the wrong root, would be worse
  *     than one that never came up.
- *   - **Nothing downstream touches process.env.** Every consumer imports `config`, so the
- *     schema below is the single, complete census of what this service can be tuned with.
- *     That matters doubly here because agent/build children get a CONSTRUCTED environment
- *     (drivers allowlist what they forward) — a stray `process.env` read elsewhere would
- *     blur that boundary.
+ *   - **The schema below is what this service is TUNED with.** Its consumers import
+ *     `config`. That is not a claim that no other module reads the environment: the PATH a
+ *     child's constructed environment carries is read where that environment is built, and
+ *     the in-unit egress shim (`drivers/egress_shim.ts`) runs in the agent's unit, without
+ *     this module, on the keys the unit fixes. What IS held is the boundary that matters
+ *     here — agent/build children get a CONSTRUCTED environment (drivers allowlist what they
+ *     forward), never this process's: tests/agent_env_boundary.test.ts reads it off real
+ *     children, so a merge through any helper or default is red, however it is spelled.
  *
  * WHAT CHANGED WITH THE INSTANCE MODEL, AND WHY IT HAD TO.
  *

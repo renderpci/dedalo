@@ -341,6 +341,10 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
     // Commit whatever the agent wrote, so the turn is a rollback point.
     try {
       await commitAll(slug, `agent: session ${sessionId} turn ${turn}`, policy);
+      // A commit that resolved (made, or a clean tree) recorded the WHOLE tree (`add -A`) —
+      // including any work an earlier refused commit OWED. Nothing is owed after it; left set,
+      // the next boot would ask git again and name whatever landed since "recovered".
+      meta.recovery_pending = undefined;
     } catch (error) {
       // A failed commit must not fail the turn — but it is never a silence.
       console.error(`[sessions] the commit after turn ${turn} of '${slug}' failed:`, error);
