@@ -23,8 +23,9 @@
  *   G1f a node's `model` reaches its fixpoint in ONE derive: a model the release adds (used
  *       by instances below and above its id) or renames resolves in the same rebuild
  *       (ontology_state resolveModelsAgainstParse), and a model of ANOTHER staged tld reaches
- *       an instance staged before it (deriveOntologyPackages pass 2). Mutation-proven: drop
- *       either half and its legs go red;
+ *       an instance staged before it (deriveOntologyPackages pass 2); a same-tld model whose
+ *       record is removed resolves to null in the same rebuild (the orphaned row is not read).
+ *       Mutation-proven: drop either half (or the removed-model branch) and its legs go red;
  *   G1g a section whose records ALL lack a tld is an ERROR of the derive (rebuildFailure —
  *       fatal in the installer and the seed compiler), and the reconcile delete refuses an
  *       unsafe tld (internal.invariant) without deleting anything;
@@ -33,7 +34,12 @@
  *       typology still referenced — by a record's parent locator (hierarchytype) or by a
  *       `<tld>0` root's parent (ontologytype) — before the sweep, so the grouper node survives
  *       and the child's parent resolves. Control: the bare rebuild deletes the node (the
- *       situation reproduces the defect);
+ *       situation reproduces the defect). Every G1h leg re-derives the suite's CORE grouper
+ *       tlds, so each is guarded: in sync before, whole projection byte-identical after (bar
+ *       the scratch typology nodes); and provisioning a grouper never re-plants the EXISTING
+ *       grouper root (createParentGrouper's register path re-hung `hierarchytype0` under
+ *       `ontologytype14` while the rebuild hangs it under its registry typology — mutation:
+ *       re-plant unconditionally → red);
  *   G1e activation of an active tld whose projection is root-only brings every node back
  *       (inSync), in edit AND list mode; a converged tld is not re-derived (its node rows are
  *       not written — xmin — only its root re-planted); a tld with no projection stays empty
@@ -51,7 +57,7 @@
  * `ontologytype0/942611` + `hierarchytype0/942612` and their nodes. Zero residue asserted.
  */
 
-import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
+import { afterAll, afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { deleteTldNodesExcept, readDdOntologyRow } from '../../src/core/db/dd_ontology.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
@@ -268,6 +274,8 @@ afterAll(async () => {
 	expect(await registryIds(OWN)).toEqual([]);
 	expect(await rowOf(SCRATCH_HIERARCHY_GROUPER)).toBeNull();
 	expect(await grouperRecordCount(HIERARCHY_TYPE_TLD, SCRATCH_HIERARCHY_TYPOLOGY)).toBe(0);
+	expect(await rowOf(SCRATCH_GROUPER)).toBeNull();
+	expect(await grouperRecordCount(ONTOLOGY_TYPE_TLD, SCRATCH_TYPOLOGY)).toBe(0);
 });
 
 // ---------------------------------------------------------------------------
@@ -307,6 +315,46 @@ describe('G1c: deriveOntologyPackages reconciles each imported tld', () => {
 // ---------------------------------------------------------------------------
 
 describe('G1h: installation-made grouper records survive a grouper package update', () => {
+	/**
+	 * G1h re-derives the suite DB's CORE grouper tlds (hierarchytype / ontologytype) in full —
+	 * a surface this test did not build. Guarded both ways: the tld must be IN SYNC before the
+	 * leg (ambient drift reds here, loudly, instead of being silently reconciled away by the
+	 * leg's rebuild), and its whole projection — every column of every row but the scratch
+	 * typology nodes — must be byte-identical after it.
+	 */
+	const CORE_GROUPER_TLDS = [HIERARCHY_TYPE_TLD, ONTOLOGY_TYPE_TLD];
+	const coreBefore = new Map<string, unknown[]>();
+
+	async function coreProjection(tld: string): Promise<unknown[]> {
+		const rows = (await sql.unsafe(
+			`SELECT to_jsonb(d) AS row FROM dd_ontology d
+			  WHERE tld = $1 AND NOT (tipo = ANY(string_to_array($2::text, ',')))
+			  ORDER BY tipo`,
+			[tld, [SCRATCH_GROUPER, SCRATCH_HIERARCHY_GROUPER].join(',')],
+		)) as { row: unknown }[];
+		return rows.map((item) => item.row);
+	}
+
+	beforeEach(async () => {
+		for (const tld of CORE_GROUPER_TLDS) {
+			const state = await inspectOntology(tld);
+			expect({ tld, drift: state.drift }).toEqual({ tld, drift: [] });
+			const projection = await coreProjection(tld);
+			// Floor: the snapshot read the core tld (an empty read would compare nothing).
+			expect(projection.length).toBeGreaterThan(0);
+			coreBefore.set(tld, projection);
+		}
+	});
+
+	afterEach(async () => {
+		for (const tld of CORE_GROUPER_TLDS) {
+			const before = coreBefore.get(tld);
+			if (before === undefined)
+				throw new Error(`G1h: no snapshot of '${tld}' (beforeEach did not run)`);
+			expect({ tld, rows: await coreProjection(tld) }).toEqual({ tld, rows: before });
+		}
+	});
+
 	/** What the scoped DELETE + COPY of a grouper package does to a record it does not carry. */
 	async function packageImportWipes(grouperTld: string, typologyId: number): Promise<void> {
 		await sql.unsafe('DELETE FROM matrix_ontology WHERE section_tipo = $1 AND section_id = $2', [
@@ -390,6 +438,23 @@ describe('G1h: installation-made grouper records survive a grouper package updat
 		expect(await readDdOntologyRow(SCRATCH_GROUPER)).not.toBeNull();
 	});
 
+	test('provisioning a grouper (register path) never re-hangs the EXISTING grouper root', async () => {
+		await assertTestDatabase('ontology_derive_packages_native');
+		const grouperRoot = await rowOf('hierarchytype0');
+		expect(grouperRoot).not.toBeNull();
+
+		// What hierarchy provisioning calls (createParentGrouper, default register: true).
+		await createParentGrouper(
+			HIERARCHY_TYPE_GROUP,
+			HIERARCHY_TYPE_TLD,
+			SCRATCH_HIERARCHY_TYPOLOGY,
+			USER_ID,
+		);
+		expect(await readDdOntologyRow(SCRATCH_HIERARCHY_GROUPER)).not.toBeNull();
+		// The root stays the projection of its registry row (rebuild / activation own it).
+		expect(await rowOf('hierarchytype0')).toEqual(grouperRoot);
+	});
+
 	test('nothing referenced, nothing re-made: a package-only update writes no grouper record', async () => {
 		const outcome = await deriveOntologyPackages(
 			[{ tld: HIERARCHY_TYPE_TLD, sectionTipo: 'hierarchytype0' } as StagedFile],
@@ -462,6 +527,27 @@ describe('G1f: model columns reach the fixpoint inside one derive', () => {
 		expect(await modelOfRow(`${OWN}1`)).toBe('zz_model_renamed');
 		expect((await inspectOntology(OWN)).inSync).toBe(true);
 		expect((await inspectOntology(OTHER)).inSync).toBe(true);
+	});
+
+	test('a model whose RECORD is removed, still referenced by an instance, converges in one rebuild', async () => {
+		await plantRoot();
+		await seed(1, OWN, 'zz_model_gone');
+		await seed(2, OWN, 'instance', modelOf(OWN_SECTION, 1));
+		await rebuildOntology(OWN, USER_ID, { mainNode: 'existing' });
+		expect(await modelOfRow(`${OWN}2`)).toBe('zz_model_gone');
+
+		// The release drops the model record; the instance still points at it.
+		await sql.unsafe('DELETE FROM matrix_ontology WHERE section_tipo = $1 AND section_id = 1', [
+			OWN_SECTION,
+		]);
+		await clearOntologyDerivedCaches();
+		const outcome = await rebuildOntology(OWN, USER_ID, { mainNode: 'existing' });
+		expect(outcome.errors).toEqual([]);
+		// The model row went as an orphan in the same transaction: the instance's model is what
+		// the parser reads without it (null), not the deleted row's name.
+		expect(await readDdOntologyRow(`${OWN}1`)).toBeNull();
+		expect(await modelOfRow(`${OWN}2`)).toBeNull();
+		expect((await inspectOntology(OWN)).inSync).toBe(true);
 	});
 });
 

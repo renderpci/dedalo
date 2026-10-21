@@ -43,7 +43,9 @@
   - step messages are the rebuild's own: `Ontology '<tld>' rebuilt…`,
     `Ontology '<tld>' rebuilt with drift`, or `…; N source record(s) declare another tld and
     were skipped`.
-  The envelope (`result`, `msg` prefix, `root_info`) is unchanged.
+  The envelope (v2: `ok`, `msg` prefix, `errors`, the `root_info` extension key —
+  WC-2026-08-16-error-envelope-compat-removal) is unchanged; `ok:true` with a non-empty
+  `errors` is the warning case.
 - **Reason:** `dd_ontology(tld)` is the projection of `matrix_ontology(<tld>0)`; an update
   that leaves orphans or writes foreign nodes breaks the invariant the resolver serves from,
   and only the one whole-tld writer can delete (single-writer tripwire).

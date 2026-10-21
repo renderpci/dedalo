@@ -44,22 +44,47 @@
  * never overwrite a canonical node of another tld — the `foreign` drift
  * ontology_state reports stays a report, not a write.
  *
+ * CONCURRENCY. Every door here takes the tld's projection lock
+ * (dd_ontology.ts lockOntologyProjection) inside its transaction BEFORE its
+ * first read, exactly as the whole-tld re-derive does before its parse: a
+ * rebuild and a delete / undelete of the same `<tld>0` record are ordered, so
+ * node presence follows record presence. Gate:
+ * test/unit/ontology_projection_race_native.test.ts.
+ *
+ * WHO MAY PROJECT CONTENT (developer-only, as the explicit door). Writing a
+ * record's PARSE into the live dd_ontology is a developer act — tool_ontology
+ * `set_records_in_dd_ontology` is declared `developer` and asserts it. The
+ * lifecycle hook is reached by plain section grants (a TM undelete, a bulk
+ * revert, an override delete), so a branch that would write CONTENT — a
+ * governed birth, an override's re-parse on birth or death — runs only for a
+ * developer principal or for the SYSTEM (no request principal: the installer,
+ * the update engine, a CLI/maintenance job). Anyone else's event writes no
+ * content: the node stays as a developer last projected it and
+ * inspectOntology reports the record as `missing` / `stale` drift for
+ * tool_ontology to resolve. A governed DEATH is not content: the node of a
+ * record that no longer exists is removed for every principal (owner decision
+ * D3, PHP parity). Gate: ontology_record_lifecycle_native L11.
+ *
  * WHY HERE (section_record/, a leaf). The lifecycle hook is called from the
  * write chokepoint, so this module must not pull the provisioning graph
  * (ontology_write.ts → create_record → select_lang …) into it: it imports only
- * the dd_ontology layer, the parser and the pure tld rules.
+ * the dd_ontology layer, the transaction primitive, the request-context
+ * accessor, the parser and the pure tld rules.
  */
 
 import {
 	type DdOntologyNode,
 	deleteDdOntologyNode,
+	lockOntologyProjection,
 	readDdOntologyRow,
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
+import { withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { ONTOLOGY_OVERWRITE } from '../ontology/ontology_tipos.ts';
 import { parseSectionRecordToOntologyNode } from '../ontology/parser.ts';
 import { buildTipo, LOCAL_ONTOLOGY_SECTION, requiredOntologyTld } from '../ontology/tld.ts';
+import { currentPrincipal } from '../security/request_context.ts';
 
 declare const addressBrand: unique symbol;
 
@@ -139,18 +164,47 @@ export class ForeignOntologyNodeRefused extends DedaloError {
 export async function projectOntologyNode(
 	address: OntologyNodeAddress,
 ): Promise<{ kind: 'projected'; tipo: string } | { kind: 'tldless' }> {
-	const node = await parseSectionRecordToOntologyNode(address.sectionTipo, address.sectionId);
-	if (node === null) return { kind: 'tldless' };
-	if (node.tld !== address.tld || node.tipo !== address.tipo) {
-		throw new ForeignOntologyNodeRefused(address, node);
-	}
-	await upsertDdOntologyNode(node);
-	return { kind: 'projected', tipo: node.tipo };
+	// The parse and the upsert are one unit under the tld's projection lock (module
+	// header, CONCURRENCY): joins the caller's transaction, or opens its own.
+	return withTransaction(async () => {
+		await lockOntologyProjection([address.tld]);
+		const node = await parseSectionRecordToOntologyNode(address.sectionTipo, address.sectionId);
+		if (node === null) return { kind: 'tldless' } as const;
+		if (node.tld !== address.tld || node.tipo !== address.tipo) {
+			throw new ForeignOntologyNodeRefused(address, node);
+		}
+		await upsertDdOntologyNode(node);
+		return { kind: 'projected', tipo: node.tipo } as const;
+	});
 }
 
-/** Remove the node at `address` (its tipo only). Returns the rows removed (0 or 1). */
+/** Remove the node at `address` (its tipo only), under the tld's projection lock. Returns the rows removed (0 or 1). */
 export async function unprojectOntologyNode(address: OntologyNodeAddress): Promise<number> {
-	return deleteDdOntologyNode(address.tipo);
+	return withTransaction(async () => {
+		await lockOntologyProjection([address.tld]);
+		return deleteDdOntologyNode(address.tipo);
+	});
+}
+
+/**
+ * Whether the current principal may have record CONTENT written into the live
+ * dd_ontology (module header, WHO MAY PROJECT CONTENT): a developer, or the
+ * system (no request principal). Read through the request-context backstop —
+ * the lifecycle hook sits under the write chokepoint, below every door that
+ * holds the principal.
+ */
+function mayProjectContent(): boolean {
+	const principal = currentPrincipal();
+	return principal === undefined || principal.isDeveloper;
+}
+
+/** The skipped outcome (and its operator warning) of a content branch refused to a non-developer. */
+function developerOnly(context: string, tipo?: string): OntologyLifecycleOutcome {
+	const reason = 'projection is developer-only';
+	console.warn(
+		`[ontology_projection] ${context}: not projected — ${reason}; the record stays as drift for tool_ontology`,
+	);
+	return tipo === undefined ? { action: 'skipped', reason } : { action: 'skipped', tipo, reason };
 }
 
 export interface OntologyLifecycleOutcome {
@@ -213,21 +267,36 @@ function overrideTargets(relationImage: unknown): OntologyNodeAddress[] {
 
 type TolerantKind = Awaited<ReturnType<typeof projectTolerant>>;
 
+const NO_PROJECTED_TARGET: OntologyLifecycleOutcome = {
+	action: 'skipped',
+	reason: 'no projected override target',
+};
+
 /** An override's lifecycle: re-parse each ALREADY-projected node it addresses. */
 async function overrideLifecycle(
 	relationImage: unknown,
 	context: string,
 ): Promise<OntologyLifecycleOutcome> {
+	const targets = overrideTargets(relationImage);
+	if (targets.length === 0) return NO_PROJECTED_TARGET;
+	if (!mayProjectContent()) return developerOnly(context);
+	// Every target tld locked (sorted) BEFORE the existence reads below.
+	await lockOntologyProjection(targets.map((target) => target.tld));
 	const kinds = new Map<string, TolerantKind>();
-	for (const target of overrideTargets(relationImage)) {
+	for (const target of targets) {
 		if ((await readDdOntologyRow(target.tipo)) === null) continue;
 		kinds.set(target.tipo, await projectTolerant(target, context));
 	}
+	return overrideOutcome(kinds);
+}
+
+/** What an override's re-parse answers: the re-projected tipos, else a refusal, else nothing. */
+function overrideOutcome(kinds: ReadonlyMap<string, TolerantKind>): OntologyLifecycleOutcome {
 	const reprojected = [...kinds].filter(([, kind]) => kind === 'projected').map(([tipo]) => tipo);
 	if (reprojected.length > 0) return { action: 'reprojected', tipo: reprojected.join(',') };
 	return [...kinds.values()].includes('refused')
 		? { action: 'refused', reason: 'override target parses outside its namespace' }
-		: { action: 'skipped', reason: 'no projected override target' };
+		: NO_PROJECTED_TARGET;
 }
 
 /** What a governed birth's tolerant projection answers, by kind. */
@@ -242,6 +311,8 @@ async function governedBirth(
 	address: OntologyNodeAddress,
 	context: string,
 ): Promise<OntologyLifecycleOutcome> {
+	if (!mayProjectContent()) return developerOnly(context, address.tipo);
+	await lockOntologyProjection([address.tld]);
 	if ((await readDdOntologyRow(`${address.tld}0`)) === null) {
 		return { action: 'skipped', tipo: address.tipo, reason: 'tld not projected' };
 	}
@@ -268,6 +339,9 @@ async function governedBirth(
  *    deletes a canonical node and never creates one.
  *  - anything else: nothing (`none`, decided from the section tipo alone — no
  *    database read, so the chokepoints call this unconditionally).
+ * Every branch that writes takes the tld's projection lock first; the CONTENT
+ * branches (a governed birth, an override's re-parse) run only for a developer
+ * or the system (module header) — anyone else's answers `skipped`.
  */
 export async function projectOntologyRecordLifecycle(
 	sectionTipo: string,
@@ -276,11 +350,15 @@ export async function projectOntologyRecordLifecycle(
 	relationImage: unknown,
 ): Promise<OntologyLifecycleOutcome> {
 	if (sectionTipo === LOCAL_ONTOLOGY_SECTION) {
-		return overrideLifecycle(relationImage, `override ${sectionTipo}/${sectionId} ${event}`);
+		return withTransaction(() =>
+			overrideLifecycle(relationImage, `override ${sectionTipo}/${sectionId} ${event}`),
+		);
 	}
 	const address = ontologyNodeAddress(sectionTipo, sectionId);
 	if (address === null) return { action: 'none' };
-	if (event === 'birth') return governedBirth(address, `undelete ${sectionTipo}/${sectionId}`);
+	if (event === 'birth') {
+		return withTransaction(() => governedBirth(address, `undelete ${sectionTipo}/${sectionId}`));
+	}
 	await unprojectOntologyNode(address);
 	return { action: 'deleted', tipo: address.tipo };
 }

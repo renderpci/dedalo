@@ -33,7 +33,10 @@
  * a torn-down tld holds none. "Inactive ⇒ empty" is NOT enforced by activation: active is
  * defined by having rows (syncOntologyActivation; hierarchy4 = owner question Q1). The
  * per-record and lifecycle doors live in section_record/ontology_projection.ts (its header
- * names every door and the gates).
+ * names every door and the gates). Under concurrency the invariant rests on ONE lock: every
+ * door that derives a tld's nodes (rebuild, retract, the per-record and lifecycle doors) takes
+ * the tld's projection lock (dd_ontology.ts lockOntologyProjection) before its first read —
+ * withTransaction alone does not order a parse against a concurrent record delete/undelete.
  *
  * WHY THERE IS NO INCREMENTAL RECONCILE (removed 2026-08-11). An `ensureOntology` used to sit
  * between the two: upsert the missing/stale nodes, delete the orphaned ones, fill the main node
@@ -112,6 +115,7 @@ import {
 	deleteTldNodesExcept,
 	deleteTldNodesReturningTipos,
 	getActiveTlds,
+	lockOntologyProjection,
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
@@ -133,7 +137,12 @@ import {
 } from './ontology_write.ts';
 import { type OntologyNodeDefect, parseSectionRecordToOntologyNodeWithDefects } from './parser.ts';
 import { getMatrixTableFromTipo, getModelByTipo } from './resolver.ts';
-import { LOCAL_ONTOLOGY_SECTION, mapTldToTargetSectionTipo, safeTld } from './tld.ts';
+import {
+	getTldFromTipo,
+	LOCAL_ONTOLOGY_SECTION,
+	mapTldToTargetSectionTipo,
+	safeTld,
+} from './tld.ts';
 
 /**
  * One node's place in the diff. `foreign` is not a dd_ontology state at all — it is a SOURCE
@@ -317,7 +326,7 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
 			});
 		}
 	}
-	resolveModelsAgainstParse(own);
+	resolveModelsAgainstParse(own, tld);
 	return { own, foreign, tldless, invalidReferences };
 }
 
@@ -328,16 +337,24 @@ async function parseMatrixNodes(tld: string): Promise<ParsedMatrixNodes> {
  * is the pre-rebuild one: a model the release adds, or renames, would leave every instance with
  * `model = NULL` / the old name until a second pass. Resolve those against the parse being
  * written instead (same strict rule: that node's term in STRUCTURE_LANG, no fallback), so one
- * rebuild converges and inspect compares against the fixpoint. A model of ANOTHER tld is the
- * update's second pass (ontology_update.ts deriveOntologyPackages). Gate:
- * ontology_derive_packages_native G1f.
+ * rebuild converges and inspect compares against the fixpoint. A same-tld model the parse
+ * does NOT produce (its record removed: the rebuild deletes its row as an orphan) resolves to
+ * `null` — what the parser reads once that row is gone — never to the stored row's name the
+ * same transaction is about to delete. A model of ANOTHER tld is the update's second pass
+ * (ontology_update.ts deriveOntologyPackages). Gate: ontology_derive_packages_native G1f.
  */
-function resolveModelsAgainstParse(own: Map<string, DdOntologyNode>): void {
+function resolveModelsAgainstParse(own: Map<string, DdOntologyNode>, tld: string): void {
 	for (const node of own.values()) {
 		if (node.model_tipo === null) continue;
 		const modelNode = own.get(node.model_tipo);
 		if (modelNode !== undefined) node.model = modelNode.term?.[STRUCTURE_LANG] ?? null;
+		else if (isRemovedSameTldModel(node.model_tipo, tld)) node.model = null;
 	}
+}
+
+/** A model tipo of THIS tld the parse does not produce (and not its root): its row is an orphan. */
+function isRemovedSameTldModel(modelTipo: string, tld: string): boolean {
+	return getTldFromTipo(modelTipo) === tld && modelTipo !== `${tld}0`;
 }
 
 /** The operator-facing line for one misfiled record: what is wrong, where, and that nothing ran. */
@@ -691,6 +708,12 @@ export async function rebuildOntology(
 			// per-insert check in upsertDdOntologyNode is then a no-op, and two rebuilds never
 			// both upgrade a held ROW EXCLUSIVE into the alignment lock (deadlock).
 			await alignDdOntologyIdSequence();
+			// The tld's projection lock BEFORE the parse (dd_ontology.ts lockOntologyProjection):
+			// a concurrent record delete / undelete of `<tld>0` (the lifecycle hook) or a
+			// per-record projection is ordered against this whole read-modify-write, so the parse
+			// below cannot go stale before the deletes and upserts it drives. Taken after the
+			// sequence heal: that may LOCK TABLE, and nothing here holds a dd_ontology lock yet.
+			await lockOntologyProjection([tld]);
 			// Parse BEFORE any delete: a bad record aborts the tx with the live data intact.
 			const { own: parsed, foreign } = await parseMatrixNodes(tld);
 			// Misfiled records are reported, never rebuilt: the delete below is scoped to THIS
@@ -741,7 +764,11 @@ export async function rebuildOntology(
  * mismatch is refused loudly by the delete primitive, never widened.
  */
 export async function retractOntology(tld: string): Promise<string[]> {
-	return withTransaction(() => deleteTldNodesReturningTipos(tld));
+	return withTransaction(async () => {
+		// Ordered against the per-record / lifecycle doors (rebuildOntology's lock).
+		await lockOntologyProjection([tld]);
+		return deleteTldNodesReturningTipos(tld);
+	});
 }
 
 /**

@@ -819,8 +819,12 @@ Merged since the last release; these ship with the next one.
     Deleting an ontology record (or emptying its data) left its node in the runtime ontology, still
     served everywhere; restoring a deleted record from the Time Machine brought the record back
     without its node. Both now move the node with the record, in the same transaction. A local
-    override follows the same rule: deleting or restoring it re-applies the node it overrides. See
-    [Ontology write pipeline](./core/ontology/ontology_write.md).
+    override follows the same rule: deleting or restoring it re-applies the node it overrides.
+    Writing a record's content into the runtime ontology stays a developer action: when a user who
+    is not a developer restores a record, or deletes or restores an override, the record changes
+    but the node does not, and the ontology inspection lists it as drift for a developer to apply.
+    An ontology rebuild and a record delete or restore on the same TLD no longer race each other.
+    See [Ontology write pipeline](./core/ontology/ontology_write.md).
 
     Wire contract: `WC-2026-10-21-ontology-record-lifecycle`.
 

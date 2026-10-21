@@ -34,7 +34,16 @@
  *      target from the locked PRE-WIPE relation (mutation: a null relation image → red);
  *   L10 only the namespace refusal is tolerated by a birth: a grammar / constraint
  *      `ontology.invalid_node` from the re-projection (forced at the write door — no parse
- *      reaches one today) aborts the undelete, row and node both absent.
+ *      reaches one today) aborts the undelete, row and node both absent;
+ *   L11 WHO MAY PROJECT CONTENT (closure r0): the lifecycle is reached by plain section grants
+ *      (a TM undelete, a bulk revert, an override delete), while writing a record's parse into
+ *      the live dd_ontology is developer-only (tool_ontology set_records_in_dd_ontology). Under
+ *      a NON-developer principal: L11a a governed undelete restores the record and writes NO
+ *      node (`missing` drift for tool_ontology); L11b an override delete and L11c its undelete
+ *      leave the target node byte-identical; L11d a governed delete still removes the node
+ *      (owner decision D3 — removal is not content). L11e the same undelete under a DEVELOPER
+ *      principal projects (the positive control: the context wrapper itself blocks nothing).
+ *      Mutation-checked 2026-10-21: the principal check dropped → L11a/b/c red.
  *
  * RED-FIRST, honestly: L1/L2/L3/L6a/L6b/L9 are red at the pre-fix sha (the finding). L4/L5/L7/L8 are
  * GUARDS of the fix's own edges and are green pre-fix BY CONSTRUCTION — no projection exists to
@@ -45,7 +54,8 @@
  * Scratch: tlds `zzlca` (section zzlca0) + `zzlcb` (zzlcb0); `localontology0` ids LOCAL_IDS
  * (distinct from ontology_overwrite_native's); L9b plants the `localontology0` ROOT only when
  * the suite DB lacks it, and removes only what it planted. Swept before and after, zero
- * residue asserted.
+ * residue asserted (dd_ontology, matrix_ontology, matrix_time_machine, matrix_counter — the
+ * explicit-id undeletes raise the scratch sections' counters).
  */
 
 import { afterAll, beforeEach, describe, expect, spyOn, test } from 'bun:test';
@@ -60,6 +70,8 @@ import {
 	deleteSectionData,
 	deleteSectionRecord,
 } from '../../src/core/section/record/delete_record.ts';
+import type { Principal } from '../../src/core/security/permissions.ts';
+import { runWithRequestContext } from '../../src/core/security/request_context.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import {
 	restoreAbsentSectionRow,
@@ -219,13 +231,31 @@ async function sweep(): Promise<void> {
 		'DELETE FROM matrix_time_machine WHERE section_tipo IN ($1, $2) OR (section_tipo = $3 AND section_id IN ($4, $5))',
 		[OWN_SECTION, OTHER_SECTION, LOCAL, ...LOCAL_IDS],
 	);
+	await sql.unsafe('DELETE FROM matrix_counter WHERE tipo IN ($1, $2)', [
+		OWN_SECTION,
+		OTHER_SECTION,
+	]);
 	await clearOntologyDerivedCaches();
+}
+
+/** Every scratch row this file can leave, outside dd_ontology (matrix, TM, counters). */
+async function scratchSourceResidue(): Promise<number> {
+	const rows = (await sql.unsafe(
+		`SELECT (SELECT count(*) FROM matrix_ontology
+		          WHERE section_tipo IN ($1, $2) OR (section_tipo = $3 AND section_id IN ($4, $5)))
+		      + (SELECT count(*) FROM matrix_time_machine
+		          WHERE section_tipo IN ($1, $2) OR (section_tipo = $3 AND section_id IN ($4, $5)))
+		      + (SELECT count(*) FROM matrix_counter WHERE tipo IN ($1, $2)) AS n`,
+		[OWN_SECTION, OTHER_SECTION, LOCAL, ...LOCAL_IDS],
+	)) as { n: number | string }[];
+	return Number(rows[0]?.n ?? -1);
 }
 
 beforeEach(sweep);
 afterAll(async () => {
 	await sweep();
 	expect(await scratchTipos()).toEqual([]);
+	expect(await scratchSourceResidue()).toBe(0);
 });
 
 /** zzlca0 root + zzlca0/<id> seeded and projected through today's primitive. */
@@ -472,5 +502,92 @@ describe('L10: only the namespace refusal is tolerated by a birth', () => {
 		}
 		expect(await matrixRowExists(OWN_SECTION, 13)).toBe(false);
 		expect(await readDdOntologyRow(`${OWN}13`)).toBeNull();
+	});
+});
+
+describe('L11: content projection is developer-only; removal is not', () => {
+	const NON_DEVELOPER: Principal = Object.freeze({
+		userId: USER_ID,
+		isGlobalAdmin: true,
+		isDeveloper: false,
+	});
+	const DEVELOPER: Principal = Object.freeze({
+		userId: USER_ID,
+		isGlobalAdmin: true,
+		isDeveloper: true,
+	});
+	/** Run `work` as `principal` (the request-context backstop the lifecycle reads). */
+	const as = <T>(principal: Principal, work: () => Promise<T>): Promise<T> =>
+		runWithRequestContext(
+			{ principal, session: null, requestId: 'ontology_record_lifecycle_l11', clientIp: '' },
+			work,
+		);
+
+	/** Delete zzlca0/<id> (node removed) and answer its snapshot. */
+	async function deletedOwnRecord(sectionId: number): Promise<{ id: number; data: unknown }> {
+		await projectedOwnRecord(sectionId);
+		await deleteSectionRecord(OWN_SECTION, sectionId, USER_ID);
+		expect(await readDdOntologyRow(`${OWN}${sectionId}`)).toBeNull();
+		return deletedSnapshot(OWN_SECTION, sectionId);
+	}
+
+	test('L11a a non-developer undelete restores the record and writes no node (missing drift)', async () => {
+		const snapshot = await deletedOwnRecord(21);
+
+		await as(NON_DEVELOPER, () =>
+			restoreSection(snapshot.data, snapshot.id, OWN_SECTION, 21, USER_ID),
+		);
+		expect(await matrixRowExists(OWN_SECTION, 21)).toBe(true);
+		expect(await readDdOntologyRow(`${OWN}21`)).toBeNull();
+		expect(kinds(await inspectOntology(OWN), 'missing')).toEqual([`${OWN}21`]);
+	});
+
+	test('L11e the same undelete as a DEVELOPER projects the node', async () => {
+		const snapshot = await deletedOwnRecord(22);
+
+		await as(DEVELOPER, () => restoreSection(snapshot.data, snapshot.id, OWN_SECTION, 22, USER_ID));
+		expect(await termOf(`${OWN}22`)).toBe('own 22');
+	});
+
+	/** zzlca0/<id> 'canon' overridden by LOCAL_IDS[0] 'local', projected (term 'local'). */
+	async function overriddenOwnNode(sectionId: number): Promise<void> {
+		await plantRoot(OWN);
+		await seed(OWN_SECTION, sectionId, OWN, 'canon');
+		await seedOverride(LOCAL_IDS[0], sectionId, 'local');
+		expect(await insertDdOntologyRecord(OWN_SECTION, sectionId)).toBe(`${OWN}${sectionId}`);
+		expect(await termOf(`${OWN}${sectionId}`)).toBe('local');
+	}
+
+	test('L11b a non-developer override delete leaves the target node untouched (stale drift)', async () => {
+		await overriddenOwnNode(23);
+		const overridden = await rowOf(`${OWN}23`);
+
+		await as(NON_DEVELOPER, () => deleteSectionRecord(LOCAL, LOCAL_IDS[0], USER_ID));
+		expect(await matrixRowExists(LOCAL, LOCAL_IDS[0])).toBe(false);
+		expect(await rowOf(`${OWN}23`)).toEqual(overridden);
+		expect(kinds(await inspectOntology(OWN), 'stale')).toEqual([`${OWN}23`]);
+	});
+
+	test('L11c a non-developer override undelete leaves the target node untouched', async () => {
+		await overriddenOwnNode(25);
+		// The system's delete re-projects the canonical term (L6a).
+		await deleteSectionRecord(LOCAL, LOCAL_IDS[0], USER_ID);
+		expect(await termOf(`${OWN}25`)).toBe('canon');
+		const canonical = await rowOf(`${OWN}25`);
+
+		const snapshot = await deletedSnapshot(LOCAL, LOCAL_IDS[0]);
+		await as(NON_DEVELOPER, () =>
+			restoreSection(snapshot.data, snapshot.id, LOCAL, LOCAL_IDS[0], USER_ID),
+		);
+		expect(await matrixRowExists(LOCAL, LOCAL_IDS[0])).toBe(true);
+		expect(await rowOf(`${OWN}25`)).toEqual(canonical);
+	});
+
+	test('L11d a non-developer delete still removes the node (D3: removal is not content)', async () => {
+		await projectedOwnRecord(24);
+
+		await as(NON_DEVELOPER, () => deleteSectionRecord(OWN_SECTION, 24, USER_ID));
+		expect(await matrixRowExists(OWN_SECTION, 24)).toBe(false);
+		expect(await readDdOntologyRow(`${OWN}24`)).toBeNull();
 	});
 });

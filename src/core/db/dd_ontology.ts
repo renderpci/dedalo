@@ -72,7 +72,7 @@ import {
 } from '../ontology/cache_invalidation.ts';
 import { safeTld } from '../ontology/tld.ts';
 import { encodeForJsonb } from './json_codec.ts';
-import { sql, sqlStateOf, withTransaction } from './postgres.ts';
+import { isInTransaction, sql, sqlStateOf, withTransaction } from './postgres.ts';
 
 /**
  * One dd_ontology node — the shape the parser produces and the writer persists.
@@ -573,6 +573,53 @@ export async function deleteDdOntologyNode(tipo: string): Promise<number> {
 	}[];
 	await clearOntologyDerivedCaches();
 	return removed.length;
+}
+
+/**
+ * The advisory-lock class (int4) of the per-tld PROJECTION lock: the key is
+ * (class, hashtext(tld)). The two-int key space cannot collide with the
+ * single-bigint advisory locks (node locks, the pending-retry / RAG drains);
+ * 17580002 is the diffusion target fence (diffusion_bridge/target_lock.ts).
+ */
+export const ONTOLOGY_PROJECTION_LOCK_CLASS = 17580003;
+
+/**
+ * Serialize every writer that derives a tld's NODES from its source records
+ * (ONT-1/2/3 under concurrency, audit 2026-09-26 r0). The invariant
+ * `dd_ontology(tld) == parse(matrix_ontology(<tld>0))` is a read-modify-write
+ * over the tld: the whole-tld re-derive (ontology_state.ts rebuildOntology /
+ * retractOntology) parses the records and then deletes/upserts nodes, the
+ * per-record doors (section_record/ontology_projection.ts projectOntologyNode /
+ * unprojectOntologyNode, the record-lifecycle hook) read a record or a node and
+ * then write. Under READ COMMITTED withTransaction alone does not order them: a
+ * rebuild whose parse predates a concurrent delete re-inserts the deleted
+ * record's node from the stale parse, one whose parse predates a concurrent
+ * undelete removes the node the undelete just committed. Every such writer
+ * takes THIS lock for each tld it derives, BEFORE its first read, inside its
+ * transaction (released at COMMIT/ROLLBACK; re-entrant within the session).
+ *
+ * Several tlds are locked in sorted order, so two multi-tld holders never wait
+ * on each other in a cycle; a cross-order pair of separate calls is still
+ * possible (a bulk run undeleting records of two tlds) and Postgres aborts one
+ * side, loudly. Refused outside a transaction (an xact lock there is a no-op).
+ * Gate: test/unit/ontology_projection_race_native.test.ts.
+ */
+export async function lockOntologyProjection(tlds: Iterable<string>): Promise<void> {
+	const ordered = [...new Set(tlds)].sort();
+	if (ordered.length === 0) return;
+	if (!isInTransaction()) {
+		throw new DedaloError('internal.invariant', {
+			message:
+				'lockOntologyProjection: called outside a transaction; the lock would be ineffective (call inside withTransaction)',
+			coordinates: { tld: ordered.join(',') },
+		});
+	}
+	for (const tld of ordered) {
+		await sql.unsafe('SELECT pg_advisory_xact_lock($1::int, hashtext($2))', [
+			ONTOLOGY_PROJECTION_LOCK_CLASS,
+			tld,
+		]);
+	}
 }
 
 /** A search filter entry: scalar (→ '=') or {operator, value}. */

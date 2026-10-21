@@ -761,10 +761,18 @@ export async function createParentGrouper(
 	};
 
 	// Register the grouper's own TLD (matrix_ontology_main + <groupTld>0 node):
-	// create-if-missing — an existing grouper row is the installation's.
+	// create-if-missing, BOTH halves — an existing grouper row is the installation's, and
+	// an existing `<groupTld>0` root is the projection of that row (rebuildOntology /
+	// syncOntologyActivation derive it, parent = the row's typology grouper). Re-planting
+	// it here with the fixed parent above re-hung `hierarchytype0` under `ontologytype14`
+	// on every thesaurus provisioning while the next rebuild hung it back under its
+	// registry typology (`ontologytype2`): two writers, a flip-flop. Gate:
+	// ontology_derive_packages_native G1h (core grouper projection byte-identical).
 	if (options.register !== false) {
 		await ensureMainSection(fileData, userId);
-		await createDdOntologyRootNode(fileData, userId);
+		if ((await readDdOntologyRow(`${tld}0`)) === null) {
+			await createDdOntologyRootNode(fileData, userId);
+		}
 	}
 
 	const { parentNodeTipo, parentSectionId } = await ensureGrouperParent(parentGroup, userId);

@@ -84,7 +84,18 @@ flowchart LR
   data) removes its node; restoring a deleted record from the Time Machine
   re-projects it (only into a TLD whose `<tld>0` root is projected). Deleting
   or restoring a local override re-parses the node it overrides. All of it
-  runs inside the record's own transaction.
+  runs inside the record's own transaction. Writing a record's content into
+  `dd_ontology` stays a developer action: when a user who is not a developer
+  restores a record, or deletes or restores an override, the record changes
+  but the node does not, and `inspectOntology()` reports it as drift for a
+  developer to apply. Removing the node of a deleted record happens for
+  everyone.
+- **Order every writer of a TLD's nodes.** A rebuild, a TLD teardown, a
+  per-record projection and a record delete or restore each take the TLD's
+  projection lock (`lockOntologyProjection()`, `src/core/db/dd_ontology.ts`)
+  inside their transaction before their first read, so a rebuild cannot
+  re-insert the node of a record deleted while it ran, nor remove one
+  restored while it ran.
 - **Resolve node fields from the editable side.** Read each definition
   component (tld, parent, model, order, translatable, relations, term,
   properties) off the matrix record, applying the **local-overwrite**

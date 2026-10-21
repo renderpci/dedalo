@@ -10,15 +10,17 @@
  * keeps a second authority from importing the primitives. It fails if:
  *
  *  1. `regenerateRecordsInDdOntology` exists anywhere (retired onto rebuildOntology).
- *  2. ANY whole-tld delete primitive of `src/core/db/dd_ontology.ts` — every
- *     `export async function deleteTld*`, DERIVED from that file, so a new variant (the
+ *  2. ANY whole-tld delete primitive of `src/core/db/dd_ontology.ts` — every export of the
+ *     module whose name, or whose function's own name, starts `deleteTld`, DERIVED from the
+ *     module's RUNTIME exports (so an arrow const or an `export { x as y }` alias is a
+ *     primitive like a declaration; self-tested below), so a new variant (the
  *     `deleteTldNodesReturningTipos` hole `ontology_delete.ts` used) is covered the day it
  *     lands — is named outside the allowlist: its definition (dd_ontology.ts), the authority
  *     (ontology_state.ts) and two TEST-ONLY teardowns, each with its reason below.
  *     `ontology_write.ts` (activation → syncOntologyActivation) and `ontology_delete.ts`
  *     (→ retractOntology) route through the authority and are NOT on it.
- *  3. A PARSE of an ontology record (every `export async function
- *     parseSectionRecordToOntologyNode*` of `src/core/ontology/parser.ts`, DERIVED) is used
+ *  3. A PARSE of an ontology record (every `parseSectionRecordToOntologyNode*` export of
+ *     `src/core/ontology/parser.ts`, DERIVED the same runtime way) is used
  *     outside its two sanctioned consumers: `section_record/ontology_projection.ts` (the ONE
  *     per-record door, which refuses a parse outside the record's own address — ONT-2) and
  *     `ontology_state.ts` (the whole-tld door, scoped to the tld it rebuilds). A third module
@@ -74,12 +76,31 @@ function sourceFiles(): string[] {
 const code = (text: string): string =>
 	text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 
-/** Every `export async function deleteTld*` of the definition file — the census subject. */
+/**
+ * The exports of `namespace` that ARE a `prefix*` primitive: the export name starts with the
+ * prefix, or the exported function's own `.name` does (an `export { deleteTldNodes as wipe }`
+ * alias keeps the declared name; an `export const deleteTldX = async () => …` arrow is named
+ * by its binding). Answers the EXPORT names — what an importer has to spell.
+ */
+function primitiveExports(namespace: Record<string, unknown>, prefix: string): string[] {
+	return Object.entries(namespace)
+		.filter(
+			([name, value]) =>
+				typeof value === 'function' && (name.startsWith(prefix) || value.name.startsWith(prefix)),
+		)
+		.map(([name]) => name)
+		.sort();
+}
+
+const ddOntologyModule = (await import('../../src/core/db/dd_ontology.ts')) as Record<
+	string,
+	unknown
+>;
+const parserModule = (await import('../../src/core/ontology/parser.ts')) as Record<string, unknown>;
+
+/** Every whole-tld delete primitive dd_ontology.ts exports — the census subject. */
 function deleteTldPrimitives(): string[] {
-	const source = code(readFileSync(join(REPO_ROOT, 'src/core/db/dd_ontology.ts'), 'utf8'));
-	return [...source.matchAll(/export\s+async\s+function\s+(deleteTld\w*)\s*\(/g)].map(
-		(match) => match[1] as string,
-	);
+	return primitiveExports(ddOntologyModule, 'deleteTld');
 }
 
 /** The modules allowed to PARSE an ontology record into a dd_ontology node (rule 3). */
@@ -89,12 +110,9 @@ const PARSE_ALLOWLIST = new Set([
 	'src/core/ontology/ontology_state.ts', // the whole-tld door (tld-scoped)
 ]);
 
-/** Every `export async function parseSectionRecordToOntologyNode*` of parser.ts. */
+/** Every `parseSectionRecordToOntologyNode*` primitive parser.ts exports. */
 function parsePrimitives(): string[] {
-	const source = code(readFileSync(join(REPO_ROOT, 'src/core/ontology/parser.ts'), 'utf8'));
-	return [
-		...source.matchAll(/export\s+async\s+function\s+(parseSectionRecordToOntologyNode\w*)\s*\(/g),
-	].map((match) => match[1] as string);
+	return primitiveExports(parserModule, 'parseSectionRecordToOntologyNode');
 }
 
 /** The files among `sources` naming a parse primitive in CODE, outside the allowlist. */
@@ -127,6 +145,22 @@ describe('dd_ontology has one reconcile/rebuild authority', () => {
 			]),
 		);
 		expect(names.length).toBeGreaterThanOrEqual(3);
+	});
+
+	test('the primitive derivation catches every export form (self-test)', () => {
+		async function deleteTldNodes(): Promise<void> {}
+		const synthetic: Record<string, unknown> = {
+			deleteTldDeclared: async function deleteTldDeclared() {},
+			deleteTldArrow: async () => {},
+			wipeEverything: deleteTldNodes, // `export { deleteTldNodes as wipeEverything }`
+			deleteTldNotAFunction: 'x',
+			readDdOntologyRow: async () => null,
+		};
+		expect(primitiveExports(synthetic, 'deleteTld')).toEqual([
+			'deleteTldArrow',
+			'deleteTldDeclared',
+			'wipeEverything',
+		]);
 	});
 
 	test('every whole-tld delete primitive is used only by the allowlisted modules', () => {

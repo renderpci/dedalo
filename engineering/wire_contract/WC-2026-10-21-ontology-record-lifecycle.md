@@ -22,9 +22,29 @@
     deletes or creates a canonical node.
   - Not re-projected: create, duplicate, archive restore (PHP parity), and a Time Machine
     data-restore of a wiped record (a save, not a birth — saves stay explicit-project).
+  - **Who may trigger a projection (closure r0, 2026-10-21).** Writing a record's CONTENT into
+    the live dd_ontology is developer-only, as the explicit door is (tool_ontology
+    `set_records_in_dd_ontology`: declared `developer`, asserted in the handler). The
+    lifecycle is reached by plain section grants (TM undelete `apply_value`, bulk revert
+    `bulk_revert_process`, any delete door), so its CONTENT branches — a governed undelete's
+    re-projection, an override's re-parse on delete / delete_data / undelete — run only for a
+    developer principal or the system (no request principal: installer, update engine,
+    CLI / maintenance jobs). Anyone else's event commits the record change and writes no node
+    content: the node stays as a developer last projected it, and inspectOntology reports
+    the record as `missing` (governed undelete) or `stale` (override) drift for tool_ontology
+    to resolve; the lifecycle answers `skipped` ("projection is developer-only") with a
+    server warning. A governed **delete / delete_data** still removes the node for every
+    principal: removing the node of a record that no longer exists is not content (D3).
+  - **Concurrency.** Every door that derives a tld's nodes — rebuildOntology, retractOntology,
+    the per-record projectOntologyNode / unprojectOntologyNode and this lifecycle — takes the
+    tld's transaction advisory lock (`pg_advisory_xact_lock(17580003, hashtext(<tld>))`,
+    dd_ontology.ts lockOntologyProjection) before its first read: a rebuild and a delete /
+    undelete of the same `<tld>0` record are ordered, so node presence follows record presence.
   Response shapes unchanged.
 - **Reason:** `dd_ontology(tld)` equals the parse of `matrix_ontology(<tld>0)`; a node whose
   source record is gone (or a record with no node) is drift the runtime serves.
 - **Gate reconciliation:** TS-native `test/unit/ontology_record_lifecycle_native.test.ts`
   (L1–L10: L1b/L9c/L4 prove the projection is inside the unit — visible in it, gone with
-  its rollback; L9b the override wipe). No parity gate replays a delete of an ontology record; no re-harvest.
+  its rollback; L9b the override wipe; L11 the developer-only content rule, with the
+  developer control) and `test/unit/ontology_projection_race_native.test.ts` (R1–R5: a
+  rebuild / per-record projection / teardown interleaved with a delete or undelete). No parity gate replays a delete of an ontology record; no re-harvest.
