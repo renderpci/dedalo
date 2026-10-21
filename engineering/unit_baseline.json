@@ -1501,6 +1501,11 @@
 			"skipped": 0,
 			"assertions": 129
 		},
+		"test/unit/diffusion_target_statement_lock_wait_native.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 27
+		},
 		"test/unit/dispatch_error_native.test.ts": {
 			"tests": 15,
 			"skipped": 0,
@@ -1895,6 +1900,11 @@
 			"tests": 5,
 			"skipped": 0,
 			"assertions": 14
+		},
+		"test/unit/ghost_unpublish_one_budget_native.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 4
 		},
 		"test/unit/guarded_text_pin_native.test.ts": {
 			"tests": 26,
@@ -2861,6 +2871,11 @@
 			"skipped": 0,
 			"assertions": 51
 		},
+		"test/unit/media_index_marker_durability_native.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 24
+		},
 		"test/unit/media_index_pub_transition_native.test.ts": {
 			"tests": 7,
 			"skipped": 0,
@@ -3656,10 +3671,20 @@
 			"skipped": 0,
 			"assertions": 141
 		},
+		"test/unit/publication_host_init_drill_avc_window.test.ts": {
+			"tests": 11,
+			"skipped": 0,
+			"assertions": 17
+		},
 		"test/unit/publication_host_init_drill_directives.test.ts": {
 			"tests": 8,
 			"skipped": 0,
 			"assertions": 115
+		},
+		"test/unit/publication_host_init_drill_verdicts.test.ts": {
+			"tests": 9,
+			"skipped": 0,
+			"assertions": 19
 		},
 		"test/unit/publication_host_init_pair_native.test.ts": {
 			"tests": 4,
@@ -3720,6 +3745,11 @@
 			"tests": 31,
 			"skipped": 0,
 			"assertions": 127
+		},
+		"test/unit/publication_host_pack_bounded_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 10
 		},
 		"test/unit/publication_host_pair_cli_native.test.ts": {
 			"tests": 48,
@@ -4895,6 +4925,16 @@
 			"tests": 13,
 			"skipped": 0,
 			"assertions": 40
+		},
+		"test/unit/target_lock_census_tripwire.test.ts": {
+			"tests": 14,
+			"skipped": 0,
+			"assertions": 94
+		},
+		"test/unit/target_lock_nested_try_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 7
 		},
 		"test/unit/temp_path_native.test.ts": {
 			"tests": 2,
