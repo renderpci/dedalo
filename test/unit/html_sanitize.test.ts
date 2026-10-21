@@ -8,15 +8,14 @@
  * STRING (`not.toMatch(/onerror/)`), which is the same regex view of HTML the
  * old sanitizer had — a payload a regex cannot see passes both. The cases below
  * judge the output the way a BROWSER would, through the spec-parser oracle in
- * test/helpers/html_oracle.ts (cheerio over parse5 — independent of the code
- * under test), including the noscript mutation round trip.
+ * test/helpers/html_oracle.ts (the declared parse5, driven directly — independent
+ * of the code under test), including the noscript mutation round trip.
  *
  * And the other half, as binding as the first: a sanitizer that corrupts prose
  * destroys the curator's record. Benign content must come back BYTE-IDENTICAL.
  */
 
 import { afterEach, describe, expect, test } from 'bun:test';
-import * as cheerio from 'cheerio';
 import { escapeHtml } from '../../src/core/security/html_escape.ts';
 import * as sanitizeModule from '../../src/core/security/html_sanitize.ts';
 import { sanitizeRichText } from '../../src/core/security/html_sanitize.ts';
@@ -25,6 +24,9 @@ import {
 	endsInDataState,
 	everyAttributeOccurrence,
 	executesAsUrl,
+	oracleElements,
+	oracleFragment,
+	oracleNodes,
 	oracleTokens,
 	TEXT_STATE_TAGS,
 } from '../helpers/html_oracle.ts';
@@ -343,8 +345,9 @@ describe('sanitizeRichText — a spec parser finds nothing live in the output', 
 		];
 		for (const input of cases) {
 			// the oracle: a browser reads U+FFFD where the reference was
-			const $ = cheerio.load(input);
-			const attribute = $('a').attr('href') ?? $('img').attr('src') ?? '';
+			const element = oracleElements(input, true).find((el) => el.tag === 'a' || el.tag === 'img');
+			const attribute =
+				element?.attrs.find((a) => a.name === (element.tag === 'a' ? 'href' : 'src'))?.value ?? '';
 			expect(attribute, `spec decoding of ${input}`).toContain('\uFFFD');
 			let out = '';
 			expect(() => {
@@ -371,8 +374,10 @@ describe('sanitizeRichText — a spec parser finds nothing live in the output', 
 
 	test('every ASCII-valued named reference: proven by the spec parser, and no scheme spelt with one survives', () => {
 		for (const [name, value] of Object.entries(ASCII_NAMED_REFERENCES)) {
-			const $ = cheerio.load(`<a title="&${name};">x</a>`, null, false);
-			expect($('a').attr('title'), `&${name};`).toBe(value);
+			const anchor = oracleElements(`<a title="&${name};">x</a>`, true).find(
+				(el) => el.tag === 'a',
+			);
+			expect(anchor?.attrs.find((a) => a.name === 'title')?.value, `&${name};`).toBe(value);
 		}
 		const spellings = generatedNamedReferenceSpellings();
 		// &colon; and &sol; spell part of every data: scheme; &Tab;/&NewLine; are covered above.
@@ -772,16 +777,13 @@ describe('sanitizeRichText — the output is context-free (wrapped and joined)',
 			'a<?x>b',
 			'a</ x>b',
 		]) {
-			const $ = cheerio.load(sanitizeRichText(input), null, false);
-			const kinds: string[] = [];
-			const walk = (nodes: ReadonlyArray<{ type: string; children?: unknown }>): void => {
-				for (const node of nodes) {
-					kinds.push(node.type);
-					if (Array.isArray(node.children)) walk(node.children as typeof nodes);
-				}
-			};
-			walk($.root().contents().toArray() as unknown as ReadonlyArray<{ type: string }>);
-			expect(kinds, input).not.toContain('comment');
+			// control: the oracle sees every one of these spellings AS a comment raw
+			const rawKinds = oracleNodes(oracleFragment(input, true)).map((node) => node.nodeName);
+			expect(rawKinds, `oracle is blind to: ${input}`).toContain('#comment');
+			const kinds = oracleNodes(oracleFragment(sanitizeRichText(input), true)).map(
+				(node) => node.nodeName,
+			);
+			expect(kinds, input).not.toContain('#comment');
 		}
 	});
 });

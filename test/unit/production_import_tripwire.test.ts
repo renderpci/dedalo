@@ -50,10 +50,13 @@ import { builtinModules } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import {
+	NON_BUN_TREES,
+	nonProductionFilesOf,
 	packageRoots,
 	productionFilesOf,
 	REPO_ROOT,
-	walkFiles,
+	shippableFiles,
+	sourceRootsOf,
 } from '../../scripts/lib/production_corpus.ts';
 import { thinReasonProblem } from '../../scripts/lib/reason_validator.ts';
 import { CLIENT_LIBS } from '../../src/core/client_libs/registry.ts';
@@ -351,6 +354,30 @@ describe('production_import — LEG 1: every bare import of a production entrypo
 		}
 	});
 
+	test('corpus totality — every shipped source file under a source root is in the production census', () => {
+		// Judged against the shipped-file listing, not against the walk that built the
+		// census: a name heuristic in the walk (it once skipped every directory called
+		// `build`, dropping publication/site_builder/src/build/ — the site builder's
+		// build step — from LEG 1) is invisible to a floor on the walk's own result.
+		const shipped = shippableFiles();
+		const missing: string[] = [];
+		let expectedTotal = 0;
+		for (const m of MEASURED) {
+			const dirs = sourceRootsOf(m.root).map((dir) => `${relative(REPO_ROOT, dir)}/`);
+			const expected = shipped.filter(
+				(file) =>
+					dirs.some((dir) => file.startsWith(dir)) &&
+					/\.(ts|tsx|js|mjs|cjs)$/.test(file) &&
+					!/(\.test\.[tj]sx?|\.d\.ts)$/.test(file),
+			);
+			expectedTotal += expected.length;
+			const seen = new Set(m.files.map((file) => relative(REPO_ROOT, file)));
+			missing.push(...expected.filter((file) => !seen.has(file)));
+		}
+		expect(expectedTotal, 'shipped production source files').toBeGreaterThan(500);
+		expect(missing, 'shipped production sources the LEG 1 census never read').toEqual([]);
+	});
+
 	for (const m of MEASURED) {
 		test(`${m.root}: no devDependency or undeclared package reachable from production`, () => {
 			expect(undeclaredProblems(m.imports, m.pkg), `${m.root}: ${WHY}`).toEqual([]);
@@ -550,21 +577,13 @@ describe('production_import — LEG 3: no package the advisory baseline accepts 
 });
 
 // ── LEG 4 ────────────────────────────────────────────────────────────────────
-
-/**
- * The non-production sources of a package root: its `test/` and `scripts/` trees.
- * They never ship, but they JUDGE what ships — an oracle that borrows a parser
- * from another package's transitive tree is judged by whatever version hoisting
- * happens to leave at node_modules/ top level.
- */
-function nonProductionFilesOf(root: string): string[] {
-	return ['test', 'scripts']
-		.map((dir) => join(REPO_ROOT, root, dir))
-		.filter((dir) => existsSync(dir))
-		.flatMap((dir) => walkFiles(dir))
-		.filter((file) => /\.(ts|tsx|js|mjs|cjs)$/.test(file) && !file.endsWith('.d.ts'))
-		.sort();
-}
+//
+// The corpus is every NON-production source a package root ships —
+// `nonProductionFilesOf` (scripts/lib/production_corpus.ts), derived from the
+// shipped-file listing, never a chosen pair of directory names. Those files never
+// ship, but they JUDGE what ships: an oracle that borrows a parser from another
+// package's transitive tree is judged by whatever version hoisting happens to
+// leave at node_modules/ top level.
 
 /**
  * The bare specifiers a source imports, read by Bun's own TRANSPILER (a parser,
@@ -605,7 +624,7 @@ function notDeclaredProblems(
 
 describe('production_import — LEG 4: every bare import of a test or script is a DECLARED package', () => {
 	const census = ROOTS.map((root) => {
-		const files = nonProductionFilesOf(root);
+		const files = nonProductionFilesOf(root, ROOTS);
 		const imports = new Map<string, string[]>();
 		for (const file of files) {
 			for (const specifier of scannedBareImportsOf(file)) {
@@ -619,9 +638,55 @@ describe('production_import — LEG 4: every bare import of a test or script is 
 		const engine = census.find((c) => c.root === '.');
 		expect(engine?.files.length ?? 0, 'engine test/ + scripts/ files').toBeGreaterThan(1000);
 		const packages = new Set([...(engine?.imports.keys() ?? [])].map(packageOf));
-		for (const name of ['cheerio', 'puppeteer', 'parse5', 'htmlparser2']) {
+		for (const name of ['puppeteer', 'parse5', 'htmlparser2']) {
 			expect(packages.has(name), `${name} is imported by a test helper or script`).toBe(true);
 		}
+	});
+
+	test('per-root corpus floor — no package root is judged over an empty census', () => {
+		// An empty map passes `notDeclaredProblems(...) toEqual([])` by construction:
+		// three of five roots did, while their suites lived under `tests/`.
+		const empty = census.filter((c) => c.files.length === 0).map((c) => c.root);
+		expect(empty, 'package roots whose LEG 4 census is EMPTY').toEqual([]);
+		expect(census.length, 'package roots in the LEG 4 census').toBeGreaterThan(2);
+	});
+
+	test('test-file totality — every shipped *.test.* file is in its own root’s census', () => {
+		// The independent listing: a test file is named `*.test.*` wherever it lives
+		// (`test/`, `tests/`, beside `src/`), so a census narrowed to chosen directory
+		// names is red here instead of green over nothing.
+		const shipped = shippableFiles();
+		const missing: string[] = [];
+		let total = 0;
+		for (const c of census) {
+			const nested = ROOTS.filter(
+				(other) => other !== c.root && (c.root === '.' || other.startsWith(`${c.root}/`)),
+			);
+			const tests = shipped.filter(
+				(file) =>
+					(c.root === '.' || file.startsWith(`${c.root}/`)) &&
+					!nested.some((other) => file.startsWith(`${other}/`)) &&
+					/\.test\.(ts|tsx|js|mjs|cjs)$/.test(file),
+			);
+			total += tests.length;
+			const seen = new Set(c.files.map((file) => relative(REPO_ROOT, file)));
+			missing.push(...tests.filter((file) => !seen.has(file)));
+		}
+		expect(total, 'shipped *.test.* files').toBeGreaterThan(1000);
+		expect(missing, 'test files LEG 4 never read').toEqual([]);
+	});
+
+	test('no NON_BUN_TREES entry is stale — each still matches a shipped source file', () => {
+		const sources = shippableFiles().filter((file) => /\.(ts|tsx|js|mjs|cjs)$/.test(file));
+		expect(sources.length, 'shipped source files').toBeGreaterThan(1000);
+		const stale = NON_BUN_TREES.filter(({ pattern }) => !sources.some((f) => pattern.test(f))).map(
+			({ pattern }) => String(pattern),
+		);
+		expect(stale).toEqual([]);
+		const thin = NON_BUN_TREES.filter(({ reason }) => thinReasonProblem(reason, 12) !== null).map(
+			({ pattern }) => String(pattern),
+		);
+		expect(thin, 'each non-Bun tree names where its specifiers resolve').toEqual([]);
 	});
 
 	for (const c of ROOTS) {

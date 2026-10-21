@@ -26,6 +26,7 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { config } from '../../src/config/config.ts';
 import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import { resolveMediaPathOptions } from '../../src/core/media/ontology_path.ts';
@@ -349,9 +350,14 @@ describe('pdfPayloadRequest + answerPdfPayload — the offset reaches the page k
  * green on every direct call. (It also measures the html method at all: the
  * PHP-era `-layout` flag made pdftohtml exit 1 on every call.)
  */
-const GS_BIN = ['/opt/homebrew/bin/gs', '/usr/local/bin/gs', '/usr/bin/gs'].find((p) =>
-	existsSync(p),
-);
+/**
+ * Ghostscript BUILDS the fixture PDF, and it is the ENGINE'S configured binary
+ * (DEDALO_GS_PATH, derived from DEDALO_BINARY_BASE — the one the cover/thumbnail
+ * render uses), not a guessed install path. A missing gs is a RED precondition,
+ * never a silent skip: the CI image ships it, and a skipped case measures
+ * nothing while the run reads green.
+ */
+const GS_BIN = config.media.binaries.ghostscript;
 const HOSTILE_LINE = 'IMP CAES<A>R x &amp; y <img src=x onerror=alert(1)>';
 
 describe('get_pdf_data end to end — text and html methods', () => {
@@ -382,7 +388,7 @@ describe('get_pdf_data end to end — text and html methods', () => {
 			// PostScript string: parentheses balance, backslash-free.
 			await runBinary(
 				[
-					GS_BIN as string,
+					GS_BIN,
 					'-q',
 					'-dNOPAUSE',
 					'-dBATCH',
@@ -401,71 +407,73 @@ describe('get_pdf_data end to end — text and html methods', () => {
 		}
 	}
 
-	test.if(GS_BIN !== undefined)(
-		'the text method answers {value: the PDF verbatim, render_class: text}',
-		async () => {
-			const { sectionId } = await plantHostilePdf();
-			const pathOpts = await resolveMediaPathOptions(PDF_TIPO, 'test3');
-			const raw = await extractPdfCore(
-				pdf,
-				{ componentTipo: PDF_TIPO, sectionTipo: 'test3', sectionId, lang: null },
-				pathOpts,
-				{ method: 'text' },
-			);
-			// the fixture really carries the characters at stake
-			expect(raw).toContain('CAES<A>R');
-			expect(raw).toContain('<img src=x onerror=alert(1)>');
+	test('precondition — Ghostscript is installed at the engine-configured path (the cases below build their PDF with it)', () => {
+		expect(
+			existsSync(GS_BIN),
+			`gs not found at '${GS_BIN}' (DEDALO_GS_PATH / DEDALO_BINARY_BASE): install Ghostscript ` +
+				'(brew install ghostscript / apt install ghostscript) or point DEDALO_GS_PATH at it',
+		).toBe(true);
+	});
 
-			const run = await handler();
-			const response = await run(
-				contextOf({
-					tipo: PDF_TIPO,
-					section_tipo: 'test3',
-					section_id: sectionId,
-					method: 'text',
-					offset: 1,
-				}),
-			);
-			expect((response as { data?: unknown }).data).toEqual({ value: raw, render_class: 'text' });
-		},
-	);
+	test('the text method answers {value: the PDF verbatim, render_class: text}', async () => {
+		const { sectionId } = await plantHostilePdf();
+		const pathOpts = await resolveMediaPathOptions(PDF_TIPO, 'test3');
+		const raw = await extractPdfCore(
+			pdf,
+			{ componentTipo: PDF_TIPO, sectionTipo: 'test3', sectionId, lang: null },
+			pathOpts,
+			{ method: 'text' },
+		);
+		// the fixture really carries the characters at stake
+		expect(raw).toContain('CAES<A>R');
+		expect(raw).toContain('<img src=x onerror=alert(1)>');
 
-	test.if(GS_BIN !== undefined)(
-		'the html method: the VALIDATED offset keys every page of a real extraction, and nothing is live',
-		async () => {
-			const { sectionId } = await plantHostilePdf([`one ${HOSTILE_LINE}`, 'two']);
-			const run = await handler();
-			const answer = async (offset: unknown): Promise<{ value: string; render_class: string }> => {
-				const options: Record<string, unknown> = {
-					tipo: PDF_TIPO,
-					section_tipo: 'test3',
-					section_id: sectionId,
-					method: 'html',
-				};
-				if (offset !== undefined) options.offset = offset;
-				const response = await run(contextOf(options));
-				return (response as { data: { value: string; render_class: string } }).data;
+		const run = await handler();
+		const response = await run(
+			contextOf({
+				tipo: PDF_TIPO,
+				section_tipo: 'test3',
+				section_id: sectionId,
+				method: 'text',
+				offset: 1,
+			}),
+		);
+		expect((response as { data?: unknown }).data).toEqual({ value: raw, render_class: 'text' });
+	});
+
+	test('the html method: the VALIDATED offset keys every page of a real extraction, and nothing is live', async () => {
+		const { sectionId } = await plantHostilePdf([`one ${HOSTILE_LINE}`, 'two']);
+		const run = await handler();
+		const answer = async (offset: unknown): Promise<{ value: string; render_class: string }> => {
+			const options: Record<string, unknown> = {
+				tipo: PDF_TIPO,
+				section_tipo: 'test3',
+				section_id: sectionId,
+				method: 'html',
 			};
+			if (offset !== undefined) options.offset = offset;
+			const response = await run(contextOf(options));
+			return (response as { data: { value: string; render_class: string } }).data;
+		};
 
-			for (const [offset, keys] of [
-				[undefined, ['[page-n-1-1-data:[1]:data]', '[page-n-2-2-data:[2]:data]']],
-				[3, ['[page-n-1-3-data:[1]:data]', '[page-n-2-4-data:[2]:data]']],
-				['3', ['[page-n-1-3-data:[1]:data]', '[page-n-2-4-data:[2]:data]']],
-			] as const) {
-				const data = await answer(offset);
-				expect(data.render_class, `offset ${String(offset)}`).toBe('html');
-				for (const key of keys) expect(data.value, `offset ${String(offset)}`).toContain(key);
-				expect(data.value).not.toContain(offset === undefined ? '-1-3-' : '-1-1-');
-				// the real pdftohtml output, shaped: a fragment, the hostile line inert
-				expect(data.value).toContain('one');
-				expect(data.value).toContain('two');
-				expect(data.value).not.toMatch(/<!doctype|<html|<head|<body/i);
-				expect(browserViolations(data.value), data.value).toEqual([]);
-			}
-		},
-	);
+		for (const [offset, keys] of [
+			[undefined, ['[page-n-1-1-data:[1]:data]', '[page-n-2-2-data:[2]:data]']],
+			[3, ['[page-n-1-3-data:[1]:data]', '[page-n-2-4-data:[2]:data]']],
+			['3', ['[page-n-1-3-data:[1]:data]', '[page-n-2-4-data:[2]:data]']],
+		] as const) {
+			const data = await answer(offset);
+			expect(data.render_class, `offset ${String(offset)}`).toBe('html');
+			for (const key of keys) expect(data.value, `offset ${String(offset)}`).toContain(key);
+			expect(data.value).not.toContain(offset === undefined ? '-1-3-' : '-1-1-');
+			// the real pdftohtml output, shaped: a fragment, the hostile line inert
+			expect(data.value).toContain('one');
+			expect(data.value).toContain('two');
+			expect(data.value).not.toMatch(/<!doctype|<html|<head|<body/i);
+			expect(browserViolations(data.value), data.value).toEqual([]);
+		}
+	});
 
-	test.if(GS_BIN !== undefined)('a non-integer offset is refused', async () => {
+	test('a non-integer offset is refused', async () => {
 		const { sectionId } = await plantHostilePdf();
 		const run = await handler();
 		for (const offset of ['abc', 1.5, '2x', {}]) {

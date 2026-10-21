@@ -4,8 +4,9 @@
  * A gate that asserts on an output STRING (`not.toMatch(/onerror/)`) shares the
  * regex view of HTML that the defect had: a payload a regex cannot see passes
  * both. This oracle judges a string the way a browser does — it parses it with a
- * spec HTML parser (cheerio over parse5, independent of the engine's own
- * sanitizer, which is built on Bun's HTMLRewriter) and walks every element, so
+ * spec HTML parser (parse5 — the DECLARED devDependency, driven directly —
+ * independent of the engine's own sanitizer, which is built on Bun's
+ * HTMLRewriter) and walks every element, so
  * `<img/onerror>`, a handler glued to a quote, a character-referenced
  * `&#106;avascript:` and an RCDATA/noscript mutation are judged by what they
  * BECOME, not by how they are spelt.
@@ -19,11 +20,75 @@
  * file) judges rule 5 — where a value's bytes leave the tokenizer.
  */
 
-import * as cheerio from 'cheerio';
+// parse5 and htmlparser2 are DECLARED devDependencies (package.json), never borrowed
+// through another package's transitive tree: BOTH halves of this oracle — the tree
+// below and the tokenizer at the end — run on the one explicit, Dependabot-tracked
+// parse5. (Until 2026-10-21 the tree half went through cheerio, whose own nested
+// parse5 7.x judged every security case while this comment named the 8.x pin.)
+import { Parser as Htmlparser2Parser } from 'htmlparser2';
+import {
+	type DefaultTreeAdapterTypes,
+	parseFragment,
+	serialize,
+	Tokenizer,
+	TokenizerMode,
+} from 'parse5';
+
+/**
+ * `html` parsed as a FRAGMENT by the spec tree builder in one scripting mode — no
+ * context element, so the template-content insertion mode, which is what a
+ * browser's `innerHTML` on an element without special content model amounts to
+ * for every case the oracle judges.
+ */
+export function oracleFragment(
+	html: string,
+	scriptingEnabled: boolean,
+): DefaultTreeAdapterTypes.DocumentFragment {
+	return parseFragment(html, { scriptingEnabled });
+}
+
+/** Every node under `root`, pre-order, descending into `<template>` content too. */
+export function oracleNodes(
+	root: DefaultTreeAdapterTypes.ParentNode,
+): DefaultTreeAdapterTypes.Node[] {
+	const out: DefaultTreeAdapterTypes.Node[] = [];
+	const visit = (parent: DefaultTreeAdapterTypes.ParentNode): void => {
+		for (const child of parent.childNodes) {
+			out.push(child);
+			if ('childNodes' in child) visit(child);
+			if ('content' in child) visit((child as DefaultTreeAdapterTypes.Template).content);
+		}
+	};
+	visit(root);
+	return out;
+}
+
+/** One element as the spec parser built it: tag lower-cased, attribute values character-reference DECODED. */
+export interface OracleElement {
+	tag: string;
+	attrs: ReadonlyArray<{ name: string; value: string }>;
+}
+
+/** Every element of `html` parsed as a fragment in one scripting mode. */
+export function oracleElements(html: string, scriptingEnabled: boolean): OracleElement[] {
+	return oracleNodes(oracleFragment(html, scriptingEnabled)).flatMap((node) =>
+		'tagName' in node
+			? [
+					{
+						tag: node.tagName.toLowerCase(),
+						attrs: node.attrs.map((a) => ({
+							name: a.prefix ? `${a.prefix}:${a.name}` : a.name,
+							value: a.value,
+						})),
+					},
+				]
+			: [],
+	);
+}
 
 /**
  * A URL a browser would EXECUTE, judged on the PARSER-DECODED attribute value
- * (cheerio hands attribs back with character references already resolved).
+ * (parse5 hands attrs back with character references already resolved).
  * WHATWG URL: leading C0-control-or-space is stripped, ASCII tab/LF/CR are
  * removed anywhere, the scheme is ASCII case-insensitive. The denylist is the
  * sanitizer's contract (javascript:, vbscript:, data:text/html,
@@ -67,24 +132,16 @@ export const LIVE_CONTAINERS: ReadonlySet<string> = new Set([
 	'frameset',
 ]);
 
-interface OracleElement {
-	tagName?: string;
-	attribs?: Record<string, string>;
-}
-
 /** Every violation a spec parser finds in `html`, parsed (as a fragment) in one scripting mode. */
 export function violationsIn(html: string, scriptingEnabled: boolean): string[] {
-	const $ = cheerio.load(html, { scriptingEnabled } as cheerio.CheerioOptions, false);
 	const found: string[] = [];
-	$('*').each((_, node) => {
-		const el = node as unknown as OracleElement;
-		const tag = (el.tagName ?? '').toLowerCase();
+	for (const { tag, attrs } of oracleElements(html, scriptingEnabled)) {
 		if (LIVE_CONTAINERS.has(tag)) found.push(`<${tag}> element survived`);
-		for (const [name, value] of Object.entries(el.attribs ?? {})) {
+		for (const { name, value } of attrs) {
 			if (/^on/i.test(name)) found.push(`<${tag} ${name}="${value}"> handler survived`);
 			else if (executesAsUrl(value)) found.push(`<${tag} ${name}="${value}"> executable URL`);
 		}
-	});
+	}
 	return found;
 }
 
@@ -95,9 +152,7 @@ export function violationsIn(html: string, scriptingEnabled: boolean): string[] 
  */
 export function browserViolations(html: string): string[] {
 	const direct = violationsIn(html, true);
-	const roundTrip = cheerio
-		.load(html, { scriptingEnabled: false } as cheerio.CheerioOptions, false)
-		.html();
+	const roundTrip = serialize(oracleFragment(html, false));
 	const mutated = violationsIn(roundTrip, true).map((v) => `[noscript round trip] ${v}`);
 	return [...direct, ...mutated];
 }
@@ -116,11 +171,8 @@ export function browserViolations(html: string): string[] {
 // content only, and `inForeignNode` (CDATA sections are real only there) inside
 // svg / math outside their HTML integration points.
 
-// parse5 and htmlparser2 are DECLARED devDependencies (package.json), never borrowed
-// through cheerio's transitive tree: the version every security case is judged by is
-// explicit and Dependabot-tracked. htmlparser2 gives the LAST-WINS view below.
-import { Parser as Htmlparser2Parser } from 'htmlparser2';
-import { Tokenizer, TokenizerMode } from 'parse5';
+// The same declared parse5 as the tree half above (imports at the top of the file);
+// htmlparser2 gives the LAST-WINS view below.
 
 /** One token as the spec tokenizer emits it. */
 export interface OracleToken {
