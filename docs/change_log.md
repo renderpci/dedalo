@@ -928,6 +928,18 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The publication host installer never puts a cut-off file in place on a full disk**
+
+    When the disk of a publication host was nearly full, the root provisioner
+    could write only part of a systemd unit, an environment file, a sudoers or
+    polkit rule, or the copied Bun binary. It then moved that cut-off file into
+    place and reported the step as done. A short write is now continued until
+    every byte is on disk. If the disk is really full, the step fails, the old
+    file stays where it was and no temporary file is left behind.
+
+    Cursor keys pressed at a guided-install prompt no longer leave stray
+    characters such as `[D` in the answer.
+
 - **An archive restore refuses an ontology node another writer created between the plan and the write**
 
     A restore plans its ontology definitions first and writes them later. A definition another writer created in between used to be overwritten silently, as if it were new. The plan is now checked again at the moment of writing: an identical definition is left alone, and a different one is refused unless the restore was asked to overwrite conflicts. The restore's report now counts what was actually written.

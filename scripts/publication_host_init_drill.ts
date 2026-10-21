@@ -756,13 +756,33 @@ export function booleanProbeVerdict(
 	return null;
 }
 
+/** booleans-measured's span on the TARGET's clock (epoch seconds, `date +%s` there), both ends inclusive. */
+export interface BooleansWindow {
+	readonly from: number;
+	readonly to: number;
+}
+
+/** The audit record's own time (`msg=audit(<epoch>.<ms>:<serial>)`, ausearch's raw form), whole seconds; null when absent. */
+export function auditSeconds(line: string): number | null {
+	const match = /msg=audit\((\d+)(?:\.\d+)?:\d+\)/.exec(line);
+	return match === null ? null : Number(match[1]);
+}
+
 /**
  * no-avc's verdict over the `ausearch -m AVC,USER_AVC -ts <drill start>` window, or null when clean.
  * The window is FLOORED on the one denial the drill causes on purpose (system-layout-v2's control,
  * `controlDenied` = that leg measured it): a window that does not hold even that read nothing — a wrong
  * -ts, the wrong day, a dead auditd — and a clean read of nothing is no measurement.
+ * The booleans leg's relay probe causes the other one (a `name_connect` with the boolean off): such a
+ * line is excused ONLY when its own audit time falls inside that leg's span (`booleans`, recorded by
+ * the leg on the target's clock). A name_connect anywhere else in the drill — or with no span recorded,
+ * or no readable time — is a denial the drill did not ask for, and is reported.
  */
-export function noAvcVerdict(window: string, controlDenied: boolean): string | null {
+export function noAvcVerdict(
+	window: string,
+	controlDenied: boolean,
+	booleans: BooleansWindow | null,
+): string | null {
 	if (!controlDenied) {
 		return 'system-layout-v2 did not measure its control denial in this drill: the window has no floor, so a clean read would prove nothing (run system-layout-v2)';
 	}
@@ -770,10 +790,36 @@ export function noAvcVerdict(window: string, controlDenied: boolean): string | n
 	if (!avcLines.some(controlNamed)) {
 		return `the window read nothing: not even system-layout-v2's control denial is in it\n${window.slice(-1000)}`;
 	}
-	const foreign = avcLines.filter((line) => !/name_connect/.test(line) && !controlNamed(line));
+	const inBooleans = (line: string): boolean => {
+		const at = auditSeconds(line);
+		return booleans !== null && at !== null && at >= booleans.from && at <= booleans.to;
+	};
+	const foreign = avcLines.filter(
+		(line) => !controlNamed(line) && !(/name_connect/.test(line) && inBooleans(line)),
+	);
 	return foreign.length === 0
 		? null
 		: `AVC denials during the drill:\n${foreign.slice(0, 20).join('\n')}`;
+}
+
+/**
+ * no-apparmor-denial's verdict on the AUDIT half (auditd running: the kernel's denials go to its log,
+ * not the journal), or null when that half measured. Its own floor, never borrowed from the journal's:
+ * `floor` is `ausearch -m SERVICE_START,SERVICE_STOP -ts <drill start>` and must name a unit of ours
+ * (the drill starts and restarts them) — a window that holds not even those read nothing (a wrong -ts,
+ * a dead log). `denials` is `ausearch -m AVC,USER_AVC` over the same -ts: exit 0 (records — the caller
+ * reads the apparmor="DENIED" lines), or exit 1 saying `<no matches>`; anything else is a failed read,
+ * never a clean one.
+ */
+export function auditHalfVerdict(
+	floor: Pick<Done, 'code' | 'out'>,
+	denials: Pick<Done, 'code' | 'out'>,
+): string | null {
+	if (floor.code !== 0 || !/unit=dedalo-publication-host-/.test(floor.out)) {
+		return `the audit log since the drill started holds no SERVICE_START/STOP of our units (exit ${floor.code}): its window read nothing, so a clean AVC read would prove nothing\n${floor.out.slice(-600)}`;
+	}
+	if (denials.code === 0 || (denials.code === 1 && /<no matches>/.test(denials.out))) return null;
+	return `ausearch -m AVC,USER_AVC failed (exit ${denials.code}): the audit half was not read\n${denials.out.slice(-600)}`;
 }
 
 interface Ctx {
@@ -2696,6 +2742,13 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		what: "the booleans the default install rests on, measured ON then OFF, each probe's AVCs counted from its own start: httpd_can_network_relay (the v2 proxy: off → an AVC, on → none) and httpd_enable_homedirs (the v1 probe under the home through the H rule: on → 200 without an AVC, off → still 200); restored after",
 		async run(ctx) {
 			const measured: Record<string, { needed_for: string; denied_without: boolean }> = {};
+			// The span no-avc excuses this leg's relay denial in: the target's clock, epoch seconds.
+			const start = (await must(ctx, 'date +%s', 'the booleans window start')).trim();
+			check(
+				/^\d+$/.test(start),
+				`the booleans window start: the target's clock answered '${start}'`,
+			);
+			const from = Number(start);
 			/** One probe: its status and the AVC denials logged from its own start (whole seconds: a pause first). */
 			const probeOnce = async (path: string): Promise<{ status: number; avcs: number }> => {
 				const since = (await must(ctx, 'sleep 1.1; date +%T', 'the probe start')).trim();
@@ -2706,28 +2759,38 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				return { status: got.status, avcs: Number(avc.out.trim()) };
 			};
 			// The v1 probe is v1-handler-probe's (a .php under the home's v1 release).
-			for (const [name, needed, probe] of [
-				['httpd_can_network_relay', 'the v2 proxy', '/dedalo/publication/server_api/v2/'],
-				[
-					'httpd_enable_homedirs',
-					'home traversal (the H rule replaces it)',
-					'/dedalo/publication/server_api/v1/probe.php',
-				],
-			] as const) {
-				const before = (await must(ctx, `getsebool ${name}`, 'getsebool')).trim().endsWith('on');
-				try {
-					await must(ctx, `setsebool ${name} on`, `${name} on`);
-					const on = await probeOnce(probe);
-					await must(ctx, `setsebool ${name} off`, `${name} off`);
-					const off = await probeOnce(probe);
-					const verdict = booleanProbeVerdict(name, probe, on, off);
-					check(verdict === null, verdict ?? '');
-					measured[name] = {
-						needed_for: needed,
-						denied_without: off.avcs > 0 || off.status !== on.status,
-					};
-				} finally {
-					await ctx.runner.sh(`setsebool ${name} ${before ? 'on' : 'off'}`);
+			try {
+				for (const [name, needed, probe] of [
+					['httpd_can_network_relay', 'the v2 proxy', '/dedalo/publication/server_api/v2/'],
+					[
+						'httpd_enable_homedirs',
+						'home traversal (the H rule replaces it)',
+						'/dedalo/publication/server_api/v1/probe.php',
+					],
+				] as const) {
+					const before = (await must(ctx, `getsebool ${name}`, 'getsebool')).trim().endsWith('on');
+					try {
+						await must(ctx, `setsebool ${name} on`, `${name} on`);
+						const on = await probeOnce(probe);
+						await must(ctx, `setsebool ${name} off`, `${name} off`);
+						const off = await probeOnce(probe);
+						const verdict = booleanProbeVerdict(name, probe, on, off);
+						check(verdict === null, verdict ?? '');
+						measured[name] = {
+							needed_for: needed,
+							denied_without: off.avcs > 0 || off.status !== on.status,
+						};
+					} finally {
+						await ctx.runner.sh(`setsebool ${name} ${before ? 'on' : 'off'}`);
+					}
+				}
+			} finally {
+				// Recorded even when the leg fails (its denials happened inside this span either way), and
+				// never thrown from here (the leg's own failure stays the one reported). No readable end =
+				// no span: no-avc then excuses no name_connect at all.
+				const end = (await ctx.runner.sh('date +%s')).out.trim();
+				if (/^\d+$/.test(end)) {
+					ctx.facts.booleans_window = { from, to: Number(end) } satisfies BooleansWindow;
 				}
 			}
 			ctx.facts.booleans = measured;
@@ -2737,10 +2800,14 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'no-avc',
 		family: 'el',
 		required: true,
-		what: "ausearch -m AVC,USER_AVC since the drill started (the target's clock) finds nothing outside the booleans leg and system-layout-v2's control file — and finds that control's denial: a window that holds not even it read nothing",
+		what: "ausearch -m AVC,USER_AVC since the drill started (the target's clock) finds nothing but system-layout-v2's control file and the booleans leg's name_connect INSIDE that leg's span (its audit time) — and finds that control's denial: a window that holds not even it read nothing",
 		async run(ctx) {
 			const out = await ctx.runner.sh(`ausearch -m AVC,USER_AVC -ts ${ctx.auditStartedAt} 2>&1`);
-			const verdict = noAvcVerdict(out.out, ctx.facts.selinux_control_denied === true);
+			const verdict = noAvcVerdict(
+				out.out,
+				ctx.facts.selinux_control_denied === true,
+				(ctx.facts.booleans_window as BooleansWindow | undefined) ?? null,
+			);
 			check(verdict === null, verdict ?? '');
 		},
 	},
@@ -2750,24 +2817,40 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		family: 'debian',
 		required: true,
 		inPlaceOnly: true,
-		what: 'AppArmor enabled on the VM\'s kernel; the journal (and audit log) since the drill started holds no apparmor="DENIED" line; which of the processes the layout runs (web servers, FPM, polkitd, the agents, v2) are confined is measured',
+		what: 'AppArmor enabled on the VM\'s kernel; the journal since the drill started (floored on our units) — and, with auditd running, the audit log (floored on its own SERVICE_START/STOP of our units, a failed read is red) — holds no apparmor="DENIED" line; which of the processes the layout runs (web servers, FPM, polkitd, the agents, v2) are confined is measured',
 		async run(ctx) {
 			check(
 				(await ctx.runner.sh('cat /sys/module/apparmor/parameters/enabled')).out.trim() === 'Y',
 				'AppArmor is not enabled on this kernel: the leg would prove nothing',
 			);
-			const log = await must(
+			// The kernel's (mediation of files, sockets, capabilities) and dbus's (USER_AVC) denials both
+			// reach the journal; with auditd RUNNING the kernel's go to its log instead — so each half is
+			// read on its own and floored on its own (a silenced audit read once rode the journal's floor).
+			const journal = await must(
 				ctx,
-				// The kernel's (mediation of files, sockets, capabilities) and dbus's (USER_AVC) denials both
-				// reach the journal; with auditd installed the kernel's go to its log instead.
-				`journalctl --no-pager -o short-iso --since ${q(ctx.startedAt)} 2>&1; if command -v ausearch >/dev/null; then ausearch -m AVC,USER_AVC -ts ${ctx.auditStartedAt} 2>/dev/null; fi; true`,
+				`journalctl --no-pager -o short-iso --since ${q(ctx.startedAt)} 2>&1`,
 				'the journal since the start',
 			);
 			// Not vacuous: the drill's own reloads and restarts are in that window.
 			check(
-				/dedalo-publication-host-/.test(log),
+				/dedalo-publication-host-/.test(journal),
 				`the journal since ${ctx.startedAt} names no unit of ours: the window read nothing`,
 			);
+			let log = journal;
+			const auditd =
+				(await ctx.runner.sh('systemctl is-active auditd 2>/dev/null')).out.trim() === 'active';
+			if (auditd) {
+				const floor = await ctx.runner.sh(
+					`ausearch -m SERVICE_START,SERVICE_STOP -ts ${ctx.auditStartedAt} 2>&1`,
+				);
+				const denials = await ctx.runner.sh(
+					`ausearch -m AVC,USER_AVC -ts ${ctx.auditStartedAt} 2>&1`,
+				);
+				const verdict = auditHalfVerdict(floor, denials);
+				check(verdict === null, verdict ?? '');
+				log += `\n${denials.out}`;
+			}
+			ctx.facts.apparmor_denials_read = auditd ? 'journal+auditd' : 'journal';
 			const denied = log.split('\n').filter((line) => /apparmor="DENIED"/.test(line));
 			check(
 				denied.length === 0,

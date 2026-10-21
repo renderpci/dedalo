@@ -1,8 +1,9 @@
 /**
  * APPLY — dumb: runs the plan's actions in order through one injected io, halts on the
  * first failure, and reports every action as done / failed / skipped. It decides nothing:
- * drift, ownership and ordering are plan.ts's. Writes are atomic (temp → chown → chmod →
- * optional validator → rename), so a failed write never leaves a half file in place.
+ * drift, ownership and ordering are plan.ts's. Writes are atomic (temp holding EVERY byte —
+ * writeAllSync continues a short write — → chown → chmod → optional validator → rename), so a
+ * failed write never leaves a half file in place.
  *
  * Also the host's two real doors: `hostIo()` and `observeHost()`. Mirrors
  * publication/site_builder/src/provision/apply.ts (ProvisionIo, apply, hostIo, observeHost)
@@ -836,6 +837,25 @@ export function withPinnedDir<T>(expect: PinExpectation, rootUid: number, fn: ()
 }
 
 /**
+ * Writes EVERY byte of `bytes` through `fd`: write(2) on a regular file may return a SHORT count (a
+ * filling disk answers part of the write; the ENOSPC only comes on the NEXT call), so a single
+ * writeSync whose count is dropped can fsync and rename a truncated file into place. A short write
+ * is continued, never dropped; the error the continuation meets is thrown to the caller (who
+ * removes its temp); a call that writes nothing is refused, never spun on. THE ONE copy — every
+ * write door of the provisioner (hostIo) and of init (init/host_io.ts) writes with it.
+ */
+export function writeAllSync(fd: number, bytes: Uint8Array): void {
+  let offset = 0;
+  while (offset < bytes.length) {
+    const written = writeSync(fd, bytes, offset, bytes.length - offset);
+    if (written <= 0) {
+      throw new Error(`write made no progress at byte ${offset} of ${bytes.length}: refusing to leave a short file`);
+    }
+    offset += written;
+  }
+}
+
+/**
  * fsync a DIRECTORY, so the entries a rename created or moved in it survive a power cut with the
  * bytes the file's own fsync already forced. Best-effort durability, never a correctness
  * condition: a directory that cannot be opened (O_NOFOLLOW: never through a link), or a
@@ -923,11 +943,15 @@ export function hostIo(exec: ProvisionExec = provisionExec(), options: HostDoorO
       rmSync(temp, { force: true });
       const fd = openSync(temp, FS.O_WRONLY | FS.O_CREAT | FS.O_EXCL | FS.O_NOFOLLOW, mode);
       try {
-        writeSync(fd, body);
+        writeAllSync(fd, Buffer.from(body, 'utf8'));
         fsyncSync(fd);
-      } finally {
+      } catch (error) {
+        // A temp that does not hold every byte is never handed to a rename: removed here.
         closeSync(fd);
+        rmSync(temp, { force: true });
+        throw error;
       }
+      closeSync(fd);
       return temp;
     },
     chown(path: string, uid: number, gid: number, pin?: PinExpectation): void {
@@ -978,7 +1002,7 @@ export function hostIo(exec: ProvisionExec = provisionExec(), options: HostDoorO
       rmSync(temp, { force: true });
       const fd = openSync(temp, FS.O_WRONLY | FS.O_CREAT | FS.O_EXCL | FS.O_NOFOLLOW, 0o600);
       try {
-        writeSync(fd, bytes);
+        writeAllSync(fd, bytes);
         fsyncSync(fd);
         fchownSync(fd, uid, gid);
         fchmodSync(fd, mode);

@@ -20,7 +20,8 @@
  * paths of a CLOSED allowlist (PROC_ALLOWLIST). Not every /proc read of init goes through it:
  * observe.ts reads /proc/cpuinfo with readRootFile, and the provisioner's own media check
  * (apply.ts) reads /proc/self/mountinfo through its own reader. The directory fsync after a
- * rename is apply.ts `fsyncDir`, the one copy both doors share.
+ * rename is apply.ts `fsyncDir`, and every write is apply.ts `writeAllSync` (a short write
+ * continued, never dropped) — the copies both doors share.
  *
  * The scratch-root seam (spec §2.2, non-root real-fs gates on macOS): `trustRoot` narrows the
  * judged ancestry to a scratch tree and `rootUid` names the uid that counts as root there (the
@@ -42,12 +43,11 @@ import {
   rmdirSync,
   rmSync,
   unlinkSync,
-  writeSync,
 } from 'node:fs';
 import type { Stats } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { ProvisionExec } from '../exec_contract';
-import { fsyncDir, hostIo, pinnedParentOf, withPinnedDir } from '../apply';
+import { fsyncDir, hostIo, pinnedParentOf, withPinnedDir, writeAllSync } from '../apply';
 import type { PathFacts, PinExpectation } from '../plan';
 import { ancestorsBelow, trustProblem } from '../plan';
 import type { InitIo, OperatorFile } from './types';
@@ -234,8 +234,7 @@ export function initHostIo(exec: ProvisionExec, options: InitHostIoOptions = {})
   const createExclusive = (temp: string, bytes: Uint8Array, mode: number, after?: (fd: number) => void): void => {
     const fd = openSync(temp, FS.O_WRONLY | FS.O_CREAT | FS.O_EXCL | FS.O_NOFOLLOW, mode & 0o777);
     try {
-      let offset = 0;
-      while (offset < bytes.length) offset += writeSync(fd, bytes, offset, bytes.length - offset);
+      writeAllSync(fd, bytes);
       fsyncSync(fd);
       after?.(fd);
     } finally {
@@ -371,9 +370,7 @@ export function initHostIo(exec: ProvisionExec, options: InitHostIoOptions = {})
       }
       try {
         regularFile(path, fstatSync(fd));
-        const bytes = Buffer.from(text, 'utf8');
-        let offset = 0;
-        while (offset < bytes.length) offset += writeSync(fd, bytes, offset, bytes.length - offset);
+        writeAllSync(fd, Buffer.from(text, 'utf8'));
         fsyncSync(fd);
       } finally {
         closeSync(fd);

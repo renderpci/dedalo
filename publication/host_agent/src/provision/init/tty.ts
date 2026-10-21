@@ -4,7 +4,8 @@
  *   - Interactive means stdin AND stdout are TTYs. Otherwise every question answers `null` (the
  *     caller turns that into "not a terminal: re-run with --yes / --decide …" or a REFUSED secret).
  *   - Everything is read in RAW mode, one character at a time: visible answers are echoed by this
- *     module, hidden ones never are. Backspace edits, Enter ends, Ctrl-C / Ctrl-D abort (null:
+ *     module, hidden ones never are. Backspace edits, Enter ends, an escape sequence (a cursor
+ *     key) is discarded whole, Ctrl-C / Ctrl-D abort (null:
  *     "aborted by operator; nothing was written for this item"). Raw mode is restored in `finally`
  *     and on SIGINT (a signal sent from outside while a question is open).
  *   - A secret is asked twice and must match; three mismatches abort.
@@ -117,11 +118,55 @@ class RawReader {
   }
 }
 
+const ESC = '\x1b';
+
+/** True when `char` is one code point in [low, high]. */
+function inRange(char: string, low: number, high: number): boolean {
+  const code = char.codePointAt(0) ?? -1;
+  return char.length === 1 && code >= low && code <= high;
+}
+
+/**
+ * Consumes the rest of an escape sequence whose ESC was just read, as ONE unit (a cursor key is not
+ * part of an answer, and neither is any byte of it): CSI `ESC [` parameter (0x30-0x3F) and
+ * intermediate (0x20-0x2F) bytes then one final byte (0x40-0x7E); SS3 `ESC O` then one final byte;
+ * otherwise ESC + one printable byte (Alt+key, a two-byte escape). Returns null when the sequence
+ * ended normally, or the character that broke it (Enter, Ctrl-C, Backspace… typed after a lone
+ * ESC) for the line to handle — a line control is never swallowed by a sequence.
+ */
+async function skipEscape(reader: RawReader): Promise<string | null> {
+  const intro = await reader.nextChar();
+  if (intro === '[') {
+    for (;;) {
+      const char = await reader.nextChar();
+      if (inRange(char, 0x20, 0x3f)) continue;
+      return inRange(char, 0x40, 0x7e) ? null : char;
+    }
+  }
+  if (intro === 'O') {
+    const char = await reader.nextChar();
+    return inRange(char, 0x40, 0x7e) ? null : char;
+  }
+  return inRange(intro, 0x20, 0x7e) ? null : intro;
+}
+
 /** Reads one line in raw mode. `echo`: print what is typed (visible) or nothing (hidden). */
 async function readLine(reader: RawReader, output: TtyOutput, echo: boolean): Promise<string> {
   let text = '';
+  /** A character an escape sequence handed back (it broke the sequence): handled before the next read. */
+  let pending: string | null = null;
   for (;;) {
-    const char = await reader.nextChar();
+    let char: string = pending ?? (await reader.nextChar());
+    pending = null;
+    if (char === ESC) {
+      const broke = await skipEscape(reader);
+      if (broke === null) continue;
+      char = broke;
+      if (char === ESC) {
+        pending = char;
+        continue;
+      }
+    }
     if (char === CTRL_C || char === CTRL_D) {
       output.write('\n');
       throw new Aborted();
@@ -137,7 +182,7 @@ async function readLine(reader: RawReader, output: TtyOutput, echo: boolean): Pr
       }
       continue;
     }
-    // Any other control character (an arrow key's ESC sequence, a tab) is not part of an answer.
+    // Any other control character (a tab; an escape sequence was consumed whole above) is not part of an answer.
     if (char < ' ' || char === '\x7f') continue;
     text += char;
     if (echo) output.write(char);
