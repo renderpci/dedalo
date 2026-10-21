@@ -189,6 +189,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The reference picker of a text area separates the term and its thesaurus part (… | …), instead of gluing them.**
+
+    In the reference picker of a text area, a term whose record carries no ancestor chain showed the thesaurus part glued to it (`LatinaAgrupador`). The picker now separates the columns that actually render, so the same entry reads `Latina | Agrupador`, like the rest of the list.
+
 - **A text area reference can link the same term from several references, and deleting a reused reference keeps the others linked.**
 
     In the reference picker of a text area, giving a second reference a term that another reference already used was refused as a duplicate, yet the reference was still written into the text, pointing at a link the database never saved. The same term can now be linked from any number of references.

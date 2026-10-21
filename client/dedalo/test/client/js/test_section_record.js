@@ -6,6 +6,7 @@
 
 
 import {section_record, apply_caller_show_interface} from '../../../core/section_record/js/section_record.js'
+import {view_text_section_record} from '../../../core/section_record/js/view_text_section_record.js'
 import {get_section_records} from '../../../core/section/js/section.js'
 import {get_dataframe} from '../../../core/component_common/js/dataframe.js'
 import {event_manager} from '../../../core/common/js/event_manager.js'
@@ -1317,6 +1318,125 @@ describe(`SECTION_RECORD (caller show_interface)`, async () => {
 				await instance.destroy?.()
 			}
 		}
+	})
+})
+
+
+
+/**
+* VIEW_TEXT_SECTION_RECORD separators
+* The flat-text row joins its columns with `context.fields_separator`. A column
+* that renders NOTHING (the empty ddinfo of a term with no ancestor chain) must
+* not glue the columns around it: the model term used to arrive as
+* `LatinaAgrupador` instead of `Latina | Agrupador` in the thesaurus/language
+* autocompletes. Two more cases pin what must NOT change: the indexation portal's
+* adjacent tag/note callbacks stay glued, and a control column (remove/section_id)
+* takes no separator around it and keeps its textless DOM (the icon-only open
+* button). Backend-free: plain objects and DOM nodes.
+*/
+describe(`view_text_section_record separators`, function() {
+
+	const node = (text) => {
+		const el = document.createElement('span')
+		el.textContent = text
+		return el
+	}
+
+	const make_record = (columns_map, instances) => ({
+		id				: 'sr_view_text_separators',
+		model			: 'section_record',
+		tipo			: 'st_x',
+		mode			: 'list',
+		context			: { view:'text', fields_separator:' | ' },
+		columns_map		: columns_map,
+		section_tipo	: 'st_x',
+		section_id		: 1,
+		caller			: null,
+		get_ar_columns_instances_list : async () => instances
+	})
+
+	const instance = (column_id, text) => ({ column_id, status:'rendered', node:node(text) })
+
+	it(`keeps the separator across an EMPTY ddinfo column`, async () => {
+
+		const self = make_record(
+			[ {id:'term'}, {id:'ddinfo', callback:() => new DocumentFragment()}, {id:'model'} ],
+			[ instance('term','Latina'), instance('model','Agrupador') ]
+		)
+
+		const wrapper = await view_text_section_record.render(self, {})
+
+		assert.equal(wrapper.textContent, 'Latina | Agrupador', 'the empty ddinfo must not glue the next column')
+	})
+
+	it(`separates a rendered ddinfo on both sides`, async () => {
+
+		const self = make_record(
+			[ {id:'term'}, {id:'ddinfo', callback:() => {
+				const fragment = new DocumentFragment()
+				fragment.appendChild(node('Parents'))
+				return fragment
+			} }, {id:'model'} ],
+			[ instance('term','Latina'), instance('model','Agrupador') ]
+		)
+
+		const wrapper = await view_text_section_record.render(self, {})
+
+		assert.equal(wrapper.textContent, 'Latina | Parents | Agrupador')
+	})
+
+	it(`keeps two adjacent callback columns glued (indexation tag + note)`, async () => {
+
+		const suffix = (text) => {
+			const fragment = new DocumentFragment()
+			fragment.appendChild(node(text))
+			return fragment
+		}
+		const self = make_record(
+			[ {id:'term'}, {id:'tag', callback:() => suffix('Term')}, {id:'info', callback:() => suffix('[Objects]')} ],
+			[ instance('term','Latina') ]
+		)
+
+		const wrapper = await view_text_section_record.render(self, {})
+
+		assert.equal(wrapper.textContent, 'Latina | Term[Objects]', 'callbacks stay one glued suffix')
+	})
+
+	it(`takes no separator before a control column`, async () => {
+
+		const fragment = new DocumentFragment()
+		fragment.appendChild(node('x'))
+		const self = make_record(
+			[ {id:'term'}, {id:'remove', callback:() => fragment} ],
+			[ instance('term','Latina') ]
+		)
+
+		const wrapper = await view_text_section_record.render(self, {})
+
+		assert.equal(wrapper.textContent, 'Latinax')
+	})
+
+	it(`keeps a textless control callback (icon-only button) and adds no separator around it`, async () => {
+
+		// the real section_id callback shape: fragment > button > span.button.icon
+		const button_fragment = () => {
+			const fragment	= new DocumentFragment()
+			const button	= document.createElement('button')
+			const icon		= document.createElement('span')
+			icon.className	= 'button edit icon'
+			button.appendChild(icon)
+			fragment.appendChild(button)
+			return fragment
+		}
+		const self = make_record(
+			[ {id:'section_id', callback:button_fragment}, {id:'term'} ],
+			[ instance('term','Latina') ]
+		)
+
+		const wrapper = await view_text_section_record.render(self, {})
+
+		assert.equal(wrapper.querySelectorAll('button').length, 1, 'icon-only callback output must survive')
+		assert.equal(wrapper.textContent, 'Latina', 'control columns take no separator before or after')
 	})
 })
 

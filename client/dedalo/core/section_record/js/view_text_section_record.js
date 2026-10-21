@@ -24,16 +24,23 @@
 * for compact label generation, portal pickers, and any context where a flat text-like
 * representation of a record is preferred over a structured grid.
 *
-* Special columns handled by callback (e.g. tool_time_machine id, ddinfo):
-*   - Callback columns are appended directly without a column separator.
-*   - 'ddinfo' callback columns are pre-rendered to detect emptiness; an empty ddinfo
-*     column is skipped entirely so that it never contributes a trailing separator.
-*   - 'remove' and 'section_id' virtual column ids suppress the following column separator.
+* Column separators (one `separator` between groups; `fields_separator` inside a
+* group; both from `context.fields_separator`):
+*   - A DATA column is always separated from its neighbours.
+*   - Two adjacent CALLBACK columns stay glued (indexation portals append the tag,
+*     ddinfo and info callbacks as one suffix).
+*   - 'remove' and 'section_id' control columns take no separator before or after them.
+*   - An empty column (an empty ddinfo fragment included) is dropped from the join,
+*     so the separator lands between the columns that DO render. The old "peek at
+*     the next column" separator was never emitted when an intermediate ddinfo was
+*     empty, gluing the following column on ("Latina" + "Agrupador" → "LatinaAgrupador").
 *
 * Component instances are rendered in parallel via Promise.all before their nodes are
-* inspected. An instance node is skipped (treated as empty) when:
-*   - Its childNodes list is empty, OR
-*   - Its textContent (trimmed) is empty AND the first child is not an IMG or SPAN element.
+* inspected. An instance node is skipped (treated as empty, `is_empty_instance_node`)
+* when its childNodes list is empty, OR its textContent (trimmed) is empty AND its
+* first child is not an IMG or SPAN element. A CALLBACK column is skipped only when
+* it returns no child nodes at all: its output is meaningful DOM even with no text
+* (an icon-only button).
 *
 * Main export: `view_text_section_record.render` — static async method called by
 * `render_list_section_record.prototype.list`.
@@ -46,23 +53,53 @@ export const view_text_section_record = function() {
 
 
 /**
+* IS_EMPTY_INSTANCE_NODE
+* Empty test for a COMPONENT instance node: a node contributes nothing when it
+* has no children, or when it has no text and its first child is neither an IMG
+* nor an inline SPAN (those carry content without text).
+*
+* NOT for callback columns: their output is meaningful DOM (a wrapper with an
+* icon-only button included), so a callback column is skipped only when it
+* returns no child nodes at all.
+*
+* @param {Node|null} node
+* @returns {boolean}
+*/
+const is_empty_instance_node = function(node) {
+
+	if (!node || node.childNodes.length===0) {
+		return true
+	}
+
+	const first_child = node.firstChild
+
+	return node.textContent.trim()==='' &&
+		first_child.tagName !== 'IMG' &&
+		first_child.tagName !== 'SPAN'
+}//end is_empty_instance_node
+
+
+
+/**
 * RENDER
 * Produce the flat-text DOM node for a single section_record row.
 *
-* Iterates `self.columns_map` in order. For each column:
-*   1. Callback columns — invoked immediately with the record's locator context and
-*      their result node appended directly to the wrapper. The loop continues to the
-*      next column without injecting a column separator.
-*   2. Regular columns — all component instances matching `column_id` are rendered in
-*      parallel. Non-empty instance nodes are joined by `fields_separator` spans and
-*      appended to the wrapper. A `column_separator` span is then appended between
-*      successive non-empty columns (see guard conditions below).
+* Iterates `self.columns_map` in order and collects one group per NON-EMPTY
+* column; the groups are joined after the loop:
+*   1. Callback columns — invoked with the record's locator context. Their result
+*      becomes a group of its own (an empty result, e.g. an empty ddinfo, joins
+*      nothing).
+*   2. Regular columns — all component instances matching `column_id` are rendered
+*      in parallel; their non-empty nodes are joined by `fields_separator` spans.
 *
-* Column separator guard: the separator after column[i] is suppressed when:
-*   - No non-empty instances were produced for column[i], OR
-*   - This is the last column (i === columns_map_length - 1), OR
-*   - The next column's id is 'remove' or 'section_id' (virtual/action columns), OR
-*   - The next column is a 'ddinfo' callback whose output is empty.
+* Column separator rule (one `separator` between groups; `fields_separator`
+* inside a group):
+*   - 'remove' and 'section_id' control columns take no separator before OR after
+*     them,
+*   - two consecutive CALLBACK columns take none either (indexation portals append
+*     tag/ddinfo/info callbacks as one glued suffix), while a data column is always
+*     separated — so `term | (empty ddinfo) | model` reads `term | model`, never
+*     `termmodel`.
 *
 * (!) `options.render_level` is read but currently unused — it is accepted for API
 * parity with other view renderers that may use it in the future.
@@ -102,17 +139,38 @@ view_text_section_record.render = async function(self, options) {
 		]
 		wrapper.classList.add(...ar_css)
 
+	// column_groups. One entry per NON-EMPTY column, in order, joined after the
+	// loop. `is_data` + `control` + `separator_before` carry the rule described in
+	// the header.
+		const column_groups = []
+		const separator = self.context.fields_separator || ' | '
+
+	// push_group — appends one column's nodes and decides its preceding separator
+		const push_group = function(nodes, is_data, column_id) {
+
+			const previous	= column_groups[column_groups.length-1]
+			const control	= column_id==='remove' || column_id==='section_id'
+
+			column_groups.push({
+				nodes				: nodes,
+				is_data				: is_data,
+				control				: control,
+				separator_before	: previous!==undefined &&
+					!control &&
+					!previous.control &&
+					(previous.is_data || is_data)
+			})
+		}
+
 	// columns. Render the columns_map items
 		const columns_map_length = columns_map.length
 		for (let i = 0; i < columns_map_length; i++) {
 
 			const current_column = columns_map[i]
 
-			// callback column case
-			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
+			// callback column case (section_id, tag, ddinfo, info, …)
 			// Callback columns skip the normal instance-render pipeline entirely; their
-			// output is appended directly to the wrapper and the loop continues so that
-			// no column separator is emitted after them.
+			// output is one group (subject to the callback/control separator rule).
 				if(current_column.callback && typeof current_column.callback==='function'){
 
 					// content_node
@@ -127,7 +185,10 @@ view_text_section_record.render = async function(self, options) {
 							locator				: self.locator
 						})
 
-					wrapper.appendChild(content_node)
+					// empty callback output (an empty ddinfo fragment) joins nothing
+						if (content_node && content_node.childNodes.length>0) {
+							push_group([content_node], false, current_column.id)
+						}
 					continue;
 				}
 
@@ -183,69 +244,48 @@ view_text_section_record.render = async function(self, options) {
 					// add already rendered node
 						const current_instance_node	= current_instance.node
 
-					// if the node is empty do not use it
-					// An instance is treated as empty when it has no child nodes at all, or when its
-					// visible text is blank and the first child is not an image or inline SPAN element
-					// (images and SPANs are valid non-textual content that should not be suppressed).
-						const empty = current_instance_node.childNodes.length===0 ||
-							(
-								current_instance_node.textContent.trim()==='' &&
-								current_instance_node.firstChild.tagName !== 'IMG' &&
-								current_instance_node.firstChild.tagName !== 'SPAN'
-							)
-						if (empty) {
+					// if the node is empty do not use it (image/span-only nodes are not empty)
+						if (is_empty_instance_node(current_instance_node)) {
 							continue
 						}
 
 						ar_nodes.push( current_instance_node )
 				}//end for (let j = 0; j < ar_instances_length; j++)
 
-			// join instances nodes, fields, with separator between them
-			// Multiple instances sharing the same column_id (e.g. multilingual component variants)
-			// are separated by the fields_separator so they read as a single concatenated value.
-				const value_separator = self.context.fields_separator || ' | '
-				const ar_nodes_length = ar_nodes.length
-				for (let k = 0; k < ar_nodes_length; k++) {
-					wrapper.appendChild(ar_nodes[k])
-					if(k < ar_nodes_length -1) {
-						const node_fields_separator = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'separator fields_separator',
-							inner_html		: value_separator
-						})
-						wrapper.appendChild(node_fields_separator)
-					}
-				}
-
-			// columns separator (between components inside the same column)
-			// The separator is only emitted when: (a) this column produced at least one node,
-			// (b) there is a next column, (c) the next column is not a virtual action column
-			// ('remove', 'section_id'), and (d) if the next column is a 'ddinfo' callback,
-			// its content is not empty (to avoid a trailing separator before blank metadata).
-				if(ar_nodes_length > 0 && i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
-
-					// ddinfo case. Check i f is empty the content
-						if (columns_map[i+1].id==='ddinfo' && typeof columns_map[i+1].callback==='function') {
-							const content_node = columns_map[i+1].callback({
-								section_tipo	: self.section_tipo,
-								section_id		: self.section_id,
-								caller			: self.caller
-							})
-							if (!content_node.textContent || !content_node.textContent.length) {
-								continue; // skip empty ddinfo
-							}
-						}
-
-					const fields_separator		= self.context.fields_separator || ', '
-					const node_fields_separator = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'separator column_separator',
-						inner_html		: fields_separator
-					})
-					wrapper.appendChild(node_fields_separator)
+			// collect the column nodes. Multiple instances sharing the same column_id
+			// (e.g. multilingual component variants) are joined by the fields_separator.
+				if (ar_nodes.length>0) {
+					push_group(ar_nodes, true, current_column.id)
 				}
 
 		}//end for (let i = 0; i < columns_map_length; i++)
+
+	// join columns. `separator` between groups, `separator` inside a group too
+		for (let i = 0; i < column_groups.length; i++) {
+
+			const group = column_groups[i]
+
+			if (group.separator_before) {
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'separator column_separator',
+					inner_html		: separator,
+					parent			: wrapper
+				})
+			}
+
+			for (let k = 0; k < group.nodes.length; k++) {
+				if (k>0) {
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'separator fields_separator',
+						inner_html		: separator,
+						parent			: wrapper
+					})
+				}
+				wrapper.appendChild(group.nodes[k])
+			}
+		}
 
 
 	return wrapper

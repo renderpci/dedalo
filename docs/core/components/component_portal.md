@@ -190,6 +190,7 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 - **Values:** an object `{mode, request_config}`.
 - **`source.mode`:** `"autocomplete"` (default behaviour — the user finds and links target records via the autocomplete service) or `"external"`. With **`external`** the portal data is *calculated*, not user-owned: in `edit` (non-pagination) requests the server recomputes the locators (inverse / dependent relations) instead of trusting the stored array, a cache rebuild does the same, and the UI hides add/link/tree buttons and tools, showing only the external + list buttons.
 - **`source.request_config`:** the per-portal RQO template: `sqo` (which target section(s), via `section_tipo` sources such as `section`, `hierarchy_types`, …), `show` (the `ddo_map` columns rendered for each linked record + `fields_separator`), `choose` (the columns offered in the autocomplete picker), and `search`. This is the heart of a portal's configuration — it defines both *what it links to* and *how each linked record is displayed*.
+- **Picker labels.** In the autocomplete picker each match is shown as the target's flat-text row: the `choose` columns that resolve a value, joined by `fields_separator` (default ` | `). A column that resolves nothing — an empty `value_with_parents` breadcrumb, for instance — is skipped, so the columns that do render stay separated (`Latina | Agrupador`, never `LatinaAgrupador`).
 
 ### config_relation
 
