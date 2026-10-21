@@ -76,6 +76,45 @@ const set_busy = function (button, busy) {
 const is_busy = (button) => button.classList.contains('loading');
 
 /**
+ * JOB_ROW_OF_KIND
+ * Whether one row of dd_utils_api::get_activity (src/core/api/activity.ts
+ * ActivityRow) is a job of `job_kind` (`<tool>_<action>`, the kind
+ * src/core/tools/background.ts submits). "Check my jobs" lists only these, and
+ * an EMPTY list is what offers the operator a new attempt — so a rule that
+ * stopped matching would offer a second commit beside a running first one.
+ * ActivityRow carries no kind field today (job_id is documented opaque), so
+ * this reads the job manager's id grammar `<kind>_<pid>_<counter>`
+ * (media/jobs.ts nextId). Not a convention trusted on faith: the gate
+ * test/unit/acquisition_job_activity_native.test.ts runs REAL background jobs
+ * through scheduleBackground and feeds their rows to THIS function — a server
+ * rename turns it red.
+ * @param {Object} row - one get_activity row
+ * @param {string} job_kind
+ * @returns {boolean}
+ */
+export const job_row_of_kind = function (row, job_kind) {
+	if (row?.source !== 'media' || typeof row.job_id !== 'string') {
+		return false;
+	}
+	const pattern = new RegExp(
+		'^' + String(job_kind).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '_\\d+_\\d+$',
+	);
+	return pattern.test(row.job_id);
+}; //end job_row_of_kind
+
+/**
+ * JOB_ROW_FOLLOW_HANDLE
+ * The get_process_status handle of one get_activity job row: the pfile is
+ * `<job id>.json` (background.ts); the pid is only a label on that wire
+ * (process_status.ts reads the pfile). Gated with job_row_of_kind.
+ * @param {Object} row - one get_activity row (job_row_of_kind true)
+ * @returns {{pid: string, pfile: string}}
+ */
+export const job_row_follow_handle = function (row) {
+	return { pid: row.job_id, pfile: row.job_id + '.json' };
+}; //end job_row_follow_handle
+
+/**
  * EDIT
  * @param {Object} options - options.render_level {string} 'full' | 'content'
  * @returns {Promise<HTMLElement>}
@@ -187,6 +226,12 @@ const get_content_data = function (self) {
 		set_busy(preview_button, false);
 		preview_button.disabled = commit_outstanding;
 	};
+	// Preview and a commit EXCLUDE each other, both ways. Preview refuses while
+	// a commit is outstanding (above); a Confirm refuses while this is true —
+	// a commit outstanding (from any review) OR a Preview in flight, whose
+	// answer rebuilds result_container: a commit started inside that window
+	// had its panel detached and a new, ENABLED Confirm drawn beside it.
+	const action_in_flight = () => commit_outstanding || is_busy(preview_button);
 
 	// Manual-fetch fallback for a source that blocks this tool's own automated
 	// fetch (server/index.ts previewHtml — confirmed live: OJS article landing
@@ -615,14 +660,8 @@ const get_content_data = function (self) {
 				});
 		};
 
-		// A row of the operator's jobs is one of THIS action's when its id has
-		// the job manager's grammar `<kind>_<pid>_<counter>` (media/jobs.ts nextId).
-		const job_id_pattern = new RegExp(
-			'^' + String(job_kind).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '_\\d+_\\d+$',
-		);
-		const is_job_of_this_kind = function (row) {
-			return row?.source === 'media' && typeof row.job_id === 'string' && job_id_pattern.test(row.job_id);
-		};
+		// A row of the operator's jobs is one of THIS action's (job_row_of_kind).
+		const is_job_of_this_kind = (row) => job_row_of_kind(row, job_kind);
 
 		const render_job_candidates = function (rows) {
 			while (container.firstChild) {
@@ -658,9 +697,8 @@ const get_content_data = function (self) {
 				follow_button.type = 'button';
 				follow_button.addEventListener('click', function (e) {
 					e.stopPropagation();
-					// the pfile is `<job id>.json` (background.ts); the pid is only
-					// a label on this wire (process_status.ts reads the pfile)
-					track_job(row.job_id, row.job_id + '.json');
+					const handle = job_row_follow_handle(row);
+					track_job(handle.pid, handle.pfile);
 				});
 			}
 			if (rows.some((row) => row.status === 'running' || row.status === 'queued')) {
@@ -1117,8 +1155,12 @@ const get_content_data = function (self) {
 
 		confirm_button.addEventListener('click', function (e) {
 			e.stopPropagation();
-			// its job is in flight (or its outcome is unknown): never a second one
-			if (is_busy(confirm_button)) {
+			// its job is in flight (or its outcome is unknown): never a second one.
+			// And never while ANOTHER action is: a commit outstanding from an
+			// earlier review, or a Preview in flight — its answer replaces this
+			// review, the commit's panel with it, and draws a NEW, enabled Confirm
+			// (see action_in_flight).
+			if (is_busy(confirm_button) || action_in_flight()) {
 				return;
 			}
 
@@ -1180,6 +1222,12 @@ const get_content_data = function (self) {
 		}
 
 		set_busy(preview_button, true);
+		// The review on screen is SUPERSEDED from this click: it leaves now, not
+		// when the answer arrives — no stale Confirm stays offered meanwhile
+		// (its handler refuses anyway: action_in_flight).
+		while (result_container.firstChild) {
+			result_container.removeChild(result_container.firstChild);
+		}
 
 		// preview_html is a plain (non-backgrounded) request, so a selected
 		// file skips stream_background_job and handles its response directly.

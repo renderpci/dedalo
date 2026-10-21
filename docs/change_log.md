@@ -189,6 +189,15 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The acquisition tools no longer start an import while a new Preview is loading**
+
+    In the auction-catalogue and journal acquisition tools, clicking **Preview** again
+    left the previous review on screen, with its **Confirm import** still enabled,
+    until the new preview arrived. An import started in that moment was then hidden by
+    the new review, and the new review's **Confirm import** could start a second import
+    beside the first. The previous review now disappears as soon as you click
+    **Preview**, and **Confirm import** does nothing while a preview is loading.
+
 - **The acquisition tools no longer let you start a second import while the first one's outcome is unknown**
 
     In the auction-catalogue and journal acquisition tools, **Confirm import** stays
