@@ -65,6 +65,8 @@ export interface RuntimePathEntry {
 	readonly consumer: string;
 	/** The EFFECTIVE path right now; null = unconfigured. */
 	readonly resolve: () => string | null;
+	/** The updater's remedy when the generic "move it, or set <key>" is wrong advice. */
+	readonly remedy?: string;
 }
 
 /** Trim-to-null: an empty env value is "unset", exactly as the readers treat it. */
@@ -148,12 +150,15 @@ export const RUNTIME_PATH_CENSUS: readonly RuntimePathEntry[] = Object.freeze([
 		envKey: 'ONTOLOGY_DATA_IO_DIR',
 		consumer: 'src/core/ontology/data_io.ts:setOntologyIoPath',
 		// readString applies the catalog default, which is legacy-aware
-		// (src/config/catalog/maintenance.ts). NOTE: the legacy in-tree dir
-		// SHIPS seed content (install/import/ontology/7.0/*.copy.gz is tracked),
-		// so a stock install resolves in-tree until the operator moves the dir
-		// or creates <private>/import/ontology — the updater's refusal names
-		// exactly that fix.
+		// (src/config/catalog/maintenance.ts probeOntologyLegacyDir): the
+		// legacy in-tree dir SHIPS the vendored release, which does not count,
+		// so a stock install resolves to <private>/import/ontology. Only an
+		// install whose legacy dir holds files the release does not ship (or an
+		// ontology server) resolves in-tree — and moving the SHIPPED files is
+		// wrong advice, hence the remedy.
 		resolve: () => readString('ONTOLOGY_DATA_IO_DIR'),
+		remedy:
+			'move the files the release does not ship (recovery/, your exports) into <private dir>/import/ontology — creating that directory ends the fallback — or set ONTOLOGY_DATA_IO_DIR',
 	},
 	{
 		id: 'transform_definitions_dir',
@@ -306,15 +311,20 @@ export const RUNTIME_PATH_CENSUS: readonly RuntimePathEntry[] = Object.freeze([
  */
 export function runtimePathsInsideTree(
 	targetRoot: string,
-): { id: string; envKey: string | null; path: string }[] {
+): { id: string; envKey: string | null; path: string; remedy?: string }[] {
 	const root = resolve(targetRoot);
-	const inside: { id: string; envKey: string | null; path: string }[] = [];
+	const inside: { id: string; envKey: string | null; path: string; remedy?: string }[] = [];
 	for (const entry of RUNTIME_PATH_CENSUS) {
 		const raw = entry.resolve();
 		if (raw === null) continue;
 		const path = resolve(raw);
 		if (path === root || path.startsWith(root + sep)) {
-			inside.push({ id: entry.id, envKey: entry.envKey, path });
+			inside.push({
+				id: entry.id,
+				envKey: entry.envKey,
+				path,
+				...(entry.remedy !== undefined ? { remedy: entry.remedy } : {}),
+			});
 		}
 	}
 	return inside;

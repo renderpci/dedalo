@@ -31,6 +31,7 @@
  * the DB layer without changing call sites.
  */
 
+import { ontologyDataIoDefaultDir } from './catalog/maintenance.ts';
 import { legacyAwareDefaultDir } from './catalog/media.ts';
 import { declaredDataLangs, resolveCurrentDataLang } from './data_langs.ts';
 import { RETIRED_ENV_KEYS, readEnv } from './env.ts';
@@ -1327,7 +1328,10 @@ export const config: DedaloConfig = Object.freeze({
 		pgBinPath: readEnv('DEDALO_PG_BIN_PATH'),
 		backupTimeRangeHours: Math.max(0, readNumber('DEDALO_BACKUP_TIME_RANGE')),
 		backupVerifySecondsPerGb: Math.max(1, readNumber('DEDALO_BACKUP_VERIFY_SECONDS_PER_GB')),
-		ontologyDataIoDir: readString('ONTOLOGY_DATA_IO_DIR'),
+		// The legacy-aware default is decided ONCE and recorded here, the one
+		// consumer call (catalog/maintenance.ts ontologyDataIoDefaultDir).
+		ontologyDataIoDir:
+			readEnv('ONTOLOGY_DATA_IO_DIR') || ontologyDataIoDefaultDir({ record: true, warn: true }),
 		transformDefinitionsDir: readString('DEDALO_TRANSFORM_DEFINITIONS_DIR'),
 		exportArtifactsDir: readString('DEDALO_EXPORT_ARTIFACTS_DIR'),
 		exportArtifactsTtlHours: readNumber('DEDALO_EXPORT_ARTIFACTS_TTL_HOURS'),

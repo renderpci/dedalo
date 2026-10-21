@@ -5736,7 +5736,9 @@ ONTOLOGY_DATA_IO_DIR `string`
 
 This parameter defines the directory to input/output the ontology files in the server. Ontology files can be created by master ontology servers or downloaded from an external provider such as the official master Dédalo server.
 
-Unset, Dédalo prefers `import/ontology` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory and would otherwise carry downloaded or exported ontology files away with the old code. The legacy `install/import/ontology` directory inside the install tree ships the vendored ontology seed files, so it keeps being used until you create the private-directory home (move any files of your own there) or set this key explicitly.
+Unset, Dédalo uses `import/ontology` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory: an update refuses to start while runtime data lives inside it, and an image install cannot write there at all. The `install/import/ontology` directory inside the code tree holds the ontology release that ships with the code; Dédalo only reads it.
+
+An install from before this default whose `install/import/ontology` holds files the release does not ship (a `recovery/` snapshot from an earlier update, files of your own), or that is an ontology server (`IS_AN_ONTOLOGY_SERVER`, whose exports were written there), keeps using that directory, with a warning at start-up: nothing is moved for you. Move your files to `<private dir>/import/ontology` (creating it ends the fallback), or set this key explicitly. The decision is taken once and recorded.
 
 Files are organised in version directories, `<major.minor>/`: one `<tld>.copy.gz` per ontology, `matrix_dd.copy.gz` for the private lists, and the `ontology.json` (plus `ontology_llm_map.json`) that describe them. The canonical production layout is:
 
@@ -5750,7 +5752,7 @@ Files are organised in version directories, `<major.minor>/`: one `<tld>.copy.gz
 ONTOLOGY_DATA_IO_DIR="/srv/dedalo/ontology"
 ```
 
-*Default: `<private dir>/import/ontology` once that directory exists; until then the legacy `<install dir>/install/import/ontology` (which ships the vendored ontology seeds) keeps being used*
+*Default: `<private dir>/import/ontology`; an install whose legacy `<install dir>/install/import/ontology` holds files the release does not ship (or that is an ontology server) keeps the legacy dir until that private directory exists*
 
 ---
 

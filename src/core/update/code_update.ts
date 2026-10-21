@@ -1291,11 +1291,12 @@ function refuseUnwritableSwapDirs(targetRoot: string, backupRoot: string): void 
 function refuseRuntimeDataInsideTree(targetRoot: string): void {
 	const insideTree = runtimePathsInsideTree(targetRoot);
 	if (insideTree.length > 0) {
-		const first = insideTree[0] as { id: string; envKey: string | null; path: string };
+		const first = insideTree[0] as (typeof insideTree)[number];
 		const remedy =
-			first.envKey === null
+			first.remedy ??
+			(first.envKey === null
 				? `move it (census id '${first.id}')`
-				: `move it, or set ${first.envKey}`;
+				: `move it, or set ${first.envKey}`);
 		throw new DedaloError('update.refused', {
 			// The FIRST offender + its env key on the wire; the full list log-only.
 			publicMessage: `Error. Runtime data lives inside the code tree: ${first.path} (${remedy}) — a code swap would carry it into the backup.`,

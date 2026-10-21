@@ -21,7 +21,9 @@ import { privateDir, projectRoot, readEnv } from '../env.ts';
  *  - 'unreadable': the dir exists but readdir failed (EACCES, an NFS blip) —
  *    NEVER "empty": a transient error must not repoint a live media root.
  */
-function probeLegacyDir(path: string): 'content' | 'empty' | 'unreadable' {
+export type LegacyDirProbe = 'content' | 'empty' | 'unreadable';
+
+function probeLegacyDir(path: string): LegacyDirProbe {
 	if (!existsSync(path)) return 'empty';
 	try {
 		return readdirSync(path).length > 0 ? 'content' : 'empty';
@@ -90,10 +92,12 @@ function recordStickyDecision(key: string, decision: LegacyDirDecision): void {
  * NEVER move anyone's files: when the key is unset and the legacy in-tree
  * directory still holds content, the legacy path keeps being used and a
  * one-line warning names the key that ends the fallback. Only an install with
- * no legacy data gets the new default. `preferPrivateWhenExists` lets a key
- * whose legacy dir SHIPS repo content (ONTOLOGY_DATA_IO_DIR — the vendored
- * `install/import/ontology/7.0/*.copy.gz` seeds make "legacy is non-empty"
- * permanently true) escape by simply creating the private-dir home.
+ * no legacy data gets the new default. A key whose legacy dir SHIPS release
+ * content passes its own `probe`, which answers 'empty' for what the release
+ * ships (ONTOLOGY_DATA_IO_DIR: the vendored `install/import/ontology/7.0/`
+ * seeds would otherwise make "legacy is non-empty" permanently true —
+ * catalog/maintenance.ts probeOntologyLegacyDir). `preferPrivateWhenExists`
+ * lets an operator end the fallback by creating the private-dir home.
  *
  * It lives HERE (not in runtime_paths.ts) because the census module imports
  * the typed readers, which load the catalog — the helper in runtime_paths
@@ -118,12 +122,22 @@ export function legacyAwareDefaultDir(
 	key: string,
 	legacyRel: readonly string[],
 	privateRel: readonly string[],
-	options: { preferPrivateWhenExists?: boolean; warn?: boolean; record?: boolean } = {},
+	options: {
+		preferPrivateWhenExists?: boolean;
+		warn?: boolean;
+		record?: boolean;
+		probe?: (path: string) => LegacyDirProbe;
+	} = {},
 ): string {
 	const legacy = join(projectRoot, ...legacyRel);
 	const modern = join(privateDir, ...privateRel);
 	if (options.preferPrivateWhenExists === true && existsSync(modern)) return modern;
-	const decision = stickyOrDerivedDecision(key, legacy, options.record === true);
+	const decision = stickyOrDerivedDecision(
+		key,
+		legacy,
+		options.record === true,
+		options.probe ?? probeLegacyDir,
+	);
 	if (decision === 'legacy') {
 		if (options.warn === true) {
 			console.warn(
@@ -138,17 +152,26 @@ export function legacyAwareDefaultDir(
 /** The recorded decision when one exists; else derive it (and record it when
  * `record` — the ONE consumer call, buildMediaConfig — asks; see the sticky
  * contract in legacyAwareDefaultDir's doc comment). */
-function stickyOrDerivedDecision(key: string, legacy: string, record: boolean): LegacyDirDecision {
+function stickyOrDerivedDecision(
+	key: string,
+	legacy: string,
+	record: boolean,
+	probe: (path: string) => LegacyDirProbe,
+): LegacyDirDecision {
 	const sticky = readStickyDecisions()[key];
 	if (sticky === 'legacy' || sticky === 'modern') return sticky;
-	const decision = deriveLegacyDecision(key, legacy);
+	const decision = deriveLegacyDecision(key, legacy, probe);
 	if (record) recordStickyDecision(key, decision);
 	return decision;
 }
 
 /** First-time derivation from the legacy dir's contents. */
-function deriveLegacyDecision(key: string, legacy: string): LegacyDirDecision {
-	const probe = probeLegacyDir(legacy);
+function deriveLegacyDecision(
+	key: string,
+	legacy: string,
+	probeDir: (path: string) => LegacyDirProbe,
+): LegacyDirDecision {
+	const probe = probeDir(legacy);
 	if (probe === 'unreadable') {
 		// Assume-legacy on error: keeping a dir that turns out empty costs
 		// nothing; repointing a root that turns out full loses the library.
