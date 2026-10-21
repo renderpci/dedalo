@@ -23,12 +23,22 @@
  *
  * A neutral kernel (no subsystem's vocabulary): the diffusion writers
  * (src/diffusion/writers/files.ts) and the core files-unlink door
- * (src/core/diffusion_bridge/diffusion_delete.ts) import it, and so does the
- * atomic JSON state-file kernel (src/core/files/atomic_json.ts).
+ * (src/core/diffusion_bridge/diffusion_delete.ts) import it, and so do the
+ * atomic JSON state-file kernel (src/core/files/atomic_json.ts) and the backup
+ * module (src/core/area_maintenance/backup.ts: its promotions' directory
+ * fsyncs and its `.verified` proof sidecars — it kept private copies of these
+ * helpers until 2026-10-21, one of which never fsynced the directory).
+ *
+ * THE ONE DOOR. On a module the server reaches, a descriptor write or flush
+ * (`writeSync`/`fsyncSync`/…) is in the sync-I/O gate's forbidden class
+ * (test/unit/sync_io_on_request_path_tripwire.test.ts): this kernel is where
+ * such calls belong, and every other module that still makes one is a ledgered,
+ * reasoned exception there.
  */
 
-import { closeSync, fsyncSync, mkdirSync, openSync, writeSync } from 'node:fs';
+import { closeSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
+import { tempPathFor } from './temp_path.ts';
 
 /**
  * The error codes of a filesystem that does not implement a directory fsync
@@ -66,6 +76,40 @@ export function fsyncFile(path: string): void {
 	} finally {
 		closeSync(fd);
 	}
+}
+
+/**
+ * Durably and atomically replace `target` with `bytes`: a sibling temp file
+ * (tempPathFor, created 'wx' at `mode`, never following or truncating anything
+ * already there) → every byte → fsync → rename over `target` → the directory
+ * fsync (now, or at `barrier`'s flush). A reader sees the old bytes or the new,
+ * never a torn mix; after it returns (or after the barrier flushed) the new
+ * bytes and their NAME survive a power cut. A failure removes the temp and
+ * propagates.
+ */
+export function writeFileDurably(
+	target: string,
+	bytes: Uint8Array | string,
+	options: { mode?: number; barrier?: DirectoryBarrier } = {},
+): void {
+	const payload = typeof bytes === 'string' ? new TextEncoder().encode(bytes) : bytes;
+	const temp = tempPathFor(target);
+	// 'wx' refuses a name that exists: what it refuses is not ours to remove.
+	const fd = openSync(temp, 'wx', options.mode ?? 0o600);
+	try {
+		try {
+			writeAllSync(fd, payload);
+			fsyncSync(fd);
+		} finally {
+			closeSync(fd);
+		}
+		renameSync(temp, target);
+	} catch (error) {
+		rmSync(temp, { force: true });
+		throw error;
+	}
+	if (options.barrier !== undefined) options.barrier.add(dirname(target));
+	else fsyncDirectory(dirname(target));
 }
 
 /** Write every byte of `bytes` to `fd` (a short write is continued, never dropped). */

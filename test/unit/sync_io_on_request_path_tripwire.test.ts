@@ -20,7 +20,17 @@
  *
  * WHAT IS FORBIDDEN IS THE UNBOUNDED-BYTE CLASS ONLY: `copyFileSync`, `cpSync`,
  * `readFileSync`, `writeFileSync`, `appendFileSync`, `execSync`, `execFileSync`,
- * `spawnSync`, `globSync`, `scanSync`. Metadata syscalls — `existsSync`,
+ * `spawnSync`, `globSync`, `scanSync` — and, since 2026-10-21, the DESCRIPTOR
+ * twins of the write half: `writeSync`/`writevSync` (a whole payload handed to
+ * the kernel in one call: `writeFileSync` on an fd) and `fsyncSync`/
+ * `fdatasyncSync` (a flush that waits on the DEVICE, for as long as the dirty
+ * pages and the journal take). The durability kernel (core/files/durable.ts) is
+ * where those belong — every other reachable module making one is a ledgered,
+ * reasoned exception below. `readSync` stays OUT deliberately: each call reads
+ * at most the `length` its caller passes, and it is the primitive of the
+ * bounded-read kernel (core/files/bounded_read.ts, a byte ceiling per read) —
+ * a readSync LOOP over a whole file is the residual this class does not see.
+ * Metadata syscalls — `existsSync`,
  * `statSync`, `mkdirSync`, `renameSync`, `unlinkSync`, `rmSync`, `readdirSync`,
  * `chmodSync`, `readlinkSync` — are O(1) and stay legal. Banning those too would
  * make the ledger below ~98 files of noise, and a ledger nobody can read enforces
@@ -120,6 +130,12 @@ const FORBIDDEN_SYNC_CALLS = [
 	'spawnSync',
 	'globSync',
 	'scanSync',
+	// The descriptor class (2026-10-21, audit 2026-09-26 residual): a request-path
+	// writeSync/fsyncSync was invisible to this gate while writeFileSync was not.
+	'writeSync',
+	'writevSync',
+	'fsyncSync',
+	'fdatasyncSync',
 ] as const;
 
 const FORBIDDEN_RE = new RegExp(`\\b(${FORBIDDEN_SYNC_CALLS.join('|')})\\s*\\(`, 'g');
@@ -146,13 +162,21 @@ const SCANNED_CALL_FLOOR = 60;
 // 39 → 36 (2026-10-12, install surface removed): config_persist / db_restore /
 // server_info left the served closure with the wizard router; install_mode.ts
 // became install_state.ts (WC-2026-10-12-install-surface-removed).
-const CEILING_FILES = 36;
+// 36 → 40 (2026-10-21, the descriptor class): NOT a regression — the CLASS
+// widened (writeSync/writevSync/fsyncSync/fdatasyncSync) and four reachable modules
+// that were always making those calls became visible: durable.ts (the kernel itself),
+// atomic_json.ts, publication_host/secrets.ts and diffusion/writers/rdf.ts.
+const CEILING_FILES = 40;
 // 93 → 88 (2026-09-30, OPS-2 review): the backup's hand-written process-record
 // writes left backup.ts when the dump became a registered maintenance job.
 // 88 → 86 (2026-10-01, DIFF-1/PERF-2): files.ts stages through a numeric fd
 // (atomicWriteFile), the rdf merge reads its parts one at a time.
 // 86 → 80 (2026-10-12): the install writers left the served closure (see above).
-const CEILING_CALLS = 80;
+// 80 → 94 (2026-10-21, the descriptor class, same reason as the file ceiling): the
+// newly visible calls are 14 — files.ts 4, engine.ts 2, upload.ts 1 and the four
+// new entries 7. backup.ts's three (its private fsync/write helpers) were CONVERTED
+// onto core/files/durable.ts in the same change instead of being counted.
+const CEILING_CALLS = 94;
 
 const EXEMPTIONS: { file: string; reason: string }[] = [
 	{
@@ -182,6 +206,16 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 		file: 'src/core/area_maintenance/backup.ts',
 		reason:
 			'operator-driven backup/restore admin action: the pg_dump log tail and the verification sidecars (a few hundred bytes each)',
+	},
+	{
+		file: 'src/core/files/atomic_json.ts',
+		reason:
+			"the atomic JSON state-file kernel fsyncs a file it has already refused to write past the store's maxBytes (the publication-host registry and runtime results, a few KB) on operator-driven pairing and host actions; its bytes go through durable.ts writeAllSync — the remaining fsyncSync is a conversion candidate onto durable.ts writeFileDurably",
+	},
+	{
+		file: 'src/core/files/durable.ts',
+		reason:
+			"THE durability kernel, the one door for descriptor writes and flushes: every call writes or fsyncs exactly what its caller hands it (a proof sidecar, a state file, a diffusion part, a directory entry), so its cost is the caller's and is judged at the caller (backup, diffusion runs, publication-host state). The one served-request use is the unpublish door's DIRECTORY fsync on a record delete (diffusion_delete.ts): a flush of one directory's entries, not of a file's bytes",
 	},
 	{
 		file: 'src/core/geoip/download.ts',
@@ -251,6 +285,11 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 		reason: 'copies the gzipped ontology definition file into the update target; operator-driven',
 	},
 	{
+		file: 'src/core/publication_host/secrets.ts',
+		reason:
+			'writes one publication-host secret file (a few hundred bytes) at pairing, an operator action, and fsyncs it before the rename; its private temp+fsync+rename copy is a conversion candidate onto durable.ts writeFileDurably (exact-mode chmod kept)',
+	},
+	{
 		file: 'src/core/resolve/server_state.ts',
 		reason: 'reads/writes the small server state JSON (install status, versions), not per request',
 	},
@@ -310,6 +349,11 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 		file: 'src/diffusion/writers/files.ts',
 		reason:
 			'reads one manifest part file while a diffusion close merges/zips the run; the diffusion run is a background operator-driven publication, not a served request',
+	},
+	{
+		file: 'src/diffusion/writers/rdf.ts',
+		reason:
+			'the RDF writer fsyncs the merged document before its rename at commit; the diffusion run is a background operator-driven publication, not a served request',
 	},
 	{
 		file: 'src/server.ts',
@@ -530,6 +574,23 @@ describe('sync I/O on the request path: the detector', () => {
 		].join('\n');
 		const hits = forbiddenCallsIn(planted);
 		expect(hits.map((h) => h.name).sort()).toEqual(['copyFileSync', 'execFileSync']);
+	});
+
+	test('positive control — a planted descriptor write / flush is flagged (the durability class)', () => {
+		// writeFileSync's descriptor twin and the flush that waits on the DEVICE:
+		// a whole payload written and forced to disk inside one served request is
+		// the same whole-installation stall as a copy, measured in device time.
+		const planted = [
+			'writeSync(fd, payload);',
+			'fsyncSync(fd);',
+			'fdatasyncSync(fd);',
+			'writevSync(fd, [head, body]);',
+		].join('\n');
+		expect(
+			forbiddenCallsIn(planted)
+				.map((h) => h.name)
+				.sort(),
+		).toEqual(['fdatasyncSync', 'fsyncSync', 'writeSync', 'writevSync']);
 	});
 
 	test('negative control — metadata syscalls are NOT flagged', () => {

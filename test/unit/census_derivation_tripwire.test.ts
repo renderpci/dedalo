@@ -272,8 +272,8 @@ const CLOSED_SET_EXEMPTION_CAP = 5;
  * hand-corpus shape or it is stale.
  */
 const ENUMERATED_HAND_PATH_LISTS: Readonly<Record<string, string>> = {
-	'test/unit/lint_scope_tripwire.test.ts':
-		'The array is the lint SCOPE policy (which directories biome must cover, `scripts/lint_browser_budget.ts`); the corpus the gate measures is what biome itself reports over that scope, and the budget floors are on the report.',
+	// (2026-10-21) lint_scope_tripwire left this list: it now reads the daemon
+	// package census from test/helpers/daemon_package_corpus.ts, a registered lister.
 };
 
 /**
@@ -569,6 +569,11 @@ const SHARED_LISTERS: Readonly<Record<string, SharedLister>> = {
 		],
 		scope:
 			'the site-builder committed rendered host configurations (nginx + apache sites-available)',
+	},
+	'test/helpers/daemon_package_corpus.ts': {
+		roots: [['.'], ['publication'], ['publication']],
+		scope:
+			'the DAEMON PACKAGES under publication/ (every directory, depth 1-2, with its own package.json + tsconfig.json) and the TypeScript each ships (git ls-files over publication/, partitioned by package; the `.` group is the cwd of that git call, the repo root, which narrows nothing) — read by daemon_typecheck_scope_tripwire (every shipped file in its tsc program) and lint_scope_tripwire (every package linted or budgeted)',
 	},
 	'test/helpers/publication_corpus.ts': {
 		roots: [

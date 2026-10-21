@@ -508,6 +508,9 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-20 (installer launcher). DB-free: an import-graph scan and the real
 	#     launcher in scratch trees with a stub installer body.
 	test/unit/install_launcher_native.test.ts
+	# --- 2026-10-21 (audit 2026-09-26 G9). DB-free: spawns git and the root tsc over
+	#     each publication/ daemon package's tsconfig (--listFilesOnly).
+	test/unit/daemon_typecheck_scope_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

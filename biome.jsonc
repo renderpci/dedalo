@@ -162,9 +162,23 @@
 			"!**/tools/**/*/css",
 			"!**/tools/**/*/img",
 
-			// AN ISOLATED SUBSYSTEM WITH ITS OWN TOOLCHAIN: publication/ is read-only
-			// and gated separately (`bun run test:publication` runs its own tsc + suite).
-			"!**/publication",
+			// THE PUBLICATION DAEMONS — excluded from `biome check .`, but NOT unmeasured.
+			// (Corrected 2026-10-21. This was one `!**/publication` "read-only and gated
+			// separately" — false for two of the three: site_builder and host_agent WRITE
+			// sites and web-server rules, and their separate gate is tsc + bun test with no
+			// lint, so `biome check publication/site_builder` answered "Checked 0 files".)
+			// Each package carries a SHRINK-ONLY error ceiling with the SAME rule set,
+			// derived from this file: PUBLICATION_BUDGETS in
+			// test/unit/lint_scope_tripwire.test.ts. A NEW directory under publication/
+			// is linted by default.
+			"!**/publication/site_builder",
+			"!**/publication/host_agent",
+			"!**/publication/server_api/v2",
+
+			// LEGACY AND NOT OURS: the PHP v1 Publication API, whose only lintable bytes
+			// are its docs page and the vendored swagger-ui bundle (3363 errors, all in
+			// the third-party bundle).
+			"!**/publication/server_api/v1",
 
 			// THE BROWSER TREES — excluded from `biome check .`, but NOT unmeasured.
 			// Deleting these two would turn verify red for the whole length of the
