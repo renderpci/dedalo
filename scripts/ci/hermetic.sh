@@ -511,6 +511,10 @@ HERMETIC_TRIPWIRES=(
 	# --- 2026-10-21 (audit 2026-09-26 G9). DB-free: spawns git and the root tsc over
 	#     each publication/ daemon package's tsconfig (--listFilesOnly).
 	test/unit/daemon_typecheck_scope_tripwire.test.ts
+	# --- 2026-10-21 (audit 2026-09-26 S2-1, target-lock census). DB-free: a babel
+	#     parse of the write-path corpus and a planted corpus; imports no src/ module
+	#     (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
+	test/unit/target_lock_census_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

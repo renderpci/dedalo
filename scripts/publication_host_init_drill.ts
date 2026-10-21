@@ -34,12 +34,15 @@
  *   --capture <dir>        in place: keep the raw discovery outputs (the typed fixtures' replacements)
  *   --media-nfs <src>      EL: the NFS export the network-media leg mounts (`host:/export`)
  *   --skip <leg>           skip one leg BY NAME (repeatable); the record lists every skipped leg,
- *                          and a record with a skipped required leg is refused
+ *                          and a record with a skipped required leg is refused; a name that
+ *                          matches no leg of this run is refused (exit 2) — a typo never
+ *                          silently runs the leg it meant to skip, nor reads as a skip
  *   --keep                 leave the container (Debian) for inspection
  *   --plan                 print the legs and exit 0, touching nothing
  *
  * Exit: 0 every leg green · 1 a leg red · 2 the drill cannot run here (no docker, not root,
- * no marker, not enforcing) — RED, never a skip.
+ * no marker, not enforcing, a --skip naming no leg) — RED, never a skip · 3 INCOMPLETE: no leg
+ * red, but a REQUIRED leg was skipped — never 'OK' over a property nobody measured.
  *
  * THE PROMPT TABLE (`PROMPTS`) is the one place that knows how init's terminal asks: the
  * source-digest confirmation, `Apply these N changes? [y/N]`, a decision's typed option, the
@@ -448,6 +451,48 @@ export interface DirectiveForm {
 
 /** What systemd-analyze prints for a directive this systemd does not know or cannot parse. */
 export const DIRECTIVE_REFUSED = /Unknown (key|lvalue|section)|Failed to parse/i;
+
+/** The probe's exit-status line (`directiveProbeScript` appends it): systemd-analyze's own status. */
+const PROBE_STATUS = /^rc=(\d+)$/m;
+
+/**
+ * One probe of a scratch unit: `systemd-analyze verify`, its OWN exit status kept on a last
+ * `rc=N` line (never swallowed by the `rm` after it), then the scratch removed.
+ */
+export function directiveProbeScript(path: string): string {
+	return `systemd-analyze verify ${path} 2>&1; echo "rc=$?"; rm -f ${path}`;
+}
+
+/**
+ * What one probe said: `refused` (systemd named the directive unknown / unparseable),
+ * `accepted` (it verified: status 0, no refusal), or `unrun` — no status line, or a non-zero
+ * status without a refusal: the probe itself did not run (systemd-analyze missing, the scratch
+ * unwritable, a crash). `unrun` is never counted as accepted.
+ */
+export function directiveProbeVerdict(out: string): 'accepted' | 'refused' | 'unrun' {
+	if (DIRECTIVE_REFUSED.test(out)) return 'refused';
+	const status = PROBE_STATUS.exec(out);
+	return status !== null && status[1] === '0' ? 'accepted' : 'unrun';
+}
+
+/** The probe's output with its status line removed (what systemd-analyze itself printed). */
+export function directiveProbeOutput(out: string): string {
+	return out.replace(PROBE_STATUS, '').trim();
+}
+
+/** The positive control: a directive no systemd knows. The probe MUST call it refused. */
+export const BOGUS_DIRECTIVE: DirectiveForm = {
+	section: 'Service',
+	key: 'DdNoSuchKey',
+	line: 'DdNoSuchKey=1',
+};
+
+/** The bare scaffold (its own `Type=` line): the probe MUST verify it clean — status 0, silent. */
+export const SCAFFOLD_DIRECTIVE: DirectiveForm = {
+	section: 'Service',
+	key: 'Type',
+	line: 'Type=oneshot',
+};
 
 /**
  * Every `Key=value` directive of the rendered unit bodies, ONCE per (section, key) — the first
@@ -2518,6 +2563,10 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				.trim()
 				.split('\n');
 			const verify = await ctx.runner.sh(`systemd-analyze verify ${units.map(q).join(' ')} 2>&1`);
+			check(
+				verify.code === 0,
+				`systemd-analyze verify of the rendered units exited ${verify.code}:\n${verify.out}${verify.err}`,
+			);
 			const named = verify.out
 				.split('\n')
 				.filter((line) => units.some((u) => line.includes(u.split('/').at(-1) as string)));
@@ -2532,13 +2581,32 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			for (const unit of units) bodies.push(await must(ctx, `cat ${q(unit)}`, `the unit ${unit}`));
 			const forms = renderedDirectiveForms(bodies);
 			check(forms.length > 0, `nothing to measure: the rendered units carry no directive`);
-			const supported: string[] = [];
 			const scratch = `/run/systemd/system/dd-floor-probe.service`;
-			for (const form of forms) {
+			const probe = async (form: DirectiveForm): Promise<string> => {
 				await putRootFile(ctx, scratch, directiveProbeUnit(form), '0644');
-				const out = await ctx.runner.sh(`systemd-analyze verify ${scratch} 2>&1; rm -f ${scratch}`);
-				if (!DIRECTIVE_REFUSED.test(out.out)) supported.push(`[${form.section}] ${form.key}=`);
+				return (await ctx.runner.sh(directiveProbeScript(scratch))).out;
+			};
+			// The probe is proven BEFORE it measures: it must call a bogus directive refused and
+			// the bare scaffold clean — else "accepted" would only mean "the probe did not run".
+			const bogus = await probe(BOGUS_DIRECTIVE);
+			check(
+				directiveProbeVerdict(bogus) === 'refused',
+				`the directive probe did not refuse a directive no systemd knows (${BOGUS_DIRECTIVE.line}):\n${bogus}`,
+			);
+			const bare = await probe(SCAFFOLD_DIRECTIVE);
+			check(
+				directiveProbeVerdict(bare) === 'accepted' && directiveProbeOutput(bare) === '',
+				`the directive probe's bare scaffold does not verify clean (status 0, no output):\n${bare}`,
+			);
+			const supported: string[] = [];
+			const unrun: string[] = [];
+			for (const form of forms) {
+				const out = await probe(form);
+				const verdict = directiveProbeVerdict(out);
+				if (verdict === 'accepted') supported.push(`[${form.section}] ${form.key}=`);
+				else if (verdict === 'unrun') unrun.push(`[${form.section}] ${form.key}=: ${out.trim()}`);
 			}
+			check(unrun.length === 0, `the directive probe did not run for:\n${unrun.join('\n')}`);
 			// The rendered units verified clean, so every directive they carry must probe as accepted:
 			// a refused one means the probe, not the unit, is wrong — never a silent short list.
 			check(
@@ -3304,6 +3372,13 @@ export async function main(argv: readonly string[]): Promise<number> {
 		return 2;
 	}
 	const legs = legsFor(args);
+	const unknown = unknownSkips(args.skip, legs);
+	if (unknown.length > 0) {
+		console.error(
+			`${TAG} --skip names no leg of this run: ${unknown.join(', ')} (the legs: bun run scripts/publication_host_init_drill.ts --plan …)`,
+		);
+		return 2;
+	}
 	if (args.plan) {
 		for (const leg of legs)
 			console.log(`${leg.name}${leg.required ? '' : ' (optional)'} [${leg.family}] — ${leg.what}`);
@@ -3368,10 +3443,38 @@ export async function main(argv: readonly string[]): Promise<number> {
 		await world?.stop();
 		rmSync(scratch, { recursive: true, force: true });
 	}
+	const verdict = drillVerdict({ failed, skipped, legs });
 	console.log(
-		`${TAG} ${failed.length === 0 ? 'OK' : `RED (${failed.join(', ')})`} on ${args.family}: ${passed.length} green, ${failed.length} red, ${skipped.length} skipped`,
+		`${TAG} ${verdict.word} on ${args.family}: ${passed.length} green, ${failed.length} red, ${skipped.length} skipped`,
 	);
-	return failed.length === 0 ? 0 : 1;
+	return verdict.code;
+}
+
+/** The --skip names that match no leg of this run: refused, so a typo is never a silent no-op. */
+export function unknownSkips(
+	skip: readonly string[],
+	legs: readonly Pick<Leg, 'name'>[],
+): string[] {
+	return skip.filter((name) => !legs.some((leg) => leg.name === name));
+}
+
+/**
+ * The run's verdict: RED (1) when a leg failed; INCOMPLETE (3) when none failed but a REQUIRED
+ * leg was skipped — a property nobody measured is never reported 'OK'; else OK (0).
+ */
+export function drillVerdict(input: {
+	failed: readonly string[];
+	skipped: readonly string[];
+	legs: readonly Pick<Leg, 'name' | 'required'>[];
+}): { code: 0 | 1 | 3; word: string } {
+	if (input.failed.length > 0) return { code: 1, word: `RED (${input.failed.join(', ')})` };
+	const skippedRequired = input.legs
+		.filter((leg) => leg.required && input.skipped.includes(leg.name))
+		.map((leg) => leg.name);
+	if (skippedRequired.length > 0) {
+		return { code: 3, word: `INCOMPLETE (required leg(s) skipped: ${skippedRequired.join(', ')})` };
+	}
+	return { code: 0, word: 'OK' };
 }
 
 if (import.meta.main) process.exit(await main(process.argv.slice(2)));

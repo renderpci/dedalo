@@ -26,7 +26,10 @@
  * writes a target names it the same way, `sql:<database>`,
  * `files:<format>/<dir label>` (logical names, never absolute paths): the
  * runner, the MariaDB delete executor, the ghost unpublish, the lang sweep, the
- * media-index apply, and core's files-unlink door. The DELETE-ONLY doors
+ * media-index apply and rebuild, and core's files-unlink door. That this list
+ * is the WHOLE set is not this header's word: test/unit/
+ * target_lock_census_tripwire.test.ts derives every path from a target sink
+ * and fails on one that reaches no door. The DELETE-ONLY doors
  * (record delete — sql and files — and the ghost unpublish) take it SHARED:
  * they never exclude each other, only the exclusive writers (gate:
  * diffusion_target_fence_native D3/D4). This module adds the JOB to it: the

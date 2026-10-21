@@ -1,7 +1,14 @@
 /**
  * THE PUBLICATION TARGET LOCK (DIFF-2, WC-2026-09-30-diffusion-target-fence):
  * the one exclusion every door that writes a publication target takes — a
- * MariaDB database or a files directory.
+ * MariaDB database, a files directory, the media marker store's `dbs/<db>`
+ * subtree. "Every" is a CENSUS, not this list:
+ * test/unit/target_lock_census_tripwire.test.ts walks the write-path corpus from
+ * every target sink (the MariaDB pool, an fs write under the files root or the
+ * marker store, a media-copy agent mutator) and requires each path to reach one
+ * of these doors or a reasoned, shrink-only exemption. The media-copy door is
+ * one such exemption by design: its `media:<host>` lock covers the grant and
+ * delete units only (mediaCopyTargetLockKey below).
  *
  * It lives in the BRIDGE because it is a contract between core and the
  * diffusion subsystem, like the published-files grammar beside it
@@ -84,9 +91,12 @@ export function fileTargetLockKey(format: string, label: string): string {
 
 /**
  * The lock key of a publication host's media COPY (copy mode, PUBLICATION_HOST_SPEC
- * §5.2): every put / mark / delete unit for that host holds it, so two processes
- * (the server's worker, a CLI reconcile) never interleave on one host — an unpublish
- * waits for an in-flight put of the same host, then withdraws it. The host NAME is the
+ * §5.2): the copy door's GRANT units (re-check `pub/<key>`, `mark true`) and its
+ * DELETE / withdraw units hold it, so two processes (the server's worker, a CLI
+ * reconcile) never interleave those on one host. It is NOT held around a file
+ * transfer — the put streams outside every lock and is compensated when `pub/`
+ * flipped meanwhile — nor around the immediate withdrawal (withdrawNowWith), which
+ * is order-safe without it (media_copy_apply.ts header). The host NAME is the
  * registry key (never an address), validated with the registry's own grammar.
  */
 export function mediaCopyTargetLockKey(host: string): string {
@@ -177,14 +187,39 @@ async function runKeptAlive<T>(work: () => Promise<T>, idleBoundMs: number): Pro
 	}
 }
 
+/** The savepoint a nested try takes its keys under (one per try; the name is reused, never nested). */
+const NESTED_TRY_SAVEPOINT = 'dedalo_target_lock_try';
+
+/**
+ * Take every key — all or none — inside an AMBIENT transaction (a door nested in
+ * another unit): withTransaction only JOINS the ambient one, so the keys are
+ * taken under a SAVEPOINT, and a busy key rolls back to it — releasing the
+ * xact-scoped locks this try took (PostgreSQL releases a rolled-back
+ * subtransaction's locks) — before TargetBusy reaches the loop. What the
+ * AMBIENT transaction itself holds stays held while a nested door waits: that
+ * is the caller's unit, not this try's.
+ */
+async function takeAllNested(keys: readonly string[], shared: boolean): Promise<void> {
+	await sql.unsafe(`SAVEPOINT ${NESTED_TRY_SAVEPOINT}`);
+	try {
+		for (const key of keys) await takeAdvisoryLock(key, shared);
+	} catch (error) {
+		await sql.unsafe(`ROLLBACK TO SAVEPOINT ${NESTED_TRY_SAVEPOINT}`);
+		await sql.unsafe(`RELEASE SAVEPOINT ${NESTED_TRY_SAVEPOINT}`);
+		throw error;
+	}
+	await sql.unsafe(`RELEASE SAVEPOINT ${NESTED_TRY_SAVEPOINT}`);
+}
+
 /**
  * ONE try: a transaction that takes EVERY key's lock — all or none — and runs
  * `work`. A key found held throws TargetBusy before `work` starts, and the
  * rollback releases the keys this try already took: a try never keeps one
  * target while another is busy. Nested on an ambient transaction (a door inside
- * another unit) the try is a savepoint whose rollback releases what it took,
- * the lock is re-entrant, the ambient transaction's settings are never
- * rewritten and its owner keeps the connection alive — no second timer.
+ * another unit) the keys are taken under a savepoint whose rollback releases
+ * what this try took (takeAllNested), the lock is re-entrant, the ambient
+ * transaction's settings are never rewritten and its owner keeps the connection
+ * alive — no second timer.
  */
 async function tryUnit<T>(
 	keys: readonly string[],
@@ -195,9 +230,13 @@ async function tryUnit<T>(
 	const opensTransaction = !isInTransaction();
 	try {
 		const value = await withTransaction(async () => {
-			if (opensTransaction) await boundUnit(idleBoundMs);
+			if (!opensTransaction) {
+				await takeAllNested(keys, shared);
+				return work();
+			}
+			await boundUnit(idleBoundMs);
 			for (const key of keys) await takeAdvisoryLock(key, shared);
-			return opensTransaction ? runKeptAlive(work, idleBoundMs) : work();
+			return runKeptAlive(work, idleBoundMs);
 		});
 		return { acquired: true, value };
 	} catch (error) {
@@ -258,8 +297,9 @@ export function withTargetLock<T>(
  * Hold SEVERAL targets at once (a store that spans them — the `.publication/pub`
  * union is derived from every database's `dbs/` subtree), with the same modes
  * and outcome as withTargetLock. ALL OR NONE: each try takes every key in
- * SORTED order inside one transaction and, the moment one is held elsewhere,
- * rolls back — releasing the ones it took — and waits holding NOTHING. A
+ * SORTED order inside one transaction (a savepoint when nested) and, the moment
+ * one is held elsewhere, rolls back — releasing the ones it took — and waits
+ * holding nothing of its own (a nested door's ambient unit keeps what IT holds). A
  * multi-target door therefore never keeps a free target locked while another
  * one is busy (closure review 2026-10-01: the nested 'wait' it replaces held
  * `sql:<A>` exclusively, with a pinned connection, for as long as `sql:<B>`'s

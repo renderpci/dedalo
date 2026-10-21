@@ -419,6 +419,7 @@ const TRIPWIRES = [
 	'test/unit/section_toolbar_phone_tripwire.test.ts',
 	'test/unit/install_launcher_native.test.ts',
 	'test/unit/daemon_typecheck_scope_tripwire.test.ts',
+	'test/unit/target_lock_census_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

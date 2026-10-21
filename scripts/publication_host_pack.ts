@@ -36,7 +36,11 @@
  * publication/host_agent/tests/init_install_kit.test.ts) — so packer and verifier cannot drift
  * and this script imports no agent module. Gate: test/unit/publication_host_kit_pack.test.ts.
  *
- * Exit: 0 written · 2 usage · 3 refused · 4 failed.
+ * Every child it waits on is BOUNDED (runBounded: git, the draft judge, the production install —
+ * the one that may stall on the network): past its bound it is SIGKILLed and the pack FAILS
+ * (PackTimedOut, exit 4), the scratch copy removed — never a hang.
+ *
+ * Exit: 0 written · 2 usage · 3 refused · 4 failed (a timed-out child included).
  */
 
 import {
@@ -121,7 +125,33 @@ export interface Spawned {
 	readonly err: string;
 }
 
-function run(argv: readonly string[], cwd: string, env?: Record<string, string>): Spawned {
+/** A local git call (no network): far past any real one. */
+export const GIT_TIMEOUT_MS = 60_000;
+/** The child that judges the draft (the agent's parseDraft in a scratch Bun). */
+export const JUDGE_TIMEOUT_MS = 120_000;
+/** The production `bun install` (network or a warm cache): generous, and finite. */
+export const INSTALL_TIMEOUT_MS = 600_000;
+
+/**
+ * A child the packer waited on past its bound: it was KILLED (SIGKILL), and the pack fails
+ * typed — runPack's finally removes the scratch copy on this path like on every other.
+ */
+export class PackTimedOut extends Error {
+	constructor(argv: readonly string[], timeoutMs: number) {
+		super(
+			`'${argv.slice(0, 3).join(' ')}' did not finish within ${Math.round(timeoutMs / 1000)} s — killed (a hung git, or a \`bun install\` stalled on the network)`,
+		);
+		this.name = 'PackTimedOut';
+	}
+}
+
+/** Run one child to completion, BOUNDED: past `timeoutMs` it is SIGKILLed and PackTimedOut thrown. */
+export function runBounded(
+	argv: readonly string[],
+	cwd: string,
+	timeoutMs: number,
+	env?: Record<string, string>,
+): Spawned {
 	const done = Bun.spawnSync([...argv], {
 		cwd,
 		env: env ?? {
@@ -131,9 +161,15 @@ function run(argv: readonly string[], cwd: string, env?: Record<string, string>)
 		},
 		stdout: 'pipe',
 		stderr: 'pipe',
+		timeout: timeoutMs,
+		killSignal: 'SIGKILL',
 	});
+	if (done.exitedDueToTimeout === true) throw new PackTimedOut(argv, timeoutMs);
 	return { code: done.exitCode ?? -1, out: done.stdout.toString(), err: done.stderr.toString() };
 }
+
+const git = (argv: readonly string[], repo: string): Spawned =>
+	runBounded(['git', ...argv], repo, GIT_TIMEOUT_MS);
 
 /**
  * The checkout's files under `paths`: what git tracks (`ls-files -s`, its mode: 100755 =
@@ -142,7 +178,7 @@ function run(argv: readonly string[], cwd: string, env?: Record<string, string>)
  * .test-tmp, a local .env — ever is). path → executable.
  */
 export function trackedFiles(repo: string, paths: readonly string[]): Map<string, boolean> {
-	const cached = run(['git', 'ls-files', '-s', '-z', '--', ...paths], repo);
+	const cached = git(['ls-files', '-s', '-z', '--', ...paths], repo);
 	if (cached.code !== 0) throw new Error(`git ls-files: ${cached.err.trim()}`);
 	const out = new Map<string, boolean>();
 	for (const record of cached.out.split('\0')) {
@@ -153,10 +189,7 @@ export function trackedFiles(repo: string, paths: readonly string[]): Map<string
 			throw new PackRefused(`'${match[2]}' is a tracked symlink: a kit holds regular files only`);
 		out.set(match[2] as string, match[1] === '100755');
 	}
-	const others = run(
-		['git', 'ls-files', '--others', '--exclude-standard', '-z', '--', ...paths],
-		repo,
-	);
+	const others = git(['ls-files', '--others', '--exclude-standard', '-z', '--', ...paths], repo);
 	if (others.code !== 0) throw new Error(`git ls-files --others: ${others.err.trim()}`);
 	for (const rel of others.out.split('\0')) {
 		if (rel === '' || out.has(rel)) continue;
@@ -219,9 +252,10 @@ export function walkFiles(
  * imports no agent module (kit.ts draftJudgeProgram, shared with the panel).
  */
 export function judgeDraft(scratchAgent: string, draftPath: string): DraftVerdict {
-	const done = run(
+	const done = runBounded(
 		[process.execPath, '--no-install', '-e', draftJudgeProgram(scratchAgent, draftPath)],
 		scratchAgent,
+		JUDGE_TIMEOUT_MS,
 	);
 	return draftVerdictFrom(done.out, done.code, done.err);
 }
@@ -246,7 +280,12 @@ export function installDeps(scratchAgent: string): void {
 		const value = process.env[key];
 		if (value !== undefined && value !== '') env[key] = value;
 	}
-	const install = run([process.execPath, ...KIT_DEPS_INSTALL_ARGS], scratchAgent, env);
+	const install = runBounded(
+		[process.execPath, ...KIT_DEPS_INSTALL_ARGS],
+		scratchAgent,
+		INSTALL_TIMEOUT_MS,
+		env,
+	);
 	if (install.code !== 0)
 		throw new Error(
 			`bun install --frozen-lockfile --production in the scratch copy failed: ${install.err.trim()}`,
@@ -407,10 +446,8 @@ export async function runPack(
 		const kit = await buildKit(collected.files, constants);
 		const out = resolve(args.out ?? kitFileName(collected.instance));
 		publishKit(out, kit.bytes);
-		const head = run(['git', 'rev-parse', 'HEAD'], repo).out.trim();
-		const dirty = run(['git', 'status', '--porcelain'], repo)
-			.out.split('\n')
-			.filter(Boolean).length;
+		const head = git(['rev-parse', 'HEAD'], repo).out.trim();
+		const dirty = git(['status', '--porcelain'], repo).out.split('\n').filter(Boolean).length;
 		const lines = [
 			`${TAG} kit for instance '${collected.instance}' (${collected.servesV1 ? 'v1 and v2' : 'v2 only'}): ${out}`,
 			`${TAG} ${collected.files.length} files, ${kit.bytes.length} bytes; from git ${head || 'unknown'}, ${dirty} uncommitted change(s)`,

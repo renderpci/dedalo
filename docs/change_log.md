@@ -984,6 +984,20 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-03-maintenance-reconcile-status-widget`.
 
+- **Unpublished media stays unpublished after a power cut — and is never reported withdrawn while it is still served**
+
+    - **A power cut can no longer bring back the media of a withdrawn record.** When a record is
+      deleted or unpublished, the markers that let the web server serve its media files
+      anonymously are now forced to disk before the record is reported unpublished. Before, a
+      power cut right after could restore them, and the next start-up re-derived public access
+      from them — with nothing left to retry the withdrawal.
+    - **A withdrawal that could not remove the markers stays pending.** If the media markers of
+      an unpublished record cannot be removed (a permission problem on the media store, a full
+      disk), the unpublish is now kept *pending* and retried, instead of being recorded as
+      *unpublished* over media that is still public.
+
+    Wire contract: `WC-2026-10-21-unpublish-markers-durable`.
+
 - **Rebuilding or updating one user's activity statistics never counts a day twice**
 
     Two rebuilds of the same user's activity statistics running at once, or a rebuild and an update, could each save the same day, so that day's totals appeared twice. Every writer of one user's statistics now waits for the other, and a day already saved is never saved again.
@@ -1176,7 +1190,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 8 entries"
+??? note "Wire contract — 9 entries"
 
     - `WC-2026-10-15-release-identity-from-tag`
     - `WC-2026-10-19-design-line-removed`
@@ -1186,6 +1200,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-21-ontology-projection-guard`
     - `WC-2026-10-21-ontology-record-lifecycle`
     - `WC-2026-10-21-ontology-update-rebuild`
+    - `WC-2026-10-21-unpublish-markers-durable`
 
 ## 7.0.0-beta.6 — 2026-10-15
 
