@@ -420,9 +420,9 @@ const CENSUS: Record<string, CensusRow> = {
 			'the bulk revert’s RECORD half: undeletes a record the run’s cascade deleted (restoreSection) and deletes a record the run created (the delete door) — whole records only, gated by getSectionPermissions(section) >= 2 plus the record scope (the delete door’s own rule). No component pair exists to downgrade.',
 	},
 	'tools/tool_time_machine/server/tool_time_machine.ts': {
-		verdict: 'PENDING',
+		verdict: 'delegates',
 		reason:
-			'apply_value restore: its level check is the inherited declarative tipo gate; it scopes the record but never consults the component rule.',
+			'apply_value: the COMPONENT branch asks authorizeComponentWrite (authorizeRecordAccess: write, level 2, section floor 1, the dd128-aware pair, the write scope) for the main and every slot it writes; the SECTION branch (a whole-record row) hands persistRecordColumns a door that asks the same for EVERY component the restore changes, behind the row lock (the chokepoint\u2019s own modified stamps excepted); a refusal rolls the restore back. An undelete (no live row) is section-level, like a create (cross-write:r3). Matrix tool:tool_time_machine:apply_value:section DD1725 leg.',
 	},
 	'tools/tool_time_machine/server/dataframe_restore.ts': {
 		verdict: 'PENDING',
@@ -451,7 +451,7 @@ const EXTRA_ROWS: Record<string, CensusRow> = {
 };
 
 /** PINNED. Shrink-only: this may go DOWN, never up. */
-const PENDING_COUNT = 4;
+const PENDING_COUNT = 3;
 
 /**
  * THE DELEGATING ENGINES — a `delegates` row on a file with no principal of its

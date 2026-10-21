@@ -593,6 +593,27 @@ export const ONTOLOGY_PROJECTION_LOCK_CLASS = 17580003;
 export const ONTOLOGY_REGISTRY_MINT_LOCK_CLASS = 17580004;
 
 /**
+ * Take the per-tld REGISTRY-ROW MINT lock (ONTOLOGY_REGISTRY_MINT_LOCK_CLASS) — the
+ * key shape's one home. `tld` must already be the NORMALIZED tld the mint checks
+ * and writes (ontology_write.ts mintMainSection): a raw spelling would lock a key
+ * no other minter of that tld takes. Refused outside a transaction (an xact lock
+ * there is a no-op).
+ */
+export async function lockOntologyRegistryMint(tld: string): Promise<void> {
+	if (!isInTransaction()) {
+		throw new DedaloError('internal.invariant', {
+			message:
+				'lockOntologyRegistryMint: called outside a transaction; the lock would be ineffective (call inside withTransaction)',
+			coordinates: { tld },
+		});
+	}
+	await sql.unsafe('SELECT pg_advisory_xact_lock($1::int, hashtext($2))', [
+		ONTOLOGY_REGISTRY_MINT_LOCK_CLASS,
+		tld,
+	]);
+}
+
+/**
  * Serialize every writer that derives a tld's NODES from its source records
  * (ONT-1/2/3 under concurrency, audit 2026-09-26 r0). The invariant
  * `dd_ontology(tld) == parse(matrix_ontology(<tld>0))` is a read-modify-write

@@ -1191,6 +1191,26 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-21-tm-restore-component-write-doors`, `WC-2026-10-21-ontology-recovery-single-flight`.
 
+- **Restoring a whole record from the time machine needs permission on every field it changes; a failed ontology re-index after an update no longer brings the old ontology back**
+
+    - **Restoring a whole record checks every field it changes.** *Apply value* on a whole
+      record in the time machine now needs edit permission on each field the restore would
+      change, like restoring a single field already does. A user who manages user accounts can
+      no longer give their own account back an earlier profile or administrator flag this way,
+      and a field you may only read is never rewritten by a restore. A refused restore changes
+      nothing. Undeleting a record works as before.
+    - **An ontology update whose re-indexing fails keeps the new ontology.** If *Update
+      ontology* has imported the new ontology but rebuilding the ontology tree from it fails,
+      the update now stays in place and the message names the ontologies to rebuild in
+      *Maintenance*. Before, the old ontology was put back under a tree already partly rebuilt
+      from the new one.
+    - **A stuck recovery-file build no longer blocks the next one.** Building or restoring the
+      ontology recovery file in *Maintenance → Build database version* now gives up after ten
+      minutes and reports it, instead of waiting forever and refusing every later attempt as
+      *already running*.
+
+    Wire contract: `WC-2026-10-21-tm-section-restore-write-door`, `WC-2026-10-21-ontology-update-derive-landed`, `WC-2026-10-21-ontology-recovery-deadline`.
+
 - **Unpublished media stays unpublished after a power cut — and is never reported withdrawn while it is still served**
 
     - **A power cut can no longer bring back the media of a withdrawn record.** When a record is
@@ -1408,7 +1428,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 15 entries"
+??? note "Wire contract — 18 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
@@ -1418,11 +1438,14 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-21-hierarchy-import-partial-refused`
     - `WC-2026-10-21-ontology-projection-guard`
     - `WC-2026-10-21-ontology-record-lifecycle`
+    - `WC-2026-10-21-ontology-recovery-deadline`
     - `WC-2026-10-21-ontology-recovery-single-flight`
+    - `WC-2026-10-21-ontology-update-derive-landed`
     - `WC-2026-10-21-ontology-update-rebuild`
     - `WC-2026-10-21-seed-and-thesaurus-int-clean`
     - `WC-2026-10-21-target-statement-lock-wait`
     - `WC-2026-10-21-tm-restore-component-write-doors`
+    - `WC-2026-10-21-tm-section-restore-write-door`
     - `WC-2026-10-21-unpublish-markers-durable`
     - `WC-2026-10-21-update-cache-locked-resave`
 

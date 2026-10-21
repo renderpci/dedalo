@@ -49,6 +49,7 @@ import {
 	installAclIdentityFixture,
 	removeAclIdentityFixture,
 } from '../helpers/acl_identity_fixture.ts';
+import { countActivityRows, sweepActivityRows } from '../helpers/activity_rows.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
 const TLD = 'zztav';
@@ -175,7 +176,9 @@ afterAll(async () => {
 	await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1', [SECTION]);
 	await sql.unsafe('DELETE FROM dedalo_ts_record_generation WHERE section_tipo = $1', [SECTION]);
 	await sql.unsafe(`DELETE FROM "${TABLE}" WHERE section_tipo = $1`, [SECTION]);
-	await sql.unsafe(`DELETE FROM matrix_activity WHERE data->>'section_tipo' = $1`, [SECTION]);
+	// The scratch section's activity rows (the restores' RECOVER rows), asserted gone.
+	await sweepActivityRows(SECTION);
+	expect(await countActivityRows(SECTION)).toBe(0);
 	expect(await dropSituation(SITUATION)).toBe(0);
 });
 

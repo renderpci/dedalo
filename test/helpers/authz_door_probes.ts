@@ -83,6 +83,12 @@ export const DD128_PROBED: Readonly<Record<string, readonly string[]>> = {
 	'tools/tool_time_machine/server/bulk_revert_undo.ts': [
 		'tool:tool_time_machine:bulk_revert_process:units',
 	],
+	// apply_value's whole-record restore — every component the restore CHANGES
+	// through the write door behind the row lock (cross-write:r3); the declarative
+	// gate reads the (section, section) pair, so this leg measures the handler.
+	'tools/tool_time_machine/server/tool_time_machine.ts': [
+		'tool:tool_time_machine:apply_value:section',
+	],
 	// (transcription_asr.ts is NOT here: its exported saveTranscriptionResult is
 	// an UNGATED writer any importer may call, and no matrix door drives the
 	// poll's save with the DD1725 manager — PENDING until one does.)

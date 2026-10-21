@@ -677,7 +677,11 @@ export interface StagedImportResult {
  * registry record + root node, scoped DELETE+COPY, ONT-TLD normalization,
  * counter consolidation — any failure auto-restores the slices already
  * replaced), then the dd_ontology re-derive per TLD in staged order and the
- * ontology cache purge. It never resolves a target, downloads, takes the latch
+ * ontology cache purge. The import is `completed` (LANDED) once Phase C has
+ * committed every slice: a failure of the re-derive after that — rolled back or
+ * thrown — is an error line naming the tlds to rebuild, never a restore of the old
+ * rows under a tld already re-derived (gate: ontology_update_derive_throw_native).
+ * It never resolves a target, downloads, takes the latch
  * or runs the update panel's tail (grammar, optimize, schema file) — its
  * callers do: updateOntology (the maintenance panel) and the installer's
  * ontology door (src/core/install/ontology_install.ts). The caller holds the
@@ -706,9 +710,13 @@ export async function importStagedOntologyFiles(
 		for (const file of staged) {
 			if (!(await importStagedFile(file, ctx, result))) return result;
 		}
-		await deriveStagedNodes(staged, ctx.userId, result);
-		await clearOntologyDerivedCaches();
+		// THE IMPORT LANDED (cross-write:r3): every slice is the update's, committed.
+		// The re-derive below is one COMMITTED transaction per tld, so from its first
+		// commit on a restore would put the OLD rows back under a dd_ontology derived
+		// from the NEW ones. `completed` is therefore set HERE, and a derive throw is
+		// the landed import's reported failure (deriveLandedImport), never a restore.
 		result.completed = true;
+		await deriveLandedImport(staged, ctx.userId, result);
 		return result;
 	} catch (error) {
 		result.msg = await restoreAfterThrow(
@@ -889,6 +897,34 @@ async function deriveStagedNodes(
 	const derived = await deriveOntologyPackages(staged, userId);
 	result.messages.push(...derived.messages);
 	result.errors.push(...derived.errors);
+}
+
+/**
+ * The re-derive of a LANDED import (Phase C committed every slice). A tld whose
+ * rebuild rolls back is already an error line of the derive; a THROW escaping it
+ * (a read failing after a tld committed — the inspect in rebuildOntology's catch
+ * or after its commit, pass 2's inspect) is reported the same way: the rows stand,
+ * the operator line names every node-deriving tld of the update to rebuild
+ * (ontology_state rebuildOntology converges each one, an already-derived tld
+ * included), the raw text goes to the log (SEC-18). The derived caches are purged
+ * either way — some tlds may have committed.
+ */
+async function deriveLandedImport(
+	staged: readonly StagedFile[],
+	userId: number,
+	result: StagedImportResult,
+): Promise<void> {
+	try {
+		await deriveStagedNodes(staged, userId, result);
+	} catch (error) {
+		console.error('[ontology_update] the re-derive of a landed import failed', error);
+		const tlds = staged.filter(derivesNodes).map((file) => file.tld);
+		result.errors.push(
+			`the ontology rows of this update were imported; re-deriving dd_ontology from them failed (see the server log) — rebuild the ontology of: ${tlds.join(', ')}`,
+		);
+	} finally {
+		await clearOntologyDerivedCaches();
+	}
 }
 
 /**

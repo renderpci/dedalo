@@ -29,10 +29,13 @@ import {
 	getOntologyMainFromTld,
 } from '../../src/core/ontology/ontology_write.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
+import { countActivityRows, sweepActivityRows } from '../helpers/activity_rows.ts';
 
 const FAIL_TLD = 'zzmntf';
 const RACE_TLD = 'zzmntr';
 let watermark = 0;
+/** Every registry id this gate minted (above the watermark) — their activity rows are swept. */
+const mintedIds = new Set<number>();
 
 async function maxRegistryId(): Promise<number> {
 	const rows = (await sql.unsafe(
@@ -52,6 +55,12 @@ async function rowsNamed(tld: string): Promise<number> {
 }
 
 async function sweep(): Promise<void> {
+	const minted = (await sql.unsafe(
+		`SELECT section_id::int AS id FROM matrix_ontology_main WHERE section_tipo = 'ontology35' AND section_id > $1`,
+		[watermark],
+	)) as { id: number }[];
+	for (const row of minted) mintedIds.add(Number(row.id));
+	await sweepActivityRows('ontology35', [...mintedIds]);
 	await sql.unsafe(
 		`DELETE FROM matrix_time_machine WHERE section_tipo = 'ontology35' AND section_id > $1`,
 		[watermark],
@@ -77,6 +86,9 @@ afterAll(async () => {
 	expect(await maxRegistryId()).toBe(watermark);
 	expect(await rowsNamed(FAIL_TLD)).toBe(0);
 	expect(await rowsNamed(RACE_TLD)).toBe(0);
+	// FLOOR: the race test minted a row; its activity residue is zero.
+	expect(mintedIds.size).toBeGreaterThan(0);
+	expect(await countActivityRows('ontology35', [...mintedIds])).toBe(0);
 });
 
 describe('createMainSection / ensureMainSection', () => {

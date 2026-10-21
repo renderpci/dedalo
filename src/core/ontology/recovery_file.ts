@@ -21,8 +21,17 @@
  * never raced. Every temp file is THIS session's (core/files/temp_path.ts
  * tempPathFor — a fixed `.part` was truncated and renamed by whichever session
  * opened it last, and unlinked by the other's `finally`); a failure removes
- * only its own. The lock holder sweeps the slot's stale temp siblings (a
- * crashed build's): no other session can be writing them.
+ * only its own. The lock holder sweeps the slot's STALE temp siblings (a
+ * crashed build's) — only those older than STALE_TEMP_AGE_MS: the lock is per
+ * DATABASE, so another installation (or suite lane) sharing the slot's
+ * directory may hold its own lock and be writing a FRESH sibling right now;
+ * none can still be writing one older than twice its children's deadline.
+ *
+ * BOUNDED WHILE HOLDING THE LOCK (cross-write:r3). pg_dump and psql run under a
+ * DEADLINE (RECOVERY_CHILD_DEADLINE_MS, a caller may pass a tighter one) and
+ * pg_dump with `--lock-wait-timeout`: a child waiting on a table lock or a stalled
+ * server is KILLED and the call fails — it never holds the single-flight lock
+ * forever, refusing every later build and restore "already running".
  */
 
 import {
@@ -72,6 +81,33 @@ export const RECOVERY_PRESERVE_TLDS = [
  * so nobody's last good dump is orphaned. Resolution lives in
  * src/core/install/runtime_paths.ts, next to the census entry that reports it.
  */
+
+/**
+ * The bound of one recovery-file child (pg_dump of the slice, psql of its
+ * restore). The slice is a few whitelisted tlds of dd_ontology — seconds of work
+ * on any installation — so ten minutes is a stall, never a slow dump.
+ */
+export const RECOVERY_CHILD_DEADLINE_MS = 10 * 60_000;
+
+/**
+ * The age past which a temp sibling of the slot is a crashed session's leftover:
+ * twice the children's deadline (a live writer's child is killed at one). A
+ * caller's deadline is clamped to RECOVERY_CHILD_DEADLINE_MS so this holds.
+ */
+const STALE_TEMP_AGE_MS = 2 * RECOVERY_CHILD_DEADLINE_MS;
+
+/** A call's deadline: the caller's, never longer than RECOVERY_CHILD_DEADLINE_MS. */
+function deadlineOf(options: RecoveryFileOptions): number {
+	return Math.min(options.deadlineMs ?? RECOVERY_CHILD_DEADLINE_MS, RECOVERY_CHILD_DEADLINE_MS);
+}
+
+/** How long pg_dump waits for the slice table's lock before failing (never forever). */
+const PG_DUMP_LOCK_WAIT = '60s';
+
+/** A recovery-file call's bounds: its children's deadline (default and ceiling RECOVERY_CHILD_DEADLINE_MS). */
+export interface RecoveryFileOptions {
+	deadlineMs?: number;
+}
 
 export interface RecoveryFileResponse {
 	/** INTERNAL outcome discriminator (never a wire body). */
@@ -142,31 +178,68 @@ function withRecoveryLock(
 }
 
 /**
- * Remove the stale temp siblings of `path` (tempPathFor's `<path>.tmp-<id>`) —
- * a crashed session's leftovers. Only the LOCK HOLDER calls it: no other
- * session can be writing them.
+ * Remove the STALE temp siblings of `path` (tempPathFor's `<path>.tmp-<id>`) —
+ * a crashed session's leftovers: only one last modified more than
+ * STALE_TEMP_AGE_MS ago. Only the LOCK HOLDER calls it, but the lock is per
+ * database: a fresh sibling may be another installation's in-flight file, so it
+ * is left alone (module header).
  */
 function sweepStaleTempSiblings(path: string): void {
 	const dir = dirname(path);
 	if (!existsSync(dir)) return;
 	const prefix = `${basename(path)}.tmp-`;
+	const staleBefore = Date.now() - STALE_TEMP_AGE_MS;
 	for (const name of readdirSync(dir)) {
-		if (name.startsWith(prefix) && isTempSibling(name)) rmSync(join(dir, name), { force: true });
+		if (!name.startsWith(prefix) || !isTempSibling(name)) continue;
+		const sibling = join(dir, name);
+		if (modifiedBefore(sibling, staleBefore)) rmSync(sibling, { force: true });
 	}
+}
+
+/** True when `path` was last modified before `epochMs`; false when it is gone already. */
+function modifiedBefore(path: string, epochMs: number): boolean {
+	const stat = statSync(path, { throwIfNoEntry: false });
+	return stat !== undefined && stat.mtimeMs < epochMs;
+}
+
+/**
+ * The DEADLINE of one child: SIGKILL it when `deadlineMs` elapses before it
+ * exits. Answers whether it fired (read after the child exited). The timer goes
+ * with the child.
+ */
+function killAfter(
+	child: { kill(signal?: number | NodeJS.Signals): void; exited: Promise<unknown> },
+	deadlineMs: number,
+): () => boolean {
+	let fired = false;
+	const timer = setTimeout(() => {
+		fired = true;
+		child.kill('SIGKILL');
+	}, deadlineMs);
+	void child.exited.finally(() => clearTimeout(timer));
+	return () => fired;
+}
+
+/** The refusal line of a child killed at its deadline. */
+function deadlineLine(what: string, deadlineMs: number): string {
+	return `${what} exceeded its ${deadlineMs} ms deadline and was killed`;
 }
 
 /** Build the recovery file (PHP build_recovery_version_file) — one at a time. */
 export function buildRecoveryVersionFile(
 	conn: DbConnDescriptor = connFromConfig(),
 	outFile: string = recoveryFileWritePath(),
+	options: RecoveryFileOptions = {},
 ): Promise<RecoveryFileResponse> {
-	return withRecoveryLock(() => buildUnderLock(conn, outFile));
+	const deadlineMs = deadlineOf(options);
+	return withRecoveryLock(() => buildUnderLock(conn, outFile, deadlineMs));
 }
 
 /** The build, under the single-flight lock. */
 async function buildUnderLock(
 	conn: DbConnDescriptor,
 	outFile: string,
+	deadlineMs: number,
 ): Promise<RecoveryFileResponse> {
 	const response = newResponse();
 	try {
@@ -193,7 +266,12 @@ async function buildUnderLock(
 		// when a socket was set, so pg_dump reached libpq's compiled-in default
 		// socket instead of the configured one.
 		const args = connArgs(conn);
-		args.push('-t', 'dd_ontology_recovery', conn.database);
+		args.push(
+			`--lock-wait-timeout=${PG_DUMP_LOCK_WAIT}`,
+			'-t',
+			'dd_ontology_recovery',
+			conn.database,
+		);
 		const child = Bun.spawn([resolvePgBinary('pg_dump'), ...args], {
 			stdout: 'pipe',
 			stderr: 'pipe',
@@ -202,10 +280,17 @@ async function buildUnderLock(
 				...(conn.password !== '' ? { PGPASSWORD: conn.password } : {}),
 			},
 		});
+		const expired = killAfter(child, deadlineMs);
 		// A compressor failure rejects (and cancels the child's stdout: pg_dump
 		// ends on the closed pipe) — the catch below reports it, `ok` stays false.
+		// A kill at the deadline closes stdout: the stream ends, the exit is non-zero.
 		await gzipStreamToFile(child.stdout, partFile);
 		const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
+		if (expired()) {
+			response.errors.push(deadlineLine('pg_dump', deadlineMs));
+			response.msg = 'Error. pg_dump failed building the recovery file';
+			return response;
+		}
 		if (exitCode !== 0) {
 			response.errors.push(`pg_dump failed: ${stderr.trim()}`);
 			response.msg = 'Error. pg_dump failed building the recovery file';
@@ -235,6 +320,7 @@ async function buildUnderLock(
 export async function restoreDdOntologyRecoveryFromFile(
 	conn: DbConnDescriptor = connFromConfig(),
 	inFile: string = resolveRecoveryFilePath(),
+	options: RecoveryFileOptions = {},
 ): Promise<RecoveryFileResponse> {
 	if (!existsSync(inFile)) {
 		const response = newResponse();
@@ -242,13 +328,15 @@ export async function restoreDdOntologyRecoveryFromFile(
 		response.msg = 'Error. source sql_file do not exists';
 		return response;
 	}
-	return withRecoveryLock(() => restoreUnderLock(conn, inFile));
+	const deadlineMs = deadlineOf(options);
+	return withRecoveryLock(() => restoreUnderLock(conn, inFile, deadlineMs));
 }
 
 /** The restore, under the single-flight lock. */
 async function restoreUnderLock(
 	conn: DbConnDescriptor,
 	inFile: string,
+	deadlineMs: number,
 ): Promise<RecoveryFileResponse> {
 	const response = newResponse();
 	// The plain intermediate is THIS session's (a fixed `<file minus .gz>` was
@@ -258,7 +346,16 @@ async function restoreUnderLock(
 	try {
 		sweepStaleTempSiblings(plainBase);
 		await gunzipWithCaps(inFile, plainPath);
-		const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-f', plainPath]);
+		// The deadline (module header): runPsql SIGKILLs its child when the signal fires.
+		const deadline = AbortSignal.timeout(deadlineMs);
+		const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-f', plainPath], {
+			signal: deadline,
+		});
+		if (deadline.aborted && run.exitCode !== 0) {
+			response.errors.push(deadlineLine('psql', deadlineMs));
+			response.msg = 'Error. Request failed [restore_dd_ontology_recovery_from_file]';
+			return response;
+		}
 		if (run.exitCode !== 0) {
 			response.errors.push(`psql restore failed: ${run.stderr.trim()}`);
 			response.msg = 'Error. Request failed [restore_dd_ontology_recovery_from_file]';

@@ -18,15 +18,26 @@
  *   - a build and a restore at once: the same — they share the slice table;
  *   - a file at the OLD fixed names (another session's in-flight artifact, as
  *     far as this session can know) is never truncated, renamed or removed;
- *   - a stale temp sibling of the slot (a crashed build's leftover) is swept by
- *     the lock holder — no other session can be writing it.
+ *   - a stale temp sibling of the slot (a crashed build's leftover, older than
+ *     twice the children's deadline) is swept by the lock holder; a FRESH one
+ *     (another installation's in-flight file — the lock is per database) is
+ *     left alone;
+ *   - the lock is free after a call: the next build replaces the slot.
  *
  * Scratch: a mkdtemp() directory; the slice table is dropped by the code under
  * test and asserted absent after. Nothing else is written.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	utimesSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
@@ -34,6 +45,7 @@ import { sql } from '../../src/core/db/postgres.ts';
 import { connFromConfig, type DbConnDescriptor } from '../../src/core/install/pg_exec.ts';
 import {
 	buildRecoveryVersionFile,
+	RECOVERY_CHILD_DEADLINE_MS,
 	type RecoveryFileResponse,
 	restoreDdOntologyRecoveryFromFile,
 } from '../../src/core/ontology/recovery_file.ts';
@@ -109,18 +121,25 @@ describe('one build or restore at a time, each on its own temp files', () => {
 		await sql.unsafe(`DROP TABLE IF EXISTS "dd_ontology_recovery" CASCADE`, []);
 	}, 120_000);
 
-	test('a file at the OLD fixed names is never touched; a stale temp sibling of the slot is swept', async () => {
+	test('a file at the OLD fixed names is never touched; a STALE temp sibling of the slot is swept, a fresh one is not', async () => {
 		const dir = mkdtempSync(join(workDir, 'foreign-'));
 		const outFile = join(dir, 'slot.sql.gz');
 		const foreignPart = `${outFile}.part`;
 		writeFileSync(foreignPart, 'another session is writing this');
 		const stale = `${outFile}.tmp-zz0000`;
 		writeFileSync(stale, 'a crashed build left this');
+		// Older than twice the children's deadline: no live writer can own it.
+		const old = (Date.now() - 3 * RECOVERY_CHILD_DEADLINE_MS) / 1000;
+		utimesSync(stale, old, old);
+		const fresh = `${outFile}.tmp-zz0001`;
+		writeFileSync(fresh, 'another installation is writing this');
 		const built = await buildRecoveryVersionFile(conn, outFile);
 		expect(built.errors).toEqual([]);
 		expect(built.ok).toBe(true);
 		expect(readFileSync(foreignPart, 'utf8')).toBe('another session is writing this');
 		expect(existsSync(stale)).toBe(false);
+		expect(readFileSync(fresh, 'utf8')).toBe('another installation is writing this');
+		rmSync(fresh);
 
 		const foreignPlain = join(dir, 'slot.sql');
 		writeFileSync(foreignPlain, 'another session is restoring this');
@@ -132,7 +151,7 @@ describe('one build or restore at a time, each on its own temp files', () => {
 		await sql.unsafe(`DROP TABLE IF EXISTS "dd_ontology_recovery" CASCADE`, []);
 	}, 120_000);
 
-	test('a refused call leaves the holder’s slot alone and the lock is free afterwards', async () => {
+	test('the lock is free after a call: the next build replaces the slot with a whole dump', async () => {
 		const dir = mkdtempSync(join(workDir, 'after-'));
 		const outFile = join(dir, 'slot.sql.gz');
 		writeFileSync(outFile, gzipSync(Buffer.from('-- previous good dump\n')));

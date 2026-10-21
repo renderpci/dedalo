@@ -25,7 +25,10 @@
  *
  * SECTION branch (recover a whole deleted/edited record): the TM snapshot's
  * data is a full matrix-columns object; it overwrites the live record via the
- * write chokepoint (PHP element->set_data + save()). LEDGERED vs PHP (no
+ * write chokepoint (PHP element->set_data + save()). Every component the
+ * restore CHANGES on a live record asks the same write door as the component
+ * branch (the dd128-aware pair — cross-write:r3); an undelete (no live row) is
+ * a record lifecycle effect, authorized at the section. LEDGERED vs PHP (no
  * fixture / no TS twin): deleted-media relink, the session-SQO reset (TS has no
  * PHP session), and the TM-row consumption (PHP deletes the restored snapshot;
  * TS keeps it — the recover writes its own whole-record audit row, which
@@ -89,6 +92,7 @@ import {
 } from '../../../src/core/relations/dataframe_slots.ts';
 import { NOLAN } from '../../../src/core/relations/main_lanes.ts';
 import {
+	type ChangedKeysDoor,
 	persistRecordBirth,
 	persistRecordColumns,
 	persistRestoredKeys,
@@ -120,6 +124,11 @@ import {
  * THE UNDELETE DOOR: also the bulk revert's (bulk_revert_records.ts) for a
  * record a revert's D2 deleted, when that revert is reverted — one restore of a whole record,
  * files included, not two. `tmId` is the snapshot row's id, for the refusal.
+ *
+ * `door`: the caller's write door for every component the restore CHANGES on a
+ * live record (persistRecordColumns — asked behind the row lock; a throw rolls
+ * the restore back). apply_value passes the dd128-aware one; an engine caller
+ * that already authorized the whole record passes none.
  */
 export async function restoreSection(
 	snapshot: unknown,
@@ -127,9 +136,10 @@ export async function restoreSection(
 	sectionTipo: string,
 	sectionId: number,
 	userId: number,
+	door?: ChangedKeysDoor,
 ): Promise<void> {
 	const columns = await withTransaction(async () => {
-		const written = await restoreSectionRow(snapshot, tmId, sectionTipo, sectionId, userId);
+		const written = await restoreSectionRow(snapshot, tmId, sectionTipo, sectionId, userId, door);
 		await recordRecoverRow(sectionTipo, sectionId, userId);
 		return written;
 	});
@@ -190,6 +200,7 @@ export async function restoreSectionRow(
 	sectionTipo: string,
 	sectionId: number,
 	userId: number,
+	door?: ChangedKeysDoor,
 ): Promise<Partial<Record<MatrixJsonbColumn, unknown>>> {
 	const { table, columns } = await snapshotColumns(snapshot, tmId, sectionTipo, sectionId);
 	await persistRecordColumns(
@@ -197,6 +208,7 @@ export async function restoreSectionRow(
 		columns,
 		{ userId },
 		{ actor: userId },
+		door,
 	);
 	return columns;
 }
@@ -491,9 +503,20 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 
 	// SECTION restore: overwrite the whole record from the snapshot columns.
 	if (model === 'section') {
+		// THE WRITE DOOR of every component the restore CHANGES (cross-write:r3):
+		// the declarative 'tipo' gate read the (section, section) pair, which names
+		// no component — so on dd128 the own-record downgrade never applied, and a
+		// user-manager wrote their own old profile / admin flag back through a
+		// whole-record row. Asked behind the row lock, before anything is written;
+		// a refusal rolls the restore back. An unchanged key is never asked.
+		const door: ChangedKeysDoor = async (componentTipos) => {
+			for (const componentTipo of componentTipos) {
+				await authorizeComponentWrite(context, sectionTipo, sectionId, componentTipo);
+			}
+		};
 		// Throws on refusal (the dispatch catch converts), so the activity row is
 		// appended only for a restore that actually landed.
-		await restoreSection(tmRow.data, tmRow.id, sectionTipo, sectionId, userId);
+		await restoreSection(tmRow.data, tmRow.id, sectionTipo, sectionId, userId, door);
 		await logRecoverActivity(
 			context,
 			'RECOVER SECTION',

@@ -50,6 +50,7 @@ import {
 	installAclIdentityFixture,
 	removeAclIdentityFixture,
 } from '../helpers/acl_identity_fixture.ts';
+import { countActivityRows, sweepActivityRows } from '../helpers/activity_rows.ts';
 
 const TLD = 'zzbcs';
 const SECTION = `${TLD}1`; // unfiltered host section
@@ -233,7 +234,9 @@ afterAll(async () => {
 		await sql.unsafe('DELETE FROM matrix_time_machine WHERE section_tipo = $1', [section]);
 		await sql.unsafe('DELETE FROM dedalo_ts_record_generation WHERE section_tipo = $1', [section]);
 		await sql.unsafe(`DELETE FROM "${TABLE}" WHERE section_tipo = $1`, [section]);
-		await sql.unsafe(`DELETE FROM matrix_activity WHERE data->>'section_tipo' = $1`, [section]);
+		// The scratch section's activity rows, asserted gone.
+		await sweepActivityRows(section);
+		expect(await countActivityRows(section)).toBe(0);
 	}
 	for (const id of minted) {
 		await sql.unsafe(
@@ -245,6 +248,9 @@ afterAll(async () => {
 			[id],
 		);
 	}
+	// The bulk-run (dd800) records are SHARED: only the ids this gate minted.
+	await sweepActivityRows('dd800', minted);
+	expect(await countActivityRows('dd800', minted)).toBe(0);
 	expect(await dropSituation(SITUATION)).toBe(0);
 });
 

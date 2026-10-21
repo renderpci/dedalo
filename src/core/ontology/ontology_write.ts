@@ -35,7 +35,7 @@
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import {
 	type DdOntologyNode,
-	ONTOLOGY_REGISTRY_MINT_LOCK_CLASS,
+	lockOntologyRegistryMint,
 	readDdOntologyRow,
 	updateDdOntologyColumns,
 	upsertDdOntologyNode,
@@ -572,18 +572,31 @@ export async function createMainSection(fileItem: FileItem, userId = -1): Promis
  * tld resolves), and two minters of one tld never both mint. An existing row
  * is refused (`refuse` — createMainSection's contract) or answered as it is
  * (`keep` — ensureMainSection's, the race's loser included).
+ *
+ * ONE TLD, NORMALIZED ONCE (cross-write:r3): the lock key, the check and the
+ * row's hierarchy6 are the same `safeTld(trim + lowercase)` — the spelling
+ * getOntologyMainFromTld looks up. A raw spelling used to lock one key, check
+ * another and write a row its own tld never found (a second mint then doubled
+ * it). A tld that is not one is refused before anything is minted.
  */
 async function mintMainSection(
 	fileItem: FileItem,
 	userId: number,
 	onExisting: 'refuse' | 'keep',
 ): Promise<{ sectionId: number; created: boolean }> {
-	const tld = fileItem.tld;
+	const tld = safeTld(
+		String(fileItem.tld ?? '')
+			.trim()
+			.toLowerCase(),
+	);
+	if (tld === null) {
+		throw new DedaloError('request.invalid', {
+			message: `createMainSection: ${JSON.stringify(fileItem.tld ?? null)} is not a tld`,
+			coordinates: { key: 'tld' },
+		});
+	}
 	return withTransaction(async () => {
-		await sql.unsafe('SELECT pg_advisory_xact_lock($1::int, hashtext($2))', [
-			ONTOLOGY_REGISTRY_MINT_LOCK_CLASS,
-			tld,
-		]);
+		await lockOntologyRegistryMint(tld);
 		const existing = await getOntologyMainFromTld(tld);
 		if (existing !== null) {
 			if (onExisting === 'keep') return { sectionId: existing.section_id, created: false };
@@ -592,7 +605,7 @@ async function mintMainSection(
 				coordinates: { tld },
 			});
 		}
-		return { sectionId: await mintRegistryRow(fileItem, userId), created: true };
+		return { sectionId: await mintRegistryRow({ ...fileItem, tld }, userId), created: true };
 	});
 }
 

@@ -127,6 +127,7 @@ import { toolTimeMachineBulkRevert } from '../../tools/tool_time_machine/server/
 import {
 	AUTHZ_3D,
 	AUTHZ_AV,
+	AUTHZ_CONTROL_USER_ID,
 	AUTHZ_FILTER,
 	AUTHZ_IMAGE,
 	AUTHZ_PROJECT_P,
@@ -139,6 +140,7 @@ import {
 	AUTHZ_USER_MANAGER_USER_ID,
 	type AuthzIdentities,
 	assertAuthzDoorContrast,
+	authzProfileId,
 	authzProjectLocator,
 	authzStubAgentModels,
 	clearAuthzDoorCaches,
@@ -1148,6 +1150,112 @@ function bulkRevertProbe(): Probe {
 }
 
 /**
+ * TIME MACHINE apply_value, SECTION branch (cross-write:r3,
+ * tool_time_machine/server/tool_time_machine.ts): a whole-record restore asks
+ * the write door for every component it CHANGES, behind the row lock
+ * (persistRecordColumns' door). The declarative `tipo` gate reads the
+ * (section, section) pair, which the dd128 own-record rule never reaches — so
+ * this probe measures the handler's door alone, through the REAL handler. Per
+ * cell a whole-record TM row is built from the identity's target's LIVE columns
+ * with ONE key changed: DD1725 → the manager's OWN dd128 record, its dd1725 set
+ * to another profile (level 2 in the profile, 1 by the own-record downgrade);
+ * CONTROL → the scratch record, its AUTHZ_TEXT_2 set to a fresh value. A
+ * regressed door that let DD1725 through is undone (the live dd1725 written
+ * back as root) so no later cell runs on a manager with a foreign profile. The
+ * TM row and the recover's activity rows are swept.
+ */
+function tmSectionApplyProbe(): Probe {
+	return {
+		expect: { DD1725: 'refused', CONTROL: 'served' },
+		run: async (identity) => {
+			await assertTestDatabase('authz_door_matrix_native: tm section apply_value');
+			const { sql } = await import('../../src/core/db/postgres.ts');
+			const { readMatrixRecord } = await import('../../src/core/db/matrix.ts');
+			const { getColumnNameByModel, getModelByTipo, getMatrixTableFromTipo } = await import(
+				'../../src/core/ontology/resolver.ts'
+			);
+			const { toolTimeMachineApplyValue } = await import(
+				'../../tools/tool_time_machine/server/tool_time_machine.ts'
+			);
+			const { sweepActivityRows } = await import('../helpers/activity_rows.ts');
+			const principal = principalOf(identity);
+			const dd128 = identity === 'DD1725';
+			const sectionTipo = dd128 ? USERS : AUTHZ_SECTION;
+			const sectionId = dd128 ? AUTHZ_USER_MANAGER_USER_ID : recordId;
+			const tipo = dd128 ? 'dd1725' : AUTHZ_TEXT_2;
+			const table = await getMatrixTableFromTipo(sectionTipo);
+			const column = getColumnNameByModel((await getModelByTipo(tipo)) ?? '');
+			if (table === null || column === null) {
+				throw new Error(`tm section probe: no table/column for ${sectionTipo}/${tipo}`);
+			}
+			const live = await readMatrixRecord(table, sectionTipo, sectionId);
+			if (live === null) throw new Error(`tm section probe: ${sectionTipo}/${sectionId} absent`);
+			const snapshot = structuredClone(live.columns) as Record<
+				string,
+				Record<string, unknown> | null
+			>;
+			const before = snapshot[column]?.[tipo];
+			snapshot[column] = {
+				...(snapshot[column] ?? {}),
+				[tipo]: dd128
+					? [
+							{
+								id: 1,
+								type: 'dd151',
+								section_id: authzProfileId(AUTHZ_CONTROL_USER_ID),
+								section_tipo: 'dd234',
+								from_component_tipo: 'dd1725',
+							},
+						]
+					: [{ id: 1, lang: 'lg-nolan', value: `zzauthz_tm_${crypto.randomUUID()}` }],
+			};
+			const rows = (await sql.unsafe(
+				`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, timestamp, user_id, data)
+				 VALUES ($1, $2, $2, 'lg-nolan', '2026-07-01 10:00:00', -1, $3::text::jsonb) RETURNING id`,
+				[sectionId, sectionTipo, JSON.stringify(snapshot)],
+			)) as { id: number }[];
+			const tmId = Number(rows[0]?.id);
+			try {
+				return await outcomeOf(() =>
+					toolTimeMachineApplyValue({
+						principal,
+						userId: principal.userId,
+						options: {
+							section_tipo: sectionTipo,
+							section_id: sectionId,
+							tipo: sectionTipo,
+							lang: 'lg-nolan',
+							matrix_id: tmId,
+						},
+						background: false,
+					} as unknown as ToolActionContext),
+				);
+			} finally {
+				if (dd128) {
+					const after = (await readMatrixRecord(table, sectionTipo, sectionId))?.columns as
+						| Record<string, Record<string, unknown> | null>
+						| undefined;
+					if (JSON.stringify(after?.[column]?.[tipo]) !== JSON.stringify(before)) {
+						// A REGRESSED door wrote the foreign profile: put the manager's own back.
+						await saveComponentData({
+							componentTipo: tipo,
+							sectionTipo,
+							sectionId,
+							lang: 'lg-nolan',
+							changedData: [{ action: 'set_data', key: null, value: before } as never],
+							userId: -1,
+						});
+					}
+					clearAuthzDoorCaches();
+				}
+				await sql.unsafe('DELETE FROM matrix_time_machine WHERE id = $1', [tmId]);
+				await sweepActivityRows(sectionTipo, [sectionId]);
+			}
+		},
+	};
+}
+
+/**
  * THE ACQUISITION TOOLS' FIXED-TARGET DOORS (PR #114 — tool_numisdata_acquisition,
  * tool_bibliography_acquisition). Each action declares `targets` with a CONSTANT
  * extractor: the previews name the tool's object section at READ (1), the
@@ -2034,6 +2142,8 @@ async function deriveCensus(): Promise<Census> {
 	probes.set('tool:tool_import_files:import_files:roles', importFilesRoleProbe());
 	// The bulk revert's per-component writer door (req 10).
 	probes.set('tool:tool_time_machine:bulk_revert_process:units', bulkRevertProbe());
+	// apply_value's whole-record restore: its per-changed-component door (cross-write:r3).
+	probes.set('tool:tool_time_machine:apply_value:section', tmSectionApplyProbe());
 	// No stale probe: every TRANSCRIPTION_OPTIONS key is a live tool_transcription action.
 	const staleTranscription = Object.keys(TRANSCRIPTION_OPTIONS).filter(
 		(action) => !transcriptionActions.has(action),
