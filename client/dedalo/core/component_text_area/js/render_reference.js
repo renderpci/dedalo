@@ -79,6 +79,84 @@ const get_display_value = (item) => {
 
 
 /**
+* SET_TEMPORAL_VALUE
+* Sets the value of the temporal (is_temporal) picker component and renders it.
+* (!) The refresh MUST reuse the save response: the read door of a temporal instance
+* serves an EMPTY value by design (WC-059), so a plain `refresh:true, build_autoload:true`
+* re-read wiped the value just set. The picker then opened empty for a tag that has a
+* locator, and Apply on that empty picker ran the Delete path — unlinking the tag locator.
+* @param {Object} reference_component - the temporal picker component instance
+* @param {Array<Object>} changed_data - frozen 'set_data' changes
+* @returns {Promise<Object>} the change_value API response
+*/
+const set_temporal_value = async (reference_component, changed_data) => {
+
+	const api_response = await reference_component.change_value({
+		changed_data	: changed_data,
+		refresh			: false
+	})
+	await reference_component.refresh({
+		build_autoload		: true,
+		tmp_api_response	: api_response // the save echo carries the value (the read door would not)
+	})
+
+	return api_response
+}//end set_temporal_value
+
+
+
+/**
+* IS_TAG_USED_OUT_OF_SELECTION
+* Whether any text fragment OUTSIDE the current editor selection carries a reference
+* tag with the given tag_id. A reused tag_id is shared by several fragments that point
+* at ONE locator, so the locator may only be unlinked when the fragment being deleted
+* (or moved to another tag) is the last one.
+* The selection is resolved exactly as service_ckeditor.remove_reference / set_reference
+* resolve it: collapsed → the whole attribute range under the caret; else the ranges.
+* (!) Only the current editor (lang and value key) is checked. Other langs of the text
+* could carry the same tag_id because the tags component is not translatable (nolan).
+* @param {Object} text_editor - service_ckeditor instance
+* @param {string} tag_id
+* @returns {boolean}
+*/
+const is_tag_used_out_of_selection = (text_editor, tag_id) => {
+
+	const editor	= text_editor.editor
+	const model		= editor.model
+	const selection	= model.document.selection
+
+	// selected ranges (the fragment that is being changed)
+	const selected_ranges = selection.isCollapsed
+		? (selection.hasAttribute('reference')
+			? [editor.plugins.get('reference_editing').findAttributeRange(
+				selection.getFirstPosition(),
+				'reference',
+				selection.getAttribute('reference'),
+				model
+			  )]
+			: [])
+		: [...selection.getRanges()]
+
+	const range = model.createRangeIn( model.document.getRoot() )
+	for (const value of range.getWalker({ ignoreElementEnd: true })) {
+		const item		= value.item
+		const reference	= item.getAttribute('reference')
+		if (!reference || reference.tag_id!=tag_id) {
+			continue
+		}
+		const item_range	= model.createRangeOn(item)
+		const in_selection	= selected_ranges.some(el => el.containsRange(item_range, true))
+		if (!in_selection) {
+			return true
+		}
+	}
+
+	return false
+}//end is_tag_used_out_of_selection
+
+
+
+/**
 * RENDER_REFERENCE
 * Opens a modal for assigning or editing a "reference" tag on the active text
 * selection in the CKEditor instance.
@@ -167,10 +245,12 @@ export const render_reference = async function(options) {
 			? found_tag_data.entries
 			: []
 
-		// component_tags_reference.data.entries is the live (potentially unsaved) array
-		// of locator entries. Each entry carries: tag_id, tag_type, from_component_tipo,
-		// section_tipo, section_id, and optionally fallback_value.
-		const ar_tags_values = component_tags_reference.data.entries
+		// The tag locators are read from the datum entries (all_tag_data), NOT from
+		// component_tags_reference.data.entries: filter_data_by_tag_id narrows data.entries
+		// to the active tag, so a tag other than the active one found no locators there and
+		// Apply added a second locator to it instead of replacing (and Delete left an orphan).
+		// Each entry carries: id, tag_id, tag_type, from_component_tipo, section_tipo, section_id.
+		const ar_tags_values = all_tag_data
 
 		// Find the locator entry that corresponds to the clicked reference span.
 		// `tag_type === 'reference'` distinguishes these from index/note/draw tags.
@@ -278,12 +358,8 @@ export const render_reference = async function(options) {
 				value	: locator.length > 0 ? locator : null
 			})]
 
-		// fix instance changed_data
-			await reference_component.change_value({
-				changed_data	: changed_data,
-				refresh			: true,
-				build_autoload 	: true
-			})
+		// fix instance changed_data (see set_temporal_value: a plain refresh re-read an empty value)
+			await set_temporal_value(reference_component, changed_data)
 
 	// header
 		const header = ui.create_dom_element({
@@ -342,7 +418,8 @@ export const render_reference = async function(options) {
 				const existing_value_node = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
-					inner_html		: render_value(current_value.display_value, 'text'),
+					// tag_id is appended to tell apart the same term used by several tags
+					inner_html		: render_value(current_value.display_value + ' [' + current_value.tag_id + ']', 'text'),
 					parent			: existing_tags_container
 				})
 				existing_value_node.data = current_value
@@ -350,7 +427,7 @@ export const render_reference = async function(options) {
 				existing_value_node.activated = false
 				existing_value_node.key = i
 				ar_existing_value_node.push(existing_value_node)
-				existing_value_node.addEventListener("mouseup", function(e) {
+				existing_value_node.addEventListener("mouseup", async function(e) {
 					e.stopPropagation()
 					// remove all selected node classes
 					for (let i = ar_existing_value_node.length - 1; i >= 0; i--) {
@@ -377,6 +454,18 @@ export const render_reference = async function(options) {
 						selected_tag.reuse = true
 						selected_tag.fallback_value = existing_value_node.data.display_value
 					}
+					// temporal portal. Shows the reused term (or the tag original value on
+					// deselect) so the 'New tag' field never contradicts the selection.
+					// Same shape as the initial set_data (the stored entry), minus the client-only display_value.
+					const reused = clone(existing_value_node.data)
+					delete reused.display_value
+					const temp_value = existing_value_node.activated
+						? [reused]
+						: (locator.length > 0 ? locator : null)
+					await set_temporal_value(reference_component, [Object.freeze({
+						action	: 'set_data',
+						value	: temp_value
+					})])
 				})
 			}
 
@@ -403,7 +492,12 @@ export const render_reference = async function(options) {
 				// if yes, delete the note section in the server
 				if(window.confirm(delete_label)) {
 
-					if(locator.length > 0){
+					// shared tag. A reused tag_id is carried by several text fragments that share
+					// ONE locator: deleting one fragment must not unlink the locator the others
+					// still point at. Checked BEFORE the unlink so its answer is still read first.
+					const used_elsewhere = is_tag_used_out_of_selection(text_editor, view_tag.tag_id)
+
+					if(locator.length > 0 && !used_elsewhere){
 
 						// if the locator is not empty, remove it of the component.
 						// Its ANSWER is READ: on a refusal the locator is still linked, so
@@ -446,6 +540,22 @@ export const render_reference = async function(options) {
 			})
 			button_apply.addEventListener('mouseup', async function(e) {
 				e.stopPropagation()
+
+				// reuse check. The temporal portal shows the reused term, but the user can still
+				// change it after selecting a reuse chip: then the reuse is discarded and the
+				// temporal portal value is applied to this tag (what the screen shows is applied).
+				if (selected_tag.reuse===true) {
+					const temp_entries	= reference_component.data.entries || []
+					const reused_data	= existing_values.find(el => el.tag_id===selected_tag.tag_id)
+					const is_reused		= reused_data && temp_entries.length===1
+						&& temp_entries[0].section_tipo===reused_data.section_tipo
+						&& same_section_id(temp_entries[0].section_id, reused_data.section_id)
+					if (!is_reused) {
+						selected_tag.tag_id	= view_tag.tag_id
+						selected_tag.reuse	= false
+					}
+				}
+
 				// save the locator when is a new tag_id
 				// if a reuse is active, the locator already exist into the portal
 				if(selected_tag.reuse === false){
@@ -462,7 +572,8 @@ export const render_reference = async function(options) {
 					// set the tag_id and tag_type into the locator to be saved
 					// Stamp the tag_id and tag_type from the clicked view-tag onto the
 					// new locator so the server can correlate it back to this text span.
-					const new_locator = temp_entries[0]
+					// (cloned: the temporal portal value is kept intact if the link is refused)
+					const new_locator = clone(temp_entries[0])
 						new_locator.tag_id = view_tag.tag_id
 						new_locator.tag_type = 'reference'
 
@@ -533,9 +644,11 @@ export const render_reference = async function(options) {
 					 // the server fallback slice — see get_display_value wire notes)
 					 // if nothing resolves, empty space is used to create the text for the collapse selection
 					 selected_tag.fallback_value = get_display_value(locator_data) || ' '
-				 }else if (selected_tag.tag_id!==view_tag.tag_id && locator.length > 0) {
+				 }else if (selected_tag.tag_id!==view_tag.tag_id && locator.length > 0
+					&& !is_tag_used_out_of_selection(text_editor, view_tag.tag_id)) {
 					// reuse case. The span moves to another tag_id: unlink the original
 					// tag locators to prevent orphan values in the tags_reference portal
+					// (only when no other text fragment still carries the original tag_id)
 					const unlinked = await component_tags_reference.unlink_record(locator)
 					if (unlinked!==true) {
 						return
@@ -550,7 +663,10 @@ export const render_reference = async function(options) {
 				// carries the tag_id that CKEditor serialises into the rich-text model.
 				const reference_tag = {
 					type	: tag_type,
-					label	: selected_tag.label,
+					// reuse case. The label follows the reused tag_id (else 'reference 5' labelled tag 3)
+					label	: selected_tag.reuse===true
+						? 'reference ' + selected_tag.tag_id
+						: selected_tag.label,
 					tag_id	: selected_tag.tag_id,
 					state	: selected_tag.state,
 					data	: selected_tag.tag_id

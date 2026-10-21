@@ -27696,9 +27696,32 @@ dd-modal > .text_area_reference_selector .existing_tags_container .value {
   margin-left: 2.3rem;
   border-top: 1px var(--color_grey_13) solid;
   line-height: 1.7rem;
+  cursor: pointer;
+}
+dd-modal > .text_area_reference_selector .existing_tags_container .value::before {
+  content: '';
+  display: inline-block;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin: 0 0.6rem 0 0.3rem;
+  vertical-align: -0.1rem;
+  background-color: var(--fg_muted);
+  -webkit-mask-image: url('../../themes/default/icons/tag.svg');
+  mask-image: url('../../themes/default/icons/tag.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
 }
 dd-modal > .text_area_reference_selector .existing_tags_container .value.selected_tag {
   background-color: var(--color_hilite_2);
+}
+dd-modal > .text_area_reference_selector .existing_tags_container .value.selected_tag::before {
+  background-color: var(--fg_on_brand);
+  -webkit-mask-image: url('../../themes/default/icons/check.svg');
+  mask-image: url('../../themes/default/icons/check.svg');
 }
 dd-modal > .text_area_reference_selector .existing_tags_container .value:hover {
   background-color: var(--color_grey_13);

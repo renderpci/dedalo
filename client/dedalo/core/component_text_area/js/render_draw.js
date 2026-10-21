@@ -108,10 +108,13 @@ export const render_draw = async function(options) {
 		const ar_tags_values = component_tags_draw.data.entries
 
 		// locator: the existing stored locator(s) for the specific tag_id the user clicked.
-		// An empty array means the tag has no linked concept yet; null means no data at all.
+		// ALWAYS an array (empty = the tag has no linked concept yet): the Delete handler
+		// reads `locator.length`, which crashed on null for a record without draw locators.
 		const locator = (ar_tags_values)
 			? ar_tags_values.filter(el => el.tag_id === view_tag.tag_id && el.tag_type === 'draw')
-			: null
+			: []
+		// alias used in apply (locator name is shadowed there)
+		const current_tag_locators = locator
 
 		// Build existing_values: deduplicated list of previously used locators across all
 		// draw tags in this record, enriched with fallback_value for display.
@@ -192,15 +195,21 @@ export const render_draw = async function(options) {
 		// user sees the currently linked concept; value is null when no locator exists yet.
 			const changed_data = [Object.freeze({
 				action	: 'set_data',
-				value	: locator || null
+				value	: locator.length > 0 ? locator : null
 			})]
 
 		// fix instance changed_data
 		// Trigger build_autoload so dependent sub-components (autocomplete dropdown, etc.) refresh.
-			await reference_component.change_value({
+		// (!) The refresh reuses the save response: the read door of a temporal instance serves
+		// an EMPTY value by design (WC-059), so a plain refresh re-read wiped the value just set
+		// and Apply on the empty picker ran the Delete path.
+			const set_data_response = await reference_component.change_value({
 				changed_data	: changed_data,
-				refresh			: true,
-				build_autoload 	: true
+				refresh			: false
+			})
+			await reference_component.refresh({
+				build_autoload		: true,
+				tmp_api_response	: set_data_response
 			})
 
 	// header
@@ -408,14 +417,14 @@ export const render_draw = async function(options) {
 
 		// button Apply reference
 		// Persists the selected locator (from the search portal or the reuse list) to
-		// component_tags_draw via add_value(), then closes the modal.
+		// component_tags_draw via link_records(), then closes the modal.
 			const button_apply = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'success apply check',
 				text_content	: get_label.apply || 'Apply',
 				parent			: footer
 			})
-			button_apply.addEventListener('mouseup',function(evt) {
+			button_apply.addEventListener('mouseup', async function(evt) {
 
 				// save the locator when is a new tag_id
 				// if a reuse is active, the locator already exist into the portal
@@ -436,7 +445,8 @@ export const render_draw = async function(options) {
 				// set the tag_id and tag_type into the locator to be saved
 				// Inject the current tag's identifiers into the locator before persisting,
 				// so the server can correlate the locator with the correct draw tag.
-				const new_locator = locator[0]
+				// (cloned: the source value (temporal portal or reuse chip) is kept intact on refusal)
+				const new_locator = clone(locator[0])
 					new_locator.tag_id = view_tag.tag_id
 					new_locator.tag_type = 'draw'
 
@@ -446,8 +456,30 @@ export const render_draw = async function(options) {
 				// The server derives the correct relation type from the ontology node properties
 				// of the target concept, so a client-supplied value would conflict.
 				delete new_locator.type
+				// reuse chip: client-only property, and the stored item id / paginated_key of the
+				// OTHER tag entry (the server mints a fresh id, as link_records' own restore does)
+				delete new_locator.fallback_value
+				delete new_locator.id
+				delete new_locator.paginated_key
 
-				component_tags_draw.add_value(new_locator);
+				// unchanged. The tag already has this locator: nothing to save
+				const unchanged = current_tag_locators.some(el =>
+					el.section_tipo===new_locator.section_tipo && same_section_id(el.section_id, new_locator.section_id)
+				)
+				if (!unchanged) {
+					// Persist through `link_records`, the v7 relation verb: the v6 `add_value` this
+					// code shipped with never existed in the v7 client, so Apply threw here.
+					// THE OUTCOME IS READ: on a refusal the modal stays open (nothing was saved).
+					// `duplicate` is benign (the locator is already linked to this tag).
+					// (!) No toast here: a server refusal was already noticed by error_dispatch,
+					// and a client data_limit refusal raised its own alert.
+					const link_outcome	= await component_tags_draw.link_records([new_locator])
+					const already_linked	= link_outcome.refused.some(el => el.reason==='duplicate')
+					if (link_outcome.linked.length!==1 && already_linked===false) {
+						console.error('(!) [render_draw] draw locator NOT saved: link refused', link_outcome.refused);
+						return
+					}
+				}
 
 				// remove the modal
 					modal.remove()
