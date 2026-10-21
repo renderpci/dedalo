@@ -106,6 +106,11 @@
 			"skipped": 0,
 			"assertions": 18
 		},
+		"test/unit/advisory_lock_class_tripwire.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 10
+		},
 		"test/unit/agent_access_native.test.ts": {
 			"tests": 24,
 			"skipped": 0,
@@ -3341,6 +3346,11 @@
 			"skipped": 0,
 			"assertions": 108
 		},
+		"test/unit/ontology_recovery_file_deadline_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 17
+		},
 		"test/unit/ontology_recovery_file_native.test.ts": {
 			"tests": 15,
 			"skipped": 0,
@@ -3360,6 +3370,11 @@
 			"tests": 2,
 			"skipped": 0,
 			"assertions": 6
+		},
+		"test/unit/ontology_registry_mint_tld_normalized_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 7
 		},
 		"test/unit/ontology_registry_row_native.test.ts": {
 			"tests": 11,
@@ -3400,6 +3415,11 @@
 			"tests": 31,
 			"skipped": 0,
 			"assertions": 81
+		},
+		"test/unit/ontology_update_derive_throw_native.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 11
 		},
 		"test/unit/ontology_update_landed_tail_native.test.ts": {
 			"tests": 2,
@@ -5195,6 +5215,11 @@
 			"tests": 13,
 			"skipped": 0,
 			"assertions": 138
+		},
+		"test/unit/tm_apply_value_section_write_door_native.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 24
 		},
 		"test/unit/tm_apply_value_slot_grant_native.test.ts": {
 			"tests": 4,
