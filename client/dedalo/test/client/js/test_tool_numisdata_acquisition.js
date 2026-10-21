@@ -44,7 +44,9 @@ import {
 import { error_text } from '../../../core/common/js/render_api_error.js';
 import { ENTITY_NAME_TIPO } from '../../../tools/tool_numisdata_acquisition/js/render_tool_numisdata_acquisition.js';
 import { tool_numisdata_acquisition } from '../../../tools/tool_numisdata_acquisition/js/tool_numisdata_acquisition.js';
+import * as renderer_module from '../../../tools/tool_numisdata_acquisition/js/render_tool_numisdata_acquisition.js';
 import {
+	describe_job_state_honesty,
 	failed_frame,
 	mount_acquisition_tool,
 	running_frame,
@@ -580,6 +582,15 @@ describe('TOOL_NUMISDATA_ACQUISITION CLIENT TEST', function () {
 			await new Promise((resolve) => setTimeout(resolve, 100));
 			assert.strictEqual(tool_requests(m.sent, 'commit_lots').length, 0, 'nothing committed on a failed search');
 		});
+	});
+
+	describe_job_state_honesty({
+		tool_constructor: tool_numisdata_acquisition,
+		model: MODEL,
+		commit_action: 'commit_lots',
+		preview_frames: [success_frame(preview_envelope())],
+		commit_success_frames: [success_frame(commit_envelope)],
+		renderer: renderer_module,
 	});
 });
 

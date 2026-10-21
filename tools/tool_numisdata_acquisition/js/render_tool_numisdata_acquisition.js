@@ -7,8 +7,8 @@ import {
 	request_failed,
 	response_data,
 } from '../../../core/common/js/api_error.js';
-import { data_manager } from '../../../core/common/js/data_manager.js';
-import { handle_api_error } from '../../../core/common/js/error_dispatch.js';
+import { data_manager, release_stream_reader } from '../../../core/common/js/data_manager.js';
+import { handle_api_error, outcome_unknown } from '../../../core/common/js/error_dispatch.js';
 import { error_text } from '../../../core/common/js/render_api_error.js';
 import { render_stream } from '../../../core/common/js/render_common.js';
 // imports
@@ -26,6 +26,54 @@ import { escape_html } from '../../../core/common/js/utils/render_escape.js';
 export const render_tool_numisdata_acquisition = function () {
 	return true;
 }; //end render_tool_numisdata_acquisition
+
+/**
+ * STATUS_UPDATE_RATE_MS
+ * How often get_process_status sends a job frame — one every update_rate,
+ * changed or not, until the terminal one (src/core/api/process_status.ts).
+ */
+const STATUS_UPDATE_RATE_MS = 1000;
+
+/**
+ * How long a job's status stream may stay SILENT before it is declared lost
+ * (the idle watchdog in stream_background_job): 15 missed frames. Long enough
+ * for a busy event loop, short enough that a half-open connection does not
+ * freeze the panel for good.
+ */
+let status_idle_limit_ms = 15 * STATUS_UPDATE_RATE_MS;
+
+/**
+ * SET_STATUS_IDLE_LIMIT_FOR_TEST
+ * TEST SEAM (acquisition_harness.js describe_job_state_honesty): shortens the
+ * idle limit so a half-open stream is declared lost within the test's budget.
+ * @param {number} ms
+ * @returns {Function} restore
+ */
+export const set_status_idle_limit_for_test = function (ms) {
+	const previous = status_idle_limit_ms;
+	status_idle_limit_ms = ms;
+	return () => {
+		status_idle_limit_ms = previous;
+	};
+}; //end set_status_idle_limit_for_test
+
+/**
+ * SET_BUSY
+ * An action button's in-flight state. `disabled` is what stops a second
+ * activation from EVERY input: the 'loading' class (the spinner) alone is
+ * pointer-events:none, and Enter/Space on the focused button still clicked it —
+ * a second job beside the first. The click handlers ALSO refuse while busy
+ * (is_busy): a disabled attribute is page state that anything can clear.
+ * @param {HTMLElement} button
+ * @param {boolean} busy
+ */
+const set_busy = function (button, busy) {
+	button.disabled = busy;
+	button.classList.toggle('loading', busy);
+}; //end set_busy
+
+/** Whether an action button's job is in flight (set_busy). */
+const is_busy = (button) => button.classList.contains('loading');
 
 /**
  * EDIT
@@ -329,40 +377,33 @@ const get_content_data = function (self) {
 	// {pid, pfile} dispatch to its terminal frame, rendering live progress via
 	// render_stream in between. on_success(data) gets the unwrapped terminal
 	// payload and appends into `container` itself; on_settle() fires exactly
-	// once, when the job's outcome is KNOWN (a refused dispatch or a terminal
-	// frame read) — never while the job may still run (render_status_lost).
+	// once, when the job's outcome is KNOWN (a dispatch the server REFUSED, or a
+	// terminal frame read) — never while the job may still run: not on a lost
+	// status (render_status_lost), not on a dispatch whose own outcome is
+	// unknown (render_dispatch_unknown). `job_kind` is the server's job kind
+	// (`<tool>_<action>`, src/core/tools/background.ts) — how the operator's own
+	// jobs of THIS action are told apart in get_activity.
 	const stream_background_job = function (options) {
 		const dispatch_promise = options.dispatch_promise;
 		const container = options.container;
 		const stream_id = options.stream_id;
+		const job_kind = options.job_kind;
 		const on_success = options.on_success;
 		const on_settle = options.on_settle;
 
-		dispatch_promise.then(function (response) {
-			// (an auth.* refusal here already reached the relogin overlay: the
-			// transport publishes every failed request's ApiError page-wide)
-			const dispatch_error = request_failed(response) ? response.error : null;
-			if (dispatch_error || typeof response?.pid === 'undefined') {
-				while (container.firstChild) {
-					container.removeChild(container.firstChild);
-				}
-				container.appendChild(render_error(dispatch_error));
-				if (on_settle) on_settle();
-				return;
-			}
-
-			const pid = response.pid;
-			const pfile = response.pfile;
-
+		// Follows ONE job — by the handle its dispatch answered, or one the
+		// operator picked from their own jobs — to its terminal frame.
+		const track_job = function (pid, pfile) {
 			// The status stream ended BEFORE the job's terminal frame (it was
-			// cut, or could not be opened): the server job may still be running.
-			// The action button stays disabled — on_settle is NOT called — because
-			// a second click would start a SECOND job beside the first (a duplicate
-			// commit). "Check again" reopens the SAME job's status; the server
-			// always ends a job's stream with a terminal frame, including for a
-			// vanished or interrupted job (src/core/api/process_status.ts), so the
-			// operator always has a way out that does not guess.
-			const render_status_lost = function (error) {
+			// cut, could not be opened, or went silent past the idle limit): the
+			// server job may still be running. The action button stays disabled —
+			// on_settle is NOT called — because a second click would start a
+			// SECOND job beside the first (a duplicate commit). "Check again"
+			// reopens the SAME job's status; the server always ends a job's stream
+			// with a terminal frame, including for a vanished or interrupted job
+			// (src/core/api/process_status.ts), so the operator always has a way
+			// out that does not guess.
+			const render_status_lost = function (error, idle) {
 				ui.create_dom_element({
 					element_type: 'div',
 					class_name: 'error_message job_status_lost',
@@ -372,6 +413,17 @@ const get_content_data = function (self) {
 					).replace('{pid}', pid),
 					parent: container,
 				});
+				if (idle) {
+					ui.create_dom_element({
+						element_type: 'div',
+						class_name: 'error_message job_status_idle',
+						text_content: (
+							self.get_tool_label('job_status_idle') ||
+							'The server sent no status for {seconds} seconds.'
+						).replace('{seconds}', String(Math.round(status_idle_limit_ms / 1000))),
+						parent: container,
+					});
+				}
 				if (error) {
 					container.appendChild(render_error(error));
 				}
@@ -400,7 +452,35 @@ const get_content_data = function (self) {
 
 				let final_rendered = false;
 
+				// THE IDLE WATCHDOG. get_process_status sends a frame every
+				// update_rate, changed or not, until the terminal one — so silence
+				// past status_idle_limit_ms is a dead connection, not a quiet job: a
+				// HALF-OPEN socket (a proxy or a NAT that dropped the peer without a
+				// FIN) never ends the read, and without this the panel waited
+				// forever with no "status lost" and no way out. On expiry the fetch
+				// is aborted (still connecting) or the reader released (mid-body);
+				// either way the one terminal path below reports the loss.
+				const stream_abort = new AbortController();
+				let stream_reader = null;
+				let idle_timer = null;
+				let idle_expired = false;
+				const stop_watchdog = () => {
+					clearTimeout(idle_timer);
+					idle_timer = null;
+				};
+				const arm_watchdog = () => {
+					clearTimeout(idle_timer);
+					idle_timer = setTimeout(() => {
+						idle_expired = true;
+						stream_abort.abort();
+						if (stream_reader) {
+							release_stream_reader(stream_reader, 'job status stream idle');
+						}
+					}, status_idle_limit_ms);
+				};
+
 				const on_read = (sse_response) => {
+					arm_watchdog();
 					render_response.update_info_node(sse_response, (info_node) => {
 						const is_running = sse_response?.is_running ?? true;
 
@@ -468,23 +548,27 @@ const get_content_data = function (self) {
 				};
 
 				// The stream ended. With the terminal frame read, the job is over:
-				// settle. WITHOUT it (a dropped connection, a proxy cut) the job may
-				// still be running — say so, not nothing.
+				// settle. WITHOUT it (a dropped connection, a proxy cut, an idle
+				// stream the watchdog released) the job may still be running — say
+				// so, not nothing.
 				const on_done = () => {
+					stop_watchdog();
 					render_response.done();
 					if (final_rendered) {
 						if (on_settle) on_settle();
 						return;
 					}
-					render_status_lost(null);
+					render_status_lost(null, idle_expired);
 				};
 
+				arm_watchdog();
 				data_manager
 					.request_stream({
+						signal: stream_abort.signal,
 						body: {
 							dd_api: 'dd_utils_api',
 							action: 'get_process_status',
-							update_rate: 1000,
+							update_rate: STATUS_UPDATE_RATE_MS,
 							options: {
 								pid: pid,
 								pfile: pfile,
@@ -492,15 +576,181 @@ const get_content_data = function (self) {
 						},
 					})
 					.then(function (stream) {
-						data_manager.read_stream(stream, on_read, on_done);
+						stream_reader = data_manager.read_stream(stream, on_read, on_done);
 					})
 					.catch(function (error) {
+						stop_watchdog();
 						render_response.done();
-						render_status_lost(error);
+						// the watchdog's own abort is the idle loss, not a second error
+						render_status_lost(idle_expired ? null : error, idle_expired);
 					});
 			};
 
 			follow_job();
+		}; //end track_job
+
+		// The DISPATCH failed in a way that leaves its outcome UNKNOWN
+		// (outcome_unknown: a transport failure — the request may have landed,
+		// and the server runs an aborted request to completion — or the server's
+		// own idempotency "do not know"). The job may have STARTED, so the action
+		// button stays disabled: re-arming it here let the operator's second
+		// click mint a NEW idempotency key and start a second job beside the
+		// first. The way out reads the server's facts — the operator's own jobs
+		// of this kind (find_started_jobs) — instead of guessing.
+		const render_dispatch_unknown = function (error, note) {
+			while (container.firstChild) {
+				container.removeChild(container.firstChild);
+			}
+			ui.create_dom_element({
+				element_type: 'div',
+				class_name: 'error_message job_dispatch_unknown',
+				text_content:
+					self.get_tool_label('job_dispatch_unknown') ||
+					'The server did not confirm whether the job started; it may be running. Check your jobs before starting it again.',
+				parent: container,
+			});
+			if (error) {
+				container.appendChild(render_error(error));
+			}
+			if (note) {
+				ui.create_dom_element({
+					element_type: 'div',
+					class_name: 'error_message job_check_failed',
+					text_content: note,
+					parent: container,
+				});
+			}
+			const check_button = ui.create_dom_element({
+				element_type: 'button',
+				class_name: 'button_check_jobs',
+				text_content: self.get_tool_label('job_check_mine') || 'Check my jobs',
+				parent: container,
+			});
+			check_button.type = 'button';
+			check_button.addEventListener('click', function (e) {
+				e.stopPropagation();
+				find_started_jobs(error);
+			});
+		};
+
+		// Reads the operator's own jobs (dd_utils_api::get_activity — live ones,
+		// and those that ended in the last minutes) and lists the ones of THIS
+		// action. Each can be followed to its end (that, and only that, settles).
+		// While one of them is live nothing else is offered: following it is the
+		// answer. With none live, an EXPLICIT re-enable — the operator's decision
+		// on the server's facts, never automatic. A read that fails is not
+		// "none": it changes nothing.
+		const find_started_jobs = function (dispatch_error) {
+			data_manager
+				.request({
+					body: {
+						dd_api: 'dd_utils_api',
+						action: 'get_activity',
+						options: {},
+					},
+				})
+				.then(function (response) {
+					const jobs =
+						!request_failed(response) && Array.isArray(response?.jobs) ? response.jobs : null;
+					if (jobs === null) {
+						render_dispatch_unknown(
+							dispatch_error,
+							(self.get_tool_label('job_check_failed') || 'Could not read your jobs: {reason}').replace(
+								'{reason}',
+								error_body_text(response?.error),
+							),
+						);
+						return;
+					}
+					render_job_candidates(jobs.filter(is_job_of_this_kind));
+				});
+		};
+
+		// A row of the operator's jobs is one of THIS action's when its id has
+		// the job manager's grammar `<kind>_<pid>_<counter>` (media/jobs.ts nextId).
+		const job_id_pattern = new RegExp(
+			'^' + String(job_kind).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '_\\d+_\\d+$',
+		);
+		const is_job_of_this_kind = function (row) {
+			return row?.source === 'media' && typeof row.job_id === 'string' && job_id_pattern.test(row.job_id);
+		};
+
+		const render_job_candidates = function (rows) {
+			while (container.firstChild) {
+				container.removeChild(container.firstChild);
+			}
+			ui.create_dom_element({
+				element_type: 'div',
+				class_name: 'job_candidates_note',
+				text_content:
+					rows.length > 0
+						? self.get_tool_label('job_candidates') || 'Your jobs of this kind (newest first):'
+						: self.get_tool_label('job_candidates_none') ||
+							'None of your jobs of this kind is running, and none ended in the last minutes.',
+				parent: container,
+			});
+			for (const row of rows) {
+				const candidate = ui.create_dom_element({
+					element_type: 'div',
+					class_name: 'job_candidate',
+					text_content:
+						String(row.status) +
+						' — ' +
+						(Number.isFinite(row.started_at) ? new Date(row.started_at).toLocaleTimeString() : '?') +
+						' ',
+					parent: container,
+				});
+				const follow_button = ui.create_dom_element({
+					element_type: 'button',
+					class_name: 'button_follow_job',
+					text_content: self.get_tool_label('job_follow') || 'Show this job',
+					parent: candidate,
+				});
+				follow_button.type = 'button';
+				follow_button.addEventListener('click', function (e) {
+					e.stopPropagation();
+					// the pfile is `<job id>.json` (background.ts); the pid is only
+					// a label on this wire (process_status.ts reads the pfile)
+					track_job(row.job_id, row.job_id + '.json');
+				});
+			}
+			if (rows.some((row) => row.status === 'running' || row.status === 'queued')) {
+				return;
+			}
+			const enable_button = ui.create_dom_element({
+				element_type: 'button',
+				class_name: 'button_enable_again',
+				text_content: self.get_tool_label('job_enable_again') || 'It did not start: allow a new attempt',
+				parent: container,
+			});
+			enable_button.type = 'button';
+			enable_button.addEventListener('click', function (e) {
+				e.stopPropagation();
+				while (container.firstChild) {
+					container.removeChild(container.firstChild);
+				}
+				if (on_settle) on_settle();
+			});
+		};
+
+		dispatch_promise.then(function (response) {
+			// (an auth.* refusal here already reached the relogin overlay: the
+			// transport publishes every failed request's ApiError page-wide)
+			const dispatch_error = request_failed(response) ? response.error : null;
+			if (dispatch_error && outcome_unknown(dispatch_error)) {
+				render_dispatch_unknown(dispatch_error, null);
+				return;
+			}
+			if (dispatch_error || typeof response?.pid === 'undefined') {
+				while (container.firstChild) {
+					container.removeChild(container.firstChild);
+				}
+				container.appendChild(render_error(dispatch_error));
+				if (on_settle) on_settle();
+				return;
+			}
+
+			track_job(response.pid, response.pfile);
 		});
 	}; //end stream_background_job
 
@@ -1010,6 +1260,10 @@ const get_content_data = function (self) {
 
 		confirm_button.addEventListener('click', function (e) {
 			e.stopPropagation();
+			// its job is in flight (or its outcome is unknown): never a second one
+			if (is_busy(confirm_button)) {
+				return;
+			}
 
 			// The auction names a house but no Entity is resolved (a search in
 			// flight, or one that failed): committing now would silently drop the
@@ -1042,17 +1296,18 @@ const get_content_data = function (self) {
 				return;
 			}
 
-			confirm_button.classList.add('loading');
+			set_busy(confirm_button, true);
 
 			stream_background_job({
 				dispatch_promise: self.commit_lots(kept, auction, current_company_selection),
 				container: commit_result_container,
 				stream_id: 'tool_numisdata_acquisition_commit',
+				job_kind: self.model + '_commit_lots',
 				on_success: (data) => {
 					commit_result_container.appendChild(build_commit_summary(data));
 				},
 				on_settle: () => {
-					confirm_button.classList.remove('loading');
+					set_busy(confirm_button, false);
 				},
 			});
 		});
@@ -1062,6 +1317,9 @@ const get_content_data = function (self) {
 
 	preview_button.addEventListener('click', function (e) {
 		e.stopPropagation();
+		if (is_busy(preview_button)) {
+			return;
+		}
 
 		const url = url_input.value.trim();
 		if (!url) {
@@ -1079,7 +1337,7 @@ const get_content_data = function (self) {
 			return;
 		}
 
-		preview_button.classList.add('loading');
+		set_busy(preview_button, true);
 
 		// preview_html is a plain (non-backgrounded) request, so a selected
 		// file skips stream_background_job and handles its response directly.
@@ -1087,7 +1345,7 @@ const get_content_data = function (self) {
 			self
 				.preview_html(url, selected_html)
 				.then(function (response) {
-					preview_button.classList.remove('loading');
+					set_busy(preview_button, false);
 					while (result_container.firstChild) {
 						result_container.removeChild(result_container.firstChild);
 					}
@@ -1107,7 +1365,7 @@ const get_content_data = function (self) {
 					);
 				})
 				.catch(function (error) {
-					preview_button.classList.remove('loading');
+					set_busy(preview_button, false);
 					console.error('[tool_numisdata_acquisition] preview_html failed:', error);
 				});
 			return;
@@ -1117,6 +1375,7 @@ const get_content_data = function (self) {
 			dispatch_promise: self.preview_url(url),
 			container: result_container,
 			stream_id: 'tool_numisdata_acquisition_preview',
+			job_kind: self.model + '_preview_url',
 			on_success: (data) => {
 				const lots = Array.isArray(data.lots) ? data.lots : [];
 				result_container.appendChild(
@@ -1129,7 +1388,7 @@ const get_content_data = function (self) {
 				);
 			},
 			on_settle: () => {
-				preview_button.classList.remove('loading');
+				set_busy(preview_button, false);
 			},
 		});
 	});

@@ -35,6 +35,7 @@ import {
 	handle_api_notice,
 	handle_api_notices,
 	api_error_from_notice,
+	outcome_unknown,
 	reset_error_dispatch_state
 } from '../../../core/common/js/error_dispatch.js'
 import {ApiError, CLIENT_ERROR} from '../../../core/common/js/api_error.js'
@@ -361,6 +362,41 @@ describe('API_NOTICES — a SUCCESS envelope\'s coded facts', function() {
 		} finally {
 			unregister_error_policy(['test_notice.*'])
 		}
+	})
+})
+
+
+
+/**
+* OUTCOME_UNKNOWN — does a failed request leave the server's outcome unknown?
+* The question an action button must answer before it re-arms (a re-click mints
+* a NEW idempotency key, so the server executes it again). Every transport
+* failure is unknown — an attempt may have landed, and the engine runs an
+* aborted request to completion — and so are the server's own "I do not know
+* whether (or what) it ran" codes. A server refusal is KNOWN: it answered, and said no.
+*/
+describe('ERROR_DISPATCH — outcome_unknown', function() {
+
+	it('every transport failure is an unknown outcome', function() {
+		for (const code of Object.values(CLIENT_ERROR)) {
+			assert.isTrue(outcome_unknown(new ApiError({code, source:'transport'})), code)
+		}
+		// a proxy's non-envelope answer (status known, body not ours)
+		assert.isTrue(outcome_unknown(new ApiError({code:CLIENT_ERROR.HTTP_STATUS, status:504, source:'transport'})))
+	})
+
+	it("the server's idempotency in_progress / outcome_unknown / replay_unavailable are unknown; a refusal is known", function() {
+		for (const code of ['idempotency.in_progress', 'idempotency.outcome_unknown', 'idempotency.replay_unavailable']) {
+			assert.isTrue(outcome_unknown(new ApiError({code, source:'envelope', transport:false})), code)
+		}
+		for (const code of ['request.invalid_options', 'auth.not_logged', 'perm.denied', 'idempotency.key_reused', 'server.unspecified']) {
+			assert.isFalse(outcome_unknown(new ApiError({code, source:'envelope', transport:false})), code)
+		}
+	})
+
+	it('a value that is not an ApiError cannot vouch for a known outcome', function() {
+		assert.isTrue(outcome_unknown(null))
+		assert.isTrue(outcome_unknown({code:'request.invalid_options'}))
 	})
 })
 

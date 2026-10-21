@@ -788,6 +788,59 @@ export const handle_api_notices = async (payload = {}) => {
 
 
 /**
+* OUTCOME_UNKNOWN_CODES
+* The server's own "I do not know whether (or what) it ran" answers — the
+* idempotency gate (src/core/api/dispatch.ts GATE 4): a twin that waited past
+* its bound while the leader still runs (`in_progress`), a twin of a leader that
+* THREW and may already have committed (`outcome_unknown`), and a twin of a
+* leader that COMPLETED but whose answer was too large to keep
+* (`replay_unavailable` — it ran; what it answered is lost).
+*/
+const OUTCOME_UNKNOWN_CODES = new Set([
+	'idempotency.in_progress',
+	'idempotency.outcome_unknown',
+	'idempotency.replay_unavailable'
+])
+
+
+
+/**
+* OUTCOME_UNKNOWN
+* Whether a FAILED request leaves the server-side outcome UNKNOWN: the
+* operation may have run, may still be running, or may never have started.
+*  - every TRANSPORT failure (`client.*`: a timeout, a dropped connection, an
+*    unreadable answer, a proxy's non-envelope page). The browser gave up, but
+*    an attempt may have landed — and the engine has no request.signal
+*    handling, so an aborted attempt runs to completion
+*    (WC-2026-08-28-idempotency-key);
+*  - the server's OUTCOME_UNKNOWN_CODES above.
+* A SERVER REFUSAL (an envelope `ok:false` with any other code) is a KNOWN
+* outcome: the server answered, and said no. Anything that is not an ApiError
+* cannot vouch for a known outcome, so it reads as unknown.
+*
+* WHY IT EXISTS. A control that starts non-idempotent work (a commit job, a
+* data transform) must not re-arm on an unknown outcome: the operator's re-click
+* mints a NEW idempotency key, and the server executes it AGAIN beside the
+* first. Such a caller keeps the control disabled and offers a way to find out
+* (the operator's own jobs, get_activity) instead.
+* @param {ApiError|*} api_error - the failed envelope's `error`
+* @return {boolean}
+*/
+export const outcome_unknown = (api_error) => {
+
+	if (!is_api_error(api_error)) {
+		return true
+	}
+	if (api_error.transport===true) {
+		return true
+	}
+
+	return OUTCOME_UNKNOWN_CODES.has(api_error.code)
+}//end outcome_unknown
+
+
+
+/**
 * RESET_ERROR_DISPATCH_STATE
 * Test helper: forget the pending relogin, the toast dedupe window and the
 * page-identity latch, and restore the real reloader and overlay renderer.

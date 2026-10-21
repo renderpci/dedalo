@@ -38,6 +38,7 @@ import { render_move_locator } from '../../../core/area_maintenance/widgets/move
 import { render_move_tld } from '../../../core/area_maintenance/widgets/move_tld/js/render_move_tld.js';
 import { render_move_to_portal } from '../../../core/area_maintenance/widgets/move_to_portal/js/render_move_to_portal.js';
 import { render_move_to_table } from '../../../core/area_maintenance/widgets/move_to_table/js/render_move_to_table.js';
+import { ApiError, CLIENT_ERROR } from '../../../core/common/js/api_error.js';
 import { update_process_status } from '../../../core/common/js/common.js';
 import { data_manager } from '../../../core/common/js/data_manager.js';
 import { event_manager } from '../../../core/common/js/event_manager.js';
@@ -417,6 +418,81 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			assert.include(h.body_response.textContent, error_text(lost));
 			assert.strictEqual(published.length, 1, 'the page relogin channel got it once');
 			assert.strictEqual(published[0].code, 'auth.not_logged');
+		});
+	});
+
+	// AN UNKNOWN OUTCOME IS NOT A REFUSAL (cross-client review r2, 2026-10). The
+	// execute door runs with retries:1 and a 60 s deadline; a deadline that fires,
+	// or a connection that drops, after the request reached the server leaves a
+	// job that may be RUNNING — the engine runs an aborted request to completion.
+	// The panel used to render that as a refusal, inviting a re-preview and a
+	// second execute of a transform that cannot be undone.
+	describe('an execute whose outcome is UNKNOWN', function () {
+		const unknown_harness = (execute_answer) => {
+			const calls = { exec: [], track: [], alert: [] };
+			let form = null;
+			const files_selected = ['a.json'];
+			const content_data = document.createElement('div');
+			const body_response = document.createElement('div');
+			const { execute_button } = init_move_transform_form(
+				{ caller: { init_form: (widget_object) => { form = widget_object; } } },
+				{
+					model: 'move_tld',
+					submit_label: 'Move TLD terms',
+					files_selected,
+					content_data,
+					body_response,
+					local_db_id: 'process_move_tld',
+				},
+				{
+					exec: (model, files, dry_run) => {
+						calls.exec.push({ model, files: [...files], dry_run });
+						return Promise.resolve(
+							dry_run
+								? { ok: true, pid: 4242, pfile: 'zz_move_tld_preview.json', dry_run }
+								: execute_answer,
+						);
+					},
+					track: (...args) => calls.track.push(args),
+					confirm: () => true,
+					alert: (text) => calls.alert.push(text),
+				},
+			);
+			return { calls, form: () => form, body_response, execute_button };
+		};
+		const execute = async (h) => {
+			await h.form().on_submit();
+			h.calls.track[0][4](clean_preview_frame);
+			h.execute_button.click();
+			await new Promise((resolve) => setTimeout(resolve, 0));
+		};
+
+		it('a TIMED-OUT execute says the job may be running — not refused', async function () {
+			const timeout = new ApiError({ code: CLIENT_ERROR.TIMEOUT, source: 'transport', details: { timeout_ms: 60000 } });
+			const h = unknown_harness({ ok: false, error: timeout });
+			await execute(h);
+			assert.strictEqual(h.calls.exec.length, 2, 'the preview, then the execute');
+			assert.isNull(h.body_response.querySelector('.move_transform_refused'), 'NOT framed as a refusal');
+			const unknown = h.body_response.querySelector('.move_transform_outcome_unknown');
+			assert.isNotNull(unknown, 'stated as an unknown outcome');
+			assert.include(unknown.textContent, 'may', 'the job may be running');
+			assert.include(unknown.textContent, error_text(timeout), 'and the cause, label-first');
+			assert.strictEqual(h.calls.track.length, 1, 'no job is tracked (there is no pid)');
+			assert.isTrue(h.execute_button.classList.contains('hide'), 'Execute stays hidden');
+		});
+
+		it("the server's idempotency.outcome_unknown is unknown too; a real refusal stays a refusal", async function () {
+			const twin = new ApiError({ code: 'idempotency.outcome_unknown', source: 'envelope', transport: false, request_id: 'zz-twin' });
+			const h = unknown_harness({ ok: false, error: twin });
+			await execute(h);
+			assert.isNotNull(h.body_response.querySelector('.move_transform_outcome_unknown'));
+			assert.include(h.body_response.textContent, 'zz-twin', 'the request_id, the join key with the log');
+
+			const refused = new ApiError({ code: 'request.invalid_options', source: 'envelope', transport: false });
+			const r = unknown_harness({ ok: false, error: refused });
+			await execute(r);
+			assert.isNotNull(r.body_response.querySelector('.move_transform_refused'));
+			assert.isNull(r.body_response.querySelector('.move_transform_outcome_unknown'));
 		});
 	});
 

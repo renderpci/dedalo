@@ -129,6 +129,12 @@ it, its button opens in a **modal** (not a separate window).
     ends, the panel says it lost the job's status and that the job may still be running (with its
     process number), and keeps its button disabled — a second click could start a second import
     beside the first. Click **Check again** to reconnect to the same job and see how it ended.
+    A progress report that falls silent for 15 seconds is treated the same way.
+
+    When the server does not confirm whether a job started at all (the request timed out or the
+    connection dropped), the panel says the job may be running and keeps its button disabled.
+    Click **Check my jobs** to list your jobs of this kind: **Show this job** follows the one that
+    started, and a new attempt is offered only when none of them is running or queued.
 
 !!! tip "Stopping a long import is safe"
     Cancelling a running Confirm import stops it before starting the next lot — it never leaves a

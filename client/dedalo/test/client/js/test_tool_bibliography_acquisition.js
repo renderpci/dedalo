@@ -41,7 +41,9 @@ import {
 } from '../../../core/common/js/error_dispatch.js';
 import { error_text } from '../../../core/common/js/render_api_error.js';
 import { tool_bibliography_acquisition } from '../../../tools/tool_bibliography_acquisition/js/tool_bibliography_acquisition.js';
+import * as renderer_module from '../../../tools/tool_bibliography_acquisition/js/render_tool_bibliography_acquisition.js';
 import {
+	describe_job_state_honesty,
 	failed_frame,
 	mount_acquisition_tool,
 	running_frame,
@@ -409,6 +411,15 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			assert.isNull(commit_result.querySelector('.success_message'), 'no success summary');
 			assert.isNotNull(commit_result.querySelector('.error_message'), 'the failure is rendered');
 		});
+	});
+
+	describe_job_state_honesty({
+		tool_constructor: tool_bibliography_acquisition,
+		model: MODEL,
+		commit_action: 'commit_publications',
+		preview_frames: [success_frame(preview_envelope)],
+		commit_success_frames: [success_frame(commit_envelope)],
+		renderer: renderer_module,
 	});
 });
 

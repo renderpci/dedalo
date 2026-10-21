@@ -27,6 +27,10 @@
  *     hidden again: a new execute needs a new preview.
  *  A run the server REFUSES (no job: a bad option, a lost session) is stated
  *  in the panel (render_refusal) — never only a toast the area does not show.
+ *  A run whose submission outcome is UNKNOWN (outcome_unknown: a deadline or a
+ *  dropped connection after the request may have landed, or the server's own
+ *  idempotency "do not know") is NOT a refusal: the job may be running, and
+ *  the panel says so (render_outcome_unknown) instead of inviting a second run.
  *
  * Backend-free gate: client/dedalo/test/client/js/test_move_transform.js.
  */
@@ -34,6 +38,7 @@
 import { request_failed } from '../../common/js/api_error.js';
 import { update_process_status } from '../../common/js/common.js';
 import { data_manager } from '../../common/js/data_manager.js';
+import { outcome_unknown } from '../../common/js/error_dispatch.js';
 // imports
 import { error_text } from '../../common/js/render_api_error.js';
 import { ui } from '../../common/js/ui.js';
@@ -124,13 +129,49 @@ const same_selection = function (a, b) {
  * @returns {HTMLElement}
  */
 const render_refusal = function (api_error) {
+	return render_error_lines('api_response error move_transform_refused', [], api_error);
+}; //end render_refusal
+
+/**
+ * RENDER_OUTCOME_UNKNOWN
+ * The panel's statement of a run whose SUBMISSION outcome is unknown: the
+ * request may have reached the server (the engine runs an aborted request to
+ * completion), so the job may be running. Says so first — before the cause —
+ * because the dangerous reading is "refused, run it again": a second execute
+ * of a transform that cannot be undone. No job is tracked (there is no pid);
+ * the operator checks the running jobs before acting.
+ * @param {Object} api_error - the envelope's `error` (an ApiError)
+ * @returns {HTMLElement}
+ */
+const render_outcome_unknown = function (api_error) {
+	return render_error_lines(
+		'api_response error move_transform_outcome_unknown',
+		[
+			'The server did not confirm this run: it may have started and may still be running. ' +
+				'Check the running jobs (or the data) before running it again.',
+		],
+		api_error,
+	);
+}; //end render_outcome_unknown
+
+/**
+ * RENDER_ERROR_LINES
+ * One panel node: the given lead lines, then the error label-first (error_text),
+ * the server's own sentence when it says more, and the request_id (the join key
+ * with the server log). Text nodes only — server text never reaches an HTML sink.
+ * @param {string} class_name
+ * @param {Array<string>} lead_lines
+ * @param {Object} api_error
+ * @returns {HTMLElement}
+ */
+const render_error_lines = function (class_name, lead_lines, api_error) {
 	const node = ui.create_dom_element({
 		element_type: 'div',
-		class_name: 'api_response error move_transform_refused',
+		class_name: class_name,
 	});
 	const headline = String(error_text(api_error));
 	const message = typeof api_error?.message === 'string' ? api_error.message : '';
-	const lines = [headline];
+	const lines = [...lead_lines, headline];
 	if (message.length && message !== headline) {
 		lines.push(message);
 	}
@@ -143,7 +184,7 @@ const render_refusal = function (api_error) {
 	});
 
 	return node;
-}; //end render_refusal
+}; //end render_error_lines
 
 /**
  * INIT_MOVE_TRANSFORM_FORM
@@ -199,8 +240,13 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 			// console only. The page-wide policy (relogin on auth.*) already ran:
 			// the transport publishes every failed request's ApiError
 			// (data_manager → page.js).
+			// An UNKNOWN outcome is not a refusal: the job may be running.
 			if (request_failed(api_response)) {
-				body_response.replaceChildren(render_refusal(api_response.error));
+				body_response.replaceChildren(
+					outcome_unknown(api_response.error)
+						? render_outcome_unknown(api_response.error)
+						: render_refusal(api_response.error),
+				);
 				return;
 			}
 			if (!api_response || api_response.pid === undefined || !api_response.pfile) {
