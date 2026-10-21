@@ -437,21 +437,46 @@ interface CarriedIpv4 {
 	readonly authoritative: boolean;
 }
 
-/** The first block in `blocks` holding `bytes`, as the IPv4 it carries. */
+/**
+ * EVERY block in `blocks` holding `bytes`, as the IPv4 each carries — MOST SPECIFIC
+ * FIRST (longest prefix: the translator routing actually follows).
+ *
+ * Every one, never the first: prefixes NEST (two translators, a resolver answering
+ * two AAAA, an operator declaring an outer and an inner prefix), and the same bytes
+ * read through a /32 and a /96 inside it are two different IPv4s. Reading only the
+ * first made the verdict hang on list order — `2a00:1:5db8:d822::a9fe:a9fe` was the
+ * public 93.184.216.34 through a /32 listed first, the metadata endpoint through the
+ * /96 (measured 2026-10-21).
+ */
 function carriedBy(
 	bytes: Uint8Array,
 	blocks: readonly PackedCidr[],
 	authoritative: boolean,
-): CarriedIpv4 | null {
-	const block = blocks.find((candidate) => packedInBlock(bytes, candidate));
-	const ipv4 = block === undefined ? null : extractRfc6052Ipv4(bytes, block.prefixBits);
-	return ipv4 === null ? null : { ipv4, authoritative };
+): CarriedIpv4[] {
+	return blocks
+		.filter((candidate) => packedInBlock(bytes, candidate))
+		.sort((left, right) => right.prefixBits - left.prefixBits)
+		.flatMap((block) => {
+			const ipv4 = extractRfc6052Ipv4(bytes, block.prefixBits);
+			return ipv4 === null ? [] : [{ ipv4, authoritative }];
+		});
 }
 
-/** Which IPv4 (if any) an IPv6 address reaches: well-known, declared, then discovered. */
-function carriedIpv4(bytes: Uint8Array, discovered: readonly PackedCidr[]): CarriedIpv4 | null {
+/**
+ * Every IPv4 an IPv6 address may reach: the trusted carriers (well-known, declared)
+ * most specific first, then the discovered ones.
+ */
+function carriedIpv4s(bytes: Uint8Array, discovered: readonly PackedCidr[]): CarriedIpv4[] {
 	const trusted = [...WELL_KNOWN_IPV4_CARRIERS, ...declaredNat64().prefixes];
-	return carriedBy(bytes, trusted, true) ?? carriedBy(bytes, discovered, false);
+	return [...carriedBy(bytes, trusted, true), ...carriedBy(bytes, discovered, false)];
+}
+
+/**
+ * The AUTHORITATIVE fold: the IPv4 the most specific trusted carrier reads — where
+ * the packet goes (longest-prefix match). Null when no trusted carrier holds it.
+ */
+function authoritativeIpv4(bytes: Uint8Array): Uint8Array | null {
+	return carriedIpv4s(bytes, [])[0]?.ipv4 ?? null;
 }
 
 /**
@@ -474,8 +499,8 @@ function carriedIpv4(bytes: Uint8Array, discovered: readonly PackedCidr[]): Carr
  */
 export function embeddedIpv4(bytes: Uint8Array): string | null {
 	if (bytes.length !== 16) return null;
-	const carried = carriedIpv4(bytes, []);
-	return carried === null ? null : formatIpv4(carried.ipv4);
+	const ipv4 = authoritativeIpv4(bytes);
+	return ipv4 === null ? null : formatIpv4(ipv4);
 }
 
 /**
@@ -540,7 +565,7 @@ function inAnyBlock(bytes: Uint8Array, blocks: readonly PackedCidr[]): boolean {
  * declared public address the guard accepts (measured 2026-09-30).
  */
 function possibleIpv4s(bytes: Uint8Array): Uint8Array[] {
-	if (carriedIpv4(bytes, []) !== null) return [];
+	if (authoritativeIpv4(bytes) !== null) return [];
 	const deprecated = inAnyBlock(bytes, DEPRECATED_IPV4_EMBEDDINGS) ? [bytes.slice(12, 16)] : [];
 	const layouts = inAnyBlock(bytes, LOCAL_USE_NAT64) ? LOCAL_USE_LAYOUTS : [];
 	return [...deprecated, ...layouts.flatMap((bits) => extractRfc6052Ipv4(bytes, bits) ?? [])];
@@ -565,9 +590,8 @@ function possibleIpv4s(bytes: Uint8Array): Uint8Array[] {
  */
 export function claimedIpv4s(bytes: Uint8Array): string[] {
 	if (bytes.length !== 16) return [];
-	const claims = [carriedIpv4(bytes, []), carriedBy(bytes, nat64Discovered.prefixes, false)];
-	const carried = claims.flatMap((claim) => (claim === null ? [] : [claim.ipv4]));
-	return [...carried, ...possibleIpv4s(bytes)].map(formatIpv4);
+	const carried = carriedIpv4s(bytes, nat64Discovered.prefixes).map((claim) => claim.ipv4);
+	return [...new Set([...carried, ...possibleIpv4s(bytes)].map(formatIpv4))];
 }
 
 /**
@@ -594,16 +618,18 @@ function isPrivateIpv6(ip: string, discovered: readonly PackedCidr[]): boolean {
 }
 
 /**
- * The verdict on a parsed address. An IPv4-carrying address whose IPv4 is non-public
- * is refused whoever says it carries one; a public IPv4 settles it only when the
- * prefix is authoritative (standardized or declared) — a discovered prefix then
- * falls through to the ordinary IPv6 rules, which is what "tighten-only" means.
+ * The verdict on a parsed address. An IPv4-carrying address is refused when ANY
+ * carrier holding it — well-known, declared or discovered, nested or not — reads a
+ * non-public IPv4, whoever says it carries one; only when EVERY reading is public
+ * does an authoritative one (standardized or declared) settle it as accepted — the
+ * IPv4 IS the destination. Discovered-only readings fall through to the ordinary
+ * IPv6 rules, which is what "tighten-only" means.
  */
 function isPrivateIpv6Bytes(bytes: Uint8Array, discovered: readonly PackedCidr[]): boolean {
-	const carried = carriedIpv4(bytes, discovered);
-	if (carried === null) return !isPublicGlobalIpv6(bytes);
-	if (isNonPublicIpv4(carried.ipv4)) return true;
-	return carried.authoritative ? false : !isPublicGlobalIpv6(bytes); // authoritative: the IPv4 IS the destination
+	const carried = carriedIpv4s(bytes, discovered);
+	if (carried.some((reading) => isNonPublicIpv4(reading.ipv4))) return true;
+	if (carried.some((reading) => reading.authoritative)) return false;
+	return !isPublicGlobalIpv6(bytes);
 }
 
 /** The verdict with an explicit set of discovered prefixes (assertPublicUrl's seam). */

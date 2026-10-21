@@ -13,7 +13,7 @@
  */
 
 import { encodeForJsonb } from '../db/json_codec.ts';
-import { sql, withTransaction } from '../db/postgres.ts';
+import { acquireNodeLock, sql, withTransaction } from '../db/postgres.ts';
 import { resolveUserName, USERS_SECTION } from '../security/user_identity.ts';
 
 /** dd1521 record components (PHP USER_ACTIVITY_* constants). */
@@ -396,6 +396,18 @@ function foldTallies(tallies: ActivityTally[]): DayGroup {
 	return group;
 }
 
+/**
+ * THE ONE LOCK every writer of ONE user's dd1521 aggregates takes, transaction-scoped
+ * (pg_advisory_xact_lock), BEFORE it reads what is there: the rebuild (delete + save
+ * every day) and the incremental update (per day: "already saved?" + save). Without
+ * it two rebuilds of the same user each deleted only the rows committed before they
+ * started and both saved every day — every day's aggregate duplicated — and an
+ * update racing either one saved a day the other was saving.
+ */
+async function lockUserStats(userId: number): Promise<void> {
+	await acquireNodeLock(UA_SECTION, `user_${userId}`);
+}
+
 /** PHP delete_user_activity_stats: drop every dd1521 row of one user. */
 export async function deleteUserActivityStats(userId: number): Promise<boolean> {
 	await sql.unsafe(
@@ -509,24 +521,15 @@ export async function updateUserActivityStats(
 	for (const day of [...dayGroups.keys()].sort()) {
 		if (maxDays > 0 && updatedDays.length >= maxDays) break;
 		const [year, month, dayNum] = day.split('-').map(Number) as [number, number, number];
-
-		// skip already-saved days
-		const exists = (await sql.unsafe(
-			`SELECT 1 FROM matrix_stats
-			 WHERE (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
-			   AND ("date"->'${UA_DATE}'->0->'start'->>'year')::int = $3
-			   AND ("date"->'${UA_DATE}'->0->'start'->>'month')::int = $4
-			   AND ("date"->'${UA_DATE}'->0->'start'->>'day')::int = $5
-			 LIMIT 1`,
-			[...userLocatorFilterPair(UA_USER, userId), year, month, dayNum],
-		)) as unknown[];
-		if (exists.length > 0) continue;
-
 		const totals = dayTotals(dayGroups.get(day) as DayGroup);
 		if (totals.length === 0) continue;
 
-		await saveUserActivity(totals, userId, 'day', year, month, dayNum);
-		updatedDays.push({ user: userId, date: day });
+		// "already saved?" and the save, ONE unit under the user's stats lock (lockUserStats).
+		const saved = await withTransaction(async () => {
+			await lockUserStats(userId);
+			return saveDayUnlessPresent(totals, userId, year, month, dayNum);
+		});
+		if (saved) updatedDays.push({ user: userId, date: day });
 	}
 
 	response.ok = true;
@@ -534,6 +537,28 @@ export async function updateUserActivityStats(
 	response.msg =
 		response.errors.length === 0 ? 'OK. Request done.' : 'Warning! Request done with errors';
 	return response;
+}
+
+/** Save one day's aggregate unless the user already has it; true when it was saved. */
+async function saveDayUnlessPresent(
+	totals: Record<string, unknown>[],
+	userId: number,
+	year: number,
+	month: number,
+	dayNum: number,
+): Promise<boolean> {
+	const exists = (await sql.unsafe(
+		`SELECT 1 FROM matrix_stats
+		 WHERE (relation @> $1::text::jsonb OR relation @> $2::text::jsonb)
+		   AND ("date"->'${UA_DATE}'->0->'start'->>'year')::int = $3
+		   AND ("date"->'${UA_DATE}'->0->'start'->>'month')::int = $4
+		   AND ("date"->'${UA_DATE}'->0->'start'->>'day')::int = $5
+		 LIMIT 1`,
+		[...userLocatorFilterPair(UA_USER, userId), year, month, dayNum],
+	)) as unknown[];
+	if (exists.length > 0) return false;
+	await saveUserActivity(totals, userId, 'day', year, month, dayNum);
+	return true;
 }
 
 /** The tallies folded per day (insertion order = first-seen day). */
@@ -615,6 +640,9 @@ export async function rebuildUserActivityStats(
 	}
 
 	const updatedDays = await withTransaction(async () => {
+		// Serialized per user (lockUserStats): a second rebuild waits, then deletes
+		// THIS one's committed rows and replaces them — never a duplicate day.
+		await lockUserStats(userId);
 		await deleteUserActivityStats(userId);
 		const saved: { user: number; date: string }[] = [];
 		for (const { day, totals } of planned) {

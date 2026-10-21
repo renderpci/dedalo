@@ -20,6 +20,11 @@
  *      (nodes + records) — the archive's purpose, unchanged;
  *   P3 the restore's ontology write waits on the tld's projection lock held by another
  *      transaction (pre-fix it ran straight through), then completes.
+ *   P4 a node ANOTHER writer creates between the restore's plan and its write (inside the
+ *      lock the restore then waits on) is re-judged under the lock: a DIFFERENT definition is
+ *      refused as a conflict — never overwritten without consent (review-diff 2026-10-21);
+ *   P5 control: an EQUAL definition created in that window is left as it is, and the outcome
+ *      counts it unchanged, not inserted.
  *
  * Scratch: tld `zzarp` (section `zzarp1` + its component `zzarp2`, records in matrix_test; the
  * source record `zzarp0/50` for P1). Swept before and after, zero residue asserted.
@@ -31,12 +36,20 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { extractArchive } from '../../src/core/archive/extract.ts';
 import { restoreArchive } from '../../src/core/archive/restore.ts';
-import { lockOntologyProjection, readDdOntologyRow } from '../../src/core/db/dd_ontology.ts';
+import {
+	lockOntologyProjection,
+	readDdOntologyRow,
+	upsertDdOntologyNode,
+} from '../../src/core/db/dd_ontology.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { isDedaloError } from '../../src/core/errors/index.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import { inspectOntology, rebuildOntology } from '../../src/core/ontology/ontology_state.ts';
-import { ensureSituation, situation } from '../../src/core/test_data/situations/situation.ts';
+import {
+	ensureSituation,
+	modelTipoFor,
+	situation,
+} from '../../src/core/test_data/situations/situation.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { interleave } from '../helpers/lock_interleave.ts';
 import { resetMediaRoot } from '../helpers/media_scratch_root.ts';
@@ -193,6 +206,45 @@ describe('the archive restore and the projection invariant', () => {
 		expect(await readDdOntologyRow(COMPONENT)).not.toBeNull();
 		expect(await recordCount()).toBe(1);
 	});
+
+	/** The situation's COMPONENT node as the archive carries it (model_tipo resolved), `term` overridable. */
+	async function componentNode(term?: Record<string, string>) {
+		const node = s.nodes.find((n) => n.tipo === COMPONENT);
+		if (node === undefined) throw new Error('no component node in the situation');
+		const modelTipo = node.model_tipo ?? (await modelTipoFor(node.model ?? ''));
+		return { ...node, model_tipo: modelTipo, ...(term === undefined ? {} : { term }) };
+	}
+
+	test('P4 a node created between plan and write with a DIFFERENT definition is refused, not overwritten', async () => {
+		const theirs = await componentNode({ 'lg-eng': 'another writer’s definition' });
+		const { blocked, result } = await interleave(
+			async () => {
+				await lockOntologyProjection([TLD]);
+				await upsertDdOntologyNode(theirs);
+			},
+			() => refusalOf(() => restoreArchive({ archiveDir: ARCHIVE, userId: 1, mediaRoot })),
+		);
+		expect(blocked).toBe(true); // planned before the node existed, then waited on the lock
+		expect(result.code).toBe('archive.refused');
+		expect(String(result.message)).toContain(`'${COMPONENT}'`);
+		// The other writer's definition survives; nothing of the archive landed.
+		expect((await readDdOntologyRow(COMPONENT))?.term).toEqual(theirs.term);
+		expect(await readDdOntologyRow(SECTION)).toBeNull();
+		expect(await recordCount()).toBe(0);
+	}, 30_000);
+
+	test('P5 control: an EQUAL node created in that window is left alone and counted unchanged', async () => {
+		const { blocked, result } = await interleave(
+			async () => {
+				await lockOntologyProjection([TLD]);
+				await upsertDdOntologyNode(await componentNode());
+			},
+			() => restoreArchive({ archiveDir: ARCHIVE, userId: 1, mediaRoot }),
+		);
+		expect(blocked).toBe(true);
+		expect(result.ontology).toEqual({ inserted: 1, unchanged: 1, overwritten: 0 });
+		expect(await recordCount()).toBe(1);
+	}, 30_000);
 
 	test('P3 the ontology write waits on the tld projection lock, then completes', async () => {
 		const { blocked, result } = await interleave(

@@ -262,13 +262,53 @@ async function refuseDerivedTlds(rows: readonly DdOntologyRow[]): Promise<void> 
 	}
 }
 
-/** The ontology write: one transaction, under the written tlds' projection lock (module header). */
-async function writeOntology(plan: OntologyPlan): Promise<void> {
-	const rows = [...plan.insert, ...plan.overwrite];
-	await withTransaction(async () => {
-		await lockOntologyProjection(writtenTlds(rows));
-		await refuseDerivedTlds(rows);
-		for (const row of rows) await upsertDdOntologyNode(row);
+/**
+ * The plan's rows RE-JUDGED under the projection lock. The plan read the destination
+ * before the lock, so a node another writer created in between was planned as an
+ * INSERT; writing it blindly would overwrite that writer's definition without the
+ * operator's consent. Re-read now: still absent → insert; now EQUAL → nothing to
+ * write; now DIFFERENT → the same conflict the plan would have named (refused unless
+ * `onOntologyConflict:'overwrite'`). A planned overwrite already carries consent.
+ */
+async function rowsToWrite(
+	plan: OntologyPlan,
+	onConflict: RestoreOptions['onOntologyConflict'],
+): Promise<{ insert: DdOntologyRow[]; overwrite: DdOntologyRow[]; unchanged: number }> {
+	const judged = { insert: [] as DdOntologyRow[], overwrite: [...plan.overwrite], unchanged: 0 };
+	for (const row of plan.insert) {
+		const existing = await readDdOntologyRow(row.tipo);
+		if (existing === null) judged.insert.push(row);
+		else if (ontologyRowsEqual(existing, row)) judged.unchanged += 1;
+		else if (onConflict === 'overwrite') judged.overwrite.push(row);
+		else {
+			refuse(
+				`ontology node '${row.tipo}' was created in the destination with a different definition while the restore was planned (pass onOntologyConflict:'overwrite' to replace it)`,
+				{ tipo: row.tipo },
+			);
+		}
+	}
+	return judged;
+}
+
+/**
+ * The ontology write: one transaction, under the written tlds' projection lock (module
+ * header), the plan re-judged under it (rowsToWrite). Answers what was actually written.
+ */
+async function writeOntology(
+	plan: OntologyPlan,
+	onConflict: RestoreOptions['onOntologyConflict'],
+): Promise<RestoreOutcome['ontology']> {
+	const planned = [...plan.insert, ...plan.overwrite];
+	return withTransaction(async () => {
+		await lockOntologyProjection(writtenTlds(planned));
+		await refuseDerivedTlds(planned);
+		const judged = await rowsToWrite(plan, onConflict);
+		for (const row of [...judged.insert, ...judged.overwrite]) await upsertDdOntologyNode(row);
+		return {
+			inserted: judged.insert.length,
+			unchanged: plan.unchanged + judged.unchanged,
+			overwritten: judged.overwrite.length,
+		};
 	});
 }
 
@@ -589,7 +629,7 @@ export async function restoreArchive(options: RestoreOptions): Promise<RestoreOu
 	// commit is re-runnable (a second pass finds every node 'unchanged'), and
 	// definitions without records are inert — the harmful half-state, rows
 	// without their definitions, cannot occur.
-	await writeOntology(ontologyPlan);
+	outcome.ontology = await writeOntology(ontologyPlan, options.onOntologyConflict);
 	await clearOntologyDerivedCaches();
 	const timestamp = dbTimestamp();
 	await withTransaction(async () => {

@@ -16,11 +16,15 @@
  * "define the constant" dead-end instead of the export form.
  */
 
-import { existsSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, statSync } from 'node:fs';
 import { rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import { Readable } from 'node:stream';
+import { createGunzip } from 'node:zlib';
 import { MATRIX_COPY_COLUMNS } from '../../db/matrix_write.ts';
 import { sql } from '../../db/postgres.ts';
+import { fsyncDirectory, writeFileDurably } from '../../files/durable.ts';
+import { tempPathFor } from '../../files/temp_path.ts';
 import { isCoreHierarchyTld } from '../../install/hierarchy_meta.ts';
 import { HIERARCHY_IMPORT_DIR } from '../../install/paths.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from '../../install/pg_exec.ts';
@@ -30,6 +34,7 @@ import {
 	type HierarchyManifest,
 	hierarchyDataFileNames,
 	serializeHierarchyManifest,
+	sha256Hex,
 } from '../../ontology/hierarchy_manifest_format.ts';
 import { HIERARCHY_MAIN_SECTION } from '../../ontology/ontology_tipos.ts';
 import { composeContains, locatorJsonVariants } from '../../search/containment.ts';
@@ -235,11 +240,12 @@ export function parseExportScope(raw: unknown): ExportScope {
  * The single psql meta-command that produces one file.
  *
  * `\copy … TO PROGRAM 'gzip -c > <file> && sync'` streams the result set
- * straight through gzip to its final name in ONE pass: no intermediate
- * uncompressed file to clean up, and `sync` flushes it before psql returns, so
- * the existence probe that follows is meaningful. `\copy` (backslash) is
- * psql's CLIENT-side meta-command — not SQL `COPY` — so gzip runs on THIS host
- * and the file lands here even when Postgres is remote.
+ * through gzip in ONE pass: no intermediate uncompressed file to clean up, and
+ * `sync` flushes it before psql returns. `<file>` is the caller's choice — the
+ * export passes a TEMP SIBLING of the final name (exportOne), never the final
+ * name itself. `\copy` (backslash) is psql's CLIENT-side meta-command — not SQL
+ * `COPY` — so gzip runs on THIS host and the file lands here even when Postgres
+ * is remote.
  */
 export function exportCopyCommand(
 	table: string,
@@ -312,6 +318,12 @@ export interface ExportHierarchyDeps {
 	outDir?: string;
 	/** Clock for hierarchy.json's envelope `date`. */
 	now?: Date;
+	/**
+	 * The psql runner (production: pg_exec runPsql). A gate injects one that
+	 * really fails the COPY on the server, or damages a real dump after psql
+	 * returned, to prove such a dump never reaches the final name.
+	 */
+	psql?: typeof runPsql;
 }
 
 /** One file to produce: everything the psql command needs, decided up front. */
@@ -426,21 +438,86 @@ async function planEntries(
 	return planListEntries(scope, exportableTipos(await activeHierarchyRows()));
 }
 
-/** Dump ONE entry to its file. Returns the record, or the error sentence. */
+/**
+ * The rows a gzip'd COPY text stream holds — one per newline (COPY's text
+ * format escapes a newline inside a value as `\\n`) — read to the END of the
+ * stream, or null when it is not one complete gzip stream (torn, cut short).
+ */
+async function gzipRowCount(source: Readable): Promise<number | null> {
+	let rows = 0;
+	try {
+		for await (const chunk of source.pipe(createGunzip())) {
+			for (const byte of chunk as Buffer) if (byte === 0x0a) rows++;
+		}
+		return rows;
+	} catch {
+		return null;
+	} finally {
+		source.destroy();
+	}
+}
+
+/**
+ * Why a dump psql reported must NOT be promoted, or null when it is whole: a
+ * nonzero exit (psql opens the gzip pipe BEFORE the server answers, so a COPY
+ * that fails — a server error, a cancelled backend, a dropped connection —
+ * still leaves a VALID but short gzip stream behind), no file, a stream that
+ * does not read to its end, or a row count that is not the one psql reported
+ * (`COPY <n>`).
+ */
+async function dumpRefusal(
+	run: { exitCode: number; stdout: string; stderr: string },
+	partFile: string,
+): Promise<string | null> {
+	if (run.exitCode !== 0) return psqlExitRefusal(run);
+	if (!existsSync(partFile)) return 'no file was produced';
+	return rowCountRefusal(run.stdout, partFile);
+}
+
+/** psql's nonzero exit, with its own words when it said any. */
+function psqlExitRefusal(run: { exitCode: number; stderr: string }): string {
+	return `psql exited ${run.exitCode}${run.stderr !== '' ? `: ${run.stderr}` : ''}`;
+}
+
+/** The file read to its END against the rows psql reported (`COPY <n>`); null when they agree. */
+async function rowCountRefusal(stdout: string, partFile: string): Promise<string | null> {
+	const reported = /^COPY (\d+)$/m.exec(stdout)?.[1];
+	if (reported === undefined) return 'psql did not report the rows it copied';
+	const rows = await gzipRowCount(createReadStream(partFile));
+	if (rows === null) return 'the gzip stream is incomplete';
+	if (rows !== Number(reported)) return `the file holds ${rows} rows, psql copied ${reported}`;
+	return null;
+}
+
+/**
+ * Dump ONE entry to its file. Returns the record, or the error sentence.
+ *
+ * The dump goes to a TEMP SIBLING (tempPathFor: same directory, so the rename
+ * is atomic) and reaches the final name ONLY when it is proven whole
+ * (dumpRefusal) — then rename + directory fsync. A refused dump is removed, and
+ * a previous good file at the final name is never touched: what hierarchy.json
+ * digests there is always a complete dump (review-diff 2026-10-21 — the dump
+ * used to stream to the final name and be judged by "the file exists" alone).
+ */
 async function exportOne(
 	conn: DbConnDescriptor,
 	outDir: string,
 	entry: ExportEntry,
+	psql: typeof runPsql,
 ): Promise<{ file: ExportedFile } | { error: string }> {
 	const outFile = join(outDir, entry.fileName);
-	const command = exportCopyCommand(entry.table, entry.where, entry.order, outFile);
-	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', command]);
-	// The file probe is the real verdict: `\copy … TO PROGRAM` reports the psql
-	// side, not gzip's, so a nonzero exit and a produced file are both possible.
-	// psql's own words ride along when there is nothing to show.
-	if (!existsSync(outFile)) {
-		const detail = run.stderr !== '' ? ` (${run.stderr})` : '';
-		return { error: `Export failed for section_tipo: ${entry.sectionTipo}${detail}` };
+	const partFile = tempPathFor(outFile);
+	const command = exportCopyCommand(entry.table, entry.where, entry.order, partFile);
+	try {
+		const run = await psql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', command]);
+		const refusal = await dumpRefusal(run, partFile);
+		if (refusal !== null) {
+			return { error: `Export failed for section_tipo: ${entry.sectionTipo} (${refusal})` };
+		}
+		await rename(partFile, outFile);
+		fsyncDirectory(outDir);
+	} finally {
+		await rm(partFile, { force: true });
 	}
 	return {
 		file: {
@@ -491,11 +568,13 @@ function resolveExportDeps(deps: ExportHierarchyDeps): {
 	conn: DbConnDescriptor;
 	outDir: string;
 	now: Date;
+	psql: typeof runPsql;
 } {
 	return {
 		conn: deps.conn ?? connFromConfig(),
 		outDir: deps.outDir ?? HIERARCHY_IMPORT_DIR,
 		now: deps.now ?? new Date(),
+		psql: deps.psql ?? runPsql,
 	};
 }
 
@@ -510,7 +589,7 @@ export async function exportHierarchy(
 	options: Record<string, unknown>,
 	deps: ExportHierarchyDeps = {},
 ): Promise<WidgetResponse> {
-	const { conn, outDir } = resolveExportDeps(deps);
+	const { conn, outDir, psql } = resolveExportDeps(deps);
 	const refusal = exportDirRefusal(outDir);
 	if (refusal !== null) return exportResponse([], [refusal]);
 
@@ -518,7 +597,7 @@ export async function exportHierarchy(
 
 	const files: ExportedFile[] = [];
 	for (const entry of entries) {
-		const result = await exportOne(conn, outDir, entry);
+		const result = await exportOne(conn, outDir, entry, psql);
 		if ('error' in result) errors.push(result.error);
 		else files.push(result.file);
 	}
@@ -535,23 +614,6 @@ export async function exportHierarchy(
 // then hierarchy.json — a dump written after it is not covered by its
 // checksums, and the installer refuses a mismatch.
 // ---------------------------------------------------------------------------
-
-/**
- * Write `text` to `target` ATOMICALLY: a sibling temp file, then a rename. The
- * installer reads this file; a half-written manifest would refuse every
- * install until re-exported.
- */
-async function writeAtomically(target: string, text: string): Promise<number> {
-	const temp = `${target}.${process.pid}.tmp`;
-	try {
-		const bytes = await Bun.write(temp, text);
-		await rename(temp, target);
-		return bytes;
-	} catch (error) {
-		await rm(temp, { force: true });
-		throw error;
-	}
-}
 
 /** The non-core entries that list no data file: activated EMPTY at install time. */
 function emptyThesauri(manifest: HierarchyManifest): string[] {
@@ -602,21 +664,55 @@ function manifestResponse(
 }
 
 /**
+ * Why the manifest must not certify the data files it lists — one line per
+ * file that is not, NOW, the bytes it digested AND one complete gzip stream.
+ * A checksum proves only "these bytes"; a torn dump (a pre-2026-10-21 export
+ * that streamed to the final name, a copy cut short) has a checksum too, and
+ * the installer's checksum check would then pass it and import a partial
+ * thesaurus. (A dump that is a COMPLETE but short stream is refused upstream,
+ * by exportOne's exit-code and row-count proof, before it reaches the name.)
+ */
+async function uncertifiableDataFiles(
+	manifest: HierarchyManifest,
+	outDir: string,
+): Promise<string[]> {
+	const lines: string[] = [];
+	for (const entry of manifest.active_hierarchies) {
+		for (const dataFile of entry.data_files) {
+			const bytes = new Uint8Array(await Bun.file(join(outDir, dataFile.file)).arrayBuffer());
+			if (sha256Hex(bytes) !== dataFile.sha256) {
+				lines.push(
+					`${dataFile.file} changed while ${HIERARCHY_MANIFEST_FILE} was built — export it again`,
+				);
+			} else if ((await gzipRowCount(Readable.from([bytes]))) === null) {
+				lines.push(
+					`${dataFile.file} is not a complete gzip stream — export ${dataFile.file.replace('.copy.gz', '')} again`,
+				);
+			}
+		}
+	}
+	return lines;
+}
+
+/**
  * Export `hierarchy.json` into the hierarchy directory: the census of the
  * active registry plus the digests of the data files present now. A census
  * bug (an output its own reader refuses) THROWS `install.manifest_invalid`
- * rather than writing a file the installer would refuse.
+ * rather than writing a file the installer would refuse; a data file it would
+ * certify that is not a complete dump REFUSES the write (the previous manifest
+ * stays). Written durably (writeFileDurably: unique temp sibling, fsync,
+ * rename, directory fsync) — the installer reads it.
  */
 export async function exportHierarchyJson(deps: ExportHierarchyDeps = {}): Promise<WidgetResponse> {
 	const { outDir, now } = resolveExportDeps(deps);
 	const refusal = exportDirRefusal(outDir);
 	if (refusal !== null) return manifestResponse(null, [refusal]);
 	const { manifest, errors } = await buildHierarchyManifest({ dataDir: outDir, now });
-	const bytes = await writeAtomically(
-		join(outDir, HIERARCHY_MANIFEST_FILE),
-		serializeHierarchyManifest(manifest),
-	);
-	return manifestResponse({ manifest, bytes }, errors);
+	const uncertifiable = await uncertifiableDataFiles(manifest, outDir);
+	if (uncertifiable.length > 0) return manifestResponse(null, [...errors, ...uncertifiable]);
+	const text = serializeHierarchyManifest(manifest);
+	writeFileDurably(join(outDir, HIERARCHY_MANIFEST_FILE), text, { mode: 0o644 });
+	return manifestResponse({ manifest, bytes: new TextEncoder().encode(text).byteLength }, errors);
 }
 
 /**

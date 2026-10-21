@@ -209,6 +209,10 @@ Merged since the last release; these ship with the next one.
     the Execute button. Before, an older clean preview could reveal it after your newer
     preview had failed.
 
+- **The assistant's find-or-create no longer duplicates a record under concurrent calls**
+
+    When two assistant requests asked for the same record at the same moment (find it by its fields, or create it), both could miss it and both create it, leaving two records with the same identity. The search is now asked again under a lock before anything is created, so the second request finds the record the first one created.
+
 - **Stopping a background export now stops it at once, even while its record selection is still being computed.**
 
     Pressing Stop on a background export used to wait until the database had finished computing
@@ -833,6 +837,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **An archive restore refuses an ontology node another writer created between the plan and the write**
+
+    A restore plans its ontology definitions first and writes them later. A definition another writer created in between used to be overwritten silently, as if it were new. The plan is now checked again at the moment of writing: an identical definition is left alone, and a different one is refused unless the restore was asked to overwrite conflicts. The restore's report now counts what was actually written.
+
 - **An archive restore no longer plants ontology definitions that the next ontology rebuild would delete**
 
     An archive carries the ontology definitions of its sections, but not the ontology records they are built from. Restoring it into an installation whose ontology already has records for the same TLD used to add those definitions anyway: the next ontology update (or a rebuild from the ontology parser tool) removed them again, and the restored records were left without their definitions. The restore now refuses this case before writing anything, and names the TLD and the definitions involved. Install or update that ontology so that it defines them, then run the restore again: the definitions are then found unchanged, or the conflict is named. A TLD for which this installation has no ontology records restores as before. The restore also waits for any ontology rebuild of the same TLD that is in progress, instead of writing at the same time. See [The archive door](./core/exporting_data.md#the-archive-door).
@@ -851,6 +859,10 @@ Merged since the last release; these ship with the next one.
     default `0` (no ceiling) see no change.
 
     Wire contract: `WC-2026-10-11-export-buffered-cap-and-admission`.
+
+- **Exporting a thesaurus never leaves or certifies a partial dump**
+
+    The hierarchy export panel used to stream each thesaurus straight to its final file and judge the export by "the file exists". A dump cut short (a server error, a dropped connection, a full disk) still left a valid-looking file, and `hierarchy.json` then certified it with a checksum, so an installation importing it received a partial thesaurus. Each dump is now written beside its final name and moved into place only when psql succeeded, the file reads to its end, and it holds exactly the rows psql reported; otherwise the panel names the reason and the previous good file is kept. Building `hierarchy.json` also refuses, keeping the previous manifest, when a data file it would list is torn or changed while it was built. A complete but short dump left by an export made before this fix cannot be told apart: export those thesauri again.
 
 - **The installer's configuration and the published client now survive a power cut**
 
@@ -934,6 +946,10 @@ Merged since the last release; these ship with the next one.
     pack no longer leaves a temporary file beside it.
 
     Wire contract: `WC-2026-09-30-diffusion-target-fence`.
+
+- **Rebuilding or updating one user's activity statistics never counts a day twice**
+
+    Two rebuilds of the same user's activity statistics running at once, or a rebuild and an update, could each save the same day, so that day's totals appeared twice. Every writer of one user's statistics now waits for the other, and a day already saved is never saved again.
 
 - **Docker stacks — ontology update no longer fails with EACCES**
 

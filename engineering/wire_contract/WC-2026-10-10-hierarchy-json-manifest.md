@@ -530,3 +530,35 @@ thesauri), `widget_request_native` (the widget's view keys),
 never forced; no entry → warning). No fixture changes, no re-harvest.
 
 ## Addendum 2026-10-12 — superseded by WC-2026-10-12-install-surface-removed (its `get_install_context` / router-action half: the wizard is gone; the manifest and plan half stands)
+
+## Addendum 2026-10-21 — a dump is promoted only when proven whole; the manifest refuses a torn data file (review-diff 2026-10-21, ops-durability)
+
+- **Export panel (`export_hierarchy`).** Each `<tld>1|2.copy.gz` is dumped to a
+  temp sibling of its final name and renamed into place (then the directory is
+  fsynced) only when psql exits 0, psql reports `COPY <n>`, the file reads to
+  the end of one complete gzip stream, and it holds exactly `<n>` lines. The
+  error line keeps its prefix and always carries the reason:
+  `Export failed for section_tipo: <tipo> (<reason>)`, `<reason>` one of
+  `psql exited <code>[: <stderr>]`, `no file was produced`,
+  `psql did not report the rows it copied`, `the gzip stream is incomplete`,
+  `the file holds <r> rows, psql copied <n>`. Before: the line appeared only
+  when no file existed (`… (<stderr>)` when psql said something), so a torn or
+  short dump at the final name was reported as exported. A refused dump is
+  removed; a previous file at the final name is never touched.
+- **Manifest (`export_hierarchy_json`).** Before writing, every data file it
+  would list is re-read: one whose sha256 no longer matches the digest it
+  computed (`<file> changed while hierarchy.json was built — export it again`)
+  or that is not one complete gzip stream
+  (`<file> is not a complete gzip stream — export <tld><n> again`) refuses the
+  write: `{data: false, msg: 'Error. hierarchy.json was not written', errors}`,
+  the previous `hierarchy.json` kept. Written via `writeFileDurably` (mode
+  0644) instead of a pid-named temp + rename.
+- **Known gap:** a COMPLETE but short dump left by an export made before this
+  addendum carries no row-count marker, so the manifest cannot detect it; only
+  re-exporting fixes it.
+- **Gate reconciliation:** no parity fixture covers the panel; no re-harvest.
+  Gates: `test/unit/export_hierarchy_partial_dump_native.test.ts` (real psql
+  failure, a dump damaged after psql returned, a short stream, the manifest
+  refusing a torn data file, the previous file kept; the "changed while
+  built" leg is a race and is not driven by a gate),
+  `test/unit/export_hierarchy_export_native.test.ts` (no temp sibling left).

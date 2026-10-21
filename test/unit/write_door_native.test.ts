@@ -358,6 +358,29 @@ describe.if(DB_READY)('write door — every tool permission kind, real resolver,
 			for (const invalid of [1.5, Number.NaN, 'abc', true, {}]) {
 				expect(parseRecordId(invalid)).toEqual({ kind: 'invalid' });
 			}
+			// The matrix section_id columns are int4: an id past that range (or past a
+			// safe integer, where Number() silently rounds) is no record address — refused
+			// as invalid BY THE GRAMMAR, never handed to SQL to abort the statement.
+			for (const outOfRange of [
+				'99999999999999999999',
+				1e20,
+				2147483648,
+				'2147483648',
+				-2147483649,
+				'-2147483649',
+				Number.MAX_SAFE_INTEGER + 1,
+			]) {
+				expect(parseRecordId(outOfRange), String(outOfRange)).toEqual({ kind: 'invalid' });
+			}
+			// …and the int4 edges themselves are ids.
+			for (const [raw, id] of [
+				[2147483647, 2147483647],
+				['2147483647', 2147483647],
+				[-2147483648, -2147483648],
+				['-2147483648', -2147483648],
+			] as const) {
+				expect(parseRecordId(raw)).toEqual({ kind: 'id', id });
+			}
 		});
 
 		test('authorizeSectionRecord: an ABSENT id is refused BY THE DOOR (never a create); a named id is level + scope; the grant carries it', async () => {
