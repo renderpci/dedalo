@@ -213,14 +213,21 @@ export interface SessionSummary {
   state: SessionMeta['state'];
 }
 
-/** The session index for a site (newest first), for the history UI. */
-export async function listSessions(slug: string): Promise<SessionSummary[]> {
+/**
+ * The ids of a site's sessions (every meta sidecar in its sessions directory), unordered. Read
+ * through the same chain walk as every other read: a refused directory THROWS, an absent one is
+ * no sessions.
+ */
+export async function sessionIdsOf(slug: string): Promise<string[]> {
   const names = await readdirShared(config.SITES_ROOT, underSitesRoot(sessionsDir(slug)));
   if (names === null) return [];
-  const files = names.filter(f => f.endsWith('.meta.json'));
+  return names.filter(f => f.endsWith('.meta.json')).map(f => f.slice(0, -'.meta.json'.length));
+}
+
+/** The session index for a site (newest first), for the history UI. */
+export async function listSessions(slug: string): Promise<SessionSummary[]> {
   const summaries: SessionSummary[] = [];
-  for (const file of files) {
-    const sessionId = file.slice(0, -'.meta.json'.length);
+  for (const sessionId of await sessionIdsOf(slug)) {
     const meta = await readMeta(slug, sessionId);
     if (meta) {
       summaries.push({

@@ -35,6 +35,7 @@ import {
   readMeta,
   writeMeta,
   allSessionMetaFiles,
+  sessionIdsOf,
 } from './store';
 
 export type SessionState = 'idle' | 'running' | 'interrupted' | 'error';
@@ -307,6 +308,9 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
   meta.identity_epoch = epoch;
   let resumeToken: string | undefined = meta.resume_token ?? undefined;
   let sawError = false;
+  // Outside the try: the catch must be able to END the run it opened (see there).
+  let proc: AgentProcess | null = null;
+  let streamEnded = false;
 
   try {
     // Spawn BEFORE the first await so the AgentProcess is registered the instant the site
@@ -316,7 +320,7 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
       slug,
       confinement: policy,
     };
-    const proc = getDriver(driver).startTurn(opts);
+    proc = getDriver(driver).startTurn(opts);
     const live = liveByslug.get(slug);
     if (live) live.proc = proc;
 
@@ -328,6 +332,7 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
       if (event.type === 'result' && event.resumeToken) resumeToken = event.resumeToken;
       if (event.type === 'error') sawError = true;
     }
+    streamEnded = true;
 
     // File-change backstop: derive the turn's edits from git, so every driver reports a
     // consistent file_change regardless of how well its native stream describes edits.
@@ -339,21 +344,7 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
     }
 
     // Commit whatever the agent wrote, so the turn is a rollback point.
-    try {
-      await commitAll(slug, `agent: session ${sessionId} turn ${turn}`, policy);
-      // A commit that resolved (made, or a clean tree) recorded the WHOLE tree (`add -A`) —
-      // including any work an earlier refused commit OWED. Nothing is owed after it; left set,
-      // the next boot would ask git again and name whatever landed since "recovered".
-      meta.recovery_pending = undefined;
-    } catch (error) {
-      // A failed commit must not fail the turn — but it is never a silence.
-      console.error(`[sessions] the commit after turn ${turn} of '${slug}' failed:`, error);
-      // OWED, whatever refused it — not only `daemon_stopping`. During a stop PID 1 stops the
-      // agent instances first and drops a git connection with `unit_refused` before this daemon
-      // has had SIGTERM; a quarantined identity or a nonconformant unit refuses it too. The next
-      // boot's sweep makes this commit as a recovery point (`sweepOnBoot`).
-      meta.recovery_pending = true;
-    }
+    await commitTurn(meta, turn, policy);
 
     // An interrupted turn reports 'interrupted' regardless of how its stream ended.
     if (liveByslug.get(slug)?.interrupted) finalState = 'interrupted';
@@ -365,6 +356,22 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
     await persist(slug, sessionId, turnErrorEvent(error, 'turn_failed', `session ${sessionId} of '${slug}'`)).catch(() => {
       // the persistence layer itself is failing; the finally below still runs
     });
+    // THE RUN IS ENDED BEFORE ITS SITE IS LET GO. A throw after `startTurn` (a persist the
+    // store refused — disk full, a `.builder` the run itself replaced with a link) leaves the
+    // run ALIVE: leaving the `for await` early signals nothing to it. The finally below drops
+    // the proc, the site's reservation and the global slot, so a run still alive past it was
+    // unstoppable (`stopSession`: not_running), uncounted, and writing a workspace no turn
+    // held. `interrupt()` returns once the run has settled (its gate and run slot torn down),
+    // and only then is what it wrote recorded — or, refused, OWED — exactly as a turn whose
+    // stream ended records it.
+    if (proc && !streamEnded) {
+      try {
+        await proc.interrupt();
+      } catch (interruptError) {
+        console.error(`[sessions] could not interrupt the failed turn ${turn} of '${slug}':`, interruptError);
+      }
+      await commitTurn(meta, turn, policy);
+    }
   } finally {
     // The persistence writes can themselves fail (disk full, workspace deleted mid-turn).
     // They are wrapped so the state/slot releases BELOW run unconditionally — a throw here
@@ -388,6 +395,59 @@ async function runTurn(meta: SessionMeta, prompt: string, policy: ConfinementPol
     }
     endTurn(slug);
     releaseGlobalSlot();
+  }
+}
+
+/**
+ * THE TURN'S COMMIT — the rollback point of whatever the run wrote, on every path a run was
+ * opened on (its stream ended, or the turn failed under it and the run was ended first).
+ *
+ * A commit that resolved (made, or a clean tree) recorded the WHOLE tree (`add -A`) — including
+ * any work an earlier refused commit OWED, this session's or ANOTHER session's of the same site.
+ * Nothing is owed after it: left set, the next boot would ask git again and name whatever landed
+ * since "recovered after restart (session …)". A refused commit is OWED, whatever refused it —
+ * not only `daemon_stopping`: during a stop PID 1 stops the agent instances first and drops a
+ * git connection with `unit_refused` before this daemon has had SIGTERM; a quarantined identity
+ * or a nonconformant unit refuses it too. The next boot's sweep makes it as a recovery point.
+ * Never throws: a failed commit must not fail the turn — but it is never a silence.
+ */
+async function commitTurn(meta: SessionMeta, turn: number, policy: ConfinementPolicy): Promise<void> {
+  const { slug, session_id: sessionId } = meta;
+  try {
+    await commitAll(slug, `agent: session ${sessionId} turn ${turn}`, policy);
+  } catch (error) {
+    console.error(`[sessions] the commit after turn ${turn} of '${slug}' failed:`, error);
+    meta.recovery_pending = true;
+    return;
+  }
+  meta.recovery_pending = undefined;
+  await settleOtherSessions(slug, sessionId);
+}
+
+/**
+ * The other sessions of the site whose debt that commit settled. The turn HOLDS the site, so no
+ * other session of it writes its meta meanwhile. One session's sidecar refused (a planted
+ * `.builder`) is that session's incident: said, and its flag stays — the boot then asks again,
+ * which is the safe side.
+ */
+async function settleOtherSessions(slug: string, ownSessionId: string): Promise<void> {
+  let ids: string[];
+  try {
+    ids = await sessionIdsOf(slug);
+  } catch (error) {
+    console.error(`[sessions] the sessions of '${slug}' could not be listed to settle their owed commits:`, error);
+    return;
+  }
+  for (const id of ids) {
+    if (id === ownSessionId) continue;
+    try {
+      const other = await readMeta(slug, id);
+      if (other?.recovery_pending !== true) continue;
+      other.recovery_pending = undefined; // dropped by the JSON write
+      await writeMeta(other);
+    } catch (error) {
+      console.error(`[sessions] the owed commit of session ${id} of '${slug}' could not be marked settled:`, error);
+    }
   }
 }
 

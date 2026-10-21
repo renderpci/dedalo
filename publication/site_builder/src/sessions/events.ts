@@ -49,8 +49,10 @@ export interface SessionMeta {
    * A commit this session OWES was not recorded — its turn's commit was refused (for any
    * reason: the daemon stopping, a connection PID 1 dropped, a quarantined identity), or a
    * boot's recovery commit was refused or skipped (the site held). The work is still in the
-   * tree; every boot's sweep asks again, commits it as a recovery point, and only then clears
-   * this. Absent otherwise.
+   * tree; every boot's sweep asks again and commits it as a recovery point. Cleared by the
+   * first commit that records the tree after it: that recovery commit, or ANY later turn's
+   * commit on the site — this session's or another's (`git add -A` records the whole tree;
+   * manager.ts `commitTurn`). Absent otherwise.
    */
   recovery_pending?: boolean;
 }

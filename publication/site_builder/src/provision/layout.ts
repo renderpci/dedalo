@@ -28,7 +28,11 @@
  * renders every artifact and compares it against what is committed, and it does so
  * WITHOUT this package's node_modules. Anything this file imports, that gate must be able
  * to import too, so the dependency budget is `node:` builtins and package-local siblings
- * that are themselves dependency-free (`../util/paths`, `../util/slug`). The manifest
+ * that are themselves dependency-free, OVER THE WHOLE CLOSURE (`../util/{paths,slug,
+ * shared_tree}`, `../drivers/{agent_identity,network_profile,unit_frames}` today, and what
+ * the renderers add: `../drivers/unit_properties`, `./hash`). Gated as an outcome by
+ * tests/render_closure_purity.test.ts: this file and every renderer are LOADED from a copy
+ * with no node_modules above it. The manifest
  * arrives here as an ALREADY-VALIDATED plain object — `src/provision/schema.ts` owns the
  * zod grammar, IMPORTS every constant and predicate below, and validates INTO the
  * `InstanceManifest` type declared here, so `derive(parseManifest(doc))` is the whole

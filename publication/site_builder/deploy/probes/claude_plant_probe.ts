@@ -56,8 +56,13 @@
  *          (iv)  every path the turns created under HOME is under `state/`;
  *          (v)   a plant in `state/claude` (a settings hook and Bash allow, user memory, a skill, an
  *                MCP server in the account file) is NOT loaded by the next turn: `state/` is
- *                writable CLI state, closed by the PLANT argv, not by ownership. The fake API
- *                ASKS for Bash on that turn (a `tool_use`), so "no Bash ran" is an outcome.
+ *                writable CLI state, closed by the PLANT argv, not by ownership. Measures the
+ *                hook, the MCP server, the memory and the skill — NOT the Bash allow: the turn
+ *                argv denies Bash outright, so "no Bash ran" holds whether or not it was loaded;
+ *          (v-bash) the SAME turn argv with Bash taken out of `--disallowedTools`, over the same
+ *                plant: the fake API ASKS for Bash (a `tool_use`) and it must not run — only the
+ *                settings-source restriction stands between the planted allow and the shell.
+ *                Counts only where C6v held.
  *   C6v — CONTROL for (v), before it: over the same CLAUDE_CONFIG_DIR, the pre-fix argv with Bash
  *        NOT denied loads every state plant — the hook fires, the account-file server runs, the
  *        memory and the skill reach the model, and the asked-for Bash RUNS; and without the
@@ -65,20 +70,21 @@
  *        not read its state from CLAUDE_CONFIG_DIR, (v) is green by construction: it says so.
  *        WRITTEN, NOT YET RUN: it must pass on the production CLI before `provision apply`
  *        rebuilds a museum's turn HOMEs (LEAD-1b §2.6a) — an owner-VM row (Ubuntu, the production
- *        CLI, a non-root uid); if (iii), (iv), (v) or C6v fails, no apply. Unmeasured until then:
+ *        CLI, a non-root uid); if (iii), (iv), (v), (v-bash) or C6v fails, no apply. Unmeasured until then:
  *        whether CLAUDE_CONFIG_DIR moves `.claude.json` and the CLI's lock/backup files.
  *
  * Measured 2026-10-01 on Claude Code 2.1.286 (macOS, git 2.54): legs P0–P5b PASS.
  * Measured 2026-10-21 on Claude Code 2.1.306 (macOS, the developer's uid — NOT the owner-VM row
  * above): every leg PASS, C6v included — the CLI reads settings, memory, skills and the account
- * file's MCP servers from CLAUDE_CONFIG_DIR, and the planted allow runs Bash there.
+ * file's MCP servers from CLAUDE_CONFIG_DIR, and the planted allow runs Bash there. (v-bash) was
+ * added after that run (2026-10-21, review cross-site:r1): WRITTEN, NOT YET RUN.
  */
 
 import { appendFileSync, chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { TURN_SYSTEM_GITCONFIG_DIRECTIVES, turnHomeEnvironment } from '../../src/drivers/agent_identity';
-import { claudeTurnArgv, listedFlags, requiredCliFlags } from '../../src/drivers/claude_argv';
+import { claudeTurnArgv, DENIED_TOOLS, listedFlags, requiredCliFlags } from '../../src/drivers/claude_argv';
 
 const bin = process.argv[2] ?? Bun.which('claude') ?? '';
 if (!bin) {
@@ -364,8 +370,27 @@ try {
         planted6.marks.every(mark => mark === 'daemon_mcp') &&
         !planted6.bodies.includes('STATE_MEMORY_PLANT') &&
         !planted6.bodies.includes('STATE_SKILL_PLANT'),
-      'P6(v) a plant in state/claude (hook, memory, skill, MCP server, Bash allow) is not loaded next turn — the asked-for Bash did not run',
+      // What this leg MEASURES: hook, MCP server, memory, skill. NOT the planted Bash allow — the
+      // turn argv denies Bash outright, so "the asked-for Bash did not run" holds whether or not
+      // the allow was loaded. That half is P6(v-bash) below.
+      'P6(v) a plant in state/claude (hook, memory, skill, MCP server) is not loaded next turn',
       `marks=${planted6.marks.join(',') || 'none'}`,
+    );
+    // P6(v-bash) — THE HALF THE DENIAL MASKS: the SAME turn argv with Bash taken out of
+    // `--disallowedTools`, over the same planted state. Only the settings-source restriction
+    // (`--setting-sources ''`) now stands between the planted allow and the shell, so the
+    // asked-for Bash must not run. Meaningful only where C6v held (the allow IS what grants it).
+    const turnArgv6 = claudeTurnArgv({ bin, prompt: bashPrompt, mcpConfigPath: mcpConfig });
+    const denyAt = turnArgv6.indexOf('--disallowedTools');
+    if (denyAt < 0 || !turnArgv6[denyAt + 1]?.split(',').includes('Bash')) {
+      throw new Error('P6(v-bash): the turn argv no longer denies Bash through --disallowedTools; re-derive this leg');
+    }
+    const undenied6 = turnArgv6.map((arg, i) => (i === denyAt + 1 ? DENIED_TOOLS.filter(tool => tool !== 'Bash').join(',') : arg));
+    const unmasked6 = await run(undenied6, env6);
+    say(
+      control6vHolds && unmasked6.result?.is_error === false && !unmasked6.marks.includes('bash_ran'),
+      'P6(v-bash) with Bash NOT denied, the planted allow in state/claude still does not run the asked-for Bash — the settings-source restriction alone keeps it out',
+      `control6v=${control6vHolds} marks=${unmasked6.marks.join(',') || 'none'}`,
     );
   } finally {
     chmodSync(home6, 0o755);

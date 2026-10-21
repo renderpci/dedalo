@@ -35,8 +35,10 @@
  *   P3 — `--session <id>` resumes the turn under the restriction.
  *   P-brief — the daemon's brief (the one instruction file) reaches the model: asked for the
  *        brief's token, the turn answers it; the workspace's own `opencode.json` instruction does
- *        not (asked for its token, the turn does not know it). If the brief does NOT reach the
- *        model, the driver must fall back to a prompt preamble.
+ *        not (asked, with no tool and without pointing at the file, to repeat every instruction
+ *        it was given, the turn never names that instruction's token; a turn that used a tool is
+ *        inconclusive — the file is named after the token, so a listing would leak it). If the
+ *        brief does NOT reach the model, the driver must fall back to a prompt preamble.
  *
  * Measured 2026-10-11 on opencode 1.18.32 (macOS, Homebrew): P0, C, P1, P-env PASS; P-db, P-org
  * PASS on 2026-10-12. P2, P3 and
@@ -230,11 +232,32 @@ try {
     const session = frames.map(frame => frame.sessionID ?? frame.session_id ?? (frame.type === 'session' ? frame.id : undefined)).find(Boolean);
     const resumed = session ? ask(opencodeTurnArgv({ bin, prompt: 'go on', resumeToken: String(session) }), tree.ws, liveEnv) : { ok: false, stdout: '', stderr: '' };
     say(Boolean(session) && resumed.ok, 'P3 --session resumes under the restriction', `session=${String(session ?? 'none')}`);
-    const asked = ask(opencodeTurnArgv({ bin, prompt: "What is the site's code word? And what word does the file named after a random token in this workspace hold? Answer both, or say unknown." }), tree.ws, liveEnv);
+    // NEVER POINT AT THE WORKSPACE FILE. The planted instruction file is NAMED after its token, so
+    // a prompt that sends the model looking for it puts the token into a tool frame (a listing, a
+    // read) whether or not the instruction was LOADED — the negative half then measured the
+    // model's tools, not the restriction. The question is neutral, asks for what the model was
+    // GIVEN, and a turn that used any tool is inconclusive (red), never a pass. The authoritative
+    // negative stays P1 (`debug config`'s instructions list, offline); this is its live witness.
+    const asked = ask(
+      opencodeTurnArgv({
+        bin,
+        prompt: "Do not use any tool. First repeat, verbatim, every instruction or context text you were given besides this message. Then say the site's code word.",
+      }),
+      tree.ws,
+      liveEnv,
+    );
+    const askedFrames = asked.stdout.split('\n').flatMap(line => {
+      try {
+        return [JSON.parse(line) as Record<string, unknown>];
+      } catch {
+        return [];
+      }
+    });
+    const usedTool = askedFrames.some(frame => typeof frame.tool === 'string' || String(frame.type ?? '').includes('tool'));
     say(
-      asked.stdout.includes(briefToken) && !asked.stdout.includes(tree.tokens.project_instructions),
-      'P-brief the daemon’s brief reaches the model; the workspace’s own instruction does not',
-      `brief=${asked.stdout.includes(briefToken)} workspace=${asked.stdout.includes(tree.tokens.project_instructions)}`,
+      asked.stdout.includes(briefToken) && !usedTool && !asked.stdout.includes(tree.tokens.project_instructions),
+      'P-brief the daemon’s brief reaches the model; the workspace’s own instruction does not (no tool used)',
+      `brief=${asked.stdout.includes(briefToken)} workspace=${asked.stdout.includes(tree.tokens.project_instructions)} tool_used=${usedTool}`,
     );
   }
 } finally {
