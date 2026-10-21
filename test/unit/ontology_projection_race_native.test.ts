@@ -71,6 +71,7 @@ import {
 } from '../../src/core/ontology/ontology_state.ts';
 import {
 	createMainSection,
+	getMainTypologyId,
 	insertDdOntologyRecord,
 } from '../../src/core/ontology/ontology_write.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
@@ -78,6 +79,7 @@ import type { Principal } from '../../src/core/security/permissions.ts';
 import { runWithRequestContext } from '../../src/core/security/request_context.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { restoreSection } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
+import { interleave } from '../helpers/lock_interleave.ts';
 
 const TLD = 'zzopr';
 const SECTION = `${TLD}0`;
@@ -86,8 +88,6 @@ const NODE = `${TLD}${ID}`;
 const USER_ID = -1;
 const LOCAL = 'localontology0';
 const OVERRIDE_ID = 990301;
-/** How long a leg waits for the concurrent side to block (it blocks at once when serialized). */
-const BLOCK_WAIT_MS = 10_000;
 
 const DEVELOPER: Principal = Object.freeze({
 	userId: USER_ID,
@@ -204,69 +204,6 @@ async function deletedSnapshot(): Promise<{ id: number; data: unknown }> {
 	const row = rows[0];
 	if (row === undefined) throw new Error(`no TM snapshot for ${SECTION}/${ID}`);
 	return { id: Number(row.id), data: row.data };
-}
-
-/** Backends of this database (other than the probe's) waiting on a heavyweight lock. */
-async function lockWaiters(): Promise<number> {
-	const rows = (await sql.unsafe(
-		`SELECT count(*)::int AS n FROM pg_stat_activity
-		  WHERE datname = current_database() AND wait_event_type = 'Lock' AND pid <> pg_backend_pid()`,
-		[],
-	)) as { n: number }[];
-	return Number(rows[0]?.n ?? 0);
-}
-
-/** True once `work` is blocked on a lock in Postgres; false if it settles (ran through) first. */
-async function blockedBehind(work: Promise<unknown>): Promise<boolean> {
-	let settled = false;
-	work.then(
-		() => {
-			settled = true;
-		},
-		() => {
-			settled = true;
-		},
-	);
-	const deadline = Date.now() + BLOCK_WAIT_MS;
-	while (Date.now() < deadline) {
-		if (settled) return false;
-		if ((await lockWaiters()) > 0) return true;
-		await Bun.sleep(20);
-	}
-	return false;
-}
-
-/**
- * Run `holder` in a transaction kept OPEN until the concurrent side (`contender`, started
- * OUTSIDE that transaction) is blocked or done; then commit. Answers whether the contender
- * was blocked, and its result.
- */
-async function interleave<T>(
-	holder: () => Promise<unknown>,
-	contender: () => Promise<T>,
-): Promise<{ blocked: boolean; result: T }> {
-	let release!: () => void;
-	const gate = new Promise<void>((resolve) => {
-		release = resolve;
-	});
-	let holding!: () => void;
-	const held = new Promise<void>((resolve) => {
-		holding = resolve;
-	});
-	const holderTx = withTransaction(async () => {
-		await holder();
-		holding();
-		await gate;
-	});
-	// A holder that fails never reaches `holding`: surface its error instead of hanging.
-	await Promise.race([held, holderTx]);
-	// This continuation runs in the TEST's context (no ambient transaction), so the
-	// contender opens its own transaction on another connection.
-	const contended = contender();
-	const blocked = await blockedBehind(contended);
-	release();
-	await holderTx;
-	return { blocked, result: await contended };
 }
 
 async function sweep(): Promise<void> {
@@ -398,6 +335,12 @@ describe('ONT under concurrency: node presence follows record presence', () => {
 		await projectedRecord();
 		await assertTestDatabase('ontology_projection_race_native');
 		const registryId = await createMainSection({ tld: TLD }, USER_ID);
+		// The root as the row derives it (hung under the row's typology grouper — inspect
+		// compares it, ontology_root_registry_native C1), so the tld is genuinely in sync.
+		await sql.unsafe('UPDATE dd_ontology SET parent = $1 WHERE tipo = $2', [
+			`ontologytype${await getMainTypologyId(TLD)}`,
+			SECTION,
+		]);
 		await clearOntologyDerivedCaches();
 		expect(await registryIds()).toEqual([registryId]);
 		return registryId;

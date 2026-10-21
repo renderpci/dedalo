@@ -118,7 +118,14 @@ Everything checkable is checked BEFORE a write, and a refusal names what it foun
 5. **Media**: a target file that exists with the same bytes is skipped; with different bytes it is
    refused unless `--on-existing-media overwrite`.
 
-Then: the ontology subtree is written (one transaction), the rows are written (one transaction —
+Then: the ontology subtree is written (one transaction, under the projection lock of every tld it
+writes — ordered against rebuild, teardown and the per-record and lifecycle doors). Under that lock,
+before its first write, it REFUSES (`archive.refused`, nothing written) a write into a tld whose
+nodes this installation derives from source records (`<tld>0` holds records here): the archive
+carries rows, not their sources, so such a row would be an orphan or a clobbered node the tld's next
+rebuild removes or reverts. Remedy: install or update that ontology so it defines the nodes, then
+restore (they are found unchanged, or named as a conflict). A tld with no source records here
+restores as before (gate: `archive_restore_projection_native`). Then the rows are written (one transaction —
 `insertMatrixRecordWithExplicitId`, which raises the section counter, then the eleven columns bound
 verbatim through `updateMatrixRecord{rawTextPassthrough}`), one whole-record Time Machine row per
 record is stamped (`tipo = section_tipo`, `lg-nolan`, the delete door's shape — the restore is

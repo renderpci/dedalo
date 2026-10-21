@@ -51,6 +51,12 @@
     lagging id sequence in its own short transaction BEFORE taking the lock (a table lock held
     across the lock wait would deadlock against a lifecycle unit).
   Response shapes unchanged.
+  - **Amended 2026-10-21 (ONT follow-up) — the archive restore is a lock taker too.** It writes
+    dd_ontology rows (its subtree) inside one transaction that now takes the projection lock of
+    every tld it writes, and under it REFUSES (`archive.refused`, nothing written) a write into a
+    tld this installation derives from source records: the archive carries rows, not their
+    sources, so such a row was an orphan (or a clobbered node) the tld's next rebuild removed.
+    Gate: `test/unit/archive_restore_projection_native.test.ts` (P1 refusal, P2 control, P3 lock).
 - **Reason:** `dd_ontology(tld)` equals the parse of `matrix_ontology(<tld>0)`; a node whose
   source record is gone (or a record with no node) is drift the runtime serves.
 - **Gate reconciliation:** TS-native `test/unit/ontology_record_lifecycle_native.test.ts`

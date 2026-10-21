@@ -15,9 +15,14 @@
  *     (stageOntologyFiles, local mode) and imported through the SHARED LOWER
  *     LAYER of the ontology update (ontology_update.ts importStagedOntologyFiles
  *     — snapshots, per-file import + auto-restore, dd_ontology re-derive), under
- *     the same single-flight latch. ONE re-derive pass then settles nodes whose
- *     model lives in a TLD imported after them (a dependency cycle). Finally the
- *     installed TLDs' structural references are VERIFIED
+ *     the same single-flight latch. That layer's re-derive is the WHOLE of it: a
+ *     node whose model lives in a TLD imported after it (a dependency cycle) is
+ *     settled there, by its pass 2 (ontology_update.ts deriveOntologyPackages —
+ *     every tld through the ONE writer, rebuildOntology). The installer re-derives
+ *     nothing of its own: its former upsert-only pass (no orphan sweep, no
+ *     transaction, no projection lock) is retired (gate: install_ontology_door_native
+ *     (h), ontology_derive_packages_native G1f). Finally the installed TLDs'
+ *     structural references are VERIFIED
  *     (verifyInstalledOntologyReferences): a dependency-class reference to a
  *     tipo this installation does not hold is a WARNING naming the remedy. A
  *     reference into a thesaurus the SAME run installs next (install_hierarchies,
@@ -65,7 +70,6 @@ import {
 	releaseOntologyImportLatch,
 } from '../ontology/ontology_update.ts';
 import { type StagedFile, stageOntologyFiles } from '../ontology/ontology_update_target.ts';
-import { setRecordsInDdOntology } from '../ontology/ontology_write.ts';
 import { getTldFromTipo } from '../ontology/tld.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_MAJOR_MINOR } from '../update/version.ts';
 import {
@@ -366,28 +370,6 @@ async function importUnderLatch(
 	}
 }
 
-/**
- * ONE re-derive pass: a node derived before the TLD holding its model was
- * imported (a declared dependency cycle) has `model` NULL while its model_tipo
- * now resolves — its TLD is derived once more.
- */
-async function rederiveUnresolvedModels(tlds: readonly string[], userId: number): Promise<void> {
-	const rows = await readDdOntologyReferenceRows(tlds);
-	const pending = rows.filter((row) => row.model === null && row.model_tipo !== null);
-	const present = await existingDdOntologyTipos(pending.map((row) => row.model_tipo as string));
-	const stale = new Set(
-		pending.filter((row) => present.has(row.model_tipo as string)).map((row) => row.tld ?? ''),
-	);
-	for (const tld of [...stale].filter((item) => item !== '')) {
-		const rebuilt = await setRecordsInDdOntology({
-			sectionTipo: `${tld}0`,
-			wholeSection: true,
-			userId,
-		});
-		if (rebuilt.ok !== true) importFailure(`re-derive of ${tld}: ${rebuilt.errors.join('; ')}`);
-	}
-}
-
 /** Records per installed TLD (the derived node count). */
 async function installedCounts(
 	tlds: readonly string[],
@@ -421,7 +403,6 @@ export async function installOntologies(
 		recoveryDir: join(stagingDir, 'recovery'),
 	});
 	const tlds = manifest.items.map((item) => item.tld);
-	await rederiveUnresolvedModels(tlds, userId);
 	const warnings = [
 		...manifest.warnings,
 		...(await verifyInstalledOntologyReferences(tlds, options.pendingThesauri)),

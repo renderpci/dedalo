@@ -120,12 +120,15 @@ describe('a batch action takes its scope from the request, or refuses', () => {
 		}
 	});
 
-	test('the internal full-section rebuild is opt-in and greppable', () => {
-		// The one legitimate way to mean "the whole section": an INTERNAL caller
-		// declares it. A request that merely omits a parameter must never reach it.
+	test('setRecordsInDdOntology has no whole-section scope at all', () => {
+		// The opt-in `wholeSection` flag is RETIRED (2026-10-21): a whole tld is
+		// ontology_state.rebuildOntology's (transactional, orphan-sweeping, under the
+		// projection lock). The OUTCOME — a retired flag or an absent scope is refused,
+		// nothing counted — is tool_ontology_scope.test.ts; this leg reds the day the
+		// flag comes back as a second whole-tld writer.
 		const write = readFileSync(join(REPO_ROOT, 'src/core/ontology/ontology_write.ts'), 'utf8');
-		expect(write).toContain('wholeSection');
-		expect(write, 'the no-scope path must throw, not default to the whole section').toMatch(
+		expect(write).not.toContain('wholeSection');
+		expect(write, 'the no-scope path must refuse, not default to the whole section').toMatch(
 			/no scope[\s\S]{0,200}/,
 		);
 	});

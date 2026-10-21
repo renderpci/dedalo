@@ -36,3 +36,16 @@ scope from the REQUEST or refuses. An absent scope parameter must never widen in
 Gated by `test/unit/tool_ontology_scope.test.ts` (9 tests, nothing written — every
 case is a refusal or a zero-match resolve, and the dd_ontology row count is asserted
 unchanged in `afterAll`). Mutation-proved: reintroducing the fallback turns it red.
+
+## Amendment, 2026-10-21 — `wholeSection` retired (no wire change)
+
+`SetRecordsTarget.wholeSection` is gone. Its last caller, the installer's own re-derive pass
+after an ontology install (`ontology_install.ts`, upsert-only: no orphan sweep, no transaction,
+no projection lock), was redundant with the shared import layer's model pass
+(`ontology_update.ts` deriveOntologyPackages pass 2, through `ontology_state.rebuildOntology`)
+and is removed. A whole tld is `rebuildOntology`'s alone; `setRecordsInDdOntology` takes one
+id or an explicit id list, and anything else — a stale `wholeSection` included — is the
+no-scope refusal. The handler's request shape is unchanged. Gates:
+`test/unit/tool_ontology_scope.test.ts` (the retired flag is refused, nothing counted),
+`test/unit/install_ontology_door_native.test.ts` (h) (a cross-package model cycle settles in
+the shared layer alone — mutation: pass 2 off → red).

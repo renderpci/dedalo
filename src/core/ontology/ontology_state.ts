@@ -524,6 +524,29 @@ export function nodeDiffColumns(parsed: DdOntologyNode, stored: DdOntologyRow): 
 }
 
 /**
+ * THE MAIN NODE'S PLACE (the root re-hang class, ONT follow-up 2026-10-21). `<tld>0` is not
+ * parsed from a record: it is DERIVED from the tld's registry row, hung under that row's
+ * typology grouper (`ontologytype<hierarchy9>`, 15 = 'others' when the row states none —
+ * settleMainNode / createDdOntologyRootNode, the one rule). A root under any other grouper is
+ * a row that disagrees with what it derives to — `stale`, `['parent']` — and rebuild re-derives
+ * it. Before, the diff only asked whether the root EXISTED: a root re-hung by a second writer
+ * (createParentGrouper re-planted `hierarchytype0` under `ontologytype14` while its row said 2)
+ * read as in sync, and every guard built on inspect (G1h's) was blind to it. A tld with no
+ * registry row is not compared: nothing derives its root (the seed compiler's rows-only pass,
+ * a test situation). Gate: ontology_root_registry_native C1–C4.
+ */
+async function mainNodeParentDrift(
+	tld: string,
+	main: DdOntologyRow | undefined,
+): Promise<OntologyDriftItem[]> {
+	if (main === undefined || main.is_main !== true) return [];
+	const typologyId = await getMainTypologyId(tld);
+	if (typologyId === null) return [];
+	if ((main.parent ?? null) === `${ONTOLOGY_TYPE_TLD}${typologyId}`) return [];
+	return [{ tipo: main.tipo, kind: 'stale', diffColumns: ['parent'] }];
+}
+
+/**
  * The full drift of ONE TLD. Pure read — safe on every render, writes nothing.
  */
 export async function inspectOntology(rawTld: string): Promise<OntologyState> {
@@ -563,6 +586,7 @@ export async function inspectOntology(rawTld: string): Promise<OntologyState> {
 		if (tipo === mainTipo) continue;
 		if (!parsed.has(tipo)) drift.push({ tipo, kind: 'orphaned', diffColumns: [] });
 	}
+	drift.push(...(await mainNodeParentDrift(tld, stored.get(mainTipo))));
 	// Misfiled source records: real drift (the tld cannot be a faithful projection while one
 	// exists) that no writer can clear — only editing the record's ontology7 does.
 	for (const item of foreign) {

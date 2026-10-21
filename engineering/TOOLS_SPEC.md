@@ -421,9 +421,11 @@ than the visible page, and resolves it to explicit ids. An unfiltered list still
 matches the whole section — but EXPLICITLY, and the number the user was shown is the
 number the run touches.
 
-Where a genuine full-section rebuild is required by an INTERNAL caller, it declares
-itself (`setRecordsInDdOntology({wholeSection:true})`) — opt-in and greppable, so no
-request that merely omits a parameter can reach it.
+There is no full-section scope at all: a whole tld is `rebuildOntology`
+(`ontology_state.ts` — id-stable, transactional, orphan-sweeping, under the tld's
+projection lock). `setRecordsInDdOntology` takes one id or an explicit id list, and
+anything else (a retired `wholeSection` flag included) is the no-scope refusal
+(2026-10-21, WC-058 amendment).
 
 ### THE COROLLARY: a tool's throwaway clone addresses NO record
 

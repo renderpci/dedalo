@@ -813,6 +813,10 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **An archive restore no longer plants ontology definitions that the next ontology rebuild would delete**
+
+    An archive carries the ontology definitions of its sections, but not the ontology records they are built from. Restoring it into an installation whose ontology already has records for the same TLD used to add those definitions anyway: the next ontology update (or a rebuild from the ontology parser tool) removed them again, and the restored records were left without their definitions. The restore now refuses this case before writing anything, and names the TLD and the definitions involved. Install or update that ontology so that it defines them, then run the restore again: the definitions are then found unchanged, or the conflict is named. A TLD for which this installation has no ontology records restores as before. The restore also waits for any ontology rebuild of the same TLD that is in progress, instead of writing at the same time. See [The archive door](./core/exporting_data.md#the-archive-door).
+
 - **A backup's verification proof now survives a power cut, and a backup is reported done only once its name is safely on disk.**
 
     When a backup is verified, Dédalo writes a small proof file next to it so the archive is not read in full again. That proof could be lost in a power cut right after the verification, or left half-written by an interrupted write, and the next check then re-read the whole archive. It is now written through the same durable path as every other engine file: complete, synced, and its name synced too. If the disk refuses to make a finished backup's name durable (an I/O error), the backup job now says it failed instead of reporting it done; the backup file itself is kept.
@@ -845,6 +849,10 @@ Merged since the last release; these ship with the next one.
     See [Ontology write pipeline](./core/ontology/ontology_write.md).
 
     Wire contract: `WC-2026-10-21-ontology-record-lifecycle`.
+
+- **The ontology status panel reports a TLD shown under the wrong typology, and the hierarchy typology groups are filed where the master ontology files them**
+
+    In the ontology tree, each TLD hangs under the typology set in its registry record. A TLD placed under a different typology used to be reported as in sync. The ontology status panel now reports it as drift, and **Rebuild** puts it back under the right typology. Separately, the first time a thesaurus is created, Dédalo registers the `hierarchytype` and `hierarchymtype` groups itself, because no ontology update brings them in. It used to file them under *Core*, with generic names. It now uses the typology and names that the master ontology gives them. Installations that registered these groups before this change keep their current placement, which stays consistent and is not reported as drift.
 
 - **An ontology update now removes the nodes a new package no longer carries.**
 

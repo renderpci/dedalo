@@ -105,25 +105,26 @@ describe('setRecordsInDdOntology — no whole-section default', () => {
 		expect(response.total).not.toBe(populatedTotal);
 	});
 
-	test('wholeSection:true is still available to internal rebuild callers', async () => {
-		// The installer re-derives a whole TLD deliberately (until integrator request #1
-		// retires the flag onto ontology_state.rebuildOntology). A GOVERNED scratch section with
-		// no records proves the scope guard lets it past while writing nothing.
-		expect(await scratchSectionRecords()).toBe(0);
+	test('there is no whole-section scope: a retired `wholeSection` flag is UNSCOPED, refused', async () => {
+		// The flag's last caller (the installer's upsert-only re-derive) is retired — a whole tld
+		// is ontology_state.rebuildOntology's. A caller still sending it (stale code, a JS
+		// object built by hand) reaches the no-scope refusal, never the unbounded scan: measured
+		// on the POPULATED section, where a sweep would have counted every record.
 		const response = await setRecordsInDdOntology({
-			sectionTipo: EMPTY_GOVERNED_SECTION,
+			sectionTipo: POPULATED_SECTION,
 			wholeSection: true,
 			userId: -1,
-		});
-		expect(response.ok).toBe(true);
+		} as never);
+		expect(response.ok).toBe(false);
 		expect(response.total).toBe(0);
-		expect(response.errors.join(' ')).not.toMatch(/no scope/i);
+		expect(response.processed_count).toBe(0);
+		expect(response.errors.join(' ')).toMatch(/no scope/i);
 	});
 
 	test('a section no ontology tld governs is refused before any scope work (ONT-2)', async () => {
 		const response = await setRecordsInDdOntology({
 			sectionTipo: 'zzz999',
-			wholeSection: true,
+			sectionIds: [1],
 			userId: -1,
 		});
 		expect(response.ok).toBe(false);
