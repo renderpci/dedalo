@@ -1651,6 +1651,11 @@
 			"skipped": 0,
 			"assertions": 87
 		},
+		"test/unit/export_hierarchy_partial_dump_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 33
+		},
 		"test/unit/export_open_grid_native.test.ts": {
 			"tests": 23,
 			"skipped": 0,
@@ -2685,6 +2690,11 @@
 			"tests": 9,
 			"skipped": 0,
 			"assertions": 31
+		},
+		"test/unit/mcp_find_or_create_race_native.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 7
 		},
 		"test/unit/mcp_media_url_grammar.test.ts": {
 			"tests": 2,
@@ -5365,6 +5375,11 @@
 			"tests": 85,
 			"skipped": 0,
 			"assertions": 495
+		},
+		"test/unit/tool_numisdata_acquisition_commit_native.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 37
 		},
 		"test/unit/tool_numisdata_acquisition_keys.test.ts": {
 			"tests": 12,
