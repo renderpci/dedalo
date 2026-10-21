@@ -105,8 +105,10 @@ describe('hierarchy_meta — the vendored thesaurus manifest reader (§4.1.9)', 
 		const offered = offeredHierarchies();
 		expect(view.hierarchies.length).toBeGreaterThan(0);
 		expect(view.hierarchies).toHaveLength(offered.length);
-		for (const [index, entry] of offered.entries()) {
-			expect(view.hierarchies[index]).toEqual({
+		// the view is ordered by LABEL (reader collation), the manifest by tld: pair by identity
+		const by_tld = new Map(view.hierarchies.map((item) => [item.tld, item]));
+		for (const entry of offered) {
+			expect(by_tld.get(entry.tld)).toEqual({
 				tld: entry.tld,
 				label: expect.any(String),
 				typology: entry.typology_id,
