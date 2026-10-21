@@ -189,6 +189,14 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The "Report a problem" tab only appears for users whose profile grants the error-report tool.**
+
+    An administrator whose profile does not include **Error report** still saw the purple "Report a problem" tab on the right edge; clicking it only answered "The tool is not active or not authorized for your user".
+
+    The server now tells the page whether the tool is granted (no extra request), and the tab shows only then, so it appears exactly for the users who can use it: those whose profile includes the tool, and the superuser. To give an administrator the tab, add **Error report** to their profile's tools.
+
+    Wire contract: `WC-2026-10-21-error-report-granted`.
+
 - **The reference picker of a text area separates the term and its thesaurus part (… | …), instead of gluing them.**
 
     In the reference picker of a text area, a term whose record carries no ancestor chain showed the thesaurus part glued to it (`LatinaAgrupador`). The picker now separates the columns that actually render, so the same entry reads `Latina | Agrupador`, like the rest of the list.
@@ -985,12 +993,13 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 4 entries"
+??? note "Wire contract — 5 entries"
 
     - `WC-2026-10-15-release-identity-from-tag`
     - `WC-2026-10-19-design-line-removed`
     - `WC-2026-10-19-inspector-record-info`
     - `WC-2026-10-20-element-context-default-lang`
+    - `WC-2026-10-21-error-report-granted`
 
 ## 7.0.0-beta.6 — 2026-10-15
 
