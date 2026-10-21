@@ -441,8 +441,32 @@ dd-modal {
 				margin-left: 2.3rem;
 				border-top: 1px @color_grey_13 solid;
 				line-height: 1.7rem;
+				cursor: pointer;
+				// selectable option icon (tag), check icon when selected
+				&::before{
+					content: '';
+					display: inline-block;
+					width: 1.1rem;
+					height: 1.1rem;
+					margin: 0 0.6rem 0 0.3rem;
+					vertical-align: -0.1rem;
+					background-color: @color_grey_7;
+					-webkit-mask-image: url('../../themes/default/icons/tag.svg');
+							mask-image: url('../../themes/default/icons/tag.svg');
+					-webkit-mask-size: contain;
+							mask-size: contain;
+					-webkit-mask-repeat: no-repeat;
+							mask-repeat: no-repeat;
+					-webkit-mask-position: center;
+							mask-position: center;
+				}
 				&.selected_tag{
 					background-color: @color_hilite_2;
+					&::before{
+						background-color: #000000;
+						-webkit-mask-image: url('../../themes/default/icons/check.svg');
+								mask-image: url('../../themes/default/icons/check.svg');
+					}
 				}
 			}
 			.value:hover{
