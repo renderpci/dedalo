@@ -587,21 +587,14 @@ export async function backgroundTranscriberPoll(
 				return saved;
 			},
 		},
-	);
-
-	// The job is over (saved, failed or given up on): drop the temporary audio.
-	// Unconditional on purpose — the one previous cleanup path ran on success
-	// only, which left a copy of the recording on disk after every failure.
-	if (cleanupPath !== '' && existsSync(cleanupPath)) {
-		try {
-			unlinkSync(cleanupPath);
-		} catch (error) {
-			console.error(
-				`[tool_transcription] could not delete the temporary audio ${cleanupPath}:`,
-				error,
-			);
-		}
-	}
+	).finally(() => {
+		// The job is over (saved, failed, given up on — or THROWN: a status
+		// provider, or a save re-gate failing untyped): drop the temporary audio.
+		// On EVERY settle, on purpose: a cleanup placed after the await ran only
+		// when the poll RETURNED, which left a copy of the recording on disk after
+		// every throw (gate: transcription_poll_cleanup_native).
+		dropTemporaryAudio(cleanupPath);
+	});
 
 	// A BACKGROUND job: a refusal here is the job's terminal state (background.ts
 	// records `error` on the job record), not a wire body.
@@ -614,14 +607,26 @@ export async function backgroundTranscriberPoll(
 	return ok(true, { requestId: toolRequestId(ctx) });
 }
 
+/** Delete the job's temporary audio copy, if any (a failure is logged, never thrown). */
+function dropTemporaryAudio(cleanupPath: string): void {
+	if (cleanupPath === '' || !existsSync(cleanupPath)) return;
+	try {
+		unlinkSync(cleanupPath);
+	} catch (error) {
+		console.error(
+			`[tool_transcription] could not delete the temporary audio ${cleanupPath}:`,
+			error,
+		);
+	}
+}
+
 /**
  * The background save's re-gate: the write door on the transcription target,
  * for the principal resolved NOW (not the one captured at enqueue) — and only
  * for a LIVE account: a deactivated (dd131 = No) or deleted user writes nothing
  * even while their profile still grants the pair (`resolveLivePrincipal`).
  * Returns null when authorized, else the refusal sentence the job records — a
- * typed refusal must not escape the poll, or the temporary-audio cleanup after
- * it would be skipped.
+ * typed refusal is the job's terminal state, never an escape from the poll.
  */
 async function authorizeBackgroundSave(
 	userId: number,

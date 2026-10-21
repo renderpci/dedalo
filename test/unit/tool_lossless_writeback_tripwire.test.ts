@@ -720,11 +720,9 @@ else {
 		'tools/tool_update_cache/server/index.ts :: updateCache': {
 			doors: {
 				saveComponentData: {
-					verdict: 'lossless',
-					readVerified: true,
-					sites: 2,
+					verdict: 'new-record',
 					reason:
-						'two calls. (1) The regenerate re-saves, per language group, the items it just READ from the record (readComponentItems → groupItemsByLang → set_data per lang), under the run’s bulkProcessId: the undo log records each BEFORE/AFTER pair, and a canonical no-op writes none (WC-2026-09-27-bulk-revert-undo-log retired the v6 "TM disabled for the sweep"). (2) The dd800 run label on the bulk-process record created in the same transaction. Honest limit: the items are read outside any lock, so a concurrent edit between the read and the re-save is replaced — it is kept in the BEFORE row and the Time Machine.',
+						'one call: the dd800 run label on the bulk-process record created in the same transaction (the regenerate re-save moved to resaveUnderRowLock, its own cell). Nothing stored is replaced.',
 				},
 				transformStoredMediaItems: {
 					verdict: 'derived-state',
@@ -736,6 +734,18 @@ else {
 					verdict: 'new-record',
 					reason:
 						'mints the dd800 bulk-process record of the run (created in the same transaction as its label, before any record is touched). Nothing stored is replaced.',
+				},
+			},
+		},
+
+		'tools/tool_update_cache/server/index.ts :: resaveUnderRowLock': {
+			doors: {
+				saveComponentData: {
+					verdict: 'lossless',
+					lockedRead: true,
+					readVerified: true,
+					reason:
+						'the regenerate re-saves, per language group, the items READ UNDER THE ROW LOCK in the same transaction (readMatrixKeyForUpdate, then readComponentItems on the locked record → groupItemsByLang → set_data per lang), under the run’s bulkProcessId: the undo log records each BEFORE/AFTER pair, and a canonical no-op writes none (WC-2026-09-27-bulk-revert-undo-log). A concurrent edit committed before the lock is what gets re-saved, never the run’s snapshot; a record deleted meanwhile is not recreated; a refused group rolls the whole component back (WC-2026-10-21-update-cache-locked-resave; gate update_cache_locked_resave_native).',
 				},
 			},
 		},

@@ -249,6 +249,19 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-11-export-buffered-cap-and-admission`.
 
+- **Update cache never overwrites an edit saved while it runs**
+
+    *Update cache* regenerates a field by saving its current value again. It used to read each
+    record once, at the start of that record's turn, and save that copy later, possibly
+    minutes later when a media field of the same record was rebuilt first. A change someone
+    saved to the field in between was silently replaced by the old value, and a record deleted
+    in between was brought back. Now each field is read and saved again in one step, with the
+    record locked, so a change saved meanwhile is kept and a deleted record stays deleted. A
+    record that stays locked by someone else is skipped and listed, and a re-save the system
+    refuses is listed instead of being counted as done.
+
+    Wire contract: `WC-2026-10-21-update-cache-locked-resave`.
+
 - **Translatable fields in tool forms show the value in your data language, not always in Spanish**
 
     Some forms build their fields by asking the server for each field's definition — the
@@ -936,6 +949,17 @@ Merged since the last release; these ship with the next one.
       Linux host could plant that file and add SQL to what the installer ran. The dump now
       goes to a fresh private directory.
 
+- **Interrupted exports and transcriptions no longer leave temporary files behind**
+
+    A thesaurus export stopped mid-dump (the server killed or restarted) left a
+    `<tipo>.copy.gz.tmp-…` or `hierarchy.json.tmp-…` file in `install/import/hierarchy`
+    for good. The next export now removes such leftovers once they are more than six hours
+    old; a newer one, which may belong to an export still running, is kept. Building
+    `hierarchy.json` also checks each data file in one streamed pass instead of reading
+    whole dumps into memory. A background transcription that failed with an unexpected
+    error kept its temporary copy of the recording on disk; the copy is now removed however
+    the job ends.
+
 - **Deleting or restoring an ontology record now removes or restores its runtime node.**
 
     Deleting an ontology record (or emptying its data) left its node in the runtime ontology, still
@@ -1050,6 +1074,17 @@ Merged since the last release; these ship with the next one.
 ### For developers
 
 #### Changed
+
+- **"Build database version: the install-seed build's answer and panel values are documented"**
+
+    *Maintenance → Build database version → Build install version* compiles the install seed
+    from the repository's own sources (since 7.0.0-beta.6). Its answer (the step readout and file size on success; a `maintenance.action_failed`
+    error carrying the same readout on a refusal) and the panel's three values (now the seed
+    sources, the scratch database pattern and the seed file, never the installation's database
+    name) are now recorded in the wire contract, for anyone scripting against the maintenance
+    API.
+
+    Wire contract: `WC-2026-10-09-build-install-version-owned-mode`.
 
 - **A developer install gets its own unix socket, named after its entity, and is refused while another server holds it.**
 
@@ -1216,8 +1251,9 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 9 entries"
+??? note "Wire contract — 11 entries"
 
+    - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
     - `WC-2026-10-19-design-line-removed`
     - `WC-2026-10-19-inspector-record-info`
@@ -1227,6 +1263,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-21-ontology-record-lifecycle`
     - `WC-2026-10-21-ontology-update-rebuild`
     - `WC-2026-10-21-unpublish-markers-durable`
+    - `WC-2026-10-21-update-cache-locked-resave`
 
 ## 7.0.0-beta.6 — 2026-10-15
 

@@ -16,15 +16,16 @@
  * "define the constant" dead-end instead of the export form.
  */
 
-import { createReadStream, existsSync, statSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { createReadStream, existsSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { rename, rm } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Readable } from 'node:stream';
+import type { Readable } from 'node:stream';
 import { createGunzip } from 'node:zlib';
 import { MATRIX_COPY_COLUMNS } from '../../db/matrix_write.ts';
 import { sql } from '../../db/postgres.ts';
 import { fsyncDirectory, writeFileDurably } from '../../files/durable.ts';
-import { tempPathFor } from '../../files/temp_path.ts';
+import { isTempSibling, tempPathFor } from '../../files/temp_path.ts';
 import { isCoreHierarchyTld } from '../../install/hierarchy_meta.ts';
 import { HIERARCHY_IMPORT_DIR } from '../../install/paths.ts';
 import { connFromConfig, type DbConnDescriptor, runPsql } from '../../install/pg_exec.ts';
@@ -34,7 +35,6 @@ import {
 	type HierarchyManifest,
 	hierarchyDataFileNames,
 	serializeHierarchyManifest,
-	sha256Hex,
 } from '../../ontology/hierarchy_manifest_format.ts';
 import { HIERARCHY_MAIN_SECTION } from '../../ontology/ontology_tipos.ts';
 import { composeContains, locatorJsonVariants } from '../../search/containment.ts';
@@ -445,8 +445,12 @@ async function planEntries(
  */
 async function gzipRowCount(source: Readable): Promise<number | null> {
 	let rows = 0;
+	const gunzip = createGunzip();
+	// pipe() does not forward a SOURCE error: unforwarded, a file that vanished
+	// (or cannot be read) would leave this loop waiting on a stream that never ends.
+	source.on('error', (error) => gunzip.destroy(error));
 	try {
-		for await (const chunk of source.pipe(createGunzip())) {
+		for await (const chunk of source.pipe(gunzip)) {
 			for (const byte of chunk as Buffer) if (byte === 0x0a) rows++;
 		}
 		return rows;
@@ -487,6 +491,60 @@ async function rowCountRefusal(stdout: string, partFile: string): Promise<string
 	if (rows === null) return 'the gzip stream is incomplete';
 	if (rows !== Number(reported)) return `the file holds ${rows} rows, psql copied ${reported}`;
 	return null;
+}
+
+/**
+ * How old (by mtime) a temp sibling must be before an export may sweep it. A
+ * temp still being written is touched by every gzip write; one untouched this
+ * long belongs to an export that DIED mid-write (a killed process never reaches
+ * exportOne's `finally`). Generous on purpose: a concurrent export's live temp
+ * must never be taken for a leftover.
+ */
+const STALE_TEMP_MS = 6 * 3600 * 1000;
+
+/**
+ * Sweep the temp siblings a DEAD export left in `outDir` — only of the names an
+ * export writes (`<tipo>.copy.gz`, hierarchy.json) and only when stale
+ * (STALE_TEMP_MS). The directory is the vendored, tracked
+ * `install/import/hierarchy`: a leftover there is junk an operator may commit.
+ * Best-effort: a sweep failure never fails the export it precedes.
+ */
+function sweepStaleExportTemps(outDir: string, now: number = Date.now()): void {
+	let names: string[];
+	try {
+		names = readdirSync(outDir);
+	} catch {
+		return;
+	}
+	for (const name of names) {
+		const path = join(outDir, name);
+		if (isExportTemp(name) && isStaleFile(path, now)) removeQuietly(path);
+	}
+}
+
+/** A temp sibling (tempPathFor) of a file an export writes: `<tipo>.copy.gz` or hierarchy.json. */
+function isExportTemp(name: string): boolean {
+	if (!isTempSibling(name)) return false;
+	const finalName = name.replace(/\.tmp-[a-z0-9]+$/, '');
+	return finalName.endsWith('.copy.gz') || finalName === HIERARCHY_MANIFEST_FILE;
+}
+
+/** Untouched for STALE_TEMP_MS (false when it cannot be stat'ed — gone meanwhile). */
+function isStaleFile(path: string, now: number): boolean {
+	try {
+		return now - statSync(path).mtimeMs >= STALE_TEMP_MS;
+	} catch {
+		return false;
+	}
+}
+
+/** Remove a leftover; a failure is logged, never the export's failure. */
+function removeQuietly(path: string): void {
+	try {
+		rmSync(path, { force: true });
+	} catch (error) {
+		console.error(`[export_hierarchy] could not remove the stale temp ${path}:`, error);
+	}
 }
 
 /**
@@ -592,6 +650,7 @@ export async function exportHierarchy(
 	const { conn, outDir, psql } = resolveExportDeps(deps);
 	const refusal = exportDirRefusal(outDir);
 	if (refusal !== null) return exportResponse([], [refusal]);
+	sweepStaleExportTemps(outDir);
 
 	const { entries, errors } = await planEntries(parseExportScope(options.section_tipo));
 
@@ -679,19 +738,34 @@ async function uncertifiableDataFiles(
 	const lines: string[] = [];
 	for (const entry of manifest.active_hierarchies) {
 		for (const dataFile of entry.data_files) {
-			const bytes = new Uint8Array(await Bun.file(join(outDir, dataFile.file)).arrayBuffer());
-			if (sha256Hex(bytes) !== dataFile.sha256) {
-				lines.push(
-					`${dataFile.file} changed while ${HIERARCHY_MANIFEST_FILE} was built — export it again`,
-				);
-			} else if ((await gzipRowCount(Readable.from([bytes]))) === null) {
+			const read = await digestAndCompleteness(join(outDir, dataFile.file));
+			// Completeness first: a stream gunzip refused stops the read early, so its
+			// digest covers only a prefix and cannot be compared.
+			if (!read.complete) {
 				lines.push(
 					`${dataFile.file} is not a complete gzip stream — export ${dataFile.file.replace('.copy.gz', '')} again`,
+				);
+			} else if (read.sha256 !== dataFile.sha256) {
+				lines.push(
+					`${dataFile.file} changed while ${HIERARCHY_MANIFEST_FILE} was built — export it again`,
 				);
 			}
 		}
 	}
 	return lines;
+}
+
+/**
+ * ONE streamed pass over a data file: its sha256 and whether it is one
+ * complete gzip stream — never the whole dump in memory (a toponymy thesaurus
+ * dump is large, and the manifest certifies every one of them in a row).
+ */
+async function digestAndCompleteness(path: string): Promise<{ sha256: string; complete: boolean }> {
+	const hash = createHash('sha256');
+	const source = createReadStream(path);
+	source.on('data', (chunk) => hash.update(chunk as Buffer));
+	const rows = await gzipRowCount(source);
+	return { sha256: hash.digest('hex'), complete: rows !== null };
 }
 
 /**
@@ -707,6 +781,7 @@ export async function exportHierarchyJson(deps: ExportHierarchyDeps = {}): Promi
 	const { outDir, now } = resolveExportDeps(deps);
 	const refusal = exportDirRefusal(outDir);
 	if (refusal !== null) return manifestResponse(null, [refusal]);
+	sweepStaleExportTemps(outDir);
 	const { manifest, errors } = await buildHierarchyManifest({ dataDir: outDir, now });
 	const uncertifiable = await uncertifiableDataFiles(manifest, outDir);
 	if (uncertifiable.length > 0) return manifestResponse(null, [...errors, ...uncertifiable]);

@@ -35,6 +35,7 @@ import {
 } from '../../../src/core/media/tools/files_info_persist.ts';
 import { labelByTipo } from '../../../src/core/ontology/labels.ts';
 import { getColumnNameByModel, getModelByTipo } from '../../../src/core/ontology/resolver.ts';
+import { getTldFromTipo } from '../../../src/core/ontology/tld.ts';
 import { currentDataLang } from '../../../src/core/resolve/request_lang.ts';
 import { buildSearchSql } from '../../../src/core/search/sql_assembler.ts';
 import { createSectionRecord } from '../../../src/core/section/record/create_record.ts';
@@ -184,12 +185,28 @@ function harvestDeps(): HarvestDeps | undefined {
  * Run `work` with this tool rebound to `seam` — TEST ISOLATION ONLY: the write
  * gate (test/unit/tool_numisdata_acquisition_commit_native.test.ts) drives
  * commit_lots against a scratch `zz*` situation and a scripted image site.
+ *
+ * SCRATCH-ONLY: every rebound target must be the shipped tipo or sit under a
+ * `zz` scratch TLD, else the seam REFUSES before `work` runs (internal.invariant;
+ * ai_spend's seamLedger/seamLimits twin). The dd128 write census's `not-dd128`
+ * verdict rests on the targets being module constants: a seam that could name
+ * any section would be a second, unbounded way to address a write.
+ * Gate: numisdata_acquisition_seam_scope_native.
  */
-export function withAcquisitionSeamForTests<R>(
+export async function withAcquisitionSeamForTests<R>(
 	seam: AcquisitionSeam,
 	work: () => Promise<R>,
 ): Promise<R> {
-	return acquisitionSeam.run(seam, work);
+	const shipped: Readonly<Record<string, string>> = { ...NUMISDATA_ACQUISITION_TARGETS };
+	for (const [field, tipo] of Object.entries(seam.targets)) {
+		if (tipo === shipped[field]) continue;
+		if (getTldFromTipo(tipo)?.startsWith('zz') === true) continue;
+		throw new DedaloError('internal.invariant', {
+			message: `tool_numisdata_acquisition: the test seam may only name zz scratch tipos ('${field}' = '${tipo}')`,
+			coordinates: { field, tipo },
+		});
+	}
+	return await acquisitionSeam.run(seam, work);
 }
 
 const IMPORT_KEY_DIR = 'numisdata_acquisition';
