@@ -3,8 +3,8 @@
 	"engine_version": "7.0.0",
 	"seed": {
 		"file": "install/db/dedalo_install.pgsql.gz",
-		"bytes": 1822973,
-		"sha256": "1f08b910188b006830f588a17d5d7fb9442e519cc2928752dd032e56257662a5",
+		"bytes": 1822977,
+		"sha256": "35398d27d133bd08963b6f60117de48828aa2cab726ce7ff99d6d226c9bfe9cf",
 		"content_sha256": "73fde4fe5f012198c00a92711bdd13beecb069230761636d86ad258eaec12552",
 		"pg_dump_version": "18.4 (Homebrew)"
 	},
@@ -36,7 +36,7 @@
 		"install/import/ontology/7.0/ontologytype.copy.gz": "1d395531a5d215b32ac0980157a28ed750da09a6afe360395a8d9307e0ec5be6",
 		"install/import/ontology/7.0/rsc.copy.gz": "fb8947ac751f0495c0499a61dac37a55225477959bc42fbdcbbf93974536f0b3",
 		"scripts/seed_build_child.ts": "97e9caa5785d2fca86fd692fa468800d1f63c4b22b39798496d1705142471513",
-		"src/core/install/seed_build.ts": "26bed12b7be087b8f482fec8ab1b8df081cf02282bfbe3e44eb741fc0beed47d",
+		"src/core/install/seed_build.ts": "1417f98ef06309cc18937bdcf0fd5ed164c8ed0bc0f4f6d3b6b591e2b1e7e9d1",
 		"src/core/install/seed_sources.ts": "82dba447d36a6aad67cb5598dd073717e53d28a764d339cc3dc22e15750374aa"
 	},
 	"rules_digest": "73f6bf38eb1287a68306fb043e66a920f139e429e56c9a55c0bcd975e0fa87ee",

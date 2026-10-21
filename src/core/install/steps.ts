@@ -29,9 +29,11 @@
  * step module).
  */
 
-import { copyFileSync, existsSync, readdirSync, renameSync, rmdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmdirSync, rmSync } from 'node:fs';
 import { basename, join, sep as pathSep, resolve as resolvePath } from 'node:path';
 import { projectRoot } from '../../config/env.ts';
+import { writeFileDurably } from '../files/durable.ts';
+import { isTempSibling } from '../files/temp_path.ts';
 import type { ServerState } from '../resolve/server_state.ts';
 import { devTrustReviewText } from './dev_certificate.ts';
 import { authorityFile } from './host/tls_authority.ts';
@@ -240,7 +242,7 @@ async function removeCreatedRuntimeFiles(state: InstallState): Promise<string> {
 const RUNTIME_FILE_IDS: readonly string[] = Object.freeze(['ts_state_path', 'session_db_path']);
 
 /**
- * Put the pre-install .env back (atomically: copy + rename), or remove the one
+ * Put the pre-install .env back (atomically and durably), or remove the one
  * the install wrote when there was none. The original's backup is the recorded
  * one, else the `.env.bak.*` whose content hash the preflight recorded (a crash
  * before the checkpoint recorded nothing).
@@ -256,10 +258,19 @@ function restorePreInstallEnv(state: InstallState): string {
 		state.created.env_backup ??
 		envBackups().find((name) => sha256Of(join(dir, name)) === state.preflight.env_sha256);
 	if (backup === undefined) return 'pre-install .env backup not found — .env left as is';
-	const tmp = `${envPath}.tmp.${process.pid}`;
-	copyFileSync(join(dir, backup), tmp);
-	renameSync(tmp, envPath);
+	// The durability kernel's door, like persist_config's own write: the
+	// restored .env survives a power cut, and a failure leaves no staged copy.
+	writeFileDurably(envPath, readFileSync(join(dir, backup)), { mode: 0o600 });
 	return 'restored the pre-install .env';
+}
+
+/**
+ * A staged copy of the secrets a killed persist run can leave: the durable
+ * door's temp sibling of `.env` or of a `.env.bak.*` (`<name>.tmp-<base36>`,
+ * core/files/temp_path.ts), or the pre-2026-10-21 `.env.tmp.<pid>`.
+ */
+function isStagedEnvCopy(name: string): boolean {
+	return name.startsWith('.env.tmp.') || (name.startsWith('.env') && isTempSibling(name));
 }
 
 /** Remove the secret copies the install's persist runs left (backups, staged tmps, its sample.env). */
@@ -267,7 +278,7 @@ function removeInstallEnvCopies(state: InstallState): number {
 	const dir = installPrivateDir();
 	const backups = installCreatedBackups(state);
 	for (const backup of backups) rmSync(join(dir, backup), { force: true });
-	for (const name of readdirSync(dir).filter((item) => item.startsWith('.env.tmp.'))) {
+	for (const name of readdirSync(dir).filter(isStagedEnvCopy)) {
 		rmSync(join(dir, name), { force: true });
 	}
 	if (state.created.sample_env && !state.preflight.sample_env_existed) {

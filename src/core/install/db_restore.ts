@@ -38,7 +38,7 @@
  * is therefore never adopted and never wiped.
  */
 
-import { readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -172,25 +172,35 @@ export async function restoreSeed(
 	stampInstallId?: string,
 ): Promise<void> {
 	// Decompress the seed to a temp .sql and restore with `psql -f` — far more
-	// robust than streaming ~14 MB through stdin (backpressure/EPIPE). The temp
-	// file is always removed.
-	const tmpSql = join(tmpdir(), `dedalo_seed_${process.pid}_${Date.now()}.sql`);
+	// robust than streaming ~14 MB through stdin (backpressure/EPIPE).
+	//
+	// psql EXECUTES this file as the install's role, so it lives where nobody
+	// else can reach it (cross-ops:r0, 2026-10-21): a fresh mkdtemp directory
+	// (0700, unguessable name), the file created EXCLUSIVELY in it ('wx' — never
+	// following or truncating an entry that is already there). It used to be
+	// `<tmpdir>/dedalo_seed_<pid>_<ms>.sql`, opened O_CREAT|O_TRUNC: a local user
+	// who planted that name got the seed written THROUGH their file or symlink,
+	// and could append SQL before psql ran it. The directory is always removed.
+	// Gate: test/unit/seed_restore_temp_confinement_native.test.ts.
 	const stamp = stampInstallId === undefined ? '' : installStampSql(stampInstallId);
+	let scratch: string | null = null;
 	try {
-		writeFileSync(
-			tmpSql,
-			Buffer.concat([gunzipSync(readFileSync(seedPath)), Buffer.from(stamp, 'utf8')]),
-			{ mode: 0o600 },
-		);
-	} catch (error) {
-		rmSync(tmpSql, { force: true });
-		refuseInstall(
-			'install.step_failed',
-			`Cannot read/decompress seed: ${(error as Error).message}`,
-			error,
-		);
-	}
-	try {
+		let tmpSql: string;
+		try {
+			scratch = mkdtempSync(join(tmpdir(), 'dedalo_seed_'));
+			tmpSql = join(scratch, 'seed.sql');
+			writeFileSync(
+				tmpSql,
+				Buffer.concat([gunzipSync(readFileSync(seedPath)), Buffer.from(stamp, 'utf8')]),
+				{ mode: 0o600, flag: 'wx' },
+			);
+		} catch (error) {
+			refuseInstall(
+				'install.step_failed',
+				`Cannot read/decompress seed: ${(error as Error).message}`,
+				error,
+			);
+		}
 		const restore = await runPsql(
 			connection,
 			['-v', 'ON_ERROR_STOP=1', '--single-transaction', '--quiet', '-f', tmpSql],
@@ -203,7 +213,7 @@ export async function restoreSeed(
 			);
 		}
 	} finally {
-		rmSync(tmpSql, { force: true });
+		if (scratch !== null) rmSync(scratch, { recursive: true, force: true });
 	}
 }
 

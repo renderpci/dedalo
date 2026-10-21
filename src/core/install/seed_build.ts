@@ -49,6 +49,7 @@ import { envSnapshot, privateFileValue, projectRoot } from '../../config/env.ts'
 import { SEARCH_STORE_BACKFILLS } from '../db/db_assets.ts';
 import definitions from '../db/db_pg_definitions.json';
 import { DD_ONTOLOGY_TLDS_SQL } from '../db/dd_ontology.ts';
+import { encodeForJsonb } from '../db/json_codec.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
 import { DedaloError, isDedaloError } from '../errors/index.ts';
 import { copySanityCheck, gunzipWithCaps } from '../ontology/data_io_import.ts';
@@ -224,10 +225,18 @@ async function psqlColumn(
 	return out === '' ? [] : out.split('\n');
 }
 
-/** `$seed$…$seed$::jsonb` — psql never interpolates inside a dollar-quoted literal. */
-function jsonbLiteral(value: unknown): string {
+/**
+ * `$seed$…$seed$::jsonb` — psql never interpolates inside a dollar-quoted
+ * literal. An absent column (undefined) is SQL NULL; every present value goes
+ * through THE matrix JSONB serializer (db/json_codec.ts encodeForJsonb), so a
+ * value JSON cannot carry faithfully (an undefined key or array slot, NaN,
+ * Infinity, a bigint) refuses the compile instead of shipping a silently
+ * altered record in every install's seed (cross-ops:r0 S3, 2026-10-21; gate:
+ * test/unit/seed_jsonb_literal_native.test.ts).
+ */
+export function jsonbLiteral(value: unknown): string {
 	if (value === undefined) return 'NULL';
-	const json = JSON.stringify(value);
+	const json = encodeForJsonb(value);
 	if (json.includes('$seed$')) fail('a seed value carries the $seed$ delimiter');
 	return `$seed$${json}$seed$::jsonb`;
 }

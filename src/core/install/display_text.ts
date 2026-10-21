@@ -7,7 +7,8 @@
  *
  * sanitizeLine is COPIED, NOT IMPORTED, from
  * publication/host_agent/src/provision/init/report.ts (the agent is a separate
- * deployable and never imports the engine, nor the engine the agent). EVERY
+ * deployable and never imports the engine, nor the engine the agent) — held
+ * equal by outcome in test/unit/install_sanitizer_twin_native.test.ts. EVERY
  * untrusted string a front end draws passes here: a catalog name from an
  * ontology server, a probe message, an engine log line, an error text.
  */

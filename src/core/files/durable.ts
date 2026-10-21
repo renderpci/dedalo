@@ -27,7 +27,11 @@
  * atomic JSON state-file kernel (src/core/files/atomic_json.ts) and the backup
  * module (src/core/area_maintenance/backup.ts: its promotions' directory
  * fsyncs and its `.verified` proof sidecars — it kept private copies of these
- * helpers until 2026-10-21, one of which never fsynced the directory).
+ * helpers until 2026-10-21, one of which never fsynced the directory), the
+ * installer's `.env` writer and its `--abort` restore
+ * (src/core/install/config_persist.ts, steps.ts), and — through
+ * directoryFsyncUnsupported only, its own I/O being async — the boot's client
+ * publisher (src/core/install/client_publish.ts).
  *
  * THE ONE DOOR. On a module the server reaches, a descriptor write or flush
  * (`writeSync`/`fsyncSync`/…) is in the sync-I/O gate's forbidden class
@@ -52,17 +56,28 @@ const DIRECTORY_FSYNC_UNSUPPORTED: ReadonlySet<string> = new Set([
 	'EOPNOTSUPP',
 ]);
 
+/**
+ * True when `error` is a filesystem refusing a DIRECTORY fsync (it has no such
+ * guarantee to give). Logs the loud line; the caller swallows it. Exported for
+ * the one async writer (core/install/client_publish.ts, whose boot step must
+ * not block the event loop) so the two doors share ONE definition of "unsupported".
+ */
+export function directoryFsyncUnsupported(dir: string, error: unknown): boolean {
+	const code = (error as { code?: unknown } | null)?.code;
+	if (typeof code !== 'string' || !DIRECTORY_FSYNC_UNSUPPORTED.has(code)) return false;
+	console.warn(
+		`[durable] the filesystem of '${dir}' refuses a directory fsync (${code}) — renames and unlinks in it are not power-cut durable`,
+	);
+	return true;
+}
+
 /** fsync a DIRECTORY: the entries created, renamed or unlinked in it survive a power cut. */
 export function fsyncDirectory(dir: string): void {
 	const fd = openSync(dir, 'r');
 	try {
 		fsyncSync(fd);
 	} catch (error) {
-		const code = (error as { code?: unknown } | null)?.code;
-		if (typeof code !== 'string' || !DIRECTORY_FSYNC_UNSUPPORTED.has(code)) throw error;
-		console.warn(
-			`[durable] the filesystem of '${dir}' refuses a directory fsync (${code}) — renames and unlinks in it are not power-cut durable`,
-		);
+		if (!directoryFsyncUnsupported(dir, error)) throw error;
 	} finally {
 		closeSync(fd);
 	}
@@ -147,7 +162,21 @@ export class DirectoryBarrier {
  * at `barrier`'s flush. Nothing created ⇒ nothing to sync.
  */
 export function mkdirDurably(dir: string, barrier?: DirectoryBarrier): void {
-	const first = mkdirSync(dir, { recursive: true });
+	syncCreatedLevels(dir, mkdirSync(dir, { recursive: true }), barrier);
+}
+
+/**
+ * The durability half of mkdirDurably, for a caller that makes its OWN
+ * `mkdirSync(dir, { recursive: true, … })` (a deliberate mode it states where
+ * the directory-mode census reads it — core/install/config_persist.ts's 0700
+ * private dir): `first` is what that call returned, the first level it
+ * created (undefined: nothing was created, nothing to sync).
+ */
+export function syncCreatedLevels(
+	dir: string,
+	first: string | undefined,
+	barrier?: DirectoryBarrier,
+): void {
 	if (first === undefined) return;
 	const stop = dirname(resolve(first));
 	for (

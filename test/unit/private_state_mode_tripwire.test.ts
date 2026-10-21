@@ -105,12 +105,12 @@ describe('private state is not world-writable, and /tmp is not raced', () => {
 	});
 
 	test('the .env write sets its mode on the TARGET', () => {
-		// OPS-14 residual: the rewrite path carries .tmp's 0600 through the rename,
+		// OPS-14 residual: the durable write creates its temp 0600 and carries it through the rename,
 		// but an install predating that change keeps whatever mode its .env was
 		// created with until something re-chmods it. This file holds the database
 		// password and the session secret.
 		const persist = read('src/core/install/config_persist.ts');
-		const commit = persist.slice(persist.indexOf('renameSync(tmp, target)'));
+		const commit = persist.slice(persist.indexOf('writeFileDurably(target, body'));
 		expect(commit.slice(0, 600)).toMatch(/chmodSync\(target, 0o600\)/);
 	});
 
@@ -120,6 +120,6 @@ describe('private state is not world-writable, and /tmp is not raced', () => {
 		expect(read('Dockerfile')).toContain('ENTRYPOINT');
 		expect(read('install.sh')).toContain('prepare_cache "$CACHE"');
 		expect(read('src/server.ts')).toContain('unix: socketPath');
-		expect(read('src/core/install/config_persist.ts')).toContain('renameSync(tmp, target)');
+		expect(read('src/core/install/config_persist.ts')).toContain('writeFileDurably(target, body');
 	});
 });

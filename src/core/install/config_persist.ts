@@ -2,23 +2,16 @@
  * persist_config (PHP installer_setup_manager / installer_config_persistor), the
  * terminal installer's `.env` writer (core/install/step_runs.ts). Writes
  * ../private/.env with the catalog's canonical key names (DB_NAME, ENTITY, … —
- * never a PHP_KEY_ALIASES fallback spelling; install_plan.ts) via an atomic
- * two-phase commit, records the install state (`terminal_installing`), and
+ * never a PHP_KEY_ALIASES fallback spelling; install_plan.ts) via an atomic,
+ * power-cut-durable two-phase commit, records the install state (`terminal_installing`), and
  * generates the secrets.
  */
 
-import {
-	chmodSync,
-	copyFileSync,
-	existsSync,
-	mkdirSync,
-	readFileSync,
-	renameSync,
-	writeFileSync,
-} from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { PHP_KEY_ALIASES } from '../../config/env.ts';
 import { DedaloError } from '../errors/index.ts';
+import { DirectoryBarrier, syncCreatedLevels, writeFileDurably } from '../files/durable.ts';
 import { setServerState } from '../resolve/server_state.ts';
 import { buildInstallPlan } from './install_plan.ts';
 import { resolvePlanCatalog } from './ontology_catalog.ts';
@@ -237,28 +230,35 @@ export async function persistConfig(
 
 	const body = `${lines.join('\n')}\n`;
 
-	// Atomic two-phase commit: private dir 0700, stage .tmp (0600), back up an
-	// existing .env BY COPY, then rename the staged file OVER it. The target is
-	// never absent (2026-10-11): the old order renamed the live .env away first,
-	// so a crash between the two renames left no .env at all — a resumable
-	// terminal install must find either the old file or the new one.
+	// Atomic AND DURABLE (cross-ops:r0, 2026-10-21), through the durability
+	// kernel (core/files/durable.ts): private dir 0700 (its new levels' entries
+	// fsynced), the existing .env backed up BY COPY (its own temp + fsync), then
+	// the new body written to a 'wx' temp sibling, fsynced, renamed OVER .env,
+	// and the directory fsynced once for both names. The target is never absent
+	// (2026-10-11: a resumable install finds either the old file or the new one),
+	// and now that holds across a POWER CUT too, not only a process kill: the
+	// executor checkpoints this step through an fsynced state file, so the .env
+	// it vouches for — the only home of the generated salt and the database
+	// password — must be on disk before this returns. A failed write removes its
+	// own temp: no staged copy of the secrets is left behind.
+	// Gate: test/unit/install_persist_config_durability.test.ts.
 	try {
 		const dir = installPrivateDir();
-		mkdirSync(dir, { recursive: true, mode: 0o700 });
+		syncCreatedLevels(dir, mkdirSync(dir, { recursive: true, mode: 0o700 }));
 		const target = join(dir, '.env');
-		const tmp = join(dir, `.env.tmp.${process.pid}`);
-		writeFileSync(tmp, body, { mode: 0o600 });
-		chmodSync(tmp, 0o600);
+		const barrier = new DirectoryBarrier();
 		if (existsSync(target)) {
-			const backup = join(dir, `.env.bak.${Date.now()}`);
-			copyFileSync(target, backup);
-			chmodSync(backup, 0o600);
+			writeFileDurably(join(dir, `.env.bak.${Date.now()}`), readFileSync(target), {
+				mode: 0o600,
+				barrier,
+			});
 		}
-		renameSync(tmp, target);
+		writeFileDurably(target, body, { mode: 0o600, barrier });
+		barrier.flush();
 		// EXPLICIT ON THE TARGET, not inherited from the staged file (P2-15 /
-		// OPS-14). The rename carries .tmp's 0600 today, so this is belt and
-		// braces for THIS path — but it is also the one line that repairs an
-		// install predating the 0600 change, whose .env keeps whatever mode it was
+		// OPS-14). The temp is created 0600 today, so this is belt and braces for
+		// THIS path — but it is also the one line that repairs an install
+		// predating the 0600 change, whose .env keeps whatever mode it was
 		// created with until something re-chmods it. This file holds the database
 		// password and the session secret.
 		chmodSync(target, 0o600);
@@ -282,17 +282,15 @@ export async function persistConfig(
 	//                     by config_docs_tripwire. Rendering here would drag the catalog
 	//                     into the install path and give a render bug a way to touch an
 	//                     install.
-	//   tmp + rename    — same atomicity as the .env: a half-written census is impossible.
+	//   durable write   — the .env's door (temp + fsync + rename + dir fsync): a
+	//                     half-written census is impossible.
 	//   FAIL-SOFT       — a missing or unreadable template must NEVER block an install.
 	//                     This is the one place we deliberately swallow an error, so it is
 	//                     stated rather than left as a bare catch.
 	try {
-		const dir = installPrivateDir();
-		const target = join(dir, 'sample.env');
-		const tmp = join(dir, `sample.env.tmp.${process.pid}`);
-		copyFileSync(SAMPLE_ENV_PATH, tmp);
-		chmodSync(tmp, 0o644);
-		renameSync(tmp, target);
+		const target = join(installPrivateDir(), 'sample.env');
+		writeFileDurably(target, readFileSync(SAMPLE_ENV_PATH), { mode: 0o644 });
+		chmodSync(target, 0o644); // explicit: the umask must not decide it
 	} catch (error) {
 		console.warn(`[install] sample.env census not written: ${(error as Error).message}`);
 	}
