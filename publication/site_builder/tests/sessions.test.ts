@@ -10,6 +10,7 @@ import { sessionEventStream } from '../src/sessions/sse';
 import { readMeta, listSessions, replayEvents } from '../src/sessions/store';
 import { startBuild, getBuild } from '../src/build/builder';
 import { readManifest, writeManifest } from '../src/sites/manifest';
+import { holdsReservation } from '../src/workspace_activity';
 import type { AgentDriver, AgentEvent, AgentProcess, SessionStartOptions } from '../src/drivers/types';
 import type { StoredEvent } from '../src/sessions/events';
 import { config } from '../src/config';
@@ -303,11 +304,14 @@ describe('workspace mutual exclusion (turns vs builds)', () => {
     const { build_id } = await startBuild('excl-b');
     await expect(startSession('excl-b', 'while building')).rejects.toThrow(/build is running/);
 
-    // Once the build settles the reservation is released and a session may start.
+    // Once the build settles the reservation is released and a session may start. Wait for
+    // BOTH: the terminal record is persisted before startBuild's `.finally` releases the
+    // reservation, so a settled record alone raced the release (red under a loaded runner,
+    // 2026-10-21 — the hermetic tier runs this package beside the parallel tripwires).
     const start = Date.now();
     for (;;) {
       const record = await getBuild('excl-b', build_id);
-      if (record && record.outcome !== 'running') break;
+      if (record && record.outcome !== 'running' && !holdsReservation('excl-b')) break;
       if (Date.now() - start > 8000) throw new Error('build never settled');
       await new Promise(r => setTimeout(r, 25));
     }

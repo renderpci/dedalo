@@ -377,6 +377,10 @@ jobs:
         if: steps.fetch.outputs.state == 'ran'
         env:
           SHA: ${{ steps.fetch.outputs.sha }}
+          # The push gate runs the hermetic tripwires in parallel workers; the night runs
+          # them in ONE serial process, so a coupling the serial lane missed surfaces as
+          # a parallel-green push vs a serial-red night on the same sha (hermetic.sh).
+          DEDALO_HERMETIC_SERIAL: '1'
         run: |
           summary="$RUNNER_TEMP/full_gate.json"
           # The rc is CARRIED, not swallowed: written below, and the next step exits with it.

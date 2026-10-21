@@ -1881,6 +1881,11 @@
 			"skipped": 0,
 			"assertions": 15
 		},
+		"test/unit/hermetic_parallel_safety_tripwire.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 20
+		},
 		"test/unit/hierarchy_census_native.test.ts": {
 			"tests": 13,
 			"skipped": 0,

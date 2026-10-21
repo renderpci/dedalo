@@ -56,6 +56,7 @@ import {
 	existsSync,
 	lstatSync,
 	mkdirSync,
+	mkdtempSync,
 	readdirSync,
 	readFileSync,
 	readlinkSync,
@@ -65,6 +66,7 @@ import {
 	utimesSync,
 	writeFileSync,
 } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { EXIT, OPTIONAL_FLAGS, VERBS } from '../../publication/site_builder/src/provision/cli.ts';
 import { derive } from '../../publication/site_builder/src/provision/layout.ts';
@@ -1082,8 +1084,7 @@ describe('the site-builder backup script actually copies what it claims to', () 
 		join(dest, 'museum-t', 'webspaces', webspace.replace(/^\//, ''));
 
 	test('it copies the markers, both release stores and the served symlink AS a symlink', () => {
-		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-backup');
-		rmSync(root, { recursive: true, force: true });
+		const root = mkdtempSync(join(tmpdir(), 'dedalo-opcmd-backup-'));
 		try {
 			const { configDir, dest } = buildHost(root);
 			const run = spawnSync('sh', [SCRIPT, dest, configDir], { encoding: 'utf8' });
@@ -1119,8 +1120,7 @@ describe('the site-builder backup script actually copies what it claims to', () 
 		// `webspaces/$(basename …)`, so both landed on one path: rsync copied the first and
 		// then copied the second over it — one museum's published bytes silently replaced by
 		// another of its sites', with the script reporting success and exiting 0.
-		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-backup-collision');
-		rmSync(root, { recursive: true, force: true });
+		const root = mkdtempSync(join(tmpdir(), 'dedalo-opcmd-backup-collision-'));
 		try {
 			const one = join(root, 'srv', 'srvA', 'site');
 			const two = join(root, 'srv', 'srvB', 'site');
@@ -1150,8 +1150,7 @@ describe('the site-builder backup script actually copies what it claims to', () 
 		// The guard behind the naming: a site table that names one webspace twice would still
 		// map onto one destination, and overwriting there is a museum's bytes lost inside a
 		// backup that says it succeeded.
-		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-backup-twice');
-		rmSync(root, { recursive: true, force: true });
+		const root = mkdtempSync(join(tmpdir(), 'dedalo-opcmd-backup-twice-'));
 		try {
 			const shared = join(root, 'srv', 'www', 'shared.example');
 			const { configDir, dest } = buildHost(root, [
@@ -1168,8 +1167,7 @@ describe('the site-builder backup script actually copies what it claims to', () 
 	});
 
 	test('a source it was told about but cannot find is LOUD and non-zero', () => {
-		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-backup-missing');
-		rmSync(root, { recursive: true, force: true });
+		const root = mkdtempSync(join(tmpdir(), 'dedalo-opcmd-backup-missing-'));
 		try {
 			const { configDir, dest } = buildHost(root);
 			rmSync(join(root, 'srv', 'audit'), { recursive: true, force: true });
@@ -1689,8 +1687,7 @@ describe('the nightly backup unit reads keys that exist and reports the failures
 	});
 
 	test('a dump that cannot be read back never becomes a *.backup file', () => {
-		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-db-backup');
-		rmSync(root, { recursive: true, force: true });
+		const root = mkdtempSync(join(tmpdir(), 'dedalo-opcmd-db-backup-'));
 		try {
 			const bin = join(root, 'bin');
 			const dir = join(root, 'db');
@@ -1748,8 +1745,7 @@ describe('the nightly backup unit reads keys that exist and reports the failures
 		// OPS-2 review: the nightly `find … -exec rm` deleted every day-old part in
 		// the directory — including the ENGINE's orphans, whose pg_dump outlived a
 		// server restart and may have finished a complete restore point.
-		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-db-orphans');
-		rmSync(root, { recursive: true, force: true });
+		const root = mkdtempSync(join(tmpdir(), 'dedalo-opcmd-db-orphans-'));
 		try {
 			const bin = join(root, 'bin');
 			const dir = join(root, 'db');
@@ -1875,8 +1871,7 @@ describe('the nightly backup unit reads keys that exist and reports the failures
 	});
 
 	test('the step runner runs every store and still fails the run', () => {
-		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-backup-step');
-		rmSync(root, { recursive: true, force: true });
+		const root = mkdtempSync(join(tmpdir(), 'dedalo-opcmd-backup-step-'));
 		try {
 			mkdirSync(root, { recursive: true });
 			const env = {
@@ -1927,8 +1922,7 @@ describe('the nightly backup unit reads keys that exist and reports the failures
 	});
 
 	test('a deletion in the source does not reach the previous generation', () => {
-		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-tree-backup');
-		rmSync(root, { recursive: true, force: true });
+		const root = mkdtempSync(join(tmpdir(), 'dedalo-opcmd-tree-backup-'));
 		try {
 			const source = join(root, 'media');
 			const dest = join(root, 'backup');
@@ -1982,8 +1976,7 @@ describe('the nightly backup unit reads keys that exist and reports the failures
 	});
 
 	test('an unresolvable media root REFUSES rather than backing up a guess', () => {
-		const root = join(REPO_ROOT, 'test', '.tmp-operator-commands-tree-refuse');
-		rmSync(root, { recursive: true, force: true });
+		const root = mkdtempSync(join(tmpdir(), 'dedalo-opcmd-tree-refuse-'));
 		try {
 			mkdirSync(root, { recursive: true });
 			// MEDIA_PATH unset and no alias: the engine's own default is one of two

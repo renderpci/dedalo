@@ -61,6 +61,11 @@ const NOT_A_BASELINE: Readonly<Record<string, { reason: string; runtime: boolean
 			'per-machine test timings for scripts/test_shard.ts partitioning (bun run test:timings) — an input to sharding, not a ratchet; never committed',
 		runtime: true,
 	},
+	'engineering/hermetic_timings.json': {
+		reason:
+			'per-file durations hermetic.sh hands `bun test --parallel --timings` to start the slowest tripwires first — scheduling only, never a verdict, so not a ratchet; committed because the runner needs it (refresh: engineering/CI.md → Tiers, Hermetic)',
+		runtime: false,
+	},
 	'engineering/test_baseline/components.json': {
 		reason:
 			'the per-machine component census scripts/lib/test_components.ts writes beside the run record — never committed',

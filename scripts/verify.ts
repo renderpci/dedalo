@@ -418,6 +418,7 @@ const TRIPWIRES = [
 	'test/unit/release_identity_separation_tripwire.test.ts',
 	'test/unit/section_toolbar_phone_tripwire.test.ts',
 	'test/unit/install_launcher_native.test.ts',
+	'test/unit/hermetic_parallel_safety_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

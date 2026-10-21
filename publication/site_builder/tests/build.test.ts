@@ -12,6 +12,7 @@ import {
 } from './fixtures/instance';
 import { createSite } from '../src/sites/workspace';
 import { readManifest, writeManifest } from '../src/sites/manifest';
+import { holdsReservation } from '../src/workspace_activity';
 import { startBuild, getBuild, getBuildLog, latestBuild } from '../src/build/builder';
 import { currentRelease } from '../src/build/promote';
 import { handleGetBuild } from '../src/routes/builds';
@@ -31,7 +32,9 @@ async function waitForBuild(slug: string, id: string): Promise<void> {
   const start = Date.now();
   for (;;) {
     const record = await getBuild(slug, id);
-    if (record && record.outcome !== 'running') return;
+    // The record settles before startBuild's `.finally` releases the reservation: a caller
+    // that starts the next build right away must wait for the release too.
+    if (record && record.outcome !== 'running' && !holdsReservation(slug)) return;
     if (Date.now() - start > 8000) throw new Error('build never finished');
     await new Promise(r => setTimeout(r, 20));
   }
