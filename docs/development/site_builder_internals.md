@@ -624,9 +624,12 @@ the daemon *reads*, not as something anyone writes:
   provider; Claude Code's `api.anthropic.com` is derived, and an opencode/pi turn with none
   is refused) and `BUILD_REGISTRY_HOSTS` (default `registry.npmjs.org`), rendered from the
   declaration's `agent.provider_hosts` / `agent.registry_hosts` when stated. Never an IP
-  literal, `localhost` or a wildcard. An opencode turn's own off-plan traffic (auto-update,
-  the models.dev catalogue, LSP downloads, share uploads) is switched off in its env; the
-  provider SDK it installs on first use comes from `registry.npmjs.org`, which such a museum
+  literal, `localhost` or a wildcard. Each driver switches its agent's own off-plan traffic
+  off in the turn's env, in EVERY confinement mode (the egress keys reach a confined run only):
+  Claude Code's auto-updater and non-essential traffic (`DISABLE_AUTOUPDATER`,
+  `CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC` — `src/drivers/claude_code.ts`), and opencode's
+  auto-update, models.dev catalogue, LSP downloads and share uploads. The opencode
+  provider SDK installed on first use comes from `registry.npmjs.org`, which such a museum
   names in `agent.provider_hosts` too. The retired `AGENT_EGRESS_ALLOW` (systemd IP tokens)
   is refused at boot when it is non-empty.
 - Limits: `MAX_SITES`, `MAX_CONCURRENT_SESSIONS`, `SESSION_TURN_TIMEOUT_MS`,

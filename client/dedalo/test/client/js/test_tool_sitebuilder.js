@@ -17,7 +17,9 @@
  */
 
 import {error_text} from '../../../core/common/js/render_api_error.js'
+import {is_api_error} from '../../../core/common/js/api_error.js'
 import {sitebuilder_controller} from '../../../tools/tool_sitebuilder/js/sitebuilder_controller.js'
+import {builder_stream} from '../../../tools/tool_sitebuilder/js/builder_stream.js'
 
 
 
@@ -75,6 +77,109 @@ describe('TOOL_SITEBUILDER CLIENT TEST', function() {
 		const bare = controller()
 		bare.self.render_event({type: 'error', error})
 		assert.equal(bare.lines().length, 1)
+	})
+})
+
+
+
+/**
+ * G3 — THE WIRE CLIENT ITSELF (builder_stream): the request it sends and what it does with the
+ * relayed bytes. Before, only render_event was driven; the fetch + SSE-parse path that feeds it
+ * (records split across reads, comments, the `event: error` frame, the refusal envelope) had no
+ * client gate at all. `fetch` is stubbed on window and restored in `finally`; the responses are
+ * built in-page.
+ */
+describe('TOOL_SITEBUILDER builder_stream — the session stream, end to end in the page', function() {
+
+	const with_stubbed_fetch = async (impl, fn) => {
+		const original = window.fetch
+		window.fetch = impl
+		try {
+			await fn()
+		} finally {
+			window.fetch = original
+		}
+	}
+
+	/** A text/event-stream Response whose body arrives in exactly these chunks. */
+	const sse_response = (chunks) => new Response(new ReadableStream({
+		start(controller) {
+			const encoder = new TextEncoder()
+			for (const chunk of chunks) controller.enqueue(encoder.encode(chunk))
+			controller.close()
+		}
+	}), {status: 200, headers: {'Content-Type': 'text/event-stream'}})
+
+	/** Run builder_stream to its end; what each callback received. */
+	const run = (options = {session_id: 'zz-s1', after: -1}) => new Promise((resolve) => {
+		const seen = {events: [], errors: [], done: 0}
+		builder_stream({
+			options,
+			on_event	: (stored) => seen.events.push(stored),
+			on_error	: (error) => { seen.errors.push(error); resolve(seen) },
+			on_done		: () => { seen.done++; resolve(seen) }
+		})
+	})
+
+	const record = (stored) => 'id: ' + stored.seq + '\ndata: ' + JSON.stringify(stored) + '\n\n'
+
+	it('POSTs ONE session_stream tool_request, and parses records split ACROSS reads (comments skipped)', async function() {
+		const text	= {seq: 0, ts: 't', body: {type: 'text', text: 'ZZ hello'}}
+		const error	= {seq: 1, ts: 't', body: {type: 'error', error: {code: 'site_builder.turn_timeout', label_key: 'site_builder_turn_timeout', retryable: true}}}
+		const end	= {seq: 2, ts: 't', body: {type: 'turn_end', state: 'idle'}}
+		const bytes	= ': ping\n\n' + record(text) + record(error) + record(end)
+		// every record cut mid-way: no read holds one whole
+		const chunks = []
+		for (let at = 0; at < bytes.length; at += 7) chunks.push(bytes.slice(at, at + 7))
+		let sent = null
+		await with_stubbed_fetch(async (url, init) => { sent = init; return sse_response(chunks) }, async () => {
+			const seen = await run({session_id: 'zz-s1', after: 4})
+			assert.deepEqual(seen.events, [text, error, end])
+			assert.deepEqual({errors: seen.errors.length, done: seen.done}, {errors: 0, done: 1})
+		})
+		assert.equal(sent.method, 'POST')
+		assert.equal(sent.headers.Accept, 'text/event-stream')
+		assert.deepEqual(JSON.parse(sent.body), {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: {model: 'tool_sitebuilder', action: 'session_stream'},
+			options	: {session_id: 'zz-s1', after: 4}
+		})
+	})
+
+	it('a TRAILING record with no blank line after it is still delivered', async function() {
+		const end = {seq: 0, ts: 't', body: {type: 'turn_end', state: 'idle'}}
+		await with_stubbed_fetch(async () => sse_response(['data: ' + JSON.stringify(end)]), async () => {
+			const seen = await run()
+			assert.deepEqual(seen.events, [end])
+		})
+	})
+
+	it('an `event: error` frame is ONE ApiError carrying the frame’s code — never an event, never on_done', async function() {
+		const body = {code: 'site_builder.stream_lost', category: 'unavailable', label_key: 'site_builder_stream_lost', message: 'x', retryable: true}
+		await with_stubbed_fetch(async () => sse_response(['event: error\ndata: ' + JSON.stringify(body) + '\n\n']), async () => {
+			const seen = await run()
+			assert.deepEqual({events: seen.events.length, done: seen.done, errors: seen.errors.length}, {events: 0, done: 0, errors: 1})
+			assert.isTrue(is_api_error(seen.errors[0]))
+			assert.equal(seen.errors[0].code, 'site_builder.stream_lost')
+		})
+	})
+
+	it('a refusal BEFORE the stream opens (a JSON envelope) is ONE ApiError with the server’s code', async function() {
+		const envelope = {ok: false, error: {code: 'site_builder.not_session_owner', category: 'forbidden', label_key: 'site_builder_not_session_owner', message: 'x', retryable: false}}
+		await with_stubbed_fetch(async () => new Response(JSON.stringify(envelope), {status: 403, headers: {'Content-Type': 'application/json'}}), async () => {
+			const seen = await run()
+			assert.deepEqual({events: seen.events.length, done: seen.done, errors: seen.errors.length}, {events: 0, done: 0, errors: 1})
+			assert.equal(seen.errors[0].code, 'site_builder.not_session_owner')
+		})
+	})
+
+	it('a transport failure is a client.* ApiError (never a hung promise, never a thrown error)', async function() {
+		await with_stubbed_fetch(async () => { throw new TypeError('Failed to fetch') }, async () => {
+			const seen = await run()
+			assert.equal(seen.errors.length, 1)
+			assert.equal(seen.errors[0].code, 'client.network')
+		})
 	})
 })
 

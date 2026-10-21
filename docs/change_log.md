@@ -516,6 +516,27 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **Site builder: a Claude Code turn turns off its auto-updater and telemetry in every confinement mode, not only when confined**
+
+    A site builder turn run by Claude Code now always starts the agent with its
+    auto-updater and its non-essential traffic (telemetry, error reporting) switched
+    off. Before, those two switches were applied only to a turn confined under its
+    site identity: on an instance declared `AGENT_CONFINEMENT=none`, a Claude Code
+    turn ran with the auto-updater on — which could replace the very binary the
+    daemon had checked before the turn — and sent traffic to hosts the instance's
+    plan does not name. opencode turns already had their equivalent switches in
+    every mode. Nothing to configure.
+
+- **Site builder: `provision remove` and `provision adopt` can no longer be hung by a pipe planted at a turn HOME's `.gitconfig` or a site's `site.json`**
+
+    The site builder provisioner reads a few files that an agent or a site
+    identity can write — a turn HOME's `.gitconfig` when an instance is removed, a
+    site's `site.json` when a pre-instance install is adopted. A named pipe planted
+    at either name made the root command wait forever. Those reads now open
+    without waiting and read only a regular file; anything else is treated as
+    unreadable, which each command already reports. Regular files —
+    including an operator's symlinked password file — are read as before.
+
 - **Bun no longer fetches packages by name outside the lockfile.**
 
     Running a Bun command in a checkout where `bun install` had not been run let

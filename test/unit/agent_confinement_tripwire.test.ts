@@ -1424,12 +1424,17 @@ describe('the shared tree is writable to the agent, and the daemon’s own state
  * `symlink(2)`, which creates a link and never writes through one). Never "its modes are
  * someone else's business".
  */
-/** The fs modules whose bindings the two censuses follow. */
+/**
+ * The modules whose bindings the two censuses follow. `bun:sqlite` too (2026-10-21): its
+ * `Database` OPENS A PATH — a content read of whatever the name resolves to — and the census
+ * that followed only the fs modules was blind to it (opencode's turn-database read was invisible).
+ */
 const FS_MODULES: ReadonlySet<string> = new Set([
 	'node:fs',
 	'fs',
 	'node:fs/promises',
 	'fs/promises',
+	'bun:sqlite',
 ]);
 
 /**
@@ -1460,11 +1465,15 @@ const FS_WRITE_NAMES: ReadonlySet<string> = new Set([
 	'createWriteStream',
 ]);
 
-/** Path-based CONTENT reads. Closed (listings are names, not content — see the read census). */
+/**
+ * Path-based CONTENT reads. Closed (listings are names, not content — see the read census).
+ * `Database` is bun:sqlite's: `new Database(path)` opens (and reads) the file at a path.
+ */
 const FS_READ_NAMES: ReadonlySet<string> = new Set([
 	'readFile',
 	'readFileSync',
 	'createReadStream',
+	'Database',
 ]);
 
 const FS_NAMED = '__DEDALO_FS_N_';
@@ -1723,6 +1732,9 @@ const RAW_FS_CALLS: Readonly<Record<string, readonly string[]>> = Object.freeze(
 		// in an identity-writable turn HOME — `listRealDirectory` and `readRegularFileNoFollow`.
 		'openSync(path, constants.O_RDONLY | constants.O_DIRECTORY | constants.O_NOFOLLOW)',
 		'openSync(path, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK)',
+		// …and `readRegularFile` (hostIo().readFile): O_RDONLY|O_NONBLOCK, never a create — a FIFO
+		// opens at once and is refused on the handle, never waited on (tests/provision_host_read_nonblocking R1).
+		'openSync(path, constants.O_RDONLY | constants.O_NONBLOCK)',
 		'renameSync(from, to)',
 		'renameSync(temporary, path)',
 		'symlinkSync(target, path)',
@@ -2164,6 +2176,12 @@ const RAW_READ_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 		"site's identity. Its one read is `/proc/self/cgroup` — its OWN unit's name, which it " +
 		'says in its hello frame — and nothing it reads is served to anyone or carries a ' +
 		'privilege the unit did not already have.',
+	'drivers/opencode.ts':
+		"opencode's turn DATABASE (`<AGENT_STATE_ROOT>/unconfined/turn/state/data/opencode/opencode.db`), " +
+		'opened by bun:sqlite READ-ONLY at each admission to prove it holds no console account — under ' +
+		'the agent state root, outside `SITES_ROOT` and every workspace; lstat-refused unless a regular ' +
+		'file. Only a row COUNT leaves it, never served; and an opencode turn runs only declared `none`, ' +
+		'where the turn is this daemon’s own uid (a link it planted reaches nothing the daemon could not read).',
 	'sites/site_table.ts':
 		"The provisioner's `sites.json` under the config directory (root:root 0644) — outside " +
 		'`SITES_ROOT`, and the ONE thing that says where a site may be published.',
@@ -2191,7 +2209,9 @@ const RAW_READ_CALLS: Readonly<Record<string, readonly string[]>> = Object.freez
 		// The observer's artifact read (S3-HOME): from the HANDLE `readRegularFileNoFollow` opened
 		// O_NOFOLLOW|O_NONBLOCK and fstat-proved a one-name regular file — never the path again.
 		'readFileSync(fd, "utf8")',
-		'readFileSync(path, "utf8")',
+		// hostIo().readFile (`readRegularFile`): from the HANDLE opened O_NONBLOCK and fstat-proved
+		// regular — a FIFO planted at a name `remove`/`adopt` reads is null, never a hung root CLI.
+		'readFileSync(fd, "utf8")',
 		'readFileSync(path, "utf8")',
 	],
 	'provision/adopt.ts': ['readFileSync(join(root, INSTANCE_MARKER), "utf8")'],
@@ -2200,6 +2220,8 @@ const RAW_READ_CALLS: Readonly<Record<string, readonly string[]>> = Object.freez
 	'drivers/confinement.ts': ['readFileSync(path, "utf8")'],
 	// THE ONE read: its own unit's cgroup, said in its hello frame.
 	'drivers/egress_shim.ts': ['readFileSync("/proc/self/cgroup", "utf8")'],
+	// THE ONE read: the turn database, read-only, for a console-account COUNT (bun:sqlite).
+	'drivers/opencode.ts': ['Database(path, {…})'],
 	'sites/site_table.ts': ['readFileSync(path, "utf8")'],
 	'sites/template.ts': ['readFile(metaPath, "utf8")'],
 });
@@ -2423,7 +2445,7 @@ interface NetworkLeaf {
 			registryHosts: string[];
 		},
 	): string[];
-	childEgressEnv(door: string, driver?: string): Record<string, string>;
+	childEgressEnv(door: string): Record<string, string>;
 	egressDirFor(runtimeDir: string, k: number): string;
 }
 
@@ -2825,19 +2847,18 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 		const net = await leaf();
 		const proxy = `http://127.0.0.1:${net.PROXY_PORT}`;
 		for (const door of ['turn', 'build']) {
-			const env = net.childEgressEnv(door, 'claude_code');
+			const env = net.childEgressEnv(door);
 			for (const key of ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy']) {
 				expect({ door, key, value: env[key] }).toEqual({ door, key, value: proxy });
 			}
 			expect({ door, node: env.NODE_USE_ENV_PROXY }).toEqual({ door, node: '1' });
 		}
-		expect(net.childEgressEnv('turn', 'claude_code').CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC).toBe(
-			'1',
-		);
-		// opencode's own off-plan traffic (auto-update, the models.dev catalogue, LSP downloads,
-		// share uploads) is turned OFF, not refused one CONNECT at a time — by the DRIVER, in every
-		// mode: an opencode turn runs only under `none`, where these egress keys are never applied,
-		// so a switch held here reached no opencode turn at all.
+		// Each driver's own off-plan traffic (claude: the auto-updater, telemetry; opencode:
+		// auto-update, the models.dev catalogue, LSP downloads, share uploads) is turned OFF, not
+		// refused one CONNECT at a time — by the DRIVER, in every mode (claude_code.ts
+		// CLAUDE_TRAFFIC_SWITCHES, held behaviourally by the daemon's tests/claude_turn_plant.test.ts
+		// P13): these egress keys reach a CONFINED run only, so a switch held here reached no
+		// declared-`none` turn at all — the claude half did exactly that until 2026-10-21.
 		const opencodeLeaf = (await import(join(PACKAGE, 'src/drivers/opencode_argv.ts'))) as {
 			opencodeTurnEnvironment: (input: {
 				operatorEnv: Record<string, string>;
@@ -2854,8 +2875,9 @@ describe('§8 a confined run reaches its own egress door and nothing else', () =
 			expect({ key, value: stated[key] }).toEqual({ key, value: '1' });
 		}
 		expect(
-			Object.keys(net.childEgressEnv('turn', 'opencode')).filter((key) =>
-				key.startsWith('OPENCODE_'),
+			Object.keys(net.childEgressEnv('turn')).filter(
+				(key) =>
+					key.startsWith('OPENCODE_') || key.startsWith('CLAUDE_') || key.includes('AUTOUPDATE'),
 			),
 		).toEqual([]);
 		expect(net.childEgressEnv('git')).toEqual({});

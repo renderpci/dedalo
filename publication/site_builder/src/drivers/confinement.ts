@@ -2619,7 +2619,7 @@ async function openConfinedRun(opts: ConfineOptions, policy: ConfinementPolicy):
       v: 1,
       door,
       argv: [...opts.argv],
-      env: { ...opts.env, ...childEgressEnv(door, facts.driver) },
+      env: { ...opts.env, ...childEgressEnv(door) },
       hostNetns,
     };
     socket.write(encodeJsonFrame('S', spec));

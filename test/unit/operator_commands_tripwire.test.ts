@@ -457,6 +457,12 @@ describe('every daemon environment key an operator page names is one the daemon 
 			'a CHILD environment key: an opencode credential OPENCODE_ENV may carry (its allowlist) — never a daemon config key',
 		OPENCODE_AUTH_CONTENT:
 			"the same — opencode's own credential store, inline, an allowlisted OPENCODE_ENV key",
+		// 2026-10-21: Claude Code's off-plan traffic switches, CHILD environment keys every
+		// claude_code turn carries in every confinement mode (claude_code.ts CLAUDE_TRAFFIC_SWITCHES).
+		DISABLE_AUTOUPDATER:
+			"a CHILD environment key every Claude Code turn carries (the CLI's auto-updater off, claude_code.ts CLAUDE_TRAFFIC_SWITCHES) — never a daemon config key",
+		CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:
+			"the same — the CLI's non-essential traffic (telemetry, error reporting) off, a child key of every Claude Code turn",
 	});
 
 	/**

@@ -337,7 +337,7 @@ export function unitNetworkProperties(
  * uses is pointed at the shim's loopback proxy. A client that ignores these variables has NO
  * network at all (fail-closed), never a direct route.
  */
-export function childEgressEnv(door: ConfinementDoor, driver?: string): Record<string, string> {
+export function childEgressEnv(door: ConfinementDoor): Record<string, string> {
   if (!DOOR_PROFILE[door]?.proxy) return {};
   const proxy = `http://127.0.0.1:${PROXY_PORT}`;
   const env: Record<string, string> = {
@@ -352,14 +352,10 @@ export function childEgressEnv(door: ConfinementDoor, driver?: string): Record<s
   };
   // Telemetry, auto-updaters, catalogue fetches and share uploads are hosts the plan does not
   // name: turned off rather than refused one CONNECT at a time (and a share upload is a
-  // disclosure, not only a refused host).
-  if (door === 'turn' && (driver ?? 'claude_code') === 'claude_code') {
-    env.CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC = '1';
-    env.DISABLE_AUTOUPDATER = '1';
-  }
-  // opencode's off-plan switches are NOT here: they are the DRIVER's statement in every mode
-  // (`OPENCODE_TRAFFIC_SWITCHES`, opencode_argv.ts), because an opencode turn runs only under
-  // `none`, where these egress keys are never applied. What CANNOT be turned off: opencode
+  // disclosure, not only a refused host) — but NOT here. Each driver states its own switches in
+  // every mode (`CLAUDE_TRAFFIC_SWITCHES`, claude_code.ts; `OPENCODE_TRAFFIC_SWITCHES`,
+  // opencode_argv.ts): these egress keys are applied to a CONFINED run only, so a switch held
+  // here never reached a declared-`none` turn. What CANNOT be turned off: opencode
   // installs a provider's SDK package from registry.npmjs.org on first use of that provider — a
   // museum whose agent HOME has not cached it names the registry in AGENT_PROVIDER_HOSTS too
   // (SITE_BUILDER_INSTANCES §6).

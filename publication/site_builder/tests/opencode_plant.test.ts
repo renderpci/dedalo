@@ -230,7 +230,7 @@ describe('O2 — the driver states the restriction and the daemon’s whole conf
     // turn runs only under `none`, where no egress key is ever applied.
     expect(Object.fromEntries([...Object.keys(TRAFFIC), 'OPENCODE_DB'].map(key => [key, env[key] ?? '(absent)']))).toEqual({ ...TRAFFIC, OPENCODE_DB: 'opencode.db' });
     // The HOME law owns HOME/XDG; childEgressEnv owns the egress (proxy) keys; nothing is a unit-fixed key.
-    const egress = Object.keys(childEgressEnv('turn', 'opencode'));
+    const egress = Object.keys(childEgressEnv('turn'));
     expect(egress.filter(key => key.startsWith('OPENCODE_'))).toEqual([]);
     for (const key of Object.keys(env)) {
       expect({ key, home: /^(HOME|XDG_|OPENCODE_TEST_HOME$|CLAUDE_CONFIG_DIR$)/.test(key), egress: egress.includes(key), fixed: isFixedEnvKey(key) }).toEqual({
@@ -563,6 +563,41 @@ describe('O6 — per SOURCE: a leak is named; a source the control cannot see is
     const bin = writeFakeOpencode(scratchDir('fake-opencode-'), 'opencode', { ignore: 'OPENCODE_CONFIG_CONTENT' });
     const said = (await probeClosure(bin, scratchDir('oc-probe-state-'))).problems.join(' ');
     expect({ mcp: said.includes("lacks the daemon's MCP server"), brief: said.includes('not exactly the daemon') }).toEqual({ mcp: true, brief: true });
+  });
+});
+
+/**
+ * G6 — A PROBE THAT CANNOT PREPARE ITS SCRATCH TREE KEEPS WHAT IT ALREADY PROVED. The `run --help`
+ * answer is asked before the scratch tree; a binary that lacks a flag every turn passes is a
+ * proven defect, and a scratch failure after it must not replace the verdict with "could not be
+ * asked" (retryable, refused only until the next attempt) — the ONE rule: a proven defect beside
+ * anything else is the defect.
+ */
+describe('G6 — a scratch-tree failure never drops a problem the probe already proved', () => {
+  test('help lacks --pure AND the state root is a file: refused, NOT transient, both named', async () => {
+    const dir = scratchDir('fake-opencode-');
+    const bin = writeFakeOpencode(dir, 'opencode', { help: RUN_HELP.split('\n').filter(line => !line.includes('--pure')).join('\n') });
+    const notADir = join(scratchDir('oc-probe-file-'), 'state-root-is-a-file');
+    writeFileSync(notADir, 'x');
+    const probe = await probeClosure(bin, notADir);
+    const said = probe.problems.join(' ');
+    expect({
+      transient: probe.transient,
+      definitive: probe.definitive,
+      flag: said.includes("does not list --pure"),
+      scratch: said.includes("scratch tree"),
+    }).toEqual({ transient: false, definitive: false, flag: true, scratch: true });
+  });
+
+  test('a scratch failure that is not a moment’s resource refusal (the state root is a file) is a PROBLEM, not retryable', async () => {
+    const notADir = join(scratchDir('oc-probe-file-'), 'state-root-is-a-file');
+    writeFileSync(notADir, 'x');
+    const probe = await probeClosure(obedientBin(), notADir);
+    expect({ transient: probe.transient, refused: probe.problems.length > 0, scratch: probe.problems.join(' ').includes('scratch tree') }).toEqual({
+      transient: false,
+      refused: true,
+      scratch: true,
+    });
   });
 });
 
@@ -926,7 +961,7 @@ describe('O13 — the probe’s environment IS the turn child’s; a console acc
     const env = { PATH: '/usr/bin:/bin', HOME: join(root, 'home'), XDG_DATA_HOME: join(root, 'unconfined', 'turn', 'state', 'data') };
     const mcp = (extra: Record<string, string>) =>
       Object.keys(JSON.parse(spawnSync(bin, ['debug', 'config'], { cwd: root, env: { ...env, ...extra }, encoding: 'utf8' }).stdout).mcp ?? {});
-    expect({ open: mcp({}).includes('zorgmcp'), proxied: mcp(childEgressEnv('turn', 'opencode')).includes('zorgmcp') }).toEqual({ open: true, proxied: false });
+    expect({ open: mcp({}).includes('zorgmcp'), proxied: mcp(childEgressEnv('turn')).includes('zorgmcp') }).toEqual({ open: true, proxied: false });
   });
 
   test('the restricted leg asks under the TURN CHILD’s environment: same keys but the offline one, same values but the per-run HOME and the stated configuration, no proxy', async () => {
