@@ -149,8 +149,8 @@ const APPLICATION_LANGS: { label: string; value: string }[] = Object.entries(
  * refuses anyone else) AND granted by the ONE grant door (isToolGranted). Dynamic
  * import: tools/ must not join environment's static import graph (SCC rule).
  */
-async function isErrorReportGranted(principal: Principal): Promise<boolean> {
-	if (!principal.isGlobalAdmin) return false;
+async function isErrorReportGranted(principal: Principal | null): Promise<boolean> {
+	if (!principal?.isGlobalAdmin) return false;
 	const { isToolGranted } = await import('../tools/security.ts');
 	return isToolGranted(principal.userId, 'tool_error_report');
 }
@@ -179,7 +179,7 @@ export async function buildPageGlobals(
 		// always_active / superuser) — is_global_admin alone over-showed it after
 		// the 2026-08-09 tool-ACL change. Both reads behind it are cached, so this
 		// replaces a per-page user_tools round-trip at no query cost.
-		tool_error_report_granted: principal !== null && (await isErrorReportGranted(principal)),
+		tool_error_report_granted: await isErrorReportGranted(principal),
 		is_root: (session?.userId ?? null) === -1,
 		user_id: session?.userId ?? null,
 		username: session?.username ?? null,

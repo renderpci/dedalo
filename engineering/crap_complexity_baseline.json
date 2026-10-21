@@ -4,8 +4,8 @@
 	"cap": 6,
 	"root": "src/core",
 	"summary": {
-		"files": 766,
-		"functions": 12096,
+		"files": 778,
+		"functions": 12603,
 		"functionsOverCap": 672,
 		"filesOverCap": 258
 	},
@@ -303,7 +303,7 @@
 		"src/core/relations/children.ts": 12,
 		"src/core/relations/config_ddo_map.ts": 12,
 		"src/core/relations/dataframe.ts": 9,
-		"src/core/relations/datalist.ts": 21,
+		"src/core/relations/datalist.ts": 19,
 		"src/core/relations/filter_projects.ts": 15,
 		"src/core/relations/models/portal.ts": 22,
 		"src/core/relations/models/relation_index.ts": 19,

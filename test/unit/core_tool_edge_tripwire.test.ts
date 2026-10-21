@@ -75,6 +75,11 @@ const LEDGERED_NAMES: Record<string, { names: Readonly<Record<string, number>>; 
 			reason:
 				'The vision spend (closure Step 3, TOOLS-4 grant half) asks the caller’s profile for THE tool this API class serves: dd_identify_api IS tool_identify’s server half (the tool has no ToolServerModule of its own), so its grant is named where its door is (`VISION_SPEND_TOOL`). A real name-keyed coupling, ADDED 2026-10-01 with owner-visible reason (WC-2026-10-01-identify-vision-grant). Clears when tool_identify gets a ToolServerModule whose actions are these and the dispatch asks the grant by construction.',
 		},
+		'src/core/resolve/environment.ts': {
+			names: { tool_error_report: 1 },
+			reason:
+				'page_globals.tool_error_report_granted asks the ONE grant door (isToolGranted) for THE tool behind the client error-report launcher tab, which page shell code renders before any tool loads. A real name-keyed coupling, ADDED 2026-10-21 with owner-visible reason (WC-2026-10-21-error-report-granted). Clears when the ToolServerModule contract can contribute page_globals keys and the tool publishes its own grant flag.',
+		},
 		'src/ai/rag/api.ts': {
 			names: { tool_rag: 1 },
 			reason:

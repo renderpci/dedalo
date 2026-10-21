@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {a11y} from '../../common/js/a11y.js'
 	import {render_value} from '../../common/js/utils/render_escape.js'
 	import {strip_tags, tool_base_url, same_section_id} from '../../common/js/utils/index.js'
 	import {get_buttons} from './render_edit_component_check_box.js'
@@ -401,21 +402,15 @@ const get_input_element = (i, current_value, self) => {
 				element_type	: 'span',
 				class_name		: 'button info tool_info_toggle',
 				title			: get_label.information || 'Information',
-				role			: 'button',
-				tabindex		: 0,
-				aria			: {expanded : false, controls : description_id},
+				aria			: {controls : description_id},
 				parent			: content_value
 			})
-			const toggle = (e) => {
-				e.stopPropagation()
-				const open = content_value.classList.toggle('open')
-				button_info.setAttribute('aria-expanded', String(open))
-			}
-			button_info.addEventListener('click', toggle)
-			button_info.addEventListener('keydown', (e) => {
-				if (e.key==='Enter' || e.key===' ') {
-					e.preventDefault()
-					toggle(e)
+			a11y.make_activable(button_info, {
+				expanded	: false,
+				on_activate	: (e) => {
+					e.stopPropagation()
+					const open = content_value.classList.toggle('open')
+					button_info.setAttribute('aria-expanded', String(open))
 				}
 			})
 			ui.create_dom_element({
