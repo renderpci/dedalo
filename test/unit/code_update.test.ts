@@ -53,6 +53,7 @@ import {
 	extractArchive,
 	preValidateArchive,
 	refuseUnaccountedLiveEntries,
+	releaseExcludedRootEntriesOf,
 	type UpdatePhaseFrame,
 	unwritableSwapDirs,
 	updateCode,
@@ -1637,6 +1638,57 @@ describe('the root whitelist', () => {
 		writeFileSync(path, JSON.stringify({ digest: 'd'.repeat(64), channel: 'master' }));
 		const refusal = refusalOfSync(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot));
 		expect(refusal.message).toContain('.vscode');
+	});
+
+	test('a CHECKOUT install: roots the incoming .gitattributes export-ignores do NOT refuse', () => {
+		// A git-clone install carries the agent-alias symlinks; no release ships
+		// them, so every in-app update of a checkout refused (2026-10-21).
+		const [codeRoot, targetRoot] = trees(
+			['README.md', '.gitattributes', 'AGENTS.md'],
+			['README.md', '.gitattributes', 'AGENTS.md'],
+		);
+		mkdirSync(join(targetRoot, '.agents'));
+		symlinkSync('.agents', join(targetRoot, '.claude'));
+		symlinkSync('AGENTS.md', join(targetRoot, 'CLAUDE.md'));
+		writeFileSync(
+			join(codeRoot, '.gitattributes'),
+			'# aliases\n/.claude export-ignore\n/CLAUDE.md   export-ignore\n*.gz binary\n',
+		);
+		expect(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot)).toThrow(/: \.agents —/);
+		mkdirSync(join(codeRoot, '.agents'));
+		expect(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot)).not.toThrow();
+		expect([...releaseExcludedRootEntriesOf(codeRoot)].sort()).toEqual(['.claude', 'CLAUDE.md']);
+	});
+
+	test('an export-ignored name that is NOT a symlink is operator content — it still refuses', () => {
+		// A real `.claude/` dir (an agent run on a release install) or a
+		// hand-written CLAUDE.md is not the checkout alias.
+		const [codeRoot, targetRoot] = trees(
+			['README.md', '.gitattributes', 'CLAUDE.md'],
+			['README.md', '.gitattributes'],
+		);
+		mkdirSync(join(targetRoot, '.claude'));
+		writeFileSync(
+			join(codeRoot, '.gitattributes'),
+			'/.claude export-ignore\n/CLAUDE.md export-ignore\n',
+		);
+		const refusal = refusalOfSync(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot));
+		expect(refusal.message).toContain(': .claude, CLAUDE.md —');
+	});
+
+	test('export-ignore excuses only the roots it NAMES — a drop-in beside them still refuses', () => {
+		const [codeRoot, targetRoot] = trees(
+			['README.md', '.gitattributes', 'my_notes.txt'],
+			['README.md', '.gitattributes'],
+		);
+		symlinkSync('README.md', join(targetRoot, 'CLAUDE.md'));
+		writeFileSync(
+			join(codeRoot, '.gitattributes'),
+			'/CLAUDE.md export-ignore\n/docs/x export-ignore\n/*.txt export-ignore\n',
+		);
+		const refusal = refusalOfSync(() => refuseUnaccountedLiveEntries(codeRoot, targetRoot));
+		expect(refusal.message).toContain(': my_notes.txt —');
+		expect(refusal.message).not.toContain('CLAUDE.md');
 	});
 
 	test('a secret inside a RETIRED dir still refuses — retirement waives the root check, never the secret walk', () => {

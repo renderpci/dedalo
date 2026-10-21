@@ -30,7 +30,7 @@
  */
 
 import { execFileSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { config } from '../../config/config.ts';
 import { projectRoot } from '../../config/env.ts';
@@ -79,6 +79,7 @@ import {
 	IGNORED_ROOT_ENTRIES,
 	installedDigestOf,
 	PRESERVE_ROOT_ENTRIES,
+	releaseExcludedRootEntriesOf,
 	resolveCodeBackupRoot,
 	STAGING_KEEP_MARKER,
 	stagingHoldsParkedTree,
@@ -472,7 +473,8 @@ function diskSpaceCheck(backupRoot: string): StatusCheck {
  *
  * A tree whose install stamp records its release's root (install_stamp.ts,
  * 2026-10-07) subtracts those entries — the swap treats them as release-owned
- * too, retired or not — so the remainder is operator-added: `ok` when empty,
+ * too, retired or not — and so are the tree's own `export-ignore` roots
+ * (code_update.ts releaseExcludedRootEntriesOf) — so the remainder is operator-added: `ok` when empty,
  * `warn` otherwise (no release ships an entry nobody committed). Without that
  * record the verdict needs the incoming release's file list, so the check
  * stays `unknown`. `treeRoot` is a seam for the unit gate; the panel reads the
@@ -487,12 +489,14 @@ export function rootEntriesCheck(treeRoot: string = projectRoot): {
 			runtimePathsInsideTree(treeRoot).map((entry) => entry.path.split('/').pop() ?? ''),
 		);
 		const releaseShipped = installedRootEntriesOf(treeRoot);
+		const repoOnly = releaseExcludedRootEntriesOf(treeRoot);
 		const entries = readdirSync(treeRoot).filter(
 			(name) =>
 				!PRESERVE_ROOT_ENTRIES.has(name) &&
 				!IGNORED_ROOT_ENTRIES.has(name) &&
 				name !== 'node_modules' &&
 				!censusInside.has(name) &&
+				!(repoOnly.has(name) && lstatSync(join(treeRoot, name)).isSymbolicLink()) &&
 				releaseShipped?.has(name) !== true,
 		);
 		if (releaseShipped === null) {
