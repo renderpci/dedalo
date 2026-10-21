@@ -611,6 +611,11 @@
 			"skipped": 0,
 			"assertions": 48
 		},
+		"test/unit/client_publish_release_name_native.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 12
+		},
 		"test/unit/client_read_stream_release_tripwire.test.ts": {
 			"tests": 7,
 			"skipped": 0,
@@ -2166,6 +2171,11 @@
 			"skipped": 0,
 			"assertions": 99
 		},
+		"test/unit/install_abort_removal_durability_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 11
+		},
 		"test/unit/install_bootstrap_sh.test.ts": {
 			"tests": 21,
 			"skipped": 0,
@@ -3010,6 +3020,11 @@
 			"tests": 22,
 			"skipped": 0,
 			"assertions": 111
+		},
+		"test/unit/media_transform_synchronous_native.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 5
 		},
 		"test/unit/media_tree_provision_native.test.ts": {
 			"tests": 47,
@@ -3985,6 +4000,11 @@
 			"tests": 22,
 			"skipped": 0,
 			"assertions": 89
+		},
+		"test/unit/reconcile_apply_policy_native.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 49
 		},
 		"test/unit/reconcile_registry_native.test.ts": {
 			"tests": 17,
