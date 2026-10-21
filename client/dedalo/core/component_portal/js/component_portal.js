@@ -1392,10 +1392,12 @@ component_portal.prototype.link_records = async function(values, options={}) {
 			// (!) tag_id is part of the identity, as in the server dedup key (relations/save.ts
 			// normalizeRelationInsert): the same record linked by two text tags (tags_reference,
 			// tags_draw) is two values. Without it the second tag was refused as 'duplicate'.
-			// Locators without tag_id (plain portals) compare undefined==undefined, as before.
+			// Locators without tag_id (plain portals) compare undefined===undefined, as before.
+			// String() keeps the id-type coercion the loose compare had (a tag_id is a number
+			// in the client and a string once stored).
 				const same_value = (item) => item.section_tipo===value.section_tipo
 					&& String(item.section_id) === String(value.section_id)
-					&& item.tag_id==value.tag_id
+					&& String(item.tag_id) === String(value.tag_id)
 				const exists = current_entries.find(same_value) || accepted.find(same_value)
 				if (typeof exists!=='undefined') {
 					console.log('[link_records] Value already exists (1) !');

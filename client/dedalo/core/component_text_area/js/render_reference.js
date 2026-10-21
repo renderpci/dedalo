@@ -141,7 +141,8 @@ const is_tag_used_out_of_selection = (text_editor, tag_id) => {
 	for (const value of range.getWalker({ ignoreElementEnd: true })) {
 		const item		= value.item
 		const reference	= item.getAttribute('reference')
-		if (!reference || reference.tag_id!=tag_id) {
+		// the attribute carries the tag_id as a string; String() keeps the coercion
+		if (!reference || String(reference.tag_id) !== String(tag_id)) {
 			continue
 		}
 		const item_range	= model.createRangeOn(item)
@@ -457,8 +458,7 @@ export const render_reference = async function(options) {
 					// temporal portal. Shows the reused term (or the tag original value on
 					// deselect) so the 'New tag' field never contradicts the selection.
 					// Same shape as the initial set_data (the stored entry), minus the client-only display_value.
-					const reused = clone(existing_value_node.data)
-					delete reused.display_value
+					const { display_value: _display_value, ...reused } = clone(existing_value_node.data)
 					const temp_value = existing_value_node.activated
 						? [reused]
 						: (locator.length > 0 ? locator : null)

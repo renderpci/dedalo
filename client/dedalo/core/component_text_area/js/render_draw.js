@@ -446,21 +446,22 @@ export const render_draw = async function(options) {
 				// Inject the current tag's identifiers into the locator before persisting,
 				// so the server can correlate the locator with the correct draw tag.
 				// (cloned: the source value (temporal portal or reuse chip) is kept intact on refusal)
-				const new_locator = clone(locator[0])
-					new_locator.tag_id = view_tag.tag_id
-					new_locator.tag_type = 'draw'
-
-				// remove type from locator to be set as preferences says in server.
-				// see the ontology node properties
-				// (!) The 'type' property (relation type) is deliberately deleted here.
+				// (!) The 'type' property (relation type) is deliberately left out here.
 				// The server derives the correct relation type from the ontology node properties
 				// of the target concept, so a client-supplied value would conflict.
-				delete new_locator.type
-				// reuse chip: client-only property, and the stored item id / paginated_key of the
-				// OTHER tag entry (the server mints a fresh id, as link_records' own restore does)
-				delete new_locator.fallback_value
-				delete new_locator.id
-				delete new_locator.paginated_key
+				// Also left out: the reuse chip's client-only `fallback_value`, and the stored
+				// item `id` / `paginated_key` of the OTHER tag entry (the server mints a fresh id,
+				// as link_records' own restore does). Destructured out, not deleted: same
+				// absence on the wire, without the delete operator.
+				const {
+					type			: _type,
+					fallback_value	: _fallback_value,
+					id				: _id,
+					paginated_key	: _paginated_key,
+					...new_locator
+				} = clone(locator[0])
+				new_locator.tag_id		= view_tag.tag_id
+				new_locator.tag_type	= 'draw'
 
 				// unchanged. The tag already has this locator: nothing to save
 				const unchanged = current_tag_locators.some(el =>
