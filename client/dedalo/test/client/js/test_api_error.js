@@ -353,4 +353,51 @@ describe('DATA_MANAGER.request — the envelope it resolves', function() {
 
 
 
+describe('DATA_MANAGER.request — the SHOW_DEBUG request line', function() {
+
+	// The debug line prints the request options for a developer. It must never
+	// print an options VALUE: secrets ride there under names nobody listed —
+	// the login form's password is `auth`, the reset flow sends `code`,
+	// `new_password`, `reset_id` — and a list of "secret names" rots the day a
+	// new form ships (the measured defect: `auth` was missing). So the rule is
+	// structural: KEY NAMES only, for every key, including one invented here.
+	it('carries the options key NAMES, never a value — whatever the key is called', async function() {
+		const secrets = {
+			auth				: 'zz-login-pass-1',
+			code				: 'zz-reset-code-2',
+			new_password		: 'zz-new-pass-3',
+			reset_id			: 'zz-reset-id-4',
+			zz_unlisted_secret	: 'zz-unlisted-5'
+		}
+		const lines			= []
+		const sent			= []
+		const original_warn	= console.warn
+		const original_show	= window.SHOW_DEBUG
+		try {
+			window.SHOW_DEBUG = true
+			console.warn = (...args) => { lines.push(args) }
+			await with_stubbed_fetch(async (url, init) => { sent.push(init.body); return json_response({ok: true, data: null}) }, async () => {
+				await data_manager.request({body: {dd_api: 'dd_utils_api', action: 'zz_debug_line', options: {...secrets, username: 'zz-user'}}, retries: 1})
+			})
+		} finally {
+			console.warn		= original_warn
+			window.SHOW_DEBUG	= original_show
+		}
+		const request_lines = lines.filter((args) => String(args[0]).startsWith('> data_manager request'))
+		assert.equal(request_lines.length, 1, 'the debug line was written (positive control)')
+		const shown = JSON.stringify(request_lines[0])
+		for (const [key, value] of Object.entries(secrets)) {
+			assert.notInclude(shown, value, `the value of '${key}' is not on the debug line`)
+			assert.include(shown, `"${key}"`, `the key name '${key}' still is`)
+		}
+		assert.notInclude(shown, 'zz-user', 'not even a value that looks harmless')
+		assert.include(shown, 'zz_debug_line', 'the action is still shown')
+		// the request itself is unchanged
+		assert.equal(sent.length, 1)
+		assert.include(String(sent[0]), 'zz-login-pass-1', 'the server still receives the value')
+	})
+})
+
+
+
 // @license-end

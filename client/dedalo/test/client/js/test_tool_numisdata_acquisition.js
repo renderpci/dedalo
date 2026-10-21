@@ -26,7 +26,15 @@
  *    the review or the summary; an auth.* failure reaches the relogin overlay;
  *  - a stopped job (no error, no result) is not reported as done;
  *  - error bodies render label-first (error_text), never a bare `.message`;
- *  - the success path still renders, and scraped text renders as TEXT.
+ *  - the success path still renders, and scraped text renders as TEXT;
+ *  - a status stream that ends BEFORE the job's terminal frame (a dropped
+ *    connection, a stream that could not open) is not silent: the panel says
+ *    the job may still be running, the action button STAYS disabled (a second
+ *    click would start a second job beside the first) and "Check again" reopens
+ *    the SAME job's status;
+ *  - the company picker: a superseded Entity search cannot overwrite the
+ *    operator's newer one, a failed search is not "no candidates" (it never
+ *    preselects "Create new"), and Confirm refuses while the Entity is unresolved.
  */
 
 import {
@@ -34,10 +42,12 @@ import {
 	set_relogin_renderer_for_test,
 } from '../../../core/common/js/error_dispatch.js';
 import { error_text } from '../../../core/common/js/render_api_error.js';
+import { ENTITY_NAME_TIPO } from '../../../tools/tool_numisdata_acquisition/js/render_tool_numisdata_acquisition.js';
 import { tool_numisdata_acquisition } from '../../../tools/tool_numisdata_acquisition/js/tool_numisdata_acquisition.js';
 import {
 	failed_frame,
 	mount_acquisition_tool,
+	running_frame,
 	running_payload,
 	status_line,
 	stopped_frame,
@@ -99,7 +109,7 @@ const commit_envelope = {
 		results: [
 			{
 				lot_identifier: '1',
-				section_tipo: 'numisdata4',
+				section_tipo: 'test3',
 				section_id: 88,
 				skipped: false,
 				fields_written: ['weight'],
@@ -305,6 +315,59 @@ describe('TOOL_NUMISDATA_ACQUISITION CLIENT TEST', function () {
 			assert.include(error_node.textContent, refused.message);
 			assert.isUndefined(m.sent.find((body) => body?.action === 'get_process_status'));
 		});
+
+		it('a status stream cut BEFORE the terminal frame says so, keeps Preview disabled, and Check again reopens the SAME job', async function () {
+			const m = await mount({
+				dispatch: { preview_url: dispatched },
+				frames: {
+					preview_url: (open_index) =>
+						open_index === 0
+							? [running_frame({ msg: 'Fetching page 1 of 3', counter: 1, total: 3 })]
+							: [success_frame(preview_envelope())],
+				},
+			});
+			const button = preview_button_of(m.content_data);
+			url_input_of(m.content_data).value = URL_OK;
+			button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			const result = result_of(m.content_data);
+			await m.wait_until(() => result.querySelector('.job_status_lost') !== null, 'the lost-status line');
+			assert.include(result.querySelector('.job_status_lost').textContent, '4242', 'names the job');
+			assert.isTrue(button.classList.contains('loading'), 'Preview stays disabled: the job may still run');
+			assert.isNull(result.querySelector('.review_container'));
+			assert.notStrictEqual(status_line(result), 'Done.');
+			// reopen
+			result.querySelector('.button_check_job').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			await m.wait_until(() => !button.classList.contains('loading'), 'the reopened job settled');
+			const opens = m.sent.filter((body) => body?.action === 'get_process_status');
+			assert.strictEqual(opens.length, 2, 'the status was opened twice');
+			for (const open of opens) {
+				assert.deepEqual(open.options, { pid: 4242, pfile: 'zz_acquisition_job.json' }, 'the SAME job');
+			}
+			assert.strictEqual(tool_requests(m.sent, 'preview_url').length, 1, 'no second job was started');
+			assert.strictEqual(status_line(result), 'Done.');
+			assert.isNotNull(result.querySelector('.review_container'), 'the reopened stream delivered the result');
+			assert.isNull(result.querySelector('.job_status_lost'));
+		});
+
+		it('a status stream that cannot be OPENED is stated (with its error) and is not silent', async function () {
+			const m = await mount({
+				dispatch: { preview_url: dispatched },
+				frames: {
+					preview_url: (open_index) =>
+						open_index === 0 ? new TypeError('Failed to fetch') : [success_frame(preview_envelope())],
+				},
+			});
+			const button = preview_button_of(m.content_data);
+			url_input_of(m.content_data).value = URL_OK;
+			button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			const result = result_of(m.content_data);
+			await m.wait_until(() => result.querySelector('.job_status_lost') !== null, 'the lost-status line');
+			assert.isTrue(button.classList.contains('loading'), 'Preview stays disabled');
+			assert.isNotNull(result.querySelector('.error_message:not(.job_status_lost)'), 'the open failure is rendered');
+			result.querySelector('.button_check_job').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			await m.wait_until(() => !button.classList.contains('loading'), 'the reopened job settled');
+			assert.isNotNull(result.querySelector('.review_container'));
+		});
 	});
 
 	describe('commit_lots (background job)', function () {
@@ -382,6 +445,140 @@ describe('TOOL_NUMISDATA_ACQUISITION CLIENT TEST', function () {
 				commit_result.querySelector('.error_message')?.textContent ?? '',
 				'Too many lots in one commit.',
 			);
+		});
+
+		it('a commit whose status stream is cut keeps Confirm disabled: no second commit while the first may run', async function () {
+			const m = await mount({
+				dispatch: { preview_url: dispatched, commit_lots: dispatched },
+				frames: {
+					preview_url: [success_frame(preview_envelope())],
+					commit_lots: [running_frame(running_payload(MODEL, 'commit_lots'))],
+				},
+			});
+			await preview(m);
+			const confirm = confirm_button_of(m.content_data);
+			confirm.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			const commit_result = m.content_data.querySelector('.commit_result_container');
+			await m.wait_until(() => commit_result.querySelector('.job_status_lost') !== null, 'the lost-status line');
+			assert.isTrue(confirm.classList.contains('loading'), 'Confirm stays disabled');
+			assert.strictEqual(tool_requests(m.sent, 'commit_lots').length, 1);
+			assert.isNull(commit_result.querySelector('.success_message'));
+		});
+	});
+
+	describe('company picker (Entity resolution)', function () {
+		const auction = { auctionHouse: 'Casa Zeta', auctionNumber: '12' };
+
+		// an Entity search answer: rows named by the tool's Entity name component,
+		// the shape search_companies reads
+		const entities = (rows) => ({
+			ok: true,
+			request_id: 'zz-req',
+			data: {
+				context: [],
+				data: [
+					{ typo: 'sections', entries: rows.map(([id]) => ({ section_id: id })) },
+					...rows.map(([id, name]) => ({
+						tipo: ENTITY_NAME_TIPO,
+						row_section_id: id,
+						entries: [{ value: name }],
+					})),
+				],
+			},
+		});
+		const search_q = (body) => body?.sqo?.filter?.$and?.[0]?.q;
+		const is_search = (body) => body?.dd_api === 'dd_core_api' && body?.action === 'read';
+		const company_input_of = (content_data) => content_data.querySelector('.company_name_input');
+		const company_search_of = (content_data) => content_data.querySelector('.company_resolution > button');
+		const checked_label = (content_data) =>
+			content_data.querySelector('.company_option input:checked')?.nextSibling?.textContent ?? null;
+
+		it("a SUPERSEDED search's late answer cannot overwrite the operator's newer choice", async function () {
+			let release_first = null;
+			const m = await mount({
+				dispatch: { preview_url: dispatched, commit_lots: dispatched },
+				frames: {
+					preview_url: [success_frame(preview_envelope(auction))],
+					commit_lots: [success_frame(commit_envelope)],
+				},
+				other: (body) => {
+					if (!is_search(body)) return null;
+					if (search_q(body) === 'Casa Zeta') {
+						// the automatic first search answers LATE, with an exact match
+						return new Promise((resolve) => {
+							release_first = () => resolve(entities([[501, 'Casa Zeta']]));
+						});
+					}
+					return entities([]);
+				},
+			});
+			await preview(m);
+			await m.wait_until(() => release_first !== null, 'the first search in flight');
+			company_input_of(m.content_data).value = 'Casa Nueva';
+			company_search_of(m.content_data).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			await m.wait_until(() => (checked_label(m.content_data) ?? '').includes('Casa Nueva'), 'the newer answer');
+			release_first();
+			await new Promise((resolve) => setTimeout(resolve, 150));
+			assert.include(checked_label(m.content_data), 'Casa Nueva', 'the stale answer did not repaint');
+			assert.isNull(
+				[...m.content_data.querySelectorAll('.company_option')].find((row) => row.textContent.includes('#501')) ?? null,
+				'no stale candidate row',
+			);
+			assert.isFalse(company_search_of(m.content_data).classList.contains('loading'));
+			await m.run_action(confirm_button_of(m.content_data), 'commit');
+			const sent = tool_requests(m.sent, 'commit_lots');
+			assert.strictEqual(sent.length, 1);
+			assert.deepEqual(sent[0].options.company_selection, { create: true, name: 'Casa Nueva' });
+		});
+
+		it('Confirm refuses while the Entity is unresolved (a search still in flight)', async function () {
+			let release = null;
+			const m = await mount({
+				dispatch: { preview_url: dispatched, commit_lots: dispatched },
+				frames: { preview_url: [success_frame(preview_envelope(auction))] },
+				other: (body) =>
+					is_search(body)
+						? new Promise((resolve) => {
+								release = () => resolve(entities([[501, 'Casa Zeta']]));
+							})
+						: null,
+			});
+			await preview(m);
+			await m.wait_until(() => release !== null, 'the search in flight');
+			confirm_button_of(m.content_data).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			assert.strictEqual(tool_requests(m.sent, 'commit_lots').length, 0, 'nothing committed');
+			assert.isNotNull(
+				m.content_data.querySelector('.commit_result_container .company_unresolved'),
+				'the refusal is stated',
+			);
+			// positive control: once resolved, the exact match is picked
+			release();
+			await m.wait_until(() => (checked_label(m.content_data) ?? '').includes('#501'), 'the exact match');
+		});
+
+		it('a FAILED search is stated and never preselects "Create new"', async function () {
+			const refused = {
+				code: 'perm.denied',
+				category: 'permission',
+				message: 'No read access to Entities.',
+				label_key: 'error_perm_denied',
+				retryable: false,
+			};
+			const m = await mount({
+				dispatch: { preview_url: dispatched, commit_lots: dispatched },
+				frames: { preview_url: [success_frame(preview_envelope(auction))] },
+				other: (body) => (is_search(body) ? { ok: false, request_id: 'zz-req', error: refused } : null),
+			});
+			await preview(m);
+			const results = m.content_data.querySelector('.company_results');
+			await m.wait_until(() => results.querySelector('.error_message') !== null, 'the search failure');
+			assert.include(results.querySelector('.error_message').textContent, error_text(refused));
+			assert.isNull(results.querySelector('.company_option'), 'no option, so no "Create new" preselected');
+			assert.isFalse(company_search_of(m.content_data).classList.contains('loading'));
+			confirm_button_of(m.content_data).dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			await new Promise((resolve) => setTimeout(resolve, 100));
+			assert.strictEqual(tool_requests(m.sent, 'commit_lots').length, 0, 'nothing committed on a failed search');
 		});
 	});
 });

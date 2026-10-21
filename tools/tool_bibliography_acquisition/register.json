@@ -20,6 +20,8 @@
 		{ "lang": "lg-eng", "name": "request_failed", "value": "The request failed." },
 		{ "lang": "lg-eng", "name": "job_done", "value": "Done." },
 		{ "lang": "lg-eng", "name": "job_no_result", "value": "The job ended without a result." },
+		{ "lang": "lg-eng", "name": "job_status_lost", "value": "Lost the job status; the job may still be running (process {pid})." },
+		{ "lang": "lg-eng", "name": "job_check_again", "value": "Check again" },
 		{ "lang": "lg-eng", "name": "job_working", "value": "Working…" },
 		{ "lang": "lg-eng", "name": "article_failures", "value": "{failed} article(s) could not be fetched — showing the {count} publications that were." },
 		{ "lang": "lg-eng", "name": "article_failure", "value": "Article {id}: {reason}" },

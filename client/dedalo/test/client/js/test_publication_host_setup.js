@@ -344,7 +344,7 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		assert.strictEqual(pass.value, '');
 	});
 
-	it('the debug request line never carries the passphrase or the package (data_manager debug_redacted)', function () {
+	it('the debug request line never carries the passphrase or the package — nor any options value (data_manager debug_redacted)', function () {
 		const merged = {
 			body: {
 				action: 'widget_request',
@@ -354,7 +354,8 @@ describe('PUBLICATION HOST SETUP (New publication host)', function () {
 		const shown = debug_redacted(merged);
 		assert.strictEqual(shown.body.options.passphrase, '[redacted]');
 		assert.strictEqual(shown.body.options.package_base64, '[redacted]');
-		assert.strictEqual(shown.body.options.name, 'a');
+		assert.strictEqual(shown.body.options.name, '[redacted]', 'every value: no list of secret names to rot');
+		assert.deepEqual(Object.keys(shown.body.options), ['name', 'passphrase', 'package_base64'], 'the key names stay');
 		assert.strictEqual(merged.body.options.passphrase, 'P', 'the request itself is unchanged');
 	});
 

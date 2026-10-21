@@ -40,6 +40,8 @@ import { render_move_to_portal } from '../../../core/area_maintenance/widgets/mo
 import { render_move_to_table } from '../../../core/area_maintenance/widgets/move_to_table/js/render_move_to_table.js';
 import { update_process_status } from '../../../core/common/js/common.js';
 import { data_manager } from '../../../core/common/js/data_manager.js';
+import { event_manager } from '../../../core/common/js/event_manager.js';
+import { error_text } from '../../../core/common/js/render_api_error.js';
 
 // harness — a fake widget + recorded effects
 const make_harness = (confirm_answer = true) => {
@@ -323,6 +325,98 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			await h.form().on_submit();
 			h.calls.track[2].on_done(clean_preview_frame);
 			assert.isFalse(h.execute_button.classList.contains('hide'));
+		});
+	});
+
+	// A REFUSED DISPATCH IS STATED IN THE PANEL. The run request itself can be
+	// refused (a bad option, a lost session, a missing permission) before any job
+	// exists. The flow used to hand that to handle_api_error, whose policy for
+	// most codes is a TOAST — and the maintenance area shows no toast surface, so
+	// the operator saw nothing (the same hole render_update_ontology.js
+	// build_failure documents). The REAL transport runs here (window.fetch
+	// scripted): it publishes the ApiError page-wide once (the page's relogin /
+	// policy channel), and the panel itself must say what was refused.
+	describe('a refused dispatch', function () {
+		const refused_harness = () => {
+			const calls = { track: [], confirm: [], alert: [] };
+			let form = null;
+			const files_selected = ['a.json'];
+			const content_data = document.createElement('div');
+			const body_response = document.createElement('div');
+			const { execute_button } = init_move_transform_form(
+				{ caller: { init_form: (widget_object) => { form = widget_object; } } },
+				{
+					model: 'move_tld',
+					submit_label: 'Move TLD terms',
+					files_selected,
+					content_data,
+					body_response,
+					local_db_id: 'process_move_tld',
+				},
+				{
+					// exec: the REAL one (exec_move_transform → data_manager.request)
+					track: (...args) => calls.track.push(args),
+					confirm: (text) => { calls.confirm.push(text); return true; },
+					alert: (text) => calls.alert.push(text),
+				},
+			);
+			return { calls, form: () => form, body_response, execute_button };
+		};
+
+		const run_refused = async (error_body, status) => {
+			const published = [];
+			const token = event_manager.subscribe('api_error', (api_error) => published.push(api_error));
+			const original_fetch = window.fetch;
+			window.fetch = async () =>
+				new Response(JSON.stringify({ ok: false, request_id: 'zz-refused', error: error_body }), {
+					status,
+					headers: { 'content-type': 'application/json' },
+				});
+			try {
+				const h = refused_harness();
+				await h.form().on_submit();
+				return { h, published };
+			} finally {
+				window.fetch = original_fetch;
+				event_manager.unsubscribe(token);
+			}
+		};
+
+		it('renders the label-first refusal in body_response; no job, no generic alert, no Execute', async function () {
+			const refused = {
+				code: 'request.invalid_options',
+				category: 'caller',
+				message: 'files_selected names a file outside the move directory.',
+				label_key: 'error_request_invalid_options',
+				retryable: false,
+			};
+			const { h, published } = await run_refused(refused, 400);
+			assert.strictEqual(h.calls.track.length, 0, 'no job is tracked');
+			assert.strictEqual(h.calls.alert.length, 0, "not the generic 'did not start the job' alert");
+			assert.isTrue(h.execute_button.classList.contains('hide'), 'Execute stays hidden');
+			const text = h.body_response.textContent;
+			assert.include(text, error_text(refused), 'the refusal, label-first, IN the panel');
+			assert.include(text, refused.message, "and the server's own sentence");
+			assert.include(text, 'zz-refused', 'and the request_id');
+			assert.isNull(h.body_response.querySelector('img'), 'text only');
+			assert.strictEqual(published.length, 1, 'the transport published it page-wide once');
+			assert.strictEqual(published[0].code, 'request.invalid_options');
+		});
+
+		it('an auth.* refusal is stated in the panel and reaches the page channel (relogin)', async function () {
+			const lost = {
+				code: 'auth.not_logged',
+				category: 'auth',
+				message: 'Authentication required',
+				label_key: 'error_auth_not_logged',
+				retryable: false,
+			};
+			const { h, published } = await run_refused(lost, 401);
+			assert.strictEqual(h.calls.track.length, 0);
+			assert.strictEqual(h.calls.alert.length, 0);
+			assert.include(h.body_response.textContent, error_text(lost));
+			assert.strictEqual(published.length, 1, 'the page relogin channel got it once');
+			assert.strictEqual(published[0].code, 'auth.not_logged');
 		});
 	});
 

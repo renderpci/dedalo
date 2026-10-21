@@ -27,7 +27,12 @@
  *  - an auth.* failure on the frame reaches the relogin overlay;
  *  - a stopped job (no error, no result) is not reported as done;
  *  - a dispatch refusal renders label-first text;
- *  - the success path still renders, and scraped text renders as TEXT.
+ *  - the success path still renders, and scraped text renders as TEXT;
+ *  - a status stream that ends BEFORE the job's terminal frame (a dropped
+ *    connection, a stream that could not open) is not silent: the panel says
+ *    the job may still be running, the action button STAYS disabled (a second
+ *    click would start a second job beside the first) and "Check again" reopens
+ *    the SAME job's status.
  */
 
 import {
@@ -39,6 +44,7 @@ import { tool_bibliography_acquisition } from '../../../tools/tool_bibliography_
 import {
 	failed_frame,
 	mount_acquisition_tool,
+	running_frame,
 	running_payload,
 	status_line,
 	stopped_frame,
@@ -89,7 +95,7 @@ const commit_envelope = {
 		results: [
 			{
 				publication_identifier: 'oai:j:1',
-				section_tipo: 'rsc205',
+				section_tipo: 'test3',
 				section_id: 77,
 				skipped: false,
 				fields_written: ['title'],
@@ -287,6 +293,56 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 				m.sent.find((body) => body?.action === 'get_process_status'),
 				'no job stream for a refused dispatch',
 			);
+		});
+
+		it('a status stream cut BEFORE the terminal frame says so, keeps Preview disabled, and Check again reopens the SAME job', async function () {
+			const m = await mount({
+				dispatch: { preview_url: dispatched },
+				frames: {
+					preview_url: (open_index) =>
+						open_index === 0
+							? [running_frame(running_payload(MODEL, 'preview_url'))]
+							: [success_frame(preview_envelope)],
+				},
+			});
+			const button = preview_button_of(m.content_data);
+			url_input_of(m.content_data).value = URL_OK;
+			button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			const result = result_of(m.content_data);
+			await m.wait_until(() => result.querySelector('.job_status_lost') !== null, 'the lost-status line');
+			assert.include(result.querySelector('.job_status_lost').textContent, '4242', 'names the job');
+			assert.isTrue(button.classList.contains('loading'), 'Preview stays disabled: the job may still run');
+			assert.isNull(result.querySelector('.review_container'));
+			result.querySelector('.button_check_job').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			await m.wait_until(() => !button.classList.contains('loading'), 'the reopened job settled');
+			const opens = m.sent.filter((body) => body?.action === 'get_process_status');
+			assert.strictEqual(opens.length, 2, 'the status was opened twice');
+			for (const open of opens) {
+				assert.deepEqual(open.options, { pid: 4242, pfile: 'zz_acquisition_job.json' }, 'the SAME job');
+			}
+			assert.strictEqual(tool_requests(m.sent, 'preview_url').length, 1, 'no second job was started');
+			assert.isNotNull(result.querySelector('.review_container'), 'the reopened stream delivered the result');
+			assert.isNull(result.querySelector('.job_status_lost'));
+		});
+
+		it('a status stream that cannot be OPENED is stated (with its error) and is not silent', async function () {
+			const m = await mount({
+				dispatch: { preview_url: dispatched },
+				frames: {
+					preview_url: (open_index) =>
+						open_index === 0 ? new TypeError('Failed to fetch') : [success_frame(preview_envelope)],
+				},
+			});
+			const button = preview_button_of(m.content_data);
+			url_input_of(m.content_data).value = URL_OK;
+			button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			const result = result_of(m.content_data);
+			await m.wait_until(() => result.querySelector('.job_status_lost') !== null, 'the lost-status line');
+			assert.isTrue(button.classList.contains('loading'), 'Preview stays disabled');
+			assert.isNotNull(result.querySelector('.error_message:not(.job_status_lost)'), 'the open failure is rendered');
+			result.querySelector('.button_check_job').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			await m.wait_until(() => !button.classList.contains('loading'), 'the reopened job settled');
+			assert.isNotNull(result.querySelector('.review_container'));
 		});
 	});
 

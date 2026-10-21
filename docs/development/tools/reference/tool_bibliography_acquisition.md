@@ -168,7 +168,12 @@ result container. Clicking **Preview**:
 
 - with no uploaded file, dispatches `preview_url` as a background job and drives it through
   `stream_background_job` — `data_manager.request_stream` + `render_stream` against
-  `dd_utils_api`/`get_process_status`, rendering live progress text until the terminal frame;
+  `dd_utils_api`/`get_process_status`, rendering live progress text until the terminal frame. When
+  the stream ends WITHOUT a terminal frame (connection cut) or cannot be opened, it settles as
+  *status lost*: it states the job may still be running (with its `pid`), keeps the action button
+  disabled (a second click would start a duplicate job), and offers **Check again**, which reopens
+  `get_process_status` for the SAME `pid` — the server always ends a job's stream with a terminal
+  frame, a vanished or interrupted job included;
 - with an uploaded file, calls `preview_html` as a **plain** (non-backgrounded) request instead —
   nothing is fetched over the network, so there's no job to stream.
 

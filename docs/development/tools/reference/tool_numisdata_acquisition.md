@@ -173,7 +173,12 @@ fills the URL field when it's still empty), and a result container. Clicking **P
 
 - with no uploaded file, dispatches `preview_url` as a background job and drives it through
   `stream_background_job` — `data_manager.request_stream` + `render_stream` against
-  `dd_utils_api`/`get_process_status`, rendering live progress text until the terminal frame;
+  `dd_utils_api`/`get_process_status`, rendering live progress text until the terminal frame. When
+  the stream ends WITHOUT a terminal frame (connection cut) or cannot be opened, it settles as
+  *status lost*: it states the job may still be running (with its `pid`), keeps the action button
+  disabled (a second click would start a duplicate job), and offers **Check again**, which reopens
+  `get_process_status` for the SAME `pid` — the server always ends a job's stream with a terminal
+  frame, a vanished or interrupted job included;
 - with an uploaded HTML file, calls `preview_html` as a **plain** (non-backgrounded) request instead
   — nothing is fetched over the network, so there's no job to stream.
 
@@ -183,6 +188,9 @@ queries real `rsc106` Entities through the engine's own search API, `dd_core_api
 `action:'search'`, with the calling user's own session so it only sees what they can read) rendering
 one radio option per candidate plus an always-present "Create new Entity" option, auto-running the
 search once with the scraped name and preselecting an exact (case/accent-loose) match when found.
+Each search is stamped and only the latest may paint (a stale answer never replaces the operator's
+choice); a failed search renders its error rather than an empty candidate list, and **Confirm
+import** refuses while the auction names a house but no Entity is resolved.
 Below that, a checklist (`build_lot_row` per lot, checked by default) with a selection toolbar:
 *Select all*/*Deselect all*, an include/exclude keyword filter against the lot's description and
 title, and an include/exclude **lot-number range** `[from, to)`. Clicking **Confirm import** gathers

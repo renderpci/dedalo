@@ -96,12 +96,14 @@ const wait_until = async (predicate, what, timeout_ms = 8000) => {
  * @param {string} model - its model name
  * @param {Object} server - the scripted server:
  *	dispatch	{Object<string, Object>} tool action → the dispatch envelope it answers
- *	frames		{Object<string, Array>} tool action → the job's status frames
- *	other		{Function} (body) => envelope|null — any other request (e.g. a search)
+ *	frames		{Object<string, Array|Function>} tool action → the job's status frames,
+ *				or (open_index) => frames|Error per opening of its status stream
+ *	other		{Function} (body) => envelope|null|Promise — any other request (e.g. a search)
  * @returns {Promise<Object>} {content_data, sent, run_action, unmount}
  */
 export const mount_acquisition_tool = async (tool_constructor, model, server) => {
 	const sent = [];
+	const status_opens = {};
 	let last_tool_action = null;
 	const original_fetch = window.fetch;
 
@@ -123,13 +125,23 @@ export const mount_acquisition_tool = async (tool_constructor, model, server) =>
 			return json_response(envelope, envelope.ok === false ? 400 : 200);
 		}
 		if (body?.dd_api === 'dd_utils_api' && body?.action === 'get_process_status') {
-			const frames = server.frames[last_tool_action];
+			const scripted = server.frames[last_tool_action];
+			// a function scripts each OPENING of the job's status stream (0, 1, …):
+			// a reopened stream ("Check again") gets its own frames
+			const open_index = status_opens[last_tool_action] ?? 0;
+			status_opens[last_tool_action] = open_index + 1;
+			const frames = typeof scripted === 'function' ? scripted(open_index) : scripted;
 			if (!frames) {
 				throw new Error('acquisition harness: no scripted frames for ' + last_tool_action);
 			}
+			// an Error scripts a stream that cannot be opened (the fetch rejects)
+			if (frames instanceof Error) {
+				throw frames;
+			}
 			return sse_response(frames);
 		}
-		const other = typeof server.other === 'function' ? server.other(body) : null;
+		// `other` may answer late (a Promise): a slow search racing a newer one
+		const other = typeof server.other === 'function' ? await server.other(body) : null;
 		if (other) {
 			return json_response(other);
 		}
@@ -184,6 +196,16 @@ export const tool_requests = (sent, action) =>
 			body?.action === 'tool_request' &&
 			body.source?.action === action,
 	);
+
+/** A frame of a job still running (what a stream cut mid-job last carried). */
+export const running_frame = (progress) => ({
+	pid: 4242,
+	pfile: 'zz_acquisition_job.json',
+	is_running: true,
+	data: progress,
+	errors: [],
+	total_time: 3,
+});
 
 /** The text of a job panel's status line (render_stream's info_node msg_node). */
 export const status_line = (container) =>

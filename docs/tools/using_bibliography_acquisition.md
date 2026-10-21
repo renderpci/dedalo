@@ -101,6 +101,12 @@ its button opens in a **modal** (not a separate window).
     typically one issue's worth — capped at 200 articles found and 200 kept per batch, not the
     journal's entire publication history. Run it again for another issue.
 
+!!! note "If the panel loses a job's progress"
+    When the connection that reports a preview's or an import's progress drops before the job
+    ends, the panel says it lost the job's status and that the job may still be running (with its
+    process number), and keeps its button disabled — a second click could start a second import
+    beside the first. Click **Check again** to reconnect to the same job and see how it ended.
+
 !!! tip "Stopping a long import is safe"
     Cancelling a running Confirm import stops it before starting the next article — it never leaves
     a half-written record behind. The summary reports how many of the total were actually

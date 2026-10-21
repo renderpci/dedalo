@@ -200,7 +200,9 @@ const get_content_data = function (self) {
 	// initial {pid, pfile} dispatch to its terminal frame, rendering live
 	// progress via render_stream in between. on_success(data) gets the
 	// unwrapped terminal payload and appends into `container` itself;
-	// on_settle() always fires exactly once regardless of outcome.
+	// on_settle() fires exactly once, when the job's outcome is KNOWN (a refused
+	// dispatch or a terminal frame read) — never while the job may still run
+	// (render_status_lost).
 	const stream_background_job = function (options) {
 		const dispatch_promise = options.dispatch_promise;
 		const container = options.container;
@@ -224,104 +226,151 @@ const get_content_data = function (self) {
 			const pid = response.pid;
 			const pfile = response.pfile;
 
-			const render_response = render_stream({
-				container: container,
-				id: stream_id,
-				pid: pid,
-				pfile: pfile,
-			});
+			// The status stream ended BEFORE the job's terminal frame (it was
+			// cut, or could not be opened): the server job may still be running.
+			// The action button stays disabled — on_settle is NOT called — because
+			// a second click would start a SECOND job beside the first (a duplicate
+			// commit). "Check again" reopens the SAME job's status; the server
+			// always ends a job's stream with a terminal frame, including for a
+			// vanished or interrupted job (src/core/api/process_status.ts), so the
+			// operator always has a way out that does not guess.
+			const render_status_lost = function (error) {
+				ui.create_dom_element({
+					element_type: 'div',
+					class_name: 'error_message job_status_lost',
+					text_content: (
+						self.get_tool_label('job_status_lost') ||
+						'Lost the job status; the job may still be running (process {pid}).'
+					).replace('{pid}', pid),
+					parent: container,
+				});
+				if (error) {
+					container.appendChild(render_error(error));
+				}
+				const check_button = ui.create_dom_element({
+					element_type: 'button',
+					class_name: 'button_check_job',
+					text_content: self.get_tool_label('job_check_again') || 'Check again',
+					parent: container,
+				});
+				check_button.type = 'button';
+				check_button.addEventListener('click', function (e) {
+					e.stopPropagation();
+					follow_job();
+				});
+			};
 
-			let final_rendered = false;
+			// Opens the job's status stream and reads it to its terminal frame
+			// (render_stream resets the container on every opening).
+			const follow_job = function () {
+				const render_response = render_stream({
+					container: container,
+					id: stream_id,
+					pid: pid,
+					pfile: pfile,
+				});
 
-			const on_read = (sse_response) => {
-				render_response.update_info_node(sse_response, (info_node) => {
-					const is_running = sse_response?.is_running ?? true;
+				let final_rendered = false;
 
-					if (is_running === false && final_rendered === false) {
-						final_rendered = true;
+				const on_read = (sse_response) => {
+					render_response.update_info_node(sse_response, (info_node) => {
+						const is_running = sse_response?.is_running ?? true;
 
+						if (is_running === false && final_rendered === false) {
+							final_rendered = true;
+
+							if (!info_node.msg_node) {
+								info_node.msg_node = ui.create_dom_element({
+									element_type: 'div',
+									class_name: 'msg_node done',
+									parent: info_node,
+								});
+							}
+
+							// A FAILED job ends with its coded error ON THE FRAME
+							// ({is_running:false, error:{code,…}} — ERRORS_SPEC §5.3,
+							// media/jobs.ts frameOf); its `data` is then the last progress
+							// payload, never an envelope. Read the frame first.
+							const frame_error = normalize_stream_error(sse_response);
+							if (frame_error) {
+								info_node.msg_node.textContent = '';
+								container.appendChild(render_error(frame_error));
+								// a session that died mid-job must reach the relogin
+								// overlay, not a dead line of text (as render_stream does)
+								if (frame_error.code.startsWith('auth.')) {
+									handle_api_error(frame_error);
+								}
+								return;
+							}
+
+							// A success ends with the handler's ok() envelope as `data`.
+							// Anything else (a stopped job: no error, no result) has
+							// nothing to render — and is not "Done.".
+							const envelope = sse_response.data;
+							const result = envelope && envelope.ok === true ? response_data(envelope) : null;
+							if (!result || typeof result !== 'object') {
+								info_node.msg_node.textContent =
+									self.get_tool_label('job_no_result') || 'The job ended without a result.';
+								return;
+							}
+
+							info_node.msg_node.textContent = self.get_tool_label('job_done') || 'Done.';
+							on_success(result);
+							return;
+						}
+
+						const frame_msg = sse_response?.data?.msg;
 						if (!info_node.msg_node) {
 							info_node.msg_node = ui.create_dom_element({
 								element_type: 'div',
-								class_name: 'msg_node done',
+								class_name: 'msg_node',
 								parent: info_node,
 							});
 						}
+						info_node.msg_node.textContent =
+							typeof frame_msg === 'string' && frame_msg
+								? frame_msg +
+									(sse_response.data.total
+										? ' (' + sse_response.data.counter + ' of ' + sse_response.data.total + ')'
+										: '')
+								: self.get_tool_label('job_working') || 'Working…';
+					});
+				};
 
-						// A FAILED job ends with its coded error ON THE FRAME
-						// ({is_running:false, error:{code,…}} — ERRORS_SPEC §5.3,
-						// media/jobs.ts frameOf); its `data` is then the last progress
-						// payload, never an envelope. Read the frame first.
-						const frame_error = normalize_stream_error(sse_response);
-						if (frame_error) {
-							info_node.msg_node.textContent = '';
-							container.appendChild(render_error(frame_error));
-							// a session that died mid-job must reach the relogin
-							// overlay, not a dead line of text (as render_stream does)
-							if (frame_error.code.startsWith('auth.')) {
-								handle_api_error(frame_error);
-							}
-							return;
-						}
-
-						// A success ends with the handler's ok() envelope as `data`.
-						// Anything else (a stopped job: no error, no result) has
-						// nothing to render — and is not "Done.".
-						const envelope = sse_response.data;
-						const result = envelope && envelope.ok === true ? response_data(envelope) : null;
-						if (!result || typeof result !== 'object') {
-							info_node.msg_node.textContent =
-								self.get_tool_label('job_no_result') || 'The job ended without a result.';
-							return;
-						}
-
-						info_node.msg_node.textContent = self.get_tool_label('job_done') || 'Done.';
-						on_success(result);
+				// The stream ended. With the terminal frame read, the job is over:
+				// settle. WITHOUT it (a dropped connection, a proxy cut) the job may
+				// still be running — say so, not nothing.
+				const on_done = () => {
+					render_response.done();
+					if (final_rendered) {
+						if (on_settle) on_settle();
 						return;
 					}
+					render_status_lost(null);
+				};
 
-					const frame_msg = sse_response?.data?.msg;
-					if (!info_node.msg_node) {
-						info_node.msg_node = ui.create_dom_element({
-							element_type: 'div',
-							class_name: 'msg_node',
-							parent: info_node,
-						});
-					}
-					info_node.msg_node.textContent =
-						typeof frame_msg === 'string' && frame_msg
-							? frame_msg +
-								(sse_response.data.total
-									? ' (' + sse_response.data.counter + ' of ' + sse_response.data.total + ')'
-									: '')
-							: self.get_tool_label('job_working') || 'Working…';
-				});
-			};
-
-			const on_done = () => {
-				render_response.done();
-				if (on_settle) on_settle();
-			};
-
-			data_manager
-				.request_stream({
-					body: {
-						dd_api: 'dd_utils_api',
-						action: 'get_process_status',
-						update_rate: 1000,
-						options: {
-							pid: pid,
-							pfile: pfile,
+				data_manager
+					.request_stream({
+						body: {
+							dd_api: 'dd_utils_api',
+							action: 'get_process_status',
+							update_rate: 1000,
+							options: {
+								pid: pid,
+								pfile: pfile,
+							},
 						},
-					},
-				})
-				.then(function (stream) {
-					data_manager.read_stream(stream, on_read, on_done);
-				})
-				.catch(function (error) {
-					if (on_settle) on_settle();
-					console.error('[tool_bibliography_acquisition] could not open the status stream:', error);
-				});
+					})
+					.then(function (stream) {
+						data_manager.read_stream(stream, on_read, on_done);
+					})
+					.catch(function (error) {
+						render_response.done();
+						render_status_lost(error);
+					});
+			};
+
+			follow_job();
 		});
 	}; //end stream_background_job
 
