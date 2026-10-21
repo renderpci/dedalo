@@ -891,6 +891,19 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-21-ontology-record-lifecycle`.
 
+- **Building the ontology recovery file no longer stops the server when the disk is full, and the file survives a power cut**
+
+    The ontology recovery file (*Maintenance → Build database version*) is the safety net an
+    ontology update relies on.
+
+    - **A full disk or a read-only private directory** while the file was being written used
+      to stop the whole server process, or leave the request waiting forever. The build now
+      fails like any other failed build: it reports the error, keeps the previous recovery
+      file as it was, and leaves no partial file behind.
+    - **A power cut right after a successful build** could leave an empty or partial recovery
+      file under its final name. The file is now forced to disk before it replaces the
+      previous one, and so is the replacement itself.
+
 - **The ontology status panel reports a TLD shown under the wrong typology, and the hierarchy typology groups are filed where the master ontology files them**
 
     In the ontology tree, each TLD hangs under the typology set in its registry record. A TLD placed under a different typology used to be reported as in sync. The ontology status panel now reports it as drift, and **Rebuild** puts it back under the right typology. Separately, the first time a thesaurus is created, Dédalo registers the `hierarchytype` and `hierarchymtype` groups itself, because no ontology update brings them in. It used to file them under *Core*, with generic names. It now uses the typology and names that the master ontology gives them. Installations that registered these groups before this change keep their current placement, which stays consistent and is not reported as drift.

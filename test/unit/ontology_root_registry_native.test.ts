@@ -26,6 +26,9 @@
  *       D2 a grouper tld the release does not define falls back to Core 14 + the generic labels;
  *       D3 PURE: the release parser reads what the vendored file states (read here
  *          independently), and grouperTldDefinition returns it for every grouper tld.
+ *       D4 PURE: each half of the definition is the RELEASE'S when stated — the vendored grouper
+ *          names equal the generic labels, so D1/D3 alone cannot tell a release name from the
+ *          fallback: a synthetic release whose name differs can — and the fallback per half.
  *
  * Every DB leg runs inside ONE transaction that is ROLLED BACK (D1 deletes and re-mints the
  * suite's own `hierarchymtype` registration — never committed), so the scratch tld `zzorp` /
@@ -60,6 +63,7 @@ import {
 	getMainNameData,
 	getMainTypologyId,
 	grouperTldDefinition,
+	grouperTldDefinitionFrom,
 } from '../../src/core/ontology/ontology_write.ts';
 import { releaseTldDefinitionFrom } from '../../src/core/ontology/release_definition.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
@@ -258,6 +262,27 @@ describe('(d) a grouper tld is registered with the master definition the release
 				'x',
 			),
 		).toEqual({ typologyId: null, nameData: null });
+	});
+
+	test('D4 each half of a grouper definition is the release’s when it states it, the fallback only when it does not', () => {
+		const releaseName = [{ lang: STRUCTURE_LANG, value: 'zz release name | hierarchymtype' }];
+		// Floor: the synthetic name is NOT the generic label (else this proves nothing).
+		const fallback = grouperTldDefinitionFrom(HIERARCHY_MODEL_TYPE_TLD, null);
+		expect(fallback.name_data).not.toEqual(releaseName);
+		expect(fallback.typology_id).toBe(14);
+		expect(
+			grouperTldDefinitionFrom(HIERARCHY_MODEL_TYPE_TLD, { typologyId: 77, nameData: releaseName }),
+		).toEqual({ tld: HIERARCHY_MODEL_TYPE_TLD, typology_id: 77, name_data: releaseName });
+		// One half stated, the other not: each falls back on its own.
+		expect(
+			grouperTldDefinitionFrom(HIERARCHY_MODEL_TYPE_TLD, {
+				typologyId: null,
+				nameData: releaseName,
+			}),
+		).toEqual({ tld: HIERARCHY_MODEL_TYPE_TLD, typology_id: 14, name_data: releaseName });
+		expect(
+			grouperTldDefinitionFrom(HIERARCHY_MODEL_TYPE_TLD, { typologyId: 77, nameData: null }),
+		).toEqual({ tld: HIERARCHY_MODEL_TYPE_TLD, typology_id: 77, name_data: fallback.name_data });
 	});
 
 	test('D1 registering hierarchymtype afresh files it where the master does: row typology + name, root parent, in sync', async () => {

@@ -795,7 +795,8 @@ function reportRecord(
 	// Located only when its scope gate (bornGate) passed before the throw.
 	else if (outcome.kind === 'failed')
 		report.skip(row, 'failed', outcome.located, outcome.detail, 'error', outcome.code);
-	else if (outcome.kind === 'refused') report.skip(row, outcome.reason, true, null);
+	// Located only when the record's scope was judged before the refusal (SEC-16).
+	else if (outcome.kind === 'refused') report.skip(row, outcome.reason, outcome.located, null);
 	else if (outcome.kind === 'kept') report.skip(row, 'cascade_delete_not_reverted', true, null);
 	else if (outcome.kind === 'present') return;
 	else if (doneBasis !== null) report.markInexact(row, doneBasis);

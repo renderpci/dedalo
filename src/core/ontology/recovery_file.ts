@@ -14,12 +14,14 @@
  * No shell pipelines: pg_dump stdout streams through in-process gzip.
  */
 
-import { once } from 'node:events';
 import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { createGzip } from 'node:zlib';
 import { envSnapshot } from '../../config/env.ts';
 import { createRecoverySlice, dropRecoverySlice } from '../db/dd_ontology.ts';
+import { fsyncDirectory, fsyncFile } from '../files/durable.ts';
 import { resolvePgBinary } from '../install/pg_bin.ts';
 import { connArgs, connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
 import { recoveryFileWritePath, resolveRecoveryFilePath } from '../install/runtime_paths.ts';
@@ -57,22 +59,25 @@ export interface RecoveryFileResponse {
 
 /**
  * Stream a byte source through in-process gzip into `path`, honouring
- * backpressure (a multi-hundred-MB dump must not buffer in memory), and
- * resolve only once the file sink has closed. Shared with the install seed
- * builder (install/seed_build.ts) — the other pg_dump this engine compresses.
+ * backpressure (a multi-hundred-MB dump must not buffer in memory). Resolves
+ * only once every byte is in the file AND fsynced (durable.ts fsyncFile) — the
+ * caller's rename then publishes durable bytes, and its directory fsync makes
+ * the name durable too. REJECTS on any failure of the source, the compressor
+ * or the sink (ENOSPC, EACCES, a read-only dir): one `pipeline` owns the three
+ * streams, so a failure is never an unhandled stream 'error' (an uncaught
+ * throw that killed the server) nor a wait that never settles (a destroyed
+ * sink never drains), and the source is cancelled — a pg_dump behind it gets
+ * a closed pipe instead of blocking forever. A failed call may leave a partial
+ * `path`: the caller owns it (both callers write a `.part` and remove it).
+ * Shared with the install seed builder (install/seed_build.ts) — the other
+ * pg_dump this engine compresses.
  */
 export async function gzipStreamToFile(
 	source: AsyncIterable<Uint8Array>,
 	path: string,
 ): Promise<void> {
-	const gzip = createGzip();
-	const sink = createWriteStream(path);
-	gzip.pipe(sink);
-	for await (const chunk of source) {
-		if (!gzip.write(chunk)) await once(gzip, 'drain');
-	}
-	gzip.end();
-	await new Promise<void>((resolveDone) => sink.on('close', () => resolveDone()));
+	await pipeline(Readable.from(source), createGzip(), createWriteStream(path));
+	fsyncFile(path);
 }
 
 /**
@@ -127,6 +132,8 @@ export async function buildRecoveryVersionFile(
 				...(conn.password !== '' ? { PGPASSWORD: conn.password } : {}),
 			},
 		});
+		// A compressor failure rejects (and cancels the child's stdout: pg_dump
+		// ends on the closed pipe) — the catch below reports it, `ok` stays false.
 		await gzipStreamToFile(child.stdout, partFile);
 		const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
 		if (exitCode !== 0) {
@@ -134,7 +141,11 @@ export async function buildRecoveryVersionFile(
 			response.msg = 'Error. pg_dump failed building the recovery file';
 			return response;
 		}
+		// The recovery file is the ontology update's safety net: its bytes were
+		// fsynced by the compressor; the rename is made durable here — a power
+		// cut after `ok` never leaves an empty or torn file in the slot.
 		renameSync(partFile, outFile);
+		fsyncDirectory(dirname(outFile));
 		response.ok = true;
 		response.msg = 'OK. Request done successfully';
 		response.file_size = `${statSync(outFile).size} Bytes`;

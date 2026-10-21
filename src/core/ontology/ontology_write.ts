@@ -96,7 +96,7 @@ import {
 	YES_NO_SECTION,
 } from './ontology_tipos.ts';
 import { getTermIdFromLocator } from './parser.ts';
-import { releaseTldDefinition } from './release_definition.ts';
+import { type ReleaseTldDefinition, releaseTldDefinition } from './release_definition.ts';
 import { getMatrixTableFromTipo } from './resolver.ts';
 import {
 	getSectionIdFromTipo,
@@ -747,10 +747,22 @@ const GROUPER_TLD_TYPOLOGY_ID = 14;
  * always invented Core 14 + generic labels: `hierarchytype` / `hierarchymtype` (typology 12 on
  * the master) were filed under Core on every installation, and no import ever corrected it —
  * neither is core nor declared by any ontology, so a default ACTIVE_ONTOLOGY_TLDS never
- * imports them. Gate: ontology_root_registry_native D1–D3.
+ * imports them. Gate: ontology_root_registry_native D1–D4.
  */
 export async function grouperTldDefinition(tld: string): Promise<FileItem> {
-	const release = await releaseTldDefinition(tld);
+	return grouperTldDefinitionFrom(tld, await releaseTldDefinition(tld));
+}
+
+/**
+ * PURE: grouperTldDefinition for a given release definition (null = the release does not
+ * define the tld). Separate so a gate can state a release whose name differs from the generic
+ * labels — the vendored release's grouper names EQUAL them, so through the file alone the name
+ * half could not tell the release's from the fallback (ontology_root_registry_native D4).
+ */
+export function grouperTldDefinitionFrom(
+	tld: string,
+	release: ReleaseTldDefinition | null,
+): FileItem {
 	return {
 		tld,
 		typology_id: release?.typologyId ?? GROUPER_TLD_TYPOLOGY_ID,

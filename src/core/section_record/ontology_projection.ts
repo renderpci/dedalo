@@ -23,11 +23,14 @@
  *     `ontologytype<N>` node). The 'existing' path (the ontology update, the
  *     activation) builds none of them: the root names its grouper only;
  *   - the archive restore — `archive/restore.ts` upserts the archive's
- *     dd_ontology rows DIRECTLY, with no matrix_ontology source written. A node
- *     it INSERTS is an orphan to rebuildOntology (the tld's next update /
- *     rebuild removes it); one it OVERWRITES is re-derived back to the
- *     destination's source. Ledgered with the integrator: the archive door must
- *     write the source records, or refuse nodes the destination cannot source;
+ *     dd_ontology rows DIRECTLY (an archive carries no matrix_ontology source),
+ *     so it writes only a tld that is the ARCHIVE'S OWN: under each written
+ *     tld's projection lock (lockOntologyProjection) it REFUSES a tld that holds
+ *     source records here — never an orphan or a clobbered node in a sourced
+ *     tld. Residual, ledgered open: the archive's own tld still holds rows with
+ *     no source record (closure: source records in the archive format).
+ *     Contract: restore.ts's header; gate:
+ *     test/unit/archive_restore_projection_native.test.ts;
  *   - the seed / test fixtures (`test_data/`, the install seed).
  * Gates: test/unit/ontology_projection_guard_native.test.ts (the guard),
  * ontology_record_lifecycle_native.test.ts (the lifecycle),

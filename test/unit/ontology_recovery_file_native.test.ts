@@ -13,13 +13,28 @@
  *   - SURF-1 leg: dropped CHECKs + a planted dd_ontology violator (test990011),
  *     inside ONE sentinel-rolled-back transaction — nothing survives it. Mutation:
  *     drop the skipped-rows push in buildRecoveryVersionFile → that leg red.
+ *   - the dump's FILE half: a read-only scratch dir (the failing sink, EACCES —
+ *     made writable again in afterAll) and a power-cut model of a fresh one.
+ *     Mutations: drop the compressor's error path → the sink cases hang/crash;
+ *     drop the file fsync, or the directory fsync after the rename → the
+ *     power-cut case red.
  *
  * NEVER assert a table-global count: every count here is a delta taken inside the
  * same test body, or is scoped to the zzt04 namespace.
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+	chmodSync,
+	existsSync,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
@@ -28,10 +43,12 @@ import { connFromConfig, type DbConnDescriptor } from '../../src/core/install/pg
 import { restoreSnapshots, snapshotTableRows } from '../../src/core/ontology/ontology_update.ts';
 import {
 	buildRecoveryVersionFile,
+	gzipStreamToFile,
 	RECOVERY_PRESERVE_TLDS,
 	restoreDdOntologyRecoveryFromFile,
 } from '../../src/core/ontology/recovery_file.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
+import { startPowerLossModel } from '../helpers/power_loss_model.ts';
 
 const TIPO_A = 'zzt04';
 const TIPO_B = 'zzt04b';
@@ -39,6 +56,8 @@ const IDS = [904001, 904002, 904003];
 
 let workDir = '';
 let conn: DbConnDescriptor;
+/** Read-only scratch dirs (the failing-sink injection); made writable again before the sweep. */
+const readOnlyDirs: string[] = [];
 
 /** All matrix_ontology rows of one scratch tipo, ordered, as plain objects. */
 async function readScratchRows(tipo: string): Promise<Record<string, unknown>[]> {
@@ -71,7 +90,9 @@ beforeAll(() => {
 });
 
 afterAll(async () => {
+	for (const dir of readOnlyDirs) chmodSync(dir, 0o755);
 	rmSync(workDir, { recursive: true, force: true });
+	expect(existsSync(workDir)).toBe(false);
 	await sql.unsafe(`DROP TABLE IF EXISTS "dd_ontology_recovery" CASCADE`, []);
 	for (const tipo of [TIPO_A, TIPO_B]) {
 		await sql.unsafe(`DELETE FROM matrix_ontology WHERE section_tipo = $1`, [tipo]);
@@ -218,7 +239,104 @@ describe('buildRecoveryVersionFile', () => {
 		expect(readFileSync(outFile)).toEqual(previous);
 		expect(existsSync(`${outFile}.part`)).toBe(false);
 	}, 60_000);
+
+	// ---- the dump's FILE half (review 2026-10-21, ops-durability) -----------
+	// pg_dump SUCCEEDS here; the disk does not. The sink refusing (ENOSPC, a
+	// read-only private dir) used to be an unhandled stream 'error': an uncaught
+	// throw that killed the server, or a promise that never settled with pg_dump
+	// blocked on a full pipe. Injected for real: the slot's directory read-only.
+
+	test('a sink that cannot be written REJECTS the compressor (no crash, no hang) and cancels its source', async () => {
+		const dir = readOnlyDir('gzip_sink_refused');
+		let pulled = 0;
+		async function* endless(): AsyncGenerator<Uint8Array> {
+			// Never ends on its own: only a cancelled source lets the call settle.
+			for (;;) {
+				pulled++;
+				yield new Uint8Array(64 * 1024).fill(pulled % 251);
+			}
+		}
+		const settled = await Promise.race([
+			gzipStreamToFile(endless(), join(dir, 'never.gz')).then(
+				() => 'resolved',
+				(error: unknown) => `rejected:${(error as { code?: string }).code}`,
+			),
+			Bun.sleep(10_000).then(() => 'hung'),
+		]);
+		expect(settled).toBe('rejected:EACCES');
+		// The source is CANCELLED (a pg_dump behind it gets a closed pipe), not left being pulled.
+		const pulledAtSettle = pulled;
+		await Bun.sleep(200);
+		expect(pulled).toBe(pulledAtSettle);
+		expect(readdirSync(dir)).toEqual([]);
+	}, 30_000);
+
+	test('pg_dump exits 0 but the slot cannot be written: ok:false, the PREVIOUS artifact intact, no .part, slice dropped', async () => {
+		const dir = readOnlyDir('build_sink_refused', (path) => {
+			writeFileSync(join(path, 'slot.sql.gz'), gzipSync(Buffer.from('-- previous good dump\n')));
+		});
+		const outFile = join(dir, 'slot.sql.gz');
+		const previous = readFileSync(outFile);
+		const response = await buildRecoveryVersionFile(conn, outFile);
+
+		expect(response.ok).toBe(false);
+		expect(response.msg).toBe('Error. Request failed [build_recovery_version_file]');
+		expect(response.errors.some((line) => line.includes('EACCES'))).toBe(true);
+		expect(response.file_size).toBeUndefined();
+		expect(readFileSync(outFile)).toEqual(previous);
+		expect(readdirSync(dir)).toEqual(['slot.sql.gz']);
+		const after = await sql.unsafe(`SELECT to_regclass('dd_ontology_recovery')::text AS t`, []);
+		expect((after as unknown as { t: string | null }[])[0]?.t).toBeNull();
+	}, 60_000);
+
+	test('a built recovery file SURVIVES A POWER CUT the moment the build reports ok (bytes fsynced, rename + directory fsynced)', async () => {
+		const dir = join(workDir, 'power_cut');
+		mkdirSync(dir, { recursive: true });
+		const outFile = join(dir, 'slot.sql.gz');
+		writeFileSync(outFile, gzipSync(Buffer.from('-- previous good dump\n')));
+		const model = startPowerLossModel(dir);
+		let response: Awaited<ReturnType<typeof buildRecoveryVersionFile>>;
+		try {
+			response = await buildRecoveryVersionFile(conn, outFile);
+		} finally {
+			model.restore();
+		}
+		expect(response.errors).toEqual([]);
+		expect(response.ok).toBe(true);
+		// Non-vacuous: the model saw the publication it judges.
+		expect(model.seen.renames).toBeGreaterThan(0);
+		expect(model.seen.fsyncs).toBeGreaterThan(0);
+		expect(model.survives(outFile), model.explain(outFile)).toBe(true);
+		const plain = gunzipSync(readFileSync(outFile)).toString('utf8');
+		expect(parseCopyBlock(plain, 'dd_ontology_recovery').rows.length).toBeGreaterThan(0);
+	}, 60_000);
 });
+
+/**
+ * A scratch directory the process cannot create files in (EACCES) — the
+ * failing sink, for real. `fill` runs before it turns read-only. Fails loud
+ * when the injection does not take (a root run ignores the mode bits): the
+ * cases above would then be vacuous.
+ */
+function readOnlyDir(name: string, fill: (path: string) => void = () => {}): string {
+	const dir = join(workDir, name);
+	mkdirSync(dir, { recursive: true });
+	fill(dir);
+	chmodSync(dir, 0o555);
+	readOnlyDirs.push(dir);
+	let injected = false;
+	try {
+		writeFileSync(join(dir, 'probe'), 'x');
+		rmSync(join(dir, 'probe'), { force: true });
+	} catch {
+		injected = true;
+	}
+	expect(
+		injected,
+		`${dir}: a read-only directory was writable (root?) — the sink injection did not take`,
+	).toBe(true);
+	return dir;
+}
 
 // ---------------------------------------------------------------------------
 // restoreDdOntologyRecoveryFromFile
