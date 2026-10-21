@@ -182,8 +182,10 @@ const get_content_data = function(self) {
 *   Intercepts the paste event to normalise multi-line clipboard text from spreadsheet
 *   or import workflows. Lines are split on `\n`; each line is trimmed and parsed as an
 *   integer with `parseInt`. Lines that fail to parse, are zero, or are negative are
-*   silently discarded. All valid ids are joined with `,` and written back into the input.
-*   Single-line pastes bypass this normalisation and fall through to the normal `change_handler`.
+*   silently discarded. All valid ids are joined with `,` and inserted at the caret/selection
+*   (existing value preserved; `,` separators added against adjacent values).
+*   Single-line pastes are filtered with the `input_handler` character set and inserted at the
+*   caret/selection like a native paste, then fall through to the normal `change_handler`.
 *
 * Change handler (`change_handler`):
 *   - Reads `input.value`; an empty string is treated as `null` (remove action) to
@@ -234,12 +236,21 @@ const get_input_element_search = (i, data_item, self) => {
 				const paste = (e.clipboardData || window.clipboardData).getData("text");
 				if (paste) {
 
+					// Insert at caret/selection (preserves existing value).
+					const start	= input.selectionStart ?? input.value.length
+					const end	= input.selectionEnd ?? input.value.length
+
 					const beats = paste.split('\n')
 					const beats_length = beats.length
 
 					// Single-line paste: treat it like a normal typed value.
+					// Apply the same character filter as input_handler (setRangeText does not fire 'input').
 					if (beats_length<2) {
-						e.target.value = paste;
+						const clean_paste = paste.replace(/[^\d.,><=]/g, '')
+						if (clean_paste.length<1) {
+							return
+						}
+						input.setRangeText(clean_paste, start, end, 'end')
 						change_handler()
 						return
 					}
@@ -257,10 +268,24 @@ const get_input_element_search = (i, data_item, self) => {
 						}
 					}
 
-					// change \n by , (paste list of section_id from import cases)
-					const value = parts.join(',')
+					if (parts.length<1) {
+						return
+					}
 
-					e.target.value = value;
+					// change \n by , (paste list of section_id from import cases)
+					let value = parts.join(',')
+
+					// Add separators against adjacent existing values.
+					const before	= input.value.slice(0, start).trim()
+					const after		= input.value.slice(end).trim()
+					if (before.length>0 && !before.endsWith(',')) {
+						value = ',' + value
+					}
+					if (after.length>0 && !after.startsWith(',')) {
+						value = value + ','
+					}
+
+					input.setRangeText(value, start, end, 'end')
 					change_handler()
 				}
 			}
