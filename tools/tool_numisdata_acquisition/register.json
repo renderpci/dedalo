@@ -19,6 +19,7 @@
 		{ "lang": "lg-eng", "name": "html_file_label", "value": "Or upload a saved HTML page (for sources that block automated fetching) — URL above still required:" },
 		{ "lang": "lg-eng", "name": "request_failed", "value": "The request failed." },
 		{ "lang": "lg-eng", "name": "job_done", "value": "Done." },
+		{ "lang": "lg-eng", "name": "job_no_result", "value": "The job ended without a result." },
 		{ "lang": "lg-eng", "name": "job_working", "value": "Working…" },
 		{ "lang": "lg-eng", "name": "auction_prefix", "value": "Auction: " },
 		{ "lang": "lg-eng", "name": "auction_existing", "value": " (existing record #{id}, will link to it)" },

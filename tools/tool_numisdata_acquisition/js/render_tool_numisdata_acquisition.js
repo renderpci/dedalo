@@ -2,8 +2,14 @@
 /*global page_globals */
 /*eslint no-undef: "error"*/
 
-import { request_failed, response_data } from '../../../core/common/js/api_error.js';
+import {
+	normalize_stream_error,
+	request_failed,
+	response_data,
+} from '../../../core/common/js/api_error.js';
 import { data_manager } from '../../../core/common/js/data_manager.js';
+import { handle_api_error } from '../../../core/common/js/error_dispatch.js';
+import { error_text } from '../../../core/common/js/render_api_error.js';
 import { render_stream } from '../../../core/common/js/render_common.js';
 // imports
 import { ui } from '../../../core/common/js/ui.js';
@@ -281,11 +287,29 @@ const get_content_data = function (self) {
 		parent: fragment,
 	});
 
-	const render_error = function (response, fallback_message) {
+	// One readable sentence from an error (an ApiError or a wire body {code,
+	// message, label_key, ...}): the translated label via error_text, plus the
+	// server's own message when it says more. Always text_content, never markup.
+	const error_body_text = function (body) {
+		if (!body || typeof body !== 'object') {
+			return String(body ?? '');
+		}
+		const label = error_text(body);
+		return typeof body.message === 'string' && body.message.length && body.message !== label
+			? label + ': ' + body.message
+			: label;
+	};
+
+	// One failure line, label-first; the tool's generic sentence only when there
+	// is nothing coded to say.
+	const render_error = function (api_error) {
 		return ui.create_dom_element({
 			element_type: 'div',
 			class_name: 'error_message',
-			text_content: response.error.message || fallback_message,
+			text_content:
+				error_body_text(api_error) ||
+				self.get_tool_label('request_failed') ||
+				'The request failed.',
 		});
 	};
 
@@ -302,13 +326,14 @@ const get_content_data = function (self) {
 		const on_settle = options.on_settle;
 
 		dispatch_promise.then(function (response) {
-			if (request_failed(response) || typeof response.pid === 'undefined') {
+			// (an auth.* refusal here already reached the relogin overlay: the
+			// transport publishes every failed request's ApiError page-wide)
+			const dispatch_error = request_failed(response) ? response.error : null;
+			if (dispatch_error || typeof response?.pid === 'undefined') {
 				while (container.firstChild) {
 					container.removeChild(container.firstChild);
 				}
-				container.appendChild(
-					render_error(response, self.get_tool_label('request_failed') || 'The request failed.'),
-				);
+				container.appendChild(render_error(dispatch_error));
 				if (on_settle) on_settle();
 				return;
 			}
@@ -340,21 +365,35 @@ const get_content_data = function (self) {
 							});
 						}
 
-						// The terminal frame's `data` is the handler's whole envelope, so
-						// response_data unwraps it the same as an ordinary response.
-						if (request_failed(sse_response.data)) {
+						// A FAILED job ends with its coded error ON THE FRAME
+						// ({is_running:false, error:{code,…}} — ERRORS_SPEC §5.3,
+						// media/jobs.ts frameOf); its `data` is then the last progress
+						// payload, never an envelope. Read the frame first.
+						const frame_error = normalize_stream_error(sse_response);
+						if (frame_error) {
 							info_node.msg_node.textContent = '';
-							container.appendChild(
-								render_error(
-									sse_response.data,
-									self.get_tool_label('request_failed') || 'The request failed.',
-								),
-							);
+							container.appendChild(render_error(frame_error));
+							// a session that died mid-job must reach the relogin
+							// overlay, not a dead line of text (as render_stream does)
+							if (frame_error.code.startsWith('auth.')) {
+								handle_api_error(frame_error);
+							}
+							return;
+						}
+
+						// A success ends with the handler's ok() envelope as `data`.
+						// Anything else (a stopped job: no error, no result) has
+						// nothing to render — and is not "Done.".
+						const envelope = sse_response.data;
+						const result = envelope && envelope.ok === true ? response_data(envelope) : null;
+						if (!result || typeof result !== 'object') {
+							info_node.msg_node.textContent =
+								self.get_tool_label('job_no_result') || 'The job ended without a result.';
 							return;
 						}
 
 						info_node.msg_node.textContent = self.get_tool_label('job_done') || 'Done.';
-						on_success(response_data(sse_response.data));
+						on_success(result);
 						return;
 					}
 
@@ -790,7 +829,7 @@ const get_content_data = function (self) {
 				// was created (its own transaction rolled back) - review item C1.
 				// Each *_error is the error system's wire body ({code, message, ...} — see
 				// server/index.ts's toErrorBody(toDedaloError(...)), review item E2), never a
-				// bare string, so every read below is `.message`.
+				// bare string, so every read below goes through error_body_text.
 				if (result.section_id === null) {
 					ui.create_dom_element({
 						element_type: 'div',
@@ -799,7 +838,7 @@ const get_content_data = function (self) {
 							self.get_tool_label('lot_not_imported') || 'Lot {lot} NOT imported: {reason}'
 						)
 							.replace('{lot}', result.lot_identifier || '?')
-							.replace('{reason}', result.error.message),
+							.replace('{reason}', error_body_text(result.error)),
 						parent: summary,
 					});
 					return;
@@ -826,7 +865,7 @@ const get_content_data = function (self) {
 					: result.auction_error
 						? (
 								self.get_tool_label('lot_auction_not_linked') || ' — auction NOT linked: {reason}'
-							).replace('{reason}', result.auction_error.message)
+							).replace('{reason}', error_body_text(result.auction_error))
 						: '';
 				const type_bit = result.type_section_id
 					? (self.get_tool_label('lot_type_linked') || ' — type #{id} ({citation})')
@@ -840,7 +879,7 @@ const get_content_data = function (self) {
 						: result.type_error
 							? (
 									self.get_tool_label('lot_type_not_linked') || ' — type NOT linked: {reason}'
-								).replace('{reason}', result.type_error.message)
+								).replace('{reason}', error_body_text(result.type_error))
 							: '';
 				const line =
 					(self.get_tool_label('lot_imported') || 'Lot #{id} (fields: {fields})')
@@ -857,7 +896,7 @@ const get_content_data = function (self) {
 							? (
 									self.get_tool_label('lot_images_not_imported') ||
 									' — images NOT imported: {reason}'
-								).replace('{reason}', result.images_error.message)
+								).replace('{reason}', error_body_text(result.images_error))
 							: '') +
 					// A failed pair is rolled back whole; only a record whose own cleanup
 					// ALSO failed is listed here (server-logged) for manual removal.
@@ -942,12 +981,7 @@ const get_content_data = function (self) {
 						result_container.removeChild(result_container.firstChild);
 					}
 					if (request_failed(response)) {
-						result_container.appendChild(
-							render_error(
-								response,
-								self.get_tool_label('request_failed') || 'The request failed.',
-							),
-						);
+						result_container.appendChild(render_error(response.error));
 						return;
 					}
 					const data = response_data(response);

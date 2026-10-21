@@ -19,7 +19,8 @@
  *     and streams its job.
  *  2. Only a preview that ENDED CLEAN (no coded error, report ok, a dry run —
  *     dry_run_cleared) reveals the Execute button, bound to a SNAPSHOT of the
- *     files that were previewed.
+ *     files that were previewed — and only the LATEST preview: a superseded
+ *     one's late end is ignored.
  *  3. Execute refuses when the checked files changed since the preview (the
  *     operator must preview what runs), asks for an explicit confirm, then runs
  *     the snapshot with dry_run: false and streams that job. The button is
@@ -150,6 +151,11 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 
 	// previewed: the snapshot of the files the last CLEAN preview ran on
 	let previewed = null;
+	// preview_generation: stamps each preview. The form does not lock while a
+	// job streams, so two previews can be in flight; only the LATEST one may
+	// reveal Execute — a superseded preview's late clean end is ignored (else a
+	// stale clean run would arm Execute after the operator's newer one failed).
+	let preview_generation = 0;
 
 	// run: fire one run and stream its job; on_done gets the final frame
 	const run = (files, dry_run, on_done) => {
@@ -207,10 +213,11 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 					return;
 				}
 				const snapshot = [...files_selected];
+				const generation = ++preview_generation;
 				previewed = null;
 				execute_button.classList.add('hide');
 				return run(snapshot, true, (frame) => {
-					if (!dry_run_cleared(frame)) {
+					if (generation !== preview_generation || !dry_run_cleared(frame)) {
 						return;
 					}
 					previewed = snapshot;

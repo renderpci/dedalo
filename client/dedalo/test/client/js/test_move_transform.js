@@ -33,7 +33,13 @@ import {
 	init_move_transform_form,
 	move_transform_request_body,
 } from '../../../core/area_maintenance/js/move_transform.js';
+import { render_move_lang } from '../../../core/area_maintenance/widgets/move_lang/js/render_move_lang.js';
+import { render_move_locator } from '../../../core/area_maintenance/widgets/move_locator/js/render_move_locator.js';
+import { render_move_tld } from '../../../core/area_maintenance/widgets/move_tld/js/render_move_tld.js';
+import { render_move_to_portal } from '../../../core/area_maintenance/widgets/move_to_portal/js/render_move_to_portal.js';
+import { render_move_to_table } from '../../../core/area_maintenance/widgets/move_to_table/js/render_move_to_table.js';
 import { update_process_status } from '../../../core/common/js/common.js';
+import { data_manager } from '../../../core/common/js/data_manager.js';
 
 // harness — a fake widget + recorded effects
 const make_harness = (confirm_answer = true) => {
@@ -291,6 +297,126 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			await h.form().on_submit();
 			assert.isTrue(h.execute_button.classList.contains('hide'));
 		});
+
+		it('a SUPERSEDED preview cannot reveal Execute: only the latest preview decides', async function () {
+			// two previews of the same files in flight; the NEWER one fails first,
+			// then the OLDER one ends clean — the operator's latest preview failed,
+			// so nothing may be executed on the strength of the stale one
+			const h = make_harness();
+			h.files_selected.push('a.json');
+			await h.form().on_submit();
+			await h.form().on_submit();
+			assert.strictEqual(h.calls.track.length, 2, 'two previews streaming');
+			h.calls.track[1].on_done({
+				...clean_preview_frame,
+				error: { code: 'maintenance.action_failed' },
+			});
+			h.calls.track[0].on_done(clean_preview_frame);
+			assert.isTrue(
+				h.execute_button.classList.contains('hide'),
+				'the stale clean preview is ignored',
+			);
+			h.execute_button.click();
+			await Promise.resolve();
+			assert.strictEqual(h.calls.exec.length, 2, 'no execute was sent');
+			// positive control: the LATEST preview ending clean still reveals it
+			await h.form().on_submit();
+			h.calls.track[2].on_done(clean_preview_frame);
+			assert.isFalse(h.execute_button.classList.contains('hide'));
+		});
+	});
+
+	// THE FIVE WIDGETS ARE WIRED TO THE ONE FLOW. The flow above is gated on a
+	// harness; this proves each real move_* renderer hands init_move_transform_form
+	// ITS OWN model: rendered for real with a fake caller.init_form, a real
+	// checkbox change, the real transport (window.fetch scripted), the real job
+	// stream. A widget that kept a private submit path, or passed another
+	// widget's model, sends the wrong body here.
+	describe('the five move_* widgets', function () {
+		const widgets = [
+			['move_lang', render_move_lang],
+			['move_locator', render_move_locator],
+			['move_tld', render_move_tld],
+			['move_to_portal', render_move_to_portal],
+			['move_to_table', render_move_to_table],
+		];
+
+		for (const [model, renderer] of widgets) {
+			it(`${model}: the submit is a dry-run PREVIEW of ITS model, and a clean end reveals Execute`, async function () {
+				this.timeout(10000);
+				const file_name = `zz_${model}_test.json`;
+				let form = null;
+				const self = {
+					model: model,
+					value: { body: '', files: [{ file_name, content: { zz: true } }] },
+					caller: {
+						init_form: (widget_object) => {
+							form = widget_object;
+						},
+					},
+				};
+				const sent = [];
+				const original_fetch = window.fetch;
+				window.fetch = async (url, init) => {
+					const body = JSON.parse(init.body);
+					sent.push(body);
+					if (body.action === 'widget_request') {
+						return new Response(
+							JSON.stringify({
+								ok: true,
+								request_id: 'zz',
+								pid: 4242,
+								pfile: `${model}_zz.json`,
+								dry_run: true,
+							}),
+							{ status: 200, headers: { 'content-type': 'application/json' } },
+						);
+					}
+					if (body.action === 'get_process_status') {
+						const encoder = new TextEncoder();
+						return new Response(
+							new ReadableStream({
+								start(controller) {
+									controller.enqueue(
+										encoder.encode('data:\n' + JSON.stringify(clean_preview_frame) + '\n\n'),
+									);
+									controller.close();
+								},
+							}),
+							{ status: 200, headers: { 'content-type': 'text/event-stream' } },
+						);
+					}
+					throw new Error('unscripted request ' + JSON.stringify(body));
+				};
+				try {
+					const content_data = await renderer.prototype.list.call(self, {
+						render_level: 'content',
+					});
+					assert.isFunction(form?.on_submit, 'the widget hands its form to the shared flow');
+					assert.include(form.submit_label, 'dry run');
+					const checkbox = content_data.querySelector('input[type="checkbox"]');
+					checkbox.checked = true;
+					checkbox.dispatchEvent(new Event('change'));
+					await form.on_submit();
+					const runs = sent.filter((body) => body.action === 'widget_request');
+					assert.strictEqual(runs.length, 1, 'one run');
+					assert.deepEqual(runs[0].source, { type: 'widget', model, action: model }, 'ITS model');
+					assert.strictEqual(runs[0].options.dry_run, true, 'a preview');
+					assert.deepEqual(runs[0].options.files_selected, [file_name]);
+					const execute_button = content_data.querySelector('.button_execute_move');
+					assert.isNotNull(execute_button, 'the Execute control is mounted');
+					const started = Date.now();
+					while (execute_button.classList.contains('hide')) {
+						if (Date.now() - started > 5000)
+							throw new Error('the clean preview never revealed Execute');
+						await new Promise((resolve) => setTimeout(resolve, 20));
+					}
+				} finally {
+					window.fetch = original_fetch;
+					await data_manager.delete_local_db_data(`process_${model}`, 'status');
+				}
+			});
+		}
 	});
 });
 

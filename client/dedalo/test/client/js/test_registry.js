@@ -175,6 +175,8 @@ export const tool_suites_green = [
 	'test_tool_lang',
 	'test_tool_lang_multi',
 	'test_tool_media_versions',
+	'test_tool_numisdata_acquisition',    // the auction acquisition client driven for real (real constructor + renderer, real transport, scripted server at window.fetch — acquisition_harness.js): preview_url/commit_lots wire bodies, and a FAILED background job (coded `error` on the terminal FRAME, ERRORS_SPEC §5.3) renders that error — it used to print "Done." and crash in on_success(undefined); auth.* → relogin; a stopped job is not "Done."; error bodies label-first; scraped text stays text.
+	'test_tool_bibliography_acquisition', // the OAI-PMH journal acquisition client, same harness and the same contract: preview_url/commit_publications wire bodies, a failed job's frame error rendered (the public sentence reaches the operator), never "Done." + on_success(undefined).
 	'test_tool_numisdata_epigraphy',
 	'test_tool_numisdata_order_coins',
 	'test_tool_ontology',
