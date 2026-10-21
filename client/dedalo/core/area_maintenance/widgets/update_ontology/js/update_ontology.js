@@ -149,8 +149,9 @@ update_ontology.prototype.supported_code_version = (required_version) => {
 *
 * Dispatches to `dd_area_maintenance_api::widget_request` with
 * `source.model = 'update_ontology'` and `source.action = 'update_ontology'`.
-* On the server the PHP method `update_ontology::update_ontology()` handles
-* this action (see `API_ACTIONS` allowlist in the PHP class).
+* On the server the widget's `update_ontology` api action handles it
+* (src/core/area_maintenance/widgets/update_ontology.ts → the staged import in
+* src/core/ontology/ontology_update.ts).
 *
 * The request runs inside a web worker (`use_worker: true`) and uses a 1-hour
 * timeout because the server pipeline (staged download + `\copy` import +
@@ -160,7 +161,7 @@ update_ontology.prototype.supported_code_version = (required_version) => {
 * `retries: 1` means exactly one attempt — retrying an ontology import
 * automatically could leave tables in a partially-imported state.
 *
-* @param {Object} options - Import parameters forwarded verbatim to PHP:
+* @param {Object} options - Import parameters forwarded verbatim to the server:
 *   @param {Object}   options.server - Target server descriptor chosen by the
 *     operator in the servers list; shape: `{ name, url, code, active }`.
 *   @param {Array}    options.files  - Filtered list of file descriptors to
@@ -171,13 +172,18 @@ update_ontology.prototype.supported_code_version = (required_version) => {
 *   @param {Object}   options.info   - Remote ontology metadata returned by
 *     the prior `get_ontology_update_info` call; forwarded so the server can
 *     record provenance.
-* @returns {Promise<Object>} Resolves to the raw API response object:
-*   `{ result: boolean, msg: string, errors: string[], root_info?: Object,
-*   missing_dependencies?: Object[] }` — `missing_dependencies` lists the
-*   declared dependencies this server lacks (report only; the mandatory ones
-*   also arrive as `errors` lines, the optional ones as `msg` log notes).
-*   `root_info.properties.version` is used by the caller to run the version
-*   compatibility check via `supported_code_version`.
+* @returns {Promise<Object>} Resolves to the envelope v2 response
+*   (ERRORS_SPEC §3): `{ ok: true, request_id, data: true, msg?, errors?,
+*   root_info?, missing_dependencies? }` on success, `{ ok: false, request_id,
+*   error: {code, …}, msg?, errors? }` on a refusal (test it with
+*   `request_failed`). `msg`, `errors`, `root_info` and `missing_dependencies`
+*   are EXTENSION keys beside `data` — read them with `response_extension`, as
+*   render_update_ontology.js does; there is no `result` key.
+*   `missing_dependencies` lists the declared dependencies this server lacks
+*   (report only; the mandatory ones also arrive as `errors` lines, the
+*   optional ones as `msg` log notes). `root_info.properties.version` is used
+*   by the caller to run the version compatibility check via
+*   `supported_code_version`.
 */
 update_ontology.prototype.update_ontology = async (options) => {
 

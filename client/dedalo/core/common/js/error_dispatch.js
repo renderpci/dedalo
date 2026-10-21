@@ -795,6 +795,11 @@ export const handle_api_notices = async (payload = {}) => {
 * THREW and may already have committed (`outcome_unknown`), and a twin of a
 * leader that COMPLETED but whose answer was too large to keep
 * (`replay_unavailable` — it ran; what it answered is lost).
+* These are the server's SPELLINGS of those situations, so they are gated by
+* OUTCOME, not by spelling: test/unit/client_outcome_unknown_native.test.ts
+* builds each situation through the real dispatcher and requires this module
+* to read the answer as unknown (and a known refusal from the same gate as
+* known) — a renamed or retired server code turns it red.
 */
 const OUTCOME_UNKNOWN_CODES = new Set([
 	'idempotency.in_progress',
