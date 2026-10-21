@@ -745,7 +745,7 @@ else {
 					lockedRead: true,
 					readVerified: true,
 					reason:
-						'the regenerate re-saves, per language group, the items READ UNDER THE ROW LOCK in the same transaction (readMatrixKeyForUpdate, then readComponentItems on the locked record → groupItemsByLang → set_data per lang), under the run’s bulkProcessId: the undo log records each BEFORE/AFTER pair, and a canonical no-op writes none (WC-2026-09-27-bulk-revert-undo-log). A concurrent edit committed before the lock is what gets re-saved, never the run’s snapshot; a record deleted meanwhile is not recreated; a refused group rolls the whole component back (WC-2026-10-21-update-cache-locked-resave; gate update_cache_locked_resave_native).',
+						'the regenerate re-saves, per language group, the items READ UNDER THE ROW LOCK in the same transaction (readMatrixKeyForUpdate, then readComponentItems on the locked record → groupItemsByLang → set_data per lang), under the run’s bulkProcessId: the undo log records each BEFORE/AFTER pair, and a canonical no-op writes none (WC-2026-09-27-bulk-revert-undo-log). A concurrent edit committed before the lock is what gets re-saved, never the run’s snapshot; a record deleted meanwhile is not recreated; a refused group — an ok:false answer or a thrown caller/permission refusal — rolls the whole component back and the sweep goes on (WC-2026-10-21-update-cache-locked-resave; gates update_cache_locked_resave_native, update_cache_refused_resave_native).',
 				},
 			},
 		},

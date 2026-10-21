@@ -479,6 +479,22 @@ class ResaveRefused extends Error {
 }
 
 /**
+ * The save door's REFUSAL of one re-save, or null when `error` is not one. The
+ * door says no two ways: an `ok:false` answer, or a THROWN typed error whose
+ * registry category is the request's own (`caller` — a malformed stored item
+ * the value-shape law refuses, a write lang this install does not declare) or
+ * the target's (`permission`). Both are THIS record's verdict: reported per
+ * record, never the end of the sweep (value_shape.ts: "the door then refuses
+ * it: loud, per record"). Anything else — a database failure, an internal
+ * error — is no verdict on the record and propagates.
+ */
+function saveDoorRefusal(error: unknown): string | null {
+	if (!isDedaloError(error)) return null;
+	const category = error.spec.category;
+	return category === 'caller' || category === 'permission' ? error.message : null;
+}
+
+/**
  * ONE row × component regenerate of a NON-media component, as a locked
  * read-modify-write in ONE transaction (WC-2026-10-21-update-cache-locked-resave;
  * dedalo-ts-write-path §3 — the read sits under FOR UPDATE in the transaction
@@ -574,9 +590,14 @@ async function resaveUnderRowLock(
 					// no-op), so the sweep adds history only where the derivation
 					// actually CHANGED a value.
 					bulkProcessId,
+				}).catch((error: unknown) => {
+					const refusal = saveDoorRefusal(error);
+					if (refusal === null) throw error;
+					throw new ResaveRefused(refusal);
 				});
 				// In this (ambient) transaction a refusal leaves the refused part's
-				// writes to US: throw, so no lang group of a refused component stays.
+				// writes to US: throw, so no lang group of a refused component stays —
+				// whichever way the door said no (an answer, or a typed throw above).
 				if (outcome.ok === false) throw new ResaveRefused(outcome.message);
 			}
 			return 'written';

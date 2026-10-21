@@ -13,3 +13,6 @@ in between was brought back. Now each field is read and saved again in one step,
 record locked, so a change saved meanwhile is kept and a deleted record stays deleted. A
 record that stays locked by someone else is skipped and listed, and a re-save the system
 refuses is listed instead of being counted as done.
+A record whose stored value the system refuses to save again (for example an old value in
+a shape the field no longer accepts) is now listed and left untouched, and the run goes on
+with the next record: it used to stop the whole run at that record.

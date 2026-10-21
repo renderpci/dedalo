@@ -651,7 +651,10 @@ const PENDING: Record<string, { closes: string; body: string }> = {
 	// declaration `observed: { kind: 'none', reason: 'PENDING: archive restore →
 	// persistRecordColumns/persistRecordBirth (owner step)' }` on that call, so the
 	// detector is red over the throwing door and green over the fix.
-	'src/core/archive/restore.ts#writeRecordRow': { closes: ARCHIVE, body: '2aab00dd0e34f285' },
+	// RE-PINNED 2026-10-21 (W4 cross-authz_read:r2): the insert branch now opens the
+	// record-generation epoch (openEpochIfReborn) before the audit row — still a
+	// write past the chokepoint, so still PENDING (gate archive_restore_reborn_epoch_native).
+	'src/core/archive/restore.ts#writeRecordRow': { closes: ARCHIVE, body: '108aaa053809638a' },
 };
 
 const bodyHash = (body: string): string =>

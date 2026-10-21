@@ -130,6 +130,7 @@ import {
 	resolveTranscriberStatusProvider,
 	saveTranscriptionResult,
 	statusPollNeedsExternalAudioUrl,
+	type TranscriberProvider,
 	type TranscriberStatusProvider,
 } from '../../../src/core/tools/transcription_asr.ts';
 import { bindingMatches, issuePollHandle, readPollHandle } from './poll_handle.ts';
@@ -374,27 +375,97 @@ async function deleteTranscribableAudioFile(ctx: ToolActionContext): Promise<Too
 }
 
 /**
+ * The seams of automatic_transcription — each defaulting to production. A gate
+ * drives the SUBMIT through them (an ASR sidecar is not served in a test, and
+ * the detached poll must not really be enqueued), keeping the media context,
+ * the WAV location and the cleanup on the REAL code path.
+ */
+export interface AutomaticSubmitSeams {
+	/** The record gate (production: gateRecord — the write door). */
+	readonly gate?: (
+		ddo: MediaDdo,
+		ctx: ToolActionContext,
+		mode: 'read' | 'write',
+		door: string,
+	) => Promise<RecordGrant>;
+	/** The transcriber's uri/key entry for this engine, or null when unconfigured. */
+	readonly transcriberConfig?: (engine: string) => Promise<{ uri: string; key: string } | null>;
+	/** The submit itself (production: routed from the engine). */
+	readonly provider?: TranscriberProvider;
+	/** Enqueue the completion poll (production: scheduleCompletionPoll). */
+	readonly schedule?: (
+		pollOptions: Record<string, unknown>,
+		ctx: ToolActionContext,
+	) => Promise<void>;
+}
+
+/**
+ * Detach the completion poll (PHP exec_background_check_transcription).
+ * EVERYTHING the poll needs — principal, user, lang, target ddo, the exact
+ * submitted av_url — is in `pollOptions`, captured at enqueue time; the
+ * detached handler never reads ALS (isolation Rule 6).
+ */
+async function scheduleCompletionPoll(
+	pollOptions: Record<string, unknown>,
+	ctx: ToolActionContext,
+): Promise<void> {
+	const loaded = await getLoadedTool('tool_transcription');
+	if (loaded === undefined) {
+		console.error(
+			'[tool_transcription] could not schedule the background completion poll (module not loaded); the client can still poll check_server_transcriber_status',
+		);
+		return;
+	}
+	scheduleBackground(
+		loaded,
+		BACKGROUND_POLL_ACTION,
+		{
+			permission: null,
+			gatedInHandler:
+				'A BACKGROUND-ONLY spec: BACKGROUND_POLL_ACTION is absent from apiActions, so it is unroutable from the wire and can only be enqueued from here, after automaticTranscription has run its gateRecord pair. User and target ddo are captured at enqueue time (isolation Rule 6); the SAVE re-runs the write door (authorizeRecordAccess on a freshly resolved principal) immediately before the transcript is written, so a grant revoked after the enqueue writes nothing.',
+			handler: backgroundTranscriberPoll,
+		},
+		pollOptions,
+		ctx.principal,
+		ctx.userId,
+	);
+}
+
+/**
  * automatic_transcription — the REMOTE ASR submit (external seam). Ensure the
  * audio quality, submit its URL to the configured transcriber server (which
  * returns a job PID), then detach the bounded background completion poll that
  * writes the transcript back (PHP exec_background_check_transcription →
  * check_background_transcriber_status → process_file).
+ *
+ * THE ON-PREMISE WAV IS THE SUBMIT'S, NEVER THE POLL'S. The local engine is
+ * POSTed the WAV's BYTES in the submit itself (transcription_local_asr.ts
+ * submitForm), so once the submit has SETTLED — accepted, refused or thrown — no
+ * later step reads the file, and it is dropped right there. It used to ride the
+ * enqueued poll (`cleanup_path`), which left a copy of the interview on disk
+ * whenever the poll never ran its handler: a refused or failed submit (nothing
+ * enqueued), an unloaded tool, a job stopped while queued, a restart.
+ * (Gate: transcription_submit_drops_audio_native, through the seams below.)
  */
-async function automaticTranscription(ctx: ToolActionContext): Promise<ToolResponse> {
+export async function automaticTranscription(
+	ctx: ToolActionContext,
+	seams: AutomaticSubmitSeams = {},
+): Promise<ToolResponse> {
 	const o = ctx.options;
+	const gate = seams.gate ?? gateRecord;
 	// THE GATES FIRST (closure Step 3, TOOLS-3): unconditional, before any
 	// validation, config lookup or provider call. WRITE on the transcription
 	// target — its component_tipo REQUIRED (the write gate used to be section-only
 	// by construction) — then READ on the media SOURCE (TOOLS-06: without it a
 	// caller who can write their OWN transcription target could transcribe the
 	// restricted audio of ANY AV record into a record they control).
-	const transcriptionGrant = await gateRecord(
+	const transcriptionGrant = await gate(
 		readTranscriptionDdo(o),
 		ctx,
 		'write',
 		'tool_transcription.automatic_transcription.transcription_ddo',
 	);
-	const mediaGrant = await gateRecord(
+	const mediaGrant = await gate(
 		readMediaDdo(o),
 		ctx,
 		'read',
@@ -411,7 +482,8 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 		});
 	}
 
-	const { provider, error: providerError } = resolveTranscriberProvider(engine);
+	const { provider: routed, error: providerError } = resolveTranscriberProvider(engine);
+	const provider = routed === null ? null : (seams.provider ?? routed);
 	if (provider === null) {
 		throw new DedaloError('tool.unsupported_target', {
 			publicMessage: providerError ?? 'unknown transcriber engine',
@@ -420,7 +492,7 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 	}
 	// Config entry is looked up by the ORIGINAL engine name; the POSTed
 	// engine field uses the mapped one ('local' → babel) — PHP does both.
-	const cfg = resolveTranscriberConfig(await getToolConfig('tool_transcription'), engine);
+	const cfg = await (seams.transcriberConfig ?? defaultTranscriberConfig)(engine);
 	if (cfg === null) {
 		throw new DedaloError('tool.dependency_unavailable', {
 			coordinates: { engine },
@@ -435,7 +507,7 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 	//  - an EXTERNAL service fetches a public URL (and so needs one to exist);
 	//  - the institution's OWN box is POSTed the bytes of the speech-optimised
 	//    WAV, so the recording is never published anywhere. That WAV is a
-	//    throwaway derivative, deleted by the completion poll.
+	//    throwaway derivative, deleted as soon as the submit settles (below).
 	const isLocalEngine = engine === LOCAL_ASR_ENGINE;
 	const audioRel = isLocalEngine
 		? await ensureTranscribableAudio(spec, identity, pathOpts)
@@ -446,17 +518,23 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 	// install that publishes nothing.
 	const audioUrl = isLocalEngine ? '' : externalMediaUrl(audioRel);
 
-	const result = await provider({
-		uri: cfg.uri,
-		key: cfg.key,
-		engine: mappedEngine,
-		quality,
-		audioUrl,
-		audioPath,
-		langTld2: getAlpha2FromCode(sourceLang) ?? '',
-		userId: ctx.userId,
-		entityName: config.entity,
-	});
+	let result: Awaited<ReturnType<TranscriberProvider>>;
+	try {
+		result = await provider({
+			uri: cfg.uri,
+			key: cfg.key,
+			engine: mappedEngine,
+			quality,
+			audioUrl,
+			audioPath,
+			langTld2: getAlpha2FromCode(sourceLang) ?? '',
+			userId: ctx.userId,
+			entityName: config.entity,
+		});
+	} finally {
+		// The bytes have left in the POST (or never will): see the header.
+		if (audioPath !== undefined) dropTemporaryAudio(audioPath);
+	}
 	// The submit seam answers its own internal `{ok, pid|msg}` outcome
 	// (src/core/tools/transcription_asr.ts TranscribeResult): an
 	// unreachable/blocked ASR server is a dependency failure, not a caller fault.
@@ -471,40 +549,22 @@ async function automaticTranscription(ctx: ToolActionContext): Promise<ToolRespo
 	// EVERYTHING the poll needs — principal, user, lang, target ddo, the
 	// exact submitted av_url — is captured HERE at enqueue time; the
 	// detached handler never reads ALS (isolation Rule 6).
-	const loaded = await getLoadedTool('tool_transcription');
-	if (loaded !== undefined) {
-		scheduleBackground(
-			loaded,
-			BACKGROUND_POLL_ACTION,
-			{
-				permission: null,
-				gatedInHandler:
-					'A BACKGROUND-ONLY spec: BACKGROUND_POLL_ACTION is absent from apiActions, so it is unroutable from the wire and can only be enqueued from here, after automaticTranscription has run its gateRecord pair. User and target ddo are captured at enqueue time (isolation Rule 6); the SAVE re-runs the write door (authorizeRecordAccess on a freshly resolved principal) immediately before the transcript is written, so a grant revoked after the enqueue writes nothing.',
-				handler: backgroundTranscriberPoll,
-			},
-			{
-				key: cfg.key,
-				url: cfg.uri,
-				lang: sourceLang,
-				av_url: audioUrl,
-				// The throwaway WAV the on-premise engine was fed. The poll
-				// deletes it when the job ends, whichever way it ends — this
-				// file is a copy of an interview and must not linger.
-				cleanup_path: audioPath,
-				engine: mappedEngine,
-				user_id: ctx.userId,
-				entity_name: config.entity,
-				transcription_ddo: grantTarget(transcriptionGrant),
-				pid: result.pid,
-			},
-			ctx.principal,
-			ctx.userId,
-		);
-	} else {
-		console.error(
-			'[tool_transcription] could not schedule the background completion poll (module not loaded); the client can still poll check_server_transcriber_status',
-		);
-	}
+	await (seams.schedule ?? scheduleCompletionPoll)(
+		{
+			key: cfg.key,
+			url: cfg.uri,
+			lang: sourceLang,
+			av_url: audioUrl,
+			// NO cleanup_path: the on-premise WAV was dropped when the submit
+			// settled (see the header) — the poll never owns a file.
+			engine: mappedEngine,
+			user_id: ctx.userId,
+			entity_name: config.entity,
+			transcription_ddo: grantTarget(transcriptionGrant),
+			pid: result.pid,
+		},
+		ctx,
+	);
 
 	// THE CLIENT GETS A HANDLE, NOT THE JOB ID (TOOLS-3 review r7): the raw id
 	// stays server-side (the background poll above holds it); the sealed handle
@@ -554,7 +614,9 @@ export async function backgroundTranscriberPoll(
 	const o = ctx.options;
 	const ddo = (o.transcription_ddo ?? {}) as MediaDdo;
 	const lang = String(o.lang ?? '');
-	const cleanupPath = String(o.cleanup_path ?? '');
+	// The poll owns NO file: the on-premise WAV is dropped when the submit settles
+	// (automaticTranscription). Jobs die on restart (background.ts), so no job
+	// enqueued by the retired `cleanup_path` producer can reach this handler.
 	const outcome = await pollTranscriptionCompletion(
 		{
 			status: {
@@ -587,14 +649,7 @@ export async function backgroundTranscriberPoll(
 				return saved;
 			},
 		},
-	).finally(() => {
-		// The job is over (saved, failed, given up on — or THROWN: a status
-		// provider, or a save re-gate failing untyped): drop the temporary audio.
-		// On EVERY settle, on purpose: a cleanup placed after the await ran only
-		// when the poll RETURNED, which left a copy of the recording on disk after
-		// every throw (gate: transcription_poll_cleanup_native).
-		dropTemporaryAudio(cleanupPath);
-	});
+	);
 
 	// A BACKGROUND job: a refusal here is the job's terminal state (background.ts
 	// records `error` on the job record), not a wire body.

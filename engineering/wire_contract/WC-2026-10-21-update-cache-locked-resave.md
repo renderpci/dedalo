@@ -32,3 +32,27 @@
   with a REAL concurrent transaction, no seam); `bulk_undo_capture_native` (the sweep's
   undo-log pairs, unchanged). TS-only tool response: no oracle fixture replays it; no
   re-harvest.
+
+## Addendum 2026-10-21 — a THROWN save-door refusal is that record's refusal too (W4 cross-authz_read:r2)
+
+- **Shape before (TS):** only an `ok:false` answer of the save door was the per-record
+  `refused` outcome. The door also refuses by THROWING a typed error before it writes —
+  the value-shape law (`request.invalid_data`: a PHP-era stored item no re-save cast
+  reads, `value_shape.ts`), an undeclared write lang (`record.lang_not_installed`). That
+  throw left the per-record classification, ended the WHOLE run at the first such record
+  (the handler failed; every record after it unprocessed) and reported nothing per record.
+- **Shape after (TS):** a thrown `DedaloError` whose registry category is `caller` or
+  `permission` is the save door's verdict on THAT record: carried out of the row ×
+  component transaction like an `ok:false` (the whole component rolls back — every lang
+  group already re-saved in it), counted in the summary's
+  `<n> re-save(s) refused by the save door (nothing written to them).`, listed as
+  `<tipo>#<id>: the re-save was refused — nothing written (<reason>)`, and the sweep goes
+  on with the next record. Any other failure (database, internal) is no verdict on the
+  record and still fails the run. Response keys unchanged.
+- **Gate reconciliation:** `update_cache_refused_resave_native` (R1 a record whose first
+  lang group re-saves to new bytes and whose second is refused: stored bytes unchanged in
+  every lang, no undo-log row, the `errors[]` line; R2 the next record of the same run is
+  re-saved, `regenerated` counts it alone, the summary names the one refusal). The `ok:false`
+  half shares the same throw out of the transaction; no `ok:false` refusal can be produced
+  per lang group (each of them refuses the whole component alike), so R1 drives the thrown
+  half. TS-only tool response: no oracle fixture replays it; no re-harvest.

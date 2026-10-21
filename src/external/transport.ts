@@ -30,8 +30,9 @@
  *      time at connect (the DNS-rebinding window).
  *   5. attach the credential — ONLY NOW. Attaching it before 3/4 would let an
  *      ontology edit point the request at an attacker's host and exfiltrate it.
- *   6. fetch: redirect:'error' (a redirect re-chooses the target), an
- *      AbortSignal at the timeout, Accept: application/json, a STREAMED byte
+ *   6. fetch: redirect:'error' (a redirect re-chooses the target), ONE
+ *      deadline per attempt from step 4's lookup to the body's last byte
+ *      (openAttemptDeadline), Accept: application/json, a STREAMED byte
  *      ceiling, and the ADAPTER'S method (v6 sent a bodyless POST at a
  *      query-string URL and got away with it by accident).
  *   7. retry only on a SERVICE failure (breaker.ts isServiceFailure: timeout /
@@ -67,6 +68,7 @@ import {
 	parseRetryAfterMs,
 	pinToVettedAddress,
 	readBytesCapped,
+	untilAborted,
 } from '../core/security/ssrf_guard.ts';
 import {
 	checkBreaker,
@@ -342,8 +344,12 @@ async function readCapped(
 	response: Response,
 	maxBytes: number,
 	coordinates: Omit<ExternalErrorFields, 'kind'>,
+	signal: AbortSignal,
 ): Promise<string> {
 	const { bytes } = await readBytesCapped(response, maxBytes, {
+		// The attempt's deadline stops the BODY read too, whether or not the fetch
+		// implementation wired its signal into the stream.
+		signal,
 		onBreach: (max) =>
 			new ExternalServiceError({
 				...coordinates,
@@ -404,11 +410,65 @@ function retryAfterMs(response: Response, now: number): number | null {
  */
 const isRetryable = isServiceFailure;
 
-/** ONE attempt: pin, credential, fetch, cap. Throws a classified error. */
+/**
+ * ONE attempt's TOTAL deadline — resolve + vet, connect, headers AND body. The
+ * timer opens before step 4: a resolver that never answers (the guard's DNS
+ * lookup) is a timeout of THIS attempt, never a slot held for ever, and a body
+ * that trickles or stalls is cut at the same instant (readCapped's signal).
+ *
+ * The running job's stop is deliberately NOT composed in here (unlike the
+ * harvesting door's openHopBudget): this door's result is SHARED — cache.ts
+ * `inFlight` and search.ts `inFlightSearches` hand one in-flight fetch to every
+ * caller that asks for the same key — so one job's stop would fail another
+ * request's lookup. A caller's own stop belongs at its own wait, not here.
+ */
+interface AttemptDeadline {
+	readonly signal: AbortSignal;
+	/** The `timeout` error when the deadline fired, else null (the failure is the caller's to classify). */
+	timedOut(
+		coordinates: Omit<ExternalErrorFields, 'kind'>,
+		cause: unknown,
+	): ExternalServiceError | null;
+	close(): void;
+}
+
+function openAttemptDeadline(timeoutMs: number): AttemptDeadline {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	return {
+		signal: controller.signal,
+		timedOut: (coordinates, cause) =>
+			controller.signal.aborted
+				? new ExternalServiceError({
+						...coordinates,
+						kind: 'timeout',
+						detail: `aborted after ${timeoutMs}ms`,
+						cause,
+					})
+				: null,
+		close: () => clearTimeout(timer),
+	};
+}
+
+/** ONE attempt: vet, pin, credential, fetch, cap — all under one deadline. Throws a classified error. */
 async function attempt(
 	options: ExternalFetchOptions,
 	url: URL,
 	deps: Required<Pick<TransportDeps, 'now'>> & TransportDeps,
+): Promise<string> {
+	const deadline = openAttemptDeadline(options.model.timeoutMs ?? externalSettings().timeoutMs);
+	try {
+		return await attemptWithin(options, url, deps, deadline);
+	} finally {
+		deadline.close();
+	}
+}
+
+async function attemptWithin(
+	options: ExternalFetchOptions,
+	url: URL,
+	deps: Required<Pick<TransportDeps, 'now'>> & TransportDeps,
+	deadline: AttemptDeadline,
 ): Promise<string> {
 	const { model, request, sectionTipo, remoteId } = options;
 	const origin = originOf(url);
@@ -419,18 +479,22 @@ async function attempt(
 		...(remoteId === undefined ? {} : { remoteId }),
 	};
 
-	// Step 4 — resolve + vet, then pin.
+	// Step 4 — resolve + vet, then pin. Under the deadline: the guard's DNS lookup
+	// is raced against it (a resolver that never answers cannot hold the slot).
 	const assertUrl = deps.assertPublicUrlImpl ?? assertPublicUrl;
 	let vetted: SafeUrlResult;
 	try {
-		vetted = await assertUrl(url.toString());
+		vetted = await untilAborted(assertUrl(url.toString()), deadline.signal);
 	} catch (error) {
-		throw new ExternalServiceError({
-			...coordinates,
-			kind: 'blocked_host',
-			detail: 'refused by the SSRF guard',
-			cause: error,
-		});
+		throw (
+			deadline.timedOut(coordinates, error) ??
+			new ExternalServiceError({
+				...coordinates,
+				kind: 'blocked_host',
+				detail: 'refused by the SSRF guard',
+				cause: error,
+			})
+		);
 	}
 
 	// Step 5 — the credential, now that the target is vetted. Mutates a COPY of
@@ -446,48 +510,44 @@ async function attempt(
 	pinExternal(requestUrl, vetted, headers, init, coordinates);
 	if (request.body !== undefined) init.body = request.body;
 
-	const timeoutMs = model.timeoutMs ?? externalSettings().timeoutMs;
-	const controller = new AbortController();
-	const timer = setTimeout(() => controller.abort(), timeoutMs);
-	init.signal = controller.signal;
+	init.signal = deadline.signal;
 	const doFetch = deps.fetchImpl ?? ((target: string, i: ExternalFetchInit) => fetch(target, i));
+	let response: Response;
 	try {
-		let response: Response;
-		try {
-			response = await doFetch(requestUrl.toString(), init);
-		} catch (error) {
-			const aborted = controller.signal.aborted;
-			throw new ExternalServiceError({
+		response = await untilAborted(doFetch(requestUrl.toString(), init), deadline.signal);
+	} catch (error) {
+		throw (
+			deadline.timedOut(coordinates, error) ??
+			new ExternalServiceError({
 				...coordinates,
-				kind: aborted ? 'timeout' : 'transport',
-				detail: aborted ? `aborted after ${timeoutMs}ms` : 'connection or redirect failure',
+				kind: 'transport',
+				detail: 'connection or redirect failure',
 				cause: error,
-			});
-		}
-		if (!response.ok) {
-			const asked = retryAfterMs(response, deps.now());
-			throw new ExternalServiceError({
-				...coordinates,
-				kind: 'http_status',
-				status: response.status,
-				...(asked === null ? {} : { retryAfterMs: asked }),
-			});
-		}
-		let text: string;
-		try {
-			text = await readCapped(response, externalSettings().maxBytes, coordinates);
-		} catch (error) {
-			if (error instanceof ExternalServiceError) throw error; // too_large, already typed
-			throw new ExternalServiceError({
+			})
+		);
+	}
+	if (!response.ok) {
+		const asked = retryAfterMs(response, deps.now());
+		throw new ExternalServiceError({
+			...coordinates,
+			kind: 'http_status',
+			status: response.status,
+			...(asked === null ? {} : { retryAfterMs: asked }),
+		});
+	}
+	try {
+		return await readCapped(response, externalSettings().maxBytes, coordinates, deadline.signal);
+	} catch (error) {
+		if (error instanceof ExternalServiceError) throw error; // too_large, already typed
+		throw (
+			deadline.timedOut(coordinates, error) ??
+			new ExternalServiceError({
 				...coordinates,
 				kind: 'transport',
 				detail: 'response stream failed',
 				cause: error,
-			});
-		}
-		return text;
-	} finally {
-		clearTimeout(timer);
+			})
+		);
 	}
 }
 

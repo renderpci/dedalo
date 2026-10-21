@@ -441,9 +441,11 @@ async function planEntries(
 /**
  * The rows a gzip'd COPY text stream holds — one per newline (COPY's text
  * format escapes a newline inside a value as `\\n`) — read to the END of the
- * stream, or null when it is not one complete gzip stream (torn, cut short).
+ * stream, or null when it is not one complete gzip stream (torn, cut short)
+ * or the SOURCE fails (a file that vanished or cannot be read) — it always
+ * settles. Exported for its gate (export_hierarchy_gzip_count_native).
  */
-async function gzipRowCount(source: Readable): Promise<number | null> {
+export async function gzipRowCount(source: Readable): Promise<number | null> {
 	let rows = 0;
 	const gunzip = createGunzip();
 	// pipe() does not forward a SOURCE error: unforwarded, a file that vanished

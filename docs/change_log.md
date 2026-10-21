@@ -235,6 +235,15 @@ Merged since the last release; these ship with the next one.
     the Execute button. Before, an older clean preview could reveal it after your newer
     preview had failed.
 
+- **A record restored from an archive no longer shows the history of a deleted record that had the same id.**
+
+    Restoring an archive re-creates each record with the id it had when it was archived. If
+    this installation once held a different record with that id, deleted since, the restored
+    record's history used to list that deleted record's changes as if they were its own, and
+    they could be restored onto it. A restored record's history now starts with the restore,
+    as it already did for records imported with an explicit id. The deleted record's history
+    is kept.
+
 - **The assistant's find-or-create no longer duplicates a record under concurrent calls**
 
     When two assistant requests asked for the same record at the same moment (find it by its fields, or create it), both could miss it and both create it, leaving two records with the same identity. The search is now asked again under a lock before anything is created, so the second request finds the record the first one created.
@@ -279,6 +288,9 @@ Merged since the last release; these ship with the next one.
     record locked, so a change saved meanwhile is kept and a deleted record stays deleted. A
     record that stays locked by someone else is skipped and listed, and a re-save the system
     refuses is listed instead of being counted as done.
+    A record whose stored value the system refuses to save again (for example an old value in
+    a shape the field no longer accepts) is now listed and left untouched, and the run goes on
+    with the next record: it used to stop the whole run at that record.
 
     Wire contract: `WC-2026-10-21-update-cache-locked-resave`.
 
@@ -919,6 +931,15 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-11-export-buffered-cap-and-admission`.
 
+- **A lookup in an external catalogue now always ends within its timeout, even when the name server or the answer stalls.**
+
+    The timeout of an external record service (for example Zenon) started only when the
+    connection was opened. Resolving the service's name, and reading an answer that stopped
+    arriving, were not covered, so a stalled name server or a stalled answer could keep the
+    lookup — and one of the service's few parallel request slots — waiting indefinitely. The
+    whole request, from the name lookup to the last byte of the answer, is now covered by the
+    service's configured timeout, and such a request is reported as timed out.
+
 - **Exporting a thesaurus never leaves or certifies a partial dump**
 
     The hierarchy export panel used to stream each thesaurus straight to its final file and judge the export by "the file exists". A dump cut short (a server error, a dropped connection, a full disk) still left a valid-looking file, and `hierarchy.json` then certified it with a checksum, so an installation importing it received a partial thesaurus. Each dump is now written beside its final name and moved into place only when psql succeeded, the file reads to its end, and it holds exactly the rows psql reported; otherwise the panel names the reason and the previous good file is kept. Building `hierarchy.json` also refuses, keeping the previous manifest, when a data file it would list is torn or changed while it was built. A complete but short dump left by an export made before this fix cannot be told apart: export those thesauri again.
@@ -968,6 +989,15 @@ Merged since the last release; these ship with the next one.
       name in the shared temporary directory. Before, another local user on a multi-user
       Linux host could plant that file and add SQL to what the installer ran. The dump now
       goes to a fresh private directory.
+
+- **The temporary audio copy made for on-premise transcription is deleted as soon as it has been sent.**
+
+    Automatic transcription with the institution's own recognition server makes a temporary
+    speech-quality copy of the interview and sends its bytes to that server. The copy used to
+    be deleted only when the background check of the transcription finished, so it stayed on
+    disk when the submission failed, when the check never ran (the job was stopped while
+    waiting, or the server restarted) or when the check could not be scheduled. It is now
+    deleted the moment the submission ends, whatever its outcome.
 
 - **Interrupted exports and transcriptions no longer leave temporary files behind**
 

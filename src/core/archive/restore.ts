@@ -88,6 +88,7 @@ import {
 	updateMatrixRecord,
 } from '../db/matrix_write.ts';
 import { withTransaction } from '../db/postgres.ts';
+import { openEpochIfReborn } from '../db/record_generation.ts';
 import { recordTimeMachine } from '../db/time_machine.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 import { MEDIA_DIR_MODE } from '../install/media_tree.ts';
@@ -522,6 +523,13 @@ async function writeRecordRow(line: ArchiveRecordLine, ctx: RowWriteContext): Pr
 		ctx.outcome.records.overwritten += 1;
 	} else {
 		await insertMatrixRecordWithExplicitId(ctx.table, ctx.sectionTipo, line.section_id, {});
+		// A BIRTH at an explicit id, like every other explicit-id birth door
+		// (create_record.ts recordBirthMarker): the address may carry the history
+		// of a record that lived and died here — a DIFFERENT record (see LOCATORS
+		// above). The epoch puts that generation below the boundary every history
+		// reader applies, BEFORE the restore's own audit row, which sits above it.
+		// The overwrite branch is the live record itself: no new generation.
+		await openEpochIfReborn(ctx.sectionTipo, line.section_id);
 		ctx.outcome.records.inserted += 1;
 	}
 	await updateMatrixRecord(ctx.table, ctx.sectionTipo, line.section_id, values, {
