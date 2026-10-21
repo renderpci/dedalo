@@ -1371,6 +1371,11 @@
 			"skipped": 0,
 			"assertions": 6
 		},
+		"test/unit/diffusion_operator_fence_budget_native.test.ts": {
+			"tests": 6,
+			"skipped": 0,
+			"assertions": 22
+		},
 		"test/unit/diffusion_parsers.test.ts": {
 			"tests": 88,
 			"skipped": 0,
@@ -3626,6 +3631,11 @@
 			"skipped": 0,
 			"assertions": 141
 		},
+		"test/unit/publication_host_init_drill_directives.test.ts": {
+			"tests": 8,
+			"skipped": 0,
+			"assertions": 115
+		},
 		"test/unit/publication_host_init_pair_native.test.ts": {
 			"tests": 4,
 			"skipped": 0,
@@ -3640,6 +3650,11 @@
 			"tests": 12,
 			"skipped": 0,
 			"assertions": 87
+		},
+		"test/unit/publication_host_kit_publish.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 7
 		},
 		"test/unit/publication_host_lockstep_kit.test.ts": {
 			"tests": 5,
@@ -3705,6 +3720,11 @@
 			"tests": 42,
 			"skipped": 0,
 			"assertions": 147
+		},
+		"test/unit/publication_host_provision_durability.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 9
 		},
 		"test/unit/publication_host_push_apis_widget.test.ts": {
 			"tests": 16,
