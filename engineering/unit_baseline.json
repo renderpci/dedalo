@@ -246,6 +246,11 @@
 			"skipped": 0,
 			"assertions": 21
 		},
+		"test/unit/archive_restore_reborn_epoch_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 6
+		},
 		"test/unit/area_activity_metric.test.ts": {
 			"tests": 3,
 			"skipped": 0,
@@ -1661,10 +1666,20 @@
 			"skipped": 0,
 			"assertions": 87
 		},
+		"test/unit/export_hierarchy_gzip_count_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 4
+		},
 		"test/unit/export_hierarchy_partial_dump_native.test.ts": {
 			"tests": 6,
 			"skipped": 0,
 			"assertions": 33
+		},
+		"test/unit/export_hierarchy_stale_temp_sweep_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 9
 		},
 		"test/unit/export_open_grid_native.test.ts": {
 			"tests": 23,
@@ -1795,6 +1810,11 @@
 			"tests": 15,
 			"skipped": 0,
 			"assertions": 75
+		},
+		"test/unit/external_transport_deadline_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 6
 		},
 		"test/unit/external_transport_native.test.ts": {
 			"tests": 28,
@@ -3140,6 +3160,11 @@
 			"tests": 1,
 			"skipped": 0,
 			"assertions": 1
+		},
+		"test/unit/numisdata_acquisition_seam_scope_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 8
 		},
 		"test/unit/obligation_ledger_native.test.ts": {
 			"tests": 46,
@@ -5641,6 +5666,11 @@
 			"skipped": 0,
 			"assertions": 17
 		},
+		"test/unit/transcription_submit_drops_audio_native.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 15
+		},
 		"test/unit/transform_engine.test.ts": {
 			"tests": 9,
 			"skipped": 0,
@@ -5750,6 +5780,16 @@
 			"tests": 5,
 			"skipped": 0,
 			"assertions": 77
+		},
+		"test/unit/update_cache_locked_resave_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 11
+		},
+		"test/unit/update_cache_refused_resave_native.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 10
 		},
 		"test/unit/update_channel_native.test.ts": {
 			"tests": 8,
