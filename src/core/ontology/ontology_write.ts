@@ -35,6 +35,7 @@
 import { canonicalizeStoredSectionId } from '../concepts/section_id.ts';
 import {
 	type DdOntologyNode,
+	ONTOLOGY_REGISTRY_MINT_LOCK_CLASS,
 	readDdOntologyRow,
 	updateDdOntologyColumns,
 	upsertDdOntologyNode,
@@ -560,13 +561,44 @@ function ddGeneralTermValue(targetSectionTipo: string): Record<string, unknown>[
  * Returns the new section_id.
  */
 export async function createMainSection(fileItem: FileItem, userId = -1): Promise<number> {
+	const minted = await mintMainSection(fileItem, userId, 'refuse');
+	return minted.sectionId;
+}
+
+/**
+ * The mint, ONE TRANSACTION (cross-write:r2): the per-tld mint lock, the "no
+ * row names this tld" check behind it, the row and every registry key — a
+ * failure after the mint rolls the row back (never an orphan registry row no
+ * tld resolves), and two minters of one tld never both mint. An existing row
+ * is refused (`refuse` — createMainSection's contract) or answered as it is
+ * (`keep` — ensureMainSection's, the race's loser included).
+ */
+async function mintMainSection(
+	fileItem: FileItem,
+	userId: number,
+	onExisting: 'refuse' | 'keep',
+): Promise<{ sectionId: number; created: boolean }> {
 	const tld = fileItem.tld;
-	if ((await getOntologyMainFromTld(tld)) !== null) {
-		throw new DedaloError('internal.invariant', {
-			message: `createMainSection: '${tld}' already has an ontology registry row`,
-			coordinates: { tld },
-		});
-	}
+	return withTransaction(async () => {
+		await sql.unsafe('SELECT pg_advisory_xact_lock($1::int, hashtext($2))', [
+			ONTOLOGY_REGISTRY_MINT_LOCK_CLASS,
+			tld,
+		]);
+		const existing = await getOntologyMainFromTld(tld);
+		if (existing !== null) {
+			if (onExisting === 'keep') return { sectionId: existing.section_id, created: false };
+			throw new DedaloError('internal.invariant', {
+				message: `createMainSection: '${tld}' already has an ontology registry row`,
+				coordinates: { tld },
+			});
+		}
+		return { sectionId: await mintRegistryRow(fileItem, userId), created: true };
+	});
+}
+
+/** The row and its registry keys (mintMainSection's body — inside its transaction). */
+async function mintRegistryRow(fileItem: FileItem, userId: number): Promise<number> {
+	const tld = fileItem.tld;
 	const targetSectionTipo = fileItem.section_tipo ?? mapTldToTargetSectionTipo(tld);
 	const langId = await resolveRegistryLangId();
 	const dependencies = definitionDependencies(fileItem);
@@ -618,7 +650,8 @@ export async function ensureMainSection(
 ): Promise<{ sectionId: number; created: boolean }> {
 	const existing = await getOntologyMainFromTld(fileItem.tld);
 	if (existing !== null) return { sectionId: existing.section_id, created: false };
-	return { sectionId: await createMainSection(fileItem, userId), created: true };
+	// Re-checked behind the mint lock: a concurrent minter's row is answered, not doubled.
+	return mintMainSection(fileItem, userId, 'keep');
 }
 
 /**
@@ -637,8 +670,11 @@ export async function syncMainSectionFromDefinition(
 ): Promise<number> {
 	const tld = fileItem.tld;
 	const existing = await getOntologyMainFromTld(tld);
-	if (existing === null) return await createMainSection(fileItem, userId);
-	const mainSectionId = existing.section_id;
+	// Missing → mint behind the mint lock; a concurrent minter's row (the race's
+	// loser) is SYNCED like any existing row, never doubled nor refused.
+	const minted = existing === null ? await mintMainSection(fileItem, userId, 'keep') : null;
+	if (minted?.created === true) return minted.sectionId;
+	const mainSectionId = minted?.sectionId ?? (existing as { section_id: number }).section_id;
 	const langId = await resolveRegistryLangId();
 	const dependencies = definitionDependencies(fileItem);
 

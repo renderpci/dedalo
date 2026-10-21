@@ -41,6 +41,10 @@
  * A unit whose OWN record the run deleted (a revert's D2 delete, reverted in
  * turn) is gated on the record's scope AFTER undeleting it, on the restored
  * row, inside its transaction — the search cannot find a row that is not there.
+ * Every cascade target a unit RE-LINKS is gated the same way, on ITS OWN
+ * restored row: the referrer's gate never stands for the target's scope (a
+ * locator in A says nothing about B's projects — cross-write:r2); out of
+ * scope refuses the unit, rolling the undelete back with it.
  * Record-level markers are gated on the section level and the record's scope,
  * the delete door's own rule.
  *
@@ -240,8 +244,14 @@ async function createRevertBulkProcess(label: string, userId: number): Promise<n
 					{ actor: userId },
 				);
 			}
-		} catch {
-			// label is cosmetic.
+		} catch (error) {
+			// The label is cosmetic — best effort, but never SILENT: this write goes
+			// through the record chokepoint, so a failure here also means its
+			// post-write obligations did not run.
+			console.error(
+				`[tool_time_machine/bulk_revert] dd800 label of revert run ${String(bulkId)} not written — its post-write obligations did not run:`,
+				error,
+			);
 		}
 		return bulkId;
 	} catch (error) {
@@ -736,29 +746,24 @@ async function undeleteRelinked(
 	for (const root of markers) {
 		for (const marker of cascadeGroup(root, children)) {
 			if (landed.has(marker)) continue;
-			prelude.push(await undeleteForUnit(unit, key, marker, marker === root, context));
+			prelude.push(await undeleteForUnit(key, marker, context));
 		}
 	}
 	return prelude;
 }
 
 /**
- * One member of a unit's prelude. A REFERENCING unit's gate stands for a
- * target it links directly; the unit's own record, and a nested child (linked
- * by its parent's snapshot, not by the unit), are judged on the restored row.
+ * One member of a unit's prelude. EVERY member — a target the unit links
+ * directly, the unit's own record, a nested child — is judged on its OWN
+ * record scope (the restored row's, inside the unit's transaction): the
+ * unit's gate judged the unit's record, never the target's (cross-write:r2).
  */
 async function undeleteForUnit(
-	unit: RevertUnit,
 	key: RevertKey,
 	marker: RecordMarker,
-	linkedByUnit: boolean,
 	context: RecordContext,
 ): Promise<Relinked> {
-	const outcome = await undeleteCascadeRecord(
-		marker,
-		context,
-		linkedByUnit && !isOwnRecord(unit, marker),
-	);
+	const outcome = await undeleteCascadeRecord(marker, context);
 	if (outcome.kind === 'out_of_scope') {
 		throw new RevertRefusal(
 			'out_of_scope',

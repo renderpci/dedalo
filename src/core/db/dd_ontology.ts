@@ -584,6 +584,15 @@ export async function deleteDdOntologyNode(tipo: string): Promise<number> {
 export const ONTOLOGY_PROJECTION_LOCK_CLASS = 17580003;
 
 /**
+ * The advisory-lock class (int4) of the per-tld REGISTRY-ROW MINT lock: the key
+ * is (class, hashtext(tld)). Taken ONLY by ontology_write.ts createMainSection,
+ * inside its transaction, BEFORE its "no row names this tld" check — so the
+ * check and the mint are one step and two minters of one tld never both mint
+ * (cross-write:r2). Its own class: it never orders against the projection lock.
+ */
+export const ONTOLOGY_REGISTRY_MINT_LOCK_CLASS = 17580004;
+
+/**
  * Serialize every writer that derives a tld's NODES from its source records
  * (ONT-1/2/3 under concurrency, audit 2026-09-26 r0). The invariant
  * `dd_ontology(tld) == parse(matrix_ontology(<tld>0))` is a read-modify-write
@@ -1004,6 +1013,48 @@ export async function createRecoverySlice(tlds: readonly string[]): Promise<Reco
 		),
 	);
 	return { created: true, skipped: violators.map((row) => row.tipo) };
+}
+
+/** The recovery-slice single-flight lock's name (hashed to the advisory key, per database). */
+const RECOVERY_SLICE_LOCK_NAME = 'dedalo_ontology_recovery_file';
+
+/**
+ * Run `work` holding the RECOVERY-SLICE single-flight lock, or answer `busy()`
+ * without running it (cross-write:r2). Every build and restore of the recovery
+ * file DROP/CREATEs the one `dd_ontology_recovery` table and writes beside the
+ * one slot (ontology/recovery_file.ts), so they run one at a time, per
+ * database, across every engine process. Outside a transaction: a
+ * SESSION-level try-lock on a RESERVED connection (the unlock must reach the
+ * connection that locked). Inside one (a caller's transaction the slice must
+ * join): the XACT-level try-lock on the pinned connection, released at its
+ * COMMIT/ROLLBACK — a session lock there would outlive an aborted transaction,
+ * whose unlock statement can no longer run.
+ */
+export async function withRecoverySliceLock<T>(work: () => Promise<T>, busy: () => T): Promise<T> {
+	const won = (rows: unknown): boolean => {
+		const got = (rows as { got: boolean | string }[])[0]?.got;
+		return got === true || got === 't' || got === 'true';
+	};
+	if (isInTransaction()) {
+		const rows = await sql.unsafe('SELECT pg_try_advisory_xact_lock(hashtext($1)) AS got', [
+			RECOVERY_SLICE_LOCK_NAME,
+		]);
+		return won(rows) ? work() : busy();
+	}
+	const reserved = await sql.reserve();
+	try {
+		const rows = await reserved.unsafe('SELECT pg_try_advisory_lock(hashtext($1)) AS got', [
+			RECOVERY_SLICE_LOCK_NAME,
+		]);
+		if (!won(rows)) return busy();
+		try {
+			return await work();
+		} finally {
+			await reserved.unsafe('SELECT pg_advisory_unlock(hashtext($1))', [RECOVERY_SLICE_LOCK_NAME]);
+		}
+	} finally {
+		reserved.release();
+	}
 }
 
 /** Drop the dd_ontology_recovery slice table (always run after the dump). */

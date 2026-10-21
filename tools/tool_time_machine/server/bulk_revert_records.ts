@@ -37,11 +37,12 @@
  * frame restored onto a missing or foreign record). A unit whose OWN record is
  * the deleted one (a revert's D2 delete, reverted in turn) takes that marker
  * too. The record-scope search runs over existing rows, so it cannot answer
- * for a row that is not there: a REFERENCING unit's gate stands for the
- * target's scope; otherwise (the unit's own record, a marker no unit takes)
- * the scope is judged on the RESTORED row, inside the undelete's transaction,
- * and a record out of scope is rolled back. Markers of one record are undone
- * newest first (LIFO).
+ * for a row that is not there BEFORE the restore: the scope is judged on the
+ * RESTORED row, inside the undelete's transaction — for EVERY target, the one a
+ * referencing unit re-links included (a locator in A says nothing about B's
+ * projects: the referrer's gate never stands for the target's,
+ * cross-write:r2) — and a record out of scope is rolled back, refusing the
+ * unit that re-links it. Markers of one record are undone newest first (LIFO).
  * Each undelete of a missing row is ONE transaction: the insert-only row
  * restore (an address taken since is never overwritten) and a BIRTH marker
  * under the revert's bulk id carrying the restored record as its image, so
@@ -234,18 +235,16 @@ async function mayUndelete(
 
 /**
  * Undelete or restore one record a role-4 marker names (D3): a missing row a
- * revert's D2 deleted, or a row a run's cascade wiped. `authorizedByUnit`: the
- * call runs INSIDE the transaction of a unit that passed its scope gate and
- * re-links this record by REFERENCE (see the header) — that gate stands for the
- * missing record's scope. Otherwise (a standalone marker, or the unit's OWN
- * record) the restored row's scope is checked before the transaction commits.
- * Inside a unit's transaction the row half joins it and the file half is
- * handed back as `afterCommit`; standalone, the whole undelete runs now.
+ * revert's D2 deleted, or a row a run's cascade wiped. The record's OWN scope
+ * is always judged — on the live row when it exists, else on the restored row
+ * before the transaction commits — whoever asks: a unit that re-links this
+ * record by reference passed ITS record's gate, which says nothing about this
+ * one's. Inside a unit's transaction the row half joins it and the file half
+ * is handed back as `afterCommit`; standalone, the whole undelete runs now.
  */
 export async function undeleteCascadeRecord(
 	marker: RecordMarker,
 	context: RecordContext,
-	authorizedByUnit = false,
 ): Promise<RecordOutcome> {
 	const table = await getMatrixTableFromTipo(marker.sectionTipo);
 	const snapshot = decodeTmImage(marker.row.data, marker.row.data_absent);
@@ -263,7 +262,7 @@ export async function undeleteCascadeRecord(
 		// was taken again. restoreWipedRecord tells the two apart.
 		return restoreWipedRecord(marker, table, snapshot as Record<string, unknown>, context);
 	}
-	return restoreDeletedRecord(marker, snapshot, context, authorizedByUnit);
+	return restoreDeletedRecord(marker, snapshot, context);
 }
 
 /** Thrown inside an undelete's transaction to roll back a row the caller may not see. */
@@ -273,7 +272,7 @@ class UndeleteOutOfScope extends Error {}
  * The MISSING-row undelete, ONE transaction: the row (insert-only — an address
  * taken since the unlocked read is never overwritten, it refuses
  * `cascade_delete_not_reverted`), the record-scope check on the restored row
- * (unless a unit's gate stands for it), and the BIRTH marker under the
+ * (always — a re-linking unit's gate never stands for it), and the BIRTH marker under the
  * revert's bulk id — so the row and its marker land together or not at all (a
  * row back without its marker could never be deleted again by reverting the
  * revert). Inside a unit's transaction all of it joins that one, and a scope
@@ -283,7 +282,6 @@ async function restoreDeletedRecord(
 	marker: RecordMarker,
 	snapshot: unknown,
 	context: RecordContext,
-	authorizedByUnit: boolean,
 ): Promise<RecordOutcome> {
 	let columns: Awaited<ReturnType<typeof restoreAbsentSectionRow>>;
 	try {
@@ -303,7 +301,6 @@ async function restoreDeletedRecord(
 			);
 			if (restored === null) return null;
 			if (
-				!authorizedByUnit &&
 				!(await principalCanAccessRecord(marker.sectionTipo, marker.sectionId, context.principal))
 			) {
 				throw new UndeleteOutOfScope();

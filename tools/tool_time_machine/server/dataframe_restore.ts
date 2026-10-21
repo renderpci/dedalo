@@ -329,6 +329,13 @@ export async function framePlanIsNoop(
  * `$save_tm = false`) — the main's fresh row carries the frames. `actor` is the
  * restoring principal: a slot write is a key write like any other, so an
  * observer of the slot recomputes (the chokepoint's ledger) as that actor.
+ *
+ * `authorizeSlot` is THE WRITE DOOR of each slot (cross-write:r2): REQUIRED,
+ * asked for every slot this call actually WRITES (a slot the plan leaves as it
+ * is is never asked — a read-only slot the restore does not touch refuses
+ * nothing), before ANY slot is written, so a refusal leaves every slot as it
+ * was and rolls back with the caller's transaction. A slot is a component with
+ * its own (section, tipo) grant: the main's grant never stands for it.
  */
 export async function applyDataframeRestore(
 	target: RecordWriteTarget,
@@ -336,15 +343,13 @@ export async function applyDataframeRestore(
 	plan: readonly DataframeSlotRestore[],
 	slice: FrameSlice | null,
 	actor: number,
+	authorizeSlot: (slotTipo: string) => Promise<void>,
 ): Promise<void> {
 	if (plan.length === 0) return;
 	const column = getColumnNameByModel('component_dataframe') as MatrixJsonbColumn;
-	for (const { slotTipo, next, written } of await plannedSlotWrites(
-		target,
-		mainTipo,
-		plan,
-		slice,
-	)) {
+	const writes = await plannedSlotWrites(target, mainTipo, plan, slice);
+	for (const { slotTipo } of writes) await authorizeSlot(slotTipo);
+	for (const { slotTipo, next, written } of writes) {
 		// null REMOVES the key (PHP's emptied slot), never '[]'.
 		await persistRecordKeys(target, [{ column, key: slotTipo, value: next }], false, { actor });
 		// The restored frames carry explicit ids; raise the slot's counter so a

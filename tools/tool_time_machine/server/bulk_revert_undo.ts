@@ -374,6 +374,9 @@ async function writeRevertedKey(
 		plan.framePlan,
 		plan.frameSlice ?? null,
 		context.userId,
+		// Every plan slot already passed authorizeKeyWrite (writePlannedKey,
+		// before any write); asked again here by the door that writes it.
+		(slotTipo) => authorizeKeyWrite(key, key.sectionTipo, key.sectionId, slotTipo, context),
 	);
 	// The chokepoint owns the key's derived writes (the COMPONENT-RESTORE
 	// entry): the save law's relation_search (the ancestor index moves with the

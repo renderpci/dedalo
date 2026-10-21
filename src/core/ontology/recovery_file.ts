@@ -12,16 +12,40 @@
  * it deliberately does NOT overwrite dd_ontology (PHP parity: the merge/swap
  * is a manual operator step).
  * No shell pipelines: pg_dump stdout streams through in-process gzip.
+ *
+ * ONE AT A TIME, EACH ON ITS OWN FILES (cross-write:r2). Build and restore both
+ * DROP/CREATE the one shared `dd_ontology_recovery` table and write next to the
+ * one slot, so they run under ONE single-flight lock — a Postgres advisory
+ * lock (db/dd_ontology.ts withRecoverySliceLock: per database, across every
+ * engine process): a second build or restore is refused "already running",
+ * never raced. Every temp file is THIS session's (core/files/temp_path.ts
+ * tempPathFor — a fixed `.part` was truncated and renamed by whichever session
+ * opened it last, and unlinked by the other's `finally`); a failure removes
+ * only its own. The lock holder sweeps the slot's stale temp siblings (a
+ * crashed build's): no other session can be writing them.
  */
 
-import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs';
-import { dirname } from 'node:path';
+import {
+	createWriteStream,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	renameSync,
+	rmSync,
+	statSync,
+} from 'node:fs';
+import { basename, dirname, join } from 'node:path';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createGzip } from 'node:zlib';
 import { envSnapshot } from '../../config/env.ts';
-import { createRecoverySlice, dropRecoverySlice } from '../db/dd_ontology.ts';
+import {
+	createRecoverySlice,
+	dropRecoverySlice,
+	withRecoverySliceLock,
+} from '../db/dd_ontology.ts';
 import { fsyncDirectory, fsyncFile } from '../files/durable.ts';
+import { isTempSibling, tempPathFor } from '../files/temp_path.ts';
 import { resolvePgBinary } from '../install/pg_bin.ts';
 import { connArgs, connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
 import { recoveryFileWritePath, resolveRecoveryFilePath } from '../install/runtime_paths.ts';
@@ -95,12 +119,56 @@ function skippedSliceLines(skipped: readonly string[]): string[] {
 	];
 }
 
-/** Build the recovery file (PHP build_recovery_version_file). */
-export async function buildRecoveryVersionFile(
+/** A fresh, not-yet-ok outcome (every door of this module starts from one). */
+function newResponse(): RecoveryFileResponse {
+	return { ok: false, msg: '', errors: [] };
+}
+
+/** The refusal of a build or restore while another one holds the lock. */
+function alreadyRunning(): RecoveryFileResponse {
+	const response = newResponse();
+	response.msg = 'Error. A recovery-file build or restore is already running';
+	response.errors.push(
+		'ontology recovery file: another build or restore holds the single-flight lock',
+	);
+	return response;
+}
+
+/** Run `work` holding the recovery single-flight lock (db/dd_ontology.ts), or refuse. */
+function withRecoveryLock(
+	work: () => Promise<RecoveryFileResponse>,
+): Promise<RecoveryFileResponse> {
+	return withRecoverySliceLock(work, alreadyRunning);
+}
+
+/**
+ * Remove the stale temp siblings of `path` (tempPathFor's `<path>.tmp-<id>`) —
+ * a crashed session's leftovers. Only the LOCK HOLDER calls it: no other
+ * session can be writing them.
+ */
+function sweepStaleTempSiblings(path: string): void {
+	const dir = dirname(path);
+	if (!existsSync(dir)) return;
+	const prefix = `${basename(path)}.tmp-`;
+	for (const name of readdirSync(dir)) {
+		if (name.startsWith(prefix) && isTempSibling(name)) rmSync(join(dir, name), { force: true });
+	}
+}
+
+/** Build the recovery file (PHP build_recovery_version_file) — one at a time. */
+export function buildRecoveryVersionFile(
 	conn: DbConnDescriptor = connFromConfig(),
 	outFile: string = recoveryFileWritePath(),
 ): Promise<RecoveryFileResponse> {
-	const response: RecoveryFileResponse = { ok: false, msg: '', errors: [] };
+	return withRecoveryLock(() => buildUnderLock(conn, outFile));
+}
+
+/** The build, under the single-flight lock. */
+async function buildUnderLock(
+	conn: DbConnDescriptor,
+	outFile: string,
+): Promise<RecoveryFileResponse> {
+	const response = newResponse();
 	try {
 		const slice = await createRecoverySlice(RECOVERY_PRESERVE_TLDS);
 		response.errors.push(...skippedSliceLines(slice.skipped));
@@ -109,13 +177,15 @@ export async function buildRecoveryVersionFile(
 		response.msg = 'Error. Unable to build the dd_ontology_recovery slice';
 		return response;
 	}
-	// Defect D9 (fixed 2026-08-09): the dump is written to a `.part` sibling and
+	// Defect D9 (fixed 2026-08-09): the dump is written to a temp sibling and
 	// renamed onto the recovery slot ONLY after pg_dump exits 0 and the sink has
 	// closed. Writing straight to outFile destroyed the last good artifact on
 	// every failure, and a partial-but-valid gzip restores as a SILENTLY
 	// truncated dd_ontology_recovery table. Rename is atomic on the same fs.
-	const partFile = `${outFile}.part`;
+	// The sibling is THIS session's (tempPathFor), never a fixed shared name.
+	const partFile = tempPathFor(outFile);
 	try {
+		sweepStaleTempSiblings(outFile);
 		// The private-dir slot ('<private>/db/') may not exist on a box whose
 		// dump always landed in-tree before; the build creates its parent.
 		mkdirSync(dirname(outFile), { recursive: true });
@@ -155,25 +225,38 @@ export async function buildRecoveryVersionFile(
 		response.msg = 'Error. Request failed [build_recovery_version_file]';
 		return response;
 	} finally {
-		// A `.part` that survives here is a failed build: never a recovery slot.
+		// This session's temp file surviving here is a failed build: never a recovery slot.
 		rmSync(partFile, { force: true });
 		await dropRecoverySlice();
 	}
 }
 
-/** Restore the slice table from the recovery file (PHP restore twin). */
+/** Restore the slice table from the recovery file (PHP restore twin) — one at a time. */
 export async function restoreDdOntologyRecoveryFromFile(
 	conn: DbConnDescriptor = connFromConfig(),
 	inFile: string = resolveRecoveryFilePath(),
 ): Promise<RecoveryFileResponse> {
-	const response: RecoveryFileResponse = { ok: false, msg: '', errors: [] };
 	if (!existsSync(inFile)) {
+		const response = newResponse();
 		response.errors.push('source sql_file do not exists');
 		response.msg = 'Error. source sql_file do not exists';
 		return response;
 	}
-	const plainPath = inFile.slice(0, -'.gz'.length);
+	return withRecoveryLock(() => restoreUnderLock(conn, inFile));
+}
+
+/** The restore, under the single-flight lock. */
+async function restoreUnderLock(
+	conn: DbConnDescriptor,
+	inFile: string,
+): Promise<RecoveryFileResponse> {
+	const response = newResponse();
+	// The plain intermediate is THIS session's (a fixed `<file minus .gz>` was
+	// overwritten and removed by every concurrent restore's own `finally`).
+	const plainBase = inFile.slice(0, -'.gz'.length);
+	const plainPath = tempPathFor(plainBase);
 	try {
+		sweepStaleTempSiblings(plainBase);
 		await gunzipWithCaps(inFile, plainPath);
 		const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-f', plainPath]);
 		if (run.exitCode !== 0) {
@@ -189,7 +272,6 @@ export async function restoreDdOntologyRecoveryFromFile(
 		response.msg = 'Error. Request failed [restore_dd_ontology_recovery_from_file]';
 		return response;
 	} finally {
-		const { rmSync } = await import('node:fs');
 		rmSync(plainPath, { force: true });
 	}
 }

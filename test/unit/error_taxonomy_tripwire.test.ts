@@ -476,7 +476,7 @@ const FAILURE_LITERAL_BASELINE: Readonly<Record<string, number>> = {
 	'src/core/ontology/ontology_state.ts': 2,
 	'src/core/ontology/ontology_update.ts': 3,
 	'src/core/ontology/ontology_write.ts': 1,
-	'src/core/ontology/recovery_file.ts': 2,
+	'src/core/ontology/recovery_file.ts': 1,
 	'src/core/security/section_permissions.ts': 4,
 	'src/core/tools/babel.ts': 2,
 	'src/core/tools/security.ts': 3,

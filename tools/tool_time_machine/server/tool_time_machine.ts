@@ -94,6 +94,7 @@ import {
 	persistRestoredKeys,
 } from '../../../src/core/section_record/index.ts';
 import { principalCanAccessRecord } from '../../../src/core/security/record_scope.ts';
+import { authorizeRecordAccess } from '../../../src/core/security/write_door.ts';
 import { readRowLaneState, restoredLaneValue } from '../../../src/core/tm_record/lane_state.ts';
 import {
 	type ToolActionContext,
@@ -392,6 +393,25 @@ async function rowFrameSlice(
 	return { survivorIds: new Set(), otherLangIds: known, heldIds: heldItemIds(restoredValue) };
 }
 
+/**
+ * apply_value's write door for ONE component of the target record (the main,
+ * or a dataframe slot its restore writes): write, level 2, section floor 1,
+ * the dd128-aware pair, the write scope. THROWS the door's perm.* refusal —
+ * inside the restore's transaction, which rolls back with it.
+ */
+async function authorizeComponentWrite(
+	context: ToolActionContext,
+	sectionTipo: string,
+	sectionId: number,
+	componentTipo: string,
+): Promise<void> {
+	await authorizeRecordAccess(
+		context.principal,
+		{ section_tipo: sectionTipo, component_tipo: componentTipo, section_id: sectionId },
+		{ mode: 'write', level: 2, sectionFloor: 1, door: 'tool_time_machine.apply_value' },
+	);
+}
+
 export async function toolTimeMachineApplyValue(context: ToolActionContext): Promise<ToolResponse> {
 	const { options, userId } = context;
 	const sectionTipo = String(options.section_tipo ?? '');
@@ -503,6 +523,12 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 		});
 	}
 
+	// THE WRITE DOOR of the MAIN (cross-write:r2): the declarative 'tipo' gate
+	// reads the raw (section, tipo) pair; the door adds the dd128 own-record
+	// rule and the write scope (the non-positive-id refusal ahead of the admin
+	// bypass). Each slot the restore writes asks the same door, below.
+	await authorizeComponentWrite(context, sectionTipo, sectionId, tipo);
+
 	// int-canonical convergence on the WHOLE snapshot (D6.2 — see restoreSection),
 	// BEFORE the strip and the frame plan below: the frames replayed into the
 	// slots are stored addresses too, so normalizing only the main would write
@@ -577,6 +603,10 @@ export async function toolTimeMachineApplyValue(context: ToolActionContext): Pro
 				identity.sliced,
 			),
 			userId,
+			// THE WRITE DOOR of each slot the restore writes (cross-write:r2): the
+			// module gate authorized the MAIN pair only — a slot is its own
+			// component, never written on the main's grant.
+			(slotTipo) => authorizeComponentWrite(context, sectionTipo, sectionId, slotTipo),
 		);
 		// Chokepoint write, the COMPONENT-RESTORE entry: restored value + the
 		// record's modified stamps + the save law's relation_search in one update

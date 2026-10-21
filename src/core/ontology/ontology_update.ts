@@ -540,6 +540,10 @@ export async function updateOntology(
 	// their import (defect D7): those writes are NOT covered by the Phase-B
 	// snapshots, so a restore cannot undo them.
 	const provisioned: string[] = [];
+	// Set once the shared layer reports the import COMPLETED: from then on the
+	// matrix rows and the dd_ontology derived from them agree, and a tail
+	// failure must never roll the rows back under it (restoreAfterThrow).
+	let landed = false;
 
 	try {
 		// ------------------------------------------------------------------
@@ -576,6 +580,7 @@ export async function updateOntology(
 			if (imported.msg !== null) response.msg = imported.msg;
 			return response;
 		}
+		landed = true;
 
 		// Declared dependencies this server lacks: REPORT ONLY, never installed
 		// (WC-2026-10-10-ontology-dependencies-hierarchy60). Here, not in the
@@ -627,7 +632,7 @@ export async function updateOntology(
 	} catch (error) {
 		const restored = await restoreAfterThrow(
 			error,
-			{ mutated, provisioned, errors: response.errors },
+			{ mutated, provisioned, errors: response.errors, landed },
 			{ conn, recoveryDir },
 		);
 		if (restored !== null) response.msg = restored;
@@ -706,7 +711,16 @@ export async function importStagedOntologyFiles(
 		result.completed = true;
 		return result;
 	} catch (error) {
-		result.msg = await restoreAfterThrow(error, result, ctx);
+		result.msg = await restoreAfterThrow(
+			error,
+			{
+				mutated: result.mutated,
+				provisioned: result.provisioned,
+				errors: result.errors,
+				landed: result.completed,
+			},
+			ctx,
+		);
 		return result;
 	}
 }
@@ -716,12 +730,31 @@ export async function importStagedOntologyFiles(
  * panel's tail): its text joins the errors, and every slice already replaced is
  * restored from its snapshot. Answers the operator line, or null when nothing was
  * replaced (the caller keeps its own message). ONE home for both catch sites.
+ * A throw AFTER the import landed (`landed`) restores nothing (cross-write:r2).
  */
-async function restoreAfterThrow(
+export async function restoreAfterThrow(
 	error: unknown,
-	progress: { mutated: readonly StagedFile[]; provisioned: readonly string[]; errors: string[] },
+	progress: {
+		mutated: readonly StagedFile[];
+		provisioned: readonly string[];
+		errors: string[];
+		/** The import COMPLETED before the throw (a tail step failed). */
+		landed: boolean;
+	},
 	ctx: { conn: DbConnDescriptor; recoveryDir: string },
 ): Promise<string | null> {
+	if (progress.landed) {
+		// The update LANDED: its rows and the dd_ontology re-derived from them
+		// agree. Restoring the snapshots now would put the OLD rows back under the
+		// NEW dd_ontology — a state neither version was ever in. The tail failure
+		// is reported (a deliberate sentence; the raw text to the log — SEC-18),
+		// nothing is rolled back.
+		console.error('[ontology_update] a step after the landed import failed', error);
+		progress.errors.push(
+			'the ontology update landed; a final step failed (see the server log) — nothing was rolled back',
+		);
+		return 'Error. The ontology update landed, but a final step failed (see the server log)';
+	}
 	progress.errors.push((error as Error).message);
 	if (progress.mutated.length === 0) return null;
 	await restoreSnapshots(progress.mutated, ctx.recoveryDir, ctx.conn, progress.errors);
