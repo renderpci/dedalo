@@ -3156,6 +3156,11 @@
 			"skipped": 0,
 			"assertions": 35
 		},
+		"test/unit/ontology_derive_packages_native.test.ts": {
+			"tests": 21,
+			"skipped": 0,
+			"assertions": 109
+		},
 		"test/unit/ontology_ingest.test.ts": {
 			"tests": 20,
 			"skipped": 0,
@@ -3181,6 +3186,16 @@
 			"skipped": 0,
 			"assertions": 99
 		},
+		"test/unit/ontology_projection_guard_native.test.ts": {
+			"tests": 18,
+			"skipped": 0,
+			"assertions": 61
+		},
+		"test/unit/ontology_projection_race_native.test.ts": {
+			"tests": 10,
+			"skipped": 0,
+			"assertions": 58
+		},
 		"test/unit/ontology_property_census_tripwire.test.ts": {
 			"tests": 12,
 			"skipped": 0,
@@ -3190,6 +3205,11 @@
 			"tests": 6,
 			"skipped": 0,
 			"assertions": 28
+		},
+		"test/unit/ontology_record_lifecycle_native.test.ts": {
+			"tests": 21,
+			"skipped": 0,
+			"assertions": 108
 		},
 		"test/unit/ontology_recovery_file_native.test.ts": {
 			"tests": 15,
