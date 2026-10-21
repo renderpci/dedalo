@@ -11,6 +11,9 @@
  *       planted at one of those names hung the root CLI forever. Now a FIFO, a socket or a device
  *       reads as null — "could not be read", which every caller already handles — and a regular
  *       file (through an operator's link too) still reads whole.
+ *   R3. `provision adopt`'s INSTANCE-MARKER read never blocks either. `adoptIo().readInstanceMarker`
+ *       reads `<root>/.dedalo_site_instance` — a name inside 2770 `SITES_ROOT`, which an agent may
+ *       write — through the same `readRegularFile`: a FIFO there is null (no marker), not a hang.
  *   R2. `stat` reports the REAL `st_dev`. The turn HOME rebuild (S3-HOME) moves by rename and
  *       refuses unless the HOME, its site directory and the archive report ONE device — so a
  *       `dev` that is missing or constant would make every real rebuild refuse (or none).
@@ -24,7 +27,9 @@ import { spawnSync } from 'node:child_process';
 import { lstatSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { adoptIo } from '../src/provision/adopt';
 import { hostIo } from '../src/provision/apply';
+import { INSTANCE_MARKER } from '../src/provision/layout';
 
 const scratch: string[] = [];
 afterEach(() => {
@@ -42,6 +47,7 @@ function mkfifo(path: string): void {
 }
 
 const APPLY = resolve(import.meta.dir, '../src/provision/apply.ts');
+const ADOPT = resolve(import.meta.dir, '../src/provision/adopt.ts');
 
 /** `hostIo().readFile(path)` in a child with a deadline: its answer, or `'HUNG'`. */
 function readInChild(path: string): unknown {
@@ -79,6 +85,36 @@ describe('R1 — a provisioner read never blocks', () => {
       absent: io.readFile(join(dir, 'nope')),
       directory: io.readFile(join(dir, 'adir')),
     }).toEqual({ file: 'secret-bytes\n', linked: 'secret-bytes\n', absent: null, directory: null });
+  });
+});
+
+/** `adoptIo().readInstanceMarker(root)` in a child with a deadline: its answer, or `'HUNG'`. */
+function readMarkerInChild(root: string): unknown {
+  const script = `const { adoptIo } = await import(${JSON.stringify(ADOPT)}); console.log(JSON.stringify({ read: adoptIo().readInstanceMarker(${JSON.stringify(root)}) }));`;
+  const child = spawnSync(process.execPath, ['-e', script], { timeout: 8_000, encoding: 'utf8' });
+  if (child.status === null) return 'HUNG';
+  if (child.status !== 0) return `exit ${child.status}: ${child.stderr}`;
+  return (JSON.parse(child.stdout.trim().split('\n').pop() as string) as { read: unknown }).read;
+}
+
+describe('R3 — the adopt instance-marker read never blocks', () => {
+  test('a FIFO planted at the instance marker reads as null, at once', () => {
+    const root = scratchDir();
+    mkfifo(join(root, INSTANCE_MARKER));
+    expect(readMarkerInChild(root)).toBeNull();
+  }, 20_000);
+
+  test('CONTROL: a regular marker reads trimmed; absent and empty are null', () => {
+    const marked = scratchDir();
+    writeFileSync(join(marked, INSTANCE_MARKER), '  museum-a\n');
+    const empty = scratchDir();
+    writeFileSync(join(empty, INSTANCE_MARKER), '\n');
+    const io = adoptIo();
+    expect({
+      marked: io.readInstanceMarker(marked),
+      absent: io.readInstanceMarker(scratchDir()),
+      empty: io.readInstanceMarker(empty),
+    }).toEqual({ marked: 'museum-a', absent: null, empty: null });
   });
 });
 

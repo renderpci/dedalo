@@ -2160,9 +2160,8 @@ const RAW_READ_EXEMPT: Readonly<Record<string, string>> = Object.freeze({
 	'provision/apply.ts':
 		'THE PROVISIONER, run as root before an agent uid exists, reading its own declaration ' +
 		'and the root-owned paths it is about to create. Nothing it reads is under a workspace.',
-	'provision/adopt.ts':
-		'The same provisioner taking an installed tree into the layout: root-owned provisioned ' +
-		'paths outside `SITES_ROOT`, before any turn can run.',
+	// provision/adopt.ts left this census (W3 L4): its one read, the instance marker, now goes
+	// through apply.ts's never-blocking `readRegularFile` — a FIFO there is null, not a hung CLI.
 	'provision/fleet.ts':
 		'The fleet index of instance declarations under the provisioner config root, outside ' +
 		'`SITES_ROOT` and root-owned.',
@@ -2214,7 +2213,6 @@ const RAW_READ_CALLS: Readonly<Record<string, readonly string[]>> = Object.freez
 		'readFileSync(fd, "utf8")',
 		'readFileSync(path, "utf8")',
 	],
-	'provision/adopt.ts': ['readFileSync(join(root, INSTANCE_MARKER), "utf8")'],
 	'provision/fleet.ts': ['readFileSync(manifestPath, "utf8")'],
 	// THE ONE read: root's turn gitconfig, lstat-proved first (`turnGitconfigProblem`).
 	'drivers/confinement.ts': ['readFileSync(path, "utf8")'],
