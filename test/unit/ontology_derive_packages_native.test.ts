@@ -39,7 +39,10 @@
  *       the scratch typology nodes); and provisioning a grouper never re-plants the EXISTING
  *       grouper root (createParentGrouper's register path re-hung `hierarchytype0` under
  *       `ontologytype14` while the rebuild hangs it under its registry typology — mutation:
- *       re-plant unconditionally → red);
+ *       re-plant unconditionally → red); a grouper tld it REGISTERS gets a registry typology
+ *       equal to its root parent, so a rebuild keeps that root (the register path minted the row
+ *       with the CHILD typology — hierarchytype under Toponymy — and the root under Core;
+ *       mutation: file the row under `typologyId` → red);
  *   G1e activation of an active tld whose projection is root-only brings every node back
  *       (inSync), in edit AND list mode; a converged tld is not re-derived (its node rows are
  *       not written — xmin — only its root re-planted); a tld with no projection stays empty
@@ -272,6 +275,7 @@ afterAll(async () => {
 	expect(await tiposOf(OWN)).toEqual([]);
 	expect(await tiposOf(OTHER)).toEqual([]);
 	expect(await registryIds(OWN)).toEqual([]);
+	expect(await registryIds(OTHER)).toEqual([]);
 	expect(await rowOf(SCRATCH_HIERARCHY_GROUPER)).toBeNull();
 	expect(await grouperRecordCount(HIERARCHY_TYPE_TLD, SCRATCH_HIERARCHY_TYPOLOGY)).toBe(0);
 	expect(await rowOf(SCRATCH_GROUPER)).toBeNull();
@@ -453,6 +457,21 @@ describe('G1h: installation-made grouper records survive a grouper package updat
 		expect(await readDdOntologyRow(SCRATCH_HIERARCHY_GROUPER)).not.toBeNull();
 		// The root stays the projection of its registry row (rebuild / activation own it).
 		expect(await rowOf('hierarchytype0')).toEqual(grouperRoot);
+	});
+
+	test('registering a NEW grouper tld: its registry typology IS its root parent (a rebuild keeps the root)', async () => {
+		await assertTestDatabase('ontology_derive_packages_native');
+		expect(await registryIds(OTHER)).toEqual([]);
+
+		// A grouper tld with no registration (zzydb): the register path mints row + root.
+		await createParentGrouper(HIERARCHY_TYPE_GROUP, OTHER, SCRATCH_TYPOLOGY, USER_ID);
+		expect((await registryIds(OTHER)).length).toBe(1);
+		const minted = await rowOf(`${OTHER}0`);
+		expect(minted).not.toBeNull();
+
+		// The root is the projection of the row: re-deriving it from the row moves nothing.
+		await rebuildOntology(OTHER, USER_ID, { mainNode: 'existing' });
+		expect(await rowOf(`${OTHER}0`)).toEqual(minted);
 	});
 
 	test('nothing referenced, nothing re-made: a package-only update writes no grouper record', async () => {

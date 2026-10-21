@@ -206,7 +206,7 @@ function mayProjectContent(): boolean {
 function developerOnly(context: string, tipo?: string): OntologyLifecycleOutcome {
 	const reason = 'projection is developer-only';
 	console.warn(
-		`[ontology_projection] ${context}: not projected — ${reason}; the record stays as drift for tool_ontology`,
+		`[ontology_projection] ${context}: not projected — ${reason}; the record stays as drift for the ontology tool`,
 	);
 	return tipo === undefined ? { action: 'skipped', reason } : { action: 'skipped', tipo, reason };
 }

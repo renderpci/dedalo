@@ -732,6 +732,9 @@ async function ensureGrouperParent(
 	return { parentNodeTipo, parentSectionId };
 }
 
+/** The typology (hierarchy13 / `ontologytype<id>`) a grouper tld registered on demand is filed under: Core. */
+const GROUPER_TLD_TYPOLOGY_ID = 14;
+
 /**
  * Ensure a typology grouper node exists in dd_ontology + the matrix and return
  * its tipo (PHP create_parent_grouper). Resilient to partial-bootstrap: creates
@@ -753,11 +756,17 @@ export async function createParentGrouper(
 	options: { register?: boolean } = {},
 ): Promise<string> {
 	const nameData = grouperNameData(tld);
+	// The grouper tld's OWN registration: its registry typology and its root's parent are ONE
+	// value (Core). `typologyId` is the typology record this call builds UNDER the grouper,
+	// never the grouper tld's own typology: minting the registry row with it filed
+	// `hierarchytype` under the first thesaurus' typology (Toponymy, 2) while the root was
+	// planted under Core — the next rebuild (which derives the root from the row) re-hung it.
+	// Fixed, never derived: prevents grouper recursion. Gate: ontology_derive_packages_native G1h.
 	const fileData: FileItem = {
 		tld,
-		typology_id: typologyId,
+		typology_id: GROUPER_TLD_TYPOLOGY_ID,
 		name_data: nameData,
-		parent_grouper_tipo: 'ontologytype14', // fixed — prevents grouper recursion
+		parent_grouper_tipo: `${ONTOLOGY_TYPE_TLD}${GROUPER_TLD_TYPOLOGY_ID}`,
 	};
 
 	// Register the grouper's own TLD (matrix_ontology_main + <groupTld>0 node):
