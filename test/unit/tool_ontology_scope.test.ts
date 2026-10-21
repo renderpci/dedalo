@@ -183,7 +183,13 @@ describe('the handler takes its scope from the request', () => {
 			),
 		);
 		expect(refusal.code).toBe('tool.action_failed');
-		// The write's per-check detail joins the LOG-only message.
+		// The write's per-check detail joins the LOG-only message. POSITIVE proof the run got
+		// PAST the scope guard: the per-record step (the absent record projects nothing) ran …
+		expect(refusal.message).toContain(
+			`Failed to process dd_ontology record for section_tipo: ${EMPTY_GOVERNED_SECTION}, section_id: 1`,
+		);
+		// … and neither the guard's refusal nor a request-sqo path is what stopped it.
+		expect(refusal.message).not.toMatch(/no scope/i);
 		expect(refusal.message).not.toMatch(/sqo/i);
 	});
 

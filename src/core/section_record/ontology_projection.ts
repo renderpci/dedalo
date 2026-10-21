@@ -57,13 +57,18 @@
  * lifecycle hook is reached by plain section grants (a TM undelete, a bulk
  * revert, an override delete), so a branch that would write CONTENT — a
  * governed birth, an override's re-parse on birth or death — runs only for a
- * developer principal or for the SYSTEM (no request principal: the installer,
- * the update engine, a CLI/maintenance job). Anyone else's event writes no
- * content: the node stays as a developer last projected it and
- * inspectOntology reports the record as `missing` / `stale` drift for
- * tool_ontology to resolve. A governed DEATH is not content: the node of a
- * record that no longer exists is removed for every principal (owner decision
- * D3, PHP parity). Gate: ontology_record_lifecycle_native L11.
+ * DEVELOPER principal, and FAILS CLOSED otherwise: no principal (an event
+ * outside any request scope — the stdio MCP surface, a script — or an
+ * unauthenticated one) is NOT a developer. There is no implicit "system":
+ * the system flows (the installer, the ontology update, the seed compiler)
+ * never need these branches — they re-derive whole tlds through
+ * ontology/ontology_state.ts rebuildOntology, which is not principal-gated.
+ * Anyone else's event writes no content: the node stays as a developer last
+ * projected it and inspectOntology reports the record as `missing` / `stale`
+ * drift for tool_ontology to resolve. A governed DEATH is not content: the node
+ * of a record that no longer exists is removed for every principal (owner
+ * decision D3, PHP parity). Gate: ontology_record_lifecycle_native L11 (L11f:
+ * no request scope / no principal).
  *
  * WHY HERE (section_record/, a leaf). The lifecycle hook is called from the
  * write chokepoint, so this module must not pull the provisioning graph
@@ -188,14 +193,13 @@ export async function unprojectOntologyNode(address: OntologyNodeAddress): Promi
 
 /**
  * Whether the current principal may have record CONTENT written into the live
- * dd_ontology (module header, WHO MAY PROJECT CONTENT): a developer, or the
- * system (no request principal). Read through the request-context backstop —
- * the lifecycle hook sits under the write chokepoint, below every door that
- * holds the principal.
+ * dd_ontology (module header, WHO MAY PROJECT CONTENT): a developer, and nobody
+ * else — a missing principal (no request scope, an unauthenticated one) fails
+ * CLOSED. Read through the request-context backstop — the lifecycle hook sits
+ * under the write chokepoint, below every door that holds the principal.
  */
 function mayProjectContent(): boolean {
-	const principal = currentPrincipal();
-	return principal === undefined || principal.isDeveloper;
+	return currentPrincipal()?.isDeveloper === true;
 }
 
 /** The skipped outcome (and its operator warning) of a content branch refused to a non-developer. */
@@ -341,7 +345,8 @@ async function governedBirth(
  *    database read, so the chokepoints call this unconditionally).
  * Every branch that writes takes the tld's projection lock first; the CONTENT
  * branches (a governed birth, an override's re-parse) run only for a developer
- * or the system (module header) — anyone else's answers `skipped`.
+ * principal (module header; no principal fails closed) — anyone else's answers
+ * `skipped`.
  */
 export async function projectOntologyRecordLifecycle(
 	sectionTipo: string,

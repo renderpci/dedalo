@@ -34,9 +34,12 @@
  * defined by having rows (syncOntologyActivation; hierarchy4 = owner question Q1). The
  * per-record and lifecycle doors live in section_record/ontology_projection.ts (its header
  * names every door and the gates). Under concurrency the invariant rests on ONE lock: every
- * door that derives a tld's nodes (rebuild, retract, the per-record and lifecycle doors) takes
- * the tld's projection lock (dd_ontology.ts lockOntologyProjection) before its first read —
- * withTransaction alone does not order a parse against a concurrent record delete/undelete.
+ * door that derives a tld's nodes (rebuild, retract, the activation, the per-record and
+ * lifecycle doors) takes the tld's projection lock (dd_ontology.ts lockOntologyProjection)
+ * before its first read — withTransaction alone does not order a parse against a concurrent
+ * record delete/undelete — and a door whose WRITE depends on "is the tld active?" (the
+ * activation; a rebuild with `onlyIfProjected`) re-asks it UNDER that lock, so a teardown
+ * that committed first is never undone. Gate: ontology_projection_race_native R1-R7.
  *
  * WHY THERE IS NO INCREMENTAL RECONCILE (removed 2026-08-11). An `ensureOntology` used to sit
  * between the two: upsert the missing/stale nodes, delete the orphaned ones, fill the main node
@@ -114,8 +117,8 @@ import {
 	deleteDdOntologyRowsReturning,
 	deleteTldNodesExcept,
 	deleteTldNodesReturningTipos,
-	getActiveTlds,
 	lockOntologyProjection,
+	tldHoldsNodes,
 	upsertDdOntologyNode,
 } from '../db/dd_ontology.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
@@ -204,6 +207,11 @@ export interface OntologyWriteResult {
 	state: OntologyState;
 	/** What the write actually changed. */
 	applied: string[];
+	/**
+	 * Set only by a rebuild with `onlyIfProjected` that found the tld empty under its lock:
+	 * nothing was written (RebuildOntologyOptions.onlyIfProjected). Never set otherwise.
+	 */
+	notProjected?: true;
 }
 
 /* ------------------------------------------------------------------ reads */
@@ -674,6 +682,15 @@ export interface RebuildOntologyOptions {
 	 * activation, the seed compiler): never write the registry.
 	 */
 	mainNode?: 'ensure' | 'existing';
+	/**
+	 * Re-derive only when the tld STILL holds rows once its projection lock is held
+	 * (dd_ontology.ts tldHoldsNodes, read live): otherwise nothing is written and the result
+	 * carries `notProjected`. For a door that decided "active" before the lock (the registry
+	 * activation, syncOntologyActivation): a teardown (retractOntology) that committed while it
+	 * waited leaves the tld empty instead of being re-derived from records the teardown has not
+	 * deleted yet. Gate: ontology_projection_race_native R7.
+	 */
+	onlyIfProjected?: boolean;
 }
 
 /** Delete the SURF-1 reclaimed rows by id (RebuildOntologyOptions.reclaimIds); the applied line. */
@@ -681,6 +698,14 @@ async function reclaimRows(ids: readonly number[] | undefined): Promise<string[]
 	const reclaimed = await deleteDdOntologyRowsReturning(ids ?? []);
 	if (reclaimed.length === 0) return [];
 	return [`reclaimed ${reclaimed.map((row) => JSON.stringify(row.tipo)).join(', ')}`];
+}
+
+/**
+ * RebuildOntologyOptions.onlyIfProjected, asked UNDER the tld's projection lock: true when the
+ * caller asked for it and the tld holds no rows (read live) — the rebuild then writes nothing.
+ */
+async function leftUnprojected(tld: string, options: RebuildOntologyOptions): Promise<boolean> {
+	return options.onlyIfProjected === true && !(await tldHoldsNodes(tld));
 }
 
 export async function rebuildOntology(
@@ -702,18 +727,26 @@ export async function rebuildOntology(
 
 	const applied: string[] = [];
 	const errors: string[] = [];
+	let notProjected = false;
 	try {
+		// Heal a lagging id sequence FIRST, in its OWN short transaction (no ambient one here
+		// for a top-level caller), so its LOCK TABLE is released before the projection lock
+		// below is awaited: held across that wait, it would deadlock against a lifecycle unit
+		// that holds the projection lock and then writes dd_ontology (ROW EXCLUSIVE). The
+		// per-insert check in upsertDdOntologyNode is then a no-op, and two rebuilds never both
+		// upgrade a held ROW EXCLUSIVE into the alignment lock.
+		await alignDdOntologyIdSequence();
 		await withTransaction(async () => {
-			// Heal a lagging id sequence FIRST, before this tx holds any dd_ontology lock: the
-			// per-insert check in upsertDdOntologyNode is then a no-op, and two rebuilds never
-			// both upgrade a held ROW EXCLUSIVE into the alignment lock (deadlock).
-			await alignDdOntologyIdSequence();
 			// The tld's projection lock BEFORE the parse (dd_ontology.ts lockOntologyProjection):
 			// a concurrent record delete / undelete of `<tld>0` (the lifecycle hook) or a
 			// per-record projection is ordered against this whole read-modify-write, so the parse
-			// below cannot go stale before the deletes and upserts it drives. Taken after the
-			// sequence heal: that may LOCK TABLE, and nothing here holds a dd_ontology lock yet.
+			// below cannot go stale before the deletes and upserts it drives.
 			await lockOntologyProjection([tld]);
+			// A caller whose "active" decision predates the lock re-asks it here (onlyIfProjected).
+			if (await leftUnprojected(tld, options)) {
+				notProjected = true;
+				return;
+			}
 			// Parse BEFORE any delete: a bad record aborts the tx with the live data intact.
 			const { own: parsed, foreign } = await parseMatrixNodes(tld);
 			// Misfiled records are reported, never rebuilt: the delete below is scoped to THIS
@@ -744,6 +777,16 @@ export async function rebuildOntology(
 	}
 
 	const state = await inspectOntology(tld);
+	if (notProjected) {
+		return {
+			ok: true,
+			msg: `Ontology '${tld}' holds no projection; left empty`,
+			errors,
+			state,
+			applied,
+			notProjected: true,
+		};
+	}
 	const converged = rebuildConverged(state);
 	return {
 		ok: converged,
@@ -815,19 +858,35 @@ interface ActivationStep {
 	errors: string[];
 }
 
-/** One registry record's activation (see syncOntologyActivation). */
+/**
+ * One registry record's activation (see syncOntologyActivation). The DECISION is made under
+ * the tld's projection lock (module header): "active?" (live, tldHoldsNodes — never the
+ * getActiveTlds cache), "in sync?" and the root re-plant are one locked unit, so a teardown
+ * (ontology_delete.ts: retractOntology, then the registry row, then the records — separate
+ * units) that committed its retract first is SEEN — the tld holds no rows, nothing is
+ * re-planted — and one that comes after waits and removes what this wrote. A drifted tld is
+ * re-derived by rebuildOntology, which re-asks "active?" under its own lock
+ * (`onlyIfProjected`): the teardown may commit between the two units. Gate:
+ * ontology_projection_race_native R6 (in sync) / R7 (drifted).
+ */
 async function activateRegistryRecord(sectionId: number, userId: number): Promise<ActivationStep> {
 	const { raw, tld } = await registryTld(sectionId);
 	if (tld === null) {
 		const line = `${ONTOLOGY_MAIN_SECTION}/${sectionId}: invalid or missing tld ${JSON.stringify(raw)}`;
 		return { processed: false, errors: [line] };
 	}
-	// No projection: not active, nothing to re-derive and nothing to retract.
-	if (!(await getActiveTlds()).includes(tld)) return { processed: true, errors: [] };
-	if ((await inspectOntology(tld)).inSync) {
-		await withTransaction(() => settleMainNode(tld, userId, 'existing'));
-		return { processed: true, errors: [] };
-	}
+	// The sequence heal BEFORE the locked unit, as rebuildOntology does (its table lock must
+	// not be held across the projection-lock wait).
+	await alignDdOntologyIdSequence();
+	const decision = await withTransaction(async (): Promise<'inactive' | 'settled' | 'drifted'> => {
+		await lockOntologyProjection([tld]);
+		// No projection: not active, nothing to re-derive and nothing to retract.
+		if (!(await tldHoldsNodes(tld))) return 'inactive';
+		if (!(await inspectOntology(tld)).inSync) return 'drifted';
+		await settleMainNode(tld, userId, 'existing');
+		return 'settled';
+	});
+	if (decision !== 'drifted') return { processed: true, errors: [] };
 	return rederiveActiveTld(tld, userId);
 }
 
@@ -837,9 +896,17 @@ async function registryTld(sectionId: number): Promise<{ raw: string | null; tld
 	return { raw, tld: raw === null ? null : safeTld(raw) };
 }
 
-/** A drifted active tld re-derived in full; processed unless it rolled back or projected nothing. */
+/**
+ * A drifted active tld re-derived in full; processed unless it rolled back or projected
+ * nothing. A tld torn down meanwhile (`notProjected`) is left empty — processed, like an
+ * inactive one.
+ */
 async function rederiveActiveTld(tld: string, userId: number): Promise<ActivationStep> {
-	const rebuilt = await rebuildOntology(tld, userId, { mainNode: 'existing' });
+	const rebuilt = await rebuildOntology(tld, userId, {
+		mainNode: 'existing',
+		onlyIfProjected: true,
+	});
+	if (rebuilt.notProjected === true) return { processed: true, errors: [] };
 	const failure = rebuildFailure(tld, rebuilt);
 	if (failure !== null) return { processed: false, errors: [...rebuilt.errors, failure] };
 	return { processed: rebuilt.applied.length > 0, errors: rebuilt.errors };

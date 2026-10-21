@@ -44,6 +44,13 @@
  *      (owner decision D3 — removal is not content). L11e the same undelete under a DEVELOPER
  *      principal projects (the positive control: the context wrapper itself blocks nothing).
  *      Mutation-checked 2026-10-21: the principal check dropped → L11a/b/c red.
+ *      L11f (closure r1) NO principal FAILS CLOSED — there is no implicit "system": an
+ *      override delete with no request scope at all (the stdio MCP surface runs its principal's
+ *      writes outside one) leaves its target byte-identical, and a governed undelete inside an
+ *      UNAUTHENTICATED scope writes no node. Mutation-checked 2026-10-21: the old
+ *      `principal === undefined ||` restored → L11f red (both halves).
+ *   L1-L10 therefore run their events AS A DEVELOPER (devTest — the door's realistic actor: a
+ *   developer's TM undelete / override delete); the removal legs would pass under anyone (D3).
  *
  * RED-FIRST, honestly: L1/L2/L3/L6a/L6b/L9 are red at the pre-fix sha (the finding). L4/L5/L7/L8 are
  * GUARDS of the fix's own edges and are green pre-fix BY CONSTRUCTION — no projection exists to
@@ -85,6 +92,27 @@ const OTHER_SECTION = `${OTHER}0`;
 const LOCAL = 'localontology0';
 const LOCAL_IDS = [990101, 990102] as const;
 const USER_ID = -1;
+
+const NON_DEVELOPER: Principal = Object.freeze({
+	userId: USER_ID,
+	isGlobalAdmin: true,
+	isDeveloper: false,
+});
+const DEVELOPER: Principal = Object.freeze({
+	userId: USER_ID,
+	isGlobalAdmin: true,
+	isDeveloper: true,
+});
+/** Run `work` as `principal` (the request-context backstop the lifecycle reads); undefined = an unauthenticated scope. */
+const as = <T>(principal: Principal | undefined, work: () => Promise<T>): Promise<T> =>
+	runWithRequestContext(
+		{ principal, session: null, requestId: 'ontology_record_lifecycle', clientIp: '' },
+		work,
+	);
+/** A leg whose events run as a DEVELOPER (content projection is developer-only, L11). */
+const devTest = (name: string, body: () => Promise<void>): void => {
+	test(name, () => as(DEVELOPER, body));
+};
 
 const loc = (sectionTipo: string, sectionId: number, from: string, type = 'dd151') => ({
 	id: 1,
@@ -267,7 +295,7 @@ async function projectedOwnRecord(sectionId: number, term = `own ${sectionId}`):
 }
 
 describe('L1/L9: deleting an ontology record removes its node', () => {
-	test('L1 deleteSectionRecord: the node is gone, no orphaned drift', async () => {
+	devTest('L1 deleteSectionRecord: the node is gone, no orphaned drift', async () => {
 		await projectedOwnRecord(1);
 
 		const result = await deleteSectionRecord(OWN_SECTION, 1, USER_ID);
@@ -277,7 +305,7 @@ describe('L1/L9: deleting an ontology record removes its node', () => {
 		expect(kinds(await inspectOntology(OWN), 'orphaned')).toEqual([]);
 	});
 
-	test('L9 deleteSectionData: the node is gone', async () => {
+	devTest('L9 deleteSectionData: the node is gone', async () => {
 		await projectedOwnRecord(4);
 
 		await deleteSectionData(OWN_SECTION, 4, USER_ID);
@@ -309,11 +337,11 @@ describe('L1b/L9c: a delete rolled back by its outer transaction keeps its node'
 		expect(await rowOf(`${OWN}${sectionId}`)).toEqual(before);
 	}
 
-	test('L1b deleteSectionRecord', async () => {
+	devTest('L1b deleteSectionRecord', async () => {
 		await rolledBackDelete(11, () => deleteSectionRecord(OWN_SECTION, 11, USER_ID));
 	});
 
-	test('L9c deleteSectionData', async () => {
+	devTest('L9c deleteSectionData', async () => {
 		await rolledBackDelete(12, () => deleteSectionData(OWN_SECTION, 12, USER_ID));
 	});
 });
@@ -328,20 +356,23 @@ describe('L2/L3/L4: undeleting an ontology record re-projects its node, transact
 		return deletedSnapshot(OWN_SECTION, 1);
 	}
 
-	test('L2 restoreSection (TM undelete): the node equals the parse, no missing drift', async () => {
-		const snapshot = await deletedOwnRecord();
+	devTest(
+		'L2 restoreSection (TM undelete): the node equals the parse, no missing drift',
+		async () => {
+			const snapshot = await deletedOwnRecord();
 
-		await restoreSection(snapshot.data, snapshot.id, OWN_SECTION, 1, USER_ID);
-		expect(await matrixRowExists(OWN_SECTION, 1)).toBe(true);
-		expect(await termOf(`${OWN}1`)).toBe('own 1');
-		const state = await inspectOntology(OWN);
-		// Floor: the drift census below read the restored record (an empty parse is not "in sync").
-		expect(state.matrixNodes).toBeGreaterThanOrEqual(1);
-		expect(kinds(state, 'missing')).toEqual([]);
-		expect(kinds(state, 'stale')).toEqual([]);
-	});
+			await restoreSection(snapshot.data, snapshot.id, OWN_SECTION, 1, USER_ID);
+			expect(await matrixRowExists(OWN_SECTION, 1)).toBe(true);
+			expect(await termOf(`${OWN}1`)).toBe('own 1');
+			const state = await inspectOntology(OWN);
+			// Floor: the drift census below read the restored record (an empty parse is not "in sync").
+			expect(state.matrixNodes).toBeGreaterThanOrEqual(1);
+			expect(kinds(state, 'missing')).toEqual([]);
+			expect(kinds(state, 'stale')).toEqual([]);
+		},
+	);
 
-	test('L3 restoreAbsentSectionRow (bulk revert undelete): the node is back', async () => {
+	devTest('L3 restoreAbsentSectionRow (bulk revert undelete): the node is back', async () => {
 		const snapshot = await deletedOwnRecord();
 
 		const written = await restoreAbsentSectionRow(
@@ -357,51 +388,57 @@ describe('L2/L3/L4: undeleting an ontology record re-projects its node, transact
 		expect(kinds(await inspectOntology(OWN), 'missing')).toEqual([]);
 	});
 
-	test('L4 an undelete rolled back by its outer transaction: node visible INSIDE, absent after', async () => {
-		const snapshot = await deletedOwnRecord();
+	devTest(
+		'L4 an undelete rolled back by its outer transaction: node visible INSIDE, absent after',
+		async () => {
+			const snapshot = await deletedOwnRecord();
 
-		let insideTx: unknown = null;
-		const probe = new Error('L4 rollback probe');
-		await expect(
-			withTransaction(async () => {
-				await restoreAbsentSectionRow(
-					snapshot.data,
-					snapshot.id,
-					OWN_SECTION,
-					1,
-					{ userId: USER_ID },
-					USER_ID,
-				);
-				insideTx = await readDdOntologyRow(`${OWN}1`);
-				throw probe;
-			}),
-		).rejects.toBe(probe);
-		// In the unit (a post-COMMIT / ledger-drain projection would not be visible here) …
-		expect(insideTx).not.toBeNull();
-		// … and of it (a detached projection would survive the rollback).
-		expect(await matrixRowExists(OWN_SECTION, 1)).toBe(false);
-		expect(await readDdOntologyRow(`${OWN}1`)).toBeNull();
-	});
+			let insideTx: unknown = null;
+			const probe = new Error('L4 rollback probe');
+			await expect(
+				withTransaction(async () => {
+					await restoreAbsentSectionRow(
+						snapshot.data,
+						snapshot.id,
+						OWN_SECTION,
+						1,
+						{ userId: USER_ID },
+						USER_ID,
+					);
+					insideTx = await readDdOntologyRow(`${OWN}1`);
+					throw probe;
+				}),
+			).rejects.toBe(probe);
+			// In the unit (a post-COMMIT / ledger-drain projection would not be visible here) …
+			expect(insideTx).not.toBeNull();
+			// … and of it (a detached projection would survive the rollback).
+			expect(await matrixRowExists(OWN_SECTION, 1)).toBe(false);
+			expect(await readDdOntologyRow(`${OWN}1`)).toBeNull();
+		},
+	);
 });
 
 describe('L5: a FOREIGN record never touches the namespace its ontology7 names', () => {
-	test('delete leaves zzlcb2 byte-identical; undelete succeeds and writes neither zzlcb2 nor zzlca2', async () => {
-		await plantRoot(OWN);
-		await plantRoot(OTHER);
-		await plantNode(`${OTHER}2`, OTHER, 'CANON');
-		await seed(OWN_SECTION, 2, OTHER, 'FOREIGN');
-		const canonical = await rowOf(`${OTHER}2`);
-		expect(canonical).not.toBeNull();
+	devTest(
+		'delete leaves zzlcb2 byte-identical; undelete succeeds and writes neither zzlcb2 nor zzlca2',
+		async () => {
+			await plantRoot(OWN);
+			await plantRoot(OTHER);
+			await plantNode(`${OTHER}2`, OTHER, 'CANON');
+			await seed(OWN_SECTION, 2, OTHER, 'FOREIGN');
+			const canonical = await rowOf(`${OTHER}2`);
+			expect(canonical).not.toBeNull();
 
-		await deleteSectionRecord(OWN_SECTION, 2, USER_ID);
-		expect(await rowOf(`${OTHER}2`)).toEqual(canonical);
+			await deleteSectionRecord(OWN_SECTION, 2, USER_ID);
+			expect(await rowOf(`${OTHER}2`)).toEqual(canonical);
 
-		const snapshot = await deletedSnapshot(OWN_SECTION, 2);
-		await restoreSection(snapshot.data, snapshot.id, OWN_SECTION, 2, USER_ID);
-		expect(await matrixRowExists(OWN_SECTION, 2)).toBe(true);
-		expect(await rowOf(`${OTHER}2`)).toEqual(canonical);
-		expect(await readDdOntologyRow(`${OWN}2`)).toBeNull();
-	});
+			const snapshot = await deletedSnapshot(OWN_SECTION, 2);
+			await restoreSection(snapshot.data, snapshot.id, OWN_SECTION, 2, USER_ID);
+			expect(await matrixRowExists(OWN_SECTION, 2)).toBe(true);
+			expect(await rowOf(`${OTHER}2`)).toEqual(canonical);
+			expect(await readDdOntologyRow(`${OWN}2`)).toBeNull();
+		},
+	);
 });
 
 describe('L6/L7: an override record re-projects the node it overrides', () => {
@@ -414,15 +451,18 @@ describe('L6/L7: an override record re-projects the node it overrides', () => {
 		expect(await termOf(`${OWN}3`)).toBe('local');
 	}
 
-	test('L6a delete the override → the target is re-projected with the canonical term', async () => {
-		await overriddenNode();
+	devTest(
+		'L6a delete the override → the target is re-projected with the canonical term',
+		async () => {
+			await overriddenNode();
 
-		await deleteSectionRecord(LOCAL, LOCAL_IDS[0], USER_ID);
-		expect(await termOf(`${OWN}3`)).toBe('canon');
-		expect(kinds(await inspectOntology(OWN), 'stale')).toEqual([]);
-	});
+			await deleteSectionRecord(LOCAL, LOCAL_IDS[0], USER_ID);
+			expect(await termOf(`${OWN}3`)).toBe('canon');
+			expect(kinds(await inspectOntology(OWN), 'stale')).toEqual([]);
+		},
+	);
 
-	test('L6b undelete the override → the target carries the override term again', async () => {
+	devTest('L6b undelete the override → the target carries the override term again', async () => {
 		await overriddenNode();
 		await deleteSectionRecord(LOCAL, LOCAL_IDS[0], USER_ID);
 		// Stand on its own: re-parse now (the override is gone → canon), whatever L6a's half does.
@@ -435,34 +475,40 @@ describe('L6/L7: an override record re-projects the node it overrides', () => {
 		expect(kinds(await inspectOntology(OWN), 'stale')).toEqual([]);
 	});
 
-	test('L9b deleteSectionData on the override → the target is re-projected from the pre-wipe locators', async () => {
-		// The wipe empties what the section DECLARES: the override section must resolve as an
-		// install that holds overrides projects it (`localontology0` root → ontology1). Planted
-		// only when absent, removed by the sweep only then (plantLocalRoot).
-		await plantLocalRoot();
-		await overriddenNode();
+	devTest(
+		'L9b deleteSectionData on the override → the target is re-projected from the pre-wipe locators',
+		async () => {
+			// The wipe empties what the section DECLARES: the override section must resolve as an
+			// install that holds overrides projects it (`localontology0` root → ontology1). Planted
+			// only when absent, removed by the sweep only then (plantLocalRoot).
+			await plantLocalRoot();
+			await overriddenNode();
 
-		await deleteSectionData(LOCAL, LOCAL_IDS[0], USER_ID);
-		expect(await termOf(`${OWN}3`)).toBe('canon');
-		expect(kinds(await inspectOntology(OWN), 'stale')).toEqual([]);
-	});
+			await deleteSectionData(LOCAL, LOCAL_IDS[0], USER_ID);
+			expect(await termOf(`${OWN}3`)).toBe('canon');
+			expect(kinds(await inspectOntology(OWN), 'stale')).toEqual([]);
+		},
+	);
 
-	test('L7 an override of an UNPROJECTED node creates no canonical node, on delete or undelete', async () => {
-		await plantRoot(OWN);
-		await seed(OWN_SECTION, 6, OWN, 'canon');
-		await seedOverride(LOCAL_IDS[1], 6, 'local');
-		expect(await readDdOntologyRow(`${OWN}6`)).toBeNull();
+	devTest(
+		'L7 an override of an UNPROJECTED node creates no canonical node, on delete or undelete',
+		async () => {
+			await plantRoot(OWN);
+			await seed(OWN_SECTION, 6, OWN, 'canon');
+			await seedOverride(LOCAL_IDS[1], 6, 'local');
+			expect(await readDdOntologyRow(`${OWN}6`)).toBeNull();
 
-		await deleteSectionRecord(LOCAL, LOCAL_IDS[1], USER_ID);
-		expect(await readDdOntologyRow(`${OWN}6`)).toBeNull();
-		const snapshot = await deletedSnapshot(LOCAL, LOCAL_IDS[1]);
-		await restoreSection(snapshot.data, snapshot.id, LOCAL, LOCAL_IDS[1], USER_ID);
-		expect(await readDdOntologyRow(`${OWN}6`)).toBeNull();
-	});
+			await deleteSectionRecord(LOCAL, LOCAL_IDS[1], USER_ID);
+			expect(await readDdOntologyRow(`${OWN}6`)).toBeNull();
+			const snapshot = await deletedSnapshot(LOCAL, LOCAL_IDS[1]);
+			await restoreSection(snapshot.data, snapshot.id, LOCAL, LOCAL_IDS[1], USER_ID);
+			expect(await readDdOntologyRow(`${OWN}6`)).toBeNull();
+		},
+	);
 });
 
 describe('L8: a birth never re-plants a tld that is not projected', () => {
-	test('undelete into a tld without its <tld>0 root writes no node', async () => {
+	devTest('undelete into a tld without its <tld>0 root writes no node', async () => {
 		// No plantRoot(OTHER): the tld is torn down / inactive.
 		await seed(OTHER_SECTION, 9, OTHER, 'unprojected');
 		await deleteSectionRecord(OTHER_SECTION, 9, USER_ID);
@@ -476,53 +522,39 @@ describe('L8: a birth never re-plants a tld that is not projected', () => {
 });
 
 describe('L10: only the namespace refusal is tolerated by a birth', () => {
-	test('a grammar / constraint refusal of the re-projection aborts the undelete (no row, no node)', async () => {
-		await projectedOwnRecord(13);
-		await deleteSectionRecord(OWN_SECTION, 13, USER_ID);
-		const snapshot = await deletedSnapshot(OWN_SECTION, 13);
-		// No record reaches a grammar refusal through the parser today (defective references are
-		// dropped, the address check precedes the write): the write door's refusal is forced.
-		const spy = spyOn(ddOntology, 'upsertDdOntologyNode').mockImplementation(async () => {
-			throw new DedaloError('ontology.invalid_node', { message: 'L10 forced grammar refusal' });
-		});
-		try {
-			const outcome = await restoreSection(
-				snapshot.data,
-				snapshot.id,
-				OWN_SECTION,
-				13,
-				USER_ID,
-			).catch((error: unknown) => error);
-			expect(spy).toHaveBeenCalled();
-			expect(String((outcome as Error)?.message ?? outcome)).toContain(
-				'L10 forced grammar refusal',
-			);
-		} finally {
-			spy.mockRestore();
-		}
-		expect(await matrixRowExists(OWN_SECTION, 13)).toBe(false);
-		expect(await readDdOntologyRow(`${OWN}13`)).toBeNull();
-	});
+	devTest(
+		'a grammar / constraint refusal of the re-projection aborts the undelete (no row, no node)',
+		async () => {
+			await projectedOwnRecord(13);
+			await deleteSectionRecord(OWN_SECTION, 13, USER_ID);
+			const snapshot = await deletedSnapshot(OWN_SECTION, 13);
+			// No record reaches a grammar refusal through the parser today (defective references are
+			// dropped, the address check precedes the write): the write door's refusal is forced.
+			const spy = spyOn(ddOntology, 'upsertDdOntologyNode').mockImplementation(async () => {
+				throw new DedaloError('ontology.invalid_node', { message: 'L10 forced grammar refusal' });
+			});
+			try {
+				const outcome = await restoreSection(
+					snapshot.data,
+					snapshot.id,
+					OWN_SECTION,
+					13,
+					USER_ID,
+				).catch((error: unknown) => error);
+				expect(spy).toHaveBeenCalled();
+				expect(String((outcome as Error)?.message ?? outcome)).toContain(
+					'L10 forced grammar refusal',
+				);
+			} finally {
+				spy.mockRestore();
+			}
+			expect(await matrixRowExists(OWN_SECTION, 13)).toBe(false);
+			expect(await readDdOntologyRow(`${OWN}13`)).toBeNull();
+		},
+	);
 });
 
 describe('L11: content projection is developer-only; removal is not', () => {
-	const NON_DEVELOPER: Principal = Object.freeze({
-		userId: USER_ID,
-		isGlobalAdmin: true,
-		isDeveloper: false,
-	});
-	const DEVELOPER: Principal = Object.freeze({
-		userId: USER_ID,
-		isGlobalAdmin: true,
-		isDeveloper: true,
-	});
-	/** Run `work` as `principal` (the request-context backstop the lifecycle reads). */
-	const as = <T>(principal: Principal, work: () => Promise<T>): Promise<T> =>
-		runWithRequestContext(
-			{ principal, session: null, requestId: 'ontology_record_lifecycle_l11', clientIp: '' },
-			work,
-		);
-
 	/** Delete zzlca0/<id> (node removed) and answer its snapshot. */
 	async function deletedOwnRecord(sectionId: number): Promise<{ id: number; data: unknown }> {
 		await projectedOwnRecord(sectionId);
@@ -570,8 +602,8 @@ describe('L11: content projection is developer-only; removal is not', () => {
 
 	test('L11c a non-developer override undelete leaves the target node untouched', async () => {
 		await overriddenOwnNode(25);
-		// The system's delete re-projects the canonical term (L6a).
-		await deleteSectionRecord(LOCAL, LOCAL_IDS[0], USER_ID);
+		// A developer's delete re-projects the canonical term (L6a).
+		await as(DEVELOPER, () => deleteSectionRecord(LOCAL, LOCAL_IDS[0], USER_ID));
 		expect(await termOf(`${OWN}25`)).toBe('canon');
 		const canonical = await rowOf(`${OWN}25`);
 
@@ -589,5 +621,22 @@ describe('L11: content projection is developer-only; removal is not', () => {
 		await as(NON_DEVELOPER, () => deleteSectionRecord(OWN_SECTION, 24, USER_ID));
 		expect(await matrixRowExists(OWN_SECTION, 24)).toBe(false);
 		expect(await readDdOntologyRow(`${OWN}24`)).toBeNull();
+	});
+
+	test('L11f no principal FAILS CLOSED (1): an override delete with NO request scope leaves its target untouched', async () => {
+		// How the stdio MCP surface runs a principal's delete: no runWithRequestContext at all.
+		await overriddenOwnNode(26);
+		const overridden = await rowOf(`${OWN}26`);
+		await deleteSectionRecord(LOCAL, LOCAL_IDS[0], USER_ID);
+		expect(await matrixRowExists(LOCAL, LOCAL_IDS[0])).toBe(false);
+		expect(await rowOf(`${OWN}26`)).toEqual(overridden);
+		expect(kinds(await inspectOntology(OWN), 'stale')).toEqual([`${OWN}26`]);
+	});
+
+	test('L11f no principal FAILS CLOSED (2): an undelete in an UNAUTHENTICATED scope writes no node', async () => {
+		const snapshot = await deletedOwnRecord(27);
+		await as(undefined, () => restoreSection(snapshot.data, snapshot.id, OWN_SECTION, 27, USER_ID));
+		expect(await matrixRowExists(OWN_SECTION, 27)).toBe(true);
+		expect(await readDdOntologyRow(`${OWN}27`)).toBeNull();
 	});
 });

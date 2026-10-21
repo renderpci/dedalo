@@ -45,7 +45,10 @@
     re-activated through this action — and nothing is ever retracted here: under this
     definition the old "inactive ⇒ retract" branch was unreachable (a tld with rows is active
     by construction), so it is gone. Retraction and re-activation become real only if
-    activation is keyed on hierarchy4 (Q1).
+    activation is keyed on hierarchy4 (Q1). "Active" is decided UNDER the tld's projection
+    lock and read live, not from the getActiveTlds cache (closure r1): a teardown whose
+    retract committed first leaves the tld empty instead of getting its root re-planted (WC
+    ontology-record-lifecycle, Concurrency; gate ontology_projection_race_native R6/R7).
   - The `<tld>0` root re-derived by the activation and by the ontology update hangs under its
     typology grouper `ontologytype<N>` by NAME; the grouper tld (its registry row, its
     `ontologytype0/<N>` record, its node) is not written.

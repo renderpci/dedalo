@@ -823,7 +823,11 @@ Merged since the last release; these ship with the next one.
     Writing a record's content into the runtime ontology stays a developer action: when a user who
     is not a developer restores a record, or deletes or restores an override, the record changes
     but the node does not, and the ontology inspection lists it as drift for a developer to apply.
-    An ontology rebuild and a record delete or restore on the same TLD no longer race each other.
+    The same holds when no user is identified at all (for example a write through the stdio MCP
+    server): only a developer's action writes node content.
+    An ontology rebuild, a registry activation and a record delete or restore on the same TLD no
+    longer race each other, and activating a TLD while it is being deleted no longer leaves its root
+    node behind.
     See [Ontology write pipeline](./core/ontology/ontology_write.md).
 
     Wire contract: `WC-2026-10-21-ontology-record-lifecycle`.

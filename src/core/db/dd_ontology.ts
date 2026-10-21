@@ -718,6 +718,21 @@ export async function getActiveTlds(): Promise<string[]> {
 }
 
 /**
+ * Whether dd_ontology holds ANY row of `tld` — getActiveTlds' "active" for ONE tld, read
+ * LIVE (never the module cache: a cache filled by a reader racing an uncommitted teardown
+ * would still list it). The question a whole-tld door re-asks UNDER the tld's projection
+ * lock (ontology_state.ts syncOntologyActivation / rebuildOntology `onlyIfProjected`), so a
+ * teardown that committed first is seen.
+ */
+export async function tldHoldsNodes(tld: string): Promise<boolean> {
+	const rows = (await sql.unsafe(
+		'SELECT EXISTS (SELECT 1 FROM dd_ontology WHERE tld = $1) AS holds',
+		[tld],
+	)) as { holds: boolean }[];
+	return rows[0]?.holds === true;
+}
+
+/**
  * The set of TLDs whose ontology package actually carries CONTENT.
  *
  * Declaring an ontology in the ontologies catalogue creates its registry root —
@@ -851,9 +866,12 @@ async function idSequenceLags(): Promise<boolean> {
  * setval run: a value already handed out can never be reissued (a check-then-
  * setval without it could LOWER the sequence under a concurrent writer). Inside
  * an ambient transaction the lock is held to its end; otherwise it lives in its
- * own short transaction. Call it BEFORE the caller's first dd_ontology write when
- * possible (rebuildOntology does): upgrading a held ROW EXCLUSIVE to this lock can
- * deadlock against a twin — Postgres then aborts one side, loudly.
+ * own short transaction. Call it BEFORE the caller's first dd_ontology write and
+ * OUTSIDE the caller's transaction when possible (rebuildOntology does, before it
+ * opens its own): upgrading a held ROW EXCLUSIVE to this lock can deadlock against a
+ * twin, and a table lock held while the tld's projection lock (lockOntologyProjection)
+ * is awaited deadlocks against a lifecycle unit that holds that lock and then writes
+ * dd_ontology — Postgres then aborts one side, loudly.
  * Returns true when the sequence was moved.
  */
 export async function alignDdOntologyIdSequence(): Promise<boolean> {

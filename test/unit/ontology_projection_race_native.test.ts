@@ -27,33 +27,59 @@
  *      teardown committed re-plants a node into the torn-down tld. Asserted: no row of the tld.
  *   R5 an OVERRIDE delete racing the teardown: same check-then-act on the override's target
  *      ("only an already-projected node is re-parsed"). Asserted: no row of the tld.
+ *   R6 the REGISTRY ACTIVATION (syncOntologyActivation, tool_ontology on an ontology35 record)
+ *      racing the teardown's retract (closure r1): its "active? in sync?" decision and the
+ *      `<tld>0` re-plant must be one unit under the lock, or an activation that decided before
+ *      the retract committed re-plants the root while the registry row still exists (the
+ *      teardown deletes it only later) — a torn-down tld that keeps a root and stays "active".
+ *      R6a an in-sync tld, R6b a drifted one. Asserted: no row of the tld.
+ *   R7 a rebuild with `onlyIfProjected` (the activation's re-derive) queued behind the retract:
+ *      it re-asks "active?" under the lock and leaves the tld empty instead of re-deriving it
+ *      from records the teardown has not deleted yet. Asserted: no row, `notProjected`.
+ *   R0 lockOntologyProjection refuses outside a transaction (the xact lock would be a no-op
+ *      there), resolves inside one, and an empty tld list is a no-op anywhere.
+ *
+ * The content legs (R2/R4/R5) run their events AS A DEVELOPER: the lifecycle's content
+ * branches are developer-only and fail closed without a principal
+ * (ontology_record_lifecycle_native L11/L11f).
  *
  * Mutation-checked 2026-10-21: the rebuild's lock removed → R1 + R2 red; projectOntologyNode's
  * lock removed → R3 red; unprojectOntologyNode's (the death) → R1 + R3 red; the governed
- * birth's lock before its root read → R4 red; the override lock before its target reads → R5 red.
+ * birth's lock before its root read → R4 red; the override lock before its target reads → R5 red;
+ * (r1) the activation's lock dropped → R6a red (R6b stays green BY DESIGN: its re-derive
+ * re-asks "active?" under the rebuild's own lock — that half is R7's); the rebuild's
+ * `onlyIfProjected` re-check dropped → R7 red; the outside-transaction refusal dropped → R0 red.
  *
- * Scratch: tld `zzrc` (section `zzrc0`, never projected elsewhere) + the `localontology0`
+ * Scratch: tld `zzopr` (section `zzopr0`, owned by this file alone — it used to share `zzrc`
+ * with reconcile_registry_native, whose TLD-wide sweep a parallel run would collide with) + the `localontology0`
  * override id OVERRIDE_ID (distinct from the other ontology gates'); swept before and after
  * (dd_ontology, matrix_ontology, matrix_time_machine, matrix_counter), zero residue asserted.
- * The rebuild runs with mainNode 'existing' and the tld has no registry row, so no registry
- * record is ever written.
+ * The rebuild runs with mainNode 'existing'; only R6 creates a registry row of `zzopr`
+ * (createMainSection, matrix_ontology_main / ontology35), swept with its TM rows.
  */
 
 import { afterAll, beforeEach, describe, expect, test } from 'bun:test';
-import { readDdOntologyRow } from '../../src/core/db/dd_ontology.ts';
+import { lockOntologyProjection, readDdOntologyRow } from '../../src/core/db/dd_ontology.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import { clearOntologyDerivedCaches } from '../../src/core/ontology/cache_invalidation.ts';
 import {
 	inspectOntology,
 	rebuildOntology,
 	retractOntology,
+	syncOntologyActivation,
 } from '../../src/core/ontology/ontology_state.ts';
-import { insertDdOntologyRecord } from '../../src/core/ontology/ontology_write.ts';
+import {
+	createMainSection,
+	insertDdOntologyRecord,
+} from '../../src/core/ontology/ontology_write.ts';
 import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
+import type { Principal } from '../../src/core/security/permissions.ts';
+import { runWithRequestContext } from '../../src/core/security/request_context.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import { restoreSection } from '../../tools/tool_time_machine/server/tool_time_machine.ts';
 
-const TLD = 'zzrc';
+const TLD = 'zzopr';
 const SECTION = `${TLD}0`;
 const ID = 7;
 const NODE = `${TLD}${ID}`;
@@ -62,6 +88,28 @@ const LOCAL = 'localontology0';
 const OVERRIDE_ID = 990301;
 /** How long a leg waits for the concurrent side to block (it blocks at once when serialized). */
 const BLOCK_WAIT_MS = 10_000;
+
+const DEVELOPER: Principal = Object.freeze({
+	userId: USER_ID,
+	isGlobalAdmin: true,
+	isDeveloper: true,
+});
+/** Run `work` as a DEVELOPER (the lifecycle's content branches are developer-only). */
+const asDeveloper = <T>(work: () => Promise<T>): Promise<T> =>
+	runWithRequestContext(
+		{ principal: DEVELOPER, session: null, requestId: 'ontology_projection_race', clientIp: '' },
+		work,
+	);
+
+/** Registry rows (matrix_ontology_main / ontology35) naming the scratch tld. */
+async function registryIds(): Promise<number[]> {
+	const rows = (await sql.unsafe(
+		`SELECT section_id FROM matrix_ontology_main
+		  WHERE section_tipo = 'ontology35' AND string->'hierarchy6' @> $1::text::jsonb`,
+		[JSON.stringify([{ value: TLD }])],
+	)) as { section_id: number }[];
+	return rows.map((row) => Number(row.section_id));
+}
 
 const loc = (sectionTipo: string, sectionId: number, from: string) => ({
 	id: 1,
@@ -223,6 +271,14 @@ async function interleave<T>(
 
 async function sweep(): Promise<void> {
 	await assertTestDatabase('ontology_projection_race_native');
+	for (const id of await registryIds()) {
+		for (const table of ['matrix_time_machine', 'matrix_ontology_main']) {
+			await sql.unsafe(
+				`DELETE FROM ${table} WHERE section_tipo = 'ontology35' AND section_id = $1`,
+				[id],
+			);
+		}
+	}
 	await sql.unsafe('DELETE FROM dd_ontology WHERE tld = $1', [TLD]);
 	await sql.unsafe(
 		'DELETE FROM matrix_ontology WHERE section_tipo = $1 OR (section_tipo = $2 AND section_id = $3)',
@@ -253,6 +309,7 @@ beforeEach(sweep);
 afterAll(async () => {
 	await sweep();
 	expect(await residue()).toBe(0);
+	expect(await registryIds()).toEqual([]);
 });
 
 describe('ONT under concurrency: node presence follows record presence', () => {
@@ -278,7 +335,7 @@ describe('ONT under concurrency: node presence follows record presence', () => {
 		const snapshot = await deletedSnapshot();
 
 		const { blocked, result } = await interleave(
-			() => restoreSection(snapshot.data, snapshot.id, SECTION, ID, USER_ID),
+			() => asDeveloper(() => restoreSection(snapshot.data, snapshot.id, SECTION, ID, USER_ID)),
 			() => rebuildOntology(TLD, USER_ID, { mainNode: 'existing' }),
 		);
 		expect(blocked).toBe(true);
@@ -313,7 +370,7 @@ describe('ONT under concurrency: node presence follows record presence', () => {
 
 		const { blocked } = await interleave(
 			() => retractOntology(TLD),
-			() => restoreSection(snapshot.data, snapshot.id, SECTION, ID, USER_ID),
+			() => asDeveloper(() => restoreSection(snapshot.data, snapshot.id, SECTION, ID, USER_ID)),
 		);
 		expect(blocked).toBe(true);
 		expect(await recordExists()).toBe(true);
@@ -330,9 +387,93 @@ describe('ONT under concurrency: node presence follows record presence', () => {
 
 		const { blocked } = await interleave(
 			() => retractOntology(TLD),
-			() => deleteSectionRecord(LOCAL, OVERRIDE_ID, USER_ID),
+			() => asDeveloper(() => deleteSectionRecord(LOCAL, OVERRIDE_ID, USER_ID)),
 		);
 		expect(blocked).toBe(true);
 		expect(await tldRows()).toEqual([]);
 	}, 30_000);
+
+	/** A projected tld WITH its registry row (what an activation re-plants the root from). */
+	async function registeredTld(): Promise<number> {
+		await projectedRecord();
+		await assertTestDatabase('ontology_projection_race_native');
+		const registryId = await createMainSection({ tld: TLD }, USER_ID);
+		await clearOntologyDerivedCaches();
+		expect(await registryIds()).toEqual([registryId]);
+		return registryId;
+	}
+
+	test('R6a an IN-SYNC activation racing the retract never re-plants the torn-down root', async () => {
+		const registryId = await registeredTld();
+		// Floor: in sync, so the activation would take its root re-plant branch.
+		expect((await inspectOntology(TLD)).inSync).toBe(true);
+
+		const { blocked, result } = await interleave(
+			() => retractOntology(TLD),
+			() => syncOntologyActivation([registryId], USER_ID),
+		);
+		expect(blocked).toBe(true);
+		expect(result.errors).toEqual([]);
+		// The registry row still exists (the teardown deletes it later): only the lock ordered it.
+		expect(await registryIds()).toEqual([registryId]);
+		expect(await tldRows()).toEqual([]);
+	}, 30_000);
+
+	test('R6b a DRIFTED activation racing the retract never re-derives the torn-down tld', async () => {
+		const registryId = await registeredTld();
+		await sql.unsafe('DELETE FROM dd_ontology WHERE tipo = $1', [NODE]);
+		await clearOntologyDerivedCaches();
+		// Floor: drifted (the record's node is missing), so the activation would re-derive.
+		expect((await inspectOntology(TLD)).inSync).toBe(false);
+
+		const { blocked, result } = await interleave(
+			() => retractOntology(TLD),
+			() => syncOntologyActivation([registryId], USER_ID),
+		);
+		expect(blocked).toBe(true);
+		expect(result.errors).toEqual([]);
+		expect(await recordExists()).toBe(true);
+		expect(await tldRows()).toEqual([]);
+	}, 30_000);
+
+	test('R7 a rebuild with onlyIfProjected queued behind the retract leaves the tld empty', async () => {
+		await projectedRecord();
+
+		const { blocked, result } = await interleave(
+			() => retractOntology(TLD),
+			() => rebuildOntology(TLD, USER_ID, { mainNode: 'existing', onlyIfProjected: true }),
+		);
+		expect(blocked).toBe(true);
+		expect(result.notProjected).toBe(true);
+		expect(result.applied).toEqual([]);
+		expect(await recordExists()).toBe(true);
+		expect(await tldRows()).toEqual([]);
+	}, 30_000);
+
+	test('R7 control: onlyIfProjected re-derives a tld that still holds rows', async () => {
+		await projectedRecord();
+		await sql.unsafe('DELETE FROM dd_ontology WHERE tipo = $1', [NODE]);
+		await clearOntologyDerivedCaches();
+
+		const result = await rebuildOntology(TLD, USER_ID, {
+			mainNode: 'existing',
+			onlyIfProjected: true,
+		});
+		expect(result.notProjected).toBeUndefined();
+		expect(await tldRows()).toEqual([SECTION, NODE]);
+	});
+});
+
+describe('R0 lockOntologyProjection is a transaction lock or a refusal', () => {
+	test('refused outside a transaction, taken inside one; an empty list is a no-op anywhere', async () => {
+		const refusal = await lockOntologyProjection([TLD]).then(
+			() => null,
+			(error: unknown) => error,
+		);
+		expect(refusal).toBeInstanceOf(DedaloError);
+		expect((refusal as DedaloError).code).toBe('internal.invariant');
+		expect((refusal as DedaloError).coordinates).toEqual({ tld: TLD });
+		await expect(withTransaction(() => lockOntologyProjection([TLD]))).resolves.toBeUndefined();
+		await expect(lockOntologyProjection([])).resolves.toBeUndefined();
+	});
 });
