@@ -50,6 +50,7 @@ import { existsSync, promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from '../../../config/config.ts';
 import {
+	boundSqlTargetStatement,
 	OPERATOR_FENCE_BOUND_MS,
 	remainingFenceBudget,
 	sqlTargetLockKey,
@@ -576,8 +577,11 @@ async function fetchPublishedSectionIds(
 	// The PUBLISHED MariaDB target, not the matrix: its section_id column carries
 	// the published string shape (a pinned edge — publication v1 LIKE-probes the
 	// quoted form), so the union stays. WC-2026-08-10-section-id-int-canonical.
+	// Lock-wait bounded: it runs under the database's exclusive fence, and a
+	// read queued behind another session's pending schema change (an exclusive
+	// metadata lock) would keep it there.
 	const rows = (await pool.unsafe(
-		`SELECT DISTINCT section_id FROM ${escapeSqlIdentifier(tableName)}`,
+		boundSqlTargetStatement(`SELECT DISTINCT section_id FROM ${escapeSqlIdentifier(tableName)}`),
 		[],
 	)) as { section_id: string | number }[];
 	return rows.map((row) => row.section_id);

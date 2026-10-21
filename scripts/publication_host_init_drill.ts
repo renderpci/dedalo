@@ -727,6 +727,55 @@ export function selinuxControlVerdict(observed: {
 		: `no AVC denial of httpd_t on ${type} for the control:\n${avc.slice(-2000)}`;
 }
 
+/** One boolean probe: its HTTP status and the AVC denials its own window logged. */
+export interface BooleanProbe {
+	readonly status: number;
+	readonly avcs: number;
+}
+
+/**
+ * booleans-measured's verdict for one boolean, or null when it measured what its `what` says: ON, the
+ * probe logs no AVC (and the v1 probe answers 200); OFF, httpd_can_network_relay's proxy probe MUST log
+ * one — a relay probe that logs none with the boolean off measured nothing (its window read nothing, or
+ * the boolean does not gate the proxy), and recording that as `denied_without: false` would call an
+ * unmeasured property green.
+ */
+export function booleanProbeVerdict(
+	name: string,
+	probe: string,
+	on: BooleanProbe,
+	off: BooleanProbe,
+): string | null {
+	if (on.avcs !== 0) return `${name} on: ${probe} still logged ${on.avcs} AVC denial(s)`;
+	if (name === 'httpd_enable_homedirs' && on.status !== 200) {
+		return `${name} on: the v1 probe answered ${on.status} (run v1-handler-probe first)`;
+	}
+	if (name === 'httpd_can_network_relay' && off.avcs === 0) {
+		return `${name} off: ${probe} logged no AVC denial — the probe's window read nothing, or the boolean no longer gates the v2 proxy: the measurement proves nothing`;
+	}
+	return null;
+}
+
+/**
+ * no-avc's verdict over the `ausearch -m AVC,USER_AVC -ts <drill start>` window, or null when clean.
+ * The window is FLOORED on the one denial the drill causes on purpose (system-layout-v2's control,
+ * `controlDenied` = that leg measured it): a window that does not hold even that read nothing — a wrong
+ * -ts, the wrong day, a dead auditd — and a clean read of nothing is no measurement.
+ */
+export function noAvcVerdict(window: string, controlDenied: boolean): string | null {
+	if (!controlDenied) {
+		return 'system-layout-v2 did not measure its control denial in this drill: the window has no floor, so a clean read would prove nothing (run system-layout-v2)';
+	}
+	const avcLines = window.split('\n').filter((line) => /avc:/.test(line));
+	if (!avcLines.some(controlNamed)) {
+		return `the window read nothing: not even system-layout-v2's control denial is in it\n${window.slice(-1000)}`;
+	}
+	const foreign = avcLines.filter((line) => !/name_connect/.test(line) && !controlNamed(line));
+	return foreign.length === 0
+		? null
+		: `AVC denials during the drill:\n${foreign.slice(0, 20).join('\n')}`;
+}
+
 interface Ctx {
 	readonly args: DrillArgs;
 	readonly runner: Runner;
@@ -736,7 +785,26 @@ interface Ctx {
 	readonly mirror: string;
 	readonly secrets: DrillSecrets;
 	readonly facts: Record<string, unknown>;
+	/** The drill's start on the TARGET's clock, `YYYY-MM-DD HH:MM:SS` (journalctl --since). */
 	readonly startedAt: string;
+	/** The same instant in the target's `%x %T` (ausearch -ts: a date in its locale, then a time). */
+	readonly auditStartedAt: string;
+}
+
+/**
+ * The drill's start as the TARGET's clock reads it — never this machine's (another timezone, another
+ * day, a skewed clock would move every "since the drill started" window): `date +'%F %T|%x %T'`
+ * there, both forms of one instant.
+ */
+export function parseTargetStart(out: string): { startedAt: string; auditStartedAt: string } {
+	const [startedAt = '', auditStartedAt = ''] = out.trim().split('|');
+	if (
+		!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(startedAt) ||
+		!/^\S+ \d{2}:\d{2}:\d{2}$/.test(auditStartedAt)
+	) {
+		throw new Error(`the target's clock answered '${out.trim()}', not '<%F %T>|<%x %T>'`);
+	}
+	return { startedAt, auditStartedAt };
 }
 
 interface Leg {
@@ -2532,6 +2600,8 @@ export const LEGS: readonly Leg[] = Object.freeze([
 					verdict === null,
 					`${verdict}\n(httpd error log since the control:\n${log.slice(-1500)})`,
 				);
+				// no-avc's floor: the one denial the drill caused on purpose, measured.
+				ctx.facts.selinux_control_denied = true;
 			} finally {
 				await ctx.runner.sh(
 					`rm -rf ${SELINUX_CONTROL_DIR} ${SELINUX_CONTROL_CONF} && apachectl -t >/dev/null 2>&1 && systemctl reload httpd`,
@@ -2648,14 +2718,10 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				try {
 					await must(ctx, `setsebool ${name} on`, `${name} on`);
 					const on = await probeOnce(probe);
-					check(on.avcs === 0, `${name} on: ${probe} still logged ${on.avcs} AVC denial(s)`);
-					if (name === 'httpd_enable_homedirs')
-						check(
-							on.status === 200,
-							`${name} on: the v1 probe answered ${on.status} (run v1-handler-probe first)`,
-						);
 					await must(ctx, `setsebool ${name} off`, `${name} off`);
 					const off = await probeOnce(probe);
+					const verdict = booleanProbeVerdict(name, probe, on, off);
+					check(verdict === null, verdict ?? '');
 					measured[name] = {
 						needed_for: needed,
 						denied_without: off.avcs > 0 || off.status !== on.status,
@@ -2671,13 +2737,11 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'no-avc',
 		family: 'el',
 		required: true,
-		what: "ausearch -m AVC,USER_AVC since the drill started finds nothing outside the booleans leg and system-layout-v2's control file",
+		what: "ausearch -m AVC,USER_AVC since the drill started (the target's clock) finds nothing outside the booleans leg and system-layout-v2's control file — and finds that control's denial: a window that holds not even it read nothing",
 		async run(ctx) {
-			const out = await ctx.runner.sh(`ausearch -m AVC,USER_AVC -ts ${ctx.startedAt} 2>&1`);
-			const lines = out.out
-				.split('\n')
-				.filter((line) => /avc:/.test(line) && !/name_connect/.test(line) && !controlNamed(line));
-			check(lines.length === 0, `AVC denials during the drill:\n${lines.slice(0, 20).join('\n')}`);
+			const out = await ctx.runner.sh(`ausearch -m AVC,USER_AVC -ts ${ctx.auditStartedAt} 2>&1`);
+			const verdict = noAvcVerdict(out.out, ctx.facts.selinux_control_denied === true);
+			check(verdict === null, verdict ?? '');
 		},
 	},
 	// ── Debian, in place only ──
@@ -2696,7 +2760,7 @@ export const LEGS: readonly Leg[] = Object.freeze([
 				ctx,
 				// The kernel's (mediation of files, sockets, capabilities) and dbus's (USER_AVC) denials both
 				// reach the journal; with auditd installed the kernel's go to its log instead.
-				`journalctl --no-pager -o short-iso --since ${q(ctx.startedAt)} 2>&1; if command -v ausearch >/dev/null; then ausearch -m AVC,USER_AVC -ts ${ctx.startedAt} 2>/dev/null; fi; true`,
+				`journalctl --no-pager -o short-iso --since ${q(ctx.startedAt)} 2>&1; if command -v ausearch >/dev/null; then ausearch -m AVC,USER_AVC -ts ${ctx.auditStartedAt} 2>/dev/null; fi; true`,
 				'the journal since the start',
 			);
 			// Not vacuous: the drill's own reloads and restarts are in that window.
@@ -3417,7 +3481,7 @@ export async function main(argv: readonly string[]): Promise<number> {
 				apiWebUserCode: `Code-${randomBytes(9).toString('base64url')}`,
 			},
 			facts: {},
-			startedAt: new Date().toLocaleTimeString('en-GB', { hour12: false }),
+			...parseTargetStart((await world.runner.sh("date +'%F %T|%x %T'")).out),
 		};
 		for (const leg of legs) {
 			if (skipped.includes(leg.name)) {

@@ -1042,6 +1042,18 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-09-30-diffusion-target-fence`.
 
+- **A publication run or unpublish no longer waits without limit on a lock held outside Dédalo**
+
+    Publishing to a MariaDB database waited as long as MariaDB let it (a day, by
+    default) when another session held a lock on the table — for example a long read
+    on the public website while a run added a column. Meanwhile every other
+    publication to that database waited too, and deleted records stayed published.
+    Now a statement waits at most 30 seconds for such a lock: the run fails and
+    releases the database (re-run it), a deleted record's unpublish stays pending and
+    is retried, and the language sweep and the media-index rebuild report the table.
+
+    Wire contract: `WC-2026-10-21-target-statement-lock-wait`.
+
 - **The Reconcile panel offers *Apply* only where you can apply, and a refusal no longer replaces the page**
 
     In *Maintenance → Reconcile*, every row showed an *Apply* button. Two of them could not
@@ -1292,7 +1304,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 13 entries"
+??? note "Wire contract — 14 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
@@ -1304,6 +1316,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-21-ontology-record-lifecycle`
     - `WC-2026-10-21-ontology-recovery-single-flight`
     - `WC-2026-10-21-ontology-update-rebuild`
+    - `WC-2026-10-21-target-statement-lock-wait`
     - `WC-2026-10-21-tm-restore-component-write-doors`
     - `WC-2026-10-21-unpublish-markers-durable`
     - `WC-2026-10-21-update-cache-locked-resave`

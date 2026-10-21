@@ -270,3 +270,15 @@ another session's in-flight temps included.
 - Gate: `test/unit/diffusion_operator_fence_budget_native.test.ts`.
   Mutation-verified: restoring `'wait'` on either door, a fresh budget per
   database, or dropping either busy report — each red.
+
+## Addendum 2026-10-21 (b) — a target statement's lock WAIT is bounded; R4 narrows
+
+- **Now:** every statement a door runs on a `sql:` target inside its unit
+  waits for another session's lock (metadata or row) at most
+  `SQL_TARGET_LOCK_WAIT_S` (30 s), then fails with errno 1205 and the unit
+  rolls back, releasing the target (`boundSqlTargetStatement`,
+  `core/diffusion_bridge/target_lock.ts`). Shapes per door, and the gate:
+  `WC-2026-10-21-target-statement-lock-wait`.
+- R4 narrows: the MariaDB lock-wait half is closed. Still an owner call: a
+  statement that WORKS for long, and a write on a half-open TCP connection
+  (no socket timeout on the target pool) — the wall-clock / socket bound.

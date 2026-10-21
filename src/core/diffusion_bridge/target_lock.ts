@@ -38,8 +38,20 @@
  * never loses it: every unit that opens its transaction runs a TIMER-DRIVEN
  * keepalive (`SELECT 1` on its own connection every tenth of the bound) while
  * its work is in flight — an ALTER on a big published table, a lang sweep's
- * chunk loop, a MariaDB statement queued behind a metadata lock all outlast
- * the bound legitimately, and no door has to remember to call it.
+ * chunk loop all outlast the bound legitimately, and no door has to remember
+ * to call it.
+ *
+ * WAITING IS NOT WORKING: because a live unit keeps its fence, a target
+ * statement that WAITS on the target server — for a metadata lock a session
+ * outside the engine holds (the public site's long read, a dump), or for a row
+ * lock — would hold the fence for as long as that server lets it wait
+ * (MariaDB's `lock_wait_timeout` defaults to a day), and every door on the
+ * target with it. So every statement a door runs on a `sql:` target inside its
+ * unit goes through boundSqlTargetStatement: it may WAIT for a target-side lock
+ * at most SQL_TARGET_LOCK_WAIT_S, then fails (errno 1205) and the unit rolls
+ * back, releasing the target. Its WORK is not bounded — a long ALTER that holds
+ * its locks runs to the end (what is left of residual R4: a statement that
+ * never returns, e.g. on a half-open socket, is an owner call).
  *
  * THE OPERATOR DOORS' BUDGET: a door a person waits on (the lang sweep, the
  * ghost unpublish, the media-index rebuild/reconcile) waits for a held target
@@ -74,6 +86,56 @@ const KEEPALIVE_FRACTION = 10;
 
 /** Lock-wait bound of every statement of a unit (a 55P03 inside it is the caller's to retry). */
 const FENCE_LOCK_TIMEOUT = '5s';
+
+/**
+ * How long ONE statement on a `sql:` target (a MariaDB publication database)
+ * may wait for a lock the target server holds for another session — a
+ * metadata lock (`lock_wait_timeout`) or an InnoDB row lock
+ * (`innodb_lock_wait_timeout`) — before it fails with errno 1205. Seconds.
+ * A wait, never the statement's work: an ALTER that got its locks runs on.
+ */
+export const SQL_TARGET_LOCK_WAIT_S = 30;
+
+/** The test seam's scope (request-scoped; no door sets it). */
+const sqlTargetLockWaitScope = new AsyncLocalStorage<number>();
+
+/**
+ * TEST SEAM: run `work` with every boundSqlTargetStatement inside it bounded
+ * at `seconds` (a gate cannot wait SQL_TARGET_LOCK_WAIT_S per leg).
+ */
+export function withSqlTargetLockWaitForTests<T>(
+	seconds: number,
+	work: () => Promise<T>,
+): Promise<T> {
+	if (!Number.isInteger(seconds) || seconds < 1) {
+		throw new DedaloError('internal.invariant', {
+			message: `sql target lock wait: ${seconds} s is not a usable bound`,
+		});
+	}
+	return sqlTargetLockWaitScope.run(seconds, work);
+}
+
+/** A statement that already scopes its own variables (`SET STATEMENT v=n FOR …`). */
+const SET_STATEMENT_PREFIX = /^\s*SET\s+STATEMENT\s+/i;
+
+/**
+ * `statement`, made to wait for a target-side lock at most
+ * SQL_TARGET_LOCK_WAIT_S (MariaDB `SET STATEMENT … FOR`, 10.1+; scoped to this
+ * one statement, never leaking to the pooled connection). A statement that
+ * already carries `SET STATEMENT` (a read's max_statement_time budget) gets the
+ * bound merged into its variable list. Every statement a door runs on a `sql:`
+ * target inside its unit goes through it — see "WAITING IS NOT WORKING" above
+ * (gate: diffusion_target_statement_lock_wait_native).
+ */
+export function boundSqlTargetStatement(statement: string): string {
+	const seconds = sqlTargetLockWaitScope.getStore() ?? SQL_TARGET_LOCK_WAIT_S;
+	const bound = `lock_wait_timeout=${seconds}, innodb_lock_wait_timeout=${seconds}`;
+	const scoped = SET_STATEMENT_PREFIX.exec(statement);
+	if (scoped !== null) {
+		return `SET STATEMENT ${bound}, ${statement.slice(scoped[0].length)}`;
+	}
+	return `SET STATEMENT ${bound} FOR ${statement}`;
+}
 
 /** Busy-target backoff: starts here, doubles, capped. */
 const BACKOFF_START_MS = 250;

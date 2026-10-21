@@ -25,6 +25,7 @@
  */
 
 import {
+	boundSqlTargetStatement,
 	sqlTargetLockKey,
 	withDeleteDoorLock,
 } from '../../../core/diffusion_bridge/target_lock.ts';
@@ -94,8 +95,12 @@ async function deleteOneTarget(target: SqlDeleteTarget, result: SqlDeleteResult)
 	try {
 		const pool = getTargetPool(target.database_name);
 		const placeholders = target.section_ids.map(() => '?').join(', ');
+		// Lock-wait bounded: a row another session holds must not keep this
+		// door's (shared) target lock — nor the record-delete request — waiting.
 		await pool.unsafe(
-			`DELETE FROM ${escapeSqlIdentifier(target.table_name)} WHERE section_id IN (${placeholders})`,
+			boundSqlTargetStatement(
+				`DELETE FROM ${escapeSqlIdentifier(target.table_name)} WHERE section_id IN (${placeholders})`,
+			),
 			// Oracle posture: section ids bind as strings.
 			target.section_ids.map((id) => String(id)),
 		);

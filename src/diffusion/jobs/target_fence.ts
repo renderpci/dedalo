@@ -47,8 +47,10 @@
  * A LIVE HOLDER NEVER LOSES ITS FENCE: the bound is for a frozen process, not a
  * slow target. A unit's target step can legitimately outlast it with no
  * Postgres statement in between — an ALTER adding an indexed column to a large
- * published table, a lang sweep's chunk loop, a MariaDB statement queued behind
- * a metadata lock. So every unit that opens its transaction runs a TIMER-DRIVEN
+ * published table, a lang sweep's chunk loop. (A MariaDB statement WAITING on a
+ * lock another session holds is not such a step: it waits at most
+ * SQL_TARGET_LOCK_WAIT_S, then fails and the unit releases the target —
+ * target_lock.ts "WAITING IS NOT WORKING".) So every unit that opens its transaction runs a TIMER-DRIVEN
  * keepalive (`SELECT 1` on the unit's own connection every tenth of the bound)
  * for the whole time its work is in flight: the idle clock never reaches the
  * bound while the event loop runs, and a frozen process sends nothing. No door

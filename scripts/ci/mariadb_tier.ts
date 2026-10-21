@@ -172,6 +172,9 @@ export const ROW_CONTRACT: ReadonlyMap<string, RowContract> = new Map<string, Ro
 	// DIFF-2 (measured 2026-10-01, l3: +93 inserted, +17 deleted, 0 updated): the sql
 	// element's fenced publications and the fenced delete doors' unpublishes.
 	['test/unit/diffusion_target_fence_native.test.ts', { rises: ['rows_inserted', 'rows_deleted'] }],
+	// Measured 2026-10-21 (l3: +17 inserted, 0 deleted, 0 updated): each leg's table reset
+	// writes its rows; every blocked DELETE/upsert fails on its lock wait, so none moves.
+	['test/unit/diffusion_target_statement_lock_wait_native.test.ts', { rises: ['rows_inserted'] }],
 	[MEASURE_SELF_GATE, { rises: ['rows_inserted', 'rows_deleted'] }],
 	[
 		'test/unit/diffusion_row_size_native.test.ts',

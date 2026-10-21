@@ -57,6 +57,7 @@
 
 import { config } from '../../../config/config.ts';
 import {
+	boundSqlTargetStatement,
 	OPERATOR_FENCE_BOUND_MS,
 	remainingFenceBudget,
 	sqlTargetLockKey,
@@ -303,7 +304,15 @@ export async function listDeclaredPublicationTables(): Promise<Set<string>> {
 
 /** The real wiring. A frozen const: injectable, but never mutable at runtime. */
 export const DEFAULT_LANG_SWEEP_DEPENDENCIES: LangSweepDependencies = Object.freeze({
-	getPool: (database: string): MariadbQueryable => getTargetPool(database),
+	// The target as the sweep sees it: every statement lock-wait bounded
+	// (boundSqlTargetStatement, merged into a read's own max_statement_time) —
+	// the DELETE chunks run under the database's EXCLUSIVE fence, and a row or
+	// metadata lock another session holds must fail a chunk into `errors`, not
+	// keep the fence (and the operator's request) waiting.
+	getPool: (database: string): MariadbQueryable => {
+		const pool = getTargetPool(database);
+		return { unsafe: (sql, params = []) => pool.unsafe(boundSqlTargetStatement(sql), params) };
+	},
 	listTargetDatabases: listMariadbTargetDatabases,
 	listDeclaredTables: listDeclaredPublicationTables,
 	policyLangs: (): string[] => [...config.diffusion.langs],
