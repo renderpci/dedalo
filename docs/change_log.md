@@ -686,6 +686,14 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **The profile tool-permissions panel explains each tool — an info button unfolds its description.**
+
+    In a profile's **Tool permissions** field, every tool row now carries a small info button. It unfolds the tool's
+    description (in the interface language) under the row and folds it again on a second click, so the panel stays
+    compact while an administrator decides which tools to grant. Tools without a description show no button.
+
+    Wire contract: `WC-2026-10-21-tool-permissions-description`.
+
 - **"A code server can publish a prerelease (`Build prerelease`), and a published release is never rebuilt."**
 
     The *serve code* panel has a third button, *Build prerelease*, beside *Build release*.
@@ -993,13 +1001,14 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 5 entries"
+??? note "Wire contract — 6 entries"
 
     - `WC-2026-10-15-release-identity-from-tag`
     - `WC-2026-10-19-design-line-removed`
     - `WC-2026-10-19-inspector-record-info`
     - `WC-2026-10-20-element-context-default-lang`
     - `WC-2026-10-21-error-report-granted`
+    - `WC-2026-10-21-tool-permissions-description`
 
 ## 7.0.0-beta.6 — 2026-10-15
 

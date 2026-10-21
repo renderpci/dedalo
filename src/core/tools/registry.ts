@@ -287,16 +287,20 @@ export interface ToolDatalistMeta {
 	name: string;
 	/** Whether the tool cannot be deactivated for a profile (dd1601 radio). */
 	always_active: boolean;
+	/** Tool description (dd612) in the requested lang (fallback chain), raw stored HTML; null when none. */
+	description: string | null;
 }
 
 /**
- * section_id → {name, always_active} over the ACTIVE tools registry, for the
+ * section_id → {name, always_active, description} over the ACTIVE tools registry, for the
  * dd1067 security-tools datalist hydration (PHP tool_common::hydrate_tools_info,
  * which builds its map from get_all_registered_tools → get_active_tools). A
  * malformed row (no name) is skipped; the caller falls back to 'Unknown'/false,
  * matching the PHP `$tools_map[$section_id] ?? null` branch.
  */
-export async function getActiveToolMetaBySectionId(): Promise<Map<number, ToolDatalistMeta>> {
+export async function getActiveToolMetaBySectionId(
+	lang: string = currentApplicationLang(),
+): Promise<Map<number, ToolDatalistMeta>> {
 	const rows = await fetchActiveToolRows();
 	const map = new Map<number, ToolDatalistMeta>();
 	for (const row of rows) {
@@ -305,6 +309,7 @@ export async function getActiveToolMetaBySectionId(): Promise<Map<number, ToolDa
 		map.set(row.section_id, {
 			name,
 			always_active: radioIsYes(row.relation, TIPO.ALWAYS_ACTIVE),
+			description: resolveLangItems(row.string?.[TIPO.DESCRIPTION], lang),
 		});
 	}
 	return map;
