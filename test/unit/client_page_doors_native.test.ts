@@ -107,19 +107,23 @@
  * `READ_DOOR_POSTURE` (the total door census) and every read route of
  * `SECTION_READ_ROUTES` is driven with hostile templates under the query tap;
  * a door whose statements come from `search_related.ts` is a MEMBER. A member
- * must be a route that declares `page: 'client_sqo'`, or get_indexation_grid,
- * or a NAMED exemption below with its reason (shrink-only). So a new route that
- * forwards rqo.sqo raw to the sink reddens here without anyone listing it.
+ * must be a route that declares `page: 'client_sqo'` (the reads WITHOUT a
+ * source.action route — `read#(default)`: the component get_data and the
+ * generic section read — declare it as `SECTION_READ_DEFAULT_PAGE`), or
+ * get_indexation_grid, or a NAMED exemption below with its reason
+ * (shrink-only). So a new route that forwards rqo.sqo raw to the sink reddens
+ * here without anyone listing it.
  *
- * LANDING ORDER (a hard dependency, not a flake): the universal-bound leg holds
- * ONLY with the wire bound in place — `rqoSchema.sqo` = `wireSqoSchema`
- * (src/core/concepts/rqo.ts). The `dd_core_api:read#(default)` member (a
- * component_relation_index get_data) reads `rqo.sqo.offset` raw
- * (section/read.ts readComponentData → relation_index findInverseReferenceLocators),
- * so without the wire clamp offset `1e21` reaches the sink and is refused 400
- * `search.invalid_sqo`, which this leg counts as a failure. This file therefore
- * lands in the SAME commit as the rqo.ts wire hunk, or after it; routing that
- * door's page through clampClientPage in read.ts removes the dependency.
+ * EVERY MEMBER BOUNDS ITS OWN PAGE — the wire bound is a backstop, never the
+ * bound. The universal bound holds a second time with the wire schema
+ * BYPASSED: the RQO handed straight to dispatch, as a server-internal caller
+ * or a page that never crossed `wireSqoSchema` hands it (save's echo reads its
+ * limit from `data.pagination`, dd_core_api.ts). The `read#(default)` member
+ * (a component_relation_index get_data) read `rqo.sqo.offset` raw
+ * (section/read.ts readComponentData → relation_index
+ * findInverseReferenceLocators) until it adopted clampClientPage: offset `1e21`
+ * reached the sink and was refused 400 `search.invalid_sqo` — so a declared
+ * posture that is not honoured reddens here, not only an undeclared one.
  *
  * Situation `zzpg` (matrix_test via test24, ids 900740..901021 and
  * 901024..901032; zzpg18 in matrix_list via dd22, ids 901022..901023 — dropped
@@ -684,10 +688,6 @@ else {
 	 */
 	const MEMBERS_WITHOUT_ROUTE_POSTURE: ReadonlyMap<string, string> = new Map([
 		[
-			'dd_core_api:read#(default)',
-			'the generic read (no source.action): a section read passes sanitizeClientSqo (the ONE clamp); a component get_data (here a component_relation_index paging the sink) reads the window the WIRE already bounded (wireSqoSchema, rqo.ts) — read.ts readComponentData keeps its own hand clamp until it adopts clampClientPage (Lane 1 integrator request 5) — then this exemption is deleted',
-		],
-		[
 			'dd_core_api:count',
 			"mode 'related' answers a TOTAL, never a window (its non-admin enumeration is an open owner decision, CLOSURE_PLAN Step 8 READ-4 flags)",
 		],
@@ -736,6 +736,13 @@ else {
 
 	/** Who drives a door: the global admin, or the non-admin READER (see the header). */
 	type Caller = 'admin' | 'reader';
+
+	/**
+	 * How a door is reached: 'wire' — through the wire schema first, the way
+	 * server.ts parses every body; 'bypassed' — the RQO handed to dispatch as
+	 * built (a server-internal caller, a page that never crossed wireSqoSchema).
+	 */
+	type Via = 'wire' | 'bypassed';
 
 	async function callerContext(caller: Caller): Promise<Record<string, unknown>> {
 		const userId = caller === 'admin' ? -1 : ACL_NON_ADMIN_USER_ID;
@@ -869,6 +876,7 @@ else {
 		limit: PageValue,
 		offset: PageValue,
 		caller: Caller = 'admin',
+		via: Via = 'wire',
 	): Promise<DoorAnswer> {
 		const context = await callerContext(caller);
 		const rqo = buildRqo(door, template, limit, offset);
@@ -898,6 +906,16 @@ else {
 						};
 						const structured = await runTool(spec, context.principal as never, input);
 						return { wire: false, status: 200, body: structured as Record<string, unknown> };
+					}
+					// 'bypassed': the RQO reaches dispatch as built, never parsed by
+					// the wire schema — the door must bound the window itself.
+					if (via === 'bypassed') {
+						const result = await dispatchRqo(rqo as never, context as never);
+						return {
+							wire: false,
+							status: result.status,
+							body: result.body as Record<string, unknown>,
+						};
 					}
 					const parsed = rqoSchema.safeParse(rqo);
 					if (!parsed.success) return { wire: true, status: 400, body: {} };
@@ -1820,7 +1838,11 @@ else {
 					? key.slice('dd_core_api:read#'.length)
 					: null;
 				if (route === null) return true;
-				return sectionReadRoutes?.get(route)?.page !== 'client_sqo';
+				const posture =
+					route === '(default)'
+						? readFacade.SECTION_READ_DEFAULT_PAGE
+						: sectionReadRoutes?.get(route)?.page;
+				return posture !== 'client_sqo';
 			});
 			expect(undeclared).toEqual([]);
 			// Shrink-only: an exemption that no longer names a member is stale.
@@ -1858,6 +1880,36 @@ else {
 						if (rowBounded(key) && !(answer.sinkMaxRows <= CEILING + 1)) {
 							failures.push(`${cell}: a sink statement returned ${answer.sinkMaxRows} rows`);
 						}
+					}
+				}
+			}
+			expect(failures).toEqual([]);
+		}, 600_000);
+
+		test('every member bounds its OWN page: driven with the wire schema BYPASSED, each hostile window is a 200 of at most the ceiling', async () => {
+			// The wire bound (wireSqoSchema) is the backstop, never the bound: a
+			// member must bound the window it is HANDED. Same cells as the universal
+			// bound above, minus the parse — so no cell can be 'refused at the wire',
+			// and a door that forwards a raw offset to the sink (1e21 → the sink's
+			// search.invalid_sqo, 400) or a raw limit reddens here.
+			const { members } = await measureMembership();
+			expect(members.size).toBeGreaterThanOrEqual(PAGE_DOORS.length);
+			expect([...members.keys()]).toContain('dd_core_api:read#(default)');
+			const failures: string[] = [];
+			for (const [key, template] of members) {
+				const door = doorByKey(key);
+				for (const limit of HOSTILE_LIMITS) {
+					for (const offset of HOSTILE_OFFSETS) {
+						const answer = await drive(door, template, limit, offset, 'admin', 'bypassed');
+						const cell = `${key} limit=${label(limit)} offset=${label(offset)} (wire bypassed)`;
+						if (answer.outcome !== 'answered' || answer.status !== 200) {
+							const code = (answer.body.error as { code?: string } | undefined)?.code;
+							failures.push(
+								`${cell}: ${answer.outcome} status ${answer.status} (${code ?? answer.error ?? ''})`,
+							);
+							continue;
+						}
+						if (answer.markers > CEILING) failures.push(`${cell}: ${answer.markers} records`);
 					}
 				}
 			}

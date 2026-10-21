@@ -480,6 +480,18 @@ export const SECTION_READ_ROUTES: ReadonlyMap<string, SectionReadRoute> = new Ma
 	['resolve_data', { page: 'none', handler: readResolveData }],
 ]);
 
+/**
+ * The page posture of the reads WITHOUT a `source.action` route (the
+ * `read#(default)` door): the component get_data pages the CLIENT's sqo window
+ * (a component_relation_index pages the relation sink) and bounds it itself —
+ * read.ts readComponentData → clampClientPage — and the generic section read
+ * bounds it in sanitizeClientSqo (clampClientLimit + clampClientOffset). Never
+ * by trusting the wire schema to have bounded it first.
+ * client_page_doors_native requires it of every door that reaches the sink,
+ * and measures it with the wire schema bypassed.
+ */
+export const SECTION_READ_DEFAULT_PAGE: SectionReadPagePosture = 'client_sqo';
+
 /** Route a permission-gated dd_core_api read RQO to its read strategy. */
 export async function routeSectionRead(rqo: Rqo, principal: Principal): Promise<ApiResult> {
 	const source = rqo.source ?? {};

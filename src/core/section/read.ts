@@ -1282,33 +1282,34 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 		}
 		return literalData as DataItem[];
 	}
-	// Client-managed paging: the paginator rqo carries sqo.limit/offset, and
-	// PHP sanitize_client_sqo CLAMPS the limit — 0/'all'/out-of-range → the
-	// client ceiling (show-all becomes limit 1000 in the response pagination).
-	// A NULL limit is NOT show-all: the real client sends sqo.limit:null on
-	// every tool-component read meaning "server decides" (common.js "force to
-	// generate default limit from server") — PHP answers with the component's
-	// config limit (wire-pinned 2026-07-10: the epigraphy coins read with
-	// limit:null pages at the override's 1, not 1000). Treating null as 0
-	// clamped every tool portal to the full list — the 34-coins bug.
-	const { CLIENT_MAX_LIMIT } = await import('../concepts/sqo.ts');
+	// Client-managed paging: the paginator rqo carries sqo.limit/offset — a
+	// CLIENT page, bounded HERE by the ONE page primitive (clampClientPage,
+	// READ-4), never by trusting that the wire schema bounded it first: save's
+	// echo hands this door a limit read from `data.pagination`, which no sqo
+	// schema ever parsed. 0/'all'/out-of-range → the client ceiling (show-all
+	// becomes the ceiling in the response pagination); a negative / non-numeric
+	// offset → 0, one past any page (1e21) → an empty page, never a raw sink
+	// refusal.
+	// A NULL (or absent) limit is NOT show-all: the real client sends
+	// sqo.limit:null on every tool-component read meaning "server decides"
+	// (common.js "force to generate default limit from server") — PHP answers
+	// with the component's config limit (wire-pinned 2026-07-10: the epigraphy
+	// coins read with limit:null pages at the override's 1, not 1000). So the
+	// DOOR DEFAULT is maxRowsPerPage (clamped too); treating null as 0 clamped
+	// every tool portal to the full list — the 34-coins bug.
+	// Gate: client_page_doors_native (every member bounds its OWN page).
+	const { clampClientPage } = await import('../concepts/sqo.ts');
 	const rawLimit = rqo.sqo?.limit;
-	const parsedLimit =
-		typeof rawLimit === 'number'
-			? rawLimit
-			: rawLimit == null
-				? dedaloConfig.features.maxRowsPerPage
-				: 0;
-	const limit =
-		!Number.isFinite(parsedLimit) || parsedLimit <= 0 || parsedLimit > CLIENT_MAX_LIMIT
-			? CLIENT_MAX_LIMIT
-			: parsedLimit;
-	const sqoOffset = typeof rqo.sqo?.offset === 'number' ? rqo.sqo.offset : 0;
+	const { limit, offset: sqoOffset } = clampClientPage(
+		rawLimit,
+		rqo.sqo?.offset,
+		sectionTipo,
+		dedaloConfig.features.maxRowsPerPage,
+	);
 
 	// relation_index: COMPUTED inverse page (offset-aware) + pool-accumulated
 	// related_list children — its own flow, no stored locators to expand.
 	if (model === 'component_relation_index') {
-		const offset = typeof rqo.sqo?.offset === 'number' ? rqo.sqo.offset : 0;
 		const { readRelationIndexData } = await import('../relations/models/relation_index.ts');
 		// related_list children resolve in the CURRENT data lang (PHP
 		// DEDALO_DATA_LANG, seeded from the session), independent of the rqo lang
@@ -1320,7 +1321,7 @@ export async function readComponentData(rqo: Rqo): Promise<DataItem[]> {
 			sectionTipo,
 			String(sectionId),
 			limit,
-			offset,
+			sqoOffset,
 			currentDataLang(),
 			emitDdoData,
 			source.mode ?? 'edit',

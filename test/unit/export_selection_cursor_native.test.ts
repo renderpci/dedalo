@@ -63,6 +63,22 @@
  *      statements (the positive control that keeps the empty match meaningful);
  *  16. A PRE-ABORTED OPEN (refuse admission) answers its total and releases
  *      as it returns — nothing held, no page;
+ *  17. A STOP CUTS THE SELECTION WHILE IT IS BUILT — the signal that fires
+ *      during the open (Stop, the lane deadline, a shutdown) is the user's
+ *      `export.cancelled`, at once: 17a — fired WHILE the hold cursor's commit
+ *      materializes a 3 s selection, the running statement is cancelled on the
+ *      server (pg_cancel_backend, guarded by the transaction's start —
+ *      postgres.ts cancelBackendStatement), so the open rejects well before the
+ *      selection could finish and NO backend of this database is left running
+ *      it; 17b — fired while the open still WAITS for a pooled connection, the
+ *      open sends nothing once it gets one (a cancel landing between two
+ *      statements reaches nothing — the abort is sticky at the open's statement
+ *      door). Both give back the slot and the connection, the pool fresh;
+ *      17c — the cancel is GUARDED by the transaction it was read in: once
+ *      that transaction ended, a cancel naming it leaves the backend's next
+ *      statement alone (a late Stop never cuts the cursor's MOVE/FETCH, nor
+ *      whatever a pooled connection runs next); the same cancel inside the
+ *      transaction does cut (the control);
  *  15. THE CEILING — the hold cursor's commit-time materialization runs under
  *      the connection's statement ceiling (a process booted with a 300 ms
  *      ceiling refuses a 3 s selection with `db.statement_timeout`), and every
@@ -1421,6 +1437,162 @@ else {
 			expect(orderViolation(ids, await directSelection(admin), tipoId)).toBeNull();
 			expect(exportSelectionSlots().inUse).toBe(0);
 		});
+
+		/** A selection that materializes in ~3 s (30 rows, 0.1 s each) — what a Stop must cut. */
+		const SLEEPY_SELECTION =
+			"SELECT 'zzsc1' AS section_tipo, g AS section_id FROM generate_series(1, 30) AS g WHERE pg_sleep(0.1) IS NOT NULL ORDER BY g";
+
+		/** The backends of THIS database still running a statement, other than the asker. */
+		async function activeBackends(): Promise<string[]> {
+			const rows = (await sql.unsafe(
+				`SELECT query FROM pg_stat_activity
+				  WHERE datname = current_database() AND state = 'active'
+				    AND backend_type = 'client backend' AND pid <> pg_backend_pid()`,
+				[],
+			)) as { query: string }[];
+			return rows.map((row) => row.query);
+		}
+
+		/** How an open ended: its code (or 'admitted <total>'), and how long it took. */
+		async function openOutcome(
+			signal: AbortSignal,
+		): Promise<{ outcome: string; settledAt: number }> {
+			try {
+				const cursor = await openSelectionCursor<{ section_id: number; section_tipo: string }>(
+					{ sql: SLEEPY_SELECTION, params: [] },
+					{ pageRows: SELECTION_PAGE, signal },
+				);
+				await cursor.close();
+				return { outcome: `admitted ${cursor.total}`, settledAt: performance.now() };
+			} catch (error) {
+				return {
+					outcome: (error as { code?: string })?.code ?? String(error),
+					settledAt: performance.now(),
+				};
+			}
+		}
+
+		test('17a. a Stop WHILE the selection materializes cancels it on the server: export.cancelled at once, nothing left running', async () => {
+			const baseline = getPoolStats().inUse;
+			const controller = new AbortController();
+			const started = performance.now();
+			const settled = openOutcome(controller.signal);
+			await Bun.sleep(400);
+			// The open is inside its COMMIT (the materialization) by now.
+			controller.abort();
+			const { outcome, settledAt } = await settled;
+			const running = await activeBackends();
+			await sql`SELECT 1`;
+			expect({
+				outcome,
+				// well before the 3 s the selection needs (the abort lands at 400 ms)
+				withinBound: settledAt - started < 1500,
+				running,
+				slotsInUse: exportSelectionSlots().inUse,
+				poolInUse: getPoolStats().inUse,
+			}).toEqual({
+				outcome: 'export.cancelled',
+				withinBound: true,
+				running: [],
+				slotsInUse: 0,
+				poolInUse: baseline,
+			});
+			// Every pooled connection is fresh: no transaction left open or aborted.
+			const probes = await Promise.all(
+				Array.from({ length: POOL_MAX }, () =>
+					sql.unsafe(
+						"SELECT now() = statement_timestamp() AS fresh, current_setting('transaction_timeout') AS bound FROM pg_sleep(0.1)",
+						[],
+					),
+				),
+			);
+			expect(
+				probes.map((rows) => {
+					const row = (rows as { fresh: boolean; bound: string }[])[0];
+					return `${row?.fresh ? 'fresh' : 'in-transaction'} ${row?.bound}`;
+				}),
+			).toEqual(Array.from({ length: POOL_MAX }, () => 'fresh 0'));
+		}, 20_000);
+
+		test('17b. a Stop while the open WAITS for a pooled connection: once it gets one it sends nothing (export.cancelled), nothing held', async () => {
+			const baseline = getPoolStats().inUse;
+			// Saturate the pool: the open takes its selection slot, then queues for a
+			// connection behind these.
+			const held = await Promise.all(
+				Array.from({ length: POOL_MAX - baseline }, () => sql.reserve()),
+			);
+			const controller = new AbortController();
+			let releasedAt = Number.NaN;
+			try {
+				const settled = openOutcome(controller.signal);
+				await Bun.sleep(150);
+				// The abort lands while the open still has no connection: no backend to
+				// cancel, nothing running — only the open's own door can refuse.
+				controller.abort();
+				await Bun.sleep(150);
+				releasedAt = performance.now();
+				for (const connection of held.splice(0)) connection.release();
+				const { outcome, settledAt } = await settled;
+				const running = await activeBackends();
+				expect({
+					outcome,
+					// the open does not BEGIN the 3 s selection it was stopped for
+					withinBound: settledAt - releasedAt < 1000,
+					running,
+					slotsInUse: exportSelectionSlots().inUse,
+				}).toEqual({
+					outcome: 'export.cancelled',
+					withinBound: true,
+					running: [],
+					slotsInUse: 0,
+				});
+			} finally {
+				for (const connection of held) connection.release();
+			}
+			await sql`SELECT 1`;
+			expect(getPoolStats().inUse).toBe(baseline);
+		}, 20_000);
+
+		test("17c. the cancel is guarded by its transaction: once it ended, the backend's next statement is untouched (control: inside, it cuts)", async () => {
+			const { cancelBackendStatement, readCancelTarget } = await import(
+				'../../src/core/db/postgres.ts'
+			);
+			/** Run a 0.6 s statement on `connection` while `target` is cancelled 100 ms in. */
+			const sleepUnderCancel = async (
+				connection: Awaited<ReturnType<typeof sql.reserve>>,
+				target: Awaited<ReturnType<typeof readCancelTarget>>,
+			): Promise<string> => {
+				const running = connection.unsafe('SELECT pg_sleep(0.6)', []);
+				await Bun.sleep(100);
+				if (target !== undefined) await cancelBackendStatement(target, 'leg 17c');
+				try {
+					await running;
+					return 'completed';
+				} catch (error) {
+					return String((error as { errno?: unknown })?.errno ?? error);
+				}
+			};
+			const connection = await sql.reserve();
+			try {
+				await connection.unsafe('BEGIN', []);
+				const ended = await readCancelTarget(connection);
+				await connection.unsafe('COMMIT', []);
+				// The SAME backend, a LATER statement: the guard must spare it.
+				const afterEnd = await sleepUnderCancel(connection, ended);
+				// Control: the target of the transaction the statement runs in.
+				await connection.unsafe('BEGIN', []);
+				const live = await readCancelTarget(connection);
+				const inside = await sleepUnderCancel(connection, live);
+				await connection.unsafe('ROLLBACK', []).catch(() => undefined);
+				expect({ read: ended !== undefined, afterEnd, inside }).toEqual({
+					read: true,
+					afterEnd: 'completed',
+					inside: '57014',
+				});
+			} finally {
+				connection.release();
+			}
+		}, 20_000);
 
 		test('16. an open whose signal fired BEFORE it (refuse admission) answers its total and releases at once', async () => {
 			// The protocol still owes the meta line (the total), but no page: the

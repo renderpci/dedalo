@@ -30,13 +30,27 @@
  * DB_STATEMENT_TIMEOUT_MS, the maintenance pool's 0 (unbounded) — the same
  * ceiling the single selection statement had, never a second key. A selection
  * past it is the typed 503 `db.statement_timeout` (PostgreSQL ends that
- * backend — 25P04 is FATAL — and the pool replaces the connection). Like every
- * request statement under that ceiling, a materialization IN FLIGHT is not cut
- * by the caller's Stop or a disconnect (docs: DB_STATEMENT_TIMEOUT_MS); it is
- * bounded by the ceiling, and the abort releases the cursor the moment the
- * open returns. Transaction-local (`set_config(…, true)`), so no exit — commit,
- * rollback, a killed backend — leaves the GUC on a pooled connection; a failed
- * open ROLLs BACK before the connection goes back (close()).
+ * backend — 25P04 is FATAL — and the pool replaces the connection).
+ * Transaction-local (`set_config(…, true)`), so no exit — commit, rollback, a
+ * killed backend — leaves the GUC on a pooled connection; a failed open ROLLs
+ * BACK before the connection goes back (close()).
+ *
+ * A STOP CUTS THE SELECTION WHILE IT IS BUILT. The caller's signal firing
+ * DURING the open (the user's Stop, the lane deadline, a shutdown) cancels the
+ * statement the cursor's transaction is running at that moment — the
+ * materializing COMMIT included — on the server (postgres.ts
+ * cancelBackendStatement: pg_cancel_backend on a dedicated connection, guarded
+ * by the transaction's start, so it never reaches a later statement on that
+ * backend), and is STICKY at the open's statement door: a cancel that lands
+ * while the backend sits idle between two statements reaches nothing, so no
+ * further statement is sent once the signal fired (that also covers an abort
+ * while the open still waits for a pooled connection). The open rejects with
+ * `export.cancelled` — the user's Stop, never a raw 57014 — the transaction
+ * rolled back, the slot and the connection released. A signal that had ALREADY
+ * fired when the open began is not a Stop of this open: it still answers its
+ * total and serves no page (below). The request path carries no signal (the
+ * server has no request.signal plumbing — api/dispatch.ts GATE 4), so a
+ * disconnect there is bounded by the ceiling alone.
  *
  * ONE TOTAL PATH, measured: the command tag's count is the only source of the
  * total. A driver that stopped surfacing it is refused loudly at open
@@ -94,7 +108,13 @@
 
 import { randomUUID } from 'node:crypto';
 import { config } from '../../config/config.ts';
-import { sql, sqlStateOf } from '../../core/db/postgres.ts';
+import {
+	type BackendCancelTarget,
+	cancelBackendStatement,
+	readCancelTarget,
+	sql,
+	sqlStateOf,
+} from '../../core/db/postgres.ts';
 import { DedaloError } from '../../core/errors/index.ts';
 
 /** Selection cursors open at once in this process (see module doc). */
@@ -239,6 +259,14 @@ function ceilingFailure(error: unknown, ceiling: string): unknown {
 	});
 }
 
+/** The open was stopped while its selection was being built (see the module doc). */
+function openStopped(cause: unknown): DedaloError {
+	return new DedaloError('export.cancelled', {
+		message: 'export selection cursor: the export was stopped while its selection was being built',
+		cause,
+	});
+}
+
 function exportBusy(reason: string): DedaloError {
 	return new DedaloError('export.busy', {
 		message: `export selection cursor refused: ${reason}`,
@@ -264,6 +292,8 @@ export async function openSelectionCursor<Row>(
 			message: `openSelectionCursor: pageRows must be an integer in [1, ${SELECTION_PAGE_ROWS_MAX}] (got ${options.pageRows})`,
 		});
 	}
+	// A Stop of THIS open is a signal that fires after it began (module doc).
+	const abortedAtEntry = options.signal?.aborted === true;
 	await acquireSlot(options.admission ?? 'refuse', options.signal);
 	const name = `export_sel_${randomUUID().replaceAll('-', '')}`;
 	const selection = built.sql.replace(/;\s*$/, '');
@@ -327,20 +357,38 @@ export async function openSelectionCursor<Row>(
 		idleTimer.unref?.();
 	};
 
+	// THE STOP DURING THE OPEN (module doc): cancel the statement running now,
+	// and refuse every statement after the signal fired (stoppedDuringOpen).
+	const stoppedDuringOpen = (): boolean => !abortedAtEntry && signal?.aborted === true;
+	let cancelTarget: BackendCancelTarget | undefined;
+	const cancelOpenStatement = () => {
+		if (cancelTarget !== undefined) {
+			void cancelBackendStatement(cancelTarget, 'export selection cursor stop');
+		}
+	};
+	if (!abortedAtEntry) signal?.addEventListener('abort', cancelOpenStatement, { once: true });
+
 	let total: number;
 	try {
-		connection = await sql.reserve();
-		await connection.unsafe(CURSOR_TX.begin);
+		const held = await sql.reserve();
+		connection = held;
+		/** One statement of the open — never sent once a Stop fired. */
+		const step = async (statement: string, stepParams: never = [] as never): Promise<unknown> => {
+			if (stoppedDuringOpen()) throw openStopped(undefined);
+			return held.unsafe(statement, stepParams);
+		};
+		await step(CURSOR_TX.begin);
 		inTransaction = true;
-		const bound = (await connection.unsafe(
+		cancelTarget = await readCancelTarget(held);
+		const bound = (await step(
 			"SELECT set_config('transaction_timeout', current_setting('statement_timeout'), true) AS ceiling",
 		)) as { ceiling: string }[];
 		ceiling = String(bound[0]?.ceiling ?? '');
-		await connection.unsafe(`DECLARE ${name} SCROLL CURSOR WITH HOLD FOR ${selection}`, params);
-		await connection.unsafe(CURSOR_TX.commit);
+		await step(`DECLARE ${name} SCROLL CURSOR WITH HOLD FOR ${selection}`, params);
+		await step(CURSOR_TX.commit);
 		inTransaction = false;
 		declared = true;
-		const moved = (await connection.unsafe(`MOVE FORWARD ALL IN ${name}`)) as { count?: unknown };
+		const moved = (await step(`MOVE FORWARD ALL IN ${name}`)) as { count?: unknown };
 		if (typeof moved.count !== 'number' || !Number.isSafeInteger(moved.count)) {
 			// ONE total path (module doc): no command-tag count, no export.
 			throw new DedaloError('internal.invariant', {
@@ -348,10 +396,19 @@ export async function openSelectionCursor<Row>(
 			});
 		}
 		total = moved.count;
-		await connection.unsafe(`MOVE ABSOLUTE 0 IN ${name}`);
+		await step(`MOVE ABSOLUTE 0 IN ${name}`);
 	} catch (error) {
 		await close();
+		if (stoppedDuringOpen()) {
+			// The step's own refusal, or what the cancel made of the running
+			// statement (57014) — either way the user's Stop.
+			throw error instanceof DedaloError && error.code === 'export.cancelled'
+				? error
+				: openStopped(error);
+		}
 		throw ceilingFailure(error, ceiling);
+	} finally {
+		signal?.removeEventListener('abort', cancelOpenStatement);
 	}
 
 	// An export aborted before it opened still answers its total (the protocol's

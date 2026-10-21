@@ -74,3 +74,31 @@
   a 300 ms ceiling: a 3 s selection refused with `db.statement_timeout` within the bound, a
   quick one served, every pooled connection fresh after the refusal and after a failed
   DECLARE) and leg 16 (a pre-aborted open answers its total and releases at once).
+
+## Addendum 2026-10-21 — a Stop cuts the selection while it is built
+
+- **Shape before:** the export's signal (the background job's Stop, the lane deadline, a
+  shutdown) was only listened to once the cursor had opened: a signal that fired while the
+  hold cursor's commit was materializing the selection waited for the whole selection (up to
+  the ceiling — unbounded with the default `0`), then answered its total and served no page.
+  The connection and the selection slot stayed busy that whole time.
+- **Shape after:** a signal that fires DURING the open cancels the statement the cursor's
+  transaction is running at that moment on the server (`postgres.ts`
+  `cancelBackendStatement` — `pg_cancel_backend` on a dedicated connection, guarded by the
+  transaction's start so it never reaches a later statement on that backend; the same door
+  the maintenance unit's abort uses) and is sticky at the open's statement door (no further
+  statement is sent — a cancel landing between two statements reaches nothing). The open
+  rejects with `export.cancelled` (409, the code a Stop already answers — never a raw
+  57014); the transaction is rolled back and the slot and the connection are released. A
+  background job's outcome is unchanged in kind (`cancelled` / `failed` +
+  `export.deadline_exceeded` / `interrupted`, by why the signal fired) — it only arrives at
+  once. A signal that had ALREADY fired when the open began still answers its total and
+  serves no page (leg 16). The request path (`get_export_grid`) carries no signal — the
+  server has no `request.signal` plumbing — so a disconnect there is still bounded by the
+  ceiling alone.
+- **Gate:** `test/unit/export_selection_cursor_native.test.ts` legs 17a (a Stop at 400 ms
+  into a 3 s materialization: `export.cancelled` within 1.5 s, no backend of the database
+  still running, slot and connection back, every pooled connection fresh), 17b (a Stop
+  while the open waits for a pooled connection: once it gets one the open sends nothing —
+  `export.cancelled` within 1 s of the release), 17c (a cancel naming an ENDED transaction
+  leaves the backend's next statement untouched; inside the transaction it cuts).
