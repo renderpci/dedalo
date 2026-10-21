@@ -811,6 +811,15 @@ export interface DedaloConfig {
 	readonly errorReport: ErrorReportConfig;
 }
 
+/** ONTOLOGY_DATA_IO_DIR: the configured value, else the recorded legacy-aware
+ * default. Blank is unset — the census reads the same key through readString +
+ * the entry's emptyIsUnset, and the two must agree. */
+function ontologyDataIoDirOf(configured: string | undefined): string {
+	return configured !== undefined && configured.trim() !== ''
+		? configured
+		: ontologyDataIoDefaultDir({ record: true, warn: true });
+}
+
 /**
  * The media catalog, built once from env with the PHP defaults (config domains
  * media_image.php / media_av.php / media_docs.php). engineering/MEDIA_SPEC.md §3.
@@ -1329,9 +1338,9 @@ export const config: DedaloConfig = Object.freeze({
 		backupTimeRangeHours: Math.max(0, readNumber('DEDALO_BACKUP_TIME_RANGE')),
 		backupVerifySecondsPerGb: Math.max(1, readNumber('DEDALO_BACKUP_VERIFY_SECONDS_PER_GB')),
 		// The legacy-aware default is decided ONCE and recorded here, the one
-		// consumer call (catalog/maintenance.ts ontologyDataIoDefaultDir).
-		ontologyDataIoDir:
-			readEnv('ONTOLOGY_DATA_IO_DIR') || ontologyDataIoDefaultDir({ record: true, warn: true }),
+		// consumer call (catalog/maintenance.ts ontologyDataIoDefaultDir). Empty
+		// (or blank) = unset, exactly as the catalog entry's emptyIsUnset reads it.
+		ontologyDataIoDir: ontologyDataIoDirOf(readEnv('ONTOLOGY_DATA_IO_DIR')),
 		transformDefinitionsDir: readString('DEDALO_TRANSFORM_DEFINITIONS_DIR'),
 		exportArtifactsDir: readString('DEDALO_EXPORT_ARTIFACTS_DIR'),
 		exportArtifactsTtlHours: readNumber('DEDALO_EXPORT_ARTIFACTS_TTL_HOURS'),

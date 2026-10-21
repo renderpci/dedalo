@@ -179,5 +179,25 @@ describe('the updater refusal', () => {
 		process.env.ONTOLOGY_DATA_IO_DIR = legacyDir;
 		const hit = runtimePathsInsideTree(tree).find((entry) => entry.id === 'ontology_data_io_dir');
 		expect(hit?.remedy).toContain('<private dir>/import/ontology');
+		expect(hit?.remedy).toContain('not ontology release files');
+	});
+
+	test('an ONTOLOGY SERVER is told to copy every version dir, never to create the home empty', () => {
+		// Its exports carry the shipped names and it serves them: "move the
+		// residue + mkdir" would repoint a live master at an empty dir.
+		const tree = join(scratch, 'tree');
+		process.env.ONTOLOGY_DATA_IO_DIR = legacyDir;
+		process.env.IS_AN_ONTOLOGY_SERVER = 'true';
+		const hit = runtimePathsInsideTree(tree).find((entry) => entry.id === 'ontology_data_io_dir');
+		expect(hit?.remedy).toContain('copy EVERY <major.minor>/ directory');
+		expect(hit?.remedy).toContain('never create it empty');
+	});
+
+	test('ONTOLOGY_DATA_IO_DIR= (empty) is unset — never the cwd, i.e. the code tree', () => {
+		process.env.ONTOLOGY_DATA_IO_DIR = '';
+		const hit = runtimePathsInsideTree(projectRoot).find(
+			(entry) => entry.id === 'ontology_data_io_dir',
+		);
+		expect(hit?.path).not.toBe(projectRoot);
 	});
 });

@@ -5738,7 +5738,9 @@ This parameter defines the directory to input/output the ontology files in the s
 
 Unset, Dédalo uses `import/ontology` inside the private directory — OUTSIDE the code tree, because a code update replaces the whole install directory: an update refuses to start while runtime data lives inside it, and an image install cannot write there at all. The `install/import/ontology` directory inside the code tree holds the ontology release that ships with the code; Dédalo only reads it.
 
-An install from before this default whose `install/import/ontology` holds files the release does not ship (a `recovery/` snapshot from an earlier update, files of your own), or that is an ontology server (`IS_AN_ONTOLOGY_SERVER`, whose exports were written there), keeps using that directory, with a warning at start-up: nothing is moved for you. Move your files to `<private dir>/import/ontology` (creating it ends the fallback), or set this key explicitly. The decision is taken once and recorded.
+An install from before this default keeps using `install/import/ontology`, with a warning at start-up, when that directory holds anything that is not an ontology release file (a `recovery/` snapshot or `.staging` from an earlier update, any other file), or when the install is an ontology server (`IS_AN_ONTOLOGY_SERVER`, whose exports were written and are served there). Nothing is moved for you. Move those files to `<private dir>/import/ontology` (creating it ends the fallback), or set this key explicitly. An ontology server copies every `<major.minor>/` directory, its exports included, before creating the private directory: once it exists, the server serves from it. The decision is taken once and recorded.
+
+The check goes by file NAME: an export of your own written into `install/import/ontology/<major.minor>/` on an install that is not an ontology server has the name of a release file and is treated as one. Such an export is rebuilt from the database at any time, and a code update keeps it in the backup of the old code.
 
 Files are organised in version directories, `<major.minor>/`: one `<tld>.copy.gz` per ontology, `matrix_dd.copy.gz` for the private lists, and the `ontology.json` (plus `ontology_llm_map.json`) that describe them. The canonical production layout is:
 
@@ -5752,7 +5754,7 @@ Files are organised in version directories, `<major.minor>/`: one `<tld>.copy.gz
 ONTOLOGY_DATA_IO_DIR="/srv/dedalo/ontology"
 ```
 
-*Default: `<private dir>/import/ontology`; an install whose legacy `<install dir>/install/import/ontology` holds files the release does not ship (or that is an ontology server) keeps the legacy dir until that private directory exists*
+*Default: `<private dir>/import/ontology`; an install whose legacy `<install dir>/install/import/ontology` holds anything that is not an ontology release file (or that is an ontology server) keeps the legacy dir until that private directory exists*
 
 ---
 
