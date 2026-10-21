@@ -39,7 +39,7 @@ import {
 } from '../install/db/migrate.ts';
 import { initRagHooks } from './ai/rag/bootstrap.ts';
 import { refuseBootWhenNotInstalled } from './boot_refusal.ts';
-import { isOntologyIoFileName } from './config/catalog/maintenance.ts';
+import { isOntologyIoFileName, recordOntologyDataIoDefault } from './config/catalog/maintenance.ts';
 import { config } from './config/config.ts';
 import { projectRoot, readEnv } from './config/env.ts';
 import { AI_MODEL_URL_PREFIX, serveModelRequest } from './core/ai/model_store.ts';
@@ -1774,6 +1774,11 @@ export async function startServer() {
 				'============================================',
 		);
 	}
+
+	// Freeze ONTOLOGY_DATA_IO_DIR's legacy-vs-modern decision in ts_state.json — at
+	// BOOT, its sticky home, and not at config import, where an installer's machine
+	// preflight (pg_bin.ts) loads config and a refused install must write nothing.
+	if (!smokeBoot) recordOntologyDataIoDefault();
 
 	// Serialize the core module-graph evaluation BEFORE anything can race it
 	// (see warmCoreModuleGraph). A failure here is fatal by design: exit

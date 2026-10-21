@@ -74,6 +74,18 @@ export function ontologyDataIoDefaultDir(
 	);
 }
 
+/**
+ * SERVER BOOT: freeze the derived decision in ts_state.json (the sticky home).
+ * At BOOT and not at config import, because `pg_bin.ts` loads config during the
+ * installer's machine preflight — and a refused install writes NOTHING into its
+ * private dir (install_validation_upfront_tripwire). A configured key needs no
+ * record: the explicit value wins on every read.
+ */
+export function recordOntologyDataIoDefault(): void {
+	if ((readEnv('ONTOLOGY_DATA_IO_DIR') ?? '').trim() !== '') return;
+	ontologyDataIoDefaultDir({ record: true, warn: true });
+}
+
 export const MAINTENANCE_KEYS = {
 	CODE_SERVERS: {
 		type: 'server_list',

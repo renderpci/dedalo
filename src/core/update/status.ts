@@ -465,6 +465,16 @@ function diskSpaceCheck(backupRoot: string): StatusCheck {
 	});
 }
 
+/** A root entry the repo tracks but no release ships: only the SYMLINK a
+ * checkout carries — a real dir/file of that name is operator content. */
+function isRepoOnlyRootAlias(
+	treeRoot: string,
+	name: string,
+	repoOnly: ReadonlySet<string>,
+): boolean {
+	return repoOnly.has(name) && lstatSync(join(treeRoot, name)).isSymbolicLink();
+}
+
 /**
  * The root-whitelist INPUT: live root entries that a release would have to
  * ship, or `refuseUnaccountedLiveEntries` moves them into the backup and
@@ -496,7 +506,7 @@ export function rootEntriesCheck(treeRoot: string = projectRoot): {
 				!IGNORED_ROOT_ENTRIES.has(name) &&
 				name !== 'node_modules' &&
 				!censusInside.has(name) &&
-				!(repoOnly.has(name) && lstatSync(join(treeRoot, name)).isSymbolicLink()) &&
+				!isRepoOnlyRootAlias(treeRoot, name, repoOnly) &&
 				releaseShipped?.has(name) !== true,
 		);
 		if (releaseShipped === null) {
