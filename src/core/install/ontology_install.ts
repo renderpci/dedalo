@@ -9,6 +9,13 @@
  *     new fetch site) into the private staging dir, gunzipped under the shared
  *     caps and COPY-sanity checked; `staged.json` records each file's sha256.
  *     Any failure refuses `install.step_failed` with the database untouched.
+ *     SHAPE-CHECKED, NOT AUTHENTICATED: a downloaded file is trusted as far as
+ *     the pinned door takes it (TLS verified, the configured server's origin, the
+ *     expected file name) — the master ontology server publishes no per-file
+ *     digest or signature to check its bytes against, so a well-formed file that
+ *     server serves is staged as served. The sha256 in `staged.json` pins what
+ *     was staged against a later change on THIS disk; it says nothing of origin.
+ *     (Vendored / local files ride the release tree's own integrity.)
  *  2. install_ontologies (AFTER the seed restore + its migrations, BEFORE the
  *     root password, hierarchies and tools): the staged files are re-verified
  *     (sha256), unpacked through the update panel's own Phase-A stager
@@ -159,7 +166,7 @@ async function downloadStaged(
 	}
 }
 
-/** Gunzip under the caps + COPY-shape check; the decompressed copy is removed. */
+/** Gunzip under the caps + COPY-shape check (a SHAPE check — see the header); the decompressed copy is removed. */
 async function verifyStaged(gzPath: string, name: string): Promise<void> {
 	const plain = `${gzPath}.verify`;
 	let problem: string | null;
@@ -176,7 +183,7 @@ async function verifyStaged(gzPath: string, name: string): Promise<void> {
 	}
 }
 
-/** Bring one file into `versionDir` (copy or download), verify it, answer its record fields. */
+/** Bring one file into `versionDir` (copy or download), shape-check it, answer its record fields. */
 async function stageFile(
 	tld: string,
 	origin: OntologyOrigin,
@@ -220,7 +227,7 @@ async function stageMatrixDd(
 }
 
 /**
- * STAGE every file of `request` (fetch/copy + verify) into the staging dir and
+ * STAGE every file of `request` (fetch/copy + shape check) into the staging dir and
  * write staged.json. The database is never touched; any failure refuses
  * `install.step_failed`.
  */
@@ -258,7 +265,7 @@ export async function stageOntologies(
 	});
 	return {
 		ok: true,
-		msg: `Staged ontology files: ${items.map((item) => item.tld).join(', ')}${manifest.matrix_dd === null ? '' : ' + matrix_dd'} — verified, nothing installed yet`,
+		msg: `Staged ontology files: ${items.map((item) => item.tld).join(', ')}${manifest.matrix_dd === null ? '' : ' + matrix_dd'} — shape-checked, nothing installed yet`,
 		staged: items.map((item) => ({ tld: item.tld, origin: item.origin, bytes: item.bytes })),
 		warnings: manifest.warnings,
 	};

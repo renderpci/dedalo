@@ -193,6 +193,23 @@ const get_content_data_edit = async (self) => {
 				button_check.classList.remove('button_spinner');
 			}
 		});
+		// APPLY only where THIS viewer may apply (row.can_apply — the registry's apply
+		// policy, WC-2026-09-03 addendum 2026-10-21): a refused or root-only apply is a
+		// disabled button that says why, never a click the server answers with a refusal.
+		if (item.can_apply !== true) {
+			const why =
+				item.apply === 'refused'
+					? 'Apply is not offered here'
+					: 'Only the root user can apply this reconcile';
+			ui.create_dom_element({
+				element_type: 'button',
+				class_name: 'light button_action reconcile_apply',
+				inner_html: 'Apply',
+				title: item.apply_reason ? `${why}: ${item.apply_reason}` : why,
+				parent: actions,
+			}).disabled = true;
+			continue;
+		}
 		const button_apply = ui.create_dom_element({
 			element_type: 'button',
 			class_name: 'light warning button_action reconcile_apply',

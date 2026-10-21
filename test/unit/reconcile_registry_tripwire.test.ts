@@ -259,10 +259,14 @@ describe('reconcile registry completeness (S-10)', () => {
 			);
 		}
 		// Publication API lockstep (phase 4): an INTERVAL dry check — code is never
-		// pushed by a timer (its apply is refused at the registry, perm.denied).
+		// pushed by a timer (its apply is refused at the registry: the applyRefused facet).
 		const lockstep = REGISTERED.find((d) => d.name === 'publication_apis') as ReconcileDefinition;
 		expect(typeof lockstep.schedule).toBe('object');
 		expect(lockstep.autoApply).toBeUndefined();
+		expect(lockstep.applyRefused?.reason.length).toBeGreaterThan(40);
+		expect(REGISTERED.filter((d) => d.applyRefused !== undefined).map((d) => d.name)).toEqual([
+			'publication_apis',
+		]);
 		// An operator APPLY that touches a public machine is root-only at the widget door
 		// (E10): media_copy alone declares it, with a reason; reconcile_status enforces it.
 		const rootOnly = REGISTERED.filter((d) => d.applyRootOnly !== undefined);

@@ -499,11 +499,12 @@ describe('PUBLICATION_APIS_RECONCILE — the interval DRY check (L5)', () => {
 		);
 	});
 
-	test('apply through the registry is perm.denied and dials nothing (code push is root-only)', async () => {
+	test('apply through the registry is refused (request.invalid — the request, not the user) and dials nothing (code push is root-only)', async () => {
 		const h = harness({ hosts: { a: held(OLD) } });
 		await expect(runPublicationApisDefinition({ apply: true }, h.deps)).rejects.toMatchObject({
-			code: 'perm.denied',
+			code: 'request.invalid',
 		});
+		expect(PUBLICATION_APIS_RECONCILE.applyRefused?.reason).toContain('root-only');
 		expect(h.calls.status).toEqual([]);
 		expect(h.calls.target).toBe(0);
 	});

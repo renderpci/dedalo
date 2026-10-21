@@ -55,10 +55,11 @@
  * install_run_files_secret_tripwire.
  */
 
-import { existsSync, readdirSync, rmdirSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, rmdirSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { processEnvValue, readEnv } from '../../config/env.ts';
 import { isDedaloError } from '../errors/index.ts';
+import { DirectoryBarrier, removeFileDurably } from '../files/durable.ts';
 import { divertRetiredPropertyNotices } from '../ontology/retired_property_notice.ts';
 import { getServerState, statePath } from '../resolve/server_state.ts';
 import { DEDALO_VERSION } from '../update/version.ts';
@@ -962,8 +963,12 @@ async function abortRun(ctx: RunContext): Promise<void> {
 		emit(ctx, step, 'undo', { message: undone });
 	}
 	state.outcome = 'aborted';
-	rmSync(join(installRunDir(), PLAN_FILE), { force: true });
-	rmSync(join(installRunDir(), STATE_FILE), { force: true });
+	// The record's removal IS the reported "aborted": made power-cut durable before it is
+	// reported, or a cut brings back a plan + state that resume would take for a live run.
+	const barrier = new DirectoryBarrier();
+	removeFileDurably(join(installRunDir(), PLAN_FILE), barrier);
+	removeFileDurably(join(installRunDir(), STATE_FILE), barrier);
+	barrier.flush();
 	ctx.state = null;
 }
 

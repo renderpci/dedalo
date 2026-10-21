@@ -26,6 +26,8 @@
  *  (j)/(k) (2026-10-10 review) "already imported" is judged on the sections the
  *      entry LISTS — a models-only entry imports and then skips; a section that
  *      holds only the root an empty activation minted is refused naming Reset;
+ *  (l) (cross-ops:r1) a listed section left EMPTY beside a populated sibling, its
+ *      file carrying rows, is refused naming Reset — never "already installed";
  *  (f) VERIFIED BEFORE WRITTEN (2026-10-10, WC-2026-10-10-hierarchy-json-manifest):
  *      a listed file whose bytes do not hash to the manifest's sha256, a listed
  *      file that is missing, or an empty list → refused, nothing written (the
@@ -171,10 +173,13 @@ describe('importHierarchyRows: one tld = one atomic unit', () => {
 	});
 
 	test('(d) without replace a present tld is skipped, untouched', async () => {
+		// PRESENT = every listed section holds its rows (terms AND models — (l) is the
+		// tld whose models never landed, which is not present).
+		await insertRow(`${TLD}2`, 1, 'operator-model');
 		const dataFiles = writeSeed(seedTerms, seedModels);
 		const result = await importHierarchyRows(conn, TLD, { importDir, dataFiles });
 		expect(result).toMatchObject({ ok: true, skipped: true });
-		expect(await rows()).toEqual(OPERATOR_STATE);
+		expect(await rows()).toEqual([...OPERATOR_STATE, `${TLD}2/1:operator-model`]);
 	});
 
 	test('(e) a seed that is not gzip is refused with a DELIBERATE sentence — never the raw zlib/fs text (SEC-17), nothing written', async () => {
@@ -286,9 +291,30 @@ describe('importHierarchyRows: "already imported" is judged on the LISTED sectio
 	});
 });
 
+describe('importHierarchyRows: one populated section never vouches for an empty sibling', () => {
+	test('(l) terms present, the listed MODELS section empty while its file carries rows: refused naming Reset, never "already installed"', async () => {
+		// The operator state has `<tld>1` rows; the entry lists terms AND models, and
+		// `<tld>2` holds nothing. The probe used to answer "imported" on `<tld>1` alone:
+		// skipped, ok — and the models never landed.
+		const dataFiles = writeSeed(seedTerms, seedModels);
+		const result = await importHierarchyRows(conn, TLD, { importDir, dataFiles });
+		expect(result.ok).toBe(false);
+		expect(result.skipped).toBeUndefined();
+		expect(result.msg).toStartWith(
+			`data available, not imported: ${TLD}2 hold(s) none of its rows`,
+		);
+		expect(result.msg).toContain('Reset to seed');
+		expect(await rows()).toEqual(OPERATOR_STATE);
+		// The destructive, confirmed door imports the whole thesaurus.
+		const reset = await importHierarchyRows(conn, TLD, { replace: true, importDir, dataFiles });
+		expect(reset).toEqual({ ok: true, msg: 'copied' });
+		expect(await rows()).toEqual([`${TLD}1/1:seed`, `${TLD}1/2:seed`, `${TLD}2/1:seed-model`]);
+	});
+});
+
 describe('classifyListedSections (pure)', () => {
 	const of = (pairs: [string, number][]) => new Map(pairs);
-	test('nothing present → absent; data present → imported; a lone root under a bigger file → root_only', () => {
+	test('nothing present → absent; data present → imported; a lone root under a bigger file, or an empty section beside a populated one → partial', () => {
 		const data = of([
 			['xx1', 50],
 			['xx2', 1],
@@ -302,6 +328,8 @@ describe('classifyListedSections (pure)', () => {
 				data,
 			),
 		).toEqual({ kind: 'absent' });
+		// A populated terms section never vouches for an EMPTY models section whose file
+		// carries rows (cross-ops:r1): that import did not land whole.
 		expect(
 			classifyListedSections(
 				of([
@@ -309,6 +337,19 @@ describe('classifyListedSections (pure)', () => {
 					['xx2', 0],
 				]),
 				data,
+			),
+		).toEqual({ kind: 'partial', rootOnly: [], missing: ['xx2'] });
+		// …while an empty FILE has nothing to land: imported.
+		expect(
+			classifyListedSections(
+				of([
+					['xx1', 50],
+					['xx2', 0],
+				]),
+				of([
+					['xx1', 50],
+					['xx2', 0],
+				]),
 			),
 		).toEqual({ kind: 'imported' });
 		// An operator who deleted terms still has more than the root: imported.
@@ -330,8 +371,9 @@ describe('classifyListedSections (pure)', () => {
 				data,
 			),
 		).toEqual({
-			kind: 'root_only',
-			sections: ['xx1'],
+			kind: 'partial',
+			rootOnly: ['xx1'],
+			missing: [],
 		});
 		// A ONE-row file is indistinguishable from its own root: imported.
 		expect(classifyListedSections(of([['xx2', 1]]), of([['xx2', 1]]))).toEqual({

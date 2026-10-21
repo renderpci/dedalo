@@ -32,7 +32,7 @@
 import { existsSync, readdirSync, readFileSync, rmdirSync, rmSync } from 'node:fs';
 import { basename, join, sep as pathSep, resolve as resolvePath } from 'node:path';
 import { projectRoot } from '../../config/env.ts';
-import { writeFileDurably } from '../files/durable.ts';
+import { DirectoryBarrier, removeFileDurably, writeFileDurably } from '../files/durable.ts';
 import { isTempSibling } from '../files/temp_path.ts';
 import type { ServerState } from '../resolve/server_state.ts';
 import { devTrustReviewText } from './dev_certificate.ts';
@@ -198,10 +198,15 @@ const persist_config: InstallStepDefinition = {
 	},
 	undo: async (ctx) => {
 		const { setServerState } = await import('../resolve/server_state.ts');
-		const restored = restorePreInstallEnv(ctx.state);
-		const removed = removeInstallEnvCopies(ctx.state);
+		// Every removal below is made power-cut durable ONCE, at the barrier's flush,
+		// before the undo reports it: an unlink no directory fsync covered can come back
+		// after a cut — the secrets the abort said it took back, still on disk.
+		const barrier = new DirectoryBarrier();
+		const restored = restorePreInstallEnv(ctx.state, barrier);
+		const removed = removeInstallEnvCopies(ctx.state, barrier);
 		setServerState({ install_status: statusBefore(ctx.state) });
-		const runtime = await removeCreatedRuntimeFiles(ctx.state);
+		const runtime = await removeCreatedRuntimeFiles(ctx.state, barrier);
+		barrier.flush();
 		return `${restored}; ${removed} backup(s) removed; install status reset${runtime}`;
 	},
 };
@@ -215,7 +220,10 @@ const SQLITE_SIDE_FILES = ['', '-wal', '-shm', '-journal'] as const;
  * last undo, after the install status was reset. One that existed at the
  * preflight is kept; a record without the list (older) removes nothing.
  */
-async function removeCreatedRuntimeFiles(state: InstallState): Promise<string> {
+async function removeCreatedRuntimeFiles(
+	state: InstallState,
+	barrier: DirectoryBarrier,
+): Promise<string> {
 	const before = state.preflight.runtime_files_before;
 	if (before === undefined) return '';
 	const { RUNTIME_PATH_CENSUS } = await import('./runtime_paths.ts');
@@ -233,7 +241,7 @@ async function removeCreatedRuntimeFiles(state: InstallState): Promise<string> {
 				existsSync(path),
 		);
 	for (const path of created) {
-		for (const side of SQLITE_SIDE_FILES) rmSync(`${path}${side}`, { force: true });
+		for (const side of SQLITE_SIDE_FILES) removeFileDurably(`${path}${side}`, barrier);
 	}
 	return created.length === 0 ? '' : `; removed ${created.join(', ')}`;
 }
@@ -247,11 +255,11 @@ const RUNTIME_FILE_IDS: readonly string[] = Object.freeze(['ts_state_path', 'ses
  * one, else the `.env.bak.*` whose content hash the preflight recorded (a crash
  * before the checkpoint recorded nothing).
  */
-function restorePreInstallEnv(state: InstallState): string {
+function restorePreInstallEnv(state: InstallState, barrier: DirectoryBarrier): string {
 	const envPath = installEnvPath();
 	const dir = installPrivateDir();
 	if (!state.preflight.env_existed) {
-		rmSync(envPath, { force: true });
+		removeFileDurably(envPath, barrier);
 		return 'removed .env';
 	}
 	const backup =
@@ -260,7 +268,7 @@ function restorePreInstallEnv(state: InstallState): string {
 	if (backup === undefined) return 'pre-install .env backup not found — .env left as is';
 	// The durability kernel's door, like persist_config's own write: the
 	// restored .env survives a power cut, and a failure leaves no staged copy.
-	writeFileDurably(envPath, readFileSync(join(dir, backup)), { mode: 0o600 });
+	writeFileDurably(envPath, readFileSync(join(dir, backup)), { mode: 0o600, barrier });
 	return 'restored the pre-install .env';
 }
 
@@ -274,15 +282,15 @@ function isStagedEnvCopy(name: string): boolean {
 }
 
 /** Remove the secret copies the install's persist runs left (backups, staged tmps, its sample.env). */
-function removeInstallEnvCopies(state: InstallState): number {
+function removeInstallEnvCopies(state: InstallState, barrier: DirectoryBarrier): number {
 	const dir = installPrivateDir();
 	const backups = installCreatedBackups(state);
-	for (const backup of backups) rmSync(join(dir, backup), { force: true });
+	for (const backup of backups) removeFileDurably(join(dir, backup), barrier);
 	for (const name of readdirSync(dir).filter(isStagedEnvCopy)) {
-		rmSync(join(dir, name), { force: true });
+		removeFileDurably(join(dir, name), barrier);
 	}
 	if (state.created.sample_env && !state.preflight.sample_env_existed) {
-		rmSync(join(dir, 'sample.env'), { force: true });
+		removeFileDurably(join(dir, 'sample.env'), barrier);
 	}
 	return backups.length;
 }

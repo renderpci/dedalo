@@ -28,8 +28,8 @@
  * module (src/core/area_maintenance/backup.ts: its promotions' directory
  * fsyncs and its `.verified` proof sidecars — it kept private copies of these
  * helpers until 2026-10-21, one of which never fsynced the directory), the
- * installer's `.env` writer and its `--abort` restore
- * (src/core/install/config_persist.ts, steps.ts), and — through
+ * installer's `.env` writer, its `--abort` restore and removals
+ * (src/core/install/config_persist.ts, steps.ts, executor.ts), and — through
  * directoryFsyncUnsupported only, its own I/O being async — the boot's client
  * publisher (src/core/install/client_publish.ts).
  *
@@ -40,7 +40,16 @@
  * reasoned exception there.
  */
 
-import { closeSync, fsyncSync, mkdirSync, openSync, renameSync, rmSync, writeSync } from 'node:fs';
+import {
+	closeSync,
+	fsyncSync,
+	mkdirSync,
+	openSync,
+	renameSync,
+	rmSync,
+	unlinkSync,
+	writeSync,
+} from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { tempPathFor } from './temp_path.ts';
 
@@ -154,6 +163,26 @@ export class DirectoryBarrier {
 			this.dirs.delete(dir);
 		}
 	}
+}
+
+/**
+ * Unlink `path` so its ABSENCE survives a power cut: the unlink, then its directory
+ * fsynced — now, or at `barrier`'s flush. An absent path is not an error (nothing to
+ * remove, nothing to sync); any other failure propagates. Answers whether it removed
+ * a file. A file whose secrets an undo takes back (`--abort`'s `.env`, its backups and
+ * staged copies) or a run record whose removal reports an outcome uses this door —
+ * after a cut, an unlink no fsync covered can bring the file back.
+ */
+export function removeFileDurably(path: string, barrier?: DirectoryBarrier): boolean {
+	try {
+		unlinkSync(path);
+	} catch (error) {
+		if ((error as { code?: unknown } | null)?.code === 'ENOENT') return false;
+		throw error;
+	}
+	if (barrier !== undefined) barrier.add(dirname(path));
+	else fsyncDirectory(dirname(path));
+	return true;
 }
 
 /**

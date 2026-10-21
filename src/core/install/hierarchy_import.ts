@@ -44,7 +44,9 @@
  * `<tld>2` models). A listed section that holds ONLY the General Term root an
  * activation minted (an empty thesaurus activated before the release shipped
  * its data) is not "installed": the terms are available but cannot be copied
- * additively — refused with its own line naming Reset, never a silent skip.
+ * additively — refused with its own line naming Reset, never a silent skip. So
+ * is a listed section left EMPTY while a sibling is populated (its file carries
+ * rows): one populated section never vouches for the others.
  *
  * A CORE tld (hierarchy_meta.ts CORE_HIERARCHIES — `lg`) is NEVER imported: its terms ship
  * in the seed, in their own table, and the seed restore already activates it. Asked for
@@ -193,17 +195,25 @@ async function listedSectionCounts(
 export type ListedSectionsState =
 	/** None of the listed sections has a row: copy. */
 	| { kind: 'absent' }
-	/** The data is there (at least one listed section populated, none root-only): skip the copy. */
+	/** The data is there (every listed section whose file carries rows is populated, none root-only): skip the copy. */
 	| { kind: 'imported' }
-	/** A listed section holds only a minted root while its file carries more: Reset is the way. */
-	| { kind: 'root_only'; sections: string[] };
+	/**
+	 * Not importable additively — Reset is the way. `rootOnly`: a listed section holds
+	 * only a minted root while its file carries more. `missing`: a listed section holds
+	 * NOTHING while its file carries rows and a sibling is populated (an import that
+	 * never landed whole: a pre-atomic interrupted run, or a release that added the file).
+	 */
+	| { kind: 'partial'; rootOnly: string[]; missing: string[] };
 
 /**
  * PURE: classify the listed sections (`counts` — rows now; `dataRows` — rows
  * in each verified file). A section with at most ONE row whose file carries
  * more is ROOT-ONLY: the General Term root an empty activation mints
  * (hierarchy_state.ts ensureRootTerm), not this release's data. A file of one
- * row is indistinguishable from its own root, so it counts as imported.
+ * row is indistinguishable from its own root, so it counts as imported. Once
+ * ANY listed section is populated, a listed section with NO row whose file
+ * carries rows is MISSING: "already installed" would skip the copy and its
+ * data would never land (an empty FILE is not missing — it has nothing to land).
  */
 export function classifyListedSections(
 	counts: ReadonlyMap<string, number>,
@@ -214,7 +224,29 @@ export function classifyListedSections(
 	const rootOnly = present
 		.filter(([section, count]) => holdsOnlyARoot(count, dataRows.get(section) ?? 0))
 		.map(([section]) => section);
-	return rootOnly.length > 0 ? { kind: 'root_only', sections: rootOnly } : { kind: 'imported' };
+	const missing = [...counts]
+		.filter(([section, count]) => count === 0 && (dataRows.get(section) ?? 0) > 0)
+		.map(([section]) => section);
+	return rootOnly.length > 0 || missing.length > 0
+		? { kind: 'partial', rootOnly, missing }
+		: { kind: 'imported' };
+}
+
+/** The operator's line for a tld whose listed sections are not importable additively. */
+function partialRefusal(state: { rootOnly: string[]; missing: string[] }): string {
+	const why = [
+		...(state.rootOnly.length === 0
+			? []
+			: [
+					`${state.rootOnly.join(', ')} hold(s) only the root an earlier activation created (it was installed as an empty thesaurus)`,
+				]),
+		...(state.missing.length === 0
+			? []
+			: [
+					`${state.missing.join(', ')} hold(s) none of its rows while the rest of the thesaurus is there (an earlier import did not land whole)`,
+				]),
+	];
+	return `data available, not imported: ${why.join('; ')} — use "Reset to seed" to import its terms; nothing imported`;
 }
 
 /** A section of `count` rows whose file carries `fileRows`: only a minted root (see above)? */
@@ -303,7 +335,8 @@ function inlineCopy(text: Uint8Array): Buffer[] {
  * nothing written).
  * Without `replace`, a tld whose LISTED sections already hold its rows is
  * skipped (the raw `\copy` is insert-only), and one whose listed section holds
- * only a minted root is refused naming Reset (classifyListedSections). Table
+ * only a minted root — or nothing, beside a populated sibling — is refused naming
+ * Reset (classifyListedSections). Table
  * FORCED to matrix_hierarchy (PHP parity), explicit column order. Gate:
  * test/unit/hierarchy_import_atomic_native.test.ts.
  */
@@ -338,8 +371,9 @@ function importRefused(msg: string): ImportOutcome {
 
 /**
  * Without `replace`: the outcome when the LISTED sections already hold rows —
- * skipped (the data is there) or refused naming Reset (only a minted root,
- * classifyListedSections) — or null when there is nothing there: copy.
+ * skipped (the data is there) or refused naming Reset (a minted root only, or a
+ * section left empty beside a populated one: classifyListedSections) — or null
+ * when there is nothing there: copy.
  */
 async function presentRowsOutcome(
 	conn: DbConnDescriptor,
@@ -352,9 +386,7 @@ async function presentRowsOutcome(
 		return { ok: true, msg: 'already installed — import skipped', skipped: true };
 	}
 	if (state.kind === 'absent') return null;
-	return importRefused(
-		`data available, not imported: ${state.sections.join(', ')} hold(s) only the root an earlier activation created (it was installed as an empty thesaurus) — use "Reset to seed" to import its terms; nothing imported`,
-	);
+	return importRefused(partialRefusal(state));
 }
 
 /**

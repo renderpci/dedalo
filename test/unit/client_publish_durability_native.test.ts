@@ -44,7 +44,7 @@ import {
 } from 'node:fs';
 import * as fsp from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { publishClient } from '../../src/core/install/client_publish.ts';
 
 const scratch: string[] = [];
@@ -97,7 +97,12 @@ describe('client_publish durability', () => {
 		expect(again.status).toBe('published');
 		expect(again.id).toBe(first.id);
 		expect(liveIsWhole(dir)).toBe(true);
-		expect(readdirSync(join(dir, 'releases'))).toEqual([first.id]);
+		// The torn directory's name is never reused: the republish is a fresh release
+		// of the same id, and the torn one is pruned.
+		const republished = basename(dirname(again.release));
+		expect(republished).not.toBe(first.id);
+		expect(republished.startsWith(`${first.id}-`)).toBe(true);
+		expect(readdirSync(join(dir, 'releases'))).toEqual([republished]);
 		expect(readdirSync(dir).sort()).toEqual(['.published', 'dedalo', 'releases']);
 	});
 
@@ -156,14 +161,17 @@ describe('client_publish durability', () => {
 			}
 			return (realCopy as (...a: unknown[]) => Promise<void>)(...args);
 		}) as typeof fsp.copyFile);
+		let again: Awaited<ReturnType<typeof publishClient>>;
 		try {
-			await publishClient({ source, dir });
+			again = await publishClient({ source, dir });
 		} finally {
 			copySpy.mockRestore();
 		}
 		expect(dangling).toEqual([]);
 		expect(liveIsWhole(dir)).toBe(true);
-		expect(readlinkSync(join(dir, 'dedalo'))).toBe(join('releases', first.id, 'dedalo'));
+		expect(readlinkSync(join(dir, 'dedalo'))).toBe(
+			join('releases', basename(dirname(again.release)), 'dedalo'),
+		);
 	});
 
 	test('4. every release byte is fsynced before the switch; the switch and the stamp are made durable', async () => {

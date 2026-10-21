@@ -13,8 +13,11 @@
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { registerAllReconciles } from '../../reconcile/catalog.ts';
 import {
+	applyPolicyOf,
+	applyPolicyReason,
 	getReconcile,
 	lastReconcileRun,
+	type ReconcileApplyPolicy,
 	type ReconcileDefinition,
 	type ReconcileScope,
 	runReconcile,
@@ -30,10 +33,23 @@ export interface ReconcileStatusRow {
 	scope_label: string | null;
 	schedule: ReconcileDefinition['schedule'];
 	auto_apply: string | null;
+	/** Who may APPLY through this door (registry.ts applyPolicyOf). */
+	apply: ReconcileApplyPolicy;
+	/** Why `apply` is not `'admin'` (the definition's declared reason), else null. */
+	apply_reason: string | null;
+	/** THIS viewer may apply it here — the client offers APPLY only when true. */
+	can_apply: boolean;
 	last_run: ReturnType<typeof lastReconcileRun>;
 }
 
-function rowOf(definition: ReconcileDefinition): ReconcileStatusRow {
+/** May `principal` apply a definition of this policy through the widget? */
+function principalMayApply(policy: ReconcileApplyPolicy, principal: Principal): boolean {
+	if (policy === 'refused') return false;
+	return policy === 'admin' || principal.userId === SUPERUSER_ID;
+}
+
+function rowOf(definition: ReconcileDefinition, principal: Principal): ReconcileStatusRow {
+	const apply = applyPolicyOf(definition);
 	return {
 		name: definition.name,
 		stores: [definition.stores[0], definition.stores[1]],
@@ -41,22 +57,34 @@ function rowOf(definition: ReconcileDefinition): ReconcileStatusRow {
 		scope_label: definition.scopeLabel,
 		schedule: definition.schedule,
 		auto_apply: definition.autoApply?.reason ?? null,
+		apply,
+		apply_reason: applyPolicyReason(definition),
+		can_apply: principalMayApply(apply, principal),
 		last_run: lastReconcileRun(definition.name),
 	};
 }
 
-async function reconcileStatusGetValue(): Promise<WidgetResponse> {
-	const rows = (await registerAllReconciles()).map(rowOf);
-	return { data: { reconciles: rows } };
+async function reconcileRows(principal: Principal): Promise<ReconcileStatusRow[]> {
+	return (await registerAllReconciles()).map((definition) => rowOf(definition, principal));
+}
+
+async function reconcileStatusGetValue(
+	_options: Record<string, unknown>,
+	principal: Principal,
+): Promise<WidgetResponse> {
+	return { data: { reconciles: await reconcileRows(principal) } };
 }
 
 /**
  * A definition declaring `applyRootOnly` (e.g. media_copy: it puts and deletes files on a
  * public machine, E10) refuses an APPLY from any principal but root, before it runs. A dry
- * run stays admin-level.
+ * run stays admin-level. The listing says so first (`can_apply: false`), so the client never
+ * offers that APPLY: this `perm.denied` answers a request no rendered button sends. (An
+ * `applyRefused` definition is refused by the registry itself, `request.invalid`.)
  */
 function requireApplyPrincipal(name: string, apply: boolean, principal: Principal): void {
-	if (!apply || getReconcile(name)?.applyRootOnly === undefined) return;
+	const definition = getReconcile(name);
+	if (!apply || definition === null || applyPolicyOf(definition) !== 'root') return;
 	if (principal.userId === SUPERUSER_ID) return;
 	throw new DedaloError('perm.denied', {
 		message: `only the root user can apply the '${name}' reconcile`,
@@ -95,7 +123,7 @@ async function reconcileStatusRunReconcile(
 		throw error;
 	}
 	const { report, record } = outcome;
-	const rows = (await registerAllReconciles()).map(rowOf);
+	const rows = await reconcileRows(principal);
 	return {
 		data: true,
 		msg:

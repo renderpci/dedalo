@@ -82,6 +82,14 @@ export interface ReconcileDefinition {
 	 * principal and are unaffected; the owner's own root door may still apply.
 	 */
 	applyRootOnly?: { reason: string };
+	/**
+	 * An APPLY is never offered through the registry's doors (widget, CLI, scheduler):
+	 * the repair has its own door — say which, and why. `runReconcile` refuses such an
+	 * apply BEFORE `run` (`request.invalid`, nothing recorded), and the doors publish it
+	 * as `applyPolicyOf` = `'refused'` so no client offers a button that cannot succeed.
+	 * Exclusive with `applyRootOnly` and `autoApply` (both are about an apply that runs).
+	 */
+	applyRefused?: { reason: string };
 	/** The repo-relative modules this definition wraps (owner + shells) — the census maps hits through it. */
 	sources: readonly string[];
 	run(options: ReconcileRunOptions): Promise<ReconcileReport>;
@@ -142,12 +150,43 @@ export function registerReconcile(definition: ReconcileDefinition): void {
 	ensureGauge();
 }
 
-/** The reason-required facets: each one declared must say why. */
+/** The reason-required facets: each one declared must say why; a refused apply excludes the others. */
 function facetProblems(definition: ReconcileDefinition): string[] {
-	const facets = { autoApply: definition.autoApply, applyRootOnly: definition.applyRootOnly };
-	return Object.entries(facets).flatMap(([facet, value]) =>
+	const facets = {
+		autoApply: definition.autoApply,
+		applyRootOnly: definition.applyRootOnly,
+		applyRefused: definition.applyRefused,
+	};
+	const problems = Object.entries(facets).flatMap(([facet, value]) =>
 		value !== undefined && value.reason.trim() === '' ? [`${facet} needs a reason`] : [],
 	);
+	if (
+		definition.applyRefused !== undefined &&
+		(definition.applyRootOnly !== undefined || definition.autoApply !== undefined)
+	) {
+		problems.push('applyRefused excludes applyRootOnly and autoApply (an apply that never runs)');
+	}
+	return problems;
+}
+
+/**
+ * Who may APPLY a definition through the registry's operator doors — the ONE derivation
+ * every door publishes (the reconcile_status row, the CLI listing):
+ *  - `'refused'` — nobody: `applyRefused` (the repair has its own door);
+ *  - `'root'`    — the root user only: `applyRootOnly`;
+ *  - `'admin'`   — whoever may open the door (a global admin).
+ */
+export type ReconcileApplyPolicy = 'admin' | 'root' | 'refused';
+
+export function applyPolicyOf(definition: ReconcileDefinition): ReconcileApplyPolicy {
+	if (definition.applyRefused !== undefined) return 'refused';
+	if (definition.applyRootOnly !== undefined) return 'root';
+	return 'admin';
+}
+
+/** The declared reason behind a non-`'admin'` apply policy (null for `'admin'`). */
+export function applyPolicyReason(definition: ReconcileDefinition): string | null {
+	return definition.applyRefused?.reason ?? definition.applyRootOnly?.reason ?? null;
 }
 
 /** The facet contract, enforced at registration so a half definition cannot hide. */
@@ -196,6 +235,30 @@ export function lastReconcileRun(name: string): ReconcileRunRecord | null {
 }
 
 /**
+ * The registered definition `name` names, when this request may run it: unknown
+ * names are `resource.not_found`; an APPLY of an `applyRefused` definition is
+ * `request.invalid`. Neither is a run, so the caller records nothing.
+ */
+function runnableDefinition(name: string, apply: boolean): ReconcileDefinition {
+	const definition = definitions.get(name);
+	if (definition === undefined) {
+		throw new DedaloError('resource.not_found', {
+			message: `reconcile '${name}' is not registered`,
+			coordinates: { reconcile: name },
+		});
+	}
+	if (apply && definition.applyRefused !== undefined) {
+		// Not a run: nothing ran, so nothing is recorded (the gauge keeps the last real run).
+		throw new DedaloError('request.invalid', {
+			message: `reconcile '${name}': apply is refused through the registry — ${definition.applyRefused.reason}`,
+			publicMessage: `The '${name}' reconcile cannot be applied here: ${definition.applyRefused.reason}`,
+			coordinates: { reconcile: name },
+		});
+	}
+	return definition;
+}
+
+/**
  * Run one reconcile through the registry, so the outcome (or the failure) is
  * remembered and published. Rethrows after recording — a caller must still
  * see its error.
@@ -204,13 +267,7 @@ export async function runReconcile(
 	name: string,
 	options: ReconcileRunOptions,
 ): Promise<{ report: ReconcileReport; record: ReconcileRunRecord }> {
-	const definition = definitions.get(name);
-	if (definition === undefined) {
-		throw new DedaloError('resource.not_found', {
-			message: `reconcile '${name}' is not registered`,
-			coordinates: { reconcile: name },
-		});
-	}
+	const definition = runnableDefinition(name, options.apply);
 	const startedAt = Date.now();
 	const base = {
 		name,

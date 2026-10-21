@@ -589,6 +589,8 @@ async function applyChange(
 	const outcome = await transformStoredMediaItems(
 		identityBase,
 		(locked) => {
+			// The stat of the locked items' own files: the one file work the transform
+			// contract allows under the lock (files_info_persist.ts MediaItemsTransform).
 			const rescan = rescanMediaItems(locked, { spec, identityBase, pathOpts, holdShrink: false });
 			const verdict = adjudicate(locked, rescan.items, identityBase, allowShrink);
 			heldItems = verdict.heldItems;
