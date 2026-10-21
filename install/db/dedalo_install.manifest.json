@@ -3,10 +3,10 @@
 	"engine_version": "7.0.0",
 	"seed": {
 		"file": "install/db/dedalo_install.pgsql.gz",
-		"bytes": 1822983,
-		"sha256": "12125691bc666b270f3083ea4494b4021b044ea01316a4cde970f54836b8c0f1",
-		"content_sha256": "5d2c5b9023b74bc767bb36fd442b98f31c61ee8ff3c7a5be334a4623f2aa6741",
-		"pg_dump_version": "18.6 (Homebrew)"
+		"bytes": 1822981,
+		"sha256": "2d46cc476283b0e20c9d136289935c94ef03fc69b3bef0f6f6f6f56043e78ab2",
+		"content_sha256": "42e597829e691cfe24805180227a688848c7e87c9bfc333e20dc97683fa236a9",
+		"pg_dump_version": "18.4 (Homebrew)"
 	},
 	"sources": {
 		"install/db/migrations/0001_baseline.sql": "79dd5dd2f60672514befb7a713e2f96727b79febb3a75b772b5a5f93df64c11b",

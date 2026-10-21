@@ -292,7 +292,9 @@ export async function insertDdOntologyRecord(
 				requiredOntologyTld(sectionTipo) === null
 					? `'${sectionTipo}' is not an ontology node section — nothing written`
 					: `'${sectionTipo}/${sectionId}': section_id is not a positive integer — nothing written`,
-			coordinates: { section_tipo: sectionTipo, section_id: String(sectionId) },
+			// Log-only coordinates carry the id AS RECEIVED (int canon; a refused non-int
+			// input stays visible verbatim) — never a String() mint (section_id_int_tripwire).
+			coordinates: { section_tipo: sectionTipo, section_id: sectionId },
 		});
 	}
 	const projected = await projectOntologyNode(address);

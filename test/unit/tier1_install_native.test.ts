@@ -29,6 +29,7 @@ import {
 	hierarchyChoiceView,
 	hierarchyMetaByTld,
 	isCoreHierarchyTld,
+	labelCollator,
 	offeredHierarchies,
 	readHierarchyManifest,
 } from '../../src/core/install/hierarchy_meta.ts';
@@ -105,8 +106,24 @@ describe('hierarchy_meta — the vendored thesaurus manifest reader (§4.1.9)', 
 		const offered = offeredHierarchies();
 		expect(view.hierarchies.length).toBeGreaterThan(0);
 		expect(view.hierarchies).toHaveLength(offered.length);
-		for (const [index, entry] of offered.entries()) {
-			expect(view.hierarchies[index]).toEqual({
+		// SAME SET as the offer (no entry lost, none invented, none twice)…
+		const offeredByTld = new Map(offered.map((entry) => [entry.tld, entry]));
+		expect(view.hierarchies.map((item) => item.tld).sort()).toEqual(
+			[...offeredByTld.keys()].sort(),
+		);
+		// …in the READER'S order: by label in its collation, tld breaking a tie — never the
+		// manifest's storage order (cee1a3ea20; full contract: hierarchy_choice_order.test.ts).
+		const collator = labelCollator('lg-eng');
+		expect(view.hierarchies.map((item) => item.tld)).toEqual(
+			[...view.hierarchies]
+				.sort((a, b) => collator.compare(a.label, b.label) || a.tld.localeCompare(b.tld))
+				.map((item) => item.tld),
+		);
+		// Each entry derived from ITS manifest entry, paired by tld (not by position).
+		for (const item of view.hierarchies) {
+			const entry = offeredByTld.get(item.tld);
+			if (entry === undefined) throw new Error(`view entry '${item.tld}' is not offered`);
+			expect(item).toEqual({
 				tld: entry.tld,
 				label: expect.any(String),
 				typology: entry.typology_id,
@@ -118,6 +135,11 @@ describe('hierarchy_meta — the vendored thesaurus manifest reader (§4.1.9)', 
 			});
 		}
 		expect(view.hierarchy_typologies.length).toBeGreaterThan(0);
+		expect(view.hierarchy_typologies.map((item) => item.typology).sort((a, b) => a - b)).toEqual(
+			readHierarchyManifest()
+				.typologies.map((item) => item.typology_id)
+				.sort((a, b) => a - b),
+		);
 		for (const item of view.hierarchy_typologies) {
 			expect(Object.keys(item).sort()).toEqual(['label', 'typology']);
 		}
