@@ -391,6 +391,11 @@
 			"skipped": 0,
 			"assertions": 35
 		},
+		"test/unit/bulk_revert_cascade_target_scope_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 26
+		},
 		"test/unit/bulk_revert_relation_search_native.test.ts": {
 			"tests": 3,
 			"skipped": 0,
@@ -930,6 +935,11 @@
 			"tests": 11,
 			"skipped": 0,
 			"assertions": 39
+		},
+		"test/unit/copy_section_ids.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 36
 		},
 		"test/unit/core_tool_edge_tripwire.test.ts": {
 			"tests": 10,
@@ -1966,6 +1976,16 @@
 			"skipped": 0,
 			"assertions": 41
 		},
+		"test/unit/hierarchy_import_obligations_native.test.ts": {
+			"tests": 5,
+			"skipped": 0,
+			"assertions": 15
+		},
+		"test/unit/hierarchy_import_stream_memory_native.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 4
+		},
 		"test/unit/hierarchy_manifest_format.test.ts": {
 			"tests": 20,
 			"skipped": 0,
@@ -2355,6 +2375,11 @@
 			"tests": 7,
 			"skipped": 0,
 			"assertions": 94
+		},
+		"test/unit/install_ontology_staging_durability.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 5
 		},
 		"test/unit/install_persist_config.test.ts": {
 			"tests": 31,
@@ -3316,10 +3341,20 @@
 			"skipped": 0,
 			"assertions": 82
 		},
+		"test/unit/ontology_recovery_file_single_flight_native.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 22
+		},
 		"test/unit/ontology_references_native.test.ts": {
 			"tests": 14,
 			"skipped": 0,
 			"assertions": 72
+		},
+		"test/unit/ontology_registry_mint_atomic_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 6
 		},
 		"test/unit/ontology_registry_row_native.test.ts": {
 			"tests": 11,
@@ -3360,6 +3395,11 @@
 			"tests": 31,
 			"skipped": 0,
 			"assertions": 81
+		},
+		"test/unit/ontology_update_landed_tail_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 11
 		},
 		"test/unit/ontology_update_restore_message_native.test.ts": {
 			"tests": 4,
@@ -3620,6 +3660,11 @@
 			"tests": 12,
 			"skipped": 0,
 			"assertions": 16
+		},
+		"test/unit/psql_matrix_write_obligations_tripwire.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 24
 		},
 		"test/unit/publication_bounds_tripwire.test.ts": {
 			"tests": 11,
@@ -4531,6 +4576,11 @@
 			"skipped": 0,
 			"assertions": 221
 		},
+		"test/unit/search_paths_client_fixture_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 4
+		},
 		"test/unit/search_pattern_escape_tripwire.test.ts": {
 			"tests": 9,
 			"skipped": 0,
@@ -4705,6 +4755,11 @@
 			"tests": 3,
 			"skipped": 0,
 			"assertions": 14
+		},
+		"test/unit/seed_section_id_int_clean_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 15
 		},
 		"test/unit/select_family_echo_datalist_native.test.ts": {
 			"tests": 14,
@@ -5135,6 +5190,11 @@
 			"tests": 13,
 			"skipped": 0,
 			"assertions": 138
+		},
+		"test/unit/tm_apply_value_slot_grant_native.test.ts": {
+			"tests": 4,
+			"skipped": 0,
+			"assertions": 14
 		},
 		"test/unit/tm_bulk_revert.test.ts": {
 			"tests": 7,
