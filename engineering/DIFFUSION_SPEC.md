@@ -518,7 +518,11 @@ to the computed sources. Ledger:
   target statement never returns (a lock wait, a half-open connection) holds
   its target — and every door waiting on it — until the runner is killed:
   the bound (a target socket/statement timeout, or a per-unit wall-clock
-  ceiling) is an owner call (WC R4). The media-index store's apply
+  ceiling) is an owner call (WC R4). The OPERATOR doors (the phantom-lang
+  sweep, the ghost unpublish, the media-index rebuild/reconcile) never wait
+  on it unbounded: ONE `OPERATOR_FENCE_BOUND_MS` (120 s) budget per call,
+  a target still held when it is spent is reported busy, nothing written
+  (gate `test/unit/diffusion_operator_fence_budget_native.test.ts`). The media-index store's apply
   doors ARE fenced, in `targets/mediastore/media_index.ts`: the reconcile
   checks before it writes (a database it did not hold voids the round) and
   the rebuild syncs each database under its fence (gate

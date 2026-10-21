@@ -835,6 +835,29 @@ export function withPinnedDir<T>(expect: PinExpectation, rootUid: number, fn: ()
   }
 }
 
+/**
+ * fsync a DIRECTORY, so the entries a rename created or moved in it survive a power cut with the
+ * bytes the file's own fsync already forced. Best-effort durability, never a correctness
+ * condition: a directory that cannot be opened (O_NOFOLLOW: never through a link), or a
+ * filesystem that refuses a directory fsync, is skipped. THE ONE copy — every write door of the
+ * provisioner (hostIo) and of init (init/host_io.ts) ends its rename with it.
+ */
+export function fsyncDir(dir: string): void {
+  let fd: number;
+  try {
+    fd = openSync(dir, FS.O_RDONLY | FS.O_DIRECTORY | FS.O_NOFOLLOW);
+  } catch {
+    return;
+  }
+  try {
+    fsyncSync(fd);
+  } catch {
+    // some filesystems refuse fsync on a directory descriptor
+  } finally {
+    closeSync(fd);
+  }
+}
+
 /** Open without following, confirm the type, hand the fd to `fn` (header, rule 2). */
 function onDescriptor(path: string, extraFlags: number, fn: (fd: number, stats: Stats) => void): void {
   let fd: number;
@@ -916,6 +939,9 @@ export function hostIo(exec: ProvisionExec = provisionExec(), options: HostDoorO
     rename(from: string, to: string): void {
       safeParent(to);
       renameSync(from, to);
+      // The new name (and the old one's removal) survive a power cut, like the bytes behind it.
+      fsyncDir(dirname(to));
+      if (dirname(from) !== dirname(to)) fsyncDir(dirname(from));
     },
     removeTemp(path: string): void {
       if (!path.endsWith(TEMP_SUFFIX)) throw new Error(`apply: refusing to remove '${path}' — not a provisioner temp file`);
@@ -963,6 +989,7 @@ export function hostIo(exec: ProvisionExec = provisionExec(), options: HostDoorO
       }
       closeSync(fd);
       renameSync(temp, dst);
+      fsyncDir(dirname(dst));
     },
   });
 }

@@ -37,6 +37,8 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { config } from '../../../config/config.ts';
 import {
+	OPERATOR_FENCE_BOUND_MS,
+	remainingFenceBudget,
 	sqlTargetLockKey,
 	withTargetLock,
 	withTargetLocks,
@@ -326,12 +328,7 @@ const MEDIA_INDEX_FENCE_ROUNDS = 5;
  * the reconcile is DEFERRED (nothing applied, the busy target named), the
  * rebuild reports what it could not resync.
  */
-export const MEDIA_INDEX_FENCE_BOUND_MS = 120_000;
-
-/** What is left of a fence budget, as a bounded lock mode (0 ⇒ one try). */
-function remainingFence(deadline: number): { boundMs: number } {
-	return { boundMs: Math.max(0, deadline - Date.now()) };
-}
+export const MEDIA_INDEX_FENCE_BOUND_MS = OPERATOR_FENCE_BOUND_MS;
 
 /**
  * A reconcile's outcome: healed (what the apply touched), or DEFERRED — the
@@ -417,7 +414,7 @@ export async function reconcileMediaIndex(
 				}
 				return { healed: { added: diff.toAdd.length, removed: diff.toRemove.length } };
 			},
-			{ mode: remainingFence(deadline) },
+			{ mode: remainingFenceBudget(deadline) },
 		);
 		if (!fenced.acquired) return { deferred: { busy_target: fenced.busyKey } };
 		const outcome = fenced.value;
@@ -613,7 +610,7 @@ async function underDatabaseFence<T>(
 	work: () => Promise<T>,
 ): Promise<T | null> {
 	const held = await withTargetLock(sqlTargetLockKey(database), work, {
-		mode: remainingFence(deadline),
+		mode: remainingFenceBudget(deadline),
 	});
 	if (held.acquired) return held.value;
 	errors.push(
@@ -693,7 +690,7 @@ export async function rebuildMediaIndexStore(
 
 	// derive pub/ from the new ground truth (the fenced apply), on what is left
 	// of the budget
-	const derived = await reconcileMediaIndex(remainingFence(deadline));
+	const derived = await reconcileMediaIndex(remainingFenceBudget(deadline));
 	if (derived?.deferred !== undefined) {
 		errors.push(
 			`pub/: derivation deferred (${derived.deferred.busy_target} held by a writer past the rebuild's wait) — re-run the rebuild`,

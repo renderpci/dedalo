@@ -53,6 +53,7 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
+import { fsyncDirectory, fsyncFile } from '../src/core/files/durable.ts';
 import {
 	AGENT_REL,
 	buildKit,
@@ -362,6 +363,26 @@ export function parsePackArgs(argv: readonly string[]): PackArgs | { readonly er
 
 export const USAGE = 'usage: bun run hostagent:pack -- --draft <draft.json> [--out <kit.tar.gz>]';
 
+/**
+ * Put the kit at `out` atomically and durably: a sibling temp (0644 whatever the umask, every
+ * byte fsynced) renamed over it, then the directory fsynced — a reader sees the old file or the
+ * whole kit, and the name it was told survives a power cut. A failure at any step removes the
+ * temp and propagates: a refused or failed pack leaves nothing beside `out`.
+ */
+export function publishKit(out: string, bytes: Uint8Array): void {
+	const tmp = join(dirname(out), `.${basename(out)}.${process.pid}.tmp`);
+	try {
+		writeFileSync(tmp, bytes);
+		chmodSync(tmp, 0o644);
+		fsyncFile(tmp);
+		renameSync(tmp, out);
+	} catch (error) {
+		rmSync(tmp, { force: true });
+		throw error;
+	}
+	fsyncDirectory(dirname(out));
+}
+
 export interface PackResult {
 	readonly code: number;
 	readonly stdout: string;
@@ -385,10 +406,7 @@ export async function runPack(
 		const collected = collectKit({ repo, draftPath, scratch, ...seams }, constants);
 		const kit = await buildKit(collected.files, constants);
 		const out = resolve(args.out ?? kitFileName(collected.instance));
-		const tmp = join(dirname(out), `.${basename(out)}.${process.pid}.tmp`);
-		writeFileSync(tmp, kit.bytes);
-		chmodSync(tmp, 0o644);
-		renameSync(tmp, out);
+		publishKit(out, kit.bytes);
 		const head = run(['git', 'rev-parse', 'HEAD'], repo).out.trim();
 		const dirty = run(['git', 'status', '--porcelain'], repo)
 			.out.split('\n')

@@ -890,6 +890,18 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-21-ontology-update-rebuild`.
 
+- **Phantom-language removal and the public-tier reconcile no longer hang on a busy publication target**
+
+    Removing phantom publication languages and applying the public-tier reconcile
+    used to wait without limit while a publication run held the target database.
+    They now wait at most 2 minutes in total, then report the busy target and leave
+    it untouched: re-run the action when the publication run has finished.
+
+    The publication-host kit (`hostagent:pack`) is now written durably, and a failed
+    pack no longer leaves a temporary file beside it.
+
+    Wire contract: `WC-2026-09-30-diffusion-target-fence`.
+
 - **Docker stacks — ontology update no longer fails with EACCES**
 
     Both Docker stacks now set `ONTOLOGY_DATA_IO_DIR=/private/import/ontology`. Before this, the engine fell back to the in-tree `install/import/ontology`, which is root-owned in the image, so **Maintenance → Update ontology** died with `EACCES: permission denied, mkdir '…/install/import/ontology/7.0/.staging'`. Existing installs pick this up from the updated compose file: `docker compose up -d` recreates the engine container, and no manual `chown` is needed.

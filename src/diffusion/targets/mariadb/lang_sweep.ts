@@ -56,7 +56,14 @@
  */
 
 import { config } from '../../../config/config.ts';
-import { sqlTargetLockKey, withTargetLock } from '../../../core/diffusion_bridge/target_lock.ts';
+import {
+	OPERATOR_FENCE_BOUND_MS,
+	remainingFenceBudget,
+	sqlTargetLockKey,
+	type TargetLockMode,
+	type TargetLockOutcome,
+	withTargetLock,
+} from '../../../core/diffusion_bridge/target_lock.ts';
 import { DedaloError } from '../../../core/errors/index.ts';
 import { escapeSqlIdentifier, requireSqlIdentifier } from '../../plan/identifier.ts';
 import { buildVirtualDiffusionTree } from '../../plan/virtual_tree.ts';
@@ -195,15 +202,24 @@ export interface LangSweepDependencies {
 	/** The publication language policy the published rows are judged against. */
 	policyLangs: () => string[];
 	/**
-	 * Run one database's sweep under its publication-target fence. Default: the
-	 * fence a publication run's batch holds (jobs/target_fence.ts, 'wait').
+	 * Run one database's sweep under its publication-target fence, waiting for
+	 * a writer at most `mode`. Default: the lock a publication run's batch holds
+	 * (jobs/target_fence.ts), taken exclusively.
 	 */
-	fenceDatabase?: (database: string, work: () => Promise<void>) => Promise<void>;
+	fenceDatabase?: (
+		database: string,
+		work: () => Promise<void>,
+		mode: TargetLockMode,
+	) => Promise<TargetLockOutcome<void>>;
 }
 
-/** The default database fence: the publication-target lock, waiting (DIFF-2). */
-async function fenceDatabase(database: string, work: () => Promise<void>): Promise<void> {
-	await withTargetLock(sqlTargetLockKey(database), work, { mode: 'wait' });
+/** The default database fence: the publication-target lock (DIFF-2), within the sweep's budget. */
+function fenceDatabase(
+	database: string,
+	work: () => Promise<void>,
+	mode: TargetLockMode,
+): Promise<TargetLockOutcome<void>> {
+	return withTargetLock(sqlTargetLockKey(database), work, { mode });
 }
 
 /**
@@ -587,6 +603,13 @@ export async function sweepPhantomLangs(
 		langs: unknown;
 		/** Restrict the sweep to these target databases; omit for all of them. */
 		databases?: string[];
+		/**
+		 * How long the WHOLE sweep waits for databases a publication writer
+		 * holds (ms), one budget across every database; default
+		 * OPERATOR_FENCE_BOUND_MS. A database still held when it is spent is
+		 * reported in `errors` and left untouched.
+		 */
+		boundMs?: number;
 	},
 	dependencies: LangSweepDependencies = DEFAULT_LANG_SWEEP_DEPENDENCIES,
 ): Promise<LangSweepResult> {
@@ -622,12 +645,23 @@ export async function sweepPhantomLangs(
 	}
 
 	// Each database under its publication-target fence (DIFF-2): a sweep never
-	// deletes rows while a publication run is writing the same database.
+	// deletes rows while a publication run is writing the same database. The
+	// operator's request waits for writers on ONE budget: a runner's unit can
+	// hold its database for as long as its target statement runs (R4), so a
+	// database still held when the budget is spent is REPORTED, never waited on.
 	const fence = dependencies.fenceDatabase ?? fenceDatabase;
+	const deadline = Date.now() + (options.boundMs ?? OPERATOR_FENCE_BOUND_MS);
 	for (const database of scope) {
-		await fence(database, () =>
-			sweepDatabase(database, requested, policySet, result, dependencies),
+		const fenced = await fence(
+			database,
+			() => sweepDatabase(database, requested, policySet, result, dependencies),
+			remainingFenceBudget(deadline),
 		);
+		if (!fenced.acquired) {
+			result.errors.push(
+				`${database}: publication target busy (${fenced.busyKey} held by a publication writer past the sweep's wait) — nothing swept here; re-run the sweep`,
+			);
+		}
 	}
 	return result;
 }

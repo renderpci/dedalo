@@ -32,11 +32,12 @@
  * diffusion_target_fence_native D3/D4). This module adds the JOB to it: the
  * lease read under the lock, and the runner's pool precondition.
  *
- * THE ONE PLACE A TRANSACTION SPANS TARGET I/O: only a unit of this module may
- * hold a Postgres transaction across target writes. It holds no matrix row
- * lock (an advisory lock + one job row's KEY SHARE + a short tail) and is
- * bounded by FENCE_IDLE_BOUND_MS (`idle_in_transaction_session_timeout`): a
- * FROZEN holder's session is killed by Postgres, its lock released.
+ * THE RUNNER'S UNIT: withFencedBatch is the bridge's unit (withTargetLock —
+ * a transaction that spans target I/O by design) plus the job's lease. It
+ * holds no matrix row lock (an advisory lock + one job row's KEY SHARE + a
+ * short tail) and is bounded by FENCE_IDLE_BOUND_MS
+ * (`idle_in_transaction_session_timeout`): a FROZEN holder's session is killed
+ * by Postgres, its lock released.
  * (Residual R1, ledgered: a thawed zombie whose session was killed can finish
  * at most the one in-flight target batch.)
  *

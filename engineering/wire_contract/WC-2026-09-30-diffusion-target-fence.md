@@ -245,3 +245,28 @@ another session's in-flight temps included.
   reconcile unbounded; busy target dropped; rebuild unbounded; deferral or
   per-database finding hidden; deferred counted as applied; closing
   reconcile given a fresh budget.
+
+## Addendum 2026-10-21 — operator doors bounded; R4 narrows
+
+- **Finding (closure review cross-diffusion, S3):** the phantom-lang sweep
+  (`sweepPhantomLangs`, exclusive) and the public-tier ghost unpublish
+  (`unpublishGhosts`, shared) took each target's fence in `'wait'` mode: a
+  runner unit stuck on its target statement (R4) hung the operator's request
+  with it.
+- **Now:** every operator door — a door a person waits on — shares ONE
+  bound, `OPERATOR_FENCE_BOUND_MS` (120 s, `core/diffusion_bridge/target_lock.ts`;
+  `MEDIA_INDEX_FENCE_BOUND_MS` is now this constant), ONE budget per call
+  across every target it visits (`remainingFenceBudget`), overridable per
+  call with `boundMs`. A target still held when the budget is spent is
+  REPORTED, nothing is written to it:
+  - the sweep: `"<db>: publication target busy (sql:<db> held by a
+    publication writer past the sweep's wait) — nothing swept here; re-run
+    the sweep"` in `errors`;
+  - the ghost apply: `"<lockKey>: publication target busy (held by a
+    publication writer past the apply's wait) — N ghost(s) left; re-run the
+    reconcile"` in `failed`, those ghosts left for the next apply.
+- R4 narrows: a hung unit no longer pins the sweep or the ghost apply past
+  their budget. The unit itself is still unbounded (owner call unchanged).
+- Gate: `test/unit/diffusion_operator_fence_budget_native.test.ts`.
+  Mutation-verified: restoring `'wait'` on either door, a fresh budget per
+  database, or dropping either busy report — each red.

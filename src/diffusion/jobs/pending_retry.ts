@@ -105,10 +105,11 @@ async function defaultPendingRetry(): Promise<PendingRetryOutcome> {
  * that took it — issued through the pool, the unlock could land on a different
  * connection and leak the lock for the life of the process. Session-level
  * rather than xact-level, because the retry propagates deletes to EXTERNAL
- * targets (MariaDB / files), and the rule is: ONLY a jobs/target_fence.ts unit
- * may hold a Postgres transaction across target I/O — it holds no matrix row
- * locks (an advisory lock + one job row's KEY SHARE + a short tail) and is
- * bounded by FENCE_IDLE_BOUND_MS. The retry's SQL executor
+ * targets (MariaDB / files), and a transaction that spans target I/O is a
+ * FENCE UNIT's (core/diffusion_bridge/target_lock.ts withTargetLock; the
+ * runner's is jobs/target_fence.ts withFencedBatch): one target's I/O, no
+ * matrix row lock, bounded by FENCE_IDLE_BOUND_MS. A drain-long transaction
+ * would be neither. The retry's SQL executor
  * (targets/mariadb/delete_record.ts) takes each target's fence itself —
  * inside this drain's patient scope (withPatientDeleteWait: one bounded budget)
  * — so a target a publication run is writing is left pending, never raced.

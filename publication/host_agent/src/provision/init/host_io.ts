@@ -16,8 +16,11 @@
  * fchmod → rename → fsync of the directory), `writeTempNamed`, `removeInitTemp` (that suffix
  * only), `removeTree` (lstat walk, never follows a link, only under `mustBeUnder`),
  * `renameDir`, `appendSync` (O_APPEND + fsync; the journal), `readOperatorFile` (bytes + owner
- * + mode + sha, one descriptor), `readRootFile`, and `readProcFile` — a CLOSED allowlist of
- * /proc paths (PROC_ALLOWLIST), the only /proc reads init makes.
+ * + mode + sha, one descriptor), `readRootFile`, and `readProcFile` — reads ONLY the /proc
+ * paths of a CLOSED allowlist (PROC_ALLOWLIST). Not every /proc read of init goes through it:
+ * observe.ts reads /proc/cpuinfo with readRootFile, and the provisioner's own media check
+ * (apply.ts) reads /proc/self/mountinfo through its own reader. The directory fsync after a
+ * rename is apply.ts `fsyncDir`, the one copy both doors share.
  *
  * The scratch-root seam (spec §2.2, non-root real-fs gates on macOS): `trustRoot` narrows the
  * judged ancestry to a scratch tree and `rootUid` names the uid that counts as root there (the
@@ -44,7 +47,7 @@ import {
 import type { Stats } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import type { ProvisionExec } from '../exec_contract';
-import { hostIo, pinnedParentOf, withPinnedDir } from '../apply';
+import { fsyncDir, hostIo, pinnedParentOf, withPinnedDir } from '../apply';
 import type { PathFacts, PinExpectation } from '../plan';
 import { ancestorsBelow, trustProblem } from '../plan';
 import type { InitIo, OperatorFile } from './types';
@@ -133,22 +136,6 @@ function readAll(fd: number, size: number, what: string, cap: number = READ_CAP_
     chunks.push(chunk.subarray(0, read));
   }
   return new Uint8Array(Buffer.concat(chunks));
-}
-
-function fsyncDir(dir: string): void {
-  let fd: number;
-  try {
-    fd = openSync(dir, FS.O_RDONLY | FS.O_DIRECTORY | FS.O_NOFOLLOW);
-  } catch {
-    return; // a directory fsync is best-effort durability, never a correctness condition
-  }
-  try {
-    fsyncSync(fd);
-  } catch {
-    // some filesystems refuse fsync on a directory descriptor
-  } finally {
-    closeSync(fd);
-  }
 }
 
 /**

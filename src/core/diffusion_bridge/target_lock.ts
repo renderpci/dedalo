@@ -23,8 +23,9 @@
  * cannot collide with the engine's single-bigint advisory locks (node locks,
  * 17581758 pending-retry drain, 918273645 RAG queue).
  *
- * THE ONE PLACE A TRANSACTION SPANS TARGET I/O: a unit of this module holds no
- * matrix row lock (an advisory lock and a short tail) and is bounded by
+ * A UNIT IS A TRANSACTION THAT SPANS TARGET I/O, by design (the runner's is
+ * jobs/target_fence.ts withFencedBatch: this unit plus the job's lease). It
+ * holds no matrix row lock (an advisory lock and a short tail) and is bounded by
  * FENCE_IDLE_BOUND_MS (`idle_in_transaction_session_timeout`): a FROZEN
  * holder's session is killed by Postgres, its lock released. A LIVE holder
  * never loses it: every unit that opens its transaction runs a TIMER-DRIVEN
@@ -32,6 +33,12 @@
  * its work is in flight — an ALTER on a big published table, a lang sweep's
  * chunk loop, a MariaDB statement queued behind a metadata lock all outlast
  * the bound legitimately, and no door has to remember to call it.
+ *
+ * THE OPERATOR DOORS' BUDGET: a door a person waits on (the lang sweep, the
+ * ghost unpublish, the media-index rebuild/reconcile) waits for a held target
+ * at most OPERATOR_FENCE_BOUND_MS in total, then reports the busy target: a
+ * live unit holds its target for as long as its target statement runs
+ * (residual R4), and that must never hang a request.
  *
  * THE DELETE DOORS' PATIENCE: a door on the record-delete REQUEST path never
  * waits for an exclusive holder (the row it leaves pending is the retry
@@ -306,6 +313,20 @@ function startUnitKeepalive(periodMs: number): { stop: () => Promise<void> } {
 			if (inFlight !== null) await inFlight;
 		},
 	};
+}
+
+/**
+ * How long an OPERATOR door — one a person waits on: an HTTP action, a
+ * reconcile apply — waits IN TOTAL for the targets writers hold: ONE budget
+ * per call, across every target it visits. Spent, the door reports the busy
+ * target instead of waiting on: a runner's unit holds its target for as long
+ * as its target statement runs (WC-2026-09-30-diffusion-target-fence R4).
+ */
+export const OPERATOR_FENCE_BOUND_MS = 120_000;
+
+/** What is left of an operator door's budget, as a bounded lock mode (spent ⇒ one try). */
+export function remainingFenceBudget(deadline: number): { boundMs: number } {
+	return { boundMs: Math.max(0, deadline - Date.now()) };
 }
 
 /**

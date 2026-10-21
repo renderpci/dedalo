@@ -437,6 +437,62 @@ export async function fetchVerifiedBun(
 	return { zip: join(dir, `${asset}.zip`), sums: join(dir, 'SHASUMS256.txt') };
 }
 
+/* ── the systemd directive probe (the systemd-analyze leg) ─────────────────────────── */
+
+/** One directive a rendered unit carries: its section, its key, the rendered line itself. */
+export interface DirectiveForm {
+	readonly section: string;
+	readonly key: string;
+	readonly line: string;
+}
+
+/** What systemd-analyze prints for a directive this systemd does not know or cannot parse. */
+export const DIRECTIVE_REFUSED = /Unknown (key|lvalue|section)|Failed to parse/i;
+
+/**
+ * Every `Key=value` directive of the rendered unit bodies, ONCE per (section, key) — the first
+ * rendering wins — in first-seen order. Comments and blank lines are not directives.
+ */
+export function renderedDirectiveForms(bodies: readonly string[]): DirectiveForm[] {
+	const forms: DirectiveForm[] = [];
+	const seen = new Set<string>();
+	for (const body of bodies) {
+		let section = '';
+		for (const raw of body.split('\n')) {
+			const line = raw.trim();
+			if (line === '' || line.startsWith('#') || line.startsWith(';')) continue;
+			const header = /^\[([A-Za-z]+)\]$/.exec(line);
+			if (header !== null) {
+				section = header[1] as string;
+				continue;
+			}
+			const directive = /^([A-Za-z][A-Za-z0-9]*)=/.exec(line);
+			if (directive === null || section === '') continue;
+			const key = directive[1] as string;
+			if (seen.has(`${section}/${key}`)) continue;
+			seen.add(`${section}/${key}`);
+			forms.push({ section, key, line });
+		}
+	}
+	return forms;
+}
+
+/**
+ * A minimal oneshot unit carrying `form`'s rendered line in its section — replacing the
+ * scaffold's own line for the same key, so the probe never holds a key twice.
+ */
+export function directiveProbeUnit(form: DirectiveForm): string {
+	const sections = new Map<string, string[]>([
+		['Unit', ['Description=dd floor probe']],
+		['Service', ['Type=oneshot', 'ExecStart=/bin/true']],
+	]);
+	const lines = (sections.get(form.section) ?? []).filter(
+		(line) => !line.startsWith(`${form.key}=`),
+	);
+	sections.set(form.section, [...lines, form.line]);
+	return `${[...sections].map(([name, body]) => `[${name}]\n${body.join('\n')}\n`).join('')}`;
+}
+
 /* ── the EL drill record (the ratchet's input) ─────────────────────────────────────── */
 
 /** What one host's run measured (spec §9.11): the facts are the host's, never another major's. */
@@ -444,6 +500,7 @@ export interface ElMeasured {
 	readonly booleans: Readonly<
 		Record<string, { readonly needed_for: string; readonly denied_without: boolean }>
 	>;
+	/** Per systemd version: every `[Section] Key=` the rendered units carry, each probed alone and accepted. */
 	readonly supported_directives: Readonly<Record<string, readonly string[]>>;
 	readonly home_traverse_type: string | null;
 	/** The home layout's v2 tree type, measured (stat): one v2 type on every layout (2026-10-09). */
@@ -2455,7 +2512,7 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'systemd-analyze',
 		family: 'el',
 		required: true,
-		what: 'systemd-analyze verify prints NO warning naming a rendered unit; which omitted directives this systemd actually supports is measured',
+		what: 'systemd-analyze verify prints NO warning naming a rendered unit; every directive the rendered units carry is probed alone against this systemd, and the ones it accepts are recorded per systemd version',
 		async run(ctx) {
 			const units = (await must(ctx, `ls /etc/systemd/system/dedalo-*.service`, 'rendered units'))
 				.trim()
@@ -2471,26 +2528,26 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			const version = (
 				await must(ctx, 'systemctl --version | head -n1', 'systemctl --version')
 			).trim();
-			const omitted =
-				(
-					await must(
-						ctx,
-						`grep -h '^# omitted' ${units.map(q).join(' ')} || true`,
-						'omitted comments',
-					)
-				).match(/[A-Za-z]+=[A-Za-z@-]*/g) ?? [];
+			const bodies: string[] = [];
+			for (const unit of units) bodies.push(await must(ctx, `cat ${q(unit)}`, `the unit ${unit}`));
+			const forms = renderedDirectiveForms(bodies);
+			check(forms.length > 0, `nothing to measure: the rendered units carry no directive`);
 			const supported: string[] = [];
-			for (const form of [...new Set(omitted)]) {
-				const scratch = `/run/systemd/system/dd-floor-probe.service`;
-				await putRootFile(
-					ctx,
-					scratch,
-					`[Service]\nExecStart=/bin/true\n${form.endsWith('=') ? `${form}yes` : form}\n`,
-					'0644',
-				);
+			const scratch = `/run/systemd/system/dd-floor-probe.service`;
+			for (const form of forms) {
+				await putRootFile(ctx, scratch, directiveProbeUnit(form), '0644');
 				const out = await ctx.runner.sh(`systemd-analyze verify ${scratch} 2>&1; rm -f ${scratch}`);
-				if (!/Unknown (key|lvalue)|Failed to parse/i.test(out.out)) supported.push(form);
+				if (!DIRECTIVE_REFUSED.test(out.out)) supported.push(`[${form.section}] ${form.key}=`);
 			}
+			// The rendered units verified clean, so every directive they carry must probe as accepted:
+			// a refused one means the probe, not the unit, is wrong — never a silent short list.
+			check(
+				supported.length === forms.length,
+				`the probe refused directives the rendered units verified with: ${forms
+					.map((f) => `[${f.section}] ${f.key}=`)
+					.filter((f) => !supported.includes(f))
+					.join(', ')}`,
+			);
 			ctx.facts.supported_directives = { [version]: supported };
 		},
 	},
