@@ -46,7 +46,7 @@
 
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, renameSync, rmSync } from 'node:fs';
-import { copyFile, readdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, readdir, readFile } from 'node:fs/promises';
 import { basename, dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import {
@@ -55,6 +55,12 @@ import {
 	readDdOntologyReferenceRows,
 } from '../db/dd_ontology.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
+import {
+	DirectoryBarrier,
+	fsyncFile,
+	syncCreatedLevels,
+	writeFileDurably,
+} from '../files/durable.ts';
 import { isCoreOntologyTld } from '../ontology/core_tlds.ts';
 import {
 	copySanityCheck,
@@ -183,19 +189,35 @@ async function verifyStaged(gzPath: string, name: string): Promise<void> {
 	}
 }
 
-/** Bring one file into `versionDir` (copy or download), shape-check it, answer its record fields. */
+/** Where one stage brings its files: `incomingDir` (fetched, unverified), then `versionDir`. */
+interface StageDirs {
+	incomingDir: string;
+	versionDir: string;
+	barrier: DirectoryBarrier;
+}
+
+/**
+ * Bring one file into the stage (copy or download into `incomingDir`), shape-check it,
+ * fsync its bytes, and only then RENAME it into `versionDir` — a staged name always
+ * holds a whole, verified file; its directory entry becomes durable at the stage's one
+ * barrier flush (stageOntologies). Answers its record fields.
+ */
 async function stageFile(
 	tld: string,
 	origin: OntologyOrigin,
 	file: string,
 	source: OntologySourceView,
-	versionDir: string,
+	stage: StageDirs,
 ): Promise<{ file: string; sha256: string; bytes: number }> {
 	const name = `${tld}.copy.gz`;
-	const target = join(versionDir, name);
-	if (origin === 'server') await downloadStaged(name, file, source, versionDir);
-	else await copyLocal(file, target, name);
-	await verifyStaged(target, name);
+	const incoming = join(stage.incomingDir, name);
+	if (origin === 'server') await downloadStaged(name, file, source, stage.incomingDir);
+	else await copyLocal(file, incoming, name);
+	await verifyStaged(incoming, name);
+	fsyncFile(incoming);
+	const target = join(stage.versionDir, name);
+	renameSync(incoming, target);
+	stage.barrier.add(stage.versionDir);
 	return { file: join(DEDALO_VERSION_MAJOR_MINOR, name), ...(await digestOf(target)) };
 }
 
@@ -212,7 +234,7 @@ async function copyLocal(file: string, target: string, name: string): Promise<vo
 
 async function stageMatrixDd(
 	request: OntologyInstallRequest,
-	versionDir: string,
+	stage: StageDirs,
 ): Promise<StagedManifest['matrix_dd']> {
 	const matrixDd = request.matrixDd;
 	if (matrixDd === null) return null;
@@ -221,7 +243,7 @@ async function stageMatrixDd(
 		matrixDd.origin,
 		matrixDd.file,
 		request.source,
-		versionDir,
+		stage,
 	);
 	return { origin: matrixDd.origin, ...staged };
 }
@@ -229,7 +251,12 @@ async function stageMatrixDd(
 /**
  * STAGE every file of `request` (fetch/copy + shape check) into the staging dir and
  * write staged.json. The database is never touched; any failure refuses
- * `install.step_failed`.
+ * `install.step_failed`. DURABLE BEFORE IT RETURNS (cross-ops:r2): the executor
+ * checkpoints the step `done` when it returns, and install_ontologies re-verifies the
+ * set later — so every staged file is fsynced, staged.json written durably, and the
+ * directories created and filled are fsynced (one barrier). A power cut after the
+ * checkpoint used to leave a `done` step whose staged set was gone: refused as drift.
+ * Gate: install_ontology_staging_durability.
  */
 export async function stageOntologies(
 	request: OntologyInstallRequest,
@@ -238,10 +265,13 @@ export async function stageOntologies(
 	const stagingDir = options.stagingDir ?? installOntologyStagingDir();
 	const versionDir = join(stagingDir, DEDALO_VERSION_MAJOR_MINOR);
 	await removeStagingDir(stagingDir);
-	mkdirSync(versionDir, { recursive: true, mode: 0o700 });
+	const barrier = new DirectoryBarrier();
+	syncCreatedLevels(versionDir, mkdirSync(versionDir, { recursive: true, mode: 0o700 }), barrier);
+	const stage: StageDirs = { incomingDir: join(stagingDir, '.incoming'), versionDir, barrier };
+	mkdirSync(stage.incomingDir, { mode: 0o700 });
 	const items: StagedRecord[] = [];
 	for (const item of request.items) {
-		const staged = await stageFile(item.tld, item.origin, item.file, request.source, versionDir);
+		const staged = await stageFile(item.tld, item.origin, item.file, request.source, stage);
 		items.push({
 			tld: item.tld,
 			origin: item.origin,
@@ -257,12 +287,15 @@ export async function stageOntologies(
 		created_at: new Date().toISOString(),
 		source: request.source,
 		items,
-		matrix_dd: await stageMatrixDd(request, versionDir),
+		matrix_dd: await stageMatrixDd(request, stage),
 		warnings: stagedWarnings(request),
 	};
-	await writeFile(join(stagingDir, STAGED_MANIFEST), JSON.stringify(manifest, null, '\t'), {
+	rmSync(stage.incomingDir, { recursive: true, force: true });
+	writeFileDurably(join(stagingDir, STAGED_MANIFEST), JSON.stringify(manifest, null, '\t'), {
 		mode: 0o600,
+		barrier,
 	});
+	barrier.flush();
 	return {
 		ok: true,
 		msg: `Staged ontology files: ${items.map((item) => item.tld).join(', ')}${manifest.matrix_dd === null ? '' : ' + matrix_dd'} — shape-checked, nothing installed yet`,

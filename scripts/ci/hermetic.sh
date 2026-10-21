@@ -515,6 +515,10 @@ HERMETIC_TRIPWIRES=(
 	#     parse of the write-path corpus and a planted corpus; imports no src/ module
 	#     (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
 	test/unit/target_lock_census_tripwire.test.ts
+	# --- 2026-10-21 (audit 2026-09-26 cross-ops:r2, psql matrix-writer census). DB-free:
+	#     a text scan of the write-path corpus + an import of each declaring module for
+	#     its exported record (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
+	test/unit/psql_matrix_write_obligations_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

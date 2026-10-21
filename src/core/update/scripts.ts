@@ -23,7 +23,12 @@
  *    statement of it is sent — its next `sql` call throws the abort);
  *  - engine write helpers may queue COMMIT-ONLY actions (registerCommitAction):
  *    they follow the savepoint (db/postgres.ts recorder) — dropped with a soft
- *    failure's ROLLBACK TO, run after the run's COMMIT otherwise.
+ *    failure's ROLLBACK TO, run after the run's COMMIT otherwise. ONE EXCEPTION:
+ *    a COMMIT whose reply is lost (the connection fails during it) and that
+ *    PostgreSQL then reports COMMITTED — the commit-only lane runs only after a
+ *    COMMIT the engine SAW succeed, so those actions never run; the run's report
+ *    says so (COMMIT_ONLY_ACTIONS_DROPPED_LINE, the update engine and every
+ *    move_* transform file alike).
  * A soft failure (`stopOnError: false`) rolls back to the script's SAVEPOINT —
  * its own writes, and the commit actions they queued, are undone; the run
  * continues.
@@ -41,3 +46,13 @@ export type UpdateScriptFn = (
  * module load (validateCatalog) and again in the engine's preflight.
  */
 export const SCRIPT_REGISTRY: Readonly<Record<string, UpdateScriptFn>> = Object.freeze({});
+
+/**
+ * The report line of a unit PostgreSQL reports COMMITTED after its COMMIT failed on
+ * the engine's side (a lost reply): its writes landed, but the COMMIT-ONLY actions
+ * they queued (db/postgres.ts registerCommitAction — the observer obligation ledger,
+ * account revocation, …) were DROPPED with the failed COMMIT, and nothing replays
+ * them. Names the remedies (cross-ops:r2 S3).
+ */
+export const COMMIT_ONLY_ACTIONS_DROPPED_LINE =
+	'its post-commit actions did NOT run (the connection failed during COMMIT; the engine runs them only after a COMMIT it saw succeed): observer propagation and account revocation queued by its writes were dropped — run the observer_mirrors reconcile (Maintenance › Reconcile, or scripts/observer_reconcile.ts; an update run starts one itself), and end the sessions of any account whose access it changed';

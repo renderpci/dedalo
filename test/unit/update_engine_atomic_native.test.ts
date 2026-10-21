@@ -66,6 +66,7 @@ import {
 } from '../../src/core/update/catalog.ts';
 import type { UpdateEngineSeams, UpdateRunResponse } from '../../src/core/update/engine.ts';
 import * as engineModule from '../../src/core/update/engine.ts';
+import { COMMIT_ONLY_ACTIONS_DROPPED_LINE } from '../../src/core/update/scripts.ts';
 import { childDriver, driverResult, repoModule } from '../helpers/child_driver.ts';
 import { refusalOf } from '../helpers/refusal.ts';
 
@@ -1018,6 +1019,8 @@ describe('OPS-6 one verdict: an unexplained failure is read back from the transa
 		expect(asked).toEqual([String(capturedXid)]);
 		expect(out.ok, out.msg.join(' | ')).toBe(true);
 		expect(out.msg).toContain(engineModule.COMMITTED_DESPITE_FAILURE_LINE);
+		// cross-ops:r2: the commit-only actions its writes queued were dropped — said, never silent.
+		expect(out.msg).toContain(`The update: ${COMMIT_ONLY_ACTIONS_DROPPED_LINE}`);
 		expect(out.msg).not.toContain(ROLLBACK_LINE);
 		expect(out.msg.at(-1)).toBe('Updated version successfully');
 	});

@@ -13,6 +13,10 @@
  *      session for the whole run; marked orphans of earlier runs are swept;
  *   2. schema.sql, then every migration file, into `dedalo_seed_build_<pid>`,
  *      then the parser scaffold (seed_sources.ts SEED_SCAFFOLD_PATH);
+ *      EVERY matrix COPY source (langs, registry, ontology packages, matrix_dd)
+ *      is staged INT-CLEAN: its PHP-era string record addresses converted by
+ *      the sweep's own kernel (copy_section_ids.ts —
+ *      WC-2026-10-21-seed-and-thesaurus-int-clean);
  *   3. the COMPILE child (scripts/seed_build_child.ts — the engine, bound to
  *      the scratch database) applies the release ontology packages through the
  *      update door's own per-package body (the CORE TLDs only — seed_sources.ts
@@ -20,11 +24,13 @@
  *      date, so the same sources compile the same content anywhere;
  *   4. psql empties every table that does not ship (the search stores
  *      included — they fill at the install's first boot, in ITS locale), loads
- *      langs + registry, writes the canonical records + the data version; then
+ *      langs + registry, writes the canonical records + the data version + the
+ *      `section_id_int_normalize` marker (the seed's stock is born swept); then
  *      CLUSTERs every table on its primary key and restarts idle sequences
  *      (a deterministic dump);
  *      the registry must be the CORE rows only (nonCoreRegistryRows),
- *      activatable (provisionBlocker) and inactive;
+ *      activatable (provisionBlocker) and inactive, and NO table may carry a
+ *      string record address (stringAddressResidue — the marker's proof);
  *   5. pg_dump → `<out>.part`;
  *   6. VERIFIED BY A REAL INSTALL: the VERIFY child restores `.part` into a
  *      second marked database through installDbFromSeed (the whole fresh
@@ -40,8 +46,16 @@
  * install_seed_manifest_tripwire (committed seed ↔ manifest ↔ sources).
  */
 
-import { mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
-import { readFile, writeFile } from 'node:fs/promises';
+import {
+	createReadStream,
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	renameSync,
+	rmSync,
+	statSync,
+} from 'node:fs';
+import { open, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { isOnlineMigration } from '../../../install/db/online_migration.ts';
@@ -64,6 +78,12 @@ import {
 } from '../ontology/ontology_dependencies.ts';
 import { gzipStreamToFile } from '../ontology/recovery_file.ts';
 import { DEDALO_VERSION } from '../update/version.ts';
+import {
+	type CopySectionIdTally,
+	canonicalCopyChunks,
+	jsonbColumnIndexes,
+	newCopySectionIdTally,
+} from './copy_section_ids.ts';
 import { isCoreHierarchyTld } from './hierarchy_meta.ts';
 import { SEED_DUMP_PATH, SEED_MANIFEST_PATH } from './paths.ts';
 import { resolvePgBinary } from './pg_bin.ts';
@@ -473,17 +493,33 @@ export async function readOntologyRelease(): Promise<OntologyRelease> {
 	};
 }
 
-/** Decompress + sanity-check one COPY source into the staging dir. */
+/**
+ * Decompress + sanity-check one COPY source into the staging dir, its record
+ * addresses INT-CLEAN (copy_section_ids.ts: the sweep's kernel on every matrix
+ * jsonb column of `columns` — none for the dd_ontology scaffold; a field it had
+ * to keep verbatim is left for the census to refuse). `tally` counts the
+ * conversions the marker reports.
+ */
 async function stageCopy(
 	source: string,
 	stagingDir: string,
 	name: string,
-	columnCount: number = MATRIX_COPY_COLUMNS.length,
+	tally: CopySectionIdTally,
+	columns: readonly string[] = MATRIX_COPY_COLUMNS,
 ): Promise<string> {
+	const raw = join(stagingDir, `${name}.raw.copy`);
 	const staged = join(stagingDir, `${name}.copy`);
-	await gunzipWithCaps(source, staged);
-	const problem = copySanityCheck(staged, columnCount);
+	await gunzipWithCaps(source, raw);
+	const problem = copySanityCheck(raw, columns.length);
 	if (problem !== null) fail(`${displayPath(source)}: ${problem}`);
+	const handle = await open(staged, 'w', 0o600);
+	try {
+		const rows = canonicalCopyChunks(createReadStream(raw), jsonbColumnIndexes(columns), tally);
+		for await (const chunk of rows) await handle.write(chunk);
+	} finally {
+		await handle.close();
+	}
+	rmSync(raw, { force: true });
 	return safePath(staged);
 }
 
@@ -516,6 +552,7 @@ export function releaseDependencies(entry: ReleaseOntology): OntologyDependency[
 async function stagePackages(
 	stagingDir: string,
 	entries: readonly ReleaseOntology[],
+	tally: CopySectionIdTally,
 ): Promise<StagedPackage[]> {
 	const staged: StagedPackage[] = [];
 	for (const tld of SEED_ONTOLOGY_TLDS) {
@@ -523,7 +560,12 @@ async function stagePackages(
 		staged.push({
 			tld,
 			sectionTipo: `${tld}0`,
-			stagedPath: await stageCopy(join(ONTOLOGY_RELEASE_DIR, `${tld}.copy.gz`), stagingDir, tld),
+			stagedPath: await stageCopy(
+				join(ONTOLOGY_RELEASE_DIR, `${tld}.copy.gz`),
+				stagingDir,
+				tld,
+				tally,
+			),
 			typologyId: entry.typology_id ?? null,
 			nameData: entry.name_data,
 			dependencies: releaseDependencies(entry),
@@ -694,27 +736,36 @@ const KEYLESS_TABLES: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * The data version row, built SERVER-SIDE (jsonb_build_object) from two
- * literals validated to carry no quote: the release date and DEDALO_VERSION.
+ * The data version row AND the `section_id_int_normalize` marker
+ * (WC-2026-08-10-section-id-int-canonical: the evidence the contraction
+ * release's boot floor reads), built SERVER-SIDE (jsonb_build_object) from
+ * literals validated to carry no quote: the release date, DEDALO_VERSION and
+ * the conversion count. The marker is honest because the stock it describes
+ * is PROVEN clean before the dump (assertShippable → stringAddressResidue);
+ * both version readers skip it (`data ? 'dedalo_version'`). ONE statement.
  */
-function dataVersionInsert(releaseDate: string): string {
+function dataVersionInsert(releaseDate: string, addressesConverted: number): string {
 	// The engine's own 'YYYY-MM-DD HH:MM:SS' (update/engine.ts), in UTC — the
 	// child's pinned zone.
 	const stamp = new Date(releaseDate).toISOString().slice(0, 19).replace('T', ' ');
 	if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(stamp))
 		fail(`refusing release date '${releaseDate}'`);
 	if (!/^\d+\.\d+\.\d+$/.test(DEDALO_VERSION)) fail(`refusing engine version '${DEDALO_VERSION}'`);
-	return `INSERT INTO matrix_updates (data) VALUES (jsonb_build_object('update_date', '${stamp}', 'dedalo_version', '${DEDALO_VERSION}'));`;
+	if (!Number.isSafeInteger(addressesConverted) || addressesConverted < 0)
+		fail(`refusing conversion count '${addressesConverted}'`);
+	const version = `jsonb_build_object('update_date', '${stamp}', 'dedalo_version', '${DEDALO_VERSION}')`;
+	const marker = `jsonb_build_object('section_id_int_normalize', jsonb_build_object('date', '${stamp}', 'origin', 'seed_build', 'converted', ${addressesConverted}))`;
+	return `INSERT INTO matrix_updates (data) VALUES (${version}), (${marker});`;
 }
 
-/** The canonical records + the data version row. */
-function recordInserts(releaseDate: string): string[] {
+/** The canonical records + the data version row + the int-clean marker. */
+function recordInserts(releaseDate: string, addressesConverted: number): string[] {
 	return [
 		...SEED_RECORDS.map(
 			(record) =>
 				`INSERT INTO "${record.table}" (section_id, section_tipo, data, relation, string, date, meta) VALUES (${record.section_id}, '${record.section_tipo}', ${jsonbLiteral(record.data)}, ${jsonbLiteral(record.relation)}, ${jsonbLiteral(record.string)}, ${jsonbLiteral(record.date)}, ${jsonbLiteral(record.meta)});`,
 		),
-		dataVersionInsert(releaseDate),
+		dataVersionInsert(releaseDate, addressesConverted),
 	];
 }
 
@@ -728,6 +779,8 @@ export function seedDataSql(input: {
 	tables: readonly string[];
 	registryPath: string;
 	releaseDate: string;
+	/** String record addresses the staging converted (copy_section_ids.ts) — the marker's count. */
+	addressesConverted: number;
 }): string {
 	const columns = MATRIX_COPY_COLUMNS.join(', ');
 	const emptied = input.tables.filter((table) => !CHILD_WRITTEN.has(table));
@@ -736,7 +789,7 @@ export function seedDataSql(input: {
 			? []
 			: [`TRUNCATE ${emptied.map((table) => `"${table}"`).join(', ')} RESTART IDENTITY;`]),
 		`\\copy matrix_hierarchy_main (${columns}) FROM '${safePath(input.registryPath)}'`,
-		...recordInserts(input.releaseDate),
+		...recordInserts(input.releaseDate, input.addressesConverted),
 	];
 	return `${lines.join('\n')}\n`;
 }
@@ -887,7 +940,7 @@ function allowedExtensions(): Set<string> {
 	return new Set(['plpgsql', ...names.filter((name) => name !== '')]);
 }
 
-/** Refuse a non-core registry row, a registry an install could not activate, an active hierarchy, or a foreign extension. */
+/** Refuse a non-core registry row, a registry an install could not activate, an active hierarchy, a string record address, or a foreign extension. */
 async function assertShippable(conn: DbConnDescriptor, database: string): Promise<number> {
 	const [json = '[]'] = await psqlColumn(
 		conn,
@@ -911,8 +964,62 @@ async function assertShippable(conn: DbConnDescriptor, database: string): Promis
 	const active = await psqlColumn(conn, database, ACTIVE_REGISTRY_SQL, 'list active hierarchies');
 	if (active.length > 0)
 		fail(`the registry must ship every hierarchy inactive; active: ${active.join(', ')}`);
+	const residue = await stringAddressResidue(conn, database);
+	if (residue.length > 0) {
+		fail(
+			`the seed would ship record addresses in the repealed string form (WC-2026-08-10-section-id-int-canonical) and a false section_id_int_normalize marker: ${residue.join('; ')}`,
+		);
+	}
 	await assertNoForeignContent(conn, database);
 	return inputs.length;
+}
+
+/** The address keys of a locator and the tipo key each one pairs with (the kernel's LOCATOR LAW). */
+const ADDRESS_KEYS: readonly (readonly [string, string])[] = [
+	['section_id', 'section_tipo'],
+	['section_id_key', 'section_tipo_key'],
+	['parent_section_id', 'section_tipo'],
+];
+
+/**
+ * THE INT-CLEAN CENSUS of a compiled database — one line per jsonb surface still
+ * carrying a CONVERTIBLE string record address (`table.column key: n`), [] when clean.
+ * Server-side and independent of the staging codec (jsonb_path walk, the sweep
+ * post-verify's predicate: a paired tipo key, a string, the strict numeric rule,
+ * safe-int length), over EVERY jsonb column of the public schema except
+ * `dd_ontology.properties` — the WC's named exemption (config DSL samples, not
+ * addresses). Reads only. Exported for its gate (seed_section_id_int_clean_native).
+ */
+export async function stringAddressResidue(
+	conn: DbConnDescriptor,
+	database: string,
+): Promise<string[]> {
+	const surfaces = await psqlColumn(
+		conn,
+		database,
+		`SELECT table_name || '.' || column_name FROM information_schema.columns
+		 WHERE table_schema = 'public' AND data_type = 'jsonb'
+		   AND NOT (table_name = 'dd_ontology' AND column_name = 'properties') ORDER BY 1`,
+		'list the jsonb columns',
+	);
+	const legs: string[] = [];
+	for (const surface of surfaces) {
+		const [table = '', column = ''] = surface.split('.');
+		if (!IDENTIFIER.test(table) || !IDENTIFIER.test(column)) fail(`refusing surface '${surface}'`);
+		for (const [key, tipo] of ADDRESS_KEYS) {
+			legs.push(`SELECT '${surface} ${key}' AS leg, count(*) AS n FROM "${table}" t,
+				LATERAL jsonb_path_query(t."${column}", 'strict $.** ? (exists (@."${key}"))') AS obj
+				WHERE obj ? '${tipo}' AND jsonb_typeof(obj->'${key}') = 'string'
+				  AND obj->>'${key}' ~ '^(-?[1-9][0-9]*|0)$' AND length(ltrim(obj->>'${key}', '-')) <= 15`);
+		}
+	}
+	if (legs.length === 0) return [];
+	return psqlColumn(
+		conn,
+		database,
+		`SELECT leg || ': ' || n FROM (${legs.join('\nUNION ALL\n')}) census WHERE n > 0 ORDER BY 1`,
+		'census the string record addresses',
+	);
 }
 
 /** Refuse an ontology row of a TLD the seed does not ship (a stale scaffold row) or a foreign extension. */
@@ -968,6 +1075,8 @@ interface SeedBuild {
 	readout: SeedReadout;
 	step: (line: string) => void;
 	scratches: Scratch[];
+	/** The string record addresses every staged source converted (the marker's count). */
+	addresses: CopySectionIdTally;
 }
 
 function stepClock(readout: SeedReadout): (line: string) => void {
@@ -990,11 +1099,12 @@ async function compileOntology(
 		database,
 		installationDatabase: privateFileValue('DB_NAME') ?? null,
 		clock: release.date,
-		packages: await stagePackages(build.stagingDir, release.entries),
+		packages: await stagePackages(build.stagingDir, release.entries, build.addresses),
 		privateListsPath: await stageCopy(
 			join(ONTOLOGY_RELEASE_DIR, 'matrix_dd.copy.gz'),
 			build.stagingDir,
 			'matrix_dd',
+			build.addresses,
 		),
 		driftTlds: [...SEED_ONTOLOGY_TLDS],
 	};
@@ -1015,7 +1125,8 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 		SEED_SCAFFOLD_PATH,
 		build.stagingDir,
 		'dd_ontology_scaffold',
-		DD_ONTOLOGY_SCAFFOLD_COLUMNS.length,
+		build.addresses,
+		DD_ONTOLOGY_SCAFFOLD_COLUMNS,
 	);
 	await psqlOk(
 		build.conn,
@@ -1028,7 +1139,12 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 	// hard-coded id — ontology_write.ts resolveRegistryLangId), so an empty
 	// langs table would refuse the first package. Loaded once: the data script
 	// keeps them (CHILD_WRITTEN).
-	const langsPath = await stageCopy(SEED_LANGS_PATH, build.stagingDir, 'matrix_langs');
+	const langsPath = await stageCopy(
+		SEED_LANGS_PATH,
+		build.stagingDir,
+		'matrix_langs',
+		build.addresses,
+	);
 	await psqlOk(
 		build.conn,
 		scratch.name,
@@ -1036,10 +1152,17 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 		'load the langs the registry rows are filed under',
 	);
 	await compileOntology(build, scratch.name, release);
+	const registryPath = await stageCopy(
+		SEED_REGISTRY_PATH,
+		build.stagingDir,
+		'matrix_hierarchy_main',
+		build.addresses,
+	);
 	const sql = seedDataSql({
 		tables: await scratchTables(build.conn, scratch.name),
-		registryPath: await stageCopy(SEED_REGISTRY_PATH, build.stagingDir, 'matrix_hierarchy_main'),
+		registryPath,
 		releaseDate: release.date,
+		addressesConverted: build.addresses.converted,
 	});
 	await psqlOk(build.conn, scratch.name, ['-1', '-f', '-'], 'load the seed data', sql);
 	await psqlOk(build.conn, scratch.name, ['-c', 'ANALYZE'], 'analyze the scratch database');
@@ -1061,7 +1184,7 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 	);
 	const registry = await assertShippable(build.conn, scratch.name);
 	build.step(
-		`data loaded (${registry} hierarchy registry records, ${SEED_RECORDS.length} canonical records, ${Object.keys(SEED_SHIPPED_TABLES).length} shipped tables)`,
+		`data loaded (${registry} hierarchy registry records, ${SEED_RECORDS.length} canonical records, ${Object.keys(SEED_SHIPPED_TABLES).length} shipped tables; ${build.addresses.converted} string record addresses converted, none left)`,
 	);
 	await dumpTo(build.conn, scratch.name, build.partFile);
 	build.step('dumped');
@@ -1154,6 +1277,7 @@ export async function buildInstallVersion(
 		readout,
 		step: stepClock(readout),
 		scratches: [],
+		addresses: newCopySectionIdTally(),
 	};
 	let lock: ClusterLock | null = null;
 	try {

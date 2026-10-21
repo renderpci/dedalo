@@ -920,6 +920,17 @@ Merged since the last release; these ship with the next one.
 
     When a backup is verified, Dédalo writes a small proof file next to it so the archive is not read in full again. That proof could be lost in a power cut right after the verification, or left half-written by an interrupted write, and the next check then re-read the whole archive. It is now written through the same durable path as every other engine file: complete, synced, and its name synced too. If the disk refuses to make a finished backup's name durable (an I/O error), the backup job now says it failed instead of reporting it done; the backup file itself is kept.
 
+- **An update or a move transform that committed after a lost connection says what did not run**
+
+    If the database connection fails while a data update or a *move* transform file is
+    being committed, Dédalo asks the database whether the work committed and reports it as
+    applied when it did. Some follow-up actions only run after a commit Dédalo saw
+    succeed, such as updating dependent fields and ending the sessions of users whose
+    access changed. In this case they were skipped without a word. The report now says
+    that they did not run and what to do: run the *observer_mirrors* reconcile (an update
+    starts one itself), and end the sessions of any account whose access the change
+    affected.
+
 - **An export's record selection now respects the database statement ceiling.**
 
     With `DB_STATEMENT_TIMEOUT_MS` set, computing an export's record selection could still run
@@ -1045,6 +1056,16 @@ Merged since the last release; these ship with the next one.
 
     In the ontology tree, each TLD hangs under the typology set in its registry record. A TLD placed under a different typology used to be reported as in sync. The ontology status panel now reports it as drift, and **Rebuild** puts it back under the right typology. Separately, the first time a thesaurus is created, Dédalo registers the `hierarchytype` and `hierarchymtype` groups itself, because no ontology update brings them in. It used to file them under *Core*, with generic names. It now uses the typology and names that the master ontology gives them. Installations that registered these groups before this change keep their current placement, which stays consistent and is not reported as drift.
 
+- **The installer's downloaded ontology files survive a power cut**
+
+    The installer fetches the chosen ontology files before it touches the database, and
+    records that step as done. The files were not forced to disk, so a power cut right
+    after that step could lose them, and resuming the installation then refused with a
+    "changed outside the installer" error that only recreating the installation would
+    clear. The files and their checklist are now written to disk safely before the step
+    counts as done, and each file appears under its final name only once it has been
+    checked.
+
 - **An ontology update now removes the nodes a new package no longer carries.**
 
     Before, **Update ontology** only added and refreshed nodes: a node dropped upstream stayed in the
@@ -1095,6 +1116,39 @@ Merged since the last release; these ship with the next one.
     says why. *Check* (the dry run) works as before on every row.
 
     Wire contract: `WC-2026-09-03-maintenance-reconcile-status-widget`.
+
+- **New installations and imported thesauri store record references in their final form**
+
+    Every reference from one record to another names the target record by number. Dédalo
+    stores that number as a number, but a fresh installation was born with thousands of
+    references written as text (the administrator account's profile and project, the
+    languages, the core ontology), and installing or resetting a thesaurus from
+    *Maintenance › Install hierarchies* copied the text form of the vendored files as it
+    was. Searches matched both forms, so nothing looked wrong, but the text form is what
+    the planned clean-up of old installations removes. Now a new installation and every
+    thesaurus you install or reset store numbers only, and a new installation records that
+    its data is already in the final form. Nothing else in the data changes.
+
+    Wire contract: `WC-2026-10-21-seed-and-thesaurus-int-clean`.
+
+- **Installing or resetting a thesaurus takes effect at once and no longer needs gigabytes of memory**
+
+    After *Maintenance › Install hierarchies* installed a thesaurus, or *Reset to seed*
+    replaced its terms, lists and counts built from those terms could keep showing the old
+    terms until the server was restarted: deleted terms were still offered and edited
+    labels still shown. They now refresh as soon as the import finishes.
+
+    The import also no longer loads whole thesaurus files into the server's memory. The
+    largest vendored thesaurus is about one gigabyte once unpacked, and the server needed
+    more than two gigabytes to import it, enough to be stopped on a modest machine with
+    every user's request lost. It now reads the files piece by piece. A file that changes
+    on disk while it is being imported is refused, and nothing of that thesaurus is
+    changed.
+
+    A reset still does not rebuild what other parts of Dédalo derived from the deleted
+    terms. The result message now says so and names what to run afterwards: the
+    *observer_mirrors* reconcile, and a new publication or semantic-search reconcile if
+    the thesaurus is published or indexed.
 
 - **Time machine restores respect every record's projects and every field's permission; the ontology recovery file is built one at a time**
 
@@ -1334,7 +1388,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 14 entries"
+??? note "Wire contract — 15 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
@@ -1346,6 +1400,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-21-ontology-record-lifecycle`
     - `WC-2026-10-21-ontology-recovery-single-flight`
     - `WC-2026-10-21-ontology-update-rebuild`
+    - `WC-2026-10-21-seed-and-thesaurus-int-clean`
     - `WC-2026-10-21-target-statement-lock-wait`
     - `WC-2026-10-21-tm-restore-component-write-doors`
     - `WC-2026-10-21-unpublish-markers-durable`

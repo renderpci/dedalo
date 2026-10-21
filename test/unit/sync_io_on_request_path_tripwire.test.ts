@@ -231,10 +231,6 @@ const EXEMPTIONS: { file: string; reason: string }[] = [
 		reason: 'writes a zero-byte probe file to test directory writability during installation',
 	},
 	{
-		file: 'src/core/install/hierarchy_import.ts',
-		reason: 'the installer gunzips a repo-owned hierarchy definition file; runs once',
-	},
-	{
 		file: 'src/core/install/hierarchy_meta.ts',
 		reason: 'reads the small repo-owned hierarchy metadata JSON during installation',
 	},

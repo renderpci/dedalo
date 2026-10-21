@@ -213,12 +213,20 @@ export interface PsqlRunResult {
  * Run psql against `conn` with the given extra args (e.g. `['-c', 'SELECT 1']`).
  * `stdin`, when provided, is piped in (used by \copy … FROM STDIN and --file via
  * stdin). ON_ERROR_STOP is the caller's responsibility (pass it in `args`).
+ *
+ * A STREAMED stdin (a ReadableStream — the hierarchy import, cross-ops:r2) is read
+ * by the child with backpressure, so a gigabyte script is never held in this
+ * process; `signal` then KILLS the child (SIGKILL) when it fires — the producer's
+ * failure must end the session BEFORE its input ends (psql reading an early EOF
+ * would run what it got).
  */
 export async function runPsql(
 	conn: DbConnDescriptor,
 	args: string[],
 	options: {
-		stdin?: Uint8Array | string;
+		stdin?: Uint8Array | string | ReadableStream<Uint8Array>;
+		/** Kills the child when it fires (see above). */
+		signal?: AbortSignal;
 		database?: string;
 		/**
 		 * The session's application_name (PGAPPNAME): the seed restore names itself
@@ -233,10 +241,11 @@ export async function runPsql(
 	// `--dbname=<db>` as ONE glued token: getopt takes everything after the
 	// first `=` as the value, so even a `--command=…`-shaped database can never
 	// be re-parsed as a psql option (CMD-01). Was a bare positional argv element.
+	const streamed = options.stdin instanceof ReadableStream ? options.stdin : null;
 	const child = Bun.spawn(
 		[resolvePgBinary('psql'), `--dbname=${database}`, ...connArgs(conn), ...args],
 		{
-			stdin: options.stdin !== undefined ? 'pipe' : 'ignore',
+			stdin: streamed ?? (options.stdin !== undefined ? 'pipe' : 'ignore'),
 			stdout: 'pipe',
 			stderr: 'pipe',
 			env: installSessionEnv(conn, options.appName),
@@ -245,16 +254,35 @@ export async function runPsql(
 	const tracked = psqlChildScope.getStore();
 	tracked?.add(child);
 	void child.exited.finally(() => tracked?.delete(child));
-	if (options.stdin !== undefined && child.stdin) {
-		child.stdin.write(options.stdin);
-		await child.stdin.end();
-	}
+	killOnAbort(child, options.signal);
+	if (streamed === null)
+		await writeWholeStdin(child, options.stdin as Uint8Array | string | undefined);
 	const [exitCode, stdout, stderr] = await Promise.all([
 		child.exited,
 		new Response(child.stdout).text(),
 		new Response(child.stderr).text(),
 	]);
 	return { exitCode, stdout: stdout.trim(), stderr: stderr.trim() };
+}
+
+/** SIGKILL `child` when `signal` fires (or already fired); the listener goes with the child. */
+function killOnAbort(child: Subprocess, signal: AbortSignal | undefined): void {
+	if (signal === undefined) return;
+	const kill = () => child.kill('SIGKILL');
+	if (signal.aborted) kill();
+	signal.addEventListener('abort', kill, { once: true });
+	void child.exited.finally(() => signal.removeEventListener('abort', kill));
+}
+
+/** A whole (non-streamed) stdin, written and closed. */
+async function writeWholeStdin(
+	child: Subprocess,
+	stdin: Uint8Array | string | undefined,
+): Promise<void> {
+	if (stdin === undefined || !child.stdin) return;
+	const sink = child.stdin as import('bun').FileSink;
+	sink.write(stdin);
+	await sink.end();
 }
 
 /** `SELECT 1` liveness against a connection (optionally a different database). */

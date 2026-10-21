@@ -273,6 +273,7 @@ describe('seed compiler — pure halves', () => {
 			tables: ['dd_ontology', 'matrix', 'matrix_langs', 'matrix_ontology', 'matrix_time_machine'],
 			registryPath: '/tmp/registry.copy',
 			releaseDate: '2026-07-14T16:08:54+02:00',
+			addressesConverted: 0,
 		});
 		// matrix_langs is loaded ONCE, before the compile (the registry door
 		// resolves STRUCTURE_LANG from it) — kept, never truncated nor reloaded.
@@ -285,6 +286,7 @@ describe('seed compiler — pure halves', () => {
 				tables: [],
 				registryPath: "/tmp/x'; DROP",
 				releaseDate: 'x',
+				addressesConverted: 0,
 			}),
 		).toThrow(
 			expect.objectContaining({ publicMessage: expect.stringContaining('refusing a path') }),

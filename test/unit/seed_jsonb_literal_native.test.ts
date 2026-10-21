@@ -57,6 +57,7 @@ describe('seed jsonbLiteral', () => {
 			tables: [],
 			registryPath: '/tmp/registry.copy',
 			releaseDate: '2026-10-21 00:00:00',
+			addressesConverted: 0,
 		});
 		expect(sql.match(/^INSERT INTO "matrix_/gm)?.length).toBe(SEED_RECORDS.length);
 	});

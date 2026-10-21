@@ -32,8 +32,9 @@
  */
 
 import { afterAll, afterEach, beforeAll, describe, expect, mock, test } from 'bun:test';
-import { sql } from '../../src/core/db/postgres.ts';
+import { registerCommitAction, sql } from '../../src/core/db/postgres.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
+import { COMMIT_ONLY_ACTIONS_DROPPED_LINE } from '../../src/core/update/scripts.ts';
 import type { TransformRecorder } from '../../src/core/update/transform/report.ts';
 
 // --- injectable definition catalog (replaces the filesystem) ----------------
@@ -617,6 +618,27 @@ describe('runTransform execute: a failed file reports what its transaction ACTUA
 		// The committed file's deltas persisted: the report counts them; b still ran.
 		expect(report.counts).toEqual({ insert: 2 });
 		expect(report.sample.map((delta) => delta.target)).toEqual(['n1', 'n2']);
+	});
+
+	test('a file reported COMMITTED after its COMMIT failed: its commit-only actions really were dropped, and the report SAYS so (cross-ops:r2)', async () => {
+		CATALOG = { 'a.json': { n: 1 } };
+		const { executor: failingAtCommit } = commitFailingExecutor();
+		let ran = 0;
+		const executor = async (items: unknown, recorder: TransformRecorder): Promise<void> => {
+			// What an engine write helper queues: the observer ledger, a revocation.
+			expect(registerCommitAction(() => void ran++)).toBe(true);
+			await failingAtCommit(items, recorder);
+		};
+		const report = await runTransform(
+			'move_tld',
+			{ dry_run: false, files_selected: ['a.json'] },
+			executor,
+			{ readXactStatus: async () => 'committed' },
+		);
+		expect(ran, 'the commit-only lane ran after a COMMIT the engine saw fail').toBe(0);
+		expect(report.errors).toHaveLength(1);
+		expect(report.errors[0]).toContain('PostgreSQL reports its transaction COMMITTED');
+		expect(report.errors[0]).toEndWith(`; ${COMMIT_ONLY_ACTIONS_DROPPED_LINE}`);
 	});
 
 	for (const [leg, readXactStatus] of [

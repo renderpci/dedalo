@@ -75,6 +75,8 @@ export async function sha256File(path: string): Promise<string> {
 const COMPILER_FILES = [
 	'src/core/install/seed_build.ts',
 	'src/core/install/seed_sources.ts',
+	// The COPY section_id codec every staged matrix source passes through (cross-ops:r2).
+	'src/core/install/copy_section_ids.ts',
 	'scripts/seed_build_child.ts',
 ];
 
