@@ -185,6 +185,13 @@ export const ROW_CONTRACT: ReadonlyMap<string, RowContract> = new Map<string, Ro
 			none: "Every real-executor leg targets a table or database that does not exist (errno 1146 / 1049 are its idempotent successes) — the gate proves the errno posture, not a row delete; the executor deleting a live row is unpublish_debt_native's ROW leg, whose contract declares rows_deleted",
 		},
 	],
+	// Measured 2026-10-21 (ci:local --docker, l3: 0/0/0).
+	[
+		'test/unit/media_index_marker_durability_native.test.ts',
+		{
+			none: "Its executor legs delete from a table never created on a suite target (errno 1146, the idempotent branch) so the withdrawal of the record's media markers is what is measured — no MariaDB row is touched",
+		},
+	],
 	[
 		'test/unit/diffusion_connection_status.test.ts',
 		{
