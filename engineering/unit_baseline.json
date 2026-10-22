@@ -5356,6 +5356,11 @@
 			"skipped": 0,
 			"assertions": 36
 		},
+		"test/unit/tm_inspector_access_native.test.ts": {
+			"tests": 26,
+			"skipped": 0,
+			"assertions": 51
+		},
 		"test/unit/tm_lang_slice_restore_native.test.ts": {
 			"tests": 30,
 			"skipped": 0,
