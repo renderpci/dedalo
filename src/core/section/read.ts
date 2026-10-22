@@ -2122,11 +2122,23 @@ export async function readSectionRows(
 	// never reaches emitDdoData — client-sent maps included (the config-build
 	// gates only shape the server-derived default map). Admin-flagged users go
 	// through the matrix too (PHP parity); superuser passes via getPermissions.
+	// A Time Machine (dd15) read judges EVERY ddo in dd15, whatever parent the
+	// client names: emitTmRow reads each cell from the virtual dd15 record by
+	// tipo alone, so the parent the gate judges must be the record the value
+	// comes from — the dd15 floor (the (scope section, component) pair), the
+	// same parent buildTmContext's authorizedTmColumns judges. Otherwise a
+	// rule-granted parent (dd655 preset, dd1324 tools register, a public list)
+	// re-authorized a level-0 component's past values. Keyed on what picks the
+	// read source (sqo.mode 'tm' → tmReadSource), not only on the request
+	// source: a forged source naming another section still reads dd15 rows.
+	const readsTimeMachine =
+		rqo.sqo?.mode === 'tm' || (source.section_tipo ?? callerTipo) === TIME_MACHINE_SECTION_TIPO;
 	if (principal !== undefined) {
 		const authorized: Ddo[] = [];
 		for (const ddo of ddoMap) {
-			const gateSection =
-				ddo.section_tipo === undefined || ddo.section_tipo === 'self'
+			const gateSection = readsTimeMachine
+				? TIME_MACHINE_SECTION_TIPO
+				: ddo.section_tipo === undefined || ddo.section_tipo === 'self'
 					? (source.section_tipo ?? callerTipo)
 					: ddo.section_tipo;
 			if (await ddoIsAuthorized(principal, gateSection, ddo.tipo)) authorized.push(ddo);

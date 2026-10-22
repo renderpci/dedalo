@@ -818,6 +818,39 @@ describe('the component pair: a section-wide TM grant never reads a level-0 comp
 		);
 	});
 
+	// The cell is read from the virtual dd15 record whatever parent the ddo
+	// names, so the gate must judge it in dd15 too: a rule-granted parent
+	// (dd655 preset, dd1324 tools register) or the caller section never
+	// re-authorizes a component the pair denies.
+	test('a client-sent column under ANY parent section serves nothing of the restricted component', async () => {
+		for (const parent of ['dd655', 'dd1324', DIRECT_SECTION]) {
+			const show = { ddo_map: [{ tipo: RESTRICTED_TEXT, section_tipo: parent, view: 'text' }] };
+			expect(served(await send('read', admin, componentRqo(RESTRICTED_TEXT, show)))).toContain(
+				SECRET,
+			);
+			const answer = await send('read', granted, componentRqo(RESTRICTED_TEXT, show));
+			expect(historyRows(answer)).toBeGreaterThan(0);
+			expect(served(answer)).not.toContain(SECRET);
+		}
+		// The read source is chosen by sqo.mode 'tm', not by the request source:
+		// a forged source naming another section still reads dd15 rows, so it is
+		// judged in dd15 too.
+		for (const sourceSection of ['dd655', DIRECT_SECTION]) {
+			const forged = componentRqo(RESTRICTED_TEXT, {
+				ddo_map: [{ tipo: RESTRICTED_TEXT, section_tipo: 'dd655', view: 'text' }],
+			});
+			forged.source = { ...forged.source, tipo: sourceSection, section_tipo: sourceSection };
+			expect(served(await send('read', granted, forged))).not.toContain(SECRET);
+		}
+		// The CONTROL: a readable component named under its caller section serves.
+		const readable = {
+			ddo_map: [{ tipo: DIRECT_TEXT, section_tipo: DIRECT_SECTION, view: 'text' }],
+		};
+		expect(served(await send('read', granted, componentRqo(DIRECT_TEXT, readable)))).toContain(
+			PUBLIC_VALUE,
+		);
+	});
+
 	test('the inspector record block: the raw value (dd1574) of a restricted row is withheld', async () => {
 		const rqo = historyRqo('read', [{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID }]);
 		expect(served(await send('read', admin, rqo))).toContain(SECRET);
