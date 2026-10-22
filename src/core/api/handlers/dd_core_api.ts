@@ -26,7 +26,8 @@ import { ok } from '../../errors/convert.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { specOf } from '../../errors/registry.ts';
 import { currentApplicationLang, currentDataLang } from '../../resolve/request_lang.ts';
-import { routeSectionRead } from '../../section/read_facade.ts';
+import { withTimeMachineReadScope } from '../../section/list_definitions/time_machine_list.ts';
+import { gateTimeMachineRead, routeSectionRead } from '../../section/read_facade.ts';
 import {
 	type ChangedDataItem,
 	isLangSlicedModel,
@@ -87,6 +88,99 @@ async function gateRelatedHosts(sqo: unknown, principal: Principal): Promise<boo
 	return true;
 }
 
+/**
+ * Gate A: the request source (section_tipo, tipo). For a dd15 source the level
+ * is the Time Machine floor, which reads the TM scope — so the caller must run
+ * this inside withTimeMachineReadScope.
+ */
+async function gateReadSource(source: RqoSource, principal: Principal): Promise<void> {
+	if (source.section_tipo === undefined || source.tipo === undefined) return;
+	const level = await getPermissions(principal, source.section_tipo, source.tipo);
+	if (level < 1) {
+		throw new DedaloError('perm.denied', {
+			coordinates: { section_tipo: source.section_tipo, tipo: source.tipo },
+		});
+	}
+}
+
+/**
+ * Gate B: every SQO target section, self-keyed — except the related search's
+ * literal 'all' (D3, 2026-10-21), which is not a section: for mode 'related'
+ * the gate is the HOST locators' sections, and the owning records are scoped
+ * row by row by the related search's own predicate (D1).
+ */
+async function gateReadTargets(sqo: Rqo['sqo'], principal: Principal): Promise<void> {
+	if (sqo === undefined) return;
+	const relatedHosts = await gateRelatedHosts(sqo, principal);
+	for (const targetSectionTipo of getSectionTipos(sqo)) {
+		if (relatedHosts && targetSectionTipo === RELATED_ALL_SECTIONS) continue;
+		const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
+		if (level < 1) {
+			throw new DedaloError('perm.denied', { coordinates: { section_tipo: targetSectionTipo } });
+		}
+	}
+}
+
+/**
+ * The generic section read behind its permission gates (BEFORE any search/DB
+ * work — PHP build_json_rows gate A + the per-sqo-target gate). Runs inside
+ * the request's TM scope (see the read handler).
+ */
+async function readGatedSection(
+	rqo: Rqo,
+	context: Parameters<ActionHandler>[1],
+	principal: Principal,
+): Promise<ApiResult> {
+	await gateReadSource(rqo.source ?? {}, principal);
+	await gateReadTargets(rqo.sqo, principal);
+
+	// Sub-action routing + the generic section read live in the section
+	// facade (S2-25) — everything below the gates is section semantics.
+	const readResult = await routeSectionRead(rqo, principal);
+	// LOAD activity (PHP dd_core_api::read :771 → log_activity): every
+	// section/area page load appends a 'LOAD EDIT'/'LOAD LIST' audit row keyed
+	// by the SECTION tipo. This is the stream the dashboard timeline aggregates
+	// (metricActivity filters WHERE ∈ child sections) — without it the activity
+	// card is permanently empty (only component-keyed SAVE rows exist, which
+	// the section filter correctly ignores).
+	await logReadActivity(rqo, principal, context, readResult);
+	return readResult;
+}
+
+/**
+ * The generic count behind the read's gates: Gate B on every SQO target, then
+ * the §7.4 Time Machine admission gate (a no-op for a non-TM SQO) — the same
+ * decision the read takes. Runs inside the request's TM scope.
+ */
+async function countGatedRows(
+	rqo: Rqo,
+	clientSqo: NonNullable<Rqo['sqo']>,
+	context: Parameters<ActionHandler>[1],
+	principal: Principal,
+): Promise<ApiResult> {
+	for (const targetSectionTipo of getSectionTipos(clientSqo)) {
+		const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
+		if (level < 1) {
+			throw new DedaloError('perm.denied', { coordinates: { section_tipo: targetSectionTipo } });
+		}
+	}
+	await gateTimeMachineRead(rqo, principal);
+	// The read STRATEGY owns counting: the default matrix source runs the
+	// SQO full_count; the dd15 TM source counts matrix_time_machine with the
+	// same scoping as its read (pagination parity — the generic SQO count
+	// would hit the wrong table).
+	const { sanitizeClientSqo } = await import('../../concepts/sqo.ts');
+	const { pickReadSource } = await import('../../section/read_source.ts');
+	const sqo = sanitizeClientSqo(structuredClone(clientSqo) as Record<string, unknown>);
+	const readSource = await pickReadSource((clientSqo as { mode?: string }).mode);
+	// The same subdatum read floor the rows read applies (SEC-1): a count
+	// that refused what the page served would paginate a different set.
+	const { subdatumReadFloor } = await import('../../security/read_floor.ts');
+	const readFloor = await subdatumReadFloor(principal, rqo.source);
+	const total = await readSource.count(sqo, principal, readFloor);
+	return { status: 200, body: ok({ total }, { requestId: context.requestId }) };
+}
+
 /** dd_core_api action handlers, keyed by action (registered in dispatch.ts). */
 export const coreApiActions: Record<string, ActionHandler> = {
 	read: async (rqo, context) => {
@@ -115,44 +209,12 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			}
 		}
 
-		// Gate A: source (section_tipo, tipo).
-		const source = rqo.source ?? {};
-		if (source.section_tipo !== undefined && source.tipo !== undefined) {
-			const level = await getPermissions(principal, source.section_tipo, source.tipo);
-			if (level < 1) {
-				throw new DedaloError('perm.denied', {
-					coordinates: { section_tipo: source.section_tipo, tipo: source.tipo },
-				});
-			}
-		}
-		// Gate B: every SQO target section, self-keyed — except the related
-		// search's literal 'all' (D3, 2026-10-21), which is not a section: for
-		// mode 'related' the gate is the HOST locators' sections, and the owning
-		// records are scoped row by row by the related search's own predicate (D1).
-		if (rqo.sqo !== undefined) {
-			const relatedHosts = await gateRelatedHosts(rqo.sqo, principal);
-			for (const targetSectionTipo of getSectionTipos(rqo.sqo)) {
-				if (relatedHosts && targetSectionTipo === RELATED_ALL_SECTIONS) continue;
-				const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
-				if (level < 1) {
-					throw new DedaloError('perm.denied', {
-						coordinates: { section_tipo: targetSectionTipo },
-					});
-				}
-			}
-		}
-
-		// Sub-action routing + the generic section read live in the section
-		// facade (S2-25) — everything below the gates is section semantics.
-		const readResult = await routeSectionRead(rqo, principal);
-		// LOAD activity (PHP dd_core_api::read :771 → log_activity): every
-		// section/area page load appends a 'LOAD EDIT'/'LOAD LIST' audit row keyed
-		// by the SECTION tipo. This is the stream the dashboard timeline aggregates
-		// (metricActivity filters WHERE ∈ child sections) — without it the activity
-		// card is permanently empty (only component-keyed SAVE rows exist, which
-		// the section filter correctly ignores).
-		await logReadActivity(rqo, principal, context, readResult);
-		return readResult;
+		// ONE Time Machine scope for the WHOLE gated read
+		// (WC-2026-10-22-tm-scope-whole-request): Gate A's dd15 floor, Gate B,
+		// the §7.4 admission gate and the per-ddo floor all judge the caller
+		// section the SQO proves. Opened only inside readSection, Gate A ran
+		// unscoped and refused every non-admin — grant or no grant.
+		return withTimeMachineReadScope(rqo.sqo, () => readGatedSection(rqo, context, principal));
 	},
 	save: async (rqo, context) => {
 		// State-changing action: CSRF is enforced by the dispatch gate
@@ -1074,26 +1136,13 @@ export const coreApiActions: Record<string, ActionHandler> = {
 			return { status: 200, body: ok(result, { requestId: context.requestId }) };
 		}
 
-		for (const targetSectionTipo of getSectionTipos(rqo.sqo)) {
-			const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
-			if (level < 1) {
-				throw new DedaloError('perm.denied', { coordinates: { section_tipo: targetSectionTipo } });
-			}
-		}
-		// The read STRATEGY owns counting: the default matrix source runs the
-		// SQO full_count; the dd15 TM source counts matrix_time_machine with the
-		// same scoping as its read (pagination parity — the generic SQO count
-		// would hit the wrong table).
-		const { sanitizeClientSqo } = await import('../../concepts/sqo.ts');
-		const { pickReadSource } = await import('../../section/read_source.ts');
-		const sqo = sanitizeClientSqo(structuredClone(rqo.sqo) as Record<string, unknown>);
-		const readSource = await pickReadSource((rqo.sqo as { mode?: string }).mode);
-		// The same subdatum read floor the rows read applies (SEC-1): a count
-		// that refused what the page served would paginate a different set.
-		const { subdatumReadFloor } = await import('../../security/read_floor.ts');
-		const readFloor = await subdatumReadFloor(principal, rqo.source);
-		const total = await readSource.count(sqo, principal, readFloor);
-		return { status: 200, body: ok({ total }, { requestId: context.requestId }) };
+		// The same ONE TM scope and the same decision as read
+		// (WC-2026-10-22-tm-scope-whole-request): a count must give the answer
+		// the read gives, or the paginator either leaks a history total the read
+		// refuses or refuses what the read serves. The scope matters when the
+		// SQO targets dd15 itself: Gate B then asks the dd15 floor.
+		const sqo = rqo.sqo;
+		return withTimeMachineReadScope(sqo, () => countGatedRows(rqo, sqo, context, principal));
 	},
 	start: async (rqo, context) => {
 		// The client's first boot call (PHP dd_core_api::start): environment

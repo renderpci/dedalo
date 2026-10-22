@@ -110,18 +110,13 @@ export async function readSection(rqo: Rqo, principal?: Principal): Promise<Read
 	// browse included: its PRESENCE is the `data_source === 'tm'` signal, its
 	// SECTION is the authorization input, and an absent section (the bare browse)
 	// is the fail-closed "admin only" answer.
-	if ((rqo.sqo as { mode?: string } | undefined)?.mode === 'tm') {
-		const [{ resolveTimeMachineScopeSection }, { runWithTimeMachineScope }] = await Promise.all([
-			import('./list_definitions/time_machine_list.ts'),
-			import('./list_definitions/tm_scope_context.ts'),
-		]);
-		const scope = resolveTimeMachineScopeSection(rqo.sqo as Record<string, unknown> | undefined);
-		return runWithTimeMachineScope(scope.sectionTipo, () =>
-			runWithRecordMemo(() => readSectionScoped(rqo, principal)),
-		);
-	}
-
-	return runWithRecordMemo(() => readSectionScoped(rqo, principal));
+	// The API handlers open the same scope around their whole body (Gate A
+	// included — WC-2026-10-22-tm-scope-whole-request); this re-open is the
+	// same answer from the same SQO, kept for the direct callers.
+	const { withTimeMachineReadScope } = await import('./list_definitions/time_machine_list.ts');
+	return withTimeMachineReadScope(rqo.sqo, () =>
+		runWithRecordMemo(() => readSectionScoped(rqo, principal)),
+	);
 }
 
 /**

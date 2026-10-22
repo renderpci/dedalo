@@ -8073,6 +8073,13 @@ body:has(.component_av.view_viewer) {
 .inspector > .inspector_content_data .component_history_body > .container_placeholder {
   font-size: 1rem;
 }
+.inspector > .inspector_content_data .relation_list_body > .inspector_block_failure,
+.inspector > .inspector_content_data .time_machine_list_body > .inspector_block_failure,
+.inspector > .inspector_content_data .component_history_body > .inspector_block_failure {
+  padding: var(--space-2) var(--space-3);
+  font-size: 0.78rem;
+  color: var(--fg_muted);
+}
 .inspector > .inspector_content_data .activity_info {
   contain: content;
 }

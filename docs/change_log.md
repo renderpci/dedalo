@@ -222,6 +222,16 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-22-related-search-one-scope`.
 
+- **Users who are allowed to see a section's change history can open *Latest changes* and *Component history* again.**
+
+    A user who is not an administrator but whose profile grants a section's history list got a
+    permission error in the inspector's *Latest changes* and *Component history*. The history now opens for every user the profile allows, also when the
+    history list sits inside a group of the section. Users without that permission no longer see the
+    two blocks at all, and a block that cannot load shows one short line inside the block instead of a
+    full-page error. The record counter of a history list follows the same permission.
+
+    Wire contract: `WC-2026-10-22-tm-scope-whole-request`.
+
 - **The acquisition tools no longer let you start a second import while the first one's outcome is unknown**
 
     In the auction-catalogue and journal acquisition tools, **Confirm import** stays
@@ -1519,7 +1529,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 21 entries"
+??? note "Wire contract — 22 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
@@ -1542,6 +1552,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-22-filter-project-pick-membership`
     - `WC-2026-10-22-reconcile-deferred-rearm`
     - `WC-2026-10-22-related-search-one-scope`
+    - `WC-2026-10-22-tm-scope-whole-request`
 
 ## 7.0.0-beta.6 — 2026-10-15
 

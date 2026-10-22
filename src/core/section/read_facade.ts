@@ -370,8 +370,10 @@ function isRelatedHost(locator: {
 // section/read_source.ts). Only the time-machine ACCESS GATE stays here:
 // it is a per-CALLER-section ACL (SECTION_SPEC §7.4, stricter than the
 // read grant) that must gate BEFORE the read. Gate B in the handler already
-// required level >= 1 on every SQO target section.
-async function gateTimeMachineRead(rqo: Rqo, principal: Principal): Promise<void> {
+// required level >= 1 on every SQO target section. Exported for the count
+// action, which must answer exactly what the read answers
+// (WC-2026-10-22-tm-scope-whole-request) — a no-op for a non-TM SQO.
+export async function gateTimeMachineRead(rqo: Rqo, principal: Principal): Promise<void> {
 	if ((rqo.sqo as { mode?: string } | undefined)?.mode !== 'tm') return;
 	const { canAccessTimeMachineList, resolveTimeMachineScopeSection } = await import(
 		'./list_definitions/time_machine_list.ts'
@@ -398,9 +400,9 @@ async function gateTimeMachineRead(rqo: Rqo, principal: Principal): Promise<void
 			coordinates: { section_tipo: gateTipo },
 		});
 	}
-	// The per-ddo permission FLOOR needs the same scope, but it is published by
-	// readSection itself (read.ts) so direct callers and tests get it too —
-	// this gate only decides admission.
+	// The per-ddo permission FLOOR needs the same scope: the API handlers open
+	// it around their whole body (withTimeMachineReadScope) and readSection
+	// re-opens it for direct callers — this gate only decides admission.
 }
 
 // resolve_data: a component in SEARCH mode resolves INJECTED locators

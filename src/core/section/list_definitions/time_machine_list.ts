@@ -16,8 +16,11 @@
  * time_machine_list and relation_list are INCLUDED (PHP :502).
  */
 
+import { getModelByTipo, getSectionRealTipo } from '../../ontology/resolver.ts';
+import { getGrantChildrenTipos } from '../../resolve/security_access_datalist.ts';
 import { getPermissions, type Principal } from '../../security/permissions.ts';
 import { findSectionChildByModel } from './node_find.ts';
+import { runWithTimeMachineScope } from './tm_scope_context.ts';
 
 /**
  * The CALLER SECTION a Time Machine read is scoped to, or null when the read is
@@ -86,10 +89,46 @@ function scopeFromTipoFilter(sqo: Record<string, unknown>): string | null {
 	return typeof q === 'string' && q !== '' ? q : null;
 }
 
-/** A section's time_machine_list child tipo (virtual-aware), or null. */
+/**
+ * Run `fn` inside the Time Machine read scope the SQO proves — or plainly when
+ * the SQO is not a TM read (`sqo.mode !== 'tm'`). THE one opener: the API
+ * handlers (read, count) open it around their WHOLE body, so every permission
+ * question asked during the request — Gate A's dd15 floor, Gate B, the §7.4
+ * admission gate, the per-ddo floor — judges the SAME scope
+ * (WC-2026-10-22-tm-scope-whole-request). readSection opens it again for its
+ * direct callers; a nested open with the same SQO is the same answer.
+ * A mixed-section SQO opens the scope with NO section: admin-only downstream.
+ */
+export function withTimeMachineReadScope<T>(sqo: unknown, fn: () => Promise<T>): Promise<T> {
+	const record = sqo as Record<string, unknown> | undefined;
+	if (record?.mode !== 'tm') return fn();
+	return runWithTimeMachineScope(resolveTimeMachineScopeSection(record).sectionTipo, fn);
+}
+
+/**
+ * A section's time_machine_list tipo (virtual-aware), or null.
+ *
+ * Agrees with the GRANT WALK (getGrantChildrenTipos — what
+ * set_section_permissions and the access editor grant over): that walk is
+ * RECURSIVE through section_group/tab groupers, so a time_machine_list nested
+ * under a grouper is GRANTED. A direct-children-only lookup made such a grant
+ * invisible to the §7.4 gate — granted in the profile, refused at read time.
+ * The direct lookup runs first (it also sees a virtual section's OWN child);
+ * the recursive walk over the real section is the fallback.
+ */
 export async function getTimeMachineListTipo(sectionTipo: string): Promise<string | null> {
 	const node = await findSectionChildByModel(sectionTipo, 'time_machine_list');
-	return node?.tipo ?? null;
+	if (node !== null) return node.tipo;
+	return findNestedTimeMachineListTipo(sectionTipo);
+}
+
+/** The first time_machine_list the grant walk reaches under the real section. */
+async function findNestedTimeMachineListTipo(sectionTipo: string): Promise<string | null> {
+	const realSectionTipo = await getSectionRealTipo(sectionTipo);
+	for (const tipo of await getGrantChildrenTipos(realSectionTipo)) {
+		if ((await getModelByTipo(tipo)) === 'time_machine_list') return tipo;
+	}
+	return null;
 }
 
 /**

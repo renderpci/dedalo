@@ -13,7 +13,12 @@ import { getMatrixTableFromTipo } from '../ontology/resolver.ts';
 import { getSectionMap } from '../ontology/section_map.ts';
 import type { StructureContextEntry } from '../resolve/structure_context.ts';
 import type { Principal } from '../security/permissions.ts';
+import { currentPrincipal } from '../security/request_context.ts';
 import { buildSectionButtons, sectionRelationListTipo } from './buttons.ts';
+import {
+	canAccessTimeMachineList,
+	getTimeMachineListTipo,
+} from './list_definitions/time_machine_list.ts';
 
 /** Inputs the section stamp needs from the calling structure-context build. */
 export interface SectionStampParams {
@@ -35,6 +40,7 @@ export interface SectionStampParams {
  * Stamp the section-only context extras onto `entry` in place (PHP :2056-2100):
  * - matrix_table (the section's storage table);
  * - config.relation_list_tipo (the inverse-references inspector trigger);
+ * - config.time_machine_list (the inspector history trigger, per principal);
  * - buttons (the section's permission-gated button_* children);
  * - tools (admin path — the section toolbar).
  */
@@ -46,9 +52,10 @@ export async function stampSectionContext(
 	// request context flows into every Promise.all branch, docs/
 	// REQUEST_ISOLATION.md), then assigned in the original field order (the
 	// stamped key order is wire surface).
-	const [matrixTable, relationListTipo, sectionMap, buttons] = await Promise.all([
+	const [matrixTable, relationListTipo, timeMachineList, sectionMap, buttons] = await Promise.all([
 		getMatrixTableFromTipo(params.tipo),
 		sectionRelationListTipo(params.tipo),
+		grantedTimeMachineListTipo(params.tipo, params.principal ?? currentPrincipal()),
 		// section_map: the section_map child node's properties (PHP :2075) — maps
 		// functional roles (term/parent/order/…) to component tipos per scope.
 		getSectionMap(params.tipo),
@@ -58,7 +65,7 @@ export async function stampSectionContext(
 		buildSectionButtons(params.tipo, params.permissions, params.principal),
 	]);
 	entry.matrix_table = matrixTable;
-	entry.config = { relation_list_tipo: relationListTipo };
+	entry.config = { relation_list_tipo: relationListTipo, time_machine_list: timeMachineList };
 	entry.section_map = sectionMap;
 	entry.buttons = buttons;
 	// sqo_session (PHP class.common.php:1695-98, stamped PER CALL — session
@@ -90,4 +97,25 @@ export async function stampSectionContext(
 		const sectionTools = await getSectionTools(params.tipo, toolConfigKeys);
 		entry.tools = sectionTools.tools;
 	}
+}
+
+/**
+ * config.time_machine_list (WC-2026-10-22-tm-scope-whole-request): the
+ * section's time_machine_list tipo when `principal` may read its inspector
+ * history (SECTION_SPEC §7.4 — the SAME canAccessTimeMachineList the read
+ * gate asks), else null. The client renders the Latest changes / Component
+ * history blocks only on a non-null value, so a refused user never sends the
+ * dd15 request at all. Stamped PER CALL and PER PRINCIPAL (this stamp is never
+ * cached); no principal answers null — fail-closed. An admin of a section with
+ * no time_machine_list node gets the section tipo itself: the gate admits a
+ * global admin regardless of the node, and the value is a trigger, not a tipo
+ * the client resolves.
+ */
+async function grantedTimeMachineListTipo(
+	sectionTipo: string,
+	principal: Principal | undefined,
+): Promise<string | null> {
+	if (principal === undefined) return null;
+	if (!(await canAccessTimeMachineList(principal, sectionTipo))) return null;
+	return (await getTimeMachineListTipo(sectionTipo)) ?? sectionTipo;
 }
