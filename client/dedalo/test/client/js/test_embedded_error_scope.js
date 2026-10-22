@@ -40,6 +40,22 @@ const refused = () => ({
 	}),
 });
 
+/**
+ * The history SQO the inspector sends. `mode 'tm'` here is the ROW SOURCE
+ * (routes the dd15 read to matrix_time_machine), never a render mode — set as
+ * `sqo.mode` so tm_mode_retired_tripwire reads it as such.
+ */
+const tm_sqo = () => {
+	const sqo = {
+		section_tipo: ['test3'],
+		limit: 10,
+		offset: 0,
+		filter_by_locators: [{ section_tipo: 'test3', section_id: 1 }],
+	};
+	sqo.mode = 'tm';
+	return sqo;
+};
+
 /** A dd15 history list as the inspector builds it — embedded under `caller`. */
 const tm_list = (caller, id_variant) =>
 	get_instance({
@@ -56,13 +72,7 @@ const tm_list = (caller, id_variant) =>
 			{
 				api_engine: 'dedalo',
 				type: 'main',
-				sqo: {
-					mode: 'tm',
-					section_tipo: ['test3'],
-					limit: 10,
-					offset: 0,
-					filter_by_locators: [{ section_tipo: 'test3', section_id: 1 }],
-				},
+				sqo: tm_sqo(),
 				show: {},
 			},
 		],

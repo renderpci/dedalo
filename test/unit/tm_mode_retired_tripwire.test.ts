@@ -58,12 +58,6 @@ const EXEMPT_SITES: readonly ExemptSite[] = [
 	},
 	{
 		file: 'src/core/section/read.ts',
-		contains: 'rqo.sqo as',
-		reason:
-			'readSection opens the TM scope on the ROW SOURCE, so the permission floor and the ddinfo suppression can see that a history read is in progress',
-	},
-	{
-		file: 'src/core/section/read.ts',
 		contains: "): 'tm' | 'temporal' | 'search' | null",
 		reason:
 			"the null-record KIND label — a data_source discriminator for the tool's preview pane, not a render mode",
@@ -160,7 +154,7 @@ describe('the ddo/display mode tm stays retired', () => {
 			offenders,
 			`The ddo/display mode 'tm' is retired (WC-2026-08-14-tm-ddo-mode-retired).\n` +
 				`These sites reintroduce it as a RENDER mode. If one is legitimate, add it to\n` +
-				`DECLARED_EXEMPTIONS in this file WITH ITS REASON — never silently.\n` +
+				`EXEMPT_SITES in this file WITH ITS REASON — never silently.\n` +
 				`Note: sqo.mode 'tm' is the ROW SOURCE and is always allowed.`,
 		).toEqual([]);
 	});

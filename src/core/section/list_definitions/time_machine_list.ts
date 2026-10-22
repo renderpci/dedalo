@@ -99,10 +99,10 @@ function scopeFromTipoFilter(sqo: Record<string, unknown>): string | null {
  * direct callers; a nested open with the same SQO is the same answer.
  * A mixed-section SQO opens the scope with NO section: admin-only downstream.
  */
-export function withTimeMachineReadScope<T>(sqo: unknown, fn: () => Promise<T>): Promise<T> {
-	const record = sqo as Record<string, unknown> | undefined;
-	if (record?.mode !== 'tm') return fn();
-	return runWithTimeMachineScope(resolveTimeMachineScopeSection(record).sectionTipo, fn);
+export function withTimeMachineReadScope<T>(rawSqo: unknown, fn: () => Promise<T>): Promise<T> {
+	const sqo = rawSqo as Record<string, unknown> | undefined;
+	if (sqo?.mode !== 'tm') return fn();
+	return runWithTimeMachineScope(resolveTimeMachineScopeSection(sqo).sectionTipo, fn);
 }
 
 /**
