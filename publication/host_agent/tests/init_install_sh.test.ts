@@ -122,7 +122,7 @@ describe('install.sh constants equal the TS ones', () => {
       expect(index, needle).toBeGreaterThan(-1);
       return index;
     };
-    const fetch = at('curl -fsSL');
+    const fetch = at('fetch_https "$BASE'); // main's first download (the door: init_install_sh_fetch.test.ts)
     expect(at('FAMILY=$(family_of /etc/os-release) || exit 3')).toBeLessThan(fetch);
     expect(at('refuse_kernel "$(uname -r)"')).toBeLessThan(fetch);
     expect(at('hold_install_lock "$STATE"')).toBeLessThan(at('rm -rf "$STAGE"'));

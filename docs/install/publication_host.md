@@ -303,8 +303,9 @@ sh /home/museum.org/host_agent/deploy/install.sh museum_org
 - copies the source into a root-only directory,
   `/var/lib/dedalo_publication_host_init/museum_org/stage/`, refusing any special file and any
   symbolic link that leaves the tree, and shows its digest for you to confirm;
-- downloads the Bun archive for the CPU over https only, and checks it against the hash table
-  committed in the source (`.bun-sha256`, [below](#the-bun-hash-table)). Bun's own
+- downloads the Bun archive for the CPU over https only, each download within a deadline (a
+  server that stops answering ends the run with a line naming `--mirror` and `--offline`, never
+  a hang), and checks it against the hash table committed in the source (`.bun-sha256`, [below](#the-bun-hash-table)). Bun's own
   `SHASUMS256.txt` is a cross-check that must agree. `bun --version` runs only after the hash
   matched;
 - starts Bun from that root-only copy, with an empty environment and none of the files a

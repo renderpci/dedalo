@@ -1018,6 +1018,15 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The publication host's `install.sh` no longer hangs on a stalled Bun download.**
+
+    Before, `install.sh` downloaded Bun with a size limit only: a mirror (or GitHub) that accepted the
+    connection and then stopped answering — during the TLS handshake or mid-download — left the
+    install waiting forever, holding its lock. Now every download has a connect deadline and a total
+    deadline; when one passes, `install.sh` stops with a line saying so and naming the ways on
+    (retry, `--mirror <https base url>`, or `--offline <bun zip>`). See the
+    [publication host guide](./install/publication_host.md).
+
 - **Installing or resetting a thesaurus no longer waits without limit behind another session's lock**
 
     **Maintenance › Install hierarchies** (both **Install** and **Reset to seed**) imports

@@ -31,8 +31,8 @@
 # Library mode (the tests): `set -- --lib; . deploy/install.sh` defines the functions and does
 # not run main. The library functions (verify_bun, check_tree, tree_digest, family_of,
 # refuse_host, refuse_kernel, hold_install_lock, pick_asset, kit_names_ok, kit_types_ok,
-# verify_kit) use POSIX tools plus $SHA256 (and
-# hold_install_lock util-linux flock) only; GNU-only forms (stat -c) are confined to main and the
+# verify_kit, fetch_https) use POSIX tools plus $SHA256 (and hold_install_lock util-linux flock,
+# fetch_https curl) only; GNU-only forms (stat -c) are confined to main and the
 # re-run trust check, which run only on Linux. There is no `set -e`: a function that dies inside
 # `$(…)` exits only that subshell, so every such assignment in main ends `|| exit 3`.
 #
@@ -42,6 +42,14 @@
 INIT_BASE=/var/lib/dedalo_publication_host_init
 BUN_ASSETS='bun-linux-aarch64 bun-linux-x64-baseline bun-linux-x64'
 BUN_RELEASE_BASE=https://github.com/oven-sh/bun/releases/download
+# Every download is bounded in TIME as well as size (tests/init_install_sh_fetch.test.ts): a mirror
+# that accepts and then stalls — in the TLS handshake or mid-body — ends the run through `die`,
+# never hangs a root install holding its lock. FETCH_CONNECT_S bounds TCP + TLS; each fetch has its
+# own total (the archive's covers ~40 MB at ~200 kbit/s; slower links: --offline). The pinned
+# sha256 gates whatever arrives.
+FETCH_CONNECT_S=30
+BUN_ZIP_MAX_S=1800
+BUN_SUMS_MAX_S=60
 # SOURCE_MANIFEST: <path>:<file|tree>, in init/constants.ts order; excludes are tree children.
 SOURCE_MANIFEST='.bun-version:file .bun-sha256:file publication/host_agent:tree publication/server_api/v2/.env.example:file publication/server_api/v1/config_api/sample.server_config_api.php:file'
 SOURCE_EXCLUDES='publication/host_agent/.test-tmp'
@@ -148,6 +156,19 @@ hold_install_lock() {
   exec 9>>"$_lock" || die "cannot open $_lock"
   flock -n 9 ||
     die "another install.sh (or its init) is running for this instance (it holds $_lock): wait for it to finish, then re-run"
+}
+
+# fetch_https <url> <out> <max bytes> <max seconds>: THE one download door (no other curl in this
+# file). HTTPS only (redirects too), TLS 1.2+, size-capped, and time-bounded: no connection within
+# FETCH_CONNECT_S, or no whole transfer within <max seconds>, dies (exit 3) naming the deadline and
+# the ways on; any other failure dies naming curl's exit.
+fetch_https() {
+  curl -fsSL --proto =https --proto-redir =https --tlsv1.2 --max-filesize "$3" \
+    --connect-timeout "$FETCH_CONNECT_S" --max-time "$4" -o "$2" "$1"
+  _rc=$?
+  [ "$_rc" -eq 0 ] && return 0
+  [ "$_rc" -eq 28 ] && die "download of $1 timed out (no connection within ${FETCH_CONNECT_S}s, or not complete within ${4}s): retry, or use --mirror <https base url> or --offline <bun zip> [<SHASUMS256.txt>]"
+  die "download of $1 failed (curl exit $_rc)"
 }
 
 # pkg_hint <family>: the command that installs the tools main needs.
@@ -597,10 +618,8 @@ main() {
     else
       BASE=${MIRROR:-$BUN_RELEASE_BASE}
       case "$BASE" in https://*) ;; *) die '--mirror must start with https://' ;; esac
-      curl -fsSL --proto =https --proto-redir =https --tlsv1.2 --max-filesize 200000000 \
-        -o "$ZIP" "$BASE/bun-v$PIN/$ASSET.zip" || die "download of $ASSET.zip failed"
-      curl -fsSL --proto =https --proto-redir =https --tlsv1.2 --max-filesize 1000000 \
-        -o "$SUMS" "$BASE/bun-v$PIN/SHASUMS256.txt" || die 'download of SHASUMS256.txt failed'
+      fetch_https "$BASE/bun-v$PIN/$ASSET.zip" "$ZIP" 200000000 "$BUN_ZIP_MAX_S"
+      fetch_https "$BASE/bun-v$PIN/SHASUMS256.txt" "$SUMS" 1000000 "$BUN_SUMS_MAX_S"
     fi
     verify_bun "$ZIP" "$SUMS" "$ASSET" "$PIN" "$STAGE/source/.bun-sha256" "$STAGE/bun"
     BUNX=$STAGE/bun/bun
