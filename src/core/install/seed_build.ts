@@ -234,14 +234,20 @@ async function psqlOk(
 	return run.stdout;
 }
 
-/** `-tA` rows of a one-column query. */
+/**
+ * `-tA` rows of a one-column query. The SQL rides psql's STDIN (`-f -`), NEVER an
+ * argv element: Linux caps ONE argv string at MAX_ARG_STRLEN (128 KiB) and the
+ * int-clean census (stringAddressResidue) is one UNION ALL over every jsonb column —
+ * past that cap, so posix_spawn failed with E2BIG in the CI image while macOS (no
+ * per-string cap) stayed green. Gate: seed_section_id_int_clean_native (d).
+ */
 async function psqlColumn(
 	conn: DbConnDescriptor,
 	database: string,
 	query: string,
 	what: string,
 ): Promise<string[]> {
-	const out = await psqlOk(conn, database, ['-tA', '-c', query], what);
+	const out = await psqlOk(conn, database, ['-tA', '-f', '-'], what, query);
 	return out === '' ? [] : out.split('\n');
 }
 

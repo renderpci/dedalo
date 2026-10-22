@@ -64,7 +64,9 @@
  * file can be a gigabyte decompressed (`in1.copy.gz`: 27.9 MB → 1.07 GB): the digest,
  * the row count and the load are each a streaming pass over the file — psql's stdin is
  * a pull stream (backpressure), so the process holds a chunk and one partial row, never
- * the file (gate: hierarchy_import_stream_memory_native).
+ * the file — and what it streamed is collected AS IT GOES (pacedCollection): in a process
+ * whose live heap is large the collector otherwise lets the garbage of a big pass pile up
+ * past the file's own size (gate: hierarchy_import_stream_memory_native).
  *
  * INT-CLEAN (WC-2026-10-21-seed-and-thesaurus-int-clean). The vendored files are PHP-era
  * exports carrying record addresses in the repealed string form; every row passes the
@@ -292,10 +294,34 @@ function listedSection(file: string): string {
 	return file.replace(/\.copy\.gz$/, '');
 }
 
+/** A collection requested per this many bytes a pass streams through the process. */
+const STREAM_COLLECT_EVERY_BYTES = 32 << 20;
+
+/**
+ * The chunks of `source`, unchanged, with a collection requested (non-blocking,
+ * `Bun.gc(false)`) every STREAM_COLLECT_EVERY_BYTES. WHY: every byte a pass streams
+ * arrives in a fresh Buffer, and the collector paces itself on the LIVE heap — so in a
+ * process whose heap is already large (the server; the unit tier's one `bun test`
+ * process) the garbage of a big pass piles up before it is reclaimed. Measured in the
+ * CI image with a large live heap, gunzipping 512 MiB: +80..234 MB of resident set
+ * unpaced, ~50 MB paced (cross-ops W4 seed-import).
+ */
+async function* pacedCollection(source: AsyncIterable<Uint8Array>): AsyncGenerator<Uint8Array> {
+	let since = 0;
+	for await (const chunk of source) {
+		since += chunk.length;
+		if (since >= STREAM_COLLECT_EVERY_BYTES) {
+			since = 0;
+			Bun.gc(false);
+		}
+		yield chunk;
+	}
+}
+
 /** sha256 of a file's bytes, streamed. */
 async function fileSha256(path: string): Promise<string> {
 	const hash = createHash('sha256');
-	for await (const chunk of createReadStream(path)) hash.update(chunk as Buffer);
+	for await (const chunk of pacedCollection(createReadStream(path))) hash.update(chunk);
 	return hash.digest('hex');
 }
 
@@ -311,8 +337,7 @@ function gunzipStream(path: string): Readable {
 async function gzipCopyRowCount(path: string): Promise<number> {
 	let rows = 0;
 	let last = 0x0a;
-	for await (const chunk of gunzipStream(path)) {
-		const bytes = chunk as Buffer;
+	for await (const bytes of pacedCollection(gunzipStream(path))) {
 		if (bytes.length === 0) continue;
 		for (let at = bytes.indexOf(0x0a); at !== -1; at = bytes.indexOf(0x0a, at + 1)) rows++;
 		last = bytes[bytes.length - 1] as number;
@@ -578,7 +603,7 @@ async function* importScript(
 		try {
 			// COPY text format escapes every backslash in the data, so no data line can
 			// be the bare `\.` terminator; every row comes out newline-terminated.
-			yield* canonicalCopyChunks(source.pipe(gunzip), jsonbIndexes, tally);
+			yield* canonicalCopyChunks(pacedCollection(source.pipe(gunzip)), jsonbIndexes, tally);
 		} finally {
 			// psql gone (a failed statement) or the stream cancelled: never leave the fd open.
 			source.destroy();

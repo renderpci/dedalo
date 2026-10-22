@@ -145,28 +145,112 @@ export function canonicalCopyRow(
 	return fields.join('\t');
 }
 
+const NEWLINE = 0x0a;
+
+/**
+ * The byte run every string-address key contains (STRING_ADDRESS names `section_id`,
+ * `section_id_key` and `parent_section_id`): rows without it have nothing to convert.
+ */
+const ADDRESS_KEY_BYTES = Buffer.from('section_id');
+
+/**
+ * The rows being gathered: their byte parts as they arrived (never copied), whether
+ * the address key occurs in them, and the last key-length-minus-one bytes seen (the
+ * key may straddle two parts).
+ */
+interface RowParts {
+	parts: Uint8Array[];
+	hasKey: boolean;
+	carry: Buffer;
+}
+
+function emptyRowParts(): RowParts {
+	return { parts: [], hasKey: false, carry: Buffer.alloc(0) };
+}
+
+/** Add one part, keeping `hasKey` exact across part boundaries. */
+function addPart(rows: RowParts, part: Uint8Array): void {
+	if (part.length === 0) return;
+	rows.parts.push(part);
+	if (rows.hasKey) return;
+	const bytes = Buffer.from(part.buffer, part.byteOffset, part.byteLength);
+	const keep = ADDRESS_KEY_BYTES.length - 1;
+	const seam = Buffer.concat([rows.carry, bytes.subarray(0, keep)]);
+	if (seam.indexOf(ADDRESS_KEY_BYTES) !== -1 || bytes.indexOf(ADDRESS_KEY_BYTES) !== -1) {
+		rows.hasKey = true;
+		return;
+	}
+	const tail = Buffer.concat([rows.carry, bytes.subarray(Math.max(0, bytes.length - keep))]);
+	rows.carry = Buffer.from(tail.subarray(Math.max(0, tail.length - keep)));
+}
+
 /**
  * STREAMING: COPY text bytes in, the same rows canonicalized out, every row
  * newline-terminated (a last row without its newline gets one). Memory is one
- * chunk plus one partial row — never the whole file.
+ * chunk plus one partial row — never the whole file — and nothing is allocated
+ * per byte for a row that carries no address key (cross-ops W4 seed-import,
+ * measured in the CI image).
+ *
+ * THE DEFECT THIS SHAPE REPLACES: the partial row was a STRING grown by `+=` per
+ * chunk and searched with `lastIndexOf` per chunk, which flattens the rope each
+ * time — a 1 MiB row arriving in 16 KiB chunks allocated ~32 MiB of discarded
+ * strings, 16 GiB over a 512 MiB thesaurus — and every row was decoded and
+ * re-encoded whether or not it could change. In a process whose live heap is
+ * already large (the server, the unit tier's one `bun test` process) the collector
+ * lets that garbage pile up: +975 MB of resident set importing a 512 MiB file
+ * (gate: hierarchy_import_stream_memory_native). Now row boundaries are found in
+ * the BYTES; rows without the address key go out as the very parts that came in
+ * (no join, no decode — NEVER ALTERS ANYTHING ELSE, byte for byte); only rows that
+ * may carry a string address are joined and decoded, once.
  */
 export async function* canonicalCopyChunks(
 	source: AsyncIterable<Uint8Array>,
 	jsonbIndexes: readonly number[],
 	tally: CopySectionIdTally,
 ): AsyncGenerator<Uint8Array> {
-	const decoder = new TextDecoder();
-	const encoder = new TextEncoder();
-	let pending = '';
+	let rows = emptyRowParts();
 	for await (const chunk of source) {
-		pending += decoder.decode(chunk, { stream: true });
-		const cut = pending.lastIndexOf('\n');
-		if (cut === -1) continue;
-		const complete = pending.slice(0, cut);
-		pending = pending.slice(cut + 1);
-		const rows = complete.split('\n').map((line) => canonicalCopyRow(line, jsonbIndexes, tally));
-		yield encoder.encode(`${rows.join('\n')}\n`);
+		const cut = chunk.lastIndexOf(NEWLINE);
+		if (cut === -1) {
+			addPart(rows, chunk);
+			continue;
+		}
+		addPart(rows, chunk.subarray(0, cut + 1));
+		yield* completeRows(rows, jsonbIndexes, tally);
+		rows = emptyRowParts();
+		addPart(rows, chunk.subarray(cut + 1));
 	}
-	pending += decoder.decode();
-	if (pending !== '') yield encoder.encode(`${canonicalCopyRow(pending, jsonbIndexes, tally)}\n`);
+	if (rows.parts.length > 0) {
+		addPart(rows, Uint8Array.of(NEWLINE));
+		yield* completeRows(rows, jsonbIndexes, tally);
+	}
+}
+
+/**
+ * Whole rows (the last part ends with its newline): passed through part by part
+ * when the address key is absent, else joined and canonicalized (the same bytes
+ * when no row changes). Rows split only at a newline byte, never part of a
+ * multi-byte UTF-8 sequence, so joined rows are whole characters; an invalid
+ * sequence in rows that must be read throws (`fatal`) instead of becoming U+FFFD —
+ * the load would refuse that byte anyway, and nothing is altered silently.
+ */
+function* completeRows(
+	rows: RowParts,
+	jsonbIndexes: readonly number[],
+	tally: CopySectionIdTally,
+): Generator<Uint8Array> {
+	if (!rows.hasKey) {
+		yield* rows.parts;
+		return;
+	}
+	const block = rows.parts.length === 1 ? (rows.parts[0] as Uint8Array) : Buffer.concat(rows.parts);
+	const text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(block);
+	const lines = text.slice(0, -1).split('\n');
+	let changed = false;
+	const out = lines.map((line) => {
+		const row = canonicalCopyRow(line, jsonbIndexes, tally);
+		if (row !== line) changed = true;
+		return row;
+	});
+	yield changed ? new TextEncoder().encode(`${out.join('\n')}\n`) : block;
 }

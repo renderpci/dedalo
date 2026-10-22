@@ -13,8 +13,18 @@
  * THE LAW (measured): importing a listed file of ~512 MiB decompressed (a scratch
  * tld `zzhim`, the lane SUITE database, the REAL psql path) grows this process's
  * resident set by far less than the file — the digest, the row count and the load
- * are streaming passes. Own file, run alone: an earlier gate's freed heap would hide
- * a regression inside the allocator's retained pages.
+ * are streaming passes — IN THE SERVER'S CONDITION: a large LIVE heap (BALLAST).
+ *
+ * WHY THE BALLAST (W4 seed-import, measured in the CI image). The collector paces
+ * itself on the live heap, so what a pass leaves as garbage piles up in a process
+ * that already holds a lot — the server, and the unit tier's one `bun test` process
+ * after a few hundred files. This gate was green alone and red in the tier (+975 MB):
+ * the codec grew each partial row as a string (`+=` then `lastIndexOf` per chunk
+ * flattens it — ~32 MiB of discarded strings per 1 MiB row) and nothing paced the
+ * collection of the streamed chunks. Alone, a small heap collected it all in time and
+ * hid that. With the ballast the verdict no longer depends on which files ran first:
+ * HEAD-before measured +490 MB here, fixed +82 MB. The control leg proves the sampler
+ * sees resident growth at all.
  *
  * SURFACES. assertTestDatabase first; `zzhim1` rows of matrix_hierarchy and their
  * matrix_counter row, swept before and after; the file in a mkdtemp dir.
@@ -39,6 +49,9 @@ const ROWS = 512;
 const PAYLOAD = 'x'.repeat(1 << 20);
 /** The ceiling: a quarter of what one decompressed copy of the file alone would take. */
 const CEILING_BYTES = (ROWS << 20) / 4;
+/** The server's condition: ~1M small live objects + 100 MiB of live strings (see the header). */
+const BALLAST_OBJECTS = 1_000_000;
+const BALLAST_STRINGS = 100;
 const conn = connFromConfig();
 let importDir = '';
 let file = '';
@@ -87,26 +100,57 @@ afterAll(async () => {
 	rmSync(importDir, { recursive: true, force: true });
 });
 
+/** A large live heap, held by the caller for as long as it measures. */
+function liveHeapBallast(): { objects: unknown[]; strings: string[] } {
+	const objects: unknown[] = [];
+	for (let at = 0; at < BALLAST_OBJECTS; at++) objects.push({ at, label: `b${at}`, pair: [at] });
+	const strings: string[] = [];
+	for (let at = 0; at < BALLAST_STRINGS; at++) strings.push(`${'b'.repeat(1 << 20)}${at}`);
+	return { objects, strings };
+}
+
+/** Peak resident growth while `work` runs (sampled every 10 ms, from a collected baseline). */
+async function residentGrowth<T>(work: () => Promise<T>): Promise<{ grew: number; value: T }> {
+	Bun.gc(true);
+	const baseline = process.memoryUsage().rss;
+	let peak = baseline;
+	const sampler = setInterval(() => {
+		peak = Math.max(peak, process.memoryUsage().rss);
+	}, 10);
+	let value: T;
+	try {
+		value = await work();
+	} finally {
+		clearInterval(sampler);
+	}
+	peak = Math.max(peak, process.memoryUsage().rss);
+	return { grew: peak - baseline, value };
+}
+
 describe('importHierarchyRows never holds a decompressed file', () => {
+	test('control: the sampler sees a touched allocation of twice the ceiling', async () => {
+		const { grew, value } = await residentGrowth(async () => {
+			const held = Buffer.alloc(CEILING_BYTES * 2, 1);
+			await Bun.sleep(50);
+			return held.length;
+		});
+		expect(value).toBe(CEILING_BYTES * 2);
+		expect(grew, 'the probe measures resident growth').toBeGreaterThan(CEILING_BYTES);
+	});
+
 	test('a ~512 MiB thesaurus file imports with the process growing far less than the file', async () => {
 		expect(statSync(file).size, 'the fixture is small on disk').toBeLessThan(16 << 20);
 		const sha256 = createHash('sha256').update(readFileSync(file)).digest('hex');
-		Bun.gc(true);
-		const baseline = process.memoryUsage().rss;
-		let peak = baseline;
-		const sampler = setInterval(() => {
-			peak = Math.max(peak, process.memoryUsage().rss);
-		}, 10);
-		let result: Awaited<ReturnType<typeof importHierarchyRows>>;
-		try {
-			result = await importHierarchyRows(conn, TLD, {
+		let ballast: ReturnType<typeof liveHeapBallast> | null = liveHeapBallast();
+		const { grew, value: result } = await residentGrowth(() =>
+			importHierarchyRows(conn, TLD, {
 				importDir,
 				dataFiles: [{ file: `${TLD}1.copy.gz`, sha256 }],
-			});
-		} finally {
-			clearInterval(sampler);
-		}
-		peak = Math.max(peak, process.memoryUsage().rss);
+			}),
+		);
+		// Held through the measurement (non-vacuity), released after it.
+		expect(ballast.objects.length + ballast.strings.length).toBe(BALLAST_OBJECTS + BALLAST_STRINGS);
+		ballast = null;
 		expect(result, JSON.stringify(result)).toMatchObject({ ok: true });
 		// Non-vacuity: every row really landed, payload whole.
 		const [landed] = (await sql.unsafe(
@@ -114,7 +158,6 @@ describe('importHierarchyRows never holds a decompressed file', () => {
 			[],
 		)) as { n: number; shortest: number }[];
 		expect(landed).toEqual({ n: ROWS, shortest: PAYLOAD.length });
-		const grew = peak - baseline;
 		expect(
 			grew,
 			`resident set grew ${Math.round(grew / 1e6)} MB importing a ${ROWS} MiB file`,

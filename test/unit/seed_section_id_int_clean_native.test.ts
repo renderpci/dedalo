@@ -17,6 +17,14 @@
  *  (c) the compiler's own census (seed_build.ts stringAddressResidue) names a string
  *      address planted in a scratch database and finds nothing on a clean one — the
  *      compile refuses to ship a residue its canonicalization missed.
+ *  (d) BOTH censuses (the compiler's and the content contract's own,
+ *      test/helpers/seed_contract.ts sectionIdStringResidue) send their SQL on psql's
+ *      STDIN, never in argv: one UNION ALL over every jsonb column is past Linux's
+ *      MAX_ARG_STRLEN (128 KiB per argv string) — posix_spawn E2BIG in the CI image
+ *      (W4 seed-import), invisible on macOS, which caps no single string. Measured on a
+ *      scratch database WIDE enough that the census statement is past that cap: every
+ *      psql argv string stays under ARGV_SQL_BOUND, the census bytes went down stdin,
+ *      and a planted address is still found.
  * The committed seed itself is held to the census + marker by the content contract
  * (test/helpers/seed_contract.ts → install_seed_contract_native, seed_build_native).
  *
@@ -30,7 +38,7 @@ import { seedDataSql, stringAddressResidue } from '../../src/core/install/seed_b
 import { SEED_RECORDS } from '../../src/core/install/seed_sources.ts';
 import { intifySectionIdsInValue } from '../../src/core/update/transform/section_id_intify.ts';
 import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
-import { column } from '../helpers/seed_contract.ts';
+import { column, sectionIdStringResidue } from '../helpers/seed_contract.ts';
 
 const PREFIX = 'dedalo_seedintclean_';
 const SCRATCH = `${PREFIX}${process.pid}`;
@@ -57,6 +65,55 @@ beforeAll(async () => {
 		'CREATE TABLE dd_ontology (id serial PRIMARY KEY, tipo text, relations jsonb, properties jsonb)',
 	);
 }, 60_000);
+
+/** The largest argv string a census psql spawn may carry (no SQL statement of size rides argv). */
+const ARGV_SQL_BOUND = 4096;
+/** Linux's cap on ONE argv string (MAX_ARG_STRLEN = 32 pages): the census must exceed it. */
+const LINUX_MAX_ARG_STRLEN = 128 * 1024;
+/** jsonb tables of the wide scratch schema (3 census legs each, ~330 bytes a leg). */
+const WIDE_TABLES = 200;
+
+/**
+ * Every psql spawn's argv, and the bytes written to its stdin, while `work` runs.
+ * Bun.spawn is wrapped for the call only; a psql child is handed back behind a proxy
+ * whose `stdin` counts what runPsql writes (the FileSink's own methods are read-only).
+ */
+async function observePsqlSpawns<T>(
+	work: () => Promise<T>,
+): Promise<{ value: T; argvs: string[][]; stdinBytes: number }> {
+	const realSpawn = Bun.spawn;
+	const argvs: string[][] = [];
+	let stdinBytes = 0;
+	const spy = (cmd: string[], options?: Parameters<typeof Bun.spawn>[1]) => {
+		const child = realSpawn(cmd, options);
+		if (!String(cmd[0]).endsWith('psql')) return child;
+		argvs.push([...cmd]);
+		const sink = child.stdin as import('bun').FileSink | null | number | undefined;
+		if (sink === null || sink === undefined || typeof sink === 'number') return child;
+		const counted = {
+			write: (data: Parameters<import('bun').FileSink['write']>[0]) => {
+				stdinBytes += typeof data === 'string' ? Buffer.byteLength(data) : data.byteLength;
+				return sink.write(data);
+			},
+			end: () => sink.end(),
+			flush: () => sink.flush(),
+		};
+		return new Proxy(child, {
+			get(target, key) {
+				if (key === 'stdin') return counted;
+				const value = Reflect.get(target, key);
+				return typeof value === 'function' ? value.bind(target) : value;
+			},
+		});
+	};
+	(Bun as { spawn: unknown }).spawn = spy;
+	try {
+		const value = await work();
+		return { value, argvs, stdinBytes };
+	} finally {
+		(Bun as { spawn: unknown }).spawn = realSpawn;
+	}
+}
 
 afterAll(async () => {
 	await column(admin, `DROP DATABASE IF EXISTS "${SCRATCH}" WITH (FORCE)`);
@@ -116,4 +173,34 @@ describe('the seed is born int-clean', () => {
 			'matrix_users.relation section_id: 2',
 		]);
 	}, 60_000);
+
+	test('(d) both censuses send their SQL on stdin — never an argv string past the bound', async () => {
+		const tables = Array.from(
+			{ length: WIDE_TABLES },
+			(_, at) => `CREATE TABLE zz_wide_${String(at).padStart(3, '0')} (relation jsonb);`,
+		);
+		await column(scratch, tables.join('\n'));
+		await column(
+			scratch,
+			`INSERT INTO zz_wide_137 (relation) VALUES ('{"x": [{"section_id": "4", "section_tipo": "dd128"}]}')`,
+		);
+		const compiler = await observePsqlSpawns(() => stringAddressResidue(admin, SCRATCH));
+		const contract = await observePsqlSpawns(() => sectionIdStringResidue(scratch));
+		// Outcome: the wide census really ran — the planted address is named.
+		expect(compiler.value).toContain('zz_wide_137.relation section_id: 1');
+		expect(contract.value).toContain('zz_wide_137.relation:section_id=1');
+		for (const [door, run] of [
+			['seed_build.ts stringAddressResidue', compiler],
+			['seed_contract.ts sectionIdStringResidue', contract],
+		] as const) {
+			// Non-vacuity: psql was spawned, and the census statement (bytes on stdin) is
+			// one Linux could not have carried as a single argv string.
+			expect(run.argvs.length, door).toBeGreaterThanOrEqual(2);
+			const longest = Math.max(...run.argvs.flat().map((arg) => Buffer.byteLength(arg)));
+			expect(longest, `${door}: longest psql argv string`).toBeLessThanOrEqual(ARGV_SQL_BOUND);
+			expect(run.stdinBytes, `${door}: census bytes on stdin`).toBeGreaterThan(
+				LINUX_MAX_ARG_STRLEN,
+			);
+		}
+	}, 120_000);
 });

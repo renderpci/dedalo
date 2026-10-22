@@ -36,9 +36,15 @@ import {
 import { REGISTRY_PROVISION_INPUTS_SQL } from '../../src/core/ontology/hierarchy_state.ts';
 import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 
-/** One-column `-tA` rows (a failed query fails the gate with psql's sentence). */
+/**
+ * One-column `-tA` rows (a failed query fails the gate with psql's sentence). The SQL
+ * rides psql's STDIN, never argv — the census below is past Linux's 128 KiB cap on one
+ * argv string (E2BIG at posix_spawn; seed_section_id_int_clean_native (d)).
+ */
 export async function column(conn: DbConnDescriptor, query: string): Promise<string[]> {
-	const run = await runPsql(conn, ['-X', '-v', 'ON_ERROR_STOP=1', '-tAc', query]);
+	const run = await runPsql(conn, ['-X', '-v', 'ON_ERROR_STOP=1', '-tA', '-f', '-'], {
+		stdin: query,
+	});
 	expect(run.exitCode, run.stderr).toBe(0);
 	return run.stdout === '' ? [] : run.stdout.split('\n');
 }

@@ -9,7 +9,10 @@
  *  - a field whose numbers would not survive a JS round trip (`40.0`, > 2^53) is KEPT
  *    verbatim and counted, never silently altered;
  *  - a row without a string address is passed through byte for byte;
- *  - streaming: a row split across chunks and a last row without its newline.
+ *  - streaming: a row split across chunks and a last row without its newline; rows
+ *    without the address key leave as the very bytes that came in (an invalid UTF-8
+ *    byte and a BOM included — never decoded); the key found wherever a chunk boundary
+ *    cuts it (every chunk size 1..13 agrees with the row codec).
  * Pure (no database).
  */
 
@@ -138,5 +141,45 @@ describe('canonicalCopyChunks (streaming)', () => {
 			{ r: [{ section_id: 2, section_tipo: 'dd64' }] },
 		]);
 		expect(tally).toEqual({ rows: 2, converted: 2, kept: 0 });
+	});
+});
+
+/** Every chunk `canonicalCopyChunks` yields over `bytes` cut every `size` bytes, joined. */
+async function streamed(bytes: Uint8Array, size: number, tally = newCopySectionIdTally()) {
+	async function* chunks() {
+		for (let at = 0; at < bytes.length; at += size) yield bytes.slice(at, at + size);
+	}
+	const parts: Uint8Array[] = [];
+	for await (const chunk of canonicalCopyChunks(chunks(), INDEXES, tally)) parts.push(chunk);
+	return Buffer.concat(parts);
+}
+
+describe('canonicalCopyChunks (byte fidelity, W4 seed-import)', () => {
+	test('rows without the address key pass through byte for byte (invalid UTF-8, BOM)', async () => {
+		const text = Buffer.from(`${row('{"r": [{"tipo": "dd64"}]}')}\n${row(null)}\n`);
+		const bytes = Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), text, Buffer.from([0xff, 0x0a])]);
+		for (const size of [1, 5, 16_384]) {
+			const tally = newCopySectionIdTally();
+			expect(Buffer.compare(await streamed(bytes, size, tally), bytes), `size ${size}`).toBe(0);
+			expect(tally).toEqual({ rows: 0, converted: 0, kept: 0 });
+		}
+	});
+
+	test('the key is found wherever a chunk boundary cuts it', async () => {
+		const lines = [
+			row('{"r": [{"section_id": "3", "section_tipo": "dd64"}]}'),
+			row('{"r": [{"tipo": "dd64"}]}'),
+			row(null, '{"label": "x", "p": [{"parent_section_id": "8", "section_tipo": "dd64"}]}'),
+			row('{"r": [{"section_id_key": "5", "section_tipo_key": "dd64"}]}'),
+		];
+		const bytes = Buffer.from(`${lines.join('\n')}\n`);
+		const reference = newCopySectionIdTally();
+		const expected = `${lines.map((line) => canonicalCopyRow(line, INDEXES, reference)).join('\n')}\n`;
+		expect(reference.converted).toBeGreaterThanOrEqual(3);
+		for (let size = 1; size <= 13; size++) {
+			const tally = newCopySectionIdTally();
+			expect((await streamed(bytes, size, tally)).toString('utf8'), `size ${size}`).toBe(expected);
+			expect(tally, `size ${size}`).toEqual(reference);
+		}
 	});
 });
