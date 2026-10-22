@@ -5,9 +5,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {update_process_status} from '../../../../common/js/common.js'
 	import {init_move_transform_form} from '../../../js/move_transform.js'
-	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
 	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
@@ -93,9 +91,9 @@ render_move_tld.prototype.list = async function(options) {
 *   (dry run) job of the checked files and streams it into `body_response`; a
 *   preview that ends clean reveals the Execute control, which runs exactly the
 *   previewed files (dry_run:false) as a job after an explicit confirm.
-* - On every render, also checks IndexedDB for a previously running process
-*   (key `'process_move_tld'`) so that a page reload re-attaches to an
-*   in-flight operation.
+* - On every render, the shared flow also re-attaches a process stored in
+*   IndexedDB (`'process_move_tld_execute'` first — it holds the form until it
+*   ends — else `'process_move_tld'`) so a page reload keeps an in-flight run.
 *
 * The `self.value` shape is populated by `move_tld::get_value()` on the PHP
 * side and has the following structure:
@@ -266,27 +264,9 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// check process status always
-		// On every render (including page reloads) check IndexedDB for a
-		// process that was launched in a previous session. If one is found,
-		// re-attach body_response to its status stream automatically so
-		// the operator does not lose visibility of an in-flight migration.
-		const check_process_data = () => {
-			data_manager.get_local_db_data(
-				local_db_id,
-				'status'
-			)
-			.then(function(local_data){
-				if (local_data && local_data.value) {
-					update_process_status(
-						local_db_id,
-						local_data.value.pid,
-						local_data.value.pfile,
-						body_response
-					)
-				}
-			})
-		}
-		check_process_data()
+		// re-attach after a reload: init_move_transform_form above re-attaches a
+		// stored EXECUTE first (it holds the form until its job ends), else a
+		// stored preview — one place for the five move_* widgets (move_transform.js).
 
 	// add at end body_response
 		content_data.appendChild(body_response)

@@ -5,9 +5,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {update_process_status} from '../../../../common/js/common.js'
 	import {init_move_transform_form} from '../../../js/move_transform.js'
-	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
 	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
@@ -33,7 +31,8 @@
 *                                   background API action and returns a
 *                                   response carrying { pid, pfile } so the
 *                                   UI can poll the process status via SSE.
-*   - `data_manager.get_local_db_data` — reads IndexedDB so that an already-
+*   - `init_move_transform_form` (move_transform.js) — also re-attaches a
+*                                   job stored in IndexedDB, so an already-
 *                                   running process is surfaced immediately
 *                                   when the widget is re-rendered mid-run.
 *
@@ -275,26 +274,9 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// check process status always
-		// On every render, probe IndexedDB for a persisted status record from a
-		// previous run. If one exists (e.g. the user navigated away mid-process),
-		// resume SSE polling immediately without requiring a new form submit.
-		const check_process_data = () => {
-			data_manager.get_local_db_data(
-				local_db_id,
-				'status'
-			)
-			.then(function(local_data){
-				if (local_data && local_data.value) {
-					update_process_status(
-						local_db_id,
-						local_data.value.pid,
-						local_data.value.pfile,
-						body_response
-					)
-				}
-			})
-		}
-		check_process_data()
+		// re-attach after a reload: init_move_transform_form above re-attaches a
+		// stored EXECUTE first (it holds the form until its job ends), else a
+		// stored preview — one place for the five move_* widgets (move_transform.js).
 
 	// add at end body_response
 		content_data.appendChild(body_response)

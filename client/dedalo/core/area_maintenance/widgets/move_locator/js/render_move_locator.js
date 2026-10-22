@@ -5,9 +5,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {update_process_status} from '../../../../common/js/common.js'
 	import {init_move_transform_form} from '../../../js/move_transform.js'
-	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
 	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
@@ -122,10 +120,10 @@ render_move_locator.prototype.list = async function(options) {
 *      the PREVIEW (dry run) job, a clean preview reveals the Execute control
 *      (dry_run:false on the previewed files, after a confirm); each job's
 *      `{ pid, pfile }` is streamed into `body_response`.
-*   4. An on-mount check (`check_process_data`) that reads IndexedDB for a
-*      previously stored PID under the key `'process_move_locator'` / `'status'`.
-*      If found, re-attaches `update_process_status` so the user sees progress
-*      after a page reload or widget re-open without having to resubmit.
+*   4. The on-mount re-attach, owned by the shared flow: a job stored in
+*      IndexedDB (`'process_move_locator_execute'` first — it holds the form
+*      until it ends — else `'process_move_locator'`) is re-attached so the user
+*      sees progress after a page reload or widget re-open.
 *
 * `files_selected` is a closure-scoped array that accumulates file_name strings
 * as checkboxes are toggled. It is read on form submit — not re-derived from the
@@ -304,26 +302,9 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// check process status always
-		// On widget mount, check IndexedDB for a PID stored by a previous submission.
-		// If one is found, re-attach the SSE stream so the user sees live progress
-		// without having to press the button again (e.g. after a page reload).
-		const check_process_data = () => {
-			data_manager.get_local_db_data(
-				local_db_id,
-				'status'
-			)
-			.then(function(local_data){
-				if (local_data && local_data.value) {
-					update_process_status(
-						local_db_id,
-						local_data.value.pid,
-						local_data.value.pfile,
-						body_response
-					)
-				}
-			})
-		}
-		check_process_data()
+		// re-attach after a reload: init_move_transform_form above re-attaches a
+		// stored EXECUTE first (it holds the form until its job ends), else a
+		// stored preview — one place for the five move_* widgets (move_transform.js).
 
 
 	// add at end body_response

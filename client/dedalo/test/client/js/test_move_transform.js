@@ -496,6 +496,223 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 		});
 	});
 
+	// AN EXECUTE OWNS ITS PANEL UNTIL IT ENDS (cross-client review r7, 2026-10).
+	// The form does not lock while a job streams, and both runs used ONE panel
+	// and ONE IndexedDB re-attach key. A Preview submitted while an execute job
+	// was still running emptied the panel (the execute's live status went on
+	// updating detached nodes), overwrote the execute's {pid, pfile} and, at its
+	// own end, deleted it: the outcome of an irreversible transform — rolled
+	// back, PARTIAL, UNKNOWN — never reached the operator, nor a reload.
+	describe('an EXECUTE in flight', function () {
+		const wait_until = async (predicate, what, ms = 5000) => {
+			const started = Date.now();
+			while (!(await predicate())) {
+				if (Date.now() - started > ms) throw new Error(`timed out: ${what}`);
+				await new Promise((resolve) => setTimeout(resolve, 20));
+			}
+		};
+
+		it('a Preview is REFUSED while the execute streams: its panel and its re-attach entry stay its own (real tracker)', async function () {
+			this.timeout(15000);
+			const local_db_id = 'zz_process_move_transform_exclusive';
+			const execute_db_id = `${local_db_id}_execute`;
+			await data_manager.delete_local_db_data(local_db_id, 'status');
+			await data_manager.delete_local_db_data(execute_db_id, 'status');
+			const exec_calls = [];
+			const alerts = [];
+			let form = null;
+			let execute_stream = null; // the execute job's open SSE controller
+			const encoder = new TextEncoder();
+			const frame_bytes = (frame) => encoder.encode('data:\n' + JSON.stringify(frame) + '\n\n');
+			const files_selected = ['a.json'];
+			const content_data = document.createElement('div');
+			const body_response = document.createElement('div');
+			const original_fetch = window.fetch;
+			window.fetch = async (url, init) => {
+				const body = JSON.parse(init.body);
+				if (body.action !== 'get_process_status') {
+					throw new Error('unscripted request ' + JSON.stringify(body));
+				}
+				const pfile = body.options.pfile;
+				return new Response(
+					new ReadableStream({
+						start(controller) {
+							if (pfile.startsWith('zz_execute')) {
+								// the execute job: running, its stream left OPEN
+								controller.enqueue(frame_bytes({ is_running: true, data: { msg: 'moving...' }, errors: [] }));
+								execute_stream = controller;
+								return;
+							}
+							controller.enqueue(frame_bytes(clean_preview_frame));
+							controller.close();
+						},
+					}),
+					{ status: 200, headers: { 'content-type': 'text/event-stream' } },
+				);
+			};
+			try {
+				const { execute_button } = init_move_transform_form(
+					{ caller: { init_form: (widget_object) => { form = widget_object; } } },
+					{ model: 'move_tld', submit_label: 'Move TLD terms', files_selected, content_data, body_response, local_db_id },
+					{
+						// exec scripted; track is the REAL update_process_status
+						exec: (model, files, dry_run) => {
+							exec_calls.push({ files: [...files], dry_run });
+							const pfile = `${dry_run ? 'zz_preview' : 'zz_execute'}_${exec_calls.length}.json`;
+							return Promise.resolve({ ok: true, pid: 4242, pfile, dry_run });
+						},
+						confirm: () => true,
+						alert: (text) => alerts.push(text),
+					},
+				);
+				// 1) a clean preview reveals Execute
+				await form.on_submit();
+				await wait_until(() => !execute_button.classList.contains('hide'), 'the clean preview reveals Execute');
+				// 2) the execute starts and streams; it renders its panel
+				execute_button.click();
+				await wait_until(() => execute_stream !== null && body_response.firstElementChild !== null, 'the execute panel');
+				await wait_until(
+					async () => (await data_manager.get_local_db_data(execute_db_id, 'status'))?.value?.pfile === 'zz_execute_2.json',
+					"the execute's re-attach entry under its OWN key",
+				);
+				const execute_panel = body_response.firstElementChild;
+				// 3) a Preview while the execute runs: refused, nothing sent
+				await form.on_submit();
+				await new Promise((resolve) => setTimeout(resolve, 200));
+				assert.strictEqual(exec_calls.length, 2, 'no preview was dispatched');
+				assert.strictEqual(alerts.length, 1, 'the operator is told why');
+				assert.isTrue(body_response.contains(execute_panel), "the execute's live panel is still the one shown");
+				assert.strictEqual(
+					(await data_manager.get_local_db_data(execute_db_id, 'status'))?.value?.pfile,
+					'zz_execute_2.json',
+					"the execute's re-attach entry is intact",
+				);
+				// 4) the execute ends: its final frame lands in ITS panel, and the form is free again
+				execute_stream.enqueue(frame_bytes({ is_running: false, data: { ok: true, dry_run: false, msg: 'zz moved' }, errors: [] }));
+				execute_stream.close();
+				await wait_until(() => body_response.textContent.includes('zz moved'), "the execute's outcome is shown");
+				await wait_until(
+					async () => !(await data_manager.get_local_db_data(execute_db_id, 'status')),
+					'the ended execute leaves no re-attach entry',
+				);
+				await form.on_submit();
+				assert.strictEqual(exec_calls.length, 3, 'positive control: after the execute ended, a preview runs');
+				assert.strictEqual(exec_calls[2].dry_run, true);
+			} finally {
+				window.fetch = original_fetch;
+				try { execute_stream?.close(); } catch { /* already closed */ }
+				await data_manager.delete_local_db_data(local_db_id, 'status');
+				await data_manager.delete_local_db_data(execute_db_id, 'status');
+			}
+		});
+
+		const reattach_harness = (stored) => {
+			const calls = { exec: [], track: [], alert: [], read: [] };
+			let form = null;
+			init_move_transform_form(
+				{ caller: { init_form: (widget_object) => { form = widget_object; } } },
+				{
+					model: 'move_tld',
+					submit_label: 'Move TLD terms',
+					files_selected: ['a.json'],
+					content_data: document.createElement('div'),
+					body_response: document.createElement('div'),
+					local_db_id: 'process_move_tld',
+				},
+				{
+					exec: (model, files, dry_run) => {
+						calls.exec.push({ files: [...files], dry_run });
+						return Promise.resolve({ ok: true, pid: 4242, pfile: `zz_${calls.exec.length}.json`, dry_run });
+					},
+					track: (id, pid, pfile, container, on_done) => calls.track.push({ id, pid, pfile, on_done }),
+					read_local: (id) => {
+						calls.read.push(id);
+						return Promise.resolve(stored[id] ?? null);
+					},
+					confirm: () => true,
+					alert: (text) => calls.alert.push(text),
+				},
+			);
+			return { calls, form: () => form };
+		};
+
+		it('after a RELOAD, a stored execute is re-attached and holds the form until it ends', async function () {
+			const h = reattach_harness({
+				process_move_tld_execute: { id: 'process_move_tld_execute', value: { pid: 77, pfile: 'zz_execute_running.json' } },
+			});
+			await h.form().on_submit();
+			assert.deepEqual(
+				h.calls.track.map((t) => [t.id, t.pfile]),
+				[['process_move_tld_execute', 'zz_execute_running.json']],
+				're-attached under its own key; no preview dispatched while it runs',
+			);
+			assert.strictEqual(h.calls.exec.length, 0);
+			assert.strictEqual(h.calls.alert.length, 1);
+			h.calls.track[0].on_done({ is_running: false, data: { ok: true }, errors: [] });
+			await h.form().on_submit();
+			assert.strictEqual(h.calls.exec.length, 1, 'free again once the re-attached execute ended');
+			assert.strictEqual(h.calls.track[1].id, 'process_move_tld', 'a preview tracks under the preview key');
+		});
+
+		it('a stored PREVIEW is re-attached as before and does not hold the form', async function () {
+			const h = reattach_harness({
+				process_move_tld: { id: 'process_move_tld', value: { pid: 78, pfile: 'zz_preview_running.json' } },
+			});
+			await h.form().on_submit();
+			assert.deepEqual(
+				h.calls.track.map((t) => [t.id, t.pfile]),
+				[['process_move_tld', 'zz_preview_running.json'], ['process_move_tld', 'zz_1.json']],
+			);
+			assert.strictEqual(h.calls.alert.length, 0);
+		});
+
+		it('an execute whose outcome is UNKNOWN keeps the form held (its warning stays); a refused execute frees it', async function () {
+			const timeout = new ApiError({ code: CLIENT_ERROR.TIMEOUT, source: 'transport', details: { timeout_ms: 60000 } });
+			const files_selected = ['a.json'];
+			const body_response = document.createElement('div');
+			const calls = { exec: [], alert: [] };
+			let form = null;
+			const make = (execute_answer) => {
+				calls.exec.length = 0;
+				calls.alert.length = 0;
+				body_response.replaceChildren();
+				return init_move_transform_form(
+					{ caller: { init_form: (widget_object) => { form = widget_object; } } },
+					{ model: 'move_tld', submit_label: 'Move TLD terms', files_selected, content_data: document.createElement('div'), body_response, local_db_id: 'process_move_tld' },
+					{
+						exec: (model, files, dry_run) => {
+							calls.exec.push({ dry_run });
+							return Promise.resolve(dry_run ? { ok: true, pid: 4242, pfile: 'zz_p.json', dry_run } : execute_answer);
+						},
+						track: (id, pid, pfile, container, on_done) => on_done(clean_preview_frame),
+						read_local: () => Promise.resolve(null),
+						confirm: () => true,
+						alert: (text) => calls.alert.push(text),
+					},
+				).execute_button;
+			};
+			// unknown: the job may be running
+			let execute_button = make({ ok: false, error: timeout });
+			await form.on_submit();
+			execute_button.click();
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			assert.isNotNull(body_response.querySelector('.move_transform_outcome_unknown'));
+			await form.on_submit();
+			assert.strictEqual(calls.exec.length, 2, 'no preview over an unconfirmed execute');
+			assert.strictEqual(calls.alert.length, 1);
+			assert.isNotNull(body_response.querySelector('.move_transform_outcome_unknown'), 'the warning stays');
+			// refused: no job exists, the form is free
+			const refused = new ApiError({ code: 'request.invalid_options', source: 'envelope', transport: false });
+			execute_button = make({ ok: false, error: refused });
+			await form.on_submit();
+			execute_button.click();
+			await new Promise((resolve) => setTimeout(resolve, 0));
+			assert.isNotNull(body_response.querySelector('.move_transform_refused'));
+			await form.on_submit();
+			assert.strictEqual(calls.exec.length, 3, 'a refused execute does not hold the form');
+		});
+	});
+
 	// THE FIVE WIDGETS ARE WIRED TO THE ONE FLOW. The flow above is gated on a
 	// harness; this proves each real move_* renderer hands init_move_transform_form
 	// ITS OWN model: rendered for real with a fake caller.init_form, a real

@@ -31,6 +31,15 @@
  *  dropped connection after the request may have landed, or the server's own
  *  idempotency "do not know") is NOT a refusal: the job may be running, and
  *  the panel says so (render_outcome_unknown) instead of inviting a second run.
+ *  AN EXECUTE OWNS THE PANEL UNTIL IT ENDS. The form does not lock while a job
+ *  streams, but while an execute job runs (or its submission outcome is
+ *  unknown) no other run starts: a Preview would empty the panel the execute
+ *  streams into and take its re-attach entry, and the outcome of a transform
+ *  that cannot be undone (rolled back, PARTIAL, UNKNOWN) would never reach the
+ *  operator. The execute is tracked under its OWN IndexedDB key
+ *  (`<local_db_id>_execute`), and the re-attach after a reload lives HERE (not
+ *  in the widgets): a stored execute is re-attached first and holds the form
+ *  again until its job ends; otherwise a stored preview is re-attached.
  *
  * Backend-free gate: client/dedalo/test/client/js/test_move_transform.js.
  */
@@ -202,6 +211,7 @@ const render_error_lines = function (class_name, lead_lines, api_error) {
  *	track			{Function} (local_db_id, pid, pfile, container, on_done(frame))
  *	confirm			{Function} (text) => boolean
  *	alert			{Function} (text) => void
+ *	read_local		{Function} (id) => Promise<{value:{pid,pfile}}|null> — the stored job of a key
  * @returns {Object} {execute_button} - the execute control node
  */
 export const init_move_transform_form = function (self, options, deps = {}) {
@@ -222,6 +232,19 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 		});
 	const ask = deps.confirm || ((text) => window.confirm(text));
 	const notify = deps.alert || ((text) => window.alert(text));
+	const read_local = deps.read_local || ((id) => data_manager.get_local_db_data(id, 'status'));
+
+	// execute_db_id: the execute's OWN re-attach key — a preview never writes or
+	// deletes it (render_stream keys the stored {pid, pfile} by the tracked id)
+	const execute_db_id = `${local_db_id}_execute`;
+	// execute_hold: why no run may start now — null (free), 'running' (an
+	// execute job streams in body_response) or 'unknown' (an execute's
+	// submission outcome is unknown: the job may be running, and the panel's
+	// warning must stay; a reload frees the form)
+	let execute_hold = null;
+	const release_execute = () => {
+		execute_hold = null;
+	};
 
 	// previewed: the snapshot of the files the last CLEAN preview ran on
 	let previewed = null;
@@ -231,7 +254,9 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 	// stale clean run would arm Execute after the operator's newer one failed).
 	let preview_generation = 0;
 
-	// run: fire one run and stream its job; on_done gets the final frame
+	// run: fire one run and stream its job; on_done gets the final frame.
+	// Resolves to what became of the submission: 'tracked' | 'refused' |
+	// 'unknown' | 'no_job'.
 	const run = (files, dry_run, on_done) => {
 		return exec(model, files, dry_run).then(function (api_response) {
 			// A REFUSED run (no job exists) is stated IN the panel, label-first.
@@ -242,20 +267,60 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 			// (data_manager → page.js).
 			// An UNKNOWN outcome is not a refusal: the job may be running.
 			if (request_failed(api_response)) {
+				const unknown = outcome_unknown(api_response.error);
 				body_response.replaceChildren(
-					outcome_unknown(api_response.error)
-						? render_outcome_unknown(api_response.error)
-						: render_refusal(api_response.error),
+					unknown ? render_outcome_unknown(api_response.error) : render_refusal(api_response.error),
 				);
-				return;
+				return unknown ? 'unknown' : 'refused';
 			}
 			if (!api_response || api_response.pid === undefined || !api_response.pfile) {
 				notify('Error: the server did not start the job');
-				return;
+				return 'no_job';
 			}
-			track(local_db_id, api_response.pid, api_response.pfile, body_response, on_done);
+			track(
+				dry_run ? local_db_id : execute_db_id,
+				api_response.pid,
+				api_response.pfile,
+				body_response,
+				on_done,
+			);
+			return 'tracked';
 		});
 	};
+
+	// hold_refusal: the operator's notice when a run is asked for while held
+	const hold_refusal = () => {
+		notify(
+			execute_hold === 'unknown'
+				? 'The last execute was not confirmed and may still be running. ' +
+						'Check the running jobs (or the data), then reload the page before starting another run.'
+				: 'An execute is still running: its outcome is shown in the panel. ' +
+						'Wait for it to end before starting another run.',
+		);
+	};
+
+	// reattached: the re-attach after a reload (or a widget re-open). A stored
+	// EXECUTE comes first and holds the form until its job ends; otherwise a
+	// stored preview is re-attached (it never reveals Execute: the snapshot it
+	// ran on is gone). A run asked for meanwhile waits for this read.
+	const stored_job = (entry) =>
+		entry?.value && entry.value.pid !== undefined && typeof entry.value.pfile === 'string'
+			? entry.value
+			: null;
+	const reattached = (async () => {
+		const stored_execute = stored_job(await read_local(execute_db_id));
+		if (stored_execute) {
+			execute_hold = 'running';
+			track(execute_db_id, stored_execute.pid, stored_execute.pfile, body_response, release_execute);
+			return;
+		}
+		const stored_preview = stored_job(await read_local(local_db_id));
+		if (stored_preview) {
+			track(local_db_id, stored_preview.pid, stored_preview.pfile, body_response, null);
+		}
+	})().catch((error) => {
+		console.error('move_transform: re-attach failed', error);
+	});
 
 	// execute_button. Hidden until a preview ends clean.
 	const execute_button = ui.create_dom_element({
@@ -267,6 +332,10 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 	execute_button.addEventListener('click', function (e) {
 		e.stopPropagation();
 		if (previewed === null) {
+			return;
+		}
+		if (execute_hold !== null) {
+			hold_refusal();
 			return;
 		}
 		if (!same_selection(previewed, files_selected)) {
@@ -282,7 +351,23 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 		const files = previewed;
 		previewed = null;
 		execute_button.classList.add('hide');
-		run(files, false, null);
+		// the execute holds the form from its dispatch: released by its job's
+		// end, or at once when no job exists (refused / not started); an UNKNOWN
+		// outcome keeps it held — the job may be running
+		execute_hold = 'running';
+		run(files, false, release_execute).then(
+			(outcome) => {
+				if (outcome === 'unknown') {
+					execute_hold = 'unknown';
+				} else if (outcome !== 'tracked') {
+					release_execute();
+				}
+			},
+			(error) => {
+				release_execute();
+				console.error('move_transform: execute dispatch failed', error);
+			},
+		);
 	});
 
 	// form: the submit is the PREVIEW
@@ -292,7 +377,12 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 			confirm_text: 'Run the preview (dry run)? It writes nothing.',
 			body_info: content_data,
 			body_response: body_response,
-			on_submit: () => {
+			on_submit: async () => {
+				await reattached;
+				if (execute_hold !== null) {
+					hold_refusal();
+					return;
+				}
 				if (!files_selected.length) {
 					notify('Error: no files are selected');
 					return;

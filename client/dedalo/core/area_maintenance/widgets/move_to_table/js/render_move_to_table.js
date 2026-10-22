@@ -5,9 +5,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {update_process_status} from '../../../../common/js/common.js'
 	import {init_move_transform_form} from '../../../js/move_transform.js'
-	import {data_manager} from '../../../../common/js/data_manager.js'
 
 	// hljs
 	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
@@ -54,9 +52,9 @@
 *
 * Process tracking:
 * - `local_db_id = 'process_move_to_table'` is the IndexedDB key used to
-*   persist the last known process state.  On every render, `check_process_data`
-*   reads this key so that a previously started migration can be re-attached
-*   even after a page reload.
+*   persist the last known process state (an execute under `<key>_execute`).
+*   On every render the shared flow (move_transform.js) reads them so that a
+*   previously started migration is re-attached even after a page reload.
 *
 * @module render_move_to_table
 */
@@ -128,9 +126,8 @@ render_move_to_table.prototype.list = async function(options) {
 *          'collapsed_move_to_table_file_<file_name>'.
 *   4. Wires the shared move_* run flow (`init_move_transform_form`): PREVIEW
 *      (dry run) job on submit, then Execute of exactly the previewed files.
-*   5. Immediately after form creation, `check_process_data` reads any
-*      previously persisted process state from IndexedDB and re-attaches the
-*      SSE progress stream if a migration was already running.
+*   5. The shared flow also re-attaches any previously persisted process
+*      state from IndexedDB (an execute first; it holds the form until it ends).
 *
 * Selection model:
 *   `files_selected` is a module-local array maintained by the checkbox
@@ -310,27 +307,9 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// check process status always
-		// Re-attach progress tracking for any migration that may already be
-		// running (e.g. the user navigated away and came back).  Reads the last
-		// known pid/pfile from IndexedDB; if present, calls update_process_status
-		// to resume the SSE stream.  This is a fire-and-forget call.
-		const check_process_data = () => {
-			data_manager.get_local_db_data(
-				local_db_id,
-				'status'
-			)
-			.then(function(local_data){
-				if (local_data && local_data.value) {
-					update_process_status(
-						local_db_id,
-						local_data.value.pid,
-						local_data.value.pfile,
-						body_response
-					)
-				}
-			})
-		}
-		check_process_data()
+		// re-attach after a reload: init_move_transform_form above re-attaches a
+		// stored EXECUTE first (it holds the form until its job ends), else a
+		// stored preview — one place for the five move_* widgets (move_transform.js).
 
 	// add at end body_response
 		content_data.appendChild(body_response)
