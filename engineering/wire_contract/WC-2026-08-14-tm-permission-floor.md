@@ -79,3 +79,11 @@ it stayed green. The scope is now opened around the whole `read`/`count` handler
 (`withTimeMachineReadScope`), `count` runs the same §7.4 gate, and the `time_machine_list` lookup
 follows the recursive grant walk. The admitted rows are further confined to the caller's record
 scope (that entry's r0 addendum). Handler-level gate: `tm_inspector_access_native`.
+
+## Addendum 2026-10-22 (review r2) — the floor judges the column's pair
+
+The floor now takes the column tipo. dd15's OWN columns (dd15 nodes, the `rsc329` annotation) keep
+the §7.4-derived read above; a dd15 column that replays a caller-section component is read only on
+that component's own pair (caller section, component) — a level-0 field stays unreadable in its
+history. The raw `dd1574` cells are judged per row on the recorded component's pair.
+`WC-2026-10-22-tm-scope-whole-request` (r2 addendum); gate `tm_inspector_access_native`.

@@ -63,3 +63,28 @@
 - **Gate reconciliation:** TS-only. `tm_inspector_access_native` legs 5–6 (out-of-project pin,
   mixed pin list, snapshot list count == rows, dead record; virtual section, no-node section,
   mixed-section count). No fixture or re-harvest.
+
+## Addendum 2026-10-22 (review r2) — a replayed component is judged on its own pair
+
+- **Shape before (TS):** the dd15 floor (`security/permissions.ts` `ruleOrderGrant` →
+  `timeMachineReadFloor`) answered read for EVERY dd15 coordinate once the §7.4 grant on the
+  caller section held, before any component lookup. Every dd15 column — including the ones that
+  REPLAY a caller-section component — inherited the section-wide grant: the component surface's
+  value column (tipo from `filter_by_locators[0].tipo`, client-chosen), the snapshot list's
+  `section_list` columns, a client-sent `show.ddo_map` column, and the inspector record block's raw
+  `dd1574` cells. A grant holder at level 0 on component C of X got every past value of C (`200`).
+- **Shape after (TS):** the floor takes the tipo. For a non-admin inside a §7.4-admitted scope, a
+  Time Machine OWN column (`isTimeMachineOwnColumn`: a dd15 node by ontology ancestry, or the
+  `rsc329` annotation) is read; any other tipo is a replayed component of the caller section and
+  is read only when `canReadTimeMachineValue` holds — `getPermissions(principal, X, C) ≥ 1`, the
+  pair the live record read asks. A failing column is dropped from the data AND the dd15 context
+  (`buildTmContext` runs the same gate). The `dd1574` column stays (a dd15 node), but each CELL is
+  judged on the pair of the component its row recorded (`row.section_tipo`, `row.tipo`): an
+  unreadable one is emitted empty — the row keeps who/when/what. Global admins and principal-less
+  internal resolutions are unchanged.
+- **Reason:** the read-door law — a value is served on section grant AND component grant on its
+  real coordinates; the §7.4 grant authorises the history, never a field the profile withholds.
+  A 'rule' basis is never extended to other coordinates (`GrantBasis`).
+- **Gate reconciliation:** TS-only. `tm_inspector_access_native` "the component pair" legs (a
+  level-0 component on the component, client-sent column, inspector record and snapshot surfaces;
+  admin controls read it; readable controls still serve; context never advertises it). No fixture.

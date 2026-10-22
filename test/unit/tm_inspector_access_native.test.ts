@@ -68,6 +68,14 @@ import { assertTestDatabase } from '../../src/core/test_data/test_database_marke
 const DIRECT_SECTION = 'zztia1';
 const DIRECT_TEXT = 'zztia2';
 const DIRECT_TM_LIST = 'zztia3';
+/** A component of DIRECT_SECTION the grant holder holds level 0 on (no dd774 row). */
+const RESTRICTED_TEXT = 'zztia4';
+/** DIRECT_SECTION's list columns (both components) — the snapshot list's own columns. */
+const DIRECT_LIST = 'zztia5';
+/** The restricted component's past value — must never reach the grant holder. */
+const SECRET = 'zztia secret';
+/** The readable component's past value — the grant holder's control. */
+const PUBLIC_VALUE = 'zztia history';
 const NESTED_SECTION = 'zztia10';
 const NESTED_GROUP = 'zztia11';
 const NESTED_TM_LIST = 'zztia12';
@@ -107,6 +115,19 @@ const SITUATION = situation({
 		{ tipo: DIRECT_SECTION, parent: 'test1', model: 'section', term: { 'lg-eng': 'zztia direct' } },
 		{ tipo: DIRECT_TEXT, parent: DIRECT_SECTION, model: 'component_input_text', order_number: 1 },
 		{ tipo: DIRECT_TM_LIST, parent: DIRECT_SECTION, model: 'time_machine_list', order_number: 2 },
+		{
+			tipo: RESTRICTED_TEXT,
+			parent: DIRECT_SECTION,
+			model: 'component_input_text',
+			order_number: 3,
+		},
+		{
+			tipo: DIRECT_LIST,
+			parent: DIRECT_SECTION,
+			model: 'section_list',
+			order_number: 4,
+			relations: [{ tipo: DIRECT_TEXT }, { tipo: RESTRICTED_TEXT }],
+		},
 		{ tipo: NESTED_SECTION, parent: 'test1', model: 'section', term: { 'lg-eng': 'zztia nested' } },
 		{ tipo: NESTED_GROUP, parent: NESTED_SECTION, model: 'section_group', order_number: 1 },
 		{ tipo: NESTED_TEXT, parent: NESTED_GROUP, model: 'component_input_text', order_number: 1 },
@@ -252,6 +273,7 @@ function clearSecurityCaches() {
 }
 
 async function sweepIdentities() {
+	await assertTestDatabase('tm_inspector_access_native sweep');
 	for (const row of OWNED) await deleteMatrixRecord(row.table, row.sectionTipo, row.sectionId);
 	await sql.unsafe("DELETE FROM matrix_activity WHERE string->'dd544'->0->>'value' = $1", [
 		CLIENT_IP,
@@ -292,11 +314,37 @@ beforeAll(async () => {
 			sectionTipo,
 			sectionId,
 			lang: LANG,
-			changedData: [{ action: 'update', id: null, value: { lang: LANG, value: 'zztia history' } }],
+			changedData: [{ action: 'update', id: null, value: { lang: LANG, value: PUBLIC_VALUE } }],
 			userId: -1,
 		});
 		expect(saved.ok).toBe(true);
 	}
+	// The RESTRICTED component's history on the same record (per-component row).
+	const restricted = await saveComponentData({
+		componentTipo: RESTRICTED_TEXT,
+		sectionTipo: DIRECT_SECTION,
+		sectionId: RECORD_ID,
+		lang: LANG,
+		changedData: [{ action: 'update', id: null, value: { lang: LANG, value: SECRET } }],
+		userId: -1,
+	});
+	expect(restricted.ok).toBe(true);
+	// A whole-record snapshot of the same record carrying BOTH components — the
+	// snapshot list's surface (inserted directly, see the note below).
+	await sql.unsafe(
+		`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, timestamp, user_id, data)
+		 VALUES ($1, $2, $2, 'lg-nolan', now(), -1, $3::text::jsonb)`,
+		[
+			RECORD_ID,
+			DIRECT_SECTION,
+			encodeForJsonb({
+				string: {
+					[DIRECT_TEXT]: [{ id: 1, lang: LANG, value: PUBLIC_VALUE }],
+					[RESTRICTED_TEXT]: [{ id: 1, lang: LANG, value: SECRET }],
+				},
+			}),
+		],
+	);
 	// Whole-record snapshot rows (tipo = section_tipo — the snapshot list's
 	// surface) of the two LIVE records, inserted directly: no engine door writes
 	// one for a live record without changing it. The DEAD record's comes from the
@@ -639,5 +687,94 @@ describe('a virtual section and a section with no time_machine_list', () => {
 		expect(await call('count', granted, [DIRECT_SECTION, NESTED_SECTION])).toEqual({
 			refused: 'perm.denied',
 		});
+	});
+});
+
+describe('the component pair: a section-wide TM grant never reads a level-0 component', () => {
+	/** The whole answer as text — a value served anywhere in it (cell, subdatum, raw) shows. */
+	const served = (answer: Answer): string =>
+		'refused' in answer ? `refused:${answer.refused}` : JSON.stringify(answer.body);
+
+	/** One COMPONENT's history (the tool opened on a component). */
+	const componentRqo = (componentTipo: string, show: object = {}) => ({
+		action: 'read',
+		source: {
+			model: 'section',
+			tipo: 'dd15',
+			section_tipo: 'dd15',
+			mode: 'list',
+			lang: LANG,
+			session_save: false,
+		},
+		sqo: {
+			id: 'component_history',
+			mode: 'tm',
+			section_tipo: [DIRECT_SECTION],
+			limit: 50,
+			offset: 0,
+			order: [{ direction: 'DESC', path: [{ component_tipo: 'id' }] }],
+			skip_projects_filter: true,
+			filter_by_locators: [
+				{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID, tipo: componentTipo },
+			],
+		},
+		show,
+	});
+
+	test('the component surface: the admin reads the restricted value, the grant holder never', async () => {
+		expect(served(await send('read', admin, componentRqo(RESTRICTED_TEXT)))).toContain(SECRET);
+		const answer = await send('read', granted, componentRqo(RESTRICTED_TEXT));
+		expect(historyRows(answer)).toBeGreaterThan(0);
+		expect(served(answer)).not.toContain(SECRET);
+	});
+
+	test('a withheld column is not advertised in the context either', async () => {
+		const columns = (answer: Answer): string[] =>
+			'refused' in answer
+				? []
+				: (((answer.body.data as { context?: { tipo?: string; type?: string }[] }).context ?? [])
+						.filter((entry) => entry.type === 'component')
+						.map((entry) => entry.tipo) as string[]);
+		expect(columns(await send('read', admin, componentRqo(RESTRICTED_TEXT)))).toContain(
+			RESTRICTED_TEXT,
+		);
+		const grantedColumns = columns(await send('read', granted, componentRqo(RESTRICTED_TEXT)));
+		expect(grantedColumns).toContain('dd559');
+		expect(grantedColumns).not.toContain(RESTRICTED_TEXT);
+	});
+
+	test('the component surface of a READABLE component still serves its value', async () => {
+		expect(served(await send('read', granted, componentRqo(DIRECT_TEXT)))).toContain(PUBLIC_VALUE);
+	});
+
+	test('a client-sent column naming the restricted component serves nothing of it', async () => {
+		const show = { ddo_map: [{ tipo: RESTRICTED_TEXT, section_tipo: 'dd15', view: 'text' }] };
+		expect(served(await send('read', admin, componentRqo(RESTRICTED_TEXT, show)))).toContain(
+			SECRET,
+		);
+		expect(served(await send('read', granted, componentRqo(RESTRICTED_TEXT, show)))).not.toContain(
+			SECRET,
+		);
+	});
+
+	test('the inspector record block: the raw value (dd1574) of a restricted row is withheld', async () => {
+		const rqo = historyRqo('read', [{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID }]);
+		expect(served(await send('read', admin, rqo))).toContain(SECRET);
+		const answer = await send('read', granted, rqo);
+		// The CONTROLS: the readable component's raw value and the history's own
+		// columns (Who, with its user subdatum) still serve.
+		expect(served(answer)).toContain(PUBLIC_VALUE);
+		expect(served(answer)).toContain('"tipo":"dd578"');
+		expect(served(answer)).toContain('"tipo":"dd132"');
+		expect(served(answer)).not.toContain(SECRET);
+	});
+
+	test('the snapshot list: the restricted column of a whole-record snapshot is withheld', async () => {
+		expect(served(await callSnapshots('read', admin, DIRECT_SECTION))).toContain(SECRET);
+		const answer = await callSnapshots('read', granted, DIRECT_SECTION);
+		expect(historyRows(answer)).toBeGreaterThan(0);
+		// The CONTROL: the readable list column of the same snapshot still serves.
+		expect(served(answer)).toContain(PUBLIC_VALUE);
+		expect(served(answer)).not.toContain(SECRET);
 	});
 });

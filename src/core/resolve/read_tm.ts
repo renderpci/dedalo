@@ -72,7 +72,7 @@ import type {
 } from '../section/read_source.ts';
 import { loadRecordCached } from '../section/record_loader.ts';
 import { injectComponentData } from '../section_record/index.ts';
-import { type Principal, SUPERUSER_ID } from '../security/permissions.ts';
+import { ddoIsAuthorized, type Principal, SUPERUSER_ID } from '../security/permissions.ts';
 import { scopedRows } from '../security/record_scope.ts';
 import { readLaneValueAt } from '../tm_record/lane_state.ts';
 import {
@@ -1029,6 +1029,31 @@ async function tmCellRow(row: TmRow, tipo: string): Promise<EmitRow> {
 }
 
 /**
+ * THE RAW CELL OF A ROW IS ITS COMPONENT'S VALUE (review r2,
+ * WC-2026-10-22-tm-scope-whole-request). The dd1574 column is one of dd15's
+ * own, so the floor admits it to every §7.4 grant holder — but each CELL holds
+ * the snapshot of the ONE component the row recorded (`row.tipo`), a different
+ * one per row. A principal who cannot read that component on the live record
+ * (canReadTimeMachineValue: the (section, component) pair) gets the cell EMPTY:
+ * the row still shows who/when/what, never the value. A whole-record row
+ * injects no raw copy (its components land under their own columns, each
+ * judged by the floor). No principal = an internal resolution, unfiltered.
+ */
+async function withholdUnreadableRawValue(
+	record: MatrixRecord,
+	row: TmRow,
+	principal: Principal | undefined,
+): Promise<void> {
+	if (principal === undefined) return;
+	const { canReadTimeMachineValue } = await import(
+		'../section/list_definitions/time_machine_list.ts'
+	);
+	if (await canReadTimeMachineValue(principal, row.section_tipo, row.tipo)) return;
+	const model = await getModelByTipo(TIPO_DATA);
+	if (model !== null) injectComponentData(record, TIPO_DATA, model, null);
+}
+
+/**
  * Emit ONE dd15 row's data items — one generic cell per requested ddo, resolved
  * from the virtual dd15 record that `tm_record.ts` materializes for the row.
  *
@@ -1049,6 +1074,7 @@ async function emitTmRow(
 	lang: string,
 	emission: EmissionContext,
 	emitDdo: EmitDdo,
+	principal: Principal | undefined,
 ): Promise<void> {
 	const requestedTipos = ddoMap
 		.map((ddo) => ddo.tipo)
@@ -1071,6 +1097,7 @@ async function emitTmRow(
 		declaredSlots,
 	);
 	await graftFrameRowValue(tmRecord, row, lang);
+	await withholdUnreadableRawValue(tmRecord, row, principal);
 	// A framed main's cells read the row's frames AS THE PREVIEW DOES (the frame
 	// state at the row, its frame children and sibling bag as of its bound):
 	// one bound per row, so its own emission over the SAME items array.
@@ -1200,7 +1227,14 @@ export const tmReadSource: SectionReadSource = {
 
 	async emitRow(context: EmitRowContext): Promise<void> {
 		const { row } = context.row.raw as TmRawRow;
-		await emitTmRow(row, context.ddoMap, context.lang, context.emission, context.emitDdo);
+		await emitTmRow(
+			row,
+			context.ddoMap,
+			context.lang,
+			context.emission,
+			context.emitDdo,
+			context.principal,
+		);
 	},
 
 	buildContext: buildTmContext,
@@ -1226,7 +1260,7 @@ async function tmMainLaneLaw(tipo: string): Promise<{ tipo: string; lang_sliced:
  * The generic readSection context builder can't produce this, so the TM source
  * owns it (formerly the dispatch mode:'tm' branch).
  */
-async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<StructureContextEntry[]> {
+async function buildTmContext(rqo: Rqo, principal: Principal): Promise<StructureContextEntry[]> {
 	const source = (rqo.source ?? {}) as Record<string, unknown>;
 	// The Time Machine (dd15) is consultation-only — cap at read (1) even for
 	// admins so no TM column/subdatum renders editable (reverts go through
@@ -1265,6 +1299,10 @@ async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<Structur
 			columns = (await deriveSectionDdoMap(TM_SECTION_TIPO, TM_SECTION_TIPO, 'list')) as never;
 		}
 	}
+	// The SAME per-column gate the data side runs (readSectionRows → the dd15
+	// floor, which judges a replayed component on its (caller section,
+	// component) pair): a column whose cells are dropped is not advertised.
+	columns = await authorizedTmColumns(columns, principal);
 
 	const tmContext: StructureContextEntry[] = [];
 	const sectionCtx = await buildStructureContext({
@@ -1339,6 +1377,19 @@ async function buildTmContext(rqo: Rqo, _principal: Principal): Promise<Structur
 	return tmContext;
 }
 
+/** The columns the principal may read, judged as the data side judges them (dd15 floor). */
+async function authorizedTmColumns<T extends { tipo?: unknown }>(
+	columns: readonly T[],
+	principal: Principal,
+): Promise<T[]> {
+	const kept: T[] = [];
+	for (const column of columns) {
+		if (typeof column.tipo !== 'string') continue;
+		if (await ddoIsAuthorized(principal, TM_SECTION_TIPO, column.tipo)) kept.push(column);
+	}
+	return kept;
+}
+
 /**
  * Count TM rows for a request (pagination parity with the read). Thin wrapper
  * over the read source's count — kept for the count dispatch path / callers.
@@ -1392,7 +1443,9 @@ export async function readTimeMachineData(rqo: Rqo): Promise<TmReadData> {
 	const { emitDdoData } = await import('../section/read.ts');
 	const emission = new EmissionContext(data as never);
 	for (const row of rows) {
-		await emitTmRow(row, ddoMap, lang, emission, emitDdoData as EmitDdo);
+		// No principal: this adapter is an internal resolution (its query is
+		// unscoped too), the ddoIsAuthorized posture.
+		await emitTmRow(row, ddoMap, lang, emission, emitDdoData as EmitDdo, undefined);
 	}
 
 	return { data, unhandled };

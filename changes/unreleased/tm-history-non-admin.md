@@ -12,3 +12,5 @@ two blocks at all, and a block that cannot load shows one short line inside the 
 full-page error. The record counter of a history list follows the same permission.
 The history shows only records the user's projects let them see, as the section list does. The
 history of a deleted record stays visible to administrators only.
+The history never shows the past values of a field the user's profile does not let them read on
+the record: those cells stay empty, the rest of the change (who, when, which field) is shown.

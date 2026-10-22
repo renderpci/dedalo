@@ -2345,6 +2345,7 @@ export async function readSectionRows(
 			callerTipo,
 			emission,
 			emitDdo: emitDdoData,
+			principal,
 		});
 	}
 	return emission.items;

@@ -16,7 +16,12 @@
  * time_machine_list and relation_list are INCLUDED (PHP :502).
  */
 
-import { getModelByTipo, getSectionRealTipo } from '../../ontology/resolver.ts';
+import { TIME_MACHINE_SECTION_TIPO } from '../../concepts/section.ts';
+import {
+	getAncestorSectionTipo,
+	getModelByTipo,
+	getSectionRealTipo,
+} from '../../ontology/resolver.ts';
 import { getGrantChildrenTipos } from '../../resolve/security_access_datalist.ts';
 import { getPermissions, type Principal } from '../../security/permissions.ts';
 import { findSectionChildByModel } from './node_find.ts';
@@ -147,6 +152,56 @@ export async function canAccessTimeMachineList(
 	if (tipo === null) return false;
 	const level = await getPermissions(principal, sectionTipo, tipo);
 	return level >= 1;
+}
+
+/**
+ * Whether a NON-ADMIN `principal` may read dd15 column `tipo` of a Time Machine
+ * read scoped to `sectionTipo` — the dd15 floor's question
+ * (security/permissions.ts timeMachineReadFloor). The §7.4 grant on the section
+ * first; then an OWN column is read, and a replayed component only on its pair.
+ */
+export async function canReadTimeMachineColumn(
+	principal: Principal,
+	sectionTipo: string,
+	tipo: string,
+): Promise<boolean> {
+	if (!(await canAccessTimeMachineList(principal, sectionTipo))) return false;
+	if (await isTimeMachineOwnColumn(tipo)) return true;
+	return canReadTimeMachineValue(principal, sectionTipo, tipo);
+}
+
+/**
+ * Whether `tipo` is one of the Time Machine's OWN columns — a node of dd15
+ * itself (who/when/what/where/process/ids, and dd15) or the TM annotation
+ * (rsc329, a note keyed by the TM row, not a component of the caller section).
+ * Such a column describes the HISTORY, so the §7.4 grant alone admits it.
+ * Anything else a dd15 read names is a REPLAYED component of the caller
+ * section and is judged on its own pair ({@link canReadTimeMachineValue}).
+ *
+ * The raw snapshot dd1574 is a dd15 node, so its COLUMN is admitted here; its
+ * CELLS carry one component's value each and are judged per row on that
+ * component's pair (resolve/read_tm.ts).
+ */
+export async function isTimeMachineOwnColumn(tipo: string): Promise<boolean> {
+	if (tipo === TM_NOTES_COLUMN) return true;
+	return (await getAncestorSectionTipo(tipo)) === TIME_MACHINE_SECTION_TIPO;
+}
+
+/**
+ * Whether `principal` may read a PAST value of component `componentTipo` of
+ * `sectionTipo` — the pair the live record read asks (getPermissions ≥ 1), so a
+ * history surface never serves a field the profile holds 0 on
+ * (WC-2026-10-22-tm-scope-whole-request, review r2). A global admin reads every
+ * history (the floor's own rule). The §7.4 section grant is the CALLER's
+ * question, asked before this one; this is the per-component half.
+ */
+export async function canReadTimeMachineValue(
+	principal: Principal,
+	sectionTipo: string,
+	componentTipo: string,
+): Promise<boolean> {
+	if (principal.isGlobalAdmin) return true;
+	return (await getPermissions(principal, sectionTipo, componentTipo)) >= 1;
 }
 
 // ---------------------------------------------------------------------------
