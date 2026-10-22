@@ -83,7 +83,8 @@ import {
 	TIER_TEST_FLOOR,
 } from '../../scripts/parity_baseline.ts';
 import { readEnv } from '../../src/config/env.ts';
-import { testDatabaseName } from '../helpers/test_database.ts';
+import { readTestDatabaseMarker } from '../../src/core/test_data/test_database_marker.ts';
+import { applicationDatabaseName, testDatabaseName } from '../helpers/test_database.ts';
 import { testMediaRootPath } from '../helpers/test_media_root.ts';
 
 /**
@@ -189,7 +190,19 @@ describe('parity baseline ratchet — the tier’s red set may only shrink', () 
 });
 
 describe('parity baseline ratchet — anti-vacuity', () => {
-	test.if(LIVE_DRIFT)('the tier actually ran (floors on files and cases)', () => {
+	test.if(LIVE_DRIFT)('the tier actually ran (floors on files and cases)', async () => {
+		// …AGAINST A SUITE DATABASE. The child measured `childEnv()`'s database; the
+		// marker row is what makes a database a suite database (never its name — a lane
+		// suite `<app>_test_l3` ends in no `_test`). readTestDatabaseMarker() verifies the
+		// row's database_name against current_database() (a misrouted restore refuses),
+		// so equating it with the child's address closes the chain: child address =
+		// this process's connected database = one `bun run test:db:setup` built.
+		const marker = await readTestDatabaseMarker();
+		expect(
+			marker,
+			`the census measured '${childEnv().DEDALO_TEST_DATABASE}', which carries no dedalo_test_marker row — not a suite database`,
+		).not.toBeNull();
+		expect(marker?.database_name).toBe(childEnv().DEDALO_TEST_DATABASE);
 		expect(
 			(DRIFT as NonNullable<typeof DRIFT>).vacuity,
 			formatDrift({
@@ -438,11 +451,25 @@ describe('census addressing — the child measures the database the parent built
 		expect(basename(testMediaRootPath())).toBe(testDatabaseName());
 	});
 
-	test('anti-vacuity: the composed name is a real suite database, not the literal fallback', () => {
+	test('anti-vacuity: the composed name is not the literal fallback, nor the application database', () => {
 		// `dedalo_ts_test` is what testDatabaseName() returns when it knows NOTHING. If the
 		// census ever composes it again on a configured machine, the address is being
 		// guessed and this whole describe is measuring a fiction.
-		expect(childEnv().DEDALO_TEST_DATABASE).not.toBe('dedalo_ts_test');
-		expect(testDatabaseName()).toMatch(/_test$/);
+		//
+		// NO NAME GRAMMAR (2026-10-22). This leg used to also require `/_test$/` — a
+		// spelling, not a property: a lane suite (`<app>_test_l3`) or any explicit
+		// DEDALO_TEST_DATABASE is a legitimate suite database that never ends in `_test`,
+		// so the gate went red on exactly the runs it exists to protect. What makes a
+		// database a suite database is its `dedalo_test_marker` row — asserted against
+		// the database the census MEASURED, in the live leg 'the tier actually ran'.
+		// DB-less, this leg refuses only the two names the address must never be. With no
+		// private .env there is no application database on disk (applicationDatabaseName()
+		// answers undefined) and the second comparison holds by construction.
+		const composed = childEnv().DEDALO_TEST_DATABASE;
+		expect(composed).not.toBe('dedalo_ts_test');
+		expect(
+			composed === applicationDatabaseName(),
+			`the census addresses the APPLICATION database '${composed}'`,
+		).toBe(false);
 	});
 });
