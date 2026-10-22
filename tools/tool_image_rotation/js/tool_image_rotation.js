@@ -29,7 +29,7 @@
 *      re-rendered server-side via ImageMagick.  The 'original' quality is always
 *      preserved untouched.
 *
-*   2. Background removal — runs the `briaai/RMBG-1.4` neural network entirely
+*   2. Background removal — runs the `onnx-community/ISNet-ONNX` neural network entirely
 *      in the browser via a Web Worker (WebGPU or WASM fallback).  The resulting
 *      PNG blob is uploaded with `service_upload`, then converted from a temp file
 *      into a full derived-quality set by `tool_upload::process_uploaded_file`.
@@ -280,7 +280,7 @@ tool_image_rotation.prototype.apply_rotation = function(options) {
 
 /**
 * AUTOMATIC_BACKGROUND_REMOVAL
-* Runs the `briaai/RMBG-1.4` subject-extraction model entirely in the browser
+* Runs the `onnx-community/ISNet-ONNX` subject-extraction model entirely in the browser
 * via a dedicated Web Worker, then uploads the resulting PNG to the server and
 * triggers full quality-set generation through `tool_upload::process_uploaded_file`.
 *
@@ -319,7 +319,7 @@ tool_image_rotation.prototype.apply_rotation = function(options) {
 * @param {Object} options.self_caller - The live `component_image` instance whose
 *   file system paths and section context are used for the upload.
 * @param {string} options.engine - Hugging Face model identifier, e.g.
-*   `'briaai/RMBG-1.4'`.
+*   `'onnx-community/ISNet-ONNX'`.
 * @param {string} options.image - Absolute URL of the source image (typically the
 *   `'original'` quality file) passed to the worker for inference.
 * @param {string} options.original_file_name - File name (with extension) of the
@@ -346,7 +346,10 @@ tool_image_rotation.prototype.automatic_background_removal = async function(opti
 		const engine 				= options.engine
 
 	// transcribe worker
-		const background_removal_worker = new Worker( '../../../core/tools_common/js/processors/remove_background/remove_background.js', {
+		// Worker URLs resolve against the PAGE (/dedalo/core/page/), not this module –
+		// same convention as tool_transcription/tool_lang. `../../../` resolved to
+		// /core/… (404) and the worker never loaded.
+		const background_removal_worker = new Worker( '../../core/tools_common/js/processors/remove_background/remove_background.js', {
 			type : 'module'
 		})
 
@@ -399,12 +402,18 @@ tool_image_rotation.prototype.automatic_background_removal = async function(opti
 					nodes.status_container.innerHTML = data;
 
 					break;
+				// the worker's own failure (model bytes missing, no inference backend…)
+				case 'error':
+					fail( e.data.error || 'Background removal failed (see console)' )
+
+					break;
 				// final data as returned as array of objects with a dd_format parameter.
 				case 'end':
 
 					background_removal_worker.terminate()
-					// get the first data
-					const output = data[0];
+					// transformers.js v4 returns ONE RawImage, alpha already applied
+					// (older versions returned an array of per-label masks).
+					const output = Array.isArray(data) ? data[0] : data;
 
 					// Convert Uint8ClampedArray to ImageData
 					const image_data = new ImageData(
@@ -429,9 +438,19 @@ tool_image_rotation.prototype.automatic_background_removal = async function(opti
 					break;
 			}
 		}
+		// ONE failure exit. The worker reports its own failures as a MESSAGE
+		// ({status:'error'}), never as an onerror Event, and a script that fails to
+		// load gives a bare Event with no message — so the reason is echoed rather
+		// than invented. `resolve(false)` is the caller's "nothing was written".
+		const fail = function(message) {
+			background_removal_worker.terminate()
+			nodes.status_container.classList.remove('loading_status')
+			nodes.status_container.textContent = message
+			resolve(false)
+		}
 		background_removal_worker.onerror = function(e) {
-			console.error('Worker error [transcribe]:', e);
-			nodes.status_container.innerHTML = `<div class="error">Worker error [transcribe]</div>`;
+			console.error('Worker error [remove_background]:', e)
+			fail( e.message ? `Worker error: ${e.message}` : 'Worker error: the worker script could not be loaded (see console)' )
 		}
 
 		const removal_options = {

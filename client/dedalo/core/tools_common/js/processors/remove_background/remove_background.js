@@ -5,7 +5,9 @@
 /**
 * REMOVE_BACKGROUND
 * Web Worker module that performs AI-based image background removal using the
-* HuggingFace Transformers.js library (v3.6.3, loaded from CDN at runtime).
+* HuggingFace Transformers.js (4.2.0, the vendored bundle at
+* `/dedalo/lib/transformers/dist/transformers.js`; weights come from this
+* install's own `/dedalo/ai_models/` store — never a CDN).
 *
 * This file runs entirely inside a dedicated Web Worker spawned by
 * tool_image_rotation's `automatic_background_removal` method. Because it
@@ -37,9 +39,8 @@
 *
 * (!) This module is loaded as `type: 'module'` by the spawning Worker
 * constructor, which means `import` statements work but top-level `await` is
-* available only in supported browsers. The CDN `pipeline` import requires a
-* network connection on first use; subsequent runs may be served from the
-* browser's module cache.
+* available only in supported browsers. The `pipeline` import resolves against
+* this install (client-lib registry), so no third party is contacted.
 */
 
 // imports — RC-01 (2026-07-28 audit): load the transformers runtime + its
@@ -68,7 +69,7 @@ env.remotePathTemplate	= '{model}/';
 * Expected `e.data` shape:
 *   {
 *     options: {
-*       model      : {string} HuggingFace model id or path, e.g. 'briaai/RMBG-1.4'
+*       model      : {string} HuggingFace model id or path, e.g. 'onnx-community/ISNet-ONNX'
 *       image_file : {string} URL of the image to process (must be accessible
 *                             from the worker's origin or a CORS-enabled URL)
 *       device     : {string} Inference backend — 'webgpu' (GPU-accelerated) or
@@ -130,7 +131,7 @@ self.onmessage = async (e) => {
 * `masked_data[0]` to obtain the first (and typically only) result.
 *
 * @param {Object} options - Configuration for the removal operation
-* @param {string} [options.model='briaai/RMBG-1.4'] - HuggingFace model id or
+* @param {string} [options.model='onnx-community/ISNet-ONNX'] - HuggingFace model id or
 *   path; must be a model that is compatible with the Transformers.js
 *   'background-removal' task
 * @param {string} options.image_file - URL of the source image to process;
@@ -145,13 +146,15 @@ self.onmessage = async (e) => {
 */
 self.background_removal = async function( options ) {
 
-	const model			= options.model || 'briaai/RMBG-1.4';
+	const model			= options.model || 'onnx-community/ISNet-ONNX';
 	const image_file	= options.image_file;
 	const device 		= options.device || 'webgpu'; // 'wasm' or 'webgpu'
 
 	// Initialize the pipeline
 	// (!) A new pipeline instance is constructed on each invocation; there is no
-	// cross-call caching. Model weights are fetched from the CDN or browser cache.
+	// cross-call caching. Weights come from this install's model store (or the
+	// browser cache of a previous run) — the store must hold them, or the pipeline
+	// fails with ModelFileNotFoundError naming the missing URL.
 	const segmenter = await pipeline("background-removal", model,{
 		device : device,
 		dtype  : 'fp32'
