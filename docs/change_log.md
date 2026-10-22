@@ -200,6 +200,15 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Turning pages in *Latest changes* no longer fails with a permission error for users who are not administrators.**
+
+    A user allowed to see a section's change history could open the inspector's *Latest changes*,
+    but moving to the next page of the list answered with a permission error. History lists are
+    read-only, so they no longer take part in field locking at all, and paging through them works for
+    every user the profile allows.
+
+    Wire contract: `WC-2026-10-23-own-lock-cleanup-ungated`.
+
 - **The acquisition tools no longer start an import while a new Preview is loading**
 
     In the auction-catalogue and journal acquisition tools, clicking **Preview** again
@@ -1554,7 +1563,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 22 entries"
+??? note "Wire contract — 23 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
@@ -1578,6 +1587,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-22-reconcile-deferred-rearm`
     - `WC-2026-10-22-related-search-one-scope`
     - `WC-2026-10-22-tm-scope-whole-request`
+    - `WC-2026-10-23-own-lock-cleanup-ungated`
 
 ## 7.0.0-beta.6 — 2026-10-15
 
