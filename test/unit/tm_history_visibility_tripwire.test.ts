@@ -146,10 +146,13 @@ const EXEMPT_CEILING = 9;
  * index-only — a `tm_role IS NULL` count reads the heap (15.0 s vs 3.1 s on
  * 29.45M rows). Its visibility is measured by OUTCOME in
  * tm_history_visibility_native ('the BARE dd15 count ignores rows that are
- * hidden') and its plan by tm_count_index_only_plan_native.
+ * hidden') and its plan by tm_count_index_only_plan_native. The eighth read is
+ * scopeTmWhere's record-scope CANDIDATE set (`tm_candidate`): an `id IN …`
+ * membership test nested INSIDE the narrowed wheres above, never a row source
+ * of its own — narrowing it too would only add a heap probe.
  */
 const NARROWED_READERS: Readonly<Record<string, { reads: number; visible: number }>> = {
-	'src/core/resolve/read_tm.ts': { reads: 7, visible: 3 },
+	'src/core/resolve/read_tm.ts': { reads: 8, visible: 3 },
 	// readTimeMachineRow, readTimeMachineHistory, readOtherLangItemIds, the
 	// two-lane as-of reader (newestRowAt: readFrameStateRowAt / readLaneRowAt),
 	// the TM preview bound + lifecycle probes (nextVisibleRow) and the per-lane as-of reader

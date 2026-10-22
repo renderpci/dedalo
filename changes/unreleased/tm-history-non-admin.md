@@ -10,3 +10,5 @@ permission error in the inspector's *Latest changes* and *Component history*. Th
 history list sits inside a group of the section. Users without that permission no longer see the
 two blocks at all, and a block that cannot load shows one short line inside the block instead of a
 full-page error. The record counter of a history list follows the same permission.
+The history shows only records the user's projects let them see, as the section list does. The
+history of a deleted record stays visible to administrators only.

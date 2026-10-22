@@ -41,3 +41,25 @@
 - **Gate reconciliation:** TS-only. No oracle interaction asserts a non-admin TM read or a count
   refusal; `config` is compared field-wise (`relation_list_tipo`) by
   `section_context_extras_differential` / `start_differential`, so the added key needs no re-harvest.
+
+## Addendum 2026-10-22 (review r0) — the rows are confined to the caller's record scope
+
+- **Shape before (TS):** the §7.4 grant that admits a non-admin TM `read`/`count` is
+  SECTION-wide, and the TM read source (`resolve/read_tm.ts`) ignored the principal. A grant
+  holder whose projects exclude record R pinned R (`filter_by_locators`) or opened the snapshot
+  list (`filter` `tipo` = section) and got R's past values and whole-record snapshots (`200`), and
+  a `count` of them — while the ordinary read of R is hidden by the projects filter.
+- **Shape after (TS):** for a non-admin, the TM where is confined through THE scope door
+  (`security/record_scope.ts` `scopedRows`: the section read grant, then the assembler's own
+  per-record predicate), the read and the count alike (`scopeTmWhere`). An out-of-scope pin answers
+  no rows and `count` 0 (`200`, silent — the list rule: no "n hidden" existence oracle); the snapshot
+  list holds only in-scope records. A DEAD record (deleted, no live row to judge) is outside every
+  non-admin's scope: its history and its snapshot (the undelete surface) stay global-admin only. A
+  where not confined to one section (bare browse, conformed dd15 filter) is refused (`perm.denied`)
+  for a non-admin a second time, below the §7.4 gate. Global admins and principal-less system
+  callers are unscoped.
+- **Reason:** a door that reads a record holds the record scope as well as the pair; the projects
+  filter is the read boundary every other record door applies (AUTHZ-01/02/05).
+- **Gate reconciliation:** TS-only. `tm_inspector_access_native` legs 5–6 (out-of-project pin,
+  mixed pin list, snapshot list count == rows, dead record; virtual section, no-node section,
+  mixed-section count). No fixture or re-harvest.

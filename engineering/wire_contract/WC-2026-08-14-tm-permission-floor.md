@@ -68,3 +68,14 @@ still owned emission at that point), so the permission change is isolated from
 the emit change for bisection. Companion:
 `WC-2026-08-14-tm-scope-server-owned`, which supplies the scope this floor is
 evaluated against.
+
+## Addendum 2026-10-22 — scope opened around the whole handler; count gated; nested time_machine_list
+
+Amended by `WC-2026-10-22-tm-scope-whole-request`. The floor above was evaluated only inside
+`readSection`; the API handlers' Gate A asked it BEFORE the scope was open, so it answered 0 and
+every non-admin was refused at the handler, grant or no grant. `tm_permission_floor_native` proved
+the grant only BELOW the handler (`readSection`), never through `coreApiActions.read` — which is why
+it stayed green. The scope is now opened around the whole `read`/`count` handler body
+(`withTimeMachineReadScope`), `count` runs the same §7.4 gate, and the `time_machine_list` lookup
+follows the recursive grant walk. The admitted rows are further confined to the caller's record
+scope (that entry's r0 addendum). Handler-level gate: `tm_inspector_access_native`.

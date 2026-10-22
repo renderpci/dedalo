@@ -22,11 +22,24 @@
  *      the recursive grant walk, so the gate must see it too.
  *   4. the section CONTEXT carries config.time_machine_list per principal: the
  *      tipo for a grant holder, null otherwise — the client's block trigger.
+ *   5. RECORD SCOPE (review r0 S1): the §7.4 grant is SECTION-wide, the projects
+ *      filter is per RECORD. A grant holder whose projects exclude a record reads
+ *      no history of it — per-record pins and the snapshot list alike — and
+ *      counts 0, while the admin control reads it. A DEAD record (deleted: no
+ *      live row to judge) is out of every non-admin's scope.
+ *   6. VIRTUAL section + NO node: a virtual section of the nested-grant section
+ *      resolves the real section's node, and the grant keyed on the VIRTUAL
+ *      section admits; a section with no time_machine_list stays admin-only and
+ *      stamps the section tipo for the admin, null for anyone else.
  *
  * Situation `zztia` (scratch TLD, torn down): section zztia1 with a DIRECT
- * time_machine_list (zztia3) and section zztia10 whose time_machine_list
- * (zztia12) sits inside a section_group (zztia11). Users/profiles are minted at
- * explicit ids and swept; TM rows are minted through the engine's own save path.
+ * time_machine_list (zztia3); section zztia10 whose time_machine_list (zztia12)
+ * sits inside a section_group (zztia11); zztia20, a VIRTUAL section of zztia10;
+ * zztia30, a PROJECT-GATED section (component_filter zztia33) with one record in
+ * the grant holder's project and one outside it; zztia40, a section with no
+ * time_machine_list. Users/profiles are minted at explicit ids and swept; TM rows
+ * are minted through the engine's own save and delete paths (the LIVE records'
+ * whole-record snapshots excepted — see beforeAll).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -36,6 +49,7 @@ import { deleteMatrixRecord } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
 import { buildStructureContext } from '../../src/core/resolve/structure_context.ts';
 import { getTimeMachineListTipo } from '../../src/core/section/list_definitions/time_machine_list.ts';
+import { deleteSectionRecord } from '../../src/core/section/record/delete_record.ts';
 import { saveComponentData } from '../../src/core/section/record/save_component.ts';
 import {
 	clearPermissionsCache,
@@ -59,6 +73,24 @@ const NESTED_GROUP = 'zztia11';
 const NESTED_TM_LIST = 'zztia12';
 const NESTED_TEXT = 'zztia13';
 const RECORD_ID = 1;
+/** A virtual section of NESTED_SECTION (its relation names a section-model node). */
+const VIRTUAL_SECTION = 'zztia20';
+/** A project-gated section: zztia33 is its component_filter. */
+const SCOPED_SECTION = 'zztia30';
+const SCOPED_TEXT = 'zztia31';
+const SCOPED_TM_LIST = 'zztia32';
+const SCOPED_FILTER = 'zztia33';
+/** In the grant holder's project. */
+const IN_SCOPE_ID = 1;
+/** In another project: outside the grant holder's records. */
+const OUT_OF_SCOPE_ID = 2;
+/** In the grant holder's project, then DELETED: only its TM history remains. */
+const DEAD_ID = 3;
+/** dd153 project ids the records and the grant holder's dd170 name (no project row needed). */
+const IN_PROJECT_ID = 958721;
+const OUT_PROJECT_ID = 958722;
+/** A section that declares NO time_machine_list. */
+const NO_NODE_SECTION = 'zztia40';
 
 const GRANTED_USER_ID = 958701;
 const UNGRANTED_USER_ID = 958702;
@@ -79,12 +111,56 @@ const SITUATION = situation({
 		{ tipo: NESTED_GROUP, parent: NESTED_SECTION, model: 'section_group', order_number: 1 },
 		{ tipo: NESTED_TEXT, parent: NESTED_GROUP, model: 'component_input_text', order_number: 1 },
 		{ tipo: NESTED_TM_LIST, parent: NESTED_GROUP, model: 'time_machine_list', order_number: 2 },
+		{
+			tipo: VIRTUAL_SECTION,
+			parent: 'test1',
+			model: 'section',
+			term: { 'lg-eng': 'zztia virtual' },
+			relations: [{ tipo: NESTED_SECTION }],
+		},
+		{ tipo: SCOPED_SECTION, parent: 'test1', model: 'section', term: { 'lg-eng': 'zztia scoped' } },
+		{ tipo: SCOPED_TEXT, parent: SCOPED_SECTION, model: 'component_input_text', order_number: 1 },
+		{ tipo: SCOPED_TM_LIST, parent: SCOPED_SECTION, model: 'time_machine_list', order_number: 2 },
+		{
+			tipo: SCOPED_FILTER,
+			parent: SCOPED_SECTION,
+			model: 'component_filter',
+			order_number: 3,
+			term: { 'lg-eng': 'Projects' },
+			relations: [{ tipo: 'dd153' }],
+		},
+		{ tipo: NO_NODE_SECTION, parent: 'test1', model: 'section', term: { 'lg-eng': 'zztia bare' } },
 	],
 	records: [
 		{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID },
 		{ section_tipo: NESTED_SECTION, section_id: RECORD_ID },
+		{ section_tipo: VIRTUAL_SECTION, section_id: RECORD_ID },
+		scopedRecord(IN_SCOPE_ID, IN_PROJECT_ID),
+		scopedRecord(OUT_OF_SCOPE_ID, OUT_PROJECT_ID),
+		scopedRecord(DEAD_ID, IN_PROJECT_ID),
 	],
 });
+
+/** A zztia30 record filed under one dd153 project. */
+function scopedRecord(sectionId: number, projectId: number) {
+	return {
+		section_tipo: SCOPED_SECTION,
+		section_id: sectionId,
+		columns: {
+			relation: {
+				[SCOPED_FILTER]: [
+					{
+						id: 1,
+						type: 'dd151',
+						section_tipo: 'dd153',
+						section_id: projectId,
+						from_component_tipo: SCOPED_FILTER,
+					},
+				],
+			},
+		},
+	};
+}
 
 /** One dd774 grant row (getPermissionsTable reads `${section_tipo}_${tipo}`). */
 const grant = (id: number, sectionTipo: string, tipo: string) => ({
@@ -100,10 +176,19 @@ const BASE_GRANTS = [
 	grant(2, DIRECT_SECTION, DIRECT_TEXT),
 	grant(3, NESTED_SECTION, NESTED_SECTION),
 	grant(4, NESTED_SECTION, NESTED_TEXT),
+	grant(7, VIRTUAL_SECTION, VIRTUAL_SECTION),
+	grant(8, VIRTUAL_SECTION, NESTED_TEXT),
+	grant(9, SCOPED_SECTION, SCOPED_SECTION),
+	grant(10, SCOPED_SECTION, SCOPED_TEXT),
+	grant(11, NO_NODE_SECTION, NO_NODE_SECTION),
 ];
 const TM_GRANTS = [
 	grant(5, DIRECT_SECTION, DIRECT_TM_LIST),
 	grant(6, NESTED_SECTION, NESTED_TM_LIST),
+	// The VIRTUAL section's grant: the pair the gate asks, (virtual section, the
+	// real section's node) — getPermissions(principal, zztia20, zztia12).
+	grant(12, VIRTUAL_SECTION, NESTED_TM_LIST),
+	grant(13, SCOPED_SECTION, SCOPED_TM_LIST),
 ];
 
 const OWNED: { table: string; sectionTipo: string; sectionId: number }[] = [
@@ -131,7 +216,12 @@ const locator = (from: string, sectionTipo: string, sectionId: number) => ({
 	from_component_tipo: from,
 });
 
-async function mintUser(userId: number, profileId: number, grants: object[]) {
+async function mintUser(
+	userId: number,
+	profileId: number,
+	grants: object[],
+	projectIds: readonly number[] = [],
+) {
 	await insertRow('matrix_profiles', 'dd234', profileId, {
 		string: { dd237: [{ id: 1, lang: LANG, value: `zztia profile ${profileId}` }] },
 		misc: { dd774: grants },
@@ -143,6 +233,14 @@ async function mintUser(userId: number, profileId: number, grants: object[]) {
 			dd244: [locator('dd244', 'dd64', 2)],
 			dd515: [locator('dd515', 'dd64', 2)],
 			dd1725: [locator('dd1725', 'dd234', profileId)],
+			...(projectIds.length > 0
+				? {
+						dd170: projectIds.map((projectId, index) => ({
+							...locator('dd170', 'dd153', projectId),
+							id: index + 1,
+						})),
+					}
+				: {}),
 		},
 	});
 }
@@ -169,27 +267,48 @@ beforeAll(async () => {
 	await assertTestDatabase('tm_inspector_access_native');
 	await sweepIdentities();
 	await ensureSituation(SITUATION);
-	await mintUser(GRANTED_USER_ID, GRANTED_PROFILE_ID, [...BASE_GRANTS, ...TM_GRANTS]);
-	await mintUser(UNGRANTED_USER_ID, UNGRANTED_PROFILE_ID, BASE_GRANTS);
+	await mintUser(
+		GRANTED_USER_ID,
+		GRANTED_PROFILE_ID,
+		[...BASE_GRANTS, ...TM_GRANTS],
+		[IN_PROJECT_ID],
+	);
+	await mintUser(UNGRANTED_USER_ID, UNGRANTED_PROFILE_ID, BASE_GRANTS, [IN_PROJECT_ID]);
 	clearSecurityCaches();
 	admin = await resolvePrincipal(-1);
 	granted = await resolvePrincipal(GRANTED_USER_ID);
 	ungranted = await resolvePrincipal(UNGRANTED_USER_ID);
 	// History rows, minted through the engine's own save path.
-	for (const [sectionTipo, componentTipo] of [
-		[DIRECT_SECTION, DIRECT_TEXT],
-		[NESTED_SECTION, NESTED_TEXT],
+	for (const [sectionTipo, componentTipo, sectionId] of [
+		[DIRECT_SECTION, DIRECT_TEXT, RECORD_ID],
+		[NESTED_SECTION, NESTED_TEXT, RECORD_ID],
+		[VIRTUAL_SECTION, NESTED_TEXT, RECORD_ID],
+		[SCOPED_SECTION, SCOPED_TEXT, IN_SCOPE_ID],
+		[SCOPED_SECTION, SCOPED_TEXT, OUT_OF_SCOPE_ID],
+		[SCOPED_SECTION, SCOPED_TEXT, DEAD_ID],
 	] as const) {
 		const saved = await saveComponentData({
 			componentTipo,
 			sectionTipo,
-			sectionId: RECORD_ID,
+			sectionId,
 			lang: LANG,
 			changedData: [{ action: 'update', id: null, value: { lang: LANG, value: 'zztia history' } }],
 			userId: -1,
 		});
 		expect(saved.ok).toBe(true);
 	}
+	// Whole-record snapshot rows (tipo = section_tipo — the snapshot list's
+	// surface) of the two LIVE records, inserted directly: no engine door writes
+	// one for a live record without changing it. The DEAD record's comes from the
+	// engine's own delete, which snapshots the record and leaves no live row.
+	for (const sectionId of [IN_SCOPE_ID, OUT_OF_SCOPE_ID]) {
+		await sql.unsafe(
+			`INSERT INTO matrix_time_machine (section_id, section_tipo, tipo, lang, timestamp, user_id, data)
+			 VALUES ($1, $2, $2, 'lg-nolan', now(), -1, '{}'::jsonb)`,
+			[sectionId, SCOPED_SECTION],
+		);
+	}
+	expect((await deleteSectionRecord(SCOPED_SECTION, DEAD_ID, -1)).removed).toBe(true);
 });
 
 afterAll(async () => {
@@ -200,7 +319,7 @@ afterAll(async () => {
 /** The inspector record-history read, exactly as render_inspector sends it. */
 function historyRqo(
 	action: 'read' | 'count',
-	locators: { section_tipo: string }[],
+	locators: { section_tipo: string; section_id?: number }[],
 	targets?: string[],
 ) {
 	return {
@@ -222,7 +341,7 @@ function historyRqo(
 			offset: 0,
 			order: [{ direction: 'DESC', path: [{ component_tipo: 'id' }] }],
 			skip_projects_filter: true,
-			filter_by_locators: locators.map((entry) => ({ ...entry, section_id: RECORD_ID })),
+			filter_by_locators: locators.map((entry) => ({ section_id: RECORD_ID, ...entry })),
 		},
 		show: {},
 	};
@@ -245,13 +364,64 @@ async function call(
 	sectionTipos: string[],
 	targets?: string[],
 ): Promise<Answer> {
+	return send(
+		action,
+		principal,
+		historyRqo(
+			action,
+			sectionTipos.map((section_tipo) => ({ section_tipo })),
+			targets,
+		),
+	);
+}
+
+/** One record's history (a single pin at `sectionId`). */
+function callPinned(
+	action: 'read' | 'count',
+	principal: Principal,
+	sectionTipo: string,
+	sectionId: number,
+): Promise<Answer> {
+	return send(
+		action,
+		principal,
+		historyRqo(action, [{ section_tipo: sectionTipo, section_id: sectionId }]),
+	);
+}
+
+/** The record-SNAPSHOT list, exactly as tool_time_machine sends it for a section caller. */
+function callSnapshots(
+	action: 'read' | 'count',
+	principal: Principal,
+	sectionTipo: string,
+): Promise<Answer> {
+	return send(action, principal, {
+		action,
+		source: {
+			model: 'section',
+			tipo: 'dd15',
+			section_tipo: 'dd15',
+			mode: 'list',
+			lang: LANG,
+			session_save: false,
+		},
+		sqo: {
+			id: 'time_machine_temporal',
+			mode: 'tm',
+			section_tipo: [sectionTipo],
+			limit: 10,
+			offset: 0,
+			order: [{ direction: 'DESC', path: [{ component_tipo: 'id' }] }],
+			skip_projects_filter: true,
+			filter: { $and: [{ q: sectionTipo, column_name: 'tipo' }] },
+		},
+		show: {},
+	});
+}
+
+async function send(action: 'read' | 'count', principal: Principal, rqo: object): Promise<Answer> {
 	const handler = coreApiActions[action];
 	if (handler === undefined) throw new Error(`dd_core_api has no '${action}' action`);
-	const rqo = historyRqo(
-		action,
-		sectionTipos.map((section_tipo) => ({ section_tipo })),
-		targets,
-	);
 	try {
 		const result = await handler(rqo as never, contextFor(principal));
 		return { body: result.body as Record<string, unknown> };
@@ -266,6 +436,18 @@ function historyRows(answer: Answer): number {
 	const data = (answer.body.data as { data?: { typo?: string; entries?: unknown[] }[] }).data ?? [];
 	const envelope = data.find((item) => item.typo === 'sections');
 	return envelope?.entries?.length ?? 0;
+}
+
+/** The caller records the history rows a read answered belong to (sorted, distinct). */
+function historyRecords(answer: Answer): number[] {
+	if ('refused' in answer) return [-1];
+	const data = (answer.body.data as { data?: { typo?: string; entries?: unknown[] }[] }).data ?? [];
+	const entries = (data.find((item) => item.typo === 'sections')?.entries ?? []) as {
+		caller_section_id?: unknown;
+	}[];
+	return [...new Set(entries.map((entry) => Number(entry.caller_section_id)))].sort(
+		(a, b) => a - b,
+	);
 }
 
 function countTotal(answer: Answer): number {
@@ -357,6 +539,20 @@ describe('the section context carries config.time_machine_list per principal', (
 		return (entry as { config?: { time_machine_list?: unknown } }).config?.time_machine_list;
 	}
 
+	test('a virtual section stamps the real node; a section with no node stamps admin only', async () => {
+		expect({
+			grantedVirtual: await stamped(granted, VIRTUAL_SECTION),
+			ungrantedVirtual: await stamped(ungranted, VIRTUAL_SECTION),
+			adminNoNode: await stamped(admin, NO_NODE_SECTION),
+			grantedNoNode: await stamped(granted, NO_NODE_SECTION),
+		}).toEqual({
+			grantedVirtual: NESTED_TM_LIST,
+			ungrantedVirtual: null,
+			adminNoNode: NO_NODE_SECTION,
+			grantedNoNode: null,
+		});
+	});
+
 	test('the tipo for a grant holder and an admin, null otherwise', async () => {
 		expect({
 			granted: await stamped(granted, DIRECT_SECTION),
@@ -368,6 +564,80 @@ describe('the section context carries config.time_machine_list per principal', (
 			grantedNested: NESTED_TM_LIST,
 			ungranted: null,
 			admin: DIRECT_TM_LIST,
+		});
+	});
+});
+
+describe('the record scope: a section-wide grant never reaches past the projects filter', () => {
+	test('the grant holder reads the history of an in-project record', async () => {
+		expect(historyRecords(await callPinned('read', granted, SCOPED_SECTION, IN_SCOPE_ID))).toEqual([
+			IN_SCOPE_ID,
+		]);
+		expect(
+			countTotal(await callPinned('count', granted, SCOPED_SECTION, IN_SCOPE_ID)),
+		).toBeGreaterThan(0);
+	});
+
+	test('an out-of-project record has no history for the grant holder — read and count', async () => {
+		// The CONTROL: the history exists, and the admin reads it.
+		expect(
+			historyRecords(await callPinned('read', admin, SCOPED_SECTION, OUT_OF_SCOPE_ID)),
+		).toEqual([OUT_OF_SCOPE_ID]);
+		expect(
+			historyRecords(await callPinned('read', granted, SCOPED_SECTION, OUT_OF_SCOPE_ID)),
+		).toEqual([]);
+		expect(countTotal(await callPinned('count', granted, SCOPED_SECTION, OUT_OF_SCOPE_ID))).toBe(0);
+	});
+
+	test('a pin list naming both records answers only the in-project one', async () => {
+		const both = historyRqo('read', [
+			{ section_tipo: SCOPED_SECTION, section_id: IN_SCOPE_ID },
+			{ section_tipo: SCOPED_SECTION, section_id: OUT_OF_SCOPE_ID },
+		]);
+		expect(historyRecords(await send('read', granted, both))).toEqual([IN_SCOPE_ID]);
+		expect(historyRecords(await send('read', admin, both))).toEqual([IN_SCOPE_ID, OUT_OF_SCOPE_ID]);
+	});
+
+	test('the snapshot list holds only in-scope records, and its count equals its rows', async () => {
+		expect(historyRecords(await callSnapshots('read', admin, SCOPED_SECTION))).toEqual([
+			IN_SCOPE_ID,
+			OUT_OF_SCOPE_ID,
+			DEAD_ID,
+		]);
+		const read = await callSnapshots('read', granted, SCOPED_SECTION);
+		expect(historyRecords(read)).toEqual([IN_SCOPE_ID]);
+		expect(countTotal(await callSnapshots('count', granted, SCOPED_SECTION))).toBe(
+			historyRows(read),
+		);
+	});
+
+	test('a DEAD record (no live row to judge) is out of the non-admin scope', async () => {
+		expect(historyRecords(await callPinned('read', admin, SCOPED_SECTION, DEAD_ID))).toEqual([
+			DEAD_ID,
+		]);
+		expect(historyRecords(await callPinned('read', granted, SCOPED_SECTION, DEAD_ID))).toEqual([]);
+		expect(countTotal(await callPinned('count', granted, SCOPED_SECTION, DEAD_ID))).toBe(0);
+	});
+});
+
+describe('a virtual section and a section with no time_machine_list', () => {
+	test('the virtual section resolves the real section nested node', async () => {
+		expect(await getTimeMachineListTipo(VIRTUAL_SECTION)).toBe(NESTED_TM_LIST);
+	});
+
+	test('the grant keyed on the virtual section admits; its absence refuses', async () => {
+		expect(historyRows(await call('read', granted, [VIRTUAL_SECTION]))).toBeGreaterThan(0);
+		expect(await call('read', ungranted, [VIRTUAL_SECTION])).toEqual({ refused: 'perm.denied' });
+	});
+
+	test('no node: admin-only, read and count alike', async () => {
+		expect(await call('read', granted, [NO_NODE_SECTION])).toEqual({ refused: 'perm.denied' });
+		expect(await call('count', granted, [NO_NODE_SECTION])).toEqual({ refused: 'perm.denied' });
+	});
+
+	test('a mixed-section count is refused like the mixed-section read', async () => {
+		expect(await call('count', granted, [DIRECT_SECTION, NESTED_SECTION])).toEqual({
+			refused: 'perm.denied',
 		});
 	});
 });
