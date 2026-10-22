@@ -79,6 +79,10 @@ const DIRECT_LIST = 'zztia5';
 const SECRET = 'zztia secret';
 /** The readable component's past value — the grant holder's control. */
 const PUBLIC_VALUE = 'zztia history';
+/** A credential of DIRECT_SECTION (secretValue): its history never serves the stored hash. */
+const PASSWORD = 'zztia6';
+/** What the save hashes — the plaintext never lands anywhere. */
+const PASSWORD_PLAIN = 'Zztia-Pass-9472!x';
 const NESTED_SECTION = 'zztia10';
 const NESTED_GROUP = 'zztia11';
 const NESTED_TM_LIST = 'zztia12';
@@ -131,6 +135,7 @@ const SITUATION = situation({
 			order_number: 4,
 			relations: [{ tipo: DIRECT_TEXT }, { tipo: RESTRICTED_TEXT }],
 		},
+		{ tipo: PASSWORD, parent: DIRECT_SECTION, model: 'component_password', order_number: 5 },
 		{ tipo: NESTED_SECTION, parent: 'test1', model: 'section', term: { 'lg-eng': 'zztia nested' } },
 		{ tipo: NESTED_GROUP, parent: NESTED_SECTION, model: 'section_group', order_number: 1 },
 		{ tipo: NESTED_TEXT, parent: NESTED_GROUP, model: 'component_input_text', order_number: 1 },
@@ -205,6 +210,9 @@ const BASE_GRANTS = [
 	grant(9, SCOPED_SECTION, SCOPED_SECTION),
 	grant(10, SCOPED_SECTION, SCOPED_TEXT),
 	grant(11, NO_NODE_SECTION, NO_NODE_SECTION),
+	// The credential is READABLE to the grant holder (a user-manager profile):
+	// the mask, not the pair, is what keeps its hash off the wire.
+	grant(14, DIRECT_SECTION, PASSWORD),
 ];
 const TM_GRANTS = [
 	grant(5, DIRECT_SECTION, DIRECT_TM_LIST),
@@ -332,6 +340,18 @@ beforeAll(async () => {
 		userId: -1,
 	});
 	expect(restricted.ok).toBe(true);
+	// The CREDENTIAL's history on the same record (stored hashed by the save).
+	const password = await saveComponentData({
+		componentTipo: PASSWORD,
+		sectionTipo: DIRECT_SECTION,
+		sectionId: RECORD_ID,
+		lang: 'lg-nolan',
+		changedData: [
+			{ action: 'update', id: null, value: { lang: 'lg-nolan', value: PASSWORD_PLAIN } },
+		],
+		userId: -1,
+	});
+	expect(password.ok).toBe(true);
 	// A whole-record snapshot of the same record carrying BOTH components — the
 	// snapshot list's surface (inserted directly, see the note below).
 	await sql.unsafe(
@@ -870,5 +890,60 @@ describe('the component pair: a section-wide TM grant never reads a level-0 comp
 		// The CONTROL: the readable list column of the same snapshot still serves.
 		expect(served(answer)).toContain(PUBLIC_VALUE);
 		expect(served(answer)).not.toContain(SECRET);
+	});
+});
+
+describe('a credential (secretValue) history never serves the stored value', () => {
+	const served = (answer: Answer): string =>
+		'refused' in answer ? `refused:${answer.refused}` : JSON.stringify(answer.body);
+
+	/** The stored (hashed) value of every TM row of the credential — what must never serve. */
+	async function storedHashes(): Promise<string[]> {
+		const rows = (await sql.unsafe(
+			`SELECT data->0->>'value' AS value FROM matrix_time_machine
+			 WHERE section_tipo = $1 AND section_id = $2 AND tipo = $3`,
+			[DIRECT_SECTION, RECORD_ID, PASSWORD],
+		)) as { value: string | null }[];
+		return rows.map((row) => row.value).filter((value): value is string => value !== null);
+	}
+
+	// WC-2026-09-30-password-hash-never-served names the Time Machine history:
+	// the raw dd1574 cell (byte-verbatim snapshot) is masked like the column,
+	// for EVERY principal — the admin and a grant holder who reads the pair.
+	test('the inspector record block: the raw dd1574 cell of a credential row is masked', async () => {
+		const hashes = await storedHashes();
+		expect(hashes.length).toBeGreaterThan(0);
+		const rqo = historyRqo('read', [{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID }]);
+		for (const principal of [admin, granted]) {
+			const text = served(await send('read', principal, rqo));
+			// The CONTROLS: the row is served (masked), the readable value too.
+			expect(text).toContain('****************');
+			expect(text).toContain(PUBLIC_VALUE);
+			for (const hash of hashes) expect(text).not.toContain(JSON.stringify(hash).slice(1, -1));
+			expect(text).not.toContain('$argon2');
+			expect(text).not.toContain(PASSWORD_PLAIN);
+		}
+	});
+
+	test('the component history of the credential, raw column requested: masked', async () => {
+		const hashes = await storedHashes();
+		const base = historyRqo('read', [{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID }]);
+		const rqo = {
+			...base,
+			sqo: {
+				...base.sqo,
+				filter_by_locators: [
+					{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID, tipo: PASSWORD },
+				],
+			},
+			show: { ddo_map: [{ tipo: 'dd1574', section_tipo: 'dd15', view: 'mini' }] },
+		};
+		for (const principal of [admin, granted]) {
+			const answer = await send('read', principal, rqo);
+			expect(historyRows(answer)).toBeGreaterThan(0);
+			const text = served(answer);
+			for (const hash of hashes) expect(text).not.toContain(JSON.stringify(hash).slice(1, -1));
+			expect(text).not.toContain('$argon2');
+		}
 	});
 });

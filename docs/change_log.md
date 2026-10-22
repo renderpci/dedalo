@@ -22,6 +22,17 @@ Merged since the last release; these ship with the next one.
 
 ### For users
 
+#### Security
+
+- **The change history of a password field no longer shows the stored password hash.**
+
+    The *Value* column of a record's change history showed, for each past change of a password field,
+    the stored (encrypted) password itself, to administrators and to any user allowed to read that
+    field. It now shows the mask `****************`, as the field does everywhere else. Restoring a
+    past password from the Time Machine is unchanged.
+
+    Wire contract: `WC-2026-09-30-password-hash-never-served`.
+
 #### Removed
 
 - **The hidden 'Calm Scholarly' design preview is removed.**

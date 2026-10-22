@@ -961,6 +961,8 @@ async function tmCellRow(row: TmRow, tipo: string): Promise<EmitRow> {
  * the row still shows who/when/what, never the value. A whole-record row
  * injects no raw copy (its components land under their own columns, each
  * judged by the floor). No principal = an internal resolution, unfiltered.
+ * A credential row's raw cell is never its stored value whatever the principal:
+ * tm_record.ts masks a `secretValue` snapshot before it lands here.
  */
 async function withholdUnreadableRawValue(
 	record: MatrixRecord,
