@@ -389,7 +389,7 @@ export const set_context_vars = function(self) {
 *   'rendered'  → if same render_level, returns existing node with a warning
 *
 * Pre-render guards (short-circuit to an error/empty node):
-*   - page_globals.page_error is set → renders the error panel
+*   - page_globals.page_error is set and self is page scope (is_page_root) → renders the error panel
 *   - type === 'component' and context is falsy → renders "invalid context" error
 *   - permissions < 1 → renders a "no access" span
 *
@@ -419,8 +419,12 @@ common.prototype.render = async function (options={}) {
 
 	// page error case
 	// page_globals.page_error is the ONE page-level failure (an ApiError set by
-	// error_dispatch / page.build).
-		if (page_globals.page_error) {
+	// error_dispatch / page.build). It replaces only a PAGE-scope render (the
+	// page, a page-root element): an embedded sibling (an inspector's
+	// relation_list, a portal, a side panel) keeps rendering its own node —
+	// swapping every instance on the page for the panel is what left the page
+	// stuck after one refusal.
+		if (page_globals.page_error && is_page_root(self)) {
 
 			// debug
 			console.warn('))) render page_globals.page_error:', self.model, page_globals.page_error);
@@ -2785,6 +2789,24 @@ export const push_browser_history = function(options) {
 
 
 /**
+* IS_PAGE_ROOT
+* Whether an instance is PAGE scope: the page itself, or an element the page
+* instantiated (its caller is the page), or one built standalone with no caller.
+* Anything with another caller is EMBEDDED (an inspector block, a portal, a
+* tool panel): its failures are panel-scoped and never the page's
+* (page_globals.page_error).
+* @param {Object} instance
+* @returns {boolean}
+*/
+export const is_page_root = function(instance) {
+	if (!instance) return false
+	if (instance.model==='page') return true
+	return !instance.caller || instance.caller.model==='page'
+}//end is_page_root
+
+
+
+/**
 * BUILD_AUTOLOAD
 * Execute the API request that loads context and data for a section, area, or portal
 * during its `build` phase. Provides a single canonical call site for the
@@ -2875,7 +2897,13 @@ export const build_autoload = async function(self, {recovery_retry=false}={}) {
 			// no-access panel, toast); `recovered` is true only when the cause
 			// is gone — today that means the user logged back in.
 				if (request_failed(api_response)) {
-					const {recovered} = await handle_api_error(api_response.error, {wrapper: self.node})
+					// page_scope: only a page-root element's refusal is the PAGE's
+					// failure (page_globals.page_error); an embedded one is panel-local
+					// and its caller renders the build()===false answer.
+					const {recovered} = await handle_api_error(api_response.error, {
+						wrapper		: self.node,
+						page_scope	: is_page_root(self)
+					})
 					// Recovered (re-login): re-send the SAME request and hand its answer
 					// back to the build() in flight. (!) Never a nested build()+render()
 					// here: that rendered a second copy, reset build_error, and this

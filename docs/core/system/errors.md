@@ -206,6 +206,12 @@ described in full on the [data_manager](../client/data_manager.md) page.
   `relogin`, `no_access_page`, `page_panel`, `csrf_retry`, `toast`, `modal`, `inline`,
   `silent`. `auth.not_logged` relogs in and retries; `perm.*` shows the no-access page;
   `record.in_use` is a modal; `validation.*` renders inline next to the field.
+- **The page panel belongs to the page.** `no_access_page` and `page_panel` take the whole
+  page (`page_globals.page_error`) only when the refused request was the page's own — the
+  page build, or the element the page opened (`ctx.page_scope: true`). A refusal inside an
+  embedded element — an inspector block, a portal, a tool panel — stays in that element: its
+  wrapper gets the panel, or the element renders its own short failure line, and every other
+  element on the page keeps working. Navigating to another element clears the page panel.
 - **Notices** go through the same table via `handle_api_notice`, at severity `warning` and
   with page-level actions suppressed — the request succeeded, so nothing may take the page
   away from the user. A caller that wants to render a notice itself claims ownership when it

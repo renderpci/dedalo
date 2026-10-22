@@ -580,9 +580,47 @@ const relogin = async () => {
 
 
 /**
+* RENDER_SCOPED_PANEL
+* The page-panel actions ('no_access_page', 'page_panel') are PAGE-level only
+* when the failed request was the PAGE's own: `ctx.page_scope===true` (the page
+* build, a page-root element's build). Only then is `page_globals.page_error`
+* set — the slot common.prototype.render turns into the page panel. Any other
+* request (an embedded side panel, an inspector block, a widget, a save) is
+* panel-scoped and NEVER sets it: an embedded refusal used to set the page slot
+* and every later render of every instance on the page became the no-access
+* panel, with no way out but a reload.
+*   - a wrapper given      → the panel goes into that wrapper (panel-local);
+*   - page_scope===false   → the caller owns the failure surface (an embedded
+*                            build that answers false): nothing here;
+*   - neither              → a toast, so the refusal is never silent.
+* @param {ApiError} api_error
+* @param {Object} entry - the resolved policy row
+* @param {Object} ctx - handle_api_error ctx
+* @return void
+*/
+const render_scoped_panel = (api_error, entry, ctx) => {
+
+	if (ctx.page_scope===true) {
+		set_page_error(api_error)
+	}
+	if (ctx.wrapper && typeof ctx.wrapper.appendChild==='function') {
+		ctx.wrapper.appendChild(render_error_panel(api_error))
+		return
+	}
+	if (ctx.page_scope===undefined) {
+		deduped_toast(api_error, entry)
+	}
+}//end render_scoped_panel
+
+
+
+/**
 * HANDLE_API_ERROR
 * @param {ApiError|Object} api_error
-* @param {Object} [ctx] - {wrapper?:HTMLElement (inline/panel target), scope?:string, silent?:bool}
+* @param {Object} [ctx] - {wrapper?:HTMLElement (inline/panel target), scope?:string, silent?:bool,
+*   page_scope?:bool (true: the PAGE's own request — the only one that may set
+*   page_globals.page_error; false: an embedded build whose caller renders the
+*   failure; see render_scoped_panel)}
 * @return Promise<{recovered:boolean, action:string}>
 */
 export const handle_api_error = async (api_error, ctx = {}) => {
@@ -621,19 +659,9 @@ export const handle_api_error = async (api_error, ctx = {}) => {
 			return {...outcome, action}
 		}
 
-		case 'no_access_page': {
-			set_page_error(api_error)
-			if (ctx.wrapper && typeof ctx.wrapper.appendChild==='function') {
-				ctx.wrapper.appendChild(render_error_panel(api_error))
-			}
-			return {recovered:false, action}
-		}
-
+		case 'no_access_page':
 		case 'page_panel': {
-			set_page_error(api_error)
-			if (ctx.wrapper && typeof ctx.wrapper.appendChild==='function') {
-				ctx.wrapper.appendChild(render_error_panel(api_error))
-			}
+			render_scoped_panel(api_error, entry, ctx)
 			return {recovered:false, action}
 		}
 

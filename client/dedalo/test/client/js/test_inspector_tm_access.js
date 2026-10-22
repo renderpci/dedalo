@@ -63,6 +63,7 @@ describe(`INSPECTOR TIME MACHINE ACCESS`, function () {
 		original_request = data_manager.request;
 		original_render = section.prototype.render;
 		original_page_error = page_globals.page_error;
+		page_globals.page_error = null;
 		requests = [];
 		dd15_renders = 0;
 		data_manager.request = async (options) => {
@@ -136,6 +137,7 @@ describe(`INSPECTOR TIME MACHINE ACCESS`, function () {
 		assert.notInclude(line.textContent, 'rq-tm-access');
 		assert.isNull(body.querySelector('.page_error_container'), 'no page-level error panel');
 		assert.isNull(body.querySelector('a'), 'no Home link');
+		assert.isNull(page_globals.page_error, 'an embedded refusal never sets the page slot');
 
 		if (self.tm_list) await self.tm_list.destroy(true, true);
 	});

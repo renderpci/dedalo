@@ -209,6 +209,15 @@ Merged since the last release; these ship with the next one.
     run still reported that it had completed. Now a run that publishes no records
     removes the previous combined document and ZIP as well.
 
+- **A refused side panel no longer takes over the whole page.**
+
+    When a part of the page that a user may not open — for example a history block in the
+    inspector — was refused, the whole page switched to the "You don't have permission to access
+    this page" panel and stayed there: every other block showed the same panel and navigating
+    elsewhere did not recover. The refusal now stays inside the part that was refused, the rest of
+    the page keeps working, and moving to another section clears a page-level refusal. See
+    [errors](./core/system/errors.md).
+
 - **The References panel and its graph open for every user who can read the record, and their page counts add up**
 
     A user who was not the superuser got *Insufficient permissions* when opening a

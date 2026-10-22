@@ -194,12 +194,28 @@ describe('ERROR_DISPATCH — handle_api_error', function() {
 		assert.equal(seen.length, 0)
 	})
 
-	it('no_access_page: sets page_globals.page_error — THE single page-level slot', async function() {
+	it('no_access_page, PAGE scope: sets page_globals.page_error — THE single page-level slot', async function() {
 		const api_error = new ApiError({code: 'perm.denied', message: 'Insufficient permissions', request_id: 'rq-p'})
-		const outcome = await handle_api_error(api_error)
+		const outcome = await handle_api_error(api_error, {page_scope: true})
 		assert.deepEqual(outcome, {recovered: false, action: 'no_access_page'})
 		assert.strictEqual(page_globals.page_error, api_error)
 		assert.isUndefined(page_globals.api_errors, 'the legacy array is gone (P4)')
+	})
+
+	it('no_access_page, EMBEDDED scope: never sets page_globals.page_error', async function() {
+		// an embedded build (page_scope:false): its caller renders the failure — no slot, no toast
+		const seen = await with_notifications(async () => {
+			const outcome = await handle_api_error(new ApiError({code: 'perm.denied'}), {page_scope: false})
+			assert.deepEqual(outcome, {recovered: false, action: 'no_access_page'})
+		})
+		assert.isNull(page_globals.page_error, 'an embedded refusal is panel-scoped')
+		assert.equal(seen.length, 0, 'the caller owns the surface')
+		// unspecified scope, no wrapper: still not the page's — but never silent (a toast)
+		const seen_unscoped = await with_notifications(async () => {
+			await handle_api_error(new ApiError({code: 'perm.denied', message: 'Insufficient permissions'}))
+		})
+		assert.isNull(page_globals.page_error)
+		assert.equal(seen_unscoped.length, 1)
 	})
 
 	it('no_access_page / page_panel render the panel into ctx.wrapper when given (text only)', async function() {
@@ -210,7 +226,7 @@ describe('ERROR_DISPATCH — handle_api_error', function() {
 		assert.equal(panel.dataset.code, 'request.invalid_tipo')
 		assert.equal(panel.querySelector('h1').textContent, 'Invalid tipo <b>x</b>')
 		assert.isNull(panel.querySelector('b'))
-		assert.strictEqual(page_globals.page_error.code, 'request.invalid_tipo')
+		assert.isNull(page_globals.page_error, 'a wrapper-local panel is not the page slot')
 	})
 
 	it('inline: renders into ctx.wrapper via ui.show_message; falls back to a toast without a wrapper', async function() {
