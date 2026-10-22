@@ -126,25 +126,24 @@ function routeClientPage(door: string, sqo: unknown, scope: string): RouteClient
  * - `'clamped'` — a value the client SENT was changed: always;
  * - `'defaulted'` — the limit was absent. These doors used to read that as
  *   "all", so the notice is owed exactly when the default CUT something the
- *   CALLER could page to: ANY row past the served page (the sink's own
- *   question, locators, owning-section axis and order) is a record this
- *   principal may see — not only the next window: a hidden window can sit
- *   between the page and visible rows. An absent limit whose answer is whole
+ *   CALLER could page to: the page is a window of the caller's SCOPED
+ *   referencing records (D1), so the notice is owed exactly when that set holds
+ *   more than offset + limit records. An absent limit whose answer is whole
  *   (the tools that send none, on a host with a few related records) carries
  *   no notice — the client toasts every notice, and nothing was cut.
  *
- * SCOPED (AUTHZ-05), like the page itself, and BOUNDED whatever the tail: the
- * whole tail past the page is asked ONE question in SQL
- * (findInverseReferencesPast → record_scope anyRowInScope — the section grant,
- * then one EXISTS under the list's own record predicate). The doors cut the
- * window BEFORE scoping, so "is there anything for you past this page" is a
- * question the caller can already ask by paging forward — the notice
- * discloses nothing new. An UNSCOPED probe would answer "do more than
- * offset+limit references exist", counting records in sections and projects
- * the caller cannot reach (a binary search on the offset reads the exact
- * unscoped total); a probe that READ the tail window by window cost a deep
- * OFFSET read per window for a non-admin whose tail is hidden
- * (client_page_doors_native: the non-admin legs and the long hidden tail).
+ * SCOPED (AUTHZ-05), like the page itself, and BOUNDED whatever the tail: ONE
+ * statement over the related search's own scoped question
+ * (anyRecordVisiblePast → search_related anyInverseReferencePast, scoped by
+ * record_scope rowScopeFor — the predicate the page and the count use). "Is
+ * there anything for you past this page" is a question the caller can already
+ * ask by paging forward — the notice discloses nothing new. An UNSCOPED probe
+ * would answer "do more than offset+limit references exist", counting records
+ * in sections and projects the caller cannot reach (a binary search on the
+ * offset reads the exact unscoped total); a probe that READ the tail window by
+ * window cost a deep OFFSET read per window for a non-admin whose tail is
+ * hidden (client_page_doors_native: the non-admin legs and the long hidden
+ * tail; related_scope_equivalence_native: count == walk == probe).
  */
 async function owedPageNotices(
 	route: RouteClientPage,
@@ -164,11 +163,15 @@ async function owedPageNotices(
 }
 
 /**
- * Whether any referencing record past `page` (the sink's default order — the
- * same call buildRelationList / buildRelatedSections issue) is one `principal`
- * may see — one scoped statement over the whole tail, never a read of it.
- * Nothing lies past MAX_SAFE_INTEGER (offsetPastPage). Dynamic imports, like
- * the sink doors themselves (record_scope pulls in the search assembler).
+ * Whether the caller's SCOPED referencing records extend past `page` — the
+ * page is a window of that same scoped set (D1: buildRelationList /
+ * buildRelatedSections cut it after scoping), so "is anything past this page
+ * yours" is "does the scoped set hold more than offset + limit records". ONE
+ * statement over the related search's own question, scoped by the same
+ * record-scope predicate as the page and the count (search_related
+ * anyInverseReferencePast + record_scope rowScopeFor) — never a read of the
+ * tail. Nothing lies past MAX_SAFE_INTEGER (offsetPastPage). Dynamic imports,
+ * like the sink doors themselves (record_scope pulls in the search assembler).
  */
 async function anyRecordVisiblePast(
 	locators: RelatedLocatorFilter[],
@@ -178,12 +181,9 @@ async function anyRecordVisiblePast(
 ): Promise<boolean> {
 	const past = offsetPastPage(page);
 	if (past === null) return false;
-	const { findInverseReferencesPast } = await import('../search/search_related.ts');
-	const { anyRowInScope } = await import('../security/record_scope.ts');
-	return anyRowInScope(
-		await findInverseReferencesPast(locators, { sectionTipos }, past),
-		principal,
-	);
+	const { anyInverseReferencePast } = await import('../search/search_related.ts');
+	const { rowScopeFor } = await import('../security/record_scope.ts');
+	return anyInverseReferencePast(locators, { sectionTipos, scope: rowScopeFor(principal) }, past);
 }
 
 // Relation list (source.action 'get_relation_list'): the Referencias
@@ -295,9 +295,10 @@ async function readRelatedSections(rqo: Rqo, principal: Principal): Promise<ApiR
 		sectionTipos,
 		limit: page.limit,
 		offset: page.offset,
-		// AUTHZ-05: scope referencing records to the caller, like
+		// AUTHZ-05 / D1: scope referencing records to the caller, like
 		// get_relation_list above — the scan spans 'all' owning sections. The
-		// scope applies AFTER the window, so a short page is not the end.
+		// scope applies BEFORE the window (in the related search's SQL), so the
+		// page is a window of the caller's own records.
 		principal,
 	});
 	// The probe addresses the hosts exactly as buildRelatedSections does (the

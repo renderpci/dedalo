@@ -766,16 +766,28 @@ export async function buildRelationList(
 		sectionTipos?: string[] | 'all';
 		/**
 		 * The caller (AUTHZ-05). When present and NOT a global admin, referencing
-		 * records outside the caller's read grant / projects filter are dropped
-		 * before any existence, label or cell value is emitted. Undefined (internal
-		 * / test callers) applies NO filter — production dispatch ALWAYS passes it.
+		 * records outside the caller's read grant / projects filter are excluded by
+		 * the related search's SQL scope (D1) before the window is cut, so no
+		 * existence, label or cell value of one is ever emitted. Undefined
+		 * (internal / test callers) applies NO filter — production dispatch ALWAYS
+		 * passes it.
 		 */
 		principal?: Principal;
 	} = {},
 ): Promise<RelationListResult> {
 	// Request-scoped data lang backstop (S2-28), never a hardcoded lg-spa.
 	const lang = options.lang ?? currentDataLang();
-	let hits = await findInverseReferences(
+	// AUTHZ-05 / D1 — the referencing records are scoped to the caller IN the
+	// related search's own SQL (security/record_scope.ts rowScopeFor): the window
+	// is cut from the SCOPED owner sequence, so a page is full while more of the
+	// caller's records exist, and it is the same set the paginator count counts.
+	// Global admins are unscoped inside the predicate; no principal (internal /
+	// test callers) = no scope.
+	const scope =
+		options.principal === undefined
+			? undefined
+			: (await import('../security/record_scope.ts')).rowScopeFor(options.principal);
+	const hits = await findInverseReferences(
 		// Canonical address in (WC-2026-08-10-section-id-int-canonical). The
 		// index probe binds ::int either way, so the old String() minting bought
 		// nothing and only spread the string form outward.
@@ -789,18 +801,9 @@ export async function buildRelationList(
 			sectionTipos: options.sectionTipos ?? 'all',
 			limit: options.limit ?? false,
 			offset: options.offset,
+			scope,
 		},
 	);
-
-	// AUTHZ-05 — scope the referencing records to the caller. Post-filter (the
-	// inverse scan is a shared, principal-free primitive): a heavily-referenced
-	// host can therefore return fewer than `limit` rows when some references are
-	// out of scope, which is correct — it never leaks a record the caller cannot
-	// reach. Global admins are unscoped inside the helper.
-	if (options.principal !== undefined) {
-		const { scopeInverseReferenceHits } = await import('../security/record_scope.ts');
-		hits = await scopeInverseReferenceHits(hits, options.principal);
-	}
 
 	// PER-CALL record loader (the export-run seam this module already exposes
 	// as CellValueResolveOptions.loadRecord, never wired here until 2026-07-20):

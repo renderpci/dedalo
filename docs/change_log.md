@@ -209,6 +209,19 @@ Merged since the last release; these ship with the next one.
     run still reported that it had completed. Now a run that publishes no records
     removes the previous combined document and ZIP as well.
 
+- **The References panel and its graph open for every user who can read the record, and their page counts add up**
+
+    A user who was not the superuser got *Insufficient permissions* when opening a
+    record's References panel or its relations graph, even with read access to the
+    record. They now open for anyone who can read the record, listing only the
+    referring records that user may see. The total shown by the panel's paginator
+    now matches its pages: before, a user who could not see some referring records
+    got short pages and could never reach the total, and counting those records grew
+    slower with every record the user could not see. See
+    [relation_list](./core/ontology/relation_list.md).
+
+    Wire contract: `WC-2026-10-22-related-search-one-scope`.
+
 - **The acquisition tools no longer let you start a second import while the first one's outcome is unknown**
 
     In the auction-catalogue and journal acquisition tools, **Confirm import** stays
@@ -1487,7 +1500,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 18 entries"
+??? note "Wire contract — 19 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
@@ -1507,6 +1520,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-21-tm-section-restore-write-door`
     - `WC-2026-10-21-unpublish-markers-durable`
     - `WC-2026-10-21-update-cache-locked-resave`
+    - `WC-2026-10-22-related-search-one-scope`
 
 ## 7.0.0-beta.6 — 2026-10-15
 

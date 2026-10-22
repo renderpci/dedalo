@@ -4,12 +4,13 @@
  * WHY THIS FILE EXISTS. `count` answers with a NUMBER, and a number is the
  * cheapest disclosure channel in the engine: it is emitted for searches whose
  * ROWS the caller may never see. The function's dangerous branch is AUTHZ-05 —
- * the inverse-reference ('related') paginator. For a global admin it runs ONE
- * index COUNT; for everyone else it deliberately runs TWO queries (enumerate
- * with `findInverseReferences`, then drop what the projects ACL hides with
- * `scopeInverseReferenceHits`). Collapsing that into the admin's single index
- * COUNT is the obvious "simplification", it changes no row the client renders,
- * and it turns the total into a RECORD-COUNT ORACLE over hidden data.
+ * the inverse-reference ('related') paginator. Since D1 (2026-10-21) it is ONE
+ * scoped COUNT for every principal: the related search's own owner question,
+ * narrowed in SQL by the caller's record scope (`rowScopeFor`; a global admin is
+ * unscoped inside it). Dropping the scope is the obvious "simplification", it
+ * changes no row the client renders, and it turns the total into a
+ * RECORD-COUNT ORACLE over hidden data. (count == paged walk == probe, and the
+ * count's bounded cost: related_scope_equivalence_native.)
  *
  * The gate therefore asserts the two totals DIFFER, on records this file mints
  * itself: one referrer inside the non-admin's project, one outside it.
@@ -277,9 +278,9 @@ describe.if(DB_READY)('dd_core_api.count', () => {
 		expect(adminTotal).toBe(OWNED_IDS.length - 1);
 		// The non-admin holds exactly one of the two projects: one reference.
 		expect(nonAdminTotal).toBe(1);
-		// THE ORACLE ASSERTION. Replacing the enumerate-then-scope arm with the
-		// admin's one-query index COUNT makes these EQUAL — the paginator then
-		// reports how many records the projects ACL is hiding.
+		// THE ORACLE ASSERTION. Counting the unscoped owner question (dropping the
+		// record scope) makes these EQUAL — the paginator then reports how many
+		// records the projects ACL is hiding.
 		expect(nonAdminTotal).not.toBe(adminTotal);
 		expect(nonAdminTotal).toBeLessThan(adminTotal);
 	});

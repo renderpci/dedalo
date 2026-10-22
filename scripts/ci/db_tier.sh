@@ -195,6 +195,7 @@ DB_TIER_TRIPWIRES=(
 	test/unit/install_ontology_door_native.test.ts
 	test/unit/client_page_doors_native.test.ts
 	test/unit/search_related_page_window_native.test.ts
+	test/unit/related_scope_equivalence_native.test.ts
 	test/unit/filter_projects_membership_native.test.ts
 	test/unit/filter_projects_scope_native.test.ts
 	test/unit/term_by_tipo_label_guard.test.ts

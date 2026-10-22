@@ -22,12 +22,15 @@
  * (clampClientPage) and at the wire (wireSqoSchema), pinned by
  * client_page_doors_native and wire_sqo_page_bound_native.
  *
- * THE PAST TAILS ARE THE SINKS' OWN ROWS FROM THE OFFSET ON (READ-4's scoped
- * probes, findInverseReferencesPast / findInverseReferenceLocatorsPast): for
- * every order each sink takes, and every offset, the tail's rows are EXACTLY
- * the sink's unwindowed rows from that offset — same rows, same order. A tail
- * in another order is another SET past the offset (rows of the page counted as
- * past, rows past it missed). The situation makes order observable: TAIL_HOST
+ * THE PAST QUESTIONS ARE THE SINKS' OWN (READ-4's scoped probes). The
+ * breakdown's tail (findInverseReferenceLocatorsPast): for every order it
+ * takes, and every offset, the tail's rows are EXACTLY the sink's unwindowed
+ * rows from that offset — same rows, same order; a tail in another order is
+ * another SET past the offset. The find sink's probe (anyInverseReferencePast,
+ * D1 2026-10-21) asks a CARDINALITY of the same owner question the page windows
+ * and the count counts: for every offset it answers "something past" exactly
+ * when the sink's unwindowed rows outnumber the offset, and countInverseReferences
+ * equals that row count. The situation makes order observable: TAIL_HOST
  * is referenced from TWO sections whose ids INTERLEAVE, inserted in DESCENDING
  * id order, so neither insertion order nor a section-first grouping order
  * coincides with an id order.
@@ -47,10 +50,12 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { DedaloError } from '../../src/core/errors/index.ts';
 import {
+	anyInverseReferencePast,
+	countInverseReferences,
 	findInverseReferenceLocators,
 	findInverseReferenceLocatorsPast,
 	findInverseReferences,
-	findInverseReferencesPast,
+	type RowScope,
 } from '../../src/core/search/search_related.ts';
 import { clearSearchStoreCache } from '../../src/core/search/search_store.ts';
 import {
@@ -220,6 +225,14 @@ async function outcome(
 	}
 }
 
+/** A scope that keeps every row (the sink's own, unscoped question). */
+const UNSCOPED: RowScope = async (rows) => rows;
+/** A scope that keeps no row. */
+const NOTHING: RowScope = async (rows) => ({
+	sql: `SELECT kept.* FROM (${rows.sql}) AS kept WHERE false`,
+	params: rows.params,
+});
+
 describe.if(DB_READY)('READ-4 — the relation sink window', () => {
 	beforeAll(async () => {
 		await ensureSituation(S);
@@ -229,20 +242,40 @@ describe.if(DB_READY)('READ-4 — the relation sink window', () => {
 		expect(await dropSituation(S)).toBe(0);
 	});
 
-	test("findInverseReferencesPast: the tail is the sink's own rows from the offset on, in every order", async () => {
+	test("anyInverseReferencePast + countInverseReferences ask the sink's own question: past(offset) ⟺ offset < rows == count", async () => {
 		const seen: string[] = [];
 		const expected: string[] = [];
 		for (const order of [undefined, 'section_id', 'section_tipo_section_id'] as const) {
 			const full = (await findInverseReferences(TAIL_FILTER, { limit: false, order })).map(rowKey);
 			expect(full.length).toBe(TAIL_REFS.length);
-			for (let offset = 0; offset <= full.length; offset++) {
-				const past = await findInverseReferencesPast(TAIL_FILTER, { order }, offset);
-				const rows = (await sql.unsafe(past.sql, past.params)) as unknown[];
-				seen.push(`${order ?? 'table'} @${offset}: ${rows.map(rowKey).join(' ')}`);
-				expected.push(`${order ?? 'table'} @${offset}: ${full.slice(offset).join(' ')}`);
+			for (let offset = 0; offset <= full.length + 1; offset++) {
+				const past = await anyInverseReferencePast(TAIL_FILTER, { scope: UNSCOPED }, offset);
+				seen.push(`${order ?? 'table'} @${offset}: ${past}`);
+				expected.push(`${order ?? 'table'} @${offset}: ${offset < full.length}`);
 			}
 		}
 		expect(seen).toEqual(expected);
+		expect((await countInverseReferences(TAIL_FILTER, { scope: UNSCOPED })).total).toBe(
+			TAIL_REFS.length,
+		);
+		// The owning-section axis narrows the probe exactly as it narrows the page.
+		const firstSection = (
+			await findInverseReferences(TAIL_FILTER, { limit: false, sectionTipos: [REF_SECTION] })
+		).length;
+		expect(
+			await Promise.all(
+				[firstSection - 1, firstSection].map((offset) =>
+					anyInverseReferencePast(
+						TAIL_FILTER,
+						{ sectionTipos: [REF_SECTION], scope: UNSCOPED },
+						offset,
+					),
+				),
+			),
+		).toEqual([true, false]);
+		// A scope that keeps nothing is honoured by both (the rows are the scope's).
+		expect(await anyInverseReferencePast(TAIL_FILTER, { scope: NOTHING }, 0)).toBe(false);
+		expect((await countInverseReferences(TAIL_FILTER, { scope: NOTHING })).total).toBe(0);
 		// Non-degeneracy: the id order interleaves the two sections.
 		const byId = (
 			await findInverseReferences(TAIL_FILTER, { limit: false, order: 'section_id' })
@@ -291,8 +324,8 @@ describe.if(DB_READY)('READ-4 — the relation sink window', () => {
 				seen.findInverseReferenceLocators = await code(() =>
 					findInverseReferenceLocators(TAIL_FILTER, { limit: false }),
 				);
-				seen.findInverseReferencesPast = await code(() =>
-					findInverseReferencesPast(TAIL_FILTER, {}, 1),
+				seen.anyInverseReferencePast = await code(() =>
+					anyInverseReferencePast(TAIL_FILTER, { scope: UNSCOPED }, 1),
 				);
 				seen.findInverseReferenceLocatorsPast = await code(() =>
 					findInverseReferenceLocatorsPast(TAIL_FILTER, {}, 1),
@@ -307,11 +340,13 @@ describe.if(DB_READY)('READ-4 — the relation sink window', () => {
 		expect(seen).toEqual({
 			findInverseReferences: 'search.index_unavailable',
 			findInverseReferenceLocators: 'search.index_unavailable',
-			findInverseReferencesPast: 'search.index_unavailable',
+			anyInverseReferencePast: 'search.index_unavailable',
 			findInverseReferenceLocatorsPast: 'search.index_unavailable',
 		});
 		// Restored: covered again, the tail answers.
-		expect(await code(() => findInverseReferencesPast(TAIL_FILTER, {}, 1))).toBe('answered');
+		expect(await code(() => anyInverseReferencePast(TAIL_FILTER, { scope: UNSCOPED }, 1))).toBe(
+			'answered',
+		);
 	});
 
 	for (const sink of SINKS) {

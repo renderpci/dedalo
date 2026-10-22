@@ -46,12 +46,16 @@
  *     reads the host's exact unscoped reference count. The reader is the ACL
  *     identity fixture's (930002) with read grants on the zzpg sections added;
  *     the relation doors are addressed with the referencing section named
- *     (Gate B reads every sqo section_tipo as a section grant, so a non-admin
- *     cannot send ['all']);
- *   - THE PROBE LOOKS PAST THE NEXT WINDOW (HOST2): for the same reader, a next
- *     window that opens on a hidden record with a visible one behind it, or that
- *     is WHOLLY hidden with a visible record after it, IS owed the notice — the
- *     reader can page to that record, so the default cut it (a probe of one
+ *     (since D3, 2026-10-21, a non-admin may also send ['all'] — Gate B gates
+ *     the HOST of a related sqo; related_scope_equivalence_native pins that);
+ *   - THE PROBE LOOKS PAST THE PAGE (HOST2): for the same reader, where the
+ *     unscoped next window opens on a hidden record with a visible one behind
+ *     it, or is WHOLLY hidden with a visible record after it, the visible
+ *     record is never lost. On the RELATION doors the page is a window of the
+ *     reader's SCOPED records (D1 — hidden rows take no window slot), owed the
+ *     notice exactly when more of them lie past it; on the GRID (which windows
+ *     its groups before scoping) the visible rows of the unscoped window, owed
+ *     the notice when a visible group lies anywhere past it (a probe of one
  *     window, or of one row, called those answers whole and dropped the visible
  *     records silently); nothing past the page owes none;
  *   - THE PROBE ASKS THE PAGE'S QUESTION: a request (all three doors) narrowed to a
@@ -64,15 +68,16 @@
  *     windowed probe grew to) costs exactly the statements and rows of one over
  *     a four-record hidden tail, and a visible record AFTER that tail is still
  *     found (owed the notice) — the tail is asked one scoped question in SQL
- *     (record_scope anyRowInScope), never read; a window loop or a row budget
- *     reddens here;
+ *     (relation doors: search_related anyInverseReferencePast through
+ *     record_scope rowScopeFor; grid: record_scope anyRowInScope), never read;
+ *     a window loop or a row budget reddens here;
  *   - THE SET-SHAPED SCOPE IS THE LIST'S: anyRowInScope answers record by record
  *     what scopeInverseReferenceHits answers, for the reader and the admin, with
  *     the projects filter, the section grant and a dd478 allow-list each
  *     deciding at least one reader cell; and its PER-RECORD half
- *     (buildAnyRowInScopeSql), with the granted list FORCED so the SQL alone
- *     decides, answers single rows AND multi-row sets exactly as the list's
- *     predicate (isRecordInScope over the granted rows) — the Users root
+ *     (buildRowsInScopeSql), with the granted list FORCED so the SQL alone
+ *     decides, KEEPS, on single rows AND multi-row sets, exactly the rows the
+ *     list's predicate keeps (isRecordInScope over the granted rows) — the Users root
  *     exclusion, the section_tipo join, the per-section guard of a mixed set,
  *     a projects-filter-EXEMPT table carrying a component_filter (zzpg18,
  *     matrix_list) and an empty granted list each decide a cell; a row naming
@@ -689,7 +694,7 @@ else {
 	const MEMBERS_WITHOUT_ROUTE_POSTURE: ReadonlyMap<string, string> = new Map([
 		[
 			'dd_core_api:count',
-			"mode 'related' answers a TOTAL, never a window (its non-admin enumeration is an open owner decision, CLOSURE_PLAN Step 8 READ-4 flags)",
+			"mode 'related' answers a TOTAL, never a window — the related search's own scoped question counted in SQL (D1, 2026-10-21; bounded: related_scope_equivalence_native)",
 		],
 	]);
 
@@ -1105,7 +1110,8 @@ else {
 
 		for (const { door, template } of PAGE_DOORS) {
 			test(`${door.key}: the defaulted notice is SCOPED — a reader who can see none of the rows past the window gets none`, async () => {
-				// The relation doors name the referencing section (a non-admin cannot send ['all']).
+				// The relation doors name the referencing section (['all'] is pinned by
+				// related_scope_equivalence_native, D3).
 				const scoped: Template =
 					template === RELATION_TEMPLATE
 						? { ...template, sqo: { ...template.sqo, section_tipo: [REF_SECTION] } }
@@ -1136,7 +1142,7 @@ else {
 		}
 
 		for (const { door, template } of PAGE_DOORS) {
-			test(`${door.key}: the defaulted notice looks PAST the next page — a hidden row, or a whole hidden page, never hides a visible row behind it`, async () => {
+			test(`${door.key}: the defaulted notice looks PAST the page — a hidden row, or a whole hidden window, never hides a visible row behind it`, async () => {
 				// Non-degeneracy of HOST2's layout (see PAST_REFS).
 				expect(PAST_REFS.slice(CEILING, CEILING + 2).map((ref) => ref.visible)).toEqual([
 					false,
@@ -1145,17 +1151,38 @@ else {
 				expect(PAST_REFS.slice(5, 8).every((ref) => !ref.visible)).toBe(true);
 				expect(PAST_REFS[8]?.visible).toBe(true);
 				const onHost2 = atHost(template, HOST2_ID, [REF_SECTION]);
+				const visible = PAST_REFS.filter((ref) => ref.visible).length;
 				const visibleIn = (from: number, to: number) =>
 					PAST_REFS.slice(from, to).filter((ref) => ref.visible).length;
+				// The RELATION doors window the reader's SCOPED records (D1): a page is
+				// a window of the visible sequence, owed the notice exactly when more
+				// visible records lie past it. The GRID windows its groups before
+				// scoping (READ-4): its page holds the visible rows of the unscoped
+				// window, owed the notice when a visible group lies anywhere past it.
+				const scopedPage = door.key !== 'dd_core_api:get_indexation_grid';
 				const cells = [
-					// MIXED: the next window opens on a hidden row, a visible one behind it.
-					{ offset: 0, readerMarkers: visibleIn(0, CEILING), owed: true },
-					// THE GAP: the WHOLE next window [5, 8) is hidden; row 8 is visible —
-					// the reader can page to it, so the default cut it.
-					{ offset: 2, readerMarkers: visibleIn(2, 2 + CEILING), owed: true },
+					// MIXED: the unscoped next window opens on a hidden row, a visible one behind it.
+					{ offset: 0 },
+					// THE GAP: the WHOLE unscoped window [5, 8) is hidden; row 8 is visible.
+					{ offset: 2 },
 					// Nothing past the served page.
-					{ offset: 6, readerMarkers: visibleIn(6, 6 + CEILING), owed: false },
-				];
+					{ offset: 6 },
+				].map(({ offset }) => ({
+					offset,
+					readerMarkers: scopedPage
+						? Math.max(0, Math.min(CEILING, visible - offset))
+						: visibleIn(offset, offset + CEILING),
+					readerOwed: scopedPage
+						? visible > offset + CEILING
+						: visibleIn(offset + CEILING, PAST_REFS.length) > 0,
+					adminOwed: PAST_REFS.length > offset + CEILING,
+				}));
+				// Non-degeneracy: the cells decide both ways for the reader, and on the
+				// scoped doors the reader's page is FULLER than the unscoped window's
+				// visible rows at the gap (hidden rows no longer take window slots).
+				expect(cells.map((cell) => cell.readerOwed)).toContain(true);
+				expect(cells.map((cell) => cell.readerOwed)).toContain(false);
+				if (scopedPage) expect(cells[1]?.readerMarkers).toBeGreaterThan(visibleIn(2, 2 + CEILING));
 				for (const cell of cells) {
 					const reader = await drive(door, onHost2, ABSENT, cell.offset, 'reader');
 					expect({
@@ -1167,9 +1194,9 @@ else {
 						cell: `reader absent@${cell.offset}`,
 						status: 200,
 						markers: cell.readerMarkers,
-						notice: cell.owed,
+						notice: cell.readerOwed,
 					});
-					// CONTROL: the admin sees every row, and is owed the same notices.
+					// CONTROL: the admin sees every row, and is owed the notice while rows lie past the page.
 					const admin = await drive(door, onHost2, ABSENT, cell.offset, 'admin');
 					expect({
 						cell: `admin absent@${cell.offset}`,
@@ -1178,7 +1205,7 @@ else {
 					}).toEqual({
 						cell: `admin absent@${cell.offset}`,
 						markers: Math.min(CEILING, PAST_REFS.length - cell.offset),
-						notice: cell.owed,
+						notice: cell.adminOwed,
 					});
 				}
 			});
@@ -1312,7 +1339,7 @@ else {
 			expect(readerVisible.filter((visible) => !visible).length).toBeGreaterThan(0);
 		});
 
-		test("the set-shaped scope's PER-RECORD half (buildAnyRowInScopeSql) is the list's predicate, arm by arm, on row SETS", async () => {
+		test("the set-shaped scope's PER-RECORD half (buildRowsInScopeSql) keeps exactly the rows the list's predicate keeps, arm by arm, on row SETS", async () => {
 			// The leg above drives anyRowInScope END TO END, so every cell whose
 			// SECTION the reader may not read (dd128, dd153, zzpg11) is decided by
 			// the grant leg before the SQL is ever built, and every row set holds ONE
@@ -1326,7 +1353,7 @@ else {
 			// for the reader AND the global admin (the admin arm of the SQL is the
 			// existence half alone).
 			const { isRecordInScope } = await import('../../src/core/security/record_scope.ts');
-			const { buildAnyRowInScopeSql } = await import('../../src/core/search/sql_assembler.ts');
+			const { buildRowsInScopeSql } = await import('../../src/core/search/sql_assembler.ts');
 			type Row = { section_tipo: string; section_id: number };
 			const rowsSql = (rows: readonly Row[]) => ({
 				sql: `SELECT v.section_tipo, v.section_id FROM (VALUES ${rows
@@ -1334,25 +1361,31 @@ else {
 					.join(', ')}) AS v(section_tipo, section_id)`,
 				params: rows.flatMap((row) => [row.section_tipo, row.section_id]),
 			});
+			const rowKey = (row: Row) => `${row.section_tipo}/${Number(row.section_id)}`;
+			// The SCOPED SET the SQL keeps (the rows the related count counts and the
+			// page windows — D1), not only whether it is empty.
 			const askSet = async (
 				rows: readonly Row[],
 				granted: readonly string[],
 				principal: Awaited<ReturnType<typeof resolvePrincipal>>,
-			): Promise<boolean> => {
-				const query = await buildAnyRowInScopeSql(rowsSql(rows), granted, principal);
-				const found = (await sql.unsafe(query.sql, query.params as never)) as { found: boolean }[];
-				return found[0]?.found === true;
+			): Promise<string[]> => {
+				const query = await buildRowsInScopeSql(rowsSql(rows), granted, principal);
+				const kept = (await sql.unsafe(query.sql, query.params as never)) as Row[];
+				return kept.map(rowKey).sort();
 			};
 			const askList = async (
 				rows: readonly Row[],
 				granted: readonly string[],
 				principal: Awaited<ReturnType<typeof resolvePrincipal>>,
-			): Promise<boolean> => {
+			): Promise<string[]> => {
+				const kept: string[] = [];
 				for (const row of rows) {
 					if (!granted.includes(row.section_tipo)) continue;
-					if (await isRecordInScope(row.section_tipo, row.section_id, principal)) return true;
+					if (await isRecordInScope(row.section_tipo, row.section_id, principal)) {
+						kept.push(rowKey(row));
+					}
 				}
-				return false;
+				return kept.sort();
 			};
 			const singles: Row[] = [
 				{ section_tipo: REF_SECTION, section_id: REF_IDS[0] as number },
@@ -1412,8 +1445,10 @@ else {
 				];
 				for (const [rows, granted] of cases) {
 					const cell = `${userId} [${rows.map((row) => `${row.section_tipo}/${row.section_id}`).join(' ')}] granted [${granted.join(' ')}]`;
-					seen.push(`${cell}: ${await askSet(rows, granted, principal)}`);
-					expected.push(`${cell}: ${await askList(rows, granted, principal)}`);
+					const setRows = await askSet(rows, granted, principal);
+					const listRows = await askList(rows, granted, principal);
+					seen.push(`${cell}: ${setRows.length > 0} {${setRows.join(' ')}}`);
+					expected.push(`${cell}: ${listRows.length > 0} {${listRows.join(' ')}}`);
 				}
 			}
 			expect(seen).toEqual(expected);
@@ -1460,15 +1495,15 @@ else {
 				// an empty granted list
 				at(-1, [{ section_tipo: HOST_SECTION, section_id: HOST_ID }], []),
 			]).toEqual([
-				`-1 [dd128/-1] granted [dd128]: false`,
-				`-1 [${REF_SECTION}/${HOST_ID}] granted [${REF_SECTION}]: false`,
-				`-1 [${HOST_SECTION}/999999999] granted [${HOST_SECTION}]: false`,
-				`-1 [${REF_SECTION}/${REF_IDS[0]}] granted [${HOST_SECTION}]: false`,
-				`${ACL_NON_ADMIN_USER_ID} [${EXEMPT_SECTION}/${EXEMPT_IDS[1]}] granted [${EXEMPT_SECTION}]: true`,
-				`${ACL_NON_ADMIN_USER_ID} [${REF_SECTION}/${REF_IDS[0]}] granted [${REF_SECTION}]: false`,
-				`${ACL_NON_ADMIN_USER_ID} [${HOST_SECTION}/${HOST_OUTSIDE_ALLOW_LIST}] granted [${HOST_SECTION}]: false`,
-				`${ACL_NON_ADMIN_USER_ID} [${REF_SECTION}/${REF_IDS[0]} ${REF_SECTION}/${PAST_REFS[0]?.id}] granted [${REF_SECTION}]: true`,
-				`-1 [${HOST_SECTION}/${HOST_ID}] granted []: false`,
+				`-1 [dd128/-1] granted [dd128]: false {}`,
+				`-1 [${REF_SECTION}/${HOST_ID}] granted [${REF_SECTION}]: false {}`,
+				`-1 [${HOST_SECTION}/999999999] granted [${HOST_SECTION}]: false {}`,
+				`-1 [${REF_SECTION}/${REF_IDS[0]}] granted [${HOST_SECTION}]: false {}`,
+				`${ACL_NON_ADMIN_USER_ID} [${EXEMPT_SECTION}/${EXEMPT_IDS[1]}] granted [${EXEMPT_SECTION}]: true {${EXEMPT_SECTION}/${EXEMPT_IDS[1]}}`,
+				`${ACL_NON_ADMIN_USER_ID} [${REF_SECTION}/${REF_IDS[0]}] granted [${REF_SECTION}]: false {}`,
+				`${ACL_NON_ADMIN_USER_ID} [${HOST_SECTION}/${HOST_OUTSIDE_ALLOW_LIST}] granted [${HOST_SECTION}]: false {}`,
+				`${ACL_NON_ADMIN_USER_ID} [${REF_SECTION}/${REF_IDS[0]} ${REF_SECTION}/${PAST_REFS[0]?.id}] granted [${REF_SECTION}]: true {${REF_SECTION}/${PAST_REFS[0]?.id}}`,
+				`-1 [${HOST_SECTION}/${HOST_ID}] granted []: false {}`,
 			]);
 		});
 

@@ -394,6 +394,7 @@ const TRIPWIRES = [
 	'test/unit/client_page_doors_native.test.ts',
 	'test/unit/wire_sqo_page_bound_native.test.ts',
 	'test/unit/search_related_page_window_native.test.ts',
+	'test/unit/related_scope_equivalence_native.test.ts',
 	'test/unit/filter_projects_membership_native.test.ts',
 	'test/unit/filter_projects_scope_native.test.ts',
 	'test/unit/install_screen_model_tripwire.test.ts',

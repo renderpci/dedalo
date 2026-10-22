@@ -830,6 +830,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'It builds the zzpw situation (one host and five referencing records) on the suite database and asserts which page of those rows each sink window renders, or that it is refused, so it cannot run without a live suite Postgres.',
 	],
 	[
+		'test/unit/related_scope_equivalence_native.test.ts',
+		"It builds the zzrsq situation on the suite database (hosts, referencing records split across the reader's project and the second suite project, an unreadable referencing section, the ACL reader) and drives the real read / count doors against those rows, comparing the count with the paged walk and the probe and counting the statements and rows the query tap saw, so it cannot run without a live suite Postgres.",
+	],
+	[
 		'test/unit/filter_projects_membership_native.test.ts',
 		"It rewrites the ACL fixture reader's dd170 membership on the suite database (through the real save door and by direct SQL), restores it in finally, and asserts the projects datalist read back from matrix_projects, so it cannot run without a live suite Postgres.",
 	],

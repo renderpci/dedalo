@@ -52,6 +52,41 @@ const SAFE_TIPO = /^[a-z]{2,}[0-9]+$/;
  */
 const INDEXATION_GRID_DEFAULT_LIMIT = 500;
 
+/** The related search's owning-section wildcard (relation_list.js, build_graph_data.js send ['all']). */
+const RELATED_ALL_SECTIONS = 'all';
+
+/**
+ * THE HOST GATE of the related search (sqo.mode 'related') — D3, 2026-10-21.
+ * The related search answers "which records point AT these hosts": its
+ * `section_tipo` axis is the OWNING sections, and the panel and the graph send
+ * the literal ['all'], which is no section and no grant can name. What the
+ * caller must be allowed to read is each HOST locator's section
+ * (`filter_by_locators`); the owning records are then scoped row by row by the
+ * related search's own predicate (D1, security/record_scope.ts rowScopeFor).
+ *
+ * Returns true when the sqo is a related search WITH hosts, all readable (the
+ * caller may then skip the literal 'all' in its per-target gate); false for any
+ * other sqo — a related sqo with no host keeps the literal gate, so 'all' never
+ * passes on its own. Throws `perm.denied` on the first unreadable host. Shared
+ * by read's Gate B and count, so the two can never gate differently.
+ * Wire: WC-2026-10-22-related-search-one-scope.
+ */
+async function gateRelatedHosts(sqo: unknown, principal: Principal): Promise<boolean> {
+	const related = sqo as { mode?: unknown; filter_by_locators?: unknown };
+	if (related.mode !== 'related' || !Array.isArray(related.filter_by_locators)) return false;
+	const hostSectionTipos = (related.filter_by_locators as { section_tipo?: unknown }[])
+		.map((locator) => locator?.section_tipo)
+		.filter((tipo): tipo is string => typeof tipo === 'string');
+	if (hostSectionTipos.length === 0) return false;
+	for (const hostSectionTipo of new Set(hostSectionTipos)) {
+		const level = await getPermissions(principal, hostSectionTipo, hostSectionTipo);
+		if (level < 1) {
+			throw new DedaloError('perm.denied', { coordinates: { section_tipo: hostSectionTipo } });
+		}
+	}
+	return true;
+}
+
 /** dd_core_api action handlers, keyed by action (registered in dispatch.ts). */
 export const coreApiActions: Record<string, ActionHandler> = {
 	read: async (rqo, context) => {
@@ -90,9 +125,14 @@ export const coreApiActions: Record<string, ActionHandler> = {
 				});
 			}
 		}
-		// Gate B: every SQO target section, self-keyed.
+		// Gate B: every SQO target section, self-keyed — except the related
+		// search's literal 'all' (D3, 2026-10-21), which is not a section: for
+		// mode 'related' the gate is the HOST locators' sections, and the owning
+		// records are scoped row by row by the related search's own predicate (D1).
 		if (rqo.sqo !== undefined) {
+			const relatedHosts = await gateRelatedHosts(rqo.sqo, principal);
 			for (const targetSectionTipo of getSectionTipos(rqo.sqo)) {
+				if (relatedHosts && targetSectionTipo === RELATED_ALL_SECTIONS) continue;
 				const level = await getPermissions(principal, targetSectionTipo, targetSectionTipo);
 				if (level < 1) {
 					throw new DedaloError('perm.denied', {
@@ -1004,66 +1044,33 @@ export const coreApiActions: Record<string, ActionHandler> = {
 
 		// Inverse-reference count (mode 'related', relation_list paginator):
 		// gate on the HOST record's section (the filter locators), since the
-		// targets are 'all' by design.
+		// targets are 'all' by design (D3 — the same host gate as read's Gate B).
+		// The total is the related search's own SCOPED question (D1): the owners
+		// this caller may see, counted in SQL through the one record-scope
+		// predicate the page and the past-the-page probe use — never an owner
+		// enumeration filtered here (related_scope_equivalence_native).
 		if ((rqo.sqo as { mode?: string }).mode === 'related') {
 			const sqoRelated = rqo.sqo as {
 				filter_by_locators?: { section_tipo?: string }[];
 				section_tipo?: string[] | 'all';
 				group_by?: string[];
 			};
+			await gateRelatedHosts(rqo.sqo, principal);
 			const locators = Array.isArray(sqoRelated.filter_by_locators)
 				? sqoRelated.filter_by_locators
 				: [];
-			for (const locator of locators) {
-				if (typeof locator.section_tipo !== 'string') continue;
-				const level = await getPermissions(principal, locator.section_tipo, locator.section_tipo);
-				if (level < 1) {
-					throw new DedaloError('perm.denied', {
-						coordinates: { section_tipo: locator.section_tipo },
-					});
-				}
-			}
 			const sectionTipos = Array.isArray(sqoRelated.section_tipo)
-				? sqoRelated.section_tipo.includes('all')
+				? sqoRelated.section_tipo.includes(RELATED_ALL_SECTIONS)
 					? ('all' as const)
 					: sqoRelated.section_tipo
 				: ('all' as const);
-			let result: { total: number; totals_group?: { key: string[]; value: number }[] };
-			if (principal.isGlobalAdmin) {
-				const { countInverseReferences } = await import('../../search/search_related.ts');
-				result = await countInverseReferences(locators as never, {
-					sectionTipos,
-					groupBy: sqoRelated.group_by,
-				});
-			} else {
-				// AUTHZ-05: the paginator total must count ONLY references the caller
-				// can reach — matching the scoped relation-list panel. The index COUNT
-				// cannot apply the per-record projects filter, so enumerate then scope.
-				const { findInverseReferences } = await import('../../search/search_related.ts');
-				const { scopeInverseReferenceHits } = await import('../../security/record_scope.ts');
-				const hits = await findInverseReferences(locators as never, {
-					sectionTipos,
-					order: 'section_id',
-				});
-				const scoped = await scopeInverseReferenceHits(hits, principal);
-				const wantsGroup =
-					Array.isArray(sqoRelated.group_by) && sqoRelated.group_by.includes('section_tipo');
-				if (wantsGroup) {
-					const bySection = new Map<string, number>();
-					for (const hit of scoped) {
-						bySection.set(hit.section_tipo, (bySection.get(hit.section_tipo) ?? 0) + 1);
-					}
-					result = {
-						total: scoped.length,
-						totals_group: [...bySection.entries()].map(([tipo, value]) => ({
-							key: [tipo],
-							value,
-						})),
-					};
-				} else {
-					result = { total: scoped.length };
-				}
-			}
+			const { countInverseReferences } = await import('../../search/search_related.ts');
+			const { rowScopeFor } = await import('../../security/record_scope.ts');
+			const result = await countInverseReferences(locators as never, {
+				sectionTipos,
+				groupBy: sqoRelated.group_by,
+				scope: rowScopeFor(principal),
+			});
 			return { status: 200, body: ok(result, { requestId: context.requestId }) };
 		}
 
