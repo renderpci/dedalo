@@ -65,6 +65,7 @@ theme:
     - navigation.top
     - navigation.footer
     - navigation.instant
+    - navigation.indexes
     - content.code.copy
 
   palette:
