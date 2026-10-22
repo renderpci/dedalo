@@ -41,6 +41,11 @@
 			"skipped": 0,
 			"assertions": 44
 		},
+		"test/unit/acquisition_job_activity_native.test.ts": {
+			"tests": 2,
+			"skipped": 0,
+			"assertions": 36
+		},
 		"test/unit/action_scope_binding_native.test.ts": {
 			"tests": 13,
 			"skipped": 0,
