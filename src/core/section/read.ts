@@ -74,6 +74,10 @@ import {
 	resolveOwnUserRecordPermission,
 } from '../security/permissions.ts';
 import type { LaneValue, RowLaneState } from '../tm_record/lane_state.ts';
+import {
+	currentTimeMachineScopeSection,
+	isTimeMachineRead,
+} from './list_definitions/tm_scope_context.ts';
 import { pickReadSource } from './read_source.ts';
 import { prefetchRecords } from './record_loader.ts';
 
@@ -149,26 +153,55 @@ function stripSessionSqoStamp(
 }
 
 /**
- * The stored session SQO a read may inherit from. A Time Machine read
- * (`sqo.mode 'tm'`) inherits NO scope-bearing key (`filter`,
- * `filter_by_locators`): its scope — the caller section whose history it
- * reads — is server-owned and judged by the §7.4 gate on the SQO the client
- * SENT, before this merge runs. A stored pin naming another section (an
- * earlier admitted read, a grant revoked since, or pins a plain read stored
- * under the same callerTipo) would otherwise replace the admitted scope after
- * the gate (WC-2026-10-22-tm-scope-whole-request, review r1 addendum).
- * Pagination keys (order/limit/offset) still ride the session.
+ * The stored session SQO a read may inherit from. The rule: the session never
+ * widens a Time Machine read (`sqo.mode 'tm'`) past the scope the §7.4 gate
+ * admitted — and the gate judged the SQO the client SENT, before this merge.
+ *
+ *   - A PER-SECTION scope is open (the client named section S): the read
+ *     inherits NO scope-bearing key (`filter`, `filter_by_locators`). A stored
+ *     pin naming another section (an earlier admitted read, a grant revoked
+ *     since, pins a plain read stored under the same callerTipo) would otherwise
+ *     replace S after the gate (WC-2026-10-22-tm-scope-whole-request, review r1
+ *     addendum). Pagination keys (order/limit/offset) still ride the session.
+ *   - UNSCOPED (the standalone dd15 browse: no filter sent, or none yet): the
+ *     gate admitted the global admin only — there is no per-section scope to
+ *     widen, so the admin's saved TM search is his own navigation and is
+ *     inherited whole (else a reload lost it and the persist below overwrote
+ *     the stored SQO with the bare one). Anyone else, or no TM scope open at
+ *     all, keeps the strip — fail-closed.
+ *
+ * The row/count backstop (read_tm assertTmWhereInOpenedScope) still refuses any
+ * WHERE outside a per-section scope, whatever produced it.
  */
 const TM_SCOPE_SQO_KEYS = ['filter', 'filter_by_locators'] as const;
-function sessionSqoForMerge(clientSqo: Rqo['sqo'], storedSqo: unknown): unknown {
+function sessionSqoForMerge(
+	clientSqo: Rqo['sqo'],
+	storedSqo: unknown,
+	principal: Principal | undefined,
+): unknown {
 	const sqo = clientSqo as { mode?: unknown } | undefined;
-	if (sqo?.mode !== 'tm') return storedSqo;
+	if (sqo?.mode !== 'tm' || isUnscopedAdminTmBrowse(principal)) return storedSqo;
+	return withoutTmScopeKeys(storedSqo);
+}
+
+/** A copy of the stored SQO minus its scope-bearing keys (a non-object passes through). */
+function withoutTmScopeKeys(storedSqo: unknown): unknown {
 	if (storedSqo === null || typeof storedSqo !== 'object' || Array.isArray(storedSqo)) {
 		return storedSqo;
 	}
 	const inheritable = { ...(storedSqo as Record<string, unknown>) };
 	for (const key of TM_SCOPE_SQO_KEYS) delete inheritable[key];
 	return inheritable;
+}
+
+/**
+ * The unscoped dd15 browse, read by whom its gate admits: a TM read scope is
+ * open WITHOUT a section, and the principal is a global admin (or there is no
+ * request principal — an internal caller, which no gate judges).
+ */
+function isUnscopedAdminTmBrowse(principal: Principal | undefined): boolean {
+	if (!isTimeMachineRead() || currentTimeMachineScopeSection() !== undefined) return false;
+	return principal === undefined || principal.isGlobalAdmin;
 }
 
 async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadResult> {
@@ -2187,7 +2220,10 @@ export async function readSectionRows(
 		const { currentRequestContext } = await import('../security/request_context.ts');
 		const storedSqo = currentRequestContext()?.session?.sqoSession?.[callerTipo];
 		if (storedSqo !== undefined) {
-			mergeSessionSqo(rqo.sqo as Record<string, unknown>, sessionSqoForMerge(rqo.sqo, storedSqo));
+			mergeSessionSqo(
+				rqo.sqo as Record<string, unknown>,
+				sessionSqoForMerge(rqo.sqo, storedSqo, principal),
+			);
 		}
 	}
 

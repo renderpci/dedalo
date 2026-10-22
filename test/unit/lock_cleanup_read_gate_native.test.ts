@@ -25,7 +25,7 @@
  * fail-loud in afterAll.
  */
 
-import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, test } from 'bun:test';
 import type { ApiRequestContext } from '../../src/core/api/handler_context.ts';
 import { utilsApiActions } from '../../src/core/api/handlers/dd_utils_api.ts';
 import type { Rqo } from '../../src/core/concepts/rqo.ts';
@@ -122,6 +122,12 @@ afterAll(async () => {
 });
 
 describe('update_lock_components_state read gate', () => {
+	// Every case BUILDS its own situation: no case leans on a lock an earlier
+	// one seeded (a filtered or reordered run would otherwise go vacuous).
+	beforeEach(async () => {
+		await sweep();
+	});
+
 	test('precondition: the caller holds no read on test3 nor on a bare dd15', async () => {
 		// Without this, an "ok" below would prove nothing about the gate.
 		expect(await getPermissions(CALLER, SECTION_TIPO, SECTION_TIPO)).toBe(0);
@@ -149,6 +155,8 @@ describe('update_lock_components_state read gate', () => {
 	});
 
 	test('delete_user_section_locks for dd15 (the inspector Latest changes pagination): ok', async () => {
+		await seedLock(OTHER_ID, 990103);
+		expect(await lockCount(OTHER_ID)).toBe(1);
 		const result = await lockAction(CALLER, {
 			section_tipo: TM_SECTION,
 			section_id: null,
@@ -162,6 +170,7 @@ describe('update_lock_components_state read gate', () => {
 
 	test('focus on an unreadable section: perm.denied, nothing acquired', async () => {
 		const before = await lockCount(CALLER_ID);
+		expect(before).toBe(0);
 		const error = await refused(CALLER, {
 			section_tipo: SECTION_TIPO,
 			section_id: 990102,
@@ -173,6 +182,8 @@ describe('update_lock_components_state read gate', () => {
 	});
 
 	test("blur on an unreadable section: perm.denied, the other user's lock survives", async () => {
+		await seedLock(OTHER_ID, 990103);
+		expect(await lockCount(OTHER_ID)).toBe(1);
 		const error = await refused(CALLER, {
 			section_tipo: SECTION_TIPO,
 			section_id: 990103,

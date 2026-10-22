@@ -138,3 +138,20 @@ inspector sends `skip_projects_filter: true` by design.
   session never widens" legs: stored foreign pins under `dd15` and under a section `source.tipo`
   serve only the admitted section, count == rows; direct read-source backstop leg (foreign pins,
   bare, mixed → `perm.denied`; own pins/snapshot list served). No fixture.
+
+## Addendum 2026-10-23 (review r2) — the unscoped admin browse keeps its saved search
+
+- **Shape before (TS, r1):** the strip applied to EVERY `sqo.mode:'tm'` read. The global admin's
+  standalone `dd15` browse (session navigation on; first autoload sends no `filter`) lost its saved
+  TM search on reload, and the persist then overwrote `sqoSession.dd15` with the bare SQO.
+- **Shape after (TS):** the strip applies only when a PER-SECTION TM scope is open (the client named
+  a section) — for every principal, admin included. An UNSCOPED read (scope open, no section; the
+  gate admits the global admin only) inherits the stored SQO whole (filter included), so the read
+  answers the saved search and `sqo_session`/the stored session keep it. A non-admin (or no TM
+  scope) keeps the strip; the bare browse stays `perm.denied` for a non-admin whatever was stored.
+- **Reason:** the session must never widen past the admitted scope; an unscoped admin browse has no
+  per-section scope to widen, so its saved search is its own navigation.
+- **Gate reconciliation:** TS-only. `tm_inspector_access_native`: admin bare browse + stored filter
+  → only the saved section's rows, stored filter not overwritten (unfiltered control spans more);
+  non-admin bare browse + stored filter → `perm.denied`; admin per-section read + stored foreign
+  pins → the admitted section only. No fixture.

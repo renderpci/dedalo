@@ -889,7 +889,11 @@ describe('the component pair: a section-wide TM grant never reads a level-0 comp
 				ddo_map: [{ tipo: RESTRICTED_TEXT, section_tipo: 'dd655', view: 'text' }],
 			});
 			forged.source = { ...forged.source, tipo: sourceSection, section_tipo: sourceSection };
-			expect(served(await send('read', granted, forged))).not.toContain(SECRET);
+			// The POSITIVE CONTROL: the forged read is served (rows), so the
+			// absence below is the gate's doing, not a refusal's.
+			const answer = await send('read', granted, forged);
+			expect(historyRows(answer)).toBeGreaterThan(0);
+			expect(served(answer)).not.toContain(SECRET);
 		}
 		// The CONTROL: a readable component named under its caller section serves.
 		const readable = {
@@ -967,10 +971,20 @@ describe('a credential (secretValue) history never serves the stored value', () 
 			},
 			show: { ddo_map: [{ tipo: 'dd1574', section_tipo: 'dd15', view: 'mini' }] },
 		};
+		expect(hashes.length).toBeGreaterThan(0);
 		for (const principal of [admin, granted]) {
 			const answer = await send('read', principal, rqo);
 			expect(historyRows(answer)).toBeGreaterThan(0);
 			const text = served(answer);
+			// The CONTROL: a dd1574 data item WAS served, its value masked — else
+			// the absence of the hash proves nothing.
+			const items =
+				'refused' in answer ? [] : ((answer.body.data as { data?: unknown[] }).data ?? []);
+			const rawValues = (items as { tipo?: string; entries?: { value?: unknown }[] }[])
+				.filter((item) => item.tipo === 'dd1574')
+				.flatMap((item) => (item.entries ?? []).map((entry) => entry.value));
+			expect(rawValues.length).toBeGreaterThan(0);
+			for (const value of rawValues) expect(value).toBe('****************');
 			for (const hash of hashes) expect(text).not.toContain(JSON.stringify(hash).slice(1, -1));
 			expect(text).not.toContain('$argon2');
 		}
@@ -1028,6 +1042,47 @@ describe('the session never widens a TM read past the scope the gate admitted (r
 		});
 	});
 
+	/**
+	 * The STANDALONE dd15 browse (session navigation on; section.js forces
+	 * sqo.mode 'tm'; the first autoload sends no filter key). Unscoped ⇒ the
+	 * gate admits the global admin only, so no per-section scope exists for a
+	 * stored filter to widen: the admin's saved search is HIS navigation.
+	 */
+	function bareBrowse() {
+		return {
+			action: 'read',
+			source: { model: 'section', tipo: 'dd15', section_tipo: 'dd15', mode: 'list', lang: LANG },
+			sqo: {
+				id: 'dd15',
+				mode: 'tm',
+				section_tipo: ['dd15'],
+				limit: 10,
+				offset: 0,
+				order: [{ direction: 'DESC', path: [{ component_tipo: 'id' }] }],
+			},
+			show: {},
+		};
+	}
+	const savedSearch = () => ({ $and: [{ q: SCOPED_SECTION, column_name: 'tipo' }] });
+
+	test('the admin dd15 browse keeps its saved filter across a filter-less read; the session is not overwritten', async () => {
+		// The CONTROL: unfiltered, the browse spans more than the saved section.
+		expect(historySections(await send('read', admin, bareBrowse()))).not.toEqual([SCOPED_SECTION]);
+		const stored: Record<string, unknown> = {
+			dd15: { mode: 'tm', section_tipo: ['dd15'], filter: savedSearch() },
+		};
+		const read = await send('read', admin, bareBrowse(), stored);
+		expect(historyRows(read)).toBeGreaterThan(0);
+		expect(historySections(read)).toEqual([SCOPED_SECTION]);
+		// The persisted SQO still carries the saved search (not the bare one).
+		expect((stored.dd15 as { filter?: unknown }).filter).toEqual(savedSearch());
+	});
+
+	test('a non-admin bare browse stays refused, whatever filter the session stored', async () => {
+		const stored = { dd15: { mode: 'tm', section_tipo: ['dd15'], filter: savedSearch() } };
+		expect(await send('read', partial, bareBrowse(), stored)).toEqual({ refused: 'perm.denied' });
+	});
+
 	for (const sourceTipo of ['dd15', SCOPED_SECTION]) {
 		test(`stored pins under '${sourceTipo}' never replace the admitted scope — read and count`, async () => {
 			const session = () => ({ [sourceTipo]: foreignPins() });
@@ -1039,6 +1094,15 @@ describe('the session never widens a TM read past the scope the gate admitted (r
 			expect(total).toBe(historyRows(read));
 		});
 	}
+
+	// A per-section scope strips stored pins for EVERY principal: the admin's
+	// unscoped-browse carve-out never reaches a read the client scoped.
+	test('the admin too: a per-section read is never re-scoped by stored pins', async () => {
+		const read = await send('read', admin, sessionSnapshots('read', 'dd15'), {
+			dd15: foreignPins(),
+		});
+		expect(historySections(read)).toEqual([SCOPED_SECTION]);
+	});
 
 	test('the backstop: a TM WHERE outside the opened scope is refused, rows and count', async () => {
 		const { tmReadSource } = await import('../../src/core/resolve/read_tm.ts');
