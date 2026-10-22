@@ -1,7 +1,6 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global it, describe, assert */
 /*eslint no-undef: "error"*/
-'use strict';
 
 /**
  * TEST_MOVE_TRANSFORM
@@ -108,9 +107,9 @@ const clean_preview_frame = {
 	errors: [],
 };
 
-describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
-	describe('move_transform_request_body', function () {
-		it('sends dry_run EXPLICITLY: true for a preview, false for an execute', function () {
+describe('MOVE_TRANSFORM (move_* preview → execute)', () => {
+	describe('move_transform_request_body', () => {
+		it('sends dry_run EXPLICITLY: true for a preview, false for an execute', () => {
 			const preview = move_transform_request_body('move_tld', ['a.json'], true);
 			const execute = move_transform_request_body('move_tld', ['a.json'], false);
 			assert.strictEqual(preview.options.dry_run, true);
@@ -122,7 +121,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			assert.deepEqual(execute.options.files_selected, ['a.json']);
 		});
 
-		it('anything but false is a preview (the server rule, mirrored)', function () {
+		it('anything but false is a preview (the server rule, mirrored)', () => {
 			assert.strictEqual(
 				move_transform_request_body('move_tld', ['a'], undefined).options.dry_run,
 				true,
@@ -133,7 +132,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			);
 		});
 
-		it('copies the selection (a later checkbox change cannot alter a sent body)', function () {
+		it('copies the selection (a later checkbox change cannot alter a sent body)', () => {
 			const files = ['a.json'];
 			const body = move_transform_request_body('move_tld', files, true);
 			files.push('b.json');
@@ -141,12 +140,12 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 		});
 	});
 
-	describe('dry_run_cleared', function () {
-		it('a preview that ended clean clears', function () {
+	describe('dry_run_cleared', () => {
+		it('a preview that ended clean clears', () => {
 			assert.strictEqual(dry_run_cleared(clean_preview_frame), true);
 		});
 
-		it('a failed run (coded error), a not-ok report, a still-running frame, an execute frame and no frame do not', function () {
+		it('a failed run (coded error), a not-ok report, a still-running frame, an execute frame and no frame do not', () => {
 			assert.strictEqual(
 				dry_run_cleared({ ...clean_preview_frame, error: { code: 'maintenance.action_failed' } }),
 				false,
@@ -177,8 +176,8 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 		});
 	});
 
-	describe('update_process_status (the real tracker the flow uses)', function () {
-		it('hands its on_done callback the LAST frame the stream carried', async function () {
+	describe('update_process_status (the real tracker the flow uses)', () => {
+		it('hands its on_done callback the LAST frame the stream carried', async () => {
 			const frames = [
 				{ is_running: true, data: { msg: 'running...' }, errors: [] },
 				clean_preview_frame,
@@ -219,8 +218,8 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 		});
 	});
 
-	describe('init_move_transform_form', function () {
-		it('the submit is a PREVIEW of the checked files; nothing is sent with none checked', async function () {
+	describe('init_move_transform_form', () => {
+		it('the submit is a PREVIEW of the checked files; nothing is sent with none checked', async () => {
 			const h = make_harness();
 			assert.isFunction(h.form()?.on_submit);
 			assert.include(h.form().submit_label, 'dry run');
@@ -237,7 +236,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			assert.strictEqual(h.calls.track[0].container, h.body_response);
 		});
 
-		it('Execute is hidden until the preview ends CLEAN; a failed preview never reveals it', async function () {
+		it('Execute is hidden until the preview ends CLEAN; a failed preview never reveals it', async () => {
 			const h = make_harness();
 			assert.isTrue(h.execute_button.classList.contains('hide'));
 			h.files_selected.push('a.json');
@@ -252,7 +251,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			assert.isFalse(h.execute_button.classList.contains('hide'));
 		});
 
-		it('Execute runs the PREVIEWED snapshot with dry_run:false after a confirm — once', async function () {
+		it('Execute runs the PREVIEWED snapshot with dry_run:false after a confirm — once', async () => {
 			const h = make_harness(true);
 			h.files_selected.push('b.json', 'a.json');
 			await h.form().on_submit();
@@ -272,7 +271,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			assert.strictEqual(h.calls.exec.length, 2);
 		});
 
-		it('Execute REFUSES a selection changed since the preview, and honours a declined confirm', async function () {
+		it('Execute REFUSES a selection changed since the preview, and honours a declined confirm', async () => {
 			const h = make_harness(false);
 			h.files_selected.push('a.json');
 			await h.form().on_submit();
@@ -291,7 +290,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			assert.strictEqual(h.calls.exec.length, 1);
 		});
 
-		it('a new preview hides a previously revealed Execute until it clears', async function () {
+		it('a new preview hides a previously revealed Execute until it clears', async () => {
 			const h = make_harness();
 			h.files_selected.push('a.json');
 			await h.form().on_submit();
@@ -301,7 +300,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			assert.isTrue(h.execute_button.classList.contains('hide'));
 		});
 
-		it('a SUPERSEDED preview cannot reveal Execute: only the latest preview decides', async function () {
+		it('a SUPERSEDED preview cannot reveal Execute: only the latest preview decides', async () => {
 			// two previews of the same files in flight; the NEWER one fails first,
 			// then the OLDER one ends clean — the operator's latest preview failed,
 			// so nothing may be executed on the strength of the stale one
@@ -337,7 +336,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 	// build_failure documents). The REAL transport runs here (window.fetch
 	// scripted): it publishes the ApiError page-wide once (the page's relogin /
 	// policy channel), and the panel itself must say what was refused.
-	describe('a refused dispatch', function () {
+	describe('a refused dispatch', () => {
 		const refused_harness = () => {
 			const calls = { track: [], confirm: [], alert: [] };
 			let form = null;
@@ -345,7 +344,13 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			const content_data = document.createElement('div');
 			const body_response = document.createElement('div');
 			const { execute_button } = init_move_transform_form(
-				{ caller: { init_form: (widget_object) => { form = widget_object; } } },
+				{
+					caller: {
+						init_form: (widget_object) => {
+							form = widget_object;
+						},
+					},
+				},
 				{
 					model: 'move_tld',
 					submit_label: 'Move TLD terms',
@@ -357,7 +362,10 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 				{
 					// exec: the REAL one (exec_move_transform → data_manager.request)
 					track: (...args) => calls.track.push(args),
-					confirm: (text) => { calls.confirm.push(text); return true; },
+					confirm: (text) => {
+						calls.confirm.push(text);
+						return true;
+					},
 					alert: (text) => calls.alert.push(text),
 				},
 			);
@@ -383,7 +391,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			}
 		};
 
-		it('renders the label-first refusal in body_response; no job, no generic alert, no Execute', async function () {
+		it('renders the label-first refusal in body_response; no job, no generic alert, no Execute', async () => {
 			const refused = {
 				code: 'request.invalid_options',
 				category: 'caller',
@@ -404,7 +412,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			assert.strictEqual(published[0].code, 'request.invalid_options');
 		});
 
-		it('an auth.* refusal is stated in the panel and reaches the page channel (relogin)', async function () {
+		it('an auth.* refusal is stated in the panel and reaches the page channel (relogin)', async () => {
 			const lost = {
 				code: 'auth.not_logged',
 				category: 'auth',
@@ -427,7 +435,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 	// job that may be RUNNING — the engine runs an aborted request to completion.
 	// The panel used to render that as a refusal, inviting a re-preview and a
 	// second execute of a transform that cannot be undone.
-	describe('an execute whose outcome is UNKNOWN', function () {
+	describe('an execute whose outcome is UNKNOWN', () => {
 		const unknown_harness = (execute_answer) => {
 			const calls = { exec: [], track: [], alert: [] };
 			let form = null;
@@ -435,7 +443,13 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			const content_data = document.createElement('div');
 			const body_response = document.createElement('div');
 			const { execute_button } = init_move_transform_form(
-				{ caller: { init_form: (widget_object) => { form = widget_object; } } },
+				{
+					caller: {
+						init_form: (widget_object) => {
+							form = widget_object;
+						},
+					},
+				},
 				{
 					model: 'move_tld',
 					submit_label: 'Move TLD terms',
@@ -467,12 +481,19 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			await new Promise((resolve) => setTimeout(resolve, 0));
 		};
 
-		it('a TIMED-OUT execute says the job may be running — not refused', async function () {
-			const timeout = new ApiError({ code: CLIENT_ERROR.TIMEOUT, source: 'transport', details: { timeout_ms: 60000 } });
+		it('a TIMED-OUT execute says the job may be running — not refused', async () => {
+			const timeout = new ApiError({
+				code: CLIENT_ERROR.TIMEOUT,
+				source: 'transport',
+				details: { timeout_ms: 60000 },
+			});
 			const h = unknown_harness({ ok: false, error: timeout });
 			await execute(h);
 			assert.strictEqual(h.calls.exec.length, 2, 'the preview, then the execute');
-			assert.isNull(h.body_response.querySelector('.move_transform_refused'), 'NOT framed as a refusal');
+			assert.isNull(
+				h.body_response.querySelector('.move_transform_refused'),
+				'NOT framed as a refusal',
+			);
 			const unknown = h.body_response.querySelector('.move_transform_outcome_unknown');
 			assert.isNotNull(unknown, 'stated as an unknown outcome');
 			assert.include(unknown.textContent, 'may', 'the job may be running');
@@ -481,14 +502,27 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			assert.isTrue(h.execute_button.classList.contains('hide'), 'Execute stays hidden');
 		});
 
-		it("the server's idempotency.outcome_unknown is unknown too; a real refusal stays a refusal", async function () {
-			const twin = new ApiError({ code: 'idempotency.outcome_unknown', source: 'envelope', transport: false, request_id: 'zz-twin' });
+		it("the server's idempotency.outcome_unknown is unknown too; a real refusal stays a refusal", async () => {
+			const twin = new ApiError({
+				code: 'idempotency.outcome_unknown',
+				source: 'envelope',
+				transport: false,
+				request_id: 'zz-twin',
+			});
 			const h = unknown_harness({ ok: false, error: twin });
 			await execute(h);
 			assert.isNotNull(h.body_response.querySelector('.move_transform_outcome_unknown'));
-			assert.include(h.body_response.textContent, 'zz-twin', 'the request_id, the join key with the log');
+			assert.include(
+				h.body_response.textContent,
+				'zz-twin',
+				'the request_id, the join key with the log',
+			);
 
-			const refused = new ApiError({ code: 'request.invalid_options', source: 'envelope', transport: false });
+			const refused = new ApiError({
+				code: 'request.invalid_options',
+				source: 'envelope',
+				transport: false,
+			});
 			const r = unknown_harness({ ok: false, error: refused });
 			await execute(r);
 			assert.isNotNull(r.body_response.querySelector('.move_transform_refused'));
@@ -503,7 +537,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 	// updating detached nodes), overwrote the execute's {pid, pfile} and, at its
 	// own end, deleted it: the outcome of an irreversible transform — rolled
 	// back, PARTIAL, UNKNOWN — never reached the operator, nor a reload.
-	describe('an EXECUTE in flight', function () {
+	describe('an EXECUTE in flight', () => {
 		const wait_until = async (predicate, what, ms = 5000) => {
 			const started = Date.now();
 			while (!(await predicate())) {
@@ -539,7 +573,9 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 						start(controller) {
 							if (pfile.startsWith('zz_execute')) {
 								// the execute job: running, its stream left OPEN
-								controller.enqueue(frame_bytes({ is_running: true, data: { msg: 'moving...' }, errors: [] }));
+								controller.enqueue(
+									frame_bytes({ is_running: true, data: { msg: 'moving...' }, errors: [] }),
+								);
 								execute_stream = controller;
 								return;
 							}
@@ -552,8 +588,21 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			};
 			try {
 				const { execute_button } = init_move_transform_form(
-					{ caller: { init_form: (widget_object) => { form = widget_object; } } },
-					{ model: 'move_tld', submit_label: 'Move TLD terms', files_selected, content_data, body_response, local_db_id },
+					{
+						caller: {
+							init_form: (widget_object) => {
+								form = widget_object;
+							},
+						},
+					},
+					{
+						model: 'move_tld',
+						submit_label: 'Move TLD terms',
+						files_selected,
+						content_data,
+						body_response,
+						local_db_id,
+					},
 					{
 						// exec scripted; track is the REAL update_process_status
 						exec: (model, files, dry_run) => {
@@ -567,12 +616,20 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 				);
 				// 1) a clean preview reveals Execute
 				await form.on_submit();
-				await wait_until(() => !execute_button.classList.contains('hide'), 'the clean preview reveals Execute');
+				await wait_until(
+					() => !execute_button.classList.contains('hide'),
+					'the clean preview reveals Execute',
+				);
 				// 2) the execute starts and streams; it renders its panel
 				execute_button.click();
-				await wait_until(() => execute_stream !== null && body_response.firstElementChild !== null, 'the execute panel');
 				await wait_until(
-					async () => (await data_manager.get_local_db_data(execute_db_id, 'status'))?.value?.pfile === 'zz_execute_2.json',
+					() => execute_stream !== null && body_response.firstElementChild !== null,
+					'the execute panel',
+				);
+				await wait_until(
+					async () =>
+						(await data_manager.get_local_db_data(execute_db_id, 'status'))?.value?.pfile ===
+						'zz_execute_2.json',
 					"the execute's re-attach entry under its OWN key",
 				);
 				const execute_panel = body_response.firstElementChild;
@@ -581,26 +638,46 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 				await new Promise((resolve) => setTimeout(resolve, 200));
 				assert.strictEqual(exec_calls.length, 2, 'no preview was dispatched');
 				assert.strictEqual(alerts.length, 1, 'the operator is told why');
-				assert.isTrue(body_response.contains(execute_panel), "the execute's live panel is still the one shown");
+				assert.isTrue(
+					body_response.contains(execute_panel),
+					"the execute's live panel is still the one shown",
+				);
 				assert.strictEqual(
 					(await data_manager.get_local_db_data(execute_db_id, 'status'))?.value?.pfile,
 					'zz_execute_2.json',
 					"the execute's re-attach entry is intact",
 				);
 				// 4) the execute ends: its final frame lands in ITS panel, and the form is free again
-				execute_stream.enqueue(frame_bytes({ is_running: false, data: { ok: true, dry_run: false, msg: 'zz moved' }, errors: [] }));
+				execute_stream.enqueue(
+					frame_bytes({
+						is_running: false,
+						data: { ok: true, dry_run: false, msg: 'zz moved' },
+						errors: [],
+					}),
+				);
 				execute_stream.close();
-				await wait_until(() => body_response.textContent.includes('zz moved'), "the execute's outcome is shown");
+				await wait_until(
+					() => body_response.textContent.includes('zz moved'),
+					"the execute's outcome is shown",
+				);
 				await wait_until(
 					async () => !(await data_manager.get_local_db_data(execute_db_id, 'status')),
 					'the ended execute leaves no re-attach entry',
 				);
 				await form.on_submit();
-				assert.strictEqual(exec_calls.length, 3, 'positive control: after the execute ended, a preview runs');
+				assert.strictEqual(
+					exec_calls.length,
+					3,
+					'positive control: after the execute ended, a preview runs',
+				);
 				assert.strictEqual(exec_calls[2].dry_run, true);
 			} finally {
 				window.fetch = original_fetch;
-				try { execute_stream?.close(); } catch { /* already closed */ }
+				try {
+					execute_stream?.close();
+				} catch {
+					/* already closed */
+				}
 				await data_manager.delete_local_db_data(local_db_id, 'status');
 				await data_manager.delete_local_db_data(execute_db_id, 'status');
 			}
@@ -610,7 +687,13 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			const calls = { exec: [], track: [], alert: [], read: [] };
 			let form = null;
 			init_move_transform_form(
-				{ caller: { init_form: (widget_object) => { form = widget_object; } } },
+				{
+					caller: {
+						init_form: (widget_object) => {
+							form = widget_object;
+						},
+					},
+				},
 				{
 					model: 'move_tld',
 					submit_label: 'Move TLD terms',
@@ -622,9 +705,15 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 				{
 					exec: (model, files, dry_run) => {
 						calls.exec.push({ files: [...files], dry_run });
-						return Promise.resolve({ ok: true, pid: 4242, pfile: `zz_${calls.exec.length}.json`, dry_run });
+						return Promise.resolve({
+							ok: true,
+							pid: 4242,
+							pfile: `zz_${calls.exec.length}.json`,
+							dry_run,
+						});
 					},
-					track: (id, pid, pfile, container, on_done) => calls.track.push({ id, pid, pfile, on_done }),
+					track: (id, pid, pfile, container, on_done) =>
+						calls.track.push({ id, pid, pfile, on_done }),
 					read_local: (id) => {
 						calls.read.push(id);
 						return Promise.resolve(stored[id] ?? null);
@@ -636,9 +725,12 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			return { calls, form: () => form };
 		};
 
-		it('after a RELOAD, a stored execute is re-attached and holds the form until it ends', async function () {
+		it('after a RELOAD, a stored execute is re-attached and holds the form until it ends', async () => {
 			const h = reattach_harness({
-				process_move_tld_execute: { id: 'process_move_tld_execute', value: { pid: 77, pfile: 'zz_execute_running.json' } },
+				process_move_tld_execute: {
+					id: 'process_move_tld_execute',
+					value: { pid: 77, pfile: 'zz_execute_running.json' },
+				},
 			});
 			await h.form().on_submit();
 			assert.deepEqual(
@@ -651,23 +743,37 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			h.calls.track[0].on_done({ is_running: false, data: { ok: true }, errors: [] });
 			await h.form().on_submit();
 			assert.strictEqual(h.calls.exec.length, 1, 'free again once the re-attached execute ended');
-			assert.strictEqual(h.calls.track[1].id, 'process_move_tld', 'a preview tracks under the preview key');
+			assert.strictEqual(
+				h.calls.track[1].id,
+				'process_move_tld',
+				'a preview tracks under the preview key',
+			);
 		});
 
-		it('a stored PREVIEW is re-attached as before and does not hold the form', async function () {
+		it('a stored PREVIEW is re-attached as before and does not hold the form', async () => {
 			const h = reattach_harness({
-				process_move_tld: { id: 'process_move_tld', value: { pid: 78, pfile: 'zz_preview_running.json' } },
+				process_move_tld: {
+					id: 'process_move_tld',
+					value: { pid: 78, pfile: 'zz_preview_running.json' },
+				},
 			});
 			await h.form().on_submit();
 			assert.deepEqual(
 				h.calls.track.map((t) => [t.id, t.pfile]),
-				[['process_move_tld', 'zz_preview_running.json'], ['process_move_tld', 'zz_1.json']],
+				[
+					['process_move_tld', 'zz_preview_running.json'],
+					['process_move_tld', 'zz_1.json'],
+				],
 			);
 			assert.strictEqual(h.calls.alert.length, 0);
 		});
 
-		it('an execute whose outcome is UNKNOWN keeps the form held (its warning stays); a refused execute frees it', async function () {
-			const timeout = new ApiError({ code: CLIENT_ERROR.TIMEOUT, source: 'transport', details: { timeout_ms: 60000 } });
+		it('an execute whose outcome is UNKNOWN keeps the form held (its warning stays); a refused execute frees it', async () => {
+			const timeout = new ApiError({
+				code: CLIENT_ERROR.TIMEOUT,
+				source: 'transport',
+				details: { timeout_ms: 60000 },
+			});
 			const files_selected = ['a.json'];
 			const body_response = document.createElement('div');
 			const calls = { exec: [], alert: [] };
@@ -677,12 +783,27 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 				calls.alert.length = 0;
 				body_response.replaceChildren();
 				return init_move_transform_form(
-					{ caller: { init_form: (widget_object) => { form = widget_object; } } },
-					{ model: 'move_tld', submit_label: 'Move TLD terms', files_selected, content_data: document.createElement('div'), body_response, local_db_id: 'process_move_tld' },
+					{
+						caller: {
+							init_form: (widget_object) => {
+								form = widget_object;
+							},
+						},
+					},
+					{
+						model: 'move_tld',
+						submit_label: 'Move TLD terms',
+						files_selected,
+						content_data: document.createElement('div'),
+						body_response,
+						local_db_id: 'process_move_tld',
+					},
 					{
 						exec: (model, files, dry_run) => {
 							calls.exec.push({ dry_run });
-							return Promise.resolve(dry_run ? { ok: true, pid: 4242, pfile: 'zz_p.json', dry_run } : execute_answer);
+							return Promise.resolve(
+								dry_run ? { ok: true, pid: 4242, pfile: 'zz_p.json', dry_run } : execute_answer,
+							);
 						},
 						track: (id, pid, pfile, container, on_done) => on_done(clean_preview_frame),
 						read_local: () => Promise.resolve(null),
@@ -700,9 +821,16 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 			await form.on_submit();
 			assert.strictEqual(calls.exec.length, 2, 'no preview over an unconfirmed execute');
 			assert.strictEqual(calls.alert.length, 1);
-			assert.isNotNull(body_response.querySelector('.move_transform_outcome_unknown'), 'the warning stays');
+			assert.isNotNull(
+				body_response.querySelector('.move_transform_outcome_unknown'),
+				'the warning stays',
+			);
 			// refused: no job exists, the form is free
-			const refused = new ApiError({ code: 'request.invalid_options', source: 'envelope', transport: false });
+			const refused = new ApiError({
+				code: 'request.invalid_options',
+				source: 'envelope',
+				transport: false,
+			});
 			execute_button = make({ ok: false, error: refused });
 			await form.on_submit();
 			execute_button.click();
@@ -719,7 +847,7 @@ describe('MOVE_TRANSFORM (move_* preview → execute)', function () {
 	// checkbox change, the real transport (window.fetch scripted), the real job
 	// stream. A widget that kept a private submit path, or passed another
 	// widget's model, sends the wrong body here.
-	describe('the five move_* widgets', function () {
+	describe('the five move_* widgets', () => {
 		const widgets = [
 			['move_lang', render_move_lang],
 			['move_locator', render_move_locator],

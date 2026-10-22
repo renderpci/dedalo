@@ -780,10 +780,9 @@ const get_content_data = function (self) {
 					if (jobs === null) {
 						render_dispatch_unknown(
 							dispatch_error,
-							(self.get_tool_label('job_check_failed') || 'Could not read your jobs: {reason}').replace(
-								'{reason}',
-								error_body_text(response?.error),
-							),
+							(
+								self.get_tool_label('job_check_failed') || 'Could not read your jobs: {reason}'
+							).replace('{reason}', error_body_text(response?.error)),
 						);
 						return;
 					}
@@ -815,7 +814,9 @@ const get_content_data = function (self) {
 					text_content:
 						String(row.status) +
 						' — ' +
-						(Number.isFinite(row.started_at) ? new Date(row.started_at).toLocaleTimeString() : '?') +
+						(Number.isFinite(row.started_at)
+							? new Date(row.started_at).toLocaleTimeString()
+							: '?') +
 						' ',
 					parent: container,
 				});

@@ -26,18 +26,29 @@
  */
 
 /** The picker that owns the search map. */
-export const SEARCH_PATHS_OWNER = 'zzpicker'
+export const SEARCH_PATHS_OWNER = 'zzpicker';
 
 /** The picker's show map: one relation column declared WITHOUT children. */
 export const show_ddo_map = [
-	{tipo: 'test54', parent: SEARCH_PATHS_OWNER, section_tipo: ['test3'], model: 'component_relation_related', mode: 'list'}
-]
+	{
+		tipo: 'test54',
+		parent: SEARCH_PATHS_OWNER,
+		section_tipo: ['test3'],
+		model: 'component_relation_related',
+		mode: 'list',
+	},
+];
 
 /** What the server emits as the item's `search_paths`, on the keys the client path builder reads. */
 export const search_paths = [
-	{tipo: 'test54', parent: SEARCH_PATHS_OWNER, section_tipo: ['test3'], model: 'component_relation_related'},
-	{tipo: 'test52', parent: 'test54', section_tipo: ['test3'], model: 'component_input_text'}
-]
+	{
+		tipo: 'test54',
+		parent: SEARCH_PATHS_OWNER,
+		section_tipo: ['test3'],
+		model: 'component_relation_related',
+	},
+	{ tipo: 'test52', parent: 'test54', section_tipo: ['test3'], model: 'component_input_text' },
+];
 
 /**
  * The filter_free paths the client must mint from `search_paths`: SERVER order
@@ -46,14 +57,29 @@ export const search_paths = [
  */
 export const expected_filter_paths = [
 	[
-		{tipo: 'test54', section_tipo: 'test3', component_tipo: 'test54', model: 'component_relation_related'},
-		{tipo: 'test52', section_tipo: 'test3', component_tipo: 'test52', model: 'component_input_text'}
-	]
-]
+		{
+			tipo: 'test54',
+			section_tipo: 'test3',
+			component_tipo: 'test54',
+			model: 'component_relation_related',
+		},
+		{
+			tipo: 'test52',
+			section_tipo: 'test3',
+			component_tipo: 'test52',
+			model: 'component_input_text',
+		},
+	],
+];
 
 /** The path the client minted BEFORE search_paths: the relation column as a leaf. */
 export const relation_leaf_path = [
-	{tipo: 'test54', section_tipo: 'test3', component_tipo: 'test54', model: 'component_relation_related'}
-]
+	{
+		tipo: 'test54',
+		section_tipo: 'test3',
+		component_tipo: 'test54',
+		model: 'component_relation_related',
+	},
+];
 
 // @license-end

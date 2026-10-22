@@ -311,7 +311,13 @@ export const init_move_transform_form = function (self, options, deps = {}) {
 		const stored_execute = stored_job(await read_local(execute_db_id));
 		if (stored_execute) {
 			execute_hold = 'running';
-			track(execute_db_id, stored_execute.pid, stored_execute.pfile, body_response, release_execute);
+			track(
+				execute_db_id,
+				stored_execute.pid,
+				stored_execute.pfile,
+				body_response,
+				release_execute,
+			);
 			return;
 		}
 		const stored_preview = stored_job(await read_local(local_db_id));

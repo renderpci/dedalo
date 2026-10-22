@@ -1,7 +1,6 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global it, describe, assert, afterEach */
 /*eslint no-undef: "error"*/
-'use strict';
 
 /**
  * TEST_ACQUISITION_PREVIEW_COMMIT_EXCLUSION
@@ -84,7 +83,9 @@ const TOOLS = [
 			data: {
 				series: { name: 'Series' },
 				series_status: { exists: false },
-				publications: [{ identifier: 'oai:j:1', title: 'First', authors: ['Ana'], publicationDate: '2001' }],
+				publications: [
+					{ identifier: 'oai:j:1', title: 'First', authors: ['Ana'], publicationDate: '2001' },
+				],
 				article_failures: [],
 				publications_truncated_by: 0,
 			},
@@ -125,7 +126,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * server, until release() — the window between a Preview click and its answer.
  * The harness restores the original fetch on unmount, which drops this wrapper.
  */
-const hold_next_preview_dispatch = function () {
+const hold_next_preview_dispatch = () => {
 	const harness_fetch = window.fetch;
 	const gate = Promise.withResolvers();
 	let armed = true;
@@ -156,7 +157,7 @@ describe('ACQUISITION PREVIEW / COMMIT EXCLUSION (no commit starts while a Previ
 	this.timeout(20000);
 
 	let mounted = null;
-	afterEach(function () {
+	afterEach(() => {
 		if (mounted) mounted.unmount();
 		mounted = null;
 	});
@@ -164,12 +165,12 @@ describe('ACQUISITION PREVIEW / COMMIT EXCLUSION (no commit starts while a Previ
 	for (const spec of TOOLS) {
 		const { model, tool_constructor, commit_action } = spec;
 
-		describe(model, function () {
+		describe(model, () => {
 			const preview_button_of = (m) => m.content_data.querySelector('.url_row button');
 			const confirm_button_of = (m) =>
 				m.content_data.querySelector('.review_container > button.primary');
 
-			it('a Confirm clicked while a Preview is in flight starts nothing; the new review starts exactly one commit', async function () {
+			it('a Confirm clicked while a Preview is in flight starts nothing; the new review starts exactly one commit', async () => {
 				mounted = await mount_acquisition_tool(tool_constructor, model, {
 					dispatch: { preview_url: dispatched, [commit_action]: dispatched },
 					frames: {
@@ -200,7 +201,10 @@ describe('ACQUISITION PREVIEW / COMMIT EXCLUSION (no commit starts while a Previ
 					0,
 					'NO commit dispatched while a Preview is in flight',
 				);
-				assert.isFalse(m.content_data.contains(old_confirm), 'the superseded review left at the Preview click');
+				assert.isFalse(
+					m.content_data.contains(old_confirm),
+					'the superseded review left at the Preview click',
+				);
 
 				// the Preview answers: a new review, whose Confirm starts ONE commit
 				hold.release();
@@ -212,7 +216,11 @@ describe('ACQUISITION PREVIEW / COMMIT EXCLUSION (no commit starts while a Previ
 				assert.notStrictEqual(new_confirm, old_confirm);
 				assert.isFalse(new_confirm.disabled, 'the new review is armed (nothing is outstanding)');
 				await m.run_action(new_confirm, 'the commit');
-				assert.strictEqual(tool_requests(m.sent, commit_action).length, 1, 'exactly one commit job');
+				assert.strictEqual(
+					tool_requests(m.sent, commit_action).length,
+					1,
+					'exactly one commit job',
+				);
 				assert.isNotNull(
 					m.content_data.querySelector('.commit_result_container .success_message'),
 					'its outcome is rendered in the live review',

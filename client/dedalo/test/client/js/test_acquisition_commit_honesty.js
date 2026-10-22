@@ -1,7 +1,6 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global it, describe, assert, afterEach */
 /*eslint no-undef: "error"*/
-'use strict';
 
 /**
  * TEST_ACQUISITION_COMMIT_HONESTY
@@ -119,7 +118,9 @@ const TOOLS = [
 			data: {
 				series: { name: 'Series' },
 				series_status: { exists: false },
-				publications: [{ identifier: 'oai:j:1', title: 'First', authors: ['Ana'], publicationDate: '2001' }],
+				publications: [
+					{ identifier: 'oai:j:1', title: 'First', authors: ['Ana'], publicationDate: '2001' },
+				],
 				article_failures: [],
 				publications_truncated_by: 0,
 			},
@@ -159,7 +160,7 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 	this.timeout(20000);
 
 	let mounted = null;
-	afterEach(function () {
+	afterEach(() => {
 		if (mounted) mounted.unmount();
 		mounted = null;
 	});
@@ -167,7 +168,7 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 	for (const spec of TOOLS) {
 		const { model, tool_constructor, commit_action } = spec;
 
-		describe(model, function () {
+		describe(model, () => {
 			const mount = async (server) => {
 				if (mounted) mounted.unmount();
 				mounted = await mount_acquisition_tool(tool_constructor, model, server);
@@ -184,7 +185,7 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 			};
 			const preview_frames = [success_frame(spec.preview_envelope)];
 
-			it('an outcome-unknown commit keeps PREVIEW disabled: a forced Preview starts nothing, and the disabled Confirm and its panel survive', async function () {
+			it('an outcome-unknown commit keeps PREVIEW disabled: a forced Preview starts nothing, and the disabled Confirm and its panel survive', async () => {
 				const m = await mount({
 					dispatch: { preview_url: dispatched, [commit_action]: unreadable },
 					frames: { preview_url: preview_frames },
@@ -195,7 +196,10 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 				const confirm = confirm_button_of(m);
 				click(confirm);
 				const panel = commit_panel_of(m);
-				await m.wait_until(() => panel.querySelector('.job_dispatch_unknown') !== null, 'the unknown-outcome line');
+				await m.wait_until(
+					() => panel.querySelector('.job_dispatch_unknown') !== null,
+					'the unknown-outcome line',
+				);
 				assert.isTrue(preview_button.disabled, 'Preview DISABLED while the commit is outstanding');
 
 				// the keyboard path: an activation that reaches the handler anyway
@@ -203,13 +207,22 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 				click(preview_button);
 				await sleep(150);
 				assert.strictEqual(tool_requests(m.sent, 'preview_url').length, 1, 'no second preview job');
-				assert.isTrue(m.content_data.contains(confirm), 'the outstanding commit\'s Confirm was not replaced');
+				assert.isTrue(
+					m.content_data.contains(confirm),
+					"the outstanding commit's Confirm was not replaced",
+				);
 				assert.isTrue(confirm.disabled, 'and it is still disabled');
-				assert.isNotNull(panel.querySelector('.job_dispatch_unknown'), 'its unknown-outcome panel survives');
+				assert.isNotNull(
+					panel.querySelector('.job_dispatch_unknown'),
+					'its unknown-outcome panel survives',
+				);
 
 				// the explicit way out re-arms BOTH: the commit's outcome is now the operator's call
 				click(panel.querySelector('.button_check_jobs'));
-				await m.wait_until(() => panel.querySelector('.button_enable_again') !== null, 'the explicit re-enable');
+				await m.wait_until(
+					() => panel.querySelector('.button_enable_again') !== null,
+					'the explicit re-enable',
+				);
 				click(panel.querySelector('.button_enable_again'));
 				await m.wait_until(() => !confirm.classList.contains('loading'), 're-enabled');
 				assert.isFalse(confirm.disabled);
@@ -217,7 +230,7 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 				assert.strictEqual(tool_requests(m.sent, commit_action).length, 1);
 			});
 
-			it('an INTERRUPTED commit (an errors[] line, no coded error, no result) is not a known outcome: stated, nothing re-arms until the explicit re-enable', async function () {
+			it('an INTERRUPTED commit (an errors[] line, no coded error, no result) is not a known outcome: stated, nothing re-arms until the explicit re-enable', async () => {
 				const line = 'interrupted: owning server process died (boot reconcile)';
 				const m = await mount({
 					dispatch: { preview_url: dispatched, [commit_action]: dispatched },
@@ -231,9 +244,16 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 				const confirm = confirm_button_of(m);
 				click(confirm);
 				const panel = commit_panel_of(m);
-				await m.wait_until(() => panel.querySelector('.job_ended_unknown') !== null, 'the ended-unknown statement');
+				await m.wait_until(
+					() => panel.querySelector('.job_ended_unknown') !== null,
+					'the ended-unknown statement',
+				);
 				await sleep(100);
-				assert.include(panel.querySelector('.job_end_line')?.textContent ?? '', line, "the server's own line is shown");
+				assert.include(
+					panel.querySelector('.job_end_line')?.textContent ?? '',
+					line,
+					"the server's own line is shown",
+				);
 				assert.isTrue(confirm.classList.contains('loading'), 'Confirm is not re-armed by itself');
 				assert.isTrue(confirm.disabled);
 				assert.isTrue(preview_button.disabled, 'nor is Preview');
@@ -249,7 +269,7 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 				assert.isNotNull(panel.querySelector('.job_ended_unknown'), 'what happened stays stated');
 			});
 
-			it('a commit stopped BEFORE it started (no line: nothing ran) is a known outcome and settles', async function () {
+			it('a commit stopped BEFORE it started (no line: nothing ran) is a known outcome and settles', async () => {
 				const m = await mount({
 					dispatch: { preview_url: dispatched, [commit_action]: dispatched },
 					frames: {
@@ -265,7 +285,7 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 				assert.isFalse(preview_button_of(m).disabled);
 			});
 
-			it('Check my jobs listing an ENDED job of this kind offers no blind re-enable: following it is the way on', async function () {
+			it('Check my jobs listing an ENDED job of this kind offers no blind re-enable: following it is the way on', async () => {
 				const ended_job_id = `${model}_${commit_action}_77_3`;
 				const m = await mount({
 					dispatch: { preview_url: dispatched, [commit_action]: unreadable },
@@ -282,14 +302,26 @@ describe('ACQUISITION COMMIT HONESTY (a commit re-arms only on a known outcome o
 				const confirm = confirm_button_of(m);
 				click(confirm);
 				const panel = commit_panel_of(m);
-				await m.wait_until(() => panel.querySelector('.button_check_jobs') !== null, 'the check button');
+				await m.wait_until(
+					() => panel.querySelector('.button_check_jobs') !== null,
+					'the check button',
+				);
 				click(panel.querySelector('.button_check_jobs'));
-				await m.wait_until(() => panel.querySelector('.button_follow_job') !== null, 'the ended job listed');
-				assert.isNull(panel.querySelector('.button_enable_again'), 'no "it did not start" beside a job that ended');
+				await m.wait_until(
+					() => panel.querySelector('.button_follow_job') !== null,
+					'the ended job listed',
+				);
+				assert.isNull(
+					panel.querySelector('.button_enable_again'),
+					'no "it did not start" beside a job that ended',
+				);
 				assert.isNotNull(panel.querySelector('.job_candidates_ended'), 'says why: follow it first');
 				assert.isTrue(confirm.classList.contains('loading'), 'listing re-arms nothing');
 				click(panel.querySelector('.button_follow_job'));
-				await m.wait_until(() => !confirm.classList.contains('loading'), 'the followed job settled');
+				await m.wait_until(
+					() => !confirm.classList.contains('loading'),
+					'the followed job settled',
+				);
 				assert.isFalse(confirm.disabled);
 				assert.isNotNull(panel.querySelector('.success_message'), 'what it did is rendered');
 				assert.strictEqual(tool_requests(m.sent, commit_action).length, 1, 'no second commit job');

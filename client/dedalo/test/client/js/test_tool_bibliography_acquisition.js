@@ -1,7 +1,6 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global it, describe, assert, beforeEach, afterEach */
 /*eslint no-undef: "error"*/
-'use strict';
 
 /**
  * TEST_TOOL_BIBLIOGRAPHY_ACQUISITION
@@ -40,8 +39,8 @@ import {
 	set_relogin_renderer_for_test,
 } from '../../../core/common/js/error_dispatch.js';
 import { error_text } from '../../../core/common/js/render_api_error.js';
-import { tool_bibliography_acquisition } from '../../../tools/tool_bibliography_acquisition/js/tool_bibliography_acquisition.js';
 import * as renderer_module from '../../../tools/tool_bibliography_acquisition/js/render_tool_bibliography_acquisition.js';
+import { tool_bibliography_acquisition } from '../../../tools/tool_bibliography_acquisition/js/tool_bibliography_acquisition.js';
 import {
 	describe_job_state_honesty,
 	failed_frame,
@@ -127,7 +126,7 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 	let restore_renderer = null;
 	let relogin_opened = 0;
 
-	beforeEach(function () {
+	beforeEach(() => {
 		window.__acq_bib = undefined;
 		relogin_opened = 0;
 		restore_renderer = set_relogin_renderer_for_test(() => {
@@ -136,7 +135,7 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 		});
 	});
 
-	afterEach(function () {
+	afterEach(() => {
 		if (mounted) mounted.unmount();
 		mounted = null;
 		if (restore_renderer) restore_renderer();
@@ -154,8 +153,8 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 		await m.run_action(preview_button_of(m.content_data), 'preview');
 	};
 
-	describe('template', function () {
-		it('module exports the constructor; construct seeds the instance; prototype is wired', function () {
+	describe('template', () => {
+		it('module exports the constructor; construct seeds the instance; prototype is wired', () => {
 			assert.equal(typeof tool_bibliography_acquisition, 'function');
 			const instance = new tool_bibliography_acquisition();
 			assert.strictEqual(instance.caller, null);
@@ -180,8 +179,8 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 		});
 	});
 
-	describe('preview_url (background job)', function () {
-		it('sends a background preview_url with the url and the section, and streams that job', async function () {
+	describe('preview_url (background job)', () => {
+		it('sends a background preview_url with the url and the section, and streams that job', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched },
 				frames: { preview_url: [success_frame(preview_envelope)] },
@@ -200,7 +199,7 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			);
 		});
 
-		it('a successful preview renders the review list; scraped text is TEXT', async function () {
+		it('a successful preview renders the review list; scraped text is TEXT', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched },
 				frames: { preview_url: [success_frame(preview_envelope)] },
@@ -223,7 +222,7 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			assert.strictEqual(window.__acq_bib, undefined, 'nothing scraped executed');
 		});
 
-		it('a FAILED preview (coded error on the frame) renders the error, not "Done." and not a review', async function () {
+		it('a FAILED preview (coded error on the frame) renders the error, not "Done." and not a review', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched },
 				frames: {
@@ -245,7 +244,7 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			assert.strictEqual(relogin_opened, 0, 'a caller error is not a session loss');
 		});
 
-		it('an auth.* failure on the frame reaches the relogin overlay', async function () {
+		it('an auth.* failure on the frame reaches the relogin overlay', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched },
 				frames: {
@@ -268,7 +267,7 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			assert.strictEqual(relogin_opened, 1, 'the session loss opens the relogin overlay');
 		});
 
-		it('a STOPPED job (no error, no result) is not reported as done', async function () {
+		it('a STOPPED job (no error, no result) is not reported as done', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched },
 				frames: {
@@ -281,7 +280,7 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			assert.isNull(result.querySelector('.review_container'), 'no review without a result');
 		});
 
-		it('a refused DISPATCH renders label-first error text and streams nothing', async function () {
+		it('a refused DISPATCH renders label-first error text and streams nothing', async () => {
 			const m = await mount({
 				dispatch: { preview_url: { ok: false, request_id: 'zz-req', error: invalid_url_error } },
 				frames: {},
@@ -297,7 +296,7 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			);
 		});
 
-		it('a status stream cut BEFORE the terminal frame says so, keeps Preview disabled, and Check again reopens the SAME job', async function () {
+		it('a status stream cut BEFORE the terminal frame says so, keeps Preview disabled, and Check again reopens the SAME job', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched },
 				frames: {
@@ -311,23 +310,42 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			url_input_of(m.content_data).value = URL_OK;
 			button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 			const result = result_of(m.content_data);
-			await m.wait_until(() => result.querySelector('.job_status_lost') !== null, 'the lost-status line');
+			await m.wait_until(
+				() => result.querySelector('.job_status_lost') !== null,
+				'the lost-status line',
+			);
 			assert.include(result.querySelector('.job_status_lost').textContent, '4242', 'names the job');
-			assert.isTrue(button.classList.contains('loading'), 'Preview stays disabled: the job may still run');
+			assert.isTrue(
+				button.classList.contains('loading'),
+				'Preview stays disabled: the job may still run',
+			);
 			assert.isNull(result.querySelector('.review_container'));
-			result.querySelector('.button_check_job').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			result
+				.querySelector('.button_check_job')
+				.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 			await m.wait_until(() => !button.classList.contains('loading'), 'the reopened job settled');
 			const opens = m.sent.filter((body) => body?.action === 'get_process_status');
 			assert.strictEqual(opens.length, 2, 'the status was opened twice');
 			for (const open of opens) {
-				assert.deepEqual(open.options, { pid: 4242, pfile: 'zz_acquisition_job.json' }, 'the SAME job');
+				assert.deepEqual(
+					open.options,
+					{ pid: 4242, pfile: 'zz_acquisition_job.json' },
+					'the SAME job',
+				);
 			}
-			assert.strictEqual(tool_requests(m.sent, 'preview_url').length, 1, 'no second job was started');
-			assert.isNotNull(result.querySelector('.review_container'), 'the reopened stream delivered the result');
+			assert.strictEqual(
+				tool_requests(m.sent, 'preview_url').length,
+				1,
+				'no second job was started',
+			);
+			assert.isNotNull(
+				result.querySelector('.review_container'),
+				'the reopened stream delivered the result',
+			);
 			assert.isNull(result.querySelector('.job_status_lost'));
 		});
 
-		it('a status stream that cannot be OPENED is stated (with its error) and is not silent', async function () {
+		it('a status stream that cannot be OPENED is stated (with its error) and is not silent', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched },
 				frames: {
@@ -339,20 +357,28 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			url_input_of(m.content_data).value = URL_OK;
 			button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 			const result = result_of(m.content_data);
-			await m.wait_until(() => result.querySelector('.job_status_lost') !== null, 'the lost-status line');
+			await m.wait_until(
+				() => result.querySelector('.job_status_lost') !== null,
+				'the lost-status line',
+			);
 			assert.isTrue(button.classList.contains('loading'), 'Preview stays disabled');
-			assert.isNotNull(result.querySelector('.error_message:not(.job_status_lost)'), 'the open failure is rendered');
-			result.querySelector('.button_check_job').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+			assert.isNotNull(
+				result.querySelector('.error_message:not(.job_status_lost)'),
+				'the open failure is rendered',
+			);
+			result
+				.querySelector('.button_check_job')
+				.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 			await m.wait_until(() => !button.classList.contains('loading'), 'the reopened job settled');
 			assert.isNotNull(result.querySelector('.review_container'));
 		});
 	});
 
-	describe('commit_publications (background job)', function () {
+	describe('commit_publications (background job)', () => {
 		const confirm_button_of = (content_data) =>
 			content_data.querySelector('.review_container > button.primary');
 
-		it('sends the kept publications and the section; a success renders the summary', async function () {
+		it('sends the kept publications and the section; a success renders the summary', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched, commit_publications: dispatched },
 				frames: {
@@ -384,7 +410,7 @@ describe('TOOL_BIBLIOGRAPHY_ACQUISITION CLIENT TEST', function () {
 			);
 		});
 
-		it('a FAILED commit renders the error and no success summary', async function () {
+		it('a FAILED commit renders the error and no success summary', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched, commit_publications: dispatched },
 				frames: {

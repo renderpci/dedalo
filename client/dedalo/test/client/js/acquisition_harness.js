@@ -282,7 +282,7 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  *	commit_success_frames {Array} a successful commit's frames (renders .success_message)
  *	renderer			{Object} the renderer MODULE (its set_status_idle_limit_for_test seam)
  */
-export const describe_job_state_honesty = function (spec) {
+export const describe_job_state_honesty = (spec) => {
 	const { tool_constructor, model, commit_action } = spec;
 	const dispatched = {
 		ok: true,
@@ -313,7 +313,7 @@ export const describe_job_state_honesty = function (spec) {
 		this.timeout(20000);
 
 		let mounted = null;
-		afterEach(function () {
+		afterEach(() => {
 			if (mounted) mounted.unmount();
 			mounted = null;
 		});
@@ -332,7 +332,7 @@ export const describe_job_state_honesty = function (spec) {
 			assert.isNotNull(confirm_button_of(m), 'the review (and its Confirm) rendered');
 		};
 
-		it('a commit dispatch with an UNREADABLE answer leaves the outcome unknown: Confirm stays disabled, a second activation starts nothing', async function () {
+		it('a commit dispatch with an UNREADABLE answer leaves the outcome unknown: Confirm stays disabled, a second activation starts nothing', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched, [commit_action]: unreadable },
 				frames: { preview_url: spec.preview_frames },
@@ -341,7 +341,10 @@ export const describe_job_state_honesty = function (spec) {
 			const confirm = confirm_button_of(m);
 			click(confirm);
 			const panel = commit_panel_of(m);
-			await m.wait_until(() => panel.querySelector('.job_dispatch_unknown') !== null, 'the unknown-outcome line');
+			await m.wait_until(
+				() => panel.querySelector('.job_dispatch_unknown') !== null,
+				'the unknown-outcome line',
+			);
 			await sleep(50);
 			assert.isTrue(confirm.classList.contains('loading'), 'Confirm is not re-armed');
 			assert.isTrue(confirm.disabled, 'Confirm is DISABLED, not only styled');
@@ -353,7 +356,7 @@ export const describe_job_state_honesty = function (spec) {
 			assert.strictEqual(tool_requests(m.sent, commit_action).length, 1, 'no second commit job');
 		});
 
-		it("idempotency.in_progress is unknown too; Check my jobs FOLLOWS the started job to its end (other kinds ignored), and only then Confirm re-arms", async function () {
+		it('idempotency.in_progress is unknown too; Check my jobs FOLLOWS the started job to its end (other kinds ignored), and only then Confirm re-arms', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched, [commit_action]: in_progress },
 				frames: { preview_url: spec.preview_frames, [commit_action]: spec.commit_success_frames },
@@ -370,24 +373,41 @@ export const describe_job_state_honesty = function (spec) {
 			const confirm = confirm_button_of(m);
 			click(confirm);
 			const panel = commit_panel_of(m);
-			await m.wait_until(() => panel.querySelector('.button_check_jobs') !== null, 'the check button');
+			await m.wait_until(
+				() => panel.querySelector('.button_check_jobs') !== null,
+				'the check button',
+			);
 			assert.isTrue(confirm.classList.contains('loading'));
 			click(panel.querySelector('.button_check_jobs'));
-			await m.wait_until(() => panel.querySelector('.button_follow_job') !== null, 'the started job listed');
-			assert.strictEqual(panel.querySelectorAll('.job_candidate').length, 1, 'only this action\'s jobs');
+			await m.wait_until(
+				() => panel.querySelector('.button_follow_job') !== null,
+				'the started job listed',
+			);
+			assert.strictEqual(
+				panel.querySelectorAll('.job_candidate').length,
+				1,
+				"only this action's jobs",
+			);
 			assert.include(panel.querySelector('.job_candidate').textContent, 'running');
-			assert.isNull(panel.querySelector('.button_enable_again'), 'no re-enable while one of them runs');
+			assert.isNull(
+				panel.querySelector('.button_enable_again'),
+				'no re-enable while one of them runs',
+			);
 			assert.isTrue(confirm.classList.contains('loading'), 'listing re-arms nothing');
 			click(panel.querySelector('.button_follow_job'));
 			await m.wait_until(() => !confirm.classList.contains('loading'), 'the followed job settled');
 			const opens = status_options_of(m.sent);
-			assert.deepEqual(opens.at(-1), { pid: started_job_id, pfile: `${started_job_id}.json` }, 'THAT job');
+			assert.deepEqual(
+				opens.at(-1),
+				{ pid: started_job_id, pfile: `${started_job_id}.json` },
+				'THAT job',
+			);
 			assert.isFalse(confirm.disabled);
 			assert.isNotNull(panel.querySelector('.success_message'), 'its outcome is rendered');
 			assert.strictEqual(tool_requests(m.sent, commit_action).length, 1, 'no second commit job');
 		});
 
-		it('Check my jobs: a FAILED read changes nothing; none of this kind offers an EXPLICIT re-enable', async function () {
+		it('Check my jobs: a FAILED read changes nothing; none of this kind offers an EXPLICIT re-enable', async () => {
 			let reads = 0;
 			const m = await mount({
 				dispatch: { preview_url: dispatched, [commit_action]: unreadable },
@@ -396,7 +416,16 @@ export const describe_job_state_honesty = function (spec) {
 					if (body?.action !== 'get_activity') return null;
 					reads++;
 					return reads === 1
-						? { ok: false, request_id: 'zz-read', error: { code: 'internal.unexpected', category: 'internal', message: 'x', retryable: false } }
+						? {
+								ok: false,
+								request_id: 'zz-read',
+								error: {
+									code: 'internal.unexpected',
+									category: 'internal',
+									message: 'x',
+									retryable: false,
+								},
+							}
 						: activity_envelope([activity_row(`${model}_preview_url_77_2`, 'running')]);
 				},
 			});
@@ -404,17 +433,30 @@ export const describe_job_state_honesty = function (spec) {
 			const confirm = confirm_button_of(m);
 			click(confirm);
 			const panel = commit_panel_of(m);
-			await m.wait_until(() => panel.querySelector('.button_check_jobs') !== null, 'the check button');
+			await m.wait_until(
+				() => panel.querySelector('.button_check_jobs') !== null,
+				'the check button',
+			);
 			click(panel.querySelector('.button_check_jobs'));
-			await m.wait_until(() => panel.querySelector('.job_check_failed') !== null, 'the failed read, stated');
+			await m.wait_until(
+				() => panel.querySelector('.job_check_failed') !== null,
+				'the failed read, stated',
+			);
 			assert.strictEqual(reads, 1);
 			assert.isNotNull(panel.querySelector('.job_dispatch_unknown'), 'still unknown');
 			assert.isNotNull(panel.querySelector('.button_check_jobs'), 'and still checkable');
 			assert.isNull(panel.querySelector('.button_enable_again'), 'a failed read is not "none"');
 			assert.isTrue(confirm.classList.contains('loading'));
 			click(panel.querySelector('.button_check_jobs'));
-			await m.wait_until(() => panel.querySelector('.button_enable_again') !== null, 'the explicit re-enable');
-			assert.strictEqual(panel.querySelectorAll('.job_candidate').length, 0, 'another action\'s job is not this one');
+			await m.wait_until(
+				() => panel.querySelector('.button_enable_again') !== null,
+				'the explicit re-enable',
+			);
+			assert.strictEqual(
+				panel.querySelectorAll('.job_candidate').length,
+				0,
+				"another action's job is not this one",
+			);
 			assert.isTrue(confirm.classList.contains('loading'), 'still nothing re-armed by itself');
 			click(panel.querySelector('.button_enable_again'));
 			await m.wait_until(() => !confirm.classList.contains('loading'), 're-enabled');
@@ -422,14 +464,20 @@ export const describe_job_state_honesty = function (spec) {
 			assert.strictEqual(tool_requests(m.sent, commit_action).length, 1);
 		});
 
-		it('a server REFUSAL of the dispatch is a known outcome: stated, and Confirm re-arms', async function () {
+		it('a server REFUSAL of the dispatch is a known outcome: stated, and Confirm re-arms', async () => {
 			const m = await mount({
 				dispatch: {
 					preview_url: dispatched,
 					[commit_action]: {
 						ok: false,
 						request_id: 'zz-refused',
-						error: { code: 'request.invalid_options', category: 'caller', message: 'Too many.', label_key: 'error_request_invalid_options', retryable: false },
+						error: {
+							code: 'request.invalid_options',
+							category: 'caller',
+							message: 'Too many.',
+							label_key: 'error_request_invalid_options',
+							retryable: false,
+						},
 					},
 				},
 				frames: { preview_url: spec.preview_frames },
@@ -443,7 +491,7 @@ export const describe_job_state_honesty = function (spec) {
 			assert.isFalse(confirm.disabled);
 		});
 
-		it('while a job runs its button is DISABLED and a second activation starts nothing (Confirm and Preview)', async function () {
+		it('while a job runs its button is DISABLED and a second activation starts nothing (Confirm and Preview)', async () => {
 			const m = await mount({
 				dispatch: { preview_url: dispatched, [commit_action]: dispatched },
 				frames: {
@@ -456,7 +504,10 @@ export const describe_job_state_honesty = function (spec) {
 			const confirm = confirm_button_of(m);
 			click(confirm);
 			const panel = commit_panel_of(m);
-			await m.wait_until(() => panel.querySelector('.job_status_lost') !== null, 'the lost-status line');
+			await m.wait_until(
+				() => panel.querySelector('.job_status_lost') !== null,
+				'the lost-status line',
+			);
 			assert.isTrue(confirm.disabled, 'Confirm DISABLED while its job may run');
 			confirm.disabled = false;
 			click(confirm);
@@ -470,7 +521,10 @@ export const describe_job_state_honesty = function (spec) {
 			const preview_button = preview_button_of(p);
 			p.content_data.querySelector('.url_input').value = 'https://example.org/zz_catalogue';
 			click(preview_button);
-			await p.wait_until(() => p.content_data.querySelector('.job_status_lost') !== null, 'the lost preview');
+			await p.wait_until(
+				() => p.content_data.querySelector('.job_status_lost') !== null,
+				'the lost preview',
+			);
 			assert.isTrue(preview_button.disabled, 'Preview DISABLED while its job may run');
 			preview_button.disabled = false;
 			click(preview_button);
@@ -478,7 +532,7 @@ export const describe_job_state_honesty = function (spec) {
 			assert.strictEqual(tool_requests(p.sent, 'preview_url').length, 1, 'no second preview job');
 		});
 
-		it('a HALF-OPEN status stream is declared lost after the idle limit; Check again reopens the SAME job', async function () {
+		it('a HALF-OPEN status stream is declared lost after the idle limit; Check again reopens the SAME job', async () => {
 			assert.isFunction(spec.renderer.set_status_idle_limit_for_test, 'the idle-limit seam');
 			const restore = spec.renderer.set_status_idle_limit_for_test(300);
 			try {
@@ -497,15 +551,29 @@ export const describe_job_state_honesty = function (spec) {
 				const confirm = confirm_button_of(m);
 				click(confirm);
 				const panel = commit_panel_of(m);
-				await m.wait_until(() => panel.querySelector('.job_status_lost') !== null, 'the idle stream declared lost', 5000);
-				assert.isNotNull(panel.querySelector('.job_status_idle'), 'says WHY: no status for too long');
+				await m.wait_until(
+					() => panel.querySelector('.job_status_lost') !== null,
+					'the idle stream declared lost',
+					5000,
+				);
+				assert.isNotNull(
+					panel.querySelector('.job_status_idle'),
+					'says WHY: no status for too long',
+				);
 				assert.isTrue(confirm.classList.contains('loading'), 'Confirm stays disabled');
 				click(panel.querySelector('.button_check_job'));
-				await m.wait_until(() => !confirm.classList.contains('loading'), 'the reopened job settled');
+				await m.wait_until(
+					() => !confirm.classList.contains('loading'),
+					'the reopened job settled',
+				);
 				const opens = status_options_of(m.sent).slice(opens_before);
 				assert.strictEqual(opens.length, 2, 'the commit job opened twice');
 				for (const options of opens) {
-					assert.deepEqual(options, { pid: 4242, pfile: 'zz_acquisition_job.json' }, 'the SAME job');
+					assert.deepEqual(
+						options,
+						{ pid: 4242, pfile: 'zz_acquisition_job.json' },
+						'the SAME job',
+					);
 				}
 				assert.isNotNull(panel.querySelector('.success_message'));
 				assert.strictEqual(tool_requests(m.sent, commit_action).length, 1);
