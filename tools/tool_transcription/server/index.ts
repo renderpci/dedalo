@@ -296,22 +296,21 @@ export function statusPollAvUrl(engine: string, audioRelativePath: string): stri
  * never ask the media publication layer for a URL when the engine is the local
  * sidecar. That is a property OF THE HANDLER — of the argument it actually
  * passes — and the only honest way to assert it is to run the handler and read
- * the request the provider received. Everything the handler needs to get that
- * far (the permission gate, the tool config row, the media context) is a
- * database read; injecting exactly those three, and nothing else, keeps the
- * av_url decision and the path build on the REAL code path.
+ * the request the provider received. The tool config row and the media context
+ * are database reads; injecting exactly those two (plus the status provider
+ * that records the request), and nothing else, keeps the av_url decision and
+ * the path build on the REAL code path.
+ *
+ * THE PERMISSION GATE IS NOT A SEAM: gateRecord always runs, before any seam is
+ * consulted — a seam that could replace it would make the check optional by
+ * construction. A gate driving this handler uses a principal the write door
+ * really grants.
  *
  * Gate: test/unit/transcription_client_poll_av_url_native.test.ts (it also pins
  * that `tool.apiActions.check_server_transcriber_status.handler` IS this
  * function, so the gate cannot drift onto a copy the wire never reaches).
  */
 export interface StatusPollSeams {
-	/**
-	 * The in-method READ gate (level 1) on the media_ddo record — the write door's
-	 * read mode. Returns the GRANT: the poll handle is matched against it and the
-	 * media context is built from it.
-	 */
-	readonly gate?: (ddo: MediaDdo, ctx: ToolActionContext) => Promise<PollGrant>;
 	/** The transcriber's uri/key entry for this engine, or null when unconfigured. */
 	readonly transcriberConfig?: (engine: string) => Promise<{ uri: string; key: string } | null>;
 	/** Media spec/identity/path options for the polled component_av record. */
@@ -379,15 +378,14 @@ async function deleteTranscribableAudioFile(ctx: ToolActionContext): Promise<Too
  * drives the SUBMIT through them (an ASR sidecar is not served in a test, and
  * the detached poll must not really be enqueued), keeping the media context,
  * the WAV location and the cleanup on the REAL code path.
+ *
+ * THE RECORD GATE IS NOT A SEAM. gateRecord always runs, on both ddos, before
+ * any seam is consulted: a seam that could replace the permission check would
+ * make the check optional by construction (and hide it from the permission
+ * census, which must see the gate called on the handler's entry path). A gate
+ * that drives this handler builds a principal the write door really grants.
  */
 export interface AutomaticSubmitSeams {
-	/** The record gate (production: gateRecord — the write door). */
-	readonly gate?: (
-		ddo: MediaDdo,
-		ctx: ToolActionContext,
-		mode: 'read' | 'write',
-		door: string,
-	) => Promise<RecordGrant>;
 	/** The transcriber's uri/key entry for this engine, or null when unconfigured. */
 	readonly transcriberConfig?: (engine: string) => Promise<{ uri: string; key: string } | null>;
 	/** The submit itself (production: routed from the engine). */
@@ -452,20 +450,19 @@ export async function automaticTranscription(
 	seams: AutomaticSubmitSeams = {},
 ): Promise<ToolResponse> {
 	const o = ctx.options;
-	const gate = seams.gate ?? gateRecord;
 	// THE GATES FIRST (closure Step 3, TOOLS-3): unconditional, before any
 	// validation, config lookup or provider call. WRITE on the transcription
 	// target — its component_tipo REQUIRED (the write gate used to be section-only
 	// by construction) — then READ on the media SOURCE (TOOLS-06: without it a
 	// caller who can write their OWN transcription target could transcribe the
 	// restricted audio of ANY AV record into a record they control).
-	const transcriptionGrant = await gate(
+	const transcriptionGrant = await gateRecord(
 		readTranscriptionDdo(o),
 		ctx,
 		'write',
 		'tool_transcription.automatic_transcription.transcription_ddo',
 	);
-	const mediaGrant = await gate(
+	const mediaGrant = await gateRecord(
 		readMediaDdo(o),
 		ctx,
 		'read',
@@ -736,12 +733,14 @@ export async function checkServerTranscriberStatus(
 	// TOOLS-3): PHP gated only when media_ddo->section_tipo was present, so a
 	// payload without it reached the config lookup ungated — now it is a gate
 	// refusal (request.invalid), before any seam is touched.
-	const ddo = readMediaDdo(ctx.options);
-	const gate =
-		seams.gate ??
-		((target: MediaDdo, context: ToolActionContext) =>
-			gateRecord(target, context, 'read', 'tool_transcription.check_server_transcriber_status'));
-	const grant = await gate(ddo, ctx);
+	// The grant (level 1, the write door's read mode) is what the poll handle is
+	// matched against and what the media context is built from.
+	const grant: PollGrant = await gateRecord(
+		readMediaDdo(ctx.options),
+		ctx,
+		'read',
+		'tool_transcription.check_server_transcriber_status',
+	);
 
 	const rawDdo = ctx.options.media_ddo ?? null;
 	const handle = ctx.options.pid;

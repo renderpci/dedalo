@@ -23,6 +23,13 @@
  * red (an exemption that no longer matches a dark file must be deleted).
  *
  * DB-FREE: it spawns git and the repo's own tsc, nothing else.
+ *
+ * TSC RUNS UNDER BUN, never through `node_modules/.bin/tsc`: that shim's
+ * shebang is `#!/usr/bin/env node`, and the CI image ships no node — the spawn
+ * listed nothing, every file read as dark, and the stale-exemption and control
+ * legs passed VACUOUSLY on the empty program. An empty (or unparseable) listing
+ * is therefore a LOUD failure of the detector itself (tscProgram throws, with
+ * tsc's exit code and stderr), never a census result.
  */
 
 import { describe, expect, test } from 'bun:test';
@@ -32,8 +39,11 @@ import { join, relative } from 'node:path';
 import { daemonPackageSources, daemonPackages } from '../helpers/daemon_package_corpus.ts';
 
 const REPO_ROOT = join(import.meta.dir, '..', '..');
-/** The repo's own tsc (root devDependency) — present wherever the root typecheck runs. */
-const TSC = join(REPO_ROOT, 'node_modules', '.bin', 'tsc');
+/**
+ * The repo's own tsc (root devDependency) — the package's JS entry, run by THIS
+ * bun (process.execPath), so no node is needed (see the header).
+ */
+const TSC = join(REPO_ROOT, 'node_modules', 'typescript', 'bin', 'tsc');
 
 /**
  * Files a daemon package ships that its tsc program does not cover, each with
@@ -58,7 +68,7 @@ const sourceCensus = (pkg: string): string[] => SOURCES.get(pkg) ?? [];
 
 /** What tsc REALLY puts in the program of `tsconfigPath` (repo-relative paths). */
 function tscProgram(tsconfigPath: string): Set<string> {
-	const run = Bun.spawnSync([TSC, '-p', tsconfigPath, '--listFilesOnly'], {
+	const run = Bun.spawnSync([process.execPath, TSC, '-p', tsconfigPath, '--listFilesOnly'], {
 		cwd: REPO_ROOT,
 		stdout: 'pipe',
 		stderr: 'pipe',
@@ -71,6 +81,16 @@ function tscProgram(tsconfigPath: string): Set<string> {
 		if (!path.startsWith('/')) continue;
 		const rel = relative(REPO_ROOT, path);
 		if (!rel.startsWith('..')) program.add(rel);
+	}
+	// AN EMPTY PROGRAM IS THE DETECTOR FAILING, not a census answer: every census
+	// file would read as dark and the control/stale legs would pass vacuously.
+	if (program.size === 0) {
+		throw new Error(
+			`tsc listed NO in-repo file for ${relative(REPO_ROOT, tsconfigPath)} ` +
+				`(exit ${String(run.exitCode)}${run.signalCode ? `, signal ${run.signalCode}` : ''}). ` +
+				`The daemon typecheck census cannot run blind. stderr: ${run.stderr.toString().trim().slice(0, 800) || '(empty)'}; ` +
+				`stdout: ${run.stdout.toString().trim().slice(0, 400) || '(empty)'}`,
+		);
 	}
 	return program;
 }

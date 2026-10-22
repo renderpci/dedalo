@@ -11,9 +11,15 @@
  * disk, unmanaged.
  *
  * OUTCOMES, driven through automatic_transcription itself (the handler the wire
- * reaches — pinned below) with its seams: the gate, the transcriber config, the
- * provider and the poll scheduler are injected; the media context, the WAV's
- * location under the suite media root and the cleanup run for real.
+ * reaches — pinned below) with its seams: the transcriber config, the provider
+ * and the poll scheduler are injected; the RECORD GATE (gateRecord → the write
+ * door, never a seam), the media context, the WAV's location under the suite
+ * media root and the cleanup run for real. The caller is the real superuser
+ * principal (resolvePrincipal), which the write door grants on this record.
+ *   W0 the gate is REAL even with every seam injected: an unknown non-admin
+ *      user is refused on the transcription target, and the superuser is
+ *      refused on a non-record media address (section_id 0) — the provider is
+ *      never reached and nothing is scheduled;
  *   W1 the provider REFUSES (ok:false): the action fails as before, the WAV is
  *      gone, nothing is scheduled;
  *   W2 the provider THROWS: the error propagates, the WAV is gone;
@@ -35,8 +41,7 @@ import { resolveMediaToolContext } from '../../src/core/media/tool_support.ts';
 import { transcribableAudioLocation } from '../../src/core/media/tools/transcription.ts';
 import { getMatrixTableFromTipo } from '../../src/core/ontology/resolver.ts';
 import { createSectionRecord } from '../../src/core/section/record/create_record.ts';
-import type { Principal } from '../../src/core/security/permissions.ts';
-import type { RecordGrant } from '../../src/core/security/write_door.ts';
+import { type Principal, resolvePrincipal } from '../../src/core/security/permissions.ts';
 import { assertTestDatabase } from '../../src/core/test_data/test_database_marker.ts';
 import type { ToolActionContext } from '../../src/core/tools/module.ts';
 import type {
@@ -50,6 +55,7 @@ import {
 	tool,
 } from '../../tools/tool_transcription/server/index.ts';
 import { mustGet } from '../helpers/assert.ts';
+import { refusalOf } from '../helpers/refusal.ts';
 
 const SECTION = 'test3';
 const AV = 'test94';
@@ -59,14 +65,18 @@ const USER_ID = -1;
 let recordId = 0;
 let table = '';
 let wavPath = '';
+let superuser: Principal;
 
-const contextFor = (): ToolActionContext =>
+const contextFor = (
+	principal: Principal = superuser,
+	mediaSectionId: number = recordId,
+): ToolActionContext =>
 	({
-		principal: { userId: USER_ID, isGlobalAdmin: true, isDeveloper: true } as unknown as Principal,
-		userId: USER_ID,
+		principal,
+		userId: principal.userId,
 		background: false,
 		options: {
-			media_ddo: { component_tipo: AV, section_tipo: SECTION, section_id: recordId },
+			media_ddo: { component_tipo: AV, section_tipo: SECTION, section_id: mediaSectionId },
 			transcription_ddo: {
 				component_tipo: TRANSCRIPT,
 				section_tipo: SECTION,
@@ -91,12 +101,6 @@ function seamsWith(provider: (req: TranscribeRequest) => Promise<TranscribeResul
 		scheduled: [] as { options: Record<string, unknown>; fileAtSchedule: boolean }[],
 	};
 	const seams: AutomaticSubmitSeams = {
-		gate: async (ddo) =>
-			({
-				sectionTipo: String(ddo.section_tipo),
-				componentTipo: String(ddo.component_tipo),
-				sectionId: Number(ddo.section_id),
-			}) as RecordGrant,
 		transcriberConfig: async () => ({ uri: 'http://zzasr.invalid/', key: 'zz-key' }),
 		provider: async (req) => {
 			seen.submittedPath = req.audioPath;
@@ -112,6 +116,7 @@ function seamsWith(provider: (req: TranscribeRequest) => Promise<TranscribeResul
 
 beforeAll(async () => {
 	await assertTestDatabase('transcription_submit_drops_audio_native');
+	superuser = await resolvePrincipal(USER_ID);
 	table = mustGet(await getMatrixTableFromTipo(SECTION), 'test3 table');
 	recordId = await createSectionRecord(SECTION, USER_ID);
 	const { spec, identity, pathOpts } = await resolveMediaToolContext({
@@ -141,6 +146,43 @@ afterAll(async () => {
 describe('automatic_transcription drops the on-premise WAV when the submit settles', () => {
 	test('pin: the handler the wire reaches IS the function driven here', () => {
 		expect(tool.apiActions.automatic_transcription?.handler).toBe(automaticTranscription);
+	});
+
+	test('W0 the gate is REAL under the seams: an unauthorized caller is refused before the provider', async () => {
+		placeWav();
+		// A user id no dd128 record carries: a non-admin principal with no profile,
+		// so no section floor — the transcription target's WRITE gate refuses.
+		const usersTable = mustGet(await getMatrixTableFromTipo('dd128'), 'dd128 table');
+		const [row] = await sql.unsafe(
+			`SELECT COALESCE(MAX(section_id), 0) + 1 AS id FROM "${usersTable}" WHERE section_tipo = 'dd128'`,
+		);
+		const stranger = await resolvePrincipal(Number(row?.id));
+		expect(stranger.isGlobalAdmin).toBe(false);
+		const { seams, seen } = seamsWith(async () => ({ ok: true, pid: 'zz-job-0', msg: 'ok' }));
+		const refused = await refusalOf(automaticTranscription(contextFor(stranger), seams));
+		expect(refused.code).toBe('perm.denied');
+		expect(refused.coordinates?.door).toBe(
+			'tool_transcription.automatic_transcription.transcription_ddo',
+		);
+		expect(seen.submittedPath).toBeUndefined();
+		expect(seen.scheduled).toEqual([]);
+
+		// The superuser passes the write gate on the transcript, then the media
+		// READ gate refuses a non-record address (0 is refused ahead of any
+		// admin bypass) — the second gateRecord runs too.
+		const { seams: seams2, seen: seen2 } = seamsWith(async () => ({
+			ok: true,
+			pid: 'zz-job-0',
+			msg: 'ok',
+		}));
+		const refusedMedia = await refusalOf(automaticTranscription(contextFor(superuser, 0), seams2));
+		expect(refusedMedia.code).toBe('perm.out_of_scope');
+		expect(refusedMedia.coordinates?.door).toBe(
+			'tool_transcription.automatic_transcription.media_ddo',
+		);
+		expect(seen2.submittedPath).toBeUndefined();
+		expect(seen2.scheduled).toEqual([]);
+		rmSync(wavPath, { force: true });
 	});
 
 	test('W1 a REFUSED submit: the action fails, the WAV is gone, nothing scheduled', async () => {
