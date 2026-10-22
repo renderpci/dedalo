@@ -532,6 +532,53 @@ describe.if(DB_READY)('dd153 project pick — the insert door itself', () => {
 		expect(codes(ambient)).toEqual([['accepted', null]]);
 	});
 
+	test('IDENTITY PRECEDENCE: threaded principal > ambient > attributed user (each pair judged both ways)', async () => {
+		const editorIdentity = editor as Identity;
+		const adminIdentity = globalAdmin as Identity;
+		const foreignPick = [{ section_tipo: PROJECTS, section_id: foreignProject }];
+		const attributedTo = (userId: number, principal?: Principal): RelationInsertContext => ({
+			...doorContext('component_filter', principal),
+			attributedUserId: userId,
+		});
+		const asAmbient = <T>(principal: Principal, run: () => Promise<T>): Promise<T> =>
+			runWithRequestContext(
+				{ principal, session: null, requestId: 'filter_project_pick_gate', clientIp: '127.0.0.1' },
+				run,
+			);
+		// Threaded vs attributed: the threaded principal decides, never the attribution.
+		expect(
+			codes(
+				await validateRelationInserts(
+					foreignPick,
+					attributedTo(adminIdentity.userId, editorIdentity.principal),
+				),
+			),
+		).toEqual([['refused', 'project_not_member']]);
+		expect(
+			codes(
+				await validateRelationInserts(
+					foreignPick,
+					attributedTo(editorIdentity.userId, adminIdentity.principal),
+				),
+			),
+		).toEqual([['accepted', null]]);
+		// Ambient vs attributed: the request scope decides, never the attribution.
+		expect(
+			codes(
+				await asAmbient(editorIdentity.principal, () =>
+					validateRelationInserts(foreignPick, attributedTo(adminIdentity.userId)),
+				),
+			),
+		).toEqual([['refused', 'project_not_member']]);
+		expect(
+			codes(
+				await asAmbient(adminIdentity.principal, () =>
+					validateRelationInserts(foreignPick, attributedTo(editorIdentity.userId)),
+				),
+			),
+		).toEqual([['accepted', null]]);
+	});
+
 	test('a membership read live: a project granted after the first pick is accepted on the next', async () => {
 		const actor = (editor as Identity).principal;
 		const before = await validateRelationInserts(

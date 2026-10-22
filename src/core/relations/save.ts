@@ -1030,23 +1030,12 @@ async function refuseByPickerConstraint(
 	// who was asking is not a gate. The doors that legitimately run credless
 	// (import, maintenance) re-persist through `storedItems` (gate 0) and are
 	// unaffected; a NET-NEW pick into a tree picker with no actor is refused.
-	if (await callerDeclaresTreePicker(context.componentTipo)) {
-		if (actor === undefined) {
-			return {
-				code: 'target_not_readable',
-				reason: `no principal to judge the read grant on the linked section '${targetSectionTipo}' (write refused fail-closed)`,
-			};
-		}
-		const { getSectionPermissions } = await import('../security/permissions.ts');
-		if ((await getSectionPermissions(actor, targetSectionTipo)) < 1) {
-			return {
-				code: 'target_not_readable',
-				// Names the SECTION, never the record: the actor already named the
-				// section in the payload, so nothing is disclosed by repeating it.
-				reason: `no read grant on the linked section '${targetSectionTipo}'`,
-			};
-		}
-	}
+	const readGrantRefusal = await refuseUnreadableTreePickerTarget(
+		context,
+		targetSectionTipo,
+		actor,
+	);
+	if (readGrantRefusal !== null) return readGrantRefusal;
 
 	// 2b. PROJECT MEMBERSHIP (owner decision 2026-10-21, D2) — the WRITE TWIN of
 	// the projects datalist, as gate 2 is the write twin of the picker read.
@@ -1285,11 +1274,7 @@ async function refuseProjectOutsideMembership(
 ): Promise<{ code: RelationInsertRefusalCode; reason: string } | null> {
 	if (getComponentModel(context.model)?.resolveData !== 'filter') return null;
 	const projectId = String(value.section_id);
-	const judged =
-		actor ??
-		(context.attributedUserId !== undefined
-			? await resolvePrincipal(context.attributedUserId)
-			: undefined);
+	const judged = await resolveMembershipJudge(actor, context);
 	if (judged === undefined) {
 		return {
 			code: 'project_not_member',
@@ -1304,6 +1289,51 @@ async function refuseProjectOutsideMembership(
 		// Names only the project the actor itself sent — nothing is disclosed.
 		reason: `the actor is not a member of project ${targetSectionTipo}/${projectId}`,
 	};
+}
+
+/**
+ * Who gate 2b judges: the threaded principal, else the ambient one (already
+ * folded into `actor` by the caller), else the user the save is ATTRIBUTED to
+ * (`attributedUserId`). Undefined only when no identity exists at all — gate
+ * 2b refuses that fail-closed.
+ */
+async function resolveMembershipJudge(
+	actor: Principal | undefined,
+	context: RelationInsertContext,
+): Promise<Principal | undefined> {
+	if (actor !== undefined) return actor;
+	if (context.attributedUserId === undefined) return undefined;
+	return await resolvePrincipal(context.attributedUserId);
+}
+
+/**
+ * GATE 2 — the read grant on the linked section, for TREE-PICKER callers only,
+ * fail-closed when no actor exists. The full reasoning (scope, the opposite
+ * read model elsewhere, why no actor is a refusal) is narrated at the gate's
+ * call site in refuseByPickerConstraint. Returns the refusal, or null.
+ */
+async function refuseUnreadableTreePickerTarget(
+	context: RelationInsertContext,
+	targetSectionTipo: string,
+	actor: Principal | undefined,
+): Promise<{ code: RelationInsertRefusalCode; reason: string } | null> {
+	if (!(await callerDeclaresTreePicker(context.componentTipo))) return null;
+	if (actor === undefined) {
+		return {
+			code: 'target_not_readable',
+			reason: `no principal to judge the read grant on the linked section '${targetSectionTipo}' (write refused fail-closed)`,
+		};
+	}
+	const { getSectionPermissions } = await import('../security/permissions.ts');
+	if ((await getSectionPermissions(actor, targetSectionTipo)) < 1) {
+		return {
+			code: 'target_not_readable',
+			// Names the SECTION, never the record: the actor already named the
+			// section in the payload, so nothing is disclosed by repeating it.
+			reason: `no read grant on the linked section '${targetSectionTipo}'`,
+		};
+	}
+	return null;
 }
 
 /**
