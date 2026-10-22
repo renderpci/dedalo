@@ -3009,11 +3009,13 @@ export const ERROR_REGISTRY = {
 		label_key: 'error_relation_insert_refused',
 		// A NET-NEW relation locator refused by the insert chokepoint's
 		// constraint gates (relations/save.ts refuseByPickerConstraint):
-		// `constraint` names which — off_target / term_not_selectable /
-		// selection_limit — and `section_tipo` the linked section the actor
-		// itself named in the payload. The read-grant refusal is NOT this code:
-		// it is the generic perm.denied, so a refusal never describes what the
-		// actor may not reach. WC-2026-08-14-relation-insert-target-validation.
+		// `constraint` names which — off_target / project_not_member /
+		// term_not_selectable / selection_limit — and `section_tipo` the linked
+		// section the actor itself named in the payload. The read-grant refusal
+		// is NOT this code: it is the generic perm.denied, so a refusal never
+		// describes what the actor may not reach.
+		// WC-2026-08-14-relation-insert-target-validation;
+		// project_not_member: WC-2026-10-22-filter-project-pick-membership.
 		message: 'The linked record was refused by the relation constraint',
 		severity: 'warn',
 		disclosure: 'public',

@@ -30,7 +30,7 @@
  *  - scratch caller nodes (synthetic tld) declaring one target each;
  *  - one test3 host record + three throwaway identities (the provisioner, an
  *    UNGRANTED one, and a project-scoped FILTER EDITOR: level 2 on test3's
- *    component_filter, 0 on the projects section dd153, one project — the
+ *    component_filter, 0 on the projects section dd153, member of the two projects it picks between — the
  *    ordinary non-admin shape every install has).
  * Provisioning grants the creating user's PROFILE level 2 over the new
  * sections, so it runs as a THROWAWAY user — never the superuser, whose profile
@@ -141,7 +141,7 @@ let hierarchyId = 0;
 let provisioner: Identity | undefined;
 /** Holds NO grant on test3 — the read-grant gate's subject. */
 let ungranted: Identity | undefined;
-/** Level 2 on test3's component_filter, 0 on dd153, member of PROJECT_HELD. */
+/** Level 2 on test3's component_filter, 0 on dd153, member of PROJECT_HELD + PROJECT_PICKED. */
 let filterEditor: Identity | undefined;
 /** Level 2 on the TREE picker caller, 0 on the scratch thesaurus, member of PROJECT_HELD. */
 let treeEditor: Identity | undefined;
@@ -398,9 +398,12 @@ beforeAll(async () => {
 
 	provisioner = await buildIdentity([]);
 	ungranted = await buildIdentity([]);
+	// Member of BOTH projects: the pick below must be one of the editor's OWN
+	// projects — a non-member pick is refused by gate 2b (D2; its own gate is
+	// filter_project_pick_native.test.ts).
 	filterEditor = await buildIdentity(
 		[{ tipo: HOST_FILTER, section_tipo: HOST, value: 2 }],
-		[PROJECT_HELD],
+		[PROJECT_HELD, PROJECT_PICKED],
 	);
 	treeEditor = await buildIdentity([{ tipo: TREE, section_tipo: HOST, value: 2 }], [PROJECT_HELD]);
 	superuser = await resolvePrincipal(-1);

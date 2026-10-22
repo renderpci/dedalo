@@ -64,6 +64,8 @@ The relationship between the two filter components is the heart of Dédalo's pro
 
 When a record is loaded, the projects on its `component_filter` are matched against the projects on the logged user's `component_filter_master` to decide visibility and editability. Both the datalist and list-value resolution of `component_filter` call `getUserAuthorizedProjects()` (`src/core/relations/filter_projects.ts`) to restrict what a user sees and can assign — so `component_filter_master` is the authority that every `component_filter` instance consults.
 
+The same membership rule governs saving both components: a non-admin may only **add** a project they belong to themselves, so a user editor who is not a global admin cannot grant a project they cannot see. See the [component_filter security model](component_filter.md#security-model).
+
 **Why it exists.** A single Dédalo installation is multi-tenant: several research projects (e.g. *Stolen Motherhoods*, an archaeological excavation, a numismatics catalogue) share one ontology and one database, but their records must stay isolated per project and per user. `component_filter_master` is where an administrator records, per user, the set of projects that user belongs to. It is the input to the project permission model.
 
 **When to use it.** Effectively never as a free-standing field you add to an arbitrary section. It is a system component wired into the User section by the core ontology (`dd170`). You interact with it when:

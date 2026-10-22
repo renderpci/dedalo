@@ -48,7 +48,7 @@ import { dbTimestamp } from '../db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../db/matrix.ts';
 import { sql, withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
-import type { Principal } from '../security/permissions.ts';
+import { type Principal, resolvePrincipal } from '../security/permissions.ts';
 import type { RecordGrant } from '../security/write_door.ts';
 import {
 	applyDataframeDeletePolicy,
@@ -61,6 +61,7 @@ import {
 	recordKeyChangeRows,
 	resolveDataframeSlotTipos,
 } from './dataframe_slots.ts';
+import { resolveProjectsScope } from './filter_projects.ts';
 import {
 	inCapScope,
 	isTargetAllowed,
@@ -489,13 +490,13 @@ export async function deriveRelationSearch(
  * TWO KINDS OF REFUSAL, TWO SIGNALS. The PHP-era drops (bad_form /
  * autoreference / duplicate) keep this door's designed contract: null, read by
  * every caller as PHP's "ignored" (the client's server-authoritative duplicate
- * check is exactly an unchanged pagination.total). The four CONSTRAINT
+ * check is exactly an unchanged pagination.total). The CONSTRAINT
  * refusals are NOT ignorable facts — a null here was a silent success (the save
  * answered ok, the locator was never written, only a server console line said
  * why), which is the exact "silently narrowed scope" CLAUDE.md forbids. They
  * are THROWN as the registered errors below, so the save transaction rolls
  * back and the API answers a named refusal (`relation.insert_refused` 400 for
- * off_target / term_not_selectable / selection_limit; the generic
+ * off_target / project_not_member / term_not_selectable / selection_limit; the generic
  * `perm.denied` 403 for target_not_readable — a refusal must not describe what
  * the actor may not reach, the same posture the picker read takes).
  * Callers wanting per-locator verdicts WITHOUT a throw use the batch door.
@@ -609,6 +610,19 @@ export interface RelationInsertContext {
 	 */
 	principal?: Principal;
 	/**
+	 * The user the SAVE is attributed to (`SaveRequest.userId` — the Time
+	 * Machine / activity author), threaded by save_component. Read by gate 2b
+	 * ONLY, and only when no principal is threaded and none is ambient: the
+	 * project assignment is then judged as the user the write is recorded
+	 * under. That is not a skip — a credless in-repo door attributed to a
+	 * non-admin is judged as that non-admin; one attributed to the superuser
+	 * (the system doors: imports, fixtures, maintenance) is a global admin.
+	 * Gate 2 does not read it: its scope (tree pickers) has no credless
+	 * writer, and it stays fail-closed there. Absent → gate 2b refuses
+	 * fail-closed.
+	 */
+	attributedUserId?: number;
+	/**
 	 * Frame pairing context — present ONLY for a component_dataframe save.
 	 * Switches on the two dataframe particularities: the persisted-frame
 	 * normalizer (forced dd490 + server-authoritative pairing fields) and
@@ -624,8 +638,9 @@ export interface RelationInsertContext {
  * key it maps on).
  *
  * The first three are the PHP-era drops this door has always made silently
- * (validate_data_element returning false); the last four are the constraint
- * refusals PHP never made.
+ * (validate_data_element returning false); the rest are the constraint
+ * refusals PHP never made (`project_not_member`: owner decision 2026-10-21, D2,
+ * WC-2026-10-22-filter-project-pick-membership).
  */
 export type RelationInsertRefusalCode =
 	| 'bad_form'
@@ -633,6 +648,7 @@ export type RelationInsertRefusalCode =
 	| 'duplicate'
 	| 'off_target'
 	| 'target_not_readable'
+	| 'project_not_member'
 	| 'term_not_selectable'
 	| 'selection_limit';
 
@@ -691,7 +707,7 @@ export interface RelationInsertBatchResult {
  * whole batch because one term was off-target would throw away a curator's
  * other nine picks.
  *
- * FOUR CONSTRAINTS, ALL SERVER-RESOLVED (picker plan §2). None of them reads
+ * FIVE CONSTRAINTS, ALL SERVER-RESOLVED (picker plan §2 + D2). None of them reads
  * anything the request carries — the caller ddo names itself and
  * `relations/picker_constraint.ts` derives the rest, which is the SAME resolver
  * the picker read calls for its affordances. Two call sites, one answer: a
@@ -705,6 +721,9 @@ export interface RelationInsertBatchResult {
  *     cannot see. Scoped to TREE-PICKER callers (the write twin of the picker
  *     read's pruning) and FAIL-CLOSED there; every other caller is authorized
  *     by the caller grant dispatch enforced (see gate 2).
+ *  2b. PROJECT MEMBERSHIP — a NET-NEW dd153 assignment on the projects-filter
+ *     family must name one of the actor's own projects (global admins exempt;
+ *     FAIL-CLOSED) — the write twin of the projects datalist (D2).
  *  3. SELECTABILITY — the term's own answer (`isTermSelectable`). The tree
  *     renders it, but a rendered affordance is not an authorization, so it is
  *     re-asked here. Scoped honestly: a target section that declares no
@@ -935,7 +954,7 @@ async function normalizeRelationInsert(
 }
 
 /**
- * THE FOUR CONSTRAINT GATES (picker plan §2.1-§2.3) — run on the NORMALIZED
+ * THE CONSTRAINT GATES (picker plan §2.1-§2.3 + D2 gate 2b) — run on the NORMALIZED
  * locator, AFTER the dedup, so a duplicate is dropped exactly as it always was
  * and never counts against the cap. Returns the named refusal, or null to
  * accept.
@@ -1028,6 +1047,16 @@ async function refuseByPickerConstraint(
 			};
 		}
 	}
+
+	// 2b. PROJECT MEMBERSHIP (owner decision 2026-10-21, D2) — the WRITE TWIN of
+	// the projects datalist, as gate 2 is the write twin of the picker read.
+	const membershipRefusal = await refuseProjectOutsideMembership(
+		value,
+		context,
+		targetSectionTipo,
+		actor,
+	);
+	if (membershipRefusal !== null) return membershipRefusal;
 
 	// 3. SELECTABILITY — the term's own answer, re-asked because a rendered
 	// affordance is not an authorization (picker plan §2a).
@@ -1212,6 +1241,69 @@ async function callerDeclaresTreePicker(componentTipo: string): Promise<boolean>
 		((await getNode(componentTipo))?.properties as { view?: unknown } | null | undefined)?.view ===
 		'tree'
 	);
+}
+
+/**
+ * GATE 2b — a NET-NEW project assignment must name a project the ACTOR is a
+ * member of (owner decision 2026-10-21, D2). Returns the refusal, or null.
+ *
+ * WHAT A PROJECT LOCATOR IS. The projects-filter family (`resolveData:
+ * 'filter'` — component_filter on a record, component_filter_master on a user)
+ * stores dd153 locators that ARE the projects ACL: adding one hands the record
+ * to that project's members (or, on dd170, grants a user the project). The
+ * option set the client renders is the actor's OWN projects
+ * (filter_projects.ts getFilterDatalist → resolveProjectsScope), so this asks
+ * the SAME scope constructor — one law for what is offered and what is
+ * persisted; a forged or stale request cannot assign a project the actor could
+ * never have ticked.
+ *
+ * SCOPE, derived on the server: the caller's MODEL is in the filter family.
+ * That alone confines the gate to project locators: the family's targets are
+ * pinned to the projects section by its implicit request_config
+ * (request_config/implicit.ts SECTION_PROJECTS_TIPO), so gate 1 has already
+ * refused any other section. Any other dd153 link — dd153's own project tree
+ * (dd1593 parent), a portal into the catalog — comes from another model: a
+ * relation, not an assignment, authorized by the caller grant as gate 2
+ * explains.
+ *
+ * NEVER RE-JUDGES A STORED LOCATOR: gate 0 has already returned for a
+ * re-persist, so a colleague's project on a shared record survives every save
+ * this actor makes (refusing to ADD is a refusal; dropping a stored assignment
+ * would be data loss). REMOVAL is not this gate's question.
+ *
+ * THE ACTOR: the threaded principal, else the ambient one, else the user the
+ * save is ATTRIBUTED to (`attributedUserId` — see its field). GLOBAL ADMINS are
+ * exempt — their scope is `all`, the whole catalog, exactly as their datalist.
+ * FAIL-CLOSED otherwise: with no identity at all the assignment is a refusal,
+ * never an exemption (gate 2's argument).
+ */
+async function refuseProjectOutsideMembership(
+	value: Record<string, unknown>,
+	context: RelationInsertContext,
+	targetSectionTipo: string,
+	actor: Principal | undefined,
+): Promise<{ code: RelationInsertRefusalCode; reason: string } | null> {
+	if (getComponentModel(context.model)?.resolveData !== 'filter') return null;
+	const projectId = String(value.section_id);
+	const judged =
+		actor ??
+		(context.attributedUserId !== undefined
+			? await resolvePrincipal(context.attributedUserId)
+			: undefined);
+	if (judged === undefined) {
+		return {
+			code: 'project_not_member',
+			reason: `no principal to judge membership of project ${targetSectionTipo}/${projectId} (write refused fail-closed)`,
+		};
+	}
+	const scope = await resolveProjectsScope(judged);
+	if (scope.kind === 'all') return null;
+	if (scope.ids.includes(Number(value.section_id))) return null;
+	return {
+		code: 'project_not_member',
+		// Names only the project the actor itself sent — nothing is disclosed.
+		reason: `the actor is not a member of project ${targetSectionTipo}/${projectId}`,
+	};
 }
 
 /**

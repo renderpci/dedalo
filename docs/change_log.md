@@ -674,6 +674,19 @@ Merged since the last release; these ship with the next one.
 
 #### Security
 
+- **A user can only assign a record to projects they belong to**
+
+    The *Projects* field lists only the projects the logged user belongs to, but the
+    server used to store any project it was sent. A modified or out-of-date request
+    could therefore place a record in a project the user is not a member of, or, on
+    a user's own *Projects* field, grant a project the editor cannot see. Saving now
+    refuses a project the user is not a member of with a message, and nothing is
+    stored. Global administrators can still assign any project. Projects already on a
+    record, including those added by colleagues in other projects, are never removed
+    by this check. See [component_filter](./core/components/component_filter.md#security-model).
+
+    Wire contract: `WC-2026-10-22-filter-project-pick-membership`.
+
 - **Site builder: a Claude Code turn turns off its auto-updater and telemetry in every confinement mode, not only when confined**
 
     A site builder turn run by Claude Code now always starts the agent with its
@@ -1506,7 +1519,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 20 entries"
+??? note "Wire contract — 21 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
@@ -1526,6 +1539,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-21-tm-section-restore-write-door`
     - `WC-2026-10-21-unpublish-markers-durable`
     - `WC-2026-10-21-update-cache-locked-resave`
+    - `WC-2026-10-22-filter-project-pick-membership`
     - `WC-2026-10-22-reconcile-deferred-rearm`
     - `WC-2026-10-22-related-search-one-scope`
 
