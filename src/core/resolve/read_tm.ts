@@ -66,6 +66,7 @@ import {
 } from '../ontology/resolver.ts';
 import { resolveDataframeSlotTipos, splitComposed } from '../relations/dataframe_slots.ts';
 import { laneLaw, NOLAN } from '../relations/main_lanes.ts';
+import { currentTimeMachineScopeSection } from '../section/list_definitions/tm_scope_context.ts';
 import type {
 	EmitDdo,
 	EmitRowContext,
@@ -486,6 +487,32 @@ export function tmHistoryCountSql(whereSql: string): string {
 }
 
 /**
+ * THE ROW BACKSTOP: inside a Time Machine read scope opened for section S (the
+ * §7.4 gate admitted S), the SQO this WHERE is built from must address S and
+ * only S. The gate and the scope judge the SQO the client SENT; anything that
+ * rewrites it later (the session read-back, a future server-side merge) could
+ * otherwise point the WHERE at another section's history — or at the bare
+ * browse — under S's admission. Principal-agnostic and fail-closed: a mismatch
+ * is refused (`perm.denied`), never narrowed. An unscoped open (bare browse,
+ * mixed pins) is already admin-only at the gate and the floor; no open at all
+ * is a direct server caller (no request principal to judge).
+ * WC-2026-10-22-tm-scope-whole-request (review r1 addendum).
+ */
+async function assertTmWhereInOpenedScope(sqo: Record<string, unknown>): Promise<void> {
+	const opened = currentTimeMachineScopeSection();
+	if (opened === undefined) return;
+	const { resolveTimeMachineScopeSection } = await import(
+		'../section/list_definitions/time_machine_list.ts'
+	);
+	const addressed = resolveTimeMachineScopeSection(sqo);
+	if (!addressed.mixed && addressed.sectionTipo === opened) return;
+	throw new DedaloError('perm.denied', {
+		message: 'Time machine read addresses a section other than the one its access was granted for',
+		coordinates: { section_tipo: opened },
+	});
+}
+
+/**
  * Query matrix_time_machine for one request (the two scoping surfaces of
  * buildTmWhere) and return the ordered/paginated rows plus which surface it is.
  * The sqo may be raw (direct readTimeMachineData) or sanitized (via the generic
@@ -500,6 +527,7 @@ async function queryTmRows(
 	// component history or the dd1371 filters. The epoch half names the
 	// generation store; ensure it exists first (see record_generation.ts).
 	await ensureTmHistoryReady();
+	await assertTmWhereInOpenedScope(sqo);
 	// TWO scoping surfaces (see buildTmWhere): the per-record component HISTORY
 	// (filter_by_locators) and the section-record LIST (the tool_time_machine
 	// browse: one row per record-level snapshot, tipo = caller section_tipo — PHP
@@ -1147,6 +1175,7 @@ export const tmReadSource: SectionReadSource = {
 
 	async count(sqo: Sqo): Promise<number> {
 		const scope = sqo as Record<string, unknown>;
+		await assertTmWhereInOpenedScope(scope);
 		const where = buildTmWhere(await timelineScope(scope));
 		return tmCount(where.whereSql, where.params);
 	},

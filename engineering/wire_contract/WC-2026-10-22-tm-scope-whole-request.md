@@ -117,3 +117,24 @@ inspector sends `skip_projects_filter: true` by design.
   reads + counts (== rows, == admin) an out-of-project record, a pin list naming both records, the
   snapshot list (deleted included), a deleted record; no grant → `perm.denied` on all of them;
   unscoped browse and mixed pins → `perm.denied` for a non-admin (admin control served). No fixture.
+
+## Addendum 2026-10-23 (review r1) — the session never widens the admitted scope
+
+- **Shape before (TS):** the §7.4 gate and the TM scope judged the SQO the client SENT; then
+  `readSectionRows` ran the session read-back (`mergeSessionSqo`), which fills `filter_by_locators`
+  / `filter` the client omitted from `sqoSession[source.tipo]`. A non-admin sending a snapshot-list
+  read (`tipo` filter = A, granted) with no `filter_by_locators` inherited stored pins of section B
+  (stored by an earlier read under the same `source.tipo` — `dd15`, or a plain read of any section
+  used as `source.tipo`) and got B's history rows (`200`) under A's admission; `count` (no merge)
+  answered A's total.
+- **Shape after (TS):** a `sqo.mode:'tm'` read inherits NO scope-bearing key from the session
+  (`filter`, `filter_by_locators`); order/limit/offset still ride it, and persist + the
+  `sqo_session` stamp are unchanged. Backstop: inside a scope opened for section S, the TM row query
+  and count refuse (`403 perm.denied`) a WHERE whose SQO does not address exactly S (another
+  section, mixed pins, the bare browse) — principal-agnostic, fail-closed.
+- **Reason:** admission and the WHERE must judge the same SQO; the TM scope is server-owned
+  (`WC-2026-08-14-tm-scope-server-owned`).
+- **Gate reconciliation:** TS-only (PHP merged every key). `tm_inspector_access_native` "the
+  session never widens" legs: stored foreign pins under `dd15` and under a section `source.tipo`
+  serve only the admitted section, count == rows; direct read-source backstop leg (foreign pins,
+  bare, mixed → `perm.denied`; own pins/snapshot list served). No fixture.

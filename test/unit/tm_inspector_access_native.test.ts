@@ -34,6 +34,11 @@
  *      resolves the real section's node, and the grant keyed on the VIRTUAL
  *      section admits; a section with no time_machine_list stays admin-only and
  *      stamps the section tipo for the admin, null for anyone else.
+ *   7. THE SESSION NEVER WIDENS THE SCOPE (review r1): the §7.4 gate admits
+ *      the SQO the client sent; the session read-back must not add a scope the
+ *      gate never judged (a stored `filter_by_locators` naming another section),
+ *      and the TM row query refuses any WHERE that addresses a section other
+ *      than the scope the request opened with (the fail-closed backstop).
  *
  * Situation `zztia` (scratch TLD, torn down): section zztia1 with a DIRECT
  * time_machine_list (zztia3); section zztia10 whose time_machine_list (zztia12)
@@ -61,6 +66,7 @@ import {
 	type Principal,
 	resolvePrincipal,
 } from '../../src/core/security/permissions.ts';
+import { runWithRequestContext } from '../../src/core/security/request_context.ts';
 import {
 	dropSituation,
 	ensureSituation,
@@ -111,6 +117,9 @@ const GRANTED_USER_ID = 958701;
 const UNGRANTED_USER_ID = 958702;
 const GRANTED_PROFILE_ID = 958711;
 const UNGRANTED_PROFILE_ID = 958712;
+/** Holds the §7.4 grant on SCOPED_SECTION only — never on DIRECT_SECTION. */
+const PARTIAL_USER_ID = 958703;
+const PARTIAL_PROFILE_ID = 958713;
 /** TEST-NET-3: the LOAD activity rows this file's reads write are swept by it. */
 const CLIENT_IP = '203.0.113.88';
 const LANG = 'lg-eng';
@@ -228,6 +237,8 @@ const OWNED: { table: string; sectionTipo: string; sectionId: number }[] = [
 	{ table: 'matrix_users', sectionTipo: 'dd128', sectionId: UNGRANTED_USER_ID },
 	{ table: 'matrix_profiles', sectionTipo: 'dd234', sectionId: GRANTED_PROFILE_ID },
 	{ table: 'matrix_profiles', sectionTipo: 'dd234', sectionId: UNGRANTED_PROFILE_ID },
+	{ table: 'matrix_users', sectionTipo: 'dd128', sectionId: PARTIAL_USER_ID },
+	{ table: 'matrix_profiles', sectionTipo: 'dd234', sectionId: PARTIAL_PROFILE_ID },
 ];
 
 async function insertRow(table: string, sectionTipo: string, sectionId: number, columns: object) {
@@ -295,6 +306,7 @@ async function sweepIdentities() {
 let admin: Principal;
 let granted: Principal;
 let ungranted: Principal;
+let partial: Principal;
 
 beforeAll(async () => {
 	await assertTestDatabase('tm_inspector_access_native');
@@ -307,10 +319,17 @@ beforeAll(async () => {
 		[IN_PROJECT_ID],
 	);
 	await mintUser(UNGRANTED_USER_ID, UNGRANTED_PROFILE_ID, BASE_GRANTS, [IN_PROJECT_ID]);
+	await mintUser(
+		PARTIAL_USER_ID,
+		PARTIAL_PROFILE_ID,
+		[...BASE_GRANTS, grant(13, SCOPED_SECTION, SCOPED_TM_LIST)],
+		[IN_PROJECT_ID],
+	);
 	clearSecurityCaches();
 	admin = await resolvePrincipal(-1);
 	granted = await resolvePrincipal(GRANTED_USER_ID);
 	ungranted = await resolvePrincipal(UNGRANTED_USER_ID);
+	partial = await resolvePrincipal(PARTIAL_USER_ID);
 	// History rows, minted through the engine's own save path.
 	for (const [sectionTipo, componentTipo, sectionId] of [
 		[DIRECT_SECTION, DIRECT_TEXT, RECORD_ID],
@@ -418,10 +437,10 @@ function historyRqo(
 	};
 }
 
-function contextFor(principal: Principal) {
+function contextFor(principal: Principal, sqoSession?: Record<string, unknown>) {
 	return {
 		principal,
-		session: { userId: principal.userId },
+		session: { userId: principal.userId, ...(sqoSession === undefined ? {} : { sqoSession }) },
 		clientIp: CLIENT_IP,
 		requestId: 'tm_inspector_access',
 	} as unknown as Parameters<NonNullable<(typeof coreApiActions)['read']>>[1];
@@ -490,11 +509,21 @@ function callSnapshots(
 	});
 }
 
-async function send(action: 'read' | 'count', principal: Principal, rqo: object): Promise<Answer> {
+async function send(
+	action: 'read' | 'count',
+	principal: Principal,
+	rqo: object,
+	sqoSession?: Record<string, unknown>,
+): Promise<Answer> {
 	const handler = coreApiActions[action];
 	if (handler === undefined) throw new Error(`dd_core_api has no '${action}' action`);
+	const context = contextFor(principal, sqoSession);
 	try {
-		const result = await handler(rqo as never, contextFor(principal));
+		// The session read-back reads the ALS request context (the seam an HTTP
+		// request opens in dispatch), so a stored session SQO rides it.
+		const result = await runWithRequestContext(context as never, () =>
+			handler(rqo as never, context),
+		);
 		return { body: result.body as Record<string, unknown> };
 	} catch (error) {
 		return { refused: String((error as { code?: unknown }).code) };
@@ -945,5 +974,122 @@ describe('a credential (secretValue) history never serves the stored value', () 
 			for (const hash of hashes) expect(text).not.toContain(JSON.stringify(hash).slice(1, -1));
 			expect(text).not.toContain('$argon2');
 		}
+	});
+});
+
+describe('the session never widens a TM read past the scope the gate admitted (review r1)', () => {
+	/** A stored session SQO pinning DIRECT_SECTION's record — a scope `partial` holds no §7.4 grant on. */
+	const foreignPins = () => ({
+		filter_by_locators: [{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID }],
+	});
+
+	/** The caller sections a read's history rows belong to (sorted, distinct). */
+	function historySections(answer: Answer): string[] {
+		if ('refused' in answer) return [answer.refused];
+		const data =
+			(answer.body.data as { data?: { typo?: string; entries?: unknown[] }[] }).data ?? [];
+		const entries = (data.find((item) => item.typo === 'sections')?.entries ?? []) as {
+			caller_section_tipo?: unknown;
+		}[];
+		return [...new Set(entries.map((entry) => String(entry.caller_section_tipo)))].sort();
+	}
+
+	/** The snapshot list of SCOPED_SECTION with session navigation ON (no session_save:false). */
+	function sessionSnapshots(action: 'read' | 'count', sourceTipo: string) {
+		return {
+			action,
+			source: {
+				model: 'section',
+				tipo: sourceTipo,
+				section_tipo: sourceTipo === 'dd15' ? 'dd15' : sourceTipo,
+				mode: 'list',
+				lang: LANG,
+			},
+			sqo: {
+				id: 'time_machine_temporal',
+				mode: 'tm',
+				section_tipo: [SCOPED_SECTION],
+				limit: 10,
+				offset: 0,
+				order: [{ direction: 'DESC', path: [{ component_tipo: 'id' }] }],
+				skip_projects_filter: true,
+				filter: { $and: [{ q: SCOPED_SECTION, column_name: 'tipo' }] },
+			},
+			show: {},
+		};
+	}
+
+	test('control: partial reads the admitted section and is refused the other one', async () => {
+		expect(historySections(await callSnapshots('read', partial, SCOPED_SECTION))).toEqual([
+			SCOPED_SECTION,
+		]);
+		expect(await callPinned('read', partial, DIRECT_SECTION, RECORD_ID)).toEqual({
+			refused: 'perm.denied',
+		});
+	});
+
+	for (const sourceTipo of ['dd15', SCOPED_SECTION]) {
+		test(`stored pins under '${sourceTipo}' never replace the admitted scope — read and count`, async () => {
+			const session = () => ({ [sourceTipo]: foreignPins() });
+			const read = await send('read', partial, sessionSnapshots('read', sourceTipo), session());
+			expect(historySections(read)).toEqual([SCOPED_SECTION]);
+			const total = countTotal(
+				await send('count', partial, sessionSnapshots('count', sourceTipo), session()),
+			);
+			expect(total).toBe(historyRows(read));
+		});
+	}
+
+	test('the backstop: a TM WHERE outside the opened scope is refused, rows and count', async () => {
+		const { tmReadSource } = await import('../../src/core/resolve/read_tm.ts');
+		const { runWithTimeMachineScope } = await import(
+			'../../src/core/section/list_definitions/tm_scope_context.ts'
+		);
+		const sqoFor = (extra: object) =>
+			({
+				section_tipo: ['dd15'],
+				mode: 'tm',
+				limit: 10,
+				offset: 0,
+				...extra,
+			}) as never;
+		const pinsOf = (sectionTipo: string) => ({
+			filter_by_locators: [{ section_tipo: sectionTipo, section_id: RECORD_ID }],
+		});
+		const outcome = async (run: () => Promise<unknown>) => {
+			try {
+				await run();
+				return 'served';
+			} catch (error) {
+				return String((error as { code?: unknown }).code);
+			}
+		};
+		const inScope = (run: () => Promise<unknown>) =>
+			outcome(() => runWithTimeMachineScope(SCOPED_SECTION, run));
+		// Another section's pins, an unscoped (bare) WHERE, a mixed pin list: refused.
+		for (const sqo of [
+			sqoFor(pinsOf(DIRECT_SECTION)),
+			sqoFor({}),
+			sqoFor({
+				filter_by_locators: [
+					{ section_tipo: SCOPED_SECTION, section_id: IN_SCOPE_ID },
+					{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID },
+				],
+			}),
+		]) {
+			expect(await inScope(() => tmReadSource.getRows(sqo))).toBe('perm.denied');
+			expect(await inScope(() => tmReadSource.count(sqo))).toBe('perm.denied');
+		}
+		// The scope's own pins and its own snapshot list: served.
+		expect(await inScope(() => tmReadSource.getRows(sqoFor(pinsOf(SCOPED_SECTION))))).toBe(
+			'served',
+		);
+		expect(
+			await inScope(() =>
+				tmReadSource.count(
+					sqoFor({ filter: { $and: [{ q: SCOPED_SECTION, column_name: 'tipo' }] } }),
+				),
+			),
+		).toBe('served');
 	});
 });

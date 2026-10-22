@@ -148,6 +148,29 @@ function stripSessionSqoStamp(
 	return context;
 }
 
+/**
+ * The stored session SQO a read may inherit from. A Time Machine read
+ * (`sqo.mode 'tm'`) inherits NO scope-bearing key (`filter`,
+ * `filter_by_locators`): its scope — the caller section whose history it
+ * reads — is server-owned and judged by the §7.4 gate on the SQO the client
+ * SENT, before this merge runs. A stored pin naming another section (an
+ * earlier admitted read, a grant revoked since, or pins a plain read stored
+ * under the same callerTipo) would otherwise replace the admitted scope after
+ * the gate (WC-2026-10-22-tm-scope-whole-request, review r1 addendum).
+ * Pagination keys (order/limit/offset) still ride the session.
+ */
+const TM_SCOPE_SQO_KEYS = ['filter', 'filter_by_locators'] as const;
+function sessionSqoForMerge(clientSqo: Rqo['sqo'], storedSqo: unknown): unknown {
+	const sqo = clientSqo as { mode?: unknown } | undefined;
+	if (sqo?.mode !== 'tm') return storedSqo;
+	if (storedSqo === null || typeof storedSqo !== 'object' || Array.isArray(storedSqo)) {
+		return storedSqo;
+	}
+	const inheritable = { ...(storedSqo as Record<string, unknown>) };
+	for (const key of TM_SCOPE_SQO_KEYS) delete inheritable[key];
+	return inheritable;
+}
+
 async function readSectionScoped(rqo: Rqo, principal?: Principal): Promise<ReadResult> {
 	const data = await readSectionRows(rqo, principal);
 	const source = rqo.source ?? {};
@@ -2164,7 +2187,7 @@ export async function readSectionRows(
 		const { currentRequestContext } = await import('../security/request_context.ts');
 		const storedSqo = currentRequestContext()?.session?.sqoSession?.[callerTipo];
 		if (storedSqo !== undefined) {
-			mergeSessionSqo(rqo.sqo as Record<string, unknown>, storedSqo);
+			mergeSessionSqo(rqo.sqo as Record<string, unknown>, sessionSqoForMerge(rqo.sqo, storedSqo));
 		}
 	}
 
