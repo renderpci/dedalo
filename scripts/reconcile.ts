@@ -43,7 +43,9 @@ function usage(message?: string): never {
 
 function scheduleText(schedule: unknown): string {
 	if (typeof schedule === 'object' && schedule !== null && 'everyMs' in schedule) {
-		return `every ${Math.round(Number((schedule as { everyMs: number }).everyMs) / 60000)} min`;
+		const { everyMs, atBoot } = schedule as { everyMs: number; atBoot?: boolean };
+		const every = `every ${Math.round(Number(everyMs) / 60000)} min`;
+		return atBoot === true ? `boot + ${every}` : every;
 	}
 	return String(schedule);
 }
@@ -109,6 +111,8 @@ async function main(): Promise<number> {
 			`${name}: ${apply ? 'APPLY' : 'DRY-RUN'} — drift ${report.drift}, applied ${report.applied} (${record.durationMs} ms)`,
 		);
 		console.log(JSON.stringify(report.detail, null, 2));
+		if (report.deferred !== undefined)
+			console.log(`\nDEFERRED: ${report.deferred.reason} — nothing applied. Re-run it.`);
 		if (!apply && report.drift > 0)
 			console.log('\nDry run: nothing written. Re-run with --apply to repair.');
 	}

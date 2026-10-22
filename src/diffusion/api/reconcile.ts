@@ -4,7 +4,7 @@
  * target for them (boundary_seam_tripwire: facade-only).
  *
  * Three definitions: `media_index` (pub/ markers derived from dbs/ markers — a
- * pure filesystem hygiene, applied at boot), `public_tier` (P1-12: what the
+ * pure filesystem hygiene, applied at boot and on a period), `public_tier` (P1-12: what the
  * public tier holds — MariaDB rows, dbs/ markers, per-record files — against
  * what the matrix holds and flags publishable; operator-run, apply removes
  * ghosts only) and `media_copy` (pub/ ∩ public files against each copy-mode
@@ -17,7 +17,7 @@
  * union the web server stats). Drift = keys whose pub/ marker is missing or
  * stray. Apply = touch/unlink them — pure filesystem hygiene, idempotent,
  * never destructive of anything that is not itself derived, which is why the
- * BOOT run keeps applying (today's server.ts posture, oracle index.ts:1183).
+ * SCHEDULED runs apply (the boot posture of the old engine, oracle index.ts:1183).
  */
 
 import { MEDIA_COPY_PERIOD_MS } from '../../core/publication_host/media_copy_status.ts';
@@ -40,8 +40,9 @@ import { runMediaCopyReconcile } from './media_copy_reconcile.ts';
  * bounded wait; DEFERRED — a writer kept a database past it — applies nothing
  * and reports the drift a plain diff measures now (`applied` 0 against it, the
  * held target in `detail.deferred`), so the scheduler's warning and the gauge
- * show an apply that did not happen rather than a clean run. `fence` is the
- * gate's seam for the bound; the registry passes none.
+ * show an apply that did not happen rather than a clean run — and the report's
+ * `deferred` tells the scheduler the repair is still owed (it re-arms the run).
+ * `fence` is the gate's seam for the bound; the registry passes none.
  */
 export async function runMediaIndexReconcile(
 	{ apply }: ReconcileRunOptions,
@@ -61,11 +62,30 @@ export async function runMediaIndexReconcile(
 	if (healed.deferred !== undefined) {
 		const diff = await diffMediaIndex();
 		const drift = diff === null ? 0 : diff.toAdd.length + diff.toRemove.length;
-		return { drift, applied: 0, detail: { enabled: true, deferred: healed.deferred } };
+		return {
+			drift,
+			applied: 0,
+			detail: { enabled: true, deferred: healed.deferred },
+			deferred: {
+				reason: `publication target ${healed.deferred.busy_target} held by a writer past the fence budget`,
+			},
+		};
 	}
 	const drift = healed.added + healed.removed;
 	return { drift, applied: drift, detail: { enabled: true, ...healed } };
 }
+
+/**
+ * The media_index period (D5, owner decision 2026-10-21: boot + interval,
+ * re-armed until done). Boot alone heals a crash of THIS process; the period
+ * heals what happens while it lives: a diffusion runner is a separate process,
+ * and one that dies between a pair's `dbs/` and `pub/` writes leaves a
+ * published record whose media 404s (or an unpublished one still public) — the
+ * module header's "until the next publish/reconcile/rebuild" needs a next
+ * reconcile. Ten minutes: the copy-mode hosts mirror pub/ on the same cadence
+ * (MEDIA_COPY_PERIOD_MS), and a run is two directory walks under the fence.
+ */
+export const MEDIA_INDEX_RECONCILE_EVERY_MS = 10 * 60_000;
 
 export const MEDIA_INDEX_RECONCILE: ReconcileDefinition = {
 	name: 'media_index',
@@ -76,7 +96,7 @@ export const MEDIA_INDEX_RECONCILE: ReconcileDefinition = {
 	description:
 		'Rebuild the pub/ publication markers from the per-target dbs/ truth — heals a crash between a publication commit and its marker write; null-drift when the marker store is off.',
 	scopeLabel: null,
-	schedule: 'boot',
+	schedule: { everyMs: MEDIA_INDEX_RECONCILE_EVERY_MS, atBoot: true },
 	autoApply: {
 		reason:
 			'pub/ is a pure derivation of dbs/: recomputing it can only add a marker the truth owns or drop one it does not; two directory walks, no SQL',

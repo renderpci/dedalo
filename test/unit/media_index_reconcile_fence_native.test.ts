@@ -457,6 +457,10 @@ describe('media_index fence — no hold-and-wait across publication targets, and
 			drift: 3,
 			applied: 0,
 			detail: { enabled: true, deferred: { busy_target: `sql:${DB_B}` } },
+			// The registry-level signal the scheduler re-arms on (D5, reconcile_scheduler_native).
+			deferred: {
+				reason: `publication target sql:${DB_B} held by a writer past the fence budget`,
+			},
 		});
 		expect(existsSync(join(base, 'pub', STRAY))).toBe(true);
 	}, 30_000);

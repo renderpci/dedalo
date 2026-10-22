@@ -750,6 +750,10 @@ const NOT_HERMETIC: ReadonlyMap<string, string> = new Map([
 		'It models a runner batch holding the publication-target advisory lock from a second Postgres session while the media-index reconcile and rebuild doors run, so the exclusion it proves exists only on a live suite Postgres.',
 	],
 	[
+		'test/unit/reconcile_scheduler_native.test.ts',
+		'It defers the scheduled media-index reconcile by holding the publication-target advisory lock from a second Postgres session and asserts the re-armed run heals the marker store once that session releases it (and that arming inside a real transaction is refused), so the deferral it proves exists only on a live suite Postgres.',
+	],
+	[
 		'test/unit/write_door_native.test.ts',
 		'It drives the real declarative tool gate and the write-door primitives as principals minted in matrix_users/matrix_profiles/dd153 projects by authz_door_fixture, against records it builds through the engine, so every leg is a statement about stored grants and rows and cannot run without a live suite Postgres.',
 	],

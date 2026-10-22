@@ -102,3 +102,22 @@
   while the open waits for a pooled connection: once it gets one the open sends nothing —
   `export.cancelled` within 1 s of the release), 17c (a cancel naming an ENDED transaction
   leaves the backend's next statement untouched; inside the transaction it cuts).
+
+## Addendum 2026-10-22 — no reserved slot (owner decision D4, 2026-10-21)
+
+- **Shape:** unchanged — this records a decision about the admission above, not a new wire
+  shape. The request path (`get_export_grid`) and the background lane
+  (`build_export_artifact`) share ONE pool of `max(1, floor(DB_POOL_MAX / 4))` selection
+  slots; no slot is reserved for either. Background exports holding every slot make a
+  `get_export_grid` request answer `export.busy` (503, retryable) until one ends; request
+  cursors holding every slot make a background export wait, and the freed slot is handed to
+  it (FIFO), so that wait is finite.
+- **Reason:** below `DB_POOL_MAX` 8 the pool is ONE slot, so a reserved request slot would
+  leave the background lane none; above, it would cap the background lane one slot short
+  while the reserved one mostly idles. The hand-off is what protects the queued lane; a
+  refused request is retryable and its client says so.
+- **Gate:** `test/unit/export_selection_cursor_native.test.ts` legs 6 (request cursors hold
+  every slot → the next request is refused), 6b (BACKGROUND cursors may take every slot —
+  none kept back — and the request path is then refused) and 12 (the freed slot is handed to
+  the queued build, never back to the free count). Mutation: a slot kept back from the
+  background admission reds 6b; one kept back from the request admission reds 6.

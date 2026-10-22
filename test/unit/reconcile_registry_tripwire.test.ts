@@ -305,6 +305,7 @@ describe('reconcile registry completeness (S-10)', () => {
 					'auto_apply',
 					'last_apply',
 					'last_applied',
+					'last_deferred',
 					'last_drift',
 					'last_error',
 					'last_run_at',
@@ -323,6 +324,16 @@ describe('the ops doc (PRODUCTION.md §6.5) names what the registry runs', () =>
 				new RegExp(`^\\| \`${name}\` \\|`, 'm'),
 			);
 		}
+	});
+
+	test('the gauge row names exactly the keys the gauge publishes', () => {
+		const row = /^\| `GET \/api\/v1\/counters` → `gauges\.reconcile` \|(.*)\|$/m.exec(doc);
+		expect(row).not.toBeNull();
+		const named = [...(row?.[1] ?? '').matchAll(/`([a-z_]+)`/g)].map((m) => m[1]).sort();
+		const gauge = reconcileGauge() as Record<string, Record<string, unknown>>;
+		const published = Object.keys(Object.values(gauge)[0] ?? {}).sort();
+		expect(published.length).toBeGreaterThan(0);
+		expect(named).toEqual(published);
 	});
 
 	test('the scheduled-apply sentence names exactly the autoApply set', () => {

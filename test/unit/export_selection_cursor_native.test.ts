@@ -46,7 +46,9 @@
  *      cursor's backend terminated) releases the slot inside the cursor itself;
  *   6. ADMISSION — with every selection slot held the next REQUEST-path open
  *      is refused EAGERLY with `export.busy` (503, retryable), never queued on
- *      the pool; 12 — a BACKGROUND build (toolExportBuildArtifact, lane
+ *      the pool; 6b — NO RESERVED SLOT (owner decision D4): the BACKGROUND
+ *      admission may take every slot, none is kept back for the request path,
+ *      which is then refused just the same; 12 — a BACKGROUND build (toolExportBuildArtifact, lane
  *      'export') is never refused for it: it waits for the slot (FIFO, the freed
  *      slot HANDED to it — never back to the free count while it waits) and
  *      completes, and a waiting build's signal ends the wait as
@@ -760,6 +762,49 @@ else {
 			} finally {
 				for (const grid of held) await grid.lines.return(undefined);
 			}
+		});
+
+		test('6b. NO RESERVED SLOT (D4): background cursors may take EVERY slot; a request-path open is then refused (export.busy)', async () => {
+			// The owner decision (2026-10-21): one shared pool, no slot reserved for
+			// either lane. Leg 6 holds every slot from the REQUEST path and leg 12 shows
+			// the background lane then waits; here the BACKGROUND admission takes them
+			// all — none is kept back for the request path — and the request path is
+			// refused eagerly, exactly as when it holds them itself.
+			const sqo = sanitizeClientSqo(structuredClone(SQO));
+			sqo.limit = null as unknown as number;
+			sqo.offset = 0;
+			const built = await buildSearchSql(sqo, { idsOnly: true });
+			const held: { close(): Promise<void> }[] = [];
+			try {
+				for (let i = 0; i < SLOTS; i++) {
+					// Bounded: a slot kept back from the background lane would leave
+					// this open waiting for a slot that never frees.
+					const open = openSelectionCursor(built, {
+						pageRows: SELECTION_PAGE,
+						admission: 'queue',
+					});
+					const outcome = await Promise.race([open, Bun.sleep(2_000).then(() => null)]);
+					if (outcome === null) {
+						void open.then((cursor) => cursor.close()).catch(() => undefined);
+						throw new Error(
+							`background open ${i + 1}/${SLOTS} was kept waiting: a slot is reserved`,
+						);
+					}
+					held.push(outcome);
+				}
+				expect(exportSelectionSlots()).toEqual({ slots: SLOTS, inUse: SLOTS, waiting: 0 });
+				let refusal: unknown = null;
+				try {
+					const extra = await openExportGrid(jobContext(admin, exportOptions()), runOptions());
+					await extra.lines.return(undefined);
+				} catch (error) {
+					refusal = error;
+				}
+				expect((refusal as { code?: string } | null)?.code).toBe('export.busy');
+			} finally {
+				for (const cursor of held) await cursor.close();
+			}
+			expect(exportSelectionSlots()).toEqual({ slots: SLOTS, inUse: 0, waiting: 0 });
 		});
 
 		test('11. page size: a pageRows outside [1, the grid page] is internal.invariant before any slot is taken', async () => {

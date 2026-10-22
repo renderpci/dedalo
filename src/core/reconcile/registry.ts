@@ -34,13 +34,15 @@ import { registerOpsGauge } from '../api/counters.ts';
 import { DedaloError } from '../errors/dedalo_error.ts';
 
 /**
- * When a reconcile runs by itself.
+ * When a reconcile runs by itself (scheduler.ts runs them).
  *  - `operator`: only when an operator asks (widget/CLI). The default for
  *    anything that walks a large store or repairs destructively.
- *  - `boot`: once, after the server listens (cheap hygiene).
- *  - `{ everyMs }`: on an interval while the server lives.
+ *  - `boot`: after the server listens (cheap hygiene) — until a run completes:
+ *    a DEFERRED run (ReconcileReport.deferred) is re-armed.
+ *  - `{ everyMs }`: on an interval while the server lives, `atBoot` also once
+ *    after it listens; a deferred run is re-armed sooner than the period.
  */
-export type ReconcileSchedule = 'operator' | 'boot' | { everyMs: number };
+export type ReconcileSchedule = 'operator' | 'boot' | { everyMs: number; atBoot?: boolean };
 
 /** The scope a run may be narrowed to — per definition (see `scopeLabel`). */
 export type ReconcileScope = readonly string[];
@@ -59,6 +61,13 @@ export interface ReconcileReport {
 	applied: number;
 	/** The owner's own report — whatever its consumers already read. */
 	detail: Record<string, unknown>;
+	/**
+	 * Set when an APPLY could not happen NOW and nothing was applied (another
+	 * writer held the store past the run's bound — media_index's fence): the
+	 * repair is still owed, and the scheduler re-arms the run until one completes.
+	 * `reason` names what held it off. Absent on a run that completed.
+	 */
+	deferred?: { reason: string };
 }
 
 export interface ReconcileDefinition {
@@ -104,6 +113,8 @@ export interface ReconcileRunRecord {
 	durationMs: number;
 	drift: number;
 	applied: number;
+	/** The report's `deferred.reason` — the apply did not happen and is owed — else null. */
+	deferred: string | null;
 	/**
 	 * Set when the run threw: the DedaloError CODE (or `internal.unexpected`
 	 * for an untyped throw) — never the exception text, which goes to the log.
@@ -189,6 +200,21 @@ export function applyPolicyReason(definition: ReconcileDefinition): string | nul
 	return definition.applyRefused?.reason ?? definition.applyRootOnly?.reason ?? null;
 }
 
+/** operator | boot | {everyMs > 0, atBoot?: boolean} — nothing else schedules a run. */
+function isValidSchedule(schedule: ReconcileSchedule): boolean {
+	if (schedule === 'operator' || schedule === 'boot') return true;
+	return typeof schedule === 'object' && isValidInterval(schedule);
+}
+
+function isValidInterval(schedule: { everyMs: number; atBoot?: boolean }): boolean {
+	const atBoot = schedule.atBoot;
+	return (
+		Number.isFinite(schedule.everyMs) &&
+		schedule.everyMs > 0 &&
+		(atBoot === undefined || typeof atBoot === 'boolean')
+	);
+}
+
 /** The facet contract, enforced at registration so a half definition cannot hide. */
 export function validateDefinition(definition: ReconcileDefinition): void {
 	const problems: string[] = [];
@@ -201,13 +227,8 @@ export function validateDefinition(definition: ReconcileDefinition): void {
 	if (definition.description.trim() === '') problems.push('description is empty');
 	if (definition.sources.length === 0) problems.push('sources is empty');
 	if (typeof definition.run !== 'function') problems.push('run is not a function');
-	const schedule = definition.schedule;
-	if (
-		schedule !== 'operator' &&
-		schedule !== 'boot' &&
-		!(typeof schedule === 'object' && Number.isFinite(schedule.everyMs) && schedule.everyMs > 0)
-	) {
-		problems.push('schedule must be operator | boot | {everyMs > 0}');
+	if (!isValidSchedule(definition.schedule)) {
+		problems.push('schedule must be operator | boot | {everyMs > 0, atBoot?: boolean}');
 	}
 	problems.push(...facetProblems(definition));
 	if (problems.length > 0) {
@@ -282,6 +303,7 @@ export async function runReconcile(
 			durationMs: Date.now() - startedAt,
 			drift: report.drift,
 			applied: report.applied,
+			deferred: report.deferred?.reason ?? null,
 			error: null,
 		};
 		lastRuns.set(name, record);
@@ -294,6 +316,7 @@ export async function runReconcile(
 			durationMs: Date.now() - startedAt,
 			drift: 0,
 			applied: 0,
+			deferred: null,
 			error: error instanceof DedaloError ? error.code : 'internal.unexpected',
 		});
 		throw error;
@@ -312,6 +335,7 @@ export function reconcileGauge(): Record<string, unknown> {
 			last_apply: last?.apply ?? null,
 			last_drift: last?.drift ?? null,
 			last_applied: last?.applied ?? null,
+			last_deferred: last?.deferred ?? null,
 			last_error: last?.error ?? null,
 		};
 	}

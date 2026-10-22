@@ -1142,7 +1142,7 @@ a shape, so an operator learns three doors, not one per subsystem:
 | --- | --- |
 | maintenance area → **Reconcile** (`reconcile_status` widget) | lists every reconcile with its last verdict; **Check** (dry) / **Apply** per row |
 | `bun scripts/reconcile.ts list` / `run <name> [--apply] [--scope a,b] [--json]` | the same from a terminal; exit 2 = drift reported and not repaired |
-| `GET /api/v1/counters` → `gauges.reconcile` | per name: `schedule`, `last_run_at`, `last_apply`, `last_drift`, `last_applied`, `last_error` (a code, never text) |
+| `GET /api/v1/counters` → `gauges.reconcile` | per name: `schedule`, `auto_apply`, `last_run_at`, `last_apply`, `last_drift`, `last_applied`, `last_deferred` (why the last apply could not happen, else null), `last_error` (a code, never text) |
 
 The registered set (grow/shrink only through `REGISTERED_NAMES` + the catalog;
 `reconcile_registry_tripwire` derives every reconcile-shaped module in the tree
@@ -1153,7 +1153,7 @@ and demands it be here):
 | `counters_media` | `matrix_counter` ↔ media file names | operator | raise-only (§6.1 step 5) |
 | `files_info` | media column `files_info` ↔ media tree | operator | judged PER ITEM: GROW/DIFF and FOREIGN (another record's files — the clone signature) rewritten, SHRINK held (`scripts/media_repair_files_info.ts --allow-shrink`); each change re-judged under the row lock through the one locked media-key writer (`missing` / `locked` / `heldOnApply` in `detail`) |
 | `observer_mirrors` | `matrix_relation_index` ↔ observer mirror slots | operator | full-law recompute (`scripts/observer_reconcile.ts` keeps `--budget`) |
-| `media_index` | `.publication/dbs` ↔ `.publication/pub` | **boot, auto-apply** | pub/ is a pure derivation: recomputed after every listen |
+| `media_index` | `.publication/dbs` ↔ `.publication/pub` | **boot + every 10 min, auto-apply** | pub/ is a pure derivation: recomputed after every listen and on the period (a diffusion runner is a separate process; one that dies between a pair's `dbs/` and `pub/` writes leaves drift while the server lives); an apply held off past its fence budget is DEFERRED and re-armed |
 | `rag_index` | matrix records ↔ `rag_embeddings` | operator | enqueues index/delete for the drain (§11) |
 | `ontology` | `<tld>0` source records ↔ `dd_ontology` | operator | destructive re-projection per drifted TLD |
 | `ontology_identifiers` | `dd_ontology` identifier columns ↔ the identifier grammar (six CHECKs) | boot (dry) | re-derive each violator's tld from source, delete the unaddressable rest (returned whole), VALIDATE the clean CHECKs |
@@ -1179,9 +1179,16 @@ destructive re-projection or row delete, an unpublish from a museum site; the pr
 list in view, through the three doors above. A step that throws is recorded by
 its error code and the plan continues.
 
-Scheduling is the registry's, not each owner's: `boot`-class definitions run
-once after the server listens, `{everyMs}` ones on their period, both
-fire-and-forget and non-fatal (`last_error` in the gauge), stopped on SIGTERM.
+Scheduling is the registry's, not each owner's (`src/core/reconcile/scheduler.ts`):
+`boot`-class definitions run after the server listens, `{everyMs}` ones on their
+period (`atBoot: true` also after the listen), both fire-and-forget and non-fatal
+(`last_error` in the gauge). A run whose apply was DEFERRED — another writer held
+the store past the run's bound, nothing applied, `last_deferred` says why — is
+re-armed after 60 s (or its period, if shorter) until one completes; a thrown run
+is not retried sooner than its period. One run per name is in flight at a time
+(the next is armed only once the previous settled), each run executes in the
+scheduler's own scope (no principal, request id `reconcile:<name>`), and SIGTERM
+clears every pending run — one already in flight finishes but never re-arms.
 `DEDALO_RECONCILE_SCHEDULER_ENABLED=false` (same posture as the diffusion
 scheduler, §8) keeps a smoke/maintenance copy from healing a shared store from
 the wrong root; the widget, the CLI and the gauge keep working. A scheduled run

@@ -21,12 +21,13 @@ export const render_reconcile_status = function () {
 
 /**
  * SCHEDULE_TEXT
- * @param {string|Object} schedule - 'operator' | 'boot' | {everyMs}
+ * @param {string|Object} schedule - 'operator' | 'boot' | {everyMs, atBoot?}
  * @returns {string}
  */
 const schedule_text = (schedule) => {
 	if (schedule && typeof schedule === 'object' && schedule.everyMs) {
-		return `every ${Math.round(schedule.everyMs / 60000)} min`;
+		const every = `every ${Math.round(schedule.everyMs / 60000)} min`;
+		return schedule.atBoot === true ? `boot + ${every}` : every;
 	}
 	return String(schedule);
 }; //end schedule_text
@@ -42,6 +43,10 @@ const last_run_text = (last_run) => {
 	}
 	if (last_run.error) {
 		return `${last_run.ranAt} FAILED: ${last_run.error}`;
+	}
+	if (last_run.deferred) {
+		// The apply could not happen then (a writer held the store); it is owed.
+		return `${last_run.ranAt} DEFERRED — drift ${last_run.drift}, nothing applied: ${last_run.deferred}`;
 	}
 	return (
 		last_run.ranAt +

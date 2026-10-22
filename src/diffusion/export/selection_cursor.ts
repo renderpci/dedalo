@@ -77,6 +77,18 @@
  *    the job's signal (`export.cancelled`): a stop, a deadline or a shutdown
  *    reaches a waiting export too.
  *
+ * NO RESERVED SLOT (owner decision 2026-10-21, D4). Both admissions draw on the
+ * ONE shared pool of EXPORT_SELECTION_SLOTS; neither lane has a slot the other
+ * cannot take. So background exports that hold every slot make a request-path
+ * open answer `export.busy` (retryable) until one ends, and request-path cursors
+ * that hold every slot make a background export wait — the hand-off above is
+ * what keeps that wait finite. A reserved request slot was considered and
+ * declined: below DB_POOL_MAX 8 there is ONE slot, so reserving it would leave
+ * the background lane none at all; above, it caps the background lane one slot
+ * short of the pool while the reserved slot mostly idles.
+ * Gate: export_selection_cursor_native legs 6 + 6b (no slot reserved for either
+ * lane) and 12 (hand-off).
+ *
  * A pool of ONE connection admits no cursor at all, in either admission: the
  * cursor would hold the only connection the export's own hydration needs (a
  * self-deadlock), so such a server refuses exports with `export.busy` and says

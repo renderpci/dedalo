@@ -31,7 +31,7 @@ import { render_reconcile_status } from './render_reconcile_status.js';
  *     { reconciles: Array<{
  *         name, stores:[a,b], description, scope_label, schedule,
  *         auto_apply: string|null,
- *         last_run: {ranAt, apply, drift, applied, durationMs, error}|null
+ *         last_run: {ranAt, apply, drift, applied, durationMs, deferred, error}|null
  *     }> }
  *   `run_reconcile` posts {name, apply} and the response carries the fresh
  *   listing (`reconciles`) plus the run `report` and `record`.

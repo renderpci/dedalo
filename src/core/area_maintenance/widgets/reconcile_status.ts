@@ -19,6 +19,7 @@ import {
 	lastReconcileRun,
 	type ReconcileApplyPolicy,
 	type ReconcileDefinition,
+	type ReconcileReport,
 	type ReconcileScope,
 	runReconcile,
 } from '../../reconcile/registry.ts';
@@ -91,6 +92,17 @@ function requireApplyPrincipal(name: string, apply: boolean, principal: Principa
 	});
 }
 
+/** The operator sentence for one run: in sync, repaired, DEFERRED (nothing applied, owed), or dry. */
+function runMessage(name: string, apply: boolean, report: ReconcileReport): string {
+	if (report.deferred !== undefined) {
+		return `${name}: drift ${report.drift}, nothing applied — DEFERRED: ${report.deferred.reason}. Run it again`;
+	}
+	if (report.drift === 0) return `OK. ${name}: the two stores agree (drift 0)`;
+	return apply
+		? `${name}: drift ${report.drift}, applied ${report.applied}`
+		: `${name}: drift ${report.drift} — dry run, nothing written. Run with apply to repair`;
+}
+
 /**
  * reconcile_status.run_reconcile — run ONE registered reconcile.
  * options: { name, apply?: boolean (default false), scope?: string[] }.
@@ -126,12 +138,7 @@ async function reconcileStatusRunReconcile(
 	const rows = await reconcileRows(principal);
 	return {
 		data: true,
-		msg:
-			report.drift === 0
-				? `OK. ${name}: the two stores agree (drift 0)`
-				: apply
-					? `${name}: drift ${report.drift}, applied ${report.applied}`
-					: `${name}: drift ${report.drift} — dry run, nothing written. Run with apply to repair`,
+		msg: runMessage(name, apply, report),
 		extend: { report, record, reconciles: rows },
 	};
 }

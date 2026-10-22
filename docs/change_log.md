@@ -976,6 +976,12 @@ Merged since the last release; these ship with the next one.
     changed. The result names any case where it could not confirm whether the import
     was applied.
 
+- **The publication-marker index is now repaired every 10 minutes as well as at startup, and a repair held off by a running publication is retried instead of skipped.**
+
+    The web server decides whether anonymous visitors may open a record's media by a marker the engine keeps in `.publication/pub`. That set is re-derived from the per-publication truth after every start, to repair a marker pair a crash left half-written. When a publication was writing at that moment for longer than two minutes, the repair was skipped and not tried again until the next restart, so a published record's media could stay unreachable — or a withdrawn one stay public — for as long as the server kept running. The repair is now retried a minute later until it completes, and it also runs every 10 minutes, which heals a pair left half-written by a publication process that died while the server stayed up. In the maintenance area, **Reconcile** shows the schedule as `boot + every 10 min` and marks a run that had to wait as *DEFERRED*, with the reason; `GET /api/v1/counters` carries it as `last_deferred`.
+
+    Wire contract: `WC-2026-10-22-reconcile-deferred-rearm`.
+
 - **A running move execute in Maintenance can no longer be hidden by a new Preview**
 
     In the five Maintenance move widgets (move languages, locators, TLD, to portal, to
@@ -1500,7 +1506,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 19 entries"
+??? note "Wire contract — 20 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
@@ -1520,6 +1526,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-21-tm-section-restore-write-door`
     - `WC-2026-10-21-unpublish-markers-durable`
     - `WC-2026-10-21-update-cache-locked-resave`
+    - `WC-2026-10-22-reconcile-deferred-rearm`
     - `WC-2026-10-22-related-search-one-scope`
 
 ## 7.0.0-beta.6 — 2026-10-15

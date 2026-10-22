@@ -394,6 +394,23 @@ const MEDIA_INDEX_FENCE_ROUNDS = 5;
 export const MEDIA_INDEX_FENCE_BOUND_MS = OPERATOR_FENCE_BOUND_MS;
 
 /**
+ * @internal TEST SEAM (named exemption, DEC-12): the DEFAULT budget of a
+ * reconcile that names none (the registry's run, so the scheduler's) — null
+ * restores MEDIA_INDEX_FENCE_BOUND_MS. Only a gate moves it, to defer a
+ * scheduled run in milliseconds instead of two minutes
+ * (reconcile_scheduler_native). An explicit `boundMs` still wins.
+ */
+let fenceBoundOverrideForTests: number | null = null;
+export function overrideMediaIndexFenceBoundForTests(boundMs: number | null): void {
+	if (boundMs !== null && !(Number.isInteger(boundMs) && boundMs > 0)) {
+		throw new DedaloError('internal.invariant', {
+			message: 'overrideMediaIndexFenceBoundForTests takes a positive integer (ms) or null',
+		});
+	}
+	fenceBoundOverrideForTests = boundMs;
+}
+
+/**
  * A reconcile's outcome: healed (what the apply touched), or DEFERRED — the
  * budget ran out with `busy_target` held by a writer, and nothing was applied.
  */
@@ -450,7 +467,8 @@ export async function reconcileMediaIndex(
 ): Promise<MediaIndexReconcileOutcome | null> {
 	const base = markerStoreBase();
 	if (base === null) return null;
-	const deadline = Date.now() + (options.boundMs ?? MEDIA_INDEX_FENCE_BOUND_MS);
+	const deadline =
+		Date.now() + (options.boundMs ?? fenceBoundOverrideForTests ?? MEDIA_INDEX_FENCE_BOUND_MS);
 	const held = new Set(await listMarkerDatabases(base));
 	for (let round = 1; ; round++) {
 		type Round =

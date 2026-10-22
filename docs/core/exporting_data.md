@@ -432,7 +432,9 @@ first line. Each server process runs
 at most a quarter of `DB_POOL_MAX` exports at once (at least one); beyond that
 a `get_export_grid` request is refused with `export.busy` — try again shortly —
 while a background export (`build_export_artifact`) waits for the next free
-slot instead of failing (its Stop ends the wait). A server with
+slot instead of failing (its Stop ends the wait). Both kinds share the same
+slots — none is reserved for either — so while background exports occupy them
+all, a direct export answers `export.busy` until one of them ends. A server with
 `DB_POOL_MAX=1` cannot run exports. A streamed export whose reader stops
 pulling lines for 15 minutes is closed with `export.consumer_idle`, which frees
 its database connection; the time the server spends building the export never
