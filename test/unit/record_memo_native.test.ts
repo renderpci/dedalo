@@ -264,7 +264,8 @@ describe('memo wiring (structural — behavioural tests stay green if these reve
 		// import behind is exactly how this reverts, and a bare `toContain`
 		// would still match the surviving `import { runWithRecordMemo }` line.
 		expect(source).toMatch(/\brunWithRecordMemo\(/);
-		// …and it must WRAP the read, not merely be mentioned somewhere.
-		expect(source).toMatch(/return runWithRecordMemo\(\(\) =>/);
+		// …and it must WRAP the read, not merely be mentioned somewhere (it sits
+		// inside the TM scope opener, so the wrap is pinned on its argument).
+		expect(source).toMatch(/runWithRecordMemo\(\(\) => readSectionScoped\(rqo, principal\)\)/);
 	});
 });

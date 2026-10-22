@@ -121,5 +121,6 @@ per request and opened around the whole `read`/`count` handler body (`withTimeMa
 so Gate A, Gate B, the §7.4 gate and the per-ddo floor judge the same caller section; `count` runs
 the same §7.4 gate as `read`; the `time_machine_list` lookup follows the recursive grant walk (a
 node under a `section_group`). A scoped surface is "the one section the user already has access
-to" at the RECORD level too: a non-admin's rows are confined to their projects scope (that
-entry's r0 addendum).
+to" at the SECTION level only: a §7.4 grant holder reads every record's history of that section,
+outside their projects and deleted records included (that entry's owner-decision addendum, which
+supersedes its r0 record-scope confinement).

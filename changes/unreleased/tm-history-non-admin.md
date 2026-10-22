@@ -10,7 +10,8 @@ permission error in the inspector's *Latest changes* and *Component history*. Th
 history list sits inside a group of the section. Users without that permission no longer see the
 two blocks at all, and a block that cannot load shows one short line inside the block instead of a
 full-page error. The record counter of a history list follows the same permission.
-The history shows only records the user's projects let them see, as the section list does. The
-history of a deleted record stays visible to administrators only.
+The history follows the same rule as the Time Machine tool: a user allowed to see a section's
+history sees the changes of every record of that section, also of records outside their projects
+and of deleted records.
 The history never shows the past values of a field the user's profile does not let them read on
 the record: those cells stay empty, the rest of the change (who, when, which field) is shown.

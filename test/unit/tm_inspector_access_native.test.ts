@@ -22,11 +22,14 @@
  *      the recursive grant walk, so the gate must see it too.
  *   4. the section CONTEXT carries config.time_machine_list per principal: the
  *      tipo for a grant holder, null otherwise — the client's block trigger.
- *   5. RECORD SCOPE (review r0 S1): the §7.4 grant is SECTION-wide, the projects
- *      filter is per RECORD. A grant holder whose projects exclude a record reads
- *      no history of it — per-record pins and the snapshot list alike — and
- *      counts 0, while the admin control reads it. A DEAD record (deleted: no
- *      live row to judge) is out of every non-admin's scope.
+ *   5. THE OWNER RULE (2026-10-22, supersedes review r0): the §7.4 grant — the
+ *      same one that opens the Time Machine tool — is what scopes a non-admin's
+ *      history; the projects filter does NOT (the history is the record's
+ *      changes, and the inspector sends skip_projects_filter by design). A grant
+ *      holder reads (and counts, equal to the rows served) the history of a
+ *      record OUTSIDE their projects, of a DELETED record, and the whole snapshot
+ *      (undelete) list; no grant → perm.denied; an unscoped (bare dd15 browse) or
+ *      mixed-section read → perm.denied for every non-admin.
  *   6. VIRTUAL section + NO node: a virtual section of the nested-grant section
  *      resolves the real section's node, and the grant keyed on the VIRTUAL
  *      section admits; a section with no time_machine_list stays admin-only and
@@ -36,7 +39,7 @@
  * time_machine_list (zztia3); section zztia10 whose time_machine_list (zztia12)
  * sits inside a section_group (zztia11); zztia20, a VIRTUAL section of zztia10;
  * zztia30, a PROJECT-GATED section (component_filter zztia33) with one record in
- * the grant holder's project and one outside it; zztia40, a section with no
+ * the grant holder's project, one outside it and one deleted; zztia40, a section with no
  * time_machine_list. Users/profiles are minted at explicit ids and swept; TM rows
  * are minted through the engine's own save and delete paths (the LIVE records'
  * whole-record snapshots excepted — see beforeAll).
@@ -616,55 +619,113 @@ describe('the section context carries config.time_machine_list per principal', (
 	});
 });
 
-describe('the record scope: a section-wide grant never reaches past the projects filter', () => {
+describe('the owner rule: the TM grant, not the projects filter, scopes a non-admin history', () => {
+	/** A read's records and its count, side by side (count must equal the rows served). */
+	async function readAndCount(
+		read: (action: 'read' | 'count') => Promise<Answer>,
+	): Promise<{ records: number[]; rows: number; total: number }> {
+		const answer = await read('read');
+		return {
+			records: historyRecords(answer),
+			rows: historyRows(answer),
+			total: countTotal(await read('count')),
+		};
+	}
+
 	test('the grant holder reads the history of an in-project record', async () => {
-		expect(historyRecords(await callPinned('read', granted, SCOPED_SECTION, IN_SCOPE_ID))).toEqual([
-			IN_SCOPE_ID,
-		]);
-		expect(
-			countTotal(await callPinned('count', granted, SCOPED_SECTION, IN_SCOPE_ID)),
-		).toBeGreaterThan(0);
+		const seen = await readAndCount((action) =>
+			callPinned(action, granted, SCOPED_SECTION, IN_SCOPE_ID),
+		);
+		expect(seen.records).toEqual([IN_SCOPE_ID]);
+		expect(seen.total).toBe(seen.rows);
 	});
 
-	test('an out-of-project record has no history for the grant holder — read and count', async () => {
-		// The CONTROL: the history exists, and the admin reads it.
-		expect(
-			historyRecords(await callPinned('read', admin, SCOPED_SECTION, OUT_OF_SCOPE_ID)),
-		).toEqual([OUT_OF_SCOPE_ID]);
-		expect(
-			historyRecords(await callPinned('read', granted, SCOPED_SECTION, OUT_OF_SCOPE_ID)),
-		).toEqual([]);
-		expect(countTotal(await callPinned('count', granted, SCOPED_SECTION, OUT_OF_SCOPE_ID))).toBe(0);
+	test('the grant holder reads the history of a record OUTSIDE their projects — read and count', async () => {
+		const pinned = (principal: Principal) =>
+			readAndCount((action) => callPinned(action, principal, SCOPED_SECTION, OUT_OF_SCOPE_ID));
+		const asAdmin = await pinned(admin);
+		const asGranted = await pinned(granted);
+		expect(asGranted.records).toEqual([OUT_OF_SCOPE_ID]);
+		expect(asGranted.rows).toBeGreaterThan(0);
+		expect(asGranted.total).toBe(asGranted.rows);
+		expect(asGranted).toEqual(asAdmin);
 	});
 
-	test('a pin list naming both records answers only the in-project one', async () => {
+	test('a pin list naming both records answers both, as it does for the admin', async () => {
 		const both = historyRqo('read', [
 			{ section_tipo: SCOPED_SECTION, section_id: IN_SCOPE_ID },
 			{ section_tipo: SCOPED_SECTION, section_id: OUT_OF_SCOPE_ID },
 		]);
-		expect(historyRecords(await send('read', granted, both))).toEqual([IN_SCOPE_ID]);
+		expect(historyRecords(await send('read', granted, both))).toEqual([
+			IN_SCOPE_ID,
+			OUT_OF_SCOPE_ID,
+		]);
 		expect(historyRecords(await send('read', admin, both))).toEqual([IN_SCOPE_ID, OUT_OF_SCOPE_ID]);
 	});
 
-	test('the snapshot list holds only in-scope records, and its count equals its rows', async () => {
-		expect(historyRecords(await callSnapshots('read', admin, SCOPED_SECTION))).toEqual([
-			IN_SCOPE_ID,
-			OUT_OF_SCOPE_ID,
-			DEAD_ID,
-		]);
-		const read = await callSnapshots('read', granted, SCOPED_SECTION);
-		expect(historyRecords(read)).toEqual([IN_SCOPE_ID]);
-		expect(countTotal(await callSnapshots('count', granted, SCOPED_SECTION))).toBe(
-			historyRows(read),
-		);
+	test('the snapshot (undelete) list holds every record, deleted included; its count equals its rows', async () => {
+		const snapshots = (principal: Principal) =>
+			readAndCount((action) => callSnapshots(action, principal, SCOPED_SECTION));
+		const asGranted = await snapshots(granted);
+		expect(asGranted.records).toEqual([IN_SCOPE_ID, OUT_OF_SCOPE_ID, DEAD_ID]);
+		expect(asGranted.total).toBe(asGranted.rows);
+		expect(asGranted).toEqual(await snapshots(admin));
 	});
 
-	test('a DEAD record (no live row to judge) is out of the non-admin scope', async () => {
-		expect(historyRecords(await callPinned('read', admin, SCOPED_SECTION, DEAD_ID))).toEqual([
-			DEAD_ID,
-		]);
-		expect(historyRecords(await callPinned('read', granted, SCOPED_SECTION, DEAD_ID))).toEqual([]);
-		expect(countTotal(await callPinned('count', granted, SCOPED_SECTION, DEAD_ID))).toBe(0);
+	test('a DELETED record keeps its history for the grant holder — read and count', async () => {
+		const pinned = (principal: Principal) =>
+			readAndCount((action) => callPinned(action, principal, SCOPED_SECTION, DEAD_ID));
+		const asGranted = await pinned(granted);
+		expect(asGranted.records).toEqual([DEAD_ID]);
+		expect(asGranted.rows).toBeGreaterThan(0);
+		expect(asGranted.total).toBe(asGranted.rows);
+		expect(asGranted).toEqual(await pinned(admin));
+	});
+
+	test('without the grant: perm.denied — out-of-project, deleted and snapshot surfaces alike', async () => {
+		const refusals: Answer[] = [];
+		for (const action of ['read', 'count'] as const) {
+			refusals.push(await callPinned(action, ungranted, SCOPED_SECTION, OUT_OF_SCOPE_ID));
+			refusals.push(await callPinned(action, ungranted, SCOPED_SECTION, DEAD_ID));
+			refusals.push(await callSnapshots(action, ungranted, SCOPED_SECTION));
+		}
+		expect(refusals).toEqual(Array(6).fill({ refused: 'perm.denied' }));
+	});
+
+	test('unscoped (the bare dd15 browse) and mixed-section reads stay admin-only', async () => {
+		const browse = (action: 'read' | 'count') => ({
+			action,
+			source: {
+				model: 'section',
+				tipo: 'dd15',
+				section_tipo: 'dd15',
+				mode: 'list',
+				lang: LANG,
+				session_save: false,
+			},
+			sqo: {
+				id: 'tm_browse',
+				mode: 'tm',
+				section_tipo: ['dd15'],
+				limit: 10,
+				offset: 0,
+				order: [{ direction: 'DESC', path: [{ component_tipo: 'id' }] }],
+			},
+			show: {},
+		});
+		const mixed = (action: 'read' | 'count') =>
+			historyRqo(action, [
+				{ section_tipo: SCOPED_SECTION, section_id: OUT_OF_SCOPE_ID },
+				{ section_tipo: DIRECT_SECTION, section_id: RECORD_ID },
+			]);
+		const refusals: Answer[] = [];
+		for (const action of ['read', 'count'] as const) {
+			refusals.push(await send(action, granted, browse(action)));
+			refusals.push(await send(action, granted, mixed(action)));
+		}
+		expect(refusals).toEqual(Array(4).fill({ refused: 'perm.denied' }));
+		// The CONTROL: the same browse is the admin's.
+		expect(historyRows(await send('read', admin, browse('read')))).toBeGreaterThan(0);
 	});
 });
 

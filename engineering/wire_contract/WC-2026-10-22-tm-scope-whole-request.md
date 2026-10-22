@@ -44,6 +44,9 @@
 
 ## Addendum 2026-10-22 (review r0) — the rows are confined to the caller's record scope
 
+> **SUPERSEDED** by the *owner decision* addendum below (same day): the projects confinement this
+> addendum describes was removed. Kept as history.
+
 - **Shape before (TS):** the §7.4 grant that admits a non-admin TM `read`/`count` is
   SECTION-wide, and the TM read source (`resolve/read_tm.ts`) ignored the principal. A grant
   holder whose projects exclude record R pinned R (`filter_by_locators`) or opened the snapshot
@@ -88,3 +91,29 @@
 - **Gate reconciliation:** TS-only. `tm_inspector_access_native` "the component pair" legs (a
   level-0 component on the component, client-sent column, inspector record and snapshot surfaces;
   admin controls read it; readable controls still serve; context never advertises it). No fixture.
+
+## Addendum 2026-10-22 (owner decision) — the §7.4 grant, not the projects filter, scopes the history
+
+Supersedes the r0 addendum. Binding owner decision: *if the user has access to the Time Machine
+tool, the user can read the history of the record, the same way they see the Time Machine; the
+history is the changes of the record, so filtering it by the user's projects makes no sense.* The
+inspector sends `skip_projects_filter: true` by design.
+
+- **Shape before (TS, r0):** a non-admin's TM where was confined through `record_scope.scopedRows`
+  (`scopeTmWhere`, `resolve/read_tm.ts`): a grant holder whose projects excluded record R got no
+  rows and `count` 0 for R's pins and R's snapshot; a DEAD record's history and its snapshot (the
+  undelete surface) were global-admin only.
+- **Shape after (TS):** no record-scope confinement of TM rows or counts. A §7.4 grant holder reads
+  the history of every record of the scoped section — outside their projects and deleted alike —
+  and the whole snapshot (undelete) list (`200`); `count` equals the rows served (read and count
+  build the same where). No grant → `403 perm.denied`. KEPT: the bare dd15 browse and an unscoped or
+  mixed-section TM read stay global-admin only (`gateTimeMachineRead` + the unscoped dd15 floor);
+  the r2 per-(section, component) column check (a level-0 component is withheld in the history as in
+  the TM tool's field permissions; raw `dd1574` cells emptied per row); Gate A/count judged in the
+  TM scope; embedded refusals panel-local.
+- **Reason:** the history is the record's changes; the §7.4 grant is the Time Machine permission,
+  and the inspector history and the tool must answer the same rows.
+- **Gate reconciliation:** TS-only. `tm_inspector_access_native` "the owner rule" legs: grant holder
+  reads + counts (== rows, == admin) an out-of-project record, a pin list naming both records, the
+  snapshot list (deleted included), a deleted record; no grant → `perm.denied` on all of them;
+  unscoped browse and mixed pins → `perm.denied` for a non-admin (admin control served). No fixture.

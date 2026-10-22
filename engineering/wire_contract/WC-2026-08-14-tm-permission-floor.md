@@ -77,8 +77,9 @@ every non-admin was refused at the handler, grant or no grant. `tm_permission_fl
 the grant only BELOW the handler (`readSection`), never through `coreApiActions.read` — which is why
 it stayed green. The scope is now opened around the whole `read`/`count` handler body
 (`withTimeMachineReadScope`), `count` runs the same §7.4 gate, and the `time_machine_list` lookup
-follows the recursive grant walk. The admitted rows are further confined to the caller's record
-scope (that entry's r0 addendum). Handler-level gate: `tm_inspector_access_native`.
+follows the recursive grant walk. The admitted rows are NOT confined to the caller's projects
+(that entry's owner-decision addendum supersedes its r0 record-scope confinement): the §7.4 grant is
+the scope of a non-admin's history. Handler-level gate: `tm_inspector_access_native`.
 
 ## Addendum 2026-10-22 (review r2) — the floor judges the column's pair
 

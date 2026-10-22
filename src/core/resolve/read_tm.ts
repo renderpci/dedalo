@@ -29,9 +29,11 @@
  * section, level >= 1). dd15's own columns resolve through the ordinary per-ddo
  * authz loop, floored by the §7.4 `time_machine_list` grant on the caller
  * section (WC-2026-08-14-tm-permission-floor); the unscoped browse is
- * global-admin only. The §7.4 grant is SECTION-wide, so a non-admin's ROWS are
- * further confined to the records their projects filter lets them see
- * (scopeTmWhere — the read and the count alike).
+ * global-admin only. The §7.4 grant IS the record scope of a non-admin's
+ * history (owner decision 2026-10-22, WC-2026-10-22-tm-scope-whole-request):
+ * the rows are the record's changes, so the projects filter does not confine
+ * them — the TM tool's own rule. Only the per-(section, component) column check
+ * narrows what a grant holder reads.
  */
 
 import { config } from '../../config/config.ts';
@@ -73,7 +75,6 @@ import type {
 import { loadRecordCached } from '../section/record_loader.ts';
 import { injectComponentData } from '../section_record/index.ts';
 import { ddoIsAuthorized, type Principal, SUPERUSER_ID } from '../security/permissions.ts';
-import { scopedRows } from '../security/record_scope.ts';
 import { readLaneValueAt } from '../tm_record/lane_state.ts';
 import {
 	buildTmSectionRecord,
@@ -289,7 +290,7 @@ async function keepsLangVersions(tipo: string): Promise<boolean> {
  * rows (newest-first, paginated), NOT an error and NOT empty. So the where is
  * `true` and it renders as the who/when/where/what history (isRecordList=false).
  */
-interface TmWhere {
+function buildTmWhere(sqo: Record<string, unknown>): {
 	whereSql: string;
 	params: unknown[];
 	isRecordList: boolean;
@@ -297,12 +298,7 @@ interface TmWhere {
 	 * PLANNER BARRIER note in queryTmRows. Only the conformed component filter can
 	 * produce one; locator and tipo scopes are pure equality. */
 	rangeFilter: boolean;
-	/** The where is confined to ONE caller section's records (the locator and the
-	 * snapshot surfaces) — the only shapes a non-admin may read (scopeTmWhere). */
-	sectionScoped: boolean;
-}
-
-function buildTmWhere(sqo: Record<string, unknown>): TmWhere {
+} {
 	const params: unknown[] = [];
 	const locators = Array.isArray(sqo.filter_by_locators)
 		? (sqo.filter_by_locators as Record<string, unknown>[])
@@ -329,19 +325,12 @@ function buildTmWhere(sqo: Record<string, unknown>): TmWhere {
 			params,
 			isRecordList: false,
 			rangeFilter: false,
-			sectionScoped: true,
 		};
 	}
 	const tipoFilter = tipoColumnFilter(sqo);
 	if (tipoFilter !== null) {
 		params.push(tipoFilter);
-		return {
-			whereSql: `tipo = $${params.length}`,
-			params,
-			isRecordList: true,
-			rangeFilter: false,
-			sectionScoped: true,
-		};
+		return { whereSql: `tipo = $${params.length}`, params, isRecordList: true, rangeFilter: false };
 	}
 	// The standalone dd15 list search: conform component clauses to the flat
 	// matrix_time_machine columns (PHP search_tm + the _tm traits). Absent this,
@@ -354,75 +343,10 @@ function buildTmWhere(sqo: Record<string, unknown>): TmWhere {
 			params,
 			isRecordList: false,
 			rangeFilter: sink.rangePredicate === true,
-			sectionScoped: false,
 		};
 	}
 	// No scope → the bare dd15 list: ALL TM rows (PHP search_tm empty where).
-	return {
-		whereSql: 'true',
-		params,
-		isRecordList: false,
-		rangeFilter: false,
-		sectionScoped: false,
-	};
-}
-
-/**
- * THE RECORD SCOPE OF A NON-ADMIN TM READ (WC-2026-10-22-tm-scope-whole-request,
- * addendum r0). The §7.4 `time_machine_list` grant that admits the read is
- * SECTION-wide; the projects filter is per RECORD. Without this, a grant holder
- * pinned a record outside their projects (`filter_by_locators`) or opened the
- * snapshot list (`tipo = section`) and read past values and whole-record
- * snapshots of records the ordinary read of the same section hides.
- *
- * The rows are confined through THE scope door (security/record_scope.ts
- * scopedRows: the section read grant, then the assembler's own per-record
- * predicate) — never a TM-local copy of the rule. The candidate set is the TM
- * rows of THIS where, bound to the same `$1..$N`, so the outer where and the
- * scoped subselect share their params and the caller appends LIMIT/OFFSET after
- * them unchanged. The read and the count both build their where here, so the
- * count stays the size of the pages.
- *
- * A DEAD record (deleted: no live row) is outside every non-admin's scope — the
- * predicate judges the live record, exactly as a list does. Its history stays
- * global-admin only; the undelete surface for non-admins is ledgered.
- *
- * A where that is NOT confined to one section (the bare browse, the conformed
- * dd15 list filter) shows every section's history at once: §7.4 already keeps
- * it global-admin only (gateTimeMachineRead), and this refuses it again rather
- * than scope a 50M-row candidate set — fail-closed if that gate is ever skipped.
- *
- * No principal = a system/direct caller (readTimeMachineData, the native gates):
- * unscoped, like every rowScopeFor door. Global admins are unscoped.
- */
-async function scopeTmWhere(where: TmWhere, principal: Principal | undefined): Promise<TmWhere> {
-	if (principal === undefined || principal.isGlobalAdmin) return where;
-	if (!where.sectionScoped) {
-		throw new DedaloError('perm.denied', {
-			message: 'Time machine reads not confined to one section are global-admin only',
-		});
-	}
-	const scoped = await scopedRows(
-		{
-			sql: `SELECT tm_candidate.id, tm_candidate.section_tipo, tm_candidate.section_id
-			      FROM matrix_time_machine tm_candidate WHERE ${where.whereSql}`,
-			params: where.params,
-		},
-		principal,
-	);
-	return {
-		...where,
-		whereSql: `(${where.whereSql}) AND id IN (SELECT tm_in_scope.id FROM (${scoped.sql}) AS tm_in_scope)`,
-		params: [...scoped.params],
-	};
-}
-
-/** The where of one TM request as `principal` may see it (read and count share it). */
-async function principalTmWhere(
-	sqo: Record<string, unknown>,
-	principal: Principal | undefined,
-): Promise<TmWhere> {
-	return scopeTmWhere(buildTmWhere(await timelineScope(sqo)), principal);
+	return { whereSql: 'true', params, isRecordList: false, rangeFilter: false };
 }
 
 /**
@@ -569,7 +493,6 @@ export function tmHistoryCountSql(whereSql: string): string {
  */
 async function queryTmRows(
 	sqo: Record<string, unknown>,
-	principal?: Principal,
 ): Promise<{ rows: TmRow[]; isRecordList: boolean }> {
 	// Every shape below is narrowed by withTmHistory: the generation epoch AND
 	// `tm_role IS NULL`, so a bulk run's undo-log rows (hidden BEFORE images,
@@ -587,7 +510,7 @@ async function queryTmRows(
 		params: scopeParams,
 		isRecordList,
 		rangeFilter,
-	} = await principalTmWhere(sqo, principal);
+	} = buildTmWhere(await timelineScope(sqo));
 
 	// Order: dd15's list columns ARE matrix_time_machine's own flat columns, so a
 	// header-click sort maps 1:1 to a real column (PHP search_tm orders over the
@@ -1209,8 +1132,8 @@ async function emitTmRow(
  * section — same envelope/context/count, only row acquisition + cell policy differ.
  */
 export const tmReadSource: SectionReadSource = {
-	async getRows(sqo: Sqo, principal?: Principal): Promise<SectionRow[]> {
-		const { rows, isRecordList } = await queryTmRows(sqo as Record<string, unknown>, principal);
+	async getRows(sqo: Sqo): Promise<SectionRow[]> {
+		const { rows, isRecordList } = await queryTmRows(sqo as Record<string, unknown>);
 		return rows.map((row) => ({
 			// dd15 addresses each snapshot by the TM row PK (its own `id`).
 			section_tipo: TM_SECTION_TIPO,
@@ -1220,8 +1143,9 @@ export const tmReadSource: SectionReadSource = {
 		}));
 	},
 
-	async count(sqo: Sqo, principal?: Principal): Promise<number> {
-		const where = await principalTmWhere(sqo as Record<string, unknown>, principal);
+	async count(sqo: Sqo): Promise<number> {
+		const scope = sqo as Record<string, unknown>;
+		const where = buildTmWhere(await timelineScope(scope));
 		return tmCount(where.whereSql, where.params);
 	},
 

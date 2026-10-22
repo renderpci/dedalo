@@ -171,11 +171,8 @@ const NARROWED_READERS: Readonly<Record<string, { reads: number; narrowSites: nu
 	// one that selects the ids. Five narrowings cover the five WHERE clauses:
 	// the count's TWO halves (tmHistoryCountSql: total − hidden, each
 	// withTmEpoch-narrowed), the barrier inner, the late-lookup inner, and the
-	// plain page. The EIGHTH read is scopeTmWhere's record-scope CANDIDATE set
-	// (`FROM matrix_time_machine tm_candidate`): a membership test (`id IN …`)
-	// that only ever appears INSIDE one of those five narrowed wheres, so the
-	// enclosing narrowing already bounds what it can admit.
-	'src/core/resolve/read_tm.ts': { reads: 8, narrowSites: 5 },
+	// plain page.
+	'src/core/resolve/read_tm.ts': { reads: 7, narrowSites: 5 },
 	'src/core/section/record/delete_record.ts': { reads: 1, narrowSites: 1 },
 	'src/core/section/record/observers.ts': { reads: 1, narrowSites: 1 },
 	// The undo-log rewrite (2026-09-27): the orchestrator's one read is the run
