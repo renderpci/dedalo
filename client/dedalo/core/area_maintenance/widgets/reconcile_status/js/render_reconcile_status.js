@@ -4,6 +4,7 @@
 
 // imports
 import { ui } from '../../../../common/js/ui.js';
+import { last_run_text, schedule_text } from './reconcile_status_text.js';
 
 /**
  * RENDER_RECONCILE_STATUS
@@ -18,45 +19,6 @@ export const render_reconcile_status = function () {
 	// and the widget would resolve null (client_prototype_contract_tripwire).
 	return true;
 }; //end render_reconcile_status
-
-/**
- * SCHEDULE_TEXT
- * @param {string|Object} schedule - 'operator' | 'boot' | {everyMs, atBoot?}
- * @returns {string}
- */
-const schedule_text = (schedule) => {
-	if (schedule && typeof schedule === 'object' && schedule.everyMs) {
-		const every = `every ${Math.round(schedule.everyMs / 60000)} min`;
-		return schedule.atBoot === true ? `boot + ${every}` : every;
-	}
-	return String(schedule);
-}; //end schedule_text
-
-/**
- * LAST_RUN_TEXT
- * @param {Object|null} last_run
- * @returns {string}
- */
-const last_run_text = (last_run) => {
-	if (!last_run) {
-		return 'never (this process)';
-	}
-	if (last_run.error) {
-		return `${last_run.ranAt} FAILED: ${last_run.error}`;
-	}
-	if (last_run.deferred) {
-		// The apply could not happen then (a writer held the store); it is owed.
-		return `${last_run.ranAt} DEFERRED — drift ${last_run.drift}, nothing applied: ${last_run.deferred}`;
-	}
-	return (
-		last_run.ranAt +
-		' ' +
-		(last_run.apply ? 'apply' : 'check') +
-		' — drift ' +
-		last_run.drift +
-		(last_run.apply ? `, applied ${last_run.applied}` : '')
-	);
-}; //end last_run_text
 
 /**
  * LIST

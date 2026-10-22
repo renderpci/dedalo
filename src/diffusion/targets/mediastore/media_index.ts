@@ -435,9 +435,11 @@ async function listMarkerDatabases(base: string): Promise<string[]> {
 
 /**
  * reconcileMediaIndex (oracle reconcile): rebuilds pub/ from the dbs/ ground
- * truth (pure filesystem diff, diffMediaIndex above, then applied). Run at
- * server boot to heal drift from crashes between SQL commit and marker apply.
- * Cheap: two directory walks, no SQL on the target.
+ * truth (pure filesystem diff, diffMediaIndex above, then applied). Run by the
+ * `media_index` registry definition at boot and on its period, to heal drift
+ * from crashes between SQL commit and marker apply — that run probes UNFENCED
+ * first and calls this door only on drift (diffusion/api/reconcile.ts
+ * runMediaIndexReconcile). Cheap: two directory walks, no SQL on the target.
  *
  * THE ONE APPLY DOOR, FENCED (DIFF-2, WC-2026-09-30-diffusion-target-fence).
  * A batch writing `dbs/<db>/…/K` then `pub/K` holds `sql:<db>`; the diff reads

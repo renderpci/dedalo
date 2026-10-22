@@ -26,7 +26,12 @@
  *     stop → start while a run still waits on its fence.
  *  3. STOP CANCELS: after stopReconcileScheduler (the SIGTERM drain) no run
  *     starts — a pending re-arm is cleared, and a run in flight when it was
- *     called does not re-arm when it ends deferred.
+ *     called does not re-arm when it ends deferred; the shutdown WAITS for that
+ *     run (drainReconcileScheduler), bounded by its deadline, and names a run
+ *     still in flight at it.
+ *  3c. A THROWN RUN IS NOT RE-ARMED EARLY: an interval definition's next run
+ *     comes at its period, never at the deferral re-arm; a `boot` one never
+ *     runs again — and the gauge records the failure.
  *  4. IDENTITY: a run executes in the scheduler's own scope (request id
  *     `reconcile:<name>`, no principal, the install's default langs) even when
  *     the scheduler was armed inside a request's scope; arming inside a
@@ -45,6 +50,7 @@ import { config } from '../../src/config/config.ts';
 import { widget as reconcileStatusWidget } from '../../src/core/area_maintenance/widgets/reconcile_status.ts';
 import { sql, withTransaction } from '../../src/core/db/postgres.ts';
 import { DIFFUSION_TARGET_LOCK_CLASS } from '../../src/core/diffusion_bridge/target_lock.ts';
+import { DedaloError } from '../../src/core/errors/dedalo_error.ts';
 import {
 	lastReconcileRun,
 	type ReconcileReport,
@@ -55,6 +61,7 @@ import {
 	validateDefinition,
 } from '../../src/core/reconcile/registry.ts';
 import {
+	drainReconcileScheduler,
 	startReconcileScheduler,
 	stopReconcileScheduler,
 } from '../../src/core/reconcile/scheduler.ts';
@@ -94,6 +101,8 @@ let base: string;
 interface RunLog {
 	started: number;
 	ended: number;
+	/** performance.now() of each start. */
+	startedAt: number[];
 	maxConcurrent: number;
 	scopes: {
 		requestId: string | undefined;
@@ -105,6 +114,8 @@ interface RunLog {
 }
 
 let log: RunLog;
+/** When true the spied run THROWS (a scheduled run that fails). */
+let failNextRuns = false;
 let runSpy: ReturnType<typeof spyOn> | null = null;
 
 beforeEach(() => {
@@ -115,30 +126,41 @@ beforeEach(() => {
 	resetReconcileRunsForTests();
 	touch(join(base, 'dbs', DB, TABLE, TRUTH_KEY));
 	touch(join(base, 'pub', STRAY_KEY));
-	log = { started: 0, ended: 0, maxConcurrent: 0, scopes: [], reports: [] };
+	log = { started: 0, ended: 0, startedAt: [], maxConcurrent: 0, scopes: [], reports: [] };
 	const realRun = MEDIA_INDEX_RECONCILE.run;
 	runSpy = spyOn(MEDIA_INDEX_RECONCILE, 'run').mockImplementation(async (options) => {
-		log.started++;
-		log.maxConcurrent = Math.max(log.maxConcurrent, log.started - log.ended);
+		// THIS test's log, captured at entry: a run a previous test left in flight
+		// writes into its own, never into the next test's.
+		const mine = log;
+		mine.started++;
+		mine.startedAt.push(performance.now());
+		mine.maxConcurrent = Math.max(mine.maxConcurrent, mine.started - mine.ended);
 		const context = currentRequestContext();
-		log.scopes.push({
+		mine.scopes.push({
 			requestId: context?.requestId,
 			principal: context?.principal,
 			appLang: currentApplicationLang(),
 			dataLang: currentDataLang(),
 		});
 		try {
+			if (failNextRuns) {
+				throw new DedaloError('internal.invariant', { message: 'zzrsch scheduled run fails' });
+			}
 			const report = await realRun(options);
-			log.reports.push(report);
+			mine.reports.push(report);
 			return report;
 		} finally {
-			log.ended++;
+			mine.ended++;
 		}
 	});
 });
 
-afterEach(() => {
+afterEach(async () => {
 	stopReconcileScheduler();
+	// A run still in flight settles before its store and seams are taken away.
+	const left = await drainReconcileScheduler(Date.now() + LEG_MS);
+	if (left.length > 0) throw new Error(`scheduled run(s) still in flight: ${left.join(', ')}`);
+	failNextRuns = false;
 	runSpy?.mockRestore();
 	runSpy = null;
 	overrideMediaIndexFenceBoundForTests(null);
@@ -269,7 +291,14 @@ describe('reconcile scheduler — a deferred media_index run is re-armed until o
 			} finally {
 				await writer.release();
 			}
-			await until(healed, 'a re-armed run healed pub/');
+			// Wait on the run that FINISHED (its report and record), not on its
+			// filesystem side effect: pub/ is healed inside the fence unit, before the
+			// unit commits and the registry records the run.
+			await until(
+				() => log.reports.at(-1)?.deferred === undefined && log.started === log.ended,
+				'a re-armed run completed',
+			);
+			expect(healed()).toBe(true);
 			const done = log.reports.at(-1);
 			expect(done?.deferred).toBeUndefined();
 			expect(done?.applied).toBe(2);
@@ -310,8 +339,11 @@ describe('reconcile scheduler — a deferred media_index run is re-armed until o
 				await until(() => log.started > log.ended, 'a run in flight');
 				stopReconcileScheduler();
 				startMediaIndexOnly(20);
+				// The new schedule's runs are put back while the old run is in flight…
+				const beforeRestart = log.started;
 				await Bun.sleep(FENCE_MS * 2);
-				expect(log.started).toBeGreaterThanOrEqual(3);
+				// …and they DO start once it ended (the re-arm ran, not merely waited).
+				await until(() => log.started > beforeRestart, 'the restarted schedule ran');
 			} finally {
 				await writer.release();
 			}
@@ -342,7 +374,7 @@ describe('reconcile scheduler — a deferred media_index run is re-armed until o
 	);
 
 	test(
-		'3b. a run in flight at the stop finishes, and does not re-arm when it ends deferred',
+		'3b. a run in flight at the stop is waited for by the shutdown drain (bounded), and does not re-arm when it ends deferred',
 		async () => {
 			const writer = await holdTarget(DB);
 			try {
@@ -350,7 +382,12 @@ describe('reconcile scheduler — a deferred media_index run is re-armed until o
 				await until(() => log.started >= 1, 'the boot run started');
 				expect(log.ended).toBe(0);
 				stopReconcileScheduler();
-				await until(() => log.ended >= 1, 'the in-flight run ended');
+				// The shutdown's wait is bounded: a run past the deadline is NAMED, not waited out.
+				expect(await drainReconcileScheduler(Date.now() + 20)).toEqual(['media_index']);
+				expect(log.ended).toBe(0);
+				// Within the deadline it is waited for: the drain returns once it ended.
+				expect(await drainReconcileScheduler(Date.now() + LEG_MS)).toEqual([]);
+				expect(log.ended).toBe(1);
 				expect(log.reports[0]?.deferred).toBeDefined();
 			} finally {
 				await writer.release();
@@ -358,6 +395,49 @@ describe('reconcile scheduler — a deferred media_index run is re-armed until o
 			await Bun.sleep(RETRY_MS * 8);
 			expect(log.started).toBe(1);
 			expect(untouched()).toBe(true);
+		},
+		LEG_MS,
+	);
+
+	test(
+		'3c. a THROWN interval run is re-armed at its period, never at the deferral re-arm; the gauge records it',
+		async () => {
+			const PERIOD_MS = 900;
+			failNextRuns = true;
+			startReconcileScheduler({
+				names: ['media_index'],
+				deferredRetryMs: 30,
+				everyMsFor: { media_index: PERIOD_MS },
+			});
+			await until(() => log.ended >= 1, 'the boot run failed');
+			expect(reconcileGauge().media_index).toMatchObject({ last_error: 'internal.invariant' });
+			// Many re-arm delays later: still one run.
+			await Bun.sleep(30 * 12);
+			expect(log.started).toBe(1);
+			// The period re-arms it.
+			await until(() => log.started >= 2, 'the period re-ran it', PERIOD_MS * 4);
+			const gap = (log.startedAt[1] as number) - (log.startedAt[0] as number);
+			expect(gap).toBeGreaterThanOrEqual(PERIOD_MS - 50);
+		},
+		LEG_MS,
+	);
+
+	test(
+		'3d. a THROWN boot run is done: it never runs again in this process',
+		async () => {
+			const schedule = MEDIA_INDEX_RECONCILE.schedule;
+			MEDIA_INDEX_RECONCILE.schedule = 'boot';
+			try {
+				failNextRuns = true;
+				startReconcileScheduler({ names: ['media_index'], deferredRetryMs: 30 });
+				await until(() => log.ended >= 1, 'the boot run failed');
+				await Bun.sleep(30 * 15);
+				expect(log.started).toBe(1);
+				expect(lastReconcileRun('media_index')?.error).toBe('internal.invariant');
+			} finally {
+				stopReconcileScheduler();
+				MEDIA_INDEX_RECONCILE.schedule = schedule;
+			}
 		},
 		LEG_MS,
 	);

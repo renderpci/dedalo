@@ -1647,6 +1647,19 @@ async function shutdownGracefully(
 		console.warn(`[shutdown] ${undrained} request(s) still in flight at deadline — closing hard`);
 		for (const server of servers) server.stop(true);
 	}
+	// A scheduled reconcile in flight (stopped above, never re-armed) ends inside
+	// the same deadline, before the pool it runs on closes (scheduler.ts doc).
+	try {
+		const { drainReconcileScheduler } = await import('./core/reconcile/scheduler.ts');
+		const abandoned = await drainReconcileScheduler(deadline);
+		if (abandoned.length > 0) {
+			console.warn(
+				`[shutdown] reconcile run(s) still in flight at deadline, abandoned: ${abandoned.join(', ')}`,
+			);
+		}
+	} catch (error) {
+		console.error('[shutdown] draining reconcile scheduler failed:', error);
+	}
 	// Mark undrained media transcodes 'interrupted' in their pfiles so the poll
 	// wire never reports a dead job as running (S2-15/S2-17).
 	try {

@@ -217,7 +217,8 @@ Study these in the reference trees, then re-express their *semantics*:
   `fields:'delete'` sentinel), fail-closed.
 - **Delete propagation + retry** — `section_record.delete()` → target
   resolution → per-format removal; failures → dd1758 `unpublish_pending`,
-  retried on boot/opportunistically/manually (native in
+  retried at a run's start / after a `media_index` apply that held the fence /
+  manually — there is no boot drain (native in
   `src/core/diffusion_bridge/diffusion_delete.ts`). Since 2026-09-03 (audit
   2026-08-26 P1-12): the pending rows are written INSIDE the delete
   transaction and settled post-commit (durable intent, LIFE-07); the file
@@ -488,7 +489,8 @@ to the computed sources. Ledger:
   wait on it); a record deleted while its batch waited is revalidated under the
   lock and unpublished. The other target doors take the same key: the record
   delete executor (on the request path it never waits — a busy target stays
-  pending in dd1758; a retry drain — a run's start, the
+  pending in dd1758; a retry drain — a run's start, a `media_index` apply
+  that held the fence (`runMediaIndexReconcile`), the
   `retry_pending_deletions` action, the maintenance widget's retry — waits one
   10 s budget in all), the ghost
   unpublish, the lang sweep, the media-index apply. The two DELETE-ONLY doors

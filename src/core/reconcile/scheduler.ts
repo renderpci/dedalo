@@ -26,10 +26,15 @@
  * flight from an earlier start (stop → start while it waits on its fence) is put
  * back by the re-arm delay, never started beside it.
  *
- * STOPPED BY THE SHUTDOWN DRAIN (stopReconcileScheduler, server.ts SIGTERM):
- * every pending timer is cleared and the schedule retired, so nothing new
- * starts; a run already in flight ends on its own (its writes are idempotent
- * derivations the next boot re-checks) and never re-arms.
+ * STOPPED BY THE SHUTDOWN DRAIN (server.ts SIGTERM): stopReconcileScheduler
+ * clears every pending timer and retires the schedule, so nothing new starts;
+ * a run already in flight never re-arms, and drainReconcileScheduler WAITS for
+ * it — bounded by the shutdown's own deadline, before the pool closes — so it
+ * ends with its fence unit committed rather than cut. One still in flight at
+ * the deadline is named in the log and abandoned with the process: its fence
+ * unit dies with the pool (nothing of the unit commits), and what of its
+ * filesystem apply landed is an idempotent derivation the next boot's run
+ * re-checks.
  *
  * IDENTITY: a scheduled run is nobody's request. A timer inherits the async
  * scope it was armed in, so every run ENTERS the scheduler's own scope — no
@@ -77,10 +82,10 @@ interface Schedule {
 
 // Process-lifetime scheduler state (module_state_tripwire allowlisted): the
 // schedule armed by startReconcileScheduler (retired by stopReconcileScheduler,
-// SIGTERM) and the names whose run is in flight — timers and reconcile NAMES,
-// never a request's identity.
+// SIGTERM) and the runs in flight by name (what the shutdown drain awaits) —
+// timers, reconcile NAMES and their settling promises, never a request's identity.
 let active: Schedule | null = null;
-const inFlight = new Set<string>();
+const inFlight = new Map<string, Promise<RunOutcome>>();
 
 /** The definition's period (a test seam may replace it); null for `boot`. */
 function periodOf(schedule: Schedule, definition: ReconcileDefinition): number | null {
@@ -139,9 +144,10 @@ async function runScheduled(definition: ReconcileDefinition): Promise<RunOutcome
 /** One run of `definition`, unless its name is already running (module doc). */
 async function runOnce(definition: ReconcileDefinition): Promise<RunOutcome> {
 	if (inFlight.has(definition.name)) return 'in_flight';
-	inFlight.add(definition.name);
+	const run = inSchedulerScope(definition.name, () => runScheduled(definition));
+	inFlight.set(definition.name, run);
 	try {
-		return await inSchedulerScope(definition.name, () => runScheduled(definition));
+		return await run;
 	} finally {
 		inFlight.delete(definition.name);
 	}
@@ -214,4 +220,30 @@ export function stopReconcileScheduler(): void {
 	for (const timer of active.timers) clearTimeout(timer);
 	active.timers.clear();
 	active = null;
+}
+
+/**
+ * Wait for the scheduled runs in flight to settle (SIGTERM drain, after
+ * stopReconcileScheduler — module doc), until `deadlineMs` (epoch ms). Returns
+ * the names STILL in flight at the deadline ([] = every run ended). Never
+ * throws: a run's failure is already recorded by runReconcile.
+ */
+export async function drainReconcileScheduler(deadlineMs: number): Promise<string[]> {
+	const pending = new Set(inFlight.keys());
+	if (pending.size === 0) return [];
+	const settled = [...inFlight].map(([name, run]) =>
+		run.then(
+			() => pending.delete(name),
+			() => pending.delete(name),
+		),
+	);
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	await Promise.race([
+		Promise.all(settled),
+		new Promise<void>((resolve) => {
+			timer = setTimeout(resolve, Math.max(0, deadlineMs - Date.now()));
+		}),
+	]);
+	clearTimeout(timer);
+	return [...pending];
 }

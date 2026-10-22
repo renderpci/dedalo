@@ -133,8 +133,9 @@ untouched (a container that is not installed never even listens: it exits 78, §
 `test/unit/container_watchdog_native.test.ts`.
 
 **Graceful shutdown (S2-17).** On SIGTERM/SIGINT the server: stops the
-diffusion scheduler cadences → stops accepting connections → drains in-flight
-requests up to `SERVER_SHUTDOWN_GRACE_MS` (default 10000) → marks still-live
+diffusion and reconcile scheduler cadences → stops accepting connections → drains in-flight
+requests up to `SERVER_SHUTDOWN_GRACE_MS` (default 10000) → waits, within the same
+deadline, for a scheduled reconcile run in flight (§6.5) → marks still-live
 media transcode jobs `interrupted` in their pfiles → journals dying background
 tool jobs → closes the Postgres pool → unlinks the socket → exits 0.
 
@@ -1153,7 +1154,7 @@ and demands it be here):
 | `counters_media` | `matrix_counter` ↔ media file names | operator | raise-only (§6.1 step 5) |
 | `files_info` | media column `files_info` ↔ media tree | operator | judged PER ITEM: GROW/DIFF and FOREIGN (another record's files — the clone signature) rewritten, SHRINK held (`scripts/media_repair_files_info.ts --allow-shrink`); each change re-judged under the row lock through the one locked media-key writer (`missing` / `locked` / `heldOnApply` in `detail`) |
 | `observer_mirrors` | `matrix_relation_index` ↔ observer mirror slots | operator | full-law recompute (`scripts/observer_reconcile.ts` keeps `--budget`) |
-| `media_index` | `.publication/dbs` ↔ `.publication/pub` | **boot + every 10 min, auto-apply** | pub/ is a pure derivation: recomputed after every listen and on the period (a diffusion runner is a separate process; one that dies between a pair's `dbs/` and `pub/` writes leaves drift while the server lives); an apply held off past its fence budget is DEFERRED and re-armed |
+| `media_index` | `.publication/dbs` ↔ `.publication/pub` | **boot + every 10 min, auto-apply** | pub/ is a pure derivation: recomputed after every listen and on the period (a diffusion runner is a separate process; one that dies between a pair's `dbs/` and `pub/` writes leaves drift while the server lives); an apply held off past its fence budget is DEFERRED and re-armed. The fence is EXCLUSIVE on every publication target, and a record delete on the request path does not wait for it (the unpublish stays pending in dd1758): so a run in sync takes no fence at all (an unfenced diff decides), and an apply that held it then drains the pending-unpublish queue — a record deleted during the hold leaves the public tier with that run, not at the next publish run (`detail.pending_unpublish`) |
 | `rag_index` | matrix records ↔ `rag_embeddings` | operator | enqueues index/delete for the drain (§11) |
 | `ontology` | `<tld>0` source records ↔ `dd_ontology` | operator | destructive re-projection per drifted TLD |
 | `ontology_identifiers` | `dd_ontology` identifier columns ↔ the identifier grammar (six CHECKs) | boot (dry) | re-derive each violator's tld from source, delete the unaddressable rest (returned whole), VALIDATE the clean CHECKs |
@@ -1188,7 +1189,11 @@ re-armed after 60 s (or its period, if shorter) until one completes; a thrown ru
 is not retried sooner than its period. One run per name is in flight at a time
 (the next is armed only once the previous settled), each run executes in the
 scheduler's own scope (no principal, request id `reconcile:<name>`), and SIGTERM
-clears every pending run — one already in flight finishes but never re-arms.
+clears every pending run — one already in flight never re-arms, and the shutdown
+waits for it within `SERVER_SHUTDOWN_GRACE_MS`, before the pool closes; one still
+running at that deadline is logged (`[shutdown] reconcile run(s) still in flight
+at deadline, abandoned`) and dies with the process (its fence unit commits
+nothing; the next boot's run re-checks).
 `DEDALO_RECONCILE_SCHEDULER_ENABLED=false` (same posture as the diffusion
 scheduler, §8) keeps a smoke/maintenance copy from healing a shared store from
 the wrong root; the widget, the CLI and the gauge keep working. A scheduled run

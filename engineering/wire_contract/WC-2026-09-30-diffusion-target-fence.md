@@ -311,3 +311,13 @@ another session's in-flight temps included.
 - Gate: `test/unit/target_lock_hold_and_wait_native.test.ts`. Mutation-verified:
   no refusal, no record on either path, upgrade allowed, a shared re-entry
   weakening an exclusive holding, no memo — each red.
+
+## Addendum 2026-10-22 — R3's drain list gains the media_index apply
+
+- R3's patient drains are now: a run's start, a `media_index` apply that HELD the fence
+  (`src/diffusion/api/reconcile.ts` `runMediaIndexReconcile` — the periodic registry run,
+  boot + every 10 min, drains the pending-unpublish queue after its exclusive hold, and
+  takes no fence at all when an unfenced probe finds the store in sync),
+  `retry_pending_deletions`, the maintenance widget's retry. There is no boot drain of its
+  own. Shape and gates: `WC-2026-10-22-reconcile-deferred-rearm` (addendum of the same
+  day) — `unpublish_debt_native` LAW 5, `media_index_reconcile_fence_native` clean-store leg.

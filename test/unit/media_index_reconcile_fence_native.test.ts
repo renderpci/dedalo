@@ -33,6 +33,10 @@
  * Non-degenerate: every interleaving is asserted to have fired, and each door
  * has real work of its own (a stray / a stale marker) so it is never a no-op.
  *
+ * AND THE CONVERSE (closure review 2026-10-22): a store in sync is NOT fenced —
+ * the periodic registry run probes unfenced first, so a delete door holding a
+ * target (shared) neither waits for it nor is held off by it.
+ *
  * The sibling DIFF-2 exclusion leg for a database the store ALREADY holds is
  * test/unit/media_index_store.test.ts "the reconcile APPLY holds every marker
  * database's publication-target fence".
@@ -46,7 +50,7 @@ import * as nodeFs from 'node:fs';
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { sql } from '../../src/core/db/postgres.ts';
+import { isInTransaction, sql } from '../../src/core/db/postgres.ts';
 import { MEDIA_INDEX_RECONCILE } from '../../src/diffusion/api/reconcile.ts';
 import {
 	applyTableState,
@@ -183,10 +187,12 @@ describe('media_index reconcile — a first publication into a new database keep
 		) => {
 			const target = String(dir);
 			if (target === join(base, 'dbs', OLD_DB, TABLE)) walkedTable = true;
-			if (target === join(base, 'pub')) {
+			// Only the FENCED diff (inside the fence unit's transaction): the run's
+			// unfenced drift probe before it applies nothing, so it is not the window.
+			if (target === join(base, 'pub') && isInTransaction()) {
 				if (!fired && walkedTable) {
 					fired = true;
-					// Exactly between the diff's dbs/ walk and its pub/ read.
+					// Exactly between the fenced diff's dbs/ walk and its pub/ read.
 					go();
 					await pairWrittenSignal;
 				}
@@ -463,6 +469,37 @@ describe('media_index fence — no hold-and-wait across publication targets, and
 			},
 		});
 		expect(existsSync(join(base, 'pub', STRAY))).toBe(true);
+	}, 30_000);
+
+	test('a store WITHOUT drift is not fenced: an unpublisher inside A (shared) does not hold the run off — a clean periodic run never leaves a request-path delete pending', async () => {
+		const { runMediaIndexReconcile } = await import('../../src/diffusion/api/reconcile.ts');
+		// In sync: every truth key has its pub/ marker, pub/ holds nothing else.
+		touch(join(base, 'dbs', DB_A, TABLE, KEY_A));
+		touch(join(base, 'pub', KEY_A));
+		// A record-delete door in flight on A: it holds `sql:<A>` SHARED, as
+		// withDeleteDoorLock does. An EXCLUSIVE fence on A would have to wait for it
+		// — and, held, would leave any delete arriving meanwhile pending.
+		const connection = await sql.reserve();
+		const lockArgs = [DIFFUSION_TARGET_LOCK_CLASS, `sql:${DB_A}`];
+		let report: Awaited<ReturnType<typeof runMediaIndexReconcile>> | 'timeout';
+		try {
+			await connection.unsafe('SELECT pg_advisory_lock_shared($1::int, hashtext($2))', lockArgs);
+			report = await within(runMediaIndexReconcile({ apply: true }, { boundMs: 1_000 }), 8_000);
+		} finally {
+			await connection.unsafe('SELECT pg_advisory_unlock_shared($1::int, hashtext($2))', lockArgs);
+			connection.release();
+		}
+		expect(report, 'the clean run never ended').not.toBe('timeout');
+		expect(
+			(report as { deferred?: unknown }).deferred,
+			'a run with NOTHING to repair waited for the exclusive fence of every publication target — every periodic run holds the request-path unpublishes off',
+		).toBeUndefined();
+		expect(report).toEqual({
+			drift: 0,
+			applied: 0,
+			detail: { enabled: true, added: 0, removed: 0 },
+		});
+		expect(existsSync(join(base, 'pub', KEY_A))).toBe(true);
 	}, 30_000);
 
 	test('a bounded rebuild with B held throughout ends: A resynced, B untouched and reported', async () => {

@@ -18,6 +18,13 @@
  * administrator happened to press a button — indefinitely, in practice
  * (audit 2026-08_oh1_beta §5.3). This restores the automatic half.
  *
+ * TWO AUTOMATIC CALLERS: a publish run's start (runner.ts), and a `media_index`
+ * reconcile apply that held the publication targets' fence (diffusion/api/
+ * reconcile.ts runMediaIndexReconcile) — that hold leaves request-path deletes
+ * pending on an install where no publish run may follow, so the run that held
+ * the fence pays what it left (closure review 2026-10-22). There is no boot
+ * drain of its own: the boot `media_index` run drains only when it fenced.
+ *
  * SERIALIZATION (why this file owns a lock). The manual door was implicitly
  * single-operator: one administrator, one button. The automatic door is not —
  * the scheduler runs DEDALO_DIFFUSION_MAX_RUNNERS runners concurrently (2 by

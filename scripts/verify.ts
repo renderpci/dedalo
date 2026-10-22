@@ -324,6 +324,7 @@ const TRIPWIRES = [
 	'test/unit/media_index_reconcile_fence_native.test.ts',
 	// D5 (owner decision 2026-10-21): a deferred scheduled reconcile is re-armed until done.
 	'test/unit/reconcile_scheduler_native.test.ts',
+	'test/unit/reconcile_status_client.test.ts',
 	// WRITE-DOOR / SEC-1 / SEC-2-media / SEC-3 / TOOLS-3 / TOOLS-4 grant half (closure Step 3, 2026-10-01).
 	'test/unit/write_door_native.test.ts',
 	'test/unit/authz_door_matrix_native.test.ts',

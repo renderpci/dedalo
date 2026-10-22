@@ -380,7 +380,7 @@ describe('reconcile registry doors (S-10)', () => {
 		expect(source).toMatch(/argv\.includes\('--apply'\)/);
 	});
 
-	test('the server boot registers the catalog, starts the scheduler behind its flag, and stops it on shutdown', () => {
+	test('the server boot registers the catalog, starts the scheduler behind its flag, stops it on shutdown and drains its run in flight', () => {
 		const source = stripComments(readFileSync(join(ROOT, 'src/server.ts'), 'utf8'), {
 			blankStrings: false,
 		});
@@ -388,6 +388,11 @@ describe('reconcile registry doors (S-10)', () => {
 		expect(source).toMatch(/readString\('DEDALO_RECONCILE_SCHEDULER_ENABLED'\) !== 'false'/);
 		expect(source).toContain('startReconcileScheduler()');
 		expect(source).toContain('stopReconcileScheduler()');
+		// The shutdown WAITS for a run in flight (bounded by its deadline) BEFORE the
+		// pool that run's fence unit lives on closes (scheduler.ts doc).
+		const drainAt = source.indexOf('drainReconcileScheduler(deadline)');
+		expect(drainAt, 'the shutdown never drains the reconcile scheduler').toBeGreaterThan(-1);
+		expect(drainAt).toBeLessThan(source.indexOf('closeDatabasePool()'));
 		// The old direct boot apply is gone: media_index heals through the registry only.
 		expect(source).not.toMatch(/void reconcileMediaIndex\(\)/);
 	});

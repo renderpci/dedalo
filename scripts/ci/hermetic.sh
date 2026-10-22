@@ -332,6 +332,9 @@ HERMETIC_TRIPWIRES=(
 	test/unit/write_obligations_tripwire.test.ts
 	test/unit/value_law_agreement_tripwire.test.ts
 	test/unit/reconcile_registry_tripwire.test.ts
+	# D5 reconcile widget sentences: pure client helpers + a source pin. Verified DB-less
+	# (DB_HOST=127.0.0.1 DB_PORT=59999): 4 pass / 0 fail.
+	test/unit/reconcile_status_client.test.ts
 	test/unit/diffusion_seed_vocabulary_tripwire.test.ts
 	test/unit/archive_docs_claim_tripwire.test.ts
 	test/unit/production_import_tripwire.test.ts
