@@ -1296,6 +1296,11 @@
 			"skipped": 0,
 			"assertions": 85
 		},
+		"test/unit/diffusion_consolidated_withdrawn_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 39
+		},
 		"test/unit/diffusion_datum_replay.test.ts": {
 			"tests": 13,
 			"skipped": 0,
