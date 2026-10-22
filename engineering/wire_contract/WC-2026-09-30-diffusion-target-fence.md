@@ -282,3 +282,32 @@ another session's in-flight temps included.
 - R4 narrows: the MariaDB lock-wait half is closed. Still an owner call: a
   statement that WORKS for long, and a write on a half-open TCP connection
   (no socket timeout on the target pool) — the wall-clock / socket bound.
+
+## Addendum 2026-10-22 — no hold-and-wait, enforced at runtime (owner decision 6)
+
+- **Finding:** all-or-none covered the keys of ONE call only. A transaction
+  that already held a target lock (a door nested in another unit, or a second
+  door inside the same ambient transaction, which keeps the first key until it
+  ends) could still ask for another target and wait for it holding the first —
+  a cycle with B's holder waiting on A sits for each side's whole mode
+  (`'wait'`: forever).
+- **Now:** the keys a try takes are recorded on its transaction
+  (`getTransactionMemo`, dying with it). A `withTargetLock(s)` call whose
+  transaction holds target locks may only RE-ENTER them: the same keys, in a
+  covering mode (exclusive covers both; shared covers shared). Another target,
+  or an upgrade shared → exclusive, throws `internal.invariant`
+  (coordinates `operation: 'target_lock.hold_and_wait'`, `held`, `requested`)
+  BEFORE the first try — nothing taken, nothing waited for, any mode. A door
+  that needs several targets names them all in one `withTargetLocks` call. A
+  door detached from the transaction (`runDetachedFromTransaction`, the
+  media-copy worker lane) is another session and holds nothing.
+- Callers audited 2026-10-22: the only nesting is the ghost unpublish's SHARED
+  `sql:<db>` re-entered SHARED by the delete executor (same key — allowed).
+  A record delete composed inside an ambient transaction whose record has two
+  or more publication targets now leaves the later targets PENDING (the
+  refusal is caught by `deleteDiffusionRecord`, the dd1758 retry settles them
+  outside the transaction) instead of holding the first target for the rest of
+  the ambient transaction. No wire shape changes.
+- Gate: `test/unit/target_lock_hold_and_wait_native.test.ts`. Mutation-verified:
+  no refusal, no record on either path, upgrade allowed, a shared re-entry
+  weakening an exclusive holding, no memo — each red.

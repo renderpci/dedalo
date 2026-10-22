@@ -64,10 +64,28 @@
  * queue's — residual R3); a retry DRAIN runs inside withPatientDeleteWait and
  * waits, ONE budget for the whole drain. withDeleteDoorLock applies both rules,
  * for the sql executor and the files unlink alike.
+ *
+ * NO HOLD-AND-WAIT (owner decision 6, 2026-10-21): a transaction that HOLDS a
+ * target lock never asks for another. The lock is xact-scoped, so "holds" is
+ * the TRANSACTION's: a door nested in another unit, and a door called after
+ * another one inside the same ambient transaction (the ambient keeps the first
+ * key until it ends), both hold while they ask — and a holder of A waiting on B
+ * while B's holder waits on A is a cycle that each side sits in for its whole
+ * mode ('wait': forever). So a call whose transaction holds target locks may
+ * only RE-ENTER them — the same keys, in a mode the held one covers (exclusive
+ * covers both; shared covers shared; shared → exclusive is an upgrade, and an
+ * upgrade waits for the other shared holders) — and anything else throws the
+ * typed internal.invariant BEFORE its first try: it takes nothing and waits for
+ * nothing, whatever its mode. A door that needs several targets names them ALL
+ * in one withTargetLocks call (all or none). The holdings are recorded on the
+ * transaction (postgres.ts getTransactionMemo) as each try's keys are taken, so
+ * they die with it; a door run detached from the transaction (postgres.ts's
+ * escape hatch — the media-copy worker's lane) is another session holding
+ * nothing. Gate: target_lock_hold_and_wait_native.
  */
 
 import { AsyncLocalStorage } from 'node:async_hooks';
-import { isInTransaction, sql, withTransaction } from '../db/postgres.ts';
+import { getTransactionMemo, isInTransaction, sql, withTransaction } from '../db/postgres.ts';
 import { DedaloError } from '../errors/index.ts';
 import { HOST_NAME } from '../publication_host/registry.ts';
 
@@ -221,6 +239,55 @@ function usableIdleBound(idleBoundMs: number): number {
 	return idleBoundMs;
 }
 
+/** The target locks the current transaction holds: key → shared (false = exclusive). */
+type HeldTargetLocks = Map<string, boolean>;
+
+/** Transaction-memo key of the holdings (dies with the transaction that took them). */
+const HELD_TARGET_LOCKS = Symbol('target_lock.held');
+
+/** The current transaction's holdings, created on first record (undefined outside a transaction). */
+function heldTargetLocks(create: boolean): HeldTargetLocks | undefined {
+	const memo = getTransactionMemo();
+	if (memo === undefined) return undefined;
+	let held = memo.get(HELD_TARGET_LOCKS) as HeldTargetLocks | undefined;
+	if (held === undefined && create) {
+		held = new Map();
+		memo.set(HELD_TARGET_LOCKS, held);
+	}
+	return held;
+}
+
+/** Record `keys` as held by the current transaction (an exclusive holding is never weakened). */
+function recordHeld(keys: readonly string[], shared: boolean): void {
+	const held = heldTargetLocks(true);
+	if (held === undefined) return;
+	for (const key of keys) held.set(key, held.get(key) === false ? false : shared);
+}
+
+/**
+ * NO HOLD-AND-WAIT (header): refuse, before any try, a call whose transaction
+ * already holds target locks unless every key it asks for is one of them held
+ * in a covering mode.
+ */
+function refuseHoldAndWait(keys: readonly string[], shared: boolean): void {
+	const held = heldTargetLocks(false);
+	if (held === undefined || held.size === 0) return;
+	const uncovered = keys.filter((key) => {
+		const heldShared = held.get(key);
+		return heldShared === undefined || (heldShared && !shared);
+	});
+	if (uncovered.length === 0) return;
+	throw new DedaloError('internal.invariant', {
+		message: `target lock: this transaction holds ${[...held.keys()].sort().join(', ')} and asked for ${uncovered.join(', ')}${shared ? '' : ' (exclusive)'} — hold-and-wait refused; name every target in ONE withTargetLocks call`,
+		coordinates: {
+			module: 'target_lock',
+			operation: 'target_lock.hold_and_wait',
+			held: [...held.keys()].sort().join(','),
+			requested: uncovered.join(','),
+		},
+	});
+}
+
 /** Take the advisory lock inside the current transaction, or throw TargetBusy. */
 async function takeAdvisoryLock(key: string, shared: boolean): Promise<void> {
 	const rows = (await sql.unsafe(
@@ -257,9 +324,9 @@ const NESTED_TRY_SAVEPOINT = 'dedalo_target_lock_try';
  * another unit): withTransaction only JOINS the ambient one, so the keys are
  * taken under a SAVEPOINT, and a busy key rolls back to it — releasing the
  * xact-scoped locks this try took (PostgreSQL releases a rolled-back
- * subtransaction's locks) — before TargetBusy reaches the loop. What the
- * AMBIENT transaction itself holds stays held while a nested door waits: that
- * is the caller's unit, not this try's.
+ * subtransaction's locks) — before TargetBusy reaches the loop. A try that
+ * gets in records its keys on the ambient transaction, which keeps them until it
+ * ends (NO HOLD-AND-WAIT in the header: a holder only ever re-enters).
  */
 async function takeAllNested(keys: readonly string[], shared: boolean): Promise<void> {
 	await sql.unsafe(`SAVEPOINT ${NESTED_TRY_SAVEPOINT}`);
@@ -271,6 +338,7 @@ async function takeAllNested(keys: readonly string[], shared: boolean): Promise<
 		throw error;
 	}
 	await sql.unsafe(`RELEASE SAVEPOINT ${NESTED_TRY_SAVEPOINT}`);
+	recordHeld(keys, shared);
 }
 
 /**
@@ -298,6 +366,7 @@ async function tryUnit<T>(
 			}
 			await boundUnit(idleBoundMs);
 			for (const key of keys) await takeAdvisoryLock(key, shared);
+			recordHeld(keys, shared);
 			return runKeptAlive(work, idleBoundMs);
 		});
 		return { acquired: true, value };
@@ -345,7 +414,9 @@ function busyWaiter(
  * the target is busy no transaction (no connection) is held, `onBusy` runs
  * once, `shouldStop` is asked, and the next try backs off. A bounded or 'try'
  * mode gives up with `{acquired: false, reason: 'busy'}`. Re-entrant within one
- * session: a nested call on the ambient transaction re-takes a lock it holds.
+ * transaction: a nested call re-takes a lock it holds in a covering mode; any
+ * other call from a transaction that holds a target lock is refused before its
+ * first try (NO HOLD-AND-WAIT, header).
  */
 export function withTargetLock<T>(
 	key: string,
@@ -361,7 +432,8 @@ export function withTargetLock<T>(
  * and outcome as withTargetLock. ALL OR NONE: each try takes every key in
  * SORTED order inside one transaction (a savepoint when nested) and, the moment
  * one is held elsewhere, rolls back — releasing the ones it took — and waits
- * holding nothing of its own (a nested door's ambient unit keeps what IT holds). A
+ * holding nothing (a transaction that already holds a target never gets this far
+ * unless it only re-enters — NO HOLD-AND-WAIT, header). A
  * multi-target door therefore never keeps a free target locked while another
  * one is busy (closure review 2026-10-01: the nested 'wait' it replaces held
  * `sql:<A>` exclusively, with a pinned connection, for as long as `sql:<B>`'s
@@ -376,6 +448,7 @@ export async function withTargetLocks<T>(
 	options: TargetLockOptions = {},
 ): Promise<TargetLockOutcome<T>> {
 	const ordered = [...new Set(keys)].sort();
+	refuseHoldAndWait(ordered, options.shared === true);
 	const idleBoundMs = usableIdleBound(options.idleBoundMs ?? FENCE_IDLE_BOUND_MS);
 	const waitForTarget = busyWaiter(options.mode ?? 'wait', options);
 	for (;;) {
