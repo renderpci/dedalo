@@ -141,6 +141,7 @@ HERMETIC_TRIPWIRES=(
 	test/unit/pdf_extract_symmetry_tripwire.test.ts
 	test/unit/ssrf_one_guard_tripwire.test.ts
 	test/unit/lint_scope_tripwire.test.ts
+	test/unit/lint_scope_local_only_untracked_tripwire.test.ts
 	test/unit/compose_invocation_tripwire.test.ts
 	test/unit/gate_vacuity_tripwire.test.ts
 	test/unit/batch_scope_tripwire.test.ts

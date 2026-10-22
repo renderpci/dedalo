@@ -164,6 +164,11 @@ export interface InstallHierarchiesOptions {
 	 * scratch dir (a manifest it built) — never a production code path.
 	 */
 	importDir?: string;
+	/**
+	 * The caller's stop (a maintenance job's stop, a shutdown): kills the running tld's
+	 * psql unit at once — its transaction rolls back — and no later tld runs ("not run").
+	 */
+	signal?: AbortSignal;
 }
 
 /**
@@ -386,8 +391,12 @@ async function verifySeedFile(
  * Reset (classifyListedSections). Table
  * FORCED to matrix_hierarchy (PHP parity), explicit column order. Once the unit
  * committed, every section it changed is announced on the record-data channel
- * (see the header). Gates: test/unit/hierarchy_import_atomic_native.test.ts,
- * hierarchy_import_obligations_native, hierarchy_import_stream_memory_native.
+ * (see the header). BOUNDED AND ENDABLE (cross-ops:r4): the unit's lock waits give
+ * up at HIERARCHY_UNIT_LOCK_TIMEOUT and the unit is retried WHOLE on the maintenance
+ * schedule (runUnitRetryingLockWaits); `signal` kills it at once (runImportUnit).
+ * Gates: test/unit/hierarchy_import_atomic_native.test.ts,
+ * hierarchy_import_obligations_native, hierarchy_import_stream_memory_native,
+ * hierarchy_import_lock_bound_native.
  */
 export async function importHierarchyRows(
 	conn: DbConnDescriptor,
@@ -397,15 +406,15 @@ export async function importHierarchyRows(
 		dataFiles: readonly HierarchyDataFile[];
 		replace?: boolean;
 		importDir?: string;
-	},
+	} & UnitRunOptions,
 ): Promise<ImportOutcome> {
 	const replace = options.replace === true;
 	const seeds = await verifySeedFiles(options.importDir ?? HIERARCHY_IMPORT_DIR, options.dataFiles);
 	if ('problem' in seeds) return importRefused(seeds.problem);
 	const present = replace ? null : await presentRowsOutcome(conn, seeds);
 	if (present !== null) return present;
-	const res = await runImportUnit(conn, tld, replace, seeds);
-	if (res.exitCode !== 0) return importRefused(failedImportMessage(replace, res));
+	const { res, attempts } = await runUnitRetryingLockWaits(conn, tld, replace, seeds, options);
+	if (res.exitCode !== 0) return importRefused(failedImportMessage(replace, res, attempts));
 	await announceChangedSections([...seeds.dataRows.keys(), ...res.removedSections]);
 	return { ok: true, msg: 'copied' };
 }
@@ -472,29 +481,90 @@ async function presentRowsOutcome(
 /** The stdout tag of a section the reset's DELETE emptied (one line per section). */
 const REMOVED_SECTION_TAG = 'removed_section:';
 
+/**
+ * The stdout tag of the unit's SESSION LINE, `unit_session:<backend pid>:<xid8>`.
+ * Printed before the first write (psql flushes each result as it prints it), so a
+ * unit the caller's signal killed is cancelled on the server and its outcome READ,
+ * never guessed (killedUnitOutcome). No line: the session never reached a write.
+ */
+const UNIT_SESSION_TAG = 'unit_session:';
+
+/**
+ * THE UNIT'S LOCK-WAIT BOUND: the maintenance bound, db/postgres.ts
+ * MAINTENANCE_LOCK_TIMEOUT, by value. This file ships its writes through psql and so
+ * may not import the pool module (sql_confinement_tripwire: one channel per file);
+ * hierarchy_import_lock_bound_native pins the two equal.
+ */
+export const HIERARCHY_UNIT_LOCK_TIMEOUT = '5s';
+
+/**
+ * The retries of a unit whose lock wait ran out (55P03), each one a WHOLE re-run —
+ * the maintenance lane's schedule (withMaintenanceTransaction's default).
+ */
+const UNIT_LOCK_RETRY_DELAYS_MS: readonly number[] = [1000, 2000, 4000, 8000];
+
+/** How long a killed unit's transaction may stay 'in progress' before its outcome is 'unknown'. */
+const KILLED_UNIT_SETTLE_MS = 30_000;
+
 /** A file whose bytes changed between its verification and its load (nothing committed). */
 class SeedFileChanged extends Error {}
+
+/** What a killed unit's transaction did, read on the server (killedUnitOutcome). */
+type KilledUnitOutcome = 'committed' | 'rolled_back' | 'unknown';
 
 /** What the import unit answered: psql's run + the sections a reset emptied. */
 export interface ImportUnitResult extends PsqlRunResult {
 	removedSections: string[];
+	/** A lock wait ran out (55P03 at HIERARCHY_UNIT_LOCK_TIMEOUT): rolled back whole, retryable. */
+	lockTimedOut: boolean;
+	/** The caller's signal killed the unit: what its transaction did, and why it was killed. */
+	aborted: { outcome: KilledUnitOutcome; cause: string } | null;
+}
+
+/** How a unit runs: the caller's stop, and (gates) the lock-retry schedule. */
+export interface UnitRunOptions {
+	/** A stop / shutdown: kills the unit's psql at once; its transaction rolls back. */
+	signal?: AbortSignal;
+	/** The whole-unit retries after a lock wait ran out (default UNIT_LOCK_RETRY_DELAYS_MS). */
+	lockRetryDelaysMs?: readonly number[];
+	/** Told before each retry (attempt number, from 1). */
+	onLockRetry?: (attempt: number, delayMs: number) => void;
 }
 
 /**
- * THE SCRIPT of one tld, streamed: `BEGIN`, (reset) the scoped DELETE answering the
- * sections it emptied, each listed file as an inline `\copy … FROM STDIN` (its rows
- * int-clean, its bytes re-hashed — a changed file throws BEFORE its `\.`, so the
- * script can never reach its COMMIT), the counter, `COMMIT`. The COMMIT is the
- * script's LAST line, never psql's implicit end-of-input one (`--single-transaction`
- * commits at EOF): a stream that ends early — a failure, a kill — leaves the
- * transaction open, and the server rolls it back when the session goes.
+ * THE UNIT'S BOUNDS, its first statements after `BEGIN`. psql children never receive
+ * the maintenance pool's startup `lock_timeout` (engineering/PRODUCTION.md: the
+ * ceiling is lifted, the lock-wait bound is not), so the unit sets its own. A lock
+ * WAIT gives up at HIERARCHY_UNIT_LOCK_TIMEOUT (55P03): the transaction rolls back, and
+ * the sessions queued behind the locks it already holds go on. The STATEMENT is
+ * unbounded on purpose: a COPY of ~10^6 rows is work, not a wait, and an operator's
+ * PGOPTIONS statement_timeout must not cut it off part-way. Then the session line
+ * (UNIT_SESSION_TAG). `pg_current_xact_id()` assigns the xid now, before any write.
+ */
+function unitSessionSql(): string {
+	return [
+		`SET LOCAL lock_timeout = '${HIERARCHY_UNIT_LOCK_TIMEOUT}';`,
+		'SET LOCAL statement_timeout = 0;',
+		`SELECT '${UNIT_SESSION_TAG}' || pg_backend_pid() || ':' || pg_current_xact_id();`,
+	].join('\n');
+}
+
+/**
+ * THE SCRIPT of one tld, streamed: `BEGIN`, the unit's bounds and session line
+ * (unitSessionSql), (reset) the scoped DELETE answering the sections it emptied, each
+ * listed file as an inline `\copy … FROM STDIN` (its rows int-clean, its bytes
+ * re-hashed — a changed file throws BEFORE its `\.`, so the script can never reach its
+ * COMMIT), the counter, `COMMIT`. The COMMIT is the script's LAST line, never psql's
+ * implicit end-of-input one (`--single-transaction` commits at EOF): a stream that ends
+ * early — a failure, a kill — leaves the transaction open, and the server rolls it back
+ * when the session goes.
  */
 async function* importScript(
-	statements: { reset: string | null; copy: string; counter: string },
+	statements: { session: string; reset: string | null; copy: string; counter: string },
 	files: readonly VerifiedSeedFile[],
 ): AsyncGenerator<Uint8Array> {
 	const encoder = new TextEncoder();
-	yield encoder.encode('BEGIN;\n');
+	yield encoder.encode(`BEGIN;\n${statements.session}\n`);
 	if (statements.reset !== null) yield encoder.encode(`${statements.reset}\n`);
 	const jsonbIndexes = jsonbColumnIndexes(MATRIX_COPY_COLUMNS);
 	const tally = newCopySectionIdTally();
@@ -550,20 +620,27 @@ function pullStream(
 
 /**
  * THE WRITE: the tld's whole import as ONE psql session, one transaction (see
- * importScript) — every statement it ships is built HERE: (reset) the scoped DELETE
- * answering the sections it emptied, the `\copy` of each listed file, the counter. A
- * failing statement stops the script (ON_ERROR_STOP) and the session ends with its
- * transaction rolled back; so does a script stream that fails (runPsql's `signal`
- * kills the child before its input ends). Exported for its gate (a file whose bytes
- * no longer hash to the verified digest: hierarchy_import_obligations_native).
+ * importScript) — every statement it ships is built HERE: the bounds, (reset) the
+ * scoped DELETE answering the sections it emptied, the `\copy` of each listed file,
+ * the counter. A failing statement stops the script (ON_ERROR_STOP) and the session
+ * ends with its transaction rolled back; so does a lock wait past the bound
+ * (`lockTimedOut`, read from the 55P03 VERBOSITY=verbose prints), and so does a
+ * script stream that fails (runPsql's `signal` kills the child before its input
+ * ends). The caller's `signal` kills it too, at once. A kill can land after the
+ * COMMIT went down the pipe, so the outcome of a killed unit is READ
+ * (killedUnitOutcome), never assumed. Exported for its gates
+ * (hierarchy_import_obligations_native: a file whose bytes no longer hash to the
+ * verified digest; hierarchy_import_lock_bound_native).
  */
 export async function runImportUnit(
 	conn: DbConnDescriptor,
 	tld: string,
 	replace: boolean,
 	seeds: SeedFiles,
+	options: { signal?: AbortSignal } = {},
 ): Promise<ImportUnitResult> {
 	const statements = {
+		session: unitSessionSql(),
 		reset: replace
 			? `WITH removed AS (DELETE FROM ${HIERARCHY_TABLE} WHERE section_tipo ~ '^${tld}[0-9]+$' RETURNING section_tipo) SELECT DISTINCT '${REMOVED_SECTION_TAG}' || section_tipo FROM removed;`
 			: null,
@@ -576,21 +653,41 @@ export async function runImportUnit(
 		failure = error;
 		producerFailed.abort();
 	});
-	const res = await runPsql(conn, ['-X', '-v', 'ON_ERROR_STOP=1', '--quiet', '-tA', '-f', '-'], {
-		stdin,
-		signal: producerFailed.signal,
-	});
+	const stop = options.signal;
+	const res = await runPsql(
+		conn,
+		['-X', '-v', 'ON_ERROR_STOP=1', '-v', 'VERBOSITY=verbose', '--quiet', '-tA', '-f', '-'],
+		{
+			stdin,
+			signal:
+				stop === undefined ? producerFailed.signal : AbortSignal.any([producerFailed.signal, stop]),
+		},
+	);
+	if (stop?.aborted === true && res.exitCode !== 0) return killedUnitResult(conn, res, stop);
 	return unitResult(res, failure);
+}
+
+/** The sections a reset's DELETE reported emptying (REMOVED_SECTION_TAG lines). */
+function removedSectionsOf(stdout: string): string[] {
+	return stdout
+		.split('\n')
+		.filter((line) => line.startsWith(REMOVED_SECTION_TAG))
+		.map((line) => line.slice(REMOVED_SECTION_TAG.length).trim());
+}
+
+/** A lock wait that ran out: SQLSTATE 55P03, as psql prints it under VERBOSITY=verbose. */
+function isLockTimeout(stderr: string): boolean {
+	return /\bERROR:\s+55P03:/.test(stderr);
 }
 
 /** psql's answer, a failed script stream folded in (never exit 0), the emptied sections parsed. */
 function unitResult(res: PsqlRunResult, failure: unknown): ImportUnitResult {
 	const { exitCode, stdout, stderr } = res;
-	const removedSections = stdout
-		.split('\n')
-		.filter((line) => line.startsWith(REMOVED_SECTION_TAG))
-		.map((line) => line.slice(REMOVED_SECTION_TAG.length).trim());
-	if (failure === null) return { exitCode, stdout, stderr, removedSections };
+	const removedSections = removedSectionsOf(stdout);
+	if (failure === null) {
+		const lockTimedOut = exitCode !== 0 && isLockTimeout(stderr);
+		return { exitCode, stdout, stderr, removedSections, lockTimedOut, aborted: null };
+	}
 	const why =
 		failure instanceof SeedFileChanged
 			? `${failure.message} changed while it was imported (its sha256 is no longer the verified one)`
@@ -598,7 +695,147 @@ function unitResult(res: PsqlRunResult, failure: unknown): ImportUnitResult {
 	if (!(failure instanceof SeedFileChanged)) {
 		console.error('[install:hierarchy_import] the import stream failed:', failure);
 	}
-	return { exitCode: exitCode === 0 ? 1 : exitCode, stdout, stderr: why, removedSections: [] };
+	return {
+		exitCode: exitCode === 0 ? 1 : exitCode,
+		stdout,
+		stderr: why,
+		removedSections: [],
+		lockTimedOut: false,
+		aborted: null,
+	};
+}
+
+/** Why `signal` fired, in words (its reason's message). */
+function abortCause(signal: AbortSignal): string {
+	const reason: unknown = signal.reason;
+	if (reason instanceof Error && reason.message !== '') return reason.message;
+	return typeof reason === 'string' && reason !== '' ? reason : 'aborted';
+}
+
+/**
+ * A unit the caller's signal KILLED: its outcome read on the server. No session line:
+ * the session never reached a write (rolled back by definition). A committed outcome
+ * (the kill landed after the COMMIT) is a success: exit 0, the emptied sections kept.
+ */
+async function killedUnitResult(
+	conn: DbConnDescriptor,
+	res: PsqlRunResult,
+	signal: AbortSignal,
+): Promise<ImportUnitResult> {
+	const match = new RegExp(`^${UNIT_SESSION_TAG}(\\d+):(\\d+)$`, 'm').exec(res.stdout);
+	const outcome: KilledUnitOutcome =
+		match === null ? 'rolled_back' : await killedUnitOutcome(conn, match[1] ?? '', match[2] ?? '');
+	const committed = outcome === 'committed';
+	return {
+		exitCode: committed ? 0 : res.exitCode,
+		stdout: res.stdout,
+		stderr: res.stderr,
+		removedSections: committed ? removedSectionsOf(res.stdout) : [],
+		lockTimedOut: false,
+		aborted: { outcome, cause: abortCause(signal) },
+	};
+}
+
+/**
+ * What a KILLED unit's transaction became. Its backend is cancelled first, only while
+ * it is still the unit's (pid AND xid: a recycled pid is never cancelled), so a long
+ * statement ends now rather than when it next reads the dead socket. Then the xid's
+ * status is polled until it leaves 'in progress' (bounded by KILLED_UNIT_SETTLE_MS).
+ * Both pid and xid are digit strings (the session-line regex), safe to embed.
+ */
+async function killedUnitOutcome(
+	conn: DbConnDescriptor,
+	pid: string,
+	xid: string,
+): Promise<KilledUnitOutcome> {
+	await runPsql(conn, [
+		'-X',
+		'-tAc',
+		`SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid = ${pid} AND backend_xid = xid('${xid}'::xid8)`,
+	]);
+	const deadline = Date.now() + KILLED_UNIT_SETTLE_MS;
+	for (;;) {
+		const status = await xactOutcome(conn, xid);
+		if (status !== 'in progress') return status;
+		if (Date.now() > deadline) return 'unknown';
+		await Bun.sleep(100);
+	}
+}
+
+/** `pg_xact_status(xid)` as an outcome; 'in progress' while it runs, 'unknown' when unreadable. */
+async function xactOutcome(
+	conn: DbConnDescriptor,
+	xid: string,
+): Promise<KilledUnitOutcome | 'in progress'> {
+	const read = await runPsql(conn, ['-X', '-tAc', `SELECT pg_xact_status('${xid}'::xid8)`]);
+	const status = read.exitCode === 0 ? read.stdout : '';
+	if (status === 'committed') return 'committed';
+	if (status === 'aborted') return 'rolled_back';
+	return status === 'in progress' ? 'in progress' : 'unknown';
+}
+
+/**
+ * runImportUnit, RETRIED WHOLE while its lock wait runs out, after each delay of the
+ * schedule (UNIT_LOCK_RETRY_DELAYS_MS — the shape of db/postgres.ts
+ * retryOnLockNotAvailable, which this psql-channel file may not import). Every
+ * attempt re-streams and re-hashes the files; a rolled-back attempt changed nothing.
+ * The backoff is abortable: a stop during it answers the last attempt's rollback as
+ * aborted. The last attempt's answer comes back with how many ran.
+ */
+async function runUnitRetryingLockWaits(
+	conn: DbConnDescriptor,
+	tld: string,
+	replace: boolean,
+	seeds: SeedFiles,
+	options: UnitRunOptions,
+): Promise<{ res: ImportUnitResult; attempts: number }> {
+	const delays = options.lockRetryDelaysMs ?? UNIT_LOCK_RETRY_DELAYS_MS;
+	for (let attempts = 1; ; attempts += 1) {
+		const res = await runImportUnit(conn, tld, replace, seeds, { signal: options.signal });
+		const delayMs = delays[attempts - 1];
+		if (!res.lockTimedOut || delayMs === undefined) return { res, attempts };
+		console.warn(
+			`[install:hierarchy_import] ${tld}: a lock wait ran past ${HIERARCHY_UNIT_LOCK_TIMEOUT} — nothing applied; retry ${attempts} in ${delayMs}ms`,
+		);
+		options.onLockRetry?.(attempts, delayMs);
+		const stopped = await sleepUnlessStopped(delayMs, options.signal);
+		if (stopped !== null) return { res: abortedBeforeRun(stopped), attempts };
+	}
+}
+
+/** Sleep `delayMs`; the signal that fired meanwhile (or already had), else null. */
+async function sleepUnlessStopped(
+	delayMs: number,
+	signal: AbortSignal | undefined,
+): Promise<AbortSignal | null> {
+	if (signal === undefined) {
+		await Bun.sleep(delayMs);
+		return null;
+	}
+	if (!signal.aborted) {
+		await new Promise<void>((resolve) => {
+			const wake = () => {
+				clearTimeout(timer);
+				signal.removeEventListener('abort', wake);
+				resolve();
+			};
+			const timer = setTimeout(wake, delayMs);
+			signal.addEventListener('abort', wake, { once: true });
+		});
+	}
+	return signal.aborted ? signal : null;
+}
+
+/** A unit stopped before (another attempt of) it ran: nothing of it is open, nothing changed. */
+function abortedBeforeRun(signal: AbortSignal): ImportUnitResult {
+	return {
+		exitCode: 1,
+		stdout: '',
+		stderr: '',
+		removedSections: [],
+		lockTimedOut: false,
+		aborted: { outcome: 'rolled_back', cause: abortCause(signal) },
+	};
 }
 
 /** The verified data files of a tld, in COPY order (terms, then models). */
@@ -631,10 +868,43 @@ async function verifySeedFiles(
 	return { files, dataRows };
 }
 
-/** A failed import unit rolled back whole: nothing of the tld changed. */
-function failedImportMessage(replace: boolean, res: PsqlRunResult): string {
-	const step = replace ? 'reset failed — nothing changed' : 'import failed — nothing imported';
-	return `${step}: ${res.stderr || `psql exited ${res.exitCode}`}`;
+/**
+ * A failed import unit, in the operator's words. Rolled back whole: nothing of the tld
+ * changed — a lock wait past the bound says so and names the lock; a killed unit says
+ * what its transaction was READ to have done (abortedImportMessage).
+ */
+function failedImportMessage(replace: boolean, res: ImportUnitResult, attempts: number): string {
+	if (res.aborted !== null) return abortedImportMessage(replace, res.aborted);
+	const step = `${replace ? 'reset failed' : 'import failed'} — ${nothingDone(replace)}`;
+	if (res.lockTimedOut) {
+		return `${step}: another session held a lock on the thesaurus's rows past the lock_timeout ${HIERARCHY_UNIT_LOCK_TIMEOUT} (${attempts} attempt(s)) — retry once it is released (a session idle in transaction shows in pg_stat_activity)`;
+	}
+	return `${step}: ${operatorStderr(res.stderr) || `psql exited ${res.exitCode}`}`;
+}
+
+/** What a rolled-back unit did NOT do, in the operator's words. */
+function nothingDone(replace: boolean): string {
+	return replace ? 'nothing changed' : 'nothing imported';
+}
+
+/** A unit the caller's signal killed: its READ outcome (killedUnitOutcome), an unreadable one included. */
+function abortedImportMessage(
+	replace: boolean,
+	aborted: NonNullable<ImportUnitResult['aborted']>,
+): string {
+	const step = `${replace ? 'reset' : 'import'} aborted (${aborted.cause})`;
+	return aborted.outcome === 'unknown'
+		? `${step} — its outcome could not be read: check the thesaurus's rows before retrying`
+		: `${step} — ${nothingDone(replace)}: its transaction rolled back`;
+}
+
+/** psql's stderr without the VERBOSITY=verbose source-location lines (server internals). */
+function operatorStderr(stderr: string): string {
+	return stderr
+		.split('\n')
+		.filter((line) => !/^\s*LOCATION:/.test(line))
+		.join('\n')
+		.trim();
 }
 
 /**
@@ -744,7 +1014,7 @@ async function emptyHierarchyOutcome(
 async function importedHierarchyOutcome(
 	meta: HierarchyMeta,
 	connection: DbConnDescriptor,
-	options: { replace: boolean; importDir: string },
+	options: { replace: boolean; importDir: string; signal?: AbortSignal },
 	engineOwnsTarget: boolean,
 	userId: number,
 ): Promise<TldOutcome> {
@@ -753,6 +1023,7 @@ async function importedHierarchyOutcome(
 		replace: options.replace,
 		importDir: options.importDir,
 		dataFiles: meta.data_files,
+		signal: options.signal,
 	});
 	if (!imported.ok) return failedTld(tld, imported.msg);
 	const skipped = imported.skipped === true;
@@ -782,7 +1053,7 @@ async function resetOutcome(meta: HierarchyMeta, userId: number): Promise<TldOut
 async function optionalHierarchyOutcome(
 	connection: DbConnDescriptor,
 	tld: string,
-	options: { replace: boolean; importDir: string },
+	options: { replace: boolean; importDir: string; signal?: AbortSignal },
 	engineOwnsTarget: boolean,
 	userId: number,
 ): Promise<TldOutcome> {
@@ -851,12 +1122,16 @@ export async function installHierarchies(
 		importDir: options.importDir ?? HIERARCHY_IMPORT_DIR,
 		engineOwnsTarget: connection.database === config.db.database,
 		userId,
+		signal: options.signal,
 	};
 	const selection = closedSelection(tlds, run);
 	const responses: HierarchyImportResponse[] = [];
 	const errors: string[] = [...selection.refusals];
 	for (const tld of selection.batch) {
-		const outcome = await tldOutcome(tld, run);
+		const outcome =
+			run.signal?.aborted === true
+				? failedTld(tld, 'not run — the operation was aborted; nothing changed')
+				: await tldOutcome(tld, run);
 		responses.push(outcome.response);
 		errors.push(...outcome.findings.map((error) => `${tld}: ${error}`));
 	}
@@ -877,6 +1152,8 @@ interface BatchRun {
 	importDir: string;
 	engineOwnsTarget: boolean;
 	userId: number;
+	/** The caller's stop (InstallHierarchiesOptions.signal). */
+	signal?: AbortSignal;
 }
 
 /**
@@ -910,7 +1187,7 @@ async function tldOutcome(tld: string, run: BatchRun): Promise<TldOutcome> {
 	return optionalHierarchyOutcome(
 		run.connection,
 		tld,
-		{ replace: run.replace, importDir: run.importDir },
+		{ replace: run.replace, importDir: run.importDir, signal: run.signal },
 		run.engineOwnsTarget,
 		run.userId,
 	);
