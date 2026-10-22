@@ -520,8 +520,10 @@ page.prototype.init = async function(options) {
 			// must not set page_globals.page_error (page_scope:false). The page's
 			// own failures set it where they happen (build, the page-root
 			// element's build_autoload).
+			// Answers the dispatch promise, so a publisher (a gate) can await the
+			// decision instead of a timer.
 			const api_error_handler = (api_error) => {
-				handle_api_error(api_error, {scope:'page', page_scope:false})
+				return handle_api_error(api_error, {scope:'page', page_scope:false})
 			}
 			self.events_tokens.push(
 				event_manager.subscribe('api_error', api_error_handler)

@@ -211,7 +211,9 @@ described in full on the [data_manager](../client/data_manager.md) page.
   page build, or the element the page opened (`ctx.page_scope: true`). A refusal inside an
   embedded element — an inspector block, a portal, a tool panel — stays in that element: its
   wrapper gets the panel, or the element renders its own short failure line, and every other
-  element on the page keeps working. Navigating to another element clears the page panel.
+  element on the page keeps working. It is never silent: an element whose build was refused
+  draws that refusal wherever it is rendered, even when the code that opened it does not check
+  the failed build. Navigating to another element clears the page panel.
 - **Notices** go through the same table via `handle_api_notice`, at severity `warning` and
   with page-level actions suppressed — the request succeeded, so nothing may take the page
   away from the user. A caller that wants to render a notice itself claims ownership when it

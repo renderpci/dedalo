@@ -20,9 +20,9 @@
 	// render() builds one). They were referenced without being imported until
 	// 2026-09-04 (P2-25 / DEAD-07 gate): the branch threw ReferenceError instead
 	// of rendering the error panel it promises.
-	import {ApiError, CLIENT_ERROR, request_failed, response_data} from '../../common/js/api_error.js'
+	import {ApiError, CLIENT_ERROR, is_api_error, request_failed, response_data} from '../../common/js/api_error.js'
 	import {handle_api_error, is_page_identity_revoked} from '../../common/js/error_dispatch.js'
-	import {render_error_panel} from '../../common/js/render_api_error.js'
+	import {render_error_panel, render_build_failure} from '../../common/js/render_api_error.js'
 
 
 
@@ -390,6 +390,7 @@ export const set_context_vars = function(self) {
 *
 * Pre-render guards (short-circuit to an error/empty node):
 *   - page_globals.page_error is set and self is page scope (is_page_root) → renders the error panel
+*   - the last build_autoload failed (status 'initialized' + build_error) → renders that failure (render_build_failure)
 *   - type === 'component' and context is falsy → renders "invalid context" error
 *   - permissions < 1 → renders a "no access" span
 *
@@ -430,6 +431,20 @@ common.prototype.render = async function (options={}) {
 			console.warn('))) render page_globals.page_error:', self.model, page_globals.page_error);
 
 			self.node = render_error_panel(page_globals.page_error)
+
+			return self.node
+		}
+	// failed build case
+	// The last build_autoload FAILED: status is back to 'initialized' and the
+	// request's ApiError is kept on build_error. A render of that instance IS the
+	// failure, drawn in place (render_build_failure). An embedded refusal reaches
+	// neither the page slot nor a toast (render_scoped_panel, page_scope:false),
+	// so a caller that ignores build()===false and renders anyway (the TM tool's
+	// list, a portal) must still show it — never a blank or crashed list. A
+	// page-scope page-panel refusal already returned above.
+		if (self.status==='initialized' && is_api_error(self.build_error)) {
+
+			self.node = render_build_failure({instance: self})
 
 			return self.node
 		}
@@ -2898,8 +2913,9 @@ export const build_autoload = async function(self, {recovery_retry=false}={}) {
 			// is gone — today that means the user logged back in.
 				if (request_failed(api_response)) {
 					// page_scope: only a page-root element's refusal is the PAGE's
-					// failure (page_globals.page_error); an embedded one is panel-local
-					// and its caller renders the build()===false answer.
+					// failure (page_globals.page_error); an embedded one is panel-local:
+					// its caller renders the build()===false answer, or render() of this
+					// failed instance draws it (see common.prototype.render).
 					const {recovered} = await handle_api_error(api_response.error, {
 						wrapper		: self.node,
 						page_scope	: is_page_root(self)

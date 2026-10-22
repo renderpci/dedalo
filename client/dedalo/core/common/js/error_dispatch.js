@@ -590,8 +590,12 @@ const relogin = async () => {
 * and every later render of every instance on the page became the no-access
 * panel, with no way out but a reload.
 *   - a wrapper given      → the panel goes into that wrapper (panel-local);
-*   - page_scope===false   → the caller owns the failure surface (an embedded
-*                            build that answers false): nothing here;
+*   - page_scope===false   → the request's own path owns the surface: an
+*                            embedded build answers false and its caller draws
+*                            it, or common.prototype.render of the failed
+*                            instance does (render_build_failure); the page's
+*                            every-request listener stays quiet so a panel-local
+*                            refusal never also raises a toast. Nothing here;
 *   - neither              → a toast, so the refusal is never silent.
 * @param {ApiError} api_error
 * @param {Object} entry - the resolved policy row

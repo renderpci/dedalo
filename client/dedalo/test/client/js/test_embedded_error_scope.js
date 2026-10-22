@@ -5,8 +5,10 @@
 import { ApiError } from '../../../core/common/js/api_error.js';
 import { common } from '../../../core/common/js/common.js';
 import { data_manager } from '../../../core/common/js/data_manager.js';
+import { reset_error_dispatch_state } from '../../../core/common/js/error_dispatch.js';
 import { event_manager } from '../../../core/common/js/event_manager.js';
 import { get_instance } from '../../../core/common/js/instances.js';
+import { error_text } from '../../../core/common/js/render_api_error.js';
 import { ui } from '../../../core/common/js/ui.js';
 
 /**
@@ -20,7 +22,11 @@ import { ui } from '../../../core/common/js/ui.js';
  *
  *   1. an EMBEDDED instance's refused build never sets page_error (a page-root
  *      one does — the control), and neither does the page's every-request
- *      `api_error` listener;
+ *      `api_error` listener (which shows nothing at all: the request's own
+ *      build path owns the surface);
+ *   1b. ...but it is never SILENT: a render() of the failed embedded build is
+ *      the refusal itself, panel-local (a caller that ignores build()===false
+ *      and renders anyway — the TM tool's list, a portal — still shows it);
  *   2. while page_error IS set, an embedded sibling (relation_list) still
  *      renders its own node; a page-root render gets the panel (the control);
  *   3. SPA navigation clears page_error and the next element renders.
@@ -54,6 +60,24 @@ const tm_sqo = () => {
 	};
 	sqo.mode = 'tm';
 	return sqo;
+};
+
+/**
+ * Every toast (`notification`) published while `fn` runs — only this suite's
+ * refusal (request_id 'rq-embedded'), so a stray toast from elsewhere cannot
+ * pass or fail it. The dedupe window is reset first: a perm.denied toast left
+ * by an earlier suite would otherwise swallow the one a regression publishes.
+ */
+const embedded_toasts = async (fn) => {
+	reset_error_dispatch_state();
+	const seen = [];
+	const token = event_manager.subscribe('notification', (payload) => seen.push(payload));
+	try {
+		await fn();
+	} finally {
+		event_manager.unsubscribe(token);
+	}
+	return seen.filter((payload) => payload?.api_error?.request_id === 'rq-embedded');
 };
 
 /** A dd15 history list as the inspector builds it — embedded under `caller`. */
@@ -109,6 +133,27 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 		await root.destroy(true, true);
 	});
 
+	it(`a refused EMBEDDED build is never silent: its render() is the refusal, panel-local`, async () => {
+		data_manager.request = async () => refused();
+
+		// a caller that ignores build()===false and renders anyway (the TM tool's
+		// list, a portal): the render must BE the failure, not a blank/crashed list
+		const embedded = await tm_list({ model: 'tool_time_machine', id: 'fake_tool' }, 'embedded_scope_render');
+		let node = null;
+		const toasts = await embedded_toasts(async () => {
+			assert.isFalse(await embedded.build(true), 'the embedded build answers false');
+			node = await embedded.render();
+		});
+
+		assert.instanceOf(node, HTMLElement, 'render() of a failed build answers a node');
+		assert.isTrue(node.classList.contains('error_alert'), 'the build failure panel (render_build_failure)');
+		assert.include(node.textContent, error_text(refused().error), 'it names the refusal, not a guess');
+		assert.isFalse(node.classList.contains('page_error_container'), 'never the page panel');
+		assert.isNull(page_globals.page_error, 'and never the page slot');
+		assert.equal(toasts.length, 0, 'panel-local, quiet: no toast on top of the panel');
+		await embedded.destroy(true, true);
+	});
+
 	it(`while page_error is set, an embedded sibling still renders its own node`, async () => {
 		page_globals.page_error = refused().error;
 
@@ -144,10 +189,18 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 		document.getElementById('content').appendChild(node);
 
 		// the page's every-request listener is NOT page scope: a refusal it hears
-		// (any request's — an inspector block's) leaves the slot alone
-		event_manager.publish('api_error', refused().error);
-		await new Promise((resolve) => setTimeout(resolve, 50));
+		// (any request's — an inspector block's) leaves the slot alone AND shows
+		// nothing — the request's own build path owns the surface (the render of a
+		// failed build, a caller's build()===false branch); a toast here would sit
+		// on top of every quiet panel-local refusal. The listener answers its
+		// dispatch, so the assertion waits for the decision, not for a timer.
+		const toasts = await embedded_toasts(async () => {
+			const results = event_manager.publish('api_error', refused().error);
+			assert.isTrue(Array.isArray(results) && results.length > 0, 'the page listener heard the refusal');
+			await Promise.all(results);
+		});
 		assert.isNull(page_globals.page_error, "the page's api_error listener never sets the page slot");
+		assert.equal(toasts.length, 0, "the page's api_error listener shows no toast for a panel refusal");
 
 		// a page-level refusal on the previous element...
 		page_globals.page_error = refused().error;
