@@ -70,6 +70,7 @@ import {
 	langToAlpha2,
 	requireFilesTarget,
 	StreamedMergeOutput,
+	withdrawConsolidated,
 } from './rdf.ts';
 import type {
 	ArtifactEvent,
@@ -389,6 +390,10 @@ class XmlWriterSession implements WriterSession {
 					records_count: 0,
 				},
 			);
+		} else {
+			// Nothing to consolidate: the previous run's merged document and zip
+			// still hold the records this run withdrew — gone, never reported.
+			withdrawConsolidated(this.targetDir, [XML_MERGED_NAME, XML_ZIP_NAME]);
 		}
 		return this.log.summary(consolidated);
 	}

@@ -116,6 +116,31 @@ export const CONSOLIDATED_MERGED_PREFIX = 'consolidated_merged:';
 export const CONSOLIDATED_ZIP_PREFIX = 'consolidated_zip:';
 
 /**
+ * A close whose run manifest yields NOTHING to consolidate (every record
+ * unpublished, or every file gone): the consolidated artifacts are the run's
+ * manifest — removed records absent (types.ts WriterCloseContext) — so an empty
+ * manifest means NO merged document and NO zip. The previous run's ones still
+ * hold the withdrawn records in the public directory; they are unlinked here,
+ * the directory fsynced before the runner commits the run 'completed' (the
+ * withdrawal is as durable as a landing). Missing = already withdrawn
+ * (idempotent); any other failure throws — the run fails and is retried, never
+ * reported 'completed' with the withdrawn records still downloadable. The
+ * rdf / xml / markdown closes share it (closure review cross-diffusion:r7).
+ */
+export function withdrawConsolidated(targetDir: string, names: readonly string[]): void {
+	let withdrawn = false;
+	for (const name of names) {
+		try {
+			unlinkSync(`${targetDir}/${name}`);
+			withdrawn = true;
+		} catch (error) {
+			if ((error as { code?: unknown } | null)?.code !== 'ENOENT') throw error;
+		}
+	}
+	if (withdrawn) fsyncDirectory(targetDir);
+}
+
+/**
  * Loud open() gate: rdf/xml publish to a service-named files target only. A
  * thin DedaloError family with a fixed code; the plan id stays log-only.
  */
@@ -663,6 +688,10 @@ class RdfWriterSession implements WriterSession {
 					records_count: 0,
 				},
 			);
+		} else {
+			// Nothing to consolidate: the previous run's merged document and zip
+			// still hold the records this run withdrew — gone, never reported.
+			withdrawConsolidated(this.targetDir, [RDF_MERGED_NAME, RDF_ZIP_NAME]);
 		}
 		return this.log.summary(consolidated);
 	}

@@ -21,6 +21,11 @@
  *    auditd read (where the kernel's denials go with auditd running) was
  *    appended with 2>/dev/null, so a failed or empty audit read passed green.
  *    Now the audit half has its own floor and a failed read is red.
+ * 5. (cross-diffusion:r7) inside the booleans span EVERY name_connect was
+ *    excused, whatever process or class caused it (php-fpm runs in httpd_t
+ *    too), and the relay OFF floor counted ANY denial. Now only the relay
+ *    probe's own denial (relayProbeDenial: the httpd worker's name_connect on
+ *    a tcp_socket in httpd_t) is excused, and only it floors relay OFF.
  *
  * HERMETIC: the verdicts are pure; no VM. The live half (ausearch accepting the
  * target's `%x %T`; the audit log's SERVICE_START/STOP naming our units) is
@@ -31,8 +36,10 @@ import { describe, expect, test } from 'bun:test';
 import {
 	auditHalfVerdict,
 	booleanProbeVerdict,
+	countProbeDenials,
 	noAvcVerdict,
 	parseTargetStart,
+	relayProbeDenial,
 	SELINUX_CONTROL_DIR,
 	SELINUX_CONTROL_FILE,
 } from '../../scripts/publication_host_init_drill.ts';
@@ -86,6 +93,36 @@ describe('no-avc: the window is floored on the control denial', () => {
 		expect(String(verdict)).toContain('AVC denials during the drill');
 		expect(String(verdict)).toContain('dest=5432');
 		expect(String(verdict)).not.toContain('dest=8080');
+	});
+
+	test('a php-fpm name_connect INSIDE the span is reported (php-fpm runs in httpd_t too)', () => {
+		const fpm =
+			'type=AVC msg=audit(1761040001.500:461): avc:  denied  { name_connect } for  pid=88 comm="php-fpm" dest=5432 scontext=system_u:system_r:httpd_t:s0 tcontext=system_u:object_r:postgresql_port_t:s0 tclass=tcp_socket permissive=0';
+		const verdict = noAvcVerdict([CONTROL_AVC, RELAY_AVC, fpm].join('\n'), true, {
+			from: 1761040001,
+			to: 1761040002,
+		});
+		expect(String(verdict)).toContain('AVC denials during the drill');
+		expect(String(verdict)).toContain('php-fpm');
+		expect(String(verdict)).not.toContain('dest=8080');
+	});
+
+	test('a non-httpd_t or non-tcp_socket name_connect INSIDE the span is reported', () => {
+		const span = { from: 1761040001, to: 1761040001 };
+		const otherDomain = RELAY_AVC.replace(':httpd_t:', ':unconfined_service_t:');
+		const otherClass = RELAY_AVC.replace('tclass=tcp_socket', 'tclass=sctp_socket');
+		for (const line of [otherDomain, otherClass]) {
+			expect(String(noAvcVerdict([CONTROL_AVC, line].join('\n'), true, span))).toContain(
+				'AVC denials during the drill',
+			);
+		}
+	});
+
+	test('relayProbeDenial names only the httpd worker connect', () => {
+		expect(relayProbeDenial(RELAY_AVC)).toBe(true);
+		expect(relayProbeDenial(STRAY_CONNECT)).toBe(false); // comm="php-fpm"
+		expect(relayProbeDenial(FOREIGN_AVC)).toBe(false);
+		expect(relayProbeDenial(CONTROL_AVC)).toBe(false);
 	});
 
 	test('no recorded booleans span: no name_connect is excused', () => {
@@ -145,19 +182,35 @@ describe('booleans-measured: OFF must measure the relay denial', () => {
 	const V1 = '/dedalo/publication/server_api/v1/probe.php';
 
 	test('relay: ON clean, OFF denied — measured', () => {
-		expect(booleanProbeVerdict(RELAY, V2, { status: 200, avcs: 0 }, { status: 503, avcs: 1 })).toBe(
-			null,
-		);
+		expect(
+			booleanProbeVerdict(
+				RELAY,
+				V2,
+				{ status: 200, avcs: 0, relay: 0 },
+				{ status: 503, avcs: 1, relay: 1 },
+			),
+		).toBe(null);
 	});
 
 	test('relay: OFF without an AVC measured nothing — refused', () => {
 		const verdict = booleanProbeVerdict(
 			RELAY,
 			V2,
-			{ status: 200, avcs: 0 },
-			{ status: 200, avcs: 0 },
+			{ status: 200, avcs: 0, relay: 0 },
+			{ status: 200, avcs: 0, relay: 0 },
 		);
 		expect(String(verdict)).toContain('the measurement proves nothing');
+	});
+
+	test('relay: OFF with only OTHER denials (not the httpd worker connect) measured nothing — refused', () => {
+		const off = { status: 503, ...countProbeDenials([FOREIGN_AVC, STRAY_CONNECT].join('\n')) };
+		expect(off).toEqual({ status: 503, avcs: 2, relay: 0 });
+		expect(
+			String(booleanProbeVerdict(RELAY, V2, { status: 200, avcs: 0, relay: 0 }, off)),
+		).toContain('the measurement proves nothing');
+		const measured = { status: 503, ...countProbeDenials([FOREIGN_AVC, RELAY_AVC].join('\n')) };
+		expect(measured).toEqual({ status: 503, avcs: 2, relay: 1 });
+		expect(booleanProbeVerdict(RELAY, V2, { status: 200, avcs: 0, relay: 0 }, measured)).toBe(null);
 	});
 
 	test('ON still denied is refused (both booleans)', () => {
@@ -167,7 +220,12 @@ describe('booleans-measured: OFF must measure the relay denial', () => {
 		] as const) {
 			expect(
 				String(
-					booleanProbeVerdict(name, probe, { status: 200, avcs: 2 }, { status: 200, avcs: 2 }),
+					booleanProbeVerdict(
+						name,
+						probe,
+						{ status: 200, avcs: 2, relay: 0 },
+						{ status: 200, avcs: 2, relay: 0 },
+					),
 				),
 			).toContain('still logged 2 AVC');
 		}
@@ -175,10 +233,22 @@ describe('booleans-measured: OFF must measure the relay denial', () => {
 
 	test('homedirs: ON must answer 200; OFF may stay 200 without an AVC (the H rule)', () => {
 		expect(
-			String(booleanProbeVerdict(HOMEDIRS, V1, { status: 404, avcs: 0 }, { status: 404, avcs: 0 })),
+			String(
+				booleanProbeVerdict(
+					HOMEDIRS,
+					V1,
+					{ status: 404, avcs: 0, relay: 0 },
+					{ status: 404, avcs: 0, relay: 0 },
+				),
+			),
 		).toContain('answered 404');
 		expect(
-			booleanProbeVerdict(HOMEDIRS, V1, { status: 200, avcs: 0 }, { status: 200, avcs: 0 }),
+			booleanProbeVerdict(
+				HOMEDIRS,
+				V1,
+				{ status: 200, avcs: 0, relay: 0 },
+				{ status: 200, avcs: 0, relay: 0 },
+			),
 		).toBe(null);
 	});
 });

@@ -727,10 +727,36 @@ export function selinuxControlVerdict(observed: {
 		: `no AVC denial of httpd_t on ${type} for the control:\n${avc.slice(-2000)}`;
 }
 
-/** One boolean probe: its HTTP status and the AVC denials its own window logged. */
+/**
+ * THE relay probe's own denial: the v2 proxy's connect refused with httpd_can_network_relay off — a
+ * `name_connect` on a `tcp_socket`, by the Apache worker (`comm="httpd"`) in `httpd_t`. php-fpm runs in
+ * httpd_t too (its comm names it), and a connect of any other process or class is not the probe's: no
+ * such line is excused by no-avc, nor counts as the relay OFF measurement. (The drill does not hold the
+ * instance's v2 port, so `dest=` is not pinned.)
+ */
+export function relayProbeDenial(line: string): boolean {
+	return (
+		/\{ name_connect \}/.test(line) &&
+		/ tclass=tcp_socket\b/.test(line) &&
+		/ comm="httpd" /.test(line) &&
+		/ scontext=\S*:httpd_t:/.test(line)
+	);
+}
+
+/** Counts of one probe window's AVC records (`ausearch -m AVC` raw lines): every denial, and the relay probe's own. */
+export function countProbeDenials(window: string): { avcs: number; relay: number } {
+	const denied = window.split('\n').filter((line) => /denied/.test(line));
+	return { avcs: denied.length, relay: denied.filter(relayProbeDenial).length };
+}
+
+/**
+ * One boolean probe: its HTTP status, the AVC denials its own window logged (any), and how many of
+ * them are the relay probe's own (relayProbeDenial) — the relay OFF floor counts only those.
+ */
 export interface BooleanProbe {
 	readonly status: number;
 	readonly avcs: number;
+	readonly relay: number;
 }
 
 /**
@@ -750,8 +776,8 @@ export function booleanProbeVerdict(
 	if (name === 'httpd_enable_homedirs' && on.status !== 200) {
 		return `${name} on: the v1 probe answered ${on.status} (run v1-handler-probe first)`;
 	}
-	if (name === 'httpd_can_network_relay' && off.avcs === 0) {
-		return `${name} off: ${probe} logged no AVC denial — the probe's window read nothing, or the boolean no longer gates the v2 proxy: the measurement proves nothing`;
+	if (name === 'httpd_can_network_relay' && off.relay === 0) {
+		return `${name} off: ${probe} logged no name_connect denial of the httpd worker (${off.avcs} other AVC line(s)) — the probe's window read nothing, or the boolean no longer gates the v2 proxy: the measurement proves nothing`;
 	}
 	return null;
 }
@@ -773,8 +799,9 @@ export function auditSeconds(line: string): number | null {
  * The window is FLOORED on the one denial the drill causes on purpose (system-layout-v2's control,
  * `controlDenied` = that leg measured it): a window that does not hold even that read nothing — a wrong
  * -ts, the wrong day, a dead auditd — and a clean read of nothing is no measurement.
- * The booleans leg's relay probe causes the other one (a `name_connect` with the boolean off): such a
- * line is excused ONLY when its own audit time falls inside that leg's span (`booleans`, recorded by
+ * The booleans leg's relay probe causes the other one (relayProbeDenial: the httpd worker's
+ * `name_connect` on a tcp_socket in httpd_t, the boolean off): such a line is excused ONLY when it is
+ * that denial AND its own audit time falls inside that leg's span (`booleans`, recorded by
  * the leg on the target's clock). A name_connect anywhere else in the drill — or with no span recorded,
  * or no readable time — is a denial the drill did not ask for, and is reported.
  */
@@ -795,7 +822,7 @@ export function noAvcVerdict(
 		return booleans !== null && at !== null && at >= booleans.from && at <= booleans.to;
 	};
 	const foreign = avcLines.filter(
-		(line) => !controlNamed(line) && !(/name_connect/.test(line) && inBooleans(line)),
+		(line) => !controlNamed(line) && !(relayProbeDenial(line) && inBooleans(line)),
 	);
 	return foreign.length === 0
 		? null
@@ -2750,13 +2777,13 @@ export const LEGS: readonly Leg[] = Object.freeze([
 			);
 			const from = Number(start);
 			/** One probe: its status and the AVC denials logged from its own start (whole seconds: a pause first). */
-			const probeOnce = async (path: string): Promise<{ status: number; avcs: number }> => {
+			const probeOnce = async (path: string): Promise<BooleanProbe> => {
 				const since = (await must(ctx, 'sleep 1.1; date +%T', 'the probe start')).trim();
 				const got = await webCheck(ctx, DOMAIN, path);
 				const avc = await ctx.runner.sh(
-					`sleep 1; ausearch -m AVC -ts ${since} 2>/dev/null | grep -c 'denied' || true`,
+					`sleep 1; ausearch -m AVC -ts ${since} 2>/dev/null || true`,
 				);
-				return { status: got.status, avcs: Number(avc.out.trim()) };
+				return { status: got.status, ...countProbeDenials(avc.out) };
 			};
 			// The v1 probe is v1-handler-probe's (a .php under the home's v1 release).
 			try {
@@ -2778,7 +2805,9 @@ export const LEGS: readonly Leg[] = Object.freeze([
 						check(verdict === null, verdict ?? '');
 						measured[name] = {
 							needed_for: needed,
-							denied_without: off.avcs > 0 || off.status !== on.status,
+							denied_without:
+								(name === 'httpd_can_network_relay' ? off.relay : off.avcs) > 0 ||
+								off.status !== on.status,
 						};
 					} finally {
 						await ctx.runner.sh(`setsebool ${name} ${before ? 'on' : 'off'}`);
@@ -2800,7 +2829,7 @@ export const LEGS: readonly Leg[] = Object.freeze([
 		name: 'no-avc',
 		family: 'el',
 		required: true,
-		what: "ausearch -m AVC,USER_AVC since the drill started (the target's clock) finds nothing but system-layout-v2's control file and the booleans leg's name_connect INSIDE that leg's span (its audit time) — and finds that control's denial: a window that holds not even it read nothing",
+		what: "ausearch -m AVC,USER_AVC since the drill started (the target's clock) finds nothing but system-layout-v2's control file and the booleans leg's relay denial (the httpd worker's name_connect on a tcp_socket in httpd_t) INSIDE that leg's span (its audit time) — and finds that control's denial: a window that holds not even it read nothing",
 		async run(ctx) {
 			const out = await ctx.runner.sh(`ausearch -m AVC,USER_AVC -ts ${ctx.auditStartedAt} 2>&1`);
 			const verdict = noAvcVerdict(
