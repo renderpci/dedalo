@@ -12,6 +12,9 @@ class diffusion_mysql extends diffusion_sql  {
 
 	static $insert_id;
 
+	// last MySQL error message set by exec_mysql_query (null when last query succeeded)
+	static ?string $last_error = null;
+
 	private const DEFAULT_COLLATION = 'utf8mb4_unicode_ci';
 
 
@@ -63,6 +66,9 @@ class diffusion_mysql extends diffusion_sql  {
 				return false;
 			}
 
+		// reset last error
+			self::$last_error = null;
+
 		try {
 
 			$mysql_conn = self::get_conn($database_name);
@@ -72,6 +78,7 @@ class diffusion_mysql extends diffusion_sql  {
 				? $mysql_conn->multi_query( $sql )
 				: $mysql_conn->query( $sql );
 			if ($result===false || !empty($mysql_conn->error)) {
+				self::$last_error = $mysql_conn->error ?: 'Unknown MySQL error';
 				debug_log(
 					__METHOD__.' INFO: Data skipped in SQL table : '. $table_name . PHP_EOL
 					.' error: '. $mysql_conn->error,
@@ -87,6 +94,8 @@ class diffusion_mysql extends diffusion_sql  {
 		} catch (Exception $e) {
 
 			error_log( 'Caught exception: ' . $e->getMessage() );
+
+			self::$last_error = $e->getMessage();
 
 			debug_log(__METHOD__
 				. " database_name " . PHP_EOL
@@ -126,6 +135,7 @@ class diffusion_mysql extends diffusion_sql  {
     *            )   ..
     * )
     * @return bool
+    * 	false on CREATE failure (MySQL message in self::$last_error)
 	*/
 	public static function create_table(array $table_data, bool $drop=true) : bool {
 
@@ -185,9 +195,9 @@ class diffusion_mysql extends diffusion_sql  {
 					.to_string($sql_query)
 					, logger::ERROR
 				);
-			}else{
-				debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string($sql_query), logger::DEBUG);
+				return false;
 			}
+			debug_log(__METHOD__." Created new table $database_name.$table_name ".to_string($sql_query), logger::DEBUG);
 
 
 		return true;
@@ -635,66 +645,96 @@ class diffusion_mysql extends diffusion_sql  {
 			}
 
 		// create table if not exits
+			// verified key includes database: same table name can exist in several databases (aliases, PRE/PRO)
 			static $ar_verified_tables;
-			if ( !in_array($table_name, (array)$ar_verified_tables) ) {
+			static $ar_failed_tables = []; // failed creations: [verified_key => error msg]. Avoid retry on every record
+			$verified_key = $database_name . '.' . $table_name;
+			if (isset($ar_failed_tables[$verified_key])) {
+				$response->result	= false;
+				$response->msg		= $ar_failed_tables[$verified_key];
+				return $response;
+			}
+			if ( !in_array($verified_key, (array)$ar_verified_tables) ) {
 
-				if(!self::table_exits($database_name, $table_name)) {
+				// tables to create: main table and its tm_ clone (when DEDALO_DIFFUSION_TM) if missing.
+				// tm_ is checked independently: it can be missing even if main table exists (e.g. previous tm_ creation failed)
+					$main_table_exists	= self::table_exits($database_name, $table_name);
+					$ar_create_tables	= [];
+					if ($main_table_exists===false) {
+						$ar_create_tables[] = [
+							'table_name'	=> $table_name,
+							'table_type'	=> 'default'
+						];
+					}
+					if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM && !self::table_exits($database_name, 'tm_'.$table_name)){
+						// create the BBDD clone version for store all publications versions (time marks with UNIX time stamp)
+						$ar_create_tables[] = [
+							'table_name'	=> 'tm_'.$table_name,
+							'table_type'	=> 'tm'
+						];
+					}
 
-					// table do not exists case. Create a new one
+				if (!empty($ar_create_tables)) {
 
-					# Call to diffusion to obtain fields for generate the table
-					#if ($typology==='thesaurus') {
-					#	$ts_options = new stdClass();
-					#		$ts_options->table_name = $table_name;
-					#	$create_table_ar_fields = self::build_thesaurus_columns( $ts_options );
-					#}else{
+					// missing tables case. Create them
 
-						$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
+						# Call to diffusion to obtain fields for generate the table
+						#if ($typology==='thesaurus') {
+						#	$ts_options = new stdClass();
+						#		$ts_options->table_name = $table_name;
+						#	$create_table_ar_fields = self::build_thesaurus_columns( $ts_options );
+						#}else{
 
-						$table_map			= $diffusion_element_tables_map->{$section_tipo} ?? null;
-						#$table_name		= $table_map->name;
-						#$table_tipo		= $table_map->table;
-						#$table_properties	= $table_map->properties;
-						#$database_name		= $table_map->database_name;
-						#$database_tipo		= $table_map->database_tipo;
-						$table_from_alias	= $table_map->from_alias ?? null;
+							$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
 
-						$table_columns_options = new stdClass();
-							$table_columns_options->table_tipo			= $diffusion_section;
-							$table_columns_options->table_name			= $table_name;
-							$table_columns_options->database_name		= $database_name;
-							$table_columns_options->table_from_alias	= $table_from_alias;
+							$table_map			= $diffusion_element_tables_map->{$section_tipo} ?? null;
+							#$table_name		= $table_map->name;
+							#$table_tipo		= $table_map->table;
+							#$table_properties	= $table_map->properties;
+							#$database_name		= $table_map->database_name;
+							#$database_tipo		= $table_map->database_tipo;
+							$table_from_alias	= $table_map->from_alias ?? null;
 
-						$create_table_ar_fields = self::build_table_columns( $table_columns_options ); // $diffusion_section, $database_name
-					#}
+							$table_columns_options = new stdClass();
+								$table_columns_options->table_tipo			= $diffusion_section;
+								$table_columns_options->table_name			= $table_name;
+								$table_columns_options->database_name		= $database_name;
+								$table_columns_options->table_from_alias	= $table_from_alias;
 
-					// table create
-						self::create_table(
-							[
-								'database_name'	=> $database_name,
-								'table_name'	=> $table_name,
-								'engine'		=> $engine,
-								'ar_fields'		=> $create_table_ar_fields['ar_fields'],
-								'table_type'	=> 'default'
-							],
-							true
-						);
+							$create_table_ar_fields = self::build_table_columns( $table_columns_options ); // $diffusion_section, $database_name
+						#}
 
-					// table dedalo_diffusion_tm create
-						if(defined('DEDALO_DIFFUSION_TM') && DEDALO_DIFFUSION_TM){
-							// create the BBDD clone version for store all publications versions (time marks with UNIX time stamp)
-							self::create_table(
-								[
-									'database_name'	=> $database_name,
-									'table_name'	=> 'tm_'.$table_name,
-									'engine'		=> $engine,
-									'ar_fields'		=> $create_table_ar_fields['ar_fields'],
-									'table_type'	=> 'tm'
-								],
-								false
-							);
-						}
-				}else{
+						// table create
+							// (!) No DROP: table_exits returns false on query error too, and a concurrent
+							// publication could have just created it. Dropping here loses published data.
+							foreach ($ar_create_tables as $create_item) {
+
+								$created = self::create_table(
+									[
+										'database_name'	=> $database_name,
+										'table_name'	=> $create_item['table_name'],
+										'engine'		=> $engine,
+										'ar_fields'		=> $create_table_ar_fields['ar_fields'],
+										'table_type'	=> $create_item['table_type']
+									],
+									false
+								);
+								// CREATE failed and table still missing (not a concurrent creation)
+								$create_error = self::$last_error ?? 'Unknown MySQL error'; // read before table_exits resets it
+								if ($created===false && !self::table_exits($database_name, $create_item['table_name'])) {
+									$response->result	= false;
+									$response->msg		= "Error creating MySQL table '$database_name.{$create_item['table_name']}' (diffusion_section: $diffusion_section): " . $create_error;
+									$ar_failed_tables[$verified_key] = $response->msg;
+									debug_log(__METHOD__
+										. ' ' . $response->msg
+										, logger::ERROR
+									);
+									return $response;
+								}
+							}
+				}
+
+				if ($main_table_exists===true) {
 
 					// table already exists case. Check columns
 
@@ -724,8 +764,8 @@ class diffusion_mysql extends diffusion_sql  {
 							}
 						}
 				}
-				$ar_verified_tables[] = $table_name; // Store state to avoid verify every time for every record
-			}//end if ( !in_array($table_name, (array)$ar_verified_tables) ) {
+				$ar_verified_tables[] = $verified_key; // Store state to avoid verify every time for every record
+			}//end if ( !in_array($verified_key, (array)$ar_verified_tables) )
 
 		// real_table_fields again. Array with available table fields (prevent to write non existing fields on save)
 			$real_table_fields = self::get_real_table_fields($database_name, $table_name);
@@ -779,7 +819,7 @@ class diffusion_mysql extends diffusion_sql  {
 							if ($result===false) {
 								#throw new Exception("Error Processing Request. MySQL insert error".$conn->error, 1);
 								$response->result = false;
-								$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error ".$conn->error;
+								$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error (tm_{$table_name}): ".self::$last_error;
 								debug_log(__METHOD__
 									." $response->msg "
 									, logger::ERROR
@@ -799,10 +839,10 @@ class diffusion_mysql extends diffusion_sql  {
 						);
 						if ($result===false) {
 							#throw new Exception("Error Processing Request. MySQL insert error".$conn->error, 1);
-							debug_log(__METHOD__." Error on insert MySQL data ". $conn->error, logger::ERROR);
+							debug_log(__METHOD__." Error on insert MySQL data ". self::$last_error, logger::ERROR);
 
 							$response->result = false;
-							$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error".$conn->error;
+							$response->msg    = "Error Processing Request. Nothing is saved. MySQL insert error ($table_name): ".self::$last_error;
 							return (object)$response;
 						}
 

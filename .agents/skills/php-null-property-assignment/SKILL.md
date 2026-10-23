@@ -1,5 +1,5 @@
 ---
-name: php_null_property_assignment
+name: php-null-property-assignment
 description: Systematic approach to identify and fix PHP errors where properties are being assigned to null or non-object values in Dédalo codebase
 ---
 
@@ -171,7 +171,7 @@ if (!empty($data)) {
 
 ## Example Fix: The paginated_key Case
 
-**Before (Line 3742 in component_common.php):**
+**Before (`component_common::get_data_paginated()`):**
 ```php
 foreach ($data_paginated as $key => $value) {
     $paginated_key = $key + $offset;

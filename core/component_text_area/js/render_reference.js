@@ -113,6 +113,8 @@ export const render_reference = async function(options) {
 				})
 				return false
 			}
+			// data_limit. Only one locator is allowed by reference tag (instance only, the ontology node is shared)
+			reference_component.context.properties = Object.assign({}, reference_component.context.properties, {data_limit : 1})
 			// force to prevent to show tool buttons
 			reference_component.show_interface.tools = false
 
@@ -186,7 +188,8 @@ export const render_reference = async function(options) {
 				const existing_value_node = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
-					inner_html		: current_value.fallback_value.join(' | '),
+					// tag_id is added to differentiate the same term used by several tags
+					inner_html		: current_value.fallback_value.join(' | ') + ' [' + current_value.tag_id + ']',
 					parent			: existing_tags_container
 				})
 				existing_value_node.data = current_value
@@ -194,7 +197,7 @@ export const render_reference = async function(options) {
 				existing_value_node.activated = false
 				existing_value_node.key = i
 				ar_existing_value_node.push(existing_value_node)
-				existing_value_node.addEventListener("mouseup", function(e) {
+				existing_value_node.addEventListener("mouseup", async function(e) {
 					e.stopPropagation()
 					// remove all selected node classes
 					for (let i = ar_existing_value_node.length - 1; i >= 0; i--) {
@@ -218,6 +221,20 @@ export const render_reference = async function(options) {
 						selected_tag.reuse = true
 						selected_tag.fallback_value = existing_value_node.data.fallback_value.join(' | ')
 					}
+					// temporal portal. Show the reused term (or the original value on deselect) for clarity
+					const reused_locator = clone(existing_value_node.data)
+					delete reused_locator.fallback_value
+					const temp_value = existing_value_node.activated
+						? [reused_locator]
+						: (locator || null)
+					await reference_component.change_value({
+						changed_data	: [Object.freeze({
+							action	: 'set_data',
+							value	: temp_value
+						})],
+						refresh			: true,
+						build_autoload	: true
+					})
 				})
 			}
 
@@ -244,19 +261,15 @@ export const render_reference = async function(options) {
 				// if yes, delete the note section in the server
 				if(window.confirm(delete_label)) {
 
-					if(locator.length > 0){
-
-						// if the locator is not empty, remove it of the component.
-						component_tags_reference.unlink_record({
-							paginated_key	: locator[0].paginated_key,
-							row_key			: null,
-							section_id		: locator[0].section_id
-						});
-						// refresh the component of the tags to get the real data
-						// component_tags_reference.reset_filter_data()
-					}
 					// remove the reference attribute of the text selected in the component_text_area
 						text_editor.remove_reference()
+
+					// remove all locators of the tag from the component (don't wait)
+					// only when the tag is not used in other text fragments (reused tag)
+					// (!) always removed in server because the client data could be paginated or filtered by other tag
+						if (!is_tag_used(text_editor, view_tag.tag_id)) {
+							remove_tag_locators(component_tags_reference, view_tag.tag_id)
+						}
 
 					// text_area. Prepare the text_editor to save setting it in dirty mode and save the change
 						text_editor.set_dirty(true)
@@ -274,21 +287,36 @@ export const render_reference = async function(options) {
 				text_content	: get_label.apply || 'Apply',
 				parent			: footer
 			})
-			button_apply.addEventListener('mouseup',function(e) {
+			button_apply.addEventListener('mouseup', async function(e) {
+
+				// reuse check. The user could change the temporal portal value after select a reuse tag
+				// in this case, the reuse is discarded and the temporal portal value is used as new tag value
+				if (selected_tag.reuse===true) {
+					const temp_value	= reference_component.data.value || []
+					const reused_data	= existing_values.find(el => el.tag_id===selected_tag.tag_id)
+					const is_reused		= reused_data && temp_value.length===1
+						&& temp_value[0].section_tipo===reused_data.section_tipo
+						&& temp_value[0].section_id==reused_data.section_id
+					if (!is_reused) {
+						selected_tag.tag_id	= view_tag.tag_id
+						selected_tag.reuse	= false
+					}
+				}
 
 				// save the locator when is a new tag_id
 				// if a reuse is active, the locator already exist into the portal
 				if(selected_tag.reuse === false){
 
-					const locator = reference_component.data.value
+					const temp_value = reference_component.data.value
 
-					if(!locator || locator.length === 0){
+					if(!temp_value || temp_value.length === 0){
 						button_remove.click()
 						return
 					}
 
 					// set the tag_id and tag_type into the locator to be saved
-					const new_locator = locator[0]
+					// (cloned to preserve the temporal portal value on errors)
+					const new_locator = clone(temp_value[0])
 						new_locator.tag_id = view_tag.tag_id
 						new_locator.tag_type = 'reference'
 
@@ -296,7 +324,33 @@ export const render_reference = async function(options) {
 					// see the ontology node properties
 					delete new_locator.type
 
-					component_tags_reference.add_value(new_locator);
+					// unchanged. The tag already has this unique locator
+					const unchanged = locator && locator.length===1
+						&& locator[0].section_tipo===new_locator.section_tipo
+						&& locator[0].section_id==new_locator.section_id
+					if (!unchanged) {
+						// replace previous tag locators (only one locator is allowed by tag)
+						// (!) always removed in server because the client data could be paginated or filtered by other tag
+						const removed = await remove_tag_locators(component_tags_reference, view_tag.tag_id)
+						const added = removed
+							? await component_tags_reference.add_value(new_locator)
+							: false
+						if (!added) {
+							// restore previous tag locators (best effort, only the loaded ones are available)
+							// to prevent to leave the current tag without locator if the user closes the modal
+							if (removed && locator && locator.length > 0) {
+								for (const old_locator of locator) {
+									const restore_locator = clone(old_locator)
+									delete restore_locator.paginated_key
+									await component_tags_reference.add_value(restore_locator)
+								}
+							}
+							// prevent to create a tag without locator. Modal stays open to allow retry
+							console.error('Error adding reference locator:', new_locator);
+							alert(get_label.error_on_save || 'Error on save the reference. Please try again');
+							return
+						}
+					}
 
 					// get the data from the new locator
 					const locator_data = new_locator
@@ -320,7 +374,10 @@ export const render_reference = async function(options) {
 
 				const reference_tag = {
 					type	: tag_type,
-					label	: selected_tag.label,
+					// reuse case. Label is set as the reused tag to keep tag_id and label coherent
+					label	: selected_tag.reuse===true
+						? 'reference ' + selected_tag.tag_id
+						: selected_tag.label,
 					tag_id	: selected_tag.tag_id,
 					state	: selected_tag.state,
 					data	: selected_tag.tag_id
@@ -332,6 +389,13 @@ export const render_reference = async function(options) {
 				}
 
 				text_editor.set_reference(reference_obj)
+
+				// reuse case. Remove the original tag locators to prevent orphan values
+				// only when the original tag is not used in other text fragments (reused tag)
+				// (!) always removed in server because the client data could be paginated or filtered by other tag
+					if (selected_tag.tag_id!==view_tag.tag_id && !is_tag_used(text_editor, view_tag.tag_id)) {
+						await remove_tag_locators(component_tags_reference, view_tag.tag_id)
+					}
 
 				// text_area. Prepare the text_editor to save setting it in dirty mode and save the change
 					text_editor.set_dirty(true)
@@ -375,6 +439,72 @@ export const render_reference = async function(options) {
 
 	return true
 }//end render_note
+
+
+
+/**
+* IS_TAG_USED
+* Checks if any text fragment of the editor has a reference tag with given tag_id
+* (a tag could be used by several fragments when it is reused)
+* (!) Only the current editor (lang and value key) is checked. Other langs of the text
+* could use the same tag_id because the tags component is not translatable (nolan)
+* @param object text_editor
+* @param string tag_id
+* @return bool
+*/
+const is_tag_used = function(text_editor, tag_id) {
+
+	const model	= text_editor.editor.model
+	const range	= model.createRangeIn( model.document.getRoot() )
+
+	for (const value of range.getWalker({ ignoreElementEnd: true })) {
+		const reference = value.item.getAttribute('reference')
+		if (reference && reference.tag_id==tag_id) {
+			return true
+		}
+	}
+
+	return false
+}//end is_tag_used
+
+
+
+/**
+* REMOVE_TAG_LOCATORS
+* Removes all reference locators of given tag_id from the tags component (saved in server)
+* and refresh the component to sync the client data
+* @param object component_tags_reference
+* @param string tag_id
+* @return bool
+*/
+const remove_tag_locators = async function(component_tags_reference, tag_id) {
+
+	// delete_locator. Removes all locators matching tag_id and tag_type
+		const api_response = await component_tags_reference.delete_locator(
+			{
+				tag_id		: tag_id,
+				tag_type	: 'reference'
+			},
+			['tag_id','tag_type']
+		)
+		if (!api_response || api_response.result===false) {
+			console.error('Error on remove tag locators:', api_response);
+			return false
+		}
+
+	// refresh to get the real data
+		await component_tags_reference.refresh({
+			build_autoload : true
+		})
+
+	// check if the component has active a tag_id filter
+		if(component_tags_reference.active_tag){
+			await component_tags_reference.filter_data_by_tag_id(component_tags_reference.active_tag)
+		}
+
+
+	return true
+}//end remove_tag_locators
 
 
 

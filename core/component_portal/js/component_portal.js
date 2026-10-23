@@ -713,7 +713,8 @@ component_portal.prototype.add_value = async function(value) {
 		}
 
 	// exists. Check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
-		const exists = current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id)
+		// tag_id is compared too (as server does in 'get_locator_properties_to_check'), because the same locator can be linked to different tags
+		const exists = current_value.find(item => item.section_tipo===value.section_tipo && item.section_id==value.section_id && item.tag_id==value.tag_id)
 		if (typeof exists!=='undefined') {
 			console.log('[add_value] Value already exists (1) !');
 			if(SHOW_DEBUG===true) {

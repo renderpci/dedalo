@@ -518,6 +518,42 @@ final class search_joins_execution_test extends TestCase {
 
 
 
+	/**
+	* TEST_FILTER_BY_LOCATORS_WITH_JOINED_ORDER
+	* filter_by_locators + order by a portal path (session order kept on navigate to a new
+	* record). The order column alias and its joins must be resolved inside the locators
+	* sub-select (was: 'column "test52_order" does not exist' -> 'Record not found'), and the
+	* multi-value portal join must not duplicate records.
+	* @return void
+	*/
+	public function test_filter_by_locators_with_joined_order() : void {
+
+		$sqo = json_decode(json_encode([
+			'section_tipo'			=> [self::$section_tipo],
+			'filter_by_locators'	=> [
+				['section_tipo' => self::$section_tipo, 'section_id' => (string)self::$id_p1],
+				['section_tipo' => self::$section_tipo, 'section_id' => (string)self::$id_p3]
+			],
+			'order'					=> [[
+				'direction'			=> 'DESC',
+				'path'				=> self::operand('', self::$tipo_string, 'component_input_text')['path'],
+				'component_path'	=> ['components', self::$tipo_string, 'dato', 'lg-nolan'],
+				'type'				=> 'string'
+			]],
+			'limit'					=> 10,
+			'offset'				=> 0,
+			'full_count'			=> false
+		]));
+
+		$this->assertSame(
+			[self::$id_p1, self::$id_p3],
+			$this->run_search($sqo),
+			'expected each located record exactly once'
+		);
+	}//end test_filter_by_locators_with_joined_order
+
+
+
 	/////////// ⬇︎ helpers ⬇︎ ////////////////
 
 

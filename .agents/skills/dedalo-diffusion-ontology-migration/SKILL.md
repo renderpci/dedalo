@@ -1,5 +1,5 @@
 ---
-name: diffusion_ontology_migration
+name: dedalo-diffusion-ontology-migration
 description: Guidelines and scripts for migrating Dédalo Diffusion Ontology properties from legacy v6 format (process_dato) to the new v7 parser-based structure.
 ---
 
@@ -47,11 +47,10 @@ The migration transforms legacy properties like `process_dato`, `data_to_be_used
 
 ## Scripts
 
-> **v6 note**: in this repo the scripts live under the v7 preparation engine: `core/area_maintenance/widgets/close_v6_prepare_v7/engine/diffusion/migration/`.
+Base dir (v6): `core/area_maintenance/widgets/close_v6_prepare_v7/engine/diffusion/migration/`.
 
-1.  **Migration**: `core/diffusion/migration/migrate_diffusion_properties.php`
+1.  **Migration**: `migrate_diffusion_properties.php`
     -   Reads `diffusion_ontology_migration.json` for explicit rules.
     -   Applies generic logic for `data_to_be_used: "dato"` and `process_dato: "resolve_value"`.
 
-2.  **Verification**: `core/diffusion/migration/verify_migration.php`
-    -   Verifies that the database matches the "to" state defined in the JSON file for specific nodes.
+2.  **Verification**: no dedicated script; see `PARITY_RUNBOOK.md` in the same dir.

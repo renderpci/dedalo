@@ -62,6 +62,8 @@ export const render_draw = async function(options) {
 		const locator = (ar_tags_values)
 			? ar_tags_values.filter(el => el.tag_id === view_tag.tag_id && el.tag_type === 'draw')
 			: null
+		// alias used in apply (locator name is shadowed there)
+		const current_tag_locators = locator
 
 		const existing_values = []
 		for (let i = all_tag_data.length - 1; i >= 0; i--) {
@@ -305,7 +307,7 @@ export const render_draw = async function(options) {
 				text_content	: get_label.apply || 'Apply',
 				parent			: footer
 			})
-			button_apply.addEventListener('mouseup',function(evt) {
+			button_apply.addEventListener('mouseup', async function(evt) {
 
 				// save the locator when is a new tag_id
 				// if a reuse is active, the locator already exist into the portal
@@ -319,7 +321,8 @@ export const render_draw = async function(options) {
 				}
 
 				// set the tag_id and tag_type into the locator to be saved
-				const new_locator = locator[0]
+				// (cloned to preserve the source value on errors)
+				const new_locator = clone(locator[0])
 					new_locator.tag_id = view_tag.tag_id
 					new_locator.tag_type = 'draw'
 
@@ -327,7 +330,19 @@ export const render_draw = async function(options) {
 				// see the ontology node properties
 				delete new_locator.type
 
-				component_tags_draw.add_value(new_locator);
+				// unchanged. The tag already has this locator (add_value would reject it as duplicate)
+				const unchanged = current_tag_locators && current_tag_locators.some(el =>
+					el.section_tipo===new_locator.section_tipo && el.section_id==new_locator.section_id
+				)
+				if (!unchanged) {
+					const added = await component_tags_draw.add_value(new_locator)
+					if (!added) {
+						// prevent to create a tag without locator. Modal stays open to allow retry
+						console.error('Error adding draw locator:', new_locator);
+						alert(get_label.error_on_save || 'Error on save the draw. Please try again');
+						return
+					}
+				}
 
 				// remove the modal
 					modal.remove()
