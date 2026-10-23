@@ -1224,6 +1224,18 @@ reset), and refuses — before anything is touched:
   still working on it (this install's own leftover seed restore excepted: it is
   ended, see [Resuming an install](#resuming-an-install-resume)).
 
+The database reset ends every other session still connected to **that
+database** first — a server left running, an open `psql`, a monitoring tool —
+because one of them holding a table would deadlock the reset or keep it waiting.
+It never touches sessions on other databases, nor the session holding the
+install lock (the abort's own). The reset is one transaction; when the server
+still picks it as a deadlock victim, or a lock wait passes 30 seconds, it is
+rolled back and run again, up to four times, and then refused with the reason
+(`Database reset failed (rolled back; SQLSTATE …)` —
+[Troubleshooting](troubleshooting.md)). A session the installer's database
+role is not allowed to end (another role's, a superuser's) is named in that
+line.
+
 Backups of `.env` that existed before the install (`.env.bak.*`) are never
 removed — only the ones that appeared since the install started.
 

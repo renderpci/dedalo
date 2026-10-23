@@ -276,6 +276,8 @@ Any failure after the install recorded its plan prints how to continue:
 | `user <u> KEPT: it still owns <path> (a removed uid would be reused by the next account) — remove what remains, then remove the user (userdel <u>)` | an abort removed what the install created, but files of the service user remain (yours, or a backup) | remove them if you no longer need them, then `userdel <u>` |
 | `--abort resets and drops the database <db> this install set up: confirm with --confirm-database <db> — nothing was undone` | the abort would touch the database | repeat it with `--confirm-database <db>` once you are sure |
 | `database '<db>' is not stamped by this install … — refusing to reset it` | the database was not seeded by this install | nothing to reset; it is not this install's |
+| `Database reset failed (rolled back; SQLSTATE <code>, <n> attempts) …` | the abort's reset of the database failed and was rolled back — nothing was dropped. Before each attempt the abort ends every other session on that database (and only that one); `40P01` (deadlock) and `55P03` (lock timeout) are tried again, up to four times. A line `(sessions it may not end: …)` names sessions the installer's database role is not allowed to end (another role's, a superuser's) | end those sessions, or stop what keeps connecting to the database, as its owner or a superuser (`SELECT pg_terminate_backend(<pid>)`), then repeat the `--abort` |
+| `the session(s) ended on '<db>' before the reset did not go within 15 s …` | a session the abort ended was still on the server 15 s later — nothing was reset | look the pid up in `pg_stat_activity`, end it as a superuser, then repeat the `--abort` |
 
 What an abort takes depends on whether the instance has **served**:
 
