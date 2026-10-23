@@ -1212,7 +1212,7 @@ vector_editor.prototype.set_color_picker = function() {
 *   layer that SvgCanvas creates automatically, renamed to 'layer_0'.
 *   Subsequent layers are created via drawing.createLayer(). For each layer,
 *   every element in layer_data[] is re-added via stage.addSVGElementsFromJson().
-*   When a layer_id 0 element is an 'image', its xlink:href is captured back
+*   When a layer_id 0 element is an 'image', its href is captured back
 *   into image_definition so the save process records the correct URL.
 *
 * B) Empty data (lib_data is falsy — first-time use):
@@ -1267,7 +1267,10 @@ vector_editor.prototype.load_data = function(self) {
 				const element = stage.addSVGElementsFromJson(layer_data)
 
 				if(current_layer.layer_id === 0 && layer_data.element=== 'image'){
-					image_definition.src		= element.getAttribute('xlink:href')
+					// SVG-Edit 7 exports the link as SVG2 `href`; only legacy data carries
+					// xlink:href. Reading xlink alone left src null, and the save handler
+					// then "restored" that null into the raster (href="null").
+					image_definition.src		= element.getAttribute('href') || element.getAttribute('xlink:href')
 					image_definition.image_node	= element
 				}
 			}

@@ -272,6 +272,13 @@ Merged since the last release; these ship with the next one.
     regenerated: one **Regenerate files** click in the media versions tool clears it,
     and the record then shows the normal empty placeholder.
 
+- **Saving a drawing in the image vector editor keeps the image visible**
+
+    Clicking save in the image vector editor no longer replaces the picture with a
+    broken-image placeholder. The drawing was saved correctly all along; only the
+    editor's live view lost the image until the record was reloaded. Switching the
+    image quality now also keeps working on images that carry a vector drawing.
+
 - **Remove background works again in the image rotation tool.**
 
     **Remove background** failed every time, with a bare `Worker error` in the panel and

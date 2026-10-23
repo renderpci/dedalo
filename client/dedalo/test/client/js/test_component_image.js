@@ -461,4 +461,48 @@ describe(`COMPONENT_IMAGE SEARCH DATA OPERATIONS`, function() {
 });
 
 
+describe(`COMPONENT_IMAGE VECTOR EDITOR`, function() {
+
+	this.timeout(10000);
+
+
+
+	it(`load_data reads the SVG2 href of the raster (SVG-Edit 7 export)`, async function() {
+
+		// lazy import: the svgcanvas bundle is heavy and only needed here
+		const {vector_editor} = await import('../../../core/component_image/js/vector_editor.js')
+
+		const href = '/dedalo/media/image/1.5MB/0/rsc29_rsc170_1.jpg'
+
+		// an editor export links the raster with SVG2 href (no xmlns:xlink)
+		const image_node = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+		image_node.setAttribute('href', href)
+
+		const editor = new vector_editor()
+		editor.image_definition = {}
+		editor.stage = {
+			getCurrentDrawing : () => ({
+				createLayer			: () => ({}),
+				getCurrentLayer		: () => ({})
+			}),
+			renameCurrentLayer		: () => {},
+			addSVGElementsFromJson	: () => image_node
+		}
+
+		editor.load_data({
+			ar_layers		: [],
+			get_lib_data	: () => ([{
+				layer_id	: 0,
+				name		: 'layer_0',
+				layer_data	: [{ element: 'image', attr: { href } }]
+			}])
+		})
+
+		// src null here made the save handler "restore" it as href="null"
+		assert.equal(editor.image_definition.src, href, 'image_definition.src expected the raster href')
+	})
+})
+
+
+
 // @license-end

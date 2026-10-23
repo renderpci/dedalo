@@ -578,7 +578,7 @@ component_image.prototype.get_active_extensions = function() {
 * Two code paths based on component state:
 *   1. Vector editor active (self.vector_editor is set): updates the image via
 *      the vector editor's stage.setHref() so the drawing canvas stays in sync.
-*   2. SVG <object> node (default edit view): directly updates the xlink:href
+*   2. SVG <object> node (default edit view): directly updates the href/xlink:href
 *      attribute on the <image> element inside the SVG document embedded in the
 *      object_node, with a cache-busting timestamp appended as a query parameter.
 *      A 'loading' CSS class is toggled on the parent content_value element
@@ -593,6 +593,12 @@ component_image.prototype.get_active_extensions = function() {
 component_image.prototype.image_quality_change_handler = async function(url) {
 
 	const self = this
+
+	// A falsy URL must never reach the SVG: setHref(x, null) writes href="null"
+	// and the raster disappears until the component is reloaded.
+	if (!url) {
+		return
+	}
 
 	// store the current image source
 		self.img_src = url
@@ -644,8 +650,12 @@ component_image.prototype.image_quality_change_handler = async function(url) {
 			// new_url with cache-busting timestamp
 				const new_url = beats[0] + '?t=' + (new Date()).getTime()
 
-			// set the new source to the image node into the svg
+			// set the new source to the image node into the svg.
+			// Write BOTH: the vector editor's export uses SVG2 `href`, which wins
+			// over xlink:href wherever both exist (xlink alone then does nothing).
+			// xlink is kept for the default envelope and older browsers.
 				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', new_url)
+				image_node.setAttribute('href', new_url)
 		}
 }//end image_quality_change_handler
 
