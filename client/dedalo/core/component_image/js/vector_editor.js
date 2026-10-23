@@ -52,8 +52,18 @@ export const vector_editor = function() {
 	this.active_opacity			= 0.3
 	this.button_color_picker	= null
 	this.selected_element		= null
+	// Descriptors of layers removed by an undoable action, keyed by layer name.
+	// Undo restores the DOM layer; this restores its data descriptor with it.
+	this._layer_snapshots		= new Map()
+	// The owning component_image instance (set in init_canvas).
+	this.component				= null
+	// true while undo/redo is applying a command (skip history compaction)
+	this._history_applying		= false
 	this.shortcuts = [
 		// Shortcuts not associated with buttons
+		{ key: ['meta+z/ctrl+z', true], fn: () => { this.undo() } },
+		{ key: ['shift+meta+z/shift+ctrl+z', true], fn: () => { this.redo() } },
+		{ key: ['ctrl+y', true], fn: () => { this.redo() } },
 		{ key: 'tab', fn: () => { this.stage.cycleElement(0) } },
 		{ key: 'shift+tab', fn: () => { this.stage.cycleElement(1) } },
 		{
@@ -119,6 +129,9 @@ export const vector_editor = function() {
 * @returns {Promise<boolean>} Resolves true when the stage is fully ready.
 */
 vector_editor.prototype.init_canvas = async function(self) {
+
+	// owning component: undo/redo must reconcile its ar_layers with the drawing
+		this.component				= self
 
 	// init with the DOM image_container (work_area)
 	// get his size
@@ -262,6 +275,14 @@ vector_editor.prototype.init_canvas = async function(self) {
 
 	// load data
 		this.load_data(self)
+
+	// hydration is NOT user history: load_data renames the default layer to
+	// layer_0 through the history-recording stage wrapper, and undoing that
+	// rename would turn the raster layer into 'Layer 1' and break save_data.
+		this.stage.undoMgr.resetUndoStack()
+	// drop the transient opacity changes the library records before inserting a
+	// new shape, so one draw is one undo
+		this.stage.bind('changed', this.compact_history.bind(this))
 
 	// update canvas to fit it into the space
 		this.update_canvas();
@@ -417,9 +438,10 @@ vector_editor.prototype.element_transition = function(win, elems) {
 * Key format normalisation: modifier prefix order is
 *   alt+ → shift+ → meta+ → ctrl+ → lowercase key name.
 * Text fields (INPUT, TEXTAREA, contentEditable) are never intercepted; keys
-* from other page controls are ignored except Delete/Backspace, which delete the
-* selected element, so the quality selector (or any other control) cannot make
-* Delete silently do nothing.
+* from other page controls are ignored except Delete/Backspace and undo/redo,
+* which act on the canvas, so the quality selector (or any other control) cannot
+* make Delete silently do nothing. Undo is Cmd+Z / Ctrl+Z; redo is
+* Shift+Cmd+Z / Ctrl+Shift+Z, plus Ctrl+Y on Windows.
 *
 * Shortcut entries support a two-element array form:
 *   [keyString, preventDefault] e.g. ['delete/backspace', true]
@@ -480,11 +502,13 @@ vector_editor.prototype.keyboard_shortcuts = function() {
 		if (!key_handler[key]) return
 		// non-destructive shortcuts (tab, a, paste…) only from the page surface:
 		// they must not hijack navigation while focus sits on a page control.
-		// Delete is allowed from any non-editable target: after using the image
-		// quality <select> (or any other control) focus stays there, and the user
-		// still expects Delete to remove the selected element.
+		// Delete and undo/redo are allowed from any non-editable target: after
+		// using the image quality <select> (or any other control) focus stays
+		// there, and the user still expects Delete/undo to act on the canvas.
 		const is_delete = key==='delete' || key==='backspace'
-		if (tag_name!=='BODY' && !is_delete) return
+		const is_history = key==='meta+z' || key==='ctrl+z'
+			|| key==='shift+meta+z' || key==='shift+ctrl+z' || key==='ctrl+y'
+		if (tag_name!=='BODY' && !is_delete && !is_history) return
 		// launch associated handler and preventDefault if necessary
 
 		key_handler[key].fn()
@@ -873,6 +897,8 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					class_name		: 'layer_selector_container',
 					parent			: buttons_container
 				})
+				// undo/redo re-renders this panel when the layer set changes
+				this.layer_selector_container = layer_selector_container
 
 			// layer selector
 				const layer_selector_button = ui.create_dom_element({
@@ -1400,9 +1426,12 @@ vector_editor.prototype.get_last_layer_id = function(self) {
 * Creates a new vector layer, registers it in the SvgCanvas drawing, and
 * appends it to self.ar_layers.
 *
-* Assigns the next sequential layer_id (get_last_layer_id() + 1) and
-* generates a random hex colour string for use as the default drawing colour
-* of shapes on this layer. The new layer is immediately set as active_layer.
+* Assigns the next sequential layer_id (get_last_layer_id() + 1, skipping ids
+* kept in an undo snapshot) and generates a random hex colour string for use as
+* the default drawing colour of shapes on this layer. The new layer is
+* immediately set as active_layer. It is created through `stage.createLayer()`
+* (not `drawing.createLayer()`), so the creation is recorded in the canvas undo
+* history; `sync_layer_descriptors()` keeps its data descriptor aligned.
 *
 * The colour is generated with Math.random() and padded to 6 hex digits —
 * this can occasionally produce very light or low-contrast colours; no
@@ -1420,14 +1449,19 @@ vector_editor.prototype.add_layer = function(self) {
 	const stage				= this.stage
 	const drawing			= stage.getCurrentDrawing()
 
-	// deselection any other selected
-	stage.clearSelection()
-
-	// set the layer data
+	// set the layer data. Skip ids kept in an undo snapshot: restoring a deleted
+	// layer must not collide with a layer added after the delete.
 		const last_layer_id	= this.get_last_layer_id(self)
-		const layer_id		= last_layer_id + 1
+		const reserved_ids	= new Set(
+			[...this._layer_snapshots.keys()]
+				.map(name => Number.parseInt(name.replace('layer_', ''), 10))
+				.filter(Number.isFinite)
+		)
+		let layer_id		= last_layer_id + 1
+		while (reserved_ids.has(layer_id)) {
+			layer_id++
+		}
 
-		// const new_layer	= self.ar_layers.find((item) => item.layer_id===layer_id)
 		const layer_name	= 'layer_' + layer_id
 
 	// create a new layer color for selectors and handlers
@@ -1443,12 +1477,19 @@ vector_editor.prototype.add_layer = function(self) {
 			name 			: layer_name,
 			visible 		: true
 		}
-		const created_layer = drawing.createLayer(layer_name)
-
-		created_layer.id = layer_name
+		// the STAGE wrapper (not drawing.createLayer) records a Create Layer
+		// command, so the layer add is undoable. It clears the selection itself.
+		stage.createLayer(layer_name)
+		const created_layer = drawing.getCurrentLayer()
+		if (created_layer) {
+			created_layer.id = layer_name
+		}
 
 		self.ar_layers.push(new_layer)
 		this.active_layer = new_layer
+		if (self.id) {
+			event_manager.publish('active_layer_'+self.id, new_layer)
+		}
 
 	return new_layer
 }//end add_layer
@@ -1621,7 +1662,9 @@ vector_editor.prototype.reset_raster = function(layer) {
 *
 * The data removal is spliced IN PLACE: self.ar_layers is the array persisted
 * as data.entries[0].lib_data, so replacing it with a filtered copy left the
-* deleted layer in the data and a later load_data resurrected it.
+* deleted layer in the data and a later load_data resurrected it. The descriptor
+* is also kept in `_layer_snapshots`: the SvgCanvas delete is undoable, and undo
+* restores the DOM layer while `sync_layer_descriptors()` restores this half.
 *
 * SvgCanvas' identifyLayers() makes the TOPMOST remaining layer current, not a
 * neighbour of the deleted one. The previously active layer is kept when it
@@ -1644,7 +1687,12 @@ vector_editor.prototype.remove_layer = function(self, layer) {
 	}
 	const previous_active = this.active_layer
 	// remove the layer in svgcanvas project
-	stage.deleteCurrentLayer()
+	if (stage.deleteCurrentLayer()===false) {
+		return false
+	}
+	// the DOM layer is in the undo history; keep its descriptor so undo can
+	// restore both halves (see sync_layer_descriptors)
+	this._layer_snapshots.set(layer.name, { ...layer })
 
 	// remove the data in place (see docblock)
 	const layer_index = self.ar_layers.findIndex(item => item.layer_id===layer.layer_id)
@@ -1668,6 +1716,290 @@ vector_editor.prototype.remove_layer = function(self, layer) {
 
 	return true
 }//end remove_layer
+
+
+
+/**
+* COMPACT_HISTORY
+* Drops the transient commands SvgCanvas records around a NEW shape: drawing a
+* rectangle/ellipse records two opacity changes on the element before it records
+* its InsertElementCommand, so a single draw would otherwise need three undos.
+*
+* Only commands BEFORE the insert that target the inserted element are dropped:
+* the element did not exist when they were recorded, so they are setup, not
+* user history. Later changes/moves of the same element stay undoable.
+*
+* Runs from the stage 'changed' event, never while undo/redo is applying (the
+* pointer would no longer be at the end and the redo stack would be corrupted).
+*
+* @returns {void}
+*/
+vector_editor.prototype.compact_history = function() {
+
+	const undoMgr = this.stage?.undoMgr
+	if (!undoMgr || this._history_applying) {
+		return
+	}
+	const stack = undoMgr.undoStack
+	// only a fresh command: after an undo the pointer sits inside the stack
+	if (!Array.isArray(stack) || undoMgr.undoStackPointer !== stack.length) {
+		return
+	}
+	const InsertElementCommand = this.stage.history?.InsertElementCommand
+	if (!InsertElementCommand) {
+		return
+	}
+
+	let removed = false
+	for (let i = stack.length - 1; i >= 0; i--) {
+		const command = stack[i]
+		if (!(command instanceof InsertElementCommand)) {
+			continue
+		}
+		const element = command.elem
+		let from = i
+		while (from > 0 && this.command_targets_element(stack[from-1], element)) {
+			from--
+		}
+		if (from < i) {
+			stack.splice(from, i-from)
+			removed = true
+			i = from // the insert moved down by the removed commands
+		}
+	}
+	if (removed) {
+		undoMgr.undoStackPointer = stack.length
+	}
+}//end compact_history
+
+
+
+/**
+* COMMAND_TARGETS_ELEMENT
+* Whether a history command only touches `element` (a BatchCommand counts when
+* every sub-command targets it). Insert/Remove commands are never treated as
+* setup: they are the element's own history.
+*
+* @param {Object} command - A SvgCanvas history command.
+* @param {Element} element - The inserted SVG element.
+* @returns {boolean}
+*/
+vector_editor.prototype.command_targets_element = function(command, element) {
+
+	const history = this.stage?.history
+	if (!history) {
+		return false
+	}
+	const { BatchCommand, InsertElementCommand, RemoveElementCommand } = history
+	if (command instanceof InsertElementCommand || command instanceof RemoveElementCommand) {
+		return false
+	}
+	if (command instanceof BatchCommand) {
+		return command.stack.length > 0
+			&& command.stack.every(sub_command => this.command_targets_element(sub_command, element))
+	}
+	return typeof command.elements === 'function' && command.elements().includes(element)
+}//end command_targets_element
+
+
+
+/**
+* UNDO
+* Reverts the last SvgCanvas history command (draw, move, resize, delete,
+* colour change, layer add/delete) and re-aligns the editor's layer data.
+*
+* The SvgCanvas UndoManager is per stage and starts empty: loading saved layers
+* is not a history entry, so undo can never reach the pre-open state.
+*
+* @returns {boolean} true when a command was undone.
+*/
+vector_editor.prototype.undo = function() {
+
+	const undoMgr = this.stage?.undoMgr
+	if (!undoMgr || undoMgr.getUndoStackSize() === 0) {
+		return false
+	}
+	this._history_applying = true
+	try {
+		undoMgr.undo()
+	} finally {
+		this._history_applying = false
+	}
+	this.after_history_change()
+
+	return true
+}//end undo
+
+
+
+/**
+* REDO
+* Re-applies the last undone command and re-aligns the layer data.
+*
+* @returns {boolean} true when a command was redone.
+*/
+vector_editor.prototype.redo = function() {
+
+	const undoMgr = this.stage?.undoMgr
+	if (!undoMgr || undoMgr.getRedoStackSize() === 0) {
+		return false
+	}
+	this._history_applying = true
+	try {
+		undoMgr.redo()
+	} finally {
+		this._history_applying = false
+	}
+	this.after_history_change()
+
+	return true
+}//end redo
+
+
+
+/**
+* AFTER_HISTORY_CHANGE
+* Post-undo/redo reconciliation. The canvas history knows nothing about
+* `ar_layers`, so a layer add/delete undone by the library must have its
+* descriptor restored or removed here, or save_data would persist a different
+* layer set than the one on screen.
+*
+* @returns {boolean} true when the layer set changed.
+*/
+vector_editor.prototype.after_history_change = function() {
+
+	const self = this.component
+	if (!self) {
+		return false
+	}
+
+	return this.sync_layer_descriptors(self)
+}//end after_history_change
+
+
+
+/**
+* SYNC_LAYER_DESCRIPTORS
+* Makes self.ar_layers match the layers SvgCanvas currently holds.
+*
+* History moves layers in and out of the drawing:
+*   - undo of a layer delete / redo of a layer add: the DOM layer is back but
+*     the descriptor is gone → restore the snapshot (or derive one).
+*   - undo of a layer add / redo of a layer delete: the DOM layer is gone but
+*     the descriptor is still there → snapshot it and splice it out.
+*
+* The data splice is IN PLACE: self.ar_layers is the array persisted as
+* data.entries[0].lib_data.
+*
+* The active layer is kept when it survives; otherwise the editor follows the
+* layer SvgCanvas left current and falls back to the raster.
+*
+* @param {Object} self - The owning component_image instance (ar_layers, id).
+* @returns {boolean} true when a layer descriptor was added or removed.
+*/
+vector_editor.prototype.sync_layer_descriptors = function(self) {
+
+	const stage = this.stage
+	if (!stage || !Array.isArray(self.ar_layers)) {
+		return false
+	}
+
+	const drawing			= stage.getCurrentDrawing()
+	// The library's history handler only calls identifyLayers() for direct
+	// Insert/RemoveElementCommand types; a layer add/delete is a BatchCommand, so
+	// the layer list can be stale. Rebuild it from the DOM before comparing.
+	drawing.identifyLayers()
+	const drawing_layers	= drawing.all_layers
+	const drawing_names		= new Set(drawing_layers.map(layer => layer.getName()))
+	let changed				= false
+
+	// layers present in the drawing but missing from the data (restored by undo)
+	for (const layer of drawing_layers) {
+		const name = layer.getName()
+		if (self.ar_layers.some(item => item.name===name)) {
+			continue
+		}
+		const snapshot = this._layer_snapshots.get(name)
+		if (snapshot) {
+			self.ar_layers.push(snapshot)
+		}else{
+			// a layer the editor did not create (legacy/foreign): derive a descriptor
+			const parsed_id = Number.parseInt(name.replace('layer_', ''), 10)
+			self.ar_layers.push({
+				layer_id		: Number.isFinite(parsed_id) ? parsed_id : self.ar_layers.length,
+				layer_data		: null,
+				layer_color		: '#ffffff',
+				layer_opacity	: 0.3,
+				user_layer_name	: name,
+				name			: name,
+				visible			: true
+			})
+		}
+		changed = true
+	}
+
+	// data descriptors whose layer left the drawing (removed by redo/undo)
+	for (let i = self.ar_layers.length - 1; i >= 0; i--) {
+		const item = self.ar_layers[i]
+		if (drawing_names.has(item.name)) {
+			continue
+		}
+		this._layer_snapshots.set(item.name, { ...item })
+		self.ar_layers.splice(i, 1)
+		changed = true
+	}
+
+	// active layer. Keep it when it survived; otherwise follow the drawing.
+	const previous_active = this.active_layer
+	let active_layer = self.ar_layers.find(item => item.layer_id===previous_active?.layer_id)
+	if (!active_layer) {
+		const current_name = drawing.getCurrentLayerName()
+		active_layer = self.ar_layers.find(item => item.name===current_name)
+			|| self.ar_layers[0]
+			|| null
+		if (active_layer) {
+			this.active_layer = active_layer
+			drawing.setCurrentLayer(active_layer.name)
+			if (self.id) {
+				event_manager.publish('active_layer_'+self.id, active_layer)
+			}
+		}
+	}else if (drawing.getCurrentLayerName() !== active_layer.name) {
+		// the history handler may have left another layer current
+		drawing.setCurrentLayer(active_layer.name)
+	}
+
+	if (changed) {
+		this.refresh_layer_selector(self)
+	}
+
+	return changed
+}//end sync_layer_descriptors
+
+
+
+/**
+* REFRESH_LAYER_SELECTOR
+* Re-renders the floating layer panel when it is open, so a layer restored or
+* removed by undo/redo appears/disappears from the list immediately.
+*
+* @param {Object} self - The owning component_image instance.
+* @returns {void}
+*/
+vector_editor.prototype.refresh_layer_selector = function(self) {
+
+	const container = this.layer_selector_container
+	if (!container || !container.querySelector('.layer_selector')) {
+		return
+	}
+	while (container.firstChild) {
+		container.removeChild(container.firstChild)
+	}
+	const layer_selector = this.render_layer_selector(self, this.active_layer)
+	if (layer_selector) {
+		container.appendChild(layer_selector)
+	}
+}//end refresh_layer_selector
 
 
 

@@ -640,7 +640,7 @@ describe(`COMPONENT_IMAGE VECTOR EDITOR`, function() {
 		editor.active_layer = ar_layers[2]
 		editor.stage = {
 			getCurrentDrawing	: () => drawing,
-			deleteCurrentLayer	: () => { calls.deleted++ }
+			deleteCurrentLayer	: () => { calls.deleted++; return true }
 		}
 
 		const published = []
@@ -658,6 +658,7 @@ describe(`COMPONENT_IMAGE VECTOR EDITOR`, function() {
 		assert.equal(editor.active_layer, ar_layers[1], 'surviving active layer expected kept')
 		assert.equal(calls.current[calls.current.length-1], 'layer_2', 'drawing expected on the active layer')
 		assert.equal(published[published.length-1], ar_layers[1], 'active layer expected published')
+		assert.equal(editor._layer_snapshots.get('layer_1')?.layer_id, 1, 'removed layer expected snapshotted for undo')
 
 		// delete the active layer: fall back to what SvgCanvas left current
 		drawing_current = 'layer_0'
@@ -666,6 +667,154 @@ describe(`COMPONENT_IMAGE VECTOR EDITOR`, function() {
 		assert.deepEqual(ar_layers.map(layer => layer.layer_id), [0], 'last vector layer removed')
 		assert.equal(editor.active_layer, ar_layers[0], 'raster expected as fallback')
 		assert.equal(calls.current[calls.current.length-1], 'layer_0', 'drawing expected on the fallback layer')
+	})
+
+
+
+	it(`undo/redo shortcuts map Cmd/Ctrl+Z and ignore text fields`, async function() {
+
+		const {vector_editor} = await import('../../../core/component_image/js/vector_editor.js')
+
+		let undo = 0
+		let redo = 0
+		const editor = new vector_editor()
+		editor.undo = () => { undo++ }
+		editor.redo = () => { redo++ }
+		editor.keyboard_shortcuts()
+
+		const keydown = (options, target = document.body) => target.dispatchEvent(
+			new KeyboardEvent('keydown', { bubbles:true, ...options })
+		)
+
+		keydown({ key:'z', metaKey:true })
+		assert.equal(undo, 1, 'Cmd+Z expected undo')
+		keydown({ key:'z', ctrlKey:true })
+		assert.equal(undo, 2, 'Ctrl+Z expected undo')
+		keydown({ key:'z', metaKey:true, shiftKey:true })
+		assert.equal(redo, 1, 'Shift+Cmd+Z expected redo')
+		keydown({ key:'z', ctrlKey:true, shiftKey:true })
+		assert.equal(redo, 2, 'Ctrl+Shift+Z expected redo')
+		keydown({ key:'y', ctrlKey:true })
+		assert.equal(redo, 3, 'Ctrl+Y expected redo')
+
+		// a text field keeps its native undo
+		const input = document.createElement('input')
+		document.body.appendChild(input)
+		keydown({ key:'z', metaKey:true }, input)
+		assert.equal(undo, 2, 'text field must keep native undo')
+
+		input.remove()
+		editor.destroy()
+	})
+
+
+
+	it(`sync_layer_descriptors restores and removes layers with the canvas history`, async function() {
+
+		const {vector_editor} = await import('../../../core/component_image/js/vector_editor.js')
+
+		const layer_node = (name) => ({ getName: () => name })
+		const drawing = {
+			identifyLayers		: () => {},
+			all_layers			: [layer_node('layer_0'), layer_node('layer_1')],
+			getCurrentLayerName	: () => 'layer_1',
+			setCurrentLayer		: (name) => { drawing.current = name; return true }
+		}
+		const editor = new vector_editor()
+		editor.stage = { getCurrentDrawing: () => drawing }
+		const self = { ar_layers: [{ layer_id:0, name:'layer_0' }], id:'sync_test' }
+		editor.active_layer = self.ar_layers[0]
+		editor._layer_snapshots.set('layer_1', { layer_id:1, name:'layer_1', layer_color:'#fff' })
+
+		// undo of a layer delete: the DOM layer is back, the descriptor is not
+		assert.isTrue(editor.sync_layer_descriptors(self))
+		assert.deepEqual(self.ar_layers.map(layer => layer.name), ['layer_0','layer_1'])
+		assert.equal(drawing.current, 'layer_0', 'surviving active layer expected current')
+
+		// redo of the layer delete: the DOM layer is gone, the descriptor is not
+		drawing.all_layers			= [layer_node('layer_0')]
+		drawing.getCurrentLayerName	= () => 'layer_0'
+		editor.active_layer			= self.ar_layers[1]
+		assert.isTrue(editor.sync_layer_descriptors(self))
+		assert.deepEqual(self.ar_layers.map(layer => layer.name), ['layer_0'])
+		assert.equal(editor._layer_snapshots.get('layer_1')?.layer_id, 1)
+		assert.equal(editor.active_layer, self.ar_layers[0], 'active expected to follow the drawing')
+
+		// redo of the layer add: the descriptor comes back from the snapshot
+		drawing.all_layers = [layer_node('layer_0'), layer_node('layer_1')]
+		assert.isTrue(editor.sync_layer_descriptors(self))
+		assert.deepEqual(self.ar_layers.map(layer => layer.name), ['layer_0','layer_1'])
+	})
+
+
+
+	it(`add_layer records a Create Layer command and skips ids held by undo snapshots`, async function() {
+
+		const {vector_editor} = await import('../../../core/component_image/js/vector_editor.js')
+
+		const group = { id:'' }
+		const calls = { created:null }
+		const drawing = { getCurrentLayer: () => group }
+		const editor = new vector_editor()
+		editor.stage = {
+			getCurrentDrawing	: () => drawing,
+			createLayer			: (name) => { calls.created = name }
+		}
+		const self = { ar_layers: [{ layer_id:0, name:'layer_0' }], id:'add_test' }
+		const layer = editor.add_layer(self)
+
+		assert.equal(calls.created, 'layer_1', 'stage wrapper expected (history-recording)')
+		assert.equal(layer.name, 'layer_1')
+		assert.equal(group.id, 'layer_1')
+		assert.equal(editor.active_layer, layer)
+
+		// a layer kept by an undo snapshot must not be reused
+		editor._layer_snapshots.set('layer_1', { layer_id:1, name:'layer_1' })
+		const self2 = { ar_layers: [{ layer_id:0, name:'layer_0' }], id:'add_test' }
+		const layer2 = editor.add_layer(self2)
+		assert.equal(layer2.layer_id, 2, 'reserved snapshot id expected skipped')
+		assert.equal(layer2.name, 'layer_2')
+	})
+
+
+
+	it(`real SvgCanvas history: one draw is one undo, and redo restores it`, async function() {
+
+		const {vector_editor} = await import('../../../core/component_image/js/vector_editor.js')
+		const {default: SvgCanvas} = await import('../../../lib/svgedit/dist/svgcanvas.js')
+
+		const container = document.createElement('div')
+		document.body.appendChild(container)
+		const stage = new SvgCanvas(container, {
+			initFill	: { color:'FFFFFF', opacity:1 },
+			initStroke	: { color:'000000', opacity:1, width:1 },
+			text		: { stroke_width:0, font_size:24, font_family:'serif' },
+			initOpacity	: 1,
+			imgPath		: '',
+			dimensions	: [100, 100],
+			baseUnit	: 'px'
+		})
+		const rect = stage.addSVGElementsFromJson({
+			element	: 'rect',
+			attr	: { x:1, y:1, width:10, height:10, id:'undo_test' }
+		})
+		// the shape's transient setup the library records before the insert
+		const opacity = new stage.history.BatchCommand('Change opacity')
+		opacity.addSubCommand(new stage.history.ChangeElementCommand(rect, { opacity:'1' }))
+		stage.undoMgr.addCommandToHistory(opacity)
+		stage.undoMgr.addCommandToHistory(new stage.history.InsertElementCommand(rect))
+
+		const editor = new vector_editor()
+		editor.stage = stage
+		editor.compact_history()
+		assert.equal(stage.undoMgr.getUndoStackSize(), 1, 'transient opacity command expected dropped')
+
+		editor.undo()
+		assert.isNull(document.getElementById('undo_test'), 'undo expected to remove the shape')
+		editor.redo()
+		assert.isOk(document.getElementById('undo_test'), 'redo expected to restore the shape')
+
+		container.remove()
 	})
 })
 
