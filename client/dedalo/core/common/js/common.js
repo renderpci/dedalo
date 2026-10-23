@@ -1868,11 +1868,19 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 				: null
 		if (filter_by_locators) {
 			sqo.filter_by_locators = filter_by_locators
-		}else if(self.section_id && self.section_tipo){
+		}else if(self.section_id!==null && self.section_id!==undefined && self.section_tipo){
+			// note the explicit null/undefined test: section_id 0 is a legitimate id
 			sqo.filter_by_locators = [{
 				section_tipo	:self.section_tipo,
 				section_id		: self.section_id
 			}]
+		}else{
+			// NO PIN — say it explicitly. An omitted key is FILLED from the
+			// server's session SQO (concepts/sqo.ts mergeSessionSqo), so a plain
+			// list would inherit the single-record pin a previous edit read stored
+			// there and render that one record. `[]` means "no pins" (zero hits use
+			// the section_id:-1 sentinel, never an empty array).
+			sqo.filter_by_locators = []
 		}
 
 	// sqo clean
