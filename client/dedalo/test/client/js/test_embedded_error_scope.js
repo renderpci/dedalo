@@ -121,7 +121,10 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 	it(`a refused EMBEDDED build never sets page_error; a page-root one does`, async () => {
 		data_manager.request = async () => refused();
 
-		const embedded = await tm_list({ model: 'inspector', id: 'fake_inspector' }, 'embedded_scope_a');
+		const embedded = await tm_list(
+			{ model: 'inspector', id: 'fake_inspector' },
+			'embedded_scope_a',
+		);
 		assert.isFalse(await embedded.build(true), 'the embedded build answers false');
 		assert.isNull(page_globals.page_error, 'an embedded refusal stays panel-scoped');
 		await embedded.destroy(true, true);
@@ -129,7 +132,11 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 		// CONTROL: the same refusal on a page-root element IS the page's failure
 		const root = await tm_list(undefined, 'embedded_scope_root');
 		assert.isFalse(await root.build(true));
-		assert.equal(page_globals.page_error?.code, 'perm.denied', 'a page-root refusal sets the page slot');
+		assert.equal(
+			page_globals.page_error?.code,
+			'perm.denied',
+			'a page-root refusal sets the page slot',
+		);
 		await root.destroy(true, true);
 	});
 
@@ -138,7 +145,10 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 
 		// a caller that ignores build()===false and renders anyway (the TM tool's
 		// list, a portal): the render must BE the failure, not a blank/crashed list
-		const embedded = await tm_list({ model: 'tool_time_machine', id: 'fake_tool' }, 'embedded_scope_render');
+		const embedded = await tm_list(
+			{ model: 'tool_time_machine', id: 'fake_tool' },
+			'embedded_scope_render',
+		);
 		let node = null;
 		const toasts = await embedded_toasts(async () => {
 			assert.isFalse(await embedded.build(true), 'the embedded build answers false');
@@ -146,8 +156,15 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 		});
 
 		assert.instanceOf(node, HTMLElement, 'render() of a failed build answers a node');
-		assert.isTrue(node.classList.contains('error_alert'), 'the build failure panel (render_build_failure)');
-		assert.include(node.textContent, error_text(refused().error), 'it names the refusal, not a guess');
+		assert.isTrue(
+			node.classList.contains('error_alert'),
+			'the build failure panel (render_build_failure)',
+		);
+		assert.include(
+			node.textContent,
+			error_text(refused().error),
+			'it names the refusal, not a guess',
+		);
 		assert.isFalse(node.classList.contains('page_error_container'), 'never the page panel');
 		assert.isNull(page_globals.page_error, 'and never the page slot');
 		assert.equal(toasts.length, 0, 'panel-local, quiet: no toast on top of the panel');
@@ -160,7 +177,7 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 		const make = (caller) => {
 			const instance = Object.create(common.prototype);
 			Object.assign(instance, {
-				id: 'fake_relation_list_' + (caller?.model || 'root'),
+				id: `fake_relation_list_${caller?.model || 'root'}`,
 				model: 'relation_list',
 				tipo: 'test138',
 				mode: 'list',
@@ -183,7 +200,11 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 	});
 
 	it(`SPA navigation clears page_error and the next element renders`, async () => {
-		const page = await get_instance({ model: 'page', menu: false, id_variant: 'embedded_scope_page' });
+		const page = await get_instance({
+			model: 'page',
+			menu: false,
+			id_variant: 'embedded_scope_page',
+		});
 		await page.build(true);
 		const node = await page.render();
 		document.getElementById('content').appendChild(node);
@@ -196,11 +217,21 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 		// dispatch, so the assertion waits for the decision, not for a timer.
 		const toasts = await embedded_toasts(async () => {
 			const results = event_manager.publish('api_error', refused().error);
-			assert.isTrue(Array.isArray(results) && results.length > 0, 'the page listener heard the refusal');
+			assert.isTrue(
+				Array.isArray(results) && results.length > 0,
+				'the page listener heard the refusal',
+			);
 			await Promise.all(results);
 		});
-		assert.isNull(page_globals.page_error, "the page's api_error listener never sets the page slot");
-		assert.equal(toasts.length, 0, "the page's api_error listener shows no toast for a panel refusal");
+		assert.isNull(
+			page_globals.page_error,
+			"the page's api_error listener never sets the page slot",
+		);
+		assert.equal(
+			toasts.length,
+			0,
+			"the page's api_error listener shows no toast for a panel refusal",
+		);
 
 		// a page-level refusal on the previous element...
 		page_globals.page_error = refused().error;
@@ -212,7 +243,9 @@ describe(`EMBEDDED ERROR SCOPE`, function () {
 		// rendered and the navigation lock is released
 		const landed = () =>
 			!page.navigation_in_progress &&
-			page.ar_instances.some((instance) => instance.tipo === 'test3' && instance.status === 'rendered');
+			page.ar_instances.some(
+				(instance) => instance.tipo === 'test3' && instance.status === 'rendered',
+			);
 		const deadline = Date.now() + 20000;
 		while (!landed() && Date.now() < deadline) {
 			await new Promise((resolve) => setTimeout(resolve, 50));

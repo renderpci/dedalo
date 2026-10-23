@@ -148,7 +148,11 @@ describe(`SECTION LOCK CLEANUP`, function () {
 			'tm row source on the request_config only (before the rqo is built)',
 		);
 		assert.isFalse(
-			holds_component_locks({ tipo: 'test3', section_tipo: 'test3', caller: { section_tipo: 'dd15' } }),
+			holds_component_locks({
+				tipo: 'test3',
+				section_tipo: 'test3',
+				caller: { section_tipo: 'dd15' },
+			}),
 			'under a dd15 caller',
 		);
 		assert.isFalse(

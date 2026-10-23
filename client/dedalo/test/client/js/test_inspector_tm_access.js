@@ -128,7 +128,10 @@ describe(`INSPECTOR TIME MACHINE ACCESS`, function () {
 		await next_frame();
 
 		// the block's answer IS the quiet line, never a rendered instance node
-		assert.isTrue(node?.classList?.contains('inspector_block_failure'), 'the loader answered the quiet line');
+		assert.isTrue(
+			node?.classList?.contains('inspector_block_failure'),
+			'the loader answered the quiet line',
+		);
 		assert.isAbove(requests.length, 0, 'the dd15 read was sent and refused');
 		assert.equal(dd15_renders, 0, 'render() is never called on the failed instance');
 		const line = body.querySelector('.inspector_block_failure');
@@ -155,7 +158,10 @@ describe(`INSPECTOR TIME MACHINE ACCESS`, function () {
 		);
 		await next_frame();
 
-		assert.isTrue(node?.classList?.contains('inspector_block_failure'), 'the loader answered the quiet line');
+		assert.isTrue(
+			node?.classList?.contains('inspector_block_failure'),
+			'the loader answered the quiet line',
+		);
 
 		assert.equal(dd15_renders, 0, 'render() is never called on the failed instance');
 		assert.isOk(body.querySelector('.inspector_block_failure'));
