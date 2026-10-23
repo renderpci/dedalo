@@ -446,20 +446,17 @@ const VACUOUS_DELIVERY_CEILING = 5;
  * baseline, so each one is named here rather than printed: a NEW unstamped baseline,
  * or one that LOSES its stamp, is red; a row whose baseline is stamped now is stale.
  * Step 1C (the GATE-1 in-image re-record) stamps both and deletes the rows — the
- * ceiling then drops to 0 (review 2026-09-30, S3).
+ * ceiling then drops to 0 (review 2026-09-30, S3). unit_baseline.json: stamped and
+ * retired 2026-10-23 (first stamped full record, CI image 93116f58…); ceiling 2 → 1.
  */
 const UNSTAMPED_BASELINES: ReadonlyMap<string, string> = new Map([
-	[
-		'engineering/unit_baseline.json',
-		'recorded before the CI-image provenance stamp existed; Step 1C re-records it in the image and stamps it',
-	],
 	[
 		'engineering/parity_baseline.json',
 		'recorded before the CI-image provenance stamp existed; Step 1C re-records it in the image and stamps it',
 	],
 ]);
 /** The ceiling on UNSTAMPED_BASELINES: lower it with every retired row, never raise it. */
-const UNSTAMPED_CEILING = 2;
+const UNSTAMPED_CEILING = 1;
 
 /** PURE. Unstamped baselines no row names, rows whose baseline is stamped, short reasons. */
 function unstampedFaults(

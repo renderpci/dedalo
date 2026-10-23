@@ -214,7 +214,8 @@ desk number is a floor, in either direction. So:
   during the transition re-records too), printed `UNSTAMPED (transition)` on every check — until the next
   GREEN full record stamps it; that record's commit sets the transition to `null` (a
   stamped file beside a live transition is refused; `ci:local` says so when it copies the
-  record). Any other unstamped file is refused. Gate: `suite_assertion_floor_tripwire`
+  record). **ENDED 2026-10-23**: the first stamped full record (CI image `93116f58…`)
+  landed with the transition set to `null`. Any other unstamped file is refused. Gate: `suite_assertion_floor_tripwire`
   (planted match / foreign / missing / edited / stale-transition / foreign-image transition
   through the CLI seam, `runningCiImage`'s marker branch through its path seam, and
   the LIVE artifact: stamped, or byte-identical to the transition). HONEST LIMITS: the

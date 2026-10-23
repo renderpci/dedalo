@@ -1,10 +1,13 @@
 {
 	"generated_by": "bun run scripts/unit_baseline.ts (runs `bun test --timeout=30000 $(bun scripts/lib/test_order.ts test/unit test/integration)` under bun's JUnit reporter and parses it via scripts/lib/parity_census.ts — never a hand-edited list)",
 	"rule": "SHRINK-ONLY red baseline for the test/unit + test/integration tier, keyed per FILE and per TEST NAME (the name is the full describe chain + test name, ' > '-joined, exactly as bun prints it). A failing test that is not listed here is a REGRESSION and fails the gate — that is the whole point: the known reds must never hide the next real one. A LISTED test that now PASSES is ALSO a gate failure. A stale entry is the ratchet quietly stopping; re-freeze so the win is locked in. Likewise a listed test that no longer exists (renamed, deleted, moved file) or is now SKIPPED: it is no longer the red it was frozen as, so the entry is stale. Keying per NAME and not per count is deliberate: a file that stops failing test A and starts failing test B has an unchanged count, and that is exactly the regression a count-only ratchet would miss. The generator REFUSES to add a failing test without --allow-regression, and the commit message MUST then say why the new red is acceptable. `measured` freezes the DEBT (failing_files/failing_tests) exactly; the SIZE counts are advisory here because this tier grows on most commits, and reddening on every added test would train the regenerate-to-green reflex the ratchet exists to prevent. The size is held by the anti-vacuity FLOORS instead, so a tier that silently stopped running is still red. `per_file` is the PER-FILE FLOOR: for every file of the tier, the cases it ran, the cases it skipped and the `expect` calls that EXECUTED (bun's own file-level JUnit attributes). Skips may only shrink; cases and assertions may only rise — a drop, or a skip that appears, is a regression the generator refuses without --allow-regression, because a test that returns before its first assertion is a PASS with assertions=0 and this count is the only thing that notices. An unrecorded file, or a recorded file that no longer reports, is stale: re-freeze. DO NOT hand-edit. Regenerate with: bun run scripts/unit_baseline.ts Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent. RECORDED IN THE CI IMAGE (2026-10-02, `bun run ci:local --docker --record-unit-baseline` on the sorted tier order; the writer refuses anywhere else): 0 frozen reds. History: 7 reds (2026-08-29) -> 3 (2026-08-30: the RAG gates stopped inheriting the machine's embedding provider; a leaked setTimeout in client_request_coalescing_tripwire stopped killing arbitrary victims) -> 2 (gate_vacuity's banked-budget case passes) -> 0 (2026-10-02: the dd1 install seed re-synced for ontology_parser; info_widget's media_icons golden builds its own term target). The stage is BLOCKING in scripts/ci/db_tier.sh since 2026-10-02 (zero drift on three executed GitHub db runs of 674c1f4f76; the 'loaded runner' leg of the old criterion was not separately exercised — engineering/CI.md): any drift from this file fails the db tier, on the runner and on the desk gate alike. Per-file floors are the image's, and a desk differs from them in BOTH directions: it asserts more where it has what a runner lacks (the sibling v6 tree, audits/, a GeoIP database, translated locales, its own ../private config) and less where the image has what the desk lacks (librsvg: media_svg_thumb skips 7 on a Mac, 0 in the image) — so a desk number is never a floor, either way. Any entry a future recording accepts (--allow-regression --reason) is expected to be FIXED; the list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
+	"ci_image": {
+		"fingerprint": "93116f5828c63f8be59cc0ac289ae93fec53a9fac3178cb46b40b4b6b2ef80c3"
+	},
 	"measured": {
-		"tier_files": 1236,
-		"tier_tests": 18774,
-		"tier_pass": 18734,
+		"tier_files": 1247,
+		"tier_tests": 18988,
+		"tier_pass": 18948,
 		"tier_skip": 40,
 		"failing_files": 0,
 		"failing_tests": 0
@@ -319,7 +322,7 @@
 		"test/unit/authz_substring_gate_tripwire.test.ts": {
 			"tests": 17,
 			"skipped": 0,
-			"assertions": 184
+			"assertions": 194
 		},
 		"test/unit/backup_freshness_deep_native.test.ts": {
 			"tests": 30,
@@ -444,7 +447,7 @@
 		"test/unit/census_derivation_tripwire.test.ts": {
 			"tests": 45,
 			"skipped": 0,
-			"assertions": 652
+			"assertions": 656
 		},
 		"test/unit/change_lang.test.ts": {
 			"tests": 15,
@@ -494,7 +497,7 @@
 		"test/unit/ci_workflow_tripwire.test.ts": {
 			"tests": 44,
 			"skipped": 0,
-			"assertions": 1283
+			"assertions": 1295
 		},
 		"test/unit/client_a11y_budget_tripwire.test.ts": {
 			"tests": 13,
@@ -564,7 +567,7 @@
 		"test/unit/client_gate_inventory_tripwire.test.ts": {
 			"tests": 43,
 			"skipped": 0,
-			"assertions": 465
+			"assertions": 469
 		},
 		"test/unit/client_idempotency_tripwire.test.ts": {
 			"tests": 44,
@@ -619,7 +622,7 @@
 		"test/unit/client_page_doors_native.test.ts": {
 			"tests": 36,
 			"skipped": 0,
-			"assertions": 142
+			"assertions": 150
 		},
 		"test/unit/client_prototype_contract_tripwire.test.ts": {
 			"tests": 3,
@@ -1727,9 +1730,9 @@
 			"assertions": 10060
 		},
 		"test/unit/export_selection_cursor_native.test.ts": {
-			"tests": 29,
+			"tests": 30,
 			"skipped": 0,
-			"assertions": 135
+			"assertions": 138
 		},
 		"test/unit/external_allowlist_classification_native.test.ts": {
 			"tests": 4,
@@ -2447,9 +2450,9 @@
 			"assertions": 552
 		},
 		"test/unit/install_probe_child.test.ts": {
-			"tests": 16,
+			"tests": 17,
 			"skipped": 0,
-			"assertions": 96
+			"assertions": 99
 		},
 		"test/unit/install_production_docs_native.test.ts": {
 			"tests": 20,
@@ -2977,9 +2980,9 @@
 			"assertions": 18
 		},
 		"test/unit/media_index_reconcile_fence_native.test.ts": {
-			"tests": 6,
+			"tests": 7,
 			"skipped": 0,
-			"assertions": 43
+			"assertions": 47
 		},
 		"test/unit/media_index_store.test.ts": {
 			"tests": 16,
@@ -4192,9 +4195,9 @@
 			"assertions": 159
 		},
 		"test/unit/reconcile_registry_tripwire.test.ts": {
-			"tests": 17,
+			"tests": 18,
 			"skipped": 0,
-			"assertions": 253
+			"assertions": 258
 		},
 		"test/unit/reconcile_scheduler_native.test.ts": {
 			"tests": 12,
@@ -4714,7 +4717,7 @@
 		"test/unit/search_related_page_window_native.test.ts": {
 			"tests": 18,
 			"skipped": 0,
-			"assertions": 40
+			"assertions": 44
 		},
 		"test/unit/search_section_id_bind_native.test.ts": {
 			"tests": 10,
@@ -4824,7 +4827,7 @@
 		"test/unit/security_audit_2026_07_23_tripwire.test.ts": {
 			"tests": 8,
 			"skipped": 0,
-			"assertions": 60
+			"assertions": 62
 		},
 		"test/unit/security_fail_closed.test.ts": {
 			"tests": 13,
@@ -5062,9 +5065,9 @@
 			"assertions": 71
 		},
 		"test/unit/suite_assertion_floor_tripwire.test.ts": {
-			"tests": 29,
+			"tests": 37,
 			"skipped": 2,
-			"assertions": 122
+			"assertions": 256
 		},
 		"test/unit/suite_mariadb_target_native.test.ts": {
 			"tests": 34,
@@ -5269,7 +5272,7 @@
 		"test/unit/tier_execution_tripwire.test.ts": {
 			"tests": 13,
 			"skipped": 0,
-			"assertions": 375
+			"assertions": 379
 		},
 		"test/unit/tier_file_order_tripwire.test.ts": {
 			"tests": 11,
@@ -5277,9 +5280,9 @@
 			"assertions": 42
 		},
 		"test/unit/tier_wiring_tripwire.test.ts": {
-			"tests": 16,
+			"tests": 17,
 			"skipped": 0,
-			"assertions": 193
+			"assertions": 198
 		},
 		"test/unit/time_machine_read.test.ts": {
 			"tests": 3,
@@ -5382,9 +5385,9 @@
 			"assertions": 36
 		},
 		"test/unit/tm_inspector_access_native.test.ts": {
-			"tests": 26,
+			"tests": 38,
 			"skipped": 0,
-			"assertions": 51
+			"assertions": 112
 		},
 		"test/unit/tm_lang_slice_restore_native.test.ts": {
 			"tests": 30,
@@ -5399,7 +5402,7 @@
 		"test/unit/tm_mode_retired_tripwire.test.ts": {
 			"tests": 4,
 			"skipped": 0,
-			"assertions": 15
+			"assertions": 14
 		},
 		"test/unit/tm_permission_floor_native.test.ts": {
 			"tests": 13,
@@ -5667,9 +5670,9 @@
 			"assertions": 128
 		},
 		"test/unit/tool_permission_census_tripwire.test.ts": {
-			"tests": 7,
+			"tests": 65,
 			"skipped": 0,
-			"assertions": 177
+			"assertions": 259
 		},
 		"test/unit/tool_phone_tripwire.test.ts": {
 			"tests": 9,
@@ -5952,9 +5955,9 @@
 			"assertions": 26
 		},
 		"test/unit/unpublish_debt_native.test.ts": {
-			"tests": 5,
+			"tests": 6,
 			"skipped": 0,
-			"assertions": 77
+			"assertions": 86
 		},
 		"test/unit/update_cache_locked_resave_native.test.ts": {
 			"tests": 3,

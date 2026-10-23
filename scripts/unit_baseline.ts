@@ -147,20 +147,10 @@ export const UNIT_TIER: TierSpec = {
 	recordOnlyInCiImage: true,
 	// The CI-image stamp (red_baseline.ts ciImageStampVerdict): the full writer stamps every
 	// record with the image it measured in, and --check refuses a foreign or missing stamp.
-	// The artifact on disk predates the stamp; no write path stamps old floors (that would
-	// launder them), and the recorder copies nothing while the db tier is red — so THIS
-	// file, byte for byte, IN THE IMAGE IT WAS RECORDED IN (fingerprint), is honoured
-	// until the next green full record. That record's
-	// commit sets this to null (a stamped file beside a live transition is refused).
-	unstampedTransition: {
-		sha256: '070b3cbf280a3425474720a0840b2f73ecbb1b1356cd3a1cd3a0bea37e26a20e',
-		// The image those floors were measured in: every record since the c5e60b9eef pin
-		// (4502d0e815 … 639cb8ccf0, which wrote these bytes) ran at this ci/Dockerfile +
-		// .bun-version, = ci/image.json's fingerprint. Another image refuses the transition.
-		fingerprint: '93116f5828c63f8be59cc0ac289ae93fec53a9fac3178cb46b40b4b6b2ef80c3',
-		reason:
-			'recorded in the CI image (639cb8ccf0 and the records before it, all at ci/Dockerfile + .bun-version fingerprint 93116f58…) before the stamp existed (2026-10-23); stamped by the next green `bun run ci:local --docker --record-unit-baseline`, whose commit deletes this transition',
-	},
+	// The pre-stamp transition (the artifact recorded before the stamp existed, pinned by
+	// sha256 + image) ENDED with the first stamped full record (2026-10-23, CI image
+	// 93116f58…): null, and it stays null — a stamped file beside a live transition is refused.
+	unstampedTransition: null,
 	whyRed:
 		"Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent. RECORDED IN THE CI IMAGE (2026-10-02, `bun run ci:local --docker --record-unit-baseline` on the sorted tier order; the writer refuses anywhere else): 0 frozen reds. History: 7 reds (2026-08-29) -> 3 (2026-08-30: the RAG gates stopped inheriting the machine's embedding provider; a leaked setTimeout in client_request_coalescing_tripwire stopped killing arbitrary victims) -> 2 (gate_vacuity's banked-budget case passes) -> 0 (2026-10-02: the dd1 install seed re-synced for ontology_parser; info_widget's media_icons golden builds its own term target). The stage is BLOCKING in scripts/ci/db_tier.sh since 2026-10-02 (zero drift on three executed GitHub db runs of 674c1f4f76; the 'loaded runner' leg of the old criterion was not separately exercised — engineering/CI.md): any drift from this file fails the db tier, on the runner and on the desk gate alike. Per-file floors are the image's, and a desk differs from them in BOTH directions: it asserts more where it has what a runner lacks (the sibling v6 tree, audits/, a GeoIP database, translated locales, its own ../private config) and less where the image has what the desk lacks (librsvg: media_svg_thumb skips 7 on a Mac, 0 in the image) — so a desk number is never a floor, either way. Any entry a future recording accepts (--allow-regression --reason) is expected to be FIXED; the list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
 };
