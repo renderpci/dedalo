@@ -5,6 +5,7 @@
 
 import { config } from '../../../config/config.ts';
 import { readString } from '../../../config/readers.ts';
+import { isValidTipo } from '../../concepts/ontology.ts';
 import { DedaloError, ok } from '../../errors/index.ts';
 import { publicOrigin, publicOriginIsLocal } from '../../resolve/public_origin.ts';
 import { login } from '../../security/auth.ts';
@@ -155,6 +156,32 @@ function parseRecordRef(options: unknown): { sectionTipo: string; sectionId: num
  */
 const OWN_LOCK_CLEANUP_ACTION = 'delete_user_section_locks';
 
+/**
+ * The ONE validation of a lock handler's `options.section_tipo`, run before any
+ * branch reads it. Absent / null / '' → request.invalid_options (the field is
+ * required); present but not a STRING in the tipo grammar → request.invalid_tipo.
+ * A truthiness check is not a type check: before this, an array, object, number
+ * or free string went straight into getPermissions and — for the ungated
+ * OWN_LOCK_CLEANUP_ACTION — straight into the DELETE's bind.
+ *
+ * Gate: test/unit/lock_section_tipo_grammar_native.test.ts.
+ */
+function requireLockSectionTipo(value: unknown, action: string): string {
+	if (value === undefined || value === null || value === '') {
+		throw new DedaloError('request.invalid_options', {
+			publicMessage: 'options.section_tipo is required',
+			message: `${action}: section_tipo is required`,
+		});
+	}
+	if (typeof value !== 'string' || !isValidTipo(value)) {
+		throw new DedaloError('request.invalid_tipo', {
+			message: `${action}: options.section_tipo is not a valid tipo: ${JSON.stringify(value)?.slice(0, 80)}`,
+			coordinates: { where: `${action}.section_tipo` },
+		});
+	}
+	return value;
+}
+
 /** dd_utils_api action handlers, keyed by action (registered in dispatch.ts). */
 export const utilsApiActions: Record<string, ActionHandler> = {
 	update_lock_components_state: async (rqo, context) => {
@@ -165,31 +192,30 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		const principal = requirePrincipal(context);
 		const options = (rqo.options ?? {}) as {
 			section_id?: unknown;
-			section_tipo?: string | null;
+			section_tipo?: unknown;
 			component_tipo?: string | null;
 			action?: string;
 		};
-		// Fail-closed (L4): section_tipo is required and the read gate runs for
-		// every action but the named own-lock cleanup — never skipped when a
-		// field is absent/falsy, and an unknown action is gated like focus.
-		if (!options.section_tipo) {
-			throw new DedaloError('request.invalid_options', {
-				publicMessage: 'options.section_tipo is required',
-				message: 'update_lock_components_state: section_tipo is required',
-			});
-		}
+		// Fail-closed (L4): section_tipo is required AND a tipo — validated before
+		// any branch, so the ungated own-lock cleanup binds a tipo too — and the
+		// read gate runs for every action but that cleanup; an unknown action is
+		// gated like focus.
+		const sectionTipo = requireLockSectionTipo(
+			options.section_tipo,
+			'update_lock_components_state',
+		);
 		if (options.action !== OWN_LOCK_CLEANUP_ACTION) {
-			const level = await getPermissions(principal, options.section_tipo, options.section_tipo);
+			const level = await getPermissions(principal, sectionTipo, sectionTipo);
 			if (level < 1) {
 				throw new DedaloError('perm.denied', {
-					coordinates: { section_tipo: options.section_tipo },
+					coordinates: { section_tipo: sectionTipo },
 				});
 			}
 		}
 		const { updateLockComponentsState } = await import('../../section/locks.ts');
 		const outcome = await updateLockComponentsState({
 			section_id: options.section_id ?? null,
-			section_tipo: options.section_tipo ?? null,
+			section_tipo: sectionTipo,
 			component_tipo: options.component_tipo ?? null,
 			action: options.action ?? '',
 			user_id: principal.userId,
@@ -213,29 +239,24 @@ export const utilsApiActions: Record<string, ActionHandler> = {
 		const principal = requirePrincipal(context);
 		const options = (rqo.options ?? {}) as {
 			section_id?: unknown;
-			section_tipo?: string | null;
+			section_tipo?: unknown;
 			component_tipo?: string | null;
 		};
-		// Fail-closed (L4): section_tipo is required and the read gate runs
-		// unconditionally — never skip it when the field is absent/falsy.
-		if (!options.section_tipo) {
-			throw new DedaloError('request.invalid_options', {
-				publicMessage: 'options.section_tipo is required',
-				message: 'get_lock_status: section_tipo is required',
-			});
-		}
+		// Fail-closed (L4): section_tipo is required AND a tipo, and the read gate
+		// runs unconditionally — never skip it when the field is absent/falsy.
+		const sectionTipo = requireLockSectionTipo(options.section_tipo, 'get_lock_status');
 		{
-			const level = await getPermissions(principal, options.section_tipo, options.section_tipo);
+			const level = await getPermissions(principal, sectionTipo, sectionTipo);
 			if (level < 1) {
 				throw new DedaloError('perm.denied', {
-					coordinates: { section_tipo: options.section_tipo },
+					coordinates: { section_tipo: sectionTipo },
 				});
 			}
 		}
 		const { getLockStatus } = await import('../../section/locks.ts');
 		const outcome = await getLockStatus({
 			section_id: options.section_id ?? null,
-			section_tipo: options.section_tipo ?? null,
+			section_tipo: sectionTipo,
 			component_tipo: options.component_tipo ?? null,
 			user_id: principal.userId,
 		});

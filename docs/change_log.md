@@ -1394,6 +1394,20 @@ Merged since the last release; these ship with the next one.
 
 ### For developers
 
+#### Security
+
+- **The component lock requests refuse a section that is not an ontology tipo.**
+
+    `dd_utils_api` `update_lock_components_state` and `get_lock_status` now check that
+    `options.section_tipo` is a string in the tipo grammar before doing anything, for every
+    action — including the caller's own lock cleanup, which runs no section read check. A missing
+    value still answers `400 request.invalid_options`; a present value that is not a tipo (an array,
+    an object, a number, a free string) now answers `400 request.invalid_tipo` and touches no lock,
+    where it used to reach the database as-is. The Dédalo client always sends a tipo, so nothing
+    changes for it.
+
+    Wire contract: `WC-2026-10-23-lock-section-tipo-grammar`.
+
 #### Changed
 
 - **"Build database version: the install-seed build's answer and panel values are documented"**
@@ -1572,7 +1586,7 @@ Merged since the last release; these ship with the next one.
     like an answer, so you replace it with `--dev-port` or `--dev-host`. `--tls none` over a kept pair clears it. No other route
     writes any of these keys.
 
-??? note "Wire contract — 23 entries"
+??? note "Wire contract — 24 entries"
 
     - `WC-2026-10-09-build-install-version-owned-mode`
     - `WC-2026-10-15-release-identity-from-tag`
@@ -1596,6 +1610,7 @@ Merged since the last release; these ship with the next one.
     - `WC-2026-10-22-reconcile-deferred-rearm`
     - `WC-2026-10-22-related-search-one-scope`
     - `WC-2026-10-22-tm-scope-whole-request`
+    - `WC-2026-10-23-lock-section-tipo-grammar`
     - `WC-2026-10-23-own-lock-cleanup-ungated`
 
 ## 7.0.0-beta.6 — 2026-10-15

@@ -22,6 +22,15 @@
  *    (the ratchet runs in BOTH directions: growing a real gate without saying so
  *    is red too), except for tokens explicitly exempted with a reason.
  *
+ *  - a gate is CALLED DIRECTLY, never through an optional seam fallback
+ *    (`seams.gate ?? (() => gateRecord(…))`, `seams.gate ?? gateRecord`, a
+ *    default parameter `gate = gateRecord`, `seams.gate ? seams.gate(…) :
+ *    gateRecord(…)`): an injectable replacement for the permission check makes
+ *    the check optional by construction, and the liveness walk below would see
+ *    `gateRecord(` and count it as called. Scanned over EVERY tool server
+ *    source, not only the exempt ones (tool_transcription carried the shape
+ *    until badbff1fc0).
+ *
  * THE HONEST LIMIT — this proves an authorization symbol is CALLED on the
  * handler's entry path. It does NOT prove that it is the RIGHT check, that it
  * precedes every side effect of the action, or that no branch reaches those side
@@ -36,6 +45,7 @@
 import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { Glob } from 'bun';
 import { stripComments } from '../helpers/strip_comments.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
@@ -495,5 +505,311 @@ describe('P2-8(a) — the `permission: null` census is exact and shrink-only', (
 		// point at something that is actually negative, or it proves nothing.
 		expect(reachableTokens(bodies, 'requireSlug').has('assertPublisher')).toBe(false);
 		expect(reachableTokens(bodies, 'publish').has('assertNoSuchGateExists')).toBe(false);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// THE DIRECT-CALL RULE — a gate is never reached through an optional seam.
+// ---------------------------------------------------------------------------
+
+/**
+ * Every source that can hold a tool action's authorization: every tool package's
+ * server tree (helpers included — a gate lifted into `server/lib/x.ts` is still
+ * the action's gate), the framework's tool layer (src/core/tools/), and any extra
+ * file a census entry joins to its walk. Discovered, never hand-listed.
+ */
+function gateSourceFiles(): string[] {
+	const found = new Set<string>();
+	for (const pattern of ['tools/*/server/**/*.ts', 'src/core/tools/**/*.ts']) {
+		for (const rel of new Glob(pattern).scanSync({ cwd: ROOT })) found.add(rel);
+	}
+	for (const entry of Object.values(CENSUS)) for (const rel of entry.files ?? []) found.add(rel);
+	return [...found].filter((rel) => !rel.includes('/tests/') && !rel.endsWith('.test.ts')).sort();
+}
+
+/** Same length, newlines kept: offsets and line numbers survive a blanking. */
+const blankOut = (text: string): string => text.replace(/[^\n]/g, ' ');
+
+/**
+ * The code a gate can live in: comments stripped AND string contents blanked
+ * (a gatedInHandler sentence naming `gateRecord(` is prose, not a call), and the
+ * import/export-from clauses blanked (naming a gate in an import is not using it).
+ */
+function gateScanCode(src: string): string {
+	return stripComments(src, { blankStrings: true }).replace(
+		/\b(?:import|export)\s+(?:type\s+)?(?:\{[^}]*\}|\*\s+as\s+[\w$]+|[\w$]+(?:\s*,\s*\{[^}]*\})?)\s*from\s*(['"])[^'"]*\1/g,
+		blankOut,
+	);
+}
+
+/** A FREE occurrence of `token`: not a property read (`principal.isGlobalAdmin`). */
+const freeToken = (token: string): RegExp => new RegExp(`(?<![\\w$.])${token}(?![\\w$])`, 'g');
+const containsFreeToken = (text: string, token: string): boolean => freeToken(token).test(text);
+
+/** A ternary `?` — not `??`, not `?.`, not an optional member `x?:`/`x?)`/`x?,`/`x?=`. */
+const TERNARY = /(?<![?\w$])\?(?![?.:])|(?<=[\w$)\]])\s\?(?![?.:])/g;
+
+/**
+ * From `from`, the end of the operand expression: the first depth-0 `,` `;` or
+ * closing bracket — and, for the right side of `??`/`||`, the first depth-0
+ * ternary `?` or `:` (which belong to an enclosing conditional).
+ */
+function operandEnd(code: string, from: number, stopAtConditional: boolean): number {
+	let depth = 0;
+	for (let i = from; i < code.length; i++) {
+		const ch = code[i] as string;
+		if (ch === '(' || ch === '[' || ch === '{') depth++;
+		else if (ch === ')' || ch === ']' || ch === '}') {
+			if (depth === 0) return i;
+			depth--;
+		} else if (depth === 0 && (ch === ',' || ch === ';')) return i;
+		else if (depth === 0 && stopAtConditional && ch === ':') return i;
+		else if (
+			depth === 0 &&
+			stopAtConditional &&
+			ch === '?' &&
+			code[i + 1] !== '?' &&
+			code[i + 1] !== '.' &&
+			code[i - 1] !== '?'
+		)
+			return i;
+	}
+	return code.length;
+}
+
+/** From `close` (an index just before a `?`), the start of the condition expression. */
+function conditionStart(code: string, close: number): number {
+	let depth = 0;
+	for (let i = close; i >= 0; i--) {
+		const ch = code[i] as string;
+		if (ch === ')' || ch === ']' || ch === '}') depth++;
+		else if (ch === '(' || ch === '[' || ch === '{') {
+			if (depth === 0) return i + 1;
+			depth--;
+		} else if (depth === 0 && (ch === ',' || ch === ';' || ch === '=' || ch === ':')) {
+			// `===`/`!==`/`>=`/`<=`/`=>` stay inside the condition; a bare `=` ends it.
+			const prev = code[i - 1] ?? '';
+			const next = code[i + 1] ?? '';
+			if (ch === '=' && (next === '=' || '=!<>'.includes(prev) || next === '>')) continue;
+			return i + 1;
+		}
+	}
+	return 0;
+}
+
+/** A member path the condition tests (`seams.gate`, `this.hooks.check`), dotted. */
+const MEMBER_PATH = /(?<![\w$.])[A-Za-z_$][\w$]*(?:\??\.[A-Za-z_$][\w$]*)+/g;
+
+/** Does `branch` CALL `member` (`m(` / `m?.(` / `await m(`)? */
+function callsMember(branch: string, member: string): boolean {
+	const escaped = member.replace(/[.$?]/g, (c) => `\\${c}`).replace(/\\\?\\\./g, '\\??\\.');
+	return new RegExp(`(?<![\\w$.])${escaped}\\s*(?:\\?\\.)?\\s*\\(`).test(branch);
+}
+
+/** One place a gate token is reachable only through an optional fallback. */
+interface SeamFallbackSite {
+	file: string;
+	line: number;
+	token: string;
+	shape: string;
+}
+
+/**
+ * Every place in `code` where an authorization token is reached through an
+ * optional fallback — the shapes that let an injected replacement stand in for
+ * the permission check:
+ *
+ *  1. `X ?? <operand naming the gate>` / `X ??= …` — `seams.gate ?? gateRecord`,
+ *     `seams.gate ?? (() => gateRecord(…))`, `(await seams.gate?.(d)) ?? gateRecord(d)`.
+ *  2. `X || <a FUNCTION VALUE naming the gate>` / `X ||= …` — `seams.gate ||
+ *     ((d) => gateRecord(d))`. A boolean `||` over CALL results is a deny
+ *     condition (`sectionTipo === '' || (await getPermissions(…)) < 1`), not a
+ *     seam, and is left alone.
+ *  3. a conditional (`?:` or `if/else`) whose condition tests a member path, one
+ *     branch CALLING that member and the other naming the gate —
+ *     `seams.gate ? seams.gate(d) : gateRecord(d)`.
+ *  4. the gate taken as a VALUE (not called): a default parameter `gate =
+ *     gateRecord`, a seam map `{ gate: gateRecord }`, a bare `?? gateRecord`. A
+ *     function value can be swapped; only a call is the check. `typeof gate…`
+ *     (a type position) and the gate's own declaration are not values.
+ */
+function seamFallbackSites(
+	file: string,
+	src: string,
+	tokens: readonly string[],
+): SeamFallbackSite[] {
+	const code = gateScanCode(src);
+	const lineOf = (index: number): number => code.slice(0, index).split('\n').length;
+	const sites: SeamFallbackSite[] = [];
+	const report = (index: number, token: string, shape: string): void => {
+		sites.push({ file, line: lineOf(index), token, shape });
+	};
+
+	// 1 + 2: the right operand of a nullish / logical-or fallback.
+	for (const match of code.matchAll(/\?\?=?|\|\|=?/g)) {
+		const start = (match.index as number) + match[0].length;
+		const operand = code.slice(start, operandEnd(code, start, true));
+		const nullish = match[0].startsWith('??');
+		const functionValue =
+			/^\s*\(*\s*(?:async\b\s*)?(?:function\b|\([^()]*\)\s*(?::[^=]*)?=>|[\w$]+\s*=>)/.test(
+				operand,
+			) || /^\s*\(*\s*[\w$]+\s*\)*\s*$/.test(operand);
+		if (!nullish && !functionValue) continue;
+		for (const token of tokens) {
+			if (containsFreeToken(operand, token))
+				report(match.index as number, token, `${match[0]} fallback`);
+		}
+	}
+
+	// 3a: `cond ? a : b` where cond tests a member one branch calls.
+	for (const match of code.matchAll(TERNARY)) {
+		const at = (match.index as number) + match[0].indexOf('?');
+		const rest = code.slice(at + 1);
+		if (/^\s*[),=]/.test(rest)) continue; // an optional parameter, not a conditional
+		const condition = code.slice(conditionStart(code, at - 1), at);
+		const branches = code.slice(at + 1, operandEnd(code, at + 1, false));
+		for (const member of condition.match(MEMBER_PATH) ?? []) {
+			if (!callsMember(branches, member)) continue;
+			for (const token of tokens) {
+				if (containsFreeToken(branches, token)) report(at, token, `ternary on ${member}`);
+			}
+		}
+	}
+
+	// 3b: `if (cond) { …member(… } else { …gate… }` (either order).
+	for (const match of code.matchAll(/\bif\s*\(/g)) {
+		const condOpen = (match.index as number) + match[0].length;
+		const condClose = closeParen(code, condOpen);
+		if (condClose === -1) continue;
+		const condition = code.slice(condOpen, condClose);
+		const members = condition.match(MEMBER_PATH) ?? [];
+		if (members.length === 0) continue;
+		const thenOpen = code.indexOf('{', condClose);
+		if (thenOpen === -1 || code.slice(condClose + 1, thenOpen).trim() !== '') continue;
+		const thenBody = objectBody(code, thenOpen);
+		const afterThen = code.slice(thenOpen + thenBody.length);
+		const elseMatch = afterThen.match(/^\s*else\s*\{/);
+		if (elseMatch === null) continue;
+		const elseOpen = thenOpen + thenBody.length + elseMatch[0].length - 1;
+		const elseBody = objectBody(code, elseOpen);
+		for (const member of members) {
+			for (const [calling, other] of [
+				[thenBody, elseBody],
+				[elseBody, thenBody],
+			] as const) {
+				if (!callsMember(calling, member)) continue;
+				for (const token of tokens) {
+					if (containsFreeToken(other, token))
+						report(match.index as number, token, `if/else on ${member}`);
+				}
+			}
+		}
+	}
+
+	// 4: the gate taken as a value.
+	for (const token of tokens) {
+		for (const match of code.matchAll(freeToken(token))) {
+			const at = match.index as number;
+			const after = code.slice(at + token.length);
+			if (/^\s*(?:\(|<[^>]*>\s*\()/.test(after)) continue; // a call (or the declaration)
+			if (/\btypeof\s+$/.test(code.slice(Math.max(0, at - 16), at))) continue; // a type position
+			report(at, token, 'gate taken as a value');
+		}
+	}
+
+	return sites;
+}
+
+describe('a tool action gate is called directly, never through an optional seam', () => {
+	test('no tool server source reaches an authorization token through a seam fallback', () => {
+		const files = gateSourceFiles();
+		// Non-vacuity for the discovery: a mis-globbed scan must not pass.
+		expect(files.length, 'no tool server sources found — the scan is broken').toBeGreaterThan(50);
+		expect(files).toContain('tools/tool_transcription/server/index.ts');
+		const sites = files.flatMap((rel) => seamFallbackSites(rel, read(rel), AUTHORIZATION_TOKENS));
+		expect(
+			sites.map((s) => `${s.file}:${s.line} ${s.token} (${s.shape})`),
+			'a gate reached through an optional seam is a gate a caller can replace — call it directly (gateRecord(…) as a statement of the handler) and drive the test through a principal the door really grants (see tool_transcription, badbff1fc0)',
+		).toEqual([]);
+	});
+
+	test('the scanner sees the census gates it is meant to protect (positive control)', () => {
+		// The gate tokens ARE present in the scanned code as direct calls; a broken
+		// blanker that erased them would make the rule above pass by vacuity.
+		const code = gateScanCode(read('tools/tool_transcription/server/index.ts'));
+		expect(containsFreeToken(code, 'gateRecord')).toBe(true);
+		expect(code.includes('gateRecord(')).toBe(true);
+	});
+
+	describe('negative controls: every refused shape is detected, every legitimate one passes', () => {
+		const scan = (snippet: string): string[] =>
+			seamFallbackSites('fixture.ts', snippet, AUTHORIZATION_TOKENS).map((s) => s.shape);
+
+		const REFUSED: readonly [string, string][] = [
+			[
+				'?? arrow fallback (the census-passing shape)',
+				'async function h(ctx, seams = {}) {\n\tconst gate = seams.gate ?? (() => gateRecord(ddo, ctx, "read"));\n\tawait gate();\n}',
+			],
+			[
+				'?? async block-bodied fallback',
+				'async function h(ctx, seams = {}) {\n\tconst gate = seams.gate ?? (async (d, c) => {\n\t\treturn gateRecord(d, c);\n\t});\n}',
+			],
+			['?? bare reference', 'function h(seams) {\n\tconst gate = seams.gate ?? gateRecord;\n}'],
+			[
+				'?? over an optional call',
+				'async function h(d, seams) {\n\tconst g = (await seams.gate?.(d)) ?? (await gateRecord(d));\n}',
+			],
+			[
+				'|| function value',
+				'function h(seams) {\n\tconst gate = seams.gate || ((d) => gateRecord(d));\n}',
+			],
+			['default parameter', 'async function h(ctx, gate = gateRecord) {\n\tawait gate(ctx);\n}'],
+			['seam map value', 'const seams = { gate: authorizeRecordAccess };'],
+			[
+				'ternary on the seam',
+				'async function h(d, seams) {\n\tconst g = seams.gate ? await seams.gate(d) : await gateRecord(d);\n}',
+			],
+			[
+				'negated ternary on the seam',
+				'async function h(d, seams) {\n\tconst g = !seams.gate ? await gateRecord(d) : await seams.gate(d);\n}',
+			],
+			[
+				'if/else on the seam',
+				'async function h(d, seams) {\n\tif (seams.gate) {\n\t\tawait seams.gate(d);\n\t} else {\n\t\tawait gateRecord(d);\n\t}\n}',
+			],
+		];
+		for (const [label, snippet] of REFUSED) {
+			test(`refused: ${label}`, () => {
+				expect(scan(snippet).length, `${label} was not detected:\n${snippet}`).toBeGreaterThan(0);
+			});
+		}
+
+		const ACCEPTED: readonly [string, string][] = [
+			[
+				'a direct call statement',
+				'async function h(ctx) {\n\tconst grant = await gateRecord(readDdo(ctx.options) ?? null, ctx, "write");\n}',
+			],
+			[
+				'a boolean deny condition over call results',
+				'async function h(p, s) {\n\tif (s === "" || (await getPermissions(p, s, s)) < 1) throw new Error("x");\n}',
+			],
+			['a property read', 'function h(p) {\n\treturn p.isDeveloper || p.isGlobalAdmin ? 1 : 0;\n}'],
+			['an import', "import { gateRecord, isGlobalAdmin } from './x.ts';"],
+			['a type position', 'type G = ReturnType<typeof gateRecord>;'],
+			['prose in a string', 'const s = "seams.gate ?? gateRecord is refused";'],
+			[
+				'a non-gate seam fallback',
+				'async function h(seams) {\n\tconst cfg = await (seams.config ?? readConfig)();\n}',
+			],
+			[
+				'both ternary branches call the gate',
+				'async function h(d, mode) {\n\treturn mode.write ? gateRecord(d, "write") : gateRecord(d, "read");\n}',
+			],
+		];
+		for (const [label, snippet] of ACCEPTED) {
+			test(`accepted: ${label}`, () => {
+				expect(scan(snippet), `${label} was wrongly flagged:\n${snippet}`).toEqual([]);
+			});
+		}
 	});
 });

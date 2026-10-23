@@ -483,7 +483,7 @@ const PRIVATE_ROOT_WALKERS: Readonly<Record<string, string>> = {
 	'test/unit/tm_lang_slice_restore_native.test.ts': 'ROOTS: `tools/tool_time_machine/server`.',
 	'test/unit/tm_mode_retired_tripwire.test.ts': 'ROOTS: `client/dedalo` `src` `tools`.',
 	'test/unit/tool_header_contract_tripwire.test.ts': 'ROOTS: `tools` — `*/css/*.less`.',
-	'test/unit/tool_permission_census_tripwire.test.ts': 'ROOTS: `tools`.',
+	'test/unit/tool_permission_census_tripwire.test.ts': 'ROOTS: `src/core/tools` `tools`; `tools`.',
 	'test/unit/tool_picker_wiring_tripwire.test.ts': 'ROOTS: `tools` ×2.',
 	'test/unit/tools_cache_invalidation.test.ts': 'ROOTS: `src/core/tools` ×2.',
 	'test/unit/update_ownership_tripwire.test.ts':
