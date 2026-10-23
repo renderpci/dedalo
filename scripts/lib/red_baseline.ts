@@ -76,6 +76,19 @@ export interface TierSpec {
 	 * Only the READ doors, `--check` and `--report`, stay open on a desk.
 	 */
 	recordOnlyInCiImage?: boolean;
+	/**
+	 * TRANSITION ONLY — the ONE unstamped artifact a `recordOnlyInCiImage` tier's `--check`
+	 * still reads, pinned by the sha256 of its exact bytes (see {@link ciImageStampVerdict}).
+	 * The stamp ({@link RedBaseline.ci_image}) is written by the full writer in the image;
+	 * a baseline recorded before the stamp existed has none, and no write path may add one
+	 * after the fact (a stamp is a claim about where the FLOORS were measured — stamping old
+	 * floors with today's image would launder exactly the artifact the check refuses). So the
+	 * pre-stamp file is honoured by name and digest, loudly on every check, until the next
+	 * green full record stamps it; any other unstamped file is refused, and the commit that
+	 * lands the first stamped record must set this to `null` (a stamped file beside a live
+	 * transition is refused too — the transition cannot outlive its artifact).
+	 */
+	unstampedTransition?: { sha256: string; reason: string } | null;
 }
 
 /** Where the CI image states its own fingerprint (ci/Dockerfile writes it at build time). */
@@ -95,9 +108,140 @@ export function ciImageMarkerMatches(
 	return readFileSync(markerPath, 'utf8').trim() === ciImageFingerprint(repoRoot);
 }
 
+/**
+ * The image identity a check compares a baseline's stamp against. IN the image it is what
+ * the image states about itself (`/etc/dedalo-ci-image`, source `marker`) — the tiers'
+ * `ci_workflow_tripwire` in-image rule holds that equal to the checkout's definition, and
+ * `ci/image.json`'s `fingerprint` (the lock beside the pinned digest) to the same value, so
+ * one fingerprint names the definition, the lock and the running build. OFF the image (a
+ * desk's host-mode db tier, `baselines:bank --with-db`) there is no running image: the
+ * check compares with the image THIS CHECKOUT defines (source `checkout`) — a desk still
+ * measures the desk (engineering/CI.md), but a baseline recorded in another definition is
+ * refused there too, never read as if it were this tree's.
+ */
+export interface RunningCiImage {
+	fingerprint: string;
+	source: 'marker' | 'checkout';
+}
+
+export function runningCiImage(
+	markerPath: string = CI_IMAGE_MARKER,
+	repoRoot: string = REPO_ROOT,
+): RunningCiImage {
+	if (existsSync(markerPath))
+		return { fingerprint: readFileSync(markerPath, 'utf8').trim(), source: 'marker' };
+	return { fingerprint: ciImageFingerprint(repoRoot), source: 'checkout' };
+}
+
+const FINGERPRINT_SHAPE = /^[0-9a-f]{64}$/;
+
+/** sha256 of an artifact's exact bytes — what {@link TierSpec.unstampedTransition} pins. */
+export function baselineBytesDigest(bytes: string): string {
+	return new Bun.CryptoHasher('sha256').update(bytes).digest('hex');
+}
+
+const short = (fingerprint: string) => `${fingerprint.slice(0, 12)}…`;
+
+/**
+ * THE STAMP VERDICT — may this artifact be checked by THIS image at all?
+ *
+ * `none` for a tier that does not record in the image (parity). Otherwise:
+ *   - stamped and equal to the running image → `match`;
+ *   - stamped with another fingerprint → REFUSED: its floors and red set are another
+ *     platform's facts (an image rebuilt from a changed ci/Dockerfile or .bun-version), and
+ *     comparing them here is the cross-image read the stamp exists to stop. Re-record in
+ *     this image (the full writer re-stamps);
+ *   - stamped but not a fingerprint → REFUSED (a hand edit);
+ *   - stamped while {@link TierSpec.unstampedTransition} is still live → REFUSED: the
+ *     transition names a pre-stamp artifact that no longer exists; delete it;
+ *   - unstamped and byte-identical to the pinned transition artifact → `legacy`, with a
+ *     line the caller PRINTS on every check (never silent);
+ *   - unstamped otherwise → REFUSED: once the tier stamps, a missing stamp is a hand edit
+ *     (the writer always writes one), and an edited pre-stamp file is no longer the
+ *     artifact the transition vouches for.
+ * Pure over the bytes, so the gate drives every branch on planted artifacts.
+ */
+export type CiImageStampVerdict =
+	| { kind: 'none' }
+	| { kind: 'match' | 'legacy'; line: string }
+	| { kind: 'refuse'; message: string };
+
+export function ciImageStampVerdict(
+	spec: TierSpec,
+	bytes: string,
+	running: RunningCiImage,
+): CiImageStampVerdict {
+	if (spec.recordOnlyInCiImage !== true) return { kind: 'none' };
+	const door = 'bun run ci:local --docker --record-unit-baseline';
+	const refuse = (why: string): CiImageStampVerdict => ({
+		kind: 'refuse',
+		message: `${spec.id}_baseline: REFUSING to check ${spec.baselinePath} — ${why}`,
+	});
+	let stamp: unknown;
+	try {
+		stamp = (JSON.parse(bytes) as { ci_image?: unknown }).ci_image;
+	} catch (error) {
+		return refuse(`it is not valid JSON (${String(error)})`);
+	}
+	const transition = spec.unstampedTransition ?? null;
+	const where =
+		running.source === 'marker'
+			? `the running CI image (${CI_IMAGE_MARKER})`
+			: `the CI image this checkout defines (no ${CI_IMAGE_MARKER} here: sha256(ci/Dockerfile ++ .bun-version))`;
+	if (stamp !== undefined) {
+		const fingerprint =
+			typeof stamp === 'object' && stamp !== null
+				? (stamp as { fingerprint?: unknown }).fingerprint
+				: undefined;
+		if (typeof fingerprint !== 'string' || !FINGERPRINT_SHAPE.test(fingerprint))
+			return refuse(
+				`its ci_image stamp is not {"fingerprint": "<64 hex>"} — the writer never writes that; re-record: ${door}`,
+			);
+		if (transition !== null)
+			return refuse(
+				`it carries a CI-image stamp while ${spec.id}'s unstampedTransition (sha256 ${short(transition.sha256)}) is still live — the pre-stamp artifact it vouches for is gone; set unstampedTransition to null in the commit that lands the stamped record`,
+			);
+		if (fingerprint !== running.fingerprint)
+			return refuse(
+				`FOREIGN CI IMAGE: recorded in ${short(fingerprint)}, but ${where} is ${short(running.fingerprint)}. Its floors and red set are another image's platform facts; re-record in this one: ${door}`,
+			);
+		return {
+			kind: 'match',
+			line: `${spec.id}_baseline: CI-image stamp ${short(fingerprint)} = ${where}`,
+		};
+	}
+	if (transition === null)
+		return refuse(
+			`it carries NO CI-image stamp (ci_image.fingerprint). The writer stamps every record with the image it measured in, so a missing stamp is a hand edit; re-record: ${door}`,
+		);
+	const digest = baselineBytesDigest(bytes);
+	if (digest !== transition.sha256)
+		return refuse(
+			`it carries NO CI-image stamp, and it is not the pre-stamp artifact unstampedTransition vouches for (sha256 ${short(transition.sha256)}; this file is ${short(digest)}) — an unstamped baseline was edited (by hand, or a --record-new before the first stamped record). Re-record: ${door}`,
+		);
+	return {
+		kind: 'legacy',
+		line: `${spec.id}_baseline: UNSTAMPED (transition) — ${spec.baselinePath} predates the CI-image stamp; read as the pinned pre-stamp artifact (sha256 ${short(digest)}): ${transition.reason}`,
+	};
+}
+
+/** The baseline with its CI-image stamp, placed after `rule` so the artifact reads top-down. */
+export function stampBaseline(baseline: RedBaseline, fingerprint: string): RedBaseline {
+	const { generated_by, rule, ci_image: _previous, ...rest } = baseline;
+	return { generated_by, rule, ci_image: { fingerprint }, ...rest };
+}
+
 export interface RedBaseline {
 	generated_by: string;
 	rule: string;
+	/**
+	 * THE CI IMAGE THE FLOORS WERE MEASURED IN — written by the full writer of a
+	 * `recordOnlyInCiImage` tier (the image's own `/etc/dedalo-ci-image`), refused by its
+	 * `--check` when it is not the running image's ({@link ciImageStampVerdict}). Absent
+	 * on the parity tier and on the one pre-stamp artifact {@link TierSpec.unstampedTransition}
+	 * names.
+	 */
+	ci_image?: { fingerprint: string };
 	measured: {
 		tier_files: number;
 		tier_tests: number;
@@ -583,6 +727,8 @@ export interface BaselineCliIo {
 	error: (line: string) => void;
 	/** Running in the CI image? Default {@link ciImageMarkerMatches}; consulted only by a `recordOnlyInCiImage` tier's writer. */
 	inCiImage?: () => boolean;
+	/** The image identity a stamp is written from and checked against. Default {@link runningCiImage}; consulted only by a `recordOnlyInCiImage` tier. */
+	runningCiImage?: () => RunningCiImage;
 }
 
 export function realBaselineCliIo(): BaselineCliIo {
@@ -599,6 +745,7 @@ export function realBaselineCliIo(): BaselineCliIo {
 		log: (line) => console.log(line),
 		error: (line) => console.error(line),
 		inCiImage: () => ciImageMarkerMatches(),
+		runningCiImage: () => runningCiImage(),
 	};
 }
 
@@ -751,9 +898,25 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 		io.exit(1);
 	}
 
+	const imageOf = io.runningCiImage ?? (() => runningCiImage());
+	const stampOf = (): CiImageStampVerdict =>
+		ciImageStampVerdict(spec, readFileSync(baselineFile(spec), 'utf8'), imageOf());
+
 	if (recordingNew) {
 		// Before the full measure: this door runs ONLY the files it records.
 		const existing = loadBaseline(spec);
+		// A new floor joins floors measured in ONE image: the existing artifact must carry
+		// THIS image's stamp (the record carries it over). A foreign or missing stamp, or the
+		// pre-stamp transition artifact, changes only through the full census, which stamps.
+		const stamp = stampOf();
+		if (stamp.kind === 'refuse' || stamp.kind === 'legacy') {
+			io.error(
+				stamp.kind === 'refuse'
+					? `${spec.id}_baseline --record-new: REFUSING — nothing was written.\n  ${stamp.message}`
+					: `${spec.id}_baseline --record-new: REFUSING — nothing was written.\n  ${stamp.line}\n  A pre-stamp baseline changes only through the full census, which stamps it with this image: bun run ci:local --docker --record-unit-baseline`,
+			);
+			io.exit(1);
+		}
 		const named = io.argv.filter((arg) => !arg.startsWith('--'));
 		const targets = named.length > 0 ? named : unrecordedFiles(spec, existing);
 		const decision = recordNewDecision(
@@ -773,6 +936,31 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 				`${spec.id}_baseline: recorded the per-file floor of ${decision.recorded.length} new file(s) in ${spec.baselinePath}:\n  ${decision.recorded.join('\n  ')}`,
 			);
 			io.exit(0);
+		}
+	}
+
+	// THE STAMP, before the measure (~5 min that would compare another image's floors):
+	// a check of a recordOnlyInCiImage tier refuses an artifact this image did not record.
+	const checkingJson = wantsCheckJson(io.argv);
+	if (checkingJson || args.has('--check')) {
+		loadBaseline(spec); // a missing/malformed artifact throws its own named error first
+		const stamp = stampOf();
+		if (stamp.kind === 'refuse') {
+			io.error(stamp.message);
+			if (checkingJson)
+				emitRatchetCheck(
+					{
+						ratchet: `${spec.id}_baseline`,
+						baselines: [spec.baselinePath],
+						improvements: [],
+						regressions: [`ci image: ${stamp.message}`],
+					},
+					io.log,
+				);
+			io.exit(1);
+		} else if (stamp.kind !== 'none') {
+			// stderr under --json: stdout carries the ONE verdict line the bank parses.
+			(checkingJson || stamp.kind === 'legacy' ? io.error : io.log)(stamp.line);
 		}
 	}
 
@@ -829,11 +1017,16 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 				`${spec.id}_baseline: ACCEPTED under --allow-regression (${accepted.length}) — each needs its reason in the commit message:\n${formatDrift({ ...emptyDrift(), regressions: drift.regressions, floors: drift.floors, firstFailures: drift.firstFailures })}`,
 			);
 	}
-	const baseline = buildBaseline(spec, run);
+	// A tier recorded only in the image carries the image it was recorded in: the guard
+	// above proved this IS the image (marker = this checkout's definition), so the running
+	// identity is the one the floors below were measured in.
+	const measuredIn = spec.recordOnlyInCiImage === true ? imageOf().fingerprint : null;
+	const built = buildBaseline(spec, run);
+	const baseline = measuredIn === null ? built : stampBaseline(built, measuredIn);
 	const target = baselineFile(spec);
 	io.writeFile(target, `${JSON.stringify(baseline, null, '\t')}\n`);
 	io.format(target);
 	io.log(
-		`${spec.id}_baseline: wrote ${spec.baselinePath} — ${baseline.measured.failing_tests} frozen reds across ${baseline.measured.failing_files} files (tier: ${baseline.measured.tier_tests} cases in ${baseline.measured.tier_files} files)`,
+		`${spec.id}_baseline: wrote ${spec.baselinePath} — ${baseline.measured.failing_tests} frozen reds across ${baseline.measured.failing_files} files (tier: ${baseline.measured.tier_tests} cases in ${baseline.measured.tier_files} files)${measuredIn === null ? '' : `, stamped CI image ${short(measuredIn)}`}`,
 	);
 }

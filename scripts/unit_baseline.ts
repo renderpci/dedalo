@@ -5,7 +5,9 @@
  *   bun run scripts/unit_baseline.ts            # rewrite the JSON baseline (default) —
  *                                  # IN THE CI IMAGE ONLY (recordOnlyInCiImage): the door is
  *                                  # `bun run ci:local --docker --record-unit-baseline`
- *   bun run scripts/unit_baseline.ts --check    # print drift, exit 1 if any
+ *   bun run scripts/unit_baseline.ts --check    # print drift, exit 1 if any — REFUSES first
+ *                                  # (no measure) a baseline whose ci_image stamp is not the
+ *                                  # running image's (red_baseline.ts ciImageStampVerdict)
  *   bun run scripts/unit_baseline.ts --report   # failing tests per file
  *   bun run scripts/unit_baseline.ts --record-new [file…]  # ONLY a new file's per_file
  *                                  # floor, measured; refuses a red (scripts/lib/red_baseline.ts
@@ -143,6 +145,17 @@ export const UNIT_TIER: TierSpec = {
 	// image (red_baseline.ts ciImageMarkerMatches); ci:local --docker --record-unit-baseline
 	// [--new <files>] is the door.
 	recordOnlyInCiImage: true,
+	// The CI-image stamp (red_baseline.ts ciImageStampVerdict): the full writer stamps every
+	// record with the image it measured in, and --check refuses a foreign or missing stamp.
+	// The artifact on disk predates the stamp; no write path stamps old floors (that would
+	// launder them), and the recorder copies nothing while the db tier is red — so THIS
+	// file, byte for byte, is honoured until the next green full record. That record's
+	// commit sets this to null (a stamped file beside a live transition is refused).
+	unstampedTransition: {
+		sha256: 'acf0d70e8e13be845e807699f4ffc5cdabbf4895e10aae5821a0e94652294625',
+		reason:
+			'recorded in the CI image (639cb8ccf0 and the records before it, all at ci/Dockerfile + .bun-version fingerprint 93116f58…) before the stamp existed (2026-10-23); stamped by the next green `bun run ci:local --docker --record-unit-baseline`, whose commit deletes this transition',
+	},
 	whyRed:
 		"Why these reds exist — and why, UNLIKE the parity tier, they are NOT permanent. RECORDED IN THE CI IMAGE (2026-10-02, `bun run ci:local --docker --record-unit-baseline` on the sorted tier order; the writer refuses anywhere else): 0 frozen reds. History: 7 reds (2026-08-29) -> 3 (2026-08-30: the RAG gates stopped inheriting the machine's embedding provider; a leaked setTimeout in client_request_coalescing_tripwire stopped killing arbitrary victims) -> 2 (gate_vacuity's banked-budget case passes) -> 0 (2026-10-02: the dd1 install seed re-synced for ontology_parser; info_widget's media_icons golden builds its own term target). The stage is BLOCKING in scripts/ci/db_tier.sh since 2026-10-02 (zero drift on three executed GitHub db runs of 674c1f4f76; the 'loaded runner' leg of the old criterion was not separately exercised — engineering/CI.md): any drift from this file fails the db tier, on the runner and on the desk gate alike. Per-file floors are the image's, and a desk differs from them in BOTH directions: it asserts more where it has what a runner lacks (the sibling v6 tree, audits/, a GeoIP database, translated locales, its own ../private config) and less where the image has what the desk lacks (librsvg: media_svg_thumb skips 7 on a Mac, 0 in the image) — so a desk number is never a floor, either way. Any entry a future recording accepts (--allow-regression --reason) is expected to be FIXED; the list is shrink-only and a listed test that passes is red, so these numbers may only go DOWN.",
 };
