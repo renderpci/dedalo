@@ -84,7 +84,9 @@ export interface TierSpec {
 	 * after the fact (a stamp is a claim about where the FLOORS were measured — stamping old
 	 * floors with today's image would launder exactly the artifact the check refuses). So the
 	 * pre-stamp file is honoured by name and digest, loudly on every check, until the next
-	 * green full record stamps it; any other unstamped file is refused, and the commit that
+	 * green full record stamps it. `--record-new` may ADD floors to it, but only in the image
+	 * `fingerprint` names: it writes no stamp and reports the new digest, which its commit
+	 * repins here (owner-approved 2026-10-23). Any other unstamped file is refused, and the commit that
 	 * lands the first stamped record must set this to `null` (a stamped file beside a live
 	 * transition is refused too — the transition cannot outlive its artifact).
 	 *
@@ -190,7 +192,7 @@ export function ciImageStampVerdict(
 	});
 	let stamp: unknown;
 	try {
-		stamp = (JSON.parse(bytes) as { ci_image?: unknown }).ci_image;
+		stamp = baselineCiImageStamp(JSON.parse(bytes) as { ci_image?: unknown });
 	} catch (error) {
 		return refuse(`it is not valid JSON (${String(error)})`);
 	}
@@ -200,10 +202,7 @@ export function ciImageStampVerdict(
 			? `the running CI image (${CI_IMAGE_MARKER})`
 			: `the CI image this checkout defines (no ${CI_IMAGE_MARKER} here: sha256(ci/Dockerfile ++ .bun-version))`;
 	if (stamp !== undefined) {
-		const fingerprint =
-			typeof stamp === 'object' && stamp !== null
-				? (stamp as { fingerprint?: unknown }).fingerprint
-				: undefined;
+		const fingerprint = stamp;
 		if (typeof fingerprint !== 'string' || !FINGERPRINT_SHAPE.test(fingerprint))
 			return refuse(
 				`its ci_image stamp is not {"fingerprint": "<64 hex>"} — the writer never writes that; re-record: ${door}`,
@@ -228,7 +227,7 @@ export function ciImageStampVerdict(
 	const digest = baselineBytesDigest(bytes);
 	if (digest !== transition.sha256)
 		return refuse(
-			`it carries NO CI-image stamp, and it is not the pre-stamp artifact unstampedTransition vouches for (sha256 ${short(transition.sha256)}; this file is ${short(digest)}) — an unstamped baseline was edited (by hand, or a --record-new before the first stamped record). Re-record: ${door}`,
+			`it carries NO CI-image stamp, and it is not the pre-stamp artifact unstampedTransition vouches for (sha256 ${short(transition.sha256)}; this file is ${short(digest)}) — an unstamped baseline was edited (by hand, or a --record-new whose commit did not repin unstampedTransition.sha256 to the digest it reported). Re-record: ${door}`,
 		);
 	if (typeof transition.fingerprint !== 'string' || !FINGERPRINT_SHAPE.test(transition.fingerprint))
 		return refuse(
@@ -242,6 +241,21 @@ export function ciImageStampVerdict(
 		kind: 'legacy',
 		line: `${spec.id}_baseline: UNSTAMPED (transition) — ${spec.baselinePath} predates the CI-image stamp; read as the pinned pre-stamp artifact (sha256 ${short(digest)}, recorded in ${short(transition.fingerprint)} = ${where}): ${transition.reason}`,
 	};
+}
+
+/**
+ * THE READER of the stamp {@link stampBaseline} writes — the one spelling of its key outside
+ * the writer, shared by {@link ciImageStampVerdict} and every gate that reads a baseline's
+ * provenance (tier_wiring_tripwire leg B), so a reader can never drift from the writer
+ * (it did: leg B read a key no writer wrote, and its provenance check could not run).
+ * `undefined` = UNSTAMPED; anything else = stamped, and only a 64-hex string is a valid
+ * stamp (a malformed one comes back as itself, or `null` for an object without one).
+ */
+export function baselineCiImageStamp(baseline: { ci_image?: unknown } | null): unknown {
+	const stamp = baseline?.ci_image;
+	if (stamp === undefined) return undefined;
+	if (typeof stamp !== 'object' || stamp === null) return stamp;
+	return (stamp as { fingerprint?: unknown }).fingerprint ?? null;
 }
 
 /** The baseline with its CI-image stamp, placed after `rule` so the artifact reads top-down. */
@@ -797,7 +811,10 @@ export function baselineFile(spec: TierSpec): string {
  *   - every other byte of the artifact — reds, counts, other records — is untouched;
  *   - on a `recordOnlyInCiImage` tier (unit) it runs IN THE CI IMAGE only, like the full
  *     writer: a floor measured on a desk is the desk's (`runBaselineCli`'s guard). The
- *     door there is `bun run ci:local --docker --record-unit-baseline --new <files>`.
+ *     door there is `bun run ci:local --docker --record-unit-baseline --new <files>`. The
+ *     existing artifact must carry THIS image's stamp, or be the pinned pre-stamp
+ *     transition artifact in the image the transition names (no stamp written; the new
+ *     digest is reported for the same commit to repin) — a foreign or missing stamp is refused.
  *
  * No file named: every on-disk tier file without a record. Pure, so the gate proves the
  * refusals on planted runs (test/unit/baselines_bank_native.test.ts).
@@ -925,17 +942,22 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 		// Before the full measure: this door runs ONLY the files it records.
 		const existing = loadBaseline(spec);
 		// A new floor joins floors measured in ONE image: the existing artifact must carry
-		// THIS image's stamp (the record carries it over). A foreign or missing stamp, or the
-		// pre-stamp transition artifact, changes only through the full census, which stamps.
+		// THIS image's stamp (the record carries it over), OR be the pinned pre-stamp
+		// transition artifact read in the very image the transition names (`legacy` — the
+		// verdict already proved byte identity AND running image = transition.fingerprint).
+		// A foreign or missing stamp, a foreign image under the transition, or an edited
+		// pre-stamp file is refused. Under the transition the record writes NO stamp (a
+		// stamp would claim the OLD floors were measured here — laundering them); the
+		// artifact stays a pre-stamp transition artifact, so its new digest is REPORTED and
+		// the same commit repins unstampedTransition.sha256 (owner-approved 2026-10-23).
 		const stamp = stampOf();
-		if (stamp.kind === 'refuse' || stamp.kind === 'legacy') {
+		if (stamp.kind === 'refuse') {
 			io.error(
-				stamp.kind === 'refuse'
-					? `${spec.id}_baseline --record-new: REFUSING — nothing was written.\n  ${stamp.message}`
-					: `${spec.id}_baseline --record-new: REFUSING — nothing was written.\n  ${stamp.line}\n  A pre-stamp baseline changes only through the full census, which stamps it with this image: bun run ci:local --docker --record-unit-baseline`,
+				`${spec.id}_baseline --record-new: REFUSING — nothing was written.\n  ${stamp.message}`,
 			);
 			io.exit(1);
 		}
+		const underTransition = stamp.kind === 'legacy';
 		const named = io.argv.filter((arg) => !arg.startsWith('--'));
 		const targets = named.length > 0 ? named : unrecordedFiles(spec, existing);
 		const decision = recordNewDecision(
@@ -954,6 +976,11 @@ export function runBaselineCli(spec: TierSpec, io: BaselineCliIo = realBaselineC
 			io.log(
 				`${spec.id}_baseline: recorded the per-file floor of ${decision.recorded.length} new file(s) in ${spec.baselinePath}:\n  ${decision.recorded.join('\n  ')}`,
 			);
+			if (underTransition)
+				// The digest of the bytes ON DISK, after the formatter: what the check will hash.
+				io.log(
+					`${spec.id}_baseline: UNSTAMPED (transition) artifact extended in the image the transition names — no stamp written. REPIN in this same commit: unstampedTransition.sha256 = '${baselineBytesDigest(readFileSync(target, 'utf8'))}' (was ${short(spec.unstampedTransition?.sha256 ?? '')})`,
+				);
 			io.exit(0);
 		}
 	}

@@ -129,7 +129,13 @@ import { join, resolve } from 'node:path';
 import { mariadbTierSet, realListing } from '../../scripts/ci/mariadb_tier.ts';
 import { ciImageFingerprint } from '../../scripts/lib/ci_image.ts';
 import type { FileCounts } from '../../scripts/lib/parity_census.ts';
-import { loadBaseline, type RedBaseline, type TierSpec } from '../../scripts/lib/red_baseline.ts';
+import {
+	baselineCiImageStamp,
+	loadBaseline,
+	type RedBaseline,
+	stampBaseline,
+	type TierSpec,
+} from '../../scripts/lib/red_baseline.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 const read = (rel: string) => readFileSync(join(ROOT, rel), 'utf8');
@@ -435,7 +441,7 @@ const VACUOUS_DELIVERY_CEILING = 5;
 
 /**
  * SHRINK-ONLY — held, not declared: the baselines whose per-file floors leg B still
- * reads WITHOUT an `image_fingerprint` stamp, each with why (> 60 characters). The
+ * reads WITHOUT a `ci_image.fingerprint` stamp, each with why (> 60 characters). The
  * provenance check (a stamp from another image is red) cannot fail on an unstamped
  * baseline, so each one is named here rather than printed: a NEW unstamped baseline,
  * or one that LOSES its stamp, is red; a row whose baseline is stamped now is stale.
@@ -464,7 +470,7 @@ function unstampedFaults(
 	for (const path of unstamped)
 		if (!allowed.has(path))
 			faults.push(
-				`${path}: floors read with no image_fingerprint and no UNSTAMPED_BASELINES row — re-record it in the CI image`,
+				`${path}: floors read with no ci_image.fingerprint stamp and no UNSTAMPED_BASELINES row — re-record it in the CI image`,
 			);
 	for (const [path, reason] of allowed) {
 		if (!unstamped.includes(path))
@@ -494,9 +500,30 @@ function testFilesUnder(rel: string): string[] {
 }
 
 /**
+ * PURE. One baseline's provenance, read through THE reader of the stamp the writer writes
+ * (red_baseline.ts `baselineCiImageStamp` ↔ `stampBaseline`) — never a key spelled here: this
+ * gate once read `image_fingerprint`, a key no writer wrote, so every baseline counted as
+ * unstamped and the foreign-image fault below could never fire. `unstamped` when there is
+ * no stamp; otherwise a fault unless the stamp is THIS checkout's CI image (floors recorded
+ * in another image describe another runner; a malformed stamp is never this image).
+ */
+function baselineProvenance(
+	path: string,
+	baseline: RedBaseline,
+	fingerprint: string,
+): { unstamped: boolean; fault: string | null } {
+	const stamp = baselineCiImageStamp(baseline);
+	if (stamp === undefined) return { unstamped: true, fault: null };
+	if (stamp === fingerprint) return { unstamped: false, fault: null };
+	return {
+		unstamped: false,
+		fault: `${path}: its floors were recorded in CI image ${String(stamp).slice(0, 12)}, not this checkout's ${fingerprint.slice(0, 12)} — re-record in the image`,
+	};
+}
+
+/**
  * The real vacuity verdict over every claimed path, plus the provenance faults of the
- * baselines it read: a baseline stamped with an `image_fingerprint` must be THIS
- * checkout's CI image (floors recorded in another image describe another runner).
+ * baselines it read ({@link baselineProvenance}).
  */
 async function realVacuity(corpus: Corpus): Promise<{
 	verdict: VacuityVerdict;
@@ -514,12 +541,9 @@ async function realVacuity(corpus: Corpus): Promise<{
 			if (baselines.has(spec.baselinePath)) continue;
 			const baseline = loadBaseline(spec);
 			baselines.set(spec.baselinePath, baseline);
-			const stamp = (baseline as RedBaseline & { image_fingerprint?: unknown }).image_fingerprint;
-			if (stamp === undefined) unstamped.push(spec.baselinePath);
-			else if (stamp !== fingerprint)
-				provenance.push(
-					`${spec.baselinePath}: its floors were recorded in CI image ${String(stamp).slice(0, 12)}, not this checkout's ${fingerprint.slice(0, 12)} — re-record in the image`,
-				);
+			const read = baselineProvenance(spec.baselinePath, baseline, fingerprint);
+			if (read.unstamped) unstamped.push(spec.baselinePath);
+			if (read.fault !== null) provenance.push(read.fault);
 		}
 	}
 	const floorOf = (file: string): FileCounts | undefined => {
@@ -1278,10 +1302,48 @@ describe('tier wiring — every gate is reached by a workflow that executes', ()
 		expect(VACUOUS_DELIVERY_EXEMPT.size).toBeLessThanOrEqual(VACUOUS_DELIVERY_CEILING);
 	});
 
+	test("B. provenance reads the stamp THE WRITER writes: stampBaseline's output in this image is stamped and clean, in another image a fault, unstamped only without one", () => {
+		const fingerprint = ciImageFingerprint(ROOT);
+		const other = fingerprint.replace(/^./, (c) => (c === '0' ? '1' : '0'));
+		const bare: RedBaseline = {
+			generated_by: 'g',
+			rule: 'r',
+			measured: {
+				tier_files: 0,
+				tier_tests: 0,
+				tier_pass: 0,
+				tier_skip: 0,
+				failing_files: 0,
+				failing_tests: 0,
+			},
+			files: {},
+			per_file: {},
+		};
+		// Through the writer's own bytes, not a hand-built object: a reader on any other key
+		// sees the written stamp as absent.
+		const written = (fp: string) =>
+			JSON.parse(JSON.stringify(stampBaseline(bare, fp))) as RedBaseline;
+		expect(baselineProvenance('a.json', written(fingerprint), fingerprint)).toEqual({
+			unstamped: false,
+			fault: null,
+		});
+		const foreign = baselineProvenance('a.json', written(other), fingerprint);
+		expect(foreign.unstamped).toBe(false);
+		expect(foreign.fault).toMatch(
+			new RegExp(`^a\\.json: its floors were recorded in CI image ${other.slice(0, 12)}`),
+		);
+		expect(baselineProvenance('a.json', bare, fingerprint)).toEqual({
+			unstamped: true,
+			fault: null,
+		});
+		const malformed = { ...bare, ci_image: 'x' } as unknown as RedBaseline;
+		expect(baselineProvenance('a.json', malformed, fingerprint).fault).not.toBeNull();
+	});
+
 	test('B. provenance controls: an unstamped baseline without a row is red, a row for a stamped one is stale, a short reason is red', () => {
 		const why = 'recorded before the image stamp existed; the in-image re-record stamps it';
 		expect(unstampedFaults(['a.json'], new Map())).toEqual([
-			expect.stringMatching(/^a\.json: floors read with no image_fingerprint/),
+			expect.stringMatching(/^a\.json: floors read with no ci_image\.fingerprint stamp/),
 		]);
 		expect(unstampedFaults(['a.json'], new Map([['a.json', why]]))).toEqual([]);
 		expect(unstampedFaults([], new Map([['a.json', why]]))).toEqual([

@@ -1072,7 +1072,7 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 		expect(ciImageStampVerdict(PARITY_TIER, doc(), image(HERE)).kind).toBe('none');
 	});
 
-	test("--record-new carries THIS image's stamp, and refuses a foreign, missing or pre-stamp one", () => {
+	test("--record-new carries THIS image's stamp, extends the pinned pre-stamp artifact ONLY in its own image (no stamp, repin reported), and refuses a foreign or missing one", () => {
 		const tier = spec();
 		drive(tier, [], image(HERE));
 		const measured = run({ [NEW]: 3 });
@@ -1084,6 +1084,7 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 		const on = drive(tier, ['--record-new', NEW], image(HERE), measured);
 		expect(on.exitCode).toBe(0);
 		expect(stampOf(tier)).toBe(HERE);
+		expect(on.said).not.toContain('REPIN');
 		expect((JSON.parse(read(tier)) as { per_file: Record<string, unknown> }).per_file[NEW]).toEqual(
 			{
 				tests: 1,
@@ -1091,21 +1092,65 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 				assertions: 3,
 			},
 		);
-		// The pre-stamp artifact: honoured by --check, never extended by --record-new
-		// (its bytes would change and the transition would vouch for nothing).
+		// The pre-stamp artifact (owner-approved 2026-10-23): extended ONLY in the image the
+		// transition is pinned to; a foreign image, or a missing stamp with no transition, is
+		// refused before measuring and the bytes stay.
 		const bytes = unstamp(tier);
 		const NEWER = 'test/zz_planted_tier/planted_newer.test.ts';
 		const pinned = {
 			...tier,
 			unstampedTransition: { sha256: baselineBytesDigest(bytes), fingerprint: HERE, reason: 'r' },
 		};
-		for (const t of [tier, pinned]) {
-			const refused = drive(t, ['--record-new', NEWER], image(HERE), run({ [NEWER]: 2 }));
-			expect(refused.exitCode).toBe(1);
-			expect(refused.measures).toBe(0);
-			expect(refused.written).toEqual([]);
+		const refusals = [
+			{ what: 'missing (no transition)', t: tier, running: image(HERE), says: 'NO CI-image stamp' },
+			{ what: 'foreign (marker)', t: pinned, running: image(THERE), says: 'FOREIGN CI IMAGE' },
+			{
+				what: 'foreign (checkout)',
+				t: pinned,
+				running: image(THERE, 'checkout'),
+				says: 'FOREIGN CI IMAGE',
+			},
+		];
+		for (const { what, t, running, says } of refusals) {
+			const refused = drive(t, ['--record-new', NEWER], running, run({ [NEWER]: 2 }));
+			expect(refused.exitCode, what).toBe(1);
+			expect(refused.measures, what).toBe(0);
+			expect(refused.written, what).toEqual([]);
+			expect(refused.said, what).toContain(says);
+			expect(read(tier), what).toBe(bytes);
 		}
-		expect(read(tier)).toBe(bytes);
+		// Same image as the pin: accepted — the floor lands, NO stamp is written (it would
+		// launder the old floors as this image's), and the new digest is reported for the
+		// same commit to repin; the repinned transition reads the new artifact, the old pin
+		// no longer does.
+		const same = drive(pinned, ['--record-new', NEWER], image(HERE), run({ [NEWER]: 2 }));
+		expect(same.exitCode, same.said).toBe(0);
+		expect(same.measures).toBe(1);
+		expect(stampOf(tier)).toBeUndefined();
+		const after = read(tier);
+		expect(after).not.toBe(bytes);
+		const doc = JSON.parse(after) as { per_file: Record<string, unknown> };
+		expect(doc.per_file[NEWER]).toEqual({ tests: 1, skipped: 0, assertions: 2 });
+		expect(doc.per_file[NEW]).toEqual({ tests: 1, skipped: 0, assertions: 3 });
+		const digest = baselineBytesDigest(after);
+		expect(same.said).toContain(
+			`REPIN in this same commit: unstampedTransition.sha256 = '${digest}'`,
+		);
+		const repinned = {
+			...pinned,
+			unstampedTransition: { ...pinned.unstampedTransition, sha256: digest },
+		};
+		expect(ciImageStampVerdict(repinned, after, image(HERE)).kind).toBe('legacy');
+		expect(ciImageStampVerdict(pinned, after, image(HERE)).kind).toBe('refuse');
+		// …and --check under the repin passes the stamp door to the measure (loudly).
+		const check = drive(
+			repinned,
+			['--check'],
+			image(HERE),
+			run({ [FILE]: 5, [NEW]: 3, [NEWER]: 2 }),
+		);
+		expect(check.measures).toBe(1);
+		expect(check.said).toContain('UNSTAMPED (transition)');
 	});
 
 	test('a pre-stamp artifact is honoured ONLY in the image its floors were recorded in — a foreign image is refused during the transition too', () => {
