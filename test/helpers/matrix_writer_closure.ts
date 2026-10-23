@@ -1144,7 +1144,7 @@ export const SANCTIONED_DERIVED_WRITERS: Readonly<Record<string, string>> = {
 	'src/core/section/record/record_metadata.ts#setRecordMetadata':
 		'the `data`-column METADATA twin (created_date / created_by_user_id, label, diffusion_info): system bookkeeping, no component value.',
 	'src/core/media/tools/files_info_persist.ts#writeItems':
-		'files_info — technical metadata derived from the files on disk; its ONE caller is the locked transform (transformStoredMediaItems).',
+		'the media-key writer: files_info — technical metadata derived from the files on disk — plus the DELETE-TIME drawing reset (lib_data/svg_file_data cleared when the delete removed the record’s last media file, audited by a recordTimeMachine row in the same transaction). Its ONE caller is the locked transform (transformStoredMediaItems).',
 	'src/core/relations/save.ts#removeDataframeDataById':
 		'the dataframe SLOT strip of a removed main item (REL-01): no TM row by contract — the main’s own chokepoint write records the full state.',
 	'src/core/ontology/hierarchy_state.ts#write':

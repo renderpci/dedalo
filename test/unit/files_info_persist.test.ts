@@ -52,6 +52,38 @@ describe('mergeFilesInfoIntoItems', () => {
 		mergeFilesInfoIntoItems(items, 'lg-spa', fresh);
 		expect(items[0]!.files_info).toEqual([]); // original untouched
 	});
+
+	/**
+	 * THE DELETE-TIME DRAWING RESET (2026-10-23, rsc29_rsc170_463941): the last
+	 * media file's delete clears the drawing that belonged to that picture, so a
+	 * later upload starts a fresh vector editor. The prior drawing is a Time
+	 * Machine version (the caller audits the clear).
+	 */
+	test('resetDrawing clears lib_data and svg_file_data on the matching items only', () => {
+		const drawing = [{ layer_id: 0, name: 'layer_0', layer_data: [] }];
+		const items = [
+			{ lang: 'lg-spa', files_info: [], lib_data: drawing, svg_file_data: '<svg/>' },
+			{ lang: 'lg-eng', files_info: [], lib_data: drawing, svg_file_data: '<svg/>' },
+		];
+		const out = mergeFilesInfoIntoItems(items, 'lg-spa', fresh, true);
+
+		expect(out.changed).toBe(true);
+		expect(out.items[0]!.lib_data).toBeNull();
+		expect(out.items[0]!.svg_file_data).toBeUndefined();
+		expect(out.items[0]!.files_info).toBe(fresh);
+		// The other language's drawing is not this delete's to clear.
+		expect(out.items[1]!.lib_data).toBe(drawing);
+		expect(out.items[1]!.svg_file_data).toBe('<svg/>');
+	});
+
+	test('resetDrawing defaults to false: the drawing is preserved', () => {
+		const drawing = [{ layer_id: 0, name: 'layer_0', layer_data: [] }];
+		const items = [{ files_info: [], lib_data: drawing, svg_file_data: '<svg/>' }];
+		const out = mergeFilesInfoIntoItems(items, null, fresh);
+
+		expect(out.items[0]!.lib_data).toBe(drawing);
+		expect(out.items[0]!.svg_file_data).toBe('<svg/>');
+	});
 });
 
 /**

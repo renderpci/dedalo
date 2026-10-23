@@ -417,7 +417,7 @@ component_image.prototype.load_tag_into_vector_editor = async function(options) 
 		for (let i = 0; i < ar_layer_id_length; i++) {
 
 			const layer_id	= parseInt(ar_layer_id[i])
-			self.vector_editor.activate_layer(layer_id)
+			self.vector_editor.activate_layer(layer_id, self)
 		}
 	} catch (error) {
 		console.error(error)

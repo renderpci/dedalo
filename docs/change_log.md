@@ -223,6 +223,17 @@ Merged since the last release; these ship with the next one.
     a master is uploaded again or the record is regenerated from the media versions
     tool (**Regenerate files** after deleting the size you want rebuilt).
 
+- **Deleting an image's last file now clears its vector drawing, so a new upload starts fresh**
+
+    Deleting every quality of an image used to remove the rendered SVG overlay but
+    keep the vector layers in the record; uploading a new image afterwards showed the
+    old shapes over the new picture. The delete that removes the last file now clears
+    the stored layers too. The cleared drawing is kept in the Time Machine, so the
+    previous version can be recovered. See
+    [component_image](./core/components/component_image.md).
+
+    Wire contract: `WC-2026-08-09-image-svg-envelope-preserved`.
+
 - **An image uploaded in a format the browser cannot show (TIFF, PSD, PNG…) keeps its full-resolution original AND regains the viewable copy, so the "original" quality is selectable again**
 
     Dédalo stores an image in tiers, and the best one is the `original`. Uploading a
@@ -271,6 +282,17 @@ Merged since the last release; these ship with the next one.
     A record emptied before this fix keeps its leftover envelope until it is
     regenerated: one **Regenerate files** click in the media versions tool clears it,
     and the record then shows the normal empty placeholder.
+
+- **The image vector editor now deletes shapes and layers reliably**
+
+    Deleting a selected shape with Delete/Backspace did nothing when several shapes
+    were selected or when focus was on the image-quality selector. Deleting a vector
+    layer could leave it in the saved drawing, and the raster layer's trash button
+    could duplicate its contents. Delete now works for single and multiple selections
+    from the quality selector, the base photograph cannot be deleted by accident, a
+    deleted layer is removed from the saved drawing, and the raster trash empties the
+    annotations while keeping the photograph. See
+    [component_image](./core/components/component_image.md).
 
 - **Saving a drawing in the image vector editor keeps the image visible**
 

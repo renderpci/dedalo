@@ -59,8 +59,22 @@ export const vector_editor = function() {
 		{
 			key: ['delete/backspace', true],
 			fn: () => {
-				// this.stage.deleteSelectedElements()
-				if (this.selected_element || this.multiselected) { this.stage.deleteSelectedElements() }
+				const stage = this.stage
+				// A multi-selection leaves selected_element null (this.multiselected
+				// was never set), so gate on the stage selection instead.
+				if (stage.getSelectedElements().length === 0) {
+					return
+				}
+				// The raster <image> is the photograph, not an annotation: the
+				// raster layer's trash button resets/restores it. Deleting it here
+				// would persist a layer_0 with no background.
+				const base_image = this.image_definition?.image_node
+				if (base_image) {
+					stage.removeFromSelection([base_image])
+				}
+				if (stage.getSelectedElements().filter(Boolean).length > 0) {
+					stage.deleteSelectedElements()
+				}
 			}
 		},
 		{ key: 'a', fn: () => { this.stage.selectAllInCurrentLayer() } },
@@ -148,6 +162,11 @@ vector_editor.prototype.init_canvas = async function(self) {
 			src			: image_url,
 			width		: image_size.width,
 			height		: image_size.height,
+			// SVG user units of the authored raster. width/height above are
+			// overwritten by update_canvas() with the container size; these keep
+			// the raster's real geometry for a reset_raster() rebuild.
+			user_width	: image_size.width,
+			user_height	: image_size.height,
 			image_ratio	: image_size.width / image_size.height,
 			image_node	: null,
 		}
@@ -397,8 +416,10 @@ vector_editor.prototype.element_transition = function(win, elems) {
 *
 * Key format normalisation: modifier prefix order is
 *   alt+ → shift+ → meta+ → ctrl+ → lowercase key name.
-* Only events targeting BODY are processed so that text inputs retain normal
-* key behaviour.
+* Text fields (INPUT, TEXTAREA, contentEditable) are never intercepted; keys
+* from other page controls are ignored except Delete/Backspace, which delete the
+* selected element, so the quality selector (or any other control) cannot make
+* Delete silently do nothing.
 *
 * Shortcut entries support a two-element array form:
 *   [keyString, preventDefault] e.g. ['delete/backspace', true]
@@ -446,13 +467,24 @@ vector_editor.prototype.keyboard_shortcuts = function() {
 	// register the keydown event
 	const keydown_handler = (e) => {
 
-		// only track keyboard shortcuts for the body containing the SVG-Editor
-		if (e.target.nodeName !== 'BODY') return
+		// never steal keys from a field the user is typing in
+		const target		= e.target
+		const tag_name		= target?.nodeName
+		const is_editable	= tag_name==='INPUT' || tag_name==='TEXTAREA' || target?.isContentEditable===true
+		if (is_editable) return
+
 		// normalize key
 		const key = `${e.altKey ? 'alt+' : ''}${e.shiftKey ? 'shift+' : ''}${e.metaKey ? 'meta+' : ''}${e.ctrlKey ? 'ctrl+' : ''}${e.key.toLowerCase()}`
 
 		// return if no shortcut defined for this key
 		if (!key_handler[key]) return
+		// non-destructive shortcuts (tab, a, paste…) only from the page surface:
+		// they must not hijack navigation while focus sits on a page control.
+		// Delete is allowed from any non-editable target: after using the image
+		// quality <select> (or any other control) focus stays there, and the user
+		// still expects Delete to remove the selected element.
+		const is_delete = key==='delete' || key==='backspace'
+		if (tag_name!=='BODY' && !is_delete) return
 		// launch associated handler and preventDefault if necessary
 
 		key_handler[key].fn()
@@ -1272,6 +1304,15 @@ vector_editor.prototype.load_data = function(self) {
 					// then "restored" that null into the raster (href="null").
 					image_definition.src		= element.getAttribute('href') || element.getAttribute('xlink:href')
 					image_definition.image_node	= element
+					// the authored size of the raster in SVG user units
+					const element_width		= Number.parseFloat(element.getAttribute('width'))
+					const element_height	= Number.parseFloat(element.getAttribute('height'))
+					if (Number.isFinite(element_width) && element_width > 0) {
+						image_definition.user_width = element_width
+					}
+					if (Number.isFinite(element_height) && element_height > 0) {
+						image_definition.user_height = element_height
+					}
 				}
 			}
 
@@ -1445,7 +1486,6 @@ vector_editor.prototype.save_data = async function(self) {
 	const drawing	= stage.getCurrentDrawing();
 
 	const all_layers = drawing.all_layers
-	const len = drawing.all_layers.length
 
 	for (let i = 0; i < all_layers.length; i++) {
 
@@ -1456,6 +1496,11 @@ vector_editor.prototype.save_data = async function(self) {
 
 		const layer_id = all_layers[i].name_
 		const current_layer = self.ar_layers.find(item => item.name===layer_id)
+		if (!current_layer) {
+			// a drawing layer with no data descriptor (legacy/diverged state):
+			// skipping beats crashing the save button on `undefined`
+			continue
+		}
 		// remove the layer definition and all title nodes
 		// get only the elements, all layer info will be recreated in load process
 		current_layer.layer_data = json.children.filter(el => el.element !== 'title')
@@ -1487,6 +1532,146 @@ vector_editor.prototype.save_data = async function(self) {
 
 
 /**
+* RESET_RASTER
+* Empties the raster layer: every annotation drawn on it is removed and the
+* base image is kept (recreated when the user had deleted the image too).
+* The raster layer cannot be deleted — it IS the image — so this is what the
+* layer row's delete button means for layer_id 0.
+*
+* @param {Object} layer - Raster layer descriptor; `name` resolves the SVG group.
+* @returns {boolean} true when the raster group was found.
+*/
+vector_editor.prototype.reset_raster = function(layer) {
+
+	const stage		= this.stage
+	const drawing	= stage.getCurrentDrawing()
+	// load_data always names the raster group 'layer_0'; older lib_data may carry
+	// a different descriptor name, so fall back to the canonical one.
+	const layer_name	= drawing.getLayerByName(layer.name) ? layer.name : 'layer_0'
+	const raster_group	= drawing.getLayerByName(layer_name)
+	if (!raster_group) {
+		return false
+	}
+
+	// annotations are everything but SvgCanvas's <title> and the base <image>.
+	// deleteSelectedElements records the undo history (a bare remove() would not).
+	const annotations = [...raster_group.children].filter(node => node.nodeName!=='image' && node.nodeName!=='title')
+	if (annotations.length > 0) {
+		stage.selectOnly(annotations)
+		stage.deleteSelectedElements()
+	}
+
+	// the image element is deletable like any other: put the raster back
+	if (!raster_group.querySelector('image')) {
+
+		const image_definition	= this.image_definition
+		// Rebuild the raster at its AUTHORED SVG user size: image_definition
+		// .width/height are overwritten by update_canvas() with the current
+		// container size, and getResolution() (the document's content box) can
+		// differ from the saved image's own width/height on legacy data.
+		const resolution	= stage.getResolution()
+		const image_width	= Number.isFinite(image_definition.user_width) && image_definition.user_width > 0
+			? image_definition.user_width
+			: resolution.w
+		const image_height	= Number.isFinite(image_definition.user_height) && image_definition.user_height > 0
+			? image_definition.user_height
+			: resolution.h
+		// addSVGElementsFromJson writes into the current group or layer, which
+		// may be a vector layer/group: leave any editing context, target the
+		// raster, then restore the previous target.
+		const previous_layer_name = drawing.getCurrentLayerName()
+		stage.leaveContext()
+		drawing.setCurrentLayer(layer_name)
+
+		const img_elem = stage.addSVGElementsFromJson({
+			element : 'image',
+			attr : {
+				x		: 0,
+				y		: 0,
+				width	: image_width,
+				height	: image_height,
+				id		: 'main_image',
+				opacity	: 1,
+				style	: 'pointer-events:inherit'
+			}
+		})
+
+		const image_node = new Image()
+		image_node.onload = () => {
+			stage.setHref(img_elem, image_node.src)
+		}
+		image_node.src = image_definition.src
+
+		image_definition.image_node = img_elem
+
+		if (previous_layer_name && previous_layer_name!==layer_name) {
+			drawing.setCurrentLayer(previous_layer_name)
+		}
+	}
+
+	return true
+}//end reset_raster
+
+
+
+/**
+* REMOVE_LAYER
+* Deletes one vector layer from the SvgCanvas drawing and from the component's
+* layer data, and leaves the editor on a valid drawing target.
+*
+* The data removal is spliced IN PLACE: self.ar_layers is the array persisted
+* as data.entries[0].lib_data, so replacing it with a filtered copy left the
+* deleted layer in the data and a later load_data resurrected it.
+*
+* SvgCanvas' identifyLayers() makes the TOPMOST remaining layer current, not a
+* neighbour of the deleted one. The previously active layer is kept when it
+* survived the delete; otherwise the editor follows the drawing's current layer
+* and falls back to the raster.
+*
+* @param {Object} self - The owning component_image instance (ar_layers, id).
+* @param {Object} layer - Vector layer descriptor to remove.
+* @returns {boolean} true when the layer was found and deleted.
+*/
+vector_editor.prototype.remove_layer = function(self, layer) {
+
+	const stage		= this.stage
+	const drawing	= stage.getCurrentDrawing()
+
+	// the SvgCanvas delete acts on the CURRENT layer: fail rather than delete
+	// an unrelated layer when the name does not resolve.
+	if (drawing.setCurrentLayer(layer.name)===false) {
+		return false
+	}
+	const previous_active = this.active_layer
+	// remove the layer in svgcanvas project
+	stage.deleteCurrentLayer()
+
+	// remove the data in place (see docblock)
+	const layer_index = self.ar_layers.findIndex(item => item.layer_id===layer.layer_id)
+	if (layer_index!==-1) {
+		self.ar_layers.splice(layer_index, 1)
+	}
+
+	// keep the previous active layer when it survived; otherwise follow what
+	// SvgCanvas left current (topmost) and fall back to the raster
+	const current_name	= drawing.getCurrentLayerName()
+	const target_layer	= self.ar_layers.find(item => item.layer_id===previous_active?.layer_id)
+		|| self.ar_layers.find(item => item.name===current_name)
+		|| self.ar_layers[0]
+	if (target_layer) {
+		drawing.setCurrentLayer(target_layer.name)
+		this.active_layer = target_layer
+		if (self.id) {
+			event_manager.publish('active_layer_'+self.id, target_layer)
+		}
+	}
+
+	return true
+}//end remove_layer
+
+
+
+/**
 * ACTIVATE_LAYER
 * Makes a specific layer the current drawing target and hides all other
 * vector layers by setting their opacity to 0.
@@ -1495,32 +1680,44 @@ vector_editor.prototype.save_data = async function(self) {
 * (the raster base) which is always visible. Sets opacity 1.0 for the layer
 * matching layer_id and 0 for all others.
 *
-* (!) this.active_layer is set to the SvgCanvas layer name string for non-
-* matching layers, and then overwritten with the matching layer name — the
-* final value after the loop is the name of the last non-matching layer
-* processed, not the activated one. This appears to be a residual bug; do not
-* fix here, document only.
+* active_layer is the layer DESCRIPTOR (not a SvgCanvas name string): draw
+* tools read layer_color / layer_id from it, and a string left the next shape
+* without colour and without a target. The drawing's current layer is moved
+* with it, so what is drawn lands in the layer the user activated.
 *
-* @param {number} layer_id - The layer_id of the layer to activate
-*   (corresponds to its position index in the SvgCanvas drawing stack).
+* @param {number} layer_id - The layer_id of the layer to activate.
+* @param {Object} self - The owning component_image instance (ar_layers, id).
 * @returns {void}
 */
-vector_editor.prototype.activate_layer = function(layer_id) {
+vector_editor.prototype.activate_layer = function(layer_id, self) {
 
 	const stage		= this.stage
 	const drawing	= stage.getCurrentDrawing()
 
-	const canvas_layers	= stage.getCurrentDrawing().getNumLayers()
+	const canvas_layers		= stage.getCurrentDrawing().getNumLayers()
+	const layer_descriptor	= self?.ar_layers?.find(item => item.layer_id===layer_id) || null
+	// layer_id is not a stack index after deletions (0, 2 is legal):
+	// match by the SvgCanvas layer name.
+	const target_name		= layer_descriptor?.name || ('layer_'+layer_id)
 
 	for (let i = canvas_layers - 1; i >= 0; i--) {
 
 		if(i === 0){
 			continue;
 		}
-		const opacity = (i === layer_id) ? 1.0 : 0
 		const viewed_layer	= drawing.getLayerName(i)
-		this.active_layer	= viewed_layer
+		const opacity		= (viewed_layer===target_name) ? 1.0 : 0
 		drawing.setLayerOpacity(viewed_layer, opacity)
+	}
+
+	if (layer_descriptor) {
+		this.active_layer = layer_descriptor
+		// stage wrapper (not drawing): it clears the selection, which would
+		// otherwise survive on a layer that activate_layer just hid.
+		stage.setCurrentLayer(layer_descriptor.name)
+		if (self?.id) {
+			event_manager.publish('active_layer_'+self.id, layer_descriptor)
+		}
 	}
 }//end activate_layer
 
@@ -1623,9 +1820,10 @@ vector_editor.prototype.render_layer_selector = function(self) {
 *   - user_layer_name: editable text div; double-click enables contentEditable,
 *     blur or Enter commits the new name back to layer.user_layer_name.
 *   - layer_delete: opens a confirmation modal via ui.attach_to_modal(). On
-*     confirm, deletes the layer from both the SvgCanvas drawing and self.ar_layers.
-*     For the raster layer (layer_id 0) it calls this.load_data(self) to
-*     re-create the base image instead of splicing the array.
+*     confirm, deletes a vector layer from both the SvgCanvas drawing and
+*     self.ar_layers (in place, so the data entry follows). For the raster
+*     layer (layer_id 0) it calls reset_raster(), which empties it and keeps
+*     the base image: the raster is the image and cannot be deleted itself.
 *   - layer_color swatch: a double-click assigns the current active_fill_color
 *     to this layer's layer_color property (does not auto-save).
 *
@@ -1635,9 +1833,8 @@ vector_editor.prototype.render_layer_selector = function(self) {
 *
 * (!) The layer_delete click handler is a classic function (not an arrow
 * function), so 'this' inside the button_delete click handler refers to the
-* button element, not the vector_editor instance. The call
-* `this.load_data(self)` on line ~1437 therefore fails at runtime for the
-* raster-layer delete path. Do not fix here; document only.
+* button element, not the vector_editor instance. The captured `editor` is used
+* there instead.
 *
 * (!) `modal` is referenced inside the button_delete click handler via closure
 * before the `const modal = ui.attach_to_modal(...)` declaration at the bottom
@@ -1722,33 +1919,40 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 				parent			: layer_li,
 				text_node		: layer.layer_icon
 			})
-			// select the layer, if the layer is the raster we change the selector name
-			const name			= layer.layer_id===0 ? 'raster': 'layer_'+layer.layer_id
-			const viewed_layer	= drawing.getLayerName(layer.layer_id)
-
 			layer_icon.addEventListener('click', (e) =>{
 				e.stopPropagation()
 
-				// get the name of the layer, if the layer is the raster we change the selector name
-				const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
-				const viewed_layer = drawing.getLayerName(layer.layer_id)
-
+				const viewed_layer	= drawing.getLayerName(layer.layer_id)
 				// get the transparency
-				const transparency = layer.layer_id === 0 ? 0.5 : 0;
-				// }else{
-					// change the visibility state of the svgcanvas layer and icon
-					if(layer.visible === true){
-						this.active_layer	= ''
-						layer.visible		= false
-						drawing.setLayerOpacity(viewed_layer, transparency)
-						layer_icon.classList.remove('active')
-					}else{
-						layer.visible		= true
-						this.active_layer	= viewed_layer
-						drawing.setLayerOpacity(viewed_layer, 1.0)
-						layer_icon.classList.add('active')
+				const transparency	= layer.layer_id === 0 ? 0.5 : 0
+
+				// change the visibility state of the svgcanvas layer and icon
+				if(layer.visible === true){
+					layer.visible = false
+					drawing.setLayerOpacity(viewed_layer, transparency)
+					layer_icon.classList.remove('active')
+
+					// a hidden layer cannot stay the drawing target: hand control
+					// to the topmost visible layer (or the raster)
+					if(this.active_layer?.layer_id === layer.layer_id){
+						const fallback = [...self.ar_layers].reverse()
+							.find(item => item.layer_id!==layer.layer_id && item.visible!==false)
+							|| self.ar_layers[0]
+						if (fallback) {
+							this.active_layer = fallback
+							stage.setCurrentLayer(fallback.name)
+							event_manager.publish('active_layer_'+self.id, fallback)
+						}
 					}
-				// }
+				}else{
+					layer.visible = true
+					drawing.setLayerOpacity(viewed_layer, 1.0)
+					layer_icon.classList.add('active')
+					// store the DESCRIPTOR, not the SvgCanvas name
+					this.active_layer = layer
+					stage.setCurrentLayer(layer.name)
+					event_manager.publish('active_layer_'+self.id, layer)
+				}
 			}) //end click event
 
 		// layer_id
@@ -1828,29 +2032,20 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 						button_delete.addEventListener('click', function(e) {
 							e.stopPropagation()
 
-							// viewed_layer
-							drawing.setCurrentLayer(layer.name)
-							// remove the layer in svgcanvas project
-							stage.deleteCurrentLayer()
-
-							//check if the user want remove transformations in raster or remove path layer
+							// raster layer: it is the image itself, so 'delete' means
+							// empty it (annotations out, base image kept). Deleting the
+							// SvgCanvas layer would be a no-op with a single layer and
+							// load_data would then duplicate the raster contents.
 							if(layer.layer_id==0){
-								// create new empty raster layer
-								// use captured `editor`: inside this function() `this` is
-								// the button element, not the vector_editor instance.
-								editor.load_data(self)
-								// const new_raster_layer	= {
-								// 	layer_id	: 0
-								// }
+								editor.reset_raster(layer)
 
 							}else{
-								//the user want remove one path layer
-								// remove the data in the instance
-									// self.delete_layer(layer)
-									self.ar_layers = self.ar_layers.filter(item => item.layer_id!==layer.layer_id)
-
-								//remove the layer node
+								// remove the path layer from the drawing and the data,
+								// and hand the editor a valid drawing target
+								if (editor.remove_layer(self, layer)) {
+									//remove the layer node
 									layer_li.remove()
+								}
 							}
 
 							// close modal

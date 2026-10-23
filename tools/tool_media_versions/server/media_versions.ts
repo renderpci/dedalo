@@ -62,6 +62,17 @@ function scanContext(mediaContext: MediaToolContext): ScanContext {
 }
 
 /**
+ * Options of a media write-back. `resetDrawing` is set ONLY by the DELETE that
+ * removed the record's last media file: the drawing belonged to the deleted
+ * picture and is cleared in the same locked write (audited in the Time Machine).
+ */
+interface WriteBackOptions {
+	resetDrawing?: boolean;
+	/** The acting user — the Time Machine row's author on a drawing reset. */
+	userId?: number;
+}
+
+/**
  * Refresh the stored files_info cache after a synchronous mutating op (R1 tail).
  * reconcileStoredFilesInfo NEVER mints: a mutation of files the component does
  * not claim must not create a stored value — only the operator's explicit
@@ -75,16 +86,20 @@ function scanContext(mediaContext: MediaToolContext): ScanContext {
 async function writeBack(
 	mediaContext: MediaToolContext,
 	freshFilesInfo: FileInfoEntry[],
+	options: WriteBackOptions = {},
 ): Promise<FilesInfoReconcileResult> {
 	const { identity } = mediaContext;
 	return assertRecordPresent(
-		await reconcileStoredFilesInfo({
-			sectionTipo: identity.sectionTipo,
-			sectionId: identity.sectionId,
-			componentTipo: identity.componentTipo,
-			lang: identity.lang,
-			freshFilesInfo,
-		}),
+		await reconcileStoredFilesInfo(
+			{
+				sectionTipo: identity.sectionTipo,
+				sectionId: identity.sectionId,
+				componentTipo: identity.componentTipo,
+				lang: identity.lang,
+				freshFilesInfo,
+			},
+			options.resetDrawing === true ? { resetDrawing: true, auditUserId: options.userId } : {},
+		),
 		identity,
 	);
 }
@@ -377,7 +392,10 @@ export async function deleteQuality(ctx: ToolActionContext): Promise<ToolRespons
 		null,
 		scanContext(mediaContext),
 	);
-	await writeBack(mediaContext, outcome.filesInfo);
+	await writeBack(mediaContext, outcome.filesInfo, {
+		resetDrawing: outcome.noMediaFilesLeft,
+		userId: ctx.userId,
+	});
 	await logMediaActivity(ctx, 'DELETE FILE', identity, {
 		msg: 'Deleted media file (file is renamed and moved to delete folder)',
 		quality,
@@ -414,7 +432,10 @@ export async function deleteVersion(ctx: ToolActionContext): Promise<ToolRespons
 		extension,
 		scanContext(mediaContext),
 	);
-	await writeBack(mediaContext, outcome.filesInfo);
+	await writeBack(mediaContext, outcome.filesInfo, {
+		resetDrawing: outcome.noMediaFilesLeft,
+		userId: ctx.userId,
+	});
 	await logMediaActivity(ctx, 'DELETE FILE', identity, {
 		msg: 'Deleted media file (file is renamed and moved to delete folder)',
 		quality,

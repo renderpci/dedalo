@@ -32,7 +32,7 @@ import {
 	resolveMasterSource,
 	retireOrphanTwins,
 } from '../processing.ts';
-import { retireOverlayIfNoMediaFiles } from '../svg_overlay.ts';
+import { identityHasMediaFiles, retireOverlayIfNoMediaFiles } from '../svg_overlay.ts';
 import { rebuildThumb } from '../thumb.ts';
 import { applyRotationCore } from './rotation.ts';
 
@@ -421,6 +421,13 @@ export interface DeleteAndResyncResult {
 	errors: string[];
 	/** The disk scan taken AFTER the rebuild (see the ordering note). */
 	filesInfo: FileInfoEntry[];
+	/**
+	 * The record holds NO media file of any quality after this delete — the same
+	 * `managedFileSlots` census that retires the SVG envelope. The tool's write-back
+	 * uses it to clear the drawing (`lib_data`/`svg_file_data`) with the last file,
+	 * so a later upload starts a fresh vector editing.
+	 */
+	noMediaFilesLeft: boolean;
 }
 
 /**
@@ -481,6 +488,7 @@ export async function deleteAndResyncCore(
 	// even the default one — leaves the wrapper in place. Run AFTER the rebuild and
 	// the twin retirement: a master delete that rebuilds the ladder leaves files
 	// behind, and a `moved` entry must describe what this action really took.
+	const noMediaFilesLeft = !identityHasMediaFiles(spec, identity, pathOpts);
 	const overlayRetired = retireOverlayIfNoMediaFiles(spec, identity, pathOpts);
 	if (overlayRetired !== null) moved.push(overlayRetired);
 	return {
@@ -489,6 +497,7 @@ export async function deleteAndResyncCore(
 		retired,
 		errors: rebuild.errors,
 		filesInfo: getFilesInfoCore(spec, identity, pathOpts, context),
+		noMediaFilesLeft,
 	};
 }
 

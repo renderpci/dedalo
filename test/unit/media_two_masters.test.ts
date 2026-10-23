@@ -533,6 +533,47 @@ describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () =>
 		expect(existsSync(derivedPath)).toBe(false);
 	});
 
+	/**
+	 * The delete-time drawing reset rides this census: the SVG envelope AND the
+	 * stored drawing (`lib_data`/`svg_file_data`) go only when NO file of any
+	 * quality remains. Deleting one tier — even the master — leaves a picture, so
+	 * the layers stay (they are re-pointed, never discarded, by a rebuild).
+	 */
+	test('noMediaFilesLeft is TRUE only when the delete took the last file of ANY quality', async () => {
+		const identity = nextIdentity();
+		await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+		await regenerateImage(image, identity, pathOpts, 'tif');
+
+		// The web tier and the thumb still depict the object.
+		const master = await deleteAndResyncCore(
+			image,
+			identity,
+			pathOpts,
+			image.originalQuality,
+			'tif',
+		);
+		expect(master.noMediaFilesLeft).toBe(false);
+
+		const web = await deleteAndResyncCore(
+			image,
+			identity,
+			pathOpts,
+			image.defaultQuality,
+			image.defaultExtension,
+		);
+		expect(web.noMediaFilesLeft).toBe(false); // the thumb is still there
+
+		const thumb = await deleteAndResyncCore(
+			image,
+			identity,
+			pathOpts,
+			config.media.thumb.quality,
+			config.media.thumb.extension,
+		);
+		expect(thumb.noMediaFilesLeft).toBe(true);
+		expect(thumb.filesInfo.every((info) => info.file_exist !== true)).toBe(true);
+	});
+
 	test('a master tier that still holds another extension re-sources FROM IT', async () => {
 		// Deleting the file the tiers WERE built from, while the same tier still
 		// holds a lower-precedence twin: the tier is still a master, the resolved

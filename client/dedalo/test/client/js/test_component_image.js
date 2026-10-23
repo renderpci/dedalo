@@ -501,6 +501,172 @@ describe(`COMPONENT_IMAGE VECTOR EDITOR`, function() {
 		// src null here made the save handler "restore" it as href="null"
 		assert.equal(editor.image_definition.src, href, 'image_definition.src expected the raster href')
 	})
+
+
+
+	it(`Delete shortcut removes single and multiple selections, ignores text fields`, async function() {
+
+		const {vector_editor} = await import('../../../core/component_image/js/vector_editor.js')
+
+		let deleted = 0
+		let selection = []
+		const editor = new vector_editor()
+		editor.stage = {
+			getSelectedElements		: () => selection,
+			deleteSelectedElements	: () => { deleted++ }
+		}
+		editor.keyboard_shortcuts()
+
+		const keydown = (target) => target.dispatchEvent(
+			new KeyboardEvent('keydown', { key:'Delete', bubbles:true })
+		)
+
+		// single selection (what one click leaves on the stage)
+		selection = [{}]
+		keydown(document.body)
+		assert.equal(deleted, 1, 'single selection expected deleted')
+
+		// multi-selection: selected_element is null, the stage selection is not
+		selection = [{}, {}]
+		keydown(document.body)
+		assert.equal(deleted, 2, 'multi selection expected deleted')
+
+		// focus on the image quality select must not block Delete
+		const select = document.createElement('select')
+		document.body.appendChild(select)
+		keydown(select)
+		assert.equal(deleted, 3, 'Delete expected with focus on a select')
+
+		// a text field keeps its own Delete key
+		const input = document.createElement('input')
+		document.body.appendChild(input)
+		keydown(input)
+		assert.equal(deleted, 3, 'Delete must not fire from an input')
+
+		input.remove()
+		select.remove()
+		editor.destroy()
+	})
+
+
+
+	it(`reset_raster keeps the image and drops only the annotations`, async function() {
+
+		const {vector_editor} = await import('../../../core/component_image/js/vector_editor.js')
+
+		const make_node = (nodeName) => document.createElementNS('http://www.w3.org/2000/svg', nodeName)
+		const title	= make_node('title')
+		const image	= make_node('image')
+		const rect	= make_node('rect')
+
+		const calls = { selected:null, deleted:0, added:0, current:[], layer_deleted:false, add_attrs:null }
+		const group = {
+			children		: [title, image, rect],
+			querySelector	: (selector) => selector==='image' ? image : null
+		}
+		const drawing = {
+			// legacy data names layer 0 'raster'; the group is really layer_0
+			getLayerByName			: (name) => name==='layer_0' ? group : null,
+			getCurrentLayerName		: () => 'layer_1',
+			setCurrentLayer			: (name) => { calls.current.push(name) }
+		}
+		const editor = new vector_editor()
+		// width/height are the mutable container size; user_* are the authored
+		// SVG units the restored raster must keep
+		editor.image_definition = { src:'data:,', width:10, height:10, user_width:700, user_height:500 }
+		editor.stage = {
+			getCurrentDrawing		: () => drawing,
+			getResolution			: () => ({ w:640, h:480 }),
+			leaveContext			: () => {},
+			deleteCurrentLayer		: () => { calls.layer_deleted = true },
+			selectOnly				: (elements) => { calls.selected = elements },
+			deleteSelectedElements	: () => { calls.deleted++ },
+			addSVGElementsFromJson	: (json) => {
+				calls.added++
+				calls.add_attrs = json.attr
+				return make_node('image')
+			},
+			setHref					: () => {}
+		}
+
+		const ok = editor.reset_raster({ layer_id:0, name:'raster' })
+
+		assert.isTrue(ok, 'reset_raster expected true when the group exists')
+		assert.equal(calls.selected.length, 1, 'only the annotation expected selected')
+		assert.equal(calls.selected[0], rect, 'selected element expected the annotation')
+		assert.equal(calls.deleted, 1, 'annotation expected deleted')
+		assert.equal(calls.added, 0, 'existing image must not be recreated')
+		assert.isFalse(calls.layer_deleted, 'the raster layer itself must not be deleted')
+
+		// the user had deleted the image element too: the raster is recreated
+		group.children		= [title]
+		group.querySelector	= () => null
+		editor.reset_raster({ layer_id:0, name:'raster' })
+
+		assert.equal(calls.added, 1, 'missing image expected recreated')
+		assert.equal(calls.add_attrs.width, 700, 'image width expected the authored user units')
+		assert.equal(calls.add_attrs.height, 500, 'image height expected the authored user units')
+		assert.deepEqual(calls.current, ['layer_0','layer_1'], 'raster targeted then previous layer restored')
+
+		// legacy state without authored units falls back to the document resolution
+		editor.image_definition.user_width = undefined
+		editor.image_definition.user_height = undefined
+		editor.reset_raster({ layer_id:0, name:'raster' })
+
+		assert.equal(calls.added, 2, 'image expected recreated again')
+		assert.equal(calls.add_attrs.width, 640, 'fallback width expected the document resolution')
+		assert.equal(calls.add_attrs.height, 480, 'fallback height expected the document resolution')
+	})
+
+
+
+	it(`remove_layer splices the data in place and keeps a valid active layer`, async function() {
+
+		const {vector_editor} = await import('../../../core/component_image/js/vector_editor.js')
+
+		const ar_layers = [
+			{ layer_id:0, name:'layer_0' },
+			{ layer_id:1, name:'layer_1' },
+			{ layer_id:2, name:'layer_2' }
+		]
+
+		const calls = { current:[], deleted:0 }
+		let drawing_current = 'layer_2'
+		const drawing = {
+			setCurrentLayer		: (name) => { calls.current.push(name); return true },
+			getCurrentLayerName	: () => drawing_current
+		}
+		const editor = new vector_editor()
+		editor.active_layer = ar_layers[2]
+		editor.stage = {
+			getCurrentDrawing	: () => drawing,
+			deleteCurrentLayer	: () => { calls.deleted++ }
+		}
+
+		const published = []
+		event_manager.subscribe_once(
+			'active_layer_remove_test',
+			(layer) => published.push(layer)
+		)
+
+		// delete a layer that is NOT the active one: the active layer survives
+		const ok = editor.remove_layer({ ar_layers, id:'remove_test' }, ar_layers[1])
+
+		assert.isTrue(ok, 'remove_layer expected true')
+		assert.equal(calls.deleted, 1, 'SvgCanvas layer expected deleted')
+		assert.deepEqual(ar_layers.map(layer => layer.layer_id), [0, 2], 'data spliced in place')
+		assert.equal(editor.active_layer, ar_layers[1], 'surviving active layer expected kept')
+		assert.equal(calls.current[calls.current.length-1], 'layer_2', 'drawing expected on the active layer')
+		assert.equal(published[published.length-1], ar_layers[1], 'active layer expected published')
+
+		// delete the active layer: fall back to what SvgCanvas left current
+		drawing_current = 'layer_0'
+		editor.remove_layer({ ar_layers, id:'remove_test' }, ar_layers[1])
+
+		assert.deepEqual(ar_layers.map(layer => layer.layer_id), [0], 'last vector layer removed')
+		assert.equal(editor.active_layer, ar_layers[0], 'raster expected as fallback')
+		assert.equal(calls.current[calls.current.length-1], 'layer_0', 'drawing expected on the fallback layer')
+	})
 })
 
 
