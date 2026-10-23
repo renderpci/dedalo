@@ -28,9 +28,17 @@
  *    count it as called. Read STRUCTURALLY, not by spelling (review r0,
  *    2026-10-23 — the first version matched `?? gateRecord` and let an
  *    arrow-wrapped default, a destructuring default, a local wrapper, an early
- *    return and an alias through). "Gate-reaching" is a closure: the tokens,
+ *    return and an alias through). "Gate-reaching" is a closure: its ROOTS,
  *    every function whose body reaches one, every `const` alias and every
- *    import of one, across files. Refused: a gate-reaching FUNCTION VALUE in any
+ *    import of one (named, namespace, `.js`/extensionless spellings), across
+ *    files. The roots are DERIVED, not a hand-kept list (review r1, 2026-10-23
+ *    — `seams.check ?? assertRecordWriteTarget` passed because the closure
+ *    started from 13 spelled names and never walked src/core/security/): the
+ *    decision primitives AUTHORIZATION_TOKENS names, every function that
+ *    CONSTRUCTS a denial (a registry code of category `permission`), and every
+ *    function whose result DECIDES one (called in the condition of an `if` that
+ *    denies) — over the tool trees AND the security layer they import from.
+ *    Refused: a gate-reaching FUNCTION VALUE in any
  *    position a different value can take (a default, a `??`/`||`/`&&` operand, a
  *    ternary arm, a `let`, an assignment, a property a later spread overrides,
  *    an array pick…); a gate call CONTROL-DEPENDENT on the presence of a
@@ -47,7 +55,13 @@
  * The seam rule is a source scan, not data flow: a gate function parked in a
  * data structure and looked up through it, a helper that CHOOSES between its
  * arguments, or a gate RESULT cached in caller-supplied state (a memo) are not
- * followed.
+ * followed. Root derivation sees a denial only as `new DedaloError('<code>'`
+ * with a literal permission-category code, and a decision only as a call in an
+ * `if` condition whose arm (or, after an exiting arm, the next statement)
+ * denies; an authorization check that denies by any other means (a boolean
+ * the caller turns into a 404, a filtered result) roots only through the
+ * primitives it calls. Its walk covers the tool trees and src/core/security/;
+ * an authorization helper living elsewhere joins only through what it calls.
  *
  * Idiom: the same credless source scan as human_write_scope_tripwire.test.ts,
  * with comments stripped (test/helpers/strip_comments.ts) so the module headers
@@ -58,6 +72,7 @@ import { describe, expect, test } from 'bun:test';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Glob } from 'bun';
+import { ERROR_REGISTRY } from '../../src/core/errors/registry.ts';
 import { stripComments } from '../helpers/strip_comments.ts';
 
 const ROOT = join(import.meta.dir, '..', '..');
@@ -298,8 +313,13 @@ const CENSUS: Record<string, CensusEntry> = {
 };
 
 /**
- * The tokens that MEAN authorization in this tree. Used for the reverse check:
- * an entry that claims UNGATED must not be calling one of these.
+ * The DECISION PRIMITIVES and census gate names: the reads every gate bottoms
+ * out in (a permission LEVEL, a scope test, an admin/developer flag) plus the
+ * named gates the census entries stand on. NOT the whole authorization
+ * vocabulary — the seam rule and the reverse check derive the rest
+ * (gateRoots: denial constructors and deciders; gateReachingNames: their
+ * closure), so a primitive missing here is still caught if anything denies on
+ * it.
  */
 const AUTHORIZATION_TOKENS: readonly string[] = [
 	'assertActionPermission',
@@ -498,7 +518,13 @@ describe('P2-8(a) — the `permission: null` census is exact and shrink-only', (
 			const bodies = functionBodies(sources.join('\n'));
 			if (!bodies.has(entry.entry)) continue; // reported by the test above
 			const tokens = reachableTokens(bodies, entry.entry);
-			const unexpected = AUTHORIZATION_TOKENS.filter(
+			// The DERIVED gate vocabulary of these files (roots + closure), not only
+			// the primitives list: an UNGATED entry that grows assertRecordWriteTarget
+			// is gated whatever the list spells.
+			const gateNames = new Set(AUTHORIZATION_TOKENS);
+			for (const file of [site.file, ...(entry.files ?? [])])
+				for (const name of LIVE_NAMES.get(file) ?? []) gateNames.add(name);
+			const unexpected = [...gateNames].filter(
 				(token) => tokens.has(token) && !(entry.allow ?? []).includes(token),
 			);
 			expect(
@@ -539,7 +565,8 @@ function gateScanCode(src: string): string {
 	);
 }
 
-const escapeName = (name: string): string => name.replace(/\$/g, '\\$');
+/** A name as a regex: `$` and the `.` of a namespace path (`scope.assertX`) are literal. */
+const escapeName = (name: string): string => name.replace(/[$.]/g, '\\$&');
 /** A FREE occurrence of `token`: not a property read (`principal.isGlobalAdmin`). */
 const freeToken = (token: string): RegExp =>
 	new RegExp(`(?<![\\w$.])${escapeName(token)}(?![\\w$])`, 'g');
@@ -760,42 +787,161 @@ function declaredName(code: string, unit: FunctionUnit): string | null {
 	return head.match(/\b(?:const|let|var)\s+([\w$]+)\s*(?::[^=;]*)?=\s*$/)?.[1] ?? null;
 }
 
-/** `import { a, b as c } from './x.ts'` → local name → [resolved file, exported name]. */
-function relativeImports(file: string, src: string): Map<string, [string, string]> {
-	const out = new Map<string, [string, string]>();
-	const dir = file.split('/').slice(0, -1);
-	for (const m of stripComments(src).matchAll(
-		/\bimport\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"](\.[^'"]*)['"]/g,
+/**
+ * A relative specifier from `file`, resolved to the repo path of its source:
+ * `./x.ts`, and the `./x.js` / extensionless spellings of the same `.ts` file
+ * (a lifted gate must not fall out of the closure by its import's extension).
+ */
+function resolveRelative(file: string, spec: string): string {
+	const parts = file.split('/').slice(0, -1);
+	for (const seg of spec.split('/')) {
+		if (seg === '..') parts.pop();
+		else if (seg !== '.') parts.push(seg);
+	}
+	const path = parts.join('/');
+	if (path.endsWith('.ts')) return path;
+	if (path.endsWith('.js')) return `${path.slice(0, -3)}.ts`;
+	return `${path}.ts`;
+}
+
+/** The relative imports of one source. */
+interface RelativeImports {
+	/** `import { a, b as c } from './x.ts'` (and `export { a as c } from`) → local → [file, exported]. */
+	named: Map<string, [string, string]>;
+	/** `import * as ns from './x.ts'` → ns → file. */
+	namespaces: Map<string, string>;
+}
+
+function relativeImports(file: string, src: string): RelativeImports {
+	const named = new Map<string, [string, string]>();
+	const namespaces = new Map<string, string>();
+	const code = stripComments(src);
+	for (const m of code.matchAll(
+		/\b(?:import|export)\s+(?:type\s+)?\{([^}]*)\}\s*from\s*['"](\.[^'"]*)['"]/g,
 	)) {
-		const parts = [...dir];
-		for (const seg of (m[2] as string).split('/')) {
-			if (seg === '..') parts.pop();
-			else if (seg !== '.') parts.push(seg);
-		}
+		const target = resolveRelative(file, m[2] as string);
 		for (const spec of (m[1] as string).split(',')) {
-			const named = spec
+			const one = spec
 				.trim()
 				.replace(/^type\s+/, '')
 				.match(/^([\w$]+)(?:\s+as\s+([\w$]+))?$/);
-			if (named !== null)
-				out.set((named[2] ?? named[1]) as string, [parts.join('/'), named[1] as string]);
+			if (one !== null) named.set((one[2] ?? one[1]) as string, [target, one[1] as string]);
 		}
 	}
-	return out;
+	for (const m of code.matchAll(/\bimport\s+\*\s+as\s+([\w$]+)\s+from\s*['"](\.[^'"]*)['"]/g)) {
+		namespaces.set(m[1] as string, resolveRelative(file, m[2] as string));
+	}
+	return { named, namespaces };
 }
 
-/** One scanned source: raw text, scan code, and its functions. */
+/** One scanned source: raw text, scan code, literal-keeping code, and its functions. */
 interface GateSource {
 	file: string;
 	src: string;
+	/** Comments stripped, strings blanked, import clauses blanked: where a gate can be USED. */
 	code: string;
+	/** Comments stripped, strings KEPT, same offsets as `code`: where a denial CODE is read. */
+	literal: string;
 	units: FunctionUnit[];
 }
 
 const gateSource = (file: string, src: string): GateSource => {
 	const code = gateScanCode(src);
-	return { file, src, code, units: functionUnits(code) };
+	const literal = stripComments(src);
+	// The two views share offsets (blanking keeps length); a drift would make the
+	// denial read land on the wrong function, so it stops the suite instead.
+	if (literal.length !== code.length)
+		throw new Error(`${file}: the scan views disagree on length — offsets are not shared`);
+	return { file, src, code, literal, units: functionUnits(code) };
 };
+
+/**
+ * The DENIAL codes: every registry code of category `permission` (HTTP 403),
+ * read from the registry — never listed here. Constructing one IS denying.
+ */
+const DENIAL_CODES: readonly string[] = Object.entries(ERROR_REGISTRY)
+	.filter(([, spec]) => spec.category === 'permission')
+	.map(([code]) => code);
+const DENIAL = new RegExp(
+	`\\bnew\\s+DedaloError\\s*\\(\\s*(['"])(?:${DENIAL_CODES.map(escapeName).join('|')})\\1`,
+);
+
+/** The function names declared in a source. */
+const declaredNames = (s: GateSource): Set<string> =>
+	new Set(s.units.map((u) => declaredName(s.code, u)).filter((n): n is string => n !== null));
+
+/**
+ * The ROOTS of the gate closure, per source, DERIVED from what the code does:
+ *  - the decision primitives AUTHORIZATION_TOKENS names;
+ *  - every DENIER: a function whose body constructs a DENIAL_CODES DedaloError
+ *    (assertToolGranted, the write door's asserts…);
+ *  - every DECIDER: a function — declared in a scanned source, so `String(x)`
+ *    never qualifies — called in the condition of an `if` inside a denier whose
+ *    arm denies (constructs a denial or calls a denier), or whose arm exits and
+ *    whose NEXT statement denies (`if (await isToolGranted(u, t)) return;
+ *    throw new DedaloError('tool.not_authorized', …)`). An imported decider is
+ *    rooted in the file that declares it, so every other importer inherits it.
+ */
+function gateRoots(
+	sources: readonly GateSource[],
+	tokens: readonly string[],
+): Map<string, Set<string>> {
+	const roots = new Map(sources.map((s) => [s.file, new Set(tokens)] as const));
+	const declared = new Map(sources.map((s) => [s.file, declaredNames(s)] as const));
+	const imports = new Map(sources.map((s) => [s.file, relativeImports(s.file, s.src)] as const));
+	const deniers = new Map<string, Set<string>>();
+	for (const s of sources) {
+		const own = new Set<string>();
+		for (const unit of s.units) {
+			if (!DENIAL.test(s.literal.slice(unit.start, unit.end))) continue;
+			const name = declaredName(s.code, unit);
+			if (name !== null) own.add(name);
+		}
+		deniers.set(s.file, own);
+		for (const name of own) roots.get(s.file)?.add(name);
+	}
+	for (const s of sources) {
+		const own = deniers.get(s.file) as Set<string>;
+		const named = (imports.get(s.file) as RelativeImports).named;
+		const isDenier = (name: string): boolean => {
+			if (own.has(name)) return true;
+			const imported = named.get(name);
+			return imported !== undefined && deniers.get(imported[0])?.has(imported[1]) === true;
+		};
+		const denies = ([a, b]: [number, number]): boolean => {
+			if (DENIAL.test(s.literal.slice(a, b))) return true;
+			const text = s.code.slice(a, b);
+			for (const m of text.matchAll(/(?<![\w$.])([A-Za-z_$][\w$]*)(?=\s*\()/g))
+				if (isDenier(m[1] as string)) return true;
+			return false;
+		};
+		for (const unit of s.units) {
+			if (!DENIAL.test(s.literal.slice(unit.start, unit.end))) continue;
+			for (const stmt of ifStatements(s.code, unit.start, unit.end)) {
+				const decides =
+					stmt.arms.some(denies) ||
+					(stmt.arms.some(([a, b]) => EXIT.test(s.code.slice(a, b))) &&
+						denies(armExtent(s.code, stmt.end)));
+				if (!decides) continue;
+				for (const m of stmt.condition.matchAll(
+					/(?<![\w$.])([A-Za-z_$][\w$]*)\s*(?:<[^<>()]*>\s*)?\(/g,
+				)) {
+					const callee = m[1] as string;
+					if ((declared.get(s.file) as Set<string>).has(callee)) {
+						roots.get(s.file)?.add(callee);
+						continue;
+					}
+					const imported = named.get(callee);
+					if (imported !== undefined && declared.get(imported[0])?.has(imported[1]) === true) {
+						roots.get(imported[0])?.add(imported[1]);
+						roots.get(s.file)?.add(callee);
+					}
+				}
+			}
+		}
+	}
+	return roots;
+}
 
 /** Does `text` reach a gate: CALL a gate-reaching name, or read an authorization token property? */
 function reachesGate(text: string, names: ReadonlySet<string>, tokens: readonly string[]): boolean {
@@ -808,19 +954,27 @@ function reachesGate(text: string, names: ReadonlySet<string>, tokens: readonly 
 }
 
 /**
- * The GATE-REACHING names of every source: the authorization tokens; every
+ * The GATE-REACHING names of every source: its ROOTS (gateRoots); every
  * function DECLARED in that file (`function f`, `const f = (…) =>`, a method)
- * whose body reaches one; every `const g = f` alias of one; and every name
- * IMPORTED from another scanned file where it is gate-reaching — to a fixpoint.
- * So a wrapper of a wrapper of gateRecord, lifted into a helper module and
- * renamed on import, is still a gate.
+ * whose body reaches one; every `const g = f` alias of one; every name
+ * IMPORTED from another scanned file where it is gate-reaching, and every
+ * `ns.name` of a namespace import of one — to a fixpoint. So a wrapper of a
+ * wrapper of gateRecord, lifted into a helper module and renamed on import, is
+ * still a gate. `frozen` holds an already-closed set (the live tree) that new
+ * sources may import from without re-closing it.
  */
 function gateReachingNames(
 	sources: readonly GateSource[],
+	roots: ReadonlyMap<string, ReadonlySet<string>>,
 	tokens: readonly string[],
+	frozen: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 ): Map<string, Set<string>> {
-	const reaching = new Map(sources.map((s) => [s.file, new Set(tokens)] as const));
+	const reaching = new Map(
+		sources.map((s) => [s.file, new Set(roots.get(s.file) ?? tokens)] as const),
+	);
 	const imports = new Map(sources.map((s) => [s.file, relativeImports(s.file, s.src)] as const));
+	const reachingIn = (target: string): ReadonlySet<string> | undefined =>
+		reaching.get(target) ?? frozen.get(target);
 	let grew = true;
 	while (grew) {
 		grew = false;
@@ -832,11 +986,12 @@ function gateReachingNames(
 					grew = true;
 				}
 			};
-			for (const [local, [target, exported]] of imports.get(file) as Map<
-				string,
-				[string, string]
-			>) {
-				if (reaching.get(target)?.has(exported) === true) add(local);
+			const { named, namespaces } = imports.get(file) as RelativeImports;
+			for (const [local, [target, exported]] of named) {
+				if (reachingIn(target)?.has(exported) === true) add(local);
+			}
+			for (const [ns, target] of namespaces) {
+				for (const name of reachingIn(target) ?? []) if (!name.includes('.')) add(`${ns}.${name}`);
 			}
 			for (const unit of units) {
 				if (reachesGate(unit.body, names, tokens)) add(declaredName(code, unit));
@@ -1290,33 +1445,61 @@ function seamFallbackSites(
 	return sites;
 }
 
+/** Every `.ts` matching one of `patterns`, tests excluded. Discovered, never hand-listed. */
+function globSources(patterns: readonly string[]): string[] {
+	const found = new Set<string>();
+	for (const pattern of patterns) {
+		for (const rel of new Glob(pattern).scanSync({ cwd: ROOT })) found.add(rel);
+	}
+	return [...found].filter((rel) => !rel.includes('/tests/') && !rel.endsWith('.test.ts')).sort();
+}
+
 /**
  * Every source that can hold a tool action's authorization: every tool package's
  * server tree (helpers included — a gate lifted into `server/lib/x.ts` is still
  * the action's gate), the framework's tool layer (src/core/tools/), and any extra
- * file a census entry joins to its walk. Discovered, never hand-listed.
+ * file a census entry joins to its walk.
  */
 function gateSourceFiles(): string[] {
-	const found = new Set<string>();
-	for (const pattern of ['tools/*/server/**/*.ts', 'src/core/tools/**/*.ts']) {
-		for (const rel of new Glob(pattern).scanSync({ cwd: ROOT })) found.add(rel);
-	}
-	for (const entry of Object.values(CENSUS)) for (const rel of entry.files ?? []) found.add(rel);
-	return [...found].filter((rel) => !rel.includes('/tests/') && !rel.endsWith('.test.ts')).sort();
+	const extra = Object.values(CENSUS).flatMap((entry) => entry.files ?? []);
+	return [
+		...new Set([...globSources(['tools/*/server/**/*.ts', 'src/core/tools/**/*.ts']), ...extra]),
+	].sort();
 }
 
-/** Parse a set of sources together: gate-reaching names cross file boundaries. */
+/**
+ * THE SECURITY LAYER the tools import their primitives from. Walked for roots and
+ * the closure (so assertRecordWriteTarget, getSectionPermissions,
+ * frontierComponentAllowed… are gates by derivation, not by being spelled in a
+ * list). CONTEXT, not seam-scanned: the layer IS the gate implementation, its
+ * own internal plumbing (a memoised scope grant, a session row's isGlobalAdmin
+ * field) is not a tool action's swappable seam, and its doors have their own
+ * gates (write_door / read_door natives).
+ */
+const SECURITY_LAYER = ['src/core/security/**/*.ts'] as const;
+
+const LIVE_FILES = gateSourceFiles();
+const LIVE_SECURITY_FILES = globSources(SECURITY_LAYER).filter((f) => !LIVE_FILES.includes(f));
+const LIVE_SOURCES = [...LIVE_FILES, ...LIVE_SECURITY_FILES].map((rel) =>
+	gateSource(rel, read(rel)),
+);
+const LIVE_ROOTS = gateRoots(LIVE_SOURCES, AUTHORIZATION_TOKENS);
+const LIVE_NAMES = gateReachingNames(LIVE_SOURCES, LIVE_ROOTS, AUTHORIZATION_TOKENS);
+
+/**
+ * Parse a set of sources together: gate-reaching names cross file boundaries,
+ * and a fixture may import the REAL security layer and tool trees (their closed
+ * names are the frozen context), so a control exercises the derivation the live
+ * rule uses.
+ */
 function scanSources(files: Readonly<Record<string, string>>): SeamFallbackSite[] {
 	const sources = Object.entries(files).map(([file, src]) => gateSource(file, src));
-	const names = gateReachingNames(sources, AUTHORIZATION_TOKENS);
+	const roots = gateRoots(sources, AUTHORIZATION_TOKENS);
+	const names = gateReachingNames(sources, roots, AUTHORIZATION_TOKENS, LIVE_NAMES);
 	return sources.flatMap((s) =>
 		seamFallbackSites(s.file, s.src, AUTHORIZATION_TOKENS, names.get(s.file) as Set<string>, s),
 	);
 }
-
-const LIVE_FILES = gateSourceFiles();
-const LIVE_SOURCES = LIVE_FILES.map((rel) => gateSource(rel, read(rel)));
-const LIVE_NAMES = gateReachingNames(LIVE_SOURCES, AUTHORIZATION_TOKENS);
 
 describe('a tool action gate is called directly, never through an optional seam', () => {
 	test('no tool server source reaches an authorization token through a seam fallback', () => {
@@ -1325,7 +1508,7 @@ describe('a tool action gate is called directly, never through an optional seam'
 			50,
 		);
 		expect(LIVE_FILES).toContain('tools/tool_transcription/server/index.ts');
-		const sites = LIVE_SOURCES.flatMap((s) =>
+		const sites = LIVE_SOURCES.filter((s) => LIVE_FILES.includes(s.file)).flatMap((s) =>
 			seamFallbackSites(
 				s.file,
 				s.src,
@@ -1378,6 +1561,41 @@ describe('a tool action gate is called directly, never through an optional seam'
 		expect(units, 'the function parser found almost nothing — it is broken').toBeGreaterThan(1000);
 		// a non-gate name stays out: the closure is not "everything".
 		expect(names('tools/tool_sitebuilder/server/index.ts').has('requireSlug')).toBe(false);
+	});
+
+	test('the roots are derived: security primitives the list never spells are gates (review r1)', () => {
+		const names = (file: string): Set<string> => LIVE_NAMES.get(file) as Set<string>;
+		const roots = (file: string): Set<string> => LIVE_ROOTS.get(file) as Set<string>;
+		// None of these is in AUTHORIZATION_TOKENS — each is a gate by derivation.
+		for (const name of [
+			'assertRecordWriteTarget',
+			'getSectionPermissions',
+			'isToolGranted',
+			'frontierComponentAllowed',
+		])
+			expect(AUTHORIZATION_TOKENS).not.toContain(name);
+		// …and reaches the tools that call it today, through a real import:
+		expect(names('tools/tool_import_files/server/index.ts').has('assertRecordWriteTarget')).toBe(
+			true,
+		);
+		expect(
+			names('tools/tool_time_machine/server/bulk_revert_records.ts').has('getSectionPermissions'),
+		).toBe(true);
+		expect(names('tools/tool_export/server/access.ts').has('isToolGranted')).toBe(true);
+		expect(names('tools/tool_export/server/access.ts').has('frontierComponentAllowed')).toBe(true);
+		// The two derivation rules, each pinned on the function it was built for:
+		// a DENIER (constructs tool.not_authorized) and a DECIDER (its result
+		// decides that denial; its own body only reads the grant list).
+		expect(roots('src/core/tools/security.ts').has('assertToolGranted')).toBe(true);
+		expect(roots('src/core/tools/security.ts').has('isToolGranted')).toBe(true);
+		expect(roots('src/core/security/record_scope.ts').has('assertRecordWriteTarget')).toBe(true);
+		// The denial codes are the registry's permission category — read, not listed.
+		expect(DENIAL_CODES).toContain('perm.denied');
+		expect(DENIAL_CODES).toContain('tool.not_authorized');
+		expect(DENIAL_CODES).not.toContain('request.invalid_tipo');
+		// The security layer was walked at all, and a non-gate in it stays out.
+		expect(LIVE_SECURITY_FILES).toContain('src/core/security/record_scope.ts');
+		expect(names('src/core/security/html_escape.ts').has('escapeHtml')).toBe(false);
 	});
 
 	describe('negative controls: every refused shape is detected, every legitimate one passes', () => {
@@ -1501,6 +1719,68 @@ describe('a tool action gate is called directly, never through an optional seam'
 					"import { liftedGate as g } from './gates.ts';\nasync function h(d, seams) {\n\tconst gate = seams.gate ?? g;\n\tawait gate(d);\n}",
 			});
 			expect(sites.map((s) => `${s.file} ${s.token}`)).toEqual(['tools/x/server/index.ts g']);
+		});
+
+		// review r1: real security primitives no list spells, reached the way a
+		// tool reaches them — an import of the LIVE security layer.
+		const TOOL_FIXTURE = 'tools/tool_x/server/index.ts';
+		const scanTool = (snippet: string): string[] =>
+			scanSources({ [TOOL_FIXTURE]: snippet }).map((s) => `${s.token} (${s.shape})`);
+		const REFUSED_DERIVED: readonly [string, string][] = [
+			[
+				'?? assertRecordWriteTarget (the write door)',
+				"import { assertRecordWriteTarget } from '../../../src/core/security/record_scope.ts';\nasync function h(d, p, seams) {\n\tconst check = seams.check ?? assertRecordWriteTarget;\n\tawait check(d.tipo, d.id, p, 'x');\n}",
+			],
+			[
+				'?? getSectionPermissions (the section level)',
+				"import { getSectionPermissions } from '../../../src/core/security/permissions.ts';\nasync function h(p, t, seams) {\n\tconst perms = seams.perms ?? getSectionPermissions;\n\treturn perms(p, t);\n}",
+			],
+			[
+				'early exit on a seam before isToolGranted (a DECIDER)',
+				"import { isToolGranted } from '../../../src/core/tools/security.ts';\nasync function h(p, seams) {\n\tif (seams.g) {\n\t\tawait seams.g(p);\n\t\treturn;\n\t}\n\tif (!(await isToolGranted(p.userId, 'tool_x'))) throw new Error('x');\n}",
+			],
+			[
+				'a namespace import of the security layer',
+				"import * as scope from '../../../src/core/security/record_scope.ts';\nasync function h(d, p, seams) {\n\tconst check = seams.check ?? scope.assertRecordWriteTarget;\n\tawait check(d.tipo, d.id, p, 'x');\n}",
+			],
+			[
+				'a local DENIER no list names',
+				"function mustOwn(p, r) {\n\tif (r.owner !== p.userId) throw new DedaloError('perm.denied', {});\n}\nasync function h(p, r, seams) {\n\tconst own = seams.own ?? mustOwn;\n\tawait own(p, r);\n}",
+			],
+			[
+				'a local DECIDER of a denial',
+				"function owns(p, r) {\n\treturn r.owner === p.userId;\n}\nfunction assertOwns(p, r) {\n\tif (!owns(p, r)) throw new DedaloError('perm.denied', {});\n}\nasync function h(p, r, seams) {\n\tconst decide = seams.owns ?? owns;\n\tif (!decide(p, r)) return;\n}",
+			],
+		];
+		for (const [label, snippet] of REFUSED_DERIVED) {
+			test(`refused (derived root): ${label}`, () => {
+				expect(scanTool(snippet).length, `${label} was not detected:\n${snippet}`).toBeGreaterThan(
+					0,
+				);
+			});
+		}
+
+		test('refused: a wrapper lifted into a sibling file imported by its .js spelling', () => {
+			const sites = scanSources({
+				'tools/x/server/gates.ts':
+					"export function mustOwn(p, r) {\n\tif (r.owner !== p.userId) throw new DedaloError('perm.out_of_scope', {});\n}",
+				'tools/x/server/index.ts':
+					"import { mustOwn } from './gates.js';\nasync function h(p, r, seams) {\n\tconst own = seams.own ?? mustOwn;\n\tawait own(p, r);\n}",
+			});
+			expect(sites.map((s) => `${s.file} ${s.token}`)).toEqual(['tools/x/server/index.ts mustOwn']);
+		});
+
+		test('accepted: a seam over a NON-denial validator (the derivation is the category, not any throw)', () => {
+			expect(
+				scanTool(
+					"function mustBeTipo(x) {\n\tif (!x) throw new DedaloError('request.invalid_tipo', {});\n}\nasync function h(x, seams) {\n\tconst v = seams.v ?? mustBeTipo;\n\tv(x);\n}",
+				),
+			).toEqual([]);
+			expect(
+				scanTool(
+					"import { escapeHtml } from '../../../src/core/security/html_escape.ts';\nfunction h(s, seams) {\n\treturn (seams.esc ?? escapeHtml)(s);\n}",
+				),
+			).toEqual([]);
 		});
 
 		const ACCEPTED: readonly [string, string][] = [
