@@ -560,7 +560,7 @@ describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () =>
 /**
  * A MASTER IS AUTHORED, NEVER GENERATED. Without the refusal the panel's build
  * gear on the retouched row resolved the retouch as its OWN source and rewrote
- * it: measured, jpeg quality 100 / 3 169 136 bytes → quality 82 / 1 798 308
+ * it: measured, jpeg quality 100 / 3 169 136 bytes → the then-default quality 82 / 1 798 308
  * bytes. The client only hides the gear for the literal 'original', so the
  * server is the chokepoint.
  */

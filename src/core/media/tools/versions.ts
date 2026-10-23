@@ -76,7 +76,7 @@ export interface BuildVersionResult {
  * every other tier. Without this refusal the panel's build gear on the retouched
  * row was live and self-destructive: MEASURED, one click on a delivered retouch
  * (jpeg quality 100, 3,169,136 bytes) resolved that very file as its own source
- * and rewrote it at quality 82, 1,798,308 bytes — the human's master destroyed,
+ * and rewrote it at the then-default quality 82, 1,798,308 bytes — the human's master destroyed,
  * irreversibly, by a button that looked like every other build button.
  *
  * v6 allowed it (build_version had a master-target branch, frozen

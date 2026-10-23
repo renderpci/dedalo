@@ -577,26 +577,40 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 	});
 
 	/**
-	 * PER-TARGET COMPRESSION (2026-08-07). PNG's `-quality` IS NOT A QUALITY: it
-	 * encodes `zlib_level*10 + filter_type`, so the engine's 82 meant "zlib level 8,
-	 * filter 2" — a worse lossless compressor — on a format that cannot lose
-	 * anything either way. MEASURED through the real 1.5MB recipe: the layered medal
-	 * master gives 721 858 B at 82 vs 535 300 B at 90 (+34.9 % for nothing), and this
-	 * install's largest master at full size 12 347 424 B vs 9 957 081 B (+24.0 %).
+	 * PER-TARGET COMPRESSION. `-quality` used to be a literal 82; PHP's image
+	 * recipe uses 90 for every target (`class.ImageMagick.php:281`, thumbs `:208`)
+	 * and 82 appears nowhere in the frozen engine. The value is still read from the
+	 * call site, because it is a property of the OUTPUT: master normalized copies
+	 * pass 100, the pdf thumb its own literal.
+	 *
+	 * PNG's `-quality` IS NOT A QUALITY (it encodes `zlib_level*10 + filter_type`),
+	 * and that is the other half of the measurement that once justified 82: at 90
+	 * PNG compresses BETTER. MEASURED through the real 1.5MB recipe, the layered
+	 * medal master gives 721 858 B at 82 vs 535 300 B at 90 (+34.9 % for nothing),
+	 * and this install's largest master at full size 12 347 424 B vs 9 957 081 B
+	 * (+24.0 %).
 	 */
 	describe('compressionForTarget', () => {
-		test('82 for the lossy targets, 90 for png/webp, path or bare extension', () => {
-			for (const target of ['/m/image/1.5MB/0/x.jpg', 'jpg', 'jpeg', 'avif', 'tif', 'tiff']) {
-				expect([target, compressionForTarget(target)]).toEqual([target, 82]);
-			}
-			for (const target of ['/m/image/1.5MB/0/x.png', 'png', 'webp']) {
+		test('90 for every target — PHP value, path or bare extension', () => {
+			for (const target of [
+				'/m/image/1.5MB/0/x.jpg',
+				'jpg',
+				'jpeg',
+				'avif',
+				'tif',
+				'tiff',
+				'/m/image/1.5MB/0/x.png',
+				'png',
+				'webp',
+			]) {
 				expect([target, compressionForTarget(target)]).toEqual([target, 90]);
 			}
 		});
 
 		test('an EXPLICIT compression always wins — this is a default, not a policy', () => {
-			// component_pdf's thumb passes 75 (PHP create_thumb literal); a per-target
-			// rule that overrode the caller would silently change that recipe.
+			// component_pdf's thumb passes 75 (PHP create_thumb literal) and a master
+			// normalized copy passes 100; a per-target rule that overrode the caller
+			// would silently change both recipes.
 			expect(compressionForTarget('/x.png', 75)).toBe(75);
 			expect(compressionForTarget('/x.jpg', 100)).toBe(100);
 		});
@@ -611,9 +625,9 @@ describe('imagemagick argv recipes (PHP class.ImageMagick.php)', () => {
 				});
 				return argv[argv.indexOf('-quality') + 1] as string;
 			};
-			expect(qualityOf('/t.jpg')).toBe('82');
+			expect(qualityOf('/t.jpg')).toBe('90');
 			// The alpha-capable twin an install configures — same recipe, other target.
-			expect(qualityOf('/t.avif')).toBe('82');
+			expect(qualityOf('/t.avif')).toBe('90');
 			expect(qualityOf('/t.png')).toBe('90');
 			expect(qualityOf('/t.png', 75)).toBe('75');
 		});

@@ -1110,7 +1110,7 @@ function shouldBackUpTwin(spec: MediaTypeSpec, quality: string, extension: strin
  * and the thumb (see regenerateImage), and the RAW beside it — the file that
  * carries the operator's bytes — is the one addFile backs up.
  *
- * IT IS ENCODED AT QUALITY 100 (see the call), not the ladder's 82 default: it is
+ * IT IS ENCODED AT QUALITY 100 (see the call), not the ladder's 90 default: it is
  * the full-resolution viewable of the archival master.
  *
  * `rebuild: false` — repair's contract: build what is MISSING, never re-encode
@@ -1159,7 +1159,7 @@ export async function buildMasterNormalizedCopy(
 	// copy (class.component_image.php:1713), and it is the record's full-resolution
 	// viewable: the raw master is untouched, so this file is the only way an
 	// operator can inspect or download the original at its real size. The ladder's
-	// 82 default is for the web tiers, where bytes are the point.
+	// 90 default is for the web tiers, where bytes are the point.
 	return await buildImageVersion(
 		spec,
 		identity,

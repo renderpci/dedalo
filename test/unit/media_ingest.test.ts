@@ -393,6 +393,19 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 			env: magickTestEnv(),
 		});
 		expect(encoded.stdout.trim()).toBe('100');
+		// The ladder's own tiers use PHP's 90 (not the old 82).
+		const tierPath = buildMediaLocation(
+			image,
+			id6,
+			image.defaultQuality,
+			image.defaultExtension,
+			pathOpts,
+		).absolutePath;
+		const tierEncoded = await runBinary([resolveMagick(), tierPath, '-format', '%Q', 'info:'], {
+			nice: false,
+			env: magickTestEnv(),
+		});
+		expect(tierEncoded.stdout.trim()).toBe('90');
 	});
 
 	test.if(HAVE_MAGICK)(

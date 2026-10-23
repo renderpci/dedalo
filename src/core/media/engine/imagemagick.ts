@@ -151,29 +151,36 @@ export function coderToken(target: string): string {
 }
 
 /**
- * Target extensions whose `-quality` is NOT a lossy quality knob and must stay
- * high. See `compressionForTarget`.
+ * The `-quality` value for a converted image. An EXPLICIT `compression` from the
+ * caller always wins — this is the DEFAULT, not a policy override.
+ *
+ * 90 IS PHP'S RECIPE VALUE, for every target: `class.ImageMagick.php:281`
+ * (`$quality = $options->quality ?? 90`) for derivatives and `:208` for the
+ * thumb, and `check_normalized_files` steps it up to 100 only for a master
+ * tier's normalized copy (passed explicitly by buildMasterNormalizedCopy). The
+ * engine used 82 until 2026-10-23 and the code here claimed it was "the PHP
+ * default"; no 82 exists anywhere in the frozen engine, and the cost was
+ * delivered detail: on rsc29/rsc170/1's 1.5MB the same picture is 55 988 B at
+ * 82 (and 4:2:0 chroma) vs 97 453 B at 90 (4:4:4) — the difference a reader sees
+ * as softness on every jpg tier.
+ *
+ * PNG IS THE TRAP THIS VALUE ALSO GETS RIGHT: its `-quality` is not a quality at
+ * all, it encodes `zlib_level*10 + filter_type`, so 90 means "zlib level 9,
+ * filter 0" — the BETTER lossless compressor. MEASURED through the real 1.5MB
+ * recipe: the layered medal master gives 721 858 B at 82 vs 535 300 B at 90
+ * (+34.9% for nothing), and this install's largest master (1849x2047) at full
+ * size gives 12 347 424 B vs 9 957 081 B (+24.0%).
  */
-const HIGH_COMPRESSION_TARGET_EXTENSIONS: ReadonlySet<string> = new Set(['png', 'webp']);
+const DEFAULT_COMPRESSION = 90;
 
 /**
- * The `-quality` value for a target file (or bare extension). An EXPLICIT
- * `compression` from the caller always wins — this is the DEFAULT, not a policy
- * override.
- *
- * 82 is the PHP default and the right lossy setting for jpg/avif/tif. PNG IS THE
- * TRAP: its `-quality` is not a quality at all, it encodes `zlib_level*10 +
- * filter_type`, so 82 means "zlib level 8, filter 2" — a WORSE lossless
- * compressor than 90, on a format that cannot lose anything either way.
- * MEASURED here through the real 1.5MB recipe: the layered medal master gives
- * 721 858 B at 82 vs 535 300 B at 90 (+34.9% for nothing), and this install's
- * largest master (1849x2047) at full size gives 12 347 424 B vs 9 957 081 B
- * (+24.0%). webp's `-quality` is a genuine quality knob, but it is the alpha
- * delivery format and 90 is its usual working point.
+ * The `-quality` value for a target file (or bare extension): the caller's
+ * explicit value, else {@link DEFAULT_COMPRESSION}. The target is kept in the
+ * signature because the value is per-OUTPUT by contract, even though today every
+ * target resolves to the same default.
  */
-export function compressionForTarget(target: string, explicit?: number): number {
-	if (explicit !== undefined) return explicit;
-	return HIGH_COMPRESSION_TARGET_EXTENSIONS.has(targetExtension(target)) ? 90 : 82;
+export function compressionForTarget(_target: string, explicit?: number): number {
+	return explicit ?? DEFAULT_COMPRESSION;
 }
 
 /**
@@ -346,9 +353,9 @@ export interface ConvertOptions {
 	sourceWidth?: number;
 	sourceHeight?: number;
 	/**
-	 * Force a specific -quality. Default is `compressionForTarget(target)`: 82
-	 * (the PHP default) for the lossy targets, 90 for png/webp — png's -quality
-	 * is a zlib/filter code, not a quality, and 82 costs measured bytes.
+	 * Force a specific -quality. Default is 90, PHP's image recipe value for every
+	 * target (see DEFAULT_COMPRESSION): master normalized copies pass 100, the pdf
+	 * thumb passes its own literal.
 	 */
 	compression?: number;
 	/** Inject the CMYK→sRGB ICC profiles + -strip (when the source is CMYK). */
