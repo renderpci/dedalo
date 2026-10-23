@@ -24,11 +24,28 @@
  *     transaction, attempt 1) is rolled back and run again → reset;
  *  3. a persistent 40P01 fails loudly after RESET_ATTEMPTS, the database
  *     untouched (every attempt rolled back);
- *  4. a NON-retryable error fails at once (one attempt).
+ *  4. a NON-retryable error fails at once (one attempt);
+ *  5. run as a NON-superuser owner while the only other session on the target
+ *     is one it may not signal (the admin's): nothing ended, that session KEPT
+ *     and named, the reset completes — twice: (a) without pg_read_all_stats
+ *     (the session's backend_type is hidden: it was a NULL entry, silently
+ *     unnamed), (b) WITH it (red before the review fix: the sweep's
+ *     tab-delimited answer lost its empty first field to the stdout trim,
+ *     parsed as ended=[NaN], and the reset refused after 15 s; skipped, named,
+ *     when the admin may not grant pg_read_all_stats);
+ *  6. a lock held by such a kept session: the attempt's lock_timeout ends the
+ *     wait (55P03, real — not injected), the attempt is run again once the
+ *     holder is gone → reset (red if the SET LOCAL lock_timeout goes: the reset
+ *     waits forever; red if 55P03 leaves the retryable set: refused at once).
+ *  Plus the sweep-answer parser: an empty `ended` with a non-empty `kept`
+ *  survives, a non-integer pid refuses.
  *
  * Never the app or the suite database: every target is a `<prefix><pid>_<leg>`
  * scratch database, swept on entry (test/helpers/scratch_database.ts) and
- * dropped WITH (FORCE). Skips (named) when the role cannot CREATE DATABASE.
+ * dropped WITH (FORCE). Legs 5-6 log in as a per-process scratch role
+ * `<prefix><pid>_role` (NOSUPERUSER, no pg_signal_backend, owner of its two
+ * databases), created here, dropped after, orphans of dead pids swept on entry.
+ * Skips (named) when the admin role cannot CREATE DATABASE (legs 5-6: CREATE ROLE).
  */
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
@@ -38,6 +55,7 @@ import {
 	holdInstallLock,
 	inspectTargetDatabase,
 	installStampOf,
+	parseSessionSweep,
 	RESET_ATTEMPTS,
 	resetDatabaseToEmpty,
 } from '../../src/core/install/db_restore.ts';
@@ -48,11 +66,25 @@ import {
 	pgClientEnv,
 	runPsql,
 } from '../../src/core/install/pg_exec.ts';
-import { sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
+import { pidIsAlive, sweepOrphanScratchDatabases } from '../helpers/scratch_database.ts';
 
 const PREFIX = 'dedalo_install_reset_';
 const dbName = (leg: string): string => `${PREFIX}${process.pid}_${leg}`;
-const LEGS = ['lock', 'other', 'retry', 'persist', 'fatal'] as const;
+const LEGS = [
+	'lock',
+	'other',
+	'retry',
+	'persist',
+	'fatal',
+	'kept',
+	'keptstats',
+	'timeout',
+] as const;
+/** Legs 5-6's databases: owned by (and seeded as) the scratch role. */
+const OWNED_LEGS = ['kept', 'keptstats', 'timeout'] as const;
+const ROLE = `${PREFIX}${process.pid}_role`;
+/** A fixed, deliberately non-secret credential of a per-process scratch role. */
+const ROLE_PASSWORD = 'dedalo_install_reset_gate';
 const INSTALL_ID = '6d1c5a3e-0b7f-4c2a-9e41-2f8d7c6b5a40';
 
 const admin: DbConnDescriptor = {
@@ -75,6 +107,48 @@ async function adminCanCreateDatabase(): Promise<boolean> {
 const available = await adminCanCreateDatabase();
 const named = (what: string): string =>
 	available ? what : `${what} — SKIPPED: the admin role cannot CREATE DATABASE`;
+
+async function adminCanCreateRole(): Promise<boolean> {
+	const probe = await runPsql(admin, [
+		'-tAc',
+		'SELECT rolcreaterole OR rolsuper FROM pg_roles WHERE rolname = current_user',
+	]);
+	return probe.exitCode === 0 && probe.stdout.trim() === 't';
+}
+const roleAvailable = available && (await adminCanCreateRole());
+async function adminCanGrantStats(): Promise<boolean> {
+	const probe = await runPsql(admin, [
+		'-tAc',
+		"SELECT rolsuper OR pg_has_role(current_user, 'pg_read_all_stats', 'MEMBER WITH ADMIN OPTION') FROM pg_roles WHERE rolname = current_user",
+	]);
+	return probe.exitCode === 0 && probe.stdout.trim() === 't';
+}
+const statsAvailable = roleAvailable && (await adminCanGrantStats());
+const namedRole = (what: string): string =>
+	roleAvailable ? what : `${what} — SKIPPED: the admin role cannot CREATE DATABASE and CREATE ROLE`;
+/** The scratch role's connection to one of its databases. */
+const roleConnOf = (database: string): DbConnDescriptor => ({
+	...admin,
+	database,
+	user: ROLE,
+	password: ROLE_PASSWORD,
+});
+
+/** Drop `<prefix><dead pid>_role` roles a killed run left (their databases were swept first). */
+async function sweepOrphanRoles(): Promise<void> {
+	const pattern = `${PREFIX.replace(/_/g, '\\_')}%`;
+	const listed = await runPsql(admin, [
+		'-tAc',
+		`SELECT rolname FROM pg_roles WHERE rolname LIKE '${pattern}'`,
+	]);
+	for (const name of listed.stdout.split('\n').map((line) => line.trim())) {
+		const pid = Number(/^([1-9][0-9]*)_role$/.exec(name.slice(PREFIX.length))?.[1] ?? '0');
+		if (pid === 0 || pid === process.pid || pidIsAlive(pid)) continue;
+		const dropped = await runPsql(admin, ['-c', `DROP ROLE IF EXISTS "${name}"`]);
+		if (dropped.exitCode !== 0)
+			console.warn(`[sweep] orphaned scratch role "${name}" not dropped: ${dropped.stderr}`);
+	}
+}
 
 /** What the seed leaves that the reset must take back: pg_trgm + a trigram index, tables, a function, the stamp. */
 const SEEDED_SQL = `CREATE EXTENSION IF NOT EXISTS pg_trgm;
@@ -159,6 +233,14 @@ beforeAll(async () => {
 		const created = await runPsql(admin, ['-c', `CREATE DATABASE "${dbName(leg)}"`]);
 		expect(created.exitCode, created.stderr).toBe(0);
 	}
+	if (!roleAvailable) return;
+	await sweepOrphanRoles();
+	await runPsql(admin, ['-c', `DROP ROLE IF EXISTS "${ROLE}"`]);
+	await psqlOk(
+		admin,
+		`CREATE ROLE "${ROLE}" LOGIN PASSWORD '${ROLE_PASSWORD}' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+${OWNED_LEGS.map((leg) => `ALTER DATABASE "${dbName(leg)}" OWNER TO "${ROLE}";`).join('\n')}`,
+	);
 });
 
 afterAll(async () => {
@@ -166,7 +248,25 @@ afterAll(async () => {
 	for (const leg of LEGS) {
 		await runPsql(admin, ['-c', `DROP DATABASE IF EXISTS "${dbName(leg)}" WITH (FORCE)`]);
 	}
+	if (roleAvailable) await runPsql(admin, ['-c', `DROP ROLE IF EXISTS "${ROLE}"`]);
 });
+
+/** Seed one of the scratch role's databases AS the role, and prove the admin's sessions are ones it may not signal. */
+async function seededOwnedDatabase(leg: (typeof OWNED_LEGS)[number]): Promise<DbConnDescriptor> {
+	const conn = roleConnOf(dbName(leg));
+	await psqlOk(conn, `${SEEDED_SQL}\nGRANT SELECT ON matrix_like TO PUBLIC;`);
+	expect(await installStampOf(conn)).toBe(INSTALL_ID);
+	// Anti-vacuity: the role is no superuser, no member of the admin role, no pg_signal_backend.
+	const may = await psqlOk(
+		admin,
+		`SELECT r.rolsuper OR pg_has_role('${ROLE}', current_user, 'USAGE') OR pg_has_role('${ROLE}', 'pg_signal_backend', 'USAGE')
+		   FROM pg_roles r WHERE r.rolname = '${ROLE}'`,
+	);
+	expect(may.trim(), `${ROLE} may signal the admin's sessions — legs 5-6 would prove nothing`).toBe(
+		'f',
+	);
+	return conn;
+}
 
 describe('database reset vs other sessions on the target', () => {
 	test.if(available)(
@@ -300,5 +400,137 @@ describe('database reset vs other sessions on the target', () => {
 			expect(await installStampOf(conn)).toBe(INSTALL_ID);
 		},
 		60000,
+	);
+	test('the sweep answer: an empty ended list with kept sessions survives; a non-integer pid refuses', () => {
+		expect(
+			parseSessionSweep('{"ended" : [], "kept" : ["123 (client backend, role x)"]}', 'db'),
+		).toEqual({ ended: [], kept: ['123 (client backend, role x)'] });
+		expect(parseSessionSweep('{"ended" : [7, 9], "kept" : []}', 'db')).toEqual({
+			ended: [7, 9],
+			kept: [],
+		});
+		for (const bad of [
+			'{"ended" : ["NaN"], "kept" : []}',
+			'{"ended" : [1.5], "kept" : []}',
+			'{"ended" : [0], "kept" : []}',
+			'{"ended" : [], "kept" : [1]}',
+			'\t123 (autovacuum worker)',
+			'',
+		]) {
+			let caught: unknown = null;
+			try {
+				parseSessionSweep(bad, 'db');
+			} catch (error) {
+				caught = error;
+			}
+			expect(isDedaloError(caught) && caught.code, bad).toBe('install.step_failed');
+		}
+	});
+
+	/** Leg 5: a reset as the scratch role, the admin's idle session the only other one on the target. */
+	async function keptOnlyReset(leg: 'kept' | 'keptstats', readAllStats: boolean): Promise<void> {
+		const conn = await seededOwnedDatabase(leg);
+		if (readAllStats) await psqlOk(admin, `GRANT pg_read_all_stats TO "${ROLE}";`);
+		const unsignallable = await openSession(connOf(conn.database), 'SELECT 1;');
+		try {
+			const bound = 30000;
+			const outcome = await Promise.race([
+				resetDatabaseToEmpty(conn, ['plpgsql'], INSTALL_ID).then(
+					(message) => ({ message }),
+					(error: unknown) => ({ error }),
+				),
+				Bun.sleep(bound).then(() => ({ timedOut: true as const })),
+			]);
+			expect('timedOut' in outcome, `the reset did not finish within ${bound / 1000} s`).toBe(
+				false,
+			);
+			expect('error' in outcome ? String(outcome.error) : '').toBe('');
+			const message = (outcome as { message: string }).message;
+			expect(message).toContain('reset to empty');
+			expect(message).not.toContain('ended ');
+			expect(message).toContain('may not end');
+			const type = readAllStats ? 'client backend' : 'backend type hidden';
+			expect(message).toContain(`${unsignallable.pid} (${type}, role ${admin.user})`);
+			const after = await inspectTargetDatabase(conn);
+			expect(after.userObjects).toEqual([]);
+			expect(after.installStamp).toBeNull();
+			expect(await backendAlive(unsignallable.pid)).toBe(true);
+		} finally {
+			await unsignallable.close();
+			if (readAllStats) await psqlOk(admin, `REVOKE pg_read_all_stats FROM "${ROLE}";`);
+		}
+	}
+
+	test.if(roleAvailable)(
+		namedRole(
+			'5a: a non-superuser owner, the only other session one it may not signal (its type hidden): nothing ended, that session kept and named, the reset completes',
+		),
+		() => keptOnlyReset('kept', false),
+		90000,
+	);
+
+	test.if(statsAvailable)(
+		(statsAvailable
+			? (what: string) => what
+			: (what: string) => `${what} — SKIPPED: the admin role may not grant pg_read_all_stats`)(
+			'5b: the same with pg_read_all_stats (the session named in full): nothing ended, kept and named, the reset completes',
+		),
+		() => keptOnlyReset('keptstats', true),
+		90000,
+	);
+
+	test.if(roleAvailable)(
+		namedRole(
+			'6: a lock held by a session it may not end — the lock_timeout ends the wait (55P03, real), the attempt runs again once the holder is gone → reset',
+		),
+		async () => {
+			const conn = await seededOwnedDatabase('timeout');
+			// The admin's session (the role may not end it), idle IN A TRANSACTION over a lock the DROPs need.
+			const holder = await openSession(
+				connOf(conn.database),
+				'BEGIN; LOCK TABLE matrix_like IN ACCESS SHARE MODE;',
+			);
+			const lockTimeoutMs = 1000;
+			const startedAt: number[] = [];
+			const bound = 30000;
+			const outcome = await Promise.race([
+				resetDatabaseToEmpty(conn, ['plpgsql'], INSTALL_ID, {
+					lockTimeoutMs,
+					scriptForAttempt: (script, attempt) => {
+						startedAt.push(Date.now());
+						if (attempt !== 2) return script;
+						// Free the lock now, and have the server wait (bounded) until the holder is gone.
+						void holder.close();
+						return `DO $wait$ BEGIN
+  FOR i IN 1..100 LOOP
+    EXIT WHEN NOT EXISTS (SELECT 1 FROM pg_stat_activity WHERE pid = ${holder.pid});
+    PERFORM pg_sleep(0.1);
+  END LOOP;
+END $wait$;
+${script}`;
+					},
+				}).then(
+					(message) => ({ message }),
+					(error: unknown) => ({ error }),
+				),
+				Bun.sleep(bound).then(() => ({ timedOut: true as const })),
+			]);
+			await holder.close();
+			expect(
+				'timedOut' in outcome,
+				`the reset did not finish within ${bound / 1000} s — it waits on the held lock without a lock_timeout`,
+			).toBe(false);
+			expect('error' in outcome ? String(outcome.error) : '').toBe('');
+			expect((outcome as { message: string }).message).toContain('reset to empty');
+			expect(startedAt.length).toBe(2);
+			// Attempt 1 ended by the lock timeout: it waited at least that long, and not the 30 s default.
+			const firstAttemptMs = (startedAt[1] ?? 0) - (startedAt[0] ?? 0);
+			expect(firstAttemptMs).toBeGreaterThanOrEqual(lockTimeoutMs);
+			expect(firstAttemptMs).toBeLessThan(15000);
+			const after = await inspectTargetDatabase(conn);
+			expect(after.userObjects).toEqual([]);
+			expect(after.installStamp).toBeNull();
+		},
+		90000,
 	);
 });

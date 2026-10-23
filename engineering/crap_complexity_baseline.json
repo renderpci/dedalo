@@ -5,7 +5,7 @@
 	"root": "src/core",
 	"summary": {
 		"files": 781,
-		"functions": 12839,
+		"functions": 12862,
 		"functionsOverCap": 669,
 		"filesOverCap": 258
 	},
@@ -255,7 +255,7 @@
 		"src/core/identify/profile_source.ts": 10,
 		"src/core/install/config_persist.ts": 10,
 		"src/core/install/db_probe_plan.ts": 8,
-		"src/core/install/db_restore.ts": 8,
+		"src/core/install/db_restore.ts": 7,
 		"src/core/install/directories.ts": 12,
 		"src/core/install/media_tree.ts": 20,
 		"src/core/install/root_pw.ts": 8,

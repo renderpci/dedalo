@@ -1041,7 +1041,8 @@ Merged since the last release; these ship with the next one.
     when the server still picks it as a deadlock victim or a lock wait times out — up to four
     times, each attempt one transaction that rolls back whole. If it still cannot finish, it
     stops with a line naming the reason and any session the installer's database role is not
-    allowed to end ([Troubleshooting](./install/troubleshooting.md)).
+    allowed to end ([Troubleshooting](./install/troubleshooting.md)); when it completes despite
+    such a session, its result line names that session too.
 
 - **The installer no longer crashes when a check's helper process stops before reading its request.**
 

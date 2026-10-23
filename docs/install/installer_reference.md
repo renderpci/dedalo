@@ -1234,7 +1234,8 @@ rolled back and run again, up to four times, and then refused with the reason
 (`Database reset failed (rolled back; SQLSTATE …)` —
 [Troubleshooting](troubleshooting.md)). A session the installer's database
 role is not allowed to end (another role's, a superuser's) is named in that
-line.
+line — and, when the reset completes despite it, in the result line
+(`left <n> session(s) it may not end: …`).
 
 Backups of `.env` that existed before the install (`.env.bak.*`) are never
 removed — only the ones that appeared since the install started.

@@ -622,8 +622,8 @@ export const RESET_ATTEMPTS = 4;
  */
 const RETRYABLE_RESET_SQLSTATES: readonly string[] = ['40P01', '55P03'];
 
-/** How long one attempt waits for any single lock before it is a lock timeout (55P03). */
-const RESET_LOCK_TIMEOUT = '30s';
+/** How long one attempt waits for any single lock before it is a lock timeout (55P03), ms. */
+const RESET_LOCK_TIMEOUT_MS = 30000;
 
 /** How long the ended sessions may take to be gone, all together (ms) — loud past it. */
 const SESSIONS_GONE_TIMEOUT_MS = 15000;
@@ -667,10 +667,15 @@ interface SessionSweep {
 async function endOtherSessions(conn: DbConnDescriptor): Promise<SessionSweep> {
 	// pg_terminate_backend sits in a CASE of the filtered rows' SELECT list (OFFSET 0
 	// fences the filter) — never where the planner could call it for a row it may not signal.
+	// ONE JSON object, never delimited text: an empty first field must survive the
+	// whitespace trims on the way back (runPsql trims stdout — a leading tab separator
+	// was eaten, and a kept-only sweep parsed as ended=[NaN]). backend_type is NULL to a
+	// role without pg_read_all_stats for another role's backend: named as hidden, never a null entry.
 	const run = await runPsqlScript(
 		conn,
-		`SELECT coalesce(string_agg(pid::text, ',' ORDER BY pid) FILTER (WHERE signalled IS NOT NULL), '')
-		        || E'\\t' || coalesce(string_agg(pid || ' (' || backend_type || coalesce(', role ' || usename, '') || ')', ', ' ORDER BY pid) FILTER (WHERE NOT may_end), '')
+		`SELECT json_build_object(
+		          'ended', coalesce(json_agg(pid ORDER BY pid) FILTER (WHERE signalled IS NOT NULL), '[]'::json),
+		          'kept', coalesce(json_agg(pid || ' (' || coalesce(backend_type, 'backend type hidden') || coalesce(', role ' || usename, '') || ')' ORDER BY pid) FILTER (WHERE NOT may_end), '[]'::json))
 		   FROM (SELECT pid, backend_type, usename, may_end,
 		                CASE WHEN may_end THEN pg_terminate_backend(pid) END AS signalled
 		           FROM (SELECT a.pid, a.backend_type, a.usename::text AS usename, coalesce(${MAY_SIGNAL_SQL}, false) AS may_end
@@ -692,13 +697,34 @@ async function endOtherSessions(conn: DbConnDescriptor): Promise<SessionSweep> {
 			`Cannot end the other sessions on '${conn.database}' before the reset: ${run.stderr}`,
 		);
 	}
-	const [ended = '', kept = ''] = run.stdout.trim().split('\t');
-	const sweep: SessionSweep = {
-		ended: ended === '' ? [] : ended.split(',').map(Number),
-		kept: kept === '' ? [] : kept.split(', '),
-	};
+	const sweep = parseSessionSweep(run.stdout, conn.database);
 	await waitSessionsGone(conn, sweep.ended);
 	return sweep;
+}
+
+/**
+ * The sweep's JSON answer, checked: every ended pid a positive integer (it is
+ * interpolated into SQL by waitSessionsGone), every kept entry a string —
+ * anything else refuses loudly, never a guessed parse.
+ */
+export function parseSessionSweep(stdout: string, database: string): SessionSweep {
+	let parsed: unknown = null;
+	try {
+		parsed = JSON.parse(stdout);
+	} catch {
+		// refused below
+	}
+	const { ended, kept } = (parsed ?? {}) as { ended?: unknown; kept?: unknown };
+	const pidsOk =
+		Array.isArray(ended) && ended.every((pid) => Number.isInteger(pid) && (pid as number) > 0);
+	const keptOk = Array.isArray(kept) && kept.every((entry) => typeof entry === 'string');
+	if (!pidsOk || !keptOk) {
+		refuseInstall(
+			'install.step_failed',
+			`Cannot read which sessions were ended on '${database}' before the reset (answer: ${JSON.stringify(stdout)}) — nothing was reset`,
+		);
+	}
+	return { ended: ended as number[], kept: kept as string[] };
 }
 
 /** Wait (bounded by SESSIONS_GONE_TIMEOUT_MS) until none of `pids` is a backend any more; refuse loudly past it. */
@@ -733,6 +759,11 @@ export interface ResetDatabaseOptions {
 	 * a retryable error inside the real transaction. Absent: the script as is.
 	 */
 	scriptForAttempt?: (script: string, attempt: number) => string;
+	/**
+	 * GATE SEAM: how long one attempt waits for any single lock before it is a
+	 * lock timeout (55P03), ms — a positive integer. Absent: RESET_LOCK_TIMEOUT_MS.
+	 */
+	lockTimeoutMs?: number;
 }
 
 /**
@@ -773,6 +804,35 @@ function refuseUnlessRetryable(stderr: string, attempt: number, kept: readonly s
 	);
 }
 
+/** The reset's per-lock wait (ms): the gate seam's when given — a positive integer, refused otherwise. */
+function resetLockTimeoutMs(options: ResetDatabaseOptions): number {
+	const ms = options.lockTimeoutMs ?? RESET_LOCK_TIMEOUT_MS;
+	if (!Number.isInteger(ms) || ms <= 0) {
+		refuseInstall(
+			'install.step_failed',
+			`reset lock timeout must be a positive integer of ms, got ${ms}`,
+		);
+	}
+	return ms;
+}
+
+/** The completed reset's report: the extensions kept, the sessions it ended, those it may not end (named). */
+function resetOutcome(
+	database: string,
+	preexistingExtensions: readonly string[],
+	sessions: SessionSweep,
+): string {
+	const ended =
+		sessions.ended.length === 0
+			? ''
+			: `; ended ${sessions.ended.length} other session(s) on it: pid ${sessions.ended.join(', ')}`;
+	const kept =
+		sessions.kept.length === 0
+			? ''
+			: `; left ${sessions.kept.length} session(s) it may not end: ${sessions.kept.join(', ')}`;
+	return `database '${database}' reset to empty (extensions kept: ${preexistingExtensions.join(', ') || 'none'}${ended}${kept})`;
+}
+
 /**
  * `--abort` ONLY: put the database back to the empty state the preflight
  * recorded — in ONE transaction: every extension the install added (CASCADE),
@@ -808,11 +868,12 @@ export async function resetDatabaseToEmpty(
 			`database '${conn.database}' is not stamped by this install (${stamp ?? 'no stamp'}; ${objects} objects) — refusing to reset it`,
 		);
 	}
+	const lockTimeoutMs = resetLockTimeoutMs(options);
 	const keep =
 		preexistingExtensions.map((name) => `'${name.replace(/'/g, "''")}'`).join(',') || "''";
 	const expected = `${INSTALL_STAMP_PREFIX}${installId}`;
 	const sql = `BEGIN;
-SET LOCAL lock_timeout = '${RESET_LOCK_TIMEOUT}';
+SET LOCAL lock_timeout = '${lockTimeoutMs}ms';
 DO $reset$
 DECLARE r record;
 BEGIN
@@ -860,11 +921,7 @@ COMMIT;`;
 			`Database reset left ${after.userObjectCount} object(s) (e.g. ${after.userObjects.slice(0, 5).join(', ')})`,
 		);
 	}
-	const ended =
-		sessions.ended.length === 0
-			? ''
-			: `; ended ${sessions.ended.length} other session(s) on it: pid ${sessions.ended.join(', ')}`;
-	return `database '${conn.database}' reset to empty (extensions kept: ${preexistingExtensions.join(', ') || 'none'}${ended})`;
+	return resetOutcome(conn.database, preexistingExtensions, sessions);
 }
 
 /** A held install lock; `release` ends the holding session (the server frees the lock). */
