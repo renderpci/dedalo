@@ -351,10 +351,13 @@ describe('probe child — the environment it inherits', () => {
 		const sentinel = 'Zz-RootSentinel-7740';
 		const dir = mkdtempSync(join(scratchRoot, 'env_'));
 		// The client spawns [execPath, 'run', <child>] in `cwd`: with execPath /bin/sh and a
-		// script named `run` in cwd, the "child" is a reporter of its own environment.
+		// script named `run` in cwd, the "child" is a reporter of its own environment. Like
+		// the real probe child it reads its whole request first: a reporter that exits
+		// unread races the client's stdin write (EPIPE under load — measured 2/40 at load
+		// ~400) and would measure THAT, not the environment. The early exit has its own leg below.
 		writeFileSync(
 			join(dir, 'run'),
-			'printf \'{"ok":true,"detail":"%s"}\\n\' "${DEDALO_INSTALL_ROOT_PASSWORD-absent}"\n',
+			'cat >/dev/null\nprintf \'{"ok":true,"detail":"%s"}\\n\' "${DEDALO_INSTALL_ROOT_PASSWORD-absent}"\n',
 		);
 		const driver = join(dir, 'driver.ts');
 		writeFileSync(
@@ -365,7 +368,7 @@ describe('probe child — the environment it inherits', () => {
 				"unsetProcessEnv(['DEDALO_INSTALL_ROOT_PASSWORD']);",
 				`const probes = childProbes({ execPath: '/bin/sh', cwd: ${JSON.stringify(dir)} });`,
 				'const client = (await probes.media({})).detail;',
-				`const control = Bun.spawnSync(['/bin/sh', 'run'], { cwd: ${JSON.stringify(dir)} }).stdout.toString();`,
+				`const control = Bun.spawnSync(['/bin/sh', 'run'], { cwd: ${JSON.stringify(dir)}, stdin: 'ignore' }).stdout.toString();`,
 				'console.log(JSON.stringify({ client, control }));',
 			].join('\n'),
 		);
@@ -380,6 +383,42 @@ describe('probe child — the environment it inherits', () => {
 		// Anti-vacuity: the launch environ DID carry it, and Bun's default spawn still passes it.
 		expect(out.control).toContain(sentinel);
 		expect(out.client).toBe('absent');
+	}, 60000);
+
+	test('a child that closes its stdin WITHOUT reading its request is a failed probe, never a crash (EPIPE) — even when it answers ok', () => {
+		const dir = mkdtempSync(join(scratchRoot, 'unread_'));
+		// Closes its stdin unread, stays alive, then answers ok. Alive matters: Bun DROPS a
+		// write to a child it has already reaped (write() → true, measured Bun 1.4.3), so
+		// only a live child with a closed read end makes the pipe error observable. The
+		// 8 MiB request is more than any pipe buffer (Linux pipe-max-size 1 MiB): whether
+		// the close lands before the write or during it, the write meets EPIPE — the
+		// shape that crashed the driver (2/40 under load ~400 on a reporter that exited unread).
+		writeFileSync(
+			join(dir, 'run'),
+			'exec 0<&-\nsleep 3\nprintf \'{"ok":true,"detail":"unread"}\\n\'\n',
+		);
+		const driver = join(dir, 'driver.ts');
+		writeFileSync(
+			driver,
+			[
+				`import { childProbes } from ${JSON.stringify(join(ROOT, 'src/core/install/install_probe_client.ts'))};`,
+				`const probes = childProbes({ execPath: '/bin/sh', cwd: ${JSON.stringify(dir)} });`,
+				"const outcome = await probes.media({ pad: 'x'.repeat(8 << 20) });",
+				'await Bun.sleep(50);', // a late rejection of the stdin flush would kill the driver here
+				'console.log(JSON.stringify({ ok: outcome.ok, detail: outcome.detail }));',
+			].join('\n'),
+		);
+		const proc = Bun.spawnSync([process.execPath, 'run', driver], {
+			cwd: ROOT,
+			env: { ...Bun.env },
+			stdout: 'pipe',
+			stderr: 'pipe',
+		});
+		expect(proc.exitCode, proc.stderr.toString()).toBe(0);
+		const out = JSON.parse(proc.stdout.toString().trim().split('\n').at(-1) as string);
+		// An answer to a request the child never read answers nothing: fail closed.
+		expect(out.ok).toBe(false);
+		expect(out.detail).toMatch(/^the media probe did not read its request/);
 	}, 60000);
 });
 

@@ -1029,6 +1029,13 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **The installer no longer crashes when a check's helper process stops before reading its request.**
+
+    Each installer check (System, database, mail, …) runs in a helper process of its own. If that
+    process stopped before reading what it was asked to check — failing at start, or stopped at its
+    time limit — the installer itself could exit with a "broken pipe" error. The check now simply
+    fails, with a sentence saying the helper did not read its request, and the installer stays open.
+
 - **A maintenance job whose progress cannot be followed now says so instead of waiting forever.**
 
     When the progress of a long job (a backup, a code update, a move of terms or languages) could
