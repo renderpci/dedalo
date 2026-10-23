@@ -32,6 +32,7 @@ import {
 	resolveMasterSource,
 	retireOrphanTwins,
 } from '../processing.ts';
+import { retireOverlayIfNoMediaFiles } from '../svg_overlay.ts';
 import { rebuildThumb } from '../thumb.ts';
 import { applyRotationCore } from './rotation.ts';
 
@@ -406,7 +407,7 @@ export async function rebuildDerivedTiersAfterMasterDelete(
 }
 
 export interface DeleteAndResyncResult {
-	/** Paths moved into deleted/ by the delete itself. */
+	/** Paths moved into deleted/ by the delete (the SVG envelope rides along when the record has no files left). */
 	moved: string[];
 	/** Derived tiers rebuilt because the delete changed the best master. */
 	rebuilt: string[];
@@ -474,6 +475,14 @@ export async function deleteAndResyncCore(
 			`[media] ${spec.model} ${identity.componentTipo}_${identity.sectionTipo}_${String(identity.sectionId)}: retired to deleted/ with the file just removed — a twin is a companion of its tier's .${spec.defaultExtension}, not an independent version: ${retired.join(', ')}`,
 		);
 	}
+	// THE SVG ENVELOPE GOES WITH THE LAST FILE, and only then (policy 2026-10-23).
+	// It is not a quality file, so no delete pass reaches it; the check is the whole
+	// census (every quality × extension, thumb included), so deleting one tier —
+	// even the default one — leaves the wrapper in place. Run AFTER the rebuild and
+	// the twin retirement: a master delete that rebuilds the ladder leaves files
+	// behind, and a `moved` entry must describe what this action really took.
+	const overlayRetired = retireOverlayIfNoMediaFiles(spec, identity, pathOpts);
+	if (overlayRetired !== null) moved.push(overlayRetired);
 	return {
 		moved,
 		rebuilt: rebuild.rebuilt,

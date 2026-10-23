@@ -62,7 +62,12 @@ import {
 	regenerateSvg,
 	resolveMasterSource,
 } from './processing.ts';
-import { createDefaultSvgFile, defaultRasterUrl, svgOverlayLocation } from './svg_overlay.ts';
+import {
+	createDefaultSvgFile,
+	defaultRasterUrl,
+	retireOverlayIfNoMediaFiles,
+	svgOverlayLocation,
+} from './svg_overlay.ts';
 import { rebuildThumb, thumbIsMissing } from './thumb.ts';
 
 export interface MediaItemsRefreshResult {
@@ -459,6 +464,11 @@ export async function regenerateMissingDerivatives(
 					}
 				}
 			}
+			// THE WRAPPER OF AN EMPTY RECORD MUST NOT SURVIVE (policy 2026-10-23; see
+			// retireOverlayIfNoMediaFiles). Not a build: a record whose every quality
+			// file is gone holds nothing for an envelope to wrap, and this is the
+			// sweep's heal for records emptied before the delete seam knew the rule.
+			retireOverlayIfNoMediaFiles(spec, identity, pathOpts);
 			break;
 		}
 		case 'component_pdf':

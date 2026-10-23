@@ -237,6 +237,25 @@ Merged since the last release; these ship with the next one.
     viewable `.jpg` copy (the standard format), not the raw `.tif`. The raw file
     remains listed and downloadable as its own version in the media versions panel.
 
+- **An image's drawing envelope is removed with the record's last file, not with one quality**
+
+    Every image is displayed through a small SVG envelope that wraps the record's
+    web-quality picture. Removing the record's files never removed that envelope, so
+    with every quality deleted the editor kept loading a wrapper whose picture was
+    gone and the browser painted its broken-image icon — in the edit view and in the
+    media versions panel.
+
+    The envelope now follows the record's files, with the same rule the files
+    themselves follow: it is moved to a `deleted` folder (recoverable, exactly like a
+    deleted quality file) **only when the record has no file left in any quality** —
+    no original, no retouched master, no web size, no thumbnail, no alternative
+    format. Deleting one quality, even the web size, leaves the envelope where it is,
+    because the record still holds a picture.
+
+    A record emptied before this fix keeps its leftover envelope until it is
+    regenerated: one **Regenerate files** click in the media versions tool clears it,
+    and the record then shows the normal empty placeholder.
+
 - **Remove background works again in the image rotation tool.**
 
     **Remove background** failed every time, with a bare `Worker error` in the panel and

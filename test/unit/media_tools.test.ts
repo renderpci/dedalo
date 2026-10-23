@@ -17,11 +17,17 @@ import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { getDimensions, resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
 import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import type { MediaIdentity, MediaPathOptions } from '../../src/core/media/path.ts';
+import {
+	baseSvgUrl,
+	createDefaultSvgFile,
+	svgOverlayLocation,
+} from '../../src/core/media/svg_overlay.ts';
 import { extractPdfCore } from '../../src/core/media/tools/pdf_extract.ts';
 import { applyRotationCore } from '../../src/core/media/tools/rotation.ts';
 import {
 	buildVersionCore,
 	conformHeadersCore,
+	deleteAndResyncCore,
 	deleteQualityCore,
 	deleteVersionCore,
 	getFilesInfoCore,
@@ -616,5 +622,59 @@ describe('media tool server modules load with the right surface', () => {
 		const pdfTool = await getLoadedTool('tool_pdf_extractor');
 		expect(pdfTool?.module.apiActions.get_pdf_data?.permission).toBe('record_tipo');
 		expect(pdfTool?.module.apiActions.get_pdf_data?.minLevel).toBe(1);
+	});
+});
+
+/**
+ * THE SVG ENVELOPE GOES WITH THE LAST FILE, AND ONLY THEN (policy 2026-10-23).
+ *
+ * The envelope is the record's picture wrapper, not a quality file. Deleting one
+ * tier — even the default one — leaves a picture somewhere in the ladder, so the
+ * wrapper stays; only when the record holds NO file of ANY quality is it retired,
+ * and it is MOVED to the `svg/…/deleted/` folder like every other media delete
+ * (restorable), never unlinked.
+ *
+ * Reported symptom that motivated the rule: after removing every quality of
+ * rsc29_rsc170_463937 the envelope survived with a dead `<image>` href and the
+ * browser painted a broken-image icon inside it.
+ */
+describe.if(HAVE_MAGICK)('the SVG envelope is retired only with the LAST media file', () => {
+	test('any surviving tier keeps it; the last delete moves it to deleted/', async () => {
+		const id31: MediaIdentity = { ...identity, sectionId: 31 };
+		const higher = image.qualities.find(
+			(quality) =>
+				!image.masterQualities.includes(quality) &&
+				quality !== image.defaultQuality &&
+				quality !== config.media.thumb.quality,
+		);
+		if (higher === undefined) throw new Error('this ladder has no higher derived tier');
+
+		// A picture in three tiers: master, default and one higher derivative.
+		await makeImage(`/image/${image.originalQuality}/test99_test3_31.jpg`, '1200x900');
+		await makeImage(`/image/${image.defaultQuality}/test99_test3_31.jpg`, '1200x900');
+		await makeImage(`/image/${higher}/test99_test3_31.jpg`, '1200x900');
+		const overlay = await createDefaultSvgFile(image, id31, pathOpts);
+		expect(overlay).not.toBeNull();
+		const live = svgOverlayLocation(image, id31, pathOpts).absolutePath;
+
+		// The DEFAULT tier first: the master and the higher tier still hold the
+		// picture, so the wrapper must survive.
+		await deleteAndResyncCore(image, id31, pathOpts, image.defaultQuality, null);
+		expect(existsSync(live)).toBe(true);
+
+		// Same for the higher tier — the original is still there.
+		await deleteAndResyncCore(image, id31, pathOpts, higher, null);
+		expect(existsSync(live)).toBe(true);
+
+		// The LAST file: the wrapper is retired to the envelope's own deleted/ folder.
+		const outcome = await deleteAndResyncCore(image, id31, pathOpts, image.originalQuality, null);
+		expect(existsSync(live)).toBe(false);
+		expect(
+			outcome.moved.some(
+				(path) =>
+					path.includes('/image/svg/') && path.includes('_deleted_') && path.endsWith('.svg'),
+			),
+		).toBe(true);
+		expect(baseSvgUrl(image, id31, pathOpts)).toBeNull();
 	});
 });

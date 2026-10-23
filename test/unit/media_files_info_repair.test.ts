@@ -22,7 +22,15 @@
 // or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
@@ -590,5 +598,50 @@ describe('repair: the normalized master copy is built when MISSING, and only the
 		);
 		expect(existsSync(copy)).toBe(true);
 		expect(await getDimensions(copy)).toMatchObject({ width: 320, height: 240 });
+	});
+});
+
+/**
+ * THE SWEEP HEALS AN EMPTY RECORD'S WRAPPER (policy 2026-10-23): the SVG
+ * envelope of an image is retired only when the record holds no file of ANY
+ * quality. This is the path that cleans records emptied before the delete seam
+ * knew the rule — pressing "Regenerate files" on one leaves the normal empty
+ * placeholder instead of the browser's broken-image icon.
+ */
+describe('repair: the SVG envelope of an empty record is retired', () => {
+	const MEDIA_ROOT = `${tmpdir()}/dedalo_repair_empty_envelope_${process.pid}`;
+	const spec = mediaTypeOf('component_image')!;
+	const identity = { componentTipo: 'test99', sectionTipo: 'test3', sectionId: 73, lang: null };
+	const pathOpts = { initialMediaPath: '', maxItemsFolder: null, mediaRoot: MEDIA_ROOT };
+	const overlayPath = `${MEDIA_ROOT}/image/svg/test99_test3_73.svg`;
+	const thumbPath = `${MEDIA_ROOT}/image/thumb/test99_test3_73.${config.media.thumb.extension}`;
+	const repair = async (): Promise<string[]> =>
+		await regenerateMissingDerivatives('component_image', spec, identity, pathOpts, {
+			rawExtension: null,
+			deleteNormalized: false,
+			bulkProcessId: null,
+		});
+
+	markMediaRoot(MEDIA_ROOT);
+	afterAll(() => rmSync(MEDIA_ROOT, { recursive: true, force: true }));
+
+	test('any surviving file keeps it; with none it moves to the envelope deleted folder', async () => {
+		mkdirSync(dirname(overlayPath), { recursive: true });
+		writeFileSync(overlayPath, '<svg xmlns="http://www.w3.org/2000/svg"/>');
+		// A thumb is still a picture of this record.
+		mkdirSync(dirname(thumbPath), { recursive: true });
+		writeFileSync(thumbPath, 'scratch');
+		expect(await repair()).toEqual([]);
+		expect(existsSync(overlayPath)).toBe(true);
+
+		// Last file gone → the wrapper is MOVED (restorable), never unlinked.
+		rmSync(thumbPath);
+		expect(await repair()).toEqual([]);
+		expect(existsSync(overlayPath)).toBe(false);
+		expect(
+			readdirSync(`${MEDIA_ROOT}/image/svg/deleted`).some(
+				(name) => name.startsWith('test99_test3_73_deleted_') && name.endsWith('.svg'),
+			),
+		).toBe(true);
 	});
 });
