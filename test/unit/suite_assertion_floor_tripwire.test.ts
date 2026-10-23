@@ -80,6 +80,7 @@ import {
 import {
 	type BaselineCliIo,
 	baselineBytesDigest,
+	baselineCiImageStamp,
 	baselineFile,
 	buildBaseline,
 	CI_IMAGE_MARKER,
@@ -1207,12 +1208,13 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 
 	test('LIVE: the real unit baseline is stamped, or IS the pinned pre-stamp artifact — never a hand edit', () => {
 		const bytes = readFileSync(baselineFile(UNIT_TIER), 'utf8');
-		const stamp = (JSON.parse(bytes) as { ci_image?: { fingerprint?: string } }).ci_image;
+		// Read through THE reader of the stamp the writer writes — never a key spelled here.
+		const stamp = baselineCiImageStamp(JSON.parse(bytes) as { ci_image?: unknown });
 		const transition = UNIT_TIER.unstampedTransition ?? null;
 		// Compared with the image the artifact NAMES (its stamp, or the transition's pin): the
 		// hermetic tier proves the artifact's shape and its binding; the running image's
 		// identity is the db tier's `unit_baseline.ts --check`, in the image.
-		const named = stamp?.fingerprint ?? transition?.fingerprint ?? '';
+		const named = (typeof stamp === 'string' ? stamp : undefined) ?? transition?.fingerprint ?? '';
 		const verdict = ciImageStampVerdict(UNIT_TIER, bytes, image(named, 'checkout'));
 		expect(verdict.kind === 'refuse' ? verdict.message : verdict.kind).toMatch(/^(match|legacy)$/);
 		// …and bound to it: any other image refuses the live artifact.
@@ -1226,6 +1228,14 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 			// it — ci_workflow_tripwire's in-image rule). A pin naming any other image is a dead
 			// transition: no build of this tree reads the artifact, so re-record it.
 			expect(transition?.fingerprint).toBe(ciImageFingerprint(REPO_ROOT));
-		} else expect(transition).toBeNull();
+		} else {
+			// The stamp itself, held to the same two facts as the pin: a well-formed fingerprint
+			// (what the writer writes), and the image THIS checkout defines — a stamp naming any
+			// other image is a foreign record (floors measured on another runner); re-record it.
+			expect(stamp).toMatch(/^[0-9a-f]{64}$/);
+			expect(stamp).toBe(ciImageFingerprint(REPO_ROOT));
+			// …and the pre-stamp transition is over: a live pin beside a stamp vouches for gone bytes.
+			expect(transition).toBeNull();
+		}
 	});
 });
