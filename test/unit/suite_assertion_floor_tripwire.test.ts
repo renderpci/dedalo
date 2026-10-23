@@ -65,7 +65,7 @@
  * Registered in engineering/TRIPWIRES.md + scripts/verify.ts.
  */
 
-import { describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -851,6 +851,9 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 	const FILE = 'test/zz_planted_tier/planted.test.ts';
 	const NEW = 'test/zz_planted_tier/planted_new.test.ts';
 	const dir = mkdtempSync(join(tmpdir(), 'suite_assertion_floor_stamp_'));
+	// The scratch root goes whatever test fails or is filtered out (`-t`), never only at
+	// the end of the last one.
+	afterAll(() => rmSync(dir, { recursive: true, force: true }));
 	const HERE = 'a'.repeat(64);
 	const THERE = 'b'.repeat(64);
 	const image = (fingerprint: string, source: RunningCiImage['source'] = 'marker') => ({
@@ -1006,6 +1009,7 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 			...tier,
 			unstampedTransition: {
 				sha256: baselineBytesDigest(bytes),
+				fingerprint: HERE,
 				reason: 'planted pre-stamp record',
 			},
 		};
@@ -1014,6 +1018,7 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 		expect(legacy.measures).toBe(1);
 		expect(legacy.said).toContain('UNSTAMPED (transition)');
 		expect(legacy.said).toContain('planted pre-stamp record');
+		expect(legacy.said).toContain(HERE.slice(0, 12));
 		// …and any edit of it is no longer that artifact.
 		writeFileSync(baselineFile(tier), bytes.replace('"assertions": 5', '"assertions": 4'));
 		const edited = drive(pinned, ['--check'], image(HERE));
@@ -1042,9 +1047,23 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 		const legacyBytes = doc();
 		const pinned = {
 			...tier,
-			unstampedTransition: { sha256: baselineBytesDigest(legacyBytes), reason: 'r' },
+			unstampedTransition: {
+				sha256: baselineBytesDigest(legacyBytes),
+				fingerprint: HERE,
+				reason: 'r',
+			},
 		};
-		expect(ciImageStampVerdict(pinned, legacyBytes, image(THERE)).kind).toBe('legacy');
+		expect(ciImageStampVerdict(pinned, legacyBytes, image(HERE)).kind).toBe('legacy');
+		// The transition is bound to the image its floors were measured in, like a stamp.
+		for (const source of ['marker', 'checkout'] as const)
+			expect(ciImageStampVerdict(pinned, legacyBytes, image(THERE, source)).kind, source).toBe(
+				'refuse',
+			);
+		const malformedPin = {
+			...tier,
+			unstampedTransition: { ...pinned.unstampedTransition, fingerprint: 'abc' },
+		};
+		expect(ciImageStampVerdict(malformedPin, legacyBytes, image('abc')).kind).toBe('refuse');
 		expect(ciImageStampVerdict(pinned, doc({ fingerprint: HERE }), image(HERE)).kind).toBe(
 			'refuse',
 		);
@@ -1078,7 +1097,7 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 		const NEWER = 'test/zz_planted_tier/planted_newer.test.ts';
 		const pinned = {
 			...tier,
-			unstampedTransition: { sha256: baselineBytesDigest(bytes), reason: 'r' },
+			unstampedTransition: { sha256: baselineBytesDigest(bytes), fingerprint: HERE, reason: 'r' },
 		};
 		for (const t of [tier, pinned]) {
 			const refused = drive(t, ['--record-new', NEWER], image(HERE), run({ [NEWER]: 2 }));
@@ -1089,21 +1108,79 @@ describe('the unit baseline carries the CI image it was recorded in — --check 
 		expect(read(tier)).toBe(bytes);
 	});
 
+	test('a pre-stamp artifact is honoured ONLY in the image its floors were recorded in — a foreign image is refused during the transition too', () => {
+		const tier = spec();
+		drive(tier, [], image(HERE));
+		const bytes = unstamp(tier);
+		const pinned = {
+			...tier,
+			unstampedTransition: {
+				sha256: baselineBytesDigest(bytes),
+				fingerprint: HERE,
+				reason: 'planted pre-stamp record',
+			},
+		};
+		// A .bun-version / ci/Dockerfile bump while the transition lives is a new image: the
+		// pinned floors are the OLD image's facts, refused before measuring, both fingerprints
+		// named — on the image (marker) and off it (this checkout's definition) alike.
+		for (const argv of [['--check'], ['--check', '--json']])
+			for (const source of ['marker', 'checkout'] as const) {
+				const what = `${argv.join(' ')} ${source}`;
+				const foreign = drive(pinned, argv, image(THERE, source));
+				expect(foreign.exitCode, what).toBe(1);
+				expect(foreign.measures, what).toBe(0);
+				expect(foreign.written, what).toEqual([]);
+				expect(foreign.said, what).toContain('FOREIGN CI IMAGE');
+				expect(foreign.said, what).toContain(HERE.slice(0, 12));
+				expect(foreign.said, what).toContain(THERE.slice(0, 12));
+			}
+		const json = drive(pinned, ['--check', '--json'], image(THERE));
+		expect(
+			(JSON.parse(json.out[0] as string) as { regressions: string[] }).regressions[0],
+		).toContain('FOREIGN CI IMAGE');
+		// The recording image still reads it (loudly), and the file is untouched.
+		expect(drive(pinned, ['--check'], image(HERE)).exitCode).toBe(0);
+		expect(read(tier)).toBe(bytes);
+	});
+
+	test('runningCiImage: the marker, when present, IS the running image (trimmed); absent, the checkout definition', () => {
+		// The seam is the marker path: a planted marker that DIFFERS from this checkout's
+		// definition proves the marker branch is read, not re-derived from the tree.
+		const marker = join(dir, 'dedalo-ci-image');
+		writeFileSync(marker, `  ${THERE}\n`);
+		expect(runningCiImage(marker)).toEqual({ fingerprint: THERE, source: 'marker' });
+		expect(runningCiImage(marker).fingerprint).not.toBe(ciImageFingerprint(REPO_ROOT));
+		const absent = join(dir, 'no-marker');
+		expect(existsSync(absent)).toBe(false);
+		expect(runningCiImage(absent, REPO_ROOT)).toEqual({
+			fingerprint: ciImageFingerprint(REPO_ROOT),
+			source: 'checkout',
+		});
+		// The default reads the REAL marker path: the image's own, never a repo file.
+		expect(CI_IMAGE_MARKER).toBe('/etc/dedalo-ci-image');
+	});
+
 	test('LIVE: the real unit baseline is stamped, or IS the pinned pre-stamp artifact — never a hand edit', () => {
 		const bytes = readFileSync(baselineFile(UNIT_TIER), 'utf8');
 		const stamp = (JSON.parse(bytes) as { ci_image?: { fingerprint?: string } }).ci_image;
-		// Compared with the stamp ITSELF (or this checkout's definition when there is none):
-		// the hermetic tier proves the artifact's shape; the image identity is the db tier's
-		// `unit_baseline.ts --check`, in the image.
-		const verdict = ciImageStampVerdict(
-			UNIT_TIER,
-			bytes,
-			image(stamp?.fingerprint ?? runningCiImage(join(dir, 'no-marker')).fingerprint, 'checkout'),
-		);
+		const transition = UNIT_TIER.unstampedTransition ?? null;
+		// Compared with the image the artifact NAMES (its stamp, or the transition's pin): the
+		// hermetic tier proves the artifact's shape and its binding; the running image's
+		// identity is the db tier's `unit_baseline.ts --check`, in the image.
+		const named = stamp?.fingerprint ?? transition?.fingerprint ?? '';
+		const verdict = ciImageStampVerdict(UNIT_TIER, bytes, image(named, 'checkout'));
 		expect(verdict.kind === 'refuse' ? verdict.message : verdict.kind).toMatch(/^(match|legacy)$/);
-		if (stamp === undefined)
-			expect(UNIT_TIER.unstampedTransition?.sha256).toBe(baselineBytesDigest(bytes));
-		else expect(UNIT_TIER.unstampedTransition ?? null).toBeNull();
-		rmSync(dir, { recursive: true, force: true });
+		// …and bound to it: any other image refuses the live artifact.
+		const other = named.replace(/^./, (c) => (c === '0' ? '1' : '0'));
+		expect(ciImageStampVerdict(UNIT_TIER, bytes, image(other, 'marker')).kind).toBe('refuse');
+		if (stamp === undefined) {
+			expect(transition?.sha256).toBe(baselineBytesDigest(bytes));
+			expect(transition?.fingerprint).toMatch(/^[0-9a-f]{64}$/);
+			// The pin is hand-typed (no writer records it), so it is held to the one image that
+			// can still read it: the image THIS checkout defines (in the image the marker equals
+			// it — ci_workflow_tripwire's in-image rule). A pin naming any other image is a dead
+			// transition: no build of this tree reads the artifact, so re-record it.
+			expect(transition?.fingerprint).toBe(ciImageFingerprint(REPO_ROOT));
+		} else expect(transition).toBeNull();
 	});
 });

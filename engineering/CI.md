@@ -208,11 +208,15 @@ desk number is a floor, in either direction. So:
   otherwise (a new floor joins floors of one image). **Transition:** the artifact recorded
   before the stamp existed carries none, and no write path stamps old floors (that would
   launder them), so `UNIT_TIER.unstampedTransition` honours exactly that file — pinned by
-  the sha256 of its bytes, printed `UNSTAMPED (transition)` on every check — until the next
+  the sha256 of its bytes AND by the fingerprint of the image its floors were recorded in
+  (`93116f58…`, verified from the recording commits' history; a foreign image refuses the
+  transition exactly as it refuses a foreign stamp, so a `.bun-version`/`ci/Dockerfile` bump
+  during the transition re-records too), printed `UNSTAMPED (transition)` on every check — until the next
   GREEN full record stamps it; that record's commit sets the transition to `null` (a
   stamped file beside a live transition is refused; `ci:local` says so when it copies the
   record). Any other unstamped file is refused. Gate: `suite_assertion_floor_tripwire`
-  (planted match / foreign / missing / edited / stale-transition through the CLI seam, and
+  (planted match / foreign / missing / edited / stale-transition / foreign-image transition
+  through the CLI seam, `runningCiImage`'s marker branch through its path seam, and
   the LIVE artifact: stamped, or byte-identical to the transition). HONEST LIMITS: the
   fingerprint names the image's DEFINITION, not one build — a rebuild of the same
   definition (`ci-image.yml`'s weekly cache-off cron, then a re-pin) can move package

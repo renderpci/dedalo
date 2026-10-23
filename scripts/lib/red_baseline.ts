@@ -87,8 +87,14 @@ export interface TierSpec {
 	 * green full record stamps it; any other unstamped file is refused, and the commit that
 	 * lands the first stamped record must set this to `null` (a stamped file beside a live
 	 * transition is refused too — the transition cannot outlive its artifact).
+	 *
+	 * `fingerprint` is the stamp the artifact WOULD carry: the CI image (sha256(ci/Dockerfile
+	 * ++ .bun-version)) its floors were measured in, verified from the history of the commits
+	 * that recorded it. The transition binds the artifact to that image exactly as a stamp
+	 * would: in any other image (a Dockerfile or `.bun-version` bump while the transition
+	 * lives) the pinned floors are another platform's facts and the check refuses them.
 	 */
-	unstampedTransition?: { sha256: string; reason: string } | null;
+	unstampedTransition?: { sha256: string; fingerprint: string; reason: string } | null;
 }
 
 /** Where the CI image states its own fingerprint (ci/Dockerfile writes it at build time). */
@@ -154,8 +160,13 @@ const short = (fingerprint: string) => `${fingerprint.slice(0, 12)}…`;
  *   - stamped but not a fingerprint → REFUSED (a hand edit);
  *   - stamped while {@link TierSpec.unstampedTransition} is still live → REFUSED: the
  *     transition names a pre-stamp artifact that no longer exists; delete it;
- *   - unstamped and byte-identical to the pinned transition artifact → `legacy`, with a
- *     line the caller PRINTS on every check (never silent);
+ *   - unstamped and byte-identical to the pinned transition artifact, and the running
+ *     image is the one the transition names → `legacy`, with a line the caller PRINTS on
+ *     every check (never silent);
+ *   - unstamped, byte-identical, but the running image is not the transition's (or the
+ *     transition names no fingerprint) → REFUSED, exactly as a foreign stamp: the pin is
+ *     the stamp the pre-stamp artifact would carry, so a transition never reads another
+ *     image's floors;
  *   - unstamped otherwise → REFUSED: once the tier stamps, a missing stamp is a hand edit
  *     (the writer always writes one), and an edited pre-stamp file is no longer the
  *     artifact the transition vouches for.
@@ -219,9 +230,17 @@ export function ciImageStampVerdict(
 		return refuse(
 			`it carries NO CI-image stamp, and it is not the pre-stamp artifact unstampedTransition vouches for (sha256 ${short(transition.sha256)}; this file is ${short(digest)}) — an unstamped baseline was edited (by hand, or a --record-new before the first stamped record). Re-record: ${door}`,
 		);
+	if (typeof transition.fingerprint !== 'string' || !FINGERPRINT_SHAPE.test(transition.fingerprint))
+		return refuse(
+			`${spec.id}'s unstampedTransition names no CI image (fingerprint is not 64 hex) — a pre-stamp artifact is bound to the image its floors were recorded in, like any stamp; re-record: ${door}`,
+		);
+	if (transition.fingerprint !== running.fingerprint)
+		return refuse(
+			`FOREIGN CI IMAGE: the pre-stamp artifact unstampedTransition vouches for was recorded in ${short(transition.fingerprint)}, but ${where} is ${short(running.fingerprint)}. Its floors and red set are another image's platform facts; re-record in this one (the record stamps it; its commit sets unstampedTransition to null): ${door}`,
+		);
 	return {
 		kind: 'legacy',
-		line: `${spec.id}_baseline: UNSTAMPED (transition) — ${spec.baselinePath} predates the CI-image stamp; read as the pinned pre-stamp artifact (sha256 ${short(digest)}): ${transition.reason}`,
+		line: `${spec.id}_baseline: UNSTAMPED (transition) — ${spec.baselinePath} predates the CI-image stamp; read as the pinned pre-stamp artifact (sha256 ${short(digest)}, recorded in ${short(transition.fingerprint)} = ${where}): ${transition.reason}`,
 	};
 }
 

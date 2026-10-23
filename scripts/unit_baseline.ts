@@ -149,10 +149,15 @@ export const UNIT_TIER: TierSpec = {
 	// record with the image it measured in, and --check refuses a foreign or missing stamp.
 	// The artifact on disk predates the stamp; no write path stamps old floors (that would
 	// launder them), and the recorder copies nothing while the db tier is red — so THIS
-	// file, byte for byte, is honoured until the next green full record. That record's
+	// file, byte for byte, IN THE IMAGE IT WAS RECORDED IN (fingerprint), is honoured
+	// until the next green full record. That record's
 	// commit sets this to null (a stamped file beside a live transition is refused).
 	unstampedTransition: {
 		sha256: 'acf0d70e8e13be845e807699f4ffc5cdabbf4895e10aae5821a0e94652294625',
+		// The image those floors were measured in: every record since the c5e60b9eef pin
+		// (4502d0e815 … 639cb8ccf0, which wrote these bytes) ran at this ci/Dockerfile +
+		// .bun-version, = ci/image.json's fingerprint. Another image refuses the transition.
+		fingerprint: '93116f5828c63f8be59cc0ac289ae93fec53a9fac3178cb46b40b4b6b2ef80c3',
 		reason:
 			'recorded in the CI image (639cb8ccf0 and the records before it, all at ci/Dockerfile + .bun-version fingerprint 93116f58…) before the stamp existed (2026-10-23); stamped by the next green `bun run ci:local --docker --record-unit-baseline`, whose commit deletes this transition',
 	},
