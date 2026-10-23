@@ -153,7 +153,7 @@ export const UNIT_TIER: TierSpec = {
 	// until the next green full record. That record's
 	// commit sets this to null (a stamped file beside a live transition is refused).
 	unstampedTransition: {
-		sha256: 'acf0d70e8e13be845e807699f4ffc5cdabbf4895e10aae5821a0e94652294625',
+		sha256: '070b3cbf280a3425474720a0840b2f73ecbb1b1356cd3a1cd3a0bea37e26a20e',
 		// The image those floors were measured in: every record since the c5e60b9eef pin
 		// (4502d0e815 … 639cb8ccf0, which wrote these bytes) ran at this ci/Dockerfile +
 		// .bun-version, = ci/image.json's fingerprint. Another image refuses the transition.

@@ -2666,6 +2666,11 @@
 			"skipped": 0,
 			"assertions": 29
 		},
+		"test/unit/lock_cleanup_read_gate_native.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 29
+		},
 		"test/unit/lock_components.test.ts": {
 			"tests": 8,
 			"skipped": 0,
@@ -2675,6 +2680,11 @@
 			"tests": 9,
 			"skipped": 0,
 			"assertions": 99
+		},
+		"test/unit/lock_section_tipo_grammar_native.test.ts": {
+			"tests": 29,
+			"skipped": 0,
+			"assertions": 107
 		},
 		"test/unit/log_section_policy_tripwire.test.ts": {
 			"tests": 6,
@@ -3716,10 +3726,20 @@
 			"skipped": 0,
 			"assertions": 16
 		},
+		"test/unit/psql_argv_sql_tripwire.test.ts": {
+			"tests": 7,
+			"skipped": 0,
+			"assertions": 33
+		},
 		"test/unit/psql_matrix_write_obligations_tripwire.test.ts": {
 			"tests": 3,
 			"skipped": 0,
 			"assertions": 24
+		},
+		"test/unit/psql_stdin_door_native.test.ts": {
+			"tests": 3,
+			"skipped": 0,
+			"assertions": 8
 		},
 		"test/unit/publication_bounds_tripwire.test.ts": {
 			"tests": 11,
@@ -4815,6 +4835,11 @@
 			"tests": 13,
 			"skipped": 0,
 			"assertions": 191
+		},
+		"test/unit/seed_contract_private_tmp.test.ts": {
+			"tests": 1,
+			"skipped": 0,
+			"assertions": 6
 		},
 		"test/unit/seed_definitions_equality_tripwire.test.ts": {
 			"tests": 5,
