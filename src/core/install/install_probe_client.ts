@@ -152,6 +152,28 @@ async function runChildIn(
 	scratch: string,
 ): Promise<Record<string, unknown>> {
 	const secrets = forms(request.secrets);
+	const child = spawnChild(options, scratch);
+	const bound = boundOf(options, request.probe);
+	let timedOut = false;
+	const timer = setTimeout(() => {
+		timedOut = true;
+		child.kill('SIGKILL');
+	}, bound);
+	try {
+		const { sent, ended } = await exchange(child, JSON.stringify(request));
+		const answer = answerObject(ended.stdout);
+		if (sent && answer !== null && !timedOut) {
+			return redactOutcome(answer, secrets);
+		}
+		const why = noAnswerReason({ timedOut, sent, ended, bound });
+		return { ok: false, detail: redactSecrets(`the ${request.probe} probe ${why}`, secrets) };
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
+/** Spawn the probe child (stdio piped, state in `scratch`) and report it to `onSpawn`. */
+function spawnChild(options: ChildProbeOptions, scratch: string): ProbeProcess {
 	const spawn = options.spawn ?? defaultSpawn;
 	const child = spawn([options.execPath, 'run', CHILD_PATH], {
 		cwd: options.cwd,
@@ -161,31 +183,40 @@ async function runChildIn(
 		env: probeChildEnv(scratch),
 	});
 	options.onSpawn?.(child);
-	const bound = boundOf(options, request.probe);
-	let timedOut = false;
-	const timer = setTimeout(() => {
-		timedOut = true;
-		child.kill('SIGKILL');
-	}, bound);
-	try {
-		// Sent while the output is collected: a child that writes before it reads cannot
-		// deadlock against a flush awaited first.
-		const delivered = deliver(child, JSON.stringify(request));
-		const ended = await collect(child);
-		const sent = await delivered;
-		const answer = answerLine(ended.stdout);
-		if (sent && answer !== null && typeof answer === 'object' && !timedOut) {
-			return redactOutcome(answer as Record<string, unknown>, secrets);
-		}
-		const why = timedOut
-			? `timed out after ${Math.round(bound / 1000)} s`
-			: sent
-				? silentExit(ended)
-				: `did not read its request (${silentExit(ended)})`;
-		return { ok: false, detail: redactSecrets(`the ${request.probe} probe ${why}`, secrets) };
-	} finally {
-		clearTimeout(timer);
-	}
+	return child;
+}
+
+/**
+ * Send the request and collect the whole output. The request is sent WHILE the output
+ * is collected: a child that writes before it reads cannot deadlock against a flush
+ * awaited first. `sent` is deliver()'s verdict (never a throw or a rejection).
+ */
+async function exchange(
+	child: ProbeProcess,
+	text: string,
+): Promise<{ sent: boolean; ended: Awaited<ReturnType<typeof collect>> }> {
+	const delivered = deliver(child, text);
+	const ended = await collect(child);
+	return { sent: await delivered, ended };
+}
+
+/** The child's answer line when it is a JSON object (or array) — else null. */
+function answerObject(stdout: string): Record<string, unknown> | null {
+	const answer = answerLine(stdout);
+	return answer !== null && typeof answer === 'object' ? (answer as Record<string, unknown>) : null;
+}
+
+/** Why a child produced no usable answer: its timeout, its silent exit, or an unread request. */
+function noAnswerReason(state: {
+	timedOut: boolean;
+	sent: boolean;
+	ended: { stderr: string; exitCode: number };
+	bound: number;
+}): string {
+	if (state.timedOut) return `timed out after ${Math.round(state.bound / 1000)} s`;
+	return state.sent
+		? silentExit(state.ended)
+		: `did not read its request (${silentExit(state.ended)})`;
 }
 
 /**
