@@ -104,7 +104,7 @@
 		"split.js": "1.6.5",
 		"three": "0.186.1",
 		"vanilla-jsoneditor": "3.13.0",
-		"zod": "^4.6.5"
+		"zod": "^4.6.7"
 	},
 	"devDependencies": {
 		"@babel/parser": "8.0.6",
@@ -117,7 +117,7 @@
 		"less": "4.9.1",
 		"mocha": "12.0.3",
 		"parse5": "8.0.1",
-		"puppeteer": "^25.12.0"
+		"puppeteer": "^25.16.0"
 	},
 	"peerDependencies": {
 		"typescript": "^7.0.2"
