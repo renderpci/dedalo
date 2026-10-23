@@ -581,13 +581,16 @@ export interface DatabaseProbeSeams {
 
 /** The server's `server_version_num` over the posted connection, or null. */
 async function serverVersionOf(postedAnswers: Record<string, unknown>): Promise<string | null> {
-	const { runPsql } = await import('./pg_exec.ts');
+	const { runPsqlScript } = await import('./pg_exec.ts');
 	const { pgConnFromOptions } = await import('./db_probe_plan.ts');
 	try {
-		const result = await runPsql(pgConnFromOptions(postedAnswers), [
-			'-tAc',
+		const result = await runPsqlScript(
+			pgConnFromOptions(postedAnswers),
 			'SHOW server_version_num',
-		]);
+			{
+				flags: ['-tA'],
+			},
+		);
 		return result.exitCode === 0 ? result.stdout : null;
 	} catch {
 		return null;

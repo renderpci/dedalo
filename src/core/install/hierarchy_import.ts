@@ -124,7 +124,13 @@ import {
 	isCoreHierarchyTld,
 } from './hierarchy_meta.ts';
 import { HIERARCHY_IMPORT_DIR } from './paths.ts';
-import { connFromConfig, type DbConnDescriptor, type PsqlRunResult, runPsql } from './pg_exec.ts';
+import {
+	connFromConfig,
+	type DbConnDescriptor,
+	type PsqlRunResult,
+	runPsql,
+	runPsqlScript,
+} from './pg_exec.ts';
 
 const HIERARCHY_TABLE = 'matrix_hierarchy';
 
@@ -211,12 +217,11 @@ async function listedSectionCounts(
 	sections: readonly string[],
 ): Promise<Map<string, number> | null> {
 	const list = sections.map((tipo) => `'${tipo}'`).join(', ');
-	const res = await runPsql(conn, [
-		'-tAF',
-		'\t',
-		'-c',
+	const res = await runPsqlScript(
+		conn,
 		`SELECT section_tipo, count(*) FROM ${HIERARCHY_TABLE} WHERE section_tipo IN (${list}) GROUP BY section_tipo`,
-	]).catch(() => null);
+		{ flags: ['-tAF', '\t'] },
+	).catch(() => null);
 	if (res === null || res.exitCode !== 0) return null;
 	const counts = new Map(sections.map((tipo) => [tipo, 0]));
 	for (const line of res.stdout.split('\n')) {
@@ -773,11 +778,11 @@ async function killedUnitOutcome(
 	pid: string,
 	xid: string,
 ): Promise<KilledUnitOutcome> {
-	await runPsql(conn, [
-		'-X',
-		'-tAc',
+	await runPsqlScript(
+		conn,
 		`SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE pid = ${pid} AND backend_xid = xid('${xid}'::xid8)`,
-	]);
+		{ flags: ['-tA'] },
+	);
 	const deadline = Date.now() + KILLED_UNIT_SETTLE_MS;
 	for (;;) {
 		const status = await xactOutcome(conn, xid);
@@ -792,7 +797,9 @@ async function xactOutcome(
 	conn: DbConnDescriptor,
 	xid: string,
 ): Promise<KilledUnitOutcome | 'in progress'> {
-	const read = await runPsql(conn, ['-X', '-tAc', `SELECT pg_xact_status('${xid}'::xid8)`]);
+	const read = await runPsqlScript(conn, `SELECT pg_xact_status('${xid}'::xid8)`, {
+		flags: ['-tA'],
+	});
 	const status = read.exitCode === 0 ? read.stdout : '';
 	if (status === 'committed') return 'committed';
 	if (status === 'aborted') return 'rolled_back';

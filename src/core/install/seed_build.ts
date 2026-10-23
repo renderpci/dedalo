@@ -91,8 +91,10 @@ import {
 	connArgs,
 	connFromConfig,
 	type DbConnDescriptor,
+	type PsqlRunResult,
 	pgClientEnv,
 	runPsql,
+	runPsqlScript,
 } from './pg_exec.ts';
 import { buildSeedManifest, type SeedManifest, writeSeedManifest } from './seed_manifest.ts';
 import {
@@ -218,36 +220,49 @@ function displayPath(path: string): string {
 	return inRepo.startsWith('..') ? path : inRepo;
 }
 
-/** psql that must succeed: its stdout, or a failure naming `what`. */
+/** A psql run that must succeed: its stdout, or a failure naming `what`. */
+function stdoutOrFail(run: PsqlRunResult, what: string): string {
+	if (run.exitCode !== 0) fail(`${what}: ${run.stderr || `psql exit ${run.exitCode}`}`);
+	return run.stdout;
+}
+
+/** A `-f <file>` run that must succeed (schema.sql, a migration file) — no SQL in `args`. */
 async function psqlOk(
 	conn: DbConnDescriptor,
 	database: string,
 	args: string[],
 	what: string,
-	stdin?: string,
 ): Promise<string> {
-	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-X', '-q', ...args], {
-		database,
-		...(stdin === undefined ? {} : { stdin }),
-	});
-	if (run.exitCode !== 0) fail(`${what}: ${run.stderr || `psql exit ${run.exitCode}`}`);
-	return run.stdout;
+	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-X', '-q', ...args], { database });
+	return stdoutOrFail(run, what);
 }
 
 /**
- * `-tA` rows of a one-column query. The SQL rides psql's STDIN (`-f -`), NEVER an
- * argv element: Linux caps ONE argv string at MAX_ARG_STRLEN (128 KiB) and the
- * int-clean census (stringAddressResidue) is one UNION ALL over every jsonb column —
- * past that cap, so posix_spawn failed with E2BIG in the CI image while macOS (no
- * per-string cap) stayed green. Gate: seed_section_id_int_clean_native (d).
+ * SQL that must succeed, through THE stdin door (pg_exec runPsqlScript — never an
+ * argv element: E2BIG past Linux's 128 KiB per-string cap; the int-clean census
+ * (stringAddressResidue) is one UNION ALL over every jsonb column, past it —
+ * seed_section_id_int_clean_native (d)). `flags`: `-1` for a script that must be
+ * one transaction.
  */
+async function psqlSqlOk(
+	conn: DbConnDescriptor,
+	database: string,
+	sql: string,
+	what: string,
+	flags: readonly string[] = [],
+): Promise<string> {
+	const run = await runPsqlScript(conn, sql, { flags: ['-q', ...flags], database });
+	return stdoutOrFail(run, what);
+}
+
+/** `-tA` rows of a one-column query (stdin, via psqlSqlOk). */
 async function psqlColumn(
 	conn: DbConnDescriptor,
 	database: string,
 	query: string,
 	what: string,
 ): Promise<string[]> {
-	const out = await psqlOk(conn, database, ['-tA', '-f', '-'], what, query);
+	const out = await psqlSqlOk(conn, database, query, what, ['-tA']);
 	return out === '' ? [] : out.split('\n');
 }
 
@@ -366,10 +381,10 @@ export async function createScratch(
 	purpose: string,
 ): Promise<Scratch> {
 	if (!IDENTIFIER.test(name)) fail(`refusing scratch database name '${name}'`);
-	await psqlOk(
+	await psqlSqlOk(
 		conn,
 		'postgres',
-		['-c', `CREATE DATABASE "${name}" TEMPLATE template0 ENCODING 'UTF8'`],
+		`CREATE DATABASE "${name}" TEMPLATE template0 ENCODING 'UTF8'`,
 		'create a scratch database (the database user needs CREATEDB)',
 	);
 	const [oid = ''] = await psqlColumn(
@@ -378,14 +393,12 @@ export async function createScratch(
 		`SELECT oid FROM pg_database WHERE datname = '${name}'`,
 		'read the scratch oid',
 	);
-	await psqlOk(
+	await psqlSqlOk(
 		conn,
 		name,
-		[
-			'-c',
-			`CREATE TABLE ${SEED_BUILD_MARKER_TABLE} (purpose text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()); INSERT INTO ${SEED_BUILD_MARKER_TABLE} (purpose) VALUES ('${purpose}')`,
-		],
+		`CREATE TABLE ${SEED_BUILD_MARKER_TABLE} (purpose text NOT NULL, created_at timestamptz NOT NULL DEFAULT now()); INSERT INTO ${SEED_BUILD_MARKER_TABLE} (purpose) VALUES ('${purpose}')`,
 		'mark the scratch database',
+		['-1'],
 	);
 	return { name, oid };
 }
@@ -402,10 +415,10 @@ export async function dropScratch(conn: DbConnDescriptor, scratch: Scratch): Pro
 	if (oid !== scratch.oid) {
 		fail(`'${scratch.name}' is not the database this run created (oid ${oid} ≠ ${scratch.oid})`);
 	}
-	await psqlOk(
+	await psqlSqlOk(
 		conn,
 		'postgres',
-		['-c', `DROP DATABASE "${scratch.name}" WITH (FORCE)`],
+		`DROP DATABASE "${scratch.name}" WITH (FORCE)`,
 		'drop the scratch database',
 	);
 }
@@ -424,10 +437,10 @@ async function sweepOrphans(conn: DbConnDescriptor, findings: string[]): Promise
 	);
 	for (const name of names.filter((candidate) => IDENTIFIER.test(candidate))) {
 		if (await isMarked(conn, name)) {
-			await psqlOk(
+			await psqlSqlOk(
 				conn,
 				'postgres',
-				['-c', `DROP DATABASE "${name}" WITH (FORCE)`],
+				`DROP DATABASE "${name}" WITH (FORCE)`,
 				`drop orphan '${name}'`,
 			);
 		} else {
@@ -1047,7 +1060,7 @@ async function assertNoForeignContent(conn: DbConnDescriptor, database: string):
 
 /** VACUUM, then pg_dump → gzip → `.part` (the compiler's own tables excluded). */
 async function dumpTo(conn: DbConnDescriptor, database: string, partFile: string): Promise<void> {
-	await psqlOk(conn, database, ['-c', 'VACUUM ANALYZE'], 'vacuum the scratch database');
+	await psqlSqlOk(conn, database, 'VACUUM ANALYZE', 'vacuum the scratch database');
 	mkdirSync(dirname(partFile), { recursive: true });
 	const dump = Bun.spawn(
 		[
@@ -1134,10 +1147,10 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 		build.addresses,
 		DD_ONTOLOGY_SCAFFOLD_COLUMNS,
 	);
-	await psqlOk(
+	await psqlSqlOk(
 		build.conn,
 		scratch.name,
-		['-c', `\\copy dd_ontology (${DD_ONTOLOGY_SCAFFOLD_COLUMNS.join(', ')}) FROM '${scaffold}'`],
+		`\\copy dd_ontology (${DD_ONTOLOGY_SCAFFOLD_COLUMNS.join(', ')}) FROM '${scaffold}'`,
 		'load the dd_ontology scaffold',
 	);
 	// The langs BEFORE the compile: the registry door files every ontology35 row
@@ -1151,10 +1164,10 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 		'matrix_langs',
 		build.addresses,
 	);
-	await psqlOk(
+	await psqlSqlOk(
 		build.conn,
 		scratch.name,
-		['-c', `\\copy matrix_langs (${MATRIX_COPY_COLUMNS.join(', ')}) FROM '${safePath(langsPath)}'`],
+		`\\copy matrix_langs (${MATRIX_COPY_COLUMNS.join(', ')}) FROM '${safePath(langsPath)}'`,
 		'load the langs the registry rows are filed under',
 	);
 	await compileOntology(build, scratch.name, release);
@@ -1170,13 +1183,11 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 		releaseDate: release.date,
 		addressesConverted: build.addresses.converted,
 	});
-	await psqlOk(build.conn, scratch.name, ['-1', '-f', '-'], 'load the seed data', sql);
-	await psqlOk(build.conn, scratch.name, ['-c', 'ANALYZE'], 'analyze the scratch database');
-	await psqlOk(
+	await psqlSqlOk(build.conn, scratch.name, sql, 'load the seed data', ['-1']);
+	await psqlSqlOk(build.conn, scratch.name, 'ANALYZE', 'analyze the scratch database');
+	await psqlSqlOk(
 		build.conn,
 		scratch.name,
-		['-1', '-f', '-'],
-		'order the tables, reset idle sequences',
 		seedFinishSql({
 			tables: await scratchTables(build.conn, scratch.name),
 			primaryKeys: await primaryKeys(build.conn, scratch.name),
@@ -1187,6 +1198,8 @@ async function compile(build: SeedBuild, release: OntologyRelease): Promise<void
 				'list idle sequences',
 			),
 		}),
+		'order the tables, reset idle sequences',
+		['-1'],
 	);
 	const registry = await assertShippable(build.conn, scratch.name);
 	build.step(

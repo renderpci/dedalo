@@ -58,7 +58,7 @@ import {
 	validateDdOntologyIdentifierConstraints,
 } from '../db/dd_ontology.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from '../install/pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsqlScript } from '../install/pg_exec.ts';
 import { engineOwnsInstall } from '../update/ownership.ts';
 import { clearOntologyDerivedCaches } from './cache_invalidation.ts';
 import { isSafeSectionTipo, setOntologyIoPath } from './data_io.ts';
@@ -398,7 +398,7 @@ export async function snapshotTableRows(
 	const columns = MATRIX_COPY_COLUMNS.map((column) => `"${column}"`).join(',');
 	const where = sectionTipo === null ? '' : ` WHERE section_tipo = '${sectionTipo}'`;
 	const copy = `\\copy (SELECT ${columns} FROM "${table}"${where} ORDER BY section_id ASC) TO '${outFile}'`;
-	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', copy]);
+	const run = await runPsqlScript(conn, copy);
 	return run.exitCode === 0;
 }
 
@@ -410,9 +410,9 @@ async function optimizeTables(
 	const errors: string[] = [];
 	for (const table of tables) {
 		if (!/^[a-zA-Z0-9_.]+$/.test(table)) continue;
-		const reindex = await runPsql(conn, ['-c', `REINDEX TABLE CONCURRENTLY ${table};`]);
+		const reindex = await runPsqlScript(conn, `REINDEX TABLE CONCURRENTLY ${table};`);
 		if (reindex.exitCode !== 0) errors.push(`REINDEX ${table}: ${reindex.stderr.trim()}`);
-		const vacuum = await runPsql(conn, ['-c', `VACUUM ANALYZE ${table};`]);
+		const vacuum = await runPsqlScript(conn, `VACUUM ANALYZE ${table};`);
 		if (vacuum.exitCode !== 0) errors.push(`VACUUM ${table}: ${vacuum.stderr.trim()}`);
 	}
 	return errors;

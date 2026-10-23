@@ -28,7 +28,7 @@ import { fsyncDirectory, writeFileDurably } from '../../files/durable.ts';
 import { isTempSibling, tempPathFor } from '../../files/temp_path.ts';
 import { isCoreHierarchyTld } from '../../install/hierarchy_meta.ts';
 import { HIERARCHY_IMPORT_DIR } from '../../install/paths.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from '../../install/pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsqlScript } from '../../install/pg_exec.ts';
 import { buildHierarchyManifest } from '../../ontology/hierarchy_census.ts';
 import {
 	HIERARCHY_MANIFEST_FILE,
@@ -319,11 +319,12 @@ export interface ExportHierarchyDeps {
 	/** Clock for hierarchy.json's envelope `date`. */
 	now?: Date;
 	/**
-	 * The psql runner (production: pg_exec runPsql). A gate injects one that
+	 * The psql runner (production: pg_exec runPsqlScript — the `\copy` rides stdin,
+	 * never argv). A gate injects one that
 	 * really fails the COPY on the server, or damages a real dump after psql
 	 * returned, to prove such a dump never reaches the final name.
 	 */
-	psql?: typeof runPsql;
+	psql?: typeof runPsqlScript;
 }
 
 /** One file to produce: everything the psql command needs, decided up front. */
@@ -563,13 +564,13 @@ async function exportOne(
 	conn: DbConnDescriptor,
 	outDir: string,
 	entry: ExportEntry,
-	psql: typeof runPsql,
+	psql: typeof runPsqlScript,
 ): Promise<{ file: ExportedFile } | { error: string }> {
 	const outFile = join(outDir, entry.fileName);
 	const partFile = tempPathFor(outFile);
 	const command = exportCopyCommand(entry.table, entry.where, entry.order, partFile);
 	try {
-		const run = await psql(conn, ['-v', 'ON_ERROR_STOP=1', '-c', command]);
+		const run = await psql(conn, command);
 		const refusal = await dumpRefusal(run, partFile);
 		if (refusal !== null) {
 			return { error: `Export failed for section_tipo: ${entry.sectionTipo} (${refusal})` };
@@ -628,13 +629,13 @@ function resolveExportDeps(deps: ExportHierarchyDeps): {
 	conn: DbConnDescriptor;
 	outDir: string;
 	now: Date;
-	psql: typeof runPsql;
+	psql: typeof runPsqlScript;
 } {
 	return {
 		conn: deps.conn ?? connFromConfig(),
 		outDir: deps.outDir ?? HIERARCHY_IMPORT_DIR,
 		now: deps.now ?? new Date(),
-		psql: deps.psql ?? runPsql,
+		psql: deps.psql ?? runPsqlScript,
 	};
 }
 

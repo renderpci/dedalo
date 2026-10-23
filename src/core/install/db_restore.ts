@@ -52,6 +52,7 @@ import {
 	type DbConnDescriptor,
 	installSessionEnv,
 	runPsql,
+	runPsqlScript,
 } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
@@ -100,7 +101,9 @@ export interface DbRestoreResult {
 
 /** Is the target DB empty (no matrix_users table)? */
 async function targetIsEmpty(conn: DbConnDescriptor): Promise<boolean> {
-	const probe = await runPsql(conn, ['-tAc', "SELECT to_regclass('public.matrix_users')"]);
+	const probe = await runPsqlScript(conn, "SELECT to_regclass('public.matrix_users')", {
+		flags: ['-tA'],
+	});
 	if (probe.exitCode !== 0) {
 		// Cannot even query → treat as "not safely empty"; the caller reports it.
 		return false;
@@ -235,7 +238,7 @@ export async function installDbFromSeed(
 	const connection = conn ?? connFromConfig();
 
 	// Empty-DB gate: never restore over an existing install.
-	const reachable = await runPsql(connection, ['-tAc', 'SELECT 1']);
+	const reachable = await runPsqlScript(connection, 'SELECT 1', { flags: ['-tA'] });
 	if (reachable.exitCode !== 0) {
 		refuseInstall('install.step_failed', `Database not reachable: ${reachable.stderr}`);
 	}
@@ -264,7 +267,7 @@ async function scalar(
 	query: string,
 	database?: string,
 ): Promise<string | null> {
-	const run = await runPsql(conn, ['-tAc', query, '-v', 'ON_ERROR_STOP=1'], { database });
+	const run = await runPsqlScript(conn, query, { flags: ['-tA'], database });
 	return run.exitCode === 0 ? run.stdout.trim() : null;
 }
 
@@ -682,7 +685,7 @@ BEGIN
 END
 $reset$;
 COMMIT;`;
-	const run = await runPsql(conn, ['-v', 'ON_ERROR_STOP=1', '--quiet'], { stdin: sql });
+	const run = await runPsqlScript(conn, sql, { flags: ['--quiet'] });
 	if (run.exitCode !== 0) {
 		refuseInstall('install.step_failed', `Database reset failed (rolled back): ${run.stderr}`);
 	}

@@ -83,9 +83,9 @@ function stripComments(code: string): string {
 	return code.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
 }
 
-/** The psql channel: runPsql, or a spawned psql binary (install/pg_exec.ts is the channel itself). */
+/** The psql channel: runPsql / runPsqlScript, or a spawned psql binary (install/pg_exec.ts is the channel itself). */
 function usesPsqlChannel(code: string): boolean {
-	return /\brunPsql\s*\(/.test(code) || /resolvePgBinary\(\s*'psql'\s*\)/.test(code);
+	return /\brunPsql(?:Script)?\s*\(/.test(code) || /resolvePgBinary\(\s*'psql'\s*\)/.test(code);
 }
 
 /** Write statements' targets: literal identifiers or `${…}` interpolations. */

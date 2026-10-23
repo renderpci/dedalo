@@ -92,7 +92,7 @@ import {
 	undeclaredWarning,
 } from './ontology_choice.ts';
 import { installOntologyStagingDir } from './paths.ts';
-import { connFromConfig, type DbConnDescriptor, runPsql } from './pg_exec.ts';
+import { connFromConfig, type DbConnDescriptor, runPsqlScript } from './pg_exec.ts';
 import { refuseInstall } from './refuse.ts';
 
 const STAGED_MANIFEST = 'staged.json';
@@ -524,10 +524,11 @@ async function stagedManifestIfAny(stagingDir: string): Promise<StagedManifest |
 /** Does `tld` have its `<tld>0` source records AND its derived dd_ontology nodes? */
 async function tldInstalled(conn: DbConnDescriptor, tld: string): Promise<boolean> {
 	if (!/^[a-z][a-z0-9_]*$/.test(tld)) return false;
-	const probe = await runPsql(conn, [
-		'-tAc',
+	const probe = await runPsqlScript(
+		conn,
 		`SELECT EXISTS (SELECT 1 FROM matrix_ontology WHERE section_tipo = '${tld}0')`,
-	]);
+		{ flags: ['-tA'] },
+	);
 	if (probe.exitCode !== 0 || probe.stdout.trim() !== 't') return false;
 	return (await readDdOntologyReferenceRows([tld])).length > 0;
 }

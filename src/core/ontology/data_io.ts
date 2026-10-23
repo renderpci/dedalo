@@ -34,13 +34,12 @@
 import { existsSync, mkdirSync, statSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { config } from '../../config/config.ts';
-import { envSnapshot } from '../../config/env.ts';
-import { libpqTransportArgs, resolvePgTransport } from '../../config/pg_transport.ts';
 import { readString } from '../../config/readers.ts';
 import { compareLocators, type Locator } from '../concepts/locator.ts';
 import { readMatrixRecord } from '../db/matrix.ts';
 import { MATRIX_COPY_COLUMNS } from '../db/matrix_write.ts';
 import { sql } from '../db/postgres.ts';
+import { connFromConfig, runPsqlScript } from '../install/pg_exec.ts';
 import { saveComponentData } from '../section/record/save_component.ts';
 import { DEDALO_VERSION, DEDALO_VERSION_MAJOR_MINOR } from '../update/version.ts';
 import { pickLangValue } from './manifest_lang_pick.ts';
@@ -547,57 +546,21 @@ export function isSafeSectionTipo(sectionTipo: string): boolean {
 }
 
 /**
- * The psql binary matching the server (mirrors area_maintenance/backup.ts
- * resolvePgDump: explicit DEDALO_PG_BIN_PATH first, then version-suffixed
- * Homebrew installs newest-first, then PATH).
- */
-export function resolvePsql(): string {
-	const declared = config.ops.pgBinPath;
-	if (typeof declared === 'string' && declared !== '') {
-		const candidate = join(declared, 'psql');
-		if (existsSync(candidate)) return candidate;
-	}
-	for (const version of [18, 17, 16, 15]) {
-		const candidate = `/opt/homebrew/opt/postgresql@${version}/bin/psql`;
-		if (existsSync(candidate)) return candidate;
-	}
-	return 'psql';
-}
-
-/** host/port/user flags (PHP DBi::get_connection_string; password via PGPASSWORD). */
-function psqlConnectionArgs(): string[] {
-	// The shared transport rule (DB_SOCKET wins) — the route the pool takes.
-	const args = libpqTransportArgs(resolvePgTransport(config.db));
-	if (config.db.user) args.push('-U', String(config.db.user));
-	return args;
-}
-
-/**
  * Run one client-side `\copy … TO PROGRAM 'gzip -c > <file> && sync'` through
- * psql (Bun.spawn — no shell of OUR making; psql itself shells out for
- * TO PROGRAM, which is why every interpolated identifier/path is validated
- * first). PGPASSWORD is threaded from config.db.password exactly like the
- * backup.ts pg_dump spawn (password-auth Postgres, S2-35 posture); the child
- * env comes from envSnapshot() (the sanctioned reader — no raw process.env).
+ * psql — THE stdin door (pg_exec runPsqlScript: the command rides `-f -`, never
+ * argv; the configured connection, PGPASSWORD in the child env). psql itself shells
+ * out for TO PROGRAM, which is why every interpolated identifier/path is validated
+ * first.
  */
 async function runCopyExport(
 	copySelect: string,
 	filePath: string,
 ): Promise<{ exitCode: number; stderr: string }> {
 	const copyCommand = `\\copy (${copySelect}) TO PROGRAM 'gzip -c > ${filePath} && sync';`;
-	const child = Bun.spawn(
-		[resolvePsql(), config.db.database, ...psqlConnectionArgs(), '-c', copyCommand],
-		{
-			stdout: 'ignore',
-			stderr: 'pipe',
-			env: {
-				...(envSnapshot() as Record<string, string>),
-				...(config.db.password !== '' ? { PGPASSWORD: config.db.password } : {}),
-			},
-		},
-	);
-	const [exitCode, stderr] = await Promise.all([child.exited, new Response(child.stderr).text()]);
-	return { exitCode, stderr: stderr.trim() };
+	const { exitCode, stderr } = await runPsqlScript(connFromConfig(), copyCommand, {
+		flags: ['-q'],
+	});
+	return { exitCode, stderr };
 }
 
 /**
@@ -648,7 +611,7 @@ export async function exportToFile(tld: string): Promise<OntologyIoResponse> {
 
 	// PHP ontology::map_tld_to_target_section_tipo: 'dd' → 'dd0'.
 	const sectionTipo = `${tld}0`;
-	// COMP-06 defence-in-depth before interpolating into the psql -c string.
+	// COMP-06 defence-in-depth before interpolating into the psql `\copy` command.
 	if (!isSafeSectionTipo(sectionTipo)) {
 		response.msg = 'Error. Invalid section_tipo for ontology export';
 		response.errors.push(`Invalid section_tipo: ${sectionTipo}`);

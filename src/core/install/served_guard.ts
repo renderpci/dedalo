@@ -20,7 +20,7 @@
  * equals anything: the abort is refused.
  */
 
-import { type DbConnDescriptor, runPsql } from './pg_exec.ts';
+import { type DbConnDescriptor, runPsqlScript } from './pg_exec.ts';
 
 /**
  * md5 over `<schema.table>:<count>/<max xmin>` of every table outside the
@@ -33,7 +33,7 @@ FROM (SELECT format('%I.%I', schemaname, tablename) AS rel FROM pg_tables
 
 /** The database's row fingerprint, or null when it could not be taken. */
 export async function databaseFingerprint(conn: DbConnDescriptor): Promise<string | null> {
-	const run = await runPsql(conn, ['-tAc', FINGERPRINT_SQL, '-v', 'ON_ERROR_STOP=1']);
+	const run = await runPsqlScript(conn, FINGERPRINT_SQL, { flags: ['-tA'] });
 	const value = run.stdout.trim();
 	return run.exitCode === 0 && /^[0-9a-f]{32}$/.test(value) ? value : null;
 }

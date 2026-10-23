@@ -527,6 +527,9 @@ HERMETIC_TRIPWIRES=(
 	#     DB-free: a text scan of src/, tools/, scripts/ + planted controls; imports
 	#     no src/ module (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
 	test/unit/advisory_lock_class_tripwire.test.ts
+	# --- 2026-10-23 (psql argv census). DB-free: a text scan of src/ + planted
+	#     controls; imports no src/ module (re-verified with DB_HOST=127.0.0.1 DB_PORT=59999).
+	test/unit/psql_argv_sql_tripwire.test.ts
 )
 
 echo "== hermetic: bun install (frozen lockfile)"

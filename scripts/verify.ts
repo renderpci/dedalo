@@ -427,6 +427,7 @@ const TRIPWIRES = [
 	'test/unit/target_lock_census_tripwire.test.ts',
 	'test/unit/psql_matrix_write_obligations_tripwire.test.ts',
 	'test/unit/advisory_lock_class_tripwire.test.ts',
+	'test/unit/psql_argv_sql_tripwire.test.ts',
 ];
 
 // ---------------------------------------------------------------------------

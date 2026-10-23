@@ -11,11 +11,11 @@
  */
 
 import { expect } from 'bun:test';
-import { readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
-import { type DbConnDescriptor, runPsql } from '../../src/core/install/pg_exec.ts';
+import { type DbConnDescriptor, runPsql, runPsqlScript } from '../../src/core/install/pg_exec.ts';
 import {
 	ACTIVE_REGISTRY_SQL,
 	nonCoreRegistryRows,
@@ -38,13 +38,12 @@ import { DEDALO_VERSION } from '../../src/core/update/version.ts';
 
 /**
  * One-column `-tA` rows (a failed query fails the gate with psql's sentence). The SQL
- * rides psql's STDIN, never argv — the census below is past Linux's 128 KiB cap on one
- * argv string (E2BIG at posix_spawn; seed_section_id_int_clean_native (d)).
+ * rides psql's STDIN through THE door (pg_exec runPsqlScript), never argv — the census
+ * below is past Linux's 128 KiB cap on one argv string (E2BIG at posix_spawn;
+ * seed_section_id_int_clean_native (d)).
  */
 export async function column(conn: DbConnDescriptor, query: string): Promise<string[]> {
-	const run = await runPsql(conn, ['-X', '-v', 'ON_ERROR_STOP=1', '-tA', '-f', '-'], {
-		stdin: query,
-	});
+	const run = await runPsqlScript(conn, query, { flags: ['-tA'] });
 	expect(run.exitCode, run.stderr).toBe(0);
 	return run.stdout === '' ? [] : run.stdout.split('\n');
 }
@@ -89,15 +88,21 @@ export async function sectionIdStringResidue(conn: DbConnDescriptor): Promise<st
 	);
 }
 
-/** Restore a seed into an EMPTY database exactly as written (no migrations, no engine). */
+/**
+ * Restore a seed into an EMPTY database exactly as written (no migrations, no engine).
+ * The plain SQL lands in a PRIVATE directory (mkdtemp: a fresh, unguessable 0700 dir)
+ * removed with its contents after — never a predictable name in the shared tmpdir,
+ * where a planted symlink would redirect the write onto another file.
+ */
 export async function restoreSeedRaw(conn: DbConnDescriptor, seedPath: string): Promise<void> {
-	const plain = join(tmpdir(), `dedalo_seed_contract_${process.pid}_${Date.now()}.sql`);
-	writeFileSync(plain, gunzipSync(readFileSync(seedPath)));
+	const dir = mkdtempSync(join(tmpdir(), 'dedalo_seed_contract_'));
 	try {
+		const plain = join(dir, 'seed.sql');
+		writeFileSync(plain, gunzipSync(readFileSync(seedPath)), { flag: 'wx', mode: 0o600 });
 		const run = await runPsql(conn, ['-X', '-q', '-v', 'ON_ERROR_STOP=1', '-f', plain]);
 		expect(run.exitCode, run.stderr).toBe(0);
 	} finally {
-		rmSync(plain, { force: true });
+		rmSync(dir, { recursive: true, force: true });
 	}
 }
 

@@ -42,7 +42,7 @@ import {
 	insertMatrixRecordWithCounter,
 } from '../../src/core/db/matrix_write.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { type PsqlRunResult, runPsql } from '../../src/core/install/pg_exec.ts';
+import { type PsqlRunResult, runPsqlScript } from '../../src/core/install/pg_exec.ts';
 import {
 	HIERARCHY_MANIFEST_FILE,
 	parseHierarchyManifestText,
@@ -125,41 +125,37 @@ afterAll(async () => {
 });
 
 /** The file the copy command pipes gzip into (whatever name the export chose). */
-function gzipTarget(args: readonly string[]): string {
-	const match = /gzip -c > (\S+) && sync/.exec(args.join(' '));
+function gzipTarget(sql: string): string {
+	const match = /gzip -c > (\S+) && sync/.exec(sql);
 	if (match?.[1] === undefined) throw new Error('no gzip target in the psql command');
 	return match[1];
 }
 
+/** The export's psql door (pg_exec runPsqlScript): the `\copy` rides stdin. */
+type PsqlDoor = typeof runPsqlScript;
+
 /** A REAL psql whose COPY fails on the server: the scan divides by zero. */
-const failingPsql = (conn: Parameters<typeof runPsql>[0], args: string[]) =>
-	runPsql(
+const failingPsql: PsqlDoor = (conn, sql, options) =>
+	runPsqlScript(
 		conn,
-		args.map((arg) =>
-			arg.replace(
-				`WHERE section_tipo = '${TIPO}'`,
-				`WHERE section_tipo = '${TIPO}' AND 1 / (section_id - ${IDS[1]}) IS NOT NULL`,
-			),
+		sql.replace(
+			`WHERE section_tipo = '${TIPO}'`,
+			`WHERE section_tipo = '${TIPO}' AND 1 / (section_id - ${IDS[1]}) IS NOT NULL`,
 		),
+		options,
 	);
 
 /** The real dump, then its gzip stream TORN (exit 0 — the damage psql never saw). */
-const tearingPsql = async (
-	conn: Parameters<typeof runPsql>[0],
-	args: string[],
-): Promise<PsqlRunResult> => {
-	const run = await runPsql(conn, args);
-	const target = gzipTarget(args);
+const tearingPsql: PsqlDoor = async (conn, sql, options): Promise<PsqlRunResult> => {
+	const run = await runPsqlScript(conn, sql, options);
+	const target = gzipTarget(sql);
 	truncateSync(target, Math.max(1, readFileSync(target).byteLength - 12));
 	return run;
 };
 
 /** The real dump, but psql's reported row count disagrees with the file. */
-const miscountingPsql = async (
-	conn: Parameters<typeof runPsql>[0],
-	args: string[],
-): Promise<PsqlRunResult> => {
-	const run = await runPsql(conn, args);
+const miscountingPsql: PsqlDoor = async (conn, sql, options): Promise<PsqlRunResult> => {
+	const run = await runPsqlScript(conn, sql, options);
 	return { ...run, stdout: run.stdout.replace(/COPY (\d+)/, (_all, n) => `COPY ${Number(n) + 1}`) };
 };
 
@@ -167,11 +163,8 @@ const miscountingPsql = async (
  * The real, whole dump — but psql exits nonzero (gzip or `sync` failed at the pipe's
  * close, after the rows were counted): only the exit code says so.
  */
-const exitingPsql = async (
-	conn: Parameters<typeof runPsql>[0],
-	args: string[],
-): Promise<PsqlRunResult> => {
-	const run = await runPsql(conn, args);
+const exitingPsql: PsqlDoor = async (conn, sql, options): Promise<PsqlRunResult> => {
+	const run = await runPsqlScript(conn, sql, options);
 	return { ...run, exitCode: 1, stderr: 'program "gzip" failed' };
 };
 

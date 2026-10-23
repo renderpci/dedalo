@@ -185,10 +185,10 @@ import {
 	buildWriterClosure,
 	declarationDoorCalls,
 	deriveRawPrimitives,
+	hasPsqlDoorEdge,
 	isPsqlMatrixWriter,
 	MATRIX_WRITE,
 	moduleRuntimeExports,
-	PSQL_DOOR,
 	RAW_PRIMITIVES,
 	RECORD_WRITE_CHOKEPOINTS,
 	rawCallsIn,
@@ -2413,7 +2413,7 @@ else {
 			expect(CLOSURE.psqlSeeds, 'psql seeds by binding vs psql writers by name').toEqual(byName);
 			for (const seed of CLOSURE.psqlSeeds) {
 				expect(
-					CLOSURE.preciseEdgesOf(seed).has(PSQL_DOOR),
+					hasPsqlDoorEdge(CLOSURE.preciseEdgesOf(seed)),
 					`${seed}: no resolved runPsql edge`,
 				).toBe(true);
 			}

@@ -1076,8 +1076,20 @@ export interface WriterClosure {
  */
 const CLOSURE_EXCLUDED_PREFIXES = [MATRIX_WRITE];
 
-/** The psql door: an off-home psql writer is a unit with a resolved edge to it. */
-export const PSQL_DOOR = 'src/core/install/pg_exec.ts#runPsql';
+/**
+ * The psql doors (install/pg_exec.ts): runPsql (`-f <file>`, streamed stdin) and
+ * runPsqlScript (SQL text on stdin). An off-home psql writer is a unit with a resolved
+ * edge to either.
+ */
+export const PSQL_DOORS: readonly string[] = [
+	'src/core/install/pg_exec.ts#runPsql',
+	'src/core/install/pg_exec.ts#runPsqlScript',
+];
+
+/** Does this edge set reach a psql door? */
+export function hasPsqlDoorEdge(edges: { has(key: string): boolean } | undefined): boolean {
+	return PSQL_DOORS.some((door) => edges?.has(door) ?? false);
+}
 
 const RECORD_WRITE = 'src/core/section_record/record_write.ts';
 
@@ -1205,7 +1217,9 @@ export function hasPsqlMatrixDml(body: string): boolean {
  * it does for the primitives.
  */
 export function isPsqlMatrixWriter(body: string): boolean {
-	return callsName(body, 'runPsql') && PSQL_MATRIX_DML.test(body);
+	return (
+		(callsName(body, 'runPsql') || callsName(body, 'runPsqlScript')) && PSQL_MATRIX_DML.test(body)
+	);
 }
 
 const IDENTIFIER = /(?<![\w$])(?<!(?:^|[^.])\.)([A-Za-z_$][\w$]*)/g;
@@ -1451,7 +1465,7 @@ export function buildWriterClosure(
 			([key, body]) =>
 				!CLOSURE_EXCLUDED_PREFIXES.some((prefix) => key.startsWith(prefix)) &&
 				!key.includes('#<type:') &&
-				(edges.get(key)?.has(PSQL_DOOR) ?? false) &&
+				hasPsqlDoorEdge(edges.get(key)) &&
 				PSQL_MATRIX_DML.test(body),
 		)
 		.map(([key]) => key)
@@ -1588,7 +1602,11 @@ export function toolServerCells(closure: WriterClosure): Map<string, Map<string,
 		if (closure.psqlSeeds.includes(key)) {
 			const action = `${file} :: ${key.slice(hash + 1)}`;
 			const doors = cells.get(action) ?? new Map<string, number>();
-			doors.set(key, closure.edgesOf(key).get(PSQL_DOOR) ?? 0);
+			const edges = closure.edgesOf(key);
+			doors.set(
+				key,
+				PSQL_DOORS.reduce((sum, door) => sum + (edges.get(door) ?? 0), 0),
+			);
 			cells.set(action, doors);
 		}
 		for (const [target, sites] of closure.edgesOf(key)) {
