@@ -22,7 +22,7 @@
 	// of rendering the error panel it promises.
 	import {ApiError, CLIENT_ERROR, is_api_error, request_failed, response_data} from '../../common/js/api_error.js'
 	import {handle_api_error, is_page_identity_revoked} from '../../common/js/error_dispatch.js'
-	import {render_error_panel, render_build_failure} from '../../common/js/render_api_error.js'
+	import {render_error_panel, render_build_failure, error_text, error_debug_suffix} from '../../common/js/render_api_error.js'
 
 
 
@@ -3010,6 +3010,42 @@ export const set_environment = function (api_response_environment) {
 
 
 /**
+* RENDER_PROCESS_STATUS_FAILURE
+* The panel's statement of a status stream that could not be opened: label-first
+* (error_text), the server's own sentence when it says more, the request_id (the
+* join key with the server log). Panel-local — never the full-page panel. Text
+* nodes only: server text never reaches an HTML sink.
+* @param {ApiError} api_error
+* @returns {HTMLElement}
+*/
+const render_process_status_failure = function (api_error) {
+
+	const node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'api_response error process_status_failure'
+	})
+	node.dataset.code = String(api_error?.code || '')
+
+	const headline	= String(error_text(api_error)) + error_debug_suffix(api_error)
+	const message	= typeof api_error?.message === 'string' ? api_error.message : ''
+	const lines		= [headline]
+	if (message.length && !headline.startsWith(message)) {
+		lines.push(message)
+	}
+	if (typeof api_error?.request_id === 'string' && api_error.request_id.length) {
+		lines.push('request_id: ' + api_error.request_id)
+	}
+	lines.forEach((line, i) => {
+		if (i > 0) node.appendChild(document.createElement('br'))
+		node.appendChild(document.createTextNode(line))
+	})
+
+	return node
+}//end render_process_status_failure
+
+
+
+/**
 * UPDATE_PROCESS_STATUS
 * Poll a long-running server process via SSE (Server-Sent Events) and update
 * a DOM container with live status information as each chunk arrives.
@@ -3034,9 +3070,13 @@ export const set_environment = function (api_response_environment) {
 * @param {string} pfile - Path to the process status file on the server
 * @param {HTMLElement} container - DOM element to render status updates into
 * @param {number} [update_rate=1000] - Polling interval in milliseconds
-* @param {Function} [callback] - Called once when the stream finishes, with the LAST
-*   frame read (null when none arrived) — a caller that acts on the outcome (the
-*   move_* preview → execute gate) reads it instead of re-polling.
+* @param {Function} [callback] - Called EXACTLY ONCE when the tracking ends: with the
+*   LAST frame read (null when none arrived) when the stream finishes — a caller
+*   that acts on the outcome (the move_* preview → execute gate) reads it instead
+*   of re-polling — or, when the stream could not be OPENED (fetch rejected,
+*   non-2xx, no body), with a terminal frame `{is_running:false, error:ApiError}`
+*   (read it with normalize_stream_error); the failure is then also stated in
+*   `container`, panel-local (never page_globals.page_error).
 * @returns {void}
 */
 export const update_process_status = function (id, pid, pfile, container, update_rate=1000, callback) {
@@ -3059,6 +3099,41 @@ export const update_process_status = function (id, pid, pfile, container, update
 		console.log(`Initiating process status update for ID: ${id}, PID: ${pid}`);
 	}
 
+	// settle: THE single terminal path. The callback runs EXACTLY ONCE however
+	// the tracking ends — the stream finished, or it could never be opened.
+	// (!) An open failure (fetch rejected, a non-2xx answer, a 2xx without body)
+	// used to be logged and dropped: the callback never ran, so a caller gating
+	// on it (the move_* preview → execute, update_code's track) waited forever.
+	let settled = false
+	const settle = (frame) => {
+		if (settled===true) {
+			return
+		}
+		settled = true
+		if (callback && typeof callback === 'function') {
+			callback(frame)
+		}
+	}
+
+	// fail_open: the stream could not be opened. No reader exists (none to
+	// release). The failure is stated IN the panel — panel-local, never the page
+	// slot (page_globals.page_error belongs to the page's own requests) — and the
+	// caller is settled with a terminal frame carrying the coded failure, the
+	// shape normalize_stream_error reads. The page-wide policy (relogin on
+	// auth.*) already ran: request_stream publishes every failure's ApiError.
+	const fail_open = (api_error) => {
+		console.error(`Stream request for ID: ${id}, PID: ${pid} failed:`, api_error?.code, api_error);
+		// client.aborted is silent by policy (the caller's own abort, a revoked
+		// page identity): nothing to state, but the caller still settles
+		if (api_error.code !== CLIENT_ERROR.ABORTED) {
+			container.replaceChildren(render_process_status_failure(api_error))
+		}
+		settle({
+			is_running	: false,
+			error		: api_error
+		})
+	}
+
 	// get_process_status from API and returns a SSE stream
 	data_manager.request_stream({
 		body : {
@@ -3072,11 +3147,6 @@ export const update_process_status = function (id, pid, pfile, container, update
 		}
 	})
 	.then((stream) => {
-
-		if (!stream) {
-			console.error('Error: data_manager.request_stream did not return a valid stream.');
-			return;
-		}
 
 		// render base nodes and set functions to manage
 		// the stream reader events
@@ -3105,18 +3175,28 @@ export const update_process_status = function (id, pid, pfile, container, update
 			render_stream_response.done()
 
 			// optional callback on done
-			if (callback && typeof callback === 'function') {
-				callback(last_response)
-			}
+			settle(last_response)
 		}
 
 		// read stream. Creates ReadableStream that fire
 		// 'on_read' function on each stream chunk at update_rate
 		// (1 second default) until stream is done (PID is no longer running)
 		data_manager.read_stream(stream, on_read, on_done)
+	}, (error) => {
+		// request_stream rejects with an ApiError (its @throws contract)
+		fail_open(is_api_error(error)
+			? error
+			: new ApiError({code: CLIENT_ERROR.BAD_RESPONSE, details: {reason: 'stream_open'}, source: 'stream', raw: error}))
 	})
 	.catch(function(error) {
-		console.error(`Stream request for ID: ${id}, PID: ${pid} failed:`, error);
+		// a throw while wiring the stream (render_stream, getReader) — before any
+		// reader could end it — must settle the caller too. Once settled, a throw
+		// here is the caller's own callback: report it as that, never re-settle.
+		if (settled===true) {
+			console.error('update_process_status: the caller callback threw', error);
+			return
+		}
+		fail_open(new ApiError({code: CLIENT_ERROR.RENDER_FAILED, details: {reason: 'process_status'}, source: 'client', raw: error}))
 	});
 }//end update_process_status
 

@@ -974,6 +974,18 @@ data_manager.request_stream = async function(options) {
 			// Get the readable stream from the response body
 			const stream = response.body;
 
+			// (!) A 2xx WITHOUT a body is not a stream either. Resolving `null`
+			// broke this method's own contract (a ReadableStream) and left every
+			// caller to notice — update_process_status did not, and its caller
+			// waited forever. Rejected as the coded failure it is.
+			if (!stream) {
+				const api_error = new ApiError({code: CLIENT_ERROR.BAD_RESPONSE, status: response.status, details: {status: response.status, reason: 'no_body'}, source: 'stream'})
+				console.error('request_stream failed:', api_error.code, api_error);
+				event_manager.publish('api_error', api_error)
+				reject(api_error)
+				return
+			}
+
 			resolve(stream)
 		})
 		.catch(error => {
