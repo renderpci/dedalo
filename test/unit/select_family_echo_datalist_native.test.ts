@@ -376,3 +376,51 @@ describe('a stored NON-project lang gets ONE "<name> *" entry at every edit door
 		expect(await appendMissingLang(options, firstIsOption, appLang)).toEqual(options);
 	});
 });
+
+/**
+ * FILTER FAMILY (component_filter / _master / _records) — the option set is
+ * USER-SCOPED (the caller's authorized projects / administered sections), so it
+ * is resolved by its own read doors (relations/models/portal.ts filterResolver;
+ * the component_filter_records emit hook) and NEVER by the generic
+ * target-section enumeration getDatalist builds. Every save echo must still
+ * carry the SAME options the edit read does: the client's post-save render
+ * reads self.data.datalist, and tool_propagate_component_data renders its
+ * editable clone straight from the TEMPORAL echo — an echo without the key
+ * rendered the propagate tool's selector with ZERO options
+ * (reported 2026-10-23: the tool opened on a component_filter showed none).
+ * The attach is getEchoDatalist (relations/datalist.ts), the ONE router both
+ * echo doors share; this block pins echo == read for every member.
+ */
+const FILTER_FAMILY: readonly { model: string; tipo: string }[] = [
+	{ model: 'component_filter', tipo: 'test101' },
+	{ model: 'component_filter_master', tipo: 'test70' },
+	{ model: 'component_filter_records', tipo: 'test69' },
+];
+
+describe('the FILTER family — every door answers the user-scoped options', () => {
+	test('the edit read carries a NON-empty datalist (the floor)', async () => {
+		for (const { model, tipo } of FILTER_FAMILY) {
+			const read = await readEdit(model, tipo, recordId);
+			// An empty list would make every equality below vacuous: the whole
+			// point is that the ECHO carries the options, not the bare item.
+			expect(Array.isArray(read.datalist)).toBe(true);
+			expect((read.datalist ?? []).length).toBeGreaterThan(0);
+		}
+	});
+
+	for (const { model, tipo } of FILTER_FAMILY) {
+		test(`the save echo carries the edit read datalist — ${model} (${tipo})`, async () => {
+			const read = await readEdit(model, tipo, recordId);
+			const response = await save(model, tipo, recordId, [{ action: 'set_data', value: [] }]);
+			expect(mainItem(response.body, tipo).datalist).toEqual(read.datalist);
+		});
+
+		test(`the temporal echo carries the edit read datalist — ${model} (${tipo})`, async () => {
+			const read = await readEdit(model, tipo, recordId);
+			const response = await save(model, tipo, recordId, [{ action: 'set_data', value: [] }], {
+				is_temporal: true,
+			});
+			expect(mainItem(response.body, tipo).datalist).toEqual(read.datalist);
+		});
+	}
+});
