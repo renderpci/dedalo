@@ -8,8 +8,11 @@
  * re-validated against the type allowlist, any existing target is backed up
  * (rename_old_files), and it is renamed into the target quality dir — the
  * ORIGINAL tier unless the caller asked for another one (PHP set_quality()).
- * The original tier keeps the raw upload; the normalized default-ext copy is
- * built by regenerate (Original law).
+ * The original tier keeps the raw upload; the browser-viewable
+ * `<id>.<defaultExtension>` copy beside it is built by buildMasterNormalizedCopy
+ * (processing.ts) from the ingest (processUploadedFile) and from repair in
+ * missing-only mode — Original law, engineering/MEDIA_SPEC.md §2. It is a
+ * DISPLAY companion: derived tiers are built from the raw, never from it.
  */
 
 import { existsSync, mkdirSync, renameSync, statSync } from 'node:fs';

@@ -56,7 +56,7 @@ All actions read the same three required options — `tipo` (the component tipo)
 | `get_job_status` | dispatch gates 1–4 (+ job ownership) | `job_id` (req.) | Poll one media job: top-level `JobStatusFrame` fields (`pid`, `pfile`, `is_running`, `data`, `errors`, `total_time`); `{result:false, errors:['job_not_found']}` on an unknown id. |
 | `conform_headers` | `record_tipo`, level 2 | `quality` (req.) | Rebuild a quality rewriting file headers (AV seek/compatibility fix). |
 | `rotate` | `record_tipo`, level 2 | `quality` (req.), `degrees` (req., e.g. `-90` / `90`) | Rotate the matching quality entries. |
-| `sync_files` | `record_tipo`, level 2 | `regenerate_options` (object, e.g. `{ delete_normalized_files: bool }`) | Re-read data and regenerate the component so `files_info` matches disk. |
+| `sync_files` | `record_tipo`, level 2 | `regenerate_options` (object, e.g. `{ delete_normalized_files: bool }`) | Re-read data and regenerate the component so `files_info` matches disk. Rebuilds only what is missing — including the browser-viewable `<id>.<defaultExtension>` copy of an image master tier whose raw upload is a `.tif`/`.psd` (see `buildMasterNormalizedCopy`); a second pass changes nothing. |
 | `delete_version` | `record_tipo`, level 2 | `quality` (req.), `extension` (optional) | Delete one specific version: the thumb-specific path for the thumb quality, else the general file-ops delete. |
 
 Response shape for every action: `{ result, msg, errors }`. For `get_files_info`, `result` is the files-info array (or `false` on failure) and `files_info_db` carries the stored array beside it; for the write actions `result` is the boolean / merged result of the delegated engine call.

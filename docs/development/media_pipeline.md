@@ -153,6 +153,16 @@ quality URL).
 every derivative is regenerated, and they are **never** served to anonymous users
 (see Stage 6).
 
+An image master uploaded in a format a browser cannot draw (`.tif`, `.psd`,
+`.psb`…) also gets a normalized, browser-viewable copy beside it —
+`<id>.jpg`, encoded at quality 100 — because every reader that picks a tier's
+picture addresses it by the type's default extension (`files_info` scans it
+first; the client's quality selector filters by it). `buildMasterNormalizedCopy()`
+(`src/core/media/processing.ts`) writes it on ingest and repair fills it when
+missing. The copy is display-only: derivatives are always built from the raw
+upload, so a flattened jpg never becomes the source of an alpha-capable
+alternative format.
+
 The on-disk path is deterministic and shared by all media types:
 
 ```text
@@ -191,7 +201,7 @@ derivation choreography lives in `processing.ts`.
 
 The per-type `regenerate*` / `buildImageVersion` / `buildPdfCover` functions in
 `processing.ts` build a single quality from the best available source
-(`resolveOriginalSource`: modified > original > nearest higher quality), writing to
+(`resolveMasterSource`: modified > original, then the upload allowlist), writing to
 a temp file and atomically renaming so the `original` is never mutated. The A/V
 quality model is profile-driven: a "quality" maps to one of the ~37 argv recipes
 in `src/core/media/engine/ffmpeg_profiles.ts` — the recipes are **data**, not

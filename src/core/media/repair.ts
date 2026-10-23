@@ -54,6 +54,7 @@ import {
 import {
 	buildAlternateVersions,
 	buildImageVersion,
+	buildMasterNormalizedCopy,
 	buildThumbVersion,
 	derivedTwinQualities,
 	regenerate3d,
@@ -390,6 +391,25 @@ export async function regenerateMissingDerivatives(
 
 	switch (model) {
 		case 'component_image': {
+			// 2a. THE NORMALIZED MASTER COPY, MISSING ONLY — the browser-viewable
+			// `<id>.<defaultExtension>` beside a raw upload in 'original'/'modified'
+			// (see buildMasterNormalizedCopy). This is the step that heals a record
+			// whose master was uploaded before the copy was ever built: without it the
+			// tier holds only a `.tif`, and the client's quality selector shows no
+			// 'original' at all. MISSING ONLY is repair's contract; the ingest of a
+			// master is what rebuilds it (processUploadedFile).
+			for (const quality of spec.masterQualities) {
+				try {
+					await buildMasterNormalizedCopy(spec, identity, quality, pathOpts, {
+						rawExtension: options.rawExtension,
+						rebuild: false,
+					});
+				} catch (error) {
+					errors.push(
+						`${quality}.${spec.defaultExtension} of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
+					);
+				}
+			}
 			// 2. default quality only when absent — and only when the original is here
 			if (!existsSync(defaultLocation.absolutePath) && source !== null) {
 				await buildImageVersion(spec, identity, spec.defaultQuality, source, pathOpts);

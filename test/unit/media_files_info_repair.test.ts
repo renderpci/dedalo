@@ -22,14 +22,17 @@
 // or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { config } from '../../src/config/config.ts';
+import { mediaTypeOf } from '../../src/core/concepts/media.ts';
 import { sql } from '../../src/core/db/postgres.ts';
-import { resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
+import { getDimensions, resolveMagick } from '../../src/core/media/engine/imagemagick.ts';
+import { runBinary } from '../../src/core/media/engine/spawn.ts';
 import type { FileInfoEntry } from '../../src/core/media/files_info.ts';
 import { buildMediaLocation } from '../../src/core/media/path.ts';
+import { regenerateMissingDerivatives } from '../../src/core/media/repair.ts';
 import {
 	readStoredMediaItems,
 	resolveMediaToolContext,
@@ -509,4 +512,83 @@ describe('repair: a twin this host cannot write is REPORTED, and costs nothing e
 			expect(existsSync(`${MEDIA_ROOT}/image/1.5MB/test99_test3_70.jxl`)).toBe(false);
 		},
 	);
+});
+
+/**
+ * THE NORMALIZED MASTER COPY, REPAIRED (2026-10-23) — the half of the Original
+ * law no writer had. An image master whose raw is a `.tif` must also carry the
+ * browser-viewable `<id>.<defaultExtension>`, or every reader that picks a
+ * tier's picture by the default extension sees nothing: `files_info` scans it
+ * first, the client's quality selector filters by it, and 'original'
+ * disappeared from the selector entirely (measured on rsc29/rsc170/1).
+ *
+ * MISSING ONLY is the repair sweep's contract, and it is also the whole point
+ * here: a record uploaded before the copy existed is healed by "Regenerate
+ * files" (`sync_files` → this function), and a second sweep must leave the file
+ * alone — repair never re-encodes what an operator may have authored.
+ */
+describe('repair: the normalized master copy is built when MISSING, and only then', () => {
+	const MEDIA_ROOT = `${tmpdir()}/dedalo_repair_master_copy_${process.pid}`;
+	const HAVE_MAGICK = existsSync(resolveMagick());
+	const spec = mediaTypeOf('component_image')!;
+	const identity = { componentTipo: 'test99', sectionTipo: 'test3', sectionId: 71, lang: null };
+	const pathOpts = { initialMediaPath: '', maxItemsFolder: null, mediaRoot: MEDIA_ROOT };
+	const rawPath = `${MEDIA_ROOT}/image/original/test99_test3_71.tif`;
+	const copyPath = `${MEDIA_ROOT}/image/original/test99_test3_71.${spec.defaultExtension}`;
+	const regenerate = async (): Promise<string[]> =>
+		await regenerateMissingDerivatives('component_image', spec, identity, pathOpts, {
+			rawExtension: 'tif',
+			deleteNormalized: false,
+			bulkProcessId: null,
+		});
+
+	markMediaRoot(MEDIA_ROOT);
+	afterAll(() => rmSync(MEDIA_ROOT, { recursive: true, force: true }));
+
+	test.if(HAVE_MAGICK)('builds the copy from the raw master, then is a no-op', async () => {
+		mkdirSync(dirname(rawPath), { recursive: true });
+		const built = await runBinary([resolveMagick(), '-size', '320x240', 'xc:green', rawPath], {
+			nice: false,
+			env: magickTestEnv(),
+		});
+		expect(built.exitCode).toBe(0);
+		expect(existsSync(copyPath)).toBe(false);
+
+		expect(await regenerate()).toEqual([]);
+		expect(existsSync(copyPath)).toBe(true);
+		// A master tier has no pixel budget: the copy is the raw's own size.
+		expect(await getDimensions(copyPath)).toMatchObject({ width: 320, height: 240 });
+
+		// SECOND SWEEP: the file is left untouched (an atomic rebuild would replace
+		// the inode and move the mtime).
+		const before = statSync(copyPath).mtimeMs;
+		expect(await regenerate()).toEqual([]);
+		expect(statSync(copyPath).mtimeMs).toBe(before);
+	});
+
+	test.if(HAVE_MAGICK)('the RETOUCHED master gets its copy too', async () => {
+		// Both master tiers are covered (PHP check_normalized_files loops original AND
+		// modified): a photographer's `.tif` retouch is equally unviewable in a
+		// browser, and the quality selector lists 'modified' by the same rule.
+		const retouched = config.media.imageQualityRetouched;
+		const raw = `${MEDIA_ROOT}/image/${retouched}/test99_test3_72.tif`;
+		const copy = `${MEDIA_ROOT}/image/${retouched}/test99_test3_72.${spec.defaultExtension}`;
+		mkdirSync(dirname(raw), { recursive: true });
+		const built = await runBinary([resolveMagick(), '-size', '320x240', 'xc:blue', raw], {
+			nice: false,
+			env: magickTestEnv(),
+		});
+		expect(built.exitCode).toBe(0);
+		expect(existsSync(copy)).toBe(false);
+
+		await regenerateMissingDerivatives(
+			'component_image',
+			spec,
+			{ ...identity, sectionId: 72 },
+			pathOpts,
+			{ rawExtension: 'tif', deleteNormalized: false, bulkProcessId: null },
+		);
+		expect(existsSync(copy)).toBe(true);
+		expect(await getDimensions(copy)).toMatchObject({ width: 320, height: 240 });
+	});
 });

@@ -23,7 +23,16 @@
 // or a locator here, so no corpus and no DB round-trip were added.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, readdirSync, rmSync, statSync, utimesSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import {
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	statSync,
+	utimesSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { assertNormalizedExtensionForTier, mediaTypeOf } from '../../src/core/concepts/media.ts';
@@ -42,6 +51,7 @@ import {
 	type MediaPathOptions,
 } from '../../src/core/media/path.ts';
 import {
+	buildMasterNormalizedCopy,
 	noteOutrankingMaster,
 	regenerateImage,
 	resolveMasterQuality,
@@ -554,6 +564,91 @@ describe.if(HAVE_MAGICK)('deleting a master re-sources the derived tiers', () =>
  * bytes. The client only hides the gear for the literal 'original', so the
  * server is the chokepoint.
  */
+/**
+ * THE NORMALIZED MASTER COPY (2026-10-23) — the Original law's other half: a
+ * master tier holds the raw upload AND a browser-viewable `<id>.<defaultExt>`.
+ * No writer existed in the TS engine, so a `.tif` original had no displayable
+ * form (the client's quality selector filters by the default extension and hid
+ * the tier entirely). The writer is `buildMasterNormalizedCopy`, driven by the
+ * INGEST (which knows the tier and the extension that just landed) and by
+ * repair; these are the properties it must never lose.
+ */
+describe.if(HAVE_MAGICK)(
+	'the normalized master copy — the displayable half of a raw master',
+	() => {
+		const hash = (path: string): string =>
+			createHash('sha256').update(readFileSync(path)).digest('hex');
+		const buildCopy = async (identity: MediaIdentity, tier: string): Promise<string | null> =>
+			await buildMasterNormalizedCopy(image, identity, tier, pathOpts, {
+				rawExtension: 'tif',
+				rebuild: true,
+			});
+
+		test('a .tif master gains the copy, which depicts the RAW', async () => {
+			const identity = nextIdentity();
+			const raw = pathOf(identity, image.originalQuality, 'tif');
+			await makeImage(raw, 'red');
+			const copy = await buildCopy(identity, image.originalQuality);
+			expect(copy).toBe(pathOf(identity, image.originalQuality, image.defaultExtension));
+			expect(existsSync(copy as string)).toBe(true);
+			expect(await depicts(copy as string)).toBe('red');
+			// THE COPY IS NOT THE SOURCE: naming the raw still resolves it as the master
+			// (a flattened jpg would lose the alpha the twin builder exists for).
+			expect(resolveMasterSource(image, identity, pathOpts, 'tif')).toBe(raw);
+		});
+
+		test('the copy is NEVER its own source', async () => {
+			const identity = nextIdentity();
+			await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+			const first = await buildCopy(identity, image.originalQuality);
+			const before = hash(first as string);
+			await buildCopy(identity, image.originalQuality);
+			// Re-encoding the jpg from itself loses a generation and changes the bytes;
+			// a rebuild from the tier's raw is deterministic and must not.
+			expect(hash(first as string)).toBe(before);
+		});
+
+		test('deleting the copy does not resurrect it; deleting the RAW leaves it and rebuilds NOTHING', async () => {
+			const identity = nextIdentity();
+			await makeImage(pathOf(identity, image.originalQuality, 'tif'), 'red');
+			await regenerateImage(image, identity, pathOpts, 'tif');
+			const copy = pathOf(identity, image.originalQuality, image.defaultExtension);
+			const raw = pathOf(identity, image.originalQuality, 'tif');
+			const derived = pathOf(identity, DERIVED, image.defaultExtension);
+			await buildCopy(identity, image.originalQuality);
+
+			// A per-file delete MEANS delete: the raw survives, the copy does not come
+			// back from the delete-rebuild pass (repair is what restores it — see
+			// media_files_info_repair.test.ts).
+			await deleteAndResyncCore(
+				image,
+				identity,
+				pathOpts,
+				image.originalQuality,
+				image.defaultExtension,
+			);
+			expect(existsSync(copy)).toBe(false);
+			expect(existsSync(raw)).toBe(true);
+
+			// With the copy present, removing the RAW changes nothing about the picture
+			// (the copy depicts the same object), so no tier is re-sourced — a rebuild
+			// here would re-encode every tier from a jpg and discard operator rotations.
+			await buildCopy(identity, image.originalQuality);
+			const before = statSync(derived).mtimeMs;
+			const outcome = await deleteAndResyncCore(
+				image,
+				identity,
+				pathOpts,
+				image.originalQuality,
+				'tif',
+			);
+			expect(outcome.rebuilt).toEqual([]);
+			expect(existsSync(copy)).toBe(true);
+			expect(statSync(derived).mtimeMs).toBe(before);
+		});
+	},
+);
+
 describe.if(HAVE_MAGICK)('build_version refuses a master target', () => {
 	test('every master tier of every type is refused', async () => {
 		for (const spec of [

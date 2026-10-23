@@ -46,6 +46,7 @@ import {
 	posterframeLocation,
 } from '../path.ts';
 import {
+	buildMasterNormalizedCopy,
 	noteOutrankingMaster,
 	regenerate3d,
 	regenerateImage,
@@ -310,6 +311,28 @@ export async function processUploadedFile(input: IngestInput): Promise<IngestRes
 					// subsystem exists to end.
 					const outcome = await regenerateImage(spec, identity, pathOpts, added.extension);
 					derivativeErrors.push(...outcome.errors);
+					// THE NORMALIZED MASTER COPY — the browser-viewable
+					// `<id>.<defaultExtension>` beside the raw upload (Original law; see
+					// buildMasterNormalizedCopy). Written HERE, not in regenerateImage,
+					// because only the ingest knows the tier that received the file and
+					// the extension it arrived with: a copy is a fact about THIS upload,
+					// and a build driven from "whichever master resolves" would let a
+					// leftover raw in another tier become this tier's picture.
+					//
+					// The target is the tier just written (a `.tif` into 'modified' gets
+					// its copy in 'modified'). Non-fatal like every other post-move step:
+					// the raw landed and is indexed either way.
+					const targetQuality = quality ?? spec.originalQuality;
+					try {
+						await buildMasterNormalizedCopy(spec, identity, targetQuality, pathOpts, {
+							rawExtension: added.extension,
+							rebuild: true,
+						});
+					} catch (error) {
+						derivativeErrors.push(
+							`${targetQuality}.${spec.defaultExtension}: ${(error as Error).message}`,
+						);
+					}
 					break;
 				}
 				case 'component_pdf':
