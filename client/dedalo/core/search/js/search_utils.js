@@ -7,13 +7,15 @@
 * SEARCH_UTILS
 * Stateless utility helpers shared across the Dédalo search subsystem.
 *
-* Currently exports a single function, is_filter_empty, which decides whether
-* a fully-built SQO filter tree contains at least one active query clause.
-* Keeping these helpers in a separate module avoids circular imports between
-* search.js, render_search.js, and the section modules that import them.
+* is_filter_empty decides whether a fully-built SQO filter tree contains at
+* least one active query clause; is_own_record_pin tells an instance's own
+* single-record pin apart from a genuine result set. Keeping these helpers in a
+* separate module avoids circular imports between search.js, render_search.js,
+* and the section modules that import them.
 *
 * Exports:
-*   is_filter_empty  — tests whether an SQO filter object has any non-empty `q` leaf
+*   is_filter_empty     — tests whether an SQO filter object has any non-empty `q` leaf
+*   is_own_record_pin   — tests whether filter_by_locators is ONLY this record
 */
 
 
@@ -115,3 +117,43 @@ export const is_filter_empty = function(filter_obj) {
 
 	return empty
 }//end is_filter_empty
+
+
+
+/**
+* IS_OWN_RECORD_PIN
+* True when `pins` is exactly the AUTO-GENERATED single-record pin for the
+* caller's own open record.
+*
+* `filter_by_locators` carries two completely different things and they must not
+* be confused:
+*   - the auto pin: ONE locator naming the section's own open record, written by
+*     common.js build_rqo_show when the instance already knows its section_id;
+*   - a genuine RESULT SET the user is looking at — a semantic/RAG search resolves
+*     its ranked hits into filter_by_locators plus order 'locator_position'
+*     (search/js/search.js exec_search), including a `section_id:-1` sentinel that
+*     means "zero hits, show an honest empty list".
+*
+* The distinction is the RECORD VIEW / PAGE VIEW rule: a view is either ONE
+* record (this pin) or a position in a found set (limit + offset). Never both —
+* a single pin plus offset > 0 asks the server to skip the only pinned row.
+* section.js uses it to keep a record view from reading or writing pagination,
+* goto_list uses it to leave the record (keeping real result sets), and
+* render_open_list_with_direct_relations uses it to discard only the auto pin.
+*
+* @param {Array} pins - sqo.filter_by_locators.
+* @param {Object|null} caller_record - { section_tipo, section_id } of the record
+*   the caller has open, or null when the caller could not name one.
+* @returns {boolean}
+*/
+export const is_own_record_pin = function(pins, caller_record) {
+
+	if (!Array.isArray(pins) || pins.length!==1 || !caller_record || caller_record.section_id===null || caller_record.section_id===undefined) {
+		return false
+	}
+
+	const pin = pins[0]
+
+	return pin?.section_tipo===caller_record.section_tipo
+		&& String(pin?.section_id)===String(caller_record.section_id)
+}//end is_own_record_pin

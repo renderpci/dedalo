@@ -32,6 +32,7 @@ import {
 	resolveMasterSource,
 	retireOrphanTwins,
 } from '../processing.ts';
+import { identityHasMediaFiles, retireOverlayIfNoMediaFiles } from '../svg_overlay.ts';
 import { rebuildThumb } from '../thumb.ts';
 import { applyRotationCore } from './rotation.ts';
 
@@ -76,7 +77,7 @@ export interface BuildVersionResult {
  * every other tier. Without this refusal the panel's build gear on the retouched
  * row was live and self-destructive: MEASURED, one click on a delivered retouch
  * (jpeg quality 100, 3,169,136 bytes) resolved that very file as its own source
- * and rewrote it at quality 82, 1,798,308 bytes — the human's master destroyed,
+ * and rewrote it at the then-default quality 82, 1,798,308 bytes — the human's master destroyed,
  * irreversibly, by a button that looked like every other build button.
  *
  * v6 allowed it (build_version had a master-target branch, frozen
@@ -406,7 +407,7 @@ export async function rebuildDerivedTiersAfterMasterDelete(
 }
 
 export interface DeleteAndResyncResult {
-	/** Paths moved into deleted/ by the delete itself. */
+	/** Paths moved into deleted/ by the delete (the SVG envelope rides along when the record has no files left). */
 	moved: string[];
 	/** Derived tiers rebuilt because the delete changed the best master. */
 	rebuilt: string[];
@@ -420,6 +421,13 @@ export interface DeleteAndResyncResult {
 	errors: string[];
 	/** The disk scan taken AFTER the rebuild (see the ordering note). */
 	filesInfo: FileInfoEntry[];
+	/**
+	 * The record holds NO media file of any quality after this delete — the same
+	 * `managedFileSlots` census that retires the SVG envelope. The tool's write-back
+	 * uses it to clear the drawing (`lib_data`/`svg_file_data`) with the last file,
+	 * so a later upload starts a fresh vector editing.
+	 */
+	noMediaFilesLeft: boolean;
 }
 
 /**
@@ -474,12 +482,22 @@ export async function deleteAndResyncCore(
 			`[media] ${spec.model} ${identity.componentTipo}_${identity.sectionTipo}_${String(identity.sectionId)}: retired to deleted/ with the file just removed — a twin is a companion of its tier's .${spec.defaultExtension}, not an independent version: ${retired.join(', ')}`,
 		);
 	}
+	// THE SVG ENVELOPE GOES WITH THE LAST FILE, and only then (policy 2026-10-23).
+	// It is not a quality file, so no delete pass reaches it; the check is the whole
+	// census (every quality × extension, thumb included), so deleting one tier —
+	// even the default one — leaves the wrapper in place. Run AFTER the rebuild and
+	// the twin retirement: a master delete that rebuilds the ladder leaves files
+	// behind, and a `moved` entry must describe what this action really took.
+	const noMediaFilesLeft = !identityHasMediaFiles(spec, identity, pathOpts);
+	const overlayRetired = retireOverlayIfNoMediaFiles(spec, identity, pathOpts);
+	if (overlayRetired !== null) moved.push(overlayRetired);
 	return {
 		moved,
 		rebuilt: rebuild.rebuilt,
 		retired,
 		errors: rebuild.errors,
 		filesInfo: getFilesInfoCore(spec, identity, pathOpts, context),
+		noMediaFilesLeft,
 	};
 }
 

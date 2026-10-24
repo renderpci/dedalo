@@ -277,13 +277,16 @@ function temporalEchoMainEntry(
 }
 
 /**
- * Select-family components re-render from data.datalist (e.g.
- * component_radio_button get_checked_value_label reads it after a save), and
- * the persisted door attaches it — so the temporal door must too, or the
- * post-save render dereferences undefined. It belongs on the RELATION branch,
- * not the literal one: every SELECT_FAMILY_MODELS member is a relation-column
- * component, so a datalist attach placed after the `column === 'relation'`
- * return could never run at all.
+ * Select-family AND filter-family components re-render from data.datalist
+ * (e.g. component_radio_button get_checked_value_label reads it after a save;
+ * view_default_edit_filter iterates it), and the persisted door attaches it —
+ * so the temporal door must too, or the post-save render dereferences
+ * undefined. It belongs on the RELATION branch, not the literal one, for every
+ * relation-column member (all of SELECT_FAMILY_MODELS, plus component_filter /
+ * _master): a datalist attach placed after the `column === 'relation'` return
+ * could never run at all. The one LITERAL member — component_filter_records —
+ * is attached in resolveTemporalSave's literal branch, the only arm it reaches
+ * (see attachTemporalLiteralEchoDatalist).
  */
 async function attachTemporalEchoDatalist(
 	echo: ApiResult,
@@ -297,16 +300,16 @@ async function attachTemporalEchoDatalist(
 	},
 ): Promise<void> {
 	const { model, componentTipo, sectionTipo, lang, picked } = args;
-	const { SELECT_FAMILY_MODELS } = await import('../../relations/models/select_family.ts');
-	if (!SELECT_FAMILY_MODELS.has(model)) return;
-	const { getEditDatalist } = await import('../../relations/datalist.ts');
+	const { echoesDatalist, getEchoDatalist } = await import('../../relations/datalist.ts');
+	if (!(await echoesDatalist(model))) return;
 	const { getNode } = await import('../../ontology/resolver.ts');
 	const node = await getNode(componentTipo);
 	const main = temporalEchoMainEntry(echo, componentTipo, sectionTipo);
 	if (main !== undefined) {
 		// The edit door, completed against the PICKED value (the raw locators
 		// the echo answers with): select_lang's "<name> *" entry matches the read's.
-		main.datalist = await getEditDatalist(
+		main.datalist = await getEchoDatalist(
+			model,
 			componentTipo,
 			node?.properties ?? null,
 			sectionTipo,
@@ -314,6 +317,36 @@ async function attachTemporalEchoDatalist(
 			picked,
 		);
 	}
+}
+
+/**
+ * The LITERAL member of the filter family — component_filter_records — reaches
+ * only the literal branch of resolveTemporalSave, so its echo datalist is
+ * attached there (the relation-column members go through
+ * attachTemporalEchoDatalist). The read door attaches it from the component's
+ * emit hook; getEchoDatalist routes the user-scoped source, so echo == read.
+ */
+async function attachTemporalLiteralEchoDatalist(
+	dataItem: unknown,
+	args: {
+		model: string;
+		componentTipo: string;
+		sectionTipo: string;
+		lang: string;
+		items: readonly unknown[];
+	},
+): Promise<void> {
+	const { model, componentTipo, sectionTipo, lang, items } = args;
+	const { FILTER_FAMILY_MODELS, getEchoDatalist } = await import('../../relations/datalist.ts');
+	if (!FILTER_FAMILY_MODELS.has(model)) return;
+	(dataItem as { datalist?: unknown }).datalist = await getEchoDatalist(
+		model,
+		componentTipo,
+		null,
+		sectionTipo,
+		lang,
+		items,
+	);
 }
 
 /**
@@ -513,6 +546,17 @@ export async function resolveTemporalSave(rqo: Rqo, principal: Principal): Promi
 		lang,
 		outcome.items,
 	);
+	// The one LITERAL filter-family member re-renders from data.datalist after a
+	// save (view_default_edit_filter_records iterates it) — the read door
+	// attaches it (the component's emit hook), so the echo must too. The
+	// relation-column members are attached in attachTemporalEchoDatalist.
+	await attachTemporalLiteralEchoDatalist(dataItem, {
+		model,
+		componentTipo,
+		sectionTipo,
+		lang,
+		items: outcome.items,
+	});
 	return {
 		status: 200,
 		body: ok({ context: [], data: [dataItem] }, { requestId: currentRequestId() }),

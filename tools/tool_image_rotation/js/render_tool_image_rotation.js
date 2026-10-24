@@ -651,7 +651,7 @@ const get_buttons = function(self) {
 			if(button_remove_background.active === false){
 				return
 			}
-			const engine = 'briaai/RMBG-1.4' // 'Xenova/rmbg-1.4'
+			const engine = 'onnx-community/ISNet-ONNX' // 'onnx-community/BiRefNet_lite-ONNX'
 			if(!engine){
 				return
 			}
@@ -676,6 +676,13 @@ const get_buttons = function(self) {
 			// return a Promise with the data to be saved into transcription component.
 			self.automatic_background_removal(background_removal_options)
 			.then( async (response)=>{
+
+				// a failed run resolves `false` — the panel already carries the reason,
+				// so do not also claim success and re-enable the button as if it worked.
+				if (response === false) {
+					button_remove_background.classList.remove('disable')
+					return
+				}
 
 				// set the status done
 				button_remove_background.classList.remove('disable')

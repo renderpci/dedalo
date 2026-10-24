@@ -54,6 +54,7 @@ import {
 import {
 	buildAlternateVersions,
 	buildImageVersion,
+	buildMasterNormalizedCopy,
 	buildThumbVersion,
 	derivedTwinQualities,
 	regenerate3d,
@@ -61,7 +62,12 @@ import {
 	regenerateSvg,
 	resolveMasterSource,
 } from './processing.ts';
-import { createDefaultSvgFile, defaultRasterUrl, svgOverlayLocation } from './svg_overlay.ts';
+import {
+	createDefaultSvgFile,
+	defaultRasterUrl,
+	retireOverlayIfNoMediaFiles,
+	svgOverlayLocation,
+} from './svg_overlay.ts';
 import { rebuildThumb, thumbIsMissing } from './thumb.ts';
 
 export interface MediaItemsRefreshResult {
@@ -213,6 +219,36 @@ function isHeldShrink(
 	holdShrink: boolean,
 ): boolean {
 	return holdShrink && existingFileCount(fresh.files_info) < existingFileCount(stored.files_info);
+}
+
+/**
+ * THE NORMALIZED MASTER COPIES, MISSING ONLY — the browser-viewable
+ * `<id>.<defaultExtension>` beside a raw upload in each master tier
+ * (buildMasterNormalizedCopy). This is what heals a record whose master was
+ * uploaded before the copy was ever built: without it the tier holds only a
+ * `.tif`, and the client's quality selector shows no 'original' at all.
+ * MISSING ONLY is repair's contract; the ingest of a master rebuilds it
+ * (processUploadedFile). Failures are VALUES, like every other repair step.
+ */
+async function healMissingMasterCopies(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+	rawExtension: string | null,
+	errors: string[],
+): Promise<void> {
+	for (const quality of spec.masterQualities) {
+		try {
+			await buildMasterNormalizedCopy(spec, identity, quality, pathOpts, {
+				rawExtension,
+				rebuild: false,
+			});
+		} catch (error) {
+			errors.push(
+				`${quality}.${spec.defaultExtension} of ${buildMediaIdentifier(identity)}: ${(error as Error).message}`,
+			);
+		}
+	}
 }
 
 /**
@@ -390,6 +426,14 @@ export async function regenerateMissingDerivatives(
 
 	switch (model) {
 		case 'component_image': {
+			// 2a. THE NORMALIZED MASTER COPY, MISSING ONLY — the browser-viewable
+			// `<id>.<defaultExtension>` beside a raw upload in 'original'/'modified'
+			// (see buildMasterNormalizedCopy). This is the step that heals a record
+			// whose master was uploaded before the copy was ever built: without it the
+			// tier holds only a `.tif`, and the client's quality selector shows no
+			// 'original' at all. MISSING ONLY is repair's contract; the ingest of a
+			// master is what rebuilds it (processUploadedFile).
+			await healMissingMasterCopies(spec, identity, pathOpts, options.rawExtension, errors);
 			// 2. default quality only when absent — and only when the original is here
 			if (!existsSync(defaultLocation.absolutePath) && source !== null) {
 				await buildImageVersion(spec, identity, spec.defaultQuality, source, pathOpts);
@@ -439,6 +483,11 @@ export async function regenerateMissingDerivatives(
 					}
 				}
 			}
+			// THE WRAPPER OF AN EMPTY RECORD MUST NOT SURVIVE (policy 2026-10-23; see
+			// retireOverlayIfNoMediaFiles). Not a build: a record whose every quality
+			// file is gone holds nothing for an envelope to wrap, and this is the
+			// sweep's heal for records emptied before the delete seam knew the rule.
+			retireOverlayIfNoMediaFiles(spec, identity, pathOpts);
 			break;
 		}
 		case 'component_pdf':

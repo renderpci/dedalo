@@ -11,7 +11,7 @@
 // `libx264`, the ffmpeg H.264 encoder, not a tipo. `libx` is not an install TLD.
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { config } from '../../src/config/config.ts';
 import { AUDIO_TR_QUALITY, mediaTypeOf } from '../../src/core/concepts/media.ts';
@@ -348,6 +348,106 @@ describe('processUploadedFile (ingest → derivatives → files_info)', () => {
 					buildMediaLocation(image, id5, image.originalQuality, 'jpg', pathOpts).absolutePath,
 				),
 			).toBe(false);
+		},
+	);
+
+	test.if(HAVE_MAGICK)('a non-jpg original also gets the browser-viewable copy', async () => {
+		// The reported defect (rsc29/rsc170/1, 2026-10-23): a `.tif` into
+		// 'original' left ONLY the tif, and every reader of a tier's picture
+		// addresses it by the type's default extension (files_info scans it first,
+		// the client quality selector filters by it) — so 'original' vanished from
+		// the selector. The copy is the Original law's other half.
+		const id6: MediaIdentity = { ...identity, sectionId: 64 };
+		await stageImage('up6.tif', '1200x800');
+		const result = await processUploadedFile({
+			spec: image,
+			identity: id6,
+			pathOpts,
+			userId: USER_ID,
+			keyDir: 'kd1',
+			tmpName: 'up6.tif',
+			extension: 'tif',
+		});
+		const raw = buildMediaLocation(image, id6, image.originalQuality, 'tif', pathOpts).absolutePath;
+		const copy = buildMediaLocation(
+			image,
+			id6,
+			image.originalQuality,
+			image.defaultExtension,
+			pathOpts,
+		).absolutePath;
+		expect([existsSync(raw), existsSync(copy)]).toEqual([true, true]);
+		// ORDER IS THE CONTRACT: the default extension comes FIRST, which is what
+		// makes every quality-only reader resolve the displayable file.
+		expect(
+			result.filesInfo
+				.filter((entry) => entry.quality === image.originalQuality)
+				.map((entry) => entry.extension),
+		).toEqual(['jpg', 'tif']);
+		// A master tier has no pixel budget: the copy is the raw's own size.
+		expect(await getDimensions(copy)).toMatchObject({ width: 1200, height: 800 });
+		// …and it is written at maximum compression quality (100): it is the record's
+		// full-resolution viewable, not a web tier.
+		const encoded = await runBinary([resolveMagick(), copy, '-format', '%Q', 'info:'], {
+			nice: false,
+			env: magickTestEnv(),
+		});
+		expect(encoded.stdout.trim()).toBe('100');
+		// The ladder's own tiers use PHP's 90 (not the old 82).
+		const tierPath = buildMediaLocation(
+			image,
+			id6,
+			image.defaultQuality,
+			image.defaultExtension,
+			pathOpts,
+		).absolutePath;
+		const tierEncoded = await runBinary([resolveMagick(), tierPath, '-format', '%Q', 'info:'], {
+			nice: false,
+			env: magickTestEnv(),
+		});
+		expect(tierEncoded.stdout.trim()).toBe('90');
+	});
+
+	test.if(HAVE_MAGICK)(
+		'a default-extension upload is never overwritten by a leftover raw',
+		async () => {
+			// THE HAZARD the copy builder must not create: a tier holding a previous
+			// raw (.tif) plus its copy, then an operator uploads a `.jpg` into
+			// 'original'. That upload IS the displayable file, so nothing may be
+			// converted — converting "whatever else the tier holds" would replace the
+			// operator's fresh picture with one of the leftover tif.
+			const id7: MediaIdentity = { ...identity, sectionId: 65 };
+			await stageImage('up7.tif', '1200x800');
+			await processUploadedFile({
+				spec: image,
+				identity: id7,
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kd1',
+				tmpName: 'up7.tif',
+				extension: 'tif',
+			});
+			await stageImage('up8.jpg', '640x480');
+			const stagedSize = statSync(`${stagingDir(USER_ID, 'kd1', ROOT)}/up8.jpg`).size;
+			await processUploadedFile({
+				spec: image,
+				identity: id7,
+				pathOpts,
+				userId: USER_ID,
+				keyDir: 'kd1',
+				tmpName: 'up8.jpg',
+				extension: 'jpg',
+			});
+			const copy = buildMediaLocation(
+				image,
+				id7,
+				image.originalQuality,
+				image.defaultExtension,
+				pathOpts,
+			).absolutePath;
+			// Byte-for-byte the upload (a re-encode of the leftover tif would differ).
+			expect(statSync(copy).size).toBe(stagedSize);
+			expect(await getDimensions(copy)).toMatchObject({ width: 640, height: 480 });
 		},
 	);
 

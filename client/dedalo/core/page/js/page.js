@@ -979,13 +979,24 @@ const navigate = async function(user_navigation_options) {
 
 				// page url
 					const current_tipo = source.config?.source_section_tipo || source.tipo;
-					// url search. Append section_id if exists
+					// record id. The address bar carries the record while one is open:
+					// a section deep link WITH an id is the edit view (server `start`
+					// forces it), and `id` left in a list would decay into that record's
+					// edit page on reload. The navigation's OWN values come first — the
+					// element is only init'ed here (its read happens later inside
+					// refresh), and a cached instance can still carry the previous
+					// record. section.build corrects the entry once the record is read
+					// (section.js sync_url_record).
+						const section_id = (new_page_element_instance.model==='section' && source.mode!=='list')
+							? (source.section_id ?? source.section_id_selected ?? new_page_element_instance.section_id ?? null)
+							: null
+					// url search.
 						const current_url_vars = url_vars_to_object(location.search)
 						const url_vars = {} // url_vars_to_object(location.search)
 							  url_vars.tipo = current_tipo
 							  url_vars.mode = source.mode
-						if(source.mode==='list' && url_vars.id){
-							delete url_vars.id
+						if (section_id!==null) {
+							url_vars.id = section_id
 						}
 						// source.config.url_vars add if they exists
 						// used by menu thesaurus_view_mode

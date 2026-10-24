@@ -408,6 +408,8 @@ export async function buildImageVersion(
 	source: string,
 	pathOpts: MediaPathOptions,
 	extension: string = spec.defaultExtension,
+	/** Explicit `-quality`; the per-target default when omitted (compressionForTarget). */
+	compression?: number,
 ): Promise<string> {
 	const target = buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath;
 	const probe = await probeImageSource(source);
@@ -432,6 +434,7 @@ export async function buildImageVersion(
 					sourceHeight: probe.canvasHeight,
 					cmyk: recipe.cmyk,
 					applyMetaAlpha,
+					compression,
 				});
 			},
 		);
@@ -1073,6 +1076,125 @@ export async function buildAlternateVersions(
 function shouldBackUpTwin(spec: MediaTypeSpec, quality: string, extension: string): boolean {
 	if (quality !== spec.defaultQuality) return true;
 	return spec.allowedExtensions.includes(extension);
+}
+
+/**
+ * The NORMALIZED MASTER COPY — the browser-viewable `<id>.<defaultExtension>`
+ * that sits BESIDE the raw upload in a MASTER tier (Original law,
+ * engineering/MEDIA_SPEC.md §2; PHP component_image::check_normalized_files
+ * :1686).
+ *
+ * WHY IT MUST EXIST. The raw master is routinely a `.tif` / `.psd` / `.png` a
+ * browser cannot render, and every reader of a tier's picture in this engine
+ * addresses it by the type's DEFAULT extension: `files_info.ts` scans that
+ * extension FIRST, the client filters its quality selector by
+ * `context.features.extension` (render_edit_component_image.js), and
+ * tool_media_versions' preview cell does the same. Without the copy an uploaded
+ * `.tif` is indexed and downloadable but has NO displayable form in the
+ * original quality at all. MEASURED on rsc29/rsc170/1 (2026-10-23): only
+ * `original/…_1.tif` on disk, and 'original' had disappeared from the quality
+ * selector entirely.
+ *
+ * IT IS A DISPLAY/INDEX COMPANION, NOT THE SOURCE. The engine builds derivatives
+ * from the RAW upload (`resolveMaster` tries the caller's `rawExtension` first),
+ * which preserves the alpha a flattened jpg would destroy — the measured reason
+ * buildAlternateVersions exists. PHP built its ladder FROM this copy; we do not.
+ *
+ * THE SOURCE IS THE TIER'S OWN RAW. A retouch in 'modified' must never become
+ * the original tier's picture, and an existing copy is never its own source —
+ * that would lose a generation on every master change.
+ *
+ * `rebuild: true` — the ingest just replaced this tier's raw, so a copy depicting
+ * the previous master is stale and is replaced. No `deleted/` backup: this file
+ * is machine-authored and rebuilt from an upload, exactly like the default tier
+ * and the thumb (see regenerateImage), and the RAW beside it — the file that
+ * carries the operator's bytes — is the one addFile backs up.
+ *
+ * IT IS ENCODED AT QUALITY 100 (see the call), not the ladder's 90 default: it is
+ * the full-resolution viewable of the archival master.
+ *
+ * `rebuild: false` — repair's contract: build what is MISSING, never re-encode
+ * what is there (repair.ts regenerateMissingDerivatives).
+ *
+ * Returns null when there is nothing to copy: the tier holds no raw upload (a
+ * copy whose raw is gone on a partial-media box), or the raw IS the default
+ * extension.
+ */
+export async function buildMasterNormalizedCopy(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	quality: string,
+	pathOpts: MediaPathOptions,
+	options: { rawExtension?: string | null; rebuild: boolean },
+): Promise<string | null> {
+	if (!spec.masterQualities.includes(quality)) {
+		// A machine-authored copy belongs beside a raw master, never in a
+		// derivative tier — there it would SHADOW the tier's own file
+		// (assertNormalizedExtensionForTier's defect, one level down).
+		const reason = `buildMasterNormalizedCopy: '${quality}' is not a MASTER tier of ${spec.model} — a normalized copy lives beside a raw master, never in a derivative tier`;
+		throw new DedaloError('media.unsupported_operation', {
+			message: reason,
+			publicMessage: reason,
+		});
+	}
+	// AN UPLOAD THAT ALREADY CARRIES THE DEFAULT EXTENSION *IS* THE COPY: the
+	// caller just said the tier's current raw is `.<defaultExtension>`, so there
+	// is nothing to convert — and converting "whatever else this tier holds"
+	// would overwrite the operator's fresh upload with a picture of a leftover
+	// raw from a previous master.
+	if (options.rawExtension?.toLowerCase() === spec.defaultExtension) return null;
+	const raw = masterTierRawFile(spec, identity, quality, pathOpts, options.rawExtension);
+	if (raw === null) return null;
+	if (!options.rebuild) {
+		const target = buildMediaLocation(
+			spec,
+			identity,
+			quality,
+			spec.defaultExtension,
+			pathOpts,
+		).absolutePath;
+		if (existsSync(target)) return null;
+	}
+	// COMPRESSION 100 — PHP check_normalized_files passed `quality = 100` for this
+	// copy (class.component_image.php:1713), and it is the record's full-resolution
+	// viewable: the raw master is untouched, so this file is the only way an
+	// operator can inspect or download the original at its real size. The ladder's
+	// 90 default is for the web tiers, where bytes are the point.
+	return await buildImageVersion(
+		spec,
+		identity,
+		quality,
+		raw,
+		pathOpts,
+		spec.defaultExtension,
+		100,
+	);
+}
+
+/**
+ * The RAW upload a master tier holds — the file the normalized copy is made
+ * from. The caller's `rawExtension` (the extension just uploaded, or the
+ * record's stored normalized name) is authoritative and is tried first; the
+ * upload allowlist follows, so a partial-media box still finds a surviving raw
+ * of another extension. The DEFAULT extension is NEVER a candidate: that is the
+ * copy, and a copy sourced from itself loses a generation per rebuild.
+ */
+function masterTierRawFile(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	quality: string,
+	pathOpts: MediaPathOptions,
+	rawExtension: string | null | undefined,
+): string | null {
+	const candidates = [rawExtension, ...spec.allowedExtensions].filter(
+		(value): value is string => typeof value === 'string' && value !== '',
+	);
+	for (const extension of candidates) {
+		if (extension === spec.defaultExtension) continue;
+		const location = buildMediaLocation(spec, identity, quality, extension, pathOpts);
+		if (existsSync(location.absolutePath)) return location.absolutePath;
+	}
+	return null;
 }
 
 /**

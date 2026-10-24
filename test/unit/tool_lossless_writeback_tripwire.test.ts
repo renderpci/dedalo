@@ -665,6 +665,8 @@ else {
 	const BYPASS = {
 		filesInfo:
 			'files_info is written by media/tools/files_info_persist.ts#writeItems (updateMatrixKeysData) past the chokepoint BY DESIGN (a SANCTIONED_DERIVED_WRITERS unit, write_obligations RAW_CALLER_EXEMPT): technical metadata derived from the files on disk — no modified stamp, no Time Machine row, no obligation hook. Its ONE caller is the LOCKED TRANSFORM (transformStoredMediaItems, CLOSURE_PLAN Step 2 / TOOLS-5): the stored items are read under readMatrixKeyForUpdate and the new ones computed FROM THEM in the same transaction, so a concurrent write is never reverted; what goes unrecorded is files_info’s own history, which a disk re-scan re-derives.',
+		drawingReset:
+			'the DELETE-TIME drawing reset rides the media-key writer past the chokepoint BY DESIGN: when the delete removed the record’s LAST media file, the drawing that belonged to that picture is cleared (lib_data → null, svg_file_data dropped) in the SAME locked transform, and the cleared value is appended to the Time Machine with recordTimeMachine in the same transaction. The operator’s delete is the decision; the prior drawing is the previous TM version, so nothing is silently lost.',
 		metadataTwin:
 			'the `data`-column METADATA twin is written by section/record/record_metadata.ts#setRecordMetadata (updateMatrixRecord) past the chokepoint BY DESIGN (write_obligations RAW_CALLER_EXEMPT): system bookkeeping MERGED into the column (created_date / created_by_user_id only; label and diffusion_info kept), mirrored from the dd199/dd200 audit value — no component value changes, so no stamp, no history, no index.',
 		hierarchy:
@@ -1339,10 +1341,10 @@ else {
 		'tools/tool_media_versions/server/media_versions.ts :: writeBack': {
 			doors: {
 				reconcileStoredFilesInfo: {
-					verdict: 'derived-state',
-					bypass_reason: BYPASS.filesInfo,
+					verdict: 'operator-value',
+					bypass_reason: BYPASS.drawingReset,
 					reason:
-						'the media-versions write-back: a fresh disk scan reconciled into files_info through the single locked writer (re-read under FOR UPDATE, never minted). Filesystem-derived state, not a curated value.',
+						'the media-versions write-back: a fresh disk scan reconciled into files_info through the single locked writer (re-read under FOR UPDATE, never minted). On the DELETE that removed the record’s LAST media file, the same locked transform also clears the drawing that belonged to the deleted image (lib_data → null, svg_file_data dropped) and appends the cleared value to the Time Machine in the same transaction — the operator’s delete is the decision, the prior drawing is the previous TM version. build/rotate/sync never set the flag.',
 				},
 			},
 		},

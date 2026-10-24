@@ -18,7 +18,7 @@
 * served as an <object type="image/svg+xml"> element whose internal <image>
 * element carries the raster URL.  This indirection lets the vector editor
 * manipulate SVG layers without touching the raster, and lets quality switches
-* only update the xlink:href attribute inside the SVG document without
+* only update the href attribute inside the SVG document without
 * rebuilding the whole DOM.
 *
 * Rendering pipeline
@@ -563,7 +563,10 @@ const render_image_node = function(self, file_info, content_value) {
 				const image = svg_doc.querySelector('image')
 				if (image) {
 					const dynamic_url = image.href.baseVal + '?t=' + (new Date()).getTime()
+					// Both: an editor-exported envelope links the raster with SVG2 `href`,
+					// which takes precedence over xlink:href.
 					image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dynamic_url);
+					image.setAttribute('href', dynamic_url);
 				}
 			}
 

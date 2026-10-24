@@ -125,3 +125,24 @@ DOORS reach the media lifecycle"* — `saveComponentData` on a scratch `test3`
 record writes the envelope at the record's own path on the real media root, and
 a hostile payload REJECTS the save with nothing written and nothing stored.
 Both cases go red if the chokepoint call is removed.
+
+## Addendum 2026-10-23 — the drawing goes with the last file
+
+The envelope policy above retires the FILE when the record holds no media file,
+but the drawing lived in the DB too (`lib_data` and the `svg_file_data` temporal
+container). The delete left them behind, and the next upload — whose
+`persistUploadedMedia` preserves `lib_data` by design — loaded the old vectors over
+the new picture (MEASURED on rsc29_rsc170_463941: new original/1.5MB/thumb files,
+old ellipses/rect still in `lib_data`, the annotated envelope in `svg/…/deleted/`).
+
+`deleteAndResyncCore` now returns `noMediaFilesLeft` (the same `managedFileSlots`
+census that retires the envelope). The media-versions delete passes it to
+`reconcileStoredFilesInfo` as `resetDrawing`; the same locked transform writes
+`lib_data: null`, drops `svg_file_data`, and appends the cleared value to the Time
+Machine (`recordTimeMachine`) in the same transaction. Build/rotate/sync never set
+the flag. No API response changes shape; the observable difference is the stored
+item after a full delete, and the editor opened after a later upload.
+
+Gate: `test/unit/media_drawing_reset.test.ts` (DB + TM row), the pure
+`resetDrawing` cases in `test/unit/files_info_persist.test.ts`, and the
+`noMediaFilesLeft` census in `test/unit/media_two_masters.test.ts`.

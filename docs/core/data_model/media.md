@@ -99,7 +99,7 @@ optional `lib_data` bag (used by `component_image`).
 | --- | --- |
 | `original_normalized_name` | the uploaded original, normalized (e.g. `rsc29_rsc170_1.tif`). Preserves the *original* extension, materialised under the `original` quality. |
 | `modified_normalized_name` | the working/modified master (e.g. `rsc29_rsc170_1.psd`), materialised under the `modified` quality. |
-| `lib_data` | free bag for component-specific metadata; used by `component_image` (empty `{}` otherwise). |
+| `lib_data` | free bag for component-specific metadata; used by `component_image` (empty `{}` otherwise). For `component_image` it holds the vector-editor layers; it is cleared together with `svg_file_data` when the record's last media file is deleted, so a later upload starts a fresh drawing (the cleared value is audited in the Time Machine). |
 
 !!! note "External-source variant"
     When the media is hosted elsewhere, the entry adds `"external": true`,

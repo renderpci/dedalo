@@ -19,7 +19,7 @@
 * crop the result with a drag-to-select overlay before writing back to disk.
 * A second operation, Automatic Background Removal, runs entirely in the
 * browser via a Web Worker (remove_background.js) that loads a Transformers.js
-* pipeline (briaai/RMBG-1.4, WebGPU or WASM fallback), converts the segmented
+* pipeline (onnx-community/ISNet-ONNX, WebGPU or WASM fallback), converts the segmented
 * pixels to a PNG Blob and uploads it through service_upload, then calls
 * process_uploaded_file (tool_upload) to move the staged file into every
 * quality directory of the target component.

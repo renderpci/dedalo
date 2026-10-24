@@ -21,6 +21,7 @@ import { DedaloError } from '../errors/dedalo_error.ts';
 import { getModelByTipo } from '../ontology/resolver.ts';
 import { writeAtomically } from './atomic.ts';
 import { getDimensions } from './engine/imagemagick.ts';
+import { managedFileSlots, moveToDeleted } from './file_ops.ts';
 import { resolveMediaPathOptions } from './ontology_path.ts';
 import {
 	additionalPath,
@@ -383,4 +384,44 @@ export function baseSvgUrl(
 	// — it resolves against the envelope's own fetch origin, keeping the
 	// persisted file host-portable.
 	return `${config.media.webBase}${location.relativePath}`;
+}
+
+/**
+ * Whether ANY file of this identity exists on disk — every quality × extension
+ * the type manages, thumb included, through `managedFileSlots` (the ONE census
+ * behind duplicate, record-delete and record-restore).
+ */
+export function identityHasMediaFiles(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+): boolean {
+	return managedFileSlots(spec).some(([quality, extension]) =>
+		existsSync(buildMediaLocation(spec, identity, quality, extension, pathOpts).absolutePath),
+	);
+}
+
+/**
+ * THE ENVELOPE OUTLIVES EVERY QUALITY FILE (policy 2026-10-23). It is retired —
+ * moved, never unlinked (No-hard-delete law) — to the `svg/…/deleted/` folder
+ * only when the record holds NO file at all: not the masters, not the thumb, not
+ * an alternate twin. Deleting ONE quality (even the default one) leaves the
+ * record with a picture somewhere, and the envelope is its wrapper.
+ *
+ * PHP unlinked it as soon as the default quality was removed
+ * (`component_image::remove_component_media_files :1643-1658`); that is NOT the
+ * rule here — the reported defect is that removing every file left the wrapper
+ * loading with a dead `<image>` href and the browser painted a broken-image icon
+ * inside it (MEASURED on rsc29_rsc170_463937).
+ */
+export function retireOverlayIfNoMediaFiles(
+	spec: MediaTypeSpec,
+	identity: MediaIdentity,
+	pathOpts: MediaPathOptions,
+): string | null {
+	if (spec.model !== 'component_image') return null;
+	if (identityHasMediaFiles(spec, identity, pathOpts)) return null;
+	const overlay = svgOverlayLocation(spec, identity, pathOpts);
+	if (!existsSync(overlay.absolutePath)) return null;
+	return moveToDeleted(overlay.absolutePath, { mediaRoot: pathOpts.mediaRoot });
 }

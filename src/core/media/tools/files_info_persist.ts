@@ -24,11 +24,20 @@
  * stored media item is left untouched (nothing to refresh). Minting one is the
  * job of `persistUploadedMedia` below, reached only from an INGEST or the
  * operator's explicit sync_files reconcile; a passive scan must never do it.
+ *
+ * ONE EXCEPTION, and it is NOT metadata: when the DELETE that emptied the record
+ * takes its LAST media file, the same locked write clears the drawing that
+ * belonged to that picture (`lib_data` → null, `svg_file_data` dropped) and
+ * appends the cleared value to the Time Machine in the same transaction. The
+ * layers are scholarship, not a cache — hence the audit row. See
+ * `reconcileStoredFilesInfo` options and the SVG-envelope lifecycle policy in
+ * engineering/MEDIA_SPEC.md.
  */
 
 import { config } from '../../../config/config.ts';
 import { canonicalEquals } from '../../concepts/canonical_json.ts';
 import type { MediaTypeSpec } from '../../concepts/media.ts';
+import { dbTimestamp } from '../../db/db_timestamp.ts';
 import type { MatrixJsonbColumn } from '../../db/matrix.ts';
 import { readMatrixKeyForUpdate, updateMatrixKeysData } from '../../db/matrix_write.ts';
 import {
@@ -38,6 +47,7 @@ import {
 	sqlStateOf,
 	withTransaction,
 } from '../../db/postgres.ts';
+import { recordTimeMachine } from '../../db/time_machine.ts';
 import { DedaloError } from '../../errors/dedalo_error.ts';
 import { getMatrixTableFromTipo } from '../../ontology/resolver.ts';
 import { type DdDate, ddDateFromMtime, type FileInfoEntry } from '../files_info.ts';
@@ -56,11 +66,17 @@ export interface StoredMediaItem {
  * identity. `lang === null` (non-translatable media) updates every item; a lang
  * updates only items with that lang (or lang-less items). Returns whether any
  * item changed so the caller can skip a no-op DB write.
+ *
+ * `resetDrawing` is the DELETE-TIME half of the SVG-envelope policy: the delete
+ * that removed the record's LAST media file also clears the drawing that belonged
+ * to that picture (`lib_data` → null, `svg_file_data` dropped). The prior drawing
+ * is a Time Machine version; the caller that sets this flag must audit the clear.
  */
 export function mergeFilesInfoIntoItems(
 	items: readonly StoredMediaItem[],
 	lang: string | null,
 	freshFilesInfo: readonly FileInfoEntry[],
+	resetDrawing = false,
 ): { items: StoredMediaItem[]; changed: boolean } {
 	if (items.length === 0) return { items: [...items], changed: false };
 	let changed = false;
@@ -68,7 +84,10 @@ export function mergeFilesInfoIntoItems(
 		const itemLang = item.lang ?? null;
 		if (lang !== null && itemLang !== null && itemLang !== lang) return item;
 		changed = true;
-		return { ...item, files_info: freshFilesInfo };
+		if (!resetDrawing) return { ...item, files_info: freshFilesInfo };
+		const cleared: StoredMediaItem = { ...item, files_info: freshFilesInfo, lib_data: null };
+		Reflect.deleteProperty(cleared, 'svg_file_data');
+		return cleared;
 	});
 	return { items: updated, changed };
 }
@@ -140,6 +159,12 @@ export interface MediaItemsTransformResult {
  */
 export interface MediaTransformOptions {
 	lockWait: 'per-record' | 'request';
+	/**
+	 * Post-write hook, run INSIDE the same transaction after the row was written.
+	 * The delete-time drawing reset uses it to append the cleared value to the
+	 * Time Machine atomically with the media-key write. Never runs on a noop.
+	 */
+	onWrite?: (items: readonly StoredMediaItem[]) => Promise<void>;
 }
 
 /**
@@ -208,14 +233,25 @@ export async function transformStoredMediaItems(
 			// "the transform wrote what was already stored" is a noop (key order ignored)
 			if (canonicalEquals(decision.write, locked)) return { action: 'noop', affected: 0 };
 			const affected = await writeItems(table, target, decision.write);
-			return affected === 0
-				? { action: 'missing', affected: 0 }
-				: { action: 'written', affected, items: decision.write };
+			if (affected === 0) return { action: 'missing', affected: 0 };
+			await runPostWriteHook(options, decision.write);
+			return { action: 'written', affected, items: decision.write };
 		});
 	} catch (error) {
 		if (isLockTimeout(error)) return { action: 'locked', affected: 0 };
 		throw error;
 	}
+}
+
+/**
+ * The transform's post-write hook, run INSIDE the same transaction (a failed
+ * audit row rolls the media key back with it). Absent = nothing to do.
+ */
+async function runPostWriteHook(
+	options: MediaTransformOptions,
+	items: readonly StoredMediaItem[],
+): Promise<void> {
+	if (options.onWrite !== undefined) await options.onWrite(items);
 }
 
 /** The row lock was not granted within the wait (raw SQLSTATE 55P03, or its typed twin). */
@@ -272,8 +308,9 @@ export function assertRecordPresent(
  */
 export async function reconcileStoredFilesInfo(
 	input: FilesInfoReconcileInput,
+	options: ReconcileOptions = {},
 ): Promise<FilesInfoReconcileResult> {
-	return await runReconcile(input, false);
+	return await runReconcile(input, false, options);
 }
 
 export interface FilesInfoReconcileInput {
@@ -282,6 +319,21 @@ export interface FilesInfoReconcileInput {
 	componentTipo: string;
 	lang: string | null;
 	freshFilesInfo: readonly FileInfoEntry[];
+}
+
+/**
+ * The DELETE-TIME drawing reset (bug 2026-10-23, rsc29_rsc170_463941). The
+ * envelope file and the drawing are one thing: when the delete removes the
+ * record's LAST media file, the layers that belonged to that picture must go with
+ * it, or the next upload loads the old vectors over the new image. The clear is a
+ * curated-value change, so it is audited: the same locked transaction appends the
+ * cleared value to the Time Machine.
+ */
+export interface ReconcileOptions {
+	/** Clear `lib_data`/`svg_file_data` on the matching language item(s). */
+	resetDrawing?: boolean;
+	/** The acting user — the Time Machine row's author. Required with resetDrawing. */
+	auditUserId?: number;
 }
 
 /**
@@ -297,13 +349,66 @@ export interface FilesInfoReconcileInput {
 export async function repairStoredFilesInfo(
 	input: FilesInfoReconcileInput,
 ): Promise<FilesInfoReconcileResult> {
-	return await runReconcile(input, true);
+	// NEVER a drawing reset: sync_files repairs a stale index, it does not delete
+	// a curator's layers (see ReconcileOptions).
+	return await runReconcile(input, true, {});
+}
+
+/**
+ * Resolve the drawing reset's audit identity, or null when this reconcile is not
+ * a reset. Throws when a reset carries no author: the clear is a curated-value
+ * change and must be audited.
+ */
+function drawingAuditFor(
+	input: FilesInfoReconcileInput,
+	options: ReconcileOptions,
+): { userId: number; lang: string } | null {
+	if (options.resetDrawing !== true) return null;
+	if (typeof options.auditUserId !== 'number') {
+		throw new DedaloError('internal.invariant', {
+			message:
+				'reconcileStoredFilesInfo: resetDrawing requires auditUserId — the drawing clear must be audited',
+			coordinates: {
+				section_tipo: input.sectionTipo,
+				section_id: input.sectionId,
+				component_tipo: input.componentTipo,
+			},
+		});
+	}
+	return { userId: options.auditUserId, lang: input.lang ?? 'lg-nolan' };
+}
+
+/** The Time Machine append, as the transform's post-write hook (absent = no reset). */
+function drawingAuditHook(
+	input: FilesInfoReconcileInput,
+	audit: { userId: number; lang: string } | null,
+): Pick<MediaTransformOptions, 'onWrite'> {
+	if (audit === null) return {};
+	return {
+		onWrite: async (items: readonly StoredMediaItem[]) => {
+			await recordTimeMachine(
+				{
+					sectionTipo: input.sectionTipo,
+					sectionId: input.sectionId,
+					componentTipo: input.componentTipo,
+					lang: audit.lang,
+					userId: audit.userId,
+					data: items,
+				},
+				dbTimestamp(new Date()),
+			);
+		},
+	};
 }
 
 async function runReconcile(
 	input: FilesInfoReconcileInput,
 	allowCreate: boolean,
+	options: ReconcileOptions,
 ): Promise<FilesInfoReconcileResult> {
+	const resetDrawing = options.resetDrawing === true;
+	const drawingAudit = drawingAuditFor(input, options);
+
 	let decided: FilesInfoReconcileAction = 'noop';
 	const outcome = await transformStoredMediaItems(
 		input,
@@ -324,12 +429,16 @@ async function runReconcile(
 				items,
 				input.lang,
 				input.freshFilesInfo,
+				resetDrawing,
 			);
 			if (!changed) return { skip: 'noop' };
 			decided = 'refreshed';
 			return { write: updated };
 		},
-		{ lockWait: 'request' },
+		{
+			lockWait: 'request',
+			...drawingAuditHook(input, drawingAudit),
+		},
 	);
 	if (outcome.action === 'missing') return { action: 'missing', affected: 0 };
 	if (outcome.action === 'locked') {

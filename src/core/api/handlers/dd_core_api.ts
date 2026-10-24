@@ -469,23 +469,25 @@ export const coreApiActions: Record<string, ActionHandler> = {
 		// The full response data payload: [main item] for scalars; for relation
 		// saves the main item PLUS the linked targets' subdatum (below).
 		let savedData: unknown[] = [savedDataItem];
-		// Select-family components (radio_button/check_box/select/…) re-render
-		// from data.datalist AFTER a save (e.g. component_radio_button
-		// get_checked_value_label reads self.data.datalist); the edit read attaches
-		// it, so the save echo must too or the post-save render dereferences
-		// undefined (client suite test_component_radio_button reset flow).
+		// Select-family AND filter-family components re-render from data.datalist
+		// after a save (e.g. component_radio_button get_checked_value_label reads
+		// self.data.datalist; view_default_edit_filter iterates it); the edit read
+		// attaches it, so the save echo must too or the post-save render
+		// dereferences undefined (client suite test_component_radio_button reset
+		// flow). getEchoDatalist is the ONE router: select family → getEditDatalist,
+		// filter family → its user-scoped sources.
 		{
-			const { SELECT_FAMILY_MODELS } = await import('../../relations/models/select_family.ts');
+			const { echoesDatalist, getEchoDatalist } = await import('../../relations/datalist.ts');
 			const { getModelByTipo, getNode, getColumnNameByModel } = await import(
 				'../../ontology/resolver.ts'
 			);
 			const savedModel = await getModelByTipo(source.tipo);
-			if (savedModel !== null && SELECT_FAMILY_MODELS.has(savedModel)) {
+			if (savedModel !== null && (await echoesDatalist(savedModel))) {
 				// The edit door: the read's options completed against the SAVED
 				// value (select_lang's "<name> *" entry), so echo == read.
-				const { getEditDatalist } = await import('../../relations/datalist.ts');
 				const savedNode = await getNode(source.tipo);
-				(savedDataItem as { datalist?: unknown }).datalist = await getEditDatalist(
+				(savedDataItem as { datalist?: unknown }).datalist = await getEchoDatalist(
+					savedModel,
 					source.tipo,
 					savedNode?.properties ?? null,
 					source.section_tipo,

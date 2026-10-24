@@ -144,6 +144,31 @@ Merged since the last release; these ship with the next one.
 
 #### Added
 
+- **The address bar now names the open record, so an edit page can be copied and reopened**
+
+    While editing a record, the address bar now carries its id (`?tipo=…&mode=edit&id=…`),
+    so copying the URL and opening it later — or in another tab — lands on **that** record.
+    Before, the URL only named the section, and reopening it showed whatever record the
+    browser's stored edit position happened to point at.
+
+    The same URL is also the reliable form for a bug report or an assistant prompt: it
+    identifies the section and the record without the search that produced them.
+
+    Alongside it, two long-standing traps around pasted record links are gone: a link that
+    named a record could come up with an empty form ("no records found") when the browser
+    had a stored edit position, and leaving such a page for the list could show a list of
+    one. The list itself is unchanged, and paginating inside an edit page still works; a
+    reloaded or shared record link simply shows that record, one at a time.
+
+- **The image vector editor now supports undo and redo**
+
+    Cmd+Z (Ctrl+Z on Windows) undoes the last change in the image vector editor, and
+    Shift+Cmd+Z / Ctrl+Shift+Z (Ctrl+Y on Windows) redoes it. Drawing, moving or
+    resizing a shape, deleting, colour changes, moving the raster image, resetting
+    the raster and adding/deleting layers are covered. Layer visibility, layer names,
+    the colour swatch and zoom are editor settings and are not part of the history.
+    See [component_image](./core/components/component_image.md).
+
 - **The inspector shows again who created, last modified and published a record, and when.**
 
     In edit mode, the inspector's *Information* panel always showed `-` for *Created* and
@@ -200,6 +225,90 @@ Merged since the last release; these ship with the next one.
 
 #### Fixed
 
+- **Image derivatives are encoded at full quality again — sharper web and list images, and somewhat larger files**
+
+    Every generated image size (`1.5MB`, `6MB`, `thumb`, the alternative-format
+    twins) was compressed at quality 82, a value inherited from the first version of
+    this engine. The previous engine encoded images at **90**, and inspection of the
+    same picture side by side shows the difference plainly: the web size looked
+    softer and smoothed-over, most visibly on fine texture and lettering.
+
+    Derived images are now encoded at 90 again, matching the previous engine. Expect
+    the `1.5MB` and other jpg sizes to grow by roughly 40–75 % for the same pixel
+    dimensions (on the reference record, 55,988 → 97,453 bytes); thumbnails grow
+    much less. The `original` quality's viewable copy was already written at 100 and
+    is unchanged.
+
+    Nothing is rebuilt automatically: existing records keep their current files until
+    a master is uploaded again or the record is regenerated from the media versions
+    tool (**Regenerate files** after deleting the size you want rebuilt).
+
+- **Deleting an image's last file now clears its vector drawing, so a new upload starts fresh**
+
+    Deleting every quality of an image used to remove the rendered SVG overlay but
+    keep the vector layers in the record; uploading a new image afterwards showed the
+    old shapes over the new picture. The delete that removes the last file now clears
+    the stored layers too. The cleared drawing is kept in the Time Machine, so the
+    previous version can be recovered. See
+    [component_image](./core/components/component_image.md).
+
+    Wire contract: `WC-2026-08-09-image-svg-envelope-preserved`.
+
+- **An image uploaded in a format the browser cannot show (TIFF, PSD, PNG…) keeps its full-resolution original AND regains the viewable copy, so the "original" quality is selectable again**
+
+    Dédalo stores an image in tiers, and the best one is the `original`. Uploading a
+    `.tif` (or `.psd`, or any format a browser cannot draw) left that tier holding
+    only the file you uploaded: the engine indexed it and let you download it, but
+    it had no picture to show. The image component's quality selector only lists
+    tiers that hold the type's standard format (`jpg`), so the `original` quality
+    disappeared from the selector altogether, and the media-versions panel's preview
+    cell for it stayed empty.
+
+    The original tier now also carries the standard-format copy beside your upload —
+    `rsc29_rsc170_1.tif` and `rsc29_rsc170_1.jpg` side by side, the pair Dédalo has
+    always stored. The copy is made when the file is uploaded into `original` or
+    `modified` (including a colleague's retouched master), and it is what every
+    reader resolves when it picks a tier's picture: the quality selector, the media
+    versions panel, list and mosaic views.
+
+    Your uploaded file is never modified or replaced, and the copy is only a viewable
+    companion: every derived size is still built from the original file itself. It
+    is encoded at maximum quality (not the lighter web compression), so a large scan
+    keeps its detail when you open the `original` tier.
+
+    Records uploaded before this fix heal with one **Regenerate files** click in the
+    media versions tool (or the next cache update sweep).
+
+    One visible consequence of restoring the established behaviour: a media export
+    or download that asks for the `original` quality of such a record now gives the
+    viewable `.jpg` copy (the standard format), not the raw `.tif`. The raw file
+    remains listed and downloadable as its own version in the media versions panel.
+
+- **The propagate tool on a Project filter now offers the same options as the component.**
+
+    Opening *Propagate component data* on a **Project** (filter) component showed the selector empty — no checkbox, so nothing could be propagated. The tool's editable panel is a throwaway copy of the component that is saved once before it renders, and the server's answer to that save carried the component's value but not its option list (the projects you are authorized to use). Only the Project filter family was affected: selects, radio buttons and the rest kept their options.
+
+    The server now answers every save of a filter component with the same options its edit view offers — the propagate tool panel, the record edit after a save, and the staged forms all show the project tree as before.
+
+- **An image's drawing envelope is removed with the record's last file, not with one quality**
+
+    Every image is displayed through a small SVG envelope that wraps the record's
+    web-quality picture. Removing the record's files never removed that envelope, so
+    with every quality deleted the editor kept loading a wrapper whose picture was
+    gone and the browser painted its broken-image icon — in the edit view and in the
+    media versions panel.
+
+    The envelope now follows the record's files, with the same rule the files
+    themselves follow: it is moved to a `deleted` folder (recoverable, exactly like a
+    deleted quality file) **only when the record has no file left in any quality** —
+    no original, no retouched master, no web size, no thumbnail, no alternative
+    format. Deleting one quality, even the web size, leaves the envelope where it is,
+    because the record still holds a picture.
+
+    A record emptied before this fix keeps its leftover envelope until it is
+    regenerated: one **Regenerate files** click in the media versions tool clears it,
+    and the record then shows the normal empty placeholder.
+
 - **Turning pages in *Latest changes* no longer fails with a permission error for users who are not administrators.**
 
     A user allowed to see a section's change history could open the inspector's *Latest changes*,
@@ -209,6 +318,24 @@ Merged since the last release; these ship with the next one.
 
     Wire contract: `WC-2026-10-23-own-lock-cleanup-ungated`.
 
+- **The image vector editor now deletes shapes and layers reliably**
+
+    Deleting a selected shape with Delete/Backspace did nothing when several shapes
+    were selected or when focus was on the image-quality selector. Deleting a vector
+    layer could leave it in the saved drawing, and the raster layer's trash button
+    could duplicate its contents. Delete now works for single and multiple selections
+    from the quality selector, the base photograph cannot be deleted by accident, a
+    deleted layer is removed from the saved drawing, and the raster trash empties the
+    annotations while keeping the photograph. See
+    [component_image](./core/components/component_image.md).
+
+- **Saving a drawing in the image vector editor keeps the image visible**
+
+    Clicking save in the image vector editor no longer replaces the picture with a
+    broken-image placeholder. The drawing was saved correctly all along; only the
+    editor's live view lost the image until the record was reloaded. Switching the
+    image quality now also keeps working on images that carry a vector drawing.
+
 - **The acquisition tools no longer start an import while a new Preview is loading**
 
     In the auction-catalogue and journal acquisition tools, clicking **Preview** again
@@ -217,6 +344,26 @@ Merged since the last release; these ship with the next one.
     the new review, and the new review's **Confirm import** could start a second import
     beside the first. The previous review now disappears as soon as you click
     **Preview**, and **Confirm import** does nothing while a preview is loading.
+
+- **Remove background works again in the image rotation tool.**
+
+    **Remove background** failed every time, with a bare `Worker error` in the panel and
+    nothing else. Three faults sat behind it, all client-side: the worker was requested
+    at a path one directory above the application root, so the browser never loaded it;
+    the model it asked for (`briaai/RMBG-1.4`) is not loadable by the bundled
+    Transformers.js runtime; and the model's output shape had changed under it, so even
+    a successful run would have thrown instead of returning the cut-out.
+
+    It now measures the subject with `onnx-community/ISNet-ONNX`, the same DIS/IS-Net
+    family as before, and any failure reports its actual reason (missing model file, no
+    WebGPU, worker error) instead of a blank banner. A failed run no longer claims
+    "Background removal completed" and no longer leaves the button disabled.
+
+    **Administrators:** the weights come from the install's own model store — never a
+    CDN — so a store seeded before today has to add
+    `onnx-community/ISNet-ONNX` (176 MB fp32: `config.json`,
+    `preprocessor_config.json`, `onnx/model.onnx`) to `<private>/ai_models/`. Until it
+    is there the tool says so plainly instead of hanging.
 
 - **Unpublishing every record of an RDF, XML or Markdown publication now also removes its combined file and ZIP**
 

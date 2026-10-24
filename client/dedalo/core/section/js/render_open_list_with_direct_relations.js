@@ -5,7 +5,7 @@
 
 // import
 	import { ui } from '../../common/js/ui.js'
-	import { is_filter_empty } from '../../search/js/search_utils.js'
+	import { is_filter_empty, is_own_record_pin } from '../../search/js/search_utils.js'
 	import { data_manager } from '../../common/js/data_manager.js'
 	import {response_data} from '../../common/js/api_error.js'
 	import {max_page_limit} from '../../common/js/sqo_limit.js'
@@ -45,40 +45,8 @@ const build_caller_record = function(self_caller) {
 
 
 
-/**
-* IS_OWN_RECORD_PIN
-* True when `pins` is exactly the AUTO-GENERATED single-record pin for the
-* caller's own open record.
-*
-* `filter_by_locators` carries two completely different things and they must not
-* be confused:
-*   - the auto pin: ONE locator naming the section's own open record, written by
-*     common.js build_rqo_show when the instance already knows its section_id;
-*   - a genuine RESULT SET the user is looking at — a semantic/RAG search resolves
-*     its ranked hits into filter_by_locators plus order 'locator_position'
-*     (search/js/search.js exec_search), including a `section_id:-1` sentinel that
-*     means "zero hits, show an honest empty list".
-*
-* Only the first may ever be discarded. Widening past a semantic result set would
-* silently open relations for records the user never searched for — or, with the
-* sentinel, for the entire section.
-*
-* @param {Array} pins - sqo.filter_by_locators (already normalised to an array).
-* @param {Object|null} caller_record - { section_tipo, section_id } of the record
-*   the caller has open, or null when the caller could not name one.
-* @returns {boolean}
-*/
-const is_own_record_pin = function(pins, caller_record) {
-
-	if (pins.length!==1 || !caller_record || caller_record.section_id===null || caller_record.section_id===undefined) {
-		return false
-	}
-
-	const pin = pins[0]
-
-	return pin?.section_tipo===caller_record.section_tipo
-		&& String(pin?.section_id)===String(caller_record.section_id)
-}//end is_own_record_pin
+// is_own_record_pin lives in search/js/search_utils.js — the RECORD VIEW /
+// PAGE VIEW rule is shared with section.js, see its doc there.
 
 
 
@@ -99,11 +67,12 @@ const is_own_record_pin = function(pins, caller_record) {
 *   - loaded with a known section_id (a direct url): build_rqo_show adds the auto
 *     single-record pin and the offset is 0, so the pin alone selects the record.
 *
-* A third, DEGRADED state exists and is what this originally had to survive: a
-* stale stored edit pagination can pair the pin with a non-zero offset, and the
-* offset then skips the only pinned row. (In that state the section's own edit
-* form is empty too — the same conflict breaks the record read, not just this
-* dialog — so the real repair is upstream; here we simply do not compound it.)
+* A third, DEGRADED state is what this originally had to survive: a stale stored
+* edit pagination pairing the pin with a non-zero offset, where the offset skips
+* the only pinned row (and the section's own edit form came up empty too — the
+* same conflict). section.js now prevents that upstream: a pinned sqo is a
+* RECORD VIEW and never meets a stored offset. The sqo handed to this function
+* may still come from elsewhere, so it simply does not compound it.
 *
 * Hence: reset the offset only when the pin set already names exactly one record.
 *

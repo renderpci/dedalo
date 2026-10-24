@@ -68,6 +68,7 @@
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {create_row_window} from '../../common/js/row_window.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
+	import {is_own_record_pin} from '../../search/js/search_utils.js'
 	import {inspector} from '../../inspector/js/inspector.js'
 	import {render_edit_section} from './render_edit_section.js'
 	import {render_list_section} from './render_list_section.js'
@@ -75,6 +76,96 @@
 	import {render_common_section} from './render_common_section.js'
 	import {request_failed, response_data} from '../../common/js/api_error.js'
 	import {handle_api_error, handle_api_notice} from '../../common/js/error_dispatch.js'
+
+
+
+/**
+* IS_PINNED_RECORD_VIEW
+* True when this instance's read selects its record with a PIN — exactly one
+* locator in `sqo.filter_by_locators` — instead of being a PAGE VIEW selected by
+* limit/offset.
+*
+* The question is about the SELECTOR, not about identity: whatever named the
+* record (a URL id, a task record, a freshly created record, a mini-record pen
+* that only carries the pin in its sqo) the read is a record view from the
+* start, even before `self.section_id` is known. Whether the pin names THIS
+* record is `is_own_record_pin`, asked only where a pin may be DROPPED
+* (goto_list, the open-relations dialog).
+*
+* ONE SELECTOR PER READ — the two are exclusive. Sent beside the single pin, an
+* offset > 0 skips the only pinned row: the edit form comes up empty (verified
+* against the suite database), and a deep offset makes the server walk rows it
+* will discard. The rule is enforced where pagination is read, written and
+* exited: build() and goto_list().
+*
+* A pin list of TWO OR MORE locators is a result set (a semantic/RAG search
+* resolves its ranked hits into filter_by_locators) and is a page view.
+*
+* @param {Object} self - section instance
+* @returns {boolean}
+*/
+const is_pinned_record_view = function(self) {
+
+	const pins = self.rqo?.sqo?.filter_by_locators
+
+	return Array.isArray(pins)
+		&& pins.length===1
+		&& pins[0]?.section_id!==undefined
+		&& pins[0]?.section_id!==null
+}//end is_pinned_record_view
+
+
+
+/**
+* SYNC_URL_RECORD
+* Make the current history entry name the record the page's own section is
+* showing (`?tipo=…&mode=edit&id=…`).
+*
+* page.navigate() pushes the entry as soon as the navigation is accepted, which
+* can be BEFORE the new section has read its record (render is asynchronous), so
+* the pushed URL may not know the id yet. This is the correction, and it also
+* covers every caller that navigates without naming the record (a mini record
+* button, a dashboard card) and a legacy `?tipo=X&mode=edit` bookmark.
+*
+* replaceState, never push: it rewrites the entry the user is on (the history
+* state with source + sqo is kept, so back/forward still restore the view).
+* Only the page's own section owns the address bar — a section inside a portal
+* or a tool must not rewrite it.
+*
+* @param {Object} self - section instance
+* @returns {void}
+*/
+const sync_url_record = function(self) {
+
+	if (self.caller?.model!=='page') {
+		return
+	}
+
+	// the record this view names, or null when it names none (list mode)
+	const section_id = (self.mode==='edit' && self.section_id!==null && self.section_id!==undefined)
+		? self.section_id
+		: null
+
+	const url_vars = url_vars_to_object(location.search)
+	const url_has_id = url_vars.id!==undefined && url_vars.id!==null && url_vars.id!==''
+
+	if (section_id===null) {
+		// a list must not keep a stale record id (an edit → list mode switch)
+		if (!url_has_id) {
+			return
+		}
+		// absence on the wire, without the delete operator
+		const { id: _stale_id, ...vars_without_id } = url_vars
+		history.replaceState(history.state, '', '?' + object_to_url_vars(vars_without_id))
+		return
+	}
+
+	if (String(url_vars.id)===String(section_id)) {
+		return
+	}
+	url_vars.id = section_id
+	history.replaceState(history.state, '', '?' + object_to_url_vars(url_vars))
+}//end sync_url_record
 
 
 
@@ -726,14 +817,34 @@ section.prototype.build = async function(autoload=false) {
 			// @see server `get_structure_context` sqo_session property addition
 			if (self.context?.sqo_session && self.request_config_object) {
 
-				// request_config_object
-				// Update on every build to preserve sync with the server section session
-				self.request_config_object.sqo = self.context.sqo_session
+				// The stored sqo is the section's LAST read — a PAGE VIEW's
+				// navigation state. A RECORD VIEW is excluded: the pin IS its
+				// identity, and the session's found-set position would replace it
+				// with another record.
+				//
+				// (!) The SAME object, never a copy: `this.context.sqo_session` IS
+				// this instance's live sqo after the first adoption, and pagination
+				// mutates it in place (update_pagination). A clone here made every
+				// page turn rewind to the previous offset.
+				//
+				// (!) Never scrub `filter_by_locators` here either: on the live
+				// object that would erase a caller's RESULT SET (search.js writes a
+				// semantic search's ranked hits onto this very sqo before
+				// navigating). A stored pin can no longer leak into a page view:
+				// build_rqo_show states `filter_by_locators: []` when the client has
+				// no pin, so the server never fills one from the session.
+				if (!is_pinned_record_view(self)) {
+					const session_sqo = self.context.sqo_session
 
-				// rqo
-				// Note that rqo is calculated once and need to be updated when build autoload is made
-				// and the context is loaded / updated
-				self.rqo.sqo = self.context.sqo_session
+					// request_config_object
+					// Update on every build to preserve sync with the server section session
+					self.request_config_object.sqo = session_sqo
+
+					// rqo
+					// Note that rqo is calculated once and need to be updated when build autoload is made
+					// and the context is loaded / updated
+					self.rqo.sqo = session_sqo
+				}
 
 				// dd15 is the TIME MACHINE section: its rows come from
 				// matrix_time_machine, so the SQO row source is always 'tm'. (This is
@@ -783,7 +894,10 @@ section.prototype.build = async function(autoload=false) {
 
 			// pagination. Set pagination from saved local_db_data if exists
 			// Updates the rqo.sqo pagination properties with local DB values
-				if (self.session_save) {
+			// (!) Never into a RECORD VIEW: the stored offset belongs to a found
+			// set, and beside the single pin it would skip the only row (an empty
+			// edit form). See is_pinned_record_view.
+				if (self.session_save && !is_pinned_record_view(self)) {
 					// Get pagination value from local database
 					const pagination_mode = self.mode==='edit' ? self.mode : 'list';
 					const saved_pagination = await data_manager.get_local_db_data(
@@ -889,43 +1003,59 @@ section.prototype.build = async function(autoload=false) {
 					}
 				}
 
+			// address bar. The record is known only now — page.navigate pushed the
+			// entry when it accepted the navigation, before this read finished.
+				sync_url_record(self)
+
 			// rqo regenerate
 				await generate_rqo()
 
 			// pagination update
 				const request_config		= self.context?.request_config || []
 				const request_config_dedalo	= request_config.find(el => el.api_engine==='dedalo') || {}
-				// fill values that are not defined previously with safe fallback to defaults (check null and undefined cases)
-				if (self.rqo.sqo.limit==null) {
-					self.rqo.sqo.limit = request_config_dedalo.show?.sqo_config?.limit ?? (self.mode==='edit' ? 1 : 10)
-				}
-				if (self.rqo.sqo.offset==null) {
-					self.rqo.sqo.offset = request_config_dedalo.show?.sqo_config?.offset ?? 0
-				}
-				// On session_save, always fix current pagination value, even if is not different
-				// Updates local DB pagination values. Don't await here
-				if (self.session_save) {
-					const pagination_mode = self.mode==='edit' ? self.mode : 'list';
-					data_manager.set_local_db_data(
-						{
-							id		: `${self.tipo}_${pagination_mode}`,
-							value	: {
-								limit	: self.rqo.sqo.limit,
-								offset	: self.rqo.sqo.offset
-							}
-						},
-						'pagination'
-					)
-					.catch(error => {
-						console.error("Error saving pagination to local DB:", error);
-					});
+				// ONE SELECTOR PER READ. A record view is ONE record: limit 1 and no
+				// position at all — offset is a found-set coordinate, and beside the
+				// single pin it skips the only row. Its pagination is neither read
+				// (above) nor written: the stored list position belongs to the list,
+				// and the view reporting 1/1 is the truth.
+				if (is_pinned_record_view(self)) {
+					self.rqo.sqo.limit	= 1
+					self.rqo.sqo.offset	= 0
+					// total 1 lets the paginator render its single-record state
+					self.total = 1
 				}else{
-					// editing one record case in session_save false
-					if (self.mode==='edit' && self.section_id) {
-						// fix offset to 0 but do not store the value
-						self.rqo.sqo.offset = 0
-						// reset total to 1 to allow paginator render properly
-						self.total = 1
+					// fill values that are not defined previously with safe fallback to defaults (check null and undefined cases)
+					if (self.rqo.sqo.limit==null) {
+						self.rqo.sqo.limit = request_config_dedalo.show?.sqo_config?.limit ?? (self.mode==='edit' ? 1 : 10)
+					}
+					if (self.rqo.sqo.offset==null) {
+						self.rqo.sqo.offset = request_config_dedalo.show?.sqo_config?.offset ?? 0
+					}
+					// On session_save, always fix current pagination value, even if is not different
+					// Updates local DB pagination values. Don't await here
+					if (self.session_save) {
+						const pagination_mode = self.mode==='edit' ? self.mode : 'list';
+						data_manager.set_local_db_data(
+							{
+								id		: `${self.tipo}_${pagination_mode}`,
+								value	: {
+									limit	: self.rqo.sqo.limit,
+									offset	: self.rqo.sqo.offset
+								}
+							},
+							'pagination'
+						)
+						.catch(error => {
+							console.error("Error saving pagination to local DB:", error);
+						});
+					}else{
+						// editing one record case in session_save false
+						if (self.mode==='edit' && self.section_id) {
+							// fix offset to 0 but do not store the value
+							self.rqo.sqo.offset = 0
+							// reset total to 1 to allow paginator render properly
+							self.total = 1
+						}
 					}
 				}
 
@@ -1793,9 +1923,21 @@ section.prototype.navigate = async function(options) {
 			const title		= self.id
 			const source	= create_source(self, null)
 
-			// url search. Append section_id if exists
+			// url search. The address bar carries the record while one is open:
+			// a section deep link with an id IS the edit view (server `start`
+			// forces it), so `id` must follow the record when paginating in edit
+			// mode and must never survive into a list.
 				const url_vars = url_vars_to_object(location.search)
-				const url = '?' + object_to_url_vars(url_vars)
+				const with_record = self.mode==='edit' && self.section_id!==null && self.section_id!==undefined
+				let url
+				if (with_record) {
+					url_vars.id = self.section_id
+					url = '?' + object_to_url_vars(url_vars)
+				}else{
+					// absence on the wire, without the delete operator
+					const { id: _url_id, ...vars_without_id } = url_vars
+					url = '?' + object_to_url_vars(vars_without_id)
+				}
 
 			// browser navigation update
 				push_browser_history({
@@ -2323,7 +2465,19 @@ section.prototype.goto_list = async function() {
 
 	// MODE USING PAGE user_navigation
 
-	const sqo = clone(self.rqo.sqo)
+	const cloned_sqo = clone(self.rqo.sqo)
+
+	// a record view's PIN names THIS record, not a result set: the list is a
+	// different view, and keeping the pin would publish a one-row list. Only the
+	// auto pin is dropped — a genuine result set (semantic search) is the user's
+	// list and stays. Dropped by destructuring, not the delete operator.
+	const { filter_by_locators: own_pin, ...unpinned_sqo } = cloned_sqo
+	const sqo = is_own_record_pin(own_pin, {
+		section_tipo	: self.section_tipo,
+		section_id		: self.section_id
+	})
+		? unpinned_sqo
+		: cloned_sqo
 
 	// reset pagination from current edit sqo
 		sqo.limit = null
